@@ -44,6 +44,7 @@ export class BattleScene extends Phaser.Scene {
 
   private attackButton!: Phaser.GameObjects.Container
   private endTurnButton!: Phaser.GameObjects.Container
+  private menuButton!: Phaser.GameObjects.Container
 
   constructor() {
     super('Battle')
@@ -92,11 +93,14 @@ export class BattleScene extends Phaser.Scene {
 
     this.attackButton = this.createButton('Attack', () => this.onAttack())
     this.endTurnButton = this.createButton('End Turn', () => this.onEndTurn())
+    this.menuButton = this.createButton('Back to Menu', () => this.onBackToMenu())
+    this.menuButton.setVisible(false)
 
     this.layout()
     this.scale.on(Phaser.Scale.Events.RESIZE, () => this.layout())
 
     this.input.keyboard?.on('keydown-I', () => this.openInventory())
+    this.input.keyboard?.on('keydown-ESC', () => this.openMenu())
 
     this.pushLog('The goblin blocks the warrior\'s path. Battle begins!')
     this.updateRoundText()
@@ -106,6 +110,21 @@ export class BattleScene extends Phaser.Scene {
     if (this.scene.isPaused()) return
     this.scene.launch('Inventory', { hp: this.warrior.hp })
     this.scene.pause()
+  }
+
+  private openMenu(): void {
+    if (this.scene.isPaused()) return
+    if (this.phase === 'over') {
+      this.scene.start('Menu', { canContinue: false })
+      return
+    }
+    this.scene.launch('Menu', { canContinue: true })
+    this.scene.bringToTop('Menu')
+    this.scene.pause()
+  }
+
+  private onBackToMenu(): void {
+    this.scene.start('Menu', { canContinue: false })
   }
 
   // ---- setup helpers -----------------------------------------------------
@@ -222,6 +241,7 @@ export class BattleScene extends Phaser.Scene {
     const buttonY = height - 50
     this.attackButton.setPosition(width / 2 - 80, buttonY)
     this.endTurnButton.setPosition(width / 2 + 80, buttonY)
+    this.menuButton.setPosition(width / 2, buttonY)
 
     this.logText.setPosition(20, height - 130)
   }
@@ -335,8 +355,9 @@ export class BattleScene extends Phaser.Scene {
 
   private endBattle(playerWon: boolean): void {
     this.phase = 'over'
-    this.setButtonEnabled(this.attackButton, false)
-    this.setButtonEnabled(this.endTurnButton, false)
+    this.attackButton.setVisible(false)
+    this.endTurnButton.setVisible(false)
+    this.menuButton.setVisible(true)
     this.bannerText.setText(playerWon ? 'VICTORY!' : 'DEFEAT')
     this.bannerText.setColor(playerWon ? '#66bb6a' : '#ef5350')
     this.bannerText.setVisible(true)
