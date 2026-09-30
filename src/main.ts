@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { BootScene } from './scenes/BootScene.ts'
 import { BattleScene } from './scenes/BattleScene.ts'
+import { InventoryScene } from './scenes/InventoryScene.ts'
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -12,5 +13,5 @@ new Phaser.Game({
     width: '100%',
     height: '100%',
   },
-  scene: [BootScene, BattleScene],
+  scene: [BootScene, BattleScene, InventoryScene],
 })
