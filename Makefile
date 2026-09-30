@@ -15,7 +15,7 @@ build: ## Build the podman dev image
 
 .PHONY: run
 run: build ## Run the dev server in podman (http://localhost:5173)
-	$(PODMAN_RUN) -it -p $(PORT):5173 $(IMAGE) npm run dev -- --host --port $(PORT)
+	$(PODMAN_RUN) -it -p $(PORT):5173 $(IMAGE) npx vite --host --port $(PORT)
 
 .PHONY: test
 test: build ## Run the test suite (in podman)
