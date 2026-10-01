@@ -3,6 +3,7 @@ import { deriveCombatStats, type Character } from '../character/character.ts'
 import { formatDamage, type CombatantStats } from '../combat/combat.ts'
 import type { GameState } from '../game/gameState.ts'
 import { EQUIPMENT_SLOT_LABELS, describeItemStats, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
+import { drawItemIcon } from './itemIcons.ts'
 
 type PanelTab = 'character' | 'inventory'
 
@@ -219,7 +220,7 @@ export class InventoryScene extends Phaser.Scene {
 
     if (item) {
       const g = this.add.graphics({ x: x - SLOT_SIZE / 2, y: y - SLOT_SIZE / 2 })
-      item.draw(g, SLOT_SIZE)
+      drawItemIcon(g, item.icon, SLOT_SIZE)
       this.inventoryContent.add(g)
 
       bg.setInteractive({ useHandCursor: true })
@@ -297,7 +298,7 @@ export class InventoryScene extends Phaser.Scene {
 
     if (item) {
       const g = this.add.graphics({ x: x - SLOT_SIZE / 2, y: y - SLOT_SIZE / 2 })
-      item.draw(g, SLOT_SIZE)
+      drawItemIcon(g, item.icon, SLOT_SIZE)
       this.inventoryContent.add(g)
 
       bg.setInteractive({ useHandCursor: true })
