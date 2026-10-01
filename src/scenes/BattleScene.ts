@@ -1,11 +1,6 @@
 import Phaser from 'phaser'
-import {
-  GOBLIN_STATS,
-  WARRIOR_STATS,
-  resolveAttack,
-  type AttackResult,
-  type CombatantStats,
-} from '../combat/combat.ts'
+import { GOBLIN_STATS, WARRIOR_STATS, type CombatantStats } from '../combat/combat.ts'
+import { BattleEngine, formatEvent, type BattleEvent, type Side } from '../engine/battleEngine.ts'
 
 interface Unit {
   stats: CombatantStats
@@ -20,8 +15,6 @@ interface Unit {
   row: number
 }
 
-type Phase = 'player' | 'enemy' | 'over'
-
 const GRID_COLS = 6
 const GRID_ROWS = 4
 const TILE_SIZE = 56
@@ -34,8 +27,8 @@ const LOG_BOX_H = LOG_VISIBLE_LINES * LOG_LINE_H + LOG_BOX_PADDING * 2
 const LOG_BOX_GAP = 14
 
 export class BattleScene extends Phaser.Scene {
-  private phase: Phase = 'player'
-  private round = 1
+  private engine!: BattleEngine
+  private names!: Record<Side, string>
   private warrior!: Unit
   private goblin!: Unit
 
@@ -68,8 +61,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.phase = 'player'
-    this.round = 1
+    this.engine = new BattleEngine({ player: WARRIOR_STATS, enemy: GOBLIN_STATS })
+    this.names = { player: WARRIOR_STATS.name, enemy: GOBLIN_STATS.name }
 
     this.floorLayer = this.add.container(0, 0)
     this.unitLayer = this.add.container(0, 0)
@@ -140,7 +133,7 @@ export class BattleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-C', () => this.openCharacter())
     this.input.keyboard?.on('keydown-ESC', () => this.openMenu())
 
-    this.pushLog('The goblin blocks the warrior\'s path. Battle begins!')
+    this.applyEvents(this.engine.getLog())
     this.updateRoundText()
   }
 
@@ -158,7 +151,7 @@ export class BattleScene extends Phaser.Scene {
 
   private openMenu(): void {
     if (this.scene.isPaused()) return
-    if (this.phase === 'over') {
+    if (this.engine.getState().phase === 'over') {
       this.scene.start('Menu', { canContinue: false })
       return
     }
@@ -325,11 +318,12 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private updateRoundText(): void {
-    if (this.phase === 'over') {
-      this.roundText.setText(`Battle over — ${this.round} rounds fought`)
+    const state = this.engine.getState()
+    if (state.phase === 'over') {
+      this.roundText.setText(`Battle over — ${state.round} rounds fought`)
       return
     }
-    this.roundText.setText(`Round ${this.round} — ${this.phase === 'player' ? "Warrior's" : "Goblin's"} turn`)
+    this.roundText.setText(`Round ${state.round} — ${state.phase === 'player' ? "Warrior's" : "Goblin's"} turn`)
   }
 
   private pushLog(line: string): void {
@@ -422,30 +416,36 @@ export class BattleScene extends Phaser.Scene {
     this.syncHitArea(this.logScrollThumb)
   }
 
-  private describeAttack(attackerName: string, defenderName: string, result: AttackResult): string {
-    if (result.fumble) return `${attackerName} rolls 1 — fumbles the attack!`
-    if (result.hit) {
-      const crit = result.critical ? ' CRITICAL HIT!' : ''
-      return `${attackerName} rolls ${result.attackRoll} (${result.totalToHit} to hit) — HITS ${defenderName} for ${result.damage} dmg.${crit}`
-    }
-    return `${attackerName} rolls ${result.attackRoll} (${result.totalToHit} to hit) — MISSES ${defenderName}.`
-  }
-
   // ---- turn logic -----------------------------------------------------
 
+  /** Renders engine events: log lines, HP bars and hit flashes all flow from here. */
+  private applyEvents(events: readonly BattleEvent[]): void {
+    for (const event of events) {
+      this.pushLog(formatEvent(event, this.names))
+      if (event.type === 'attack') {
+        this.flashHit(event.defender === 'player' ? this.warrior : this.goblin, event.hit)
+      }
+    }
+    this.syncUnitsFromEngine()
+  }
+
+  private syncUnitsFromEngine(): void {
+    const state = this.engine.getState()
+    this.warrior.hp = state.player.hp
+    this.goblin.hp = state.enemy.hp
+    this.refreshHpDisplay(this.warrior)
+    this.refreshHpDisplay(this.goblin)
+  }
+
   private onAttack(): void {
-    if (this.phase !== 'player') return
+    if (this.engine.getState().phase !== 'player') return
     this.setButtonEnabled(this.attackButton, false)
     this.setButtonEnabled(this.endTurnButton, false)
 
-    const result = resolveAttack(this.warrior.stats, this.goblin.stats.ac)
-    this.goblin.hp = Math.max(this.goblin.hp - result.damage, 0)
-    this.refreshHpDisplay(this.goblin)
-    this.pushLog(this.describeAttack('Warrior', 'Goblin', result))
-    this.flashHit(this.goblin, result)
+    this.applyEvents(this.engine.playerAttack())
 
-    if (this.goblin.hp <= 0) {
-      this.endBattle(true)
+    if (this.engine.getState().phase === 'over') {
+      this.endBattle()
       return
     }
 
@@ -453,52 +453,47 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private onEndTurn(): void {
-    if (this.phase !== 'player') return
+    if (this.engine.getState().phase !== 'player') return
     this.setButtonEnabled(this.attackButton, false)
     this.setButtonEnabled(this.endTurnButton, false)
-    this.pushLog('Warrior holds position and ends the turn.')
+    this.applyEvents(this.engine.playerEndTurn())
     this.time.delayedCall(300, () => this.startEnemyTurn())
   }
 
   private startEnemyTurn(): void {
-    this.phase = 'enemy'
     this.updateRoundText()
 
     this.time.delayedCall(500, () => {
-      const result = resolveAttack(this.goblin.stats, this.warrior.stats.ac)
-      this.warrior.hp = Math.max(this.warrior.hp - result.damage, 0)
-      this.refreshHpDisplay(this.warrior)
-      this.pushLog(this.describeAttack('Goblin', 'Warrior', result))
-      this.flashHit(this.warrior, result)
+      this.applyEvents(this.engine.enemyTurn())
 
-      if (this.warrior.hp <= 0) {
-        this.endBattle(false)
+      if (this.engine.getState().phase === 'over') {
+        this.endBattle()
         return
       }
 
-      this.round += 1
-      this.phase = 'player'
       this.updateRoundText()
       this.setButtonEnabled(this.attackButton, true)
       this.setButtonEnabled(this.endTurnButton, true)
     })
   }
 
-  private flashHit(unit: Unit, result: AttackResult): void {
-    if (!result.hit) return
+  private flashHit(unit: Unit, hit: boolean): void {
+    if (!hit) return
     unit.sprite.setTint(0xff8a80)
     this.time.delayedCall(150, () => unit.sprite.clearTint())
   }
 
-  private endBattle(playerWon: boolean): void {
-    this.phase = 'over'
+  private endBattle(): void {
+    const state = this.engine.getState()
+    const playerWon = state.winner === 'player'
     this.attackButton.setVisible(false)
     this.endTurnButton.setVisible(false)
     this.menuButton.setVisible(true)
     this.bannerText.setText(playerWon ? 'VICTORY!' : 'DEFEAT')
     this.bannerText.setColor(playerWon ? '#66bb6a' : '#ef5350')
     this.bannerText.setVisible(true)
-    this.pushLog(playerWon ? 'The goblin falls. Victory!' : 'The warrior falls. Defeat...')
     this.updateRoundText()
+    // Structured dump for balancing/AI tooling to scrape from devtools.
+    console.info('[battle-log]', JSON.stringify(this.engine.getLog()))
   }
 }
