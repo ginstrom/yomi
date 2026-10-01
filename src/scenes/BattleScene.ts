@@ -26,7 +26,12 @@ const GRID_COLS = 6
 const GRID_ROWS = 4
 const TILE_SIZE = 56
 const FLOOR_SQUASH_Y = 0.6
-const LOG_LINES = 5
+const LOG_HISTORY = 50
+const LOG_VISIBLE_LINES = 5
+const LOG_LINE_H = 20
+const LOG_BOX_PADDING = 10
+const LOG_BOX_H = LOG_VISIBLE_LINES * LOG_LINE_H + LOG_BOX_PADDING * 2
+const LOG_BOX_GAP = 14
 
 export class BattleScene extends Phaser.Scene {
   private phase: Phase = 'player'
@@ -39,8 +44,13 @@ export class BattleScene extends Phaser.Scene {
 
   private roundText!: Phaser.GameObjects.Text
   private bannerText!: Phaser.GameObjects.Text
+  private logBoxBg!: Phaser.GameObjects.Rectangle
+  private logScrollTrack!: Phaser.GameObjects.Rectangle
+  private logScrollThumb!: Phaser.GameObjects.Rectangle
   private logText!: Phaser.GameObjects.Text
   private logLines: string[] = []
+  private logScrollLines = 0
+  private logAutoScroll = true
 
   private attackButton!: Phaser.GameObjects.Container
   private endTurnButton!: Phaser.GameObjects.Container
@@ -74,12 +84,39 @@ export class BattleScene extends Phaser.Scene {
       .text(20, 16, '', { fontFamily: 'monospace', fontSize: '20px', color: '#ffffff' })
       .setScrollFactor(0)
 
-    this.logText = this.add.text(20, 0, '', {
+    this.logBoxBg = this.add
+      .rectangle(0, 0, 10, LOG_BOX_H, 0x0d0d0d, 0.75)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0x3a3a3a)
+
+    this.logText = this.add.text(0, 0, '', {
       fontFamily: 'monospace',
       fontSize: '14px',
       color: '#cfd8dc',
       lineSpacing: 4,
     })
+
+    this.logScrollTrack = this.add
+      .rectangle(0, 0, 4, 10, 0x2a2a2a)
+      .setOrigin(0, 0)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true })
+    this.logScrollThumb = this.add
+      .rectangle(0, 0, 4, 10, 0x6b6b6b)
+      .setOrigin(0, 0)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true })
+
+    this.input.setDraggable(this.logScrollThumb)
+    this.logScrollThumb.on('drag', (_pointer: Phaser.Input.Pointer, _dragX: number, dragY: number) =>
+      this.onLogThumbDrag(dragY),
+    )
+    this.logScrollTrack.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.onLogTrackClick(pointer))
+
+    this.input.on(
+      'wheel',
+      (pointer: Phaser.Input.Pointer, _objects: unknown, _dx: number, dy: number) => this.onLogWheel(pointer, dy),
+    )
 
     this.bannerText = this.add
       .text(0, 0, '', {
@@ -250,7 +287,16 @@ export class BattleScene extends Phaser.Scene {
     this.endTurnButton.setPosition(width / 2 + 80, buttonY)
     this.menuButton.setPosition(width / 2, buttonY)
 
-    this.logText.setPosition(20, height - 130)
+    const buttonTop = buttonY - 22
+    const logBoxW = width - 40
+    const logBoxX = 20
+    const logBoxY = buttonTop - LOG_BOX_GAP - LOG_BOX_H
+
+    this.logBoxBg.setPosition(logBoxX, logBoxY)
+    this.logBoxBg.setSize(logBoxW, LOG_BOX_H)
+    this.logText.setPosition(logBoxX + LOG_BOX_PADDING, logBoxY + LOG_BOX_PADDING)
+
+    this.renderLog()
   }
 
   private tileCenter(col: number, row: number): { x: number; y: number } {
@@ -288,8 +334,92 @@ export class BattleScene extends Phaser.Scene {
 
   private pushLog(line: string): void {
     this.logLines.push(line)
-    if (this.logLines.length > LOG_LINES) this.logLines.shift()
-    this.logText.setText(this.logLines.join('\n'))
+    if (this.logLines.length > LOG_HISTORY) this.logLines.shift()
+
+    if (!this.logAutoScroll) {
+      const maxScroll = Math.max(0, this.logLines.length - LOG_VISIBLE_LINES)
+      this.logScrollLines = Math.min(this.logScrollLines + 1, maxScroll)
+    }
+    this.renderLog()
+  }
+
+  private renderLog(): void {
+    const maxScroll = Math.max(0, this.logLines.length - LOG_VISIBLE_LINES)
+    this.logScrollLines = Phaser.Math.Clamp(this.logScrollLines, 0, maxScroll)
+
+    const start = Math.max(0, this.logLines.length - LOG_VISIBLE_LINES - this.logScrollLines)
+    const visible = this.logLines.slice(start, start + LOG_VISIBLE_LINES)
+    this.logText.setText(visible.join('\n'))
+
+    this.updateLogScrollbar(maxScroll)
+  }
+
+  private onLogWheel(pointer: Phaser.Input.Pointer, deltaY: number): void {
+    if (!this.logBoxBg.getBounds().contains(pointer.x, pointer.y)) return
+    const maxScroll = Math.max(0, this.logLines.length - LOG_VISIBLE_LINES)
+    if (maxScroll === 0) return
+
+    const direction = deltaY > 0 ? -1 : 1
+    this.logScrollLines = Phaser.Math.Clamp(this.logScrollLines + direction, 0, maxScroll)
+    this.logAutoScroll = this.logScrollLines === 0
+    this.renderLog()
+  }
+
+  private syncHitArea(shape: Phaser.GameObjects.Rectangle): void {
+    // setInteractive() snapshots a hit-area rect at whatever size the object had
+    // at that moment; it does not track later setSize() calls, so it must be
+    // kept in sync manually whenever the visible rectangle is resized.
+    const hitArea = shape.input?.hitArea as Phaser.Geom.Rectangle | undefined
+    hitArea?.setSize(shape.width, shape.height)
+  }
+
+  private onLogThumbDrag(dragY: number): void {
+    const maxScroll = Math.max(0, this.logLines.length - LOG_VISIBLE_LINES)
+    if (maxScroll === 0) return
+
+    const trackY = this.logScrollTrack.y
+    const trackH = this.logScrollTrack.height
+    const thumbH = this.logScrollThumb.height
+    const travel = trackH - thumbH
+    const clampedY = Phaser.Math.Clamp(dragY, trackY, trackY + travel)
+    const scrollRatio = travel > 0 ? 1 - (clampedY - trackY) / travel : 0
+
+    this.logScrollLines = Math.round(scrollRatio * maxScroll)
+    this.logAutoScroll = this.logScrollLines === 0
+    this.renderLog()
+  }
+
+  private onLogTrackClick(pointer: Phaser.Input.Pointer): void {
+    const maxScroll = Math.max(0, this.logLines.length - LOG_VISIBLE_LINES)
+    if (maxScroll === 0) return
+
+    const direction = pointer.y < this.logScrollThumb.y ? 1 : -1
+    this.logScrollLines = Phaser.Math.Clamp(this.logScrollLines + direction * LOG_VISIBLE_LINES, 0, maxScroll)
+    this.logAutoScroll = this.logScrollLines === 0
+    this.renderLog()
+  }
+
+  private updateLogScrollbar(maxScroll: number): void {
+    const hasOverflow = maxScroll > 0
+    this.logScrollTrack.setVisible(hasOverflow)
+    this.logScrollThumb.setVisible(hasOverflow)
+    if (!hasOverflow) return
+
+    const barW = 8
+    const trackX = this.logBoxBg.x + this.logBoxBg.width - barW - 4
+    const trackY = this.logBoxBg.y + 4
+    const trackH = LOG_BOX_H - 8
+    this.logScrollTrack.setPosition(trackX, trackY)
+    this.logScrollTrack.setSize(barW, trackH)
+    this.syncHitArea(this.logScrollTrack)
+
+    const visibleRatio = Math.min(1, LOG_VISIBLE_LINES / this.logLines.length)
+    const thumbH = Math.max(16, trackH * visibleRatio)
+    const scrollRatio = this.logScrollLines / maxScroll
+    const thumbY = trackY + (trackH - thumbH) * (1 - scrollRatio)
+    this.logScrollThumb.setPosition(trackX, thumbY)
+    this.logScrollThumb.setSize(barW, thumbH)
+    this.syncHitArea(this.logScrollThumb)
   }
 
   private describeAttack(attackerName: string, defenderName: string, result: AttackResult): string {
