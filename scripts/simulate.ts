@@ -1,13 +1,18 @@
 #!/usr/bin/env node
 // Headless battle simulator for balancing: runs the same BattleEngine the
-// game uses, many times with a "always attack" policy, and writes every
-// event to a JSONL file plus a summary of win rate / damage / hit rate.
+// game uses many times, with each side driven by a named policy, and writes
+// every event to a JSONL file plus a summary of win rate / damage / hit rate.
+// Each battle's battle_start event records its seed and policies, so any
+// single battle can be replayed.
 //
 // Usage: node scripts/simulate.ts [--battles 1000] [--out battles.jsonl] [--seed 1] [--max-rounds 200]
+//                                 [--player-policy aggressive] [--enemy-policy aggressive]
 import { writeFileSync } from 'node:fs'
 import { createWarrior, deriveCombatStats } from '../src/character/character.ts'
-import { GOBLIN_STATS, type RNG } from '../src/combat/combat.ts'
-import { BattleEngine, type BattleEvent } from '../src/engine/battleEngine.ts'
+import { GOBLIN_STATS } from '../src/combat/combat.ts'
+import { mulberry32, randomSeed } from '../src/combat/rng.ts'
+import { BattleEngine, type BattleEvent, type Side } from '../src/engine/battleEngine.ts'
+import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.ts'
 
 const WARRIOR_STATS = deriveCombatStats(createWarrior())
 
@@ -16,10 +21,28 @@ interface CliArgs {
   outPath: string
   seed: number | null
   maxRounds: number
+  policies: Record<Side, PolicyName>
+}
+
+function positiveInt(flag: string, raw: string): number {
+  const n = Number(raw)
+  if (!Number.isInteger(n) || n < 1) throw new Error(`${flag} must be a positive integer, got "${raw}"`)
+  return n
+}
+
+function policyName(flag: string, raw: string): PolicyName {
+  if (!isPolicyName(raw)) throw new Error(`${flag} must be one of ${Object.keys(POLICIES).join(', ')}, got "${raw}"`)
+  return raw
 }
 
 function parseArgs(argv: string[]): CliArgs {
-  const args: CliArgs = { battles: 1000, outPath: 'battles.jsonl', seed: null, maxRounds: 200 }
+  const args: CliArgs = {
+    battles: 1000,
+    outPath: 'battles.jsonl',
+    seed: null,
+    maxRounds: 200,
+    policies: { player: 'aggressive', enemy: 'aggressive' },
+  }
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i]
     const value = () => {
@@ -29,16 +52,23 @@ function parseArgs(argv: string[]): CliArgs {
     }
     switch (flag) {
       case '--battles':
-        args.battles = Number(value())
+        args.battles = positiveInt(flag, value())
         break
       case '--out':
         args.outPath = value()
         break
       case '--seed':
         args.seed = Number(value())
+        if (!Number.isInteger(args.seed)) throw new Error(`--seed must be an integer`)
         break
       case '--max-rounds':
-        args.maxRounds = Number(value())
+        args.maxRounds = positiveInt(flag, value())
+        break
+      case '--player-policy':
+        args.policies.player = policyName(flag, value())
+        break
+      case '--enemy-policy':
+        args.policies.enemy = policyName(flag, value())
         break
       default:
         throw new Error(`Unknown argument: ${flag}`)
@@ -47,30 +77,23 @@ function parseArgs(argv: string[]): CliArgs {
   return args
 }
 
-// Small, fast, seedable PRNG (mulberry32) so runs are reproducible.
-function mulberry32(seed: number): RNG {
-  let state = seed
-  return () => {
-    state |= 0
-    state = (state + 0x6d2b79f5) | 0
-    let t = Math.imul(state ^ (state >>> 15), 1 | state)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
 type LoggedEvent = BattleEvent & { battleId: number }
 
-function runBattle(battleId: number, rng: RNG, maxRounds: number): LoggedEvent[] {
-  const engine = new BattleEngine({ player: WARRIOR_STATS, enemy: GOBLIN_STATS }, rng)
+function runBattle(battleId: number, seed: number, args: CliArgs): LoggedEvent[] {
+  const engine = new BattleEngine(
+    { player: WARRIOR_STATS, enemy: GOBLIN_STATS },
+    { seed, meta: { source: 'simulate', policies: args.policies } },
+  )
+  // Policies get their own stream so swapping one doesn't change the dice.
+  const policyRng = mulberry32(seed ^ 0x9e3779b9)
 
-  let guard = 0
-  while (engine.getState().phase !== 'over') {
-    if (guard++ > maxRounds * 2) {
-      throw new Error(`Battle ${battleId} did not resolve within ${maxRounds} rounds`)
+  for (let state = engine.getState(); state.phase !== 'over'; state = engine.getState()) {
+    if (state.round > args.maxRounds) {
+      throw new Error(`Battle ${battleId} (seed ${seed}) did not resolve within ${args.maxRounds} rounds`)
     }
-    engine.playerAttack()
-    if (engine.getState().phase === 'enemy') engine.enemyTurn()
+    const side = state.phase
+    const policy = POLICIES[args.policies[side]]
+    engine.step(policy({ state, side, legal: engine.legalActions(), rng: policyRng }))
   }
 
   return engine.getLog().map((event) => ({ ...event, battleId }))
@@ -106,7 +129,7 @@ function summarize(events: LoggedEvent[], battles: number): Summary {
     if (event.type === 'battle_end') {
       totalRounds += event.round
       if (event.winner === 'player') playerWins++
-      else enemyWins++
+      else if (event.winner === 'enemy') enemyWins++
     }
     if (event.type === 'attack') {
       if (event.attacker === 'player') {
@@ -139,17 +162,19 @@ function summarize(events: LoggedEvent[], battles: number): Summary {
 
 function main(): void {
   const args = parseArgs(process.argv.slice(2))
-  const baseSeed = args.seed ?? Date.now()
+  const baseSeed = args.seed ?? randomSeed()
 
   const allEvents: LoggedEvent[] = []
   for (let battleId = 0; battleId < args.battles; battleId++) {
-    allEvents.push(...runBattle(battleId, mulberry32(baseSeed + battleId), args.maxRounds))
+    allEvents.push(...runBattle(battleId, (baseSeed + battleId) >>> 0, args))
   }
 
   writeFileSync(args.outPath, allEvents.map((event) => JSON.stringify(event)).join('\n') + '\n')
 
   const summary = summarize(allEvents, args.battles)
-  console.log(`Simulated ${args.battles} battles (seed ${baseSeed}) -> ${args.outPath}`)
+  console.log(
+    `Simulated ${args.battles} battles (seed ${baseSeed}, player ${args.policies.player} vs enemy ${args.policies.enemy}) -> ${args.outPath}`,
+  )
   console.table(summary)
 }
 

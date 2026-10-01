@@ -1,13 +1,18 @@
 import { resolveAttack, type CombatantStats, type RNG } from '../combat/combat.ts'
+import { mulberry32, randomSeed } from '../combat/rng.ts'
+
+/** Bump when event shapes change so log consumers can tell formats apart. */
+export const LOG_SCHEMA_VERSION = 2
 
 export type Side = 'player' | 'enemy'
 export type Phase = Side | 'over'
 
-export interface UnitSnapshot {
+export type Action = { type: 'attack' } | { type: 'end_turn' }
+
+/** Everything an agent may observe about a unit: its full stat block plus current HP. */
+export interface UnitSnapshot extends CombatantStats {
   side: Side
-  name: string
   hp: number
-  maxHp: number
 }
 
 export interface BattleState {
@@ -25,6 +30,11 @@ interface EventBase {
 
 export interface BattleStartEvent extends EventBase {
   type: 'battle_start'
+  schemaVersion: number
+  /** Seed of the engine's RNG; null when the caller injected its own RNG. */
+  seed: number | null
+  /** Free-form caller context (policies, source, build...) for log analysis. */
+  meta: Record<string, unknown>
   player: UnitSnapshot
   enemy: UnitSnapshot
 }
@@ -49,18 +59,33 @@ export interface EndTurnEvent extends EventBase {
 
 export interface BattleEndEvent extends EventBase {
   type: 'battle_end'
-  winner: Side
+  /** null when the battle was abandoned before anyone fell. */
+  winner: Side | null
+  reason: 'defeat' | 'abandoned'
 }
 
 export type BattleEvent = BattleStartEvent | AttackEvent | EndTurnEvent | BattleEndEvent
 
+export interface BattleOptions {
+  /** Seed for the built-in RNG; a random one is chosen (and logged) if omitted. */
+  seed?: number
+  /** Overrides the seeded RNG entirely, e.g. scripted rolls in tests. */
+  rng?: RNG
+  /** Lets a unit enter battle already wounded; defaults to maxHp. */
+  startHp?: Partial<Record<Side, number>>
+  meta?: Record<string, unknown>
+}
+
+const ALL_ACTIONS: readonly Action[] = [{ type: 'attack' }, { type: 'end_turn' }]
+
 const other = (side: Side): Side => (side === 'player' ? 'enemy' : 'player')
 
 /**
- * Pure, Phaser-free battle simulation: turn order, attack resolution and a
- * structured event log. Scenes render it; scripts/simulate.ts drives it
- * headlessly for balancing. Both consume the same events, so manual play and
- * batch simulation always agree on what "a battle" means.
+ * Pure, Phaser-free battle rules: turn order, attack resolution and a
+ * structured event log. It's side-agnostic — whoever's phase it is acts via
+ * step(), so the UI, scripted policies and AI agents all drive it the same
+ * way. Given the seed in battle_start and the actions in the log, a battle
+ * replays exactly.
  */
 export class BattleEngine {
   private seq = 0
@@ -72,15 +97,24 @@ export class BattleEngine {
   private readonly stats: Record<Side, CombatantStats>
   private readonly rng: RNG
 
-  /** startHp lets a unit enter battle already wounded; defaults to maxHp. */
-  constructor(stats: Record<Side, CombatantStats>, rng: RNG = Math.random, startHp: Partial<Record<Side, number>> = {}) {
+  constructor(stats: Record<Side, CombatantStats>, options: BattleOptions = {}) {
     this.stats = stats
-    this.rng = rng
+    let seed: number | null = null
+    if (options.rng) {
+      this.rng = options.rng
+    } else {
+      seed = options.seed ?? randomSeed()
+      this.rng = mulberry32(seed)
+    }
+    const startHp = options.startHp ?? {}
     const initialHp = (side: Side) => Math.min(startHp[side] ?? stats[side].maxHp, stats[side].maxHp)
     this.hp = { player: initialHp('player'), enemy: initialHp('enemy') }
     this.record<BattleStartEvent>({
       type: 'battle_start',
       round: this.round,
+      schemaVersion: LOG_SCHEMA_VERSION,
+      seed,
+      meta: options.meta ?? {},
       player: this.snapshot('player'),
       enemy: this.snapshot('enemy'),
     })
@@ -100,27 +134,33 @@ export class BattleEngine {
     return this.events
   }
 
-  playerAttack(): BattleEvent[] {
-    if (this.phase !== 'player') return []
-    const events = this.attack('player')
-    if (this.winner === null) this.phase = 'enemy'
-    return events
+  /** Actions available to the side whose phase it is; empty once the battle is over. */
+  legalActions(): readonly Action[] {
+    return this.phase === 'over' ? [] : ALL_ACTIONS
   }
 
-  playerEndTurn(): BattleEvent[] {
-    if (this.phase !== 'player') return []
-    this.phase = 'enemy'
-    return [this.record<EndTurnEvent>({ type: 'end_turn', round: this.round, side: 'player' })]
-  }
+  /** Performs an action for the side whose phase it is. Throws if the battle is over. */
+  step(action: Action): BattleEvent[] {
+    const side = this.phase
+    if (side === 'over') throw new Error(`Cannot ${action.type}: the battle is over`)
 
-  enemyTurn(): BattleEvent[] {
-    if (this.phase !== 'enemy') return []
-    const events = this.attack('enemy')
+    const events =
+      action.type === 'attack'
+        ? this.attack(side)
+        : [this.record<EndTurnEvent>({ type: 'end_turn', round: this.round, side })]
+
     if (this.winner === null) {
-      this.round += 1
-      this.phase = 'player'
+      if (side === 'enemy') this.round += 1
+      this.phase = other(side)
     }
     return events
+  }
+
+  /** Ends an unfinished battle (e.g. the player quit) so its log is still complete. */
+  abandon(): BattleEvent[] {
+    if (this.phase === 'over') return []
+    this.phase = 'over'
+    return [this.record<BattleEndEvent>({ type: 'battle_end', round: this.round, winner: null, reason: 'abandoned' })]
   }
 
   private attack(side: Side): BattleEvent[] {
@@ -147,14 +187,16 @@ export class BattleEngine {
     if (this.hp[defender] <= 0) {
       this.winner = side
       this.phase = 'over'
-      events.push(this.record<BattleEndEvent>({ type: 'battle_end', round: this.round, winner: side }))
+      events.push(
+        this.record<BattleEndEvent>({ type: 'battle_end', round: this.round, winner: side, reason: 'defeat' }),
+      )
     }
 
     return events
   }
 
   private snapshot(side: Side): UnitSnapshot {
-    return { side, name: this.stats[side].name, hp: this.hp[side], maxHp: this.stats[side].maxHp }
+    return { ...this.stats[side], side, hp: this.hp[side] }
   }
 
   private record<E extends BattleEvent>(event: Omit<E, 'seq'>): E {
@@ -182,6 +224,7 @@ export function formatEvent(event: BattleEvent, names: Record<Side, string>): st
     case 'end_turn':
       return `${names[event.side]} holds position and ends the turn.`
     case 'battle_end':
+      if (event.winner === null) return 'The battle is abandoned.'
       return event.winner === 'player' ? `${names.enemy} falls. Victory!` : `${names.player} falls. Defeat...`
   }
 }

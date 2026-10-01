@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { deriveCombatStats } from '../character/character.ts'
 import { GOBLIN_STATS } from '../combat/combat.ts'
 import { BattleEngine, formatEvent, type BattleEvent, type Side, type UnitSnapshot } from '../engine/battleEngine.ts'
+import { POLICIES, type PolicyName } from '../engine/policies.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 
 interface BattleData {
@@ -29,11 +30,13 @@ const LOG_LINE_H = 20
 const LOG_BOX_PADDING = 10
 const LOG_BOX_H = LOG_VISIBLE_LINES * LOG_LINE_H + LOG_BOX_PADDING * 2
 const LOG_BOX_GAP = 14
+const ENEMY_POLICY: PolicyName = 'aggressive'
 
 export class BattleScene extends Phaser.Scene {
   private gameState!: GameState
   private engine!: BattleEngine
   private names!: Record<Side, string>
+  private logDumped = false
   private warrior!: Unit
   private goblin!: Unit
 
@@ -69,13 +72,17 @@ export class BattleScene extends Phaser.Scene {
     this.gameState = data?.game ?? newGame()
     const player = this.gameState.player
     const playerStats = deriveCombatStats(player)
-    this.engine = new BattleEngine({ player: playerStats, enemy: GOBLIN_STATS }, Math.random, { player: player.hp })
+    this.engine = new BattleEngine(
+      { player: playerStats, enemy: GOBLIN_STATS },
+      { startHp: { player: player.hp }, meta: { source: 'game', enemyPolicy: ENEMY_POLICY } },
+    )
     this.names = { player: playerStats.name, enemy: GOBLIN_STATS.name }
     // Phaser reuses the scene instance on restart, so field initializers
     // don't run again — reset per-battle state explicitly.
     this.logLines = []
     this.logScrollLines = 0
     this.logAutoScroll = true
+    this.logDumped = false
 
     this.floorLayer = this.add.container(0, 0)
     this.unitLayer = this.add.container(0, 0)
@@ -141,6 +148,9 @@ export class BattleScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
+      // Leaving mid-battle (e.g. "New" from the pause menu) still yields a complete log.
+      this.engine.abandon()
+      this.dumpLog()
     })
 
     this.input.keyboard?.on('keydown-I', () => this.openInventory())
@@ -454,7 +464,7 @@ export class BattleScene extends Phaser.Scene {
     this.setButtonEnabled(this.attackButton, false)
     this.setButtonEnabled(this.endTurnButton, false)
 
-    this.applyEvents(this.engine.playerAttack())
+    this.applyEvents(this.engine.step({ type: 'attack' }))
 
     if (this.engine.getState().phase === 'over') {
       this.endBattle()
@@ -468,7 +478,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.engine.getState().phase !== 'player') return
     this.setButtonEnabled(this.attackButton, false)
     this.setButtonEnabled(this.endTurnButton, false)
-    this.applyEvents(this.engine.playerEndTurn())
+    this.applyEvents(this.engine.step({ type: 'end_turn' }))
     this.time.delayedCall(300, () => this.startEnemyTurn())
   }
 
@@ -476,7 +486,9 @@ export class BattleScene extends Phaser.Scene {
     this.updateRoundText()
 
     this.time.delayedCall(500, () => {
-      this.applyEvents(this.engine.enemyTurn())
+      const state = this.engine.getState()
+      const action = POLICIES[ENEMY_POLICY]({ state, side: 'enemy', legal: this.engine.legalActions(), rng: Math.random })
+      this.applyEvents(this.engine.step(action))
 
       if (this.engine.getState().phase === 'over') {
         this.endBattle()
@@ -505,7 +517,13 @@ export class BattleScene extends Phaser.Scene {
     this.bannerText.setColor(playerWon ? '#66bb6a' : '#ef5350')
     this.bannerText.setVisible(true)
     this.updateRoundText()
-    // Structured dump for balancing/AI tooling to scrape from devtools.
+    this.dumpLog()
+  }
+
+  /** Structured dump for balancing/AI tooling to scrape from devtools; once per battle. */
+  private dumpLog(): void {
+    if (this.logDumped) return
+    this.logDumped = true
     console.info('[battle-log]', JSON.stringify(this.engine.getLog()))
   }
 }
