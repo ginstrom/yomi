@@ -12,6 +12,7 @@ import {
 export interface BaseStats {
   maxHp: number
   attackBonus: number
+  speed: number
 }
 
 /**
@@ -53,11 +54,12 @@ export function deriveCombatStats(character: Character): CombatantStats {
     ac: baseAc + acBonus,
     attackBonus,
     damage,
+    speed: character.base.speed,
   }
 }
 
 export function createWarrior(): Character {
-  const base: BaseStats = { maxHp: 20, attackBonus: 4 }
+  const base: BaseStats = { maxHp: 20, attackBonus: 4, speed: 3 }
   return {
     name: 'Warrior',
     className: 'Fighter',

@@ -10,10 +10,10 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { createWarrior, deriveCombatStats } from '../src/character/character.ts'
-import { GOBLIN_STATS } from '../src/combat/combat.ts'
 import { mulberry32, randomSeed } from '../src/combat/rng.ts'
-import { BattleEngine, type BattleEvent, type Side } from '../src/engine/battleEngine.ts'
+import { BattleEngine, type BattleEvent, type Side, type UnitId } from '../src/engine/battleEngine.ts'
 import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.ts'
+import { goblinEncounter } from '../src/game/encounters.ts'
 
 const WARRIOR_STATS = deriveCombatStats(createWarrior())
 
@@ -81,20 +81,21 @@ function parseArgs(argv: string[]): CliArgs {
 type LoggedEvent = BattleEvent & { battleId: number }
 
 function runBattle(battleId: number, seed: number, args: CliArgs): LoggedEvent[] {
-  const engine = new BattleEngine(
-    { player: WARRIOR_STATS, enemy: GOBLIN_STATS },
-    { seed, meta: { source: 'simulate', policies: args.policies } },
-  )
+  const engine = new BattleEngine(goblinEncounter(WARRIOR_STATS), {
+    seed,
+    meta: { source: 'simulate', policies: args.policies },
+  })
   // Policies get their own stream so swapping one doesn't change the dice.
   const policyRng = mulberry32(seed ^ 0x9e3779b9)
 
   for (let state = engine.getState(); state.phase !== 'over'; state = engine.getState()) {
+    // Aimless policies (e.g. random) can circle forever; log those as abandoned.
     if (state.round > args.maxRounds) {
-      throw new Error(`Battle ${battleId} (seed ${seed}) did not resolve within ${args.maxRounds} rounds`)
+      engine.abandon()
+      break
     }
-    const side = state.phase
-    const policy = POLICIES[args.policies[side]]
-    engine.step(policy({ state, side, legal: engine.legalActions(), rng: policyRng }))
+    const policy = POLICIES[args.policies[state.phase]]
+    engine.step(policy({ state, unit: state.active!, legal: engine.legalActions(), rng: policyRng }))
   }
 
   return engine.getLog().map((event) => ({ ...event, battleId }))
@@ -104,6 +105,8 @@ interface Summary {
   battles: number
   playerWins: number
   enemyWins: number
+  /** Battles abandoned at --max-rounds. */
+  unresolved: number
   avgRounds: number
   avgPlayerDamageDealt: number
   avgEnemyDamageDealt: number
@@ -125,15 +128,18 @@ function summarize(events: LoggedEvent[], battles: number): Summary {
   let enemyHits = 0
   let playerCrits = 0
   let enemyCrits = 0
+  // Attacks name units; each battle's battle_start says which side they're on.
+  let sideOf = new Map<UnitId, Side>()
 
   for (const event of events) {
+    if (event.type === 'battle_start') sideOf = new Map(event.units.map((u) => [u.id, u.side]))
     if (event.type === 'battle_end') {
       totalRounds += event.round
       if (event.winner === 'player') playerWins++
       else if (event.winner === 'enemy') enemyWins++
     }
     if (event.type === 'attack') {
-      if (event.attacker === 'player') {
+      if (sideOf.get(event.attacker) === 'player') {
         playerAttacks++
         playerDamage += event.damage
         if (event.hit) playerHits++
@@ -151,6 +157,7 @@ function summarize(events: LoggedEvent[], battles: number): Summary {
     battles,
     playerWins,
     enemyWins,
+    unresolved: battles - playerWins - enemyWins,
     avgRounds: totalRounds / battles,
     avgPlayerDamageDealt: playerDamage / battles,
     avgEnemyDamageDealt: enemyDamage / battles,

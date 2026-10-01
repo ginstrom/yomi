@@ -268,6 +268,7 @@ export class InventoryScene extends Phaser.Scene {
       `Armor Class:   ${this.stats.ac}`,
       `Attack Bonus:  +${this.stats.attackBonus}`,
       `Damage:        ${formatDamage(this.stats.damage)}`,
+      `Speed:         ${this.stats.speed}`,
     ]
   }
 

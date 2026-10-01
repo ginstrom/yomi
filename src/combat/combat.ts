@@ -10,6 +10,8 @@ export interface CombatantStats {
   ac: number
   attackBonus: number
   damage: DamageRoll
+  /** Hexes the unit can move in one turn. */
+  speed: number
 }
 
 export interface AttackResult {
@@ -67,4 +69,5 @@ export const GOBLIN_STATS: CombatantStats = {
   ac: 13,
   attackBonus: 3,
   damage: { count: 1, sides: 6, bonus: 1 },
+  speed: 4,
 }
