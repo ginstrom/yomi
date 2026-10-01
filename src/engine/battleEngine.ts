@@ -72,10 +72,12 @@ export class BattleEngine {
   private readonly stats: Record<Side, CombatantStats>
   private readonly rng: RNG
 
-  constructor(stats: Record<Side, CombatantStats>, rng: RNG = Math.random) {
+  /** startHp lets a unit enter battle already wounded; defaults to maxHp. */
+  constructor(stats: Record<Side, CombatantStats>, rng: RNG = Math.random, startHp: Partial<Record<Side, number>> = {}) {
     this.stats = stats
     this.rng = rng
-    this.hp = { player: stats.player.maxHp, enemy: stats.enemy.maxHp }
+    const initialHp = (side: Side) => Math.min(startHp[side] ?? stats[side].maxHp, stats[side].maxHp)
+    this.hp = { player: initialHp('player'), enemy: initialHp('enemy') }
     this.record<BattleStartEvent>({
       type: 'battle_start',
       round: this.round,

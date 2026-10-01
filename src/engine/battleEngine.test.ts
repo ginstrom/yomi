@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { GOBLIN_STATS, WARRIOR_STATS } from '../combat/combat.ts'
+import { GOBLIN_STATS, type CombatantStats } from '../combat/combat.ts'
 import { BattleEngine, formatEvent, type AttackEvent, type BattleEndEvent } from './battleEngine.ts'
 
 function sequence(values: number[]): () => number {
   let i = 0
   return () => values[Math.min(i++, values.length - 1)]
+}
+
+const WARRIOR_STATS: CombatantStats = {
+  name: 'Warrior',
+  maxHp: 20,
+  ac: 15,
+  attackBonus: 4,
+  damage: { count: 1, sides: 8, bonus: 2 },
 }
 
 const STATS = { player: WARRIOR_STATS, enemy: GOBLIN_STATS }
@@ -20,6 +28,12 @@ describe('BattleEngine', () => {
     expect(state.enemy.hp).toBe(GOBLIN_STATS.maxHp)
     expect(engine.getLog()).toHaveLength(1)
     expect(engine.getLog()[0].type).toBe('battle_start')
+  })
+
+  it('can start a unit wounded, capped at maxHp', () => {
+    const engine = new BattleEngine(STATS, Math.random, { player: 7, enemy: 999 })
+    expect(engine.getState().player.hp).toBe(7)
+    expect(engine.getState().enemy.hp).toBe(GOBLIN_STATS.maxHp)
   })
 
   it('ignores actions that do not match the current phase', () => {

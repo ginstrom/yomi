@@ -1,17 +1,13 @@
 import Phaser from 'phaser'
-import { WARRIOR_STATS } from '../combat/combat.ts'
-import {
-  EQUIPMENT_SLOT_LABELS,
-  PLAYER_BACKPACK,
-  PLAYER_EQUIPMENT,
-  type EquipmentSlot,
-  type Item,
-} from '../inventory/inventory.ts'
+import { deriveCombatStats, type Character } from '../character/character.ts'
+import { formatDamage, type CombatantStats } from '../combat/combat.ts'
+import type { GameState } from '../game/gameState.ts'
+import { EQUIPMENT_SLOT_LABELS, describeItemStats, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
 
 type PanelTab = 'character' | 'inventory'
 
 interface InventoryData {
-  hp?: number
+  game: GameState
   tab?: PanelTab
 }
 
@@ -31,7 +27,8 @@ interface TabButton {
 
 export class InventoryScene extends Phaser.Scene {
   private activeTab: PanelTab = 'inventory'
-  private hp = 0
+  private character!: Character
+  private stats!: CombatantStats
   private dimBg!: Phaser.GameObjects.Rectangle
   private panel!: Phaser.GameObjects.Container
   private characterContent!: Phaser.GameObjects.Container
@@ -46,7 +43,8 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   create(data: InventoryData): void {
-    this.hp = data?.hp ?? WARRIOR_STATS.maxHp
+    this.character = data.game.player
+    this.stats = deriveCombatStats(this.character)
 
     this.dimBg = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.6).setOrigin(0.5)
     this.panel = this.add.container(0, 0)
@@ -127,10 +125,10 @@ export class InventoryScene extends Phaser.Scene {
 
   private buildCharacterTab(): void {
     const title = this.add
-      .text(PANEL_W / 2, 70, WARRIOR_STATS.name, { fontFamily: 'monospace', fontSize: '26px', color: '#e8c766' })
+      .text(PANEL_W / 2, 70, this.character.name, { fontFamily: 'monospace', fontSize: '26px', color: '#e8c766' })
       .setOrigin(0.5)
     const subtitle = this.add
-      .text(PANEL_W / 2, 98, 'Fighter', { fontFamily: 'monospace', fontSize: '14px', color: '#8a7a5a' })
+      .text(PANEL_W / 2, 98, this.character.className, { fontFamily: 'monospace', fontSize: '14px', color: '#8a7a5a' })
       .setOrigin(0.5)
     this.characterContent.add([title, subtitle])
 
@@ -144,14 +142,7 @@ export class InventoryScene extends Phaser.Scene {
     portrait.setScale(portraitScale)
     this.characterContent.add([portraitBg, portrait])
 
-    const lines = [
-      `Class:         Fighter`,
-      ``,
-      `Hit Points:    ${this.hp} / ${WARRIOR_STATS.maxHp}`,
-      `Armor Class:   ${WARRIOR_STATS.ac}`,
-      `Attack Bonus:  +${WARRIOR_STATS.attackBonus}`,
-      `Damage:        1d${WARRIOR_STATS.damage.sides}+${WARRIOR_STATS.damage.bonus}`,
-    ]
+    const lines = [`Class:         ${this.character.className}`, ``, ...this.statLines()]
     const statsBlock = this.add.text(360, 170, lines.join('\n'), {
       fontFamily: 'monospace',
       fontSize: '15px',
@@ -165,9 +156,9 @@ export class InventoryScene extends Phaser.Scene {
 
   private buildCharacterBadges(y: number): void {
     const badges: Array<{ label: string; value: string }> = [
-      { label: 'AC', value: `${WARRIOR_STATS.ac}` },
-      { label: 'HP', value: `${this.hp}/${WARRIOR_STATS.maxHp}` },
-      { label: 'ATK', value: `+${WARRIOR_STATS.attackBonus}` },
+      { label: 'AC', value: `${this.stats.ac}` },
+      { label: 'HP', value: `${this.character.hp}/${this.stats.maxHp}` },
+      { label: 'ATK', value: `+${this.stats.attackBonus}` },
     ]
     const badgeW = 90
     const badgeH = 56
@@ -222,7 +213,7 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   private createSlot(x: number, y: number, slot: EquipmentSlot): void {
-    const item = PLAYER_EQUIPMENT[slot]
+    const item = this.character.equipment[slot]
     const bg = this.add.rectangle(x, y, SLOT_SIZE, SLOT_SIZE, 0x1b1712, 0.9).setStrokeStyle(2, 0x6b5a3a)
     this.inventoryContent.add(bg)
 
@@ -254,19 +245,13 @@ export class InventoryScene extends Phaser.Scene {
 
   private buildStats(): void {
     const nameText = this.add
-      .text(STATS_X, 70, WARRIOR_STATS.name, { fontFamily: 'monospace', fontSize: '20px', color: '#e8c766' })
+      .text(STATS_X, 70, this.character.name, { fontFamily: 'monospace', fontSize: '20px', color: '#e8c766' })
       .setOrigin(0, 0.5)
     const classText = this.add
-      .text(STATS_X, 94, 'Fighter', { fontFamily: 'monospace', fontSize: '13px', color: '#8a7a5a' })
+      .text(STATS_X, 94, this.character.className, { fontFamily: 'monospace', fontSize: '13px', color: '#8a7a5a' })
       .setOrigin(0, 0.5)
 
-    const lines = [
-      `Armor Class:   ${WARRIOR_STATS.ac}`,
-      `Hit Points:    ${this.hp} / ${WARRIOR_STATS.maxHp}`,
-      `Attack Bonus:  +${WARRIOR_STATS.attackBonus}`,
-      `Damage:        1d${WARRIOR_STATS.damage.sides}+${WARRIOR_STATS.damage.bonus}`,
-    ]
-    const statsBody = this.add.text(STATS_X, 130, lines.join('\n'), {
+    const statsBody = this.add.text(STATS_X, 130, this.statLines().join('\n'), {
       fontFamily: 'monospace',
       fontSize: '14px',
       color: '#d8c9a3',
@@ -274,6 +259,15 @@ export class InventoryScene extends Phaser.Scene {
     })
 
     this.inventoryContent.add([nameText, classText, statsBody])
+  }
+
+  private statLines(): string[] {
+    return [
+      `Hit Points:    ${this.character.hp} / ${this.stats.maxHp}`,
+      `Armor Class:   ${this.stats.ac}`,
+      `Attack Bonus:  +${this.stats.attackBonus}`,
+      `Damage:        ${formatDamage(this.stats.damage)}`,
+    ]
   }
 
   private buildBackpack(): void {
@@ -288,7 +282,7 @@ export class InventoryScene extends Phaser.Scene {
     const startX = PANEL_W / 2 - totalW / 2 + SLOT_SIZE / 2
     const startY = 400
 
-    PLAYER_BACKPACK.forEach((item, i) => {
+    this.character.backpack.forEach((item, i) => {
       const col = i % cols
       const row = Math.floor(i / cols)
       const x = startX + col * (SLOT_SIZE + gap)
@@ -330,7 +324,7 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   private showTooltip(item: Item, x: number, y: number): void {
-    this.tooltipText.setText(`${item.name}\n${item.description}`)
+    this.tooltipText.setText([item.name, item.description, ...describeItemStats(item.stats)].join('\n'))
     this.tooltipText.setPosition(-this.tooltipText.width / 2, -this.tooltipText.height - 6)
     this.tooltipBg.setSize(this.tooltipText.width + 16, this.tooltipText.height + 12)
     this.tooltipBg.setPosition(0, -this.tooltipText.height / 2 - 6)

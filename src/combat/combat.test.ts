@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { GOBLIN_STATS, WARRIOR_STATS, resolveAttack, rollDamage, rollDie } from './combat.ts'
+import { GOBLIN_STATS, formatDamage, resolveAttack, rollDamage, rollDie, type CombatantStats } from './combat.ts'
+
+const WARRIOR_STATS: CombatantStats = {
+  name: 'Warrior',
+  maxHp: 20,
+  ac: 15,
+  attackBonus: 4,
+  damage: { count: 1, sides: 8, bonus: 2 },
+}
 
 function sequence(values: number[]): () => number {
   let i = 0
@@ -53,5 +61,13 @@ describe('resolveAttack', () => {
     const result = resolveAttack(GOBLIN_STATS, 25, rng)
     expect(result.hit).toBe(false)
     expect(result.damage).toBe(0)
+  })
+})
+
+describe('formatDamage', () => {
+  it('renders dice notation with signed bonuses', () => {
+    expect(formatDamage({ count: 1, sides: 8, bonus: 2 })).toBe('1d8+2')
+    expect(formatDamage({ count: 2, sides: 6, bonus: 0 })).toBe('2d6')
+    expect(formatDamage({ count: 1, sides: 4, bonus: -1 })).toBe('1d4-1')
   })
 })

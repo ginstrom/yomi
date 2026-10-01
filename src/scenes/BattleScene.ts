@@ -1,10 +1,14 @@
 import Phaser from 'phaser'
-import { GOBLIN_STATS, WARRIOR_STATS, type CombatantStats } from '../combat/combat.ts'
-import { BattleEngine, formatEvent, type BattleEvent, type Side } from '../engine/battleEngine.ts'
+import { deriveCombatStats } from '../character/character.ts'
+import { GOBLIN_STATS } from '../combat/combat.ts'
+import { BattleEngine, formatEvent, type BattleEvent, type Side, type UnitSnapshot } from '../engine/battleEngine.ts'
+import { newGame, type GameState } from '../game/gameState.ts'
+
+interface BattleData {
+  game?: GameState
+}
 
 interface Unit {
-  stats: CombatantStats
-  hp: number
   sprite: Phaser.GameObjects.Sprite
   shadow: Phaser.GameObjects.Ellipse
   hpBarBg: Phaser.GameObjects.Rectangle
@@ -27,6 +31,7 @@ const LOG_BOX_H = LOG_VISIBLE_LINES * LOG_LINE_H + LOG_BOX_PADDING * 2
 const LOG_BOX_GAP = 14
 
 export class BattleScene extends Phaser.Scene {
+  private gameState!: GameState
   private engine!: BattleEngine
   private names!: Record<Side, string>
   private warrior!: Unit
@@ -60,9 +65,12 @@ export class BattleScene extends Phaser.Scene {
     this.load.image('tile_dark', 'assets/sprites/tile_dark.png')
   }
 
-  create(): void {
-    this.engine = new BattleEngine({ player: WARRIOR_STATS, enemy: GOBLIN_STATS })
-    this.names = { player: WARRIOR_STATS.name, enemy: GOBLIN_STATS.name }
+  create(data: BattleData): void {
+    this.gameState = data?.game ?? newGame()
+    const player = this.gameState.player
+    const playerStats = deriveCombatStats(player)
+    this.engine = new BattleEngine({ player: playerStats, enemy: GOBLIN_STATS }, Math.random, { player: player.hp })
+    this.names = { player: playerStats.name, enemy: GOBLIN_STATS.name }
     // Phaser reuses the scene instance on restart, so field initializers
     // don't run again — reset per-battle state explicitly.
     this.logLines = []
@@ -73,10 +81,8 @@ export class BattleScene extends Phaser.Scene {
     this.unitLayer = this.add.container(0, 0)
     this.buildFloor()
 
-    this.warrior = this.createUnit(WARRIOR_STATS, 'warrior', 1, 2, false)
-    this.goblin = this.createUnit(GOBLIN_STATS, 'goblin', GRID_COLS - 2, 2, true)
-    this.refreshHpDisplay(this.warrior)
-    this.refreshHpDisplay(this.goblin)
+    this.warrior = this.createUnit(this.names.player, 'warrior', 1, 2, false)
+    this.goblin = this.createUnit(this.names.enemy, 'goblin', GRID_COLS - 2, 2, true)
 
     this.roundText = this.add
       .text(20, 16, '', { fontFamily: 'monospace', fontSize: '20px', color: '#ffffff' })
@@ -147,13 +153,13 @@ export class BattleScene extends Phaser.Scene {
 
   private openInventory(): void {
     if (this.scene.isPaused()) return
-    this.scene.launch('Inventory', { hp: this.warrior.hp, tab: 'inventory' })
+    this.scene.launch('Inventory', { game: this.gameState, tab: 'inventory' })
     this.scene.pause()
   }
 
   private openCharacter(): void {
     if (this.scene.isPaused()) return
-    this.scene.launch('Inventory', { hp: this.warrior.hp, tab: 'character' })
+    this.scene.launch('Inventory', { game: this.gameState, tab: 'character' })
     this.scene.pause()
   }
 
@@ -188,7 +194,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private createUnit(
-    stats: CombatantStats,
+    name: string,
     textureKey: string,
     col: number,
     row: number,
@@ -211,14 +217,12 @@ export class BattleScene extends Phaser.Scene {
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: '12px', color: '#ffffff' })
       .setOrigin(0.5, 1)
     const nameText = this.add
-      .text(0, 0, stats.name, { fontFamily: 'monospace', fontSize: '13px', color: '#ffffff' })
+      .text(0, 0, name, { fontFamily: 'monospace', fontSize: '13px', color: '#ffffff' })
       .setOrigin(0.5, 1)
 
     this.unitLayer.add([shadow, sprite, hpBarBg, hpBarFill, hpText, nameText])
 
     const unit: Unit = {
-      stats,
-      hp: stats.maxHp,
       sprite,
       shadow,
       hpBarBg,
@@ -318,11 +322,11 @@ export class BattleScene extends Phaser.Scene {
     unit.nameText.setPosition(x, unit.hpText.y - 16)
   }
 
-  private refreshHpDisplay(unit: Unit): void {
-    const ratio = Phaser.Math.Clamp(unit.hp / unit.stats.maxHp, 0, 1)
+  private refreshHpDisplay(unit: Unit, snapshot: UnitSnapshot): void {
+    const ratio = Phaser.Math.Clamp(snapshot.hp / snapshot.maxHp, 0, 1)
     unit.hpBarFill.width = unit.hpBarBg.width * ratio
     unit.hpBarFill.setFillStyle(ratio > 0.5 ? 0x43a047 : ratio > 0.2 ? 0xfb8c00 : 0xe53935)
-    unit.hpText.setText(`${Math.max(unit.hp, 0)} / ${unit.stats.maxHp}`)
+    unit.hpText.setText(`${snapshot.hp} / ${snapshot.maxHp}`)
   }
 
   private updateRoundText(): void {
@@ -437,12 +441,12 @@ export class BattleScene extends Phaser.Scene {
     this.syncUnitsFromEngine()
   }
 
+  /** The engine owns HP during battle; write it back to the persistent character. */
   private syncUnitsFromEngine(): void {
     const state = this.engine.getState()
-    this.warrior.hp = state.player.hp
-    this.goblin.hp = state.enemy.hp
-    this.refreshHpDisplay(this.warrior)
-    this.refreshHpDisplay(this.goblin)
+    this.gameState.player.hp = state.player.hp
+    this.refreshHpDisplay(this.warrior, state.player)
+    this.refreshHpDisplay(this.goblin, state.enemy)
   }
 
   private onAttack(): void {

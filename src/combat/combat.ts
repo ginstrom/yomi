@@ -55,12 +55,10 @@ export function resolveAttack(
   return { attackRoll, totalToHit, hit, critical, fumble, damage }
 }
 
-export const WARRIOR_STATS: CombatantStats = {
-  name: 'Warrior',
-  maxHp: 20,
-  ac: 15,
-  attackBonus: 4,
-  damage: { count: 1, sides: 8, bonus: 2 },
+/** "1d8+2" notation. */
+export function formatDamage(roll: DamageRoll): string {
+  const bonus = roll.bonus > 0 ? `+${roll.bonus}` : roll.bonus < 0 ? `${roll.bonus}` : ''
+  return `${roll.count}d${roll.sides}${bonus}`
 }
 
 export const GOBLIN_STATS: CombatantStats = {

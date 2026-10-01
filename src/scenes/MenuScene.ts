@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { newGame } from '../game/gameState.ts'
 
 interface MenuData {
   canContinue?: boolean
@@ -95,7 +96,7 @@ export class MenuScene extends Phaser.Scene {
 
   private onNew(): void {
     this.scene.stop()
-    this.scene.start('Battle')
+    this.scene.start('Battle', { game: newGame() })
   }
 
   private onContinue(): void {

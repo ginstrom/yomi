@@ -5,8 +5,11 @@
 //
 // Usage: node scripts/simulate.ts [--battles 1000] [--out battles.jsonl] [--seed 1] [--max-rounds 200]
 import { writeFileSync } from 'node:fs'
-import { GOBLIN_STATS, WARRIOR_STATS, type RNG } from '../src/combat/combat.ts'
+import { createWarrior, deriveCombatStats } from '../src/character/character.ts'
+import { GOBLIN_STATS, type RNG } from '../src/combat/combat.ts'
 import { BattleEngine, type BattleEvent } from '../src/engine/battleEngine.ts'
+
+const WARRIOR_STATS = deriveCombatStats(createWarrior())
 
 interface CliArgs {
   battles: number
