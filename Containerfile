@@ -1,4 +1,6 @@
-FROM node:22-slim
+# Keep in step with package.json "engines" and @types/node; scripts/*.ts
+# rely on Node running TypeScript natively.
+FROM node:26-slim
 
 WORKDIR /app
 

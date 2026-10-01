@@ -1,13 +1,17 @@
 {
   "name": "yomi",
   "private": true,
+  "engines": {
+    "node": ">=26"
+  },
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest run",
+    "typecheck": "tsc",
+    "test": "tsc && vitest run",
     "simulate": "node scripts/simulate.ts"
   },
   "devDependencies": {

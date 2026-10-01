@@ -5,9 +5,10 @@
 // Each battle's battle_start event records its seed and policies, so any
 // single battle can be replayed.
 //
-// Usage: node scripts/simulate.ts [--battles 1000] [--out battles.jsonl] [--seed 1] [--max-rounds 200]
+// Usage: node scripts/simulate.ts [--battles 1000] [--out logs/battles.jsonl] [--seed 1] [--max-rounds 200]
 //                                 [--player-policy aggressive] [--enemy-policy aggressive]
-import { writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
 import { createWarrior, deriveCombatStats } from '../src/character/character.ts'
 import { GOBLIN_STATS } from '../src/combat/combat.ts'
 import { mulberry32, randomSeed } from '../src/combat/rng.ts'
@@ -38,7 +39,7 @@ function policyName(flag: string, raw: string): PolicyName {
 function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = {
     battles: 1000,
-    outPath: 'battles.jsonl',
+    outPath: 'logs/battles.jsonl',
     seed: null,
     maxRounds: 200,
     policies: { player: 'aggressive', enemy: 'aggressive' },
@@ -169,6 +170,7 @@ function main(): void {
     allEvents.push(...runBattle(battleId, (baseSeed + battleId) >>> 0, args))
   }
 
+  mkdirSync(dirname(args.outPath), { recursive: true })
   writeFileSync(args.outPath, allEvents.map((event) => JSON.stringify(event)).join('\n') + '\n')
 
   const summary = summarize(allEvents, args.battles)
