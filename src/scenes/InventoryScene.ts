@@ -8,8 +8,11 @@ import {
   type Item,
 } from '../inventory/inventory.ts'
 
+type PanelTab = 'character' | 'inventory'
+
 interface InventoryData {
   hp?: number
+  tab?: PanelTab
 }
 
 const PANEL_W = 720
@@ -18,10 +21,22 @@ const SLOT_SIZE = 46
 const DOLL_X = 190
 const DOLL_Y = 210
 const STATS_X = 440
+const TAB_W = 140
+const TAB_H = 32
+
+interface TabButton {
+  bg: Phaser.GameObjects.Rectangle
+  text: Phaser.GameObjects.Text
+}
 
 export class InventoryScene extends Phaser.Scene {
+  private activeTab: PanelTab = 'inventory'
+  private hp = 0
   private dimBg!: Phaser.GameObjects.Rectangle
   private panel!: Phaser.GameObjects.Container
+  private characterContent!: Phaser.GameObjects.Container
+  private inventoryContent!: Phaser.GameObjects.Container
+  private tabButtons: Record<PanelTab, TabButton> = {} as Record<PanelTab, TabButton>
   private tooltip!: Phaser.GameObjects.Container
   private tooltipText!: Phaser.GameObjects.Text
   private tooltipBg!: Phaser.GameObjects.Rectangle
@@ -31,19 +46,32 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   create(data: InventoryData): void {
+    this.hp = data?.hp ?? WARRIOR_STATS.maxHp
+
     this.dimBg = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.6).setOrigin(0.5)
     this.panel = this.add.container(0, 0)
 
     this.buildFrame()
+    this.buildTabs()
+
+    this.characterContent = this.add.container(0, 0)
+    this.panel.add(this.characterContent)
+    this.buildCharacterTab()
+
+    this.inventoryContent = this.add.container(0, 0)
+    this.panel.add(this.inventoryContent)
     this.buildPaperdoll()
-    this.buildStats(data)
+    this.buildStats()
     this.buildBackpack()
     this.buildTooltip()
+
+    this.showTab(data?.tab ?? 'inventory')
 
     this.layout()
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
 
-    this.input.keyboard?.on('keydown-I', () => this.close())
+    this.input.keyboard?.on('keydown-I', () => this.onPressI())
+    this.input.keyboard?.on('keydown-C', () => this.onPressC())
     this.input.keyboard?.on('keydown-ESC', () => this.close())
   }
 
@@ -51,31 +79,128 @@ export class InventoryScene extends Phaser.Scene {
     this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
   }
 
-  // ---- build -------------------------------------------------------------
+  // ---- build: frame & tabs -------------------------------------------------
 
   private buildFrame(): void {
     const panelBg = this.add
       .rectangle(PANEL_W / 2, PANEL_H / 2, PANEL_W, PANEL_H, 0x241d15, 0.98)
       .setStrokeStyle(3, 0xc9a227)
-    const title = this.add
-      .text(PANEL_W / 2, 26, 'Inventory', { fontFamily: 'monospace', fontSize: '22px', color: '#e8c766' })
-      .setOrigin(0.5)
     const hint = this.add
-      .text(PANEL_W - 16, 26, '[I] Close', { fontFamily: 'monospace', fontSize: '12px', color: '#8a7a5a' })
+      .text(PANEL_W - 16, 26, '[ESC] Close', { fontFamily: 'monospace', fontSize: '12px', color: '#8a7a5a' })
       .setOrigin(1, 0.5)
-    this.panel.add([panelBg, title, hint])
+    this.panel.add([panelBg, hint])
   }
+
+  private buildTabs(): void {
+    const y = 26
+    const centerX = PANEL_W / 2
+    this.tabButtons.character = this.createTabButton('Character', centerX - TAB_W / 2 - 6, y, 'character')
+    this.tabButtons.inventory = this.createTabButton('Inventory', centerX + TAB_W / 2 + 6, y, 'inventory')
+  }
+
+  private createTabButton(label: string, x: number, y: number, tab: PanelTab): TabButton {
+    const bg = this.add.rectangle(x, y, TAB_W, TAB_H, 0x1b1712, 0.95).setStrokeStyle(2, 0x6b5a3a)
+    bg.setInteractive({ useHandCursor: true })
+    bg.on('pointerdown', () => this.showTab(tab))
+    const text = this.add
+      .text(x, y, label, { fontFamily: 'monospace', fontSize: '15px', color: '#8a7a5a' })
+      .setOrigin(0.5)
+    this.panel.add([bg, text])
+    return { bg, text }
+  }
+
+  private showTab(tab: PanelTab): void {
+    this.activeTab = tab
+    this.characterContent.setVisible(tab === 'character')
+    this.inventoryContent.setVisible(tab === 'inventory')
+    if (tab !== 'inventory') this.hideTooltip()
+
+    for (const key of Object.keys(this.tabButtons) as PanelTab[]) {
+      const active = key === tab
+      const button = this.tabButtons[key]
+      button.bg.setStrokeStyle(2, active ? 0xc9a227 : 0x6b5a3a)
+      button.text.setColor(active ? '#e8c766' : '#8a7a5a')
+    }
+  }
+
+  // ---- build: character tab -------------------------------------------------
+
+  private buildCharacterTab(): void {
+    const title = this.add
+      .text(PANEL_W / 2, 70, WARRIOR_STATS.name, { fontFamily: 'monospace', fontSize: '26px', color: '#e8c766' })
+      .setOrigin(0.5)
+    const subtitle = this.add
+      .text(PANEL_W / 2, 98, 'Fighter', { fontFamily: 'monospace', fontSize: '14px', color: '#8a7a5a' })
+      .setOrigin(0.5)
+    this.characterContent.add([title, subtitle])
+
+    const portraitX = 190
+    const portraitY = 260
+    const portraitBg = this.add
+      .rectangle(portraitX, portraitY, 170, 230, 0x14100c, 0.8)
+      .setStrokeStyle(2, 0x6b5a3a)
+    const portrait = this.add.image(portraitX, portraitY + 100, 'warrior').setOrigin(0.5, 1)
+    const portraitScale = Math.min(130 / portrait.width, 200 / portrait.height)
+    portrait.setScale(portraitScale)
+    this.characterContent.add([portraitBg, portrait])
+
+    const lines = [
+      `Class:         Fighter`,
+      ``,
+      `Hit Points:    ${this.hp} / ${WARRIOR_STATS.maxHp}`,
+      `Armor Class:   ${WARRIOR_STATS.ac}`,
+      `Attack Bonus:  +${WARRIOR_STATS.attackBonus}`,
+      `Damage:        1d${WARRIOR_STATS.damage.sides}+${WARRIOR_STATS.damage.bonus}`,
+    ]
+    const statsBlock = this.add.text(360, 170, lines.join('\n'), {
+      fontFamily: 'monospace',
+      fontSize: '15px',
+      color: '#d8c9a3',
+      lineSpacing: 14,
+    })
+    this.characterContent.add(statsBlock)
+
+    this.buildCharacterBadges(430)
+  }
+
+  private buildCharacterBadges(y: number): void {
+    const badges: Array<{ label: string; value: string }> = [
+      { label: 'AC', value: `${WARRIOR_STATS.ac}` },
+      { label: 'HP', value: `${this.hp}/${WARRIOR_STATS.maxHp}` },
+      { label: 'ATK', value: `+${WARRIOR_STATS.attackBonus}` },
+    ]
+    const badgeW = 90
+    const badgeH = 56
+    const gap = 14
+    const centerX = PANEL_W / 2
+    const totalW = badges.length * badgeW + (badges.length - 1) * gap
+    const startX = centerX - totalW / 2 + badgeW / 2
+
+    badges.forEach((badge, i) => {
+      const x = startX + i * (badgeW + gap)
+      const bg = this.add.rectangle(x, y, badgeW, badgeH, 0x1b1712, 0.9).setStrokeStyle(2, 0x6b5a3a)
+      const label = this.add
+        .text(x, y - 14, badge.label, { fontFamily: 'monospace', fontSize: '11px', color: '#8a7a5a' })
+        .setOrigin(0.5)
+      const value = this.add
+        .text(x, y + 10, badge.value, { fontFamily: 'monospace', fontSize: '16px', color: '#e8c766' })
+        .setOrigin(0.5)
+      this.characterContent.add([bg, label, value])
+    })
+  }
+
+  // ---- build: inventory tab -------------------------------------------------
 
   private buildPaperdoll(): void {
     const dollBoxBg = this.add
       .rectangle(DOLL_X, DOLL_Y, 150, 210, 0x14100c, 0.8)
       .setStrokeStyle(2, 0x4a3d28)
-    this.panel.add(dollBoxBg)
+    this.inventoryContent.add(dollBoxBg)
 
     const doll = this.add.image(DOLL_X, DOLL_Y + 95, 'warrior').setOrigin(0.5, 1)
     const dollScale = Math.min(110 / doll.width, 180 / doll.height)
     doll.setScale(dollScale)
-    this.panel.add(doll)
+    this.inventoryContent.add(doll)
 
     const leftX = DOLL_X - 115
     const rightX = DOLL_X + 115
@@ -99,12 +224,12 @@ export class InventoryScene extends Phaser.Scene {
   private createSlot(x: number, y: number, slot: EquipmentSlot): void {
     const item = PLAYER_EQUIPMENT[slot]
     const bg = this.add.rectangle(x, y, SLOT_SIZE, SLOT_SIZE, 0x1b1712, 0.9).setStrokeStyle(2, 0x6b5a3a)
-    this.panel.add(bg)
+    this.inventoryContent.add(bg)
 
     if (item) {
       const g = this.add.graphics({ x: x - SLOT_SIZE / 2, y: y - SLOT_SIZE / 2 })
       item.draw(g, SLOT_SIZE)
-      this.panel.add(g)
+      this.inventoryContent.add(g)
 
       bg.setInteractive({ useHandCursor: true })
       bg.on('pointerover', () => {
@@ -123,13 +248,11 @@ export class InventoryScene extends Phaser.Scene {
           color: '#665a44',
         })
         .setOrigin(0.5)
-      this.panel.add(label)
+      this.inventoryContent.add(label)
     }
   }
 
-  private buildStats(data: InventoryData): void {
-    const hp = data.hp ?? WARRIOR_STATS.maxHp
-
+  private buildStats(): void {
     const nameText = this.add
       .text(STATS_X, 70, WARRIOR_STATS.name, { fontFamily: 'monospace', fontSize: '20px', color: '#e8c766' })
       .setOrigin(0, 0.5)
@@ -139,7 +262,7 @@ export class InventoryScene extends Phaser.Scene {
 
     const lines = [
       `Armor Class:   ${WARRIOR_STATS.ac}`,
-      `Hit Points:    ${hp} / ${WARRIOR_STATS.maxHp}`,
+      `Hit Points:    ${this.hp} / ${WARRIOR_STATS.maxHp}`,
       `Attack Bonus:  +${WARRIOR_STATS.attackBonus}`,
       `Damage:        1d${WARRIOR_STATS.damage.sides}+${WARRIOR_STATS.damage.bonus}`,
     ]
@@ -150,14 +273,14 @@ export class InventoryScene extends Phaser.Scene {
       lineSpacing: 12,
     })
 
-    this.panel.add([nameText, classText, statsBody])
+    this.inventoryContent.add([nameText, classText, statsBody])
   }
 
   private buildBackpack(): void {
     const title = this.add
       .text(PANEL_W / 2, 360, 'Backpack', { fontFamily: 'monospace', fontSize: '14px', color: '#8a7a5a' })
       .setOrigin(0.5)
-    this.panel.add(title)
+    this.inventoryContent.add(title)
 
     const cols = 6
     const gap = 8
@@ -176,12 +299,12 @@ export class InventoryScene extends Phaser.Scene {
 
   private createBackpackSlot(x: number, y: number, item: Item | null): void {
     const bg = this.add.rectangle(x, y, SLOT_SIZE, SLOT_SIZE, 0x1b1712, 0.9).setStrokeStyle(2, 0x4a3d28)
-    this.panel.add(bg)
+    this.inventoryContent.add(bg)
 
     if (item) {
       const g = this.add.graphics({ x: x - SLOT_SIZE / 2, y: y - SLOT_SIZE / 2 })
       item.draw(g, SLOT_SIZE)
-      this.panel.add(g)
+      this.inventoryContent.add(g)
 
       bg.setInteractive({ useHandCursor: true })
       bg.on('pointerover', () => {
@@ -203,7 +326,7 @@ export class InventoryScene extends Phaser.Scene {
     })
     this.tooltipBg = this.add.rectangle(0, 0, 10, 10, 0x000000, 0.85).setStrokeStyle(1, 0xc9a227)
     this.tooltip = this.add.container(0, 0, [this.tooltipBg, this.tooltipText]).setVisible(false)
-    this.panel.add(this.tooltip)
+    this.inventoryContent.add(this.tooltip)
   }
 
   private showTooltip(item: Item, x: number, y: number): void {
@@ -229,6 +352,22 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   // ---- actions -------------------------------------------------------------
+
+  private onPressI(): void {
+    if (this.activeTab === 'inventory') {
+      this.close()
+    } else {
+      this.showTab('inventory')
+    }
+  }
+
+  private onPressC(): void {
+    if (this.activeTab === 'character') {
+      this.close()
+    } else {
+      this.showTab('character')
+    }
+  }
 
   private close(): void {
     this.scene.stop()

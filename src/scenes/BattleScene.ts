@@ -100,6 +100,7 @@ export class BattleScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, () => this.layout())
 
     this.input.keyboard?.on('keydown-I', () => this.openInventory())
+    this.input.keyboard?.on('keydown-C', () => this.openCharacter())
     this.input.keyboard?.on('keydown-ESC', () => this.openMenu())
 
     this.pushLog('The goblin blocks the warrior\'s path. Battle begins!')
@@ -108,7 +109,13 @@ export class BattleScene extends Phaser.Scene {
 
   private openInventory(): void {
     if (this.scene.isPaused()) return
-    this.scene.launch('Inventory', { hp: this.warrior.hp })
+    this.scene.launch('Inventory', { hp: this.warrior.hp, tab: 'inventory' })
+    this.scene.pause()
+  }
+
+  private openCharacter(): void {
+    if (this.scene.isPaused()) return
+    this.scene.launch('Inventory', { hp: this.warrior.hp, tab: 'character' })
     this.scene.pause()
   }
 
