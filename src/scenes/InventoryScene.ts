@@ -69,14 +69,14 @@ export class InventoryScene extends Phaser.Scene {
 
     this.layout()
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
+    // Phaser doesn't call a shutdown() method on scenes; it only emits SHUTDOWN.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
+    })
 
     this.input.keyboard?.on('keydown-I', () => this.onPressI())
     this.input.keyboard?.on('keydown-C', () => this.onPressC())
     this.input.keyboard?.on('keydown-ESC', () => this.close())
-  }
-
-  shutdown(): void {
-    this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
   }
 
   // ---- build: frame & tabs -------------------------------------------------

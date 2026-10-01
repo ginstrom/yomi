@@ -39,12 +39,12 @@ export class MenuScene extends Phaser.Scene {
 
     this.layout()
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
+    // Phaser doesn't call a shutdown() method on scenes; it only emits SHUTDOWN.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
+    })
 
     this.input.keyboard?.on('keydown-ESC', () => this.onEscape())
-  }
-
-  shutdown(): void {
-    this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
   }
 
   // ---- build ---------------------------------------------------------------

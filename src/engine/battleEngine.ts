@@ -170,7 +170,7 @@ export function formatEvent(event: BattleEvent, names: Record<Side, string>): st
     case 'attack': {
       const attackerName = names[event.attacker]
       const defenderName = names[event.defender]
-      if (event.fumble) return `${attackerName} rolls 1 — fumbles the attack!`
+      if (event.fumble) return `${attackerName} rolls ${event.attackRoll} — fumbles the attack!`
       if (event.hit) {
         const crit = event.critical ? ' CRITICAL HIT!' : ''
         return `${attackerName} rolls ${event.attackRoll} (${event.totalToHit} to hit) — HITS ${defenderName} for ${event.damage} dmg.${crit}`

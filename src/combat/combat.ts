@@ -49,7 +49,8 @@ export function resolveAttack(
   const fumble = attackRoll === 1
   const totalToHit = attackRoll + attacker.attackBonus
   const hit = !fumble && (critical || totalToHit >= defenderAc)
-  const damage = hit ? rollDamage(attacker.damage, rng) * (critical ? 2 : 1) : 0
+  const damageRoll = critical ? { ...attacker.damage, count: attacker.damage.count * 2 } : attacker.damage
+  const damage = hit ? rollDamage(damageRoll, rng) : 0
 
   return { attackRoll, totalToHit, hit, critical, fumble, damage }
 }

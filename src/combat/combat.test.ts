@@ -32,13 +32,13 @@ describe('resolveAttack', () => {
     expect(result.damage).toBe(0)
   })
 
-  it('always hits and doubles damage on a natural 20', () => {
-    const rng = sequence([0.999 /* d20 -> 20 */, 0 /* damage die -> 1 */])
+  it('always hits and doubles the damage dice (not the bonus) on a natural 20', () => {
+    const rng = sequence([0.999 /* d20 -> 20 */, 0 /* damage die -> 1 */, 0.999 /* damage die -> 8 */])
     const result = resolveAttack(WARRIOR_STATS, 999, rng)
     expect(result.attackRoll).toBe(20)
     expect(result.critical).toBe(true)
     expect(result.hit).toBe(true)
-    expect(result.damage).toBe((1 + WARRIOR_STATS.damage.bonus) * 2)
+    expect(result.damage).toBe(1 + 8 + WARRIOR_STATS.damage.bonus)
   })
 
   it('hits when total-to-hit meets or beats defender AC', () => {

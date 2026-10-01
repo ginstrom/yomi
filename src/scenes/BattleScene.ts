@@ -63,6 +63,11 @@ export class BattleScene extends Phaser.Scene {
   create(): void {
     this.engine = new BattleEngine({ player: WARRIOR_STATS, enemy: GOBLIN_STATS })
     this.names = { player: WARRIOR_STATS.name, enemy: GOBLIN_STATS.name }
+    // Phaser reuses the scene instance on restart, so field initializers
+    // don't run again — reset per-battle state explicitly.
+    this.logLines = []
+    this.logScrollLines = 0
+    this.logAutoScroll = true
 
     this.floorLayer = this.add.container(0, 0)
     this.unitLayer = this.add.container(0, 0)
@@ -127,7 +132,10 @@ export class BattleScene extends Phaser.Scene {
     this.menuButton.setVisible(false)
 
     this.layout()
-    this.scale.on(Phaser.Scale.Events.RESIZE, () => this.layout())
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
+    })
 
     this.input.keyboard?.on('keydown-I', () => this.openInventory())
     this.input.keyboard?.on('keydown-C', () => this.openCharacter())
@@ -323,7 +331,7 @@ export class BattleScene extends Phaser.Scene {
       this.roundText.setText(`Battle over — ${state.round} rounds fought`)
       return
     }
-    this.roundText.setText(`Round ${state.round} — ${state.phase === 'player' ? "Warrior's" : "Goblin's"} turn`)
+    this.roundText.setText(`Round ${state.round} — ${this.names[state.phase]}'s turn`)
   }
 
   private pushLog(line: string): void {
