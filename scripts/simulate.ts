@@ -13,7 +13,7 @@ import { createWarrior, deriveCombatStats } from '../src/character/character.ts'
 import { mulberry32, randomSeed } from '../src/combat/rng.ts'
 import { BattleEngine, type BattleEvent, type Side, type UnitId } from '../src/engine/battleEngine.ts'
 import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.ts'
-import { goblinEncounter } from '../src/game/encounters.ts'
+import { goblinRaid } from '../src/game/encounters.ts'
 
 const WARRIOR_STATS = deriveCombatStats(createWarrior())
 
@@ -81,7 +81,7 @@ function parseArgs(argv: string[]): CliArgs {
 type LoggedEvent = BattleEvent & { battleId: number }
 
 function runBattle(battleId: number, seed: number, args: CliArgs): LoggedEvent[] {
-  const engine = new BattleEngine(goblinEncounter(WARRIOR_STATS), {
+  const engine = new BattleEngine(goblinRaid(WARRIOR_STATS).setup, {
     seed,
     meta: { source: 'simulate', policies: args.policies },
   })

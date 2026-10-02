@@ -11,7 +11,7 @@ import {
   type UnitSnapshot,
 } from '../engine/battleEngine.ts'
 import { POLICIES, type PolicyName } from '../engine/policies.ts'
-import { HERO_ID, goblinEncounter } from '../game/encounters.ts'
+import { HERO_ID, goblinRaid, type UnitKind } from '../game/encounters.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { HexBoard, hexCorners, hexEquals, hexToPixel, pixelToHex, type BoardSize, type Hex } from '../grid/hex.ts'
 import { ScrollingLog } from './scrollingLog.ts'
@@ -58,10 +58,11 @@ const LOG_BOX_H = LOG_VISIBLE_LINES * LOG_LINE_H + LOG_BOX_PADDING * 2
 const LOG_BOX_GAP = 14
 const ENEMY_POLICY: PolicyName = 'aggressive'
 
-/** How to draw each unit, by id. */
-const APPEARANCE: Record<UnitId, { textureKey: string; displayHeight: number }> = {
-  [HERO_ID]: { textureKey: 'warrior', displayHeight: 84 },
-  goblin: { textureKey: 'goblin', displayHeight: 68 },
+/** How to draw each kind of unit; each texture is loaded from assets/sprites/<kind>.png. */
+const APPEARANCE: Record<UnitKind, { displayHeight: number }> = {
+  warrior: { displayHeight: 84 },
+  goblin: { displayHeight: 68 },
+  kobold: { displayHeight: 70 },
 }
 
 export class BattleScene extends Phaser.Scene {
@@ -102,14 +103,13 @@ export class BattleScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image('warrior', 'assets/sprites/warrior.png')
-    this.load.image('goblin', 'assets/sprites/goblin.png')
+    for (const kind of Object.keys(APPEARANCE)) this.load.image(kind, `assets/sprites/${kind}.png`)
   }
 
   create(data: BattleData): void {
     this.gameState = data?.game ?? newGame()
     const player = this.gameState.player
-    const setup = goblinEncounter(deriveCombatStats(player), player.hp)
+    const { setup, kinds } = goblinRaid(deriveCombatStats(player), player.hp)
     this.engine = new BattleEngine(setup, { meta: { source: 'game', enemyPolicy: ENEMY_POLICY } })
     this.board = new HexBoard(setup.board)
     this.names = Object.fromEntries(setup.units.map((u) => [u.id, u.stats.name]))
@@ -126,7 +126,7 @@ export class BattleScene extends Phaser.Scene {
     this.highlights = this.add.graphics()
     this.floorLayer.add(this.highlights)
     this.unitLayer = this.add.container(0, 0)
-    this.units = new Map(setup.units.map((u) => [u.id, this.createUnit(u)]))
+    this.units = new Map(setup.units.map((u) => [u.id, this.createUnit(u, kinds[u.id])]))
     this.labelLayer = this.add.container(0, 0)
 
     this.roundText = this.add
@@ -285,10 +285,10 @@ export class BattleScene extends Phaser.Scene {
     this.floorLayer.add(floor)
   }
 
-  private createUnit({ id, side, stats }: UnitSetup): Unit {
-    const { textureKey, displayHeight } = APPEARANCE[id]
-    const sprite = this.add.sprite(0, 0, textureKey)
-    const tex = this.textures.get(textureKey).getSourceImage()
+  private createUnit({ side, stats }: UnitSetup, kind: UnitKind): Unit {
+    const { displayHeight } = APPEARANCE[kind]
+    const sprite = this.add.sprite(0, 0, kind)
+    const tex = this.textures.get(kind).getSourceImage()
     const aspect = tex.width / tex.height
     sprite.setDisplaySize(displayHeight * aspect, displayHeight)
     sprite.setOrigin(0.5, 1)

@@ -83,3 +83,14 @@ export const GOBLIN_STATS: CombatantStats = {
   speed: 4,
   actionPoints: 3,
 }
+
+/** A fragile skirmisher: harder to hit and quicker than a Goblin, but light on hit points and damage. */
+export const KOBOLD_STATS: CombatantStats = {
+  name: 'Kobold',
+  maxHp: 7,
+  ac: 14,
+  attackBonus: 2,
+  damage: { count: 1, sides: 4, bonus: 1 },
+  speed: 6,
+  actionPoints: 3,
+}
