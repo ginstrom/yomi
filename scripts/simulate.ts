@@ -116,6 +116,9 @@ interface Summary {
   enemyCritRate: number
   /** Free attacks provoked by leaving a zone of control, per battle. */
   avgOpportunityAttacks: number
+  /** Attacks on a defender's side or rear arc, given its facing, per battle. */
+  avgSideAttacks: number
+  avgRearAttacks: number
 }
 
 function summarize(events: LoggedEvent[], battles: number): Summary {
@@ -131,6 +134,8 @@ function summarize(events: LoggedEvent[], battles: number): Summary {
   let playerCrits = 0
   let enemyCrits = 0
   let opportunityAttacks = 0
+  let sideAttacks = 0
+  let rearAttacks = 0
   // Attacks name units; each battle's battle_start says which side they're on.
   let sideOf = new Map<UnitId, Side>()
 
@@ -143,6 +148,8 @@ function summarize(events: LoggedEvent[], battles: number): Summary {
     }
     if (event.type === 'attack') {
       if (event.opportunity) opportunityAttacks++
+      if (event.arc === 'side') sideAttacks++
+      if (event.arc === 'rear') rearAttacks++
       if (sideOf.get(event.attacker) === 'player') {
         playerAttacks++
         playerDamage += event.damage
@@ -170,6 +177,8 @@ function summarize(events: LoggedEvent[], battles: number): Summary {
     playerCritRate: playerAttacks ? playerCrits / playerAttacks : 0,
     enemyCritRate: enemyAttacks ? enemyCrits / enemyAttacks : 0,
     avgOpportunityAttacks: opportunityAttacks / battles,
+    avgSideAttacks: sideAttacks / battles,
+    avgRearAttacks: rearAttacks / battles,
   }
 }
 

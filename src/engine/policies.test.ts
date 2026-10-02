@@ -50,6 +50,19 @@ describe('policies', () => {
     expect(choose(engine)).toEqual(ATTACK_E1)
   })
 
+  it('aggressive attacks a foe from behind before one it faces', () => {
+    // Both touch p1 at (1,1); e1 at (2,1) faces west towards it, e2 at (2,0) faces away.
+    const engine = new BattleEngine({
+      board: { cols: 8, rows: 3 },
+      units: [
+        { id: 'p1', side: 'player', stats: GOBLIN_STATS, position: hex(1, 1) },
+        { id: 'e1', side: 'enemy', stats: GOBLIN_STATS, position: hex(2, 1) },
+        { id: 'e2', side: 'enemy', stats: GOBLIN_STATS, position: hex(2, 0), facing: 1 },
+      ],
+    })
+    expect(choose(engine)).toEqual({ type: 'attack', unit: 'p1', target: 'e2' })
+  })
+
   it('aggressive closes the distance, ends its turn when spent, and attacks next turn', () => {
     const engine = engineWith(hex(0, 1), hex(6, 1))
     // Speed 4, 3 AP: reaching the foe takes 2 AP, leaving too few to strike.

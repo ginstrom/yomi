@@ -1,7 +1,10 @@
 import type { RNG } from '../combat/combat.ts'
 import { hexDistance, type Hex } from '../grid/hex.ts'
 import {
+  ARC_BONUS,
   ATTACK_AP_COST,
+  FLANK_BONUS_PER_ALLY,
+  attackArc,
   flankersOf,
   moveApCost,
   type Action,
@@ -28,8 +31,9 @@ const END_TURN: Action = { type: 'end_turn' }
 
 /**
  * Takes each unit in roster order and gives it the first useful thing to do;
- * ends the turn when no unit has one. A unit attacks the adjacent foe it
- * flanks most if it can afford to; otherwise it closes on the nearest foe,
+ * ends the turn when no unit has one. A unit attacks the adjacent foe it has
+ * the biggest to-hit bonus against (flanking, side or rear) if it can afford
+ * to; otherwise it closes on the nearest foe,
  * preferring a hex next to one with AP left to strike, then the smallest gap,
  * then the cheapest move.
  */
@@ -37,22 +41,25 @@ const aggressive: Policy = ({ state, legal }) => {
   for (const self of state.units) {
     const own = legal.filter((a) => a.type !== 'end_turn' && a.unit === self.id)
     if (own.length === 0) continue
-    const choice = mostFlankedAttack(state, self, own) ?? closingMove(state, self, own)
+    const choice = bestBonusAttack(state, self, own) ?? closingMove(state, self, own)
     if (choice) return choice
   }
   return END_TURN
 }
 
-function mostFlankedAttack(state: BattleState, self: UnitSnapshot, own: readonly Action[]): Action | null {
+function bestBonusAttack(state: BattleState, self: UnitSnapshot, own: readonly Action[]): Action | null {
   let best: Action | null = null
-  let mostFlankers = -1
+  let bestBonus = -1
   for (const action of own) {
     if (action.type !== 'attack') continue
     const target = state.units.find((u) => u.id === action.target)
-    const flankers = target ? flankersOf(state.units, self, target).length : 0
-    if (flankers > mostFlankers) {
+    const bonus = target
+      ? flankersOf(state.units, self, target).length * FLANK_BONUS_PER_ALLY +
+        ARC_BONUS[attackArc(target, self.position)]
+      : 0
+    if (bonus > bestBonus) {
       best = action
-      mostFlankers = flankers
+      bestBonus = bonus
     }
   }
   return best

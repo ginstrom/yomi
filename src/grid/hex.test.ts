@@ -5,6 +5,7 @@ import {
   hex,
   hexAdd,
   hexCorners,
+  hexDirection,
   hexDistance,
   hexEquals,
   hexKey,
@@ -24,6 +25,13 @@ describe('hex geometry', () => {
     for (let i = 0; i < 3; i++) {
       expect(hexAdd(HEX_DIRECTIONS[i], HEX_DIRECTIONS[i + 3])).toEqual(hex(0, 0))
     }
+  })
+
+  it('names the direction from a hex to each neighbour, and nothing further', () => {
+    const origin = hex(2, -1)
+    hexNeighbors(origin).forEach((n, i) => expect(hexDirection(origin, n)).toBe(i))
+    expect(hexDirection(origin, origin)).toBeNull()
+    expect(hexDirection(origin, hex(4, -1))).toBeNull()
   })
 
   it('puts every neighbour at distance 1', () => {

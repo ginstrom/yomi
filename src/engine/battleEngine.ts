@@ -1,12 +1,33 @@
 import { hitChance, resolveAttack, type CombatantStats, type RNG } from '../combat/combat.ts'
 import { mulberry32, randomSeed } from '../combat/rng.ts'
-import { HexBoard, hexDistance, hexEquals, hexKey, reachableHexes, type BoardSize, type Hex } from '../grid/hex.ts'
+import {
+  HexBoard,
+  hexDirection,
+  hexDistance,
+  hexEquals,
+  hexKey,
+  reachableHexes,
+  type BoardSize,
+  type Hex,
+} from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 6
+export const LOG_SCHEMA_VERSION = 7
 
 /** To-hit bonus an attacker gains for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 2
+
+/**
+ * Which way a defender is struck from, relative to its facing: its three
+ * front hexes, the two beside its back, or straight behind it.
+ */
+export type Arc = 'front' | 'side' | 'rear'
+
+/** To-hit bonus for striking a defender in each arc. */
+export const ARC_BONUS: Readonly<Record<Arc, number>> = { front: 0, side: 1, rear: 2 }
+
+/** Where units face before they first move or attack: towards the other side's starting edge. */
+export const DEFAULT_FACING: Readonly<Record<Side, number>> = { player: 0, enemy: 3 } // east, west
 
 /** Action points an attack costs. */
 export const ATTACK_AP_COST = 2
@@ -32,6 +53,8 @@ export interface UnitSetup {
   side: Side
   stats: CombatantStats
   position: Hex
+  /** Index into HEX_DIRECTIONS; defaults to DEFAULT_FACING for the unit's side. */
+  facing?: number
   /** Lets a unit enter battle already wounded; defaults to (and is capped at) maxHp. */
   hp?: number
 }
@@ -48,6 +71,11 @@ export interface UnitSnapshot extends CombatantStats {
   side: Side
   hp: number
   position: Hex
+  /**
+   * The way the unit faces, as an index into HEX_DIRECTIONS. It turns
+   * automatically: towards each step it takes and each foe it attacks.
+   */
+  facing: number
   /** Action points left this turn; refilled when the unit's side starts its turn. */
   ap: number
   /** Whether the unit can still make a free attack this enemy turn. */
@@ -75,6 +103,8 @@ export interface MovePreview {
 export interface AttackPreview {
   flankers: UnitId[]
   flankBonus: number
+  arc: Arc
+  arcBonus: number
   /** Probability of a hit, natural 1s and 20s included. */
   hitChance: number
 }
@@ -110,6 +140,8 @@ export interface MoveEvent extends EventBase {
   path: Hex[]
   destination: Hex
   apCost: number
+  /** The mover's facing at the end of the segment: towards its last step, or its next one if it hasn't moved yet. */
+  facing: number
 }
 
 export interface AttackEvent extends EventBase {
@@ -122,6 +154,12 @@ export interface AttackEvent extends EventBase {
   flankers: UnitId[]
   /** To-hit bonus from flankers, already included in totalToHit. */
   flankBonus: number
+  /** Which of the defender's arcs the attack came from, given the defender's facing. */
+  arc: Arc
+  /** To-hit bonus from the arc, already included in totalToHit. */
+  arcBonus: number
+  /** The attacker's facing after turning to strike. */
+  attackerFacing: number
   attackRoll: number
   totalToHit: number
   hit: boolean
@@ -164,6 +202,7 @@ interface UnitRecord {
   stats: CombatantStats
   hp: number
   position: Hex
+  facing: number
   ap: number
   reactionReady: boolean
 }
@@ -189,6 +228,16 @@ export function flankersOf(units: readonly Placed[], attacker: Placed, defender:
     .map((u) => u.id)
 }
 
+/** The arc of `defender` that an attack from the neighbouring hex `from` strikes. */
+export function attackArc(defender: Pick<UnitSnapshot, 'position' | 'facing'>, from: Hex): Arc {
+  const direction = hexDirection(defender.position, from)
+  if (direction === null) throw new Error('Attacks come from a neighbouring hex')
+  // Steps clockwise or counter-clockwise from straight ahead: 0, 1, 2 or 3.
+  const turn = (direction - defender.facing + 6) % 6
+  const away = Math.min(turn, 6 - turn)
+  return away <= 1 ? 'front' : away === 2 ? 'side' : 'rear'
+}
+
 /**
  * Pure, Phaser-free battle rules on a hex board: turns, action points,
  * movement, zones of control, attack resolution and a structured event log.
@@ -198,7 +247,8 @@ export function flankersOf(units: readonly Placed[], attacker: Placed, defender:
  * units then act in any order — moving (one AP per `speed` hexes) and
  * attacking adjacent foes (ATTACK_AP_COST) — until the side ends its turn.
  * An attack gains a to-hit bonus for each other ally adjacent to the
- * defender. Every standing unit exerts a zone of control over its
+ * defender, and another for striking the defender's side or rear: units
+ * face the way they last stepped or struck. Every standing unit exerts a zone of control over its
  * neighbouring hexes: a foe stepping out of one provokes a free attack, at
  * most one per unit per enemy turn.
  *
@@ -235,6 +285,7 @@ export class BattleEngine {
       stats: u.stats,
       hp: Math.max(0, Math.min(u.hp ?? u.stats.maxHp, u.stats.maxHp)),
       position: u.position,
+      facing: u.facing ?? DEFAULT_FACING[u.side],
       ap: 0,
       reactionReady: false,
     }))
@@ -320,7 +371,10 @@ export class BattleEngine {
     if (actor.ap < ATTACK_AP_COST || !this.canAttack(actor, foe)) return null
     const flankers = flankersOf(this.units, actor, foe)
     const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
-    return { flankers, flankBonus, hitChance: hitChance(actor.stats, foe.stats.ac, flankBonus) }
+    const arc = attackArc(foe, actor.position)
+    const arcBonus = ARC_BONUS[arc]
+    const chance = hitChance(actor.stats, foe.stats.ac, flankBonus + arcBonus)
+    return { flankers, flankBonus, arc, arcBonus, hitChance: chance }
   }
 
   /** Performs an action for the side whose turn it is. Throws if the battle is over or the action is illegal. */
@@ -380,7 +434,9 @@ export class BattleEngine {
 
   /**
    * Walks the path, pausing for a free attack from each ready foe whose zone
-   * the mover steps out of. The move ends early if the mover falls.
+   * the mover steps out of. The mover turns towards each step before taking
+   * it, so a free attack strikes whichever arc that exposes. The move ends
+   * early if the mover falls.
    */
   private move(actor: UnitRecord, to: Hex): BattleEvent[] {
     const path = this.reachable(actor).get(hexKey(to))
@@ -404,6 +460,7 @@ export class BattleEngine {
           path: segment,
           destination: to,
           apCost: firstSegment ? apCost : 0,
+          facing: actor.facing,
         }),
       )
       firstSegment = false
@@ -412,6 +469,7 @@ export class BattleEngine {
     }
 
     for (const step of path) {
+      actor.facing = hexDirection(actor.position, step)!
       const reactors = this.reactorsAt(actor, actor.position)
       if (reactors.length > 0) logSegment()
       for (const foe of reactors) {
@@ -441,9 +499,12 @@ export class BattleEngine {
   }
 
   private attack(actor: UnitRecord, target: UnitRecord, opportunity: boolean): BattleEvent[] {
+    actor.facing = hexDirection(actor.position, target.position)!
     const flankers = flankersOf(this.units, actor, target)
     const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
-    const result = resolveAttack(actor.stats, target.stats.ac, this.rng, flankBonus)
+    const arc = attackArc(target, actor.position)
+    const arcBonus = ARC_BONUS[arc]
+    const result = resolveAttack(actor.stats, target.stats.ac, this.rng, flankBonus + arcBonus)
     target.hp = Math.max(0, target.hp - result.damage)
 
     const events: BattleEvent[] = [
@@ -455,6 +516,9 @@ export class BattleEngine {
         opportunity,
         flankers,
         flankBonus,
+        arc,
+        arcBonus,
+        attackerFacing: actor.facing,
         attackRoll: result.attackRoll,
         totalToHit: result.totalToHit,
         hit: result.hit,
@@ -504,6 +568,7 @@ function snapshot(unit: UnitRecord): UnitSnapshot {
     side: unit.side,
     hp: unit.hp,
     position: unit.position,
+    facing: unit.facing,
     ap: unit.ap,
     reactionReady: unit.reactionReady,
   }
@@ -528,7 +593,9 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
       const opening = event.opportunity ? `${defenderName} breaks away — free attack! ` : ''
       if (event.fumble) return `${opening}${attackerName} rolls 1 — fumbles the attack!`
       const flank = event.flankBonus > 0 ? `, +${event.flankBonus} flanking` : ''
-      const roll = `${opening}${attackerName} rolls ${event.attackRoll} (${event.totalToHit} to hit${flank})`
+      const from = event.arc === 'rear' ? 'from behind' : 'from the side'
+      const arc = event.arcBonus > 0 ? `, +${event.arcBonus} ${from}` : ''
+      const roll = `${opening}${attackerName} rolls ${event.attackRoll} (${event.totalToHit} to hit${flank}${arc})`
       if (event.hit) {
         const crit = event.critical ? ' CRITICAL HIT!' : ''
         return `${roll} — HITS ${defenderName} for ${event.damage} dmg.${crit}`

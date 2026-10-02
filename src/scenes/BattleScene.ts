@@ -13,7 +13,17 @@ import {
 import { POLICIES, type PolicyName } from '../engine/policies.ts'
 import { HERO_ID, goblinRaid, type UnitKind } from '../game/encounters.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
-import { HexBoard, hexCorners, hexEquals, hexToPixel, pixelToHex, type BoardSize, type Hex } from '../grid/hex.ts'
+import {
+  HEX_DIRECTIONS,
+  HexBoard,
+  hexCorners,
+  hexDirection,
+  hexEquals,
+  hexToPixel,
+  pixelToHex,
+  type BoardSize,
+  type Hex,
+} from '../grid/hex.ts'
 import { ScrollingLog } from './scrollingLog.ts'
 
 interface BattleData {
@@ -32,6 +42,8 @@ interface Unit {
   hpBarBg: Phaser.GameObjects.Rectangle
   hpBarFill: Phaser.GameObjects.Rectangle
   hpText: Phaser.GameObjects.Text
+  /** Points the way the unit faces, so the player can see whose side or back is open. */
+  facingArrow: Phaser.GameObjects.Graphics
   /** One pip per action point, filled for those left; shown during the unit's side's turn. */
   apPips: Phaser.GameObjects.Graphics
 }
@@ -297,15 +309,13 @@ export class BattleScene extends Phaser.Scene {
     this.floorLayer.add(floor)
   }
 
-  private createUnit({ side, stats }: UnitSetup, kind: UnitKind): Unit {
+  private createUnit({ stats }: UnitSetup, kind: UnitKind): Unit {
     const { displayHeight } = APPEARANCE[kind]
     const sprite = this.add.sprite(0, 0, kind)
     const tex = this.textures.get(kind).getSourceImage()
     const aspect = tex.width / tex.height
     sprite.setDisplaySize(displayHeight * aspect, displayHeight)
     sprite.setOrigin(0.5, 1)
-    // Sprites face right; enemies start on the right and face left.
-    sprite.setFlipX(side === 'enemy')
 
     const shadow = this.add.ellipse(0, 0, displayHeight * 0.55, displayHeight * 0.18, 0x000000, 0.35)
     const container = this.add.container(0, 0, [shadow, sprite])
@@ -324,11 +334,18 @@ export class BattleScene extends Phaser.Scene {
     const hpText = this.add
       .text(0, PLATE_BAR_Y + PLATE_BAR_H / 2, '', { ...outlined, fontSize: '10px', strokeThickness: 2 })
       .setOrigin(0.5)
+    // Drawn pointing east and rotated to the unit's facing.
+    const facingArrow = this.add
+      .graphics({ x: -PLATE_BAR_W / 2 - 8, y: PLATE_BAR_Y + PLATE_BAR_H / 2 })
+      .fillStyle(0xffffff, 1)
+      .lineStyle(1.5, 0x000000, 1)
+      .fillTriangle(6, 0, -4, -5, -4, 5)
+      .strokeTriangle(6, 0, -4, -5, -4, 5)
     const apPips = this.add.graphics()
-    const plate = this.add.container(0, 0, [nameText, hpBarBg, hpBarFill, hpText, apPips])
+    const plate = this.add.container(0, 0, [nameText, hpBarBg, hpBarFill, hpText, facingArrow, apPips])
     this.plateLayer.add(plate)
 
-    return { container, sprite, plate, hpBarBg, hpBarFill, hpText, apPips }
+    return { container, sprite, plate, hpBarBg, hpBarFill, hpText, facingArrow, apPips }
   }
 
   private createButton(label: string, onClick: () => void): Phaser.GameObjects.Container {
@@ -417,6 +434,15 @@ export class BattleScene extends Phaser.Scene {
     unit.container.setPosition(x, y)
     unit.plate.setPosition(x, y)
     this.sortUnits()
+  }
+
+  /** Turns the unit's sprite (which can only look left or right) and its facing arrow to a HEX_DIRECTIONS index. */
+  private faceUnit(id: UnitId, facing: number): void {
+    const unit = this.units.get(id)!
+    const { x, y } = hexToPixel(HEX_DIRECTIONS[facing], 1)
+    // Sprites are drawn facing right.
+    unit.sprite.setFlipX(x < 0)
+    unit.facingArrow.setRotation(Math.atan2(y * FLOOR_SQUASH_Y, x))
   }
 
   /** Units lower on screen draw in front. */
@@ -528,15 +554,15 @@ export class BattleScene extends Phaser.Scene {
     this.highlights.strokePoints(this.hexPolygon(positionOf(this.selected)), true)
   }
 
-  /** "60%" on a foe's nameplate when the selected unit can attack it, with "+2" when flanking helps. */
+  /** "60%" on a foe's nameplate when the selected unit can attack it, with "+3" for flanking, side and rear bonuses. */
   private addHitChanceLabel(attacker: UnitId, target: UnitId, at: Hex): void {
     const preview = this.engine.previewAttack(attacker, target)
     if (!preview) return
     const percent = Math.round(preview.hitChance * 100)
-    const flank = preview.flankBonus > 0 ? ` +${preview.flankBonus}` : ''
+    const bonus = preview.flankBonus + preview.arcBonus
     const { x, y } = this.hexCenter(at)
     const label = this.add
-      .text(x, y + PLATE_STATUS_Y, `${percent}%${flank}`, {
+      .text(x, y + PLATE_STATUS_Y, `${percent}%${bonus > 0 ? ` +${bonus}` : ''}`, {
         fontFamily: 'monospace',
         fontSize: '11px',
         color: '#ffffff',
@@ -622,8 +648,13 @@ export class BattleScene extends Phaser.Scene {
 
   private showEvent(event: BattleEvent): void {
     this.pushLog(formatEvent(event, this.names))
-    if (event.type === 'move') this.animateMove(event.unit, event.path)
+    if (event.type === 'move') {
+      // A mover struck before its first step has already turned towards it.
+      if (event.path.length === 0) this.faceUnit(event.unit, event.facing)
+      this.animateMove(event.unit, event.from, event.path)
+    }
     if (event.type === 'attack') {
+      this.faceUnit(event.attacker, event.attackerFacing)
       const defender = this.units.get(event.defender)!
       this.flashHit(defender, event.hit)
       const maxHp = this.engine.getState().units.find((u) => u.id === event.defender)!.maxHp
@@ -637,12 +668,18 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private animateMove(id: UnitId, path: readonly Hex[]): void {
+  /** Walks a unit along its path, turning it towards each step as it takes it. */
+  private animateMove(id: UnitId, from: Hex, path: readonly Hex[]): void {
     if (path.length === 0) return
     const { container, plate } = this.units.get(id)!
     this.tweens.chain({
       targets: [container, plate],
-      tweens: path.map((h) => ({ ...this.hexCenter(h), duration: MOVE_STEP_MS, onUpdate: () => this.sortUnits() })),
+      tweens: path.map((h, i) => ({
+        ...this.hexCenter(h),
+        duration: MOVE_STEP_MS,
+        onStart: () => this.faceUnit(id, hexDirection(i === 0 ? from : path[i - 1], h)!),
+        onUpdate: () => this.sortUnits(),
+      })),
     })
   }
 
@@ -650,6 +687,7 @@ export class BattleScene extends Phaser.Scene {
   private syncUnitsFromEngine(): void {
     for (const snapshot of this.engine.getState().units) {
       if (snapshot.id === HERO_ID) this.gameState.player.hp = snapshot.hp
+      this.faceUnit(snapshot.id, snapshot.facing)
       this.refreshHpDisplay(this.units.get(snapshot.id)!, snapshot.hp, snapshot.maxHp)
     }
     this.refreshAllApPips()

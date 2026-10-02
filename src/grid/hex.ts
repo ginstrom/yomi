@@ -25,6 +25,12 @@ export const HEX_DIRECTIONS: readonly Hex[] = [
   hex(0, 1), // south-east
 ]
 
+/** The index into HEX_DIRECTIONS of the step from `from` to a neighbouring `to`, or null if they aren't neighbours. */
+export function hexDirection(from: Hex, to: Hex): number | null {
+  const i = HEX_DIRECTIONS.findIndex((d) => d.q === to.q - from.q && d.r === to.r - from.r)
+  return i === -1 ? null : i
+}
+
 /** A stable string form, for use as a Map/Set key. */
 export const hexKey = (h: Hex): string => `${h.q},${h.r}`
 

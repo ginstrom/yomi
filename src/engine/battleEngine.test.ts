@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { GOBLIN_STATS, type CombatantStats } from '../combat/combat.ts'
-import { hex, hexKey, type Hex } from '../grid/hex.ts'
+import { HEX_DIRECTIONS, hex, hexAdd, hexKey, type Hex } from '../grid/hex.ts'
 import {
+  ARC_BONUS,
   ATTACK_AP_COST,
   BattleEngine,
   FLANK_BONUS_PER_ALLY,
   LOG_SCHEMA_VERSION,
+  attackArc,
   flankersOf,
   formatEvent,
   moveApCost,
@@ -53,6 +55,14 @@ const FUMBLE = 0
 const KILL = [0.99, 0.99]
 /** d20 -> 7: the Warrior's 11 misses a Goblin's AC 13 alone, but 13 hits with one flanker. */
 const ROLL_7 = 0.3
+/** d20 -> 10: a Goblin's 13 misses the Warrior's AC 15 from the front, but 15 hits from behind. */
+const ROLL_10 = 0.45
+
+/** Facings, as indices into HEX_DIRECTIONS. */
+const EAST = 0
+const NORTH_WEST = 2
+const WEST = 3
+const SOUTH_EAST = 5
 
 const unitOf = (engine: BattleEngine, id: string) => engine.getState().units.find((u) => u.id === id)!
 const nonMoves = (engine: BattleEngine, unit?: string) => engine.legalActions(unit).filter((a) => a.type !== 'move')
@@ -436,14 +446,92 @@ describe('BattleEngine flanking', () => {
     expect(engine.previewAttack('warrior', 'goblin')).toEqual({
       flankers: ['cleric'],
       flankBonus: FLANK_BONUS_PER_ALLY,
+      arc: 'front',
+      arcBonus: 0,
       hitChance: 0.7,
     })
-    expect(engine.previewAttack('warrior', 'goblin2')).toEqual({ flankers: [], flankBonus: 0, hitChance: 0.6 })
+    expect(engine.previewAttack('warrior', 'goblin2')).toEqual({
+      flankers: [],
+      flankBonus: 0,
+      arc: 'front',
+      arcBonus: 0,
+      hitChance: 0.6,
+    })
     expect(engine.previewAttack('cleric', 'goblin2')).toBeNull() // not adjacent
     expect(engine.previewAttack('goblin', 'warrior')).toBeNull() // not the enemy's turn
     engine.step(move('warrior', hex(0, 0)))
     engine.step(move('warrior', hex(1, 1)))
     expect(engine.previewAttack('warrior', 'goblin')).toBeNull() // too few AP
+  })
+})
+
+describe('BattleEngine facing', () => {
+  const facingOf = (engine: BattleEngine, id: string) => unitOf(engine, id).facing
+
+  it('starts each side facing the other, unless the setup says otherwise', () => {
+    const engine = new BattleEngine(setup([WARRIOR, GOBLIN, { ...GOBLIN2, facing: SOUTH_EAST }]))
+    expect([facingOf(engine, 'warrior'), facingOf(engine, 'goblin'), facingOf(engine, 'goblin2')]).toEqual([
+      EAST,
+      WEST,
+      SOUTH_EAST,
+    ])
+  })
+
+  it('splits a defender’s six sides into three front, two side and one rear', () => {
+    const defender = { position: hex(2, 1), facing: EAST }
+    const arcs = HEX_DIRECTIONS.map((d) => attackArc(defender, hexAdd(defender.position, d)))
+    expect(arcs).toEqual(['front', 'front', 'side', 'rear', 'side', 'front'])
+    expect(attackArc({ ...defender, facing: WEST }, hex(3, 1))).toBe('rear')
+    expect(() => attackArc(defender, hex(4, 1))).toThrow()
+  })
+
+  it('turns a mover towards its last step', () => {
+    const engine = new BattleEngine(setup([{ ...WARRIOR, position: hex(0, 1) }, { ...GOBLIN, position: hex(4, 1) }]))
+    const [event] = engine.step(move('warrior', hex(0, 0))) as [MoveEvent]
+    expect(event.facing).toBe(NORTH_WEST)
+    expect(facingOf(engine, 'warrior')).toBe(NORTH_WEST)
+  })
+
+  it('turns an attacker towards its target, but not the defender towards the attacker', () => {
+    const engine = new BattleEngine(setup([{ ...WARRIOR, facing: WEST }, GOBLIN]), { rng: sequence([FUMBLE]) })
+    const [attack] = engine.step(ATTACK_GOBLIN) as [AttackEvent]
+    expect(attack.attackerFacing).toBe(EAST)
+    expect(facingOf(engine, 'warrior')).toBe(EAST)
+    expect(facingOf(engine, 'goblin')).toBe(WEST)
+  })
+
+  it('turns a miss into a hit when striking from behind', () => {
+    const attack = (warriorFacing: number) => {
+      const engine = new BattleEngine(setup([{ ...WARRIOR, facing: warriorFacing }, GOBLIN]), {
+        rng: sequence([ROLL_10, 0]),
+      })
+      engine.step(END_TURN)
+      return engine.step(ATTACK_WARRIOR)[0] as AttackEvent
+    }
+    expect(attack(EAST)).toMatchObject({ arc: 'front', arcBonus: 0, totalToHit: 13, hit: false })
+    expect(attack(WEST)).toMatchObject({ arc: 'rear', arcBonus: ARC_BONUS.rear, totalToHit: 15, hit: true })
+  })
+
+  it('stacks the arc bonus with flanking in the preview', () => {
+    const engine = new BattleEngine(
+      setup([WARRIOR, { ...GOBLIN, facing: SOUTH_EAST }, { ...CLERIC, position: hex(2, 2) }]),
+    )
+    // The warrior strikes from the goblin's west, beside its back: +4, +2 flanking and +1 hits AC 13 on 6+.
+    expect(engine.previewAttack('warrior', 'goblin')).toMatchObject({
+      flankBonus: FLANK_BONUS_PER_ALLY,
+      arc: 'side',
+      arcBonus: ARC_BONUS.side,
+      hitChance: 0.75,
+    })
+  })
+
+  it('exposes the back of a unit that retreats straight away, but not of one that slides aside', () => {
+    const freeAttackOn = (to: Hex) => {
+      const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE]) })
+      return engine.step(move('warrior', to)).find((e): e is AttackEvent => e.type === 'attack')!
+    }
+    expect(freeAttackOn(hex(0, 1))).toMatchObject({ arc: 'rear', arcBonus: ARC_BONUS.rear })
+    expect(freeAttackOn(hex(1, 2))).toMatchObject({ arc: 'front', arcBonus: 0 })
   })
 })
 
@@ -484,6 +572,16 @@ describe('formatEvent', () => {
     })
     expect(formatEvent(engine.step(ATTACK_GOBLIN)[0], NAMES)).toBe(
       'Warrior rolls 7 (13 to hit, +2 flanking) — HITS Goblin for 3 dmg.',
+    )
+  })
+
+  it('describes a side or rear attack in the roll', () => {
+    const engine = new BattleEngine(setup([{ ...WARRIOR, facing: WEST }, GOBLIN]), {
+      rng: sequence([ROLL_10, 0]),
+    })
+    engine.step(END_TURN)
+    expect(formatEvent(engine.step(ATTACK_WARRIOR)[0], NAMES)).toBe(
+      'Goblin rolls 10 (15 to hit, +2 from behind) — HITS Warrior for 2 dmg.',
     )
   })
 
