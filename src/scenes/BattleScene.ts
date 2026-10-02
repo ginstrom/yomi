@@ -21,16 +21,19 @@ interface BattleData {
 }
 
 interface Unit {
-  /** Holds every part below, positioned at the unit's feet, so moving and depth-sorting move it all. */
+  /** The unit's body and shadow, positioned at its feet and depth-sorted with the other units. */
   container: Phaser.GameObjects.Container
   sprite: Phaser.GameObjects.Sprite
+  /**
+   * Name, HP and AP, drawn over every unit in the lower half of the unit's own
+   * hex. Plates sit the same way in every hex, so neighbours' plates never collide.
+   */
+  plate: Phaser.GameObjects.Container
   hpBarBg: Phaser.GameObjects.Rectangle
   hpBarFill: Phaser.GameObjects.Rectangle
   hpText: Phaser.GameObjects.Text
-  nameText: Phaser.GameObjects.Text
   /** One pip per action point, filled for those left; shown during the unit's side's turn. */
   apPips: Phaser.GameObjects.Graphics
-  apPipsY: number
 }
 
 /** Corner radius of a hex in pixels, before the floor's vertical squash. */
@@ -50,6 +53,12 @@ const MOVE_ALPHA_BY_COST = [0.6, 0.4, 0.25]
 const MOVE_STEP_MS = 140
 /** Pause after a free attack lands, before the mover walks on. */
 const OPPORTUNITY_PAUSE_MS = 450
+/** Nameplate rows, in pixels below a unit's feet: name, HP bar, then AP pips or a foe's hit chance. */
+const PLATE_NAME_Y = -3
+const PLATE_BAR_Y = 11
+const PLATE_BAR_W = 52
+const PLATE_BAR_H = 10
+const PLATE_STATUS_Y = 27
 const LOG_HISTORY = 50
 const LOG_VISIBLE_LINES = 5
 const LOG_LINE_H = 20
@@ -82,7 +91,9 @@ export class BattleScene extends Phaser.Scene {
   private floorLayer!: Phaser.GameObjects.Container
   private highlights!: Phaser.GameObjects.Graphics
   private unitLayer!: Phaser.GameObjects.Container
-  /** Hit-chance labels on attackable foes, drawn above the units. */
+  /** Units' nameplates, drawn above every unit so none is hidden behind a sprite. */
+  private plateLayer!: Phaser.GameObjects.Container
+  /** Hit-chance labels on attackable foes, drawn above the nameplates. */
   private labelLayer!: Phaser.GameObjects.Container
 
   private roundText!: Phaser.GameObjects.Text
@@ -126,6 +137,7 @@ export class BattleScene extends Phaser.Scene {
     this.highlights = this.add.graphics()
     this.floorLayer.add(this.highlights)
     this.unitLayer = this.add.container(0, 0)
+    this.plateLayer = this.add.container(0, 0)
     this.units = new Map(setup.units.map((u) => [u.id, this.createUnit(u, kinds[u.id])]))
     this.labelLayer = this.add.container(0, 0)
 
@@ -296,25 +308,27 @@ export class BattleScene extends Phaser.Scene {
     sprite.setFlipX(side === 'enemy')
 
     const shadow = this.add.ellipse(0, 0, displayHeight * 0.55, displayHeight * 0.18, 0x000000, 0.35)
-
-    // Narrower than a hex, so neighbours' bars don't run together.
-    const barWidth = 52
-    const barY = -displayHeight - 14
-    const hpBarBg = this.add.rectangle(0, barY, barWidth, 8, 0x212121).setOrigin(0.5, 1)
-    const hpBarFill = this.add.rectangle(-barWidth / 2, barY, barWidth, 8, 0x43a047).setOrigin(0, 1)
-    const hpText = this.add
-      .text(0, barY - 10, '', { fontFamily: 'monospace', fontSize: '12px', color: '#ffffff' })
-      .setOrigin(0.5, 1)
-    const nameText = this.add
-      .text(0, barY - 26, stats.name, { fontFamily: 'monospace', fontSize: '13px', color: '#ffffff' })
-      .setOrigin(0.5, 1)
-
-    const apPips = this.add.graphics()
-    const apPipsY = barY + 8
-
-    const container = this.add.container(0, 0, [shadow, sprite, hpBarBg, hpBarFill, hpText, nameText, apPips])
+    const container = this.add.container(0, 0, [shadow, sprite])
     this.unitLayer.add(container)
-    return { container, sprite, hpBarBg, hpBarFill, hpText, nameText, apPips, apPipsY }
+
+    // An outline keeps plate text legible over the floor, highlights and other units.
+    const outlined = { fontFamily: 'monospace', color: '#ffffff', stroke: '#000000', strokeThickness: 3 }
+    const nameText = this.add.text(0, PLATE_NAME_Y, stats.name, { ...outlined, fontSize: '12px' }).setOrigin(0.5, 0)
+    const hpBarBg = this.add
+      .rectangle(0, PLATE_BAR_Y, PLATE_BAR_W, PLATE_BAR_H, 0x212121)
+      .setOrigin(0.5, 0)
+      .setStrokeStyle(1, 0x000000)
+    const hpBarFill = this.add
+      .rectangle(-PLATE_BAR_W / 2, PLATE_BAR_Y, PLATE_BAR_W, PLATE_BAR_H, 0x43a047)
+      .setOrigin(0, 0)
+    const hpText = this.add
+      .text(0, PLATE_BAR_Y + PLATE_BAR_H / 2, '', { ...outlined, fontSize: '10px', strokeThickness: 2 })
+      .setOrigin(0.5)
+    const apPips = this.add.graphics()
+    const plate = this.add.container(0, 0, [nameText, hpBarBg, hpBarFill, hpText, apPips])
+    this.plateLayer.add(plate)
+
+    return { container, sprite, plate, hpBarBg, hpBarFill, hpText, apPips }
   }
 
   private createButton(label: string, onClick: () => void): Phaser.GameObjects.Container {
@@ -366,6 +380,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.floorLayer.setPosition(floorX, floorY)
     this.unitLayer.setPosition(floorX, floorY)
+    this.plateLayer.setPosition(floorX, floorY)
     this.labelLayer.setPosition(floorX, floorY)
     for (const snapshot of this.engine.getState().units) this.placeUnit(snapshot.id, snapshot.position)
     this.positionBanner()
@@ -387,11 +402,10 @@ export class BattleScene extends Phaser.Scene {
     this.renderLog()
   }
 
-  /** Centres the banner between the header text and the tallest unit's name label. */
+  /** Centres the banner between the header text and the top of the tallest unit. */
   private positionBanner(): void {
     const unitsTop =
-      this.unitLayer.y +
-      Math.min(...[...this.units.values()].map((u) => u.container.y + u.nameText.y - u.nameText.height))
+      this.unitLayer.y + Math.min(...[...this.units.values()].map((u) => u.container.y - u.sprite.displayHeight))
     const headerBottom = this.hintText.y + this.hintText.height
     const y = Math.max(headerBottom + this.bannerText.height / 2, (headerBottom + unitsTop) / 2)
     this.bannerText.setPosition(this.scale.width / 2, y)
@@ -399,7 +413,9 @@ export class BattleScene extends Phaser.Scene {
 
   private placeUnit(id: UnitId, at: Hex): void {
     const { x, y } = this.hexCenter(at)
-    this.units.get(id)!.container.setPosition(x, y)
+    const unit = this.units.get(id)!
+    unit.container.setPosition(x, y)
+    unit.plate.setPosition(x, y)
     this.sortUnits()
   }
 
@@ -424,9 +440,9 @@ export class BattleScene extends Phaser.Scene {
     for (let i = 0; i < snapshot.actionPoints; i++) {
       const x = (i - (snapshot.actionPoints - 1) / 2) * spacing
       pips.fillStyle(i < snapshot.ap ? AP_PIP_FULL : AP_PIP_SPENT, 1)
-      pips.fillCircle(x, unit.apPipsY, 3.5)
+      pips.fillCircle(x, PLATE_STATUS_Y, 3.5)
       pips.lineStyle(1, 0x000000, 0.8)
-      pips.strokeCircle(x, unit.apPipsY, 3.5)
+      pips.strokeCircle(x, PLATE_STATUS_Y, 3.5)
     }
   }
 
@@ -512,7 +528,7 @@ export class BattleScene extends Phaser.Scene {
     this.highlights.strokePoints(this.hexPolygon(positionOf(this.selected)), true)
   }
 
-  /** "60%" under a foe the selected unit can attack, with "+2" when flanking helps. */
+  /** "60%" on a foe's nameplate when the selected unit can attack it, with "+2" when flanking helps. */
   private addHitChanceLabel(attacker: UnitId, target: UnitId, at: Hex): void {
     const preview = this.engine.previewAttack(attacker, target)
     if (!preview) return
@@ -520,12 +536,12 @@ export class BattleScene extends Phaser.Scene {
     const flank = preview.flankBonus > 0 ? ` +${preview.flankBonus}` : ''
     const { x, y } = this.hexCenter(at)
     const label = this.add
-      .text(x, y + HEX_SIZE * FLOOR_SQUASH_Y * 0.55, `${percent}%${flank}`, {
+      .text(x, y + PLATE_STATUS_Y, `${percent}%${flank}`, {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '11px',
         color: '#ffffff',
         backgroundColor: '#000000b3',
-        padding: { x: 3, y: 1 },
+        padding: { x: 3, y: 0 },
       })
       .setOrigin(0.5)
     this.labelLayer.add(label)
@@ -613,14 +629,19 @@ export class BattleScene extends Phaser.Scene {
       const maxHp = this.engine.getState().units.find((u) => u.id === event.defender)!.maxHp
       this.refreshHpDisplay(defender, event.defenderHpAfter, maxHp)
     }
-    if (event.type === 'unit_down') this.units.get(event.unit)!.sprite.setAlpha(0.4)
+    if (event.type === 'unit_down') {
+      // Others may stand on a fallen unit's hex, so its plate goes rather than collide with theirs.
+      const unit = this.units.get(event.unit)!
+      unit.sprite.setAlpha(0.4)
+      unit.plate.setVisible(false)
+    }
   }
 
   private animateMove(id: UnitId, path: readonly Hex[]): void {
     if (path.length === 0) return
-    const container = this.units.get(id)!.container
+    const { container, plate } = this.units.get(id)!
     this.tweens.chain({
-      targets: container,
+      targets: [container, plate],
       tweens: path.map((h) => ({ ...this.hexCenter(h), duration: MOVE_STEP_MS, onUpdate: () => this.sortUnits() })),
     })
   }
