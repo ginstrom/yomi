@@ -5,6 +5,7 @@ import {
   formatEvent,
   type Action,
   type BattleEvent,
+  type Phase,
   type UnitId,
   type UnitSetup,
   type UnitSnapshot,
@@ -27,6 +28,9 @@ interface Unit {
   hpBarFill: Phaser.GameObjects.Rectangle
   hpText: Phaser.GameObjects.Text
   nameText: Phaser.GameObjects.Text
+  /** One pip per action point, filled for those left; shown during the unit's side's turn. */
+  apPips: Phaser.GameObjects.Graphics
+  apPipsY: number
 }
 
 /** Corner radius of a hex in pixels, before the floor's vertical squash. */
@@ -37,8 +41,15 @@ const FLOOR_EDGE = 0x7a3b35
 const MOVE_HIGHLIGHT = 0x1e88e5
 const MOVE_OUTLINE = 0x90caf9
 const ATTACK_HIGHLIGHT = 0xe53935
+const PROVOKE_OUTLINE = 0xffa726
 const ACTIVE_OUTLINE = 0xffee58
+const AP_PIP_FULL = 0xffee58
+const AP_PIP_SPENT = 0x424242
+/** Move highlights fade as they cost more AP: 1 AP, 2 AP, 3+ AP. */
+const MOVE_ALPHA_BY_COST = [0.6, 0.4, 0.25]
 const MOVE_STEP_MS = 140
+/** Pause after a free attack lands, before the mover walks on. */
+const OPPORTUNITY_PAUSE_MS = 450
 const LOG_HISTORY = 50
 const LOG_VISIBLE_LINES = 5
 const LOG_LINE_H = 20
@@ -61,11 +72,17 @@ export class BattleScene extends Phaser.Scene {
   private logDumped = false
   /** True while the player may act; off during animations and the enemy's turn. */
   private playerControl = false
+  /** The player unit that board clicks and the Attack button act for. */
+  private selected: UnitId | null = null
+  /** The Attack button was pressed with several foes in reach: the next board click picks one. */
+  private targeting = false
   private units!: Map<UnitId, Unit>
 
   private floorLayer!: Phaser.GameObjects.Container
   private highlights!: Phaser.GameObjects.Graphics
   private unitLayer!: Phaser.GameObjects.Container
+  /** Hit-chance labels on attackable foes, drawn above the units. */
+  private labelLayer!: Phaser.GameObjects.Container
 
   private roundText!: Phaser.GameObjects.Text
   private hintText!: Phaser.GameObjects.Text
@@ -101,6 +118,8 @@ export class BattleScene extends Phaser.Scene {
     this.log = new ScrollingLog(LOG_HISTORY, LOG_VISIBLE_LINES)
     this.logDumped = false
     this.playerControl = false
+    this.selected = null
+    this.targeting = false
 
     this.floorLayer = this.add.container(0, 0)
     this.buildFloor(setup.board)
@@ -108,12 +127,13 @@ export class BattleScene extends Phaser.Scene {
     this.floorLayer.add(this.highlights)
     this.unitLayer = this.add.container(0, 0)
     this.units = new Map(setup.units.map((u) => [u.id, this.createUnit(u)]))
+    this.labelLayer = this.add.container(0, 0)
 
     this.roundText = this.add
       .text(20, 16, '', { fontFamily: 'monospace', fontSize: '20px', color: '#ffffff' })
       .setScrollFactor(0)
     this.hintText = this.add
-      .text(20, 44, 'Click a blue hex to move, a red foe to attack.', {
+      .text(20, 44, '', {
         fontFamily: 'monospace',
         fontSize: '13px',
         color: '#9e9e9e',
@@ -184,7 +204,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.input.keyboard?.on('keydown-I', () => this.openInventory())
     this.input.keyboard?.on('keydown-C', () => this.openCharacter())
-    this.input.keyboard?.on('keydown-ESC', () => this.openMenu())
+    this.input.keyboard?.on('keydown-ESC', () => (this.targeting ? this.setTargeting(false) : this.openMenu()))
 
     this.applyEvents(this.engine.getLog())
     // A side can enter already fallen (e.g. a hero carried over at 0 hp).
@@ -289,9 +309,12 @@ export class BattleScene extends Phaser.Scene {
       .text(0, barY - 26, stats.name, { fontFamily: 'monospace', fontSize: '13px', color: '#ffffff' })
       .setOrigin(0.5, 1)
 
-    const container = this.add.container(0, 0, [shadow, sprite, hpBarBg, hpBarFill, hpText, nameText])
+    const apPips = this.add.graphics()
+    const apPipsY = barY + 8
+
+    const container = this.add.container(0, 0, [shadow, sprite, hpBarBg, hpBarFill, hpText, nameText, apPips])
     this.unitLayer.add(container)
-    return { container, sprite, hpBarBg, hpBarFill, hpText, nameText }
+    return { container, sprite, hpBarBg, hpBarFill, hpText, nameText, apPips, apPipsY }
   }
 
   private createButton(label: string, onClick: () => void): Phaser.GameObjects.Container {
@@ -319,6 +342,10 @@ export class BattleScene extends Phaser.Scene {
     return container
   }
 
+  private setButtonLabel(button: Phaser.GameObjects.Container, label: string): void {
+    ;(button.getData('text') as Phaser.GameObjects.Text).setText(label)
+  }
+
   private setButtonEnabled(button: Phaser.GameObjects.Container, enabled: boolean): void {
     const bg = button.getData('bg') as Phaser.GameObjects.Rectangle
     const text = button.getData('text') as Phaser.GameObjects.Text
@@ -339,6 +366,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.floorLayer.setPosition(floorX, floorY)
     this.unitLayer.setPosition(floorX, floorY)
+    this.labelLayer.setPosition(floorX, floorY)
     for (const snapshot of this.engine.getState().units) this.placeUnit(snapshot.id, snapshot.position)
     this.positionBanner()
 
@@ -380,12 +408,26 @@ export class BattleScene extends Phaser.Scene {
     this.unitLayer.sort('y')
   }
 
-  private refreshHpDisplay(unit: Unit, snapshot: UnitSnapshot): void {
-    const ratio = Phaser.Math.Clamp(snapshot.hp / snapshot.maxHp, 0, 1)
+  private refreshHpDisplay(unit: Unit, hp: number, maxHp: number): void {
+    const ratio = Phaser.Math.Clamp(hp / maxHp, 0, 1)
     // setSize, not a bare width assignment, so the shape's geometry and path follow.
     unit.hpBarFill.setSize(unit.hpBarBg.width * ratio, unit.hpBarBg.height)
     unit.hpBarFill.setFillStyle(ratio > 0.5 ? 0x43a047 : ratio > 0.2 ? 0xfb8c00 : 0xe53935)
-    unit.hpText.setText(`${snapshot.hp} / ${snapshot.maxHp}`)
+    unit.hpText.setText(`${hp} / ${maxHp}`)
+  }
+
+  private refreshApPips(unit: Unit, snapshot: UnitSnapshot, phase: Phase): void {
+    const pips = unit.apPips
+    pips.clear()
+    if (snapshot.side !== phase || snapshot.hp <= 0) return
+    const spacing = 10
+    for (let i = 0; i < snapshot.actionPoints; i++) {
+      const x = (i - (snapshot.actionPoints - 1) / 2) * spacing
+      pips.fillStyle(i < snapshot.ap ? AP_PIP_FULL : AP_PIP_SPENT, 1)
+      pips.fillCircle(x, unit.apPipsY, 3.5)
+      pips.lineStyle(1, 0x000000, 0.8)
+      pips.strokeCircle(x, unit.apPipsY, 3.5)
+    }
   }
 
   private updateRoundText(): void {
@@ -394,31 +436,99 @@ export class BattleScene extends Phaser.Scene {
       this.roundText.setText(`Battle over — ${state.round} rounds fought`)
       return
     }
-    this.roundText.setText(`Round ${state.round} — ${this.names[state.active!]}'s turn`)
+    this.roundText.setText(`Round ${state.round} — ${state.phase === 'player' ? 'your turn' : "enemy's turn"}`)
   }
 
-  /** Marks where the active player unit can move and whom it can attack. */
+  /** Player units that still have something to do this turn, in roster order. */
+  private actableUnits(): UnitId[] {
+    const ids = new Set<UnitId>()
+    for (const action of this.engine.legalActions()) if (action.type !== 'end_turn') ids.add(action.unit)
+    return [...ids]
+  }
+
+  /** Keeps the selection on a unit that can still act, moving it on when the current one is spent. */
+  private ensureSelection(): void {
+    const actable = this.actableUnits()
+    if (this.selected === null || !actable.includes(this.selected)) this.selected = actable[0] ?? null
+  }
+
+  /** The selected unit's legal attacks, in roster order of their targets. */
+  private selectedAttacks(): Extract<Action, { type: 'attack' }>[] {
+    if (this.selected === null) return []
+    return this.engine.legalActions(this.selected).filter((a) => a.type === 'attack')
+  }
+
+  /**
+   * Marks where the selected unit can move (fainter for more AP, orange-edged
+   * where the move provokes a free attack) and whom it can attack, with the
+   * odds of hitting each. While picking a target, only the targets show.
+   */
   private refreshHighlights(): void {
     this.highlights.clear()
+    this.labelLayer.removeAll(true)
     this.hintText.setVisible(this.playerControl)
     if (!this.playerControl) return
 
     const state = this.engine.getState()
     const positionOf = (id: UnitId) => state.units.find((u) => u.id === id)!.position
-    for (const action of this.engine.legalActions()) {
-      if (action.type === 'move') {
+    const actable = this.actableUnits()
+    this.hintText.setText(
+      this.targeting
+        ? 'Choose a foe to attack (2 AP). Esc or Cancel to go back.'
+        : actable.length === 0
+          ? 'No action points left. Press End Turn.'
+          : 'Blue: move (fainter costs more AP), orange edge provokes a free attack. Red: attack (2 AP).',
+    )
+
+    for (const id of this.targeting ? [] : actable) {
+      if (id === this.selected) continue
+      this.highlights.lineStyle(2, 0xffffff, 0.5)
+      this.highlights.strokePoints(this.hexPolygon(positionOf(id)), true)
+    }
+    if (this.selected === null) return
+
+    for (const action of this.engine.legalActions(this.selected)) {
+      if (action.type === 'move' && !this.targeting) {
+        const preview = this.engine.previewMove(action.unit, action.to)!
         const polygon = this.hexPolygon(action.to)
-        this.highlights.fillStyle(MOVE_HIGHLIGHT, 0.55)
+        const alpha = MOVE_ALPHA_BY_COST[Math.min(preview.apCost, MOVE_ALPHA_BY_COST.length) - 1]
+        this.highlights.fillStyle(MOVE_HIGHLIGHT, alpha)
         this.highlights.fillPoints(polygon, true)
-        this.highlights.lineStyle(1, MOVE_OUTLINE, 0.9)
+        if (preview.provokes.length > 0) this.highlights.lineStyle(2, PROVOKE_OUTLINE, 1)
+        else this.highlights.lineStyle(1, MOVE_OUTLINE, 0.9)
         this.highlights.strokePoints(polygon, true)
       } else if (action.type === 'attack') {
-        this.highlights.fillStyle(ATTACK_HIGHLIGHT, 0.5)
-        this.highlights.fillPoints(this.hexPolygon(positionOf(action.target)), true)
+        const polygon = this.hexPolygon(positionOf(action.target))
+        this.highlights.fillStyle(ATTACK_HIGHLIGHT, this.targeting ? 0.7 : 0.5)
+        this.highlights.fillPoints(polygon, true)
+        if (this.targeting) {
+          this.highlights.lineStyle(2, 0xffffff, 0.9)
+          this.highlights.strokePoints(polygon, true)
+        }
+        this.addHitChanceLabel(action.unit, action.target, positionOf(action.target))
       }
     }
     this.highlights.lineStyle(2, ACTIVE_OUTLINE, 1)
-    this.highlights.strokePoints(this.hexPolygon(positionOf(state.active!)), true)
+    this.highlights.strokePoints(this.hexPolygon(positionOf(this.selected)), true)
+  }
+
+  /** "60%" under a foe the selected unit can attack, with "+2" when flanking helps. */
+  private addHitChanceLabel(attacker: UnitId, target: UnitId, at: Hex): void {
+    const preview = this.engine.previewAttack(attacker, target)
+    if (!preview) return
+    const percent = Math.round(preview.hitChance * 100)
+    const flank = preview.flankBonus > 0 ? ` +${preview.flankBonus}` : ''
+    const { x, y } = this.hexCenter(at)
+    const label = this.add
+      .text(x, y + HEX_SIZE * FLOOR_SQUASH_Y * 0.55, `${percent}%${flank}`, {
+        fontFamily: 'monospace',
+        fontSize: '12px',
+        color: '#ffffff',
+        backgroundColor: '#000000b3',
+        padding: { x: 3, y: 1 },
+      })
+      .setOrigin(0.5)
+    this.labelLayer.add(label)
   }
 
   // ---- battle log ---------------------------------------------------------
@@ -475,45 +585,75 @@ export class BattleScene extends Phaser.Scene {
   // ---- turn logic -----------------------------------------------------
 
   /**
-   * Renders engine events: log lines, HP bars, hit flashes and movement all
-   * flow from here. Returns how long the animations take, in ms.
+   * Renders engine events one after another — a move's walk, then any free
+   * attack that interrupts it, then the rest of the walk — so log lines, HP
+   * bars and hit flashes land when they happen. Returns the total time, in ms.
    */
   private applyEvents(events: readonly BattleEvent[]): number {
-    let animationMs = 0
+    let at = 0
     for (const event of events) {
-      this.pushLog(formatEvent(event, this.names))
-      if (event.type === 'move') animationMs = Math.max(animationMs, this.animateMove(event.unit, event.path))
-      if (event.type === 'attack') this.flashHit(this.units.get(event.defender)!, event.hit)
-      if (event.type === 'unit_down') this.units.get(event.unit)!.sprite.setAlpha(0.4)
+      if (at === 0) this.showEvent(event)
+      else this.time.delayedCall(at, () => this.showEvent(event))
+      if (event.type === 'move') at += event.path.length * MOVE_STEP_MS
+      if (event.type === 'attack' && event.opportunity) at += OPPORTUNITY_PAUSE_MS
     }
-    this.syncUnitsFromEngine()
-    return animationMs
+    // AP is spent the moment the action is taken; HP follows the animation.
+    this.refreshAllApPips()
+    if (at === 0) this.syncUnitsFromEngine()
+    else this.time.delayedCall(at, () => this.syncUnitsFromEngine())
+    return at
   }
 
-  private animateMove(id: UnitId, path: readonly Hex[]): number {
+  private showEvent(event: BattleEvent): void {
+    this.pushLog(formatEvent(event, this.names))
+    if (event.type === 'move') this.animateMove(event.unit, event.path)
+    if (event.type === 'attack') {
+      const defender = this.units.get(event.defender)!
+      this.flashHit(defender, event.hit)
+      const maxHp = this.engine.getState().units.find((u) => u.id === event.defender)!.maxHp
+      this.refreshHpDisplay(defender, event.defenderHpAfter, maxHp)
+    }
+    if (event.type === 'unit_down') this.units.get(event.unit)!.sprite.setAlpha(0.4)
+  }
+
+  private animateMove(id: UnitId, path: readonly Hex[]): void {
+    if (path.length === 0) return
     const container = this.units.get(id)!.container
     this.tweens.chain({
       targets: container,
       tweens: path.map((h) => ({ ...this.hexCenter(h), duration: MOVE_STEP_MS, onUpdate: () => this.sortUnits() })),
     })
-    return path.length * MOVE_STEP_MS
   }
 
   /** The engine owns HP during battle; write it back to the persistent character. */
   private syncUnitsFromEngine(): void {
     for (const snapshot of this.engine.getState().units) {
       if (snapshot.id === HERO_ID) this.gameState.player.hp = snapshot.hp
-      this.refreshHpDisplay(this.units.get(snapshot.id)!, snapshot)
+      this.refreshHpDisplay(this.units.get(snapshot.id)!, snapshot.hp, snapshot.maxHp)
     }
+    this.refreshAllApPips()
+  }
+
+  private refreshAllApPips(): void {
+    const state = this.engine.getState()
+    for (const snapshot of state.units) this.refreshApPips(this.units.get(snapshot.id)!, snapshot, state.phase)
   }
 
   private setPlayerControl(enabled: boolean): void {
     this.playerControl = enabled
-    const canAttack = enabled && this.engine.legalActions().some((a) => a.type === 'attack')
-    this.setButtonEnabled(this.attackButton, canAttack)
+    if (enabled) this.ensureSelection()
+    const attacks = enabled ? this.selectedAttacks().length : 0
+    if (attacks < 2) this.targeting = false
+    this.setButtonEnabled(this.attackButton, attacks > 0)
+    this.setButtonLabel(this.attackButton, this.targeting ? 'Cancel' : 'Attack')
     this.setButtonEnabled(this.endTurnButton, enabled)
     this.refreshHighlights()
     this.updateRoundText()
+  }
+
+  private setTargeting(on: boolean): void {
+    this.targeting = on
+    this.setPlayerControl(this.playerControl)
   }
 
   private onBoardClick(pointer: Phaser.Input.Pointer): void {
@@ -521,18 +661,41 @@ export class BattleScene extends Phaser.Scene {
     const clicked = this.hexAt(pointer.x, pointer.y)
     if (!clicked) return
     const state = this.engine.getState()
-    const action = this.engine.legalActions().find(
-      (a) =>
-        (a.type === 'move' && hexEquals(a.to, clicked)) ||
-        (a.type === 'attack' && hexEquals(state.units.find((u) => u.id === a.target)!.position, clicked)),
-    )
-    if (action) this.playerAct(action)
+    const unitAt = state.units.find((u) => u.hp > 0 && hexEquals(u.position, clicked))
+    if (this.targeting) {
+      // Only a target counts; any other board click backs out of picking one.
+      const attack = this.selectedAttacks().find((a) => a.target === unitAt?.id)
+      if (attack) this.playerAct(attack)
+      else this.setTargeting(false)
+      return
+    }
+    const action =
+      this.selected === null
+        ? undefined
+        : this.engine
+            .legalActions(this.selected)
+            .find(
+              (a) =>
+                (a.type === 'move' && hexEquals(a.to, clicked)) || (a.type === 'attack' && a.target === unitAt?.id),
+            )
+    if (action) {
+      this.playerAct(action)
+    } else if (unitAt && this.actableUnits().includes(unitAt.id)) {
+      this.selected = unitAt.id
+      this.setPlayerControl(true)
+    }
   }
 
+  /** Attacks the only foe in reach, or asks which one when there are several; pressed again, cancels. */
   private onAttack(): void {
-    // Attacks the first adjacent foe; clicking a foe on the board picks one.
-    const attack = this.engine.legalActions().find((a) => a.type === 'attack')
-    if (this.playerControl && attack) this.playerAct(attack)
+    if (!this.playerControl) return
+    if (this.targeting) {
+      this.setTargeting(false)
+      return
+    }
+    const attacks = this.selectedAttacks()
+    if (attacks.length === 1) this.playerAct(attacks[0])
+    else if (attacks.length > 1) this.setTargeting(true)
   }
 
   private onEndTurn(): void {
@@ -554,14 +717,12 @@ export class BattleScene extends Phaser.Scene {
     else this.setPlayerControl(true)
   }
 
-  /** Plays one enemy action, then continues; an enemy turn may be a move and then an attack. */
+  /** Plays one enemy action, then continues; the enemy's turn runs until its policy ends it. */
   private runEnemyAction(): void {
     this.updateRoundText()
     this.time.delayedCall(400, () => {
-      const state = this.engine.getState()
       const action = POLICIES[ENEMY_POLICY]({
-        state,
-        unit: state.active!,
+        state: this.engine.getState(),
         legal: this.engine.legalActions(),
         rng: Math.random,
       })

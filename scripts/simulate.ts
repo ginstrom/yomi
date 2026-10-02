@@ -95,7 +95,7 @@ function runBattle(battleId: number, seed: number, args: CliArgs): LoggedEvent[]
       break
     }
     const policy = POLICIES[args.policies[state.phase]]
-    engine.step(policy({ state, unit: state.active!, legal: engine.legalActions(), rng: policyRng }))
+    engine.step(policy({ state, legal: engine.legalActions(), rng: policyRng }))
   }
 
   return engine.getLog().map((event) => ({ ...event, battleId }))
@@ -114,6 +114,8 @@ interface Summary {
   enemyHitRate: number
   playerCritRate: number
   enemyCritRate: number
+  /** Free attacks provoked by leaving a zone of control, per battle. */
+  avgOpportunityAttacks: number
 }
 
 function summarize(events: LoggedEvent[], battles: number): Summary {
@@ -128,6 +130,7 @@ function summarize(events: LoggedEvent[], battles: number): Summary {
   let enemyHits = 0
   let playerCrits = 0
   let enemyCrits = 0
+  let opportunityAttacks = 0
   // Attacks name units; each battle's battle_start says which side they're on.
   let sideOf = new Map<UnitId, Side>()
 
@@ -139,6 +142,7 @@ function summarize(events: LoggedEvent[], battles: number): Summary {
       else if (event.winner === 'enemy') enemyWins++
     }
     if (event.type === 'attack') {
+      if (event.opportunity) opportunityAttacks++
       if (sideOf.get(event.attacker) === 'player') {
         playerAttacks++
         playerDamage += event.damage
@@ -165,6 +169,7 @@ function summarize(events: LoggedEvent[], battles: number): Summary {
     enemyHitRate: enemyAttacks ? enemyHits / enemyAttacks : 0,
     playerCritRate: playerAttacks ? playerCrits / playerAttacks : 0,
     enemyCritRate: enemyAttacks ? enemyCrits / enemyAttacks : 0,
+    avgOpportunityAttacks: opportunityAttacks / battles,
   }
 }
 

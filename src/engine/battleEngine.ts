@@ -1,17 +1,32 @@
-import { resolveAttack, type CombatantStats, type RNG } from '../combat/combat.ts'
+import { hitChance, resolveAttack, type CombatantStats, type RNG } from '../combat/combat.ts'
 import { mulberry32, randomSeed } from '../combat/rng.ts'
 import { HexBoard, hexDistance, hexEquals, hexKey, reachableHexes, type BoardSize, type Hex } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 4
+export const LOG_SCHEMA_VERSION = 6
+
+/** To-hit bonus an attacker gains for each other standing ally adjacent to the defender. */
+export const FLANK_BONUS_PER_ALLY = 2
+
+/** Action points an attack costs. */
+export const ATTACK_AP_COST = 2
+
+/** Action points a move of `steps` hexes costs: one per `speed` hexes or part thereof. */
+export function moveApCost(steps: number, speed: number): number {
+  return Math.ceil(steps / speed)
+}
 
 export type Side = 'player' | 'enemy'
 export type Phase = Side | 'over'
 export type UnitId = string
 
-export type Action = { type: 'move'; to: Hex } | { type: 'attack'; target: UnitId } | { type: 'end_turn' }
+/** Moves and attacks name the acting unit; end_turn ends the whole side's turn. */
+export type Action =
+  | { type: 'move'; unit: UnitId; to: Hex }
+  | { type: 'attack'; unit: UnitId; target: UnitId }
+  | { type: 'end_turn' }
 
-/** A unit entering battle. Roster order within a side is turn order. */
+/** A unit entering battle. Roster order is the order legal actions are listed in. */
 export interface UnitSetup {
   id: UnitId
   side: Side
@@ -27,24 +42,41 @@ export interface BattleSetup {
   units: readonly UnitSetup[]
 }
 
-/** Everything an agent may observe about a unit: its full stat block plus current HP. */
+/** Everything an agent may observe about a unit: its full stat block plus its current condition. */
 export interface UnitSnapshot extends CombatantStats {
   id: UnitId
   side: Side
   hp: number
   position: Hex
+  /** Action points left this turn; refilled when the unit's side starts its turn. */
+  ap: number
+  /** Whether the unit can still make a free attack this enemy turn. */
+  reactionReady: boolean
 }
 
 export interface BattleState {
   round: number
+  /** The side taking its turn, or 'over'. */
   phase: Phase
-  /** The unit whose turn it is; null once the battle is over. */
-  active: UnitId | null
-  /** Whether the active unit has already moved this turn (a unit moves at most once, before attacking). */
-  activeHasMoved: boolean
   /** Every unit in roster order, including fallen ones (hp 0). */
   units: UnitSnapshot[]
   winner: Side | null
+}
+
+/** What a move to a hex would involve, for UIs and agents to weigh before committing. */
+export interface MovePreview {
+  path: Hex[]
+  apCost: number
+  /** Foes whose free attacks the move would provoke, in the order they'd strike. */
+  provokes: UnitId[]
+}
+
+/** What an attack would involve before the dice are rolled. */
+export interface AttackPreview {
+  flankers: UnitId[]
+  flankBonus: number
+  /** Probability of a hit, natural 1s and 20s included. */
+  hitChance: number
 }
 
 interface EventBase {
@@ -63,6 +95,12 @@ export interface BattleStartEvent extends EventBase {
   units: UnitSnapshot[]
 }
 
+/**
+ * A stretch of movement. A move that provokes free attacks is logged in
+ * segments, split where the attacks land; the first segment carries the
+ * action's AP cost (later ones 0) and may be empty if the mover is struck
+ * before its first step. Every segment names the requested destination.
+ */
 export interface MoveEvent extends EventBase {
   type: 'move'
   unit: UnitId
@@ -70,12 +108,20 @@ export interface MoveEvent extends EventBase {
   to: Hex
   /** Every hex stepped through after `from`, ending at `to`. */
   path: Hex[]
+  destination: Hex
+  apCost: number
 }
 
 export interface AttackEvent extends EventBase {
   type: 'attack'
   attacker: UnitId
   defender: UnitId
+  /** A free attack provoked by the defender leaving the attacker's zone of control; costs no AP. */
+  opportunity: boolean
+  /** The attacker's standing allies adjacent to the defender when the attack was made. */
+  flankers: UnitId[]
+  /** To-hit bonus from flankers, already included in totalToHit. */
+  flankBonus: number
   attackRoll: number
   totalToHit: number
   hit: boolean
@@ -92,7 +138,7 @@ export interface UnitDownEvent extends EventBase {
 
 export interface EndTurnEvent extends EventBase {
   type: 'end_turn'
-  unit: UnitId
+  side: Side
 }
 
 export interface BattleEndEvent extends EventBase {
@@ -118,26 +164,51 @@ interface UnitRecord {
   stats: CombatantStats
   hp: number
   position: Hex
+  ap: number
+  reactionReady: boolean
 }
 
 const other = (side: Side): Side => (side === 'player' ? 'enemy' : 'player')
 
+/** The minimum a unit needs for positional rules; both engine records and snapshots qualify. */
+type Placed = Pick<UnitSnapshot, 'id' | 'side' | 'hp' | 'position'>
+
 /**
- * Pure, Phaser-free battle rules on a hex board: turn order, movement, attack
- * resolution and a structured event log. Sides alternate phases, starting
- * with the player; within a phase each standing unit takes one turn in roster
- * order. A turn is an optional move of up to `speed` hexes, then either an
- * attack on an adjacent foe or end_turn — attacking ends the turn. Whoever is
- * active acts via step(), so the UI, scripted policies and AI agents all drive
- * it the same way. Given the seed in battle_start and the actions in the log,
- * a battle replays exactly.
+ * The attacker's standing allies adjacent to the defender, in roster order:
+ * each one helps surround the defender and grants FLANK_BONUS_PER_ALLY.
+ */
+export function flankersOf(units: readonly Placed[], attacker: Placed, defender: Placed): UnitId[] {
+  return units
+    .filter(
+      (u) =>
+        u.id !== attacker.id &&
+        u.side === attacker.side &&
+        u.hp > 0 &&
+        hexDistance(u.position, defender.position) === 1,
+    )
+    .map((u) => u.id)
+}
+
+/**
+ * Pure, Phaser-free battle rules on a hex board: turns, action points,
+ * movement, zones of control, attack resolution and a structured event log.
+ *
+ * Sides alternate turns, starting with the player. At the start of its
+ * side's turn each standing unit gets its action points, and the side's
+ * units then act in any order — moving (one AP per `speed` hexes) and
+ * attacking adjacent foes (ATTACK_AP_COST) — until the side ends its turn.
+ * An attack gains a to-hit bonus for each other ally adjacent to the
+ * defender. Every standing unit exerts a zone of control over its
+ * neighbouring hexes: a foe stepping out of one provokes a free attack, at
+ * most one per unit per enemy turn.
+ *
+ * The UI, scripted policies and AI agents all drive it through step(). Given
+ * the seed in battle_start and the actions in the log, a battle replays exactly.
  */
 export class BattleEngine {
   private seq = 0
   private round = 1
   private phase: Phase = 'player'
-  private activeIndex: number
-  private activeHasMoved = false
   private winner: Side | null = null
   private readonly board: HexBoard
   private readonly units: UnitRecord[]
@@ -164,6 +235,8 @@ export class BattleEngine {
       stats: u.stats,
       hp: Math.max(0, Math.min(u.hp ?? u.stats.maxHp, u.stats.maxHp)),
       position: u.position,
+      ap: 0,
+      reactionReady: false,
     }))
 
     let seed: number | null = null
@@ -174,6 +247,7 @@ export class BattleEngine {
       this.rng = mulberry32(seed)
     }
 
+    this.startTurn('player')
     this.record<BattleStartEvent>({
       type: 'battle_start',
       round: this.round,
@@ -183,18 +257,14 @@ export class BattleEngine {
       board: setup.board,
       units: this.units.map(snapshot),
     })
-
     // A side may enter battle already fallen (e.g. every member at 0 hp).
-    this.activeIndex = -1
-    if (!this.checkWinner()) this.advance()
+    this.checkWinner()
   }
 
   getState(): BattleState {
     return {
       round: this.round,
       phase: this.phase,
-      active: this.phase === 'over' ? null : this.units[this.activeIndex].id,
-      activeHasMoved: this.activeHasMoved,
       units: this.units.map(snapshot),
       winner: this.winner,
     }
@@ -205,47 +275,75 @@ export class BattleEngine {
   }
 
   /**
-   * Actions available to the active unit: a move to each reachable hex (if it
-   * hasn't moved yet), an attack on each adjacent standing foe, and end_turn.
-   * Empty once the battle is over.
+   * Actions available to the side whose turn it is (or, given `unit`, just to
+   * that unit): for each of its standing units in roster order, a move to each
+   * hex its AP can reach and an attack on each adjacent standing foe if it can
+   * afford one; then end_turn. Empty once the battle is over.
    */
-  legalActions(): Action[] {
+  legalActions(unit?: UnitId): Action[] {
     if (this.phase === 'over') return []
-    const actor = this.units[this.activeIndex]
-    const moves: Action[] = this.activeHasMoved
-      ? []
-      : [...this.reachable(actor).values()].map((path) => ({ type: 'move', to: path[path.length - 1] }))
-    const attacks: Action[] = this.units
-      .filter((u) => u.side !== actor.side && u.hp > 0 && hexDistance(u.position, actor.position) === 1)
-      .map((u) => ({ type: 'attack', target: u.id }))
-    return [...moves, ...attacks, { type: 'end_turn' }]
+    const actions: Action[] = []
+    for (const actor of this.units) {
+      if (!this.canAct(actor) || (unit !== undefined && actor.id !== unit)) continue
+      for (const path of this.reachable(actor).values()) {
+        actions.push({ type: 'move', unit: actor.id, to: path[path.length - 1] })
+      }
+      if (actor.ap < ATTACK_AP_COST) continue
+      for (const foe of this.units) {
+        if (this.canAttack(actor, foe)) actions.push({ type: 'attack', unit: actor.id, target: foe.id })
+      }
+    }
+    actions.push({ type: 'end_turn' })
+    return actions
   }
 
-  /** Performs an action for the active unit. Throws if the battle is over or the action is illegal. */
+  /** The path, AP cost and provoked foes of a legal move, or null if the move isn't legal now. */
+  previewMove(unit: UnitId, to: Hex): MovePreview | null {
+    const actor = this.units.find((u) => u.id === unit)
+    if (this.phase === 'over' || !actor || !this.canAct(actor)) return null
+    const path = this.reachable(actor).get(hexKey(to))
+    if (!path) return null
+    const provokes: UnitId[] = []
+    let at = actor.position
+    for (const step of path) {
+      for (const foe of this.reactorsAt(actor, at)) if (!provokes.includes(foe.id)) provokes.push(foe.id)
+      at = step
+    }
+    return { path, apCost: moveApCost(path.length, actor.stats.speed), provokes }
+  }
+
+  /** Flanking and odds of a legal attack, or null if the attack isn't legal now. */
+  previewAttack(unit: UnitId, target: UnitId): AttackPreview | null {
+    const actor = this.units.find((u) => u.id === unit)
+    const foe = this.units.find((u) => u.id === target)
+    if (this.phase === 'over' || !actor || !foe || !this.canAct(actor)) return null
+    if (actor.ap < ATTACK_AP_COST || !this.canAttack(actor, foe)) return null
+    const flankers = flankersOf(this.units, actor, foe)
+    const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
+    return { flankers, flankBonus, hitChance: hitChance(actor.stats, foe.stats.ac, flankBonus) }
+  }
+
+  /** Performs an action for the side whose turn it is. Throws if the battle is over or the action is illegal. */
   step(action: Action): BattleEvent[] {
     if (this.phase === 'over') throw new Error(`Cannot ${action.type}: the battle is over`)
-    const actor = this.units[this.activeIndex]
 
-    if (action.type === 'move') return [this.move(actor, action.to)]
-
-    let events: BattleEvent[]
-    if (action.type === 'attack') {
-      const target = this.units.find((u) => u.id === action.target)
-      if (
-        !target ||
-        target.side === actor.side ||
-        target.hp <= 0 ||
-        hexDistance(target.position, actor.position) !== 1
-      ) {
-        throw new Error(`${actor.id} cannot attack ${action.target}`)
-      }
-      events = this.attack(actor, target)
-    } else {
-      events = [this.record<EndTurnEvent>({ type: 'end_turn', round: this.round, unit: actor.id })]
+    if (action.type === 'end_turn') {
+      const side = this.phase
+      const event = this.record<EndTurnEvent>({ type: 'end_turn', round: this.round, side })
+      if (side === 'enemy') this.round += 1
+      this.startTurn(other(side))
+      return [event]
     }
 
-    if (this.winner === null) this.advance()
-    return events
+    const actor = this.units.find((u) => u.id === action.unit)
+    if (!actor || !this.canAct(actor)) throw new Error(`${action.unit} cannot act now`)
+    if (action.type === 'move') return this.move(actor, action.to)
+
+    const target = this.units.find((u) => u.id === action.target)
+    if (!target || !this.canAttack(actor, target)) throw new Error(`${actor.id} cannot attack ${action.target}`)
+    if (actor.ap < ATTACK_AP_COST) throw new Error(`${actor.id} has too few action points to attack`)
+    actor.ap -= ATTACK_AP_COST
+    return this.attack(actor, target, false)
   }
 
   /** Ends an unfinished battle (e.g. the player quit) so its log is still complete. */
@@ -255,25 +353,97 @@ export class BattleEngine {
     return [this.record<BattleEndEvent>({ type: 'battle_end', round: this.round, winner: null, reason: 'abandoned' })]
   }
 
-  /** Moving doesn't end the turn: the unit may still attack or end it. */
-  private move(actor: UnitRecord, to: Hex): MoveEvent {
-    if (this.activeHasMoved) throw new Error(`${actor.id} has already moved this turn`)
+  /** Refills the side's action points and readies the other side's free attacks. */
+  private startTurn(side: Side): void {
+    this.phase = side
+    for (const u of this.units) {
+      if (u.side === side) u.ap = u.hp > 0 ? u.stats.actionPoints : 0
+      else u.reactionReady = u.hp > 0
+    }
+  }
+
+  private canAct(unit: UnitRecord): boolean {
+    return unit.side === this.phase && unit.hp > 0 && unit.ap > 0
+  }
+
+  private canAttack(actor: UnitRecord, target: UnitRecord): boolean {
+    return target.side !== actor.side && target.hp > 0 && hexDistance(target.position, actor.position) === 1
+  }
+
+  /** Foes that would strike `mover` for stepping out of `hex`. */
+  private reactorsAt(mover: UnitRecord, hex: Hex): UnitRecord[] {
+    // Crit-focused builds may later slip through zones of control; that check belongs here.
+    return this.units.filter(
+      (u) => u.side !== mover.side && u.hp > 0 && u.reactionReady && hexDistance(u.position, hex) === 1,
+    )
+  }
+
+  /**
+   * Walks the path, pausing for a free attack from each ready foe whose zone
+   * the mover steps out of. The move ends early if the mover falls.
+   */
+  private move(actor: UnitRecord, to: Hex): BattleEvent[] {
     const path = this.reachable(actor).get(hexKey(to))
     if (!path) throw new Error(`${actor.id} cannot move to ${hexKey(to)}`)
-    const from = actor.position
-    actor.position = to
-    this.activeHasMoved = true
-    return this.record<MoveEvent>({ type: 'move', round: this.round, unit: actor.id, from, to, path })
+    const apCost = moveApCost(path.length, actor.stats.speed)
+    actor.ap -= apCost
+
+    const events: BattleEvent[] = []
+    let segment: Hex[] = []
+    let segmentFrom = actor.position
+    let firstSegment = true
+    const logSegment = () => {
+      if (segment.length === 0 && !firstSegment) return
+      events.push(
+        this.record<MoveEvent>({
+          type: 'move',
+          round: this.round,
+          unit: actor.id,
+          from: segmentFrom,
+          to: actor.position,
+          path: segment,
+          destination: to,
+          apCost: firstSegment ? apCost : 0,
+        }),
+      )
+      firstSegment = false
+      segment = []
+      segmentFrom = actor.position
+    }
+
+    for (const step of path) {
+      const reactors = this.reactorsAt(actor, actor.position)
+      if (reactors.length > 0) logSegment()
+      for (const foe of reactors) {
+        foe.reactionReady = false
+        events.push(...this.attack(foe, actor, true))
+        if (actor.hp <= 0) return events
+      }
+      actor.position = step
+      segment.push(step)
+    }
+    logSegment()
+    return events
   }
 
-  /** Hexes the unit can move to this turn: on the board, within its speed, around standing units. */
+  /**
+   * Hexes the unit can move to with its remaining AP: on the board, around
+   * standing units, preferring routes that provoke fewer free attacks.
+   */
   private reachable(actor: UnitRecord): Map<string, Hex[]> {
     const blocked = (h: Hex) => this.units.some((u) => u !== actor && u.hp > 0 && hexEquals(u.position, h))
-    return reachableHexes(actor.position, actor.stats.speed, (h) => this.board.contains(h) && !blocked(h))
+    return reachableHexes(
+      actor.position,
+      actor.ap * actor.stats.speed,
+      (h) => this.board.contains(h) && !blocked(h),
+      (from) => this.reactorsAt(actor, from).length,
+    )
   }
 
-  private attack(actor: UnitRecord, target: UnitRecord): BattleEvent[] {
-    const result = resolveAttack(actor.stats, target.stats.ac, this.rng)
+  private attack(actor: UnitRecord, target: UnitRecord, opportunity: boolean): BattleEvent[] {
+    const flankers = flankersOf(this.units, actor, target)
+    const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
+    const result = resolveAttack(actor.stats, target.stats.ac, this.rng, flankBonus)
     target.hp = Math.max(0, target.hp - result.damage)
 
     const events: BattleEvent[] = [
@@ -282,6 +452,9 @@ export class BattleEngine {
         round: this.round,
         attacker: actor.id,
         defender: target.id,
+        opportunity,
+        flankers,
+        flankBonus,
         attackRoll: result.attackRoll,
         totalToHit: result.totalToHit,
         hit: result.hit,
@@ -293,6 +466,7 @@ export class BattleEngine {
     ]
 
     if (target.hp <= 0) {
+      target.ap = 0
       events.push(this.record<UnitDownEvent>({ type: 'unit_down', round: this.round, unit: target.id }))
       const end = this.checkWinner()
       if (end) events.push(end)
@@ -316,21 +490,6 @@ export class BattleEngine {
     return null
   }
 
-  /** Hands the turn to the next standing unit of the current side, else to the other side. */
-  private advance(): void {
-    this.activeHasMoved = false
-    const side = this.phase as Side
-    const next = this.units.findIndex((u, i) => i > this.activeIndex && u.side === side && u.hp > 0)
-    if (next !== -1) {
-      this.activeIndex = next
-      return
-    }
-    if (side === 'enemy') this.round += 1
-    this.phase = other(side)
-    // Each side has a standing unit here, or checkWinner would have ended the battle.
-    this.activeIndex = this.units.findIndex((u) => u.side === this.phase && u.hp > 0)
-  }
-
   private record<E extends BattleEvent>(event: Omit<E, 'seq'>): E {
     const full = { ...event, seq: this.seq++ } as E
     this.events.push(full)
@@ -339,7 +498,15 @@ export class BattleEngine {
 }
 
 function snapshot(unit: UnitRecord): UnitSnapshot {
-  return { ...unit.stats, id: unit.id, side: unit.side, hp: unit.hp, position: unit.position }
+  return {
+    ...unit.stats,
+    id: unit.id,
+    side: unit.side,
+    hp: unit.hp,
+    position: unit.position,
+    ap: unit.ap,
+    reactionReady: unit.reactionReady,
+  }
 }
 
 /** Joins names as "A", "A and B", "A, B and C". */
@@ -358,21 +525,25 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
     case 'attack': {
       const attackerName = names[event.attacker]
       const defenderName = names[event.defender]
-      if (event.fumble) return `${attackerName} rolls ${event.attackRoll} — fumbles the attack!`
+      const opening = event.opportunity ? `${defenderName} breaks away — free attack! ` : ''
+      if (event.fumble) return `${opening}${attackerName} rolls 1 — fumbles the attack!`
+      const flank = event.flankBonus > 0 ? `, +${event.flankBonus} flanking` : ''
+      const roll = `${opening}${attackerName} rolls ${event.attackRoll} (${event.totalToHit} to hit${flank})`
       if (event.hit) {
         const crit = event.critical ? ' CRITICAL HIT!' : ''
-        return `${attackerName} rolls ${event.attackRoll} (${event.totalToHit} to hit) — HITS ${defenderName} for ${event.damage} dmg.${crit}`
+        return `${roll} — HITS ${defenderName} for ${event.damage} dmg.${crit}`
       }
-      return `${attackerName} rolls ${event.attackRoll} (${event.totalToHit} to hit) — MISSES ${defenderName}.`
+      return `${roll} — MISSES ${defenderName}.`
     }
     case 'move': {
       const steps = event.path.length
+      if (steps === 0) return `${names[event.unit]} starts to move.`
       return `${names[event.unit]} moves ${steps} ${steps === 1 ? 'hex' : 'hexes'}.`
     }
     case 'unit_down':
       return `${names[event.unit]} falls.`
     case 'end_turn':
-      return `${names[event.unit]} holds position and ends the turn.`
+      return event.side === 'player' ? 'You end your turn.' : 'The enemy ends its turn.'
     case 'battle_end':
       if (event.winner === null) return 'The battle is abandoned.'
       return event.winner === 'player' ? 'Victory!' : 'Defeat...'

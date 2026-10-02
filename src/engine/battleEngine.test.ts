@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { GOBLIN_STATS, type CombatantStats } from '../combat/combat.ts'
-import { hex, hexDistance, hexKey } from '../grid/hex.ts'
+import { hex, hexKey, type Hex } from '../grid/hex.ts'
 import {
+  ATTACK_AP_COST,
   BattleEngine,
+  FLANK_BONUS_PER_ALLY,
   LOG_SCHEMA_VERSION,
+  flankersOf,
   formatEvent,
+  moveApCost,
   type Action,
   type AttackEvent,
+  type BattleEvent,
   type BattleStartEvent,
   type MoveEvent,
   type UnitSetup,
@@ -24,6 +29,7 @@ const WARRIOR_STATS: CombatantStats = {
   attackBonus: 4,
   damage: { count: 1, sides: 8, bonus: 2 },
   speed: 3,
+  actionPoints: 3,
 }
 
 const BOARD = { cols: 6, rows: 3 }
@@ -38,29 +44,27 @@ const CLERIC: UnitSetup = { id: 'cleric', side: 'player', stats: WARRIOR_STATS, 
 const DUEL = setup([WARRIOR, GOBLIN])
 
 const NAMES = { warrior: 'Warrior', goblin: 'Goblin', goblin2: 'Goblin Archer', cleric: 'Cleric' }
-const ATTACK_GOBLIN: Action = { type: 'attack', target: 'goblin' }
-const ATTACK_WARRIOR: Action = { type: 'attack', target: 'warrior' }
+const ATTACK_GOBLIN: Action = { type: 'attack', unit: 'warrior', target: 'goblin' }
+const ATTACK_WARRIOR: Action = { type: 'attack', unit: 'goblin', target: 'warrior' }
 const END_TURN: Action = { type: 'end_turn' }
 /** d20 -> 1: a fumble, so no damage. */
 const FUMBLE = 0
 /** d20 -> 20 then max damage dice: a crit that fells a Goblin outright. */
 const KILL = [0.99, 0.99]
+/** d20 -> 7: the Warrior's 11 misses a Goblin's AC 13 alone, but 13 hits with one flanker. */
+const ROLL_7 = 0.3
 
 const unitOf = (engine: BattleEngine, id: string) => engine.getState().units.find((u) => u.id === id)!
-const nonMoves = (engine: BattleEngine) => engine.legalActions().filter((a) => a.type !== 'move')
+const nonMoves = (engine: BattleEngine, unit?: string) => engine.legalActions(unit).filter((a) => a.type !== 'move')
+const move = (unit: string, to: Hex): Action => ({ type: 'move', unit, to })
 
 describe('BattleEngine', () => {
-  it('starts with the first player unit active and logs a self-describing battle_start event', () => {
+  it('starts on the player side with full AP and logs a self-describing battle_start event', () => {
     const engine = new BattleEngine(DUEL, { seed: 42, meta: { source: 'test' } })
-    expect(engine.getState()).toMatchObject({
-      phase: 'player',
-      round: 1,
-      active: 'warrior',
-      activeHasMoved: false,
-      winner: null,
-    })
-    expect(unitOf(engine, 'warrior').hp).toBe(WARRIOR_STATS.maxHp)
-    expect(unitOf(engine, 'goblin').hp).toBe(GOBLIN_STATS.maxHp)
+    expect(engine.getState()).toMatchObject({ phase: 'player', round: 1, winner: null })
+    expect(unitOf(engine, 'warrior')).toMatchObject({ hp: WARRIOR_STATS.maxHp, ap: WARRIOR_STATS.actionPoints })
+    // The enemy waits with its free attacks ready.
+    expect(unitOf(engine, 'goblin')).toMatchObject({ hp: GOBLIN_STATS.maxHp, ap: 0, reactionReady: true })
 
     expect(engine.getLog()).toHaveLength(1)
     const start = engine.getLog()[0] as BattleStartEvent
@@ -71,8 +75,8 @@ describe('BattleEngine', () => {
       meta: { source: 'test' },
       board: BOARD,
       units: [
-        { ...WARRIOR_STATS, id: 'warrior', side: 'player', hp: WARRIOR_STATS.maxHp, position: hex(1, 1) },
-        { ...GOBLIN_STATS, id: 'goblin', side: 'enemy', hp: GOBLIN_STATS.maxHp, position: hex(2, 1) },
+        { ...WARRIOR_STATS, id: 'warrior', side: 'player', hp: WARRIOR_STATS.maxHp, position: hex(1, 1), ap: 3 },
+        { ...GOBLIN_STATS, id: 'goblin', side: 'enemy', hp: GOBLIN_STATS.maxHp, position: hex(2, 1), ap: 0 },
       ],
     })
   })
@@ -99,70 +103,84 @@ describe('BattleEngine', () => {
     expect(unitOf(engine, 'goblin').hp).toBe(GOBLIN_STATS.maxHp)
   })
 
-  it('offers an attack on each adjacent standing foe, plus end_turn', () => {
-    const engine = new BattleEngine(DUEL)
-    expect(nonMoves(engine)).toEqual([ATTACK_GOBLIN, END_TURN])
+  it('offers each unit on the side an attack on each adjacent standing foe, then one end_turn', () => {
+    const engine = new BattleEngine(setup([WARRIOR, GOBLIN, CLERIC, GOBLIN2]))
+    expect(nonMoves(engine)).toEqual([ATTACK_GOBLIN, { type: 'attack', unit: 'warrior', target: 'goblin2' }, END_TURN])
+    // The cleric touches no foe, so it may only move.
+    expect(nonMoves(engine, 'cleric')).toEqual([END_TURN])
+    expect(engine.legalActions('cleric').some((a) => a.type === 'move')).toBe(true)
   })
 
   it('rejects attacks on allies, unknown units, fallen foes and foes out of reach', () => {
     const engine = new BattleEngine(setup([WARRIOR, GOBLIN, CLERIC]))
-    expect(() => engine.step({ type: 'attack', target: 'cleric' })).toThrow(/cannot attack/)
-    expect(() => engine.step({ type: 'attack', target: 'nobody' })).toThrow(/cannot attack/)
+    expect(() => engine.step({ type: 'attack', unit: 'warrior', target: 'cleric' })).toThrow(/cannot attack/)
+    expect(() => engine.step({ type: 'attack', unit: 'warrior', target: 'nobody' })).toThrow(/cannot attack/)
 
     const withFallen = new BattleEngine(setup([WARRIOR, GOBLIN, { ...GOBLIN2, hp: 0 }]))
     expect(nonMoves(withFallen)).toEqual([ATTACK_GOBLIN, END_TURN])
-    expect(() => withFallen.step({ type: 'attack', target: 'goblin2' })).toThrow(/cannot attack/)
+    expect(() => withFallen.step({ type: 'attack', unit: 'warrior', target: 'goblin2' })).toThrow(/cannot attack/)
 
     const apart = new BattleEngine(setup([WARRIOR, { ...GOBLIN, position: hex(4, 1) }]))
     expect(nonMoves(apart)).toEqual([END_TURN])
     expect(() => apart.step(ATTACK_GOBLIN)).toThrow(/cannot attack/)
   })
 
-  it('passes the turn to the enemy after a player attack that does not end the battle', () => {
-    const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE]) })
-    const events = engine.step(ATTACK_GOBLIN)
-    expect(events).toEqual([
-      expect.objectContaining({ type: 'attack', attacker: 'warrior', defender: 'goblin', fumble: true, damage: 0 }),
-    ])
-    expect(engine.getState()).toMatchObject({ phase: 'enemy', active: 'goblin' })
-  })
-
-  it('acts for whichever unit is active, advancing the round after the enemy side', () => {
-    const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE, FUMBLE]) })
-    engine.step(ATTACK_GOBLIN)
-    const [enemyAttack] = engine.step(ATTACK_WARRIOR) as [AttackEvent]
-    expect(enemyAttack.attacker).toBe('goblin')
-    expect(engine.getState()).toMatchObject({ phase: 'player', active: 'warrior', round: 2 })
-  })
-
-  it('lets any unit end its turn without attacking', () => {
+  it('only lets the side whose turn it is act', () => {
     const engine = new BattleEngine(DUEL)
-    expect(engine.step(END_TURN)).toEqual([expect.objectContaining({ type: 'end_turn', unit: 'warrior' })])
-    expect(engine.step(END_TURN)).toEqual([expect.objectContaining({ type: 'end_turn', unit: 'goblin' })])
+    expect(() => engine.step(ATTACK_WARRIOR)).toThrow(/goblin cannot act/)
+    expect(() => engine.step({ type: 'attack', unit: 'nobody', target: 'goblin' })).toThrow(/cannot act/)
+  })
+
+  it('charges AP for an attack without ending the turn, and refuses one it cannot afford', () => {
+    const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE]) })
+    expect(engine.step(ATTACK_GOBLIN)).toEqual([
+      expect.objectContaining({ type: 'attack', attacker: 'warrior', defender: 'goblin', opportunity: false }),
+    ])
+    expect(engine.getState().phase).toBe('player')
+    expect(unitOf(engine, 'warrior').ap).toBe(WARRIOR_STATS.actionPoints - ATTACK_AP_COST)
+    expect(nonMoves(engine)).toEqual([END_TURN])
+    expect(() => engine.step(ATTACK_GOBLIN)).toThrow(/too few action points/)
+  })
+
+  it('refuses any action from a unit with no AP left', () => {
+    const engine = new BattleEngine(setup([WARRIOR, { ...GOBLIN, position: hex(4, 1) }]), { rng: sequence([FUMBLE]) })
+    engine.step(move('warrior', hex(3, 1))) // 2 hexes: 1 AP
+    engine.step(ATTACK_GOBLIN) // 2 AP
+    expect(unitOf(engine, 'warrior').ap).toBe(0)
+    expect(engine.legalActions()).toEqual([END_TURN])
+    expect(() => engine.step(move('warrior', hex(2, 1)))).toThrow(/cannot act/)
+  })
+
+  it('ends the side’s turn on end_turn, refilling the other side’s AP and advancing the round after the enemy', () => {
+    const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE]) })
+    engine.step(ATTACK_GOBLIN)
+    expect(engine.step(END_TURN)).toEqual([expect.objectContaining({ type: 'end_turn', side: 'player' })])
+    expect(engine.getState()).toMatchObject({ phase: 'enemy', round: 1 })
+    expect(unitOf(engine, 'goblin').ap).toBe(GOBLIN_STATS.actionPoints)
+
+    expect(engine.step(END_TURN)).toEqual([expect.objectContaining({ type: 'end_turn', side: 'enemy' })])
     expect(engine.getState()).toMatchObject({ phase: 'player', round: 2 })
-    expect(unitOf(engine, 'goblin').hp).toBe(GOBLIN_STATS.maxHp)
+    expect(unitOf(engine, 'warrior').ap).toBe(WARRIOR_STATS.actionPoints)
   })
 
-  it('gives every standing unit on a side a turn, in roster order, before the other side', () => {
-    const engine = new BattleEngine(setup([WARRIOR, GOBLIN, CLERIC, GOBLIN2]))
-    const order: (string | null)[] = []
-    for (let i = 0; i < 5; i++) {
-      order.push(engine.getState().active)
-      engine.step(END_TURN)
-    }
-    expect(order).toEqual(['warrior', 'cleric', 'goblin', 'goblin2', 'warrior'])
-    expect(engine.getState().round).toBe(2)
+  it('lets the side’s units act in any order, interleaved', () => {
+    const engine = new BattleEngine(setup([WARRIOR, GOBLIN, CLERIC, GOBLIN2]), { rng: sequence([FUMBLE]) })
+    engine.step(move('cleric', hex(1, 2)))
+    engine.step(ATTACK_GOBLIN)
+    engine.step(move('cleric', hex(0, 2)))
+    expect(unitOf(engine, 'cleric')).toMatchObject({ position: hex(0, 2), ap: 1 })
+    expect(engine.getState().phase).toBe('player')
   })
 
-  it('skips fallen units and keeps fighting while a side still has someone standing', () => {
+  it('leaves fallen units out and keeps fighting while a side still has someone standing', () => {
     const engine = new BattleEngine(setup([WARRIOR, GOBLIN, GOBLIN2]), { rng: sequence(KILL) })
     const events = engine.step(ATTACK_GOBLIN)
     expect(events.map((e) => e.type)).toEqual(['attack', 'unit_down'])
-    expect(engine.getState()).toMatchObject({ phase: 'enemy', active: 'goblin2', winner: null })
-    expect(nonMoves(engine)).toEqual([ATTACK_WARRIOR, END_TURN])
+    expect(engine.getState()).toMatchObject({ phase: 'player', winner: null })
     engine.step(END_TURN)
-    expect(engine.getState().active).toBe('warrior')
-    expect(nonMoves(engine)).toEqual([{ type: 'attack', target: 'goblin2' }, END_TURN])
+    expect(unitOf(engine, 'goblin').ap).toBe(0)
+    expect(nonMoves(engine)).toEqual([{ type: 'attack', unit: 'goblin2', target: 'warrior' }, END_TURN])
+    expect(engine.legalActions().every((a) => a.type === 'end_turn' || a.unit === 'goblin2')).toBe(true)
   })
 
   it('ends the battle when the last unit on a side falls', () => {
@@ -174,10 +192,11 @@ describe('BattleEngine', () => {
       expect.objectContaining({ type: 'battle_end', winner: 'player', reason: 'defeat' }),
     ])
 
-    expect(engine.getState()).toMatchObject({ phase: 'over', active: null, winner: 'player' })
+    expect(engine.getState()).toMatchObject({ phase: 'over', winner: 'player' })
     expect(unitOf(engine, 'goblin').hp).toBe(0)
     expect(engine.legalActions()).toEqual([])
     expect(() => engine.step(ATTACK_GOBLIN)).toThrow(/over/)
+    expect(() => engine.step(END_TURN)).toThrow(/over/)
   })
 
   it('ends at once if a side enters battle with nobody standing', () => {
@@ -205,9 +224,9 @@ describe('BattleEngine', () => {
     const play = (seed: number) => {
       const engine = new BattleEngine(DUEL, { seed })
       for (let i = 0; i < 12 && engine.legalActions().length; i++) {
-        // Attack when possible, otherwise hold, whatever side is active.
+        // Attack when possible, otherwise end the turn, whatever side is acting.
         const attack = engine.legalActions().find((a) => a.type === 'attack')
-        engine.step(i % 3 === 2 || !attack ? END_TURN : attack)
+        engine.step(attack ?? END_TURN)
       }
       return engine.getLog()
     }
@@ -218,6 +237,7 @@ describe('BattleEngine', () => {
   it('assigns a strictly increasing seq to every event in the log', () => {
     const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE]) })
     engine.step(ATTACK_GOBLIN)
+    engine.step(END_TURN)
     engine.step(ATTACK_WARRIOR)
     engine.abandon()
     const seqs = engine.getLog().map((e) => e.seq)
@@ -227,51 +247,203 @@ describe('BattleEngine', () => {
 })
 
 describe('BattleEngine movement', () => {
+  // Five hexes apart, so nobody starts in a zone of control.
   const apart = () =>
     new BattleEngine(setup([{ ...WARRIOR, position: hex(0, 1) }, { ...GOBLIN, position: hex(4, 1) }]))
   const moveTargets = (engine: BattleEngine) =>
     engine.legalActions().flatMap((a) => (a.type === 'move' ? [hexKey(a.to)] : []))
 
-  it('offers moves to on-board hexes within speed, around other units', () => {
+  it('charges one AP per speed hexes moved, or part thereof', () => {
+    expect([1, 3, 4, 6, 7].map((steps) => moveApCost(steps, 3))).toEqual([1, 1, 2, 2, 3])
+  })
+
+  it('offers moves to on-board hexes its AP can reach, around other units', () => {
     const engine = new BattleEngine(setup([WARRIOR, GOBLIN, CLERIC]))
     const targets = moveTargets(engine)
     expect(targets.length).toBeGreaterThan(0)
     for (const key of targets) {
-      const [q, r] = key.split(',').map(Number)
-      expect(hexDistance(hex(q, r), WARRIOR.position)).toBeLessThanOrEqual(WARRIOR_STATS.speed)
+      const [, r] = key.split(',').map(Number)
       expect(r >= 0 && r < BOARD.rows).toBe(true)
     }
     expect(targets).not.toContain(hexKey(GOBLIN.position))
     expect(targets).not.toContain(hexKey(CLERIC.position))
   })
 
-  it('moves along a logged path without ending the turn, then allows no second move', () => {
+  it('moves along a logged path, charging AP but leaving the turn open', () => {
     const engine = apart()
-    const [event] = engine.step({ type: 'move', to: hex(3, 1) }) as [MoveEvent]
-    expect(event).toMatchObject({ type: 'move', unit: 'warrior', from: hex(0, 1), to: hex(3, 1) })
+    const [event] = engine.step(move('warrior', hex(3, 1))) as [MoveEvent]
+    expect(event).toMatchObject({
+      type: 'move',
+      unit: 'warrior',
+      from: hex(0, 1),
+      to: hex(3, 1),
+      destination: hex(3, 1),
+      apCost: 1,
+    })
     expect(event.path).toEqual([hex(1, 1), hex(2, 1), hex(3, 1)])
-    expect(unitOf(engine, 'warrior').position).toEqual(hex(3, 1))
-    expect(engine.getState()).toMatchObject({ active: 'warrior', activeHasMoved: true })
-
-    // Now adjacent: it can attack or end the turn, but not move again.
-    expect(engine.legalActions()).toEqual([ATTACK_GOBLIN, END_TURN])
-    expect(() => engine.step({ type: 'move', to: hex(2, 1) })).toThrow(/already moved/)
-  })
-
-  it('rejects moves beyond speed, off the board or onto a unit', () => {
-    const engine = apart()
-    expect(() => engine.step({ type: 'move', to: hex(4, 0) })).toThrow(/cannot move/) // 4 steps away
-    expect(() => engine.step({ type: 'move', to: hex(0, -1) })).toThrow(/cannot move/)
-    const crowded = new BattleEngine(setup([WARRIOR, GOBLIN]))
-    expect(() => crowded.step({ type: 'move', to: GOBLIN.position })).toThrow(/cannot move/)
-  })
-
-  it('lets each unit move again on its next turn', () => {
-    const engine = apart()
-    engine.step({ type: 'move', to: hex(1, 1) })
-    engine.step(END_TURN)
-    expect(engine.getState()).toMatchObject({ active: 'goblin', activeHasMoved: false })
+    expect(unitOf(engine, 'warrior')).toMatchObject({ position: hex(3, 1), ap: 2 })
+    expect(engine.getState().phase).toBe('player')
+    // Now adjacent with 2 AP: it can still attack, or move again.
+    expect(nonMoves(engine)).toEqual([ATTACK_GOBLIN, END_TURN])
     expect(moveTargets(engine).length).toBeGreaterThan(0)
+  })
+
+  it('charges more AP for longer moves', () => {
+    const engine = apart()
+    const [event] = engine.step(move('warrior', hex(4, 0))) as [MoveEvent] // 4 hexes
+    expect(event.apCost).toBe(2)
+    expect(unitOf(engine, 'warrior').ap).toBe(1)
+    expect(nonMoves(engine)).toEqual([END_TURN]) // adjacent, but an attack costs 2
+  })
+
+  it('rejects moves beyond its AP, off the board or onto a unit', () => {
+    const engine = apart()
+    engine.step(move('warrior', hex(1, 1)))
+    engine.step(move('warrior', hex(2, 1)))
+    engine.step(move('warrior', hex(2, 2))) // a hex at a time still costs 1 AP each: all 3 spent
+    expect(() => engine.step(move('warrior', hex(1, 2)))).toThrow(/cannot act/)
+    const fresh = apart()
+    expect(() => fresh.step(move('warrior', hex(0, -1)))).toThrow(/cannot move/)
+    expect(() => fresh.step(move('warrior', hex(4, 1)))).toThrow(/cannot move/)
+  })
+
+  it('previews a move’s path, cost and provoked foes without changing anything', () => {
+    const engine = new BattleEngine(DUEL)
+    expect(engine.previewMove('warrior', hex(0, 1))).toEqual({ path: [hex(0, 1)], apCost: 1, provokes: ['goblin'] })
+    expect(engine.previewMove('warrior', hex(2, 1))).toBeNull() // occupied
+    expect(engine.previewMove('goblin', hex(3, 1))).toBeNull() // not its turn
+    expect(unitOf(engine, 'warrior')).toMatchObject({ position: hex(1, 1), ap: 3 })
+  })
+})
+
+describe('BattleEngine zones of control', () => {
+  const opportunity = (events: readonly BattleEvent[]) =>
+    events.filter((e): e is AttackEvent => e.type === 'attack' && e.opportunity)
+
+  it('gives a foe a free attack when a unit steps out of its zone, splitting the move around it', () => {
+    const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE]) })
+    const events = engine.step(move('warrior', hex(0, 1)))
+    expect(events).toEqual([
+      expect.objectContaining({ type: 'move', path: [], from: hex(1, 1), to: hex(1, 1), apCost: 1 }),
+      expect.objectContaining({ type: 'attack', attacker: 'goblin', defender: 'warrior', opportunity: true }),
+      expect.objectContaining({ type: 'move', path: [hex(0, 1)], from: hex(1, 1), to: hex(0, 1), apCost: 0 }),
+    ])
+    for (const e of events) if (e.type === 'move') expect(e.destination).toEqual(hex(0, 1))
+    expect(unitOf(engine, 'goblin').reactionReady).toBe(false)
+    expect(unitOf(engine, 'warrior')).toMatchObject({ position: hex(0, 1), ap: 2 })
+  })
+
+  it('provokes even when sliding to another hex beside the foe, but each foe strikes once per turn', () => {
+    const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE]) })
+    expect(opportunity(engine.step(move('warrior', hex(1, 2))))).toHaveLength(1) // (1,2) also touches the goblin
+    expect(opportunity(engine.step(move('warrior', hex(1, 1))))).toHaveLength(0) // reaction spent
+    engine.step(END_TURN)
+    engine.step(END_TURN)
+    expect(opportunity(engine.step(move('warrior', hex(0, 1))))).toHaveLength(1) // ready again
+  })
+
+  it('does not provoke when moving into a zone', () => {
+    const engine = new BattleEngine(setup([{ ...WARRIOR, position: hex(0, 1) }, { ...GOBLIN, position: hex(4, 1) }]))
+    expect(opportunity(engine.step(move('warrior', hex(3, 1))))).toEqual([])
+  })
+
+  it('stops the move where the mover falls', () => {
+    const engine = new BattleEngine(setup([{ ...WARRIOR, hp: 1 }, GOBLIN, CLERIC]), { rng: sequence(KILL) })
+    const events = engine.step(move('warrior', hex(0, 2)))
+    expect(events.map((e) => e.type)).toEqual(['move', 'attack', 'unit_down'])
+    expect(unitOf(engine, 'warrior')).toMatchObject({ hp: 0, position: hex(1, 1), ap: 0 })
+    expect(engine.getState()).toMatchObject({ phase: 'player', winner: null })
+  })
+
+  it('ends the battle if the free attack fells the last mover', () => {
+    const engine = new BattleEngine(setup([{ ...WARRIOR, hp: 1 }, GOBLIN]), { rng: sequence(KILL) })
+    const events = engine.step(move('warrior', hex(0, 1)))
+    expect(events.map((e) => e.type)).toEqual(['move', 'attack', 'unit_down', 'battle_end'])
+    expect(engine.getState().winner).toBe('enemy')
+  })
+
+  it('lets the player react to enemy moves too', () => {
+    const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE]) })
+    engine.step(END_TURN)
+    expect(opportunity(engine.step(move('goblin', hex(3, 1))))).toEqual([
+      expect.objectContaining({ attacker: 'warrior', defender: 'goblin' }),
+    ])
+  })
+
+  it('routes around zones when an equally short path exists', () => {
+    // From (1,1) to (2,2): via (2,1) passes beside the goblin at (3,0); via (1,2) does not.
+    const engine = new BattleEngine(setup([WARRIOR, { ...GOBLIN, position: hex(3, 0) }]))
+    expect(engine.previewMove('warrior', hex(2, 2))).toEqual({ path: [hex(1, 2), hex(2, 2)], apCost: 1, provokes: [] })
+    expect(opportunity(engine.step(move('warrior', hex(2, 2))))).toEqual([])
+  })
+})
+
+describe('BattleEngine flanking', () => {
+  // The goblin at (2,1) has the warrior to its west; (2,2) and (3,0) also touch it.
+  const flanker = (id: string, position = hex(2, 2), hp?: number): UnitSetup => ({
+    ...CLERIC,
+    id,
+    position,
+    hp,
+  })
+  const attackOn = (units: UnitSetup[], rolls = [ROLL_7, 0]) =>
+    new BattleEngine(setup(units), { rng: sequence(rolls) }).step(ATTACK_GOBLIN)[0] as AttackEvent
+
+  it('turns a miss into a hit with an ally on the other side of the defender', () => {
+    expect(attackOn([WARRIOR, GOBLIN])).toMatchObject({ flankers: [], flankBonus: 0, totalToHit: 11, hit: false })
+    expect(attackOn([WARRIOR, GOBLIN, flanker('cleric')])).toMatchObject({
+      flankers: ['cleric'],
+      flankBonus: FLANK_BONUS_PER_ALLY,
+      totalToHit: 11 + FLANK_BONUS_PER_ALLY,
+      hit: true,
+    })
+  })
+
+  it('adds a bonus for each adjacent ally', () => {
+    const event = attackOn([WARRIOR, GOBLIN, flanker('cleric'), flanker('rogue', hex(3, 0))])
+    expect(event).toMatchObject({ flankers: ['cleric', 'rogue'], flankBonus: 2 * FLANK_BONUS_PER_ALLY })
+  })
+
+  it('ignores fallen allies, distant allies and the defender’s own side', () => {
+    const event = attackOn([
+      WARRIOR,
+      GOBLIN,
+      GOBLIN2, // adjacent to the goblin, but on its side
+      flanker('fallen', hex(2, 2), 0),
+      flanker('distant', hex(4, 1)),
+    ])
+    expect(event).toMatchObject({ flankers: [], flankBonus: 0 })
+  })
+
+  it('lets enemies flank the player too', () => {
+    // goblin2 at (2,0) touches the warrior, so the goblin's attack is flanked.
+    const engine = new BattleEngine(setup([WARRIOR, GOBLIN, GOBLIN2]), { rng: sequence([FUMBLE]) })
+    engine.step(END_TURN)
+    const [attack] = engine.step(ATTACK_WARRIOR) as [AttackEvent]
+    expect(attack).toMatchObject({ attacker: 'goblin', flankers: ['goblin2'], flankBonus: FLANK_BONUS_PER_ALLY })
+  })
+
+  it('exposes the same rule over snapshots for agents', () => {
+    const { units } = new BattleEngine(setup([WARRIOR, GOBLIN, flanker('cleric')])).getState()
+    const byId = (id: string) => units.find((u) => u.id === id)!
+    expect(flankersOf(units, byId('warrior'), byId('goblin'))).toEqual(['cleric'])
+    expect(flankersOf(units, byId('goblin'), byId('warrior'))).toEqual([])
+  })
+
+  it('previews the flanking and hit chance of a legal attack', () => {
+    const engine = new BattleEngine(setup([WARRIOR, GOBLIN, GOBLIN2, flanker('cleric')]))
+    // Warrior +4 vs AC 13 hits on 9+ (60%); one flanker makes it 7+ (70%).
+    expect(engine.previewAttack('warrior', 'goblin')).toEqual({
+      flankers: ['cleric'],
+      flankBonus: FLANK_BONUS_PER_ALLY,
+      hitChance: 0.7,
+    })
+    expect(engine.previewAttack('warrior', 'goblin2')).toEqual({ flankers: [], flankBonus: 0, hitChance: 0.6 })
+    expect(engine.previewAttack('cleric', 'goblin2')).toBeNull() // not adjacent
+    expect(engine.previewAttack('goblin', 'warrior')).toBeNull() // not the enemy's turn
+    engine.step(move('warrior', hex(0, 0)))
+    engine.step(move('warrior', hex(1, 1)))
+    expect(engine.previewAttack('warrior', 'goblin')).toBeNull() // too few AP
   })
 })
 
@@ -286,9 +458,33 @@ describe('formatEvent', () => {
 
   it('describes a move', () => {
     const engine = new BattleEngine(setup([{ ...WARRIOR, position: hex(0, 1) }, { ...GOBLIN, position: hex(4, 1) }]))
-    expect(formatEvent(engine.step({ type: 'move', to: hex(1, 1) })[0], NAMES)).toBe('Warrior moves 1 hex.')
+    expect(formatEvent(engine.step(move('warrior', hex(1, 1)))[0], NAMES)).toBe('Warrior moves 1 hex.')
     engine.step(END_TURN)
-    expect(formatEvent(engine.step({ type: 'move', to: hex(2, 1) })[0], NAMES)).toBe('Goblin moves 2 hexes.')
+    expect(formatEvent(engine.step(move('goblin', hex(2, 1)))[0], NAMES)).toBe('Goblin moves 2 hexes.')
+  })
+
+  it('describes a free attack interrupting a move', () => {
+    const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE]) })
+    expect(engine.step(move('warrior', hex(0, 1))).map((e) => formatEvent(e, NAMES))).toEqual([
+      'Warrior starts to move.',
+      'Warrior breaks away — free attack! Goblin rolls 1 — fumbles the attack!',
+      'Warrior moves 1 hex.',
+    ])
+  })
+
+  it('describes the end of each side’s turn', () => {
+    const engine = new BattleEngine(DUEL)
+    expect(formatEvent(engine.step(END_TURN)[0], NAMES)).toBe('You end your turn.')
+    expect(formatEvent(engine.step(END_TURN)[0], NAMES)).toBe('The enemy ends its turn.')
+  })
+
+  it('describes the flanking bonus in the roll', () => {
+    const engine = new BattleEngine(setup([WARRIOR, GOBLIN, { ...CLERIC, position: hex(2, 2) }]), {
+      rng: sequence([ROLL_7, 0]),
+    })
+    expect(formatEvent(engine.step(ATTACK_GOBLIN)[0], NAMES)).toBe(
+      'Warrior rolls 7 (13 to hit, +2 flanking) — HITS Goblin for 3 dmg.',
+    )
   })
 
   it('describes a fumble', () => {

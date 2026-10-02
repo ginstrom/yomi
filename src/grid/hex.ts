@@ -114,25 +114,38 @@ export class HexBoard {
 /**
  * Hexes reachable from `start` in at most `maxSteps` steps through passable
  * hexes, each with a shortest path (start excluded, destination included).
+ * Among equally short paths, the one with the lowest total `stepPenalty`
+ * wins (e.g. fewest provoked free attacks); earlier-found paths win ties.
  * The start itself is not in the result.
  */
-export function reachableHexes(start: Hex, maxSteps: number, passable: (h: Hex) => boolean): Map<string, Hex[]> {
+export function reachableHexes(
+  start: Hex,
+  maxSteps: number,
+  passable: (h: Hex) => boolean,
+  stepPenalty: (from: Hex, to: Hex) => number = () => 0,
+): Map<string, Hex[]> {
+  type Entry = { hex: Hex; path: Hex[]; penalty: number }
   const paths = new Map<string, Hex[]>()
   const seen = new Set([hexKey(start)])
-  let frontier: { hex: Hex; path: Hex[] }[] = [{ hex: start, path: [] }]
+  let frontier: Entry[] = [{ hex: start, path: [], penalty: 0 }]
+  // Breadth-first, one ring of path length at a time, so every path is shortest
+  // and the penalty only has to break ties within a ring.
   for (let step = 0; step < maxSteps && frontier.length > 0; step++) {
-    const next: typeof frontier = []
-    for (const { hex: from, path } of frontier) {
+    const next = new Map<string, Entry>()
+    for (const { hex: from, path, penalty } of frontier) {
       for (const n of hexNeighbors(from)) {
         const key = hexKey(n)
         if (seen.has(key) || !passable(n)) continue
-        seen.add(key)
-        const nPath = [...path, n]
-        paths.set(key, nPath)
-        next.push({ hex: n, path: nPath })
+        const total = penalty + stepPenalty(from, n)
+        const best = next.get(key)
+        if (!best || total < best.penalty) next.set(key, { hex: n, path: [...path, n], penalty: total })
       }
     }
-    frontier = next
+    for (const [key, entry] of next) {
+      seen.add(key)
+      paths.set(key, entry.path)
+    }
+    frontier = [...next.values()]
   }
   return paths
 }

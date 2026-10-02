@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GOBLIN_STATS, formatDamage, resolveAttack, rollDamage, rollDie, type CombatantStats } from './combat.ts'
+import { GOBLIN_STATS, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, type CombatantStats } from './combat.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -8,6 +8,7 @@ const WARRIOR_STATS: CombatantStats = {
   attackBonus: 4,
   damage: { count: 1, sides: 8, bonus: 2 },
   speed: 3,
+  actionPoints: 3,
 }
 
 function sequence(values: number[]): () => number {
@@ -55,6 +56,24 @@ describe('resolveAttack', () => {
     const result = resolveAttack(WARRIOR_STATS, 15, rng)
     expect(result.totalToHit).toBe(11 + WARRIOR_STATS.attackBonus)
     expect(result.hit).toBe(true)
+  })
+
+  it('adds a situational bonus to the total to hit', () => {
+    const rng = sequence([0.45 /* d20 -> 10 */, 0.5 /* damage die */])
+    const result = resolveAttack(WARRIOR_STATS, 16, rng, 2)
+    expect(result.totalToHit).toBe(10 + WARRIOR_STATS.attackBonus + 2)
+    expect(result.hit).toBe(true)
+  })
+
+  it('hitChance matches resolveAttack over every d20 roll', () => {
+    for (const [ac, bonus] of [[13, 0], [16, 2], [30, 0], [2, 0], [15, -10]]) {
+      let hits = 0
+      for (let roll = 1; roll <= 20; roll++) {
+        if (resolveAttack(WARRIOR_STATS, ac, sequence([(roll - 0.5) / 20, 0.5]), bonus).hit) hits++
+      }
+      expect(hitChance(WARRIOR_STATS, ac, bonus)).toBeCloseTo(hits / 20)
+    }
+    expect(hitChance(WARRIOR_STATS, 13)).toBeCloseTo(0.6)
   })
 
   it('misses when total-to-hit is below defender AC', () => {

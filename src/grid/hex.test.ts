@@ -15,6 +15,7 @@ import {
   offsetToHex,
   pixelToHex,
   reachableHexes,
+  type Hex,
 } from './hex.ts'
 
 describe('hex geometry', () => {
@@ -88,6 +89,15 @@ describe('reachableHexes', () => {
     // Straight east is 2 steps; around the wall it takes 3.
     expect(reach.get(hexKey(hex(2, 0)))).toHaveLength(3)
     expect(reachableHexes(hex(0, 0), 3, (h) => !wall.has(hexKey(h)) && h.q < 2).has(hexKey(hex(2, 0)))).toBe(false)
+  })
+
+  it('breaks ties between shortest paths by the lowest step penalty, never taking a longer path', () => {
+    // hex(1,1) is two steps away, through either (1,0) or (0,1).
+    expect(reachableHexes(hex(0, 0), 2, () => true).get(hexKey(hex(1, 1)))).toEqual([hex(1, 0), hex(1, 1)])
+    const leavingCostly = (from: Hex) => (hexEquals(from, hex(1, 0)) ? 5 : 0)
+    const reach = reachableHexes(hex(0, 0), 2, () => true, leavingCostly)
+    expect(reach.get(hexKey(hex(1, 1)))).toEqual([hex(0, 1), hex(1, 1)])
+    expect(reach.get(hexKey(hex(2, 0)))).toEqual([hex(1, 0), hex(2, 0)]) // the only shortest path
   })
 })
 

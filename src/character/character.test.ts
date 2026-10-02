@@ -32,6 +32,7 @@ describe('deriveCombatStats', () => {
       attackBonus: 4,
       damage: { count: 1, sides: 8, bonus: 2 },
       speed: 3,
+      actionPoints: 3,
     })
   })
 
