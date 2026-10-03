@@ -390,6 +390,20 @@ describe('BattleEngine zones of control', () => {
     expect(engine.previewMove('warrior', hex(2, 2))).toEqual({ path: [hex(1, 2), hex(2, 2)], apCost: 1, provokes: [] })
     expect(opportunity(engine.step(move('warrior', hex(2, 2))))).toEqual([])
   })
+
+  it('prefers walking past one foe several times to passing two foes once each', () => {
+    const mover: UnitSetup = {
+      id: 'mover',
+      side: 'player',
+      stats: { ...WARRIOR_STATS, speed: 2, actionPoints: 2 },
+      position: hex(0, 0),
+    }
+    const x: UnitSetup = { id: 'x', side: 'enemy', stats: GOBLIN_STATS, position: hex(1, 0) }
+    const y: UnitSetup = { id: 'y', side: 'enemy', stats: GOBLIN_STATS, position: hex(3, 1) }
+    const engine = new BattleEngine({ board: { cols: 6, rows: 5 }, units: [mover, x, y] }, { rng: sequence([FUMBLE]) })
+    expect(engine.previewMove('mover', hex(3, 0))!.provokes).toHaveLength(1)
+    expect(opportunity(engine.step(move('mover', hex(3, 0))))).toHaveLength(1)
+  })
 })
 
 describe('BattleEngine flanking', () => {

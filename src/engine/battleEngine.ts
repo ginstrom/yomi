@@ -495,7 +495,8 @@ export class BattleEngine {
 
   /**
    * Hexes the unit can move to with its remaining AP: on the board, around
-   * standing units, preferring routes that provoke fewer free attacks.
+   * standing units, preferring routes that provoke fewer distinct foes, since
+   * each foe strikes at most once.
    */
   private reachable(actor: UnitRecord): Map<string, Hex[]> {
     const blocked = (h: Hex) => this.units.some((u) => u !== actor && u.hp > 0 && hexEquals(u.position, h))
@@ -503,7 +504,7 @@ export class BattleEngine {
       actor.position,
       actor.ap * actor.stats.speed,
       (h) => this.board.contains(h) && !blocked(h),
-      (from) => this.reactorsAt(actor, from).length,
+      (from) => this.reactorsAt(actor, from).map((u) => u.id),
     )
   }
 

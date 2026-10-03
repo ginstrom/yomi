@@ -120,38 +120,47 @@ export class HexBoard {
 /**
  * Hexes reachable from `start` in at most `maxSteps` steps through passable
  * hexes, each with a shortest path (start excluded, destination included).
- * Among equally short paths, the one with the lowest total `stepPenalty`
- * wins (e.g. fewest provoked free attacks); earlier-found paths win ties.
- * The start itself is not in the result.
+ * Among equally short paths, the one that provokes the fewest distinct ids
+ * wins (e.g. fewest foes granted a free attack, however many of their hexes
+ * it passes); earlier-found paths win ties. The start itself is not in the
+ * result.
  */
 export function reachableHexes(
   start: Hex,
   maxSteps: number,
   passable: (h: Hex) => boolean,
-  stepPenalty: (from: Hex, to: Hex) => number = () => 0,
+  /** Ids of whoever is provoked by stepping out of `from`; each counts once per route. */
+  provokers: (from: Hex) => readonly string[] = () => [],
 ): Map<string, Hex[]> {
-  type Entry = { hex: Hex; path: Hex[]; penalty: number }
+  type Entry = { hex: Hex; path: Hex[]; provoked: ReadonlySet<string> }
+  const isSubset = (a: ReadonlySet<string>, b: ReadonlySet<string>) => [...a].every((id) => b.has(id))
   const paths = new Map<string, Hex[]>()
   const seen = new Set([hexKey(start)])
-  let frontier: Entry[] = [{ hex: start, path: [], penalty: 0 }]
+  let frontier: Entry[] = [{ hex: start, path: [], provoked: new Set() }]
   // Breadth-first, one ring of path length at a time, so every path is shortest
-  // and the penalty only has to break ties within a ring.
+  // and the provoked ids only have to break ties within a ring. Sets don't add
+  // up like numbers: a route that has provoked {x} may end up cheaper than one
+  // that provoked {y} if the rest of the way passes x again. So each hex keeps
+  // every route whose provoked ids aren't a superset of another route's there.
   for (let step = 0; step < maxSteps && frontier.length > 0; step++) {
-    const next = new Map<string, Entry>()
-    for (const { hex: from, path, penalty } of frontier) {
+    const next = new Map<string, Entry[]>()
+    for (const { hex: from, path, provoked } of frontier) {
+      const leaving = new Set([...provoked, ...provokers(from)])
       for (const n of hexNeighbors(from)) {
         const key = hexKey(n)
         if (seen.has(key) || !passable(n)) continue
-        const total = penalty + stepPenalty(from, n)
-        const best = next.get(key)
-        if (!best || total < best.penalty) next.set(key, { hex: n, path: [...path, n], penalty: total })
+        const kept = next.get(key) ?? []
+        if (kept.some((e) => isSubset(e.provoked, leaving))) continue
+        const better = kept.filter((e) => !isSubset(leaving, e.provoked))
+        next.set(key, [...better, { hex: n, path: [...path, n], provoked: leaving }])
       }
     }
-    for (const [key, entry] of next) {
+    for (const [key, kept] of next) {
       seen.add(key)
-      paths.set(key, entry.path)
+      const best = kept.reduce((a, b) => (b.provoked.size < a.provoked.size ? b : a))
+      paths.set(key, best.path)
     }
-    frontier = [...next.values()]
+    frontier = [...next.values()].flat()
   }
   return paths
 }

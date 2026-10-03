@@ -99,13 +99,38 @@ describe('reachableHexes', () => {
     expect(reachableHexes(hex(0, 0), 3, (h) => !wall.has(hexKey(h)) && h.q < 2).has(hexKey(hex(2, 0)))).toBe(false)
   })
 
-  it('breaks ties between shortest paths by the lowest step penalty, never taking a longer path', () => {
+  it('breaks ties between shortest paths by the fewest provokers, never taking a longer path', () => {
     // hex(1,1) is two steps away, through either (1,0) or (0,1).
     expect(reachableHexes(hex(0, 0), 2, () => true).get(hexKey(hex(1, 1)))).toEqual([hex(1, 0), hex(1, 1)])
-    const leavingCostly = (from: Hex) => (hexEquals(from, hex(1, 0)) ? 5 : 0)
+    const leavingCostly = (from: Hex) => (hexEquals(from, hex(1, 0)) ? ['a'] : [])
     const reach = reachableHexes(hex(0, 0), 2, () => true, leavingCostly)
     expect(reach.get(hexKey(hex(1, 1)))).toEqual([hex(0, 1), hex(1, 1)])
     expect(reach.get(hexKey(hex(2, 0)))).toEqual([hex(1, 0), hex(2, 0)]) // the only shortest path
+  })
+
+  it('prefers one provoker met three times over two provokers met once each', () => {
+    // To (1,3): east first, then along a's edge; or south along b and c, then east.
+    const foes = new Map([
+      [hexKey(hex(1, 0)), ['a']],
+      [hexKey(hex(1, 1)), ['a']],
+      [hexKey(hex(1, 2)), ['a']],
+      [hexKey(hex(0, 1)), ['b']],
+      [hexKey(hex(0, 2)), ['c']],
+    ])
+    const reach = reachableHexes(hex(0, 0), 4, () => true, (from) => foes.get(hexKey(from)) ?? [])
+    expect(reach.get(hexKey(hex(1, 3)))).toEqual([hex(1, 0), hex(1, 1), hex(1, 2), hex(1, 3)])
+  })
+
+  it('keeps routes whose provokers cannot be compared until a later step decides', () => {
+    // (1,1) is reached first having provoked y, or second having provoked x; leaving it provokes x.
+    const foes = new Map([
+      [hexKey(hex(1, 0)), ['y']],
+      [hexKey(hex(0, 1)), ['x']],
+      [hexKey(hex(1, 1)), ['x']],
+    ])
+    const open = (h: Hex) => !hexEquals(h, hex(0, 2))
+    const reach = reachableHexes(hex(0, 0), 3, open, (from) => foes.get(hexKey(from)) ?? [])
+    expect(reach.get(hexKey(hex(1, 2)))).toEqual([hex(0, 1), hex(1, 1), hex(1, 2)])
   })
 })
 
