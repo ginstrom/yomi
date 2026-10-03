@@ -27,10 +27,17 @@ export function scheduleEvents(
 ): { beats: Beat[]; totalMs: number } {
   const beats: Beat[] = []
   let at = 0
+  let prior: BattleEvent | undefined
   for (const event of events) {
+    const cues: Cue[] = []
+    // A move cut short by what follows ends turned the way the engine judged it,
+    // which is towards the step about to be taken.
+    if (prior?.type === 'move') cues.push({ kind: 'face', unit: prior.unit, facing: prior.facing })
+    cues.push({ kind: 'show', event })
     const last = beats[beats.length - 1]
-    if (last?.at === at) last.cues.push({ kind: 'show', event })
-    else beats.push({ at, cues: [{ kind: 'show', event }] })
+    if (last?.at === at) last.cues.push(...cues)
+    else beats.push({ at, cues })
+    prior = event
     if (event.type === 'move') at += event.path.length * timing.moveStepMs
     if (event.type === 'attack' && event.opportunity) at += timing.opportunityPauseMs
   }

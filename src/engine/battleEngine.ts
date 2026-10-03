@@ -141,7 +141,11 @@ export interface MoveEvent extends EventBase {
   path: Hex[]
   destination: Hex
   apCost: number
-  /** The mover's facing at the end of the segment: towards its last step, or its next one if it hasn't moved yet. */
+  /**
+   * The mover's facing when the segment ends. If a free attack interrupts the
+   * move here, this is turned towards the step about to be taken, which is the
+   * facing the attack is judged against. Otherwise it is towards the last step.
+   */
   facing: number
 }
 

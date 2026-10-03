@@ -659,8 +659,6 @@ export class BattleScene extends Phaser.Scene {
   private showEvent(event: BattleEvent): void {
     this.pushLog(formatEvent(event, this.names))
     if (event.type === 'move') {
-      // A mover struck before its first step has already turned towards it.
-      if (event.path.length === 0) this.faceUnit(event.unit, event.facing)
       this.animateMove(event.unit, event.from, event.path)
     }
     if (event.type === 'attack') {

@@ -33,6 +33,7 @@ function endTurn(): EndTurnEvent {
 }
 
 const show = (event: BattleEvent) => ({ kind: 'show', event })
+const face = (facing: number) => ({ kind: 'face', unit: 'hero', facing })
 
 describe('scheduleEvents', () => {
   it('shows a plain move at once and waits for its walk', () => {
@@ -50,7 +51,7 @@ describe('scheduleEvents', () => {
     expect(scheduleEvents([first, strike, rest], TIMING)).toEqual({
       beats: [
         { at: 0, cues: [show(first)] },
-        { at: 2 * 140, cues: [show(strike)] },
+        { at: 2 * 140, cues: [face(0), show(strike)] },
         { at: 2 * 140 + 450, cues: [show(rest)] },
       ],
       totalMs: 5 * 140 + 450,
@@ -61,8 +62,25 @@ describe('scheduleEvents', () => {
     const still = move(0)
     const strike = attack(true)
     expect(scheduleEvents([still, strike], TIMING)).toEqual({
-      beats: [{ at: 0, cues: [show(still), show(strike)] }],
+      beats: [{ at: 0, cues: [show(still), face(0), show(strike)] }],
       totalMs: 450,
+    })
+  })
+
+  it('turns the mover before each free attack that interrupts it', () => {
+    const still = { ...move(1), facing: 3 }
+    const first = attack(true)
+    const step = { ...move(1, 0), facing: 4 }
+    const second = attack(true)
+    const last = { ...move(0, -1), facing: 4 }
+    expect(scheduleEvents([still, first, step, second, last], TIMING)).toEqual({
+      beats: [
+        { at: 0, cues: [show(still), face(3), show(first)] },
+        { at: 450, cues: [show(step)] },
+        { at: 590, cues: [face(4), show(second)] },
+        { at: 1040, cues: [show(last)] },
+      ],
+      totalMs: 2 * 140 + 2 * 450,
     })
   })
 

@@ -62,6 +62,7 @@ const ROLL_10 = 0.45
 const EAST = 0
 const NORTH_WEST = 2
 const WEST = 3
+const SOUTH_WEST = 4
 const SOUTH_EAST = 5
 
 const unitOf = (engine: BattleEngine, id: string) => engine.getState().units.find((u) => u.id === id)!
@@ -526,6 +527,29 @@ describe('BattleEngine facing', () => {
       arcBonus: ARC_BONUS.side,
       hitChance: 0.75,
     })
+  })
+
+  it('judges a free attack mid-move against the mover turned towards its next step', () => {
+    const engine = new BattleEngine(
+      {
+        board: { cols: 6, rows: 4 },
+        units: [
+          { ...WARRIOR, position: hex(1, 1) },
+          { ...GOBLIN, position: hex(0, 0) },
+          { ...GOBLIN2, position: hex(0, 2) },
+        ],
+      },
+      { rng: sequence([FUMBLE]) },
+    )
+    const events = engine.step(move('warrior', hex(-1, 2)))
+    const moves = events.filter((e): e is MoveEvent => e.type === 'move')
+    const attacks = events.filter((e): e is AttackEvent => e.type === 'attack')
+    expect(moves.map((m) => m.path)).toEqual([[], [hex(0, 1)], [hex(-1, 2)]])
+    expect(moves[1].facing).toBe(SOUTH_WEST)
+    expect(attacks.map((a) => [a.attacker, a.arc])).toEqual([
+      ['goblin2', 'front'],
+      ['goblin', 'side'],
+    ])
   })
 
   it('exposes the back of a unit that retreats straight away, but not of one that slides aside', () => {
