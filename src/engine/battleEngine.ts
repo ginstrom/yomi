@@ -1,6 +1,7 @@
 import { hitChance, resolveAttack, type CombatantStats, type RNG } from '../combat/combat.ts'
 import { mulberry32, randomSeed } from '../combat/rng.ts'
 import {
+  HEX_DIRECTIONS,
   HexBoard,
   hexDirection,
   hexDistance,
@@ -275,6 +276,10 @@ export class BattleEngine {
     }
     for (const u of roster) {
       if (!this.board.contains(u.position)) throw new Error(`${u.id} starts off the board`)
+      const facing = u.facing ?? DEFAULT_FACING[u.side]
+      if (!Number.isInteger(facing) || facing < 0 || facing >= HEX_DIRECTIONS.length) {
+        throw new Error(`${u.id} faces an unknown direction: ${facing}`)
+      }
     }
     if (new Set(roster.map((u) => hexKey(u.position))).size !== roster.length) {
       throw new Error('Units must start on different hexes')

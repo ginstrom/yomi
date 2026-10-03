@@ -98,13 +98,16 @@ describe('BattleEngine', () => {
     expect(injected.seed).toBeNull()
   })
 
-  it('rejects bad rosters: duplicate ids, a missing side, shared or off-board hexes', () => {
+  it('rejects bad rosters: duplicate ids, a missing side, shared or off-board hexes, unknown facings', () => {
     expect(() => new BattleEngine(setup([WARRIOR, WARRIOR, GOBLIN]))).toThrow(/unique/)
     expect(() => new BattleEngine(setup([WARRIOR]))).toThrow(/No enemy units/)
     expect(() => new BattleEngine(setup([WARRIOR, { ...GOBLIN, position: WARRIOR.position }]))).toThrow(
       /different hexes/,
     )
     expect(() => new BattleEngine(setup([WARRIOR, { ...GOBLIN, position: hex(-5, 0) }]))).toThrow(/off the board/)
+    for (const facing of [6, -1, 1.5]) {
+      expect(() => new BattleEngine(setup([WARRIOR, { ...GOBLIN, facing }]))).toThrow(/unknown direction/)
+    }
   })
 
   it('can start a unit wounded, capped at maxHp', () => {
