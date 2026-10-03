@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { deriveCombatStats } from '../character/character.ts'
 import {
+  ATTACK_AP_COST,
   BattleEngine,
   formatEvent,
   type Action,
@@ -516,10 +517,10 @@ export class BattleScene extends Phaser.Scene {
     const actable = this.actableUnits()
     this.hintText.setText(
       this.targeting
-        ? 'Choose a foe to attack (2 AP). Esc or Cancel to go back.'
+        ? `Choose a foe to attack (${ATTACK_AP_COST} AP). Esc or Cancel to go back.`
         : actable.length === 0
           ? 'No action points left. Press End Turn.'
-          : 'Blue: move (fainter costs more AP), orange edge provokes a free attack. Red: attack (2 AP).',
+          : `Blue: move (fainter costs more AP), orange edge provokes a free attack. Red: attack (${ATTACK_AP_COST} AP).`,
     )
 
     for (const id of this.targeting ? [] : actable) {
