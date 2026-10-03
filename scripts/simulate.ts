@@ -78,7 +78,7 @@ function parseArgs(argv: string[]): CliArgs {
   return args
 }
 
-type LoggedEvent = BattleEvent & { battleId: number }
+export type LoggedEvent = BattleEvent & { battleId: number }
 
 function runBattle(battleId: number, seed: number, args: CliArgs): LoggedEvent[] {
   const engine = new BattleEngine(goblinRaid(WARRIOR_STATS).setup, {
@@ -101,12 +101,13 @@ function runBattle(battleId: number, seed: number, args: CliArgs): LoggedEvent[]
   return engine.getLog().map((event) => ({ ...event, battleId }))
 }
 
-interface Summary {
+export interface Summary {
   battles: number
   playerWins: number
   enemyWins: number
   /** Battles abandoned at --max-rounds. */
   unresolved: number
+  /** Rounds per decided battle; battles counted under `unresolved` are left out. */
   avgRounds: number
   avgPlayerDamageDealt: number
   avgEnemyDamageDealt: number
@@ -121,7 +122,7 @@ interface Summary {
   avgRearAttacks: number
 }
 
-function summarize(events: LoggedEvent[], battles: number): Summary {
+export function summarize(events: LoggedEvent[], battles: number): Summary {
   let playerWins = 0
   let enemyWins = 0
   let totalRounds = 0
@@ -141,10 +142,10 @@ function summarize(events: LoggedEvent[], battles: number): Summary {
 
   for (const event of events) {
     if (event.type === 'battle_start') sideOf = new Map(event.units.map((u) => [u.id, u.side]))
-    if (event.type === 'battle_end') {
+    if (event.type === 'battle_end' && event.winner) {
       totalRounds += event.round
       if (event.winner === 'player') playerWins++
-      else if (event.winner === 'enemy') enemyWins++
+      else enemyWins++
     }
     if (event.type === 'attack') {
       if (event.opportunity) opportunityAttacks++
@@ -164,12 +165,13 @@ function summarize(events: LoggedEvent[], battles: number): Summary {
     }
   }
 
+  const decided = playerWins + enemyWins
   return {
     battles,
     playerWins,
     enemyWins,
-    unresolved: battles - playerWins - enemyWins,
-    avgRounds: totalRounds / battles,
+    unresolved: battles - decided,
+    avgRounds: decided ? totalRounds / decided : 0,
     avgPlayerDamageDealt: playerDamage / battles,
     avgEnemyDamageDealt: enemyDamage / battles,
     playerHitRate: playerAttacks ? playerHits / playerAttacks : 0,
@@ -201,4 +203,4 @@ function main(): void {
   console.table(summary)
 }
 
-main()
+if (import.meta.main) main()
