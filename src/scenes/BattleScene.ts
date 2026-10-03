@@ -21,10 +21,10 @@ import {
   hexDirection,
   hexEquals,
   hexToPixel,
-  pixelToHex,
   type BoardSize,
   type Hex,
 } from '../grid/hex.ts'
+import { FLOOR_SQUASH_Y, HEX_SIZE, boardHexAt, boardHexCenter, boardPixelSize } from './boardGeometry.ts'
 import { scheduleEvents, type Cue } from './eventSchedule.ts'
 import { ScrollingLog } from './scrollingLog.ts'
 
@@ -50,9 +50,6 @@ interface Unit {
   apPips: Phaser.GameObjects.Graphics
 }
 
-/** Corner radius of a hex in pixels, before the floor's vertical squash. */
-const HEX_SIZE = 40
-const FLOOR_SQUASH_Y = 0.6
 const FLOOR_COLORS = [0xe0a56a, 0xd09358, 0xc0844f]
 const FLOOR_EDGE = 0x7a3b35
 const MOVE_HIGHLIGHT = 0x1e88e5
@@ -73,6 +70,13 @@ const PLATE_BAR_Y = 11
 const PLATE_BAR_W = 52
 const PLATE_BAR_H = 10
 const PLATE_STATUS_Y = 27
+/** How far a nameplate's lowest row reaches below a unit's feet. */
+const PLATE_BOTTOM = PLATE_STATUS_Y + 8
+/** Below the round and hint lines; the board keeps clear of them. */
+const HEADER_BOTTOM = 64
+/** Clear space either side of the board, and between the board and the log box. */
+const BOARD_MARGIN_X = 16
+const BOARD_GAP_ABOVE_LOG = 12
 const LOG_HISTORY = 50
 const LOG_VISIBLE_LINES = 5
 const LOG_LINE_H = 20
@@ -272,32 +276,15 @@ export class BattleScene extends Phaser.Scene {
 
   // ---- board geometry ------------------------------------------------------
 
-  /** Board size in pixels, after the squash. */
-  private boardPixelSize(): { width: number; height: number } {
-    const { cols, rows } = this.board.size
-    return {
-      width: Math.sqrt(3) * HEX_SIZE * (cols + 0.5),
-      height: HEX_SIZE * (1.5 * rows + 0.5) * FLOOR_SQUASH_Y,
-    }
-  }
-
-  /** Centre of a hex relative to the board's top-left corner. */
-  private hexCenter(h: Hex): { x: number; y: number } {
-    const { x, y } = hexToPixel(h, HEX_SIZE)
-    // hex(0, 0) sits half a hex in from the board's left and top edges.
-    return { x: x + (Math.sqrt(3) / 2) * HEX_SIZE, y: (y + HEX_SIZE) * FLOOR_SQUASH_Y }
-  }
-
   /** The board hex under a screen position, or null when off the board. */
   private hexAt(screenX: number, screenY: number): Hex | null {
-    const localX = screenX - this.floorLayer.x - (Math.sqrt(3) / 2) * HEX_SIZE
-    const localY = (screenY - this.floorLayer.y) / FLOOR_SQUASH_Y - HEX_SIZE
-    const h = pixelToHex(localX, localY, HEX_SIZE)
+    const origin = { x: this.floorLayer.x, y: this.floorLayer.y }
+    const h = boardHexAt({ x: screenX, y: screenY }, origin, this.floorLayer.scale)
     return this.board.contains(h) ? h : null
   }
 
   private hexPolygon(h: Hex): Phaser.Math.Vector2[] {
-    const c = this.hexCenter(h)
+    const c = boardHexCenter(h)
     return hexCorners(HEX_SIZE).map((p) => new Phaser.Math.Vector2(c.x + p.x, c.y + p.y * FLOOR_SQUASH_Y))
   }
 
@@ -403,20 +390,14 @@ export class BattleScene extends Phaser.Scene {
 
   // ---- layout -------------------------------------------------------------
 
+  /**
+   * Header at the top, buttons and log box at the bottom, and the board centred
+   * in the space between, scaled down (never up) to fit. The smallest window
+   * supported is 480×360; below that the screen may clip.
+   */
   private layout(): void {
     const width = this.scale.width
     const height = this.scale.height
-
-    const board = this.boardPixelSize()
-    const floorX = (width - board.width) / 2
-    const floorY = Math.max(90, (height - board.height) / 2 - 20)
-
-    this.floorLayer.setPosition(floorX, floorY)
-    this.unitLayer.setPosition(floorX, floorY)
-    this.plateLayer.setPosition(floorX, floorY)
-    this.labelLayer.setPosition(floorX, floorY)
-    for (const snapshot of this.engine.getState().units) this.placeUnit(snapshot.id, snapshot.position)
-    this.positionBanner()
 
     const buttonY = height - 50
     this.attackButton.setPosition(width / 2 - 80, buttonY)
@@ -432,20 +413,43 @@ export class BattleScene extends Phaser.Scene {
     this.logBoxBg.setSize(logBoxW, LOG_BOX_H)
     this.logText.setPosition(logBoxX + LOG_BOX_PADDING, logBoxY + LOG_BOX_PADDING)
 
+    // The board's drawn extent in board-local pixels: sprites stand up out of the
+    // top row and nameplates hang below the bottom row.
+    const board = boardPixelSize(this.board.size)
+    const rowInset = boardHexCenter({ q: 0, r: 0 }).y
+    const tallest = Math.max(...Object.values(APPEARANCE).map((a) => a.displayHeight))
+    const top = Math.min(0, rowInset - tallest)
+    const bottom = Math.max(board.height, board.height - rowInset + PLATE_BOTTOM)
+
+    const freeLeft = BOARD_MARGIN_X
+    const freeTop = HEADER_BOTTOM
+    const freeW = width - 2 * BOARD_MARGIN_X
+    const freeH = logBoxY - BOARD_GAP_ABOVE_LOG - freeTop
+    const scale = Math.max(0, Math.min(1, freeW / board.width, freeH / (bottom - top)))
+    const floorX = freeLeft + (freeW - board.width * scale) / 2
+    const floorY = freeTop + (freeH - (bottom - top) * scale) / 2 - top * scale
+
+    for (const layer of [this.floorLayer, this.unitLayer, this.plateLayer, this.labelLayer]) {
+      layer.setPosition(floorX, floorY).setScale(scale)
+    }
+    for (const snapshot of this.engine.getState().units) this.placeUnit(snapshot.id, snapshot.position)
+    this.positionBanner()
+
     this.renderLog()
   }
 
   /** Centres the banner between the header text and the top of the tallest unit. */
   private positionBanner(): void {
     const unitsTop =
-      this.unitLayer.y + Math.min(...[...this.units.values()].map((u) => u.container.y - u.sprite.displayHeight))
+      this.unitLayer.y +
+      this.unitLayer.scale * Math.min(...[...this.units.values()].map((u) => u.container.y - u.sprite.displayHeight))
     const headerBottom = this.hintText.y + this.hintText.height
     const y = Math.max(headerBottom + this.bannerText.height / 2, (headerBottom + unitsTop) / 2)
     this.bannerText.setPosition(this.scale.width / 2, y)
   }
 
   private placeUnit(id: UnitId, at: Hex): void {
-    const { x, y } = this.hexCenter(at)
+    const { x, y } = boardHexCenter(at)
     const unit = this.units.get(id)!
     unit.container.setPosition(x, y)
     unit.plate.setPosition(x, y)
@@ -576,7 +580,7 @@ export class BattleScene extends Phaser.Scene {
     if (!preview) return
     const percent = Math.round(preview.hitChance * 100)
     const bonus = preview.flankBonus + preview.arcBonus
-    const { x, y } = this.hexCenter(at)
+    const { x, y } = boardHexCenter(at)
     const label = this.add
       .text(x, y + PLATE_STATUS_Y, `${percent}%${bonus > 0 ? ` +${bonus}` : ''}`, {
         fontFamily: 'monospace',
@@ -697,7 +701,7 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.chain({
       targets: [container, plate],
       tweens: path.map((h, i) => ({
-        ...this.hexCenter(h),
+        ...boardHexCenter(h),
         duration: MOVE_STEP_MS,
         onStart: () => this.faceUnit(id, hexDirection(i === 0 ? from : path[i - 1], h)!),
         onUpdate: () => this.sortUnits(),

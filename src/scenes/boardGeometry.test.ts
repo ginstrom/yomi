@@ -1,0 +1,44 @@
+import { describe, expect, it } from 'vitest'
+import { HexBoard, hex } from '../grid/hex.ts'
+import { boardHexAt, boardHexCenter, boardPixelSize } from './boardGeometry.ts'
+
+// The goblinRaid board.
+const SIZE = { cols: 8, rows: 5 }
+const ORIGIN = { x: 37, y: 112 }
+
+describe('board geometry', () => {
+  it.each([1, 0.6])('finds every hex at its own centre, drawn at scale %s', (scale) => {
+    const board = new HexBoard(SIZE)
+    for (const h of board.hexes) {
+      const c = boardHexCenter(h)
+      const screen = { x: ORIGIN.x + c.x * scale, y: ORIGIN.y + c.y * scale }
+      expect(boardHexAt(screen, ORIGIN, scale)).toEqual(h)
+    }
+  })
+
+  it.each([1, 0.6])('answers an off-board hex for points beside the board, drawn at scale %s', (scale) => {
+    const board = new HexBoard(SIZE)
+    const { width, height } = boardPixelSize(SIZE)
+    const middleY = ORIGIN.y + (height / 2) * scale
+    const middleX = ORIGIN.x + (width / 2) * scale
+    const offBoard = [
+      { x: ORIGIN.x - 10 * scale, y: middleY },
+      { x: ORIGIN.x + (width + 10) * scale, y: middleY },
+      { x: middleX, y: ORIGIN.y - 10 * scale },
+      { x: middleX, y: ORIGIN.y + (height + 10) * scale },
+    ]
+    for (const p of offBoard) expect(board.contains(boardHexAt(p, ORIGIN, scale))).toBe(false)
+  })
+
+  it('puts hex(0, 0) half a hex in from the top-left corner', () => {
+    const c = boardHexCenter(hex(0, 0))
+    expect(c.x).toBeCloseTo((Math.sqrt(3) / 2) * 40)
+    expect(c.y).toBeCloseTo(40 * 0.6)
+  })
+
+  it('sizes the board to its hexes after the squash', () => {
+    const { width, height } = boardPixelSize(SIZE)
+    expect(width).toBeCloseTo(Math.sqrt(3) * 40 * 8.5)
+    expect(height).toBeCloseTo(40 * 8 * 0.6)
+  })
+})

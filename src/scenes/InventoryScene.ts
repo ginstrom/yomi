@@ -345,7 +345,11 @@ export class InventoryScene extends Phaser.Scene {
     const { width, height } = this.scale
     this.dimBg.setSize(width, height)
     this.dimBg.setPosition(width / 2, height / 2)
-    this.panel.setPosition((width - PANEL_W) / 2, (height - PANEL_H) / 2)
+    // Scaled down (never up) to fit, keeping 16 px clear on each side; slot hit areas and
+    // tooltips scale with the panel. The smallest window supported is 480×360.
+    const scale = Math.max(0, Math.min(1, (width - 32) / PANEL_W, (height - 32) / PANEL_H))
+    this.panel.setScale(scale)
+    this.panel.setPosition((width - PANEL_W * scale) / 2, (height - PANEL_H * scale) / 2)
   }
 
   // ---- actions -------------------------------------------------------------
