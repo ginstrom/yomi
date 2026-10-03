@@ -166,10 +166,12 @@ export class BattleScene extends Phaser.Scene {
       })
       .setScrollFactor(0)
 
+    // Interactive with no handler, so a click on the log never counts as a board click.
     this.logBoxBg = this.add
       .rectangle(0, 0, 10, LOG_BOX_H, 0x0d0d0d, 0.75)
       .setOrigin(0, 0)
       .setStrokeStyle(1, 0x3a3a3a)
+      .setInteractive()
 
     this.logText = this.add.text(0, 0, '', {
       fontFamily: 'monospace',
@@ -199,7 +201,11 @@ export class BattleScene extends Phaser.Scene {
       'wheel',
       (pointer: Phaser.Input.Pointer, _objects: unknown, _dx: number, dy: number) => this.onLogWheel(pointer, dy),
     )
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.onBoardClick(pointer))
+    // Phaser passes the interactive objects under the pointer. A click on any of them (a button,
+    // the log or its scrollbar) is not a board click, even where it lies over the board.
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
+      if (over.length === 0) this.onBoardClick(pointer)
+    })
 
     this.bannerText = this.add
       .text(0, 0, '', {
@@ -361,17 +367,24 @@ export class BattleScene extends Phaser.Scene {
       .text(0, 0, label, { fontFamily: 'monospace', fontSize: '16px', color: '#ffffff' })
       .setOrigin(0.5)
 
-    bg.on('pointerover', () => bg.setFillStyle(0x3182ce))
-    bg.on('pointerout', () => bg.setFillStyle(0x2b6cb0))
+    // A disabled button keeps its input enabled: Phaser leaves input-disabled objects out of the
+    // hit test, which would let a click on a greyed-out button fall through to the board.
+    const container = this.add.container(0, 0, [bg, text])
+    const isEnabled = (): boolean => container.getData('enabled') as boolean
+    bg.on('pointerover', () => {
+      if (isEnabled()) bg.setFillStyle(0x3182ce)
+    })
+    bg.on('pointerout', () => {
+      if (isEnabled()) bg.setFillStyle(0x2b6cb0)
+    })
     bg.on('pointerdown', () => {
-      if (!bg.input?.enabled) return
-      onClick()
+      if (isEnabled()) onClick()
     })
 
-    const container = this.add.container(0, 0, [bg, text])
     container.setSize(width, height)
     container.setData('bg', bg)
     container.setData('text', text)
+    container.setData('enabled', true)
     return container
   }
 
@@ -382,7 +395,8 @@ export class BattleScene extends Phaser.Scene {
   private setButtonEnabled(button: Phaser.GameObjects.Container, enabled: boolean): void {
     const bg = button.getData('bg') as Phaser.GameObjects.Rectangle
     const text = button.getData('text') as Phaser.GameObjects.Text
-    bg.input!.enabled = enabled
+    button.setData('enabled', enabled)
+    bg.input!.cursor = enabled ? 'pointer' : false
     bg.setFillStyle(enabled ? 0x2b6cb0 : 0x424242)
     text.setAlpha(enabled ? 1 : 0.5)
   }
