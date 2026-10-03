@@ -25,6 +25,7 @@ import {
   type BoardSize,
   type Hex,
 } from '../grid/hex.ts'
+import { scheduleEvents, type Cue } from './eventSchedule.ts'
 import { ScrollingLog } from './scrollingLog.ts'
 
 interface BattleData {
@@ -633,18 +634,26 @@ export class BattleScene extends Phaser.Scene {
    * bars and hit flashes land when they happen. Returns the total time, in ms.
    */
   private applyEvents(events: readonly BattleEvent[]): number {
-    let at = 0
-    for (const event of events) {
-      if (at === 0) this.showEvent(event)
-      else this.time.delayedCall(at, () => this.showEvent(event))
-      if (event.type === 'move') at += event.path.length * MOVE_STEP_MS
-      if (event.type === 'attack' && event.opportunity) at += OPPORTUNITY_PAUSE_MS
+    const { beats, totalMs } = scheduleEvents(events, {
+      moveStepMs: MOVE_STEP_MS,
+      opportunityPauseMs: OPPORTUNITY_PAUSE_MS,
+    })
+    for (const { at, cues } of beats) {
+      if (at === 0) this.playCues(cues)
+      else this.time.delayedCall(at, () => this.playCues(cues))
     }
     // AP is spent the moment the action is taken; HP follows the animation.
     this.refreshAllApPips()
-    if (at === 0) this.syncUnitsFromEngine()
-    else this.time.delayedCall(at, () => this.syncUnitsFromEngine())
-    return at
+    if (totalMs === 0) this.syncUnitsFromEngine()
+    else this.time.delayedCall(totalMs, () => this.syncUnitsFromEngine())
+    return totalMs
+  }
+
+  private playCues(cues: readonly Cue[]): void {
+    for (const cue of cues) {
+      if (cue.kind === 'show') this.showEvent(cue.event)
+      else this.faceUnit(cue.unit, cue.facing)
+    }
   }
 
   private showEvent(event: BattleEvent): void {
