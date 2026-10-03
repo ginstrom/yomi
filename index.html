@@ -10,12 +10,17 @@
         margin: 0;
         padding: 0;
         background: #000;
-        overflow: hidden;
+        height: 100%;
       }
+      /* Below the game's minimum size the canvas overflows and the page scrolls. */
       #game {
         display: flex;
-        width: 100vw;
-        height: 100vh;
+        width: 100%;
+        height: 100%;
+        align-items: flex-start;
+      }
+      #game canvas {
+        flex: none;
       }
     </style>
   </head>

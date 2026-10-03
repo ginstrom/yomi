@@ -83,6 +83,8 @@ const LOG_LINE_H = 20
 const LOG_BOX_PADDING = 10
 const LOG_BOX_H = LOG_VISIBLE_LINES * LOG_LINE_H + LOG_BOX_PADDING * 2
 const LOG_BOX_GAP = 14
+/** Width kept clear of wrapped log text for the scrollbar. */
+const LOG_SCROLLBAR_SPACE = 16
 const ENEMY_POLICY: PolicyName = 'aggressive'
 
 /** How to draw each kind of unit; each texture is loaded from assets/sprites/<kind>.png. */
@@ -392,8 +394,9 @@ export class BattleScene extends Phaser.Scene {
 
   /**
    * Header at the top, buttons and log box at the bottom, and the board centred
-   * in the space between, scaled down (never up) to fit. The smallest window
-   * supported is 480×360; below that the screen may clip.
+   * in the space between, scaled down (never up) to fit. The game is never
+   * smaller than MIN_GAME_SIZE (main.ts), where the board fits at full size and
+   * the hint line fits on one line.
    */
   private layout(): void {
     const width = this.scale.width
@@ -412,6 +415,9 @@ export class BattleScene extends Phaser.Scene {
     this.logBoxBg.setPosition(logBoxX, logBoxY)
     this.logBoxBg.setSize(logBoxW, LOG_BOX_H)
     this.logText.setPosition(logBoxX + LOG_BOX_PADDING, logBoxY + LOG_BOX_PADDING)
+    // Long lines wrap onto further rows, clear of the scrollbar.
+    this.logText.setWordWrapWidth(logBoxW - 2 * LOG_BOX_PADDING - LOG_SCROLLBAR_SPACE)
+    this.log.setWrap((line) => this.logText.getWrappedText(line))
 
     // The board's drawn extent in board-local pixels: sprites stand up out of the
     // top row and nameplates hang below the bottom row.

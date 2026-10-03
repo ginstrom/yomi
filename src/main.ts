@@ -4,6 +4,12 @@ import { MenuScene } from './scenes/MenuScene.ts'
 import { BattleScene } from './scenes/BattleScene.ts'
 import { InventoryScene } from './scenes/InventoryScene.ts'
 
+/**
+ * The smallest the game gets: the board and inventory fit at full size and
+ * nothing clips. In a smaller window the page scrolls instead.
+ */
+const MIN_GAME_SIZE = { width: 760, height: 560 }
+
 new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
@@ -13,6 +19,7 @@ new Phaser.Game({
     mode: Phaser.Scale.RESIZE,
     width: '100%',
     height: '100%',
+    min: MIN_GAME_SIZE,
   },
   scene: [BootScene, MenuScene, BattleScene, InventoryScene],
 })
