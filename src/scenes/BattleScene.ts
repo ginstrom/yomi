@@ -24,13 +24,26 @@ import {
   type BoardSize,
   type Hex,
 } from '../grid/hex.ts'
-import { FLOOR_SQUASH_Y, HEX_SIZE, boardHexAt, boardHexCenter, boardPixelSize } from './boardGeometry.ts'
+import { planAttack, type AttackPlan } from './attackPlan.ts'
+import { FLOOR_SQUASH_Y, HEX_SIZE, boardHexAt, boardHexCenter, boardPixelSize, curvedArrow } from './boardGeometry.ts'
+import { CURSORS } from './cursors.ts'
 import { scheduleEvents, type Cue } from './eventSchedule.ts'
 import { ScrollingLog } from './scrollingLog.ts'
+import { SOUND_VOLUME, eventSounds, type SoundKey } from './sounds.ts'
 
 interface BattleData {
   game?: GameState
 }
+
+type MoveAction = Extract<Action, { type: 'move' }>
+
+/** What a click on a board hex would do, as shown while the pointer hovers over it. */
+type BoardIntent =
+  | { kind: 'none' }
+  | { kind: 'select'; unit: UnitId }
+  | { kind: 'move'; action: MoveAction }
+  /** Go for a foe: the plan may move first, and strikes only if `plan.attack`. */
+  | { kind: 'attack'; target: UnitId; plan: AttackPlan }
 
 interface Unit {
   /** The unit's body and shadow, positioned at its feet and depth-sorted with the other units. */
@@ -56,7 +69,10 @@ const MOVE_HIGHLIGHT = 0x1e88e5
 const MOVE_OUTLINE = 0x90caf9
 const ATTACK_HIGHLIGHT = 0xe53935
 const PROVOKE_OUTLINE = 0xffa726
-const ACTIVE_OUTLINE = 0xffee58
+const SELECTED_OUTLINE = 0xffffff
+const HOVER_OUTLINE = 0xffffff
+const ARROW_COLOR = 0xffffff
+const ARROW_EDGE = 0x000000
 const AP_PIP_FULL = 0xffee58
 const AP_PIP_SPENT = 0x424242
 /** Move highlights fade as they cost more AP: 1 AP, 2 AP, 3+ AP. */
@@ -64,6 +80,8 @@ const MOVE_ALPHA_BY_COST = [0.6, 0.4, 0.25]
 const MOVE_STEP_MS = 140
 /** Pause after a free attack lands, before the mover walks on. */
 const OPPORTUNITY_PAUSE_MS = 450
+/** Pause after a unit walks up to a foe, before it strikes. */
+const APPROACH_PAUSE_MS = 120
 /** Nameplate rows, in pixels below a unit's feet: name, HP bar, then AP pips or a foe's hit chance. */
 const PLATE_NAME_Y = -3
 const PLATE_BAR_Y = 11
@@ -110,6 +128,10 @@ export class BattleScene extends Phaser.Scene {
 
   private floorLayer!: Phaser.GameObjects.Container
   private highlights!: Phaser.GameObjects.Graphics
+  /** What a click on the hovered hex would do: a path arrow, an outline, red for an attack. */
+  private hoverMarks!: Phaser.GameObjects.Graphics
+  /** The board hex under the pointer, or null when it is off the board or over a button or the log. */
+  private hovered: Hex | null = null
   private unitLayer!: Phaser.GameObjects.Container
   /** Units' nameplates, drawn above every unit so none is hidden behind a sprite. */
   private plateLayer!: Phaser.GameObjects.Container
@@ -151,11 +173,14 @@ export class BattleScene extends Phaser.Scene {
     this.playerControl = false
     this.selected = null
     this.targeting = false
+    this.hovered = null
 
     this.floorLayer = this.add.container(0, 0)
     this.buildFloor(setup.board)
     this.highlights = this.add.graphics()
     this.floorLayer.add(this.highlights)
+    this.hoverMarks = this.add.graphics()
+    this.floorLayer.add(this.hoverMarks)
     this.unitLayer = this.add.container(0, 0)
     this.plateLayer = this.add.container(0, 0)
     this.units = new Map(setup.units.map((u) => [u.id, this.createUnit(u, kinds[u.id])]))
@@ -212,6 +237,12 @@ export class BattleScene extends Phaser.Scene {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
       if (over.length === 0) this.onBoardClick(pointer)
     })
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) =>
+      this.onPointerMove(pointer, over),
+    )
+    this.input.on(Phaser.Input.Events.GAME_OUT, () => this.setHovered(null))
+    // A paused battle (inventory or menu open) mustn't leave its board cursor on the overlay.
+    this.events.on(Phaser.Scenes.Events.PAUSE, () => this.setHovered(null))
 
     this.bannerText = this.add
       .text(0, 0, '', {
@@ -235,6 +266,7 @@ export class BattleScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
+      this.input.setDefaultCursor('default')
       // Leaving mid-battle (e.g. "New" from the pause menu) still yields a complete log.
       this.engine.abandon()
       this.dumpLog()
@@ -367,7 +399,9 @@ export class BattleScene extends Phaser.Scene {
       if (isEnabled()) bg.setFillStyle(0x2b6cb0)
     })
     bg.on('pointerdown', () => {
-      if (isEnabled()) onClick()
+      if (!isEnabled()) return
+      this.playSound('sfx_ui_click')
+      onClick()
     })
 
     container.setSize(width, height)
@@ -535,6 +569,7 @@ export class BattleScene extends Phaser.Scene {
     this.highlights.clear()
     this.labelLayer.removeAll(true)
     this.hintText.setVisible(this.playerControl)
+    this.refreshHover()
     if (!this.playerControl) return
 
     const state = this.engine.getState()
@@ -545,7 +580,7 @@ export class BattleScene extends Phaser.Scene {
         ? `Choose a foe to attack (${ATTACK_AP_COST} AP). Esc or Cancel to go back.`
         : actable.length === 0
           ? 'No action points left. Press End Turn.'
-          : `Blue: move (fainter costs more AP), orange edge provokes a free attack. Red: attack (${ATTACK_AP_COST} AP).`,
+          : `Blue: move (fainter costs more AP), orange edge provokes a free attack. Click a foe to attack.`,
     )
 
     for (const id of this.targeting ? [] : actable) {
@@ -576,8 +611,108 @@ export class BattleScene extends Phaser.Scene {
         this.addHitChanceLabel(action.unit, action.target, positionOf(action.target))
       }
     }
-    this.highlights.lineStyle(2, ACTIVE_OUTLINE, 1)
+    this.highlights.lineStyle(3, SELECTED_OUTLINE, 1)
     this.highlights.strokePoints(this.hexPolygon(positionOf(this.selected)), true)
+  }
+
+  // ---- hover --------------------------------------------------------------
+
+  private onPointerMove(pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]): void {
+    if (over.length > 0) {
+      // Buttons set their own cursor; leaving one restores this default.
+      this.input.manager.defaultCursor = CURSORS.move
+      this.hovered = null
+      this.hoverMarks.clear()
+      return
+    }
+    this.setHovered(this.hexAt(pointer.x, pointer.y))
+  }
+
+  private setHovered(at: Hex | null): void {
+    const same = at === null || this.hovered === null ? at === this.hovered : hexEquals(at, this.hovered)
+    this.hovered = at
+    if (!same) this.refreshHover()
+  }
+
+  /** What a click on `at` would do for the selected unit. */
+  private boardIntent(at: Hex): BoardIntent {
+    if (!this.playerControl || this.selected === null) return { kind: 'none' }
+    const state = this.engine.getState()
+    const self = state.units.find((u) => u.id === this.selected)!
+    const unitAt = state.units.find((u) => u.hp > 0 && hexEquals(u.position, at))
+    if (this.targeting) {
+      // Only a foe already in reach is a target; any other click backs out of picking one.
+      return unitAt && this.selectedAttacks().some((a) => a.target === unitAt.id)
+        ? { kind: 'attack', target: unitAt.id, plan: { move: null, attack: true } }
+        : { kind: 'none' }
+    }
+    if (unitAt && unitAt.side !== self.side) {
+      return { kind: 'attack', target: unitAt.id, plan: planAttack(this.engine, self.id, unitAt.id) }
+    }
+    if (unitAt) {
+      return unitAt.id !== self.id && this.actableUnits().includes(unitAt.id)
+        ? { kind: 'select', unit: unitAt.id }
+        : { kind: 'none' }
+    }
+    const move = this.engine
+      .legalActions(self.id)
+      .find((a): a is MoveAction => a.type === 'move' && hexEquals(a.to, at))
+    return move ? { kind: 'move', action: move } : { kind: 'none' }
+  }
+
+  /**
+   * Shows what a click on the hovered hex would do: an arrow to where the
+   * selected unit would walk, and red on it and the foe it would go for, with
+   * the cursor to match (crossed swords, faded when the AP can't cover a strike).
+   */
+  private refreshHover(): void {
+    this.hoverMarks.clear()
+    const intent: BoardIntent = this.hovered ? this.boardIntent(this.hovered) : { kind: 'none' }
+    const selectedAt = () => this.engine.getState().units.find((u) => u.id === this.selected)!.position
+    switch (intent.kind) {
+      case 'none':
+        this.input.setDefaultCursor(CURSORS.move)
+        break
+      case 'select':
+        this.input.setDefaultCursor(CURSORS.select)
+        break
+      case 'move':
+        this.input.setDefaultCursor(CURSORS.move)
+        this.markDestination(selectedAt(), intent.action.to)
+        break
+      case 'attack': {
+        this.input.setDefaultCursor(intent.plan.attack ? CURSORS.attack : CURSORS.attackDisabled)
+        const from = selectedAt()
+        const foeAt = this.hovered!
+        for (const h of [from, foeAt]) {
+          const polygon = this.hexPolygon(h)
+          this.hoverMarks.fillStyle(ATTACK_HIGHLIGHT, intent.plan.attack ? 0.55 : 0.3)
+          this.hoverMarks.fillPoints(polygon, true)
+          this.hoverMarks.lineStyle(3, ATTACK_HIGHLIGHT, intent.plan.attack ? 1 : 0.6)
+          this.hoverMarks.strokePoints(polygon, true)
+        }
+        if (intent.plan.move) this.markDestination(from, intent.plan.move.to)
+        break
+      }
+    }
+  }
+
+  /** Outlines `to` and draws a curved arrow to it from `from`. */
+  private markDestination(from: Hex, to: Hex): void {
+    const g = this.hoverMarks
+    g.lineStyle(3, HOVER_OUTLINE, 1)
+    g.strokePoints(this.hexPolygon(to), true)
+    const { shaft: points, head } = curvedArrow(boardHexCenter(from), boardHexCenter(to))
+    const shaft = points.map((p) => new Phaser.Math.Vector2(p.x, p.y))
+    // A dark edge under the arrow keeps it visible over every floor shade and highlight.
+    g.lineStyle(7, ARROW_EDGE, 0.6)
+    g.strokePoints(shaft, false)
+    g.lineStyle(4, ARROW_EDGE, 0.6)
+    g.strokeTriangle(head[0].x, head[0].y, head[1].x, head[1].y, head[2].x, head[2].y)
+    g.lineStyle(3, ARROW_COLOR, 1)
+    g.strokePoints(shaft, false)
+    g.fillStyle(ARROW_COLOR, 1)
+    g.fillTriangle(head[0].x, head[0].y, head[1].x, head[1].y, head[2].x, head[2].y)
   }
 
   /** "60%" on a foe's nameplate when the selected unit can attack it, with "+3" for flanking, side and rear bonuses. */
@@ -682,6 +817,10 @@ export class BattleScene extends Phaser.Scene {
 
   private showEvent(event: BattleEvent): void {
     this.pushLog(formatEvent(event, this.names))
+    for (const { key, delayMs } of eventSounds(event)) {
+      if (delayMs === 0) this.playSound(key)
+      else this.time.delayedCall(delayMs, () => this.playSound(key))
+    }
     if (event.type === 'move') {
       this.animateMove(event.unit, event.from, event.path)
     }
@@ -751,30 +890,39 @@ export class BattleScene extends Phaser.Scene {
     if (!this.playerControl) return
     const clicked = this.hexAt(pointer.x, pointer.y)
     if (!clicked) return
-    const state = this.engine.getState()
-    const unitAt = state.units.find((u) => u.hp > 0 && hexEquals(u.position, clicked))
-    if (this.targeting) {
-      // Only a target counts; any other board click backs out of picking one.
-      const attack = this.selectedAttacks().find((a) => a.target === unitAt?.id)
-      if (attack) this.playerAct(attack)
-      else this.setTargeting(false)
+    const intent = this.boardIntent(clicked)
+    if (intent.kind === 'select') {
+      this.selected = intent.unit
+      this.setPlayerControl(true)
+    } else if (intent.kind === 'move') {
+      this.playerAct(intent.action)
+    } else if (intent.kind === 'attack') {
+      this.goFor(intent.target, intent.plan)
+    } else if (this.targeting) {
+      this.setTargeting(false)
+    }
+  }
+
+  /** Carries out a plan for the selected unit to go for a foe: walk up to it, strike it, or both. */
+  private goFor(target: UnitId, { move, attack }: AttackPlan): void {
+    const unit = this.selected!
+    const strike: Action = { type: 'attack', unit, target }
+    if (!move) {
+      if (attack) this.playerAct(strike)
       return
     }
-    const action =
-      this.selected === null
-        ? undefined
-        : this.engine
-            .legalActions(this.selected)
-            .find(
-              (a) =>
-                (a.type === 'move' && hexEquals(a.to, clicked)) || (a.type === 'attack' && a.target === unitAt?.id),
-            )
-    if (action) {
-      this.playerAct(action)
-    } else if (unitAt && this.actableUnits().includes(unitAt.id)) {
-      this.selected = unitAt.id
-      this.setPlayerControl(true)
+    if (!attack) {
+      this.playerAct(move)
+      return
     }
+    this.setPlayerControl(false)
+    const animationMs = this.applyEvents(this.engine.step(move))
+    this.time.delayedCall(animationMs + APPROACH_PAUSE_MS, () => {
+      // A free attack on the way may have felled the unit, or ended the battle.
+      const stillLegal = this.engine.legalActions(unit).some((a) => a.type === 'attack' && a.target === target)
+      if (stillLegal) this.playerAct(strike)
+      else this.continueBattle()
+    })
   }
 
   /** Attacks the only foe in reach, or asks which one when there are several; pressed again, cancels. */
@@ -820,6 +968,10 @@ export class BattleScene extends Phaser.Scene {
       const animationMs = this.applyEvents(this.engine.step(action))
       this.time.delayedCall(animationMs + 200, () => this.continueBattle())
     })
+  }
+
+  private playSound(key: SoundKey): void {
+    this.sound.play(key, { volume: SOUND_VOLUME })
   }
 
   private flashHit(unit: Unit, hit: boolean): void {

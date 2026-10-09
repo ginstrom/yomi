@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { newGame } from '../game/gameState.ts'
+import { SOUND_VOLUME } from './sounds.ts'
 
 interface MenuData {
   canContinue?: boolean
@@ -66,7 +67,10 @@ export class MenuScene extends Phaser.Scene {
       bg.setInteractive({ useHandCursor: true })
       bg.on('pointerover', () => bg.setFillStyle(0x3182ce))
       bg.on('pointerout', () => bg.setFillStyle(0x2b6cb0))
-      bg.on('pointerdown', () => onClick())
+      bg.on('pointerdown', () => {
+        this.sound.play('sfx_ui_click', { volume: SOUND_VOLUME })
+        onClick()
+      })
     }
 
     const container = this.add.container(0, 0, [bg, text])

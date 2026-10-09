@@ -33,3 +33,56 @@ export function boardHexAt(screen: Point, origin: Point, scale: number): Hex {
   const localY = (screen.y - origin.y) / scale / FLOOR_SQUASH_Y - HEX_SIZE
   return pixelToHex(localX, localY, HEX_SIZE)
 }
+
+/** A curved arrow's shaft, as points along it, and its head, as a triangle whose first point is the tip. */
+export interface CurvedArrow {
+  shaft: Point[]
+  head: [Point, Point, Point]
+}
+
+/**
+ * An arrow from `from` to `to` that bows upwards (or, between points on one
+ * level, up from the line between them), ending in a head at `to`.
+ */
+export function curvedArrow(from: Point, to: Point, headLength = 12, segments = 16): CurvedArrow {
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+  const length = Math.hypot(dx, dy)
+  // The normal that points up the screen, so arrows arc like a thrown ball.
+  let nx = -dy / length
+  let ny = dx / length
+  if (ny > 0 || (ny === 0 && nx > 0)) {
+    nx = -nx
+    ny = -ny
+  }
+  const bow = length * 0.25
+  const control = { x: (from.x + to.x) / 2 + nx * bow, y: (from.y + to.y) / 2 + ny * bow }
+  const at = (t: number): Point => ({
+    x: (1 - t) ** 2 * from.x + 2 * (1 - t) * t * control.x + t ** 2 * to.x,
+    y: (1 - t) ** 2 * from.y + 2 * (1 - t) * t * control.y + t ** 2 * to.y,
+  })
+  // The head points along the curve's tangent at its end, which runs from the control point.
+  const tx = to.x - control.x
+  const ty = to.y - control.y
+  const tl = Math.hypot(tx, ty)
+  const ux = tx / tl
+  const uy = ty / tl
+  const base = { x: to.x - ux * headLength, y: to.y - uy * headLength }
+  const half = headLength * 0.55
+  const head: [Point, Point, Point] = [
+    to,
+    { x: base.x - uy * half, y: base.y + ux * half },
+    { x: base.x + uy * half, y: base.y - ux * half },
+  ]
+  // The shaft stops where the head begins, so the head's tip stays sharp.
+  const shaft: Point[] = []
+  for (let i = 0; i <= segments; i++) {
+    const p = at(i / segments)
+    if (Math.hypot(p.x - to.x, p.y - to.y) < headLength) {
+      shaft.push(base)
+      break
+    }
+    shaft.push(p)
+  }
+  return { shaft, head }
+}
