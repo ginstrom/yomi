@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { loadAudioSettings } from './audioSettings.ts'
 import { SOUND_KEYS } from './sounds.ts'
 
 export class BootScene extends Phaser.Scene {
@@ -12,6 +13,8 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
+    // The master level is the sound manager's global volume, shared by every scene.
+    this.sound.volume = loadAudioSettings().master
     this.scene.start('Menu', { canContinue: false })
   }
 }

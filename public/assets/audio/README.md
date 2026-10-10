@@ -15,5 +15,6 @@ content, no licence or attribution needed. Mono 16-bit PCM WAV, 22050 Hz.
 | `sfx_ui_click.wav` | Button and tab presses |
 | `music_victory.wav` | Victory sting |
 | `music_defeat.wav` | Defeat sting |
+| `music_battle.wav` | Looping battle theme, stopped when the battle ends |
 
 Placeholders only, meant to be replaced by a real sound pass.

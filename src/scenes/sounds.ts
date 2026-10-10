@@ -10,6 +10,7 @@ export const SOUND_KEYS = [
   'sfx_ui_click',
   'music_victory',
   'music_defeat',
+  'music_battle',
 ] as const
 
 export type SoundKey = (typeof SOUND_KEYS)[number]
@@ -26,6 +27,8 @@ export const IMPACT_DELAY_MS = 90
 export const STING_DELAY_MS = 450
 /** The placeholder tones are harsh square waves; this keeps them from blaring. */
 export const SOUND_VOLUME = 0.4
+/** The battle theme loops under every sound effect, so it sits well below them. */
+export const MUSIC_VOLUME = 0.2
 
 /** The sounds that go with a battle event, kept free of Phaser so it can be unit tested. */
 export function eventSounds(event: BattleEvent): SoundCue[] {

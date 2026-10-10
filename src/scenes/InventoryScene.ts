@@ -4,7 +4,7 @@ import { formatDamage, type CombatantStats } from '../combat/combat.ts'
 import type { GameState } from '../game/gameState.ts'
 import { EQUIPMENT_SLOT_LABELS, describeItemStats, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
 import { drawItemIcon } from './itemIcons.ts'
-import { SOUND_VOLUME } from './sounds.ts'
+import { soundVolume } from './audioSettings.ts'
 
 type PanelTab = 'character' | 'inventory'
 
@@ -102,7 +102,7 @@ export class InventoryScene extends Phaser.Scene {
     const bg = this.add.rectangle(x, y, TAB_W, TAB_H, 0x1b1712, 0.95).setStrokeStyle(2, 0x6b5a3a)
     bg.setInteractive({ useHandCursor: true })
     bg.on('pointerdown', () => {
-      this.sound.play('sfx_ui_click', { volume: SOUND_VOLUME })
+      this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
       this.showTab(tab)
     })
     const text = this.add

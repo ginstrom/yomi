@@ -29,7 +29,8 @@ import { FLOOR_SQUASH_Y, HEX_SIZE, boardHexAt, boardHexCenter, boardPixelSize, c
 import { CURSORS } from './cursors.ts'
 import { scheduleEvents, type Cue } from './eventSchedule.ts'
 import { ScrollingLog } from './scrollingLog.ts'
-import { SOUND_VOLUME, eventSounds, type SoundKey } from './sounds.ts'
+import { soundVolume } from './audioSettings.ts'
+import { eventSounds, type SoundKey } from './sounds.ts'
 
 interface BattleData {
   game?: GameState
@@ -118,6 +119,7 @@ export class BattleScene extends Phaser.Scene {
   private board!: HexBoard
   private names!: Record<UnitId, string>
   private logDumped = false
+  private music: Phaser.Sound.WebAudioSound | Phaser.Sound.HTML5AudioSound | Phaser.Sound.NoAudioSound | null = null
   /** True while the player may act; off during animations and the enemy's turn. */
   private playerControl = false
   /** The player unit that board clicks and the Attack button act for. */
@@ -243,6 +245,8 @@ export class BattleScene extends Phaser.Scene {
     this.input.on(Phaser.Input.Events.GAME_OUT, () => this.setHovered(null))
     // A paused battle (inventory or menu open) mustn't leave its board cursor on the overlay.
     this.events.on(Phaser.Scenes.Events.PAUSE, () => this.setHovered(null))
+    // The menu pauses the theme; the options there may have changed its volume.
+    this.events.on(Phaser.Scenes.Events.RESUME, () => this.resumeMusic())
 
     this.bannerText = this.add
       .text(0, 0, '', {
@@ -267,6 +271,7 @@ export class BattleScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
       this.input.setDefaultCursor('default')
+      this.stopMusic()
       // Leaving mid-battle (e.g. "New" from the pause menu) still yields a complete log.
       this.engine.abandon()
       this.dumpLog()
@@ -275,6 +280,9 @@ export class BattleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-I', () => this.openInventory())
     this.input.keyboard?.on('keydown-C', () => this.openCharacter())
     this.input.keyboard?.on('keydown-ESC', () => (this.targeting ? this.setTargeting(false) : this.openMenu()))
+
+    this.music = this.sound.add('music_battle', { loop: true, volume: soundVolume('music_battle') })
+    this.music.play()
 
     this.applyEvents(this.engine.getLog())
     // A side can enter already fallen (e.g. a hero carried over at 0 hp).
@@ -299,6 +307,7 @@ export class BattleScene extends Phaser.Scene {
       this.scene.start('Menu', { canContinue: false })
       return
     }
+    this.music?.pause()
     this.scene.launch('Menu', { canContinue: true })
     this.scene.bringToTop('Menu')
     this.scene.pause()
@@ -817,6 +826,8 @@ export class BattleScene extends Phaser.Scene {
 
   private showEvent(event: BattleEvent): void {
     this.pushLog(formatEvent(event, this.names))
+    // The theme gives way to the victory or defeat sting.
+    if (event.type === 'battle_end') this.stopMusic()
     for (const { key, delayMs } of eventSounds(event)) {
       if (delayMs === 0) this.playSound(key)
       else this.time.delayedCall(delayMs, () => this.playSound(key))
@@ -971,7 +982,18 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private playSound(key: SoundKey): void {
-    this.sound.play(key, { volume: SOUND_VOLUME })
+    this.sound.play(key, { volume: soundVolume(key) })
+  }
+
+  private resumeMusic(): void {
+    if (!this.music) return
+    this.music.setVolume(soundVolume('music_battle'))
+    if (this.music.isPaused) this.music.resume()
+  }
+
+  private stopMusic(): void {
+    this.music?.destroy()
+    this.music = null
   }
 
   private flashHit(unit: Unit, hit: boolean): void {
