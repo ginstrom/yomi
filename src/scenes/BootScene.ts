@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { loadAudioSettings } from './audioSettings.ts'
-import { SOUND_KEYS } from './sounds.ts'
+import { SOUND_KEYS, soundFiles } from './sounds.ts'
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -9,7 +9,7 @@ export class BootScene extends Phaser.Scene {
 
   /** Sounds load once here; Phaser's sound cache is shared by every scene. */
   preload(): void {
-    for (const key of SOUND_KEYS) this.load.audio(key, `assets/audio/${key}.wav`)
+    for (const key of SOUND_KEYS) this.load.audio(key, soundFiles(key))
   }
 
   create(): void {

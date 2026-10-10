@@ -1,6 +1,6 @@
 import type { BattleEvent } from '../engine/battleEngine.ts'
 
-/** Every sound the game plays; each is loaded from assets/audio/<key>.wav. */
+/** Every sound the game plays; each is loaded from assets/audio/ by soundFiles(key). */
 export const SOUND_KEYS = [
   'sfx_melee_swing',
   'sfx_hit_impact',
@@ -14,6 +14,16 @@ export const SOUND_KEYS = [
 ] as const
 
 export type SoundKey = (typeof SOUND_KEYS)[number]
+
+/**
+ * The files to load a sound from, best first; Phaser takes the first the browser
+ * can play. The placeholder tones are WAV. The battle theme is Ogg Opus, which
+ * loops without a gap, with MP3 for browsers that cannot play Opus.
+ */
+export function soundFiles(key: SoundKey): string[] {
+  const path = `assets/audio/${key}`
+  return key === 'music_battle' ? [`${path}.opus`, `${path}.mp3`] : [`${path}.wav`]
+}
 
 /** A sound to start `delayMs` after its event is shown. */
 export interface SoundCue {
