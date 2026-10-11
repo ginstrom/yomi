@@ -6,11 +6,12 @@ Yomi's heroes fight with blades, bows and fists, and eight of the eleven equipme
 
 - **Skills**: Unarmed and First Aid go. The three skills are Melee Weapons, Archery and **Magic**.
 - **Spellcasting**: spells are learned as perks. The first is **Magic Arrow**. A caster has mana, and a mage joins the starting party.
+- **The perk tree**: perks are laid out as a tree, a branch for each attribute, and chosen from it. The Skills tab lists only the perks a character has taken, with a **Perk Tree** button that opens the tree. Six new perks **raise an attribute** each.
 - **Magic items**: enchanted gear for the empty slots and the weapon hand, won as loot from monster locations and handed round the party on the world map.
 
-**Status: ready for planning.** Nothing blocks implementation. Section 8 lists the decisions made here on judgement; the first three are worth confirming before planning.
+**Status: ready for planning.** Nothing blocks implementation. Section 8 lists the decisions made here on judgement; the first three, and the three on the perk tree (10 to 12), are worth confirming before planning.
 
-Decisions the user made, which the design keeps as given: Unarmed and First Aid are removed; Magic is a skill; spells come through perks; the perks will later become a perk tree; the first spell perk is Magic Arrow.
+Decisions the user made, which the design keeps as given: Unarmed and First Aid are removed; Magic is a skill; spells come through perks; the first spell perk is Magic Arrow; the Skills tab shows just the perks taken; a Perk Tree button shows the perks as a tree, from which the player chooses a character's perks; perks can raise attributes.
 
 ## 2. Requirements and scope
 
@@ -32,6 +33,10 @@ Decisions the user made, which the design keeps as given: Unarmed and First Aid 
 | R12 | On the world map the character panel can change gear for free, and its ground section shows the baggage, through which items pass between members. |
 | R13 | The simulator reports casts, and gains a `--campaign` mode that plays the whole map, which is how scaling is retuned. |
 | R14 | Scaling is retuned for a party of four with magic and without First Aid, and `CLAUDE.md`'s rules of scaling are rewritten with the new numbers. |
+| R15 | The perks form a **tree**: six branches, one for each attribute, and within a branch a perk may ask for a rank of the perk before it. |
+| R16 | The Skills tab lists **only the perks the character has taken**, and has a **Perk Tree** button. |
+| R17 | The button opens the **perk tree** for the member shown: every perk as a node of the tree, marked as taken, open or closed, with what it does and what it asks. On the world map a click on an open perk spends a pick on it; in battle the tree is only shown. Perks are chosen nowhere else. |
+| R18 | Each attribute has a perk that **raises it by 1** a rank, up to the attribute's maximum of 10. Everything derived from the attribute follows, and so does what other perks ask of it. |
 
 ### Quality constraints
 
@@ -39,11 +44,14 @@ Decisions the user made, which the design keeps as given: Unarmed and First Aid 
 - A battle still replays exactly from its seed and its actions.
 - `LOG_SCHEMA_VERSION` goes from 13 to 14.
 - A unit without magic behaves exactly as today, so existing stat blocks need no new fields.
-- Teaching a spell is a property of a perk's data, so the coming perk tree adds spells by adding entries.
+- Teaching a spell is a property of a perk's data, and so is a perk's place in the tree, so a later spell is one more entry in `PERKS` and the tree draws it without new code.
+- A character still stores only what it was born with and what it has learned: a raised attribute is derived from its perks, never written over the one it was born with.
 
 ### Non-goals
 
-- **The perk tree.** Perks stay a flat list with requirements. This design adds one spell perk and the way a perk teaches a spell; the tree, and the spells on it, come later.
+- **New perks to fill the tree**, beyond Magic Arrow and the six that raise an attribute. The tree is built from the perks there are, so some branches are one perk long.
+- **Scrolling the tree.** It fits the panel as designed, with room for one more step of depth; section 6 says when that runs out.
+- **Taking back a perk**, and raising an attribute by any means but a perk.
 - **Any spell but Magic Arrow.** That leaves out healing, area spells and lasting effects, and with them friendly fire and per-unit effect state in the engine. Section 6 says what each would need.
 - **Choosing among several spells in battle.** With one spell in the game the Cast button needs no spell list; one comes with the second spell.
 - **A replacement for First Aid.** After this change, wounds heal only on a new level.
@@ -69,6 +77,10 @@ Decisions the user made, which the design keeps as given: Unarmed and First Aid 
 | A10 | A second ring goes into the empty ring slot, not over the first. | R10 |
 | A11 | `npm run simulate -- --campaign --battles 500 --seed 1` prints the share of campaigns that clear the map and the win rate at each threat. | R13 |
 | A12 | That share is about 2 in 3 with the aggressive policy, and `CLAUDE.md` states the numbers that give it. | R14 |
+| A13 | A level 6 character with Endurance 6, Agility 6 and a pick cannot take Tireless until it has a rank of Toughness. Every perk but the six attribute perks either asks for its branch's attribute or skill, or for a perk of its own branch. | R15 |
+| A14 | In the browser, a new game's Skills tab lists no perk for Aldric and exactly Magic Arrow for Delwyn, and no perk a character has not taken appears there. | R16 |
+| A15 | In the browser, the Perk Tree button opens the tree with all sixteen perks, on the world map and in battle, and Back returns to the Skills tab. On the world map with a pick waiting, a click on an open perk takes it, the pick is spent, and back on the Skills tab the perk is listed; in battle the same click takes nothing. | R17 |
+| A16 | Aldric at level 3 takes Gain Endurance: his Endurance reads 8, and his maximum and current hit points rise by 3. Brenna at level 3 takes Gain Intelligence and her untrained Magic goes from 48% to 52%, which meets what Magic Arrow asks. A character whose attribute is 10 cannot take that attribute's perk. | R18 |
 
 ## 3. Current system
 
@@ -77,7 +89,8 @@ Inspected facts, with the files they come from.
 - **Skills** ([`src/character/skills.ts`](../../src/character/skills.ts)): `SKILL_IDS` is `melee`, `archery`, `unarmed`, `firstAid`. `TAGGED_SKILLS` is 2. `Character.trained` is a `Record<SkillId, number>`, filled in by hand in `createCharacter`.
 - **Unarmed** ([`src/character/character.ts`](../../src/character/character.ts)): `weaponSkill` returns `unarmed` for an empty hand, and `unarmedDamage` picks a die from `UNARMED_DICE` by the Unarmed skill (1d2 up to 1d8). A bare-handed attack costs 3 AP.
 - **First Aid** ([`src/game/party.ts`](../../src/game/party.ts)): `rewardVictory` has the best healer standing restore `firstAidHp` to every member; `VictoryReward.healer` and `MemberReward.tended` report it and `describeRewards` prints it. The `healer` perk and the `firstAid` key of `PerkEffects` add to it ([`src/character/perks.ts`](../../src/character/perks.ts)). `autoAdvance` trains First Aid for a character tagged in it ([`src/character/progression.ts`](../../src/character/progression.ts)).
-- **Perks**: data; numeric `PerkEffects` are summed by `perkBonus`. A perk can ask for a level, attributes and skills. A pick comes every third level (`PERK_LEVEL_STEP`), so the first at level 3. `Build` has no way to start a character with a perk. Ten perks fill the Skills tab's perk list to the bottom of the panel.
+- **Perks**: data; numeric `PerkEffects` are summed by `perkBonus`. A perk can ask for a level, attributes and skills. A pick comes every third level (`PERK_LEVEL_STEP`), so the first at level 3. `Build` has no way to start a character with a perk. Perks are a flat list: none asks for another. The Skills tab lists all ten down its right half, taken or not, and a click on a row takes the perk (`buildPerks`); they fill it to the bottom of the panel, so it has no room for more.
+- **Attributes** ([`src/character/attributes.ts`](../../src/character/attributes.ts)): fixed at creation, from 1 to 10. Every reader takes them straight from `character.attributes`: `maxHp`, `hpPerLevel` and `deriveCombatStats` in `character.ts`, `skillLevel` in `skills.ts`, `skillPointsPerLevel` in `progression.ts`, `qualifiesFor` in `perks.ts`, and the Character tab.
 - **Starting heroes**: Aldric is tagged Melee and Unarmed, Brenna Archery and First Aid, Corwin Melee and Archery. Intelligence: 4, 7, 5. The `wizard` portrait exists and is unused.
 - **Items** ([`src/inventory/inventory.ts`](../../src/inventory/inventory.ts)): an `Item` has one `slot`. `ItemStats` covers damage, attack cost, range, two-handedness, `acBonus` and `toHit`. Only `mainHand`, `offHand` and `armor` have items. `WEAPONS` is "every weapon in the game": `createCharacter` puts every one a hero does not hold into its backpack, and the simulator's `--player-weapon` picks from it. `ring1` and `ring2` are separate slots.
 - **Engine** ([`src/engine/battleEngine.ts`](../../src/engine/battleEngine.ts)): actions are `move`, `attack`, `equip`, `end_turn`. `equip` swaps the stat block and caps hp at the new maximum. `LOG_SCHEMA_VERSION` is 13.
@@ -86,7 +99,7 @@ Inspected facts, with the files they come from.
 - **Encounters and scaling** ([`src/game/encounters.ts`](../../src/game/encounters.ts), [`src/game/worldMap.ts`](../../src/game/worldMap.ts)): `FOES_AT_THREAT` is `[2, 3, 3, 3, 4]`, tuned for a party of three that First Aid tends after each win. Twelve monster locations: two at threat 1, four at 2, two each at 3, 4 and 5.
 - **Game state** ([`src/game/gameState.ts`](../../src/game/gameState.ts)): `{ party, world }`.
 - **Battle screen** ([`src/scenes/BattleScene.ts`](../../src/scenes/BattleScene.ts)): two buttons, Attack and End Turn. `targeting: boolean` is the pick-a-foe mode; Esc leaves it. `endBattle` calls `clearLocation` and `rewardVictory` and shows `describeRewards`' lines.
-- **Character panel** ([`src/scenes/InventoryScene.ts`](../../src/scenes/InventoryScene.ts)): gear can be changed only when a member's `gearApCost` is not null, which `WorldScene` never passes, so gear is view-only on the world map. The Ground section edits whatever `Item[]` the member's `ground` is.
+- **Character panel** ([`src/scenes/InventoryScene.ts`](../../src/scenes/InventoryScene.ts)): gear can be changed only when a member's `gearApCost` is not null, which `WorldScene` never passes, so gear is view-only on the world map. The Ground section edits whatever `Item[]` the member's `ground` is. The panel is 720×500 with three tabs, each a container shown or hidden by `showTab`; `canAdvance` in its scene data says whether skill points and perks may be spent (the world map) or only shown (battle).
 - **Simulator** ([`scripts/simulate.ts`](../../scripts/simulate.ts)): fights one encounter many times. The campaign run used for both past retunes was a throwaway script and is not in the repository (project memory).
 
 ## 4. Proposed behaviour
@@ -115,7 +128,7 @@ Inspected facts, with the files they come from.
 | --- | --- | --- | --- | --- | --- |
 | Magic Arrow | 3 | 4 | 5 | a foe | 1d10 damage |
 
-A character knows a spell when it has a rank of a perk that teaches it. The perk is taken like any other, with a pick, on the world map; its level requirement is 1 so that a starting character can be built with it, though a pick first comes at level 3. Of the present heroes, Brenna (Magic 48%, untagged) is two skill points from qualifying.
+A character knows a spell when it has a rank of a perk that teaches it. The perk is taken like any other, with a pick, from the perk tree on the world map (section 4.10); its level requirement is 1 so that a starting character can be built with it, though a pick first comes at level 3. Of the present heroes, Brenna (Magic 48%, untagged) is two skill points from qualifying, or one rank of Gain Intelligence (section 4.11).
 
 Maximum mana is `2 × intelligence`, plus `floor(intelligence / 2)` for each level above the first, plus gear. A character that knows no spell has no mana and the screens show none for it. Mana is a battle's budget: it starts full and is gone when spent. It is never stored on the character, in keeping with the rule that a character's numbers are derived.
 
@@ -138,7 +151,7 @@ Magic Arrow is rolled like an attack: the chance is the caster's spell skill les
 
 Unlike Attack, Cast always asks for the target, even when only one foe is in range: mana is too dear to spend on a slip. Clicking a foe outside targeting still means a weapon attack, so a mage is never made to guess which it will get.
 
-The Character tab's combat figures and the Inventory tab's stat lines gain a `Mana` line for a member with mana: `Mana 15 / 18` in battle, `Mana 18` on the world map. The Magic Arrow perk appears in the Skills tab's perk list like any perk; there is no separate list of spells.
+The Character tab's combat figures and the Inventory tab's stat lines gain a `Mana` line for a member with mana: `Mana 15 / 18` in battle, `Mana 18` on the world map. The Magic Arrow perk is listed on the Skills tab once taken, like any perk; there is no separate list of spells.
 
 ### 4.5 The mage (R9)
 
@@ -218,6 +231,95 @@ The summary gains `avgPlayerCasts` and `avgEnemyCasts`. A spell's damage counts 
 
 The retune keeps the standing target: the aggressive policy clears the map about 2 times in 3. Two changes pull against each other: a fourth hero makes each battle easier, and the loss of First Aid makes a run of battles harder, since wounds now last until the next level. The levers, in the order to try them, are `FOES_AT_THREAT` (should a threat want a fifth foe, `GOBLIN_RAID` and `KOBOLD_SCOUTS` need a fifth `FoeSlot` each, on hexes off `PARTY_START`), the per-level growth in `foeAtLevel`, and last the spell and mana numbers of section 4.2. Single cells are checked with `--encounter --threat --party-level` as before, and the sentences in `CLAUDE.md` about what a fresh party and an even-level party win are restated from those runs.
 
+### 4.10 The perk tree (R15 to R17)
+
+**The tree.** There is a branch for each attribute. Its trunk is the perk that raises the attribute (section 4.11); the perks that build on that attribute grow from the trunk, and a perk further out asks for a rank of the one before it.
+
+| Branch | Trunk | From the trunk | Then |
+| --- | --- | --- | --- |
+| Strength | Gain Strength | Heavy Hand (Strength 6) | |
+| Perception | Gain Perception | Deadly Aim (Perception 6) | Far Shot (Perception 7) |
+| Endurance | Gain Endurance | Toughness (Endurance 5) | Tireless (level 6, Endurance 6, Agility 6) |
+| Intelligence | Gain Intelligence | Quick Study (Intelligence 5) | Scholar (Intelligence 6) |
+| | | Magic Arrow (Magic 50%) | |
+| Agility | Gain Agility | Dodger (Agility 6) | |
+| Luck | Gain Luck | Keen Eye (Luck 6) | |
+
+The two kinds of line in the tree mean different things, and the tree is honest about both:
+
+- **Trunk to perk**: the perk asks for the branch's attribute at some value (or, for Magic Arrow, the skill that starts from it). It does *not* ask for a rank of the trunk perk: Aldric, with Strength 7, takes Heavy Hand without Gain Strength. The trunk perk is how a character short of the value gets there.
+- **Perk to perk**: the further perk asks for at least one rank of the nearer one. This is new: Far Shot now asks for Deadly Aim, Tireless for Toughness and Scholar for Quick Study, each on top of what it asked before.
+
+What a perk asks for in level, attributes and skills is otherwise unchanged. A new perk joins the tree by naming its branch and, if it has one, the perk before it.
+
+**The Skills tab.** Skills stay down the left. The right half becomes:
+
+- the `Perks` heading and, beside it, the status as now: `Choose a perk` or `Choose 2 perks` in gold when picks wait and can be spent here, `2 to choose` in battle, else `Next at level 6`;
+- a row for each perk the character has a rank of, in the order of `PERKS`: name and ranks (`Toughness 1/2`; no count for a perk of one rank) over its description, in the present row's style without the frame. Nothing here is clickable. With none taken, one dim line: `No perks yet.`;
+- at the bottom, the **Perk Tree** button, outlined in gold when a pick waits and can be spent here.
+
+The list has room for eight rows, which a character reaches with its eighth pick at level 24; nothing in the game comes near that level.
+
+**The tree view.** The button, or `P` anywhere in the panel, swaps the panel's content for the tree. The three tab buttons stay, with Skills lit; a click on any of them leaves the tree for that tab. A **Back** button, `P` again or Esc returns to the Skills tab (Esc on a tab still closes the panel). A click on a portrait beside the panel turns the tree to that member.
+
+```
+ Perk Tree                                   Choose a perk   [Back]
+
+ [Strength 7    ]──[Heavy Hand 0/2 ]
+ [Perception 4  ]──[Deadly Aim 0/2 ]──[Far Shot      ]
+ [Endurance 7   ]──[Toughness 1/2  ]──[Tireless      ]
+ [Intelligence 4]─┬[Quick Study 0/2]──[Scholar       ]
+                  └[Magic Arrow    ]
+ [Agility 6     ]──[Dodger 0/2     ]
+ [Luck 7        ]──[Keen Eye 0/2   ]
+
+ Heavy Hand 0/2: +1 damage with melee weapons and bare hands
+ Asks: Level 3, Strength 6                        Click to take
+```
+
+The tree grows from left to right: trunks in the first column, a column for each step out, a row for each tip of a branch, and a perk on the row of the first perk that grows from it. A perk's node shows its name and, when it has more than one rank, how many are taken. A trunk node shows the attribute's name and its present value in place of the perk's name (`Strength 7`), and the ranks once one is taken (`Strength 8 1/2`).
+
+A node is in one of three states for the member shown:
+
+| State | When | Looks |
+| --- | --- | --- |
+| Taken | every rank is taken | gold name, dim frame |
+| Open | a rank is left and the character meets all the perk asks | plain name; with a pick to spend here, a gold frame and the hand cursor |
+| Closed | a rank is left and the character lacks something the perk asks | dim name and frame |
+
+Whatever its state, a perk with at least one rank taken has its name in gold and a gold line coming into it, so a character's path through the tree stands out.
+
+The strip under the tree describes the node the pointer is over: its name and ranks, what a rank does, what it asks (`Asks: Level 6, Endurance 6, Agility 6, Toughness`), and on the right one of `Click to take`, `Taken`, `Not yet: Agility 6, Toughness` (naming only what is lacking), `No perk to choose until level 6`, or in battle `Perks are chosen on the world map`. With the pointer on no node the strip gives the rule: `A perk comes every 3rd level. A line from a perk means it must be taken first.`
+
+A click on an open node, on the world map with a pick waiting, takes a rank at once, as a click on a perk's row does today; the tree redraws, and the party column's mark for a member with something to spend follows. Any other click on a node does nothing.
+
+### 4.11 Perks that raise an attribute (R18)
+
+| Perk | Asks | Ranks | A rank adds |
+| --- | --- | --- | --- |
+| Gain Strength | level 3 | 2 | +1 Strength |
+| Gain Perception | level 3 | 2 | +1 Perception |
+| Gain Endurance | level 3 | 2 | +1 Endurance |
+| Gain Intelligence | level 3 | 2 | +1 Intelligence |
+| Gain Agility | level 3 | 2 | +1 Agility |
+| Gain Luck | level 3 | 2 | +1 Luck |
+
+A rank cannot be taken when the attribute already stands at 10, so Delwyn, with Intelligence 9, can take one rank of Gain Intelligence and not the second.
+
+A character's attribute is what it was born with plus what its perks add. That number is the attribute everywhere: nothing reads the born value but the sum itself. So a rank changes, at once and for good, everything the attribute feeds:
+
+- **hit points**: Strength and Endurance each add one, and Endurance at an even value adds one more for every level already gained, since hit points a level are derived and not banked. The character's current hit points rise by as much as its maximum, as with Toughness.
+- **action points** (Agility at an even value), **armour class** (Agility), **critical chance** (Luck), **melee damage** (Strength at 7 and 9);
+- **skills**: every skill that starts from the attribute moves with it, so a rank of Gain Intelligence is +4% Magic;
+- **mana**, for a character that knows a spell (Intelligence);
+- **what perks ask**: a raised attribute counts towards a perk's requirement, which is what makes the trunk the way into its branch.
+
+One thing is not made up after the fact: **skill points**. A level's points are handed over when the level comes, so a raise of Intelligence earns more only from the next level on.
+
+The Character tab shows the raised value, with what the perks added beside it when that is not nothing: `Endurance 8 (+1)`.
+
+A new character's attributes still add up to `ATTRIBUTE_POINTS`; the perks raise it above that.
+
 ## 5. Technical design
 
 All paths marked *new* are proposed.
@@ -266,7 +368,15 @@ magic?: {
 
 - `Perk` gains `spell?: SpellId`: the spell a rank of it teaches. It sits beside `effects`, not in it, because `perkBonus` sums numbers.
 - `PERKS` gains `magic_arrow: { name: 'Magic Arrow', description: 'Teaches Magic Arrow: 1d10 to a foe within 5 hexes, for 3 mana', ranks: 1, level: 1, skills: { magic: 50 }, effects: {}, spell: 'magic_arrow' }`.
-- `healer` leaves `PERKS` and `firstAid` leaves `PerkEffects`. `heavy_hand`'s description keeps "and bare hands". The list stays at ten perks, so the Skills tab's layout does not change.
+- `healer` leaves `PERKS` and `firstAid` leaves `PerkEffects`. `heavy_hand`'s description keeps "and bare hands".
+- `PerkEffects` extends `Partial<Attributes>`: an effect keyed by an attribute's id is what a rank adds to that attribute. `perkBonus` sums these as it sums the others.
+- `Perk` gains `branch: AttributeId`, its branch of the tree, and `requires?: string`, the id of the perk it grows from, which must be one of its own branch. (`string`, because `PerkId` is derived from `PERKS`; a test checks each names a perk of the same branch, and readers go through `perkParent`.)
+- `PERKS` gains the six of section 4.11, `gain_strength` to `gain_luck`: `{ name: 'Gain Strength', description: '+1 Strength', ranks: 2, level: 3, branch: 'strength', effects: { strength: 1 } }`. They come last in `PERKS`, which keeps them last in `autoAdvance`'s fallback. Every other perk gets the `branch` of section 4.10's table, and `far_shot`, `tireless` and `scholar` get `requires`. That makes sixteen perks.
+- `TRUNK_PERKS: Record<AttributeId, PerkId>`: the perk that raises each attribute and stands as its branch's trunk.
+- `attributeLevel(character, id): number`: `character.attributes[id] + perkBonus(character, id)`. `attributesOf(character): Attributes` gives all six. These are the only readers of `character.attributes` once this is done.
+- `perkParent(perk): PerkId | null`: the perk `requires` names.
+- `qualifiesFor` changes in three ways: attributes are judged by `attributeLevel`; a perk with a parent needs a rank of it; and a perk is refused if a rank would take any attribute above `MAX_ATTRIBUTE`.
+- `missingRequirements(character, perk): string[]`: what `qualifiesFor` finds lacking, each worded as `describePerkRequirements` words it, empty when the character meets everything (ranks left are not its business). `describePerkRequirements` adds the parent's name last: `Level 6, Endurance 6, Agility 6, Toughness`.
 - `knownSpells(character): SpellId[]`: the `SPELL_IDS` taught by a perk the character has a rank of. It lives here, beside `perkBonus`, as the other way a perk's data is read.
 
 **`character.ts`**:
@@ -274,16 +384,19 @@ magic?: {
 - `Build` gains `perks?: PerkId[]`, each given at rank 1 by `createCharacter` without spending a pick or checking what the perk asks. `createCharacter` builds `trained` from `SKILL_IDS` instead of naming each skill.
 - `UNARMED_DICE` and `unarmedDamage` go; bare hands roll a constant `{ count: 1, sides: 4, bonus: 0 }`.
 - `weaponSkill(weapon)`: `weapon.stats.skill` when the item names one; else `archery` for a range above 1; else `melee`, the empty hand included.
-- `maxMana(character): number`: 0 when `knownSpells` is empty, else `2 × int + (level − 1) × floor(int / 2)` plus the `maxMana` of worn items. "Worn" is the set `deriveCombatStats` already computes (an off-hand item under a two-handed weapon counts for nothing).
+- Every read of `character.attributes` in `maxHp`, `hpPerLevel` and `deriveCombatStats` becomes `attributeLevel` or `attributesOf`. `takePerk` already adds a rise in `maxHp` to the hit points left, which covers Gain Strength and Gain Endurance.
+- `maxMana(character): number`: 0 when `knownSpells` is empty, else `2 × int + (level − 1) × floor(int / 2)` plus the `maxMana` of worn items, `int` being `attributeLevel(character, 'intelligence')`. "Worn" is the set `deriveCombatStats` already computes (an off-hand item under a two-handed weapon counts for nothing).
 - `deriveCombatStats`: `ranged` becomes "the weapon's range is above 1" (today it is "the skill is Archery"), so a wand gets no might and takes `rangedDamage` and `range`; `critChance` adds worn items' `critChance`; and `magic` is set when the character knows a spell: `{ maxMana: maxMana(c), skill: skillLevel(c, 'magic') + worn items' spellSkill, spells: knownSpells(c) }`.
 - `equipFromBackpack`: for an item whose `ring` flag is set (below), the slot is chosen as section 4.6 says; everything else is unchanged.
 - `WARRIOR_BUILD.tagged` becomes `['melee']`.
 
-**`progression.ts`**: `autoAdvance` loses its First Aid step: the weapon's skill to mastery, then the weapon again, then whatever is left to raise. The mage's weapon skill is Magic because it holds a wand. `AUTO_PERKS` is unchanged; Magic Arrow is reached through the fallback to any perk on offer.
+**`progression.ts`**: `autoAdvance` loses its First Aid step: the weapon's skill to mastery, then the weapon again, then whatever is left to raise. The mage's weapon skill is Magic because it holds a wand. `AUTO_PERKS` is unchanged; Magic Arrow is reached through the fallback to any perk on offer, and the attribute perks after it. Tireless stays first in `AUTO_PERKS` and is simply not on offer until Toughness is taken. `skillPointsPerLevel` reads intelligence through `attributeLevel`.
 
 **`party.ts`**: `FIRST_AID_PER_HP` and `firstAidHp` go. `rewardVictory` awards experience and stands the fallen up, and nothing more; `VictoryReward` loses `healer` and `MemberReward` loses `tended`; `describeRewards` loses its last line. Tags become Brenna `['archery']` and Corwin `['melee']`. Delwyn joins `STARTING_HEROES` with `perks: ['magic_arrow']`.
 
-**`attributes.ts`** descriptions: perception `Archery`; intelligence `Skill points, mana and Magic`.
+**`attributes.ts`** descriptions: perception `Archery`; intelligence `Skill points, mana and Magic`. Its header comment stops saying attributes never change: the ones a character is born with do not, and perks add to them.
+
+**`skills.ts`**: `skillLevel` passes `attributesOf(character)` to the skill's `base`. That makes `skills.ts` and `perks.ts` import each other at run time. It is safe, since neither calls the other while its module is being evaluated (only inside functions), and it is the price of keeping `attributeLevel` beside `perkBonus`.
 
 **`inventory.ts`**:
 
@@ -371,7 +484,37 @@ As section 4.8. `policies.ts` imports `SPELLS` for ranges and costs.
 **`InventoryScene`**
 
 - `PanelMember` gains `mana?: number` (what is left, in battle). `InventoryData` gains `groundTitle?: string`, default `'Ground'`.
-- The stat lines and the Character tab show mana as section 4.4 says. The Skills tab needs no layout change: three skill rows where there were four, ten perk rows as before.
+- The stat lines and the Character tab show mana as section 4.4 says. The Character tab's attribute rows read `attributeLevel` and show what perks added (section 4.11).
+- The Skills tab has three skill rows where there were four. `buildPerks` is rewritten as section 4.10 says: the status, the taken perks, the Perk Tree button. It no longer takes a perk.
+- `PanelTab` gains `'perkTree'`, a fourth content container (`treeContent`) that `showTab` shows like the others. `TABS` keeps its three buttons, and the Skills button is lit for both `skills` and `perkTree`. `buildContent` redraws the tree with the rest, so `switchTo` and `advance` need nothing new.
+- `buildPerkTree` draws what `perkTreeLayout` returns (below): the lines first, as one `Graphics`, each from a node's right edge to its child's left edge with a square elbow where the rows differ; then a framed node for each perk, wired as the perk rows are today (`canTake`, `advance(() => takePerk(...))`), with `pointerover` and `pointerout` filling the strip.
+- Keys: `P` shows the tree, or the Skills tab when the tree is showing. Esc goes back to the Skills tab from the tree and closes the panel otherwise.
+
+**`perkTree.ts`** (*new*, in `src/scenes/`, Phaser-free): where the tree's nodes sit and what each looks like.
+
+```ts
+export interface TreeNode {
+  perk: PerkId
+  /** Steps out from the trunk: 0 for the trunk perk itself. */
+  column: number
+  row: number
+  /** The node its line comes from: its `perkParent`, or its branch's trunk; null for a trunk. */
+  from: PerkId | null
+}
+
+/** Every perk's place: branches in `ATTRIBUTE_IDS` order, each tip of a branch on a row of its own. */
+export function perkTreeLayout(): TreeNode[]
+
+export type NodeState = 'taken' | 'open' | 'closed'
+
+/** How `perk` stands for the character; a perk with ranks left that it qualifies for is open. */
+export function nodeState(character: Character, perk: PerkId): NodeState
+
+/** The right-hand words of the strip for a node (section 4.10). */
+export function nodeHint(character: Character, perk: PerkId, canAdvance: boolean): string
+```
+
+Within a branch the trunk is at column 0; the branch's perks with no parent are at column 1 in `PERKS` order, and a perk's children follow at the next column, depth first. A node with children sits on its first child's row. With today's perks that is seven rows and three columns. The scene places them with constants of its own: rows 46 apart from y 100, columns 172 apart from x 20, nodes 160 by 36, the strip from y 430. A fourth column fits the panel unused.
 - The gear hint has a third wording for the world map (section 4.7), chosen by `resumeKey`.
 
 **`WorldScene.openPanel`** passes `{ character, gearApCost: 0, ground: gameState.baggage }` for every member and `groundTitle: 'Baggage'`. Nothing is needed on close: the characters and the baggage were edited in place.
@@ -382,10 +525,11 @@ As section 4.8. `policies.ts` imports `SPELLS` for ranges and costs.
 
 - `BattleProbe.buttons` gains `cast`; `BattleProbe` gains `casting: SpellId | null`.
 - `InventoryProbe` gains `mana: number | null` and `ground: Array<Point & { item: string }>` (the items the ground grid shows now), which a test needs in order to take loot from the baggage. Its `skills` record follows `SkillId` and so loses two entries and gains one.
+- `InventoryProbe.tab` gains `'perkTree'`. `perks` keeps its shape but now gives every perk's node in the tree, which is on screen only while `tab` is `'perkTree'`. It gains `takenPerks: Array<{ perk: string; ranks: number }>` (the rows the Skills tab lists), `attributes: Record<AttributeId, number>` (as the Character tab shows them), and the centres of two buttons, `perkTreeButton` and `back`.
 
 ### 5.6 Documentation
 
-`CLAUDE.md` in the same commits as the changes that make it wrong: the three skills and the single tag; every mention of Unarmed, First Aid, the healer's tending and `firstAidHp`; how a perk teaches a spell; the rules of casting and mana; wands and rings; loot and the baggage; `GameState`; the party of four; gear on the world map; `spells.ts`; the simulator flags; the rules of scaling; and `LOG_SCHEMA_VERSION`. The roadmap memory's "gear changes on the world map" is no longer left out.
+`CLAUDE.md` in the same commits as the changes that make it wrong: the three skills and the single tag; every mention of Unarmed, First Aid, the healer's tending and `firstAidHp`; how a perk teaches a spell; the perk tree (branches, `requires`, the trunk perks) and where perks are chosen; attributes as born plus perks, read through `attributeLevel`, in place of "which never change" and "attributes do not rise"; `perkTree.ts` among the scene helpers; the rules of casting and mana; wands and rings; loot and the baggage; `GameState`; the party of four; gear on the world map; `spells.ts`; the simulator flags; the rules of scaling; and `LOG_SCHEMA_VERSION`. The roadmap memory's "gear changes on the world map" is no longer left out.
 
 ## 6. Consequences
 
@@ -393,13 +537,18 @@ As section 4.8. `policies.ts` imports `SPELLS` for ranges and costs.
 - **Balance.** The present numbers were tuned for three heroes with First Aid. They will be wrong in both directions until R14 is done, so the retune belongs at the end of the same piece of work. Loot is outside the simulator, so the played game will run a little easier than the tuned figure; the items are modest on purpose.
 - **Unarmed builds end.** Bare hands become a fallback at 1d4, where a trained Unarmed skill reached 1d8. Aldric loses his second tag and Brenna hers; neither changes how they fight with what they hold.
 - **Log consumers** must handle schema 14: a `cast` event, and damage and deaths that no `attack` event precedes.
+- **Perks cost a click more.** Choosing one is now Skills, Perk Tree, perk, where it was one click on the Skills tab. In exchange the Skills tab says at a glance what a character has, and the tree has room to grow.
+- **Three perks are harder to reach.** Far Shot, Tireless and Scholar each need a pick spent on the perk before them. Tireless at level 6 now means Toughness at level 3; `autoAdvance` wanted both anyway, so the simulator's warriors are unchanged.
+- **Attribute perks change growth**, which by the project's rule calls for a retune; it is the same retune as R14. Their worth is uneven by design of the attribute rules, not of the perks: a rank that lifts Agility to an even value brings an action point at level 3, where Tireless brings one at level 6 behind two requirements. The retune should look at that pair first. The simulator's parties take attribute perks only as a last resort, so campaign figures understate a player who uses them well.
+- **A raised attribute opens perks**, so every attribute requirement in `PERKS` is now a price in picks and no longer a wall. A hero two short of a perk can have it with its third pick.
+- **The tree's room.** The panel holds eight rows and four columns. Today's sixteen perks use seven and three. A second spell under Intelligence takes a row if it starts a new tip and none if it follows Magic Arrow; when the rows run out the tree needs the wheel, as the ground pile has (`slotScroll.ts`).
 - **Existing tests** of Unarmed dice, First Aid, the Healer perk, the healer's reward line, three heroes and two tags will be deleted or rewritten; stat blocks built by hand in tests need nothing, since `magic` is optional.
 - **Party size**: `PARTY_START` already has six hexes and `MAX_PARTY_SIZE` is 6, so a fourth hero needs no board change.
 - **No saved games exist**, so nothing migrates.
 
 ### What later spells will need
 
-Recorded so the perk tree can be planned against it; none of it is built here.
+Recorded so the spells to come on the perk tree can be planned against it; none of it is built here. Each is a perk in the Intelligence branch, usually growing from Magic Arrow.
 
 - *Another damaging spell on one foe*: a `SPELLS` entry and a perk. The battle screen then needs a way to choose among a unit's spells; the Cast button taking the first castable one is the assumption that breaks.
 - *A healing spell*: `Spell` needs an effect other than `damage`, cast legality needs ally targets, and `CastEvent` needs a result that is not a roll to hit.
@@ -408,11 +557,15 @@ Recorded so the perk tree can be planned against it; none of it is built here.
 
 ### Choices and their alternatives
 
-- *A perk names the spell it teaches (`Perk.spell`), not a numeric effect.* It keeps `perkBonus` a sum of numbers and makes "which spells does this character know" one filter over its perks, which is the shape a perk tree will want.
+- *A perk names the spell it teaches (`Perk.spell`), not a numeric effect.* It keeps `perkBonus` a sum of numbers and makes "which spells does this character know" one filter over its perks, and a spell takes its place in the tree by the same `branch` and `requires` as any perk.
 - *Magic is both the gate to spell perks and the chance to hit.* Otherwise the skill would do nothing once the perk was taken, and a point in it would be a point wasted.
 - *Spells ignore flanking and facing.* It keeps a clear difference between a caster and an archer.
 - *One tag, not two of three.* Tagging two of three skills is hardly a choice, and it would force a second tag on heroes with no use for one.
 - *The baggage, not loot into backpacks.* Backpacks are nearly full of spare weapons, members could not hand items to each other outside battle, and the panel's ground section already does everything a shared pile needs.
+- *A raised attribute is derived, not written into `attributes`.* Writing it would be less code, but it would break the rule that a character stores only what it was born with and has learned, lose the born value the sheet shows beside the raise, and make a perk's effect depend on when it was taken.
+- *Trunks are the attribute perks, and do not gate their branch.* A tree needs roots, and the attribute a branch's perks ask for is the natural one. Making the trunk a requirement would cost every hero a pick before its first real perk, at one pick every three levels.
+- *The tree is a view inside the character panel, not a scene.* It needs the party's portraits, the member being shown and `canAdvance`, all of which the panel has; a scene of its own would add a handover for no gain.
+- *One click takes a perk, with no confirmation.* That is how perks and skill points are spent today. A pick cannot be taken back, so a confirming step is the alternative if slips prove common.
 - *`CastEvent` is flat, with one target's result.* It mirrors `AttackEvent` and is all Magic Arrow needs. An area spell will change its shape and bump the schema again, which is cheap here.
 
 ## 7. Verification
@@ -420,6 +573,9 @@ Recorded so the perk tree can be planned against it; none of it is built here.
 Domain tests (`npx vitest run --project domain`), with seeded or scripted RNGs:
 
 - `skills`, `character`: the three skills and Magic's base and tag (A1); bare hands strike with Melee at 1d4; `weaponSkill` for an empty hand, a sword, a bow and a wand; a wand takes Deadly Aim and Far Shot and nothing from strength; `maxMana` by intelligence, level and the circlet, and 0 without a spell, circlet or not; `deriveCombatStats` sets and omits `magic`; items' critical chance and spell skill; `sameCombatStats` with and without `magic`; a `Build` with `perks` starts with them.
+- `perks`: every perk has a branch, every `requires` names a perk of the same branch, and each attribute has its trunk; a perk with a parent is refused without a rank of it and allowed with one (A13); `attributeLevel` with and without ranks; an attribute perk is refused at 10; a raised attribute meets another perk's requirement; `missingRequirements` names exactly what is lacking.
+- `character`, `skills`, `progression`: Gain Endurance raises maximum and current hit points by what section 4.11 says, levels gained included (A16); Gain Agility's action point and armour; Gain Luck's critical chance; Gain Intelligence's Magic, mana and the skill points of the *next* level only.
+- `perkTree`: the layout has every perk once, trunks in column 0 in attribute order, a child one column out from its parent, no two nodes on one cell, and Magic Arrow on a row of its own; `nodeState` and `nodeHint` for a taken, an open and a closed perk, with and without a pick, in battle and out.
 - `perks`, `progression`: Magic Arrow qualifies at Magic 50% and not at 49%; `takePerk` then makes `knownSpells` return it (A3); `autoAdvance` no longer trains a skill that does not exist.
 - `character` (equipping): a ring into an empty first slot, then the second, then replacing the first (A10).
 - `party`: four heroes and Delwyn's derived numbers; `rewardVictory` restores nothing but through a level and a revival, and `describeRewards` has no healer's line (A2).
@@ -434,7 +590,9 @@ Scene smoke tests (`--project scenes`): `Battle` and `Inventory` still start.
 In-browser tests (`npm run test:browser`), following [`e2e/CLAUDE.md`](../../e2e/CLAUDE.md):
 
 - Battle: cast Magic Arrow through the Cast button and a foe; the probe's log ends in a `cast` event and the mage's `mana` fell by 3; Esc leaves targeting (A8). The three buttons fit at 840×560.
-- Panel: the Skills tab shows three skills, and Magic Arrow among the perks, taken for Delwyn.
+- Panel: the Skills tab shows three skills; its perk list is empty for Aldric and holds only Magic Arrow for Delwyn (A14). The Perk Tree button opens the tree with sixteen nodes, none of which can be taken at level 1; Back and Esc return to the Skills tab; a portrait turns the tree to another member. The existing check in `e2e/character.test.ts` that no perk can be taken moves to the tree.
+- Panel, in battle: the tree opens and no node can be taken.
+- Taking a perk by a click (the second half of A15) has no automated test: the suite has no way to hand a member a pick, [`e2e/CLAUDE.md`](../../e2e/CLAUDE.md) forbids reaching into a scene to make one, and a pick first comes at level 3. What the click does is covered by the `perks`, `progression` and `perkTree` domain tests; that the click is wired is checked by hand on the dev server, by playing a seeded game to level 3 and taking a perk from the tree, on the world map and then in a battle.
 - World: win the nearest battle (with a seed that wins), open the panel, take the ring from the baggage, equip it, and see the armour class rise by 5 (A9).
 
 Balance: the campaign run and the single-cell runs of section 4.9, their results written into `CLAUDE.md` (A12).
@@ -452,3 +610,9 @@ None of these blocks planning. Each is a decision made here on judgement, with t
 7. **Spell, mana and item numbers** are first values, to be moved by the retune.
 8. **Emberblade and the Hawkeye Bow reuse the plain sword and bow icons.** Assumed, to hold the art to five new icons; the tooltip tells them apart.
 9. **Risk: retune effort.** A fourth hero and the loss of healing may not be answered by foe counts alone, since `FOES_AT_THREAT` moves in whole foes. `foeAtLevel`'s growth is the finer lever.
+10. **Attribute raises are perks in the tree.** Assumed: "perks can be used to raise attribute points" means six perks, one an attribute, each rank spending a pick for +1, as Fallout's Gain perks do. The alternative reading is a pick spent straight on an attribute from the Character tab, with no perk; the rules of section 4.11 would be the same.
+11. **The shape of the tree.** Assumed: a branch for each attribute with the attribute's perk as its trunk, and the trunk not required by the perks that grow from it. The table of section 4.10 places today's perks; say so if any belongs elsewhere.
+12. **Three perks gain a requirement.** Assumed, since a tree with no perk asking for another is only a list: Far Shot asks for Deadly Aim, Tireless for Toughness, Scholar for Quick Study.
+13. **Two ranks an attribute perk, from level 3.** Assumed. Fallout gives one rank at level 12; here picks come every third level and the map ends long before level 12.
+14. **A raise of Endurance pays for past levels; a raise of Intelligence does not.** Assumed, because hit points are derived and skill points are banked. Banking the missed points on taking the perk is the alternative.
+15. **Esc steps back from the tree** to the Skills tab and does not close the panel. Assumed, as the tree is a view opened from that tab.
