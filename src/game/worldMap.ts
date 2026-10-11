@@ -45,30 +45,70 @@ export interface WorldState {
 /** What the party can do about the monsters it stands among, other than attack them. */
 export type Lingering = 'scout' | 'wait'
 
+/**
+ * The map is far larger than a window shows, so the party sees only what lies
+ * around it and the rest comes into view as it travels.
+ */
+export const WORLD_SIZE: BoardSize = { cols: 60, rows: 40 }
+
+const town = (id: string, name: string, col: number, row: number): WorldLocation => ({
+  id,
+  kind: 'town',
+  name,
+  position: offsetToHex(col, row),
+})
+const resource = (id: string, name: string, col: number, row: number): WorldLocation => ({
+  id,
+  kind: 'resource',
+  name,
+  position: offsetToHex(col, row),
+})
+const monsters = (id: string, name: string, col: number, row: number, encounter: EncounterId): WorldLocation => ({
+  id,
+  kind: 'monsters',
+  name,
+  position: offsetToHex(col, row),
+  encounter,
+})
+
 export function newWorld(): WorldState {
   return {
-    board: { cols: 12, rows: 7 },
-    party: offsetToHex(1, 3),
+    board: WORLD_SIZE,
+    party: offsetToHex(9, 19),
     turn: 1,
+    // The party's home country first, in the west, then the lands further out.
     locations: [
-      { id: 'oakvale', kind: 'town', name: 'Oakvale', position: offsetToHex(1, 3) },
-      { id: 'stonebridge', kind: 'town', name: 'Stonebridge', position: offsetToHex(10, 2) },
-      { id: 'iron_vein', kind: 'resource', name: 'Iron Vein', position: offsetToHex(3, 5) },
-      { id: 'gold_seam', kind: 'resource', name: 'Gold Seam', position: offsetToHex(7, 0) },
-      {
-        id: 'goblin_raiders',
-        kind: 'monsters',
-        name: 'Goblin Raiders',
-        position: offsetToHex(5, 2),
-        encounter: 'goblin_raid',
-      },
-      {
-        id: 'kobold_scouts',
-        kind: 'monsters',
-        name: 'Kobold Scouts',
-        position: offsetToHex(8, 5),
-        encounter: 'kobold_scouts',
-      },
+      town('oakvale', 'Oakvale', 9, 19),
+      town('stonebridge', 'Stonebridge', 18, 18),
+      resource('iron_vein', 'Iron Vein', 11, 21),
+      resource('gold_seam', 'Gold Seam', 15, 16),
+      monsters('goblin_raiders', 'Goblin Raiders', 13, 18, 'goblin_raid'),
+      monsters('kobold_scouts', 'Kobold Scouts', 16, 21, 'kobold_scouts'),
+
+      town('greyford', 'Greyford', 6, 5),
+      town('millbrook', 'Millbrook', 10, 34),
+      town('highmoor', 'Highmoor', 30, 8),
+      town('saltmarsh', 'Saltmarsh', 25, 31),
+      town('eastwatch', 'Eastwatch', 44, 20),
+      town('thornwick', 'Thornwick', 52, 6),
+      town('deepwell', 'Deepwell', 50, 34),
+      resource('timber_stand', 'Timber Stand', 4, 28),
+      resource('peat_bog', 'Peat Bog', 21, 4),
+      resource('silver_lode', 'Silver Lode', 27, 14),
+      resource('old_quarry', 'Old Quarry', 36, 26),
+      resource('salt_flats', 'Salt Flats', 33, 36),
+      resource('copper_pit', 'Copper Pit', 41, 10),
+      resource('crystal_cave', 'Crystal Cave', 56, 24),
+      monsters('goblin_reavers', 'Goblin Reavers', 12, 8, 'goblin_raid'),
+      monsters('kobold_trappers', 'Kobold Trappers', 8, 30, 'kobold_scouts'),
+      monsters('goblin_warband', 'Goblin Warband', 24, 10, 'goblin_raid'),
+      monsters('kobold_diggers', 'Kobold Diggers', 22, 25, 'kobold_scouts'),
+      monsters('kobold_skulkers', 'Kobold Skulkers', 30, 22, 'kobold_scouts'),
+      monsters('goblin_marauders', 'Goblin Marauders', 34, 17, 'goblin_raid'),
+      monsters('kobold_lurkers', 'Kobold Lurkers', 39, 31, 'kobold_scouts'),
+      monsters('goblin_outriders', 'Goblin Outriders', 47, 13, 'goblin_raid'),
+      monsters('kobold_tunnellers', 'Kobold Tunnellers', 54, 28, 'kobold_scouts'),
+      monsters('goblin_pillagers', 'Goblin Pillagers', 57, 10, 'goblin_raid'),
     ],
     confronting: null,
   }

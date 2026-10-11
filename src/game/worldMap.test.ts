@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { HexBoard, hexDistance, hexEquals, hexKey, offsetToHex } from '../grid/hex.ts'
+import { HexBoard, hexDistance, hexEquals, hexKey, hexToOffset, offsetToHex } from '../grid/hex.ts'
 import { ENCOUNTERS } from './encounters.ts'
 import { clearLocation, linger, locationAt, monstersHere, newWorld, routeTo, travel, type WorldState } from './worldMap.ts'
 
@@ -13,6 +13,20 @@ describe('newWorld', () => {
     for (const l of world.locations) expect(board.contains(l.position)).toBe(true)
     expect(new Set(world.locations.map((l) => hexKey(l.position))).size).toBe(world.locations.length)
     expect(new Set(world.locations.map((l) => l.id)).size).toBe(world.locations.length)
+  })
+
+  it('is larger than a window shows, with locations out to every side', () => {
+    expect(world.board.cols).toBeGreaterThanOrEqual(48)
+    expect(world.board.rows).toBeGreaterThanOrEqual(30)
+    const cols = world.locations.map((l) => hexToOffset(l.position).col)
+    const rows = world.locations.map((l) => hexToOffset(l.position).row)
+    expect(Math.max(...cols) - Math.min(...cols)).toBeGreaterThan(world.board.cols / 2)
+    expect(Math.max(...rows) - Math.min(...rows)).toBeGreaterThan(world.board.rows / 2)
+  })
+
+  it('leaves room to walk around every monster location', () => {
+    const lairs = monsters(world)
+    for (const a of lairs) for (const b of lairs) if (a !== b) expect(hexDistance(a.position, b.position)).toBeGreaterThan(2)
   })
 
   it('shows monsters, towns and resources', () => {

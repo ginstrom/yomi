@@ -15,6 +15,7 @@ import { HexBoard, hexCorners, hexEquals, type Hex } from '../grid/hex.ts'
 import { soundVolume } from './audioSettings.ts'
 import { WORLD_LAYOUT, boardHexAt, boardHexCenter, boardPixelSize } from './boardGeometry.ts'
 import { CURSORS } from './cursors.ts'
+import { mapOrigin, rectContains, type Rect } from './mapScroll.ts'
 
 interface WorldData {
   game?: GameState
@@ -46,9 +47,11 @@ const MONSTERS_OUTLINE = 0xe53935
 const PARTY_OUTLINE = 0xffffff
 const WALK_STEP_MS = 140
 
-/** Below the turn and hint lines; the map keeps clear of them. */
+/** Below the turn and hint lines. */
 const HEADER_BOTTOM = 64
-const MAP_MARGIN_X = 16
+/** The bars behind the header and the buttons: the map shows through them, dimmed. */
+const BAR_COLOR = 0x1d1d1d
+const BAR_ALPHA = 0.8
 const BUTTON_W = 140
 const BUTTON_H = 44
 const BUTTON_SPACING = 160
@@ -61,7 +64,12 @@ export class WorldScene extends Phaser.Scene {
   /** The map hex under the pointer, or null when it is off the map or over a button. */
   private hovered: Hex | null = null
 
+  /** The whole map, most of it off screen; `follow` scrolls it to keep the party in view. */
   private mapLayer!: Phaser.GameObjects.Container
+  /** The part of the screen between the bars, where the map is in plain sight and takes clicks. */
+  private view: Rect = { x: 0, y: 0, width: 0, height: 0 }
+  private headerBar!: Phaser.GameObjects.Rectangle
+  private footerBar!: Phaser.GameObjects.Rectangle
   /** The route a click on the hovered hex would walk. */
   private hoverMarks!: Phaser.GameObjects.Graphics
   private partyMark!: Phaser.GameObjects.Graphics
@@ -103,6 +111,8 @@ export class WorldScene extends Phaser.Scene {
     this.mapLayer.add([this.hoverMarks, this.partyMark])
     this.buildLocations()
 
+    this.headerBar = this.add.rectangle(0, 0, 0, 0, BAR_COLOR, BAR_ALPHA).setOrigin(0)
+    this.footerBar = this.add.rectangle(0, 0, 0, 0, BAR_COLOR, BAR_ALPHA).setOrigin(0)
     this.turnText = this.add.text(20, 16, '', { fontFamily: 'monospace', fontSize: '20px', color: '#ffffff' })
     this.hintText = this.add.text(20, 44, '', { fontFamily: 'monospace', fontSize: '13px', color: '#9e9e9e' })
     this.partyText = this.add
@@ -139,8 +149,12 @@ export class WorldScene extends Phaser.Scene {
     const here = monstersHere(this.world)
     this.messageText.setText(here ? `You stand before the ${here.name}.` : '')
     this.refresh()
-    // After the first refresh: the map is laid out below the party's lines.
+    // After the first refresh: the view starts below the party's lines, and centres on where the party stands.
     this.layout()
+  }
+
+  update(): void {
+    if (this.walking) this.follow()
   }
 
   // ---- build ---------------------------------------------------------------
@@ -208,7 +222,7 @@ export class WorldScene extends Phaser.Scene {
 
   // ---- layout ---------------------------------------------------------------
 
-  /** Header at the top, message and buttons at the bottom, and the map centred between, scaled down (never up) to fit. */
+  /** Header bar at the top, message and buttons in a bar at the bottom, and the map filling the window behind them. */
   private layout(): void {
     const { width, height } = this.scale
     this.partyText.setX(width - 20)
@@ -217,21 +231,31 @@ export class WorldScene extends Phaser.Scene {
     const messageY = buttonY - BUTTON_H / 2 - 26
     this.messageText.setPosition(width / 2, messageY)
 
-    const map = boardPixelSize(this.world.board, WORLD_LAYOUT)
-    const freeW = width - 2 * MAP_MARGIN_X
-    // A large party's lines reach below the header, and the map keeps clear of them too.
+    // A large party's lines reach below the header, and the bar reaches below them.
     const headerBottom = Math.max(HEADER_BOTTOM, this.partyText.y + this.partyText.height + 8)
-    const freeH = messageY - 20 - headerBottom
-    const scale = Math.max(0, Math.min(1, freeW / map.width, freeH / map.height))
-    this.mapLayer
-      .setPosition(MAP_MARGIN_X + (freeW - map.width * scale) / 2, headerBottom + (freeH - map.height * scale) / 2)
-      .setScale(scale)
+    const footerTop = messageY - 20
+    this.headerBar.setSize(width, headerBottom)
+    this.footerBar.setPosition(0, footerTop).setSize(width, height - footerTop)
+    this.view = { x: 0, y: headerBottom, width, height: Math.max(0, footerTop - headerBottom) }
+    this.follow()
   }
 
-  /** The map hex under a screen position, or null when off the map. */
+  /**
+   * Scrolls the map to keep the party mid-view, as far as the map's edges
+   * allow. The edges stop at the view's, not the window's, so the party is
+   * never left standing under a bar.
+   */
+  private follow(): void {
+    const map = boardPixelSize(this.world.board, WORLD_LAYOUT)
+    const { x, y } = mapOrigin({ x: this.party.x, y: this.party.y - PARTY_FEET_Y }, map, this.view)
+    this.mapLayer.setPosition(x, y)
+  }
+
+  /** The map hex under a screen position, or null when off the map or under a bar. */
   private hexAt(screenX: number, screenY: number): Hex | null {
-    const origin = { x: this.mapLayer.x, y: this.mapLayer.y }
-    const h = boardHexAt({ x: screenX, y: screenY }, origin, this.mapLayer.scale, WORLD_LAYOUT)
+    const screen = { x: screenX, y: screenY }
+    if (!rectContains(this.view, screen)) return null
+    const h = boardHexAt(screen, { x: this.mapLayer.x, y: this.mapLayer.y }, 1, WORLD_LAYOUT)
     return this.board.contains(h) ? h : null
   }
 
@@ -323,6 +347,10 @@ export class WorldScene extends Phaser.Scene {
 
   private arrive(): void {
     this.walking = false
+    this.follow()
+    // The map has scrolled under the pointer, which is over another hex now.
+    const pointer = this.input.activePointer
+    this.hovered = this.hexAt(pointer.x, pointer.y)
     const here = monstersHere(this.world)
     if (here) this.messageText.setText(`You come upon the ${here.name}.`)
     this.refresh()
