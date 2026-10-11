@@ -29,6 +29,10 @@ run: build ## Run the dev server in podman (http://localhost:5173)
 test: build ## Run the test suite (in podman)
 	$(PODMAN_RUN) $(IMAGE) $(WITH_DEPS) npm test
 
+.PHONY: test-browser
+test-browser: build ## Run the in-browser tests in headless Chromium, e.g. make test-browser ARGS="-t victorious"
+	$(PODMAN_RUN) --ipc=host $(IMAGE) $(WITH_DEPS) npm run test:browser -- $(ARGS)
+
 .PHONY: simulate
 simulate: build ## Run headless battle simulations, e.g. make simulate ARGS="--battles 5000 --seed 1"
 	$(PODMAN_RUN) $(IMAGE) $(WITH_DEPS) node scripts/simulate.ts $(ARGS)

@@ -1,6 +1,6 @@
 # In-browser tests
 
-`npm run test:browser` runs these in headless Chromium with Playwright, under vitest (`vitest.browser.config.ts`). `globalSetup.ts` starts a Vite dev server for the run, on a port of its own, so a dev server already up is left alone. If Chromium is missing, `npx playwright install chromium` fetches it.
+`npm run test:browser` runs these in headless Chromium with Playwright, under vitest (`vitest.browser.config.ts`). `globalSetup.ts` starts a Vite dev server for the run, on a port of its own, so a dev server already up is left alone. If Chromium is missing, `npx playwright install chromium` fetches it. `make test-browser` runs them in the podman container instead, whose image has Chromium built in (`Containerfile`).
 
 ## How a test drives the game
 

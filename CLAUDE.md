@@ -27,7 +27,7 @@ Node 26+ is required: `scripts/*.ts` run on Node's native TypeScript support (no
 
 There is no linter; `tsc` is the lint step (`noUnusedLocals`, `noUnusedParameters`, `erasableSyntaxOnly`, `verbatimModuleSyntax`). `erasableSyntaxOnly` means no enums, namespaces or constructor parameter properties; use `import type` for type-only imports.
 
-The `Makefile` runs the same things inside a podman container (`make run`, `make test`, `make simulate ARGS="..."`, `make shell`), with `node_modules` in a named volume that reinstalls itself when `package-lock.json` changes. `vite.config.ts` polls for file changes because of that bind mount.
+The `Makefile` runs the same things inside a podman container (`make run`, `make test`, `make test-browser ARGS="-t victorious"`, `make simulate ARGS="..."`, `make shell`), with `node_modules` in a named volume that reinstalls itself when `package-lock.json` changes. `vite.config.ts` polls for file changes because of that bind mount.
 
 Simulator flags: `--battles`, `--seed`, `--out` (default `logs/battles.jsonl`; `logs/` is gitignored), `--max-rounds`, `--player-policy`, `--enemy-policy` (`aggressive` or `random`), `--player-weapon` (an item id from `WEAPONS` in `src/inventory/inventory.ts`, e.g. `yew_bow`, put in every party member's hand; the way to compare weapon balance). The player's side is a new game's party. It writes every event as JSONL and prints a summary of win rate, rounds, hit rates and free attacks.
 
@@ -86,7 +86,7 @@ Every scene but `Boot` has a `probe()`: plain data telling where its controls ar
 
 Tests that need determinism pass a seeded `mulberry32` or a scripted RNG into the engine.
 
-The in-browser tests in `e2e/` are a separate run (`npm run test:browser`, with its own `vitest.browser.config.ts`) and not part of `npm test`: they take seconds each and need Playwright's Chromium, which the podman image does not have, so there is no `make` target for them. They play the real game served by a Vite dev server and check what the others cannot: the scenes handing over to each other, overlays pausing and resuming, assets loading, layout on resize. Run them after a change to a scene. `e2e/CLAUDE.md` says how they work and how to add one.
+The in-browser tests in `e2e/` are a separate run (`npm run test:browser`, with its own `vitest.browser.config.ts`) and not part of `npm test`: they take seconds each and need Playwright's Chromium, which the podman image carries for `make test-browser`. They play the real game served by a Vite dev server and check what the others cannot: the scenes handing over to each other, overlays pausing and resuming, assets loading, layout on resize. Run them after a change to a scene. `e2e/CLAUDE.md` says how they work and how to add one.
 
 ### Assets and docs
 
