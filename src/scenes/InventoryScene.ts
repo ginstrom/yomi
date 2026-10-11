@@ -3,7 +3,7 @@ import { deriveCombatStats, type Character } from '../character/character.ts'
 import { formatDamage, type CombatantStats } from '../combat/combat.ts'
 import type { GameState } from '../game/gameState.ts'
 import { EQUIPMENT_SLOT_LABELS, describeItemStats, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
-import { drawItemIcon } from './itemIcons.ts'
+import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
 import { soundVolume } from './audioSettings.ts'
 
 type PanelTab = 'character' | 'inventory'
@@ -42,6 +42,10 @@ export class InventoryScene extends Phaser.Scene {
 
   constructor() {
     super('Inventory')
+  }
+
+  preload(): void {
+    for (const key of Object.values(ITEM_ICON_KEYS)) this.load.image(key, `assets/sprites/${key}.png`)
   }
 
   create(data: InventoryData): void {
@@ -143,7 +147,8 @@ export class InventoryScene extends Phaser.Scene {
       .rectangle(portraitX, portraitY, 170, 230, 0x14100c, 0.8)
       .setStrokeStyle(2, 0x6b5a3a)
     const portrait = this.add.image(portraitX, portraitY + 100, 'warrior').setOrigin(0.5, 1)
-    const portraitScale = Math.min(130 / portrait.width, 200 / portrait.height)
+    // A whole-number scale keeps the sprite's pixels square.
+    const portraitScale = Math.floor(Math.min(160 / portrait.width, 200 / portrait.height))
     portrait.setScale(portraitScale)
     this.characterContent.add([portraitBg, portrait])
 
@@ -194,7 +199,7 @@ export class InventoryScene extends Phaser.Scene {
     this.inventoryContent.add(dollBoxBg)
 
     const doll = this.add.image(DOLL_X, DOLL_Y + 95, 'warrior').setOrigin(0.5, 1)
-    const dollScale = Math.min(110 / doll.width, 180 / doll.height)
+    const dollScale = Math.floor(Math.min(140 / doll.width, 180 / doll.height))
     doll.setScale(dollScale)
     this.inventoryContent.add(doll)
 
@@ -223,9 +228,7 @@ export class InventoryScene extends Phaser.Scene {
     this.inventoryContent.add(bg)
 
     if (item) {
-      const g = this.add.graphics({ x: x - SLOT_SIZE / 2, y: y - SLOT_SIZE / 2 })
-      drawItemIcon(g, item.icon, SLOT_SIZE)
-      this.inventoryContent.add(g)
+      this.inventoryContent.add(this.add.image(x, y, ITEM_ICON_KEYS[item.icon]).setScale(ITEM_ICON_SCALE))
 
       bg.setInteractive({ useHandCursor: true })
       bg.on('pointerover', () => {
@@ -303,9 +306,7 @@ export class InventoryScene extends Phaser.Scene {
     this.inventoryContent.add(bg)
 
     if (item) {
-      const g = this.add.graphics({ x: x - SLOT_SIZE / 2, y: y - SLOT_SIZE / 2 })
-      drawItemIcon(g, item.icon, SLOT_SIZE)
-      this.inventoryContent.add(g)
+      this.inventoryContent.add(this.add.image(x, y, ITEM_ICON_KEYS[item.icon]).setScale(ITEM_ICON_SCALE))
 
       bg.setInteractive({ useHandCursor: true })
       bg.on('pointerover', () => {

@@ -1,0 +1,16 @@
+{
+  "targets": {
+    "frames:sprites": [
+      "goblin.png",
+      "icon_armor.png",
+      "icon_shield.png",
+      "icon_sword.png",
+      "kobold.png",
+      "sprites.json",
+      "tile_dark.png",
+      "tile_light.png",
+      "warrior.png"
+    ]
+  },
+  "version": 1
+}

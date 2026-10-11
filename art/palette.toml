@@ -1,0 +1,31 @@
+# Yomi's palette: muted steel, leather and torchlit stone, after the Infinity Engine CRPGs.
+# One character per colour; '.' is transparent.
+[colors]
+k = { hex = "#14100c", name = "outline" }
+D = { hex = "#2b3038", name = "dark steel" }
+d = { hex = "#4c5560", name = "steel" }
+l = { hex = "#7f8a93", name = "light steel" }
+w = { hex = "#bcc3c4", name = "pale steel" }
+W = { hex = "#ebe7d6", name = "bone" }
+N = { hex = "#3a2414", name = "dark brown" }
+n = { hex = "#5c3b20", name = "brown" }
+t = { hex = "#8a6038", name = "tan" }
+T = { hex = "#b89060", name = "light tan" }
+O = { hex = "#7d5a16", name = "dark gold" }
+y = { hex = "#c9a227", name = "gold" }
+Y = { hex = "#f0d878", name = "pale gold" }
+R = { hex = "#4f1616", name = "dark red" }
+r = { hex = "#8c2a22", name = "red" }
+o = { hex = "#c2602e", name = "rust" }
+S = { hex = "#8a5a42", name = "skin shadow" }
+s = { hex = "#c48f6a", name = "skin" }
+h = { hex = "#e6bd96", name = "skin light" }
+G = { hex = "#2c3a1c", name = "dark olive" }
+g = { hex = "#556b2b", name = "olive" }
+e = { hex = "#869a48", name = "moss" }
+B = { hex = "#1c2740", name = "dark blue" }
+b = { hex = "#33487a", name = "blue" }
+c = { hex = "#6384b4", name = "light blue" }
+M = { hex = "#3c3833", name = "dark stone" }
+m = { hex = "#5a544a", name = "stone" }
+a = { hex = "#787062", name = "light stone" }

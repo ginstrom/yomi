@@ -1,0 +1,22 @@
+# Worn flagstones, the lighter of the two floor tiles.
+canvas = "tile"
+
+[frames]
+base = """
+MMMMMMMMMMMMMMMM
+MaaaaaaaMaaaaaaa
+MaaaaaamMaaaaaam
+MaaaaaamMaaaaaam
+MaaaaaamMaaaaaam
+MaaaaaamMaaaaaam
+MaaaaaamMaaaaaam
+MmmmmmmmMmmmmmmm
+MMMMMMMMMMMMMMMM
+aaaaMaaaaaaaMaaa
+aaamMaaaaaamMaaa
+aaamMaaaaaamMaaa
+aaamMaaaaaamMaaa
+aaamMaaaaaamMaaa
+aaamMaaaaaamMaaa
+mmmmMmmmmmmmMmmm
+"""

@@ -1,0 +1,242 @@
+{
+  "goblin": {
+    "anchor": [
+      16,
+      32
+    ],
+    "bounds": [
+      8,
+      8,
+      20,
+      24
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "goblin.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          8,
+          8,
+          20,
+          24
+        ],
+        "file": "goblin.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "icon_armor": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bounds": [
+      1,
+      0,
+      18,
+      19
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_armor.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          1,
+          0,
+          18,
+          19
+        ],
+        "file": "icon_armor.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_shield": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bounds": [
+      2,
+      0,
+      17,
+      20
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_shield.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          2,
+          0,
+          17,
+          20
+        ],
+        "file": "icon_shield.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_sword": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bounds": [
+      0,
+      0,
+      19,
+      19
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_sword.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          19,
+          19
+        ],
+        "file": "icon_sword.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "kobold": {
+    "anchor": [
+      16,
+      32
+    ],
+    "bounds": [
+      2,
+      0,
+      25,
+      32
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "kobold.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          2,
+          0,
+          25,
+          32
+        ],
+        "file": "kobold.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tile_dark": {
+    "anchor": [
+      0,
+      0
+    ],
+    "bounds": [
+      0,
+      0,
+      16,
+      16
+    ],
+    "canvas": "tile",
+    "display_scale": 4,
+    "file": "tile_dark.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "file": "tile_dark.png"
+      }
+    },
+    "size": [
+      16,
+      16
+    ]
+  },
+  "tile_light": {
+    "anchor": [
+      0,
+      0
+    ],
+    "bounds": [
+      0,
+      0,
+      16,
+      16
+    ],
+    "canvas": "tile",
+    "display_scale": 4,
+    "file": "tile_light.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "file": "tile_light.png"
+      }
+    },
+    "size": [
+      16,
+      16
+    ]
+  },
+  "warrior": {
+    "anchor": [
+      16,
+      32
+    ],
+    "bounds": [
+      3,
+      2,
+      26,
+      30
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "warrior.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          3,
+          2,
+          26,
+          30
+        ],
+        "file": "warrior.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  }
+}

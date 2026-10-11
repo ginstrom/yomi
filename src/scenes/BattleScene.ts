@@ -64,8 +64,9 @@ interface Unit {
   apPips: Phaser.GameObjects.Graphics
 }
 
-const FLOOR_COLORS = [0xe0a56a, 0xd09358, 0xc0844f]
-const FLOOR_EDGE = 0x7a3b35
+/** Flagstone greys from art/palette.toml, so the floor sits with the sprites. */
+const FLOOR_COLORS = [0x787062, 0x6b6457, 0x5a544a]
+const FLOOR_EDGE = 0x14100c
 const MOVE_HIGHLIGHT = 0x1e88e5
 const MOVE_OUTLINE = 0x90caf9
 const ATTACK_HIGHLIGHT = 0xe53935
@@ -106,11 +107,14 @@ const LOG_BOX_GAP = 14
 const LOG_SCROLLBAR_SPACE = 16
 const ENEMY_POLICY: PolicyName = 'aggressive'
 
-/** How to draw each kind of unit; each texture is loaded from assets/sprites/<kind>.png. */
+/**
+ * How to draw each kind of unit; each texture is loaded from assets/sprites/<kind>.png.
+ * Every unit sprite is a 32px canvas shown at 3x, so a small creature is drawn small, not scaled down.
+ */
 const APPEARANCE: Record<UnitKind, { displayHeight: number }> = {
-  warrior: { displayHeight: 84 },
-  goblin: { displayHeight: 68 },
-  kobold: { displayHeight: 70 },
+  warrior: { displayHeight: 96 },
+  goblin: { displayHeight: 96 },
+  kobold: { displayHeight: 96 },
 }
 
 export class BattleScene extends Phaser.Scene {

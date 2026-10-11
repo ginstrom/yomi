@@ -12,7 +12,9 @@
     "preview": "vite preview",
     "typecheck": "tsc",
     "test": "tsc && vitest run",
-    "simulate": "node scripts/simulate.ts"
+    "simulate": "node scripts/simulate.ts",
+    "sprites": "sprite build --project art",
+    "sprites:check": "sprite build --check --project art"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",

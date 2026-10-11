@@ -1,0 +1,22 @@
+# Flagstones in shadow.
+canvas = "tile"
+
+[frames]
+base = """
+kkkkkkkkkkkkkkkk
+kmmmmmmmkmmmmmmm
+kmmmmmmMkmmmmmmM
+kmmmmmmMkmmmmmmM
+kmmmmmmMkmmmmmmM
+kmmmmmmMkmmmmmmM
+kmmmmmmMkmmmmmmM
+kMMMMMMMkMMMMMMM
+kkkkkkkkkkkkkkkk
+mmmmkmmmmmmmkmmm
+mmmMkmmmmmmMkmmm
+mmmMkmmmmmmMkmmm
+mmmMkmmmmmmMkmmm
+mmmMkmmmmmmMkmmm
+mmmMkmmmmmmMkmmm
+MMMMkMMMMMMMkMMM
+"""
