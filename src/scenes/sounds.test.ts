@@ -5,13 +5,15 @@ import { IMPACT_DELAY_MS, STING_DELAY_MS, eventSounds } from './sounds.ts'
 function attack(hit: boolean, critical = false): AttackEvent {
   return {
     type: 'attack', seq: 0, round: 1, attacker: 'goblin', defender: 'hero', opportunity: false,
+    weapon: null, distance: 1, apCost: 2, apAfter: 0, attackBonus: 2, defenderAc: 12,
+    damageDice: { count: 1, sides: 6, bonus: 0 }, defenderHpBefore: 10,
     flankers: [], flankBonus: 0, arc: 'front', arcBonus: 0, attackerFacing: 3,
     attackRoll: 10, totalToHit: 12, hit, critical, fumble: false, damage: hit ? 3 : 0, defenderHpAfter: 7,
   }
 }
 
 function battleEnd(winner: Side | null): BattleEndEvent {
-  return { type: 'battle_end', seq: 0, round: 3, winner, reason: winner ? 'defeat' : 'abandoned' }
+  return { type: 'battle_end', seq: 0, round: 3, winner, reason: winner ? 'defeat' : 'abandoned', survivors: {} }
 }
 
 describe('eventSounds', () => {
@@ -35,6 +37,6 @@ describe('eventSounds', () => {
   })
 
   it('stays quiet for moves and turn changes', () => {
-    expect(eventSounds({ type: 'end_turn', seq: 0, round: 1, side: 'player' })).toEqual([])
+    expect(eventSounds({ type: 'end_turn', seq: 0, round: 1, side: 'player', unspentAp: {} })).toEqual([])
   })
 })

@@ -22,6 +22,7 @@ function battle(battleId: number, rounds: number, winner: Side | null): LoggedEv
       round: rounds,
       winner,
       reason: winner ? 'defeat' : 'abandoned',
+      survivors: {},
     },
   ]
 }

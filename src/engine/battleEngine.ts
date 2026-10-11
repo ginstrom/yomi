@@ -1,4 +1,4 @@
-import { hitChance, resolveAttack, type CombatantStats, type RNG } from '../combat/combat.ts'
+import { hitChance, resolveAttack, type CombatantStats, type DamageRoll, type RNG } from '../combat/combat.ts'
 import { mulberry32, randomSeed } from '../combat/rng.ts'
 import {
   HEX_DIRECTIONS,
@@ -14,7 +14,7 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 10
+export const LOG_SCHEMA_VERSION = 11
 
 /** To-hit bonus an attacker gains for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 2
@@ -45,15 +45,31 @@ export type Side = 'player' | 'enemy'
 export type Phase = Side | 'over'
 export type UnitId = string
 
+/** An item as the log names it. */
+export interface GearItem {
+  id: string
+  name: string
+}
+
+/** One slot's change of gear: an item put on, taken off, or swapped for another. */
+export interface GearChange {
+  slot: string
+  /** The item that was in the slot; null if it was empty. */
+  from: GearItem | null
+  /** The item now in the slot; null if it was emptied. */
+  to: GearItem | null
+}
+
 /**
  * Moves, attacks and gear changes name the acting unit; end_turn ends the
  * whole side's turn. An equip action carries the stats the unit fights with
- * from then on, since the engine knows stats and not the items behind them.
+ * from then on, since the engine knows stats and not the items behind them;
+ * `changes` says which items those were and is only copied into the log.
  */
 export type Action =
   | { type: 'move'; unit: UnitId; to: Hex }
   | { type: 'attack'; unit: UnitId; target: UnitId }
-  | { type: 'equip'; unit: UnitId; stats: CombatantStats }
+  | { type: 'equip'; unit: UnitId; stats: CombatantStats; changes?: readonly GearChange[] }
   | { type: 'end_turn' }
 
 /** A unit entering battle. Roster order is the order legal actions are listed in. */
@@ -149,6 +165,8 @@ export interface MoveEvent extends EventBase {
   path: Hex[]
   destination: Hex
   apCost: number
+  /** The mover's action points once the move is paid for. */
+  apAfter: number
   /**
    * The mover's facing when the segment ends. If a free attack interrupts the
    * move here, this is turned towards the step about to be taken, which is the
@@ -163,6 +181,14 @@ export interface AttackEvent extends EventBase {
   defender: UnitId
   /** A free attack provoked by the defender leaving the attacker's zone of control; costs no AP. */
   opportunity: boolean
+  /** The attacker's weapon by name; null if its stats name none. */
+  weapon: string | null
+  /** Hexes between attacker and defender: 1 for a blow, more for a shot. */
+  distance: number
+  /** The attacker's `attackApCost`, or 0 for a free attack. */
+  apCost: number
+  /** The attacker's action points once the attack is paid for. */
+  apAfter: number
   /** The attacker's standing allies adjacent to the defender when the attack was made. */
   flankers: UnitId[]
   /** To-hit bonus from flankers, already included in totalToHit. */
@@ -174,11 +200,19 @@ export interface AttackEvent extends EventBase {
   /** The attacker's facing after turning to strike. */
   attackerFacing: number
   attackRoll: number
+  /** The attacker's own to-hit bonus, already included in totalToHit. */
+  attackBonus: number
   totalToHit: number
+  /** The armour class totalToHit had to reach. */
+  defenderAc: number
   hit: boolean
   critical: boolean
   fumble: boolean
+  /** The dice a hit rolls, before a critical doubles their count. */
+  damageDice: DamageRoll
+  /** Damage rolled; it may be more than the defender had left. */
   damage: number
+  defenderHpBefore: number
   defenderHpAfter: number
 }
 
@@ -188,6 +222,12 @@ export interface EquipEvent extends EventBase {
   unit: UnitId
   /** EQUIP_AP_COST, or 0 when the unit had already paid for a change and not acted since. */
   apCost: number
+  /** The unit's action points once the change is paid for. */
+  apAfter: number
+  /** The items changed, slot by slot; empty if the caller did not say. */
+  changes: GearChange[]
+  /** The stats the unit fought with until now. */
+  statsBefore: CombatantStats
   /** The stats the unit fights with from here on. */
   stats: CombatantStats
 }
@@ -200,6 +240,8 @@ export interface UnitDownEvent extends EventBase {
 export interface EndTurnEvent extends EventBase {
   type: 'end_turn'
   side: Side
+  /** Action points each of the side's standing units left unspent. */
+  unspentAp: Record<UnitId, number>
 }
 
 export interface BattleEndEvent extends EventBase {
@@ -207,6 +249,8 @@ export interface BattleEndEvent extends EventBase {
   /** null when the battle was abandoned before a side fell. */
   winner: Side | null
   reason: 'defeat' | 'abandoned'
+  /** Hit points of every unit still standing. */
+  survivors: Record<UnitId, number>
 }
 
 export type BattleEvent =
@@ -437,7 +481,10 @@ export class BattleEngine {
 
     if (action.type === 'end_turn') {
       const side = this.phase
-      const event = this.record<EndTurnEvent>({ type: 'end_turn', round: this.round, side })
+      const unspentAp = Object.fromEntries(
+        this.units.filter((u) => u.side === side && u.hp > 0).map((u) => [u.id, u.ap]),
+      )
+      const event = this.record<EndTurnEvent>({ type: 'end_turn', round: this.round, side, unspentAp })
       if (side === 'enemy') this.round += 1
       this.startTurn(other(side))
       return [event]
@@ -445,7 +492,7 @@ export class BattleEngine {
 
     const actor = this.units.find((u) => u.id === action.unit)
     // Checked first: a unit that spent its last point on a change of gear may still change again.
-    if (actor && action.type === 'equip') return this.equip(actor, action.stats)
+    if (actor && action.type === 'equip') return this.equip(actor, action.stats, action.changes ?? [])
     if (!actor || action.type === 'equip' || !this.canAct(actor)) throw new Error(`${action.unit} cannot act now`)
     if (action.type === 'move') return this.move(actor, action.to)
 
@@ -454,14 +501,22 @@ export class BattleEngine {
     if (actor.ap < actor.stats.attackApCost) throw new Error(`${actor.id} has too few action points to attack`)
     actor.ap -= actor.stats.attackApCost
     actor.gearChangePaid = false
-    return this.attack(actor, target, false)
+    return this.attack(actor, target, actor.stats.attackApCost)
   }
 
   /** Ends an unfinished battle (e.g. the player quit) so its log is still complete. */
   abandon(): BattleEvent[] {
     if (this.phase === 'over') return []
     this.phase = 'over'
-    return [this.record<BattleEndEvent>({ type: 'battle_end', round: this.round, winner: null, reason: 'abandoned' })]
+    return [
+      this.record<BattleEndEvent>({
+        type: 'battle_end',
+        round: this.round,
+        winner: null,
+        reason: 'abandoned',
+        survivors: this.survivors(),
+      }),
+    ]
   }
 
   /** Refills the side's action points and readies the other side's free attacks. */
@@ -528,6 +583,7 @@ export class BattleEngine {
           path: segment,
           destination: to,
           apCost: firstSegment ? apCost : 0,
+          apAfter: actor.ap,
           facing: actor.facing,
         }),
       )
@@ -542,7 +598,7 @@ export class BattleEngine {
       if (reactors.length > 0) logSegment()
       for (const foe of reactors) {
         foe.reactionReady = false
-        events.push(...this.attack(foe, actor, true))
+        events.push(...this.attack(foe, actor, null))
         if (actor.hp <= 0) return events
       }
       actor.position = step
@@ -568,23 +624,37 @@ export class BattleEngine {
   }
 
   /** Swaps the unit's stats for those of its new gear; its wounds and remaining AP carry over. */
-  private equip(actor: UnitRecord, stats: CombatantStats): BattleEvent[] {
+  private equip(actor: UnitRecord, stats: CombatantStats, changes: readonly GearChange[]): BattleEvent[] {
     const apCost = this.equipCost(actor.id)
     if (apCost === null) throw new Error(`${actor.id} cannot change gear now`)
+    const statsBefore = actor.stats
     actor.ap -= apCost
     actor.gearChangePaid = true
     actor.stats = stats
     actor.hp = Math.min(actor.hp, stats.maxHp)
-    return [this.record<EquipEvent>({ type: 'equip', round: this.round, unit: actor.id, apCost, stats })]
+    return [
+      this.record<EquipEvent>({
+        type: 'equip',
+        round: this.round,
+        unit: actor.id,
+        apCost,
+        apAfter: actor.ap,
+        changes: [...changes],
+        statsBefore,
+        stats,
+      }),
+    ]
   }
 
-  private attack(actor: UnitRecord, target: UnitRecord, opportunity: boolean): BattleEvent[] {
+  /** Resolves an attack already paid for; an `apCost` of null marks a free attack. */
+  private attack(actor: UnitRecord, target: UnitRecord, apCost: number | null): BattleEvent[] {
     actor.facing = hexDirectionTowards(actor.position, target.position)!
     const flankers = flankersOf(this.units, actor, target)
     const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
     const arc = attackArc(target, actor.position)
     const arcBonus = ARC_BONUS[arc]
     const result = resolveAttack(actor.stats, target.stats.ac, this.rng, flankBonus + arcBonus)
+    const defenderHpBefore = target.hp
     target.hp = Math.max(0, target.hp - result.damage)
 
     const events: BattleEvent[] = [
@@ -593,18 +663,26 @@ export class BattleEngine {
         round: this.round,
         attacker: actor.id,
         defender: target.id,
-        opportunity,
+        opportunity: apCost === null,
+        weapon: actor.stats.weapon ?? null,
+        distance: hexDistance(actor.position, target.position),
+        apCost: apCost ?? 0,
+        apAfter: actor.ap,
         flankers,
         flankBonus,
         arc,
         arcBonus,
         attackerFacing: actor.facing,
         attackRoll: result.attackRoll,
+        attackBonus: actor.stats.attackBonus,
         totalToHit: result.totalToHit,
+        defenderAc: target.stats.ac,
         hit: result.hit,
         critical: result.critical,
         fumble: result.fumble,
+        damageDice: actor.stats.damage,
         damage: result.damage,
+        defenderHpBefore,
         defenderHpAfter: target.hp,
       }),
     ]
@@ -629,9 +707,14 @@ export class BattleEngine {
         round: this.round,
         winner: this.winner,
         reason: 'defeat',
+        survivors: this.survivors(),
       })
     }
     return null
+  }
+
+  private survivors(): Record<UnitId, number> {
+    return Object.fromEntries(this.units.filter((u) => u.hp > 0).map((u) => [u.id, u.hp]))
   }
 
   private record<E extends BattleEvent>(event: Omit<E, 'seq'>): E {
@@ -659,7 +742,16 @@ function listNames(names: string[]): string {
   return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
 }
 
-/** Renders an event as the human-readable line BattleScene pushes to its log. */
+/** "swaps the Iron Longsword for the Yew Bow", "takes up the Oak Shield", "puts away the Oak Shield". */
+function describeGearChange({ from, to }: GearChange): string {
+  if (from && to) return `swaps the ${from.name} for the ${to.name}`
+  return to ? `takes up the ${to.name}` : `puts away the ${from?.name ?? 'gear'}`
+}
+
+/**
+ * Renders an event as the human-readable line BattleScene pushes to its log.
+ * It is a summary: the event itself carries more than the line says.
+ */
 export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, string>>): string {
   switch (event.type) {
     case 'battle_start': {
@@ -688,7 +780,8 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
       return `${names[event.unit]} moves ${steps} ${steps === 1 ? 'hex' : 'hexes'}.`
     }
     case 'equip':
-      return `${names[event.unit]} changes gear.`
+      if (event.changes.length === 0) return `${names[event.unit]} changes gear.`
+      return `${names[event.unit]} ${listNames(event.changes.map(describeGearChange))}.`
     case 'unit_down':
       return `${names[event.unit]} falls.`
     case 'end_turn':

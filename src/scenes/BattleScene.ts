@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { deriveCombatStats } from '../character/character.ts'
+import { deriveCombatStats, gearChanges } from '../character/character.ts'
 import { sameCombatStats } from '../combat/combat.ts'
 import {
   BattleEngine,
@@ -14,6 +14,7 @@ import {
 import { POLICIES, type PolicyName } from '../engine/policies.ts'
 import { HERO_ID, goblinRaid, type UnitKind } from '../game/encounters.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
+import type { Equipment } from '../inventory/inventory.ts'
 import {
   HEX_DIRECTIONS,
   HexBoard,
@@ -120,6 +121,8 @@ const APPEARANCE: Record<UnitKind, { displayHeight: number }> = {
 
 export class BattleScene extends Phaser.Scene {
   private gameState!: GameState
+  /** The hero's equipment as the engine's log last had it, to tell the next gear change against. */
+  private loggedEquipment: Equipment = {}
   private engine!: BattleEngine
   private board!: HexBoard
   private names!: Record<UnitId, string>
@@ -170,6 +173,7 @@ export class BattleScene extends Phaser.Scene {
     this.gameState = data?.game ?? newGame()
     const player = this.gameState.player
     const { setup, kinds } = goblinRaid(deriveCombatStats(player), player.hp)
+    this.loggedEquipment = { ...player.equipment }
     this.engine = new BattleEngine(setup, { meta: { source: 'game', enemyPolicy: ENEMY_POLICY } })
     this.board = new HexBoard(setup.board)
     this.names = Object.fromEntries(setup.units.map((u) => [u.id, u.stats.name]))
@@ -314,9 +318,13 @@ export class BattleScene extends Phaser.Scene {
   /** Tells the engine about gear changed in the inventory, which edits the character directly. */
   private commitGearChange(): void {
     if (!this.playerControl) return
-    const stats = deriveCombatStats(this.gameState.player)
+    const player = this.gameState.player
+    const stats = deriveCombatStats(player)
     const hero = this.engine.getState().units.find((u) => u.id === HERO_ID)!
-    if (!sameCombatStats(stats, hero)) this.playerAct({ type: 'equip', unit: HERO_ID, stats })
+    if (sameCombatStats(stats, hero)) return
+    const changes = gearChanges(this.loggedEquipment, player.equipment)
+    this.loggedEquipment = { ...player.equipment }
+    this.playerAct({ type: 'equip', unit: HERO_ID, stats, changes })
   }
 
   private openMenu(): void {

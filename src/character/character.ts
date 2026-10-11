@@ -1,6 +1,8 @@
 import type { CombatantStats, DamageRoll } from '../combat/combat.ts'
+import type { GearChange } from '../engine/battleEngine.ts'
 import {
   BACKPACK_SIZE,
+  EQUIPMENT_SLOT_ORDER,
   IRON_SWORD,
   OAK_SHIELD,
   STEEL_ARMOR,
@@ -35,6 +37,7 @@ const UNARMORED_AC = 10
 const UNARMED_DAMAGE: DamageRoll = { count: 1, sides: 2, bonus: 0 }
 const UNARMED_ATTACK_AP_COST = 3
 const MELEE_RANGE = 1
+const UNARMED_WEAPON = 'Fists'
 
 export function deriveCombatStats(character: Character): CombatantStats {
   // A two-handed weapon leaves no hand for a shield, whatever the off hand holds.
@@ -65,6 +68,7 @@ export function deriveCombatStats(character: Character): CombatantStats {
     ac: baseAc + acBonus,
     attackBonus,
     damage,
+    weapon: character.equipment.mainHand?.name ?? UNARMED_WEAPON,
     attackApCost,
     attackRange,
     actionPoints: character.base.actionPoints,
@@ -94,6 +98,16 @@ export function unequipToBackpack(character: Character, slot: EquipmentSlot): bo
   character.backpack[space] = item
   delete character.equipment[slot]
   return true
+}
+
+/** What differs between two sets of equipment, slot by slot in paperdoll order, for the battle log. */
+export function gearChanges(before: Equipment, after: Equipment): GearChange[] {
+  const named = (item: Item | undefined) => (item ? { id: item.id, name: item.name } : null)
+  return EQUIPMENT_SLOT_ORDER.filter((slot) => before[slot]?.id !== after[slot]?.id).map((slot) => ({
+    slot,
+    from: named(before[slot]),
+    to: named(after[slot]),
+  }))
 }
 
 /** The weapons the warrior carries but does not start with in hand. */

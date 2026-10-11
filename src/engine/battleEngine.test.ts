@@ -14,6 +14,7 @@ import {
   type AttackEvent,
   type BattleEvent,
   type BattleStartEvent,
+  type GearChange,
   type MoveEvent,
   type UnitSetup,
 } from './battleEngine.ts'
@@ -726,7 +727,12 @@ describe('formatEvent', () => {
 describe('BattleEngine gear changes', () => {
   const BOW_STATS: CombatantStats = { ...WARRIOR_STATS, damage: { count: 1, sides: 8, bonus: 0 }, attackRange: 5 }
   const DAGGER_STATS: CombatantStats = { ...WARRIOR_STATS, damage: { count: 1, sides: 4, bonus: 0 }, attackApCost: 3 }
-  const equip = (stats: CombatantStats): Action => ({ type: 'equip', unit: 'warrior', stats })
+  const equip = (stats: CombatantStats, changes?: GearChange[]): Action => ({
+    type: 'equip',
+    unit: 'warrior',
+    stats,
+    changes,
+  })
   const warriorOf = (engine: BattleEngine) => engine.getState().units.find((u) => u.id === 'warrior')!
   // The goblin stands four hexes east of the warrior: out of a sword's reach, inside a bow's.
   const APART = setup([WARRIOR, { ...GOBLIN, position: hex(5, 1) }])
@@ -741,7 +747,47 @@ describe('BattleEngine gear changes', () => {
     expect(events).toMatchObject([{ type: 'equip', unit: 'warrior', apCost: EQUIP_AP_COST, stats: BOW_STATS }])
     expect(warriorOf(engine)).toMatchObject({ ap: WARRIOR_STATS.actionPoints - EQUIP_AP_COST, attackRange: 5 })
     expect(engine.legalActions('warrior')).toContainEqual(ATTACK_GOBLIN)
+    expect(events[0]).toMatchObject({ apAfter: 7, changes: [], statsBefore: WARRIOR_STATS })
     expect(formatEvent(events[0], NAMES)).toBe('Warrior changes gear.')
+  })
+
+  it('logs which items changed and names them to the player', () => {
+    const engine = new BattleEngine(APART, { rng: () => FUMBLE })
+    const sword = { id: 'iron_sword', name: 'Iron Longsword' }
+    const bow = { id: 'yew_bow', name: 'Yew Bow' }
+    const shield = { id: 'oak_shield', name: 'Oak Shield' }
+    const changes = [
+      { slot: 'mainHand', from: sword, to: bow },
+      { slot: 'offHand', from: shield, to: null },
+    ]
+    const [event] = engine.step(equip(BOW_STATS, changes))
+    expect(event).toMatchObject({ type: 'equip', changes })
+    expect(formatEvent(event, NAMES)).toBe(
+      'Warrior swaps the Iron Longsword for the Yew Bow and puts away the Oak Shield.',
+    )
+    const [taken] = engine.step(equip(BOW_STATS, [{ slot: 'offHand', from: null, to: shield }]))
+    expect(formatEvent(taken, NAMES)).toBe('Warrior takes up the Oak Shield.')
+  })
+
+  it('logs the weapon, range, cost and numbers behind an attack', () => {
+    const engine = new BattleEngine(APART, { rng: () => 0.5 })
+    engine.step(equip({ ...BOW_STATS, weapon: 'Yew Bow' }))
+    const [shot] = engine.step({ type: 'attack', unit: 'warrior', target: 'goblin' })
+    const ap = WARRIOR_STATS.actionPoints - EQUIP_AP_COST - BOW_STATS.attackApCost
+    expect(shot).toMatchObject({
+      type: 'attack',
+      weapon: 'Yew Bow',
+      distance: 4,
+      apCost: BOW_STATS.attackApCost,
+      apAfter: ap,
+      attackBonus: BOW_STATS.attackBonus,
+      defenderAc: GOBLIN.stats.ac,
+      damageDice: BOW_STATS.damage,
+    })
+    if (shot.type !== 'attack') throw new Error('expected an attack')
+    expect(shot.defenderHpBefore - shot.defenderHpAfter).toBe(Math.min(shot.damage, shot.defenderHpBefore))
+    const [end] = engine.step({ type: 'end_turn' })
+    expect(end).toMatchObject({ type: 'end_turn', unspentAp: { warrior: ap } })
   })
 
   it('charges once for any number of changes until the unit acts', () => {

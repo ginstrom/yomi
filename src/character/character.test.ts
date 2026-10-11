@@ -10,7 +10,7 @@ import {
   YEW_BOW,
   type Item,
 } from '../inventory/inventory.ts'
-import { createWarrior, deriveCombatStats, equipFromBackpack, unequipToBackpack } from './character.ts'
+import { createWarrior, deriveCombatStats, equipFromBackpack, gearChanges, unequipToBackpack } from './character.ts'
 
 describe('createWarrior', () => {
   it('starts at full HP with armor, sword and shield equipped and the other weapons in the backpack', () => {
@@ -38,6 +38,7 @@ describe('deriveCombatStats', () => {
   it('derives the starting warrior stats from base stats and gear', () => {
     expect(deriveCombatStats(createWarrior())).toEqual({
       name: 'Warrior',
+      weapon: 'Iron Longsword',
       maxHp: 20,
       ac: 15,
       attackBonus: 4,
@@ -128,5 +129,29 @@ describe('unequipToBackpack', () => {
     warrior.backpack.fill(IRON_DAGGER)
     expect(unequipToBackpack(warrior, 'mainHand')).toBe(false)
     expect(warrior.equipment.mainHand).toBe(IRON_SWORD)
+  })
+})
+
+describe('gearChanges', () => {
+  it('names what each changed slot held and holds, in paperdoll order', () => {
+    const warrior = createWarrior()
+    const before = { ...warrior.equipment }
+    expect(gearChanges(before, warrior.equipment)).toEqual([])
+
+    equipFromBackpack(warrior, warrior.backpack.indexOf(YEW_BOW))
+    unequipToBackpack(warrior, 'offHand')
+    expect(gearChanges(before, warrior.equipment)).toEqual([
+      { slot: 'mainHand', from: { id: 'iron_sword', name: 'Iron Longsword' }, to: { id: 'yew_bow', name: 'Yew Bow' } },
+      { slot: 'offHand', from: { id: 'oak_shield', name: 'Oak Shield' }, to: null },
+    ])
+  })
+})
+
+describe('deriveCombatStats weapon name', () => {
+  it('names the weapon in hand, or fists', () => {
+    const warrior = createWarrior()
+    expect(deriveCombatStats(warrior).weapon).toBe('Iron Longsword')
+    delete warrior.equipment.mainHand
+    expect(deriveCombatStats(warrior).weapon).toBe('Fists')
   })
 })

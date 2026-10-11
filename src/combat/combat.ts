@@ -10,6 +10,8 @@ export interface CombatantStats {
   ac: number
   attackBonus: number
   damage: DamageRoll
+  /** The weapon by name, for the log; left out for a unit that names none. */
+  weapon?: string
   /** Action points one attack costs; set by the weapon. */
   attackApCost: number
   /** How many hexes away the unit can strike: 1 for a melee weapon, more for a ranged one. */
@@ -28,6 +30,7 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     a.damage.count === b.damage.count &&
     a.damage.sides === b.damage.sides &&
     a.damage.bonus === b.damage.bonus &&
+    a.weapon === b.weapon &&
     a.attackApCost === b.attackApCost &&
     a.attackRange === b.attackRange &&
     a.actionPoints === b.actionPoints
