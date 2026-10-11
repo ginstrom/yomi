@@ -1,5 +1,5 @@
-import { HexBoard, hexEquals, hexKey, offsetToHex, reachableHexes, type BoardSize, type Hex } from '../grid/hex.ts'
-import type { EncounterId } from './encounters.ts'
+import { HexBoard, hexDistance, hexEquals, hexKey, offsetToHex, reachableHexes, type BoardSize, type Hex } from '../grid/hex.ts'
+import { MAX_THREAT, type EncounterId } from './encounters.ts'
 
 /**
  * The world map: a hex board the party travels between battles, with points of
@@ -14,10 +14,12 @@ interface LocationBase {
   position: Hex
 }
 
-/** Monsters to scout, wait out or attack; attacking fights `encounter`. */
+/** Monsters to scout, wait out or attack; attacking fights `encounter` at `threat`. */
 export interface MonsterLocation extends LocationBase {
   kind: 'monsters'
   encounter: EncounterId
+  /** How dangerous they are, from 1: set by how far from home they lie (`threatAt`). */
+  threat: number
 }
 
 /** Towns and resources are only shown for now; nothing happens at them. */
@@ -51,6 +53,20 @@ export type Lingering = 'scout' | 'wait'
  */
 export const WORLD_SIZE: BoardSize = { cols: 60, rows: 40 }
 
+/** Where a new game's party stands: Oakvale, in the west. */
+const HOME: Hex = offsetToHex(9, 19)
+
+/**
+ * How many hexes from home each step of threat is. The first band holds the
+ * party's home country, and the map's far corners reach the top threat.
+ */
+export const THREAT_BAND = 11
+
+/** How dangerous the monsters at `position` are: 1 around home, and one more for every `THREAT_BAND` hexes out, up to `MAX_THREAT`. */
+export function threatAt(position: Hex): number {
+  return Math.min(MAX_THREAT, 1 + Math.floor(hexDistance(HOME, position) / THREAT_BAND))
+}
+
 const town = (id: string, name: string, col: number, row: number): WorldLocation => ({
   id,
   kind: 'town',
@@ -69,14 +85,16 @@ const monsters = (id: string, name: string, col: number, row: number, encounter:
   name,
   position: offsetToHex(col, row),
   encounter,
+  threat: threatAt(offsetToHex(col, row)),
 })
 
 export function newWorld(): WorldState {
   return {
     board: WORLD_SIZE,
-    party: offsetToHex(9, 19),
+    party: HOME,
     turn: 1,
-    // The party's home country first, in the west, then the lands further out.
+    // The party's home country first, in the west, then the lands further out,
+    // whose monsters are the more dangerous the further they lie (threatAt).
     locations: [
       town('oakvale', 'Oakvale', 9, 19),
       town('stonebridge', 'Stonebridge', 18, 18),

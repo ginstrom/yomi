@@ -1,4 +1,4 @@
-import { GOBLIN_STATS, KOBOLD_STATS, type CombatantStats } from '../combat/combat.ts'
+import { GOBLIN_STATS, KOBOLD_STATS, foeAtLevel, type CombatantStats } from '../combat/combat.ts'
 import type { BattleSetup, UnitId, UnitSetup } from '../engine/battleEngine.ts'
 import { offsetToHex } from '../grid/hex.ts'
 
@@ -40,7 +40,7 @@ function partyKinds(party: readonly Fighter[]): Record<UnitId, UnitKind> {
 export type UnitKind = 'warrior' | 'goblin' | 'kobold'
 
 /**
- * The experience beating a unit of each kind is worth. An even match for a
+ * The experience beating a level 1 unit of each kind is worth. An even match for a
  * hero of level L is worth about `EVEN_FOE_XP_PER_LEVEL * L` and a weak foe
  * half that (see progression.ts): the Goblin is a little weaker than a new
  * hero, the Kobold weak.
@@ -50,52 +50,102 @@ export const FOE_XP: Record<UnitKind, number> = { warrior: 0, goblin: 80, kobold
 export interface Encounter {
   setup: BattleSetup
   kinds: Record<UnitId, UnitKind>
+  /** How dangerous the battle was made, which is also the level of its foes. */
+  threat: number
 }
 
 /**
- * A Goblin and a Kobold across the board from the party. The simulator fights
- * this one, so balancing runs fight a battle the game has.
+ * How many foes a battle has at each threat, from 1 up. Numbers tell more
+ * than levels do: a fourth foe against a party of three costs it about as
+ * much as two more levels on the other three would.
  */
-export function goblinRaid(party: readonly Fighter[]): Encounter {
+const FOES_AT_THREAT = [2, 3, 3, 3, 4]
+
+/** The most dangerous a battle gets; any threat above it is fought as this. */
+export const MAX_THREAT = FOES_AT_THREAT.length
+
+/** A foe an encounter can field; a setup fields the first few of its list. */
+interface FoeSlot {
+  id: UnitId
+  kind: Exclude<UnitKind, 'warrior'>
+  /** Each foe of a battle has a name of its own, so the log tells them apart. */
+  name: string
+  at: readonly [number, number]
+}
+
+const FOE_STATS: Record<FoeSlot['kind'], CombatantStats> = { goblin: GOBLIN_STATS, kobold: KOBOLD_STATS }
+
+const BOARD = { cols: 8, rows: 5 }
+
+/**
+ * The party against the foes `threat` calls for: the first `FOES_AT_THREAT`
+ * of `slots`, every one at level `threat` (`foeAtLevel`). The numbers behind
+ * both were chosen with the simulator; see the rules of scaling in CLAUDE.md.
+ */
+function encounter(party: readonly Fighter[], slots: readonly FoeSlot[], threat: number): Encounter {
+  const level = Math.min(Math.max(1, Math.floor(threat)), MAX_THREAT)
+  const foes = slots.slice(0, FOES_AT_THREAT[level - 1])
   return {
     setup: {
-      board: { cols: 8, rows: 5 },
+      board: BOARD,
       units: [
         ...partyUnits(party),
-        { id: 'goblin', side: 'enemy', stats: GOBLIN_STATS, position: offsetToHex(6, 2) },
-        { id: 'kobold', side: 'enemy', stats: KOBOLD_STATS, position: offsetToHex(7, 0) },
+        ...foes.map(({ id, kind, name, at }): UnitSetup => ({
+          id,
+          side: 'enemy',
+          stats: { ...foeAtLevel(FOE_STATS[kind], level), name },
+          position: offsetToHex(...at),
+        })),
       ],
     },
-    kinds: { ...partyKinds(party), goblin: 'goblin', kobold: 'kobold' },
+    kinds: { ...partyKinds(party), ...Object.fromEntries(foes.map((foe) => [foe.id, foe.kind])) },
+    threat: level,
   }
 }
 
-/** Two Kobolds that come at the party from both ends of the far side. */
-export function koboldScouts(party: readonly Fighter[]): Encounter {
-  return {
-    setup: {
-      board: { cols: 8, rows: 5 },
-      units: [
-        ...partyUnits(party),
-        { id: 'scout', side: 'enemy', stats: { ...KOBOLD_STATS, name: 'Kobold Scout' }, position: offsetToHex(6, 0) },
-        { id: 'tracker', side: 'enemy', stats: { ...KOBOLD_STATS, name: 'Kobold Tracker' }, position: offsetToHex(6, 4) },
-      ],
-    },
-    kinds: { ...partyKinds(party), scout: 'kobold', tracker: 'kobold' },
-  }
+const GOBLIN_RAID: readonly FoeSlot[] = [
+  { id: 'goblin', kind: 'goblin', name: 'Goblin', at: [6, 2] },
+  { id: 'kobold', kind: 'kobold', name: 'Kobold', at: [7, 0] },
+  { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [6, 4] },
+  { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [7, 3] },
+]
+
+const KOBOLD_SCOUTS: readonly FoeSlot[] = [
+  { id: 'scout', kind: 'kobold', name: 'Kobold Scout', at: [6, 0] },
+  { id: 'tracker', kind: 'kobold', name: 'Kobold Tracker', at: [6, 4] },
+  { id: 'trapper', kind: 'kobold', name: 'Kobold Trapper', at: [7, 2] },
+  { id: 'overseer', kind: 'goblin', name: 'Goblin Overseer', at: [6, 2] },
+]
+
+/**
+ * A Goblin and a Kobold across the board from the party, and more of both
+ * where the threat is higher. The simulator fights this one unless told
+ * otherwise, so balancing runs fight a battle the game has.
+ */
+export function goblinRaid(party: readonly Fighter[], threat = 1): Encounter {
+  return encounter(party, GOBLIN_RAID, threat)
 }
 
-/** The experience each party member earns for winning `encounter`: what its foes are worth together. */
+/** Two Kobolds that come at the party from both ends of the far side; where the threat is higher, more of them and a Goblin to drive them. */
+export function koboldScouts(party: readonly Fighter[], threat = 1): Encounter {
+  return encounter(party, KOBOLD_SCOUTS, threat)
+}
+
+/**
+ * The experience each party member earns for winning `encounter`: what its
+ * foes are worth together, a foe of level L being worth L times its kind's
+ * `FOE_XP`, as the yardstick has it.
+ */
 export function xpReward(encounter: Encounter): number {
   return encounter.setup.units
     .filter((u) => u.side === 'enemy')
-    .reduce((total, u) => total + FOE_XP[encounter.kinds[u.id]], 0)
+    .reduce((total, u) => total + FOE_XP[encounter.kinds[u.id]] * encounter.threat, 0)
 }
 
 /** Every battle a monster location on the world map can lead to, by id. */
 export const ENCOUNTERS = {
   goblin_raid: goblinRaid,
   kobold_scouts: koboldScouts,
-} satisfies Record<string, (party: readonly Fighter[]) => Encounter>
+} satisfies Record<string, (party: readonly Fighter[], threat?: number) => Encounter>
 
 export type EncounterId = keyof typeof ENCOUNTERS

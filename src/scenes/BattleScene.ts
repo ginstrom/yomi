@@ -204,7 +204,7 @@ export class BattleScene extends Phaser.Scene {
     const at = this.gameState.world.locations.find((l) => l.id === data?.location)
     this.location = at?.kind === 'monsters' ? at : null
     const encounter = ENCOUNTERS[this.location?.encounter ?? DEFAULT_ENCOUNTER]
-    const fight = encounter(partyFighters(party))
+    const fight = encounter(partyFighters(party), this.location?.threat)
     const { setup, kinds } = fight
     this.xpReward = xpReward(fight)
     this.heroes = new Map(party.map((member, i) => [heroId(i), member]))

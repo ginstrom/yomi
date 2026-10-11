@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GOBLIN_STATS, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, type CombatantStats } from './combat.ts'
+import { GOBLIN_STATS, foeAtLevel, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, type CombatantStats } from './combat.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -99,5 +99,22 @@ describe('sameCombatStats', () => {
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, attackRange: 5 })).toBe(false)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, weapon: 'Iron Longsword' })).toBe(false)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, damage: { count: 1, sides: 8, bonus: 0 } })).toBe(false)
+  })
+})
+
+describe('foeAtLevel', () => {
+  it('leaves a level 1 monster as it is', () => {
+    expect(foeAtLevel(GOBLIN_STATS, 1)).toEqual(GOBLIN_STATS)
+  })
+
+  it('adds hit points every level, and attack, damage and armour at their steps', () => {
+    expect(foeAtLevel(GOBLIN_STATS, 2)).toEqual({ ...GOBLIN_STATS, maxHp: 14 })
+    expect(foeAtLevel(GOBLIN_STATS, 5)).toEqual({
+      ...GOBLIN_STATS,
+      maxHp: 22,
+      ac: 14,
+      attackBonus: 5,
+      damage: { count: 1, sides: 6, bonus: 2 },
+    })
   })
 })

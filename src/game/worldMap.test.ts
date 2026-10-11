@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { HexBoard, hexDistance, hexEquals, hexKey, hexToOffset, offsetToHex } from '../grid/hex.ts'
-import { ENCOUNTERS } from './encounters.ts'
-import { clearLocation, linger, locationAt, monstersHere, newWorld, routeTo, travel, type WorldState } from './worldMap.ts'
+import { ENCOUNTERS, MAX_THREAT } from './encounters.ts'
+import {
+  THREAT_BAND,
+  clearLocation,
+  linger,
+  locationAt,
+  monstersHere,
+  newWorld,
+  routeTo,
+  threatAt,
+  travel,
+  type WorldState,
+} from './worldMap.ts'
 
 const monsters = (world: WorldState) => world.locations.filter((l) => l.kind === 'monsters')
 
@@ -35,6 +46,16 @@ describe('newWorld', () => {
 
   it('gives every monster location a battle to fight', () => {
     for (const l of monsters(world)) expect(ENCOUNTERS[l.encounter]).toBeTypeOf('function')
+  })
+
+  it('makes monsters the more dangerous the further from home they lie', () => {
+    const lairs = monsters(world).filter((l) => l.kind === 'monsters')
+    const byDistance = [...lairs].sort((a, b) => hexDistance(world.party, a.position) - hexDistance(world.party, b.position))
+    const threats = byDistance.map((l) => l.threat)
+    expect(threats).toEqual([...threats].sort((a, b) => a - b))
+    expect(threats[0]).toBe(1)
+    expect(threats.at(-1)).toBe(MAX_THREAT)
+    for (const l of lairs) expect(l.threat).toBe(threatAt(l.position))
   })
 
   it('starts the party on turn 1, on the map and clear of monsters', () => {
@@ -128,5 +149,17 @@ describe('linger', () => {
     const world = newWorld()
     expect(linger(world, 'wait')).toBe(false)
     expect(world.turn).toBe(1)
+  })
+})
+
+describe('threatAt', () => {
+  const home = newWorld().party
+
+  it('is 1 at home, a step higher each band out, and never past the top', () => {
+    expect(threatAt(home)).toBe(1)
+    expect(threatAt({ q: home.q + THREAT_BAND - 1, r: home.r })).toBe(1)
+    expect(threatAt({ q: home.q + THREAT_BAND, r: home.r })).toBe(2)
+    expect(threatAt({ q: home.q + THREAT_BAND * 2, r: home.r })).toBe(3)
+    expect(threatAt({ q: home.q + THREAT_BAND * 50, r: home.r })).toBe(MAX_THREAT)
   })
 })

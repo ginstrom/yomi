@@ -148,7 +148,7 @@ export class WorldScene extends Phaser.Scene {
     })
 
     const here = monstersHere(this.world)
-    this.messageText.setText(here ? `You stand before the ${here.name}.` : '')
+    this.messageText.setText(here ? `You stand before the ${here.name} (threat ${here.threat}).` : '')
     this.refresh()
     // After the first refresh: the view starts below the party's lines, and centres on where the party stands.
     this.layout()
@@ -366,7 +366,7 @@ export class WorldScene extends Phaser.Scene {
     const pointer = this.input.activePointer
     this.hovered = this.hexAt(pointer.x, pointer.y)
     const here = monstersHere(this.world)
-    if (here) this.messageText.setText(`You come upon the ${here.name}.`)
+    if (here) this.messageText.setText(`You come upon the ${here.name} (threat ${here.threat}).`)
     this.refresh()
   }
 
