@@ -11,6 +11,7 @@ const WARRIOR_STATS: CombatantStats = {
   attackBonus: 4,
   damage: { count: 1, sides: 8, bonus: 2 },
   attackApCost: 5,
+  attackRange: 1,
   actionPoints: 8,
 }
 
@@ -56,5 +57,23 @@ describe('planAttack', () => {
     const plan = planAttack(battle(offsetToHex(6, 0), goblin), 'warrior', 'goblin')
     expect(plan.attack).toBe(true)
     expect(attackArc({ position: goblin, facing: 3 }, plan.move!.to)).toBe('rear')
+  })
+
+  it('shoots a foe in range from where it stands', () => {
+    const engine = battle(hex(0, 1), hex(4, 1), { attackRange: 5 })
+    expect(planAttack(engine, 'warrior', 'goblin')).toEqual({ move: null, attack: true })
+  })
+
+  it('walks an archer only as far as it needs to shoot', () => {
+    const plan = planAttack(battle(hex(0, 1), hex(6, 1), { attackRange: 4 }), 'warrior', 'goblin')
+    expect(plan.attack).toBe(true)
+    expect(hexDistance(hex(0, 1), plan.move!.to)).toBe(2)
+    expect(hexDistance(plan.move!.to, hex(6, 1))).toBe(4)
+  })
+
+  it('does nothing when the foe is in range but the AP cannot cover a shot', () => {
+    const engine = battle(hex(0, 1), hex(3, 1), { attackRange: 5 })
+    engine.step({ type: 'attack', unit: 'warrior', target: 'goblin' })
+    expect(planAttack(engine, 'warrior', 'goblin')).toEqual({ move: null, attack: false })
   })
 })

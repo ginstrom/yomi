@@ -3,7 +3,12 @@
     "frames:sprites": [
       "goblin.png",
       "icon_armor.png",
+      "icon_axe.png",
+      "icon_bow.png",
+      "icon_dagger.png",
+      "icon_greatsword.png",
       "icon_shield.png",
+      "icon_shortsword.png",
       "icon_sword.png",
       "kobold.png",
       "sprites.json",

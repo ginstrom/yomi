@@ -4,6 +4,7 @@ import {
   HEX_DIRECTIONS,
   HexBoard,
   hexDirection,
+  hexDirectionTowards,
   hexDistance,
   hexEquals,
   hexKey,
@@ -13,14 +14,15 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 8
+export const LOG_SCHEMA_VERSION = 9
 
 /** To-hit bonus an attacker gains for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 2
 
 /**
  * Which way a defender is struck from, relative to its facing: its three
- * front hexes, the two beside its back, or straight behind it.
+ * front hexes, the two beside its back, or straight behind it. A shot from
+ * further off strikes the arc of the neighbouring hex it comes in over.
  */
 export type Arc = 'front' | 'side' | 'rear'
 
@@ -228,10 +230,10 @@ export function flankersOf(units: readonly Placed[], attacker: Placed, defender:
     .map((u) => u.id)
 }
 
-/** The arc of `defender` that an attack from the neighbouring hex `from` strikes. */
+/** The arc of `defender` that an attack from the hex `from` strikes, whether beside it or at range. */
 export function attackArc(defender: Pick<UnitSnapshot, 'position' | 'facing'>, from: Hex): Arc {
-  const direction = hexDirection(defender.position, from)
-  if (direction === null) throw new Error('Attacks come from a neighbouring hex')
+  const direction = hexDirectionTowards(defender.position, from)
+  if (direction === null) throw new Error('Attacks come from another hex')
   // Steps clockwise or counter-clockwise from straight ahead: 0, 1, 2 or 3.
   const turn = (direction - defender.facing + 6) % 6
   const away = Math.min(turn, 6 - turn)
@@ -245,12 +247,14 @@ export function attackArc(defender: Pick<UnitSnapshot, 'position' | 'facing'>, f
  * Sides alternate turns, starting with the player. At the start of its
  * side's turn each standing unit gets its action points, and the side's
  * units then act in any order — moving (MOVE_AP_COST_PER_HEX a hex) and
- * attacking adjacent foes (the unit's `attackApCost`) — until the side ends its turn.
+ * attacking foes within the unit's `attackRange` (for its `attackApCost`) —
+ * until the side ends its turn. Nothing blocks a shot: there is no line of sight yet.
  * An attack gains a to-hit bonus for each other ally adjacent to the
  * defender, and another for striking the defender's side or rear: units
- * face the way they last stepped or struck. Every standing unit exerts a zone of control over its
- * neighbouring hexes: a foe stepping out of one provokes a free attack, at
- * most one per unit per enemy turn.
+ * face the way they last stepped or struck. Every standing unit with a melee
+ * weapon exerts a zone of control over its neighbouring hexes: a foe stepping
+ * out of one provokes a free attack, at most one per unit per enemy turn.
+ * A ranged weapon (`attackRange` above 1) holds no zone.
  *
  * The UI, scripted policies and AI agents all drive it through step(). Given
  * the seed in battle_start and the actions in the log, a battle replays exactly.
@@ -332,7 +336,7 @@ export class BattleEngine {
   /**
    * Actions available to the side whose turn it is (or, given `unit`, just to
    * that unit): for each of its standing units in roster order, a move to each
-   * hex its AP can reach and an attack on each adjacent standing foe if it can
+   * hex its AP can reach and an attack on each standing foe in range if it can
    * afford one; then end_turn. Empty once the battle is over.
    */
   legalActions(unit?: UnitId): Action[] {
@@ -425,14 +429,23 @@ export class BattleEngine {
   }
 
   private canAttack(actor: UnitRecord, target: UnitRecord): boolean {
-    return target.side !== actor.side && target.hp > 0 && hexDistance(target.position, actor.position) === 1
+    return (
+      target.side !== actor.side &&
+      target.hp > 0 &&
+      hexDistance(target.position, actor.position) <= actor.stats.attackRange
+    )
   }
 
   /** Foes that would strike `mover` for stepping out of `hex`. */
   private reactorsAt(mover: UnitRecord, hex: Hex): UnitRecord[] {
     // Crit-focused builds may later slip through zones of control; that check belongs here.
     return this.units.filter(
-      (u) => u.side !== mover.side && u.hp > 0 && u.reactionReady && hexDistance(u.position, hex) === 1,
+      (u) =>
+        u.side !== mover.side &&
+        u.hp > 0 &&
+        u.reactionReady &&
+        u.stats.attackRange === 1 &&
+        hexDistance(u.position, hex) === 1,
     )
   }
 
@@ -504,7 +517,7 @@ export class BattleEngine {
   }
 
   private attack(actor: UnitRecord, target: UnitRecord, opportunity: boolean): BattleEvent[] {
-    actor.facing = hexDirection(actor.position, target.position)!
+    actor.facing = hexDirectionTowards(actor.position, target.position)!
     const flankers = flankersOf(this.units, actor, target)
     const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
     const arc = attackArc(target, actor.position)

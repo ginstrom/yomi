@@ -7,6 +7,7 @@
 //
 // Usage: node scripts/simulate.ts [--battles 1000] [--out logs/battles.jsonl] [--seed 1] [--max-rounds 200]
 //                                 [--player-policy aggressive] [--enemy-policy aggressive]
+//                                 [--player-weapon iron_sword]
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { createWarrior, deriveCombatStats } from '../src/character/character.ts'
@@ -14,8 +15,7 @@ import { mulberry32, randomSeed } from '../src/combat/rng.ts'
 import { BattleEngine, type BattleEvent, type Side, type UnitId } from '../src/engine/battleEngine.ts'
 import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.ts'
 import { goblinRaid } from '../src/game/encounters.ts'
-
-const WARRIOR_STATS = deriveCombatStats(createWarrior())
+import { WEAPONS, type Item } from '../src/inventory/inventory.ts'
 
 interface CliArgs {
   battles: number
@@ -23,6 +23,8 @@ interface CliArgs {
   seed: number | null
   maxRounds: number
   policies: Record<Side, PolicyName>
+  /** The weapon the hero fights with; null leaves the starting gear as it is. */
+  playerWeapon: Item | null
 }
 
 function positiveInt(flag: string, raw: string): number {
@@ -36,6 +38,12 @@ function policyName(flag: string, raw: string): PolicyName {
   return raw
 }
 
+function weapon(flag: string, raw: string): Item {
+  const item = WEAPONS.find((w) => w.id === raw)
+  if (!item) throw new Error(`${flag} must be one of ${WEAPONS.map((w) => w.id).join(', ')}, got "${raw}"`)
+  return item
+}
+
 function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = {
     battles: 1000,
@@ -43,6 +51,7 @@ function parseArgs(argv: string[]): CliArgs {
     seed: null,
     maxRounds: 200,
     policies: { player: 'aggressive', enemy: 'aggressive' },
+    playerWeapon: null,
   }
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i]
@@ -71,6 +80,9 @@ function parseArgs(argv: string[]): CliArgs {
       case '--enemy-policy':
         args.policies.enemy = policyName(flag, value())
         break
+      case '--player-weapon':
+        args.playerWeapon = weapon(flag, value())
+        break
       default:
         throw new Error(`Unknown argument: ${flag}`)
     }
@@ -81,9 +93,11 @@ function parseArgs(argv: string[]): CliArgs {
 export type LoggedEvent = BattleEvent & { battleId: number }
 
 function runBattle(battleId: number, seed: number, args: CliArgs): LoggedEvent[] {
-  const engine = new BattleEngine(goblinRaid(WARRIOR_STATS).setup, {
+  const hero = createWarrior()
+  if (args.playerWeapon) hero.equipment.mainHand = args.playerWeapon
+  const engine = new BattleEngine(goblinRaid(deriveCombatStats(hero)).setup, {
     seed,
-    meta: { source: 'simulate', policies: args.policies },
+    meta: { source: 'simulate', policies: args.policies, playerWeapon: hero.equipment.mainHand?.id },
   })
   // Policies get their own stream so swapping one doesn't change the dice.
   const policyRng = mulberry32(seed ^ 0x9e3779b9)

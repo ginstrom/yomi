@@ -17,6 +17,11 @@ Infinity Engine CRPGs (Baldur's Gate 1 and 2). No third-party art is included.
 | `goblin.png` | `art/units/goblin.sprite.toml` | `BattleScene` |
 | `kobold.png` | `art/units/kobold.sprite.toml` | `BattleScene` |
 | `icon_sword.png` | `art/icons/icon_sword.sprite.toml` | `InventoryScene` |
+| `icon_dagger.png` | `art/icons/icon_dagger.sprite.toml` | `InventoryScene` |
+| `icon_shortsword.png` | `art/icons/icon_shortsword.sprite.toml` | `InventoryScene` |
+| `icon_greatsword.png` | `art/icons/icon_greatsword.sprite.toml` | `InventoryScene` |
+| `icon_axe.png` | `art/icons/icon_axe.sprite.toml` | `InventoryScene` |
+| `icon_bow.png` | `art/icons/icon_bow.sprite.toml` | `InventoryScene` |
 | `icon_shield.png` | `art/icons/icon_shield.sprite.toml` | `InventoryScene` |
 | `icon_armor.png` | `art/icons/icon_armor.sprite.toml` | `InventoryScene` |
 | `tile_light.png` | `art/tiles/tile_light.sprite.toml` | not loaded yet |

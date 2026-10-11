@@ -29,6 +29,7 @@ const WARRIOR_STATS: CombatantStats = {
   attackBonus: 4,
   damage: { count: 1, sides: 8, bonus: 2 },
   attackApCost: 5,
+  attackRange: 1,
   actionPoints: 8,
 }
 
@@ -412,6 +413,69 @@ describe('BattleEngine zones of control', () => {
   })
 })
 
+describe('BattleEngine ranged attacks', () => {
+  const ARCHER_STATS: CombatantStats = { ...WARRIOR_STATS, name: 'Archer', attackRange: 3 }
+  const ARCHER: UnitSetup = { id: 'archer', side: 'player', stats: ARCHER_STATS, position: hex(1, 1) }
+  const SHOOT_GOBLIN: Action = { type: 'attack', unit: 'archer', target: 'goblin' }
+
+  it('lets a unit attack any standing foe within its range, and none beyond it', () => {
+    const engine = new BattleEngine(
+      setup([ARCHER, { ...GOBLIN, position: hex(4, 1) }, { ...GOBLIN2, position: hex(5, 1) }]),
+    )
+    expect(nonMoves(engine)).toEqual([SHOOT_GOBLIN, END_TURN])
+    expect(engine.previewAttack('archer', 'goblin')).not.toBeNull()
+    expect(engine.previewAttack('archer', 'goblin2')).toBeNull()
+    expect(() => engine.step({ type: 'attack', unit: 'archer', target: 'goblin2' })).toThrow()
+  })
+
+  it('still reaches a foe standing next to it', () => {
+    const engine = new BattleEngine(setup([ARCHER, GOBLIN]))
+    expect(nonMoves(engine)).toEqual([SHOOT_GOBLIN, END_TURN])
+  })
+
+  it('turns the shooter towards a distant target and spends the attack cost', () => {
+    const engine = new BattleEngine(setup([{ ...ARCHER, facing: WEST }, { ...GOBLIN, position: hex(4, 0) }]), {
+      rng: sequence([FUMBLE]),
+    })
+    const [attack] = engine.step(SHOOT_GOBLIN) as [AttackEvent]
+    expect(attack.attackerFacing).toBe(EAST)
+    expect(unitOf(engine, 'archer').facing).toBe(EAST)
+    expect(unitOf(engine, 'archer').ap).toBe(ARCHER_STATS.actionPoints - ARCHER_STATS.attackApCost)
+  })
+
+  it('gains the rear bonus for a shot into a foe’s back', () => {
+    const engine = new BattleEngine(setup([ARCHER, { ...GOBLIN, position: hex(4, 1), facing: EAST }]), {
+      rng: sequence([ROLL_7]),
+    })
+    expect(engine.previewAttack('archer', 'goblin')).toMatchObject({ arc: 'rear', arcBonus: ARC_BONUS.rear })
+    const [attack] = engine.step(SHOOT_GOBLIN) as [AttackEvent]
+    expect(attack).toMatchObject({ arc: 'rear', totalToHit: 7 + ARCHER_STATS.attackBonus + ARC_BONUS.rear, hit: true })
+  })
+
+  it('counts allies beside the target as flankers for a shot', () => {
+    const engine = new BattleEngine(setup([ARCHER, { ...CLERIC, position: hex(3, 1) }, { ...GOBLIN, position: hex(4, 1) }]))
+    expect(engine.previewAttack('archer', 'goblin')).toMatchObject({
+      flankers: ['cleric'],
+      flankBonus: FLANK_BONUS_PER_ALLY,
+    })
+  })
+
+  it('holds no zone of control with a ranged weapon', () => {
+    // The goblin walks away from the archer beside it and is not struck.
+    const engine = new BattleEngine(setup([ARCHER, GOBLIN]))
+    engine.step(END_TURN)
+    expect(engine.previewMove('goblin', hex(4, 1))!.provokes).toEqual([])
+    const events = engine.step(move('goblin', hex(4, 1)))
+    expect(events.map((e) => e.type)).toEqual(['move'])
+  })
+
+  it('is still struck for walking out of a melee foe’s zone', () => {
+    const engine = new BattleEngine(setup([ARCHER, GOBLIN]), { rng: sequence([FUMBLE]) })
+    const events = engine.step(move('archer', hex(0, 1)))
+    expect(events.map((e) => e.type)).toEqual(['move', 'attack', 'move'])
+  })
+})
+
 describe('BattleEngine flanking', () => {
   // The goblin at (2,1) has the warrior to its west; (2,2) and (3,0) also touch it.
   const flanker = (id: string, position = hex(2, 2), hp?: number): UnitSetup => ({
@@ -506,7 +570,13 @@ describe('BattleEngine facing', () => {
     const arcs = HEX_DIRECTIONS.map((d) => attackArc(defender, hexAdd(defender.position, d)))
     expect(arcs).toEqual(['front', 'front', 'side', 'rear', 'side', 'front'])
     expect(attackArc({ ...defender, facing: WEST }, hex(3, 1))).toBe('rear')
-    expect(() => attackArc(defender, hex(4, 1))).toThrow()
+    expect(() => attackArc(defender, defender.position)).toThrow()
+  })
+
+  it('judges a shot from range by the side it comes in over', () => {
+    const defender = { position: hex(2, 1), facing: EAST }
+    const arcs = HEX_DIRECTIONS.map((d) => attackArc(defender, hex(2 + 3 * d.q, 1 + 3 * d.r)))
+    expect(arcs).toEqual(['front', 'front', 'side', 'rear', 'side', 'front'])
   })
 
   it('turns a mover towards its last step', () => {

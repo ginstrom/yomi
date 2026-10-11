@@ -26,6 +26,23 @@ const ATTACK_E1: Action = { type: 'attack', unit: 'p1', target: 'e1' }
 const END_TURN: Action = { type: 'end_turn' }
 
 describe('policies', () => {
+  it('aggressive stops an archer as soon as its target is in range, then shoots', () => {
+    const archer = { ...GOBLIN_STATS, attackApCost: 4, attackRange: 3 }
+    const engine = new BattleEngine({
+      board: { cols: 8, rows: 3 },
+      units: [
+        { id: 'p1', side: 'player', stats: archer, position: hex(0, 1) },
+        { id: 'e1', side: 'enemy', stats: GOBLIN_STATS, position: hex(5, 1) },
+      ],
+    })
+    expect(choose(engine)).toEqual({ type: 'move', unit: 'p1', to: hex(2, 1) })
+    engine.step(choose(engine))
+    expect(choose(engine)).toEqual(ATTACK_E1)
+    engine.step(ATTACK_E1)
+    // 2 AP left and the foe in range: it holds its ground rather than walking up.
+    expect(choose(engine)).toEqual(END_TURN)
+  })
+
   it('aggressive attacks whenever attacking is legal, and otherwise ends the turn', () => {
     expect(POLICIES.aggressive(context([END_TURN, ATTACK_E1]))).toEqual(ATTACK_E1)
     expect(POLICIES.aggressive(context([END_TURN]))).toEqual(END_TURN)

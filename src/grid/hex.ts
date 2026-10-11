@@ -79,6 +79,15 @@ export function hexLine(a: Hex, b: Hex): Hex[] {
   return line
 }
 
+/**
+ * The index into HEX_DIRECTIONS of the first step along the straight line from
+ * `from` to `to`: the way to face a hex however far off it is. Null if they are
+ * the same hex.
+ */
+export function hexDirectionTowards(from: Hex, to: Hex): number | null {
+  return hexEquals(from, to) ? null : hexDirection(from, hexLine(from, to)[1])
+}
+
 /** Board size in offset columns and rows; plain data so it can sit in a battle log. */
 export interface BoardSize {
   cols: number

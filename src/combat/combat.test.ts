@@ -8,6 +8,7 @@ const WARRIOR_STATS: CombatantStats = {
   attackBonus: 4,
   damage: { count: 1, sides: 8, bonus: 2 },
   attackApCost: 5,
+  attackRange: 1,
   actionPoints: 8,
 }
 

@@ -9,6 +9,7 @@ import {
   hexDistance,
   hexEquals,
   hexKey,
+  hexDirectionTowards,
   hexLine,
   hexNeighbors,
   hexToOffset,
@@ -53,6 +54,17 @@ describe('hex geometry', () => {
     expect(line).toHaveLength(hexDistance(hex(0, 0), hex(3, -2)) + 1)
     for (let i = 1; i < line.length; i++) expect(hexDistance(line[i - 1], line[i])).toBe(1)
     expect(hexLine(hex(1, 1), hex(1, 1))).toEqual([hex(1, 1)])
+  })
+
+  it('finds the direction towards a hex at any distance', () => {
+    const from = hex(2, 2)
+    HEX_DIRECTIONS.forEach((d, i) => {
+      expect(hexDirectionTowards(from, hexAdd(from, d))).toBe(i)
+      expect(hexDirectionTowards(from, hex(from.q + 3 * d.q, from.r + 3 * d.r))).toBe(i)
+    })
+    // Mostly east, a little north.
+    expect(hexDirectionTowards(from, hex(6, 1))).toBe(0)
+    expect(hexDirectionTowards(from, from)).toBeNull()
   })
 
   it('keys and compares hexes by value', () => {

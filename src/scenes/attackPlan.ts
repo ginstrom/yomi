@@ -22,10 +22,10 @@ export interface AttackPlan {
 
 /**
  * Plans `unit` going for `target`. If it can strike now, it does. Otherwise, if
- * a hex beside the foe leaves AP for an attack, it moves there and strikes:
+ * a hex within its attack range of the foe leaves AP for an attack, it moves there and strikes:
  * provoking the fewest free attacks, then hitting the weakest arc, then
- * walking the least. Failing that it closes in without attacking: to the
- * nearest hex beside the foe, or as near as it can get.
+ * walking the least. Failing that it closes in without attacking, as near
+ * as it can get.
  */
 export function planAttack(engine: BattleEngine, unit: UnitId, target: UnitId): AttackPlan {
   const state = engine.getState()
@@ -33,7 +33,7 @@ export function planAttack(engine: BattleEngine, unit: UnitId, target: UnitId): 
   const foe = state.units.find((u) => u.id === target)
   if (!actor || !foe || foe.hp <= 0 || foe.side === actor.side) return { move: null, attack: false }
   if (engine.previewAttack(unit, target)) return { move: null, attack: true }
-  if (hexDistance(actor.position, foe.position) === 1) return { move: null, attack: false }
+  if (hexDistance(actor.position, foe.position) <= actor.attackRange) return { move: null, attack: false }
 
   const moves = engine
     .legalActions(unit)
@@ -54,7 +54,9 @@ export function planAttack(engine: BattleEngine, unit: UnitId, target: UnitId): 
   }
 
   const strikes = moves.filter(
-    (m) => hexDistance(m.action.to, foe.position) === 1 && m.preview.apCost + actor.attackApCost <= actor.ap,
+    (m) =>
+      hexDistance(m.action.to, foe.position) <= actor.attackRange &&
+      m.preview.apCost + actor.attackApCost <= actor.ap,
   )
   if (strikes.length > 0) {
     const move = pick(strikes, (m) => [

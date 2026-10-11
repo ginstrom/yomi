@@ -12,6 +12,8 @@ export interface CombatantStats {
   damage: DamageRoll
   /** Action points one attack costs; set by the weapon. */
   attackApCost: number
+  /** How many hexes away the unit can strike: 1 for a melee weapon, more for a ranged one. */
+  attackRange: number
   /** Action points the unit gets at the start of each of its side's turns. */
   actionPoints: number
 }
@@ -81,6 +83,7 @@ export const GOBLIN_STATS: CombatantStats = {
   attackBonus: 3,
   damage: { count: 1, sides: 6, bonus: 1 },
   attackApCost: 5,
+  attackRange: 1,
   actionPoints: 8,
 }
 
@@ -92,5 +95,6 @@ export const KOBOLD_STATS: CombatantStats = {
   attackBonus: 2,
   damage: { count: 1, sides: 4, bonus: 1 },
   attackApCost: 5,
+  attackRange: 1,
   actionPoints: 8,
 }

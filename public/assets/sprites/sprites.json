@@ -59,6 +59,126 @@
       20
     ]
   },
+  "icon_axe": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bounds": [
+      1,
+      0,
+      18,
+      19
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_axe.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          1,
+          0,
+          18,
+          19
+        ],
+        "file": "icon_axe.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_bow": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bounds": [
+      1,
+      0,
+      19,
+      20
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_bow.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          1,
+          0,
+          19,
+          20
+        ],
+        "file": "icon_bow.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_dagger": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bounds": [
+      4,
+      4,
+      11,
+      10
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_dagger.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          4,
+          4,
+          11,
+          10
+        ],
+        "file": "icon_dagger.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_greatsword": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bounds": [
+      1,
+      0,
+      19,
+      19
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_greatsword.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          1,
+          0,
+          19,
+          19
+        ],
+        "file": "icon_greatsword.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
   "icon_shield": {
     "anchor": [
       10,
@@ -82,6 +202,36 @@
           20
         ],
         "file": "icon_shield.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_shortsword": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bounds": [
+      3,
+      2,
+      14,
+      13
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_shortsword.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          2,
+          14,
+          13
+        ],
+        "file": "icon_shortsword.png"
       }
     },
     "size": [

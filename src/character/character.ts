@@ -4,6 +4,7 @@ import {
   IRON_SWORD,
   OAK_SHIELD,
   STEEL_ARMOR,
+  WEAPONS,
   type Equipment,
   type Item,
 } from '../inventory/inventory.ts'
@@ -32,21 +33,27 @@ export interface Character {
 const UNARMORED_AC = 10
 const UNARMED_DAMAGE: DamageRoll = { count: 1, sides: 2, bonus: 0 }
 const UNARMED_ATTACK_AP_COST = 3
+const MELEE_RANGE = 1
 
 export function deriveCombatStats(character: Character): CombatantStats {
-  const items = Object.values(character.equipment).filter((item): item is Item => item !== undefined)
+  // A two-handed weapon leaves no hand for a shield, whatever the off hand holds.
+  const { offHand, ...rest } = character.equipment
+  const worn = character.equipment.mainHand?.stats?.twoHanded ? rest : { ...rest, offHand }
+  const items = Object.values(worn).filter((item): item is Item => item !== undefined)
 
   let baseAc = UNARMORED_AC
   let acBonus = 0
   let attackBonus = character.base.attackBonus
   let damage = UNARMED_DAMAGE
   let attackApCost = UNARMED_ATTACK_AP_COST
+  let attackRange = MELEE_RANGE
 
   for (const { stats } of items) {
     if (!stats) continue
     if (stats.baseAc !== undefined) baseAc = Math.max(baseAc, stats.baseAc)
     if (stats.damage) damage = stats.damage
     if (stats.attackApCost !== undefined) attackApCost = stats.attackApCost
+    if (stats.attackRange !== undefined) attackRange = stats.attackRange
     acBonus += stats.acBonus ?? 0
     attackBonus += stats.attackBonus ?? 0
   }
@@ -58,9 +65,13 @@ export function deriveCombatStats(character: Character): CombatantStats {
     attackBonus,
     damage,
     attackApCost,
+    attackRange,
     actionPoints: character.base.actionPoints,
   }
 }
+
+/** The weapons the warrior carries but does not start with in hand. */
+const SPARE_WEAPONS = WEAPONS.filter((weapon) => weapon !== IRON_SWORD)
 
 export function createWarrior(): Character {
   const base: BaseStats = { maxHp: 20, attackBonus: 4, actionPoints: 8 }
@@ -70,6 +81,6 @@ export function createWarrior(): Character {
     base,
     hp: base.maxHp,
     equipment: { armor: STEEL_ARMOR, mainHand: IRON_SWORD, offHand: OAK_SHIELD },
-    backpack: new Array<Item | null>(BACKPACK_SIZE).fill(null),
+    backpack: Array.from({ length: BACKPACK_SIZE }, (_, i) => SPARE_WEAPONS[i] ?? null),
   }
 }

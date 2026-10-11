@@ -30,11 +30,11 @@ const END_TURN: Action = { type: 'end_turn' }
 
 /**
  * Takes each unit in roster order and gives it the first useful thing to do;
- * ends the turn when no unit has one. A unit attacks the adjacent foe it has
+ * ends the turn when no unit has one. A unit attacks the foe in range it has
  * the biggest to-hit bonus against (flanking, side or rear) if it can afford
- * to; otherwise it closes on the nearest foe,
- * preferring a hex next to one with AP left to strike, then the smallest gap,
- * then the cheapest move.
+ * to; otherwise, if no foe is in range, it closes on the nearest one,
+ * preferring the cheapest move that leaves AP to strike from where it ends,
+ * then the smallest gap, then the cheapest move.
  */
 const aggressive: Policy = ({ state, legal }) => {
   for (const self of state.units) {
@@ -69,6 +69,7 @@ function closingMove(state: BattleState, self: UnitSnapshot, own: readonly Actio
   if (foes.length === 0) return null
   const gap = (h: Hex) => Math.min(...foes.map((f) => hexDistance(h, f.position)))
   const currentGap = gap(self.position)
+  if (currentGap <= self.attackRange) return null
 
   let best: Action | null = null
   let bestScore: number[] = []
@@ -78,8 +79,9 @@ function closingMove(state: BattleState, self: UnitSnapshot, own: readonly Actio
     if (g >= currentGap) continue
     // A lower bound: the real path may detour around units.
     const cost = hexDistance(self.position, action.to) * MOVE_AP_COST_PER_HEX
-    const canStrike = g === 1 && self.ap - cost >= self.attackApCost
-    const score = [canStrike ? 0 : 1, g, cost]
+    const canStrike = g <= self.attackRange && self.ap - cost >= self.attackApCost
+    // An archer stops as soon as it is in range rather than walking up to its target.
+    const score = canStrike ? [0, cost, g] : [1, g, cost]
     if (!best || lexLess(score, bestScore)) {
       best = action
       bestScore = score

@@ -27,7 +27,7 @@ There is no linter; `tsc` is the lint step (`noUnusedLocals`, `noUnusedParameter
 
 The `Makefile` runs the same things inside a podman container (`make run`, `make test`, `make simulate ARGS="..."`, `make shell`), with `node_modules` in a named volume that reinstalls itself when `package-lock.json` changes. `vite.config.ts` polls for file changes because of that bind mount.
 
-Simulator flags: `--battles`, `--seed`, `--out` (default `logs/battles.jsonl`; `logs/` is gitignored), `--max-rounds`, `--player-policy`, `--enemy-policy` (`aggressive` or `random`). It writes every event as JSONL and prints a summary of win rate, rounds, hit rates and free attacks.
+Simulator flags: `--battles`, `--seed`, `--out` (default `logs/battles.jsonl`; `logs/` is gitignored), `--max-rounds`, `--player-policy`, `--enemy-policy` (`aggressive` or `random`), `--player-weapon` (an item id from `WEAPONS` in `src/inventory/inventory.ts`, e.g. `yew_bow`; the way to compare weapon balance). It writes every event as JSONL and prints a summary of win rate, rounds, hit rates and free attacks.
 
 ## Committing
 
@@ -51,7 +51,7 @@ The central rule: **game rules are Phaser-free and live outside the scenes.** Th
 - `src/game/encounters.ts`: battle setups, shared by the game and the simulator so balance runs fight the real encounter. It also maps unit ids to a `UnitKind`, which is how scenes pick a sprite; the engine knows only stats.
 - `src/game/gameState.ts`: state that outlives a scene. It is created by the menu and passed through scene data, never held in a module global.
 
-Rules of the battle system worth knowing before touching the engine: a side's units act in any order and the turn ends manually; units get 8 AP a turn by default, a move costs 1 AP per hex (`MOVE_AP_COST_PER_HEX`) and an attack costs the unit's `attackApCost`, which comes from its weapon (`ItemStats.attackApCost`; the longsword's is 5); leaving a hex adjacent to a ready foe provokes one free attack (one per unit per enemy turn, decided in `reactorsAt`); to-hit bonuses stack from flanking (`FLANK_BONUS_PER_ALLY`) and from the arc struck (`ARC_BONUS`); facing is automatic, set by moving and attacking.
+Rules of the battle system worth knowing before touching the engine: a side's units act in any order and the turn ends manually; units get 8 AP a turn by default, a move costs 1 AP per hex (`MOVE_AP_COST_PER_HEX`) and an attack costs the unit's `attackApCost` and reaches foes within its `attackRange`, both of which come from its weapon (`ItemStats`; the longsword costs 5 and reaches 1 hex, the bow reaches 5); nothing blocks a shot, as there is no line of sight yet; a two-handed weapon cancels the off-hand item's stats (`deriveCombatStats`); leaving a hex adjacent to a ready foe with a melee weapon provokes one free attack (one per unit per enemy turn, decided in `reactorsAt`; ranged weapons hold no zone of control); to-hit bonuses stack from flanking (`FLANK_BONUS_PER_ALLY`) and from the arc struck (`ARC_BONUS`, judged at range by the neighbouring hex the shot comes in over); facing is automatic, set by moving and attacking.
 
 ### Scene layer (`src/scenes/`)
 
