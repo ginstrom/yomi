@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GOBLIN_STATS, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, type CombatantStats } from './combat.ts'
+import { GOBLIN_STATS, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, type CombatantStats } from './combat.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -90,5 +90,13 @@ describe('formatDamage', () => {
     expect(formatDamage({ count: 1, sides: 8, bonus: 2 })).toBe('1d8+2')
     expect(formatDamage({ count: 2, sides: 6, bonus: 0 })).toBe('2d6')
     expect(formatDamage({ count: 1, sides: 4, bonus: -1 })).toBe('1d4-1')
+  })
+})
+
+describe('sameCombatStats', () => {
+  it('compares every stat, damage dice included', () => {
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, damage: { ...WARRIOR_STATS.damage } })).toBe(true)
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, attackRange: 5 })).toBe(false)
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, damage: { count: 1, sides: 8, bonus: 0 } })).toBe(false)
   })
 })

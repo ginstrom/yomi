@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { deriveCombatStats } from '../character/character.ts'
+import { sameCombatStats } from '../combat/combat.ts'
 import {
   BattleEngine,
   formatEvent,
@@ -251,6 +252,7 @@ export class BattleScene extends Phaser.Scene {
     this.events.on(Phaser.Scenes.Events.PAUSE, () => this.setHovered(null))
     // The menu pauses the theme; the options there may have changed its volume.
     this.events.on(Phaser.Scenes.Events.RESUME, () => this.resumeMusic())
+    this.events.on(Phaser.Scenes.Events.RESUME, () => this.commitGearChange())
 
     this.bannerText = this.add
       .text(0, 0, '', {
@@ -294,15 +296,27 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private openInventory(): void {
-    if (this.scene.isPaused()) return
-    this.scene.launch('Inventory', { game: this.gameState, tab: 'inventory' })
-    this.scene.pause()
+    this.openPanel('inventory')
   }
 
   private openCharacter(): void {
+    this.openPanel('character')
+  }
+
+  /** Opens the character panel; gear can be changed there only while the player has control. */
+  private openPanel(tab: 'inventory' | 'character'): void {
     if (this.scene.isPaused()) return
-    this.scene.launch('Inventory', { game: this.gameState, tab: 'character' })
+    const gearApCost = this.playerControl ? this.engine.equipCost(HERO_ID) : null
+    this.scene.launch('Inventory', { game: this.gameState, tab, gearApCost })
     this.scene.pause()
+  }
+
+  /** Tells the engine about gear changed in the inventory, which edits the character directly. */
+  private commitGearChange(): void {
+    if (!this.playerControl) return
+    const stats = deriveCombatStats(this.gameState.player)
+    const hero = this.engine.getState().units.find((u) => u.id === HERO_ID)!
+    if (!sameCombatStats(stats, hero)) this.playerAct({ type: 'equip', unit: HERO_ID, stats })
   }
 
   private openMenu(): void {

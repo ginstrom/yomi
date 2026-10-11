@@ -4,6 +4,7 @@ import { HEX_DIRECTIONS, hex, hexAdd, hexKey, type Hex } from '../grid/hex.ts'
 import {
   ARC_BONUS,
   BattleEngine,
+  EQUIP_AP_COST,
   FLANK_BONUS_PER_ALLY,
   LOG_SCHEMA_VERSION,
   attackArc,
@@ -719,5 +720,86 @@ describe('formatEvent', () => {
   it('describes an abandoned battle', () => {
     const [end] = new BattleEngine(DUEL).abandon()
     expect(formatEvent(end, NAMES)).toBe('The battle is abandoned.')
+  })
+})
+
+describe('BattleEngine gear changes', () => {
+  const BOW_STATS: CombatantStats = { ...WARRIOR_STATS, damage: { count: 1, sides: 8, bonus: 0 }, attackRange: 5 }
+  const DAGGER_STATS: CombatantStats = { ...WARRIOR_STATS, damage: { count: 1, sides: 4, bonus: 0 }, attackApCost: 3 }
+  const equip = (stats: CombatantStats): Action => ({ type: 'equip', unit: 'warrior', stats })
+  const warriorOf = (engine: BattleEngine) => engine.getState().units.find((u) => u.id === 'warrior')!
+  // The goblin stands four hexes east of the warrior: out of a sword's reach, inside a bow's.
+  const APART = setup([WARRIOR, { ...GOBLIN, position: hex(5, 1) }])
+
+  it('costs an action point and swaps the stats the unit fights with', () => {
+    const engine = new BattleEngine(APART, { rng: () => FUMBLE })
+    expect(engine.equipCost('warrior')).toBe(EQUIP_AP_COST)
+    expect(engine.legalActions('warrior')).not.toContainEqual(ATTACK_GOBLIN)
+
+    const events = engine.step(equip(BOW_STATS))
+
+    expect(events).toMatchObject([{ type: 'equip', unit: 'warrior', apCost: EQUIP_AP_COST, stats: BOW_STATS }])
+    expect(warriorOf(engine)).toMatchObject({ ap: WARRIOR_STATS.actionPoints - EQUIP_AP_COST, attackRange: 5 })
+    expect(engine.legalActions('warrior')).toContainEqual(ATTACK_GOBLIN)
+    expect(formatEvent(events[0], NAMES)).toBe('Warrior changes gear.')
+  })
+
+  it('charges once for any number of changes until the unit acts', () => {
+    const engine = new BattleEngine(APART, { rng: () => FUMBLE })
+    engine.step(equip(BOW_STATS))
+    expect(engine.equipCost('warrior')).toBe(0)
+    expect(engine.step(equip(DAGGER_STATS))).toMatchObject([{ type: 'equip', apCost: 0 }])
+    expect(warriorOf(engine).ap).toBe(WARRIOR_STATS.actionPoints - EQUIP_AP_COST)
+
+    engine.step({ type: 'move', unit: 'warrior', to: hex(2, 1) })
+    expect(engine.equipCost('warrior')).toBe(EQUIP_AP_COST)
+    expect(engine.step(equip(BOW_STATS))).toMatchObject([{ type: 'equip', apCost: EQUIP_AP_COST }])
+  })
+
+  it('charges again after an attack', () => {
+    const engine = new BattleEngine(APART, { rng: () => FUMBLE })
+    engine.step(equip(BOW_STATS))
+    engine.step(ATTACK_GOBLIN)
+    expect(engine.equipCost('warrior')).toBe(EQUIP_AP_COST)
+  })
+
+  it('charges again on the next turn', () => {
+    const engine = new BattleEngine(APART, { rng: () => FUMBLE })
+    engine.step(equip(BOW_STATS))
+    engine.step(END_TURN)
+    expect(engine.equipCost('warrior')).toBeNull()
+    engine.step(END_TURN)
+    expect(engine.equipCost('warrior')).toBe(EQUIP_AP_COST)
+  })
+
+  it('lets a unit that spent its last point on a change go on changing, but not start one without a point', () => {
+    const engine = new BattleEngine(APART, { rng: () => FUMBLE })
+    engine.step({ type: 'move', unit: 'warrior', to: hex(4, 1) })
+    engine.step({ type: 'move', unit: 'warrior', to: hex(0, 1) })
+    expect(warriorOf(engine).ap).toBe(1)
+    engine.step(equip(BOW_STATS))
+    expect(warriorOf(engine).ap).toBe(0)
+    expect(engine.step(equip(DAGGER_STATS))).toMatchObject([{ type: 'equip', apCost: 0 }])
+
+    const spent = new BattleEngine(APART, { rng: () => FUMBLE })
+    spent.step({ type: 'move', unit: 'warrior', to: hex(4, 1) })
+    spent.step({ type: 'move', unit: 'warrior', to: hex(0, 1) })
+    spent.step({ type: 'move', unit: 'warrior', to: hex(1, 1) })
+    expect(spent.equipCost('warrior')).toBeNull()
+    expect(() => spent.step(equip(BOW_STATS))).toThrow('cannot change gear')
+  })
+
+  it('refuses a change out of turn', () => {
+    const engine = new BattleEngine(APART, { rng: () => FUMBLE })
+    expect(engine.equipCost('goblin')).toBeNull()
+    expect(() => engine.step({ type: 'equip', unit: 'goblin', stats: BOW_STATS })).toThrow('cannot change gear')
+  })
+
+  it('drops the zone of control of a unit that takes up a bow', () => {
+    const engine = new BattleEngine(DUEL, { rng: () => FUMBLE })
+    engine.step(equip(BOW_STATS))
+    engine.step(END_TURN)
+    const events = engine.step({ type: 'move', unit: 'goblin', to: hex(4, 1) })
+    expect(events.map((e) => e.type)).toEqual(['move'])
   })
 })

@@ -18,6 +18,22 @@ export interface CombatantStats {
   actionPoints: number
 }
 
+/** Whether two stat blocks are the same in every respect. */
+export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
+  return (
+    a.name === b.name &&
+    a.maxHp === b.maxHp &&
+    a.ac === b.ac &&
+    a.attackBonus === b.attackBonus &&
+    a.damage.count === b.damage.count &&
+    a.damage.sides === b.damage.sides &&
+    a.damage.bonus === b.damage.bonus &&
+    a.attackApCost === b.attackApCost &&
+    a.attackRange === b.attackRange &&
+    a.actionPoints === b.actionPoints
+  )
+}
+
 export interface AttackResult {
   attackRoll: number
   totalToHit: number

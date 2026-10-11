@@ -1,5 +1,10 @@
 import Phaser from 'phaser'
-import { deriveCombatStats, type Character } from '../character/character.ts'
+import {
+  deriveCombatStats,
+  equipFromBackpack,
+  unequipToBackpack,
+  type Character,
+} from '../character/character.ts'
 import { formatDamage, type CombatantStats } from '../combat/combat.ts'
 import type { GameState } from '../game/gameState.ts'
 import { EQUIPMENT_SLOT_LABELS, describeItemStats, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
@@ -11,6 +16,12 @@ type PanelTab = 'character' | 'inventory'
 interface InventoryData {
   game: GameState
   tab?: PanelTab
+  /**
+   * What changing gear costs in action points, charged once by the battle when
+   * the panel closes however many items were moved; 0 if already paid for.
+   * Null or absent makes the panel view-only.
+   */
+  gearApCost?: number | null
 }
 
 const PANEL_W = 720
@@ -31,6 +42,7 @@ export class InventoryScene extends Phaser.Scene {
   private activeTab: PanelTab = 'inventory'
   private character!: Character
   private stats!: CombatantStats
+  private gearApCost: number | null = null
   private dimBg!: Phaser.GameObjects.Rectangle
   private panel!: Phaser.GameObjects.Container
   private characterContent!: Phaser.GameObjects.Container
@@ -50,7 +62,7 @@ export class InventoryScene extends Phaser.Scene {
 
   create(data: InventoryData): void {
     this.character = data.game.player
-    this.stats = deriveCombatStats(this.character)
+    this.gearApCost = data.gearApCost ?? null
 
     this.dimBg = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.6).setOrigin(0.5)
     this.panel = this.add.container(0, 0)
@@ -59,15 +71,9 @@ export class InventoryScene extends Phaser.Scene {
     this.buildTabs()
 
     this.characterContent = this.add.container(0, 0)
-    this.panel.add(this.characterContent)
-    this.buildCharacterTab()
-
     this.inventoryContent = this.add.container(0, 0)
-    this.panel.add(this.inventoryContent)
-    this.buildPaperdoll()
-    this.buildStats()
-    this.buildBackpack()
-    this.buildTooltip()
+    this.panel.add([this.characterContent, this.inventoryContent])
+    this.buildContent()
 
     this.showTab(data?.tab ?? 'inventory')
 
@@ -81,6 +87,19 @@ export class InventoryScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-I', () => this.onPressI())
     this.input.keyboard?.on('keydown-C', () => this.onPressC())
     this.input.keyboard?.on('keydown-ESC', () => this.close())
+  }
+
+  /** Draws both tabs from the character as it now stands; rerun after each change of gear. */
+  private buildContent(): void {
+    this.stats = deriveCombatStats(this.character)
+    this.characterContent.removeAll(true)
+    this.inventoryContent.removeAll(true)
+    this.buildCharacterTab()
+    this.buildPaperdoll()
+    this.buildStats()
+    this.buildGearHint()
+    this.buildBackpack()
+    this.buildTooltip()
   }
 
   // ---- build: frame & tabs -------------------------------------------------
@@ -229,7 +248,10 @@ export class InventoryScene extends Phaser.Scene {
     this.inventoryContent.add(bg)
 
     if (item) {
-      this.inventoryContent.add(this.add.image(x, y, ITEM_ICON_KEYS[item.icon]).setScale(ITEM_ICON_SCALE))
+      const icon = this.add.image(x, y, ITEM_ICON_KEYS[item.icon]).setScale(ITEM_ICON_SCALE)
+      // A two-handed weapon leaves the off hand's item idle (see deriveCombatStats).
+      if (slot === 'offHand' && this.character.equipment.mainHand?.stats?.twoHanded) icon.setAlpha(0.35)
+      this.inventoryContent.add(icon)
 
       bg.setInteractive({ useHandCursor: true })
       bg.on('pointerover', () => {
@@ -240,6 +262,7 @@ export class InventoryScene extends Phaser.Scene {
         bg.setStrokeStyle(2, 0x6b5a3a)
         this.hideTooltip()
       })
+      bg.on('pointerdown', () => this.changeGear(() => unequipToBackpack(this.character, slot)))
     } else {
       const label = this.add
         .text(x, y, EQUIPMENT_SLOT_LABELS[slot], {
@@ -270,6 +293,23 @@ export class InventoryScene extends Phaser.Scene {
     this.inventoryContent.add([nameText, classText, statsBody])
   }
 
+  private buildGearHint(): void {
+    const hint =
+      this.gearApCost === null
+        ? 'Gear can be changed only on your turn, with an action point to spare.'
+        : this.gearApCost === 0
+          ? 'Click an item to equip or stow it. Free until you next move or attack.'
+          : `Click an item to equip or stow it. Costs ${this.gearApCost} AP on closing, however many you change.`
+    this.inventoryContent.add(
+      this.add.text(STATS_X, 300, hint, {
+        fontFamily: 'monospace',
+        fontSize: '12px',
+        color: '#8a7a5a',
+        wordWrap: { width: PANEL_W - STATS_X - 20 },
+      }),
+    )
+  }
+
   private statLines(): string[] {
     return [
       `Hit Points:    ${this.character.hp} / ${this.stats.maxHp}`,
@@ -298,11 +338,11 @@ export class InventoryScene extends Phaser.Scene {
       const row = Math.floor(i / cols)
       const x = startX + col * (SLOT_SIZE + gap)
       const y = startY + row * (SLOT_SIZE + gap)
-      this.createBackpackSlot(x, y, item)
+      this.createBackpackSlot(x, y, item, i)
     })
   }
 
-  private createBackpackSlot(x: number, y: number, item: Item | null): void {
+  private createBackpackSlot(x: number, y: number, item: Item | null, index: number): void {
     const bg = this.add.rectangle(x, y, SLOT_SIZE, SLOT_SIZE, 0x1b1712, 0.9).setStrokeStyle(2, 0x4a3d28)
     this.inventoryContent.add(bg)
 
@@ -318,6 +358,7 @@ export class InventoryScene extends Phaser.Scene {
         bg.setStrokeStyle(2, 0x4a3d28)
         this.hideTooltip()
       })
+      bg.on('pointerdown', () => this.changeGear(() => equipFromBackpack(this.character, index)))
     }
   }
 
@@ -359,6 +400,14 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   // ---- actions -------------------------------------------------------------
+
+  /** Applies a change of gear, if the battle allows one now, and redraws the panel to match. */
+  private changeGear(change: () => boolean): void {
+    if (this.gearApCost === null || !change()) return
+    this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+    // Next tick: the redraw destroys the slot whose click handler this runs in.
+    this.time.delayedCall(0, () => this.buildContent())
+  }
 
   private onPressI(): void {
     if (this.activeTab === 'inventory') {

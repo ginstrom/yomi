@@ -6,6 +6,7 @@ import {
   STEEL_ARMOR,
   WEAPONS,
   type Equipment,
+  type EquipmentSlot,
   type Item,
 } from '../inventory/inventory.ts'
 
@@ -68,6 +69,31 @@ export function deriveCombatStats(character: Character): CombatantStats {
     attackRange,
     actionPoints: character.base.actionPoints,
   }
+}
+
+/**
+ * Equips the backpack item at `index` in the slot it belongs to; whatever was
+ * there takes its place in the backpack. Returns false if that space is empty.
+ */
+export function equipFromBackpack(character: Character, index: number): boolean {
+  const item = character.backpack[index]
+  if (!item) return false
+  character.backpack[index] = character.equipment[item.slot] ?? null
+  character.equipment[item.slot] = item
+  return true
+}
+
+/**
+ * Stows the item in `slot` in the first empty backpack space. Returns false
+ * if the slot is empty or the backpack is full.
+ */
+export function unequipToBackpack(character: Character, slot: EquipmentSlot): boolean {
+  const item = character.equipment[slot]
+  const space = character.backpack.indexOf(null)
+  if (!item || space === -1) return false
+  character.backpack[space] = item
+  delete character.equipment[slot]
+  return true
 }
 
 /** The weapons the warrior carries but does not start with in hand. */

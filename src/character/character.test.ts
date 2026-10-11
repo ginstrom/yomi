@@ -10,7 +10,7 @@ import {
   YEW_BOW,
   type Item,
 } from '../inventory/inventory.ts'
-import { createWarrior, deriveCombatStats } from './character.ts'
+import { createWarrior, deriveCombatStats, equipFromBackpack, unequipToBackpack } from './character.ts'
 
 describe('createWarrior', () => {
   it('starts at full HP with armor, sword and shield equipped and the other weapons in the backpack', () => {
@@ -85,5 +85,48 @@ describe('deriveCombatStats', () => {
     const ring: Item = { ...STEEL_ARMOR, id: 'ring', slot: 'ring1', stats: { attackBonus: 1, acBonus: 1 } }
     warrior.equipment.ring1 = ring
     expect(deriveCombatStats(warrior)).toMatchObject({ ac: 14, attackBonus: 5 })
+  })
+})
+
+describe('equipFromBackpack', () => {
+  it('swaps the backpack item with whatever its slot held', () => {
+    const warrior = createWarrior()
+    const index = warrior.backpack.indexOf(YEW_BOW)
+    expect(equipFromBackpack(warrior, index)).toBe(true)
+    expect(warrior.equipment.mainHand).toBe(YEW_BOW)
+    expect(warrior.backpack[index]).toBe(IRON_SWORD)
+    expect(deriveCombatStats(warrior)).toMatchObject({ attackRange: 5, ac: 13 })
+  })
+
+  it('leaves the backpack space empty when the slot was', () => {
+    const warrior = createWarrior()
+    delete warrior.equipment.mainHand
+    expect(equipFromBackpack(warrior, 0)).toBe(true)
+    expect(warrior.equipment.mainHand).toBe(IRON_DAGGER)
+    expect(warrior.backpack[0]).toBeNull()
+  })
+
+  it('does nothing for an empty space', () => {
+    const warrior = createWarrior()
+    expect(equipFromBackpack(warrior, BACKPACK_SIZE - 1)).toBe(false)
+    expect(warrior.equipment.mainHand).toBe(IRON_SWORD)
+  })
+})
+
+describe('unequipToBackpack', () => {
+  it('stows the item in the first empty space', () => {
+    const warrior = createWarrior()
+    const space = warrior.backpack.indexOf(null)
+    expect(unequipToBackpack(warrior, 'offHand')).toBe(true)
+    expect(warrior.equipment.offHand).toBeUndefined()
+    expect(warrior.backpack[space]).toBe(OAK_SHIELD)
+  })
+
+  it('does nothing for an empty slot or a full backpack', () => {
+    const warrior = createWarrior()
+    expect(unequipToBackpack(warrior, 'head')).toBe(false)
+    warrior.backpack.fill(IRON_DAGGER)
+    expect(unequipToBackpack(warrior, 'mainHand')).toBe(false)
+    expect(warrior.equipment.mainHand).toBe(IRON_SWORD)
   })
 })

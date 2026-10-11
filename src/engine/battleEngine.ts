@@ -14,7 +14,7 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 9
+export const LOG_SCHEMA_VERSION = 10
 
 /** To-hit bonus an attacker gains for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 2
@@ -35,14 +35,25 @@ export const DEFAULT_FACING: Readonly<Record<Side, number>> = { player: 0, enemy
 /** Action points each hex of a move costs. */
 export const MOVE_AP_COST_PER_HEX = 1
 
+/**
+ * Action points a change of gear costs. It is paid once: further changes are
+ * free until the unit moves or attacks, or its turn ends.
+ */
+export const EQUIP_AP_COST = 1
+
 export type Side = 'player' | 'enemy'
 export type Phase = Side | 'over'
 export type UnitId = string
 
-/** Moves and attacks name the acting unit; end_turn ends the whole side's turn. */
+/**
+ * Moves, attacks and gear changes name the acting unit; end_turn ends the
+ * whole side's turn. An equip action carries the stats the unit fights with
+ * from then on, since the engine knows stats and not the items behind them.
+ */
 export type Action =
   | { type: 'move'; unit: UnitId; to: Hex }
   | { type: 'attack'; unit: UnitId; target: UnitId }
+  | { type: 'equip'; unit: UnitId; stats: CombatantStats }
   | { type: 'end_turn' }
 
 /** A unit entering battle. Roster order is the order legal actions are listed in. */
@@ -171,6 +182,16 @@ export interface AttackEvent extends EventBase {
   defenderHpAfter: number
 }
 
+/** A unit changed its gear mid-battle, and so its stats. */
+export interface EquipEvent extends EventBase {
+  type: 'equip'
+  unit: UnitId
+  /** EQUIP_AP_COST, or 0 when the unit had already paid for a change and not acted since. */
+  apCost: number
+  /** The stats the unit fights with from here on. */
+  stats: CombatantStats
+}
+
 export interface UnitDownEvent extends EventBase {
   type: 'unit_down'
   unit: UnitId
@@ -188,7 +209,14 @@ export interface BattleEndEvent extends EventBase {
   reason: 'defeat' | 'abandoned'
 }
 
-export type BattleEvent = BattleStartEvent | MoveEvent | AttackEvent | UnitDownEvent | EndTurnEvent | BattleEndEvent
+export type BattleEvent =
+  | BattleStartEvent
+  | MoveEvent
+  | AttackEvent
+  | EquipEvent
+  | UnitDownEvent
+  | EndTurnEvent
+  | BattleEndEvent
 
 export interface BattleOptions {
   /** Seed for the built-in RNG; a random one is chosen (and logged) if omitted. */
@@ -207,6 +235,8 @@ interface UnitRecord {
   facing: number
   ap: number
   reactionReady: boolean
+  /** The unit has paid for a change of gear and not moved or attacked since. */
+  gearChangePaid: boolean
 }
 
 const other = (side: Side): Side => (side === 'player' ? 'enemy' : 'player')
@@ -254,7 +284,8 @@ export function attackArc(defender: Pick<UnitSnapshot, 'position' | 'facing'>, f
  * face the way they last stepped or struck. Every standing unit with a melee
  * weapon exerts a zone of control over its neighbouring hexes: a foe stepping
  * out of one provokes a free attack, at most one per unit per enemy turn.
- * A ranged weapon (`attackRange` above 1) holds no zone.
+ * A ranged weapon (`attackRange` above 1) holds no zone. A unit may change
+ * its gear on its own turn for EQUIP_AP_COST.
  *
  * The UI, scripted policies and AI agents all drive it through step(). Given
  * the seed in battle_start and the actions in the log, a battle replays exactly.
@@ -296,6 +327,7 @@ export class BattleEngine {
       facing: u.facing ?? DEFAULT_FACING[u.side],
       ap: 0,
       reactionReady: false,
+      gearChangePaid: false,
     }))
 
     let seed: number | null = null
@@ -337,7 +369,9 @@ export class BattleEngine {
    * Actions available to the side whose turn it is (or, given `unit`, just to
    * that unit): for each of its standing units in roster order, a move to each
    * hex its AP can reach and an attack on each standing foe in range if it can
-   * afford one; then end_turn. Empty once the battle is over.
+   * afford one; then end_turn. Empty once the battle is over. Equip actions
+   * are not listed, as the engine cannot know what gear a unit carries: see
+   * equipCost().
    */
   legalActions(unit?: UnitId): Action[] {
     if (this.phase === 'over') return []
@@ -385,6 +419,18 @@ export class BattleEngine {
     return { flankers, flankBonus, arc, arcBonus, hitChance: chance }
   }
 
+  /**
+   * The action points a change of gear would cost the unit now, or null if it
+   * cannot change gear: it is not its side's turn, it has fallen, or it has
+   * not the points. The cost is 0 while an earlier change is still paid for.
+   */
+  equipCost(unit: UnitId): number | null {
+    const actor = this.units.find((u) => u.id === unit)
+    if (!actor || actor.side !== this.phase || actor.hp <= 0) return null
+    const cost = actor.gearChangePaid ? 0 : EQUIP_AP_COST
+    return actor.ap >= cost ? cost : null
+  }
+
   /** Performs an action for the side whose turn it is. Throws if the battle is over or the action is illegal. */
   step(action: Action): BattleEvent[] {
     if (this.phase === 'over') throw new Error(`Cannot ${action.type}: the battle is over`)
@@ -398,13 +444,16 @@ export class BattleEngine {
     }
 
     const actor = this.units.find((u) => u.id === action.unit)
-    if (!actor || !this.canAct(actor)) throw new Error(`${action.unit} cannot act now`)
+    // Checked first: a unit that spent its last point on a change of gear may still change again.
+    if (actor && action.type === 'equip') return this.equip(actor, action.stats)
+    if (!actor || action.type === 'equip' || !this.canAct(actor)) throw new Error(`${action.unit} cannot act now`)
     if (action.type === 'move') return this.move(actor, action.to)
 
     const target = this.units.find((u) => u.id === action.target)
     if (!target || !this.canAttack(actor, target)) throw new Error(`${actor.id} cannot attack ${action.target}`)
     if (actor.ap < actor.stats.attackApCost) throw new Error(`${actor.id} has too few action points to attack`)
     actor.ap -= actor.stats.attackApCost
+    actor.gearChangePaid = false
     return this.attack(actor, target, false)
   }
 
@@ -421,6 +470,7 @@ export class BattleEngine {
     for (const u of this.units) {
       if (u.side === side) u.ap = u.hp > 0 ? u.stats.actionPoints : 0
       else u.reactionReady = u.hp > 0
+      u.gearChangePaid = false
     }
   }
 
@@ -460,6 +510,7 @@ export class BattleEngine {
     if (!path) throw new Error(`${actor.id} cannot move to ${hexKey(to)}`)
     const apCost = path.length * MOVE_AP_COST_PER_HEX
     actor.ap -= apCost
+    actor.gearChangePaid = false
 
     const events: BattleEvent[] = []
     let segment: Hex[] = []
@@ -514,6 +565,17 @@ export class BattleEngine {
       (h) => this.board.contains(h) && !blocked(h),
       (from) => this.reactorsAt(actor, from).map((u) => u.id),
     )
+  }
+
+  /** Swaps the unit's stats for those of its new gear; its wounds and remaining AP carry over. */
+  private equip(actor: UnitRecord, stats: CombatantStats): BattleEvent[] {
+    const apCost = this.equipCost(actor.id)
+    if (apCost === null) throw new Error(`${actor.id} cannot change gear now`)
+    actor.ap -= apCost
+    actor.gearChangePaid = true
+    actor.stats = stats
+    actor.hp = Math.min(actor.hp, stats.maxHp)
+    return [this.record<EquipEvent>({ type: 'equip', round: this.round, unit: actor.id, apCost, stats })]
   }
 
   private attack(actor: UnitRecord, target: UnitRecord, opportunity: boolean): BattleEvent[] {
@@ -625,6 +687,8 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
       if (steps === 0) return `${names[event.unit]} starts to move.`
       return `${names[event.unit]} moves ${steps} ${steps === 1 ? 'hex' : 'hexes'}.`
     }
+    case 'equip':
+      return `${names[event.unit]} changes gear.`
     case 'unit_down':
       return `${names[event.unit]} falls.`
     case 'end_turn':

@@ -53,6 +53,8 @@ The central rule: **game rules are Phaser-free and live outside the scenes.** Th
 
 Rules of the battle system worth knowing before touching the engine: a side's units act in any order and the turn ends manually; units get 8 AP a turn by default, a move costs 1 AP per hex (`MOVE_AP_COST_PER_HEX`) and an attack costs the unit's `attackApCost` and reaches foes within its `attackRange`, both of which come from its weapon (`ItemStats`; the longsword costs 5 and reaches 1 hex, the bow reaches 5); nothing blocks a shot, as there is no line of sight yet; a two-handed weapon cancels the off-hand item's stats (`deriveCombatStats`); leaving a hex adjacent to a ready foe with a melee weapon provokes one free attack (one per unit per enemy turn, decided in `reactorsAt`; ranged weapons hold no zone of control); to-hit bonuses stack from flanking (`FLANK_BONUS_PER_ALLY`) and from the arc struck (`ARC_BONUS`, judged at range by the neighbouring hex the shot comes in over); facing is automatic, set by moving and attacking.
 
+Gear can be changed mid-battle. The inventory edits the `Character` directly (`equipFromBackpack`, `unequipToBackpack`), and when it closes `BattleScene` sends the engine an `equip` action carrying the newly derived stats, since the engine knows stats and not items. A change costs `EQUIP_AP_COST` (1 AP), paid once: further changes are free until the unit moves or attacks or its turn ends (`equipCost`). `legalActions` never lists `equip`, so the AI policies do not change gear.
+
 ### Scene layer (`src/scenes/`)
 
 Scenes are `Boot` → `Menu` → `Battle`, with `Inventory` and the in-battle `Menu` launched as overlays that pause `Battle` and resume it on close.
