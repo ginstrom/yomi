@@ -12,6 +12,7 @@ import {
   type WorldState,
 } from '../game/worldMap.ts'
 import { HexBoard, hexCorners, hexEquals, type Hex } from '../grid/hex.ts'
+import { buttonProbe, type WorldProbe } from '../testHook.ts'
 import { soundVolume } from './audioSettings.ts'
 import { WORLD_LAYOUT, boardHexAt, boardHexCenter, boardPixelSize } from './boardGeometry.ts'
 import { CURSORS } from './cursors.ts'
@@ -155,6 +156,19 @@ export class WorldScene extends Phaser.Scene {
 
   update(): void {
     if (this.walking) this.follow()
+  }
+
+  /** What the in-browser tests see of the world map; see testHook.ts. */
+  probe(): WorldProbe {
+    const [scout, wait, attack] = this.buttons.map((button) => buttonProbe(button))
+    return {
+      world: this.world,
+      walking: this.walking,
+      origin: { x: this.mapLayer.x, y: this.mapLayer.y },
+      view: this.view,
+      message: this.messageText.text,
+      buttons: { scout, wait, attack },
+    }
   }
 
   // ---- build ---------------------------------------------------------------

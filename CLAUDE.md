@@ -18,6 +18,8 @@ Node 26+ is required: `scripts/*.ts` run on Node's native TypeScript support (no
 | One test file | `npx vitest run src/grid/hex.test.ts` |
 | One test by name | `npx vitest run src/engine/battleEngine.test.ts -t "routes around zones"` |
 | One vitest project | `npx vitest run --project domain` (or `scenes`) |
+| In-browser tests (headless Chromium) | `npm run test:browser` |
+| One in-browser test by name | `npm run test:browser -- -t "victorious"` |
 | Production build | `npm run build` |
 | Headless battle simulator | `npm run simulate -- --battles 2000 --seed 1` |
 | Build sprites from `art/` | `npm run sprites` |
@@ -28,6 +30,8 @@ There is no linter; `tsc` is the lint step (`noUnusedLocals`, `noUnusedParameter
 The `Makefile` runs the same things inside a podman container (`make run`, `make test`, `make simulate ARGS="..."`, `make shell`), with `node_modules` in a named volume that reinstalls itself when `package-lock.json` changes. `vite.config.ts` polls for file changes because of that bind mount.
 
 Simulator flags: `--battles`, `--seed`, `--out` (default `logs/battles.jsonl`; `logs/` is gitignored), `--max-rounds`, `--player-policy`, `--enemy-policy` (`aggressive` or `random`), `--player-weapon` (an item id from `WEAPONS` in `src/inventory/inventory.ts`, e.g. `yew_bow`, put in every party member's hand; the way to compare weapon balance). The player's side is a new game's party. It writes every event as JSONL and prints a summary of win rate, rounds, hit rates and free attacks.
+
+The game takes a seed from the page's address, as in `http://localhost:5173/?seed=42` (`seed.ts`; `main.ts` puts it in the game's registry). Every battle of that session is then fought with it, the enemy's choices included, so the same actions play out the same way: use it to replay a battle from the seed its `battle_start` logged.
 
 ## Committing
 
@@ -69,7 +73,9 @@ Scenes are `Boot` → `Menu` → `World` ⇄ `Battle`. New on the menu starts `W
 
 `BattleScene` is a view over the engine: it turns clicks into `Action`s, calls `engine.step`, and plays back the returned events. It must not decide outcomes. Scenes use Phaser's `RESIZE` scale mode, so each one positions everything in a `layout()` method that reruns on resize; the game is held at a minimum of 760×560 (`MIN_GAME_SIZE` in `src/main.ts`), below which the page scrolls.
 
-Scene logic that can be expressed without Phaser is pulled into sibling helper modules, and new logic should follow suit: `eventSchedule.ts` (timing of event playback), `boardGeometry.ts` (hex ↔ screen, for a `BoardLayout`: the battlefield's is squashed to look like a floor, the world map's is flat with smaller hexes), `attackPlan.ts` (what clicking a foe does), `scrollingLog.ts`, `slotScroll.ts` (which rows of the ground pile the inventory shows), `mapScroll.ts` (where the world map sits on screen for the party to be in view), `clicks.ts` (what counts as a right-click), `sounds.ts` (which sounds an event triggers), `audioSettings.ts` (volume levels, saved to `localStorage`), `cursors.ts` (the pointer cursors, as inline SVG).
+Scene logic that can be expressed without Phaser is pulled into sibling helper modules, and new logic should follow suit: `eventSchedule.ts` (timing of event playback), `boardGeometry.ts` (hex ↔ screen, for a `BoardLayout`: the battlefield's is squashed to look like a floor, the world map's is flat with smaller hexes), `attackPlan.ts` (what clicking a foe does), `scrollingLog.ts`, `slotScroll.ts` (which rows of the ground pile the inventory shows), `mapScroll.ts` (where the world map sits on screen for the party to be in view), `clicks.ts` (what counts as a right-click), `sounds.ts` (which sounds an event triggers), `audioSettings.ts` (volume levels, saved to `localStorage`), `cursors.ts` (the pointer cursors, as inline SVG), `seed.ts` (the seed in the page's address).
+
+Every scene but `Boot` has a `probe()`: plain data telling where its controls are on screen and what state it shows, typed in `src/testHook.ts`. In dev builds `main.ts` installs the hook that puts the probes within the in-browser tests' reach as `window.__yomi`; a production build leaves it out. Game code must not read the hook or the probes. A control that a test needs to click goes in its scene's probe.
 
 ### Tests
 
@@ -79,6 +85,8 @@ Scene logic that can be expressed without Phaser is pulled into sibling helper m
 - `scenes` (jsdom + canvas mock, shared module graph): only `src/scenes/*Scene.test.ts`. These are smoke tests; real behaviour is tested through the helper modules and the engine.
 
 Tests that need determinism pass a seeded `mulberry32` or a scripted RNG into the engine.
+
+The in-browser tests in `e2e/` are a separate run (`npm run test:browser`, with its own `vitest.browser.config.ts`) and not part of `npm test`: they take seconds each and need Playwright's Chromium, which the podman image does not have, so there is no `make` target for them. They play the real game served by a Vite dev server and check what the others cannot: the scenes handing over to each other, overlays pausing and resuming, assets loading, layout on resize. Run them after a change to a scene. `e2e/CLAUDE.md` says how they work and how to add one.
 
 ### Assets and docs
 

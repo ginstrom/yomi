@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { HexBoard, hex } from '../grid/hex.ts'
-import { WORLD_LAYOUT, boardHexAt, boardHexCenter, boardPixelSize, curvedArrow } from './boardGeometry.ts'
+import {
+  WORLD_LAYOUT,
+  boardHexAt,
+  boardHexCenter,
+  boardHexOnScreen,
+  boardPixelSize,
+  curvedArrow,
+} from './boardGeometry.ts'
 
 // The goblinRaid board.
 const SIZE = { cols: 8, rows: 5 }
@@ -10,17 +17,14 @@ describe('board geometry', () => {
   it.each([1, 0.6])('finds every hex at its own centre, drawn at scale %s', (scale) => {
     const board = new HexBoard(SIZE)
     for (const h of board.hexes) {
-      const c = boardHexCenter(h)
-      const screen = { x: ORIGIN.x + c.x * scale, y: ORIGIN.y + c.y * scale }
-      expect(boardHexAt(screen, ORIGIN, scale)).toEqual(h)
+      expect(boardHexAt(boardHexOnScreen(h, ORIGIN, scale), ORIGIN, scale)).toEqual(h)
     }
   })
 
   it('finds every hex of the unsquashed world map at its own centre, and fits the map in the smallest window', () => {
     const size = { cols: 12, rows: 7 }
     for (const h of new HexBoard(size).hexes) {
-      const c = boardHexCenter(h, WORLD_LAYOUT)
-      expect(boardHexAt({ x: ORIGIN.x + c.x * 0.5, y: ORIGIN.y + c.y * 0.5 }, ORIGIN, 0.5, WORLD_LAYOUT)).toEqual(h)
+      expect(boardHexAt(boardHexOnScreen(h, ORIGIN, 0.5, WORLD_LAYOUT), ORIGIN, 0.5, WORLD_LAYOUT)).toEqual(h)
     }
     const { width, height } = boardPixelSize(size, WORLD_LAYOUT)
     expect(width).toBeLessThan(760)

@@ -4,6 +4,8 @@ import { MenuScene } from './scenes/MenuScene.ts'
 import { WorldScene } from './scenes/WorldScene.ts'
 import { BattleScene } from './scenes/BattleScene.ts'
 import { InventoryScene } from './scenes/InventoryScene.ts'
+import { SEED_KEY, seedFromUrl } from './scenes/seed.ts'
+import { installTestHook } from './testHook.ts'
 
 /**
  * The smallest the game gets: the board and inventory fit at full size and
@@ -11,7 +13,7 @@ import { InventoryScene } from './scenes/InventoryScene.ts'
  */
 const MIN_GAME_SIZE = { width: 760, height: 560 }
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   backgroundColor: '#1d1d1d',
@@ -24,3 +26,6 @@ new Phaser.Game({
   },
   scene: [BootScene, MenuScene, WorldScene, BattleScene, InventoryScene],
 })
+game.registry.set(SEED_KEY, seedFromUrl(window.location.search))
+// Dev builds only: the in-browser tests drive the game through this.
+if (import.meta.env.DEV) installTestHook(game)

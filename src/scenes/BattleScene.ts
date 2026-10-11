@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { deriveCombatStats, gearChanges, type Character } from '../character/character.ts'
-import { sameCombatStats } from '../combat/combat.ts'
+import { sameCombatStats, type RNG } from '../combat/combat.ts'
+import { mulberry32 } from '../combat/rng.ts'
 import {
   BattleEngine,
   formatEvent,
@@ -28,11 +29,13 @@ import {
   type BoardSize,
   type Hex,
 } from '../grid/hex.ts'
+import { buttonProbe, type BattleProbe } from '../testHook.ts'
 import { planAttack, type AttackPlan } from './attackPlan.ts'
 import { FLOOR_SQUASH_Y, HEX_SIZE, boardHexAt, boardHexCenter, boardPixelSize, curvedArrow } from './boardGeometry.ts'
 import { CURSORS } from './cursors.ts'
 import { scheduleEvents, type Cue } from './eventSchedule.ts'
 import { ScrollingLog } from './scrollingLog.ts'
+import { SEED_KEY } from './seed.ts'
 import { soundVolume } from './audioSettings.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
 import { eventSounds, type SoundKey } from './sounds.ts'
@@ -142,6 +145,8 @@ export class BattleScene extends Phaser.Scene {
   /** The unit the open inventory belongs to, the pile it is working on, and what that held when it opened. */
   private openPile: { unit: UnitId; items: Item[]; before: Item[] } | null = null
   private engine!: BattleEngine
+  /** What the enemy's policy rolls with; seeded like the engine when the page's address gives a seed. */
+  private enemyRng: RNG = Math.random
   private board!: HexBoard
   private names!: Record<UnitId, string>
   private logDumped = false
@@ -206,7 +211,10 @@ export class BattleScene extends Phaser.Scene {
     this.loggedEquipment = new Map(party.map((member, i) => [heroId(i), { ...member.equipment }]))
     this.ground = new Ground()
     this.openPile = null
-    this.engine = new BattleEngine(setup, { meta: { source: 'game', enemyPolicy: ENEMY_POLICY } })
+    const seed = (this.registry.get(SEED_KEY) as number | null | undefined) ?? undefined
+    this.engine = new BattleEngine(setup, { seed, meta: { source: 'game', enemyPolicy: ENEMY_POLICY } })
+    // A stream of its own, so the enemy's choices do not shift the engine's dice.
+    this.enemyRng = seed === undefined ? Math.random : mulberry32(seed + 1)
     this.board = new HexBoard(setup.board)
     this.names = Object.fromEntries(setup.units.map((u) => [u.id, u.stats.name]))
     // Phaser reuses the scene instance on restart, so field initializers
@@ -327,6 +335,24 @@ export class BattleScene extends Phaser.Scene {
     this.applyEvents(this.engine.getLog())
     // A side can enter already fallen (e.g. a party carried over at 0 hp).
     this.continueBattle()
+  }
+
+  /** What the in-browser tests see of the battle; see testHook.ts. */
+  probe(): BattleProbe {
+    const enabled = (button: Phaser.GameObjects.Container) => button.getData('enabled') as boolean
+    return {
+      state: this.engine.getState(),
+      log: this.engine.getLog(),
+      playerControl: this.playerControl,
+      selected: this.selected,
+      origin: { x: this.floorLayer.x, y: this.floorLayer.y },
+      scale: this.floorLayer.scale,
+      buttons: {
+        attack: buttonProbe(this.attackButton, enabled(this.attackButton)),
+        endTurn: buttonProbe(this.endTurnButton, enabled(this.endTurnButton)),
+        result: buttonProbe(this.menuButton),
+      },
+    }
   }
 
   private openInventory(): void {
@@ -1073,7 +1099,7 @@ export class BattleScene extends Phaser.Scene {
       const action = POLICIES[ENEMY_POLICY]({
         state: this.engine.getState(),
         legal: this.engine.legalActions(),
-        rng: Math.random,
+        rng: this.enemyRng,
       })
       const animationMs = this.applyEvents(this.engine.step(action))
       this.time.delayedCall(animationMs + 200, () => this.continueBattle())

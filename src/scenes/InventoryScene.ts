@@ -12,6 +12,8 @@ import {
 import { xpToNextLevel } from '../character/progression.ts'
 import { formatDamage, type CombatantStats } from '../combat/combat.ts'
 import { EQUIPMENT_SLOT_LABELS, describeItemStats, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
+import type { InventoryProbe } from '../testHook.ts'
+import type { Point } from './boardGeometry.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
 import { soundVolume } from './audioSettings.ts'
 import { isSecondaryClick } from './clicks.ts'
@@ -55,6 +57,11 @@ interface TabButton {
   text: Phaser.GameObjects.Text
 }
 
+/** The x of the first column of a grid of slots centred on `centerX`. */
+function gridStartX(centerX: number, cols: number): number {
+  return centerX - ((cols - 1) * (SLOT_SIZE + SLOT_GAP)) / 2
+}
+
 /** Centre of the `index`th slot of a grid whose first column is at `startX`. */
 function slotPosition(startX: number, index: number, cols: number): { x: number; y: number } {
   return {
@@ -69,6 +76,8 @@ export class InventoryScene extends Phaser.Scene {
   private stats!: CombatantStats
   private gearApCost: number | null = null
   private ground: Item[] = []
+  /** Each equipment slot's centre, in the panel's own pixels. */
+  private slotCentres = new Map<EquipmentSlot, Point>()
   /** Which rows of the ground pile the grid shows. */
   private groundScroll = new SlotScroll(GROUND_COLS, GROUND_ROWS)
   private dimBg!: Phaser.GameObjects.Rectangle
@@ -122,6 +131,25 @@ export class InventoryScene extends Phaser.Scene {
     this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _objects: unknown, _dx: number, dy: number) =>
       this.onWheel(dy),
     )
+  }
+
+  /** What the in-browser tests see of the panel; see testHook.ts. */
+  probe(): InventoryProbe {
+    const onScreen = ({ x, y }: Point): Point => ({
+      x: this.panel.x + x * this.panel.scale,
+      y: this.panel.y + y * this.panel.scale,
+    })
+    const { equipment, backpack } = this.character
+    const startX = gridStartX(DOLL_X, BACKPACK_COLS)
+    return {
+      tab: this.activeTab,
+      equipment: Object.fromEntries(
+        [...this.slotCentres].map(([slot, at]) => [slot, { ...onScreen(at), item: equipment[slot]?.id ?? null }]),
+      ) as InventoryProbe['equipment'],
+      backpack: backpack.flatMap((item, i) =>
+        item ? [{ ...onScreen(slotPosition(startX, i, BACKPACK_COLS)), item: item.id }] : [],
+      ),
+    }
   }
 
   /** Draws both tabs from the character as it now stands; rerun after each change of gear. */
@@ -284,6 +312,7 @@ export class InventoryScene extends Phaser.Scene {
     // A two-handed weapon fills the off hand too, shown there as a ghost of the weapon.
     const ghost = slot === 'offHand' && !equipment.offHand && isTwoHanded(equipment.mainHand)
     const heldIn: EquipmentSlot = ghost ? 'mainHand' : slot
+    this.slotCentres.set(slot, { x, y })
     const item = equipment[heldIn]
     const bg = this.add.rectangle(x, y, SLOT_SIZE, SLOT_SIZE, 0x1b1712, 0.9).setStrokeStyle(2, 0x6b5a3a)
     this.inventoryContent.add(bg)
@@ -424,7 +453,7 @@ export class InventoryScene extends Phaser.Scene {
         .text(centerX, SLOT_TITLE_Y, title, { fontFamily: 'monospace', fontSize: '14px', color: '#8a7a5a' })
         .setOrigin(0.5),
     )
-    return centerX - ((cols - 1) * (SLOT_SIZE + SLOT_GAP)) / 2
+    return gridStartX(centerX, cols)
   }
 
   /** A backpack or ground space; clicking the item in it makes the change `onClick` returns the success of. */

@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "typecheck": "tsc",
     "test": "tsc && vitest run",
+    "test:browser": "vitest run --config vitest.browser.config.ts",
     "simulate": "node scripts/simulate.ts",
     "sprites": "sprite build --project art",
     "sprites:check": "sprite build --check --project art"

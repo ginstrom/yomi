@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { newGame } from '../game/gameState.ts'
+import { buttonProbe, type MenuProbe } from '../testHook.ts'
 import { getAudioSettings, setAudioLevel, soundVolume, type AudioChannel } from './audioSettings.ts'
 
 interface MenuData {
@@ -83,6 +84,20 @@ export class MenuScene extends Phaser.Scene {
     })
 
     this.input.keyboard?.on('keydown-ESC', () => this.onEscape())
+  }
+
+  /** What the in-browser tests see of the menu; see testHook.ts. */
+  probe(): MenuProbe {
+    const [newButton, continueButton, optionsButton] = this.buttons
+    return {
+      showingOptions: this.showingOptions,
+      buttons: {
+        new: buttonProbe(newButton),
+        continue: buttonProbe(continueButton, this.resumeKey !== undefined),
+        options: buttonProbe(optionsButton),
+        back: buttonProbe(this.backButton),
+      },
+    }
   }
 
   // ---- build ---------------------------------------------------------------

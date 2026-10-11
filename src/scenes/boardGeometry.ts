@@ -53,6 +53,12 @@ export function boardHexAt(
   return pixelToHex(localX, localY, hexSize)
 }
 
+/** Centre of a hex on screen, for a board drawn as `boardHexAt` has it: the inverse of that function. */
+export function boardHexOnScreen(h: Hex, origin: Point, scale: number, layout: BoardLayout = BATTLE_LAYOUT): Point {
+  const { x, y } = boardHexCenter(h, layout)
+  return { x: origin.x + x * scale, y: origin.y + y * scale }
+}
+
 /** A curved arrow's shaft, as points along it, and its head, as a triangle whose first point is the tip. */
 export interface CurvedArrow {
   shaft: Point[]
