@@ -29,6 +29,10 @@ The `Makefile` runs the same things inside a podman container (`make run`, `make
 
 Simulator flags: `--battles`, `--seed`, `--out` (default `logs/battles.jsonl`; `logs/` is gitignored), `--max-rounds`, `--player-policy`, `--enemy-policy` (`aggressive` or `random`). It writes every event as JSONL and prints a summary of win rate, rounds, hit rates and free attacks.
 
+## Committing
+
+Commit finished work without being asked: once a change is complete and `npm test` passes, commit it on the current branch. Commits are free in this project's workflow, so there is no need to wait for a go-ahead. Do not push unless asked.
+
 ## Architecture
 
 The central rule: **game rules are Phaser-free and live outside the scenes.** The same `BattleEngine` drives the in-browser game and the headless simulator, so anything that changes a battle's outcome has to go in the domain modules, with tests.
