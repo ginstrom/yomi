@@ -1,4 +1,5 @@
 import type Phaser from 'phaser'
+import type { SkillId } from './character/skills.ts'
 import type { BattleEvent, BattleState, UnitId } from './engine/battleEngine.ts'
 import type { WorldState } from './game/worldMap.ts'
 import type { EquipmentSlot } from './inventory/inventory.ts'
@@ -34,6 +35,8 @@ export interface WorldProbe {
   view: Rect
   message: string
   buttons: { scout: ButtonProbe; wait: ButtonProbe; attack: ButtonProbe }
+  /** Each party member's line, by its centre on screen: a click opens the member's panel. */
+  party: Array<Point & { name: string; level: number; canAdvance: boolean }>
 }
 
 export interface BattleProbe {
@@ -49,7 +52,14 @@ export interface BattleProbe {
 }
 
 export interface InventoryProbe {
-  tab: 'character' | 'inventory'
+  tab: 'character' | 'skills' | 'inventory'
+  /** What the character has waiting to spend. */
+  skillPoints: number
+  perkPicks: number
+  /** Each skill's level, with the centre on screen of the button that raises it and whether a click there would. */
+  skills: Record<SkillId, Point & { level: number; canRaise: boolean }>
+  /** Every perk's row, by its centre on screen, with the ranks taken and whether a click would take one. */
+  perks: Array<Point & { perk: string; ranks: number; canTake: boolean }>
   /** Every equipment slot's centre on screen, with the id of the item in it. */
   equipment: Record<EquipmentSlot, Point & { item: string | null }>
   /** The backpack's items, each with its slot's centre on screen. */

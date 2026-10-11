@@ -11,36 +11,70 @@ import {
   type EquipmentSlot,
   type Item,
 } from '../inventory/inventory.ts'
-
-/** Intrinsic stats before equipment. */
-export interface BaseStats {
-  maxHp: number
-  toHit: number
-  actionPoints: number
-}
+import type { Attributes } from './attributes.ts'
+import { perkBonus, type PerkId } from './perks.ts'
+import { skillLevel, type SkillId } from './skills.ts'
 
 /**
- * One of the player's persistent characters. Combat stats are never stored here —
- * they're derived from base stats + equipment, so changing gear is the only
- * way to change them and every screen agrees on the numbers.
+ * One of the player's persistent characters: what it was born with
+ * (`attributes`, `tagged`), what it has learned (`level`, `trained`, `perks`)
+ * and what it carries. Its numbers are never stored: hit points, action
+ * points and the stats it fights with are derived from those, so every
+ * screen agrees on them.
  */
 export interface Character {
   name: string
-  className: string
   level: number
   /** Experience earned towards the next level; see progression.ts. */
   xp: number
-  base: BaseStats
+  attributes: Attributes
+  /** The skills the character has a gift for; see skills.ts. */
+  tagged: SkillId[]
+  /** What skill points have added to each skill, in percent. */
+  trained: Record<SkillId, number>
+  /** Skill points earned by levelling and not yet spent. */
+  skillPoints: number
+  /** Ranks taken of each perk. */
+  perks: Partial<Record<PerkId, number>>
+  /** Perks earned by levelling and not yet chosen. */
+  perkPicks: number
   hp: number
   equipment: Equipment
   backpack: Array<Item | null>
 }
 
-const BASE_CRIT_CHANCE = 5
-const UNARMED_DAMAGE: DamageRoll = { count: 1, sides: 2, bonus: 0 }
+/** Hit points before attributes and levels add theirs. */
+const BASE_HP = 10
+/** Action points before agility adds its half. */
+const BASE_ACTION_POINTS = 5
 const UNARMED_ATTACK_AP_COST = 3
 const MELEE_RANGE = 1
 const UNARMED_WEAPON = 'Fists'
+/** The sides of the die bare hands roll, by the Unarmed skill it takes, best first. */
+const UNARMED_DICE: ReadonlyArray<readonly [skill: number, sides: number]> = [[100, 8], [75, 6], [55, 4], [0, 2]]
+
+/** The hit points a new level adds: more for the hardy. */
+export function hpPerLevel(character: Character): number {
+  return 2 + Math.floor(character.attributes.endurance / 2)
+}
+
+export function maxHp(character: Character): number {
+  const { strength, endurance } = character.attributes
+  return BASE_HP + strength + endurance + (character.level - 1) * hpPerLevel(character) + perkBonus(character, 'maxHp')
+}
+
+/** The skill a character strikes with, holding `weapon` or nothing: its chance to hit comes from that skill. */
+export function weaponSkill(weapon: Item | undefined): SkillId {
+  if (!weapon) return 'unarmed'
+  return (weapon.stats?.attackRange ?? MELEE_RANGE) > MELEE_RANGE ? 'archery' : 'melee'
+}
+
+/** What bare hands roll: a bigger die the higher the character's Unarmed skill. */
+function unarmedDamage(character: Character): DamageRoll {
+  const skill = skillLevel(character, 'unarmed')
+  const [, sides] = UNARMED_DICE.find(([needed]) => skill >= needed)!
+  return { count: 1, sides, bonus: 0 }
+}
 
 export function deriveCombatStats(character: Character): CombatantStats {
   // A two-handed weapon leaves no hand for a shield. equipFromBackpack() keeps the
@@ -48,13 +82,15 @@ export function deriveCombatStats(character: Character): CombatantStats {
   const { offHand, ...rest } = character.equipment
   const worn = isTwoHanded(character.equipment.mainHand) ? rest : { ...rest, offHand }
   const items = Object.values(worn).filter((item): item is Item => item !== undefined)
+  const { strength, agility, luck } = character.attributes
+  const skill = weaponSkill(character.equipment.mainHand)
+  const ranged = skill === 'archery'
 
-  let ac = 0
-  let toHit = character.base.toHit
-  let damage = UNARMED_DAMAGE
+  let ac = agility + perkBonus(character, 'armorClass')
+  let toHit = skillLevel(character, skill)
+  let damage = unarmedDamage(character)
   let attackApCost = UNARMED_ATTACK_AP_COST
   let attackRange = MELEE_RANGE
-
   for (const { stats } of items) {
     if (!stats) continue
     if (stats.damage) damage = stats.damage
@@ -63,18 +99,21 @@ export function deriveCombatStats(character: Character): CombatantStats {
     ac += stats.acBonus ?? 0
     toHit += stats.toHit ?? 0
   }
+  // Strength tells in a blow, not in a shot.
+  const might = ranged ? 0 : Math.max(0, Math.floor((strength - 5) / 2))
+  const damageBonus = might + perkBonus(character, ranged ? 'rangedDamage' : 'meleeDamage')
 
   return {
     name: character.name,
-    maxHp: character.base.maxHp,
+    maxHp: maxHp(character),
     ac,
     toHit,
-    critChance: BASE_CRIT_CHANCE,
-    damage,
+    critChance: luck + perkBonus(character, 'critChance'),
+    damage: { ...damage, bonus: damage.bonus + damageBonus },
     weapon: character.equipment.mainHand?.name ?? UNARMED_WEAPON,
     attackApCost,
-    attackRange,
-    actionPoints: character.base.actionPoints,
+    attackRange: attackRange + (ranged ? perkBonus(character, 'range') : 0),
+    actionPoints: BASE_ACTION_POINTS + Math.floor(agility / 2) + perkBonus(character, 'actionPoints'),
   }
 }
 
@@ -173,19 +212,47 @@ export function gearChanges(before: Equipment, after: Equipment): GearChange[] {
   }))
 }
 
-/** The weapons the warrior carries but does not start with in hand. */
-const SPARE_WEAPONS = WEAPONS.filter((weapon) => weapon !== IRON_SWORD)
+/** What a new character is made from: who it is, and what it holds in each hand to begin with. */
+export interface Build {
+  attributes: Attributes
+  tagged: SkillId[]
+  mainHand: Item
+  offHand?: Item
+}
 
-export function createWarrior(name = 'Warrior'): Character {
-  const base: BaseStats = { maxHp: 20, toHit: 75, actionPoints: 8 }
-  return {
+/** A soldier: strong, hardy and lucky, with a sword and a shield. */
+export const WARRIOR_BUILD: Build = {
+  attributes: { strength: 7, perception: 4, endurance: 7, intelligence: 4, agility: 6, luck: 7 },
+  tagged: ['melee', 'unarmed'],
+  mainHand: IRON_SWORD,
+  offHand: OAK_SHIELD,
+}
+
+/**
+ * A level 1 character at full hit points, in a steel breastplate, with every
+ * weapon it does not hold in its backpack, and the shield too if its hands
+ * are full.
+ */
+export function createCharacter(name: string, build: Build): Character {
+  const spare = [...WEAPONS.filter((weapon) => weapon !== build.mainHand), ...(build.offHand ? [] : [OAK_SHIELD])]
+  const character: Character = {
     name,
-    className: 'Fighter',
     level: 1,
     xp: 0,
-    base,
-    hp: base.maxHp,
-    equipment: { armor: STEEL_ARMOR, mainHand: IRON_SWORD, offHand: OAK_SHIELD },
-    backpack: Array.from({ length: BACKPACK_SIZE }, (_, i) => SPARE_WEAPONS[i] ?? null),
+    attributes: { ...build.attributes },
+    tagged: [...build.tagged],
+    trained: { melee: 0, archery: 0, unarmed: 0, firstAid: 0 },
+    skillPoints: 0,
+    perks: {},
+    perkPicks: 0,
+    hp: 0,
+    equipment: { armor: STEEL_ARMOR, mainHand: build.mainHand, ...(build.offHand ? { offHand: build.offHand } : {}) },
+    backpack: Array.from({ length: BACKPACK_SIZE }, (_, i) => spare[i] ?? null),
   }
+  character.hp = maxHp(character)
+  return character
+}
+
+export function createWarrior(name = 'Warrior'): Character {
+  return createCharacter(name, WARRIOR_BUILD)
 }

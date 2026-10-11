@@ -103,14 +103,14 @@ describe('foeAtLevel', () => {
     expect(foeAtLevel(GOBLIN_STATS, 1)).toEqual(GOBLIN_STATS)
   })
 
-  it('adds hit points every level, and chance to hit, damage and armour at their steps', () => {
-    expect(foeAtLevel(GOBLIN_STATS, 2)).toEqual({ ...GOBLIN_STATS, maxHp: 14 })
+  it('adds hit points, chance to hit and armour every level, and damage every second', () => {
+    expect(foeAtLevel(GOBLIN_STATS, 2)).toEqual({ ...GOBLIN_STATS, maxHp: 17, ac: 20, toHit: 75 })
     expect(foeAtLevel(GOBLIN_STATS, 5)).toEqual({
       ...GOBLIN_STATS,
-      maxHp: 22,
-      ac: 20,
-      toHit: 80,
-      damage: { count: 1, sides: 6, bonus: 2 },
+      maxHp: 31,
+      ac: 35,
+      toHit: 90,
+      damage: { count: 1, sides: 6, bonus: 3 },
     })
   })
 })

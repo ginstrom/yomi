@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { ATTRIBUTES, ATTRIBUTE_IDS } from '../character/attributes.ts'
 import {
   deriveCombatStats,
   dropEquipped,
@@ -9,7 +10,20 @@ import {
   unequipToBackpack,
   type Character,
 } from '../character/character.ts'
-import { xpToNextLevel } from '../character/progression.ts'
+import { PERKS, PERK_IDS, describePerkRequirements, perkRanks, qualifiesFor, type PerkId } from '../character/perks.ts'
+import { nextPerkLevel, takePerk, xpToNextLevel } from '../character/progression.ts'
+import {
+  MASTERY_COST,
+  MASTERY_LEVEL,
+  SKILLS,
+  SKILL_IDS,
+  TAGGED_SKILL_STEP,
+  isTagged,
+  raiseSkill,
+  skillLevel,
+  skillRaiseCost,
+  type SkillId,
+} from '../character/skills.ts'
 import { formatDamage, type CombatantStats } from '../combat/combat.ts'
 import { EQUIPMENT_SLOT_LABELS, describeItemStats, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
 import type { InventoryProbe } from '../testHook.ts'
@@ -19,7 +33,12 @@ import { soundVolume } from './audioSettings.ts'
 import { isSecondaryClick } from './clicks.ts'
 import { SlotScroll } from './slotScroll.ts'
 
-type PanelTab = 'character' | 'inventory'
+type PanelTab = InventoryProbe['tab']
+const TABS: ReadonlyArray<readonly [tab: PanelTab, label: string]> = [
+  ['character', 'Character'],
+  ['skills', 'Skills'],
+  ['inventory', 'Inventory'],
+]
 
 interface InventoryData {
   /** The party member whose panel this is. */
@@ -33,6 +52,10 @@ interface InventoryData {
   gearApCost?: number | null
   /** The pile on the hex the character stands on, which drops go onto and pick-ups come off. */
   ground?: Item[]
+  /** Whether skill points and perks can be spent here: on the world map, not in the thick of a battle. */
+  canAdvance?: boolean
+  /** The scene the panel lies over, resumed when it closes. */
+  resume?: 'Battle' | 'World'
 }
 
 const PANEL_W = 720
@@ -51,6 +74,31 @@ const SLOT_GRID_Y = 404
 const SCROLLBAR_W = 8
 const TAB_W = 140
 const TAB_H = 32
+const TAB_SPACING = TAB_W + 12
+
+/** The character tab: attributes beside the portrait, and what they come to beside those. */
+const ATTRIBUTES_X = 215
+const ATTRIBUTES_W = 250
+const ATTRIBUTE_ROW_H = 36
+const COMBAT_X = 490
+const SHEET_Y = 140
+
+/** The skills tab: skills down the left, each with a button to raise it, and every perk down the right. */
+const SKILLS_X = 24
+const SKILLS_W = 320
+const SKILL_ROW_Y = 104
+const SKILL_ROW_H = 52
+const RAISE_SIZE = 22
+const PERKS_X = 368
+const PERKS_W = PANEL_W - PERKS_X - 20
+const PERK_ROW_Y = 104
+const PERK_ROW_H = 38
+
+const FONT = 'monospace'
+const GOLD = '#e8c766'
+const DIM = '#8a7a5a'
+const TEXT = '#d8c9a3'
+const FAINT = '#665a44'
 
 interface TabButton {
   bg: Phaser.GameObjects.Rectangle
@@ -76,6 +124,8 @@ export class InventoryScene extends Phaser.Scene {
   private stats!: CombatantStats
   private gearApCost: number | null = null
   private ground: Item[] = []
+  private canAdvance = false
+  private resumeKey: NonNullable<InventoryData['resume']> = 'Battle'
   /** Each equipment slot's centre, in the panel's own pixels. */
   private slotCentres = new Map<EquipmentSlot, Point>()
   /** Which rows of the ground pile the grid shows. */
@@ -83,6 +133,7 @@ export class InventoryScene extends Phaser.Scene {
   private dimBg!: Phaser.GameObjects.Rectangle
   private panel!: Phaser.GameObjects.Container
   private characterContent!: Phaser.GameObjects.Container
+  private skillsContent!: Phaser.GameObjects.Container
   private inventoryContent!: Phaser.GameObjects.Container
   private tabButtons: Record<PanelTab, TabButton> = {} as Record<PanelTab, TabButton>
   private tooltip!: Phaser.GameObjects.Container
@@ -101,6 +152,8 @@ export class InventoryScene extends Phaser.Scene {
     this.character = data.character
     this.gearApCost = data.gearApCost ?? null
     this.ground = data.ground ?? []
+    this.canAdvance = data.canAdvance ?? false
+    this.resumeKey = data.resume ?? 'Battle'
     this.groundScroll = new SlotScroll(GROUND_COLS, GROUND_ROWS)
     // Right-clicking an item drops it.
     this.input.mouse?.disableContextMenu()
@@ -112,8 +165,9 @@ export class InventoryScene extends Phaser.Scene {
     this.buildTabs()
 
     this.characterContent = this.add.container(0, 0)
+    this.skillsContent = this.add.container(0, 0)
     this.inventoryContent = this.add.container(0, 0)
-    this.panel.add([this.characterContent, this.inventoryContent])
+    this.panel.add([this.characterContent, this.skillsContent, this.inventoryContent])
     this.buildContent()
 
     this.showTab(data?.tab ?? 'inventory')
@@ -125,8 +179,9 @@ export class InventoryScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
     })
 
-    this.input.keyboard?.on('keydown-I', () => this.onPressI())
-    this.input.keyboard?.on('keydown-C', () => this.onPressC())
+    this.input.keyboard?.on('keydown-I', () => this.onTabKey('inventory'))
+    this.input.keyboard?.on('keydown-C', () => this.onTabKey('character'))
+    this.input.keyboard?.on('keydown-S', () => this.onTabKey('skills'))
     this.input.keyboard?.on('keydown-ESC', () => this.close())
     this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _objects: unknown, _dx: number, dy: number) =>
       this.onWheel(dy),
@@ -143,6 +198,20 @@ export class InventoryScene extends Phaser.Scene {
     const startX = gridStartX(DOLL_X, BACKPACK_COLS)
     return {
       tab: this.activeTab,
+      skillPoints: this.character.skillPoints,
+      perkPicks: this.character.perkPicks,
+      skills: Object.fromEntries(
+        SKILL_IDS.map((id, row) => [
+          id,
+          { ...onScreen(this.raiseButtonAt(row)), level: skillLevel(this.character, id), canRaise: this.canRaise(id) },
+        ]),
+      ) as InventoryProbe['skills'],
+      perks: PERK_IDS.map((id, row) => ({
+        ...onScreen({ x: PERKS_X + PERKS_W / 2, y: PERK_ROW_Y + row * PERK_ROW_H }),
+        perk: id,
+        ranks: perkRanks(this.character, id),
+        canTake: this.canTake(id),
+      })),
       equipment: Object.fromEntries(
         [...this.slotCentres].map(([slot, at]) => [slot, { ...onScreen(at), item: equipment[slot]?.id ?? null }]),
       ) as InventoryProbe['equipment'],
@@ -152,12 +221,15 @@ export class InventoryScene extends Phaser.Scene {
     }
   }
 
-  /** Draws both tabs from the character as it now stands; rerun after each change of gear. */
+  /** Draws every tab from the character as it now stands; rerun after each change to it. */
   private buildContent(): void {
     this.stats = deriveCombatStats(this.character)
     this.characterContent.removeAll(true)
+    this.skillsContent.removeAll(true)
     this.inventoryContent.removeAll(true)
     this.buildCharacterTab()
+    this.buildSkills()
+    this.buildPerks()
     this.buildPaperdoll()
     this.buildStats()
     this.buildGearHint()
@@ -179,10 +251,10 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   private buildTabs(): void {
-    const y = 26
-    const centerX = PANEL_W / 2
-    this.tabButtons.character = this.createTabButton('Character', centerX - TAB_W / 2 - 6, y, 'character')
-    this.tabButtons.inventory = this.createTabButton('Inventory', centerX + TAB_W / 2 + 6, y, 'inventory')
+    TABS.forEach(([tab, label], i) => {
+      const x = PANEL_W / 2 + (i - (TABS.length - 1) / 2) * TAB_SPACING
+      this.tabButtons[tab] = this.createTabButton(label, x, 26, tab)
+    })
   }
 
   private createTabButton(label: string, x: number, y: number, tab: PanelTab): TabButton {
@@ -202,6 +274,7 @@ export class InventoryScene extends Phaser.Scene {
   private showTab(tab: PanelTab): void {
     this.activeTab = tab
     this.characterContent.setVisible(tab === 'character')
+    this.skillsContent.setVisible(tab === 'skills')
     this.inventoryContent.setVisible(tab === 'inventory')
     if (tab !== 'inventory') this.hideTooltip()
 
@@ -216,37 +289,59 @@ export class InventoryScene extends Phaser.Scene {
   // ---- build: character tab -------------------------------------------------
 
   private buildCharacterTab(): void {
-    const { level, xp } = this.character
     const title = this.add
-      .text(PANEL_W / 2, 70, this.character.name, { fontFamily: 'monospace', fontSize: '26px', color: '#e8c766' })
+      .text(PANEL_W / 2, 70, this.character.name, { fontFamily: FONT, fontSize: '26px', color: GOLD })
       .setOrigin(0.5)
     const subtitle = this.add
-      .text(PANEL_W / 2, 98, this.classLine(), { fontFamily: 'monospace', fontSize: '14px', color: '#8a7a5a' })
+      .text(PANEL_W / 2, 98, this.classLine(), { fontFamily: FONT, fontSize: '14px', color: DIM })
       .setOrigin(0.5)
     this.characterContent.add([title, subtitle])
 
-    const portraitX = 190
-    const portraitY = 260
+    const portraitX = 110
+    const portraitY = 250
     const portraitBg = this.add
-      .rectangle(portraitX, portraitY, 170, 230, 0x14100c, 0.8)
+      .rectangle(portraitX, portraitY, 150, 210, 0x14100c, 0.8)
       .setStrokeStyle(2, 0x6b5a3a)
-    const portrait = this.add.image(portraitX, portraitY + 100, 'warrior').setOrigin(0.5, 1)
+    const portrait = this.add.image(portraitX, portraitY + 92, 'warrior').setOrigin(0.5, 1)
     // A whole-number scale keeps the sprite's pixels square.
-    const portraitScale = Math.floor(Math.min(160 / portrait.width, 200 / portrait.height))
+    const portraitScale = Math.floor(Math.min(140 / portrait.width, 184 / portrait.height))
     portrait.setScale(portraitScale)
     this.characterContent.add([portraitBg, portrait])
 
-    const lines = [`Experience:    ${xp} / ${xpToNextLevel(level)}`, ``, ...this.statLines()]
-    // Top-aligned with the portrait frame, so the block ends clear of the badges below.
-    const statsBlock = this.add.text(360, portraitY - 115, lines.join('\n'), {
-      fontFamily: 'monospace',
-      fontSize: '15px',
-      color: '#d8c9a3',
-      lineSpacing: 14,
+    this.characterContent.add(this.heading('Attributes', ATTRIBUTES_X, SHEET_Y))
+    ATTRIBUTE_IDS.forEach((id, row) => {
+      const y = SHEET_Y + 26 + row * ATTRIBUTE_ROW_H
+      const { name, description } = ATTRIBUTES[id]
+      this.characterContent.add([
+        this.add.text(ATTRIBUTES_X, y, name, { fontFamily: FONT, fontSize: '15px', color: TEXT }),
+        this.add
+          .text(ATTRIBUTES_X + ATTRIBUTES_W, y, `${this.character.attributes[id]}`, {
+            fontFamily: FONT,
+            fontSize: '15px',
+            color: GOLD,
+          })
+          .setOrigin(1, 0),
+        this.add.text(ATTRIBUTES_X, y + 18, description, { fontFamily: FONT, fontSize: '11px', color: DIM }),
+      ])
     })
-    this.characterContent.add(statsBlock)
+
+    // Top-aligned with the attributes, so the block ends clear of the badges below.
+    const lines = [...this.statLines(), `Critical:      ${this.stats.critChance}%`]
+    this.characterContent.add([
+      this.heading('In battle', COMBAT_X, SHEET_Y),
+      this.add.text(COMBAT_X, SHEET_Y + 26, lines.join('\n'), {
+        fontFamily: FONT,
+        fontSize: '14px',
+        color: TEXT,
+        lineSpacing: 12,
+      }),
+    ])
 
     this.buildCharacterBadges(440)
+  }
+
+  private heading(label: string, x: number, y: number): Phaser.GameObjects.Text {
+    return this.add.text(x, y, label, { fontFamily: FONT, fontSize: '14px', color: DIM })
   }
 
   private buildCharacterBadges(y: number): void {
@@ -272,6 +367,147 @@ export class InventoryScene extends Phaser.Scene {
         .text(x, y + 10, badge.value, { fontFamily: 'monospace', fontSize: '16px', color: '#e8c766' })
         .setOrigin(0.5)
       this.characterContent.add([bg, label, value])
+    })
+  }
+
+  // ---- build: skills tab -------------------------------------------------
+
+  /** Whether a click would raise `skill` now. */
+  private canRaise(skill: SkillId): boolean {
+    const cost = skillRaiseCost(this.character, skill)
+    return this.canAdvance && cost !== null && cost <= this.character.skillPoints
+  }
+
+  /** Whether a click would take a rank of `perk` now. */
+  private canTake(perk: PerkId): boolean {
+    return this.canAdvance && this.character.perkPicks > 0 && qualifiesFor(this.character, perk)
+  }
+
+  /** The centre of the button that raises the skill in the `row`th row. */
+  private raiseButtonAt(row: number): Point {
+    return { x: SKILLS_X + SKILLS_W - RAISE_SIZE / 2, y: SKILL_ROW_Y + row * SKILL_ROW_H }
+  }
+
+  private buildSkills(): void {
+    const { skillPoints } = this.character
+    const points = this.add
+      .text(SKILLS_X + SKILLS_W, 66, `Skill points: ${skillPoints}`, {
+        fontFamily: FONT,
+        fontSize: '14px',
+        color: skillPoints > 0 ? GOLD : DIM,
+      })
+      .setOrigin(1, 0)
+    this.skillsContent.add([this.heading('Skills', SKILLS_X, 66), points])
+
+    SKILL_IDS.forEach((id, row) => {
+      const button = this.raiseButtonAt(row)
+      const tagged = isTagged(this.character, id)
+      const { name, description } = SKILLS[id]
+      this.skillsContent.add([
+        this.add
+          .text(SKILLS_X, button.y, tagged ? `${name} (tagged)` : name, {
+            fontFamily: FONT,
+            fontSize: '14px',
+            color: tagged ? GOLD : TEXT,
+          })
+          .setOrigin(0, 0.5),
+        this.add
+          .text(button.x - RAISE_SIZE, button.y, `${skillLevel(this.character, id)}%`, {
+            fontFamily: FONT,
+            fontSize: '14px',
+            color: GOLD,
+          })
+          .setOrigin(1, 0.5),
+        this.add.text(SKILLS_X, button.y + 10, description, {
+          fontFamily: FONT,
+          fontSize: '11px',
+          color: DIM,
+          wordWrap: { width: SKILLS_W - RAISE_SIZE - 6 },
+        }),
+      ])
+      if (this.canAdvance && skillPoints > 0) this.buildRaiseButton(id, button)
+    })
+
+    const rules = [
+      `A skill point raises a skill by 1%, or a tagged one by ${TAGGED_SKILL_STEP}%. From ${MASTERY_LEVEL}% on, a raise costs ${MASTERY_COST} points.`,
+      this.canAdvance
+        ? 'Every level brings skill points.'
+        : 'Skill points and perks are spent on the world map: click a hero’s name there.',
+    ]
+    this.skillsContent.add(
+      this.add.text(SKILLS_X, SKILL_ROW_Y + SKILL_IDS.length * SKILL_ROW_H, rules.join('\n\n'), {
+        fontFamily: FONT,
+        fontSize: '12px',
+        color: DIM,
+        wordWrap: { width: SKILLS_W },
+      }),
+    )
+  }
+
+  /** The "+" beside a skill, dimmed when the points left do not cover the raise. */
+  private buildRaiseButton(skill: SkillId, { x, y }: Point): void {
+    const enabled = this.canRaise(skill)
+    const bg = this.add
+      .rectangle(x, y, RAISE_SIZE, RAISE_SIZE, 0x1b1712, 0.95)
+      .setStrokeStyle(2, enabled ? 0xc9a227 : 0x4a3d28)
+    const plus = this.add
+      .text(x, y, '+', { fontFamily: FONT, fontSize: '16px', color: enabled ? GOLD : FAINT })
+      .setOrigin(0.5)
+    this.skillsContent.add([bg, plus])
+    if (!enabled) return
+    bg.setInteractive({ useHandCursor: true })
+    bg.on('pointerdown', () => this.advance(() => raiseSkill(this.character, skill)))
+  }
+
+  /** Every perk there is: the ranks taken, what each asks, and a click to take one when a pick is waiting. */
+  private buildPerks(): void {
+    const { perkPicks } = this.character
+    const status =
+      perkPicks > 0 && this.canAdvance
+        ? `Choose ${perkPicks === 1 ? 'a perk' : `${perkPicks} perks`}`
+        : perkPicks > 0
+          ? `${perkPicks} to choose`
+          : `Next at level ${nextPerkLevel(this.character)}`
+    this.skillsContent.add([
+      this.heading('Perks', PERKS_X, 66),
+      this.add
+        .text(PERKS_X + PERKS_W, 66, status, { fontFamily: FONT, fontSize: '14px', color: perkPicks > 0 ? GOLD : DIM })
+        .setOrigin(1, 0),
+    ])
+
+    PERK_IDS.forEach((id, row) => {
+      const y = PERK_ROW_Y + row * PERK_ROW_H
+      const { name, description, ranks } = PERKS[id]
+      const taken = perkRanks(this.character, id)
+      const open = this.canTake(id)
+      const within = taken < ranks && qualifiesFor(this.character, id)
+      const bg = this.add
+        .rectangle(PERKS_X + PERKS_W / 2, y, PERKS_W, PERK_ROW_H - 4, 0x1b1712, open ? 0.95 : 0.5)
+        .setStrokeStyle(open ? 2 : 1, open ? 0xc9a227 : 0x4a3d28)
+      const rank = ranks > 1 || taken > 0 ? ` ${taken}/${ranks}` : ''
+      // What it asks is shown until the character meets it; a perk in hand shows its ranks alone.
+      const note = taken >= ranks ? 'taken' : within ? '' : describePerkRequirements(id)
+      this.skillsContent.add([
+        bg,
+        this.add.text(PERKS_X + 8, y - 15, `${name}${rank}`, {
+          fontFamily: FONT,
+          fontSize: '13px',
+          color: taken > 0 ? GOLD : within ? TEXT : DIM,
+        }),
+        this.add
+          .text(PERKS_X + PERKS_W - 8, y - 14, note, { fontFamily: FONT, fontSize: '11px', color: FAINT })
+          .setOrigin(1, 0),
+        this.add.text(PERKS_X + 8, y + 1, description, {
+          fontFamily: FONT,
+          fontSize: '11px',
+          color: within || taken > 0 ? DIM : FAINT,
+        }),
+      ])
+      if (!open) return
+      bg.setInteractive({ useHandCursor: true })
+      bg.on('pointerover', () => bg.setFillStyle(0x3a2f1c, 0.95))
+      bg.on('pointerout', () => bg.setFillStyle(0x1b1712, 0.95))
+      bg.on('pointerdown', () => this.advance(() => takePerk(this.character, id)))
     })
   }
 
@@ -371,7 +607,9 @@ export class InventoryScene extends Phaser.Scene {
   private buildGearHint(): void {
     const hint =
       this.gearApCost === null
-        ? 'Gear can be changed only on your turn, with an action point to spare.'
+        ? this.resumeKey === 'World'
+          ? 'Gear is changed in battle, on your turn.'
+          : 'Gear can be changed only on your turn, with an action point to spare.'
         : this.gearApCost === 0
           ? 'Click to equip, stow or pick up; right- or Ctrl+click to drop. Free until you next move or attack.'
           : `Click to equip, stow or pick up; right- or Ctrl+click to drop. Costs ${this.gearApCost} AP on closing, however many changes.`
@@ -385,9 +623,10 @@ export class InventoryScene extends Phaser.Scene {
     )
   }
 
-  /** "Level 2 Fighter", under the character's name. */
+  /** "Level 2 - 30 / 200 XP", under the character's name. */
   private classLine(): string {
-    return `Level ${this.character.level} ${this.character.className}`
+    const { level, xp } = this.character
+    return `Level ${level} - ${xp} / ${xpToNextLevel(level)} XP`
   }
 
   private statLines(): string[] {
@@ -537,6 +776,14 @@ export class InventoryScene extends Phaser.Scene {
     this.time.delayedCall(0, () => this.buildContent())
   }
 
+  /** Spends a skill point or a perk pick, as `spend` does and reports, and redraws the panel to match. */
+  private advance(spend: () => boolean): void {
+    if (!this.canAdvance || !spend()) return
+    this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+    // Next tick: the redraw destroys the button whose click handler this runs in.
+    this.time.delayedCall(0, () => this.buildContent())
+  }
+
   private onWheel(deltaY: number): void {
     if (this.activeTab === 'inventory' && this.groundScroll.wheel(deltaY)) this.buildContent()
   }
@@ -547,24 +794,14 @@ export class InventoryScene extends Phaser.Scene {
     this.time.delayedCall(0, () => this.buildContent())
   }
 
-  private onPressI(): void {
-    if (this.activeTab === 'inventory') {
-      this.close()
-    } else {
-      this.showTab('inventory')
-    }
-  }
-
-  private onPressC(): void {
-    if (this.activeTab === 'character') {
-      this.close()
-    } else {
-      this.showTab('character')
-    }
+  /** A tab's key shows the tab, or closes the panel when it is the one showing. */
+  private onTabKey(tab: PanelTab): void {
+    if (this.activeTab === tab) this.close()
+    else this.showTab(tab)
   }
 
   private close(): void {
     this.scene.stop()
-    this.scene.resume('Battle')
+    this.scene.resume(this.resumeKey)
   }
 }

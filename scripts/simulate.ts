@@ -14,7 +14,7 @@ import { dirname } from 'node:path'
 import { mulberry32, randomSeed } from '../src/combat/rng.ts'
 import { BattleEngine, type BattleEvent, type Side, type UnitId } from '../src/engine/battleEngine.ts'
 import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.ts'
-import { gainXp, xpToNextLevel } from '../src/character/progression.ts'
+import { autoAdvance, levelUp } from '../src/character/progression.ts'
 import { ENCOUNTERS, type EncounterId } from '../src/game/encounters.ts'
 import { newParty, partyFighters } from '../src/game/party.ts'
 import { WEAPONS, type Item } from '../src/inventory/inventory.ts'
@@ -30,7 +30,7 @@ interface CliArgs {
   encounter: EncounterId
   /** How dangerous the encounter is made: 1 is the party's home country. */
   threat: number
-  /** The level every party member is raised to before the battle, at full hit points. */
+  /** The level every party member is raised to before the battle, its skill points and perks spent (`autoAdvance`), at full hit points. */
   partyLevel: number
 }
 
@@ -119,13 +119,20 @@ export type LoggedEvent = BattleEvent & { battleId: number }
 function runBattle(battleId: number, seed: number, args: CliArgs): LoggedEvent[] {
   const party = newParty()
   if (args.playerWeapon) for (const member of party) member.equipment.mainHand = args.playerWeapon
-  for (const member of party) while (member.level < args.partyLevel) gainXp(member, xpToNextLevel(member.level) - member.xp)
+  for (const member of party) {
+    // Spent a level at a time, as a player would: a perk is chosen at the level that brings it.
+    while (member.level < args.partyLevel) {
+      levelUp(member)
+      autoAdvance(member)
+    }
+  }
   const engine = new BattleEngine(ENCOUNTERS[args.encounter](partyFighters(party), args.threat).setup, {
     seed,
     meta: {
       source: 'simulate',
       policies: args.policies,
-      playerWeapon: party[0].equipment.mainHand?.id,
+      // Each member's, in party order: the starting heroes do not all hold the same.
+      playerWeapons: party.map((member) => member.equipment.mainHand?.id ?? null),
       encounter: args.encounter,
       threat: args.threat,
       partyLevel: args.partyLevel,

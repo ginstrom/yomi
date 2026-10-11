@@ -141,27 +141,28 @@ export const KOBOLD_STATS: CombatantStats = {
 }
 
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
-export const FOE_HP_PER_LEVEL = 0.2
-/** ...`FOE_STEP_PERCENT` to its chance to hit every this many levels... */
-export const FOE_ATTACK_LEVEL_STEP = 2
-/** ...and 1 to its damage and `FOE_STEP_PERCENT` to its armour class every this many. */
-export const FOE_DAMAGE_LEVEL_STEP = 3
-export const FOE_AC_LEVEL_STEP = 3
-export const FOE_STEP_PERCENT = 5
+export const FOE_HP_PER_LEVEL = 0.4
+/** ...this many points to its chance to hit and to its armour class... */
+export const FOE_TO_HIT_PER_LEVEL = 5
+export const FOE_AC_PER_LEVEL = 5
+/** ...and 1 to its damage every this many levels. */
+export const FOE_DAMAGE_LEVEL_STEP = 2
 
 /**
  * A monster's stat block at `level`, from its level 1 block. A monster grows
- * faster than a hero does (progression.ts), who gains no damage or armour by
- * level: the lands further out are meant to be harder for the party that has
- * earned its way there, not merely to keep pace with it.
+ * about as fast as a hero who puts every skill point into one weapon and
+ * faster than one who does not, and its armour grows where a hero's does not
+ * (character.ts, progression.ts): the lands further out are meant to be
+ * harder for the party that has earned its way there, not merely to keep
+ * pace with it.
  */
 export function foeAtLevel(base: CombatantStats, level: number): CombatantStats {
   const above = Math.max(0, level - 1)
   return {
     ...base,
     maxHp: Math.round(base.maxHp * (1 + FOE_HP_PER_LEVEL * above)),
-    ac: base.ac + FOE_STEP_PERCENT * Math.floor(above / FOE_AC_LEVEL_STEP),
-    toHit: base.toHit + FOE_STEP_PERCENT * Math.floor(above / FOE_ATTACK_LEVEL_STEP),
+    ac: base.ac + FOE_AC_PER_LEVEL * above,
+    toHit: base.toHit + FOE_TO_HIT_PER_LEVEL * above,
     damage: { ...base.damage, bonus: base.damage.bonus + Math.floor(above / FOE_DAMAGE_LEVEL_STEP) },
   }
 }

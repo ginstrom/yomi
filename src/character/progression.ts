@@ -1,4 +1,6 @@
-import type { Character } from './character.ts'
+import { maxHp, weaponSkill, type Character } from './character.ts'
+import { PERK_IDS, availablePerks, perkBonus, qualifiesFor, type PerkId } from './perks.ts'
+import { MASTERY_LEVEL, SKILL_IDS, isTagged, raiseSkill, skillLevel, type SkillId } from './skills.ts'
 
 /**
  * Levels and the experience that buys them. A foe is worth a fixed amount of
@@ -11,50 +13,124 @@ import type { Character } from './character.ts'
  * costs a little less than one even foe, so a first win over something
  * slightly weaker is enough; after that level L + 1 costs L - 1 even foes:
  * one at level 2, two at level 3, three at level 4.
+ *
+ * A level brings hit points (`hpPerLevel`), skill points to spend on skills
+ * (`skillPointsPerLevel`) and, every `PERK_LEVEL_STEP` levels, a perk to
+ * choose. The points and the pick wait on the character until its player
+ * spends them (`raiseSkill`, `takePerk`), or `autoAdvance` does.
  */
 export const EVEN_FOE_XP_PER_LEVEL = 100
 
 /** What level 2 costs: a touch under one even foe. */
 const FIRST_LEVEL_XP = 80
 
-/** Hit points every level adds. */
-export const LEVEL_UP_HP = 4
-/** Every level that is a multiple of this adds `TO_HIT_PER_STEP` to the chance to hit. */
-export const ATTACK_BONUS_LEVEL_STEP = 2
-export const TO_HIT_PER_STEP = 5
+/** Skill points a level brings before intelligence adds its half. */
+const BASE_SKILL_POINTS = 2
+/** Every level that is a multiple of this brings a perk. */
+export const PERK_LEVEL_STEP = 3
 
 /** The experience it takes to rise from `level` to the next. */
 export function xpToNextLevel(level: number): number {
   return level <= 1 ? FIRST_LEVEL_XP : EVEN_FOE_XP_PER_LEVEL * level * (level - 1)
 }
 
+/** The skill points each new level brings the character: more for the clever. */
+export function skillPointsPerLevel(character: Character): number {
+  return BASE_SKILL_POINTS + Math.floor(character.attributes.intelligence / 2) + perkBonus(character, 'skillPoints')
+}
+
+/** The level the character's next perk comes at. */
+export function nextPerkLevel(character: Character): number {
+  return (Math.floor(character.level / PERK_LEVEL_STEP) + 1) * PERK_LEVEL_STEP
+}
+
+/** Whether the character has skill points or a perk waiting to be spent. */
+export function canAdvance(character: Character): boolean {
+  return character.skillPoints > 0 || (character.perkPicks > 0 && availablePerks(character).length > 0)
+}
+
 /** What a gain of experience came to. */
 export interface XpGain {
+  /** The experience earned, after what the character's perks add to it. */
   xp: number
   /** How many levels it bought; usually none. */
   levelsGained: number
-  /** What those levels added to the character's base stats. */
+  /** What those levels brought. */
   maxHpGained: number
-  toHitGained: number
+  skillPointsGained: number
+  perksGained: number
+}
+
+/**
+ * Raises the character a level, whatever its experience: hit points, skill
+ * points, a perk pick at every `PERK_LEVEL_STEP`th level, and all its wounds
+ * healed.
+ */
+export function levelUp(character: Character): void {
+  character.level += 1
+  character.skillPoints += skillPointsPerLevel(character)
+  if (character.level % PERK_LEVEL_STEP === 0) character.perkPicks += 1
+  character.hp = maxHp(character)
 }
 
 /**
  * Gives `character` experience, raising its level as often as the experience
- * pays for; what is left over counts towards the next. A level raises base
- * stats, and a character that levels up is restored to full hit points.
+ * pays for; what is left over counts towards the next.
  */
 export function gainXp(character: Character, xp: number): XpGain {
-  const gain: XpGain = { xp, levelsGained: 0, maxHpGained: 0, toHitGained: 0 }
-  character.xp += xp
+  const earned = Math.round(xp * (1 + perkBonus(character, 'xpPercent') / 100))
+  const before = { maxHp: maxHp(character), level: character.level, points: character.skillPoints, picks: character.perkPicks }
+  character.xp += earned
   while (character.xp >= xpToNextLevel(character.level)) {
     character.xp -= xpToNextLevel(character.level)
-    character.level += 1
-    gain.levelsGained += 1
-    gain.maxHpGained += LEVEL_UP_HP
-    if (character.level % ATTACK_BONUS_LEVEL_STEP === 0) gain.toHitGained += TO_HIT_PER_STEP
+    levelUp(character)
   }
-  character.base.maxHp += gain.maxHpGained
-  character.base.toHit += gain.toHitGained
-  if (gain.levelsGained > 0) character.hp = character.base.maxHp
-  return gain
+  return {
+    xp: earned,
+    levelsGained: character.level - before.level,
+    maxHpGained: maxHp(character) - before.maxHp,
+    skillPointsGained: character.skillPoints - before.points,
+    perksGained: character.perkPicks - before.picks,
+  }
+}
+
+/**
+ * Spends a perk pick on a rank of `perk`. A perk that adds hit points adds as
+ * many to those the character has left. Returns false if the character
+ * has no pick or does not qualify.
+ */
+export function takePerk(character: Character, perk: PerkId): boolean {
+  if (character.perkPicks < 1 || !qualifiesFor(character, perk)) return false
+  const hpBefore = maxHp(character)
+  character.perkPicks -= 1
+  character.perks[perk] = (character.perks[perk] ?? 0) + 1
+  character.hp += maxHp(character) - hpBefore
+  return true
+}
+
+/** The perks `autoAdvance` takes, most wanted first; it takes any other only when none of these is on offer. */
+const AUTO_PERKS: readonly PerkId[] = ['tireless', 'toughness', 'dodger', 'heavy_hand', 'deadly_aim', 'keen_eye']
+
+/**
+ * Spends everything the character has waiting, the way a plain fighter
+ * would: skill points on the skill of the weapon in hand up to mastery, then
+ * on First Aid if it has the gift, then on the weapon again and whatever is
+ * left to raise; perk picks on combat perks first. It is what the simulator's parties do with their
+ * levels, so balance runs fight heroes that have grown.
+ */
+export function autoAdvance(character: Character): void {
+  const weapon = weaponSkill(character.equipment.mainHand)
+  const order: Array<[SkillId, number]> = [
+    [weapon, MASTERY_LEVEL],
+    ...(isTagged(character, 'firstAid') ? [['firstAid', MASTERY_LEVEL] as [SkillId, number]] : []),
+    [weapon, Infinity],
+    ...SKILL_IDS.map((skill): [SkillId, number] => [skill, Infinity]),
+  ]
+  for (const [skill, upTo] of order) {
+    while (skillLevel(character, skill) < upTo && raiseSkill(character, skill));
+  }
+  while (character.perkPicks > 0) {
+    const perk = [...AUTO_PERKS, ...PERK_IDS].find((id) => qualifiesFor(character, id))
+    if (!perk || !takePerk(character, perk)) break
+  }
 }

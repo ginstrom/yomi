@@ -327,6 +327,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.input.keyboard?.on('keydown-I', () => this.openInventory())
     this.input.keyboard?.on('keydown-C', () => this.openCharacter())
+    this.input.keyboard?.on('keydown-S', () => this.openPanel('skills'))
     this.input.keyboard?.on('keydown-ESC', () => (this.targeting ? this.setTargeting(false) : this.openMenu()))
 
     this.music = this.sound.add('music_battle', { loop: true, volume: soundVolume('music_battle') })
@@ -376,7 +377,7 @@ export class BattleScene extends Phaser.Scene {
    * Opens the selected unit's character panel; gear can be changed there only while the
    * player has control.
    */
-  private openPanel(tab: 'inventory' | 'character'): void {
+  private openPanel(tab: 'inventory' | 'character' | 'skills'): void {
     if (this.scene.isPaused()) return
     const unit = this.panelUnit()
     if (!unit) return

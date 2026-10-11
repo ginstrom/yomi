@@ -11,20 +11,27 @@ import {
   type Item,
 } from '../inventory/inventory.ts'
 import {
+  createCharacter,
   createWarrior,
   deriveCombatStats,
   dropEquipped,
   dropFromBackpack,
   equipFromBackpack,
   gearChanges,
+  maxHp,
   pickUp,
   unequipToBackpack,
+  weaponSkill,
+  type Build,
 } from './character.ts'
+import { levelUp } from './progression.ts'
+import { skillLevel } from './skills.ts'
 
 describe('createWarrior', () => {
   it('starts at full HP with armor, sword and shield equipped and the other weapons in the backpack', () => {
     const warrior = createWarrior()
-    expect(warrior.hp).toBe(warrior.base.maxHp)
+    expect([warrior.level, warrior.xp, warrior.skillPoints, warrior.perkPicks]).toEqual([1, 0, 0, 0])
+    expect(warrior.hp).toBe(maxHp(warrior))
     expect(warrior.equipment).toEqual({ armor: STEEL_ARMOR, mainHand: IRON_SWORD, offHand: OAK_SHIELD })
     expect(warrior.backpack).toHaveLength(BACKPACK_SIZE)
     const carried = warrior.backpack.filter((slot) => slot !== null)
@@ -37,33 +44,45 @@ describe('createWarrior', () => {
     a.hp = 1
     a.backpack[0] = null
     delete a.equipment.offHand
-    expect(b.hp).toBe(b.base.maxHp)
+    a.attributes.strength = 1
+    a.trained.melee = 30
+    a.tagged.pop()
+    a.perks.toughness = 1
+    expect(b).toEqual(createWarrior())
+    expect(b.hp).toBe(maxHp(b))
     expect(b.backpack[0]).toBe(IRON_DAGGER)
     expect(b.equipment.offHand).toBe(OAK_SHIELD)
   })
 })
 
 describe('deriveCombatStats', () => {
-  it('derives the starting warrior stats from base stats and gear', () => {
+  it('derives the starting warrior stats from attributes, skills and gear', () => {
     expect(deriveCombatStats(createWarrior())).toEqual({
       name: 'Warrior',
       weapon: 'Iron Longsword',
-      maxHp: 20,
-      ac: 25,
-      toHit: 75,
-      critChance: 5,
-      damage: { count: 1, sides: 8, bonus: 2 },
+      // 10 + strength 7 + endurance 7
+      maxHp: 24,
+      // agility 6, breastplate 15, shield 10
+      ac: 31,
+      // Melee Weapons: 30 + 2 x (strength 7 + agility 6), and 20 for the tag
+      toHit: 76,
+      // luck
+      critChance: 7,
+      // the sword's 1d8+2, and 1 for strength 7
+      damage: { count: 1, sides: 8, bonus: 3 },
       attackApCost: 5,
       attackRange: 1,
       actionPoints: 8,
     })
   })
 
-  it('falls back to unarmored AC and an unarmed attack with nothing equipped', () => {
+  it('falls back to agility for armour and to bare hands with nothing equipped', () => {
     const naked = { ...createWarrior(), equipment: {} }
     const stats = deriveCombatStats(naked)
-    expect(stats.ac).toBe(0)
-    expect(stats.damage).toEqual({ count: 1, sides: 2, bonus: 0 })
+    expect(stats.ac).toBe(6)
+    expect(stats.toHit).toBe(skillLevel(naked, 'unarmed'))
+    // Unarmed 86% rolls a d6; strength adds 1.
+    expect(stats.damage).toEqual({ count: 1, sides: 6, bonus: 1 })
     expect(stats.attackApCost).toBe(3)
   })
 
@@ -83,19 +102,112 @@ describe('deriveCombatStats', () => {
   it('gets nothing from a shield while wielding a two-handed weapon', () => {
     const warrior = createWarrior()
     warrior.equipment.mainHand = STEEL_GREATSWORD
-    expect(deriveCombatStats(warrior).ac).toBe(15)
+    expect(deriveCombatStats(warrior).ac).toBe(21)
     warrior.equipment.mainHand = IRON_DAGGER
-    expect(deriveCombatStats(warrior).ac).toBe(25)
+    expect(deriveCombatStats(warrior).ac).toBe(31)
   })
 
   it('reflects equipment changes', () => {
     const warrior = createWarrior()
     delete warrior.equipment.offHand
-    expect(deriveCombatStats(warrior).ac).toBe(15)
+    expect(deriveCombatStats(warrior).ac).toBe(21)
 
     const ring: Item = { ...STEEL_ARMOR, id: 'ring', slot: 'ring1', stats: { toHit: 5, acBonus: 5 } }
     warrior.equipment.ring1 = ring
-    expect(deriveCombatStats(warrior)).toMatchObject({ ac: 20, toHit: 80 })
+    expect(deriveCombatStats(warrior)).toMatchObject({ ac: 26, toHit: 81 })
+  })
+})
+
+describe('createCharacter', () => {
+  const ARCHER: Build = {
+    attributes: { strength: 4, perception: 7, endurance: 5, intelligence: 7, agility: 7, luck: 5 },
+    tagged: ['archery', 'firstAid'],
+    mainHand: YEW_BOW,
+  }
+
+  it('puts the build’s weapon in hand and the rest in the backpack, the shield too when both hands are full', () => {
+    const archer = createCharacter('Archer', ARCHER)
+    expect(archer.equipment).toEqual({ armor: STEEL_ARMOR, mainHand: YEW_BOW })
+    const carried = archer.backpack.filter((slot) => slot !== null)
+    expect(carried).toEqual([...WEAPONS.filter((weapon) => weapon !== YEW_BOW), OAK_SHIELD])
+    expect(archer.hp).toBe(10 + 4 + 5)
+  })
+
+  it('takes a copy of the build, so one character’s growth is not another’s', () => {
+    const archer = createCharacter('Archer', ARCHER)
+    archer.attributes.luck = 10
+    archer.tagged.push('melee')
+    expect(ARCHER.attributes.luck).toBe(5)
+    expect(ARCHER.tagged).toEqual(['archery', 'firstAid'])
+  })
+})
+
+describe('what a character’s numbers come from', () => {
+  it('strikes with the skill of the weapon in hand', () => {
+    expect([undefined, IRON_SWORD, STEEL_GREATSWORD, YEW_BOW].map(weaponSkill)).toEqual([
+      'unarmed',
+      'melee',
+      'melee',
+      'archery',
+    ])
+    const warrior = createWarrior()
+    warrior.equipment = { mainHand: YEW_BOW }
+    // An untagged skill: 30 + 2 x (perception 4 + agility 6). Strength adds nothing to a shot.
+    expect(deriveCombatStats(warrior)).toMatchObject({ toHit: 50, damage: YEW_BOW.stats!.damage })
+    warrior.trained.archery = 12
+    expect(deriveCombatStats(warrior).toHit).toBe(62)
+  })
+
+  it('rolls a bigger die with bare hands the higher the Unarmed skill', () => {
+    const brawler = createWarrior()
+    brawler.equipment = {}
+    brawler.tagged = []
+    brawler.attributes = { ...brawler.attributes, strength: 1, agility: 1 }
+    const sides = (trained: number) => {
+      brawler.trained.unarmed = trained
+      return deriveCombatStats(brawler).damage.sides
+    }
+    // From 44%: up to 54%, at 55%, at 75% and at 100%.
+    expect([0, 10, 11, 31, 56].map(sides)).toEqual([2, 2, 4, 6, 8])
+  })
+
+  it('gets hit points from strength, endurance and each level', () => {
+    const warrior = createWarrior()
+    levelUp(warrior)
+    levelUp(warrior)
+    // Endurance 7 is worth 2 + 3 a level.
+    expect(maxHp(warrior)).toBe(24 + 2 * 5)
+    warrior.attributes.endurance = 2
+    expect(maxHp(warrior)).toBe(10 + 7 + 2 + 2 * 3)
+  })
+
+  it('gets action points from agility and a critical chance from luck', () => {
+    const warrior = createWarrior()
+    const stats = (agility: number, luck: number) => {
+      warrior.attributes = { ...warrior.attributes, agility, luck }
+      const { actionPoints, critChance } = deriveCombatStats(warrior)
+      return [actionPoints, critChance]
+    }
+    expect(stats(1, 1)).toEqual([5, 1])
+    expect(stats(7, 5)).toEqual([8, 5])
+    expect(stats(10, 10)).toEqual([10, 10])
+  })
+
+  it('adds what perks give', () => {
+    const warrior = createWarrior()
+    const plain = deriveCombatStats(warrior)
+    warrior.perks = { toughness: 2, dodger: 1, heavy_hand: 2, keen_eye: 1, tireless: 1, deadly_aim: 1, far_shot: 1 }
+    expect(deriveCombatStats(warrior)).toEqual({
+      ...plain,
+      maxHp: plain.maxHp + 12,
+      ac: plain.ac + 5,
+      damage: { ...plain.damage, bonus: plain.damage.bonus + 2 },
+      critChance: plain.critChance + 5,
+      actionPoints: plain.actionPoints + 1,
+    })
+    // The archer's perks tell only with a bow in hand, and the swordsman's only without.
+    warrior.equipment = { mainHand: YEW_BOW }
+    expect(deriveCombatStats(warrior)).toMatchObject({ attackRange: 7, damage: { count: 1, sides: 8, bonus: 1 } })
   })
 })
 
@@ -118,7 +230,7 @@ describe('equipFromBackpack', () => {
     expect(warrior.equipment.offHand).toBeUndefined()
     expect(warrior.backpack[index]).toBe(IRON_SWORD)
     expect(warrior.backpack[space]).toBe(OAK_SHIELD)
-    expect(deriveCombatStats(warrior)).toMatchObject({ attackRange: 5, ac: 15 })
+    expect(deriveCombatStats(warrior)).toMatchObject({ attackRange: 5, ac: 21 })
   })
 
   it('stows a two-handed weapon when a shield is equipped', () => {
@@ -218,7 +330,7 @@ describe('dropping and picking up', () => {
     expect(warrior.equipment.offHand).toBeUndefined()
     expect(ground).toEqual([OAK_SHIELD])
     expect(dropEquipped(warrior, 'head', ground)).toBe(false)
-    expect(deriveCombatStats(warrior).ac).toBe(15)
+    expect(deriveCombatStats(warrior).ac).toBe(21)
   })
 
   it('picks an item up into the first empty backpack space', () => {
