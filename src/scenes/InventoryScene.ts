@@ -253,7 +253,7 @@ export class InventoryScene extends Phaser.Scene {
     const badges: Array<{ label: string; value: string }> = [
       { label: 'AC', value: `${this.stats.ac}` },
       { label: 'HP', value: `${this.character.hp}/${this.stats.maxHp}` },
-      { label: 'ATK', value: `+${this.stats.attackBonus}` },
+      { label: 'HIT', value: `${this.stats.toHit}%` },
     ]
     const badgeW = 90
     const badgeH = 56
@@ -394,7 +394,7 @@ export class InventoryScene extends Phaser.Scene {
     return [
       `Hit Points:    ${this.character.hp} / ${this.stats.maxHp}`,
       `Armor Class:   ${this.stats.ac}`,
-      `Attack Bonus:  +${this.stats.attackBonus}`,
+      `To Hit:        ${this.stats.toHit}%`,
       `Damage:        ${formatDamage(this.stats.damage)}`,
       `Attack Cost:   ${this.stats.attackApCost} AP`,
       `Action Points: ${this.stats.actionPoints}`,

@@ -15,7 +15,7 @@ import {
 /** Intrinsic stats before equipment. */
 export interface BaseStats {
   maxHp: number
-  attackBonus: number
+  toHit: number
   actionPoints: number
 }
 
@@ -36,7 +36,7 @@ export interface Character {
   backpack: Array<Item | null>
 }
 
-const UNARMORED_AC = 10
+const BASE_CRIT_CHANCE = 5
 const UNARMED_DAMAGE: DamageRoll = { count: 1, sides: 2, bonus: 0 }
 const UNARMED_ATTACK_AP_COST = 3
 const MELEE_RANGE = 1
@@ -49,28 +49,27 @@ export function deriveCombatStats(character: Character): CombatantStats {
   const worn = isTwoHanded(character.equipment.mainHand) ? rest : { ...rest, offHand }
   const items = Object.values(worn).filter((item): item is Item => item !== undefined)
 
-  let baseAc = UNARMORED_AC
-  let acBonus = 0
-  let attackBonus = character.base.attackBonus
+  let ac = 0
+  let toHit = character.base.toHit
   let damage = UNARMED_DAMAGE
   let attackApCost = UNARMED_ATTACK_AP_COST
   let attackRange = MELEE_RANGE
 
   for (const { stats } of items) {
     if (!stats) continue
-    if (stats.baseAc !== undefined) baseAc = Math.max(baseAc, stats.baseAc)
     if (stats.damage) damage = stats.damage
     if (stats.attackApCost !== undefined) attackApCost = stats.attackApCost
     if (stats.attackRange !== undefined) attackRange = stats.attackRange
-    acBonus += stats.acBonus ?? 0
-    attackBonus += stats.attackBonus ?? 0
+    ac += stats.acBonus ?? 0
+    toHit += stats.toHit ?? 0
   }
 
   return {
     name: character.name,
     maxHp: character.base.maxHp,
-    ac: baseAc + acBonus,
-    attackBonus,
+    ac,
+    toHit,
+    critChance: BASE_CRIT_CHANCE,
     damage,
     weapon: character.equipment.mainHand?.name ?? UNARMED_WEAPON,
     attackApCost,
@@ -178,7 +177,7 @@ export function gearChanges(before: Equipment, after: Equipment): GearChange[] {
 const SPARE_WEAPONS = WEAPONS.filter((weapon) => weapon !== IRON_SWORD)
 
 export function createWarrior(name = 'Warrior'): Character {
-  const base: BaseStats = { maxHp: 20, attackBonus: 4, actionPoints: 8 }
+  const base: BaseStats = { maxHp: 20, toHit: 75, actionPoints: 8 }
   return {
     name,
     className: 'Fighter',

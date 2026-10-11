@@ -27,8 +27,9 @@ function sequence(values: number[]): () => number {
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
   maxHp: 20,
-  ac: 15,
-  attackBonus: 4,
+  ac: 25,
+  toHit: 75,
+  critChance: 5,
   damage: { count: 1, sides: 8, bonus: 2 },
   attackApCost: 5,
   attackRange: 1,
@@ -50,13 +51,13 @@ const NAMES = { warrior: 'Warrior', goblin: 'Goblin', goblin2: 'Goblin Archer', 
 const ATTACK_GOBLIN: Action = { type: 'attack', unit: 'warrior', target: 'goblin' }
 const ATTACK_WARRIOR: Action = { type: 'attack', unit: 'goblin', target: 'warrior' }
 const END_TURN: Action = { type: 'end_turn' }
-/** d20 -> 1: a fumble, so no damage. */
+/** A roll of 100: a fumble, so no damage. */
 const FUMBLE = 0
-/** d20 -> 20 then max damage dice: a crit that fells a Goblin outright. */
+/** A roll of 1 then max damage dice: a crit that fells a Goblin outright. */
 const KILL = [0.99, 0.99]
-/** d20 -> 7: the Warrior's 11 misses a Goblin's AC 13 alone, but 13 hits with one flanker. */
+/** A roll of 70: over the Warrior's 60% against a Goblin alone, but within its 70% with one flanker. */
 const ROLL_7 = 0.3
-/** d20 -> 10: a Goblin's 13 misses the Warrior's AC 15 from the front, but 15 hits from behind. */
+/** A roll of 55: over a Goblin's 45% against the Warrior from the front, but within its 55% from behind. */
 const ROLL_10 = 0.45
 
 /** Facings, as indices into HEX_DIRECTIONS. */
@@ -451,7 +452,7 @@ describe('BattleEngine ranged attacks', () => {
     })
     expect(engine.previewAttack('archer', 'goblin')).toMatchObject({ arc: 'rear', arcBonus: ARC_BONUS.rear })
     const [attack] = engine.step(SHOOT_GOBLIN) as [AttackEvent]
-    expect(attack).toMatchObject({ arc: 'rear', totalToHit: 7 + ARCHER_STATS.attackBonus + ARC_BONUS.rear, hit: true })
+    expect(attack).toMatchObject({ arc: 'rear', chance: ARCHER_STATS.toHit + ARC_BONUS.rear - GOBLIN.stats.ac, hit: true })
   })
 
   it('counts allies beside the target as flankers for a shot', () => {
@@ -490,11 +491,11 @@ describe('BattleEngine flanking', () => {
     new BattleEngine(setup(units), { rng: sequence(rolls) }).step(ATTACK_GOBLIN)[0] as AttackEvent
 
   it('turns a miss into a hit with an ally on the other side of the defender', () => {
-    expect(attackOn([WARRIOR, GOBLIN])).toMatchObject({ flankers: [], flankBonus: 0, totalToHit: 11, hit: false })
+    expect(attackOn([WARRIOR, GOBLIN])).toMatchObject({ flankers: [], flankBonus: 0, attackRoll: 70, chance: 60, hit: false })
     expect(attackOn([WARRIOR, GOBLIN, flanker('cleric')])).toMatchObject({
       flankers: ['cleric'],
       flankBonus: FLANK_BONUS_PER_ALLY,
-      totalToHit: 11 + FLANK_BONUS_PER_ALLY,
+      chance: 60 + FLANK_BONUS_PER_ALLY,
       hit: true,
     })
   })
@@ -604,15 +605,15 @@ describe('BattleEngine facing', () => {
       engine.step(END_TURN)
       return engine.step(ATTACK_WARRIOR)[0] as AttackEvent
     }
-    expect(attack(EAST)).toMatchObject({ arc: 'front', arcBonus: 0, totalToHit: 13, hit: false })
-    expect(attack(WEST)).toMatchObject({ arc: 'rear', arcBonus: ARC_BONUS.rear, totalToHit: 15, hit: true })
+    expect(attack(EAST)).toMatchObject({ arc: 'front', arcBonus: 0, attackRoll: 55, chance: 45, hit: false })
+    expect(attack(WEST)).toMatchObject({ arc: 'rear', arcBonus: ARC_BONUS.rear, chance: 55, hit: true })
   })
 
   it('stacks the arc bonus with flanking in the preview', () => {
     const engine = new BattleEngine(
       setup([WARRIOR, { ...GOBLIN, facing: SOUTH_EAST }, { ...CLERIC, position: hex(2, 2) }]),
     )
-    // The warrior strikes from the goblin's west, beside its back: +4, +2 flanking and +1 hits AC 13 on 6+.
+    // The warrior strikes from the goblin's west, beside its back: 75%, +10 flanking and +5, less the goblin's armour class of 15.
     expect(engine.previewAttack('warrior', 'goblin')).toMatchObject({
       flankBonus: FLANK_BONUS_PER_ALLY,
       arc: 'side',
@@ -674,7 +675,7 @@ describe('formatEvent', () => {
     const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE]) })
     expect(engine.step(move('warrior', hex(0, 1))).map((e) => formatEvent(e, NAMES))).toEqual([
       'Warrior starts to move.',
-      'Warrior breaks away — free attack! Goblin rolls 1 — fumbles the attack!',
+      'Warrior breaks away — free attack! Goblin rolls 100 — fumbles the attack!',
       'Warrior moves 1 hex.',
     ])
   })
@@ -690,7 +691,7 @@ describe('formatEvent', () => {
       rng: sequence([ROLL_7, 0]),
     })
     expect(formatEvent(engine.step(ATTACK_GOBLIN)[0], NAMES)).toBe(
-      'Warrior rolls 7 (13 to hit, +2 flanking) — HITS Goblin for 3 dmg.',
+      'Warrior rolls 70 (needs 70 or less, +10 flanking) — HITS Goblin for 3 dmg.',
     )
   })
 
@@ -700,14 +701,14 @@ describe('formatEvent', () => {
     })
     engine.step(END_TURN)
     expect(formatEvent(engine.step(ATTACK_WARRIOR)[0], NAMES)).toBe(
-      'Goblin rolls 10 (15 to hit, +2 from behind) — HITS Warrior for 2 dmg.',
+      'Goblin rolls 55 (needs 55 or less, +10 from behind) — HITS Warrior for 2 dmg.',
     )
   })
 
   it('describes a fumble', () => {
     const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE]) })
     const [attack] = engine.step(ATTACK_GOBLIN)
-    expect(formatEvent(attack, NAMES)).toBe('Warrior rolls 1 — fumbles the attack!')
+    expect(formatEvent(attack, NAMES)).toBe('Warrior rolls 100 — fumbles the attack!')
   })
 
   it('describes a critical hit, the fall and the outcome', () => {
@@ -826,7 +827,7 @@ describe('BattleEngine gear changes', () => {
       distance: 4,
       apCost: BOW_STATS.attackApCost,
       apAfter: ap,
-      attackBonus: BOW_STATS.attackBonus,
+      toHit: BOW_STATS.toHit,
       defenderAc: GOBLIN.stats.ac,
       damageDice: BOW_STATS.damage,
     })

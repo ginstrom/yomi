@@ -4,8 +4,9 @@ import { GOBLIN_STATS, foeAtLevel, formatDamage, hitChance, resolveAttack, rollD
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
   maxHp: 20,
-  ac: 15,
-  attackBonus: 4,
+  ac: 25,
+  toHit: 75,
+  critChance: 5,
   damage: { count: 1, sides: 8, bonus: 2 },
   attackApCost: 5,
   attackRange: 1,
@@ -34,54 +35,49 @@ describe('rollDamage', () => {
 })
 
 describe('resolveAttack', () => {
-  it('always misses on a natural 1, even against a very low AC', () => {
-    const rng = sequence([0 /* d20 -> 1 */])
-    const result = resolveAttack(WARRIOR_STATS, 1, rng)
-    expect(result.attackRoll).toBe(1)
-    expect(result.fumble).toBe(true)
-    expect(result.hit).toBe(false)
-    expect(result.damage).toBe(0)
+  it('always misses on a roll above 95, even against no armour at all', () => {
+    const rng = sequence([0 /* roll -> 100 */])
+    const result = resolveAttack({ ...WARRIOR_STATS, toHit: 200 }, 0, rng)
+    expect(result).toMatchObject({ attackRoll: 100, chance: 95, fumble: true, hit: false, damage: 0 })
   })
 
-  it('always hits and doubles the damage dice (not the bonus) on a natural 20', () => {
-    const rng = sequence([0.999 /* d20 -> 20 */, 0 /* damage die -> 1 */, 0.999 /* damage die -> 8 */])
+  it('hits with the best rolls whatever the armour, and doubles the damage dice (not the bonus) on a critical', () => {
+    const rng = sequence([0.999 /* roll -> 1 */, 0 /* damage die -> 1 */, 0.999 /* damage die -> 8 */])
     const result = resolveAttack(WARRIOR_STATS, 999, rng)
-    expect(result.attackRoll).toBe(20)
-    expect(result.critical).toBe(true)
-    expect(result.hit).toBe(true)
+    expect(result).toMatchObject({ attackRoll: 1, chance: 5, critical: true, hit: true })
     expect(result.damage).toBe(1 + 8 + WARRIOR_STATS.damage.bonus)
   })
 
-  it('hits when total-to-hit meets or beats defender AC', () => {
-    const rng = sequence([0.5 /* d20 -> 11 */, 0.5 /* damage die */])
-    const result = resolveAttack(WARRIOR_STATS, 15, rng)
-    expect(result.totalToHit).toBe(11 + WARRIOR_STATS.attackBonus)
-    expect(result.hit).toBe(true)
+  it('hits when the roll is within the chance: to hit less armour class', () => {
+    const hit = resolveAttack(WARRIOR_STATS, 25, sequence([0.5 /* roll -> 50 */, 0.5 /* damage die */]))
+    expect(hit).toMatchObject({ attackRoll: 50, chance: 50, hit: true, critical: false })
+    const miss = resolveAttack(WARRIOR_STATS, 25, sequence([0.49 /* roll -> 51 */]))
+    expect(miss).toMatchObject({ attackRoll: 51, hit: false, fumble: false, damage: 0 })
   })
 
-  it('adds a situational bonus to the total to hit', () => {
-    const rng = sequence([0.45 /* d20 -> 10 */, 0.5 /* damage die */])
-    const result = resolveAttack(WARRIOR_STATS, 16, rng, 2)
-    expect(result.totalToHit).toBe(10 + WARRIOR_STATS.attackBonus + 2)
-    expect(result.hit).toBe(true)
+  it('adds a situational bonus to the chance', () => {
+    const rng = sequence([0.45 /* roll -> 55 */, 0.5 /* damage die */])
+    const result = resolveAttack(WARRIOR_STATS, 30, rng, 10)
+    expect(result).toMatchObject({ chance: 55, hit: true })
   })
 
-  it('hitChance matches resolveAttack over every d20 roll', () => {
-    for (const [ac, bonus] of [[13, 0], [16, 2], [30, 0], [2, 0], [15, -10]]) {
+  it('is critical only within the attacker’s critical chance, and only on a hit', () => {
+    const keen = { ...WARRIOR_STATS, critChance: 20 }
+    expect(resolveAttack(keen, 15, sequence([0.8 /* roll -> 20 */, 0.5])).critical).toBe(true)
+    expect(resolveAttack(keen, 15, sequence([0.79 /* roll -> 21 */, 0.5])).critical).toBe(false)
+    // A 10% chance to hit: a roll of 15 is within the critical chance but misses.
+    expect(resolveAttack(keen, 65, sequence([0.85 /* roll -> 15 */]))).toMatchObject({ hit: false, critical: false })
+  })
+
+  it('hitChance matches resolveAttack over every roll', () => {
+    for (const [ac, bonus] of [[15, 0], [30, 10], [100, 0], [-40, 0], [25, -50]]) {
       let hits = 0
-      for (let roll = 1; roll <= 20; roll++) {
-        if (resolveAttack(WARRIOR_STATS, ac, sequence([(roll - 0.5) / 20, 0.5]), bonus).hit) hits++
+      for (let roll = 1; roll <= 100; roll++) {
+        if (resolveAttack(WARRIOR_STATS, ac, sequence([(roll - 0.5) / 100, 0.5]), bonus).hit) hits++
       }
-      expect(hitChance(WARRIOR_STATS, ac, bonus)).toBeCloseTo(hits / 20)
+      expect(hitChance(WARRIOR_STATS, ac, bonus)).toBeCloseTo(hits / 100)
     }
-    expect(hitChance(WARRIOR_STATS, 13)).toBeCloseTo(0.6)
-  })
-
-  it('misses when total-to-hit is below defender AC', () => {
-    const rng = sequence([0.05 /* d20 -> 2 */])
-    const result = resolveAttack(GOBLIN_STATS, 25, rng)
-    expect(result.hit).toBe(false)
-    expect(result.damage).toBe(0)
+    expect(hitChance(WARRIOR_STATS, 15)).toBeCloseTo(0.6)
   })
 })
 
@@ -107,13 +103,13 @@ describe('foeAtLevel', () => {
     expect(foeAtLevel(GOBLIN_STATS, 1)).toEqual(GOBLIN_STATS)
   })
 
-  it('adds hit points every level, and attack, damage and armour at their steps', () => {
+  it('adds hit points every level, and chance to hit, damage and armour at their steps', () => {
     expect(foeAtLevel(GOBLIN_STATS, 2)).toEqual({ ...GOBLIN_STATS, maxHp: 14 })
     expect(foeAtLevel(GOBLIN_STATS, 5)).toEqual({
       ...GOBLIN_STATS,
       maxHp: 22,
-      ac: 14,
-      attackBonus: 5,
+      ac: 20,
+      toHit: 80,
       damage: { count: 1, sides: 6, bonus: 2 },
     })
   })

@@ -16,8 +16,7 @@ describe('inventory', () => {
     expect(
       describeItemStats({ damage: { count: 1, sides: 8, bonus: 0 }, attackApCost: 5, attackRange: 5, twoHanded: true }),
     ).toEqual(['Damage: 1d8', 'Attack Cost: 5 AP', 'Range: 5 hexes', 'Two-handed'])
-    expect(describeItemStats({ baseAc: 13 })).toEqual(['Armor Class: 13'])
-    expect(describeItemStats({ acBonus: 2, attackBonus: 1 })).toEqual(['Armor Class: +2', 'Attack: +1'])
+    expect(describeItemStats({ acBonus: 10, toHit: 5 })).toEqual(['Armor Class: +10', 'To Hit: +5%'])
     expect(describeItemStats()).toEqual([])
   })
 

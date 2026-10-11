@@ -49,8 +49,9 @@ describe('deriveCombatStats', () => {
       name: 'Warrior',
       weapon: 'Iron Longsword',
       maxHp: 20,
-      ac: 15,
-      attackBonus: 4,
+      ac: 25,
+      toHit: 75,
+      critChance: 5,
       damage: { count: 1, sides: 8, bonus: 2 },
       attackApCost: 5,
       attackRange: 1,
@@ -61,7 +62,7 @@ describe('deriveCombatStats', () => {
   it('falls back to unarmored AC and an unarmed attack with nothing equipped', () => {
     const naked = { ...createWarrior(), equipment: {} }
     const stats = deriveCombatStats(naked)
-    expect(stats.ac).toBe(10)
+    expect(stats.ac).toBe(0)
     expect(stats.damage).toEqual({ count: 1, sides: 2, bonus: 0 })
     expect(stats.attackApCost).toBe(3)
   })
@@ -82,19 +83,19 @@ describe('deriveCombatStats', () => {
   it('gets nothing from a shield while wielding a two-handed weapon', () => {
     const warrior = createWarrior()
     warrior.equipment.mainHand = STEEL_GREATSWORD
-    expect(deriveCombatStats(warrior).ac).toBe(13)
-    warrior.equipment.mainHand = IRON_DAGGER
     expect(deriveCombatStats(warrior).ac).toBe(15)
+    warrior.equipment.mainHand = IRON_DAGGER
+    expect(deriveCombatStats(warrior).ac).toBe(25)
   })
 
   it('reflects equipment changes', () => {
     const warrior = createWarrior()
     delete warrior.equipment.offHand
-    expect(deriveCombatStats(warrior).ac).toBe(13)
+    expect(deriveCombatStats(warrior).ac).toBe(15)
 
-    const ring: Item = { ...STEEL_ARMOR, id: 'ring', slot: 'ring1', stats: { attackBonus: 1, acBonus: 1 } }
+    const ring: Item = { ...STEEL_ARMOR, id: 'ring', slot: 'ring1', stats: { toHit: 5, acBonus: 5 } }
     warrior.equipment.ring1 = ring
-    expect(deriveCombatStats(warrior)).toMatchObject({ ac: 14, attackBonus: 5 })
+    expect(deriveCombatStats(warrior)).toMatchObject({ ac: 20, toHit: 80 })
   })
 })
 
@@ -117,7 +118,7 @@ describe('equipFromBackpack', () => {
     expect(warrior.equipment.offHand).toBeUndefined()
     expect(warrior.backpack[index]).toBe(IRON_SWORD)
     expect(warrior.backpack[space]).toBe(OAK_SHIELD)
-    expect(deriveCombatStats(warrior)).toMatchObject({ attackRange: 5, ac: 13 })
+    expect(deriveCombatStats(warrior)).toMatchObject({ attackRange: 5, ac: 15 })
   })
 
   it('stows a two-handed weapon when a shield is equipped', () => {
@@ -217,7 +218,7 @@ describe('dropping and picking up', () => {
     expect(warrior.equipment.offHand).toBeUndefined()
     expect(ground).toEqual([OAK_SHIELD])
     expect(dropEquipped(warrior, 'head', ground)).toBe(false)
-    expect(deriveCombatStats(warrior).ac).toBe(13)
+    expect(deriveCombatStats(warrior).ac).toBe(15)
   })
 
   it('picks an item up into the first empty backpack space', () => {

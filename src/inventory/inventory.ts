@@ -40,11 +40,10 @@ export interface ItemStats {
   attackRange?: number
   /** A main-hand weapon that takes both hands: whatever is in the off hand counts for nothing. */
   twoHanded?: boolean
-  /** Armor's base AC; replaces the unarmored AC of 10. */
-  baseAc?: number
-  /** Flat AC bonus, e.g. from a shield. */
+  /** What the item adds to its wearer's armour class, in percent. */
   acBonus?: number
-  attackBonus?: number
+  /** What the item adds to its wearer's chance to hit, in percent. */
+  toHit?: number
 }
 
 export interface Item {
@@ -65,9 +64,8 @@ export function describeItemStats(stats: ItemStats = {}): string[] {
   if (stats.attackApCost !== undefined) lines.push(`Attack Cost: ${stats.attackApCost} AP`)
   if (stats.attackRange !== undefined) lines.push(`Range: ${stats.attackRange} hexes`)
   if (stats.twoHanded) lines.push('Two-handed')
-  if (stats.baseAc !== undefined) lines.push(`Armor Class: ${stats.baseAc}`)
   if (stats.acBonus) lines.push(`Armor Class: +${stats.acBonus}`)
-  if (stats.attackBonus) lines.push(`Attack: +${stats.attackBonus}`)
+  if (stats.toHit) lines.push(`To Hit: +${stats.toHit}%`)
   return lines
 }
 
@@ -146,7 +144,7 @@ export const OAK_SHIELD: Item = {
   name: 'Oak Shield',
   slot: 'offHand',
   description: 'Iron-banded oak shield.',
-  stats: { acBonus: 2 },
+  stats: { acBonus: 10 },
   icon: 'shield',
 }
 
@@ -155,7 +153,7 @@ export const STEEL_ARMOR: Item = {
   name: 'Steel Breastplate',
   slot: 'armor',
   description: 'Sturdy plate armor.',
-  stats: { baseAc: 13 },
+  stats: { acBonus: 15 },
   icon: 'armor',
 }
 

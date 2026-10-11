@@ -7,8 +7,9 @@ import { planAttack } from './attackPlan.ts'
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
   maxHp: 20,
-  ac: 15,
-  attackBonus: 4,
+  ac: 25,
+  toHit: 75,
+  critChance: 5,
   damage: { count: 1, sides: 8, bonus: 2 },
   attackApCost: 5,
   attackRange: 1,

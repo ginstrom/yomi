@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createWarrior } from './character.ts'
-import { EVEN_FOE_XP_PER_LEVEL, LEVEL_UP_HP, gainXp, xpToNextLevel } from './progression.ts'
+import { EVEN_FOE_XP_PER_LEVEL, LEVEL_UP_HP, TO_HIT_PER_STEP, gainXp, xpToNextLevel } from './progression.ts'
 
 describe('xpToNextLevel', () => {
   it('asks for more even foes at each level: under one, then one, two, three', () => {
@@ -19,7 +19,7 @@ describe('gainXp', () => {
     const warrior = createWarrior()
     warrior.hp = 5
     const gain = gainXp(warrior, xpToNextLevel(1) - 1)
-    expect(gain).toEqual({ xp: xpToNextLevel(1) - 1, levelsGained: 0, maxHpGained: 0, attackBonusGained: 0 })
+    expect(gain).toEqual({ xp: xpToNextLevel(1) - 1, levelsGained: 0, maxHpGained: 0, toHitGained: 0 })
     expect([warrior.level, warrior.xp, warrior.hp]).toEqual([1, xpToNextLevel(1) - 1, 5])
     expect(warrior.base).toEqual(createWarrior().base)
   })
@@ -33,11 +33,11 @@ describe('gainXp', () => {
       xp: xpToNextLevel(1) + 30,
       levelsGained: 1,
       maxHpGained: LEVEL_UP_HP,
-      attackBonusGained: 1,
+      toHitGained: TO_HIT_PER_STEP,
     })
     expect([warrior.level, warrior.xp]).toEqual([2, 30])
     expect(warrior.base.maxHp).toBe(before.maxHp + LEVEL_UP_HP)
-    expect(warrior.base.attackBonus).toBe(before.attackBonus + 1)
+    expect(warrior.base.toHit).toBe(before.toHit + TO_HIT_PER_STEP)
     expect(warrior.hp).toBe(warrior.base.maxHp)
   })
 
@@ -57,6 +57,6 @@ describe('gainXp', () => {
     expect(gain.levelsGained).toBe(3)
     expect([warrior.level, warrior.xp]).toEqual([4, 0])
     expect(warrior.base.maxHp).toBe(before.maxHp + 3 * LEVEL_UP_HP)
-    expect(warrior.base.attackBonus).toBe(before.attackBonus + 2)
+    expect(warrior.base.toHit).toBe(before.toHit + 2 * TO_HIT_PER_STEP)
   })
 })

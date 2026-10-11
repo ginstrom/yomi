@@ -14,10 +14,10 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 12
+export const LOG_SCHEMA_VERSION = 13
 
-/** To-hit bonus an attacker gains for each other standing ally adjacent to the defender. */
-export const FLANK_BONUS_PER_ALLY = 2
+/** What an attacker's chance to hit gains, in percent, for each other standing ally adjacent to the defender. */
+export const FLANK_BONUS_PER_ALLY = 10
 
 /**
  * Which way a defender is struck from, relative to its facing: its three
@@ -26,8 +26,8 @@ export const FLANK_BONUS_PER_ALLY = 2
  */
 export type Arc = 'front' | 'side' | 'rear'
 
-/** To-hit bonus for striking a defender in each arc. */
-export const ARC_BONUS: Readonly<Record<Arc, number>> = { front: 0, side: 1, rear: 2 }
+/** What striking a defender in each arc adds to the chance to hit, in percent. */
+export const ARC_BONUS: Readonly<Record<Arc, number>> = { front: 0, side: 5, rear: 10 }
 
 /** Where units face before they first move or attack: towards the other side's starting edge. */
 export const DEFAULT_FACING: Readonly<Record<Side, number>> = { player: 0, enemy: 3 } // east, west
@@ -140,7 +140,7 @@ export interface AttackPreview {
   flankBonus: number
   arc: Arc
   arcBonus: number
-  /** Probability of a hit, natural 1s and 20s included. */
+  /** Probability of a hit, from 0.05 to 0.95. */
   hitChance: number
 }
 
@@ -201,19 +201,21 @@ export interface AttackEvent extends EventBase {
   apAfter: number
   /** The attacker's standing allies adjacent to the defender when the attack was made. */
   flankers: UnitId[]
-  /** To-hit bonus from flankers, already included in totalToHit. */
+  /** What the flankers added to the chance to hit, in percent; already included in `chance`. */
   flankBonus: number
   /** Which of the defender's arcs the attack came from, given the defender's facing. */
   arc: Arc
-  /** To-hit bonus from the arc, already included in totalToHit. */
+  /** What the arc added to the chance to hit, in percent; already included in `chance`. */
   arcBonus: number
   /** The attacker's facing after turning to strike. */
   attackerFacing: number
+  /** The roll, 1 to 100: a hit when no higher than `chance`. */
   attackRoll: number
-  /** The attacker's own to-hit bonus, already included in totalToHit. */
-  attackBonus: number
-  totalToHit: number
-  /** The armour class totalToHit had to reach. */
+  /** The attacker's own `toHit`, before bonuses and the defender's armour. */
+  toHit: number
+  /** The chance to hit in percent, after bonuses, armour class and the limits on both ends. */
+  chance: number
+  /** The armour class taken off the chance. */
   defenderAc: number
   hit: boolean
   critical: boolean
@@ -694,8 +696,8 @@ export class BattleEngine {
         arcBonus,
         attackerFacing: actor.facing,
         attackRoll: result.attackRoll,
-        attackBonus: actor.stats.attackBonus,
-        totalToHit: result.totalToHit,
+        toHit: actor.stats.toHit,
+        chance: result.chance,
         defenderAc: target.stats.ac,
         hit: result.hit,
         critical: result.critical,
@@ -788,11 +790,11 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
       const attackerName = names[event.attacker]
       const defenderName = names[event.defender]
       const opening = event.opportunity ? `${defenderName} breaks away — free attack! ` : ''
-      if (event.fumble) return `${opening}${attackerName} rolls 1 — fumbles the attack!`
+      if (event.fumble) return `${opening}${attackerName} rolls ${event.attackRoll} — fumbles the attack!`
       const flank = event.flankBonus > 0 ? `, +${event.flankBonus} flanking` : ''
       const from = event.arc === 'rear' ? 'from behind' : 'from the side'
       const arc = event.arcBonus > 0 ? `, +${event.arcBonus} ${from}` : ''
-      const roll = `${opening}${attackerName} rolls ${event.attackRoll} (${event.totalToHit} to hit${flank}${arc})`
+      const roll = `${opening}${attackerName} rolls ${event.attackRoll} (needs ${event.chance} or less${flank}${arc})`
       if (event.hit) {
         const crit = event.critical ? ' CRITICAL HIT!' : ''
         return `${roll} — HITS ${defenderName} for ${event.damage} dmg.${crit}`

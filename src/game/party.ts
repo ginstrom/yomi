@@ -63,7 +63,7 @@ export function describeRewards(rewards: readonly MemberReward[]): string[] {
   const lines = [`+${rewards[0].gain.xp} XP${rewards.length > 1 ? ' each' : ''}`]
   for (const { member, gain, revived } of rewards) {
     if (gain.levelsGained > 0) {
-      const attack = gain.attackBonusGained > 0 ? `, +${gain.attackBonusGained} attack` : ''
+      const attack = gain.toHitGained > 0 ? `, +${gain.toHitGained}% to hit` : ''
       lines.push(`${member.name} reaches level ${member.level}: +${gain.maxHpGained} max HP${attack}, wounds healed`)
     } else if (revived) {
       lines.push(`${member.name} gets back up, badly hurt`)

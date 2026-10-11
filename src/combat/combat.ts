@@ -7,8 +7,12 @@ export interface DamageRoll {
 export interface CombatantStats {
   name: string
   maxHp: number
+  /** Armour class: the points it takes off an attacker's chance to hit, in percent. */
   ac: number
-  attackBonus: number
+  /** The chance in percent of hitting a foe of armour class 0, before flanking and the like: a hero's skill with its weapon. */
+  toHit: number
+  /** The chance in percent that an attack is a critical hit; one that would not hit at all cannot be. */
+  critChance: number
   damage: DamageRoll
   /** The weapon by name, for the log; left out for a unit that names none. */
   weapon?: string
@@ -26,7 +30,8 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     a.name === b.name &&
     a.maxHp === b.maxHp &&
     a.ac === b.ac &&
-    a.attackBonus === b.attackBonus &&
+    a.toHit === b.toHit &&
+    a.critChance === b.critChance &&
     a.damage.count === b.damage.count &&
     a.damage.sides === b.damage.sides &&
     a.damage.bonus === b.damage.bonus &&
@@ -38,8 +43,10 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
 }
 
 export interface AttackResult {
+  /** 1 to 100; low is good. */
   attackRoll: number
-  totalToHit: number
+  /** The chance in percent the roll had to come within. */
+  chance: number
   hit: boolean
   critical: boolean
   fumble: boolean
@@ -60,10 +67,25 @@ export function rollDamage(roll: DamageRoll, rng: RNG = Math.random): number {
   return total
 }
 
+/** However the numbers fall, an attack has at least this chance in percent of hitting, and at most the other. */
+export const MIN_HIT_CHANCE = 5
+export const MAX_HIT_CHANCE = 95
+
 /**
- * D20-style resolution: natural 1 always misses, natural 20 always hits
- * and doubles damage dice, otherwise attackRoll + attackBonus (+ any
- * situational bonus, e.g. flanking) vs defenderAc.
+ * The chance in percent that an attack hits: the attacker's `toHit`, plus any
+ * situational bonus (flanking, say), less the defender's armour class, kept
+ * between `MIN_HIT_CHANCE` and `MAX_HIT_CHANCE`.
+ */
+export function hitPercent(attacker: CombatantStats, defenderAc: number, situationalBonus = 0): number {
+  return Math.min(MAX_HIT_CHANCE, Math.max(MIN_HIT_CHANCE, attacker.toHit + situationalBonus - defenderAc))
+}
+
+/**
+ * Percentile resolution: a roll of 1 to 100 hits when it is no higher than
+ * the chance to hit (`hitPercent`), and a hit is critical, doubling the
+ * damage dice, when the roll is also within the attacker's `critChance`. A
+ * roll above `MAX_HIT_CHANCE` always misses and is a fumble. The roll counts
+ * down from the top of `rng`'s range, so a high `rng()` is a lucky one.
  */
 export function resolveAttack(
   attacker: CombatantStats,
@@ -71,22 +93,20 @@ export function resolveAttack(
   rng: RNG = Math.random,
   situationalBonus = 0,
 ): AttackResult {
-  const attackRoll = rollDie(20, rng)
-  const critical = attackRoll === 20
-  const fumble = attackRoll === 1
-  const totalToHit = attackRoll + attacker.attackBonus + situationalBonus
-  const hit = !fumble && (critical || totalToHit >= defenderAc)
+  const attackRoll = 101 - rollDie(100, rng)
+  const chance = hitPercent(attacker, defenderAc, situationalBonus)
+  const fumble = attackRoll > MAX_HIT_CHANCE
+  const hit = attackRoll <= chance
+  const critical = hit && attackRoll <= attacker.critChance
   const damageRoll = critical ? { ...attacker.damage, count: attacker.damage.count * 2 } : attacker.damage
   const damage = hit ? rollDamage(damageRoll, rng) : 0
 
-  return { attackRoll, totalToHit, hit, critical, fumble, damage }
+  return { attackRoll, chance, hit, critical, fumble, damage }
 }
 
-/** Probability that resolveAttack hits, from 0.05 (only a natural 20) to 0.95 (all but a natural 1). */
+/** Probability that resolveAttack hits, from 0.05 to 0.95. */
 export function hitChance(attacker: CombatantStats, defenderAc: number, situationalBonus = 0): number {
-  const lowestHittingRoll = Math.max(2, defenderAc - attacker.attackBonus - situationalBonus)
-  const hittingRolls = 1 + Math.max(0, 19 - lowestHittingRoll + 1)
-  return Math.min(hittingRolls, 19) / 20
+  return hitPercent(attacker, defenderAc, situationalBonus) / 100
 }
 
 /** "1d8+2" notation. */
@@ -98,8 +118,9 @@ export function formatDamage(roll: DamageRoll): string {
 export const GOBLIN_STATS: CombatantStats = {
   name: 'Goblin',
   maxHp: 12,
-  ac: 13,
-  attackBonus: 3,
+  ac: 15,
+  toHit: 70,
+  critChance: 5,
   damage: { count: 1, sides: 6, bonus: 1 },
   attackApCost: 5,
   attackRange: 1,
@@ -110,8 +131,9 @@ export const GOBLIN_STATS: CombatantStats = {
 export const KOBOLD_STATS: CombatantStats = {
   name: 'Kobold',
   maxHp: 7,
-  ac: 14,
-  attackBonus: 2,
+  ac: 20,
+  toHit: 65,
+  critChance: 5,
   damage: { count: 1, sides: 4, bonus: 1 },
   attackApCost: 5,
   attackRange: 1,
@@ -120,11 +142,12 @@ export const KOBOLD_STATS: CombatantStats = {
 
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
 export const FOE_HP_PER_LEVEL = 0.2
-/** ...1 to its attack bonus every this many levels... */
+/** ...`FOE_STEP_PERCENT` to its chance to hit every this many levels... */
 export const FOE_ATTACK_LEVEL_STEP = 2
-/** ...and 1 to its damage and to its armour class every this many. */
+/** ...and 1 to its damage and `FOE_STEP_PERCENT` to its armour class every this many. */
 export const FOE_DAMAGE_LEVEL_STEP = 3
 export const FOE_AC_LEVEL_STEP = 3
+export const FOE_STEP_PERCENT = 5
 
 /**
  * A monster's stat block at `level`, from its level 1 block. A monster grows
@@ -137,8 +160,8 @@ export function foeAtLevel(base: CombatantStats, level: number): CombatantStats 
   return {
     ...base,
     maxHp: Math.round(base.maxHp * (1 + FOE_HP_PER_LEVEL * above)),
-    ac: base.ac + Math.floor(above / FOE_AC_LEVEL_STEP),
-    attackBonus: base.attackBonus + Math.floor(above / FOE_ATTACK_LEVEL_STEP),
+    ac: base.ac + FOE_STEP_PERCENT * Math.floor(above / FOE_AC_LEVEL_STEP),
+    toHit: base.toHit + FOE_STEP_PERCENT * Math.floor(above / FOE_ATTACK_LEVEL_STEP),
     damage: { ...base.damage, bonus: base.damage.bonus + Math.floor(above / FOE_DAMAGE_LEVEL_STEP) },
   }
 }

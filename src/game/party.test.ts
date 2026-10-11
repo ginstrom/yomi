@@ -93,9 +93,9 @@ describe('describeRewards', () => {
     party[1].hp = 0
     expect(describeRewards(rewardVictory(party, xpToNextLevel(1)))).toEqual([
       `+${xpToNextLevel(1)} XP each`,
-      `Aldric reaches level 2: +${LEVEL_UP_HP} max HP, +1 attack, wounds healed`,
+      `Aldric reaches level 2: +${LEVEL_UP_HP} max HP, +5% to hit, wounds healed`,
       'Brenna gets back up, badly hurt',
-      `Corwin reaches level 2: +${LEVEL_UP_HP} max HP, +1 attack, wounds healed`,
+      `Corwin reaches level 2: +${LEVEL_UP_HP} max HP, +5% to hit, wounds healed`,
     ])
   })
 })
