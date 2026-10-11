@@ -2,12 +2,15 @@
 
 ## 1. Purpose and status
 
-Yomi's heroes fight with blades, bows and fists, and eight of the eleven equipment slots have nothing to hold. This design adds magic in two halves:
+Yomi's heroes fight with blades, bows and fists, and eight of the eleven equipment slots have nothing to hold. This design adds magic in two halves, and trims the skill list to make room for it:
 
-- **Spellcasting**: a Sorcery skill, a mana pool, three spells cast in battle, and a mage in the starting party.
+- **Skills**: Unarmed and First Aid go. The three skills are Melee Weapons, Archery and **Magic**.
+- **Spellcasting**: spells are learned as perks. The first is **Magic Arrow**. A caster has mana, and a mage joins the starting party.
 - **Magic items**: enchanted gear for the empty slots and the weapon hand, won as loot from monster locations and handed round the party on the world map.
 
-**Status: ready for planning.** Nothing blocks implementation. Section 8 lists the product decisions I made without the user's word, each with the default this design assumes; the first three are worth confirming before planning.
+**Status: ready for planning.** Nothing blocks implementation. Section 8 lists the decisions made here on judgement; the first three are worth confirming before planning.
+
+Decisions the user made, which the design keeps as given: Unarmed and First Aid are removed; Magic is a skill; spells come through perks; the perks will later become a perk tree; the first spell perk is Magic Arrow.
 
 ## 2. Requirements and scope
 
@@ -15,36 +18,38 @@ Yomi's heroes fight with blades, bows and fists, and eight of the eleven equipme
 
 | ID | Requirement |
 | --- | --- |
-| R1 | A fifth skill, **Sorcery**, is a percentage like the others: it starts from intelligence, can be tagged and is raised with skill points. |
-| R2 | A character **knows** every spell whose Sorcery requirement it meets. Nothing about spells is stored on the character. |
-| R3 | A character that knows a spell has **mana**: a maximum derived from intelligence, level, perks and gear. Every battle starts at the maximum; mana does not return during a battle. |
-| R4 | In battle a unit can **cast** a spell it knows on a legal target for the spell's action points and mana. The engine resolves it, logs it as an event, and lists it in `legalActions`. |
-| R5 | Three spells ship, one of each shape: **Firebolt** (damage to one foe), **Mend** (heals an ally) and **Fireburst** (damage to a foe and every unit beside it, friend or foe). |
-| R6 | The `aggressive` policy casts, so the game's enemy AI and the simulator's sides use spells when their units have them. |
-| R7 | The player casts from the battle screen: a Cast button, a choice of spell, then a target, with the odds shown and a way to back out. |
-| R8 | The character panel gains a **Spells** tab listing every spell, which are known, and the character's mana. |
-| R9 | A new game's party has a fourth hero, a mage, who knows Firebolt and Mend at level 1. |
-| R10 | Two perks support casters: more mana, and more spell damage. |
-| R11 | **Magic items** exist for the neck, head, cloak and ring slots and as enchanted weapons, including wands that strike with Sorcery. Items can add to mana, spell skill and critical chance as well as to what items add today. |
-| R12 | Each monster location holds **loot**, which a victory there moves into the party's shared **baggage**. The victory screen names it. |
-| R13 | On the world map the character panel can change gear for free, and its ground section shows the baggage, through which items pass between members. |
-| R14 | The simulator reports casts and healing, and gains a `--campaign` mode that plays the whole map, which is how scaling is retuned. |
-| R15 | Scaling is retuned for the party of four with magic, and `CLAUDE.md`'s rules of scaling are rewritten with the new numbers. |
+| R1 | The **Unarmed** skill is removed. Bare hands strike with Melee Weapons and roll a fixed die. |
+| R2 | The **First Aid** skill is removed, with everything that hangs on it: the tending after a victory, the Healer perk and the `firstAid` perk effect. |
+| R3 | **Magic** is a skill like the others: it starts from intelligence, can be tagged and is raised with skill points. It is the chance of a spell striking. |
+| R4 | A **spell is learned by taking its perk**. The Magic Arrow perk asks for Magic 50% and teaches Magic Arrow. A character knows exactly the spells its perks teach. |
+| R5 | A character that knows a spell has **mana**: a maximum derived from intelligence, level and gear. Every battle starts at the maximum; mana does not return during a battle. |
+| R6 | In battle a unit can **cast** a spell it knows on a foe in range for the spell's action points and mana. The engine resolves it, logs it as an event, and lists it in `legalActions`. |
+| R7 | The `aggressive` policy casts, so the game's enemy AI and the simulator's sides use spells when their units have them. |
+| R8 | The player casts from the battle screen: a Cast button, then a target, with the odds shown and a way to back out. |
+| R9 | A new game's party has a fourth hero, a mage, who starts with the Magic Arrow perk. |
+| R10 | **Magic items** exist for the neck, head, cloak and ring slots and as enchanted weapons, including wands that strike with Magic. Items can add to mana, spell skill and critical chance as well as to what items add today. |
+| R11 | Each monster location holds **loot**, which a victory there moves into the party's shared **baggage**. The victory screen names it. |
+| R12 | On the world map the character panel can change gear for free, and its ground section shows the baggage, through which items pass between members. |
+| R13 | The simulator reports casts, and gains a `--campaign` mode that plays the whole map, which is how scaling is retuned. |
+| R14 | Scaling is retuned for a party of four with magic and without First Aid, and `CLAUDE.md`'s rules of scaling are rewritten with the new numbers. |
 
 ### Quality constraints
 
 - All rules live in the Phaser-free domain modules with tests; `BattleScene` decides no outcome.
-- A battle still replays exactly from its seed and its actions. The order in which a spell draws from the RNG is fixed (section 5.3).
+- A battle still replays exactly from its seed and its actions.
 - `LOG_SCHEMA_VERSION` goes from 13 to 14.
-- A unit without magic behaves exactly as today, so existing stat blocks and tests need no new fields.
+- A unit without magic behaves exactly as today, so existing stat blocks need no new fields.
+- Teaching a spell is a property of a perk's data, so the coming perk tree adds spells by adding entries.
 
 ### Non-goals
 
-- Lasting effects (buffs, slows, damage over time). The engine keeps no per-unit state beyond what it has now, plus mana.
+- **The perk tree.** Perks stay a flat list with requirements. This design adds one spell perk and the way a perk teaches a spell; the tree, and the spells on it, come later.
+- **Any spell but Magic Arrow.** That leaves out healing, area spells and lasting effects, and with them friendly fire and per-unit effect state in the engine. Section 6 says what each would need.
+- **Choosing among several spells in battle.** With one spell in the game the Cast button needs no spell list; one comes with the second spell.
+- **A replacement for First Aid.** After this change, wounds heal only on a new level.
 - Consumables: potions, scrolls, charges on wands. There is no "use item" action.
-- Enemy casters. The engine and the policy support them; adding one is a stat block with a `magic` entry, a sprite and a `FOE_XP` value, left for later.
+- Enemy casters. The engine and the policy support them; adding one is a stat block with a `magic` entry, a sprite and a `FOE_XP` value.
 - Line of sight, spell interruption, free attacks provoked by casting, armour hampering a caster.
-- Casting outside battle. Mend cannot be used on the world map.
 - A mage sprite: every hero is still drawn as the `warrior` kind.
 - Shops, random loot, item weight or value.
 
@@ -52,107 +57,103 @@ Yomi's heroes fight with blades, bows and fists, and eight of the eleven equipme
 
 | ID | Criterion | Covers |
 | --- | --- | --- |
-| A1 | A character with Sorcery 76% knows Firebolt and Mend and not Fireburst; raised to 90% it knows all three, with no other change to it. | R1, R2 |
-| A2 | The mage enters battle with 18 mana; a Firebolt leaves 15 and 4 fewer action points; the next battle starts at 18 again. | R3, R4 |
-| A3 | A cast with too little mana or action points, out of range, or on an illegal target throws from `step` and is absent from `legalActions`. | R4 |
-| A4 | Fireburst on a foe with an ally of the caster beside it rolls against that ally too, and can fell it. | R5 |
-| A5 | Two engines given the same seed and the same actions, casts included, produce identical logs. | R4 |
-| A6 | In a simulated battle the mage's side logs `cast` events, and the summary counts them. | R6, R14 |
-| A7 | In the browser: select the mage, press Cast, pick Firebolt, click a foe; the log shows the cast and the Cast button shows 3 less mana. Esc backs out at each stage. | R7 |
-| A8 | The Spells tab shows three rows for every member, two of them marked known for the mage. | R8, R9 |
-| A9 | Winning at Goblin Raiders puts a Ring of Protection in the baggage and names it on the victory screen; on the world map a member takes it from the baggage and wears it, and its armour class rises by 5. | R11, R12, R13 |
-| A10 | A second ring goes into the empty ring slot, not over the first. | R11 |
-| A11 | `npm run simulate -- --campaign --battles 500 --seed 1` prints the share of campaigns that clear the map and the win rate at each threat. | R14 |
-| A12 | That share is about 2 in 3 with the aggressive policy, and `CLAUDE.md` states the numbers that give it. | R15 |
+| A1 | `SKILL_IDS` is `melee`, `archery`, `magic`. A character with nothing in hand hits with its Melee Weapons skill and rolls 1d4. | R1, R3 |
+| A2 | A won battle restores no hit points except through a new level, and its reward lines mention no healer. No perk or perk effect names First Aid. | R2 |
+| A3 | A level 3 character with Magic 50% and a perk pick can take Magic Arrow, and one with 49% cannot. Before taking it the character has no spells and no mana; after, it knows Magic Arrow and has mana. | R4, R5 |
+| A4 | The mage enters battle with 18 mana; a Magic Arrow leaves 15 and 4 fewer action points; the next battle starts at 18 again. | R5, R6, R9 |
+| A5 | A cast with too little mana or action points, out of range, on an ally or on a fallen foe throws from `step` and is absent from `legalActions`. | R6 |
+| A6 | Two engines given the same seed and the same actions, casts included, produce identical logs. | R6 |
+| A7 | In a simulated battle the mage logs `cast` events, and the summary counts them. | R7, R13 |
+| A8 | In the browser: select the mage, press Cast, click a foe; the log shows the cast and the Cast button shows 3 less mana. Esc backs out of targeting. | R8 |
+| A9 | Winning at Goblin Raiders puts a Ring of Protection in the baggage and names it on the victory screen; on the world map a member takes it from the baggage and wears it, and its armour class rises by 5. | R10, R11, R12 |
+| A10 | A second ring goes into the empty ring slot, not over the first. | R10 |
+| A11 | `npm run simulate -- --campaign --battles 500 --seed 1` prints the share of campaigns that clear the map and the win rate at each threat. | R13 |
+| A12 | That share is about 2 in 3 with the aggressive policy, and `CLAUDE.md` states the numbers that give it. | R14 |
 
 ## 3. Current system
 
 Inspected facts, with the files they come from.
 
-- **Skills** ([`src/character/skills.ts`](../../src/character/skills.ts)): four ids in `SKILL_IDS`; `SKILLS` gives each a base from attributes. `Character.trained` is a `Record<SkillId, number>`, filled in by hand in `createCharacter`.
-- **Derived stats** ([`src/character/character.ts`](../../src/character/character.ts)): `deriveCombatStats` turns a character into `CombatantStats`. `weaponSkill` picks the skill from the weapon: none is Unarmed, a range above 1 is Archery, otherwise Melee. `maxHp` depends on attributes, level and perks, never on gear.
-- **Perks** ([`src/character/perks.ts`](../../src/character/perks.ts)): data; `PerkEffects` keys are summed by `perkBonus`. Perks can ask for skill levels (`healer` does).
+- **Skills** ([`src/character/skills.ts`](../../src/character/skills.ts)): `SKILL_IDS` is `melee`, `archery`, `unarmed`, `firstAid`. `TAGGED_SKILLS` is 2. `Character.trained` is a `Record<SkillId, number>`, filled in by hand in `createCharacter`.
+- **Unarmed** ([`src/character/character.ts`](../../src/character/character.ts)): `weaponSkill` returns `unarmed` for an empty hand, and `unarmedDamage` picks a die from `UNARMED_DICE` by the Unarmed skill (1d2 up to 1d8). A bare-handed attack costs 3 AP.
+- **First Aid** ([`src/game/party.ts`](../../src/game/party.ts)): `rewardVictory` has the best healer standing restore `firstAidHp` to every member; `VictoryReward.healer` and `MemberReward.tended` report it and `describeRewards` prints it. The `healer` perk and the `firstAid` key of `PerkEffects` add to it ([`src/character/perks.ts`](../../src/character/perks.ts)). `autoAdvance` trains First Aid for a character tagged in it ([`src/character/progression.ts`](../../src/character/progression.ts)).
+- **Perks**: data; numeric `PerkEffects` are summed by `perkBonus`. A perk can ask for a level, attributes and skills. A pick comes every third level (`PERK_LEVEL_STEP`), so the first at level 3. `Build` has no way to start a character with a perk. Ten perks fill the Skills tab's perk list to the bottom of the panel.
+- **Starting heroes**: Aldric is tagged Melee and Unarmed, Brenna Archery and First Aid, Corwin Melee and Archery. Intelligence: 4, 7, 5. The `wizard` portrait exists and is unused.
 - **Items** ([`src/inventory/inventory.ts`](../../src/inventory/inventory.ts)): an `Item` has one `slot`. `ItemStats` covers damage, attack cost, range, two-handedness, `acBonus` and `toHit`. Only `mainHand`, `offHand` and `armor` have items. `WEAPONS` is "every weapon in the game": `createCharacter` puts every one a hero does not hold into its backpack, and the simulator's `--player-weapon` picks from it. `ring1` and `ring2` are separate slots.
-- **Engine** ([`src/engine/battleEngine.ts`](../../src/engine/battleEngine.ts)): actions are `move`, `attack`, `equip`, `end_turn`. A unit record holds stats, hp, position, facing, ap and two flags. `equip` swaps the stat block and caps hp at the new maximum. `checkWinner` tests the player's side first. `LOG_SCHEMA_VERSION` is 13.
+- **Engine** ([`src/engine/battleEngine.ts`](../../src/engine/battleEngine.ts)): actions are `move`, `attack`, `equip`, `end_turn`. `equip` swaps the stat block and caps hp at the new maximum. `LOG_SCHEMA_VERSION` is 13.
 - **Attack resolution** ([`src/combat/combat.ts`](../../src/combat/combat.ts)): `resolveAttack(attacker, defenderAc, rng, bonus)` draws one roll to hit and, on a hit, the damage dice. `CombatantStats` already has one optional field (`weapon`); `sameCombatStats` compares field by field.
 - **Policies** ([`src/engine/policies.ts`](../../src/engine/policies.ts)): `aggressive` attacks with the best bonus or closes on the nearest foe, judging reach by `attackRange` and `attackApCost`.
-- **Party** ([`src/game/party.ts`](../../src/game/party.ts)): three `STARTING_HEROES`. Intelligence: Aldric 4, Brenna 7, Corwin 5. The `wizard` and `priestess` portraits exist and are unused.
-- **Encounters and scaling** ([`src/game/encounters.ts`](../../src/game/encounters.ts), [`src/game/worldMap.ts`](../../src/game/worldMap.ts)): `FOES_AT_THREAT` is `[2, 3, 3, 3, 4]`, tuned for a party of three. Twelve monster locations: two at threat 1, four at 2, two each at 3, 4 and 5.
+- **Encounters and scaling** ([`src/game/encounters.ts`](../../src/game/encounters.ts), [`src/game/worldMap.ts`](../../src/game/worldMap.ts)): `FOES_AT_THREAT` is `[2, 3, 3, 3, 4]`, tuned for a party of three that First Aid tends after each win. Twelve monster locations: two at threat 1, four at 2, two each at 3, 4 and 5.
 - **Game state** ([`src/game/gameState.ts`](../../src/game/gameState.ts)): `{ party, world }`.
-- **Battle screen** ([`src/scenes/BattleScene.ts`](../../src/scenes/BattleScene.ts)): two buttons, Attack and End Turn. `targeting: boolean` is the pick-a-foe mode; Esc leaves it. `endBattle` calls `clearLocation` and `rewardVictory` and shows `describeRewards`' lines. Keys I, C, S open the panel.
-- **Character panel** ([`src/scenes/InventoryScene.ts`](../../src/scenes/InventoryScene.ts)): three tabs. Gear can be changed only when a member's `gearApCost` is not null, which `WorldScene` never passes, so gear is view-only on the world map. The Ground section edits whatever `Item[]` the member's `ground` is. Ten perk rows of 38px fill the Skills tab to y = 484 of the panel's 500; three tabs of 140px sit clear of the "[ESC] Close" hint, a fourth would not.
+- **Battle screen** ([`src/scenes/BattleScene.ts`](../../src/scenes/BattleScene.ts)): two buttons, Attack and End Turn. `targeting: boolean` is the pick-a-foe mode; Esc leaves it. `endBattle` calls `clearLocation` and `rewardVictory` and shows `describeRewards`' lines.
+- **Character panel** ([`src/scenes/InventoryScene.ts`](../../src/scenes/InventoryScene.ts)): gear can be changed only when a member's `gearApCost` is not null, which `WorldScene` never passes, so gear is view-only on the world map. The Ground section edits whatever `Item[]` the member's `ground` is.
 - **Simulator** ([`scripts/simulate.ts`](../../scripts/simulate.ts)): fights one encounter many times. The campaign run used for both past retunes was a throwaway script and is not in the repository (project memory).
 
 ## 4. Proposed behaviour
 
-### 4.1 Sorcery, known spells and mana (R1 to R3)
+### 4.1 The three skills (R1 to R3)
 
-Sorcery starts at `20 + 4 × intelligence`. A tag adds 20 as for any skill.
+| Skill | Starts at | Does |
+| --- | --- | --- |
+| Melee Weapons | `30 + 2 × (strength + agility)` | Chance to hit with a blade, an axe or bare hands |
+| Archery | `30 + 2 × (perception + agility)` | Chance to hit with a bow |
+| Magic | `20 + 4 × intelligence` | Chance of a spell or a wand striking; what spell perks ask for |
 
-| Spell | Sorcery | Mana | AP | Range | Target | Effect |
-| --- | --- | --- | --- | --- | --- | --- |
-| Firebolt | 50% | 3 | 4 | 5 | a foe | 1d10 damage |
-| Mend | 65% | 4 | 4 | 3 | a wounded ally, or the caster | heals 1d6+2 |
-| Fireburst | 90% | 7 | 6 | 4 | a foe | 1d8 damage to it and to every unit beside it |
+**Bare hands** strike with Melee Weapons, roll 1d4 and cost 3 action points. The die no longer grows with a skill.
 
-A character knows a spell from the moment its own Sorcery reaches the requirement: its attributes, tag and trained points, with nothing from gear. So of the present heroes Brenna (48%) is two skill points from Firebolt, and the others further.
+**Tags.** With three skills, a character is tagged in one (`TAGGED_SKILLS` becomes 1): Aldric Melee, Brenna Archery, Corwin Melee, and the mage Magic. The tag still adds 20 and doubles what a skill point buys.
 
-Maximum mana is `2 × intelligence`, plus `floor(intelligence / 2)` for each level above the first, plus perks and gear. A character that knows no spell has no mana and the screens show none for it. Mana is a battle's budget: it starts full and is gone when spent. It is never stored on the character, in keeping with the rule that a character's numbers are derived.
+**After a victory** nobody tends wounds. A member who fell still gets back up at `REVIVED_HP`, and a new level still heals fully; nothing else restores hit points.
 
-These numbers are starting values. R15's retune may move them.
+### 4.2 Spell perks, known spells and mana (R4, R5)
 
-### 4.2 Casting in battle (R4, R5)
-
-A unit may cast a spell when it is its side's turn, it stands, it knows the spell, and it has the action points and the mana. Legal targets, all standing and within the spell's range in hexes:
-
-- Firebolt and Fireburst: any foe.
-- Mend: any unit of the caster's side with fewer hit points than its maximum, the caster included (distance 0).
-
-Casting pays the action points and the mana, turns the caster to face a target on another hex, and ends a paid-for change of gear exactly as an attack does. It provokes nothing.
-
-A damaging spell is rolled like an attack, once for each unit it touches: the chance is the caster's spell skill less the unit's armour class, kept between 5 and 95; a roll within the caster's critical chance doubles the dice. Flanking and facing add nothing to a spell: it is the reliable strike, where a blade is the one that rewards position. Fireburst touches its target first and then every other standing unit adjacent to the target in roster order, whichever side it is on, the caster too if it stands there.
-
-Mend always works: it rolls its dice and restores that much, up to the target's maximum. It cannot raise the fallen.
-
-Units felled by a spell fall after the spell's event, in the order they were touched, and then the battle's end is judged once. A Fireburst that fells the last unit of both sides is a defeat, since the player's side is tested first.
-
-### 4.3 The player's flow (R7)
-
-1. With a unit selected, the **Cast** button sits between Attack and End Turn, reading `Cast (15)`: the unit's mana. It is hidden for a unit without magic and disabled when the unit can cast nothing now. Key: `M`.
-2. Pressing it swaps the button row for one button per known spell, in the table's order, labelled with name and mana cost (`Firebolt 3`), plus **Cancel**. A spell the unit cannot cast now (too little mana or AP, or no target in range) is disabled. Keys `1` to `3` pick; Esc or Cancel returns to the usual row.
-3. Picking a spell enters targeting for it. Only its legal targets are highlighted, red for a foe and green for an ally, each labelled with the chance to hit (Mend shows no label). The hint reads `Firebolt: choose a foe (4 AP, 3 mana). Esc to go back.` Hovering a Fireburst target outlines every hex the burst would touch, allies' included, each with its own chance.
-4. A click on a legal target casts. Any other board click, Esc or Cancel goes back to the spell row.
-5. Playback: a small coloured dot flies from caster to target (a tweened `Graphics` circle, no new sprite), each unit hurt flashes red as for a blow, a healed unit flashes green, and hit point bars follow. The log shows one line (section 5.3).
-
-Clicking a foe outside these modes still means a weapon attack; spells are always cast through the button, so a mage in melee is never made to guess.
-
-### 4.4 The Spells tab (R8)
-
-A fourth tab, **Spells** (key `B`, for book, in the panel and in battle), shows the member's Sorcery, its mana (`Mana 15 / 18` in battle, `Mana 18` on the world map, `No mana` when it knows no spell) and a row for each spell in the style of a perk row: name, `3 mana · 4 AP · range 5`, the description, and `Sorcery 65%` at the right until the member knows it. Known spells are gold. The tab is read-only everywhere.
-
-The Character tab's combat figures and the Inventory tab's stat lines gain a `Mana` line for a member with mana.
-
-### 4.5 The mage (R9) and the perks (R10)
-
-The fourth starting hero:
-
-| Name | Portrait | S | P | E | I | A | L | Tagged | In hand |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Delwyn | `wizard` | 3 | 5 | 4 | 9 | 6 | 8 | Sorcery, First Aid | Wand of Sparks |
-
-That gives 17 hit points, 8 action points, Sorcery 76%, 18 mana, and Firebolt and Mend from the start: two Firebolts a turn for three turns, then the wand. Like every hero Delwyn gets the steel breastplate and the spare weapons from `createCharacter`.
-
-| Perk | Asks | Ranks | A rank adds |
+| Perk | Asks | Ranks | Teaches |
 | --- | --- | --- | --- |
-| Wellspring | level 3, Sorcery 50% | 2 | +5 mana |
-| Evoker | level 3, Sorcery 75% | 2 | +1 damage with spells and wands |
+| Magic Arrow | level 1, Magic 50% | 1 | Magic Arrow |
 
-### 4.6 Magic items (R11)
+| Spell | Mana | AP | Range | Target | Effect |
+| --- | --- | --- | --- | --- | --- |
+| Magic Arrow | 3 | 4 | 5 | a foe | 1d10 damage |
+
+A character knows a spell when it has a rank of a perk that teaches it. The perk is taken like any other, with a pick, on the world map; its level requirement is 1 so that a starting character can be built with it, though a pick first comes at level 3. Of the present heroes, Brenna (Magic 48%, untagged) is two skill points from qualifying.
+
+Maximum mana is `2 × intelligence`, plus `floor(intelligence / 2)` for each level above the first, plus gear. A character that knows no spell has no mana and the screens show none for it. Mana is a battle's budget: it starts full and is gone when spent. It is never stored on the character, in keeping with the rule that a character's numbers are derived.
+
+These numbers are starting values. R14's retune may move them.
+
+### 4.3 Casting in battle (R6)
+
+A unit may cast a spell when it is its side's turn, it stands, it knows the spell, and it has the action points and the mana. A legal target is a standing foe within the spell's range in hexes.
+
+Casting pays the action points and the mana, turns the caster to face its target, and ends a paid-for change of gear exactly as an attack does. It provokes nothing.
+
+Magic Arrow is rolled like an attack: the chance is the caster's spell skill less the target's armour class, kept between 5 and 95; a roll within the caster's critical chance doubles the dice; a roll above 95 is a fumble. Flanking and facing add nothing to a spell: it is the reliable strike, where a blade is the one that rewards position.
+
+### 4.4 The player's flow (R8)
+
+1. With a unit selected, the **Cast** button sits between Attack and End Turn, reading `Cast (15)`: the unit's mana. It is hidden for a unit without magic and disabled when the unit can cast nothing now (too little mana or AP, or no foe in range). Key: `M`.
+2. Pressing it enters targeting for the unit's spell, and the button reads Cancel. Only the spell's legal targets are highlighted, each labelled with the chance to hit. The hint reads `Magic Arrow: choose a foe (4 AP, 3 mana). Esc or Cancel to go back.`
+3. A click on a legal target casts. Any other board click, Esc or Cancel goes back.
+4. Playback: a small coloured dot flies from caster to target (a tweened `Graphics` circle, no new sprite), a unit hurt flashes red as for a blow, and its hit point bar follows. The log shows one line (section 5.3).
+
+Unlike Attack, Cast always asks for the target, even when only one foe is in range: mana is too dear to spend on a slip. Clicking a foe outside targeting still means a weapon attack, so a mage is never made to guess which it will get.
+
+The Character tab's combat figures and the Inventory tab's stat lines gain a `Mana` line for a member with mana: `Mana 15 / 18` in battle, `Mana 18` on the world map. The Magic Arrow perk appears in the Skills tab's perk list like any perk; there is no separate list of spells.
+
+### 4.5 The mage (R9)
+
+| Name | Portrait | S | P | E | I | A | L | Tagged | Perk | In hand |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Delwyn | `wizard` | 3 | 5 | 4 | 9 | 6 | 8 | Magic | Magic Arrow | Wand of Sparks |
+
+That gives 17 hit points, 8 action points, Magic 76% and 18 mana: two Magic Arrows a turn for three turns, then the wand. Like every hero Delwyn gets the steel breastplate and the spare weapons from `createCharacter`.
+
+### 4.6 Magic items (R10)
 
 | Id | Name | Slot | Adds | Icon |
 | --- | --- | --- | --- | --- |
-| `spark_wand` | Wand of Sparks | weapon | 1d6, 5 AP, range 4, strikes with Sorcery | `wand` |
-| `storm_wand` | Wand of Storms | weapon | 1d10+1, 5 AP, range 5, strikes with Sorcery | `wand` |
+| `spark_wand` | Wand of Sparks | weapon | 1d6, 5 AP, range 4, strikes with Magic | `wand` |
+| `storm_wand` | Wand of Storms | weapon | 1d10+1, 5 AP, range 5, strikes with Magic | `wand` |
 | `emberblade` | Emberblade | weapon | 1d8+4, 5 AP, +10% to hit | `sword` |
 | `hawk_bow` | Hawkeye Bow | weapon, two-handed | 1d8+2, 5 AP, range 6, +10% to hit | `bow` |
 | `ring_protection` | Ring of Protection | ring | +5 armour class | `ring` |
@@ -163,15 +164,15 @@ That gives 17 hit points, 8 action points, Sorcery 76%, 18 mana, and Firebolt an
 
 Rules that are new:
 
-- A **wand** is a ranged weapon whose chance to hit is the wielder's Sorcery rather than Archery. It costs no mana, holds no zone of control (its range is above 1), gains nothing from strength, and takes the Evoker perk's damage rather than Deadly Aim's. Far Shot lengthens it, as it does any ranged weapon.
+- A **wand** is a ranged weapon whose chance to hit is the wielder's Magic rather than Archery. In every other respect it is a ranged weapon: it costs no mana, holds no zone of control, gains nothing from strength, and takes the Deadly Aim and Far Shot perks as a bow does.
 - A **ring** fits either ring slot: equipping one fills the first ring slot if it is empty, else the second if that is empty, else replaces the first. Two of the same ring both count.
-- An item's **spell skill** adds to the chance of the wearer's spells striking. It does not teach a spell and does not help a wand.
-- An item's **mana** raises the maximum. Putting one on mid-battle adds no mana to spend; taking one off caps what is left at the new maximum.
+- An item's **spell skill** adds to the chance of the wearer's spells striking. It does not count towards what a spell perk asks and does not help a wand.
+- An item's **mana** raises the maximum of a wearer who knows a spell, and does nothing for one who does not. Putting one on mid-battle adds no mana to spend; taking one off caps what is left at the new maximum.
 - No item changes maximum hit points. That keeps `character.hp <= maxHp(character)` true however gear is changed outside battle (section 4.7).
 
 Magic items are not in `WEAPONS`, so a new hero's backpack does not fill with them.
 
-### 4.7 Loot and the baggage (R12, R13)
+### 4.7 Loot and the baggage (R11, R12)
 
 Every monster location has fixed loot, better the further out:
 
@@ -196,60 +197,55 @@ On the world map the character panel's Inventory tab works as it does in battle,
 
 In battle nothing changes: the ground is the hex's pile, and the baggage is out of reach.
 
-### 4.8 The AI (R6)
+### 4.8 The AI (R7)
 
-`aggressive` gives each unit, in this order, the first thing that applies:
+`aggressive` gives each unit the first of these that applies:
 
-1. **Mend** the ally with the lowest hit points among its legal Mend targets, if that ally is at or below half its maximum.
-2. **Fireburst** the legal target whose burst touches the most foes, if it touches at least two foes and no unit of the caster's own side.
-3. **Firebolt** the legal target with the fewest hit points (first in roster order on a tie).
-4. Otherwise as today: the weapon attack with the best bonus, or a closing move.
+1. **Cast** a damaging spell on the legal target with the fewest hit points (first in roster order on a tie).
+2. Otherwise as today: the weapon attack with the best bonus, or a closing move.
 
-The closing move judges reach by the unit's best way to do harm from afar: if it has the mana for a damaging spell it knows, the range and AP cost of the one with the longest range; otherwise its weapon's, as now. So a mage stops at Firebolt's range and does not walk into the line. The policy stays general: steps 1 to 3 run over whatever cast actions `legalActions` lists, keyed on each spell's effect, not on spell ids.
+The closing move judges reach by the unit's best way to do harm from afar: if it has the mana for a spell it knows, that spell's range and AP cost; otherwise its weapon's, as now. So a mage stops at Magic Arrow's range and does not walk into the line, and one out of mana closes to its wand's range. Step 1 runs over whatever cast actions `legalActions` lists, not over spell ids.
 
 `random` needs no change; casts are among the legal actions it draws from.
 
-### 4.9 Simulator (R14) and retune (R15)
+### 4.9 Simulator (R13) and retune (R14)
 
-The summary gains `avgPlayerCasts`, `avgEnemyCasts` and `avgPlayerHealing` (hit points Mend restored, per battle). Damage a spell does to the other side counts in the existing damage figures; damage to the caster's own side is left out of them and reported as `avgFriendlyFire`. Hit and critical rates stay weapon attacks only.
+The summary gains `avgPlayerCasts` and `avgEnemyCasts`. A spell's damage counts in the existing damage figures. Hit and critical rates stay weapon attacks only.
 
 `--player-weapon` accepts any weapon-slot item, magic ones included.
 
 `--campaign` changes what one of `--battles` is: a whole campaign. A new party fights the monster locations of a new world nearest first (by hex distance from where it stands, which is the last location beaten, starting at home; first in the world's list on a tie), each at its own threat, carrying its hit points, taking `rewardVictory` after each win and then `autoAdvance` for every member, until it clears the map or loses. Loot is not used: the simulator's heroes keep their starting gear. `--encounter`, `--threat` and `--party-level` are refused with `--campaign`. Every battle's events go to `--out` as now, each `battle_start` carrying `meta.campaign` (its number) and `meta.location`. The summary prints the share of campaigns that cleared the map, the mean number of locations cleared, and a table by threat of battles fought and the share won.
 
-The retune keeps the standing target: the aggressive policy clears the map about 2 times in 3. The levers, in the order to try them, are `FOES_AT_THREAT` (a fourth hero most likely wants one more foe at some threats, and `GOBLIN_RAID` and `KOBOLD_SCOUTS` then need a fifth `FoeSlot` each, on hexes off `PARTY_START`), the per-level growth in `foeAtLevel`, and last the spell and mana numbers of section 4.1. Single cells are checked with `--encounter --threat --party-level` as before, and the sentences in `CLAUDE.md` about what a fresh party and an even-level party win are restated from those runs.
+The retune keeps the standing target: the aggressive policy clears the map about 2 times in 3. Two changes pull against each other: a fourth hero makes each battle easier, and the loss of First Aid makes a run of battles harder, since wounds now last until the next level. The levers, in the order to try them, are `FOES_AT_THREAT` (should a threat want a fifth foe, `GOBLIN_RAID` and `KOBOLD_SCOUTS` need a fifth `FoeSlot` each, on hexes off `PARTY_START`), the per-level growth in `foeAtLevel`, and last the spell and mana numbers of section 4.2. Single cells are checked with `--encounter --threat --party-level` as before, and the sentences in `CLAUDE.md` about what a fresh party and an even-level party win are restated from those runs.
 
 ## 5. Technical design
 
 All paths marked *new* are proposed.
 
-### 5.1 Data: spells, skill, perks, items
+### 5.1 Data: skills, spells, perks, items
+
+**`skills.ts`**: `SKILL_IDS` becomes `['melee', 'archery', 'magic']`; `unarmed` and `firstAid` leave `SKILLS`; `magic` joins with `base: ({ intelligence }) => 20 + 4 * intelligence`. `TAGGED_SKILLS` becomes 1. Melee's description becomes `Chance to hit with a blade, an axe or bare hands`.
 
 **`src/combat/spells.ts`** (*new*, lowest layer, imports only `DamageRoll`):
 
 ```ts
-export const SPELL_IDS = ['firebolt', 'mend', 'fireburst'] as const
+export const SPELL_IDS = ['magic_arrow'] as const
 export type SpellId = (typeof SPELL_IDS)[number]
-
-export type SpellEffect =
-  | { kind: 'damage'; dice: DamageRoll; /** 0 strikes the target alone; 1 also every unit beside it. */ radius: 0 | 1 }
-  | { kind: 'heal'; dice: DamageRoll }
 
 export interface Spell {
   name: string
   description: string
-  /** The Sorcery, in percent, a character needs to know it. */
-  skill: number
   manaCost: number
   apCost: number
   range: number
-  effect: SpellEffect
+  /** What it does to the foe it strikes. */
+  damage: DamageRoll
 }
 
 export const SPELLS: Record<SpellId, Spell>
 ```
 
-A damaging spell targets a foe and a healing one an ally; that follows from `effect.kind`, so there is no separate target field. The requirement is a plain number so that `combat/` does not import `character/`.
+A spell does not name the perk that teaches it or the skill it asks for: the perk does, so `combat/` does not import `character/`.
 
 **`CombatantStats`** gains one optional field. Absent means the unit cannot cast, which is every existing stat block:
 
@@ -259,39 +255,42 @@ magic?: {
   maxMana: number
   /** The chance in percent of a spell striking a foe of armour class 0. */
   skill: number
-  /** Added to the damage of each spell that does any. */
-  damageBonus: number
   /** In SPELL_IDS order. */
   spells: readonly SpellId[]
 }
 ```
 
-`sameCombatStats` compares it: both absent, or all four parts equal.
+`sameCombatStats` compares it: both absent, or all three parts equal.
 
-**`skills.ts`**: `'sorcery'` joins `SKILL_IDS` with `base: ({ intelligence }) => 20 + 4 * intelligence`. `createCharacter` builds `trained` from `SKILL_IDS` instead of naming each skill.
+**`perks.ts`**:
+
+- `Perk` gains `spell?: SpellId`: the spell a rank of it teaches. It sits beside `effects`, not in it, because `perkBonus` sums numbers.
+- `PERKS` gains `magic_arrow: { name: 'Magic Arrow', description: 'Teaches Magic Arrow: 1d10 to a foe within 5 hexes, for 3 mana', ranks: 1, level: 1, skills: { magic: 50 }, effects: {}, spell: 'magic_arrow' }`.
+- `healer` leaves `PERKS` and `firstAid` leaves `PerkEffects`. `heavy_hand`'s description keeps "and bare hands". The list stays at ten perks, so the Skills tab's layout does not change.
+- `knownSpells(character): SpellId[]`: the `SPELL_IDS` taught by a perk the character has a rank of. It lives here, beside `perkBonus`, as the other way a perk's data is read.
 
 **`character.ts`**:
 
-- `knownSpells(character): SpellId[]`: the `SPELL_IDS` whose `skill` is at most `skillLevel(character, 'sorcery')`.
-- `maxMana(character): number`: 0 when `knownSpells` is empty, else `2 × int + (level − 1) × floor(int / 2) + perkBonus('maxMana')` plus the `maxMana` of worn items. "Worn" is the same set `deriveCombatStats` already computes (an off-hand item under a two-handed weapon counts for nothing).
-- `weaponSkill(weapon)` returns `weapon.stats.skill` when the item names one, before its present rules.
-- `deriveCombatStats`: `ranged` becomes "the weapon's range is above 1" (today it is "the skill is Archery"); the damage bonus is `spellDamage` for a Sorcery weapon, `rangedDamage` for another ranged one, else might and `meleeDamage`; `critChance` adds worn items' `critChance`; and `magic` is set when the character knows a spell: `{ maxMana: maxMana(c), skill: skillLevel(c, 'sorcery') + worn items' spellSkill, damageBonus: perkBonus(c, 'spellDamage'), spells: knownSpells(c) }`.
+- `Build` gains `perks?: PerkId[]`, each given at rank 1 by `createCharacter` without spending a pick or checking what the perk asks. `createCharacter` builds `trained` from `SKILL_IDS` instead of naming each skill.
+- `UNARMED_DICE` and `unarmedDamage` go; bare hands roll a constant `{ count: 1, sides: 4, bonus: 0 }`.
+- `weaponSkill(weapon)`: `weapon.stats.skill` when the item names one; else `archery` for a range above 1; else `melee`, the empty hand included.
+- `maxMana(character): number`: 0 when `knownSpells` is empty, else `2 × int + (level − 1) × floor(int / 2)` plus the `maxMana` of worn items. "Worn" is the set `deriveCombatStats` already computes (an off-hand item under a two-handed weapon counts for nothing).
+- `deriveCombatStats`: `ranged` becomes "the weapon's range is above 1" (today it is "the skill is Archery"), so a wand gets no might and takes `rangedDamage` and `range`; `critChance` adds worn items' `critChance`; and `magic` is set when the character knows a spell: `{ maxMana: maxMana(c), skill: skillLevel(c, 'magic') + worn items' spellSkill, spells: knownSpells(c) }`.
 - `equipFromBackpack`: for an item whose `ring` flag is set (below), the slot is chosen as section 4.6 says; everything else is unchanged.
+- `WARRIOR_BUILD.tagged` becomes `['melee']`.
 
-**`perks.ts`**: `PerkEffects` gains `maxMana` and `spellDamage`; `PERKS` gains `wellspring` and `evoker` (section 4.5). `AUTO_PERKS` becomes `tireless, evoker, wellspring, toughness, …`: only a caster qualifies for the two, so other builds are unaffected.
+**`progression.ts`**: `autoAdvance` loses its First Aid step: the weapon's skill to mastery, then the weapon again, then whatever is left to raise. The mage's weapon skill is Magic because it holds a wand. `AUTO_PERKS` is unchanged; Magic Arrow is reached through the fallback to any perk on offer.
 
-**`progression.ts`**: `autoAdvance` needs no change beyond `AUTO_PERKS`; the mage's weapon skill is Sorcery because it holds a wand.
+**`party.ts`**: `FIRST_AID_PER_HP` and `firstAidHp` go. `rewardVictory` awards experience and stands the fallen up, and nothing more; `VictoryReward` loses `healer` and `MemberReward` loses `tended`; `describeRewards` loses its last line. Tags become Brenna `['archery']` and Corwin `['melee']`. Delwyn joins `STARTING_HEROES` with `perks: ['magic_arrow']`.
+
+**`attributes.ts`** descriptions: perception `Archery`; intelligence `Skill points, mana and Magic`.
 
 **`inventory.ts`**:
 
-- `ItemStats` gains `skill?: SkillId` (the skill a weapon strikes with), `maxMana?`, `spellSkill?`, `critChance?`. `describeItemStats` gets a line for each (`Strikes with Sorcery`, `Mana: +6`, `Spell Skill: +10%`, `Critical: +5%`). `inventory.ts` imports `SkillId` as a type only; `skills.ts` does not import `inventory.ts`, so no cycle.
+- `ItemStats` gains `skill?: SkillId` (the skill a weapon strikes with), `maxMana?`, `spellSkill?`, `critChance?`. `describeItemStats` gets a line for each (`Strikes with Magic`, `Mana: +6`, `Spell Skill: +10%`, `Critical: +5%`). `inventory.ts` imports `SkillId` as a type only; `skills.ts` does not import `inventory.ts`, so no cycle.
 - `Item` gains `ring?: true`. Ring items have `slot: 'ring1'` and the flag.
 - `ItemIcon` gains `'wand' | 'ring' | 'amulet' | 'circlet' | 'cloak'`.
 - The nine items of section 4.6 as constants, and `MAGIC_ITEMS: readonly Item[]` listing them. `WEAPONS` is unchanged.
-
-**`attributes.ts`**: intelligence's description becomes `Skill points, mana, Sorcery, First Aid`.
-
-**`party.ts`**: Delwyn joins `STARTING_HEROES`.
 
 ### 5.2 World state, loot and baggage
 
@@ -307,26 +306,15 @@ magic?: {
 | { type: 'cast'; unit: UnitId; spell: SpellId; target: UnitId }
 ```
 
-Every spell targets a unit, Fireburst included, so there is one shape and `legalActions` stays small.
-
 **State**: `UnitRecord` and `UnitSnapshot` gain `mana: number`, set at construction to `stats.magic?.maxMana ?? 0`. `equip` sets `mana = min(mana, newStats.magic?.maxMana ?? 0)`. `startTurn` does not touch it.
 
-**`legalActions`**: for each unit that can act, moves, then attacks (when it has the AP, as now), then for each spell in `stats.magic.spells` whose AP and mana it has, a cast on each legal target in roster order. The present early `continue` when AP is short of an attack must not skip the casts.
+**`legalActions`**: for each unit that can act, moves, then attacks (when it has the AP, as now), then for each spell in `stats.magic.spells` whose AP and mana it has, a cast on each standing foe within the spell's range, in roster order. The present early `continue` when AP is short of an attack must not skip the casts.
 
-**`previewCast(unit, spell, target): CastPreview | null`**: null if the cast is not legal now; otherwise
+**`previewCast(unit, spell, target): CastPreview | null`**: null if the cast is not legal now; otherwise `{ apCost, manaCost, hitChance }`, the last from 0.05 to 0.95.
 
-```ts
-interface CastPreview {
-  apCost: number
-  manaCost: number
-  /** Every unit the spell would touch, target first; a damaging spell gives each its chance to be hit, 0.05 to 0.95. */
-  affected: Array<{ unit: UnitId; hitChance?: number }>
-}
-```
+**`step`** for a cast, in order: validate with the same test `legalActions` uses, else throw `"<unit> cannot cast <spell> on <target>"`; subtract AP and mana; clear `gearChangePaid`; face the target; resolve; record the `cast` event; then, if the target fell, zero its AP, record `unit_down` and `checkWinner`, as an attack does.
 
-**`step`** for a cast, in order: validate (the same test `legalActions` uses; otherwise throw `"<unit> cannot cast <spell> on <target>"`); subtract AP and mana; clear `gearChangePaid`; face the target if it is on another hex; resolve; record the `cast` event; then for each touched unit now at 0 hit points, in touched order, zero its AP and record `unit_down`; then `checkWinner` once.
-
-**Resolution and RNG order.** For damage, for each touched unit in order (target, then the others adjacent to it in roster order): one call to `resolveAttack({ ...caster.stats, toHit: magic.skill, damage: { ...dice, bonus: dice.bonus + magic.damageBonus } }, unit.stats.ac, rng)`, with no situational bonus. That draws the roll to hit and then, on a hit, the dice, exactly as a weapon attack does, so a unit's draws are finished before the next unit's begin. For healing: one `rollDamage(dice, rng)`.
+**Resolution**: one call to `resolveAttack({ ...caster.stats, toHit: magic.skill, damage: spell.damage }, target.stats.ac, rng)` with no situational bonus. It draws from the RNG exactly as a weapon attack does: the roll to hit, then the dice on a hit.
 
 **Event**
 
@@ -344,54 +332,46 @@ export interface CastEvent extends EventBase {
   casterFacing: number
   /** The caster's spell skill, before the target's armour. */
   skill: number
-  /** Every unit touched, target first. */
-  results: CastResult[]
+  attackRoll: number
+  chance: number
+  defenderAc: number
+  hit: boolean
+  critical: boolean
+  fumble: boolean
+  damageDice: DamageRoll
+  damage: number
+  targetHpBefore: number
+  targetHpAfter: number
 }
-
-export type CastResult =
-  | {
-      kind: 'damage'; unit: UnitId
-      attackRoll: number; chance: number; defenderAc: number
-      hit: boolean; critical: boolean; fumble: boolean
-      damageDice: DamageRoll; damage: number
-      hpBefore: number; hpAfter: number
-    }
-  | { kind: 'heal'; unit: UnitId; dice: DamageRoll; rolled: number; hpBefore: number; hpAfter: number }
 ```
 
-`LOG_SCHEMA_VERSION` becomes 14: a new event type, and `mana` and `magic` in every unit snapshot.
+`LOG_SCHEMA_VERSION` becomes 14: a new event type, and `mana` and `magic` in unit snapshots.
 
-**`formatEvent`**, one line per cast:
-
-- One unit hurt: `Delwyn casts Firebolt: rolls 34 (needs 61 or less) — HITS Goblin for 7 dmg.` with `CRITICAL HIT!`, `MISSES Goblin.` and the fumble wording as for an attack.
-- Several: `Delwyn casts Fireburst: Goblin 7 dmg, Kobold missed, Aldric 3 dmg.`
-- Healing: `Delwyn casts Mend on Aldric: +6 HP.`, the figure being `hpAfter − hpBefore`; `on herself`-style wording is avoided by `Delwyn casts Mend: +6 HP.` when caster and target are the same.
+**`formatEvent`**: `Delwyn casts Magic Arrow: rolls 34 (needs 61 or less) — HITS Goblin for 7 dmg.`, with `CRITICAL HIT!`, `MISSES Goblin.` and the fumble wording as for an attack.
 
 ### 5.4 Policies
 
-As section 4.8. `policies.ts` imports `SPELLS` to read effects, ranges and costs. The burst's touched units are worked out from the state by a small exported helper in `battleEngine.ts`, `burstUnits(units, target)` (the target, then the standing units adjacent to it in roster order), which the engine's own resolution and `previewCast` also use, so the three cannot disagree.
+As section 4.8. `policies.ts` imports `SPELLS` for ranges and costs.
 
 ### 5.5 Scenes
 
-**`src/scenes/spellMenu.ts`** (*new*, Phaser-free): `spellChoices(engine, unit)` returns, for each spell the unit knows, `{ spell, label, enabled, targets: UnitId[] }`, from `legalActions(unit)`; and `castHint(spell)` returns the hint line. `BattleScene` builds its spell buttons from it.
-
 **`BattleScene`**
 
-- `targeting: boolean` becomes a mode: `'none' | 'attack' | 'spells' | { spell: SpellId }`. `setPlayerControl` resets it to `'none'` whenever the selected unit changes or control is lost, as it resets `targeting` now.
-- A Cast button; the three buttons sit at `centreX − 160`, `centreX`, `centreX + 160`. In `'spells'` mode they are hidden and the spell buttons and Cancel take the row at the same spacing. Up to four buttons must fit at the minimum 840×560 window: shrink the button width if they do not.
-- `boardIntent` gains a `cast` kind for a legal target while a spell is chosen; `refreshHighlights` and `refreshHover` draw what section 4.3 describes, from `previewCast`.
-- `showEvent` handles `cast`: face the caster, fly the dot, flash and refresh each result's unit. `playerAct` pauses 600 ms after a cast, as after an attack.
-- Keys: `M` casts, `1` to `3` pick a spell in `'spells'` mode, `B` opens the panel on Spells, and Esc steps back one mode before it opens the menu.
+- `targeting: boolean` becomes `targeting: 'attack' | SpellId | null`. `setPlayerControl` clears it whenever control is lost or the action it was for is no longer legal, as it clears the flag now.
+- A Cast button; the three buttons sit at `centreX − 160`, `centreX`, `centreX + 160`, and must fit at the minimum 840×560 window: shrink the button width if they do not. While a spell is being targeted the Cast button reads Cancel, as Attack does in its own mode.
+- `onCast` picks the first spell in the unit's `magic.spells` that has a legal cast and sets `targeting` to it. `boardIntent` gains a `cast` kind for a legal target while a spell is targeted; `refreshHighlights` draws those targets and their odds from `previewCast`.
+- `showEvent` handles `cast`: face the caster, fly the dot, flash the target and refresh its bar. `playerAct` pauses 600 ms after a cast, as after an attack.
+- Keys: `M` is the Cast button.
 - `openPanel` passes each member's current `mana` from the engine's snapshot.
 
 **`eventSchedule.ts`**: unchanged; a cast takes no scheduled time, like an attack.
 
-**`sounds.ts`**: `SOUND_KEYS` gains `sfx_spell_cast` and `sfx_spell_heal`. A damaging cast cues `sfx_spell_cast` at 0 and, at `IMPACT_DELAY_MS`, the critical impact if any result is critical, else the hit impact if any hit, else the miss. A heal cues `sfx_spell_heal`. Both files are placeholder tones made as the audio README describes, and the README's table gains their rows.
+**`sounds.ts`**: `SOUND_KEYS` gains `sfx_spell_cast`. A cast cues it at 0 and, at `IMPACT_DELAY_MS`, the same outcome sound an attack would. The file is a placeholder tone made as the audio README describes, and the README's table gains its row.
 
 **`InventoryScene`**
 
-- `TABS` gains `['spells', 'Spells']`; `TAB_W` drops to 120 so four tabs clear the close hint. `PERK_ROW_H` drops to 32 so twelve perks end at y = 488; check both lines of a row still read at that height, and if not, scroll the perk list with a `SlotScroll` as the ground pile does.
 - `PanelMember` gains `mana?: number` (what is left, in battle). `InventoryData` gains `groundTitle?: string`, default `'Ground'`.
+- The stat lines and the Character tab show mana as section 4.4 says. The Skills tab needs no layout change: three skill rows where there were four, ten perk rows as before.
 - The gear hint has a third wording for the world map (section 4.7), chosen by `resumeKey`.
 
 **`WorldScene.openPanel`** passes `{ character, gearApCost: 0, ground: gameState.baggage }` for every member and `groundTitle: 'Baggage'`. Nothing is needed on close: the characters and the baggage were edited in place.
@@ -400,49 +380,61 @@ As section 4.8. `policies.ts` imports `SPELLS` to read effects, ranges and costs
 
 **`testHook.ts`**
 
-- `BattleProbe.buttons` gains `cast`; `BattleProbe` gains `spells: Array<ButtonProbe & { spell: SpellId }>` (the spell row, empty outside `'spells'` mode) and `casting: SpellId | null`.
-- `InventoryProbe.tab` gains `'spells'`; `InventoryProbe` gains `spells: Array<{ spell: SpellId; known: boolean }>`, `mana: number | null` and `ground: Array<Point & { item: string }>` (the items the ground grid shows now), which a test needs in order to take loot from the baggage.
+- `BattleProbe.buttons` gains `cast`; `BattleProbe` gains `casting: SpellId | null`.
+- `InventoryProbe` gains `mana: number | null` and `ground: Array<Point & { item: string }>` (the items the ground grid shows now), which a test needs in order to take loot from the baggage. Its `skills` record follows `SkillId` and so loses two entries and gains one.
 
 ### 5.6 Documentation
 
-`CLAUDE.md` in the same commits as the changes that make it wrong: the simulator flags; `spells.ts` and `spellMenu.ts`; the rules of casting, mana, known spells, wands and rings; loot and the baggage; `GameState`; the party of four; the panel's four tabs and gear on the world map (the roadmap memory's "gear changes on the world map" is no longer left out); the rules of scaling; and `LOG_SCHEMA_VERSION`.
+`CLAUDE.md` in the same commits as the changes that make it wrong: the three skills and the single tag; every mention of Unarmed, First Aid, the healer's tending and `firstAidHp`; how a perk teaches a spell; the rules of casting and mana; wands and rings; loot and the baggage; `GameState`; the party of four; gear on the world map; `spells.ts`; the simulator flags; the rules of scaling; and `LOG_SCHEMA_VERSION`. The roadmap memory's "gear changes on the world map" is no longer left out.
 
 ## 6. Consequences
 
-- **Balance.** A fourth hero, burst damage and in-battle healing each make the party stronger, and `CLAUDE.md` already says to retune when there is more healing than First Aid. The present numbers will be too easy until R15 is done, so the retune belongs at the end of the same piece of work, not after it. Loot is outside the simulator, so the played game will run a little easier than the tuned figure; the items are modest on purpose.
-- **Stalling to heal.** Because mana is a battle's budget and hit points carry over, a player can keep a last weak foe alive and spend the rest of the mage's mana on Mend. It is bounded (18 mana is four Mends, about 22 hit points) and costs turns under attack. Accepted; a mana pool that carried between battles would remove it at the price of a stored number and a rule for getting mana back.
-- **Friendly fire** is the first way a player can fell its own unit. The hover outline in section 4.3 is what makes that a choice and not an accident.
+- **Healing.** With First Aid gone, a party's wounds last until a level heals them. Hit points become the campaign's hard limit, and the order in which the player takes on locations matters more. This is the largest change to how the game plays, larger than Magic Arrow, and the retune must be judged by campaign runs, not single battles.
+- **Balance.** The present numbers were tuned for three heroes with First Aid. They will be wrong in both directions until R14 is done, so the retune belongs at the end of the same piece of work. Loot is outside the simulator, so the played game will run a little easier than the tuned figure; the items are modest on purpose.
+- **Unarmed builds end.** Bare hands become a fallback at 1d4, where a trained Unarmed skill reached 1d8. Aldric loses his second tag and Brenna hers; neither changes how they fight with what they hold.
 - **Log consumers** must handle schema 14: a `cast` event, and damage and deaths that no `attack` event precedes.
-- **Existing tests** that count three heroes, list four skills or three tabs, or assume ten perks will need updating; stat blocks built by hand in tests need nothing, since `magic` is optional.
-- **Party of three assumptions**: `PARTY_START` already has six hexes and `MAX_PARTY_SIZE` is 6, so a fourth hero needs no board change. A fifth foe slot does need hexes chosen.
+- **Existing tests** of Unarmed dice, First Aid, the Healer perk, the healer's reward line, three heroes and two tags will be deleted or rewritten; stat blocks built by hand in tests need nothing, since `magic` is optional.
+- **Party size**: `PARTY_START` already has six hexes and `MAX_PARTY_SIZE` is 6, so a fourth hero needs no board change.
 - **No saved games exist**, so nothing migrates.
+
+### What later spells will need
+
+Recorded so the perk tree can be planned against it; none of it is built here.
+
+- *Another damaging spell on one foe*: a `SPELLS` entry and a perk. The battle screen then needs a way to choose among a unit's spells; the Cast button taking the first castable one is the assumption that breaks.
+- *A healing spell*: `Spell` needs an effect other than `damage`, cast legality needs ally targets, and `CastEvent` needs a result that is not a roll to hit.
+- *An area spell*: one cast touches several units, so the event carries a list of results and the order of RNG draws across them must be fixed. It is also the first way to hurt one's own side.
+- *A lasting effect*: per-unit state in the engine with a duration, and a mark for it on the unit's plate.
 
 ### Choices and their alternatives
 
-- *Spells known by skill threshold, not learned from books or perks.* It stores nothing, follows the Unarmed die's precedent, and makes Sorcery points worth spending for any hero. The cost is that every caster of equal skill has the same spells; schools or spellbooks can come later as a second gate on `knownSpells`.
-- *One skill, not one per school.* Three spells do not carry two skills.
-- *Spells ignore flanking and facing.* It keeps a clear difference between a caster and an archer, and keeps Fireburst from needing an arc for each unit it touches.
-- *Fireburst targets a unit, not a hex.* One action shape, a short `legalActions`, and the existing click-a-foe targeting. The cost is that a burst cannot be centred on an empty hex between two foes.
+- *A perk names the spell it teaches (`Perk.spell`), not a numeric effect.* It keeps `perkBonus` a sum of numbers and makes "which spells does this character know" one filter over its perks, which is the shape a perk tree will want.
+- *Magic is both the gate to spell perks and the chance to hit.* Otherwise the skill would do nothing once the perk was taken, and a point in it would be a point wasted.
+- *Spells ignore flanking and facing.* It keeps a clear difference between a caster and an archer.
+- *One tag, not two of three.* Tagging two of three skills is hardly a choice, and it would force a second tag on heroes with no use for one.
 - *The baggage, not loot into backpacks.* Backpacks are nearly full of spare weapons, members could not hand items to each other outside battle, and the panel's ground section already does everything a shared pile needs.
+- *`CastEvent` is flat, with one target's result.* It mirrors `AttackEvent` and is all Magic Arrow needs. An area spell will change its shape and bump the schema again, which is cheap here.
 
 ## 7. Verification
 
 Domain tests (`npx vitest run --project domain`), with seeded or scripted RNGs:
 
-- `skills`, `character`: Sorcery's base and tag; `knownSpells` at 49, 50, 65 and 90 (A1); `maxMana` by intelligence, level, Wellspring and the circlet, and 0 without a spell; `deriveCombatStats` sets and omits `magic`; a wand's chance to hit is Sorcery, takes Evoker and not Deadly Aim, gains nothing from strength; items' critical chance and spell skill; `sameCombatStats` with and without `magic`.
+- `skills`, `character`: the three skills and Magic's base and tag (A1); bare hands strike with Melee at 1d4; `weaponSkill` for an empty hand, a sword, a bow and a wand; a wand takes Deadly Aim and Far Shot and nothing from strength; `maxMana` by intelligence, level and the circlet, and 0 without a spell, circlet or not; `deriveCombatStats` sets and omits `magic`; items' critical chance and spell skill; `sameCombatStats` with and without `magic`; a `Build` with `perks` starts with them.
+- `perks`, `progression`: Magic Arrow qualifies at Magic 50% and not at 49%; `takePerk` then makes `knownSpells` return it (A3); `autoAdvance` no longer trains a skill that does not exist.
 - `character` (equipping): a ring into an empty first slot, then the second, then replacing the first (A10).
-- `battleEngine`: cast legality in every direction (A3); AP and mana paid and carried (A2); Firebolt hit, miss, critical and fumble from scripted rolls; Mend capped at the maximum and refused on the unhurt and the fallen; Fireburst's touched units and their order, an ally felled, both sides' last units felled together (A4); `equip` capping mana; `previewCast` agreeing with what `step` then does; two engines with one seed giving one log (A5); `formatEvent`'s three lines.
-- `policies`: each of the four steps of section 4.8 chosen in a state built for it; a mage with mana stops at Firebolt's range, and one without it closes to its wand's.
-- `party`, `gameState`, `worldMap`: four heroes, Delwyn's derived numbers; every monster location has loot; `takeLoot` moves it.
-- `spellMenu`, `sounds`: choices enabled and disabled by mana, AP and targets; cues for a hit, a miss, a critical and a heal.
-- `simulate`: the new summary fields from a hand-built log; a campaign with a fixed seed runs to an end, reports per-threat rows and refuses `--threat` (A6, A11).
+- `party`: four heroes and Delwyn's derived numbers; `rewardVictory` restores nothing but through a level and a revival, and `describeRewards` has no healer's line (A2).
+- `battleEngine`: cast legality in every direction (A5); AP and mana paid and carried (A4); a hit, a miss, a critical and a fumble from scripted rolls; the target felled and the battle won by a cast; `equip` capping mana; `previewCast` agreeing with what `step` then does; two engines with one seed giving one log (A6); `formatEvent`'s line.
+- `policies`: a caster with mana casts on the weakest foe in range before it would strike with its weapon; with mana it stops at Magic Arrow's range, and without it closes to its wand's.
+- `gameState`, `worldMap`: every monster location has loot; `takeLoot` moves it.
+- `sounds`: cues for a cast that hits, misses and is critical.
+- `simulate`: the new summary fields from a hand-built log; a campaign with a fixed seed runs to an end, reports per-threat rows and refuses `--threat` (A7, A11).
 
-Scene smoke tests (`--project scenes`): `Battle` and `Inventory` still start with the new buttons and tab.
+Scene smoke tests (`--project scenes`): `Battle` and `Inventory` still start.
 
 In-browser tests (`npm run test:browser`), following [`e2e/CLAUDE.md`](../../e2e/CLAUDE.md):
 
-- Battle: cast Firebolt through the Cast button and a foe; the probe's log ends in a `cast` event and the mage's `mana` fell by 3; Esc from targeting returns to the spell row and again to the usual buttons (A7).
-- Panel: the Spells tab opens by its tab and by `B`, with two spells known for Delwyn (A8); the perk list and the four tabs fit at 840×560.
+- Battle: cast Magic Arrow through the Cast button and a foe; the probe's log ends in a `cast` event and the mage's `mana` fell by 3; Esc leaves targeting (A8). The three buttons fit at 840×560.
+- Panel: the Skills tab shows three skills, and Magic Arrow among the perks, taken for Delwyn.
 - World: win the nearest battle (with a seed that wins), open the panel, take the ring from the baggage, equip it, and see the armour class rise by 5 (A9).
 
 Balance: the campaign run and the single-cell runs of section 4.9, their results written into `CLAUDE.md` (A12).
@@ -451,10 +443,12 @@ Balance: the campaign run and the single-cell runs of section 4.9, their results
 
 None of these blocks planning. Each is a decision made here on judgement, with the default the design assumes.
 
-1. **A fourth starting hero.** Assumed: Delwyn joins the three. Without a caster at the start, magic would be invisible until Brenna is trained into it. The alternative that avoids a larger party is to rebuild Corwin as the mage; R15's retune is needed either way, but would be smaller.
-2. **Mana refills every battle.** Assumed, for the reasons in sections 4.1 and 6. The alternative is a pool that carries like hit points and comes back with travel or levels.
-3. **No consumables and no enemy casters in this pass.** Assumed. Both are natural next steps, and the second is nearly free once this lands.
-4. **Spell and item numbers** are first values, to be moved by the retune.
-5. **Emberblade and the Hawkeye Bow reuse the plain sword and bow icons.** Assumed, to hold the art to five new icons; the tooltip tells them apart.
-6. **Risk: panel room.** The Skills tab's perk list and the tab row are both at their limit (section 5.5). The fallbacks are given there, and the in-browser check at 840×560 is what decides.
-7. **Risk: retune effort.** A fourth hero may not be answered by foe counts alone, since `FOES_AT_THREAT` moves in whole foes. `foeAtLevel`'s growth is the finer lever.
+1. **Nothing replaces First Aid's healing.** Assumed: removing the skill removes the tending after a victory, and wounds heal only on a level. The alternatives are to keep a flat tending that needs no skill, or to wait for a healing spell on the perk tree. This shapes the whole campaign, so it is the one to confirm first.
+2. **One tag a character.** Assumed, now that there are three skills. Keeping two would mean choosing second tags for Aldric, Brenna and the mage.
+3. **A fourth starting hero.** Assumed: Delwyn joins the three, starting with the Magic Arrow perk, since a pick does not otherwise come before level 3 and no present hero has Magic 50%. The alternative is to rebuild Corwin as the mage.
+4. **Bare hands roll 1d4.** Assumed; any fixed die serves, as bare hands are now only a fallback.
+5. **Mana refills every battle.** Assumed, as it stores nothing. The alternative is a pool that carries like hit points and comes back with travel or levels.
+6. **Magic Arrow rolls to hit.** Assumed, so that the Magic skill matters after the perk is taken. An arrow that never misses is the classic alternative, and would leave the skill as only a gate.
+7. **Spell, mana and item numbers** are first values, to be moved by the retune.
+8. **Emberblade and the Hawkeye Bow reuse the plain sword and bow icons.** Assumed, to hold the art to five new icons; the tooltip tells them apart.
+9. **Risk: retune effort.** A fourth hero and the loss of healing may not be answered by foe counts alone, since `FOES_AT_THREAT` moves in whole foes. `foeAtLevel`'s growth is the finer lever.
