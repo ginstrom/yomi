@@ -162,7 +162,7 @@ export class WorldScene extends Phaser.Scene {
       here
         ? `You stand before the ${here.name} (threat ${here.threat}).`
         : this.gameState.party.some(canAdvance)
-          ? 'Your heroes have grown: click the portrait of one marked "+" to spend its skill points.'
+          ? 'Your heroes have grown: click the portrait of one marked "+" to spend its skill points and perks.'
           : '',
     )
     this.refresh()

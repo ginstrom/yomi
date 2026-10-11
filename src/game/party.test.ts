@@ -5,7 +5,7 @@ import { knownSpells } from '../character/perks.ts'
 import { canAdvance, skillPointsPerLevel, xpToNextLevel } from '../character/progression.ts'
 import { TAGGED_SKILLS, skillLevel } from '../character/skills.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
-import { ENCOUNTERS } from './encounters.ts'
+import { ENCOUNTERS, MAX_THREAT } from './encounters.ts'
 import {
   MAX_PARTY_SIZE,
   REVIVED_HP,
@@ -84,12 +84,15 @@ describe('partyFighters', () => {
     expect(partyFighters(party)[1].hp).toBe(7)
   })
 
-  it('fits a full party into every encounter', () => {
+  it('fits a full party into every encounter, at every threat', () => {
     const party = newParty()
     while (joinParty(party, createWarrior()));
     for (const build of Object.values(ENCOUNTERS)) {
-      const state = new BattleEngine(build(partyFighters(party)).setup).getState()
-      expect(state.units.filter((u) => u.side === 'player')).toHaveLength(MAX_PARTY_SIZE)
+      for (let threat = 1; threat <= MAX_THREAT; threat++) {
+        // The engine refuses a setup with two units on one hex.
+        const state = new BattleEngine(build(partyFighters(party), threat).setup).getState()
+        expect(state.units.filter((u) => u.side === 'player')).toHaveLength(MAX_PARTY_SIZE)
+      }
     }
   })
 })

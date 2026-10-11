@@ -55,11 +55,14 @@ export interface Encounter {
 }
 
 /**
- * How many foes a battle has at each threat, from 1 up. Numbers tell more
- * than levels do: a fourth foe against a party of three costs it about as
- * much as two more levels on the other three would.
+ * How many foes a battle has at each threat, from 1 up, tuned for a new
+ * game's party of four. Numbers tell more than levels do, and they tell
+ * twice: a foe more is a harder battle now and, by the experience it is
+ * worth, a stronger party in every battle after. So a count raised at one
+ * threat can make the next threat easier; judge a change by a campaign run
+ * (`npm run simulate -- --campaign`), not by the battle it changes.
  */
-const FOES_AT_THREAT = [2, 3, 3, 3, 4]
+const FOES_AT_THREAT = [2, 3, 4, 4, 5]
 
 /** The most dangerous a battle gets; any threat above it is fought as this. */
 export const MAX_THREAT = FOES_AT_THREAT.length
@@ -108,6 +111,7 @@ const GOBLIN_RAID: readonly FoeSlot[] = [
   { id: 'kobold', kind: 'kobold', name: 'Kobold', at: [7, 0] },
   { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [6, 4] },
   { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [7, 3] },
+  { id: 'brute', kind: 'goblin', name: 'Goblin Brute', at: [7, 1] },
 ]
 
 const KOBOLD_SCOUTS: readonly FoeSlot[] = [
@@ -115,11 +119,12 @@ const KOBOLD_SCOUTS: readonly FoeSlot[] = [
   { id: 'tracker', kind: 'kobold', name: 'Kobold Tracker', at: [6, 4] },
   { id: 'trapper', kind: 'kobold', name: 'Kobold Trapper', at: [7, 2] },
   { id: 'overseer', kind: 'goblin', name: 'Goblin Overseer', at: [6, 2] },
+  { id: 'whip', kind: 'goblin', name: 'Goblin Whip', at: [7, 4] },
 ]
 
 /**
  * A Goblin and a Kobold across the board from the party, and more of both
- * where the threat is higher. The simulator fights this one unless told
+ * where the threat is higher, up to five. The simulator fights this one unless told
  * otherwise, so balancing runs fight a battle the game has.
  */
 export function goblinRaid(party: readonly Fighter[], threat = 1): Encounter {

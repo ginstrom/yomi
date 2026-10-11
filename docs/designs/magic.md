@@ -9,7 +9,14 @@ Yomi's heroes fight with blades, bows and fists, and eight of the eleven equipme
 - **The perk tree**: perks are laid out as a tree, a branch for each attribute, and chosen from it. The Skills tab lists only the perks a character has taken, with a **Perk Tree** button that opens the tree. Six new perks **raise an attribute** each.
 - **Magic items**: enchanted gear for the empty slots and the weapon hand, won as loot from monster locations and handed round the party on the world map.
 
-**Status: ready for planning.** Nothing blocks implementation. Section 8 lists the decisions made here on judgement; the first three, and the three on the perk tree (10 to 12), are worth confirming before planning.
+**Status: implemented on 2026-10-12**, with the assumptions of section 8 taken as written; the first three, and the three on the perk tree (10 to 12), are still the ones worth a second look now that they can be played. Where the code differs from this text:
+
+- The retune (R14) moved only `FOES_AT_THREAT`, from 2, 3, 3, 3, 4 to 2, 3, 4, 4, 5, with a fifth `FoeSlot` in each encounter. Monster growth and the spell and mana numbers are as first written. `CLAUDE.md` has the figures.
+- `takeLoot` empties the location's `loot` as it fills the baggage, so loot is found once.
+- `inventory.ts` imports `SKILLS` at run time, for the `Strikes with Magic` tooltip line; there is still no cycle through it.
+- A closed perk whose attribute is already 10 reads `Not yet: Luck is as high as it goes` in the tree's strip (`cappedAttribute`), which section 4.10 did not word.
+- Taking a perk by a click has an in-browser test after all (section 7 thought it could not): the test wins three battles to reach level 3, which takes it some nine seconds.
+- The probes carry two fields more than section 5.5 lists, for the tests of A9: `BattleProbe.result` (the victory screen's lines) and `InventoryProbe.armorClass`.
 
 Decisions the user made, which the design keeps as given: Unarmed and First Aid are removed; Magic is a skill; spells come through perks; the first spell perk is Magic Arrow; the Skills tab shows just the perks taken; a Perk Tree button shows the perks as a tree, from which the player chooses a character's perks; perks can raise attributes.
 

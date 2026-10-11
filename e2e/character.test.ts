@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { offsetToHex } from '../src/grid/hex.ts'
 import { useGames } from './driver.ts'
 
 describe('a hero’s panel', () => {
@@ -133,5 +134,47 @@ describe('a hero’s panel', () => {
     await game.press('Escape')
     await game.waitForScenes(['World'])
     expect((await game.waitFor('World')).party[0].canAdvance).toBe(false)
+  })
+
+  it('takes a perk from the tree with the pick that the third level brings', async () => {
+    const game = await games.open()
+    await game.enterBattle()
+    const win = async () => {
+      const over = await game.fightBattle()
+      expect(over.state.winner).toBe('player')
+      await game.click(over.buttons.result)
+      await game.waitForScenes(['World'])
+    }
+    await win()
+    // The Kobold Scouts next, then by way of open country to the Goblin Reavers, who are worth the third level.
+    for (const hops of [[[16, 21]], [[14, 16], [13, 12], [12, 8]]]) {
+      let world = await game.waitFor('World')
+      for (const [col, row] of hops) world = await game.travelTo(offsetToHex(col, row))
+      await game.click(world.buttons.attack)
+      await game.waitForScenes(['Battle'])
+      await game.waitFor('Battle', (b) => b.playerControl)
+      await win()
+    }
+    const world = await game.waitFor('World')
+    expect(world.party[0]).toMatchObject({ level: 3, canAdvance: true })
+
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    const skills = await game.waitFor('Inventory', (p) => p.tab === 'skills')
+    expect(skills).toMatchObject({ perkPicks: 1, takenPerks: [] })
+    await game.click(skills.perkTreeButton)
+    const tree = await game.waitFor('Inventory', (p) => p.tab === 'perkTree')
+    const node = (perk: string) => tree.perks.find((n) => n.perk === perk)!
+    expect(node('gain_endurance').canTake).toBe(true)
+    // Tireless grows from Toughness, and asks for level 6 besides.
+    expect(node('tireless').canTake).toBe(false)
+
+    await game.click(node('gain_endurance'))
+    const taken = await game.waitFor('Inventory', (p) => p.perkPicks === 0)
+    expect(taken.attributes.endurance).toBe(tree.attributes.endurance + 1)
+    expect(taken.perks.some((n) => n.canTake)).toBe(false)
+    await game.click(taken.back)
+    const back = await game.waitFor('Inventory', (p) => p.tab === 'skills')
+    expect(back.takenPerks).toEqual([{ perk: 'gain_endurance', ranks: 1 }])
   })
 })
