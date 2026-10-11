@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import {
   deriveCombatStats,
   equipFromBackpack,
+  isTwoHanded,
   unequipToBackpack,
   type Character,
 } from '../character/character.ts'
@@ -243,14 +244,17 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   private createSlot(x: number, y: number, slot: EquipmentSlot): void {
-    const item = this.character.equipment[slot]
+    const { equipment } = this.character
+    // A two-handed weapon fills the off hand too, shown there as a ghost of the weapon.
+    const ghost = slot === 'offHand' && !equipment.offHand && isTwoHanded(equipment.mainHand)
+    const heldIn: EquipmentSlot = ghost ? 'mainHand' : slot
+    const item = equipment[heldIn]
     const bg = this.add.rectangle(x, y, SLOT_SIZE, SLOT_SIZE, 0x1b1712, 0.9).setStrokeStyle(2, 0x6b5a3a)
     this.inventoryContent.add(bg)
 
     if (item) {
       const icon = this.add.image(x, y, ITEM_ICON_KEYS[item.icon]).setScale(ITEM_ICON_SCALE)
-      // A two-handed weapon leaves the off hand's item idle (see deriveCombatStats).
-      if (slot === 'offHand' && this.character.equipment.mainHand?.stats?.twoHanded) icon.setAlpha(0.35)
+      if (ghost) icon.setAlpha(0.35)
       this.inventoryContent.add(icon)
 
       bg.setInteractive({ useHandCursor: true })
@@ -262,7 +266,7 @@ export class InventoryScene extends Phaser.Scene {
         bg.setStrokeStyle(2, 0x6b5a3a)
         this.hideTooltip()
       })
-      bg.on('pointerdown', () => this.changeGear(() => unequipToBackpack(this.character, slot)))
+      bg.on('pointerdown', () => this.changeGear(() => unequipToBackpack(this.character, heldIn)))
     } else {
       const label = this.add
         .text(x, y, EQUIPMENT_SLOT_LABELS[slot], {

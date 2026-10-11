@@ -92,11 +92,54 @@ describe('deriveCombatStats', () => {
 describe('equipFromBackpack', () => {
   it('swaps the backpack item with whatever its slot held', () => {
     const warrior = createWarrior()
+    const index = warrior.backpack.indexOf(IRON_DAGGER)
+    expect(equipFromBackpack(warrior, index)).toBe(true)
+    expect(warrior.equipment.mainHand).toBe(IRON_DAGGER)
+    expect(warrior.equipment.offHand).toBe(OAK_SHIELD)
+    expect(warrior.backpack[index]).toBe(IRON_SWORD)
+  })
+
+  it('stows the shield when a two-handed weapon is equipped', () => {
+    const warrior = createWarrior()
     const index = warrior.backpack.indexOf(YEW_BOW)
+    const space = warrior.backpack.indexOf(null)
     expect(equipFromBackpack(warrior, index)).toBe(true)
     expect(warrior.equipment.mainHand).toBe(YEW_BOW)
+    expect(warrior.equipment.offHand).toBeUndefined()
     expect(warrior.backpack[index]).toBe(IRON_SWORD)
+    expect(warrior.backpack[space]).toBe(OAK_SHIELD)
     expect(deriveCombatStats(warrior)).toMatchObject({ attackRange: 5, ac: 13 })
+  })
+
+  it('stows a two-handed weapon when a shield is equipped', () => {
+    const warrior = createWarrior()
+    equipFromBackpack(warrior, warrior.backpack.indexOf(STEEL_GREATSWORD))
+    const index = warrior.backpack.indexOf(OAK_SHIELD)
+    expect(equipFromBackpack(warrior, index)).toBe(true)
+    expect(warrior.equipment.offHand).toBe(OAK_SHIELD)
+    expect(warrior.equipment.mainHand).toBeUndefined()
+    expect(warrior.backpack[index]).toBe(STEEL_GREATSWORD)
+  })
+
+  it('puts the shield in the space the two-handed weapon left when the main hand was empty', () => {
+    const warrior = createWarrior()
+    delete warrior.equipment.mainHand
+    const index = warrior.backpack.indexOf(YEW_BOW)
+    warrior.backpack.fill(IRON_DAGGER, warrior.backpack.indexOf(null))
+    expect(equipFromBackpack(warrior, index)).toBe(true)
+    expect(warrior.equipment).toMatchObject({ mainHand: YEW_BOW })
+    expect(warrior.equipment.offHand).toBeUndefined()
+    expect(warrior.backpack[index]).toBe(OAK_SHIELD)
+  })
+
+  it('refuses a two-handed weapon when the backpack cannot take both the weapon and the shield', () => {
+    const warrior = createWarrior()
+    const index = warrior.backpack.indexOf(YEW_BOW)
+    warrior.backpack.fill(IRON_DAGGER, warrior.backpack.indexOf(null))
+    const packed = [...warrior.backpack]
+    expect(equipFromBackpack(warrior, index)).toBe(false)
+    expect(warrior.equipment).toEqual({ armor: STEEL_ARMOR, mainHand: IRON_SWORD, offHand: OAK_SHIELD })
+    expect(warrior.backpack).toEqual(packed)
   })
 
   it('leaves the backpack space empty when the slot was', () => {
@@ -139,7 +182,6 @@ describe('gearChanges', () => {
     expect(gearChanges(before, warrior.equipment)).toEqual([])
 
     equipFromBackpack(warrior, warrior.backpack.indexOf(YEW_BOW))
-    unequipToBackpack(warrior, 'offHand')
     expect(gearChanges(before, warrior.equipment)).toEqual([
       { slot: 'mainHand', from: { id: 'iron_sword', name: 'Iron Longsword' }, to: { id: 'yew_bow', name: 'Yew Bow' } },
       { slot: 'offHand', from: { id: 'oak_shield', name: 'Oak Shield' }, to: null },

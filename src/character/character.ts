@@ -40,9 +40,10 @@ const MELEE_RANGE = 1
 const UNARMED_WEAPON = 'Fists'
 
 export function deriveCombatStats(character: Character): CombatantStats {
-  // A two-handed weapon leaves no hand for a shield, whatever the off hand holds.
+  // A two-handed weapon leaves no hand for a shield. equipFromBackpack() keeps the
+  // two apart, so this only matters for equipment put together some other way.
   const { offHand, ...rest } = character.equipment
-  const worn = character.equipment.mainHand?.stats?.twoHanded ? rest : { ...rest, offHand }
+  const worn = isTwoHanded(character.equipment.mainHand) ? rest : { ...rest, offHand }
   const items = Object.values(worn).filter((item): item is Item => item !== undefined)
 
   let baseAc = UNARMORED_AC
@@ -75,15 +76,42 @@ export function deriveCombatStats(character: Character): CombatantStats {
   }
 }
 
+/** Whether `item` is a weapon that takes both hands, leaving none for the off hand. */
+export function isTwoHanded(item: Item | undefined): boolean {
+  return item?.stats?.twoHanded === true
+}
+
 /**
  * Equips the backpack item at `index` in the slot it belongs to; whatever was
- * there takes its place in the backpack. Returns false if that space is empty.
+ * there takes its place in the backpack. A two-handed weapon and an off-hand
+ * item cannot be held together, so equipping either also stows the other.
+ * Returns false if that space is empty, or if the backpack has no room for
+ * both items coming off.
  */
 export function equipFromBackpack(character: Character, index: number): boolean {
-  const item = character.backpack[index]
+  const { equipment, backpack } = character
+  const item = backpack[index]
   if (!item) return false
-  character.backpack[index] = character.equipment[item.slot] ?? null
-  character.equipment[item.slot] = item
+
+  const replaced = equipment[item.slot] ?? null
+  const otherHand: EquipmentSlot | null =
+    item.slot === 'mainHand' && isTwoHanded(item)
+      ? 'offHand'
+      : item.slot === 'offHand' && isTwoHanded(equipment.mainHand)
+        ? 'mainHand'
+        : null
+  const freed = (otherHand && equipment[otherHand]) ?? null
+
+  // The item's own space takes one of the two; a second needs an empty space.
+  const space = replaced && freed ? backpack.indexOf(null) : index
+  if (space === -1) return false
+
+  backpack[index] = replaced ?? freed
+  if (freed) {
+    backpack[space] = freed
+    delete equipment[otherHand!]
+  }
+  equipment[item.slot] = item
   return true
 }
 
