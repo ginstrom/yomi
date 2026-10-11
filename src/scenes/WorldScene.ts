@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { xpToNextLevel } from '../character/progression.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import {
   linger,
@@ -68,6 +69,8 @@ export class WorldScene extends Phaser.Scene {
 
   private turnText!: Phaser.GameObjects.Text
   private hintText!: Phaser.GameObjects.Text
+  /** The hero's level, experience and hit points, at the top right. */
+  private partyText!: Phaser.GameObjects.Text
   /** What last happened, above the buttons. */
   private messageText!: Phaser.GameObjects.Text
   /** Scout, Wait and Attack, shown while the party stands among monsters. */
@@ -102,6 +105,9 @@ export class WorldScene extends Phaser.Scene {
 
     this.turnText = this.add.text(20, 16, '', { fontFamily: 'monospace', fontSize: '20px', color: '#ffffff' })
     this.hintText = this.add.text(20, 44, '', { fontFamily: 'monospace', fontSize: '13px', color: '#9e9e9e' })
+    this.partyText = this.add
+      .text(0, 20, '', { fontFamily: 'monospace', fontSize: '15px', color: '#e8c766' })
+      .setOrigin(1, 0)
     this.messageText = this.add
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: '15px', color: '#cfd8dc' })
       .setOrigin(0.5)
@@ -204,6 +210,7 @@ export class WorldScene extends Phaser.Scene {
   /** Header at the top, message and buttons at the bottom, and the map centred between, scaled down (never up) to fit. */
   private layout(): void {
     const { width, height } = this.scale
+    this.partyText.setX(width - 20)
     const buttonY = height - 50
     this.buttons.forEach((button, i) => button.setPosition(width / 2 + (i - 1) * BUTTON_SPACING, buttonY))
     const messageY = buttonY - BUTTON_H / 2 - 26
@@ -235,7 +242,9 @@ export class WorldScene extends Phaser.Scene {
     this.party.setPosition(x, y + PARTY_FEET_Y)
     this.partyMark.clear().lineStyle(3, PARTY_OUTLINE, 1).strokePoints(this.hexPolygon(world.party), true)
 
+    const { name, level, xp, hp, base } = this.gameState.player
     this.turnText.setText(`Turn ${world.turn}`)
+    this.partyText.setText(`${name}  Level ${level}  XP ${xp}/${xpToNextLevel(level)}  HP ${hp}/${base.maxHp}`)
     this.hintText.setText(
       world.confronting !== null
         ? 'Monsters! Scout them, wait, or attack.'

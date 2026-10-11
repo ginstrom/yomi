@@ -8,6 +8,14 @@ export const HERO_ID = 'hero'
 /** What a unit is, for drawing it; the engine only knows its stats. */
 export type UnitKind = 'warrior' | 'goblin' | 'kobold'
 
+/**
+ * The experience beating a unit of each kind is worth. An even match for a
+ * hero of level L is worth about `EVEN_FOE_XP_PER_LEVEL * L` and a weak foe
+ * half that (see progression.ts): the Goblin is a little weaker than a new
+ * hero, the Kobold weak.
+ */
+export const FOE_XP: Record<UnitKind, number> = { warrior: 0, goblin: 80, kobold: 50 }
+
 export interface Encounter {
   setup: BattleSetup
   kinds: Record<UnitId, UnitKind>
@@ -44,6 +52,13 @@ export function koboldScouts(hero: CombatantStats, heroHp?: number): Encounter {
     },
     kinds: { [HERO_ID]: 'warrior', scout: 'kobold', tracker: 'kobold' },
   }
+}
+
+/** The experience the hero earns for winning `encounter`: what its foes are worth together. */
+export function xpReward(encounter: Encounter): number {
+  return encounter.setup.units
+    .filter((u) => u.side === 'enemy')
+    .reduce((total, u) => total + FOE_XP[encounter.kinds[u.id]], 0)
 }
 
 /** Every battle a monster location on the world map can lead to, by id. */

@@ -27,6 +27,9 @@ export interface BaseStats {
 export interface Character {
   name: string
   className: string
+  level: number
+  /** Experience earned towards the next level; see progression.ts. */
+  xp: number
   base: BaseStats
   hp: number
   equipment: Equipment
@@ -179,6 +182,8 @@ export function createWarrior(): Character {
   return {
     name: 'Warrior',
     className: 'Fighter',
+    level: 1,
+    xp: 0,
     base,
     hp: base.maxHp,
     equipment: { armor: STEEL_ARMOR, mainHand: IRON_SWORD, offHand: OAK_SHIELD },

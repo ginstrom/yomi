@@ -9,6 +9,7 @@ import {
   unequipToBackpack,
   type Character,
 } from '../character/character.ts'
+import { xpToNextLevel } from '../character/progression.ts'
 import { formatDamage, type CombatantStats } from '../combat/combat.ts'
 import type { GameState } from '../game/gameState.ts'
 import { EQUIPMENT_SLOT_LABELS, describeItemStats, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
@@ -187,11 +188,12 @@ export class InventoryScene extends Phaser.Scene {
   // ---- build: character tab -------------------------------------------------
 
   private buildCharacterTab(): void {
+    const { level, xp } = this.character
     const title = this.add
       .text(PANEL_W / 2, 70, this.character.name, { fontFamily: 'monospace', fontSize: '26px', color: '#e8c766' })
       .setOrigin(0.5)
     const subtitle = this.add
-      .text(PANEL_W / 2, 98, this.character.className, { fontFamily: 'monospace', fontSize: '14px', color: '#8a7a5a' })
+      .text(PANEL_W / 2, 98, this.classLine(), { fontFamily: 'monospace', fontSize: '14px', color: '#8a7a5a' })
       .setOrigin(0.5)
     this.characterContent.add([title, subtitle])
 
@@ -206,7 +208,7 @@ export class InventoryScene extends Phaser.Scene {
     portrait.setScale(portraitScale)
     this.characterContent.add([portraitBg, portrait])
 
-    const lines = [`Class:         ${this.character.className}`, ``, ...this.statLines()]
+    const lines = [`Experience:    ${xp} / ${xpToNextLevel(level)}`, ``, ...this.statLines()]
     // Top-aligned with the portrait frame, so the block ends clear of the badges below.
     const statsBlock = this.add.text(360, portraitY - 115, lines.join('\n'), {
       fontFamily: 'monospace',
@@ -324,7 +326,7 @@ export class InventoryScene extends Phaser.Scene {
       .text(STATS_X, 70, this.character.name, { fontFamily: 'monospace', fontSize: '20px', color: '#e8c766' })
       .setOrigin(0, 0.5)
     const classText = this.add
-      .text(STATS_X, 94, this.character.className, { fontFamily: 'monospace', fontSize: '13px', color: '#8a7a5a' })
+      .text(STATS_X, 94, this.classLine(), { fontFamily: 'monospace', fontSize: '13px', color: '#8a7a5a' })
       .setOrigin(0, 0.5)
 
     const statsBody = this.add.text(STATS_X, 130, this.statLines().join('\n'), {
@@ -352,6 +354,11 @@ export class InventoryScene extends Phaser.Scene {
         wordWrap: { width: PANEL_W - STATS_X - 20 },
       }),
     )
+  }
+
+  /** "Level 2 Fighter", under the character's name. */
+  private classLine(): string {
+    return `Level ${this.character.level} ${this.character.className}`
   }
 
   private statLines(): string[] {

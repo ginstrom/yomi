@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { deriveCombatStats, gearChanges } from '../character/character.ts'
+import { describeXpGain, gainXp } from '../character/progression.ts'
 import { sameCombatStats } from '../combat/combat.ts'
 import {
   BattleEngine,
@@ -12,7 +13,7 @@ import {
   type UnitSnapshot,
 } from '../engine/battleEngine.ts'
 import { POLICIES, type PolicyName } from '../engine/policies.ts'
-import { ENCOUNTERS, HERO_ID, type EncounterId, type UnitKind } from '../game/encounters.ts'
+import { ENCOUNTERS, HERO_ID, xpReward, type EncounterId, type UnitKind } from '../game/encounters.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { Ground, pileChanges } from '../game/ground.ts'
 import { clearLocation, type MonsterLocation } from '../game/worldMap.ts'
@@ -130,6 +131,8 @@ export class BattleScene extends Phaser.Scene {
   private gameState!: GameState
   /** The monsters being fought, which a victory clears from the world map. */
   private location: MonsterLocation | null = null
+  /** The experience a victory here is worth, until it is won. */
+  private xpReward = 0
   /** The hero's equipment as the engine's log last had it, to tell the next gear change against. */
   private loggedEquipment: Equipment = {}
   /** What lies on the battlefield. The inventory drops onto and picks up from the pile on the hero's hex. */
@@ -194,7 +197,9 @@ export class BattleScene extends Phaser.Scene {
     const at = this.gameState.world.locations.find((l) => l.id === data?.location)
     this.location = at?.kind === 'monsters' ? at : null
     const encounter = ENCOUNTERS[this.location?.encounter ?? DEFAULT_ENCOUNTER]
-    const { setup, kinds } = encounter(deriveCombatStats(player), player.hp)
+    const fight = encounter(deriveCombatStats(player), player.hp)
+    const { setup, kinds } = fight
+    this.xpReward = xpReward(fight)
     this.loggedEquipment = { ...player.equipment }
     this.ground = new Ground()
     this.openPile = null
@@ -293,8 +298,8 @@ export class BattleScene extends Phaser.Scene {
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: '48px', color: '#ffee58', fontStyle: 'bold' })
       .setOrigin(0.5)
     this.resultText = this.add
-      .text(0, 0, '', { fontFamily: 'monospace', fontSize: '16px', color: '#cfd8dc' })
-      .setOrigin(0.5)
+      .text(0, 0, '', { fontFamily: 'monospace', fontSize: '16px', color: '#cfd8dc', align: 'center', lineSpacing: 6 })
+      .setOrigin(0.5, 0)
     this.menuButton = this.createButton('OK', () => this.leaveBattle())
     for (const part of [this.resultShade, this.bannerText, this.resultText, this.menuButton]) part.setVisible(false)
 
@@ -531,8 +536,9 @@ export class BattleScene extends Phaser.Scene {
 
     this.resultShade.setSize(width, height)
     this.bannerText.setPosition(width / 2, height / 2 - 60)
-    this.resultText.setPosition(width / 2, height / 2)
-    this.menuButton.setPosition(width / 2, height / 2 + 60)
+    // Up to four lines: a victory adds the experience won and what a new level brought.
+    this.resultText.setPosition(width / 2, height / 2 - 20)
+    this.menuButton.setPosition(width / 2, height / 2 + 110)
 
     const buttonTop = buttonY - 22
     const logBoxW = width - 40
@@ -1086,10 +1092,15 @@ export class BattleScene extends Phaser.Scene {
     // The win is the world's from here on, however the scene is left.
     if (playerWon && this.location) clearLocation(this.gameState.world, this.location.id)
     const foes = this.location ? `The ${this.location.name}` : 'Your foes'
+    const player = this.gameState.player
+    const xpLines = playerWon ? describeXpGain(player, gainXp(player, this.xpReward)) : []
+    this.xpReward = 0
     this.bannerText.setText(playerWon ? 'VICTORY!' : 'DEFEAT')
     this.bannerText.setColor(playerWon ? '#66bb6a' : '#ef5350')
     this.resultText.setText(
-      playerWon ? `${foes} are beaten.` : `${this.gameState.player.name} has fallen. The journey ends here.`,
+      playerWon
+        ? [`${foes} are beaten.`, ...xpLines].join('\n')
+        : `${player.name} has fallen. The journey ends here.`,
     )
     this.setButtonLabel(this.menuButton, playerWon ? 'OK' : 'Main Menu')
     for (const part of [this.resultShade, this.bannerText, this.resultText, this.menuButton]) part.setVisible(true)
