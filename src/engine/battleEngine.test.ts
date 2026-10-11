@@ -769,6 +769,52 @@ describe('BattleEngine gear changes', () => {
     expect(formatEvent(taken, NAMES)).toBe('Warrior takes up the Oak Shield.')
   })
 
+  it('logs what was dropped and picked up, and where', () => {
+    const engine = new BattleEngine(APART, { rng: () => FUMBLE })
+    const bow = { id: 'yew_bow', name: 'Yew Bow' }
+    const shield = { id: 'oak_shield', name: 'Oak Shield' }
+    const dagger = { id: 'iron_dagger', name: 'Iron Dagger' }
+
+    // Dropping from the backpack leaves the unit's stats as they were, and still costs the point.
+    const [drop] = engine.step({ type: 'equip', unit: 'warrior', stats: WARRIOR_STATS, dropped: [shield, dagger] })
+    expect(drop).toMatchObject({
+      type: 'equip',
+      apCost: EQUIP_AP_COST,
+      position: WARRIOR.position,
+      changes: [],
+      dropped: [shield, dagger],
+      pickedUp: [],
+    })
+    expect(formatEvent(drop, NAMES)).toBe('Warrior drops the Oak Shield and the Iron Dagger.')
+
+    const [swap] = engine.step({
+      type: 'equip',
+      unit: 'warrior',
+      stats: BOW_STATS,
+      changes: [{ slot: 'offHand', from: null, to: shield }],
+      dropped: [dagger],
+      pickedUp: [bow],
+    })
+    expect(swap).toMatchObject({ apCost: 0, dropped: [dagger], pickedUp: [bow] })
+    expect(formatEvent(swap, NAMES)).toBe(
+      'Warrior takes up the Oak Shield, drops the Iron Dagger and picks up the Yew Bow.',
+    )
+  })
+
+  it('says only that an item dropped straight from its slot was dropped', () => {
+    const engine = new BattleEngine(APART, { rng: () => FUMBLE })
+    const shield = { id: 'oak_shield', name: 'Oak Shield' }
+    const [event] = engine.step({
+      type: 'equip',
+      unit: 'warrior',
+      stats: WARRIOR_STATS,
+      changes: [{ slot: 'offHand', from: shield, to: null }],
+      dropped: [shield],
+    })
+    expect(event).toMatchObject({ changes: [{ slot: 'offHand', from: shield, to: null }] })
+    expect(formatEvent(event, NAMES)).toBe('Warrior drops the Oak Shield.')
+  })
+
   it('logs the weapon, range, cost and numbers behind an attack', () => {
     const engine = new BattleEngine(APART, { rng: () => 0.5 })
     engine.step(equip({ ...BOW_STATS, weapon: 'Yew Bow' }))

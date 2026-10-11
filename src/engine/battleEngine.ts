@@ -14,7 +14,7 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 11
+export const LOG_SCHEMA_VERSION = 12
 
 /** To-hit bonus an attacker gains for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 2
@@ -36,8 +36,9 @@ export const DEFAULT_FACING: Readonly<Record<Side, number>> = { player: 0, enemy
 export const MOVE_AP_COST_PER_HEX = 1
 
 /**
- * Action points a change of gear costs. It is paid once: further changes are
- * free until the unit moves or attacks, or its turn ends.
+ * Action points a change of gear costs, whether items are equipped, stowed,
+ * dropped or picked up. It is paid once: further changes are free until the
+ * unit moves or attacks, or its turn ends.
  */
 export const EQUIP_AP_COST = 1
 
@@ -64,12 +65,21 @@ export interface GearChange {
  * Moves, attacks and gear changes name the acting unit; end_turn ends the
  * whole side's turn. An equip action carries the stats the unit fights with
  * from then on, since the engine knows stats and not the items behind them;
- * `changes` says which items those were and is only copied into the log.
+ * `changes` says which items those were, and `dropped` and `pickedUp` which
+ * went onto or came off the ground of the unit's hex. All three are only
+ * copied into the log: the caller keeps track of what lies where.
  */
 export type Action =
   | { type: 'move'; unit: UnitId; to: Hex }
   | { type: 'attack'; unit: UnitId; target: UnitId }
-  | { type: 'equip'; unit: UnitId; stats: CombatantStats; changes?: readonly GearChange[] }
+  | {
+      type: 'equip'
+      unit: UnitId
+      stats: CombatantStats
+      changes?: readonly GearChange[]
+      dropped?: readonly GearItem[]
+      pickedUp?: readonly GearItem[]
+    }
   | { type: 'end_turn' }
 
 /** A unit entering battle. Roster order is the order legal actions are listed in. */
@@ -216,7 +226,7 @@ export interface AttackEvent extends EventBase {
   defenderHpAfter: number
 }
 
-/** A unit changed its gear mid-battle, and so its stats. */
+/** A unit changed its gear mid-battle: what it wears, and so its stats, or what it carries. */
 export interface EquipEvent extends EventBase {
   type: 'equip'
   unit: UnitId
@@ -224,8 +234,14 @@ export interface EquipEvent extends EventBase {
   apCost: number
   /** The unit's action points once the change is paid for. */
   apAfter: number
+  /** The hex the unit stood on, which is where anything dropped lies and anything picked up lay. */
+  position: Hex
   /** The items changed, slot by slot; empty if the caller did not say. */
   changes: GearChange[]
+  /** Items left on the ground. */
+  dropped: GearItem[]
+  /** Items taken from the ground. */
+  pickedUp: GearItem[]
   /** The stats the unit fought with until now. */
   statsBefore: CombatantStats
   /** The stats the unit fights with from here on. */
@@ -329,7 +345,7 @@ export function attackArc(defender: Pick<UnitSnapshot, 'position' | 'facing'>, f
  * weapon exerts a zone of control over its neighbouring hexes: a foe stepping
  * out of one provokes a free attack, at most one per unit per enemy turn.
  * A ranged weapon (`attackRange` above 1) holds no zone. A unit may change
- * its gear on its own turn for EQUIP_AP_COST.
+ * its gear on its own turn for EQUIP_AP_COST, dropping and picking up included.
  *
  * The UI, scripted policies and AI agents all drive it through step(). Given
  * the seed in battle_start and the actions in the log, a battle replays exactly.
@@ -492,7 +508,7 @@ export class BattleEngine {
 
     const actor = this.units.find((u) => u.id === action.unit)
     // Checked first: a unit that spent its last point on a change of gear may still change again.
-    if (actor && action.type === 'equip') return this.equip(actor, action.stats, action.changes ?? [])
+    if (actor && action.type === 'equip') return this.equip(actor, action)
     if (!actor || action.type === 'equip' || !this.canAct(actor)) throw new Error(`${action.unit} cannot act now`)
     if (action.type === 'move') return this.move(actor, action.to)
 
@@ -624,7 +640,8 @@ export class BattleEngine {
   }
 
   /** Swaps the unit's stats for those of its new gear; its wounds and remaining AP carry over. */
-  private equip(actor: UnitRecord, stats: CombatantStats, changes: readonly GearChange[]): BattleEvent[] {
+  private equip(actor: UnitRecord, action: Extract<Action, { type: 'equip' }>): BattleEvent[] {
+    const { stats } = action
     const apCost = this.equipCost(actor.id)
     if (apCost === null) throw new Error(`${actor.id} cannot change gear now`)
     const statsBefore = actor.stats
@@ -639,7 +656,10 @@ export class BattleEngine {
         unit: actor.id,
         apCost,
         apAfter: actor.ap,
-        changes: [...changes],
+        position: actor.position,
+        changes: [...(action.changes ?? [])],
+        dropped: [...(action.dropped ?? [])],
+        pickedUp: [...(action.pickedUp ?? [])],
         statsBefore,
         stats,
       }),
@@ -742,6 +762,11 @@ function listNames(names: string[]): string {
   return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
 }
 
+/** "the Oak Shield", "the Oak Shield and the Yew Bow". */
+function listItems(items: readonly GearItem[]): string {
+  return listNames(items.map((item) => `the ${item.name}`))
+}
+
 /** "swaps the Iron Longsword for the Yew Bow", "takes up the Oak Shield", "puts away the Oak Shield". */
 function describeGearChange({ from, to }: GearChange): string {
   if (from && to) return `swaps the ${from.name} for the ${to.name}`
@@ -779,9 +804,17 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
       if (steps === 0) return `${names[event.unit]} starts to move.`
       return `${names[event.unit]} moves ${steps} ${steps === 1 ? 'hex' : 'hexes'}.`
     }
-    case 'equip':
-      if (event.changes.length === 0) return `${names[event.unit]} changes gear.`
-      return `${names[event.unit]} ${listNames(event.changes.map(describeGearChange))}.`
+    case 'equip': {
+      // An item dropped straight from its slot is not also "put away".
+      const dropped = new Set(event.dropped.map((item) => item.id))
+      const deeds = event.changes
+        .filter(({ from, to }) => to !== null || from === null || !dropped.has(from.id))
+        .map(describeGearChange)
+      if (event.dropped.length > 0) deeds.push(`drops ${listItems(event.dropped)}`)
+      if (event.pickedUp.length > 0) deeds.push(`picks up ${listItems(event.pickedUp)}`)
+      if (deeds.length === 0) return `${names[event.unit]} changes gear.`
+      return `${names[event.unit]} ${listNames(deeds)}.`
+    }
     case 'unit_down':
       return `${names[event.unit]} falls.`
     case 'end_turn':

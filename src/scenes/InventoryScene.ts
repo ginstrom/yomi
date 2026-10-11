@@ -1,8 +1,11 @@
 import Phaser from 'phaser'
 import {
   deriveCombatStats,
+  dropEquipped,
+  dropFromBackpack,
   equipFromBackpack,
   isTwoHanded,
+  pickUp,
   unequipToBackpack,
   type Character,
 } from '../character/character.ts'
@@ -23,6 +26,8 @@ interface InventoryData {
    * Null or absent makes the panel view-only.
    */
   gearApCost?: number | null
+  /** The pile on the hex the character stands on, which drops go onto and pick-ups come off. */
+  ground?: Item[]
 }
 
 const PANEL_W = 720
@@ -31,6 +36,13 @@ const SLOT_SIZE = 46
 const DOLL_X = 190
 const DOLL_Y = 210
 const STATS_X = 440
+/** The backpack sits under the paperdoll and the ground under the stats. */
+const BACKPACK_COLS = 6
+const GROUND_COLS = 5
+const GROUND_ROWS = 2
+const SLOT_GAP = 8
+const SLOT_TITLE_Y = 367
+const SLOT_GRID_Y = 404
 const TAB_W = 140
 const TAB_H = 32
 
@@ -39,11 +51,20 @@ interface TabButton {
   text: Phaser.GameObjects.Text
 }
 
+/** Centre of the `index`th slot of a grid whose first column is at `startX`. */
+function slotPosition(startX: number, index: number, cols: number): { x: number; y: number } {
+  return {
+    x: startX + (index % cols) * (SLOT_SIZE + SLOT_GAP),
+    y: SLOT_GRID_Y + Math.floor(index / cols) * (SLOT_SIZE + SLOT_GAP),
+  }
+}
+
 export class InventoryScene extends Phaser.Scene {
   private activeTab: PanelTab = 'inventory'
   private character!: Character
   private stats!: CombatantStats
   private gearApCost: number | null = null
+  private ground: Item[] = []
   private dimBg!: Phaser.GameObjects.Rectangle
   private panel!: Phaser.GameObjects.Container
   private characterContent!: Phaser.GameObjects.Container
@@ -64,6 +85,9 @@ export class InventoryScene extends Phaser.Scene {
   create(data: InventoryData): void {
     this.character = data.game.player
     this.gearApCost = data.gearApCost ?? null
+    this.ground = data.ground ?? []
+    // Right-clicking an item drops it.
+    this.input.mouse?.disableContextMenu()
 
     this.dimBg = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.6).setOrigin(0.5)
     this.panel = this.add.container(0, 0)
@@ -100,6 +124,7 @@ export class InventoryScene extends Phaser.Scene {
     this.buildStats()
     this.buildGearHint()
     this.buildBackpack()
+    this.buildGround()
     this.buildTooltip()
   }
 
@@ -266,7 +291,13 @@ export class InventoryScene extends Phaser.Scene {
         bg.setStrokeStyle(2, 0x6b5a3a)
         this.hideTooltip()
       })
-      bg.on('pointerdown', () => this.changeGear(() => unequipToBackpack(this.character, heldIn)))
+      bg.on('pointerdown', (pointer: Phaser.Input.Pointer) =>
+        this.changeGear(() =>
+          pointer.rightButtonDown()
+            ? dropEquipped(this.character, heldIn, this.ground)
+            : unequipToBackpack(this.character, heldIn),
+        ),
+      )
     } else {
       const label = this.add
         .text(x, y, EQUIPMENT_SLOT_LABELS[slot], {
@@ -302,8 +333,8 @@ export class InventoryScene extends Phaser.Scene {
       this.gearApCost === null
         ? 'Gear can be changed only on your turn, with an action point to spare.'
         : this.gearApCost === 0
-          ? 'Click an item to equip or stow it. Free until you next move or attack.'
-          : `Click an item to equip or stow it. Costs ${this.gearApCost} AP on closing, however many you change.`
+          ? 'Click to equip, stow or pick up; right-click to drop. Free until you next move or attack.'
+          : `Click to equip, stow or pick up; right-click to drop. Costs ${this.gearApCost} AP on closing, however many changes.`
     this.inventoryContent.add(
       this.add.text(STATS_X, 300, hint, {
         fontFamily: 'monospace',
@@ -326,27 +357,47 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   private buildBackpack(): void {
-    const title = this.add
-      .text(PANEL_W / 2, 360, 'Backpack', { fontFamily: 'monospace', fontSize: '14px', color: '#8a7a5a' })
-      .setOrigin(0.5)
-    this.inventoryContent.add(title)
-
-    const cols = 6
-    const gap = 8
-    const totalW = cols * SLOT_SIZE + (cols - 1) * gap
-    const startX = PANEL_W / 2 - totalW / 2 + SLOT_SIZE / 2
-    const startY = 400
-
+    const startX = this.buildSlotGrid('Backpack', DOLL_X, BACKPACK_COLS)
     this.character.backpack.forEach((item, i) => {
-      const col = i % cols
-      const row = Math.floor(i / cols)
-      const x = startX + col * (SLOT_SIZE + gap)
-      const y = startY + row * (SLOT_SIZE + gap)
-      this.createBackpackSlot(x, y, item, i)
+      const { x, y } = slotPosition(startX, i, BACKPACK_COLS)
+      this.createItemSlot(x, y, item, (pointer) =>
+        pointer.rightButtonDown()
+          ? dropFromBackpack(this.character, i, this.ground)
+          : equipFromBackpack(this.character, i, this.ground),
+      )
     })
   }
 
-  private createBackpackSlot(x: number, y: number, item: Item | null, index: number): void {
+  /** What lies on the character's hex. A pile deeper than the grid shows its oldest items. */
+  private buildGround(): void {
+    const shown = GROUND_COLS * GROUND_ROWS
+    const hidden = this.ground.length - shown
+    const title = hidden > 0 ? `Ground (+${hidden} more)` : 'Ground'
+    const gridW = GROUND_COLS * SLOT_SIZE + (GROUND_COLS - 1) * SLOT_GAP
+    const startX = this.buildSlotGrid(title, STATS_X + gridW / 2, GROUND_COLS)
+    for (let i = 0; i < shown; i++) {
+      const { x, y } = slotPosition(startX, i, GROUND_COLS)
+      this.createItemSlot(x, y, this.ground[i] ?? null, () => pickUp(this.character, this.ground, i))
+    }
+  }
+
+  /** Titles a grid of slots centred on `centerX`; returns the x of its first column. */
+  private buildSlotGrid(title: string, centerX: number, cols: number): number {
+    this.inventoryContent.add(
+      this.add
+        .text(centerX, SLOT_TITLE_Y, title, { fontFamily: 'monospace', fontSize: '14px', color: '#8a7a5a' })
+        .setOrigin(0.5),
+    )
+    return centerX - ((cols - 1) * (SLOT_SIZE + SLOT_GAP)) / 2
+  }
+
+  /** A backpack or ground space; clicking the item in it makes the change `onClick` returns the success of. */
+  private createItemSlot(
+    x: number,
+    y: number,
+    item: Item | null,
+    onClick: (pointer: Phaser.Input.Pointer) => boolean,
+  ): void {
     const bg = this.add.rectangle(x, y, SLOT_SIZE, SLOT_SIZE, 0x1b1712, 0.9).setStrokeStyle(2, 0x4a3d28)
     this.inventoryContent.add(bg)
 
@@ -362,7 +413,7 @@ export class InventoryScene extends Phaser.Scene {
         bg.setStrokeStyle(2, 0x4a3d28)
         this.hideTooltip()
       })
-      bg.on('pointerdown', () => this.changeGear(() => equipFromBackpack(this.character, index)))
+      bg.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.changeGear(() => onClick(pointer)))
     }
   }
 
@@ -382,7 +433,9 @@ export class InventoryScene extends Phaser.Scene {
     this.tooltipText.setPosition(-this.tooltipText.width / 2, -this.tooltipText.height - 6)
     this.tooltipBg.setSize(this.tooltipText.width + 16, this.tooltipText.height + 12)
     this.tooltipBg.setPosition(0, -this.tooltipText.height / 2 - 6)
-    this.tooltip.setPosition(x, y)
+    // Kept inside the panel: the slots at its edges are narrower than their tooltips.
+    const reach = this.tooltipBg.width / 2 + 4
+    this.tooltip.setPosition(Phaser.Math.Clamp(x, reach, PANEL_W - reach), y)
     this.tooltip.setVisible(true)
   }
 

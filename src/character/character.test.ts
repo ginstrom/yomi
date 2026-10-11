@@ -10,7 +10,16 @@ import {
   YEW_BOW,
   type Item,
 } from '../inventory/inventory.ts'
-import { createWarrior, deriveCombatStats, equipFromBackpack, gearChanges, unequipToBackpack } from './character.ts'
+import {
+  createWarrior,
+  deriveCombatStats,
+  dropEquipped,
+  dropFromBackpack,
+  equipFromBackpack,
+  gearChanges,
+  pickUp,
+  unequipToBackpack,
+} from './character.ts'
 
 describe('createWarrior', () => {
   it('starts at full HP with armor, sword and shield equipped and the other weapons in the backpack', () => {
@@ -93,7 +102,7 @@ describe('equipFromBackpack', () => {
   it('swaps the backpack item with whatever its slot held', () => {
     const warrior = createWarrior()
     const index = warrior.backpack.indexOf(IRON_DAGGER)
-    expect(equipFromBackpack(warrior, index)).toBe(true)
+    expect(equipFromBackpack(warrior, index, [])).toBe(true)
     expect(warrior.equipment.mainHand).toBe(IRON_DAGGER)
     expect(warrior.equipment.offHand).toBe(OAK_SHIELD)
     expect(warrior.backpack[index]).toBe(IRON_SWORD)
@@ -103,7 +112,7 @@ describe('equipFromBackpack', () => {
     const warrior = createWarrior()
     const index = warrior.backpack.indexOf(YEW_BOW)
     const space = warrior.backpack.indexOf(null)
-    expect(equipFromBackpack(warrior, index)).toBe(true)
+    expect(equipFromBackpack(warrior, index, [])).toBe(true)
     expect(warrior.equipment.mainHand).toBe(YEW_BOW)
     expect(warrior.equipment.offHand).toBeUndefined()
     expect(warrior.backpack[index]).toBe(IRON_SWORD)
@@ -113,9 +122,9 @@ describe('equipFromBackpack', () => {
 
   it('stows a two-handed weapon when a shield is equipped', () => {
     const warrior = createWarrior()
-    equipFromBackpack(warrior, warrior.backpack.indexOf(STEEL_GREATSWORD))
+    equipFromBackpack(warrior, warrior.backpack.indexOf(STEEL_GREATSWORD), [])
     const index = warrior.backpack.indexOf(OAK_SHIELD)
-    expect(equipFromBackpack(warrior, index)).toBe(true)
+    expect(equipFromBackpack(warrior, index, [])).toBe(true)
     expect(warrior.equipment.offHand).toBe(OAK_SHIELD)
     expect(warrior.equipment.mainHand).toBeUndefined()
     expect(warrior.backpack[index]).toBe(STEEL_GREATSWORD)
@@ -126,33 +135,48 @@ describe('equipFromBackpack', () => {
     delete warrior.equipment.mainHand
     const index = warrior.backpack.indexOf(YEW_BOW)
     warrior.backpack.fill(IRON_DAGGER, warrior.backpack.indexOf(null))
-    expect(equipFromBackpack(warrior, index)).toBe(true)
+    expect(equipFromBackpack(warrior, index, [])).toBe(true)
     expect(warrior.equipment).toMatchObject({ mainHand: YEW_BOW })
     expect(warrior.equipment.offHand).toBeUndefined()
     expect(warrior.backpack[index]).toBe(OAK_SHIELD)
   })
 
-  it('refuses a two-handed weapon when the backpack cannot take both the weapon and the shield', () => {
+  it('drops the shield on the ground when the backpack has room only for the weapon coming off', () => {
     const warrior = createWarrior()
     const index = warrior.backpack.indexOf(YEW_BOW)
     warrior.backpack.fill(IRON_DAGGER, warrior.backpack.indexOf(null))
-    const packed = [...warrior.backpack]
-    expect(equipFromBackpack(warrior, index)).toBe(false)
-    expect(warrior.equipment).toEqual({ armor: STEEL_ARMOR, mainHand: IRON_SWORD, offHand: OAK_SHIELD })
-    expect(warrior.backpack).toEqual(packed)
+    const ground: Item[] = []
+    expect(equipFromBackpack(warrior, index, ground)).toBe(true)
+    expect(warrior.equipment).toEqual({ armor: STEEL_ARMOR, mainHand: YEW_BOW })
+    expect(warrior.backpack[index]).toBe(IRON_SWORD)
+    expect(warrior.backpack).not.toContain(null)
+    expect(ground).toEqual([OAK_SHIELD])
+  })
+
+  it('drops a two-handed weapon when a shield replaces another off-hand item and the backpack is full', () => {
+    const warrior = createWarrior()
+    const buckler: Item = { ...OAK_SHIELD, id: 'buckler' }
+    warrior.equipment = { mainHand: YEW_BOW, offHand: buckler }
+    warrior.backpack.fill(IRON_DAGGER)
+    warrior.backpack[0] = OAK_SHIELD
+    const ground: Item[] = []
+    expect(equipFromBackpack(warrior, 0, ground)).toBe(true)
+    expect(warrior.equipment).toEqual({ offHand: OAK_SHIELD })
+    expect(warrior.backpack[0]).toBe(buckler)
+    expect(ground).toEqual([YEW_BOW])
   })
 
   it('leaves the backpack space empty when the slot was', () => {
     const warrior = createWarrior()
     delete warrior.equipment.mainHand
-    expect(equipFromBackpack(warrior, 0)).toBe(true)
+    expect(equipFromBackpack(warrior, 0, [])).toBe(true)
     expect(warrior.equipment.mainHand).toBe(IRON_DAGGER)
     expect(warrior.backpack[0]).toBeNull()
   })
 
   it('does nothing for an empty space', () => {
     const warrior = createWarrior()
-    expect(equipFromBackpack(warrior, BACKPACK_SIZE - 1)).toBe(false)
+    expect(equipFromBackpack(warrior, BACKPACK_SIZE - 1, [])).toBe(false)
     expect(warrior.equipment.mainHand).toBe(IRON_SWORD)
   })
 })
@@ -175,13 +199,53 @@ describe('unequipToBackpack', () => {
   })
 })
 
+describe('dropping and picking up', () => {
+  it('drops a backpack item on the ground, leaving its space empty', () => {
+    const warrior = createWarrior()
+    const ground: Item[] = [OAK_SHIELD]
+    expect(dropFromBackpack(warrior, 0, ground)).toBe(true)
+    expect(warrior.backpack[0]).toBeNull()
+    expect(ground).toEqual([OAK_SHIELD, IRON_DAGGER])
+    expect(dropFromBackpack(warrior, 0, ground)).toBe(false)
+    expect(ground).toHaveLength(2)
+  })
+
+  it('drops an equipped item on the ground', () => {
+    const warrior = createWarrior()
+    const ground: Item[] = []
+    expect(dropEquipped(warrior, 'offHand', ground)).toBe(true)
+    expect(warrior.equipment.offHand).toBeUndefined()
+    expect(ground).toEqual([OAK_SHIELD])
+    expect(dropEquipped(warrior, 'head', ground)).toBe(false)
+    expect(deriveCombatStats(warrior).ac).toBe(13)
+  })
+
+  it('picks an item up into the first empty backpack space', () => {
+    const warrior = createWarrior()
+    const ground: Item[] = [OAK_SHIELD, STEEL_ARMOR]
+    const space = warrior.backpack.indexOf(null)
+    expect(pickUp(warrior, ground, 1)).toBe(true)
+    expect(warrior.backpack[space]).toBe(STEEL_ARMOR)
+    expect(ground).toEqual([OAK_SHIELD])
+  })
+
+  it('picks nothing up from an empty spot or into a full backpack', () => {
+    const warrior = createWarrior()
+    const ground: Item[] = [OAK_SHIELD]
+    expect(pickUp(warrior, ground, 3)).toBe(false)
+    warrior.backpack.fill(IRON_DAGGER)
+    expect(pickUp(warrior, ground, 0)).toBe(false)
+    expect(ground).toEqual([OAK_SHIELD])
+  })
+})
+
 describe('gearChanges', () => {
   it('names what each changed slot held and holds, in paperdoll order', () => {
     const warrior = createWarrior()
     const before = { ...warrior.equipment }
     expect(gearChanges(before, warrior.equipment)).toEqual([])
 
-    equipFromBackpack(warrior, warrior.backpack.indexOf(YEW_BOW))
+    equipFromBackpack(warrior, warrior.backpack.indexOf(YEW_BOW), [])
     expect(gearChanges(before, warrior.equipment)).toEqual([
       { slot: 'mainHand', from: { id: 'iron_sword', name: 'Iron Longsword' }, to: { id: 'yew_bow', name: 'Yew Bow' } },
       { slot: 'offHand', from: { id: 'oak_shield', name: 'Oak Shield' }, to: null },

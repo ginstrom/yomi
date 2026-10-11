@@ -84,11 +84,12 @@ export function isTwoHanded(item: Item | undefined): boolean {
 /**
  * Equips the backpack item at `index` in the slot it belongs to; whatever was
  * there takes its place in the backpack. A two-handed weapon and an off-hand
- * item cannot be held together, so equipping either also stows the other.
- * Returns false if that space is empty, or if the backpack has no room for
- * both items coming off.
+ * item cannot be held together, so equipping either also stows the other. If
+ * both hands come off and the backpack has room for only one, the other-hand
+ * item falls onto `ground`, the pile at the character's feet. Returns false if
+ * that backpack space is empty.
  */
-export function equipFromBackpack(character: Character, index: number): boolean {
+export function equipFromBackpack(character: Character, index: number, ground: Item[]): boolean {
   const { equipment, backpack } = character
   const item = backpack[index]
   if (!item) return false
@@ -103,13 +104,14 @@ export function equipFromBackpack(character: Character, index: number): boolean 
   const freed = (otherHand && equipment[otherHand]) ?? null
 
   // The item's own space takes one of the two; a second needs an empty space.
-  const space = replaced && freed ? backpack.indexOf(null) : index
-  if (space === -1) return false
-
   backpack[index] = replaced ?? freed
   if (freed) {
-    backpack[space] = freed
     delete equipment[otherHand!]
+    if (replaced) {
+      const space = backpack.indexOf(null)
+      if (space === -1) ground.push(freed)
+      else backpack[space] = freed
+    }
   }
   equipment[item.slot] = item
   return true
@@ -125,6 +127,37 @@ export function unequipToBackpack(character: Character, slot: EquipmentSlot): bo
   if (!item || space === -1) return false
   character.backpack[space] = item
   delete character.equipment[slot]
+  return true
+}
+
+/** Drops the backpack item at `index` onto `ground`. Returns false if that space is empty. */
+export function dropFromBackpack(character: Character, index: number, ground: Item[]): boolean {
+  const item = character.backpack[index]
+  if (!item) return false
+  character.backpack[index] = null
+  ground.push(item)
+  return true
+}
+
+/** Drops the item in `slot` onto `ground`. Returns false if the slot is empty. */
+export function dropEquipped(character: Character, slot: EquipmentSlot, ground: Item[]): boolean {
+  const item = character.equipment[slot]
+  if (!item) return false
+  delete character.equipment[slot]
+  ground.push(item)
+  return true
+}
+
+/**
+ * Picks up the item at `index` of `ground` into the first empty backpack
+ * space. Returns false if nothing lies there or the backpack is full.
+ */
+export function pickUp(character: Character, ground: Item[], index: number): boolean {
+  const item = ground[index]
+  const space = character.backpack.indexOf(null)
+  if (!item || space === -1) return false
+  ground.splice(index, 1)
+  character.backpack[space] = item
   return true
 }
 

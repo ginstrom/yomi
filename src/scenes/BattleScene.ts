@@ -14,7 +14,8 @@ import {
 import { POLICIES, type PolicyName } from '../engine/policies.ts'
 import { HERO_ID, goblinRaid, type UnitKind } from '../game/encounters.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
-import type { Equipment } from '../inventory/inventory.ts'
+import { Ground, pileChanges } from '../game/ground.ts'
+import type { Equipment, Item } from '../inventory/inventory.ts'
 import {
   HEX_DIRECTIONS,
   HexBoard,
@@ -31,6 +32,7 @@ import { CURSORS } from './cursors.ts'
 import { scheduleEvents, type Cue } from './eventSchedule.ts'
 import { ScrollingLog } from './scrollingLog.ts'
 import { soundVolume } from './audioSettings.ts'
+import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
 import { eventSounds, type SoundKey } from './sounds.ts'
 
 interface BattleData {
@@ -123,6 +125,10 @@ export class BattleScene extends Phaser.Scene {
   private gameState!: GameState
   /** The hero's equipment as the engine's log last had it, to tell the next gear change against. */
   private loggedEquipment: Equipment = {}
+  /** What lies on the battlefield. The inventory drops onto and picks up from the pile on the hero's hex. */
+  private ground = new Ground()
+  /** The pile the open inventory is working on, and what it held when the inventory opened. */
+  private openPile: { items: Item[]; before: Item[] } | null = null
   private engine!: BattleEngine
   private board!: HexBoard
   private names!: Record<UnitId, string>
@@ -142,6 +148,8 @@ export class BattleScene extends Phaser.Scene {
   private hoverMarks!: Phaser.GameObjects.Graphics
   /** The board hex under the pointer, or null when it is off the board or over a button or the log. */
   private hovered: Hex | null = null
+  /** A marker on each hex with items lying on it; in the floor layer, so units stand over them. */
+  private groundMarks!: Phaser.GameObjects.Container
   private unitLayer!: Phaser.GameObjects.Container
   /** Units' nameplates, drawn above every unit so none is hidden behind a sprite. */
   private plateLayer!: Phaser.GameObjects.Container
@@ -167,6 +175,7 @@ export class BattleScene extends Phaser.Scene {
 
   preload(): void {
     for (const kind of Object.keys(APPEARANCE)) this.load.image(kind, `assets/sprites/${kind}.png`)
+    for (const key of Object.values(ITEM_ICON_KEYS)) this.load.image(key, `assets/sprites/${key}.png`)
   }
 
   create(data: BattleData): void {
@@ -174,6 +183,8 @@ export class BattleScene extends Phaser.Scene {
     const player = this.gameState.player
     const { setup, kinds } = goblinRaid(deriveCombatStats(player), player.hp)
     this.loggedEquipment = { ...player.equipment }
+    this.ground = new Ground()
+    this.openPile = null
     this.engine = new BattleEngine(setup, { meta: { source: 'game', enemyPolicy: ENEMY_POLICY } })
     this.board = new HexBoard(setup.board)
     this.names = Object.fromEntries(setup.units.map((u) => [u.id, u.stats.name]))
@@ -192,6 +203,8 @@ export class BattleScene extends Phaser.Scene {
     this.floorLayer.add(this.highlights)
     this.hoverMarks = this.add.graphics()
     this.floorLayer.add(this.hoverMarks)
+    this.groundMarks = this.add.container(0, 0)
+    this.floorLayer.add(this.groundMarks)
     this.unitLayer = this.add.container(0, 0)
     this.plateLayer = this.add.container(0, 0)
     this.units = new Map(setup.units.map((u) => [u.id, this.createUnit(u, kinds[u.id])]))
@@ -311,20 +324,49 @@ export class BattleScene extends Phaser.Scene {
   private openPanel(tab: 'inventory' | 'character'): void {
     if (this.scene.isPaused()) return
     const gearApCost = this.playerControl ? this.engine.equipCost(HERO_ID) : null
-    this.scene.launch('Inventory', { game: this.gameState, tab, gearApCost })
+    const hero = this.engine.getState().units.find((u) => u.id === HERO_ID)!
+    const items = this.ground.pileAt(hero.position)
+    this.openPile = { items, before: [...items] }
+    this.scene.launch('Inventory', { game: this.gameState, tab, gearApCost, ground: items })
     this.scene.pause()
   }
 
-  /** Tells the engine about gear changed in the inventory, which edits the character directly. */
+  /**
+   * Tells the engine about gear changed in the inventory, which edits the character and the
+   * ground under it directly. One action covers the whole visit, so it is paid for once.
+   */
   private commitGearChange(): void {
-    if (!this.playerControl) return
+    // The in-battle menu resumes the battle too, with no inventory behind it.
+    const pile = this.openPile
+    this.openPile = null
+    if (!pile || !this.playerControl) return
     const player = this.gameState.player
     const stats = deriveCombatStats(player)
     const hero = this.engine.getState().units.find((u) => u.id === HERO_ID)!
-    if (sameCombatStats(stats, hero)) return
+    const { dropped, pickedUp } = pileChanges(pile.before, pile.items)
+    if (sameCombatStats(stats, hero) && dropped.length === 0 && pickedUp.length === 0) return
     const changes = gearChanges(this.loggedEquipment, player.equipment)
     this.loggedEquipment = { ...player.equipment }
-    this.playerAct({ type: 'equip', unit: HERO_ID, stats, changes })
+    this.refreshGroundMarks()
+    const named = ({ id, name }: Item) => ({ id, name })
+    this.playerAct({
+      type: 'equip',
+      unit: HERO_ID,
+      stats,
+      changes,
+      dropped: dropped.map(named),
+      pickedUp: pickedUp.map(named),
+    })
+  }
+
+  /** Shows the item last dropped on each hex with a pile; a unit standing there hides it. */
+  private refreshGroundMarks(): void {
+    this.groundMarks.removeAll(true)
+    for (const { hex, items } of this.ground.piles()) {
+      const { x, y } = boardHexCenter(hex)
+      const top = items[items.length - 1]
+      this.groundMarks.add(this.add.image(x, y, ITEM_ICON_KEYS[top.icon]).setScale(ITEM_ICON_SCALE))
+    }
   }
 
   private openMenu(): void {
