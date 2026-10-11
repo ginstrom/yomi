@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { BootScene } from './scenes/BootScene.ts'
 import { MenuScene } from './scenes/MenuScene.ts'
+import { WorldScene } from './scenes/WorldScene.ts'
 import { BattleScene } from './scenes/BattleScene.ts'
 import { InventoryScene } from './scenes/InventoryScene.ts'
 
@@ -21,5 +22,5 @@ new Phaser.Game({
     height: '100%',
     min: MIN_GAME_SIZE,
   },
-  scene: [BootScene, MenuScene, BattleScene, InventoryScene],
+  scene: [BootScene, MenuScene, WorldScene, BattleScene, InventoryScene],
 })

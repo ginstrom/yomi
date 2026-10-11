@@ -9,29 +9,48 @@ export interface Point {
 export const HEX_SIZE = 40
 export const FLOOR_SQUASH_Y = 0.6
 
+/** How a board of hexes is drawn: the hexes' corner radius, and how far it is flattened to look like a floor. */
+export interface BoardLayout {
+  hexSize: number
+  squashY: number
+}
+
+/** The battlefield, seen at an angle. */
+export const BATTLE_LAYOUT: BoardLayout = { hexSize: HEX_SIZE, squashY: FLOOR_SQUASH_Y }
+/** The world map, seen from above, with smaller hexes so more of them fit. */
+export const WORLD_LAYOUT: BoardLayout = { hexSize: 32, squashY: 1 }
+
 /** Board size in board-local pixels, after the squash and before any scale. */
-export function boardPixelSize({ cols, rows }: BoardSize): { width: number; height: number } {
+export function boardPixelSize(
+  { cols, rows }: BoardSize,
+  { hexSize, squashY }: BoardLayout = BATTLE_LAYOUT,
+): { width: number; height: number } {
   return {
-    width: Math.sqrt(3) * HEX_SIZE * (cols + 0.5),
-    height: HEX_SIZE * (1.5 * rows + 0.5) * FLOOR_SQUASH_Y,
+    width: Math.sqrt(3) * hexSize * (cols + 0.5),
+    height: hexSize * (1.5 * rows + 0.5) * squashY,
   }
 }
 
 /** Centre of a hex in board-local pixels, relative to the board's top-left corner. */
-export function boardHexCenter(h: Hex): Point {
-  const { x, y } = hexToPixel(h, HEX_SIZE)
+export function boardHexCenter(h: Hex, { hexSize, squashY }: BoardLayout = BATTLE_LAYOUT): Point {
+  const { x, y } = hexToPixel(h, hexSize)
   // hex(0, 0) sits half a hex in from the board's left and top edges.
-  return { x: x + (Math.sqrt(3) / 2) * HEX_SIZE, y: (y + HEX_SIZE) * FLOOR_SQUASH_Y }
+  return { x: x + (Math.sqrt(3) / 2) * hexSize, y: (y + hexSize) * squashY }
 }
 
 /**
  * The hex under a screen point, for a board drawn with its top-left corner at
  * `origin` and scaled by `scale`. The hex may lie off the board.
  */
-export function boardHexAt(screen: Point, origin: Point, scale: number): Hex {
-  const localX = (screen.x - origin.x) / scale - (Math.sqrt(3) / 2) * HEX_SIZE
-  const localY = (screen.y - origin.y) / scale / FLOOR_SQUASH_Y - HEX_SIZE
-  return pixelToHex(localX, localY, HEX_SIZE)
+export function boardHexAt(
+  screen: Point,
+  origin: Point,
+  scale: number,
+  { hexSize, squashY }: BoardLayout = BATTLE_LAYOUT,
+): Hex {
+  const localX = (screen.x - origin.x) / scale - (Math.sqrt(3) / 2) * hexSize
+  const localY = (screen.y - origin.y) / scale / squashY - hexSize
+  return pixelToHex(localX, localY, hexSize)
 }
 
 /** A curved arrow's shaft, as points along it, and its head, as a triangle whose first point is the tip. */

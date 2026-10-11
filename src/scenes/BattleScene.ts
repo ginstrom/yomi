@@ -12,9 +12,10 @@ import {
   type UnitSnapshot,
 } from '../engine/battleEngine.ts'
 import { POLICIES, type PolicyName } from '../engine/policies.ts'
-import { HERO_ID, goblinRaid, type UnitKind } from '../game/encounters.ts'
+import { ENCOUNTERS, HERO_ID, type EncounterId, type UnitKind } from '../game/encounters.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { Ground, pileChanges } from '../game/ground.ts'
+import { clearLocation, type MonsterLocation } from '../game/worldMap.ts'
 import type { Equipment, Item } from '../inventory/inventory.ts'
 import {
   HEX_DIRECTIONS,
@@ -37,6 +38,8 @@ import { eventSounds, type SoundKey } from './sounds.ts'
 
 interface BattleData {
   game?: GameState
+  /** The id of the monster location on the world map that this battle is fought at. */
+  location?: string
 }
 
 type MoveAction = Extract<Action, { type: 'move' }>
@@ -110,6 +113,8 @@ const LOG_BOX_GAP = 14
 /** Width kept clear of wrapped log text for the scrollbar. */
 const LOG_SCROLLBAR_SPACE = 16
 const ENEMY_POLICY: PolicyName = 'aggressive'
+/** The battle fought when the scene is started without a monster location, as in tests. */
+const DEFAULT_ENCOUNTER: EncounterId = 'goblin_raid'
 
 /**
  * How to draw each kind of unit; each texture is loaded from assets/sprites/<kind>.png.
@@ -123,6 +128,8 @@ const APPEARANCE: Record<UnitKind, { displayHeight: number }> = {
 
 export class BattleScene extends Phaser.Scene {
   private gameState!: GameState
+  /** The monsters being fought, which a victory clears from the world map. */
+  private location: MonsterLocation | null = null
   /** The hero's equipment as the engine's log last had it, to tell the next gear change against. */
   private loggedEquipment: Equipment = {}
   /** What lies on the battlefield. The inventory drops onto and picks up from the pile on the hero's hex. */
@@ -158,7 +165,10 @@ export class BattleScene extends Phaser.Scene {
 
   private roundText!: Phaser.GameObjects.Text
   private hintText!: Phaser.GameObjects.Text
+  /** The victory or defeat screen: a shade over the battle, a banner, a line under it and one button. */
+  private resultShade!: Phaser.GameObjects.Rectangle
   private bannerText!: Phaser.GameObjects.Text
+  private resultText!: Phaser.GameObjects.Text
   private logBoxBg!: Phaser.GameObjects.Rectangle
   private logScrollTrack!: Phaser.GameObjects.Rectangle
   private logScrollThumb!: Phaser.GameObjects.Rectangle
@@ -181,7 +191,10 @@ export class BattleScene extends Phaser.Scene {
   create(data: BattleData): void {
     this.gameState = data?.game ?? newGame()
     const player = this.gameState.player
-    const { setup, kinds } = goblinRaid(deriveCombatStats(player), player.hp)
+    const at = this.gameState.world.locations.find((l) => l.id === data?.location)
+    this.location = at?.kind === 'monsters' ? at : null
+    const encounter = ENCOUNTERS[this.location?.encounter ?? DEFAULT_ENCOUNTER]
+    const { setup, kinds } = encounter(deriveCombatStats(player), player.hp)
     this.loggedEquipment = { ...player.equipment }
     this.ground = new Ground()
     this.openPile = null
@@ -271,23 +284,19 @@ export class BattleScene extends Phaser.Scene {
     this.events.on(Phaser.Scenes.Events.RESUME, () => this.resumeMusic())
     this.events.on(Phaser.Scenes.Events.RESUME, () => this.commitGearChange())
 
-    this.bannerText = this.add
-      .text(0, 0, '', {
-        fontFamily: 'monospace',
-        fontSize: '36px',
-        color: '#ffee58',
-        fontStyle: 'bold',
-        // A backing keeps the banner legible wherever it lands over the board.
-        backgroundColor: '#000000b3',
-        padding: { x: 16, y: 8 },
-      })
-      .setOrigin(0.5)
-      .setVisible(false)
-
     this.attackButton = this.createButton('Attack', () => this.onAttack())
     this.endTurnButton = this.createButton('End Turn', () => this.onEndTurn())
-    this.menuButton = this.createButton('Back to Menu', () => this.onBackToMenu())
-    this.menuButton.setVisible(false)
+
+    // Interactive with no handler, so the finished battle under the result screen takes no clicks.
+    this.resultShade = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.7).setOrigin(0, 0).setInteractive()
+    this.bannerText = this.add
+      .text(0, 0, '', { fontFamily: 'monospace', fontSize: '48px', color: '#ffee58', fontStyle: 'bold' })
+      .setOrigin(0.5)
+    this.resultText = this.add
+      .text(0, 0, '', { fontFamily: 'monospace', fontSize: '16px', color: '#cfd8dc' })
+      .setOrigin(0.5)
+    this.menuButton = this.createButton('OK', () => this.leaveBattle())
+    for (const part of [this.resultShade, this.bannerText, this.resultText, this.menuButton]) part.setVisible(false)
 
     this.layout()
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
@@ -372,17 +381,20 @@ export class BattleScene extends Phaser.Scene {
   private openMenu(): void {
     if (this.scene.isPaused()) return
     if (this.engine.getState().phase === 'over') {
-      this.scene.start('Menu', { canContinue: false })
+      // Esc answers the result screen's one button, once it is up.
+      if (this.menuButton.visible) this.leaveBattle()
       return
     }
     this.music?.pause()
-    this.scene.launch('Menu', { canContinue: true })
+    this.scene.launch('Menu', { resume: 'Battle' })
     this.scene.bringToTop('Menu')
     this.scene.pause()
   }
 
-  private onBackToMenu(): void {
-    this.scene.start('Menu', { canContinue: false })
+  /** Leaves the finished battle: back to the world map after a victory, to the main menu otherwise. */
+  private leaveBattle(): void {
+    if (this.engine.getState().winner === 'player') this.scene.start('World', { game: this.gameState })
+    else this.scene.start('Menu')
   }
 
   // ---- board geometry ------------------------------------------------------
@@ -516,7 +528,11 @@ export class BattleScene extends Phaser.Scene {
     const buttonY = height - 50
     this.attackButton.setPosition(width / 2 - 80, buttonY)
     this.endTurnButton.setPosition(width / 2 + 80, buttonY)
-    this.menuButton.setPosition(width / 2, buttonY)
+
+    this.resultShade.setSize(width, height)
+    this.bannerText.setPosition(width / 2, height / 2 - 60)
+    this.resultText.setPosition(width / 2, height / 2)
+    this.menuButton.setPosition(width / 2, height / 2 + 60)
 
     const buttonTop = buttonY - 22
     const logBoxW = width - 40
@@ -550,19 +566,8 @@ export class BattleScene extends Phaser.Scene {
       layer.setPosition(floorX, floorY).setScale(scale)
     }
     for (const snapshot of this.engine.getState().units) this.placeUnit(snapshot.id, snapshot.position)
-    this.positionBanner()
 
     this.renderLog()
-  }
-
-  /** Centres the banner between the header text and the top of the tallest unit. */
-  private positionBanner(): void {
-    const unitsTop =
-      this.unitLayer.y +
-      this.unitLayer.scale * Math.min(...[...this.units.values()].map((u) => u.container.y - u.sprite.displayHeight))
-    const headerBottom = this.hintText.y + this.hintText.height
-    const y = Math.max(headerBottom + this.bannerText.height / 2, (headerBottom + unitsTop) / 2)
-    this.bannerText.setPosition(this.scale.width / 2, y)
   }
 
   private placeUnit(id: UnitId, at: Hex): void {
@@ -1078,11 +1083,16 @@ export class BattleScene extends Phaser.Scene {
     this.setPlayerControl(false)
     this.attackButton.setVisible(false)
     this.endTurnButton.setVisible(false)
-    this.menuButton.setVisible(true)
+    // The win is the world's from here on, however the scene is left.
+    if (playerWon && this.location) clearLocation(this.gameState.world, this.location.id)
+    const foes = this.location ? `The ${this.location.name}` : 'Your foes'
     this.bannerText.setText(playerWon ? 'VICTORY!' : 'DEFEAT')
     this.bannerText.setColor(playerWon ? '#66bb6a' : '#ef5350')
-    this.bannerText.setVisible(true)
-    this.positionBanner()
+    this.resultText.setText(
+      playerWon ? `${foes} are beaten.` : `${this.gameState.player.name} has fallen. The journey ends here.`,
+    )
+    this.setButtonLabel(this.menuButton, playerWon ? 'OK' : 'Main Menu')
+    for (const part of [this.resultShade, this.bannerText, this.resultText, this.menuButton]) part.setVisible(true)
     this.updateRoundText()
     this.dumpLog()
   }

@@ -14,9 +14,8 @@ export interface Encounter {
 }
 
 /**
- * The one encounter so far: a Goblin and a Kobold across the board from the
- * hero. Shared by the game and the simulator so balancing runs fight the
- * same battle.
+ * A Goblin and a Kobold across the board from the hero. The simulator fights
+ * this one, so balancing runs fight a battle the game has.
  */
 export function goblinRaid(hero: CombatantStats, heroHp?: number): Encounter {
   return {
@@ -31,3 +30,26 @@ export function goblinRaid(hero: CombatantStats, heroHp?: number): Encounter {
     kinds: { [HERO_ID]: 'warrior', goblin: 'goblin', kobold: 'kobold' },
   }
 }
+
+/** Two Kobolds that come at the hero from both ends of the far side. */
+export function koboldScouts(hero: CombatantStats, heroHp?: number): Encounter {
+  return {
+    setup: {
+      board: { cols: 8, rows: 5 },
+      units: [
+        { id: HERO_ID, side: 'player', stats: hero, hp: heroHp, position: offsetToHex(1, 2) },
+        { id: 'scout', side: 'enemy', stats: { ...KOBOLD_STATS, name: 'Kobold Scout' }, position: offsetToHex(6, 0) },
+        { id: 'tracker', side: 'enemy', stats: { ...KOBOLD_STATS, name: 'Kobold Tracker' }, position: offsetToHex(6, 4) },
+      ],
+    },
+    kinds: { [HERO_ID]: 'warrior', scout: 'kobold', tracker: 'kobold' },
+  }
+}
+
+/** Every battle a monster location on the world map can lead to, by id. */
+export const ENCOUNTERS = {
+  goblin_raid: goblinRaid,
+  kobold_scouts: koboldScouts,
+} satisfies Record<string, (hero: CombatantStats, heroHp?: number) => Encounter>
+
+export type EncounterId = keyof typeof ENCOUNTERS

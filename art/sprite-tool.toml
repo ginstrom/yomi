@@ -22,6 +22,12 @@ anchor = [10, 10]
 display_scale = 2
 outline = ["k"]
 
+[canvas.map]              # points of interest on the world map
+size = [24, 24]
+anchor = [12, 12]
+display_scale = 2
+outline = ["k"]
+
 [preview]
 scale = 6                # default upscale for `sprite preview`
 background = "#3a3a3a"

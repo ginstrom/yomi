@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Yomi is a 2D turn-based fantasy tactics game: Phaser 4 + TypeScript, bundled with Vite. Battles are fought on a pointy-top hex grid, with action points, flanking, facing arcs and zones of control.
+Yomi is a 2D turn-based fantasy tactics game: Phaser 4 + TypeScript, bundled with Vite. Battles are fought on a pointy-top hex grid, with action points, flanking, facing arcs and zones of control. Between battles the party travels a world map, also of hexes, from one point of interest to the next.
 
 ## Commands
 
@@ -48,21 +48,24 @@ The central rule: **game rules are Phaser-free and live outside the scenes.** Th
   
   Events are the engine's only output and are also the log format. **Bump `LOG_SCHEMA_VERSION` whenever an event's shape changes.** Events record more than the player is shown (AP spent and left, the numbers behind each roll, the items behind a gear change); `formatEvent` renders the short on-screen line, so add detail to the event and keep the line simple. `battle_start` records the seed and policies so any battle can be replayed.
 - `src/engine/policies.ts`: AI as pure functions `({ state, legal, rng }) => Action`, registered in `POLICIES`. The game's enemy and the simulator's two sides pick from the same registry.
-- `src/game/encounters.ts`: battle setups, shared by the game and the simulator so balance runs fight the real encounter. It also maps unit ids to a `UnitKind`, which is how scenes pick a sprite; the engine knows only stats.
+- `src/game/encounters.ts`: battle setups, registered by id in `ENCOUNTERS`. A monster location on the world map names the `EncounterId` it leads to, and the simulator fights `goblinRaid`, so balance runs fight a battle the game has. Each setup also maps unit ids to a `UnitKind`, which is how scenes pick a sprite; the engine knows only stats.
 - `src/game/ground.ts`: `Ground`, the loose items lying on a battlefield, one pile per hex, and `pileChanges`, which tells what a visit to the inventory dropped and picked up. `BattleScene` holds one `Ground` per battle; the engine does not track it.
-- `src/game/gameState.ts`: state that outlives a scene. It is created by the menu and passed through scene data, never held in a module global.
+- `src/game/worldMap.ts`: the world map's state and rules, Phaser-free like the battle's: `WorldState` (the board, the party's hex, the turn count, the locations) and the functions that change it (`travel`, `linger`, `clearLocation`). `WorldScene` asks `routeTo` what a click would do and must not decide it. See the rules below.
+- `src/game/gameState.ts`: state that outlives a scene, which is the player's `Character` and the `WorldState`. It is created by the menu and passed through scene data, never held in a module global.
 
 Rules of the battle system worth knowing before touching the engine: a side's units act in any order and the turn ends manually; units get 8 AP a turn by default, a move costs 1 AP per hex (`MOVE_AP_COST_PER_HEX`) and an attack costs the unit's `attackApCost` and reaches foes within its `attackRange`, both of which come from its weapon (`ItemStats`; the longsword costs 5 and reaches 1 hex, the bow reaches 5); nothing blocks a shot, as there is no line of sight yet; a two-handed weapon and an off-hand item cannot be held together, so equipping either stows the other (`equipFromBackpack`), or drops it on the ground when the backpack has no room, and the inventory shows the weapon ghosted in the off-hand slot; leaving a hex adjacent to a ready foe with a melee weapon provokes one free attack (one per unit per enemy turn, decided in `reactorsAt`; ranged weapons hold no zone of control); to-hit bonuses stack from flanking (`FLANK_BONUS_PER_ALLY`) and from the arc struck (`ARC_BONUS`, judged at range by the neighbouring hex the shot comes in over); facing is automatic, set by moving and attacking.
 
 Gear can be changed mid-battle. The inventory edits the `Character` directly (`equipFromBackpack`, `unequipToBackpack`), and when it closes `BattleScene` sends the engine an `equip` action carrying the newly derived stats, since the engine knows stats and not items; the action also lists the items changed (`gearChanges`), which the engine only copies into the `equip` event. Items can be dropped on the hero's hex and picked up from it the same way: the inventory's Ground section edits that hex's pile (`dropFromBackpack`, `dropEquipped`, `pickUp`; right-click or Ctrl+click drops, a click on a ground item picks it up into the backpack, and a pile deeper than the grid scrolls with the wheel), and the same `equip` action lists what was `dropped` and `pickedUp`, again only for the log. Equipping, stowing, dropping and picking up share one cost: a change costs `EQUIP_AP_COST` (1 AP), paid once: further changes are free until the unit moves or attacks or its turn ends (`equipCost`). `legalActions` never lists `equip`, so the AI policies do not change gear.
 
+Rules of the world map: time passes in turns, one per hex travelled; routes keep clear of every monster location except one they end on; walking into monsters sets `confronting`, and the party cannot travel on until it scouts, waits (a turn each, and neither does more yet) or attacks; a won battle takes its location off the map. Towns and resources are only shown for now.
+
 ### Scene layer (`src/scenes/`)
 
-Scenes are `Boot` → `Menu` → `Battle`, with `Inventory` and the in-battle `Menu` launched as overlays that pause `Battle` and resume it on close.
+Scenes are `Boot` → `Menu` → `World` ⇄ `Battle`. New on the menu starts `World` with a fresh `GameState`. Attacking a monster location starts `Battle` with that location's id; a victory clears the location and returns to `World`, and a defeat goes back to `Menu`. `Inventory` is an overlay over `Battle`, and `Menu` is one over `World` or `Battle` (Esc), told which to resume by its `resume` scene data; overlays pause the scene under them and resume it on close.
 
 `BattleScene` is a view over the engine: it turns clicks into `Action`s, calls `engine.step`, and plays back the returned events. It must not decide outcomes. Scenes use Phaser's `RESIZE` scale mode, so each one positions everything in a `layout()` method that reruns on resize; the game is held at a minimum of 760×560 (`MIN_GAME_SIZE` in `src/main.ts`), below which the page scrolls.
 
-Scene logic that can be expressed without Phaser is pulled into sibling helper modules, and new logic should follow suit: `eventSchedule.ts` (timing of event playback), `boardGeometry.ts` (hex ↔ screen), `attackPlan.ts` (what clicking a foe does), `scrollingLog.ts`, `slotScroll.ts` (which rows of the ground pile the inventory shows), `clicks.ts` (what counts as a right-click), `sounds.ts` (which sounds an event triggers), `audioSettings.ts` (volume levels, saved to `localStorage`), `cursors.ts` (the pointer cursors, as inline SVG).
+Scene logic that can be expressed without Phaser is pulled into sibling helper modules, and new logic should follow suit: `eventSchedule.ts` (timing of event playback), `boardGeometry.ts` (hex ↔ screen, for a `BoardLayout`: the battlefield's is squashed to look like a floor, the world map's is flat with smaller hexes), `attackPlan.ts` (what clicking a foe does), `scrollingLog.ts`, `slotScroll.ts` (which rows of the ground pile the inventory shows), `clicks.ts` (what counts as a right-click), `sounds.ts` (which sounds an event triggers), `audioSettings.ts` (volume levels, saved to `localStorage`), `cursors.ts` (the pointer cursors, as inline SVG).
 
 ### Tests
 
@@ -75,7 +78,7 @@ Tests that need determinism pass a seeded `mulberry32` or a scripted RNG into th
 
 ### Assets and docs
 
-Sprites in `public/assets/sprites/` are generated from `art/` (see Sprites) and audio in `public/assets/audio/` is placeholder; each directory's `README.md` records provenance and licence and should be updated when files are added. `BootScene` preloads every sound in `SOUND_KEYS` (`sounds.ts`); `BattleScene` loads one sprite per `UnitKind` from `assets/sprites/<kind>.png`, keyed by its `APPEARANCE` table, so a new unit kind needs an entry there and a matching PNG. `InventoryScene` loads one icon per `ItemIcon` from `assets/sprites/icon_<icon>.png`, keyed by `ITEM_ICON_KEYS` (`itemIcons.ts`).
+Sprites in `public/assets/sprites/` are generated from `art/` (see Sprites) and audio in `public/assets/audio/` is placeholder; each directory's `README.md` records provenance and licence and should be updated when files are added. `BootScene` preloads every sound in `SOUND_KEYS` (`sounds.ts`); `BattleScene` loads one sprite per `UnitKind` from `assets/sprites/<kind>.png`, keyed by its `APPEARANCE` table, so a new unit kind needs an entry there and a matching PNG. `InventoryScene` loads one icon per `ItemIcon` from `assets/sprites/icon_<icon>.png`, keyed by `ITEM_ICON_KEYS` (`itemIcons.ts`). `WorldScene` loads one sprite per `LocationKind`, keyed by `LOCATION_SPRITES`, and shows the party as the warrior's battle sprite.
 
 `docs/implementation-plans/` holds step-by-step plans with completion logs, which are useful for the reasoning behind past fixes.
 

@@ -299,6 +299,96 @@
       32
     ]
   },
+  "map_monsters": {
+    "anchor": [
+      12,
+      12
+    ],
+    "bounds": [
+      4,
+      2,
+      16,
+      18
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "map_monsters.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          4,
+          2,
+          16,
+          18
+        ],
+        "file": "map_monsters.png"
+      }
+    },
+    "size": [
+      24,
+      24
+    ]
+  },
+  "map_resource": {
+    "anchor": [
+      12,
+      12
+    ],
+    "bounds": [
+      2,
+      4,
+      21,
+      18
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "map_resource.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          2,
+          4,
+          21,
+          18
+        ],
+        "file": "map_resource.png"
+      }
+    },
+    "size": [
+      24,
+      24
+    ]
+  },
+  "map_town": {
+    "anchor": [
+      12,
+      12
+    ],
+    "bounds": [
+      3,
+      2,
+      18,
+      20
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "map_town.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          2,
+          18,
+          20
+        ],
+        "file": "map_town.png"
+      }
+    },
+    "size": [
+      24,
+      24
+    ]
+  },
   "tile_dark": {
     "anchor": [
       0,

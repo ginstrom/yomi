@@ -3,7 +3,8 @@ import { newGame } from '../game/gameState.ts'
 import { getAudioSettings, setAudioLevel, soundVolume, type AudioChannel } from './audioSettings.ts'
 
 interface MenuData {
-  canContinue?: boolean
+  /** The paused scene the menu was opened over, which Continue goes back to. */
+  resume?: 'World' | 'Battle'
 }
 
 const BUTTON_W = 220
@@ -33,7 +34,7 @@ interface Slider {
 }
 
 export class MenuScene extends Phaser.Scene {
-  private canContinue = false
+  private resumeKey: MenuData['resume']
   private bg!: Phaser.GameObjects.Rectangle
   private title!: Phaser.GameObjects.Text
   private buttons: Phaser.GameObjects.Container[] = []
@@ -49,7 +50,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(data: MenuData): void {
-    this.canContinue = data?.canContinue ?? false
+    this.resumeKey = data?.resume
 
     this.bg = this.add.rectangle(0, 0, 1, 1, 0x14100c, 1).setOrigin(0.5)
     this.title = this.add
@@ -57,7 +58,7 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5)
 
     const newButton = this.createButton('New', () => this.onNew(), true)
-    const continueButton = this.createButton('Continue', () => this.onContinue(), this.canContinue)
+    const continueButton = this.createButton('Continue', () => this.onContinue(), this.resumeKey !== undefined)
     const optionsButton = this.createButton('Options', () => this.onOptions(), true)
     this.buttons = [newButton, continueButton, optionsButton]
 
@@ -177,15 +178,16 @@ export class MenuScene extends Phaser.Scene {
 
   // ---- actions ---------------------------------------------------------------
 
+  /** A new game starts on the world map; the game the menu was opened over is dropped. */
   private onNew(): void {
-    this.scene.stop()
-    this.scene.start('Battle', { game: newGame() })
+    if (this.resumeKey) this.scene.stop(this.resumeKey)
+    this.scene.start('World', { game: newGame() })
   }
 
   private onContinue(): void {
-    if (!this.canContinue) return
+    if (!this.resumeKey) return
     this.scene.stop()
-    this.scene.resume('Battle')
+    this.scene.resume(this.resumeKey)
   }
 
   private onOptions(): void {
@@ -223,6 +225,6 @@ export class MenuScene extends Phaser.Scene {
 
   private onEscape(): void {
     if (this.showingOptions) this.showOptions(false)
-    else if (this.canContinue) this.onContinue()
+    else this.onContinue()
   }
 }

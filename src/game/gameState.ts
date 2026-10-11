@@ -1,4 +1,5 @@
 import { createWarrior, type Character } from '../character/character.ts'
+import { newWorld, type WorldState } from './worldMap.ts'
 
 /**
  * Everything that persists across scenes for one playthrough. Created by the
@@ -6,8 +7,9 @@ import { createWarrior, type Character } from '../character/character.ts'
  */
 export interface GameState {
   player: Character
+  world: WorldState
 }
 
 export function newGame(): GameState {
-  return { player: createWarrior() }
+  return { player: createWarrior(), world: newWorld() }
 }
