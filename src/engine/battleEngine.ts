@@ -13,7 +13,7 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 7
+export const LOG_SCHEMA_VERSION = 8
 
 /** To-hit bonus an attacker gains for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 2
@@ -30,13 +30,8 @@ export const ARC_BONUS: Readonly<Record<Arc, number>> = { front: 0, side: 1, rea
 /** Where units face before they first move or attack: towards the other side's starting edge. */
 export const DEFAULT_FACING: Readonly<Record<Side, number>> = { player: 0, enemy: 3 } // east, west
 
-/** Action points an attack costs. */
-export const ATTACK_AP_COST = 2
-
-/** Action points a move of `steps` hexes costs: one per `speed` hexes or part thereof. */
-export function moveApCost(steps: number, speed: number): number {
-  return Math.ceil(steps / speed)
-}
+/** Action points each hex of a move costs. */
+export const MOVE_AP_COST_PER_HEX = 1
 
 export type Side = 'player' | 'enemy'
 export type Phase = Side | 'over'
@@ -249,8 +244,8 @@ export function attackArc(defender: Pick<UnitSnapshot, 'position' | 'facing'>, f
  *
  * Sides alternate turns, starting with the player. At the start of its
  * side's turn each standing unit gets its action points, and the side's
- * units then act in any order — moving (one AP per `speed` hexes) and
- * attacking adjacent foes (ATTACK_AP_COST) — until the side ends its turn.
+ * units then act in any order — moving (MOVE_AP_COST_PER_HEX a hex) and
+ * attacking adjacent foes (the unit's `attackApCost`) — until the side ends its turn.
  * An attack gains a to-hit bonus for each other ally adjacent to the
  * defender, and another for striking the defender's side or rear: units
  * face the way they last stepped or struck. Every standing unit exerts a zone of control over its
@@ -348,7 +343,7 @@ export class BattleEngine {
       for (const path of this.reachable(actor).values()) {
         actions.push({ type: 'move', unit: actor.id, to: path[path.length - 1] })
       }
-      if (actor.ap < ATTACK_AP_COST) continue
+      if (actor.ap < actor.stats.attackApCost) continue
       for (const foe of this.units) {
         if (this.canAttack(actor, foe)) actions.push({ type: 'attack', unit: actor.id, target: foe.id })
       }
@@ -369,7 +364,7 @@ export class BattleEngine {
       for (const foe of this.reactorsAt(actor, at)) if (!provokes.includes(foe.id)) provokes.push(foe.id)
       at = step
     }
-    return { path, apCost: moveApCost(path.length, actor.stats.speed), provokes }
+    return { path, apCost: path.length * MOVE_AP_COST_PER_HEX, provokes }
   }
 
   /** Flanking and odds of a legal attack, or null if the attack isn't legal now. */
@@ -377,7 +372,7 @@ export class BattleEngine {
     const actor = this.units.find((u) => u.id === unit)
     const foe = this.units.find((u) => u.id === target)
     if (this.phase === 'over' || !actor || !foe || !this.canAct(actor)) return null
-    if (actor.ap < ATTACK_AP_COST || !this.canAttack(actor, foe)) return null
+    if (actor.ap < actor.stats.attackApCost || !this.canAttack(actor, foe)) return null
     const flankers = flankersOf(this.units, actor, foe)
     const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
     const arc = attackArc(foe, actor.position)
@@ -404,8 +399,8 @@ export class BattleEngine {
 
     const target = this.units.find((u) => u.id === action.target)
     if (!target || !this.canAttack(actor, target)) throw new Error(`${actor.id} cannot attack ${action.target}`)
-    if (actor.ap < ATTACK_AP_COST) throw new Error(`${actor.id} has too few action points to attack`)
-    actor.ap -= ATTACK_AP_COST
+    if (actor.ap < actor.stats.attackApCost) throw new Error(`${actor.id} has too few action points to attack`)
+    actor.ap -= actor.stats.attackApCost
     return this.attack(actor, target, false)
   }
 
@@ -450,7 +445,7 @@ export class BattleEngine {
   private move(actor: UnitRecord, to: Hex): BattleEvent[] {
     const path = this.reachable(actor).get(hexKey(to))
     if (!path) throw new Error(`${actor.id} cannot move to ${hexKey(to)}`)
-    const apCost = moveApCost(path.length, actor.stats.speed)
+    const apCost = path.length * MOVE_AP_COST_PER_HEX
     actor.ap -= apCost
 
     const events: BattleEvent[] = []
@@ -502,7 +497,7 @@ export class BattleEngine {
     const blocked = (h: Hex) => this.units.some((u) => u !== actor && u.hp > 0 && hexEquals(u.position, h))
     return reachableHexes(
       actor.position,
-      actor.ap * actor.stats.speed,
+      Math.floor(actor.ap / MOVE_AP_COST_PER_HEX),
       (h) => this.board.contains(h) && !blocked(h),
       (from) => this.reactorsAt(actor, from).map((u) => u.id),
     )

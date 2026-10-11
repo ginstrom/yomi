@@ -47,7 +47,7 @@ The central rule: **game rules are Phaser-free and live outside the scenes.** Th
 - `src/game/encounters.ts`: battle setups, shared by the game and the simulator so balance runs fight the real encounter. It also maps unit ids to a `UnitKind`, which is how scenes pick a sprite; the engine knows only stats.
 - `src/game/gameState.ts`: state that outlives a scene. It is created by the menu and passed through scene data, never held in a module global.
 
-Rules of the battle system worth knowing before touching the engine: a side's units act in any order and the turn ends manually; a move costs `ceil(hexes / speed)` AP and an attack costs `ATTACK_AP_COST`; leaving a hex adjacent to a ready foe provokes one free attack (one per unit per enemy turn, decided in `reactorsAt`); to-hit bonuses stack from flanking (`FLANK_BONUS_PER_ALLY`) and from the arc struck (`ARC_BONUS`); facing is automatic, set by moving and attacking.
+Rules of the battle system worth knowing before touching the engine: a side's units act in any order and the turn ends manually; units get 8 AP a turn by default, a move costs 1 AP per hex (`MOVE_AP_COST_PER_HEX`) and an attack costs the unit's `attackApCost`, which comes from its weapon (`ItemStats.attackApCost`; the longsword's is 5); leaving a hex adjacent to a ready foe provokes one free attack (one per unit per enemy turn, decided in `reactorsAt`); to-hit bonuses stack from flanking (`FLANK_BONUS_PER_ALLY`) and from the arc struck (`ARC_BONUS`); facing is automatic, set by moving and attacking.
 
 ### Scene layer (`src/scenes/`)
 

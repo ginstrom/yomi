@@ -74,8 +74,8 @@ describe('policies', () => {
   })
 
   it('aggressive prefers a hex it can still strike from', () => {
-    const engine = engineWith(hex(0, 1), hex(5, 1))
-    expect(choose(engine)).toEqual({ type: 'move', unit: 'p1', to: hex(4, 1) }) // 1 AP, 2 left
+    const engine = engineWith(hex(0, 1), hex(4, 1))
+    expect(choose(engine)).toEqual({ type: 'move', unit: 'p1', to: hex(3, 1) }) // 3 AP, 5 left
     engine.step(choose(engine))
     expect(choose(engine)).toEqual(ATTACK_E1)
   })

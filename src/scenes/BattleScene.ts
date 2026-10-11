@@ -1,7 +1,6 @@
 import Phaser from 'phaser'
 import { deriveCombatStats } from '../character/character.ts'
 import {
-  ATTACK_AP_COST,
   BattleEngine,
   formatEvent,
   type Action,
@@ -77,8 +76,9 @@ const ARROW_COLOR = 0xffffff
 const ARROW_EDGE = 0x000000
 const AP_PIP_FULL = 0xffee58
 const AP_PIP_SPENT = 0x424242
-/** Move highlights fade as they cost more AP: 1 AP, 2 AP, 3+ AP. */
-const MOVE_ALPHA_BY_COST = [0.6, 0.4, 0.25]
+/** Move highlights are fainter where the move leaves too few AP to attack. */
+const MOVE_ALPHA_CAN_ATTACK = 0.6
+const MOVE_ALPHA_MOVE_ONLY = 0.25
 const MOVE_STEP_MS = 140
 /** Pause after a free attack lands, before the mover walks on. */
 const OPPORTUNITY_PAUSE_MS = 450
@@ -535,13 +535,13 @@ export class BattleScene extends Phaser.Scene {
     const pips = unit.apPips
     pips.clear()
     if (snapshot.side !== phase || snapshot.hp <= 0) return
-    const spacing = 10
+    const spacing = 7
     for (let i = 0; i < snapshot.actionPoints; i++) {
       const x = (i - (snapshot.actionPoints - 1) / 2) * spacing
       pips.fillStyle(i < snapshot.ap ? AP_PIP_FULL : AP_PIP_SPENT, 1)
-      pips.fillCircle(x, PLATE_STATUS_Y, 3.5)
+      pips.fillCircle(x, PLATE_STATUS_Y, 2.5)
       pips.lineStyle(1, 0x000000, 0.8)
-      pips.strokeCircle(x, PLATE_STATUS_Y, 3.5)
+      pips.strokeCircle(x, PLATE_STATUS_Y, 2.5)
     }
   }
 
@@ -574,7 +574,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * Marks where the selected unit can move (fainter for more AP, orange-edged
+   * Marks where the selected unit can move (fainter where no AP is left to attack, orange-edged
    * where the move provokes a free attack) and whom it can attack, with the
    * odds of hitting each. While picking a target, only the targets show.
    */
@@ -588,12 +588,13 @@ export class BattleScene extends Phaser.Scene {
     const state = this.engine.getState()
     const positionOf = (id: UnitId) => state.units.find((u) => u.id === id)!.position
     const actable = this.actableUnits()
+    const self = state.units.find((u) => u.id === this.selected)
     this.hintText.setText(
-      this.targeting
-        ? `Choose a foe to attack (${ATTACK_AP_COST} AP). Esc or Cancel to go back.`
+      this.targeting && self
+        ? `Choose a foe to attack (${self.attackApCost} AP). Esc or Cancel to go back.`
         : actable.length === 0
           ? 'No action points left. Press End Turn.'
-          : `Blue: move (fainter costs more AP), orange edge provokes a free attack. Click a foe to attack.`,
+          : `Blue: move (fainter leaves too few AP to attack), orange edge provokes a free attack. Click a foe to attack.`,
     )
 
     for (const id of this.targeting ? [] : actable) {
@@ -601,13 +602,14 @@ export class BattleScene extends Phaser.Scene {
       this.highlights.lineStyle(2, 0xffffff, 0.5)
       this.highlights.strokePoints(this.hexPolygon(positionOf(id)), true)
     }
-    if (this.selected === null) return
+    if (this.selected === null || !self) return
 
     for (const action of this.engine.legalActions(this.selected)) {
       if (action.type === 'move' && !this.targeting) {
         const preview = this.engine.previewMove(action.unit, action.to)!
         const polygon = this.hexPolygon(action.to)
-        const alpha = MOVE_ALPHA_BY_COST[Math.min(preview.apCost, MOVE_ALPHA_BY_COST.length) - 1]
+        const canAttack = preview.apCost + self.attackApCost <= self.ap
+        const alpha = canAttack ? MOVE_ALPHA_CAN_ATTACK : MOVE_ALPHA_MOVE_ONLY
         this.highlights.fillStyle(MOVE_HIGHLIGHT, alpha)
         this.highlights.fillPoints(polygon, true)
         if (preview.provokes.length > 0) this.highlights.lineStyle(2, PROVOKE_OUTLINE, 1)

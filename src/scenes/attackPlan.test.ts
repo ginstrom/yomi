@@ -10,8 +10,8 @@ const WARRIOR_STATS: CombatantStats = {
   ac: 15,
   attackBonus: 4,
   damage: { count: 1, sides: 8, bonus: 2 },
-  speed: 3,
-  actionPoints: 3,
+  attackApCost: 5,
+  actionPoints: 8,
 }
 
 function battle(warrior: Hex, goblin: Hex, stats: Partial<CombatantStats> = {}): BattleEngine {
@@ -34,17 +34,17 @@ describe('planAttack', () => {
   })
 
   it('walks the shortest way beside a foe when too few AP are left to strike', () => {
-    const plan = planAttack(battle(hex(0, 1), hex(4, 1), { actionPoints: 2 }), 'warrior', 'goblin')
+    const plan = planAttack(battle(hex(0, 1), hex(4, 1), { actionPoints: 4 }), 'warrior', 'goblin')
     expect(plan).toEqual({ move: { type: 'move', unit: 'warrior', to: hex(3, 1) }, attack: false })
   })
 
   it('closes in as far as it can when no hex beside the foe is in reach', () => {
-    const plan = planAttack(battle(hex(0, 1), hex(7, 1), { speed: 1, actionPoints: 2 }), 'warrior', 'goblin')
+    const plan = planAttack(battle(hex(0, 1), hex(7, 1), { actionPoints: 2 }), 'warrior', 'goblin')
     expect(plan).toEqual({ move: { type: 'move', unit: 'warrior', to: hex(2, 1) }, attack: false })
   })
 
   it('does nothing beside a foe it cannot afford to strike', () => {
-    const engine = battle(hex(0, 1), hex(3, 1), { speed: 1 })
+    const engine = battle(hex(0, 1), hex(3, 1), { actionPoints: 6 })
     engine.step({ type: 'move', unit: 'warrior', to: hex(1, 1) })
     engine.step({ type: 'move', unit: 'warrior', to: hex(2, 1) })
     expect(planAttack(engine, 'warrior', 'goblin')).toEqual({ move: null, attack: false })

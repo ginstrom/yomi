@@ -12,7 +12,6 @@ import {
 export interface BaseStats {
   maxHp: number
   attackBonus: number
-  speed: number
   actionPoints: number
 }
 
@@ -32,6 +31,7 @@ export interface Character {
 
 const UNARMORED_AC = 10
 const UNARMED_DAMAGE: DamageRoll = { count: 1, sides: 2, bonus: 0 }
+const UNARMED_ATTACK_AP_COST = 3
 
 export function deriveCombatStats(character: Character): CombatantStats {
   const items = Object.values(character.equipment).filter((item): item is Item => item !== undefined)
@@ -40,11 +40,13 @@ export function deriveCombatStats(character: Character): CombatantStats {
   let acBonus = 0
   let attackBonus = character.base.attackBonus
   let damage = UNARMED_DAMAGE
+  let attackApCost = UNARMED_ATTACK_AP_COST
 
   for (const { stats } of items) {
     if (!stats) continue
     if (stats.baseAc !== undefined) baseAc = Math.max(baseAc, stats.baseAc)
     if (stats.damage) damage = stats.damage
+    if (stats.attackApCost !== undefined) attackApCost = stats.attackApCost
     acBonus += stats.acBonus ?? 0
     attackBonus += stats.attackBonus ?? 0
   }
@@ -55,13 +57,13 @@ export function deriveCombatStats(character: Character): CombatantStats {
     ac: baseAc + acBonus,
     attackBonus,
     damage,
-    speed: character.base.speed,
+    attackApCost,
     actionPoints: character.base.actionPoints,
   }
 }
 
 export function createWarrior(): Character {
-  const base: BaseStats = { maxHp: 20, attackBonus: 4, speed: 3, actionPoints: 3 }
+  const base: BaseStats = { maxHp: 20, attackBonus: 4, actionPoints: 8 }
   return {
     name: 'Warrior',
     className: 'Fighter',

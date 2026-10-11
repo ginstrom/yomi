@@ -2,11 +2,10 @@ import type { RNG } from '../combat/combat.ts'
 import { hexDistance, type Hex } from '../grid/hex.ts'
 import {
   ARC_BONUS,
-  ATTACK_AP_COST,
   FLANK_BONUS_PER_ALLY,
+  MOVE_AP_COST_PER_HEX,
   attackArc,
   flankersOf,
-  moveApCost,
   type Action,
   type BattleState,
   type UnitSnapshot,
@@ -78,8 +77,8 @@ function closingMove(state: BattleState, self: UnitSnapshot, own: readonly Actio
     const g = gap(action.to)
     if (g >= currentGap) continue
     // A lower bound: the real path may detour around units.
-    const cost = moveApCost(hexDistance(self.position, action.to), self.speed)
-    const canStrike = g === 1 && self.ap - cost >= ATTACK_AP_COST
+    const cost = hexDistance(self.position, action.to) * MOVE_AP_COST_PER_HEX
+    const canStrike = g === 1 && self.ap - cost >= self.attackApCost
     const score = [canStrike ? 0 : 1, g, cost]
     if (!best || lexLess(score, bestScore)) {
       best = action

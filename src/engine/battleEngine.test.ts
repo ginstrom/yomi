@@ -3,14 +3,12 @@ import { GOBLIN_STATS, type CombatantStats } from '../combat/combat.ts'
 import { HEX_DIRECTIONS, hex, hexAdd, hexKey, type Hex } from '../grid/hex.ts'
 import {
   ARC_BONUS,
-  ATTACK_AP_COST,
   BattleEngine,
   FLANK_BONUS_PER_ALLY,
   LOG_SCHEMA_VERSION,
   attackArc,
   flankersOf,
   formatEvent,
-  moveApCost,
   type Action,
   type AttackEvent,
   type BattleEvent,
@@ -30,8 +28,8 @@ const WARRIOR_STATS: CombatantStats = {
   ac: 15,
   attackBonus: 4,
   damage: { count: 1, sides: 8, bonus: 2 },
-  speed: 3,
-  actionPoints: 3,
+  attackApCost: 5,
+  actionPoints: 8,
 }
 
 const BOARD = { cols: 6, rows: 3 }
@@ -86,7 +84,7 @@ describe('BattleEngine', () => {
       meta: { source: 'test' },
       board: BOARD,
       units: [
-        { ...WARRIOR_STATS, id: 'warrior', side: 'player', hp: WARRIOR_STATS.maxHp, position: hex(1, 1), ap: 3 },
+        { ...WARRIOR_STATS, id: 'warrior', side: 'player', hp: WARRIOR_STATS.maxHp, position: hex(1, 1), ap: 8 },
         { ...GOBLIN_STATS, id: 'goblin', side: 'enemy', hp: GOBLIN_STATS.maxHp, position: hex(2, 1), ap: 0 },
       ],
     })
@@ -151,15 +149,25 @@ describe('BattleEngine', () => {
       expect.objectContaining({ type: 'attack', attacker: 'warrior', defender: 'goblin', opportunity: false }),
     ])
     expect(engine.getState().phase).toBe('player')
-    expect(unitOf(engine, 'warrior').ap).toBe(WARRIOR_STATS.actionPoints - ATTACK_AP_COST)
+    expect(unitOf(engine, 'warrior').ap).toBe(WARRIOR_STATS.actionPoints - WARRIOR_STATS.attackApCost)
     expect(nonMoves(engine)).toEqual([END_TURN])
     expect(() => engine.step(ATTACK_GOBLIN)).toThrow(/too few action points/)
   })
 
+  it('charges each unit its own attack cost, so a lighter weapon strikes more often', () => {
+    const quick = { ...WARRIOR, stats: { ...WARRIOR_STATS, attackApCost: 3 } }
+    const engine = new BattleEngine(setup([quick, GOBLIN]), { rng: sequence([FUMBLE]) })
+    engine.step(ATTACK_GOBLIN)
+    engine.step(ATTACK_GOBLIN)
+    expect(unitOf(engine, 'warrior').ap).toBe(2)
+    expect(nonMoves(engine)).toEqual([END_TURN])
+  })
+
   it('refuses any action from a unit with no AP left', () => {
-    const engine = new BattleEngine(setup([WARRIOR, { ...GOBLIN, position: hex(4, 1) }]), { rng: sequence([FUMBLE]) })
-    engine.step(move('warrior', hex(3, 1))) // 2 hexes: 1 AP
-    engine.step(ATTACK_GOBLIN) // 2 AP
+    const warrior = { ...WARRIOR, stats: { ...WARRIOR_STATS, actionPoints: 7 } }
+    const engine = new BattleEngine(setup([warrior, { ...GOBLIN, position: hex(4, 1) }]), { rng: sequence([FUMBLE]) })
+    engine.step(move('warrior', hex(3, 1))) // 2 hexes: 2 AP
+    engine.step(ATTACK_GOBLIN) // 5 AP
     expect(unitOf(engine, 'warrior').ap).toBe(0)
     expect(engine.legalActions()).toEqual([END_TURN])
     expect(() => engine.step(move('warrior', hex(2, 1)))).toThrow(/cannot act/)
@@ -182,7 +190,7 @@ describe('BattleEngine', () => {
     engine.step(move('cleric', hex(1, 2)))
     engine.step(ATTACK_GOBLIN)
     engine.step(move('cleric', hex(0, 2)))
-    expect(unitOf(engine, 'cleric')).toMatchObject({ position: hex(0, 2), ap: 1 })
+    expect(unitOf(engine, 'cleric')).toMatchObject({ position: hex(0, 2), ap: 5 })
     expect(engine.getState().phase).toBe('player')
   })
 
@@ -267,10 +275,6 @@ describe('BattleEngine movement', () => {
   const moveTargets = (engine: BattleEngine) =>
     engine.legalActions().flatMap((a) => (a.type === 'move' ? [hexKey(a.to)] : []))
 
-  it('charges one AP per speed hexes moved, or part thereof', () => {
-    expect([1, 3, 4, 6, 7].map((steps) => moveApCost(steps, 3))).toEqual([1, 1, 2, 2, 3])
-  })
-
   it('offers moves to on-board hexes its AP can reach, around other units', () => {
     const engine = new BattleEngine(setup([WARRIOR, GOBLIN, CLERIC]))
     const targets = moveTargets(engine)
@@ -292,29 +296,31 @@ describe('BattleEngine movement', () => {
       from: hex(0, 1),
       to: hex(3, 1),
       destination: hex(3, 1),
-      apCost: 1,
+      apCost: 3,
     })
     expect(event.path).toEqual([hex(1, 1), hex(2, 1), hex(3, 1)])
-    expect(unitOf(engine, 'warrior')).toMatchObject({ position: hex(3, 1), ap: 2 })
+    expect(unitOf(engine, 'warrior')).toMatchObject({ position: hex(3, 1), ap: 5 })
     expect(engine.getState().phase).toBe('player')
-    // Now adjacent with 2 AP: it can still attack, or move again.
+    // Now adjacent with 5 AP: it can still attack, or move again.
     expect(nonMoves(engine)).toEqual([ATTACK_GOBLIN, END_TURN])
     expect(moveTargets(engine).length).toBeGreaterThan(0)
   })
 
-  it('charges more AP for longer moves', () => {
+  it('charges one AP for each hex moved', () => {
     const engine = apart()
     const [event] = engine.step(move('warrior', hex(4, 0))) as [MoveEvent] // 4 hexes
-    expect(event.apCost).toBe(2)
-    expect(unitOf(engine, 'warrior').ap).toBe(1)
-    expect(nonMoves(engine)).toEqual([END_TURN]) // adjacent, but an attack costs 2
+    expect(event.apCost).toBe(4)
+    expect(unitOf(engine, 'warrior').ap).toBe(4)
+    expect(nonMoves(engine)).toEqual([END_TURN]) // adjacent, but an attack costs 5
   })
 
   it('rejects moves beyond its AP, off the board or onto a unit', () => {
-    const engine = apart()
+    const tired = { ...WARRIOR, position: hex(0, 1), stats: { ...WARRIOR_STATS, actionPoints: 3 } }
+    const engine = new BattleEngine(setup([tired, { ...GOBLIN, position: hex(4, 1) }]))
+    expect(() => engine.step(move('warrior', hex(4, 0)))).toThrow(/cannot move/) // 4 hexes away
     engine.step(move('warrior', hex(1, 1)))
     engine.step(move('warrior', hex(2, 1)))
-    engine.step(move('warrior', hex(2, 2))) // a hex at a time still costs 1 AP each: all 3 spent
+    engine.step(move('warrior', hex(2, 2))) // 1 AP a hex: all 3 spent
     expect(() => engine.step(move('warrior', hex(1, 2)))).toThrow(/cannot act/)
     const fresh = apart()
     expect(() => fresh.step(move('warrior', hex(0, -1)))).toThrow(/cannot move/)
@@ -326,7 +332,7 @@ describe('BattleEngine movement', () => {
     expect(engine.previewMove('warrior', hex(0, 1))).toEqual({ path: [hex(0, 1)], apCost: 1, provokes: ['goblin'] })
     expect(engine.previewMove('warrior', hex(2, 1))).toBeNull() // occupied
     expect(engine.previewMove('goblin', hex(3, 1))).toBeNull() // not its turn
-    expect(unitOf(engine, 'warrior')).toMatchObject({ position: hex(1, 1), ap: 3 })
+    expect(unitOf(engine, 'warrior')).toMatchObject({ position: hex(1, 1), ap: 8 })
   })
 })
 
@@ -344,7 +350,7 @@ describe('BattleEngine zones of control', () => {
     ])
     for (const e of events) if (e.type === 'move') expect(e.destination).toEqual(hex(0, 1))
     expect(unitOf(engine, 'goblin').reactionReady).toBe(false)
-    expect(unitOf(engine, 'warrior')).toMatchObject({ position: hex(0, 1), ap: 2 })
+    expect(unitOf(engine, 'warrior')).toMatchObject({ position: hex(0, 1), ap: 7 })
   })
 
   it('provokes even when sliding to another hex beside the foe, but each foe strikes once per turn', () => {
@@ -387,7 +393,7 @@ describe('BattleEngine zones of control', () => {
   it('routes around zones when an equally short path exists', () => {
     // From (1,1) to (2,2): via (2,1) passes beside the goblin at (3,0); via (1,2) does not.
     const engine = new BattleEngine(setup([WARRIOR, { ...GOBLIN, position: hex(3, 0) }]))
-    expect(engine.previewMove('warrior', hex(2, 2))).toEqual({ path: [hex(1, 2), hex(2, 2)], apCost: 1, provokes: [] })
+    expect(engine.previewMove('warrior', hex(2, 2))).toEqual({ path: [hex(1, 2), hex(2, 2)], apCost: 2, provokes: [] })
     expect(opportunity(engine.step(move('warrior', hex(2, 2))))).toEqual([])
   })
 
@@ -395,7 +401,7 @@ describe('BattleEngine zones of control', () => {
     const mover: UnitSetup = {
       id: 'mover',
       side: 'player',
-      stats: { ...WARRIOR_STATS, speed: 2, actionPoints: 2 },
+      stats: { ...WARRIOR_STATS, actionPoints: 4 },
       position: hex(0, 0),
     }
     const x: UnitSetup = { id: 'x', side: 'enemy', stats: GOBLIN_STATS, position: hex(1, 0) }

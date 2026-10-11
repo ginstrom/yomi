@@ -34,6 +34,8 @@ export type ItemIcon = 'sword' | 'shield' | 'armor'
 export interface ItemStats {
   /** Weapon damage; replaces the wielder's unarmed damage. */
   damage?: DamageRoll
+  /** Action points an attack with this weapon costs; replaces the unarmed cost. */
+  attackApCost?: number
   /** Armor's base AC; replaces the unarmored AC of 10. */
   baseAc?: number
   /** Flat AC bonus, e.g. from a shield. */
@@ -56,6 +58,7 @@ export type Equipment = Partial<Record<EquipmentSlot, Item>>
 export function describeItemStats(stats: ItemStats = {}): string[] {
   const lines: string[] = []
   if (stats.damage) lines.push(`Damage: ${formatDamage(stats.damage)}`)
+  if (stats.attackApCost !== undefined) lines.push(`Attack Cost: ${stats.attackApCost} AP`)
   if (stats.baseAc !== undefined) lines.push(`Armor Class: ${stats.baseAc}`)
   if (stats.acBonus) lines.push(`Armor Class: +${stats.acBonus}`)
   if (stats.attackBonus) lines.push(`Attack: +${stats.attackBonus}`)
@@ -67,7 +70,7 @@ export const IRON_SWORD: Item = {
   name: 'Iron Longsword',
   slot: 'mainHand',
   description: 'A well-balanced blade.',
-  stats: { damage: { count: 1, sides: 8, bonus: 2 } },
+  stats: { damage: { count: 1, sides: 8, bonus: 2 }, attackApCost: 5 },
   icon: 'sword',
 }
 

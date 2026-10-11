@@ -31,16 +31,23 @@ describe('deriveCombatStats', () => {
       ac: 15,
       attackBonus: 4,
       damage: { count: 1, sides: 8, bonus: 2 },
-      speed: 3,
-      actionPoints: 3,
+      attackApCost: 5,
+      actionPoints: 8,
     })
   })
 
-  it('falls back to unarmored AC and unarmed damage with nothing equipped', () => {
+  it('falls back to unarmored AC and an unarmed attack with nothing equipped', () => {
     const naked = { ...createWarrior(), equipment: {} }
     const stats = deriveCombatStats(naked)
     expect(stats.ac).toBe(10)
     expect(stats.damage).toEqual({ count: 1, sides: 2, bonus: 0 })
+    expect(stats.attackApCost).toBe(3)
+  })
+
+  it('takes the attack cost from the weapon in hand', () => {
+    const warrior = createWarrior()
+    warrior.equipment.mainHand = { ...IRON_SWORD, id: 'dagger', stats: { ...IRON_SWORD.stats, attackApCost: 2 } }
+    expect(deriveCombatStats(warrior).attackApCost).toBe(2)
   })
 
   it('reflects equipment changes', () => {

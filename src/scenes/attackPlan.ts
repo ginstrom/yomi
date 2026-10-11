@@ -1,6 +1,5 @@
 import {
   ARC_BONUS,
-  ATTACK_AP_COST,
   attackArc,
   type Action,
   type BattleEngine,
@@ -55,7 +54,7 @@ export function planAttack(engine: BattleEngine, unit: UnitId, target: UnitId): 
   }
 
   const strikes = moves.filter(
-    (m) => hexDistance(m.action.to, foe.position) === 1 && m.preview.apCost + ATTACK_AP_COST <= actor.ap,
+    (m) => hexDistance(m.action.to, foe.position) === 1 && m.preview.apCost + actor.attackApCost <= actor.ap,
   )
   if (strikes.length > 0) {
     const move = pick(strikes, (m) => [

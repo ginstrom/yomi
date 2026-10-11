@@ -7,8 +7,8 @@ const WARRIOR_STATS: CombatantStats = {
   ac: 15,
   attackBonus: 4,
   damage: { count: 1, sides: 8, bonus: 2 },
-  speed: 3,
-  actionPoints: 3,
+  attackApCost: 5,
+  actionPoints: 8,
 }
 
 function sequence(values: number[]): () => number {

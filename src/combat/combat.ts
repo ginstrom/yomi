@@ -10,8 +10,8 @@ export interface CombatantStats {
   ac: number
   attackBonus: number
   damage: DamageRoll
-  /** Hexes the unit can move per action point spent on movement. */
-  speed: number
+  /** Action points one attack costs; set by the weapon. */
+  attackApCost: number
   /** Action points the unit gets at the start of each of its side's turns. */
   actionPoints: number
 }
@@ -80,17 +80,17 @@ export const GOBLIN_STATS: CombatantStats = {
   ac: 13,
   attackBonus: 3,
   damage: { count: 1, sides: 6, bonus: 1 },
-  speed: 4,
-  actionPoints: 3,
+  attackApCost: 5,
+  actionPoints: 8,
 }
 
-/** A fragile skirmisher: harder to hit and quicker than a Goblin, but light on hit points and damage. */
+/** A fragile skirmisher: harder to hit than a Goblin, but light on hit points and damage. */
 export const KOBOLD_STATS: CombatantStats = {
   name: 'Kobold',
   maxHp: 7,
   ac: 14,
   attackBonus: 2,
   damage: { count: 1, sides: 4, bonus: 1 },
-  speed: 6,
-  actionPoints: 3,
+  attackApCost: 5,
+  actionPoints: 8,
 }
