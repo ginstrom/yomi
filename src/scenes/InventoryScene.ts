@@ -14,6 +14,8 @@ import type { GameState } from '../game/gameState.ts'
 import { EQUIPMENT_SLOT_LABELS, describeItemStats, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
 import { soundVolume } from './audioSettings.ts'
+import { isSecondaryClick } from './clicks.ts'
+import { SlotScroll } from './slotScroll.ts'
 
 type PanelTab = 'character' | 'inventory'
 
@@ -43,6 +45,7 @@ const GROUND_ROWS = 2
 const SLOT_GAP = 8
 const SLOT_TITLE_Y = 367
 const SLOT_GRID_Y = 404
+const SCROLLBAR_W = 8
 const TAB_W = 140
 const TAB_H = 32
 
@@ -65,6 +68,8 @@ export class InventoryScene extends Phaser.Scene {
   private stats!: CombatantStats
   private gearApCost: number | null = null
   private ground: Item[] = []
+  /** Which rows of the ground pile the grid shows. */
+  private groundScroll = new SlotScroll(GROUND_COLS, GROUND_ROWS)
   private dimBg!: Phaser.GameObjects.Rectangle
   private panel!: Phaser.GameObjects.Container
   private characterContent!: Phaser.GameObjects.Container
@@ -86,6 +91,7 @@ export class InventoryScene extends Phaser.Scene {
     this.character = data.game.player
     this.gearApCost = data.gearApCost ?? null
     this.ground = data.ground ?? []
+    this.groundScroll = new SlotScroll(GROUND_COLS, GROUND_ROWS)
     // Right-clicking an item drops it.
     this.input.mouse?.disableContextMenu()
 
@@ -112,6 +118,9 @@ export class InventoryScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-I', () => this.onPressI())
     this.input.keyboard?.on('keydown-C', () => this.onPressC())
     this.input.keyboard?.on('keydown-ESC', () => this.close())
+    this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _objects: unknown, _dx: number, dy: number) =>
+      this.onWheel(dy),
+    )
   }
 
   /** Draws both tabs from the character as it now stands; rerun after each change of gear. */
@@ -293,7 +302,7 @@ export class InventoryScene extends Phaser.Scene {
       })
       bg.on('pointerdown', (pointer: Phaser.Input.Pointer) =>
         this.changeGear(() =>
-          pointer.rightButtonDown()
+          isSecondaryClick(pointer)
             ? dropEquipped(this.character, heldIn, this.ground)
             : unequipToBackpack(this.character, heldIn),
         ),
@@ -333,8 +342,8 @@ export class InventoryScene extends Phaser.Scene {
       this.gearApCost === null
         ? 'Gear can be changed only on your turn, with an action point to spare.'
         : this.gearApCost === 0
-          ? 'Click to equip, stow or pick up; right-click to drop. Free until you next move or attack.'
-          : `Click to equip, stow or pick up; right-click to drop. Costs ${this.gearApCost} AP on closing, however many changes.`
+          ? 'Click to equip, stow or pick up; right- or Ctrl+click to drop. Free until you next move or attack.'
+          : `Click to equip, stow or pick up; right- or Ctrl+click to drop. Costs ${this.gearApCost} AP on closing, however many changes.`
     this.inventoryContent.add(
       this.add.text(STATS_X, 300, hint, {
         fontFamily: 'monospace',
@@ -361,24 +370,44 @@ export class InventoryScene extends Phaser.Scene {
     this.character.backpack.forEach((item, i) => {
       const { x, y } = slotPosition(startX, i, BACKPACK_COLS)
       this.createItemSlot(x, y, item, (pointer) =>
-        pointer.rightButtonDown()
+        isSecondaryClick(pointer)
           ? dropFromBackpack(this.character, i, this.ground)
           : equipFromBackpack(this.character, i, this.ground),
       )
     })
   }
 
-  /** What lies on the character's hex. A pile deeper than the grid shows its oldest items. */
+  /** What lies on the character's hex, oldest first. A pile deeper than the grid scrolls. */
   private buildGround(): void {
-    const shown = GROUND_COLS * GROUND_ROWS
-    const hidden = this.ground.length - shown
-    const title = hidden > 0 ? `Ground (+${hidden} more)` : 'Ground'
+    this.groundScroll.setCount(this.ground.length)
+    const scrolls = this.groundScroll.maxRow > 0
+    const title = scrolls ? `Ground (${this.ground.length})` : 'Ground'
     const gridW = GROUND_COLS * SLOT_SIZE + (GROUND_COLS - 1) * SLOT_GAP
     const startX = this.buildSlotGrid(title, STATS_X + gridW / 2, GROUND_COLS)
-    for (let i = 0; i < shown; i++) {
+    const first = this.groundScroll.firstIndex
+    for (let i = 0; i < GROUND_COLS * GROUND_ROWS; i++) {
       const { x, y } = slotPosition(startX, i, GROUND_COLS)
-      this.createItemSlot(x, y, this.ground[i] ?? null, () => pickUp(this.character, this.ground, i))
+      const index = first + i
+      this.createItemSlot(x, y, this.ground[index] ?? null, () => pickUp(this.character, this.ground, index))
     }
+    this.buildGroundScrollbar(STATS_X + gridW + 4)
+  }
+
+  /** The bar beside the ground grid, drawn only when the pile is deeper than the grid. */
+  private buildGroundScrollbar(x: number): void {
+    const trackY = SLOT_GRID_Y - SLOT_SIZE / 2
+    const trackH = GROUND_ROWS * SLOT_SIZE + (GROUND_ROWS - 1) * SLOT_GAP
+    const thumb = this.groundScroll.thumb(trackH, 16)
+    if (!thumb) return
+
+    const track = this.add.rectangle(x, trackY, SCROLLBAR_W, trackH, 0x14100c, 0.9).setOrigin(0)
+    const bar = this.add.rectangle(x, trackY + thumb.y, SCROLLBAR_W, thumb.height, 0x6b5a3a).setOrigin(0)
+    track.setInteractive({ useHandCursor: true })
+    // A click on the track above or below the thumb scrolls that way.
+    track.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, localY: number) =>
+      this.scrollGround(localY < thumb.y ? -1 : 1),
+    )
+    this.inventoryContent.add([track, bar])
   }
 
   /** Titles a grid of slots centred on `centerX`; returns the x of its first column. */
@@ -460,9 +489,25 @@ export class InventoryScene extends Phaser.Scene {
 
   /** Applies a change of gear, if the battle allows one now, and redraws the panel to match. */
   private changeGear(change: () => boolean): void {
+    const onGround = this.ground.length
     if (this.gearApCost === null || !change()) return
+    // A dropped item lands at the end of the pile: bring it into view.
+    if (this.ground.length > onGround) {
+      this.groundScroll.setCount(this.ground.length)
+      this.groundScroll.scrollToEnd()
+    }
     this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
     // Next tick: the redraw destroys the slot whose click handler this runs in.
+    this.time.delayedCall(0, () => this.buildContent())
+  }
+
+  private onWheel(deltaY: number): void {
+    if (this.activeTab === 'inventory' && this.groundScroll.wheel(deltaY)) this.buildContent()
+  }
+
+  private scrollGround(rows: number): void {
+    if (!this.groundScroll.scrollBy(rows)) return
+    // Next tick: the redraw destroys the track whose click handler this runs in.
     this.time.delayedCall(0, () => this.buildContent())
   }
 
