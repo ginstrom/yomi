@@ -1,4 +1,4 @@
-import { createWarrior, type Character } from '../character/character.ts'
+import { newParty, type Party } from './party.ts'
 import { newWorld, type WorldState } from './worldMap.ts'
 
 /**
@@ -6,10 +6,10 @@ import { newWorld, type WorldState } from './worldMap.ts'
  * menu on "New" and handed to scenes via scene data — never a module global.
  */
 export interface GameState {
-  player: Character
+  party: Party
   world: WorldState
 }
 
 export function newGame(): GameState {
-  return { player: createWarrior(), world: newWorld() }
+  return { party: newParty(), world: newWorld() }
 }

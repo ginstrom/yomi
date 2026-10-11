@@ -20,7 +20,7 @@ export interface BaseStats {
 }
 
 /**
- * The player's persistent character. Combat stats are never stored here —
+ * One of the player's persistent characters. Combat stats are never stored here —
  * they're derived from base stats + equipment, so changing gear is the only
  * way to change them and every screen agrees on the numbers.
  */
@@ -177,10 +177,10 @@ export function gearChanges(before: Equipment, after: Equipment): GearChange[] {
 /** The weapons the warrior carries but does not start with in hand. */
 const SPARE_WEAPONS = WEAPONS.filter((weapon) => weapon !== IRON_SWORD)
 
-export function createWarrior(): Character {
+export function createWarrior(name = 'Warrior'): Character {
   const base: BaseStats = { maxHp: 20, attackBonus: 4, actionPoints: 8 }
   return {
-    name: 'Warrior',
+    name,
     className: 'Fighter',
     level: 1,
     xp: 0,

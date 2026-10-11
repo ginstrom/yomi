@@ -10,11 +10,11 @@
 //                                 [--player-weapon iron_sword]
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { createWarrior, deriveCombatStats } from '../src/character/character.ts'
 import { mulberry32, randomSeed } from '../src/combat/rng.ts'
 import { BattleEngine, type BattleEvent, type Side, type UnitId } from '../src/engine/battleEngine.ts'
 import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.ts'
 import { goblinRaid } from '../src/game/encounters.ts'
+import { newParty, partyFighters } from '../src/game/party.ts'
 import { WEAPONS, type Item } from '../src/inventory/inventory.ts'
 
 interface CliArgs {
@@ -23,7 +23,7 @@ interface CliArgs {
   seed: number | null
   maxRounds: number
   policies: Record<Side, PolicyName>
-  /** The weapon the hero fights with; null leaves the starting gear as it is. */
+  /** The weapon every party member fights with; null leaves the starting gear as it is. */
   playerWeapon: Item | null
 }
 
@@ -93,11 +93,11 @@ function parseArgs(argv: string[]): CliArgs {
 export type LoggedEvent = BattleEvent & { battleId: number }
 
 function runBattle(battleId: number, seed: number, args: CliArgs): LoggedEvent[] {
-  const hero = createWarrior()
-  if (args.playerWeapon) hero.equipment.mainHand = args.playerWeapon
-  const engine = new BattleEngine(goblinRaid(deriveCombatStats(hero)).setup, {
+  const party = newParty()
+  if (args.playerWeapon) for (const member of party) member.equipment.mainHand = args.playerWeapon
+  const engine = new BattleEngine(goblinRaid(partyFighters(party)).setup, {
     seed,
-    meta: { source: 'simulate', policies: args.policies, playerWeapon: hero.equipment.mainHand?.id },
+    meta: { source: 'simulate', policies: args.policies, playerWeapon: party[0].equipment.mainHand?.id },
   })
   // Policies get their own stream so swapping one doesn't change the dice.
   const policyRng = mulberry32(seed ^ 0x9e3779b9)

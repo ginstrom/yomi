@@ -28,7 +28,7 @@ const LOCATION_SPRITES: Record<LocationKind, string> = {
 }
 /** Map sprites are drawn on a 24px canvas and shown at 2x. */
 const LOCATION_SCALE = 2
-/** The party is the hero's battle sprite, shown smaller than on the battlefield. */
+/** The party is the warrior's battle sprite, shown smaller than on the battlefield. */
 const PARTY_SPRITE = 'warrior'
 const PARTY_SCALE = 2
 /** How far below a hex's centre the party's feet stand, and a location's name starts. */
@@ -69,7 +69,7 @@ export class WorldScene extends Phaser.Scene {
 
   private turnText!: Phaser.GameObjects.Text
   private hintText!: Phaser.GameObjects.Text
-  /** The hero's level, experience and hit points, at the top right. */
+  /** Each party member's level, experience and hit points, a line apiece at the top right. */
   private partyText!: Phaser.GameObjects.Text
   /** What last happened, above the buttons. */
   private messageText!: Phaser.GameObjects.Text
@@ -106,7 +106,7 @@ export class WorldScene extends Phaser.Scene {
     this.turnText = this.add.text(20, 16, '', { fontFamily: 'monospace', fontSize: '20px', color: '#ffffff' })
     this.hintText = this.add.text(20, 44, '', { fontFamily: 'monospace', fontSize: '13px', color: '#9e9e9e' })
     this.partyText = this.add
-      .text(0, 20, '', { fontFamily: 'monospace', fontSize: '15px', color: '#e8c766' })
+      .text(0, 10, '', { fontFamily: 'monospace', fontSize: '13px', color: '#e8c766', align: 'right' })
       .setOrigin(1, 0)
     this.messageText = this.add
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: '15px', color: '#cfd8dc' })
@@ -130,7 +130,6 @@ export class WorldScene extends Phaser.Scene {
     this.events.on(Phaser.Scenes.Events.PAUSE, () => this.setHovered(null))
     this.input.keyboard?.on('keydown-ESC', () => this.openMenu())
 
-    this.layout()
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
@@ -140,6 +139,8 @@ export class WorldScene extends Phaser.Scene {
     const here = monstersHere(this.world)
     this.messageText.setText(here ? `You stand before the ${here.name}.` : '')
     this.refresh()
+    // After the first refresh: the map is laid out below the party's lines.
+    this.layout()
   }
 
   // ---- build ---------------------------------------------------------------
@@ -218,10 +219,12 @@ export class WorldScene extends Phaser.Scene {
 
     const map = boardPixelSize(this.world.board, WORLD_LAYOUT)
     const freeW = width - 2 * MAP_MARGIN_X
-    const freeH = messageY - 20 - HEADER_BOTTOM
+    // A large party's lines reach below the header, and the map keeps clear of them too.
+    const headerBottom = Math.max(HEADER_BOTTOM, this.partyText.y + this.partyText.height + 8)
+    const freeH = messageY - 20 - headerBottom
     const scale = Math.max(0, Math.min(1, freeW / map.width, freeH / map.height))
     this.mapLayer
-      .setPosition(MAP_MARGIN_X + (freeW - map.width * scale) / 2, HEADER_BOTTOM + (freeH - map.height * scale) / 2)
+      .setPosition(MAP_MARGIN_X + (freeW - map.width * scale) / 2, headerBottom + (freeH - map.height * scale) / 2)
       .setScale(scale)
   }
 
@@ -242,9 +245,13 @@ export class WorldScene extends Phaser.Scene {
     this.party.setPosition(x, y + PARTY_FEET_Y)
     this.partyMark.clear().lineStyle(3, PARTY_OUTLINE, 1).strokePoints(this.hexPolygon(world.party), true)
 
-    const { name, level, xp, hp, base } = this.gameState.player
     this.turnText.setText(`Turn ${world.turn}`)
-    this.partyText.setText(`${name}  Level ${level}  XP ${xp}/${xpToNextLevel(level)}  HP ${hp}/${base.maxHp}`)
+    this.partyText.setText(
+      this.gameState.party.map(
+        ({ name, level, xp, hp, base }) =>
+          `${name}  Level ${level}  XP ${xp}/${xpToNextLevel(level)}  HP ${hp}/${base.maxHp}`,
+      ),
+    )
     this.hintText.setText(
       world.confronting !== null
         ? 'Monsters! Scout them, wait, or attack.'

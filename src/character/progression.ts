@@ -57,16 +57,3 @@ export function gainXp(character: Character, xp: number): XpGain {
   if (gain.levelsGained > 0) character.hp = character.base.maxHp
   return gain
 }
-
-/** The lines the victory screen shows for a gain: the experience, then each thing a new level brought. */
-export function describeXpGain(character: Character, gain: XpGain): string[] {
-  const lines = [`+${gain.xp} XP`]
-  if (gain.levelsGained === 0) {
-    lines[0] += ` (${character.xp} / ${xpToNextLevel(character.level)} to level ${character.level + 1})`
-    return lines
-  }
-  const attack = gain.attackBonusGained > 0 ? `, +${gain.attackBonusGained} attack` : ''
-  lines.push(`${character.name} reaches level ${character.level}!`)
-  lines.push(`+${gain.maxHpGained} max HP${attack}, wounds healed`)
-  return lines
-}

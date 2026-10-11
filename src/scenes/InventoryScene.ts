@@ -11,7 +11,6 @@ import {
 } from '../character/character.ts'
 import { xpToNextLevel } from '../character/progression.ts'
 import { formatDamage, type CombatantStats } from '../combat/combat.ts'
-import type { GameState } from '../game/gameState.ts'
 import { EQUIPMENT_SLOT_LABELS, describeItemStats, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
 import { soundVolume } from './audioSettings.ts'
@@ -21,7 +20,8 @@ import { SlotScroll } from './slotScroll.ts'
 type PanelTab = 'character' | 'inventory'
 
 interface InventoryData {
-  game: GameState
+  /** The party member whose panel this is. */
+  character: Character
   tab?: PanelTab
   /**
    * What changing gear costs in action points, charged once by the battle when
@@ -89,7 +89,7 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   create(data: InventoryData): void {
-    this.character = data.game.player
+    this.character = data.character
     this.gearApCost = data.gearApCost ?? null
     this.ground = data.ground ?? []
     this.groundScroll = new SlotScroll(GROUND_COLS, GROUND_ROWS)

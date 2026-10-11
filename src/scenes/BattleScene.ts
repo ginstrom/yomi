@@ -1,6 +1,5 @@
 import Phaser from 'phaser'
-import { deriveCombatStats, gearChanges } from '../character/character.ts'
-import { describeXpGain, gainXp } from '../character/progression.ts'
+import { deriveCombatStats, gearChanges, type Character } from '../character/character.ts'
 import { sameCombatStats } from '../combat/combat.ts'
 import {
   BattleEngine,
@@ -13,9 +12,10 @@ import {
   type UnitSnapshot,
 } from '../engine/battleEngine.ts'
 import { POLICIES, type PolicyName } from '../engine/policies.ts'
-import { ENCOUNTERS, HERO_ID, xpReward, type EncounterId, type UnitKind } from '../game/encounters.ts'
+import { ENCOUNTERS, heroId, xpReward, type EncounterId, type UnitKind } from '../game/encounters.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { Ground, pileChanges } from '../game/ground.ts'
+import { describeRewards, partyFighters, rewardVictory } from '../game/party.ts'
 import { clearLocation, type MonsterLocation } from '../game/worldMap.ts'
 import type { Equipment, Item } from '../inventory/inventory.ts'
 import {
@@ -133,12 +133,14 @@ export class BattleScene extends Phaser.Scene {
   private location: MonsterLocation | null = null
   /** The experience a victory here is worth, until it is won. */
   private xpReward = 0
-  /** The hero's equipment as the engine's log last had it, to tell the next gear change against. */
-  private loggedEquipment: Equipment = {}
-  /** What lies on the battlefield. The inventory drops onto and picks up from the pile on the hero's hex. */
+  /** The party member behind each player unit. */
+  private heroes = new Map<UnitId, Character>()
+  /** Each member's equipment as the engine's log last had it, to tell the next gear change against. */
+  private loggedEquipment = new Map<UnitId, Equipment>()
+  /** What lies on the battlefield. The inventory drops onto and picks up from the pile on its unit's hex. */
   private ground = new Ground()
-  /** The pile the open inventory is working on, and what it held when the inventory opened. */
-  private openPile: { items: Item[]; before: Item[] } | null = null
+  /** The unit the open inventory belongs to, the pile it is working on, and what that held when it opened. */
+  private openPile: { unit: UnitId; items: Item[]; before: Item[] } | null = null
   private engine!: BattleEngine
   private board!: HexBoard
   private names!: Record<UnitId, string>
@@ -193,14 +195,15 @@ export class BattleScene extends Phaser.Scene {
 
   create(data: BattleData): void {
     this.gameState = data?.game ?? newGame()
-    const player = this.gameState.player
+    const party = this.gameState.party
     const at = this.gameState.world.locations.find((l) => l.id === data?.location)
     this.location = at?.kind === 'monsters' ? at : null
     const encounter = ENCOUNTERS[this.location?.encounter ?? DEFAULT_ENCOUNTER]
-    const fight = encounter(deriveCombatStats(player), player.hp)
+    const fight = encounter(partyFighters(party))
     const { setup, kinds } = fight
     this.xpReward = xpReward(fight)
-    this.loggedEquipment = { ...player.equipment }
+    this.heroes = new Map(party.map((member, i) => [heroId(i), member]))
+    this.loggedEquipment = new Map(party.map((member, i) => [heroId(i), { ...member.equipment }]))
     this.ground = new Ground()
     this.openPile = null
     this.engine = new BattleEngine(setup, { meta: { source: 'game', enemyPolicy: ENEMY_POLICY } })
@@ -322,7 +325,7 @@ export class BattleScene extends Phaser.Scene {
     this.music.play()
 
     this.applyEvents(this.engine.getLog())
-    // A side can enter already fallen (e.g. a hero carried over at 0 hp).
+    // A side can enter already fallen (e.g. a party carried over at 0 hp).
     this.continueBattle()
   }
 
@@ -334,19 +337,32 @@ export class BattleScene extends Phaser.Scene {
     this.openPanel('character')
   }
 
-  /** Opens the character panel; gear can be changed there only while the player has control. */
+  /**
+   * The party member whose panel opens: the selected unit, or before any is
+   * selected the first member standing.
+   */
+  private panelUnit(): UnitSnapshot | undefined {
+    const heroes = this.engine.getState().units.filter((u) => this.heroes.has(u.id))
+    return heroes.find((u) => u.id === this.selected) ?? heroes.find((u) => u.hp > 0) ?? heroes[0]
+  }
+
+  /**
+   * Opens the selected unit's character panel; gear can be changed there only while the
+   * player has control.
+   */
   private openPanel(tab: 'inventory' | 'character'): void {
     if (this.scene.isPaused()) return
-    const gearApCost = this.playerControl ? this.engine.equipCost(HERO_ID) : null
-    const hero = this.engine.getState().units.find((u) => u.id === HERO_ID)!
-    const items = this.ground.pileAt(hero.position)
-    this.openPile = { items, before: [...items] }
-    this.scene.launch('Inventory', { game: this.gameState, tab, gearApCost, ground: items })
+    const unit = this.panelUnit()
+    if (!unit) return
+    const gearApCost = this.playerControl ? this.engine.equipCost(unit.id) : null
+    const items = this.ground.pileAt(unit.position)
+    this.openPile = { unit: unit.id, items, before: [...items] }
+    this.scene.launch('Inventory', { character: this.heroes.get(unit.id)!, tab, gearApCost, ground: items })
     this.scene.pause()
   }
 
   /**
-   * Tells the engine about gear changed in the inventory, which edits the character and the
+   * Tells the engine about gear changed in the inventory, which edits its character and the
    * ground under it directly. One action covers the whole visit, so it is paid for once.
    */
   private commitGearChange(): void {
@@ -354,18 +370,18 @@ export class BattleScene extends Phaser.Scene {
     const pile = this.openPile
     this.openPile = null
     if (!pile || !this.playerControl) return
-    const player = this.gameState.player
-    const stats = deriveCombatStats(player)
-    const hero = this.engine.getState().units.find((u) => u.id === HERO_ID)!
+    const member = this.heroes.get(pile.unit)!
+    const stats = deriveCombatStats(member)
+    const unit = this.engine.getState().units.find((u) => u.id === pile.unit)!
     const { dropped, pickedUp } = pileChanges(pile.before, pile.items)
-    if (sameCombatStats(stats, hero) && dropped.length === 0 && pickedUp.length === 0) return
-    const changes = gearChanges(this.loggedEquipment, player.equipment)
-    this.loggedEquipment = { ...player.equipment }
+    if (sameCombatStats(stats, unit) && dropped.length === 0 && pickedUp.length === 0) return
+    const changes = gearChanges(this.loggedEquipment.get(pile.unit)!, member.equipment)
+    this.loggedEquipment.set(pile.unit, { ...member.equipment })
     this.refreshGroundMarks()
     const named = ({ id, name }: Item) => ({ id, name })
     this.playerAct({
       type: 'equip',
-      unit: HERO_ID,
+      unit: pile.unit,
       stats,
       changes,
       dropped: dropped.map(named),
@@ -535,10 +551,11 @@ export class BattleScene extends Phaser.Scene {
     this.endTurnButton.setPosition(width / 2 + 80, buttonY)
 
     this.resultShade.setSize(width, height)
-    this.bannerText.setPosition(width / 2, height / 2 - 60)
-    // Up to four lines: a victory adds the experience won and what a new level brought.
-    this.resultText.setPosition(width / 2, height / 2 - 20)
-    this.menuButton.setPosition(width / 2, height / 2 + 110)
+    this.bannerText.setPosition(width / 2, height / 2 - 100)
+    // A victory adds the experience won and a line for each member it levelled or stood back up,
+    // so the button keeps below however many lines there are.
+    this.resultText.setPosition(width / 2, height / 2 - 60)
+    this.menuButton.setPosition(width / 2, this.resultText.y + this.resultText.height + 46)
 
     const buttonTop = buttonY - 22
     const logBoxW = width - 40
@@ -946,10 +963,11 @@ export class BattleScene extends Phaser.Scene {
     })
   }
 
-  /** The engine owns HP during battle; write it back to the persistent character. */
+  /** The engine owns HP during battle; write it back to the persistent characters. */
   private syncUnitsFromEngine(): void {
     for (const snapshot of this.engine.getState().units) {
-      if (snapshot.id === HERO_ID) this.gameState.player.hp = snapshot.hp
+      const member = this.heroes.get(snapshot.id)
+      if (member) member.hp = snapshot.hp
       this.faceUnit(snapshot.id, snapshot.facing)
       this.refreshHpDisplay(this.units.get(snapshot.id)!, snapshot.hp, snapshot.maxHp)
     }
@@ -1092,17 +1110,19 @@ export class BattleScene extends Phaser.Scene {
     // The win is the world's from here on, however the scene is left.
     if (playerWon && this.location) clearLocation(this.gameState.world, this.location.id)
     const foes = this.location ? `The ${this.location.name}` : 'Your foes'
-    const player = this.gameState.player
-    const xpLines = playerWon ? describeXpGain(player, gainXp(player, this.xpReward)) : []
+    // The reward goes by the hit points the party ended on: who fell, and so who gets back up.
+    this.syncUnitsFromEngine()
+    const xpLines = playerWon ? describeRewards(rewardVictory(this.gameState.party, this.xpReward)) : []
     this.xpReward = 0
     this.bannerText.setText(playerWon ? 'VICTORY!' : 'DEFEAT')
     this.bannerText.setColor(playerWon ? '#66bb6a' : '#ef5350')
     this.resultText.setText(
       playerWon
         ? [`${foes} are beaten.`, ...xpLines].join('\n')
-        : `${player.name} has fallen. The journey ends here.`,
+        : 'The party has fallen. The journey ends here.',
     )
     this.setButtonLabel(this.menuButton, playerWon ? 'OK' : 'Main Menu')
+    this.layout()
     for (const part of [this.resultShade, this.bannerText, this.resultText, this.menuButton]) part.setVisible(true)
     this.updateRoundText()
     this.dumpLog()
