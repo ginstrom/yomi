@@ -153,7 +153,8 @@ export class InventoryScene extends Phaser.Scene {
     this.characterContent.add([portraitBg, portrait])
 
     const lines = [`Class:         ${this.character.className}`, ``, ...this.statLines()]
-    const statsBlock = this.add.text(360, 170, lines.join('\n'), {
+    // Top-aligned with the portrait frame, so the block ends clear of the badges below.
+    const statsBlock = this.add.text(360, portraitY - 115, lines.join('\n'), {
       fontFamily: 'monospace',
       fontSize: '15px',
       color: '#d8c9a3',
@@ -161,7 +162,7 @@ export class InventoryScene extends Phaser.Scene {
     })
     this.characterContent.add(statsBlock)
 
-    this.buildCharacterBadges(430)
+    this.buildCharacterBadges(440)
   }
 
   private buildCharacterBadges(y: number): void {
