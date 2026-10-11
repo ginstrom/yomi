@@ -102,7 +102,7 @@ The in-browser tests in `e2e/` are a separate run (`npm run test:browser`, with 
 
 Sprites in `public/assets/sprites/` are generated from `art/` (see Sprites) and audio in `public/assets/audio/` is placeholder; each directory's `README.md` records provenance and licence and should be updated when files are added. `BootScene` preloads every sound in `SOUND_KEYS` (`sounds.ts`); `BattleScene` loads one sprite per `UnitKind` from `assets/sprites/<kind>.png`, keyed by its `APPEARANCE` table, so a new unit kind needs an entry there, a matching PNG and an experience value in `FOE_XP`. `InventoryScene` loads one icon per `ItemIcon` from `assets/sprites/icon_<icon>.png`, keyed by `ITEM_ICON_KEYS` (`itemIcons.ts`). `WorldScene` loads one sprite per `LocationKind`, keyed by `LOCATION_SPRITES`, and shows the party as the warrior's battle sprite. Every scene with a `PartyColumn` loads one portrait per `PortraitId` from `assets/sprites/portrait_<id>.png` (`portraitKey`), so a new preset needs an id in `PORTRAIT_IDS` and a matching sprite in `art/portraits/`.
 
-`docs/implementation-plans/` holds step-by-step plans with completion logs, which are useful for the reasoning behind past fixes.
+`docs/designs/` holds feature designs, written before a feature is planned: what to build and why, which may be ahead of the code. `docs/implementation-plans/` holds step-by-step plans with completion logs, which are useful for the reasoning behind past fixes.
 
 ### Sprites
 
