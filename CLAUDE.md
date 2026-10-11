@@ -37,6 +37,10 @@ The game takes a seed from the page's address, as in `http://localhost:5173/?see
 
 Commit finished work without being asked: once a change is complete and `npm test` passes, commit it on the current branch. Commits are free in this project's workflow, so there is no need to wait for a go-ahead. Do not push unless asked.
 
+## Subagents
+
+When spawning an agent, pick its model by the task. Pass `model: "sonnet"` for work that is not too complex: searching the code or finding where something lives, reading and summarising files or logs, running the tests or the simulator and reporting the result, and mechanical edits whose shape is already decided (a rename, a table entry, a doc update). Leave the model unset, so the agent inherits the session's, for work that needs judgement: designing or planning a feature, changing the engine's rules or the balance, debugging a failure whose cause is unknown, and reviewing code. When in doubt between the two, use the session's model.
+
 ## Architecture
 
 The central rule: **game rules are Phaser-free and live outside the scenes.** The same `BattleEngine` drives the in-browser game and the headless simulator, so anything that changes a battle's outcome has to go in the domain modules, with tests.
