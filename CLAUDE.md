@@ -62,7 +62,7 @@ Scenes are `Boot` → `Menu` → `Battle`, with `Inventory` and the in-battle `M
 
 `BattleScene` is a view over the engine: it turns clicks into `Action`s, calls `engine.step`, and plays back the returned events. It must not decide outcomes. Scenes use Phaser's `RESIZE` scale mode, so each one positions everything in a `layout()` method that reruns on resize; the game is held at a minimum of 760×560 (`MIN_GAME_SIZE` in `src/main.ts`), below which the page scrolls.
 
-Scene logic that can be expressed without Phaser is pulled into sibling helper modules, and new logic should follow suit: `eventSchedule.ts` (timing of event playback), `boardGeometry.ts` (hex ↔ screen), `attackPlan.ts` (what clicking a foe does), `scrollingLog.ts`, `slotScroll.ts` (which rows of the ground pile the inventory shows), `clicks.ts` (what counts as a right-click), `sounds.ts` (which sounds an event triggers), `audioSettings.ts` (volume levels, saved to `localStorage`).
+Scene logic that can be expressed without Phaser is pulled into sibling helper modules, and new logic should follow suit: `eventSchedule.ts` (timing of event playback), `boardGeometry.ts` (hex ↔ screen), `attackPlan.ts` (what clicking a foe does), `scrollingLog.ts`, `slotScroll.ts` (which rows of the ground pile the inventory shows), `clicks.ts` (what counts as a right-click), `sounds.ts` (which sounds an event triggers), `audioSettings.ts` (volume levels, saved to `localStorage`), `cursors.ts` (the pointer cursors, as inline SVG).
 
 ### Tests
 
@@ -75,17 +75,30 @@ Tests that need determinism pass a seeded `mulberry32` or a scripted RNG into th
 
 ### Assets and docs
 
-Sprites in `public/assets/sprites/` are generated from `art/` (see below) and audio in `public/assets/audio/` is placeholder; each directory's `README.md` records provenance and licence and should be updated when files are added. `BootScene` preloads every sound in `SOUND_KEYS` (`sounds.ts`); `BattleScene` loads one sprite per `UnitKind` from `assets/sprites/<kind>.png`, keyed by its `APPEARANCE` table, so a new unit kind needs an entry there and a matching PNG. `InventoryScene` loads one icon per `ItemIcon` from `assets/sprites/icon_<icon>.png`, keyed by `ITEM_ICON_KEYS` (`itemIcons.ts`).
-
-### Sprites (sprite-tool)
-
-Sprites are made with [sprite-tool](https://github.com/ginstrom/sprite-tool) (`uv tool install git+https://github.com/ginstrom/sprite-tool@v0.3.0`), which is installed on the host and is not in the podman image. Run `sprite guide --project art` before drawing or changing one: it prints the file format, the palette and the canvas classes.
-
-- Sources are text grids in `art/**/<id>.sprite.toml`; `art/sprite-tool.toml` holds the canvas classes and the export target. Create one with `sprite new <kind> --canvas unit --project art --dir units`, where the id is the `UnitKind`.
-- Loop: `sprite check --project art` until it prints `ok`, `sprite preview <id> --grid --project art` and look at the PNG it names, then `npm run sprites`.
-- The build writes loose PNGs (`<id>.png`, the first frame) into `public/assets/sprites/`, which is what `BattleScene` loads, plus `sprites.json`, a per-sprite metadata index (size, anchor, bounds, display scale) that nothing loads yet. Commit the exported files, `sprites.json` and `.sprite-tool-manifest.json` with the source; never edit an exported PNG by hand.
-- The tool only overwrites files listed in the manifest, and every PNG in `public/assets/sprites/` is now on it. A PNG put there by hand stops the build for a sprite with the same id; replacing one deliberately takes a one-off `sprite build --adopt --project art`, plus an update to the sprites `README.md`.
-- All sprites share `art/palette.toml`, a muted Baldur's Gate-style palette. Units are drawn on the 32px `unit` canvas and shown at 3x, so creature size is drawn into the sprite; item icons use the 20px `icon` canvas at 2x.
-- `art/units/warrior.sprite.toml.example` is the tool's sample sprite, renamed so it is not built. It is a format reference, not the game's warrior.
+Sprites in `public/assets/sprites/` are generated from `art/` (see Sprites) and audio in `public/assets/audio/` is placeholder; each directory's `README.md` records provenance and licence and should be updated when files are added. `BootScene` preloads every sound in `SOUND_KEYS` (`sounds.ts`); `BattleScene` loads one sprite per `UnitKind` from `assets/sprites/<kind>.png`, keyed by its `APPEARANCE` table, so a new unit kind needs an entry there and a matching PNG. `InventoryScene` loads one icon per `ItemIcon` from `assets/sprites/icon_<icon>.png`, keyed by `ITEM_ICON_KEYS` (`itemIcons.ts`).
 
 `docs/implementation-plans/` holds step-by-step plans with completion logs, which are useful for the reasoning behind past fixes.
+
+### Sprites
+
+Sprites are generated from text sources in `art/` with sprite-tool. `art/CLAUDE.md` has the workflow, and loads by itself when you work on files there; read it before drawing or changing a sprite. Never edit an exported PNG by hand: change the source and run `npm run sprites`.
+
+## Keeping this file current
+
+This file is the project's code map, and it is only worth loading if it is true. Update it in the same commit as the change that makes it wrong or incomplete; do not leave it for a later pass.
+
+A change needs an edit here when it:
+
+- adds, removes or renames a scene, or changes how scenes hand over to each other
+- adds a domain module, or a helper module in `src/scenes/`
+- adds or changes a command, npm script or simulator flag
+- adds or changes a rule of play that someone would need to know before touching the code that enforces it
+- adds a table that maps ids to assets (like `APPEARANCE` or `ITEM_ICON_KEYS`), or changes which scene loads what
+- changes how tests are split between the vitest projects
+- makes a "not yet" statement here false (for example "there is no line of sight yet")
+
+Before committing, search this file for every name the change renamed or deleted, and fix or remove the lines that mention it.
+
+What belongs here is what the code does not say for itself: where a kind of logic goes, the contract between modules, the rules that span files, and the reason behind a constraint. Give a module one line on what it is responsible for, not a list of its exports. Leave out anything a grep answers, and do not grow a file-by-file inventory.
+
+Keep this file to what most tasks need. Detail that matters only inside one directory goes in a `CLAUDE.md` in that directory, as `art/CLAUDE.md` does for sprites, with a one-line pointer here.
