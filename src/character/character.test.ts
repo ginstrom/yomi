@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AMULET_FOCUS,
   BACKPACK_SIZE,
   IRON_DAGGER,
   IRON_SWORD,
   OAK_SHIELD,
+  RING_FORTUNE,
+  RING_PROTECTION,
+  SAGE_CIRCLET,
+  SPARK_WAND,
   STEEL_ARMOR,
   STEEL_GREATSWORD,
   WEAPONS,
@@ -19,12 +24,13 @@ import {
   equipFromBackpack,
   gearChanges,
   maxHp,
+  maxMana,
   pickUp,
   unequipToBackpack,
   weaponSkill,
   type Build,
 } from './character.ts'
-import { levelUp } from './progression.ts'
+import { levelUp, skillPointsPerLevel, takePerk } from './progression.ts'
 import { skillLevel } from './skills.ts'
 
 describe('createWarrior', () => {
@@ -80,9 +86,9 @@ describe('deriveCombatStats', () => {
     const naked = { ...createWarrior(), equipment: {} }
     const stats = deriveCombatStats(naked)
     expect(stats.ac).toBe(6)
-    expect(stats.toHit).toBe(skillLevel(naked, 'unarmed'))
-    // Unarmed 86% rolls a d6; strength adds 1.
-    expect(stats.damage).toEqual({ count: 1, sides: 6, bonus: 1 })
+    expect(stats.toHit).toBe(skillLevel(naked, 'melee'))
+    // Bare hands roll a d4 whatever the skill; strength adds 1.
+    expect(stats.damage).toEqual({ count: 1, sides: 4, bonus: 1 })
     expect(stats.attackApCost).toBe(3)
   })
 
@@ -122,7 +128,7 @@ describe('createCharacter', () => {
   const ARCHER: Build = {
     portrait: 'ranger',
     attributes: { strength: 4, perception: 7, endurance: 5, intelligence: 7, agility: 7, luck: 5 },
-    tagged: ['archery', 'firstAid'],
+    tagged: ['archery'],
     mainHand: YEW_BOW,
   }
 
@@ -140,17 +146,24 @@ describe('createCharacter', () => {
     archer.attributes.luck = 10
     archer.tagged.push('melee')
     expect(ARCHER.attributes.luck).toBe(5)
-    expect(ARCHER.tagged).toEqual(['archery', 'firstAid'])
+    expect(ARCHER.tagged).toEqual(['archery'])
+  })
+
+  it('starts with the perks its build names, with no pick spent', () => {
+    const mage = createCharacter('Mage', { ...ARCHER, perks: ['magic_arrow'] })
+    expect([mage.perks, mage.perkPicks]).toEqual([{ magic_arrow: 1 }, 0])
+    expect(createCharacter('Archer', ARCHER).perks).toEqual({})
   })
 })
 
 describe('what a character’s numbers come from', () => {
   it('strikes with the skill of the weapon in hand', () => {
-    expect([undefined, IRON_SWORD, STEEL_GREATSWORD, YEW_BOW].map(weaponSkill)).toEqual([
-      'unarmed',
+    expect([undefined, IRON_SWORD, STEEL_GREATSWORD, YEW_BOW, SPARK_WAND].map(weaponSkill)).toEqual([
+      'melee',
       'melee',
       'melee',
       'archery',
+      'magic',
     ])
     const warrior = createWarrior()
     warrior.equipment = { mainHand: YEW_BOW }
@@ -160,17 +173,23 @@ describe('what a character’s numbers come from', () => {
     expect(deriveCombatStats(warrior).toHit).toBe(62)
   })
 
-  it('rolls a bigger die with bare hands the higher the Unarmed skill', () => {
+  it('rolls the same die with bare hands however high the skill', () => {
     const brawler = createWarrior()
     brawler.equipment = {}
-    brawler.tagged = []
-    brawler.attributes = { ...brawler.attributes, strength: 1, agility: 1 }
-    const sides = (trained: number) => {
-      brawler.trained.unarmed = trained
-      return deriveCombatStats(brawler).damage.sides
-    }
-    // From 44%: up to 54%, at 55%, at 75% and at 100%.
-    expect([0, 10, 11, 31, 56].map(sides)).toEqual([2, 2, 4, 6, 8])
+    brawler.trained.melee = 60
+    expect(deriveCombatStats(brawler).damage).toMatchObject({ count: 1, sides: 4 })
+  })
+
+  it('strikes with Magic through a wand, which is a ranged weapon in every other respect', () => {
+    const warrior = createWarrior()
+    warrior.equipment = { mainHand: SPARK_WAND }
+    warrior.perks = { heavy_hand: 2, deadly_aim: 1, far_shot: 1 }
+    // Magic 20 + 4 x intelligence 4; nothing from strength 7, and the archer's perks tell.
+    expect(deriveCombatStats(warrior)).toMatchObject({
+      toHit: 36,
+      attackRange: 6,
+      damage: { count: 1, sides: 6, bonus: 1 },
+    })
   })
 
   it('gets hit points from strength, endurance and each level', () => {
@@ -210,6 +229,112 @@ describe('what a character’s numbers come from', () => {
     // The archer's perks tell only with a bow in hand, and the swordsman's only without.
     warrior.equipment = { mainHand: YEW_BOW }
     expect(deriveCombatStats(warrior)).toMatchObject({ attackRange: 7, damage: { count: 1, sides: 8, bonus: 1 } })
+  })
+})
+
+describe('magic', () => {
+  /** The warrior, intelligence 4, taught Magic Arrow. */
+  const caster = () => ({ ...createWarrior(), perks: { magic_arrow: 1 } })
+
+  it('gives no mana and no magic to a character that knows no spell, whatever it wears', () => {
+    const warrior = createWarrior()
+    warrior.equipment.head = SAGE_CIRCLET
+    expect(maxMana(warrior)).toBe(0)
+    expect(deriveCombatStats(warrior).magic).toBeUndefined()
+  })
+
+  it('gives a caster mana by its intelligence, its level and its gear', () => {
+    const mage = caster()
+    expect(maxMana(mage)).toBe(8)
+    mage.level = 3
+    expect(maxMana(mage)).toBe(8 + 2 * 2)
+    mage.equipment.head = SAGE_CIRCLET
+    expect(maxMana(mage)).toBe(8 + 2 * 2 + 6)
+    mage.attributes.intelligence = 9
+    mage.level = 1
+    mage.equipment = {}
+    expect(maxMana(mage)).toBe(18)
+  })
+
+  it('fights with the spells its perks teach, at its Magic and what its gear adds to a spell', () => {
+    const mage = caster()
+    expect(deriveCombatStats(mage).magic).toEqual({ maxMana: 8, skill: 36, spells: ['magic_arrow'] })
+    mage.equipment.neck = AMULET_FOCUS
+    mage.trained.magic = 4
+    expect(deriveCombatStats(mage).magic).toMatchObject({ skill: 50 })
+    // The amulet helps a spell, not a wand.
+    mage.equipment.mainHand = SPARK_WAND
+    expect(deriveCombatStats(mage).toHit).toBe(40)
+  })
+
+  it('adds an item’s critical chance', () => {
+    const warrior = createWarrior()
+    warrior.equipment.ring1 = RING_FORTUNE
+    warrior.equipment.ring2 = RING_FORTUNE
+    expect(deriveCombatStats(warrior).critChance).toBe(7 + 10)
+  })
+})
+
+describe('a perk that raises an attribute', () => {
+  const at = (level: number) => {
+    const warrior = createWarrior()
+    while (warrior.level < level) levelUp(warrior)
+    warrior.perkPicks = 1
+    return warrior
+  }
+
+  it('raises hit points for endurance, the levels already gained included, and those left with them', () => {
+    const warrior = at(3)
+    const before = maxHp(warrior)
+    warrior.hp = 10
+    expect(takePerk(warrior, 'gain_endurance')).toBe(true)
+    // One for the endurance, and endurance 8 is worth one more for each of two levels gained.
+    expect(maxHp(warrior)).toBe(before + 3)
+    expect(warrior.hp).toBe(13)
+    expect(warrior.attributes.endurance).toBe(7)
+  })
+
+  it('raises hit points and, at 7 and 9, melee damage for strength', () => {
+    const warrior = at(3)
+    warrior.perkPicks = 2
+    const before = deriveCombatStats(warrior)
+    takePerk(warrior, 'gain_strength')
+    expect(deriveCombatStats(warrior)).toMatchObject({ maxHp: before.maxHp + 1, damage: before.damage })
+    takePerk(warrior, 'gain_strength')
+    expect(deriveCombatStats(warrior).damage.bonus).toBe(before.damage.bonus + 1)
+    // Melee Weapons starts from strength.
+    expect(deriveCombatStats(warrior).toHit).toBe(before.toHit + 4)
+  })
+
+  it('raises armour, and action points at an even value, for agility', () => {
+    const warrior = at(3)
+    warrior.perkPicks = 2
+    const before = deriveCombatStats(warrior)
+    takePerk(warrior, 'gain_agility')
+    expect(deriveCombatStats(warrior)).toMatchObject({ ac: before.ac + 1, actionPoints: before.actionPoints })
+    takePerk(warrior, 'gain_agility')
+    expect(deriveCombatStats(warrior)).toMatchObject({ ac: before.ac + 2, actionPoints: before.actionPoints + 1 })
+  })
+
+  it('raises the critical chance for luck', () => {
+    const warrior = at(3)
+    takePerk(warrior, 'gain_luck')
+    expect(deriveCombatStats(warrior).critChance).toBe(8)
+  })
+
+  it('raises Magic and mana for intelligence, and the skill points of later levels only', () => {
+    const mage = at(3)
+    mage.perkPicks = 2
+    mage.perks.magic_arrow = 1
+    const before = { magic: skillLevel(mage, 'magic'), mana: maxMana(mage), points: mage.skillPoints }
+    const perLevel = skillPointsPerLevel(mage)
+    takePerk(mage, 'gain_intelligence')
+    expect(skillLevel(mage, 'magic')).toBe(before.magic + 4)
+    // Intelligence 5: 2 more at level 1; half of it is still 2 a level.
+    expect(maxMana(mage)).toBe(before.mana + 2)
+    expect(mage.skillPoints).toBe(before.points)
+    takePerk(mage, 'gain_intelligence')
+    expect(skillPointsPerLevel(mage)).toBe(perLevel + 1)
   })
 })
 
@@ -293,6 +418,24 @@ describe('equipFromBackpack', () => {
     const warrior = createWarrior()
     expect(equipFromBackpack(warrior, BACKPACK_SIZE - 1, [])).toBe(false)
     expect(warrior.equipment.mainHand).toBe(IRON_SWORD)
+  })
+
+  it('puts a ring on the first ring slot, then the second, then in place of the first', () => {
+    const warrior = createWarrior()
+    const other: Item = { ...RING_FORTUNE, id: 'other_ring' }
+    warrior.backpack = [RING_PROTECTION, RING_PROTECTION, other, ...Array<null>(BACKPACK_SIZE - 3).fill(null)]
+    const plain = deriveCombatStats(warrior).ac
+    expect(equipFromBackpack(warrior, 0, [])).toBe(true)
+    expect(warrior.equipment).toMatchObject({ ring1: RING_PROTECTION })
+    expect(warrior.equipment.ring2).toBeUndefined()
+    expect(deriveCombatStats(warrior).ac).toBe(plain + 5)
+    expect(equipFromBackpack(warrior, 1, [])).toBe(true)
+    expect(warrior.equipment).toMatchObject({ ring1: RING_PROTECTION, ring2: RING_PROTECTION })
+    // Two of the same ring both count.
+    expect(deriveCombatStats(warrior).ac).toBe(plain + 10)
+    expect(equipFromBackpack(warrior, 2, [])).toBe(true)
+    expect(warrior.equipment).toMatchObject({ ring1: other, ring2: RING_PROTECTION })
+    expect(warrior.backpack[2]).toBe(RING_PROTECTION)
   })
 })
 

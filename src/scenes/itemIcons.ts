@@ -10,6 +10,11 @@ export const ITEM_ICON_KEYS: Record<ItemIcon, string> = {
   bow: 'icon_bow',
   shield: 'icon_shield',
   armor: 'icon_armor',
+  wand: 'icon_wand',
+  ring: 'icon_ring',
+  amulet: 'icon_amulet',
+  circlet: 'icon_circlet',
+  cloak: 'icon_cloak',
 }
 
 /** How much an icon is enlarged; the `icon` canvas class in art/sprite-tool.toml is drawn for this. */

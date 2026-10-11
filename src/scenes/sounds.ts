@@ -6,6 +6,7 @@ export const SOUND_KEYS = [
   'sfx_hit_impact',
   'sfx_crit_impact',
   'sfx_miss',
+  'sfx_spell_cast',
   'sfx_unit_death',
   'sfx_ui_click',
   'music_victory',
@@ -47,6 +48,13 @@ export function eventSounds(event: BattleEvent): SoundCue[] {
       const outcome: SoundKey = !event.hit ? 'sfx_miss' : event.critical ? 'sfx_crit_impact' : 'sfx_hit_impact'
       return [
         { key: 'sfx_melee_swing', delayMs: 0 },
+        { key: outcome, delayMs: IMPACT_DELAY_MS },
+      ]
+    }
+    case 'cast': {
+      const outcome: SoundKey = !event.hit ? 'sfx_miss' : event.critical ? 'sfx_crit_impact' : 'sfx_hit_impact'
+      return [
+        { key: 'sfx_spell_cast', delayMs: 0 },
         { key: outcome, delayMs: IMPACT_DELAY_MS },
       ]
     }

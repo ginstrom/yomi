@@ -1,6 +1,6 @@
 import { maxHp, weaponSkill, type Character } from './character.ts'
-import { PERK_IDS, availablePerks, perkBonus, qualifiesFor, type PerkId } from './perks.ts'
-import { MASTERY_LEVEL, SKILL_IDS, isTagged, raiseSkill, skillLevel, type SkillId } from './skills.ts'
+import { PERK_IDS, attributeLevel, availablePerks, perkBonus, qualifiesFor, type PerkId } from './perks.ts'
+import { MASTERY_LEVEL, SKILL_IDS, raiseSkill, skillLevel, type SkillId } from './skills.ts'
 
 /**
  * Levels and the experience that buys them. A foe is worth a fixed amount of
@@ -36,7 +36,7 @@ export function xpToNextLevel(level: number): number {
 
 /** The skill points each new level brings the character: more for the clever. */
 export function skillPointsPerLevel(character: Character): number {
-  return BASE_SKILL_POINTS + Math.floor(character.attributes.intelligence / 2) + perkBonus(character, 'skillPoints')
+  return BASE_SKILL_POINTS + Math.floor(attributeLevel(character, 'intelligence') / 2) + perkBonus(character, 'skillPoints')
 }
 
 /** The level the character's next perk comes at. */
@@ -95,9 +95,9 @@ export function gainXp(character: Character, xp: number): XpGain {
 }
 
 /**
- * Spends a perk pick on a rank of `perk`. A perk that adds hit points adds as
- * many to those the character has left. Returns false if the character
- * has no pick or does not qualify.
+ * Spends a perk pick on a rank of `perk`. A perk that adds hit points, itself
+ * or by an attribute it raises, adds as many to those the character has
+ * left. Returns false if the character has no pick or does not qualify.
  */
 export function takePerk(character: Character, perk: PerkId): boolean {
   if (character.perkPicks < 1 || !qualifiesFor(character, perk)) return false
@@ -108,21 +108,24 @@ export function takePerk(character: Character, perk: PerkId): boolean {
   return true
 }
 
-/** The perks `autoAdvance` takes, most wanted first; it takes any other only when none of these is on offer. */
+/**
+ * The perks `autoAdvance` takes, most wanted first; it takes any other only
+ * when none of these is on offer, in the order of `PERKS`, where the perks
+ * that raise an attribute come last. Tireless is not on offer until Toughness is taken.
+ */
 const AUTO_PERKS: readonly PerkId[] = ['tireless', 'toughness', 'dodger', 'heavy_hand', 'deadly_aim', 'keen_eye']
 
 /**
  * Spends everything the character has waiting, the way a plain fighter
- * would: skill points on the skill of the weapon in hand up to mastery, then
- * on First Aid if it has the gift, then on the weapon again and whatever is
- * left to raise; perk picks on combat perks first. It is what the simulator's parties do with their
+ * would: skill points on the skill of the weapon in hand (a mage's wand
+ * makes that Magic) and then on whatever is left to raise; perk picks on
+ * combat perks first. It is what the simulator's parties do with their
  * levels, so balance runs fight heroes that have grown.
  */
 export function autoAdvance(character: Character): void {
   const weapon = weaponSkill(character.equipment.mainHand)
   const order: Array<[SkillId, number]> = [
     [weapon, MASTERY_LEVEL],
-    ...(isTagged(character, 'firstAid') ? [['firstAid', MASTERY_LEVEL] as [SkillId, number]] : []),
     [weapon, Infinity],
     ...SKILL_IDS.map((skill): [SkillId, number] => [skill, Infinity]),
   ]

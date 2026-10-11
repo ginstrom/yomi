@@ -29,6 +29,36 @@
       32
     ]
   },
+  "icon_amulet": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bounds": [
+      2,
+      1,
+      16,
+      16
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_amulet.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          2,
+          1,
+          16,
+          16
+        ],
+        "file": "icon_amulet.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
   "icon_armor": {
     "anchor": [
       10,
@@ -119,6 +149,66 @@
       20
     ]
   },
+  "icon_circlet": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bounds": [
+      1,
+      5,
+      18,
+      10
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_circlet.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          1,
+          5,
+          18,
+          10
+        ],
+        "file": "icon_circlet.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_cloak": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bounds": [
+      1,
+      1,
+      18,
+      17
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_cloak.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          1,
+          1,
+          18,
+          17
+        ],
+        "file": "icon_cloak.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
   "icon_dagger": {
     "anchor": [
       10,
@@ -172,6 +262,36 @@
           19
         ],
         "file": "icon_greatsword.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_ring": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bounds": [
+      4,
+      3,
+      12,
+      14
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_ring.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          4,
+          3,
+          12,
+          14
+        ],
+        "file": "icon_ring.png"
       }
     },
     "size": [
@@ -262,6 +382,36 @@
           19
         ],
         "file": "icon_sword.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_wand": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bounds": [
+      2,
+      2,
+      15,
+      16
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_wand.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          2,
+          2,
+          15,
+          16
+        ],
+        "file": "icon_wand.png"
       }
     },
     "size": [

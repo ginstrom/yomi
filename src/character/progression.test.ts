@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { YEW_BOW } from '../inventory/inventory.ts'
+import { SPARK_WAND, YEW_BOW } from '../inventory/inventory.ts'
 import { createWarrior, hpPerLevel, maxHp } from './character.ts'
 import {
   EVEN_FOE_XP_PER_LEVEL,
@@ -13,7 +13,7 @@ import {
   takePerk,
   xpToNextLevel,
 } from './progression.ts'
-import { MASTERY_LEVEL, skillLevel } from './skills.ts'
+import { SKILL_IDS, skillLevel } from './skills.ts'
 
 describe('xpToNextLevel', () => {
   it('asks for more even foes at each level: under one, then one, two, three', () => {
@@ -37,6 +37,10 @@ describe('skillPointsPerLevel', () => {
     expect([1, 4, 7, 10].map(points)).toEqual([2, 4, 5, 7])
     warrior.perks.scholar = 1
     expect(skillPointsPerLevel(warrior)).toBe(9)
+    // An attribute a perk has raised counts.
+    warrior.attributes.intelligence = 5
+    warrior.perks = { gain_intelligence: 1 }
+    expect(skillPointsPerLevel(warrior)).toBe(5)
   })
 })
 
@@ -99,6 +103,7 @@ describe('takePerk', () => {
     expect(takePerk(warrior, 'dodger')).toBe(false)
     warrior.perkPicks = 2
     expect(takePerk(warrior, 'tireless')).toBe(false)
+    expect(warrior.perkPicks).toBe(2)
     expect(takePerk(warrior, 'dodger')).toBe(true)
     expect(takePerk(warrior, 'dodger')).toBe(true)
     expect([warrior.perks.dodger, warrior.perkPicks]).toEqual([2, 0])
@@ -149,13 +154,27 @@ describe('autoAdvance', () => {
     expect(archer.trained).toMatchObject({ archery: skillPointsPerLevel(archer), melee: 0 })
   })
 
-  it('turns to First Aid, for a character with the gift, once the weapon is mastered', () => {
+  it('trains Magic for a character with a wand in hand, and only skills there are', () => {
+    const mage = createWarrior()
+    mage.equipment.mainHand = SPARK_WAND
+    levelUp(mage)
+    autoAdvance(mage)
+    expect(mage.trained).toEqual({ melee: 0, archery: 0, magic: skillPointsPerLevel(mage) })
+    expect(Object.keys(mage.trained)).toEqual([...SKILL_IDS])
+  })
+
+  it('takes Tireless only once it has Toughness, and falls back on any perk on offer', () => {
     const warrior = createWarrior()
-    warrior.tagged = ['melee', 'firstAid']
-    warrior.trained.melee = MASTERY_LEVEL - skillLevel(warrior, 'melee')
-    warrior.skillPoints = 3
+    while (warrior.level < 6) levelUp(warrior)
     autoAdvance(warrior)
-    expect(warrior.trained.firstAid).toBe(6)
-    expect(skillLevel(warrior, 'melee')).toBe(MASTERY_LEVEL)
+    expect(warrior.perks).toEqual({ toughness: 1, tireless: 1 })
+    // Nothing a plain fighter wants is on offer to this one but a spell and the attribute perks.
+    const scholar = createWarrior()
+    scholar.attributes = { strength: 5, perception: 5, endurance: 4, intelligence: 4, agility: 5, luck: 5 }
+    scholar.trained.magic = 20
+    scholar.level = 3
+    scholar.perkPicks = 2
+    autoAdvance(scholar)
+    expect(scholar.perks).toEqual({ magic_arrow: 1, gain_strength: 1 })
   })
 })

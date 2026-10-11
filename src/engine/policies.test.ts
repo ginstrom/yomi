@@ -43,6 +43,46 @@ describe('policies', () => {
     expect(choose(engine)).toEqual(END_TURN)
   })
 
+  describe('aggressive with a caster', () => {
+    // A wand that reaches 4 hexes for 5 AP, and Magic Arrow, which reaches 5 for 4 AP and 3 mana.
+    const mage = (maxMana: number) => ({
+      ...GOBLIN_STATS,
+      attackApCost: 5,
+      attackRange: 4,
+      magic: { maxMana, skill: 70, spells: ['magic_arrow' as const] },
+    })
+    const facing = (maxMana: number, ...foes: Array<[id: string, at: Hex, hp?: number]>) =>
+      new BattleEngine({
+        board: { cols: 8, rows: 3 },
+        units: [
+          { id: 'p1', side: 'player', stats: mage(maxMana), position: hex(0, 1) },
+          ...foes.map(([id, position, hp]) => ({ id, side: 'enemy' as const, stats: GOBLIN_STATS, position, hp })),
+        ],
+      })
+
+    it('casts on the weakest foe in range before it would strike with its weapon', () => {
+      const engine = facing(18, ['e1', hex(3, 1)], ['e2', hex(4, 1), 5], ['e3', hex(4, 0), 5])
+      expect(engine.legalActions()).toContainEqual({ type: 'attack', unit: 'p1', target: 'e1' })
+      expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'magic_arrow', target: 'e2' })
+    })
+
+    it('stops at its spell’s range while it has the mana, and holds there', () => {
+      const engine = facing(6, ['e1', hex(7, 1)])
+      expect(choose(engine)).toEqual({ type: 'move', unit: 'p1', to: hex(2, 1) })
+      engine.step(choose(engine))
+      expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'magic_arrow', target: 'e1' })
+      engine.step(choose(engine))
+      expect(choose(engine)).toEqual(END_TURN)
+    })
+
+    it('closes to its wand’s range once its mana is spent', () => {
+      const engine = facing(2, ['e1', hex(7, 1)])
+      expect(choose(engine)).toEqual({ type: 'move', unit: 'p1', to: hex(3, 1) })
+      engine.step(choose(engine))
+      expect(choose(engine)).toEqual(ATTACK_E1)
+    })
+  })
+
   it('aggressive attacks whenever attacking is legal, and otherwise ends the turn', () => {
     expect(POLICIES.aggressive(context([END_TURN, ATTACK_E1]))).toEqual(ATTACK_E1)
     expect(POLICIES.aggressive(context([END_TURN]))).toEqual(END_TURN)

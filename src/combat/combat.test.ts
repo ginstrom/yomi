@@ -93,6 +93,14 @@ describe('sameCombatStats', () => {
   it('compares every stat, damage dice included', () => {
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, damage: { ...WARRIOR_STATS.damage } })).toBe(true)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, attackRange: 5 })).toBe(false)
+    const magic = { maxMana: 18, skill: 76, spells: ['magic_arrow' as const] }
+    const mage = { ...WARRIOR_STATS, magic }
+    expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, spells: [...magic.spells] } })).toBe(true)
+    expect(sameCombatStats(mage, WARRIOR_STATS)).toBe(false)
+    expect(sameCombatStats(WARRIOR_STATS, mage)).toBe(false)
+    expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, maxMana: 24 } })).toBe(false)
+    expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, skill: 86 } })).toBe(false)
+    expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, spells: [] } })).toBe(false)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, weapon: 'Iron Longsword' })).toBe(false)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, damage: { count: 1, sides: 8, bonus: 0 } })).toBe(false)
   })

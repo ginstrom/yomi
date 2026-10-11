@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { ATTRIBUTE_POINTS, MAX_ATTRIBUTE, MIN_ATTRIBUTE } from '../character/attributes.ts'
-import { createWarrior, deriveCombatStats, hpPerLevel, maxHp, weaponSkill } from '../character/character.ts'
+import { createWarrior, deriveCombatStats, hpPerLevel, maxHp, maxMana, weaponSkill } from '../character/character.ts'
+import { knownSpells } from '../character/perks.ts'
 import { canAdvance, skillPointsPerLevel, xpToNextLevel } from '../character/progression.ts'
-import { TAGGED_SKILLS } from '../character/skills.ts'
+import { TAGGED_SKILLS, skillLevel } from '../character/skills.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
 import { ENCOUNTERS } from './encounters.ts'
 import {
   MAX_PARTY_SIZE,
   REVIVED_HP,
   describeRewards,
-  firstAidHp,
   joinParty,
   newParty,
   partyFighters,
@@ -17,11 +17,28 @@ import {
 } from './party.ts'
 
 describe('newParty', () => {
-  it('starts with three level 1 heroes, each with a name of its own', () => {
+  it('starts with four level 1 heroes, each with a name of its own', () => {
     const party = newParty()
-    expect(party.map((m) => m.level)).toEqual([1, 1, 1])
-    expect(new Set(party.map((m) => m.name)).size).toBe(3)
-    expect(new Set(party.map((m) => m.portrait)).size).toBe(3)
+    expect(party.map((m) => m.level)).toEqual([1, 1, 1, 1])
+    expect(new Set(party.map((m) => m.name)).size).toBe(4)
+    expect(new Set(party.map((m) => m.portrait)).size).toBe(4)
+  })
+
+  it('makes the fourth a mage, who starts knowing Magic Arrow', () => {
+    const party = newParty()
+    const mage = party[3]
+    expect(party.map((m) => knownSpells(m))).toEqual([[], [], [], ['magic_arrow']])
+    expect([mage.name, mage.portrait, mage.perkPicks]).toEqual(['Delwyn', 'wizard', 0])
+    expect([maxHp(mage), skillLevel(mage, 'magic'), maxMana(mage)]).toEqual([17, 76, 18])
+    expect(deriveCombatStats(mage)).toMatchObject({
+      actionPoints: 8,
+      weapon: 'Wand of Sparks',
+      toHit: 76,
+      attackRange: 4,
+      magic: { maxMana: 18, skill: 76, spells: ['magic_arrow'] },
+    })
+    // The archer is two skill points from the spell, or one rank of Gain Intelligence.
+    expect(skillLevel(party[1], 'magic')).toBe(48)
   })
 
   it('makes each a different build of the same worth, hale and with nothing yet to spend', () => {
@@ -38,7 +55,7 @@ describe('newParty', () => {
       // Each holds a weapon it has a gift for.
       expect(member.tagged).toContain(weaponSkill(member.equipment.mainHand))
     }
-    expect(new Set(party.map((m) => JSON.stringify(m.attributes))).size).toBe(3)
+    expect(new Set(party.map((m) => JSON.stringify(m.attributes))).size).toBe(4)
   })
 
   it('gives each member its own gear', () => {
@@ -77,23 +94,24 @@ describe('partyFighters', () => {
   })
 })
 
-/** A party of warriors: no healer to speak of, and every member alike. */
+/** A party of warriors, every member alike. */
 const warriors = (...names: string[]) => names.map((name) => createWarrior(name))
 
 describe('rewardVictory', () => {
   it('gives every member the whole reward', () => {
     const party = newParty()
     const { members } = rewardVictory(party, 50)
-    expect(party.map((m) => m.xp)).toEqual([50, 50, 50])
+    expect(party.map((m) => m.xp)).toEqual([50, 50, 50, 50])
     expect(members.map((r) => [r.member, r.gain.xp, r.revived])).toEqual(party.map((m) => [m, 50, false]))
   })
 
-  it('stands a fallen member back up, barely, for the healer to tend', () => {
+  it('stands a fallen member back up, barely, and tends no one', () => {
     const party = warriors('Aldric', 'Brenna', 'Corwin')
+    party[0].hp = 5
     party[2].hp = 0
     const { members } = rewardVictory(party, 10)
     expect(members.map((r) => r.revived)).toEqual([false, false, true])
-    expect(party[2].hp).toBe(REVIVED_HP + firstAidHp(party[0]))
+    expect(party.map((m) => m.hp)).toEqual([5, maxHp(party[1]), REVIVED_HP])
   })
 
   it('heals a fallen member whom the reward levels up', () => {
@@ -103,36 +121,6 @@ describe('rewardVictory', () => {
     expect(party[0].hp).toBe(maxHp(party[0]))
     expect(members[0].revived).toBe(false)
   })
-
-  it('has the best healer standing tend everyone, up to their full hit points', () => {
-    const party = warriors('Aldric', 'Brenna', 'Corwin')
-    party[1].trained.firstAid = 30
-    party[1].perks.healer = 1
-    // First Aid 56% and the Healer perk: 5 + 3.
-    expect(firstAidHp(party[1])).toBe(8)
-    party[0].hp = 10
-    party[1].hp = 2
-    party[2].hp = maxHp(party[2]) - 3
-    const { members, healer } = rewardVictory(party, 10)
-    expect(healer).toBe(party[1])
-    expect(members.map((r) => r.tended)).toEqual([8, 8, 3])
-    expect(party.map((m) => m.hp)).toEqual([18, 10, maxHp(party[2])])
-  })
-
-  it('leaves the tending to the next best when the healer has fallen', () => {
-    const party = warriors('Aldric', 'Brenna', 'Corwin')
-    party[1].trained.firstAid = 30
-    party[0].hp = 10
-    party[1].hp = 0
-    const { members, healer } = rewardVictory(party, 10)
-    expect(healer).toBe(party[0])
-    expect(members[0].tended).toBe(firstAidHp(party[0]))
-    expect(party[0].hp).toBe(10 + firstAidHp(party[0]))
-  })
-
-  it('names no healer when no one was hurt', () => {
-    expect(rewardVictory(newParty(), 10).healer).toBeNull()
-  })
 })
 
 describe('describeRewards', () => {
@@ -141,7 +129,7 @@ describe('describeRewards', () => {
     expect(describeRewards(rewardVictory([createWarrior()], 50))).toEqual(['+50 XP'])
   })
 
-  it('announces each new level and what it brought, who got back up, and the healer’s work', () => {
+  it('announces each new level and what it brought, and who got back up, and no healer', () => {
     const party = warriors('Aldric', 'Brenna', 'Corwin')
     party[1].level = 3
     party[1].hp = 0
@@ -152,7 +140,6 @@ describe('describeRewards', () => {
       `Aldric reaches level 2: +${hp} max HP, ${points} skill points, wounds healed`,
       'Brenna gets back up, badly hurt',
       `Corwin reaches level 2: +${hp} max HP, ${points} skill points, wounds healed`,
-      `Aldric tends the party's wounds: up to ${firstAidHp(party[0])} HP each`,
     ])
   })
 

@@ -2,9 +2,11 @@ import Phaser from 'phaser'
 import { deriveCombatStats, gearChanges, type Character } from '../character/character.ts'
 import { sameCombatStats, type RNG } from '../combat/combat.ts'
 import { mulberry32 } from '../combat/rng.ts'
+import { SPELLS, type SpellId } from '../combat/spells.ts'
 import {
   BattleEngine,
   formatEvent,
+  listNames,
   type Action,
   type BattleEvent,
   type Phase,
@@ -14,7 +16,7 @@ import {
 } from '../engine/battleEngine.ts'
 import { POLICIES, type PolicyName } from '../engine/policies.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId, type UnitKind } from '../game/encounters.ts'
-import { newGame, type GameState } from '../game/gameState.ts'
+import { newGame, takeLoot, type GameState } from '../game/gameState.ts'
 import { Ground, pileChanges } from '../game/ground.ts'
 import { describeRewards, partyFighters, rewardVictory } from '../game/party.ts'
 import { clearLocation, type MonsterLocation } from '../game/worldMap.ts'
@@ -49,6 +51,7 @@ interface BattleData {
 }
 
 type MoveAction = Extract<Action, { type: 'move' }>
+type CastAction = Extract<Action, { type: 'cast' }>
 
 /** What a click on a board hex would do, as shown while the pointer hovers over it. */
 type BoardIntent =
@@ -57,6 +60,8 @@ type BoardIntent =
   | { kind: 'move'; action: MoveAction }
   /** Go for a foe: the plan may move first, and strikes only if `plan.attack`. */
   | { kind: 'attack'; target: UnitId; plan: AttackPlan }
+  /** Cast the spell being targeted on a foe it can reach. */
+  | { kind: 'cast'; action: CastAction }
 
 interface Unit {
   /** The unit's body and shadow, positioned at its feet and depth-sorted with the other units. */
@@ -82,6 +87,12 @@ const FLOOR_EDGE = 0x14100c
 const MOVE_HIGHLIGHT = 0x1e88e5
 const MOVE_OUTLINE = 0x90caf9
 const ATTACK_HIGHLIGHT = 0xe53935
+const SPELL_HIGHLIGHT = 0x7e57c2
+const SPELL_BOLT = 0xb39ddb
+/** How long a spell's bolt takes to fly from caster to target. */
+const SPELL_FLIGHT_MS = 150
+/** From one button's centre to the next; three fit the least window (MIN_GAME_SIZE in main.ts) beside the party's column. */
+const BUTTON_SPACING = 160
 const PROVOKE_OUTLINE = 0xffa726
 const SELECTED_OUTLINE = 0xffffff
 const HOVER_OUTLINE = 0xffffff
@@ -158,8 +169,11 @@ export class BattleScene extends Phaser.Scene {
   private playerControl = false
   /** The player unit that board clicks and the Attack button act for. */
   private selected: UnitId | null = null
-  /** The Attack button was pressed with several foes in reach: the next board click picks one. */
-  private targeting = false
+  /**
+   * What the next board click picks a target for: an attack, after the Attack button was pressed
+   * with several foes in reach, or the spell the Cast button chose. Null outside both.
+   */
+  private targeting: 'attack' | SpellId | null = null
   private units!: Map<UnitId, Unit>
 
   private floorLayer!: Phaser.GameObjects.Container
@@ -191,6 +205,8 @@ export class BattleScene extends Phaser.Scene {
   private log!: ScrollingLog
 
   private attackButton!: Phaser.GameObjects.Container
+  /** Shown for a unit with magic; reads its mana, and Cancel while a spell's target is being picked. */
+  private castButton!: Phaser.GameObjects.Container
   private endTurnButton!: Phaser.GameObjects.Container
   private menuButton!: Phaser.GameObjects.Container
 
@@ -229,7 +245,7 @@ export class BattleScene extends Phaser.Scene {
     this.logDumped = false
     this.playerControl = false
     this.selected = null
-    this.targeting = false
+    this.targeting = null
     this.hovered = null
 
     this.floorLayer = this.add.container(0, 0)
@@ -311,6 +327,7 @@ export class BattleScene extends Phaser.Scene {
     })
 
     this.attackButton = this.createButton('Attack', () => this.onAttack())
+    this.castButton = this.createButton('Cast', () => this.onCast())
     this.endTurnButton = this.createButton('End Turn', () => this.onEndTurn())
     // Under the result screen, whose shade keeps clicks off the portraits once the battle is over.
     this.column = new PartyColumn(this, party, (index) => this.onPortrait(index))
@@ -340,7 +357,10 @@ export class BattleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-I', () => this.openPanel('inventory'))
     this.input.keyboard?.on('keydown-C', () => this.openPanel('character'))
     this.input.keyboard?.on('keydown-S', () => this.openPanel('skills'))
-    this.input.keyboard?.on('keydown-ESC', () => (this.targeting ? this.setTargeting(false) : this.openMenu()))
+    this.input.keyboard?.on('keydown-M', () => {
+      if (!this.scene.isPaused() && this.castButton.visible && this.castButton.getData('enabled')) this.onCast()
+    })
+    this.input.keyboard?.on('keydown-ESC', () => (this.targeting ? this.setTargeting(null) : this.openMenu()))
 
     this.music = this.sound.add('music_battle', { loop: true, volume: soundVolume('music_battle') })
     this.music.play()
@@ -362,9 +382,12 @@ export class BattleScene extends Phaser.Scene {
       scale: this.floorLayer.scale,
       buttons: {
         attack: buttonProbe(this.attackButton, enabled(this.attackButton)),
+        cast: buttonProbe(this.castButton, enabled(this.castButton)),
         endTurn: buttonProbe(this.endTurnButton, enabled(this.endTurnButton)),
         result: buttonProbe(this.menuButton),
       },
+      casting: this.targeting === 'attack' ? null : this.targeting,
+      result: this.resultText.visible ? this.resultText.text.split('\n') : [],
       party: this.column.probe(),
     }
   }
@@ -389,7 +412,7 @@ export class BattleScene extends Phaser.Scene {
     const id = heroId(index)
     if (!this.playerControl || !this.actableUnits().includes(id)) return false
     this.selected = id
-    this.targeting = false
+    this.targeting = null
     this.setPlayerControl(true)
     return true
   }
@@ -421,7 +444,8 @@ export class BattleScene extends Phaser.Scene {
       if (!unit) return { character }
       const items = this.ground.pileAt(unit.position)
       this.openPiles!.push({ unit: unit.id, items, before: [...items] })
-      return { character, gearApCost: this.playerControl ? this.engine.equipCost(unit.id) : null, ground: items }
+      const gearApCost = this.playerControl ? this.engine.equipCost(unit.id) : null
+      return { character, gearApCost, ground: items, mana: unit.mana }
     })
     this.scene.launch('Inventory', { members, index, tab })
     this.scene.pause()
@@ -625,8 +649,9 @@ export class BattleScene extends Phaser.Scene {
     this.column.layout(height)
     const centreX = PARTY_PANEL_W + (width - PARTY_PANEL_W) / 2
     const buttonY = height - 50
-    this.attackButton.setPosition(centreX - 80, buttonY)
-    this.endTurnButton.setPosition(centreX + 80, buttonY)
+    this.attackButton.setPosition(centreX - BUTTON_SPACING, buttonY)
+    this.castButton.setPosition(centreX, buttonY)
+    this.endTurnButton.setPosition(centreX + BUTTON_SPACING, buttonY)
 
     this.resultShade.setSize(width, height)
     this.bannerText.setPosition(width / 2, height / 2 - 100)
@@ -737,6 +762,12 @@ export class BattleScene extends Phaser.Scene {
     if (this.selected === null || !actable.includes(this.selected)) this.selected = actable[0] ?? null
   }
 
+  /** The selected unit's legal casts, spell by spell in the order it knows them, in roster order of their targets. */
+  private selectedCasts(): CastAction[] {
+    if (this.selected === null) return []
+    return this.engine.legalActions(this.selected).filter((a) => a.type === 'cast')
+  }
+
   /** The selected unit's legal attacks, in roster order of their targets. */
   private selectedAttacks(): Extract<Action, { type: 'attack' }>[] {
     if (this.selected === null) return []
@@ -746,7 +777,8 @@ export class BattleScene extends Phaser.Scene {
   /**
    * Marks where the selected unit can move (fainter where no AP is left to attack, orange-edged
    * where the move provokes a free attack) and whom it can attack, with the
-   * odds of hitting each. While picking a target, only the targets show.
+   * odds of hitting each. While picking a target, only the targets show: for a
+   * spell, the foes it can be cast on and the odds of it striking each.
    */
   private refreshHighlights(): void {
     this.highlights.clear()
@@ -759,12 +791,16 @@ export class BattleScene extends Phaser.Scene {
     const positionOf = (id: UnitId) => state.units.find((u) => u.id === id)!.position
     const actable = this.actableUnits()
     const self = state.units.find((u) => u.id === this.selected)
+    const spell = this.targeting !== null && this.targeting !== 'attack' ? this.targeting : null
+    const cost = spell && `${SPELLS[spell].apCost} AP, ${SPELLS[spell].manaCost} mana`
     this.hintText.setText(
-      this.targeting && self
-        ? `Choose a foe to attack (${self.attackApCost} AP). Esc or Cancel to go back.`
-        : actable.length === 0
-          ? 'No action points left. Press End Turn.'
-          : `Blue: move (fainter leaves too few AP to attack), orange edge provokes a free attack. Click a foe to attack.`,
+      spell
+        ? `${SPELLS[spell].name}: choose a foe (${cost}). Esc or Cancel to go back.`
+        : this.targeting && self
+          ? `Choose a foe to attack (${self.attackApCost} AP). Esc or Cancel to go back.`
+          : actable.length === 0
+            ? 'No action points left. Press End Turn.'
+            : `Blue: move (fainter leaves too few AP to attack), orange edge provokes a free attack. Click a foe to attack.`,
     )
 
     for (const id of this.targeting ? [] : actable) {
@@ -785,7 +821,7 @@ export class BattleScene extends Phaser.Scene {
         if (preview.provokes.length > 0) this.highlights.lineStyle(2, PROVOKE_OUTLINE, 1)
         else this.highlights.lineStyle(1, MOVE_OUTLINE, 0.9)
         this.highlights.strokePoints(polygon, true)
-      } else if (action.type === 'attack') {
+      } else if (action.type === 'attack' && spell === null) {
         const polygon = this.hexPolygon(positionOf(action.target))
         this.highlights.fillStyle(ATTACK_HIGHLIGHT, this.targeting ? 0.7 : 0.5)
         this.highlights.fillPoints(polygon, true)
@@ -794,6 +830,14 @@ export class BattleScene extends Phaser.Scene {
           this.highlights.strokePoints(polygon, true)
         }
         this.addHitChanceLabel(action.unit, action.target, positionOf(action.target))
+      } else if (action.type === 'cast' && action.spell === spell) {
+        const polygon = this.hexPolygon(positionOf(action.target))
+        this.highlights.fillStyle(SPELL_HIGHLIGHT, 0.7)
+        this.highlights.fillPoints(polygon, true)
+        this.highlights.lineStyle(2, 0xffffff, 0.9)
+        this.highlights.strokePoints(polygon, true)
+        const preview = this.engine.previewCast(action.unit, action.spell, action.target)
+        if (preview) this.addChanceLabel(`${Math.round(preview.hitChance * 100)}%`, positionOf(action.target))
       }
     }
     this.highlights.lineStyle(3, SELECTED_OUTLINE, 1)
@@ -825,6 +869,12 @@ export class BattleScene extends Phaser.Scene {
     const state = this.engine.getState()
     const self = state.units.find((u) => u.id === this.selected)!
     const unitAt = state.units.find((u) => u.hp > 0 && hexEquals(u.position, at))
+    if (this.targeting !== null && this.targeting !== 'attack') {
+      // Only a foe the spell can reach is a target; any other click backs out of casting.
+      const spell = this.targeting
+      const cast = unitAt && this.selectedCasts().find((a) => a.spell === spell && a.target === unitAt.id)
+      return cast ? { kind: 'cast', action: cast } : { kind: 'none' }
+    }
     if (this.targeting) {
       // Only a foe already in reach is a target; any other click backs out of picking one.
       return unitAt && this.selectedAttacks().some((a) => a.target === unitAt.id)
@@ -879,6 +929,13 @@ export class BattleScene extends Phaser.Scene {
         if (intent.plan.move) this.markDestination(from, intent.plan.move.to)
         break
       }
+      case 'cast':
+        this.input.setDefaultCursor(CURSORS.attack)
+        for (const h of [selectedAt(), this.hovered!]) {
+          this.hoverMarks.lineStyle(3, SPELL_HIGHLIGHT, 1)
+          this.hoverMarks.strokePoints(this.hexPolygon(h), true)
+        }
+        break
     }
   }
 
@@ -906,9 +963,14 @@ export class BattleScene extends Phaser.Scene {
     if (!preview) return
     const percent = Math.round(preview.hitChance * 100)
     const bonus = preview.flankBonus + preview.arcBonus
+    this.addChanceLabel(`${percent}%${bonus > 0 ? ` +${bonus}` : ''}`, at)
+  }
+
+  /** A label on the nameplate of the unit at `at`, where its AP pips would be. */
+  private addChanceLabel(text: string, at: Hex): void {
     const { x, y } = boardHexCenter(at)
     const label = this.add
-      .text(x, y + PLATE_STATUS_Y, `${percent}%${bonus > 0 ? ` +${bonus}` : ''}`, {
+      .text(x, y + PLATE_STATUS_Y, text, {
         fontFamily: 'monospace',
         fontSize: '11px',
         color: '#ffffff',
@@ -1018,12 +1080,41 @@ export class BattleScene extends Phaser.Scene {
       const maxHp = this.engine.getState().units.find((u) => u.id === event.defender)!.maxHp
       this.refreshHpDisplay(defender, event.defenderHpAfter, maxHp)
     }
+    if (event.type === 'cast') {
+      this.faceUnit(event.caster, event.casterFacing)
+      const target = this.units.get(event.target)!
+      this.flyBolt(event.caster, event.target, () => this.flashHit(target, event.hit))
+      const maxHp = this.engine.getState().units.find((u) => u.id === event.target)!.maxHp
+      this.refreshHpDisplay(target, event.targetHpAfter, maxHp)
+    }
     if (event.type === 'unit_down') {
       // Others may stand on a fallen unit's hex, so its plate goes rather than collide with theirs.
       const unit = this.units.get(event.unit)!
       unit.sprite.setAlpha(0.4)
       unit.plate.setVisible(false)
     }
+  }
+
+  /** Flies a spell's bolt from one unit to another, chest high, and calls `onArrive` as it lands. */
+  private flyBolt(from: UnitId, to: UnitId, onArrive: () => void): void {
+    const chest = (id: UnitId) => {
+      const { x, y } = this.units.get(id)!.container
+      return { x, y: y - APPEARANCE.warrior.displayHeight / 3 }
+    }
+    const start = chest(from)
+    const bolt = this.add.graphics({ x: start.x, y: start.y })
+    bolt.fillStyle(SPELL_BOLT, 1).fillCircle(0, 0, 5).lineStyle(2, 0xffffff, 0.9).strokeCircle(0, 0, 5)
+    // With the labels: over every unit and nameplate, and scaled and placed as the board is.
+    this.labelLayer.add(bolt)
+    this.tweens.add({
+      targets: bolt,
+      ...chest(to),
+      duration: SPELL_FLIGHT_MS,
+      onComplete: () => {
+        bolt.destroy()
+        onArrive()
+      },
+    })
   }
 
   /** Walks a unit along its path, turning it towards each step as it takes it. */
@@ -1062,17 +1153,27 @@ export class BattleScene extends Phaser.Scene {
     this.playerControl = enabled
     if (enabled) this.ensureSelection()
     const attacks = enabled ? this.selectedAttacks().length : 0
-    if (attacks < 2) this.targeting = false
+    const casts = enabled ? this.selectedCasts() : []
+    // Picking a target ends when control is lost or the action it was for is no longer legal.
+    if (this.targeting === 'attack' ? attacks < 2 : !casts.some((cast) => cast.spell === this.targeting)) {
+      this.targeting = null
+    }
+    const casting = this.targeting !== null && this.targeting !== 'attack'
     this.setButtonEnabled(this.attackButton, attacks > 0)
-    this.setButtonLabel(this.attackButton, this.targeting ? 'Cancel' : 'Attack')
+    this.setButtonLabel(this.attackButton, this.targeting === 'attack' ? 'Cancel' : 'Attack')
+    // The Cast button is the selected unit's: it shows the mana it has left, and only for a unit with magic.
+    const caster = this.engine.getState().units.find((u) => u.id === this.selected && u.magic)
+    this.castButton.setVisible(caster !== undefined && this.engine.getState().phase !== 'over')
+    this.setButtonEnabled(this.castButton, casts.length > 0)
+    this.setButtonLabel(this.castButton, casting ? 'Cancel' : `Cast (${caster?.mana ?? 0})`)
     this.setButtonEnabled(this.endTurnButton, enabled)
     this.refreshHighlights()
     this.updateRoundText()
     this.column.refresh(this.activeIndex())
   }
 
-  private setTargeting(on: boolean): void {
-    this.targeting = on
+  private setTargeting(what: 'attack' | SpellId | null): void {
+    this.targeting = what
     this.setPlayerControl(this.playerControl)
   }
 
@@ -1088,8 +1189,10 @@ export class BattleScene extends Phaser.Scene {
       this.playerAct(intent.action)
     } else if (intent.kind === 'attack') {
       this.goFor(intent.target, intent.plan)
+    } else if (intent.kind === 'cast') {
+      this.playerAct(intent.action)
     } else if (this.targeting) {
-      this.setTargeting(false)
+      this.setTargeting(null)
     }
   }
 
@@ -1118,13 +1221,28 @@ export class BattleScene extends Phaser.Scene {
   /** Attacks the only foe in reach, or asks which one when there are several; pressed again, cancels. */
   private onAttack(): void {
     if (!this.playerControl) return
-    if (this.targeting) {
-      this.setTargeting(false)
+    if (this.targeting === 'attack') {
+      this.setTargeting(null)
       return
     }
     const attacks = this.selectedAttacks()
     if (attacks.length === 1) this.playerAct(attacks[0])
-    else if (attacks.length > 1) this.setTargeting(true)
+    else if (attacks.length > 1) this.setTargeting('attack')
+  }
+
+  /**
+   * Asks which foe to cast on, for the first spell the selected unit knows and can cast now;
+   * pressed again, cancels. It always asks, even with one foe in range: mana is too dear to
+   * spend on a slip.
+   */
+  private onCast(): void {
+    if (!this.playerControl) return
+    if (this.targeting !== null && this.targeting !== 'attack') {
+      this.setTargeting(null)
+      return
+    }
+    const [first] = this.selectedCasts()
+    if (first) this.setTargeting(first.spell)
   }
 
   private onEndTurn(): void {
@@ -1134,7 +1252,7 @@ export class BattleScene extends Phaser.Scene {
   private playerAct(action: Action): void {
     this.setPlayerControl(false)
     const animationMs = this.applyEvents(this.engine.step(action))
-    const pause = action.type === 'attack' ? 600 : action.type === 'end_turn' ? 300 : 0
+    const pause = action.type === 'attack' || action.type === 'cast' ? 600 : action.type === 'end_turn' ? 300 : 0
     this.time.delayedCall(animationMs + pause, () => this.continueBattle())
   }
 
@@ -1186,19 +1304,22 @@ export class BattleScene extends Phaser.Scene {
     const playerWon = state.winner === 'player'
     this.setPlayerControl(false)
     this.attackButton.setVisible(false)
+    this.castButton.setVisible(false)
     this.endTurnButton.setVisible(false)
-    // The win is the world's from here on, however the scene is left.
+    // The win and what it won are the world's from here on, however the scene is left.
+    const found = playerWon && this.location ? takeLoot(this.gameState, this.location) : []
     if (playerWon && this.location) clearLocation(this.gameState.world, this.location.id)
     const foes = this.location ? `The ${this.location.name}` : 'Your foes'
     // The reward goes by the hit points the party ended on: who fell, and so who gets back up.
     this.syncUnitsFromEngine()
     const xpLines = playerWon ? describeRewards(rewardVictory(this.gameState.party, this.xpReward)) : []
     this.xpReward = 0
+    const lootLines = found.length > 0 ? [`Found: ${listNames(found.map((item) => item.name))}.`] : []
     this.bannerText.setText(playerWon ? 'VICTORY!' : 'DEFEAT')
     this.bannerText.setColor(playerWon ? '#66bb6a' : '#ef5350')
     this.resultText.setText(
       playerWon
-        ? [`${foes} are beaten.`, ...xpLines].join('\n')
+        ? [`${foes} are beaten.`, ...xpLines, ...lootLines].join('\n')
         : 'The party has fallen. The journey ends here.',
     )
     this.setButtonLabel(this.menuButton, playerWon ? 'OK' : 'Main Menu')

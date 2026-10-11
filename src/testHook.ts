@@ -1,5 +1,7 @@
 import type Phaser from 'phaser'
+import type { AttributeId } from './character/attributes.ts'
 import type { SkillId } from './character/skills.ts'
+import type { SpellId } from './combat/spells.ts'
 import type { BattleEvent, BattleState, UnitId } from './engine/battleEngine.ts'
 import type { WorldState } from './game/worldMap.ts'
 import type { EquipmentSlot } from './inventory/inventory.ts'
@@ -56,13 +58,18 @@ export interface BattleProbe {
   /** Where the board's top-left corner is on screen and how far it is scaled; with BATTLE_LAYOUT, that places every hex. */
   origin: Point
   scale: number
-  /** `result` is the one button of the victory or defeat screen. */
-  buttons: { attack: ButtonProbe; endTurn: ButtonProbe; result: ButtonProbe }
+  /** `cast` is shown only for a unit with magic; `result` is the one button of the victory or defeat screen. */
+  buttons: { attack: ButtonProbe; cast: ButtonProbe; endTurn: ButtonProbe; result: ButtonProbe }
+  /** The spell the next board click picks a target for, after the Cast button. */
+  casting: SpellId | null
+  /** The lines of the victory or defeat screen; empty until the battle is over. */
+  result: string[]
   party: PortraitProbe[]
 }
 
 export interface InventoryProbe {
-  tab: 'character' | 'skills' | 'inventory'
+  /** `perkTree` is the view the Skills tab's Perk Tree button opens; it has no tab button of its own. */
+  tab: 'character' | 'skills' | 'inventory' | 'perkTree'
   /** The portraits beside the panel: a click on one turns the panel to that member, who is then the active one. */
   party: PortraitProbe[]
   /** What the character has waiting to spend. */
@@ -70,12 +77,28 @@ export interface InventoryProbe {
   perkPicks: number
   /** Each skill's level, with the centre on screen of the button that raises it and whether a click there would. */
   skills: Record<SkillId, Point & { level: number; canRaise: boolean }>
-  /** Every perk's row, by its centre on screen, with the ranks taken and whether a click would take one. */
+  /** The character's attributes as the Character tab shows them: what it was born with and what its perks add. */
+  attributes: Record<AttributeId, number>
+  /** The armour class its gear and perks now give it. */
+  armorClass: number
+  /** The mana shown: what is left in battle, the most there is on the world map; null for a character without magic. */
+  mana: number | null
+  /** The perks the Skills tab lists: those the character has a rank of. */
+  takenPerks: Array<{ perk: string; ranks: number }>
+  /** The Skills tab's button that opens the perk tree, and the tree's button back, by their centres on screen. */
+  perkTreeButton: Point
+  back: Point
+  /**
+   * Every perk's node in the tree, by its centre on screen, with the ranks taken and whether a
+   * click would take one. The nodes are on screen only while `tab` is `perkTree`.
+   */
   perks: Array<Point & { perk: string; ranks: number; canTake: boolean }>
   /** Every equipment slot's centre on screen, with the id of the item in it. */
   equipment: Record<EquipmentSlot, Point & { item: string | null }>
   /** The backpack's items, each with its slot's centre on screen. */
   backpack: Array<Point & { item: string }>
+  /** The items the ground grid shows now (on the world map, the baggage), each with its slot's centre on screen. */
+  ground: Array<Point & { item: string }>
 }
 
 export interface Probes {

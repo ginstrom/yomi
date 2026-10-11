@@ -1,8 +1,9 @@
 /**
- * The six attributes a character is born with, each from `MIN_ATTRIBUTE` to
- * `MAX_ATTRIBUTE` with 5 the common run. They never change; everything else
- * about a character is worked out from them (character.ts, skills.ts), from
- * its level and from what it has learned.
+ * The six attributes of a character, each from `MIN_ATTRIBUTE` to
+ * `MAX_ATTRIBUTE` with 5 the common run. The ones it is born with never
+ * change, and perks add to them (`attributeLevel` in perks.ts); everything
+ * else about a character is worked out from that sum (character.ts,
+ * skills.ts), from its level and from what it has learned.
  */
 export const ATTRIBUTE_IDS = ['strength', 'perception', 'endurance', 'intelligence', 'agility', 'luck'] as const
 
@@ -23,9 +24,9 @@ export interface AttributeInfo {
 
 export const ATTRIBUTES: Record<AttributeId, AttributeInfo> = {
   strength: { name: 'Strength', description: 'Hit points, melee damage and skills' },
-  perception: { name: 'Perception', description: 'Archery and First Aid' },
+  perception: { name: 'Perception', description: 'Archery' },
   endurance: { name: 'Endurance', description: 'Hit points, more with every level' },
-  intelligence: { name: 'Intelligence', description: 'Skill points, First Aid' },
+  intelligence: { name: 'Intelligence', description: 'Skill points, mana and Magic' },
   agility: { name: 'Agility', description: 'Action points, armour, weapon skills' },
   luck: { name: 'Luck', description: 'Chance of a critical hit' },
 }

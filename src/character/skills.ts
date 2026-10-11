@@ -1,13 +1,15 @@
 import type { Attributes } from './attributes.ts'
 import type { Character } from './character.ts'
+import { attributesOf } from './perks.ts'
 
 /**
  * Skills, each a percentage. A skill starts from the character's attributes,
  * a tagged one `TAG_BONUS` higher, and is raised with the skill points every
  * level brings (progression.ts). A weapon skill is the wielder's chance to
- * hit with that kind of weapon, before the foe's armour (character.ts).
+ * hit with that kind of weapon, before the foe's armour (character.ts), and
+ * Magic is the chance of a spell or a wand striking.
  */
-export const SKILL_IDS = ['melee', 'archery', 'unarmed', 'firstAid'] as const
+export const SKILL_IDS = ['melee', 'archery', 'magic'] as const
 
 export type SkillId = (typeof SKILL_IDS)[number]
 
@@ -22,7 +24,7 @@ export interface SkillInfo {
 export const SKILLS: Record<SkillId, SkillInfo> = {
   melee: {
     name: 'Melee Weapons',
-    description: 'Chance to hit with a blade or an axe',
+    description: 'Chance to hit with a blade, an axe or bare hands',
     base: ({ strength, agility }) => 30 + 2 * (strength + agility),
   },
   archery: {
@@ -30,20 +32,15 @@ export const SKILLS: Record<SkillId, SkillInfo> = {
     description: 'Chance to hit with a bow',
     base: ({ perception, agility }) => 30 + 2 * (perception + agility),
   },
-  unarmed: {
-    name: 'Unarmed',
-    description: 'Chance to hit with bare hands, which also strike harder at 55%, 75% and 100%',
-    base: ({ strength, agility }) => 40 + 2 * (strength + agility),
-  },
-  firstAid: {
-    name: 'First Aid',
-    description: 'After a victory the best healer standing tends everyone: 1 hit point per 10%',
-    base: ({ perception, intelligence }) => 10 + 2 * (perception + intelligence),
+  magic: {
+    name: 'Magic',
+    description: 'Chance of a spell or a wand striking, and what spell perks ask for',
+    base: ({ intelligence }) => 20 + 4 * intelligence,
   },
 }
 
-/** How many skills a character is tagged in: the ones it has a gift for. */
-export const TAGGED_SKILLS = 2
+/** How many skills a character is tagged in: the one it has a gift for. */
+export const TAGGED_SKILLS = 1
 /** What a tag adds to a skill from the start. */
 export const TAG_BONUS = 20
 /** What a skill point adds to a skill, and to a tagged one. */
@@ -62,7 +59,7 @@ export function isTagged(character: Character, skill: SkillId): boolean {
 /** The character's level in `skill`, in percent: its attributes' share, its tag's and what it has trained. */
 export function skillLevel(character: Character, skill: SkillId): number {
   const tag = isTagged(character, skill) ? TAG_BONUS : 0
-  return SKILLS[skill].base(character.attributes) + tag + character.trained[skill]
+  return SKILLS[skill].base(attributesOf(character)) + tag + character.trained[skill]
 }
 
 /** How many skill points the next raise of `skill` costs the character, or null if it is as high as it goes. */

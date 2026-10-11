@@ -427,8 +427,10 @@ export class WorldScene extends Phaser.Scene {
     const character = party[index]
     if (!character) return
     const tab = canAdvance(character) ? 'skills' : 'character'
-    const members = party.map((member) => ({ character: member }))
-    this.scene.launch('Inventory', { members, index, tab, canAdvance: true, resume: 'World' })
+    // Gear is changed freely here, and the ground is the party's baggage, through which items
+    // pass between members. The panel edits the characters and the baggage in place.
+    const members = party.map((member) => ({ character: member, gearApCost: 0, ground: this.gameState.baggage }))
+    this.scene.launch('Inventory', { members, index, tab, canAdvance: true, resume: 'World', groundTitle: 'Baggage' })
     this.scene.bringToTop('Inventory')
     this.scene.pause()
   }

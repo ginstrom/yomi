@@ -1,3 +1,4 @@
+import { SKILLS, type SkillId } from '../character/skills.ts'
 import { formatDamage, type DamageRoll } from '../combat/combat.ts'
 
 export type EquipmentSlot =
@@ -28,7 +29,20 @@ export const EQUIPMENT_SLOT_LABELS: Record<EquipmentSlot, string> = {
 }
 
 /** Identifies an item's artwork; scenes map it to a renderer (see scenes/itemIcons.ts). */
-export type ItemIcon = 'sword' | 'shortsword' | 'greatsword' | 'dagger' | 'axe' | 'bow' | 'shield' | 'armor'
+export type ItemIcon =
+  | 'sword'
+  | 'shortsword'
+  | 'greatsword'
+  | 'dagger'
+  | 'axe'
+  | 'bow'
+  | 'shield'
+  | 'armor'
+  | 'wand'
+  | 'ring'
+  | 'amulet'
+  | 'circlet'
+  | 'cloak'
 
 /** What an item contributes to its wearer's combat stats; see deriveCombatStats(). */
 export interface ItemStats {
@@ -44,6 +58,14 @@ export interface ItemStats {
   acBonus?: number
   /** What the item adds to its wearer's chance to hit, in percent. */
   toHit?: number
+  /** The skill a weapon strikes with, when it is not the one its reach tells: a wand's is Magic. */
+  skill?: SkillId
+  /** What the item adds to the mana of a wearer who knows a spell. */
+  maxMana?: number
+  /** What the item adds to the chance of its wearer's spells striking, in percent. */
+  spellSkill?: number
+  /** What the item adds to its wearer's chance of a critical hit, in percent. */
+  critChance?: number
 }
 
 export interface Item {
@@ -53,6 +75,8 @@ export interface Item {
   description: string
   stats?: ItemStats
   icon: ItemIcon
+  /** A ring fits either ring slot, whichever its `slot` says; see equipFromBackpack(). */
+  ring?: true
 }
 
 export type Equipment = Partial<Record<EquipmentSlot, Item>>
@@ -66,6 +90,10 @@ export function describeItemStats(stats: ItemStats = {}): string[] {
   if (stats.twoHanded) lines.push('Two-handed')
   if (stats.acBonus) lines.push(`Armor Class: +${stats.acBonus}`)
   if (stats.toHit) lines.push(`To Hit: +${stats.toHit}%`)
+  if (stats.skill) lines.push(`Strikes with ${SKILLS[stats.skill].name}`)
+  if (stats.maxMana) lines.push(`Mana: +${stats.maxMana}`)
+  if (stats.spellSkill) lines.push(`Spell Skill: +${stats.spellSkill}%`)
+  if (stats.critChance) lines.push(`Critical: +${stats.critChance}%`)
   return lines
 }
 
@@ -129,7 +157,7 @@ export const YEW_BOW: Item = {
   icon: 'bow',
 }
 
-/** Every weapon in the game, lightest first. */
+/** Every plain weapon, lightest first: what a new hero carries. The enchanted ones are in `MAGIC_ITEMS`. */
 export const WEAPONS: readonly Item[] = [
   IRON_DAGGER,
   IRON_SHORTSWORD,
@@ -156,6 +184,107 @@ export const STEEL_ARMOR: Item = {
   stats: { acBonus: 15 },
   icon: 'armor',
 }
+
+// Magic items are won as loot (game/worldMap.ts), so none is in `WEAPONS`. They
+// are modest on purpose: the simulator's parties fight without them, so the
+// game as played runs a little easier than the tuned figures.
+
+/** A wand is a ranged weapon that strikes with Magic and costs no mana. */
+export const SPARK_WAND: Item = {
+  id: 'spark_wand',
+  name: 'Wand of Sparks',
+  slot: 'mainHand',
+  description: 'Spits stinging sparks.',
+  stats: { damage: { count: 1, sides: 6, bonus: 0 }, attackApCost: 5, attackRange: 4, skill: 'magic' },
+  icon: 'wand',
+}
+
+export const STORM_WAND: Item = {
+  id: 'storm_wand',
+  name: 'Wand of Storms',
+  slot: 'mainHand',
+  description: 'Crackles with caught lightning.',
+  stats: { damage: { count: 1, sides: 10, bonus: 1 }, attackApCost: 5, attackRange: 5, skill: 'magic' },
+  icon: 'wand',
+}
+
+export const EMBERBLADE: Item = {
+  id: 'emberblade',
+  name: 'Emberblade',
+  slot: 'mainHand',
+  description: 'Its edge glows like a banked fire.',
+  stats: { damage: { count: 1, sides: 8, bonus: 4 }, attackApCost: 5, toHit: 10 },
+  icon: 'sword',
+}
+
+export const HAWK_BOW: Item = {
+  id: 'hawk_bow',
+  name: 'Hawkeye Bow',
+  slot: 'mainHand',
+  description: 'Its arrows seem to seek their mark.',
+  stats: { damage: { count: 1, sides: 8, bonus: 2 }, attackApCost: 5, attackRange: 6, twoHanded: true, toHit: 10 },
+  icon: 'bow',
+}
+
+export const RING_PROTECTION: Item = {
+  id: 'ring_protection',
+  name: 'Ring of Protection',
+  slot: 'ring1',
+  ring: true,
+  description: 'Turns blows a little aside.',
+  stats: { acBonus: 5 },
+  icon: 'ring',
+}
+
+export const RING_FORTUNE: Item = {
+  id: 'ring_fortune',
+  name: 'Ring of Fortune',
+  slot: 'ring1',
+  ring: true,
+  description: 'Luck runs with its wearer.',
+  stats: { critChance: 5 },
+  icon: 'ring',
+}
+
+export const AMULET_FOCUS: Item = {
+  id: 'amulet_focus',
+  name: 'Amulet of Focus',
+  slot: 'neck',
+  description: "Steadies a caster's aim.",
+  stats: { spellSkill: 10 },
+  icon: 'amulet',
+}
+
+export const SAGE_CIRCLET: Item = {
+  id: 'sage_circlet',
+  name: "Sage's Circlet",
+  slot: 'head',
+  description: 'A band of silver that deepens the well a caster draws on.',
+  stats: { maxMana: 6 },
+  icon: 'circlet',
+}
+
+export const SHADOW_CLOAK: Item = {
+  id: 'shadow_cloak',
+  name: 'Cloak of Shadows',
+  slot: 'cloak',
+  description: 'Hard to fix the eye on.',
+  stats: { acBonus: 10 },
+  icon: 'cloak',
+}
+
+/** Every enchanted item in the game. */
+export const MAGIC_ITEMS: readonly Item[] = [
+  SPARK_WAND,
+  STORM_WAND,
+  EMBERBLADE,
+  HAWK_BOW,
+  RING_PROTECTION,
+  RING_FORTUNE,
+  AMULET_FOCUS,
+  SAGE_CIRCLET,
+  SHADOW_CLOAK,
+]
 
 export const EQUIPMENT_SLOT_ORDER: EquipmentSlot[] = [
   'head',

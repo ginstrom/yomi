@@ -53,18 +53,18 @@ describe('a battle', () => {
   it('selects a hero by its portrait, and opens the hero’s panel on a second click', async () => {
     const game = await games.open()
     const start = await game.enterBattle()
-    expect(start.party.map((member) => member.active)).toEqual([true, false, false])
+    expect(start.party.map((member) => member.active)).toEqual([true, false, false, false])
 
     await game.click(start.party[1])
     const selected = await game.waitFor('Battle', (b) => b.selected === 'hero_2')
-    expect(selected.party.map((member) => member.active)).toEqual([false, true, false])
+    expect(selected.party.map((member) => member.active)).toEqual([false, true, false, false])
     expect(await game.scenes()).toEqual({ running: ['Battle'], paused: [] })
 
     await game.click(selected.party[1])
     await game.waitForScenes(['Inventory'], ['Battle'])
     const panel = await game.waitFor('Inventory')
     expect(panel.tab).toBe('character')
-    expect(panel.party.map((member) => member.active)).toEqual([false, true, false])
+    expect(panel.party.map((member) => member.active)).toEqual([false, true, false, false])
   })
 
   it('turns the open panel to another hero by its portrait, each paying for its own change of gear', async () => {
@@ -91,6 +91,46 @@ describe('a battle', () => {
     expect(battle.selected).toBe('hero_3')
     const equips = battle.log.filter((e) => e.type === 'equip')
     expect(equips.map((e) => [e.unit, e.apCost])).toEqual([['hero_1', 1], ['hero_3', 1]])
+  })
+
+  it('casts the mage’s spell on a foe picked after the Cast button, and backs out of picking on Esc', async () => {
+    const game = await games.open()
+    const start = await game.enterBattle()
+    const mage = (battle: BattleProbe) => battle.state.units.find((u) => u.id === 'hero_4')!
+    // Only a unit with magic has the button.
+    expect(start.buttons.cast.visible).toBe(false)
+
+    await game.click(start.party[3])
+    const selected = await game.waitFor('Battle', (b) => b.selected === 'hero_4')
+    expect(mage(selected)).toMatchObject({ mana: 18, ap: 8 })
+    // No foe is within the spell's range yet.
+    expect(selected.buttons.cast).toMatchObject({ visible: true, enabled: false })
+
+    await game.click(battleHexOnScreen(selected, offsetToHex(3, 1)))
+    const near = await game.waitFor('Battle', (b) => b.playerControl && b.buttons.cast.enabled)
+    expect(mage(near).ap).toBe(5)
+
+    await game.click(near.buttons.cast)
+    expect((await game.waitFor('Battle', (b) => b.casting !== null)).casting).toBe('magic_arrow')
+    await game.press('Escape')
+    await game.waitFor('Battle', (b) => b.casting === null)
+    expect(await game.scenes()).toEqual({ running: ['Battle'], paused: [] })
+
+    await game.press('m')
+    const picking = await game.waitFor('Battle', (b) => b.casting === 'magic_arrow')
+    const foe = picking.state.units.find((u) => u.id === 'goblin')!
+    await game.click(battleHexOnScreen(picking, foe.position))
+    const after = await game.waitFor('Battle', (b) => b.log.some((e) => e.type === 'cast') && (b.playerControl || b.buttons.result.visible))
+    expect(after.log.filter((e) => e.type === 'cast')).toMatchObject([
+      { caster: 'hero_4', spell: 'magic_arrow', target: 'goblin', manaCost: 3, manaAfter: 15, apAfter: 1 },
+    ])
+    expect(mage(after)).toMatchObject({ mana: 15, ap: 1 })
+    expect(after.casting).toBeNull()
+
+    // The panel shows what mana is left.
+    await game.press('c')
+    await game.waitForScenes(['Inventory'], ['Battle'])
+    expect((await game.waitFor('Inventory', (p) => p.party[3].active)).mana).toBe(15)
   })
 
   it('pauses under the menu on Esc, resumes on Continue, and is dropped for a new game', async () => {
@@ -151,7 +191,11 @@ describe('a battle', () => {
       const panel = (await game.probe('Inventory'))!
       const battle = (await game.probe('Battle'))!
       const portraits = [...panel.party, ...battle.party]
-      for (const at of [panel.equipment.head, panel.equipment.belt, battle.buttons.attack, battle.buttons.endTurn, ...portraits]) {
+      const buttons = [battle.buttons.attack, battle.buttons.cast, battle.buttons.endTurn]
+      // The three buttons keep clear of each other, at the least window too.
+      expect(buttons[1].x - buttons[0].x).toBeGreaterThanOrEqual(150)
+      expect(buttons[2].x - buttons[1].x).toBeGreaterThanOrEqual(150)
+      for (const at of [panel.equipment.head, panel.equipment.belt, ...buttons, ...portraits]) {
         expect(at.x).toBeGreaterThan(0)
         expect(at.x).toBeLessThan(width)
         expect(at.y).toBeGreaterThan(0)

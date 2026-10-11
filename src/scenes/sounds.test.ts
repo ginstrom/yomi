@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { AttackEvent, BattleEndEvent, Side } from '../engine/battleEngine.ts'
+import type { AttackEvent, BattleEndEvent, CastEvent, Side } from '../engine/battleEngine.ts'
 import { IMPACT_DELAY_MS, STING_DELAY_MS, eventSounds } from './sounds.ts'
 
 function attack(hit: boolean, critical = false): AttackEvent {
@@ -9,6 +9,15 @@ function attack(hit: boolean, critical = false): AttackEvent {
     damageDice: { count: 1, sides: 6, bonus: 0 }, defenderHpBefore: 10,
     flankers: [], flankBonus: 0, arc: 'front', arcBonus: 0, attackerFacing: 3,
     attackRoll: 40, chance: 55, hit, critical, fumble: false, damage: hit ? 3 : 0, defenderHpAfter: 7,
+  }
+}
+
+function cast(hit: boolean, critical = false): CastEvent {
+  return {
+    type: 'cast', seq: 0, round: 1, caster: 'hero', spell: 'magic_arrow', target: 'goblin', distance: 4,
+    apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76, defenderAc: 15,
+    damageDice: { count: 1, sides: 10, bonus: 0 }, targetHpBefore: 12,
+    attackRoll: 40, chance: 61, hit, critical, fumble: false, damage: hit ? 5 : 0, targetHpAfter: hit ? 7 : 12,
   }
 }
 
@@ -22,6 +31,13 @@ describe('eventSounds', () => {
     expect(eventSounds(attack(true))).toEqual([swing, { key: 'sfx_hit_impact', delayMs: IMPACT_DELAY_MS }])
     expect(eventSounds(attack(true, true))).toEqual([swing, { key: 'sfx_crit_impact', delayMs: IMPACT_DELAY_MS }])
     expect(eventSounds(attack(false))).toEqual([swing, { key: 'sfx_miss', delayMs: IMPACT_DELAY_MS }])
+  })
+
+  it('sounds a spell, then how it lands', () => {
+    const spell = { key: 'sfx_spell_cast', delayMs: 0 }
+    expect(eventSounds(cast(true))).toEqual([spell, { key: 'sfx_hit_impact', delayMs: IMPACT_DELAY_MS }])
+    expect(eventSounds(cast(true, true))).toEqual([spell, { key: 'sfx_crit_impact', delayMs: IMPACT_DELAY_MS }])
+    expect(eventSounds(cast(false))).toEqual([spell, { key: 'sfx_miss', delayMs: IMPACT_DELAY_MS }])
   })
 
   it('marks a fallen unit', () => {

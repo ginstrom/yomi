@@ -1,4 +1,16 @@
 import { HexBoard, hexDistance, hexEquals, hexKey, offsetToHex, reachableHexes, type BoardSize, type Hex } from '../grid/hex.ts'
+import {
+  AMULET_FOCUS,
+  EMBERBLADE,
+  HAWK_BOW,
+  RING_FORTUNE,
+  RING_PROTECTION,
+  SAGE_CIRCLET,
+  SHADOW_CLOAK,
+  SPARK_WAND,
+  STORM_WAND,
+  type Item,
+} from '../inventory/inventory.ts'
 import { MAX_THREAT, type EncounterId } from './encounters.ts'
 
 /**
@@ -14,12 +26,14 @@ interface LocationBase {
   position: Hex
 }
 
-/** Monsters to scout, wait out or attack; attacking fights `encounter` at `threat`. */
+/** Monsters to scout, wait out or attack; attacking fights `encounter` at `threat`, and beating them wins their `loot`. */
 export interface MonsterLocation extends LocationBase {
   kind: 'monsters'
   encounter: EncounterId
   /** How dangerous they are, from 1: set by how far from home they lie (`threatAt`). */
   threat: number
+  /** What the party finds when it has beaten them (`takeLoot` in gameState.ts): better the further out. */
+  loot: Item[]
 }
 
 /** Towns and resources are only shown for now; nothing happens at them. */
@@ -79,13 +93,21 @@ const resource = (id: string, name: string, col: number, row: number): WorldLoca
   name,
   position: offsetToHex(col, row),
 })
-const monsters = (id: string, name: string, col: number, row: number, encounter: EncounterId): WorldLocation => ({
+const monsters = (
+  id: string,
+  name: string,
+  col: number,
+  row: number,
+  encounter: EncounterId,
+  loot: Item[],
+): WorldLocation => ({
   id,
   kind: 'monsters',
   name,
   position: offsetToHex(col, row),
   encounter,
   threat: threatAt(offsetToHex(col, row)),
+  loot,
 })
 
 export function newWorld(): WorldState {
@@ -100,8 +122,8 @@ export function newWorld(): WorldState {
       town('stonebridge', 'Stonebridge', 18, 18),
       resource('iron_vein', 'Iron Vein', 11, 21),
       resource('gold_seam', 'Gold Seam', 15, 16),
-      monsters('goblin_raiders', 'Goblin Raiders', 13, 18, 'goblin_raid'),
-      monsters('kobold_scouts', 'Kobold Scouts', 16, 21, 'kobold_scouts'),
+      monsters('goblin_raiders', 'Goblin Raiders', 13, 18, 'goblin_raid', [RING_PROTECTION]),
+      monsters('kobold_scouts', 'Kobold Scouts', 16, 21, 'kobold_scouts', [AMULET_FOCUS]),
 
       town('greyford', 'Greyford', 6, 5),
       town('millbrook', 'Millbrook', 10, 34),
@@ -117,16 +139,16 @@ export function newWorld(): WorldState {
       resource('salt_flats', 'Salt Flats', 33, 36),
       resource('copper_pit', 'Copper Pit', 41, 10),
       resource('crystal_cave', 'Crystal Cave', 56, 24),
-      monsters('goblin_reavers', 'Goblin Reavers', 12, 8, 'goblin_raid'),
-      monsters('kobold_trappers', 'Kobold Trappers', 8, 30, 'kobold_scouts'),
-      monsters('goblin_warband', 'Goblin Warband', 24, 10, 'goblin_raid'),
-      monsters('kobold_diggers', 'Kobold Diggers', 22, 25, 'kobold_scouts'),
-      monsters('kobold_skulkers', 'Kobold Skulkers', 30, 22, 'kobold_scouts'),
-      monsters('goblin_marauders', 'Goblin Marauders', 34, 17, 'goblin_raid'),
-      monsters('kobold_lurkers', 'Kobold Lurkers', 39, 31, 'kobold_scouts'),
-      monsters('goblin_outriders', 'Goblin Outriders', 47, 13, 'goblin_raid'),
-      monsters('kobold_tunnellers', 'Kobold Tunnellers', 54, 28, 'kobold_scouts'),
-      monsters('goblin_pillagers', 'Goblin Pillagers', 57, 10, 'goblin_raid'),
+      monsters('goblin_reavers', 'Goblin Reavers', 12, 8, 'goblin_raid', [RING_FORTUNE]),
+      monsters('kobold_trappers', 'Kobold Trappers', 8, 30, 'kobold_scouts', [SAGE_CIRCLET]),
+      monsters('goblin_warband', 'Goblin Warband', 24, 10, 'goblin_raid', [RING_PROTECTION]),
+      monsters('kobold_diggers', 'Kobold Diggers', 22, 25, 'kobold_scouts', [SPARK_WAND]),
+      monsters('kobold_skulkers', 'Kobold Skulkers', 30, 22, 'kobold_scouts', [SHADOW_CLOAK]),
+      monsters('goblin_marauders', 'Goblin Marauders', 34, 17, 'goblin_raid', [EMBERBLADE]),
+      monsters('kobold_lurkers', 'Kobold Lurkers', 39, 31, 'kobold_scouts', [HAWK_BOW]),
+      monsters('goblin_outriders', 'Goblin Outriders', 47, 13, 'goblin_raid', [STORM_WAND]),
+      monsters('kobold_tunnellers', 'Kobold Tunnellers', 54, 28, 'kobold_scouts', [SAGE_CIRCLET]),
+      monsters('goblin_pillagers', 'Goblin Pillagers', 57, 10, 'goblin_raid', [EMBERBLADE]),
     ],
     confronting: null,
   }

@@ -1,5 +1,6 @@
 import { hitChance, resolveAttack, type CombatantStats, type DamageRoll, type RNG } from '../combat/combat.ts'
 import { mulberry32, randomSeed } from '../combat/rng.ts'
+import { SPELLS, type SpellId } from '../combat/spells.ts'
 import {
   HEX_DIRECTIONS,
   HexBoard,
@@ -14,7 +15,7 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 13
+export const LOG_SCHEMA_VERSION = 14
 
 /** What an attacker's chance to hit gains, in percent, for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 10
@@ -62,8 +63,9 @@ export interface GearChange {
 }
 
 /**
- * Moves, attacks and gear changes name the acting unit; end_turn ends the
- * whole side's turn. An equip action carries the stats the unit fights with
+ * Moves, attacks, casts and gear changes name the acting unit; end_turn ends
+ * the whole side's turn. A cast names a spell the unit knows and the foe it
+ * is cast on. An equip action carries the stats the unit fights with
  * from then on, since the engine knows stats and not the items behind them;
  * `changes` says which items those were, and `dropped` and `pickedUp` which
  * went onto or came off the ground of the unit's hex. All three are only
@@ -72,6 +74,7 @@ export interface GearChange {
 export type Action =
   | { type: 'move'; unit: UnitId; to: Hex }
   | { type: 'attack'; unit: UnitId; target: UnitId }
+  | { type: 'cast'; unit: UnitId; spell: SpellId; target: UnitId }
   | {
       type: 'equip'
       unit: UnitId
@@ -113,6 +116,8 @@ export interface UnitSnapshot extends CombatantStats {
   facing: number
   /** Action points left this turn; refilled when the unit's side starts its turn. */
   ap: number
+  /** Mana left: full as the battle starts and never refilled; 0 for a unit without magic. */
+  mana: number
   /** Whether the unit can still make a free attack this enemy turn. */
   reactionReady: boolean
 }
@@ -141,6 +146,14 @@ export interface AttackPreview {
   arc: Arc
   arcBonus: number
   /** Probability of a hit, from 0.05 to 0.95. */
+  hitChance: number
+}
+
+/** What a cast would cost and its odds, before the dice are rolled. */
+export interface CastPreview {
+  apCost: number
+  manaCost: number
+  /** Probability of the spell striking, from 0.05 to 0.95. */
   hitChance: number
 }
 
@@ -228,6 +241,43 @@ export interface AttackEvent extends EventBase {
   defenderHpAfter: number
 }
 
+/**
+ * A spell cast on a foe. It is rolled as an attack is, with the caster's
+ * spell skill for its chance, and nothing for flanking or the arc it strikes.
+ */
+export interface CastEvent extends EventBase {
+  type: 'cast'
+  caster: UnitId
+  spell: SpellId
+  target: UnitId
+  /** Hexes between caster and target. */
+  distance: number
+  apCost: number
+  /** The caster's action points once the cast is paid for. */
+  apAfter: number
+  manaCost: number
+  /** The caster's mana once the cast is paid for. */
+  manaAfter: number
+  /** The caster's facing after turning to its target. */
+  casterFacing: number
+  /** The caster's spell skill, before the target's armour. */
+  skill: number
+  /** The roll, 1 to 100: the spell strikes when no higher than `chance`. */
+  attackRoll: number
+  /** The chance in percent, after armour class and the limits on both ends. */
+  chance: number
+  defenderAc: number
+  hit: boolean
+  critical: boolean
+  fumble: boolean
+  /** The dice the spell rolls, before a critical doubles their count. */
+  damageDice: DamageRoll
+  /** Damage rolled; it may be more than the target had left. */
+  damage: number
+  targetHpBefore: number
+  targetHpAfter: number
+}
+
 /** A unit changed its gear mid-battle: what it wears, and so its stats, or what it carries. */
 export interface EquipEvent extends EventBase {
   type: 'equip'
@@ -275,6 +325,7 @@ export type BattleEvent =
   | BattleStartEvent
   | MoveEvent
   | AttackEvent
+  | CastEvent
   | EquipEvent
   | UnitDownEvent
   | EndTurnEvent
@@ -296,8 +347,9 @@ interface UnitRecord {
   position: Hex
   facing: number
   ap: number
+  mana: number
   reactionReady: boolean
-  /** The unit has paid for a change of gear and not moved or attacked since. */
+  /** The unit has paid for a change of gear and not moved, attacked or cast since. */
   gearChangePaid: boolean
 }
 
@@ -346,7 +398,10 @@ export function attackArc(defender: Pick<UnitSnapshot, 'position' | 'facing'>, f
  * face the way they last stepped or struck. Every standing unit with a melee
  * weapon exerts a zone of control over its neighbouring hexes: a foe stepping
  * out of one provokes a free attack, at most one per unit per enemy turn.
- * A ranged weapon (`attackRange` above 1) holds no zone. A unit may change
+ * A ranged weapon (`attackRange` above 1) holds no zone. A unit with magic
+ * (`stats.magic`) may cast a spell it knows on a foe within the spell's
+ * range, for the spell's action points and mana; mana starts full and does
+ * not come back during the battle. A cast provokes nothing. A unit may change
  * its gear on its own turn for EQUIP_AP_COST, dropping and picking up included.
  *
  * The UI, scripted policies and AI agents all drive it through step(). Given
@@ -388,6 +443,7 @@ export class BattleEngine {
       position: u.position,
       facing: u.facing ?? DEFAULT_FACING[u.side],
       ap: 0,
+      mana: u.stats.magic?.maxMana ?? 0,
       reactionReady: false,
       gearChangePaid: false,
     }))
@@ -430,8 +486,9 @@ export class BattleEngine {
   /**
    * Actions available to the side whose turn it is (or, given `unit`, just to
    * that unit): for each of its standing units in roster order, a move to each
-   * hex its AP can reach and an attack on each standing foe in range if it can
-   * afford one; then end_turn. Empty once the battle is over. Equip actions
+   * hex its AP can reach, an attack on each standing foe in range if it can
+   * afford one, and for each spell it knows and can pay for a cast on each
+   * standing foe in the spell's range; then end_turn. Empty once the battle is over. Equip actions
    * are not listed, as the engine cannot know what gear a unit carries: see
    * equipCost().
    */
@@ -443,9 +500,15 @@ export class BattleEngine {
       for (const path of this.reachable(actor).values()) {
         actions.push({ type: 'move', unit: actor.id, to: path[path.length - 1] })
       }
-      if (actor.ap < actor.stats.attackApCost) continue
-      for (const foe of this.units) {
-        if (this.canAttack(actor, foe)) actions.push({ type: 'attack', unit: actor.id, target: foe.id })
+      if (actor.ap >= actor.stats.attackApCost) {
+        for (const foe of this.units) {
+          if (this.canAttack(actor, foe)) actions.push({ type: 'attack', unit: actor.id, target: foe.id })
+        }
+      }
+      for (const spell of actor.stats.magic?.spells ?? []) {
+        for (const foe of this.units) {
+          if (this.canCast(actor, spell, foe)) actions.push({ type: 'cast', unit: actor.id, spell, target: foe.id })
+        }
       }
     }
     actions.push({ type: 'end_turn' })
@@ -479,6 +542,15 @@ export class BattleEngine {
     const arcBonus = ARC_BONUS[arc]
     const chance = hitChance(actor.stats, foe.stats.ac, flankBonus + arcBonus)
     return { flankers, flankBonus, arc, arcBonus, hitChance: chance }
+  }
+
+  /** The costs and odds of a legal cast, or null if the cast isn't legal now. */
+  previewCast(unit: UnitId, spell: SpellId, target: UnitId): CastPreview | null {
+    const actor = this.units.find((u) => u.id === unit)
+    const foe = this.units.find((u) => u.id === target)
+    if (this.phase === 'over' || !actor || !foe || !this.canAct(actor) || !this.canCast(actor, spell, foe)) return null
+    const { apCost, manaCost } = SPELLS[spell]
+    return { apCost, manaCost, hitChance: hitChance(spellcaster(actor.stats, spell), foe.stats.ac) }
   }
 
   /**
@@ -515,6 +587,12 @@ export class BattleEngine {
     if (action.type === 'move') return this.move(actor, action.to)
 
     const target = this.units.find((u) => u.id === action.target)
+    if (action.type === 'cast') {
+      if (!target || !this.canCast(actor, action.spell, target)) {
+        throw new Error(`${actor.id} cannot cast ${action.spell} on ${action.target}`)
+      }
+      return this.cast(actor, action.spell, target)
+    }
     if (!target || !this.canAttack(actor, target)) throw new Error(`${actor.id} cannot attack ${action.target}`)
     if (actor.ap < actor.stats.attackApCost) throw new Error(`${actor.id} has too few action points to attack`)
     actor.ap -= actor.stats.attackApCost
@@ -556,6 +634,20 @@ export class BattleEngine {
       target.side !== actor.side &&
       target.hp > 0 &&
       hexDistance(target.position, actor.position) <= actor.stats.attackRange
+    )
+  }
+
+  /** Whether `actor` knows `spell`, can pay for it, and `target` is a standing foe within its range. */
+  private canCast(actor: UnitRecord, spell: SpellId, target: UnitRecord): boolean {
+    const known = SPELLS[spell]
+    return (
+      known !== undefined &&
+      actor.stats.magic?.spells.includes(spell) === true &&
+      actor.ap >= known.apCost &&
+      actor.mana >= known.manaCost &&
+      target.side !== actor.side &&
+      target.hp > 0 &&
+      hexDistance(target.position, actor.position) <= known.range
     )
   }
 
@@ -641,7 +733,10 @@ export class BattleEngine {
     )
   }
 
-  /** Swaps the unit's stats for those of its new gear; its wounds and remaining AP carry over. */
+  /**
+   * Swaps the unit's stats for those of its new gear; its wounds and remaining AP carry over.
+   * So does its mana, kept within the new maximum: gear put on adds none to spend.
+   */
   private equip(actor: UnitRecord, action: Extract<Action, { type: 'equip' }>): BattleEvent[] {
     const { stats } = action
     const apCost = this.equipCost(actor.id)
@@ -651,6 +746,7 @@ export class BattleEngine {
     actor.gearChangePaid = true
     actor.stats = stats
     actor.hp = Math.min(actor.hp, stats.maxHp)
+    actor.mana = Math.min(actor.mana, stats.magic?.maxMana ?? 0)
     return [
       this.record<EquipEvent>({
         type: 'equip',
@@ -709,12 +805,59 @@ export class BattleEngine {
       }),
     ]
 
-    if (target.hp <= 0) {
-      target.ap = 0
-      events.push(this.record<UnitDownEvent>({ type: 'unit_down', round: this.round, unit: target.id }))
-      const end = this.checkWinner()
-      if (end) events.push(end)
-    }
+    events.push(...this.fell(target))
+    return events
+  }
+
+  /** Pays for a legal cast and resolves it: one roll to hit, and on a hit the spell's dice, as an attack draws them. */
+  private cast(actor: UnitRecord, spell: SpellId, target: UnitRecord): BattleEvent[] {
+    const { apCost, manaCost, damage } = SPELLS[spell]
+    actor.ap -= apCost
+    actor.mana -= manaCost
+    actor.gearChangePaid = false
+    actor.facing = hexDirectionTowards(actor.position, target.position)!
+    const result = resolveAttack(spellcaster(actor.stats, spell), target.stats.ac, this.rng)
+    const targetHpBefore = target.hp
+    target.hp = Math.max(0, target.hp - result.damage)
+
+    return [
+      this.record<CastEvent>({
+        type: 'cast',
+        round: this.round,
+        caster: actor.id,
+        spell,
+        target: target.id,
+        distance: hexDistance(actor.position, target.position),
+        apCost,
+        apAfter: actor.ap,
+        manaCost,
+        manaAfter: actor.mana,
+        casterFacing: actor.facing,
+        skill: actor.stats.magic!.skill,
+        attackRoll: result.attackRoll,
+        chance: result.chance,
+        defenderAc: target.stats.ac,
+        hit: result.hit,
+        critical: result.critical,
+        fumble: result.fumble,
+        damageDice: damage,
+        damage: result.damage,
+        targetHpBefore,
+        targetHpAfter: target.hp,
+      }),
+      ...this.fell(target),
+    ]
+  }
+
+  /** What follows a blow or a spell on `target`: nothing if it stands, else its fall and perhaps the battle's end. */
+  private fell(target: UnitRecord): BattleEvent[] {
+    if (target.hp > 0) return []
+    target.ap = 0
+    const events: BattleEvent[] = [
+      this.record<UnitDownEvent>({ type: 'unit_down', round: this.round, unit: target.id }),
+    ]
+    const end = this.checkWinner()
+    if (end) events.push(end)
     return events
   }
 
@@ -755,12 +898,18 @@ function snapshot(unit: UnitRecord): UnitSnapshot {
     position: unit.position,
     facing: unit.facing,
     ap: unit.ap,
+    mana: unit.mana,
     reactionReady: unit.reactionReady,
   }
 }
 
+/** The caster as `resolveAttack` sees it casting `spell`: its spell skill for its chance, the spell's dice for its damage. */
+function spellcaster(stats: CombatantStats, spell: SpellId): CombatantStats {
+  return { ...stats, toHit: stats.magic?.skill ?? 0, damage: SPELLS[spell].damage }
+}
+
 /** Joins names as "A", "A and B", "A, B and C". */
-function listNames(names: string[]): string {
+export function listNames(names: string[]): string {
   return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
 }
 
@@ -800,6 +949,16 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
         return `${roll} — HITS ${defenderName} for ${event.damage} dmg.${crit}`
       }
       return `${roll} — MISSES ${defenderName}.`
+    }
+    case 'cast': {
+      const opening = `${names[event.caster]} casts ${SPELLS[event.spell].name}: rolls ${event.attackRoll}`
+      if (event.fumble) return `${opening} — fumbles the spell!`
+      const roll = `${opening} (needs ${event.chance} or less)`
+      if (event.hit) {
+        const crit = event.critical ? ' CRITICAL HIT!' : ''
+        return `${roll} — HITS ${names[event.target]} for ${event.damage} dmg.${crit}`
+      }
+      return `${roll} — MISSES ${names[event.target]}.`
     }
     case 'move': {
       const steps = event.path.length

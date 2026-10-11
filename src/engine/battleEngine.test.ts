@@ -896,3 +896,199 @@ describe('BattleEngine gear changes', () => {
     expect(events.map((e) => e.type)).toEqual(['move'])
   })
 })
+
+describe('BattleEngine spells', () => {
+  const MAGE_STATS: CombatantStats = {
+    ...WARRIOR_STATS,
+    name: 'Mage',
+    magic: { maxMana: 18, skill: 76, spells: ['magic_arrow'] },
+  }
+  const WIDE = { cols: 9, rows: 3 }
+  const MAGE: UnitSetup = { id: 'mage', side: 'player', stats: MAGE_STATS, position: hex(1, 1) }
+  // Four hexes east of the mage: inside Magic Arrow's five, outside a sword's one.
+  const FAR_GOBLIN: UnitSetup = { ...GOBLIN, position: hex(5, 1) }
+  const battle = (units: UnitSetup[], rng: number[] = [FUMBLE]) =>
+    new BattleEngine({ board: WIDE, units }, { rng: sequence(rng) })
+  const cast = (target: string, unit = 'mage'): Action => ({ type: 'cast', unit, spell: 'magic_arrow', target })
+  const NAMED = { ...NAMES, mage: 'Mage' }
+  /** A roll of 34, within the mage's 61% against a Goblin, then a 7 on the d10. */
+  const HIT_FOR_7 = [0.66, 0.6]
+
+  it('starts a caster with its mana, and a unit without magic with none', () => {
+    const engine = battle([MAGE, FAR_GOBLIN])
+    expect(unitOf(engine, 'mage').mana).toBe(18)
+    expect(unitOf(engine, 'goblin').mana).toBe(0)
+    expect(engine.getLog()[0]).toMatchObject({ schemaVersion: 14, units: [{ mana: 18, magic: MAGE_STATS.magic }, {}] })
+  })
+
+  it('lists a cast on each foe in the spell’s range, and pays its action points and mana', () => {
+    const engine = battle([MAGE, FAR_GOBLIN, { ...GOBLIN2, position: hex(7, 1) }], HIT_FOR_7)
+    expect(nonMoves(engine)).toEqual([cast('goblin'), END_TURN])
+
+    const events = engine.step(cast('goblin'))
+
+    expect(events).toEqual([
+      expect.objectContaining({
+        type: 'cast',
+        caster: 'mage',
+        spell: 'magic_arrow',
+        target: 'goblin',
+        distance: 4,
+        apCost: 4,
+        apAfter: 4,
+        manaCost: 3,
+        manaAfter: 15,
+        casterFacing: EAST,
+        skill: 76,
+        attackRoll: 34,
+        chance: 61,
+        defenderAc: 15,
+        hit: true,
+        critical: false,
+        fumble: false,
+        damageDice: { count: 1, sides: 10, bonus: 0 },
+        damage: 7,
+        targetHpBefore: 12,
+        targetHpAfter: 5,
+      }),
+    ])
+    expect(unitOf(engine, 'mage')).toMatchObject({ ap: 4, mana: 15 })
+    expect(unitOf(engine, 'goblin').hp).toBe(5)
+    expect(formatEvent(events[0], NAMED)).toBe('Mage casts Magic Arrow: rolls 34 (needs 61 or less) — HITS Goblin for 7 dmg.')
+  })
+
+  it('keeps what mana is left from turn to turn', () => {
+    const engine = battle([MAGE, FAR_GOBLIN])
+    engine.step(cast('goblin'))
+    engine.step(cast('goblin'))
+    expect(unitOf(engine, 'mage')).toMatchObject({ ap: 0, mana: 12 })
+    engine.step(END_TURN)
+    engine.step(END_TURN)
+    expect(unitOf(engine, 'mage')).toMatchObject({ ap: 8, mana: 12 })
+  })
+
+  it('misses, fumbles and strikes critically as an attack does, with nothing for flank or arc', () => {
+    // The cleric stands beside the goblin, whose back is to the mage: a blade would gain from both.
+    const flanked = [MAGE, { ...CLERIC, position: hex(4, 1) }, { ...FAR_GOBLIN, facing: EAST }]
+    const miss = battle(flanked, [0.3]).step(cast('goblin'))
+    expect(miss).toMatchObject([{ attackRoll: 70, chance: 61, hit: false, fumble: false, damage: 0 }])
+    expect(formatEvent(miss[0], NAMED)).toBe('Mage casts Magic Arrow: rolls 70 (needs 61 or less) — MISSES Goblin.')
+
+    const fumble = battle(flanked, [FUMBLE]).step(cast('goblin'))
+    expect(fumble).toMatchObject([{ attackRoll: 100, hit: false, fumble: true }])
+    expect(formatEvent(fumble[0], NAMED)).toBe('Mage casts Magic Arrow: rolls 100 — fumbles the spell!')
+
+    // A roll of 5 is within the mage's critical chance: 2d10, here a 3 and a 3.
+    const critical = battle(flanked, [0.95, 0.2]).step(cast('goblin'))
+    expect(critical[0]).toMatchObject({ attackRoll: 5, critical: true, damage: 6 })
+    expect(formatEvent(critical[0], NAMED)).toBe(
+      'Mage casts Magic Arrow: rolls 5 (needs 61 or less) — HITS Goblin for 6 dmg. CRITICAL HIT!',
+    )
+  })
+
+  it('fells its target and wins the battle', () => {
+    const engine = battle([MAGE, FAR_GOBLIN], KILL)
+    expect(engine.step(cast('goblin')).map((e) => e.type)).toEqual(['cast', 'unit_down', 'battle_end'])
+    expect(engine.getState()).toMatchObject({ phase: 'over', winner: 'player' })
+  })
+
+  it('provokes nothing, and ends a paid-for change of gear', () => {
+    const engine = battle([MAGE, { ...GOBLIN, position: hex(2, 1) }])
+    engine.step({ type: 'equip', unit: 'mage', stats: MAGE_STATS })
+    expect(engine.equipCost('mage')).toBe(0)
+    expect(engine.step(cast('goblin')).map((e) => e.type)).toEqual(['cast'])
+    expect(engine.equipCost('mage')).toBe(EQUIP_AP_COST)
+  })
+
+  it('lists a cast for a unit with too few action points to attack', () => {
+    const quick = { ...MAGE_STATS, attackApCost: 9, attackRange: 5 }
+    const engine = battle([{ ...MAGE, stats: quick }, FAR_GOBLIN])
+    expect(nonMoves(engine)).toEqual([cast('goblin'), END_TURN])
+  })
+
+  describe('refuses a cast', () => {
+    const refused = (engine: BattleEngine, action: Action) => {
+      expect(engine.legalActions()).not.toContainEqual(action)
+      if (action.type === 'cast') expect(engine.previewCast(action.unit, action.spell, action.target)).toBeNull()
+      expect(() => engine.step(action)).toThrow(/cannot cast magic_arrow on|cannot act now/)
+    }
+    const with_ = (magic: Partial<NonNullable<CombatantStats['magic']>>, stats: Partial<CombatantStats> = {}) => ({
+      ...MAGE,
+      stats: { ...MAGE_STATS, ...stats, magic: { ...MAGE_STATS.magic!, ...magic } },
+    })
+
+    it('with too little mana', () => {
+      refused(battle([with_({ maxMana: 2 }), FAR_GOBLIN]), cast('goblin'))
+      const engine = battle([with_({ maxMana: 5 }), FAR_GOBLIN])
+      engine.step(cast('goblin'))
+      refused(engine, cast('goblin'))
+    })
+
+    it('with too few action points', () => {
+      refused(battle([with_({}, { actionPoints: 3 }), FAR_GOBLIN]), cast('goblin'))
+    })
+
+    it('out of range', () => {
+      refused(battle([MAGE, { ...GOBLIN, position: hex(7, 1) }]), cast('goblin'))
+    })
+
+    it('on an ally', () => {
+      refused(battle([MAGE, CLERIC, FAR_GOBLIN]), cast('cleric'))
+    })
+
+    it('on a fallen foe', () => {
+      const engine = battle([MAGE, FAR_GOBLIN, { ...GOBLIN2, position: hex(5, 0) }], KILL)
+      engine.step(cast('goblin'))
+      refused(engine, cast('goblin'))
+      expect(engine.legalActions()).toContainEqual(cast('goblin2'))
+    })
+
+    it('from a unit that knows no spell, or not that one', () => {
+      refused(battle([{ ...MAGE, stats: WARRIOR_STATS }, FAR_GOBLIN]), cast('goblin'))
+      refused(battle([with_({ spells: [] }), FAR_GOBLIN]), cast('goblin'))
+    })
+
+    it('out of turn', () => {
+      const engine = battle([MAGE, FAR_GOBLIN])
+      engine.step(END_TURN)
+      refused(engine, cast('goblin'))
+    })
+  })
+
+  it('previews the odds the cast is then rolled at', () => {
+    const engine = battle([MAGE, FAR_GOBLIN], HIT_FOR_7)
+    expect(engine.previewCast('mage', 'magic_arrow', 'goblin')).toEqual({ apCost: 4, manaCost: 3, hitChance: 0.61 })
+    expect(engine.step(cast('goblin'))[0]).toMatchObject({ chance: 61 })
+    // Armour takes the chance down, but never below 5 in 100.
+    const armoured = battle([MAGE, { ...FAR_GOBLIN, stats: { ...GOBLIN_STATS, ac: 90 } }])
+    expect(armoured.previewCast('mage', 'magic_arrow', 'goblin')?.hitChance).toBe(0.05)
+  })
+
+  it('keeps the mana left within the maximum of new gear, and adds none', () => {
+    const engine = battle([MAGE, FAR_GOBLIN])
+    const equip = (magic?: CombatantStats['magic']): Action => ({
+      type: 'equip',
+      unit: 'mage',
+      stats: { ...WARRIOR_STATS, name: 'Mage', ...(magic ? { magic } : {}) },
+    })
+    engine.step(equip({ ...MAGE_STATS.magic!, maxMana: 24 }))
+    expect(unitOf(engine, 'mage').mana).toBe(18)
+    engine.step(equip({ ...MAGE_STATS.magic!, maxMana: 12 }))
+    expect(unitOf(engine, 'mage').mana).toBe(12)
+    engine.step(equip())
+    expect(unitOf(engine, 'mage').mana).toBe(0)
+    engine.step(equip(MAGE_STATS.magic))
+    expect(unitOf(engine, 'mage').mana).toBe(0)
+  })
+
+  it('replays exactly from its seed and its actions, casts included', () => {
+    const run = () => {
+      const engine = new BattleEngine({ board: WIDE, units: [MAGE, CLERIC, FAR_GOBLIN, GOBLIN2] }, { seed: 7 })
+      const actions: Action[] = [cast('goblin'), cast('goblin2'), END_TURN, END_TURN, cast('goblin2'), move('mage', hex(2, 1))]
+      for (const action of actions) if (engine.getState().phase !== 'over') engine.step(action)
+      return engine.getLog()
+    }
+    expect(run()).toEqual(run())
+    expect(run().filter((e) => e.type === 'cast')).toHaveLength(3)
+  })
+})

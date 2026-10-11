@@ -48,6 +48,26 @@ describe('newWorld', () => {
     for (const l of monsters(world)) expect(ENCOUNTERS[l.encounter]).toBeTypeOf('function')
   })
 
+  it('gives every monster location loot of its own, which another world does not share', () => {
+    const lairs = monsters(world)
+    for (const l of lairs) expect(l.loot.length).toBeGreaterThan(0)
+    expect(Object.fromEntries(lairs.map((l) => [l.name, l.loot.map((item) => item.name)]))).toEqual({
+      'Goblin Raiders': ['Ring of Protection'],
+      'Kobold Scouts': ['Amulet of Focus'],
+      'Goblin Reavers': ['Ring of Fortune'],
+      'Kobold Trappers': ["Sage's Circlet"],
+      'Goblin Warband': ['Ring of Protection'],
+      'Kobold Diggers': ['Wand of Sparks'],
+      'Kobold Skulkers': ['Cloak of Shadows'],
+      'Goblin Marauders': ['Emberblade'],
+      'Kobold Lurkers': ['Hawkeye Bow'],
+      'Goblin Outriders': ['Wand of Storms'],
+      'Kobold Tunnellers': ["Sage's Circlet"],
+      'Goblin Pillagers': ['Emberblade'],
+    })
+    expect(monsters(newWorld())[0].loot).not.toBe(lairs[0].loot)
+  })
+
   it('makes monsters the more dangerous the further from home they lie', () => {
     const lairs = monsters(world).filter((l) => l.kind === 'monsters')
     const byDistance = [...lairs].sort((a, b) => hexDistance(world.party, a.position) - hexDistance(world.party, b.position))

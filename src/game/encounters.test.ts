@@ -26,9 +26,10 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter', (_id, build) => {
     expect(new Set(state.units.map((u) => `${u.position.q},${u.position.r}`)).size).toBe(state.units.length)
   })
 
-  it('lines a party of three up with a hex between each', () => {
-    const [first, ...rest] = state.units.filter((u) => u.side === 'player')
-    for (const other of rest) expect(hexDistance(first.position, other.position)).toBe(2)
+  it('lines the first three of the party up with a hex between each, and the fourth in a gap behind', () => {
+    const [first, second, third, fourth] = state.units.filter((u) => u.side === 'player')
+    for (const other of [second, third]) expect(hexDistance(first.position, other.position)).toBe(2)
+    for (const front of [first, second]) expect(hexDistance(fourth.position, front.position)).toBe(1)
   })
 
   it('fights with a party of one', () => {

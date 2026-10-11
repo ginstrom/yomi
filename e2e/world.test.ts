@@ -42,8 +42,46 @@ describe('the world map', () => {
     const battle = await game.enterBattle()
     expect(await game.scenes()).toEqual({ running: ['Battle'], paused: [] })
     expect(battle.state).toMatchObject({ round: 1, phase: 'player' })
-    expect(battle.state.units.filter((u) => u.side === 'player')).toHaveLength(3)
+    expect(battle.state.units.filter((u) => u.side === 'player')).toHaveLength(4)
     expect(battle.log[0]).toMatchObject({ type: 'battle_start', seed: 1 })
+  })
+
+  it('puts a beaten location’s loot in the baggage, from which a hero takes it and wears it', async () => {
+    const game = await games.open()
+    await game.enterBattle()
+    const over = await game.fightBattle()
+    expect(over.state.winner).toBe('player')
+    expect(over.result.at(-1)).toBe('Found: Ring of Protection.')
+    await game.click(over.buttons.result)
+    await game.waitForScenes(['World'])
+
+    const world = await game.waitFor('World')
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    const before = await game.waitFor('Inventory', (p) => p.tab === 'inventory')
+    expect(before.ground.map((slot) => slot.item)).toEqual(['ring_protection'])
+    expect(before.equipment.ring1.item).toBeNull()
+
+    // A click on an item in the baggage takes it, and a click on it in the backpack puts it on.
+    await game.click(before.ground[0])
+    const taken = await game.waitFor('Inventory', (p) => p.ground.length === 0)
+    const ring = taken.backpack.find((slot) => slot.item === 'ring_protection')!
+    expect(ring).toBeDefined()
+    await game.click(ring)
+    const worn = await game.waitFor('Inventory', (p) => p.equipment.ring1.item === 'ring_protection')
+    expect(worn.armorClass).toBe(before.armorClass + 5)
+
+    // Another hero takes over what the first puts back in the baggage.
+    await game.page.mouse.click(worn.equipment.ring1.x, worn.equipment.ring1.y, { button: 'right' })
+    const dropped = await game.waitFor('Inventory', (p) => p.ground.length === 1 && p.armorClass === before.armorClass)
+    expect(dropped.equipment.ring1.item).toBeNull()
+    await game.click(dropped.party[3])
+    const other = await game.waitFor('Inventory', (p) => p.party[3].active)
+    expect(other.ground.map((slot) => slot.item)).toEqual(['ring_protection'])
+
+    await game.press('Escape')
+    await game.waitForScenes(['World'])
   })
 
   it('pauses under the menu on Esc and resumes where it was', async () => {

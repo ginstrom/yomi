@@ -1,3 +1,5 @@
+import type { SpellId } from './spells.ts'
+
 export interface DamageRoll {
   count: number
   sides: number
@@ -22,6 +24,24 @@ export interface CombatantStats {
   attackRange: number
   /** Action points the unit gets at the start of each of its side's turns. */
   actionPoints: number
+  /** What the unit casts with; left out for a unit that knows no spell. */
+  magic?: {
+    maxMana: number
+    /** The chance in percent of a spell striking a foe of armour class 0. */
+    skill: number
+    /** In SPELL_IDS order. */
+    spells: readonly SpellId[]
+  }
+}
+
+function sameMagic(a: CombatantStats['magic'], b: CombatantStats['magic']): boolean {
+  if (!a || !b) return a === b
+  return (
+    a.maxMana === b.maxMana &&
+    a.skill === b.skill &&
+    a.spells.length === b.spells.length &&
+    a.spells.every((spell, i) => spell === b.spells[i])
+  )
 }
 
 /** Whether two stat blocks are the same in every respect. */
@@ -38,7 +58,8 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     a.weapon === b.weapon &&
     a.attackApCost === b.attackApCost &&
     a.attackRange === b.attackRange &&
-    a.actionPoints === b.actionPoints
+    a.actionPoints === b.actionPoints &&
+    sameMagic(a.magic, b.magic)
   )
 }
 
