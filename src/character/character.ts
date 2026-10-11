@@ -13,6 +13,7 @@ import {
 } from '../inventory/inventory.ts'
 import type { Attributes } from './attributes.ts'
 import { perkBonus, type PerkId } from './perks.ts'
+import type { PortraitId } from './portraits.ts'
 import { skillLevel, type SkillId } from './skills.ts'
 
 /**
@@ -24,6 +25,8 @@ import { skillLevel, type SkillId } from './skills.ts'
  */
 export interface Character {
   name: string
+  /** The face shown for it in the party's column and on its panel. */
+  portrait: PortraitId
   level: number
   /** Experience earned towards the next level; see progression.ts. */
   xp: number
@@ -214,6 +217,7 @@ export function gearChanges(before: Equipment, after: Equipment): GearChange[] {
 
 /** What a new character is made from: who it is, and what it holds in each hand to begin with. */
 export interface Build {
+  portrait: PortraitId
   attributes: Attributes
   tagged: SkillId[]
   mainHand: Item
@@ -222,6 +226,7 @@ export interface Build {
 
 /** A soldier: strong, hardy and lucky, with a sword and a shield. */
 export const WARRIOR_BUILD: Build = {
+  portrait: 'knight',
   attributes: { strength: 7, perception: 4, endurance: 7, intelligence: 4, agility: 6, luck: 7 },
   tagged: ['melee', 'unarmed'],
   mainHand: IRON_SWORD,
@@ -237,6 +242,7 @@ export function createCharacter(name: string, build: Build): Character {
   const spare = [...WEAPONS.filter((weapon) => weapon !== build.mainHand), ...(build.offHand ? [] : [OAK_SHIELD])]
   const character: Character = {
     name,
+    portrait: build.portrait,
     level: 1,
     xp: 0,
     attributes: { ...build.attributes },

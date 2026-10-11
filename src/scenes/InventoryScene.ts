@@ -31,6 +31,8 @@ import type { Point } from './boardGeometry.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
 import { soundVolume } from './audioSettings.ts'
 import { isSecondaryClick } from './clicks.ts'
+import { PartyColumn } from './PartyColumn.ts'
+import { PARTY_PANEL_W, portraitKey } from './partyPanel.ts'
 import { SlotScroll } from './slotScroll.ts'
 
 type PanelTab = InventoryProbe['tab']
@@ -40,18 +42,25 @@ const TABS: ReadonlyArray<readonly [tab: PanelTab, label: string]> = [
   ['inventory', 'Inventory'],
 ]
 
-interface InventoryData {
-  /** The party member whose panel this is. */
+/** A party member the panel can show, and what it may do with its gear there. */
+export interface PanelMember {
   character: Character
-  tab?: PanelTab
   /**
    * What changing gear costs in action points, charged once by the battle when
    * the panel closes however many items were moved; 0 if already paid for.
-   * Null or absent makes the panel view-only.
+   * Null or absent makes the member's gear view-only.
    */
   gearApCost?: number | null
   /** The pile on the hex the character stands on, which drops go onto and pick-ups come off. */
   ground?: Item[]
+}
+
+interface InventoryData {
+  /** The whole party in its order, each with a portrait beside the panel that turns the panel to it. */
+  members: PanelMember[]
+  /** The member the panel opens on. */
+  index?: number
+  tab?: PanelTab
   /** Whether skill points and perks can be spent here: on the world map, not in the thick of a battle. */
   canAdvance?: boolean
   /** The scene the panel lies over, resumed when it closes. */
@@ -77,6 +86,10 @@ const TAB_H = 32
 const TAB_SPACING = TAB_W + 12
 
 /** The character tab: attributes beside the portrait, and what they come to beside those. */
+const PORTRAIT_X = 110
+const PORTRAIT_Y = 216
+/** The portrait is shown twice the size it has in the party's column. */
+const PORTRAIT_SCALE = 4
 const ATTRIBUTES_X = 215
 const ATTRIBUTES_W = 250
 const ATTRIBUTE_ROW_H = 36
@@ -120,6 +133,10 @@ function slotPosition(startX: number, index: number, cols: number): { x: number;
 
 export class InventoryScene extends Phaser.Scene {
   private activeTab: PanelTab = 'inventory'
+  private members: PanelMember[] = []
+  /** Which of `members` the panel shows; the fields below are that member's. */
+  private index = 0
+  private column!: PartyColumn
   private character!: Character
   private stats!: CombatantStats
   private gearApCost: number | null = null
@@ -146,19 +163,25 @@ export class InventoryScene extends Phaser.Scene {
 
   preload(): void {
     for (const key of Object.values(ITEM_ICON_KEYS)) this.load.image(key, `assets/sprites/${key}.png`)
+    PartyColumn.preload(this)
   }
 
   create(data: InventoryData): void {
-    this.character = data.character
-    this.gearApCost = data.gearApCost ?? null
-    this.ground = data.ground ?? []
+    this.members = data.members
     this.canAdvance = data.canAdvance ?? false
     this.resumeKey = data.resume ?? 'Battle'
-    this.groundScroll = new SlotScroll(GROUND_COLS, GROUND_ROWS)
+    this.setMember(data.index ?? 0)
     // Right-clicking an item drops it.
     this.input.mouse?.disableContextMenu()
 
     this.dimBg = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.6).setOrigin(0.5)
+    // Over the dimmed scene's own column, which is paused with its scene and takes no clicks.
+    this.column = new PartyColumn(
+      this,
+      this.members.map((member) => member.character),
+      (index) => this.switchTo(index),
+    )
+    this.column.refresh(this.index)
     this.panel = this.add.container(0, 0)
 
     this.buildFrame()
@@ -198,6 +221,7 @@ export class InventoryScene extends Phaser.Scene {
     const startX = gridStartX(DOLL_X, BACKPACK_COLS)
     return {
       tab: this.activeTab,
+      party: this.column.probe(),
       skillPoints: this.character.skillPoints,
       perkPicks: this.character.perkPicks,
       skills: Object.fromEntries(
@@ -221,9 +245,27 @@ export class InventoryScene extends Phaser.Scene {
     }
   }
 
+  /** Turns the panel's fields to the `index`th member; `buildContent` then draws it. */
+  private setMember(index: number): void {
+    const member = this.members[index]
+    this.index = index
+    this.character = member.character
+    this.gearApCost = member.gearApCost ?? null
+    this.ground = member.ground ?? []
+    this.groundScroll = new SlotScroll(GROUND_COLS, GROUND_ROWS)
+  }
+
+  /** A click on a portrait turns the panel to that member, on the tab it is showing. */
+  private switchTo(index: number): void {
+    if (index === this.index) return
+    this.setMember(index)
+    this.buildContent()
+  }
+
   /** Draws every tab from the character as it now stands; rerun after each change to it. */
   private buildContent(): void {
     this.stats = deriveCombatStats(this.character)
+    this.column.refresh(this.index)
     this.characterContent.removeAll(true)
     this.skillsContent.removeAll(true)
     this.inventoryContent.removeAll(true)
@@ -297,16 +339,13 @@ export class InventoryScene extends Phaser.Scene {
       .setOrigin(0.5)
     this.characterContent.add([title, subtitle])
 
-    const portraitX = 110
-    const portraitY = 250
-    const portraitBg = this.add
-      .rectangle(portraitX, portraitY, 150, 210, 0x14100c, 0.8)
+    const portrait = this.add
+      .image(PORTRAIT_X, PORTRAIT_Y, portraitKey(this.character.portrait))
+      .setScale(PORTRAIT_SCALE)
+    const portraitFrame = this.add
+      .rectangle(PORTRAIT_X, PORTRAIT_Y, portrait.displayWidth, portrait.displayHeight)
       .setStrokeStyle(2, 0x6b5a3a)
-    const portrait = this.add.image(portraitX, portraitY + 92, 'warrior').setOrigin(0.5, 1)
-    // A whole-number scale keeps the sprite's pixels square.
-    const portraitScale = Math.floor(Math.min(140 / portrait.width, 184 / portrait.height))
-    portrait.setScale(portraitScale)
-    this.characterContent.add([portraitBg, portrait])
+    this.characterContent.add([portrait, portraitFrame])
 
     this.characterContent.add(this.heading('Attributes', ATTRIBUTES_X, SHEET_Y))
     ATTRIBUTE_IDS.forEach((id, row) => {
@@ -432,7 +471,7 @@ export class InventoryScene extends Phaser.Scene {
       `A skill point raises a skill by 1%, or a tagged one by ${TAGGED_SKILL_STEP}%. From ${MASTERY_LEVEL}% on, a raise costs ${MASTERY_COST} points.`,
       this.canAdvance
         ? 'Every level brings skill points.'
-        : 'Skill points and perks are spent on the world map: click a hero’s name there.',
+        : 'Skill points and perks are spent on the world map, in this panel.',
     ]
     this.skillsContent.add(
       this.add.text(SKILLS_X, SKILL_ROW_Y + SKILL_IDS.length * SKILL_ROW_H, rules.join('\n\n'), {
@@ -753,11 +792,14 @@ export class InventoryScene extends Phaser.Scene {
     const { width, height } = this.scale
     this.dimBg.setSize(width, height)
     this.dimBg.setPosition(width / 2, height / 2)
-    // Scaled down (never up) to fit, keeping 16 px clear on each side; slot hit areas and
-    // tooltips scale with the panel. At MIN_GAME_SIZE (main.ts) it fits unscaled.
-    const scale = Math.max(0, Math.min(1, (width - 32) / PANEL_W, (height - 32) / PANEL_H))
+    this.column.layout(height)
+    // Right of the party's column, and scaled down (never up) to fit there, keeping 16 px clear
+    // on each side; slot hit areas and tooltips scale with the panel. At MIN_GAME_SIZE (main.ts)
+    // it fits unscaled.
+    const free = width - PARTY_PANEL_W
+    const scale = Math.max(0, Math.min(1, (free - 32) / PANEL_W, (height - 32) / PANEL_H))
     this.panel.setScale(scale)
-    this.panel.setPosition((width - PANEL_W * scale) / 2, (height - PANEL_H * scale) / 2)
+    this.panel.setPosition(PARTY_PANEL_W + (free - PANEL_W * scale) / 2, (height - PANEL_H * scale) / 2)
   }
 
   // ---- actions -------------------------------------------------------------
@@ -800,8 +842,9 @@ export class InventoryScene extends Phaser.Scene {
     else this.showTab(tab)
   }
 
+  /** Closes the panel, telling the scene under it which member it last showed. */
   private close(): void {
     this.scene.stop()
-    this.scene.resume(this.resumeKey)
+    this.scene.resume(this.resumeKey, { member: this.index })
   }
 }

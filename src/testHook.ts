@@ -21,6 +21,16 @@ export interface ButtonProbe extends Point {
   enabled: boolean
 }
 
+/** A party member's portrait in the column at the left, by its centre on screen; see partyPanel.ts for what a click does. */
+export interface PortraitProbe extends Point {
+  name: string
+  level: number
+  /** Whether the member has skill points or a perk to spend, which its portrait marks. */
+  canAdvance: boolean
+  /** Whether it is the member marked: the one a panel opens for, and in battle the unit selected. */
+  active: boolean
+}
+
 export interface MenuProbe {
   showingOptions: boolean
   buttons: { new: ButtonProbe; continue: ButtonProbe; options: ButtonProbe; back: ButtonProbe }
@@ -35,8 +45,7 @@ export interface WorldProbe {
   view: Rect
   message: string
   buttons: { scout: ButtonProbe; wait: ButtonProbe; attack: ButtonProbe }
-  /** Each party member's line, by its centre on screen: a click opens the member's panel. */
-  party: Array<Point & { name: string; level: number; canAdvance: boolean }>
+  party: PortraitProbe[]
 }
 
 export interface BattleProbe {
@@ -49,10 +58,13 @@ export interface BattleProbe {
   scale: number
   /** `result` is the one button of the victory or defeat screen. */
   buttons: { attack: ButtonProbe; endTurn: ButtonProbe; result: ButtonProbe }
+  party: PortraitProbe[]
 }
 
 export interface InventoryProbe {
   tab: 'character' | 'skills' | 'inventory'
+  /** The portraits beside the panel: a click on one turns the panel to that member, who is then the active one. */
+  party: PortraitProbe[]
   /** What the character has waiting to spend. */
   skillPoints: number
   perkPicks: number

@@ -27,6 +27,14 @@ Infinity Engine CRPGs (Baldur's Gate 1 and 2). No third-party art is included.
 | `map_monsters.png` | `art/map/map_monsters.sprite.toml` | `WorldScene` |
 | `map_town.png` | `art/map/map_town.sprite.toml` | `WorldScene` |
 | `map_resource.png` | `art/map/map_resource.sprite.toml` | `WorldScene` |
+| `portrait_knight.png` | `art/portraits/portrait_knight.sprite.toml` | `PartyColumn`, `InventoryScene` |
+| `portrait_ranger.png` | `art/portraits/portrait_ranger.sprite.toml` | `PartyColumn`, `InventoryScene` |
+| `portrait_rogue.png` | `art/portraits/portrait_rogue.sprite.toml` | `PartyColumn`, `InventoryScene` |
+| `portrait_wizard.png` | `art/portraits/portrait_wizard.sprite.toml` | `PartyColumn`, `InventoryScene` |
+| `portrait_dwarf.png` | `art/portraits/portrait_dwarf.sprite.toml` | `PartyColumn`, `InventoryScene` |
+| `portrait_priestess.png` | `art/portraits/portrait_priestess.sprite.toml` | `PartyColumn`, `InventoryScene` |
+| `portrait_barbarian.png` | `art/portraits/portrait_barbarian.sprite.toml` | `PartyColumn`, `InventoryScene` |
+| `portrait_squire.png` | `art/portraits/portrait_squire.sprite.toml` | `PartyColumn`, `InventoryScene` |
 | `tile_light.png` | `art/tiles/tile_light.sprite.toml` | not loaded yet |
 | `tile_dark.png` | `art/tiles/tile_dark.sprite.toml` | not loaded yet |
 

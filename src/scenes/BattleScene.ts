@@ -38,6 +38,8 @@ import { ScrollingLog } from './scrollingLog.ts'
 import { SEED_KEY } from './seed.ts'
 import { soundVolume } from './audioSettings.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
+import { PartyColumn } from './PartyColumn.ts'
+import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick } from './partyPanel.ts'
 import { eventSounds, type SoundKey } from './sounds.ts'
 
 interface BattleData {
@@ -103,8 +105,6 @@ const PLATE_BAR_H = 10
 const PLATE_STATUS_Y = 27
 /** How far a nameplate's lowest row reaches below a unit's feet. */
 const PLATE_BOTTOM = PLATE_STATUS_Y + 8
-/** Below the round and hint lines; the board keeps clear of them. */
-const HEADER_BOTTOM = 64
 /** Clear space either side of the board, and between the board and the log box. */
 const BOARD_MARGIN_X = 16
 const BOARD_GAP_ABOVE_LOG = 12
@@ -142,8 +142,11 @@ export class BattleScene extends Phaser.Scene {
   private loggedEquipment = new Map<UnitId, Equipment>()
   /** What lies on the battlefield. The inventory drops onto and picks up from the pile on its unit's hex. */
   private ground = new Ground()
-  /** The unit the open inventory belongs to, the pile it is working on, and what that held when it opened. */
-  private openPile: { unit: UnitId; items: Item[]; before: Item[] } | null = null
+  /**
+   * While the character panel is open: each member's unit, the pile under it that the panel
+   * works on, and what that held when the panel opened.
+   */
+  private openPiles: Array<{ unit: UnitId; items: Item[]; before: Item[] }> | null = null
   private engine!: BattleEngine
   /** What the enemy's policy rolls with; seeded like the engine when the page's address gives a seed. */
   private enemyRng: RNG = Math.random
@@ -173,6 +176,8 @@ export class BattleScene extends Phaser.Scene {
   /** Hit-chance labels on attackable foes, drawn above the nameplates. */
   private labelLayer!: Phaser.GameObjects.Container
 
+  /** The party's portraits down the left; the one marked is the member a panel opens for. */
+  private column!: PartyColumn
   private roundText!: Phaser.GameObjects.Text
   private hintText!: Phaser.GameObjects.Text
   /** The victory or defeat screen: a shade over the battle, a banner, a line under it and one button. */
@@ -196,6 +201,7 @@ export class BattleScene extends Phaser.Scene {
   preload(): void {
     for (const kind of Object.keys(APPEARANCE)) this.load.image(kind, `assets/sprites/${kind}.png`)
     for (const key of Object.values(ITEM_ICON_KEYS)) this.load.image(key, `assets/sprites/${key}.png`)
+    PartyColumn.preload(this)
   }
 
   create(data: BattleData): void {
@@ -210,7 +216,7 @@ export class BattleScene extends Phaser.Scene {
     this.heroes = new Map(party.map((member, i) => [heroId(i), member]))
     this.loggedEquipment = new Map(party.map((member, i) => [heroId(i), { ...member.equipment }]))
     this.ground = new Ground()
-    this.openPile = null
+    this.openPiles = null
     const seed = (this.registry.get(SEED_KEY) as number | null | undefined) ?? undefined
     this.engine = new BattleEngine(setup, { seed, meta: { source: 'game', enemyPolicy: ENEMY_POLICY } })
     // A stream of its own, so the enemy's choices do not shift the engine's dice.
@@ -298,10 +304,16 @@ export class BattleScene extends Phaser.Scene {
     this.events.on(Phaser.Scenes.Events.PAUSE, () => this.setHovered(null))
     // The menu pauses the theme; the options there may have changed its volume.
     this.events.on(Phaser.Scenes.Events.RESUME, () => this.resumeMusic())
-    this.events.on(Phaser.Scenes.Events.RESUME, () => this.commitGearChange())
+    // The character panel tells the member it last showed; the menu tells nothing.
+    this.events.on(Phaser.Scenes.Events.RESUME, (_sys: Phaser.Scenes.Systems, data?: { member?: number }) => {
+      if (data?.member !== undefined) this.selectHero(data.member)
+      this.commitGearChange()
+    })
 
     this.attackButton = this.createButton('Attack', () => this.onAttack())
     this.endTurnButton = this.createButton('End Turn', () => this.onEndTurn())
+    // Under the result screen, whose shade keeps clicks off the portraits once the battle is over.
+    this.column = new PartyColumn(this, party, (index) => this.onPortrait(index))
 
     // Interactive with no handler, so the finished battle under the result screen takes no clicks.
     this.resultShade = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.7).setOrigin(0, 0).setInteractive()
@@ -325,8 +337,8 @@ export class BattleScene extends Phaser.Scene {
       this.dumpLog()
     })
 
-    this.input.keyboard?.on('keydown-I', () => this.openInventory())
-    this.input.keyboard?.on('keydown-C', () => this.openCharacter())
+    this.input.keyboard?.on('keydown-I', () => this.openPanel('inventory'))
+    this.input.keyboard?.on('keydown-C', () => this.openPanel('character'))
     this.input.keyboard?.on('keydown-S', () => this.openPanel('skills'))
     this.input.keyboard?.on('keydown-ESC', () => (this.targeting ? this.setTargeting(false) : this.openMenu()))
 
@@ -353,67 +365,103 @@ export class BattleScene extends Phaser.Scene {
         endTurn: buttonProbe(this.endTurnButton, enabled(this.endTurnButton)),
         result: buttonProbe(this.menuButton),
       },
+      party: this.column.probe(),
     }
   }
 
-  private openInventory(): void {
-    this.openPanel('inventory')
-  }
-
-  private openCharacter(): void {
-    this.openPanel('character')
-  }
-
   /**
-   * The party member whose panel opens: the selected unit, or before any is
-   * selected the first member standing.
+   * The party member whose panel opens, and whose portrait is marked: the
+   * selected unit, or before any is selected the first member standing.
    */
   private panelUnit(): UnitSnapshot | undefined {
     const heroes = this.engine.getState().units.filter((u) => this.heroes.has(u.id))
     return heroes.find((u) => u.id === this.selected) ?? heroes.find((u) => u.hp > 0) ?? heroes[0]
   }
 
+  /** The place in the party of the member `panelUnit` gives. */
+  private activeIndex(): number | null {
+    const member = this.heroes.get(this.panelUnit()?.id ?? '')
+    return member ? this.gameState.party.indexOf(member) : null
+  }
+
+  /** Makes the `index`th member's unit the selected one, if it has anything left to do this turn. */
+  private selectHero(index: number): boolean {
+    const id = heroId(index)
+    if (!this.playerControl || !this.actableUnits().includes(id)) return false
+    this.selected = id
+    this.targeting = false
+    this.setPlayerControl(true)
+    return true
+  }
+
   /**
-   * Opens the selected unit's character panel; gear can be changed there only while the
-   * player has control.
+   * A click on a portrait selects that member's unit, as a click on the unit
+   * does, and a click on the selected member's opens its panel. So does a click
+   * on a member that cannot be selected now: one that is spent or has fallen,
+   * or any of them while the enemy moves.
    */
-  private openPanel(tab: 'inventory' | 'character' | 'skills'): void {
-    if (this.scene.isPaused()) return
-    const unit = this.panelUnit()
-    if (!unit) return
-    const gearApCost = this.playerControl ? this.engine.equipCost(unit.id) : null
-    const items = this.ground.pileAt(unit.position)
-    this.openPile = { unit: unit.id, items, before: [...items] }
-    this.scene.launch('Inventory', { character: this.heroes.get(unit.id)!, tab, gearApCost, ground: items })
+  private onPortrait(index: number): void {
+    const selectable = this.playerControl && this.actableUnits().includes(heroId(index))
+    if (portraitClick(index, this.activeIndex(), selectable) === 'open') this.openPanel('character', index)
+    else this.selectHero(index)
+  }
+
+  /**
+   * Opens the character panel on a party member: the one at `index`, or else
+   * the selected unit's. Its portraits turn it to any other member, so every
+   * member's gear and ground go with it; gear can be changed there only while
+   * the player has control.
+   */
+  private openPanel(tab: 'inventory' | 'character' | 'skills', index = this.activeIndex()): void {
+    if (this.scene.isPaused() || index === null) return
+    const units = this.engine.getState().units
+    this.openPiles = []
+    const members = this.gameState.party.map((character, i) => {
+      const unit = units.find((u) => u.id === heroId(i))
+      if (!unit) return { character }
+      const items = this.ground.pileAt(unit.position)
+      this.openPiles!.push({ unit: unit.id, items, before: [...items] })
+      return { character, gearApCost: this.playerControl ? this.engine.equipCost(unit.id) : null, ground: items }
+    })
+    this.scene.launch('Inventory', { members, index, tab })
     this.scene.pause()
   }
 
   /**
-   * Tells the engine about gear changed in the inventory, which edits its character and the
-   * ground under it directly. One action covers the whole visit, so it is paid for once.
+   * Tells the engine about gear changed in the character panel, which edits its characters and
+   * the ground under them directly. One action covers the whole visit to a member, so each
+   * member whose gear changed pays for it once.
    */
   private commitGearChange(): void {
-    // The in-battle menu resumes the battle too, with no inventory behind it.
-    const pile = this.openPile
-    this.openPile = null
-    if (!pile || !this.playerControl) return
-    const member = this.heroes.get(pile.unit)!
-    const stats = deriveCombatStats(member)
-    const unit = this.engine.getState().units.find((u) => u.id === pile.unit)!
-    const { dropped, pickedUp } = pileChanges(pile.before, pile.items)
-    if (sameCombatStats(stats, unit) && dropped.length === 0 && pickedUp.length === 0) return
-    const changes = gearChanges(this.loggedEquipment.get(pile.unit)!, member.equipment)
-    this.loggedEquipment.set(pile.unit, { ...member.equipment })
-    this.refreshGroundMarks()
+    // The in-battle menu resumes the battle too, with no panel behind it.
+    const piles = this.openPiles
+    this.openPiles = null
+    if (!piles || !this.playerControl) return
+    const units = this.engine.getState().units
     const named = ({ id, name }: Item) => ({ id, name })
-    this.playerAct({
-      type: 'equip',
-      unit: pile.unit,
-      stats,
-      changes,
-      dropped: dropped.map(named),
-      pickedUp: pickedUp.map(named),
-    })
+    const actions: Action[] = []
+    for (const pile of piles) {
+      const member = this.heroes.get(pile.unit)!
+      const stats = deriveCombatStats(member)
+      const unit = units.find((u) => u.id === pile.unit)!
+      const { dropped, pickedUp } = pileChanges(pile.before, pile.items)
+      if (sameCombatStats(stats, unit) && dropped.length === 0 && pickedUp.length === 0) continue
+      const changes = gearChanges(this.loggedEquipment.get(pile.unit)!, member.equipment)
+      this.loggedEquipment.set(pile.unit, { ...member.equipment })
+      actions.push({
+        type: 'equip',
+        unit: pile.unit,
+        stats,
+        changes,
+        dropped: dropped.map(named),
+        pickedUp: pickedUp.map(named),
+      })
+    }
+    if (actions.length === 0) return
+    this.refreshGroundMarks()
+    this.setPlayerControl(false)
+    const animationMs = this.applyEvents(actions.flatMap((action) => this.engine.step(action)))
+    this.time.delayedCall(animationMs, () => this.continueBattle())
   }
 
   /** Shows the item last dropped on each hex with a pile; a unit standing there hides it. */
@@ -573,9 +621,12 @@ export class BattleScene extends Phaser.Scene {
     const width = this.scale.width
     const height = this.scale.height
 
+    // The party's column takes the left; the board, the log and the buttons share what is right of it.
+    this.column.layout(height)
+    const centreX = PARTY_PANEL_W + (width - PARTY_PANEL_W) / 2
     const buttonY = height - 50
-    this.attackButton.setPosition(width / 2 - 80, buttonY)
-    this.endTurnButton.setPosition(width / 2 + 80, buttonY)
+    this.attackButton.setPosition(centreX - 80, buttonY)
+    this.endTurnButton.setPosition(centreX + 80, buttonY)
 
     this.resultShade.setSize(width, height)
     this.bannerText.setPosition(width / 2, height / 2 - 100)
@@ -585,8 +636,8 @@ export class BattleScene extends Phaser.Scene {
     this.menuButton.setPosition(width / 2, this.resultText.y + this.resultText.height + 46)
 
     const buttonTop = buttonY - 22
-    const logBoxW = width - 40
-    const logBoxX = 20
+    const logBoxX = PARTY_PANEL_W + BOARD_MARGIN_X
+    const logBoxW = width - logBoxX - BOARD_MARGIN_X
     const logBoxY = buttonTop - LOG_BOX_GAP - LOG_BOX_H
 
     this.logBoxBg.setPosition(logBoxX, logBoxY)
@@ -604,9 +655,9 @@ export class BattleScene extends Phaser.Scene {
     const top = Math.min(0, rowInset - tallest)
     const bottom = Math.max(board.height, board.height - rowInset + PLATE_BOTTOM)
 
-    const freeLeft = BOARD_MARGIN_X
+    const freeLeft = PARTY_PANEL_W + BOARD_MARGIN_X
     const freeTop = HEADER_BOTTOM
-    const freeW = width - 2 * BOARD_MARGIN_X
+    const freeW = width - PARTY_PANEL_W - 2 * BOARD_MARGIN_X
     const freeH = logBoxY - BOARD_GAP_ABOVE_LOG - freeTop
     const scale = Math.max(0, Math.min(1, freeW / board.width, freeH / (bottom - top)))
     const floorX = freeLeft + (freeW - board.width * scale) / 2
@@ -999,6 +1050,7 @@ export class BattleScene extends Phaser.Scene {
       this.refreshHpDisplay(this.units.get(snapshot.id)!, snapshot.hp, snapshot.maxHp)
     }
     this.refreshAllApPips()
+    this.column.refresh(this.activeIndex())
   }
 
   private refreshAllApPips(): void {
@@ -1016,6 +1068,7 @@ export class BattleScene extends Phaser.Scene {
     this.setButtonEnabled(this.endTurnButton, enabled)
     this.refreshHighlights()
     this.updateRoundText()
+    this.column.refresh(this.activeIndex())
   }
 
   private setTargeting(on: boolean): void {
@@ -1152,6 +1205,8 @@ export class BattleScene extends Phaser.Scene {
     this.layout()
     for (const part of [this.resultShade, this.bannerText, this.resultText, this.menuButton]) part.setVisible(true)
     this.updateRoundText()
+    // The reward may have raised levels and healed wounds.
+    this.column.refresh(this.activeIndex())
     this.dumpLog()
   }
 

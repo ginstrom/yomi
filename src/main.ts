@@ -8,10 +8,11 @@ import { SEED_KEY, seedFromUrl } from './scenes/seed.ts'
 import { installTestHook } from './testHook.ts'
 
 /**
- * The smallest the game gets: the board and inventory fit at full size and
- * nothing clips. In a smaller window the page scrolls instead.
+ * The smallest the game gets: beside the party's column, the board and the
+ * character panel fit at full size and nothing clips. In a smaller window the
+ * page scrolls instead.
  */
-const MIN_GAME_SIZE = { width: 760, height: 560 }
+const MIN_GAME_SIZE = { width: 840, height: 560 }
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,

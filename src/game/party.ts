@@ -24,6 +24,7 @@ const STARTING_HEROES: ReadonlyArray<readonly [name: string, build: Build]> = [
   [
     'Brenna',
     {
+      portrait: 'ranger',
       attributes: { strength: 4, perception: 7, endurance: 5, intelligence: 7, agility: 7, luck: 5 },
       tagged: ['archery', 'firstAid'],
       mainHand: YEW_BOW,
@@ -32,6 +33,7 @@ const STARTING_HEROES: ReadonlyArray<readonly [name: string, build: Build]> = [
   [
     'Corwin',
     {
+      portrait: 'rogue',
       attributes: { strength: 6, perception: 5, endurance: 6, intelligence: 5, agility: 8, luck: 5 },
       tagged: ['melee', 'archery'],
       mainHand: IRON_SWORD,

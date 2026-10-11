@@ -9,7 +9,7 @@ The page is one canvas, so there is nothing to select. A test reads a scene's pr
 - `useGames()` at the top of a `describe` launches the browser and returns `open()`. After each test it fails the test if the page logged a console error, threw, or had a request fail, which is how a missing asset or a broken layout shows up. Do not catch or filter those to make a test pass.
 - `waitFor(scene, predicate)` polls a scene's probe until the predicate holds, and `waitForScenes(running, paused)` waits for a hand-over. Wait on state, never on time: there are no sleeps here.
 - `click` and `press` wait two frames after the input, so its effect is visible to the next probe.
-- Hexes are placed with `battleHexOnScreen` and `worldHexOnScreen`, from the probe's origin and scale; buttons carry their own position. Never hard-code a pixel coordinate.
+- Hexes are placed with `battleHexOnScreen` and `worldHexOnScreen`, from the probe's origin and scale; buttons and the party's portraits (`party` in the world's, the battle's and the panel's probes) carry their own position. Never hard-code a pixel coordinate.
 - `newGame`, `travelTo`, `enterBattle`, `fightBattle` and `loseBattle` are the journeys most tests start with.
 
 Games open with `?seed=` (`WINNING_SEED` unless told otherwise), so dice and enemy choices repeat from run to run, and at ten times life speed (`SPEED`), which the hook applies to every scene's timers and tweens. If a change to the rules makes `fightBattle` lose with that seed, pick another seed that wins; the test is about the hand-over after a victory, not about balance.

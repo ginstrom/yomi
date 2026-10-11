@@ -4,25 +4,40 @@ import { useGames } from './driver.ts'
 describe('a hero’s panel', () => {
   const games = useGames()
 
-  it('opens over the world map from the hero’s name, and closes back to it', async () => {
+  it('opens over the world map from the hero’s portrait, and closes back to it', async () => {
     const game = await games.open()
     const world = await game.newGame()
     expect(world.party.map((member) => [member.level, member.canAdvance])).toEqual(Array(3).fill([1, false]))
+    expect(world.party.map((member) => member.active)).toEqual([true, false, false])
 
+    // The first click marks the hero, and the second opens its panel.
     await game.click(world.party[1])
+    const marked = await game.waitFor('World', (w) => w.party[1].active)
+    expect(await game.scenes()).toEqual({ running: ['World'], paused: [] })
+    await game.click(marked.party[1])
     await game.waitForScenes(['Inventory'], ['World'])
     // Nothing to spend yet, so it opens on the hero and not on the skills.
     const panel = await game.waitFor('Inventory')
     expect(panel).toMatchObject({ tab: 'character', skillPoints: 0, perkPicks: 0 })
+    expect(panel.party.map((member) => member.active)).toEqual([false, true, false])
 
     await game.press('s')
     const skills = await game.waitFor('Inventory', (p) => p.tab === 'skills')
     expect(Object.values(skills.skills).some((skill) => skill.canRaise)).toBe(false)
     expect(skills.perks.some((perk) => perk.canTake)).toBe(false)
 
+    // A portrait beside the panel turns it to that hero, on the tab it is showing.
+    await game.click(skills.party[2])
+    const turned = await game.waitFor('Inventory', (p) => p.party[2].active)
+    expect(turned.tab).toBe('skills')
+    expect(turned.equipment.mainHand.item).not.toBe(skills.equipment.mainHand.item)
+
     await game.press('Escape')
     await game.waitForScenes(['World'])
-    expect((await game.probe('World'))!.world).toEqual(world.world)
+    const back = (await game.probe('World'))!
+    expect(back.world).toEqual(world.world)
+    // The hero the panel last showed is the one marked on the map.
+    expect(back.party.map((member) => member.active)).toEqual([false, false, true])
   })
 
   it('spends the skill points a victory brought, on the world map and not in battle', async () => {

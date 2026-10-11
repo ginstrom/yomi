@@ -50,6 +50,49 @@ describe('a battle', () => {
     expect(battle.log.at(-1)).toMatchObject({ type: 'equip', unit: 'hero_1', apCost: 1 })
   })
 
+  it('selects a hero by its portrait, and opens the hero’s panel on a second click', async () => {
+    const game = await games.open()
+    const start = await game.enterBattle()
+    expect(start.party.map((member) => member.active)).toEqual([true, false, false])
+
+    await game.click(start.party[1])
+    const selected = await game.waitFor('Battle', (b) => b.selected === 'hero_2')
+    expect(selected.party.map((member) => member.active)).toEqual([false, true, false])
+    expect(await game.scenes()).toEqual({ running: ['Battle'], paused: [] })
+
+    await game.click(selected.party[1])
+    await game.waitForScenes(['Inventory'], ['Battle'])
+    const panel = await game.waitFor('Inventory')
+    expect(panel.tab).toBe('character')
+    expect(panel.party.map((member) => member.active)).toEqual([false, true, false])
+  })
+
+  it('turns the open panel to another hero by its portrait, each paying for its own change of gear', async () => {
+    const game = await games.open()
+    await game.enterBattle()
+    await game.press('i')
+    await game.waitForScenes(['Inventory'], ['Battle'])
+    const first = await game.waitFor('Inventory')
+    await game.click(first.equipment.mainHand)
+    await game.waitFor('Inventory', (p) => p.equipment.mainHand.item === null)
+
+    await game.click(first.party[2])
+    const third = await game.waitFor('Inventory', (p) => p.party[2].active)
+    // Still on the inventory, and showing the third hero's own gear.
+    expect(third.tab).toBe('inventory')
+    expect(third.equipment.mainHand.item).not.toBeNull()
+    await game.click(third.equipment.offHand)
+    await game.waitFor('Inventory', (p) => p.equipment.offHand.item === null)
+
+    await game.press('Escape')
+    await game.waitForScenes(['Battle'])
+    const battle = await game.awaitTurn()
+    // The hero last shown is the one selected.
+    expect(battle.selected).toBe('hero_3')
+    const equips = battle.log.filter((e) => e.type === 'equip')
+    expect(equips.map((e) => [e.unit, e.apCost])).toEqual([['hero_1', 1], ['hero_3', 1]])
+  })
+
   it('pauses under the menu on Esc, resumes on Continue, and is dropped for a new game', async () => {
     const game = await games.open()
     const before = await game.enterBattle()
@@ -102,12 +145,13 @@ describe('a battle', () => {
     await game.press('i')
     await game.waitForScenes(['Inventory'], ['Battle'])
 
-    for (const [width, height] of [[1600, 900], [760, 560], [900, 1200]]) {
+    for (const [width, height] of [[1600, 900], [840, 560], [900, 1200]]) {
       await game.resize(width, height)
       expect(await game.canvasSize()).toEqual({ width, height })
       const panel = (await game.probe('Inventory'))!
       const battle = (await game.probe('Battle'))!
-      for (const at of [panel.equipment.head, panel.equipment.belt, battle.buttons.attack, battle.buttons.endTurn]) {
+      const portraits = [...panel.party, ...battle.party]
+      for (const at of [panel.equipment.head, panel.equipment.belt, battle.buttons.attack, battle.buttons.endTurn, ...portraits]) {
         expect(at.x).toBeGreaterThan(0)
         expect(at.x).toBeLessThan(width)
         expect(at.y).toBeGreaterThan(0)
@@ -117,7 +161,7 @@ describe('a battle', () => {
 
     // Smaller than the game gets: the canvas keeps its least size and the page scrolls.
     await game.resize(500, 400)
-    expect(await game.canvasSize()).toEqual({ width: 760, height: 560 })
+    expect(await game.canvasSize()).toEqual({ width: 840, height: 560 })
 
     // Clicks still land on the hexes where they are now drawn.
     await game.resize(1000, 700)

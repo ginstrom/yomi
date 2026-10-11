@@ -21,6 +21,7 @@ describe('newParty', () => {
     const party = newParty()
     expect(party.map((m) => m.level)).toEqual([1, 1, 1])
     expect(new Set(party.map((m) => m.name)).size).toBe(3)
+    expect(new Set(party.map((m) => m.portrait)).size).toBe(3)
   })
 
   it('makes each a different build of the same worth, hale and with nothing yet to spend', () => {

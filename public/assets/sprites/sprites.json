@@ -389,6 +389,246 @@
       24
     ]
   },
+  "portrait_barbarian": {
+    "anchor": [
+      16,
+      16
+    ],
+    "bounds": [
+      0,
+      0,
+      32,
+      32
+    ],
+    "canvas": "portrait",
+    "display_scale": 2,
+    "file": "portrait_barbarian.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "portrait_barbarian.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "portrait_dwarf": {
+    "anchor": [
+      16,
+      16
+    ],
+    "bounds": [
+      0,
+      0,
+      32,
+      32
+    ],
+    "canvas": "portrait",
+    "display_scale": 2,
+    "file": "portrait_dwarf.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "portrait_dwarf.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "portrait_knight": {
+    "anchor": [
+      16,
+      16
+    ],
+    "bounds": [
+      0,
+      0,
+      32,
+      32
+    ],
+    "canvas": "portrait",
+    "display_scale": 2,
+    "file": "portrait_knight.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "portrait_knight.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "portrait_priestess": {
+    "anchor": [
+      16,
+      16
+    ],
+    "bounds": [
+      0,
+      0,
+      32,
+      32
+    ],
+    "canvas": "portrait",
+    "display_scale": 2,
+    "file": "portrait_priestess.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "portrait_priestess.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "portrait_ranger": {
+    "anchor": [
+      16,
+      16
+    ],
+    "bounds": [
+      0,
+      0,
+      32,
+      32
+    ],
+    "canvas": "portrait",
+    "display_scale": 2,
+    "file": "portrait_ranger.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "portrait_ranger.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "portrait_rogue": {
+    "anchor": [
+      16,
+      16
+    ],
+    "bounds": [
+      0,
+      0,
+      32,
+      32
+    ],
+    "canvas": "portrait",
+    "display_scale": 2,
+    "file": "portrait_rogue.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "portrait_rogue.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "portrait_squire": {
+    "anchor": [
+      16,
+      16
+    ],
+    "bounds": [
+      0,
+      0,
+      32,
+      32
+    ],
+    "canvas": "portrait",
+    "display_scale": 2,
+    "file": "portrait_squire.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "portrait_squire.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "portrait_wizard": {
+    "anchor": [
+      16,
+      16
+    ],
+    "bounds": [
+      0,
+      0,
+      32,
+      32
+    ],
+    "canvas": "portrait",
+    "display_scale": 2,
+    "file": "portrait_wizard.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "file": "portrait_wizard.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
   "tile_dark": {
     "anchor": [
       0,

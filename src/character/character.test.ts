@@ -120,6 +120,7 @@ describe('deriveCombatStats', () => {
 
 describe('createCharacter', () => {
   const ARCHER: Build = {
+    portrait: 'ranger',
     attributes: { strength: 4, perception: 7, endurance: 5, intelligence: 7, agility: 7, luck: 5 },
     tagged: ['archery', 'firstAid'],
     mainHand: YEW_BOW,
@@ -131,6 +132,7 @@ describe('createCharacter', () => {
     const carried = archer.backpack.filter((slot) => slot !== null)
     expect(carried).toEqual([...WEAPONS.filter((weapon) => weapon !== YEW_BOW), OAK_SHIELD])
     expect(archer.hp).toBe(10 + 4 + 5)
+    expect(archer.portrait).toBe('ranger')
   })
 
   it('takes a copy of the build, so one character’s growth is not another’s', () => {

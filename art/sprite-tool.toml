@@ -28,6 +28,11 @@ anchor = [12, 12]
 display_scale = 2
 outline = ["k"]
 
+[canvas.portrait]         # a party member's face, filling the canvas edge to edge
+size = [32, 32]
+anchor = [16, 16]
+display_scale = 2
+
 [preview]
 scale = 6                # default upscale for `sprite preview`
 background = "#3a3a3a"

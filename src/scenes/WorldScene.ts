@@ -1,6 +1,5 @@
 import Phaser from 'phaser'
-import { maxHp, type Character } from '../character/character.ts'
-import { canAdvance, xpToNextLevel } from '../character/progression.ts'
+import { canAdvance } from '../character/progression.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import {
   linger,
@@ -18,6 +17,8 @@ import { soundVolume } from './audioSettings.ts'
 import { WORLD_LAYOUT, boardHexAt, boardHexCenter, boardPixelSize } from './boardGeometry.ts'
 import { CURSORS } from './cursors.ts'
 import { mapOrigin, rectContains, type Rect } from './mapScroll.ts'
+import { PartyColumn } from './PartyColumn.ts'
+import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick } from './partyPanel.ts'
 
 interface WorldData {
   game?: GameState
@@ -49,19 +50,12 @@ const MONSTERS_OUTLINE = 0xe53935
 const PARTY_OUTLINE = 0xffffff
 const WALK_STEP_MS = 140
 
-/** Below the turn and hint lines. */
-const HEADER_BOTTOM = 64
 /** The bars behind the header and the buttons: the map shows through them, dimmed. */
 const BAR_COLOR = 0x1d1d1d
 const BAR_ALPHA = 0.8
 const BUTTON_W = 140
 const BUTTON_H = 44
 const BUTTON_SPACING = 160
-/** The party's lines at the top right: a member with something to spend stands out, in colour and with a "+". */
-const PARTY_LINE_H = 18
-const PARTY_COLOR = '#e8c766'
-const PARTY_ADVANCE_COLOR = '#9ccc65'
-const PARTY_HOVER_COLOR = '#ffffff'
 
 export class WorldScene extends Phaser.Scene {
   private gameState!: GameState
@@ -73,7 +67,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** The whole map, most of it off screen; `follow` scrolls it to keep the party in view. */
   private mapLayer!: Phaser.GameObjects.Container
-  /** The part of the screen between the bars, where the map is in plain sight and takes clicks. */
+  /** The part of the screen between the bars and right of the party's column, where the map is in plain sight and takes clicks. */
   private view: Rect = { x: 0, y: 0, width: 0, height: 0 }
   private headerBar!: Phaser.GameObjects.Rectangle
   private footerBar!: Phaser.GameObjects.Rectangle
@@ -84,8 +78,10 @@ export class WorldScene extends Phaser.Scene {
 
   private turnText!: Phaser.GameObjects.Text
   private hintText!: Phaser.GameObjects.Text
-  /** Each party member's level, experience and hit points, a line apiece at the top right; a click opens the member's panel. */
-  private partyLines: Phaser.GameObjects.Text[] = []
+  /** The party's portraits down the left. */
+  private column!: PartyColumn
+  /** The party member marked in the column, whose panel C or a click on its portrait opens. */
+  private active = 0
   /** What last happened, above the buttons. */
   private messageText!: Phaser.GameObjects.Text
   /** Scout, Wait and Attack, shown while the party stands among monsters. */
@@ -101,6 +97,7 @@ export class WorldScene extends Phaser.Scene {
 
   preload(): void {
     this.load.image(PARTY_SPRITE, `assets/sprites/${PARTY_SPRITE}.png`)
+    PartyColumn.preload(this)
     for (const key of Object.values(LOCATION_SPRITES)) this.load.image(key, `assets/sprites/${key}.png`)
   }
 
@@ -110,6 +107,8 @@ export class WorldScene extends Phaser.Scene {
     // Phaser reuses the scene instance on restart, so field initializers don't run again.
     this.walking = false
     this.hovered = null
+    // The first member with something to spend, so one click on its portrait opens its panel.
+    this.active = Math.max(0, this.gameState.party.findIndex(canAdvance))
 
     this.mapLayer = this.add.container(0, 0)
     this.buildTerrain()
@@ -122,7 +121,6 @@ export class WorldScene extends Phaser.Scene {
     this.footerBar = this.add.rectangle(0, 0, 0, 0, BAR_COLOR, BAR_ALPHA).setOrigin(0)
     this.turnText = this.add.text(20, 16, '', { fontFamily: 'monospace', fontSize: '20px', color: '#ffffff' })
     this.hintText = this.add.text(20, 44, '', { fontFamily: 'monospace', fontSize: '13px', color: '#9e9e9e' })
-    this.partyLines = this.gameState.party.map((member, i) => this.createPartyLine(member, i))
     this.messageText = this.add
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: '15px', color: '#cfd8dc' })
       .setOrigin(0.5)
@@ -132,6 +130,7 @@ export class WorldScene extends Phaser.Scene {
       this.createButton('Wait', () => this.onLinger('wait')),
       this.createButton('Attack', () => this.onAttack()),
     ]
+    this.column = new PartyColumn(this, this.gameState.party, (index) => this.onPortrait(index))
 
     // Phaser passes the interactive objects under the pointer; a click on a button is not a map click.
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
@@ -144,9 +143,13 @@ export class WorldScene extends Phaser.Scene {
     // A paused map (menu open) mustn't leave its cursor on the overlay.
     this.events.on(Phaser.Scenes.Events.PAUSE, () => this.setHovered(null))
     this.input.keyboard?.on('keydown-ESC', () => this.openMenu())
-    this.input.keyboard?.on('keydown-C', () => this.openPanel())
-    // Back from a member's panel, where skill points and perks may have been spent.
-    this.events.on(Phaser.Scenes.Events.RESUME, () => this.refresh())
+    this.input.keyboard?.on('keydown-C', () => this.openPanel(this.active))
+    // Back from a member's panel, where skill points and perks may have been spent, and
+    // which tells the member it last showed. The menu resumes the map too, and tells nothing.
+    this.events.on(Phaser.Scenes.Events.RESUME, (_sys: Phaser.Scenes.Systems, data?: { member?: number }) => {
+      this.active = data?.member ?? this.active
+      this.refresh()
+    })
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -159,11 +162,11 @@ export class WorldScene extends Phaser.Scene {
       here
         ? `You stand before the ${here.name} (threat ${here.threat}).`
         : this.gameState.party.some(canAdvance)
-          ? 'Your heroes have grown: click a name at the top right to spend skill points.'
+          ? 'Your heroes have grown: click the portrait of one marked "+" to spend its skill points.'
           : '',
     )
     this.refresh()
-    // After the first refresh: the view starts below the party's lines, and centres on where the party stands.
+    // After the first refresh: the view centres on where the party stands.
     this.layout()
   }
 
@@ -181,10 +184,7 @@ export class WorldScene extends Phaser.Scene {
       view: this.view,
       message: this.messageText.text,
       buttons: { scout, wait, attack },
-      party: this.gameState.party.map((member, i) => {
-        const { x, y } = this.partyLines[i].getCenter()
-        return { x, y, name: member.name, level: member.level, canAdvance: canAdvance(member) }
-      }),
+      party: this.column.probe(),
     }
   }
 
@@ -251,37 +251,30 @@ export class WorldScene extends Phaser.Scene {
     return this.add.container(0, 0, [bg, text]).setSize(BUTTON_W, BUTTON_H)
   }
 
-  private createPartyLine(member: Character, index: number): Phaser.GameObjects.Text {
-    const line = this.add
-      .text(0, 10 + index * PARTY_LINE_H, '', { fontFamily: 'monospace', fontSize: '13px', color: PARTY_COLOR })
-      .setOrigin(1, 0)
-      .setInteractive({ useHandCursor: true })
-    line.on('pointerover', () => line.setColor(PARTY_HOVER_COLOR))
-    line.on('pointerout', () => line.setColor(canAdvance(member) ? PARTY_ADVANCE_COLOR : PARTY_COLOR))
-    line.on('pointerdown', () => {
-      this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
-      this.openPanel(member)
-    })
-    return line
-  }
-
   // ---- layout ---------------------------------------------------------------
 
-  /** Header bar at the top, message and buttons in a bar at the bottom, and the map filling the window behind them. */
+  /**
+   * Header bar at the top, the party's column down the left, message and
+   * buttons in a bar at the bottom, and the map filling the window behind them.
+   */
   private layout(): void {
     const { width, height } = this.scale
-    for (const line of this.partyLines) line.setX(width - 20)
+    const centreX = PARTY_PANEL_W + (width - PARTY_PANEL_W) / 2
     const buttonY = height - 50
-    this.buttons.forEach((button, i) => button.setPosition(width / 2 + (i - 1) * BUTTON_SPACING, buttonY))
+    this.buttons.forEach((button, i) => button.setPosition(centreX + (i - 1) * BUTTON_SPACING, buttonY))
     const messageY = buttonY - BUTTON_H / 2 - 26
-    this.messageText.setPosition(width / 2, messageY)
+    this.messageText.setPosition(centreX, messageY)
 
-    // A large party's lines reach below the header, and the bar reaches below them.
-    const headerBottom = Math.max(HEADER_BOTTOM, 10 + this.partyLines.length * PARTY_LINE_H + 8)
     const footerTop = messageY - 20
-    this.headerBar.setSize(width, headerBottom)
-    this.footerBar.setPosition(0, footerTop).setSize(width, height - footerTop)
-    this.view = { x: 0, y: headerBottom, width, height: Math.max(0, footerTop - headerBottom) }
+    this.headerBar.setSize(width, HEADER_BOTTOM)
+    this.footerBar.setPosition(PARTY_PANEL_W, footerTop).setSize(width - PARTY_PANEL_W, height - footerTop)
+    this.column.layout(height)
+    this.view = {
+      x: PARTY_PANEL_W,
+      y: HEADER_BOTTOM,
+      width: Math.max(0, width - PARTY_PANEL_W),
+      height: Math.max(0, footerTop - HEADER_BOTTOM),
+    }
     this.follow()
   }
 
@@ -315,14 +308,7 @@ export class WorldScene extends Phaser.Scene {
     this.partyMark.clear().lineStyle(3, PARTY_OUTLINE, 1).strokePoints(this.hexPolygon(world.party), true)
 
     this.turnText.setText(`Turn ${world.turn}`)
-    const party = this.gameState.party
-    party.forEach((member, i) => {
-      const { name, level, xp, hp } = member
-      const advance = canAdvance(member) ? '+ ' : ''
-      this.partyLines[i]
-        .setText(`${advance}${name}  Level ${level}  XP ${xp}/${xpToNextLevel(level)}  HP ${hp}/${maxHp(member)}`)
-        .setColor(advance ? PARTY_ADVANCE_COLOR : PARTY_COLOR)
-    })
+    this.column.refresh(this.active)
     this.hintText.setText(
       world.confronting !== null
         ? 'Monsters! Scout them, wait, or attack.'
@@ -420,18 +406,29 @@ export class WorldScene extends Phaser.Scene {
     if (here) this.scene.start('Battle', { game: this.gameState, location: here.id })
   }
 
+  /** A click on a portrait marks that member, and a click on the one marked opens its panel. */
+  private onPortrait(index: number): void {
+    if (portraitClick(index, this.active) === 'open') {
+      this.openPanel(index)
+      return
+    }
+    this.active = index
+    this.refresh()
+  }
+
   /**
    * Opens a party member's panel over the map, where its skill points and
-   * perks are spent: the member named, or else the first with something to
-   * spend. Not while the party walks.
+   * perks are spent, on the skills if it has any to spend. Not while the
+   * party walks.
    */
-  private openPanel(member?: Character): void {
+  private openPanel(index: number): void {
     if (this.scene.isPaused() || this.walking) return
     const party = this.gameState.party
-    const character = member ?? party.find(canAdvance) ?? party[0]
+    const character = party[index]
     if (!character) return
     const tab = canAdvance(character) ? 'skills' : 'character'
-    this.scene.launch('Inventory', { character, tab, canAdvance: true, resume: 'World' })
+    const members = party.map((member) => ({ character: member }))
+    this.scene.launch('Inventory', { members, index, tab, canAdvance: true, resume: 'World' })
     this.scene.bringToTop('Inventory')
     this.scene.pause()
   }
