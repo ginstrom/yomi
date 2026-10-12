@@ -4,6 +4,21 @@
       16,
       32
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       24,
       3,
@@ -43,6 +58,21 @@
       16,
       32
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       22,
       8,
@@ -82,6 +112,21 @@
       16,
       32
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       22,
       8,
@@ -121,6 +166,21 @@
       16,
       32
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       23,
       12,
@@ -160,6 +220,21 @@
       16,
       32
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       22,
       0,
@@ -199,6 +274,21 @@
       16,
       32
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       3,
       13,
@@ -238,6 +328,21 @@
       16,
       32
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       23,
       8,
@@ -277,6 +382,21 @@
       16,
       32
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       23,
       2,
@@ -316,6 +436,21 @@
       16,
       32
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       23,
       2,
@@ -355,6 +490,21 @@
       16,
       32
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       23,
       8,
@@ -394,6 +544,21 @@
       16,
       32
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       23,
       8,
@@ -433,6 +598,34 @@
       16,
       32
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 500
+          },
+          {
+            "frame": "idle_1",
+            "ms": 500
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "idle_0",
+            "ms": 140
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       8,
       8,
@@ -481,6 +674,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       2,
       1,
@@ -511,6 +705,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       1,
       0,
@@ -541,6 +736,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       1,
       0,
@@ -571,6 +767,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       1,
       0,
@@ -601,6 +798,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       1,
       0,
@@ -631,6 +829,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       1,
       5,
@@ -661,6 +860,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       1,
       1,
@@ -691,6 +891,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       4,
       4,
@@ -721,6 +922,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       1,
       0,
@@ -751,6 +953,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       4,
       3,
@@ -781,6 +984,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       4,
       3,
@@ -811,6 +1015,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       2,
       0,
@@ -841,6 +1046,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       3,
       2,
@@ -871,6 +1077,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       0,
       0,
@@ -901,6 +1108,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       0,
       0,
@@ -931,6 +1139,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       2,
       2,
@@ -961,6 +1170,7 @@
       10,
       10
     ],
+    "anims": {},
     "bounds": [
       2,
       2,
@@ -991,6 +1201,34 @@
       16,
       32
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 420
+          },
+          {
+            "frame": "idle_1",
+            "ms": 420
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "idle_0",
+            "ms": 140
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       2,
       0,
@@ -1039,6 +1277,25 @@
       12,
       12
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 500
+          },
+          {
+            "frame": "base",
+            "ms": 500
+          },
+          {
+            "frame": "glow",
+            "ms": 500
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       4,
       2,
@@ -1078,6 +1335,29 @@
       12,
       12
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 450
+          },
+          {
+            "frame": "glint_0",
+            "ms": 450
+          },
+          {
+            "frame": "base",
+            "ms": 450
+          },
+          {
+            "frame": "glint_1",
+            "ms": 450
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       2,
       4,
@@ -1126,6 +1406,25 @@
       12,
       12
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 550
+          },
+          {
+            "frame": "smoke_0",
+            "ms": 550
+          },
+          {
+            "frame": "smoke_1",
+            "ms": 550
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       3,
       0,
@@ -1174,6 +1473,7 @@
       16,
       16
     ],
+    "anims": {},
     "bounds": [
       0,
       0,
@@ -1204,6 +1504,7 @@
       16,
       16
     ],
+    "anims": {},
     "bounds": [
       0,
       0,
@@ -1234,6 +1535,7 @@
       16,
       16
     ],
+    "anims": {},
     "bounds": [
       0,
       0,
@@ -1264,6 +1566,7 @@
       16,
       16
     ],
+    "anims": {},
     "bounds": [
       0,
       0,
@@ -1294,6 +1597,7 @@
       16,
       16
     ],
+    "anims": {},
     "bounds": [
       0,
       0,
@@ -1324,6 +1628,7 @@
       16,
       16
     ],
+    "anims": {},
     "bounds": [
       0,
       0,
@@ -1354,6 +1659,7 @@
       16,
       16
     ],
+    "anims": {},
     "bounds": [
       0,
       0,
@@ -1384,6 +1690,7 @@
       16,
       16
     ],
+    "anims": {},
     "bounds": [
       0,
       0,
@@ -1414,6 +1721,7 @@
       0,
       0
     ],
+    "anims": {},
     "bounds": [
       0,
       0,
@@ -1444,6 +1752,7 @@
       0,
       0
     ],
+    "anims": {},
     "bounds": [
       0,
       0,
@@ -1474,6 +1783,34 @@
       16,
       32
     ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "idle_0",
+            "ms": 140
+          }
+        ],
+        "loop": true
+      }
+    },
     "bounds": [
       7,
       3,
