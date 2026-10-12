@@ -32,6 +32,8 @@ import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
 import { soundVolume } from './audioSettings.ts'
 import { isSecondaryClick } from './clicks.ts'
 import { PartyColumn } from './PartyColumn.ts'
+import { UnitFigure } from './UnitFigure.ts'
+import { gearLayers } from './unitLook.ts'
 import { PARTY_PANEL_W, portraitKey } from './partyPanel.ts'
 import { nodeHint, perkTitle } from './perkTree.ts'
 import { PerkTreeView } from './PerkTreeView.ts'
@@ -84,6 +86,8 @@ const SLOT_SIZE = 46
 const DOLL_X = 190
 const DOLL_Y = 210
 const STATS_X = 440
+/** How much the paperdoll's figure, a 32px unit sprite, is enlarged. */
+const DOLL_SCALE = 4
 /** The backpack sits under the paperdoll and the ground under the stats. */
 const BACKPACK_COLS = 6
 const GROUND_COLS = 5
@@ -636,9 +640,11 @@ export class InventoryScene extends Phaser.Scene {
       .setStrokeStyle(2, 0x4a3d28)
     this.inventoryContent.add(dollBoxBg)
 
-    const doll = this.add.image(DOLL_X, DOLL_Y + 95, 'warrior').setOrigin(0.5, 1)
-    const dollScale = Math.floor(Math.min(140 / doll.width, 180 / doll.height))
-    doll.setScale(dollScale)
+    // The hero as the battlefield shows it, holding what the slots beside it say.
+    const doll = new UnitFigure(this, 'warrior', DOLL_SCALE)
+      .setGear(gearLayers(this.character.equipment))
+      .play('idle')
+      .setPosition(DOLL_X, DOLL_Y + 95)
     this.inventoryContent.add(doll)
 
     const leftX = DOLL_X - 115

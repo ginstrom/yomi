@@ -1,0 +1,40 @@
+# A longsword, held upright in the hero's fist.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md.
+canvas = "unit"
+outline = false
+grounded = false
+
+[frames.idle_0.runs]
+2 = [[25, "k"]]
+3 = [[24, "kwk"]]
+4 = [[24, "kwlk"]]
+5 = [[24, "kwlk"]]
+6 = [[24, "kwlk"]]
+7 = [[24, "kwlk"]]
+8 = [[24, "kwlk"]]
+9 = [[24, "kwlk"]]
+10 = [[24, "kwlk"]]
+11 = [[24, "kwlk"]]
+12 = [[24, "kwlk"]]
+13 = [[24, "kwlk"]]
+14 = [[24, "kwlk"]]
+15 = [[24, "kwlk"]]
+16 = [[24, "kwlk"]]
+17 = [[24, "kwlk"]]
+18 = [[23, "OyyYOk"]]
+20 = [[25, "n"]]
+21 = [[24, "kyk"]]
+22 = [[25, "k"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it holds with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 600
+
+[variants.ember]
+swap = { l = "r", w = "o" }

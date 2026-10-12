@@ -1,0 +1,28 @@
+# An oak shield with a steel rim and boss, on the hero's other arm.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md.
+canvas = "unit"
+outline = false
+grounded = false
+
+[frames.idle_0.runs]
+13 = [[4, "kkkkk"]]
+14 = [[3, "kwllllld"]]
+15 = [[3, "klTttttt"]]
+16 = [[3, "klttlltn"]]
+17 = [[3, "kltlwwln"]]
+18 = [[3, "klttlltn"]]
+19 = [[3, "klttttnn"]]
+20 = [[4, "klttnndk"]]
+21 = [[5, "kltndk"]]
+22 = [[6, "kddk"]]
+23 = [[7, "kk"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it holds with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 600

@@ -29,3 +29,12 @@ base = """
 ........................
 ........................
 """
+
+# The eye sockets smoulder.
+[frames.glow]
+from = "base"
+runs = { 9 = [[8, "ro"], [14, "ro"]], 10 = [[8, "rr"], [14, "rr"]] }
+
+[anim.idle]
+frames = ["base", "base", "glow"]
+ms = 500

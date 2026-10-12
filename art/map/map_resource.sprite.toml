@@ -29,3 +29,16 @@ base = """
 ........................
 ........................
 """
+
+# The gold catches the light, one fleck and then another.
+[frames.glint_0]
+from = "base"
+runs = { 8 = [[10, "W"]], 16 = [[12, "W"]] }
+
+[frames.glint_1]
+from = "base"
+runs = { 11 = [[13, "W"]], 17 = [[18, "W"]] }
+
+[anim.idle]
+frames = ["base", "glint_0", "base", "glint_1"]
+ms = 450

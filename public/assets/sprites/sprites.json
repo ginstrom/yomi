@@ -1,4 +1,433 @@
 {
+  "gear_axe": {
+    "anchor": [
+      16,
+      32
+    ],
+    "bounds": [
+      24,
+      3,
+      8,
+      21
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_axe.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          24,
+          3,
+          8,
+          20
+        ],
+        "file": "gear_axe__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          24,
+          4,
+          8,
+          20
+        ],
+        "file": "gear_axe__idle_1.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_bow": {
+    "anchor": [
+      16,
+      32
+    ],
+    "bounds": [
+      22,
+      8,
+      8,
+      24
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_bow.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          22,
+          8,
+          8,
+          23
+        ],
+        "file": "gear_bow__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          22,
+          9,
+          8,
+          23
+        ],
+        "file": "gear_bow__idle_1.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_bow_hawk": {
+    "anchor": [
+      16,
+      32
+    ],
+    "bounds": [
+      22,
+      8,
+      8,
+      24
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_bow_hawk.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          22,
+          8,
+          8,
+          23
+        ],
+        "file": "gear_bow_hawk__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          22,
+          9,
+          8,
+          23
+        ],
+        "file": "gear_bow_hawk__idle_1.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_dagger": {
+    "anchor": [
+      16,
+      32
+    ],
+    "bounds": [
+      23,
+      12,
+      5,
+      12
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_dagger.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          23,
+          12,
+          5,
+          11
+        ],
+        "file": "gear_dagger__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          23,
+          13,
+          5,
+          11
+        ],
+        "file": "gear_dagger__idle_1.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_greatsword": {
+    "anchor": [
+      16,
+      32
+    ],
+    "bounds": [
+      22,
+      0,
+      9,
+      25
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_greatsword.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          22,
+          0,
+          9,
+          24
+        ],
+        "file": "gear_greatsword__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          22,
+          1,
+          9,
+          24
+        ],
+        "file": "gear_greatsword__idle_1.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_shield": {
+    "anchor": [
+      16,
+      32
+    ],
+    "bounds": [
+      3,
+      13,
+      9,
+      12
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_shield.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          3,
+          13,
+          9,
+          11
+        ],
+        "file": "gear_shield__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          3,
+          14,
+          9,
+          11
+        ],
+        "file": "gear_shield__idle_1.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_shortsword": {
+    "anchor": [
+      16,
+      32
+    ],
+    "bounds": [
+      23,
+      8,
+      6,
+      16
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_shortsword.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          23,
+          8,
+          6,
+          15
+        ],
+        "file": "gear_shortsword__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          23,
+          9,
+          6,
+          15
+        ],
+        "file": "gear_shortsword__idle_1.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_sword": {
+    "anchor": [
+      16,
+      32
+    ],
+    "bounds": [
+      23,
+      2,
+      6,
+      22
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_sword.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          23,
+          2,
+          6,
+          21
+        ],
+        "file": "gear_sword__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          23,
+          3,
+          6,
+          21
+        ],
+        "file": "gear_sword__idle_1.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_sword_ember": {
+    "anchor": [
+      16,
+      32
+    ],
+    "bounds": [
+      23,
+      2,
+      6,
+      22
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_sword_ember.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          23,
+          2,
+          6,
+          21
+        ],
+        "file": "gear_sword_ember__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          23,
+          3,
+          6,
+          21
+        ],
+        "file": "gear_sword_ember__idle_1.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_wand": {
+    "anchor": [
+      16,
+      32
+    ],
+    "bounds": [
+      23,
+      8,
+      5,
+      16
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_wand.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          23,
+          8,
+          5,
+          15
+        ],
+        "file": "gear_wand__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          23,
+          9,
+          5,
+          15
+        ],
+        "file": "gear_wand__idle_1.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_wand_storm": {
+    "anchor": [
+      16,
+      32
+    ],
+    "bounds": [
+      23,
+      8,
+      5,
+      16
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_wand_storm.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          23,
+          8,
+          5,
+          15
+        ],
+        "file": "gear_wand_storm__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          23,
+          9,
+          5,
+          15
+        ],
+        "file": "gear_wand_storm__idle_1.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
   "goblin": {
     "anchor": [
       16,
@@ -21,7 +450,25 @@
           20,
           24
         ],
-        "file": "goblin.png"
+        "file": "goblin__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          8,
+          9,
+          20,
+          23
+        ],
+        "file": "goblin__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          8,
+          8,
+          20,
+          24
+        ],
+        "file": "goblin__walk_0.png"
       }
     },
     "size": [
@@ -561,7 +1008,25 @@
           25,
           32
         ],
-        "file": "kobold.png"
+        "file": "kobold__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          2,
+          1,
+          25,
+          31
+        ],
+        "file": "kobold__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          2,
+          0,
+          25,
+          32
+        ],
+        "file": "kobold__walk_0.png"
       }
     },
     "size": [
@@ -591,7 +1056,16 @@
           16,
           18
         ],
-        "file": "map_monsters.png"
+        "file": "map_monsters__base.png"
+      },
+      "glow": {
+        "bounds": [
+          4,
+          2,
+          16,
+          18
+        ],
+        "file": "map_monsters__glow.png"
       }
     },
     "size": [
@@ -621,7 +1095,25 @@
           21,
           18
         ],
-        "file": "map_resource.png"
+        "file": "map_resource__base.png"
+      },
+      "glint_0": {
+        "bounds": [
+          2,
+          4,
+          21,
+          18
+        ],
+        "file": "map_resource__glint_0.png"
+      },
+      "glint_1": {
+        "bounds": [
+          2,
+          4,
+          21,
+          18
+        ],
+        "file": "map_resource__glint_1.png"
       }
     },
     "size": [
@@ -636,9 +1128,9 @@
     ],
     "bounds": [
       3,
-      2,
+      0,
       18,
-      20
+      22
     ],
     "canvas": "map",
     "display_scale": 2,
@@ -651,7 +1143,25 @@
           18,
           20
         ],
-        "file": "map_town.png"
+        "file": "map_town__base.png"
+      },
+      "smoke_0": {
+        "bounds": [
+          3,
+          1,
+          18,
+          21
+        ],
+        "file": "map_town__smoke_0.png"
+      },
+      "smoke_1": {
+        "bounds": [
+          3,
+          0,
+          18,
+          22
+        ],
+        "file": "map_town__smoke_1.png"
       }
     },
     "size": [
@@ -965,10 +1475,10 @@
       32
     ],
     "bounds": [
+      7,
       3,
-      2,
-      26,
-      30
+      21,
+      29
     ],
     "canvas": "unit",
     "display_scale": 3,
@@ -976,12 +1486,30 @@
     "frames": {
       "idle_0": {
         "bounds": [
+          7,
           3,
-          2,
-          26,
-          30
+          21,
+          29
         ],
-        "file": "warrior.png"
+        "file": "warrior__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          7,
+          4,
+          21,
+          28
+        ],
+        "file": "warrior__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          7,
+          3,
+          21,
+          29
+        ],
+        "file": "warrior__walk_0.png"
       }
     },
     "size": [

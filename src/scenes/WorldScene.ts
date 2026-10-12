@@ -19,13 +19,15 @@ import { WORLD_LAYOUT, boardHexAt, boardHexCenter, boardPixelSize } from './boar
 import { CURSORS } from './cursors.ts'
 import { mapOrigin, rectContains, type Rect } from './mapScroll.ts'
 import { PartyColumn } from './PartyColumn.ts'
+import { UnitFigure } from './UnitFigure.ts'
+import { gearLayers, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick } from './partyPanel.ts'
 
 interface WorldData {
   game?: GameState
 }
 
-/** Each kind of location's texture, loaded from assets/sprites/<key>.png. */
+/** Each kind of location's sprite in the atlas (art/map/), which has an `idle` animation for each. */
 const LOCATION_SPRITES: Record<LocationKind, string> = {
   monsters: 'map_monsters',
   town: 'map_town',
@@ -33,9 +35,11 @@ const LOCATION_SPRITES: Record<LocationKind, string> = {
 }
 /** Map sprites are drawn on a 24px canvas and shown at 2x. */
 const LOCATION_SCALE = 2
-/** The party is the warrior's battle sprite, shown smaller than on the battlefield. */
+/** The party is its first member as the battlefield shows it, gear and all, but smaller. */
 const PARTY_SPRITE = 'warrior'
 const PARTY_SCALE = 2
+/** Locations stir out of step: each starts this much after the one before it. */
+const LOCATION_STAGGER_MS = 310
 /** How far below a hex's centre the party's feet stand, and a location's name starts. */
 const PARTY_FEET_Y = 20
 const LABEL_Y = 14
@@ -75,7 +79,7 @@ export class WorldScene extends Phaser.Scene {
   /** The route a click on the hovered hex would walk. */
   private hoverMarks!: Phaser.GameObjects.Graphics
   private partyMark!: Phaser.GameObjects.Graphics
-  private party!: Phaser.GameObjects.Image
+  private party!: UnitFigure
 
   private turnText!: Phaser.GameObjects.Text
   private hintText!: Phaser.GameObjects.Text
@@ -97,9 +101,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image(PARTY_SPRITE, `assets/sprites/${PARTY_SPRITE}.png`)
     PartyColumn.preload(this)
-    for (const key of Object.values(LOCATION_SPRITES)) this.load.image(key, `assets/sprites/${key}.png`)
   }
 
   create(data: WorldData): void {
@@ -149,6 +151,7 @@ export class WorldScene extends Phaser.Scene {
     // which tells the member it last showed. The menu resumes the map too, and tells nothing.
     this.events.on(Phaser.Scenes.Events.RESUME, (_sys: Phaser.Scenes.Systems, data?: { member?: number }) => {
       this.active = data?.member ?? this.active
+      this.refreshPartyGear()
       this.refresh()
       this.save()
     })
@@ -216,10 +219,14 @@ export class WorldScene extends Phaser.Scene {
   /** Every location's sprite, then the party, then the names over them all so none is hidden. */
   private buildLocations(): void {
     const labels: Phaser.GameObjects.Text[] = []
-    for (const location of this.world.locations) {
+    for (const [i, location] of this.world.locations.entries()) {
       const { x, y } = boardHexCenter(location.position, WORLD_LAYOUT)
+      const sprite = LOCATION_SPRITES[location.kind]
       this.mapLayer.add(
-        this.add.image(x, y + LOCATION_Y, LOCATION_SPRITES[location.kind]).setScale(LOCATION_SCALE),
+        this.add
+          .sprite(x, y + LOCATION_Y, SPRITE_ATLAS, spriteFrame(sprite, 'base'))
+          .setScale(LOCATION_SCALE)
+          .play({ key: spriteAnim(sprite, 'idle'), delay: (i * LOCATION_STAGGER_MS) % 1000 }),
       )
       labels.push(
         this.add
@@ -233,9 +240,15 @@ export class WorldScene extends Phaser.Scene {
           .setOrigin(0.5, 0),
       )
     }
-    this.party = this.add.image(0, 0, PARTY_SPRITE).setScale(PARTY_SCALE).setOrigin(0.5, 1)
+    this.party = new UnitFigure(this, PARTY_SPRITE, PARTY_SCALE).play('idle')
+    this.refreshPartyGear()
     this.mapLayer.add(this.party)
     this.mapLayer.add(labels)
+  }
+
+  /** Shows the party's figure holding what its first member does now. */
+  private refreshPartyGear(): void {
+    this.party.setGear(gearLayers(this.gameState.party[0]?.equipment ?? {}))
   }
 
   private createButton(label: string, onClick: () => void): Phaser.GameObjects.Container {
@@ -366,14 +379,18 @@ export class WorldScene extends Phaser.Scene {
     // The journey is made as far as the world goes; the walk only shows it.
     this.save()
     this.refreshWalking()
+    this.party.play('walk')
     this.tweens.chain({
       targets: this.party,
       tweens: route.map((h) => {
         const { x, y } = boardHexCenter(h, WORLD_LAYOUT)
         // The party sprite is drawn facing right.
-        return { x, y: y + PARTY_FEET_Y, duration: WALK_STEP_MS, onStart: () => this.party.setFlipX(x < this.party.x) }
+        return { x, y: y + PARTY_FEET_Y, duration: WALK_STEP_MS, onStart: () => this.party.faceLeft(x < this.party.x) }
       }),
-      onComplete: () => this.arrive(),
+      onComplete: () => {
+        this.party.play('idle')
+        this.arrive()
+      },
     })
   }
 

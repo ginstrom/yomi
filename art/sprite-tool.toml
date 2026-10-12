@@ -40,13 +40,14 @@ background = "#3a3a3a"
 # `sprite build` writes every [[export]] target. `frames` writes one PNG per frame.
 [[export]]
 type = "frames"
-out = "../public/assets/sprites"   # BattleScene loads assets/sprites/<kind>.png
+out = "../public/assets/sprites"   # icons and portraits are loaded as assets/sprites/<id>.png
 
-# [[export]]
-# type = "phaser"
-# out = "../public/assets/sprites"
-# name = "atlas"         # atlas.png, atlas.json, atlas.anims.json
-#
+# One sheet of every frame, with the animations: what the units, their gear and the map's sprites are shown from.
+[[export]]
+type = "phaser"
+out = "../public/assets/sprites"
+name = "atlas"           # atlas.png, atlas.json, atlas.anims.json; BootScene loads them
+
 # [[export]]
 # type = "godot"
 # out = "../assets/sprites"

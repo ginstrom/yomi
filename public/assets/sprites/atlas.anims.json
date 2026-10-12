@@ -1,0 +1,344 @@
+{
+  "anims": [
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_axe/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_axe/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_axe/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_bow/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_bow/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_bow/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_bow_hawk/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_bow_hawk/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_bow_hawk/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_dagger/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_dagger/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_dagger/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_greatsword/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_greatsword/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_greatsword/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_shield/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_shield/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_shield/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_shortsword/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_shortsword/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_shortsword/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_sword/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_sword/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_sword/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_sword_ember/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_sword_ember/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_sword_ember/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_wand/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_wand/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_wand/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_wand_storm/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_wand_storm/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_wand_storm/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 500,
+          "frame": "goblin/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 500,
+          "frame": "goblin/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "goblin/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "goblin/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "goblin/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "goblin/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 420,
+          "frame": "kobold/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 420,
+          "frame": "kobold/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "kobold/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "kobold/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "kobold/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "kobold/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 500,
+          "frame": "map_monsters/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 500,
+          "frame": "map_monsters/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 500,
+          "frame": "map_monsters/glow",
+          "key": "atlas"
+        }
+      ],
+      "key": "map_monsters/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 450,
+          "frame": "map_resource/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 450,
+          "frame": "map_resource/glint_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 450,
+          "frame": "map_resource/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 450,
+          "frame": "map_resource/glint_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "map_resource/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 550,
+          "frame": "map_town/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 550,
+          "frame": "map_town/smoke_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 550,
+          "frame": "map_town/smoke_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "map_town/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "warrior/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "warrior/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "warrior/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "warrior/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "warrior/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "warrior/walk",
+      "repeat": -1
+    }
+  ]
+}

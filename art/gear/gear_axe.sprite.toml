@@ -1,0 +1,36 @@
+# A battle axe: one broad blade on a long haft.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md.
+canvas = "unit"
+outline = false
+grounded = false
+
+[frames.idle_0.runs]
+3 = [[25, "k"]]
+4 = [[24, "knkkkk"]]
+5 = [[24, "knllllk"]]
+6 = [[24, "knlwwwwk"]]
+7 = [[24, "knlwwwwk"]]
+8 = [[24, "knlwwwwk"]]
+9 = [[24, "knllllk"]]
+10 = [[24, "knkkkk"]]
+11 = [[24, "knk"]]
+12 = [[24, "knk"]]
+13 = [[24, "knk"]]
+14 = [[24, "knk"]]
+15 = [[24, "knk"]]
+16 = [[24, "knk"]]
+17 = [[24, "knk"]]
+18 = [[24, "knk"]]
+20 = [[25, "n"]]
+21 = [[24, "knk"]]
+22 = [[25, "k"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it holds with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 600

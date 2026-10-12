@@ -1,0 +1,27 @@
+# A dagger: a narrow blade a hand long.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md.
+canvas = "unit"
+outline = false
+grounded = false
+
+[frames.idle_0.runs]
+12 = [[25, "k"]]
+13 = [[24, "kwk"]]
+14 = [[24, "kwk"]]
+15 = [[24, "kwk"]]
+16 = [[24, "kwk"]]
+17 = [[23, "kkwkk"]]
+18 = [[23, "kyyYk"]]
+20 = [[25, "n"]]
+21 = [[24, "kyk"]]
+22 = [[25, "k"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it holds with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 600

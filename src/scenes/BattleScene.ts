@@ -42,6 +42,8 @@ import { SEED_KEY } from './seed.ts'
 import { soundVolume } from './audioSettings.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
 import { PartyColumn } from './PartyColumn.ts'
+import { UnitFigure } from './UnitFigure.ts'
+import { gearLayers } from './unitLook.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick } from './partyPanel.ts'
 import { eventSounds, type SoundKey } from './sounds.ts'
 
@@ -69,7 +71,7 @@ type BoardIntent =
 interface Unit {
   /** The unit's body and shadow, positioned at its feet and depth-sorted with the other units. */
   container: Phaser.GameObjects.Container
-  sprite: Phaser.GameObjects.Sprite
+  figure: UnitFigure
   /**
    * Name, HP and AP, drawn over every unit in the lower half of the unit's own
    * hex. Plates sit the same way in every hex, so neighbours' plates never collide.
@@ -135,14 +137,16 @@ const ENEMY_POLICY: PolicyName = 'aggressive'
 const DEFAULT_ENCOUNTER: EncounterId = 'goblin_raid'
 
 /**
- * How to draw each kind of unit; each texture is loaded from assets/sprites/<kind>.png.
- * Every unit sprite is a 32px canvas shown at 3x, so a small creature is drawn small, not scaled down.
+ * Every unit sprite is a 32px canvas shown at 3x, so a small creature is drawn small, not scaled
+ * down. A kind's sprite is the atlas's of the same name (art/units/<kind>.sprite.toml).
  */
-const APPEARANCE: Record<UnitKind, { displayHeight: number }> = {
-  warrior: { displayHeight: 96 },
-  goblin: { displayHeight: 96 },
-  kobold: { displayHeight: 96 },
-}
+const UNIT_SCALE = 3
+const UNIT_HEIGHT = 32 * UNIT_SCALE
+/** Units breathe out of step: each starts this much after the one before it. */
+const IDLE_STAGGER_MS = 230
+/** How far a unit leans into its strike, and how long the lean out and back takes. */
+const LUNGE_PX = 10
+const LUNGE_MS = 70
 
 export class BattleScene extends Phaser.Scene {
   private gameState!: GameState
@@ -220,7 +224,6 @@ export class BattleScene extends Phaser.Scene {
   }
 
   preload(): void {
-    for (const kind of Object.keys(APPEARANCE)) this.load.image(kind, `assets/sprites/${kind}.png`)
     for (const key of Object.values(ITEM_ICON_KEYS)) this.load.image(key, `assets/sprites/${key}.png`)
     PartyColumn.preload(this)
   }
@@ -275,7 +278,8 @@ export class BattleScene extends Phaser.Scene {
     this.floorLayer.add(this.groundMarks)
     this.unitLayer = this.add.container(0, 0)
     this.plateLayer = this.add.container(0, 0)
-    this.units = new Map(fielded.map((u) => [u.id, this.createUnit(u.name, kinds[u.id])]))
+    this.units = new Map(fielded.map((u, i) => [u.id, this.createUnit(u.name, kinds[u.id], i * IDLE_STAGGER_MS)]))
+    this.refreshGear()
     this.labelLayer = this.add.container(0, 0)
 
     this.roundText = this.add
@@ -406,7 +410,7 @@ export class BattleScene extends Phaser.Scene {
   /** Others may stand on a fallen unit's hex, so its plate goes rather than collide with theirs. */
   private showFallen(id: UnitId): void {
     const unit = this.units.get(id)!
-    unit.sprite.setAlpha(0.4)
+    unit.figure.stop().setFigureAlpha(0.4)
     unit.plate.setVisible(false)
   }
 
@@ -500,6 +504,7 @@ export class BattleScene extends Phaser.Scene {
     // The in-battle menu resumes the battle too, with no panel behind it.
     const piles = this.openPiles
     this.openPiles = null
+    this.refreshGear()
     if (!piles || !this.playerControl) return
     const units = this.engine.getState().units
     const named = ({ id, name }: Item) => ({ id, name })
@@ -526,6 +531,10 @@ export class BattleScene extends Phaser.Scene {
     this.setPlayerControl(false)
     const animationMs = this.applyEvents(actions.flatMap((action) => this.engine.step(action)))
     this.time.delayedCall(animationMs, () => this.continueBattle())
+  }
+
+  private standing(id: UnitId): boolean {
+    return this.engine.getState().units.some((u) => u.id === id && u.hp > 0)
   }
 
   /** Shows the item last dropped on each hex with a pile; a unit standing there hides it. */
@@ -587,16 +596,15 @@ export class BattleScene extends Phaser.Scene {
     this.floorLayer.add(floor)
   }
 
-  private createUnit(name: string, kind: UnitKind): Unit {
-    const { displayHeight } = APPEARANCE[kind]
-    const sprite = this.add.sprite(0, 0, kind)
-    const tex = this.textures.get(kind).getSourceImage()
-    const aspect = tex.width / tex.height
-    sprite.setDisplaySize(displayHeight * aspect, displayHeight)
-    sprite.setOrigin(0.5, 1)
+  /** Shows each hero holding what its character does now. */
+  private refreshGear(): void {
+    for (const [id, member] of this.heroes) this.units.get(id)?.figure.setGear(gearLayers(member.equipment))
+  }
 
-    const shadow = this.add.ellipse(0, 0, displayHeight * 0.55, displayHeight * 0.18, 0x000000, 0.35)
-    const container = this.add.container(0, 0, [shadow, sprite])
+  private createUnit(name: string, kind: UnitKind, idleDelayMs: number): Unit {
+    const figure = new UnitFigure(this, kind, UNIT_SCALE).play('idle', idleDelayMs)
+    const shadow = this.add.ellipse(0, 0, UNIT_HEIGHT * 0.55, UNIT_HEIGHT * 0.18, 0x000000, 0.35)
+    const container = this.add.container(0, 0, [shadow, figure])
     this.unitLayer.add(container)
 
     // An outline keeps plate text legible over the floor, highlights and other units.
@@ -623,7 +631,7 @@ export class BattleScene extends Phaser.Scene {
     const plate = this.add.container(0, 0, [nameText, hpBarBg, hpBarFill, hpText, facingArrow, apPips])
     this.plateLayer.add(plate)
 
-    return { container, sprite, plate, hpBarBg, hpBarFill, hpText, facingArrow, apPips }
+    return { container, figure, plate, hpBarBg, hpBarFill, hpText, facingArrow, apPips }
   }
 
   private createButton(label: string, onClick: () => void): Phaser.GameObjects.Container {
@@ -716,8 +724,7 @@ export class BattleScene extends Phaser.Scene {
     // top row and nameplates hang below the bottom row.
     const board = boardPixelSize(this.board.size)
     const rowInset = boardHexCenter({ q: 0, r: 0 }).y
-    const tallest = Math.max(...Object.values(APPEARANCE).map((a) => a.displayHeight))
-    const top = Math.min(0, rowInset - tallest)
+    const top = Math.min(0, rowInset - UNIT_HEIGHT)
     const bottom = Math.max(board.height, board.height - rowInset + PLATE_BOTTOM)
 
     const freeLeft = PARTY_PANEL_W + BOARD_MARGIN_X
@@ -749,7 +756,7 @@ export class BattleScene extends Phaser.Scene {
     const unit = this.units.get(id)!
     const { x, y } = hexToPixel(HEX_DIRECTIONS[facing], 1)
     // Sprites are drawn facing right.
-    unit.sprite.setFlipX(x < 0)
+    unit.figure.faceLeft(x < 0)
     unit.facingArrow.setRotation(Math.atan2(y * FLOOR_SQUASH_Y, x))
   }
 
@@ -1115,6 +1122,7 @@ export class BattleScene extends Phaser.Scene {
     }
     if (event.type === 'attack') {
       this.faceUnit(event.attacker, event.attackerFacing)
+      this.lunge(event.attacker, event.defender)
       const defender = this.units.get(event.defender)!
       this.flashHit(defender, event.hit)
       const maxHp = this.engine.getState().units.find((u) => u.id === event.defender)!.maxHp
@@ -1134,7 +1142,7 @@ export class BattleScene extends Phaser.Scene {
   private flyBolt(from: UnitId, to: UnitId, onArrive: () => void): void {
     const chest = (id: UnitId) => {
       const { x, y } = this.units.get(id)!.container
-      return { x, y: y - APPEARANCE.warrior.displayHeight / 3 }
+      return { x, y: y - UNIT_HEIGHT / 3 }
     }
     const start = chest(from)
     const bolt = this.add.graphics({ x: start.x, y: start.y })
@@ -1152,12 +1160,23 @@ export class BattleScene extends Phaser.Scene {
     })
   }
 
+  /** Leans a unit into its strike and back; its hex, plate and shadow stay where they are. */
+  private lunge(id: UnitId, at: UnitId): void {
+    const { figure, container } = this.units.get(id)!
+    const target = this.units.get(at)!.container
+    const reach = new Phaser.Math.Vector2(target.x - container.x, target.y - container.y).setLength(LUNGE_PX)
+    this.tweens.add({ targets: figure, x: reach.x, y: reach.y, duration: LUNGE_MS, yoyo: true, ease: 'Quad.easeOut' })
+  }
+
   /** Walks a unit along its path, turning it towards each step as it takes it. */
   private animateMove(id: UnitId, from: Hex, path: readonly Hex[]): void {
     if (path.length === 0) return
-    const { container, plate } = this.units.get(id)!
+    const { container, plate, figure } = this.units.get(id)!
+    figure.play('walk')
     this.tweens.chain({
       targets: [container, plate],
+      // A unit cut down on its way stays down.
+      onComplete: () => this.standing(id) && figure.play('idle'),
       tweens: path.map((h, i) => ({
         ...boardHexCenter(h),
         duration: MOVE_STEP_MS,
@@ -1363,8 +1382,8 @@ export class BattleScene extends Phaser.Scene {
 
   private flashHit(unit: Unit, hit: boolean): void {
     if (!hit) return
-    unit.sprite.setTint(0xff8a80)
-    this.time.delayedCall(150, () => unit.sprite.clearTint())
+    unit.figure.setFigureTint(0xff8a80)
+    this.time.delayedCall(150, () => unit.figure.setFigureTint(null))
   }
 
   private endBattle(): void {

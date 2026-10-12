@@ -29,3 +29,16 @@ base = """
 ........................
 ........................
 """
+
+# A puff of smoke climbs from the chimney.
+[frames.smoke_0]
+from = "base"
+runs = { 2 = [[15, "ww"]] }
+
+[frames.smoke_1]
+from = "base"
+runs = { 1 = [[17, "ww"]] }
+
+[anim.idle]
+frames = ["base", "smoke_0", "smoke_1"]
+ms = 550

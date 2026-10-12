@@ -1,0 +1,31 @@
+# A shortsword: the longsword's hilt under a shorter blade.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md.
+canvas = "unit"
+outline = false
+grounded = false
+
+[frames.idle_0.runs]
+8 = [[25, "k"]]
+9 = [[24, "kwk"]]
+10 = [[24, "kwlk"]]
+11 = [[24, "kwlk"]]
+12 = [[24, "kwlk"]]
+13 = [[24, "kwlk"]]
+14 = [[24, "kwlk"]]
+15 = [[24, "kwlk"]]
+16 = [[24, "kwlk"]]
+17 = [[24, "kwlk"]]
+18 = [[23, "OyyYOk"]]
+20 = [[25, "n"]]
+21 = [[24, "kyk"]]
+22 = [[25, "k"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it holds with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 600
