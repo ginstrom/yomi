@@ -26,7 +26,7 @@ const warriorAt = (level: number) => ({ ...createWarrior(), level })
 
 describe('PERKS', () => {
   it('gives every perk a name, a description, a rank to take and something it does', () => {
-    expect(PERK_IDS).toHaveLength(16)
+    expect(PERK_IDS).toHaveLength(19)
     for (const id of PERK_IDS) {
       const perk: Perk = PERKS[id]
       expect(perk.name.length * perk.description.length).toBeGreaterThan(0)
@@ -83,13 +83,25 @@ describe('the perk tree', () => {
 
 describe('qualifiesFor', () => {
   it('asks for the perk’s level', () => {
-    expect(availablePerks(warriorAt(2))).toEqual([])
-    expect(qualifiesFor(warriorAt(3), 'toughness')).toBe(true)
+    // A new character may take the perks of level 1; the ones that raise an attribute wait for level 3.
+    expect(availablePerks(warriorAt(1))).toEqual(['toughness', 'dodger', 'heavy_hand', 'keen_eye', 'weapon_training'])
+    expect(qualifiesFor(warriorAt(2), 'gain_strength')).toBe(false)
+    expect(qualifiesFor(warriorAt(3), 'gain_strength')).toBe(true)
+    const hardy = { ...warriorAt(5), perks: { toughness: 1 } }
+    expect(qualifiesFor(hardy, 'tireless')).toBe(false)
+    expect(qualifiesFor({ ...hardy, level: 6 }, 'tireless')).toBe(true)
   })
 
   it('asks for the perk’s attributes', () => {
     const warrior = warriorAt(3)
-    expect(availablePerks(warrior)).toEqual(['toughness', 'dodger', 'heavy_hand', 'keen_eye', ...Object.values(TRUNK_PERKS)])
+    expect(availablePerks(warrior)).toEqual([
+      'toughness',
+      'dodger',
+      'heavy_hand',
+      'keen_eye',
+      'weapon_training',
+      ...Object.values(TRUNK_PERKS),
+    ])
     expect(qualifiesFor(warrior, 'deadly_aim')).toBe(false)
     warrior.attributes.perception = 6
     expect(qualifiesFor(warrior, 'deadly_aim')).toBe(true)
@@ -98,14 +110,28 @@ describe('qualifiesFor', () => {
   it('asks for the perk’s skills: Magic Arrow at Magic 50% and not at 49%', () => {
     const warrior = warriorAt(3)
     warrior.perkPicks = 1
-    warrior.trained.magic = 13
+    warrior.trained.magic = 41
     expect(skillLevel(warrior, 'magic')).toBe(49)
     expect(qualifiesFor(warrior, 'magic_arrow')).toBe(false)
     expect(takePerk(warrior, 'magic_arrow')).toBe(false)
     expect(knownSpells(warrior)).toEqual([])
-    warrior.trained.magic = 14
+    warrior.trained.magic = 42
     expect(takePerk(warrior, 'magic_arrow')).toBe(true)
     expect(knownSpells(warrior)).toEqual(['magic_arrow'])
+  })
+
+  it('counts what a skill perk adds: Arcane Study can carry a mage to Magic Arrow', () => {
+    const mage = warriorAt(1)
+    mage.attributes.intelligence = 5
+    mage.perkPicks = 3
+    mage.trained.magic = 30
+    expect(skillLevel(mage, 'magic')).toBe(40)
+    expect(qualifiesFor(mage, 'magic_arrow')).toBe(false)
+    expect(takePerk(mage, 'arcane_study')).toBe(true)
+    expect(takePerk(mage, 'arcane_study')).toBe(true)
+    expect(takePerk(mage, 'arcane_study')).toBe(false)
+    expect(skillLevel(mage, 'magic')).toBe(50)
+    expect(takePerk(mage, 'magic_arrow')).toBe(true)
   })
 
   it('asks for a rank of the perk it grows from', () => {
@@ -161,6 +187,18 @@ describe('perkBonus', () => {
   })
 })
 
+describe('a skill perk', () => {
+  it('adds 5% a rank to its skill and to no other, for two ranks', () => {
+    const warrior = createWarrior()
+    const before = SKILL_IDS.map((id) => skillLevel(warrior, id))
+    warrior.perks = { weapon_training: 2, marksmanship: 1 }
+    expect(SKILL_IDS.map((id) => skillLevel(warrior, id))).toEqual([before[0] + 10, before[1] + 5, before[2]])
+    for (const id of ['weapon_training', 'marksmanship', 'arcane_study'] as const) {
+      expect(PERKS[id]).toMatchObject({ ranks: 2, level: 1 })
+    }
+  })
+})
+
 describe('attributeLevel', () => {
   it('is what the character was born with and what its perks add', () => {
     const warrior = createWarrior()
@@ -183,7 +221,7 @@ describe('knownSpells', () => {
 
 describe('describePerkRequirements', () => {
   it('lists the level, then attributes and skills, then the perk before it', () => {
-    expect(describePerkRequirements('toughness')).toBe('Level 3, Endurance 5')
+    expect(describePerkRequirements('toughness')).toBe('Level 1, Endurance 5')
     expect(describePerkRequirements('tireless')).toBe('Level 6, Endurance 6, Agility 6, Toughness')
     expect(describePerkRequirements('magic_arrow')).toBe('Level 1, Magic 50%')
     expect(describePerkRequirements('gain_luck')).toBe('Level 3')

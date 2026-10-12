@@ -1,11 +1,12 @@
 import type { Attributes } from './attributes.ts'
 import type { Character } from './character.ts'
-import { attributesOf } from './perks.ts'
+import { attributesOf, perkBonus } from './perks.ts'
 
 /**
- * Skills, each a percentage. A skill starts from the character's attributes,
- * a tagged one `TAG_BONUS` higher, and is raised with the skill points every
- * level brings (progression.ts). A weapon skill is the wielder's chance to
+ * Skills, each a percentage. A skill starts low, from the character's
+ * attributes alone, a tagged one `TAG_BONUS` higher, and is raised with the
+ * skill points of creation (creation.ts) and of every level (progression.ts),
+ * and by the perk that trains it. A weapon skill is the wielder's chance to
  * hit with that kind of weapon, before the foe's armour (character.ts), and
  * Magic is the chance of a spell or a wand striking.
  */
@@ -25,17 +26,17 @@ export const SKILLS: Record<SkillId, SkillInfo> = {
   melee: {
     name: 'Melee Weapons',
     description: 'Chance to hit with a blade, an axe or bare hands',
-    base: ({ strength, agility }) => 30 + 2 * (strength + agility),
+    base: ({ strength, agility }) => strength + agility,
   },
   archery: {
     name: 'Archery',
     description: 'Chance to hit with a bow',
-    base: ({ perception, agility }) => 30 + 2 * (perception + agility),
+    base: ({ perception, agility }) => perception + agility,
   },
   magic: {
     name: 'Magic',
     description: 'Chance of a spell or a wand striking, and what spell perks ask for',
-    base: ({ intelligence }) => 20 + 4 * intelligence,
+    base: ({ intelligence }) => 2 * intelligence,
   },
 }
 
@@ -56,10 +57,14 @@ export function isTagged(character: Character, skill: SkillId): boolean {
   return character.tagged.includes(skill)
 }
 
-/** The character's level in `skill`, in percent: its attributes' share, its tag's and what it has trained. */
+/**
+ * The character's level in `skill`, in percent: its attributes' share, its
+ * tag's, what it has trained and what its perks add. This is the skill
+ * everywhere, for a chance to hit as for what a perk asks.
+ */
 export function skillLevel(character: Character, skill: SkillId): number {
   const tag = isTagged(character, skill) ? TAG_BONUS : 0
-  return SKILLS[skill].base(attributesOf(character)) + tag + character.trained[skill]
+  return SKILLS[skill].base(attributesOf(character)) + tag + character.trained[skill] + perkBonus(character, skill)
 }
 
 /** How many skill points the next raise of `skill` costs the character, or null if it is as high as it goes. */

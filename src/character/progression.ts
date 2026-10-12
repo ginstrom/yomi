@@ -113,7 +113,17 @@ export function takePerk(character: Character, perk: PerkId): boolean {
  * when none of these is on offer, in the order of `PERKS`, where the perks
  * that raise an attribute come last. Tireless is not on offer until Toughness is taken.
  */
-const AUTO_PERKS: readonly PerkId[] = ['tireless', 'toughness', 'dodger', 'heavy_hand', 'deadly_aim', 'keen_eye']
+const AUTO_PERKS: readonly PerkId[] = [
+  'tireless',
+  'toughness',
+  'dodger',
+  'heavy_hand',
+  'deadly_aim',
+  'keen_eye',
+  'weapon_training',
+  'marksmanship',
+  'arcane_study',
+]
 
 /**
  * Spends everything the character has waiting, the way a plain fighter

@@ -56,13 +56,13 @@ export interface Encounter {
 
 /**
  * How many foes a battle has at each threat, from 1 up, tuned for a new
- * game's party of four. Numbers tell more than levels do, and they tell
+ * game's ready-made party of three. Numbers tell more than levels do, and they tell
  * twice: a foe more is a harder battle now and, by the experience it is
  * worth, a stronger party in every battle after. So a count raised at one
  * threat can make the next threat easier; judge a change by a campaign run
  * (`npm run simulate -- --campaign`), not by the battle it changes.
  */
-const FOES_AT_THREAT = [2, 3, 4, 4, 5]
+const FOES_AT_THREAT = [2, 3, 3, 3, 4]
 
 /** The most dangerous a battle gets; any threat above it is fought as this. */
 export const MAX_THREAT = FOES_AT_THREAT.length

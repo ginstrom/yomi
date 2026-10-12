@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { ATTRIBUTE_POINTS, MAX_ATTRIBUTE, MIN_ATTRIBUTE } from '../character/attributes.ts'
+import { ATTRIBUTE_POINTS } from '../character/attributes.ts'
 import { createWarrior, deriveCombatStats, hpPerLevel, maxHp, maxMana, weaponSkill } from '../character/character.ts'
+import {
+  attributePointsLeft,
+  draftCharacter,
+  draftProblems,
+  perkPicksLeft,
+  skillPointsLeft,
+} from '../character/creation.ts'
 import { knownSpells } from '../character/perks.ts'
 import { canAdvance, skillPointsPerLevel, xpToNextLevel } from '../character/progression.ts'
 import { TAGGED_SKILLS, skillLevel } from '../character/skills.ts'
@@ -8,85 +15,99 @@ import { BattleEngine } from '../engine/battleEngine.ts'
 import { ENCOUNTERS, MAX_THREAT } from './encounters.ts'
 import {
   MAX_PARTY_SIZE,
+  READY_MADE,
   REVIVED_HP,
+  STARTING_PARTY_LIMIT,
   describeRewards,
   joinParty,
-  newParty,
+  readyMadeParty,
   partyFighters,
   rewardVictory,
 } from './party.ts'
 
-describe('newParty', () => {
-  it('starts with four level 1 heroes, each with a name of its own', () => {
-    const party = newParty()
-    expect(party.map((m) => m.level)).toEqual([1, 1, 1, 1])
-    expect(new Set(party.map((m) => m.name)).size).toBe(4)
-    expect(new Set(party.map((m) => m.portrait)).size).toBe(4)
+describe('readyMadeParty', () => {
+  it('is three level 1 heroes, each with a name and a face of its own', () => {
+    const party = readyMadeParty()
+    expect(party.map((m) => m.name)).toEqual(['Aldric', 'Brenna', 'Delwyn'])
+    expect(party.map((m) => m.level)).toEqual([1, 1, 1])
+    expect(new Set(party.map((m) => m.portrait)).size).toBe(3)
   })
 
-  it('makes the fourth a mage, who starts knowing Magic Arrow', () => {
-    const party = newParty()
-    const mage = party[3]
-    expect(party.map((m) => knownSpells(m))).toEqual([[], [], [], ['magic_arrow']])
-    expect([mage.name, mage.portrait, mage.perkPicks]).toEqual(['Delwyn', 'wizard', 0])
-    expect([maxHp(mage), skillLevel(mage, 'magic'), maxMana(mage)]).toEqual([17, 76, 18])
-    expect(deriveCombatStats(mage)).toMatchObject({
-      actionPoints: 8,
-      weapon: 'Wand of Sparks',
-      toHit: 76,
-      attackRange: 4,
-      magic: { maxMana: 18, skill: 76, spells: ['magic_arrow'] },
-    })
-    // The archer is two skill points from the spell, or one rank of Gain Intelligence.
-    expect(skillLevel(party[1], 'magic')).toBe(48)
-  })
-
-  it('makes each a different build of the same worth, hale and with nothing yet to spend', () => {
-    const party = newParty()
-    for (const member of party) {
+  it('is made of drafts with no problems: 35 attribute points, a tag, 10 skill points and 3 picks spent', () => {
+    for (const draft of READY_MADE) {
+      const others = READY_MADE.filter((other) => other !== draft).map((other) => other.name)
+      expect(draftProblems(draft, others)).toEqual([])
+      expect([attributePointsLeft(draft), skillPointsLeft(draft), perkPicksLeft(draft)]).toEqual([0, 0, 0])
+      const member = draftCharacter(draft)
       expect(Object.values(member.attributes).reduce((a, b) => a + b)).toBe(ATTRIBUTE_POINTS)
-      for (const value of Object.values(member.attributes)) {
-        expect(value).toBeGreaterThanOrEqual(MIN_ATTRIBUTE)
-        expect(value).toBeLessThanOrEqual(MAX_ATTRIBUTE)
-      }
       expect(new Set(member.tagged).size).toBe(TAGGED_SKILLS)
+      expect([member.skillPoints, member.perkPicks]).toEqual([0, 0])
+      expect(Object.values(member.perks).reduce((a, b) => a + b)).toBe(3)
       expect(member.hp).toBe(maxHp(member))
       expect(canAdvance(member)).toBe(false)
       // Each holds a weapon it has a gift for.
       expect(member.tagged).toContain(weaponSkill(member.equipment.mainHand))
     }
-    expect(new Set(party.map((m) => JSON.stringify(m.attributes))).size).toBe(4)
+  })
+
+  it('makes each the specialist of one skill, near 60% in it and near 10% in the others', () => {
+    const [aldric, brenna, delwyn] = readyMadeParty()
+    expect(skillLevel(aldric, 'melee')).toBe(58)
+    expect(skillLevel(aldric, 'archery')).toBe(10)
+    expect(skillLevel(brenna, 'archery')).toBe(59)
+    expect(skillLevel(delwyn, 'magic')).toBe(63)
+  })
+
+  it('makes the third a mage, who starts knowing Magic Arrow', () => {
+    const party = readyMadeParty()
+    const mage = party[2]
+    expect(party.map((m) => knownSpells(m))).toEqual([[], [], ['magic_arrow']])
+    expect([maxHp(mage), maxMana(mage)]).toEqual([17, 18])
+    expect(deriveCombatStats(mage)).toMatchObject({
+      actionPoints: 8,
+      weapon: 'Wand of Sparks',
+      toHit: 63,
+      attackRange: 4,
+      magic: { maxMana: 18, skill: 63, spells: ['magic_arrow'] },
+    })
   })
 
   it('gives each member its own gear', () => {
-    const [a, , c] = newParty()
+    const [a, b] = readyMadeParty()
     a.backpack[0] = null
-    delete a.equipment.offHand
-    expect(c.backpack[0]).not.toBeNull()
-    expect(c.equipment.offHand).toBeDefined()
+    expect(b.backpack[0]).not.toBeNull()
+    expect(readyMadeParty()[0].backpack[0]).not.toBeNull()
   })
 })
 
 describe('joinParty', () => {
-  it('takes members up to the limit and no further', () => {
-    const party = newParty()
-    while (party.length < MAX_PARTY_SIZE) expect(joinParty(party, createWarrior())).toBe(true)
-    expect(joinParty(party, createWarrior())).toBe(false)
+  it('refuses a fourth member at a limit of 3', () => {
+    const party = readyMadeParty()
+    expect(joinParty(party, createWarrior(), STARTING_PARTY_LIMIT)).toBe(false)
+    expect(party).toHaveLength(3)
+    party.pop()
+    expect(joinParty(party, createWarrior(), STARTING_PARTY_LIMIT)).toBe(true)
+  })
+
+  it('takes members up to a higher limit, and never past the most a party can hold', () => {
+    const party = readyMadeParty()
+    while (party.length < MAX_PARTY_SIZE) expect(joinParty(party, createWarrior(), MAX_PARTY_SIZE)).toBe(true)
+    expect(joinParty(party, createWarrior(), MAX_PARTY_SIZE + 1)).toBe(false)
     expect(party).toHaveLength(MAX_PARTY_SIZE)
   })
 })
 
 describe('partyFighters', () => {
   it('gives each member its stats and the hit points it has left, in party order', () => {
-    const party = newParty()
+    const party = readyMadeParty()
     party[1].hp = 7
     expect(partyFighters(party)).toEqual(party.map((m) => ({ stats: deriveCombatStats(m), hp: m.hp })))
     expect(partyFighters(party)[1].hp).toBe(7)
   })
 
   it('fits a full party into every encounter, at every threat', () => {
-    const party = newParty()
-    while (joinParty(party, createWarrior()));
+    const party = readyMadeParty()
+    while (joinParty(party, createWarrior(), MAX_PARTY_SIZE));
     for (const build of Object.values(ENCOUNTERS)) {
       for (let threat = 1; threat <= MAX_THREAT; threat++) {
         // The engine refuses a setup with two units on one hex.
@@ -102,9 +123,9 @@ const warriors = (...names: string[]) => names.map((name) => createWarrior(name)
 
 describe('rewardVictory', () => {
   it('gives every member the whole reward', () => {
-    const party = newParty()
+    const party = readyMadeParty()
     const { members } = rewardVictory(party, 50)
-    expect(party.map((m) => m.xp)).toEqual([50, 50, 50, 50])
+    expect(party.map((m) => m.xp)).toEqual([50, 50, 50])
     expect(members.map((r) => [r.member, r.gain.xp, r.revived])).toEqual(party.map((m) => [m, 50, false]))
   })
 
@@ -118,7 +139,7 @@ describe('rewardVictory', () => {
   })
 
   it('heals a fallen member whom the reward levels up', () => {
-    const party = newParty()
+    const party = readyMadeParty()
     party[0].hp = 0
     const { members } = rewardVictory(party, xpToNextLevel(1))
     expect(party[0].hp).toBe(maxHp(party[0]))
@@ -128,7 +149,7 @@ describe('rewardVictory', () => {
 
 describe('describeRewards', () => {
   it('shows only the experience when it changed nobody', () => {
-    expect(describeRewards(rewardVictory(newParty(), 50))).toEqual(['+50 XP each'])
+    expect(describeRewards(rewardVictory(readyMadeParty(), 50))).toEqual(['+50 XP each'])
     expect(describeRewards(rewardVictory([createWarrior()], 50))).toEqual(['+50 XP'])
   })
 

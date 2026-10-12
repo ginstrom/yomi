@@ -25,6 +25,18 @@ describe('Ground', () => {
   })
 })
 
+describe('Ground.fromPiles', () => {
+  it('puts back the piles another ground listed, sharing none of its lists', () => {
+    const ground = new Ground()
+    ground.pileAt(hex(1, 2)).push(OAK_SHIELD, IRON_DAGGER)
+    ground.pileAt(hex(3, 0)).push(YEW_BOW)
+    const restored = Ground.fromPiles(ground.piles())
+    expect(restored.piles()).toEqual(ground.piles())
+    restored.pileAt(hex(3, 0)).pop()
+    expect(ground.pileAt(hex(3, 0))).toEqual([YEW_BOW])
+  })
+})
+
 describe('pileChanges', () => {
   it('tells what was dropped on a pile and what was picked up from it', () => {
     expect(pileChanges([IRON_SWORD, OAK_SHIELD], [OAK_SHIELD, YEW_BOW, IRON_DAGGER])).toEqual({

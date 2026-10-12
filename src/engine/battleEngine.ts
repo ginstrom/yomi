@@ -1,5 +1,5 @@
 import { hitChance, resolveAttack, type CombatantStats, type DamageRoll, type RNG } from '../combat/combat.ts'
-import { mulberry32, randomSeed } from '../combat/rng.ts'
+import { mulberry32, randomSeed, type SeededRng } from '../combat/rng.ts'
 import { SPELLS, type SpellId } from '../combat/spells.ts'
 import {
   HEX_DIRECTIONS,
@@ -339,7 +339,8 @@ export interface BattleOptions {
   meta?: Record<string, unknown>
 }
 
-interface UnitRecord {
+/** A unit as the engine keeps it. Exported for `BattleSnapshot`; callers otherwise see `UnitSnapshot`s. */
+export interface UnitRecord {
   id: UnitId
   side: Side
   stats: CombatantStats
@@ -351,6 +352,23 @@ interface UnitRecord {
   reactionReady: boolean
   /** The unit has paid for a change of gear and not moved, attacked or cast since. */
   gearChangePaid: boolean
+}
+
+/**
+ * Everything an engine holds, as plain data that survives JSON: what a save
+ * keeps of a battle (game/save.ts). `BattleEngine.restore` makes of it an
+ * engine that plays on exactly as the one snapshotted would have.
+ */
+export interface BattleSnapshot {
+  board: BoardSize
+  units: UnitRecord[]
+  round: number
+  phase: Phase
+  winner: Side | null
+  seq: number
+  events: BattleEvent[]
+  /** Where the engine's dice stand (`SeededRng.state`). */
+  rng: number
 }
 
 const other = (side: Side): Side => (side === 'player' ? 'enemy' : 'player')
@@ -412,14 +430,31 @@ export class BattleEngine {
   private round = 1
   private phase: Phase = 'player'
   private winner: Side | null = null
+  private readonly boardSize: BoardSize
   private readonly board: HexBoard
   private readonly units: UnitRecord[]
   private readonly events: BattleEvent[] = []
   private readonly rng: RNG
+  /** The built-in RNG, whose place in its stream a snapshot can record; null for an engine given its own. */
+  private readonly seeded: SeededRng | null = null
 
-  constructor(setup: BattleSetup, options: BattleOptions = {}) {
+  /** `restored` is `restore`'s way in: the engine then takes up that snapshot and starts nothing. */
+  constructor(setup: BattleSetup, options: BattleOptions = {}, restored?: BattleSnapshot) {
     const roster = setup.units
+    this.boardSize = setup.board
     this.board = new HexBoard(setup.board)
+    if (restored) {
+      const { units, events, rng, ...rest } = structuredClone(restored)
+      this.units = units
+      this.events.push(...events)
+      this.seeded = mulberry32(rng)
+      this.rng = this.seeded
+      this.round = rest.round
+      this.phase = rest.phase
+      this.winner = rest.winner
+      this.seq = rest.seq
+      return
+    }
     const ids = new Set(roster.map((u) => u.id))
     if (ids.size !== roster.length) throw new Error('Unit ids must be unique')
     for (const side of ['player', 'enemy'] as const) {
@@ -453,7 +488,8 @@ export class BattleEngine {
       this.rng = options.rng
     } else {
       seed = options.seed ?? randomSeed()
-      this.rng = mulberry32(seed)
+      this.seeded = mulberry32(seed)
+      this.rng = this.seeded
     }
 
     this.startTurn('player')
@@ -468,6 +504,34 @@ export class BattleEngine {
     })
     // A side may enter battle already fallen (e.g. every member at 0 hp).
     this.checkWinner()
+  }
+
+  /**
+   * The engine as plain data, sharing nothing with it. It may be taken at any
+   * time; the game takes one as the player's turn begins. Throws for an engine
+   * given its own `rng`, whose place in its stream cannot be recorded.
+   */
+  snapshot(): BattleSnapshot {
+    if (!this.seeded) throw new Error('An engine with its own rng cannot be snapshotted')
+    return structuredClone({
+      board: this.boardSize,
+      units: this.units,
+      round: this.round,
+      phase: this.phase,
+      winner: this.winner,
+      seq: this.seq,
+      events: this.events,
+      rng: this.seeded.state(),
+    })
+  }
+
+  /**
+   * The engine a snapshot was taken of, to play on from there. Nothing is
+   * started over: no `battle_start` is recorded and no turn begun, so its log
+   * is the same log, carried on.
+   */
+  static restore(snapshot: BattleSnapshot): BattleEngine {
+    return new BattleEngine({ board: snapshot.board, units: [] }, {}, snapshot)
   }
 
   getState(): BattleState {

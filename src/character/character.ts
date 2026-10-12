@@ -5,8 +5,10 @@ import {
   EQUIPMENT_SLOT_ORDER,
   IRON_SWORD,
   OAK_SHIELD,
+  SPARK_WAND,
   STEEL_ARMOR,
   WEAPONS,
+  YEW_BOW,
   type Equipment,
   type EquipmentSlot,
   type Item,
@@ -253,8 +255,17 @@ export interface Build {
   tagged: SkillId[]
   mainHand: Item
   offHand?: Item
-  /** Perks it starts with a rank of, given without a pick and whatever they ask. */
-  perks?: PerkId[]
+}
+
+/**
+ * What a created character holds to begin with: the weapon of its tagged
+ * skill. Starting gear is not chosen; the other plain weapons are in its
+ * backpack (`createCharacter`), so this is a default and not a limit.
+ */
+export const STARTING_KIT: Record<SkillId, { mainHand: Item; offHand?: Item }> = {
+  melee: { mainHand: IRON_SWORD, offHand: OAK_SHIELD },
+  archery: { mainHand: YEW_BOW },
+  magic: { mainHand: SPARK_WAND },
 }
 
 /** A soldier: strong, hardy and lucky, with a sword and a shield. */
@@ -262,14 +273,14 @@ export const WARRIOR_BUILD: Build = {
   portrait: 'knight',
   attributes: { strength: 7, perception: 4, endurance: 7, intelligence: 4, agility: 6, luck: 7 },
   tagged: ['melee'],
-  mainHand: IRON_SWORD,
-  offHand: OAK_SHIELD,
+  ...STARTING_KIT.melee,
 }
 
 /**
  * A level 1 character at full hit points, in a steel breastplate, with every
- * weapon it does not hold in its backpack, and the shield too if its hands
- * are full.
+ * plain weapon it does not hold in its backpack, and the shield too if its
+ * hands are full. It has no perks and nothing to spend: creation.ts gives a
+ * created character those.
  */
 export function createCharacter(name: string, build: Build): Character {
   const spare = [...WEAPONS.filter((weapon) => weapon !== build.mainHand), ...(build.offHand ? [] : [OAK_SHIELD])]
@@ -282,7 +293,7 @@ export function createCharacter(name: string, build: Build): Character {
     tagged: [...build.tagged],
     trained: Object.fromEntries(SKILL_IDS.map((id) => [id, 0])) as Record<SkillId, number>,
     skillPoints: 0,
-    perks: Object.fromEntries((build.perks ?? []).map((id) => [id, 1])),
+    perks: {},
     perkPicks: 0,
     hp: 0,
     equipment: { armor: STEEL_ARMOR, mainHand: build.mainHand, ...(build.offHand ? { offHand: build.offHand } : {}) },

@@ -1,50 +1,47 @@
-import { WARRIOR_BUILD, createCharacter, deriveCombatStats, type Build, type Character } from '../character/character.ts'
+import { deriveCombatStats, type Character } from '../character/character.ts'
+import { draftCharacter, type CharacterDraft } from '../character/creation.ts'
 import { gainXp, type XpGain } from '../character/progression.ts'
-import { IRON_SWORD, OAK_SHIELD, SPARK_WAND, YEW_BOW } from '../inventory/inventory.ts'
 import type { Fighter } from './encounters.ts'
 
-/** The most characters a party can hold. */
+/** The most characters a party can ever hold: what a party limit can grow to, and what `PARTY_START` has hexes for. */
 export const MAX_PARTY_SIZE = 6
+
+/** The party limit a new game starts with; a game stores its own (`GameState.partyLimit`). */
+export const STARTING_PARTY_LIMIT = 3
 
 /** The hit points a member who fell in a battle the party won gets back up with. */
 export const REVIVED_HP = 1
 
 /**
- * The heroes a new game starts with. Each is a different build: a soldier, an
- * archer, a quick skirmisher, and a mage who starts with the Magic Arrow perk,
- * as a pick does not otherwise come before level 3.
+ * The ready-made party: a soldier, an archer and a mage, each the specialist
+ * of one skill. They are drafts, built as a created character is, so each is
+ * a legal creation and can be edited on the party screen like one.
  */
-const STARTING_HEROES: ReadonlyArray<readonly [name: string, build: Build]> = [
-  ['Aldric', WARRIOR_BUILD],
-  [
-    'Brenna',
-    {
-      portrait: 'ranger',
-      attributes: { strength: 4, perception: 7, endurance: 5, intelligence: 7, agility: 7, luck: 5 },
-      tagged: ['archery'],
-      mainHand: YEW_BOW,
-    },
-  ],
-  [
-    'Corwin',
-    {
-      portrait: 'rogue',
-      attributes: { strength: 6, perception: 5, endurance: 6, intelligence: 5, agility: 8, luck: 5 },
-      tagged: ['melee'],
-      mainHand: IRON_SWORD,
-      offHand: OAK_SHIELD,
-    },
-  ],
-  [
-    'Delwyn',
-    {
-      portrait: 'wizard',
-      attributes: { strength: 3, perception: 5, endurance: 4, intelligence: 9, agility: 6, luck: 8 },
-      tagged: ['magic'],
-      mainHand: SPARK_WAND,
-      perks: ['magic_arrow'],
-    },
-  ],
+export const READY_MADE: readonly CharacterDraft[] = [
+  {
+    name: 'Aldric',
+    portrait: 'knight',
+    attributes: { strength: 7, perception: 4, endurance: 7, intelligence: 4, agility: 6, luck: 7 },
+    tagged: 'melee',
+    raises: { melee: 10, archery: 0, magic: 0 },
+    perks: ['weapon_training', 'toughness', 'heavy_hand'],
+  },
+  {
+    name: 'Brenna',
+    portrait: 'ranger',
+    attributes: { strength: 4, perception: 7, endurance: 5, intelligence: 7, agility: 7, luck: 5 },
+    tagged: 'archery',
+    raises: { melee: 0, archery: 10, magic: 0 },
+    perks: ['marksmanship', 'deadly_aim', 'dodger'],
+  },
+  {
+    name: 'Delwyn',
+    portrait: 'wizard',
+    attributes: { strength: 3, perception: 5, endurance: 4, intelligence: 9, agility: 6, luck: 8 },
+    tagged: 'magic',
+    raises: { melee: 0, archery: 0, magic: 10 },
+    perks: ['magic_arrow', 'arcane_study', 'keen_eye'],
+  },
 ]
 
 /**
@@ -53,14 +50,19 @@ const STARTING_HEROES: ReadonlyArray<readonly [name: string, build: Build]> = [
  */
 export type Party = Character[]
 
-/** The four starting heroes, at level 1. */
-export function newParty(): Party {
-  return STARTING_HEROES.map(([name, build]) => createCharacter(name, build))
+/** The party a list of drafts makes, in their order. */
+export function partyFromDrafts(drafts: readonly CharacterDraft[]): Party {
+  return drafts.map(draftCharacter)
 }
 
-/** Adds `character` to the party. Returns false if the party is full. */
-export function joinParty(party: Party, character: Character): boolean {
-  if (party.length >= MAX_PARTY_SIZE) return false
+/** The ready-made three, at level 1. */
+export function readyMadeParty(): Party {
+  return partyFromDrafts(READY_MADE)
+}
+
+/** Adds `character` to the party. Returns false if the party is at `limit`, its game's party limit. */
+export function joinParty(party: Party, character: Character, limit: number): boolean {
+  if (party.length >= Math.min(limit, MAX_PARTY_SIZE)) return false
   party.push(character)
   return true
 }

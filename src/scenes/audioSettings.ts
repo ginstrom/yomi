@@ -1,3 +1,4 @@
+import { storage } from '../storage.ts'
 import { MUSIC_VOLUME, SOUND_VOLUME, type SoundKey } from './sounds.ts'
 
 /** The player's volume levels, each from 0 (silent) to 1 (full). */
@@ -33,15 +34,6 @@ export function parseAudioSettings(raw: string | null): AudioSettings {
     master: clampLevel(saved.master, DEFAULT_AUDIO_SETTINGS.master),
     effects: clampLevel(saved.effects, DEFAULT_AUDIO_SETTINGS.effects),
     music: clampLevel(saved.music, DEFAULT_AUDIO_SETTINGS.music),
-  }
-}
-
-/** Storage can be missing or throw (private windows, blocked site data); settings then last the session. */
-function storage(): Storage | null {
-  try {
-    return globalThis.localStorage ?? null
-  } catch {
-    return null
   }
 }
 

@@ -22,7 +22,7 @@ import { BattleEngine, type BattleEvent, type BattleSetup, type Side, type UnitI
 import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.ts'
 import { autoAdvance, levelUp } from '../src/character/progression.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/encounters.ts'
-import { newParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
+import { readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
 import { clearLocation, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
 import { hexDistance } from '../src/grid/hex.ts'
 import { MAGIC_ITEMS, WEAPONS, type Item } from '../src/inventory/inventory.ts'
@@ -143,7 +143,7 @@ export type LoggedEvent = BattleEvent & { battleId: number }
 
 /** A new game's party, with the weapon the run asks for in every hand. */
 function startingParty(args: CliArgs): Party {
-  const party = newParty()
+  const party = readyMadeParty()
   if (args.playerWeapon) for (const member of party) member.equipment.mainHand = args.playerWeapon
   return party
 }

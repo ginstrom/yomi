@@ -127,7 +127,9 @@ describe('canAdvance', () => {
     expect(canAdvance(warrior)).toBe(true)
     warrior.skillPoints = 0
     warrior.perkPicks = 1
+    expect(canAdvance(warrior)).toBe(true)
     // A pick with no perk on offer is nothing to act on yet.
+    warrior.attributes = { strength: 4, perception: 4, endurance: 4, intelligence: 4, agility: 4, luck: 4 }
     expect(canAdvance(warrior)).toBe(false)
     warrior.level = 3
     expect(canAdvance(warrior)).toBe(true)
@@ -170,8 +172,8 @@ describe('autoAdvance', () => {
     expect(warrior.perks).toEqual({ toughness: 1, tireless: 1 })
     // Nothing a plain fighter wants is on offer to this one but a spell and the attribute perks.
     const scholar = createWarrior()
-    scholar.attributes = { strength: 5, perception: 5, endurance: 4, intelligence: 4, agility: 5, luck: 5 }
-    scholar.trained.magic = 20
+    scholar.attributes = { strength: 4, perception: 4, endurance: 4, intelligence: 4, agility: 5, luck: 5 }
+    scholar.trained.magic = 42
     scholar.level = 3
     scholar.perkPicks = 2
     autoAdvance(scholar)

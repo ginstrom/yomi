@@ -7,10 +7,11 @@ describe('newGame', () => {
   it('starts with a party, a world and empty baggage, none of them shared with another game', () => {
     const game = newGame()
     expect(game.baggage).toEqual([])
-    expect(game.party).toHaveLength(4)
+    expect(game.party).toHaveLength(3)
+    expect([game.partyLimit, game.slot]).toEqual([3, null])
     game.baggage.push(RING_PROTECTION)
     game.party.pop()
-    expect(newGame()).toMatchObject({ baggage: [], party: { length: 4 } })
+    expect(newGame()).toMatchObject({ baggage: [], party: { length: 3 } })
   })
 })
 

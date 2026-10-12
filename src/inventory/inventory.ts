@@ -290,6 +290,15 @@ export const MAGIC_ITEMS: readonly Item[] = [
   SHADOW_CLOAK,
 ]
 
+const ITEMS_BY_ID: ReadonlyMap<string, Item> = new Map(
+  [...WEAPONS, ...MAGIC_ITEMS, OAK_SHIELD, STEEL_ARMOR].map((item) => [item.id, item]),
+)
+
+/** The item with this id: the constant itself, which is how a save gets its items back (game/save.ts). */
+export function itemById(id: string): Item | undefined {
+  return ITEMS_BY_ID.get(id)
+}
+
 export const EQUIPMENT_SLOT_ORDER: EquipmentSlot[] = [
   'head',
   'neck',

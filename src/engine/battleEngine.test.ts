@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { GOBLIN_STATS, type CombatantStats } from '../combat/combat.ts'
+import { mulberry32 } from '../combat/rng.ts'
 import { HEX_DIRECTIONS, hex, hexAdd, hexKey, type Hex } from '../grid/hex.ts'
 import {
   ARC_BONUS,
@@ -18,6 +19,7 @@ import {
   type MoveEvent,
   type UnitSetup,
 } from './battleEngine.ts'
+import { POLICIES } from './policies.ts'
 
 function sequence(values: number[]): () => number {
   let i = 0
@@ -1090,5 +1092,64 @@ describe('BattleEngine spells', () => {
     }
     expect(run()).toEqual(run())
     expect(run().filter((e) => e.type === 'cast')).toHaveLength(3)
+  })
+})
+
+describe('BattleEngine snapshots', () => {
+  const FIELD = { board: { cols: 8, rows: 5 }, units: [WARRIOR, CLERIC, { ...GOBLIN, position: hex(6, 1) }, { ...GOBLIN2, position: hex(6, 3) }] }
+
+  /** Plays the battle out with the aggressive policy on both sides, from wherever the engine stands. */
+  const playOut = (engine: BattleEngine, policyRng: () => number): readonly BattleEvent[] => {
+    for (let state = engine.getState(); state.phase !== 'over'; state = engine.getState()) {
+      engine.step(POLICIES.aggressive({ state, legal: engine.legalActions(), rng: policyRng }))
+    }
+    return engine.getLog()
+  }
+
+  it('plays on from a snapshot exactly as the engine it was taken of, through JSON', () => {
+    for (const stepsBefore of [0, 3, 9]) {
+      const straight = new BattleEngine(FIELD, { seed: 11 })
+      const saved = new BattleEngine(FIELD, { seed: 11 })
+      const policy = { straight: mulberry32(5), saved: mulberry32(5) }
+      for (let i = 0; i < stepsBefore; i++) {
+        for (const [engine, rng] of [[straight, policy.straight], [saved, policy.saved]] as const) {
+          engine.step(POLICIES.aggressive({ state: engine.getState(), legal: engine.legalActions(), rng }))
+        }
+      }
+      const json = JSON.stringify({ engine: saved.snapshot(), policy: policy.saved.state() })
+      const { engine, policy: policyState } = JSON.parse(json)
+      const restored = BattleEngine.restore(engine)
+      expect(restored.getState()).toEqual(straight.getState())
+      expect(restored.legalActions()).toEqual(straight.legalActions())
+      const log = playOut(restored, mulberry32(policyState))
+      expect(log).toEqual(playOut(straight, policy.straight))
+      expect(log.at(-1)?.type).toBe('battle_end')
+      expect(log.map((e) => e.seq)).toEqual(log.map((_, i) => i))
+    }
+  })
+
+  it('records no second battle_start and starts no turn over', () => {
+    const engine = new BattleEngine(DUEL, { seed: 3 })
+    engine.step({ type: 'move', unit: 'warrior', to: hex(0, 1) })
+    const restored = BattleEngine.restore(engine.snapshot())
+    expect(restored.getLog()).toEqual(engine.getLog())
+    expect(restored.getLog().filter((e) => e.type === 'battle_start')).toHaveLength(1)
+    expect(restored.getState()).toEqual(engine.getState())
+    expect(restored.getState().units.find((u) => u.id === 'warrior')?.ap).toBe(WARRIOR_STATS.actionPoints - 1)
+  })
+
+  it('shares nothing with the engine it was taken of', () => {
+    const engine = new BattleEngine(DUEL, { seed: 3 })
+    const snapshot = engine.snapshot()
+    engine.step({ type: 'move', unit: 'warrior', to: hex(0, 1) })
+    expect(snapshot.events).toHaveLength(1)
+    expect(snapshot.units[0].position).toEqual(hex(1, 1))
+    const restored = BattleEngine.restore(snapshot)
+    restored.step(END_TURN)
+    expect(snapshot.phase).toBe('player')
+  })
+
+  it('cannot be taken of an engine given its own rng', () => {
+    expect(() => new BattleEngine(DUEL, { rng: sequence([0.5]) }).snapshot()).toThrow('cannot be snapshotted')
   })
 })

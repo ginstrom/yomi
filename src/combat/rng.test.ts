@@ -13,6 +13,16 @@ describe('mulberry32', () => {
     }
   })
 
+  it('carries on the same stream from its state, taken at any point', () => {
+    const rng = mulberry32(42)
+    for (let i = 0; i < 17; i++) rng()
+    const resumed = mulberry32(rng.state())
+    for (let i = 0; i < 100; i++) expect(resumed()).toBe(rng())
+    // Before the first roll too, and for a seed that is not a 32-bit integer.
+    expect(mulberry32(mulberry32(2 ** 32 + 5).state())()).toBe(mulberry32(2 ** 32 + 5)())
+    expect(Number.isInteger(JSON.parse(JSON.stringify(rng.state())))).toBe(true)
+  })
+
   it('produces different streams for different seeds', () => {
     expect(mulberry32(1)()).not.toBe(mulberry32(2)())
   })

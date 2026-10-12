@@ -26,6 +26,13 @@ export class Ground {
     return pile.items
   }
 
+  /** A ground with these piles lying on it, as a saved battle's is put back. */
+  static fromPiles(piles: readonly GroundPile[]): Ground {
+    const ground = new Ground()
+    for (const { hex, items } of piles) ground.pileAt(hex).push(...items)
+    return ground
+  }
+
   /** Every hex with something lying on it. */
   piles(): GroundPile[] {
     return [...this.byHex.values()].filter((pile) => pile.items.length > 0)

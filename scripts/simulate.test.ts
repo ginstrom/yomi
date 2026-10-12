@@ -109,7 +109,7 @@ describe('a campaign', () => {
 
   it('logs each battle with its campaign, location and threat, under an id of its own', () => {
     expect(starts.every((e) => e.meta.campaign === 3 && e.meta.source === 'simulate')).toBe(true)
-    expect(starts[0].meta).toMatchObject({ location: 'goblin_raiders', threat: 1, partyLevels: [1, 1, 1, 1] })
+    expect(starts[0].meta).toMatchObject({ location: 'goblin_raiders', threat: 1, partyLevels: [1, 1, 1] })
     expect(battles.map((events) => events[0].battleId)).toEqual(battles.map((_, i) => 100 + i))
   })
 
@@ -117,7 +117,7 @@ describe('a campaign', () => {
     const second = starts[1]
     expect((second.meta.partyLevels as number[]).every((level) => level >= 2)).toBe(true)
     const heroes = second.units.filter((u) => u.side === 'player')
-    expect(heroes).toHaveLength(4)
+    expect(heroes).toHaveLength(3)
     // A level heals, so wounds show only on a hero the first battle did not level; none starts above its most.
     expect(heroes.every((u) => u.hp <= u.maxHp && u.hp > 0)).toBe(true)
   })

@@ -4,8 +4,9 @@ import { SPELL_IDS, type SpellId } from '../combat/spells.ts'
 import { SKILLS, SKILL_IDS, skillLevel, type SkillId } from './skills.ts'
 
 /**
- * Perks: a character picks one every `PERK_LEVEL_STEP` levels (progression.ts)
- * from those it qualifies for by level, attributes, skills and the perks it
+ * Perks: a character picks `CREATION_PERK_PICKS` as it is created (creation.ts)
+ * and one every `PERK_LEVEL_STEP` levels (progression.ts), from those it
+ * qualifies for by level, attributes, skills and the perks it
  * already has. A perk is data: what it asks, where it sits in the perk tree,
  * what each rank of it adds (summed by `perkBonus` wherever the number it
  * changes is worked out) and the spell it teaches, if any.
@@ -19,9 +20,10 @@ import { SKILLS, SKILL_IDS, skillLevel, type SkillId } from './skills.ts'
 /**
  * What a rank of a perk adds. Each is read where its number is derived; see
  * `perkBonus`'s callers. An effect keyed by an attribute's id is what a rank
- * adds to that attribute (`attributeLevel`).
+ * adds to that attribute (`attributeLevel`), and one keyed by a skill's id is
+ * the percent it adds to that skill (`skillLevel`).
  */
-export interface PerkEffects extends Partial<Attributes> {
+export interface PerkEffects extends Partial<Attributes>, Partial<Record<SkillId, number>> {
   maxHp?: number
   armorClass?: number
   actionPoints?: number
@@ -74,7 +76,7 @@ export const PERKS = {
     name: 'Toughness',
     description: '+6 hit points',
     ranks: 2,
-    level: 3,
+    level: 1,
     attributes: { endurance: 5 },
     branch: 'endurance',
     effects: { maxHp: 6 },
@@ -83,7 +85,7 @@ export const PERKS = {
     name: 'Dodger',
     description: '+5 armour class',
     ranks: 2,
-    level: 3,
+    level: 1,
     attributes: { agility: 6 },
     branch: 'agility',
     effects: { armorClass: 5 },
@@ -92,7 +94,7 @@ export const PERKS = {
     name: 'Heavy Hand',
     description: '+1 damage with melee weapons and bare hands',
     ranks: 2,
-    level: 3,
+    level: 1,
     attributes: { strength: 6 },
     branch: 'strength',
     effects: { meleeDamage: 1 },
@@ -101,7 +103,7 @@ export const PERKS = {
     name: 'Deadly Aim',
     description: '+1 damage with ranged weapons',
     ranks: 2,
-    level: 3,
+    level: 1,
     attributes: { perception: 6 },
     branch: 'perception',
     effects: { rangedDamage: 1 },
@@ -110,7 +112,7 @@ export const PERKS = {
     name: 'Keen Eye',
     description: '+5% chance of a critical hit',
     ranks: 2,
-    level: 3,
+    level: 1,
     attributes: { luck: 6 },
     branch: 'luck',
     effects: { critChance: 5 },
@@ -119,7 +121,7 @@ export const PERKS = {
     name: 'Far Shot',
     description: 'Ranged weapons reach 2 hexes further',
     ranks: 1,
-    level: 3,
+    level: 1,
     attributes: { perception: 7 },
     branch: 'perception',
     requires: 'deadly_aim',
@@ -129,7 +131,7 @@ export const PERKS = {
     name: 'Quick Study',
     description: '+10% experience',
     ranks: 2,
-    level: 3,
+    level: 1,
     attributes: { intelligence: 5 },
     branch: 'intelligence',
     effects: { xpPercent: 10 },
@@ -138,7 +140,7 @@ export const PERKS = {
     name: 'Scholar',
     description: '+2 skill points every level',
     ranks: 1,
-    level: 3,
+    level: 1,
     attributes: { intelligence: 6 },
     branch: 'intelligence',
     requires: 'quick_study',
@@ -158,14 +160,41 @@ export const PERKS = {
     name: 'Magic Arrow',
     description: 'Teaches Magic Arrow: 1d10 to a foe within 5 hexes, for 3 mana',
     ranks: 1,
-    // A starting character can be built with it; a pick first comes at level 3.
     level: 1,
     skills: { magic: 50 },
     branch: 'intelligence',
     effects: {},
     spell: 'magic_arrow',
   },
-  // Last, so that `autoAdvance` falls back on them last.
+  weapon_training: {
+    name: 'Weapon Training',
+    description: '+5% Melee Weapons',
+    ranks: 2,
+    level: 1,
+    attributes: { strength: 5 },
+    branch: 'strength',
+    effects: { melee: 5 },
+  },
+  marksmanship: {
+    name: 'Marksmanship',
+    description: '+5% Archery',
+    ranks: 2,
+    level: 1,
+    attributes: { perception: 5 },
+    branch: 'perception',
+    effects: { archery: 5 },
+  },
+  arcane_study: {
+    name: 'Arcane Study',
+    description: '+5% Magic',
+    ranks: 2,
+    level: 1,
+    attributes: { intelligence: 5 },
+    branch: 'intelligence',
+    effects: { magic: 5 },
+  },
+  // Last, so that `autoAdvance` falls back on them last. They ask level 3: one
+  // taken at creation would be an attribute point more than creation gives.
   gain_strength: gain('strength'),
   gain_perception: gain('perception'),
   gain_endurance: gain('endurance'),

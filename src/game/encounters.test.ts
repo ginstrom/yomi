@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
+import { createWarrior } from '../character/character.ts'
 import { xpToNextLevel } from '../character/progression.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
 import { hexDistance } from '../grid/hex.ts'
 import { GOBLIN_STATS, foeAtLevel } from '../combat/combat.ts'
 import { ENCOUNTERS, FOE_XP, MAX_THREAT, goblinRaid, heroId, koboldScouts, xpReward } from './encounters.ts'
-import { newParty, partyFighters } from './party.ts'
+import { readyMadeParty, partyFighters } from './party.ts'
 
-const party = () => partyFighters(newParty())
+/** A party of four: one more than a new game's, to stand in the second row. */
+const party = () => partyFighters([...readyMadeParty(), createWarrior()])
 
 describe.each(Object.entries(ENCOUNTERS))('the %s encounter', (_id, build) => {
   const wounded = party().map((fighter, i) => ({ ...fighter, hp: 5 + i }))

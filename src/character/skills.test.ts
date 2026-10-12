@@ -18,26 +18,26 @@ describe('skillLevel', () => {
     const warrior = createWarrior()
     expect(SKILL_IDS).toEqual(['melee', 'archery', 'magic'])
     expect(SKILL_IDS.map((id) => skillLevel(warrior, id))).toEqual([
-      30 + 2 * (7 + 6) + TAG_BONUS,
-      30 + 2 * (4 + 6),
-      20 + 4 * 4,
+      7 + 6 + TAG_BONUS,
+      4 + 6,
+      2 * 4,
     ])
     warrior.tagged = ['magic']
-    expect(skillLevel(warrior, 'magic')).toBe(36 + TAG_BONUS)
+    expect(skillLevel(warrior, 'magic')).toBe(8 + TAG_BONUS)
   })
 
   it('adds what has been trained', () => {
     const warrior = createWarrior()
     warrior.trained.magic = 9
-    expect(skillLevel(warrior, 'magic')).toBe(45)
+    expect(skillLevel(warrior, 'magic')).toBe(17)
   })
 
   it('moves with an attribute a perk has raised', () => {
     const warrior = createWarrior()
     warrior.perks.gain_intelligence = 2
-    expect(skillLevel(warrior, 'magic')).toBe(20 + 4 * 6)
+    expect(skillLevel(warrior, 'magic')).toBe(2 * 6)
     warrior.perks.gain_agility = 1
-    expect(skillLevel(warrior, 'archery')).toBe(30 + 2 * (4 + 7))
+    expect(skillLevel(warrior, 'archery')).toBe(4 + 7)
   })
 
   it('gives every skill a name and a word on what it does', () => {

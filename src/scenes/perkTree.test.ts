@@ -35,20 +35,23 @@ describe('perkTreeLayout', () => {
     expect(nodes.map((node) => [node.perk, node.column, node.row])).toEqual([
       ['gain_strength', 0, 0],
       ['heavy_hand', 1, 0],
-      ['gain_perception', 0, 1],
-      ['deadly_aim', 1, 1],
-      ['far_shot', 2, 1],
-      ['gain_endurance', 0, 2],
-      ['toughness', 1, 2],
-      ['tireless', 2, 2],
-      ['gain_intelligence', 0, 3],
-      ['quick_study', 1, 3],
-      ['scholar', 2, 3],
-      ['magic_arrow', 1, 4],
-      ['gain_agility', 0, 5],
-      ['dodger', 1, 5],
-      ['gain_luck', 0, 6],
-      ['keen_eye', 1, 6],
+      ['weapon_training', 1, 1],
+      ['gain_perception', 0, 2],
+      ['deadly_aim', 1, 2],
+      ['far_shot', 2, 2],
+      ['marksmanship', 1, 3],
+      ['gain_endurance', 0, 4],
+      ['toughness', 1, 4],
+      ['tireless', 2, 4],
+      ['gain_intelligence', 0, 5],
+      ['quick_study', 1, 5],
+      ['scholar', 2, 5],
+      ['magic_arrow', 1, 6],
+      ['arcane_study', 1, 7],
+      ['gain_agility', 0, 8],
+      ['dodger', 1, 8],
+      ['gain_luck', 0, 9],
+      ['keen_eye', 1, 9],
     ])
   })
 })
@@ -63,8 +66,14 @@ describe('nodeState', () => {
     expect(nodeState(warrior, 'toughness')).toBe('open')
     warrior.perks.toughness = 2
     expect(nodeState(warrior, 'toughness')).toBe('taken')
-    // Before a pick ever comes, nothing but a spell it has the skill for is open.
-    expect(PERK_IDS.filter((id) => nodeState(warriorAt(1), id) !== 'closed')).toEqual([])
+    // A new character's picks are for the perks of level 1: the trunks open at level 3.
+    expect(PERK_IDS.filter((id) => nodeState(warriorAt(1), id) !== 'closed')).toEqual([
+      'toughness',
+      'dodger',
+      'heavy_hand',
+      'keen_eye',
+      'weapon_training',
+    ])
   })
 })
 
@@ -99,7 +108,7 @@ describe('nodeHint', () => {
     expect(nodeHint(hero, 'tireless', true)).toBe('Not yet: Toughness')
     hero.attributes.agility = 5
     expect(nodeHint(hero, 'tireless', false)).toBe('Not yet: Agility 6, Toughness')
-    expect(nodeHint(warriorAt(1), 'toughness', true)).toBe('Not yet: Level 3')
+    expect(nodeHint(warriorAt(1), 'gain_strength', true)).toBe('Not yet: Level 3')
     hero.attributes.luck = 10
     expect(nodeHint(hero, 'gain_luck', true)).toBe('Not yet: Luck is as high as it goes')
   })
