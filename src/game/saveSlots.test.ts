@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { newGame } from './gameState.ts'
 import { serializeSave, type SaveFile } from './save.ts'
-import { SLOT_IDS, deleteSlot, firstEmptySlot, latestSlot, readSlot, saveGame, writeSlot } from './saveSlots.ts'
+import { SLOT_IDS, describeSlot, deleteSlot, firstEmptySlot, latestSlot, readSlot, saveGame, writeSlot } from './saveSlots.ts'
 
 /** A stand-in for the browser's storage, which Node has none of. */
 class MemoryStorage {
@@ -57,6 +57,16 @@ describe('the slots', () => {
     expect(firstEmptySlot()).toBe(3)
     writeSlot(3, file(1))
     expect([latestSlot(), firstEmptySlot()]).toEqual([3, null])
+  })
+
+  it('are listed by what they hold: a game that can be loaded, nothing, or something unreadable', () => {
+    writeSlot(1, file(new Date(2026, 9, 12, 21, 40).getTime()))
+    store.setItem('yomi.save.3', '{')
+    expect(SLOT_IDS.map(describeSlot)).toEqual([
+      { line: '1  Aldric, Brenna, Delwyn    Level 1    Turn 1    12 Oct 21:40', loadable: true },
+      { line: '2  Empty', loadable: false },
+      { line: '3  Unreadable save', loadable: false },
+    ])
   })
 
   it('are emptied by deleteSlot', () => {

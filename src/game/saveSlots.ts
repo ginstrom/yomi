@@ -1,6 +1,6 @@
 import { storage } from '../storage.ts'
 import type { GameState } from './gameState.ts'
-import { parseSave, serializeSave, type SaveFile, type SavedBattle } from './save.ts'
+import { describeSave, parseSave, saveSummary, serializeSave, type SaveFile, type SavedBattle } from './save.ts'
 
 /**
  * The three save slots, kept in the browser's storage. A playthrough lives in
@@ -10,6 +10,11 @@ import { parseSave, serializeSave, type SaveFile, type SavedBattle } from './sav
  */
 export const SLOT_IDS = [1, 2, 3] as const
 export type SlotId = (typeof SLOT_IDS)[number]
+
+/** What a scene tells the player, once, when the browser refuses a save; play goes on unsaved. */
+export const SAVE_FAILED_MESSAGE = 'The game could not be saved.'
+/** The game registry's key for having said so, so that it is said once a session and not at every turn. */
+export const SAVE_WARNED_KEY = 'saveWarned'
 
 const slotKey = (slot: SlotId): string => `yomi.save.${slot}`
 
@@ -27,6 +32,14 @@ export function readSlot(slot: SlotId): SaveFile | null | 'unreadable' {
   // The slot a game is read from is the slot it is written back to.
   file.game.slot = slot
   return file
+}
+
+/** A slot's row in a list of the slots: what it holds, in words, and whether that can be loaded. */
+export function describeSlot(slot: SlotId): { line: string; loadable: boolean } {
+  const file = readSlot(slot)
+  if (file === null) return { line: `${slot}  Empty`, loadable: false }
+  if (file === 'unreadable') return { line: `${slot}  Unreadable save`, loadable: false }
+  return { line: `${slot}  ${describeSave(saveSummary(file))}`, loadable: true }
 }
 
 /** Writes a slot. Returns false if the browser refused. */

@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { canAdvance } from '../character/progression.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
+import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, saveGame } from '../game/saveSlots.ts'
 import {
   linger,
   locationAt,
@@ -149,6 +150,7 @@ export class WorldScene extends Phaser.Scene {
     this.events.on(Phaser.Scenes.Events.RESUME, (_sys: Phaser.Scenes.Systems, data?: { member?: number }) => {
       this.active = data?.member ?? this.active
       this.refresh()
+      this.save()
     })
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
@@ -168,6 +170,8 @@ export class WorldScene extends Phaser.Scene {
     this.refresh()
     // After the first refresh: the view centres on where the party stands.
     this.layout()
+    // However the map was come to (a new game, a battle won, a load), the slot now holds it.
+    this.save()
   }
 
   update(): void {
@@ -359,6 +363,8 @@ export class WorldScene extends Phaser.Scene {
 
     this.walking = true
     this.messageText.setText('')
+    // The journey is made as far as the world goes; the walk only shows it.
+    this.save()
     this.refreshWalking()
     this.tweens.chain({
       targets: this.party,
@@ -399,6 +405,17 @@ export class WorldScene extends Phaser.Scene {
         : `You wait a turn. The ${here.name} do not stir.`,
     )
     this.refresh()
+    this.save()
+  }
+
+  /**
+   * Writes the game to its slot, as the map does after everything that changes
+   * it. If the browser refuses, play goes on and the message line says so, once.
+   */
+  private save(): void {
+    if (saveGame(this.gameState) || this.registry.get(SAVE_WARNED_KEY)) return
+    this.registry.set(SAVE_WARNED_KEY, true)
+    this.messageText.setText(SAVE_FAILED_MESSAGE)
   }
 
   private onAttack(): void {

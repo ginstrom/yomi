@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { deriveCombatStats, gearChanges, type Character } from '../character/character.ts'
-import { sameCombatStats, type RNG } from '../combat/combat.ts'
-import { mulberry32 } from '../combat/rng.ts'
+import { sameCombatStats } from '../combat/combat.ts'
+import { mulberry32, randomSeed, type SeededRng } from '../combat/rng.ts'
 import { SPELLS, type SpellId } from '../combat/spells.ts'
 import {
   BattleEngine,
@@ -11,7 +11,6 @@ import {
   type BattleEvent,
   type Phase,
   type UnitId,
-  type UnitSetup,
   type UnitSnapshot,
 } from '../engine/battleEngine.ts'
 import { POLICIES, type PolicyName } from '../engine/policies.ts'
@@ -19,6 +18,8 @@ import { ENCOUNTERS, heroId, xpReward, type EncounterId, type UnitKind } from '.
 import { newGame, takeLoot, type GameState } from '../game/gameState.ts'
 import { Ground, pileChanges } from '../game/ground.ts'
 import { describeRewards, partyFighters, rewardVictory } from '../game/party.ts'
+import type { SavedBattle } from '../game/save.ts'
+import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
 import { clearLocation, type MonsterLocation } from '../game/worldMap.ts'
 import type { Equipment, Item } from '../inventory/inventory.ts'
 import {
@@ -48,6 +49,8 @@ interface BattleData {
   game?: GameState
   /** The id of the monster location on the world map that this battle is fought at. */
   location?: string
+  /** A battle read from a save slot, to take up where it stood instead of starting one. */
+  saved?: SavedBattle
 }
 
 type MoveAction = Extract<Action, { type: 'move' }>
@@ -159,8 +162,10 @@ export class BattleScene extends Phaser.Scene {
    */
   private openPiles: Array<{ unit: UnitId; items: Item[]; before: Item[] }> | null = null
   private engine!: BattleEngine
-  /** What the enemy's policy rolls with; seeded like the engine when the page's address gives a seed. */
-  private enemyRng: RNG = Math.random
+  /** What the enemy's policy rolls with: seeded, like the engine, so that a save can tell where it stands. */
+  private enemyRng: SeededRng = mulberry32(0)
+  /** The round whose start was last saved, so that each of the player's turns is saved once. */
+  private savedRound: number | null = null
   private board!: HexBoard
   private names!: Record<UnitId, string>
   private logDumped = false
@@ -231,14 +236,26 @@ export class BattleScene extends Phaser.Scene {
     this.xpReward = xpReward(fight)
     this.heroes = new Map(party.map((member, i) => [heroId(i), member]))
     this.loggedEquipment = new Map(party.map((member, i) => [heroId(i), { ...member.equipment }]))
-    this.ground = new Ground()
     this.openPiles = null
-    const seed = (this.registry.get(SEED_KEY) as number | null | undefined) ?? undefined
-    this.engine = new BattleEngine(setup, { seed, meta: { source: 'game', enemyPolicy: ENEMY_POLICY } })
-    // A stream of its own, so the enemy's choices do not shift the engine's dice.
-    this.enemyRng = seed === undefined ? Math.random : mulberry32(seed + 1)
-    this.board = new HexBoard(setup.board)
-    this.names = Object.fromEntries(setup.units.map((u) => [u.id, u.stats.name]))
+    this.savedRound = null
+    const saved = data?.saved
+    if (saved) {
+      // The encounter above is built only for its kinds and its worth: the units are the engine's.
+      this.engine = BattleEngine.restore(saved.engine)
+      this.enemyRng = mulberry32(saved.enemyRng)
+      this.ground = Ground.fromPiles(saved.ground)
+    } else {
+      // Every battle is seeded, by the page's address or at random, so every battle can be saved and replayed.
+      const seed = (this.registry.get(SEED_KEY) as number | null | undefined) ?? randomSeed()
+      this.engine = new BattleEngine(setup, { seed, meta: { source: 'game', enemyPolicy: ENEMY_POLICY } })
+      // A stream of its own, so the enemy's choices do not shift the engine's dice.
+      this.enemyRng = mulberry32(seed + 1)
+      this.ground = new Ground()
+    }
+    const board = saved?.engine.board ?? setup.board
+    const fielded = this.engine.getState().units
+    this.board = new HexBoard(board)
+    this.names = Object.fromEntries(fielded.map((u) => [u.id, u.name]))
     // Phaser reuses the scene instance on restart, so field initializers
     // don't run again — reset per-battle state explicitly.
     this.log = new ScrollingLog(LOG_HISTORY, LOG_VISIBLE_LINES)
@@ -249,7 +266,7 @@ export class BattleScene extends Phaser.Scene {
     this.hovered = null
 
     this.floorLayer = this.add.container(0, 0)
-    this.buildFloor(setup.board)
+    this.buildFloor(board)
     this.highlights = this.add.graphics()
     this.floorLayer.add(this.highlights)
     this.hoverMarks = this.add.graphics()
@@ -258,7 +275,7 @@ export class BattleScene extends Phaser.Scene {
     this.floorLayer.add(this.groundMarks)
     this.unitLayer = this.add.container(0, 0)
     this.plateLayer = this.add.container(0, 0)
-    this.units = new Map(setup.units.map((u) => [u.id, this.createUnit(u, kinds[u.id])]))
+    this.units = new Map(fielded.map((u) => [u.id, this.createUnit(u.name, kinds[u.id])]))
     this.labelLayer = this.add.container(0, 0)
 
     this.roundText = this.add
@@ -365,9 +382,32 @@ export class BattleScene extends Phaser.Scene {
     this.music = this.sound.add('music_battle', { loop: true, volume: soundVolume('music_battle') })
     this.music.play()
 
-    this.applyEvents(this.engine.getLog())
+    if (saved) this.showRestored()
+    else this.applyEvents(this.engine.getLog())
     // A side can enter already fallen (e.g. a party carried over at 0 hp).
     this.continueBattle()
+  }
+
+  /**
+   * Shows a battle taken up from a save as it stands, with nothing played back:
+   * the log refilled from the engine's events, the fallen as fallen and the
+   * ground's piles marked.
+   */
+  private showRestored(): void {
+    for (const event of this.engine.getLog()) this.log.push(formatEvent(event, this.names))
+    this.renderLog()
+    for (const { id, hp } of this.engine.getState().units) {
+      if (hp <= 0) this.showFallen(id)
+    }
+    this.refreshGroundMarks()
+    this.syncUnitsFromEngine()
+  }
+
+  /** Others may stand on a fallen unit's hex, so its plate goes rather than collide with theirs. */
+  private showFallen(id: UnitId): void {
+    const unit = this.units.get(id)!
+    unit.sprite.setAlpha(0.4)
+    unit.plate.setVisible(false)
   }
 
   /** What the in-browser tests see of the battle; see testHook.ts. */
@@ -547,7 +587,7 @@ export class BattleScene extends Phaser.Scene {
     this.floorLayer.add(floor)
   }
 
-  private createUnit({ stats }: UnitSetup, kind: UnitKind): Unit {
+  private createUnit(name: string, kind: UnitKind): Unit {
     const { displayHeight } = APPEARANCE[kind]
     const sprite = this.add.sprite(0, 0, kind)
     const tex = this.textures.get(kind).getSourceImage()
@@ -561,7 +601,7 @@ export class BattleScene extends Phaser.Scene {
 
     // An outline keeps plate text legible over the floor, highlights and other units.
     const outlined = { fontFamily: 'monospace', color: '#ffffff', stroke: '#000000', strokeThickness: 3 }
-    const nameText = this.add.text(0, PLATE_NAME_Y, stats.name, { ...outlined, fontSize: '12px' }).setOrigin(0.5, 0)
+    const nameText = this.add.text(0, PLATE_NAME_Y, name, { ...outlined, fontSize: '12px' }).setOrigin(0.5, 0)
     const hpBarBg = this.add
       .rectangle(0, PLATE_BAR_Y, PLATE_BAR_W, PLATE_BAR_H, 0x212121)
       .setOrigin(0.5, 0)
@@ -1087,12 +1127,7 @@ export class BattleScene extends Phaser.Scene {
       const maxHp = this.engine.getState().units.find((u) => u.id === event.target)!.maxHp
       this.refreshHpDisplay(target, event.targetHpAfter, maxHp)
     }
-    if (event.type === 'unit_down') {
-      // Others may stand on a fallen unit's hex, so its plate goes rather than collide with theirs.
-      const unit = this.units.get(event.unit)!
-      unit.sprite.setAlpha(0.4)
-      unit.plate.setVisible(false)
-    }
+    if (event.type === 'unit_down') this.showFallen(event.unit)
   }
 
   /** Flies a spell's bolt from one unit to another, chest high, and calls `onArrive` as it lands. */
@@ -1258,10 +1293,43 @@ export class BattleScene extends Phaser.Scene {
 
   /** Hands control to whoever acts next: the battle's end, an enemy, or a player unit. */
   private continueBattle(): void {
-    const phase = this.engine.getState().phase
-    if (phase === 'over') this.endBattle()
-    else if (phase === 'enemy') this.runEnemyAction()
-    else this.setPlayerControl(true)
+    const { phase, round } = this.engine.getState()
+    if (phase === 'over') {
+      this.endBattle()
+      return
+    }
+    if (phase === 'enemy') {
+      this.runEnemyAction()
+      return
+    }
+    // The player's turn begins: nothing is animating and no unit is half-way through anything.
+    if (round !== this.savedRound) {
+      this.savedRound = round
+      this.save()
+    }
+    this.setPlayerControl(true)
+  }
+
+  /**
+   * Writes the game to its slot with the battle as it stands, or, once the
+   * battle is won, as the world map will find it. If the browser refuses, play
+   * goes on and the log says so, once.
+   */
+  private save(): void {
+    const over = this.engine.getState().phase === 'over'
+    // A battle with no monster location behind it is a test's: a load would have nowhere to take it up.
+    if (!over && !this.location) return
+    const battle: SavedBattle | null = over
+      ? null
+      : {
+          location: this.location!.id,
+          engine: this.engine.snapshot(),
+          enemyRng: this.enemyRng.state(),
+          ground: this.ground.piles(),
+        }
+    if (saveGame(this.gameState, battle) || this.registry.get(SAVE_WARNED_KEY)) return
+    this.registry.set(SAVE_WARNED_KEY, true)
+    this.pushLog(SAVE_FAILED_MESSAGE)
   }
 
   /** Plays one enemy action, then continues; the enemy's turn runs until its policy ends it. */
@@ -1314,6 +1382,14 @@ export class BattleScene extends Phaser.Scene {
     this.syncUnitsFromEngine()
     const xpLines = playerWon ? describeRewards(rewardVictory(this.gameState.party, this.xpReward)) : []
     this.xpReward = 0
+    if (playerWon) {
+      // Kept as it happens: a page reloaded on the victory screen opens the world map with the win.
+      this.save()
+    } else if (this.gameState.slot !== null) {
+      // Permadeath: the playthrough is over and its slot is free. Nothing writes it back.
+      deleteSlot(this.gameState.slot)
+      this.gameState.slot = null
+    }
     const lootLines = found.length > 0 ? [`Found: ${listNames(found.map((item) => item.name))}.`] : []
     this.bannerText.setText(playerWon ? 'VICTORY!' : 'DEFEAT')
     this.bannerText.setColor(playerWon ? '#66bb6a' : '#ef5350')

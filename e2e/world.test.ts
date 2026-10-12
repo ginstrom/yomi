@@ -42,7 +42,7 @@ describe('the world map', () => {
     const battle = await game.enterBattle()
     expect(await game.scenes()).toEqual({ running: ['Battle'], paused: [] })
     expect(battle.state).toMatchObject({ round: 1, phase: 'player' })
-    expect(battle.state.units.filter((u) => u.side === 'player')).toHaveLength(4)
+    expect(battle.state.units.filter((u) => u.side === 'player')).toHaveLength(3)
     expect(battle.log[0]).toMatchObject({ type: 'battle_start', seed: 1 })
   })
 
@@ -76,8 +76,8 @@ describe('the world map', () => {
     await game.page.mouse.click(worn.equipment.ring1.x, worn.equipment.ring1.y, { button: 'right' })
     const dropped = await game.waitFor('Inventory', (p) => p.ground.length === 1 && p.armorClass === before.armorClass)
     expect(dropped.equipment.ring1.item).toBeNull()
-    await game.click(dropped.party[3])
-    const other = await game.waitFor('Inventory', (p) => p.party[3].active)
+    await game.click(dropped.party[2])
+    const other = await game.waitFor('Inventory', (p) => p.party[2].active)
     expect(other.ground.map((slot) => slot.item)).toEqual(['ring_protection'])
 
     await game.press('Escape')

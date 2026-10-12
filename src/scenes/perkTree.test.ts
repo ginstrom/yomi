@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { ATTRIBUTE_IDS } from '../character/attributes.ts'
 import { createWarrior } from '../character/character.ts'
 import { PERKS, PERK_IDS, TRUNK_PERKS, perkParent } from '../character/perks.ts'
-import { nodeHint, nodeLabel, nodeState, perkTitle, perkTreeLayout } from './perkTree.ts'
+import { newDraft, type CharacterDraft } from '../character/creation.ts'
+import { draftNodeHint, nodeHint, nodeLabel, nodeState, perkTitle, perkTreeLayout } from './perkTree.ts'
 
 /** The warrior: strength 7, perception 4, endurance 7, intelligence 4, agility 6, luck 7. */
 const warriorAt = (level: number, perkPicks = 0) => ({ ...createWarrior(), level, perkPicks })
@@ -118,5 +119,28 @@ describe('nodeHint', () => {
     warrior.perks.toughness = 2
     expect(nodeHint(warrior, 'toughness', true)).toBe('Taken')
     expect(nodeHint(warrior, 'toughness', false)).toBe('Taken')
+  })
+})
+
+describe('draftNodeHint', () => {
+  const draft = (perks: CharacterDraft['perks']): CharacterDraft => ({
+    ...newDraft(),
+    attributes: { strength: 4, perception: 7, endurance: 5, intelligence: 7, agility: 7, luck: 5 },
+    tagged: 'archery',
+    perks,
+  })
+
+  it('offers a rank to take while a pick is left, and the last rank back when none is', () => {
+    expect(draftNodeHint(draft([]), 'toughness')).toBe('Click to take')
+    expect(draftNodeHint(draft(['toughness']), 'toughness')).toBe('Click to take')
+    expect(draftNodeHint(draft(['toughness', 'toughness']), 'toughness')).toBe('Click to give back')
+    expect(draftNodeHint(draft(['toughness', 'dodger', 'deadly_aim']), 'dodger')).toBe('Click to give back')
+    expect(draftNodeHint(draft(['toughness', 'dodger', 'deadly_aim']), 'marksmanship')).toBe('No picks left')
+  })
+
+  it('says why a click would do nothing', () => {
+    expect(draftNodeHint(draft([]), 'heavy_hand')).toBe('Not yet: Strength 6')
+    expect(draftNodeHint(draft([]), 'gain_luck')).toBe('Not yet: Level 3')
+    expect(draftNodeHint(draft(['deadly_aim', 'far_shot', 'dodger']), 'deadly_aim')).toBe('Far Shot asks for Deadly Aim')
   })
 })

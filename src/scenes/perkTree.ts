@@ -1,5 +1,6 @@
 import { ATTRIBUTES, ATTRIBUTE_IDS } from '../character/attributes.ts'
 import type { Character } from '../character/character.ts'
+import { draftCharacter, togglePerk, type CharacterDraft } from '../character/creation.ts'
 import {
   PERKS,
   PERK_IDS,
@@ -99,4 +100,16 @@ export function nodeHint(character: Character, perk: PerkId, canAdvance: boolean
   }
   if (!canAdvance) return 'Perks are chosen on the world map'
   return character.perkPicks > 0 ? 'Click to take' : `No perk to choose until level ${nextPerkLevel(character)}`
+}
+
+/**
+ * The same words for a node of the tree in character creation, where a click
+ * takes a rank or gives the last one back (`togglePerk`).
+ */
+export function draftNodeHint(draft: CharacterDraft, perk: PerkId): string {
+  const change = togglePerk(draft, perk)
+  if (change.draft !== draft) return change.draft.perks.length > draft.perks.length ? 'Click to take' : 'Click to give back'
+  if (change.notes.length > 0) return change.notes[0]
+  const character = draftCharacter(draft)
+  return nodeState(character, perk) === 'open' ? 'No picks left' : nodeHint(character, perk, true)
 }

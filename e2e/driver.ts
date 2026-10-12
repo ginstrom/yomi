@@ -2,7 +2,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import { afterAll, afterEach, beforeAll, expect, inject } from 'vitest'
 import { hexDistance, offsetToHex, type Hex } from '../src/grid/hex.ts'
 import { BATTLE_LAYOUT, WORLD_LAYOUT, boardHexOnScreen, type Point } from '../src/scenes/boardGeometry.ts'
-import type { BattleProbe, Probes, WorldProbe } from '../src/testHook.ts'
+import type { BattleProbe, MenuProbe, PartyProbe, Probes, WorldProbe } from '../src/testHook.ts'
 
 export const VIEWPORT = { width: 1280, height: 800 }
 /** A seed with which `winBattle` beats the Goblin Raiders. */
@@ -96,6 +96,17 @@ export class Game {
     }
   }
 
+  /**
+   * The probe of a scene that has just started, once its buttons take clicks: a scene's
+   * game objects become interactive on the frame after they are made, so a click sent the
+   * moment the scene is up would miss them.
+   */
+  async settled<K extends keyof Probes>(key: K, ready: (probe: Probes[K]) => boolean = () => true): Promise<Probes[K]> {
+    await this.waitFor(key, ready)
+    await this.frames()
+    return this.waitFor(key, ready)
+  }
+
   scenes(): Promise<{ running: string[]; paused: string[] }> {
     return this.page.evaluate(() => ({ running: window.__yomi!.running(), paused: window.__yomi!.paused() }))
   }
@@ -137,12 +148,38 @@ export class Game {
 
   // ---- journeys ---------------------------------------------------------------
 
-  /** From the main menu: starts a new game, which opens on the world map. */
-  async newGame(): Promise<WorldProbe> {
+  /** From the main menu: New, which opens the party screen on its choice. */
+  async openPartyScreen(): Promise<PartyProbe> {
     const menu = await this.waitFor('Menu')
     await this.click(menu.buttons.new)
+    await this.waitForScenes(['Party'])
+    return this.settled('Party', (p) => p.view === 'choice')
+  }
+
+  /** From the party screen's choice: takes the ready-made party and begins, which opens the world map. */
+  async beginReadyMade(): Promise<WorldProbe> {
+    const choice = await this.settled('Party', (p) => p.view === 'choice')
+    await this.click(choice.buttons.readyMade)
+    const roster = await this.waitFor('Party', (p) => p.view === 'roster')
+    await this.click(roster.buttons.begin)
     await this.waitForScenes(['World'])
     return this.waitFor('World')
+  }
+
+  /** From the main menu: a new game with the ready-made party, which opens on the world map. */
+  async newGame(): Promise<WorldProbe> {
+    await this.openPartyScreen()
+    return this.beginReadyMade()
+  }
+
+  /** Loads the page again, as a closed and reopened tab would, and waits for the main menu. The context keeps its storage. */
+  async reload(): Promise<MenuProbe> {
+    await this.page.reload()
+    await this.page.waitForFunction(() => window.__yomi?.running().includes('Menu'))
+    await this.page.evaluate((speed) => {
+      window.__yomi!.speed = speed
+    }, SPEED)
+    return this.waitFor('Menu')
   }
 
   /** Clicks a hex of the world map and waits for the party to arrive there. */

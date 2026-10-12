@@ -10,16 +10,7 @@ import {
   unequipToBackpack,
   type Character,
 } from '../character/character.ts'
-import {
-  PERKS,
-  PERK_IDS,
-  attributeLevel,
-  attributesOf,
-  describePerkRequirements,
-  perkRanks,
-  qualifiesFor,
-  type PerkId,
-} from '../character/perks.ts'
+import { PERKS, PERK_IDS, attributeLevel, attributesOf, perkRanks, qualifiesFor, type PerkId } from '../character/perks.ts'
 import { nextPerkLevel, takePerk, xpToNextLevel } from '../character/progression.ts'
 import {
   MASTERY_COST,
@@ -42,7 +33,8 @@ import { soundVolume } from './audioSettings.ts'
 import { isSecondaryClick } from './clicks.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { PARTY_PANEL_W, portraitKey } from './partyPanel.ts'
-import { nodeHint, nodeLabel, nodeState, perkTitle, perkTreeLayout, type TreeNode } from './perkTree.ts'
+import { nodeHint, perkTitle } from './perkTree.ts'
+import { PerkTreeView } from './PerkTreeView.ts'
 import { SlotScroll } from './slotScroll.ts'
 
 /** What the panel can show: one of its three tabs, or the perk tree, which is opened from the Skills tab. */
@@ -127,17 +119,11 @@ const PERK_ROW_Y = 104
 const PERK_ROW_H = 38
 const TREE_BUTTON = { x: PERKS_X + PERKS_W / 2, y: 462, width: 160, height: 32 }
 
-/** The perk tree: a node for each perk, a row for each tip of a branch, and a strip under it for the node pointed at. */
+/** The perk tree's heading and its button back; the tree itself is `PerkTreeView`'s. */
 const TREE_X = 20
-const TREE_Y = 100
-const TREE_COLUMN_W = 172
-const TREE_ROW_H = 46
-const NODE_W = 160
-const NODE_H = 36
-const TREE_STRIP_Y = 430
 const BACK_BUTTON = { x: PANEL_W - 20 - 40, y: 75, width: 80, height: 26 }
 /** What the strip says with the pointer on no node. */
-const TREE_RULE = 'A perk comes every 3rd level. A line from a perk means it must be taken first.'
+const TREE_RULE = 'A new character has 3 perks to choose, and one more comes every 3rd level. A line from a perk means it must be taken first.'
 
 const FONT = 'monospace'
 const GOLD = '#e8c766'
@@ -188,9 +174,6 @@ export class InventoryScene extends Phaser.Scene {
   private skillsContent!: Phaser.GameObjects.Container
   private inventoryContent!: Phaser.GameObjects.Container
   private treeContent!: Phaser.GameObjects.Container
-  /** The strip under the perk tree: what the node pointed at does and asks, and what a click on it would do. */
-  private treeStrip: Phaser.GameObjects.Text[] = []
-  private readonly treeNodes: readonly TreeNode[] = perkTreeLayout()
   private tabButtons: Record<MainTab, TabButton> = {} as Record<MainTab, TabButton>
   private tooltip!: Phaser.GameObjects.Container
   private tooltipText!: Phaser.GameObjects.Text
@@ -279,15 +262,12 @@ export class InventoryScene extends Phaser.Scene {
       takenPerks: this.takenPerks().map((id) => ({ perk: id, ranks: perkRanks(this.character, id) })),
       perkTreeButton: onScreen(TREE_BUTTON),
       back: onScreen(BACK_BUTTON),
-      perks: this.treeNodes.map((node) => {
-        const { x, y } = this.nodeAt(node)
-        return {
-          ...onScreen({ x: x + NODE_W / 2, y: y + NODE_H / 2 }),
-          perk: node.perk,
-          ranks: perkRanks(this.character, node.perk),
-          canTake: this.canTake(node.perk),
-        }
-      }),
+      perks: PerkTreeView.nodeCentres().map(({ perk, ...at }) => ({
+        ...onScreen(at),
+        perk,
+        ranks: perkRanks(this.character, perk),
+        canTake: this.canTake(perk),
+      })),
       equipment: Object.fromEntries(
         [...this.slotCentres].map(([slot, at]) => [slot, { ...onScreen(at), item: equipment[slot]?.id ?? null }]),
       ) as InventoryProbe['equipment'],
@@ -633,97 +613,19 @@ export class InventoryScene extends Phaser.Scene {
 
   // ---- build: perk tree -------------------------------------------------
 
-  /** A node's top left corner, in the panel's own pixels. */
-  private nodeAt({ column, row }: Pick<TreeNode, 'column' | 'row'>): Point {
-    return { x: TREE_X + column * TREE_COLUMN_W, y: TREE_Y + row * TREE_ROW_H }
-  }
-
-  /**
-   * Every perk as a node of the tree (perkTree.ts), with a line from the node it
-   * grows from. A click on an open node takes a rank where a pick can be spent.
-   */
+  /** The tree (`PerkTreeView`) under its heading: a click on an open node takes a rank where a pick can be spent. */
   private buildPerkTree(): void {
     this.treeContent.add(this.heading('Perk Tree', TREE_X, 66))
     this.buildPerkStatus(this.treeContent, BACK_BUTTON.x - BACK_BUTTON.width / 2 - 16, 66)
     this.buildPanelButton(this.treeContent, BACK_BUTTON, 'Back', false, () => this.showTab('skills'))
-
-    const lines = this.add.graphics()
-    this.treeContent.add(lines)
-    for (const node of this.treeNodes) {
-      const from = this.treeNodes.find((other) => other.perk === node.from)
-      if (!from) continue
-      const start = this.nodeAt(from)
-      const end = this.nodeAt(node)
-      const y0 = start.y + NODE_H / 2
-      const y1 = end.y + NODE_H / 2
-      // A square elbow, halfway across the gap, where the two are on different rows.
-      const elbow = (start.x + NODE_W + end.x) / 2
-      const walked = perkRanks(this.character, node.perk) > 0
-      lines.lineStyle(2, walked ? 0xc9a227 : 0x4a3d28, 1)
-      lines.beginPath()
-      lines.moveTo(start.x + NODE_W, y0)
-      lines.lineTo(elbow, y0)
-      lines.lineTo(elbow, y1)
-      lines.lineTo(end.x, y1)
-      lines.strokePath()
-    }
-    for (const node of this.treeNodes) this.buildTreeNode(node)
-
-    const style = { fontFamily: FONT, fontSize: '12px', color: DIM }
-    this.treeStrip = [
-      this.add.text(TREE_X, TREE_STRIP_Y, '', { ...style, color: TEXT, wordWrap: { width: PANEL_W - 2 * TREE_X } }),
-      this.add.text(TREE_X, TREE_STRIP_Y + 36, '', style),
-      this.add.text(PANEL_W - TREE_X, TREE_STRIP_Y + 36, '', { ...style, color: GOLD }).setOrigin(1, 0),
-    ]
-    this.treeContent.add(this.treeStrip)
-    this.describeNode(null)
-  }
-
-  private buildTreeNode(node: TreeNode): void {
-    const { x, y } = this.nodeAt(node)
-    const id = node.perk
-    const state = nodeState(this.character, id)
-    const takeable = this.canTake(id)
-    const started = perkRanks(this.character, id) > 0
-    const bg = this.add
-      .rectangle(x, y, NODE_W, NODE_H, 0x1b1712, state === 'closed' ? 0.5 : 0.95)
-      .setOrigin(0)
-      .setStrokeStyle(takeable ? 2 : 1, takeable ? 0xc9a227 : state === 'open' ? 0x6b5a3a : 0x4a3d28)
-    const label = this.add
-      .text(x + NODE_W / 2, y + NODE_H / 2, nodeLabel(this.character, id), {
-        fontFamily: FONT,
-        fontSize: '13px',
-        color: started ? GOLD : state === 'open' ? TEXT : DIM,
-      })
-      .setOrigin(0.5)
-    this.treeContent.add([bg, label])
-
-    bg.setInteractive({ useHandCursor: takeable })
-    bg.on('pointerover', () => {
-      if (takeable) bg.setFillStyle(0x3a2f1c, 0.95)
-      this.describeNode(id)
+    new PerkTreeView(this, this.treeContent, {
+      character: this.character,
+      clickable: (perk) => this.canTake(perk),
+      onClick: (perk) => this.advance(() => takePerk(this.character, perk)),
+      hint: (perk) => nodeHint(this.character, perk, this.canAdvance),
+      rule: TREE_RULE,
+      stripWidth: PANEL_W - 2 * TREE_X,
     })
-    bg.on('pointerout', () => {
-      if (takeable) bg.setFillStyle(0x1b1712, 0.95)
-      this.describeNode(null)
-    })
-    bg.on('pointerdown', () => {
-      if (takeable) this.advance(() => takePerk(this.character, id))
-    })
-  }
-
-  /** Fills the strip under the tree for the node pointed at, or with the rule when there is none. */
-  private describeNode(perk: PerkId | null): void {
-    const [what, asks, hint] = this.treeStrip
-    if (perk === null) {
-      what.setText(TREE_RULE).setColor(DIM)
-      asks.setText('')
-      hint.setText('')
-      return
-    }
-    what.setText(`${perkTitle(this.character, perk)}: ${PERKS[perk].description}`).setColor(TEXT)
-    asks.setText(`Asks: ${describePerkRequirements(perk)}`)
-    hint.setText(nodeHint(this.character, perk, this.canAdvance))
   }
 
   // ---- build: inventory tab -------------------------------------------------

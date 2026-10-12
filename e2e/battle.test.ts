@@ -53,18 +53,18 @@ describe('a battle', () => {
   it('selects a hero by its portrait, and opens the hero’s panel on a second click', async () => {
     const game = await games.open()
     const start = await game.enterBattle()
-    expect(start.party.map((member) => member.active)).toEqual([true, false, false, false])
+    expect(start.party.map((member) => member.active)).toEqual([true, false, false])
 
     await game.click(start.party[1])
     const selected = await game.waitFor('Battle', (b) => b.selected === 'hero_2')
-    expect(selected.party.map((member) => member.active)).toEqual([false, true, false, false])
+    expect(selected.party.map((member) => member.active)).toEqual([false, true, false])
     expect(await game.scenes()).toEqual({ running: ['Battle'], paused: [] })
 
     await game.click(selected.party[1])
     await game.waitForScenes(['Inventory'], ['Battle'])
     const panel = await game.waitFor('Inventory')
     expect(panel.tab).toBe('character')
-    expect(panel.party.map((member) => member.active)).toEqual([false, true, false, false])
+    expect(panel.party.map((member) => member.active)).toEqual([false, true, false])
   })
 
   it('turns the open panel to another hero by its portrait, each paying for its own change of gear', async () => {
@@ -81,8 +81,8 @@ describe('a battle', () => {
     // Still on the inventory, and showing the third hero's own gear.
     expect(third.tab).toBe('inventory')
     expect(third.equipment.mainHand.item).not.toBeNull()
-    await game.click(third.equipment.offHand)
-    await game.waitFor('Inventory', (p) => p.equipment.offHand.item === null)
+    await game.click(third.equipment.mainHand)
+    await game.waitFor('Inventory', (p) => p.party[2].active && p.equipment.mainHand.item === null)
 
     await game.press('Escape')
     await game.waitForScenes(['Battle'])
@@ -96,17 +96,17 @@ describe('a battle', () => {
   it('casts the mage’s spell on a foe picked after the Cast button, and backs out of picking on Esc', async () => {
     const game = await games.open()
     const start = await game.enterBattle()
-    const mage = (battle: BattleProbe) => battle.state.units.find((u) => u.id === 'hero_4')!
+    const mage = (battle: BattleProbe) => battle.state.units.find((u) => u.id === 'hero_3')!
     // Only a unit with magic has the button.
     expect(start.buttons.cast.visible).toBe(false)
 
-    await game.click(start.party[3])
-    const selected = await game.waitFor('Battle', (b) => b.selected === 'hero_4')
+    await game.click(start.party[2])
+    const selected = await game.waitFor('Battle', (b) => b.selected === 'hero_3')
     expect(mage(selected)).toMatchObject({ mana: 18, ap: 8 })
     // No foe is within the spell's range yet.
     expect(selected.buttons.cast).toMatchObject({ visible: true, enabled: false })
 
-    await game.click(battleHexOnScreen(selected, offsetToHex(3, 1)))
+    await game.click(battleHexOnScreen(selected, offsetToHex(3, 3)))
     const near = await game.waitFor('Battle', (b) => b.playerControl && b.buttons.cast.enabled)
     expect(mage(near).ap).toBe(5)
 
@@ -122,7 +122,7 @@ describe('a battle', () => {
     await game.click(battleHexOnScreen(picking, foe.position))
     const after = await game.waitFor('Battle', (b) => b.log.some((e) => e.type === 'cast') && (b.playerControl || b.buttons.result.visible))
     expect(after.log.filter((e) => e.type === 'cast')).toMatchObject([
-      { caster: 'hero_4', spell: 'magic_arrow', target: 'goblin', manaCost: 3, manaAfter: 15, apAfter: 1 },
+      { caster: 'hero_3', spell: 'magic_arrow', target: 'goblin', manaCost: 3, manaAfter: 15, apAfter: 1 },
     ])
     expect(mage(after)).toMatchObject({ mana: 15, ap: 1 })
     expect(after.casting).toBeNull()
@@ -130,7 +130,7 @@ describe('a battle', () => {
     // The panel shows what mana is left.
     await game.press('c')
     await game.waitForScenes(['Inventory'], ['Battle'])
-    expect((await game.waitFor('Inventory', (p) => p.party[3].active)).mana).toBe(15)
+    expect((await game.waitFor('Inventory', (p) => p.party[2].active)).mana).toBe(15)
   })
 
   it('pauses under the menu on Esc, resumes on Continue, and is dropped for a new game', async () => {
@@ -146,8 +146,9 @@ describe('a battle', () => {
     await game.press('Escape')
     await game.waitForScenes(['Menu'], ['Battle'])
     await game.click((await game.waitFor('Menu')).buttons.new)
-    await game.waitForScenes(['World'])
-    const world = await game.waitFor('World')
+    // New leads to the party screen, and the battle is gone from under the menu.
+    await game.waitForScenes(['Party'])
+    const world = await game.beginReadyMade()
     expect(world.world.turn).toBe(1)
     expect(world.world.locations.some((l) => l.id === RAIDERS.id)).toBe(true)
   })

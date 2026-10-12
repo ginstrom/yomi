@@ -1,5 +1,7 @@
 import type Phaser from 'phaser'
 import type { AttributeId } from './character/attributes.ts'
+import type { CharacterDraft } from './character/creation.ts'
+import type { PortraitId } from './character/portraits.ts'
 import type { SkillId } from './character/skills.ts'
 import type { SpellId } from './combat/spells.ts'
 import type { BattleEvent, BattleState, UnitId } from './engine/battleEngine.ts'
@@ -35,7 +37,54 @@ export interface PortraitProbe extends Point {
 
 export interface MenuProbe {
   showingOptions: boolean
-  buttons: { new: ButtonProbe; continue: ButtonProbe; options: ButtonProbe; back: ButtonProbe }
+  /** Whether the save slots are shown, which the Load button does. */
+  showingLoad: boolean
+  /** `continue` is enabled over a paused game, or when a slot can be loaded. */
+  buttons: { new: ButtonProbe; continue: ButtonProbe; load: ButtonProbe; options: ButtonProbe; back: ButtonProbe }
+  /** The three save slots' rows, each with the line it reads; enabled when it holds a game that can be loaded. */
+  slots: Array<ButtonProbe & { line: string }>
+}
+
+export interface PartyProbe {
+  /** The choice between the two ways to start, the roster, or the prompt for a slot to overwrite. */
+  view: 'choice' | 'roster' | 'overwrite'
+  /** A row for each place up to the party limit: a member with Edit and Remove, or an empty place with Create. */
+  rows: Array<{ name: string | null; edit: ButtonProbe; remove: ButtonProbe; create: ButtonProbe }>
+  /** `readyMade` and `createOwn` are the choice's; `begin` is the roster's, enabled with a member or more. */
+  buttons: { readyMade: ButtonProbe; createOwn: ButtonProbe; begin: ButtonProbe; back: ButtonProbe }
+  /** The overwrite prompt's rows, one for each save slot, each with the line it reads. */
+  slots: Array<ButtonProbe & { line: string }>
+}
+
+/** The steps of character creation, in the order Next walks them. */
+export type CreationStep = 'attributes' | 'skills' | 'perks' | 'name'
+
+export interface CreationProbe {
+  step: CreationStep
+  /** Whether a member of the party is being edited, not a new one created. */
+  editing: boolean
+  /** What has been chosen so far. */
+  draft: CharacterDraft
+  /** What is left to place of each kind. */
+  attributePoints: number
+  skillPoints: number
+  perkPicks: number
+  /** The tabs that open each step directly. */
+  steps: Record<CreationStep, ButtonProbe>
+  /** Each attribute's value and its two buttons; on screen on the attributes step. */
+  attributes: Record<AttributeId, { value: number; minus: ButtonProbe; plus: ButtonProbe }>
+  /** Each skill's level as the draft's character has it, its points placed and its buttons; on screen on the skills step. */
+  skills: Record<SkillId, { level: number; placed: number; tagged: boolean; tag: ButtonProbe; minus: ButtonProbe; plus: ButtonProbe }>
+  /** Every perk's node, by its centre on screen, with the ranks chosen and whether a click would take or give back one; on screen on the perks step. */
+  perks: Array<Point & { perk: string; ranks: number; canClick: boolean }>
+  /** The preset faces, by their centres on screen; on screen on the name step. */
+  portraits: Array<Point & { portrait: PortraitId; picked: boolean }>
+  /** `create` reads Save when editing; it is on the name step, enabled when the draft has no problems. */
+  buttons: { next: ButtonProbe; back: ButtonProbe; create: ButtonProbe; cancel: ButtonProbe }
+  /** The problem shown beside Create: the first the draft has, or nothing. */
+  problem: string
+  /** What the last change dropped or refused, as the screen says it. */
+  notes: string[]
 }
 
 export interface WorldProbe {
@@ -103,6 +152,8 @@ export interface InventoryProbe {
 
 export interface Probes {
   Menu: MenuProbe
+  Party: PartyProbe
+  Creation: CreationProbe
   World: WorldProbe
   Battle: BattleProbe
   Inventory: InventoryProbe

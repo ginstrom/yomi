@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { newGame } from '../game/gameState.ts'
+import { SLOT_IDS, describeSlot, latestSlot, readSlot, type SlotId } from '../game/saveSlots.ts'
 import { buttonProbe, type MenuProbe } from '../testHook.ts'
 import { getAudioSettings, setAudioLevel, soundVolume, type AudioChannel } from './audioSettings.ts'
 
@@ -8,9 +8,16 @@ interface MenuData {
   resume?: 'World' | 'Battle'
 }
 
+/** What the menu shows: its main buttons, the volume controls, or the save slots to load from. */
+type MenuView = 'main' | 'options' | 'load'
+
 const BUTTON_W = 220
 const BUTTON_H = 52
 const BUTTON_GAP = 20
+/** A save slot's row in the Load list: wide enough for its party, level, turn and date. */
+const SLOT_W = 620
+const SLOT_H = 44
+const SLOT_GAP = 14
 
 const SLIDER_W = 200
 const SLIDER_H = 10
@@ -42,9 +49,14 @@ export class MenuScene extends Phaser.Scene {
   private optionsTitle!: Phaser.GameObjects.Text
   private sliders: Slider[] = []
   private backButton!: Phaser.GameObjects.Container
+  private loadTitle!: Phaser.GameObjects.Text
+  /** A row for each save slot, with what it was drawn from. */
+  private slots: Array<{ button: Phaser.GameObjects.Container; line: string; loadable: boolean }> = []
   /** The slider being dragged, if any. */
   private dragging: Slider | null = null
-  private showingOptions = false
+  private view: MenuView = 'main'
+  /** Whether Continue has anything to go to: a paused game, or a slot that can be loaded. */
+  private canContinue = false
 
   constructor() {
     super('Menu')
@@ -58,17 +70,26 @@ export class MenuScene extends Phaser.Scene {
       .text(0, 0, 'YOMI', { fontFamily: 'monospace', fontSize: '56px', color: '#e8c766', fontStyle: 'bold' })
       .setOrigin(0.5)
 
+    this.canContinue = this.resumeKey !== undefined || latestSlot() !== null
     const newButton = this.createButton('New', () => this.onNew(), true)
-    const continueButton = this.createButton('Continue', () => this.onContinue(), this.resumeKey !== undefined)
-    const optionsButton = this.createButton('Options', () => this.onOptions(), true)
-    this.buttons = [newButton, continueButton, optionsButton]
+    const continueButton = this.createButton('Continue', () => this.onContinue(), this.canContinue)
+    const loadButton = this.createButton('Load', () => this.show('load'), true)
+    const optionsButton = this.createButton('Options', () => this.show('options'), true)
+    this.buttons = [newButton, continueButton, loadButton, optionsButton]
 
     this.optionsTitle = this.add
       .text(0, 0, 'Options', { fontFamily: 'monospace', fontSize: '24px', color: '#e8c766', fontStyle: 'bold' })
       .setOrigin(0.5)
     this.sliders = SLIDERS.map(({ channel, label }) => this.createSlider(channel, label))
-    this.backButton = this.createButton('Back', () => this.showOptions(false), true)
-    this.showOptions(false)
+    this.loadTitle = this.add
+      .text(0, 0, 'Load', { fontFamily: 'monospace', fontSize: '24px', color: '#e8c766', fontStyle: 'bold' })
+      .setOrigin(0.5)
+    this.slots = SLOT_IDS.map((slot) => {
+      const { line, loadable } = describeSlot(slot)
+      return { button: this.createButton(line, () => this.loadSlot(slot), loadable, SLOT_W, SLOT_H), line, loadable }
+    })
+    this.backButton = this.createButton('Back', () => this.show('main'), true)
+    this.show('main')
 
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (this.dragging && pointer.isDown) this.setFromPointer(this.dragging, pointer)
@@ -88,31 +109,42 @@ export class MenuScene extends Phaser.Scene {
 
   /** What the in-browser tests see of the menu; see testHook.ts. */
   probe(): MenuProbe {
-    const [newButton, continueButton, optionsButton] = this.buttons
+    const [newButton, continueButton, loadButton, optionsButton] = this.buttons
     return {
-      showingOptions: this.showingOptions,
+      showingOptions: this.view === 'options',
+      showingLoad: this.view === 'load',
       buttons: {
         new: buttonProbe(newButton),
-        continue: buttonProbe(continueButton, this.resumeKey !== undefined),
+        continue: buttonProbe(continueButton, this.canContinue),
+        load: buttonProbe(loadButton),
         options: buttonProbe(optionsButton),
         back: buttonProbe(this.backButton),
       },
+      slots: this.slots.map(({ button, line, loadable }) => ({ ...buttonProbe(button, loadable), line })),
     }
   }
 
   // ---- build ---------------------------------------------------------------
 
-  private createButton(label: string, onClick: () => void, enabled: boolean): Phaser.GameObjects.Container {
+  private createButton(
+    label: string,
+    onClick: () => void,
+    enabled: boolean,
+    width = BUTTON_W,
+    height = BUTTON_H,
+  ): Phaser.GameObjects.Container {
     const bg = this.add
-      .rectangle(0, 0, BUTTON_W, BUTTON_H, enabled ? 0x2b6cb0 : 0x2a2a2a)
+      .rectangle(0, 0, width, height, enabled ? 0x2b6cb0 : 0x2a2a2a)
       .setStrokeStyle(2, enabled ? 0x90cdf4 : 0x4a4a4a)
     const text = this.add
       .text(0, 0, label, {
         fontFamily: 'monospace',
-        fontSize: '18px',
+        fontSize: width === BUTTON_W ? '18px' : '14px',
         color: enabled ? '#ffffff' : '#707070',
       })
       .setOrigin(0.5)
+    // A slot's line can run long (three long names, a battle's name): it shrinks to fit its row.
+    text.setScale(Math.min(1, (width - 24) / text.width))
 
     if (enabled) {
       bg.setInteractive({ useHandCursor: true })
@@ -125,7 +157,7 @@ export class MenuScene extends Phaser.Scene {
     }
 
     const container = this.add.container(0, 0, [bg, text])
-    container.setSize(BUTTON_W, BUTTON_H)
+    container.setSize(width, height)
     return container
   }
 
@@ -181,7 +213,12 @@ export class MenuScene extends Phaser.Scene {
       slider.value.setPosition(left + rowW, y)
       this.drawSlider(slider)
     })
-    this.backButton.setPosition(centerX, slidersY + this.sliders.length * SLIDER_ROW_GAP + 30)
+
+    // Back sits under whichever of the two it steps back from.
+    this.loadTitle.setPosition(centerX, slidersY - 60)
+    this.slots.forEach(({ button }, i) => button.setPosition(centerX, slidersY + i * (SLOT_H + SLOT_GAP)))
+    const under = this.view === 'load' ? this.slots.length * (SLOT_H + SLOT_GAP) + 16 : this.sliders.length * SLIDER_ROW_GAP + 30
+    this.backButton.setPosition(centerX, slidersY + under)
   }
 
   private drawSlider(slider: Slider): void {
@@ -193,32 +230,48 @@ export class MenuScene extends Phaser.Scene {
 
   // ---- actions ---------------------------------------------------------------
 
-  /** A new game starts on the world map; the game the menu was opened over is dropped. */
+  /** A new game starts on the party screen; the game the menu was opened over stays in its slot. */
   private onNew(): void {
     if (this.resumeKey) this.scene.stop(this.resumeKey)
-    this.scene.start('World', { game: newGame() })
+    this.scene.start('Party')
   }
 
+  /** Back to the paused game, which is the latest save; with none paused, the slot written last. */
   private onContinue(): void {
-    if (!this.resumeKey) return
-    this.scene.stop()
-    this.scene.resume(this.resumeKey)
-  }
-
-  private onOptions(): void {
-    this.showOptions(true)
-  }
-
-  /** Swaps the main buttons for the volume controls, or back. */
-  private showOptions(show: boolean): void {
-    this.showingOptions = show
-    this.endDrag()
-    for (const button of this.buttons) button.setVisible(!show)
-    this.optionsTitle.setVisible(show)
-    for (const { label, track, fill, knob, value } of this.sliders) {
-      for (const part of [label, track, fill, knob, value]) part.setVisible(show)
+    if (this.resumeKey) {
+      this.scene.stop()
+      this.scene.resume(this.resumeKey)
+      return
     }
-    this.backButton.setVisible(show)
+    const slot = latestSlot()
+    if (slot !== null) this.loadSlot(slot)
+  }
+
+  /**
+   * Loads a slot's game: on the world map, or in the battle it was saved in.
+   * The game paused under the menu, if any, is dropped; it is in its own slot.
+   */
+  private loadSlot(slot: SlotId): void {
+    const file = readSlot(slot)
+    if (file === null || file === 'unreadable') return
+    if (this.resumeKey) this.scene.stop(this.resumeKey)
+    if (file.battle) this.scene.start('Battle', { game: file.game, location: file.battle.location, saved: file.battle })
+    else this.scene.start('World', { game: file.game })
+  }
+
+  /** Swaps the main buttons for the volume controls or the save slots, or back. */
+  private show(view: MenuView): void {
+    this.view = view
+    this.endDrag()
+    for (const button of this.buttons) button.setVisible(view === 'main')
+    this.optionsTitle.setVisible(view === 'options')
+    for (const { label, track, fill, knob, value } of this.sliders) {
+      for (const part of [label, track, fill, knob, value]) part.setVisible(view === 'options')
+    }
+    this.loadTitle.setVisible(view === 'load')
+    for (const { button } of this.slots) button.setVisible(view === 'load')
+    this.backButton.setVisible(view !== 'main')
+    this.layout()
   }
 
   private setFromPointer(slider: Slider, pointer: Phaser.Input.Pointer): void {
@@ -239,7 +292,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private onEscape(): void {
-    if (this.showingOptions) this.showOptions(false)
-    else this.onContinue()
+    if (this.view !== 'main') this.show('main')
+    else if (this.resumeKey) this.onContinue()
   }
 }
