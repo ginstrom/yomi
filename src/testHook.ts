@@ -52,6 +52,10 @@ export interface PartyProbe {
   rows: Array<{ name: string | null; edit: ButtonProbe; remove: ButtonProbe; create: ButtonProbe }>
   /** `readyMade` and `createOwn` are the choice's; `begin` is the roster's, enabled with a member or more. */
   buttons: { readyMade: ButtonProbe; createOwn: ButtonProbe; begin: ButtonProbe; back: ButtonProbe }
+  /** The ready-made party's portraits under its button, on the choice: nothing to click, but a hover tells of the member. */
+  readyMade: Array<ButtonProbe & { name: string }>
+  /** The lines the hover shows of the ready-made member under the pointer, its name first; empty with none. */
+  info: string[]
   /** The overwrite prompt's rows, one for each save slot, each with the line it reads. */
   slots: Array<ButtonProbe & { line: string }>
 }

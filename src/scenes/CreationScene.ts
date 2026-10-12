@@ -63,6 +63,9 @@ const HEADING_Y = 50
 const ATTRIBUTE_ROW_Y = 96
 const ATTRIBUTE_ROW_H = 56
 const STEPPER = 26
+/** A plus or minus held down repeats as a held key does: after a pause, then quickly. */
+const HOLD_REPEAT_DELAY_MS = 400
+const HOLD_REPEAT_INTERVAL_MS = 70
 const ATTRIBUTE_MINUS_X = 430
 const ATTRIBUTE_PLUS_X = 486
 
@@ -129,6 +132,8 @@ export class CreationScene extends Phaser.Scene {
   private step: CreationStep = 'attributes'
   /** What the last change dropped or refused. */
   private notes: string[] = []
+  /** The plus or minus being held down, and the timer of its next repeat. */
+  private held: { at: Rect; enabled: () => boolean; change: () => DraftChange; timer: Phaser.Time.TimerEvent } | null = null
   private bg!: Phaser.GameObjects.Rectangle
   private panel!: Phaser.GameObjects.Container
   private content!: Phaser.GameObjects.Container
@@ -147,6 +152,7 @@ export class CreationScene extends Phaser.Scene {
     this.draft = this.index === null ? newDraft() : copyDraft(this.drafts[this.index])
     this.step = 'attributes'
     this.notes = []
+    this.held = null
 
     this.bg = this.add.rectangle(0, 0, 1, 1, 0x14100c, 1).setOrigin(0)
     this.panel = this.add.container(0, 0)
@@ -161,6 +167,7 @@ export class CreationScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
     })
     this.input.keyboard?.on('keydown-ESC', () => this.finish(this.drafts))
+    for (const released of ['pointerup', 'pointerupoutside', 'gameout']) this.input.on(released, () => this.release())
     // The name is typed, while its step shows.
     this.input.keyboard?.on('keydown', (event: KeyboardEvent) => this.onKey(event))
   }
@@ -296,13 +303,52 @@ export class CreationScene extends Phaser.Scene {
       this.text(LEFT, y - 16, ATTRIBUTES[id].name, TEXT, 15)
       this.text(LEFT, y + 4, ATTRIBUTES[id].description, DIM, 11)
       this.text((ATTRIBUTE_MINUS_X + ATTRIBUTE_PLUS_X) / 2, y, `${this.draft.attributes[id]}`, GOLD, 16).setOrigin(0.5)
-      this.stepperButton(stepper(ATTRIBUTE_MINUS_X, y), '-', canAdjustAttribute(this.draft, id, -1), () => adjustAttribute(this.draft, id, -1))
-      this.stepperButton(stepper(ATTRIBUTE_PLUS_X, y), '+', canAdjustAttribute(this.draft, id, 1), () => adjustAttribute(this.draft, id, 1))
+      this.stepperButton(stepper(ATTRIBUTE_MINUS_X, y), '-', () => canAdjustAttribute(this.draft, id, -1), () => adjustAttribute(this.draft, id, -1))
+      this.stepperButton(stepper(ATTRIBUTE_PLUS_X, y), '+', () => canAdjustAttribute(this.draft, id, 1), () => adjustAttribute(this.draft, id, 1))
     })
   }
 
-  private stepperButton(at: Rect, label: string, enabled: boolean, change: () => DraftChange): void {
-    this.button(at, label, () => this.apply(change()), { enabled, fontSize: 16 })
+  /** A plus or minus: `change` is asked anew at each press and repeat, and `enabled` whether there is another to make. */
+  private stepperButton(at: Rect, label: string, enabled: () => boolean, change: () => DraftChange): void {
+    const onPress = () => {
+      this.hold(at, enabled, change)
+      this.time.delayedCall(0, () => this.apply(change()))
+    }
+    addPanelButton(this, this.content, at, label, onPress, { enabled: enabled(), fontSize: 16 })
+  }
+
+  /**
+   * Begins the repeats of a button just pressed. The hold is the scene's and
+   * not the button's, which each change redraws; it ends when the pointer is
+   * let go or leaves the button's place, or the button has nothing left to do.
+   */
+  private hold(at: Rect, enabled: () => boolean, change: () => DraftChange): void {
+    this.release()
+    const timer = this.time.delayedCall(HOLD_REPEAT_DELAY_MS, () => {
+      if (!this.held) return
+      this.held.timer = this.time.addEvent({ delay: HOLD_REPEAT_INTERVAL_MS, loop: true, callback: () => this.repeat() })
+      this.repeat()
+    })
+    this.held = { at, enabled, change, timer }
+  }
+
+  private repeat(): void {
+    if (!this.held) return
+    const { at, enabled, change } = this.held
+    const pointer = this.input.activePointer
+    const { x, y, scale } = this.panel
+    const over =
+      Math.abs((pointer.x - x) / scale - at.x) <= at.width / 2 && Math.abs((pointer.y - y) / scale - at.y) <= at.height / 2
+    if (!pointer.isDown || !over || !enabled()) {
+      this.release()
+      return
+    }
+    this.apply(change())
+  }
+
+  private release(): void {
+    this.held?.timer.remove()
+    this.held = null
   }
 
   private buildSkills(character: Character): void {
@@ -318,9 +364,9 @@ export class CreationScene extends Phaser.Scene {
       this.text(LEFT, y - 20, SKILLS[id].name, tagged ? GOLD : TEXT, 15)
       this.text(LEFT, y + 2, SKILLS[id].description, DIM, 11).setWordWrapWidth(TAG_X - LEFT - 50)
       this.button(this.tagButton(row), tagged ? 'Tagged' : 'Tag', () => this.apply(tagSkill(this.draft, id)), { marked: tagged })
-      this.stepperButton(stepper(SKILL_MINUS_X, y), '-', canAdjustSkill(this.draft, id, -1), () => adjustSkill(this.draft, id, -1))
+      this.stepperButton(stepper(SKILL_MINUS_X, y), '-', () => canAdjustSkill(this.draft, id, -1), () => adjustSkill(this.draft, id, -1))
       this.text((SKILL_MINUS_X + SKILL_PLUS_X) / 2, y, `${this.draft.raises[id]}`, TEXT, 15).setOrigin(0.5)
-      this.stepperButton(stepper(SKILL_PLUS_X, y), '+', canAdjustSkill(this.draft, id, 1), () => adjustSkill(this.draft, id, 1))
+      this.stepperButton(stepper(SKILL_PLUS_X, y), '+', () => canAdjustSkill(this.draft, id, 1), () => adjustSkill(this.draft, id, 1))
       this.text(SKILL_LEVEL_X, y, `${skillLevel(character, id)}%`, GOLD, 16).setOrigin(1, 0.5)
     })
     this.text(LEFT, skillRowY(SKILL_IDS.length) - 30, 'Points left unplaced stay with the character, to spend on the world map.', DIM, 11)
@@ -429,6 +475,7 @@ export class CreationScene extends Phaser.Scene {
   }
 
   private showStep(step: CreationStep): void {
+    this.release()
     this.step = step
     this.render()
   }

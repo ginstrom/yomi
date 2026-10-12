@@ -136,6 +136,24 @@ export class Game {
     await this.frames()
   }
 
+  /** Moves the pointer there without pressing, as a hover does. */
+  async hover(at: Point): Promise<void> {
+    await this.page.mouse.move(at.x, at.y)
+    await this.frames()
+  }
+
+  /** Presses the mouse button there and keeps it down; `letGo` ends it. */
+  async holdDown(at: Point): Promise<void> {
+    await this.page.mouse.move(at.x, at.y)
+    await this.page.mouse.down()
+    await this.frames()
+  }
+
+  async letGo(): Promise<void> {
+    await this.page.mouse.up()
+    await this.frames()
+  }
+
   async press(key: string): Promise<void> {
     await this.page.keyboard.press(key)
     await this.frames()

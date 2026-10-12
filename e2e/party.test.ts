@@ -22,6 +22,17 @@ describe('the party screen', () => {
     expect(choice.buttons.readyMade.visible && choice.buttons.createOwn.visible).toBe(true)
     expect(choice.buttons.begin.visible).toBe(false)
 
+    // The ready-made three are shown under their button, and a hover tells of one.
+    expect(choice.readyMade.map((member) => member.name)).toEqual(['Aldric', 'Brenna', 'Delwyn'])
+    expect(choice.readyMade.every((member) => member.visible)).toBe(true)
+    expect(choice.info).toEqual([])
+    await game.hover(choice.readyMade[2])
+    const told = await game.waitFor('Party', (p) => p.info.length > 0)
+    expect(told.info[0]).toBe('Delwyn')
+    expect(told.info.join(' ')).toContain('Magic Arrow')
+    await game.hover(choice.buttons.createOwn)
+    await game.waitFor('Party', (p) => p.info.length === 0)
+
     await game.click(choice.buttons.readyMade)
     const ready = await game.waitFor('Party', (p) => p.view === 'roster')
     expect(ready.rows.map((row) => row.name)).toEqual(['Aldric', 'Brenna', 'Delwyn'])
@@ -40,6 +51,35 @@ describe('the party screen', () => {
     await game.click(own.buttons.back)
     await game.click((await game.waitFor('Party', (p) => p.view === 'choice')).buttons.back)
     await game.waitForScenes(['Menu'])
+  })
+
+  it('repeats a plus or minus held down, until it is let go or has nothing left to do', async () => {
+    const game = await games.open()
+    const choice = await game.openPartyScreen()
+    await game.click(choice.buttons.createOwn)
+    const roster = await game.waitFor('Party', (p) => p.view === 'roster')
+    await game.click(roster.rows[0].create)
+    await game.waitForScenes(['Creation'])
+    const start = await game.settled('Creation')
+
+    // Held, the plus goes on to the most an attribute can be, and stops there.
+    await game.holdDown(start.attributes.strength.plus)
+    const full = await game.waitFor('Creation', (c) => c.attributes.strength.value === 10)
+    expect(full.attributes.strength.plus.enabled).toBe(false)
+    await game.letGo()
+
+    // A click is one step and no more.
+    await game.click(full.attributes.strength.minus)
+    await game.frames(30)
+    expect((await game.probe('Creation'))!.attributes.strength.value).toBe(9)
+
+    // Let go, a held minus stops where it is.
+    await game.holdDown(full.attributes.strength.minus)
+    await game.waitFor('Creation', (c) => c.attributes.strength.value < 8)
+    await game.letGo()
+    const stopped = (await game.probe('Creation'))!.attributes.strength.value
+    await game.frames(30)
+    expect((await game.probe('Creation'))!.attributes.strength.value).toBe(stopped)
   })
 
   it('removes a member and creates one in its place through all four steps, who then begins the game', async () => {
