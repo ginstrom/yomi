@@ -8,9 +8,9 @@ A new game drops the player onto the world map with four fixed heroes, and a clo
 - **Character creation**: attributes from 1 with points to place, skills that start low with points to place and one to tag, and three starting perks. New perks raise a skill, so a specialist starts near 60% in its skill.
 - **Save slots**: three of them, written by the game itself after every turn on the world map and in battle. The menu gets **Continue** (the latest save) and **Load** (pick a slot).
 
-**Status: ready for planning.** Nothing blocks it. Section 8 lists the assumptions made where the request left a choice open; the first three are worth a look before planning, as each changes what is built.
+**Status: ready for planning.** Nothing blocks it. Section 8 lists the assumptions made where the request left a choice open.
 
-Decisions the user made, kept as given: the two ways to start; a ready-made party of three; a limit that starts at 3; one party screen after either choice, for removing and creating; creation that starts with attributes, all at 1, with a set number of points; low skills with a set number of points, so that the tag matters; about three starting perks; perks that raise skills; about 60% for a specialist; three slots, Continue and Load; a save after every world map turn and every battle turn.
+Decisions the user made, kept as given: the two ways to start; a ready-made party of three; a limit that starts at 3; one party screen after either choice, for removing and creating; creation that starts with attributes, all at 1, with a set number of points; low skills with a set number of points, so that the tag matters; about three starting perks; perks that raise skills; about 60% for a specialist; three slots, Continue and Load; a save after every world map turn and every battle turn. And, on reading the first draft of this design: a defeat is **permadeath**, the slot is deleted; starting gear is **not chosen** for now; a character can be **edited until the game begins**.
 
 ## 2. Requirements and scope
 
@@ -21,7 +21,7 @@ Decisions the user made, kept as given: the two ways to start; a ready-made part
 | R1 | **New** opens a choice: the ready-made party, or create your own. Either leads to the party screen, the first with the ready-made three in it and the second with it empty. |
 | R2 | The **ready-made party** has three characters, each one a legal creation under R5 to R8. |
 | R3 | A game has a **party limit**, which starts at 3. The party screen shows that many places and no party grows past it. |
-| R4 | On the **party screen** the player removes any character and creates one in any empty place, and begins the game once the party has at least one member. |
+| R4 | On the **party screen** the player removes any character, edits any character, creates one in any empty place, and begins the game once the party has at least one member. Editing reopens creation with everything as it was chosen, the ready-made characters included. Once the game has begun there is no editing. |
 | R5 | **Creation: attributes.** All six start at 1 and the player places 29 points, none above 10. All must be placed. |
 | R6 | **Creation: skills.** Skills start low, from attributes alone. The player tags one skill and has 10 skill points to place, which buy what they buy later: 1% a point, 2% in the tagged skill. |
 | R7 | **Creation: perks.** The player has 3 perk picks, spent in the perk tree on any perk the character qualifies for at level 1. |
@@ -31,6 +31,7 @@ Decisions the user made, kept as given: the two ways to start; a ready-made part
 | R11 | There are **three save slots**. A new game takes one, and the game writes to it by itself: after every turn on the world map and at the start of each of the player's turns in battle. There is no save button. |
 | R12 | The menu's **Continue** loads the slot written last. **Load** lists the three slots and loads the one picked. A game saved in battle opens in that battle, as it stood at the start of the player's turn. |
 | R13 | Scaling is **retuned** for the ready-made party of three under the new skill numbers, to the standing target: the aggressive policy clears the map about 2 times in 3. `CLAUDE.md`'s rules are rewritten with the new numbers. |
+| R14 | **Defeat is permadeath**: when the party falls, its slot is deleted. |
 
 ### Quality constraints
 
@@ -43,11 +44,12 @@ Decisions the user made, kept as given: the two ways to start; a ready-made part
 
 ### Non-goals
 
-- **Editing a character once created**, on the party screen or later. A character is removed and made again.
+- **Editing a character once the game has begun.** From then on it changes only as it levels.
 - **Recruiting after the game has begun**, and anything that **raises the party limit**. The limit is stored with the game so that something later can raise it.
 - **Choosing starting gear.** A character's starting weapon follows its tagged skill (section 4.5).
 - Traits, classes, a random-character button, and a seventh attribute.
 - **A save button, more than one save of a playthrough, copying or deleting a slot** (a new game may overwrite one), and export to a file.
+- **A way back from defeat**: no retry of a lost battle, no earlier save to fall back on.
 - **Migrating old saves.** A save of another version is unreadable. Migration comes with the first release that has players to keep.
 - Saving in the middle of a turn, or while the enemy acts.
 
@@ -71,6 +73,8 @@ Decisions the user made, kept as given: the two ways to start; a ready-made part
 | A14 | A slot holding `{`, or a save of another `SAVE_VERSION`, reads as unreadable, cannot be loaded and does not enable Continue. | R12 |
 | A15 | With all three slots full, Begin asks which to overwrite; with one empty it takes the first empty one without asking. | R11 |
 | A16 | `npm run simulate -- --campaign --battles 1000 --seed 1` with the ready-made party clears the map about 2 times in 3, and `CLAUDE.md` gives the numbers that do it. | R13 |
+| A17 | On the party screen, Edit on Aldric opens creation with his attributes, tag, skill points, perks, name and portrait as they are. Raising his Luck by taking a point from Strength and saving changes the Aldric in the same place, and adds no member. Edit on a character created a moment ago does the same. | R4 |
+| A18 | In the browser: lose a battle. The slot is empty, the defeat screen leads to the menu, and Continue is disabled when no other slot is filled. | R14 |
 
 ## 3. Current system
 
@@ -102,8 +106,9 @@ Menu ── New ──────▶ Party (choice) ──▶ Party (roster) �
 ```
 
 - **New** starts the `Party` scene on its choice: **Ready-made party**, **Create your own**, **Back** (to the menu).
-- Either choice shows the roster: one row for each place up to the party limit. A filled row shows the portrait, name, tagged skill with its percentage, and hit points, with a **Remove** button. An empty row is a **Create character** button. Below: **Begin** (enabled with one member or more) and **Back** (to the choice; the party made so far is dropped).
-- **Create character** starts `Creation`. Its **Create** returns to the roster with the character added in the first empty place; its **Cancel** returns with nothing added. Removing closes the gap: the party stays in battle order, and a new character joins at the end.
+- Either choice shows the roster: one row for each place up to the party limit. A filled row shows the portrait, name, tagged skill with its percentage, and hit points, with **Edit** and **Remove** buttons. An empty row is a **Create character** button. Below: **Begin** (enabled with one member or more) and **Back** (to the choice; the party made so far is dropped).
+- **Create character** starts `Creation` on an empty draft. Its **Create** returns to the roster with the character added in the first empty place; its **Cancel** returns with nothing added. Removing closes the gap: the party stays in battle order, and a new character joins at the end.
+- **Edit** starts `Creation` on that character's own choices, on the attributes step, with every step free to change. Its last button reads **Save** and puts the changed character back in the same place; **Cancel** leaves it as it was. This is why the party screen keeps the choices behind each character and not only the character (section 5.3).
 - **Begin** takes a slot (section 4.7), makes the game, saves it and starts `World`.
 
 ### 4.2 Creation: attributes (R5)
@@ -147,9 +152,9 @@ A change on an earlier step can undo a perk: lower Endurance to 4 and Toughness 
 
 ### 4.5 Creation: name, portrait and gear (R8)
 
-The last step. The eight portraits of `PORTRAIT_IDS` in a row, one picked (the first to begin with; two members may share a face). The name is typed: while this step shows, letter keys, space, hyphen and apostrophe add to it, Backspace removes, to at most 12 characters. It must not be empty or the name of another member, since the battle log tells units apart by name.
+The last step. The eight portraits of `PORTRAIT_IDS` in a row, one picked (the first to begin with; two members may share a face). The name is typed: while this step shows, letter keys, space, hyphen and apostrophe add to it, Backspace removes, to at most 12 characters. It must not be empty or the name of another member (its own, when it is being edited, is no clash), since the battle log tells units apart by name.
 
-**Create** is on this step and is enabled when the draft has no problems; otherwise the first problem is shown beside it.
+**Create** (**Save** when editing) is on this step and is enabled when the draft has no problems; otherwise the first problem is shown beside it.
 
 Starting gear is not chosen. A character holds the weapon of its tagged skill: Iron Longsword and Oak Shield for Melee Weapons, Yew Bow for Archery, Spark Wand for Magic. As today it wears a steel breastplate and carries every other plain weapon in its backpack, with the shield if its hands are full, so what it holds is a default and not a limit.
 
@@ -176,7 +181,7 @@ Three slots, numbered 1 to 3. A playthrough lives in one slot from Begin to its 
 - **On the world map** the game is saved when the scene opens (from the party screen, from a battle, from a load) and after everything that changes it: a journey, scouting or waiting, and the closing of the character panel.
 - **In battle** it is saved each time the player's turn begins, the first turn included. At that moment nothing is animating and no unit is half-way through anything, so the save is a whole turn's starting point.
 - **A victory** is saved as it happens, with its loot, experience and cleared location, before the player presses OK. A reload on the victory screen opens the world map with the win kept.
-- **A defeat** takes the battle out of the slot and leaves the world map as it was saved before the attack. Continue then opens the map with the party standing before those monsters, as wounded as it arrived, free to scout or wait and walk away. (Assumption 1.)
+- **A defeat** deletes the slot, as the party falls and before the player presses Main Menu (R14). The playthrough is over: Continue goes to whichever other slot was written last, or is disabled, and the slot is free for a new game.
 
 If the browser refuses the write, play goes on and the world map's message line, or the battle log, says once: "The game could not be saved."
 
@@ -259,7 +264,8 @@ What is left in `skillPoints` and `perkPicks` is what the character keeps (R10).
 
 ### 5.3 Party and game state
 
-- [`party.ts`](../../src/game/party.ts): `STARTING_HEROES` becomes `READY_MADE: readonly CharacterDraft[]` (section 4.6) and `newParty()` becomes `readyMadeParty()`, mapping `draftCharacter` over it. `STARTING_PARTY_LIMIT = 3`. `joinParty(party, character, limit)` refuses at `limit`; `MAX_PARTY_SIZE` (6) stays as the most a limit can ever be, which is what `PARTY_START` has hexes for. `removeMember(party, index)` splices.
+- [`party.ts`](../../src/game/party.ts): `STARTING_HEROES` becomes `READY_MADE: readonly CharacterDraft[]` (section 4.6) and `newParty()` becomes `readyMadeParty()`, which is `partyFromDrafts(READY_MADE)`: `draftCharacter` over each. `STARTING_PARTY_LIMIT = 3`. `joinParty(party, character, limit)` refuses at `limit`; `MAX_PARTY_SIZE` (6) stays as the most a limit can ever be, which is what `PARTY_START` has hexes for.
+- **The party being built is a list of drafts**, not of characters: a `CharacterDraft` is exactly what the player chose, so editing is reopening it (R4), and nothing has to be worked backwards from a `Character`. The roster shows each through `draftCharacter`, and Begin calls `partyFromDrafts` once. The drafts are not kept after that, which is what ends editing.
 - [`gameState.ts`](../../src/game/gameState.ts): `GameState` gains `partyLimit: number` and `slot: SlotId | null`. `newGame(party = readyMadeParty(), slot = null)`. A game with no slot is never saved: that is the simulator's, the tests', and a scene started without data.
 - [`scripts/simulate.ts`](../../scripts/simulate.ts) calls `readyMadeParty()`; no flag changes.
 
@@ -272,9 +278,8 @@ export const SAVE_VERSION = 1
 
 /** One slot's contents. */
 export interface SaveFile {
-  /** The game as it last stood on the world map. */
-  world: GameState
-  /** The battle being fought, if any, with the game as it stands inside it. */
+  game: GameState
+  /** The battle being fought, if any. */
   battle: SavedBattle | null
   /** When it was written, in milliseconds since the epoch: what Continue goes by. */
   savedAt: number
@@ -283,8 +288,6 @@ export interface SaveFile {
 export interface SavedBattle {
   /** The monster location's id in `game.world`. */
   location: string
-  /** The party mid-battle: gear changed since the attack is here and not in `SaveFile.world`. */
-  game: GameState
   engine: BattleSnapshot
   /** Where the enemy policy's RNG stands. */
   enemyRng: number
@@ -301,7 +304,7 @@ export function saveSummary(file: SaveFile): { names: string[]; level: number; t
 - The string is JSON of `{ version, ...file }` with one substitution: every `Item` is written as its `id`. Items appear in a character's `equipment` and `backpack`, in `baggage`, in a monster location's `loot` and in the ground's piles. `parseSave` turns each id back into the constant through `itemById`, so identity comparisons hold after a load and an item's tuning reaches old saves.
 - [`inventory.ts`](../../src/inventory/inventory.ts) gains `itemById(id): Item | undefined`, over `WEAPONS`, `MAGIC_ITEMS`, `OAK_SHIELD` and `STEEL_ARMOR`. A test checks that every item a new game can hold (kits, backpacks, loot) is found.
 - Everything else in `GameState` is already plain data and is written as it is. `parseSave` checks the version, the top-level shape, every item id and every perk and skill id; it does not otherwise audit numbers it wrote itself.
-- Two copies of the game while a battle is on are a few kilobytes and are what lets a defeat fall back to the map (section 4.7) though battle gear changes edit characters in place.
+- In a battle's save, `game` is the game as it stands mid-battle: gear changed since the attack is in its characters, and their hit points are still those they entered with, the engine's units having the present ones.
 
 ### 5.5 Slots: `src/game/saveSlots.ts` *(new)*
 
@@ -320,15 +323,13 @@ Keys are `yomi.save.1` to `yomi.save.3` in `localStorage`, reached through the s
 Two helpers keep the scenes from assembling files:
 
 ```ts
-/** Saves the game as it stands on the world map; drops any battle from the slot. */
-export function saveWorld(game: GameState): boolean
-/** Saves a battle at the start of the player's turn, keeping the slot's world map save. */
-export function saveBattle(game: GameState, battle: Omit<SavedBattle, 'game'>): boolean
-/** A lost battle: the slot goes back to its world map save. */
-export function dropBattle(slot: SlotId): boolean
+/** Saves the game to its slot: as it stands on the world map, or with the battle it is in. */
+export function saveGame(game: GameState, battle: SavedBattle | null = null): boolean
+/** Empties a slot, as a defeat does. */
+export function deleteSlot(slot: SlotId): boolean
 ```
 
-Each returns true and does nothing when `game.slot` is null. `saveBattle` reads the slot for its `world` part; if that is missing it writes the game as both.
+`saveGame` returns true and does nothing when `game.slot` is null.
 
 ### 5.6 The engine and its dice
 
@@ -355,16 +356,16 @@ Each returns true and does nothing when `game.slot` is null. `saveBattle` reads 
 
 ### 5.7 Scenes
 
-- **`MenuScene`**: buttons New, Continue, Load, Options; a third view (the slot list) beside the main buttons and the options. `onNew` starts `Party`. Continue resumes the paused scene if there is one, else loads `latestSlot()`. Loading a `SaveFile`: stop the paused scene if any; with `battle`, `scene.start('Battle', { game: battle.game, location: battle.location, saved: battle })`, else `scene.start('World', { game: world })`. The loaded `GameState` carries its `slot`.
-- **`PartyScene`** *(new, `src/scenes/PartyScene.ts`, key `Party`)*: the choice, the roster and the overwrite prompt, three views of one scene. Its data is `{ party?: Party }`: absent shows the choice, present shows the roster, which is how `Creation` returns to it. It holds the party being built and nothing else; `joinParty` and `removeMember` do the work.
-- **`CreationScene`** *(new, `src/scenes/CreationScene.ts`, key `Creation`)*: data `{ party: Party }`. Holds a `CharacterDraft` and the step shown; every control calls a function of `creation.ts` and redraws from `draftCharacter(draft)`. The perk step is a `PerkTreeView` over that character. Create and Cancel both `scene.start('Party', { party })`. The panel is 720×500, centred, as the character panel is, so it fits the 840×560 minimum.
-- **`WorldScene`**: calls `saveWorld(this.gameState)` at the end of `create`, after `travel` and `linger`, and on the resume that follows the character panel. A false return sets the message line once.
+- **`MenuScene`**: buttons New, Continue, Load, Options; a third view (the slot list) beside the main buttons and the options. `onNew` starts `Party`. Continue resumes the paused scene if there is one, else loads `latestSlot()`. Loading a `SaveFile`: stop the paused scene if any; with `battle`, `scene.start('Battle', { game, location: battle.location, saved: battle })`, else `scene.start('World', { game })`. The loaded `GameState` carries its `slot`.
+- **`PartyScene`** *(new, `src/scenes/PartyScene.ts`, key `Party`)*: the choice, the roster and the overwrite prompt, three views of one scene. Its data is `{ drafts?: CharacterDraft[] }`: absent shows the choice, present shows the roster, which is how `Creation` returns to it. It holds the drafts and nothing else: Ready-made copies `READY_MADE`, Remove splices, and Begin makes the game from `partyFromDrafts(drafts)`.
+- **`CreationScene`** *(new, `src/scenes/CreationScene.ts`, key `Creation`)*: data `{ drafts: CharacterDraft[]; index?: number }`, `index` being the place to edit and its absence a new character. Holds a copy of that draft (or `newDraft()`) and the step shown; every control calls a function of `creation.ts` and redraws from `draftCharacter(draft)`. The perk step is a `PerkTreeView` over that character. Create appends its draft, Save replaces the one at `index`, Cancel changes nothing, and all three `scene.start('Party', { drafts })`. `takenNames` for `draftProblems` is the other drafts' names. The panel is 720×500, centred, as the character panel is, so it fits the 840×560 minimum.
+- **`WorldScene`**: calls `saveGame(this.gameState)` at the end of `create`, after `travel` and `linger`, and on the resume that follows the character panel. A false return sets the message line once.
 - **`BattleScene`**:
   - Every battle is seeded: the page's seed if it gives one, else `randomSeed()`, to the engine and, plus one, to the enemy's RNG. `Math.random` is no longer a battle's source of anything, so every battle can be saved, and replayed from its log.
   - `create` with `saved` takes the engine from `BattleEngine.restore(saved.engine)`, the enemy RNG from `mulberry32(saved.enemyRng)` and the ground from `saved.ground`; it still builds the encounter from the location for `kinds` and `xpReward`, and discards that encounter's setup. Units are drawn from `engine.getState()`, the log is refilled by `formatEvent` over `engine.getLog()`, and `loggedEquipment` is taken from the characters.
-  - Where the scene hands control to the player at the start of a player phase, it calls `saveBattle`. `Ground` gains `fromPiles(piles)` to go with `piles()`.
-  - `endBattle`: on a win, after the loot, the cleared location and the reward, `saveWorld(this.gameState)`; on a loss, `dropBattle(slot)`.
-- **Probes** ([`src/testHook.ts`](../../src/testHook.ts)): `MenuProbe` gains `buttons.load`, `showingLoad` and `slots` (a button and its summary line each); `PartyProbe` (view, a row for each place with its name and its Remove or Create button, Begin, Back, the two choices, the overwrite slots) and `CreationProbe` (step, the draft, points left of each kind, every ± and Tag button, the tree's nodes, the portraits, Next, Back, Create, Cancel, the problem shown) join `Probes`.
+  - Where the scene hands control to the player at the start of a player phase, it calls `saveGame` with the battle. `Ground` gains `fromPiles(piles)` to go with `piles()`.
+  - `endBattle`: on a win, after the loot, the cleared location and the reward, `saveGame(this.gameState)`; on a loss, `deleteSlot(slot)`, and the game's `slot` is set to null so that nothing writes it back.
+- **Probes** ([`src/testHook.ts`](../../src/testHook.ts)): `MenuProbe` gains `buttons.load`, `showingLoad` and `slots` (a button and its summary line each); `PartyProbe` (view, a row for each place with its name and its Edit and Remove buttons or its Create button, Begin, Back, the two choices, the overwrite slots) and `CreationProbe` (step, the draft, points left of each kind, every ± and Tag button, the tree's nodes, the portraits, Next, Back, Create, Cancel, the problem shown) join `Probes`.
 
 ### 5.8 Retune (R13)
 
@@ -379,11 +380,13 @@ The creation budgets (29, 10, 3) and the skill formulas are the design's and are
 
 ### 5.9 `CLAUDE.md`
 
-In the same commits as the code: the scene flow (`Boot` → `Menu` → `Party` ⇄ `Creation` → `World` ⇄ `Battle`, and Continue and Load); the new modules (`creation.ts`, `save.ts`, `saveSlots.ts`, `storage.ts`, `PerkTreeView.ts`); the rules of characters (the skill formulas, three starting perks, skill perks, "no character creation yet" removed, `STARTING_HEROES` replaced); the party of three and its limit; a paragraph of rules of saving (when, what a slot holds, what defeat does, items by id, `SAVE_VERSION` to be raised when the shape of `GameState`, `Character` or `BattleSnapshot` changes); the simulator's "new game's party" reworded; the rules of scaling rewritten. `e2e/CLAUDE.md` gets the new journeys.
+In the same commits as the code: the scene flow (`Boot` → `Menu` → `Party` ⇄ `Creation` → `World` ⇄ `Battle`, and Continue and Load); the new modules (`creation.ts`, `save.ts`, `saveSlots.ts`, `storage.ts`, `PerkTreeView.ts`); the rules of characters (the skill formulas, three starting perks, skill perks, "no character creation yet" removed, `STARTING_HEROES` replaced); the party of three and its limit; a paragraph of rules of saving (when, what a slot holds, that defeat deletes it, items by id, `SAVE_VERSION` to be raised when the shape of `GameState`, `Character` or `BattleSnapshot` changes); the simulator's "new game's party" reworded; the rules of scaling rewritten. `e2e/CLAUDE.md` gets the new journeys.
 
 ## 6. Consequences
 
-- **A reload rewinds to the start of the turn.** The dice are saved where they stood, so the same actions give the same results, but a player may reload and try other actions. Saving after each of the player's actions as well would close that; it is one more call to `saveBattle` and is left out because a turn was what was asked for.
+- **A reload rewinds to the start of the turn.** The dice are saved where they stood, so the same actions give the same results, but a player may reload and try other actions. Saving after each of the player's actions as well would close that; it is one more call to `saveGame` and is left out because a turn was what was asked for.
+- **Permadeath has a gap of one turn.** The slot is deleted when the last member falls, which is in the enemy's turn; a page reloaded before that blow lands is back at the start of the player's turn. Closing it means saving during the enemy's turn, which is a non-goal here.
+- **A defeat cannot be undone**, and with one save a playthrough there is nothing older to load. That is the rule asked for; it makes the retune's 2 in 3 the odds of a whole playthrough for a player who fights as the aggressive policy does.
 - **Saves break when the saved shapes change.** Until there is migration, a change to `GameState`, `Character`, `WorldState` or `BattleSnapshot` must raise `SAVE_VERSION`, and the saves before it read as unreadable. Rules and item numbers can change freely: characters store no derived number and items are saved by id. A battle in progress does hold derived stats (the engine's stat blocks), which stay as they were until that battle ends.
 - **The world is saved whole**, locations and all, not as a list of what was cleared, so a later change to `newWorld()` reaches only new games.
 - **Size**: a world map save is a few kilobytes. A battle adds the engine's event log, some tens of kilobytes late in a long fight, written once a turn. Three slots stay far inside `localStorage`'s five megabytes.
@@ -396,11 +399,11 @@ In the same commits as the code: the scene flow (`Boot` → `Menu` → `Party` �
 
 Domain tests (Node):
 
-- `creation.test.ts`: the budgets; each problem of A5; `draftCharacter` leaves unspent points and picks on the character (A8); a tag change re-prices `raises`; `pruneDraft` drops and reports (A7); perks at creation obey level and requirements (A6).
+- `creation.test.ts`: the budgets; each problem of A5; `draftCharacter` leaves unspent points and picks on the character (A8); a tag change re-prices `raises`; `pruneDraft` drops and reports (A7); a draft's own name is no clash when `takenNames` leaves it out (A17); perks at creation obey level and requirements (A6).
 - `skills.test.ts`, `perks.test.ts`: the new bases; a skill perk adds to `skillLevel` and counts towards Magic Arrow's 50%.
 - `party.test.ts`: the ready-made three are problem-free drafts with the numbers of A3; `joinParty` at the limit (A4).
 - `save.test.ts`: round trips on the map and in battle with item identity (A9); unreadable input of every kind (A14); `itemById` covers a new game.
-- `saveSlots.test.ts`, with a stand-in storage: empty, written, latest, first empty, a storage that throws; `saveBattle` keeps the world part and `dropBattle` restores it.
+- `saveSlots.test.ts`, with a stand-in storage: empty, written, latest, first empty, a storage that throws; `saveGame` with and without a battle and for a game with no slot; `deleteSlot` leaves the slot empty.
 - `rng.test.ts`: `mulberry32(rng.state())` continues the stream.
 - `battleEngine.test.ts`: A12, with the snapshot passed through `JSON.stringify`; a restored engine records no second `battle_start`; `snapshot` throws for a scripted RNG.
 
@@ -409,24 +412,25 @@ Scene smoke tests (`scenes` project): `PartyScene.test.ts` and `CreationScene.te
 In-browser tests (`npm run test:browser`):
 
 - `driver.newGame()` goes New → Ready-made → Begin, so the existing journeys stand.
-- `party.test.ts` *(new)*: A1; remove a ready-made member and create one in its place through all four steps, then Begin and find it in the party's column (A4); Create disabled until the draft is whole (A5).
-- `saves.test.ts` *(new)*: A10, A11, A13 and A15, using `page.reload()`, which keeps the context's storage; A14 by writing a bad value into `localStorage` before the menu opens.
+- `party.test.ts` *(new)*: A1; remove a ready-made member and create one in its place through all four steps, then Begin and find it in the party's column (A4); edit a ready-made member and a created one (A17); Create disabled until the draft is whole (A5).
+- `saves.test.ts` *(new)*: A10, A11, A13, A15 and, with the driver's `loseBattle`, A18, using `page.reload()`, which keeps the context's storage; A14 by writing a bad value into `localStorage` before the menu opens.
 
 Balance: A16, with the campaign's printed summary pasted into the plan's completion log.
 
 ## 8. Assumptions and open questions
 
-None blocks planning. The first three are the ones where another answer changes the build.
+None blocks planning.
 
-1. **Defeat sends the slot back to the world map before the attack.** The alternatives: delete the slot (a lost party is lost, as "the journey ends here" says today), or leave the save at the start of the last turn (which can leave a slot that loads straight into a lost battle). The first needs no second copy of the game in `SaveFile`; the choice made is the forgiving one.
-2. **Corwin is the hero dropped**, leaving one specialist for each skill, and the ready-made heroes keep today's attributes.
-3. **Starting gear follows the tag** and is not chosen.
-4. **The numbers**: 29 attribute points (the present total of 35), 10 skill points, 3 picks, bases of `strength + agility`, `perception + agility` and `2 × intelligence`, a tag still worth 20, skill perks of 5% and two ranks. They give 58 to 63% for the ready-made three; each is a constant.
-5. **Unspent creation points carry into the game** instead of being required or lost.
-6. **A new game takes the first empty slot** and asks only when all three are full.
-7. **A party may begin with fewer than three**, down to one.
-8. **Created characters cannot be edited**, only removed and made again.
-9. **The battle save is once a turn**, not after each action (section 6).
-10. **Names** are typed on the keyboard, 12 characters at most, unique in the party.
+Settled by the user after the first draft: defeat deletes the slot (R14); starting gear follows the tag and is not chosen, for now (section 4.5); characters can be edited until the game begins (R4).
 
-Risks: the perk tree at 33px a row has not been drawn, and if node labels crowd, the tree needs the scrolling the magic design put off. The retune may show that three level 1 heroes at 60% cannot open the campaign against two goblins, in which case the budgets of assumption 4 are what to revisit.
+Still assumptions, each a small change if wrong:
+
+1. **Corwin is the hero dropped**, leaving one specialist for each skill, and the ready-made heroes keep today's attributes.
+2. **The numbers**: 29 attribute points (the present total of 35), 10 skill points, 3 picks, bases of `strength + agility`, `perception + agility` and `2 × intelligence`, a tag still worth 20, skill perks of 5% and two ranks. They give 58 to 63% for the ready-made three; each is a constant.
+3. **Unspent creation points carry into the game** instead of being required or lost.
+4. **A new game takes the first empty slot** and asks only when all three are full.
+5. **A party may begin with fewer than three**, down to one.
+6. **The battle save is once a turn**, not after each action (section 6).
+7. **Names** are typed on the keyboard, 12 characters at most, unique in the party.
+
+Risks: the perk tree at 33px a row has not been drawn, and if node labels crowd, the tree needs the scrolling the magic design put off. The retune may show that three level 1 heroes at 60% cannot open the campaign against two goblins, in which case the budgets of assumption 2 are what to revisit.
