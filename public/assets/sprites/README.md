@@ -17,15 +17,19 @@ Infinity Engine CRPGs (Baldur's Gate 1 and 2). No third-party art is included.
 | `goblin.png` | `art/units/goblin.sprite.toml` | `BattleScene` |
 | `kobold.png` | `art/units/kobold.sprite.toml` | `BattleScene` |
 | `icon_sword.png` | `art/icons/icon_sword.sprite.toml` | `InventoryScene` |
+| `icon_sword_ember.png` | `art/icons/icon_sword.sprite.toml` (variant `ember`) | `InventoryScene` |
 | `icon_dagger.png` | `art/icons/icon_dagger.sprite.toml` | `InventoryScene` |
 | `icon_shortsword.png` | `art/icons/icon_shortsword.sprite.toml` | `InventoryScene` |
 | `icon_greatsword.png` | `art/icons/icon_greatsword.sprite.toml` | `InventoryScene` |
 | `icon_axe.png` | `art/icons/icon_axe.sprite.toml` | `InventoryScene` |
 | `icon_bow.png` | `art/icons/icon_bow.sprite.toml` | `InventoryScene` |
+| `icon_bow_hawk.png` | `art/icons/icon_bow.sprite.toml` (variant `hawk`) | `InventoryScene` |
 | `icon_shield.png` | `art/icons/icon_shield.sprite.toml` | `InventoryScene` |
 | `icon_armor.png` | `art/icons/icon_armor.sprite.toml` | `InventoryScene` |
 | `icon_wand.png` | `art/icons/icon_wand.sprite.toml` | `InventoryScene` |
+| `icon_wand_storm.png` | `art/icons/icon_wand.sprite.toml` (variant `storm`) | `InventoryScene` |
 | `icon_ring.png` | `art/icons/icon_ring.sprite.toml` | `InventoryScene` |
+| `icon_ring_fortune.png` | `art/icons/icon_ring.sprite.toml` (variant `fortune`) | `InventoryScene` |
 | `icon_amulet.png` | `art/icons/icon_amulet.sprite.toml` | `InventoryScene` |
 | `icon_circlet.png` | `art/icons/icon_circlet.sprite.toml` | `InventoryScene` |
 | `icon_cloak.png` | `art/icons/icon_cloak.sprite.toml` | `InventoryScene` |

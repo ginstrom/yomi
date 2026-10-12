@@ -43,6 +43,10 @@ export type ItemIcon =
   | 'amulet'
   | 'circlet'
   | 'cloak'
+  | 'wand_storm'
+  | 'sword_ember'
+  | 'bow_hawk'
+  | 'ring_fortune'
 
 /** What an item contributes to its wearer's combat stats; see deriveCombatStats(). */
 export interface ItemStats {
@@ -205,7 +209,7 @@ export const STORM_WAND: Item = {
   slot: 'mainHand',
   description: 'Crackles with caught lightning.',
   stats: { damage: { count: 1, sides: 10, bonus: 1 }, attackApCost: 5, attackRange: 5, skill: 'magic' },
-  icon: 'wand',
+  icon: 'wand_storm',
 }
 
 export const EMBERBLADE: Item = {
@@ -214,7 +218,7 @@ export const EMBERBLADE: Item = {
   slot: 'mainHand',
   description: 'Its edge glows like a banked fire.',
   stats: { damage: { count: 1, sides: 8, bonus: 4 }, attackApCost: 5, toHit: 10 },
-  icon: 'sword',
+  icon: 'sword_ember',
 }
 
 export const HAWK_BOW: Item = {
@@ -223,7 +227,7 @@ export const HAWK_BOW: Item = {
   slot: 'mainHand',
   description: 'Its arrows seem to seek their mark.',
   stats: { damage: { count: 1, sides: 8, bonus: 2 }, attackApCost: 5, attackRange: 6, twoHanded: true, toHit: 10 },
-  icon: 'bow',
+  icon: 'bow_hawk',
 }
 
 export const RING_PROTECTION: Item = {
@@ -243,7 +247,7 @@ export const RING_FORTUNE: Item = {
   ring: true,
   description: 'Luck runs with its wearer.',
   stats: { critChance: 5 },
-  icon: 'ring',
+  icon: 'ring_fortune',
 }
 
 export const AMULET_FOCUS: Item = {

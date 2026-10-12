@@ -6,7 +6,7 @@ The magic work drew five item icons (`art/icons/icon_{wand,ring,amulet,circlet,c
 
 This design is Yomi's half of the fix. The tool's half is in the sprite-tool repository, `docs/designs/text-view-and-runs-discovery.md` (sprite-tool 0.4: a `sprite show` command that prints a sprite as text, and a guide that shows runs in its example). It was split from that design; nothing here changes the tool.
 
-**Status: ready for planning.** R1 and R3 need only the installed sprite-tool 0.3.0. R2 waits for the `v0.4.0` tag.
+**Status: implemented** on 2026-10-12, R2 included: `v0.4.0` was tagged by then, and the upgrade changed no exported file. The swaps of section 4.3 were kept as given, and a variant is exported as `<id>_<name>.png`, as assumed.
 
 ## 2. Requirements and scope
 
