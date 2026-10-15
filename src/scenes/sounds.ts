@@ -21,12 +21,12 @@ export type SoundKey = (typeof SOUND_KEYS)[number]
 
 /**
  * The files to load a sound from, best first; Phaser takes the first the browser
- * can play. The placeholder tones are WAV. The battle theme is Ogg Opus, which
+ * can play. The placeholder tones are WAV. The themes are Ogg Opus, which
  * loops without a gap, with MP3 for browsers that cannot play Opus.
  */
 export function soundFiles(key: SoundKey): string[] {
   const path = `assets/audio/${key}`
-  return key === 'music_battle' ? [`${path}.opus`, `${path}.mp3`] : [`${path}.wav`]
+  return key === 'music_battle' || key === 'music_world_map' ? [`${path}.opus`, `${path}.mp3`] : [`${path}.wav`]
 }
 
 /** A sound to start `delayMs` after its event is shown. */
