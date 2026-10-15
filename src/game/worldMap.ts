@@ -50,6 +50,12 @@ export interface QuietLocation extends LocationBase {
 }
 
 export type WorldLocation = MonsterLocation | QuietLocation
+
+/** A watchtower the party built (buildings.ts): not a location, as it holds no battle and blocks no route. */
+export interface Tower {
+  id: string
+  position: Hex
+}
 export type LocationKind = WorldLocation['kind']
 
 export interface WorldState {
@@ -83,7 +89,11 @@ export interface WorldState {
   sighted: string[]
   /** The ids of the towns and resources held, the encampment among them while the game lasts. */
   held: string[]
-  /** The held sites the blight is gaining on, as of the last day. */
+  /** The watchtowers standing. */
+  towers: Tower[]
+  /** How many watchtowers have been built, which names the next. */
+  towersBuilt: number
+  /** The held sites and towers the blight is gaining on, as of the last day. */
   threatened: string[]
   /** What held sites have yielded, kept at the encampment. Nothing spends it yet. */
   stock: Stock
@@ -203,6 +213,8 @@ export function newWorld(seed: number = randomSeed()): WorldState {
     rng: seed | 0,
     held: [ENCAMPMENT_ID],
     threatened: [],
+    towers: [],
+    towersBuilt: 0,
     stock: {},
     status: 'playing',
   }
@@ -232,7 +244,8 @@ export function passTurn(world: WorldState, party: readonly { level: number }[])
 /**
  * Whether an event stops a journey or a stretch of camping: monsters sighted
  * near the party, a held site threatened or lost, the encampment lost. A
- * spawn is not seen as such: it is told when it comes into sight.
+ * spawn is not seen as such: it is told when it comes into sight. A tower
+ * under threat is told as a site is.
  */
 export function isNotable(world: WorldState, event: WorldEvent): boolean {
   switch (event.type) {
@@ -240,6 +253,7 @@ export function isNotable(world: WorldState, event: WorldEvent): boolean {
       return hexDistance(world.party, event.at) <= NOTICE_RADIUS
     case 'site_threatened':
     case 'site_lost':
+    case 'tower_lost':
     case 'encampment_lost':
       return true
     default:

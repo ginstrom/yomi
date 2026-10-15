@@ -25,6 +25,7 @@ import { autoAdvance, levelUp } from '../src/character/progression.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/encounters.ts'
 import { readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
 import { blightedShare, monsterStrength, type WorldEvent } from '../src/game/blight.ts'
+import { buildTower, canBuildTower } from '../src/game/buildings.ts'
 import { campUntilHealed, canCamp, partyWounded } from '../src/game/camp.ts'
 import { daysToFall, sites } from '../src/game/territory.ts'
 import {
@@ -225,6 +226,9 @@ export interface CampaignRecord {
   /** Hit points restored by rest and spells between battles, and the days camped for them. */
   healedHp: number
   campDays: number
+  /** Watchtowers built, and lost to the blight. */
+  towersBuilt: number
+  towersLost: number
 }
 
 export interface Campaign {
@@ -280,12 +284,15 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
   const battles: LoggedEvent[][] = []
   const record: CampaignRecord = {
     outcome: 'timeout', days: 0, battles: 0, spawns: 0, captured: 0, lost: 0, blighted: 0, healedHp: 0, campDays: 0,
+    towersBuilt: 0, towersLost: 0,
   }
   const tally = (events: readonly WorldEvent[]) => {
     for (const event of events) {
       if (event.type === 'spawned') record.spawns++
       if (event.type === 'site_captured') record.captured++
       if (event.type === 'site_lost') record.lost++
+      if (event.type === 'tower_built') record.towersBuilt++
+      if (event.type === 'tower_lost') record.towersLost++
     }
   }
   const finish = (outcome: CampaignOutcome): Campaign => {
@@ -334,6 +341,8 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
     for (const member of party) autoAdvance(member)
     clearLocation(world, next.id)
     if (world.status === 'won') return finish('source')
+    // A watchtower wherever the party stops on land that takes one and the stock affords it.
+    if (canBuildTower(world) === null) tally(buildTower(world, party)!)
     while (partyWounded(party) && canCamp(world)) {
       const camp = campUntilHealed(world, party)!
       tally(camp.events)
@@ -478,6 +487,8 @@ export interface CampaignSummary {
   avgBattles: number
   avgHealedHp: number
   avgCampDays: number
+  avgTowersBuilt: number
+  avgTowersLost: number
   /** In rising order of threat; a threat no campaign reached has no row. */
   byThreat: ThreatRow[]
 }
@@ -523,6 +534,8 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     avgBattles: avg((r) => r.battles),
     avgHealedHp: avg((r) => r.healedHp),
     avgCampDays: avg((r) => r.campDays),
+    avgTowersBuilt: avg((r) => r.towersBuilt),
+    avgTowersLost: avg((r) => r.towersLost),
     byThreat: threats.rows(),
   }
 }
@@ -574,6 +587,7 @@ function main(): void {
   console.log(
     `A campaign: ${summary.avgDays.toFixed(0)} days, ${summary.avgBattles.toFixed(1)} battles, ${summary.avgSpawns.toFixed(1)} spawns, ${summary.avgCaptured.toFixed(1)} sites captured and ${summary.avgLost.toFixed(1)} lost, ${(summary.avgBlighted * 100).toFixed(0)}% of the land blighted at the end`,
   )
+  console.log(`Watchtowers: ${summary.avgTowersBuilt.toFixed(1)} built a campaign, ${summary.avgTowersLost.toFixed(1)} lost`)
   console.log(
     `Hit points healed between battles: ${summary.avgHealedHp.toFixed(1)} a campaign, in ${summary.avgCampDays.toFixed(1)} days of camping`,
   )

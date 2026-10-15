@@ -13,6 +13,10 @@ export function describeWorldEvent(event: WorldEvent): string {
       return `${event.name} is lost to the blight.`
     case 'yield':
       return `${event.name} yields ${event.amount} ${event.material}.`
+    case 'tower_built':
+      return 'A watchtower rises over the land.'
+    case 'tower_lost':
+      return 'A watchtower is lost to the blight.'
     case 'encampment_lost':
       return 'The blight has taken Oakvale.'
     // Unseen: a spawn is told when it comes into sight.

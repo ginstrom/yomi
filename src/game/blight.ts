@@ -9,7 +9,7 @@ import { ENCAMPMENT_ID, threatAt, type MonsterLocation, type WorldState } from '
  * The blight (docs/designs/blight.md): every hex of the world map has a level
  * from 0 (clean) to 3 (corrupted), and each day blight and clean influence
  * contend for it. Monster locations, the Source and corrupted land push the
- * blight; the encampment, held sites and the party push back. A hex's `shift`
+ * blight; the encampment, held sites, watchtowers and the party push back. A hex's `shift`
  * counter moves by the difference each day, and a level goes up or down when
  * it reaches `SHIFT_COST` either way. Corrupted land spawns new monster
  * locations. Phaser-free; worldMap.ts calls `advanceDay` once a world turn.
@@ -31,6 +31,8 @@ export const CREEP = 1
 export const CAMP_STRENGTH = 8
 export const TOWN_STRENGTH = 5
 export const SITE_STRENGTH = 3
+/** A watchtower (buildings.ts), between a resource and a town. */
+export const TOWER_STRENGTH = 4
 /** The party pushes with this plus half the sum of its members' levels. */
 export const PARTY_BASE = 2
 /** How far a hex's shift counter must go, either way, to move its level by one. */
@@ -45,7 +47,7 @@ export const MAX_BLIGHT_GROWTH = 0.5
 export const SPAWN_DIVISOR = 200
 /** ...and a monster location appears when it reaches this. */
 export const SPAWN_COST = 30
-/** A spawn keeps this many hexes from the party, other monster locations and held sites. */
+/** A spawn keeps this many hexes from the party, other monster locations, held sites and watchtowers. */
 export const SPAWN_CLEARANCE = 4
 export const MAX_MONSTER_LOCATIONS = 24
 /** The chance a spawned location guards an item. */
@@ -68,6 +70,8 @@ export type WorldEvent =
   | { type: 'site_threatened'; site: string; name: string; days: number }
   | { type: 'site_captured'; site: string; name: string }
   | { type: 'site_lost'; site: string; name: string }
+  | { type: 'tower_built'; tower: string; at: Hex }
+  | { type: 'tower_lost'; tower: string; at: Hex }
   | { type: 'yield'; site: string; name: string; material: Material; amount: number }
   | { type: 'encampment_lost' }
 
@@ -148,6 +152,7 @@ function sources(world: WorldState): { blight: Array<[Hex, number]>; clean: Arra
     if (location.kind === 'monsters') blight.push([location.position, monsterStrength(location)])
     else if (world.held.includes(location.id)) clean.push([location.position, siteStrength(world, location.id)])
   }
+  for (const tower of world.towers) clean.push([tower.position, TOWER_STRENGTH])
   return { blight, clean }
 }
 
@@ -277,6 +282,7 @@ function spawn(world: WorldState, pinned: Set<number>, partyIndex: number): Worl
   const keepClear = [
     world.party,
     ...world.locations.filter((l) => l.kind === 'monsters' || world.held.includes(l.id)).map((l) => l.position),
+    ...world.towers.map((tower) => tower.position),
   ]
   const occupied = new Set(world.locations.map((l) => boardIndex(world.board, l.position)))
   const candidates = corrupted.filter(

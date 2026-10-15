@@ -1468,6 +1468,60 @@
       24
     ]
   },
+  "map_watchtower": {
+    "anchor": [
+      12,
+      12
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 600
+          },
+          {
+            "frame": "flag_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      6,
+      0,
+      12,
+      23
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "map_watchtower.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          6,
+          0,
+          12,
+          23
+        ],
+        "file": "map_watchtower__base.png"
+      },
+      "flag_1": {
+        "bounds": [
+          6,
+          0,
+          12,
+          23
+        ],
+        "file": "map_watchtower__flag_1.png"
+      }
+    },
+    "size": [
+      24,
+      24
+    ]
+  },
   "portrait_barbarian": {
     "anchor": [
       16,

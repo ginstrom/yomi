@@ -4,9 +4,9 @@ import { ENCAMPMENT_ID, SOURCE_ID, type WorldState } from './worldMap.ts'
 
 /**
  * Fog of war (docs/designs/guild-hall-and-watchtowers.md §4.6): what the
- * player knows of the world map. The party, the encampment and the held sites
- * see every hex within a radius; nothing blocks sight. A hex once seen stays
- * explored, remembered at the blight level it had when last in sight
+ * player knows of the world map. The party, the encampment, the held sites
+ * and the watchtowers see every hex within a radius; nothing blocks sight. A
+ * hex once seen stays explored, remembered at the blight level it had when last in sight
  * (`WorldState.seen`), and a monster location once seen stays known
  * (`WorldState.sighted`). Knowledge only: the blight's rules work on the true
  * state, and the simulator ignores it. Vision draws no dice.
@@ -16,6 +16,7 @@ export const PARTY_VISION = 5
 export const CAMP_VISION = 6
 export const TOWN_VISION = 3
 export const SITE_VISION = 2
+export const TOWER_VISION = 8
 
 /** `WorldState.seen` holds this for a hex never seen. */
 export const UNEXPLORED = -1
@@ -32,7 +33,7 @@ function hexesWithin(world: WorldState, at: Hex, radius: number, into: Set<numbe
   }
 }
 
-/** The hexes in sight now, by `boardIndex`: within sight of the party, the encampment or a held site. */
+/** The hexes in sight now, by `boardIndex`: within sight of the party, the encampment, a held site or a watchtower. */
 export function visibleHexes(world: WorldState): Set<number> {
   const visible = new Set<number>()
   hexesWithin(world, world.party, PARTY_VISION, visible)
@@ -41,6 +42,7 @@ export function visibleHexes(world: WorldState): Set<number> {
     const radius = location.id === ENCAMPMENT_ID ? CAMP_VISION : location.kind === 'town' ? TOWN_VISION : SITE_VISION
     hexesWithin(world, location.position, radius, visible)
   }
+  for (const tower of world.towers) hexesWithin(world, tower.position, TOWER_VISION, visible)
   return visible
 }
 

@@ -1,3 +1,4 @@
+import type { Hex } from '../grid/hex.ts'
 import { SHIFT_COST, blightAt, boardIndex, netInfluence, type WorldEvent } from './blight.ts'
 import { ENCAMPMENT_ID, type QuietLocation, type WorldState } from './worldMap.ts'
 
@@ -7,8 +8,12 @@ import { ENCAMPMENT_ID, type QuietLocation, type WorldState } from './worldMap.t
  * when its hex is cleansed to level 0 and lost when the blight raises it to
  * `LOSS_LEVEL`. A held site adds clean influence (blight.ts) and yields to the
  * encampment's stock every `YIELD_DAYS`. The encampment is held like any
- * site, and losing it loses the game.
+ * site, and losing it loses the game. A watchtower (buildings.ts) is lost and
+ * warned of as a held site is, and yields nothing.
  */
+
+/** What the warning of a tower under threat calls it. */
+export const TOWER_NAME = 'A watchtower'
 
 export type Material = 'gold' | 'iron' | 'timber' | 'silver' | 'stone' | 'salt' | 'copper' | 'crystal' | 'peat'
 export type Stock = Partial<Record<Material, number>>
@@ -49,10 +54,11 @@ export function initialHeld(world: WorldState): string[] {
 }
 
 /**
- * The days until the blight takes a held site, at today's influence, or null
- * when the blight is not gaining there. A site falls at `LOSS_LEVEL`.
+ * The days until the blight takes a held site or a tower, at today's
+ * influence, or null when the blight is not gaining there. Either falls at
+ * `LOSS_LEVEL`.
  */
-export function daysToFall(world: WorldState, party: readonly { level: number }[], site: QuietLocation): number | null {
+export function daysToFall(world: WorldState, party: readonly { level: number }[], site: { position: Hex }): number | null {
   const net = netInfluence(world, party, site.position)
   if (net <= 0) return null
   const level = blightAt(world, site.position)
@@ -84,10 +90,17 @@ export function updateTerritory(world: WorldState, party: readonly { level: numb
       }
     }
   }
-  // Told once, as a site comes under threat; the map shows it for as long as it lasts.
+  for (const tower of world.towers.filter((t) => blightAt(world, t.position) >= LOSS_LEVEL)) {
+    world.towers = world.towers.filter((t) => t !== tower)
+    events.push({ type: 'tower_lost', tower: tower.id, at: tower.position })
+  }
+  // Told once, as a site or tower comes under threat; the map shows it for as long as it lasts.
   const threatened: string[] = []
-  for (const site of sites(world)) {
-    if (!world.held.includes(site.id)) continue
+  const watched = [
+    ...sites(world).filter((site) => world.held.includes(site.id)),
+    ...world.towers.map((tower) => ({ ...tower, name: TOWER_NAME })),
+  ]
+  for (const site of watched) {
     const days = daysToFall(world, party, site)
     if (days === null) continue
     threatened.push(site.id)

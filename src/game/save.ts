@@ -122,6 +122,7 @@ export function parseSave(raw: string | null): SaveFile | null {
     const { world } = game
     check(world.board && Array.isArray(world.blight) && Array.isArray(world.shift) && world.blight.length === world.board.cols * world.board.rows)
     check(Array.isArray(world.seen) && world.seen.length === world.blight.length && Array.isArray(world.sighted))
+    check(Array.isArray(world.towers) && typeof world.towersBuilt === 'number')
     check(Array.isArray(world.held) && Array.isArray(world.threatened) && world.stock && typeof world.stock === 'object')
     check(typeof world.rng === 'number' && typeof world.spawnPressure === 'number' && typeof world.status === 'string')
     check(typeof game.partyLimit === 'number' && (game.slot === null || typeof game.slot === 'number'))

@@ -1,12 +1,14 @@
 import Phaser from 'phaser'
 import { canAdvance } from '../character/progression.ts'
 import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex } from '../game/blight.ts'
+import { buildTower, canBuildTower, towerSiteRefusal } from '../game/buildings.ts'
 import { campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from '../game/camp.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
 import { daysToFall } from '../game/territory.ts'
 import { UNEXPLORED, knownBlightedShare, visibleHexes } from '../game/vision.ts'
 import {
+  isNotable,
   linger,
   locationAt,
   monstersHere,
@@ -27,7 +29,7 @@ import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { gearLayers, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick } from './partyPanel.ts'
-import { describeWorldEvents } from './worldEvents.ts'
+import { describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
 
 interface WorldData {
   game?: GameState
@@ -39,6 +41,8 @@ const LOCATION_SPRITES: Record<LocationKind, string> = {
   town: 'map_town',
   resource: 'map_resource',
 }
+/** A watchtower's sprite, which is not a location's. */
+const TOWER_SPRITE = 'map_watchtower'
 /** Map sprites are drawn on a 24px canvas and shown at 2x. */
 const LOCATION_SCALE = 2
 /** The party is its first member as the battlefield shows it, gear and all, but smaller. */
@@ -86,7 +90,7 @@ const BUTTON_W = 140
 const BUTTON_H = 44
 /** Between two buttons of a row. */
 const BUTTON_GAP = 20
-/** Wide enough for "Camp until healed". */
+/** Wide enough for "Camp until healed" and "Build Watchtower". */
 const WIDE_BUTTON_W = 200
 
 export class WorldScene extends Phaser.Scene {
@@ -118,8 +122,9 @@ export class WorldScene extends Phaser.Scene {
   private messageText!: Phaser.GameObjects.Text
   /** Scout, Wait and Attack, shown while the party stands among monsters. */
   private buttons: Phaser.GameObjects.Container[] = []
-  /** Camp and Camp until healed, shown wherever else the party stands still. */
+  /** Camp and Camp until healed, shown wherever else the party stands still, and Build Watchtower where one may stand. */
   private campButtons: Phaser.GameObjects.Container[] = []
+  private towerButton!: Phaser.GameObjects.Container
 
   /**
    * The blight's tint, corruption's specks and the front line, drawn in
@@ -203,6 +208,7 @@ export class WorldScene extends Phaser.Scene {
       this.createButton('Camp', () => this.onCamp()),
       this.createButton('Camp until healed', () => this.onCampUntilHealed(), WIDE_BUTTON_W),
     ]
+    this.towerButton = this.createButton('Build Watchtower', () => this.onBuildTower(), WIDE_BUTTON_W)
     this.column = new PartyColumn(this, this.gameState.party, (index) => this.onPortrait(index))
 
     this.outcomeShade = this.add.rectangle(0, 0, 0, 0, 0x000000, 0.75).setOrigin(0).setInteractive()
@@ -281,6 +287,7 @@ export class WorldScene extends Phaser.Scene {
         attack,
         camp,
         campUntilHealed,
+        buildTower: buttonProbe(this.towerButton),
         end: buttonProbe(this.endButton),
         endless: buttonProbe(this.endlessButton),
         menu: buttonProbe(this.menuButton),
@@ -324,7 +331,10 @@ export class WorldScene extends Phaser.Scene {
 
   /** Every known location's sprite, under the party, faded where out of sight; drawn again only when that changes. */
   private refreshLocations(): void {
-    const key = this.world.locations.map((l) => `${l.id}:${this.knowledgeOf(l)}`).join()
+    const key = [
+      ...this.world.locations.map((l) => `${l.id}:${this.knowledgeOf(l)}`),
+      ...this.world.towers.map((t) => t.id),
+    ].join()
     if (key === this.drawnLocations) return
     this.drawnLocations = key
     this.siteSprites.removeAll(true)
@@ -341,6 +351,15 @@ export class WorldScene extends Phaser.Scene {
       if (source) figure.setTint(SOURCE_TINT)
       if (knowledge === 'remembered') figure.setAlpha(REMEMBERED_ALPHA)
       this.siteSprites.add(figure)
+    }
+    for (const [i, tower] of this.world.towers.entries()) {
+      const { x, y } = boardHexCenter(tower.position, WORLD_LAYOUT)
+      this.siteSprites.add(
+        this.add
+          .sprite(x, y + LOCATION_Y, SPRITE_ATLAS, spriteFrame(TOWER_SPRITE, 'base'))
+          .setScale(LOCATION_SCALE)
+          .play({ key: spriteAnim(TOWER_SPRITE, 'idle'), delay: (i * LOCATION_STAGGER_MS) % 1000 }),
+      )
     }
   }
 
@@ -370,6 +389,24 @@ export class WorldScene extends Phaser.Scene {
           })
           .setOrigin(0.5, 0)
           .setAlpha(knowledge === 'remembered' ? REMEMBERED_ALPHA + 0.25 : 1),
+      )
+    }
+    // A tower goes unnamed until the blight gains on it.
+    for (const tower of this.world.towers) {
+      const days = this.world.threatened.includes(tower.id) ? daysToFall(this.world, this.gameState.party, tower) : null
+      if (days === null) continue
+      const { x, y } = boardHexCenter(tower.position, WORLD_LAYOUT)
+      this.siteLabels.add(
+        this.add
+          .text(x, y + LABEL_Y, `Watchtower\nfalls in ${days}d`, {
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            color: '#ffb74d',
+            stroke: '#000000',
+            strokeThickness: 3,
+            align: 'center',
+          })
+          .setOrigin(0.5, 0),
       )
     }
   }
@@ -455,7 +492,7 @@ export class WorldScene extends Phaser.Scene {
     const { width, height } = this.scale
     const centreX = PARTY_PANEL_W + (width - PARTY_PANEL_W) / 2
     const buttonY = height - 50
-    for (const row of [this.buttons, this.campButtons]) {
+    for (const row of [this.buttons, [...this.campButtons, this.towerButton]]) {
       // A row centred under the map, its buttons BUTTON_GAP apart.
       let x = centreX - (row.reduce((sum, button) => sum + button.width, 0) + (row.length - 1) * BUTTON_GAP) / 2
       for (const button of row) {
@@ -545,6 +582,7 @@ export class WorldScene extends Phaser.Scene {
     )
     for (const button of this.buttons) button.setVisible(here !== null && !this.walking && world.status !== 'lost')
     for (const button of this.campButtons) button.setVisible(canCamp(world) && !this.walking)
+    this.towerButton.setVisible(canCamp(world) && !this.walking && towerSiteRefusal(world) === null)
     const over = world.status === 'won' || world.status === 'lost'
     this.outcomeShade.setVisible(over)
     this.outcomeText.setVisible(over).setText(
@@ -620,7 +658,7 @@ export class WorldScene extends Phaser.Scene {
   /** While the party walks, nothing else can be done and its hex is not yet where it stands. */
   private refreshWalking(): void {
     this.partyMark.clear()
-    for (const button of [...this.buttons, ...this.campButtons]) button.setVisible(false)
+    for (const button of [...this.buttons, ...this.campButtons, this.towerButton]) button.setVisible(false)
     this.refreshHover()
   }
 
@@ -677,6 +715,23 @@ export class WorldScene extends Phaser.Scene {
     this.messageText.setText(
       result.interruptedBy ? `Camp is broken after ${days}. ${told}` : `${describeCamp(result)}${told ? ` ${told}` : ''}`,
     )
+    this.refresh()
+    this.save()
+    this.checkOutcome()
+  }
+
+  /** Builds a watchtower where the party stands, a day's work, or says why it cannot (the stock, most often). */
+  private onBuildTower(): void {
+    const refusal = canBuildTower(this.world)
+    const events = refusal ? null : buildTower(this.world, this.gameState.party)
+    if (!events) {
+      this.messageText.setText(refusal ?? '')
+      return
+    }
+    // The first event is the tower's own; the rest are the day's.
+    const [built, ...day] = events
+    const told = describeWorldEvents(day, day.find((event) => isNotable(this.world, event)) ?? null)
+    this.messageText.setText(`${describeWorldEvent(built)}${told ? ` ${told}` : ''}`)
     this.refresh()
     this.save()
     this.checkOutcome()

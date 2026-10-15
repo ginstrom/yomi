@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { WorldStatus } from '../src/game/worldMap.ts'
+import type { WorldState, WorldStatus } from '../src/game/worldMap.ts'
 import { offsetToHex } from '../src/grid/hex.ts'
 import type { WorldProbe } from '../src/testHook.ts'
 import { RAIDERS, useGames, worldHexOnScreen, type Game } from './driver.ts'
@@ -153,18 +153,42 @@ describe('the world map', () => {
   })
 
   /** A new game saved in slot 1, its world's status changed there and the page reloaded on it, as the game would leave it. */
-  async function reloadedAs(game: Game, status: WorldStatus): Promise<WorldProbe> {
-    await game.newGame()
-    await game.page.evaluate((status) => {
+  /** The game in slot 1 with `changes` made to its world, reloaded and continued. */
+  async function reloadedWith(game: Game, changes: Partial<WorldState>): Promise<WorldProbe> {
+    await game.page.evaluate((changes) => {
       const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
-      saved.game.world.status = status
+      Object.assign(saved.game.world, changes)
       localStorage.setItem('yomi.save.1', JSON.stringify(saved))
-    }, status)
+    }, changes)
     const menu = await game.reload()
     await game.click(menu.buttons.continue)
     await game.waitForScenes(['World'])
     return game.settled('World')
   }
+
+  async function reloadedAs(game: Game, status: WorldStatus): Promise<WorldProbe> {
+    await game.newGame()
+    return reloadedWith(game, { status })
+  }
+
+  it('builds a watchtower on clean land with the stock, and says what it costs without', async () => {
+    const game = await games.open()
+    await game.newGame()
+    const there = await game.travelTo(offsetToHex(7, 17))
+    expect(there.buttons.buildTower.visible).toBe(true)
+    await game.click(there.buttons.buildTower)
+    const poor = await game.waitFor('World', (w) => w.message.includes('costs'))
+    expect(poor.world.towers).toEqual([])
+
+    const rich = await reloadedWith(game, { stock: { iron: 10, gold: 5 } })
+    await game.click(rich.buttons.buildTower)
+    const built = await game.waitFor('World', (w) => w.world.towers.length === 1)
+    expect(built.message).toContain('A watchtower rises')
+    // Spent, though the day's yield may have come in since.
+    expect(built.world.stock.iron).toBeLessThan(10)
+    expect(built.world.turn).toBe(rich.world.turn + 1)
+    expect(built.buttons.buildTower.visible).toBe(false)
+  })
 
   it('shows the victory once the Source is beaten, to end on or go on in endless mode', async () => {
     const game = await games.open()

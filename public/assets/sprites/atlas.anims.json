@@ -311,6 +311,22 @@
     {
       "frames": [
         {
+          "duration": 600,
+          "frame": "map_watchtower/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "map_watchtower/flag_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "map_watchtower/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 500,
           "frame": "shaman/idle_0",
           "key": "atlas"

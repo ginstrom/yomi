@@ -119,6 +119,8 @@ export interface WorldProbe {
     attack: ButtonProbe
     camp: ButtonProbe
     campUntilHealed: ButtonProbe
+    /** Shows where the party may camp on land a watchtower could stand on; a click without the stock says why in the message. */
+    buildTower: ButtonProbe
     end: ButtonProbe
     endless: ButtonProbe
     menu: ButtonProbe
