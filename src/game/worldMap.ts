@@ -15,14 +15,15 @@ import {
 import { advanceDay, cleanse, seedBlight, type WorldEvent } from './blight.ts'
 import { MAX_THREAT, type EncounterId } from './encounters.ts'
 import { initialHeld, updateTerritory, type Stock } from './territory.ts'
+import { seedSight, updateSight } from './vision.ts'
 
 /**
  * The world map: a hex board the party travels between battles, with points of
  * interest on it. Phaser-free, like the battle rules; `WorldScene` is a view
  * over it. Time passes in turns: a step of travel takes one, and so does
  * scouting or waiting at a monster location, or a day of camping (camp.ts).
- * Every turn passes through `passTurn`, which is the blight's day (blight.ts)
- * and the territory's (territory.ts).
+ * Every turn passes through `passTurn`, which is the blight's day (blight.ts),
+ * the territory's (territory.ts) and what the player sees of them (vision.ts).
  */
 
 interface LocationBase {
@@ -73,6 +74,13 @@ export interface WorldState {
   spawns: number
   /** Where the world's RNG stands (`mulberry32`'s `state()`); only spawns draw from it. */
   rng: number
+  /**
+   * What the player knows of every hex, by `boardIndex` (vision.ts): `UNEXPLORED`
+   * (-1) for a hex never seen, else its blight level when it was last in sight.
+   */
+  seen: number[]
+  /** The ids of the monster locations the player has seen; routes keep clear only of these. */
+  sighted: string[]
   /** The ids of the towns and resources held, the encampment among them while the game lasts. */
   held: string[]
   /** The held sites the blight is gaining on, as of the last day. */
@@ -188,6 +196,8 @@ export function newWorld(seed: number = randomSeed()): WorldState {
     confronting: null,
     blight: [],
     shift: [],
+    seen: [],
+    sighted: [],
     spawnPressure: 0,
     spawns: 0,
     rng: seed | 0,
@@ -200,6 +210,7 @@ export function newWorld(seed: number = randomSeed()): WorldState {
   world.held = initialHeld(world)
   // The sites taken at the start push back from the start.
   seedBlight(world)
+  seedSight(world)
   return world
 }
 
@@ -209,19 +220,23 @@ export function worldActive(world: WorldState): boolean {
 }
 
 /**
- * Passes one world turn: the turn count, the blight's day and the
- * territory's, and returns what happened. Every way of spending time comes
- * through here.
+ * Passes one world turn: the turn count, the blight's day, the territory's
+ * and what comes into sight, and returns what happened. Every way of spending
+ * time comes through here.
  */
 export function passTurn(world: WorldState, party: readonly { level: number }[]): WorldEvent[] {
   world.turn += 1
-  return [...advanceDay(world, party), ...updateTerritory(world, party)]
+  return [...advanceDay(world, party), ...updateTerritory(world, party), ...updateSight(world)]
 }
 
-/** Whether an event stops a journey or a stretch of camping: a spawn near the party, a held site threatened or lost, the encampment lost. */
+/**
+ * Whether an event stops a journey or a stretch of camping: monsters sighted
+ * near the party, a held site threatened or lost, the encampment lost. A
+ * spawn is not seen as such: it is told when it comes into sight.
+ */
 export function isNotable(world: WorldState, event: WorldEvent): boolean {
   switch (event.type) {
-    case 'spawned':
+    case 'sighted':
       return hexDistance(world.party, event.at) <= NOTICE_RADIUS
     case 'site_threatened':
     case 'site_lost':
@@ -246,12 +261,18 @@ export function monstersHere(world: WorldState): MonsterLocation | null {
  * The hexes the party would walk to reach `to`, `to` included, or null when it
  * cannot go there: it is off the map or where the party already stands, or
  * monsters the party walked into still await its answer. The route keeps
- * clear of every monster location except one it ends on.
+ * clear of every monster location the player knows of (`sighted`) except one
+ * it ends on, and is planned through the unexplored as through open land.
  */
 export function routeTo(world: WorldState, to: Hex): Hex[] | null {
   const board = new HexBoard(world.board)
   if (world.confronting !== null || !board.contains(to)) return null
-  const passable = (h: Hex) => board.contains(h) && (hexEquals(h, to) || locationAt(world, h)?.kind !== 'monsters')
+  const known = new Set(
+    world.locations
+      .filter((l) => l.kind === 'monsters' && world.sighted.includes(l.id))
+      .map((l) => hexKey(l.position)),
+  )
+  const passable = (h: Hex) => board.contains(h) && (hexEquals(h, to) || !known.has(hexKey(h)))
   return reachableHexes(world.party, board.hexes.length, passable).get(hexKey(to)) ?? null
 }
 
@@ -264,7 +285,8 @@ export interface Journey {
 
 /**
  * Walks the party toward `to` a hex and a turn at a time, and stops early on
- * a notable event (`isNotable`) or where monsters have appeared on the road.
+ * a notable event (`isNotable`) or where monsters stand on the road: sighted
+ * since the route was planned, as they are long before the party reaches them.
  * Walks nowhere if there is no route. Arriving among monsters confronts the
  * party with them.
  */
@@ -304,8 +326,11 @@ export function linger(world: WorldState, _how: Lingering, party: readonly { lev
 export function clearLocation(world: WorldState, id: string): void {
   const location = world.locations.find((l) => l.id === id)
   world.locations = world.locations.filter((l) => l.id !== id)
+  world.sighted = world.sighted.filter((sighted) => sighted !== id)
   if (world.confronting === id) world.confronting = null
   if (location?.kind !== 'monsters') return
   cleanse(world, location.position, location.threat)
+  // The party sees the land it has just cleansed.
+  updateSight(world)
   if (location.source && world.status === 'playing') world.status = 'won'
 }

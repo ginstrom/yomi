@@ -1,10 +1,11 @@
 import Phaser from 'phaser'
 import { canAdvance } from '../character/progression.ts'
-import { MAX_BLIGHT, blightAt, blightGrowth, blightedShare, boardHex } from '../game/blight.ts'
+import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex } from '../game/blight.ts'
 import { campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from '../game/camp.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
 import { daysToFall } from '../game/territory.ts'
+import { UNEXPLORED, knownBlightedShare, visibleHexes } from '../game/vision.ts'
 import {
   linger,
   locationAt,
@@ -69,6 +70,11 @@ const CORRUPTION_SPECK = 0xb388c9
 const FRONT_COLOR = 0xe8f5e9
 /** The ring inside the party's hex where it stands on blighted land, which it keeps neutral. */
 const NEUTRAL_RING = 0x90caf9
+/** Fog: land never seen, and the veil over land remembered but out of sight. */
+const UNEXPLORED_COLOR = 0x0b0b0e
+const FOG_VEIL_ALPHA = 0.45
+/** A location out of sight is drawn as remembered, faded. */
+const REMEMBERED_ALPHA = 0.5
 /** The Source is a monster location drawn darker and larger. */
 const SOURCE_TINT = 0x9c4dcc
 const SOURCE_SCALE = 3
@@ -129,6 +135,8 @@ export class WorldScene extends Phaser.Scene {
   /** The ids of the locations drawn, and the levels of the land, to tell when they must be drawn again. */
   private drawnLocations = ''
   private drawnBlight = ''
+  /** The hexes in sight as of the last refresh, by `boardIndex`. */
+  private visible = new Set<number>()
   /** The share of the land blighted, the blight's growth and the stock, at the header's right. */
   private statusText!: Phaser.GameObjects.Text
   /** The screen over the map when the game is won or lost, and its buttons: End and Continue, or Main Menu. */
@@ -170,6 +178,7 @@ export class WorldScene extends Phaser.Scene {
     this.siteLabels = this.add.container(0, 0)
     this.drawnLocations = ''
     this.drawnBlight = ''
+    this.visible = new Set()
     this.party = new UnitFigure(this, PARTY_SPRITE, PARTY_SCALE).play('idle')
     this.refreshPartyGear()
     this.mapLayer.add([this.blightLayer, this.hoverMarks, this.partyMark, this.siteSprites, this.party, this.siteLabels])
@@ -265,6 +274,7 @@ export class WorldScene extends Phaser.Scene {
       view: this.view,
       message: this.messageText.text,
       outcome: this.outcomeText.visible ? this.outcomeText.text : '',
+      visible: [...this.visible].sort((a, b) => a - b),
       buttons: {
         scout,
         wait,
@@ -300,13 +310,27 @@ export class WorldScene extends Phaser.Scene {
     this.mapLayer.add(terrain)
   }
 
-  /** Every location's sprite, under the party; drawn again only when a location has come or gone. */
+  /**
+   * How the player knows a location: 'hidden' (monsters not sighted, or a
+   * town or resource on land never explored), 'remembered' (known but out of
+   * sight) or 'seen'.
+   */
+  private knowledgeOf(location: WorldLocation): 'hidden' | 'remembered' | 'seen' {
+    const i = boardIndex(this.world.board, location.position)
+    const known = location.kind === 'monsters' ? this.world.sighted.includes(location.id) : this.world.seen[i] !== UNEXPLORED
+    if (!known) return 'hidden'
+    return this.visible.has(i) ? 'seen' : 'remembered'
+  }
+
+  /** Every known location's sprite, under the party, faded where out of sight; drawn again only when that changes. */
   private refreshLocations(): void {
-    const key = this.world.locations.map((l) => l.id).join()
+    const key = this.world.locations.map((l) => `${l.id}:${this.knowledgeOf(l)}`).join()
     if (key === this.drawnLocations) return
     this.drawnLocations = key
     this.siteSprites.removeAll(true)
     for (const [i, location] of this.world.locations.entries()) {
+      const knowledge = this.knowledgeOf(location)
+      if (knowledge === 'hidden') continue
       const { x, y } = boardHexCenter(location.position, WORLD_LAYOUT)
       const sprite = LOCATION_SPRITES[location.kind]
       const source = location.kind === 'monsters' && location.source
@@ -315,14 +339,17 @@ export class WorldScene extends Phaser.Scene {
         .setScale(source ? SOURCE_SCALE : LOCATION_SCALE)
         .play({ key: spriteAnim(sprite, 'idle'), delay: (i * LOCATION_STAGGER_MS) % 1000 })
       if (source) figure.setTint(SOURCE_TINT)
+      if (knowledge === 'remembered') figure.setAlpha(REMEMBERED_ALPHA)
       this.siteSprites.add(figure)
     }
   }
 
-  /** Every location's name over the party, so none is hidden: a held site's starred, and a threatened one's with the days until it falls. */
+  /** Every known location's name over the party, so none is hidden: a held site's starred, and a threatened one's with the days until it falls. */
   private refreshLabels(): void {
     this.siteLabels.removeAll(true)
     for (const location of this.world.locations) {
+      const knowledge = this.knowledgeOf(location)
+      if (knowledge === 'hidden') continue
       const { x, y } = boardHexCenter(location.position, WORLD_LAYOUT)
       const held = this.world.held.includes(location.id)
       const days =
@@ -341,23 +368,34 @@ export class WorldScene extends Phaser.Scene {
             strokeThickness: 3,
             align: 'center',
           })
-          .setOrigin(0.5, 0),
+          .setOrigin(0.5, 0)
+          .setAlpha(knowledge === 'remembered' ? REMEMBERED_ALPHA + 0.25 : 1),
       )
     }
   }
 
-  /** Each hex's tint for its level, specks on corrupted land and a faint line along every edge between clean land and blighted. */
+  /**
+   * The land as the player knows it (`seen`): black where never explored;
+   * elsewhere each hex's tint for its level as last seen, specks on corrupted
+   * land and a faint line along every edge between clean land and blighted,
+   * under a veil where out of sight.
+   */
   private refreshBlight(): void {
-    const drawn = this.world.blight.join('')
+    const { board, seen } = this.world
+    const drawn = `${seen.join('')}|${[...this.visible].join()}`
     if (drawn === this.drawnBlight) return
     this.drawnBlight = drawn
     const g = this.blightMarks.clear()
-    const { board, blight } = this.world
     const size = WORLD_LAYOUT.hexSize
-    for (let i = 0; i < blight.length; i++) {
-      const level = blight[i]
+    for (let i = 0; i < seen.length; i++) {
+      const level = seen[i]
       const h = boardHex(board, i)
       const c = boardHexCenter(h, WORLD_LAYOUT)
+      if (level === UNEXPLORED) {
+        g.fillStyle(UNEXPLORED_COLOR, 1).fillPoints(this.hexPolygon(h), true)
+        continue
+      }
+      if (!this.visible.has(i)) g.fillStyle(0x000000, FOG_VEIL_ALPHA).fillPoints(this.hexPolygon(h), true)
       if (level > 0) {
         g.fillStyle(BLIGHT_TINTS[level], BLIGHT_ALPHAS[level]).fillPoints(this.hexPolygon(h), true)
         if (level === MAX_BLIGHT) {
@@ -371,7 +409,7 @@ export class WorldScene extends Phaser.Scene {
       // The edge two hexes share is a side's length, square across the line between their centres.
       g.lineStyle(2, FRONT_COLOR, 0.35)
       for (const n of hexNeighbors(h)) {
-        if (!this.board.contains(n) || blightAt(this.world, n) === 0) continue
+        if (!this.board.contains(n) || seen[boardIndex(board, n)] <= 0) continue
         const d = boardHexCenter(n, WORLD_LAYOUT)
         const mx = (c.x + d.x) / 2
         const my = (c.y + d.y) / 2
@@ -476,6 +514,7 @@ export class WorldScene extends Phaser.Scene {
     const { x, y } = boardHexCenter(world.party, WORLD_LAYOUT)
     this.party.setPosition(x, y + PARTY_FEET_Y)
     this.partyMark.clear().lineStyle(3, PARTY_OUTLINE, 1).strokePoints(this.hexPolygon(world.party), true)
+    this.visible = visibleHexes(world)
     // Blighted land the party stands on is neutral while it stays.
     if (blightAt(world, world.party) > 0) {
       const c = boardHexCenter(world.party, WORLD_LAYOUT)
@@ -492,7 +531,7 @@ export class WorldScene extends Phaser.Scene {
       .join(', ')
     this.statusText.setText(
       [
-        `Blighted ${Math.round(blightedShare(world) * 100)}%${growth > 0 ? `, blight +${growth}%` : ''}${world.status === 'endless' ? ' (endless)' : ''}`,
+        `Blighted ${Math.round(knownBlightedShare(world) * 100)}% of the land known${growth > 0 ? `, blight +${growth}%` : ''}${world.status === 'endless' ? ' (endless)' : ''}`,
         `Stock: ${stock || 'nothing yet'}`,
       ].join('\n'),
     )
@@ -534,7 +573,8 @@ export class WorldScene extends Phaser.Scene {
       return
     }
     const to = route[route.length - 1]
-    const toMonsters = locationAt(this.world, to)?.kind === 'monsters'
+    const there = locationAt(this.world, to)
+    const toMonsters = there?.kind === 'monsters' && this.world.sighted.includes(there.id)
     this.input.setDefaultCursor(toMonsters ? CURSORS.attack : CURSORS.select)
 
     const points = [this.world.party, ...route].map((h) => {

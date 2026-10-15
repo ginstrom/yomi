@@ -8,7 +8,7 @@ The blight design left buildings open (its §9) and gave the encampment's stock 
 - **Watchtowers** are built in the field by a party standing on clean land. A tower pushes back the blight and watches the land around it.
 - Watching needs something to watch, so the world map gains **fog of war**. The party, the encampment, held sites and watchtowers see a radius around them; the rest is unexplored or remembered as it was last seen.
 
-**Status: ready to plan.** The user set the scope: a guild hall with a roster, recruiting, swapping, replacing the dead and upgrades for party size; watchtowers built by an occupying party on blight-free land, giving influence and vision; and fog of war. The user then decided the four rule questions (§9). Costs, strengths and radii are starting points for the simulator, not decisions.
+**Status: phase 1 (fog of war and vision) implemented; phases 2–4 to build.** The user set the scope: a guild hall with a roster, recruiting, swapping, replacing the dead and upgrades for party size; watchtowers built by an occupying party on blight-free land, giving influence and vision; and fog of war. The user then decided the four rule questions (§9). Costs, strengths and radii are starting points for the simulator, not decisions.
 
 Related:
 - [blight.md](blight.md): the stock, influence, held sites and the encampment. This design is its phase 4, in part: the guild hall is the "barracks" of its §4.6, and the watchtower is its first field building.
@@ -222,6 +222,8 @@ This is the largest balance change here: today a fallen hero costs only hit poin
 4. **The death rule**, with the campaign retune. It comes last so the roster exists before death can bite.
 
 Each phase is playable on its own.
+
+Implementation notes, phase 1: `seen` and `sighted` are seeded by `seedSight` in `newWorld`. `updateSight` also runs in `clearLocation`, so the land a battle cleansed is seen at once, and a beaten location leaves `sighted`. A sighted nest's event is `{ type: 'sighted', location, name, at, threat }`; `spawned` is still returned, for the simulator's tally, but the map says nothing of it. The scene's `known(world)` was not needed: it draws `seen` with `visibleHexes` for the veil.
 
 ## 8. Verification
 

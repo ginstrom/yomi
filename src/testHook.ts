@@ -107,6 +107,8 @@ export interface WorldProbe {
   message: string
   /** The words of the victory or defeat screen over the map, or '' while the game goes on. The blight, held sites and status are in `world`. */
   outcome: string
+  /** The hexes in sight, by `boardIndex`, in order; what the player remembers of the rest is `world.seen`. */
+  visible: number[]
   /**
    * Scout, Wait and Attack show among monsters, the camp buttons elsewhere; `campUntilHealed` is enabled while someone is wounded.
    * `end` and `endless` show on the victory screen, `menu` on the defeat screen.

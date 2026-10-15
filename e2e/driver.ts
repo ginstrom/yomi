@@ -200,11 +200,21 @@ export class Game {
     return this.waitFor('Menu')
   }
 
-  /** Clicks a hex of the world map and waits for the party to arrive there. */
+  /**
+   * Clicks a hex of the world map and waits for the party to arrive there,
+   * clicking again, as a player would, whenever something sighted on the way
+   * stops it short.
+   */
   async travelTo(to: Hex): Promise<WorldProbe> {
-    const world = await this.waitFor('World', (w) => !w.walking)
-    await this.click(worldHexOnScreen(world, to))
-    return this.waitFor('World', (w) => !w.walking && w.world.party.q === to.q && w.world.party.r === to.r)
+    const arrived = (w: WorldProbe) => w.world.party.q === to.q && w.world.party.r === to.r
+    let world = await this.waitFor('World', (w) => !w.walking)
+    for (let tries = 0; tries < 5 && !arrived(world); tries++) {
+      const turn = world.world.turn
+      await this.click(worldHexOnScreen(world, to))
+      world = await this.waitFor('World', (w) => !w.walking && (arrived(w) || w.world.turn !== turn))
+    }
+    if (!arrived(world)) throw new Error(`the party did not reach ${to.q},${to.r}: ${world.message}`)
+    return world
   }
 
   /** From the main menu: a new game, a walk to the Goblin Raiders and an attack, up to the player's first turn. */

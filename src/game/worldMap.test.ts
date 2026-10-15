@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { HexBoard, hexDistance, hexEquals, hexKey, hexToOffset, offsetToHex } from '../grid/hex.ts'
+import { HexBoard, hexDistance, hexEquals, hexKey, hexToOffset, offsetToHex, type Hex } from '../grid/hex.ts'
 import { ENCOUNTERS, MAX_THREAT } from './encounters.ts'
 import { readyMadeParty } from './party.ts'
 import {
@@ -20,6 +20,10 @@ const monsters = (world: WorldState) => world.locations.filter((l) => l.kind ===
 /** The monster locations other than the Source. */
 const lairs = (world: WorldState) => monsters(world).filter((l) => l.kind === 'monsters' && !l.source)
 const party = readyMadeParty()
+/** Travels on to `to` however often a sighting stops the party, as a player clicks again. */
+function journeyTo(world: WorldState, to: Hex): void {
+  for (let tries = 0; tries < 10 && !hexEquals(world.party, to); tries++) travel(world, to, party)
+}
 
 describe('newWorld', () => {
   const world = newWorld(1)
@@ -101,6 +105,8 @@ describe('newWorld', () => {
 describe('travel', () => {
   it('walks a shortest route, a turn a hex', () => {
     const world = newWorld(1)
+    // Nothing left to sight on the way.
+    world.sighted = monsters(world).map((l) => l.id)
     const from = world.party
     const to = offsetToHex(3, 1)
     const { walked, interruptedBy } = travel(world, to, party)
@@ -132,7 +138,7 @@ describe('travel', () => {
   it('passes over towns and resources without stopping', () => {
     const world = newWorld(1)
     const town = world.locations.find((l) => l.kind === 'town')!
-    travel(world, town.position, party)
+    journeyTo(world, town.position)
     expect(world.confronting).toBeNull()
     expect(routeTo(world, offsetToHex(0, 0))).not.toBeNull()
   })
@@ -142,7 +148,7 @@ describe('a monster location', () => {
   function arrive(): { world: WorldState; id: string } {
     const world = newWorld(1)
     const [goblins] = monsters(world)
-    travel(world, goblins.position, party)
+    journeyTo(world, goblins.position)
     return { world, id: goblins.id }
   }
 

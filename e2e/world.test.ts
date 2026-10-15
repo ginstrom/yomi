@@ -19,6 +19,20 @@ describe('the world map', () => {
     expect(arrived.world.confronting).toBeNull()
   })
 
+  it('opens on the home valley and the Source, the rest unexplored, and reveals land as the party travels', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    const index = (col: number, row: number) => row * start.world.board.cols + col
+    expect(start.visible).toContain(index(9, 19))
+    expect(start.world.seen[index(58, 19)]).toBeGreaterThanOrEqual(0)
+    expect(start.world.seen[index(9, 28)]).toBe(-1)
+    expect(start.world.sighted).toContain('blight_source')
+
+    const south = await game.travelTo(offsetToHex(9, 25))
+    expect(south.visible).toContain(index(9, 28))
+    expect(south.world.seen[index(9, 28)]).toBeGreaterThanOrEqual(0)
+  })
+
   it('holds the party among monsters until it answers them', async () => {
     const game = await games.open()
     await game.newGame()

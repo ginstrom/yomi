@@ -64,6 +64,7 @@ const INITIAL_CORRUPTED = 9
 export type WorldEvent =
   | { type: 'level_changed'; at: Hex; from: number; to: number }
   | { type: 'spawned'; location: string; name: string; at: Hex; threat: number }
+  | { type: 'sighted'; location: string; name: string; at: Hex; threat: number }
   | { type: 'site_threatened'; site: string; name: string; days: number }
   | { type: 'site_captured'; site: string; name: string }
   | { type: 'site_lost'; site: string; name: string }

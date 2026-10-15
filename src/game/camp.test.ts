@@ -25,7 +25,8 @@ describe('campDay', () => {
   it('is refused among monsters', () => {
     const world = newWorld(1)
     const raiders = world.locations.find((l) => l.id === 'goblin_raiders')!
-    travel(world, raiders.position, party())
+    // A sighting on the way stops the party; it goes on.
+    while (!monstersHere(world)) travel(world, raiders.position, party())
     expect(monstersHere(world)).not.toBeNull()
     expect(canCamp(world)).toBe(false)
     const members = party()
