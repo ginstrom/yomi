@@ -23,7 +23,7 @@ function move(from: number, ...steps: number[]): MoveEvent {
 function attack(opportunity: boolean): AttackEvent {
   return {
     type: 'attack', seq: seq++, round: 1, attacker: 'goblin', defender: 'hero', opportunity,
-    weapon: null, distance: 1, apCost: 0, apAfter: 0, toHit: 70, defenderAc: 15,
+    weapon: null, distance: 1, apCost: 0, apAfter: 0, toHit: 70, defenderAc: 15, armorPierce: 0,
     damageDice: { count: 1, sides: 6, bonus: 0 }, defenderHpBefore: 10,
     flankers: [], flankBonus: 0, arc: 'front', arcBonus: 0, attackerFacing: 3,
     attackRoll: 40, chance: 55, hit: true, critical: false, fumble: false, damage: 3, defenderHpAfter: 7,

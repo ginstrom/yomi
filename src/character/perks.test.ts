@@ -26,7 +26,7 @@ const warriorAt = (level: number) => ({ ...createWarrior(), level })
 
 describe('PERKS', () => {
   it('gives every perk a name, a description, a rank to take and something it does', () => {
-    expect(PERK_IDS).toHaveLength(26)
+    expect(PERK_IDS).toHaveLength(28)
     for (const id of PERK_IDS) {
       const perk: Perk = PERKS[id]
       expect(perk.name.length * perk.description.length).toBeGreaterThan(0)
@@ -69,6 +69,7 @@ describe('the perk tree', () => {
       ['tireless', 'toughness'],
       ['mighty_blow', 'heavy_hand'],
       ['weapon_mastery', 'weapon_training'],
+      ['sunder', 'armor_breaker'],
       ['eagle_eye', 'marksmanship'],
       ['deep_well', 'magic_arrow'],
       ['arcane_mastery', 'arcane_study'],
@@ -91,7 +92,14 @@ describe('the perk tree', () => {
 describe('qualifiesFor', () => {
   it('asks for the perk’s level', () => {
     // A new character may take the perks of level 1; the ones that raise an attribute wait for level 3.
-    expect(availablePerks(warriorAt(1))).toEqual(['toughness', 'dodger', 'heavy_hand', 'keen_eye', 'weapon_training'])
+    expect(availablePerks(warriorAt(1))).toEqual([
+      'toughness',
+      'dodger',
+      'heavy_hand',
+      'keen_eye',
+      'weapon_training',
+      'armor_breaker',
+    ])
     expect(qualifiesFor(warriorAt(2), 'gain_strength')).toBe(false)
     expect(qualifiesFor(warriorAt(3), 'gain_strength')).toBe(true)
     const hardy = { ...warriorAt(5), perks: { toughness: 1 } }
@@ -108,6 +116,7 @@ describe('qualifiesFor', () => {
       'heavy_hand',
       'keen_eye',
       'weapon_training',
+      'armor_breaker',
       ...Object.values(TRUNK_PERKS),
     ])
     expect(qualifiesFor(warrior, 'deadly_aim')).toBe(false)
@@ -162,7 +171,7 @@ describe('qualifiesFor', () => {
     expect(qualifiesFor(warrior, 'weapon_mastery')).toBe(true)
     const trunks = Object.values(TRUNK_PERKS)
     const tips = PERK_IDS.filter((id) => !trunks.includes(id) && PERKS[id].level === 6)
-    expect(tips).toHaveLength(8)
+    expect(tips).toHaveLength(9)
     for (const id of tips) {
       const perk: Perk = PERKS[id]
       expect(perkParent(id)).not.toBeNull()

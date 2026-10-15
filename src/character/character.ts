@@ -118,11 +118,13 @@ export function deriveCombatStats(character: Character): CombatantStats {
   let damage = UNARMED_DAMAGE
   let attackApCost = UNARMED_ATTACK_AP_COST
   let attackRange = MELEE_RANGE
+  let armorPierce = 0
   for (const stats of wornStats(character)) {
     if (stats.damage) damage = stats.damage
     if (stats.attackApCost !== undefined) attackApCost = stats.attackApCost
     if (stats.attackRange !== undefined) attackRange = stats.attackRange
     ac += stats.acBonus ?? 0
+    armorPierce += stats.armorPierce ?? 0
     toHit += stats.toHit ?? 0
     critChance += stats.critChance ?? 0
     spellSkill += stats.spellSkill ?? 0
@@ -132,6 +134,8 @@ export function deriveCombatStats(character: Character): CombatantStats {
   // Strength tells in a blow, not in a shot.
   const might = ranged ? 0 : Math.max(0, Math.floor((strength - 5) / 2))
   const damageBonus = might + perkBonus(character, ranged ? 'rangedDamage' : 'meleeDamage')
+  // Piercing is the melee fighter's answer to armour, as reach is the archer's.
+  const pierce = ranged ? 0 : Math.min(100, armorPierce + perkBonus(character, 'armorPierce'))
   const spells = knownSpells(character)
 
   return {
@@ -140,6 +144,7 @@ export function deriveCombatStats(character: Character): CombatantStats {
     ac,
     toHit,
     critChance,
+    ...(pierce > 0 ? { armorPierce: pierce } : {}),
     damage: { ...damage, bonus: damage.bonus + damageBonus },
     weapon: character.equipment.mainHand?.name ?? UNARMED_WEAPON,
     attackApCost,

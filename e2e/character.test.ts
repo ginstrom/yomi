@@ -65,8 +65,8 @@ describe('a hero’s panel', () => {
 
     await game.click(delwyn.perkTreeButton)
     const tree = await game.waitFor('Inventory', (p) => p.tab === 'perkTree')
-    expect(tree.perks).toHaveLength(26)
-    expect(new Set(tree.perks.map((node) => `${node.x},${node.y}`)).size).toBe(26)
+    expect(tree.perks).toHaveLength(28)
+    expect(new Set(tree.perks.map((node) => `${node.x},${node.y}`)).size).toBe(28)
     // The picks of creation are spent, and the next comes at level 3.
     expect(tree.perks.some((node) => node.canTake)).toBe(false)
     const taken = (nodes: typeof tree.perks) => nodes.filter((node) => node.ranks > 0).map((node) => node.perk).sort()
@@ -104,7 +104,7 @@ describe('a hero’s panel', () => {
     // The perk tree opens in battle too, where nothing can be taken from it.
     await game.press('p')
     const tree = await game.waitFor('Inventory', (p) => p.tab === 'perkTree')
-    expect(tree.perks).toHaveLength(26)
+    expect(tree.perks).toHaveLength(28)
     expect(tree.perks.some((node) => node.canTake)).toBe(false)
     await game.press('Escape')
     await game.waitFor('Inventory', (p) => p.tab === 'skills')

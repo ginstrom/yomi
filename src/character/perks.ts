@@ -32,6 +32,8 @@ export interface PerkEffects extends Partial<Attributes>, Partial<Record<SkillId
   /** Damage added to a blow with a melee weapon or bare hands, and to a shot. */
   meleeDamage?: number
   rangedDamage?: number
+  /** Percent of a foe's armour class a blow with a melee weapon or bare hands passes through. */
+  armorPierce?: number
   /** Hexes added to the reach of a ranged weapon. */
   range?: number
   /** Percent added to experience earned. */
@@ -177,6 +179,15 @@ export const PERKS = {
     branch: 'strength',
     effects: { melee: 5 },
   },
+  armor_breaker: {
+    name: 'Armour Breaker',
+    description: 'Melee blows pierce 15% of a foe\'s armour',
+    ranks: 2,
+    level: 1,
+    attributes: { strength: 6 },
+    branch: 'strength',
+    effects: { armorPierce: 15 },
+  },
   marksmanship: {
     name: 'Marksmanship',
     description: '+5% Archery',
@@ -216,6 +227,16 @@ export const PERKS = {
     branch: 'strength',
     requires: 'weapon_training',
     effects: { melee: 10 },
+  },
+  sunder: {
+    name: 'Sunder',
+    description: 'Melee blows pierce 20% more of a foe\'s armour',
+    ranks: 1,
+    level: 6,
+    attributes: { strength: 8 },
+    branch: 'strength',
+    requires: 'armor_breaker',
+    effects: { armorPierce: 20 },
   },
   eagle_eye: {
     name: 'Eagle Eye',

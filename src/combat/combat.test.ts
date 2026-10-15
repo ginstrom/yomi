@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GOBLIN_STATS, foeAtLevel, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, type CombatantStats } from './combat.ts'
+import { GOBLIN_STATS, effectiveAc, foeAtLevel, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, type CombatantStats } from './combat.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -31,6 +31,21 @@ describe('rollDamage', () => {
     const rng = sequence([0, 0.999])
     const total = rollDamage({ count: 2, sides: 6, bonus: 3 }, rng)
     expect(total).toBe(1 + 6 + 3)
+  })
+})
+
+describe('effectiveAc', () => {
+  it('takes the pierced share off the armour, rounded in the defender\'s favour, and never below nothing', () => {
+    expect(effectiveAc(WARRIOR_STATS, 35)).toBe(35)
+    expect(effectiveAc({ ...WARRIOR_STATS, armorPierce: 25 }, 35)).toBe(27)
+    expect(effectiveAc({ ...WARRIOR_STATS, armorPierce: 25 }, 15)).toBe(12)
+    expect(effectiveAc({ ...WARRIOR_STATS, armorPierce: 150 }, 35)).toBe(0)
+  })
+
+  it('tells most against the heaviest armour', () => {
+    const axe = { ...WARRIOR_STATS, armorPierce: 25 }
+    expect(hitChance(axe, 40) - hitChance(WARRIOR_STATS, 40)).toBeCloseTo(0.1)
+    expect(hitChance(axe, 20) - hitChance(WARRIOR_STATS, 20)).toBeCloseTo(0.05)
   })
 })
 
@@ -102,6 +117,8 @@ describe('sameCombatStats', () => {
     expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, skill: 86 } })).toBe(false)
     expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, spells: [] } })).toBe(false)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, weapon: 'Iron Longsword' })).toBe(false)
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, armorPierce: 0 })).toBe(true)
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, armorPierce: 15 })).toBe(false)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, damage: { count: 1, sides: 8, bonus: 0 } })).toBe(false)
   })
 })
@@ -112,10 +129,10 @@ describe('foeAtLevel', () => {
   })
 
   it('adds hit points, chance to hit and armour every level, and damage every second', () => {
-    expect(foeAtLevel(GOBLIN_STATS, 2)).toEqual({ ...GOBLIN_STATS, maxHp: 17, ac: 20, toHit: 75 })
+    expect(foeAtLevel(GOBLIN_STATS, 2)).toEqual({ ...GOBLIN_STATS, maxHp: 19, ac: 20, toHit: 75 })
     expect(foeAtLevel(GOBLIN_STATS, 5)).toEqual({
       ...GOBLIN_STATS,
-      maxHp: 34,
+      maxHp: 41,
       ac: 35,
       toHit: 90,
       damage: { count: 1, sides: 6, bonus: 3 },

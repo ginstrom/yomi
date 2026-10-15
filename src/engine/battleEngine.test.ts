@@ -556,6 +556,14 @@ describe('BattleEngine flanking', () => {
     engine.step(move('warrior', hex(1, 1)))
     expect(engine.previewAttack('warrior', 'goblin')).toBeNull() // too few AP
   })
+
+  it('takes the share of armour a weapon pierces off the chance, and logs it', () => {
+    // 75 to hit against the goblin's 15: 60%, and 63% with 12 of it left by a 25% pierce.
+    const piercer = { ...WARRIOR, stats: { ...WARRIOR_STATS, armorPierce: 25 } }
+    const engine = new BattleEngine(setup([piercer, GOBLIN]), { rng: sequence([FUMBLE]) })
+    expect(engine.previewAttack('warrior', 'goblin')?.hitChance).toBe(0.63)
+    expect(engine.step(ATTACK_GOBLIN)[0]).toMatchObject({ chance: 63, defenderAc: 15, armorPierce: 25 })
+  })
 })
 
 describe('BattleEngine facing', () => {
@@ -920,7 +928,7 @@ describe('BattleEngine spells', () => {
     const engine = battle([MAGE, FAR_GOBLIN])
     expect(unitOf(engine, 'mage').mana).toBe(18)
     expect(unitOf(engine, 'goblin').mana).toBe(0)
-    expect(engine.getLog()[0]).toMatchObject({ schemaVersion: 14, units: [{ mana: 18, magic: MAGE_STATS.magic }, {}] })
+    expect(engine.getLog()[0]).toMatchObject({ schemaVersion: 15, units: [{ mana: 18, magic: MAGE_STATS.magic }, {}] })
   })
 
   it('lists a cast on each foe in the spell’s range, and pays its action points and mana', () => {
@@ -1064,6 +1072,9 @@ describe('BattleEngine spells', () => {
     // Armour takes the chance down, but never below 5 in 100.
     const armoured = battle([MAGE, { ...FAR_GOBLIN, stats: { ...GOBLIN_STATS, ac: 90 } }])
     expect(armoured.previewCast('mage', 'magic_arrow', 'goblin')?.hitChance).toBe(0.05)
+    // A spell pierces nothing, whatever the caster's weapon does.
+    const piercing = battle([{ ...MAGE, stats: { ...MAGE_STATS, armorPierce: 50 } }, FAR_GOBLIN])
+    expect(piercing.previewCast('mage', 'magic_arrow', 'goblin')?.hitChance).toBe(0.61)
   })
 
   it('keeps the mana left within the maximum of new gear, and adds none', () => {

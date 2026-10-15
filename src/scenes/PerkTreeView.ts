@@ -4,14 +4,17 @@ import { PERKS, describePerkRequirements, perkRanks, type PerkId } from '../char
 import type { Point } from './boardGeometry.ts'
 import { nodeLabel, nodeState, perkTitle, perkTreeLayout, type TreeNode } from './perkTree.ts'
 
+const NODES: readonly TreeNode[] = perkTreeLayout()
+
 /** Where the tree is drawn in its container: a node for each perk, a row for each tip of a branch, and a strip under it. */
 const TREE_X = 20
 const TREE_Y = 100
 const TREE_COLUMN_W = 172
-const TREE_ROW_H = 33
+const TREE_ROW_H = 31
 const NODE_W = 160
-const NODE_H = 28
-const TREE_STRIP_Y = 432
+const NODE_H = 27
+const NODE_ROWS = 1 + Math.max(...NODES.map((node) => node.row))
+const TREE_STRIP_Y = TREE_Y + NODE_ROWS * TREE_ROW_H
 /** How far the tree and its strip reach across; a panel may put something beside them. */
 export const PERK_TREE_W = TREE_X + 2 * TREE_COLUMN_W + NODE_W
 
@@ -20,7 +23,6 @@ const GOLD = '#e8c766'
 const DIM = '#8a7a5a'
 const TEXT = '#d8c9a3'
 
-const NODES: readonly TreeNode[] = perkTreeLayout()
 
 /** A node's top left corner, in the container's own pixels. */
 function nodeAt({ column, row }: Pick<TreeNode, 'column' | 'row'>): Point {

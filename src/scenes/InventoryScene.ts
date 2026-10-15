@@ -717,12 +717,12 @@ export class InventoryScene extends Phaser.Scene {
       .setOrigin(0, 0.5)
 
     const lines = this.statLines()
-    // A caster's mana makes a seventh line, which has to end clear of the hint below.
+    // A caster's mana and a melee weapon's piercing each make a line more, and the last has to end clear of the hint below.
     const statsBody = this.add.text(STATS_X, 130, lines.join('\n'), {
       fontFamily: 'monospace',
       fontSize: '14px',
       color: '#d8c9a3',
-      lineSpacing: lines.length > 6 ? 8 : 12,
+      lineSpacing: lines.length > 7 ? 4 : lines.length > 6 ? 8 : 12,
     })
 
     this.inventoryContent.add([nameText, classText, statsBody])
@@ -760,6 +760,7 @@ export class InventoryScene extends Phaser.Scene {
       `To Hit:        ${this.stats.toHit}%`,
       `Damage:        ${formatDamage(this.stats.damage)}`,
       `Attack Cost:   ${this.stats.attackApCost} AP`,
+      ...(this.stats.armorPierce ? [`Pierces:       ${this.stats.armorPierce}% armor`] : []),
       `Action Points: ${this.stats.actionPoints}`,
       ...(this.stats.magic ? [`Mana:          ${this.manaLine()}`] : []),
     ]

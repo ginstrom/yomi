@@ -74,8 +74,10 @@ describe('deriveCombatStats', () => {
       toHit: 33,
       // luck
       critChance: 7,
-      // the sword's 1d8+2, and 1 for strength 7
-      damage: { count: 1, sides: 8, bonus: 3 },
+      // the sword's 1d8+3, and 1 for strength 7
+      damage: { count: 1, sides: 8, bonus: 4 },
+      // the sword's
+      armorPierce: 15,
       attackApCost: 5,
       attackRange: 1,
       actionPoints: 8,
@@ -216,9 +218,19 @@ describe('what a character’s numbers come from', () => {
   it('adds what perks give', () => {
     const warrior = createWarrior()
     const plain = deriveCombatStats(warrior)
-    warrior.perks = { toughness: 2, dodger: 1, heavy_hand: 2, keen_eye: 1, tireless: 1, deadly_aim: 1, far_shot: 1 }
+    warrior.perks = {
+      toughness: 2,
+      dodger: 1,
+      heavy_hand: 2,
+      armor_breaker: 2,
+      keen_eye: 1,
+      tireless: 1,
+      deadly_aim: 1,
+      far_shot: 1,
+    }
     expect(deriveCombatStats(warrior)).toEqual({
       ...plain,
+      armorPierce: plain.armorPierce! + 30,
       maxHp: plain.maxHp + 12,
       ac: plain.ac + 5,
       damage: { ...plain.damage, bonus: plain.damage.bonus + 2 },
@@ -227,7 +239,8 @@ describe('what a character’s numbers come from', () => {
     })
     // The archer's perks tell only with a bow in hand, and the swordsman's only without.
     warrior.equipment = { mainHand: YEW_BOW }
-    expect(deriveCombatStats(warrior)).toMatchObject({ attackRange: 7, damage: { count: 1, sides: 8, bonus: 1 } })
+    expect(deriveCombatStats(warrior)).toMatchObject({ attackRange: 7, damage: { count: 1, sides: 6, bonus: 1 } })
+    expect(deriveCombatStats(warrior).armorPierce).toBeUndefined()
   })
 })
 

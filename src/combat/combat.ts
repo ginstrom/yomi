@@ -15,6 +15,8 @@ export interface CombatantStats {
   toHit: number
   /** The chance in percent that an attack is a critical hit; one that would not hit at all cannot be. */
   critChance: number
+  /** The share in percent of a foe's armour class its weapon passes through, none when left out (`effectiveAc`). */
+  armorPierce?: number
   damage: DamageRoll
   /** The weapon by name, for the log; left out for a unit that names none. */
   weapon?: string
@@ -52,6 +54,7 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     a.ac === b.ac &&
     a.toHit === b.toHit &&
     a.critChance === b.critChance &&
+    (a.armorPierce ?? 0) === (b.armorPierce ?? 0) &&
     a.damage.count === b.damage.count &&
     a.damage.sides === b.damage.sides &&
     a.damage.bonus === b.damage.bonus &&
@@ -93,12 +96,25 @@ export const MIN_HIT_CHANCE = 5
 export const MAX_HIT_CHANCE = 95
 
 /**
+ * The armour class that counts against the attacker: the defender's, less the
+ * share of it the attacker's weapon pierces, rounded in the defender's favour.
+ * A share and not a sum, so that piercing tells most against the heaviest
+ * armour and is not merely a chance to hit by another name.
+ */
+export function effectiveAc(attacker: CombatantStats, defenderAc: number): number {
+  const pierce = Math.min(100, Math.max(0, attacker.armorPierce ?? 0))
+  return defenderAc - Math.floor((defenderAc * pierce) / 100)
+}
+
+/**
  * The chance in percent that an attack hits: the attacker's `toHit`, plus any
- * situational bonus (flanking, say), less the defender's armour class, kept
- * between `MIN_HIT_CHANCE` and `MAX_HIT_CHANCE`.
+ * situational bonus (flanking, say), less the defender's armour class as the
+ * attacker's weapon leaves it (`effectiveAc`), kept between `MIN_HIT_CHANCE`
+ * and `MAX_HIT_CHANCE`.
  */
 export function hitPercent(attacker: CombatantStats, defenderAc: number, situationalBonus = 0): number {
-  return Math.min(MAX_HIT_CHANCE, Math.max(MIN_HIT_CHANCE, attacker.toHit + situationalBonus - defenderAc))
+  const ac = effectiveAc(attacker, defenderAc)
+  return Math.min(MAX_HIT_CHANCE, Math.max(MIN_HIT_CHANCE, attacker.toHit + situationalBonus - ac))
 }
 
 /**
@@ -162,7 +178,7 @@ export const KOBOLD_STATS: CombatantStats = {
 }
 
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
-export const FOE_HP_PER_LEVEL = 0.45
+export const FOE_HP_PER_LEVEL = 0.6
 /** ...this many points to its chance to hit and to its armour class... */
 export const FOE_TO_HIT_PER_LEVEL = 5
 export const FOE_AC_PER_LEVEL = 5

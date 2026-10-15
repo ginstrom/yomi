@@ -15,7 +15,7 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 14
+export const LOG_SCHEMA_VERSION = 15
 
 /** What an attacker's chance to hit gains, in percent, for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 10
@@ -228,8 +228,9 @@ export interface AttackEvent extends EventBase {
   toHit: number
   /** The chance to hit in percent, after bonuses, armour class and the limits on both ends. */
   chance: number
-  /** The armour class taken off the chance. */
+  /** The defender's armour class, of which the weapon pierced `armorPierce` percent before it came off the chance. */
   defenderAc: number
+  armorPierce: number
   hit: boolean
   critical: boolean
   fumble: boolean
@@ -859,6 +860,7 @@ export class BattleEngine {
         toHit: actor.stats.toHit,
         chance: result.chance,
         defenderAc: target.stats.ac,
+        armorPierce: actor.stats.armorPierce ?? 0,
         hit: result.hit,
         critical: result.critical,
         fumble: result.fumble,
@@ -967,9 +969,9 @@ function snapshot(unit: UnitRecord): UnitSnapshot {
   }
 }
 
-/** The caster as `resolveAttack` sees it casting `spell`: its spell skill for its chance, the spell's dice for its damage. */
+/** The caster as `resolveAttack` sees it casting `spell`: its spell skill for its chance, the spell's dice for its damage, and no weapon's piercing. */
 function spellcaster(stats: CombatantStats, spell: SpellId): CombatantStats {
-  return { ...stats, toHit: stats.magic?.skill ?? 0, damage: SPELLS[spell].damage }
+  return { ...stats, toHit: stats.magic?.skill ?? 0, damage: SPELLS[spell].damage, armorPierce: 0 }
 }
 
 /** Joins names as "A", "A and B", "A, B and C". */
