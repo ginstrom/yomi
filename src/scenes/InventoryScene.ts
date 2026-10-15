@@ -774,7 +774,7 @@ export class InventoryScene extends Phaser.Scene {
       : known.length === 0
         ? ''
         : this.canAdvance
-          ? `Out of battle a heal restores ${worldSpells(this.character).map(({ spell }) => `${worldHealing(spell)} (${SPELLS[spell].name})`).join(', ') || 'its average'}. Mana comes back only with a battle or a level.`
+          ? `Out of battle a heal restores ${worldSpells(this.character).map(({ spell }) => `${worldHealing(spell)} (${SPELLS[spell].name})`).join(', ') || 'its average'}. A day of camping or a new level refills mana.`
           : 'Spells are cast in battle with the Cast button (M).'
     content.add(
       this.add

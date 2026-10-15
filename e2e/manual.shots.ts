@@ -107,15 +107,19 @@ describe('the manual’s screenshots', () => {
     await game.hover(battleHexOnScreen(battle, nearest.position))
     await shot(game, 'battle-attack')
 
+    // The mage steps two hexes forward, to bring a foe within Magic Arrow's reach.
     await game.click(battle.party[2])
     await game.waitFor('Battle', (b) => b.selected === 'hero_3')
+    const mage = battle.state.units.find((u) => u.id === 'hero_3')!
+    await game.click(battleHexOnScreen(battle, { q: mage.position.q + 2, r: mage.position.r }))
+    const stepped = await game.waitFor('Battle', (b) => b.playerControl && b.state.units.find((u) => u.id === 'hero_3')!.ap === 6)
     await game.press('m')
     const menu = await game.waitFor('Battle', (b) => b.spellMenu !== null)
     await shot(game, 'battle-spell-menu')
-    const spell = menu.spellMenu!.find((row) => row.enabled)!
-    await game.click(spell)
-    await game.waitFor('Battle', (b) => b.casting !== null)
-    await game.hover(battleHexOnScreen(battle, hero.position))
+    await game.click(menu.spellMenu!.find((row) => row.spell === 'magic_arrow')!)
+    await game.waitFor('Battle', (b) => b.casting === 'magic_arrow')
+    const target = stepped.state.units.filter((u) => u.side === 'enemy').find((u) => hexDistance(stepped.state.units.find((m) => m.id === 'hero_3')!.position, u.position) <= 5)!
+    await game.hover(battleHexOnScreen(battle, target.position))
     await shot(game, 'battle-targeting')
     await game.press('Escape')
     await game.waitFor('Battle', (b) => b.casting === null)
