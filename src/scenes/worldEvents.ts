@@ -1,0 +1,36 @@
+import type { WorldEvent } from '../game/blight.ts'
+
+/** The world map's line for an event, or '' for one too small to tell (a hex's level changing). */
+export function describeWorldEvent(event: WorldEvent): string {
+  switch (event.type) {
+    case 'spawned':
+      return `A ${event.name} rises from the corrupted land (threat ${event.threat}).`
+    case 'site_threatened':
+      return `${event.name} is under threat: the blight takes it in ${event.days} ${event.days === 1 ? 'day' : 'days'}.`
+    case 'site_captured':
+      return `${event.name} is cleansed, and now yours.`
+    case 'site_lost':
+      return `${event.name} is lost to the blight.`
+    case 'yield':
+      return `${event.name} yields ${event.amount} ${event.material}.`
+    case 'encampment_lost':
+      return 'The blight has taken Oakvale.'
+    case 'level_changed':
+      return ''
+  }
+}
+
+/**
+ * What the message line says of the events of a journey or a stretch of
+ * camping: the one that cut it short, or else the last that matters (yields
+ * and the land's levels are left to the map and the header), with a count of
+ * the rest.
+ */
+export function describeWorldEvents(events: readonly WorldEvent[], interruptedBy: WorldEvent | null = null): string {
+  if (interruptedBy) return describeWorldEvent(interruptedBy)
+  const told = events.filter((event) => event.type !== 'level_changed' && event.type !== 'yield')
+  const last = told.at(-1)
+  if (!last) return ''
+  const more = told.length - 1
+  return more > 0 ? `${describeWorldEvent(last)} (${more} more ${more === 1 ? 'event' : 'events'} on the map.)` : describeWorldEvent(last)
+}

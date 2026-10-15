@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import type { WorldStatus } from '../src/game/worldMap.ts'
 import { offsetToHex } from '../src/grid/hex.ts'
-import { RAIDERS, useGames, worldHexOnScreen } from './driver.ts'
+import type { WorldProbe } from '../src/testHook.ts'
+import { RAIDERS, useGames, worldHexOnScreen, type Game } from './driver.ts'
 
 describe('the world map', () => {
   const games = useGames()
@@ -134,5 +136,51 @@ describe('the world map', () => {
     await game.waitForScenes(['Menu'], ['World'])
     await game.press('Escape')
     await game.waitForScenes(['World'])
+  })
+
+  /** A new game saved in slot 1, its world's status changed there and the page reloaded on it, as the game would leave it. */
+  async function reloadedAs(game: Game, status: WorldStatus): Promise<WorldProbe> {
+    await game.newGame()
+    await game.page.evaluate((status) => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      saved.game.world.status = status
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    }, status)
+    const menu = await game.reload()
+    await game.click(menu.buttons.continue)
+    await game.waitForScenes(['World'])
+    return game.settled('World')
+  }
+
+  it('shows the victory once the Source is beaten, to end on or go on in endless mode', async () => {
+    const game = await games.open()
+    const won = await reloadedAs(game, 'won')
+    expect(won.outcome).toMatch(/^VICTORY!/)
+    expect([won.buttons.end.visible, won.buttons.endless.visible, won.buttons.camp.visible]).toEqual([true, true, false])
+
+    await game.click(won.buttons.endless)
+    const endless = await game.waitFor('World', (w) => w.world.status === 'endless')
+    expect(endless.outcome).toBe('')
+    expect(endless.buttons.end.visible).toBe(false)
+    // The game kept is the one that goes on.
+    expect(await game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!).game.world.status)).toBe('endless')
+  })
+
+  it('ends on the menu with the save kept, when the player ends a won game', async () => {
+    const game = await games.open()
+    const won = await reloadedAs(game, 'won')
+    await game.click(won.buttons.end)
+    await game.waitForScenes(['Menu'])
+    expect(await game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!).game.world.status)).toBe('won')
+  })
+
+  it('ends the playthrough when the encampment falls, freeing its slot', async () => {
+    const game = await games.open()
+    const lost = await reloadedAs(game, 'lost')
+    expect(lost.outcome).toMatch(/^DEFEAT/)
+    expect(lost.buttons.menu.visible).toBe(true)
+    expect(await game.page.evaluate(() => localStorage.getItem('yomi.save.1'))).toBeNull()
+    await game.click(lost.buttons.menu)
+    await game.waitForScenes(['Menu'])
   })
 })

@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import type { SpellId } from '../src/combat/spells.ts'
 import type { CastOutcome, Side } from '../src/engine/battleEngine.ts'
-import { monsterLocations, parseArgs, runCampaign, summarize, summarizeCampaigns, type LoggedEvent } from './simulate.ts'
+import { readyMadeParty } from '../src/game/party.ts'
+import { SOURCE_ID, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
+import {
+  MAX_CAMPAIGN_DAYS,
+  SOURCE_READY_LEVEL,
+  nextTarget,
+  parseArgs,
+  runCampaign,
+  summarize,
+  summarizeCampaigns,
+  type LoggedEvent,
+} from './simulate.ts'
 
 function battle(battleId: number, rounds: number, winner: Side | null): LoggedEvent[] {
   return [
@@ -103,18 +114,27 @@ describe('parseArgs', () => {
 
 describe('a campaign', () => {
   const args = parseArgs(['--campaign'])
-  const battles = runCampaign(3, 1, args, 100)
+  const { battles, record } = runCampaign(3, 1, args, 100)
   const starts = battles.map((events) => events[0]).filter((e) => e.type === 'battle_start')
   const winners = battles.map((events) => events.at(-1)).map((e) => (e?.type === 'battle_end' ? e.winner : undefined))
 
-  it('fights location after location, nearest first, until the map is clear or a battle is not won', () => {
+  it('fights nest after nest, the home band first, until the Source is beaten or a battle is not won', () => {
     expect(battles.length).toBeGreaterThan(1)
-    expect(battles.length).toBeLessThanOrEqual(monsterLocations())
-    // Every battle but the last is won; the last is lost unless it cleared the map.
+    // Every battle but the last is won; the last is the Source's unless the party fell.
     expect(winners.slice(0, -1).every((winner) => winner === 'player')).toBe(true)
-    if (battles.length < monsterLocations()) expect(winners.at(-1)).not.toBe('player')
+    expect(record.outcome).toBe(winners.at(-1) === 'player' ? 'source' : 'fallen')
+    if (record.outcome === 'source') expect(starts.at(-1)?.meta.location).toBe(SOURCE_ID)
     expect(starts.slice(0, 2).map((e) => e.meta.location)).toEqual(['goblin_raiders', 'kobold_scouts'])
     expect(new Set(starts.map((e) => e.meta.location)).size).toBe(battles.length)
+    expect(record.battles).toBe(battles.length)
+  })
+
+  it('spends days as it goes, while the blight spawns', () => {
+    expect(record.days).toBeGreaterThan(battles.length)
+    expect(record.days).toBeLessThanOrEqual(MAX_CAMPAIGN_DAYS + 1)
+    expect(record.spawns).toBeGreaterThan(0)
+    const days = starts.map((e) => e.meta.day as number)
+    expect(days).toEqual([...days].sort((a, b) => a - b))
   })
 
   it('logs each battle with its campaign, location and threat, under an id of its own', () => {
@@ -133,22 +153,46 @@ describe('a campaign', () => {
   })
 
   it('plays out the same from the same seed, casts included', () => {
-    expect(runCampaign(3, 1, args, 100)).toEqual(battles)
+    expect(runCampaign(3, 1, args, 100)).toEqual({ battles, record })
     expect(battles.flat().some((e) => e.type === 'cast')).toBe(true)
   })
 
-  it('is summed up by the share that cleared the map and the battles won at each threat', () => {
-    const summary = summarizeCampaigns(battles.flat(), 1, monsterLocations())
-    const won = winners.filter((winner) => winner === 'player').length
-    expect(summary).toMatchObject({
-      campaigns: 1,
-      cleared: won === monsterLocations() ? 1 : 0,
-      avgLocationsCleared: won,
-    })
+  it('is summed up by how campaigns ended and the battles won at each threat', () => {
+    const other = { ...record, outcome: 'encampment' as const, days: record.days + 10 }
+    const summary = summarizeCampaigns(battles.flat(), [record, other])
+    expect(summary).toMatchObject({ campaigns: 2, sourceShare: record.outcome === 'source' ? 0.5 : 0, avgDays: record.days + 5 })
+    expect(summary.outcomes.encampment).toBe(1)
     expect(summary.byThreat.map((row) => row.threat)).toEqual([...new Set(starts.map((e) => e.meta.threat as number))].sort())
     expect(summary.byThreat.reduce((total, row) => total + row.battles, 0)).toBe(battles.length)
     expect(summary.byThreat[0]).toEqual({ threat: 1, battles: 2, won: 2, winRate: 1 })
-    // A campaign that stops short has not cleared a shorter map's worth by accident.
-    expect(summarizeCampaigns(battles.flat(), 2, won + 1)).toMatchObject({ cleared: 0, clearedShare: 0, avgLocationsCleared: won / 2 })
+  })
+})
+
+describe('nextTarget', () => {
+  it('answers the nest pushing on a threatened site before the nearest', () => {
+    const world = newWorld(1)
+    const party = readyMadeParty()
+    expect(nextTarget(world, party)?.id).toBe('goblin_raiders')
+    const stonebridge = world.locations.find((l) => l.id === 'stonebridge')!
+    const besiegers: MonsterLocation = {
+      id: 'besiegers', kind: 'monsters', name: 'Besiegers', position: { q: stonebridge.position.q + 1, r: stonebridge.position.r },
+      encounter: 'goblin_raid', threat: 1, loot: [],
+    }
+    world.locations.push(besiegers)
+    expect(nextTarget(world, party)?.id).toBe('goblin_raiders')
+    world.held.push('stonebridge')
+    world.threatened = ['stonebridge']
+    expect(nextTarget(world, party)).toBe(besiegers)
+  })
+
+  it('marches on the Source once every member is ready, or nothing else is left', () => {
+    const world = newWorld(1)
+    const party = readyMadeParty()
+    for (const member of party) member.level = SOURCE_READY_LEVEL
+    expect(nextTarget(world, party)?.id).toBe(SOURCE_ID)
+    party[0].level = 1
+    expect(nextTarget(world, party)?.id).not.toBe(SOURCE_ID)
+    world.locations = world.locations.filter((l) => l.kind !== 'monsters' || (l.kind === 'monsters' && l.source))
+    expect(nextTarget(world, party)?.id).toBe(SOURCE_ID)
   })
 })

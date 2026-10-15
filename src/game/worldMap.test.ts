@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { HexBoard, hexDistance, hexEquals, hexKey, hexToOffset, offsetToHex } from '../grid/hex.ts'
 import { ENCOUNTERS, MAX_THREAT } from './encounters.ts'
+import { readyMadeParty } from './party.ts'
 import {
+  SOURCE_ID,
   THREAT_BAND,
   clearLocation,
   linger,
@@ -15,9 +17,12 @@ import {
 } from './worldMap.ts'
 
 const monsters = (world: WorldState) => world.locations.filter((l) => l.kind === 'monsters')
+/** The monster locations other than the Source. */
+const lairs = (world: WorldState) => monsters(world).filter((l) => l.kind === 'monsters' && !l.source)
+const party = readyMadeParty()
 
 describe('newWorld', () => {
-  const world = newWorld()
+  const world = newWorld(1)
 
   it('puts every location on its own hex of the map', () => {
     const board = new HexBoard(world.board)
@@ -64,18 +69,18 @@ describe('newWorld', () => {
       'Goblin Outriders': ['Wand of Storms'],
       'Kobold Tunnellers': ["Sage's Circlet"],
       'Goblin Pillagers': ['Emberblade'],
+      'The Blight Source': ['Wand of Storms'],
     })
-    expect(monsters(newWorld())[0].loot).not.toBe(lairs[0].loot)
+    expect(monsters(newWorld(1))[0].loot).not.toBe(lairs[0].loot)
   })
 
   it('makes monsters the more dangerous the further from home they lie', () => {
-    const lairs = monsters(world).filter((l) => l.kind === 'monsters')
-    const byDistance = [...lairs].sort((a, b) => hexDistance(world.party, a.position) - hexDistance(world.party, b.position))
+    const byDistance = [...lairs(world)].sort((a, b) => hexDistance(world.party, a.position) - hexDistance(world.party, b.position))
     const threats = byDistance.map((l) => l.threat)
     expect(threats).toEqual([...threats].sort((a, b) => a - b))
     expect(threats[0]).toBe(1)
     expect(threats.at(-1)).toBe(MAX_THREAT)
-    for (const l of lairs) expect(l.threat).toBe(threatAt(l.position))
+    for (const l of monsters(world)) expect(l.threat).toBe(threatAt(l.position))
   })
 
   it('starts the party on turn 1, on the map and clear of monsters', () => {
@@ -84,14 +89,22 @@ describe('newWorld', () => {
     expect(monstersHere(world)).toBeNull()
     expect(world.confronting).toBeNull()
   })
+
+  it('puts the Source in the far east, at the top threat', () => {
+    const source = monsters(world).find((l) => l.kind === 'monsters' && l.source)!
+    expect(source.id).toBe(SOURCE_ID)
+    expect(source.threat).toBe(MAX_THREAT)
+    expect(hexToOffset(source.position).col).toBeGreaterThan(world.board.cols - 5)
+  })
 })
 
 describe('travel', () => {
   it('walks a shortest route, a turn a hex', () => {
-    const world = newWorld()
+    const world = newWorld(1)
     const from = world.party
     const to = offsetToHex(3, 1)
-    const walked = travel(world, to)
+    const { walked, interruptedBy } = travel(world, to, party)
+    expect(interruptedBy).toBeNull()
     expect(walked.length).toBe(hexDistance(from, to))
     expect(hexEquals(walked[walked.length - 1], to)).toBe(true)
     expect(world.party).toEqual(to)
@@ -99,15 +112,15 @@ describe('travel', () => {
   })
 
   it('goes nowhere off the map or to the hex the party stands on', () => {
-    const world = newWorld()
+    const world = newWorld(1)
     const before = structuredClone(world)
-    expect(travel(world, offsetToHex(-1, 0))).toEqual([])
-    expect(travel(world, world.party)).toEqual([])
+    expect(travel(world, offsetToHex(-1, 0), party).walked).toEqual([])
+    expect(travel(world, world.party, party).walked).toEqual([])
     expect(world).toEqual(before)
   })
 
   it('routes around monsters that are not the destination', () => {
-    const world = newWorld()
+    const world = newWorld(1)
     const [goblins] = monsters(world)
     // Straight through the goblins' hex, along their row.
     world.party = { q: goblins.position.q - 2, r: goblins.position.r }
@@ -117,9 +130,9 @@ describe('travel', () => {
   })
 
   it('passes over towns and resources without stopping', () => {
-    const world = newWorld()
+    const world = newWorld(1)
     const town = world.locations.find((l) => l.kind === 'town')!
-    travel(world, town.position)
+    travel(world, town.position, party)
     expect(world.confronting).toBeNull()
     expect(routeTo(world, offsetToHex(0, 0))).not.toBeNull()
   })
@@ -127,9 +140,9 @@ describe('travel', () => {
 
 describe('a monster location', () => {
   function arrive(): { world: WorldState; id: string } {
-    const world = newWorld()
+    const world = newWorld(1)
     const [goblins] = monsters(world)
-    travel(world, goblins.position)
+    travel(world, goblins.position, party)
     return { world, id: goblins.id }
   }
 
@@ -138,19 +151,19 @@ describe('a monster location', () => {
     expect(monstersHere(world)?.id).toBe(id)
     expect(world.confronting).toBe(id)
     expect(routeTo(world, offsetToHex(0, 0))).toBeNull()
-    expect(travel(world, offsetToHex(0, 0))).toEqual([])
+    expect(travel(world, offsetToHex(0, 0), party).walked).toEqual([])
   })
 
   it.each(['scout', 'wait'] as const)('lets the party %s for a turn, then move away or choose again', (how) => {
     const { world, id } = arrive()
     const turn = world.turn
-    expect(linger(world, how)).toBe(true)
+    expect(linger(world, how, party)).not.toBeNull()
     expect(world.turn).toBe(turn + 1)
     // Still there to scout, wait at or attack...
     expect(monstersHere(world)?.id).toBe(id)
-    expect(linger(world, how)).toBe(true)
+    expect(linger(world, how, party)).not.toBeNull()
     // ...and free to leave.
-    expect(travel(world, offsetToHex(0, 0)).length).toBeGreaterThan(0)
+    expect(travel(world, offsetToHex(0, 0), party).walked.length).toBeGreaterThan(0)
     expect(monstersHere(world)).toBeNull()
   })
 
@@ -166,14 +179,14 @@ describe('a monster location', () => {
 
 describe('linger', () => {
   it('does nothing away from monsters', () => {
-    const world = newWorld()
-    expect(linger(world, 'wait')).toBe(false)
+    const world = newWorld(1)
+    expect(linger(world, 'wait', party)).toBeNull()
     expect(world.turn).toBe(1)
   })
 })
 
 describe('threatAt', () => {
-  const home = newWorld().party
+  const home = newWorld(1).party
 
   it('is 1 at home, a step higher each band out, and never past the top', () => {
     expect(threatAt(home)).toBe(1)

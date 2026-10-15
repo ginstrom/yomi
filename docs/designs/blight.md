@@ -6,7 +6,7 @@ The party was sent out to fight an encroaching evil. When the game begins, bligh
 
 The blight gives the world map a reason for time to matter. Today travelling, waiting and camping cost nothing, so "Camp until healed" is a free full heal before every battle. With the blight, a day spent is a day it presses in, and a day the land is held is a day that land yields.
 
-**Status: proposal, revised three times with the user's decisions (§8), ready to plan phase 1.** The shape of the system is settled. The constants are starting points for the simulator, not decisions. §9 lists the one open question, which does not block phase 1.
+**Status: phases 1, 2, 3 and 5 implemented; phase 4 waits on the buildings question (§9).** The shape of the system is settled. The constants are the simulator's, not decisions. §10 records where the implementation departs from this text and the numbers it was first tuned to.
 
 Related:
 - [expeditions-and-encampment.md](expeditions-and-encampment.md) designs the encampment, towns, crafting and camp improvements. This design gives that loop its stakes: what the encampment defends and where its gold and materials come from. Its "later threat system" is this design.
@@ -76,7 +76,7 @@ Each day, both sides' influence is summed for each hex. Each source pushes with 
 
 | Source | Strength |
 | --- | --- |
-| A monster location | `BLIGHT_PER_THREAT × threat` (3 × threat) |
+| A monster location | `BLIGHT_PER_THREAT × threat` (2 × threat; proposed as 3) |
 | The Source | `SOURCE_STRENGTH` (20) |
 
 Each corrupted neighbour of a hex also adds `CREEP` (1) to that hex.
@@ -98,7 +98,7 @@ The party's power is its levels only, so a new party of three at level 1 pushes 
 ### 4.3 The contest
 
 - Each hex carries a sparse `shift` counter, which moves by `blight − clean` each day.
-- At `+SHIFT_COST` (20) the hex's level rises by one, at `−SHIFT_COST` it falls by one, and either way the counter goes back to 0.
+- At `+SHIFT_COST` (60; proposed as 20) the hex's level rises by one, at `−SHIFT_COST` it falls by one, and either way the counter goes back to 0.
 - **Occupied hexes are exempt (R5):**
   - **A monster location's hex** stays at its level, at least 2, and cannot be lowered until the monsters are beaten.
   - **The party's hex** neither rises nor counts as corrupted for `CREEP` or spawning. It still falls under the party's own influence, so standing on blighted land slowly turns it. Turning a hex this way is the party's way to take ground it has no building near.
@@ -115,7 +115,7 @@ The party's power is its levels only, so a new party of three at level 1 pushes 
 
 ### 4.4 Spawning
 
-- **Pressure:** each day, `spawnPressure` grows by the count of corrupted hexes (occupied ones excluded) divided by `SPAWN_DIVISOR` (10).
+- **Pressure:** each day, `spawnPressure` grows by the count of corrupted hexes (occupied ones excluded) divided by `SPAWN_DIVISOR` (200; proposed as 10).
 - **A spawn:** at `SPAWN_COST` (30) a monster location appears on a corrupted hex, chosen by the world RNG. The hex must be at least `SPAWN_CLEARANCE` (4) hexes from the party, other monster locations and held sites.
 - **What appears:** a random encounter at `threatAt(position)`, with a small loot draw.
 - **Cap:** `MAX_MONSTER_LOCATIONS` (24).
@@ -280,3 +280,19 @@ The levers, in order:
 ## 9. Open questions
 
 1. **Buildings** (to be decided): which buildings exist, what they cost, and where they may stand, whether only at held sites or on any clean hex. This blocks phase 4 only.
+
+## 10. Implementation notes
+
+What the code does where this design left it open or the code departs from it:
+
+- **Constants.** At the proposed numbers an idle party saw 75% of the map blighted by day 50 and the monster cap reached within a month. `BLIGHT_PER_THREAT` 2, `SHIFT_COST` 60 and `SPAWN_DIVISOR` 200 give about 42% at day 50 and 90% at day 400 for a party that never acts.
+- **Storage.** Levels and shift counters are dense arrays by board index (`boardIndex`), not sparse maps: 2,400 numbers each, simpler and faster, and small in a save. The fixed sources' influence is a memo outside the state, worked out again only when a location or held site changes; a day costs well under a millisecond.
+- **The starting land.** A new world's levels come from its sources' influence with one level of taint added everywhere (`seedBlight`), so the home valley starts clean and the rest tainted, with blighted and corrupted land around the nests and the Source. The sites that start clean start held.
+- **The party's influence** reaches every hex within its strength, and its own hex is neutral as §4.3 says. Functions that pass time take the party for its levels.
+- **Warnings** are told once, when a held site comes under threat; the map's label shows the days for as long as it lasts.
+- **The map.** The tint, the specks on corrupted land and the front line are drawn in a Graphics and rendered into a texture when the levels change, since a Graphics of the whole map redrawn every frame slowed the game badly. Corrupted land shows specks rather than an animated `blight` atlas sprite, which is still to be drawn. A held site's name is starred and green, a threatened one's orange with "falls in Nd"; the header shows the share blighted, the growth and the stock.
+- **The Source** is a monster location flagged `source`, `blight_source` at (58, 19), and fights Goblin Raid at threat 5 until its encounter is designed. Its loot is a Wand of Storms.
+- **Endless mode** only lets play go on: nothing escalates yet. Ending keeps the save with the game's `status` at 'won', which reopens on the victory screen.
+- **Spawns** are named Goblin Brood or Kobold Nest by their encounter, with a one-in-two chance of a random enchanted item as loot.
+- **The simulator** marches on the Source once every member has reached level 7 (`SOURCE_READY_LEVEL`), and it answers a threatened site only with a nest it is up to (threat no higher than its lowest level). First tuning, 500 campaigns from seed 1: 393 beat the Source (78.6%) and 107 fell in battle, the encampment never fell; a campaign took about 142 days and 13.5 battles, saw 19 spawns, captured 1.5 sites and lost 0.1, and ended with 35% of the land blighted. The two-in-three target waits for the Source's own encounter.
+- **Not built:** phase 4 (improvements and buildings; nothing spends the stock yet), and phase 6.

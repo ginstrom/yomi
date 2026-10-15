@@ -11,7 +11,7 @@ class MemoryStorage {
   removeItem = (key: string): void => void this.values.delete(key)
 }
 
-const file = (savedAt: number): SaveFile => ({ game: newGame(), battle: null, savedAt })
+const file = (savedAt: number): SaveFile => ({ game: newGame(undefined, null, 1), battle: null, savedAt })
 
 let store: MemoryStorage
 

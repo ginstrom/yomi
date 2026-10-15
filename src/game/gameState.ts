@@ -23,9 +23,9 @@ export interface GameState {
   slot: SlotId | null
 }
 
-/** A game at its start: the given party, the ready-made one by default, at home on a new world. */
-export function newGame(party: Party = readyMadeParty(), slot: SlotId | null = null): GameState {
-  return { party, world: newWorld(), baggage: [], partyLimit: STARTING_PARTY_LIMIT, slot }
+/** A game at its start: the given party, the ready-made one by default, at home on a new world, of `seed` (random by default). */
+export function newGame(party: Party = readyMadeParty(), slot: SlotId | null = null, seed?: number): GameState {
+  return { party, world: newWorld(seed), baggage: [], partyLimit: STARTING_PARTY_LIMIT, slot }
 }
 
 /** Moves the loot of a beaten monster location into the baggage, and returns what was found. */

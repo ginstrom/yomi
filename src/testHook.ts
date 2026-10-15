@@ -105,8 +105,22 @@ export interface WorldProbe {
   /** The part of the screen where the map takes clicks. */
   view: Rect
   message: string
-  /** Scout, Wait and Attack show among monsters, the camp buttons elsewhere; `campUntilHealed` is enabled while someone is wounded. */
-  buttons: { scout: ButtonProbe; wait: ButtonProbe; attack: ButtonProbe; camp: ButtonProbe; campUntilHealed: ButtonProbe }
+  /** The words of the victory or defeat screen over the map, or '' while the game goes on. The blight, held sites and status are in `world`. */
+  outcome: string
+  /**
+   * Scout, Wait and Attack show among monsters, the camp buttons elsewhere; `campUntilHealed` is enabled while someone is wounded.
+   * `end` and `endless` show on the victory screen, `menu` on the defeat screen.
+   */
+  buttons: {
+    scout: ButtonProbe
+    wait: ButtonProbe
+    attack: ButtonProbe
+    camp: ButtonProbe
+    campUntilHealed: ButtonProbe
+    end: ButtonProbe
+    endless: ButtonProbe
+    menu: ButtonProbe
+  }
   party: PortraitProbe[]
 }
 

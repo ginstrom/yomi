@@ -17,7 +17,7 @@ const monsters = (game: GameState): MonsterLocation[] =>
 
 /** A game some way in: loot in the baggage, a ring worn, a level gained, a perk taken. */
 function gameUnderWay(): GameState {
-  const game = newGame(undefined, 2)
+  const game = newGame(undefined, 2, 1)
   const [first] = monsters(game)
   takeLoot(game, first)
   const [aldric, brenna] = game.party
@@ -110,7 +110,7 @@ describe('a save', () => {
   })
 })
 
-const newGameFile = (): SaveFile => ({ game: newGame(undefined, 1), battle: null, savedAt: 1 })
+const newGameFile = (): SaveFile => ({ game: newGame(undefined, 1, 1), battle: null, savedAt: 1 })
 
 describe('parseSave', () => {
   const changed = (change: (saved: any) => void): string => {

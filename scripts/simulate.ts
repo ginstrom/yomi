@@ -6,9 +6,10 @@
 // single battle can be replayed.
 //
 // With --campaign each of --battles is a whole campaign instead: a new party
-// fights the world map's monster locations nearest first, carrying its wounds
-// and spending its levels, until it has cleared the map or fallen. That is
-// how scaling is judged; see the rules of scaling in CLAUDE.md.
+// sets out on a new world with the blight spreading, fights its nests,
+// carrying its wounds and spending its levels, and marches on the Source when
+// ready, until it beats it, falls, or loses the encampment. That is how
+// scaling is judged; see the rules of scaling in CLAUDE.md.
 //
 // Usage: node scripts/simulate.ts [--battles 1000] [--out logs/battles.jsonl] [--seed 1] [--max-rounds 200]
 //                                 [--player-policy aggressive] [--enemy-policy aggressive]
@@ -23,9 +24,18 @@ import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.
 import { autoAdvance, levelUp } from '../src/character/progression.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/encounters.ts'
 import { readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
-import { campUntilHealed } from '../src/game/camp.ts'
-import { clearLocation, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
-import { hexDistance } from '../src/grid/hex.ts'
+import { blightedShare, monsterStrength, type WorldEvent } from '../src/game/blight.ts'
+import { campUntilHealed, canCamp, partyWounded } from '../src/game/camp.ts'
+import { daysToFall, sites } from '../src/game/territory.ts'
+import {
+  clearLocation,
+  newWorld,
+  travel,
+  worldActive,
+  type MonsterLocation,
+  type WorldState,
+} from '../src/game/worldMap.ts'
+import { hexDistance, hexEquals } from '../src/grid/hex.ts'
 import { MAGIC_ITEMS, WEAPONS, type Item } from '../src/inventory/inventory.ts'
 
 export interface CliArgs {
@@ -190,41 +200,122 @@ function runBattle(battleId: number, seed: number, args: CliArgs): LoggedEvent[]
   return fight(setup, seed, party, args, meta).getLog().map((event) => ({ ...event, battleId }))
 }
 
-/** Seeds apart for the battles of one campaign: more than a map has monster locations. */
+/** Seeds apart for the battles of one campaign: more than a campaign fights. */
 const CAMPAIGN_SEED_STEP = 1000
 
+/** The days a campaign may last before it is called off. */
+export const MAX_CAMPAIGN_DAYS = 2000
+/** The level every member must reach before the party marches on the Source, unless nothing else is left. */
+export const SOURCE_READY_LEVEL = 7
+
+/** How a campaign ended: the Source beaten, the party fallen, the encampment lost, or out of days (or of routes). */
+export type CampaignOutcome = 'source' | 'fallen' | 'encampment' | 'timeout'
+
+/** What a campaign did besides its battles. */
+export interface CampaignRecord {
+  outcome: CampaignOutcome
+  /** The world turn it ended on. */
+  days: number
+  battles: number
+  spawns: number
+  captured: number
+  lost: number
+  /** The share of the map blighted or worse when it ended. */
+  blighted: number
+  /** Hit points restored by rest and spells between battles, and the days camped for them. */
+  healedHp: number
+  campDays: number
+}
+
+export interface Campaign {
+  battles: LoggedEvent[][]
+  record: CampaignRecord
+}
+
+const lowestLevel = (party: Party) => Math.min(...party.map((member) => member.level))
+
 /**
- * Plays one campaign and returns each battle's events, in the order fought. A
- * new party fights the monster locations of a new world nearest first, by
- * hexes from where it stands (home, then the last location beaten; the first
- * in the world's list on a tie), each at its own threat. It carries its hit
- * points from battle to battle, takes `rewardVictory` after each win and
- * spends what that brought with `autoAdvance`, and camps where it won until
- * its wounds are healed (`campUntilHealed`, adding the hit points rest and
- * spells restored and the days it took to `healed`), until the map is clear
- * or a battle is not won. Loot is left alone: the heroes keep their
+ * Where a careful party goes next. First the nest pushing hardest on the held
+ * site nearest to falling, if the party is up to its threat; then the nearest
+ * nest it is up to (a threat no higher than its lowest level), or the nearest
+ * of all if none; and the Source once every member has `SOURCE_READY_LEVEL`
+ * or nothing else is left.
+ */
+export function nextTarget(world: WorldState, party: Party): MonsterLocation | null {
+  const all = world.locations.filter((l): l is MonsterLocation => l.kind === 'monsters')
+  const source = all.find((l) => l.source) ?? null
+  const nests = all.filter((l) => !l.source)
+  if (source && (nests.length === 0 || lowestLevel(party) >= SOURCE_READY_LEVEL)) return source
+  const upTo = nests.filter((l) => l.threat <= Math.max(1, lowestLevel(party)))
+  const threatened = sites(world)
+    .filter((site) => world.threatened.includes(site.id))
+    .map((site) => ({ site, days: daysToFall(world, party, site) ?? Infinity }))
+    .sort((a, b) => a.days - b.days)
+  for (const { site } of threatened) {
+    const push = (l: MonsterLocation) => monsterStrength(l) - hexDistance(l.position, site.position)
+    const pushing = upTo.filter((l) => push(l) > 0)
+    if (pushing.length > 0) return pushing.reduce((a, b) => (push(b) > push(a) ? b : a))
+  }
+  const pool = upTo.length > 0 ? upTo : nests
+  if (pool.length === 0) return null
+  return pool.reduce((a, b) => (hexDistance(world.party, b.position) < hexDistance(world.party, a.position) ? b : a))
+}
+
+/**
+ * Plays one campaign and returns each battle's events, in the order fought,
+ * with a record of the rest. A new party sets out from the encampment of a
+ * new world (seeded with the campaign's seed) and goes where `nextTarget`
+ * sends it, walking there a day a hex as the blight goes on, each nest at
+ * its own threat. It carries its hit points from battle to battle, takes
+ * `rewardVictory` after each win and spends what that brought with
+ * `autoAdvance`, and camps where it won until its wounds are healed
+ * (`campUntilHealed`, again whenever an event breaks camp). The campaign ends
+ * when the Source is beaten, a battle is not won, the encampment falls, or
+ * `MAX_CAMPAIGN_DAYS` pass. Loot is left alone: the heroes keep their
  * starting gear.
  */
-export function runCampaign(
-  campaign: number,
-  seed: number,
-  args: CliArgs,
-  firstBattleId = 0,
-  healed: { hp: number; days: number } = { hp: 0, days: 0 },
-): LoggedEvent[][] {
+export function runCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0): Campaign {
   const party = startingParty(args)
-  const world = newWorld()
+  const world = newWorld(seed)
   const battles: LoggedEvent[][] = []
+  const record: CampaignRecord = {
+    outcome: 'timeout', days: 0, battles: 0, spawns: 0, captured: 0, lost: 0, blighted: 0, healedHp: 0, campDays: 0,
+  }
+  const tally = (events: readonly WorldEvent[]) => {
+    for (const event of events) {
+      if (event.type === 'spawned') record.spawns++
+      if (event.type === 'site_captured') record.captured++
+      if (event.type === 'site_lost') record.lost++
+    }
+  }
+  const finish = (outcome: CampaignOutcome): Campaign => {
+    record.outcome = outcome
+    record.days = world.turn
+    record.battles = battles.length
+    record.blighted = blightedShare(world)
+    return { battles, record }
+  }
   for (;;) {
-    const lairs = world.locations.filter((l): l is MonsterLocation => l.kind === 'monsters')
-    if (lairs.length === 0) break
-    const next = lairs.reduce((a, b) => (hexDistance(world.party, b.position) < hexDistance(world.party, a.position) ? b : a))
+    if (world.status === 'lost') return finish('encampment')
+    if (world.turn > MAX_CAMPAIGN_DAYS) return finish('timeout')
+    const next = nextTarget(world, party)
+    if (!next) return finish('timeout')
+    // The journey stops for what happens on the way; the careful party takes note and goes on.
+    while (!hexEquals(world.party, next.position) && worldActive(world) && world.turn <= MAX_CAMPAIGN_DAYS) {
+      const journey = travel(world, next.position, party)
+      tally(journey.events)
+      if (journey.walked.length === 0) return finish('timeout')
+    }
+    if (!worldActive(world)) return finish('encampment')
+    if (!hexEquals(world.party, next.position)) return finish('timeout')
+
     const encounter = ENCOUNTERS[next.encounter](partyFighters(party), next.threat)
     const meta = {
       campaign,
       location: next.id,
       encounter: next.encounter,
       threat: next.threat,
+      day: world.turn,
       partyLevels: party.map((member) => member.level),
     }
     const battleId = firstBattleId + battles.length
@@ -232,7 +323,7 @@ export function runCampaign(
     battles.push(engine.getLog().map((event) => ({ ...event, battleId })))
 
     const state = engine.getState()
-    if (state.winner !== 'player') break
+    if (state.winner !== 'player') return finish('fallen')
     // The party's wounds and mana left are its own from here on, as BattleScene makes them.
     party.forEach((member, i) => {
       const unit = state.units.find((u) => u.id === heroId(i))!
@@ -242,12 +333,14 @@ export function runCampaign(
     rewardVictory(party, xpReward(encounter))
     for (const member of party) autoAdvance(member)
     clearLocation(world, next.id)
-    world.party = next.position
-    const camp = campUntilHealed(world, party)!
-    healed.hp += camp.rested + camp.cast
-    healed.days += camp.days
+    if (world.status === 'won') return finish('source')
+    while (partyWounded(party) && canCamp(world)) {
+      const camp = campUntilHealed(world, party)!
+      tally(camp.events)
+      record.healedHp += camp.rested + camp.cast
+      record.campDays += camp.days
+    }
   }
-  return battles
 }
 
 export interface Summary {
@@ -373,84 +466,92 @@ export interface ThreatRow {
 
 export interface CampaignSummary {
   campaigns: number
-  /** Campaigns that beat every monster location of the map. */
-  cleared: number
-  clearedShare: number
-  avgLocationsCleared: number
+  /** How many campaigns ended each way. */
+  outcomes: Record<CampaignOutcome, number>
+  /** The share that beat the Source: the measure the game is tuned by. */
+  sourceShare: number
+  avgDays: number
+  avgSpawns: number
+  avgCaptured: number
+  avgLost: number
+  avgBlighted: number
+  avgBattles: number
+  avgHealedHp: number
+  avgCampDays: number
   /** In rising order of threat; a threat no campaign reached has no row. */
   byThreat: ThreatRow[]
 }
 
-/** Adds up what `summarizeCampaigns` reports, an event at a time. */
-class CampaignTally {
-  private wins = new Map<number, number>()
+/** Adds up the battles at each threat, an event at a time. */
+class ThreatTally {
   private threats = new Map<number, { battles: number; won: number }>()
-  private campaign = 0
   private threat = 0
 
   add(event: BattleEvent): void {
     if (event.type === 'battle_start') {
-      this.campaign = Number(event.meta.campaign ?? 0)
       this.threat = Number(event.meta.threat ?? 0)
       const row = this.threats.get(this.threat) ?? { battles: 0, won: 0 }
       row.battles++
       this.threats.set(this.threat, row)
     }
-    if (event.type === 'battle_end' && event.winner === 'player') {
-      this.threats.get(this.threat)!.won++
-      this.wins.set(this.campaign, (this.wins.get(this.campaign) ?? 0) + 1)
-    }
+    if (event.type === 'battle_end' && event.winner === 'player') this.threats.get(this.threat)!.won++
   }
 
-  /** `locations` is how many monster locations the map has: a campaign with that many wins cleared it. */
-  summary(campaigns: number, locations: number): CampaignSummary {
-    const cleared = [...this.wins.values()].filter((wins) => wins >= locations).length
-    const won = [...this.wins.values()].reduce((a, b) => a + b, 0)
-    return {
-      campaigns,
-      cleared,
-      clearedShare: cleared / campaigns,
-      avgLocationsCleared: won / campaigns,
-      byThreat: [...this.threats.entries()]
-        .sort(([a], [b]) => a - b)
-        .map(([threat, row]) => ({ threat, ...row, winRate: row.won / row.battles })),
-    }
+  rows(): ThreatRow[] {
+    return [...this.threats.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([threat, row]) => ({ threat, ...row, winRate: row.won / row.battles }))
   }
 }
 
-export function summarizeCampaigns(events: readonly LoggedEvent[], campaigns: number, locations: number): CampaignSummary {
-  const tally = new CampaignTally()
-  for (const event of events) tally.add(event)
-  return tally.summary(campaigns, locations)
-}
-
-/** How many monster locations a new world has. */
-export function monsterLocations(): number {
-  return newWorld().locations.filter((l) => l.kind === 'monsters').length
+export function summarizeCampaigns(events: readonly LoggedEvent[], records: readonly CampaignRecord[]): CampaignSummary {
+  const threats = new ThreatTally()
+  for (const event of events) threats.add(event)
+  const campaigns = records.length
+  const avg = (of: (record: CampaignRecord) => number) => records.reduce((sum, r) => sum + of(r), 0) / campaigns
+  const outcomes: Record<CampaignOutcome, number> = { source: 0, fallen: 0, encampment: 0, timeout: 0 }
+  for (const record of records) outcomes[record.outcome]++
+  return {
+    campaigns,
+    outcomes,
+    sourceShare: outcomes.source / campaigns,
+    avgDays: avg((r) => r.days),
+    avgSpawns: avg((r) => r.spawns),
+    avgCaptured: avg((r) => r.captured),
+    avgLost: avg((r) => r.lost),
+    avgBlighted: avg((r) => r.blighted),
+    avgBattles: avg((r) => r.battles),
+    avgHealedHp: avg((r) => r.healedHp),
+    avgCampDays: avg((r) => r.campDays),
+    byThreat: threats.rows(),
+  }
 }
 
 function main(): void {
   const args = parseArgs(process.argv.slice(2))
   const baseSeed = args.seed ?? randomSeed()
   const tally = new Tally()
-  const campaigns = new CampaignTally()
+  const threats = new ThreatTally()
+  const records: CampaignRecord[] = []
 
   // Written a battle at a time: a run of campaigns is too long to hold in memory.
   mkdirSync(dirname(args.outPath), { recursive: true })
   const out = openSync(args.outPath, 'w')
   let battles = 0
-  const healed = { hp: 0, days: 0 }
   const log = (events: readonly LoggedEvent[]) => {
     battles++
     writeSync(out, events.map((event) => JSON.stringify(event)).join('\n') + '\n')
     for (const event of events) {
       tally.add(event)
-      campaigns.add(event)
+      threats.add(event)
     }
   }
   for (let run = 0; run < args.battles; run++) {
-    if (args.campaign) runCampaign(run, (baseSeed + run * CAMPAIGN_SEED_STEP) >>> 0, args, battles, healed).forEach(log)
-    else log(runBattle(run, (baseSeed + run) >>> 0, args))
+    if (args.campaign) {
+      const { battles: fought, record } = runCampaign(run, (baseSeed + run * CAMPAIGN_SEED_STEP) >>> 0, args, battles)
+      fought.forEach(log)
+      records.push(record)
+    } else log(runBattle(run, (baseSeed + run) >>> 0, args))
   }
   closeSync(out)
 
@@ -462,15 +563,21 @@ function main(): void {
     console.table(tally.summary(battles))
     return
   }
-  const { byThreat, ...summary } = campaigns.summary(args.battles, monsterLocations())
+  // The battles were tallied as they were written; the records hold the rest.
+  const summary = { ...summarizeCampaigns([], records), byThreat: threats.rows() }
+  const { outcomes } = summary
+  const pct = (n: number) => `${((n / summary.campaigns) * 100).toFixed(1)}%`
   console.log(`Simulated ${args.battles} campaigns, ${battles} battles in all (${versus}) -> ${args.outPath}`)
   console.log(
-    `Cleared the map: ${summary.cleared} of ${summary.campaigns} (${(summary.clearedShare * 100).toFixed(1)}%); locations cleared a campaign: ${summary.avgLocationsCleared.toFixed(2)} of ${monsterLocations()}`,
+    `Beat the Source: ${outcomes.source} of ${summary.campaigns} (${pct(outcomes.source)}); party fell: ${outcomes.fallen} (${pct(outcomes.fallen)}); encampment lost: ${outcomes.encampment} (${pct(outcomes.encampment)}); out of days: ${outcomes.timeout}`,
   )
   console.log(
-    `Hit points healed between battles: ${(healed.hp / args.battles).toFixed(1)} a campaign, in ${(healed.days / args.battles).toFixed(1)} days of camping`,
+    `A campaign: ${summary.avgDays.toFixed(0)} days, ${summary.avgBattles.toFixed(1)} battles, ${summary.avgSpawns.toFixed(1)} spawns, ${summary.avgCaptured.toFixed(1)} sites captured and ${summary.avgLost.toFixed(1)} lost, ${(summary.avgBlighted * 100).toFixed(0)}% of the land blighted at the end`,
   )
-  console.table(byThreat.map((row) => ({ ...row, winRate: Number(row.winRate.toFixed(3)) })))
+  console.log(
+    `Hit points healed between battles: ${summary.avgHealedHp.toFixed(1)} a campaign, in ${summary.avgCampDays.toFixed(1)} days of camping`,
+  )
+  console.table(summary.byThreat.map((row) => ({ ...row, winRate: Number(row.winRate.toFixed(3)) })))
   console.table(tally.summary(battles))
 }
 
