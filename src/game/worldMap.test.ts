@@ -98,6 +98,7 @@ describe('newWorld', () => {
     const source = monsters(world).find((l) => l.kind === 'monsters' && l.source)!
     expect(source.id).toBe(SOURCE_ID)
     expect(source.threat).toBe(MAX_THREAT)
+    expect(source.kind === 'monsters' && source.encounter).toBe('source_guardians')
     expect(hexToOffset(source.position).col).toBeGreaterThan(world.board.cols - 5)
   })
 })

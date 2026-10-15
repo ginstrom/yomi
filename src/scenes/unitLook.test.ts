@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { IRON_SWORD, MAGIC_ITEMS, OAK_SHIELD, STEEL_ARMOR, STEEL_GREATSWORD, WEAPONS, YEW_BOW } from '../inventory/inventory.ts'
+import { FOE_XP, type UnitKind } from '../game/encounters.ts'
 import { GEAR_SPRITES, gearLayers, spriteAnim, spriteFrame, UNIT_REST_FRAME } from './unitLook.ts'
 
 const atlas = JSON.parse(readFileSync('public/assets/sprites/atlas.json', 'utf8')) as { frames: Record<string, unknown> }
@@ -32,6 +33,15 @@ describe('gearLayers', () => {
     for (const sprite of Object.values(GEAR_SPRITES)) {
       expect(atlas.frames[spriteFrame(sprite, UNIT_REST_FRAME)], sprite).toBeDefined()
       expect(anims.anims.map((a) => a.key)).toContain(spriteAnim(sprite, 'idle'))
+    }
+  })
+})
+
+describe('the units', () => {
+  it('has every kind of unit in the atlas, with idle and walk animations', () => {
+    for (const kind of Object.keys(FOE_XP) as UnitKind[]) {
+      expect(atlas.frames[spriteFrame(kind, UNIT_REST_FRAME)], kind).toBeDefined()
+      for (const anim of ['idle', 'walk']) expect(anims.anims.map((a) => a.key)).toContain(spriteAnim(kind, anim))
     }
   })
 })

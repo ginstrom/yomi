@@ -1,0 +1,25 @@
+# Corrupted land: rotten stalks bearing red pustules out of a mound of
+# blighted earth, their caps glowing in turn. Shown at 1x, one to each
+# corrupted hex.
+canvas = "map"
+outline = "auto"
+
+[frames.base.runs]
+7 = [[11, "RrR"]]
+8 = [[11, "ror"]]
+9 = [[7, "RrR"], [12, "G"]]
+10 = [[7, "ror"], [12, "G"], [15, "RrR"]]
+11 = [[8, "G"], [12, "G"], [15, "ror"]]
+12 = [[8, "G"], [12, "G"], [16, "G"]]
+13 = [[8, "G"], [12, "G"], [16, "G"]]
+14 = [[6, "GgGggGggGggGg"]]
+15 = [[7, "GGgGGgGGgGG"]]
+
+# The caps glow.
+[frames.glow_1]
+from = "base"
+runs = { 8 = [[12, "Y"]], 10 = [[8, "y"]], 11 = [[16, "y"]] }
+
+[anim.idle]
+frames = ["base", "glow_1"]
+ms = 700

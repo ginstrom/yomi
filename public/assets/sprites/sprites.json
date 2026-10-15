@@ -669,6 +669,82 @@
       32
     ]
   },
+  "horror": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 160
+          },
+          {
+            "frame": "idle_0",
+            "ms": 160
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      4,
+      5,
+      25,
+      27
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "horror.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          4,
+          5,
+          25,
+          27
+        ],
+        "file": "horror__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          4,
+          6,
+          25,
+          26
+        ],
+        "file": "horror__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          4,
+          5,
+          25,
+          27
+        ],
+        "file": "horror__walk_0.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
   "icon_amulet": {
     "anchor": [
       10,
@@ -1270,6 +1346,60 @@
     "size": [
       32,
       32
+    ]
+  },
+  "map_blight": {
+    "anchor": [
+      12,
+      12
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 700
+          },
+          {
+            "frame": "glow_1",
+            "ms": 700
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      5,
+      6,
+      15,
+      11
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "map_blight.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          5,
+          6,
+          15,
+          11
+        ],
+        "file": "map_blight__base.png"
+      },
+      "glow_1": {
+        "bounds": [
+          5,
+          6,
+          15,
+          11
+        ],
+        "file": "map_blight__glow_1.png"
+      }
+    },
+    "size": [
+      24,
+      24
     ]
   },
   "map_monsters": {

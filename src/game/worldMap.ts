@@ -206,8 +206,7 @@ export function newWorld(seed: number = randomSeed()): WorldState {
       monsters('goblin_outriders', 'Goblin Outriders', 47, 13, 'goblin_raid', [STORM_WAND]),
       monsters('kobold_tunnellers', 'Kobold Tunnellers', 54, 28, 'kobold_scouts', [SAGE_CIRCLET]),
       monsters('goblin_pillagers', 'Goblin Pillagers', 57, 10, 'goblin_raid', [EMBERBLADE]),
-      // Its battle is a place-holder until the Source's own encounter is designed.
-      { ...(monsters(SOURCE_ID, 'The Blight Source', 58, 19, 'goblin_raid', [STORM_WAND]) as MonsterLocation), source: true },
+      { ...(monsters(SOURCE_ID, 'The Blight Source', 58, 19, 'source_guardians', [STORM_WAND]) as MonsterLocation), source: true },
     ],
     confronting: null,
     blight: [],

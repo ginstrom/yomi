@@ -1,4 +1,4 @@
-import { GOBLIN_SHAMAN_STATS, GOBLIN_STATS, KOBOLD_STATS, foeAtLevel, type CombatantStats } from '../combat/combat.ts'
+import { BLIGHT_HORROR_STATS, GOBLIN_SHAMAN_STATS, GOBLIN_STATS, KOBOLD_STATS, foeAtLevel, type CombatantStats } from '../combat/combat.ts'
 import type { BattleSetup, UnitId, UnitSetup } from '../engine/battleEngine.ts'
 import { offsetToHex } from '../grid/hex.ts'
 
@@ -37,16 +37,17 @@ function partyKinds(party: readonly Fighter[]): Record<UnitId, UnitKind> {
 }
 
 /** What a unit is, for drawing it; the engine only knows its stats. */
-export type UnitKind = 'warrior' | 'goblin' | 'kobold' | 'shaman'
+export type UnitKind = 'warrior' | 'goblin' | 'kobold' | 'shaman' | 'horror'
 
 /**
  * The experience beating a level 1 unit of each kind is worth. An even match for a
  * hero of level L is worth about `EVEN_FOE_XP_PER_LEVEL * L` and a weak foe
  * half that (see progression.ts): the Goblin is a little weaker than a new
  * hero, the Kobold weak, and the Goblin Shaman, frail but a healer and a
- * curse, worth a little more than a Goblin.
+ * curse, worth a little more than a Goblin; the Blight Horror, which guards
+ * the Source, as much as four Goblins.
  */
-export const FOE_XP: Record<UnitKind, number> = { warrior: 0, goblin: 80, kobold: 50, shaman: 90 }
+export const FOE_XP: Record<UnitKind, number> = { warrior: 0, goblin: 80, kobold: 50, shaman: 90, horror: 320 }
 
 export interface Encounter {
   setup: BattleSetup
@@ -81,6 +82,7 @@ const FOE_STATS: Record<FoeSlot['kind'], CombatantStats> = {
   goblin: GOBLIN_STATS,
   kobold: KOBOLD_STATS,
   shaman: GOBLIN_SHAMAN_STATS,
+  horror: BLIGHT_HORROR_STATS,
 }
 
 const BOARD = { cols: 8, rows: 5 }
@@ -129,6 +131,15 @@ const KOBOLD_SCOUTS: readonly FoeSlot[] = [
   { id: 'whip', kind: 'goblin', name: 'Goblin Whip', at: [7, 4] },
 ]
 
+// The Horror first, so it takes the field at any threat; the Source is fought at the top.
+const SOURCE_GUARDIANS: readonly FoeSlot[] = [
+  { id: 'horror', kind: 'horror', name: 'Blight Horror', at: [6, 2] },
+  { id: 'brute', kind: 'goblin', name: 'Goblin Brute', at: [6, 0] },
+  { id: 'shaman', kind: 'shaman', name: 'Blight Shaman', at: [7, 2] },
+  { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [6, 4] },
+  { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [7, 4] },
+]
+
 /**
  * A Goblin and a Kobold across the board from the party; where the threat is
  * higher a Goblin Shaman behind them, and more of both, up to five. The simulator fights this one unless told
@@ -141,6 +152,15 @@ export function goblinRaid(party: readonly Fighter[], threat = 1): Encounter {
 /** Two Kobolds that come at the party from both ends of the far side; where the threat is higher, more of them and a Goblin to drive them. */
 export function koboldScouts(party: readonly Fighter[], threat = 1): Encounter {
   return encounter(party, KOBOLD_SCOUTS, threat)
+}
+
+/**
+ * What guards the blight's Source: the Blight Horror, with a Goblin Brute
+ * beside it and, at the threat the Source is fought at, a shaman and a
+ * Kobold Sneak behind.
+ */
+export function sourceGuardians(party: readonly Fighter[], threat = 1): Encounter {
+  return encounter(party, SOURCE_GUARDIANS, threat)
 }
 
 /**
@@ -158,6 +178,7 @@ export function xpReward(encounter: Encounter): number {
 export const ENCOUNTERS = {
   goblin_raid: goblinRaid,
   kobold_scouts: koboldScouts,
+  source_guardians: sourceGuardians,
 } satisfies Record<string, (party: readonly Fighter[], threat?: number) => Encounter>
 
 export type EncounterId = keyof typeof ENCOUNTERS

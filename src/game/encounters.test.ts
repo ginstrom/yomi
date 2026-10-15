@@ -5,8 +5,8 @@ import { POLICIES } from '../engine/policies.ts'
 import { xpToNextLevel } from '../character/progression.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
 import { hexDistance } from '../grid/hex.ts'
-import { GOBLIN_STATS, foeAtLevel } from '../combat/combat.ts'
-import { ENCOUNTERS, FOE_XP, MAX_THREAT, goblinRaid, heroId, koboldScouts, xpReward } from './encounters.ts'
+import { BLIGHT_HORROR_STATS, GOBLIN_STATS, foeAtLevel } from '../combat/combat.ts'
+import { ENCOUNTERS, FOE_XP, MAX_THREAT, goblinRaid, heroId, koboldScouts, sourceGuardians, xpReward } from './encounters.ts'
 import { readyMadeParty, partyFighters } from './party.ts'
 
 /** A party of four: one more than a new game's, to stand in the second row. */
@@ -83,6 +83,20 @@ describe('goblinRaid', () => {
       ['goblin', 'Goblin'],
       ['kobold', 'Kobold'],
     ])
+  })
+})
+
+describe('sourceGuardians', () => {
+  it('fields the Blight Horror at every threat, a caster of its level', () => {
+    for (let threat = 1; threat <= MAX_THREAT; threat++) {
+      const [horror] = sourceGuardians(party(), threat).setup.units.filter((u) => u.side === 'enemy')
+      expect(horror.stats).toEqual({ ...foeAtLevel(BLIGHT_HORROR_STATS, threat), name: 'Blight Horror' })
+    }
+    expect(BLIGHT_HORROR_STATS.magic?.spells).toEqual(['death_cloud', 'bane'])
+  })
+
+  it('is worth more than a Goblin Raid of the same threat', () => {
+    expect(xpReward(sourceGuardians(party(), MAX_THREAT))).toBeGreaterThan(xpReward(goblinRaid(party(), MAX_THREAT)))
   })
 })
 

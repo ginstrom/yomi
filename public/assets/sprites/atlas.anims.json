@@ -211,6 +211,38 @@
     {
       "frames": [
         {
+          "duration": 600,
+          "frame": "horror/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "horror/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "horror/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 160,
+          "frame": "horror/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "horror/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "horror/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 420,
           "frame": "kobold/idle_0",
           "key": "atlas"
@@ -238,6 +270,22 @@
         }
       ],
       "key": "kobold/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 700,
+          "frame": "map_blight/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 700,
+          "frame": "map_blight/glow_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "map_blight/idle",
       "repeat": -1
     },
     {

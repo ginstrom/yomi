@@ -600,11 +600,83 @@
       },
       "trimmed": false
     },
+    "horror/idle_0": {
+      "frame": {
+        "h": 32,
+        "w": 32,
+        "x": 331,
+        "y": 34
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 32,
+        "w": 32
+      },
+      "spriteSourceSize": {
+        "h": 32,
+        "w": 32,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "horror/idle_1": {
+      "frame": {
+        "h": 32,
+        "w": 32,
+        "x": 364,
+        "y": 34
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 32,
+        "w": 32
+      },
+      "spriteSourceSize": {
+        "h": 32,
+        "w": 32,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "horror/walk_0": {
+      "frame": {
+        "h": 32,
+        "w": 32,
+        "x": 397,
+        "y": 34
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 32,
+        "w": 32
+      },
+      "spriteSourceSize": {
+        "h": 32,
+        "w": 32,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
     "icon_amulet/base": {
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 151,
+        "x": 301,
         "y": 100
       },
       "pivot": {
@@ -628,7 +700,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 172,
+        "x": 322,
         "y": 100
       },
       "pivot": {
@@ -652,7 +724,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 193,
+        "x": 343,
         "y": 100
       },
       "pivot": {
@@ -676,7 +748,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 214,
+        "x": 364,
         "y": 100
       },
       "pivot": {
@@ -700,7 +772,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 235,
+        "x": 385,
         "y": 100
       },
       "pivot": {
@@ -724,7 +796,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 256,
+        "x": 406,
         "y": 100
       },
       "pivot": {
@@ -748,7 +820,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 277,
+        "x": 427,
         "y": 100
       },
       "pivot": {
@@ -772,7 +844,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 298,
+        "x": 448,
         "y": 100
       },
       "pivot": {
@@ -796,7 +868,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 319,
+        "x": 469,
         "y": 100
       },
       "pivot": {
@@ -820,7 +892,7 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 340,
+        "x": 490,
         "y": 100
       },
       "pivot": {
@@ -844,8 +916,8 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 361,
-        "y": 100
+        "x": 1,
+        "y": 125
       },
       "pivot": {
         "x": 0.5,
@@ -868,8 +940,8 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 382,
-        "y": 100
+        "x": 22,
+        "y": 125
       },
       "pivot": {
         "x": 0.5,
@@ -892,8 +964,8 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 403,
-        "y": 100
+        "x": 43,
+        "y": 125
       },
       "pivot": {
         "x": 0.5,
@@ -916,8 +988,8 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 424,
-        "y": 100
+        "x": 64,
+        "y": 125
       },
       "pivot": {
         "x": 0.5,
@@ -940,8 +1012,8 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 445,
-        "y": 100
+        "x": 85,
+        "y": 125
       },
       "pivot": {
         "x": 0.5,
@@ -964,8 +1036,8 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 466,
-        "y": 100
+        "x": 106,
+        "y": 125
       },
       "pivot": {
         "x": 0.5,
@@ -988,8 +1060,8 @@
       "frame": {
         "h": 20,
         "w": 20,
-        "x": 487,
-        "y": 100
+        "x": 127,
+        "y": 125
       },
       "pivot": {
         "x": 0.5,
@@ -1012,7 +1084,7 @@
       "frame": {
         "h": 32,
         "w": 32,
-        "x": 331,
+        "x": 430,
         "y": 34
       },
       "pivot": {
@@ -1036,7 +1108,7 @@
       "frame": {
         "h": 32,
         "w": 32,
-        "x": 364,
+        "x": 463,
         "y": 34
       },
       "pivot": {
@@ -1060,8 +1132,8 @@
       "frame": {
         "h": 32,
         "w": 32,
-        "x": 397,
-        "y": 34
+        "x": 1,
+        "y": 67
       },
       "pivot": {
         "x": 0.5,
@@ -1080,103 +1152,7 @@
       },
       "trimmed": false
     },
-    "map_monsters/base": {
-      "frame": {
-        "h": 24,
-        "w": 24,
-        "x": 397,
-        "y": 67
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 24,
-        "w": 24
-      },
-      "spriteSourceSize": {
-        "h": 24,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "map_monsters/glow": {
-      "frame": {
-        "h": 24,
-        "w": 24,
-        "x": 422,
-        "y": 67
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 24,
-        "w": 24
-      },
-      "spriteSourceSize": {
-        "h": 24,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "map_resource/base": {
-      "frame": {
-        "h": 24,
-        "w": 24,
-        "x": 447,
-        "y": 67
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 24,
-        "w": 24
-      },
-      "spriteSourceSize": {
-        "h": 24,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "map_resource/glint_0": {
-      "frame": {
-        "h": 24,
-        "w": 24,
-        "x": 472,
-        "y": 67
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 24,
-        "w": 24
-      },
-      "spriteSourceSize": {
-        "h": 24,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "map_resource/glint_1": {
+    "map_blight/base": {
       "frame": {
         "h": 24,
         "w": 24,
@@ -1200,7 +1176,7 @@
       },
       "trimmed": false
     },
-    "map_town/base": {
+    "map_blight/glow_1": {
       "frame": {
         "h": 24,
         "w": 24,
@@ -1224,7 +1200,7 @@
       },
       "trimmed": false
     },
-    "map_town/smoke_0": {
+    "map_monsters/base": {
       "frame": {
         "h": 24,
         "w": 24,
@@ -1248,7 +1224,7 @@
       },
       "trimmed": false
     },
-    "map_town/smoke_1": {
+    "map_monsters/glow": {
       "frame": {
         "h": 24,
         "w": 24,
@@ -1272,7 +1248,7 @@
       },
       "trimmed": false
     },
-    "map_watchtower/base": {
+    "map_resource/base": {
       "frame": {
         "h": 24,
         "w": 24,
@@ -1296,7 +1272,7 @@
       },
       "trimmed": false
     },
-    "map_watchtower/flag_1": {
+    "map_resource/glint_0": {
       "frame": {
         "h": 24,
         "w": 24,
@@ -1320,79 +1296,151 @@
       },
       "trimmed": false
     },
+    "map_resource/glint_1": {
+      "frame": {
+        "h": 24,
+        "w": 24,
+        "x": 151,
+        "y": 100
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 24,
+        "w": 24
+      },
+      "spriteSourceSize": {
+        "h": 24,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "map_town/base": {
+      "frame": {
+        "h": 24,
+        "w": 24,
+        "x": 176,
+        "y": 100
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 24,
+        "w": 24
+      },
+      "spriteSourceSize": {
+        "h": 24,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "map_town/smoke_0": {
+      "frame": {
+        "h": 24,
+        "w": 24,
+        "x": 201,
+        "y": 100
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 24,
+        "w": 24
+      },
+      "spriteSourceSize": {
+        "h": 24,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "map_town/smoke_1": {
+      "frame": {
+        "h": 24,
+        "w": 24,
+        "x": 226,
+        "y": 100
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 24,
+        "w": 24
+      },
+      "spriteSourceSize": {
+        "h": 24,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "map_watchtower/base": {
+      "frame": {
+        "h": 24,
+        "w": 24,
+        "x": 251,
+        "y": 100
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 24,
+        "w": 24
+      },
+      "spriteSourceSize": {
+        "h": 24,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "map_watchtower/flag_1": {
+      "frame": {
+        "h": 24,
+        "w": 24,
+        "x": 276,
+        "y": 100
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 24,
+        "w": 24
+      },
+      "spriteSourceSize": {
+        "h": 24,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
     "portrait_barbarian/base": {
-      "frame": {
-        "h": 32,
-        "w": 32,
-        "x": 430,
-        "y": 34
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 32,
-        "w": 32
-      },
-      "spriteSourceSize": {
-        "h": 32,
-        "w": 32,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "portrait_dwarf/base": {
-      "frame": {
-        "h": 32,
-        "w": 32,
-        "x": 463,
-        "y": 34
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 32,
-        "w": 32
-      },
-      "spriteSourceSize": {
-        "h": 32,
-        "w": 32,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "portrait_knight/base": {
-      "frame": {
-        "h": 32,
-        "w": 32,
-        "x": 1,
-        "y": 67
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 32,
-        "w": 32
-      },
-      "spriteSourceSize": {
-        "h": 32,
-        "w": 32,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "portrait_priestess/base": {
       "frame": {
         "h": 32,
         "w": 32,
@@ -1416,7 +1464,7 @@
       },
       "trimmed": false
     },
-    "portrait_ranger/base": {
+    "portrait_dwarf/base": {
       "frame": {
         "h": 32,
         "w": 32,
@@ -1440,7 +1488,7 @@
       },
       "trimmed": false
     },
-    "portrait_rogue/base": {
+    "portrait_knight/base": {
       "frame": {
         "h": 32,
         "w": 32,
@@ -1464,7 +1512,7 @@
       },
       "trimmed": false
     },
-    "portrait_squire/base": {
+    "portrait_priestess/base": {
       "frame": {
         "h": 32,
         "w": 32,
@@ -1488,7 +1536,7 @@
       },
       "trimmed": false
     },
-    "portrait_wizard/base": {
+    "portrait_ranger/base": {
       "frame": {
         "h": 32,
         "w": 32,
@@ -1512,7 +1560,7 @@
       },
       "trimmed": false
     },
-    "shaman/idle_0": {
+    "portrait_rogue/base": {
       "frame": {
         "h": 32,
         "w": 32,
@@ -1521,7 +1569,7 @@
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
+        "y": 0.5
       },
       "rotated": false,
       "sourceSize": {
@@ -1536,7 +1584,7 @@
       },
       "trimmed": false
     },
-    "shaman/idle_1": {
+    "portrait_squire/base": {
       "frame": {
         "h": 32,
         "w": 32,
@@ -1545,7 +1593,7 @@
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
+        "y": 0.5
       },
       "rotated": false,
       "sourceSize": {
@@ -1560,7 +1608,7 @@
       },
       "trimmed": false
     },
-    "shaman/walk_0": {
+    "portrait_wizard/base": {
       "frame": {
         "h": 32,
         "w": 32,
@@ -1569,7 +1617,7 @@
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
+        "y": 0.5
       },
       "rotated": false,
       "sourceSize": {
@@ -1584,55 +1632,7 @@
       },
       "trimmed": false
     },
-    "tile_dark/base": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 1,
-        "y": 125
-      },
-      "pivot": {
-        "x": 0.0,
-        "y": 0.0
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "tile_light/base": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 18,
-        "y": 125
-      },
-      "pivot": {
-        "x": 0.0,
-        "y": 0.0
-      },
-      "rotated": false,
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "warrior/idle_0": {
+    "shaman/idle_0": {
       "frame": {
         "h": 32,
         "w": 32,
@@ -1656,7 +1656,7 @@
       },
       "trimmed": false
     },
-    "warrior/idle_1": {
+    "shaman/idle_1": {
       "frame": {
         "h": 32,
         "w": 32,
@@ -1680,11 +1680,131 @@
       },
       "trimmed": false
     },
-    "warrior/walk_0": {
+    "shaman/walk_0": {
       "frame": {
         "h": 32,
         "w": 32,
         "x": 364,
+        "y": 67
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 32,
+        "w": 32
+      },
+      "spriteSourceSize": {
+        "h": 32,
+        "w": 32,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "tile_dark/base": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 148,
+        "y": 125
+      },
+      "pivot": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "tile_light/base": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 165,
+        "y": 125
+      },
+      "pivot": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "warrior/idle_0": {
+      "frame": {
+        "h": 32,
+        "w": 32,
+        "x": 397,
+        "y": 67
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 32,
+        "w": 32
+      },
+      "spriteSourceSize": {
+        "h": 32,
+        "w": 32,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "warrior/idle_1": {
+      "frame": {
+        "h": 32,
+        "w": 32,
+        "x": 430,
+        "y": 67
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 32,
+        "w": 32
+      },
+      "spriteSourceSize": {
+        "h": 32,
+        "w": 32,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "warrior/walk_0": {
+      "frame": {
+        "h": 32,
+        "w": 32,
+        "x": 463,
         "y": 67
       },
       "pivot": {
@@ -1710,7 +1830,7 @@
     "image": "atlas.png",
     "scale": "1",
     "size": {
-      "h": 142,
+      "h": 146,
       "w": 512
     }
   }

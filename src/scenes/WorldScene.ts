@@ -69,8 +69,9 @@ const WALK_STEP_MS = 140
 /** The blight's tint over the grass, by level: a sickly yellow-green, then violets darkening to corruption. */
 const BLIGHT_TINTS = [0, 0xb8c040, 0x7a3f8a, 0x2e0f3a]
 const BLIGHT_ALPHAS = [0, 0.3, 0.4, 0.6]
-/** The specks that mark corrupted land. */
-const CORRUPTION_SPECK = 0xb388c9
+/** What grows on corrupted land, one to a hex, shown at its own size so it fits inside. */
+const BLIGHT_SPRITE = 'map_blight'
+const BLIGHT_SCALE = 1
 /** The faint line along the edge of clean land. */
 const FRONT_COLOR = 0xe8f5e9
 /** The ring inside the party's hex where it stands on blighted land, which it keeps neutral. */
@@ -132,13 +133,15 @@ export class WorldScene extends Phaser.Scene {
   private hallButton!: Phaser.GameObjects.Container
 
   /**
-   * The blight's tint, corruption's specks and the front line, drawn in
+   * The blight's tint and the front line, drawn in
    * `blightMarks` (off the display list) and from there into `blightLayer`
    * once each time the land changes: a Graphics of the whole map would be
    * worked out again every frame.
    */
   private blightMarks!: Phaser.GameObjects.Graphics
   private blightLayer!: Phaser.GameObjects.RenderTexture
+  /** The growths on corrupted land as the player knows it, rebuilt with `blightLayer`. */
+  private blightSprites!: Phaser.GameObjects.Container
   /** The locations' sprites, under the party, and their names and badges, over it; the sprites are rebuilt when a location comes or goes. */
   private siteSprites!: Phaser.GameObjects.Container
   private siteLabels!: Phaser.GameObjects.Container
@@ -182,6 +185,7 @@ export class WorldScene extends Phaser.Scene {
     this.blightMarks = this.make.graphics({}, false)
     const map = boardPixelSize(this.world.board, WORLD_LAYOUT)
     this.blightLayer = this.add.renderTexture(0, 0, Math.ceil(map.width), Math.ceil(map.height)).setOrigin(0)
+    this.blightSprites = this.add.container(0, 0)
     this.hoverMarks = this.add.graphics()
     this.partyMark = this.add.graphics()
     this.siteSprites = this.add.container(0, 0)
@@ -191,7 +195,7 @@ export class WorldScene extends Phaser.Scene {
     this.visible = new Set()
     this.party = new UnitFigure(this, PARTY_SPRITE, PARTY_SCALE).play('idle')
     this.refreshPartyGear()
-    this.mapLayer.add([this.blightLayer, this.hoverMarks, this.partyMark, this.siteSprites, this.party, this.siteLabels])
+    this.mapLayer.add([this.blightLayer, this.blightSprites, this.hoverMarks, this.partyMark, this.siteSprites, this.party, this.siteLabels])
 
     this.headerBar = this.add.rectangle(0, 0, 0, 0, BAR_COLOR, BAR_ALPHA).setOrigin(0)
     this.footerBar = this.add.rectangle(0, 0, 0, 0, BAR_COLOR, BAR_ALPHA).setOrigin(0)
@@ -423,8 +427,8 @@ export class WorldScene extends Phaser.Scene {
 
   /**
    * The land as the player knows it (`seen`): black where never explored;
-   * elsewhere each hex's tint for its level as last seen, specks on corrupted
-   * land and a faint line along every edge between clean land and blighted,
+   * elsewhere each hex's tint for its level as last seen, a growth on corrupted
+   * land (faded out of sight) and a faint line along every edge between clean land and blighted,
    * under a veil where out of sight.
    */
   private refreshBlight(): void {
@@ -433,6 +437,7 @@ export class WorldScene extends Phaser.Scene {
     if (drawn === this.drawnBlight) return
     this.drawnBlight = drawn
     const g = this.blightMarks.clear()
+    this.blightSprites.removeAll(true)
     const size = WORLD_LAYOUT.hexSize
     for (let i = 0; i < seen.length; i++) {
       const level = seen[i]
@@ -446,10 +451,12 @@ export class WorldScene extends Phaser.Scene {
       if (level > 0) {
         g.fillStyle(BLIGHT_TINTS[level], BLIGHT_ALPHAS[level]).fillPoints(this.hexPolygon(h), true)
         if (level === MAX_BLIGHT) {
-          g.fillStyle(CORRUPTION_SPECK, 0.7)
-          g.fillCircle(c.x - size * 0.35, c.y + size * 0.15, 1.5)
-          g.fillCircle(c.x + size * 0.25, c.y - size * 0.3, 1.5)
-          g.fillCircle(c.x + size * 0.1, c.y + size * 0.4, 1.5)
+          const growth = this.add
+            .sprite(c.x, c.y, SPRITE_ATLAS, spriteFrame(BLIGHT_SPRITE, 'base'))
+            .setScale(BLIGHT_SCALE)
+            .play({ key: spriteAnim(BLIGHT_SPRITE, 'idle'), delay: (i * LOCATION_STAGGER_MS) % 1400 })
+          if (!this.visible.has(i)) growth.setAlpha(REMEMBERED_ALPHA)
+          this.blightSprites.add(growth)
         }
         continue
       }

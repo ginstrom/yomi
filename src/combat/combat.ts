@@ -212,6 +212,27 @@ export const GOBLIN_SHAMAN_STATS: CombatantStats = {
   magic: { maxMana: 14, skill: 60, spells: ['magic_arrow', 'heal', 'bane'] },
 }
 
+/**
+ * What guards the blight's Source: a hulk of corrupted flesh that tears with
+ * its claws, through some of any armour, and breathes the blight out as
+ * Death Cloud and Bane. Fought only at the top threat, so its level 1 block
+ * is a sketch for `foeAtLevel` to raise.
+ */
+export const BLIGHT_HORROR_STATS: CombatantStats = {
+  name: 'Blight Horror',
+  maxHp: 50,
+  ac: 15,
+  toHit: 70,
+  critChance: 5,
+  armorPierce: 25,
+  damage: { count: 2, sides: 6, bonus: 2 },
+  weapon: 'Claws',
+  attackApCost: 4,
+  attackRange: 1,
+  actionPoints: 8,
+  magic: { maxMana: 16, skill: 60, spells: ['death_cloud', 'bane'] },
+}
+
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
 export const FOE_HP_PER_LEVEL = 0.7
 /** ...this many points to its chance to hit and to its armour class... */
