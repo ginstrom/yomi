@@ -6,7 +6,7 @@ The party was sent out to fight an encroaching evil. When the game begins, bligh
 
 The blight gives the world map a reason for time to matter. Today travelling, waiting and camping cost nothing, so "Camp until healed" is a free full heal before every battle. With the blight, a day spent is a day it presses in, and a day the land is held is a day that land yields.
 
-**Status: proposal, revised twice with the user's decisions (§8), ready to plan phase 1.** The shape of the system is settled. The constants are starting points for the simulator, not decisions. §9 lists what is still open; none of it blocks phase 1.
+**Status: proposal, revised three times with the user's decisions (§8), ready to plan phase 1.** The shape of the system is settled. The constants are starting points for the simulator, not decisions. §9 lists the one open question, which does not block phase 1.
 
 Related:
 - [expeditions-and-encampment.md](expeditions-and-encampment.md) designs the encampment, towns, crafting and camp improvements. This design gives that loop its stakes: what the encampment defends and where its gold and materials come from. Its "later threat system" is this design.
@@ -29,7 +29,9 @@ The game has two progression loops, and the blight feeds both:
                         └─▶ battles ─▶ levels   └─▶ improvements, buildings, crafting
 ```
 
-How far meta-progression reaches, for instance whether anything carries over between playthroughs, is deliberately left open (§9).
+Each playthrough is a fresh start: nothing carries over between them. Both loops run within one game.
+
+Against both loops runs a third pressure, **time** (§4.3a). The blight grows stronger the longer the game goes on, up to a cap. A slow game therefore faces a harder blight, but the party's growth has no cap, so a party that survives long enough can level past the blight and steamroll it.
 
 ## 3. Requirements
 
@@ -79,6 +81,8 @@ Each day, both sides' influence is summed for each hex. Each source pushes with 
 
 Each corrupted neighbour of a hex also adds `CREEP` (1) to that hex.
 
+The blight side's total is then multiplied by its growth over time (§4.3a).
+
 **Clean sources:**
 
 | Source | Strength |
@@ -89,7 +93,7 @@ Each corrupted neighbour of a hex also adds `CREEP` (1) to that hex.
 | A building (§4.6) | its own strength |
 | The party | `PARTY_BASE` (2) plus half the sum of its members' levels, rounded down |
 
-The party's power is its levels for now, so a new party of three at level 1 pushes with 3 and a party of three at level 5 with 9. Later this can count other things too, such as gear or perks.
+The party's power is its levels only, so a new party of three at level 1 pushes with 3 and a party of three at level 5 with 9. Gear and perks do not count.
 
 ### 4.3 The contest
 
@@ -102,12 +106,29 @@ The party's power is its levels for now, so a new party of three at level 1 push
 - **Dice:** influence needs none. Only spawning and tie-breaks draw from the world RNG.
 - **Cost:** about 2,400 hexes a day, each summing a handful of sources. That is cheap, but travel and camping advance many days at once, so the simulator should check it.
 
+### 4.3a The blight grows with time
+
+- **Growth:** the blight's strength rises with the days, by `BLIGHT_GROWTH` (10%) every `GROWTH_DAYS` (30), up to `MAX_BLIGHT_GROWTH` (+50%) at day 150.
+- **What it multiplies:** all blight influence (§4.2) and spawn pressure (§4.4).
+- **What it does not change:** monster threat. Threat stays set by distance (`threatAt`), capped at `MAX_THREAT`.
+- **Why a cap:** the longer the player takes to reach the Source, the harder the land is to hold, and the faster nests spawn. Past the cap the blight stops getting worse, while the party keeps levelling, so a party that lives long enough can steamroll.
+
 ### 4.4 Spawning
 
 - **Pressure:** each day, `spawnPressure` grows by the count of corrupted hexes (occupied ones excluded) divided by `SPAWN_DIVISOR` (10).
 - **A spawn:** at `SPAWN_COST` (30) a monster location appears on a corrupted hex, chosen by the world RNG. The hex must be at least `SPAWN_CLEARANCE` (4) hexes from the party, other monster locations and held sites.
 - **What appears:** a random encounter at `threatAt(position)`, with a small loot draw.
 - **Cap:** `MAX_MONSTER_LOCATIONS` (24).
+
+### 4.4a Staying home, and the soft lock
+
+- **Staying home is allowed.** A party that stays at the encampment keeps it from being taken, since an occupied hex cannot be taken. Waiting there is safe but fruitless: sites fall and spawns grow.
+- **The danger is a soft lock:** the monsters around home grow too tough for the party to beat, so it can neither level nor push out.
+- **Two rules guard against it:**
+  - A spawn's threat follows its distance from home (`threatAt`), never the blight or the date. Nests in the home band are always threat 1 and can be fought to level on.
+  - The blight's growth with time is capped (§4.3a), so what surrounds home stops getting worse.
+
+  The simulator should check that a weak party which waits a long time still finds threat-1 battles within reach.
 
 ### 4.5 Taking and losing ground
 
@@ -174,7 +195,7 @@ Monster locations stay put for now. Later, a location will be able to move along
 
 ### 5.1 Domain modules (proposed, Phaser-free)
 
-- **`src/game/blight.ts`:** levels, influence, shift counters, occupation, spawning, warnings, and `advanceDay(world): WorldEvent[]`.
+- **`src/game/blight.ts`:** levels, influence, the growth with time (derived from `turn`, so it needs no state), shift counters, occupation, spawning, warnings, and `advanceDay(world): WorldEvent[]`.
 - **`src/game/territory.ts`:** held sites, capture and loss as levels change, buildings, yields and the stock.
 - **`src/game/encampment.ts`:** improvements and their effects on strength and warning. The expeditions design proposed `camp.ts` for this, but the field camp now has that name.
 
@@ -211,7 +232,7 @@ Before that, the reserve roster, deployment and a turn model for several parties
 
 ## 6. Phasing
 
-1. **Blight and the contest:** levels, influence (monsters, the encampment, the party), occupation and the neutral hex, cleansing on victory, the map's tint and markers, time costing turns, interruptions, and the save bump. This phase is playable on its own.
+1. **Blight and the contest:** levels, influence (monsters, the encampment, the party), the blight's growth with time, occupation and the neutral hex, cleansing on victory, the map's tint and markers, time costing turns, interruptions, and the save bump. This phase is playable on its own.
 2. **Spawning.**
 3. **Territory:** capture and loss by influence, warnings, yields and the stock, and losing the encampment as a defeat.
 4. **The encampment:** its improvements and buildings, with the expeditions design's crafting.
@@ -228,8 +249,9 @@ The levers, in order:
 1. `SHIFT_COST`
 2. `BLIGHT_PER_THREAT`
 3. `SPAWN_COST`
-4. the clean strengths (the party's scaling included)
-5. the Source's encounter
+4. the blight's growth with time and its cap
+5. the clean strengths (the party's scaling included)
+6. the Source's encounter
 
 `FOES_AT_THREAT` should not move for this. Spawns add experience as well as danger, and yields add gear through crafting, so judge each change by campaign runs.
 
@@ -248,13 +270,13 @@ The levers, in order:
    3. **Capturing:** to capture a site is to remove its blight, which influence does without anyone standing there: buildings, and nearby friendly units scaled to their power. An occupied hex cannot be taken. The party occupying a hex makes it neutral, so blight does not spread from it, but the party's influence has to turn it over time.
    4. **Losing sites:** blight takes held sites back, and monsters take them as the player takes ground.
    5. **Moving monsters:** monsters stay put for now, and will eventually move, spreading blight.
+9. *(third round)*
+   1. **Fresh starts:** each playthrough starts afresh, and nothing carries over.
+   2. **Staying home:** it is fine for now to stay safe in the encampment. The risk is a soft lock, where the surrounding monsters grow too tough to beat (§4.4a).
+   3. **Growth with time:** the blight grows gradually over time, so the longer the party takes to reach the final boss, the harder it gets. The growth is capped, so a party that lives long enough can level up and steamroll.
+   4. **Buildings:** to be decided.
+   5. **Party power:** only levels count.
 
 ## 9. Open questions
 
-None of these block phase 1.
-
-1. **Meta-progression:** does anything carry over between playthroughs?
-2. **Playing it safe at home:** is it a problem? The party standing at the encampment keeps it from being taken, since an occupied hex cannot be taken. That makes waiting at home safe but fruitless, as sites fall and spawns grow. Should something stop that, for instance the encampment also falling when every site is lost?
-3. **Does the blight answer the player's growth?** The second loop's "tougher foes" comes from pushing into further bands. Should the blight also grow as the encampment does, for instance the Source's strength or spawn pressure rising with the encampment's improvements?
-4. **Buildings:** which buildings exist, what they cost, and where they may stand: only at held sites, or on any clean hex?
-5. **The party's power:** is it only levels, or should gear and perks count too?
+1. **Buildings** (to be decided): which buildings exist, what they cost, and where they may stand, whether only at held sites or on any clean hex. This blocks phase 4 only.
