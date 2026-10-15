@@ -10,11 +10,13 @@ export function describeWorldEvent(event: WorldEvent): string {
     case 'site_captured':
       return `${event.name} is cleansed, and now yours.`
     case 'site_lost':
-      return `${event.name} is lost to the blight.`
+      return event.outpost ? `${event.name} is lost to the blight, and its outpost razed.` : `${event.name} is lost to the blight.`
     case 'yield':
       return `${event.name} yields ${event.amount} ${event.material}.`
     case 'tower_built':
       return 'A watchtower rises over the land.'
+    case 'outpost_built':
+      return `An outpost stands at ${event.name}.`
     case 'tower_lost':
       return 'A watchtower is lost to the blight.'
     case 'encampment_lost':

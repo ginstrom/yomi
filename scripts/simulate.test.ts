@@ -4,12 +4,15 @@ import type { CastOutcome, Side } from '../src/engine/battleEngine.ts'
 import { canAdvance } from '../src/character/progression.ts'
 import { newGame } from '../src/game/gameState.ts'
 import { readyMadeParty } from '../src/game/party.ts'
+import { OUTPOST_COST } from '../src/game/buildings.ts'
 import { SOURCE_ID, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
 import {
   MAX_CAMPAIGN_DAYS,
+  OUTPOST_ERRAND_RADIUS,
   SOURCE_READY_LEVEL,
   hallErrand,
   nextTarget,
+  outpostErrand,
   parseArgs,
   runCampaign,
   summarize,
@@ -222,5 +225,34 @@ describe('the guild hall in a campaign', () => {
     expect(hallErrand(game)).toBe(true)
     expect(visitGuildHall(game)).toBe(1)
     expect(game.party.at(-1)!.name).toBe('Aldric 2')
+  })
+})
+
+describe('the shrine and outposts in a campaign', () => {
+  it('raises the shrine with what the guild hall leaves', () => {
+    const game = newGame(undefined, null, 1)
+    game.world.stock = { gold: 100, iron: 50, silver: 15 }
+    visitGuildHall(game)
+    // The hall's 90 gold first, then the shrine's first level would want 20.
+    expect(game.world.shrine).toBe(0)
+    game.world.stock.gold = 70
+    visitGuildHall(game)
+    expect(game.world.shrine).toBe(2)
+    expect(game.world.stock).toMatchObject({ gold: 0, silver: 0 })
+  })
+
+  it('puts an outpost on the nearest held site without one, within reach, when the stock affords it', () => {
+    const world = newWorld(1)
+    const stonebridge = world.locations.find((l) => l.id === 'stonebridge')!
+    world.held = [...new Set([...world.held, 'stonebridge'])]
+    world.party = { q: stonebridge.position.q - 2, r: stonebridge.position.r }
+    expect(outpostErrand(world)).toBeNull()
+    world.stock = { ...OUTPOST_COST }
+    expect(outpostErrand(world)?.id).toBe('stonebridge')
+    world.outposts = ['stonebridge']
+    expect(outpostErrand(world)?.id).not.toBe('stonebridge')
+    world.outposts = []
+    world.party = { q: stonebridge.position.q + OUTPOST_ERRAND_RADIUS + 8, r: stonebridge.position.r }
+    expect(outpostErrand(world)?.id).not.toBe('stonebridge')
   })
 })

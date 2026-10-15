@@ -6,7 +6,7 @@ The party was sent out to fight an encroaching evil. When the game begins, bligh
 
 The blight gives the world map a reason for time to matter. Today travelling, waiting and camping cost nothing, so "Camp until healed" is a free full heal before every battle. With the blight, a day spent is a day it presses in, and a day the land is held is a day that land yields.
 
-**Status: phases 1, 2, 3 and 5 implemented; phase 4 waits on the buildings question (§9).** The shape of the system is settled. The constants are the simulator's, not decisions. §10 records where the implementation departs from this text and the numbers it was first tuned to.
+**Status: phases 1 to 5 implemented.** Phase 4's buildings are the guild hall and watchtowers ([guild-hall-and-watchtowers.md](guild-hall-and-watchtowers.md)), the shrine and the outpost; the infirmary and the workshop are left to the expeditions design (§9). The shape of the system is settled. The constants are the simulator's, not decisions. §10 records where the implementation departs from this text and the numbers it was first tuned to.
 
 Related:
 - [expeditions-and-encampment.md](expeditions-and-encampment.md) designs the encampment, towns, crafting and camp improvements. This design gives that loop its stakes: what the encampment defends and where its gold and materials come from. Its "later threat system" is this design.
@@ -279,7 +279,7 @@ The levers, in order:
 
 ## 9. Open questions
 
-1. **Buildings** (in part decided): the user chose a guild hall at the encampment (roster, recruiting, upgrades to a party of 4 and 5) and watchtowers built by a party on blight-free land, with fog of war for their vision. They are designed in [guild-hall-and-watchtowers.md](guild-hall-and-watchtowers.md). The other improvements of §4.6 remain open.
+1. **Buildings** (decided for the influence war): the user chose a guild hall at the encampment (roster, recruiting, upgrades to a party of 4 and 5) and watchtowers built by a party on blight-free land, with fog of war for their vision, designed in [guild-hall-and-watchtowers.md](guild-hall-and-watchtowers.md); then the shrine and the outpost as §4.6 sketches them (§10). The infirmary and the workshop belong to the expeditions design and remain open; the §4.6 watchtower's spawn warning was overtaken by the field watchtower and fog.
 
 ## 10. Implementation notes
 
@@ -295,4 +295,7 @@ What the code does where this design left it open or the code departs from it:
 - **Endless mode** only lets play go on: nothing escalates yet. Ending keeps the save with the game's `status` at 'won', which reopens on the victory screen.
 - **Spawns** are named Goblin Brood or Kobold Nest by their encounter, with a one-in-two chance of a random enchanted item as loot.
 - **The simulator** marches on the Source once every member has reached level 7 (`SOURCE_READY_LEVEL`), and it answers a threatened site only with a nest it is up to (threat no higher than its lowest level). First tuning, 500 campaigns from seed 1: 393 beat the Source (78.6%) and 107 fell in battle, the encampment never fell; a campaign took about 142 days and 13.5 battles, saw 19 spawns, captured 1.5 sites and lost 0.1, and ended with 35% of the land blighted. The two-in-three target waits for the Source's own encounter.
-- **Not built:** phase 4 (improvements and buildings; nothing spends the stock yet), and phase 6.
+- **The shrine** is raised at Oakvale from the guild hall's overlay, no time passing: three levels, each adding `SHRINE_STRENGTH` (3) to the encampment's 8, for 20 gold, then 40 gold and 15 silver, then 80 gold and 30 silver (silver, from further out, being what campaigns otherwise left unspent).
+- **The outpost** is built by the party standing on a held town or resource other than Oakvale, in a day, for 15 gold and 10 timber: it adds `OUTPOST_STRENGTH` (3) to the site's influence and `OUTPOST_YIELD` (1) to its yield before taint halves it, is marked "outpost" under the site's name, and is razed when the site is lost.
+- **The simulator** raises the shrine with what the guild hall leaves when it is home, and after a win builds an outpost on the nearest held site without one within 6 hexes if the stock affords it.
+- **Not built:** the infirmary and workshop (expeditions design), the animated `blight` sprite, the Source's encounter, and phase 6.

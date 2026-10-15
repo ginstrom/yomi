@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { canAdvance } from '../character/progression.ts'
-import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex } from '../game/blight.ts'
-import { buildTower, canBuildTower, towerSiteRefusal } from '../game/buildings.ts'
+import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex, type WorldEvent } from '../game/blight.ts'
+import { buildOutpost, buildTower, canBuildOutpost, canBuildTower, outpostSiteRefusal, towerSiteRefusal } from '../game/buildings.ts'
 import { campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from '../game/camp.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { atGuildHall } from '../game/guildHall.ts'
@@ -91,7 +91,7 @@ const BUTTON_W = 140
 const BUTTON_H = 44
 /** Between two buttons of a row. */
 const BUTTON_GAP = 20
-/** Wide enough for "Camp until healed" and "Build Watchtower". */
+/** Wide enough for "Camp until healed", "Build Watchtower" and "Build Outpost". */
 const WIDE_BUTTON_W = 200
 
 export class WorldScene extends Phaser.Scene {
@@ -126,6 +126,8 @@ export class WorldScene extends Phaser.Scene {
   /** Camp and Camp until healed, shown wherever else the party stands still, and Build Watchtower where one may stand. */
   private campButtons: Phaser.GameObjects.Container[] = []
   private towerButton!: Phaser.GameObjects.Container
+  /** Shown on a held town or resource that has no outpost yet. */
+  private outpostButton!: Phaser.GameObjects.Container
   /** Shown at Oakvale, beside the camp buttons: opens the guild hall. */
   private hallButton!: Phaser.GameObjects.Container
 
@@ -212,6 +214,7 @@ export class WorldScene extends Phaser.Scene {
       this.createButton('Camp until healed', () => this.onCampUntilHealed(), WIDE_BUTTON_W),
     ]
     this.towerButton = this.createButton('Build Watchtower', () => this.onBuildTower(), WIDE_BUTTON_W)
+    this.outpostButton = this.createButton('Build Outpost', () => this.onBuildOutpost(), WIDE_BUTTON_W)
     this.hallButton = this.createButton('Guild Hall', () => this.openGuildHall())
     this.column = new PartyColumn(this, this.gameState.party, (index) => this.onPortrait(index))
 
@@ -292,6 +295,7 @@ export class WorldScene extends Phaser.Scene {
         camp,
         campUntilHealed,
         buildTower: buttonProbe(this.towerButton),
+        buildOutpost: buttonProbe(this.outpostButton),
         guildHall: buttonProbe(this.hallButton),
         end: buttonProbe(this.endButton),
         endless: buttonProbe(this.endlessButton),
@@ -381,6 +385,7 @@ export class WorldScene extends Phaser.Scene {
           ? daysToFall(this.world, this.gameState.party, location)
           : null
       const lines = [held ? `${location.name} *` : location.name]
+      if (this.world.outposts.includes(location.id)) lines.push('outpost')
       if (days !== null) lines.push(`falls in ${days}d`)
       this.siteLabels.add(
         this.add
@@ -497,8 +502,8 @@ export class WorldScene extends Phaser.Scene {
     const { width, height } = this.scale
     const centreX = PARTY_PANEL_W + (width - PARTY_PANEL_W) / 2
     const buttonY = height - 50
-    // Only the buttons shown take room: the camp row has the tower's or the hall's, never both.
-    for (const all of [this.buttons, [...this.campButtons, this.towerButton, this.hallButton]]) {
+    // Only the buttons shown take room: the camp row has one of the tower's, the outpost's and the hall's at most.
+    for (const all of [this.buttons, [...this.campButtons, this.towerButton, this.outpostButton, this.hallButton]]) {
       const row = all.filter((button) => button.visible)
       // A row centred under the map, its buttons BUTTON_GAP apart.
       let x = centreX - (row.reduce((sum, button) => sum + button.width, 0) + (row.length - 1) * BUTTON_GAP) / 2
@@ -590,6 +595,7 @@ export class WorldScene extends Phaser.Scene {
     for (const button of this.buttons) button.setVisible(here !== null && !this.walking && world.status !== 'lost')
     for (const button of this.campButtons) button.setVisible(canCamp(world) && !this.walking)
     this.towerButton.setVisible(canCamp(world) && !this.walking && towerSiteRefusal(world) === null)
+    this.outpostButton.setVisible(canCamp(world) && !this.walking && outpostSiteRefusal(world) === null)
     this.hallButton.setVisible(atGuildHall(world) && !this.walking)
     this.layout()
     const over = world.status === 'won' || world.status === 'lost'
@@ -667,7 +673,7 @@ export class WorldScene extends Phaser.Scene {
   /** While the party walks, nothing else can be done and its hex is not yet where it stands. */
   private refreshWalking(): void {
     this.partyMark.clear()
-    for (const button of [...this.buttons, ...this.campButtons, this.towerButton, this.hallButton]) button.setVisible(false)
+    for (const button of [...this.buttons, ...this.campButtons, this.towerButton, this.outpostButton, this.hallButton]) button.setVisible(false)
     this.refreshHover()
   }
 
@@ -732,7 +738,17 @@ export class WorldScene extends Phaser.Scene {
   /** Builds a watchtower where the party stands, a day's work, or says why it cannot (the stock, most often). */
   private onBuildTower(): void {
     const refusal = canBuildTower(this.world)
-    const events = refusal ? null : buildTower(this.world, this.gameState.party)
+    this.built(refusal, refusal ? null : buildTower(this.world, this.gameState.party))
+  }
+
+  /** Builds an outpost at the held site the party stands on, a day's work, or says why it cannot. */
+  private onBuildOutpost(): void {
+    const refusal = canBuildOutpost(this.world)
+    this.built(refusal, refusal ? null : buildOutpost(this.world, this.gameState.party))
+  }
+
+  /** Tells what a building's day brought, or why it was refused. */
+  private built(refusal: string | null, events: WorldEvent[] | null): void {
     if (!events) {
       this.messageText.setText(refusal ?? '')
       return

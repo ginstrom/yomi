@@ -121,6 +121,8 @@ export interface WorldProbe {
     campUntilHealed: ButtonProbe
     /** Shows where the party may camp on land a watchtower could stand on; a click without the stock says why in the message. */
     buildTower: ButtonProbe
+    /** Shows on a held town or resource without an outpost; a click without the stock says why in the message. */
+    buildOutpost: ButtonProbe
     /** Shows while the party stands at Oakvale. */
     guildHall: ButtonProbe
     end: ButtonProbe
@@ -140,6 +142,8 @@ export interface GuildHallProbe {
   view: 'roster' | 'recruit'
   level: number
   partyLimit: number
+  /** The shrine's level at Oakvale. */
+  shrine: number
   /** What the last action did, or why it was refused. */
   message: string
   /** The hero clicked, whom a click on the other row swaps with. */
@@ -148,9 +152,11 @@ export interface GuildHallProbe {
   reserves: Array<HallFaceProbe & { level: number }>
   /** The pre-rolls not in the company, on the recruit view: a click hires one. */
   prerolls: HallFaceProbe[]
-  /** `upgrade`, `toReserves`, `toParty`, `recruit` and `close` are the roster's; `create` and `back` the recruit view's. */
+  /** `upgrade`, `shrine`, `toReserves`, `toParty`, `recruit` and `close` are the roster's; `create` and `back` the recruit view's. */
   buttons: {
     upgrade: ButtonProbe
+    /** Raises the shrine a level, enabled when the stock affords it. */
+    shrine: ButtonProbe
     toReserves: ButtonProbe
     toParty: ButtonProbe
     recruit: ButtonProbe

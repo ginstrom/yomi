@@ -25,7 +25,7 @@ import { autoAdvance, levelUp } from '../src/character/progression.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/encounters.ts'
 import { PREROLLS, readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
 import { blightedShare, monsterStrength, type WorldEvent } from '../src/game/blight.ts'
-import { buildTower, canAfford, canBuildTower } from '../src/game/buildings.ts'
+import { OUTPOST_COST, buildOutpost, buildTower, canAfford, canBuildOutpost, canBuildTower, raiseShrine } from '../src/game/buildings.ts'
 import { newGame, type GameState } from '../src/game/gameState.ts'
 import {
   RECRUIT_COST,
@@ -45,6 +45,7 @@ import {
   travel,
   worldActive,
   type MonsterLocation,
+  type QuietLocation,
   type WorldState,
 } from '../src/game/worldMap.ts'
 import { hexDistance, hexEquals, type Hex } from '../src/grid/hex.ts'
@@ -245,6 +246,9 @@ export interface CampaignRecord {
   /** Heroes hired at the guild hall, and its level at the end. */
   recruits: number
   hallLevel: number
+  /** The shrine's level at the end, and the outposts built. */
+  shrineLevel: number
+  outpostsBuilt: number
 }
 
 export interface Campaign {
@@ -269,7 +273,8 @@ export function hallErrand(game: GameState): boolean {
 /**
  * At the guild hall: raises it as far as the stock allows, then fills the
  * party's empty places with recruits, the pre-rolls in turn (renamed when the
- * name is taken), their points spent by `autoAdvance`.
+ * name is taken), their points spent by `autoAdvance`, and raises the shrine
+ * with what is left.
  */
 export function visitGuildHall(game: GameState): number {
   while (upgradeGuildHall(game) === null);
@@ -284,7 +289,29 @@ export function visitGuildHall(game: GameState): number {
     autoAdvance(game.party.at(-1)!)
     hired++
   }
+  while (raiseShrine(game.world) === null);
   return hired
+}
+
+/** How far the careful party goes out of its way, after a win, to put an outpost on a held site. */
+export const OUTPOST_ERRAND_RADIUS = 6
+
+/**
+ * The held site the careful party should build an outpost on after a win: the
+ * nearest within `OUTPOST_ERRAND_RADIUS` that has none, when the stock affords
+ * one; the encampment has its shrine instead.
+ */
+export function outpostErrand(world: WorldState): QuietLocation | null {
+  if (!canAfford(world.stock, OUTPOST_COST)) return null
+  const near = sites(world).filter(
+    (site) =>
+      site.id !== ENCAMPMENT_ID &&
+      world.held.includes(site.id) &&
+      !world.outposts.includes(site.id) &&
+      hexDistance(site.position, world.party) <= OUTPOST_ERRAND_RADIUS,
+  )
+  if (near.length === 0) return null
+  return near.reduce((a, b) => (hexDistance(world.party, b.position) < hexDistance(world.party, a.position) ? b : a))
 }
 
 /**
@@ -334,7 +361,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
   const battles: LoggedEvent[][] = []
   const record: CampaignRecord = {
     outcome: 'timeout', days: 0, battles: 0, spawns: 0, captured: 0, lost: 0, blighted: 0, healedHp: 0, campDays: 0,
-    towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1,
+    towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0,
   }
   const tally = (events: readonly WorldEvent[]) => {
     for (const event of events) {
@@ -343,6 +370,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
       if (event.type === 'site_lost') record.lost++
       if (event.type === 'tower_built') record.towersBuilt++
       if (event.type === 'tower_lost') record.towersLost++
+      if (event.type === 'outpost_built') record.outpostsBuilt++
     }
   }
   const finish = (outcome: CampaignOutcome): Campaign => {
@@ -351,6 +379,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
     record.battles = battles.length
     record.blighted = blightedShare(world)
     record.hallLevel = world.guildHall
+    record.shrineLevel = world.shrine
     return { battles, record }
   }
   /** Walks to `to`, going on whenever something on the way stops the party; false if it never gets there. */
@@ -404,6 +433,10 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
     if (world.status === 'won') return finish('source')
     // A watchtower wherever the party stops on land that takes one and the stock affords it.
     if (canBuildTower(world) === null) tally(buildTower(world, party)!)
+    // An outpost on a held site nearby, if the stock affords one; the party camps there.
+    const outpost = outpostErrand(world)
+    if (outpost && walkTo(outpost.position) && canBuildOutpost(world) === null) tally(buildOutpost(world, party)!)
+    if (!worldActive(world)) return finish('encampment')
     while (partyWounded(party) && canCamp(world)) {
       const camp = campUntilHealed(world, party)!
       tally(camp.events)
@@ -553,6 +586,8 @@ export interface CampaignSummary {
   avgRecruits: number
   avgDeaths: number
   avgHallLevel: number
+  avgShrineLevel: number
+  avgOutpostsBuilt: number
   /** In rising order of threat; a threat no campaign reached has no row. */
   byThreat: ThreatRow[]
 }
@@ -603,6 +638,8 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     avgRecruits: avg((r) => r.recruits),
     avgDeaths: avg((r) => r.deaths),
     avgHallLevel: avg((r) => r.hallLevel),
+    avgShrineLevel: avg((r) => r.shrineLevel),
+    avgOutpostsBuilt: avg((r) => r.outpostsBuilt),
     byThreat: threats.rows(),
   }
 }
@@ -655,6 +692,7 @@ function main(): void {
     `A campaign: ${summary.avgDays.toFixed(0)} days, ${summary.avgBattles.toFixed(1)} battles, ${summary.avgSpawns.toFixed(1)} spawns, ${summary.avgCaptured.toFixed(1)} sites captured and ${summary.avgLost.toFixed(1)} lost, ${(summary.avgBlighted * 100).toFixed(0)}% of the land blighted at the end`,
   )
   console.log(`Watchtowers: ${summary.avgTowersBuilt.toFixed(1)} built a campaign, ${summary.avgTowersLost.toFixed(1)} lost`)
+  console.log(`Shrine: level ${summary.avgShrineLevel.toFixed(1)} at the end; outposts: ${summary.avgOutpostsBuilt.toFixed(1)} built a campaign`)
   console.log(`Guild hall: level ${summary.avgHallLevel.toFixed(1)} at the end, ${summary.avgRecruits.toFixed(1)} recruits and ${summary.avgDeaths.toFixed(1)} heroes dead a campaign`)
   console.log(
     `Hit points healed between battles: ${summary.avgHealedHp.toFixed(1)} a campaign, in ${summary.avgCampDays.toFixed(1)} days of camping`,

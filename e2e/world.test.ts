@@ -190,6 +190,21 @@ describe('the world map', () => {
     expect(built.buttons.buildTower.visible).toBe(false)
   })
 
+  it('builds an outpost on a held site with the stock, and marks the site', async () => {
+    const game = await games.open()
+    await game.newGame()
+    await reloadedWith(game, { stock: { gold: 15, timber: 10 } })
+    // Iron Vein, held from the start.
+    const there = await game.travelTo(offsetToHex(11, 21))
+    expect(there.buttons.buildOutpost.visible).toBe(true)
+    expect(there.buttons.buildTower.visible).toBe(false)
+    await game.click(there.buttons.buildOutpost)
+    const built = await game.waitFor('World', (w) => w.world.outposts.length === 1)
+    expect(built.world.outposts).toEqual(['iron_vein'])
+    expect(built.message).toContain('An outpost stands at Iron Vein')
+    expect(built.buttons.buildOutpost.visible).toBe(false)
+  })
+
   it('shows the victory once the Source is beaten, to end on or go on in endless mode', async () => {
     const game = await games.open()
     const won = await reloadedAs(game, 'won')

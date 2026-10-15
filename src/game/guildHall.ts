@@ -1,12 +1,11 @@
 import { maxHp, maxMana, type Character } from '../character/character.ts'
 import { draftCharacter, type CharacterDraft } from '../character/creation.ts'
 import { levelUp } from '../character/progression.ts'
-import { hexEquals } from '../grid/hex.ts'
-import { canAfford, describeCost, spend } from './buildings.ts'
+import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
 import type { GameState } from './gameState.ts'
 import { MAX_PARTY_SIZE, PREROLLS, type Preroll } from './party.ts'
 import type { Stock } from './territory.ts'
-import { ENCAMPMENT_ID, worldActive, type WorldState } from './worldMap.ts'
+import type { WorldState } from './worldMap.ts'
 
 /**
  * The guild hall at the encampment (docs/designs/guild-hall-and-watchtowers.md
@@ -35,8 +34,7 @@ export function partyLimit(world: WorldState): number {
 
 /** Whether the party stands at the encampment, the guild hall open to it. */
 export function atGuildHall(world: WorldState): boolean {
-  const camp = world.locations.find((l) => l.id === ENCAMPMENT_ID)
-  return worldActive(world) && camp !== undefined && hexEquals(camp.position, world.party) && world.confronting === null
+  return atEncampment(world)
 }
 
 const NOT_HERE = 'The guild hall is at Oakvale.'

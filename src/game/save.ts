@@ -17,7 +17,7 @@ import type { WorldLocation } from './worldMap.ts'
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 5
+export const SAVE_VERSION = 6
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -126,6 +126,7 @@ export function parseSave(raw: string | null): SaveFile | null {
     check(world.board && Array.isArray(world.blight) && Array.isArray(world.shift) && world.blight.length === world.board.cols * world.board.rows)
     check(Array.isArray(world.seen) && world.seen.length === world.blight.length && Array.isArray(world.sighted))
     check(Array.isArray(world.towers) && typeof world.towersBuilt === 'number')
+    check(typeof world.shrine === 'number' && Array.isArray(world.outposts))
     check(Array.isArray(world.held) && Array.isArray(world.threatened) && world.stock && typeof world.stock === 'object')
     check(typeof world.rng === 'number' && typeof world.spawnPressure === 'number' && typeof world.status === 'string')
     check(Array.isArray(game.reserves) && typeof world.guildHall === 'number')

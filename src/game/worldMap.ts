@@ -95,9 +95,13 @@ export interface WorldState {
   towers: Tower[]
   /** How many watchtowers have been built, which names the next. */
   towersBuilt: number
+  /** The shrine's level at the encampment, 0 (none) to `MAX_SHRINE_LEVEL` (buildings.ts): each adds to the encampment's strength. */
+  shrine: number
+  /** The ids of the held sites with an outpost (buildings.ts), which adds to a site's strength and yield; razed when the site is lost. */
+  outposts: string[]
   /** The held sites and towers the blight is gaining on, as of the last day. */
   threatened: string[]
-  /** What held sites have yielded, kept at the encampment. Nothing spends it yet. */
+  /** What held sites have yielded, kept at the encampment, which buildings and the guild hall spend. */
   stock: Stock
   /** 'won' once the Source is beaten, until the player ends the game or goes on in 'endless' mode; 'lost' once the encampment falls. */
   status: WorldStatus
@@ -218,6 +222,8 @@ export function newWorld(seed: number = randomSeed()): WorldState {
     guildHall: 1,
     towers: [],
     towersBuilt: 0,
+    shrine: 0,
+    outposts: [],
     stock: {},
     status: 'playing',
   }

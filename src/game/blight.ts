@@ -9,7 +9,8 @@ import { ENCAMPMENT_ID, threatAt, type MonsterLocation, type WorldState } from '
  * The blight (docs/designs/blight.md): every hex of the world map has a level
  * from 0 (clean) to 3 (corrupted), and each day blight and clean influence
  * contend for it. Monster locations, the Source and corrupted land push the
- * blight; the encampment, held sites, watchtowers and the party push back. A hex's `shift`
+ * blight; the encampment (with its shrine), held sites (with their outposts),
+ * watchtowers and the party push back. A hex's `shift`
  * counter moves by the difference each day, and a level goes up or down when
  * it reaches `SHIFT_COST` either way. Corrupted land spawns new monster
  * locations. Phaser-free; worldMap.ts calls `advanceDay` once a world turn.
@@ -33,6 +34,10 @@ export const TOWN_STRENGTH = 5
 export const SITE_STRENGTH = 3
 /** A watchtower (buildings.ts), between a resource and a town. */
 export const TOWER_STRENGTH = 4
+/** What each level of the encampment's shrine adds to its strength (buildings.ts). */
+export const SHRINE_STRENGTH = 3
+/** What an outpost adds to its held site's strength (buildings.ts). */
+export const OUTPOST_STRENGTH = 3
 /** The party pushes with this plus half the sum of its members' levels. */
 export const PARTY_BASE = 2
 /** How far a hex's shift counter must go, either way, to move its level by one. */
@@ -69,9 +74,10 @@ export type WorldEvent =
   | { type: 'sighted'; location: string; name: string; at: Hex; threat: number }
   | { type: 'site_threatened'; site: string; name: string; days: number }
   | { type: 'site_captured'; site: string; name: string }
-  | { type: 'site_lost'; site: string; name: string }
+  | { type: 'site_lost'; site: string; name: string; outpost?: true }
   | { type: 'tower_built'; tower: string; at: Hex }
   | { type: 'tower_lost'; tower: string; at: Hex }
+  | { type: 'outpost_built'; site: string; name: string }
   | { type: 'yield'; site: string; name: string; material: Material; amount: number }
   | { type: 'encampment_lost' }
 
@@ -106,10 +112,11 @@ export function monsterStrength(location: MonsterLocation): number {
   return location.source ? SOURCE_STRENGTH : BLIGHT_PER_THREAT * location.threat
 }
 
-/** What a held site pushes with. */
-function siteStrength(world: WorldState, id: string): number {
-  if (id === ENCAMPMENT_ID) return CAMP_STRENGTH
-  return world.locations.find((l) => l.id === id)?.kind === 'town' ? TOWN_STRENGTH : SITE_STRENGTH
+/** What a held site pushes with: the encampment with its shrine, a town or resource with its outpost. */
+export function siteStrength(world: WorldState, id: string): number {
+  if (id === ENCAMPMENT_ID) return CAMP_STRENGTH + SHRINE_STRENGTH * world.shrine
+  const own = world.locations.find((l) => l.id === id)?.kind === 'town' ? TOWN_STRENGTH : SITE_STRENGTH
+  return own + (world.outposts.includes(id) ? OUTPOST_STRENGTH : 0)
 }
 
 // ---- the board's geometry and the fixed sources' fields, worked out once ----

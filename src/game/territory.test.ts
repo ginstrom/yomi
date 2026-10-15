@@ -86,11 +86,11 @@ describe('yields', () => {
     expect(updateTerritory(world, party).some((e) => e.type === 'yield')).toBe(false)
     world.turn = YIELD_DAYS
     const events = updateTerritory(world, party).filter((e) => e.type === 'yield')
-    expect(events).toContainEqual({ type: 'yield', site: ENCAMPMENT_ID, name: 'Oakvale', ...siteYield(site(world, ENCAMPMENT_ID)) })
-    expect(events).toContainEqual({ type: 'yield', site: 'iron_vein', name: 'Iron Vein', material: 'iron', amount: siteYield(ironVein).amount / 2 })
+    expect(events).toContainEqual({ type: 'yield', site: ENCAMPMENT_ID, name: 'Oakvale', ...siteYield(world, site(world, ENCAMPMENT_ID)) })
+    expect(events).toContainEqual({ type: 'yield', site: 'iron_vein', name: 'Iron Vein', material: 'iron', amount: siteYield(world, ironVein).amount / 2 })
     // Every held site yields, the ones captured that day too, and the stock is what they yielded.
     expect(events.map((e) => e.site)).toEqual(sites(world).filter((l) => world.held.includes(l.id)).map((l) => l.id))
-    expect(world.stock.iron).toBe(siteYield(ironVein).amount / 2)
+    expect(world.stock.iron).toBe(siteYield(world, ironVein).amount / 2)
     expect(world.stock.gold).toBe(events.filter((e) => e.type === 'yield' && e.material === 'gold').reduce((sum, e) => sum + (e.type === 'yield' ? e.amount : 0), 0))
   })
 })

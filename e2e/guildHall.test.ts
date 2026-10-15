@@ -33,6 +33,7 @@ describe('the guild hall', () => {
     await game.click(hall.buttons.upgrade)
     const raised = await game.settled('GuildHall', (h) => h.level === 2)
     expect(raised.partyLimit).toBe(4)
+    expect(raised.message).toBe('The guild hall is raised to level 2.')
 
     await game.click(raised.buttons.recruit)
     const offer = await game.settled('GuildHall', (h) => h.view === 'recruit')
@@ -63,6 +64,23 @@ describe('the guild hall', () => {
     const back = await game.settled('World')
     expect(back.party.map((member) => member.name)).toEqual(['Aldric', 'Delwyn', 'Garrick'])
     expect(back.world.stock).toMatchObject({ gold: 60, iron: 35 })
+  })
+
+  it('raises the shrine for the stock, beside the hall’s upgrade', async () => {
+    const game = await games.open()
+    const home = await richAtHome(game)
+    await game.click(home.buttons.guildHall)
+    await game.waitForScenes(['GuildHall'], ['World'])
+    const hall = await game.settled('GuildHall')
+    expect([hall.shrine, hall.buttons.shrine.enabled]).toEqual([0, true])
+    await game.click(hall.buttons.shrine)
+    const raised = await game.settled('GuildHall', (h) => h.shrine === 1)
+    expect(raised.message).toContain('raised to level 1')
+    // The second level wants silver, which the stock has none of.
+    expect(raised.buttons.shrine.enabled).toBe(false)
+    await game.click(raised.buttons.close)
+    await game.waitForScenes(['World'])
+    expect((await game.settled('World')).world.stock).toMatchObject({ gold: 80, iron: 50 })
   })
 
   it('leads to character creation for a recruit and back again', async () => {

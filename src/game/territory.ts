@@ -8,7 +8,8 @@ import { ENCAMPMENT_ID, type QuietLocation, type WorldState } from './worldMap.t
  * when its hex is cleansed to level 0 and lost when the blight raises it to
  * `LOSS_LEVEL`. A held site adds clean influence (blight.ts) and yields to the
  * encampment's stock every `YIELD_DAYS`. The encampment is held like any
- * site, and losing it loses the game. A watchtower (buildings.ts) is lost and
+ * site, and losing it loses the game. An outpost (buildings.ts) lifts its
+ * site's yield and is razed when the site is lost. A watchtower is lost and
  * warned of as a held site is, and yields nothing.
  */
 
@@ -23,6 +24,8 @@ export const LOSS_LEVEL = 2
 export const YIELD_DAYS = 5
 /** What a town yields, in gold. */
 export const TOWN_YIELD = 2
+/** What an outpost (buildings.ts) adds to its site's yield, before taint halves it. */
+export const OUTPOST_YIELD = 1
 
 /** What each resource yields, by its location's id. */
 const RESOURCE_YIELDS: Record<string, { material: Material; amount: number }> = {
@@ -41,9 +44,10 @@ export function sites(world: WorldState): QuietLocation[] {
   return world.locations.filter((l): l is QuietLocation => l.kind !== 'monsters')
 }
 
-/** What a site yields a time at full strength; a tainted one yields half, rounded down. */
-export function siteYield(site: QuietLocation): { material: Material; amount: number } {
-  return site.kind === 'town' ? { material: 'gold', amount: TOWN_YIELD } : (RESOURCE_YIELDS[site.id] ?? { material: 'gold', amount: 1 })
+/** What a site yields a time at full strength, its outpost's share included; a tainted one yields half, rounded down. */
+export function siteYield(world: WorldState, site: QuietLocation): { material: Material; amount: number } {
+  const own = site.kind === 'town' ? { material: 'gold' as const, amount: TOWN_YIELD } : (RESOURCE_YIELDS[site.id] ?? { material: 'gold' as const, amount: 1 })
+  return world.outposts.includes(site.id) ? { ...own, amount: own.amount + OUTPOST_YIELD } : own
 }
 
 /** The sites clean enough to hold at the start of a game, the encampment always among them. */
@@ -85,6 +89,10 @@ export function updateTerritory(world: WorldState, party: readonly { level: numb
       if (site.id === ENCAMPMENT_ID) {
         world.status = 'lost'
         events.push({ type: 'encampment_lost' })
+      } else if (world.outposts.includes(site.id)) {
+        // An outpost falls with its site.
+        world.outposts = world.outposts.filter((id) => id !== site.id)
+        events.push({ type: 'site_lost', site: site.id, name: site.name, outpost: true })
       } else {
         events.push({ type: 'site_lost', site: site.id, name: site.name })
       }
@@ -110,7 +118,7 @@ export function updateTerritory(world: WorldState, party: readonly { level: numb
   if (world.turn % YIELD_DAYS === 0) {
     for (const site of sites(world)) {
       if (!world.held.includes(site.id)) continue
-      const { material, amount } = siteYield(site)
+      const { material, amount } = siteYield(world, site)
       const yielded = blightAt(world, site.position) > 0 ? Math.floor(amount / 2) : amount
       if (yielded === 0) continue
       world.stock[material] = (world.stock[material] ?? 0) + yielded
