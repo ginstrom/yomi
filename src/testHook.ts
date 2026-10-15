@@ -39,8 +39,17 @@ export interface MenuProbe {
   showingOptions: boolean
   /** Whether the save slots are shown, which the Load button does. */
   showingLoad: boolean
+  /** Whether the player's manual is laid over the menu, which the Manual button does. */
+  showingManual: boolean
   /** `continue` is enabled over a paused game, or when a slot can be loaded. */
-  buttons: { new: ButtonProbe; continue: ButtonProbe; load: ButtonProbe; options: ButtonProbe; back: ButtonProbe }
+  buttons: {
+    new: ButtonProbe
+    continue: ButtonProbe
+    load: ButtonProbe
+    options: ButtonProbe
+    manual: ButtonProbe
+    back: ButtonProbe
+  }
   /** The three save slots' rows, each with the line it reads; enabled when it holds a game that can be loaded. */
   slots: Array<ButtonProbe & { line: string }>
 }

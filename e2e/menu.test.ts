@@ -23,4 +23,30 @@ describe('the main menu', () => {
     const back = await game.waitFor('Menu', (m) => !m.showingOptions)
     expect(back.buttons.new.visible).toBe(true)
   })
+
+  it('lays the manual over the game, and Back to game returns to the menu and the paused map', async () => {
+    const game = await games.open()
+    await game.newGame()
+    await game.press('Escape')
+    await game.waitForScenes(['Menu'], ['World'])
+    const menu = await game.settled('Menu')
+    await game.click(menu.buttons.manual)
+    await game.waitFor('Menu', (m) => m.showingManual)
+    const manual = game.page.locator('#yomi-manual')
+    await manual.locator('h1', { hasText: "Player's Manual" }).waitFor()
+    // Its screenshots load: an image that failed would fail the test as a failed request.
+    await manual.locator('img').first().evaluate((img: HTMLImageElement) => img.decode())
+
+    await manual.locator('.manual-back').click()
+    await game.waitFor('Menu', (m) => !m.showingManual)
+    expect(await manual.count()).toBe(0)
+    expect(await game.scenes()).toEqual({ running: ['Menu'], paused: ['World'] })
+
+    await game.click(menu.buttons.manual)
+    await game.waitFor('Menu', (m) => m.showingManual)
+    // Esc belongs to the manual while it is open: it must not reach the menu and resume the game.
+    await game.page.keyboard.press('Escape')
+    await game.waitFor('Menu', (m) => !m.showingManual)
+    expect(await game.scenes()).toEqual({ running: ['Menu'], paused: ['World'] })
+  })
 })

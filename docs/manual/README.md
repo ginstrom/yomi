@@ -30,6 +30,7 @@ The main menu offers:
 - **Continue**: return to the game paused under the menu or, if none is paused, load the game saved most recently.
 - **Load**: choose one of the three save slots.
 - **Options**: set the volume of the master channel, sound effects and music.
+- **Manual**: read this manual. **Back to game** at its top, or **Esc**, returns to the menu, and the game paused under it is just as you left it.
 
 Press **Esc** on the world map or in battle to open this menu over the game. Press it again to return.
 

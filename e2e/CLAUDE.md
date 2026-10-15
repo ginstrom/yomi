@@ -4,7 +4,7 @@
 
 ## How a test drives the game
 
-The page is one canvas, so there is nothing to select. A test reads a scene's probe (`src/testHook.ts`) for where things are on screen, and clicks there. All of that goes through `Game` in `driver.ts`:
+The page is one canvas, so there is nothing to select (but for the player's manual, plain HTML laid over it, which `menu.test.ts` reaches through `game.page`'s locators). A test reads a scene's probe (`src/testHook.ts`) for where things are on screen, and clicks there. All of that goes through `Game` in `driver.ts`:
 
 - `useGames()` at the top of a `describe` launches the browser and returns `open()`. After each test it fails the test if the page logged a console error, threw, or had a request fail, which is how a missing asset or a broken layout shows up. Do not catch or filter those to make a test pass.
 - `waitFor(scene, predicate)` polls a scene's probe until the predicate holds, and `waitForScenes(running, paused)` waits for a hand-over. Wait on state, never on time: there are no sleeps here.

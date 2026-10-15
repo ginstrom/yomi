@@ -13,7 +13,7 @@ type MenuView = 'main' | 'options' | 'load'
 
 const BUTTON_W = 220
 const BUTTON_H = 52
-const BUTTON_GAP = 20
+const BUTTON_GAP = 16
 /** A save slot's row in the Load list: wide enough for its party, level, turn and date. */
 const SLOT_W = 620
 const SLOT_H = 44
@@ -57,6 +57,8 @@ export class MenuScene extends Phaser.Scene {
   private view: MenuView = 'main'
   /** Whether Continue has anything to go to: a paused game, or a slot that can be loaded. */
   private canContinue = false
+  /** Whether the manual is over the menu, or on its way: the menu then takes no clicks or keys. */
+  private manualOpen = false
 
   constructor() {
     super('Menu')
@@ -75,7 +77,8 @@ export class MenuScene extends Phaser.Scene {
     const continueButton = this.createButton('Continue', () => this.onContinue(), this.canContinue)
     const loadButton = this.createButton('Load', () => this.show('load'), true)
     const optionsButton = this.createButton('Options', () => this.show('options'), true)
-    this.buttons = [newButton, continueButton, loadButton, optionsButton]
+    const manualButton = this.createButton('Manual', () => this.openManual(), true)
+    this.buttons = [newButton, continueButton, loadButton, optionsButton, manualButton]
 
     this.optionsTitle = this.add
       .text(0, 0, 'Options', { fontFamily: 'monospace', fontSize: '24px', color: '#e8c766', fontStyle: 'bold' })
@@ -109,15 +112,17 @@ export class MenuScene extends Phaser.Scene {
 
   /** What the in-browser tests see of the menu; see testHook.ts. */
   probe(): MenuProbe {
-    const [newButton, continueButton, loadButton, optionsButton] = this.buttons
+    const [newButton, continueButton, loadButton, optionsButton, manualButton] = this.buttons
     return {
       showingOptions: this.view === 'options',
       showingLoad: this.view === 'load',
+      showingManual: this.manualOpen,
       buttons: {
         new: buttonProbe(newButton),
         continue: buttonProbe(continueButton, this.canContinue),
         load: buttonProbe(loadButton),
         options: buttonProbe(optionsButton),
+        manual: buttonProbe(manualButton),
         back: buttonProbe(this.backButton),
       },
       slots: this.slots.map(({ button, line, loadable }) => ({ ...buttonProbe(button, loadable), line })),
@@ -151,6 +156,7 @@ export class MenuScene extends Phaser.Scene {
       bg.on('pointerover', () => bg.setFillStyle(0x3182ce))
       bg.on('pointerout', () => bg.setFillStyle(0x2b6cb0))
       bg.on('pointerdown', () => {
+        if (this.manualOpen) return
         this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
         onClick()
       })
@@ -197,8 +203,9 @@ export class MenuScene extends Phaser.Scene {
     const startY = height / 2 - 20
     this.title.setPosition(centerX, startY - 160)
 
+    // The main buttons start a little above the rest, so that all five fit the smallest window.
     this.buttons.forEach((button, i) => {
-      button.setPosition(centerX, startY + i * (BUTTON_H + BUTTON_GAP))
+      button.setPosition(centerX, startY - 80 + i * (BUTTON_H + BUTTON_GAP))
     })
 
     const rowW = SLIDER_LABEL_W + SLIDER_W + SLIDER_VALUE_W
@@ -259,6 +266,20 @@ export class MenuScene extends Phaser.Scene {
     else this.scene.start('World', { game: file.game })
   }
 
+  /**
+   * Lays the player's manual over the menu, as a page of its own whose Back to game link
+   * (or Esc) returns here, to the menu as it was and the game paused under it.
+   */
+  private openManual(): void {
+    this.manualOpen = true
+    this.input.keyboard?.resetKeys()
+    void import('./manualOverlay.ts').then(({ openManual }) =>
+      openManual(() => {
+        this.manualOpen = false
+      }),
+    )
+  }
+
   /** Swaps the main buttons for the volume controls or the save slots, or back. */
   private show(view: MenuView): void {
     this.view = view
@@ -292,6 +313,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private onEscape(): void {
+    if (this.manualOpen) return
     if (this.view !== 'main') this.show('main')
     else if (this.resumeKey) this.onContinue()
   }
