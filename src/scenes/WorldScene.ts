@@ -67,9 +67,9 @@ const MONSTERS_OUTLINE = 0xe53935
 const PARTY_OUTLINE = 0xffffff
 const WALK_STEP_MS = 140
 
-/** The blight's tint over the grass, by level: a sickly yellow-green, then violets darkening to corruption. */
-const BLIGHT_TINTS = [0, 0xb8c040, 0x7a3f8a, 0x2e0f3a]
-const BLIGHT_ALPHAS = [0, 0.3, 0.4, 0.6]
+/** The blight's tint over the grass, by level: a muddy brown, then violets, each darker than the last, so worse land never looks healthier. */
+const BLIGHT_TINTS = [0, 0x4a4030, 0x4a2058, 0x2e0f3a]
+const BLIGHT_ALPHAS = [0, 0.35, 0.45, 0.6]
 /** What grows on corrupted land, one to a hex, shown at its own size so it fits inside. */
 const BLIGHT_SPRITE = 'map_blight'
 const BLIGHT_SCALE = 1
