@@ -139,6 +139,8 @@ const PLATE_BOTTOM = PLATE_STATUS_Y + 8
 /** Clear space either side of the board, and between the board and the log box. */
 const BOARD_MARGIN_X = 16
 const BOARD_GAP_ABOVE_LOG = 12
+/** How far the board is scaled up to fill a large window. */
+const BOARD_MAX_SCALE = 2
 const LOG_HISTORY = 50
 const LOG_VISIBLE_LINES = 5
 const LOG_LINE_H = 20
@@ -152,10 +154,11 @@ const ENEMY_POLICY: PolicyName = 'aggressive'
 const DEFAULT_ENCOUNTER: EncounterId = 'goblin_raid'
 
 /**
- * Every unit sprite is a 32px canvas shown at 3x, so a small creature is drawn small, not scaled
- * down. A kind's sprite is the atlas's of the same name (art/units/<kind>.sprite.toml).
+ * Every unit sprite is a 32px canvas shown at 2x (before the board's own scale), so a small
+ * creature is drawn small, not scaled down, and a figure stands about a hex tall without hiding
+ * the hexes behind it. A kind's sprite is the atlas's of the same name (art/units/<kind>.sprite.toml).
  */
-const UNIT_SCALE = 3
+const UNIT_SCALE = 2
 const UNIT_HEIGHT = 32 * UNIT_SCALE
 /** Units breathe out of step: each starts this much after the one before it. */
 const IDLE_STAGGER_MS = 230
@@ -722,9 +725,9 @@ export class BattleScene extends Phaser.Scene {
 
   /**
    * Header at the top, buttons and log box at the bottom, and the board centred
-   * in the space between, scaled down (never up) to fit. The game is never
-   * smaller than MIN_GAME_SIZE (main.ts), where the board fits at full size and
-   * the hint line fits on one line.
+   * in the space between, scaled to fill it, up to BOARD_MAX_SCALE. The game is
+   * never smaller than MIN_GAME_SIZE (main.ts), where the board fits at full size
+   * and the hint line fits on one line.
    */
   private layout(): void {
     const width = this.scale.width
@@ -768,7 +771,7 @@ export class BattleScene extends Phaser.Scene {
     const freeTop = HEADER_BOTTOM
     const freeW = width - PARTY_PANEL_W - 2 * BOARD_MARGIN_X
     const freeH = logBoxY - BOARD_GAP_ABOVE_LOG - freeTop
-    const scale = Math.max(0, Math.min(1, freeW / board.width, freeH / (bottom - top)))
+    const scale = Math.max(0, Math.min(BOARD_MAX_SCALE, freeW / board.width, freeH / (bottom - top)))
     const floorX = freeLeft + (freeW - board.width * scale) / 2
     const floorY = freeTop + (freeH - (bottom - top) * scale) / 2 - top * scale
 
