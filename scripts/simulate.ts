@@ -22,7 +22,7 @@ import { BattleEngine, type BattleEvent, type BattleSetup, type Side, type UnitI
 import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.ts'
 import { autoAdvance, levelUp } from '../src/character/progression.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/encounters.ts'
-import { readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
+import { autoHeal, readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
 import { clearLocation, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
 import { hexDistance } from '../src/grid/hex.ts'
 import { MAGIC_ITEMS, WEAPONS, type Item } from '../src/inventory/inventory.ts'
@@ -198,10 +198,18 @@ const CAMPAIGN_SEED_STEP = 1000
  * hexes from where it stands (home, then the last location beaten; the first
  * in the world's list on a tie), each at its own threat. It carries its hit
  * points from battle to battle, takes `rewardVictory` after each win and
- * spends what that brought with `autoAdvance`, until the map is clear or a
- * battle is not won. Loot is left alone: the heroes keep their starting gear.
+ * spends what that brought with `autoAdvance`, and heals what it can with the
+ * mana left (`autoHeal`, adding what it restored to `healed`), until the map
+ * is clear or a battle is not won. Loot is left alone: the heroes keep their
+ * starting gear.
  */
-export function runCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0): LoggedEvent[][] {
+export function runCampaign(
+  campaign: number,
+  seed: number,
+  args: CliArgs,
+  firstBattleId = 0,
+  healed: { hp: number } = { hp: 0 },
+): LoggedEvent[][] {
   const party = startingParty(args)
   const world = newWorld()
   const battles: LoggedEvent[][] = []
@@ -223,10 +231,15 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
 
     const state = engine.getState()
     if (state.winner !== 'player') break
-    // The party's wounds are its own from here on, as BattleScene makes them.
-    party.forEach((member, i) => (member.hp = state.units.find((u) => u.id === heroId(i))!.hp))
+    // The party's wounds and mana left are its own from here on, as BattleScene makes them.
+    party.forEach((member, i) => {
+      const unit = state.units.find((u) => u.id === heroId(i))!
+      member.hp = unit.hp
+      member.mana = unit.mana
+    })
     rewardVictory(party, xpReward(encounter))
     for (const member of party) autoAdvance(member)
+    healed.hp += autoHeal(party)
     clearLocation(world, next.id)
     world.party = next.position
   }
@@ -252,9 +265,15 @@ export interface Summary {
   /** Attacks on a defender's side or rear arc, given its facing, per battle. */
   avgSideAttacks: number
   avgRearAttacks: number
-  /** Spells cast, per battle. A spell's damage counts in the damage dealt; the hit and critical rates are of weapon attacks only. */
+  /** Spells cast, per battle. A spell's damage counts in the damage dealt, and so does a status's damage, to the side it hurt the foes of; the hit and critical rates are of weapon attacks only. */
   avgPlayerCasts: number
   avgEnemyCasts: number
+  /** Hit points restored by spells in battle, per battle, by the caster's side. */
+  avgPlayerHealing: number
+  avgEnemyHealing: number
+  /** Statuses laid by spells, per battle, by the caster's side. */
+  avgPlayerStatuses: number
+  avgEnemyStatuses: number
 }
 
 /** Adds up what `summarize` reports, an event at a time, so a long run need not be held in memory. */
@@ -267,6 +286,8 @@ class Tally {
   private hits: Record<Side, number> = { player: 0, enemy: 0 }
   private crits: Record<Side, number> = { player: 0, enemy: 0 }
   private casts: Record<Side, number> = { player: 0, enemy: 0 }
+  private healing: Record<Side, number> = { player: 0, enemy: 0 }
+  private statuses: Record<Side, number> = { player: 0, enemy: 0 }
   private opportunityAttacks = 0
   private sideAttacks = 0
   private rearAttacks = 0
@@ -293,7 +314,14 @@ class Tally {
     if (event.type === 'cast') {
       const side = this.sideOf.get(event.caster) === 'player' ? 'player' : 'enemy'
       this.casts[side]++
-      this.damage[side] += event.damage
+      for (const outcome of event.outcomes) {
+        this.damage[side] += outcome.damage
+        this.healing[side] += outcome.healed
+        if (outcome.status) this.statuses[side]++
+      }
+    }
+    if (event.type === 'status_tick') {
+      this.damage[this.sideOf.get(event.unit) === 'player' ? 'enemy' : 'player'] += event.damage
     }
   }
 
@@ -317,6 +345,10 @@ class Tally {
       avgRearAttacks: this.rearAttacks / battles,
       avgPlayerCasts: this.casts.player / battles,
       avgEnemyCasts: this.casts.enemy / battles,
+      avgPlayerHealing: this.healing.player / battles,
+      avgEnemyHealing: this.healing.enemy / battles,
+      avgPlayerStatuses: this.statuses.player / battles,
+      avgEnemyStatuses: this.statuses.enemy / battles,
     }
   }
 }
@@ -403,6 +435,7 @@ function main(): void {
   mkdirSync(dirname(args.outPath), { recursive: true })
   const out = openSync(args.outPath, 'w')
   let battles = 0
+  const healed = { hp: 0 }
   const log = (events: readonly LoggedEvent[]) => {
     battles++
     writeSync(out, events.map((event) => JSON.stringify(event)).join('\n') + '\n')
@@ -412,7 +445,7 @@ function main(): void {
     }
   }
   for (let run = 0; run < args.battles; run++) {
-    if (args.campaign) runCampaign(run, (baseSeed + run * CAMPAIGN_SEED_STEP) >>> 0, args, battles).forEach(log)
+    if (args.campaign) runCampaign(run, (baseSeed + run * CAMPAIGN_SEED_STEP) >>> 0, args, battles, healed).forEach(log)
     else log(runBattle(run, (baseSeed + run) >>> 0, args))
   }
   closeSync(out)
@@ -430,6 +463,7 @@ function main(): void {
   console.log(
     `Cleared the map: ${summary.cleared} of ${summary.campaigns} (${(summary.clearedShare * 100).toFixed(1)}%); locations cleared a campaign: ${summary.avgLocationsCleared.toFixed(2)} of ${monsterLocations()}`,
   )
+  console.log(`Hit points healed between battles: ${(healed.hp / args.battles).toFixed(1)} a campaign`)
   console.table(byThreat.map((row) => ({ ...row, winRate: Number(row.winRate.toFixed(3)) })))
   console.table(tally.summary(battles))
 }

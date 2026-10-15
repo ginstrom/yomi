@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GOBLIN_STATS, effectiveAc, foeAtLevel, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, type CombatantStats } from './combat.ts'
+import { GOBLIN_SHAMAN_STATS, GOBLIN_STATS, effectiveAc, foeAtLevel, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, type CombatantStats } from './combat.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -126,6 +126,11 @@ describe('sameCombatStats', () => {
 describe('foeAtLevel', () => {
   it('leaves a level 1 monster as it is', () => {
     expect(foeAtLevel(GOBLIN_STATS, 1)).toEqual(GOBLIN_STATS)
+    expect(foeAtLevel(GOBLIN_SHAMAN_STATS, 1)).toEqual(GOBLIN_SHAMAN_STATS)
+  })
+
+  it('adds mana and spell chance to a caster every level', () => {
+    expect(foeAtLevel(GOBLIN_SHAMAN_STATS, 3).magic).toEqual({ ...GOBLIN_SHAMAN_STATS.magic, maxMana: 20, skill: 70 })
   })
 
   it('adds hit points, chance to hit and armour every level, and damage every second', () => {

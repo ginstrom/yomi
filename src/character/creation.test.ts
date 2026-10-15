@@ -10,6 +10,7 @@ import {
   attributePointsLeft,
   canAdjustAttribute,
   canAdjustSkill,
+  draftCasts,
   draftCharacter,
   draftPerkRanks,
   draftProblems,
@@ -17,6 +18,7 @@ import {
   perkPicksLeft,
   pruneDraft,
   skillPointsLeft,
+  spellPicksLeft,
   tagSkill,
   togglePerk,
   typeInName,
@@ -149,10 +151,11 @@ describe('draftCharacter', () => {
         attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
         tagged: 'magic',
         raises: { melee: 0, archery: 0, magic: 10 },
-        perks: ['magic_arrow', 'arcane_study', 'keen_eye'],
+        perks: ['spellcasting', 'arcane_study', 'keen_eye', 'magic_arrow', 'heal'],
       }),
     )
-    expect([skillLevel(mage, 'magic'), knownSpells(mage), maxMana(mage)]).toEqual([63, ['magic_arrow'], 18])
+    expect([skillLevel(mage, 'magic'), knownSpells(mage), maxMana(mage)]).toEqual([63, ['magic_arrow', 'heal'], 18])
+    expect([mage.mana, mage.perkPicks, mage.spellPicks]).toEqual([18, 0, 0])
     // Without the tag the same character is at 18 + 10 + 5.
     const untagged = draftCharacter(soldier({ ...soldier(), attributes: mage.attributes, tagged: 'melee', raises: { melee: 0, archery: 0, magic: 10 }, perks: ['arcane_study'] }))
     expect(skillLevel(untagged, 'magic')).toBe(33)
@@ -168,21 +171,45 @@ describe('perks at creation', () => {
     expect(togglePerk(hardy, 'tireless').draft.perks).toEqual([])
   })
 
-  it('lets Magic Arrow be taken once Magic is 50% and not before', () => {
-    // Intelligence 9: 18, the tag 20, and 2% a point.
+  it('lets Spellcasting be taken once Magic is 40% and not before', () => {
+    // Intelligence 9: 18, and the tag 20.
     const mage = soldier({
       attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
       tagged: 'magic',
-      raises: { melee: 0, archery: 0, magic: 5 },
+      raises: { melee: 10, archery: 0, magic: 0 },
       perks: [],
     })
-    expect(skillLevel(draftCharacter(mage), 'magic')).toBe(48)
-    expect(togglePerk(mage, 'magic_arrow').draft.perks).toEqual([])
-    const trained = adjustSkill(mage, 'magic', 1).draft
-    expect(togglePerk(trained, 'magic_arrow').draft.perks).toEqual(['magic_arrow'])
-    // Arcane Study counts towards it too.
+    expect(skillLevel(draftCharacter(mage), 'magic')).toBe(38)
+    expect(togglePerk(mage, 'spellcasting').draft.perks).toEqual([])
+    // Arcane Study counts towards it.
     const studied = togglePerk(mage, 'arcane_study').draft
-    expect(togglePerk(studied, 'magic_arrow').draft.perks).toEqual(['arcane_study', 'magic_arrow'])
+    expect(togglePerk(studied, 'spellcasting').draft.perks).toEqual(['arcane_study', 'spellcasting'])
+  })
+
+  it('gives Spellcasting two spell picks, spent before a perk pick on a spell (A13)', () => {
+    const mage = soldier({
+      attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
+      tagged: 'magic',
+      raises: { melee: 0, archery: 0, magic: 10 },
+      perks: [],
+    })
+    expect(draftCasts(mage)).toBe(false)
+    expect(togglePerk(mage, 'heal').draft.perks).toEqual([])
+    let draft = togglePerk(mage, 'spellcasting').draft
+    expect([draftCasts(draft), perkPicksLeft(draft), spellPicksLeft(draft)]).toEqual([true, 2, 2])
+    for (const spell of ['heal', 'magic_arrow', 'shield'] as const) draft = togglePerk(draft, spell).draft
+    expect([perkPicksLeft(draft), spellPicksLeft(draft)]).toEqual([1, 0])
+    expect(draftProblems(draft, [])).toEqual([])
+    const removed = togglePerk(draft, 'spellcasting')
+    expect(removed.draft).toBe(draft)
+    expect(removed.notes).toEqual(['Heal asks for Spellcasting'])
+    // Lowering Magic under 40% drops Spellcasting and every spell with it.
+    const lowered = adjustSkill(draft, 'magic', -1)
+    expect(skillLevel(draftCharacter(mage), 'magic')).toBe(58)
+    expect(lowered.draft.perks).toEqual(draft.perks)
+    const untagged = tagSkill(draft, 'archery')
+    expect(untagged.draft.perks).toEqual([])
+    expect(untagged.notes[0]).toBe('Spellcasting dropped: it asks Magic 40%')
   })
 
   it('takes a second rank, stops at three picks, and gives the last rank back on a click', () => {
@@ -229,11 +256,14 @@ describe('pruneDraft', () => {
     const mage = soldier({
       attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
       tagged: 'magic',
-      raises: { melee: 0, archery: 0, magic: 6 },
-      perks: ['magic_arrow'],
+      raises: { melee: 0, archery: 0, magic: 1 },
+      perks: ['spellcasting', 'magic_arrow'],
     })
-    expect(adjustSkill(mage, 'magic', -1)).toMatchObject({ draft: { perks: [] }, notes: ['Magic Arrow dropped: it asks Magic 50%'] })
-    expect(tagSkill(mage, 'melee')).toMatchObject({ draft: { tagged: 'melee', perks: [] }, notes: ['Magic Arrow dropped: it asks Magic 50%'] })
+    expect(adjustSkill(mage, 'magic', -1)).toMatchObject({
+      draft: { perks: [] },
+      notes: ['Spellcasting dropped: it asks Magic 40%', 'Magic Arrow dropped: it asks Magic 40%, Spellcasting'],
+    })
+    expect(tagSkill(mage, 'melee')).toMatchObject({ draft: { tagged: 'melee', perks: [] } })
     expect(tagSkill(mage, 'magic')).toEqual({ draft: mage, notes: [] })
   })
 

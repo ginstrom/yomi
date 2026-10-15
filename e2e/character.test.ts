@@ -52,12 +52,12 @@ describe('a hero’s panel', () => {
     expect(aldric.takenPerks.map(({ perk }) => perk)).toEqual(['toughness', 'heavy_hand', 'weapon_training'])
     expect(aldric.mana).toBeNull()
 
-    // The mage's include the perk that teaches its spell, and so it has mana.
+    // The mage's include Spellcasting, which opened its spells; the spells are the Spells tab's.
     await game.click(aldric.party[2])
     const delwyn = await game.waitFor('Inventory', (p) => p.party[2].active)
     expect(delwyn.takenPerks).toEqual([
       { perk: 'keen_eye', ranks: 1 },
-      { perk: 'magic_arrow', ranks: 1 },
+      { perk: 'spellcasting', ranks: 1 },
       { perk: 'arcane_study', ranks: 1 },
     ])
     expect(delwyn.mana).toBe(18)
@@ -70,7 +70,7 @@ describe('a hero’s panel', () => {
     // The picks of creation are spent, and the next comes at level 3.
     expect(tree.perks.some((node) => node.canTake)).toBe(false)
     const taken = (nodes: typeof tree.perks) => nodes.filter((node) => node.ranks > 0).map((node) => node.perk).sort()
-    expect(taken(tree.perks)).toEqual(['arcane_study', 'keen_eye', 'magic_arrow'])
+    expect(taken(tree.perks)).toEqual(['arcane_study', 'keen_eye', 'spellcasting'])
 
     // A click on a node takes nothing without a pick, and a portrait turns the tree to its hero.
     await game.click(tree.perks.find((node) => node.perk === 'gain_luck')!)
@@ -80,6 +80,30 @@ describe('a hero’s panel', () => {
     expect(taken(turned.perks)).toEqual(['heavy_hand', 'toughness', 'weapon_training'])
 
     await game.click(turned.back)
+    await game.waitFor('Inventory', (p) => p.tab === 'skills')
+    // The mage's spells, and the spell tree, all seventeen of it, with Magic Arrow and Heal learned.
+    await game.click(turned.party[2])
+    await game.waitFor('Inventory', (p) => p.party[2].active)
+    await game.press('b')
+    const spells = await game.waitFor('Inventory', (p) => p.tab === 'spells')
+    expect(spells.spells.map(({ spell, castable }) => [spell, castable])).toEqual([
+      ['magic_arrow', false],
+      ['heal', true],
+    ])
+    // Heal is cast on the world map from here, on a member picked by its portrait, for the mana carried.
+    expect(spells.mana).toBe(18)
+    await game.click(spells.spells[1])
+    const choosing = await game.waitFor('Inventory', (p) => p.worldCast === 'heal')
+    await game.click(choosing.party[0])
+    const cast = await game.waitFor('Inventory', (p) => p.worldCast === null && p.mana === 15)
+    expect(cast.party[2].active).toBe(true)
+    await game.press('k')
+    const spellTree = await game.waitFor('Inventory', (p) => p.tab === 'spellTree')
+    expect(spellTree.spellNodes).toHaveLength(17)
+    expect(taken(spellTree.spellNodes)).toEqual(['heal', 'magic_arrow'])
+    await game.press('Escape')
+    await game.waitFor('Inventory', (p) => p.tab === 'spells')
+    await game.press('s')
     await game.waitFor('Inventory', (p) => p.tab === 'skills')
     await game.press('p')
     await game.waitFor('Inventory', (p) => p.tab === 'perkTree')

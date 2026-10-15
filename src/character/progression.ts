@@ -1,5 +1,5 @@
-import { maxHp, weaponSkill, type Character } from './character.ts'
-import { PERK_IDS, attributeLevel, availablePerks, perkBonus, qualifiesFor, type PerkId } from './perks.ts'
+import { maxHp, maxMana, weaponSkill, type Character } from './character.ts'
+import { PERK_IDS, attributeLevel, availablePerks, isSpellPerk, perkBonus, perkRanks, qualifiesFor, type PerkId } from './perks.ts'
 import { SKILL_COST_TIERS, SKILL_IDS, raiseSkill, skillLevel, type SkillId } from './skills.ts'
 
 /**
@@ -43,14 +43,32 @@ export function skillPointsPerLevel(character: Character): number {
   return BASE_SKILL_POINTS + Math.floor(attributeLevel(character, 'intelligence') / 3) + perkBonus(character, 'skillPoints')
 }
 
+/** The spell picks taking Spellcasting brings at once; every level after brings one more. */
+export const SPELLCASTING_SPELL_PICKS = 2
+
+/** Whether the character has taken Spellcasting, and so earns a spell pick with every level. */
+export function hasSpellcasting(character: Character): boolean {
+  return perkRanks(character, 'spellcasting') > 0
+}
+
+/** The level the character's next spell pick comes at. */
+export function nextSpellLevel(character: Character): number {
+  return character.level + 1
+}
+
 /** The level the character's next perk comes at. */
 export function nextPerkLevel(character: Character): number {
   return (Math.floor(character.level / PERK_LEVEL_STEP) + 1) * PERK_LEVEL_STEP
 }
 
-/** Whether the character has skill points or a perk waiting to be spent. */
+/** Whether the character has a pick it could spend on `perk` now: a spell pick for a spell, else a perk pick. */
+export function hasPickFor(character: Character, perk: PerkId): boolean {
+  return character.perkPicks > 0 || (isSpellPerk(perk) && character.spellPicks > 0)
+}
+
+/** Whether the character has skill points, or a perk or spell pick it could spend, waiting. */
 export function canAdvance(character: Character): boolean {
-  return character.skillPoints > 0 || (character.perkPicks > 0 && availablePerks(character).length > 0)
+  return character.skillPoints > 0 || availablePerks(character).some((perk) => hasPickFor(character, perk))
 }
 
 /** What a gain of experience came to. */
@@ -63,18 +81,21 @@ export interface XpGain {
   maxHpGained: number
   skillPointsGained: number
   perksGained: number
+  spellsGained: number
 }
 
 /**
  * Raises the character a level, whatever its experience: hit points, skill
- * points, a perk pick at every `PERK_LEVEL_STEP`th level, and all its wounds
- * healed.
+ * points, a perk pick at every `PERK_LEVEL_STEP`th level, a spell pick if it
+ * has Spellcasting, all its wounds healed and its mana full.
  */
 export function levelUp(character: Character): void {
   character.level += 1
   character.skillPoints += skillPointsPerLevel(character)
   if (character.level % PERK_LEVEL_STEP === 0) character.perkPicks += 1
+  if (hasSpellcasting(character)) character.spellPicks += 1
   character.hp = maxHp(character)
+  character.mana = maxMana(character)
 }
 
 /**
@@ -83,7 +104,13 @@ export function levelUp(character: Character): void {
  */
 export function gainXp(character: Character, xp: number): XpGain {
   const earned = Math.round(xp * (1 + perkBonus(character, 'xpPercent') / 100))
-  const before = { maxHp: maxHp(character), level: character.level, points: character.skillPoints, picks: character.perkPicks }
+  const before = {
+    maxHp: maxHp(character),
+    level: character.level,
+    points: character.skillPoints,
+    picks: character.perkPicks,
+    spells: character.spellPicks,
+  }
   character.xp += earned
   while (character.xp >= xpToNextLevel(character.level)) {
     character.xp -= xpToNextLevel(character.level)
@@ -95,20 +122,26 @@ export function gainXp(character: Character, xp: number): XpGain {
     maxHpGained: maxHp(character) - before.maxHp,
     skillPointsGained: character.skillPoints - before.points,
     perksGained: character.perkPicks - before.picks,
+    spellsGained: character.spellPicks - before.spells,
   }
 }
 
 /**
- * Spends a perk pick on a rank of `perk`. A perk that adds hit points, itself
- * or by an attribute it raises, adds as many to those the character has
- * left. Returns false if the character has no pick or does not qualify.
+ * Spends a pick on a rank of `perk`: a spell pick for a spell if there is
+ * one, else a perk pick. A perk that adds hit points or mana, itself or by an
+ * attribute it raises, adds as many to those the character has left, and
+ * Spellcasting brings its spell picks. Returns false if the character has no
+ * pick for it or does not qualify.
  */
 export function takePerk(character: Character, perk: PerkId): boolean {
-  if (character.perkPicks < 1 || !qualifiesFor(character, perk)) return false
-  const hpBefore = maxHp(character)
-  character.perkPicks -= 1
+  if (!hasPickFor(character, perk) || !qualifiesFor(character, perk)) return false
+  const before = { hp: maxHp(character), mana: maxMana(character) }
+  if (isSpellPerk(perk) && character.spellPicks > 0) character.spellPicks -= 1
+  else character.perkPicks -= 1
   character.perks[perk] = (character.perks[perk] ?? 0) + 1
-  character.hp += maxHp(character) - hpBefore
+  if (perk === 'spellcasting') character.spellPicks += SPELLCASTING_SPELL_PICKS
+  character.hp += maxHp(character) - before.hp
+  character.mana = Math.min(character.mana, before.mana) + maxMana(character) - before.mana
   return true
 }
 
@@ -141,7 +174,7 @@ const AUTO_PERKS: readonly PerkId[] = [
  * Spends everything the character has waiting, the way a plain fighter
  * would: skill points on the skill of the weapon in hand (a mage's wand
  * makes that Magic) and then on whatever is left to raise; perk picks on
- * combat perks first. It is what the simulator's parties do with their
+ * combat perks first; spell picks by `AUTO_SPELLS`. It is what the simulator's parties do with their
  * levels, so balance runs fight heroes that have grown.
  */
 export function autoAdvance(character: Character): void {
@@ -155,7 +188,38 @@ export function autoAdvance(character: Character): void {
     while (skillLevel(character, skill) < upTo && raiseSkill(character, skill));
   }
   while (character.perkPicks > 0) {
-    const perk = [...AUTO_PERKS, ...PERK_IDS].find((id) => qualifiesFor(character, id))
+    // Never Spellcasting: the simulator's heroes are what their drafts made them.
+    const fallback = PERK_IDS.filter((id) => !isSpellPerk(id) && id !== 'spellcasting')
+    const perk = [...AUTO_PERKS, ...fallback].find((id) => qualifiesFor(character, id))
     if (!perk || !takePerk(character, perk)) break
   }
+  while (character.spellPicks > 0) {
+    const spell = AUTO_SPELLS.find((id) => qualifiesFor(character, id))
+    if (!spell || !takePerk(character, spell)) break
+  }
 }
+
+/**
+ * The spells `autoAdvance` learns, most wanted first: a heal, a strike and
+ * the stronger of each, then the rest. Every spell perk is here, so a caster
+ * spends every spell pick it can.
+ */
+const AUTO_SPELLS: readonly PerkId[] = [
+  'heal',
+  'magic_arrow',
+  'flame_arrow',
+  'heal_all',
+  'fireball',
+  'greater_heal',
+  'bless',
+  'greater_heal_all',
+  'acid_arrow',
+  'bane',
+  'frost_blast',
+  'sleep',
+  'death_cloud',
+  'shield',
+  'mirror_image',
+  'protect',
+  'haste',
+]

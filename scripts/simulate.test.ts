@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Side } from '../src/engine/battleEngine.ts'
+import type { SpellId } from '../src/combat/spells.ts'
+import type { CastOutcome, Side } from '../src/engine/battleEngine.ts'
 import { monsterLocations, parseArgs, runCampaign, summarize, summarizeCampaigns, type LoggedEvent } from './simulate.ts'
 
 function battle(battleId: number, rounds: number, winner: Side | null): LoggedEvent[] {
@@ -47,27 +48,36 @@ describe('summarize, with spells', () => {
     const [start, end] = battle(0, 3, 'player')
     if (start.type !== 'battle_start') throw new Error('expected a battle_start')
     const unit = (id: string, side: Side) => ({ id, side }) as (typeof start.units)[number]
-    const cast = (caster: string, target: string, damage: number): LoggedEvent => ({
-      type: 'cast', battleId: 0, seq: 1, round: 1, caster, spell: 'magic_arrow', target, distance: 4,
-      apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76, defenderAc: 15,
-      damageDice: { count: 1, sides: 10, bonus: 0 }, targetHpBefore: 12, targetHpAfter: 12 - damage,
-      attackRoll: 40, chance: 61, hit: damage > 0, critical: false, fumble: false, damage,
+    const outcome = (target: string, damage: number, healed = 0, status: CastOutcome['status'] = null): CastOutcome => ({
+      unit: target, attackRoll: 40, chance: 61, defenderAc: 15, hit: damage > 0, critical: false, fumble: false,
+      image: false, damage, healed, hpBefore: 12, hpAfter: 12 - damage + healed, status,
+    })
+    const cast = (caster: string, spell: SpellId, outcomes: CastOutcome[]): LoggedEvent => ({
+      type: 'cast', battleId: 0, seq: 1, round: 1, caster, spell, target: outcomes[0].unit, at: { q: 0, r: 0 },
+      distance: 4, apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76, outcomes,
     })
     return [
       { ...start, units: [unit('mage', 'player'), unit('shaman', 'enemy')] },
-      cast('mage', 'shaman', 7),
-      cast('mage', 'shaman', 0),
-      cast('shaman', 'mage', 4),
+      cast('mage', 'magic_arrow', [outcome('shaman', 7)]),
+      cast('mage', 'magic_arrow', [outcome('shaman', 0)]),
+      cast('shaman', 'magic_arrow', [outcome('mage', 4)]),
+      cast('shaman', 'heal', [outcome('shaman', 0, 6)]),
+      cast('mage', 'sleep', [outcome('shaman', 0, 0, { id: 'asleep', turnsLeft: 2 })]),
+      { type: 'status_tick', battleId: 0, seq: 2, round: 2, unit: 'shaman', status: 'poisoned', damage: 3, hpBefore: 5, hpAfter: 2 },
       end,
     ]
   }
 
-  it('counts casts by side, and their damage with the rest, but not among the attacks', () => {
+  it('counts casts by side, their damage and a status’s with the rest, healing and statuses, but not among the attacks', () => {
     expect(summarize(events(), 1)).toMatchObject({
-      avgPlayerCasts: 2,
-      avgEnemyCasts: 1,
-      avgPlayerDamageDealt: 7,
+      avgPlayerCasts: 3,
+      avgEnemyCasts: 2,
+      avgPlayerDamageDealt: 10,
       avgEnemyDamageDealt: 4,
+      avgEnemyHealing: 6,
+      avgPlayerHealing: 0,
+      avgPlayerStatuses: 1,
+      avgEnemyStatuses: 0,
       playerHitRate: 0,
       enemyHitRate: 0,
     })

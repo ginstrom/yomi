@@ -130,15 +130,32 @@ export function resolveAttack(
   rng: RNG = Math.random,
   situationalBonus = 0,
 ): AttackResult {
+  const roll = rollToHit(attacker, defenderAc, rng, situationalBonus)
+  return { ...roll, damage: roll.hit ? rollHitDamage(attacker.damage, roll.critical, rng) : 0 }
+}
+
+/**
+ * The first half of `resolveAttack`: the roll to hit, without the damage. The
+ * engine rolls the two apart where a hit may do no harm (it strikes a mirror
+ * image), so that no dice are drawn for it.
+ */
+export function rollToHit(
+  attacker: CombatantStats,
+  defenderAc: number,
+  rng: RNG = Math.random,
+  situationalBonus = 0,
+): Omit<AttackResult, 'damage'> {
   const attackRoll = 101 - rollDie(100, rng)
   const chance = hitPercent(attacker, defenderAc, situationalBonus)
   const fumble = attackRoll > MAX_HIT_CHANCE
   const hit = attackRoll <= chance
   const critical = hit && attackRoll <= attacker.critChance
-  const damageRoll = critical ? { ...attacker.damage, count: attacker.damage.count * 2 } : attacker.damage
-  const damage = hit ? rollDamage(damageRoll, rng) : 0
+  return { attackRoll, chance, hit, critical, fumble }
+}
 
-  return { attackRoll, chance, hit, critical, fumble, damage }
+/** The second half of `resolveAttack`: the damage of a hit, a critical doubling the dice. */
+export function rollHitDamage(dice: DamageRoll, critical: boolean, rng: RNG = Math.random): number {
+  return rollDamage(critical ? { ...dice, count: dice.count * 2 } : dice, rng)
 }
 
 /** Probability that resolveAttack hits, from 0.05 to 0.95. */
@@ -177,13 +194,33 @@ export const KOBOLD_STATS: CombatantStats = {
   actionPoints: 8,
 }
 
+/**
+ * A goblin caster that keeps to the back: frail and a poor fighter, it heals
+ * its side, curses the party with Bane and throws Magic Arrows.
+ */
+export const GOBLIN_SHAMAN_STATS: CombatantStats = {
+  name: 'Goblin Shaman',
+  maxHp: 10,
+  ac: 10,
+  toHit: 50,
+  critChance: 5,
+  damage: { count: 1, sides: 4, bonus: 0 },
+  weapon: 'Staff',
+  attackApCost: 4,
+  attackRange: 1,
+  actionPoints: 8,
+  magic: { maxMana: 14, skill: 60, spells: ['magic_arrow', 'heal', 'bane'] },
+}
+
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
 export const FOE_HP_PER_LEVEL = 0.6
 /** ...this many points to its chance to hit and to its armour class... */
 export const FOE_TO_HIT_PER_LEVEL = 5
 export const FOE_AC_PER_LEVEL = 5
-/** ...and 1 to its damage every this many levels. */
+/** ...and 1 to its damage every this many levels... */
 export const FOE_DAMAGE_LEVEL_STEP = 2
+/** ...and to a caster this much mana, besides `FOE_TO_HIT_PER_LEVEL` to its spells' chance. */
+export const FOE_MANA_PER_LEVEL = 3
 
 /**
  * A monster's stat block at `level`, from its level 1 block. A monster grows
@@ -202,5 +239,14 @@ export function foeAtLevel(base: CombatantStats, level: number): CombatantStats 
     ac: base.ac + FOE_AC_PER_LEVEL * above,
     toHit: base.toHit + FOE_TO_HIT_PER_LEVEL * above,
     damage: { ...base.damage, bonus: base.damage.bonus + Math.floor(above / FOE_DAMAGE_LEVEL_STEP) },
+    ...(base.magic
+      ? {
+          magic: {
+            ...base.magic,
+            maxMana: base.magic.maxMana + FOE_MANA_PER_LEVEL * above,
+            skill: base.magic.skill + FOE_TO_HIT_PER_LEVEL * above,
+          },
+        }
+      : {}),
   }
 }

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { GOBLIN_STATS } from '../combat/combat.ts'
 import { hex, type Hex } from '../grid/hex.ts'
-import { BattleEngine, type Action } from './battleEngine.ts'
+import { BattleEngine, castTouches, type Action } from './battleEngine.ts'
+import type { SpellId } from '../combat/spells.ts'
 import { POLICIES, isPolicyName, type PolicyContext } from './policies.ts'
 
 function engineWith(playerAt: Hex, enemyAt: Hex): BattleEngine {
@@ -21,6 +22,8 @@ function context(legal: readonly Action[], rngValue = 0): PolicyContext {
 
 const choose = (engine: BattleEngine) =>
   POLICIES.aggressive({ state: engine.getState(), legal: engine.legalActions(), rng: () => 0 })
+
+const unitAt = (engine: BattleEngine, id: string) => engine.getState().units.find((u) => u.id === id)!
 
 const ATTACK_E1: Action = { type: 'attack', unit: 'p1', target: 'e1' }
 const END_TURN: Action = { type: 'end_turn' }
@@ -80,6 +83,84 @@ describe('policies', () => {
       expect(choose(engine)).toEqual({ type: 'move', unit: 'p1', to: hex(3, 1) })
       engine.step(choose(engine))
       expect(choose(engine)).toEqual(ATTACK_E1)
+    })
+  })
+
+  describe('aggressive with spells of every kind (A14)', () => {
+    const caster = (spells: SpellId[], maxMana = 40) => ({
+      ...GOBLIN_STATS,
+      actionPoints: 12,
+      magic: { maxMana, skill: 70, spells },
+    })
+    type Placing = { id: string; side: 'player' | 'enemy'; at: Hex; hp?: number }
+    const field = (spells: SpellId[], others: Placing[], maxMana?: number) =>
+      new BattleEngine({
+        board: { cols: 9, rows: 4 },
+        units: [
+          { id: 'p1', side: 'player', stats: caster(spells, maxMana), position: hex(0, 1) },
+          ...others.map(({ id, side, at, hp }) => ({ id, side, stats: GOBLIN_STATS, position: at, hp })),
+        ],
+      })
+
+    it('heals an ally at half its hit points or less before it strikes', () => {
+      const engine = field(['magic_arrow', 'heal'], [
+        { id: 'p2', side: 'player', at: hex(1, 1), hp: 6 },
+        { id: 'e1', side: 'enemy', at: hex(4, 1), hp: 3 },
+      ])
+      expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'heal', target: 'p2' })
+      // Above half, it strikes instead.
+      const hale = field(['magic_arrow', 'heal'], [
+        { id: 'p2', side: 'player', at: hex(1, 1), hp: 7 },
+        { id: 'e1', side: 'enemy', at: hex(4, 1) },
+      ])
+      expect(choose(hale)).toEqual({ type: 'cast', unit: 'p1', spell: 'magic_arrow', target: 'e1' })
+    })
+
+    it('throws a hostile area spell only where it touches two foes or more and no ally', () => {
+      const foes: Placing[] = [
+        { id: 'e1', side: 'enemy', at: hex(4, 1) },
+        { id: 'e2', side: 'enemy', at: hex(5, 1) },
+      ]
+      const engine = field(['fireball'], foes)
+      const cast = choose(engine)
+      expect(cast).toMatchObject({ type: 'cast', spell: 'fireball' })
+      const touched = castTouches(engine.getState().units, unitAt(engine, 'p1'), 'fireball', { at: (cast as { at: Hex }).at })
+      expect(touched.map((u) => u.id)).toEqual(['e1', 'e2'])
+      // An ally beside them leaves no centre that touches both foes and not it.
+      const crowded = field(['fireball'], [...foes, { id: 'p2', side: 'player', at: hex(4, 2) }, { id: 'p3', side: 'player', at: hex(5, 0) }])
+      expect(choose(crowded).type).not.toBe('cast')
+    })
+
+    it('keeps the mana for its cheapest heal rather than spend it on a strike', () => {
+      const shaman = field(['magic_arrow', 'heal'], [{ id: 'e1', side: 'enemy', at: hex(4, 1) }], 5)
+      expect(choose(shaman)).not.toMatchObject({ type: 'cast' })
+      const flush = field(['magic_arrow', 'heal'], [{ id: 'e1', side: 'enemy', at: hex(4, 1) }], 6)
+      expect(choose(flush)).toMatchObject({ type: 'cast', spell: 'magic_arrow' })
+    })
+
+    it('guards itself with Mirror Image, then Shield, when a foe stands beside it', () => {
+      const engine = field(['shield', 'mirror_image', 'magic_arrow'], [{ id: 'e1', side: 'enemy', at: hex(1, 1) }])
+      expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'mirror_image', target: 'p1' })
+      engine.step(choose(engine))
+      expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'shield', target: 'p1' })
+      engine.step(choose(engine))
+      expect(choose(engine)).toMatchObject({ spell: 'magic_arrow' })
+    })
+
+    it('blesses two allies or more not yet blessed, and puts the healthiest foe to sleep while two stand', () => {
+      const engine = field(['bless', 'sleep'], [
+        { id: 'p2', side: 'player', at: hex(1, 1) },
+        { id: 'e1', side: 'enemy', at: hex(4, 1), hp: 5 },
+        { id: 'e2', side: 'enemy', at: hex(4, 2) },
+      ])
+      expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'bless', at: hex(0, 1) })
+      engine.step(choose(engine))
+      expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'sleep', target: 'e2' })
+    })
+
+    it('never casts Protect or Haste', () => {
+      const engine = field(['protect', 'haste'], [{ id: 'p2', side: 'player', at: hex(1, 1) }, { id: 'e1', side: 'enemy', at: hex(7, 1) }])
+      expect(choose(engine).type).toBe('move')
     })
   })
 

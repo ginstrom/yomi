@@ -1,10 +1,12 @@
 import type Phaser from 'phaser'
 import type { Character } from '../character/character.ts'
-import { PERKS, describePerkRequirements, perkRanks, type PerkId } from '../character/perks.ts'
+import { PERKS, describePerkRequirements, perkRanks, type Perk, type PerkId } from '../character/perks.ts'
+import { SCHOOLS } from '../combat/spells.ts'
 import type { Point } from './boardGeometry.ts'
-import { nodeLabel, nodeState, perkTitle, perkTreeLayout, type TreeNode } from './perkTree.ts'
+import { nodeLabel, nodeState, perkTitle, perkTreeLayout, type TreeKind, type TreeNode } from './perkTree.ts'
 
-const NODES: readonly TreeNode[] = perkTreeLayout()
+/** Both trees' nodes, laid out once. */
+const TREES: Record<TreeKind, readonly TreeNode[]> = { perks: perkTreeLayout('perks'), spells: perkTreeLayout('spells') }
 
 /** Where the tree is drawn in its container: a node for each perk, a row for each tip of a branch, and a strip under it. */
 const TREE_X = 20
@@ -13,7 +15,10 @@ const TREE_COLUMN_W = 172
 const TREE_ROW_H = 31
 const NODE_W = 160
 const NODE_H = 27
-const NODE_ROWS = 1 + Math.max(...NODES.map((node) => node.row))
+/** The rows of the taller tree, so that the strip sits in one place under either. */
+const NODE_ROWS = 1 + Math.max(...Object.values(TREES).flat().map((node) => node.row))
+/** The edge on a spell's node in its school's colour. */
+const SCHOOL_EDGE_W = 4
 const TREE_STRIP_Y = TREE_Y + NODE_ROWS * TREE_ROW_H
 /** How far the tree and its strip reach across; a panel may put something beside them. */
 export const PERK_TREE_W = TREE_X + 2 * TREE_COLUMN_W + NODE_W
@@ -23,7 +28,6 @@ const GOLD = '#e8c766'
 const DIM = '#8a7a5a'
 const TEXT = '#d8c9a3'
 
-
 /** A node's top left corner, in the container's own pixels. */
 function nodeAt({ column, row }: Pick<TreeNode, 'column' | 'row'>): Point {
   return { x: TREE_X + column * TREE_COLUMN_W, y: TREE_Y + row * TREE_ROW_H }
@@ -31,6 +35,8 @@ function nodeAt({ column, row }: Pick<TreeNode, 'column' | 'row'>): Point {
 
 /** What a scene tells the tree it draws. */
 export interface PerkTreeOptions {
+  /** Which tree: the perks, by default, or the spells. */
+  tree?: TreeKind
   /** The character whose perks the tree shows. */
   character: Character
   /** Whether a click on the perk's node would do anything now. */
@@ -47,33 +53,36 @@ export interface PerkTreeOptions {
 }
 
 /**
- * The perk tree's game objects: every perk as a node (perkTree.ts), a line
- * from the node it grows from, and a strip under it for the node pointed at.
- * Like `PartyColumn` it imports Phaser and has no logic of its own: the
- * character panel and character creation both draw it, and each decides what
- * a click on a node does.
+ * A tree's game objects, the perk tree's or the spell tree's: every perk as a
+ * node (perkTree.ts), a line from the node it grows from, and a strip under
+ * it for the node pointed at; a spell's node is edged in its school's
+ * colour. Like `PartyColumn` it imports Phaser and has no logic of its own:
+ * the character panel and character creation both draw it, and each decides
+ * what a click on a node does.
  */
 export class PerkTreeView {
-  /** Every perk's node, by its centre in the container's own pixels, for a scene's probe. */
-  static nodeCentres(): Array<Point & { perk: PerkId }> {
-    return NODES.map((node) => {
+  /** Every node of a tree, by its centre in the container's own pixels, for a scene's probe. */
+  static nodeCentres(tree: TreeKind = 'perks'): Array<Point & { perk: PerkId }> {
+    return TREES[tree].map((node) => {
       const { x, y } = nodeAt(node)
       return { perk: node.perk, x: x + NODE_W / 2, y: y + NODE_H / 2 }
     })
   }
 
   private readonly options: PerkTreeOptions
+  private readonly nodes: readonly TreeNode[]
   private readonly strip: Phaser.GameObjects.Text[]
 
   /** Draws the tree into `container`, which the scene clears and redraws after each change to the character. */
   constructor(scene: Phaser.Scene, container: Phaser.GameObjects.Container, options: PerkTreeOptions) {
     this.options = options
+    this.nodes = TREES[options.tree ?? 'perks']
     const { character } = options
 
     const lines = scene.add.graphics()
     container.add(lines)
-    for (const node of NODES) {
-      const from = NODES.find((other) => other.perk === node.from)
+    for (const node of this.nodes) {
+      const from = this.nodes.find((other) => other.perk === node.from)
       if (!from) continue
       const start = nodeAt(from)
       const end = nodeAt(node)
@@ -90,7 +99,7 @@ export class PerkTreeView {
       lines.lineTo(end.x, y1)
       lines.strokePath()
     }
-    for (const node of NODES) this.buildNode(scene, container, node)
+    for (const node of this.nodes) this.buildNode(scene, container, node)
 
     const style = { fontFamily: FONT, fontSize: '12px', color: DIM }
     const width = options.stripWidth ?? PERK_TREE_W - TREE_X
@@ -123,6 +132,11 @@ export class PerkTreeView {
       })
       .setOrigin(0.5)
     container.add([bg, label])
+    const { school } = PERKS[id] as Perk
+    if (school) {
+      const edge = scene.add.rectangle(x, y, SCHOOL_EDGE_W, NODE_H, SCHOOLS[school].colour, state === 'closed' ? 0.5 : 1)
+      container.add(edge.setOrigin(0))
+    }
 
     bg.setInteractive({ useHandCursor: live })
     bg.on('pointerover', () => {
@@ -147,7 +161,9 @@ export class PerkTreeView {
       hint.setText('')
       return
     }
-    what.setText(`${perkTitle(this.options.character, perk)}: ${PERKS[perk].description}`).setColor(TEXT)
+    const { school } = PERKS[perk] as Perk
+    const title = `${perkTitle(this.options.character, perk)}${school ? ` (${SCHOOLS[school].name})` : ''}`
+    what.setText(`${title}: ${PERKS[perk].description}`).setColor(TEXT)
     asks.setText(`Asks: ${describePerkRequirements(perk)}`)
     hint.setText(this.options.hint(perk))
   }

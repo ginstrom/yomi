@@ -22,8 +22,9 @@ import { SKILL_IDS, skillLevel, type SkillId } from './skills.ts'
 /**
  * One of the player's persistent characters: what it was born with
  * (`attributes`, `tagged`), what it has learned (`level`, `trained`, `perks`)
- * and what it carries. Its numbers are never stored: hit points, action
- * points, mana and the stats it fights with are derived from those, so every
+ * and what it carries, its wounds and its mana left included. Its other
+ * numbers are never stored: maximum hit points, action points, maximum mana
+ * and the stats it fights with are derived from those, so every
  * screen agrees on them. That goes for its attributes too: a perk that
  * raises one is added where the attribute is read (`attributeLevel`), never
  * written over the one it was born with.
@@ -47,7 +48,11 @@ export interface Character {
   perks: Partial<Record<PerkId, number>>
   /** Perks earned by levelling and not yet chosen. */
   perkPicks: number
+  /** Spells to learn, from Spellcasting and the levels after it, not yet chosen; a perk pick can buy a spell too. */
+  spellPicks: number
   hp: number
+  /** Mana carried out of the last battle, spent on the world map; read it through `manaOf`. Every battle begins at `maxMana`. */
+  mana: number
   equipment: Equipment
   backpack: Array<Item | null>
 }
@@ -92,6 +97,11 @@ function wornStats(character: Character): ItemStats[] {
   const { offHand, ...rest } = character.equipment
   const worn = isTwoHanded(character.equipment.mainHand) ? rest : { ...rest, offHand }
   return Object.values(worn).flatMap((item) => (item?.stats ? [item.stats] : []))
+}
+
+/** The mana the character has to spend out of battle: what it carried out of its last, within its maximum as it stands. */
+export function manaOf(character: Character): number {
+  return Math.max(0, Math.min(character.mana, maxMana(character)))
 }
 
 /**
@@ -301,7 +311,9 @@ export function createCharacter(name: string, build: Build): Character {
     skillPoints: 0,
     perks: {},
     perkPicks: 0,
+    spellPicks: 0,
     hp: 0,
+    mana: 0,
     equipment: { armor: STEEL_ARMOR, mainHand: build.mainHand, ...(build.offHand ? { offHand: build.offHand } : {}) },
     backpack: Array.from({ length: BACKPACK_SIZE }, (_, i) => spare[i] ?? null),
   }

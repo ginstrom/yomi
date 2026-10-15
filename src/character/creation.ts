@@ -1,8 +1,8 @@
 import { ATTRIBUTES, ATTRIBUTE_IDS, ATTRIBUTE_POINTS, MAX_ATTRIBUTE, MIN_ATTRIBUTE, type AttributeId, type Attributes } from './attributes.ts'
-import { STARTING_KIT, createCharacter, maxHp, type Character } from './character.ts'
-import { PERKS, missingRequirements, type PerkId } from './perks.ts'
+import { STARTING_KIT, createCharacter, maxHp, maxMana, type Character } from './character.ts'
+import { PERKS, isSpellPerk, missingRequirements, type PerkId } from './perks.ts'
 import { PORTRAIT_IDS, type PortraitId } from './portraits.ts'
-import { takePerk } from './progression.ts'
+import { SPELLCASTING_SPELL_PICKS, takePerk } from './progression.ts'
 import { SKILL_IDS, raiseSkill, type SkillId } from './skills.ts'
 
 /**
@@ -56,8 +56,34 @@ export function skillPointsLeft(draft: CharacterDraft): number {
   return CREATION_SKILL_POINTS - SKILL_IDS.reduce((sum, id) => sum + draft.raises[id], 0)
 }
 
+/**
+ * The perk and spell picks the draft's choices leave, counted as `takePerk`
+ * spends them: a spell from a spell pick while there is one, everything else
+ * from a perk pick, and Spellcasting bringing its spell picks. A perk pick
+ * left below 0 is a perk too many.
+ */
+function picksLeft(draft: CharacterDraft): { perks: number; spells: number } {
+  const left = { perks: CREATION_PERK_PICKS, spells: 0 }
+  for (const perk of draft.perks) {
+    if (isSpellPerk(perk) && left.spells > 0) left.spells -= 1
+    else left.perks -= 1
+    if (perk === 'spellcasting') left.spells += SPELLCASTING_SPELL_PICKS
+  }
+  return left
+}
+
 export function perkPicksLeft(draft: CharacterDraft): number {
-  return CREATION_PERK_PICKS - draft.perks.length
+  return picksLeft(draft).perks
+}
+
+/** The spell picks the draft has left: none until it takes Spellcasting. */
+export function spellPicksLeft(draft: CharacterDraft): number {
+  return picksLeft(draft).spells
+}
+
+/** Whether the draft has taken Spellcasting, and so has a spell tree to choose from. */
+export function draftCasts(draft: CharacterDraft): boolean {
+  return draft.perks.includes('spellcasting')
 }
 
 /** The draft's character before its perks, and with its perk picks to spend. */
@@ -100,6 +126,7 @@ export function draftCharacter(draft: CharacterDraft): Character {
   const character = unperked(draft)
   takePerks(character, draft.perks)
   character.hp = maxHp(character)
+  character.mana = maxMana(character)
   return character
 }
 
@@ -196,7 +223,7 @@ export function draftPerkRanks(draft: CharacterDraft, perk: PerkId): number {
  */
 export function togglePerk(draft: CharacterDraft, perk: PerkId): DraftChange {
   const taken = { ...draft, perks: [...draft.perks, perk] }
-  if (perkPicksLeft(draft) > 0 && pruneDraft(taken).dropped.length === 0) return unchanged(taken)
+  if (perkPicksLeft(taken) >= 0 && pruneDraft(taken).dropped.length === 0) return unchanged(taken)
   const last = draft.perks.lastIndexOf(perk)
   if (last === -1) return unchanged(draft)
   const without = { ...draft, perks: draft.perks.filter((_, index) => index !== last) }

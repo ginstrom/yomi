@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { createWarrior } from '../character/character.ts'
+import { createWarrior, deriveCombatStats } from '../character/character.ts'
+import { mulberry32 } from '../combat/rng.ts'
+import { POLICIES } from '../engine/policies.ts'
 import { xpToNextLevel } from '../character/progression.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
 import { hexDistance } from '../grid/hex.ts'
@@ -81,6 +83,30 @@ describe('goblinRaid', () => {
       ['goblin', 'Goblin'],
       ['kobold', 'Kobold'],
     ])
+  })
+})
+
+describe('the Goblin Shaman (A15)', () => {
+  it('stays home at threat 1 and joins the raid from threat 2, a caster of its level', () => {
+    const kinds = (threat: number) => Object.values(goblinRaid(party(), threat).kinds)
+    expect(kinds(1)).not.toContain('shaman')
+    expect(kinds(2)).toContain('shaman')
+    const shaman = goblinRaid(party(), 3).setup.units.find((u) => u.id === 'shaman')!
+    expect(shaman.stats.magic).toEqual({ maxMana: 20, skill: 70, spells: ['magic_arrow', 'heal', 'bane'] })
+  })
+
+  it('casts in a battle fought out by the policies', () => {
+    const fighters = readyMadeParty().map((member) => ({ stats: deriveCombatStats(member) }))
+    let casts = 0
+    for (let seed = 1; seed <= 5; seed++) {
+      const engine = new BattleEngine(goblinRaid(fighters, 2).setup, { seed })
+      const rng = mulberry32(seed)
+      for (let state = engine.getState(); state.phase !== 'over' && state.round < 50; state = engine.getState()) {
+        engine.step(POLICIES.aggressive({ state, legal: engine.legalActions(), rng }))
+      }
+      casts += engine.getLog().filter((e) => e.type === 'cast' && e.caster === 'shaman').length
+    }
+    expect(casts).toBeGreaterThan(0)
   })
 })
 

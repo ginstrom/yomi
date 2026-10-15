@@ -311,6 +311,38 @@
     {
       "frames": [
         {
+          "duration": 500,
+          "frame": "shaman/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 500,
+          "frame": "shaman/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "shaman/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "shaman/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "shaman/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "shaman/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "warrior/idle_0",
           "key": "atlas"

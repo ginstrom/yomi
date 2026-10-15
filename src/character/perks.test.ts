@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SPELL_IDS } from '../combat/spells.ts'
+import { SPELLS, SPELL_IDS } from '../combat/spells.ts'
 import { ATTRIBUTE_IDS } from './attributes.ts'
 import { createWarrior } from './character.ts'
 import {
@@ -16,6 +16,10 @@ import {
   perkBonus,
   perkParent,
   qualifiesFor,
+  SPELL_PERK_IDS,
+  SPELL_TIERS,
+  isSpellPerk,
+  spellPerkOf,
   type Perk,
 } from './perks.ts'
 import { takePerk } from './progression.ts'
@@ -26,12 +30,13 @@ const warriorAt = (level: number) => ({ ...createWarrior(), level })
 
 describe('PERKS', () => {
   it('gives every perk a name, a description, a rank to take and something it does', () => {
-    expect(PERK_IDS).toHaveLength(28)
+    expect(PERK_IDS).toHaveLength(28 + SPELL_IDS.length)
     for (const id of PERK_IDS) {
       const perk: Perk = PERKS[id]
       expect(perk.name.length * perk.description.length).toBeGreaterThan(0)
       expect(perk.ranks).toBeGreaterThanOrEqual(1)
-      expect(perk.spell !== undefined || Object.values(perk.effects).some((amount) => amount !== 0)).toBe(true)
+      const opens = id === 'spellcasting'
+      expect(opens || perk.spell !== undefined || Object.values(perk.effects).some((amount) => amount !== 0)).toBe(true)
     }
   })
 
@@ -63,7 +68,7 @@ describe('the perk tree', () => {
       expect(PERK_IDS).toContain(parent)
       expect(PERKS[parent].branch).toBe(PERKS[id].branch)
     }
-    expect(PERK_IDS.map((id) => [id, perkParent(id)]).filter(([, parent]) => parent)).toEqual([
+    expect(PERK_IDS.filter((id) => !isSpellPerk(id)).map((id) => [id, perkParent(id)]).filter(([, parent]) => parent)).toEqual([
       ['far_shot', 'deadly_aim'],
       ['scholar', 'quick_study'],
       ['tireless', 'toughness'],
@@ -71,7 +76,7 @@ describe('the perk tree', () => {
       ['weapon_mastery', 'weapon_training'],
       ['sunder', 'armor_breaker'],
       ['eagle_eye', 'marksmanship'],
-      ['deep_well', 'magic_arrow'],
+      ['deep_well', 'spellcasting'],
       ['arcane_mastery', 'arcane_study'],
       ['evasion', 'dodger'],
       ['fortune', 'keen_eye'],
@@ -124,31 +129,32 @@ describe('qualifiesFor', () => {
     expect(qualifiesFor(warrior, 'deadly_aim')).toBe(true)
   })
 
-  it('asks for the perk’s skills: Magic Arrow at Magic 50% and not at 49%', () => {
+  it('asks for the perk’s skills: Spellcasting at Magic 40% and not at 39%', () => {
     const warrior = warriorAt(3)
     warrior.perkPicks = 1
-    warrior.trained.magic = 41
-    expect(skillLevel(warrior, 'magic')).toBe(49)
-    expect(qualifiesFor(warrior, 'magic_arrow')).toBe(false)
-    expect(takePerk(warrior, 'magic_arrow')).toBe(false)
+    warrior.trained.magic = 31
+    expect(skillLevel(warrior, 'magic')).toBe(39)
+    expect(qualifiesFor(warrior, 'spellcasting')).toBe(false)
+    expect(takePerk(warrior, 'spellcasting')).toBe(false)
+    warrior.trained.magic = 32
+    expect(takePerk(warrior, 'spellcasting')).toBe(true)
+    // It teaches no spell; it opens the spell tree.
     expect(knownSpells(warrior)).toEqual([])
-    warrior.trained.magic = 42
-    expect(takePerk(warrior, 'magic_arrow')).toBe(true)
-    expect(knownSpells(warrior)).toEqual(['magic_arrow'])
+    expect(qualifiesFor(warrior, 'magic_arrow')).toBe(true)
   })
 
-  it('counts what a skill perk adds: Arcane Study can carry a mage to Magic Arrow', () => {
-    const mage = warriorAt(1)
+  it('counts what a skill perk adds: Arcane Study can carry a mage to a tier 2 spell', () => {
+    const mage = warriorAt(3)
     mage.attributes.intelligence = 5
     mage.perkPicks = 3
-    mage.trained.magic = 30
-    expect(skillLevel(mage, 'magic')).toBe(40)
-    expect(qualifiesFor(mage, 'magic_arrow')).toBe(false)
+    mage.perks = { spellcasting: 1, magic_arrow: 1 }
+    mage.trained.magic = 35
+    expect(skillLevel(mage, 'magic')).toBe(45)
+    expect(qualifiesFor(mage, 'flame_arrow')).toBe(false)
     expect(takePerk(mage, 'arcane_study')).toBe(true)
     expect(takePerk(mage, 'arcane_study')).toBe(true)
-    expect(takePerk(mage, 'arcane_study')).toBe(false)
-    expect(skillLevel(mage, 'magic')).toBe(50)
-    expect(takePerk(mage, 'magic_arrow')).toBe(true)
+    expect(skillLevel(mage, 'magic')).toBe(55)
+    expect(takePerk(mage, 'flame_arrow')).toBe(true)
   })
 
   it('asks for a rank of the perk it grows from', () => {
@@ -252,11 +258,32 @@ describe('knownSpells', () => {
   })
 })
 
+describe('the spell perks', () => {
+  it('teach each spell once, from its school, at its tier, from Spellcasting or a spell of its school', () => {
+    expect(SPELL_PERK_IDS).toHaveLength(SPELL_IDS.length)
+    for (const spell of SPELL_IDS) {
+      const id = spellPerkOf(spell)
+      const perk: Perk = PERKS[id]
+      expect(id).toBe(spell)
+      expect(perk.school).toBe(SPELLS[spell].school)
+      const parent = perkParent(id)!
+      if (parent === 'spellcasting') expect(perk).toMatchObject({ level: 1, skills: { magic: 40 } })
+      else {
+        expect((PERKS[parent] as Perk).school).toBe(perk.school)
+        const tier = Object.values(SPELL_TIERS).findIndex((t) => t.level === perk.level)
+        expect(PERKS[parent].level).toBe(Object.values(SPELL_TIERS)[tier - 1].level)
+      }
+    }
+    expect(isSpellPerk('spellcasting')).toBe(false)
+  })
+})
+
 describe('describePerkRequirements', () => {
   it('lists the level, then attributes and skills, then the perk before it', () => {
     expect(describePerkRequirements('toughness')).toBe('Level 1, Endurance 5')
     expect(describePerkRequirements('tireless')).toBe('Level 6, Endurance 8, Agility 6, Toughness')
-    expect(describePerkRequirements('magic_arrow')).toBe('Level 1, Magic 50%')
+    expect(describePerkRequirements('spellcasting')).toBe('Level 1, Magic 40%')
+    expect(describePerkRequirements('fireball')).toBe('Level 5, Magic 70%, Flame Arrow')
     expect(describePerkRequirements('gain_luck')).toBe('Level 3')
   })
 })
@@ -270,7 +297,7 @@ describe('missingRequirements', () => {
     hero.perks.toughness = 1
     hero.attributes.endurance = 8
     expect(missingRequirements(hero, 'tireless')).toEqual(['Agility 6'])
-    expect(missingRequirements(hero, 'magic_arrow')).toEqual(['Magic 50%'])
+    expect(missingRequirements(hero, 'magic_arrow')).toEqual(['Magic 40%', 'Spellcasting'])
     expect(missingRequirements(hero, 'heavy_hand')).toEqual([])
     // Ranks left are not its business.
     hero.perks.toughness = 2

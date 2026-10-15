@@ -1,4 +1,4 @@
-import { GOBLIN_STATS, KOBOLD_STATS, foeAtLevel, type CombatantStats } from '../combat/combat.ts'
+import { GOBLIN_SHAMAN_STATS, GOBLIN_STATS, KOBOLD_STATS, foeAtLevel, type CombatantStats } from '../combat/combat.ts'
 import type { BattleSetup, UnitId, UnitSetup } from '../engine/battleEngine.ts'
 import { offsetToHex } from '../grid/hex.ts'
 
@@ -37,15 +37,16 @@ function partyKinds(party: readonly Fighter[]): Record<UnitId, UnitKind> {
 }
 
 /** What a unit is, for drawing it; the engine only knows its stats. */
-export type UnitKind = 'warrior' | 'goblin' | 'kobold'
+export type UnitKind = 'warrior' | 'goblin' | 'kobold' | 'shaman'
 
 /**
  * The experience beating a level 1 unit of each kind is worth. An even match for a
  * hero of level L is worth about `EVEN_FOE_XP_PER_LEVEL * L` and a weak foe
  * half that (see progression.ts): the Goblin is a little weaker than a new
- * hero, the Kobold weak.
+ * hero, the Kobold weak, and the Goblin Shaman, frail but a healer and a
+ * curse, worth a little more than a Goblin.
  */
-export const FOE_XP: Record<UnitKind, number> = { warrior: 0, goblin: 80, kobold: 50 }
+export const FOE_XP: Record<UnitKind, number> = { warrior: 0, goblin: 80, kobold: 50, shaman: 90 }
 
 export interface Encounter {
   setup: BattleSetup
@@ -62,7 +63,7 @@ export interface Encounter {
  * threat can make the next threat easier; judge a change by a campaign run
  * (`npm run simulate -- --campaign`), not by the battle it changes.
  */
-const FOES_AT_THREAT = [2, 3, 3, 3, 3]
+const FOES_AT_THREAT = [2, 3, 3, 3, 4]
 
 /** The most dangerous a battle gets; any threat above it is fought as this. */
 export const MAX_THREAT = FOES_AT_THREAT.length
@@ -76,7 +77,11 @@ interface FoeSlot {
   at: readonly [number, number]
 }
 
-const FOE_STATS: Record<FoeSlot['kind'], CombatantStats> = { goblin: GOBLIN_STATS, kobold: KOBOLD_STATS }
+const FOE_STATS: Record<FoeSlot['kind'], CombatantStats> = {
+  goblin: GOBLIN_STATS,
+  kobold: KOBOLD_STATS,
+  shaman: GOBLIN_SHAMAN_STATS,
+}
 
 const BOARD = { cols: 8, rows: 5 }
 
@@ -109,8 +114,10 @@ function encounter(party: readonly Fighter[], slots: readonly FoeSlot[], threat:
 const GOBLIN_RAID: readonly FoeSlot[] = [
   { id: 'goblin', kind: 'goblin', name: 'Goblin', at: [6, 2] },
   { id: 'kobold', kind: 'kobold', name: 'Kobold', at: [7, 0] },
-  { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [6, 4] },
+  // Third, so it takes the field from threat 2; at the back, off the party's hexes.
+  { id: 'shaman', kind: 'shaman', name: 'Goblin Shaman', at: [7, 2] },
   { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [7, 3] },
+  { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [6, 4] },
   { id: 'brute', kind: 'goblin', name: 'Goblin Brute', at: [7, 1] },
 ]
 
@@ -123,8 +130,8 @@ const KOBOLD_SCOUTS: readonly FoeSlot[] = [
 ]
 
 /**
- * A Goblin and a Kobold across the board from the party, and more of both
- * where the threat is higher, up to five. The simulator fights this one unless told
+ * A Goblin and a Kobold across the board from the party; where the threat is
+ * higher a Goblin Shaman behind them, and more of both, up to five. The simulator fights this one unless told
  * otherwise, so balancing runs fight a battle the game has.
  */
 export function goblinRaid(party: readonly Fighter[], threat = 1): Encounter {

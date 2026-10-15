@@ -1,3 +1,4 @@
+import { SPELLS } from '../combat/spells.ts'
 import type { BattleEvent } from '../engine/battleEngine.ts'
 
 /** Every sound the game plays; each is loaded from assets/audio/ by soundFiles(key). */
@@ -7,6 +8,7 @@ export const SOUND_KEYS = [
   'sfx_crit_impact',
   'sfx_miss',
   'sfx_spell_cast',
+  'sfx_heal',
   'sfx_unit_death',
   'sfx_ui_click',
   'music_victory',
@@ -52,12 +54,22 @@ export function eventSounds(event: BattleEvent): SoundCue[] {
       ]
     }
     case 'cast': {
-      const outcome: SoundKey = !event.hit ? 'sfx_miss' : event.critical ? 'sfx_crit_impact' : 'sfx_hit_impact'
+      // A friendly spell chimes; a hostile one lands as its best outcome does, an image struck being a miss.
+      const struck = event.outcomes.filter((o) => o.hit && !o.image)
+      const outcome: SoundKey = !SPELLS[event.spell].hostile
+        ? 'sfx_heal'
+        : struck.length === 0
+          ? 'sfx_miss'
+          : struck.some((o) => o.critical)
+            ? 'sfx_crit_impact'
+            : 'sfx_hit_impact'
       return [
         { key: 'sfx_spell_cast', delayMs: 0 },
         { key: outcome, delayMs: IMPACT_DELAY_MS },
       ]
     }
+    case 'status_tick':
+      return [{ key: 'sfx_hit_impact', delayMs: 0 }]
     case 'unit_down':
       return [{ key: 'sfx_unit_death', delayMs: 0 }]
     case 'battle_end':

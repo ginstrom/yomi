@@ -25,7 +25,7 @@ function attack(opportunity: boolean): AttackEvent {
     type: 'attack', seq: seq++, round: 1, attacker: 'goblin', defender: 'hero', opportunity,
     weapon: null, distance: 1, apCost: 0, apAfter: 0, toHit: 70, defenderAc: 15, armorPierce: 0,
     damageDice: { count: 1, sides: 6, bonus: 0 }, defenderHpBefore: 10,
-    flankers: [], flankBonus: 0, arc: 'front', arcBonus: 0, attackerFacing: 3,
+    flankers: [], flankBonus: 0, arc: 'front', arcBonus: 0, attackerFacing: 3, helpless: false, image: false,
     attackRoll: 40, chance: 55, hit: true, critical: false, fumble: false, damage: 3, defenderHpAfter: 7,
   }
 }
@@ -93,5 +93,12 @@ describe('scheduleEvents', () => {
       beats: [{ at: 0, cues: [show(strike), show(end)] }],
       totalMs: 0,
     })
+  })
+
+  it('gives each status’s damage at a turn’s start a pause of its own', () => {
+    const tick = (seq: number): BattleEvent => ({ type: 'status_tick', seq, round: 1, unit: 'g', status: 'poisoned', damage: 2, hpBefore: 5, hpAfter: 3 })
+    const { beats, totalMs } = scheduleEvents([tick(0), tick(1)], { moveStepMs: 100, opportunityPauseMs: 400, tickPauseMs: 300 })
+    expect(beats.map((beat) => beat.at)).toEqual([0, 300])
+    expect(totalMs).toBe(600)
   })
 })

@@ -36,7 +36,8 @@ describe('PREROLLS', () => {
       expect(Object.values(member.attributes).reduce((a, b) => a + b)).toBe(ATTRIBUTE_POINTS)
       expect(new Set(member.tagged).size).toBe(TAGGED_SKILLS)
       expect([member.skillPoints, member.perkPicks]).toEqual([0, 0])
-      expect(Object.values(member.perks).reduce((a, b) => a + b)).toBe(3)
+      expect(member.spellPicks).toBe(0)
+      expect(Object.values(member.perks).reduce((a, b) => a + b)).toBe(member.perks.spellcasting ? 5 : 3)
       expect(member.hp).toBe(maxHp(member))
       expect(canAdvance(member)).toBe(false)
       // Each holds a weapon it has a gift for.
@@ -78,17 +79,18 @@ describe('readyMadeParty', () => {
     expect(skillLevel(delwyn, 'magic')).toBe(63)
   })
 
-  it('makes the third a mage, who starts knowing Magic Arrow', () => {
+  it('makes the third a mage, who starts knowing Magic Arrow and Heal', () => {
     const party = readyMadeParty()
     const mage = party[2]
-    expect(party.map((m) => knownSpells(m))).toEqual([[], [], ['magic_arrow']])
+    expect(party.map((m) => knownSpells(m))).toEqual([[], [], ['magic_arrow', 'heal']])
+    expect(mage.mana).toBe(18)
     expect([maxHp(mage), maxMana(mage)]).toEqual([17, 18])
     expect(deriveCombatStats(mage)).toMatchObject({
       actionPoints: 8,
       weapon: 'Wand of Sparks',
       toHit: 63,
       attackRange: 4,
-      magic: { maxMana: 18, skill: 63, spells: ['magic_arrow'] },
+      magic: { maxMana: 18, skill: 63, spells: ['magic_arrow', 'heal'] },
     })
   })
 

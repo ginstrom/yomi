@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ATTRIBUTE_IDS } from '../character/attributes.ts'
 import { createWarrior } from '../character/character.ts'
-import { PERKS, PERK_IDS, TRUNK_PERKS, perkParent } from '../character/perks.ts'
+import { PERKS, PERK_IDS, SPELL_PERK_IDS, TRUNK_PERKS, isSpellPerk, perkParent } from '../character/perks.ts'
 import { newDraft, type CharacterDraft } from '../character/creation.ts'
 import { draftNodeHint, nodeHint, nodeLabel, nodeState, perkTitle, perkTreeLayout } from './perkTree.ts'
 
@@ -12,8 +12,8 @@ describe('perkTreeLayout', () => {
   const nodes = perkTreeLayout()
   const at = (perk: string) => nodes.find((node) => node.perk === perk)!
 
-  it('places every perk once, no two on one cell', () => {
-    expect(nodes.map((node) => node.perk).sort()).toEqual([...PERK_IDS].sort())
+  it('places every perk but the spells once, no two on one cell', () => {
+    expect(nodes.map((node) => node.perk).sort()).toEqual(PERK_IDS.filter((id) => !isSpellPerk(id)).sort())
     expect(new Set(nodes.map((node) => `${node.column},${node.row}`)).size).toBe(nodes.length)
   })
 
@@ -52,7 +52,7 @@ describe('perkTreeLayout', () => {
       ['gain_intelligence', 0, 6],
       ['quick_study', 1, 6],
       ['scholar', 2, 6],
-      ['magic_arrow', 1, 7],
+      ['spellcasting', 1, 7],
       ['deep_well', 2, 7],
       ['arcane_study', 1, 8],
       ['arcane_mastery', 2, 8],
@@ -63,6 +63,50 @@ describe('perkTreeLayout', () => {
       ['keen_eye', 1, 10],
       ['fortune', 2, 10],
     ])
+  })
+})
+
+describe('perkTreeLayout of the spells (A2)', () => {
+  const nodes = perkTreeLayout('spells')
+
+  it('places every spell once, in three columns and nine rows, no two on one cell', () => {
+    expect(nodes.map((node) => node.perk).sort()).toEqual([...SPELL_PERK_IDS].sort())
+    expect(new Set(nodes.map((node) => `${node.column},${node.row}`)).size).toBe(nodes.length)
+    expect(Math.max(...nodes.map((node) => node.column))).toBe(2)
+    expect(Math.max(...nodes.map((node) => node.row))).toBe(8)
+  })
+
+  it('keeps each school’s rows together, offence, then healing, then support', () => {
+    expect(nodes.map((node) => [node.perk, node.column, node.row])).toEqual([
+      ['magic_arrow', 0, 0],
+      ['flame_arrow', 1, 0],
+      ['fireball', 2, 0],
+      ['acid_arrow', 2, 1],
+      ['sleep', 1, 2],
+      ['death_cloud', 2, 2],
+      ['frost_blast', 1, 3],
+      ['heal', 0, 4],
+      ['greater_heal', 1, 4],
+      ['heal_all', 1, 5],
+      ['greater_heal_all', 2, 5],
+      ['shield', 0, 6],
+      ['mirror_image', 1, 6],
+      ['protect', 0, 7],
+      ['haste', 1, 7],
+      ['bless', 0, 8],
+      ['bane', 1, 8],
+    ])
+  })
+
+  it('speaks of spell picks on a spell’s node', () => {
+    const mage = warriorAt(1)
+    mage.trained.magic = 40
+    mage.perks = { spellcasting: 1 }
+    expect(nodeHint(mage, 'heal', true)).toBe('No spell to choose until level 2')
+    mage.spellPicks = 1
+    expect(nodeHint(mage, 'heal', true)).toBe('Click to take')
+    expect(nodeHint(mage, 'heal', false)).toBe('Spells are chosen on the world map')
+    expect(nodeHint(mage, 'fireball', true)).toBe('Not yet: Level 5, Magic 70%, Flame Arrow')
   })
 })
 

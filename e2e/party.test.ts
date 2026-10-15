@@ -161,9 +161,16 @@ describe('the party screen', () => {
     const perks = await toStep(game, 'perks')
     const node = (creation: CreationProbe, perk: string) => creation.perks.find((n) => n.perk === perk)!
     expect(node(perks, 'toughness').canClick).toBe(true)
-    // The perks that raise an attribute ask level 3, and Magic Arrow a Magic this character lacks.
+    // The perks that raise an attribute ask level 3, and Spellcasting a Magic this character lacks.
     expect(node(perks, 'gain_strength').canClick).toBe(false)
-    expect(node(perks, 'magic_arrow').canClick).toBe(false)
+    expect(node(perks, 'spellcasting').canClick).toBe(false)
+    // The switch shows the spell tree, of which nothing is open without Spellcasting.
+    await game.click(perks.treeSwitch.spells)
+    const spellTree = await game.waitFor('Creation', (c) => c.tree === 'spells')
+    expect(spellTree.perks).toHaveLength(17)
+    expect(spellTree.perks.some((n) => n.canClick)).toBe(false)
+    await game.click(spellTree.treeSwitch.perks)
+    await game.waitFor('Creation', (c) => c.tree === 'perks')
     await game.click(node(perks, 'toughness'))
     await game.waitFor('Creation', (c) => c.perkPicks === 2)
     await game.click(node(perks, 'weapon_training'))

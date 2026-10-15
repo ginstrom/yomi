@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SPARK_WAND, YEW_BOW } from '../inventory/inventory.ts'
-import { createWarrior, hpPerLevel, maxHp } from './character.ts'
+import { createWarrior, hpPerLevel, maxHp, maxMana } from './character.ts'
+import { knownSpells } from './perks.ts'
 import {
   EVEN_FOE_XP_PER_LEVEL,
   PERK_LEVEL_STEP,
@@ -49,7 +50,7 @@ describe('gainXp', () => {
     const warrior = createWarrior()
     warrior.hp = 5
     const gain = gainXp(warrior, xpToNextLevel(1) - 1)
-    expect(gain).toEqual({ xp: xpToNextLevel(1) - 1, levelsGained: 0, maxHpGained: 0, skillPointsGained: 0, perksGained: 0 })
+    expect(gain).toEqual({ xp: xpToNextLevel(1) - 1, levelsGained: 0, maxHpGained: 0, skillPointsGained: 0, perksGained: 0, spellsGained: 0 })
     expect(warrior).toEqual({ ...createWarrior(), xp: xpToNextLevel(1) - 1, hp: 5 })
   })
 
@@ -64,6 +65,7 @@ describe('gainXp', () => {
       maxHpGained: hpPerLevel(warrior),
       skillPointsGained: skillPointsPerLevel(warrior),
       perksGained: 0,
+      spellsGained: 0,
     })
     expect([warrior.level, warrior.xp]).toEqual([2, 30])
     expect(maxHp(warrior)).toBe(before + hpPerLevel(warrior))
@@ -171,13 +173,75 @@ describe('autoAdvance', () => {
     while (warrior.level < 6) levelUp(warrior)
     autoAdvance(warrior)
     expect(warrior.perks).toEqual({ toughness: 1, tireless: 1 })
-    // Nothing a plain fighter wants is on offer to this one but a spell and the attribute perks.
+    // Nothing a plain fighter wants is on offer to this one but Spellcasting, which it never takes, and the attribute perks.
     const scholar = createWarrior()
     scholar.attributes = { strength: 4, perception: 4, endurance: 4, intelligence: 4, agility: 5, luck: 5 }
     scholar.trained.magic = 42
     scholar.level = 3
     scholar.perkPicks = 2
     autoAdvance(scholar)
-    expect(scholar.perks).toEqual({ magic_arrow: 1, gain_strength: 1 })
+    expect(scholar.perks).toEqual({ gain_strength: 1, weapon_training: 1 })
+  })
+})
+
+describe('spell picks (A3)', () => {
+  const caster = () => {
+    const mage = createWarrior()
+    mage.trained.magic = 32
+    mage.perkPicks = 1
+    return mage
+  }
+
+  it('come two with Spellcasting and one with every level after, and to no one else', () => {
+    const mage = caster()
+    expect(takePerk(mage, 'spellcasting')).toBe(true)
+    expect([mage.perkPicks, mage.spellPicks, maxMana(mage)]).toEqual([0, 2, 0])
+    levelUp(mage)
+    expect(mage.spellPicks).toBe(3)
+    const warrior = createWarrior()
+    levelUp(warrior)
+    expect(warrior.spellPicks).toBe(0)
+    expect(gainXp(mage, xpToNextLevel(2)).spellsGained).toBe(1)
+  })
+
+  it('are spent on a spell before a perk pick is, and never on an ordinary perk', () => {
+    const mage = caster()
+    takePerk(mage, 'spellcasting')
+    mage.perkPicks = 1
+    expect(takePerk(mage, 'heal')).toBe(true)
+    expect([mage.perkPicks, mage.spellPicks]).toEqual([1, 1])
+    expect(takePerk(mage, 'keen_eye')).toBe(true)
+    expect([mage.perkPicks, mage.spellPicks]).toEqual([0, 1])
+    expect(takePerk(mage, 'shield')).toBe(true)
+    expect(takePerk(mage, 'protect')).toBe(false)
+    mage.perkPicks = 1
+    expect(takePerk(mage, 'protect')).toBe(true)
+    expect(mage.perkPicks).toBe(0)
+  })
+
+  it('bring mana with the first spell, as a perk that raises the maximum raises what is carried', () => {
+    const mage = caster()
+    takePerk(mage, 'spellcasting')
+    expect(mage.mana).toBe(0)
+    takePerk(mage, 'heal')
+    expect(mage.mana).toBe(maxMana(mage))
+    mage.mana = 2
+    mage.level = 3
+    mage.perkPicks = 1
+    takePerk(mage, 'gain_intelligence')
+    expect(mage.mana).toBe(4)
+  })
+
+  it('are spent by autoAdvance in its order, never on Spellcasting for one without it', () => {
+    const mage = caster()
+    takePerk(mage, 'spellcasting')
+    autoAdvance(mage)
+    expect(knownSpells(mage)).toEqual(['magic_arrow', 'heal'])
+    expect(mage.spellPicks).toBe(0)
+    const warrior = createWarrior()
+    warrior.trained.magic = 40
+    warrior.perkPicks = 1
+    autoAdvance(warrior)
+    expect(warrior.perks.spellcasting).toBeUndefined()
   })
 })

@@ -1716,6 +1716,82 @@
       32
     ]
   },
+  "shaman": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 500
+          },
+          {
+            "frame": "idle_1",
+            "ms": 500
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "idle_0",
+            "ms": 140
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      8,
+      4,
+      19,
+      28
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "shaman.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          8,
+          4,
+          19,
+          28
+        ],
+        "file": "shaman__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          8,
+          5,
+          19,
+          27
+        ],
+        "file": "shaman__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          8,
+          4,
+          19,
+          28
+        ],
+        "file": "shaman__walk_0.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
   "tile_dark": {
     "anchor": [
       0,

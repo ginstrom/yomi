@@ -93,7 +93,7 @@ describe('a battle', () => {
     expect(equips.map((e) => [e.unit, e.apCost])).toEqual([['hero_1', 1], ['hero_3', 1]])
   })
 
-  it('casts the mage’s spell on a foe picked after the Cast button, and backs out of picking on Esc', async () => {
+  it('casts a spell picked from the Cast button’s list, on a foe and then on the caster, and backs out on Esc (A10)', async () => {
     const game = await games.open()
     const start = await game.enterBattle()
     const mage = (battle: BattleProbe) => battle.state.units.find((u) => u.id === 'hero_3')!
@@ -103,26 +103,39 @@ describe('a battle', () => {
     await game.click(start.party[2])
     const selected = await game.waitFor('Battle', (b) => b.selected === 'hero_3')
     expect(mage(selected)).toMatchObject({ mana: 18, ap: 8 })
-    // No foe is within the spell's range yet.
-    expect(selected.buttons.cast).toMatchObject({ visible: true, enabled: false })
+    // Heal can always be cast on the caster itself; no foe is within Magic Arrow's range yet.
+    expect(selected.buttons.cast).toMatchObject({ visible: true, enabled: true })
+    await game.click(selected.buttons.cast)
+    const list = await game.waitFor('Battle', (b) => b.spellMenu !== null)
+    expect(list.spellMenu!.map(({ spell, enabled }) => [spell, enabled])).toEqual([
+      ['magic_arrow', false],
+      ['heal', true],
+    ])
+    await game.press('Escape')
+    await game.waitFor('Battle', (b) => b.spellMenu === null)
+    expect(await game.scenes()).toEqual({ running: ['Battle'], paused: [] })
 
     await game.click(battleHexOnScreen(selected, offsetToHex(3, 3)))
-    const near = await game.waitFor('Battle', (b) => b.playerControl && b.buttons.cast.enabled)
-    expect(mage(near).ap).toBe(5)
+    const near = await game.waitFor('Battle', (b) => b.playerControl && mage(b).ap === 5)
 
-    await game.click(near.buttons.cast)
+    await game.press('m')
+    const opened = await game.waitFor('Battle', (b) => b.spellMenu !== null)
+    expect(opened.spellMenu![0]).toMatchObject({ spell: 'magic_arrow', enabled: true })
+    await game.click(opened.spellMenu![0])
     expect((await game.waitFor('Battle', (b) => b.casting !== null)).casting).toBe('magic_arrow')
     await game.press('Escape')
     await game.waitFor('Battle', (b) => b.casting === null)
-    expect(await game.scenes()).toEqual({ running: ['Battle'], paused: [] })
+    expect(near.casting).toBeNull()
 
     await game.press('m')
+    await game.waitFor('Battle', (b) => b.spellMenu !== null)
+    await game.press('1')
     const picking = await game.waitFor('Battle', (b) => b.casting === 'magic_arrow')
     const foe = picking.state.units.find((u) => u.id === 'goblin')!
     await game.click(battleHexOnScreen(picking, foe.position))
     const after = await game.waitFor('Battle', (b) => b.log.some((e) => e.type === 'cast') && (b.playerControl || b.buttons.result.visible))
     expect(after.log.filter((e) => e.type === 'cast')).toMatchObject([
-      { caster: 'hero_3', spell: 'magic_arrow', target: 'goblin', manaCost: 3, manaAfter: 15, apAfter: 1 },
+      { caster: 'hero_3', spell: 'magic_arrow', target: 'goblin', manaCost: 3, manaAfter: 15, apAfter: 1, outcomes: [{ unit: 'goblin' }] },
     ])
     expect(mage(after)).toMatchObject({ mana: 15, ap: 1 })
     expect(after.casting).toBeNull()
@@ -131,6 +144,24 @@ describe('a battle', () => {
     await game.press('c')
     await game.waitForScenes(['Inventory'], ['Battle'])
     expect((await game.waitFor('Inventory', (p) => p.party[2].active)).mana).toBe(15)
+    await game.press('Escape')
+    await game.waitForScenes(['Battle'])
+
+    // Next turn the mage heals itself: the spell list's second row, then a click on the caster.
+    await game.click(after.buttons.endTurn)
+    const next = await game.awaitTurn()
+    if (next.buttons.result.visible || mage(next).hp <= 0) return
+    // A click on the selected member's portrait would open its panel instead.
+    if (next.selected !== 'hero_3') await game.click(next.party[2])
+    await game.waitFor('Battle', (b) => b.selected === 'hero_3')
+    await game.press('m')
+    await game.waitFor('Battle', (b) => b.spellMenu !== null)
+    await game.press('2')
+    const healing = await game.waitFor('Battle', (b) => b.casting === 'heal')
+    await game.click(battleHexOnScreen(healing, mage(healing).position))
+    const healed = await game.waitFor('Battle', (b) => b.log.some((e) => e.type === 'cast' && e.spell === 'heal'))
+    const heal = healed.log.find((e) => e.type === 'cast' && e.spell === 'heal')!
+    expect(heal).toMatchObject({ caster: 'hero_3', manaCost: 3, manaAfter: 12, outcomes: [{ unit: 'hero_3', attackRoll: null }] })
   })
 
   it('pauses under the menu on Esc, resumes on Continue, and is dropped for a new game', async () => {

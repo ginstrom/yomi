@@ -75,13 +75,17 @@ export interface CreationProbe {
   attributePoints: number
   skillPoints: number
   perkPicks: number
+  spellPicks: number
+  /** Which tree the perks step shows, and the switch between the two. */
+  tree: 'perks' | 'spells'
+  treeSwitch: { perks: ButtonProbe; spells: ButtonProbe }
   /** The tabs that open each step directly. */
   steps: Record<CreationStep, ButtonProbe>
   /** Each attribute's value and its two buttons; on screen on the attributes step. */
   attributes: Record<AttributeId, { value: number; minus: ButtonProbe; plus: ButtonProbe }>
   /** Each skill's level as the draft's character has it, its points placed and its buttons; on screen on the skills step. */
   skills: Record<SkillId, { level: number; placed: number; tagged: boolean; tag: ButtonProbe; minus: ButtonProbe; plus: ButtonProbe }>
-  /** Every perk's node, by its centre on screen, with the ranks chosen and whether a click would take or give back one; on screen on the perks step. */
+  /** Every node of the tree shown, by its centre on screen, with the ranks chosen and whether a click would take or give back one; on screen on the perks step. */
   perks: Array<Point & { perk: string; ranks: number; canClick: boolean }>
   /** The preset faces, by their centres on screen; on screen on the name step. */
   portraits: Array<Point & { portrait: PortraitId; picked: boolean }>
@@ -117,26 +121,29 @@ export interface BattleProbe {
   buttons: { attack: ButtonProbe; cast: ButtonProbe; endTurn: ButtonProbe; result: ButtonProbe }
   /** The spell the next board click picks a target for, after the Cast button. */
   casting: SpellId | null
+  /** The Cast button's spell list, a row a spell with its centre, while it is open; null when shut. Each unit's statuses are in `state`. */
+  spellMenu: Array<Point & { spell: SpellId; enabled: boolean }> | null
   /** The lines of the victory or defeat screen; empty until the battle is over. */
   result: string[]
   party: PortraitProbe[]
 }
 
 export interface InventoryProbe {
-  /** `perkTree` is the view the Skills tab's Perk Tree button opens; it has no tab button of its own. */
-  tab: 'character' | 'skills' | 'inventory' | 'perkTree'
+  /** `perkTree` and `spellTree` are the views the Skills and Spells tabs' tree buttons open; they have no tab buttons of their own. */
+  tab: 'character' | 'skills' | 'spells' | 'inventory' | 'perkTree' | 'spellTree'
   /** The portraits beside the panel: a click on one turns the panel to that member, who is then the active one. */
   party: PortraitProbe[]
   /** What the character has waiting to spend. */
   skillPoints: number
   perkPicks: number
+  spellPicks: number
   /** Each skill's level, with the centre on screen of the button that raises it and whether a click there would. */
   skills: Record<SkillId, Point & { level: number; canRaise: boolean }>
   /** The character's attributes as the Character tab shows them: what it was born with and what its perks add. */
   attributes: Record<AttributeId, number>
   /** The armour class its gear and perks now give it. */
   armorClass: number
-  /** The mana shown: what is left in battle, the most there is on the world map; null for a character without magic. */
+  /** The mana shown: what is left in battle, what the character carries on the world map; null for a character without magic. */
   mana: number | null
   /** The perks the Skills tab lists: those the character has a rank of. */
   takenPerks: Array<{ perk: string; ranks: number }>
@@ -148,6 +155,13 @@ export interface InventoryProbe {
    * click would take one. The nodes are on screen only while `tab` is `perkTree`.
    */
   perks: Array<Point & { perk: string; ranks: number; canTake: boolean }>
+  /** The Spells tab's button that opens the spell tree, and the spell tree's nodes as `perks` gives the perk tree's, on screen while `tab` is `spellTree`. */
+  spellTreeButton: Point
+  spellNodes: Array<Point & { perk: string; ranks: number; canTake: boolean }>
+  /** The spells the Spells tab lists, each with the centre of its row's Cast button and whether a click there would cast it here. */
+  spells: Array<Point & { spell: SpellId; castable: boolean }>
+  /** A heal of one member waiting for a portrait to be clicked, on the world map. */
+  worldCast: SpellId | null
   /** Every equipment slot's centre on screen, with the id of the item in it. */
   equipment: Record<EquipmentSlot, Point & { item: string | null }>
   /** The backpack's items, each with its slot's centre on screen. */

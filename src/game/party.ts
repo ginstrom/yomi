@@ -1,6 +1,8 @@
-import { deriveCombatStats, type Character } from '../character/character.ts'
+import { deriveCombatStats, maxHp, type Character } from '../character/character.ts'
 import { draftCharacter, type CharacterDraft } from '../character/creation.ts'
 import { gainXp, type XpGain } from '../character/progression.ts'
+import { castOnWorldMap, healsOne, worldHealing, worldSpells } from '../character/worldCasting.ts'
+import type { SpellId } from '../combat/spells.ts'
 import type { Fighter } from './encounters.ts'
 
 /** The most characters a party can ever hold: what a party limit can grow to, and what `PARTY_START` has hexes for. */
@@ -56,7 +58,8 @@ export const PREROLLS: readonly Preroll[] = [
       attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
       tagged: 'magic',
       raises: { melee: 0, archery: 0, magic: 10 },
-      perks: ['magic_arrow', 'arcane_study', 'keen_eye'],
+      // Spellcasting's two spell picks buy the last two.
+      perks: ['spellcasting', 'arcane_study', 'keen_eye', 'magic_arrow', 'heal'],
     },
   },
   {
@@ -121,8 +124,8 @@ export interface VictoryReward {
  * Rewards the party for a won battle worth `xp`. Every member earns all of
  * it, the fallen too, so a hero levels at the pace progression.ts sets
  * however many fight beside it. A member who fell gets back up at
- * `REVIVED_HP`, unless a new level has healed it. Nothing else restores hit
- * points: wounds last until a level heals them.
+ * `REVIVED_HP`, unless a new level has healed it. Wounds last until a level
+ * or a healing spell heals them.
  */
 export function rewardVictory(party: Party, xp: number): VictoryReward {
   const members = party.map((member): MemberReward => {
@@ -143,10 +146,47 @@ export function describeRewards({ members }: VictoryReward): string[] {
     if (gain.levelsGained > 0) {
       const points = `, ${gain.skillPointsGained} skill points`
       const perk = gain.perksGained > 0 ? ', a perk' : ''
-      lines.push(`${member.name} reaches level ${member.level}: +${gain.maxHpGained} max HP${points}${perk}, wounds healed`)
+      const spell = gain.spellsGained > 0 ? `, ${gain.spellsGained === 1 ? 'a spell' : `${gain.spellsGained} spells`}` : ''
+      lines.push(`${member.name} reaches level ${member.level}: +${gain.maxHpGained} max HP${points}${perk}${spell}, wounds healed`)
     } else if (revived) {
       lines.push(`${member.name} gets back up, badly hurt`)
     }
   }
   return lines
+}
+
+/** Hit points `member` has lost. */
+const lost = (member: Character) => maxHp(member) - member.hp
+
+/**
+ * Spends the party's mana on its wounds after a won battle, as a careful
+ * player would: each member that knows a healing spell, in party order,
+ * casts while it has the mana and some member has lost at least what its
+ * cheapest heal restores; a heal of the whole party when two members or more
+ * have lost what that restores, else its strongest heal of one it can afford,
+ * on the member who has lost most. Returns the hit points restored, for the
+ * simulator. It is the simulator's; the player heals from the Spells tab.
+ */
+export function autoHeal(party: Party): number {
+  const before = party.reduce((sum, member) => sum + member.hp, 0)
+  for (const caster of party) {
+    for (;;) {
+      const known = worldSpells(caster)
+      if (known.length === 0) break
+      const cheapest = Math.min(...known.map(({ spell }) => worldHealing(spell)))
+      if (!party.some((member) => lost(member) >= cheapest)) break
+      const affordable = known.filter((k) => k.affordable).map((k) => k.spell)
+      const strongest = (spells: SpellId[]) =>
+        spells.reduce<SpellId | null>((a, b) => (a === null || worldHealing(b) > worldHealing(a) ? b : a), null)
+      const group = strongest(affordable.filter((spell) => !healsOne(spell)))
+      const one = strongest(affordable.filter(healsOne))
+      const target = party.reduce((a, b) => (lost(b) > lost(a) ? b : a))
+      const cast =
+        group !== null && party.filter((member) => lost(member) >= worldHealing(group)).length >= 2
+          ? castOnWorldMap(caster, group, party)
+          : one !== null && castOnWorldMap(caster, one, party, target)
+      if (!cast) break
+    }
+  }
+  return party.reduce((sum, member) => sum + member.hp, 0) - before
 }

@@ -1,6 +1,6 @@
 import { ATTRIBUTES, ATTRIBUTE_IDS, MAX_ATTRIBUTE, type AttributeId, type Attributes } from './attributes.ts'
 import type { Character } from './character.ts'
-import { SPELL_IDS, type SpellId } from '../combat/spells.ts'
+import { SPELLS, SPELL_IDS, type SchoolId, type SpellId } from '../combat/spells.ts'
 import { SKILLS, SKILL_IDS, skillLevel, type SkillId } from './skills.ts'
 
 /**
@@ -63,6 +63,38 @@ export interface Perk {
   effects: PerkEffects
   /** The spell a rank of it teaches. */
   spell?: SpellId
+  /**
+   * Its school, which makes it a spell perk: it sits in the spell tree and not
+   * the perk tree, and is bought with a spell pick if there is one.
+   */
+  school?: SchoolId
+}
+
+/** What a spell perk asks by its tier, besides the spell before it. */
+export const SPELL_TIERS = {
+  1: { level: 1, magic: 40 },
+  2: { level: 3, magic: 55 },
+  3: { level: 5, magic: 70 },
+} as const
+
+/**
+ * The perk that teaches `spell`: a node of the spell tree, asking its tier's
+ * level and Magic and a rank of `requires`, Spellcasting at a school's root.
+ */
+function spellPerk(spell: SpellId, tier: keyof typeof SPELL_TIERS, requires: string): Perk {
+  const { name, description, school, manaCost, apCost } = SPELLS[spell]
+  return {
+    name,
+    description: `${description}; ${manaCost} mana, ${apCost} AP`,
+    ranks: 1,
+    level: SPELL_TIERS[tier].level,
+    skills: { magic: SPELL_TIERS[tier].magic },
+    branch: 'intelligence',
+    requires,
+    effects: {},
+    spell,
+    school,
+  }
 }
 
 /** What every perk that raises an attribute shares. */
@@ -160,15 +192,14 @@ export const PERKS = {
     requires: 'toughness',
     effects: { actionPoints: 1 },
   },
-  magic_arrow: {
-    name: 'Magic Arrow',
-    description: 'Teaches Magic Arrow: 1d10 to a foe within 5 hexes, for 3 mana',
+  spellcasting: {
+    name: 'Spellcasting',
+    description: 'Opens the spell tree: 2 spells now and 1 every level',
     ranks: 1,
     level: 1,
-    skills: { magic: 50 },
+    skills: { magic: 40 },
     branch: 'intelligence',
     effects: {},
-    spell: 'magic_arrow',
   },
   weapon_training: {
     name: 'Weapon Training',
@@ -255,7 +286,7 @@ export const PERKS = {
     level: 6,
     attributes: { intelligence: 8 },
     branch: 'intelligence',
-    requires: 'magic_arrow',
+    requires: 'spellcasting',
     effects: { maxMana: 6 },
   },
   arcane_mastery: {
@@ -296,6 +327,26 @@ export const PERKS = {
   gain_intelligence: gain('intelligence'),
   gain_agility: gain('agility'),
   gain_luck: gain('luck'),
+  // The spell tree: a perk for each spell, keyed by the spell's id, bought
+  // with a spell pick first. After the attribute perks, so that `autoAdvance`'s
+  // fallback to any perk never reaches them.
+  magic_arrow: spellPerk('magic_arrow', 1, 'spellcasting'),
+  flame_arrow: spellPerk('flame_arrow', 2, 'magic_arrow'),
+  sleep: spellPerk('sleep', 2, 'magic_arrow'),
+  frost_blast: spellPerk('frost_blast', 2, 'magic_arrow'),
+  fireball: spellPerk('fireball', 3, 'flame_arrow'),
+  acid_arrow: spellPerk('acid_arrow', 3, 'flame_arrow'),
+  death_cloud: spellPerk('death_cloud', 3, 'sleep'),
+  heal: spellPerk('heal', 1, 'spellcasting'),
+  greater_heal: spellPerk('greater_heal', 2, 'heal'),
+  heal_all: spellPerk('heal_all', 2, 'heal'),
+  greater_heal_all: spellPerk('greater_heal_all', 3, 'heal_all'),
+  shield: spellPerk('shield', 1, 'spellcasting'),
+  protect: spellPerk('protect', 1, 'spellcasting'),
+  bless: spellPerk('bless', 1, 'spellcasting'),
+  mirror_image: spellPerk('mirror_image', 2, 'shield'),
+  haste: spellPerk('haste', 2, 'protect'),
+  bane: spellPerk('bane', 2, 'bless'),
 } satisfies Record<string, Perk>
 
 export type PerkId = keyof typeof PERKS
@@ -336,6 +387,19 @@ export function attributeLevel(character: Character, id: AttributeId): number {
 /** All six attributes as they stand (`attributeLevel`). */
 export function attributesOf(character: Character): Attributes {
   return Object.fromEntries(ATTRIBUTE_IDS.map((id) => [id, attributeLevel(character, id)])) as Attributes
+}
+
+/** Whether `perk` is a spell perk: one of the spell tree, bought with a spell pick first. */
+export function isSpellPerk(perk: PerkId): boolean {
+  return (PERKS[perk] as Perk).school !== undefined
+}
+
+/** The spell perks, in the order of `PERKS`. */
+export const SPELL_PERK_IDS: readonly PerkId[] = PERK_IDS.filter(isSpellPerk)
+
+/** The perk that teaches `spell`. */
+export function spellPerkOf(spell: SpellId): PerkId {
+  return PERK_IDS.find((id) => (PERKS[id] as Perk).spell === spell)!
 }
 
 /** The perk `perk` grows from in the tree and asks a rank of, or null if it asks for none. */

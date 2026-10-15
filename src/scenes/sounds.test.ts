@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AttackEvent, BattleEndEvent, CastEvent, Side } from '../engine/battleEngine.ts'
+import type { SpellId } from '../combat/spells.ts'
 import { IMPACT_DELAY_MS, STING_DELAY_MS, eventSounds } from './sounds.ts'
 
 function attack(hit: boolean, critical = false): AttackEvent {
@@ -7,17 +8,21 @@ function attack(hit: boolean, critical = false): AttackEvent {
     type: 'attack', seq: 0, round: 1, attacker: 'goblin', defender: 'hero', opportunity: false,
     weapon: null, distance: 1, apCost: 2, apAfter: 0, toHit: 70, defenderAc: 15, armorPierce: 0,
     damageDice: { count: 1, sides: 6, bonus: 0 }, defenderHpBefore: 10,
-    flankers: [], flankBonus: 0, arc: 'front', arcBonus: 0, attackerFacing: 3,
+    flankers: [], flankBonus: 0, arc: 'front', arcBonus: 0, attackerFacing: 3, helpless: false, image: false,
     attackRoll: 40, chance: 55, hit, critical, fumble: false, damage: hit ? 3 : 0, defenderHpAfter: 7,
   }
 }
 
-function cast(hit: boolean, critical = false): CastEvent {
+function cast(hit: boolean, critical = false, spell: SpellId = 'magic_arrow'): CastEvent {
   return {
-    type: 'cast', seq: 0, round: 1, caster: 'hero', spell: 'magic_arrow', target: 'goblin', distance: 4,
-    apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76, defenderAc: 15,
-    damageDice: { count: 1, sides: 10, bonus: 0 }, targetHpBefore: 12,
-    attackRoll: 40, chance: 61, hit, critical, fumble: false, damage: hit ? 5 : 0, targetHpAfter: hit ? 7 : 12,
+    type: 'cast', seq: 0, round: 1, caster: 'hero', spell, target: 'goblin', at: { q: 4, r: 0 }, distance: 4,
+    apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76,
+    outcomes: [
+      {
+        unit: 'goblin', attackRoll: 40, chance: 61, defenderAc: 15, hit, critical, fumble: false, image: false,
+        damage: hit ? 5 : 0, healed: 0, hpBefore: 12, hpAfter: hit ? 7 : 12, status: null,
+      },
+    ],
   }
 }
 
@@ -38,6 +43,7 @@ describe('eventSounds', () => {
     expect(eventSounds(cast(true))).toEqual([spell, { key: 'sfx_hit_impact', delayMs: IMPACT_DELAY_MS }])
     expect(eventSounds(cast(true, true))).toEqual([spell, { key: 'sfx_crit_impact', delayMs: IMPACT_DELAY_MS }])
     expect(eventSounds(cast(false))).toEqual([spell, { key: 'sfx_miss', delayMs: IMPACT_DELAY_MS }])
+    expect(eventSounds(cast(true, false, 'heal'))).toEqual([spell, { key: 'sfx_heal', delayMs: IMPACT_DELAY_MS }])
   })
 
   it('marks a fallen unit', () => {
