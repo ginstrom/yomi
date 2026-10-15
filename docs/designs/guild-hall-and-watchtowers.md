@@ -8,7 +8,7 @@ The blight design left buildings open (its §9) and gave the encampment's stock 
 - **Watchtowers** are built in the field by a party standing on clean land. A tower pushes back the blight and watches the land around it.
 - Watching needs something to watch, so the world map gains **fog of war**. The party, the encampment, held sites and watchtowers see a radius around them; the rest is unexplored or remembered as it was last seen.
 
-**Status: proposal for iteration.** The user set the scope: a guild hall with a roster, recruiting, swapping, replacing the dead and upgrades for party size; watchtowers built by an occupying party on blight-free land, giving influence and vision; and fog of war. The rest is my proposal. Four questions in §9 change the rules and should be answered before planning. Costs, strengths and radii are starting points for the simulator.
+**Status: ready to plan.** The user set the scope: a guild hall with a roster, recruiting, swapping, replacing the dead and upgrades for party size; watchtowers built by an occupying party on blight-free land, giving influence and vision; and fog of war. The user then decided the four rule questions (§9). Costs, strengths and radii are starting points for the simulator, not decisions.
 
 Related:
 - [blight.md](blight.md): the stock, influence, held sites and the encampment. This design is its phase 4, in part: the guild hall is the "barracks" of its §4.6, and the watchtower is its first field building.
@@ -21,7 +21,7 @@ Related:
 | R1 | **Guild hall:** the encampment has a guild hall from the start, at level 1. It is used while the party stands at Oakvale. |
 | R2 | **Roster:** heroes not in the party wait at the guild hall as reserves. While at Oakvale, the player can move members between the party and the reserves. |
 | R3 | **Recruiting:** the guild hall recruits new heroes into the reserves, from the pre-rolled characters or by character creation, for a price from the stock. |
-| R4 | **The dead:** a hero who dies leaves the party for good, and the guild hall is where the player replaces them (§9, question 1). |
+| R4 | **The dead:** a member who falls in battle dies, won battle or lost, and leaves the company for good. The guild hall is where the player replaces them. |
 | R5 | **Upgrades:** the guild hall can be raised to level 2 and level 3 for a price from the stock. Its level sets the party limit: 3, 4 and 5. |
 | R6 | **Watchtowers:** a party standing on a level-0 hex may build a watchtower there for a price from the stock. The hex must hold no location or other tower. |
 | R7 | **A tower's influence:** a watchtower is a clean source in the blight's contest. Blight takes it like a held site: it is lost at level 2. |
@@ -67,25 +67,26 @@ Related:
 - **Swapping** happens only at the guild hall. The player can move a member to the reserves, move a reserve into the party while it is under the limit, or exchange the two. The party may never be empty. Names stay unique across the whole company, party and reserves together.
 - **Gear:** a hero keeps what they wear and carry. The baggage stays with the party.
 - **Reserves rest.** A reserve joins the party with full hit points and mana. Waiting at home is resting, which needs no daily bookkeeping.
-- **Experience:** reserves earn none. The party's rewards go to the party. That makes a reserve a cost of time, which recruiting at a higher level (§4.3) offsets.
+- **Experience:** reserves earn none. The party's rewards go to the party. Ways for reserves and raw recruits to grow are a later mechanic, out of scope here: stationing them at guard posts or watchtowers to gain levels slowly, training facilities at the encampment, or low-level scouting parties.
 
 ### 4.3 Recruiting
 
 - **Who:** any pre-roll not already in the company, or a hero made in character creation, which returns to the guild hall rather than the party screen.
 - **Price:** `RECRUIT_COST`, 10 gold.
-- **Level:** recruits join the reserves at the party's lowest level, less one (at least 1). They come with that many levels of experience and their skill points, perks and spell picks unspent, so the player spends them in the character panel as for any level-up. A recruit hired to replace the dead late in a game is then not a level-1 liability (§9, question 2).
+- **Level:** recruits join the reserves at `min(guild hall level, the party's lowest level)`, so at most level 3. They come with that many levels of experience and their skill points, perks and spell picks unspent, so the player spends them in the character panel as for any level-up. A recruit hired late in a game is therefore green beside the veterans. That is intended: losing a raised hero should hurt, and training recruits up is a later mechanic (§4.2).
 - **Room:** recruiting is refused when the reserves are full. The button says why.
 
 ### 4.4 Death
 
-**Proposed (§9, question 1):** a member who falls in a battle the party wins is **dead**, and no longer revives at 1 hit point.
+**Decided: permadeath.** A member who falls in a battle the party wins is **dead**, and no longer revives at 1 hit point (`REVIVED_HP` goes).
 
 - What they wore and carried goes into the baggage, so gear is not lost.
 - The party goes on smaller until the player recruits or swaps at the guild hall.
 - The victory screen names the dead.
-- A party wipe still ends the game (§9, question 3).
+- A party wipe still ends the game, reserves or not. Forming a new party from the reserves waits for multiple parties.
+- Resurrection will come later, as a very high-level spell.
 
-This is the largest balance change here: today a fallen hero costs only hit points. It needs a campaign retune.
+This is the largest balance change here: today a fallen hero costs only hit points, and losing one raised to a high level is meant to hurt. It needs a campaign retune.
 
 ### 4.5 Watchtowers
 
@@ -126,7 +127,7 @@ This is the largest balance change here: today a fallen hero costs only hit poin
   - A nest that spawns out of sight is not told. It is told when it comes into sight, as a new `sighted` event.
   - A sighting is notable, and stops travel and camping, when it lies within `NOTICE_RADIUS` of the party, as a spawn is today.
   - The player always learns of their own held sites and towers: under threat, lost, captured, as today.
-- **The Source** is marked from the start: the party was sent to destroy it. Its hex is explored and it is in `sighted`, though the land between is not.
+- **The Source** is marked from the start: the party was sent to destroy it. Its hex is explored and it is in `sighted`, though the land between is not (decided).
 - **Routing:**
   - `routeTo` avoids only the monster locations in `sighted`, so a route may be planned through the unknown.
   - The party sees at least 5 hexes ahead, so a nest on the road comes into sight before the party reaches it. The journey stops there, as `travel` already does for a nest on the road.
@@ -199,7 +200,7 @@ This is the largest balance change here: today a fallen hero costs only hit poin
 
 ### 5.3 The simulator
 
-- **The guild hall.** The careful party goes home to upgrade once the stock affords the next level and no held site is threatened. On the same visit it recruits, at the party's lowest level less one, a pre-roll to fill every empty place, spending the recruit's points with `autoAdvance`.
+- **The guild hall.** The careful party goes home to upgrade once the stock affords the next level and no held site is threatened, and also whenever it has lost a member. On the visit it recruits pre-rolls (at `min(hall level, lowest level)`) to fill every empty place, spending their points with `autoAdvance`.
 - **Watchtowers.** It builds one wherever it camps on qualifying land and can afford it.
 - **New metrics:** deaths, recruits, the hall's level at the end, and towers built and lost.
 - **Retuning.** The death rule and parties of 4 and 5 both move the balance. The blight's target still holds: beat the Source about 2 times in 3 without losing the encampment. `FOES_AT_THREAT` should not grow with the party limit, which would hide the reward (the expeditions design's §8 says the same). Check the Source's encounter against a party of 5.
@@ -234,20 +235,11 @@ Each phase is playable on its own.
 | A member falls in a won battle: they are gone, their gear is in the baggage, and the party fights on smaller until a recruit or reserve replaces them. | R4 |
 | The same seed and choices give the same world, sight included. | R10 |
 
-## 9. Open questions
+## 9. Decisions made
 
-Each of these changes a rule, so I propose a default and ask.
+1. **Death:** permadeath. Losing party members should hurt, especially after raising them up. Resurrection comes later, at very high levels.
+2. **A recruit's level:** `min(guild hall level, the party's lowest level)`. Training scrub recruits up is a later mechanic: stationing them in guard posts or watchtowers to grow levels passively, training facilities in the encampment, special low-level scouting parties.
+3. **A wipe with reserves at home:** it ends the game for now. Forming a new party comes with multiple parties.
+4. **Fog:** as proposed. Unexplored hexes are black, explored ones show the blight as last seen, and the Source is known from the start.
 
-1. **Death (blocks phase 4).** "Replace dead ones" implies that heroes can die, but today a hero who falls in a won battle revives at 1 hit point, and only a wipe kills. **Proposed:** falling in a won battle is death. Alternatives:
-   - death only on a wipe, so the roster's use is party size and swapping;
-   - death at a roll, as in some tactics games.
-2. **A recruit's level.** **Proposed:** the party's lowest level less one, with points to spend, so replacing the dead mid-game is possible. The alternative is level 1 always, which makes late losses very hard to recover.
-3. **A wipe with reserves at home.** **Proposed:** a wipe still ends the game, as today. The alternative: while the guild hall has reserves, a wipe sends the survivors' company back to Oakvale, and the game goes on with the reserves as the party, so permadeath applies to heroes rather than to the game.
-4. **What fog hides.** **Proposed:**
-   - unexplored hexes are black;
-   - explored hexes show the blight as last seen;
-   - the Source is known from the start.
-
-   The alternatives are to show the true blight everywhere explored and hide only the monsters, which is simpler and leaks the blight's spread, or to hide the Source until it is found.
-
-Costs, strengths, radii, `TOWER_SPACING` and `MAX_RESERVES` are starting points for the simulator, and not blocking.
+Costs, strengths, radii, `TOWER_SPACING` and `MAX_RESERVES` remain starting points for the simulator.
