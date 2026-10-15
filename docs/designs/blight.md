@@ -279,7 +279,7 @@ The levers, in order:
 
 ## 9. Open questions
 
-1. **Buildings** (to be decided): which buildings exist, what they cost, and where they may stand, whether only at held sites or on any clean hex. This blocks phase 4 only.
+1. **Buildings** (in part decided): the user chose a guild hall at the encampment (roster, recruiting, upgrades to a party of 4 and 5) and watchtowers built by a party on blight-free land, with fog of war for their vision. They are designed in [guild-hall-and-watchtowers.md](guild-hall-and-watchtowers.md). The other improvements of §4.6 remain open.
 
 ## 10. Implementation notes
 
