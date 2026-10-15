@@ -31,6 +31,7 @@ import { UnitFigure } from './UnitFigure.ts'
 import { gearLayers, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick } from './partyPanel.ts'
 import { describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
+import { hexInfo } from './hexInfo.ts'
 
 interface WorldData {
   game?: GameState
@@ -94,6 +95,10 @@ const BUTTON_H = 44
 const BUTTON_GAP = 20
 /** Wide enough for "Camp until healed", "Build Watchtower" and "Build Outpost". */
 const WIDE_BUTTON_W = 200
+/** The info panel on the hovered hex, at the view's top right. */
+const INFO_W = 280
+const INFO_PAD = 10
+const INFO_MARGIN = 12
 
 export class WorldScene extends Phaser.Scene {
   private gameState!: GameState
@@ -131,6 +136,9 @@ export class WorldScene extends Phaser.Scene {
   private outpostButton!: Phaser.GameObjects.Container
   /** Shown at Oakvale, beside the camp buttons: opens the guild hall. */
   private hallButton!: Phaser.GameObjects.Container
+  /** What the player knows of the hovered hex (`hexInfo`), hidden while no hex is hovered. */
+  private infoBox!: Phaser.GameObjects.Rectangle
+  private infoText!: Phaser.GameObjects.Text
 
   /**
    * The blight's tint and the front line, drawn in
@@ -207,6 +215,14 @@ export class WorldScene extends Phaser.Scene {
     this.messageText = this.add
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: '15px', color: '#cfd8dc' })
       .setOrigin(0.5)
+    this.infoBox = this.add.rectangle(0, 0, INFO_W, 0, BAR_COLOR, BAR_ALPHA).setOrigin(0).setStrokeStyle(1, 0x616161)
+    this.infoText = this.add.text(0, 0, '', {
+      fontFamily: 'monospace',
+      fontSize: '12px',
+      color: '#e0e0e0',
+      lineSpacing: 3,
+      wordWrap: { width: INFO_W - 2 * INFO_PAD },
+    })
 
     this.buttons = [
       this.createButton('Scout', () => this.onLinger('scout')),
@@ -292,6 +308,7 @@ export class WorldScene extends Phaser.Scene {
       message: this.messageText.text,
       outcome: this.outcomeText.visible ? this.outcomeText.text : '',
       visible: [...this.visible].sort((a, b) => a - b),
+      info: this.infoText.visible ? this.infoText.text : '',
       buttons: {
         scout,
         wait,
@@ -522,6 +539,8 @@ export class WorldScene extends Phaser.Scene {
     const messageY = buttonY - BUTTON_H / 2 - 26
     this.messageText.setPosition(centreX, messageY)
     this.statusText.setPosition(width - 20, 16)
+    this.infoBox.setPosition(width - INFO_MARGIN - INFO_W, HEADER_BOTTOM + INFO_MARGIN)
+    this.infoText.setPosition(this.infoBox.x + INFO_PAD, this.infoBox.y + INFO_PAD)
     this.outcomeShade.setSize(width, height)
     const middleY = height / 2
     this.outcomeText.setPosition(centreX, middleY - 40)
@@ -624,8 +643,9 @@ export class WorldScene extends Phaser.Scene {
     if (!same) this.refreshHover()
   }
 
-  /** Draws the route a click on the hovered hex would walk, red-ringed where it ends among monsters. */
+  /** Draws the route a click on the hovered hex would walk, red-ringed where it ends among monsters, and tells of the hex. */
   private refreshHover(): void {
+    this.refreshInfo()
     const g = this.hoverMarks.clear()
     const route = this.hovered && !this.walking ? routeTo(this.world, this.hovered) : null
     if (!route) {
@@ -645,6 +665,17 @@ export class WorldScene extends Phaser.Scene {
     g.lineStyle(7, ROUTE_EDGE, 0.5).strokePoints(points, false)
     g.lineStyle(3, ROUTE_COLOR, 1).strokePoints(points, false)
     g.lineStyle(3, toMonsters ? MONSTERS_OUTLINE : ROUTE_COLOR, 1).strokePoints(this.hexPolygon(to), true)
+  }
+
+  /** The info panel: what the player knows of the hovered hex. */
+  private refreshInfo(): void {
+    const shown = this.hovered !== null && !this.outcomeShade.visible
+    this.infoBox.setVisible(shown)
+    this.infoText.setVisible(shown)
+    if (!this.hovered || !shown) return
+    const { title, lines } = hexInfo(this.world, this.gameState.party, this.visible, this.hovered)
+    this.infoText.setText([title, '', ...lines].join('\n'))
+    this.infoBox.setSize(INFO_W, this.infoText.height + 2 * INFO_PAD)
   }
 
   // ---- actions ---------------------------------------------------------------

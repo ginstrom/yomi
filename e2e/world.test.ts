@@ -33,6 +33,19 @@ describe('the world map', () => {
     expect(south.world.seen[index(9, 28)]).toBeGreaterThanOrEqual(0)
   })
 
+  it('tells of the hovered hex in the info panel', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    await game.hover(worldHexOnScreen(start, start.world.party))
+    const here = await game.waitFor('World', (w) => w.info !== '')
+    expect(here.info).toContain('Your party:')
+    await game.hover(worldHexOnScreen(start, RAIDERS.position))
+    const raiders = await game.waitFor('World', (w) => w.info.startsWith('Goblin Raiders'))
+    expect(raiders.info).toContain('threat 1')
+    await game.hover({ x: 0, y: 0 })
+    await game.waitFor('World', (w) => w.info === '')
+  })
+
   it('holds the party among monsters until it answers them', async () => {
     const game = await games.open()
     await game.newGame()

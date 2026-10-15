@@ -118,6 +118,8 @@ export interface WorldProbe {
   outcome: string
   /** The hexes in sight, by `boardIndex`, in order; what the player remembers of the rest is `world.seen`. */
   visible: number[]
+  /** The info panel's words on the hovered hex, or '' while no hex is hovered. */
+  info: string
   /**
    * Scout, Wait and Attack show among monsters, the camp buttons elsewhere; `campUntilHealed` is enabled while someone is wounded.
    * `end` and `endless` show on the victory screen, `menu` on the defeat screen.
