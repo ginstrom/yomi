@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { newGame } from './gameState.ts'
-import { serializeSave, type SaveFile } from './save.ts'
+import { SAVE_VERSION, serializeSave, type SaveFile } from './save.ts'
 import { SLOT_IDS, describeSlot, deleteSlot, firstEmptySlot, latestSlot, readSlot, saveGame, writeSlot } from './saveSlots.ts'
 
 /** A stand-in for the browser's storage, which Node has none of. */
@@ -50,7 +50,7 @@ describe('the slots', () => {
 
   it('read damage and other versions as unreadable, which neither loads nor counts as the latest', () => {
     store.setItem('yomi.save.1', '{')
-    store.setItem('yomi.save.2', serializeSave(file(999)).replace('"version":1', '"version":0'))
+    store.setItem('yomi.save.2', serializeSave(file(999)).replace(`"version":${SAVE_VERSION}`, '"version":0'))
     expect([readSlot(1), readSlot(2)]).toEqual(['unreadable', 'unreadable'])
     expect(latestSlot()).toBeNull()
     // An unreadable slot is not empty: a new game does not take it unasked.
