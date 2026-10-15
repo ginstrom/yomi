@@ -12,12 +12,12 @@ import { knownSpells } from '../character/perks.ts'
 import { canAdvance, skillPointsPerLevel, xpToNextLevel } from '../character/progression.ts'
 import { TAGGED_SKILLS, skillLevel } from '../character/skills.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
+import type { Item } from '../inventory/inventory.ts'
 import { ENCOUNTERS, MAX_THREAT } from './encounters.ts'
 import {
   MAX_PARTY_SIZE,
   PREROLLS,
   READY_MADE,
-  REVIVED_HP,
   STARTING_PARTY_LIMIT,
   describeRewards,
   joinParty,
@@ -146,45 +146,45 @@ const warriors = (...names: string[]) => names.map((name) => createWarrior(name)
 describe('rewardVictory', () => {
   it('gives every member the whole reward', () => {
     const party = readyMadeParty()
-    const { members } = rewardVictory(party, 50)
+    const { members, dead } = rewardVictory(party, 50, [])
     expect(party.map((m) => m.xp)).toEqual([50, 50, 50])
-    expect(members.map((r) => [r.member, r.gain.xp, r.revived])).toEqual(party.map((m) => [m, 50, false]))
+    expect(members.map((r) => [r.member, r.gain.xp])).toEqual(party.map((m) => [m, 50]))
+    expect(dead).toEqual([])
   })
 
-  it('stands a fallen member back up, barely, and tends no one', () => {
+  it('buries a member who fell, their gear into the baggage, and tends no one else', () => {
     const party = warriors('Aldric', 'Brenna', 'Corwin')
-    party[0].hp = 5
-    party[2].hp = 0
-    const { members } = rewardVictory(party, 10)
-    expect(members.map((r) => r.revived)).toEqual([false, false, true])
-    expect(party.map((m) => m.hp)).toEqual([5, maxHp(party[1]), REVIVED_HP])
-  })
-
-  it('heals a fallen member whom the reward levels up', () => {
-    const party = readyMadeParty()
-    party[0].hp = 0
-    const { members } = rewardVictory(party, xpToNextLevel(1))
-    expect(party[0].hp).toBe(maxHp(party[0]))
-    expect(members[0].revived).toBe(false)
+    const [aldric, brenna, corwin] = party
+    aldric.hp = 5
+    corwin.hp = 0
+    const carried = [...Object.values(corwin.equipment), ...corwin.backpack.filter((item) => item !== null)]
+    const baggage: Item[] = []
+    const { members, dead } = rewardVictory(party, xpToNextLevel(1), baggage)
+    expect(dead).toEqual([corwin])
+    expect(party).toEqual([aldric, brenna])
+    expect(members.map((r) => r.member)).toEqual([aldric, brenna])
+    expect(corwin.level).toBe(1)
+    expect(baggage).toEqual(carried)
+    expect(baggage.length).toBeGreaterThan(1)
   })
 })
 
 describe('describeRewards', () => {
   it('shows only the experience when it changed nobody', () => {
-    expect(describeRewards(rewardVictory(readyMadeParty(), 50))).toEqual(['+50 XP each'])
-    expect(describeRewards(rewardVictory([createWarrior()], 50))).toEqual(['+50 XP'])
+    expect(describeRewards(rewardVictory(readyMadeParty(), 50, []))).toEqual(['+50 XP each'])
+    expect(describeRewards(rewardVictory([createWarrior()], 50, []))).toEqual(['+50 XP'])
   })
 
-  it('announces each new level and what it brought, and who got back up, and no healer', () => {
+  it('announces the dead, and each new level and what it brought', () => {
     const party = warriors('Aldric', 'Brenna', 'Corwin')
     party[1].level = 3
     party[1].hp = 0
     const hp = hpPerLevel(party[0])
     const points = skillPointsPerLevel(party[0])
-    expect(describeRewards(rewardVictory(party, xpToNextLevel(1)))).toEqual([
+    expect(describeRewards(rewardVictory(party, xpToNextLevel(1), []))).toEqual([
       `+${xpToNextLevel(1)} XP each`,
+      'Brenna fell and will not rise again. What they carried is in the baggage.',
       `Aldric reaches level 2: +${hp} max HP, ${points} skill points, wounds healed`,
-      'Brenna gets back up, badly hurt',
       `Corwin reaches level 2: +${hp} max HP, ${points} skill points, wounds healed`,
     ])
   })
@@ -192,7 +192,7 @@ describe('describeRewards', () => {
   it('announces a perk with the level that brings one', () => {
     const [hero] = warriors('Aldric')
     hero.level = 2
-    expect(describeRewards(rewardVictory([hero], xpToNextLevel(2)))[1]).toBe(
+    expect(describeRewards(rewardVictory([hero], xpToNextLevel(2), []))[1]).toBe(
       `Aldric reaches level 3: +${hpPerLevel(hero)} max HP, ${skillPointsPerLevel(hero)} skill points, a perk, wounds healed`,
     )
   })

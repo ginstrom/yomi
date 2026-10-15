@@ -372,7 +372,8 @@ export class BattleScene extends Phaser.Scene {
     this.castButton = this.createButton('Cast', () => this.onCast())
     this.endTurnButton = this.createButton('End Turn', () => this.onEndTurn())
     // Under the result screen, whose shade keeps clicks off the portraits once the battle is over.
-    this.column = new PartyColumn(this, party, (index) => this.onPortrait(index))
+    // A copy: the dead leave the party as the battle ends, and stay in the column, faded, under the result screen.
+    this.column = new PartyColumn(this, [...party], (index) => this.onPortrait(index))
 
     // Interactive with no handler, so the finished battle under the result screen takes no clicks.
     this.resultShade = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.7).setOrigin(0, 0).setInteractive()
@@ -1580,7 +1581,7 @@ export class BattleScene extends Phaser.Scene {
     const found = playerWon && this.location ? takeLoot(this.gameState, this.location) : []
     if (playerWon && this.location) clearLocation(this.gameState.world, this.location.id)
     const foes = this.location ? `The ${this.location.name}` : 'Your foes'
-    // The reward goes by the hit points the party ended on: who fell, and so who gets back up.
+    // The reward goes by the hit points the party ended on: who fell, and so who is dead.
     this.syncUnitsFromEngine()
     // What mana a winner has left is its own, to heal with on the world map; a level or a day of camping fills it.
     if (playerWon) {
@@ -1589,7 +1590,8 @@ export class BattleScene extends Phaser.Scene {
         if (member) member.mana = unit.mana
       }
     }
-    const xpLines = playerWon ? describeRewards(rewardVictory(this.gameState.party, this.xpReward)) : []
+    // The fallen are dead: out of the party, their gear in the baggage.
+    const xpLines = playerWon ? describeRewards(rewardVictory(this.gameState.party, this.xpReward, this.gameState.baggage)) : []
     this.xpReward = 0
     if (playerWon) {
       // Kept as it happens: a page reloaded on the victory screen opens the world map with the win.

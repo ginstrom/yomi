@@ -240,6 +240,8 @@ export interface CampaignRecord {
   /** Watchtowers built, and lost to the blight. */
   towersBuilt: number
   towersLost: number
+  /** Heroes who fell in a won battle, gone for good. */
+  deaths: number
   /** Heroes hired at the guild hall, and its level at the end. */
   recruits: number
   hallLevel: number
@@ -332,7 +334,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
   const battles: LoggedEvent[][] = []
   const record: CampaignRecord = {
     outcome: 'timeout', days: 0, battles: 0, spawns: 0, captured: 0, lost: 0, blighted: 0, healedHp: 0, campDays: 0,
-    towersBuilt: 0, towersLost: 0, recruits: 0, hallLevel: 1,
+    towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1,
   }
   const tally = (events: readonly WorldEvent[]) => {
     for (const event of events) {
@@ -396,7 +398,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
       member.hp = unit.hp
       member.mana = unit.mana
     })
-    rewardVictory(party, xpReward(encounter))
+    record.deaths += rewardVictory(party, xpReward(encounter), game.baggage).dead.length
     for (const member of party) autoAdvance(member)
     clearLocation(world, next.id)
     if (world.status === 'won') return finish('source')
@@ -549,6 +551,7 @@ export interface CampaignSummary {
   avgTowersBuilt: number
   avgTowersLost: number
   avgRecruits: number
+  avgDeaths: number
   avgHallLevel: number
   /** In rising order of threat; a threat no campaign reached has no row. */
   byThreat: ThreatRow[]
@@ -598,6 +601,7 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     avgTowersBuilt: avg((r) => r.towersBuilt),
     avgTowersLost: avg((r) => r.towersLost),
     avgRecruits: avg((r) => r.recruits),
+    avgDeaths: avg((r) => r.deaths),
     avgHallLevel: avg((r) => r.hallLevel),
     byThreat: threats.rows(),
   }
@@ -651,7 +655,7 @@ function main(): void {
     `A campaign: ${summary.avgDays.toFixed(0)} days, ${summary.avgBattles.toFixed(1)} battles, ${summary.avgSpawns.toFixed(1)} spawns, ${summary.avgCaptured.toFixed(1)} sites captured and ${summary.avgLost.toFixed(1)} lost, ${(summary.avgBlighted * 100).toFixed(0)}% of the land blighted at the end`,
   )
   console.log(`Watchtowers: ${summary.avgTowersBuilt.toFixed(1)} built a campaign, ${summary.avgTowersLost.toFixed(1)} lost`)
-  console.log(`Guild hall: level ${summary.avgHallLevel.toFixed(1)} at the end, ${summary.avgRecruits.toFixed(1)} recruits a campaign`)
+  console.log(`Guild hall: level ${summary.avgHallLevel.toFixed(1)} at the end, ${summary.avgRecruits.toFixed(1)} recruits and ${summary.avgDeaths.toFixed(1)} heroes dead a campaign`)
   console.log(
     `Hit points healed between battles: ${summary.avgHealedHp.toFixed(1)} a campaign, in ${summary.avgCampDays.toFixed(1)} days of camping`,
   )
