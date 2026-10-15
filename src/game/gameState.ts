@@ -1,5 +1,6 @@
+import type { Character } from '../character/character.ts'
 import type { Item } from '../inventory/inventory.ts'
-import { STARTING_PARTY_LIMIT, readyMadeParty, type Party } from './party.ts'
+import { readyMadeParty, type Party } from './party.ts'
 import type { SlotId } from './saveSlots.ts'
 import { newWorld, type MonsterLocation, type WorldState } from './worldMap.ts'
 
@@ -17,15 +18,18 @@ export interface GameState {
    * into it, which is how an item passes from one to another.
    */
   baggage: Item[]
-  /** The most members the party may have. Nothing raises it yet. */
-  partyLimit: number
+  /**
+   * The heroes waiting at the guild hall, not in the party (guildHall.ts).
+   * The party's limit is the hall's level's (`partyLimit`), not stored.
+   */
+  reserves: Character[]
   /** The save slot the playthrough lives in. A game with none is never saved: the simulator's, a test's. */
   slot: SlotId | null
 }
 
 /** A game at its start: the given party, the ready-made one by default, at home on a new world, of `seed` (random by default). */
 export function newGame(party: Party = readyMadeParty(), slot: SlotId | null = null, seed?: number): GameState {
-  return { party, world: newWorld(seed), baggage: [], partyLimit: STARTING_PARTY_LIMIT, slot }
+  return { party, world: newWorld(seed), baggage: [], reserves: [], slot }
 }
 
 /** Moves the loot of a beaten monster location into the baggage, and returns what was found. */

@@ -89,6 +89,8 @@ export interface WorldState {
   sighted: string[]
   /** The ids of the towns and resources held, the encampment among them while the game lasts. */
   held: string[]
+  /** The guild hall's level, 1 to `MAX_GUILD_HALL_LEVEL` (guildHall.ts), which sets the party limit. */
+  guildHall: number
   /** The watchtowers standing. */
   towers: Tower[]
   /** How many watchtowers have been built, which names the next. */
@@ -213,6 +215,7 @@ export function newWorld(seed: number = randomSeed()): WorldState {
     rng: seed | 0,
     held: [ENCAMPMENT_ID],
     threatened: [],
+    guildHall: 1,
     towers: [],
     towersBuilt: 0,
     stock: {},

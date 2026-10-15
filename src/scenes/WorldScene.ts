@@ -4,6 +4,7 @@ import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex } from '../gam
 import { buildTower, canBuildTower, towerSiteRefusal } from '../game/buildings.ts'
 import { campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from '../game/camp.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
+import { atGuildHall } from '../game/guildHall.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
 import { daysToFall } from '../game/territory.ts'
 import { UNEXPLORED, knownBlightedShare, visibleHexes } from '../game/vision.ts'
@@ -125,6 +126,8 @@ export class WorldScene extends Phaser.Scene {
   /** Camp and Camp until healed, shown wherever else the party stands still, and Build Watchtower where one may stand. */
   private campButtons: Phaser.GameObjects.Container[] = []
   private towerButton!: Phaser.GameObjects.Container
+  /** Shown at Oakvale, beside the camp buttons: opens the guild hall. */
+  private hallButton!: Phaser.GameObjects.Container
 
   /**
    * The blight's tint, corruption's specks and the front line, drawn in
@@ -209,6 +212,7 @@ export class WorldScene extends Phaser.Scene {
       this.createButton('Camp until healed', () => this.onCampUntilHealed(), WIDE_BUTTON_W),
     ]
     this.towerButton = this.createButton('Build Watchtower', () => this.onBuildTower(), WIDE_BUTTON_W)
+    this.hallButton = this.createButton('Guild Hall', () => this.openGuildHall())
     this.column = new PartyColumn(this, this.gameState.party, (index) => this.onPortrait(index))
 
     this.outcomeShade = this.add.rectangle(0, 0, 0, 0, 0x000000, 0.75).setOrigin(0).setInteractive()
@@ -288,6 +292,7 @@ export class WorldScene extends Phaser.Scene {
         camp,
         campUntilHealed,
         buildTower: buttonProbe(this.towerButton),
+        guildHall: buttonProbe(this.hallButton),
         end: buttonProbe(this.endButton),
         endless: buttonProbe(this.endlessButton),
         menu: buttonProbe(this.menuButton),
@@ -492,7 +497,9 @@ export class WorldScene extends Phaser.Scene {
     const { width, height } = this.scale
     const centreX = PARTY_PANEL_W + (width - PARTY_PANEL_W) / 2
     const buttonY = height - 50
-    for (const row of [this.buttons, [...this.campButtons, this.towerButton]]) {
+    // Only the buttons shown take room: the camp row has the tower's or the hall's, never both.
+    for (const all of [this.buttons, [...this.campButtons, this.towerButton, this.hallButton]]) {
+      const row = all.filter((button) => button.visible)
       // A row centred under the map, its buttons BUTTON_GAP apart.
       let x = centreX - (row.reduce((sum, button) => sum + button.width, 0) + (row.length - 1) * BUTTON_GAP) / 2
       for (const button of row) {
@@ -583,6 +590,8 @@ export class WorldScene extends Phaser.Scene {
     for (const button of this.buttons) button.setVisible(here !== null && !this.walking && world.status !== 'lost')
     for (const button of this.campButtons) button.setVisible(canCamp(world) && !this.walking)
     this.towerButton.setVisible(canCamp(world) && !this.walking && towerSiteRefusal(world) === null)
+    this.hallButton.setVisible(atGuildHall(world) && !this.walking)
+    this.layout()
     const over = world.status === 'won' || world.status === 'lost'
     this.outcomeShade.setVisible(over)
     this.outcomeText.setVisible(over).setText(
@@ -658,7 +667,7 @@ export class WorldScene extends Phaser.Scene {
   /** While the party walks, nothing else can be done and its hex is not yet where it stands. */
   private refreshWalking(): void {
     this.partyMark.clear()
-    for (const button of [...this.buttons, ...this.campButtons, this.towerButton]) button.setVisible(false)
+    for (const button of [...this.buttons, ...this.campButtons, this.towerButton, this.hallButton]) button.setVisible(false)
     this.refreshHover()
   }
 
@@ -803,6 +812,14 @@ export class WorldScene extends Phaser.Scene {
     const members = party.map((member) => ({ character: member, gearApCost: 0, ground: this.gameState.baggage }))
     this.scene.launch('Inventory', { members, index, tab, canAdvance: true, resume: 'World', groundTitle: 'Baggage' })
     this.scene.bringToTop('Inventory')
+    this.scene.pause()
+  }
+
+  /** The guild hall over the map, at Oakvale; it starts the map again when it closes. */
+  private openGuildHall(): void {
+    if (this.scene.isPaused() || this.walking || !atGuildHall(this.world)) return
+    this.scene.launch('GuildHall', { game: this.gameState })
+    this.scene.bringToTop('GuildHall')
     this.scene.pause()
   }
 

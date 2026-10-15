@@ -121,11 +121,43 @@ export interface WorldProbe {
     campUntilHealed: ButtonProbe
     /** Shows where the party may camp on land a watchtower could stand on; a click without the stock says why in the message. */
     buildTower: ButtonProbe
+    /** Shows while the party stands at Oakvale. */
+    guildHall: ButtonProbe
     end: ButtonProbe
     endless: ButtonProbe
     menu: ButtonProbe
   }
   party: PortraitProbe[]
+}
+
+/** A hero's face in the guild hall, by its centre on screen. */
+export interface HallFaceProbe extends ButtonProbe {
+  name: string
+}
+
+export interface GuildHallProbe {
+  /** The party and reserves, or the recruits on offer. */
+  view: 'roster' | 'recruit'
+  level: number
+  partyLimit: number
+  /** What the last action did, or why it was refused. */
+  message: string
+  /** The hero clicked, whom a click on the other row swaps with. */
+  selected: { row: 'party' | 'reserves'; index: number } | null
+  party: Array<HallFaceProbe & { level: number }>
+  reserves: Array<HallFaceProbe & { level: number }>
+  /** The pre-rolls not in the company, on the recruit view: a click hires one. */
+  prerolls: HallFaceProbe[]
+  /** `upgrade`, `toReserves`, `toParty`, `recruit` and `close` are the roster's; `create` and `back` the recruit view's. */
+  buttons: {
+    upgrade: ButtonProbe
+    toReserves: ButtonProbe
+    toParty: ButtonProbe
+    recruit: ButtonProbe
+    create: ButtonProbe
+    back: ButtonProbe
+    close: ButtonProbe
+  }
 }
 
 export interface BattleProbe {
@@ -196,6 +228,7 @@ export interface Probes {
   World: WorldProbe
   Battle: BattleProbe
   Inventory: InventoryProbe
+  GuildHall: GuildHallProbe
 }
 
 export interface TestHook {

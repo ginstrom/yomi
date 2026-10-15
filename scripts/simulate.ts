@@ -23,20 +23,31 @@ import { BattleEngine, type BattleEvent, type BattleSetup, type Side, type UnitI
 import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.ts'
 import { autoAdvance, levelUp } from '../src/character/progression.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/encounters.ts'
-import { readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
+import { PREROLLS, readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
 import { blightedShare, monsterStrength, type WorldEvent } from '../src/game/blight.ts'
-import { buildTower, canBuildTower } from '../src/game/buildings.ts'
+import { buildTower, canAfford, canBuildTower } from '../src/game/buildings.ts'
+import { newGame, type GameState } from '../src/game/gameState.ts'
+import {
+  RECRUIT_COST,
+  atGuildHall,
+  partyLimit,
+  recruit,
+  recruitRefusal,
+  toParty,
+  upgradeCost,
+  upgradeGuildHall,
+} from '../src/game/guildHall.ts'
 import { campUntilHealed, canCamp, partyWounded } from '../src/game/camp.ts'
 import { daysToFall, sites } from '../src/game/territory.ts'
 import {
+  ENCAMPMENT_ID,
   clearLocation,
-  newWorld,
   travel,
   worldActive,
   type MonsterLocation,
   type WorldState,
 } from '../src/game/worldMap.ts'
-import { hexDistance, hexEquals } from '../src/grid/hex.ts'
+import { hexDistance, hexEquals, type Hex } from '../src/grid/hex.ts'
 import { MAGIC_ITEMS, WEAPONS, type Item } from '../src/inventory/inventory.ts'
 
 export interface CliArgs {
@@ -229,6 +240,9 @@ export interface CampaignRecord {
   /** Watchtowers built, and lost to the blight. */
   towersBuilt: number
   towersLost: number
+  /** Heroes hired at the guild hall, and its level at the end. */
+  recruits: number
+  hallLevel: number
 }
 
 export interface Campaign {
@@ -237,6 +251,39 @@ export interface Campaign {
 }
 
 const lowestLevel = (party: Party) => Math.min(...party.map((member) => member.level))
+
+/**
+ * Whether the careful party should go home to the guild hall: to raise it,
+ * once the stock affords the next level and no held site is under threat, or
+ * to fill an empty place in the party when the stock affords a recruit.
+ */
+export function hallErrand(game: GameState): boolean {
+  const { world } = game
+  const cost = upgradeCost(world)
+  if (cost && canAfford(world.stock, cost) && world.threatened.length === 0) return true
+  return game.party.length < partyLimit(world) && canAfford(world.stock, RECRUIT_COST)
+}
+
+/**
+ * At the guild hall: raises it as far as the stock allows, then fills the
+ * party's empty places with recruits, the pre-rolls in turn (renamed when the
+ * name is taken), their points spent by `autoAdvance`.
+ */
+export function visitGuildHall(game: GameState): number {
+  while (upgradeGuildHall(game) === null);
+  let hired = 0
+  while (game.party.length < partyLimit(game.world) && recruitRefusal(game) === null) {
+    const taken = [...game.party, ...game.reserves].map((member) => member.name)
+    const base = PREROLLS[(game.party.length + game.reserves.length) % PREROLLS.length].draft
+    let name = base.name
+    for (let n = 2; taken.includes(name); n++) name = `${base.name} ${n}`
+    if (recruit(game, { ...base, name }) !== null) break
+    toParty(game, game.reserves.length - 1)
+    autoAdvance(game.party.at(-1)!)
+    hired++
+  }
+  return hired
+}
 
 /**
  * Where a careful party goes next. First the nest pushing hardest on the held
@@ -279,12 +326,13 @@ export function nextTarget(world: WorldState, party: Party): MonsterLocation | n
  * starting gear.
  */
 export function runCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0): Campaign {
-  const party = startingParty(args)
-  const world = newWorld(seed)
+  const game = newGame(startingParty(args), null, seed)
+  const { party, world } = game
+  const home = world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
   const battles: LoggedEvent[][] = []
   const record: CampaignRecord = {
     outcome: 'timeout', days: 0, battles: 0, spawns: 0, captured: 0, lost: 0, blighted: 0, healedHp: 0, campDays: 0,
-    towersBuilt: 0, towersLost: 0,
+    towersBuilt: 0, towersLost: 0, recruits: 0, hallLevel: 1,
   }
   const tally = (events: readonly WorldEvent[]) => {
     for (const event of events) {
@@ -300,21 +348,32 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
     record.days = world.turn
     record.battles = battles.length
     record.blighted = blightedShare(world)
+    record.hallLevel = world.guildHall
     return { battles, record }
+  }
+  /** Walks to `to`, going on whenever something on the way stops the party; false if it never gets there. */
+  const walkTo = (to: Hex): boolean => {
+    while (!hexEquals(world.party, to) && worldActive(world) && world.turn <= MAX_CAMPAIGN_DAYS) {
+      const journey = travel(world, to, party)
+      tally(journey.events)
+      if (journey.walked.length === 0) return false
+    }
+    return hexEquals(world.party, to)
   }
   for (;;) {
     if (world.status === 'lost') return finish('encampment')
     if (world.turn > MAX_CAMPAIGN_DAYS) return finish('timeout')
+    if (hallErrand(game) && !hexEquals(world.party, home)) {
+      if (!walkTo(home)) return finish(worldActive(world) ? 'timeout' : 'encampment')
+    }
+    // Done at once, whatever brought the party home.
+    if (atGuildHall(world)) record.recruits += visitGuildHall(game)
     const next = nextTarget(world, party)
     if (!next) return finish('timeout')
     // The journey stops for what happens on the way; the careful party takes note and goes on.
-    while (!hexEquals(world.party, next.position) && worldActive(world) && world.turn <= MAX_CAMPAIGN_DAYS) {
-      const journey = travel(world, next.position, party)
-      tally(journey.events)
-      if (journey.walked.length === 0) return finish('timeout')
-    }
+    const arrived = walkTo(next.position)
     if (!worldActive(world)) return finish('encampment')
-    if (!hexEquals(world.party, next.position)) return finish('timeout')
+    if (!arrived) return finish('timeout')
 
     const encounter = ENCOUNTERS[next.encounter](partyFighters(party), next.threat)
     const meta = {
@@ -489,6 +548,8 @@ export interface CampaignSummary {
   avgCampDays: number
   avgTowersBuilt: number
   avgTowersLost: number
+  avgRecruits: number
+  avgHallLevel: number
   /** In rising order of threat; a threat no campaign reached has no row. */
   byThreat: ThreatRow[]
 }
@@ -536,6 +597,8 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     avgCampDays: avg((r) => r.campDays),
     avgTowersBuilt: avg((r) => r.towersBuilt),
     avgTowersLost: avg((r) => r.towersLost),
+    avgRecruits: avg((r) => r.recruits),
+    avgHallLevel: avg((r) => r.hallLevel),
     byThreat: threats.rows(),
   }
 }
@@ -588,6 +651,7 @@ function main(): void {
     `A campaign: ${summary.avgDays.toFixed(0)} days, ${summary.avgBattles.toFixed(1)} battles, ${summary.avgSpawns.toFixed(1)} spawns, ${summary.avgCaptured.toFixed(1)} sites captured and ${summary.avgLost.toFixed(1)} lost, ${(summary.avgBlighted * 100).toFixed(0)}% of the land blighted at the end`,
   )
   console.log(`Watchtowers: ${summary.avgTowersBuilt.toFixed(1)} built a campaign, ${summary.avgTowersLost.toFixed(1)} lost`)
+  console.log(`Guild hall: level ${summary.avgHallLevel.toFixed(1)} at the end, ${summary.avgRecruits.toFixed(1)} recruits a campaign`)
   console.log(
     `Hit points healed between battles: ${summary.avgHealedHp.toFixed(1)} a campaign, in ${summary.avgCampDays.toFixed(1)} days of camping`,
   )

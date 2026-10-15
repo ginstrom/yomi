@@ -27,6 +27,7 @@ import {
   type DraftChange,
 } from '../character/creation.ts'
 import type { PerkId } from '../character/perks.ts'
+import type { GameState } from '../game/gameState.ts'
 import { PORTRAIT_IDS } from '../character/portraits.ts'
 import { SKILLS, SKILL_IDS, TAGGED_SKILL_STEP, TAG_BONUS, skillLevel } from '../character/skills.ts'
 import type { ButtonProbe, CreationProbe, CreationStep } from '../testHook.ts'
@@ -41,9 +42,13 @@ import { PERK_TREE_W, PerkTreeView } from './PerkTreeView.ts'
 
 interface CreationData {
   /** The party being built, which the screen hands back with its character added or changed. */
-  drafts: CharacterDraft[]
+  drafts?: CharacterDraft[]
   /** The place of the member to edit; absent, a new character is created. */
   index?: number
+  /** Where the character goes: the party screen's roster (the default), or the guild hall as a recruit. */
+  returnTo?: 'Party' | 'GuildHall'
+  /** The game the guild hall recruits into, whose company's names are taken. */
+  game?: GameState
 }
 
 const STEPS: ReadonlyArray<readonly [step: CreationStep, label: string]> = [
@@ -134,6 +139,8 @@ const portraitAt = (index: number): Point => ({
  */
 export class CreationScene extends Phaser.Scene {
   private drafts: CharacterDraft[] = []
+  /** The guild hall's game when recruiting, or null when building a party. */
+  private recruiting: GameState | null = null
   /** The place being edited, or null for a new character. */
   private index: number | null = null
   private draft: CharacterDraft = newDraft()
@@ -159,6 +166,7 @@ export class CreationScene extends Phaser.Scene {
   create(data: CreationData): void {
     this.drafts = (data?.drafts ?? []).map(copyDraft)
     this.index = data?.index ?? null
+    this.recruiting = data?.returnTo === 'GuildHall' ? (data.game ?? null) : null
     this.draft = this.index === null ? newDraft() : copyDraft(this.drafts[this.index])
     this.step = 'attributes'
     this.tree = 'perks'
@@ -259,8 +267,9 @@ export class CreationScene extends Phaser.Scene {
     return draftCharacter(this.draft)
   }
 
-  /** The other members' names, which this one may not take; its own, when it is edited, is no clash. */
+  /** The other members' names, which this one may not take; its own, when it is edited, is no clash. A recruit's are the company's. */
   private takenNames(): string[] {
+    if (this.recruiting) return [...this.recruiting.party, ...this.recruiting.reserves].map((member) => member.name)
     return this.drafts.filter((_, i) => i !== this.index).map((draft) => draft.name.trim())
   }
 
@@ -533,11 +542,16 @@ export class CreationScene extends Phaser.Scene {
   private onCreate(): void {
     if (this.problems().length > 0) return
     const made = { ...this.draft, name: this.draft.name.trim() }
+    if (this.recruiting) {
+      this.scene.start('GuildHall', { game: this.recruiting, recruit: made })
+      return
+    }
     this.finish(this.index === null ? [...this.drafts, made] : this.drafts.map((draft, i) => (i === this.index ? made : draft)))
   }
 
-  /** Back to the party screen's roster with the party as it now is. */
+  /** Back to the party screen's roster with the party as it now is, or to the guild hall with no one made. */
   private finish(drafts: CharacterDraft[]): void {
-    this.scene.start('Party', { drafts })
+    if (this.recruiting) this.scene.start('GuildHall', { game: this.recruiting })
+    else this.scene.start('Party', { drafts })
   }
 }

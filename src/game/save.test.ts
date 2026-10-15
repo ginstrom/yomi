@@ -8,7 +8,7 @@ import { IRON_DAGGER, MAGIC_ITEMS, OAK_SHIELD, RING_PROTECTION, STEEL_ARMOR, WEA
 import { ENCOUNTERS } from './encounters.ts'
 import { newGame, takeLoot, type GameState } from './gameState.ts'
 import { Ground } from './ground.ts'
-import { partyFighters } from './party.ts'
+import { PREROLLS, partyFighters, partyFromDrafts } from './party.ts'
 import { SAVE_VERSION, describeSave, parseSave, saveSummary, serializeSave, type SaveFile, type SavedBattle } from './save.ts'
 import type { MonsterLocation } from './worldMap.ts'
 
@@ -27,6 +27,9 @@ function gameUnderWay(): GameState {
   takePerk(brenna, 'gain_perception')
   brenna.hp -= 3
   game.world.turn = 14
+  // A reserve at the guild hall, kit and all.
+  game.reserves.push(partyFromDrafts([PREROLLS[3].draft])[0])
+  game.world.guildHall = 2
   return game
 }
 
@@ -96,7 +99,8 @@ describe('a save', () => {
 
   it('writes an item as its id and nothing more', () => {
     const raw = serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 })
-    expect(JSON.parse(raw)).toMatchObject({ version: SAVE_VERSION, savedAt: 5, game: { slot: 2, partyLimit: 3 } })
+    expect(JSON.parse(raw)).toMatchObject({ version: SAVE_VERSION, savedAt: 5, game: { slot: 2, world: { guildHall: 2 } } })
+    expect(JSON.parse(raw).game.reserves[0].equipment).toMatchObject({ armor: 'steel_armor' })
     expect(JSON.parse(raw).game.party[0].equipment).toMatchObject({ armor: 'steel_armor', ring1: 'ring_protection' })
     expect(raw).not.toContain(STEEL_ARMOR.description)
   })
@@ -144,7 +148,7 @@ describe('parseSave', () => {
   })
 
   it('refuses a save with a part missing', () => {
-    for (const part of ['party', 'world', 'baggage', 'partyLimit']) {
+    for (const part of ['party', 'world', 'baggage', 'reserves']) {
       expect(parseSave(changed((saved) => delete saved.game[part]))).toBeNull()
     }
     expect(parseSave(changed((saved) => delete saved.game))).toBeNull()

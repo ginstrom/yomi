@@ -1,16 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import type { SpellId } from '../src/combat/spells.ts'
 import type { CastOutcome, Side } from '../src/engine/battleEngine.ts'
+import { canAdvance } from '../src/character/progression.ts'
+import { newGame } from '../src/game/gameState.ts'
 import { readyMadeParty } from '../src/game/party.ts'
 import { SOURCE_ID, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
 import {
   MAX_CAMPAIGN_DAYS,
   SOURCE_READY_LEVEL,
+  hallErrand,
   nextTarget,
   parseArgs,
   runCampaign,
   summarize,
   summarizeCampaigns,
+  visitGuildHall,
   type LoggedEvent,
 } from './simulate.ts'
 
@@ -194,5 +198,29 @@ describe('nextTarget', () => {
     expect(nextTarget(world, party)?.id).not.toBe(SOURCE_ID)
     world.locations = world.locations.filter((l) => l.kind !== 'monsters' || (l.kind === 'monsters' && l.source))
     expect(nextTarget(world, party)?.id).toBe(SOURCE_ID)
+  })
+})
+
+describe('the guild hall in a campaign', () => {
+  it('sends the party home when the stock affords an upgrade, which raises the hall and fills the new places', () => {
+    const game = newGame(undefined, null, 1)
+    expect(hallErrand(game)).toBe(false)
+    game.world.stock = { gold: 100, iron: 50 }
+    expect(hallErrand(game)).toBe(true)
+    game.world.threatened = ['iron_vein']
+    expect(hallErrand(game)).toBe(false)
+    game.world.threatened = []
+
+    expect(visitGuildHall(game)).toBe(1)
+    expect(game.world.guildHall).toBe(3)
+    expect(game.party.map((member) => member.name)).toEqual(['Aldric', 'Brenna', 'Delwyn', 'Garrick'])
+    expect(canAdvance(game.party[3])).toBe(false)
+    expect(game.world.stock).toEqual({ gold: 0, iron: 5 })
+    // A fifth place, and no gold to fill it.
+    expect(hallErrand(game)).toBe(false)
+    game.world.stock.gold = 10
+    expect(hallErrand(game)).toBe(true)
+    expect(visitGuildHall(game)).toBe(1)
+    expect(game.party.at(-1)!.name).toBe('Aldric 2')
   })
 })

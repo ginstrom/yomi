@@ -8,7 +8,7 @@ describe('newGame', () => {
     const game = newGame()
     expect(game.baggage).toEqual([])
     expect(game.party).toHaveLength(3)
-    expect([game.partyLimit, game.slot]).toEqual([3, null])
+    expect([game.reserves, game.slot]).toEqual([[], null])
     game.baggage.push(RING_PROTECTION)
     game.party.pop()
     expect(newGame()).toMatchObject({ baggage: [], party: { length: 3 } })

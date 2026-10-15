@@ -8,7 +8,7 @@ import type { Fighter } from './encounters.ts'
 /** The most characters a party can ever hold: what a party limit can grow to, and what `PARTY_START` has hexes for. */
 export const MAX_PARTY_SIZE = 6
 
-/** The party limit a new game starts with; a game stores its own (`GameState.partyLimit`). */
+/** The party limit a new game starts with, the party screen's; in a game the guild hall's level sets it (`partyLimit` in guildHall.ts). */
 export const STARTING_PARTY_LIMIT = 3
 
 /** The hit points a member who fell in a battle the party won gets back up with. */

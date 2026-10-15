@@ -73,12 +73,8 @@ export function serializeSave(file: SaveFile): string {
     version: SAVE_VERSION,
     savedAt: file.savedAt,
     game: withKeys(game, {
-      party: game.party.map((member) =>
-        withKeys(member, {
-          equipment: Object.fromEntries(Object.entries(member.equipment).map(([slot, item]) => [slot, item.id])),
-          backpack: member.backpack.map(itemId),
-        }),
-      ),
+      party: game.party.map(characterIds),
+      reserves: game.reserves.map(characterIds),
       baggage: game.baggage.map(itemId),
       world: withKeys(game.world, {
         locations: game.world.locations.map((location) =>
@@ -89,6 +85,13 @@ export function serializeSave(file: SaveFile): string {
     battle: battle && withKeys(battle, { ground: battle.ground.map(({ hex, items }) => ({ hex, items: items.map(itemId) })) }),
   })
 }
+
+/** A character with every item written as its id. */
+const characterIds = (member: Character) =>
+  withKeys(member, {
+    equipment: Object.fromEntries(Object.entries(member.equipment).map(([slot, item]) => [slot, item.id])),
+    backpack: member.backpack.map(itemId),
+  })
 
 function characterOf(saved: Character): Character {
   check(saved && typeof saved === 'object' && typeof saved.name === 'string')
@@ -125,7 +128,8 @@ export function parseSave(raw: string | null): SaveFile | null {
     check(Array.isArray(world.towers) && typeof world.towersBuilt === 'number')
     check(Array.isArray(world.held) && Array.isArray(world.threatened) && world.stock && typeof world.stock === 'object')
     check(typeof world.rng === 'number' && typeof world.spawnPressure === 'number' && typeof world.status === 'string')
-    check(typeof game.partyLimit === 'number' && (game.slot === null || typeof game.slot === 'number'))
+    check(Array.isArray(game.reserves) && typeof world.guildHall === 'number')
+    check(game.slot === null || typeof game.slot === 'number')
     check(battle === null || (typeof battle === 'object' && typeof battle.location === 'string'))
     check(battle === null || (typeof battle.enemyRng === 'number' && Array.isArray(battle.ground)))
     check(battle === null || (battle.engine && Array.isArray(battle.engine.units) && Array.isArray(battle.engine.events)))
@@ -133,6 +137,7 @@ export function parseSave(raw: string | null): SaveFile | null {
       game: {
         ...game,
         party: game.party.map(characterOf),
+        reserves: game.reserves.map(characterOf),
         baggage: itemsOf(game.baggage),
         world: { ...game.world, locations: game.world.locations.map(locationOf) },
       },
