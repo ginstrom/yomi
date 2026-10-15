@@ -97,13 +97,14 @@ function wornStats(character: Character): ItemStats[] {
 /**
  * The mana the character enters every battle with: none for one that knows no
  * spell, whatever it wears; otherwise twice its intelligence, half its
- * intelligence more for each level above the first, and what its gear adds.
+ * intelligence more for each level above the first, and what its gear and perks add.
  */
 export function maxMana(character: Character): number {
   if (knownSpells(character).length === 0) return 0
   const intelligence = attributeLevel(character, 'intelligence')
   const gear = wornStats(character).reduce((total, stats) => total + (stats.maxMana ?? 0), 0)
-  return MANA_PER_INTELLIGENCE * intelligence + (character.level - 1) * Math.floor(intelligence / 2) + gear
+  const perks = perkBonus(character, 'maxMana')
+  return MANA_PER_INTELLIGENCE * intelligence + (character.level - 1) * Math.floor(intelligence / 2) + gear + perks
 }
 
 export function deriveCombatStats(character: Character): CombatantStats {

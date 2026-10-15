@@ -52,9 +52,9 @@ describe('readyMadeParty', () => {
 
   it('makes each the specialist of one skill, near 60% in it and near 10% in the others', () => {
     const [aldric, brenna, delwyn] = readyMadeParty()
-    expect(skillLevel(aldric, 'melee')).toBe(58)
-    expect(skillLevel(aldric, 'archery')).toBe(10)
-    expect(skillLevel(brenna, 'archery')).toBe(59)
+    expect(skillLevel(aldric, 'melee')).toBe(60)
+    expect(skillLevel(aldric, 'archery')).toBe(9)
+    expect(skillLevel(brenna, 'archery')).toBe(61)
     expect(skillLevel(delwyn, 'magic')).toBe(63)
   })
 

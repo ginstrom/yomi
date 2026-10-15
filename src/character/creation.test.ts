@@ -31,7 +31,7 @@ import { IRON_SWORD, OAK_SHIELD, SPARK_WAND, YEW_BOW } from '../inventory/invent
 const soldier = (changes: Partial<CharacterDraft> = {}): CharacterDraft => ({
   name: 'Mira',
   portrait: 'squire',
-  attributes: { strength: 7, perception: 4, endurance: 7, intelligence: 4, agility: 6, luck: 7 },
+  attributes: { strength: 9, perception: 3, endurance: 7, intelligence: 3, agility: 6, luck: 4 },
   tagged: 'melee',
   raises: { melee: 10, archery: 0, magic: 0 },
   perks: ['weapon_training', 'toughness', 'heavy_hand'],
@@ -39,11 +39,11 @@ const soldier = (changes: Partial<CharacterDraft> = {}): CharacterDraft => ({
 })
 
 describe('the budgets', () => {
-  it('are 29 attribute points over six attributes at 1, 10 skill points and 3 picks', () => {
-    expect([CREATION_ATTRIBUTE_POINTS, CREATION_SKILL_POINTS, CREATION_PERK_PICKS]).toEqual([29, 10, 3])
+  it('are 26 attribute points over six attributes at 1, 10 skill points and 3 picks', () => {
+    expect([CREATION_ATTRIBUTE_POINTS, CREATION_SKILL_POINTS, CREATION_PERK_PICKS]).toEqual([26, 10, 3])
     const draft = newDraft()
     expect(Object.values(draft.attributes)).toEqual([1, 1, 1, 1, 1, 1])
-    expect([attributePointsLeft(draft), skillPointsLeft(draft), perkPicksLeft(draft)]).toEqual([29, 10, 3])
+    expect([attributePointsLeft(draft), skillPointsLeft(draft), perkPicksLeft(draft)]).toEqual([26, 10, 3])
     expect([attributePointsLeft(soldier()), skillPointsLeft(soldier()), perkPicksLeft(soldier())]).toEqual([0, 0, 0])
   })
 
@@ -61,13 +61,13 @@ describe('draftProblems', () => {
   })
 
   it('names a point unplaced, and an attribute out of range', () => {
-    const short = soldier({ attributes: { ...soldier().attributes, luck: 6 } })
+    const short = soldier({ attributes: { ...soldier().attributes, luck: 3 } })
     expect(draftProblems(short, [])).toEqual(['1 attribute point left to place'])
-    const zero = soldier({ attributes: { strength: 7, perception: 4, endurance: 7, intelligence: 10, agility: 7, luck: 0 } })
+    const zero = soldier({ attributes: { strength: 7, perception: 4, endurance: 7, intelligence: 7, agility: 7, luck: 0 } })
     expect(draftProblems(zero, [])).toContain('Luck must be from 1 to 10')
-    const eleven = soldier({ attributes: { strength: 11, perception: 4, endurance: 7, intelligence: 4, agility: 6, luck: 3 } })
+    const eleven = soldier({ attributes: { strength: 11, perception: 3, endurance: 7, intelligence: 3, agility: 5, luck: 3 } })
     expect(draftProblems(eleven, [])[0]).toBe('Strength must be from 1 to 10')
-    const over = soldier({ attributes: { ...soldier().attributes, luck: 8 } })
+    const over = soldier({ attributes: { ...soldier().attributes, luck: 5 } })
     expect(draftProblems(over, [])).toEqual(['Too many attribute points placed'])
   })
 
@@ -97,7 +97,7 @@ describe('draftProblems', () => {
   })
 
   it('lists them in step order', () => {
-    expect(draftProblems(newDraft(), [])).toEqual(['29 attribute points left to place', 'Tag a skill', 'Give the character a name'])
+    expect(draftProblems(newDraft(), [])).toEqual(['26 attribute points left to place', 'Tag a skill', 'Give the character a name'])
   })
 })
 
@@ -106,8 +106,8 @@ describe('draftCharacter', () => {
     const character = draftCharacter(soldier())
     expect(character).toMatchObject({ name: 'Mira', portrait: 'squire', level: 1, xp: 0, tagged: ['melee'] })
     expect(character.hp).toBe(maxHp(character))
-    // 10 + strength 7 + endurance 7, and Toughness.
-    expect(maxHp(character)).toBe(30)
+    // 10 + strength 9 + endurance 7, and Toughness.
+    expect(maxHp(character)).toBe(32)
     expect([character.equipment.mainHand, character.equipment.offHand]).toEqual([IRON_SWORD, OAK_SHIELD])
     expect(draftCharacter(soldier({ tagged: 'archery', perks: [] })).equipment).toMatchObject({ mainHand: YEW_BOW })
     expect(draftCharacter(soldier({ tagged: 'archery', perks: [] })).equipment.offHand).toBeUndefined()
@@ -117,8 +117,8 @@ describe('draftCharacter', () => {
   it('spends its points as the world map would: 2% a point in the tagged skill, 1% in another', () => {
     const character = draftCharacter(soldier({ raises: { melee: 6, archery: 4, magic: 0 } }))
     expect(character.trained).toEqual({ melee: 12, archery: 4, magic: 0 })
-    // strength 7 + agility 6, the tag, twelve trained and a rank of Weapon Training.
-    expect(skillLevel(character, 'melee')).toBe(13 + 20 + 12 + 5)
+    // strength 9 + agility 6, the tag, twelve trained and a rank of Weapon Training.
+    expect(skillLevel(character, 'melee')).toBe(15 + 20 + 12 + 5)
     expect(character.perks).toEqual({ weapon_training: 1, toughness: 1, heavy_hand: 1 })
   })
 
@@ -146,7 +146,7 @@ describe('draftCharacter', () => {
   it('makes a specialist of about 60%, and a mage with a spell and mana', () => {
     const mage = draftCharacter(
       soldier({
-        attributes: { strength: 3, perception: 5, endurance: 4, intelligence: 9, agility: 6, luck: 8 },
+        attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
         tagged: 'magic',
         raises: { melee: 0, archery: 0, magic: 10 },
         perks: ['magic_arrow', 'arcane_study', 'keen_eye'],
@@ -160,7 +160,7 @@ describe('draftCharacter', () => {
 })
 
 describe('perks at creation', () => {
-  const hardy = soldier({ attributes: { strength: 7, perception: 4, endurance: 5, intelligence: 6, agility: 6, luck: 7 }, perks: [] })
+  const hardy = soldier({ attributes: { strength: 7, perception: 4, endurance: 5, intelligence: 4, agility: 6, luck: 6 }, perks: [] })
 
   it('lets a character with Endurance 5 take Toughness, and none take Gain Strength', () => {
     expect(togglePerk(hardy, 'toughness').draft.perks).toEqual(['toughness'])
@@ -171,7 +171,7 @@ describe('perks at creation', () => {
   it('lets Magic Arrow be taken once Magic is 50% and not before', () => {
     // Intelligence 9: 18, the tag 20, and 2% a point.
     const mage = soldier({
-      attributes: { strength: 3, perception: 5, endurance: 4, intelligence: 9, agility: 6, luck: 8 },
+      attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
       tagged: 'magic',
       raises: { melee: 0, archery: 0, magic: 5 },
       perks: [],
@@ -199,7 +199,7 @@ describe('perks at creation', () => {
 
   it('refuses to give back a perk another chosen perk asks for', () => {
     const archer = soldier({
-      attributes: { strength: 4, perception: 7, endurance: 5, intelligence: 7, agility: 7, luck: 5 },
+      attributes: { strength: 4, perception: 7, endurance: 5, intelligence: 4, agility: 7, luck: 5 },
       tagged: 'archery',
       raises: { melee: 0, archery: 10, magic: 0 },
       perks: ['deadly_aim', 'far_shot', 'dodger'],
@@ -217,7 +217,7 @@ describe('pruneDraft', () => {
   })
 
   it('drops a perk an attribute no longer carries, returns its pick and says which', () => {
-    const draft = soldier({ attributes: { ...soldier().attributes, endurance: 5, luck: 9 } })
+    const draft = soldier({ attributes: { ...soldier().attributes, endurance: 5, luck: 6 } })
     const lowered = adjustAttribute(draft, 'endurance', -1)
     expect(lowered.draft.perks).toEqual(['weapon_training', 'heavy_hand'])
     expect(lowered.notes).toEqual(['Toughness dropped: it asks Endurance 5'])
@@ -227,7 +227,7 @@ describe('pruneDraft', () => {
 
   it('drops a spell when the skill under it is lowered or the tag moves', () => {
     const mage = soldier({
-      attributes: { strength: 3, perception: 5, endurance: 4, intelligence: 9, agility: 6, luck: 8 },
+      attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
       tagged: 'magic',
       raises: { melee: 0, archery: 0, magic: 6 },
       perks: ['magic_arrow'],
@@ -239,7 +239,7 @@ describe('pruneDraft', () => {
 
   it('drops with a perk the one that grew from it', () => {
     const archer = soldier({
-      attributes: { strength: 4, perception: 7, endurance: 5, intelligence: 7, agility: 7, luck: 5 },
+      attributes: { strength: 4, perception: 7, endurance: 5, intelligence: 4, agility: 7, luck: 5 },
       perks: ['deadly_aim', 'far_shot'],
     })
     const { draft, notes } = adjustAttribute(adjustAttribute(archer, 'perception', -1).draft, 'perception', -1)
@@ -256,7 +256,7 @@ describe('placing points', () => {
     let raised = draft
     for (let i = 0; i < 12; i++) raised = adjustAttribute(raised, 'strength', 1).draft
     expect(raised.attributes.strength).toBe(10)
-    expect(attributePointsLeft(raised)).toBe(20)
+    expect(attributePointsLeft(raised)).toBe(17)
     expect(canAdjustAttribute(soldier(), 'luck', 1)).toBe(false)
     expect(canAdjustAttribute(soldier(), 'luck', -1)).toBe(true)
     expect(draft.attributes.strength).toBe(1)

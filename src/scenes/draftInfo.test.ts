@@ -11,7 +11,7 @@ describe('draftInfo', () => {
     const lines = draftInfo(aldric)
     expect(lines[0]).toMatch(/^Melee Weapons \d+%$/)
     expect(lines[1]).toBe(`HP ${stats.maxHp}  AP ${stats.actionPoints}  AC ${stats.ac}  Mana -`)
-    expect(lines[2]).toBe('STR 7  PER 4  END 7  INT 4  AGI 6  LUC 7')
+    expect(lines[2]).toBe('STR 9  PER 3  END 7  INT 3  AGI 6  LUC 4')
     expect(lines[3]).toBe('Holds: Iron Longsword, Oak Shield')
     expect(lines[4]).toBe('Perks: Weapon Training, Toughness, Heavy Hand')
   })

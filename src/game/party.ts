@@ -21,7 +21,7 @@ export const READY_MADE: readonly CharacterDraft[] = [
   {
     name: 'Aldric',
     portrait: 'knight',
-    attributes: { strength: 7, perception: 4, endurance: 7, intelligence: 4, agility: 6, luck: 7 },
+    attributes: { strength: 9, perception: 3, endurance: 7, intelligence: 3, agility: 6, luck: 4 },
     tagged: 'melee',
     raises: { melee: 10, archery: 0, magic: 0 },
     perks: ['weapon_training', 'toughness', 'heavy_hand'],
@@ -29,7 +29,7 @@ export const READY_MADE: readonly CharacterDraft[] = [
   {
     name: 'Brenna',
     portrait: 'ranger',
-    attributes: { strength: 4, perception: 7, endurance: 5, intelligence: 7, agility: 7, luck: 5 },
+    attributes: { strength: 3, perception: 9, endurance: 5, intelligence: 4, agility: 7, luck: 4 },
     tagged: 'archery',
     raises: { melee: 0, archery: 10, magic: 0 },
     perks: ['marksmanship', 'deadly_aim', 'dodger'],
@@ -37,7 +37,7 @@ export const READY_MADE: readonly CharacterDraft[] = [
   {
     name: 'Delwyn',
     portrait: 'wizard',
-    attributes: { strength: 3, perception: 5, endurance: 4, intelligence: 9, agility: 6, luck: 8 },
+    attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
     tagged: 'magic',
     raises: { melee: 0, archery: 0, magic: 10 },
     perks: ['magic_arrow', 'arcane_study', 'keen_eye'],

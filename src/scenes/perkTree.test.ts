@@ -36,11 +36,14 @@ describe('perkTreeLayout', () => {
     expect(nodes.map((node) => [node.perk, node.column, node.row])).toEqual([
       ['gain_strength', 0, 0],
       ['heavy_hand', 1, 0],
+      ['mighty_blow', 2, 0],
       ['weapon_training', 1, 1],
+      ['weapon_mastery', 2, 1],
       ['gain_perception', 0, 2],
       ['deadly_aim', 1, 2],
       ['far_shot', 2, 2],
       ['marksmanship', 1, 3],
+      ['eagle_eye', 2, 3],
       ['gain_endurance', 0, 4],
       ['toughness', 1, 4],
       ['tireless', 2, 4],
@@ -48,11 +51,15 @@ describe('perkTreeLayout', () => {
       ['quick_study', 1, 5],
       ['scholar', 2, 5],
       ['magic_arrow', 1, 6],
+      ['deep_well', 2, 6],
       ['arcane_study', 1, 7],
+      ['arcane_mastery', 2, 7],
       ['gain_agility', 0, 8],
       ['dodger', 1, 8],
+      ['evasion', 2, 8],
       ['gain_luck', 0, 9],
       ['keen_eye', 1, 9],
+      ['fortune', 2, 9],
     ])
   })
 })
@@ -106,6 +113,7 @@ describe('nodeHint', () => {
 
   it('names only what a closed perk still lacks', () => {
     const hero = warriorAt(6, 1)
+    hero.attributes.endurance = 8
     expect(nodeHint(hero, 'tireless', true)).toBe('Not yet: Toughness')
     hero.attributes.agility = 5
     expect(nodeHint(hero, 'tireless', false)).toBe('Not yet: Agility 6, Toughness')

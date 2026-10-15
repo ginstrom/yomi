@@ -62,7 +62,7 @@ export interface Encounter {
  * threat can make the next threat easier; judge a change by a campaign run
  * (`npm run simulate -- --campaign`), not by the battle it changes.
  */
-const FOES_AT_THREAT = [2, 3, 3, 3, 4]
+const FOES_AT_THREAT = [2, 3, 3, 3, 3]
 
 /** The most dangerous a battle gets; any threat above it is fought as this. */
 export const MAX_THREAT = FOES_AT_THREAT.length

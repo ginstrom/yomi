@@ -26,7 +26,7 @@ const warriorAt = (level: number) => ({ ...createWarrior(), level })
 
 describe('PERKS', () => {
   it('gives every perk a name, a description, a rank to take and something it does', () => {
-    expect(PERK_IDS).toHaveLength(19)
+    expect(PERK_IDS).toHaveLength(26)
     for (const id of PERK_IDS) {
       const perk: Perk = PERKS[id]
       expect(perk.name.length * perk.description.length).toBeGreaterThan(0)
@@ -67,6 +67,13 @@ describe('the perk tree', () => {
       ['far_shot', 'deadly_aim'],
       ['scholar', 'quick_study'],
       ['tireless', 'toughness'],
+      ['mighty_blow', 'heavy_hand'],
+      ['weapon_mastery', 'weapon_training'],
+      ['eagle_eye', 'marksmanship'],
+      ['deep_well', 'magic_arrow'],
+      ['arcane_mastery', 'arcane_study'],
+      ['evasion', 'dodger'],
+      ['fortune', 'keen_eye'],
     ])
   })
 
@@ -88,6 +95,7 @@ describe('qualifiesFor', () => {
     expect(qualifiesFor(warriorAt(2), 'gain_strength')).toBe(false)
     expect(qualifiesFor(warriorAt(3), 'gain_strength')).toBe(true)
     const hardy = { ...warriorAt(5), perks: { toughness: 1 } }
+    hardy.attributes.endurance = 8
     expect(qualifiesFor(hardy, 'tireless')).toBe(false)
     expect(qualifiesFor({ ...hardy, level: 6 }, 'tireless')).toBe(true)
   })
@@ -136,7 +144,7 @@ describe('qualifiesFor', () => {
 
   it('asks for a rank of the perk it grows from', () => {
     const hero = warriorAt(6)
-    hero.attributes = { ...hero.attributes, endurance: 6, agility: 6 }
+    hero.attributes = { ...hero.attributes, endurance: 8, agility: 6 }
     hero.perkPicks = 2
     expect(qualifiesFor(hero, 'tireless')).toBe(false)
     expect(takePerk(hero, 'tireless')).toBe(false)
@@ -144,6 +152,22 @@ describe('qualifiesFor', () => {
     expect(takePerk(hero, 'tireless')).toBe(true)
     // The trunk is not asked for: strength 7 takes Heavy Hand without Gain Strength.
     expect(qualifiesFor(hero, 'heavy_hand')).toBe(true)
+  })
+
+  it('asks level 6 and an attribute of 8 at the far end of a branch, which the trunk can reach', () => {
+    const warrior = warriorAt(6)
+    warrior.perks = { weapon_training: 1 }
+    expect(missingRequirements(warrior, 'weapon_mastery')).toEqual(['Strength 8'])
+    warrior.perks.gain_strength = 1
+    expect(qualifiesFor(warrior, 'weapon_mastery')).toBe(true)
+    const trunks = Object.values(TRUNK_PERKS)
+    const tips = PERK_IDS.filter((id) => !trunks.includes(id) && PERKS[id].level === 6)
+    expect(tips).toHaveLength(8)
+    for (const id of tips) {
+      const perk: Perk = PERKS[id]
+      expect(perkParent(id)).not.toBeNull()
+      expect(perk.attributes?.[perk.branch]).toBe(8)
+    }
   })
 
   it('counts an attribute a perk has raised', () => {
@@ -222,7 +246,7 @@ describe('knownSpells', () => {
 describe('describePerkRequirements', () => {
   it('lists the level, then attributes and skills, then the perk before it', () => {
     expect(describePerkRequirements('toughness')).toBe('Level 1, Endurance 5')
-    expect(describePerkRequirements('tireless')).toBe('Level 6, Endurance 6, Agility 6, Toughness')
+    expect(describePerkRequirements('tireless')).toBe('Level 6, Endurance 8, Agility 6, Toughness')
     expect(describePerkRequirements('magic_arrow')).toBe('Level 1, Magic 50%')
     expect(describePerkRequirements('gain_luck')).toBe('Level 3')
   })
@@ -232,9 +256,10 @@ describe('missingRequirements', () => {
   it('names exactly what the character lacks', () => {
     const hero = warriorAt(5)
     hero.attributes.agility = 5
-    expect(missingRequirements(hero, 'tireless')).toEqual(['Level 6', 'Agility 6', 'Toughness'])
+    expect(missingRequirements(hero, 'tireless')).toEqual(['Level 6', 'Endurance 8', 'Agility 6', 'Toughness'])
     hero.level = 6
     hero.perks.toughness = 1
+    hero.attributes.endurance = 8
     expect(missingRequirements(hero, 'tireless')).toEqual(['Agility 6'])
     expect(missingRequirements(hero, 'magic_arrow')).toEqual(['Magic 50%'])
     expect(missingRequirements(hero, 'heavy_hand')).toEqual([])

@@ -96,12 +96,12 @@ describe('the party screen', () => {
     await game.click(two.rows[2].create)
     await game.waitForScenes(['Creation'])
     const start = await game.settled('Creation')
-    expect(start).toMatchObject({ step: 'attributes', editing: false, attributePoints: 29, skillPoints: 10, perkPicks: 3 })
+    expect(start).toMatchObject({ step: 'attributes', editing: false, attributePoints: 26, skillPoints: 10, perkPicks: 3 })
     expect(Object.values(start.attributes).map((a) => a.value)).toEqual([1, 1, 1, 1, 1, 1])
     expect(start.attributes.strength.minus.enabled).toBe(false)
 
-    // Strength 6, perception 4, endurance 6, intelligence 5, agility 7, luck 7.
-    const spread = { strength: 5, perception: 3, endurance: 5, intelligence: 4, agility: 6, luck: 6 } as const
+    // Strength 6, perception 3, endurance 5, intelligence 4, agility 7, luck 7.
+    const spread = { strength: 5, perception: 2, endurance: 4, intelligence: 3, agility: 6, luck: 6 } as const
     for (const [id, points] of Object.entries(spread) as Array<[keyof typeof spread, number]>) {
       await clickTimes(game, (c) => c.attributes[id].plus, points)
     }
@@ -184,16 +184,16 @@ describe('the party screen', () => {
       name: 'Aldric',
       portrait: 'knight',
       tagged: 'melee',
-      attributes: { strength: 7, luck: 7 },
+      attributes: { strength: 9, luck: 4 },
       raises: { melee: 10 },
       perks: ['weapon_training', 'toughness', 'heavy_hand'],
     })
 
-    await game.click(aldric.attributes.strength.minus)
-    await game.waitFor('Creation', (c) => c.attributePoints === 1)
-    await game.click(aldric.attributes.luck.plus)
+    await clickTimes(game, (c) => c.attributes.strength.minus, 3)
+    await game.waitFor('Creation', (c) => c.attributePoints === 3)
+    await clickTimes(game, (c) => c.attributes.luck.plus, 3)
     const changed = await game.waitFor('Creation', (c) => c.attributePoints === 0)
-    expect(changed.draft.attributes).toMatchObject({ strength: 6, luck: 8 })
+    expect(changed.draft.attributes).toMatchObject({ strength: 6, luck: 7 })
     expect(changed.notes).toEqual([])
 
     // One more point off Strength and Heavy Hand, which asks 6, is dropped, and the screen says so.
@@ -216,7 +216,7 @@ describe('the party screen', () => {
     await game.click(roster.rows[0].edit)
     await game.waitForScenes(['Creation'])
     const again = await game.settled('Creation')
-    expect(again.draft).toMatchObject({ attributes: { strength: 6, luck: 8 }, perks: ['weapon_training', 'toughness'] })
+    expect(again.draft).toMatchObject({ attributes: { strength: 6, luck: 7 }, perks: ['weapon_training', 'toughness'] })
     expect(again.perkPicks).toBe(1)
     // Cancel leaves the member as it was.
     await game.click(again.attributes.endurance.minus)

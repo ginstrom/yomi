@@ -38,6 +38,8 @@ export interface PerkEffects extends Partial<Attributes>, Partial<Record<SkillId
   xpPercent?: number
   /** Skill points added to what each new level brings. */
   skillPoints?: number
+  /** Mana added to a caster's, as gear adds it. */
+  maxMana?: number
 }
 
 export type PerkEffect = keyof PerkEffects
@@ -151,7 +153,7 @@ export const PERKS = {
     description: '+1 action point every turn',
     ranks: 1,
     level: 6,
-    attributes: { endurance: 6, agility: 6 },
+    attributes: { endurance: 8, agility: 6 },
     branch: 'endurance',
     requires: 'toughness',
     effects: { actionPoints: 1 },
@@ -192,6 +194,78 @@ export const PERKS = {
     attributes: { intelligence: 5 },
     branch: 'intelligence',
     effects: { magic: 5 },
+  },
+  // The far ends of the branches: level 6, and an attribute of 8, which a
+  // character born short of it reaches with its branch's trunk at level 3.
+  mighty_blow: {
+    name: 'Mighty Blow',
+    description: '+2 damage with melee weapons and bare hands',
+    ranks: 1,
+    level: 6,
+    attributes: { strength: 8 },
+    branch: 'strength',
+    requires: 'heavy_hand',
+    effects: { meleeDamage: 2 },
+  },
+  weapon_mastery: {
+    name: 'Weapon Mastery',
+    description: '+10% Melee Weapons',
+    ranks: 1,
+    level: 6,
+    attributes: { strength: 8 },
+    branch: 'strength',
+    requires: 'weapon_training',
+    effects: { melee: 10 },
+  },
+  eagle_eye: {
+    name: 'Eagle Eye',
+    description: '+10% Archery',
+    ranks: 1,
+    level: 6,
+    attributes: { perception: 8 },
+    branch: 'perception',
+    requires: 'marksmanship',
+    effects: { archery: 10 },
+  },
+  deep_well: {
+    name: 'Deep Well',
+    description: '+6 mana',
+    ranks: 1,
+    level: 6,
+    attributes: { intelligence: 8 },
+    branch: 'intelligence',
+    requires: 'magic_arrow',
+    effects: { maxMana: 6 },
+  },
+  arcane_mastery: {
+    name: 'Arcane Mastery',
+    description: '+10% Magic',
+    ranks: 1,
+    level: 6,
+    attributes: { intelligence: 8 },
+    branch: 'intelligence',
+    requires: 'arcane_study',
+    effects: { magic: 10 },
+  },
+  evasion: {
+    name: 'Evasion',
+    description: '+10 armour class',
+    ranks: 1,
+    level: 6,
+    attributes: { agility: 8 },
+    branch: 'agility',
+    requires: 'dodger',
+    effects: { armorClass: 10 },
+  },
+  fortune: {
+    name: 'Fortune',
+    description: '+10% chance of a critical hit',
+    ranks: 1,
+    level: 6,
+    attributes: { luck: 8 },
+    branch: 'luck',
+    requires: 'keen_eye',
+    effects: { critChance: 10 },
   },
   // Last, so that `autoAdvance` falls back on them last. They ask level 3: one
   // taken at creation would be an attribute point more than creation gives.

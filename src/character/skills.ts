@@ -49,9 +49,14 @@ export const SKILL_STEP = 1
 export const TAGGED_SKILL_STEP = 2
 /** No skill is raised beyond this. */
 export const MAX_SKILL = 150
-/** From this level on, mastery comes dearer: a raise costs `MASTERY_COST` points instead of 1. */
-export const MASTERY_LEVEL = 100
-export const MASTERY_COST = 2
+/**
+ * What a raise costs as a skill nears mastery: from each `level` on, `cost`
+ * skill points instead of 1, the dearest that applies. Ascending by level.
+ */
+export const SKILL_COST_TIERS: readonly { level: number; cost: number }[] = [
+  { level: 80, cost: 2 },
+  { level: 90, cost: 3 },
+]
 
 export function isTagged(character: Character, skill: SkillId): boolean {
   return character.tagged.includes(skill)
@@ -71,7 +76,7 @@ export function skillLevel(character: Character, skill: SkillId): number {
 export function skillRaiseCost(character: Character, skill: SkillId): number | null {
   const level = skillLevel(character, skill)
   if (level >= MAX_SKILL) return null
-  return level >= MASTERY_LEVEL ? MASTERY_COST : 1
+  return SKILL_COST_TIERS.findLast((tier) => level >= tier.level)?.cost ?? 1
 }
 
 /**

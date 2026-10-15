@@ -115,7 +115,7 @@ describe('foeAtLevel', () => {
     expect(foeAtLevel(GOBLIN_STATS, 2)).toEqual({ ...GOBLIN_STATS, maxHp: 17, ac: 20, toHit: 75 })
     expect(foeAtLevel(GOBLIN_STATS, 5)).toEqual({
       ...GOBLIN_STATS,
-      maxHp: 31,
+      maxHp: 34,
       ac: 35,
       toHit: 90,
       damage: { count: 1, sides: 6, bonus: 3 },

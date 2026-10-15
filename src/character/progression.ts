@@ -1,6 +1,6 @@
 import { maxHp, weaponSkill, type Character } from './character.ts'
 import { PERK_IDS, attributeLevel, availablePerks, perkBonus, qualifiesFor, type PerkId } from './perks.ts'
-import { MASTERY_LEVEL, SKILL_IDS, raiseSkill, skillLevel, type SkillId } from './skills.ts'
+import { SKILL_COST_TIERS, SKILL_IDS, raiseSkill, skillLevel, type SkillId } from './skills.ts'
 
 /**
  * Levels and the experience that buys them. A foe is worth a fixed amount of
@@ -24,7 +24,7 @@ export const EVEN_FOE_XP_PER_LEVEL = 100
 /** What level 2 costs: a touch under one even foe. */
 const FIRST_LEVEL_XP = 80
 
-/** Skill points a level brings before intelligence adds its half. */
+/** Skill points a level brings before intelligence adds a third of itself. */
 const BASE_SKILL_POINTS = 2
 /** Every level that is a multiple of this brings a perk. */
 export const PERK_LEVEL_STEP = 3
@@ -34,9 +34,13 @@ export function xpToNextLevel(level: number): number {
   return level <= 1 ? FIRST_LEVEL_XP : EVEN_FOE_XP_PER_LEVEL * level * (level - 1)
 }
 
-/** The skill points each new level brings the character: more for the clever. */
+/**
+ * The skill points each new level brings the character: more for the clever,
+ * though not many more (2 at intelligence 1 or 2, 5 at 9 or 10), as a tagged
+ * skill doubles what each buys.
+ */
 export function skillPointsPerLevel(character: Character): number {
-  return BASE_SKILL_POINTS + Math.floor(attributeLevel(character, 'intelligence') / 2) + perkBonus(character, 'skillPoints')
+  return BASE_SKILL_POINTS + Math.floor(attributeLevel(character, 'intelligence') / 3) + perkBonus(character, 'skillPoints')
 }
 
 /** The level the character's next perk comes at. */
@@ -111,10 +115,16 @@ export function takePerk(character: Character, perk: PerkId): boolean {
 /**
  * The perks `autoAdvance` takes, most wanted first; it takes any other only
  * when none of these is on offer, in the order of `PERKS`, where the perks
- * that raise an attribute come last. Tireless is not on offer until Toughness is taken.
+ * that raise an attribute come last. A perk at the end of a branch is not on offer
+ * until the one before it is taken.
  */
 const AUTO_PERKS: readonly PerkId[] = [
+  'weapon_mastery',
+  'eagle_eye',
+  'arcane_mastery',
   'tireless',
+  'mighty_blow',
+  'evasion',
   'toughness',
   'dodger',
   'heavy_hand',
@@ -135,7 +145,7 @@ const AUTO_PERKS: readonly PerkId[] = [
 export function autoAdvance(character: Character): void {
   const weapon = weaponSkill(character.equipment.mainHand)
   const order: Array<[SkillId, number]> = [
-    [weapon, MASTERY_LEVEL],
+    [weapon, SKILL_COST_TIERS[0].level],
     [weapon, Infinity],
     ...SKILL_IDS.map((skill): [SkillId, number] => [skill, Infinity]),
   ]

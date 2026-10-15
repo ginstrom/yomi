@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createWarrior } from './character.ts'
 import {
-  MASTERY_COST,
-  MASTERY_LEVEL,
+  SKILL_COST_TIERS,
   MAX_SKILL,
   SKILLS,
   SKILL_IDS,
@@ -60,17 +59,27 @@ describe('raiseSkill', () => {
     expect(warrior.trained.melee).toBe(0)
   })
 
-  it('costs more from mastery on', () => {
+  it('costs 2 points from 80% and 3 from 90%', () => {
     const warrior = createWarrior()
-    warrior.trained.archery = MASTERY_LEVEL - 1 - skillLevel(warrior, 'archery')
-    warrior.skillPoints = 1 + MASTERY_COST
+    expect(SKILL_COST_TIERS).toEqual([
+      { level: 80, cost: 2 },
+      { level: 90, cost: 3 },
+    ])
+    warrior.trained.archery = 79 - skillLevel(warrior, 'archery')
+    warrior.skillPoints = 1 + 2
     expect(skillRaiseCost(warrior, 'archery')).toBe(1)
     expect(raiseSkill(warrior, 'archery')).toBe(true)
-    expect(skillRaiseCost(warrior, 'archery')).toBe(MASTERY_COST)
+    expect(skillRaiseCost(warrior, 'archery')).toBe(2)
     expect(raiseSkill(warrior, 'archery')).toBe(true)
-    expect([skillLevel(warrior, 'archery'), warrior.skillPoints]).toEqual([MASTERY_LEVEL + 1, 0])
-    warrior.skillPoints = MASTERY_COST - 1
+    expect([skillLevel(warrior, 'archery'), warrior.skillPoints]).toEqual([81, 0])
+    warrior.skillPoints = 1
     expect(raiseSkill(warrior, 'archery')).toBe(false)
+    warrior.trained.archery += 89 - skillLevel(warrior, 'archery')
+    expect(skillRaiseCost(warrior, 'archery')).toBe(2)
+    warrior.trained.archery += 1
+    expect(skillRaiseCost(warrior, 'archery')).toBe(3)
+    warrior.trained.archery += 40
+    expect(skillRaiseCost(warrior, 'archery')).toBe(3)
   })
 
   it('stops at the highest a skill goes, a tagged one too', () => {
@@ -81,6 +90,6 @@ describe('raiseSkill', () => {
     expect(skillLevel(warrior, 'melee')).toBe(MAX_SKILL)
     expect(skillRaiseCost(warrior, 'melee')).toBeNull()
     expect(raiseSkill(warrior, 'melee')).toBe(false)
-    expect(warrior.skillPoints).toBe(10 - MASTERY_COST)
+    expect(warrior.skillPoints).toBe(10 - SKILL_COST_TIERS[SKILL_COST_TIERS.length - 1].cost)
   })
 })

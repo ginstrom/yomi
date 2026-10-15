@@ -28,19 +28,19 @@ describe('xpToNextLevel', () => {
 })
 
 describe('skillPointsPerLevel', () => {
-  it('gives 2 and half the character’s intelligence, and what a perk adds', () => {
+  it('gives 2 and a third of the character’s intelligence, and what a perk adds', () => {
     const warrior = createWarrior()
     const points = (intelligence: number) => {
       warrior.attributes.intelligence = intelligence
       return skillPointsPerLevel(warrior)
     }
-    expect([1, 4, 7, 10].map(points)).toEqual([2, 4, 5, 7])
+    expect([1, 2, 3, 5, 6, 8, 9, 10].map(points)).toEqual([2, 2, 3, 3, 4, 4, 5, 5])
     warrior.perks.scholar = 1
-    expect(skillPointsPerLevel(warrior)).toBe(9)
+    expect(skillPointsPerLevel(warrior)).toBe(7)
     // An attribute a perk has raised counts.
     warrior.attributes.intelligence = 5
     warrior.perks = { gain_intelligence: 1 }
-    expect(skillPointsPerLevel(warrior)).toBe(5)
+    expect(skillPointsPerLevel(warrior)).toBe(4)
   })
 })
 
@@ -167,6 +167,7 @@ describe('autoAdvance', () => {
 
   it('takes Tireless only once it has Toughness, and falls back on any perk on offer', () => {
     const warrior = createWarrior()
+    warrior.attributes.endurance = 8
     while (warrior.level < 6) levelUp(warrior)
     autoAdvance(warrior)
     expect(warrior.perks).toEqual({ toughness: 1, tireless: 1 })

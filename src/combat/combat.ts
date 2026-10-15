@@ -162,7 +162,7 @@ export const KOBOLD_STATS: CombatantStats = {
 }
 
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
-export const FOE_HP_PER_LEVEL = 0.4
+export const FOE_HP_PER_LEVEL = 0.45
 /** ...this many points to its chance to hit and to its armour class... */
 export const FOE_TO_HIT_PER_LEVEL = 5
 export const FOE_AC_PER_LEVEL = 5
@@ -171,8 +171,9 @@ export const FOE_DAMAGE_LEVEL_STEP = 2
 
 /**
  * A monster's stat block at `level`, from its level 1 block. A monster grows
- * about as fast as a hero who puts every skill point into one weapon and
- * faster than one who does not, and its armour grows where a hero's does not
+ * about as fast as a hero who puts every skill point into one weapon, until
+ * the hero's points come dearer from 80% (skills.ts), and faster than one
+ * who does not, and its armour grows where a hero's does not
  * (character.ts, progression.ts): the lands further out are meant to be
  * harder for the party that has earned its way there, not merely to keep
  * pace with it.

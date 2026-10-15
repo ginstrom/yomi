@@ -13,8 +13,7 @@ import {
 import { PERKS, PERK_IDS, attributeLevel, attributesOf, perkRanks, qualifiesFor, type PerkId } from '../character/perks.ts'
 import { nextPerkLevel, takePerk, xpToNextLevel } from '../character/progression.ts'
 import {
-  MASTERY_COST,
-  MASTERY_LEVEL,
+  SKILL_COST_TIERS,
   SKILLS,
   SKILL_IDS,
   TAGGED_SKILL_STEP,
@@ -516,7 +515,7 @@ export class InventoryScene extends Phaser.Scene {
     })
 
     const rules = [
-      `A skill point raises a skill by 1%, or a tagged one by ${TAGGED_SKILL_STEP}%. From ${MASTERY_LEVEL}% on, a raise costs ${MASTERY_COST} points.`,
+      `A skill point raises a skill by 1%, or a tagged one by ${TAGGED_SKILL_STEP}%. ${SKILL_COST_TIERS.map(({ level, cost }) => `From ${level}%, a raise costs ${cost} points.`).join(' ')}`,
       this.canAdvance
         ? 'Every level brings skill points.'
         : 'Skill points and perks are spent on the world map, in this panel.',
