@@ -15,7 +15,8 @@
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "simulate": "node scripts/simulate.ts",
     "sprites": "sprite build --project art",
-    "sprites:check": "sprite build --check --project art"
+    "sprites:check": "sprite build --check --project art",
+    "manual:screenshots": "vitest run --config vitest.manual.config.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",

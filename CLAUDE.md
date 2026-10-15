@@ -20,6 +20,7 @@ Node 26+ is required: `scripts/*.ts` run on Node's native TypeScript support (no
 | One vitest project | `npx vitest run --project domain` (or `scenes`) |
 | In-browser tests (headless Chromium) | `npm run test:browser` |
 | One in-browser test by name | `npm run test:browser -- -t "victorious"` |
+| Retake the player's manual's screenshots (`docs/manual/`) | `npm run manual:screenshots` |
 | Production build | `npm run build` |
 | Headless battle simulator | `npm run simulate -- --battles 2000 --seed 1` |
 | Build sprites from `art/` | `npm run sprites` |
@@ -125,7 +126,7 @@ The in-browser tests in `e2e/` are a separate run (`npm run test:browser`, with 
 
 Sprites in `public/assets/sprites/` are generated from `art/` (see Sprites) and audio in `public/assets/audio/` is placeholder; each directory's `README.md` records provenance and licence and should be updated when files are added. `BootScene` preloads every sound in `SOUND_KEYS` (`sounds.ts`) and the sprite atlas with its animations (`atlas.png`, `atlas.json`, `atlas.anims.json`), from which everything that moves is shown: units, what they hold and the world map's locations. A frame is named `<sprite>/<frame>` and an animation `<sprite>/<anim>` (`spriteFrame`, `spriteAnim`), and the animations themselves are written in the sprites' sources, not in the scenes. A unit is drawn as the atlas's sprite named for its `UnitKind`, with `idle` and `walk` animations, so a new unit kind needs a sprite of that name with both and an experience value in `FOE_XP`. Every hero is the `warrior` body, bare-handed, with a sprite laid over it for what is in each hand (`GEAR_SPRITES` in `unitLook.ts`, by the item's icon, from `art/gear/`), so a new weapon or shield icon needs an entry there and a sprite; `BattleScene` puts a hero's gear on its figure again whenever the character panel closes. A strike's lunge and a hit's flash are tweens in `BattleScene`, as they were never frames. `InventoryScene` loads one icon per `ItemIcon` from `assets/sprites/icon_<icon>.png`, keyed by `ITEM_ICON_KEYS` (`itemIcons.ts`). `WorldScene` shows one atlas sprite per `LocationKind`, keyed by `LOCATION_SPRITES`, `map_watchtower` for a tower and `map_blight` on each corrupted hex, each playing its `idle`, and shows the party as its first member's battle figure, gear included. Every scene with a `PartyColumn`, and `Party` and `Creation`, loads one portrait per `PortraitId` from `assets/sprites/portrait_<id>.png` (`portraitKey`), so a new preset needs an id in `PORTRAIT_IDS` and a matching sprite in `art/portraits/`.
 
-`docs/designs/` holds feature designs, written before a feature is planned: what to build and why, which may be ahead of the code. `docs/implementation-plans/` holds step-by-step plans with completion logs, which are useful for the reasoning behind past fixes.
+`docs/manual/README.md` is the player's manual, its screenshots taken by `e2e/manual.shots.ts` (`vitest.manual.config.ts`, not part of either test run); a change to a rule it states or a screen it shows should update it and retake them. `docs/designs/` holds feature designs, written before a feature is planned: what to build and why, which may be ahead of the code. `docs/implementation-plans/` holds step-by-step plans with completion logs, which are useful for the reasoning behind past fixes.
 
 ### Sprites
 
