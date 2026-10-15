@@ -17,7 +17,7 @@ import { MAX_THREAT, type EncounterId } from './encounters.ts'
  * The world map: a hex board the party travels between battles, with points of
  * interest on it. Phaser-free, like the battle rules; `WorldScene` is a view
  * over it. Time passes in turns: a step of travel takes one, and so does
- * scouting or waiting at a monster location.
+ * scouting or waiting at a monster location, or a day of camping (camp.ts).
  */
 
 interface LocationBase {

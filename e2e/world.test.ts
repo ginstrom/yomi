@@ -84,6 +84,38 @@ describe('the world map', () => {
     await game.waitForScenes(['World'])
   })
 
+  it('camps only away from monsters, and camps until the party’s wounds are healed', async () => {
+    const game = await games.open()
+    const home = await game.newGame()
+    expect(home.buttons.camp.visible).toBe(true)
+    expect(home.buttons.campUntilHealed.enabled).toBe(false)
+    await game.click(home.buttons.camp)
+    const rested = await game.waitFor('World', (w) => w.world.turn === 2)
+    expect(rested.message).toContain('You camp a day')
+
+    const among = await game.travelTo(RAIDERS.position)
+    expect(among.buttons.camp.visible).toBe(false)
+    expect(among.buttons.campUntilHealed.visible).toBe(false)
+    await game.click(among.buttons.wait)
+    await game.waitFor('World', (w) => w.world.confronting === null)
+    await game.travelTo(offsetToHex(11, 19))
+
+    // Wounded as a battle leaves a party: planted in the save, and loaded.
+    await game.page.evaluate(() => {
+      const save = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      save.game.party[0].hp = 1
+      save.game.party[1].hp = 2
+      localStorage.setItem('yomi.save.1', JSON.stringify(save))
+    })
+    await game.click((await game.reload()).buttons.continue)
+    await game.waitForScenes(['World'])
+    const hurt = await game.settled('World', (w) => w.buttons.campUntilHealed.enabled)
+    await game.click(hurt.buttons.campUntilHealed)
+    const healed = await game.waitFor('World', (w) => !w.buttons.campUntilHealed.enabled)
+    expect(healed.message).toMatch(/^Camped \d+ days?: \d+ hp healed \(\d+ by rest, \d+ by spells\)\.$/)
+    expect(healed.world.turn).toBeGreaterThan(hurt.world.turn)
+  })
+
   it('pauses under the menu on Esc and resumes where it was', async () => {
     const game = await games.open()
     await game.newGame()

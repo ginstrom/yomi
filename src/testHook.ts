@@ -105,7 +105,8 @@ export interface WorldProbe {
   /** The part of the screen where the map takes clicks. */
   view: Rect
   message: string
-  buttons: { scout: ButtonProbe; wait: ButtonProbe; attack: ButtonProbe }
+  /** Scout, Wait and Attack show among monsters, the camp buttons elsewhere; `campUntilHealed` is enabled while someone is wounded. */
+  buttons: { scout: ButtonProbe; wait: ButtonProbe; attack: ButtonProbe; camp: ButtonProbe; campUntilHealed: ButtonProbe }
   party: PortraitProbe[]
 }
 

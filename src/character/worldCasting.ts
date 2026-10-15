@@ -4,7 +4,7 @@ import { knownSpells } from './perks.ts'
 
 /**
  * Casting out of battle, on the world map: only healing spells, paid from the
- * mana a caster carried out of its last battle (`manaOf`). A heal restores
+ * mana a caster carried out of its last battle or a day of camping refilled (`manaOf`). A heal restores
  * the average of its dice, rounded down, so the world map rolls no dice and a
  * reload changes nothing; range and area do not apply, and a spell centred on
  * the caster heals the whole party.

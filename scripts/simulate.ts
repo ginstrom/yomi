@@ -22,7 +22,8 @@ import { BattleEngine, type BattleEvent, type BattleSetup, type Side, type UnitI
 import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.ts'
 import { autoAdvance, levelUp } from '../src/character/progression.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/encounters.ts'
-import { autoHeal, readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
+import { readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
+import { campUntilHealed } from '../src/game/camp.ts'
 import { clearLocation, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
 import { hexDistance } from '../src/grid/hex.ts'
 import { MAGIC_ITEMS, WEAPONS, type Item } from '../src/inventory/inventory.ts'
@@ -198,9 +199,10 @@ const CAMPAIGN_SEED_STEP = 1000
  * hexes from where it stands (home, then the last location beaten; the first
  * in the world's list on a tie), each at its own threat. It carries its hit
  * points from battle to battle, takes `rewardVictory` after each win and
- * spends what that brought with `autoAdvance`, and heals what it can with the
- * mana left (`autoHeal`, adding what it restored to `healed`), until the map
- * is clear or a battle is not won. Loot is left alone: the heroes keep their
+ * spends what that brought with `autoAdvance`, and camps where it won until
+ * its wounds are healed (`campUntilHealed`, adding the hit points rest and
+ * spells restored and the days it took to `healed`), until the map is clear
+ * or a battle is not won. Loot is left alone: the heroes keep their
  * starting gear.
  */
 export function runCampaign(
@@ -208,7 +210,7 @@ export function runCampaign(
   seed: number,
   args: CliArgs,
   firstBattleId = 0,
-  healed: { hp: number } = { hp: 0 },
+  healed: { hp: number; days: number } = { hp: 0, days: 0 },
 ): LoggedEvent[][] {
   const party = startingParty(args)
   const world = newWorld()
@@ -239,9 +241,11 @@ export function runCampaign(
     })
     rewardVictory(party, xpReward(encounter))
     for (const member of party) autoAdvance(member)
-    healed.hp += autoHeal(party)
     clearLocation(world, next.id)
     world.party = next.position
+    const camp = campUntilHealed(world, party)!
+    healed.hp += camp.rested + camp.cast
+    healed.days += camp.days
   }
   return battles
 }
@@ -435,7 +439,7 @@ function main(): void {
   mkdirSync(dirname(args.outPath), { recursive: true })
   const out = openSync(args.outPath, 'w')
   let battles = 0
-  const healed = { hp: 0 }
+  const healed = { hp: 0, days: 0 }
   const log = (events: readonly LoggedEvent[]) => {
     battles++
     writeSync(out, events.map((event) => JSON.stringify(event)).join('\n') + '\n')
@@ -463,7 +467,9 @@ function main(): void {
   console.log(
     `Cleared the map: ${summary.cleared} of ${summary.campaigns} (${(summary.clearedShare * 100).toFixed(1)}%); locations cleared a campaign: ${summary.avgLocationsCleared.toFixed(2)} of ${monsterLocations()}`,
   )
-  console.log(`Hit points healed between battles: ${(healed.hp / args.battles).toFixed(1)} a campaign`)
+  console.log(
+    `Hit points healed between battles: ${(healed.hp / args.battles).toFixed(1)} a campaign, in ${(healed.days / args.battles).toFixed(1)} days of camping`,
+  )
   console.table(byThreat.map((row) => ({ ...row, winRate: Number(row.winRate.toFixed(3)) })))
   console.table(tally.summary(battles))
 }

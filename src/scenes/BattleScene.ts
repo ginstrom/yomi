@@ -1582,7 +1582,7 @@ export class BattleScene extends Phaser.Scene {
     const foes = this.location ? `The ${this.location.name}` : 'Your foes'
     // The reward goes by the hit points the party ended on: who fell, and so who gets back up.
     this.syncUnitsFromEngine()
-    // What mana a winner has left is its own, to heal with on the world map; a level fills it.
+    // What mana a winner has left is its own, to heal with on the world map; a level or a day of camping fills it.
     if (playerWon) {
       for (const unit of state.units) {
         const member = this.heroes.get(unit.id)

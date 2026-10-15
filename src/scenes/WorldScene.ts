@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { canAdvance } from '../character/progression.ts'
+import { campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from '../game/camp.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, saveGame } from '../game/saveSlots.ts'
 import {
@@ -60,7 +61,10 @@ const BAR_COLOR = 0x1d1d1d
 const BAR_ALPHA = 0.8
 const BUTTON_W = 140
 const BUTTON_H = 44
-const BUTTON_SPACING = 160
+/** Between two buttons of a row. */
+const BUTTON_GAP = 20
+/** Wide enough for "Camp until healed". */
+const WIDE_BUTTON_W = 200
 
 export class WorldScene extends Phaser.Scene {
   private gameState!: GameState
@@ -91,6 +95,8 @@ export class WorldScene extends Phaser.Scene {
   private messageText!: Phaser.GameObjects.Text
   /** Scout, Wait and Attack, shown while the party stands among monsters. */
   private buttons: Phaser.GameObjects.Container[] = []
+  /** Camp and Camp until healed, shown wherever else the party stands still. */
+  private campButtons: Phaser.GameObjects.Container[] = []
 
   constructor() {
     super('World')
@@ -132,6 +138,10 @@ export class WorldScene extends Phaser.Scene {
       this.createButton('Scout', () => this.onLinger('scout')),
       this.createButton('Wait', () => this.onLinger('wait')),
       this.createButton('Attack', () => this.onAttack()),
+    ]
+    this.campButtons = [
+      this.createButton('Camp', () => this.onCamp()),
+      this.createButton('Camp until healed', () => this.onCampUntilHealed(), WIDE_BUTTON_W),
     ]
     this.column = new PartyColumn(this, this.gameState.party, (index) => this.onPortrait(index))
 
@@ -184,13 +194,15 @@ export class WorldScene extends Phaser.Scene {
   /** What the in-browser tests see of the world map; see testHook.ts. */
   probe(): WorldProbe {
     const [scout, wait, attack] = this.buttons.map((button) => buttonProbe(button))
+    const camp = buttonProbe(this.campButtons[0])
+    const campUntilHealed = buttonProbe(this.campButtons[1], partyWounded(this.gameState.party))
     return {
       world: this.world,
       walking: this.walking,
       origin: { x: this.mapLayer.x, y: this.mapLayer.y },
       view: this.view,
       message: this.messageText.text,
-      buttons: { scout, wait, attack },
+      buttons: { scout, wait, attack, camp, campUntilHealed },
       party: this.column.probe(),
     }
   }
@@ -251,9 +263,9 @@ export class WorldScene extends Phaser.Scene {
     this.party.setGear(gearLayers(this.gameState.party[0]?.equipment ?? {}))
   }
 
-  private createButton(label: string, onClick: () => void): Phaser.GameObjects.Container {
+  private createButton(label: string, onClick: () => void, width = BUTTON_W): Phaser.GameObjects.Container {
     const bg = this.add
-      .rectangle(0, 0, BUTTON_W, BUTTON_H, 0x2b6cb0)
+      .rectangle(0, 0, width, BUTTON_H, 0x2b6cb0)
       .setStrokeStyle(2, 0x90cdf4)
       .setInteractive({ useHandCursor: true })
     const text = this.add
@@ -265,7 +277,7 @@ export class WorldScene extends Phaser.Scene {
       this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
       onClick()
     })
-    return this.add.container(0, 0, [bg, text]).setSize(BUTTON_W, BUTTON_H)
+    return this.add.container(0, 0, [bg, text]).setSize(width, BUTTON_H)
   }
 
   // ---- layout ---------------------------------------------------------------
@@ -278,7 +290,14 @@ export class WorldScene extends Phaser.Scene {
     const { width, height } = this.scale
     const centreX = PARTY_PANEL_W + (width - PARTY_PANEL_W) / 2
     const buttonY = height - 50
-    this.buttons.forEach((button, i) => button.setPosition(centreX + (i - 1) * BUTTON_SPACING, buttonY))
+    for (const row of [this.buttons, this.campButtons]) {
+      // A row centred under the map, its buttons BUTTON_GAP apart.
+      let x = centreX - (row.reduce((sum, button) => sum + button.width, 0) + (row.length - 1) * BUTTON_GAP) / 2
+      for (const button of row) {
+        button.setPosition(x + button.width / 2, buttonY)
+        x += button.width + BUTTON_GAP
+      }
+    }
     const messageY = buttonY - BUTTON_H / 2 - 26
     this.messageText.setPosition(centreX, messageY)
 
@@ -331,9 +350,10 @@ export class WorldScene extends Phaser.Scene {
         ? 'Monsters! Scout them, wait, or attack.'
         : here
           ? 'Scout, wait or attack, or click a hex to move away.'
-          : 'Click a hex to travel there. Each hex takes a turn.',
+          : 'Click a hex to travel there, or camp. Each hex, or day of camping, takes a turn.',
     )
     for (const button of this.buttons) button.setVisible(here !== null && !this.walking)
+    for (const button of this.campButtons) button.setVisible(canCamp(world) && !this.walking)
     this.refreshHover()
   }
 
@@ -397,7 +417,7 @@ export class WorldScene extends Phaser.Scene {
   /** While the party walks, nothing else can be done and its hex is not yet where it stands. */
   private refreshWalking(): void {
     this.partyMark.clear()
-    for (const button of this.buttons) button.setVisible(false)
+    for (const button of [...this.buttons, ...this.campButtons]) button.setVisible(false)
     this.refreshHover()
   }
 
@@ -421,6 +441,24 @@ export class WorldScene extends Phaser.Scene {
         ? `You scout the ${here.name}, but learn nothing new.`
         : `You wait a turn. The ${here.name} do not stir.`,
     )
+    this.refresh()
+    this.save()
+  }
+
+  /** A day's rest where the party stands: a hit point each, and every caster's mana back. */
+  private onCamp(): void {
+    const healed = campDay(this.world, this.gameState.party)
+    if (healed === null) return
+    this.messageText.setText(`You camp a day. Mana is restored${healed > 0 ? ` and rest heals ${healed} hp` : ''}.`)
+    this.refresh()
+    this.save()
+  }
+
+  /** Days of rest, with the casters healing what they can each day, until no one is wounded. */
+  private onCampUntilHealed(): void {
+    const result = campUntilHealed(this.world, this.gameState.party)
+    if (result === null) return
+    this.messageText.setText(describeCamp(result))
     this.refresh()
     this.save()
   }
