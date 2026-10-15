@@ -65,11 +65,11 @@ export function setAudioLevel(channel: AudioChannel, level: number): AudioSettin
 }
 
 /**
- * The volume to play a sound at: the music channel covers the battle theme and
- * the victory and defeat stings, the effects channel everything else. The master
- * level is applied separately, as the sound manager's global volume.
+ * The volume to play a sound at: the music channel covers the battle and world
+ * map themes and the victory and defeat stings, the effects channel everything
+ * else. The master level is applied separately, as the sound manager's global volume.
  */
 export function soundVolume(key: SoundKey, settings: AudioSettings = current): number {
-  const base = key === 'music_battle' ? MUSIC_VOLUME : SOUND_VOLUME
+  const base = key === 'music_battle' || key === 'music_world_map' ? MUSIC_VOLUME : SOUND_VOLUME
   return base * (key.startsWith('music_') ? settings.music : settings.effects)
 }

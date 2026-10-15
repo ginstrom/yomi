@@ -26,8 +26,9 @@ describe('soundVolume', () => {
     expect(soundVolume('sfx_hit_impact', settings)).toBeCloseTo(SOUND_VOLUME * 0.5)
   })
 
-  it('puts the battle theme and the stings on the music level', () => {
+  it('puts the themes and the stings on the music level', () => {
     expect(soundVolume('music_battle', settings)).toBeCloseTo(MUSIC_VOLUME * 0.25)
+    expect(soundVolume('music_world_map', settings)).toBeCloseTo(MUSIC_VOLUME * 0.25)
     expect(soundVolume('music_victory', settings)).toBeCloseTo(SOUND_VOLUME * 0.25)
   })
 })

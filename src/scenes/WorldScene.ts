@@ -138,6 +138,8 @@ export class WorldScene extends Phaser.Scene {
   private hallButton!: Phaser.GameObjects.Container
   /** What the player knows of the hovered hex (`hexInfo`), hidden while no hex is hovered. */
   private infoBox!: Phaser.GameObjects.Rectangle
+  /** The world map's theme, looping while the map is open and paused under the menu. */
+  private music: Phaser.Sound.WebAudioSound | Phaser.Sound.HTML5AudioSound | Phaser.Sound.NoAudioSound | null = null
   private infoText!: Phaser.GameObjects.Text
 
   /**
@@ -261,6 +263,8 @@ export class WorldScene extends Phaser.Scene {
     // Back from a member's panel, where skill points and perks may have been spent, and
     // which tells the member it last showed. The menu resumes the map too, and tells nothing.
     this.events.on(Phaser.Scenes.Events.RESUME, (_sys: Phaser.Scenes.Systems, data?: { member?: number }) => {
+      // The menu pauses the theme; the options there may have changed its volume.
+      this.resumeMusic()
       this.active = data?.member ?? this.active
       this.refreshPartyGear()
       this.refresh()
@@ -271,7 +275,12 @@ export class WorldScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
       this.input.setDefaultCursor('default')
+      this.music?.destroy()
+      this.music = null
     })
+
+    this.music = this.sound.add('music_world_map', { loop: true, volume: soundVolume('music_world_map') })
+    this.music.play()
 
     const here = monstersHere(this.world)
     this.messageText.setText(
@@ -877,8 +886,15 @@ export class WorldScene extends Phaser.Scene {
     this.scene.pause()
   }
 
+  private resumeMusic(): void {
+    if (!this.music) return
+    this.music.setVolume(soundVolume('music_world_map'))
+    if (this.music.isPaused) this.music.resume()
+  }
+
   private openMenu(): void {
     if (this.scene.isPaused()) return
+    this.music?.pause()
     this.scene.launch('Menu', { resume: 'World' })
     this.scene.bringToTop('Menu')
     this.scene.pause()

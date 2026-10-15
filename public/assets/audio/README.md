@@ -26,5 +26,6 @@ the same Opus stream remuxed into Ogg (no re-encode), and `music_battle.mp3`
 | `music_victory.wav` | Victory sting |
 | `music_defeat.wav` | Defeat sting |
 | `music_battle.opus`, `music_battle.mp3` | Looping battle theme, stopped when the battle ends |
+| `music_world_map.wav` | Looping world map theme, paused under the menu |
 
 The WAVs are placeholders only, meant to be replaced by a real sound pass.
