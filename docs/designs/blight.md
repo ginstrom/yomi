@@ -2,111 +2,207 @@
 
 ## 1. Purpose and status
 
-The party was sent out to fight an encroaching evil. When the game begins, blight is already eating the land, and the party must push it back. The endgame is to destroy the blight's source. This gives the world map what it lacks now, which is a reason for time to matter. Today, travelling, waiting and camping cost nothing, so "Camp until healed" is a free full heal before every battle. With this design, every day the party spends is a day the blight grows.
+The party was sent out to fight an encroaching evil. When the game begins, blight is already eating the land, and the party has to push it back. The endgame is to destroy the blight's source. After that, the player can keep playing in endless mode.
 
-**Status: summary proposal, for iteration.** This document covers the shape of the system and gives provisional numbers. Section 7 lists the decisions to settle before a detailed design and plan. Every constant here is a starting point for the simulator, not a decision.
+This gives the world map a reason for time to matter. Today, travelling, waiting and camping cost nothing, so "Camp until healed" is a free full heal before every battle. With this design, each day spent is a day the blight presses in. Each day held is also a day the party's territory pays out.
 
-Related: [expeditions-and-encampment.md](expeditions-and-encampment.md) §5 sketches territory and announced threats. This design takes on its "later threat system" and keeps its rule that a site under threat is announced with time to respond.
+**Status: proposal, revised once with the user's decisions (§8), for further iteration.** The shape of the system is settled. The constants are starting points for the simulator, not decisions. §9 lists what is still open.
+
+Related:
+- [expeditions-and-encampment.md](expeditions-and-encampment.md) designs the encampment, the towns, crafting and the camp's improvements. This design gives that loop its stakes: what the encampment is defending and where its gold and materials come from. Its "later threat system" is this design.
+- The existing field camp (`src/game/camp.ts`, Camp and "Camp until healed") is a different thing from the encampment and stays as it is. Only its days now cost time.
 
 ## 2. The loop
 
 ```
-monsters ──(threat per day)──▶ blight spreads ──▶ corrupted land spawns monsters
-    ▲                                                        │
-    └──── party defeats monsters, cleanses land, holds sites ◀┘
+ monsters ──┐                                   ┌── encampment, held sites, parties
+            ▼                                   ▼
+        blight influence  ◀── contest per hex ──▶  clean influence
+            │                                   │
+   corrupted land spawns monsters        held land yields gold and materials
+            │                                   │
+            └──▶ battles ──▶ experience ◀───────┴──▶ improve the encampment, craft
 ```
+
+There are two layers:
+
+- **Strategic layer:** an influence war over the map between blight and clean.
+- **Meta-progression layer:** the encampment, improved with what held territory yields, which makes the party and its reach stronger.
+
+## 3. Requirements
 
 | ID | Requirement |
 | --- | --- |
-| R1 | The world map has blight, a level per hex: 0 is clean, 1 tainted, 2 blighted and 3 corrupted. A new game starts with blight around the Source and its nearest monster locations. |
-| R2 | Blight grows each world turn, in proportion to the threat of the monsters standing in it. |
-| R3 | Corrupted land spawns new monster locations over time. |
-| R4 | Defeating a monster location cleanses the blight around it. |
-| R5 | Towns and resources can be captured. A held site wards the land around it and can be lost to a siege that the player is warned about. |
-| R6 | The Source is a final monster location, far from home. Defeating it wins the game. |
-| R7 | Every world turn counts, including each hex of a journey and each day of camping. |
-| R8 | The same world seed and the same choices give the same blight and the same spawns. The rules stay Phaser-free, like the battle rules. |
+| R1 | **Blight levels:** every hex has a blight level from 0 to 3 (clean, tainted, blighted, corrupted), and the world map shows it on each hex. |
+| R2 | **Influence contest:** blight sources and clean sources contest each hex every day. A hex's level drifts toward whichever side presses harder there. |
+| R3 | **Blight sources:** monster locations and the Source, each in proportion to its threat, and corrupted land itself, so blight creeps along. |
+| R4 | **Clean sources:** the encampment, held sites and the party (and later its other parties). |
+| R5 | **Spawning:** corrupted land spawns new monster locations over time. |
+| R6 | **Victory over monsters:** it removes a blight source and cleanses the land around it at once. |
+| R7 | **Capture:** towns and resources can be captured. Held sites yield gold and materials and can be lost to a siege the player is warned about. |
+| R8 | **The encampment:** the game starts with one, at Oakvale. Its improvements are the meta-progression. Losing it loses the game. |
+| R9 | **The Source and endless mode:** the Source is the final monster location. Beating it wins the game, and the player may then continue in endless mode. |
+| R10 | **Time:** every world turn counts, including each hex of travel, each day of camping, scouting and waiting. |
+| R11 | **Interruptions:** a notable map event stops a journey or a stretch of camping where it happens. |
+| R12 | **Determinism:** the same world seed and the same choices give the same blight, spawns and yields. The rules stay Phaser-free. |
 
-Non-goals for now: blight changing a battle's board or rules, economy or resources from held sites, more than one party, and fog of war.
+Non-goals: blight changes nothing in battle (§8.6); there is no fog of war; multiple parties get a design of their own (§5.4).
 
-## 3. Rules (provisional)
+## 4. Rules (provisional)
 
-### 3.1 Blight and spread
+### 4.1 Blight levels and the map
 
-- `WorldState.blight` holds a level 0–3 for each hex, stored sparsely: only hexes above 0 are kept.
-- **Sources:** every monster location is a source with a strength equal to its `threat`. The Source itself has a strength of `SOURCE_STRENGTH` (8).
-- **Pressure:** each world turn, each source adds its strength to its own pressure. Each time a source's pressure reaches `SPREAD_COST` (12), it pays that cost and raises one hex of its **frontier** by a level. The frontier is the hexes below level 3 that touch the source's blight, or the source's own hex, and are not warded. The hex raised is the frontier hex nearest the source, with ties broken by the world RNG.
-- **Effect:** a threat-1 nest creeps out about once every 12 days, and a threat-5 nest about once every 2–3 days. Far, dangerous lands spread fastest, and they fill up before the party can reach them, which is the pressure we want.
+- `WorldState.blight` stores levels sparsely: only hexes above 0 are kept.
+- **On the map:** each level is a tint over the grass, from a sickly yellow-green to a dark violet, drawn as a separate layer above the terrain so it can be redrawn without the terrain. Corrupted hexes also get a small animated atlas sprite (`blight/idle`, tendrils or spores).
+- **Held land:** the edge of the territory a clean source wards gets a faint outline, so the player sees where the front line is.
 
-### 3.2 Spawning
+### 4.2 The influence contest
 
-- Each world turn, `spawnPressure` increases by the number of corrupted hexes divided by `SPAWN_DIVISOR` (10).
-- When it reaches `SPAWN_COST` (30), a new monster location appears on a corrupted hex. That hex must be at least `SPAWN_CLEARANCE` (4) hexes from the party, other monster locations and held sites.
-- The new location's encounter is drawn from `ENCOUNTERS`. Its threat is `threatAt(position)`, so distance from home still sets danger, and its loot is none or a small draw. A spawn is itself a source, so unchecked blight compounds.
-- `MAX_MONSTER_LOCATIONS` (24) caps the number of monster locations so that a neglected map is grim but finite.
+Each day, for each hex, both sides' influence is summed:
 
-### 3.3 Pushing back
+- **Blight:** for each monster location, `max(0, BLIGHT_PER_THREAT × threat − distance)`; for the Source, `max(0, SOURCE_STRENGTH − distance)`; plus `CREEP` for each corrupted neighbour.
+- **Clean:** for each clean source, `max(0, strength − distance)`. The strengths are:
+  - **Encampment:** `CAMP_STRENGTH` (8), raised by its improvements.
+  - **Held town:** `TOWN_STRENGTH` (5).
+  - **Held resource:** `SITE_STRENGTH` (3).
+  - **The party:** `PARTY_STRENGTH` (3), where it stands. This is the "forces" side, which later parties add to.
 
-- **Victory:** winning at a monster location removes it, as today, and with it its source. It also lowers blight by 2 levels within `CLEANSE_RADIUS` hexes, where the radius is 1 + threat. Beating far monsters therefore cleanses more.
-- **Capture:** a town or resource is captured when the party stands on it, its hex is below level 2, and no monster location lies within `CLAIM_RADIUS` (3) hexes. Oakvale is held from the start.
-- **Holding:** a held site wards every hex within `WARD_RADIUS` (3). Blight cannot spread into a warded hex, and every `WARD_CLEANSE_DAYS` (5) days the ward lowers one hex in its radius by a level.
-- **Siege:** when a monster location stands within `WARD_RADIUS` + 2 of a held site, because it spawned there or blight brought it, a siege begins. The map shows the countdown, `SIEGE_DAYS` (10). The siege is lifted if the party beats those monsters before the countdown ends. Otherwise the site falls: it is no longer held, its ward is gone, and its hex becomes blighted. A fallen site can be recaptured.
+Each hex then carries a sparse `shift` counter, which moves by `blight − clean` each day. At `+SHIFT_COST` (20) the hex rises a level, and at `−SHIFT_COST` it falls a level. Either way the counter then resets to 0.
 
-### 3.4 The Source and the end
+Consequences:
+- **Front lines:** the contest settles into lines that move, rather than blight growing without limit. A threat-5 nest pushes hard and far, while a held town holds its valley.
+- **No dice:** influence needs no RNG. Only spawning and tie-breaks draw from the world RNG.
+- **Cost:** about 2,400 hexes a day, with a handful of sources each. That is cheap, but travel and camping advance many days at once, so it should be checked in the simulator.
 
-- **The Source:** a monster location in the far east corner at threat `MAX_THREAT`. It has an encounter of its own (a boss with escorts, to be designed) and the strongest spread.
-- **Victory:** beating the Source wins the game. Remaining blight stops being fed by it but can still be cleaned up. Whether that cleanup is optional is an open question (§7).
-- **Defeat:** the game is lost when the party wipes, as today, or when Oakvale falls (proposed).
+Starting values (provisional): `BLIGHT_PER_THREAT` 3 (a threat-5 nest reaches about 15 hexes before falloff ends it), `SOURCE_STRENGTH` 20, `CREEP` 1.
 
-### 3.5 Time
+### 4.3 Spawning
 
-- `travel` steps through every turn of a route, so blight and spawns happen mid-journey. A spawn on the route does not interrupt travel in the first version.
-- `campDay`, `linger` and each hex of travel advance the blight once. "Camp until healed" now has a visible cost. Its message reports what grew, for example `Camped 6 days: 31 hp healed. The blight spread 4 hexes.`
+- **Pressure:** each day, `spawnPressure` grows by the number of corrupted hexes divided by `SPAWN_DIVISOR` (10).
+- **A spawn:** when the pressure reaches `SPAWN_COST` (30), a new monster location appears on a corrupted hex. That hex must lie at least `SPAWN_CLEARANCE` (4) hexes from the party, other monster locations and held sites, and is chosen by the world RNG.
+- **What appears:** a random encounter at `threatAt(position)`, with a small loot draw.
+- **The cap:** `MAX_MONSTER_LOCATIONS` (24).
 
-## 4. Technical shape
+### 4.4 Pushing back
 
-- **`src/game/blight.ts` (proposed, Phaser-free):**
-  - Blight levels and the constants above.
-  - `advanceDay(world)`: spread, spawning, ward cleansing and siege countdowns for one turn. It returns events such as `spread`, `spawned`, `siege_started` and `site_fell`, so the scene can report what happened.
-  - `cleanse(world, location)` for victories, and `capture(world)`.
+- **Winning a battle:**
+  - The monster location is removed, as today, and so is its blight influence.
+  - Blight drops 2 levels within `1 + threat` hexes, and the shift counters there are reset.
+- **Capturing a site:**
+  - The party captures a town or resource by standing on it when its hex is below level 2 and no monster location lies within `CLAIM_RADIUS` (3).
+  - A captured site joins the clean sources and begins to yield.
+- **Sieges:**
+  - **Start:** when a monster location lies within `SIEGE_RADIUS` (5) of a held site or the encampment, a siege begins. This is announced and interrupts the party (§4.7), and a countdown of `SIEGE_DAYS` (10) shows on the map.
+  - **Lifted:** if those monsters are beaten in time.
+  - **Lost:** when the countdown runs out. A site that falls stops being held: it loses its influence and yield, and its hex becomes blighted. It can be recaptured. If the encampment falls, the game is lost.
+
+### 4.5 Resources
+
+- **What sites yield:** every `YIELD_DAYS` (5) days, each held site adds its yield to the encampment's stock. A resource yields its material (Iron Vein: iron, Timber Stand: timber, Gold Seam: gold, and so on), and a town yields gold.
+- **Blight cuts the yield:** a site's yield shrinks by a third per blight level of its own hex.
+- **No carrying:** the stock lives at the encampment, not in the party's baggage, so nothing has to be carried home.
+- **Spending:** gold and materials pay for encampment improvements and for crafting, both per the expeditions design.
+
+The expeditions design warned against income that accrues per turn, because waiting would then be a wealth generator. That concern is now settled: waiting feeds the blight, which threatens the very sites that yield.
+
+### 4.6 The encampment
+
+- **Location and strength:** it starts at Oakvale. It is the strongest clean source and the party's home.
+- **Improvements:** they are bought with the stock and are the meta-progression. Examples:
+  - **Palisade:** a longer siege countdown.
+  - **Watchtower:** shows spawn pressure, and warns a few days before a spawn.
+  - **Shrine:** raises `CAMP_STRENGTH`.
+  - **Infirmary:** heals faster when camping at home.
+  - **Workshop:** crafting.
+  - **Barracks:** a second party (§5.4).
+
+  The exact list and costs belong to the expeditions design. This design adds only the strength, siege and warning improvements.
+- **Losing it** loses the game (permadeath, as a party wipe does now).
+
+### 4.7 Time and interruptions
+
+- **One function for a turn:** every world turn goes through `passTurn(world)`, which calls `advanceDay`. `advanceDay` returns `WorldEvent`s: `spawned`, `siege_started`, `site_fell`, `yield` and `level_changed`.
+- **Travel goes a hex at a time.** If a day raises a **notable** event (a spawn within `NOTICE_RADIUS` (8) of the party, a siege starting, a site falling), the journey stops on that hex and the scene reports the event. The rest of the route is dropped, and the player picks the next move.
+- **Camping goes a day at a time.** "Camp until healed" stops on a notable event in the same way, and reports the days camped so far and what happened.
+- **Not notable:** level changes and yields are reported in the footer and the log but do not interrupt.
+
+### 4.8 The Source and endless mode
+
+- **The Source:** a monster location in the far east corner, at threat `MAX_THREAT`, with a boss encounter of its own (to be designed). It is the strongest blight source.
+- **Victory:** beating the Source shows a victory screen with two choices: **End** (back to the menu, and the save is kept as a finished game) or **Continue (endless)**.
+- **Endless mode:** remaining nests keep pushing and spawns go on. To keep it from winding down, a new Source rises every `RESURGENCE_DAYS` (proposed 60) at the far corner of the map from the encampment, with a stronger boss each time. Endless mode needs threat above `MAX_THREAT`, which today is a hard cap. That is open (§9).
+
+## 5. Technical shape
+
+### 5.1 Domain modules (proposed, Phaser-free)
+
+- **`src/game/blight.ts`:** levels, the influence sums, shift counters, spawning, sieges, and `advanceDay(world): WorldEvent[]`.
+- **`src/game/territory.ts`:** capture, held sites, yields and the encampment's stock.
+- **`src/game/encampment.ts`:** improvements and their effects on strengths, sieges and warnings. The expeditions design proposed `camp.ts` for this, but that name is taken by the field camp.
+
+### 5.2 Changes to existing code
+
 - **`worldMap.ts`:**
-  - Turns advance through one function, `passTurn(world)`, which increments `turn` and calls `advanceDay`. `travel`, `linger` and `campDay` use it.
-  - `WorldState` gains `blight`, per-source pressure, `spawnPressure`, the `held` site ids, sieges and the world RNG state (`mulberry32` with `state()`, as a battle's is). This changes the save shape, so `SAVE_VERSION` goes up.
+  - Adds `passTurn`.
+  - `travel` advances turn by turn and may stop early, returning the hexes walked and the events.
+  - `linger` goes through `passTurn`.
+  - `clearLocation` also cleanses the land around the location.
+- **`camp.ts`:**
+  - `campDay` goes through `passTurn`.
+  - `campUntilHealed` stops on a notable event, and its `CampResult` gains `interruptedBy`.
+- **`WorldState` gains:** `blight`, the shift counters, `spawnPressure`, held site ids, sieges, the world RNG state (`mulberry32`'s `state()`), the encampment's improvements and its stock, and `endless`. This changes the save shape, so `SAVE_VERSION` goes up.
+
+### 5.3 The scene and the simulator
+
 - **`WorldScene`:**
-  - Tints hexes by blight level, flags held sites and shows siege countdowns.
-  - Shows a footer line such as `Blight: 18% of the land`.
-  - Reports what the events returned after each action.
-- **Simulator:**
-  - `--campaign` already walks nearest-first and camps until healed, so it now pays for the time it spends.
-  - New metrics: blight share at the end, monsters spawned, sites lost, and whether the Source fell.
-  - The policy needs a rule for when to attack the Source.
+  - **Map layers:** the blight tint layer, the corrupted-hex sprites and the outlines of held land.
+  - **Badges:** siege countdowns and a held-site flag.
+  - **Footer:** a line with the stock and the share of the land blighted.
+  - **Events:** shown as messages.
+  - **Probe:** gains blight and held-site data, so the browser tests can check them.
+- **Simulator:** `--campaign` now pays for its time and gets the new metrics: blight share at the end, spawns, sites lost, whether the encampment fell and whether the Source fell. Its policy needs rules for capturing sites (on the way), answering sieges (the nearest besieger first) and attacking the Source.
 
-## 5. Phasing
+### 5.4 Multiple parties (separate design)
 
-1. **Blight and its spread from monster locations,** plus cleansing on victory, map tinting, and a cost to time. This is playable alone and puts a price on camping.
+More parties are the natural way to hold a larger front. A party garrisoned at a site adds `PARTY_STRENGTH`, and a second party can answer a siege while the first pushes on. That needs the reserve roster, deployment and a turn model for several parties, which the expeditions design already flags. This design leaves room for it: `PARTY_STRENGTH` is per party, so the clean side sums over a list.
+
+## 6. Phasing
+
+1. **Blight levels and the influence contest**, with monsters, the encampment and the party as sources, cleansing on victory, the tint on the map, time costing turns, and interruptions. This is playable alone.
 2. **Spawning.**
-3. **Capture, wards and sieges.**
-4. **The Source,** its encounter, and winning and losing.
+3. **Capture, held sites, yields and the stock, and sieges, the encampment's included**, which brings losing the game by losing the encampment.
+4. **Encampment improvements**, with the expeditions design's crafting.
+5. **The Source, victory and endless mode.**
+6. **Multiple parties**, after their own design.
 
-Each phase gets a campaign retune (§6).
+Each phase gets a campaign retune.
 
-## 6. Balance
+## 7. Balance
 
-The current target, clearing the map about 2 times in 3, stops meaning much once the map refills itself. A proposed replacement is that the simulator's careful party **beats the Source about 2 times in 3**, with blight under some share of the land when it does. The levers are, in order:
+The current target, clearing the map about 2 times in 3, stops meaning much once the map refills itself. The proposed replacement is that the simulator's careful party **beats the Source about 2 times in 3, without losing the encampment**. The levers, in order:
 
-1. `SPREAD_COST`
-2. `SPAWN_COST`
-3. `CLEANSE_RADIUS`
-4. the Source's encounter
+1. `SHIFT_COST`
+2. `BLIGHT_PER_THREAT`
+3. `SPAWN_COST`
+4. the clean strengths
+5. the Source's encounter
 
-`FOES_AT_THREAT` should not move for this. Spawns add experience as well as danger, so judge changes by campaign runs.
+`FOES_AT_THREAT` should not move for this. Spawns add experience as well as danger, and yields add gear through crafting, so judge by campaign runs.
 
-## 7. Open questions
+## 8. Decisions made
 
-1. **Per-hex blight levels or a simpler binary:** levels give a visible gradient and something for wards to wear down. Binary halves the rules. This design proposes levels.
-2. **Should threat follow blight instead of distance?** One example: a spawn's threat could be the level of the hex plus a distance band. Distance-based threat keeps the current tuning, so it is the proposal for now.
-3. **What does holding a site give besides its ward?** Examples: recovery at a town, or the encampment design's services. This design gives only the ward.
-4. **Does Oakvale falling lose the game, or is the party wipe the only loss?**
-5. **After the Source falls, does the game end at once,** or must the remaining blight be cleansed?
-6. **Does blight touch battles?** For example, corrupted ground could weaken healing or strengthen foes. Out of scope here, but cheap to add later through the encounter setup.
-7. **Should a spawn or a siege beginning interrupt a journey or a camp?** Proposed for later. "Camp until healed" stopping when a siege begins is the most likely first case.
+1. **Levels.** Blight has levels 0–3, each shown on the map's hexes.
+2. **Influence.** Blight and clean contest the land, and player-held resources, structures and forces push the blight back. This is another reason for multiple parties.
+3. **Resources.** Held territory yields gold and materials for crafting and improvements.
+4. **The encampment.** The game starts with an encampment, gradually improved as the meta-progression loop. Losing it loses the game.
+5. **The Source.** Beating the Source wins the game, and the player can continue in endless mode.
+6. **Battles.** Blight does not affect battles.
+7. **Interruptions.** Events on the map take the party out of movement and rest.
+
+## 9. Open questions
+
+1. **What does "meta-progression" span?** This design takes it as within one playthrough, since the encampment is lost with the game. Should anything carry over between playthroughs, such as unlocked improvements or prerolls?
+2. **Threat above 5 in endless mode:** extend `FOES_AT_THREAT` and `foeAtLevel` past `MAX_THREAT`, or keep threat 5 and make spawns more frequent?
+3. **Does capturing a site take more than standing on it?** For example a battle, a garrison or a cost.
+4. **Is a held site lost only to a siege,** or also when blight under it reaches a level?
+5. **Should spawned monsters move toward the encampment**, or are they static nests as today? Static is simpler and already makes the sieges.
