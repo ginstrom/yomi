@@ -102,7 +102,7 @@ describe('the manual’s screenshots', () => {
     const hero = battle.state.units.find((u) => u.id === 'hero_1')!
     const foes = battle.state.units.filter((u) => u.side === 'enemy')
     const nearest = foes.reduce((a, b) => (hexDistance(hero.position, b.position) < hexDistance(hero.position, a.position) ? b : a))
-    await game.hover(battleHexOnScreen(battle, offsetToHex(3, 2)))
+    await game.hover(battleHexOnScreen(battle, offsetToHex(5, 4)))
     await shot(game, 'battle-move')
     await game.hover(battleHexOnScreen(battle, nearest.position))
     await shot(game, 'battle-attack')

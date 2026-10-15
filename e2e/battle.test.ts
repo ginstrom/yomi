@@ -14,7 +14,7 @@ describe('a battle', () => {
     const start = await game.enterBattle()
     expect(start.selected).toBe('hero_1')
 
-    const to = offsetToHex(3, 2)
+    const to = offsetToHex(5, 4)
     await game.click(battleHexOnScreen(start, to))
     const moved = await game.awaitTurn()
     expect(hero(moved)).toMatchObject({ position: to, ap: 6 })
@@ -115,7 +115,7 @@ describe('a battle', () => {
     await game.waitFor('Battle', (b) => b.spellMenu === null)
     expect(await game.scenes()).toEqual({ running: ['Battle'], paused: [] })
 
-    await game.click(battleHexOnScreen(selected, offsetToHex(3, 3)))
+    await game.click(battleHexOnScreen(selected, offsetToHex(5, 5)))
     const near = await game.waitFor('Battle', (b) => b.playerControl && mage(b).ap === 5)
 
     await game.press('m')
@@ -244,7 +244,7 @@ describe('a battle', () => {
     await game.press('Escape')
     await game.waitForScenes(['Battle'])
     const battle = await game.awaitTurn()
-    const to = offsetToHex(3, 2)
+    const to = offsetToHex(5, 4)
     await game.click(battleHexOnScreen(battle, to))
     expect(hero(await game.awaitTurn())).toMatchObject({ position: to })
   })

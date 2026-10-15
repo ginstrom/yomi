@@ -15,11 +15,11 @@ export function heroId(index: number): UnitId {
 
 /**
  * Where the party lines up, as [column, row], in party order: the first three
- * down the second column with a hex between them, so their sprites and
+ * down the fourth column with a hex between them, so their sprites and
  * nameplates stand clear of each other, and the rest in the gaps behind.
  * Every encounter's board must have these hexes, and keep its foes off them.
  */
-const PARTY_START: ReadonlyArray<readonly [number, number]> = [[1, 2], [1, 0], [1, 4], [0, 1], [0, 3], [0, 2]]
+const PARTY_START: ReadonlyArray<readonly [number, number]> = [[3, 4], [3, 2], [3, 6], [2, 3], [2, 5], [2, 4]]
 
 function partyUnits(party: readonly Fighter[]): UnitSetup[] {
   if (party.length > PARTY_START.length) throw new Error(`No room for a party of ${party.length}`)
@@ -85,7 +85,12 @@ const FOE_STATS: Record<FoeSlot['kind'], CombatantStats> = {
   horror: BLIGHT_HORROR_STATS,
 }
 
-const BOARD = { cols: 8, rows: 5 }
+/**
+ * Both sides line up in the middle, two hexes in from every edge, so there is
+ * ground on all sides to flank, fall back and come round on; shifting the
+ * lines by whole pairs of rows keeps the odd-r board's shape between them.
+ */
+const BOARD = { cols: 12, rows: 9 }
 
 /**
  * The party against the foes `threat` calls for: the first `FOES_AT_THREAT`
@@ -114,30 +119,30 @@ function encounter(party: readonly Fighter[], slots: readonly FoeSlot[], threat:
 }
 
 const GOBLIN_RAID: readonly FoeSlot[] = [
-  { id: 'goblin', kind: 'goblin', name: 'Goblin', at: [6, 2] },
-  { id: 'kobold', kind: 'kobold', name: 'Kobold', at: [7, 0] },
+  { id: 'goblin', kind: 'goblin', name: 'Goblin', at: [8, 4] },
+  { id: 'kobold', kind: 'kobold', name: 'Kobold', at: [9, 2] },
   // Third, so it takes the field from threat 2; at the back, off the party's hexes.
-  { id: 'shaman', kind: 'shaman', name: 'Goblin Shaman', at: [7, 2] },
-  { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [7, 3] },
-  { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [6, 4] },
-  { id: 'brute', kind: 'goblin', name: 'Goblin Brute', at: [7, 1] },
+  { id: 'shaman', kind: 'shaman', name: 'Goblin Shaman', at: [9, 4] },
+  { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [9, 5] },
+  { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [8, 6] },
+  { id: 'brute', kind: 'goblin', name: 'Goblin Brute', at: [9, 3] },
 ]
 
 const KOBOLD_SCOUTS: readonly FoeSlot[] = [
-  { id: 'scout', kind: 'kobold', name: 'Kobold Scout', at: [6, 0] },
-  { id: 'tracker', kind: 'kobold', name: 'Kobold Tracker', at: [6, 4] },
-  { id: 'trapper', kind: 'kobold', name: 'Kobold Trapper', at: [7, 2] },
-  { id: 'overseer', kind: 'goblin', name: 'Goblin Overseer', at: [6, 2] },
-  { id: 'whip', kind: 'goblin', name: 'Goblin Whip', at: [7, 4] },
+  { id: 'scout', kind: 'kobold', name: 'Kobold Scout', at: [8, 2] },
+  { id: 'tracker', kind: 'kobold', name: 'Kobold Tracker', at: [8, 6] },
+  { id: 'trapper', kind: 'kobold', name: 'Kobold Trapper', at: [9, 4] },
+  { id: 'overseer', kind: 'goblin', name: 'Goblin Overseer', at: [8, 4] },
+  { id: 'whip', kind: 'goblin', name: 'Goblin Whip', at: [9, 6] },
 ]
 
 // The Horror first, so it takes the field at any threat; the Source is fought at the top.
 const SOURCE_GUARDIANS: readonly FoeSlot[] = [
-  { id: 'horror', kind: 'horror', name: 'Blight Horror', at: [6, 2] },
-  { id: 'brute', kind: 'goblin', name: 'Goblin Brute', at: [6, 0] },
-  { id: 'shaman', kind: 'shaman', name: 'Blight Shaman', at: [7, 2] },
-  { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [6, 4] },
-  { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [7, 4] },
+  { id: 'horror', kind: 'horror', name: 'Blight Horror', at: [8, 4] },
+  { id: 'brute', kind: 'goblin', name: 'Goblin Brute', at: [8, 2] },
+  { id: 'shaman', kind: 'shaman', name: 'Blight Shaman', at: [9, 4] },
+  { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [8, 6] },
+  { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [9, 6] },
 ]
 
 /**

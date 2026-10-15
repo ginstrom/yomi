@@ -43,11 +43,11 @@ describe('save slots', () => {
   it('opens a game saved in battle in that battle, as it stood when the player’s turn began', async () => {
     const game = await games.open()
     const start = await game.enterBattle()
-    await game.click(battleHexOnScreen(start, offsetToHex(3, 2)))
+    await game.click(battleHexOnScreen(start, offsetToHex(5, 4)))
     await game.click((await game.awaitTurn()).buttons.endTurn)
     const saved = await game.waitFor('Battle', (b) => b.playerControl && b.state.round === 2)
     // What is done after the turn began is not kept: a reload rewinds to its start.
-    await game.click(battleHexOnScreen(saved, offsetToHex(4, 2)))
+    await game.click(battleHexOnScreen(saved, offsetToHex(6, 4)))
     await game.waitFor('Battle', (b) => b.playerControl && b.log.length > saved.log.length)
 
     const menu = await game.reload()
