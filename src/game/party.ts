@@ -12,37 +12,69 @@ export const STARTING_PARTY_LIMIT = 3
 /** The hit points a member who fell in a battle the party won gets back up with. */
 export const REVIVED_HP = 1
 
+/** A pre-rolled character: a draft ready to fill a place in the party, and the few words the party screen says of it. */
+export interface Preroll {
+  draft: CharacterDraft
+  /** What it is good at, as "Melee fighter", shown under its portrait. */
+  role: string
+}
+
 /**
- * The ready-made party: a soldier, an archer and a mage, each the specialist
- * of one skill. They are drafts, built as a created character is, so each is
- * a legal creation and can be edited on the party screen like one.
+ * The pre-rolled characters a place in the party can be filled with, instead
+ * of creating one. They are drafts, built as a created character is, so each
+ * is a legal creation and can be edited on the party screen like one. The
+ * first three are the ready-made party (`READY_MADE`).
  */
-export const READY_MADE: readonly CharacterDraft[] = [
+export const PREROLLS: readonly Preroll[] = [
   {
-    name: 'Aldric',
-    portrait: 'knight',
-    attributes: { strength: 9, perception: 3, endurance: 7, intelligence: 3, agility: 6, luck: 4 },
-    tagged: 'melee',
-    raises: { melee: 10, archery: 0, magic: 0 },
-    perks: ['weapon_training', 'toughness', 'heavy_hand'],
+    role: 'Melee fighter',
+    draft: {
+      name: 'Aldric',
+      portrait: 'knight',
+      attributes: { strength: 9, perception: 3, endurance: 7, intelligence: 3, agility: 6, luck: 4 },
+      tagged: 'melee',
+      raises: { melee: 10, archery: 0, magic: 0 },
+      perks: ['weapon_training', 'toughness', 'heavy_hand'],
+    },
   },
   {
-    name: 'Brenna',
-    portrait: 'ranger',
-    attributes: { strength: 3, perception: 9, endurance: 5, intelligence: 4, agility: 7, luck: 4 },
-    tagged: 'archery',
-    raises: { melee: 0, archery: 10, magic: 0 },
-    perks: ['marksmanship', 'deadly_aim', 'dodger'],
+    role: 'Archer',
+    draft: {
+      name: 'Brenna',
+      portrait: 'ranger',
+      attributes: { strength: 3, perception: 9, endurance: 5, intelligence: 4, agility: 7, luck: 4 },
+      tagged: 'archery',
+      raises: { melee: 0, archery: 10, magic: 0 },
+      perks: ['marksmanship', 'deadly_aim', 'dodger'],
+    },
   },
   {
-    name: 'Delwyn',
-    portrait: 'wizard',
-    attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
-    tagged: 'magic',
-    raises: { melee: 0, archery: 0, magic: 10 },
-    perks: ['magic_arrow', 'arcane_study', 'keen_eye'],
+    role: 'Mage',
+    draft: {
+      name: 'Delwyn',
+      portrait: 'wizard',
+      attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
+      tagged: 'magic',
+      raises: { melee: 0, archery: 0, magic: 10 },
+      perks: ['magic_arrow', 'arcane_study', 'keen_eye'],
+    },
+  },
+  {
+    // Tagged in Melee Weapons and trained in Archery, so the two end up close.
+    role: 'Balanced warrior',
+    draft: {
+      name: 'Garrick',
+      portrait: 'squire',
+      attributes: { strength: 6, perception: 6, endurance: 5, intelligence: 3, agility: 8, luck: 4 },
+      tagged: 'melee',
+      raises: { melee: 0, archery: 10, magic: 0 },
+      perks: ['weapon_training', 'marksmanship', 'marksmanship'],
+    },
   },
 ]
+
+/** The ready-made party: a soldier, an archer and a mage, each the specialist of one skill. */
+export const READY_MADE: readonly CharacterDraft[] = PREROLLS.slice(0, 3).map((preroll) => preroll.draft)
 
 /**
  * The player's characters, in the order they line up for battle. A battle's

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { deriveCombatStats } from '../character/character.ts'
 import { draftCharacter, newDraft } from '../character/creation.ts'
-import { READY_MADE } from '../game/party.ts'
-import { draftInfo } from './draftInfo.ts'
+import { PREROLLS, READY_MADE } from '../game/party.ts'
+import { draftInfo, draftSkills } from './draftInfo.ts'
 
 describe('draftInfo', () => {
   it("tells the soldier's skill, numbers, attributes, gear and perks", () => {
@@ -28,5 +28,14 @@ describe('draftInfo', () => {
     const blank = draftInfo(newDraft())
     expect(blank[0]).toBe('No tagged skill')
     expect(blank[4]).toBe('Perks: none')
+  })
+})
+
+describe('draftSkills', () => {
+  it('gives the tagged skill first, then any other the draft placed points in', () => {
+    expect(draftSkills(READY_MADE[0])).toBe('Melee Weapons 60%')
+    const garrick = PREROLLS.find((preroll) => preroll.draft.name === 'Garrick')!.draft
+    expect(draftSkills(garrick)).toBe('Melee Weapons 39%  Archery 34%')
+    expect(draftSkills({ ...garrick, tagged: null })).toBe('Archery 34%')
   })
 })

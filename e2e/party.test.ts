@@ -24,6 +24,7 @@ describe('the party screen', () => {
 
     // The ready-made three are shown under their button, and a hover tells of one.
     expect(choice.readyMade.map((member) => member.name)).toEqual(['Aldric', 'Brenna', 'Delwyn'])
+    expect(choice.readyMade.map((member) => member.role)).toEqual(['Melee fighter', 'Archer', 'Mage'])
     expect(choice.readyMade.every((member) => member.visible)).toBe(true)
     expect(choice.info).toEqual([])
     await game.hover(choice.readyMade[2])
@@ -51,6 +52,46 @@ describe('the party screen', () => {
     await game.click(own.buttons.back)
     await game.click((await game.waitFor('Party', (p) => p.view === 'choice')).buttons.back)
     await game.waitForScenes(['Menu'])
+  })
+
+  it('fills empty places with pre-rolled characters, each at most once', async () => {
+    const game = await games.open()
+    const choice = await game.openPartyScreen()
+    await game.click(choice.buttons.createOwn)
+    const roster = await game.waitFor('Party', (p) => p.view === 'roster')
+    expect(roster.rows.every((row) => row.preroll.visible)).toBe(true)
+
+    await game.click(roster.rows[0].preroll)
+    const prerolls = await game.settled('Party', (p) => p.view === 'prerolls')
+    expect(prerolls.prerolls.map((p) => [p.name, p.role])).toEqual([
+      ['Aldric', 'Melee fighter'],
+      ['Brenna', 'Archer'],
+      ['Delwyn', 'Mage'],
+      ['Garrick', 'Balanced warrior'],
+    ])
+    expect(prerolls.prerolls.every((p) => p.enabled)).toBe(true)
+    await game.hover(prerolls.prerolls[3])
+    expect((await game.waitFor('Party', (p) => p.info.length > 0)).info[0]).toBe('Garrick')
+    await game.click(prerolls.prerolls[3])
+    const one = await game.settled('Party', (p) => p.view === 'roster')
+    expect(one.rows.map((row) => row.name)).toEqual(['Garrick', null, null])
+    expect(one.rows.map((row) => row.preroll.visible)).toEqual([false, true, true])
+
+    // One already in the party is shown, but cannot be chosen again; Back returns to the roster as it was.
+    await game.click(one.rows[1].preroll)
+    const again = await game.settled('Party', (p) => p.view === 'prerolls')
+    expect(again.prerolls.map((p) => p.enabled)).toEqual([true, true, true, false])
+    await game.click(again.buttons.back)
+    const back = await game.settled('Party', (p) => p.view === 'roster')
+    expect(back.rows.map((row) => row.name)).toEqual(['Garrick', null, null])
+
+    await game.click(back.rows[1].preroll)
+    await game.click((await game.settled('Party', (p) => p.view === 'prerolls')).prerolls[1])
+    const two = await game.settled('Party', (p) => p.view === 'roster')
+    expect(two.rows.map((row) => row.name)).toEqual(['Garrick', 'Brenna', null])
+    await game.click(two.buttons.begin)
+    await game.waitForScenes(['World'])
+    expect((await game.waitFor('World')).party.map((member) => member.name)).toEqual(['Garrick', 'Brenna'])
   })
 
   it('repeats a plus or minus held down, until it is let go or has nothing left to do', async () => {
@@ -234,7 +275,7 @@ describe('the party screen', () => {
     const choice = await game.openPartyScreen()
     await game.click(choice.buttons.createOwn)
     const roster = await game.waitFor('Party', (p) => p.view === 'roster')
-    for (const { x, y } of [roster.rows[0].create, roster.rows[2].create, roster.buttons.begin, roster.buttons.back]) {
+    for (const { x, y } of [roster.rows[0].create, roster.rows[2].preroll, roster.buttons.begin, roster.buttons.back]) {
       expect(x > 0 && x < 840 && y > 0 && y < 560).toBe(true)
     }
     await game.click(roster.rows[0].create)

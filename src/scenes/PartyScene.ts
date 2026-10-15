@@ -1,13 +1,13 @@
 import Phaser from 'phaser'
 import { maxHp } from '../character/character.ts'
 import { copyDraft, draftCharacter, type CharacterDraft } from '../character/creation.ts'
-import { SKILLS, skillLevel } from '../character/skills.ts'
 import { newGame } from '../game/gameState.ts'
-import { READY_MADE, STARTING_PARTY_LIMIT, partyFromDrafts } from '../game/party.ts'
+import { PREROLLS, READY_MADE, STARTING_PARTY_LIMIT, partyFromDrafts } from '../game/party.ts'
 import { SLOT_IDS, describeSlot, firstEmptySlot, type SlotId } from '../game/saveSlots.ts'
 import type { ButtonProbe, PartyProbe } from '../testHook.ts'
+import { soundVolume } from './audioSettings.ts'
 import type { Point } from './boardGeometry.ts'
-import { draftInfo } from './draftInfo.ts'
+import { draftInfo, draftSkills } from './draftInfo.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton, type PanelButtonLook } from './panelButton.ts'
 import { PartyColumn } from './PartyColumn.ts'
@@ -32,13 +32,20 @@ const READY_MADE_BUTTON: Rect = { x: CENTRE_X, y: 140, width: CHOICE_W, height: 
 const CREATE_OWN_BUTTON: Rect = { x: CENTRE_X, y: 330, width: CHOICE_W, height: CHOICE_H }
 const CHOICE_BACK_BUTTON: Rect = { x: CENTRE_X, y: 404, width: 160, height: 40 }
 
-/** The ready-made party under its button: a face and a name for each, and what a hover tells of one. */
-const PREVIEW_Y = 212
-const PREVIEW_PITCH = 96
-const PREVIEW_NAME_Y = PREVIEW_Y + PORTRAIT_SIZE / 2 + 6
+/** The ready-made party under its button: a face, a name and a role for each, and what a hover tells of one. */
+const PREVIEW_Y = 206
+const PREVIEW_PITCH = 120
+/** Under a face, how far down its name and its role are, and the box a hover shows. */
+const NAME_DY = PORTRAIT_SIZE / 2 + 6
+const ROLE_DY = NAME_DY + 18
+const INFO_DY = ROLE_DY + 22
 const INFO_W = 336
 const INFO_PAD = 10
-const INFO_Y = PREVIEW_NAME_Y + 22
+
+/** The prerolls to fill a place with: a face, a name and a role for each, in a row. */
+const PREROLL_Y = 170
+const PREROLL_PITCH = Math.min(140, (FRAME_W - 60) / PREROLLS.length)
+const PREROLL_BACK_BUTTON: Rect = { x: CENTRE_X, y: 440, width: 160, height: 40 }
 
 /** The roster: a row for each place in the party. */
 const ROW_W = 600
@@ -64,26 +71,32 @@ const TEXT = '#d8c9a3'
 const rowY = (index: number): number => ROW_Y + index * ROW_PITCH
 const editButton = (index: number): Rect => ({ x: ROW_LEFT + ROW_W - 150, y: rowY(index), width: ROW_BUTTON_W, height: ROW_BUTTON_H })
 const removeButton = (index: number): Rect => ({ x: ROW_LEFT + ROW_W - 56, y: rowY(index), width: ROW_BUTTON_W, height: ROW_BUTTON_H })
-const createButton = (index: number): Rect => ({ x: CENTRE_X, y: rowY(index), width: 220, height: 40 })
+const createButton = (index: number): Rect => ({ x: CENTRE_X - 110, y: rowY(index), width: 200, height: 40 })
+const prerollButton = (index: number): Rect => ({ x: CENTRE_X + 110, y: rowY(index), width: 200, height: 40 })
 const previewAt = (index: number): Point => ({
   x: CENTRE_X + (index - (READY_MADE.length - 1) / 2) * PREVIEW_PITCH,
   y: PREVIEW_Y,
 })
+const prerollAt = (index: number): Point => ({
+  x: CENTRE_X + (index - (PREROLLS.length - 1) / 2) * PREROLL_PITCH,
+  y: PREROLL_Y,
+})
+const faceRect = ({ x, y }: Point): Rect => ({ x, y, width: PORTRAIT_SIZE, height: PORTRAIT_SIZE })
 const slotButton = (index: number): Rect => ({ x: CENTRE_X, y: SLOT_Y + index * SLOT_PITCH, width: SLOT_W, height: SLOT_H })
 
 /**
  * The party screen, which New leads to: the choice between the ready-made
- * party and one's own, the roster where characters are created, edited and
- * removed until the game begins, and the prompt for a slot to overwrite when
- * all three are full. It holds the party as drafts (creation.ts) and nothing
+ * party and one's own, the roster where characters are created, picked from
+ * the prerolls, edited and removed until the game begins, and the prompt for
+ * a slot to overwrite when all three are full. It holds the party as drafts (creation.ts) and nothing
  * else; Begin makes the characters and the game of them.
  */
 export class PartyScene extends Phaser.Scene {
   private view: PartyView = 'choice'
   private drafts: CharacterDraft[] = []
   private readonly limit = STARTING_PARTY_LIMIT
-  /** The ready-made member whose portrait the pointer is over, on the choice. */
-  private hovered: number | null = null
+  /** The draft whose portrait the pointer is over: a ready-made member on the choice, or a preroll. */
+  private hovered: CharacterDraft | null = null
   private info!: Phaser.GameObjects.Container
   private bg!: Phaser.GameObjects.Rectangle
   private frame!: Phaser.GameObjects.Container
@@ -130,6 +143,7 @@ export class PartyScene extends Phaser.Scene {
           edit: button(editButton(index), filled),
           remove: button(removeButton(index), filled),
           create: button(createButton(index), roster && !filled),
+          preroll: button(prerollButton(index), roster && !filled),
         }
       }),
       buttons: {
@@ -138,11 +152,17 @@ export class PartyScene extends Phaser.Scene {
         begin: button(BEGIN_BUTTON, roster, this.drafts.length > 0),
         back: button(this.backButton(), true),
       },
-      readyMade: READY_MADE.map((draft, index) => ({
-        ...button({ ...previewAt(index), width: PORTRAIT_SIZE, height: PORTRAIT_SIZE }, this.view === 'choice'),
+      readyMade: PREROLLS.slice(0, READY_MADE.length).map(({ draft, role }, index) => ({
+        ...button(faceRect(previewAt(index)), this.view === 'choice'),
         name: draft.name,
+        role,
       })),
-      info: this.hovered === null ? [] : [READY_MADE[this.hovered].name, ...draftInfo(READY_MADE[this.hovered])],
+      prerolls: PREROLLS.map(({ draft, role }, index) => ({
+        ...button(faceRect(prerollAt(index)), this.view === 'prerolls', !this.inParty(draft)),
+        name: draft.name,
+        role,
+      })),
+      info: this.hovered === null ? [] : [this.hovered.name, ...draftInfo(this.hovered)],
       slots: SLOT_IDS.map((slot, index) => ({
         ...button(slotButton(index), this.view === 'overwrite'),
         line: describeSlot(slot).line,
@@ -153,6 +173,7 @@ export class PartyScene extends Phaser.Scene {
   /** Back sits under whatever the view shows, and beside Begin on the roster. */
   private backButton(): Rect {
     if (this.view === 'choice') return CHOICE_BACK_BUTTON
+    if (this.view === 'prerolls') return PREROLL_BACK_BUTTON
     if (this.view === 'roster') return { ...BEGIN_BUTTON, x: CENTRE_X - 90 }
     return { x: CENTRE_X, y: SLOT_Y + SLOT_IDS.length * SLOT_PITCH + 10, width: 160, height: 40 }
   }
@@ -166,7 +187,8 @@ export class PartyScene extends Phaser.Scene {
     this.info = this.add.container(0, 0).setVisible(false)
     const titles: Record<PartyView, [title: string, under: string]> = {
       choice: ['New game', 'Take the ready-made party, or create your own.'],
-      roster: ['Your party', `Up to ${this.limit} members. Edit or remove a character, or create one in an empty place.`],
+      roster: ['Your party', `Up to ${this.limit} members. Fill an empty place, or edit or remove a character.`],
+      prerolls: ['Pre-rolled characters', 'Choose one to join the party. You can edit it afterwards.'],
       overwrite: ['All three slots are full', 'Which game should the new one overwrite?'],
     }
     const [title, under] = titles[this.view]
@@ -176,6 +198,7 @@ export class PartyScene extends Phaser.Scene {
     ])
     if (this.view === 'choice') this.buildChoice()
     else if (this.view === 'roster') this.buildRoster()
+    else if (this.view === 'prerolls') this.buildPrerolls()
     else this.buildOverwrite()
     this.button(this.backButton(), 'Back', () => this.onBack())
     // Last, so that it lies over the buttons.
@@ -190,32 +213,49 @@ export class PartyScene extends Phaser.Scene {
   private buildChoice(): void {
     this.button(READY_MADE_BUTTON, 'Ready-made party', () => this.showRoster(READY_MADE.map(copyDraft)), { fontSize: 16 })
     this.button(CREATE_OWN_BUTTON, 'Create your own', () => this.showRoster([]), { fontSize: 16 })
-    READY_MADE.forEach((draft, index) => {
-      const { x, y } = previewAt(index)
-      const edge = this.add.rectangle(x, y, PORTRAIT_SIZE, PORTRAIT_SIZE).setStrokeStyle(2, 0x6b5a3a).setInteractive()
-      edge.on('pointerover', () => {
-        edge.setStrokeStyle(2, 0xe8c766)
-        this.showInfo(index)
-      })
-      edge.on('pointerout', () => {
-        edge.setStrokeStyle(2, 0x6b5a3a)
-        if (this.hovered === index) this.showInfo(null)
-      })
-      this.frame.add([
-        this.add.image(x, y, portraitKey(draft.portrait)).setScale(PORTRAIT_SCALE),
-        edge,
-        this.add.text(x, PREVIEW_NAME_Y, draft.name, { fontFamily: FONT, fontSize: '13px', color: TEXT }).setOrigin(0.5, 0),
-      ])
-    })
+    PREROLLS.slice(0, READY_MADE.length).forEach(({ draft, role }, index) => this.addFace(draft, role, previewAt(index)))
   }
 
-  /** Shows what the ready-made member at `index` comes to, in a box under its portrait; null takes the box away. */
-  private showInfo(index: number | null): void {
-    this.hovered = index
+  /**
+   * A draft's portrait with its name and role under it; a hover tells what it
+   * comes to. With `onClick` the face is a button, and `enabled` false draws
+   * it faint and takes no clicks.
+   */
+  private addFace(draft: CharacterDraft, role: string, at: Point, onClick?: () => void, enabled = true): void {
+    const { x, y } = at
+    const rest = enabled ? 0x6b5a3a : 0x3a3024
+    const edge = this.add.rectangle(x, y, PORTRAIT_SIZE, PORTRAIT_SIZE).setStrokeStyle(2, rest).setInteractive({ useHandCursor: !!onClick && enabled })
+    edge.on('pointerover', () => {
+      edge.setStrokeStyle(2, 0xe8c766)
+      this.showInfo(draft, at)
+    })
+    edge.on('pointerout', () => {
+      edge.setStrokeStyle(2, rest)
+      if (this.hovered === draft) this.showInfo(null)
+    })
+    if (onClick && enabled) {
+      edge.on('pointerdown', () => {
+        this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+        // Next tick: the redraw a click leads to destroys the face whose handler this runs in.
+        this.time.delayedCall(0, onClick)
+      })
+    }
+    this.frame.add([
+      this.add.image(x, y, portraitKey(draft.portrait)).setScale(PORTRAIT_SCALE).setAlpha(enabled ? 1 : 0.4),
+      edge,
+      this.add.text(x, y + NAME_DY, draft.name, { fontFamily: FONT, fontSize: '13px', color: enabled ? TEXT : DIM }).setOrigin(0.5, 0),
+      this.add
+        .text(x, y + ROLE_DY, enabled ? role : 'In the party', { fontFamily: FONT, fontSize: '12px', color: enabled ? GOLD : DIM })
+        .setOrigin(0.5, 0),
+    ])
+  }
+
+  /** Shows what `draft` comes to, in a box under its portrait at `at`; null takes the box away. */
+  private showInfo(draft: CharacterDraft | null, at?: Point): void {
+    this.hovered = draft
     this.info.removeAll(true)
-    this.info.setVisible(index !== null)
-    if (index === null) return
-    const draft = READY_MADE[index]
+    this.info.setVisible(draft !== null)
+    if (draft === null || !at) return
     const name = this.add.text(INFO_PAD, INFO_PAD, draft.name, { fontFamily: FONT, fontSize: '15px', color: GOLD })
     const body = this.add
       .text(INFO_PAD, INFO_PAD + 24, draftInfo(draft).join('\n'), {
@@ -228,8 +268,8 @@ export class PartyScene extends Phaser.Scene {
     const height = body.y + body.height + INFO_PAD
     this.info.add([this.add.rectangle(0, 0, INFO_W, height, 0x14100c, 1).setOrigin(0).setStrokeStyle(2, 0xc9a227), name, body])
     // Under its portrait, and within the frame.
-    const x = Math.max(8, Math.min(FRAME_W - INFO_W - 8, previewAt(index).x - INFO_W / 2))
-    this.info.setPosition(x, INFO_Y)
+    const x = Math.max(8, Math.min(FRAME_W - INFO_W - 8, at.x - INFO_W / 2))
+    this.info.setPosition(x, at.y + INFO_DY)
   }
 
   private buildRoster(): void {
@@ -239,24 +279,34 @@ export class PartyScene extends Phaser.Scene {
       this.frame.add(this.add.rectangle(CENTRE_X, y, ROW_W, ROW_H, 0x1b1712, draft ? 0.9 : 0.4).setStrokeStyle(1, 0x4a3d28))
       if (!draft) {
         this.button(createButton(index), 'Create character', () => this.openCreation())
+        this.button(prerollButton(index), 'Choose pre-rolled', () => this.showPrerolls())
         continue
       }
       // Shown as the character the draft makes, so the roster cannot disagree with the game.
       const character = draftCharacter(draft)
       const portraitX = ROW_LEFT + 8 + PORTRAIT_SIZE / 2
       const textX = portraitX + PORTRAIT_SIZE / 2 + 14
-      const [tagged] = character.tagged
-      const skill = tagged ? `${SKILLS[tagged].name} ${skillLevel(character, tagged)}%` : 'No tagged skill'
       this.frame.add([
         this.add.image(portraitX, y, portraitKey(character.portrait)).setScale(PORTRAIT_SCALE),
         this.add.rectangle(portraitX, y, PORTRAIT_SIZE, PORTRAIT_SIZE).setStrokeStyle(2, 0x6b5a3a),
         this.add.text(textX, y - 24, character.name, { fontFamily: FONT, fontSize: '18px', color: GOLD }),
-        this.add.text(textX, y + 4, `${skill}    HP ${maxHp(character)}`, { fontFamily: FONT, fontSize: '13px', color: TEXT }),
+        this.add.text(textX, y + 4, `${draftSkills(draft)}    HP ${maxHp(character)}`, { fontFamily: FONT, fontSize: '13px', color: TEXT }),
       ])
       this.button(editButton(index), 'Edit', () => this.openCreation(index))
       this.button(removeButton(index), 'Remove', () => this.onRemove(index))
     }
     this.button(BEGIN_BUTTON, 'Begin', () => this.onBegin(), { enabled: this.drafts.length > 0, marked: true, fontSize: 16 })
+  }
+
+  /** A preroll already in the party (by name, which members may not share) is shown but cannot be chosen again. */
+  private buildPrerolls(): void {
+    PREROLLS.forEach(({ draft, role }, index) =>
+      this.addFace(draft, role, prerollAt(index), () => this.addPreroll(draft), !this.inParty(draft)),
+    )
+  }
+
+  private inParty(draft: CharacterDraft): boolean {
+    return this.drafts.some((member) => member.name === draft.name)
   }
 
   private buildOverwrite(): void {
@@ -278,6 +328,17 @@ export class PartyScene extends Phaser.Scene {
     this.drafts = drafts
     this.view = 'roster'
     this.render()
+  }
+
+  private showPrerolls(): void {
+    this.view = 'prerolls'
+    this.render()
+  }
+
+  /** A preroll joins at the end, as a created character does, as a copy the roster may edit. */
+  private addPreroll(draft: CharacterDraft): void {
+    if (this.drafts.length >= this.limit || this.inParty(draft)) return
+    this.showRoster([...this.drafts, copyDraft(draft)])
   }
 
   /** Removing closes the gap: the party stays in battle order, and a new character joins at the end. */
@@ -308,14 +369,14 @@ export class PartyScene extends Phaser.Scene {
     this.scene.start('World', { game: newGame(partyFromDrafts(this.drafts), slot) })
   }
 
-  /** From the overwrite prompt back to the roster, from the roster to the choice (the party made so far is dropped), from the choice to the menu. */
+  /** From the overwrite prompt or the prerolls back to the roster, from the roster to the choice (the party made so far is dropped), from the choice to the menu. */
   private onBack(): void {
     if (this.view === 'choice') {
       this.scene.start('Menu')
       return
     }
     if (this.view === 'roster') this.drafts = []
-    this.view = this.view === 'overwrite' ? 'roster' : 'choice'
+    this.view = this.view === 'roster' ? 'choice' : 'roster'
     this.render()
   }
 }

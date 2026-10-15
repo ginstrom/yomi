@@ -46,15 +46,17 @@ export interface MenuProbe {
 }
 
 export interface PartyProbe {
-  /** The choice between the two ways to start, the roster, or the prompt for a slot to overwrite. */
-  view: 'choice' | 'roster' | 'overwrite'
-  /** A row for each place up to the party limit: a member with Edit and Remove, or an empty place with Create. */
-  rows: Array<{ name: string | null; edit: ButtonProbe; remove: ButtonProbe; create: ButtonProbe }>
+  /** The choice between the two ways to start, the roster, the prerolls to fill a place with, or the prompt for a slot to overwrite. */
+  view: 'choice' | 'roster' | 'prerolls' | 'overwrite'
+  /** A row for each place up to the party limit: a member with Edit and Remove, or an empty place with Create and Preroll. */
+  rows: Array<{ name: string | null; edit: ButtonProbe; remove: ButtonProbe; create: ButtonProbe; preroll: ButtonProbe }>
   /** `readyMade` and `createOwn` are the choice's; `begin` is the roster's, enabled with a member or more. */
   buttons: { readyMade: ButtonProbe; createOwn: ButtonProbe; begin: ButtonProbe; back: ButtonProbe }
   /** The ready-made party's portraits under its button, on the choice: nothing to click, but a hover tells of the member. */
-  readyMade: Array<ButtonProbe & { name: string }>
-  /** The lines the hover shows of the ready-made member under the pointer, its name first; empty with none. */
+  readyMade: Array<ButtonProbe & { name: string; role: string }>
+  /** The prerolls' portraits, on their view: a click adds one to the party; one already in it is disabled. */
+  prerolls: Array<ButtonProbe & { name: string; role: string }>
+  /** The lines the hover shows of the ready-made member or preroll under the pointer, its name first; empty with none. */
   info: string[]
   /** The overwrite prompt's rows, one for each save slot, each with the line it reads. */
   slots: Array<ButtonProbe & { line: string }>

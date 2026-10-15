@@ -15,6 +15,7 @@ import { BattleEngine } from '../engine/battleEngine.ts'
 import { ENCOUNTERS, MAX_THREAT } from './encounters.ts'
 import {
   MAX_PARTY_SIZE,
+  PREROLLS,
   READY_MADE,
   REVIVED_HP,
   STARTING_PARTY_LIMIT,
@@ -25,17 +26,10 @@ import {
   rewardVictory,
 } from './party.ts'
 
-describe('readyMadeParty', () => {
-  it('is three level 1 heroes, each with a name and a face of its own', () => {
-    const party = readyMadeParty()
-    expect(party.map((m) => m.name)).toEqual(['Aldric', 'Brenna', 'Delwyn'])
-    expect(party.map((m) => m.level)).toEqual([1, 1, 1])
-    expect(new Set(party.map((m) => m.portrait)).size).toBe(3)
-  })
-
-  it('is made of drafts with no problems: 35 attribute points, a tag, 10 skill points and 3 picks spent', () => {
-    for (const draft of READY_MADE) {
-      const others = READY_MADE.filter((other) => other !== draft).map((other) => other.name)
+describe('PREROLLS', () => {
+  it('are drafts with no problems: 32 attribute points, a tag, 10 skill points and 3 picks spent', () => {
+    for (const { draft } of PREROLLS) {
+      const others = PREROLLS.filter((other) => other.draft !== draft).map((other) => other.draft.name)
       expect(draftProblems(draft, others)).toEqual([])
       expect([attributePointsLeft(draft), skillPointsLeft(draft), perkPicksLeft(draft)]).toEqual([0, 0, 0])
       const member = draftCharacter(draft)
@@ -48,6 +42,32 @@ describe('readyMadeParty', () => {
       // Each holds a weapon it has a gift for.
       expect(member.tagged).toContain(weaponSkill(member.equipment.mainHand))
     }
+  })
+
+  it('each have a name, a face and a role of their own', () => {
+    const distinct = (values: string[]) => new Set(values).size
+    expect(distinct(PREROLLS.map((p) => p.draft.name))).toBe(PREROLLS.length)
+    expect(distinct(PREROLLS.map((p) => p.draft.portrait))).toBe(PREROLLS.length)
+    expect(distinct(PREROLLS.map((p) => p.role))).toBe(PREROLLS.length)
+  })
+
+  it('include a balanced warrior, middling in both melee and archery', () => {
+    const balanced = PREROLLS.find((preroll) => preroll.role === 'Balanced warrior')!
+    const garrick = draftCharacter(balanced.draft)
+    expect([skillLevel(garrick, 'melee'), skillLevel(garrick, 'archery')]).toEqual([39, 34])
+  })
+})
+
+describe('readyMadeParty', () => {
+  it('is three level 1 heroes, each with a name and a face of its own', () => {
+    const party = readyMadeParty()
+    expect(party.map((m) => m.name)).toEqual(['Aldric', 'Brenna', 'Delwyn'])
+    expect(party.map((m) => m.level)).toEqual([1, 1, 1])
+    expect(new Set(party.map((m) => m.portrait)).size).toBe(3)
+  })
+
+  it('is the first three prerolls', () => {
+    expect(READY_MADE).toEqual(PREROLLS.slice(0, 3).map((preroll) => preroll.draft))
   })
 
   it('makes each the specialist of one skill, near 60% in it and near 10% in the others', () => {
