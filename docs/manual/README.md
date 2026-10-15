@@ -4,20 +4,6 @@ The blight is spreading out of the east. Its corruption creeps over the land a h
 
 Yomi is a turn-based tactics game. You walk a world map of hexes from place to place, and battles are fought on a small hex board with action points, flanking, facing and zones of control.
 
-**Contents**
-
-1. [Starting a game](#1-starting-a-game)
-2. [Creating a character](#2-creating-a-character)
-3. [The world map](#3-the-world-map)
-4. [The character panel](#4-the-character-panel)
-5. [Battle](#5-battle)
-6. [Magic](#6-magic)
-7. [Growing stronger](#7-growing-stronger)
-8. [The blight](#8-the-blight)
-9. [Building](#9-building)
-10. [Winning, losing and saving](#10-winning-losing-and-saving)
-11. [Reference](#11-reference)
-
 ---
 
 ## 1. Starting a game

@@ -1,7 +1,7 @@
 import { Marked, type Tokens } from 'marked'
 
 /**
- * A heading's anchor as GitHub makes it, which is what the manual's contents link to:
+ * A heading's anchor as GitHub makes it, which is what the manual's own links name:
  * lower case, punctuation dropped, spaces to hyphens ("1. Starting a game" → "1-starting-a-game").
  */
 export function headingSlug(text: string): string {
@@ -12,13 +12,24 @@ export function headingSlug(text: string): string {
     .replace(/\s/g, '-')
 }
 
+/** A section of the manual, as its contents list it: the anchor of its heading and the heading's text. */
+export interface ManualSection {
+  id: string
+  text: string
+}
+
 /**
  * The player's manual (`docs/manual/README.md`) as HTML for the game's page: headings
  * carry the anchors its links name, and each image's path is passed through `imageUrl`,
- * since the page serves the images from elsewhere than beside the Markdown.
+ * since the page serves the images from elsewhere than beside the Markdown. `contents`
+ * is its sections (the second-level headings) in order, for the page's sidebar.
  */
-export function renderManual(markdown: string, imageUrl: (src: string) => string): string {
+export function renderManual(
+  markdown: string,
+  imageUrl: (src: string) => string,
+): { html: string; contents: ManualSection[] } {
   const used = new Map<string, number>()
+  const contents: ManualSection[] = []
   const marked = new Marked({
     walkTokens(token) {
       if (token.type === 'image') (token as Tokens.Image).href = imageUrl((token as Tokens.Image).href)
@@ -29,9 +40,11 @@ export function renderManual(markdown: string, imageUrl: (src: string) => string
         const seen = used.get(base) ?? 0
         used.set(base, seen + 1)
         const id = seen === 0 ? base : `${base}-${seen}`
+        if (depth === 2) contents.push({ id, text })
         return `<h${depth} id="${id}">${this.parser.parseInline(tokens)}</h${depth}>\n`
       },
     },
   })
-  return marked.parse(markdown, { async: false })
+  const html = marked.parse(markdown, { async: false })
+  return { html, contents }
 }
