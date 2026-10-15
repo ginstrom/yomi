@@ -162,7 +162,8 @@ describe('a campaign', () => {
   it('plays out the same from the same seed, casts included', () => {
     expect(runCampaign(3, 1, args, 100)).toEqual({ battles, record })
     expect(battles.flat().some((e) => e.type === 'cast')).toBe(true)
-  })
+    // A whole campaign again: seconds under the full suite's load.
+  }, 20_000)
 
   it('is summed up by how campaigns ended and the battles won at each threat', () => {
     const other = { ...record, outcome: 'encampment' as const, days: record.days + 10 }
