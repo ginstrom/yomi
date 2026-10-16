@@ -12,6 +12,9 @@ const yielded: WorldEvent = { type: 'yield', site: 'encampment', name: 'Oakvale'
 describe('describeWorldEvent', () => {
   it('tells each event, and nothing of a level changing or of a spawn, which is told when sighted', () => {
     expect(describeWorldEvent(sighted)).toBe('You sight a Kobold Nest (threat 2).')
+    expect(describeWorldEvent({ ...sighted, name: 'The Blight Source', threat: 5, source: true })).toBe(
+      'You have found the heart of the blight, The Blight Source (threat 5). Destroy it to end the blight.',
+    )
     expect(describeWorldEvent(spawned)).toBe('')
     expect(describeWorldEvent(threatened)).toBe('Iron Vein is under threat: the blight takes it in 1 day.')
     expect(describeWorldEvent(captured)).toBe('Gold Seam is cleansed, and now yours.')

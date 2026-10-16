@@ -19,14 +19,14 @@ describe('the world map', () => {
     expect(arrived.world.confronting).toBeNull()
   })
 
-  it('opens on the home valley and the Source, the rest unexplored, and reveals land as the party travels', async () => {
+  it('opens on the home valley, the rest unexplored and the Source unknown, and reveals land as the party travels', async () => {
     const game = await games.open()
     const start = await game.newGame()
     const index = (col: number, row: number) => row * start.world.board.cols + col
     expect(start.visible).toContain(index(9, 19))
-    expect(start.world.seen[index(58, 19)]).toBeGreaterThanOrEqual(0)
+    expect(start.world.seen[index(58, 19)]).toBe(-1)
     expect(start.world.seen[index(9, 28)]).toBe(-1)
-    expect(start.world.sighted).toContain('blight_source')
+    expect(start.world.sighted).not.toContain('blight_source')
 
     const south = await game.travelTo(offsetToHex(9, 25))
     expect(south.visible).toContain(index(9, 28))

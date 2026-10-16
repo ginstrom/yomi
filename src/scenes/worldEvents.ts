@@ -4,7 +4,9 @@ import type { WorldEvent } from '../game/blight.ts'
 export function describeWorldEvent(event: WorldEvent): string {
   switch (event.type) {
     case 'sighted':
-      return `You sight a ${event.name} (threat ${event.threat}).`
+      return event.source
+        ? `You have found the heart of the blight, ${event.name} (threat ${event.threat}). Destroy it to end the blight.`
+        : `You sight a ${event.name} (threat ${event.threat}).`
     case 'site_threatened':
       return `${event.name} is under threat: the blight takes it in ${event.days} ${event.days === 1 ? 'day' : 'days'}.`
     case 'site_captured':

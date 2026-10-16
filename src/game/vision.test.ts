@@ -39,13 +39,13 @@ function hiddenNest(world: WorldState, col: number, row: number): MonsterLocatio
 describe('a new world', () => {
   const world = newWorld(1)
 
-  it('knows the home valley and the Source, and nothing between', () => {
+  it('knows the home valley and nothing beyond, not even the Source', () => {
     const home = at(world, ENCAMPMENT_ID)
     for (let i = 0; i < world.seen.length; i++) {
       if (hexDistance(home, boardHex(world.board, i)) <= CAMP_VISION) expect(world.seen[i]).toBe(world.blight[i])
     }
-    expect(seenAt(world, at(world, SOURCE_ID))).toBe(world.blight[boardIndex(world.board, at(world, SOURCE_ID))])
-    expect(world.sighted).toContain(SOURCE_ID)
+    expect(seenAt(world, at(world, SOURCE_ID))).toBe(UNEXPLORED)
+    expect(world.sighted).not.toContain(SOURCE_ID)
     expect(world.sighted).toContain('goblin_raiders')
     expect(seenAt(world, offsetToHex(40, 2))).toBe(UNEXPLORED)
     expect(world.sighted).not.toContain('goblin_pillagers')
@@ -92,6 +92,19 @@ describe('sight', () => {
     expect(isNotable(world, { type: 'sighted', location: 'x', name: 'x', at: offsetToHex(50, 2), threat: 1 })).toBe(false)
     expect(isNotable(world, { type: 'spawned', location: 'x', name: 'x', at: world.party, threat: 1 })).toBe(false)
     expect(NOTICE_RADIUS).toBeGreaterThanOrEqual(PARTY_VISION)
+  })
+
+  it('finds the Source by exploring, and stops for it however far off it is sighted', () => {
+    const world = newWorld(1)
+    const source = at(world, SOURCE_ID)
+    world.party = { q: source.q - PARTY_VISION, r: source.r }
+    const events = updateSight(world)
+    const found = events.find((e) => e.type === 'sighted' && e.location === SOURCE_ID)
+    expect(found).toMatchObject({ type: 'sighted', source: true })
+    expect(world.sighted).toContain(SOURCE_ID)
+    world.party = offsetToHex(9, 19)
+    expect(hexDistance(world.party, source)).toBeGreaterThan(NOTICE_RADIUS)
+    expect(isNotable(world, found!)).toBe(true)
   })
 
   it('routes through an unsighted nest, and around it once sighted', () => {

@@ -1,6 +1,6 @@
 import { hexToOffset, type Hex } from '../grid/hex.ts'
 import { boardIndex, type WorldEvent } from './blight.ts'
-import { ENCAMPMENT_ID, SOURCE_ID, type WorldState } from './worldMap.ts'
+import { ENCAMPMENT_ID, type WorldState } from './worldMap.ts'
 
 /**
  * Fog of war (docs/designs/guild-hall-and-watchtowers.md §4.6): what the
@@ -59,24 +59,25 @@ export function updateSight(world: WorldState): WorldEvent[] {
     if (location.kind !== 'monsters' || world.sighted.includes(location.id)) continue
     if (!visible.has(boardIndex(world.board, location.position))) continue
     world.sighted.push(location.id)
-    events.push({ type: 'sighted', location: location.id, name: location.name, at: location.position, threat: location.threat })
+    events.push({
+      type: 'sighted',
+      location: location.id,
+      name: location.name,
+      at: location.position,
+      threat: location.threat,
+      ...(location.source ? { source: true as const } : {}),
+    })
   }
   return events
 }
 
 /**
- * A new world's knowledge: all unexplored but what its watchers see, and the
- * Source, which the party was sent to destroy, marked from the start.
+ * A new world's knowledge: all unexplored but what its watchers see. The
+ * Source too is unknown, a mystery until the party's exploring finds it.
  */
 export function seedSight(world: WorldState): void {
   world.seen = world.blight.map(() => UNEXPLORED)
   world.sighted = []
-  const source = world.locations.find((l) => l.id === SOURCE_ID)
-  if (source) {
-    const i = boardIndex(world.board, source.position)
-    world.seen[i] = world.blight[i]
-    world.sighted.push(source.id)
-  }
   updateSight(world)
 }
 

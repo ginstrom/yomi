@@ -1,6 +1,6 @@
 # Yomi: Player's Manual
 
-The blight is spreading out of the east. Its corruption creeps over the land a hex at a time, and monsters breed wherever it runs deep. You lead a small company of heroes from your encampment, the last settlement standing, which you name when the game begins (Oakvale, unless you choose otherwise). Your job is to hold the land, break the monster nests, grow strong enough to march on the Source of the blight, and destroy it.
+The blight is spreading out of the east. Its corruption creeps over the land a hex at a time, and monsters breed wherever it runs deep. You lead a small company of heroes from your encampment, the last settlement standing, which you name when the game begins (Oakvale, unless you choose otherwise). Nobody knows what drives it. Your job is to hold the land, break the monster nests and beat back the encroachment, and, as you push further out, to find where the blight comes from and end it.
 
 Yomi is a turn-based tactics game. You walk a world map of hexes from place to place, and battles are fought on a small hex board with action points, flanking, facing and zones of control.
 
@@ -110,7 +110,7 @@ Click a hex to travel there. Hovering over a hex first shows the route, and a pa
 
 ### Fog of war
 
-Black hexes have never been seen. The party sees 5 hexes around it, the encampment 6, a resource you hold 2, and a watchtower 8. Land you have seen but cannot see now is drawn under a veil, showing the state it was in when you last saw it. Once you have spotted a monster lair it stays on your map. The Source of the blight is known from the start.
+Black hexes have never been seen. The party sees 5 hexes around it, the encampment 6, a resource you hold 2, and a watchtower 8. Land you have seen but cannot see now is drawn under a veil, showing the state it was in when you last saw it. Once you have spotted a monster lair it stays on your map. Whatever lies at the heart of the blight is as hidden as the rest, until you explore far enough to find it.
 
 ### Places
 
@@ -397,7 +397,7 @@ You can recruit one of the pre-rolled heroes not already in your company, or **C
 
 ## 10. Winning, losing and saving
 
-- **Victory**: beat the guardians of the **Source**, far in the east. They fight at threat 5 and are led by the **Blight Horror**, which claws through armour and casts Death Cloud and Bane. Plan to arrive with heroes around level 7. After the victory you can **End** the game or carry on in **endless** mode.
+- **Victory**: find the heart of the blight and destroy it. It is not on your map when the game begins: explore, and the moment your party or a watchtower sights it, wherever it is, your journey stops and it is marked. What guards it fights at threat 5, so plan to arrive with heroes around level 7. After the victory you can **End** the game or carry on in **endless** mode.
 - **Defeat**: the game ends if your whole party falls in a battle, or if your encampment falls to the blight.
 
 **Saving is automatic.** Each playthrough lives in one of three slots, and there is no save button. The world map saves after each journey, camp and panel change. A battle saves at the start of each of your turns, so reloading during a battle rewinds to the start of that turn with the same dice. A defeat deletes its slot.

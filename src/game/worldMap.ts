@@ -259,14 +259,15 @@ export function passTurn(world: WorldState, party: readonly { level: number }[])
 
 /**
  * Whether an event stops a journey or a stretch of camping: monsters sighted
- * near the party, a held site threatened or lost, the encampment lost. A
+ * near the party, the Source found wherever it is sighted, a held site
+ * threatened or lost, the encampment lost. A
  * spawn is not seen as such: it is told when it comes into sight. A tower
  * under threat is told as a site is.
  */
 export function isNotable(world: WorldState, event: WorldEvent): boolean {
   switch (event.type) {
     case 'sighted':
-      return hexDistance(world.party, event.at) <= NOTICE_RADIUS
+      return event.source === true || hexDistance(world.party, event.at) <= NOTICE_RADIUS
     case 'site_threatened':
     case 'site_lost':
     case 'tower_lost':
