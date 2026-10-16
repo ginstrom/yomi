@@ -19,7 +19,7 @@ describe('hexInfo', () => {
     world.party = oakvale.position
     const { title, lines } = info(world)
     expect(title).toBe(oakvale.name)
-    expect(lines).toContain('Your encampment, held.')
+    expect(lines).toContain('Your encampment.')
     expect(lines).toContain('Blight: clean.')
     expect(lines).toContain('Your party:')
     expect(lines.some((line) => line.includes(party[0].name))).toBe(true)

@@ -17,7 +17,7 @@ import type { WorldLocation } from './worldMap.ts'
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 7
+export const SAVE_VERSION = 8
 
 /** One slot's contents. */
 export interface SaveFile {

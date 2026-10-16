@@ -44,9 +44,13 @@ export interface MonsterLocation extends LocationBase {
   source?: true
 }
 
-/** Towns and resources, which the party holds while their land is clean (territory.ts); Oakvale is the encampment. */
+/**
+ * The encampment, the party's home and the only settlement, named by the
+ * player; and resources, which the party holds while their land is clean
+ * (territory.ts), as it holds the encampment.
+ */
 export interface QuietLocation extends LocationBase {
-  kind: 'town' | 'resource'
+  kind: 'encampment' | 'resource'
 }
 
 export type WorldLocation = MonsterLocation | QuietLocation
@@ -87,7 +91,7 @@ export interface WorldState {
   seen: number[]
   /** The ids of the monster locations the player has seen; routes keep clear only of these. */
   sighted: string[]
-  /** The ids of the towns and resources held, the encampment among them while the game lasts. */
+  /** The ids of the resources held, the encampment among them while the game lasts. */
   held: string[]
   /** The guild hall's level, 1 to `MAX_GUILD_HALL_LEVEL` (guildHall.ts), which sets the party limit. */
   guildHall: number
@@ -118,9 +122,13 @@ export type Lingering = 'scout' | 'wait'
  */
 export const WORLD_SIZE: BoardSize = { cols: 60, rows: 40 }
 
-/** Where a new game's party stands: Oakvale, in the west, the encampment. */
+/** Where a new game's party stands: the encampment, in the west. */
 const HOME: Hex = offsetToHex(9, 19)
-export const ENCAMPMENT_ID = 'oakvale'
+export const ENCAMPMENT_ID = 'encampment'
+/** What the encampment is called unless the player names it otherwise. */
+export const DEFAULT_ENCAMPMENT_NAME = 'Oakvale'
+/** The longest name the encampment may have. */
+export const MAX_ENCAMPMENT_NAME_LENGTH = 16
 export const SOURCE_ID = 'blight_source'
 
 /** How far from the party a spawn must be to stop it travelling or camping. */
@@ -137,12 +145,6 @@ export function threatAt(position: Hex): number {
   return Math.min(MAX_THREAT, 1 + Math.floor(hexDistance(HOME, position) / THREAT_BAND))
 }
 
-const town = (id: string, name: string, col: number, row: number): WorldLocation => ({
-  id,
-  kind: 'town',
-  name,
-  position: offsetToHex(col, row),
-})
 const resource = (id: string, name: string, col: number, row: number): WorldLocation => ({
   id,
   kind: 'resource',
@@ -166,8 +168,12 @@ const monsters = (
   loot,
 })
 
-/** A new world, the blight seeded from its sources; `seed` is the world RNG's, which only spawns draw from. */
-export function newWorld(seed: number = randomSeed()): WorldState {
+/**
+ * A new world, the blight seeded from its sources; `seed` is the world RNG's,
+ * which only spawns draw from, and `encampmentName` what the player called
+ * home.
+ */
+export function newWorld(seed: number = randomSeed(), encampmentName: string = DEFAULT_ENCAMPMENT_NAME): WorldState {
   const world: WorldState = {
     board: WORLD_SIZE,
     party: HOME,
@@ -175,20 +181,12 @@ export function newWorld(seed: number = randomSeed()): WorldState {
     // The party's home country first, in the west, then the lands further out,
     // whose monsters are the more dangerous the further they lie (threatAt).
     locations: [
-      town('oakvale', 'Oakvale', 9, 19),
-      town('stonebridge', 'Stonebridge', 18, 18),
+      { id: ENCAMPMENT_ID, kind: 'encampment', name: encampmentName.trim() || DEFAULT_ENCAMPMENT_NAME, position: HOME },
       resource('iron_vein', 'Iron Vein', 11, 21),
       resource('gold_seam', 'Gold Seam', 15, 16),
       monsters('goblin_raiders', 'Goblin Raiders', 13, 18, 'goblin_raid', [RING_PROTECTION]),
       monsters('kobold_scouts', 'Kobold Scouts', 16, 21, 'kobold_scouts', [AMULET_FOCUS]),
 
-      town('greyford', 'Greyford', 6, 5),
-      town('millbrook', 'Millbrook', 10, 34),
-      town('highmoor', 'Highmoor', 30, 8),
-      town('saltmarsh', 'Saltmarsh', 25, 31),
-      town('eastwatch', 'Eastwatch', 44, 20),
-      town('thornwick', 'Thornwick', 52, 6),
-      town('deepwell', 'Deepwell', 50, 34),
       resource('timber_stand', 'Timber Stand', 4, 28),
       resource('peat_bog', 'Peat Bog', 21, 4),
       resource('silver_lode', 'Silver Lode', 27, 14),
@@ -232,6 +230,16 @@ export function newWorld(seed: number = randomSeed()): WorldState {
   seedBlight(world)
   seedSight(world)
   return world
+}
+
+/** The encampment, which is on the map for as long as the game lasts. */
+export function encampment(world: WorldState): QuietLocation {
+  return world.locations.find((l): l is QuietLocation => l.id === ENCAMPMENT_ID)!
+}
+
+/** What the player called the encampment. */
+export function encampmentName(world: WorldState): string {
+  return encampment(world).name
 }
 
 /** Whether the game goes on: not lost, and not waiting on the player's choice after the Source. */

@@ -235,11 +235,15 @@ export function togglePerk(draft: CharacterDraft, perk: PerkId): DraftChange {
 /** The characters allowed in a name besides letters. */
 const NAME_PUNCTUATION = " -'"
 
-/** The name with `key` typed at its end: a letter, a space, a hyphen or an apostrophe is added, Backspace removes. */
-export function typeInName(name: string, key: string): string {
+/**
+ * The name with `key` typed at its end: a letter, a space, a hyphen or an
+ * apostrophe is added, Backspace removes; never past `maxLength`, a
+ * character's by default.
+ */
+export function typeInName(name: string, key: string, maxLength: number = MAX_NAME_LENGTH): string {
   if (key === 'Backspace') return name.slice(0, -1)
   const typable = key.length === 1 && (/\p{L}/u.test(key) || NAME_PUNCTUATION.includes(key))
-  if (!typable || name.length >= MAX_NAME_LENGTH) return name
+  if (!typable || name.length >= maxLength) return name
   // A name does not begin with a space.
   return key === ' ' && name === '' ? name : name + key
 }

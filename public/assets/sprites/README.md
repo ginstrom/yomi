@@ -42,6 +42,7 @@ Infinity Engine CRPGs (Baldur's Gate 1 and 2). No third-party art is included.
 | `icon_circlet.png` | `art/icons/icon_circlet.sprite.toml` | `InventoryScene` |
 | `icon_cloak.png` | `art/icons/icon_cloak.sprite.toml` | `InventoryScene` |
 | `atlas.png`: `map_*/*` | `art/map/map_*.sprite.toml` | `WorldScene` |
+| `atlas.png`: `camp_*/*` | `art/encampment/camp_*.sprite.toml` | `EncampmentScene` |
 | `portrait_knight.png` | `art/portraits/portrait_knight.sprite.toml` | `PartyColumn`, `InventoryScene` |
 | `portrait_ranger.png` | `art/portraits/portrait_ranger.sprite.toml` | `PartyColumn`, `InventoryScene` |
 | `portrait_rogue.png` | `art/portraits/portrait_rogue.sprite.toml` | `PartyColumn`, `InventoryScene` |

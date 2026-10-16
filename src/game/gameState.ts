@@ -27,9 +27,13 @@ export interface GameState {
   slot: SlotId | null
 }
 
-/** A game at its start: the given party, the ready-made one by default, at home on a new world, of `seed` (random by default). */
-export function newGame(party: Party = readyMadeParty(), slot: SlotId | null = null, seed?: number): GameState {
-  return { party, world: newWorld(seed), baggage: [], reserves: [], slot }
+/**
+ * A game at its start: the given party, the ready-made one by default, at home
+ * on a new world, of `seed` (random by default), in the encampment the player
+ * named (Oakvale by default).
+ */
+export function newGame(party: Party = readyMadeParty(), slot: SlotId | null = null, seed?: number, encampmentName?: string): GameState {
+  return { party, world: newWorld(seed, encampmentName), baggage: [], reserves: [], slot }
 }
 
 /** Moves the loot of a beaten monster location into the baggage, and returns what was found. */

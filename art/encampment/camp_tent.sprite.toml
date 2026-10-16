@@ -1,0 +1,19 @@
+# A canvas tent of the encampment, its flap open.
+canvas = "map"
+outline = "auto"
+
+[frames.base.runs]
+5 = [[11, "nn"]]
+6 = [[11, "nn"]]
+7 = [[11, "Tt"]]
+8 = [[10, "TTtt"]]
+9 = [[9, "TTTttt"]]
+10 = [[8, "TTTTtttt"]]
+11 = [[7, "TTTTTttttt"]]
+12 = [[6, "TTTTTTtttttt"]]
+13 = [[5, "TTTTTTTttttttt"]]
+14 = [[4, "TTTTTTTNNttttttt"]]
+15 = [[3, "TTTTTTTTNNtttttttt"]]
+16 = [[2, "TTTTTTTTTNNttttttttt"]]
+17 = [[1, "TTTTTTTTTTNNtttttttttt"]]
+18 = [[1, "nnnnnnnnnnNNnnnnnnnnnn"]]

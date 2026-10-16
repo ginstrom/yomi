@@ -3,8 +3,8 @@ import { SHIFT_COST, blightAt, boardIndex, netInfluence, type WorldEvent } from 
 import { ENCAMPMENT_ID, type QuietLocation, type WorldState } from './worldMap.ts'
 
 /**
- * Territory (docs/designs/blight.md §4.5, §4.7): the towns and resources the
- * party holds. Nobody has to stand on a site to take it: a site is captured
+ * Territory (docs/designs/blight.md §4.5, §4.7): the resources the party
+ * holds, and the encampment. Nobody has to stand on a site to take it: a site is captured
  * when its hex is cleansed to level 0 and lost when the blight raises it to
  * `LOSS_LEVEL`. A held site adds clean influence (blight.ts) and yields to the
  * encampment's stock every `YIELD_DAYS`. The encampment is held like any
@@ -22,8 +22,8 @@ export type Stock = Partial<Record<Material, number>>
 /** A held site is lost when its hex reaches this level. */
 export const LOSS_LEVEL = 2
 export const YIELD_DAYS = 5
-/** What a town yields, in gold. */
-export const TOWN_YIELD = 2
+/** What the encampment yields, in gold. */
+export const ENCAMPMENT_YIELD = 2
 /** What an outpost (buildings.ts) adds to its site's yield, before taint halves it. */
 export const OUTPOST_YIELD = 1
 
@@ -46,7 +46,7 @@ export function sites(world: WorldState): QuietLocation[] {
 
 /** What a site yields a time at full strength, its outpost's share included; a tainted one yields half, rounded down. */
 export function siteYield(world: WorldState, site: QuietLocation): { material: Material; amount: number } {
-  const own = site.kind === 'town' ? { material: 'gold' as const, amount: TOWN_YIELD } : (RESOURCE_YIELDS[site.id] ?? { material: 'gold' as const, amount: 1 })
+  const own = site.kind === 'encampment' ? { material: 'gold' as const, amount: ENCAMPMENT_YIELD } : (RESOURCE_YIELDS[site.id] ?? { material: 'gold' as const, amount: 1 })
   return world.outposts.includes(site.id) ? { ...own, amount: own.amount + OUTPOST_YIELD } : own
 }
 
@@ -88,7 +88,7 @@ export function updateTerritory(world: WorldState, party: readonly { level: numb
       world.held = world.held.filter((id) => id !== site.id)
       if (site.id === ENCAMPMENT_ID) {
         world.status = 'lost'
-        events.push({ type: 'encampment_lost' })
+        events.push({ type: 'encampment_lost', name: site.name })
       } else if (world.outposts.includes(site.id)) {
         // An outpost falls with its site.
         world.outposts = world.outposts.filter((id) => id !== site.id)

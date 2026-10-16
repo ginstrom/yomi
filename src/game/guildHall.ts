@@ -5,13 +5,13 @@ import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
 import type { GameState } from './gameState.ts'
 import { MAX_PARTY_SIZE, PREROLLS, type Preroll } from './party.ts'
 import type { Stock } from './territory.ts'
-import type { WorldState } from './worldMap.ts'
+import { encampmentName, type WorldState } from './worldMap.ts'
 
 /**
  * The guild hall at the encampment (docs/designs/guild-hall-and-watchtowers.md
  * §4.1–4.3): the roster of heroes beyond the party, recruiting, swapping, and
  * the hall's level, which sets the party limit. Used only while the party
- * stands at Oakvale. Each action returns why it was refused, or null when done.
+ * stands at the encampment. Each action returns why it was refused, or null when done.
  */
 
 /** Each level's party limit and what raising the hall to it costs; level 1 is where a game starts. */
@@ -37,7 +37,7 @@ export function atGuildHall(world: WorldState): boolean {
   return atEncampment(world)
 }
 
-const NOT_HERE = 'The guild hall is at Oakvale.'
+const notHere = (world: WorldState): string => `The guild hall is at ${encampmentName(world)}.`
 
 /** What raising the hall a level costs, or null at the top level. */
 export function upgradeCost(world: WorldState): Stock | null {
@@ -46,7 +46,7 @@ export function upgradeCost(world: WorldState): Stock | null {
 
 export function upgradeGuildHall(game: GameState): string | null {
   const { world } = game
-  if (!atGuildHall(world)) return NOT_HERE
+  if (!atGuildHall(world)) return notHere(world)
   const cost = upgradeCost(world)
   if (!cost) return 'The guild hall is as large as it gets.'
   if (!canAfford(world.stock, cost)) return `The next level costs ${describeCost(cost)}, more than the stock holds.`
@@ -73,7 +73,7 @@ export function recruitLevel(game: GameState): number {
 
 /** Why a recruit named `name` cannot join now, or null when one can. */
 export function recruitRefusal(game: GameState, name?: string): string | null {
-  if (!atGuildHall(game.world)) return NOT_HERE
+  if (!atGuildHall(game.world)) return notHere(game.world)
   if (game.reserves.length >= MAX_RESERVES) return `The guild hall keeps no more than ${MAX_RESERVES} heroes in reserve.`
   if (!canAfford(game.world.stock, RECRUIT_COST)) return `A recruit costs ${describeCost(RECRUIT_COST)}, more than the stock holds.`
   if (name !== undefined && company(game).some((member) => member.name === name.trim())) return `${name} is already in the company.`
@@ -105,7 +105,7 @@ function rested(hero: Character): Character {
 
 /** Sends party member `index` to the reserves. The party is never left empty. */
 export function toReserves(game: GameState, index: number): string | null {
-  if (!atGuildHall(game.world)) return NOT_HERE
+  if (!atGuildHall(game.world)) return notHere(game.world)
   if (!game.party[index]) return 'There is no such member.'
   if (game.party.length <= 1) return 'The party cannot be left empty.'
   if (game.reserves.length >= MAX_RESERVES) return `The guild hall keeps no more than ${MAX_RESERVES} heroes in reserve.`
@@ -115,7 +115,7 @@ export function toReserves(game: GameState, index: number): string | null {
 
 /** Brings reserve `index` into the party, at its end, while the party is under its limit. */
 export function toParty(game: GameState, index: number): string | null {
-  if (!atGuildHall(game.world)) return NOT_HERE
+  if (!atGuildHall(game.world)) return notHere(game.world)
   if (!game.reserves[index]) return 'There is no such reserve.'
   if (game.party.length >= partyLimit(game.world)) return `The party is full: the guild hall's level ${game.world.guildHall} allows ${partyLimit(game.world)}.`
   game.party.push(rested(game.reserves.splice(index, 1)[0]))
@@ -124,7 +124,7 @@ export function toParty(game: GameState, index: number): string | null {
 
 /** Exchanges party member `member` for reserve `reserve`, who takes its place in the battle order. */
 export function swap(game: GameState, member: number, reserve: number): string | null {
-  if (!atGuildHall(game.world)) return NOT_HERE
+  if (!atGuildHall(game.world)) return notHere(game.world)
   if (!game.party[member] || !game.reserves[reserve]) return 'There is no such hero.'
   const leaving = game.party[member]
   game.party[member] = rested(game.reserves[reserve])

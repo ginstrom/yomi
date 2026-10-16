@@ -1,9 +1,10 @@
 import Phaser from 'phaser'
 import { maxHp } from '../character/character.ts'
-import { copyDraft, draftCharacter, type CharacterDraft } from '../character/creation.ts'
+import { copyDraft, draftCharacter, typeInName, type CharacterDraft } from '../character/creation.ts'
 import { newGame } from '../game/gameState.ts'
 import { PREROLLS, READY_MADE, STARTING_PARTY_LIMIT, partyFromDrafts } from '../game/party.ts'
 import { SLOT_IDS, describeSlot, firstEmptySlot, type SlotId } from '../game/saveSlots.ts'
+import { DEFAULT_ENCAMPMENT_NAME, MAX_ENCAMPMENT_NAME_LENGTH } from '../game/worldMap.ts'
 import type { ButtonProbe, PartyProbe } from '../testHook.ts'
 import { soundVolume } from './audioSettings.ts'
 import type { Point } from './boardGeometry.ts'
@@ -16,6 +17,8 @@ import { PORTRAIT_SCALE, PORTRAIT_SIZE, portraitKey } from './partyPanel.ts'
 interface PartyData {
   /** The party being built, when coming back from character creation; absent, the screen opens on its choice. */
   drafts?: CharacterDraft[]
+  /** The encampment's name as typed so far, when coming back from character creation. */
+  encampmentName?: string
 }
 
 type PartyView = PartyProbe['view']
@@ -62,6 +65,10 @@ const SLOT_H = 44
 const SLOT_Y = 170
 const SLOT_PITCH = 58
 
+/** The roster's box for the encampment's name, under the rows. */
+const CAMP_NAME_Y = 384
+const CAMP_NAME_BOX: Rect = { x: CENTRE_X + 60, y: CAMP_NAME_Y, width: 300, height: 32 }
+
 const BEGIN_BUTTON: Rect = { x: CENTRE_X + 90, y: 440, width: 150, height: 40 }
 const FONT = 'monospace'
 const GOLD = '#e8c766'
@@ -94,6 +101,8 @@ const slotButton = (index: number): Rect => ({ x: CENTRE_X, y: SLOT_Y + index * 
 export class PartyScene extends Phaser.Scene {
   private view: PartyView = 'choice'
   private drafts: CharacterDraft[] = []
+  /** What the player calls the encampment, typed on the roster. */
+  private encampmentName = DEFAULT_ENCAMPMENT_NAME
   private readonly limit = STARTING_PARTY_LIMIT
   /** The draft whose portrait the pointer is over: a ready-made member on the choice, or a preroll. */
   private hovered: CharacterDraft | null = null
@@ -112,6 +121,7 @@ export class PartyScene extends Phaser.Scene {
   create(data: PartyData): void {
     this.drafts = (data?.drafts ?? []).map(copyDraft)
     this.view = data?.drafts ? 'roster' : 'choice'
+    this.encampmentName = data?.encampmentName ?? DEFAULT_ENCAMPMENT_NAME
     this.bg = this.add.rectangle(0, 0, 1, 1, 0x14100c, 1).setOrigin(0)
     this.frame = this.add.container(0, 0)
     this.render()
@@ -122,6 +132,7 @@ export class PartyScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
     })
     this.input.keyboard?.on('keydown-ESC', () => this.onBack())
+    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => this.onKey(event))
   }
 
   /** What the in-browser tests see of the party screen; see testHook.ts. */
@@ -136,6 +147,7 @@ export class PartyScene extends Phaser.Scene {
     const roster = this.view === 'roster'
     return {
       view: this.view,
+      encampmentName: this.encampmentName,
       rows: Array.from({ length: this.limit }, (_, index) => {
         const filled = roster && index < this.drafts.length
         return {
@@ -295,7 +307,21 @@ export class PartyScene extends Phaser.Scene {
       this.button(editButton(index), 'Edit', () => this.openCreation(index))
       this.button(removeButton(index), 'Remove', () => this.onRemove(index))
     }
+    this.buildEncampmentName()
     this.button(BEGIN_BUTTON, 'Begin', () => this.onBegin(), { enabled: this.drafts.length > 0, marked: true, fontSize: 16 })
+  }
+
+  /** The box the encampment's name is typed into: every key on the roster goes to it. */
+  private buildEncampmentName(): void {
+    const box = CAMP_NAME_BOX
+    this.frame.add([
+      this.add.text(ROW_LEFT, CAMP_NAME_Y, 'Your encampment', { fontFamily: FONT, fontSize: '14px', color: GOLD }).setOrigin(0, 0.5),
+      this.add.rectangle(box.x, box.y, box.width, box.height, 0x14100c, 0.9).setStrokeStyle(2, 0xc9a227),
+      this.add.text(box.x - box.width / 2 + 10, box.y, `${this.encampmentName}_`, { fontFamily: FONT, fontSize: '16px', color: GOLD }).setOrigin(0, 0.5),
+      this.add
+        .text(box.x + box.width / 2 + 8, box.y, 'type to\nrename', { fontFamily: FONT, fontSize: '10px', color: DIM })
+        .setOrigin(0, 0.5),
+    ])
   }
 
   /** A preroll already in the party (by name, which members may not share) is shown but cannot be chosen again. */
@@ -349,7 +375,18 @@ export class PartyScene extends Phaser.Scene {
 
   /** Creation for a new character, or for the one at `index` as it was chosen. */
   private openCreation(index?: number): void {
-    this.scene.start('Creation', { drafts: this.drafts, index })
+    this.scene.start('Creation', { drafts: this.drafts, index, encampmentName: this.encampmentName })
+  }
+
+  /** On the roster, typing names the encampment. */
+  private onKey(event: KeyboardEvent): void {
+    if (this.view !== 'roster') return
+    const name = typeInName(this.encampmentName, event.key, MAX_ENCAMPMENT_NAME_LENGTH)
+    if (name === this.encampmentName) return
+    // Space would scroll a page that scrolls, and Backspace go back in some browsers.
+    event.preventDefault()
+    this.encampmentName = name
+    this.render()
   }
 
   /** The game takes the first empty slot; with none empty, the player says which to overwrite. */
@@ -366,7 +403,7 @@ export class PartyScene extends Phaser.Scene {
 
   /** Makes the characters and the game of them. The drafts end here, and with them editing; the world map saves the game as it opens. */
   private begin(slot: SlotId): void {
-    this.scene.start('World', { game: newGame(partyFromDrafts(this.drafts), slot) })
+    this.scene.start('World', { game: newGame(partyFromDrafts(this.drafts), slot, undefined, this.encampmentName) })
   }
 
   /** From the overwrite prompt or the prerolls back to the roster, from the roster to the choice (the party made so far is dropped), from the choice to the menu. */

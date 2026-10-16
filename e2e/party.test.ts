@@ -134,6 +134,12 @@ describe('the party screen', () => {
     expect(two.rows.map((row) => row.name)).toEqual(['Aldric', 'Delwyn', null])
     expect(two.rows.map((row) => row.create.visible)).toEqual([false, false, true])
 
+    // Typing on the roster names the encampment, which creation leaves as it was.
+    expect(two.encampmentName).toBe('Oakvale')
+    for (let i = 0; i < 'Oakvale'.length; i++) await game.press('Backspace')
+    for (const key of 'Hearthold') await game.press(key)
+    await game.waitFor('Party', (p) => p.encampmentName === 'Hearthold')
+
     await game.click(two.rows[2].create)
     await game.waitForScenes(['Creation'])
     const start = await game.settled('Creation')
@@ -199,6 +205,7 @@ describe('the party screen', () => {
     await game.waitForScenes(['Party'])
     const roster = await game.settled('Party', (p) => p.view === 'roster')
     expect(roster.rows.map((row) => row.name)).toEqual(['Aldric', 'Delwyn', 'Mira'])
+    expect(roster.encampmentName).toBe('Hearthold')
     // With three members there is no Create.
     expect(roster.rows.some((row) => row.create.visible)).toBe(false)
 
@@ -206,6 +213,8 @@ describe('the party screen', () => {
     await game.waitForScenes(['World'])
     const world = await game.waitFor('World')
     expect(world.party.map((member) => member.name)).toEqual(['Aldric', 'Delwyn', 'Mira'])
+    expect(world.world.locations.find((l) => l.kind === 'encampment')?.name).toBe('Hearthold')
+    expect(world.buttons.enterEncampment.visible).toBe(true)
     // What creation left unspent is the character's to spend on the world map.
     expect(world.party[2]).toMatchObject({ level: 1, canAdvance: true })
     await game.click(world.party[2])

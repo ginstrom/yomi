@@ -28,6 +28,13 @@ anchor = [12, 12]
 display_scale = 2
 outline = ["k"]
 
+[canvas.building]         # a facility of the encampment, on the encampment screen
+size = [48, 48]
+anchor = [24, 48]
+display_scale = 3
+outline = ["k"]
+grounded = true
+
 [canvas.portrait]         # a party member's face, filling the canvas edge to edge
 size = [32, 32]
 anchor = [16, 16]

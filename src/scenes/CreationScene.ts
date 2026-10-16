@@ -49,6 +49,8 @@ interface CreationData {
   returnTo?: 'Party' | 'GuildHall'
   /** The game the guild hall recruits into, whose company's names are taken. */
   game?: GameState
+  /** What the party screen has named the encampment so far, handed back to it unchanged. */
+  encampmentName?: string
 }
 
 const STEPS: ReadonlyArray<readonly [step: CreationStep, label: string]> = [
@@ -141,6 +143,8 @@ export class CreationScene extends Phaser.Scene {
   private drafts: CharacterDraft[] = []
   /** The guild hall's game when recruiting, or null when building a party. */
   private recruiting: GameState | null = null
+  /** The encampment's name as the party screen had it, to hand back. */
+  private encampmentName: string | undefined
   /** The place being edited, or null for a new character. */
   private index: number | null = null
   private draft: CharacterDraft = newDraft()
@@ -167,6 +171,7 @@ export class CreationScene extends Phaser.Scene {
     this.drafts = (data?.drafts ?? []).map(copyDraft)
     this.index = data?.index ?? null
     this.recruiting = data?.returnTo === 'GuildHall' ? (data.game ?? null) : null
+    this.encampmentName = data?.encampmentName
     this.draft = this.index === null ? newDraft() : copyDraft(this.drafts[this.index])
     this.step = 'attributes'
     this.tree = 'perks'
@@ -552,6 +557,6 @@ export class CreationScene extends Phaser.Scene {
   /** Back to the party screen's roster with the party as it now is, or to the guild hall with no one made. */
   private finish(drafts: CharacterDraft[]): void {
     if (this.recruiting) this.scene.start('GuildHall', { game: this.recruiting })
-    else this.scene.start('Party', { drafts })
+    else this.scene.start('Party', { drafts, encampmentName: this.encampmentName })
   }
 }

@@ -1,0 +1,29 @@
+# An empty plot: staked out and roped off, a sign on a post, where a facility
+# not yet built will stand.
+canvas = "building"
+outline = "auto"
+
+[frames.base.runs]
+24 = [[16, "nnnnnnnnnnnnnnnn"]]
+25 = [[16, "nTTTTTTTTTTTTTTn"]]
+26 = [[16, "nTNNTNNNTNTNNTTn"]]
+27 = [[16, "nTNTTNTNTTNNTNTn"]]
+28 = [[16, "nTTTTTTTTTTTTTTn"]]
+29 = [[16, "nnnnnnnnnnnnnnnn"]]
+30 = [[23, "nN"]]
+31 = [[23, "nN"]]
+32 = [[23, "nN"]]
+33 = [[23, "nN"]]
+34 = [[23, "nN"]]
+35 = [[10, "nn"], [23, "nN"], [36, "nn"]]
+36 = [[10, "nn"], [12, "TTTTTTTTTTT"], [23, "nN"], [25, "TTTTTTTTTTT"], [36, "nn"]]
+37 = [[10, "nn"], [23, "nN"], [36, "nn"]]
+38 = [[10, "nn"], [23, "nN"], [36, "nn"]]
+39 = [[10, "nn"], [23, "nN"], [36, "nn"]]
+40 = [[10, "nn"], [12, "tttttttttttttttttttttttt"], [36, "nn"]]
+41 = [[9, "tttttttttttttttttttttttttttttt"]]
+42 = [[8, "ttnttttttttttttttntttttttttttttt"]]
+43 = [[8, "tttttttntttttttttttttttnttttnttt"]]
+44 = [[8, "ttttnttttttttttnttttttttttttttnt"]]
+45 = [[9, "tttttttttttttttttttttttttttttt"]]
+46 = [[6, "gggggggggggggggggggggggggggggggggggg"]]

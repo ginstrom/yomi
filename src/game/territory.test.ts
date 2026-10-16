@@ -27,16 +27,16 @@ describe('held sites', () => {
 
   it('are captured when their land is clean and lost when it is blighted', () => {
     const world = newWorld(1)
-    const stonebridge = site(world, 'stonebridge')
+    const goldSeam = site(world, 'gold_seam')
     const ironVein = site(world, 'iron_vein')
-    setLevel(world, stonebridge, 0)
+    setLevel(world, goldSeam, 0)
     setLevel(world, ironVein, LOSS_LEVEL)
-    world.held = world.held.filter((id) => id !== 'stonebridge')
+    world.held = world.held.filter((id) => id !== 'gold_seam')
     if (!world.held.includes('iron_vein')) world.held.push('iron_vein')
     const events = updateTerritory(world, party)
-    expect(events).toContainEqual({ type: 'site_captured', site: 'stonebridge', name: 'Stonebridge' })
+    expect(events).toContainEqual({ type: 'site_captured', site: 'gold_seam', name: 'Gold Seam' })
     expect(events).toContainEqual({ type: 'site_lost', site: 'iron_vein', name: 'Iron Vein' })
-    expect(world.held).toContain('stonebridge')
+    expect(world.held).toContain('gold_seam')
     expect(world.held).not.toContain('iron_vein')
   })
 
@@ -68,7 +68,7 @@ describe('the encampment', () => {
   it('lost to the blight loses the game, and nothing more can be done', () => {
     const world = newWorld(1)
     setLevel(world, site(world, ENCAMPMENT_ID), LOSS_LEVEL)
-    expect(updateTerritory(world, party)).toContainEqual({ type: 'encampment_lost' })
+    expect(updateTerritory(world, party)).toContainEqual({ type: 'encampment_lost', name: 'Oakvale' })
     expect(world.status).toBe('lost')
     const turn = world.turn
     expect(travel(world, { q: world.party.q + 2, r: world.party.r }, party).walked).toEqual([])

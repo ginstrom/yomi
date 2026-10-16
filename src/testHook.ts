@@ -5,6 +5,7 @@ import type { PortraitId } from './character/portraits.ts'
 import type { SkillId } from './character/skills.ts'
 import type { SpellId } from './combat/spells.ts'
 import type { BattleEvent, BattleState, UnitId } from './engine/battleEngine.ts'
+import type { FacilityId } from './game/encampment.ts'
 import type { WorldState } from './game/worldMap.ts'
 import type { EquipmentSlot } from './inventory/inventory.ts'
 import type { Point } from './scenes/boardGeometry.ts'
@@ -57,6 +58,8 @@ export interface MenuProbe {
 export interface PartyProbe {
   /** The choice between the two ways to start, the roster, the prerolls to fill a place with, or the prompt for a slot to overwrite. */
   view: 'choice' | 'roster' | 'prerolls' | 'overwrite'
+  /** The encampment's name as typed on the roster, which the new game's encampment takes. */
+  encampmentName: string
   /** A row for each place up to the party limit: a member with Edit and Remove, or an empty place with Create and Preroll. */
   rows: Array<{ name: string | null; edit: ButtonProbe; remove: ButtonProbe; create: ButtonProbe; preroll: ButtonProbe }>
   /** `readyMade` and `createOwn` are the choice's; `begin` is the roster's, enabled with a member or more. */
@@ -132,10 +135,10 @@ export interface WorldProbe {
     campUntilHealed: ButtonProbe
     /** Shows where the party may camp on land a watchtower could stand on; a click without the stock says why in the message. */
     buildTower: ButtonProbe
-    /** Shows on a held town or resource without an outpost; a click without the stock says why in the message. */
+    /** Shows on a held resource without an outpost; a click without the stock says why in the message. */
     buildOutpost: ButtonProbe
-    /** Shows while the party stands at Oakvale. */
-    guildHall: ButtonProbe
+    /** Shows while the party stands at the encampment: goes in, to its facilities. */
+    enterEncampment: ButtonProbe
     end: ButtonProbe
     endless: ButtonProbe
     menu: ButtonProbe
@@ -148,13 +151,24 @@ export interface HallFaceProbe extends ButtonProbe {
   name: string
 }
 
+export interface EncampmentProbe {
+  /** What the player named the encampment. */
+  name: string
+  /** The facility whose details show, or null. */
+  selected: FacilityId | null
+  /** What the last action did, or why it was refused. */
+  message: string
+  /** Every facility, built or an empty plot, at its building's centre: a click shows its details. `frame` is the atlas frame drawn. */
+  facilities: Array<ButtonProbe & { id: FacilityId; level: number; frame: string }>
+  /** `improve` builds or raises the facility shown, `open` goes into it (the guild hall), `leave` goes back to the map. */
+  buttons: { improve: ButtonProbe; open: ButtonProbe; leave: ButtonProbe }
+}
+
 export interface GuildHallProbe {
   /** The party and reserves, or the recruits on offer. */
   view: 'roster' | 'recruit'
   level: number
   partyLimit: number
-  /** The shrine's level at Oakvale. */
-  shrine: number
   /** What the last action did, or why it was refused. */
   message: string
   /** The hero clicked, whom a click on the other row swaps with. */
@@ -163,11 +177,8 @@ export interface GuildHallProbe {
   reserves: Array<HallFaceProbe & { level: number }>
   /** The pre-rolls not in the company, on the recruit view: a click hires one. */
   prerolls: HallFaceProbe[]
-  /** `upgrade`, `shrine`, `toReserves`, `toParty`, `recruit` and `close` are the roster's; `create` and `back` the recruit view's. */
+  /** `toReserves`, `toParty`, `recruit` and `close` (back to the encampment) are the roster's; `create` and `back` the recruit view's. */
   buttons: {
-    upgrade: ButtonProbe
-    /** Raises the shrine a level, enabled when the stock affords it. */
-    shrine: ButtonProbe
     toReserves: ButtonProbe
     toParty: ButtonProbe
     recruit: ButtonProbe
@@ -245,6 +256,7 @@ export interface Probes {
   World: WorldProbe
   Battle: BattleProbe
   Inventory: InventoryProbe
+  Encampment: EncampmentProbe
   GuildHall: GuildHallProbe
 }
 

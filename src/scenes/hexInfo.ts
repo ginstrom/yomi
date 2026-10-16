@@ -18,7 +18,7 @@ export interface HexInfo {
  * info panel: what stands there, its blight as last seen (and, in sight,
  * whether the blight is gaining on it), the party if it is there, and how
  * many days' walk it is. Tells nothing the fog hides: a monster location only
- * once sighted, a town or resource only once its land is explored.
+ * once sighted, a resource only once its land is explored.
  */
 export function hexInfo(world: WorldState, party: readonly Character[], visible: ReadonlySet<number>, at: Hex): HexInfo {
   const i = boardIndex(world.board, at)
@@ -37,7 +37,7 @@ export function hexInfo(world: WorldState, party: readonly Character[], visible:
       lines.push(`Monsters, threat ${location.threat}: foes of level ${location.threat}.`)
     } else {
       const held = world.held.includes(location.id)
-      lines.push(`${location.id === ENCAMPMENT_ID ? 'Your encampment' : location.kind === 'town' ? 'Town' : 'Resource'}, ${held ? 'held' : 'not held'}.`)
+      lines.push(location.kind === 'encampment' ? 'Your encampment.' : `Resource, ${held ? 'held' : 'not held'}.`)
       if (location.id === ENCAMPMENT_ID) {
         lines.push(`Guild hall level ${world.guildHall}/${MAX_GUILD_HALL_LEVEL}, shrine ${world.shrine}/${MAX_SHRINE_LEVEL}.`)
       } else {

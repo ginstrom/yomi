@@ -28,11 +28,10 @@ export const BLIGHT_PER_THREAT = 2
 export const SOURCE_STRENGTH = 20
 /** What each corrupted neighbour adds to a hex's blight. */
 export const CREEP = 1
-/** The clean side: the encampment, a held town, a held resource. */
+/** The clean side: the encampment, a held resource. */
 export const CAMP_STRENGTH = 8
-export const TOWN_STRENGTH = 5
 export const SITE_STRENGTH = 3
-/** A watchtower (buildings.ts), between a resource and a town. */
+/** A watchtower (buildings.ts), a little stronger than a resource. */
 export const TOWER_STRENGTH = 4
 /** What each level of the encampment's shrine adds to its strength (buildings.ts). */
 export const SHRINE_STRENGTH = 3
@@ -79,7 +78,7 @@ export type WorldEvent =
   | { type: 'tower_lost'; tower: string; at: Hex }
   | { type: 'outpost_built'; site: string; name: string }
   | { type: 'yield'; site: string; name: string; material: Material; amount: number }
-  | { type: 'encampment_lost' }
+  | { type: 'encampment_lost'; name: string }
 
 /** Where a hex's level and shift counter are kept in `WorldState.blight` and `.shift`. */
 export function boardIndex(board: BoardSize, h: Hex): number {
@@ -112,11 +111,10 @@ export function monsterStrength(location: MonsterLocation): number {
   return location.source ? SOURCE_STRENGTH : BLIGHT_PER_THREAT * location.threat
 }
 
-/** What a held site pushes with: the encampment with its shrine, a town or resource with its outpost. */
+/** What a held site pushes with: the encampment with its shrine, a resource with its outpost. */
 export function siteStrength(world: WorldState, id: string): number {
   if (id === ENCAMPMENT_ID) return CAMP_STRENGTH + SHRINE_STRENGTH * world.shrine
-  const own = world.locations.find((l) => l.id === id)?.kind === 'town' ? TOWN_STRENGTH : SITE_STRENGTH
-  return own + (world.outposts.includes(id) ? OUTPOST_STRENGTH : 0)
+  return SITE_STRENGTH + (world.outposts.includes(id) ? OUTPOST_STRENGTH : 0)
 }
 
 // ---- the board's geometry and the fixed sources' fields, worked out once ----

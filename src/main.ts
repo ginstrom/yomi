@@ -6,6 +6,7 @@ import { CreationScene } from './scenes/CreationScene.ts'
 import { WorldScene } from './scenes/WorldScene.ts'
 import { BattleScene } from './scenes/BattleScene.ts'
 import { InventoryScene } from './scenes/InventoryScene.ts'
+import { EncampmentScene } from './scenes/EncampmentScene.ts'
 import { GuildHallScene } from './scenes/GuildHallScene.ts'
 import { SEED_KEY, seedFromUrl } from './scenes/seed.ts'
 import { installTestHook } from './testHook.ts'
@@ -28,7 +29,7 @@ const game = new Phaser.Game({
     height: '100%',
     min: MIN_GAME_SIZE,
   },
-  scene: [BootScene, MenuScene, PartyScene, CreationScene, WorldScene, BattleScene, InventoryScene, GuildHallScene],
+  scene: [BootScene, MenuScene, PartyScene, CreationScene, WorldScene, BattleScene, InventoryScene, EncampmentScene, GuildHallScene],
 })
 game.registry.set(SEED_KEY, seedFromUrl(window.location.search))
 // Dev builds only: the in-browser tests drive the game through this.

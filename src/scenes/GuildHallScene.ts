@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import type { Character } from '../character/character.ts'
 import { canAdvance } from '../character/progression.ts'
 import type { CharacterDraft } from '../character/creation.ts'
-import { canAfford, describeCost, raiseShrine, shrineCost } from '../game/buildings.ts'
+import { describeCost } from '../game/buildings.ts'
 import type { GameState } from '../game/gameState.ts'
 import {
   MAX_RESERVES,
@@ -15,8 +15,6 @@ import {
   swap,
   toParty,
   toReserves,
-  upgradeCost,
-  upgradeGuildHall,
 } from '../game/guildHall.ts'
 import type { ButtonProbe, GuildHallProbe } from '../testHook.ts'
 import { soundVolume } from './audioSettings.ts'
@@ -46,10 +44,6 @@ const PREROLL_Y = 200
 const ROW_LABEL_DX = -FRAME_W / 2 + 24
 const BUTTON_Y = 420
 const MESSAGE_Y = 468
-/** The hall's upgrade and the shrine's, side by side. */
-const UPGRADE_W = 330
-const UPGRADE_BUTTON: Rect = { x: CENTRE_X - (UPGRADE_W + 16) / 2, y: 106, width: UPGRADE_W, height: 34 }
-const SHRINE_BUTTON: Rect = { x: CENTRE_X + (UPGRADE_W + 16) / 2, y: 106, width: UPGRADE_W, height: 34 }
 const BUTTONS_W = 140
 const buttonAt = (index: number, of: number): Rect => ({
   x: CENTRE_X + (index - (of - 1) / 2) * (BUTTONS_W + 16),
@@ -67,12 +61,12 @@ const DIM = '#8a7a5a'
 const TEXT = '#d8c9a3'
 
 /**
- * The guild hall at Oakvale, an overlay over the paused world map: the party
- * and the reserves, swapped by clicking one and then the other; the hall's
- * upgrade and the shrine's (buildings.ts), Oakvale's other improvement; and recruiting, from the pre-rolls or through character creation,
- * which comes back here with its draft. Every control calls a function of
- * guildHall.ts. Closing it starts the world map again, as the party may have
- * changed under its column.
+ * The guild hall, entered from the encampment (EncampmentScene, which raises
+ * the hall's level) over the paused world map: the party and the reserves,
+ * swapped by clicking one and then the other, and recruiting, from the
+ * pre-rolls or through character creation, which comes back here with its
+ * draft. Every control calls a function of guildHall.ts. Closing it goes back
+ * to the encampment.
  */
 export class GuildHallScene extends Phaser.Scene {
   private gameState!: GameState
@@ -131,7 +125,6 @@ export class GuildHallScene extends Phaser.Scene {
       view: this.view,
       level: this.gameState.world.guildHall,
       partyLimit: partyLimit(this.gameState.world),
-      shrine: this.gameState.world.shrine,
       message: this.message,
       selected: this.selected,
       party: faces(this.gameState.party, PARTY_Y),
@@ -143,8 +136,6 @@ export class GuildHallScene extends Phaser.Scene {
         name: draft.name,
       })),
       buttons: {
-        upgrade: control('upgrade'),
-        shrine: control('shrine'),
         toReserves: control('toReserves'),
         toParty: control('toParty'),
         recruit: control('recruit'),
@@ -169,7 +160,7 @@ export class GuildHallScene extends Phaser.Scene {
       this.add.rectangle(CENTRE_X, FRAME_H / 2, FRAME_W, FRAME_H, 0x241d15, 0.98).setStrokeStyle(3, 0xc9a227),
       this.add.text(CENTRE_X, TITLE_Y, 'Guild Hall', { fontFamily: FONT, fontSize: '28px', color: GOLD, fontStyle: 'bold' }).setOrigin(0.5),
       this.add
-        .text(CENTRE_X, TITLE_Y + 28, `Level ${world.guildHall}: a party of up to ${partyLimit(world)}. Shrine ${world.shrine}.  Stock: ${stock || 'nothing'}`, {
+        .text(CENTRE_X, TITLE_Y + 28, `Level ${world.guildHall}: a party of up to ${partyLimit(world)}.  Stock: ${stock || 'nothing'}`, {
           fontFamily: FONT,
           fontSize: '13px',
           color: DIM,
@@ -193,28 +184,6 @@ export class GuildHallScene extends Phaser.Scene {
 
   private buildRoster(): void {
     const { world } = this.gameState
-    const cost = upgradeCost(world)
-    this.button(
-      'upgrade',
-      UPGRADE_BUTTON,
-      cost ? `Upgrade to level ${world.guildHall + 1}: ${describeCost(cost)}` : 'The hall is fully built',
-      () => {
-        const next = world.guildHall + 1
-        this.act(upgradeGuildHall(this.gameState), `The guild hall is raised to level ${next}.`)
-      },
-      !!cost && canAfford(world.stock, cost),
-    )
-    const shrine = shrineCost(world)
-    this.button(
-      'shrine',
-      SHRINE_BUTTON,
-      shrine ? `Shrine to level ${world.shrine + 1}: ${describeCost(shrine)}` : 'The shrine is fully built',
-      () => {
-        const next = world.shrine + 1
-        this.act(raiseShrine(world), `The shrine is raised to level ${next}: Oakvale holds its land the harder.`)
-      },
-      !!shrine && canAfford(world.stock, shrine),
-    )
     this.label(PARTY_Y, `Party (${this.gameState.party.length} of ${partyLimit(world)})`)
     this.gameState.party.forEach((hero, index) => this.addFace(hero, faceAt(index, this.gameState.party.length, PARTY_Y), 'party', index))
     this.label(RESERVES_Y, `Reserves (${this.gameState.reserves.length} of ${MAX_RESERVES})`)
@@ -333,8 +302,9 @@ export class GuildHallScene extends Phaser.Scene {
     this.scene.bringToTop('Creation')
   }
 
-  /** Back to the map, started again: the party under its column may have changed. */
+  /** Back to the encampment, the guild hall's details showing. */
   private close(): void {
-    this.scene.start('World', { game: this.gameState })
+    this.scene.start('Encampment', { game: this.gameState, select: 'guild_hall' })
+    this.scene.bringToTop('Encampment')
   }
 }

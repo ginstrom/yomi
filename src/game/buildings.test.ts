@@ -68,9 +68,9 @@ describe('a watchtower', () => {
     tainted.blight[boardIndex(tainted.board, tainted.party)] = 1
     expect(canBuildTower(tainted)).toMatch(/clean land/)
 
-    const onTown = ready()
-    onTown.party = offsetToHex(9, 19)
-    expect(canBuildTower(onTown)).toMatch(/town or a resource/)
+    const onHome = ready()
+    onHome.party = offsetToHex(9, 19)
+    expect(canBuildTower(onHome)).toMatch(/encampment or a resource/)
 
     const crowded = ready()
     buildTower(crowded, party)
@@ -169,8 +169,8 @@ describe('an outpost', () => {
   /** A new world with the party at held Stonebridge and the stock to build. */
   function atStonebridge(): WorldState {
     const world = newWorld(1)
-    world.held = [...new Set([...world.held, 'stonebridge'])]
-    world.party = world.locations.find((l) => l.id === 'stonebridge')!.position
+    world.held = [...new Set([...world.held, 'gold_seam'])]
+    world.party = world.locations.find((l) => l.id === 'gold_seam')!.position
     world.stock = { gold: 20, timber: 12 }
     return world
   }
@@ -179,8 +179,8 @@ describe('an outpost', () => {
     const world = atStonebridge()
     expect(canBuildOutpost(world)).toBeNull()
     const events = buildOutpost(world, party)!
-    expect(events[0]).toEqual({ type: 'outpost_built', site: 'stonebridge', name: 'Stonebridge' })
-    expect(world.outposts).toEqual(['stonebridge'])
+    expect(events[0]).toEqual({ type: 'outpost_built', site: 'gold_seam', name: 'Gold Seam' })
+    expect(world.outposts).toEqual(['gold_seam'])
     expect(world.stock).toEqual({ gold: 5, timber: 2 })
     expect(world.turn).toBe(2)
     expect(canBuildOutpost(world)).toMatch(/already has an outpost/)
@@ -189,15 +189,15 @@ describe('an outpost', () => {
   it('is refused off a held site, at Oakvale, or without the stock', () => {
     const empty = atStonebridge()
     empty.party = offsetToHex(7, 17)
-    expect(canBuildOutpost(empty)).toMatch(/held town or resource/)
+    expect(canBuildOutpost(empty)).toMatch(/held resource/)
 
     const home = atStonebridge()
     home.party = home.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
-    expect(canBuildOutpost(home)).toMatch(/held town or resource/)
+    expect(canBuildOutpost(home)).toMatch(/held resource/)
 
     const unheld = atStonebridge()
-    unheld.held = unheld.held.filter((id) => id !== 'stonebridge')
-    expect(canBuildOutpost(unheld)).toMatch(/held town or resource/)
+    unheld.held = unheld.held.filter((id) => id !== 'gold_seam')
+    expect(canBuildOutpost(unheld)).toMatch(/held resource/)
 
     const poor = atStonebridge()
     poor.stock = { gold: 15, timber: 9 }
@@ -212,17 +212,17 @@ describe('an outpost', () => {
     const away = offsetToHex(30, 2)
     world.party = away
     const before = netInfluence(world, party, at)
-    const stonebridge = sites(world).find((l) => l.id === 'stonebridge')!
-    const yieldBefore = siteYield(world, stonebridge).amount
+    const goldSeam = sites(world).find((l) => l.id === 'gold_seam')!
+    const yieldBefore = siteYield(world, goldSeam).amount
     world.party = at
     buildOutpost(world, party)
     world.party = away
     expect(netInfluence(world, party, at)).toBeCloseTo(before - OUTPOST_STRENGTH)
-    expect(siteYield(world, stonebridge).amount).toBe(yieldBefore + OUTPOST_YIELD)
+    expect(siteYield(world, goldSeam).amount).toBe(yieldBefore + OUTPOST_YIELD)
     world.blight[boardIndex(world.board, at)] = 0
     world.stock = {}
     world.turn = YIELD_DAYS
-    const yielded = updateTerritory(world, party).find((e) => e.type === 'yield' && e.site === 'stonebridge')
+    const yielded = updateTerritory(world, party).find((e) => e.type === 'yield' && e.site === 'gold_seam')
     expect(yielded).toMatchObject({ amount: yieldBefore + OUTPOST_YIELD })
   })
 
@@ -231,7 +231,7 @@ describe('an outpost', () => {
     buildOutpost(world, party)
     world.blight[boardIndex(world.board, world.party)] = LOSS_LEVEL
     const lost = updateTerritory(world, party).find((e) => e.type === 'site_lost')
-    expect(lost).toEqual({ type: 'site_lost', site: 'stonebridge', name: 'Stonebridge', outpost: true })
+    expect(lost).toEqual({ type: 'site_lost', site: 'gold_seam', name: 'Gold Seam', outpost: true })
     expect(world.outposts).toEqual([])
   })
 })

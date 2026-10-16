@@ -1,4 +1,4 @@
-# A town: a red-roofed house.
+# The encampment: a red-roofed house, the only settlement on the map.
 canvas = "map"
 outline = "auto"
 

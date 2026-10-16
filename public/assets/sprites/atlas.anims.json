@@ -3,6 +3,22 @@
     {
       "frames": [
         {
+          "duration": 260,
+          "frame": "camp_fire/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 260,
+          "frame": "camp_fire/flicker_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "camp_fire/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "gear_axe/idle_0",
           "key": "atlas"
@@ -291,6 +307,27 @@
     {
       "frames": [
         {
+          "duration": 550,
+          "frame": "map_encampment/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 550,
+          "frame": "map_encampment/smoke_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 550,
+          "frame": "map_encampment/smoke_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "map_encampment/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 500,
           "frame": "map_monsters/base",
           "key": "atlas"
@@ -333,27 +370,6 @@
         }
       ],
       "key": "map_resource/idle",
-      "repeat": -1
-    },
-    {
-      "frames": [
-        {
-          "duration": 550,
-          "frame": "map_town/base",
-          "key": "atlas"
-        },
-        {
-          "duration": 550,
-          "frame": "map_town/smoke_0",
-          "key": "atlas"
-        },
-        {
-          "duration": 550,
-          "frame": "map_town/smoke_1",
-          "key": "atlas"
-        }
-      ],
-      "key": "map_town/idle",
       "repeat": -1
     },
     {

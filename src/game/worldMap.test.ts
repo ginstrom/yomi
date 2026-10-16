@@ -3,9 +3,12 @@ import { HexBoard, hexDistance, hexEquals, hexKey, hexToOffset, offsetToHex, typ
 import { ENCOUNTERS, MAX_THREAT } from './encounters.ts'
 import { readyMadeParty } from './party.ts'
 import {
+  DEFAULT_ENCAMPMENT_NAME,
+  ENCAMPMENT_ID,
   SOURCE_ID,
   THREAT_BAND,
   clearLocation,
+  encampmentName,
   linger,
   locationAt,
   monstersHere,
@@ -49,8 +52,15 @@ describe('newWorld', () => {
     for (const a of lairs) for (const b of lairs) if (a !== b) expect(hexDistance(a.position, b.position)).toBeGreaterThan(2)
   })
 
-  it('shows monsters, towns and resources', () => {
-    expect(new Set(world.locations.map((l) => l.kind))).toEqual(new Set(['monsters', 'town', 'resource']))
+  it('shows monsters and resources, and no settlement but the encampment', () => {
+    expect(new Set(world.locations.map((l) => l.kind))).toEqual(new Set(['monsters', 'encampment', 'resource']))
+    expect(world.locations.filter((l) => l.kind === 'encampment').map((l) => l.id)).toEqual([ENCAMPMENT_ID])
+  })
+
+  it('names the encampment as the player chose, or Oakvale by default', () => {
+    expect(encampmentName(world)).toBe(DEFAULT_ENCAMPMENT_NAME)
+    expect(encampmentName(newWorld(1, '  Hearthold '))).toBe('Hearthold')
+    expect(encampmentName(newWorld(1, '   '))).toBe(DEFAULT_ENCAMPMENT_NAME)
   })
 
   it('gives every monster location a battle to fight', () => {
@@ -136,10 +146,10 @@ describe('travel', () => {
     expect(route.length).toBe(5)
   })
 
-  it('passes over towns and resources without stopping', () => {
+  it('passes over resources without stopping', () => {
     const world = newWorld(1)
-    const town = world.locations.find((l) => l.kind === 'town')!
-    journeyTo(world, town.position)
+    const resource = world.locations.find((l) => l.kind === 'resource')!
+    journeyTo(world, resource.position)
     expect(world.confronting).toBeNull()
     expect(routeTo(world, offsetToHex(0, 0))).not.toBeNull()
   })

@@ -1,4 +1,218 @@
 {
+  "camp_fire": {
+    "anchor": [
+      12,
+      12
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 260
+          },
+          {
+            "frame": "flicker_1",
+            "ms": 260
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      3,
+      10,
+      18,
+      13
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "camp_fire.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          11,
+          18,
+          12
+        ],
+        "file": "camp_fire__base.png"
+      },
+      "flicker_1": {
+        "bounds": [
+          3,
+          10,
+          18,
+          13
+        ],
+        "file": "camp_fire__flicker_1.png"
+      }
+    },
+    "size": [
+      24,
+      24
+    ]
+  },
+  "camp_guild_hall": {
+    "anchor": [
+      24,
+      48
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      1,
+      48,
+      47
+    ],
+    "canvas": "building",
+    "display_scale": 3,
+    "file": "camp_guild_hall.png",
+    "frames": {
+      "level_1": {
+        "bounds": [
+          4,
+          11,
+          40,
+          37
+        ],
+        "file": "camp_guild_hall__level_1.png"
+      },
+      "level_2": {
+        "bounds": [
+          0,
+          11,
+          44,
+          37
+        ],
+        "file": "camp_guild_hall__level_2.png"
+      },
+      "level_3": {
+        "bounds": [
+          0,
+          1,
+          48,
+          47
+        ],
+        "file": "camp_guild_hall__level_3.png"
+      }
+    },
+    "size": [
+      48,
+      48
+    ]
+  },
+  "camp_plot": {
+    "anchor": [
+      24,
+      48
+    ],
+    "anims": {},
+    "bounds": [
+      5,
+      23,
+      38,
+      25
+    ],
+    "canvas": "building",
+    "display_scale": 3,
+    "file": "camp_plot.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          5,
+          23,
+          38,
+          25
+        ],
+        "file": "camp_plot.png"
+      }
+    },
+    "size": [
+      48,
+      48
+    ]
+  },
+  "camp_shrine": {
+    "anchor": [
+      24,
+      48
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      4,
+      42,
+      44
+    ],
+    "canvas": "building",
+    "display_scale": 3,
+    "file": "camp_shrine.png",
+    "frames": {
+      "level_1": {
+        "bounds": [
+          7,
+          23,
+          34,
+          25
+        ],
+        "file": "camp_shrine__level_1.png"
+      },
+      "level_2": {
+        "bounds": [
+          3,
+          14,
+          42,
+          34
+        ],
+        "file": "camp_shrine__level_2.png"
+      },
+      "level_3": {
+        "bounds": [
+          3,
+          4,
+          42,
+          44
+        ],
+        "file": "camp_shrine__level_3.png"
+      }
+    },
+    "size": [
+      48,
+      48
+    ]
+  },
+  "camp_tent": {
+    "anchor": [
+      12,
+      12
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      4,
+      24,
+      16
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "camp_tent.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          4,
+          24,
+          16
+        ],
+        "file": "camp_tent.png"
+      }
+    },
+    "size": [
+      24,
+      24
+    ]
+  },
   "gear_axe": {
     "anchor": [
       16,
@@ -1402,6 +1616,73 @@
       24
     ]
   },
+  "map_encampment": {
+    "anchor": [
+      12,
+      12
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 550
+          },
+          {
+            "frame": "smoke_0",
+            "ms": 550
+          },
+          {
+            "frame": "smoke_1",
+            "ms": 550
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      3,
+      0,
+      18,
+      22
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "map_encampment.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          2,
+          18,
+          20
+        ],
+        "file": "map_encampment__base.png"
+      },
+      "smoke_0": {
+        "bounds": [
+          3,
+          1,
+          18,
+          21
+        ],
+        "file": "map_encampment__smoke_0.png"
+      },
+      "smoke_1": {
+        "bounds": [
+          3,
+          0,
+          18,
+          22
+        ],
+        "file": "map_encampment__smoke_1.png"
+      }
+    },
+    "size": [
+      24,
+      24
+    ]
+  },
   "map_monsters": {
     "anchor": [
       12,
@@ -1524,73 +1805,6 @@
           18
         ],
         "file": "map_resource__glint_1.png"
-      }
-    },
-    "size": [
-      24,
-      24
-    ]
-  },
-  "map_town": {
-    "anchor": [
-      12,
-      12
-    ],
-    "anims": {
-      "idle": {
-        "frames": [
-          {
-            "frame": "base",
-            "ms": 550
-          },
-          {
-            "frame": "smoke_0",
-            "ms": 550
-          },
-          {
-            "frame": "smoke_1",
-            "ms": 550
-          }
-        ],
-        "loop": true
-      }
-    },
-    "bounds": [
-      3,
-      0,
-      18,
-      22
-    ],
-    "canvas": "map",
-    "display_scale": 2,
-    "file": "map_town.png",
-    "frames": {
-      "base": {
-        "bounds": [
-          3,
-          2,
-          18,
-          20
-        ],
-        "file": "map_town__base.png"
-      },
-      "smoke_0": {
-        "bounds": [
-          3,
-          1,
-          18,
-          21
-        ],
-        "file": "map_town__smoke_0.png"
-      },
-      "smoke_1": {
-        "bounds": [
-          3,
-          0,
-          18,
-          22
-        ],
-        "file": "map_town__smoke_1.png"
       }
     },
     "size": [

@@ -181,15 +181,15 @@ describe('nextTarget', () => {
     const world = newWorld(1)
     const party = readyMadeParty()
     expect(nextTarget(world, party)?.id).toBe('goblin_raiders')
-    const stonebridge = world.locations.find((l) => l.id === 'stonebridge')!
+    const goldSeam = world.locations.find((l) => l.id === 'gold_seam')!
     const besiegers: MonsterLocation = {
-      id: 'besiegers', kind: 'monsters', name: 'Besiegers', position: { q: stonebridge.position.q + 1, r: stonebridge.position.r },
+      id: 'besiegers', kind: 'monsters', name: 'Besiegers', position: { q: goldSeam.position.q + 1, r: goldSeam.position.r },
       encounter: 'goblin_raid', threat: 1, loot: [],
     }
     world.locations.push(besiegers)
     expect(nextTarget(world, party)?.id).toBe('goblin_raiders')
-    world.held.push('stonebridge')
-    world.threatened = ['stonebridge']
+    world.held.push('gold_seam')
+    world.threatened = ['gold_seam']
     expect(nextTarget(world, party)).toBe(besiegers)
   })
 
@@ -244,16 +244,16 @@ describe('the shrine and outposts in a campaign', () => {
 
   it('puts an outpost on the nearest held site without one, within reach, when the stock affords it', () => {
     const world = newWorld(1)
-    const stonebridge = world.locations.find((l) => l.id === 'stonebridge')!
-    world.held = [...new Set([...world.held, 'stonebridge'])]
-    world.party = { q: stonebridge.position.q - 2, r: stonebridge.position.r }
+    const goldSeam = world.locations.find((l) => l.id === 'gold_seam')!
+    world.held = [...new Set([...world.held, 'gold_seam'])]
+    world.party = { q: goldSeam.position.q - 2, r: goldSeam.position.r }
     expect(outpostErrand(world)).toBeNull()
     world.stock = { ...OUTPOST_COST }
-    expect(outpostErrand(world)?.id).toBe('stonebridge')
-    world.outposts = ['stonebridge']
-    expect(outpostErrand(world)?.id).not.toBe('stonebridge')
+    expect(outpostErrand(world)?.id).toBe('gold_seam')
+    world.outposts = ['gold_seam']
+    expect(outpostErrand(world)?.id).not.toBe('gold_seam')
     world.outposts = []
-    world.party = { q: stonebridge.position.q + OUTPOST_ERRAND_RADIUS + 8, r: stonebridge.position.r }
-    expect(outpostErrand(world)?.id).not.toBe('stonebridge')
+    world.party = { q: goldSeam.position.q + OUTPOST_ERRAND_RADIUS + 8, r: goldSeam.position.r }
+    expect(outpostErrand(world)?.id).not.toBe('gold_seam')
   })
 })

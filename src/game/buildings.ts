@@ -1,7 +1,7 @@
 import { hexDistance, hexEquals } from '../grid/hex.ts'
 import { blightAt, type WorldEvent } from './blight.ts'
 import type { Material, Stock } from './territory.ts'
-import { ENCAMPMENT_ID, locationAt, monstersHere, passTurn, worldActive, type QuietLocation, type WorldState } from './worldMap.ts'
+import { ENCAMPMENT_ID, encampmentName, locationAt, monstersHere, passTurn, worldActive, type QuietLocation, type WorldState } from './worldMap.ts'
 
 /**
  * What the encampment's stock builds, and the stock's arithmetic. Everything
@@ -13,8 +13,8 @@ import { ENCAMPMENT_ID, locationAt, monstersHere, passTurn, worldActive, type Qu
  *   and is lost as a held site is (territory.ts).
  * - The shrine (docs/designs/blight.md §4.6) is raised at the encampment, a
  *   level at a time, each adding to the encampment's strength.
- * - An outpost (blight.md §4.6) is built by the party standing on a held town
- *   or resource: it adds to the site's strength and yield, and falls with it.
+ * - An outpost (blight.md §4.6) is built by the party standing on a held
+ *   resource: it adds to the site's strength and yield, and falls with it.
  */
 
 /** Iron and gold, which the home valley yields from the start: timber and stone come too late in a campaign (the simulator never had them). */
@@ -49,7 +49,7 @@ export function describeCost(cost: Stock): string {
 export function towerSiteRefusal(world: WorldState): string | null {
   if (!worldActive(world) || monstersHere(world)) return 'Nothing can be built here now.'
   if (world.towers.some((tower) => hexEquals(tower.position, world.party))) return 'A watchtower already stands here.'
-  if (locationAt(world, world.party)) return 'A watchtower cannot stand on a town or a resource.'
+  if (locationAt(world, world.party)) return 'A watchtower cannot stand on the encampment or a resource.'
   if (blightAt(world, world.party) > 0) return 'A watchtower needs clean land.'
   if (world.towers.some((tower) => hexDistance(tower.position, world.party) < TOWER_SPACING)) {
     return `Too near another watchtower: they must stand ${TOWER_SPACING} hexes apart.`
@@ -99,7 +99,7 @@ export function shrineCost(world: WorldState): Stock | null {
 
 /** Raises the shrine a level, at once and without passing time; returns why it cannot, or null when done. */
 export function raiseShrine(world: WorldState): string | null {
-  if (!atEncampment(world)) return 'The shrine is at Oakvale.'
+  if (!atEncampment(world)) return `The shrine is at ${encampmentName(world)}.`
   const cost = shrineCost(world)
   if (!cost) return 'The shrine is as great as it gets.'
   if (!canAfford(world.stock, cost)) return `The next level costs ${describeCost(cost)}, more than the stock holds.`
@@ -108,7 +108,7 @@ export function raiseShrine(world: WorldState): string | null {
   return null
 }
 
-/** The held town or resource the party stands on, the encampment aside, where an outpost could go. */
+/** The held resource the party stands on, where an outpost could go. */
 export function outpostSite(world: WorldState): QuietLocation | null {
   const here = locationAt(world, world.party)
   if (!here || here.kind === 'monsters' || here.id === ENCAMPMENT_ID || !world.held.includes(here.id)) return null
@@ -119,7 +119,7 @@ export function outpostSite(world: WorldState): QuietLocation | null {
 export function outpostSiteRefusal(world: WorldState): string | null {
   if (!worldActive(world) || monstersHere(world)) return 'Nothing can be built here now.'
   const site = outpostSite(world)
-  if (!site) return 'An outpost goes on a held town or resource.'
+  if (!site) return 'An outpost goes on a held resource.'
   if (world.outposts.includes(site.id)) return `${site.name} already has an outpost.`
   return null
 }

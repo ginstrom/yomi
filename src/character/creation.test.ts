@@ -306,8 +306,9 @@ describe('placing points', () => {
 
 describe('typeInName', () => {
   it('adds letters, spaces, hyphens and apostrophes, and nothing else', () => {
-    expect([...'Ann-Li O\'Dé'].reduce(typeInName, '')).toBe("Ann-Li O'Dé")
-    expect(['A', '1', 'Enter', 'Shift', '!', 'b'].reduce(typeInName, '')).toBe('Ab')
+    const type = (keys: string[]) => keys.reduce((name, key) => typeInName(name, key), '')
+    expect(type([...'Ann-Li O\'Dé'])).toBe("Ann-Li O'Dé")
+    expect(type(['A', '1', 'Enter', 'Shift', '!', 'b'])).toBe('Ab')
     expect(typeInName('', ' ')).toBe('')
   })
 
@@ -315,5 +316,7 @@ describe('typeInName', () => {
     expect(typeInName('Mira', 'Backspace')).toBe('Mir')
     expect(typeInName('', 'Backspace')).toBe('')
     expect(typeInName('x'.repeat(MAX_NAME_LENGTH), 'y')).toHaveLength(MAX_NAME_LENGTH)
+    // Another longest, as the encampment's name has.
+    expect(typeInName('x'.repeat(MAX_NAME_LENGTH), 'y', MAX_NAME_LENGTH + 4)).toHaveLength(MAX_NAME_LENGTH + 1)
   })
 })

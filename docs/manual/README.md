@@ -1,6 +1,6 @@
 # Yomi: Player's Manual
 
-The blight is spreading out of the east. Its corruption creeps over the land a hex at a time, and monsters breed wherever it runs deep. You lead a small company of heroes from the encampment at Oakvale. Your job is to hold the land, break the monster nests, grow strong enough to march on the Source of the blight, and destroy it.
+The blight is spreading out of the east. Its corruption creeps over the land a hex at a time, and monsters breed wherever it runs deep. You lead a small company of heroes from your encampment, the last settlement standing, which you name when the game begins (Oakvale, unless you choose otherwise). Your job is to hold the land, break the monster nests, grow strong enough to march on the Source of the blight, and destroy it.
 
 Yomi is a turn-based tactics game. You walk a world map of hexes from place to place, and battles are fought on a small hex board with action points, flanking, facing and zones of control.
 
@@ -35,7 +35,7 @@ Either choice takes you to the roster, which has one row for each place in the p
 
 ![Pre-rolled characters](images/party-prerolls.png)
 
-A pre-rolled hero who is already in the party is greyed out, because every name in the party must be unique. When the party is ready, press **Begin**. The game takes the first empty save slot, or asks which slot to overwrite if all three are full.
+A pre-rolled hero who is already in the party is greyed out, because every name in the party must be unique. Under the rows is the name of your encampment: type to change it (Backspace removes letters). When the party is ready, press **Begin**. The game takes the first empty save slot, or asks which slot to overwrite if all three are full.
 
 ---
 
@@ -110,13 +110,13 @@ Click a hex to travel there. Hovering over a hex first shows the route, and a pa
 
 ### Fog of war
 
-Black hexes have never been seen. The party sees 5 hexes around it, Oakvale 6, a town you hold 3, a resource you hold 2, and a watchtower 8. Land you have seen but cannot see now is drawn under a veil, showing the state it was in when you last saw it. Once you have spotted a monster lair it stays on your map. The Source of the blight is known from the start.
+Black hexes have never been seen. The party sees 5 hexes around it, the encampment 6, a resource you hold 2, and a watchtower 8. Land you have seen but cannot see now is drawn under a veil, showing the state it was in when you last saw it. Once you have spotted a monster lair it stays on your map. The Source of the blight is known from the start.
 
 ### Places
 
-- **Oakvale**, your encampment, which is home to the guild hall and the shrine.
-- **Towns** and **resources** (Iron Vein, Gold Seam, Timber Stand and others). A held site's name is starred and drawn in green. A site under threat is drawn in orange, along with the number of days left until it falls.
-- **Monster lairs**, marked with a skull, each with a **threat** from 1 to 5. The further a lair is from Oakvale, the higher its threat.
+- **Your encampment**, the only settlement left, where the guild hall and the shrine stand.
+- **Resources** (Iron Vein, Gold Seam, Timber Stand and others). A held site's name is starred and drawn in green. A site under threat is drawn in orange, along with the number of days left until it falls.
+- **Monster lairs**, marked with a skull, each with a **threat** from 1 to 5. The further a lair is from the encampment, the higher its threat.
 
 ### Monsters
 
@@ -136,7 +136,7 @@ When there are no monsters on your hex, the footer offers:
 - **Camp**: rest for a day. Each day of camping heals every hero 1 hit point and refills every caster's mana.
 - **Camp until healed**: your healers cast their heals with the mana they have, then the party camps a day and casts again, repeating until everyone is whole. Anything important that happens breaks camp.
 - **Build Watchtower** or **Build Outpost**, where the land allows (see [Building](#9-building)).
-- **Guild Hall**, at Oakvale.
+- **Enter** the encampment, when the party stands on it (see [The encampment](#the-encampment)).
 
 ---
 
@@ -348,13 +348,13 @@ A hero born with an attribute of 7 can reach that attribute's masteries by takin
 Every hex of land has a blight level from 0 (clean) to 3 (corrupted), shown as a tint over the grass. Corrupted land also shows dark growths. Every day, sources of influence push on the hexes around them, and their strength fades by a point for each hex of distance:
 
 - **Pushing the blight forward**: monster lairs (more strongly the higher their threat), the Source itself, and corrupted land spreading to its neighbours. The blight grows stronger over time, by a tenth every 30 days.
-- **Pushing it back**: Oakvale (stronger with its shrine), every town and resource you hold (stronger with an outpost), every watchtower, and the party itself, which grows stronger as the heroes level up.
+- **Pushing it back**: the encampment (stronger with its shrine), every resource you hold (stronger with an outpost), every watchtower, and the party itself, which grows stronger as the heroes level up.
 
 Consequences:
 
-- **Corrupted land breeds new monster lairs.** A new lair's threat depends on how far from Oakvale it appears.
+- **Corrupted land breeds new monster lairs.** A new lair's threat depends on how far from the encampment it appears.
 - **Winning a battle cleanses the land** around the lair, lowering every hex within 1 + its threat by two levels.
-- **Towns and resources** are captured when their land is clean (level 0) and lost when it reaches level 2. While the blight gains on a site, the map shows it in orange with the number of days left until it falls. A watchtower can be lost the same way.
+- **Resources** are captured when their land is clean (level 0) and lost when it reaches level 2. While the blight gains on a site, the map shows it in orange with the number of days left until it falls. A watchtower can be lost the same way.
 - **Stock**: every 5 days, each site you hold adds its yield to the encampment's stock (gold, iron, timber, silver and so on). A site whose land is tainted yields half.
 
 The header's percentage counts only the land you have explored.
@@ -368,17 +368,23 @@ The stock pays for everything you build.
 | Building | Where | Cost | Time | Effect |
 | --- | --- | --- | --- | --- |
 | Watchtower | Clean land off any location, 4+ hexes from other towers | 10 iron, 5 gold | A day | Sees 8 hexes and pushes the blight back. New lairs will not spawn close to it. |
-| Outpost | A held town or resource without one | 15 gold, 10 timber | A day | The site resists the blight more strongly and yields more. Lost with the site. |
-| Shrine | Oakvale (Guild Hall screen) | 20 gold, then 40 gold + 15 silver, then 80 gold + 30 silver | Instant | Each level strengthens Oakvale against the blight |
-| Guild hall | Oakvale (Guild Hall screen) | 30 gold + 15 iron, then 60 gold + 30 iron | Instant | Party limit 3, then 4, then 5 |
+| Outpost | A held resource without one | 15 gold, 10 timber | A day | The site resists the blight more strongly and yields more. Lost with the site. |
+| Shrine | The encampment's empty plot | 20 gold, then 40 gold + 15 silver, then 80 gold + 30 silver | Instant | Each level strengthens the encampment against the blight |
+| Guild hall | The encampment | 30 gold + 15 iron, then 60 gold + 30 iron | Instant | Party limit 3, then 4, then 5 |
 
 If you click a build button without enough stock, the game tells you the cost.
+
+### The encampment
+
+![The encampment](images/encampment.png)
+
+When the party stands on the encampment, **Enter** (the button carries the encampment's name) shows the place: every facility on its plot. A facility not yet built is an empty plot with a sign, and a built one is drawn at its level, so the encampment grows as you build. Click a building or a plot to see what it does, what its next level brings and costs, and **Build** or **Raise** it. **Leave** (or Esc) goes back to the map.
 
 ### The guild hall
 
 ![The guild hall](images/guild-hall.png)
 
-At Oakvale, the **Guild Hall** button opens this screen. It shows your party, the reserves waiting at the hall, and the upgrades for the hall and the shrine.
+In the encampment, click the guild hall and then **Enter the Guild Hall**. It shows your party and the reserves waiting at the hall. **Close** goes back to the encampment.
 
 - **Click a hero** to select them. Then click a hero in the other row to swap the two, or use **To reserves** / **To party**.
 - **Recruit** hires a new hero for **10 gold**, who joins the reserves.
@@ -392,7 +398,7 @@ You can recruit one of the pre-rolled heroes not already in your company, or **C
 ## 10. Winning, losing and saving
 
 - **Victory**: beat the guardians of the **Source**, far in the east. They fight at threat 5 and are led by the **Blight Horror**, which claws through armour and casts Death Cloud and Bane. Plan to arrive with heroes around level 7. After the victory you can **End** the game or carry on in **endless** mode.
-- **Defeat**: the game ends if your whole party falls in a battle, or if Oakvale falls to the blight.
+- **Defeat**: the game ends if your whole party falls in a battle, or if your encampment falls to the blight.
 
 **Saving is automatic.** Each playthrough lives in one of three slots, and there is no save button. The world map saves after each journey, camp and panel change. A battle saves at the start of each of your turns, so reloading during a battle rewinds to the start of that turn with the same dice. A defeat deletes its slot.
 

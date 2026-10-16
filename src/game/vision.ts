@@ -14,7 +14,6 @@ import { ENCAMPMENT_ID, SOURCE_ID, type WorldState } from './worldMap.ts'
 
 export const PARTY_VISION = 5
 export const CAMP_VISION = 6
-export const TOWN_VISION = 3
 export const SITE_VISION = 2
 export const TOWER_VISION = 8
 
@@ -39,7 +38,7 @@ export function visibleHexes(world: WorldState): Set<number> {
   hexesWithin(world, world.party, PARTY_VISION, visible)
   for (const location of world.locations) {
     if (location.kind === 'monsters' || !world.held.includes(location.id)) continue
-    const radius = location.id === ENCAMPMENT_ID ? CAMP_VISION : location.kind === 'town' ? TOWN_VISION : SITE_VISION
+    const radius = location.id === ENCAMPMENT_ID ? CAMP_VISION : SITE_VISION
     hexesWithin(world, location.position, radius, visible)
   }
   for (const tower of world.towers) hexesWithin(world, tower.position, TOWER_VISION, visible)

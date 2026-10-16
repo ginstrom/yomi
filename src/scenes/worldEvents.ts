@@ -20,7 +20,7 @@ export function describeWorldEvent(event: WorldEvent): string {
     case 'tower_lost':
       return 'A watchtower is lost to the blight.'
     case 'encampment_lost':
-      return 'The blight has taken Oakvale.'
+      return `The blight has taken ${event.name}.`
     // Unseen: a spawn is told when it comes into sight.
     case 'spawned':
     case 'level_changed':

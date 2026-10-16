@@ -1,0 +1,24 @@
+# The encampment's campfire, burning between the facilities.
+canvas = "map"
+outline = "auto"
+
+[frames.base.runs]
+12 = [[11, "oo"]]
+13 = [[10, "oYYo"]]
+14 = [[9, "ooYYoo"]]
+15 = [[9, "oYWWYo"]]
+16 = [[8, "oYWWWWYo"]]
+17 = [[8, "oYYWWYYo"]]
+18 = [[7, "ooYYYYYYoo"]]
+19 = [[6, "NnnnnnnnnnnN"]]
+20 = [[5, "nNnNnNnNnNnNnN"]]
+21 = [[4, "mmmmmmmmmmmmmmmm"]]
+
+# The flames lick to the other side.
+[frames.flicker_1]
+from = "base"
+runs = { 11 = [[12, "oo"]], 12 = [[11, "oYo"]], 13 = [[10, "oYYYo"]], 15 = [[9, "oYYWYo"]] }
+
+[anim.idle]
+frames = ["base", "flicker_1"]
+ms = 260
