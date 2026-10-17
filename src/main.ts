@@ -11,6 +11,7 @@ import { GuildHallScene } from './scenes/GuildHallScene.ts'
 import { StoryScene } from './scenes/StoryScene.ts'
 import { SEED_KEY, seedFromUrl } from './scenes/seed.ts'
 import { installTestHook } from './testHook.ts'
+import { installDebugConsole } from './scenes/debugConsole.ts'
 
 /**
  * The smallest the game gets: beside the party's column, the board and the
@@ -35,3 +36,5 @@ const game = new Phaser.Game({
 game.registry.set(SEED_KEY, seedFromUrl(window.location.search))
 // Dev builds only: the in-browser tests drive the game through this.
 if (import.meta.env.DEV) installTestHook(game)
+// Dev builds only: the debug console, opened by ~.
+if (import.meta.env.DEV) installDebugConsole(game)

@@ -50,6 +50,7 @@ import { showStory, type StoryAnchors } from './StoryScene.ts'
 import { storyFor, type StoryItem } from '../story/story.ts'
 import { eventSounds, type SoundKey } from './sounds.ts'
 import { describeStatuses, spellMenuRows, targetingHint } from './spellMenu.ts'
+import type { DebugSource } from './debugCommands.ts'
 
 interface BattleData {
   game?: GameState
@@ -451,6 +452,11 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** What the in-browser tests see of the battle; see testHook.ts. */
+  /** What the debug console (debugConsole.ts) reads: the game and the battle, which it does not change. */
+  debugSource(): DebugSource {
+    return { game: this.gameState, battle: { state: this.engine.getState(), names: this.names } }
+  }
+
   probe(): BattleProbe {
     const enabled = (button: Phaser.GameObjects.Container) => button.getData('enabled') as boolean
     return {

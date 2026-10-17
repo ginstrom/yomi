@@ -34,6 +34,7 @@ import { describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
 import { hexInfo } from './hexInfo.ts'
 import { tellStory, type StoryAnchors } from './StoryScene.ts'
 import type { StoryMoment } from '../story/story.ts'
+import type { DebugSource } from './debugCommands.ts'
 
 interface WorldData {
   game?: GameState
@@ -309,6 +310,19 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** What the in-browser tests see of the world map; see testHook.ts. */
+  /** What the debug console (debugConsole.ts) works on: the game, redrawn and saved after a command changes it. */
+  debugSource(): DebugSource {
+    return {
+      game: this.gameState,
+      changed: () => {
+        this.refreshPartyGear()
+        this.refresh()
+        this.save()
+        this.checkOutcome()
+      },
+    }
+  }
+
   probe(): WorldProbe {
     const [scout, wait, attack] = this.buttons.map((button) => buttonProbe(button))
     const camp = buttonProbe(this.campButtons[0])
