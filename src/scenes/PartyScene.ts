@@ -19,6 +19,8 @@ interface PartyData {
   drafts?: CharacterDraft[]
   /** The encampment's name as typed so far, when coming back from character creation. */
   encampmentName?: string
+  /** Whether the tutorial box is ticked, when coming back from character creation. */
+  tutorial?: boolean
 }
 
 type PartyView = PartyProbe['view']
@@ -70,6 +72,8 @@ const CAMP_NAME_Y = 384
 const CAMP_NAME_BOX: Rect = { x: CENTRE_X + 60, y: CAMP_NAME_Y, width: 300, height: 32 }
 
 const BEGIN_BUTTON: Rect = { x: CENTRE_X + 90, y: 440, width: 150, height: 40 }
+/** The roster's tick box for the tutorial, left of Back. */
+const TUTORIAL_BOX: Rect = { x: ROW_LEFT + 60, y: 440, width: 120, height: 40 }
 const FONT = 'monospace'
 const GOLD = '#e8c766'
 const DIM = '#8a7a5a'
@@ -103,6 +107,8 @@ export class PartyScene extends Phaser.Scene {
   private drafts: CharacterDraft[] = []
   /** What the player calls the encampment, typed on the roster. */
   private encampmentName = DEFAULT_ENCAMPMENT_NAME
+  /** Whether the new game shows the tutorial's tips; ticked unless the player unticks it. */
+  private tutorial = true
   private readonly limit = STARTING_PARTY_LIMIT
   /** The draft whose portrait the pointer is over: a ready-made member on the choice, or a preroll. */
   private hovered: CharacterDraft | null = null
@@ -122,6 +128,7 @@ export class PartyScene extends Phaser.Scene {
     this.drafts = (data?.drafts ?? []).map(copyDraft)
     this.view = data?.drafts ? 'roster' : 'choice'
     this.encampmentName = data?.encampmentName ?? DEFAULT_ENCAMPMENT_NAME
+    this.tutorial = data?.tutorial ?? true
     this.bg = this.add.rectangle(0, 0, 1, 1, 0x14100c, 1).setOrigin(0)
     this.frame = this.add.container(0, 0)
     this.render()
@@ -148,6 +155,7 @@ export class PartyScene extends Phaser.Scene {
     return {
       view: this.view,
       encampmentName: this.encampmentName,
+      tutorial: this.tutorial,
       rows: Array.from({ length: this.limit }, (_, index) => {
         const filled = roster && index < this.drafts.length
         return {
@@ -162,6 +170,7 @@ export class PartyScene extends Phaser.Scene {
         readyMade: button(READY_MADE_BUTTON, this.view === 'choice'),
         createOwn: button(CREATE_OWN_BUTTON, this.view === 'choice'),
         begin: button(BEGIN_BUTTON, roster, this.drafts.length > 0),
+        tutorial: button(TUTORIAL_BOX, roster),
         back: button(this.backButton(), true),
       },
       readyMade: PREROLLS.slice(0, READY_MADE.length).map(({ draft, role }, index) => ({
@@ -308,6 +317,7 @@ export class PartyScene extends Phaser.Scene {
       this.button(removeButton(index), 'Remove', () => this.onRemove(index))
     }
     this.buildEncampmentName()
+    this.button(TUTORIAL_BOX, `[${this.tutorial ? 'x' : ' '}] Tutorial`, () => this.toggleTutorial(), { marked: this.tutorial })
     this.button(BEGIN_BUTTON, 'Begin', () => this.onBegin(), { enabled: this.drafts.length > 0, marked: true, fontSize: 16 })
   }
 
@@ -375,7 +385,13 @@ export class PartyScene extends Phaser.Scene {
 
   /** Creation for a new character, or for the one at `index` as it was chosen. */
   private openCreation(index?: number): void {
-    this.scene.start('Creation', { drafts: this.drafts, index, encampmentName: this.encampmentName })
+    this.scene.start('Creation', { drafts: this.drafts, index, encampmentName: this.encampmentName, tutorial: this.tutorial })
+  }
+
+  /** Ticks or unticks the tutorial; the menu's options change it once the game has begun. */
+  private toggleTutorial(): void {
+    this.tutorial = !this.tutorial
+    this.render()
   }
 
   /** On the roster, typing names the encampment. */
@@ -403,7 +419,7 @@ export class PartyScene extends Phaser.Scene {
 
   /** Makes the characters and the game of them. The drafts end here, and with them editing; the world map saves the game as it opens. */
   private begin(slot: SlotId): void {
-    this.scene.start('World', { game: newGame(partyFromDrafts(this.drafts), slot, undefined, this.encampmentName) })
+    this.scene.start('World', { game: newGame(partyFromDrafts(this.drafts), slot, undefined, this.encampmentName, this.tutorial) })
   }
 
   /** From the overwrite prompt or the prerolls back to the roster, from the roster to the choice (the party made so far is dropped), from the choice to the menu. */

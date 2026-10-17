@@ -45,7 +45,9 @@ import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { gearLayers } from './unitLook.ts'
-import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick } from './partyPanel.ts'
+import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
+import { showStory, type StoryAnchors } from './StoryScene.ts'
+import { storyFor, type StoryItem } from '../story/story.ts'
 import { eventSounds, type SoundKey } from './sounds.ts'
 import { describeStatuses, spellMenuRows, targetingHint } from './spellMenu.ts'
 
@@ -594,7 +596,7 @@ export class BattleScene extends Phaser.Scene {
       return
     }
     this.music?.pause()
-    this.scene.launch('Menu', { resume: 'Battle' })
+    this.scene.launch('Menu', { resume: 'Battle', game: this.gameState })
     this.scene.bringToTop('Menu')
     this.scene.pause()
   }
@@ -1510,11 +1512,31 @@ export class BattleScene extends Phaser.Scene {
       return
     }
     // The player's turn begins: nothing is animating and no unit is half-way through anything.
+    let story: StoryItem[] = []
     if (round !== this.savedRound) {
       this.savedRound = round
+      // Chosen before the save, so that what the story shows is saved as shown.
+      story = storyFor(this.gameState, {
+        kind: 'battle_turn',
+        round,
+        encounter: this.location?.encounter ?? DEFAULT_ENCOUNTER,
+        threat: this.location?.threat ?? 1,
+      })
       this.save()
     }
     this.setPlayerControl(true)
+    showStory(this, this.gameState, story, this.anchors())
+  }
+
+  /** Where the controls a tutorial tip may point at are on screen, those that show. */
+  private anchors(): StoryAnchors {
+    const centre = (button: Phaser.GameObjects.Container) => (button.visible ? { x: button.x, y: button.y } : undefined)
+    const portrait = portraitRect(0)
+    return {
+      'battle.party': { x: portrait.x + portrait.width / 2, y: portrait.y + portrait.height / 2 },
+      'battle.endTurn': centre(this.endTurnButton),
+      'battle.cast': centre(this.castButton),
+    }
   }
 
   /**

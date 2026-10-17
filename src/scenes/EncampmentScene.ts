@@ -9,6 +9,7 @@ import type { Point } from './boardGeometry.ts'
 import { facilityFrame, facilityLabel, plotAt } from './encampmentView.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton } from './panelButton.ts'
+import { tellStory } from './StoryScene.ts'
 import { SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 
 interface EncampmentData {
@@ -84,12 +85,19 @@ export class EncampmentScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this))
     this.input.keyboard?.on('keydown-ESC', () => (this.selected ? this.select(null) : this.leave()))
+    const leave = this.controls.leave?.at
+    tellStory(this, this.gameState, { kind: 'encampment_opened' }, leave ? { 'encampment.leave': this.onScreen(leave) } : {})
+  }
+
+  /** Where a point of the frame is on screen. */
+  private onScreen(at: Point): Point {
+    const { x, y, scale } = this.frame
+    return { x: x + at.x * scale, y: y + at.y * scale }
   }
 
   /** What the in-browser tests see of the encampment; see testHook.ts. */
   probe(): EncampmentProbe {
-    const { x, y, scale } = this.frame
-    const onScreen = (at: Point) => ({ x: x + at.x * scale, y: y + at.y * scale })
+    const onScreen = (at: Point) => this.onScreen(at)
     const control = (key: keyof EncampmentProbe['buttons']): ButtonProbe => {
       const shown = this.controls[key]
       return { ...onScreen(shown?.at ?? { x: 0, y: 0 }), visible: !!shown, enabled: !!shown?.enabled }

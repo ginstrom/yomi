@@ -6,6 +6,7 @@ import { itemById, type Equipment, type Item } from '../inventory/inventory.ts'
 import type { GameState } from './gameState.ts'
 import type { GroundPile } from './ground.ts'
 import type { WorldLocation } from './worldMap.ts'
+import { CUTSCENE_IDS } from '../story/cutscenes.ts'
 
 /**
  * The save format: a game, and the battle it is in if any, as a string and
@@ -17,7 +18,7 @@ import type { WorldLocation } from './worldMap.ts'
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 8
+export const SAVE_VERSION = 9
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -131,6 +132,10 @@ export function parseSave(raw: string | null): SaveFile | null {
     check(typeof world.rng === 'number' && typeof world.spawnPressure === 'number' && typeof world.status === 'string')
     check(Array.isArray(game.reserves) && typeof world.guildHall === 'number')
     check(game.slot === null || typeof game.slot === 'number')
+    const { story } = game
+    check(story && typeof story === 'object' && typeof story.tutorial === 'boolean')
+    check(Array.isArray(story.played) && story.played.every((id) => CUTSCENE_IDS.includes(id)))
+    check(Array.isArray(story.tipsShown) && story.tipsShown.every((id) => typeof id === 'string'))
     check(battle === null || (typeof battle === 'object' && typeof battle.location === 'string'))
     check(battle === null || (typeof battle.enemyRng === 'number' && Array.isArray(battle.ground)))
     check(battle === null || (battle.engine && Array.isArray(battle.engine.units) && Array.isArray(battle.engine.events)))

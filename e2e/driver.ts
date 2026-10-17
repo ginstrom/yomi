@@ -178,10 +178,39 @@ export class Game {
   async beginReadyMade(): Promise<WorldProbe> {
     const choice = await this.settled('Party', (p) => p.view === 'choice')
     await this.click(choice.buttons.readyMade)
-    const roster = await this.waitFor('Party', (p) => p.view === 'roster')
+    await this.begin(await this.waitFor('Party', (p) => p.view === 'roster'))
+    return this.enterWorld()
+  }
+
+  /**
+   * From the roster: ticks or unticks the tutorial as asked (off unless told,
+   * so that its tips do not get in the way) and clicks Begin, which opens the
+   * world map, or the prompt for a slot to overwrite.
+   */
+  async begin(roster: PartyProbe, { tutorial = false } = {}): Promise<void> {
+    if (roster.tutorial !== tutorial) {
+      await this.click(roster.buttons.tutorial)
+      roster = await this.settled('Party', (p) => p.view === 'roster' && p.tutorial === tutorial)
+    }
     await this.click(roster.buttons.begin)
+  }
+
+  /** Once a new game has begun: skips the story told over the map as it opens (the intro), and waits for the map. */
+  async enterWorld(): Promise<WorldProbe> {
+    await expect
+      .poll(async () => (await this.scenes()).running.some((key) => key === 'Story' || key === 'World'), { timeout: WAIT_MS })
+      .toBe(true)
+    await this.skipStory()
     await this.waitForScenes(['World'])
     return this.waitFor('World')
+  }
+
+  /** Skips whatever the story is showing, item by item, until the scene under it resumes. */
+  async skipStory(): Promise<void> {
+    while ((await this.scenes()).running.includes('Story')) {
+      await this.settled('Story')
+      await this.press('Escape')
+    }
   }
 
   /** From the main menu: a new game with the ready-made party, which opens on the world map. */

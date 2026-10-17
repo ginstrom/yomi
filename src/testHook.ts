@@ -42,6 +42,8 @@ export interface MenuProbe {
   showingLoad: boolean
   /** Whether the player's manual is laid over the menu, which the Manual button does. */
   showingManual: boolean
+  /** Whether the paused game's tutorial is on; null with no game under the menu. */
+  tutorial: boolean | null
   /** `continue` is enabled over a paused game, or when a slot can be loaded. */
   buttons: {
     new: ButtonProbe
@@ -50,6 +52,8 @@ export interface MenuProbe {
     options: ButtonProbe
     manual: ButtonProbe
     back: ButtonProbe
+    /** The options' switch for the paused game's tutorial, shown only over a game. */
+    tutorial: ButtonProbe
   }
   /** The three save slots' rows, each with the line it reads; enabled when it holds a game that can be loaded. */
   slots: Array<ButtonProbe & { line: string }>
@@ -60,10 +64,12 @@ export interface PartyProbe {
   view: 'choice' | 'roster' | 'prerolls' | 'overwrite'
   /** The encampment's name as typed on the roster, which the new game's encampment takes. */
   encampmentName: string
+  /** Whether the roster's tutorial box is ticked, which the new game's tutorial takes. */
+  tutorial: boolean
   /** A row for each place up to the party limit: a member with Edit and Remove, or an empty place with Create and Preroll. */
   rows: Array<{ name: string | null; edit: ButtonProbe; remove: ButtonProbe; create: ButtonProbe; preroll: ButtonProbe }>
   /** `readyMade` and `createOwn` are the choice's; `begin` is the roster's, enabled with a member or more. */
-  buttons: { readyMade: ButtonProbe; createOwn: ButtonProbe; begin: ButtonProbe; back: ButtonProbe }
+  buttons: { readyMade: ButtonProbe; createOwn: ButtonProbe; begin: ButtonProbe; back: ButtonProbe; tutorial: ButtonProbe }
   /** The ready-made party's portraits under its button, on the choice: nothing to click, but a hover tells of the member. */
   readyMade: Array<ButtonProbe & { name: string; role: string }>
   /** The prerolls' portraits, on their view: a click adds one to the party; one already in it is disabled. */
@@ -249,6 +255,25 @@ export interface InventoryProbe {
   ground: Array<Point & { item: string }>
 }
 
+export interface StoryProbe {
+  /** What shows: a cutscene or a tutorial tip, or null once the story is done. */
+  kind: 'cutscene' | 'tip' | null
+  /** The cutscene's id in `CUTSCENES` or the tip's in `TUTORIAL`. */
+  id: string | null
+  /** The cutscene's beat showing, from 0, and how many it has; 0 for a tip. */
+  beat: number
+  beats: number
+  speaker: string | null
+  /** The words showing, with the game's names put in. */
+  text: string
+  /** Where the tip's ring is, round the control it is about; null with none. */
+  anchor: Point | null
+  /** Whether the game's tutorial is on. */
+  tutorial: boolean
+  /** `next` goes on (Next, Continue or Got it); `skip` skips the rest of a cutscene; `tutorialOff` is a tip's. */
+  buttons: { next: ButtonProbe; skip: ButtonProbe; tutorialOff: ButtonProbe }
+}
+
 export interface Probes {
   Menu: MenuProbe
   Party: PartyProbe
@@ -258,6 +283,7 @@ export interface Probes {
   Inventory: InventoryProbe
   Encampment: EncampmentProbe
   GuildHall: GuildHallProbe
+  Story: StoryProbe
 }
 
 export interface TestHook {

@@ -1,5 +1,6 @@
 import type { Character } from '../character/character.ts'
 import type { Item } from '../inventory/inventory.ts'
+import { newStoryState, type StoryState } from '../story/story.ts'
 import { readyMadeParty, type Party } from './party.ts'
 import type { SlotId } from './saveSlots.ts'
 import { newWorld, type MonsterLocation, type WorldState } from './worldMap.ts'
@@ -25,15 +26,24 @@ export interface GameState {
   reserves: Character[]
   /** The save slot the playthrough lives in. A game with none is never saved: the simulator's, a test's. */
   slot: SlotId | null
+  /** The cutscenes played and the tutorial's progress (story.ts). */
+  story: StoryState
 }
 
 /**
  * A game at its start: the given party, the ready-made one by default, at home
  * on a new world, of `seed` (random by default), in the encampment the player
- * named (Oakvale by default).
+ * named (Oakvale by default), with the tutorial on if the player ticked it
+ * (off by default, as for the simulator and the tests).
  */
-export function newGame(party: Party = readyMadeParty(), slot: SlotId | null = null, seed?: number, encampmentName?: string): GameState {
-  return { party, world: newWorld(seed, encampmentName), baggage: [], reserves: [], slot }
+export function newGame(
+  party: Party = readyMadeParty(),
+  slot: SlotId | null = null,
+  seed?: number,
+  encampmentName?: string,
+  tutorial = false,
+): GameState {
+  return { party, world: newWorld(seed, encampmentName), baggage: [], reserves: [], slot, story: newStoryState(tutorial) }
 }
 
 /** Moves the loot of a beaten monster location into the baggage, and returns what was found. */

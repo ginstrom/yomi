@@ -89,9 +89,8 @@ describe('the party screen', () => {
     await game.click((await game.settled('Party', (p) => p.view === 'prerolls')).prerolls[1])
     const two = await game.settled('Party', (p) => p.view === 'roster')
     expect(two.rows.map((row) => row.name)).toEqual(['Garrick', 'Brenna', null])
-    await game.click(two.buttons.begin)
-    await game.waitForScenes(['World'])
-    expect((await game.waitFor('World')).party.map((member) => member.name)).toEqual(['Garrick', 'Brenna'])
+    await game.begin(two)
+    expect((await game.enterWorld()).party.map((member) => member.name)).toEqual(['Garrick', 'Brenna'])
   })
 
   it('repeats a plus or minus held down, until it is let go or has nothing left to do', async () => {
@@ -209,9 +208,8 @@ describe('the party screen', () => {
     // With three members there is no Create.
     expect(roster.rows.some((row) => row.create.visible)).toBe(false)
 
-    await game.click(roster.buttons.begin)
-    await game.waitForScenes(['World'])
-    const world = await game.waitFor('World')
+    await game.begin(roster)
+    const world = await game.enterWorld()
     expect(world.party.map((member) => member.name)).toEqual(['Aldric', 'Delwyn', 'Mira'])
     expect(world.world.locations.find((l) => l.kind === 'encampment')?.name).toBe('Hearthold')
     expect(world.buttons.enterEncampment.visible).toBe(true)

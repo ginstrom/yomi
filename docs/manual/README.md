@@ -15,7 +15,7 @@ The main menu offers:
 - **New**: start a new game.
 - **Continue**: return to the game paused under the menu or, if none is paused, load the game saved most recently.
 - **Load**: choose one of the three save slots.
-- **Options**: set the volume of the master channel, sound effects and music.
+- **Options**: set the volume of the master channel, sound effects and music. Opened during a game, it also turns that game's tutorial on or off.
 - **Manual**: read this manual. **Back to game** at its top, or **Esc**, returns to the menu, and the game paused under it is just as you left it.
 
 Press **Esc** on the world map or in battle to open this menu over the game. Press it again to return.
@@ -35,7 +35,9 @@ Either choice takes you to the roster, which has one row for each place in the p
 
 ![Pre-rolled characters](images/party-prerolls.png)
 
-A pre-rolled hero who is already in the party is greyed out, because every name in the party must be unique. Under the rows is the name of your encampment: type to change it (Backspace removes letters). When the party is ready, press **Begin**. The game takes the first empty save slot, or asks which slot to overwrite if all three are full.
+A pre-rolled hero who is already in the party is greyed out, because every name in the party must be unique. Under the rows is the name of your encampment: type to change it (Backspace removes letters). The **Tutorial** box, ticked to begin with, shows tips as you meet each part of the game: each tip shows once, **Got it** (or Enter) moves on, and **Turn tutorial off** stops them; the menu's Options turn them back on, going on from where they stopped. When the party is ready, press **Begin**.
+
+Now and then the story is told in a scene over the game. Click, or press Space or Enter, to read on, and Esc to skip the rest of it. The game takes the first empty save slot, or asks which slot to overwrite if all three are full.
 
 ---
 

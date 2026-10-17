@@ -29,9 +29,11 @@ import { mapOrigin, rectContains, type Rect } from './mapScroll.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { gearLayers, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
-import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick } from './partyPanel.ts'
+import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
 import { describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
 import { hexInfo } from './hexInfo.ts'
+import { tellStory, type StoryAnchors } from './StoryScene.ts'
+import type { StoryMoment } from '../story/story.ts'
 
 interface WorldData {
   game?: GameState
@@ -299,6 +301,7 @@ export class WorldScene extends Phaser.Scene {
     // However the map was come to (a new game, a battle won, a load), the slot now holds it.
     this.save()
     this.checkOutcome()
+    this.tell({ kind: 'world_opened' })
   }
 
   update(): void {
@@ -713,7 +716,7 @@ export class WorldScene extends Phaser.Scene {
       }),
       onComplete: () => {
         this.party.play('idle')
-        this.arrive(describeWorldEvents(journey.events, journey.interruptedBy), journey.interruptedBy !== null)
+        this.arrive(describeWorldEvents(journey.events, journey.interruptedBy), journey.interruptedBy !== null, journey.events)
       },
     })
   }
@@ -725,8 +728,8 @@ export class WorldScene extends Phaser.Scene {
     this.refreshHover()
   }
 
-  /** The walk is over: `told` is what happened on the way, and `stopped` whether that cut the journey short. */
-  private arrive(told: string, stopped: boolean): void {
+  /** The walk is over: `told` is what happened on the way (`events`), and `stopped` whether that cut the journey short. */
+  private arrive(told: string, stopped: boolean, events: WorldEvent[]): void {
     this.walking = false
     this.follow()
     // The map has scrolled under the pointer, which is over another hex now.
@@ -738,6 +741,7 @@ export class WorldScene extends Phaser.Scene {
     )
     this.refresh()
     this.checkOutcome()
+    this.tell({ kind: 'world_turn', events })
   }
 
   /** Scouting and waiting each pass a turn among the monsters; nothing comes of either yet. */
@@ -754,6 +758,7 @@ export class WorldScene extends Phaser.Scene {
     this.refresh()
     this.save()
     this.checkOutcome()
+    this.tell({ kind: 'world_turn', events })
   }
 
   /** A day's rest where the party stands: a hit point each, and every caster's mana back. */
@@ -767,6 +772,7 @@ export class WorldScene extends Phaser.Scene {
     this.refresh()
     this.save()
     this.checkOutcome()
+    this.tell({ kind: 'world_turn', events: day.events })
   }
 
   /** Days of rest, with the casters healing what they can each day, until no one is wounded. */
@@ -781,6 +787,7 @@ export class WorldScene extends Phaser.Scene {
     this.refresh()
     this.save()
     this.checkOutcome()
+    this.tell({ kind: 'world_turn', events: result.events })
   }
 
   /** Builds a watchtower where the party stands, a day's work, or says why it cannot (the stock, most often). */
@@ -808,6 +815,27 @@ export class WorldScene extends Phaser.Scene {
     this.refresh()
     this.save()
     this.checkOutcome()
+    this.tell({ kind: 'world_turn', events })
+  }
+
+  /**
+   * Tells the story of a moment on the map (StoryScene), which pauses the map
+   * while it is told; the map saves what was shown as it resumes.
+   */
+  private tell(moment: StoryMoment): void {
+    tellStory(this, this.gameState, moment, this.anchors())
+  }
+
+  /** Where the controls a tutorial tip may point at are on screen, those that show. */
+  private anchors(): StoryAnchors {
+    const centre = (button: Phaser.GameObjects.Container) => (button.visible ? { x: button.x, y: button.y } : undefined)
+    const portrait = portraitRect(0)
+    return {
+      'world.party': { x: portrait.x + portrait.width / 2, y: portrait.y + portrait.height / 2 },
+      'world.camp': centre(this.campButtons[0]),
+      'world.attack': centre(this.buttons[2]),
+      'world.enterEncampment': centre(this.encampmentButton),
+    }
   }
 
   /**
@@ -896,7 +924,7 @@ export class WorldScene extends Phaser.Scene {
   private openMenu(): void {
     if (this.scene.isPaused()) return
     this.music?.pause()
-    this.scene.launch('Menu', { resume: 'World' })
+    this.scene.launch('Menu', { resume: 'World', game: this.gameState })
     this.scene.bringToTop('Menu')
     this.scene.pause()
   }

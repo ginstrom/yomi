@@ -1,11 +1,15 @@
 import Phaser from 'phaser'
+import type { GameState } from '../game/gameState.ts'
 import { SLOT_IDS, describeSlot, latestSlot, readSlot, type SlotId } from '../game/saveSlots.ts'
 import { buttonProbe, type MenuProbe } from '../testHook.ts'
+import { setTutorial } from '../story/story.ts'
 import { getAudioSettings, setAudioLevel, soundVolume, type AudioChannel } from './audioSettings.ts'
 
 interface MenuData {
   /** The paused scene the menu was opened over, which Continue goes back to. */
   resume?: 'World' | 'Battle'
+  /** The game paused under the menu, whose tutorial the options turn on and off. */
+  game?: GameState
 }
 
 /** What the menu shows: its main buttons, the volume controls, or the save slots to load from. */
@@ -43,6 +47,9 @@ interface Slider {
 
 export class MenuScene extends Phaser.Scene {
   private resumeKey: MenuData['resume']
+  private gameState: GameState | undefined
+  /** The options' switch for the paused game's tutorial, shown only over a game. */
+  private tutorialButton!: Phaser.GameObjects.Container
   private bg!: Phaser.GameObjects.Rectangle
   private title!: Phaser.GameObjects.Text
   private buttons: Phaser.GameObjects.Container[] = []
@@ -66,6 +73,7 @@ export class MenuScene extends Phaser.Scene {
 
   create(data: MenuData): void {
     this.resumeKey = data?.resume
+    this.gameState = data?.game
 
     this.bg = this.add.rectangle(0, 0, 1, 1, 0x14100c, 1).setOrigin(0.5)
     this.title = this.add
@@ -84,6 +92,7 @@ export class MenuScene extends Phaser.Scene {
       .text(0, 0, 'Options', { fontFamily: 'monospace', fontSize: '24px', color: '#e8c766', fontStyle: 'bold' })
       .setOrigin(0.5)
     this.sliders = SLIDERS.map(({ channel, label }) => this.createSlider(channel, label))
+    this.tutorialButton = this.createTutorialButton()
     this.loadTitle = this.add
       .text(0, 0, 'Load', { fontFamily: 'monospace', fontSize: '24px', color: '#e8c766', fontStyle: 'bold' })
       .setOrigin(0.5)
@@ -117,6 +126,7 @@ export class MenuScene extends Phaser.Scene {
       showingOptions: this.view === 'options',
       showingLoad: this.view === 'load',
       showingManual: this.manualOpen,
+      tutorial: this.gameState?.story.tutorial ?? null,
       buttons: {
         new: buttonProbe(newButton),
         continue: buttonProbe(continueButton, this.canContinue),
@@ -124,6 +134,7 @@ export class MenuScene extends Phaser.Scene {
         options: buttonProbe(optionsButton),
         manual: buttonProbe(manualButton),
         back: buttonProbe(this.backButton),
+        tutorial: buttonProbe(this.tutorialButton),
       },
       slots: this.slots.map(({ button, line, loadable }) => ({ ...buttonProbe(button, loadable), line })),
     }
@@ -165,6 +176,17 @@ export class MenuScene extends Phaser.Scene {
     const container = this.add.container(0, 0, [bg, text])
     container.setSize(width, height)
     return container
+  }
+
+  /** "Tutorial: On" or "Off", for the game under the menu; it saves with the game as the game goes on. */
+  private createTutorialButton(): Phaser.GameObjects.Container {
+    const label = () => `Tutorial: ${this.gameState?.story.tutorial ? 'On' : 'Off'}`
+    const button = this.createButton(label(), () => {
+      if (!this.gameState) return
+      setTutorial(this.gameState, !this.gameState.story.tutorial)
+      ;(button.list[1] as Phaser.GameObjects.Text).setText(label())
+    }, true)
+    return button
   }
 
   private createSlider(channel: AudioChannel, labelText: string): Slider {
@@ -224,7 +246,10 @@ export class MenuScene extends Phaser.Scene {
     // Back sits under whichever of the two it steps back from.
     this.loadTitle.setPosition(centerX, slidersY - 60)
     this.slots.forEach(({ button }, i) => button.setPosition(centerX, slidersY + i * (SLOT_H + SLOT_GAP)))
-    const under = this.view === 'load' ? this.slots.length * (SLOT_H + SLOT_GAP) + 16 : this.sliders.length * SLIDER_ROW_GAP + 30
+    const slidersEnd = slidersY + this.sliders.length * SLIDER_ROW_GAP + 10
+    this.tutorialButton.setPosition(centerX, slidersEnd)
+    const tutorialRoom = this.gameState ? BUTTON_H + BUTTON_GAP : 0
+    const under = this.view === 'load' ? this.slots.length * (SLOT_H + SLOT_GAP) + 16 : this.sliders.length * SLIDER_ROW_GAP + 30 + tutorialRoom
     this.backButton.setPosition(centerX, slidersY + under)
   }
 
@@ -289,6 +314,7 @@ export class MenuScene extends Phaser.Scene {
     for (const { label, track, fill, knob, value } of this.sliders) {
       for (const part of [label, track, fill, knob, value]) part.setVisible(view === 'options')
     }
+    this.tutorialButton.setVisible(view === 'options' && this.gameState !== undefined)
     this.loadTitle.setVisible(view === 'load')
     for (const { button } of this.slots) button.setVisible(view === 'load')
     this.backButton.setVisible(view !== 'main')
