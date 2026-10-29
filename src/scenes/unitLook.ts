@@ -36,6 +36,23 @@ export const GEAR_SPRITES: Partial<Record<ItemIcon, string>> = {
   shield: 'gear_shield',
 }
 
+/** The gear sprites a strike swings: blades and axes, not a bow, a wand or a shield. */
+export const SWUNG_GEAR: ReadonlySet<string> = new Set([
+  'gear_sword',
+  'gear_sword_ember',
+  'gear_shortsword',
+  'gear_greatsword',
+  'gear_dagger',
+  'gear_axe',
+])
+
+/**
+ * Where a held weapon is gripped, from the unit canvas's anchor (its feet), in
+ * canvas pixels: the middle of column 25, row 19 (art/CLAUDE.md). A swing turns
+ * the weapon about it.
+ */
+export const GRIP_FROM_FEET = { x: 25.5 - 16, y: 19.5 - 32 }
+
 /** The sprites to lay over a body for what it holds, in drawing order: the weapon, then the off hand's. */
 export function gearLayers(equipment: Equipment): string[] {
   const { mainHand, offHand } = equipment

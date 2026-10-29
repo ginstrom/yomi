@@ -1,5 +1,6 @@
 import { SPELLS } from '../combat/spells.ts'
 import type { BattleEvent } from '../engine/battleEngine.ts'
+import { impactMs } from './battleEffects.ts'
 
 /** Every sound the game plays; each is loaded from assets/audio/ by soundFiles(key). */
 export const SOUND_KEYS = [
@@ -35,8 +36,6 @@ export interface SoundCue {
   delayMs: number
 }
 
-/** The impact lands just after the swing starts, so the two read as one blow. */
-export const IMPACT_DELAY_MS = 90
 /** The battle's last blow and fall are heard before the victory or defeat sting. */
 export const STING_DELAY_MS = 450
 /** The placeholder tones are harsh square waves; this keeps them from blaring. */
@@ -44,14 +43,17 @@ export const SOUND_VOLUME = 0.4
 /** A theme loops under every sound effect, so it sits well below them. */
 export const MUSIC_VOLUME = 0.2
 
-/** The sounds that go with a battle event, kept free of Phaser so it can be unit tested. */
+/**
+ * The sounds that go with a battle event, kept free of Phaser so it can be
+ * unit tested. An outcome is heard as the blow or the missile lands (`impactMs`).
+ */
 export function eventSounds(event: BattleEvent): SoundCue[] {
   switch (event.type) {
     case 'attack': {
       const outcome: SoundKey = !event.hit ? 'sfx_miss' : event.critical ? 'sfx_crit_impact' : 'sfx_hit_impact'
       return [
         { key: 'sfx_melee_swing', delayMs: 0 },
-        { key: outcome, delayMs: IMPACT_DELAY_MS },
+        { key: outcome, delayMs: impactMs(event) },
       ]
     }
     case 'cast': {
@@ -66,7 +68,7 @@ export function eventSounds(event: BattleEvent): SoundCue[] {
             : 'sfx_hit_impact'
       return [
         { key: 'sfx_spell_cast', delayMs: 0 },
-        { key: outcome, delayMs: IMPACT_DELAY_MS },
+        { key: outcome, delayMs: impactMs(event) },
       ]
     }
     case 'status_tick':

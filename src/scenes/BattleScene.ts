@@ -37,6 +37,20 @@ import { buttonProbe, type BattleProbe } from '../testHook.ts'
 import { planAttack, type AttackPlan } from './attackPlan.ts'
 import { FLOOR_SQUASH_Y, HEX_SIZE, boardHexAt, boardHexCenter, boardPixelSize, curvedArrow } from './boardGeometry.ts'
 import { CURSORS } from './cursors.ts'
+import {
+  OUTLINE_CRITICAL,
+  OUTLINE_HURT,
+  OUTLINE_IMAGE,
+  RELEASE_MS,
+  SPELL_LOOKS,
+  SWING_IMPACT_MS,
+  attackLook,
+  castOutline,
+  flightMs,
+  holdMs,
+  impactMs,
+  type SpellLook,
+} from './battleEffects.ts'
 import { scheduleEvents, type Cue } from './eventSchedule.ts'
 import { ScrollingLog } from './scrollingLog.ts'
 import { SEED_KEY } from './seed.ts'
@@ -100,11 +114,26 @@ const MOVE_HIGHLIGHT = 0x1e88e5
 const MOVE_OUTLINE = 0x90caf9
 const ATTACK_HIGHLIGHT = 0xe53935
 const SPELL_HIGHLIGHT = 0x7e57c2
-const SPELL_BOLT = 0xb39ddb
-/** How long a spell's bolt takes to fly from caster to target. */
-const SPELL_FLIGHT_MS = 150
 /** How long an area spell's hexes glow as it lands. */
 const AREA_FLASH_MS = 300
+/** An arrow's shaft and head, and a wand's bolt. */
+const ARROW_SHAFT = 0x8a6038
+const ARROW_HEAD = 0xbcc3c4
+const ARROW_FLETCH = 0xebe7d6
+const WAND_BOLT = 0x80deea
+/** How high an arrow arcs over each hex it flies, in pixels, up to the most. */
+const ARROW_ARC_PER_HEX = 6
+const ARROW_ARC_MAX = 30
+/** A melee blow's slash across the defender, in its attacker's colour of steel. */
+const SLASH_COLOUR = 0xffffff
+const SLASH_MS = 160
+/** How long an outline rings a unit that a blow or a spell lands on. */
+const OUTLINE_MS = 420
+/** How far a hit knocks a unit back and a miss has it sway aside, in pixels. */
+const KNOCK_PX = 5
+const DODGE_PX = 7
+/** How high a unit's step lifts it, in pixels. */
+const STEP_BOB_PX = 3
 /** The pause each status's damage at a turn's start is given. */
 const TICK_PAUSE_MS = 350
 /** What a unit flashes: hurt, healed or helped, or an image struck in its place. */
@@ -1184,6 +1213,7 @@ export class BattleScene extends Phaser.Scene {
       moveStepMs: MOVE_STEP_MS,
       opportunityPauseMs: OPPORTUNITY_PAUSE_MS,
       tickPauseMs: TICK_PAUSE_MS,
+      holdMs,
     })
     for (const { at, cues } of beats) {
       if (at === 0) this.playCues(cues)
@@ -1214,19 +1244,12 @@ export class BattleScene extends Phaser.Scene {
     if (event.type === 'move') {
       this.animateMove(event.unit, event.from, event.path)
     }
-    if (event.type === 'attack') {
-      this.faceUnit(event.attacker, event.attackerFacing)
-      this.lunge(event.attacker, event.defender)
-      const defender = this.units.get(event.defender)!
-      if (event.image) this.flash(defender, IMAGE_TINT)
-      else if (event.hit) this.flash(defender, HURT_TINT)
-      const maxHp = this.engine.getState().units.find((u) => u.id === event.defender)!.maxHp
-      this.refreshHpDisplay(defender, event.defenderHpAfter, maxHp)
-    }
+    if (event.type === 'attack') this.showAttack(event)
     if (event.type === 'cast') this.showCast(event)
     if (event.type === 'status_tick') {
       const unit = this.units.get(event.unit)!
       this.flash(unit, HURT_TINT)
+      unit.figure.pulseOutline(OUTLINE_HURT, OUTLINE_MS)
       this.refreshHpDisplay(unit, event.hpAfter, this.engine.getState().units.find((u) => u.id === event.unit)!.maxHp)
     }
     if (event.type === 'cast' || event.type === 'status_end' || event.type === 'status_tick' || event.type === 'unit_down') {
@@ -1236,33 +1259,103 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * A cast: the caster turns, a bolt flies to where it was aimed (none for a
-   * spell centred on the caster), an area glows, and each unit touched flashes
-   * as it fared, its hit points following.
+   * An attack: the attacker turns and strikes, a blade swung and leaned into
+   * or a shot loosed, and when it lands (`impactMs`) the defender shows how it
+   * fared, its hit points following.
+   */
+  private showAttack(event: Extract<BattleEvent, { type: 'attack' }>): void {
+    this.faceUnit(event.attacker, event.attackerFacing)
+    const attacker = this.units.get(event.attacker)!
+    const defender = this.units.get(event.defender)!
+    const look = attackLook(event, this.heroes.get(event.attacker)?.equipment.mainHand?.icon)
+    const land = () => {
+      if (look === 'swing') this.slash(event.attacker, event.defender, event.critical)
+      if (event.image) this.react(event.defender, event.attacker, OUTLINE_IMAGE, IMAGE_TINT)
+      else if (event.hit) this.react(event.defender, event.attacker, event.critical ? OUTLINE_CRITICAL : OUTLINE_HURT, HURT_TINT, event.critical)
+      else this.dodge(event.defender, event.attacker)
+      const maxHp = this.engine.getState().units.find((u) => u.id === event.defender)!.maxHp
+      this.refreshHpDisplay(defender, event.defenderHpAfter, maxHp)
+    }
+    if (look === 'swing') {
+      const raiseMs = SWING_IMPACT_MS - LUNGE_MS
+      attacker.figure.swing(raiseMs, LUNGE_MS)
+      this.time.delayedCall(raiseMs, () => this.lunge(event.attacker, event.defender))
+      this.time.delayedCall(impactMs(event), land)
+      return
+    }
+    // A shot: a short draw back, then the missile flies, past the defender's shoulder on a miss.
+    this.recoil(event.attacker, event.defender)
+    this.time.delayedCall(RELEASE_MS, () => {
+      const from = this.chest(event.attacker)
+      const to = this.chest(event.defender)
+      const ms = flightMs(event.distance)
+      const end = event.hit ? to : this.pastShoulder(from, to)
+      if (look === 'arrow') this.flyArrow(from, end, event.distance, ms, land)
+      else this.flyMissile(from, end, ms, { colour: WAND_BOLT, glow: 0xffffff, missile: 'dart', impact: 'burst' }, () => {
+        if (event.hit) this.burst(to, WAND_BOLT, 0xffffff, 0.6)
+        land()
+      })
+    })
+  }
+
+  /**
+   * A cast: the caster turns and gestures, its spell's missile flies to where
+   * it was aimed (none for a spell centred on the caster), and where it lands
+   * the spell shows itself (`SPELL_LOOKS`) and each unit touched is outlined as
+   * it fared, its hit points following.
    */
   private showCast(event: Extract<BattleEvent, { type: 'cast' }>): void {
     this.faceUnit(event.caster, event.casterFacing)
     const units = this.engine.getState().units
-    const casterAt = units.find((u) => u.id === event.caster)!.position
-    const { target, radius = 0, hostile } = SPELLS[event.spell]
+    const { target, radius = 0 } = SPELLS[event.spell]
+    const look = SPELL_LOOKS[event.spell]
+    const caster = this.units.get(event.caster)!
+    caster.figure.pulseOutline(look.colour, RELEASE_MS + 200)
     const land = () => {
-      if (target === 'area') this.flashArea(areaHexes(event.at, radius).filter((h) => this.board.contains(h)))
+      const area = target === 'area' ? areaHexes(event.at, radius).filter((h) => this.board.contains(h)) : []
+      if (target === 'area') this.flashArea(area, look.colour)
+      this.spellImpact(event, look, area)
       for (const outcome of event.outcomes) {
         const unit = this.units.get(outcome.unit)!
-        if (outcome.image) this.flash(unit, IMAGE_TINT)
-        else if (!hostile) this.flash(unit, HELPED_TINT)
-        else if (outcome.hit) this.flash(unit, HURT_TINT)
+        const outline = castOutline(event.spell, outcome)
+        if (outcome.image) this.react(outcome.unit, event.caster, OUTLINE_IMAGE, IMAGE_TINT)
+        else if (!SPELLS[event.spell].hostile) {
+          this.flash(unit, HELPED_TINT)
+          unit.figure.pulseOutline(outline!, OUTLINE_MS)
+        } else if (outcome.hit) this.react(outcome.unit, event.caster, outline!, HURT_TINT, outcome.critical)
+        else if (outcome.unit !== event.caster) this.dodge(outcome.unit, event.caster)
         this.refreshHpDisplay(unit, outcome.hpAfter, units.find((u) => u.id === outcome.unit)!.maxHp)
       }
     }
-    if (hexEquals(event.at, casterAt)) land()
-    else this.flyBolt(event.caster, event.at, land)
+    this.time.delayedCall(RELEASE_MS, () => {
+      if (event.distance === 0) land()
+      else this.flyMissile(this.chest(event.caster), this.hexChest(event.at), flightMs(event.distance), look, land)
+    })
+  }
+
+  /** What a spell shows where it lands: a burst at its aim, a cloud over its hexes, or sparkles or a ring on each unit it touched. */
+  private spellImpact(event: Extract<BattleEvent, { type: 'cast' }>, look: SpellLook, area: readonly Hex[]): void {
+    const touched = event.outcomes.filter((o) => !o.image).map((o) => o.unit)
+    switch (look.impact) {
+      case 'burst':
+        this.burst(this.hexChest(event.at), look.colour, look.glow, 1 + (SPELLS[event.spell].radius ?? 0))
+        break
+      case 'cloud':
+        for (const h of area.length > 0 ? area : [event.at]) this.cloud(boardHexCenter(h), look.colour, look.glow)
+        break
+      case 'sparkle':
+        for (const id of touched) this.sparkle(id, look.colour, look.glow)
+        break
+      case 'ring':
+        for (const id of touched) this.ring(id, look.colour)
+        break
+    }
   }
 
   /** Lights an area's hexes for a moment. */
-  private flashArea(hexes: readonly Hex[]): void {
+  private flashArea(hexes: readonly Hex[], colour: number): void {
     const glow = this.add.graphics()
-    glow.fillStyle(SPELL_BOLT, 0.45)
+    glow.fillStyle(colour, 0.4)
     for (const h of hexes) glow.fillPoints(this.hexPolygon(h), true)
     this.floorLayer.add(glow)
     this.tweens.add({ targets: glow, alpha: 0, duration: AREA_FLASH_MS, onComplete: () => glow.destroy() })
@@ -1274,28 +1367,182 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  /** Flies a spell's bolt from a unit to a hex, chest high, and calls `onArrive` as it lands. */
-  private flyBolt(from: UnitId, to: Hex, onArrive: () => void): void {
-    const chest = (id: UnitId) => {
-      const { x, y } = this.units.get(id)!.container
-      return { x, y: y - UNIT_HEIGHT / 3 }
+  // ---- effects --------------------------------------------------------
+  // Drawn in the label layer, over every unit and nameplate, and scaled and placed as the board is.
+
+  /** Where a unit's chest is, a third of the way up its figure, wherever its figure leans. */
+  private chest(id: UnitId): { x: number; y: number } {
+    const { container } = this.units.get(id)!
+    return { x: container.x, y: container.y - UNIT_HEIGHT / 3 }
+  }
+
+  /** Where a unit standing on a hex would have its chest. */
+  private hexChest(h: Hex): { x: number; y: number } {
+    const { x, y } = boardHexCenter(h)
+    return { x, y: y - UNIT_HEIGHT / 3 }
+  }
+
+  /** A point past a target's shoulder, where a shot that misses goes. */
+  private pastShoulder(from: { x: number; y: number }, to: { x: number; y: number }): { x: number; y: number } {
+    const along = new Phaser.Math.Vector2(to.x - from.x, to.y - from.y).normalize()
+    return { x: to.x + along.x * 30 - along.y * 14, y: to.y + along.y * 30 + along.x * 14 - 10 }
+  }
+
+  /** Flies an arrow in an arc, turned along its flight, and calls `onArrive` as it lands. */
+  private flyArrow(from: { x: number; y: number }, to: { x: number; y: number }, hexes: number, ms: number, onArrive: () => void): void {
+    // Drawn pointing east, tip at the origin.
+    const arrow = this.add
+      .graphics()
+      // A dark edge first, so the shaft shows over the floor's browns.
+      .lineStyle(5, ARROW_EDGE, 0.85)
+      .lineBetween(-24, 0, -2, 0)
+      .lineStyle(3, ARROW_SHAFT, 1)
+      .lineBetween(-24, 0, -4, 0)
+      .fillStyle(ARROW_EDGE, 1)
+      .fillTriangle(2, 0, -8, -5, -8, 5)
+      .fillStyle(ARROW_HEAD, 1)
+      .fillTriangle(0, 0, -7, -3, -7, 3)
+      .lineStyle(2, ARROW_FLETCH, 1)
+      .lineBetween(-26, -4, -20, 0)
+      .lineBetween(-26, 4, -20, 0)
+    this.labelLayer.add(arrow)
+    const height = Math.min(ARROW_ARC_MAX, ARROW_ARC_PER_HEX * hexes)
+    const at = (t: number) => ({
+      x: from.x + (to.x - from.x) * t,
+      y: from.y + (to.y - from.y) * t - 4 * height * t * (1 - t),
+    })
+    const flight = { t: 0 }
+    const place = () => {
+      const now = at(flight.t)
+      const ahead = at(Math.min(1, flight.t + 0.02))
+      const behind = at(Math.max(0, flight.t - 0.02))
+      arrow.setPosition(now.x, now.y).setRotation(Math.atan2(ahead.y - behind.y, ahead.x - behind.x))
     }
-    const start = chest(from)
-    const end = boardHexCenter(to)
-    const bolt = this.add.graphics({ x: start.x, y: start.y })
-    bolt.fillStyle(SPELL_BOLT, 1).fillCircle(0, 0, 5).lineStyle(2, 0xffffff, 0.9).strokeCircle(0, 0, 5)
-    // With the labels: over every unit and nameplate, and scaled and placed as the board is.
-    this.labelLayer.add(bolt)
+    place()
     this.tweens.add({
-      targets: bolt,
-      x: end.x,
-      y: end.y - UNIT_HEIGHT / 3,
-      duration: SPELL_FLIGHT_MS,
+      targets: flight,
+      t: 1,
+      duration: ms,
+      onUpdate: place,
       onComplete: () => {
-        bolt.destroy()
+        this.tweens.add({ targets: arrow, alpha: 0, duration: 120, onComplete: () => arrow.destroy() })
         onArrive()
       },
     })
+  }
+
+  /** Flies a spell's missile, an orb or a dart trailing sparks of its glow, and calls `onArrive` as it lands. */
+  private flyMissile(from: { x: number; y: number }, to: { x: number; y: number }, ms: number, look: SpellLook, onArrive: () => void): void {
+    const missile = this.add.graphics({ x: from.x, y: from.y })
+    if (look.missile === 'orb') {
+      missile.fillStyle(look.glow, 0.35).fillCircle(0, 0, 9).fillStyle(look.colour, 1).fillCircle(0, 0, 5).fillStyle(0xffffff, 0.9).fillCircle(-1, -1, 2)
+    } else {
+      missile.fillStyle(look.glow, 0.35).fillEllipse(-3, 0, 22, 9).fillStyle(look.colour, 1).fillEllipse(-2, 0, 14, 5).fillStyle(0xffffff, 0.9).fillCircle(3, 0, 2)
+      missile.setRotation(Math.atan2(to.y - from.y, to.x - from.x))
+    }
+    this.labelLayer.add(missile)
+    let lastSpark = 0
+    this.tweens.add({
+      targets: missile,
+      x: to.x,
+      y: to.y,
+      duration: ms,
+      onUpdate: () => {
+        if (this.time.now - lastSpark < 20) return
+        lastSpark = this.time.now
+        const spark = this.add.circle(missile.x + Phaser.Math.Between(-2, 2), missile.y + Phaser.Math.Between(-2, 2), Phaser.Math.Between(2, 4), look.glow, 0.8)
+        this.labelLayer.addAt(spark, this.labelLayer.getIndex(missile))
+        this.tweens.add({ targets: spark, alpha: 0, scale: 0.2, y: spark.y - 4, duration: 220, onComplete: () => spark.destroy() })
+      },
+      onComplete: () => {
+        missile.destroy()
+        onArrive()
+      },
+    })
+  }
+
+  /** A flash and sparks flying out from a point; `size` 1 for a single target, more for an area's radius. */
+  private burst(at: { x: number; y: number }, colour: number, glow: number, size: number): void {
+    const flare = this.add.circle(at.x, at.y, 8 * size, glow, 0.8)
+    this.labelLayer.add(flare)
+    this.tweens.add({ targets: flare, scale: 2, alpha: 0, duration: 260, ease: 'Quad.easeOut', onComplete: () => flare.destroy() })
+    const sparks = 8 + 4 * size
+    for (let i = 0; i < sparks; i++) {
+      const angle = (Math.PI * 2 * i) / sparks + Phaser.Math.FloatBetween(-0.2, 0.2)
+      const reach = Phaser.Math.Between(14, 24) * size
+      const spark = this.add.circle(at.x, at.y, Phaser.Math.Between(2, 3), i % 2 ? colour : glow, 1)
+      this.labelLayer.add(spark)
+      this.tweens.add({
+        targets: spark,
+        x: at.x + Math.cos(angle) * reach,
+        y: at.y + Math.sin(angle) * reach * FLOOR_SQUASH_Y,
+        alpha: 0,
+        duration: Phaser.Math.Between(240, 360),
+        ease: 'Quad.easeOut',
+        onComplete: () => spark.destroy(),
+      })
+    }
+  }
+
+  /** Puffs of a foul cloud, rising and spreading from a hex's floor. */
+  private cloud(at: { x: number; y: number }, colour: number, glow: number): void {
+    for (let i = 0; i < 4; i++) {
+      const puff = this.add.circle(at.x + Phaser.Math.Between(-14, 14), at.y - Phaser.Math.Between(4, 20), Phaser.Math.Between(6, 10), i % 2 ? colour : glow, 0.55)
+      this.labelLayer.add(puff)
+      this.tweens.add({ targets: puff, scale: 1.8, alpha: 0, y: puff.y - 14, delay: i * 50, duration: 520, onComplete: () => puff.destroy() })
+    }
+  }
+
+  /** Motes rising round a unit, as healing or a charm settles on it. */
+  private sparkle(id: UnitId, colour: number, glow: number): void {
+    const { container } = this.units.get(id)!
+    for (let i = 0; i < 9; i++) {
+      const mote = this.add.circle(container.x + Phaser.Math.Between(-16, 16), container.y - Phaser.Math.Between(0, 16), Phaser.Math.Between(2, 3), i % 3 ? colour : glow, 1)
+      this.labelLayer.add(mote)
+      this.tweens.add({ targets: mote, y: mote.y - Phaser.Math.Between(28, 46), alpha: 0, delay: i * 30, duration: 520, ease: 'Sine.easeOut', onComplete: () => mote.destroy() })
+    }
+  }
+
+  /** A ring spreading out over the floor round a unit's feet, as a ward is laid on it. */
+  private ring(id: UnitId, colour: number): void {
+    const { container } = this.units.get(id)!
+    const ring = this.add.ellipse(container.x, container.y, 30, 30 * FLOOR_SQUASH_Y).setStrokeStyle(3, colour, 1)
+    this.floorLayer.add(ring)
+    this.tweens.add({ targets: ring, scale: 2, alpha: 0, duration: 420, ease: 'Quad.easeOut', onComplete: () => ring.destroy() })
+  }
+
+  /** A blade's cut across the defender: a pale crescent that sweeps and fades, wider for a critical. */
+  private slash(attacker: UnitId, defender: UnitId, critical: boolean): void {
+    const at = this.chest(defender)
+    const from = this.chest(attacker)
+    const side = from.x <= at.x ? 1 : -1
+    const radius = critical ? 22 : 16
+    const arc = this.add.graphics({ x: at.x - side * 4, y: at.y })
+    arc.lineStyle(critical ? 4 : 3, SLASH_COLOUR, 0.95)
+    arc.beginPath()
+    arc.arc(0, 0, radius, Phaser.Math.DegToRad(-70), Phaser.Math.DegToRad(50))
+    arc.strokePath()
+    arc.setScale(side, 1).setRotation(side * -0.3)
+    this.labelLayer.add(arc)
+    this.tweens.add({ targets: arc, rotation: side * 0.4, alpha: 0, duration: SLASH_MS, ease: 'Quad.easeOut', onComplete: () => arc.destroy() })
+  }
+
+  /** A unit struck: it flashes, is outlined and is knocked back a little from whoever struck it. */
+  private react(id: UnitId, from: UnitId, outline: number, tint: number, critical = false): void {
+    const unit = this.units.get(id)!
+    this.flash(unit, tint)
+    unit.figure.pulseOutline(outline, critical ? OUTLINE_MS * 1.5 : OUTLINE_MS)
+    if (id === from) return
+    const away = Math.sign(unit.container.x - this.units.get(from)!.container.x) || 1
+    const px = (critical ? 2 : 1) * KNOCK_PX * away
+    this.tweens.add({ targets: unit.figure, x: px, duration: 60, yoyo: true, ease: 'Quad.easeOut', onComplete: () => unit.figure.setX(0) })
+  }
+
+  /** A unit missed sways aside and back. */
+  private dodge(id: UnitId, from: UnitId): void {
+    const unit = this.units.get(id)!
+    const away = Math.sign(unit.container.x - this.units.get(from)!.container.x) || 1
+    this.tweens.add({ targets: unit.figure, x: DODGE_PX * away, duration: 90, yoyo: true, ease: 'Sine.easeOut', onComplete: () => unit.figure.setX(0) })
   }
 
   /** Leans a unit into its strike and back; its hex, plate and shadow stay where they are. */
@@ -1306,11 +1553,29 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: figure, x: reach.x, y: reach.y, duration: LUNGE_MS, yoyo: true, ease: 'Quad.easeOut' })
   }
 
+  /** A shooter draws back a little from its target as it looses. */
+  private recoil(id: UnitId, at: UnitId): void {
+    const { figure, container } = this.units.get(id)!
+    const target = this.units.get(at)!.container
+    const back = new Phaser.Math.Vector2(container.x - target.x, container.y - target.y).setLength(LUNGE_PX / 2)
+    this.tweens.add({ targets: figure, x: back.x, y: back.y, duration: RELEASE_MS, yoyo: true, ease: 'Quad.easeOut' })
+  }
+
   /** Walks a unit along its path, turning it towards each step as it takes it. */
   private animateMove(id: UnitId, from: Hex, path: readonly Hex[]): void {
     if (path.length === 0) return
     const { container, plate, figure } = this.units.get(id)!
     figure.play('walk')
+    // Each step lifts the unit a little and sets it down.
+    this.tweens.add({
+      targets: figure,
+      y: -STEP_BOB_PX,
+      duration: MOVE_STEP_MS / 2,
+      yoyo: true,
+      repeat: path.length - 1,
+      ease: 'Sine.easeOut',
+      onComplete: () => figure.setY(0),
+    })
     this.tweens.chain({
       targets: [container, plate],
       // A unit cut down on its way stays down.

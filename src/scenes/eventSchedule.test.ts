@@ -101,4 +101,15 @@ describe('scheduleEvents', () => {
     expect(beats.map((beat) => beat.at)).toEqual([0, 300])
     expect(totalMs).toBe(600)
   })
+
+  it('holds what follows a blow until it has landed', () => {
+    const strike = attack(false)
+    const end = endTurn()
+    const { beats, totalMs } = scheduleEvents([strike, end], { ...TIMING, holdMs: (e) => (e.type === 'attack' ? 200 : 0) })
+    expect(beats).toEqual([
+      { at: 0, cues: [show(strike)] },
+      { at: 200, cues: [show(end)] },
+    ])
+    expect(totalMs).toBe(200)
+  })
 })
