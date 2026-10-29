@@ -92,6 +92,30 @@ from = "idle_0"
 frames = ["idle_0", "idle_1"]
 ms = 600
 
+# The near foot lifts and swings: the left, then the right, the shin drawn shorter and
+# the foot a pixel behind. Only the leg rows change, so gear keeps to its idle_0.
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.rows]
+25 = "..........kDdlkkddlk............"
+26 = "..........kDdlkkddlk............"
+27 = "..........kNNnkkddlk............"
+28 = "..........kNNnkkddlk............"
+29 = "...........kkk.kNnntk..........."
+30 = "...............kNNnnk..........."
+31 = "................kkkk............"
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.rows]
+25 = "...........kDdlkkddlk..........."
+26 = "...........kDdlkkddlk..........."
+27 = "...........kDdlkkNnntk.........."
+28 = "...........kDdlkkNNnnk.........."
+29 = "...........kNNnk.kkkk..........."
+30 = "...........kNNnk................"
+31 = "............kkk................."
+
 [anim.walk]
-frames = ["walk_0", "idle_0"]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
 ms = 140

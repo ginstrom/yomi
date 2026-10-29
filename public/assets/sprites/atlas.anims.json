@@ -217,7 +217,17 @@
         },
         {
           "duration": 140,
-          "frame": "goblin/idle_0",
+          "frame": "goblin/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "goblin/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "goblin/walk_2",
           "key": "atlas"
         }
       ],
@@ -249,7 +259,17 @@
         },
         {
           "duration": 160,
-          "frame": "horror/idle_0",
+          "frame": "horror/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "horror/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "horror/walk_2",
           "key": "atlas"
         }
       ],
@@ -281,7 +301,17 @@
         },
         {
           "duration": 140,
-          "frame": "kobold/idle_0",
+          "frame": "kobold/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "kobold/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "kobold/walk_2",
           "key": "atlas"
         }
       ],
@@ -413,7 +443,17 @@
         },
         {
           "duration": 140,
-          "frame": "shaman/idle_0",
+          "frame": "shaman/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "shaman/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "shaman/walk_2",
           "key": "atlas"
         }
       ],
@@ -445,7 +485,17 @@
         },
         {
           "duration": 140,
-          "frame": "warrior/idle_0",
+          "frame": "warrior/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "warrior/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "warrior/walk_2",
           "key": "atlas"
         }
       ],

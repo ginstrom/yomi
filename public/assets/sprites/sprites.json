@@ -833,7 +833,15 @@
             "ms": 140
           },
           {
-            "frame": "idle_0",
+            "frame": "walk_1",
+            "ms": 140
+          },
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_2",
             "ms": 140
           }
         ],
@@ -876,6 +884,24 @@
           24
         ],
         "file": "goblin__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          8,
+          8,
+          20,
+          24
+        ],
+        "file": "goblin__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          8,
+          8,
+          20,
+          24
+        ],
+        "file": "goblin__walk_2.png"
       }
     },
     "size": [
@@ -909,7 +935,15 @@
             "ms": 160
           },
           {
-            "frame": "idle_0",
+            "frame": "walk_1",
+            "ms": 160
+          },
+          {
+            "frame": "walk_0",
+            "ms": 160
+          },
+          {
+            "frame": "walk_2",
             "ms": 160
           }
         ],
@@ -952,6 +986,24 @@
           27
         ],
         "file": "horror__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          4,
+          5,
+          25,
+          27
+        ],
+        "file": "horror__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          4,
+          5,
+          25,
+          27
+        ],
+        "file": "horror__walk_2.png"
       }
     },
     "size": [
@@ -1512,7 +1564,15 @@
             "ms": 140
           },
           {
-            "frame": "idle_0",
+            "frame": "walk_1",
+            "ms": 140
+          },
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_2",
             "ms": 140
           }
         ],
@@ -1555,6 +1615,24 @@
           32
         ],
         "file": "kobold__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          2,
+          0,
+          25,
+          32
+        ],
+        "file": "kobold__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          2,
+          0,
+          25,
+          32
+        ],
+        "file": "kobold__walk_2.png"
       }
     },
     "size": [
@@ -2140,7 +2218,15 @@
             "ms": 140
           },
           {
-            "frame": "idle_0",
+            "frame": "walk_1",
+            "ms": 140
+          },
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_2",
             "ms": 140
           }
         ],
@@ -2183,6 +2269,24 @@
           28
         ],
         "file": "shaman__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          8,
+          4,
+          19,
+          28
+        ],
+        "file": "shaman__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          8,
+          4,
+          19,
+          28
+        ],
+        "file": "shaman__walk_2.png"
       }
     },
     "size": [
@@ -2278,7 +2382,15 @@
             "ms": 140
           },
           {
-            "frame": "idle_0",
+            "frame": "walk_1",
+            "ms": 140
+          },
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_2",
             "ms": 140
           }
         ],
@@ -2321,6 +2433,24 @@
           29
         ],
         "file": "warrior__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          7,
+          3,
+          21,
+          29
+        ],
+        "file": "warrior__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          7,
+          3,
+          21,
+          29
+        ],
+        "file": "warrior__walk_2.png"
       }
     },
     "size": [

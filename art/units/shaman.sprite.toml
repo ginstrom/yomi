@@ -59,6 +59,29 @@ from = "idle_0"
 frames = ["idle_0", "idle_1"]
 ms = 500
 
+# The near foot lifts: the left, then the right. Only the leg rows change.
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.rows]
+25 = "...........kGgk.kgek...knk......"
+26 = "...........kGgk.kgek...knk......"
+27 = "...........kGggkkgek...knk......"
+28 = "...........kGGgkkgek...knk......"
+29 = "............kkk.kggek..knk......"
+30 = "................kGggek.knk......"
+31 = ".................kkkk..kkk......"
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.rows]
+25 = "............kGgk.kgek..knk......"
+26 = "............kGgk.kgek..knk......"
+27 = "............kGgk.kggek.knk......"
+28 = "............kGgk.kGggekknk......"
+29 = "............kGggk.kkkk.knk......"
+30 = "............kGGgk......knk......"
+31 = ".............kkk.......kkk......"
+
 [anim.walk]
-frames = ["walk_0", "idle_0"]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
 ms = 140
