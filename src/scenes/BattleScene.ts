@@ -65,6 +65,7 @@ import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { CHEST_POINT, SPRITE_ATLAS, gearLayers, pointFromAnchor, spriteAnim, spriteFrame } from './unitLook.ts'
+import { DEFAULT_ENCOUNTER, chooseBattle } from './battleSetup.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
 import { showStory, type StoryAnchors } from './StoryScene.ts'
 import { storyFor, type StoryItem } from '../story/story.ts'
@@ -76,6 +77,9 @@ interface BattleData {
   game?: GameState
   /** The id of the monster location on the world map that this battle is fought at. */
   location?: string
+  /** Without a location only (the debug console's `fight`): the encounter to fight, and the threat to fight it at. */
+  encounter?: EncounterId
+  threat?: number
   /** A battle read from a save slot, to take up where it stood instead of starting one. */
   saved?: SavedBattle
 }
@@ -185,8 +189,6 @@ const LOG_BOX_GAP = 14
 /** Width kept clear of wrapped log text for the scrollbar. */
 const LOG_SCROLLBAR_SPACE = 16
 const ENEMY_POLICY: PolicyName = 'aggressive'
-/** The battle fought when the scene is started without a monster location, as in tests. */
-const DEFAULT_ENCOUNTER: EncounterId = 'goblin_raid'
 
 /**
  * Every unit sprite is a 32px canvas shown at 2x (before the board's own scale), so a small
@@ -205,6 +207,9 @@ export class BattleScene extends Phaser.Scene {
   private gameState!: GameState
   /** The monsters being fought, which a victory clears from the world map. */
   private location: MonsterLocation | null = null
+  /** The encounter fought and the threat it was built at (`Encounter.threat`, within its band). */
+  private encounterId: EncounterId = DEFAULT_ENCOUNTER
+  private threat = 1
   /** The experience a victory here is worth, until it is won. */
   private xpReward = 0
   /** The party member behind each player unit. */
@@ -288,10 +293,11 @@ export class BattleScene extends Phaser.Scene {
   create(data: BattleData): void {
     this.gameState = data?.game ?? newGame()
     const party = this.gameState.party
-    const at = this.gameState.world.locations.find((l) => l.id === data?.location)
-    this.location = at?.kind === 'monsters' ? at : null
-    const encounter = ENCOUNTERS[this.location?.encounter ?? DEFAULT_ENCOUNTER]
-    const fight = encounter(partyFighters(party), this.location?.threat)
+    const chosen = chooseBattle(this.gameState.world, data)
+    this.location = chosen.location
+    this.encounterId = chosen.encounter
+    const fight = ENCOUNTERS[chosen.encounter](partyFighters(party), chosen.threat)
+    this.threat = fight.threat
     const { setup, kinds } = fight
     this.xpReward = xpReward(fight)
     this.heroes = new Map(party.map((member, i) => [heroId(i), member]))
@@ -1804,8 +1810,8 @@ export class BattleScene extends Phaser.Scene {
       story = storyFor(this.gameState, {
         kind: 'battle_turn',
         round,
-        encounter: this.location?.encounter ?? DEFAULT_ENCOUNTER,
-        threat: this.location?.threat ?? 1,
+        encounter: this.encounterId,
+        threat: this.threat,
       })
       this.save()
     }

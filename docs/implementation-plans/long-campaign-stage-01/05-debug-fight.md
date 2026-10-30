@@ -114,8 +114,32 @@ CLAUDE.md, under Commands (the debug console paragraph), lists what changers do:
 
 ## Completion criteria
 
-- [ ] `fight <encounter> [threat]` works on the world map, and is refused off it, without a source `fight`, and with bad arguments.
-- [ ] BattleScene uses `data.encounter` and `data.threat` without a location. No loot is taken, no location is cleared, the blight is unchanged, and XP is rewarded (check recorded).
-- [ ] The tests above are added and `make test` passes.
-- [ ] The CLAUDE.md debug console paragraph is updated.
-- [ ] Committed. The index's step 05 row is set to `done`, with a completion note (commit, checks run, the XP check's finding) added at the end of this file.
+- [x] `fight <encounter> [threat]` works on the world map, and is refused off it, without a source `fight`, and with bad arguments.
+- [x] BattleScene uses `data.encounter` and `data.threat` without a location. No loot is taken, no location is cleared, the blight is unchanged, and XP is rewarded (check recorded).
+- [x] The tests above are added and `make test` passes.
+- [x] The CLAUDE.md debug console paragraph is updated.
+- [x] Committed. The index's step 05 row is set to `done`, with a completion note (commit, checks run, the XP check's finding) added at the end of this file.
+
+## Completion note
+
+- **Commit:** "Step 05: the debug fight command" (one commit: code, tests, CLAUDE.md, this note and the index).
+- **The XP check:** `xpReward` is set in `BattleScene.create` from the encounter built there (`this.xpReward = xpReward(fight)`), and `endBattle` runs `rewardVictory(..., this.xpReward, ...)` for any win, location or not. Only `takeLoot` and `clearLocation` are guarded on `this.location`. So a battle with no location already rewarded experience; nothing needed fixing. The in-browser test below confirms it (the victory screen shows `+N XP each`).
+- **Changes:**
+  - `src/scenes/debugCommands.ts`: `DebugSource.fight` (C8), and the `fight <encounter> [threat]` command, `changes: true`. It refuses an unknown or missing id (listing `ENCOUNTERS`' ids), a threat that is not a whole number or is below 1, and a source with no `fight` ("Battles start only from the world map."). Off the world map `runCommand` refuses it before it runs, as other changers. The threat defaults to `threatAt(world.party)`.
+  - The `changed` question: the command reports a change, so the console runs WorldScene's `changed()` (redraw, save, `checkOutcome`) after `fight`. That is harmless: `scene.start` only queues the stop and start for the scene manager's next step, so `changed()` runs on a World still live, and saves a game nothing has changed. No special case was needed.
+  - `completions` completes command names only, so `fight` needed no entry.
+  - `src/scenes/WorldScene.ts`: `debugSource()` gains `fight`, starting `'Battle'` with `{ game, encounter, threat }`. `world.confronting` is left alone.
+  - `src/scenes/BattleScene.ts`: `BattleData` gains `encounter?` and `threat?`, documented as used only without a location. The choice of encounter is `chooseBattle` (below), C8's rule. The `battle_turn` story moment now reads the scene's encounter id and the built encounter's threat (`Encounter.threat`), rather than falling back to Goblin Raid at threat 1 when there is no location. For every monster location these equal the location's own (each location's threat lies in its encounter's band).
+  - **New helper `src/scenes/battleSetup.ts`** (`chooseBattle`, `DEFAULT_ENCOUNTER`, moved from BattleScene): what a `Battle` start asks for, a monster location's encounter and threat, else the data's, else Goblin Raid. CLAUDE.md lists it among the scene helpers.
+  - CLAUDE.md: the debug console paragraph names `fight` among the changers, and says `Battle` takes `encounter` and `threat` without a location and what such a battle does. `e2e/CLAUDE.md`: `debug.test.ts`'s line.
+- **Tests:**
+  - `src/scenes/debugCommands.test.ts` (`fight`): calls `source.fight('goblin_raid', 3)`; the default threat is `threatAt` of the party's hex (home, then the Bandit Camp's hex, threat 3); an unknown id, a missing id, `0`, `-1` and `x` are refused and `fight` is not called; a source with `changed` and no `fight` is refused with the message; a source with `fight` but no `changed` (in battle) is refused as other changers are; `help` lists `fight <encounter> [threat]`. Red first: all five failed ("Unknown command").
+  - `src/scenes/battleSetup.test.ts`: a location overrides the data; without one the data's encounter and threat are used; an id naming a quiet location gives no location; nothing asked gives Goblin Raid at its default threat.
+  - `e2e/debug.test.ts`: on a new game's map, `fight kobold_scouts 2` starts `Battle`; its foes match `koboldScouts(readyMadeParty fighters, 2)` by id and maximum hit points; the battle is won (`WINNING_SEED`), the result shows XP and no "Found:"; back on the map the locations and the blight are unchanged.
+- **Deviation from the task file:** it asks for `BattleScene.test.ts` (jsdom) tests that drive a battle with "the file's existing helpers". There are none: every `*Scene.test.ts` is a one-line smoke test, and CLAUDE.md says scene behaviour is tested through helper modules and in-browser tests. So the encounter choice was pulled into `battleSetup.ts` and tested in the domain project, and the battle itself (the encounter built, XP, no loot, no location cleared, the blight untouched) is tested in the browser, where `fightBattle` exists.
+- **Verification:**
+  - `npm run -s typecheck`: clean. `npx vitest run --project domain src/scenes/debugCommands.test.ts src/scenes/battleSetup.test.ts`: 17 + 4 passed.
+  - `make test`: 65 files, 748 tests passed.
+  - `make test-browser ARGS="e2e/debug.test.ts"`: 3 of 3 passed. `make test-browser ARGS="e2e/battle.test.ts e2e/saves.test.ts e2e/story.test.ts"` (BattleScene changed): 19 of 19 passed.
+  - The manual `make dev` check was not done by hand; the in-browser test plays the same steps in the real game (headless Chromium). Step 07 walks it in play.
+- **For later steps:** `fight bandit_camp 3` (or 4, 5) fights the camp anywhere on the map; a threat outside an encounter's band is fought at the band's nearest threat.

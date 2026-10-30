@@ -324,6 +324,8 @@ export class WorldScene extends Phaser.Scene {
         this.save()
         this.checkOutcome()
       },
+      // As an attack on a location would, but with none behind it: it clears none and takes no loot.
+      fight: (encounter, threat) => this.scene.start('Battle', { game: this.gameState, encounter, threat }),
     }
   }
 
