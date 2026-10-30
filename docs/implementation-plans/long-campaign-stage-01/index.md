@@ -159,6 +159,8 @@ export function banditGrade(threat: number): Grade
   | captain | `IRON_SWORD` | `OAK_SHIELD` | `STEEL_ARMOR` |
 
   The mage's draft is a Spellcasting caster whose spells include Magic Arrow and Shield by level 3, and Flame Arrow by level 4.
+
+  **Amended at step 03 (`8c76d91`):** the Wand of Sparks is an enchanted item, which takes no grade (`itemById` refuses one), so the mage's wand stays plain at every grade. All other gear is graded as above.
 - **Determinism:** the same arguments give equal stats every time.
 - **The hero-rules contract (S1-A3):** a `Character` made by `draftCharacter(draft)`, levelled the same way, `autoAdvance`d and equipped with the same items, has `deriveCombatStats` equal to `banditStats`.
 
