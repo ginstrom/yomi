@@ -136,7 +136,7 @@ Check that all of these exist before starting. If `bandit_camp` is not in `ENCOU
 
 ## Completion note
 
-- **Status:** done. Commit `COMMIT_HASH` ("Step 04: bandits on the map").
+- **Status:** done. Commit `7ff2fb9` ("Step 04: bandits on the map").
 - **Built:**
   - `src/game/worldMap.ts`: Kobold Skulkers (30, 22) is now `bandit_camp` 'Bandit Camp', and Goblin Outriders (47, 13) `bandit_hideout` 'Bandit Hideout', both fighting `bandit_camp`, with their old loot (Cloak of Shadows, Wand of Storms). Threats 3 and 4, as measured.
   - `src/game/blight.ts`: `SPAWN_KINDS` gains `{ encounter: 'bandit_camp', name: 'Bandit Gang' }`. `spawn` draws the position, then the kind among those whose `ENCOUNTER_BANDS` holds `threatAt(at)` (`eligible[Math.floor(rng() * eligible.length)]`), then the loot, as before. The number of draws is unchanged, so the world RNG's stream is the same as before for every spawn; only the kind at threats 3 to 5 differs.

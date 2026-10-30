@@ -242,7 +242,7 @@ fight?: (encounter: EncounterId, threat: number) => void
 | 01 | [Native levels, encounter bands and the yardstick](01-native-levels-and-bands.md) | `foeAtLevel` with native levels, `foeStats`, bands and counts per encounter, `encountersFor`, `foeYardstick` and its test. The campaign summary is identical. | — | done |
 | 02 | [Bandit sprites](02-bandit-sprites.md) | Five bandit sprites in the atlas, with `idle` and `walk`, and the sprites README updated | — | done |
 | 03 | [Bandits and the Bandit Camp](03-bandits-and-camp.md) | `bandits.ts`, the bandit kinds, XP, the `bandit_camp` encounter. Bandits drawn in battle. | 01, 02 | done |
-| 04 | [Bandits on the map](04-map-and-spawns.md) | Two locations become bandit camps; spawns by band with a Bandit Gang; `SAVE_VERSION` 12 | 03 | done (COMMIT_HASH; guard 91 of 500, see the task's note) |
+| 04 | [Bandits on the map](04-map-and-spawns.md) | Two locations become bandit camps; spawns by band with a Bandit Gang; `SAVE_VERSION` 12 | 03 | done (7ff2fb9; guard 91 of 500, see the task's note) |
 | 05 | [The debug `fight` command](05-debug-fight.md) | `fight <encounter> [threat]` starts a battle with no location | 01 | pending |
 | 06 | [The simulator's ready level and level record](06-simulator-ready-level.md) | `--ready-level`, `finalLevels`, `deathsAtLevel`, `battlesToLevel`, printed | — | pending |
 | 07 | [Measure, tune and document](07-measure-tune-document.md) | The guard and the bandit cells measured, counts tuned if needed, CLAUDE.md, the manual and the stage's notes updated, the play script walked | 03, 04, 05, 06 | pending |
