@@ -194,6 +194,8 @@ These are the choices each family offers:
 | Modify | as today, at the grades the workshop makes | Workshop or field |
 | Loot | unique items, runes, trophies | won battles (§4.5) |
 
+[`economy-and-trade-routes.md`](economy-and-trade-routes.md) §4.2 makes trading post level 4 the Market and adds levels 5 and 6. Their costs and passive income are set there.
+
 **Workshop levels** (levels 1 to 3 unchanged):
 
 | Level | Cost | Unlocks |
