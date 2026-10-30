@@ -3,8 +3,8 @@ import type { Item, ItemStats } from './inventory.ts'
 /**
  * The grades of a plain item (docs/designs/expeditions-and-encampment.md
  * §4.1): plain, Fine and Masterwork, sold by the trading post. A grade adds
- * damage (and at the top, to hit) to a weapon and armour class to a shield or
- * armour; it never changes attack AP, range, piercing or two-handedness, so a
+ * damage (and at the top, to hit) to a weapon, armour class to a shield and
+ * resistance to armour; it never changes attack AP, range, piercing or two-handedness, so a
  * weapon keeps its place among the AP thresholds.
  */
 
@@ -18,14 +18,15 @@ interface GradeDef {
   /** What it adds to a weapon's damage bonus, and to its chance to hit. */
   damage: number
   toHit: number
-  /** What it adds to a shield's or armour's armour class. */
+  /** What it adds to a shield's armour class, and to armour's resistance. */
   ac: number
+  resistance: number
 }
 
 export const GRADE_DEFS: Record<Grade, GradeDef> = {
-  1: { prefix: '', damage: 0, toHit: 0, ac: 0 },
-  2: { prefix: 'Fine ', damage: 1, toHit: 0, ac: 3 },
-  3: { prefix: 'Masterwork ', damage: 2, toHit: 5, ac: 6 },
+  1: { prefix: '', damage: 0, toHit: 0, ac: 0, resistance: 0 },
+  2: { prefix: 'Fine ', damage: 1, toHit: 0, ac: 3, resistance: 1 },
+  3: { prefix: 'Masterwork ', damage: 2, toHit: 5, ac: 6, resistance: 2 },
 }
 
 export function isGrade(n: number): n is Grade {
@@ -44,6 +45,8 @@ export function gradedStats(stats: ItemStats, grade: Grade): ItemStats {
   if (stats.damage) {
     graded.damage = { ...stats.damage, bonus: stats.damage.bonus + def.damage }
     if (def.toHit) graded.toHit = (stats.toHit ?? 0) + def.toHit
+  } else if (stats.resistance !== undefined && def.resistance) {
+    graded.resistance = stats.resistance + def.resistance
   } else if (stats.acBonus !== undefined && def.ac) {
     graded.acBonus = stats.acBonus + def.ac
   }

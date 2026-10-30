@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GOBLIN_SHAMAN_STATS, GOBLIN_STATS, effectiveAc, foeAtLevel, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, type CombatantStats } from './combat.ts'
+import { GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, damageThrough, effectiveResistance, foeAtLevel, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, type CombatantStats } from './combat.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -34,18 +34,32 @@ describe('rollDamage', () => {
   })
 })
 
-describe('effectiveAc', () => {
-  it('takes the pierced share off the armour, rounded in the defender\'s favour, and never below nothing', () => {
-    expect(effectiveAc(WARRIOR_STATS, 35)).toBe(35)
-    expect(effectiveAc({ ...WARRIOR_STATS, armorPierce: 25 }, 35)).toBe(27)
-    expect(effectiveAc({ ...WARRIOR_STATS, armorPierce: 25 }, 15)).toBe(12)
-    expect(effectiveAc({ ...WARRIOR_STATS, armorPierce: 150 }, 35)).toBe(0)
+describe('effectiveResistance', () => {
+  it('takes the pierced points off the resistance, never below nothing', () => {
+    expect(effectiveResistance(WARRIOR_STATS, 4)).toBe(4)
+    expect(effectiveResistance({ ...WARRIOR_STATS, armorPierce: 2 }, 4)).toBe(2)
+    expect(effectiveResistance({ ...WARRIOR_STATS, armorPierce: 6 }, 4)).toBe(0)
   })
 
-  it('tells most against the heaviest armour', () => {
-    const axe = { ...WARRIOR_STATS, armorPierce: 25 }
-    expect(hitChance(axe, 40) - hitChance(WARRIOR_STATS, 40)).toBeCloseTo(0.1)
-    expect(hitChance(axe, 20) - hitChance(WARRIOR_STATS, 20)).toBeCloseTo(0.05)
+  it('leaves the chance to hit alone: piercing is no chance to hit by another name', () => {
+    expect(hitChance({ ...WARRIOR_STATS, armorPierce: 3 }, 40)).toBe(hitChance(WARRIOR_STATS, 40))
+  })
+})
+
+describe('damageThrough', () => {
+  it('takes the resistance off the roll, but a hit that rolled anything does at least 1', () => {
+    expect(damageThrough(7, 0)).toBe(7)
+    expect(damageThrough(7, 3)).toBe(4)
+    expect(damageThrough(2, 3)).toBe(1)
+    expect(damageThrough(0, 3)).toBe(0)
+  })
+
+  it('tells most against many light hits', () => {
+    // Two dagger blows of 3 against one greatsword blow of 10, through 3 points of armour.
+    const light = 2 * damageThrough(3, 3)
+    const heavy = damageThrough(10, 3)
+    expect(light).toBeLessThan(heavy / 3)
+    expect(2 * damageThrough(3, 0)).toBeLessThan(damageThrough(10, 0))
   })
 })
 
@@ -84,6 +98,14 @@ describe('resolveAttack', () => {
     expect(resolveAttack(keen, 65, sequence([0.85 /* roll -> 15 */]))).toMatchObject({ hit: false, critical: false })
   })
 
+  it('takes the defender\'s resistance, less what the weapon pierces, off the damage of a hit', () => {
+    const rolls = () => sequence([0.5 /* roll -> 50 */, 0.5 /* damage die -> 5 */])
+    expect(resolveAttack(WARRIOR_STATS, 0, rolls()).damage).toBe(7)
+    expect(resolveAttack(WARRIOR_STATS, 0, rolls(), 0, 4).damage).toBe(3)
+    expect(resolveAttack({ ...WARRIOR_STATS, armorPierce: 1 }, 0, rolls(), 0, 4).damage).toBe(4)
+    expect(resolveAttack(WARRIOR_STATS, 0, rolls(), 0, 20).damage).toBe(1)
+  })
+
   it('hitChance matches resolveAttack over every roll', () => {
     for (const [ac, bonus] of [[15, 0], [30, 10], [100, 0], [-40, 0], [25, -50]]) {
       let hits = 0
@@ -118,7 +140,10 @@ describe('sameCombatStats', () => {
     expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, spells: [] } })).toBe(false)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, weapon: 'Iron Longsword' })).toBe(false)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, armorPierce: 0 })).toBe(true)
-    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, armorPierce: 15 })).toBe(false)
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, armorPierce: 2 })).toBe(false)
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, resistance: 0 })).toBe(true)
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, resistance: 2 })).toBe(false)
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, regeneration: 2 })).toBe(false)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, damage: { count: 1, sides: 8, bonus: 0 } })).toBe(false)
   })
 })
@@ -142,5 +167,11 @@ describe('foeAtLevel', () => {
       toHit: 90,
       damage: { count: 1, sides: 6, bonus: 3 },
     })
+  })
+
+  it('keeps its kind\'s resistance and regeneration at every level', () => {
+    expect(foeAtLevel(GOBLIN_STATS, 5).resistance).toBe(GOBLIN_STATS.resistance)
+    expect(foeAtLevel(TROLL_STATS, 4).regeneration).toBe(TROLL_STATS.regeneration)
+    expect(foeAtLevel(GOBLIN_STATS, 4).regeneration).toBeUndefined()
   })
 })

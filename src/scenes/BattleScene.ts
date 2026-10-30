@@ -137,7 +137,7 @@ const KNOCK_PX = 5
 const DODGE_PX = 7
 /** How high a unit's step lifts it, in pixels. */
 const STEP_BOB_PX = 3
-/** The pause each status's damage at a turn's start is given. */
+/** The pause each status's damage, and each regeneration, at a turn's start is given. */
 const TICK_PAUSE_MS = 350
 /** What a unit flashes: hurt, healed or helped, or an image struck in its place. */
 const HURT_TINT = 0xff8a80
@@ -1129,13 +1129,18 @@ export class BattleScene extends Phaser.Scene {
     g.fillTriangle(head[0].x, head[0].y, head[1].x, head[1].y, head[2].x, head[2].y)
   }
 
-  /** "60%" on a foe's nameplate when the selected unit can attack it, with "+3" for flanking, side and rear bonuses. */
+  /**
+   * "60%" on a foe's nameplate when the selected unit can attack it, with "+3"
+   * for flanking, side and rear bonuses, and "−2 dmg" for what its armour
+   * takes off each hit after piercing.
+   */
   private addHitChanceLabel(attacker: UnitId, target: UnitId, at: Hex): void {
     const preview = this.engine.previewAttack(attacker, target)
     if (!preview) return
     const percent = Math.round(preview.hitChance * 100)
     const bonus = preview.flankBonus + preview.arcBonus
-    this.addChanceLabel(`${percent}%${bonus > 0 ? ` +${bonus}` : ''}`, at)
+    const armour = preview.resistance > 0 ? ` −${preview.resistance} dmg` : ''
+    this.addChanceLabel(`${percent}%${bonus > 0 ? ` +${bonus}` : ''}${armour}`, at)
   }
 
   /** A label on the nameplate of the unit at `at`, where its AP pips would be. */
@@ -1253,6 +1258,11 @@ export class BattleScene extends Phaser.Scene {
       const unit = this.units.get(event.unit)!
       this.flash(unit, HURT_TINT)
       unit.figure.pulseOutline(OUTLINE_HURT, OUTLINE_MS)
+      this.refreshHpDisplay(unit, event.hpAfter, this.engine.getState().units.find((u) => u.id === event.unit)!.maxHp)
+    }
+    if (event.type === 'regenerate') {
+      const unit = this.units.get(event.unit)!
+      this.flash(unit, HELPED_TINT)
       this.refreshHpDisplay(unit, event.hpAfter, this.engine.getState().units.find((u) => u.id === event.unit)!.maxHp)
     }
     if (event.type === 'cast' || event.type === 'status_end' || event.type === 'status_tick' || event.type === 'unit_down') {

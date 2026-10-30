@@ -5,8 +5,19 @@ import { POLICIES } from '../engine/policies.ts'
 import { xpToNextLevel } from '../character/progression.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
 import { hexDistance } from '../grid/hex.ts'
-import { BLIGHT_HORROR_STATS, GOBLIN_STATS, foeAtLevel } from '../combat/combat.ts'
-import { ENCOUNTERS, FOE_XP, MAX_THREAT, goblinRaid, heroId, koboldScouts, sourceGuardians, xpReward } from './encounters.ts'
+import { BLIGHT_HORROR_STATS, GOBLIN_STATS, HOBGOBLIN_CHIEF_STATS, TROLL_STATS, foeAtLevel } from '../combat/combat.ts'
+import {
+  ENCOUNTERS,
+  FOE_XP,
+  MAX_THREAT,
+  goblinRaid,
+  heroId,
+  hobgoblinWarband,
+  koboldScouts,
+  sourceGuardians,
+  trollLair,
+  xpReward,
+} from './encounters.ts'
 import { readyMadeParty, partyFighters } from './party.ts'
 
 /** A party of four: one more than a new game's, to stand in the second row. */
@@ -97,6 +108,31 @@ describe('sourceGuardians', () => {
 
   it('is worth more than a Goblin Raid of the same threat', () => {
     expect(xpReward(sourceGuardians(party(), MAX_THREAT))).toBeGreaterThan(xpReward(goblinRaid(party(), MAX_THREAT)))
+  })
+})
+
+describe('hobgoblinWarband', () => {
+  it('fields the Hobgoblin Chief, in its mail, at every threat', () => {
+    for (let threat = 1; threat <= MAX_THREAT; threat++) {
+      const [chief] = hobgoblinWarband(party(), threat).setup.units.filter((u) => u.side === 'enemy')
+      expect(chief.stats).toEqual({ ...foeAtLevel(HOBGOBLIN_CHIEF_STATS, threat), name: 'Hobgoblin Chief' })
+    }
+    expect(HOBGOBLIN_CHIEF_STATS.resistance).toBeGreaterThan(GOBLIN_STATS.resistance!)
+  })
+})
+
+describe('trollLair', () => {
+  const kinds = (threat: number) => Object.values(trollLair(party(), threat).kinds)
+
+  it('fields a regenerating Troll at every threat', () => {
+    for (let threat = 1; threat <= MAX_THREAT; threat++) expect(kinds(threat)).toContain('troll')
+    expect(TROLL_STATS.regeneration).toBeGreaterThan(0)
+  })
+
+  it('keeps the Armoured Troll back below threat 5, a goblin taking its place', () => {
+    expect(kinds(4)).not.toContain('armored_troll')
+    expect(kinds(4)).toEqual(['warrior', 'warrior', 'warrior', 'warrior', 'troll', 'goblin', 'goblin'])
+    expect(kinds(5)).toContain('armored_troll')
   })
 })
 

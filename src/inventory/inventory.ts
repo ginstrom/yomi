@@ -58,12 +58,14 @@ export interface ItemStats {
   attackApCost?: number
   /** How many hexes away the weapon can strike; a melee weapon leaves it out and reaches 1. */
   attackRange?: number
-  /** The share in percent of a foe's armour class a melee weapon's blows pass through; nothing for a ranged one. */
+  /** Points of a foe's resistance a melee weapon's blows pass through; nothing for a ranged one. */
   armorPierce?: number
   /** A main-hand weapon that takes both hands: whatever is in the off hand counts for nothing. */
   twoHanded?: boolean
   /** What the item adds to its wearer's armour class, in percent. */
   acBonus?: number
+  /** What the item adds to its wearer's resistance: points off the damage of every weapon hit it takes. */
+  resistance?: number
   /** What the item adds to its wearer's chance to hit, in percent. */
   toHit?: number
   /** The skill a weapon strikes with, when it is not the one its reach tells: a wand's is Magic. */
@@ -100,9 +102,10 @@ export function describeItemStats(stats: ItemStats = {}): string[] {
   if (stats.damage) lines.push(`Damage: ${formatDamage(stats.damage)}`)
   if (stats.attackApCost !== undefined) lines.push(`Attack Cost: ${stats.attackApCost} AP`)
   if (stats.attackRange !== undefined) lines.push(`Range: ${stats.attackRange} hexes`)
-  if (stats.armorPierce) lines.push(`Pierces ${stats.armorPierce}% of armour`)
+  if (stats.armorPierce) lines.push(`Pierces ${stats.armorPierce} resistance`)
   if (stats.twoHanded) lines.push('Two-handed')
   if (stats.acBonus) lines.push(`Armor Class: ${signed(stats.acBonus)}`)
+  if (stats.resistance) lines.push(`Resistance: ${signed(stats.resistance)}`)
   if (stats.toHit) lines.push(`To Hit: ${signed(stats.toHit)}%`)
   if (stats.skill) lines.push(`Strikes with ${SKILLS[stats.skill].name}`)
   if (stats.maxMana) lines.push(`Mana: +${stats.maxMana}`)
@@ -118,7 +121,7 @@ export const IRON_SWORD: Item = {
   name: 'Iron Longsword',
   slot: 'mainHand',
   description: 'A well-balanced blade.',
-  stats: { damage: { count: 1, sides: 8, bonus: 3 }, attackApCost: 5, armorPierce: 15 },
+  stats: { damage: { count: 1, sides: 8, bonus: 3 }, attackApCost: 5, armorPierce: 1 },
   icon: 'sword',
 }
 
@@ -126,17 +129,18 @@ export const IRON_SWORD: Item = {
 // less buys two attacks from a unit that stands still, and every point above
 // that is a hex it cannot also walk. Two attacks a turn are worth more than
 // their summed damage suggests, which is why the light weapons and the bow
-// roll so low: `npm run simulate -- --player-weapon <id>` compares them. The
-// bow's two shots a turn make it the weapon for picking off the lightly
-// armoured from afar; a melee weapon answers armour instead, by the share of
-// it its blows pierce (`armorPierce`), most of all the heavy ones.
+// roll so low: `npm run simulate -- --player-weapon <id>` compares them. But
+// a foe's resistance comes off every hit (`damageThrough`), so armour takes
+// the most from those many small hits: the light blades and the bow are the
+// weapons for the lightly armoured, and the heavy ones, whose big hits also
+// pierce points of resistance (`armorPierce`), the answer to the armoured.
 
 export const IRON_DAGGER: Item = {
   id: 'iron_dagger',
   name: 'Iron Dagger',
   slot: 'mainHand',
   description: 'Short, light and quick.',
-  stats: { damage: { count: 1, sides: 4, bonus: 0 }, attackApCost: 3, armorPierce: 20 },
+  stats: { damage: { count: 1, sides: 4, bonus: 0 }, attackApCost: 3 },
   icon: 'dagger',
 }
 
@@ -145,7 +149,7 @@ export const IRON_SHORTSWORD: Item = {
   name: 'Iron Shortsword',
   slot: 'mainHand',
   description: 'A handy stabbing blade.',
-  stats: { damage: { count: 1, sides: 3, bonus: 1 }, attackApCost: 4, armorPierce: 10 },
+  stats: { damage: { count: 1, sides: 3, bonus: 1 }, attackApCost: 4 },
   icon: 'shortsword',
 }
 
@@ -154,7 +158,7 @@ export const IRON_BATTLE_AXE: Item = {
   name: 'Iron Battle Axe',
   slot: 'mainHand',
   description: 'A heavy head on a long haft.',
-  stats: { damage: { count: 1, sides: 12, bonus: 2 }, attackApCost: 6, armorPierce: 25 },
+  stats: { damage: { count: 1, sides: 12, bonus: 2 }, attackApCost: 6, armorPierce: 2 },
   icon: 'axe',
 }
 
@@ -163,7 +167,7 @@ export const STEEL_GREATSWORD: Item = {
   name: 'Steel Greatsword',
   slot: 'mainHand',
   description: 'A blade as tall as its wielder.',
-  stats: { damage: { count: 2, sides: 6, bonus: 3 }, attackApCost: 7, armorPierce: 25, twoHanded: true },
+  stats: { damage: { count: 2, sides: 6, bonus: 3 }, attackApCost: 7, armorPierce: 2, twoHanded: true },
   icon: 'greatsword',
 }
 
@@ -200,7 +204,7 @@ export const STEEL_ARMOR: Item = {
   name: 'Steel Breastplate',
   slot: 'armor',
   description: 'Sturdy plate armor.',
-  stats: { acBonus: 15 },
+  stats: { acBonus: 10, resistance: 2 },
   icon: 'armor',
 }
 
@@ -232,7 +236,7 @@ export const EMBERBLADE: Item = {
   name: 'Emberblade',
   slot: 'mainHand',
   description: 'Its edge glows like a banked fire.',
-  stats: { damage: { count: 1, sides: 8, bonus: 4 }, attackApCost: 5, armorPierce: 15, toHit: 10 },
+  stats: { damage: { count: 1, sides: 8, bonus: 4 }, attackApCost: 5, armorPierce: 1, toHit: 10 },
   icon: 'sword_ember',
 }
 

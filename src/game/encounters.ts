@@ -1,4 +1,14 @@
-import { BLIGHT_HORROR_STATS, GOBLIN_SHAMAN_STATS, GOBLIN_STATS, KOBOLD_STATS, foeAtLevel, type CombatantStats } from '../combat/combat.ts'
+import {
+  ARMORED_TROLL_STATS,
+  BLIGHT_HORROR_STATS,
+  GOBLIN_SHAMAN_STATS,
+  GOBLIN_STATS,
+  HOBGOBLIN_CHIEF_STATS,
+  KOBOLD_STATS,
+  TROLL_STATS,
+  foeAtLevel,
+  type CombatantStats,
+} from '../combat/combat.ts'
 import type { BattleSetup, UnitId, UnitSetup } from '../engine/battleEngine.ts'
 import { offsetToHex } from '../grid/hex.ts'
 
@@ -37,17 +47,27 @@ function partyKinds(party: readonly Fighter[]): Record<UnitId, UnitKind> {
 }
 
 /** What a unit is, for drawing it; the engine only knows its stats. */
-export type UnitKind = 'warrior' | 'goblin' | 'kobold' | 'shaman' | 'horror'
+export type UnitKind = 'warrior' | 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll'
 
 /**
  * The experience beating a level 1 unit of each kind is worth. An even match for a
  * hero of level L is worth about `EVEN_FOE_XP_PER_LEVEL * L` and a weak foe
  * half that (see progression.ts): the Goblin is a little weaker than a new
  * hero, the Kobold weak, and the Goblin Shaman, frail but a healer and a
- * curse, worth a little more than a Goblin; the Blight Horror, which guards
- * the Source, as much as four Goblins.
+ * curse, worth a little more than a Goblin; the Hobgoblin Chief, in mail,
+ * and the Troll, which regenerates, about two Goblins, and the Armoured Troll
+ * more; the Blight Horror, which guards the Source, as much as four Goblins.
  */
-export const FOE_XP: Record<UnitKind, number> = { warrior: 0, goblin: 80, kobold: 50, shaman: 90, horror: 320 }
+export const FOE_XP: Record<UnitKind, number> = {
+  warrior: 0,
+  goblin: 80,
+  kobold: 50,
+  shaman: 90,
+  horror: 320,
+  hobgoblin: 150,
+  troll: 160,
+  armored_troll: 220,
+}
 
 export interface Encounter {
   setup: BattleSetup
@@ -76,6 +96,8 @@ interface FoeSlot {
   /** Each foe of a battle has a name of its own, so the log tells them apart. */
   name: string
   at: readonly [number, number]
+  /** The lowest threat it takes the field at; below it, the slots after it fill its place. Any threat when left out. */
+  fromThreat?: number
 }
 
 const FOE_STATS: Record<FoeSlot['kind'], CombatantStats> = {
@@ -83,6 +105,9 @@ const FOE_STATS: Record<FoeSlot['kind'], CombatantStats> = {
   kobold: KOBOLD_STATS,
   shaman: GOBLIN_SHAMAN_STATS,
   horror: BLIGHT_HORROR_STATS,
+  hobgoblin: HOBGOBLIN_CHIEF_STATS,
+  troll: TROLL_STATS,
+  armored_troll: ARMORED_TROLL_STATS,
 }
 
 /**
@@ -94,12 +119,13 @@ const BOARD = { cols: 12, rows: 9 }
 
 /**
  * The party against the foes `threat` calls for: the first `FOES_AT_THREAT`
- * of `slots`, every one at level `threat` (`foeAtLevel`). The numbers behind
+ * of `slots` that take the field at that threat (`fromThreat`), every one at
+ * level `threat` (`foeAtLevel`). The numbers behind
  * both were chosen with the simulator; see the rules of scaling in CLAUDE.md.
  */
 function encounter(party: readonly Fighter[], slots: readonly FoeSlot[], threat: number): Encounter {
   const level = Math.min(Math.max(1, Math.floor(threat)), MAX_THREAT)
-  const foes = slots.slice(0, FOES_AT_THREAT[level - 1])
+  const foes = slots.filter((slot) => (slot.fromThreat ?? 1) <= level).slice(0, FOES_AT_THREAT[level - 1])
   return {
     setup: {
       board: BOARD,
@@ -136,6 +162,26 @@ const KOBOLD_SCOUTS: readonly FoeSlot[] = [
   { id: 'whip', kind: 'goblin', name: 'Goblin Whip', at: [9, 6] },
 ]
 
+// The Chief first, so it takes the field at any threat: the armoured foe of the near lands.
+const HOBGOBLIN_WARBAND: readonly FoeSlot[] = [
+  { id: 'chief', kind: 'hobgoblin', name: 'Hobgoblin Chief', at: [8, 4] },
+  { id: 'goblin', kind: 'goblin', name: 'Goblin', at: [8, 2] },
+  { id: 'shaman', kind: 'shaman', name: 'Goblin Shaman', at: [9, 4] },
+  { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [8, 6] },
+  { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [9, 2] },
+]
+
+// The Armoured Troll only at threat 5, a minion of the far lands; below that a goblin fills its place. At
+// threat 4 the ready-made party, a longsword, a bow and a wand, could not get through its armour and its
+// regeneration together (7 battles won in 500 at the party's level).
+const TROLL_LAIR: readonly FoeSlot[] = [
+  { id: 'troll', kind: 'troll', name: 'Troll', at: [8, 4] },
+  { id: 'goblin', kind: 'goblin', name: 'Goblin Herder', at: [8, 2] },
+  { id: 'armored', kind: 'armored_troll', name: 'Armoured Troll', at: [9, 4], fromThreat: 5 },
+  { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [8, 6] },
+  { id: 'whelp', kind: 'troll', name: 'Troll Whelp', at: [9, 6] },
+]
+
 // The Horror first, so it takes the field at any threat; the Source is fought at the top.
 const SOURCE_GUARDIANS: readonly FoeSlot[] = [
   { id: 'horror', kind: 'horror', name: 'Blight Horror', at: [8, 4] },
@@ -157,6 +203,19 @@ export function goblinRaid(party: readonly Fighter[], threat = 1): Encounter {
 /** Two Kobolds that come at the party from both ends of the far side; where the threat is higher, more of them and a Goblin to drive them. */
 export function koboldScouts(party: readonly Fighter[], threat = 1): Encounter {
   return encounter(party, KOBOLD_SCOUTS, threat)
+}
+
+/** A Hobgoblin Chief in mail with a Goblin; where the threat is higher, a shaman and more goblins behind it. */
+export function hobgoblinWarband(party: readonly Fighter[], threat = 1): Encounter {
+  return encounter(party, HOBGOBLIN_WARBAND, threat)
+}
+
+/**
+ * A Troll, which regenerates, with a Goblin to herd it; at threat 5 an
+ * Armoured Troll beside it, which only the heavy weapons and the spells hurt.
+ */
+export function trollLair(party: readonly Fighter[], threat = 1): Encounter {
+  return encounter(party, TROLL_LAIR, threat)
 }
 
 /**
@@ -183,6 +242,8 @@ export function xpReward(encounter: Encounter): number {
 export const ENCOUNTERS = {
   goblin_raid: goblinRaid,
   kobold_scouts: koboldScouts,
+  hobgoblin_warband: hobgoblinWarband,
+  troll_lair: trollLair,
   source_guardians: sourceGuardians,
 } satisfies Record<string, (party: readonly Fighter[], threat?: number) => Encounter>
 

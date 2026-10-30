@@ -73,6 +73,8 @@ export function eventSounds(event: BattleEvent): SoundCue[] {
     }
     case 'status_tick':
       return [{ key: 'sfx_hit_impact', delayMs: 0 }]
+    case 'regenerate':
+      return [{ key: 'sfx_heal', delayMs: 0 }]
     case 'unit_down':
       return [{ key: 'sfx_unit_death', delayMs: 0 }]
     case 'battle_end':

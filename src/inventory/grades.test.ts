@@ -12,6 +12,7 @@ const merits = (s: ItemStats) => ({
   crit: s.critChance ?? 0,
   pierce: s.armorPierce ?? 0,
   ac: s.acBonus ?? 0,
+  resistance: s.resistance ?? 0,
   ap: -(s.attackApCost ?? 0),
   range: s.attackRange ?? 0,
 })
@@ -33,9 +34,11 @@ describe('the gear ladder', () => {
     for (const item of [fine, masterwork]) {
       expect(item.stats!.attackApCost).toBe(5)
       expect(item.stats!.attackRange).toBeUndefined()
-      expect(item.stats!.armorPierce).toBe(15)
+      expect(item.stats!.armorPierce).toBe(1)
     }
     expect(itemById('oak_shield@3')!.stats!.acBonus).toBe(16)
+    // Armour's grade adds to what it stops, not to its armour class.
+    expect(itemById('steel_armor@3')!.stats).toMatchObject({ acBonus: 10, resistance: 4 })
   })
 
   it('names a modified item with its modifier first and its grade last', () => {

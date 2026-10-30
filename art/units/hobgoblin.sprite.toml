@@ -1,0 +1,85 @@
+# A hobgoblin chief: a tall, broad goblin in a coat of mail and an iron
+# helm with a nasal guard, gripping a spiked morning star.
+canvas = "unit"
+
+outline = "auto"
+
+[points]
+chest = [15, 16]
+
+[frames.idle_0.runs]
+1 = [[25, "w"]]
+2 = [[15, "dl"], [24, "dlw"]]
+3 = [[13, "Dddll"], [23, "Ddllw"]]
+4 = [[12, "Dddddlw"], [21, "wwDdllwww"]]
+5 = [[11, "DDdddddlw"], [23, "DDddl"]]
+6 = [[10, "Ddddddddlll"], [24, "DDd"]]
+7 = [[8, "e"], [9, "gGGggggeYel"], [25, "n"]]
+8 = [[9, "gGGgggeeeele"], [25, "n"]]
+9 = [[10, "GGggggeeeee"], [25, "n"]]
+10 = [[11, "GGgggRWRWe"], [25, "n"]]
+11 = [[12, "GGggeeee"], [25, "n"]]
+12 = [[8, "DDdldldldldldl"], [25, "n"]]
+13 = [[7, "DDdkDldldldldlll"], [25, "n"]]
+14 = [[7, "DdlkDdldldldldll"], [25, "n"]]
+15 = [[7, "DdlkDldldldldl"], [21, "Ggeeee"]]
+16 = [[7, "DdlkDdldldldld"], [21, "GgGgge"]]
+17 = [[7, "gegkDldldldldl"], [25, "n"]]
+18 = [[7, "GgekDdldldldld"], [25, "n"]]
+19 = [[7, "GgekNnnnyYnnnN"], [25, "n"]]
+20 = [[7, "GgekDdldldldlD"], [25, "n"]]
+21 = [[11, "Ddldldldl"], [25, "n"]]
+22 = [[11, "DdldkDdld"], [25, "N"]]
+23 = [[12, "Gge"], [17, "Gge"]]
+24 = [[12, "Gge"], [17, "Gge"]]
+25 = [[12, "Gge"], [17, "Gge"]]
+26 = [[12, "Gge"], [17, "Gge"]]
+27 = [[12, "Gge"], [17, "Gge"]]
+28 = [[12, "Nnt"], [17, "Nnt"]]
+29 = [[12, "Nnt"], [17, "Nnt"]]
+30 = [[12, "Nnnt"], [17, "Nnnt"]]
+
+# A breath: everything above the shins sinks a pixel.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [0, 25], by = [0, 1] }
+
+# A stride: the legs part and nothing above them moves.
+[frames.walk_0]
+from = "idle_0"
+[frames.walk_0.runs]
+23 = [[9, "...Gge..Gge...."]]
+24 = [[9, "..Gge....Gge..."]]
+25 = [[9, "..Gge....Gge..."]]
+26 = [[9, ".Gge......Gge.."]]
+27 = [[9, ".Gge......Gge.."]]
+28 = [[9, ".Nnt......Nnt.."]]
+29 = [[9, ".Nnt......Nnt.."]]
+30 = [[9, ".Nnnt.....Nnnt."]]
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 520
+
+# The near foot lifts: the left, then the right. Only the leg rows change.
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.runs]
+26 = [[12, "Nnt"]]
+27 = [[12, "Nnt"]]
+28 = [[12, "Nnnt"]]
+29 = [[12, "...."]]
+30 = [[12, "...."]]
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.runs]
+26 = [[17, "Nnt"]]
+27 = [[17, "Nnt"]]
+28 = [[17, "Nnnt"]]
+29 = [[17, "...."]]
+30 = [[17, "...."]]
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 140

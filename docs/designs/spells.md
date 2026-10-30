@@ -173,7 +173,7 @@ The spell tree, as section 4.6 draws it:
 | --- | --- | --- |
 | Asleep | `Z` | Gets no AP at the start of its turns; holds no zone of control; attacks on it gain +20 (`HELPLESS_BONUS`). Any damage ends it. |
 | Chilled | `C` | −3 AP at the start of its turns, never below 0. |
-| Corroded | `A` | −5 armour class; 1d4 damage at the start of its turns. |
+| Corroded | `A` | −5 armour class, −2 resistance; 1d4 damage at the start of its turns; no regeneration. |
 | Poisoned | `P` | 1d6 damage at the start of its turns. |
 | Shielded | `S` | +15 armour class. |
 | Protected | `D` | +10 armour class. |
@@ -181,6 +181,7 @@ The spell tree, as section 4.6 draws it:
 | Baned | `X` | −15 to its chance to hit, weapon and spell alike. |
 | Hasted | `H` | +3 AP at the start of its turns. |
 | Mirrored | `M` | Each hit on it, by an attack or a hostile spell, strikes an image instead: no damage, no status, one image fewer. Ends when the images do. |
+| Seared | `F` | No regeneration. Laid for a turn by Fireball and Flame Arrow. |
 
 Rules common to all:
 

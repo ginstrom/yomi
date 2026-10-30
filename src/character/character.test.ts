@@ -68,8 +68,10 @@ describe('deriveCombatStats', () => {
       weapon: 'Iron Longsword',
       // 10 + strength 7 + endurance 7
       maxHp: 24,
-      // agility 6, breastplate 15, shield 10
-      ac: 31,
+      // agility 6, breastplate 10, shield 10
+      ac: 26,
+      // the breastplate's
+      resistance: 2,
       // Melee Weapons: strength 7 + agility 6, and 20 for the tag
       toHit: 33,
       // luck
@@ -77,7 +79,7 @@ describe('deriveCombatStats', () => {
       // the sword's 1d8+3, and 1 for strength 7
       damage: { count: 1, sides: 8, bonus: 4 },
       // the sword's
-      armorPierce: 15,
+      armorPierce: 1,
       attackApCost: 5,
       attackRange: 1,
       actionPoints: 8,
@@ -110,19 +112,19 @@ describe('deriveCombatStats', () => {
   it('gets nothing from a shield while wielding a two-handed weapon', () => {
     const warrior = createWarrior()
     warrior.equipment.mainHand = STEEL_GREATSWORD
-    expect(deriveCombatStats(warrior).ac).toBe(21)
+    expect(deriveCombatStats(warrior).ac).toBe(16)
     warrior.equipment.mainHand = IRON_DAGGER
-    expect(deriveCombatStats(warrior).ac).toBe(31)
+    expect(deriveCombatStats(warrior).ac).toBe(26)
   })
 
   it('reflects equipment changes', () => {
     const warrior = createWarrior()
     delete warrior.equipment.offHand
-    expect(deriveCombatStats(warrior).ac).toBe(21)
+    expect(deriveCombatStats(warrior).ac).toBe(16)
 
     const ring: Item = { ...STEEL_ARMOR, id: 'ring', slot: 'ring1', stats: { toHit: 5, acBonus: 5 } }
     warrior.equipment.ring1 = ring
-    expect(deriveCombatStats(warrior)).toMatchObject({ ac: 26, toHit: 38 })
+    expect(deriveCombatStats(warrior)).toMatchObject({ ac: 21, toHit: 38 })
   })
 })
 
@@ -230,7 +232,7 @@ describe('what a character’s numbers come from', () => {
     }
     expect(deriveCombatStats(warrior)).toEqual({
       ...plain,
-      armorPierce: plain.armorPierce! + 30,
+      armorPierce: plain.armorPierce! + 2,
       maxHp: plain.maxHp + 12,
       ac: plain.ac + 5,
       damage: { ...plain.damage, bonus: plain.damage.bonus + 2 },
@@ -369,7 +371,7 @@ describe('equipFromBackpack', () => {
     expect(warrior.equipment.offHand).toBeUndefined()
     expect(warrior.backpack[index]).toBe(IRON_SWORD)
     expect(warrior.backpack[space]).toBe(OAK_SHIELD)
-    expect(deriveCombatStats(warrior)).toMatchObject({ attackRange: 5, ac: 21 })
+    expect(deriveCombatStats(warrior)).toMatchObject({ attackRange: 5, ac: 16 })
   })
 
   it('stows a two-handed weapon when a shield is equipped', () => {
@@ -487,7 +489,7 @@ describe('dropping and picking up', () => {
     expect(warrior.equipment.offHand).toBeUndefined()
     expect(ground).toEqual([OAK_SHIELD])
     expect(dropEquipped(warrior, 'head', ground)).toBe(false)
-    expect(deriveCombatStats(warrior).ac).toBe(21)
+    expect(deriveCombatStats(warrior).ac).toBe(16)
   })
 
   it('picks an item up into the first empty backpack space', () => {

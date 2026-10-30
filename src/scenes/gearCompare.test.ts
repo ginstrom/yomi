@@ -18,7 +18,7 @@ describe('gear comparisons', () => {
 
   it('names what a modifier adds and takes', () => {
     expect(compareLines(OAK_SHIELD, itemById('oak_shield+braced1')!)).toEqual(['Armor Class: +10 → +13', 'To Hit: none → −5%'])
-    expect(statLines(IRON_SWORD)).toEqual(['Damage: 1d8+3', 'Attack: 5 AP, 1 attack a turn', 'Range: 1 hex', 'Pierces: 15% of armour'])
+    expect(statLines(IRON_SWORD)).toEqual(['Damage: 1d8+3', 'Attack: 5 AP, 1 attack a turn', 'Range: 1 hex', 'Pierces: 1 resistance'])
     expect(statSummary(itemById('yew_bow@3')!)).toBe('1d6+2, 4 AP, range 5, hit +5%')
   })
 })

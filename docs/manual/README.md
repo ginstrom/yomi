@@ -163,7 +163,7 @@ To switch the panel to another hero, click their portrait on the left.
 
 ![The Character tab](images/panel-character.png)
 
-This tab shows the hero's attributes, their level and experience, and what they fight with: hit points, armour class, chance to hit, damage, attack cost, how much armour their blows pierce, action points and critical chance.
+This tab shows the hero's attributes, their level and experience, and what they fight with: hit points, armour class, resistance, chance to hit, damage, attack cost, how much resistance their blows pierce, action points and critical chance.
 
 ### Skills and perks
 
@@ -220,13 +220,13 @@ Hover over a hex to see the path, then click to move there. Each hex costs **1 A
 
 **Click a foe** to attack it. If it is out of reach, the hero first walks into range along the path shown, then strikes. The weapon decides both the cost and the reach:
 
-| Weapon | Damage | AP | Reach | Pierces armour |
+| Weapon | Damage | AP | Reach | Pierces resistance |
 | --- | --- | --- | --- | --- |
-| Iron Dagger | 1d4 | 3 | 1 | 20% |
-| Iron Shortsword | 1d3+1 | 4 | 1 | 10% |
-| Iron Longsword | 1d8+3 | 5 | 1 | 15% |
-| Iron Battle Axe | 1d12+2 | 6 | 1 | 25% |
-| Steel Greatsword (two hands) | 2d6+3 | 7 | 1 | 25% |
+| Iron Dagger | 1d4 | 3 | 1 | — |
+| Iron Shortsword | 1d3+1 | 4 | 1 | — |
+| Iron Longsword | 1d8+3 | 5 | 1 | 1 |
+| Iron Battle Axe | 1d12+2 | 6 | 1 | 2 |
+| Steel Greatsword (two hands) | 2d6+3 | 7 | 1 | 2 |
 | Yew Bow (two hands) | 1d6 | 4 | 5 | — |
 | Wand of Sparks | 1d6 | 5 | 4 | — |
 
@@ -244,7 +244,17 @@ The chance is always kept between 5% and 95%. A hit is **critical** if the roll 
 - **Arc**: +5% from the foe's side and +10% from its rear. For a ranged attack, the arc is judged by the hex next to the target that the shot comes in over.
 - **Helpless**: +20% against a sleeping target.
 
-**Armour piercing**: melee blows ignore part of the foe's armour class (see the table above, and the Armour Breaker and Sunder perks). This makes heavy weapons the answer to heavy armour. Bow shots, wand shots and spells pierce nothing.
+### Armour: dodging and resistance
+
+Defence works in two ways. **Armour class** (from agility, shields and some magic) makes a hero or monster harder to hit. **Resistance** (from body armour, or a monster's own hide or bone plates) takes that many points off the damage of every weapon hit. A hit always does at least 1.
+
+Because resistance comes off every hit, it hurts weapons that hit often for a little, such as the dagger, the shortsword and the bow, much more than weapons that hit hard. Those quick weapons are best against lightly armoured foes. Against heavily armoured ones, reach for a heavy weapon.
+
+**Armour piercing**: melee blows ignore some points of the foe's resistance (see the table above, and the Bearded modifier and the Armour Breaker and Sunder perks). Bow and wand shots pierce nothing. Spells ignore resistance altogether, which makes a mage the other answer to armour.
+
+When you hover a foe you can attack, its nameplate shows your chance to hit and, after piercing, how much damage its armour will stop (for example "60% −3 dmg").
+
+**Regeneration**: trolls heal some hit points at the start of each of their turns. Acid (Acid Arrow, which also eats 2 points of resistance while it lasts) and fire (Fireball and Flame Arrow, for the turn after) stop it.
 
 ### Zones of control and free attacks
 
@@ -300,7 +310,7 @@ The letters beside a unit's health bar show its current effects. An effect lasts
 | --- | --- |
 | Asleep | No AP, no zone of control, easy to hit. Any damage wakes it. |
 | Chilled | −3 AP for a turn |
-| Corroded | −5 armour class, 1d4 damage a turn |
+| Corroded | −5 armour class, −2 resistance, 1d4 damage a turn, no regeneration |
 | Poisoned | 1d6 damage a turn |
 | Shielded | +15 armour class |
 | Protected | +10 armour class |
@@ -308,6 +318,7 @@ The letters beside a unit's health bar show its current effects. An effect lasts
 | Baned | −15 to hit |
 | Hasted | +3 AP |
 | Mirrored | Images take the next hits, and a hit on an image deals no damage |
+| Seared | No regeneration for a turn |
 
 Damage over time strikes at the start of the affected unit's side's turn. Section 11 lists every spell.
 
@@ -403,7 +414,7 @@ You can recruit one of the pre-rolled heroes not already in your company, or **C
 
 ### Gear grades
 
-Every plain weapon, the shield and the breastplate come in three **grades**: plain, **Fine** and **Masterwork**. A Fine weapon does 1 more damage, and a Masterwork one 2 more and hits 5% more often; a Fine shield or breastplate adds 3 to armour class, a Masterwork one 6. A grade never changes a weapon's AP cost, reach or armour piercing. Enchanted items have no grade.
+Every plain weapon, the shield and the breastplate come in three **grades**: plain, **Fine** and **Masterwork**. A Fine weapon does 1 more damage, and a Masterwork one 2 more and hits 5% more often; a Fine shield adds 3 to armour class and a Masterwork one 6; a Fine breastplate adds 1 to resistance and a Masterwork one 2. A grade never changes a weapon's AP cost, reach or armour piercing. Enchanted items have no grade.
 
 ### The trading post
 
@@ -438,12 +449,12 @@ The screen lists every item your heroes wear or carry, then the baggage's, that 
 | --- | --- | --- | --- |
 | Balanced | shortsword, longsword, greatsword | to hit +5 / +10 / +15% | damage −1 |
 | Recurve | bow | damage +1 / +2 / +3 | range −1 |
-| Bearded | battle axe | pierces 10 / 15 / 20 more points of armour | damage −2 |
+| Bearded | battle axe | pierces 1 / 2 / 3 more points of resistance | damage −2 |
 | Keen | dagger, shortsword, longsword | critical +5 / +10 / +15% | damage −1 |
 | Braced | shield | armour class +3 / +5 / +7 | to hit −5% |
 | Light | longsword, battle axe | attack AP −1 | damage −3 / −2 / −1 |
 | Long | bow | range +1 / +2 / +3 | to hit −5% |
-| Reinforced | breastplate | armour class +3 / +5 / +7 | to hit −5% |
+| Reinforced | breastplate | resistance +1 / +2 / +3 | to hit −5% |
 
 A craft costs 5 gold and 5 iron (5 timber for a bow or shield) at grade I, 10 gold and 5 copper at grade II, and 20 gold and 5 crystal at grade III. A Light Longsword costs 4 AP a blow, so a hero who stands still strikes twice a turn.
 
@@ -502,10 +513,10 @@ Spells further out in a school need the spell before them, and their tier asks m
 | --- | --- | --- |
 | Strength | Heavy Hand | +1 melee damage |
 | | Weapon Training | +5% Melee Weapons |
-| | Armour Breaker | Melee blows pierce 15% of armour |
+| | Armour Breaker | Melee blows pierce 1 point of resistance |
 | | Mighty Blow | +2 melee damage |
 | | Weapon Mastery | +10% Melee Weapons |
-| | Sunder | Melee blows pierce 20% more armour |
+| | Sunder | Melee blows pierce 2 more points of resistance |
 | Perception | Deadly Aim | +1 ranged damage |
 | | Marksmanship | +5% Archery |
 | | Far Shot | Ranged weapons reach 2 hexes further |
@@ -532,7 +543,7 @@ Lairs hold loot. Among the items you may find:
 | Item | Effect |
 | --- | --- |
 | Wand of Storms | 1d10+1, 5 AP, reach 5, uses Magic skill |
-| Emberblade | 1d8+4, 5 AP, +10% to hit, pierces 15% |
+| Emberblade | 1d8+4, 5 AP, +10% to hit, pierces 1 |
 | Hawkeye Bow | 1d6+2, 4 AP, reach 6, +10% to hit |
 | Ring of Protection | +5 AC |
 | Ring of Fortune | +5% critical chance |

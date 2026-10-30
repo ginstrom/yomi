@@ -136,12 +136,12 @@ So level 1 widens what can be made, and levels 2 and 3 raise the bar on everythi
 | --- | --- | --- | --- |
 | Balanced | shortsword, longsword, greatsword | to hit +5 / +10 / +15 | damage −1 |
 | Recurve | bow | damage +1 / +2 / +3 | range −1 |
-| Bearded | battle axe | pierces +10 / +15 / +20 points | damage −2 |
+| Bearded | battle axe | pierces +1 / +2 / +3 points of resistance | damage −2 |
 | Keen | dagger, shortsword, longsword | critical +5 / +10 / +15 | damage −1 |
 | Braced | shield | AC +3 / +5 / +7 | to hit −5 |
 | Light | longsword, battle axe | attack AP −1 | damage −3 / −2 / −1 |
 | Long | bow | range +1 / +2 / +3 | to hit −5 |
-| Reinforced | breastplate | AC +3 / +5 / +7 | to hit −5 |
+| Reinforced | breastplate | resistance +1 / +2 / +3 | to hit −5 |
 
 - The worse side is the same at every grade, except Light's, whose grades shrink its cost instead, since its gain (a blow's AP) cannot grow. A Light Longsword strikes for 4 AP, twice a turn: the one to watch in balance runs.
 - No modifier moves the bow off 4 AP, so it keeps its second shot.

@@ -26,8 +26,9 @@ function statWords(stats: ItemStats, ap: number): Array<[string, string]> {
   if (stats.damage) words.push(['Damage', formatDamage(stats.damage)])
   if (stats.attackApCost !== undefined) words.push(['Attack', `${stats.attackApCost} AP, ${attacks(attacksPerTurn(stats, ap)!)}`])
   if (stats.damage) words.push(['Range', `${stats.attackRange ?? 1} ${(stats.attackRange ?? 1) === 1 ? 'hex' : 'hexes'}`])
-  if (stats.armorPierce) words.push(['Pierces', `${stats.armorPierce}% of armour`])
+  if (stats.armorPierce) words.push(['Pierces', `${stats.armorPierce} resistance`])
   if (stats.acBonus) words.push(['Armor Class', signed(stats.acBonus)])
+  if (stats.resistance) words.push(['Resistance', signed(stats.resistance)])
   if (stats.toHit) words.push(['To Hit', signed(stats.toHit, '%')])
   if (stats.critChance) words.push(['Critical', signed(stats.critChance, '%')])
   return words
@@ -38,15 +39,16 @@ export function statLines(item: Item, ap = TYPICAL_AP): string[] {
   return statWords(item.stats ?? {}, ap).map(([label, words]) => `${label}: ${words}`)
 }
 
-/** An item's stats on one line, for a list: "1d8+3, 5 AP, pierces 15%" or "AC +10". */
+/** An item's stats on one line, for a list: "1d8+3, 5 AP, pierces 1" or "AC +10, resists 2". */
 export function statSummary(item: Item): string {
   const s = item.stats ?? {}
   const parts: string[] = []
   if (s.damage) parts.push(formatDamage(s.damage))
   if (s.attackApCost !== undefined) parts.push(`${s.attackApCost} AP`)
   if (s.attackRange !== undefined) parts.push(`range ${s.attackRange}`)
-  if (s.armorPierce) parts.push(`pierces ${s.armorPierce}%`)
+  if (s.armorPierce) parts.push(`pierces ${s.armorPierce}`)
   if (s.acBonus) parts.push(`AC ${signed(s.acBonus)}`)
+  if (s.resistance) parts.push(`resists ${s.resistance}`)
   if (s.toHit) parts.push(`hit ${signed(s.toHit, '%')}`)
   if (s.critChance) parts.push(`crit ${signed(s.critChance, '%')}`)
   return parts.join(', ')

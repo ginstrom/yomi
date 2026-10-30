@@ -3,6 +3,48 @@
     {
       "frames": [
         {
+          "duration": 560,
+          "frame": "armored_troll/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 560,
+          "frame": "armored_troll/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "armored_troll/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 160,
+          "frame": "armored_troll/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "armored_troll/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "armored_troll/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "armored_troll/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "armored_troll/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 260,
           "frame": "camp_fire/base",
           "key": "atlas"
@@ -384,6 +426,48 @@
     {
       "frames": [
         {
+          "duration": 520,
+          "frame": "hobgoblin/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 520,
+          "frame": "hobgoblin/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "hobgoblin/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "hobgoblin/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "hobgoblin/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "hobgoblin/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "hobgoblin/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "hobgoblin/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "horror/idle_0",
           "key": "atlas"
@@ -605,6 +689,48 @@
         }
       ],
       "key": "shaman/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "troll/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 560,
+          "frame": "troll/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "troll/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 160,
+          "frame": "troll/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "troll/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "troll/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "troll/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "troll/walk",
       "repeat": -1
     },
     {

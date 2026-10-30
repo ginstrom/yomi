@@ -1,5 +1,5 @@
-import type { DamageRoll, RNG } from '../combat/combat.ts'
-import { SPELLS, isHealing, type SpellId } from '../combat/spells.ts'
+import { damageThrough, effectiveResistance, hitChance, type DamageRoll, type RNG } from '../combat/combat.ts'
+import { HELPLESS_BONUS, SPELLS, isHealing, type SpellId } from '../combat/spells.ts'
 import { hexDistance, type Hex } from '../grid/hex.ts'
 import {
   ARC_BONUS,
@@ -7,6 +7,7 @@ import {
   MOVE_AP_COST_PER_HEX,
   attackArc,
   castTouches,
+  effectiveStats,
   flankersOf,
   hasStatus,
   type Action,
@@ -41,8 +42,10 @@ const END_TURN: Action = { type: 'end_turn' }
  * healthiest foe to sleep while two stand; strikes the weakest foe with its
  * hardest-hitting spell. A caster that knows a heal keeps the mana for its
  * cheapest, spending it only on healing. Protect and Haste it never casts.
- * Otherwise a unit attacks the foe in range it has the biggest to-hit bonus
- * against (flanking, side or rear) if it can afford to; otherwise, if no foe
+ * Otherwise a unit attacks the foe in range it would do the most harm to if
+ * it can afford to: the chance to hit (flanking, side and rear included)
+ * times the damage of a hit through the foe's resistance, so that it leaves
+ * the heavily armoured to weapons that pierce them; otherwise, if no foe
  * is in reach, it closes on the nearest one, preferring the cheapest move
  * that leaves AP to strike from where it ends, then the smallest gap, then
  * the cheapest move. Its reach is that of a damaging spell of one foe it has
@@ -61,7 +64,7 @@ const aggressive: Policy = ({ state, legal }) => {
       blessCast(casts) ??
       sleepCast(state, casts) ??
       strikeCast(casts) ??
-      bestBonusAttack(state, self, own) ??
+      bestAttack(state, self, own) ??
       closingMove(state, self, own)
     if (choice) return choice
   }
@@ -186,19 +189,29 @@ function reach(self: UnitSnapshot): { range: number; apCost: number } {
   return spell ? { range: spell.range, apCost: spell.apCost } : { range: self.attackRange, apCost: self.attackApCost }
 }
 
-function bestBonusAttack(state: BattleState, self: UnitSnapshot, own: readonly Action[]): Action | null {
+/** The harm an attack would do on average: its chance to hit times the average hit through the target's resistance, near enough. */
+function expectedHarm(state: BattleState, self: UnitSnapshot, target: UnitSnapshot): number {
+  const attacker = effectiveStats({ stats: self, statuses: self.statuses })
+  const defender = effectiveStats({ stats: target, statuses: target.statuses })
+  const bonus =
+    flankersOf(state.units, self, target).length * FLANK_BONUS_PER_ALLY +
+    ARC_BONUS[attackArc(target, self.position)] +
+    (hasStatus(target, 'asleep') ? HELPLESS_BONUS : 0)
+  const { count, sides, bonus: flat } = attacker.damage
+  const averageHit = damageThrough(count * ((sides + 1) / 2) + flat, effectiveResistance(attacker, defender.resistance ?? 0))
+  return hitChance(attacker, defender.ac, bonus) * averageHit
+}
+
+function bestAttack(state: BattleState, self: UnitSnapshot, own: readonly Action[]): Action | null {
   let best: Action | null = null
-  let bestBonus = -1
+  let bestHarm = -1
   for (const action of own) {
     if (action.type !== 'attack') continue
     const target = state.units.find((u) => u.id === action.target)
-    const bonus = target
-      ? flankersOf(state.units, self, target).length * FLANK_BONUS_PER_ALLY +
-        ARC_BONUS[attackArc(target, self.position)]
-      : 0
-    if (bonus > bestBonus) {
+    const harm = target ? expectedHarm(state, self, target) : 0
+    if (harm > bestHarm) {
       best = action
-      bestBonus = bonus
+      bestHarm = harm
     }
   }
   return best

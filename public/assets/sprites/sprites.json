@@ -1,4 +1,138 @@
 {
+  "armored_troll": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          },
+          {
+            "frame": "idle_1",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 160
+          },
+          {
+            "frame": "walk_1",
+            "ms": 160
+          },
+          {
+            "frame": "walk_0",
+            "ms": 160
+          },
+          {
+            "frame": "walk_2",
+            "ms": 160
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      1,
+      1,
+      27,
+      31
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "armored_troll.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          1,
+          1,
+          27,
+          31
+        ],
+        "file": "armored_troll__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          1,
+          2,
+          27,
+          30
+        ],
+        "file": "armored_troll__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          1,
+          1,
+          27,
+          31
+        ],
+        "file": "armored_troll__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          1,
+          1,
+          27,
+          31
+        ],
+        "file": "armored_troll__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          1,
+          1,
+          27,
+          31
+        ],
+        "file": "armored_troll__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          10.5,
+          13.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          10.5,
+          14.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          10.5,
+          13.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          10.5,
+          13.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          10.5,
+          13.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
   "camp_fire": {
     "anchor": [
       12,
@@ -1379,6 +1513,140 @@
         "chest": [
           16.5,
           17.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "hobgoblin": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 520
+          },
+          {
+            "frame": "idle_1",
+            "ms": 520
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_1",
+            "ms": 140
+          },
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_2",
+            "ms": 140
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      6,
+      0,
+      25,
+      32
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "hobgoblin.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          6,
+          0,
+          25,
+          32
+        ],
+        "file": "hobgoblin__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          6,
+          1,
+          25,
+          31
+        ],
+        "file": "hobgoblin__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          6,
+          0,
+          25,
+          32
+        ],
+        "file": "hobgoblin__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          6,
+          0,
+          25,
+          32
+        ],
+        "file": "hobgoblin__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          6,
+          0,
+          25,
+          32
+        ],
+        "file": "hobgoblin__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          15.5,
+          16.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          15.5,
+          17.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          15.5,
+          16.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          15.5,
+          16.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          15.5,
+          16.5
         ]
       }
     },
@@ -2928,6 +3196,140 @@
     "size": [
       16,
       16
+    ]
+  },
+  "troll": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          },
+          {
+            "frame": "idle_1",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 160
+          },
+          {
+            "frame": "walk_1",
+            "ms": 160
+          },
+          {
+            "frame": "walk_0",
+            "ms": 160
+          },
+          {
+            "frame": "walk_2",
+            "ms": 160
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      1,
+      2,
+      27,
+      30
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "troll.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          1,
+          2,
+          27,
+          30
+        ],
+        "file": "troll__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          1,
+          3,
+          27,
+          29
+        ],
+        "file": "troll__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          1,
+          2,
+          27,
+          30
+        ],
+        "file": "troll__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          1,
+          2,
+          27,
+          30
+        ],
+        "file": "troll__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          1,
+          2,
+          27,
+          30
+        ],
+        "file": "troll__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          10.5,
+          13.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          10.5,
+          14.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          10.5,
+          13.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          10.5,
+          13.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          10.5,
+          13.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
     ]
   },
   "warrior": {

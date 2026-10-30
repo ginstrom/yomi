@@ -25,7 +25,7 @@ export interface Modifier {
 
 const addDamage = (stats: ItemStats, by: number): ItemStats =>
   stats.damage ? { ...stats, damage: { ...stats.damage, bonus: stats.damage.bonus + by } } : stats
-const add = (stats: ItemStats, key: 'toHit' | 'critChance' | 'armorPierce' | 'acBonus' | 'attackApCost' | 'attackRange', by: number): ItemStats => ({
+const add = (stats: ItemStats, key: 'toHit' | 'critChance' | 'armorPierce' | 'acBonus' | 'resistance' | 'attackApCost' | 'attackRange', by: number): ItemStats => ({
   ...stats,
   [key]: (stats[key] ?? 0) + by,
 })
@@ -56,8 +56,8 @@ export const MODIFIERS: Record<ModifierId, Modifier> = {
     name: 'Bearded',
     fits: ['iron_battle_axe'],
     unlock: 1,
-    apply: (s, g) => addDamage(add(s, 'armorPierce', step([10, 15, 20], g)), -2),
-    better: (g) => `pierces ${step([10, 15, 20], g)} more points of armour`,
+    apply: (s, g) => addDamage(add(s, 'armorPierce', g), -2),
+    better: (g) => `pierces ${g} more ${g === 1 ? 'point' : 'points'} of resistance`,
     worse: () => 'damage −2',
   },
   keen: {
@@ -101,8 +101,8 @@ export const MODIFIERS: Record<ModifierId, Modifier> = {
     name: 'Reinforced',
     fits: ['steel_armor'],
     unlock: 2,
-    apply: (s, g) => add(add(s, 'acBonus', step([3, 5, 7], g)), 'toHit', -5),
-    better: (g) => `armour class +${step([3, 5, 7], g)}`,
+    apply: (s, g) => add(add(s, 'resistance', g), 'toHit', -5),
+    better: (g) => `resistance +${g}`,
     worse: () => 'to hit −5%',
   },
 }
