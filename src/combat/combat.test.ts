@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, damageThrough, effectiveResistance, foeAtLevel, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, type CombatantStats } from './combat.ts'
+import { GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, damageThrough, effectiveResistance, foeAtLevel, foeYardstick, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, type CombatantStats } from './combat.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -173,5 +173,68 @@ describe('foeAtLevel', () => {
     expect(foeAtLevel(GOBLIN_STATS, 5).resistance).toBe(GOBLIN_STATS.resistance)
     expect(foeAtLevel(TROLL_STATS, 4).regeneration).toBe(TROLL_STATS.regeneration)
     expect(foeAtLevel(GOBLIN_STATS, 4).regeneration).toBeUndefined()
+  })
+
+  it('is the same with a native level of 1 as without one', () => {
+    for (let level = 0; level <= 6; level++) {
+      expect(foeAtLevel(GOBLIN_STATS, level, 1)).toEqual(foeAtLevel(GOBLIN_STATS, level))
+      expect(foeAtLevel(GOBLIN_SHAMAN_STATS, level, 1)).toEqual(foeAtLevel(GOBLIN_SHAMAN_STATS, level))
+    }
+  })
+
+  it('leaves a monster as it is at its native level, and treats a lower level as the native one', () => {
+    expect(foeAtLevel(TROLL_STATS, 15, 15)).toEqual(TROLL_STATS)
+    expect(foeAtLevel(TROLL_STATS, 9, 15)).toEqual(TROLL_STATS)
+    expect(foeAtLevel(GOBLIN_SHAMAN_STATS, 3, 8)).toEqual(GOBLIN_SHAMAN_STATS)
+  })
+
+  it('adds to a monster the steps of the levels above its native one', () => {
+    const base = { ...GOBLIN_STATS, maxHp: 60 }
+    expect(foeAtLevel(base, 16, 15)).toEqual({ ...base, maxHp: 64, ac: base.ac + 5, toHit: base.toHit + 5 })
+    expect(foeAtLevel(base, 17, 15)).toEqual({
+      ...base,
+      maxHp: Math.round((60 * (1 + 0.7 * 16)) / (1 + 0.7 * 14)),
+      ac: base.ac + 10,
+      toHit: base.toHit + 10,
+      damage: { ...base.damage, bonus: base.damage.bonus + 1 },
+    })
+  })
+
+  it('adds mana and spell chance to a caster from its native level up', () => {
+    expect(foeAtLevel(GOBLIN_SHAMAN_STATS, 7, 5).magic).toEqual({
+      ...GOBLIN_SHAMAN_STATS.magic,
+      maxMana: GOBLIN_SHAMAN_STATS.magic!.maxMana + 6,
+      skill: GOBLIN_SHAMAN_STATS.magic!.skill + 10,
+    })
+  })
+})
+
+describe('foeYardstick', () => {
+  it('is the ready-made fighter\'s growth at level 1', () => {
+    const y = foeYardstick(1)
+    expect(y.ac).toEqual([5, 25])
+    expect(y.toHit).toEqual([80, 100])
+    expect(y.maxHp[0]).toBeCloseTo(31.5)
+    expect(y.maxHp[1]).toBeCloseTo(63)
+    expect(y.meanDamage[0]).toBeCloseTo(3.2)
+    expect(y.meanDamage[1]).toBeCloseTo(32 / 6)
+  })
+
+  it('interpolates linearly between the levels measured', () => {
+    // Level 7 is two fifths of the way from 5 to 10: hit 90.8, fighter 68 HP, 11.3 damage.
+    const y = foeYardstick(7)
+    expect(y.ac[0]).toBeCloseTo(35.8)
+    expect(y.ac[1]).toBeCloseTo(55.8)
+    expect(y.toHit).toEqual([80, 100])
+    expect(y.maxHp[0]).toBeCloseTo(33.9)
+    expect(y.maxHp[1]).toBeCloseTo(67.8)
+    expect(y.meanDamage[0]).toBeCloseTo(6.8)
+    expect(y.meanDamage[1]).toBeCloseTo(68 / 6)
+  })
+
+  it('holds the level 20 figures past level 20', () => {
+    expect(foeYardstick(25)).toEqual(foeYardstick(20))
+    expect(foeYardstick(20).ac).toEqual([69, 89])
+    expect(foeYardstick(20).meanDamage[0]).toBeCloseTo(13.3)
   })
 })

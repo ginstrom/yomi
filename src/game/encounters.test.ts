@@ -5,11 +5,28 @@ import { POLICIES } from '../engine/policies.ts'
 import { xpToNextLevel } from '../character/progression.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
 import { hexDistance } from '../grid/hex.ts'
-import { BLIGHT_HORROR_STATS, GOBLIN_STATS, HOBGOBLIN_CHIEF_STATS, TROLL_STATS, foeAtLevel } from '../combat/combat.ts'
+import {
+  ARMORED_TROLL_STATS,
+  BLIGHT_HORROR_STATS,
+  GOBLIN_SHAMAN_STATS,
+  GOBLIN_STATS,
+  HOBGOBLIN_CHIEF_STATS,
+  KOBOLD_STATS,
+  TROLL_STATS,
+  foeAtLevel,
+  foeYardstick,
+  type CombatantStats,
+} from '../combat/combat.ts'
 import {
   ENCOUNTERS,
+  ENCOUNTER_BANDS,
+  FOE_NATIVE_LEVEL,
   FOE_XP,
   MAX_THREAT,
+  encountersFor,
+  foeStats,
+  type EncounterId,
+  type MonsterKind,
   goblinRaid,
   heroId,
   hobgoblinWarband,
@@ -173,5 +190,113 @@ describe('xpReward', () => {
   it('makes a lone Goblin, or any first battle, worth a new hero\'s second level', () => {
     expect(FOE_XP.goblin).toBeGreaterThanOrEqual(xpToNextLevel(1))
     for (const build of Object.values(ENCOUNTERS)) expect(xpReward(build(party()))).toBeGreaterThanOrEqual(xpToNextLevel(1))
+  })
+})
+
+describe('the encounters\' bands and counts', () => {
+  const ids = Object.keys(ENCOUNTERS) as EncounterId[]
+  const foeCount = (id: EncounterId, threat: number) =>
+    ENCOUNTERS[id](party(), threat).setup.units.filter((u) => u.side === 'enemy').length
+
+  it('gives each of today\'s encounters the band 1 to 5', () => {
+    expect(ids.length).toBe(5)
+    for (const id of ids) expect(ENCOUNTER_BANDS[id]).toEqual({ min: 1, max: 5 })
+  })
+
+  it('fields the foes it always has: 2, 3, 3, 3, 4 at threats 1 to 5', () => {
+    for (const id of ids) expect([1, 2, 3, 4, 5].map((threat) => foeCount(id, threat))).toEqual([2, 3, 3, 3, 4])
+  })
+
+  it('fights a threat outside its band as the nearest threat in it, and a fractional one as the whole below', () => {
+    for (const id of ids) {
+      expect(ENCOUNTERS[id](party(), 0)).toEqual(ENCOUNTERS[id](party(), 1))
+      expect(ENCOUNTERS[id](party(), 9)).toEqual(ENCOUNTERS[id](party(), 5))
+      expect(ENCOUNTERS[id](party(), 3.7)).toEqual(ENCOUNTERS[id](party(), 3))
+      expect(ENCOUNTERS[id](party(), 0).threat).toBe(1)
+      expect(ENCOUNTERS[id](party(), 9).threat).toBe(5)
+      expect(ENCOUNTERS[id](party(), 3.7).threat).toBe(3)
+    }
+  })
+
+  it('lists the encounters whose band holds a threat, in order', () => {
+    expect(encountersFor(3)).toEqual(ids)
+    expect(encountersFor(1)).toEqual(ids)
+    expect(encountersFor(5)).toEqual(ids)
+    expect(encountersFor(6)).toEqual([])
+    expect(encountersFor(0)).toEqual([])
+  })
+
+  it('keeps the top of today\'s map at 5', () => {
+    expect(MAX_THREAT).toBe(5)
+  })
+})
+
+/** Every monster kind's level 1 block, to check `foeStats` against. */
+const BLOCKS: Record<MonsterKind, CombatantStats> = {
+  goblin: GOBLIN_STATS,
+  kobold: KOBOLD_STATS,
+  shaman: GOBLIN_SHAMAN_STATS,
+  horror: BLIGHT_HORROR_STATS,
+  hobgoblin: HOBGOBLIN_CHIEF_STATS,
+  troll: TROLL_STATS,
+  armored_troll: ARMORED_TROLL_STATS,
+}
+
+describe('foeStats', () => {
+  const kinds = Object.keys(BLOCKS) as MonsterKind[]
+
+  it('gives every monster kind a native level, 1 for today\'s', () => {
+    for (const kind of kinds) expect(FOE_NATIVE_LEVEL[kind]).toBe(1)
+  })
+
+  it('scales a monster from its block by foeAtLevel and its native level', () => {
+    for (const kind of kinds) {
+      for (let level = 1; level <= 5; level++) {
+        expect(foeStats(kind, level)).toEqual(foeAtLevel(BLOCKS[kind], level, FOE_NATIVE_LEVEL[kind]))
+      }
+    }
+  })
+})
+
+describe('the foe yardstick', () => {
+  type Field = 'ac' | 'toHit' | 'maxHp' | 'meanDamage'
+  /** The fields a kind is meant to sit outside the yardstick on, and why. */
+  const EXCEPTIONS: ReadonlyArray<{ kind: MonsterKind; field: Field; reason: string }> = [
+    { kind: 'goblin', field: 'maxHp', reason: 'level 1 foes are a hero\'s own size or less: a hero at level 1 has 32 hit points' },
+    { kind: 'goblin', field: 'toHit', reason: 'level 1 foes hit less often than the band; they catch up by 5 a level' },
+    { kind: 'kobold', field: 'maxHp', reason: 'the Kobold is a weak foe, worth 50 XP, and dies to a blow or two' },
+    { kind: 'kobold', field: 'toHit', reason: 'the Kobold is a weak foe, and level 1 foes hit less often than the band' },
+    { kind: 'shaman', field: 'maxHp', reason: 'the Goblin Shaman is frail, a caster to be hunted down' },
+    { kind: 'shaman', field: 'toHit', reason: 'the Goblin Shaman\'s weapon is a staff it seldom uses; its spells strike by their own skill' },
+    { kind: 'horror', field: 'meanDamage', reason: 'the Blight Horror is a boss: two claws of 2d6+2 a turn and a death cloud, meant to be fought at the top threat only' },
+    { kind: 'horror', field: 'toHit', reason: 'a boss\'s level 1 block is a sketch for foeAtLevel to raise; it hits as other level 1 foes do' },
+    { kind: 'hobgoblin', field: 'maxHp', reason: 'the Hobgoblin Chief\'s mail (resistance 4) stands for hit points, so its pool is small' },
+    { kind: 'hobgoblin', field: 'meanDamage', reason: 'a morning star that pierces armour; a level 1 foe\'s damage is high against a 32 hit point fighter' },
+    { kind: 'hobgoblin', field: 'toHit', reason: 'level 1 foes hit less often than the band; they catch up by 5 a level' },
+    { kind: 'troll', field: 'maxHp', reason: 'the Troll regenerates 3 a turn, which does the work of hit points' },
+    { kind: 'troll', field: 'meanDamage', reason: 'two claws a turn, to make up for hit points a regenerating foe loses' },
+    { kind: 'troll', field: 'toHit', reason: 'level 1 foes hit less often than the band; they catch up by 5 a level' },
+    { kind: 'armored_troll', field: 'maxHp', reason: 'plates (resistance 5) and regeneration stand for hit points, so its pool is small' },
+    { kind: 'armored_troll', field: 'meanDamage', reason: 'one heavy blow of 2d6+2 a turn, the damage of a foe that is a danger in melee' },
+    { kind: 'armored_troll', field: 'toHit', reason: 'easy to hit and slow to strike: level 1 foes hit less often than the band' },
+  ]
+
+  const meanDamage = (s: CombatantStats) =>
+    Math.max(1, Math.floor(s.actionPoints / s.attackApCost)) * ((s.damage.count * (s.damage.sides + 1)) / 2 + s.damage.bonus)
+
+  it.each(Object.keys(BLOCKS) as MonsterKind[])('holds the %s to the yardstick at its native level, but for named exceptions', (kind) => {
+    const level = FOE_NATIVE_LEVEL[kind]
+    const stats = foeStats(kind, level)
+    const yardstick = foeYardstick(level)
+    const values: Record<Field, number> = { ac: stats.ac, toHit: stats.toHit, maxHp: stats.maxHp, meanDamage: meanDamage(stats) }
+    const outside = (Object.keys(values) as Field[]).filter(
+      (field) => values[field] < yardstick[field][0] || values[field] > yardstick[field][1],
+    )
+    const named = EXCEPTIONS.filter((e) => e.kind === kind).map((e) => e.field)
+    expect(outside.sort(), `${kind}: ${outside.map((f) => `${f} ${values[f]} outside [${yardstick[f]}]`).join('; ')}`).toEqual(named.sort())
+  })
+
+  it('names a reason for every exception', () => {
+    for (const e of EXCEPTIONS) expect(e.reason.length).toBeGreaterThan(10)
   })
 })

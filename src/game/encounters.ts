@@ -46,8 +46,14 @@ function partyKinds(party: readonly Fighter[]): Record<UnitId, UnitKind> {
   return Object.fromEntries(party.map((_, i) => [heroId(i), 'warrior']))
 }
 
+/** Monsters: stat blocks scaled by `foeAtLevel` from their native level. */
+export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll'
+
+/** What a foe can be: a monster kind, and in time others. */
+export type FoeKind = MonsterKind
+
 /** What a unit is, for drawing it; the engine only knows its stats. */
-export type UnitKind = 'warrior' | 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll'
+export type UnitKind = 'warrior' | FoeKind
 
 /**
  * The experience beating a level 1 unit of each kind is worth. An even match for a
@@ -76,23 +82,19 @@ export interface Encounter {
   threat: number
 }
 
-/**
- * How many foes a battle has at each threat, from 1 up, tuned for a new
- * game's ready-made party of three. Numbers tell more than levels do, and they tell
- * twice: a foe more is a harder battle now and, by the experience it is
- * worth, a stronger party in every battle after. So a count raised at one
- * threat can make the next threat easier; judge a change by a campaign run
- * (`npm run simulate -- --campaign`), not by the battle it changes.
- */
-const FOES_AT_THREAT = [2, 3, 3, 3, 4]
+/** The highest threat on today's map, and `threatAt`'s cap until the map grows. */
+export const MAX_THREAT = 5
 
-/** The most dangerous a battle gets; any threat above it is fought as this. */
-export const MAX_THREAT = FOES_AT_THREAT.length
+/** The threats an encounter is fought at, from `min` to `max`; any threat outside is fought as the nearest in it. */
+export interface ThreatBand {
+  min: number
+  max: number
+}
 
 /** A foe an encounter can field; a setup fields the first few of its list. */
 interface FoeSlot {
   id: UnitId
-  kind: Exclude<UnitKind, 'warrior'>
+  kind: FoeKind
   /** Each foe of a battle has a name of its own, so the log tells them apart. */
   name: string
   at: readonly [number, number]
@@ -100,7 +102,7 @@ interface FoeSlot {
   fromThreat?: number
 }
 
-const FOE_STATS: Record<FoeSlot['kind'], CombatantStats> = {
+const FOE_STATS: Record<MonsterKind, CombatantStats> = {
   goblin: GOBLIN_STATS,
   kobold: KOBOLD_STATS,
   shaman: GOBLIN_SHAMAN_STATS,
@@ -108,6 +110,22 @@ const FOE_STATS: Record<FoeSlot['kind'], CombatantStats> = {
   hobgoblin: HOBGOBLIN_CHIEF_STATS,
   troll: TROLL_STATS,
   armored_troll: ARMORED_TROLL_STATS,
+}
+
+/** The level each monster kind's stat block is written for; it grows from there (`foeAtLevel`). */
+export const FOE_NATIVE_LEVEL: Record<MonsterKind, number> = {
+  goblin: 1,
+  kobold: 1,
+  shaman: 1,
+  horror: 1,
+  hobgoblin: 1,
+  troll: 1,
+  armored_troll: 1,
+}
+
+/** A foe of `kind` at `level`: a monster by `foeAtLevel` from its native level. */
+export function foeStats(kind: FoeKind, level: number): CombatantStats {
+  return foeAtLevel(FOE_STATS[kind], level, FOE_NATIVE_LEVEL[kind])
 }
 
 /**
@@ -118,14 +136,35 @@ const FOE_STATS: Record<FoeSlot['kind'], CombatantStats> = {
 const BOARD = { cols: 12, rows: 9 }
 
 /**
- * The party against the foes `threat` calls for: the first `FOES_AT_THREAT`
- * of `slots` that take the field at that threat (`fromThreat`), every one at
- * level `threat` (`foeAtLevel`). The numbers behind
- * both were chosen with the simulator; see the rules of scaling in CLAUDE.md.
+ * An encounter as data: the foes it can field, in the order they take the
+ * field, the threats it is fought at, and how many of them fight at each.
  */
-function encounter(party: readonly Fighter[], slots: readonly FoeSlot[], threat: number): Encounter {
-  const level = Math.min(Math.max(1, Math.floor(threat)), MAX_THREAT)
-  const foes = slots.filter((slot) => (slot.fromThreat ?? 1) <= level).slice(0, FOES_AT_THREAT[level - 1])
+interface EncounterDef {
+  slots: readonly FoeSlot[]
+  band: ThreatBand
+  /**
+   * How many foes fight at each threat of the band, from `band.min` up, tuned
+   * for a new game's ready-made party of three. Numbers tell more than
+   * levels do, and they tell twice: a foe more is a harder battle now and, by
+   * the experience it is worth, a stronger party in every battle after. So a
+   * count raised at one threat can make the next threat easier; judge a change
+   * by a campaign run (`npm run simulate -- --campaign`), not by the battle it
+   * changes. One count for each threat of the band.
+   */
+  counts: readonly number[]
+}
+
+/**
+ * The party against the foes `threat` calls for. The level is the threat
+ * (a whole number) held within the band; the foes are the slots that take the
+ * field at that level (`fromThreat`), cut to the band's count for it, each
+ * a monster at that level (`foeStats`). The numbers behind the counts were
+ * chosen with the simulator; see the rules of scaling in CLAUDE.md.
+ */
+function encounter(party: readonly Fighter[], { slots, band, counts }: EncounterDef, threat: number): Encounter {
+  if (counts.length !== band.max - band.min + 1) throw new Error('An encounter needs a foe count for each threat of its band')
+  const level = Math.min(Math.max(Math.floor(threat), band.min), band.max)
+  const foes = slots.filter((slot) => (slot.fromThreat ?? 1) <= level).slice(0, counts[level - band.min])
   return {
     setup: {
       board: BOARD,
@@ -134,7 +173,7 @@ function encounter(party: readonly Fighter[], slots: readonly FoeSlot[], threat:
         ...foes.map(({ id, kind, name, at }): UnitSetup => ({
           id,
           side: 'enemy',
-          stats: { ...foeAtLevel(FOE_STATS[kind], level), name },
+          stats: { ...foeStats(kind, level), name },
           position: offsetToHex(...at),
         })),
       ],
@@ -144,7 +183,7 @@ function encounter(party: readonly Fighter[], slots: readonly FoeSlot[], threat:
   }
 }
 
-const GOBLIN_RAID: readonly FoeSlot[] = [
+const GOBLIN_RAID_SLOTS: readonly FoeSlot[] = [
   { id: 'goblin', kind: 'goblin', name: 'Goblin', at: [8, 4] },
   { id: 'kobold', kind: 'kobold', name: 'Kobold', at: [9, 2] },
   // Third, so it takes the field from threat 2; at the back, off the party's hexes.
@@ -154,7 +193,7 @@ const GOBLIN_RAID: readonly FoeSlot[] = [
   { id: 'brute', kind: 'goblin', name: 'Goblin Brute', at: [9, 3] },
 ]
 
-const KOBOLD_SCOUTS: readonly FoeSlot[] = [
+const KOBOLD_SCOUTS_SLOTS: readonly FoeSlot[] = [
   { id: 'scout', kind: 'kobold', name: 'Kobold Scout', at: [8, 2] },
   { id: 'tracker', kind: 'kobold', name: 'Kobold Tracker', at: [8, 6] },
   { id: 'trapper', kind: 'kobold', name: 'Kobold Trapper', at: [9, 4] },
@@ -163,7 +202,7 @@ const KOBOLD_SCOUTS: readonly FoeSlot[] = [
 ]
 
 // The Chief first, so it takes the field at any threat: the armoured foe of the near lands.
-const HOBGOBLIN_WARBAND: readonly FoeSlot[] = [
+const HOBGOBLIN_WARBAND_SLOTS: readonly FoeSlot[] = [
   { id: 'chief', kind: 'hobgoblin', name: 'Hobgoblin Chief', at: [8, 4] },
   { id: 'goblin', kind: 'goblin', name: 'Goblin', at: [8, 2] },
   { id: 'shaman', kind: 'shaman', name: 'Goblin Shaman', at: [9, 4] },
@@ -174,7 +213,7 @@ const HOBGOBLIN_WARBAND: readonly FoeSlot[] = [
 // The Armoured Troll only at threat 5, a minion of the far lands; below that a goblin fills its place. At
 // threat 4 the ready-made party, a longsword, a bow and a wand, could not get through its armour and its
 // regeneration together (7 battles won in 500 at the party's level).
-const TROLL_LAIR: readonly FoeSlot[] = [
+const TROLL_LAIR_SLOTS: readonly FoeSlot[] = [
   { id: 'troll', kind: 'troll', name: 'Troll', at: [8, 4] },
   { id: 'goblin', kind: 'goblin', name: 'Goblin Herder', at: [8, 2] },
   { id: 'armored', kind: 'armored_troll', name: 'Armoured Troll', at: [9, 4], fromThreat: 5 },
@@ -183,13 +222,22 @@ const TROLL_LAIR: readonly FoeSlot[] = [
 ]
 
 // The Horror first, so it takes the field at any threat; the Source is fought at the top.
-const SOURCE_GUARDIANS: readonly FoeSlot[] = [
+const SOURCE_GUARDIANS_SLOTS: readonly FoeSlot[] = [
   { id: 'horror', kind: 'horror', name: 'Blight Horror', at: [8, 4] },
   { id: 'brute', kind: 'goblin', name: 'Goblin Brute', at: [8, 2] },
   { id: 'shaman', kind: 'shaman', name: 'Blight Shaman', at: [9, 4] },
   { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [8, 6] },
   { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [9, 6] },
 ]
+
+/** Today's encounters are fought at threats 1 to 5, with these many foes at each. */
+const TODAY = { band: { min: 1, max: 5 }, counts: [2, 3, 3, 3, 4] } as const satisfies Omit<EncounterDef, 'slots'>
+
+const GOBLIN_RAID: EncounterDef = { slots: GOBLIN_RAID_SLOTS, ...TODAY }
+const KOBOLD_SCOUTS: EncounterDef = { slots: KOBOLD_SCOUTS_SLOTS, ...TODAY }
+const HOBGOBLIN_WARBAND: EncounterDef = { slots: HOBGOBLIN_WARBAND_SLOTS, ...TODAY }
+const TROLL_LAIR: EncounterDef = { slots: TROLL_LAIR_SLOTS, ...TODAY }
+const SOURCE_GUARDIANS: EncounterDef = { slots: SOURCE_GUARDIANS_SLOTS, ...TODAY }
 
 /**
  * A Goblin and a Kobold across the board from the party; where the threat is
@@ -248,3 +296,19 @@ export const ENCOUNTERS = {
 } satisfies Record<string, (party: readonly Fighter[], threat?: number) => Encounter>
 
 export type EncounterId = keyof typeof ENCOUNTERS
+
+/** The threats each encounter is fought at, from its definition. */
+export const ENCOUNTER_BANDS: Record<EncounterId, ThreatBand> = {
+  goblin_raid: GOBLIN_RAID.band,
+  kobold_scouts: KOBOLD_SCOUTS.band,
+  hobgoblin_warband: HOBGOBLIN_WARBAND.band,
+  troll_lair: TROLL_LAIR.band,
+  source_guardians: SOURCE_GUARDIANS.band,
+}
+
+/** The encounters whose band holds `threat`, in `ENCOUNTERS` order. */
+export function encountersFor(threat: number): EncounterId[] {
+  return (Object.keys(ENCOUNTERS) as EncounterId[]).filter(
+    (id) => threat >= ENCOUNTER_BANDS[id].min && threat <= ENCOUNTER_BANDS[id].max,
+  )
+}

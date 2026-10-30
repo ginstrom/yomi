@@ -237,7 +237,7 @@ fight?: (encounter: EncounterId, threat: number) => void
 
 | Step | Task | Outcome | Depends on | Status |
 | --- | --- | --- | --- | --- |
-| 01 | [Native levels, encounter bands and the yardstick](01-native-levels-and-bands.md) | `foeAtLevel` with native levels, `foeStats`, bands and counts per encounter, `encountersFor`, `foeYardstick` and its test. The campaign summary is identical. | — | pending |
+| 01 | [Native levels, encounter bands and the yardstick](01-native-levels-and-bands.md) | `foeAtLevel` with native levels, `foeStats`, bands and counts per encounter, `encountersFor`, `foeYardstick` and its test. The campaign summary is identical. | — | done |
 | 02 | [Bandit sprites](02-bandit-sprites.md) | Five bandit sprites in the atlas, with `idle` and `walk`, and the sprites README updated | — | pending |
 | 03 | [Bandits and the Bandit Camp](03-bandits-and-camp.md) | `bandits.ts`, the bandit kinds, XP, the `bandit_camp` encounter. Bandits drawn in battle. | 01, 02 | pending |
 | 04 | [Bandits on the map](04-map-and-spawns.md) | Two locations become bandit camps; spawns by band with a Bandit Gang; `SAVE_VERSION` 12 | 03 | pending |

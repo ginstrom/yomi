@@ -338,13 +338,16 @@ export const FOE_MANA_PER_LEVEL = 3
  * pace with it. Its resistance and regeneration are its kind's at any
  * level: how heavily a monster is armoured is what sets the weapons to fight
  * it with, and a regeneration that grew with its hit points outpaced what a
- * party deals in a round.
+ * party deals in a round. A kind with a `native` level above 1 has its block
+ * written for that level: it is that block at `native` (a lower level is
+ * taken as `native`), and grows from there by the same steps.
  */
-export function foeAtLevel(base: CombatantStats, level: number): CombatantStats {
-  const above = Math.max(0, level - 1)
+export function foeAtLevel(base: CombatantStats, level: number, native = 1): CombatantStats {
+  const at = Math.max(level, native)
+  const above = at - native
   return {
     ...base,
-    maxHp: Math.round(base.maxHp * (1 + FOE_HP_PER_LEVEL * above)),
+    maxHp: Math.round((base.maxHp * (1 + FOE_HP_PER_LEVEL * (at - 1))) / (1 + FOE_HP_PER_LEVEL * (native - 1))),
     ac: base.ac + FOE_AC_PER_LEVEL * above,
     toHit: base.toHit + FOE_TO_HIT_PER_LEVEL * above,
     damage: { ...base.damage, bonus: base.damage.bonus + Math.floor(above / FOE_DAMAGE_LEVEL_STEP) },
@@ -357,5 +360,53 @@ export function foeAtLevel(base: CombatantStats, level: number): CombatantStats 
           },
         }
       : {}),
+  }
+}
+
+/** The measured growth of the ready-made fighter (campaign reference §3) at the levels it was measured: [level, hero hit, hit points, mean damage a turn]. */
+const FIGHTER_GROWTH: ReadonlyArray<readonly [number, number, number, number]> = [
+  [1, 60, 32, 10.5],
+  [5, 82, 58, 10.5],
+  [10, 104, 83, 12.5],
+  [15, 114, 108, 12.5],
+  [20, 124, 133, 13.5],
+]
+
+/** The fighter's `column` at `level`: linear between the levels measured, held at the first and the last outside them. */
+function fighterGrowth(level: number, column: 1 | 2 | 3): number {
+  const last = FIGHTER_GROWTH[FIGHTER_GROWTH.length - 1]
+  if (level <= FIGHTER_GROWTH[0][0]) return FIGHTER_GROWTH[0][column]
+  if (level >= last[0]) return last[column]
+  const next = FIGHTER_GROWTH.findIndex((row) => row[0] >= level)
+  const from = FIGHTER_GROWTH[next - 1]
+  const to = FIGHTER_GROWTH[next]
+  return from[column] + ((to[column] - from[column]) * (level - from[0])) / (to[0] - from[0])
+}
+
+/** The ranges a foe of a level should sit in, as [low, high]; see `foeYardstick`. */
+export interface FoeYardstick {
+  ac: readonly [number, number]
+  toHit: readonly [number, number]
+  maxHp: readonly [number, number]
+  /** Mean damage a turn: attacks a turn (floor(actionPoints / attackApCost), at least 1) times the mean of its damage roll. */
+  meanDamage: readonly [number, number]
+}
+
+/**
+ * What a foe of `level` should look like against the ready-made fighter's
+ * growth: armour class 35 to 55 below the hero's chance to hit, a chance to
+ * hit of 80 to 100, hit points 3 to 6 of the fighter's blows, and a turn's
+ * damage a sixth to a tenth of the fighter's hit points. A yardstick for
+ * a new kind, not a rule: a kind outside it should say why.
+ */
+export function foeYardstick(level: number): FoeYardstick {
+  const hit = fighterGrowth(level, 1)
+  const hp = fighterGrowth(level, 2)
+  const damage = fighterGrowth(level, 3)
+  return {
+    ac: [hit - 55, hit - 35],
+    toHit: [80, 100],
+    maxHp: [3 * damage, 6 * damage],
+    meanDamage: [hp / 10, hp / 6],
   }
 }

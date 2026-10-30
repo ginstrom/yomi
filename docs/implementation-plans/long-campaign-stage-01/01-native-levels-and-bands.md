@@ -190,3 +190,20 @@ The test checks every `MonsterKind` at its native level. Each field outside its 
 - [ ] `make test` passes, and the campaign and troll-lair summaries are identical before and after.
 - [ ] The CLAUDE.md lines naming `FOES_AT_THREAT` and the scaling rule mention per-encounter counts, bands and native levels.
 - [ ] One commit is made, and the index's step 01 row is set to `done`, with a completion note here (commit hash, the commands run, "summary identical").
+
+## Completion note
+
+- **Status:** done. Commit: see `git log` for "Step 01" (the hash is the commit that carries this note).
+- **Built:**
+  - `foeAtLevel(base, level, native = 1)` and `foeYardstick`/`FoeYardstick` in `src/combat/combat.ts`;
+  - `MonsterKind`, `FoeKind` (= `MonsterKind`), `UnitKind`, `FOE_NATIVE_LEVEL`, `foeStats`, `ThreatBand`, `ENCOUNTER_BANDS` (derived from each encounter's definition), `encountersFor` and `MAX_THREAT = 5` in `src/game/encounters.ts`;
+  - each encounter is an `EncounterDef { slots, band, counts }`, today's five sharing band 1 to 5 and counts `[2, 3, 3, 3, 4]` (`TODAY`); `encounter()` throws if `counts` is not one per threat of the band; `FOES_AT_THREAT` is gone.
+- **Yardstick test** (`src/game/encounters.test.ts`): every monster kind is within the yardstick on `ac`; the named exceptions are `maxHp` and `toHit` for all kinds but the Horror, plus `meanDamage` for the Horror, Hobgoblin Chief, Troll and Armoured Troll (17 entries, each with a reason). Step 03 should hold the bandits to the yardstick and add a `BanditKind` test of its own; the test's `BLOCKS` map is typed `Record<MonsterKind, ...>`, so it keeps working when `FoeKind` widens.
+- **Verification:**
+  - `npm run -s typecheck` clean; `npx vitest run --project domain`: 54 files, 703 tests passed.
+  - `make test`: 63 files, 712 tests passed.
+  - Campaign guard, `--campaign --battles 500 --seed 1`, baseline taken before any code change: the summary (podman build lines filtered) is identical before and after, "Beat the Source: 320 of 500 (64.0%)".
+  - Spot check, `--encounter troll_lair --threat 5 --party-level 5 --battles 200 --seed 1`: identical before and after.
+- **CLAUDE.md:** the rules of scaling now name bands, per-encounter counts, native levels, `foeStats` and `foeYardstick` in place of `FOES_AT_THREAT`.
+- **Deviations:** none. The `BLOCKS` stat-block map is duplicated in the test only because `FOE_STATS` is private; it is a single test-level constant.
+
