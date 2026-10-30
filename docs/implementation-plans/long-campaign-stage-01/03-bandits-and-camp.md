@@ -240,3 +240,31 @@ Tests are written first and seen to fail where they can.
 - [ ] The CLAUDE.md lines made wrong are fixed.
 - [ ] One commit on the current branch, not pushed, its message ending with the repo's `Co-Authored-By` attribution line.
 - [ ] [index.md](index.md)'s row for step 03 is set to `done`, with a completion note added below: the commit hash, the checks run and their results, and the cell win rates.
+
+## Completion note
+
+- **Status:** done, in the commit "Step 03: bandits and the Bandit Camp" (the commit that carries this note).
+- **Built:**
+  - `src/game/bandits.ts`: `BanditRole`, `BANDIT_ROLE`, `banditStats` (cached per role, level and grade; a level below 1 counts as 1), `banditGrade`, and `banditDraft(role)` (an extra export, a copy of the role's draft, for the hero-rules test). The build order, written in `banditStats`'s comment and mirrored by the test: `draftCharacter`, then the role's gear in place of the starting kit, then `levelUp` to the level, then one `autoAdvance`, then `deriveCombatStats`.
+  - Drafts, each a legal creation (checked with `draftProblems`, the long names aside): Captain (Aldric's attributes; Weapon Training, Toughness, Dodger), Brute (strength 10; Weapon Training, Heavy Hand, Armour Breaker), Archer (Brenna's), Hedge-Mage (Delwyn's attributes; Spellcasting, Arcane Study, Keen Eye, Magic Arrow, Shield), Cutthroat (agility 9; Weapon Training, Dodger, Toughness).
+  - The mage's spells come by `autoAdvance` alone: Magic Arrow, Shield, Heal and Flame Arrow at level 3; Heal All at 4; Fireball at 5. No `takePerk` was needed.
+  - `src/game/encounters.ts`: `BanditKind`, `FoeKind` widened, `FOE_XP` 100 for each bandit (doc comment extended), `foeStats`'s bandit branch, `BANDIT_CAMP` (band 3–7, counts `[3, 3, 4, 4, 4]`, slots per C6), `banditCamp`, and `bandit_camp` in `ENCOUNTERS`, `ENCOUNTER_BANDS` and `ENCOUNTER_COUNTS`.
+  - CLAUDE.md: the `encounters.ts` bullet describes bandits, `bandits.ts` and the camp ("not yet on the map": **step 04 must update that phrase**); the rules of scaling say the monsters' five are band 1 to 5 and the Bandit Camp 3 to 7.
+- **Tests:** new `src/game/bandits.test.ts` (hero-rules equality for every role at levels 1, 3, 5 and grades 1, 2; determinism; level below 1; legal drafts; the mage's spells; gear in the stats; grade 2 damage; `banditGrade`; `BANDIT_ROLE`). `src/game/encounters.test.ts`: a `banditCamp` block (registration, fields at 3 to 6, kinds, names, positions and stats, clamping at 1, 2.5 and 9, XP 900/1200/2000). The generic "as the threat rises" tests now walk each encounter's own band rather than 1 to `MAX_THREAT`, and the "today's band 1 to 5" tests cover the five monster encounters only, as the camp's band is 3 to 7; `encountersFor` is checked at 1, 2, 3, 5, 6, 7, 8 and 0.
+- **Verification:**
+  - `npm run -s typecheck` clean; `npx vitest run --project domain`: 55 files, 725 tests passed.
+  - `make test`: 64 files, 734 tests passed (`unitLook.test.ts` unchanged and passing with the bandit kinds in `FOE_XP`).
+  - Checkpoint, `make -s simulate ARGS="--campaign --battles 500 --seed 1"`, run on `e6362d5` (changes stashed) and then on this step's tree: the summaries differ only in podman's build lines; every summary line is identical, "Beat the Source: 320 of 500 (64.0%)".
+  - Cells, `--encounter bandit_camp --threat T --party-level T --battles 200 --seed 1`:
+
+    | T | Party wins | Avg rounds | Party / bandit damage dealt | Party / bandit hit rate |
+    | --- | --- | --- | --- | --- |
+    | 3 | 70 of 200 (35%) | 13.1 | 105 / 114 | 57% / 58% |
+    | 4 | 61 of 200 (30.5%) | 12.5 | 120 / 135 | 67% / 61% |
+    | 5 | 1 of 200 (0.5%) | 8.2 | 109 / 164 | 73% / 71% |
+
+- **For step 07 (and step 04):** the camp is much harder than the plan's target ("a party of the threat's level wins most but not all"): bandits have hero-sized hit points (the Captain 48 at level 3, armour class 31 with shield and breastplate), and at threat 5 Fine gear and a fourth bandit make it nearly unwinnable. Step 04 puts the camp on the map at threats 3 and 4, so the campaign guard will likely fall well over 5 points unless the counts or grades are retuned first. The design names counts and grade as the levers.
+- **Deviations:**
+  - The Hedge-Mage's Wand of Sparks is not graded: it is an enchanted item, and enchanted items take no grade (`grades.ts`, CLAUDE.md), so a Fine wand is no item of today's game and no hero could hold it. Every other piece of gear is graded as C5 says.
+  - The extra `banditDraft(role)` export, which the task file allowed for the test.
+  - Generic encounter tests changed from the threats 1 to `MAX_THREAT` to each encounter's own band, as described above; no expectation was weakened for the five monster encounters.

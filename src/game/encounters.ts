@@ -11,6 +11,7 @@ import {
 } from '../combat/combat.ts'
 import type { BattleSetup, UnitId, UnitSetup } from '../engine/battleEngine.ts'
 import { offsetToHex } from '../grid/hex.ts'
+import { BANDIT_ROLE, banditGrade, banditStats } from './bandits.ts'
 
 /** A party member as it enters a battle: its stats, and the hit points it has left if wounded. */
 export interface Fighter {
@@ -49,8 +50,11 @@ function partyKinds(party: readonly Fighter[]): Record<UnitId, UnitKind> {
 /** Monsters: stat blocks scaled by `foeAtLevel` from their native level. */
 export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll'
 
-/** What a foe can be: a monster kind, and in time others. */
-export type FoeKind = MonsterKind
+/** Humanoids built by hero rules (bandits.ts). */
+export type BanditKind = 'bandit_cutthroat' | 'bandit_archer' | 'bandit_brute' | 'bandit_mage' | 'bandit_captain'
+
+/** What a foe can be: a monster, or a bandit. */
+export type FoeKind = MonsterKind | BanditKind
 
 /** What a unit is, for drawing it; the engine only knows its stats. */
 export type UnitKind = 'warrior' | FoeKind
@@ -63,6 +67,8 @@ export type UnitKind = 'warrior' | FoeKind
  * curse, worth a little more than a Goblin; the Hobgoblin Chief, in mail,
  * and the Troll, which regenerates, about two Goblins, and the Armoured Troll
  * more; the Blight Horror, which guards the Source, as much as four Goblins.
+ * Bandits, built by hero rules (bandits.ts), are even foes for a hero of
+ * their level, whatever their role, and so worth `EVEN_FOE_XP_PER_LEVEL`.
  */
 export const FOE_XP: Record<UnitKind, number> = {
   warrior: 0,
@@ -73,6 +79,11 @@ export const FOE_XP: Record<UnitKind, number> = {
   hobgoblin: 150,
   troll: 160,
   armored_troll: 220,
+  bandit_cutthroat: 100,
+  bandit_archer: 100,
+  bandit_brute: 100,
+  bandit_mage: 100,
+  bandit_captain: 100,
 }
 
 export interface Encounter {
@@ -123,8 +134,16 @@ export const FOE_NATIVE_LEVEL: Record<MonsterKind, number> = {
   armored_troll: 1,
 }
 
-/** A foe of `kind` at `level`: a monster by `foeAtLevel` from its native level. */
+function isBandit(kind: FoeKind): kind is BanditKind {
+  return kind in BANDIT_ROLE
+}
+
+/**
+ * A foe of `kind` at `level`: a monster by `foeAtLevel` from its native
+ * level; a bandit by `banditStats`, in the gear its level's threat calls for.
+ */
 export function foeStats(kind: FoeKind, level: number): CombatantStats {
+  if (isBandit(kind)) return banditStats(BANDIT_ROLE[kind], level, banditGrade(level))
   return foeAtLevel(FOE_STATS[kind], level, FOE_NATIVE_LEVEL[kind])
 }
 
@@ -230,6 +249,16 @@ const SOURCE_GUARDIANS_SLOTS: readonly FoeSlot[] = [
   { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [9, 6] },
 ]
 
+// The Captain first, so it leads at every threat; the Hedge-Mage from threat 4, ahead of the Brute and the Archer
+// so that it takes the field there, and the Cutthroat last.
+const BANDIT_CAMP_SLOTS: readonly FoeSlot[] = [
+  { id: 'captain', kind: 'bandit_captain', name: 'Bandit Captain', at: [8, 4] },
+  { id: 'mage', kind: 'bandit_mage', name: 'Hedge-Mage', at: [9, 4], fromThreat: 4 },
+  { id: 'brute', kind: 'bandit_brute', name: 'Bandit Brute', at: [8, 2] },
+  { id: 'archer', kind: 'bandit_archer', name: 'Bandit Archer', at: [9, 6] },
+  { id: 'cutthroat', kind: 'bandit_cutthroat', name: 'Cutthroat', at: [8, 6] },
+]
+
 /** Today's encounters are fought at threats 1 to 5, with these many foes at each. */
 const TODAY = { band: { min: 1, max: 5 }, counts: [2, 3, 3, 3, 4] } as const satisfies Omit<EncounterDef, 'slots'>
 
@@ -238,6 +267,8 @@ const KOBOLD_SCOUTS: EncounterDef = { slots: KOBOLD_SCOUTS_SLOTS, ...TODAY }
 const HOBGOBLIN_WARBAND: EncounterDef = { slots: HOBGOBLIN_WARBAND_SLOTS, ...TODAY }
 const TROLL_LAIR: EncounterDef = { slots: TROLL_LAIR_SLOTS, ...TODAY }
 const SOURCE_GUARDIANS: EncounterDef = { slots: SOURCE_GUARDIANS_SLOTS, ...TODAY }
+/** Bandits are fought from threat 3 (the first counts; the stage that grows the map tunes those past 5). */
+const BANDIT_CAMP: EncounterDef = { slots: BANDIT_CAMP_SLOTS, band: { min: 3, max: 7 }, counts: [3, 3, 4, 4, 4] }
 
 /**
  * A Goblin and a Kobold across the board from the party; where the threat is
@@ -276,6 +307,16 @@ export function sourceGuardians(party: readonly Fighter[], threat = 1): Encounte
 }
 
 /**
+ * Bandits, built by the rules heroes are: a Bandit Captain with sword, shield
+ * and breastplate, a Brute with an axe and an Archer; from threat 4 a
+ * Hedge-Mage who casts in the Archer's place, and both from threat 5, when
+ * their gear turns Fine.
+ */
+export function banditCamp(party: readonly Fighter[], threat = 3): Encounter {
+  return encounter(party, BANDIT_CAMP, threat)
+}
+
+/**
  * The experience each party member earns for winning `encounter`: what its
  * foes are worth together, a foe of level L being worth L times its kind's
  * `FOE_XP`, as the yardstick has it.
@@ -293,6 +334,7 @@ export const ENCOUNTERS = {
   hobgoblin_warband: hobgoblinWarband,
   troll_lair: trollLair,
   source_guardians: sourceGuardians,
+  bandit_camp: banditCamp,
 } satisfies Record<string, (party: readonly Fighter[], threat?: number) => Encounter>
 
 export type EncounterId = keyof typeof ENCOUNTERS
@@ -304,6 +346,7 @@ export const ENCOUNTER_BANDS: Record<EncounterId, ThreatBand> = {
   hobgoblin_warband: HOBGOBLIN_WARBAND.band,
   troll_lair: TROLL_LAIR.band,
   source_guardians: SOURCE_GUARDIANS.band,
+  bandit_camp: BANDIT_CAMP.band,
 }
 
 /** How many foes each encounter fields at each threat of its band, from `band.min` up, from its definition. */
@@ -313,6 +356,7 @@ export const ENCOUNTER_COUNTS: Record<EncounterId, readonly number[]> = {
   hobgoblin_warband: HOBGOBLIN_WARBAND.counts,
   troll_lair: TROLL_LAIR.counts,
   source_guardians: SOURCE_GUARDIANS.counts,
+  bandit_camp: BANDIT_CAMP.counts,
 }
 
 /** The encounters whose band holds `threat`, in `ENCOUNTERS` order. */
