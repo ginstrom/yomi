@@ -16,10 +16,10 @@ This design gives the player a **company** of several parties in the field at on
 Recruits stay green on purpose. They grow by fighting the easier battles, and the guild hall's upper levels pay for more parties, not bigger ones.
 
 This is the "multiple parties" left to a separate design by:
-- [`blight.md`](blight.md) §5.4;
-- [`guild-hall-and-watchtowers.md`](guild-hall-and-watchtowers.md), its non-goals and §8.2 and §8.3.
+- [`blight.md`](../../blight.md) §5.4;
+- [`guild-hall-and-watchtowers.md`](../../guild-hall-and-watchtowers.md), its non-goals and §8.2 and §8.3.
 
-[`blight.md`](blight.md) already sums party influence over a list, so the blight needs no new rule.
+[`blight.md`](../../blight.md) already sums party influence over a list, so the blight needs no new rule.
 
 **Status: ready for planning, with assumptions.** The first two steps are pure refactors with no change in behaviour. Section 8 lists the decisions taken on the user's behalf; 8.1 (the turn model) and 8.3 (auto-resolving battles) shape the most and are worth a look before step 3.
 
@@ -55,7 +55,7 @@ Where this design and the code differ, the code is right.
 ### Non-goals
 
 - **Parties fighting side by side in one battle,** or reinforcing mid-battle.
-- **Monster locations that attack a party** (moving monsters, [`blight.md`](blight.md) §4.9).
+- **Monster locations that attack a party** (moving monsters, [`blight.md`](../../blight.md) §4.9).
 - **Training facilities, or experience from garrison duty.** These are deferred to §8.4: the scrubs grow by fighting.
 - **More than three parties.**
 - **Per-party stock.** The stock stays the encampment's, shared.
@@ -80,19 +80,19 @@ Where this design and the code differ, the code is right.
 
 ## 3. Current system (inspected)
 
-- **The game state.** In [`src/game/gameState.ts`](../../src/game/gameState.ts), `GameState` has one `party: Party`, one `baggage: Item[]` and `reserves: Character[]`.
-- **The world map.** In [`src/game/worldMap.ts`](../../src/game/worldMap.ts):
+- **The game state.** In [`src/game/gameState.ts`](../../../../src/game/gameState.ts), `GameState` has one `party: Party`, one `baggage: Item[]` and `reserves: Character[]`.
+- **The world map.** In [`src/game/worldMap.ts`](../../../../src/game/worldMap.ts):
   - `WorldState.party` is one hex, and `WorldState.confronting` is one location id.
   - `passTurn(world, party)` advances a day: the blight, territory and sight.
   - `travel` walks a route, a `passTurn` a hex, stopping on `isNotable`.
   - `isNotable` measures `sighted` from `world.party`.
-- **Camping.** In [`src/game/camp.ts`](../../src/game/camp.ts), `campUntilHealed` and `campDay` act on the single party.
-- **The blight.** In [`src/game/blight.ts`](../../src/game/blight.ts):
+- **Camping.** In [`src/game/camp.ts`](../../../../src/game/camp.ts), `campUntilHealed` and `campDay` act on the single party.
+- **The blight.** In [`src/game/blight.ts`](../../../../src/game/blight.ts):
   - `partyStrength` takes a party's levels.
   - `netAt` adds the party's reach from `world.party` and keeps its hex neutral.
   - `spawn` keeps clear of `world.party`.
-  - [`vision.ts`](../../src/game/vision.ts) sees from `world.party`.
-- **The guild hall.** In [`src/game/guildHall.ts`](../../src/game/guildHall.ts):
+  - [`vision.ts`](../../../../src/game/vision.ts) sees from `world.party`.
+- **The guild hall.** In [`src/game/guildHall.ts`](../../../../src/game/guildHall.ts):
   - It has levels 1 to 3, with party limits 3, 4 and 5, and `MAX_RESERVES` is 4.
   - `recruitLevel` is `max(1, min(hall, lowest party level))`.
   - Swapping works only at home.
@@ -106,7 +106,7 @@ Where this design and the code differ, the code is right.
   - `worldMap.ts` (6);
   - `buildings.ts` (7 on `world.party`);
   - `BattleScene`, `TradingPostScene`, `CraftingScene`, `GuildHallScene`, and the story and tutorial modules.
-- **The simulator.** In [`scripts/simulate.ts`](../../scripts/simulate.ts), `runCampaign` is a sequential script: walk to the next target, fight, camp, run errands. It calls `travel` and `campUntilHealed`, which pass the days inside them.
+- **The simulator.** In [`scripts/simulate.ts`](../../../../scripts/simulate.ts), `runCampaign` is a sequential script: walk to the next target, fight, camp, run errands. It calls `travel` and `campUntilHealed`, which pass the days inside them.
 
 ## 4. Proposed behaviour
 
@@ -182,7 +182,7 @@ The first interrupt of a day stops the clock after that day. The map selects the
 
 ### 5.1 State
 
-*Proposed* in [`src/game/gameState.ts`](../../src/game/gameState.ts):
+*Proposed* in [`src/game/gameState.ts`](../../../../src/game/gameState.ts):
 
 ```ts
 export type Order =
@@ -224,26 +224,26 @@ export interface GameState {
 
 ### 5.2 The world rules over parties
 
-- **[`src/game/blight.ts`](../../src/game/blight.ts):**
+- **[`src/game/blight.ts`](../../../../src/game/blight.ts):**
   - `netAt` sums `partyStrength(levels) − distance` over the presences.
   - Every presence's hex is neutral.
   - `spawn` keeps `SPAWN_CLEARANCE` from every presence.
   - `advanceDay(world, presences)`.
-- **[`src/game/vision.ts`](../../src/game/vision.ts):** `updateSight(world, presences)` takes the union of each presence's radius.
-- **[`src/game/worldMap.ts`](../../src/game/worldMap.ts):**
+- **[`src/game/vision.ts`](../../../../src/game/vision.ts):** `updateSight(world, presences)` takes the union of each presence's radius.
+- **[`src/game/worldMap.ts`](../../../../src/game/worldMap.ts):**
   - `passTurn(world, presences)`.
   - `isNotable(world, event, presences)` measures `sighted` from the nearest presence.
   - `travel` is split: the route planning (`routeTo`) stays, and the stepping moves to the day loop.
-- **[`src/game/camp.ts`](../../src/game/camp.ts):** `campDay(world, expedition)` heals one party. `campUntilHealed` stays as a convenience built on the day loop, for the simulator and tests.
-- **[`src/game/buildings.ts`](../../src/game/buildings.ts), [`crafting.ts`](../../src/game/crafting.ts), [`trade.ts`](../../src/game/trade.ts) (economy design) and [`guildHall.ts`](../../src/game/guildHall.ts)** take the acting `Expedition` where they used `world.party` or `game.party`.
+- **[`src/game/camp.ts`](../../../../src/game/camp.ts):** `campDay(world, expedition)` heals one party. `campUntilHealed` stays as a convenience built on the day loop, for the simulator and tests.
+- **[`src/game/buildings.ts`](../../../../src/game/buildings.ts), [`crafting.ts`](../../../../src/game/crafting.ts), [`trade.ts`](../../../../src/game/trade.ts) (economy design) and [`guildHall.ts`](../../../../src/game/guildHall.ts)** take the acting `Expedition` where they used `world.party` or `game.party`.
   - `atGuildHall(expedition)` is a new helper.
   - `recruitLevel(game)` = `world.guildHall`.
   - `GUILD_HALL_LEVELS` gains `parties` and `company` per level.
-- **[`src/game/itemPlace.ts`](../../src/game/itemPlace.ts):** a place names the expedition: `{ party: id, member, slot } | { party: id, baggage: index }`.
+- **[`src/game/itemPlace.ts`](../../../../src/game/itemPlace.ts):** a place names the expedition: `{ party: id, member, slot } | { party: id, baggage: index }`.
 
 ### 5.3 The day loop
 
-*Proposed:* a new [`src/game/company.ts`](../../src/game/company.ts).
+*Proposed:* a new [`src/game/company.ts`](../../../../src/game/company.ts).
 
 ```ts
 export interface DayReport { events: Array<WorldEvent & { party?: string }>; interrupt: { party: string | null; event: WorldEvent | PartyEvent } | null }
@@ -278,21 +278,21 @@ export function exchange(game, a: string, b: string, moves): string | null      
 
 ### 5.4 Scenes
 
-- **[`WorldScene.ts`](../../src/scenes/WorldScene.ts):**
+- **[`WorldScene.ts`](../../../../src/scenes/WorldScene.ts):**
   - The party column becomes the party bar (§4.2): per-party banners on the map, and the selected party's route preview.
   - Buttons for Home, Camp, Garrison, Next day and Until something happens. The day actions (scout, wait, build, craft) act for the selected party.
   - On an interrupt it selects and centres the party concerned.
   - The meet order is given by clicking another party's banner.
   - Exchange opens from the character panel when two parties share a hex. It has two columns and works like the guild hall's swap.
-- **[`BattleScene.ts`](../../src/scenes/BattleScene.ts):** it receives the expedition id, and reads members and baggage from it.
-- **[`GuildHallScene.ts`](../../src/scenes/GuildHallScene.ts):** the parties at home and the reserves as columns; Form party, Rename and Disband; moving heroes.
+- **[`BattleScene.ts`](../../../../src/scenes/BattleScene.ts):** it receives the expedition id, and reads members and baggage from it.
+- **[`GuildHallScene.ts`](../../../../src/scenes/GuildHallScene.ts):** the parties at home and the reserves as columns; Form party, Rename and Disband; moving heroes.
 - **The encampment, trading post and crafting scenes** act for the party at home (§4.4) and show which one when more than one is.
-- **[`debugCommands.ts`](../../src/scenes/debugCommands.ts):** the commands that touch the party take an optional party name. A `party` command lists them.
+- **[`debugCommands.ts`](../../../../src/scenes/debugCommands.ts):** the commands that touch the party take an optional party name. A `party` command lists them.
 - **Sprites:** a banner per party (three colours) on the world map marker, drawn by a subagent.
 
 ### 5.5 The simulator
 
-*Proposed* in [`scripts/simulate.ts`](../../scripts/simulate.ts):
+*Proposed* in [`scripts/simulate.ts`](../../../../scripts/simulate.ts):
 - `runCampaign` becomes a day loop over `passDay`/`advance`, with a policy that sets each idle party's order. The sequential errand script becomes per-role decision functions. The battle, reward and camping steps are unchanged in substance.
 
 **Roles:**
@@ -384,7 +384,7 @@ Tests run under `make test` (podman). The domain project can be run locally with
 3. **Hall levels 4 and 5:** forming parties at home; the recruit rule; wipes and the loss condition.
 4. **The world map's company UI:** the party bar, orders, interrupts with focus, banners, and the Guild Hall's columns.
 5. **Meeting, exchange, garrisons and road guards** (the road guards need the economy design's routes).
-6. **The simulator's company policy:** vanguard, guard and third party; reinforcement; the record; `--parties`; and the retune with the companion designs. Then CLAUDE.md, the manual, and [`blight.md`](blight.md) §5.4 and [`guild-hall-and-watchtowers.md`](guild-hall-and-watchtowers.md) marked as answered.
+6. **The simulator's company policy:** vanguard, guard and third party; reinforcement; the record; `--parties`; and the retune with the companion designs. Then CLAUDE.md, the manual, and [`blight.md`](../../blight.md) §5.4 and [`guild-hall-and-watchtowers.md`](../../guild-hall-and-watchtowers.md) marked as answered.
 
 This is the companion that makes [`campaign-to-level-20.md`](campaign-to-level-20.md)'s long walks bearable, so its step 2 (the bigger map) is best measured with this design's step 6 in place.
 

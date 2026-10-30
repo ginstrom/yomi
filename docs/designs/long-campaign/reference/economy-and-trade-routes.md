@@ -16,7 +16,7 @@ This design gives the encampment an economy that grows with the campaign and is 
 2. **Income buildings.** The trading post's upper levels become a **Market** and a **Trading House**, which bring in **passive gold**.
 3. **Trade routes.** Once the party has reached a distant **trade partner**, the Trading House can open a **route** to it: a fixed road of hexes from the encampment. Every yield day it brings gold and the partner's goods, scaled by how much of the road is clean. Blight on the road cuts the income. Nests near it raid the road. A road raided for too long is abandoned.
 
-It keeps a rule from [`blight.md`](blight.md) §4.7: **waiting is not free money.** Every new source of income stands on land the blight contests, and the blight grows with time. Sitting at home lets the routes and sites that pay decay.
+It keeps a rule from [`blight.md`](../../blight.md) §4.7: **waiting is not free money.** Every new source of income stands on land the blight contests, and the blight grows with time. Sitting at home lets the routes and sites that pay decay.
 
 **Status: ready for planning, with assumptions.** Nothing blocks the first step. Section 8 lists the decisions taken on the user's behalf. The numbers are first values for the retune (R12).
 
@@ -73,25 +73,25 @@ Where this design and the code differ, the code is right.
 
 ## 3. Current system (inspected)
 
-- **Territory.** In [`src/game/territory.ts`](../../src/game/territory.ts):
+- **Territory.** In [`src/game/territory.ts`](../../../../src/game/territory.ts):
   - `Material` lists nine materials, and `RESOURCE_YIELDS` gives each site's material and amount (2).
   - `siteYield` adds `OUTPOST_YIELD` (1) for an outpost.
   - `updateTerritory` captures a site at level 0 and loses it at `LOSS_LEVEL` (2), razing its outpost.
   - It reports threatened sites once (`site_threatened`, `daysToFall`).
   - Every `YIELD_DAYS` (5) it adds yields, halved on tainted ground, and emits `yield` events.
-- **Buildings.** In [`src/game/buildings.ts`](../../src/game/buildings.ts):
+- **Buildings.** In [`src/game/buildings.ts`](../../../../src/game/buildings.ts):
   - An outpost (`OUTPOST_COST`: 15 gold, 10 timber) is built by the party on a held resource and takes a day. It is kept as `world.outposts: string[]`.
   - Watchtowers are clean sources, kept `TOWER_SPACING` (4) apart, and are lost as sites are.
   - The shrine adds `SHRINE_STRENGTH` to the encampment.
-- **The blight.** In [`src/game/blight.ts`](../../src/game/blight.ts):
+- **The blight.** In [`src/game/blight.ts`](../../../../src/game/blight.ts):
   - Influence is a sum of fields from sources: monsters, the Source, held sites, towers and the party.
   - `fields` is memoised on the list of sources, and `siteStrength` adds `OUTPOST_STRENGTH` (3).
   - World events include `yield`, `site_threatened`, `site_lost` and `outpost_built`.
-  - `isNotable` in [`worldMap.ts`](../../src/game/worldMap.ts) decides what interrupts travel.
-- **Facilities.** In [`src/game/encampment.ts`](../../src/game/encampment.ts), `FacilityId` covers five facilities, read through the `FACILITIES` table and drawn by `encampmentView.ts` with one sprite per facility level.
-- **The trading post.** In [`src/game/tradingPost.ts`](../../src/game/tradingPost.ts), it has levels 1 to 3. The gear design adds a level 4.
+  - `isNotable` in [`worldMap.ts`](../../../../src/game/worldMap.ts) decides what interrupts travel.
+- **Facilities.** In [`src/game/encampment.ts`](../../../../src/game/encampment.ts), `FacilityId` covers five facilities, read through the `FACILITIES` table and drawn by `encampmentView.ts` with one sprite per facility level.
+- **The trading post.** In [`src/game/tradingPost.ts`](../../../../src/game/tradingPost.ts), it has levels 1 to 3. The gear design adds a level 4.
 - **Settlements.** Earlier towns were taken off the map, leaving the encampment as the only settlement (CLAUDE.md, rules of scaling). That lowered gold income and made the shrine and outposts rarer. No neutral location kind exists: `LocationKind` is `monsters`, `encampment` or `resource`.
-- **The simulator.** In [`scripts/simulate.ts`](../../scripts/simulate.ts):
+- **The simulator.** In [`scripts/simulate.ts`](../../../../scripts/simulate.ts):
   - It builds towers where it stops, and outposts within `OUTPOST_ERRAND_RADIUS` (`outpostErrand`).
   - It goes home by `hallErrand`.
   - `nextTarget` weighs nests pushing on threatened sites.
@@ -197,7 +197,7 @@ A raided route pays nothing that day and emits `route_raided` with the cause. Th
 
 After `ABANDON_AFTER` (6, which is 30 days) raided yield days in a row, the route is abandoned: `route_abandoned`, notable. Its slot is freed. The first yield day without a raid emits `route_restored` and resets the count.
 
-**Roads (Lodge 3).** Each open route's road hexes become clean sources of strength `ROAD_STRENGTH` (1), counted as one source per road hex, with the usual fall-off of [`blight.md`](blight.md) §4.2. They stop at an abandoned route.
+**Roads (Lodge 3).** Each open route's road hexes become clean sources of strength `ROAD_STRENGTH` (1), counted as one source per road hex, with the usual fall-off of [`blight.md`](../../blight.md) §4.2. They stop at an abandoned route.
 
 **Protecting a route** uses tools the party already has:
 - clearing the nests near the road;
@@ -252,12 +252,12 @@ Bump `SAVE_VERSION`. If they land together, one bump can serve this design, the 
 
 ### 5.2 Modules
 
-**[`src/game/territory.ts`](../../src/game/territory.ts):**
+**[`src/game/territory.ts`](../../../../src/game/territory.ts):**
 - `siteYield` reads the improvement level: +1, +3, +3.
 - `lossLevel(world, site)` is `MAX_BLIGHT` for a fort, else `LOSS_LEVEL`. `updateTerritory` and `daysToFall` use it.
 - Market income is added in the yield step, with an encampment `yield` event of `source: 'market'`.
 
-**[`src/game/blight.ts`](../../src/game/blight.ts):**
+**[`src/game/blight.ts`](../../../../src/game/blight.ts):**
 - `siteStrength` reads the improvement level: +3, +3, +7.
 - Partners are clean sources of `PARTNER_STRENGTH` (3).
 - With Lodge 3, `sources()` adds a road source for each hex of every open route.
@@ -272,11 +272,11 @@ Bump `SAVE_VERSION`. If they land together, one bump can serve this design, the 
   - `route_abandoned`;
   - `yield` gains an optional `source: 'site' | 'market' | 'route'` and `route?`.
 
-**[`src/game/buildings.ts`](../../src/game/buildings.ts):**
+**[`src/game/buildings.ts`](../../../../src/game/buildings.ts):**
 - `improveSite(world, party)` and `improveRefusal(world)` replace `buildOutpost` and `canBuildOutpost`, at the next level with its cost and Lodge gate. The old names stay as wrappers for level 1 until callers move.
 - `LODGE_COSTS`, `raiseLodge(world)` and `lodgeCost(world)` are added.
 
-*Proposed* new module, [`src/game/trade.ts`](../../src/game/trade.ts):
+*Proposed* new module, [`src/game/trade.ts`](../../../../src/game/trade.ts):
 - `partners(world)` and `contactPartner(world, id)`, called from the travel step when the party enters a partner's hex;
 - `routeLimit(world)`;
 - `roadTo(world, partner)`, a deterministic path over the world board. It uses the same passability as `travel`, treats monster hexes and their neighbours as blocked, and breaks ties by `hexKey`;
@@ -284,26 +284,26 @@ Bump `SAVE_VERSION`. If they land together, one bump can serve this design, the 
 - `routeSecurity(world, route)`, `routeIncome(world, route)` and `raidCause(world, route)`;
 - `tradeDay(world)`, called by `updateTerritory` on yield days. It pays routes, counts raids, abandons routes and returns events.
 
-**[`src/game/encampment.ts`](../../src/game/encampment.ts)** gains the `builders_lodge` facility in `FACILITIES`. The trading post's effect line names Market, Market Hall or Trading House and the income.
+**[`src/game/encampment.ts`](../../../../src/game/encampment.ts)** gains the `builders_lodge` facility in `FACILITIES`. The trading post's effect line names Market, Market Hall or Trading House and the income.
 
-**[`src/game/worldMap.ts`](../../src/game/worldMap.ts):**
+**[`src/game/worldMap.ts`](../../../../src/game/worldMap.ts):**
 - partners in `newWorld`;
 - `isNotable` gains `route_raided` (first of a run), `route_abandoned` and `partner_silent`.
 
 ### 5.3 Scenes
 
-- **[`WorldScene.ts`](../../src/scenes/WorldScene.ts):**
+- **[`WorldScene.ts`](../../../../src/scenes/WorldScene.ts):**
   - a roads overlay layer under the locations, with segments coloured per hex;
   - partner icons;
   - the Improve button where the Build Outpost button was, showing the next level and its cost or refusal;
   - a hover tooltip on roads.
 - **The trading post scene:** a **Routes** tab listing contacted partners with their status. A partner not yet routed has an Open button, the road previewed on a minimap strip with its length and expected income. An open route shows its security, its last income and a raided count.
-- **[`encampmentView.ts`](../../src/scenes/encampmentView.ts):** a plot and sprite frames for the Lodge (`camp_lodge`, `level_1..3`), drawn by a subagent per [`sprite-drawing-guidance.md`](sprite-drawing-guidance.md).
+- **[`encampmentView.ts`](../../../../src/scenes/encampmentView.ts):** a plot and sprite frames for the Lodge (`camp_lodge`, `level_1..3`), drawn by a subagent per [`sprite-drawing-guidance.md`](../../sprite-drawing-guidance.md).
 - **`worldEvents.ts`:** lines for the new events, and the yield summary by source.
 
 ### 5.4 The simulator
 
-*Proposed* in [`scripts/simulate.ts`](../../scripts/simulate.ts):
+*Proposed* in [`scripts/simulate.ts`](../../../../scripts/simulate.ts):
 
 - **Improvements.** `outpostErrand` becomes `improveErrand`: the nearest held site within `OUTPOST_ERRAND_RADIUS` below the highest level the Lodge allows, if the stock affords it. Forts go first on sites with `daysToFall` under 30.
 - **Home visits.** `visitFacilities` raises the Lodge after the trading post's market levels when routes are possible, and opens routes to every contacted partner while slots allow, nearest first.
@@ -388,7 +388,7 @@ Tests run under `make test` (podman). The domain project can be run locally with
 3. **Partners.** The location kind, contact and silence, Millbrook and Saltmere on today's map.
 4. **Routes.** `trade.ts`, the Routes tab, the road overlay, events, and the simulator opening and protecting routes.
 5. **Roads.** Lodge 3 and road sources.
-6. **Retune and docs.** CLAUDE.md (territory, buildings, the simulator), the manual, and [`blight.md`](blight.md) §4.6 and §4.7.
+6. **Retune and docs.** CLAUDE.md (territory, buildings, the simulator), the manual, and [`blight.md`](../../blight.md) §4.6 and §4.7.
 
 Steps 1 to 4 work on today's map. The campaign design's bigger map adds the outer partners.
 

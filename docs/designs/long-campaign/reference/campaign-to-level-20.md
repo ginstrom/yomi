@@ -22,10 +22,10 @@ This design makes a campaign take the party from level 1 to level 20. It does th
 **Status: ready for planning, with assumptions.** Nothing blocks a first step. Section 8 records the decisions taken on the user's behalf; each can be changed without reshaping the rest. The monster roster in section 5.5 is a proposal. Its numbers are first values for the retune (R14) to move.
 
 Related documents:
-- [`blight.md`](blight.md): spawning, influence and the Source.
-- [`spells.md`](spells.md): areas, statuses and the enemy caster.
-- [`guild-hall-and-watchtowers.md`](guild-hall-and-watchtowers.md): recruits and permadeath.
-- The rules of scaling in [`CLAUDE.md`](../../CLAUDE.md).
+- [`blight.md`](../../blight.md): spawning, influence and the Source.
+- [`spells.md`](../../spells.md): areas, statuses and the enemy caster.
+- [`guild-hall-and-watchtowers.md`](../../guild-hall-and-watchtowers.md): recruits and permadeath.
+- The rules of scaling in [`CLAUDE.md`](../../../../CLAUDE.md).
 
 Where those documents and the code differ, the code is right.
 
@@ -60,7 +60,7 @@ Where those documents and the code differ, the code is right.
 ### Non-goals
 
 - **Units bigger than one hex.** A dragon stands on one hex, as a goblin does.
-- **Summoning, and monsters that move on the world map.** These are left to [`blight.md`](blight.md) section 4.9.
+- **Summoning, and monsters that move on the world map.** These are left to [`blight.md`](../../blight.md) section 4.9.
 - **Hero-side growth beyond what exists:** grades above 3, new hero perks and new hero spells. Section 6.4 explains why this is the main risk, and where it would come in.
 - **Simulator heroes changing weapons.** This is a separate follow-up.
 - **New loot tables.** Further rings reuse `MAGIC_ITEMS`, and bandits drop no gear.
@@ -84,13 +84,13 @@ Where those documents and the code differ, the code is right.
 
 ## 3. Current system (inspected)
 
-- **Threat.** In [`src/game/worldMap.ts`](../../src/game/worldMap.ts), `threatAt` is `min(MAX_THREAT, 1 + floor(distance / THREAT_BAND))`, with `THREAT_BAND` = 11. `WORLD_SIZE` is 60 × 40, home is at offset (9, 19), and the Source is at (58, 19). `newWorld` lists the fixed locations by hand, each with its `EncounterId` and loot.
-- **Encounters.** In [`src/game/encounters.ts`](../../src/game/encounters.ts):
+- **Threat.** In [`src/game/worldMap.ts`](../../../../src/game/worldMap.ts), `threatAt` is `min(MAX_THREAT, 1 + floor(distance / THREAT_BAND))`, with `THREAT_BAND` = 11. `WORLD_SIZE` is 60 × 40, home is at offset (9, 19), and the Source is at (58, 19). `newWorld` lists the fixed locations by hand, each with its `EncounterId` and loot.
+- **Encounters.** In [`src/game/encounters.ts`](../../../../src/game/encounters.ts):
   - `FOES_AT_THREAT` = [2, 3, 3, 3, 4] and `MAX_THREAT` = its length.
   - `encounter()` takes the first N `FoeSlot`s that take the field at the threat (`fromThreat`). It levels each foe to the threat and caps the level at `MAX_THREAT`.
   - `xpReward` is the sum of `FOE_XP[kind] × threat`.
   - `UnitKind` names sprites and prices experience.
-- **Scaling.** In [`src/combat/combat.ts`](../../src/combat/combat.ts), `foeAtLevel` adds 70% of the level 1 hit points per level, 5 to-hit and 5 armour class per level, +1 damage every 2 levels, and 3 mana per level to casters. Resistance and regeneration do not scale. At level 20 a Goblin would have:
+- **Scaling.** In [`src/combat/combat.ts`](../../../../src/combat/combat.ts), `foeAtLevel` adds 70% of the level 1 hit points per level, 5 to-hit and 5 armour class per level, +1 damage every 2 levels, and 3 mana per level to casters. Resistance and regeneration do not scale. At level 20 a Goblin would have:
   - 172 hit points;
   - armour class 110;
   - to-hit 160.
@@ -107,19 +107,19 @@ Where those documents and the code differ, the code is right.
   | 20 | 133 / 36 / 124 / 1d8+9 | 106 / 27 / 130 | 93 / 26 / 150 / 17 |
 
   Heroes grow in hit points (about 5 a level) and in chance to hit (about 3.5 a level, slowing near the 150 skill cap). Their armour class and damage hardly grow: grades stop at 3 and the gear is the same gear.
-- **The blight.** In [`src/game/blight.ts`](../../src/game/blight.ts):
+- **The blight.** In [`src/game/blight.ts`](../../../../src/game/blight.ts):
   - A nest pushes with `BLIGHT_PER_THREAT` (2) × threat, and the Source with 20.
   - Spawns choose from `SPAWN_KINDS` (Goblin Brood, Kobold Nest) and take `threatAt` of where they land.
   - `MAX_MONSTER_LOCATIONS` is 24.
   - `advanceDay` visits every hex once a day.
-- **Spells and the engine.** In [`src/combat/spells.ts`](../../src/combat/spells.ts) and [`src/engine/battleEngine.ts`](../../src/engine/battleEngine.ts):
+- **Spells and the engine.** In [`src/combat/spells.ts`](../../../../src/combat/spells.ts) and [`src/engine/battleEngine.ts`](../../../../src/engine/battleEngine.ts):
   - Areas are bursts only: a `radius` around a centre (`castTouches`, `areaHexes`).
   - Monsters already cast through `CombatantStats.magic` (the Goblin Shaman).
   - Several attacks a turn already come from action points (the Troll's two claws).
   - Actions are `move`, `attack`, `cast`, `equip` and `end_turn`.
-  - [`src/grid/hex.ts`](../../src/grid/hex.ts) has `hexLine`, `hexDirection` and `hexDirectionTowards`.
-- **Recruits.** In [`src/game/guildHall.ts`](../../src/game/guildHall.ts), `recruitLevel` is `max(1, min(guildHall, lowest member level))`, with the hall at most level 3. In a long campaign a hero lost at level 15 is replaced at level 3.
-- **The simulator.** In [`scripts/simulate.ts`](../../scripts/simulate.ts):
+  - [`src/grid/hex.ts`](../../../../src/grid/hex.ts) has `hexLine`, `hexDirection` and `hexDirectionTowards`.
+- **Recruits.** In [`src/game/guildHall.ts`](../../../../src/game/guildHall.ts), `recruitLevel` is `max(1, min(guildHall, lowest member level))`, with the hall at most level 3. In a long campaign a hero lost at level 15 is replaced at level 3.
+- **The simulator.** In [`scripts/simulate.ts`](../../../../scripts/simulate.ts):
   - `SOURCE_READY_LEVEL` = 7 and `MAX_CAMPAIGN_DAYS` = 2000.
   - `nextTarget` goes to nests whose threat is no higher than the party's lowest level.
   - A 500-campaign run writes some 70 MB of log and takes about a minute.
@@ -183,7 +183,7 @@ This is superseded by [`multiple-parties.md`](multiple-parties.md) §4.3. A seco
 
 ### 5.1 Zones and the map (R1–R3)
 
-**[`src/game/worldMap.ts`](../../src/game/worldMap.ts)**
+**[`src/game/worldMap.ts`](../../../../src/game/worldMap.ts)**
 
 *Proposed:*
 - `THREAT_RINGS: readonly { upTo: number; threat: number }[]`, the table of 4.1 (each `upTo` is the largest distance in the ring), and `SOURCE_THREAT = 20`.
@@ -199,13 +199,13 @@ This is superseded by [`multiple-parties.md`](multiple-parties.md) §4.3. A seco
 - The Source moves to about (131, 36).
 - The implementer authors the coordinates and checks them with the test of A2.
 
-**[`src/game/encounters.ts`](../../src/game/encounters.ts)**
+**[`src/game/encounters.ts`](../../../../src/game/encounters.ts)**
 
 *Proposed:*
 - `ENCOUNTER_BANDS: Record<EncounterId, { min: number; max: number }>`
 - `encountersFor(threat): EncounterId[]` (the encounters whose band holds it).
 
-**Spawns.** In [`src/game/blight.ts`](../../src/game/blight.ts):
+**Spawns.** In [`src/game/blight.ts`](../../../../src/game/blight.ts):
 - `SPAWN_KINDS` gains entries for the new encounters.
 - `spawn` picks among the kinds whose band holds `threatAt(at)`.
 - `MAX_MONSTER_LOCATIONS` rises with the map, to 60 as a first value.
@@ -237,7 +237,7 @@ A unit test checks every kind's native-level block against the bands. A kind may
 
 ### 5.3 Native levels and `foeAtLevel` (R4)
 
-*Proposed* in [`src/combat/combat.ts`](../../src/combat/combat.ts):
+*Proposed* in [`src/combat/combat.ts`](../../../../src/combat/combat.ts):
 - `FOE_NATIVE_LEVEL: Record<UnitKind, number>` lives in `encounters.ts`, beside `FOE_XP`. The stat block stays free of it.
 - `foeAtLevel(base, level, native = 1)`, where `above = max(0, level - native)`:
   - To-hit, armour class, damage and mana use today's steps × `above`.
@@ -251,11 +251,11 @@ A unit test checks every kind's native-level block against the bands. A kind may
 - Today's five encounters keep `FOES_AT_THREAT` as their counts, cut to their bands.
 - `MAX_THREAT` is renamed `EARLY_THREAT_CAP` or removed. Its meaning moves to the bands.
 
-**XP.** `xpReward` is unchanged in form, `FOE_XP[kind] × level`. New kinds get `FOE_XP` set by the yardstick: an even foe of level L is worth `EVEN_FOE_XP_PER_LEVEL × L`, so `FOE_XP` ≈ 100 × (strength relative to an even foe). [`progression.ts`](../../src/character/progression.ts) stays as is.
+**XP.** `xpReward` is unchanged in form, `FOE_XP[kind] × level`. New kinds get `FOE_XP` set by the yardstick: an even foe of level L is worth `EVEN_FOE_XP_PER_LEVEL × L`, so `FOE_XP` ≈ 100 × (strength relative to an even foe). [`progression.ts`](../../../../src/character/progression.ts) stays as is.
 
 ### 5.4 Special attacks (R8–R10, R12)
 
-**Data**, *proposed* in a new [`src/combat/abilities.ts`](../../src/combat/abilities.ts) beside `spells.ts`:
+**Data**, *proposed* in a new [`src/combat/abilities.ts`](../../../../src/combat/abilities.ts) beside `spells.ts`:
 
 ```ts
 export type AreaShape = 'burst' | 'cone' | 'line'
@@ -279,7 +279,7 @@ export const ABILITIES: Record<AbilityId, Ability>
 
 `CombatantStats` gains `abilities?: readonly AbilityId[]`, and `sameCombatStats` compares it. `foeAtLevel` adds its damage step to every ability's damage, as it does to the weapon.
 
-**Shapes**, *proposed* in [`src/grid/hex.ts`](../../src/grid/hex.ts): `areaOf(shape, origin, aim, range, radius)`.
+**Shapes**, *proposed* in [`src/grid/hex.ts`](../../../../src/grid/hex.ts): `areaOf(shape, origin, aim, range, radius)`.
 - **Burst:** within `radius` of `aim`, which must be within `range` of the origin. This is today's spell rule.
 - **Line:** `hexLine(origin, aim)` extended to `range` hexes, the origin excluded.
 - **Cone:** the hexes within `range` of the origin whose direction from the origin is within 30° of the direction to `aim` (a 60° wedge), the origin excluded.
@@ -296,7 +296,7 @@ export const ABILITIES: Record<AbilityId, Ability>
   - **Web:** burst 1 at range 4; lays Webbed (−4 action points, 2 turns) and deals no damage.
   - **Dark Shield:** self; reuses Shielded.
 
-**Actions and events**, in [`src/engine/battleEngine.ts`](../../src/engine/battleEngine.ts):
+**Actions and events**, in [`src/engine/battleEngine.ts`](../../../../src/engine/battleEngine.ts):
 - New action: `{ type: 'ability'; unit; ability; target: UnitId } | { type: 'ability'; unit; ability; at: Hex }`. A routine takes a target and an area takes `at`. `legalActions` lists them while the AP and the recharge allow.
 - **A routine** emits one `AttackEvent` per strike, with a new optional field `strike: string` (the strike's name) and `ability: AbilityId`. The scene's attack animation, sounds and log line stay as they are and name the strike ("Young Dragon bites Aldric…"). A strike not made emits nothing.
 - **An area** emits a new `AbilityEvent` shaped like `CastEvent`:
@@ -306,14 +306,14 @@ export const ABILITIES: Record<AbilityId, Ability>
 - `UnitRecord` and `UnitSnapshot` gain `recharging: Partial<Record<AbilityId, number>>`. It counts down at the start of the unit's side's turn, after status ticks and regeneration.
 - Bump `LOG_SCHEMA_VERSION` (new event and fields) and `SAVE_VERSION` (snapshot shape, the map and new locations).
 
-**The scene** ([`src/scenes/BattleScene.ts`](../../src/scenes/BattleScene.ts) and its helpers):
-- `AbilityEvent` reuses the spell-effect path ([`battleEffects.ts`](../../src/scenes/battleEffects.ts)) with the touched hexes drawn.
+**The scene** ([`src/scenes/BattleScene.ts`](../../../../src/scenes/BattleScene.ts) and its helpers):
+- `AbilityEvent` reuses the spell-effect path ([`battleEffects.ts`](../../../../src/scenes/battleEffects.ts)) with the touched hexes drawn.
 - `eventSchedule.ts` and `sounds.ts` get entries for it.
 - A foe's tooltip lists its abilities and their recharge.
 
 ### 5.5 The roster (R6, R7)
 
-**Humanoids (R6).** *Proposed* in a new [`src/game/bandits.ts`](../../src/game/bandits.ts):
+**Humanoids (R6).** *Proposed* in a new [`src/game/bandits.ts`](../../../../src/game/bandits.ts):
 - `banditStats(role, level, tier): CombatantStats` builds a `Character` from a role's draft, raises it with `levelUp` and `autoAdvance`, equips the tier's gear, and returns `deriveCombatStats`.
 - The roles are:
   - **Cutthroat:** dagger.
@@ -349,7 +349,7 @@ export const ABILITIES: Record<AbilityId, Ability>
 | Elder Wyrm | 18 | top threat | res 5 | Breath (cone 4, 8d6); routine; regenerates 2 |
 | Blight Horror (Source) | 20 | final boss | res 3 | Blight Breath (burst 2 around itself, acid, lays Corroded); routine; regenerates 2 |
 
-Each row is a stat block, a `UnitKind`, a `FOE_XP`, a `FOE_NATIVE_LEVEL` and a sprite (`art/units/*.sprite.toml`, drawn by a subagent per [`sprite-drawing-guidance.md`](sprite-drawing-guidance.md)).
+Each row is a stat block, a `UnitKind`, a `FOE_XP`, a `FOE_NATIVE_LEVEL` and a sprite (`art/units/*.sprite.toml`, drawn by a subagent per [`sprite-drawing-guidance.md`](../../sprite-drawing-guidance.md)).
 
 Two behaviours in the table are flagged as small engine additions, each optional in the first pass:
 - the wolf's pack bonus;
@@ -363,7 +363,7 @@ This is superseded by [`multiple-parties.md`](multiple-parties.md) §4.1 and §5
 
 ### 5.7 The simulator (R14)
 
-In [`scripts/simulate.ts`](../../scripts/simulate.ts):
+In [`scripts/simulate.ts`](../../../../scripts/simulate.ts):
 - `--ready-level N` (default `SOURCE_READY_LEVEL`) is threaded into `nextTarget`.
 - `SOURCE_READY_LEVEL` becomes 18 once the outer rings exist. Until then it stays 7.
 - `MAX_CAMPAIGN_DAYS` rises to 6000.
@@ -485,4 +485,4 @@ None of these block step 1. They are recorded with the default taken.
 - the hero ceiling (6.4);
 - the simulator's runtime (6.3);
 - the long walk home after a late death (6.2);
-- the blight's balance on a map four times the size, which [`blight.md`](blight.md)'s numbers were not set for.
+- the blight's balance on a map four times the size, which [`blight.md`](../../blight.md)'s numbers were not set for.

@@ -25,7 +25,7 @@ This design gives gear its own path from level 1 to 20, in four parts:
 The numbers are first values; the retune moves them (R15).
 
 It builds on two designs:
-- [`expeditions-and-encampment.md`](expeditions-and-encampment.md): grades, modifiers, the trading post and the workshop. This design keeps all four and extends them.
+- [`expeditions-and-encampment.md`](../../expeditions-and-encampment.md): grades, modifiers, the trading post and the workshop. This design keeps all four and extends them.
 - [`campaign-to-level-20.md`](campaign-to-level-20.md): rings, the foe yardstick, special attacks and the long-campaign simulator. Where the two overlap, this design changes that one's yardstick (R14).
 
 Where any of these documents and the code differ, the code is right.
@@ -85,30 +85,30 @@ Where any of these documents and the code differ, the code is right.
 
 ## 3. Current system (inspected)
 
-- **Items.** In [`src/inventory/inventory.ts`](../../src/inventory/inventory.ts):
+- **Items.** In [`src/inventory/inventory.ts`](../../../../src/inventory/inventory.ts):
   - An `Item` has an `id`, `slot`, `stats: ItemStats`, an `icon`, and optional `base`, `grade` and `mod`.
   - `ItemStats` covers damage, attack AP, range, piercing, two-handed, armour class, resistance, to hit, skill, mana, spell skill and critical chance.
   - The eight plain items are `BASE_ITEMS`; the unique items are `MAGIC_ITEMS`.
   - `itemById` parses `<base>[@<grade>][+<modifier><grade>]` (`ID_GRAMMAR`) and caches what it builds.
   - The slots head, neck, cloak, gloves, belt, boots and rings exist, but only unique items fill them.
-- **Grades.** In [`src/inventory/grades.ts`](../../src/inventory/grades.ts), grade 1 is plain, 2 is Fine and 3 is Masterwork.
+- **Grades.** In [`src/inventory/grades.ts`](../../../../src/inventory/grades.ts), grade 1 is plain, 2 is Fine and 3 is Masterwork.
   - Weapons get damage +1 / +2, and +5 to hit at Masterwork.
   - Shields get armour class +3 / +6.
   - Armour gets resistance +1 / +2.
-- **Modifiers.** In [`src/inventory/modifiers.ts`](../../src/inventory/modifiers.ts), there are eight, each fitting listed base ids. An item holds one modifier.
-- **Crafting.** In [`src/game/crafting.ts`](../../src/game/crafting.ts):
+- **Modifiers.** In [`src/inventory/modifiers.ts`](../../../../src/inventory/modifiers.ts), there are eight, each fitting listed base ids. An item holds one modifier.
+- **Crafting.** In [`src/game/crafting.ts`](../../../../src/game/crafting.ts):
   - Crafting in the field makes field modifiers at grade 1 and takes a day.
   - The workshop (levels 1 to 3) unlocks modifiers and higher grades.
   - `craftCost` is gold plus iron or timber at grade 1, copper at grade 2 and crystal at grade 3.
-- **The trading post.** In [`src/game/tradingPost.ts`](../../src/game/tradingPost.ts), levels 1 to 3 sell grades 1 to 3. `PRICES` gives each base's price, and `GRADE_PRICE` multiplies it by 1, 3 or 8. Items sell for half. Materials sell at 1 gold for 2.
-- **Materials.** In [`src/game/territory.ts`](../../src/game/territory.ts), the `Material` type is gold, iron, timber, silver, stone, salt, copper, crystal and peat. Each resource site yields one material.
-- **Stats.** In [`src/character/character.ts`](../../src/character/character.ts), `deriveCombatStats` sums worn stats.
+- **The trading post.** In [`src/game/tradingPost.ts`](../../../../src/game/tradingPost.ts), levels 1 to 3 sell grades 1 to 3. `PRICES` gives each base's price, and `GRADE_PRICE` multiplies it by 1, 3 or 8. Items sell for half. Materials sell at 1 gold for 2.
+- **Materials.** In [`src/game/territory.ts`](../../../../src/game/territory.ts), the `Material` type is gold, iron, timber, silver, stone, salt, copper, crystal and peat. Each resource site yields one material.
+- **Stats.** In [`src/character/character.ts`](../../../../src/character/character.ts), `deriveCombatStats` sums worn stats.
   - Strength adds `floor((str − 5) / 2)` to melee damage.
   - Piercing counts only for melee: "ranged" is decided by range greater than 1.
   - `weaponSkill` picks Archery for anything with range.
 - **Loot.** Locations carry fixed `loot` items, and spawns sometimes carry a `MAGIC_ITEMS` entry (`takeLoot`). The simulator ignores loot.
-- **Saves.** In [`src/game/save.ts`](../../src/game/save.ts), equipment, backpacks and baggage are stored as item ids.
-- **The simulator's gear.** In [`scripts/simulate.ts`](../../scripts/simulate.ts), `visitFacilities` buys the best grade of each member's weapon, shield and armour (`GEAR_SLOTS`), then crafts by `PREFERRED_MODIFIERS`. The record notes that gold is too scarce after the hall and recruits to buy much.
+- **Saves.** In [`src/game/save.ts`](../../../../src/game/save.ts), equipment, backpacks and baggage are stored as item ids.
+- **The simulator's gear.** In [`scripts/simulate.ts`](../../../../scripts/simulate.ts), `visitFacilities` buys the best grade of each member's weapon, shield and armour (`GEAR_SLOTS`), then crafts by `PREFERRED_MODIFIERS`. The record notes that gold is too scarce after the hall and recruits to buy much.
 - **Elements.** Elements do not exist. Spells and status ticks ignore resistance, and nothing reduces them except armour class against the spell's roll to hit.
 
 ## 4. Proposed behaviour
@@ -313,7 +313,7 @@ A critical hit doubles the weapon's roll as today, but not the bonus. The log re
 
 ### 5.1 The item model and ids
 
-**Tables.** *Proposed* in a new [`src/inventory/catalog.ts`](../../src/inventory/catalog.ts):
+**Tables.** *Proposed* in a new [`src/inventory/catalog.ts`](../../../../src/inventory/catalog.ts):
 
 ```ts
 export type MaterialKind = 'metal' | 'wood' | 'hide'
@@ -375,7 +375,7 @@ For example: `mithril_longsword@3+keen2#ember3.storm2`, and `emberblade#dawn1`.
 
 ### 5.2 Runes
 
-*Proposed:* [`src/inventory/runes.ts`](../../src/inventory/runes.ts).
+*Proposed:* [`src/inventory/runes.ts`](../../../../src/inventory/runes.ts).
 
 ```ts
 export type RuneId = 'ember' | 'rime' | 'storm' | 'venom' | 'acid' | 'stone' | 'wind' | 'life' | 'mind' | 'dawn'
@@ -389,7 +389,7 @@ export const RANK_NAMES: Record<Rank, string>       // 'Lesser ', '', 'Greater '
 
 **The pouch.** `GameState` gains `runes: Partial<Record<RuneKey, number>>`, the party's pouch. It is saved as is.
 
-*Proposed* in a new [`src/game/runecraft.ts`](../../src/game/runecraft.ts), following the `crafting.ts` pattern (refusal strings, `ItemPlace`, `passTurn` in the field):
+*Proposed* in a new [`src/game/runecraft.ts`](../../../../src/game/runecraft.ts), following the `crafting.ts` pattern (refusal strings, `ItemPlace`, `passTurn` in the field):
 - `embed(game, place, socketIndex?, rune)` fills the first empty socket by default;
 - `extract(game, place, socketIndex)`;
 - `fuse(game, rune, rank)`;
@@ -397,12 +397,12 @@ export const RANK_NAMES: Record<Rank, string>       // 'Lesser ', '', 'Greater '
 
 ### 5.3 Elements and wards
 
-*Proposed:* `Element` and `ELEMENTS` live in [`src/combat/combat.ts`](../../src/combat/combat.ts).
+*Proposed:* `Element` and `ELEMENTS` live in [`src/combat/combat.ts`](../../../../src/combat/combat.ts).
 - `CombatantStats` gains `wards?: Partial<Record<Element, number>>` and `onHit?: readonly OnHit[]`.
 - `sameCombatStats` compares both.
 - `Spell`, `StatusRule` (for ticks) and the campaign design's `Ability.area` gain `element?: Element`.
 
-**In the engine** ([`src/engine/battleEngine.ts`](../../src/engine/battleEngine.ts)):
+**In the engine** ([`src/engine/battleEngine.ts`](../../../../src/engine/battleEngine.ts)):
 - `warded(damage, element, unit)` = `max(0, damage − ward)`. It applies to cast outcomes, area outcomes, status ticks, and each `onHit` part of an attack.
 - `AttackEvent` gains `bonus: { element?: Element; bane?: true; rolled: number; damage: number }[]` and `healed?: number` (Life).
 - `CastOutcome` and `StatusTickEvent` gain `warded: number`.
@@ -423,17 +423,17 @@ export const RANK_NAMES: Record<Rank, string>       // 'Lesser ', '', 'Greater '
 
 ### 5.4 Forging and the workshop
 
-In [`src/game/crafting.ts`](../../src/game/crafting.ts):
+In [`src/game/crafting.ts`](../../../../src/game/crafting.ts):
 - `WORKSHOP_COSTS` grows to six levels (§4.3).
 - *Proposed:* `forge(game, family, material)` and `forgeRefusal`, which put a plain item in the baggage.
 - *Proposed:* `temper(game, place, grade)` raises a tier 3+ item's grade at the workshop. The cost is gold (tier × 10 × grade) plus the tier's material (4 × grade). The trading post's Fine and Masterwork stop at tier 2.
 - `craftCost` for modifiers on tier 3+ items asks that tier's material in place of iron, copper or crystal.
 
-**Materials.** `Material` in [`src/game/territory.ts`](../../src/game/territory.ts) gains:
+**Materials.** `Material` in [`src/game/territory.ts`](../../../../src/game/territory.ts) gains:
 - the ores and woods: `mithril`, `adamant`, `starmetal`, `ironwood`, `elderwood`, `wyrmwood` and `heartwood`;
 - the trophies: `wolfhide`, `wyvern_hide`, `basilisk_scale` and `drake_scale`.
 
-`RESOURCE_YIELDS` gains the new sites. Trophies come from a new `TROPHIES: Partial<Record<UnitKind, { material; amount }>>` in [`src/game/encounters.ts`](../../src/game/encounters.ts). They are granted in `rewardVictory`, or beside it in `GameState`, so the scene and the simulator share one path.
+`RESOURCE_YIELDS` gains the new sites. Trophies come from a new `TROPHIES: Partial<Record<UnitKind, { material; amount }>>` in [`src/game/encounters.ts`](../../../../src/game/encounters.ts). They are granted in `rewardVictory`, or beside it in `GameState`, so the scene and the simulator share one path.
 
 ### 5.5 The trading post
 
@@ -445,24 +445,24 @@ In [`src/game/crafting.ts`](../../src/game/crafting.ts):
 
 ### 5.6 Loot
 
-- *Proposed:* `rollRunes(threat, encounter, rng)` in a new [`src/game/loot.ts`](../../src/game/loot.ts). It draws from the battle's own RNG stream, a fixed salt of the battle seed, so replays stay identical.
+- *Proposed:* `rollRunes(threat, encounter, rng)` in a new [`src/game/loot.ts`](../../../../src/game/loot.ts). It draws from the battle's own RNG stream, a fixed salt of the battle seed, so replays stay identical.
 - `takeLoot` also returns the runes and trophies, and `VictoryReward` grows to show them.
 - Spawned locations keep `SPAWN_LOOT_CHANCE` for uniques. Unique items gain a `sockets` entry in their catalog (Emberblade 1, Storm Wand 1, Hawkeye Bow 1, the rest 0).
 
 ### 5.7 Scenes
 
-- **[`InventoryScene.ts`](../../src/scenes/InventoryScene.ts):** the tooltip shows tier, grade, modifier, sockets (filled and empty) and each rune's line. The character panel shows wards when there are any.
-- **[`CraftingScene.ts`](../../src/scenes/CraftingScene.ts):** three tabs, Modify (today's), Forge and Runes.
+- **[`InventoryScene.ts`](../../../../src/scenes/InventoryScene.ts):** the tooltip shows tier, grade, modifier, sockets (filled and empty) and each rune's line. The character panel shows wards when there are any.
+- **[`CraftingScene.ts`](../../../../src/scenes/CraftingScene.ts):** three tabs, Modify (today's), Forge and Runes.
   - Forge lists families by slot, the tiers the workshop allows, the cost, and the stats against the item worn.
   - Runes shows the pouch, the chosen item's sockets, and the embed, extract and fuse actions with their costs and refusals.
 - **Trading post scene:** a slot and family filter, and a Runes section.
-- **[`gearCompare.ts`](../../src/scenes/gearCompare.ts):** compares wards, on-hit effects, strength shortfall and AP penalty.
+- **[`gearCompare.ts`](../../../../src/scenes/gearCompare.ts):** compares wards, on-hit effects, strength shortfall and AP penalty.
 - **Item icons:** one new icon per new family in `itemIcons.ts`, tinted by material (a `MATERIAL_TINTS` table). A small socket pip row sits on the icon.
 - **Battle log and floating text:** "+3 fire", and "warded 4" on spells.
 
 ### 5.8 The yardstick and the simulator
 
-**Expected kit.** *Proposed:* `expectedKit(role, level)` in [`scripts/simulate.ts`](../../scripts/simulate.ts), shared with the yardstick test. It is the gear the careful party should own at a level when the economy works:
+**Expected kit.** *Proposed:* `expectedKit(role, level)` in [`scripts/simulate.ts`](../../../../scripts/simulate.ts), shared with the yardstick test. It is the gear the careful party should own at a level when the economy works:
 
 | Level | Tier, grade | Sockets filled (rank) |
 | --- | --- | --- |
