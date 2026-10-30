@@ -18,7 +18,7 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 9
+export const SAVE_VERSION = 10
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -128,6 +128,7 @@ export function parseSave(raw: string | null): SaveFile | null {
     check(Array.isArray(world.seen) && world.seen.length === world.blight.length && Array.isArray(world.sighted))
     check(Array.isArray(world.towers) && typeof world.towersBuilt === 'number')
     check(typeof world.shrine === 'number' && Array.isArray(world.outposts))
+    check(typeof world.tradingPost === 'number' && typeof world.workshop === 'number' && typeof world.infirmary === 'number')
     check(Array.isArray(world.held) && Array.isArray(world.threatened) && world.stock && typeof world.stock === 'object')
     check(typeof world.rng === 'number' && typeof world.spawnPressure === 'number' && typeof world.status === 'string')
     check(Array.isArray(game.reserves) && typeof world.guildHall === 'number')

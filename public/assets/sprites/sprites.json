@@ -102,6 +102,55 @@
       48
     ]
   },
+  "camp_infirmary": {
+    "anchor": [
+      24,
+      48
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      6,
+      48,
+      42
+    ],
+    "canvas": "building",
+    "display_scale": 3,
+    "file": "camp_infirmary.png",
+    "frames": {
+      "level_1": {
+        "bounds": [
+          3,
+          6,
+          42,
+          42
+        ],
+        "file": "camp_infirmary__level_1.png"
+      },
+      "level_2": {
+        "bounds": [
+          0,
+          6,
+          45,
+          42
+        ],
+        "file": "camp_infirmary__level_2.png"
+      },
+      "level_3": {
+        "bounds": [
+          0,
+          6,
+          48,
+          42
+        ],
+        "file": "camp_infirmary__level_3.png"
+      }
+    },
+    "size": [
+      48,
+      48
+    ]
+  },
   "camp_plot": {
     "anchor": [
       24,
@@ -211,6 +260,104 @@
     "size": [
       24,
       24
+    ]
+  },
+  "camp_trading_post": {
+    "anchor": [
+      24,
+      48
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      5,
+      48,
+      43
+    ],
+    "canvas": "building",
+    "display_scale": 3,
+    "file": "camp_trading_post.png",
+    "frames": {
+      "level_1": {
+        "bounds": [
+          4,
+          15,
+          40,
+          33
+        ],
+        "file": "camp_trading_post__level_1.png"
+      },
+      "level_2": {
+        "bounds": [
+          0,
+          15,
+          48,
+          33
+        ],
+        "file": "camp_trading_post__level_2.png"
+      },
+      "level_3": {
+        "bounds": [
+          0,
+          5,
+          48,
+          43
+        ],
+        "file": "camp_trading_post__level_3.png"
+      }
+    },
+    "size": [
+      48,
+      48
+    ]
+  },
+  "camp_workshop": {
+    "anchor": [
+      24,
+      48
+    ],
+    "anims": {},
+    "bounds": [
+      1,
+      0,
+      46,
+      48
+    ],
+    "canvas": "building",
+    "display_scale": 3,
+    "file": "camp_workshop.png",
+    "frames": {
+      "level_1": {
+        "bounds": [
+          5,
+          13,
+          42,
+          35
+        ],
+        "file": "camp_workshop__level_1.png"
+      },
+      "level_2": {
+        "bounds": [
+          5,
+          0,
+          42,
+          48
+        ],
+        "file": "camp_workshop__level_2.png"
+      },
+      "level_3": {
+        "bounds": [
+          1,
+          0,
+          46,
+          48
+        ],
+        "file": "camp_workshop__level_3.png"
+      }
+    },
+    "size": [
+      48,
+      48
     ]
   },
   "fx_arrow": {

@@ -1,12 +1,14 @@
 import { maxHp, maxMana, manaOf, type Character } from '../character/character.ts'
 import { gainXp, xpToNextLevel } from '../character/progression.ts'
 import type { BattleState } from '../engine/battleEngine.ts'
+import { facilities, setFacilityLevel, type FacilityId } from '../game/encampment.ts'
 import type { GameState } from '../game/gameState.ts'
 import type { Material } from '../game/territory.ts'
 import { updateSight } from '../game/vision.ts'
 import { isNotable, monstersHere, passTurn, worldActive, type WorldLocation } from '../game/worldMap.ts'
 import { HexBoard, hexToOffset, offsetToHex } from '../grid/hex.ts'
-import { MAGIC_ITEMS, WEAPONS, itemById } from '../inventory/inventory.ts'
+import { BASE_ITEMS, MAGIC_ITEMS, itemById } from '../inventory/inventory.ts'
+import { MODIFIER_IDS } from '../inventory/modifiers.ts'
 import { describeWorldEvent } from './worldEvents.ts'
 
 /**
@@ -183,8 +185,28 @@ const COMMANDS: Record<string, Command> = {
   },
   items: {
     usage: 'items',
-    summary: 'The ids of the items `give` knows.',
-    run: () => [...WEAPONS, ...MAGIC_ITEMS].map((item) => `${item.id.padEnd(18)} ${item.name}`),
+    summary: 'The ids of the items `give` knows; a plain one takes a grade and a modifier, as iron_sword@2+light1.',
+    run: () => [
+      ...[...BASE_ITEMS, ...MAGIC_ITEMS].map((item) => `${item.id.padEnd(18)} ${item.name}`),
+      `Grades: <id>@2 (Fine), <id>@3 (Masterwork). Modifiers: <id>+<modifier><1-3>, of ${MODIFIER_IDS.join(', ')}.`,
+    ],
+  },
+  facility: {
+    usage: 'facility [id level]',
+    summary: "Show the encampment's facilities' levels, or set one's.",
+    changes: 'withArgs',
+    run([id, level], context) {
+      const game = gameOf(context)
+      if (id !== undefined) {
+        const facility = facilities(game).find((f) => f.id === id)
+        if (!facility) throw new DebugError(`No facility "${id}"; there are ${facilities(game).map((f) => f.id).join(', ')}.`)
+        const n = integer(level, 'the level')
+        const lowest = id === 'guild_hall' || id === 'trading_post' ? 1 : 0
+        if (n < lowest || n > facility.maxLevel) throw new DebugError(`${facility.name}'s level goes from ${lowest} to ${facility.maxLevel}.`)
+        setFacilityLevel(game, id as FacilityId, n)
+      }
+      return facilities(game).map((f) => `${f.id.padEnd(14)} level ${f.level} of ${f.maxLevel}`)
+    },
   },
   give: {
     usage: 'give <item> [count]',

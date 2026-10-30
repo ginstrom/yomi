@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest'
 import type { EncampmentProbe, GuildHallProbe } from '../src/testHook.ts'
 import { useGames, type Game } from './driver.ts'
 
-/** A new game with gold and iron planted in its stock, reloaded and continued at the encampment. */
-async function richAtHome(game: Game) {
+/** A new game with gold and iron (or `stock`) planted in its stock, reloaded and continued at the encampment. */
+async function richAtHome(game: Game, stock: Record<string, number> = { gold: 100, iron: 50 }) {
   await game.newGame()
-  await game.page.evaluate(() => {
+  await game.page.evaluate((stock) => {
     const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
-    saved.game.world.stock = { gold: 100, iron: 50 }
+    saved.game.world.stock = stock
     localStorage.setItem('yomi.save.1', JSON.stringify(saved))
-  })
+  }, stock)
   const menu = await game.reload()
   await game.click(menu.buttons.continue)
   await game.waitForScenes(['World'])
@@ -125,5 +125,107 @@ describe('the encampment', () => {
     await game.press('Escape')
     await game.waitForScenes(['GuildHall'], ['World'])
     expect((await game.settled('GuildHall')).reserves).toEqual([])
+  })
+
+  it('shows five plots, the trading post built, and buys and sells there', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 100, salt: 4 })
+    const camp = await enter(game)
+    expect(camp.facilities.map((f) => [f.id, f.frame])).toEqual([
+      ['guild_hall', 'camp_guild_hall/level_1'],
+      ['shrine', 'camp_plot/base'],
+      ['trading_post', 'camp_trading_post/level_1'],
+      ['workshop', 'camp_plot/base'],
+      ['infirmary', 'camp_plot/base'],
+    ])
+    await game.click(facility(camp, 'trading_post'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'trading_post')
+    await game.click(shown.buttons.open)
+    await game.waitForScenes(['TradingPost'], ['World'])
+    const post = await game.settled('TradingPost')
+    expect(post.rows.some((row) => row.id.includes('@'))).toBe(false)
+
+    const sword = post.rows.find((row) => row.id === 'iron_sword')!
+    await game.click(sword)
+    const picked = await game.settled('TradingPost', (p) => p.selected === 'iron_sword')
+    expect(picked.details).toContain('Attack: 5 AP, 1 attack a turn')
+    await game.click(picked.buttons.confirm)
+    const bought = await game.settled('TradingPost', (p) => p.gold === 88)
+    expect(bought.message).toBe('Bought the Iron Longsword for 12 gold. It is in the baggage.')
+
+    await game.click(bought.buttons.sellTab)
+    const selling = await game.settled('TradingPost', (p) => p.tab === 'sell')
+    expect(selling.rows.some((row) => row.id.startsWith('worn'))).toBe(false)
+    await game.click(selling.rows.find((row) => row.id === 'baggage:0')!)
+    const toSell = await game.settled('TradingPost', (p) => p.selected === 'baggage:0')
+    await game.click(toSell.buttons.confirm)
+    const sold = await game.settled('TradingPost', (p) => p.gold === 94)
+    // The materials come last, on the last page.
+    await game.click(sold.buttons.next)
+    const last = await game.settled('TradingPost', (p) => p.rows.find((row) => row.id === 'material:salt')!.visible)
+    await game.click(last.rows.find((row) => row.id === 'material:salt')!)
+    const salt = await game.settled('TradingPost', (p) => p.selected === 'material:salt')
+    await game.click(salt.buttons.confirmAll)
+    const done = await game.settled('TradingPost', (p) => p.gold === 96)
+
+    await game.click(done.buttons.close)
+    await game.waitForScenes(['Encampment'], ['World'])
+    expect((await game.settled('Encampment')).selected).toBe('trading_post')
+  })
+
+  it('builds the workshop and works the soldier’s sword there, in no time', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 200, iron: 50, stone: 20, copper: 10 })
+    const camp = await enter(game)
+    await game.click(facility(camp, 'workshop'))
+    let shown = await game.settled('Encampment', (c) => c.selected === 'workshop')
+    await game.click(shown.buttons.improve)
+    shown = await game.settled('Encampment', (c) => facility(c, 'workshop').level === 1)
+    await game.click(shown.buttons.improve)
+    shown = await game.settled('Encampment', (c) => facility(c, 'workshop').level === 2)
+    expect(facility(shown, 'workshop').frame).toBe('camp_workshop/level_2')
+    await game.click(shown.buttons.open)
+    await game.waitForScenes(['Crafting'], ['World'])
+    const bench = await game.settled('Crafting')
+    expect(bench.tier).toBe(2)
+    await game.click(bench.items.find((item) => item.id === 'worn:0:mainHand')!)
+    const sword = await game.settled('Crafting', (c) => c.selected === 'worn:0:mainHand')
+    expect(sword.options.map((o) => o.id)).toEqual(['balanced1', 'balanced2', 'keen1', 'keen2', 'light1', 'light2'])
+    await game.click(sword.options.find((o) => o.id === 'light1')!)
+    const light = await game.settled('Crafting', (c) => c.chosen === 'light1')
+    expect(light.preview).toContain('Attack: 5 AP, 1 attack a turn → 4 AP, 2 attacks a turn')
+    await game.click(light.buttons.work)
+    const made = await game.settled('Crafting', (c) => c.message.startsWith('Made'))
+    expect(made.items.find((item) => item.id === 'worn:0:mainHand')!.itemId).toBe('iron_sword+light1')
+
+    await game.click(made.buttons.close)
+    await game.waitForScenes(['Encampment'], ['World'])
+    const back = await game.settled('Encampment')
+    await game.click(back.buttons.leave)
+    await game.waitForScenes(['World'])
+    const world = (await game.settled('World')).world
+    expect(world.turn).toBe(1)
+    expect(world.stock).toMatchObject({ gold: 200 - 25 - 40 - 5, iron: 50 - 15 - 5 })
+  })
+
+  it('crafts in the field from the map’s Craft button, a day passing', async () => {
+    const game = await games.open()
+    const home = await richAtHome(game, { gold: 20, iron: 20 })
+    expect(home.buttons.craft.visible).toBe(true)
+    await game.click(home.buttons.craft)
+    await game.waitForScenes(['Crafting'], ['World'])
+    const bench = await game.settled('Crafting')
+    expect(bench.tier).toBe('field')
+    await game.click(bench.items.find((item) => item.id === 'worn:0:mainHand')!)
+    const sword = await game.settled('Crafting', (c) => c.selected === 'worn:0:mainHand')
+    expect(sword.options.map((o) => o.id)).toEqual(['balanced1'])
+    await game.click(sword.options[0])
+    const chosen = await game.settled('Crafting', (c) => c.chosen === 'balanced1')
+    await game.click(chosen.buttons.work)
+    await game.waitForScenes(['World'])
+    await game.skipStory()
+    const after = await game.settled('World', (w) => w.message.includes('Balanced'))
+    expect(after.world.turn).toBe(2)
+    expect(after.world.stock).toMatchObject({ gold: 15, iron: 15 })
   })
 })

@@ -46,6 +46,23 @@ function battleOf(game: GameState): SavedBattle {
   return { location: location.id, engine: engine.snapshot(), enemyRng: enemyRng.state(), ground: ground.piles() }
 }
 
+describe('the encampment’s facilities and graded gear', () => {
+  it('save and load as they were', () => {
+    const game = gameUnderWay()
+    Object.assign(game.world, { tradingPost: 3, workshop: 2, infirmary: 1 })
+    game.world.stock = { gold: 7, copper: 3 }
+    game.party[0].equipment.mainHand = itemById('iron_sword@3+light2')
+    game.party[1].backpack[0] = itemById('yew_bow+recurve1')!
+    game.baggage.push(itemById('steel_armor@2')!)
+    const loaded = parseSave(serializeSave({ game, battle: null, savedAt: 1 }))!.game
+    expect([loaded.world.tradingPost, loaded.world.workshop, loaded.world.infirmary]).toEqual([3, 2, 1])
+    expect(loaded.world.stock).toEqual({ gold: 7, copper: 3 })
+    expect(loaded.party[0].equipment.mainHand).toBe(itemById('iron_sword@3+light2'))
+    expect(loaded.party[1].backpack[0]).toBe(game.party[1].backpack[0])
+    expect(loaded.baggage.at(-1)).toBe(itemById('steel_armor@2'))
+  })
+})
+
 describe('itemById', () => {
   it('finds every item there is, as the constant itself', () => {
     for (const item of [...WEAPONS, ...MAGIC_ITEMS, OAK_SHIELD, STEEL_ARMOR]) expect(itemById(item.id)).toBe(item)

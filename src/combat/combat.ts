@@ -153,9 +153,9 @@ export function rollToHit(
   return { attackRoll, chance, hit, critical, fumble }
 }
 
-/** The second half of `resolveAttack`: the damage of a hit, a critical doubling the dice. */
+/** The second half of `resolveAttack`: the damage of a hit, a critical doubling the dice; never below 0, as a modifier may lower a weapon's bonus. */
 export function rollHitDamage(dice: DamageRoll, critical: boolean, rng: RNG = Math.random): number {
-  return rollDamage(critical ? { ...dice, count: dice.count * 2 } : dice, rng)
+  return Math.max(0, rollDamage(critical ? { ...dice, count: dice.count * 2 } : dice, rng))
 }
 
 /** Probability that resolveAttack hits, from 0.05 to 0.95. */

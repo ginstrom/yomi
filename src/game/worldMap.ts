@@ -103,6 +103,12 @@ export interface WorldState {
   shrine: number
   /** The ids of the held sites with an outpost (buildings.ts), which adds to a site's strength and yield; razed when the site is lost. */
   outposts: string[]
+  /** The trading post's level at the encampment, 1 to `MAX_TRADING_POST_LEVEL` (tradingPost.ts): the grades it sells. */
+  tradingPost: number
+  /** The workshop's level at the encampment, 0 (none) to `MAX_WORKSHOP_LEVEL` (crafting.ts): the modifiers and grades it makes. */
+  workshop: number
+  /** The infirmary's level at the encampment, 0 (none) to `MAX_INFIRMARY_LEVEL` (infirmary.ts): what a day's camping heals. */
+  infirmary: number
   /** The held sites and towers the blight is gaining on, as of the last day. */
   threatened: string[]
   /** What held sites have yielded, kept at the encampment, which buildings and the guild hall spend. */
@@ -221,6 +227,9 @@ export function newWorld(seed: number = randomSeed(), encampmentName: string = D
     towersBuilt: 0,
     shrine: 0,
     outposts: [],
+    tradingPost: 1,
+    workshop: 0,
+    infirmary: 0,
     stock: {},
     status: 'playing',
   }

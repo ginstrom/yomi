@@ -1,20 +1,22 @@
 import { maxHp, maxMana } from '../character/character.ts'
 import type { WorldEvent } from './blight.ts'
+import { restHealing } from './infirmary.ts'
 import { autoHeal, type Party } from './party.ts'
 import { isNotable, monstersHere, passTurn, worldActive, type WorldState } from './worldMap.ts'
 
 /**
  * Camping on the world map: the party rests where it stands, a day at a
  * time. A day is a world turn, as a hex of travel is; it fills every
- * caster's mana and heals every member `NATURAL_HEALING_PER_DAY`. Camping
+ * caster's mana and heals every member what the infirmary says
+ * (`restHealing`: `NATURAL_HEALING_PER_DAY` without one). Camping
  * until healed casts the party's heals as a careful player would (`autoHeal`)
  * and camps another day while anyone is still wounded, so that mana is spent
  * on wounds before each night refills it, unless a notable event on the map
  * (`isNotable`) breaks camp first.
  */
 
-/** What a day's rest heals each member, besides what a caster's refilled mana can heal. */
-export const NATURAL_HEALING_PER_DAY = 1
+/** What a day's rest heals each member without an infirmary, besides what a caster's refilled mana can heal. */
+export { NATURAL_HEALING_PER_DAY } from './infirmary.ts'
 
 /** What came of camping: the days it took, the hit points restored by rest and by spells, what happened on the map meanwhile, and the event that broke camp if one did. */
 export interface CampResult {
@@ -45,16 +47,18 @@ const totalHp = (party: Party) => party.reduce((sum, member) => sum + member.hp,
 
 /**
  * Camps one day: a world turn passes (`passTurn`), every member heals
- * `NATURAL_HEALING_PER_DAY` up to its maximum and every caster's mana is
+ * `restHealing` up to its maximum and every caster's mana is
  * full. Returns the hit points restored and the day's events, or null,
  * changing nothing, where the party cannot camp.
  */
 export function campDay(world: WorldState, party: Party): CampDay | null {
   if (!canCamp(world)) return null
   const before = totalHp(party)
+  // Judged where the party camps, before the day's events can change it.
+  const healing = party.map((member) => restHealing(world, member))
   const events = passTurn(world, party)
-  for (const member of party) {
-    member.hp = Math.min(maxHp(member), member.hp + NATURAL_HEALING_PER_DAY)
+  for (const [i, member] of party.entries()) {
+    member.hp = Math.min(maxHp(member), member.hp + healing[i])
     member.mana = maxMana(member)
   }
   return { healed: totalHp(party) - before, events }
