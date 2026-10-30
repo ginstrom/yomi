@@ -217,11 +217,12 @@ describe('banditCamp', () => {
     expect(ENCOUNTER_COUNTS.bandit_camp).toEqual([2, 2, 2, 4, 4])
   })
 
-  it('fields the Captain and Brute at threat 3, the Captain and Hedge-Mage at 4 and 5, and four from 6', () => {
+  it('fields the Captain with the Brute at threat 3, the Hedge-Mage at 4 and the Archer at 5, and four from 6', () => {
     expect(field(3)).toEqual(['captain', 'brute'])
     expect(field(4)).toEqual(['captain', 'mage'])
-    expect(field(5)).toEqual(['captain', 'mage'])
-    expect(field(6)).toEqual(['captain', 'mage', 'brute', 'archer'])
+    expect(field(5)).toEqual(['captain', 'archer'])
+    expect(field(6)).toEqual(['captain', 'archer', 'mage', 'brute'])
+    expect(field(7)).toEqual(['captain', 'archer', 'mage', 'brute'])
   })
 
   it('gives each bandit its kind, name and hex, and stats built by hero rules at the threat\'s level and grade', () => {
@@ -236,6 +237,7 @@ describe('banditCamp', () => {
     }
     expect(foeStats('bandit_captain', 5)).toEqual(banditStats('captain', 5, 2))
     expect(foeStats('bandit_mage', 4)).toEqual(banditStats('mage', 4, 1))
+    expect(foeStats('bandit_archer', 5)).toEqual(banditStats('archer', 5, 2))
   })
 
   it('fights a threat outside its band as the nearest in it', () => {
@@ -250,7 +252,7 @@ describe('banditCamp', () => {
 
   it('pays 100 a level for each bandit, an even foe', () => {
     for (const kind of Object.keys(BANDIT_ROLE) as BanditKind[]) expect(FOE_XP[kind]).toBe(100)
-    expect([3, 4, 5].map((threat) => xpReward(banditCamp(party(), threat)))).toEqual([600, 800, 1000])
+    expect([3, 4, 5, 6].map((threat) => xpReward(banditCamp(party(), threat)))).toEqual([600, 800, 1000, 2400])
   })
 })
 

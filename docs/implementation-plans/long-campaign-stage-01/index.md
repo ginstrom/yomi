@@ -25,6 +25,8 @@ The plan follows the design except where the design contradicts itself or the co
    The counts are `[3, 3, 4, 4, 4]` over the band 3–7. A threat-3 camp then fields the Captain, Brute and Archer. Threat 4 fields the Captain, Hedge-Mage and Brute. Threat 5 fields the Captain, Hedge-Mage, Brute and Archer. The Cutthroat, fifth in the slot order, takes the field only once a later stage raises a count to 5 (stage 9); the counts top out at 4. (Corrected at the second overall review: this once said the Cutthroat enters from threat 6.) Step 07 may retune the counts on today's map from the simulator, and records what it measures.
 
    **Retuned at step 07:** the counts are `[2, 2, 2, 4, 4]` (C6 below as amended). Three bandits were a wall at threats 3 and 4 (39% and 32% for a party of the threat's level) and four at 5 (0.6%); two win 89%, 95% and 87%. The camp now fields the Captain and Brute at threat 3, and the Captain and Hedge-Mage at threats 4 and 5; the Archer from threat 6; the Cutthroat, fifth in the slot order, takes the field only once a later stage raises a count to 5 (stage 9).
+
+   **Reordered after the stage (2026-10-30, the user's follow-up):** the slot order is Captain, Archer (`fromThreat: 5`), Hedge-Mage (`fromThreat: 4`), Brute, Cutthroat, counts unchanged, so the camp fields the Captain and Brute at threat 3, the Captain and Hedge-Mage at 4, the Captain and Archer at 5, and the Captain, Archer, Hedge-Mage and Brute at 6 and 7. See C6 and the execution notes.
 3. **Today's encounters keep the band 1–5.** The design says today's five encounters keep their counts "cut to their bands", but gives no bands for them in this stage. The plan gives each of them `{ min: 1, max: 5 }` with counts `[2, 3, 3, 3, 4]`, today's `FOES_AT_THREAT`, so every battle that exists today is unchanged. Narrower bands for them belong to stage 9.
 4. **The yardstick is checked at native level only.** The design asks for the test "applied to today's kinds at threats 1 to 5". The reference (campaign A11) checks a kind at its native level. Today's kinds are native 1, so the test checks level 1, with exceptions named. Checking every threat would turn the test into a list of exceptions.
 5. **The threat table already prints every threat that occurs** (`ThreatRow`, "a threat no campaign reached has no row"), so that part of the design needs no work.
@@ -176,14 +178,15 @@ export function banditCamp(party: readonly Fighter[], threat = 3): Encounter
 ```
 
 - Band `{ min: 3, max: 7 }`, counts `[3, 3, 4, 4, 4]`. **Amended at step 07:** counts `[2, 2, 2, 4, 4]`, tuned in the simulator (see correction 2).
+- **Amended 2026-10-30 (follow-up after the stage):** the slot order is Captain, Archer (`fromThreat: 5`), Hedge-Mage, Brute, Cutthroat, so that the Archer takes the field at threat 5 in the Hedge-Mage's place. The table below keeps its ids, kinds, names and positions; only the order and the Archer's `fromThreat` change. The threat-5 cell went from 434 to 470 of 500, the guard from 237 to 238.
 - The slots, in order (ids are unit ids; positions are `[col, row]` on the 12 × 9 board, off the party's hexes):
 
   | Id | Kind | Name | Position | From threat |
   | --- | --- | --- | --- | --- |
   | `captain` | `bandit_captain` | Bandit Captain | (8, 4) | — |
+  | `archer` | `bandit_archer` | Bandit Archer | (9, 6) | 5 (amended 2026-10-30; was second to last, from threat 1) |
   | `mage` | `bandit_mage` | Hedge-Mage | (9, 4) | 4 |
   | `brute` | `bandit_brute` | Bandit Brute | (8, 2) | — |
-  | `archer` | `bandit_archer` | Bandit Archer | (9, 6) | — |
   | `cutthroat` | `bandit_cutthroat` | Cutthroat | (8, 6) | — |
 
 ### C7. The map and spawns (step 04)
@@ -278,8 +281,8 @@ fight?: (encounter: EncounterId, threat: number) => void
 ## Overall completion criteria
 
 - [x] Every step is done, with `make test` passing at each commit.
-- [x] The campaign summary is identical after step 01, and the guard is measured after step 04 and judged in 07 (237 of 500 after tuning, 83 below 320: explained in CLAUDE.md and the stage notes, not retuned away; a decision for the user).
-- [x] Cells `--encounter bandit_camp --threat T --party-level T` for T = 3, 4 and 5 are recorded. A party of the threat's level wins most but not all (88.8%, 94.6%, 86.8%).
+- [x] The campaign summary is identical after step 01, and the guard is measured after step 04 and judged in 07 (237 of 500 after tuning, 83 below 320: explained in CLAUDE.md and the stage notes, not retuned away; 238 with the Archer at threat 5). **Accepted by the user** after the stage, at that level: "a real player can just choose to grind more".
+- [x] Cells `--encounter bandit_camp --threat T --party-level T` for T = 3, 4 and 5 are recorded. A party of the threat's level wins most but not all (88.8%, 94.6%, 86.8%; with the Archer at threat 5, 94%).
 - [x] CLAUDE.md describes native levels, bands, bandits, the `fight` command and `--ready-level`, and the manual mentions bandits.
 - [x] The stage design gets an "Implementation notes" section with the figures. The stages index marks stage 1 done.
 - [x] The design's play script has been walked in the game (`make dev`), or the steps not walked are listed for the user in step 07's record (not walked; listed).
@@ -288,6 +291,11 @@ fight?: (encounter: EncounterId, threat: number) => void
 
 - **Overall review** of steps 01 to 07 (`bf7b802..24d1a82`): clean. Four doc fixes made in one commit, "Overall review: correct the stage's remaining docs": the `banditCamp` comment for the tuned counts; "foe", not "monster", in `encounter`'s comment; the stage design's status line, its commit list (step 07's review commits) and play-script item 2 (the threat-5 mage's Fireball and Heal All); and this note. Checks run by the reviewer: `make test` 754 passed; the production build OK; the sprites check OK; browser tests `debug` 3/3, `battle` 9/9 and `saves` 6/6 when run alone (three timeouts seen only when they ran together under load).
 - **Second overall review:** clean but for one doc error: the Cutthroat never takes the field at any threat, as the camp's counts top out at 4 (threats 6 and 7; higher threats clamp to 7) and it is fifth in the slot order, while several docs said it appears from threat 6. Corrected in the `banditCamp` comment, CLAUDE.md's rules of scaling, the stage's implementation notes, correction 2 above and step 03's task file: the Archer from threat 6; the Cutthroat only once a later stage raises a count to 5 (stage 9).
+
+- **Follow-ups after the stage (2026-10-30, the user's decisions):**
+  - **The guard is accepted** at its level, 237 of 500 (238 after the next item), against 320 before the stage. The user's reason: "a real player can just choose to grind more." Recorded in CLAUDE.md's rules of scaling, the stage design's status line and notes, and the stages index.
+  - **The Archer at threat 5.** The slot order became Captain, Archer (`fromThreat: 5`), Hedge-Mage (`fromThreat: 4`), Brute, Cutthroat, counts unchanged (C6 amended). Tests first: `encounters.test.ts` pins the field at threats 3 to 7, the Archer's stats at 5 and the XP at threats 3 to 6 (the field test failed on threat 5 before the change). Measured from seed 1 in podman: the threat-5 cell `--encounter bandit_camp --threat 5 --party-level 5 --battles 500` 470 of 500 (94%, 8.4 rounds; was 434), most but not all, so not retuned; the guard `--campaign --ready-level 7 --battles 500` 238 of 500 (was 237), the fixed camp 446 of 500, the Hideout 260 of 261, Bandit Gangs 377 of 377, 817 of 819 and 346 of 346 at threats 3, 4 and 5. Threats 3 and 4 field what they did. CLAUDE.md, the stage notes (cells, follow-up, play-script step 2) and the manual's bandit paragraph were updated.
+  - **The manual** was brought up to date and its screenshots retaken, in a commit of its own.
 
 ## Open questions
 

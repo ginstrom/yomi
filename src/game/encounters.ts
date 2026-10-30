@@ -249,13 +249,14 @@ const SOURCE_GUARDIANS_SLOTS: readonly FoeSlot[] = [
   { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [9, 6] },
 ]
 
-// The Captain first, so it leads at every threat; the Hedge-Mage from threat 4, ahead of the Brute and the Archer
-// so that it takes the field there, and the Cutthroat last.
+// The Captain first, so it leads at every threat; then the Archer from threat 5 and the Hedge-Mage from threat 4,
+// ahead of the Brute, so that each threat of today's map has its own second bandit (the Brute at 3, the Hedge-Mage
+// at 4, the Archer at 5), and the Cutthroat last.
 const BANDIT_CAMP_SLOTS: readonly FoeSlot[] = [
   { id: 'captain', kind: 'bandit_captain', name: 'Bandit Captain', at: [8, 4] },
+  { id: 'archer', kind: 'bandit_archer', name: 'Bandit Archer', at: [9, 6], fromThreat: 5 },
   { id: 'mage', kind: 'bandit_mage', name: 'Hedge-Mage', at: [9, 4], fromThreat: 4 },
   { id: 'brute', kind: 'bandit_brute', name: 'Bandit Brute', at: [8, 2] },
-  { id: 'archer', kind: 'bandit_archer', name: 'Bandit Archer', at: [9, 6] },
   { id: 'cutthroat', kind: 'bandit_cutthroat', name: 'Cutthroat', at: [8, 6] },
 ]
 
@@ -313,10 +314,10 @@ export function sourceGuardians(party: readonly Fighter[], threat = 1): Encounte
 /**
  * Bandits, built by the rules heroes are: a Bandit Captain with sword, shield
  * and breastplate, and a Brute with an axe and breastplate at threat 3; at
- * threats 4 and 5 a Hedge-Mage in the Brute's place, their gear Fine at 5.
- * From threat 6 four fight, the Archer joining them; the Cutthroat, fifth in
- * the slot order, takes the field only once a later stage raises a count to 5
- * (stage 9).
+ * threat 4 a Hedge-Mage in the Brute's place, and at threat 5 an Archer, their
+ * gear Fine at 5. From threat 6 four fight, the Captain, Archer, Hedge-Mage and
+ * Brute; the Cutthroat, fifth in the slot order, takes the field only once a
+ * later stage raises a count to 5 (stage 9).
  */
 export function banditCamp(party: readonly Fighter[], threat = 3): Encounter {
   return encounter(party, BANDIT_CAMP, threat)
