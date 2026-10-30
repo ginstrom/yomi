@@ -184,7 +184,7 @@ If the game cannot be driven from this session (no browser), list each unwalked 
 
 ## Completion note
 
-- **Status:** done. Commit "Step 07: measure, tune and document" (hash recorded in the follow-up commit below).
+- **Status:** done. Commit `c4ce6f8` ("Step 07: measure, tune and document").
 - **Changed:**
   - `src/game/encounters.ts`: the Bandit Camp's counts `[3, 3, 4, 4, 4]` → `[2, 2, 2, 4, 4]`, and the doc comment above it. `banditGrade` is unchanged (plain below 5, Fine from 5).
   - `src/game/encounters.test.ts`: the three tests pinning the counts, the bandits fielded at each threat and the experience (600, 800, 1000 at threats 3 to 5).

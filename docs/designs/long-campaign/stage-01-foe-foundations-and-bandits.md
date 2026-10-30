@@ -134,7 +134,7 @@ Built from the plan in [`docs/implementation-plans/long-campaign-stage-01/`](../
 - Step 04, bandits on the map: `7ff2fb9`.
 - Step 05, the debug `fight` command: `c39b8ec`, review `112793b`.
 - Step 06, `--ready-level` and the level record: `5481925`.
-- Step 07, measure, tune and document: the commit "Step 07: measure, tune and document" (its hash is in the plan's step 07 note).
+- Step 07, measure, tune and document: `c4ce6f8`.
 
 **Departures from this design** (the plan's corrections):
 1. The Bandit Hideout (once Goblin Outriders, (47, 13)) is at threat 4, not 5: that is what `threatAt` gives there.
