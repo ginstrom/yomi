@@ -1,13 +1,16 @@
-# Encampment facilities: the workshop and the infirmary
+# Encampment facilities: the trading post, the workshop and the infirmary
 
 ## 1. Purpose and status
 
-The encampment has two facilities, the guild hall and the shrine. The blight design left two more to this document ([blight.md](blight.md) §4.6, §9): the **workshop**, for crafting, and the **infirmary**, for recovery. This design adds both as encampment facilities, built and raised from the stock like the others.
+The encampment has two facilities, the guild hall and the shrine. The blight design left the rest of the encampment to this document ([blight.md](blight.md) §4.6, §9). This design adds three more, and with them a **gear ladder**: today the plain gear is one flat set, and better items come only as loot.
 
-- **The workshop** turns plain gear into specialised variants, each with a tradeoff. Its recipes spend the far materials that nothing buys today (copper, crystal), so pushing the blight back pays off in gear as well as influence.
-- **The infirmary** makes a visit home worth more: wounds heal faster at the encampment, and at its top level its supplies quicken healing in the field too.
+- **The trading post** sells gear for gold and buys whatever the party no longer needs. Its levels sell better grades of gear.
+- **The workshop** modifies gear: each modifier trades one stat for another, and its grade rises with the workshop's level. A few modifiers can be made in the field, with no building at all.
+- **The infirmary** heals faster at the encampment, and at its top level in the field too.
 
-**Status: ready for planning.** The facility rules, recipe list and technical shape are settled enough to plan. Commerce and quests, which the earlier version of this document proposed, are open questions (§9) and are not part of the scope. Costs, recipe numbers and healing rates are starting points for the simulator, not decisions.
+Together they make the blight's second loop ("develop the encampment → more power → tougher foes") a loop of buildings *and* gear: held land yields gold and materials, the buildings turn them into better gear, and better gear pushes into land that yields more. Gold becomes the contested resource, wanted by the guild hall, the shrine, recruits and gear at once.
+
+**Status: ready for planning.** The user chose commerce as a facility, crafting in tiers from the field up through the workshop's levels, and grades that raise what each tier can make; quests are dropped, the blight being enough to drive the game (§9). Costs, prices, stats and healing rates are starting points for the simulator, not decisions.
 
 ### History
 
@@ -21,80 +24,146 @@ This file first proposed an "expeditions and encampment" loop: a home camp at Oa
 | Scout lodge | Watchtowers and fog of war (same) |
 | Named resource sites, announced threats, time pressure | The blight: capture by influence, "falls in Nd", the stock ([blight.md](blight.md)) |
 | The regional stronghold | The Source and endless mode ([blight.md](blight.md) §4.10) |
-| Towns, trade, quests | Towns removed; trade and quests open (§9) |
+| Town trade | The trading post (this design) |
+| Quests | Dropped (§9) |
 | Workshop, infirmary | This design |
 
 ## 2. Requirements and scope
 
 | ID | Requirement |
 | --- | --- |
-| R1 | The encampment screen shows the workshop and the infirmary as facilities, on the two free plots, each built and raised with the stock at the encampment, with its effect, next level and cost shown as for the guild hall and shrine. |
-| R2 | The workshop, once built, opens a screen listing the recipes its level allows and the items the party could work. |
-| R3 | A recipe turns one plain item into one variant for a cost in stock. It shows the item's stats before and after, with attack AP and the attacks a turn it buys, before the player confirms. |
-| R4 | The workshop works items in the baggage and items worn or carried by party members. A worked item's variant takes its place: the same slot, backpack place or baggage place. Reserves' gear is not offered. |
-| R5 | Enchanted items and variants cannot be worked. Working is permanent. |
-| R6 | Each variant is better at something and worse at something else than its base. None is better in every stat. |
-| R7 | The infirmary raises what a day's camping at the encampment heals, by level; at its top level it also raises what a day's camping heals elsewhere. |
-| R8 | Every action validates before it changes anything; a refusal says why and changes nothing. |
-| R9 | The rules stay Phaser-free, deterministic, and in the domain layer; the world map rolls nothing for them. |
-| R10 | Facility levels and crafted items are saved and loaded. |
-| R11 | The campaign simulator builds and uses both facilities, so balance runs measure them. |
+| R1 | The encampment screen shows the trading post, the workshop and the infirmary as facilities, each with its level, effect, next level and cost, raised with the stock at the encampment as the guild hall and shrine are. |
+| R2 | **Gear grades:** every plain item comes in three grades, plain, Fine and Masterwork. A higher grade is better in damage or armour and never changes attack AP or range. |
+| R3 | **Buying:** the trading post sells plain items for gold, up to the grade its level allows, into the baggage. |
+| R4 | **Selling:** the trading post buys items from the baggage and from party members' backpacks for gold, and surplus materials at a poor rate. It never sells materials. |
+| R5 | **Modifiers:** an item can carry one modifier, which makes it better at one thing and worse at another. Working an item that has one replaces it. |
+| R6 | **Crafting tiers:** a few modifiers can be made in the field, anywhere the party can camp; the workshop's levels unlock more, and the highest grade of each modifier the party can make equals the workshop's level (the field makes grade 1). |
+| R7 | Every craft and trade shows the item's stats before and after (attack AP and attacks a turn included) or the gold it brings, and its cost, before the player confirms. |
+| R8 | Enchanted items take no grade or modifier; they can be sold. |
+| R9 | **The infirmary** raises what a day's camping heals at the encampment, by level, and at its top level elsewhere. |
+| R10 | Every action validates before it changes anything; a refusal says why and changes nothing. |
+| R11 | Rules stay Phaser-free and deterministic; nothing rolls dice. |
+| R12 | Facility levels and graded or modified items are saved and loaded. |
+| R13 | The campaign simulator trades, crafts and uses the infirmary, so balance runs measure the loop. |
 
-**Non-goals:** making items from nothing; dismantling; random affixes; working enchanted items; reworking a variant; buying or selling (§9); quests (§9); resurrection, which the guild hall design reserves for very high levels; working an item away from the encampment.
+**Non-goals:** quests; buying materials; random or rotating shop stock; random affixes; modifying enchanted items; more than one modifier on an item; dismantling; a crafting skill or crafting experience (§8); resurrection.
 
 ## 3. Current system
 
 Inspected facts:
 
-- [`encampment.ts`](../../src/game/encampment.ts) lists the facilities (`FACILITIES`: `guild_hall`, `shrine`), each with its level, effect, cost and `improve`, and `improveFacility` dispatches to the facility's own module. `improveRefusal` refuses away from the encampment or without the stock. A facility with `opens: true` has a screen of its own.
+- [`encampment.ts`](../../src/game/encampment.ts) lists the facilities (`FACILITIES`: `guild_hall`, `shrine`), each with its level, effect, cost and `improve`; `improveFacility` dispatches to the facility's module, and `improveRefusal` refuses away from the encampment or without the stock. A facility with `opens: true` has a screen of its own, as the guild hall does.
 - [`encampmentView.ts`](../../src/scenes/encampmentView.ts) draws each facility on a plot. `PLOTS` has four; two are free. Sprites are `camp_<facility>` with `level_N` frames ([`art/encampment/`](../../art/encampment/)).
-- [`buildings.ts`](../../src/game/buildings.ts) has the stock's arithmetic (`canAfford`, `spend`, `describeCost`), `atEncampment`, and the shrine's levels in `WorldState.shrine`. [`guildHall.ts`](../../src/game/guildHall.ts) keeps its level in `WorldState.guildHall`.
-- [`territory.ts`](../../src/game/territory.ts): the stock is `Partial<Record<Material, number>>` over gold, iron, timber, silver, stone, salt, copper, crystal and peat. The guild hall and watchtower spend gold and iron, the shrine gold and silver, the outpost gold and timber. **Stone, salt, copper, crystal and peat buy nothing.** Home is at (9, 19); the iron vein and timber stand are close, peat and silver middling, stone, salt and copper far, crystal beside the Source.
-- [`camp.ts`](../../src/game/camp.ts): a day's camping (`campDay`) passes a world turn, heals every member `NATURAL_HEALING_PER_DAY` (1) and fills mana; `campUntilHealed` casts heals and camps until whole or interrupted. Allowed anywhere not among monsters, the encampment included. Heroes coming out of the reserves are already rested (`guildHall.ts`, `rested`).
-- [`inventory.ts`](../../src/inventory/inventory.ts): items are catalog values with fixed `ItemStats`, found by id through `itemById` (`ITEMS_BY_ID`, over `WEAPONS`, `MAGIC_ITEMS`, the shield and the breastplate). With 8 AP, an attack cost of 4 or less buys two attacks a turn; armour piercing is the melee answer to armour. The plain gear: dagger (3 AP), shortsword (4), longsword (5, 1d8+3, pierces 15%), battle axe (6, 1d12+2, 25%), greatsword (7, two-handed), yew bow (4 AP, range 5, two-handed), oak shield (+10 AC), steel breastplate (+15 AC).
-- [`save.ts`](../../src/game/save.ts) saves items by catalog id, so any item registered with `itemById` saves without a format change. `SAVE_VERSION` is 9; a new `WorldState` field breaks the format, which the project allows ([guild-hall-and-watchtowers.md](guild-hall-and-watchtowers.md) §6).
-- Gear changes on the world map go through the Inventory scene, with the baggage as its ground (`WorldScene.ts`). The dead's gear lands in the baggage (`buryFallen`).
-- The simulator (`scripts/simulate.ts`) fights with its parties' starting gear and never uses loot. It goes home on `hallErrand` and spends there in `visitGuildHall`. Its target is beating the Source about 2 times in 3; trips home from the eastern front run to some 65 days.
+- [`buildings.ts`](../../src/game/buildings.ts) has the stock's arithmetic (`canAfford`, `spend`, `describeCost`) and `atEncampment`. [`guildHall.ts`](../../src/game/guildHall.ts) keeps its level in `WorldState.guildHall`, starting at 1.
+- [`territory.ts`](../../src/game/territory.ts): the stock holds gold, iron, timber, silver, stone, salt, copper, crystal and peat. The guild hall and watchtower spend gold and iron, the shrine gold and silver, the outpost gold and timber; **stone, salt, copper, crystal and peat buy nothing.** Gold comes from the encampment (2 every `YIELD_DAYS`) and the Gold Seam. Home is at (9, 19): iron and timber close, peat and silver middling, stone, salt and copper far, crystal beside the Source.
+- [`camp.ts`](../../src/game/camp.ts): a day's camping passes a world turn, heals each member `NATURAL_HEALING_PER_DAY` (1) and fills mana; `campUntilHealed` casts heals and camps until whole or interrupted, anywhere but among monsters.
+- [`inventory.ts`](../../src/inventory/inventory.ts): an `Item` is a constant with fixed `ItemStats`, found by id through `itemById` over `WEAPONS`, `MAGIC_ITEMS`, the shield and the breastplate. With 8 AP, an attack of 4 AP or less buys two a turn; armour piercing is melee's answer to armour. The plain gear: dagger (3 AP), shortsword (4), longsword (5, 1d8+3, pierces 15%), battle axe (6, 1d12+2, 25%), greatsword (7, two-handed), yew bow (4 AP, range 5), oak shield (+10 AC), steel breastplate (+15 AC). No item changes maximum hit points, which keeps `hp <= maxHp` true however gear changes.
+- A new hero holds the weapon of their tagged skill, wears a steel breastplate and carries every other plain weapon in their backpack (`creation.ts`, `STARTING_KIT`). The dead's gear goes to the baggage (`buryFallen`); spawns drop an enchanted item half the time.
+- [`save.ts`](../../src/game/save.ts) stores each item as its id and restores it through `itemById` as the same constant, so identity comparisons hold after a load. `SAVE_VERSION` is 9; the format may break whenever a change calls for it.
+- The world map's character panel changes gear through the baggage (`WorldScene.ts`).
+- The simulator (`scripts/simulate.ts`) fights with starting gear and never uses loot. It goes home on `hallErrand` and spends there in `visitGuildHall`. Its target is beating the Source about 2 times in 3; a trip home from the eastern front is some 65 days.
 
 ## 4. Proposed behaviour
 
-### 4.1 The workshop
+### 4.1 The gear ladder
 
-Built and raised at the encampment, no time passing, like the shrine. Levels (provisional costs, chosen so each level asks for land further out):
+An item is a **base** (a plain item), at a **grade**, with at most one **modifier** at a grade of its own.
 
-| Level | Cost | Brings |
+| Grade | Name | Weapons | Shield, armour |
+| --- | --- | --- | --- |
+| 1 | (plain) Iron Longsword | as today | as today |
+| 2 | Fine Iron Longsword | damage +1 | AC +3 |
+| 3 | Masterwork Iron Longsword | damage +2, to hit +5 | AC +6 |
+
+A grade never changes attack AP, range, piercing or two-handedness, so every weapon keeps its place among the AP thresholds.
+
+Grades come from the trading post. Modifiers come from crafting. Enchanted items stand outside the ladder: they keep their fixed stats, take no grade or modifier, and are valued for what they are.
+
+### 4.2 The trading post
+
+Built from the start at level 1, as the guild hall is, so trade is part of the loop from the first visit home. Raised at the encampment, no time passing.
+
+| Level | Cost | Sells |
 | --- | --- | --- |
-| 1 | 25 gold, 15 iron | Tier 1 recipes |
-| 2 | 40 gold, 15 stone, 10 copper | Tier 2 recipes |
-| 3 | 60 gold, 10 crystal | Tier 3 recipes |
+| 1 | (built) | plain items |
+| 2 | 40 gold, 15 stone | and Fine items |
+| 3 | 80 gold, 15 copper | and Masterwork items |
 
-The facility `opens`: its Enter button shows the workshop screen. The screen lists:
+The facility `opens` its own screen, with two tabs:
 
-- **Items it could work:** each party member's worn and carried items with a recipe, by member, then baggage items with a recipe. (A new hero carries every plain weapon in their backpack, so the party starts with plenty to work.) An item with recipes only at a higher level is listed greyed, saying the level it needs.
-- **For the chosen item, its recipes:** the variant's name, its cost, and its stats beside the item's own (`describeItemStats` for each). Where the attack AP differs or the attacks a turn change, say so: "2 attacks a turn → 1".
-- **Work it:** confirms "This cannot be undone", spends the stock and puts the variant where the item was: the same member's same slot or backpack place, or the same baggage place. No time passes.
+- **Buy:** every plain base at every grade the level allows, with its price and its stats; a purchase goes into the baggage. Stock is unlimited.
+- **Sell:** the items in the baggage and in the party's backpacks, each with what it fetches; and the stock's materials other than gold, which sell at a poor rate. Worn items are not offered, so nothing a hero fights with is sold by a slip: take it off first in the character panel.
 
-Refusals, each with its reason: not at the encampment; workshop not built or too low a level; not enough stock; the item has no such recipe; the selection is stale (§5.3).
+Prices (provisional):
 
-### 4.2 The recipes
+| Base | Plain price |
+| --- | --- |
+| Iron Dagger | 6 |
+| Iron Shortsword | 8 |
+| Iron Longsword, Yew Bow | 12 |
+| Oak Shield | 10 |
+| Iron Battle Axe | 14 |
+| Steel Greatsword, Steel Breastplate | 20 |
 
-A variant keeps its base's slot, icon, two-handedness and the skill it strikes with. It changes two or three stats, one for the better and one for the worse, and the tradeoffs follow the weapon rules: whether an attack costs 4 AP or less, how much armour a blow pierces, range for the bow. No recipe moves the bow off 4 AP, which would cost it its second shot.
+- A Fine item costs 3 times the plain price and a Masterwork one 8 times.
+- An item sells for half its base-and-grade price, rounded down. A modifier adds nothing to what it fetches, so crafting is never a way to make gold.
+- Each enchanted item has a fixed value in the catalog (provisional 30 to 60), and sells for half of it. It is never bought.
+- Materials sell at 1 gold for every 2, so a surplus of salt or peat is worth something but never a substitute for the land that yields gold.
 
-| Tier | Base | Variant | Change from the base | Cost |
-| --- | --- | --- | --- | --- |
-| 1 | Iron Longsword | Balanced Longsword | to hit +10; damage 1d8+3 → 1d8+1 | 10 gold, 5 iron |
-| 1 | Iron Battle Axe | Bearded Axe | pierces 25% → 40%; damage 1d12+2 → 1d12 | 10 gold, 5 iron |
-| 1 | Yew Bow | Recurve Bow | damage 1d6 → 1d6+1; range 5 → 4 | 10 gold, 5 timber |
-| 2 | Iron Longsword | Light Longsword | 5 AP → 4; damage 1d8+3 → 1d6; pierces 15% → 5% | 15 gold, 5 copper |
-| 2 | Oak Shield | Tower Shield | AC +10 → +15; to hit −5 | 15 gold, 5 copper, 5 stone |
-| 2 | Iron Dagger | Stiletto | pierces 20% → 40%; damage 1d4 → 1d3 | 15 gold, 5 copper |
-| 3 | Yew Bow | Longbow | range 5 → 7; to hit −5 | 20 gold, 5 crystal |
-| 3 | Steel Breastplate | Crystal-set Breastplate | AC +15 → +20; to hit −5 | 20 gold, 5 crystal |
-| 3 | Steel Greatsword | Runed Greatsword | critical +10; 7 AP → 8 | 20 gold, 5 crystal |
+Refusals: away from the encampment; a grade above the level; not enough gold; a stale selection (§5.3).
 
-R6 holds by construction: each row has a gain and a loss. Whether each is worth having is the simulator's question (§7). Light Longsword is the one to watch: two blows a turn are worth more than their damage suggests.
+### 4.3 Crafting
 
-### 4.3 The infirmary
+A craft puts a modifier, at a grade, on an item that is not enchanted. An item already modified loses its modifier for the new one: a modifier can be replaced, by another or by a higher grade of itself, at the full cost of the new one. Nothing is refunded.
+
+**Where it is done:**
+
+- **In the field:** from the world map, anywhere the party may camp. Field crafting makes the field modifiers at grade 1, and takes a day (a world turn, through `passTurn`, which may raise events as camping does).
+- **At the workshop:** at the encampment, no time passing. Its level decides which modifiers it makes and the highest grade: a workshop of level L makes every modifier unlocked at or below L, at any grade up to L.
+
+| Workshop level | Cost | Unlocks | Highest grade |
+| --- | --- | --- | --- |
+| 0 (field) | | Balanced, Recurve | 1 |
+| 1 | 25 gold, 15 iron | Bearded, Keen, Braced | 1 |
+| 2 | 40 gold, 15 stone | Light, Long, Reinforced | 2 |
+| 3 | 60 gold, 10 crystal | | 3 |
+
+So level 1 widens what can be made, and levels 2 and 3 raise the bar on everything already known. That is the "crafting level": the workshop's own, and the materials it asks, not a new skill or experience track.
+
+**The modifiers** (provisional; grade 1 / 2 / 3):
+
+| Modifier | Fits | Better | Worse |
+| --- | --- | --- | --- |
+| Balanced | shortsword, longsword, greatsword | to hit +5 / +10 / +15 | damage −1 |
+| Recurve | bow | damage +1 / +2 / +3 | range −1 |
+| Bearded | battle axe | pierces +10 / +15 / +20 points | damage −2 |
+| Keen | dagger, shortsword, longsword | critical +5 / +10 / +15 | damage −1 |
+| Braced | shield | AC +3 / +5 / +7 | to hit −5 |
+| Light | longsword, battle axe | attack AP −1 | damage −3 / −2 / −1 |
+| Long | bow | range +1 / +2 / +3 | to hit −5 |
+| Reinforced | breastplate | AC +3 / +5 / +7 | to hit −5 |
+
+- The worse side is the same at every grade, except Light's, whose grades shrink its cost instead, since its gain (a blow's AP) cannot grow. A Light Longsword strikes for 4 AP, twice a turn: the one to watch in balance runs.
+- No modifier moves the bow off 4 AP, so it keeps its second shot.
+- No modifier touches maximum hit points.
+
+**What a craft costs:** gold and one material, by grade (provisional):
+
+| Grade | Cost |
+| --- | --- |
+| 1 | 5 gold, and 5 iron (metal) or 5 timber (bow, shield) |
+| 2 | 10 gold, 5 copper |
+| 3 | 20 gold, 5 crystal |
+
+**The crafting screen** is the same in the field and at the workshop, told which it is:
+
+- **Items:** each party member's worn and carried items, then the baggage's, that some modifier fits. One whose modifiers all need a higher workshop level is greyed, saying the level.
+- **For the chosen item:** each fitting modifier, at each grade allowed here, with its cost and the item's stats beside what they become, saying any change in attacks a turn ("2 attacks a turn → 1") and, when the item already has a modifier, which it replaces.
+- **Work it:** confirms, spends the stock, and puts the new item where the old one was: the same slot, backpack place or baggage place. In the field it then passes the day.
+
+Refusals: away from the encampment for a workshop craft, or among monsters for a field one; the modifier not unlocked or the grade too high here; not enough stock; an enchanted item, or one the modifier does not fit; a stale selection.
+
+### 4.4 The infirmary
 
 Built and raised at the encampment, no time passing.
 
@@ -104,91 +173,118 @@ Built and raised at the encampment, no time passing.
 | 2 | 40 gold, 15 peat | At the encampment, a day heals every member fully. |
 | 3 | 60 gold, 20 salt | Also, field dressings: a day camped anywhere else heals each member 3, not 1. |
 
-The levels do different things rather than add percentages. Levels 1 and 2 make a trip home, already made for the guild hall and shrine, double as recovery. Level 3 is the one that changes the field, and it asks for salt from the far south. Camping still fills mana as before; casting heals (`autoHeal`) is unchanged. The infirmary cannot raise the dead.
+The levels do different things rather than add percentages. Levels 1 and 2 make a trip home, already made for the guild hall, trade and crafting, double as recovery; level 3 changes the field, and asks for salt from the far south. Camping still fills mana as before, and casting heals (`autoHeal`) is unchanged. The infirmary cannot raise the dead.
+
+### 4.5 Materials after this design
+
+Every material now buys something: iron and timber (field crafts, the workshop), stone (trading post 2, workshop 2), copper (trading post 3, grade 2 crafts), crystal (workshop 3, grade 3 crafts), peat and salt (the infirmary), silver (the shrine). The far land feeds the top of the ladder.
 
 ## 5. Technical design
 
-### 5.1 State
+### 5.1 The item model
 
-`WorldState` gains `workshop: number` and `infirmary: number`, each 0 (not built) to 3, set to 0 by `newWorld`. `SAVE_VERSION` goes to 10. Crafted items need no state: they are catalog items.
+An item's id says what it is: `<base>[@<grade>][+<modifier><grade>]`, such as `iron_sword`, `iron_sword@2`, `iron_sword+balanced1` and `iron_sword@3+light2`. A plain item's id is unchanged, so the ids in the code today are grade 1 with no modifier. Enchanted items have no `@` or `+`.
 
-### 5.2 Domain modules (proposed)
+- **`src/inventory/inventory.ts`:** `Item` gains optional `base`, `grade` and `mod` (`{ id: ModifierId, grade }`), present on graded and modified items, which the trading post and the crafting screen read. `itemById` parses an id and builds the item from its base, grade and modifier, **memoised**, so the same id always gives the same object and identity comparisons hold after a load. An id that does not parse, a grade outside 1 to 3, a modifier that does not fit its base, or any `@` or `+` on an enchanted item gives `undefined`, which the save reader already treats as unreadable.
+- **`src/inventory/grades.ts`** (proposed): the grades (name prefix and what each adds by item kind), and `gradedItem(base, grade)`.
+- **`src/inventory/modifiers.ts`** (proposed): `MODIFIERS` (`ModifierId`, name, the bases it fits, its workshop unlock level, and its stat change at each grade), and `modifiedItem(item, mod, grade)`. A modified item's name puts the modifier first and its grade last: "Balanced Fine Iron Longsword (II)". Its icon, slot, skill and two-handedness are the base's.
+- A test checks every base × grade × fitting modifier × grade: it builds, round-trips through its id, changes no maximum hit points, a grade changes neither AP nor range nor piercing, and each modifier is better than its unmodified item in one stat and worse in another.
 
-- **`src/inventory/crafted.ts`** (proposed): the variant items (`CRAFTED_ITEMS`), defined by spreading their base (`{ ...IRON_SWORD, id: 'balanced_longsword', name: ..., description: ..., stats: { ...IRON_SWORD.stats, toHit: 10, damage: ... } }`). `ITEMS_BY_ID` includes them, so saves and `itemById` find them. They are not in `WEAPONS` (what a new hero carries) or `MAGIC_ITEMS` (loot).
-- **`src/game/workshop.ts`** (proposed):
-  - `WORKSHOP_LEVELS`, `MAX_WORKSHOP_LEVEL`, `workshopCost(world)`, `upgradeWorkshop(world)`: as the guild hall's.
-  - `RECIPES: readonly Recipe[]`, where `Recipe = { id, base: string, result: string, tier: 1 | 2 | 3, cost: Stock }`. Module-load checks in a test: every `base` and `result` resolves through `itemById`, a result's slot equals its base's, no base is enchanted or crafted, and each result is better than its base in at least one stat and worse in one.
-  - `recipesFor(item)`: the recipes whose base is the item.
-  - `workable(game)`: what the screen lists, `WorkSource[]` with the item and whether the workshop's level allows its recipes.
-  - `craft(game, source, recipeId)`: returns a refusal string or null, as `upgradeGuildHall` does. `source` is `{ from: 'baggage', index, itemId } | { from: 'worn', member, slot, itemId } | { from: 'backpack', member, index, itemId }`, where `member` is an index into the party. All checks before any change: at the encampment, the workshop's level ≥ the recipe's tier, the stock affords it, the source still holds an item of `itemId` (a stale selection is refused rather than working whatever moved into the place), and the recipe's base is that item. Then it spends and replaces the item in place.
-- **`src/game/infirmary.ts`** (proposed): `INFIRMARY_LEVELS`, `infirmaryCost`, `raiseInfirmary`, and `restHealing(world, member): number`, what a day's camping heals that member where the party stands. `campDay` calls `restHealing` instead of using `NATURAL_HEALING_PER_DAY` directly; at level 0 it returns that constant everywhere, so camping is unchanged until the infirmary is built.
-- **`encampment.ts`:** `FacilityId` gains `'workshop'` and `'infirmary'`, and `FACILITIES` an entry each: the workshop with `opens: true`, the infirmary with `opens: false`. Their `effect` lines come from the level tables.
+### 5.2 State
 
-None of this imports Phaser or rolls dice. `restHealing` is arithmetic over `maxHp`.
+`WorldState` gains `tradingPost: number` (1 to 3, starting at 1), `workshop: number` and `infirmary: number` (0 to 3, starting at 0). `SAVE_VERSION` goes to 10. Items need no new state: they are ids.
 
-### 5.3 Scenes
+### 5.3 Domain modules (proposed)
 
-- **Encampment:** two sprites, `camp_workshop` and `camp_infirmary`, with `level_1` to `level_3` frames, on the third and fourth plots. `npm run sprites` and `sprites:check` cover them.
-- **Workshop screen** (proposed `WorkshopScene`, opened from the encampment as `GuildHallScene` is, and closing back to it): the list of workable items, the recipes of the chosen one with before-and-after stats, and the Work button with its confirmation. Its state is the domain's `workable` and `craft`; the screen decides nothing. Item icons come from `itemIcons.ts` by the base's icon. It works at the 840×560 minimum and exposes its controls through the scene probes, as the other overlays do.
-- **Camping's message** (`describeCamp`) is unchanged; it already reports hit points by rest.
+All take the game and explicit inputs, return a refusal string or null as the guild hall's actions do, check everything before changing anything, and import no Phaser.
 
-### 5.4 The simulator
+A selection names where an item is and which item it expects there: `ItemPlace = { from: 'baggage', index, itemId } | { from: 'worn', member, slot, itemId } | { from: 'backpack', member, index, itemId }`, `member` an index into the party. A place that no longer holds an item of `itemId` is refused as stale, rather than acting on whatever moved into it.
 
-- On a home visit (`visitGuildHall`), after the hall and before the shrine: build or raise the workshop if the stock affords it, then work each member's main-hand and shield and armour, best recipe first by a fixed preference list per base (chosen by the comparisons in §7), while the stock lasts. Then raise the infirmary if it affords it.
-- `campUntilHealed` uses `restHealing` through `campDay`, so a party that camps at home heals at the infirmary's rate with no new policy.
-- The summary adds the workshop's and infirmary's levels at the end, the items worked, and the days camped (already reported), so the effect on campaign length shows.
+- **`src/game/tradingPost.ts`:** levels and costs, `raiseTradingPost`; `PRICES` by base id and `VALUES` for enchanted items; `buyPrice(item)` and `salePrice(item)`; `wares(world)`, the items for sale; `buy(game, itemId)`; `sell(game, place)`, refusing a worn place; `sellMaterial(game, material, amount)`, in pairs, never gold.
+- **`src/game/crafting.ts`:** workshop levels and costs, `upgradeWorkshop`; `craftTier(world)`, `'field'` or the workshop's level, given where the party stands (`atEncampment` with a workshop built is the workshop, else the field); `options(game, place)`, the modifiers and grades allowed here with their costs; `craft(game, place, modifierId, grade)`, which spends, replaces the item in its place, and in the field passes the day (`passTurn`), returning the day's events for the scene to report as camping does.
+- **`src/game/infirmary.ts`:** levels and costs, `raiseInfirmary`, and `restHealing(world, member)`, what a day's camping heals that member where the party stands. `campDay` calls it instead of using `NATURAL_HEALING_PER_DAY` directly; at level 0 it returns that constant everywhere.
+- **`encampment.ts`:** `FacilityId` gains `'trading_post'`, `'workshop'` and `'infirmary'`, with entries in `FACILITIES`: the trading post and workshop `opens: true`, the infirmary `opens: false`.
 
-The simulator's `--player-weapon` takes any id `itemById` finds, so variants can be compared battle by battle like the plain weapons (CLAUDE.md lists the flag as taking ids from `WEAPONS` or `MAGIC_ITEMS`; extend it to `CRAFTED_ITEMS`).
+### 5.4 Scenes
 
-### 5.5 Smaller changes
+- **Encampment:** three new sprites, `camp_trading_post`, `camp_workshop` and `camp_infirmary`, each with `level_1` to `level_3`. Five facilities need five plots: `PLOTS` gains one, and the clearing's layout is checked at the 840×560 minimum.
+- **`TradingPostScene`** (proposed): opened from the encampment as `GuildHallScene` is, closing back to it; Buy and Sell tabs over `wares`, `buy`, `sell` and `sellMaterial`.
+- **`CraftingScene`** (proposed): the screen of §4.3, over `options` and `craft`. Opened from the encampment's workshop, closing back to it, or from the world map's footer (a **Craft** button beside Camp, wherever camping is allowed), closing back to the map, which redraws and saves after a field craft as after camping.
+- Both screens draw item icons by the base's icon (`itemIcons.ts`) and battle figures show gear by icon (`GEAR_SPRITES`), so no new item art is needed. A grade or modifier mark on the icon is optional polish.
+- Both expose their controls through the scene probes and work at the minimum size.
 
-- `debugCommands.ts`: a command to set a facility's level, for testing.
-- The player's manual (`docs/manual/README.md`): the encampment section gains the workshop and infirmary, with a screenshot of the workshop (`npm run manual:screenshots`).
-- CLAUDE.md's architecture list gains `workshop.ts`, `infirmary.ts` and `crafted.ts`.
+### 5.5 The simulator
+
+On a home visit, after the guild hall and recruits:
+
+1. Sell the baggage (it fights without loot, so all of it is surplus) and surplus materials beyond what its next planned purchases need.
+2. Raise the trading post, workshop and infirmary as the stock allows, in that order (provisional, to be tuned).
+3. Buy the best grade it can afford of each member's weapon and armour, then craft the best modifier for each by a fixed preference per base, chosen by single-cell comparisons.
+4. Raise the shrine with what is left.
+
+In the field, after a win, it field-crafts its preferred grade 1 modifier on a member's weapon if the stock allows and the item has none. `campUntilHealed` uses `restHealing` through `campDay` with no new policy.
+
+The summary adds the facilities' levels at the end, the gold spent on gear and taken from sales, the items crafted, and the field crafts' days. `--player-weapon` accepts any id `itemById` builds, so graded and modified weapons are compared battle by battle as the plain ones are.
+
+### 5.6 Smaller changes
+
+- `debugCommands.ts`: setting a facility's level, and giving an item by any id (which graded and modified ids then reach).
+- The player's manual: the three facilities, field crafting, and screenshots of the trading post and crafting screens (`npm run manual:screenshots`).
+- CLAUDE.md: the new modules, the item id grammar and its memoisation (the saving rules' "a new item must be in `WEAPONS` or `MAGIC_ITEMS`" becomes "a new base or enchanted item"), the facilities, and the `--player-weapon` flag.
 
 ## 6. Consequences
 
 - **Saves:** version 10; older saves are refused, as before.
-- **Balance:** the workshop makes the party stronger, and the infirmary shortens or removes healing stops (days the blight would otherwise have) — both push toward the Source sooner. The 2-in-3 target is then restored by the Source's encounter, as with the guild hall, not by the nests' foe counts (`FOES_AT_THREAT`).
-- **Going home costs days.** Both facilities only work at home (the infirmary's level 3 aside). That is deliberate: they give the existing trips home more to do, rather than adding trips. If the simulator shows extra trips for crafting alone, consider letting the workshop work the items of a hero who is at home in the reserves, or an order waiting to be fetched (§9).
-- **Material use:** after this, every material buys something: stone and copper (workshop 2), crystal (workshop 3), peat and salt (infirmary). The far land then matters to the second loop.
+- **Balance:** the party fights with better gear than the simulator has ever given it, and the infirmary saves healing days. Restore the 2-in-3 target at the Source's encounter, as the guild hall's retune did; do not raise `FOES_AT_THREAT` to hide what the encampment bought.
+- **Gold competes.** Gear, the hall, recruits and the shrine all want it. If the simulator leaves the shrine or hall unbuilt, look at gear prices first, then at sales.
+- **Going home.** Grades and the best crafts need the encampment, which gives trips home more to do rather than adding trips; field crafting covers the cheap end anywhere, at a day each.
+- **Item ids:** generated ids are a grammar in one place (`itemById`). The catalog grows to every combination without hand-written entries; the test in §5.1 keeps them all valid.
 
 ## 7. Phasing and verification
 
 Phases, each playable:
 
-1. **The infirmary:** state, levels, `restHealing`, the facility entry and sprite, the simulator's use of it. Smallest, and it tests the facility plumbing.
-2. **The workshop and tier 1:** state, `crafted.ts`, recipes, `craft`, the workshop screen, the simulator's policy.
-3. **Tiers 2 and 3** with their variants, then the campaign retune.
+1. **The item model and the trading post:** id grammar, grades, prices, selling, buying at all three levels, the facility and its screen, the simulator's trading.
+2. **Crafting:** modifiers, field crafting, the workshop and its levels, the crafting screen, the simulator's crafting.
+3. **The infirmary:** independent of the others, it can move earlier.
+4. **The campaign retune**, at the Source.
 
-Before each recipe is kept, compare it with its base at one cell of scaling: `npm run simulate -- --player-weapon <id> --encounter goblin_raid --threat 3 --party-level 5` against the base's run. Then judge the whole by campaign runs (`npm run simulate -- --campaign --battles 500 --seed 1`) against the current figures (about 69% beat the Source in some 314 days).
+Before a grade or modifier's numbers are kept, compare it with its unmodified item at one cell of scaling, as `npm run simulate -- --player-weapon iron_sword+balanced1 --encounter goblin_raid --threat 3 --party-level 5` against `iron_sword`. Judge the whole by campaign runs (`npm run simulate -- --campaign --battles 500 --seed 1`) against the current figures (about 69% beat the Source, in some 314 days).
 
 | Scenario | Requirements |
 | --- | --- |
-| At the encampment, build the infirmary and the workshop: the stock falls by the shown cost, each appears on its plot at level 1, and raising each to 3 shows the next effect and cost at every step. Away from home, or without the stock, each is refused with its reason. | R1, R8 |
-| Camp a wounded party at the encampment at infirmary levels 0, 1, 2: a day heals 1, a third, then all; at level 3, a day camped elsewhere heals 3. Mana refills in every case. | R7, R9 |
-| Open the workshop: worn and baggage items with recipes are listed; those whose recipes need a higher level are greyed with the level. Enchanted items and variants do not appear. | R2, R4, R5 |
-| Work one of two longswords in the baggage, a member's worn bow and a dagger in a backpack: only the chosen item changes, in its own place; the member's derived stats change accordingly; the stock falls by the shown cost. | R3, R4, R8 |
-| A selection made stale (the baggage reordered, the member's slot emptied) is refused and nothing changes. | R8 |
-| Each recipe's preview shows before-and-after stats and any change in attacks a turn; the catalog test confirms every variant is better and worse than its base somewhere. | R3, R6 |
-| Save and load after building, raising and working: levels and items are as they were. | R10 |
-| The simulator's campaign summary reports workshop and infirmary levels and items worked. | R11 |
+| A new game's encampment shows the trading post at level 1 and the workshop and infirmary as empty plots. Each is built or raised for its shown cost; away from home or without the stock it is refused with its reason. | R1, R10 |
+| `itemById` builds every valid graded and modified id, gives the same object twice, and refuses invalid ones; a Fine and a Masterwork longsword have its AP and range, and more damage. | R2, R12 |
+| Buy a plain longsword at level 1: the gold falls by its price and it is in the baggage; Fine items are offered only from level 2. Sell a baggage item and a backpack item for half their price, and 4 salt for 2 gold; a worn item is not offered. A stale selection changes nothing. | R3, R4, R7, R10 |
+| Sell a Balanced longsword: it fetches the unmodified price. Sell an enchanted item: it fetches half its value; it cannot be crafted. | R4, R8 |
+| In the field, craft a Balanced longsword: a day passes and the stock falls; a workshop modifier or grade 2 is not offered. At a level 2 workshop, replace its modifier with Balanced II, then Light I; the preview shows "1 attack a turn → 2". | R5, R6, R7 |
+| Camp a wounded party at the encampment at infirmary levels 0, 1, 2 (a day heals 1, a third, all), and elsewhere at level 3 (3 a day). Mana refills in every case. | R9, R11 |
+| Save and load after trading, crafting and raising each facility: levels, stock and items are as they were. | R12 |
+| The simulator's campaign summary reports facility levels, trade and crafts. | R13 |
 
-Tests: domain tests for the level tables, `restHealing`, `craft`'s refusals and atomicity, and the catalog checks; a save round trip; a scene test that the workshop screen starts and closes back to the encampment; browser tests for entering the workshop from the encampment and working an item. Run `npm test`, and `npm run test:browser` after the scene changes.
+Tests: domain tests for the id grammar and catalog checks, prices, every action's refusals and atomicity, field crafting's day, and `restHealing`; a save round trip with graded and modified items; scene smoke tests that the new screens start and close back where they came from; browser tests for buying and selling, crafting at the workshop and in the field, and the encampment's five plots. Run `npm test`, and `npm run test:browser` after the scene changes.
 
-## 8. Assumptions
+## 8. Decisions and assumptions
 
-1. **Variants are catalog items**, not per-item state: no mutable stats, no affixes. Two identical swords are worked independently by where each lies.
-2. **The party's worn and carried gear can be worked directly**, not only the baggage, since trips home are long and moving gear to the baggage first adds nothing.
-3. **Working takes no time**, like raising the shrine; building takes none either. The days are in getting home.
-4. **Reserves' gear is not offered**, to keep the screen to the party and the baggage. The reserves can be swapped in first.
-5. **The level 3 infirmary is the only effect away from home.**
+Decided by the user:
+
+1. **Commerce** is in scope, as a facility, to make gear and buildings one loop.
+2. **Quests** are dropped: more complexity than they are worth, with the blight driving the game.
+3. **Crafting comes in tiers:** some with no building, more as the workshop rises, and higher levels raise the bar of what each tier makes.
+
+Assumptions:
+
+1. **The crafting level is the workshop's level.** A crafting skill on characters would mean a fourth skill, new creation budgets, a reworked (full) perk tree and a retune, and a crafter's death would take the crafting with them. Crafting experience would reward crafting junk to level up. Both are left out.
+2. **Materials are never sold to the party**, so the far land stays the only way to the top of the ladder.
+3. **Worn items cannot be sold**, but can be crafted, since a craft improves what the hero fights with and a sale takes it away.
+4. **One modifier an item**, replaceable without refund.
+5. **Field crafting costs a day**, the workshop's crafts none: the days are in getting home.
+6. **The trading post starts built**, so selling is open from the first trip home.
 
 ## 9. Open questions
 
-None blocks the scope above.
+None blocks planning.
 
-1. **Commerce.** The towns that would have held shops are gone. If wanted, it is a facility, a trading post: selling turns the baggage's surplus (the dead's gear, loot no one uses) into gold, which the stock now has uses for. Buying is less clear, since held land supplies the stock; buying plain gear would feed the workshop. To decide: whether to have it, and whether it sells only or buys too.
-2. **Quests.** With no towns there are no quest givers, and most nests are spawned rather than placed. If wanted, quests would be authored objectives on fixed nests or sites, delivered by the story system (`src/story/`, a `StoryMoment` and a cutscene) and rewarded from the stock or with a recipe. The blight already gives the player goals; quests would need to give something it does not, such as unlocking a recipe or a facility level. To decide: whether to have them.
-3. **Working away from home.** If the simulator shows trips made for crafting alone, an outpost could take orders to be fetched, or the workshop could work the gear of heroes in the reserves.
-4. **Making plain items**, for recruits or to feed the workshop, waits on commerce: buying them would do the same job.
+1. **Making plain items in the workshop** rather than buying them: left out, since the trading post supplies them.
+2. **A fourth grade, or enchanting**, beyond Masterwork: later, if the ladder runs out before the Source.
+3. **Crafting away from home at an outpost:** only if the simulator shows trips made for crafting alone.
