@@ -175,13 +175,31 @@ If the game cannot be driven from this session (no browser), list each unwalked 
 
 ## 6. Completion criteria
 
-- [ ] The guard and all six cells (bandits and goblins at 3, 4 and 5) have been run, with their figures in the stage's implementation notes.
-- [ ] Any tuning is recorded with its effect, and the guard has been re-run after it.
-- [ ] CLAUDE.md, `docs/manual/README.md`, the stage design's implementation notes and `docs/designs/long-campaign/index.md` are updated.
-- [ ] The play script is walked, or its unwalked steps are listed for the user.
-- [ ] `make test` passes. One commit for the step is made on the current branch, not pushed, its message ending with the repo's `Co-Authored-By` attribution line.
-- [ ] Step 07's row in [index.md](index.md) is set to `done`, the overall completion checklist is ticked where met, and a completion note is added below.
+- [x] The guard and all six cells (bandits and goblins at 3, 4 and 5) have been run, with their figures in the stage's implementation notes.
+- [x] Any tuning is recorded with its effect, and the guard has been re-run after it.
+- [x] CLAUDE.md, `docs/manual/README.md`, the stage design's implementation notes and `docs/designs/long-campaign/index.md` are updated.
+- [x] The play script is walked, or its unwalked steps are listed for the user.
+- [x] `make test` passes. One commit for the step is made on the current branch, not pushed, its message ending with the repo's `Co-Authored-By` attribution line.
+- [x] Step 07's row in [index.md](index.md) is set to `done`, the overall completion checklist is ticked where met, and a completion note is added below.
 
 ## Completion note
 
-_To be filled in by the implementer: commit, figures, tuning, and anything left for the user._
+- **Status:** done. Commit "Step 07: measure, tune and document" (hash recorded in the follow-up commit below).
+- **Changed:**
+  - `src/game/encounters.ts`: the Bandit Camp's counts `[3, 3, 4, 4, 4]` → `[2, 2, 2, 4, 4]`, and the doc comment above it. `banditGrade` is unchanged (plain below 5, Fine from 5).
+  - `src/game/encounters.test.ts`: the three tests pinning the counts, the bandits fielded at each threat and the experience (600, 800, 1000 at threats 3 to 5).
+  - `CLAUDE.md`: the `combat/` bullet (`foeAtLevel`'s native level and hit-point rule, `foeYardstick` and its test), the `encounters.ts` bullet (monster and bandit kinds, `FOE_NATIVE_LEVEL`, `foeStats`, `ENCOUNTER_BANDS` and `ENCOUNTER_COUNTS` with clamping, `encountersFor`, `MAX_THREAT`), a new `bandits.ts` bullet, and the rules of scaling (the camp's counts and composition by threat, the cells, and the guard's history). The simulator paragraphs (`--ready-level`, the level lines) and the debug console's `fight` were already current from steps 05 and 06.
+  - `docs/manual/README.md`: a **Bandits** paragraph under Monsters, and spawns "bandits from threat 3". No screenshot changed.
+  - The stage design: an `## Implementation notes` section with every figure below. The stages index marks stage 1 done, naming the open guard and play script.
+  - `index.md`: correction 2 and C6 record the tuned counts; step 07's row and the overall checklist.
+- **Measurements** (seed 1, 500 each, run one after another):
+  - Cells, party wins of 500 and average rounds. Bandit Camp at the first counts: threat 3 195 (12.8), 4 158 (12.6), 5 3 (8.2). Tuned `[2, 2, 2, ...]`: 444 (10.0), 473 (9.5), 434 (10.3). Goblin Raid: 500 (7.0), 500 (8.7), 358 (13.1).
+  - Tuning tried and not kept: `[2, 2, 3, ...]` at threat 5 won 59 (11.8%); the same with `banditGrade` Fine only from 6 won 173 (34.6%).
+  - Guard, `--campaign --ready-level 7 --battles 500 --seed 1`, tuned: Beat the Source 237 of 500 (47.4%), party fell 263, encampment never lost; 279 days, 18.9 battles, 26.1 spawns; 1.8 heroes dead, guild hall 2.4, 2.2 recruits; won by threat 1011/1011, 1780/1796, 2012/2066, 2981/3004, 1387/1557; final levels lowest 6.7, highest 7.4; deaths at level 2 (48), 3 (178), 4 (33), 5 (102), 6 (27), 7 (271), 8 (219), 9 (24), 10 (1); level 5 in 6.8 battles (429 campaigns), 10 in 33.0 (2).
+  - For the explanation, the pre-stage baseline was re-run at `70b3075` (a temporary worktree, since removed): 320 of 500, as recorded. Its battle log and the tuned one were broken down by location (losses, and heroes dead in won battles) with a scratch script; the figures are in the stage notes.
+- **Judgement of the guard:** 83 campaigns below 320, outside the 5 points; explained in CLAUDE.md and the stage notes rather than retuned, as both levers are spent. The fixed camp at threat 3 is still lost 54 times, the Goblin Reavers 16 more (lone survivors), and bandit fights kill some 270 heroes a run in won battles, so 99 parties reach the Source four strong (62 before), and a party of four almost never wins it (3 of 99). **A decision for the user:** accept the fall as the price of bandits, or move it with a lever outside this step (the bandits' drafts or levels, the threat-3 camp's place on the map, or the Source's battle for a party of four).
+- **Also for the user:** with two bandits at threats 3 to 5, the Archer and the Cutthroat never take the field on today's map; the design's play script expected four (correction 2: three) bandits at threat 3 and the Archer at 5. Putting the Archer in the Brute's slot would show it, but that is a change of the slot order (C6), unmeasured here.
+- **Checks:** `npx vitest run --project domain` 745 passed; `npm run -s typecheck` clean; `make test` 65 files, 754 tests passed; `make test-browser ARGS="e2e/debug.test.ts"` 3 of 3 passed (the `fight` battle leaves the locations and the blight unchanged, §7's risk).
+- **Play script:** not walked (no browser session at `make dev`). Steps 1 to 4, and the §7 check with bandits, are listed for the user in the stage's implementation notes, adjusted for the tuned counts (two bandits at threat 3; the Captain and Hedge-Mage at 5).
+- **Not done:** the step 04 reviewer's optional note (`spawn` in `blight.ts` could use `encountersFor`) was left alone: `blight.ts` is outside this step's files.
+- **Logs:** every log this step wrote was deleted; the older logs already in `logs/` were left.

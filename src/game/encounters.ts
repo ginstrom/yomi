@@ -267,8 +267,12 @@ const KOBOLD_SCOUTS: EncounterDef = { slots: KOBOLD_SCOUTS_SLOTS, ...TODAY }
 const HOBGOBLIN_WARBAND: EncounterDef = { slots: HOBGOBLIN_WARBAND_SLOTS, ...TODAY }
 const TROLL_LAIR: EncounterDef = { slots: TROLL_LAIR_SLOTS, ...TODAY }
 const SOURCE_GUARDIANS: EncounterDef = { slots: SOURCE_GUARDIANS_SLOTS, ...TODAY }
-/** Bandits are fought from threat 3 (the first counts; the stage that grows the map tunes those past 5). */
-const BANDIT_CAMP: EncounterDef = { slots: BANDIT_CAMP_SLOTS, band: { min: 3, max: 7 }, counts: [3, 3, 4, 4, 4] }
+/**
+ * Bandits are fought from threat 3. Two at threats 3 to 5, tuned by the simulator (a third made the camp a wall:
+ * a party of the threat's level won 2 in 5 at threats 3 and 4); the counts past 5 are the first guess, for the
+ * stage that grows the map to tune.
+ */
+const BANDIT_CAMP: EncounterDef = { slots: BANDIT_CAMP_SLOTS, band: { min: 3, max: 7 }, counts: [2, 2, 2, 4, 4] }
 
 /**
  * A Goblin and a Kobold across the board from the party; where the threat is

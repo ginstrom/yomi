@@ -30,7 +30,7 @@ Each stage leaves a complete, playable game, verified by tests, by a simulator c
 
 | Stage | Title | What the player gets | Depends on |
 | --- | --- | --- | --- |
-| 1 | [Foe foundations and bandits](stage-01-foe-foundations-and-bandits.md) | Native levels and encounter bands under the hood. Bandit camps, built like heroes, at threats 3 to 5. A debug command to fight any encounter. | — |
+| 1 | [Foe foundations and bandits](stage-01-foe-foundations-and-bandits.md) (done; see its [implementation notes](stage-01-foe-foundations-and-bandits.md#implementation-notes): the guard is 237 of 500 and the play script is still to walk) | Native levels and encounter bands under the hood. Bandit camps, built like heroes, at threats 3 to 5. A debug command to fight any encounter. | — |
 | 2 | [Special attacks and elements](stage-02-special-attacks-and-elements.md) | Strike routines, cone, line and burst area attacks with recharge, monster spells, elements and monster wards. A Spider Nest and a Salamander nest. | 1 |
 | 3 | [Gear families and the first two tiers](stage-03-gear-families.md) | Many weapon and armour families, iron and steel tiers, strength and weight, helms, gloves and boots, and the trading post's level 4 and filter. | 1 |
 | 4 | [Runes](stage-04-runes.md) | Sockets, the rune pouch, ten runes in four ranks, embedding, fusing and extracting, rune loot and shop runes, hero wards and on-hit damage. | 2, 3 |

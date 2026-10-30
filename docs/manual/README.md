@@ -131,6 +131,8 @@ When you walk onto a monster lair, the footer offers three actions:
 
 You can also click a hex to walk away.
 
+**Bandits.** Not every lair holds monsters. Bandits hold the **Bandit Camp** (threat 3) and the **Bandit Hideout** (threat 4), and new **Bandit Gangs** appear where the blight breeds lairs of threat 3 or more. Bandits are people, built the way your heroes are: a Captain with sword, shield and breastplate, a Brute with a battle axe and breastplate, and, at threat 4 or more, a Hedge-Mage who casts Magic Arrow and Shield and can heal. They have a hero's hit points and armour, and at threat 5 they carry Fine gear, so expect a hard fight against a party of your level, and bring a heavy blade for their armour.
+
 ### Camping and other actions
 
 When there are no monsters on your hex, the footer offers:
@@ -366,7 +368,7 @@ Every hex of land has a blight level from 0 (clean) to 3 (corrupted), shown as a
 
 Consequences:
 
-- **Corrupted land breeds new monster lairs.** A new lair's threat depends on how far from the encampment it appears.
+- **Corrupted land breeds new monster lairs.** A new lair's threat depends on how far from the encampment it appears: goblins and kobolds at any threat, and bandits from threat 3.
 - **Winning a battle cleanses the land** around the lair, lowering every hex within 1 + its threat by two levels.
 - **Resources** are captured when their land is clean (level 0) and lost when it reaches level 2. While the blight gains on a site, the map shows it in orange with the number of days left until it falls. A watchtower can be lost the same way.
 - **Stock**: every 5 days, each site you hold adds its yield to the encampment's stock (gold, iron, timber, silver and so on). A site whose land is tainted yields half.

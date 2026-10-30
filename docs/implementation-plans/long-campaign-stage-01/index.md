@@ -23,6 +23,8 @@ The plan follows the design except where the design contradicts itself or the co
    5. Cutthroat.
 
    The counts are `[3, 3, 4, 4, 4]` over the band 3–7. A threat-3 camp then fields the Captain, Brute and Archer. Threat 4 fields the Captain, Hedge-Mage and Brute. Threat 5 fields the Captain, Hedge-Mage, Brute and Archer. The Cutthroat enters from threat 6, and stage 9 retunes the counts there. Step 07 may retune the counts on today's map from the simulator, and records what it measures.
+
+   **Retuned at step 07:** the counts are `[2, 2, 2, 4, 4]` (C6 below as amended). Three bandits were a wall at threats 3 and 4 (39% and 32% for a party of the threat's level) and four at 5 (0.6%); two win 89%, 95% and 87%. The camp now fields the Captain and Brute at threat 3, and the Captain and Hedge-Mage at threats 4 and 5; the Archer and Cutthroat enter from threat 6.
 3. **Today's encounters keep the band 1–5.** The design says today's five encounters keep their counts "cut to their bands", but gives no bands for them in this stage. The plan gives each of them `{ min: 1, max: 5 }` with counts `[2, 3, 3, 3, 4]`, today's `FOES_AT_THREAT`, so every battle that exists today is unchanged. Narrower bands for them belong to stage 9.
 4. **The yardstick is checked at native level only.** The design asks for the test "applied to today's kinds at threats 1 to 5". The reference (campaign A11) checks a kind at its native level. Today's kinds are native 1, so the test checks level 1, with exceptions named. Checking every threat would turn the test into a list of exceptions.
 5. **The threat table already prints every threat that occurs** (`ThreatRow`, "a threat no campaign reached has no row"), so that part of the design needs no work.
@@ -173,7 +175,7 @@ export function banditCamp(party: readonly Fighter[], threat = 3): Encounter
 // ENCOUNTERS gains bandit_camp: banditCamp  →  EncounterId includes 'bandit_camp'
 ```
 
-- Band `{ min: 3, max: 7 }`, counts `[3, 3, 4, 4, 4]`.
+- Band `{ min: 3, max: 7 }`, counts `[3, 3, 4, 4, 4]`. **Amended at step 07:** counts `[2, 2, 2, 4, 4]`, tuned in the simulator (see correction 2).
 - The slots, in order (ids are unit ids; positions are `[col, row]` on the 12 × 9 board, off the party's hexes):
 
   | Id | Kind | Name | Position | From threat |
@@ -245,7 +247,7 @@ fight?: (encounter: EncounterId, threat: number) => void
 | 04 | [Bandits on the map](04-map-and-spawns.md) | Two locations become bandit camps; spawns by band with a Bandit Gang; `SAVE_VERSION` 12 | 03 | done (7ff2fb9; guard 91 of 500, see the task's note) |
 | 05 | [The debug `fight` command](05-debug-fight.md) | `fight <encounter> [threat]` starts a battle with no location | 01 | done (see the task's note) |
 | 06 | [The simulator's ready level and level record](06-simulator-ready-level.md) | `--ready-level`, `finalLevels`, `deathsAtLevel`, `battlesToLevel`, printed | — | done (5481925; guard identical but for the new lines, see the task's note) |
-| 07 | [Measure, tune and document](07-measure-tune-document.md) | The guard and the bandit cells measured, counts tuned if needed, CLAUDE.md, the manual and the stage's notes updated, the play script walked | 03, 04, 05, 06 | pending |
+| 07 | [Measure, tune and document](07-measure-tune-document.md) | The guard and the bandit cells measured, counts tuned if needed, CLAUDE.md, the manual and the stage's notes updated, the play script walked | 03, 04, 05, 06 | done (counts tuned to [2, 2, 2, 4, 4]; guard 237 of 500, outside the 5 points and explained; play script left for the user; see the task's note) |
 
 ## Execution order
 
@@ -275,12 +277,12 @@ fight?: (encounter: EncounterId, threat: number) => void
 
 ## Overall completion criteria
 
-- [ ] Every step is done, with `make test` passing at each commit.
-- [ ] The campaign summary is identical after step 01, and the guard is measured after step 04 and judged in 07.
-- [ ] Cells `--encounter bandit_camp --threat T --party-level T` for T = 3, 4 and 5 are recorded. A party of the threat's level wins most but not all.
-- [ ] CLAUDE.md describes native levels, bands, bandits, the `fight` command and `--ready-level`, and the manual mentions bandits.
-- [ ] The stage design gets an "Implementation notes" section with the figures. The stages index marks stage 1 done.
-- [ ] The design's play script has been walked in the game (`make dev`), or the steps not walked are listed for the user in step 07's record.
+- [x] Every step is done, with `make test` passing at each commit.
+- [x] The campaign summary is identical after step 01, and the guard is measured after step 04 and judged in 07 (237 of 500 after tuning, 83 below 320: explained in CLAUDE.md and the stage notes, not retuned away; a decision for the user).
+- [x] Cells `--encounter bandit_camp --threat T --party-level T` for T = 3, 4 and 5 are recorded. A party of the threat's level wins most but not all (88.8%, 94.6%, 86.8%).
+- [x] CLAUDE.md describes native levels, bands, bandits, the `fight` command and `--ready-level`, and the manual mentions bandits.
+- [x] The stage design gets an "Implementation notes" section with the figures. The stages index marks stage 1 done.
+- [x] The design's play script has been walked in the game (`make dev`), or the steps not walked are listed for the user in step 07's record (not walked; listed).
 
 ## Open questions
 

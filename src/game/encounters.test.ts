@@ -211,16 +211,16 @@ describe('banditCamp', () => {
     cutthroat: { kind: 'bandit_cutthroat', name: 'Cutthroat', at: [8, 6] },
   } as const
 
-  it('is registered, with the band 3 to 7 and the counts 3, 3, 4, 4, 4', () => {
+  it('is registered, with the band 3 to 7 and the counts 2, 2, 2, 4, 4', () => {
     expect(ENCOUNTERS.bandit_camp).toBe(banditCamp)
     expect(ENCOUNTER_BANDS.bandit_camp).toEqual({ min: 3, max: 7 })
-    expect(ENCOUNTER_COUNTS.bandit_camp).toEqual([3, 3, 4, 4, 4])
+    expect(ENCOUNTER_COUNTS.bandit_camp).toEqual([2, 2, 2, 4, 4])
   })
 
-  it('fields the Captain, Brute and Archer at threat 3, the Hedge-Mage in the Archer\'s place at 4, and all four at 5', () => {
-    expect(field(3)).toEqual(['captain', 'brute', 'archer'])
-    expect(field(4)).toEqual(['captain', 'mage', 'brute'])
-    expect(field(5)).toEqual(['captain', 'mage', 'brute', 'archer'])
+  it('fields the Captain and Brute at threat 3, the Captain and Hedge-Mage at 4 and 5, and four from 6', () => {
+    expect(field(3)).toEqual(['captain', 'brute'])
+    expect(field(4)).toEqual(['captain', 'mage'])
+    expect(field(5)).toEqual(['captain', 'mage'])
     expect(field(6)).toEqual(['captain', 'mage', 'brute', 'archer'])
   })
 
@@ -250,7 +250,7 @@ describe('banditCamp', () => {
 
   it('pays 100 a level for each bandit, an even foe', () => {
     for (const kind of Object.keys(BANDIT_ROLE) as BanditKind[]) expect(FOE_XP[kind]).toBe(100)
-    expect([3, 4, 5].map((threat) => xpReward(banditCamp(party(), threat)))).toEqual([900, 1200, 2000])
+    expect([3, 4, 5].map((threat) => xpReward(banditCamp(party(), threat)))).toEqual([600, 800, 1000])
   })
 })
 
