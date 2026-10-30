@@ -131,7 +131,7 @@ When you walk onto a monster lair, the footer offers three actions:
 
 You can also click a hex to walk away.
 
-**Bandits.** Not every lair holds monsters. Bandits hold the **Bandit Camp** (threat 3) and the **Bandit Hideout** (threat 4), and new **Bandit Gangs** appear where the blight breeds lairs of threat 3 or more. Bandits are people, built the way your heroes are: a Captain with sword, shield and breastplate, a Brute with a battle axe and breastplate, and, at threat 4 or more, a Hedge-Mage who casts Magic Arrow and Shield and can heal. They have a hero's hit points and armour, and at threat 5 they carry Fine gear, so expect a hard fight against a party of your level, and bring a heavy blade for their armour.
+**Bandits.** Not every lair holds monsters. Bandits hold the **Bandit Camp** (threat 3) and the **Bandit Hideout** (threat 4), and new **Bandit Gangs** appear where the blight breeds lairs of threat 3 or more. Bandits are people, built the way your heroes are, and always led by a Captain with sword, shield and breastplate. At threat 3 a Brute with a battle axe and breastplate fights beside him; at threats 4 and 5 a Hedge-Mage takes the Brute's place, casting Magic Arrow, Flame Arrow and Shield and healing, and at threat 5 Fireball too. They have a hero's hit points and armour, and at threat 5 they carry Fine gear, so expect a hard fight against a party of your level, and bring a heavy weapon, or spells, for their armour.
 
 ### Camping and other actions
 
