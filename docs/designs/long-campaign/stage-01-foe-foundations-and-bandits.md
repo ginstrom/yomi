@@ -156,7 +156,7 @@ Built from the plan in [`docs/implementation-plans/long-campaign-stage-01/`](../
 - Counts `[3, 3, 4, 4, 4]` → `[2, 2, 2, 4, 4]`: threat 3 from 39% to 88.8%, threat 4 from 31.6% to 94.6%, threat 5 from 0.6% to 86.8%. The camp now fields the Captain and the Brute at threat 3, and the Captain and the Hedge-Mage at threats 4 and 5.
 - Tried and not kept: three bandits at threat 5 (Captain, Hedge-Mage, Brute) won 59 of 500 (11.8%) in Fine gear, and 173 (34.6%) with `banditGrade` plain at 5 (Fine from 6). Three bandits are a wall at every threat of today's map; the gear grade is already plain below 5, so it cannot ease threats 3 and 4, and at 5 the Fine gear is kept, as two bandits in it are in range.
 - The counts at threats 6 and 7 stay 4 and 4, unmeasured, for stage 9.
-- So, on today's map, the Archer and the Cutthroat never take the field: they appear only from threat 6 (`fight bandit_camp 6` shows them).
+- So, on today's map, the Archer and the Cutthroat never take the field. The Archer does from threat 6 (`fight bandit_camp 6` shows it, beside the Captain, Hedge-Mage and Brute); the Cutthroat, fifth in the slot order, takes the field only once a later stage raises a count to 5 (stage 9), as the counts top out at 4 and higher threats are fought as threat 7.
 
 **The early-game guard** (`make -s simulate ARGS="--campaign --ready-level 7 --battles 500 --seed 1"`):
 

@@ -28,7 +28,7 @@ From the design:
 | 4 | Captain, Hedge-Mage, Brute |
 | 5 | Captain, Hedge-Mage, Brute, Archer |
 
-The Cutthroat enters from threat 6, which this stage never reaches on the map. Step 07 may retune the counts from the simulator; this step uses these first values.
+The Cutthroat enters from threat 6, which this stage never reaches on the map. (Corrected at the second overall review: with counts topping out at 4 it never takes the field in this stage; it needs a count of 5, which stage 9 may give.) Step 07 may retune the counts from the simulator; this step uses these first values.
 
 ### Contracts (copied from the index, unchanged)
 

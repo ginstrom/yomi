@@ -314,8 +314,9 @@ export function sourceGuardians(party: readonly Fighter[], threat = 1): Encounte
  * Bandits, built by the rules heroes are: a Bandit Captain with sword, shield
  * and breastplate, and a Brute with an axe and breastplate at threat 3; at
  * threats 4 and 5 a Hedge-Mage in the Brute's place, their gear Fine at 5.
- * The Archer and the Cutthroat take the field only from threat 6, where four
- * fight.
+ * From threat 6 four fight, the Archer joining them; the Cutthroat, fifth in
+ * the slot order, takes the field only once a later stage raises a count to 5
+ * (stage 9).
  */
 export function banditCamp(party: readonly Fighter[], threat = 3): Encounter {
   return encounter(party, BANDIT_CAMP, threat)
