@@ -243,7 +243,7 @@ Tests are written first and seen to fail where they can.
 
 ## Completion note
 
-- **Status:** done, in the commit "Step 03: bandits and the Bandit Camp" (the commit that carries this note).
+- **Status:** done. Commit `8c76d91` ("Step 03: bandits and the Bandit Camp").
 - **Built:**
   - `src/game/bandits.ts`: `BanditRole`, `BANDIT_ROLE`, `banditStats` (cached per role, level and grade; a level below 1 counts as 1), `banditGrade`, and `banditDraft(role)` (an extra export, a copy of the role's draft, for the hero-rules test). The build order, written in `banditStats`'s comment and mirrored by the test: `draftCharacter`, then the role's gear in place of the starting kit, then `levelUp` to the level, then one `autoAdvance`, then `deriveCombatStats`.
   - Drafts, each a legal creation (checked with `draftProblems`, the long names aside): Captain (Aldric's attributes; Weapon Training, Toughness, Dodger), Brute (strength 10; Weapon Training, Heavy Hand, Armour Breaker), Archer (Brenna's), Hedge-Mage (Delwyn's attributes; Spellcasting, Arcane Study, Keen Eye, Magic Arrow, Shield), Cutthroat (agility 9; Weapon Training, Dodger, Toughness).
