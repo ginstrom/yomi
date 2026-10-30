@@ -122,7 +122,7 @@ CLAUDE.md, under Commands (the debug console paragraph), lists what changers do:
 
 ## Completion note
 
-- **Commit:** "Step 05: the debug fight command" (one commit: code, tests, CLAUDE.md, this note and the index).
+- **Commit:** `c39b8ec` "Step 05: the debug fight command" (code, tests, CLAUDE.md, this note and the index).
 - **The XP check:** `xpReward` is set in `BattleScene.create` from the encounter built there (`this.xpReward = xpReward(fight)`), and `endBattle` runs `rewardVictory(..., this.xpReward, ...)` for any win, location or not. Only `takeLoot` and `clearLocation` are guarded on `this.location`. So a battle with no location already rewarded experience; nothing needed fixing. The in-browser test below confirms it (the victory screen shows `+N XP each`).
 - **Changes:**
   - `src/scenes/debugCommands.ts`: `DebugSource.fight` (C8), and the `fight <encounter> [threat]` command, `changes: true`. It refuses an unknown or missing id (listing `ENCOUNTERS`' ids), a threat that is not a whole number or is below 1, and a source with no `fight` ("Battles start only from the world map."). Off the world map `runCommand` refuses it before it runs, as other changers. The threat defaults to `threatAt(world.party)`.
@@ -143,3 +143,4 @@ CLAUDE.md, under Commands (the debug console paragraph), lists what changers do:
   - `make test-browser ARGS="e2e/debug.test.ts"`: 3 of 3 passed. `make test-browser ARGS="e2e/battle.test.ts e2e/saves.test.ts e2e/story.test.ts"` (BattleScene changed): 19 of 19 passed.
   - The manual `make dev` check was not done by hand; the in-browser test plays the same steps in the real game (headless Chromium). Step 07 walks it in play.
 - **For later steps:** `fight bandit_camp 3` (or 4, 5) fights the camp anywhere on the map; a threat outside an encounter's band is fought at the band's nearest threat.
+- **Review follow-up** (separate commit): the reviewer found the step clean and asked for two small fixes. `debugCommands.test.ts`: `onWorldMap`'s doc comment is back above it, not above `withFight`. `e2e/debug.test.ts`: once the `fight` battle reaches player control, the test asserts that slot 1 still holds a save with `battle: null`, which checks C8's "never saved mid-battle". Checked by mutation: with BattleScene's guard (`if (!over && !this.location) return`) removed and the saved location defaulted so `save()` does not throw, the test fails on that assertion (`expected { location: 'debug', … } to be null`). With the guard restored, `make test-browser ARGS="e2e/debug.test.ts"` passes 3 of 3, and `make test` passes.

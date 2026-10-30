@@ -6,13 +6,13 @@ import { SOURCE_ID, threatAt } from '../game/worldMap.ts'
 import { hexToOffset } from '../grid/hex.ts'
 import { completions, runCommand, COMMAND_NAMES, type DebugContext } from './debugCommands.ts'
 
-/** A context on the world map, which takes changes, unless `changed` is left out. */
 /** A context on the world map that can start battles, recording the ones it was asked for. */
 function withFight(game: GameState = newGame(undefined, null, 7)): DebugContext & { fight: ReturnType<typeof vi.fn> } {
   const fight = vi.fn()
   return { scenes: ['World'], seed: 42, source: { game, changed: vi.fn(), fight }, fight }
 }
 
+/** A context on the world map, which takes changes, unless `changed` is left out. */
 function onWorldMap(game: GameState = newGame(undefined, null, 7)): DebugContext & { changed: ReturnType<typeof vi.fn> } {
   const changed = vi.fn()
   return { scenes: ['World'], seed: 42, source: { game, changed }, changed }

@@ -58,6 +58,10 @@ describe('the debug console', () => {
     const expected = koboldScouts(partyFighters(readyMadeParty()), 2).setup.units.filter((u) => u.side === 'enemy')
     const enemies = battle.state.units.filter((u) => u.side === 'enemy')
     expect(enemies.map((u) => [u.id, u.maxHp])).toEqual(expected.map((u) => [u.id, u.stats.maxHp]))
+    // Never saved mid-battle: the slot still holds the world map's save, with no battle in it.
+    const saved = await game.page.evaluate(() => localStorage.getItem('yomi.save.1'))
+    expect(saved).not.toBeNull()
+    expect(JSON.parse(saved!).battle).toBeNull()
 
     const over = await game.fightBattle()
     expect(over.state.winner).toBe('player')
