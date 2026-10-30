@@ -284,6 +284,10 @@ fight?: (encounter: EncounterId, threat: number) => void
 - [x] The stage design gets an "Implementation notes" section with the figures. The stages index marks stage 1 done.
 - [x] The design's play script has been walked in the game (`make dev`), or the steps not walked are listed for the user in step 07's record (not walked; listed).
 
+## Execution notes
+
+- **Overall review** of steps 01 to 07 (`bf7b802..24d1a82`): clean. Four doc fixes made in one commit, "Overall review: correct the stage's remaining docs": the `banditCamp` comment for the tuned counts; "foe", not "monster", in `encounter`'s comment; the stage design's status line, its commit list (step 07's review commits) and play-script item 2 (the threat-5 mage's Fireball and Heal All); and this note. Checks run by the reviewer: `make test` 754 passed; the production build OK; the sprites check OK; browser tests `debug` 3/3, `battle` 9/9 and `saves` 6/6 when run alone (three timeouts seen only when they ran together under load).
+
 ## Open questions
 
 None block the plan. The corrections above are recorded in place of questions.

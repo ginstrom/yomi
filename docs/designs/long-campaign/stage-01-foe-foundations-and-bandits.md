@@ -15,7 +15,7 @@ This stage lays the foundation for foes beyond threat 5, without changing the ma
 - **Bandit camps** on today's map. They are human opponents built by the same rules as heroes: drafts, levels, skill points, perks and gear.
 - **A debug command** to fight any encounter at any threat, which later stages use to check their foes.
 
-**Status:** ready for planning.
+**Status:** implemented; see the [implementation notes](#implementation-notes). The guard decision and the play script are still open.
 
 ## 2. Scope
 
@@ -134,7 +134,7 @@ Built from the plan in [`docs/implementation-plans/long-campaign-stage-01/`](../
 - Step 04, bandits on the map: `7ff2fb9`.
 - Step 05, the debug `fight` command: `c39b8ec`, review `112793b`.
 - Step 06, `--ready-level` and the level record: `5481925`.
-- Step 07, measure, tune and document: `c4ce6f8`.
+- Step 07, measure, tune and document: `c4ce6f8`; review `2e918e4` (the spawn-band tests made fast) and `24d1a82` (bandit docs); overall review, the commit "Overall review: correct the stage's remaining docs".
 
 **Departures from this design** (the plan's corrections):
 1. The Bandit Hideout (once Goblin Outriders, (47, 13)) is at threat 4, not 5: that is what `threatAt` gives there.
@@ -184,7 +184,7 @@ The camp and the Reavers account for 70. The rest is at the Source: bandits kill
 
 **The play script** was not walked: the implementer had no browser session at `make dev`. Adjusted for the tuned counts, these steps remain for the user:
 1. New game with the ready-made party; in the console (`~`) `xp 2000 all`, then `fight bandit_camp 3`. Expect **two** bandits, the Bandit Captain and the Bandit Brute, with their own sprites and weapons in the hover info. Win and see the experience.
-2. `fight bandit_camp 5`. Expect the Captain and the Hedge-Mage, the mage casting Shield and Magic Arrow and the Captain holding the line. The Archer is not there at 5; `fight bandit_camp 6` shows it (and four bandits) if wanted.
+2. `fight bandit_camp 5`. Expect the Captain and the Hedge-Mage, the mage casting Shield and Magic Arrow, and likely Fireball and Heal All too (a level 5 mage knows them), and the Captain holding the line. The Archer is not there at 5; `fight bandit_camp 6` shows it (and four bandits) if wanted.
 3. Play to the Bandit Camp at (30, 22), attack and win; see the location cleared and the blight cleansed as for any nest.
 4. `days 300`, then `locations all`: any Bandit Gang stands at threat 3 or more.
 5. After a `fight` battle with bandits, the world map is unchanged: no location cleared, no blight cleansed (covered by the browser test above for Kobold Scouts).

@@ -177,7 +177,7 @@ interface EncounterDef {
  * The party against the foes `threat` calls for. The level is the threat
  * (a whole number) held within the band; the foes are the slots that take the
  * field at that level (`fromThreat`), cut to the band's count for it, each
- * a monster at that level (`foeStats`). The numbers behind the counts were
+ * a foe at that level (`foeStats`). The numbers behind the counts were
  * chosen with the simulator; see the rules of scaling in CLAUDE.md.
  */
 function encounter(party: readonly Fighter[], { slots, band, counts }: EncounterDef, threat: number): Encounter {
@@ -312,9 +312,10 @@ export function sourceGuardians(party: readonly Fighter[], threat = 1): Encounte
 
 /**
  * Bandits, built by the rules heroes are: a Bandit Captain with sword, shield
- * and breastplate, a Brute with an axe and an Archer; from threat 4 a
- * Hedge-Mage who casts in the Archer's place, and both from threat 5, when
- * their gear turns Fine.
+ * and breastplate, and a Brute with an axe and breastplate at threat 3; at
+ * threats 4 and 5 a Hedge-Mage in the Brute's place, their gear Fine at 5.
+ * The Archer and the Cutthroat take the field only from threat 6, where four
+ * fight.
  */
 export function banditCamp(party: readonly Fighter[], threat = 3): Encounter {
   return encounter(party, BANDIT_CAMP, threat)
