@@ -103,6 +103,16 @@ export class UnitFigure extends Phaser.GameObjects.Container {
   }
 
   /**
+   * Where the body's point `name` is in the frame it shows now, from the feet
+   * in screen pixels, the way it faces; null for a body without it.
+   */
+  point(name: string): { x: number; y: number } | null {
+    const at = pointFromAnchor(this.base.frame.customData, name)
+    if (!at) return null
+    return { x: at.x * this.spriteScale * (this.flipped ? -1 : 1), y: at.y * this.spriteScale }
+  }
+
+  /**
    * Swings the blade or axe in the weapon hand about the fist: raised back over
    * `raiseMs`, cut down past upright over `cutMs`, then brought back. A figure
    * holding nothing that swings (a bow, a wand, bare hands, a monster's own
@@ -111,12 +121,11 @@ export class UnitFigure extends Phaser.GameObjects.Container {
   swing(raiseMs: number, cutMs: number): this {
     const weapon = this.gear.find((sprite) => SWUNG_GEAR.has(sprite.name))
     // The fist is the body's, a point of the frame it shows now (it sinks as the body breathes).
-    const fist = pointFromAnchor(this.base.frame.customData, GRIP_POINT)
-    if (!weapon || !fist) return this
+    const grip = this.point(GRIP_POINT)
+    if (!weapon || !grip) return this
     const turn = { angle: 0 }
     const side = this.flipped ? -1 : 1
     // The sprite turns about its origin, the feet; moving it keeps the grip where the fist is.
-    const grip = { x: fist.x * this.spriteScale * side, y: fist.y * this.spriteScale }
     const apply = () => {
       const radians = Phaser.Math.DegToRad(turn.angle * side)
       const cos = Math.cos(radians)

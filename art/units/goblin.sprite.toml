@@ -1,6 +1,9 @@
 # A hunched goblin in a leather jerkin with a crude iron blade.
 canvas = "unit"
 
+[points]
+chest = [16, 17]
+
 [frames]
 idle_0 = """
 ................................

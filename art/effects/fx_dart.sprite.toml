@@ -1,0 +1,13 @@
+# A dart of light, a wand's bolt or an arrow spell: drawn pale, pointing right, and
+# tinted by BattleScene in the spell's colour. `tip` is where it strikes.
+canvas = "effect"
+
+[points]
+tip = [13, 8]
+
+[frames.main.runs]
+6 = [[8, "lwl"]]
+7 = [[4, "lwwWWWWw"]]
+8 = [[0, "llwwwWWWWWWWWw"]]
+9 = [[4, "lwwWWWWw"]]
+10 = [[8, "lwl"]]

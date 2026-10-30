@@ -8,6 +8,18 @@ import type { ItemIcon } from '../inventory/inventory.ts'
  * the effects; this says which and when.
  */
 
+/**
+ * The effect sprites (art/effects/, the `effect` canvas): drawn pointing
+ * right about their centre, a missile and the burst drawn pale for a tint of
+ * its colour. One drawn point first names the pixel that strikes `tip`.
+ */
+export const ARROW_SPRITE = 'fx_arrow'
+export const MISSILE_SPRITES: Record<Missile, string> = { orb: 'fx_orb', dart: 'fx_dart' }
+export const BURST_SPRITE = 'fx_burst'
+export const BURST_ANIM = 'burst'
+export const EFFECT_FRAME = 'main'
+export const TIP_POINT = 'tip'
+
 /** A blow is swung; a shot flies, as an arrow from a bow or a bolt from a wand. */
 export type AttackLook = 'swing' | 'arrow' | 'bolt'
 

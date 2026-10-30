@@ -19,6 +19,32 @@
     {
       "frames": [
         {
+          "duration": 70,
+          "frame": "fx_burst/burst_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 70,
+          "frame": "fx_burst/burst_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 70,
+          "frame": "fx_burst/burst_2",
+          "key": "atlas"
+        },
+        {
+          "duration": 40,
+          "frame": "fx_burst/burst_3",
+          "key": "atlas"
+        }
+      ],
+      "key": "fx_burst/burst",
+      "repeat": 0
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "gear_axe/idle_0",
           "key": "atlas"

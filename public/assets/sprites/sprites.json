@@ -213,6 +213,195 @@
       24
     ]
   },
+  "fx_arrow": {
+    "anchor": [
+      8,
+      8
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      6,
+      16,
+      5
+    ],
+    "canvas": "effect",
+    "display_scale": 2,
+    "file": "fx_arrow.png",
+    "frames": {
+      "main": {
+        "bounds": [
+          0,
+          6,
+          16,
+          5
+        ],
+        "file": "fx_arrow.png"
+      }
+    },
+    "points": {
+      "main": {
+        "tip": [
+          15.5,
+          8.5
+        ]
+      }
+    },
+    "size": [
+      16,
+      16
+    ]
+  },
+  "fx_burst": {
+    "anchor": [
+      8,
+      8
+    ],
+    "anims": {
+      "burst": {
+        "frames": [
+          {
+            "frame": "burst_0",
+            "ms": 70
+          },
+          {
+            "frame": "burst_1",
+            "ms": 70
+          },
+          {
+            "frame": "burst_2",
+            "ms": 70
+          },
+          {
+            "frame": "burst_3",
+            "ms": 40
+          }
+        ],
+        "loop": false
+      }
+    },
+    "bounds": [
+      1,
+      1,
+      14,
+      14
+    ],
+    "canvas": "effect",
+    "display_scale": 2,
+    "file": "fx_burst.png",
+    "frames": {
+      "burst_0": {
+        "bounds": [
+          6,
+          6,
+          4,
+          4
+        ],
+        "file": "fx_burst__burst_0.png"
+      },
+      "burst_1": {
+        "bounds": [
+          5,
+          5,
+          6,
+          6
+        ],
+        "file": "fx_burst__burst_1.png"
+      },
+      "burst_2": {
+        "bounds": [
+          3,
+          3,
+          10,
+          10
+        ],
+        "file": "fx_burst__burst_2.png"
+      },
+      "burst_3": {
+        "bounds": [
+          1,
+          1,
+          14,
+          14
+        ],
+        "file": "fx_burst__burst_3.png"
+      }
+    },
+    "size": [
+      16,
+      16
+    ]
+  },
+  "fx_dart": {
+    "anchor": [
+      8,
+      8
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      6,
+      14,
+      5
+    ],
+    "canvas": "effect",
+    "display_scale": 2,
+    "file": "fx_dart.png",
+    "frames": {
+      "main": {
+        "bounds": [
+          0,
+          6,
+          14,
+          5
+        ],
+        "file": "fx_dart.png"
+      }
+    },
+    "points": {
+      "main": {
+        "tip": [
+          13.5,
+          8.5
+        ]
+      }
+    },
+    "size": [
+      16,
+      16
+    ]
+  },
+  "fx_orb": {
+    "anchor": [
+      8,
+      8
+    ],
+    "anims": {},
+    "bounds": [
+      4,
+      4,
+      8,
+      8
+    ],
+    "canvas": "effect",
+    "display_scale": 2,
+    "file": "fx_orb.png",
+    "frames": {
+      "main": {
+        "bounds": [
+          4,
+          4,
+          8,
+          8
+        ],
+        "file": "fx_orb.png"
+      }
+    },
+    "size": [
+      16,
+      16
+    ]
+  },
   "gear_axe": {
     "anchor": [
       16,
@@ -1014,6 +1203,38 @@
         "file": "goblin__walk_2.png"
       }
     },
+    "points": {
+      "idle_0": {
+        "chest": [
+          16.5,
+          17.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          16.5,
+          17.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          16.5,
+          17.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          16.5,
+          17.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          16.5,
+          17.5
+        ]
+      }
+    },
     "size": [
       32,
       32
@@ -1114,6 +1335,38 @@
           27
         ],
         "file": "horror__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          14.5,
+          14.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          14.5,
+          15.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          14.5,
+          14.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          14.5,
+          14.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          14.5,
+          14.5
+        ]
       }
     },
     "size": [
@@ -1743,6 +1996,38 @@
           32
         ],
         "file": "kobold__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          15.5,
+          17.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          15.5,
+          17.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          15.5,
+          17.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          15.5,
+          17.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          15.5,
+          17.5
+        ]
       }
     },
     "size": [
@@ -2399,6 +2684,38 @@
         "file": "shaman__walk_2.png"
       }
     },
+    "points": {
+      "idle_0": {
+        "chest": [
+          16.5,
+          17.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          16.5,
+          18.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          16.5,
+          17.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          16.5,
+          17.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          16.5,
+          17.5
+        ]
+      }
+    },
     "size": [
       32,
       32
@@ -2565,30 +2882,50 @@
     },
     "points": {
       "idle_0": {
+        "chest": [
+          16.5,
+          15.5
+        ],
         "grip": [
           25.5,
           19.5
         ]
       },
       "idle_1": {
+        "chest": [
+          16.5,
+          16.5
+        ],
         "grip": [
           25.5,
           20.5
         ]
       },
       "walk_0": {
+        "chest": [
+          16.5,
+          15.5
+        ],
         "grip": [
           25.5,
           19.5
         ]
       },
       "walk_1": {
+        "chest": [
+          16.5,
+          15.5
+        ],
         "grip": [
           25.5,
           19.5
         ]
       },
       "walk_2": {
+        "chest": [
+          16.5,
+          15.5
+        ],
         "grip": [
           25.5,
           19.5

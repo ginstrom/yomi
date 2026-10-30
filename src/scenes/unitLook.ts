@@ -49,6 +49,9 @@ export const SWUNG_GEAR: ReadonlySet<string> = new Set([
 /** The point a held weapon is gripped at, and turns about when it swings: the warrior's fist. */
 export const GRIP_POINT = 'grip'
 
+/** The point a shot or a spell is aimed at and flies from: the middle of a unit's body. */
+export const CHEST_POINT = 'chest'
+
 /** What sprite-tool writes on each frame of the atlas, which Phaser keeps as the frame's `customData`. */
 interface AtlasFrameData {
   pivot?: { x: number; y: number }

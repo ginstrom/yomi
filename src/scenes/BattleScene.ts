@@ -38,12 +38,18 @@ import { planAttack, type AttackPlan } from './attackPlan.ts'
 import { FLOOR_SQUASH_Y, HEX_SIZE, boardHexAt, boardHexCenter, boardPixelSize, curvedArrow } from './boardGeometry.ts'
 import { CURSORS } from './cursors.ts'
 import {
+  ARROW_SPRITE,
+  BURST_ANIM,
+  BURST_SPRITE,
+  EFFECT_FRAME,
+  MISSILE_SPRITES,
   OUTLINE_CRITICAL,
   OUTLINE_HURT,
   OUTLINE_IMAGE,
   RELEASE_MS,
   SPELL_LOOKS,
   SWING_IMPACT_MS,
+  TIP_POINT,
   attackLook,
   castOutline,
   flightMs,
@@ -58,7 +64,7 @@ import { soundVolume } from './audioSettings.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
-import { gearLayers } from './unitLook.ts'
+import { CHEST_POINT, SPRITE_ATLAS, gearLayers, pointFromAnchor, spriteAnim, spriteFrame } from './unitLook.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
 import { showStory, type StoryAnchors } from './StoryScene.ts'
 import { storyFor, type StoryItem } from '../story/story.ts'
@@ -116,10 +122,7 @@ const ATTACK_HIGHLIGHT = 0xe53935
 const SPELL_HIGHLIGHT = 0x7e57c2
 /** How long an area spell's hexes glow as it lands. */
 const AREA_FLASH_MS = 300
-/** An arrow's shaft and head, and a wand's bolt. */
-const ARROW_SHAFT = 0x8a6038
-const ARROW_HEAD = 0xbcc3c4
-const ARROW_FLETCH = 0xebe7d6
+/** A wand's bolt. */
 const WAND_BOLT = 0x80deea
 /** How high an arrow arcs over each hex it flies, in pixels, up to the most. */
 const ARROW_ARC_PER_HEX = 6
@@ -1292,7 +1295,7 @@ export class BattleScene extends Phaser.Scene {
       const end = event.hit ? to : this.pastShoulder(from, to)
       if (look === 'arrow') this.flyArrow(from, end, event.distance, ms, land)
       else this.flyMissile(from, end, ms, { colour: WAND_BOLT, glow: 0xffffff, missile: 'dart', impact: 'burst' }, () => {
-        if (event.hit) this.burst(to, WAND_BOLT, 0xffffff, 0.6)
+        if (event.hit) this.burst(to, WAND_BOLT, 0xffffff, 1)
         land()
       })
     })
@@ -1329,7 +1332,7 @@ export class BattleScene extends Phaser.Scene {
     }
     this.time.delayedCall(RELEASE_MS, () => {
       if (event.distance === 0) land()
-      else this.flyMissile(this.chest(event.caster), this.hexChest(event.at), flightMs(event.distance), look, land)
+      else this.flyMissile(this.chest(event.caster), this.hexChest(event.at, event.outcomes), flightMs(event.distance), look, land)
     })
   }
 
@@ -1338,7 +1341,7 @@ export class BattleScene extends Phaser.Scene {
     const touched = event.outcomes.filter((o) => !o.image).map((o) => o.unit)
     switch (look.impact) {
       case 'burst':
-        this.burst(this.hexChest(event.at), look.colour, look.glow, 1 + (SPELLS[event.spell].radius ?? 0))
+        this.burst(this.hexChest(event.at, event.outcomes), look.colour, look.glow, 1.5 + (SPELLS[event.spell].radius ?? 0))
         break
       case 'cloud':
         for (const h of area.length > 0 ? area : [event.at]) this.cloud(boardHexCenter(h), look.colour, look.glow)
@@ -1370,16 +1373,35 @@ export class BattleScene extends Phaser.Scene {
   // ---- effects --------------------------------------------------------
   // Drawn in the label layer, over every unit and nameplate, and scaled and placed as the board is.
 
-  /** Where a unit's chest is, a third of the way up its figure, wherever its figure leans. */
+  /** Where a unit's chest is, its sprite's `chest` point (a third of the way up one without), wherever its figure leans. */
   private chest(id: UnitId): { x: number; y: number } {
-    const { container } = this.units.get(id)!
-    return { x: container.x, y: container.y - UNIT_HEIGHT / 3 }
+    const { container, figure } = this.units.get(id)!
+    const at = figure.point(CHEST_POINT) ?? { x: 0, y: -UNIT_HEIGHT / 3 }
+    return { x: container.x + figure.x + at.x, y: container.y + figure.y + at.y }
   }
 
-  /** Where a unit standing on a hex would have its chest. */
-  private hexChest(h: Hex): { x: number; y: number } {
+  /** What a spell aimed at a hex flies to: the chest of the unit of `touched` standing there, or where one would have it. */
+  private hexChest(h: Hex, touched: readonly { unit: UnitId }[]): { x: number; y: number } {
     const { x, y } = boardHexCenter(h)
-    return { x, y: y - UNIT_HEIGHT / 3 }
+    const standing = touched.find(({ unit }) => {
+      const { container } = this.units.get(unit)!
+      return Math.abs(container.x - x) < 1 && Math.abs(container.y - y) < 1
+    })
+    return standing ? this.chest(standing.unit) : { x, y: y - UNIT_HEIGHT / 3 }
+  }
+
+  /**
+   * An effect sprite (art/effects/) shown as the units are, in a container
+   * whose origin is the sprite's `tip` (its centre if it has none): placed at
+   * where it strikes and turned along its flight.
+   */
+  private effect(sprite: string): Phaser.GameObjects.Container {
+    const image = this.add.sprite(0, 0, SPRITE_ATLAS, spriteFrame(sprite, EFFECT_FRAME)).setScale(UNIT_SCALE)
+    const tip = pointFromAnchor(image.frame.customData, TIP_POINT)
+    if (tip) image.setPosition(-tip.x * UNIT_SCALE, -tip.y * UNIT_SCALE)
+    const effect = this.add.container(0, 0, [image])
+    this.labelLayer.add(effect)
+    return effect
   }
 
   /** A point past a target's shoulder, where a shot that misses goes. */
@@ -1390,22 +1412,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** Flies an arrow in an arc, turned along its flight, and calls `onArrive` as it lands. */
   private flyArrow(from: { x: number; y: number }, to: { x: number; y: number }, hexes: number, ms: number, onArrive: () => void): void {
-    // Drawn pointing east, tip at the origin.
-    const arrow = this.add
-      .graphics()
-      // A dark edge first, so the shaft shows over the floor's browns.
-      .lineStyle(5, ARROW_EDGE, 0.85)
-      .lineBetween(-24, 0, -2, 0)
-      .lineStyle(3, ARROW_SHAFT, 1)
-      .lineBetween(-24, 0, -4, 0)
-      .fillStyle(ARROW_EDGE, 1)
-      .fillTriangle(2, 0, -8, -5, -8, 5)
-      .fillStyle(ARROW_HEAD, 1)
-      .fillTriangle(0, 0, -7, -3, -7, 3)
-      .lineStyle(2, ARROW_FLETCH, 1)
-      .lineBetween(-26, -4, -20, 0)
-      .lineBetween(-26, 4, -20, 0)
-    this.labelLayer.add(arrow)
+    const arrow = this.effect(ARROW_SPRITE)
     const height = Math.min(ARROW_ARC_MAX, ARROW_ARC_PER_HEX * hexes)
     const at = (t: number) => ({
       x: from.x + (to.x - from.x) * t,
@@ -1433,14 +1440,16 @@ export class BattleScene extends Phaser.Scene {
 
   /** Flies a spell's missile, an orb or a dart trailing sparks of its glow, and calls `onArrive` as it lands. */
   private flyMissile(from: { x: number; y: number }, to: { x: number; y: number }, ms: number, look: SpellLook, onArrive: () => void): void {
-    const missile = this.add.graphics({ x: from.x, y: from.y })
-    if (look.missile === 'orb') {
-      missile.fillStyle(look.glow, 0.35).fillCircle(0, 0, 9).fillStyle(look.colour, 1).fillCircle(0, 0, 5).fillStyle(0xffffff, 0.9).fillCircle(-1, -1, 2)
-    } else {
-      missile.fillStyle(look.glow, 0.35).fillEllipse(-3, 0, 22, 9).fillStyle(look.colour, 1).fillEllipse(-2, 0, 14, 5).fillStyle(0xffffff, 0.9).fillCircle(3, 0, 2)
-      missile.setRotation(Math.atan2(to.y - from.y, to.x - from.x))
-    }
-    this.labelLayer.add(missile)
+    const missile = this.effect(MISSILE_SPRITES[look.missile])
+    const image = missile.first as Phaser.GameObjects.Sprite
+    // A dart's origin is its tip: it starts a length ahead, so that it leaves from the chest rather than trailing back across it.
+    const along = new Phaser.Math.Vector2(to.x - from.x, to.y - from.y).setLength(Math.hypot(image.x, image.y))
+    missile.setPosition(from.x + along.x, from.y + along.y)
+    image.setTint(look.colour)
+    // A soft glow about the missile, behind it.
+    const halo = look.missile === 'orb' ? this.add.circle(0, 0, 11, look.glow, 0.35) : this.add.ellipse(image.x, 0, 24, 10, look.glow, 0.35)
+    missile.addAt(halo, 0)
+    if (look.missile === 'dart') missile.setRotation(Math.atan2(to.y - from.y, to.x - from.x))
     let lastSpark = 0
     this.tweens.add({
       targets: missile,
@@ -1461,27 +1470,22 @@ export class BattleScene extends Phaser.Scene {
     })
   }
 
-  /** A flash and sparks flying out from a point; `size` 1 for a single target, more for an area's radius. */
+  /**
+   * A flash and a burst of sparks (`fx_burst`, in `colour`) from a point;
+   * `size` 1 for a shot, more for a spell and its area's radius. The sprite is
+   * shown at a whole multiple of its pixels, so its edges stay sharp.
+   */
   private burst(at: { x: number; y: number }, colour: number, glow: number, size: number): void {
     const flare = this.add.circle(at.x, at.y, 8 * size, glow, 0.8)
     this.labelLayer.add(flare)
     this.tweens.add({ targets: flare, scale: 2, alpha: 0, duration: 260, ease: 'Quad.easeOut', onComplete: () => flare.destroy() })
-    const sparks = 8 + 4 * size
-    for (let i = 0; i < sparks; i++) {
-      const angle = (Math.PI * 2 * i) / sparks + Phaser.Math.FloatBetween(-0.2, 0.2)
-      const reach = Phaser.Math.Between(14, 24) * size
-      const spark = this.add.circle(at.x, at.y, Phaser.Math.Between(2, 3), i % 2 ? colour : glow, 1)
-      this.labelLayer.add(spark)
-      this.tweens.add({
-        targets: spark,
-        x: at.x + Math.cos(angle) * reach,
-        y: at.y + Math.sin(angle) * reach * FLOOR_SQUASH_Y,
-        alpha: 0,
-        duration: Phaser.Math.Between(240, 360),
-        ease: 'Quad.easeOut',
-        onComplete: () => spark.destroy(),
-      })
-    }
+    const sparks = this.add
+      .sprite(at.x, at.y, SPRITE_ATLAS, spriteFrame(BURST_SPRITE, 'burst_0'))
+      .setScale(Math.round(UNIT_SCALE * size))
+      .setTint(colour)
+    this.labelLayer.add(sparks)
+    sparks.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sparks.destroy())
+    sparks.play(spriteAnim(BURST_SPRITE, BURST_ANIM))
   }
 
   /** Puffs of a foul cloud, rising and spreading from a hex's floor. */

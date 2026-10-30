@@ -6,6 +6,7 @@ canvas = "unit"
 # The fist the held weapon is gripped in, and turns about when it swings (UnitFigure.swing).
 [points]
 grip = [25, 19]
+chest = [16, 15]
 
 [frames]
 idle_0 = """

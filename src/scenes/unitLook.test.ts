@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { IRON_SWORD, MAGIC_ITEMS, OAK_SHIELD, STEEL_ARMOR, STEEL_GREATSWORD, WEAPONS, YEW_BOW } from '../inventory/inventory.ts'
 import { FOE_XP, type UnitKind } from '../game/encounters.ts'
-import { GEAR_SPRITES, GRIP_POINT, gearLayers, pointFromAnchor, spriteAnim, spriteFrame, UNIT_REST_FRAME } from './unitLook.ts'
+import { ARROW_SPRITE, BURST_ANIM, BURST_SPRITE, EFFECT_FRAME, MISSILE_SPRITES, TIP_POINT } from './battleEffects.ts'
+import { CHEST_POINT, GEAR_SPRITES, GRIP_POINT, gearLayers, pointFromAnchor, spriteAnim, spriteFrame, UNIT_REST_FRAME } from './unitLook.ts'
 
 const atlas = JSON.parse(readFileSync('public/assets/sprites/atlas.json', 'utf8')) as { frames: Record<string, unknown> }
 const anims = JSON.parse(readFileSync('public/assets/sprites/atlas.anims.json', 'utf8')) as { anims: Array<{ key: string }> }
@@ -63,5 +64,23 @@ describe('pointFromAnchor', () => {
     const warrior = Object.keys(atlas.frames).filter((key) => key.startsWith('warrior/'))
     expect(warrior.length).toBeGreaterThan(1)
     for (const key of warrior) expect(pointFromAnchor(atlas.frames[key], GRIP_POINT), key).not.toBeNull()
+  })
+
+  it('finds a chest on every frame of every unit, where shots and spells are aimed', () => {
+    const kinds: string[] = ['warrior', ...Object.keys(FOE_XP)]
+    const frames = Object.keys(atlas.frames).filter((key) => kinds.includes(key.split('/')[0]))
+    expect(frames.length).toBeGreaterThan(kinds.length)
+    for (const key of frames) expect(pointFromAnchor(atlas.frames[key], CHEST_POINT), key).not.toBeNull()
+  })
+})
+
+describe('effect sprites', () => {
+  it('are in the atlas, a shot or a dart with the tip it strikes with', () => {
+    for (const sprite of [ARROW_SPRITE, ...Object.values(MISSILE_SPRITES)]) {
+      expect(atlas.frames[spriteFrame(sprite, EFFECT_FRAME)], sprite).toBeDefined()
+    }
+    expect(pointFromAnchor(atlas.frames[spriteFrame(ARROW_SPRITE, EFFECT_FRAME)], TIP_POINT)).toEqual({ x: 7.5, y: 0.5 })
+    expect(pointFromAnchor(atlas.frames[spriteFrame(MISSILE_SPRITES.dart, EFFECT_FRAME)], TIP_POINT)).not.toBeNull()
+    expect(anims.anims.map((a) => a.key)).toContain(spriteAnim(BURST_SPRITE, BURST_ANIM))
   })
 })

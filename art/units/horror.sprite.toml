@@ -2,7 +2,11 @@
 # flesh, bone spikes down its back, one pale eye, a red maw of teeth and a
 # long claw reaching forward.
 canvas = "unit"
+
 outline = "auto"
+
+[points]
+chest = [14, 14]
 
 [frames.idle_0.runs]
 6 = [[10, "W"], [15, "W"], [20, "W"]]

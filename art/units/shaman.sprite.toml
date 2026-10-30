@@ -1,6 +1,9 @@
 # A goblin shaman in a red robe, leaning on a staff topped with a skull.
 canvas = "unit"
 
+[points]
+chest = [16, 17]
+
 [frames]
 idle_0 = """
 ................................

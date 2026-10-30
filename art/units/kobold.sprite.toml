@@ -1,6 +1,9 @@
 # A rust-scaled kobold with a spear.
 canvas = "unit"
 
+[points]
+chest = [15, 17]
+
 [frames]
 idle_0 = """
 ........................k.......

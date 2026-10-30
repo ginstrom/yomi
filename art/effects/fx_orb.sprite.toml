@@ -1,0 +1,12 @@
+# A spell's orb in flight, about the centre: drawn pale and tinted by BattleScene in the spell's colour.
+canvas = "effect"
+
+[frames.main.runs]
+4 = [[6, "llll"]]
+5 = [[5, "lwwwwl"]]
+6 = [[4, "lwWWWWwl"]]
+7 = [[4, "lwWWWWwl"]]
+8 = [[4, "lwWWWWwl"]]
+9 = [[4, "lwWWWWwl"]]
+10 = [[5, "lwwwwl"]]
+11 = [[6, "llll"]]

@@ -40,6 +40,11 @@ size = [32, 32]
 anchor = [16, 16]
 display_scale = 2
 
+[canvas.effect]           # a shot, a missile or a burst in battle: drawn pointing right, turned by the game about its centre
+size = [16, 16]
+anchor = [8, 8]
+display_scale = 2        # as a unit is shown in battle (UNIT_SCALE), so the pixels match
+
 [preview]
 scale = 6                # default upscale for `sprite preview`
 background = "#3a3a3a"
