@@ -139,7 +139,7 @@ The exact wording is the implementer's. It must say the averages, the death coun
 
 ## Completion record
 
-**Commit:** the step 06 commit on `armor-resistance` (parent `112793b`; its hash is in `git log --grep "Step 06"`).
+**Commit:** `5481925` on `armor-resistance` (parent `112793b`).
 
 **What changed:** `scripts/simulate.ts` (`--ready-level`, `CliArgs.readyLevel`, `nextTarget`'s `readyLevel` parameter, `CampaignRecord.finalLevels`/`deathsAtLevel`/`battlesToLevel`, an exported `LEVEL_MARKS` = [5, 10, 15, 20] and `LevelMark` type, `CampaignSummary.avgLowestFinalLevel`/`avgHighestFinalLevel`/`deathsByLevel`/`toLevel`, two new printed lines), `scripts/simulate.test.ts` (seven new tests, written first and seen to fail: 6 failing for the expected reasons before the code), `CLAUDE.md` (the simulator paragraphs).
 
