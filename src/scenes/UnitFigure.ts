@@ -1,8 +1,9 @@
 import Phaser from 'phaser'
 import {
-  GRIP_FROM_FEET,
+  GRIP_POINT,
   SPRITE_ATLAS,
   SWUNG_GEAR,
+  pointFromAnchor,
   spriteAnim,
   spriteFrame,
   UNIT_REST_FRAME,
@@ -109,11 +110,13 @@ export class UnitFigure extends Phaser.GameObjects.Container {
    */
   swing(raiseMs: number, cutMs: number): this {
     const weapon = this.gear.find((sprite) => SWUNG_GEAR.has(sprite.name))
-    if (!weapon) return this
+    // The fist is the body's, a point of the frame it shows now (it sinks as the body breathes).
+    const fist = pointFromAnchor(this.base.frame.customData, GRIP_POINT)
+    if (!weapon || !fist) return this
     const turn = { angle: 0 }
     const side = this.flipped ? -1 : 1
     // The sprite turns about its origin, the feet; moving it keeps the grip where the fist is.
-    const grip = { x: GRIP_FROM_FEET.x * this.spriteScale * side, y: GRIP_FROM_FEET.y * this.spriteScale }
+    const grip = { x: fist.x * this.spriteScale * side, y: fist.y * this.spriteScale }
     const apply = () => {
       const radians = Phaser.Math.DegToRad(turn.angle * side)
       const cos = Math.cos(radians)
@@ -159,6 +162,18 @@ export class UnitFigure extends Phaser.GameObjects.Container {
         this.renderFilters = false
       },
     })
+    return this
+  }
+
+  /**
+   * Stops a pulsed outline at once. A faded figure (a fallen unit) is all edge
+   * to the glow, which would fill it rather than ring it.
+   */
+  clearOutline(): this {
+    if (this.outline) {
+      this.scene.tweens.killTweensOf(this.outline)
+      this.renderFilters = false
+    }
     return this
   }
 

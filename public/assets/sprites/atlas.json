@@ -2195,6 +2195,12 @@
         "x": 0.5,
         "y": 1.0
       },
+      "points": {
+        "grip": [
+          25.5,
+          19.5
+        ]
+      },
       "rotated": false,
       "sourceSize": {
         "h": 32,
@@ -2218,6 +2224,12 @@
       "pivot": {
         "x": 0.5,
         "y": 1.0
+      },
+      "points": {
+        "grip": [
+          25.5,
+          20.5
+        ]
       },
       "rotated": false,
       "sourceSize": {
@@ -2243,6 +2255,12 @@
         "x": 0.5,
         "y": 1.0
       },
+      "points": {
+        "grip": [
+          25.5,
+          19.5
+        ]
+      },
       "rotated": false,
       "sourceSize": {
         "h": 32,
@@ -2267,6 +2285,12 @@
         "x": 0.5,
         "y": 1.0
       },
+      "points": {
+        "grip": [
+          25.5,
+          19.5
+        ]
+      },
       "rotated": false,
       "sourceSize": {
         "h": 32,
@@ -2290,6 +2314,12 @@
       "pivot": {
         "x": 0.5,
         "y": 1.0
+      },
+      "points": {
+        "grip": [
+          25.5,
+          19.5
+        ]
       },
       "rotated": false,
       "sourceSize": {

@@ -35,6 +35,17 @@
     {
       "frames": [
         {
+          "duration": 560,
+          "frame": "gear_axe/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_axe/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "gear_bow/idle_0",
           "key": "atlas"
@@ -46,6 +57,17 @@
         }
       ],
       "key": "gear_bow/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_bow/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_bow/walk",
       "repeat": -1
     },
     {
@@ -67,6 +89,17 @@
     {
       "frames": [
         {
+          "duration": 560,
+          "frame": "gear_bow_hawk/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_bow_hawk/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "gear_dagger/idle_0",
           "key": "atlas"
@@ -78,6 +111,17 @@
         }
       ],
       "key": "gear_dagger/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_dagger/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_dagger/walk",
       "repeat": -1
     },
     {
@@ -99,6 +143,17 @@
     {
       "frames": [
         {
+          "duration": 560,
+          "frame": "gear_greatsword/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_greatsword/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "gear_shield/idle_0",
           "key": "atlas"
@@ -110,6 +165,17 @@
         }
       ],
       "key": "gear_shield/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_shield/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_shield/walk",
       "repeat": -1
     },
     {
@@ -131,6 +197,17 @@
     {
       "frames": [
         {
+          "duration": 560,
+          "frame": "gear_shortsword/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_shortsword/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "gear_sword/idle_0",
           "key": "atlas"
@@ -142,6 +219,17 @@
         }
       ],
       "key": "gear_sword/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_sword/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_sword/walk",
       "repeat": -1
     },
     {
@@ -163,6 +251,17 @@
     {
       "frames": [
         {
+          "duration": 560,
+          "frame": "gear_sword_ember/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_sword_ember/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "gear_wand/idle_0",
           "key": "atlas"
@@ -179,6 +278,17 @@
     {
       "frames": [
         {
+          "duration": 560,
+          "frame": "gear_wand/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_wand/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "gear_wand_storm/idle_0",
           "key": "atlas"
@@ -190,6 +300,17 @@
         }
       ],
       "key": "gear_wand_storm/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_wand_storm/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_wand_storm/walk",
       "repeat": -1
     },
     {

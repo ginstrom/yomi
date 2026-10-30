@@ -2,8 +2,7 @@
 # Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
 # and leaves open what the body shows through: see art/CLAUDE.md.
 canvas = "unit"
-outline = false
-grounded = false
+over = "warrior"
 
 [frames.idle_0.runs]
 8 = [[25, "k"]]
@@ -27,5 +26,7 @@ from = "idle_0"
 shift = [0, 1]
 
 [anim.idle]
-frames = ["idle_0", "idle_1"]
-ms = 600
+like = "warrior"      # breathes with the body
+
+[anim.walk]
+rest = true           # holds idle_0 while the body walks

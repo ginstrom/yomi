@@ -46,12 +46,28 @@ export const SWUNG_GEAR: ReadonlySet<string> = new Set([
   'gear_axe',
 ])
 
+/** The point a held weapon is gripped at, and turns about when it swings: the warrior's fist. */
+export const GRIP_POINT = 'grip'
+
+/** What sprite-tool writes on each frame of the atlas, which Phaser keeps as the frame's `customData`. */
+interface AtlasFrameData {
+  pivot?: { x: number; y: number }
+  sourceSize?: { w: number; h: number }
+  /** The sprite's named points (`[points]` in its source), each the centre of a pixel, from the canvas's top left. */
+  points?: Record<string, [number, number]>
+}
+
 /**
- * Where a held weapon is gripped, from the unit canvas's anchor (its feet), in
- * canvas pixels: the middle of column 25, row 19 (art/CLAUDE.md). A swing turns
- * the weapon about it.
+ * Where a frame's named point is, from its anchor (a unit's feet), in canvas
+ * pixels; null when the frame has no such point. `frameData` is an atlas
+ * frame's `customData`.
  */
-export const GRIP_FROM_FEET = { x: 25.5 - 16, y: 19.5 - 32 }
+export function pointFromAnchor(frameData: unknown, name: string): { x: number; y: number } | null {
+  const { pivot, sourceSize, points } = (frameData ?? {}) as AtlasFrameData
+  const point = points?.[name]
+  if (!point || !pivot || !sourceSize) return null
+  return { x: point[0] - pivot.x * sourceSize.w, y: point[1] - pivot.y * sourceSize.h }
+}
 
 /** The sprites to lay over a body for what it holds, in drawing order: the weapon, then the off hand's. */
 export function gearLayers(equipment: Equipment): string[] {

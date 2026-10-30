@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { IRON_SWORD, MAGIC_ITEMS, OAK_SHIELD, STEEL_ARMOR, STEEL_GREATSWORD, WEAPONS, YEW_BOW } from '../inventory/inventory.ts'
 import { FOE_XP, type UnitKind } from '../game/encounters.ts'
-import { GEAR_SPRITES, gearLayers, spriteAnim, spriteFrame, UNIT_REST_FRAME } from './unitLook.ts'
+import { GEAR_SPRITES, GRIP_POINT, gearLayers, pointFromAnchor, spriteAnim, spriteFrame, UNIT_REST_FRAME } from './unitLook.ts'
 
 const atlas = JSON.parse(readFileSync('public/assets/sprites/atlas.json', 'utf8')) as { frames: Record<string, unknown> }
 const anims = JSON.parse(readFileSync('public/assets/sprites/atlas.anims.json', 'utf8')) as { anims: Array<{ key: string }> }
@@ -43,5 +43,25 @@ describe('the units', () => {
       expect(atlas.frames[spriteFrame(kind, UNIT_REST_FRAME)], kind).toBeDefined()
       for (const anim of ['idle', 'walk']) expect(anims.anims.map((a) => a.key)).toContain(spriteAnim(kind, anim))
     }
+  })
+})
+
+describe('pointFromAnchor', () => {
+  const frame = { pivot: { x: 0.5, y: 1 }, sourceSize: { w: 32, h: 32 }, points: { grip: [25.5, 19.5] } }
+
+  it('measures a frame’s point from its anchor, the feet of a unit', () => {
+    expect(pointFromAnchor(frame, 'grip')).toEqual({ x: 9.5, y: -12.5 })
+  })
+
+  it('finds nothing in a frame without that point, or without the atlas’s data', () => {
+    expect(pointFromAnchor(frame, 'chest')).toBeNull()
+    expect(pointFromAnchor({ pivot: frame.pivot, sourceSize: frame.sourceSize }, 'grip')).toBeNull()
+    expect(pointFromAnchor(undefined, 'grip')).toBeNull()
+  })
+
+  it('finds the grip on every frame of the warrior, the body every hero is drawn on', () => {
+    const warrior = Object.keys(atlas.frames).filter((key) => key.startsWith('warrior/'))
+    expect(warrior.length).toBeGreaterThan(1)
+    for (const key of warrior) expect(pointFromAnchor(atlas.frames[key], GRIP_POINT), key).not.toBeNull()
   })
 })

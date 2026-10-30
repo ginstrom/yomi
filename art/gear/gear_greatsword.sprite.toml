@@ -2,8 +2,7 @@
 # Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
 # and leaves open what the body shows through: see art/CLAUDE.md.
 canvas = "unit"
-outline = false
-grounded = false
+over = "warrior"
 
 [frames.idle_0.runs]
 0 = [[25, "kk"]]
@@ -25,8 +24,9 @@ grounded = false
 16 = [[23, "kwwllk"]]
 17 = [[22, "kkwwllkk"]]
 18 = [[22, "OyyyYYYOk"]]
-20 = [[25, "nn"]]
-21 = [[25, "nn"]]
+19 = [[28, "kk"]]
+20 = [[25, "nnk"]]
+21 = [[24, "knnk"]]
 22 = [[24, "kyYk"]]
 23 = [[25, "kk"]]
 
@@ -36,5 +36,7 @@ from = "idle_0"
 shift = [0, 1]
 
 [anim.idle]
-frames = ["idle_0", "idle_1"]
-ms = 600
+like = "warrior"      # breathes with the body
+
+[anim.walk]
+rest = true           # holds idle_0 while the body walks

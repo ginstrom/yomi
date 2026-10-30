@@ -476,7 +476,7 @@ export class BattleScene extends Phaser.Scene {
   /** Others may stand on a fallen unit's hex, so its plate goes rather than collide with theirs. */
   private showFallen(id: UnitId): void {
     const unit = this.units.get(id)!
-    unit.figure.stop().setFigureAlpha(0.4)
+    unit.figure.stop().clearOutline().setFigureAlpha(0.4)
     unit.plate.setVisible(false)
   }
 
