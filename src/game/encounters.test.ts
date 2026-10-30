@@ -20,6 +20,7 @@ import {
 import {
   ENCOUNTERS,
   ENCOUNTER_BANDS,
+  ENCOUNTER_COUNTS,
   FOE_NATIVE_LEVEL,
   FOE_XP,
   MAX_THREAT,
@@ -203,6 +204,12 @@ describe('the encounters\' bands and counts', () => {
     for (const id of ids) expect(ENCOUNTER_BANDS[id]).toEqual({ min: 1, max: 5 })
   })
 
+  it('gives every encounter one foe count for each threat of its band', () => {
+    for (const id of ids) {
+      expect(ENCOUNTER_COUNTS[id].length).toBe(ENCOUNTER_BANDS[id].max - ENCOUNTER_BANDS[id].min + 1)
+    }
+  })
+
   it('fields the foes it always has: 2, 3, 3, 3, 4 at threats 1 to 5', () => {
     for (const id of ids) expect([1, 2, 3, 4, 5].map((threat) => foeCount(id, threat))).toEqual([2, 3, 3, 3, 4])
   })
@@ -278,7 +285,7 @@ describe('the foe yardstick', () => {
     { kind: 'troll', field: 'toHit', reason: 'level 1 foes hit less often than the band; they catch up by 5 a level' },
     { kind: 'armored_troll', field: 'maxHp', reason: 'plates (resistance 5) and regeneration stand for hit points, so its pool is small' },
     { kind: 'armored_troll', field: 'meanDamage', reason: 'one heavy blow of 2d6+2 a turn, the damage of a foe that is a danger in melee' },
-    { kind: 'armored_troll', field: 'toHit', reason: 'easy to hit and slow to strike: level 1 foes hit less often than the band' },
+    { kind: 'armored_troll', field: 'toHit', reason: 'level 1 foes hit less often than the band; they catch up by 5 a level' },
   ]
 
   const meanDamage = (s: CombatantStats) =>

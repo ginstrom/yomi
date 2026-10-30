@@ -306,6 +306,15 @@ export const ENCOUNTER_BANDS: Record<EncounterId, ThreatBand> = {
   source_guardians: SOURCE_GUARDIANS.band,
 }
 
+/** How many foes each encounter fields at each threat of its band, from `band.min` up, from its definition. */
+export const ENCOUNTER_COUNTS: Record<EncounterId, readonly number[]> = {
+  goblin_raid: GOBLIN_RAID.counts,
+  kobold_scouts: KOBOLD_SCOUTS.counts,
+  hobgoblin_warband: HOBGOBLIN_WARBAND.counts,
+  troll_lair: TROLL_LAIR.counts,
+  source_guardians: SOURCE_GUARDIANS.counts,
+}
+
 /** The encounters whose band holds `threat`, in `ENCOUNTERS` order. */
 export function encountersFor(threat: number): EncounterId[] {
   return (Object.keys(ENCOUNTERS) as EncounterId[]).filter(
