@@ -159,16 +159,30 @@ describe('spawning', () => {
     expect(lairs(world).length).toBe(MAX_MONSTER_LOCATIONS)
   })
 
-  it('spawns only kinds whose encounter band holds the threat of where they lie', () => {
-    const spawned: MonsterLocation[] = []
-    for (let seed = 1; seed <= 200; seed++) {
-      const world = newWorld(seed)
-      corruptWhere(world, () => true)
-      world.spawnPressure = SPAWN_COST
-      passTurn(world, party)
-      spawned.push(...spawns(world))
+  /**
+   * One forced spawn on each of 80 fresh worlds with all land corrupted, worked out once for the two tests below
+   * (a world and its first day are costly, and 200 worlds for each test ran past the timeout on a busy machine).
+   * 80 seeds spawn at every threat from 1 to 5, and Bandit Gangs at 3, 4 and 5.
+   */
+  let forced: MonsterLocation[] | undefined
+  const forcedSpawns = (): MonsterLocation[] => {
+    if (!forced) {
+      forced = []
+      for (let seed = 1; seed <= 80; seed++) {
+        const world = newWorld(seed)
+        corruptWhere(world, () => true)
+        world.spawnPressure = SPAWN_COST
+        passTurn(world, party)
+        forced.push(...spawns(world))
+      }
     }
-    expect(spawned.length).toBeGreaterThan(150)
+    return forced
+  }
+
+  it('spawns only kinds whose encounter band holds the threat of where they lie', () => {
+    const spawned = forcedSpawns()
+    expect(spawned.length).toBeGreaterThan(60)
+    expect(new Set(spawned.map((l) => l.threat))).toEqual(new Set([1, 2, 3, 4, 5]))
     for (const l of spawned) {
       const band = ENCOUNTER_BANDS[l.encounter]
       expect(l.threat).toBeGreaterThanOrEqual(band.min)
@@ -177,19 +191,9 @@ describe('spawning', () => {
   })
 
   it('spawns a Bandit Gang only from threat 3, and does spawn one there', () => {
-    const gangs: MonsterLocation[] = []
-    for (let seed = 1; seed <= 200; seed++) {
-      const world = newWorld(seed)
-      corruptWhere(world, () => true)
-      world.spawnPressure = SPAWN_COST
-      passTurn(world, party)
-      gangs.push(...spawns(world).filter((l) => l.name === 'Bandit Gang'))
-    }
-    expect(gangs.length).toBeGreaterThan(0)
-    for (const l of gangs) {
-      expect(l.encounter).toBe('bandit_camp')
-      expect(l.threat).toBeGreaterThanOrEqual(3)
-    }
+    const gangs = forcedSpawns().filter((l) => l.name === 'Bandit Gang')
+    expect(new Set(gangs.map((l) => l.threat))).toEqual(new Set([3, 4, 5]))
+    for (const l of gangs) expect(l.encounter).toBe('bandit_camp')
   })
 
   it('spawns at threats 1 and 2 as before bandits: the same places, kinds and loot', () => {
