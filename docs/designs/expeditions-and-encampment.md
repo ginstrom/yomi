@@ -10,7 +10,7 @@ The encampment has two facilities, the guild hall and the shrine. The blight des
 
 Together they make the blight's second loop ("develop the encampment → more power → tougher foes") a loop of buildings *and* gear: held land yields gold and materials, the buildings turn them into better gear, and better gear pushes into land that yields more. Gold becomes the contested resource, wanted by the guild hall, the shrine, recruits and gear at once.
 
-**Status: ready for planning.** The user chose commerce as a facility, crafting in tiers from the field up through the workshop's levels, and grades that raise what each tier can make; quests are dropped, the blight being enough to drive the game (§9). Costs, prices, stats and healing rates are starting points for the simulator, not decisions.
+**Status: implemented** (commit eee148b; the campaign retune after it). The rest of this section is the design as it was decided. The user chose commerce as a facility, crafting in tiers from the field up through the workshop's levels, and grades that raise what each tier can make; quests are dropped, the blight being enough to drive the game (§9). Costs, prices, stats and healing rates are starting points for the simulator, not decisions.
 
 ### History
 
