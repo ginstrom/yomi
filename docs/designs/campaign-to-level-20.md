@@ -47,7 +47,7 @@ Where those documents and the code differ, the code is right.
 | R10 | **Monster spells.** Some spells are known only to monsters. They never appear in the hero spell tree, and they may use the new cone and line shapes. |
 | R11 | The **`aggressive` policy** uses routines, area attacks and monster spells by expected harm, sparing its own side. So the game's enemy and both sides in the simulator use them. |
 | R12 | The **battle screen** shows a routine as its strikes, and shows an area attack's hexes and its outcome on each unit. The log names each. |
-| R13 | **Recruits keep pace.** A recruit joins two levels below the party's highest member, and never above its lowest. One hired after a late death can fight beside the survivors. |
+| R13 | **Replacing late losses:** *superseded by [`multiple-parties.md`](multiple-parties.md).* Recruits join at the guild hall's level. A second party trains them and promotes its best to the vanguard. |
 | R14 | The **simulator** gains `--ready-level N`, which sets the level every member needs before marching on the Source. It also reports the levels reached, deaths and recruits by level, and battles won by threat up to 20. The long campaign is retuned until about two in three campaigns beat the Source. |
 
 ### Quality constraints
@@ -78,7 +78,7 @@ Where those documents and the code differ, the code is right.
 | A6 | Engine tests cover each new action: a routine's strikes, an area attack's touched hexes for each shape and its half-on-miss, recharge, and monster-spell casts. Each emits the events of 5.4. | R8–R10 |
 | A7 | Policy tests show the enemy using a breath only when it hits more of its foes than its allies, and preferring a routine over a single strike. | R11 |
 | A8 | Scene tests show a routine as one strike per strike event and an area attack's hexes, and the log reads correctly. | R12 |
-| A9 | `recruitLevel` follows R13, including with a single survivor. | R13 |
+| A9 | See [`multiple-parties.md`](multiple-parties.md) A10 and A12. | R13 |
 | A10 | `make simulate ARGS="--campaign --ready-level 18 --battles 500 --seed 1"` reports how campaigns end. Most parties reach level 18 or more before the Source. About two in three beat it. No threat band is won 100% of the time by a party of its own level. | R14 |
 | A11 | Every new kind has a native-level block within the yardstick bands of 5.2 (a unit test). | R4, R7 |
 
@@ -169,9 +169,7 @@ The player sees the cone drawn and every outcome logged. A unit downed by the br
 
 ### 4.3 Death and replacement
 
-When a hero dies, the simulator's party goes home (`hallErrand`) and hires a recruit at the R13 level. The player sees that level in the guild hall as now.
-
-A recruit at highest − 2 trails the party but fights in its ring. Because the party targets nests at its *lowest* level, it may step back a ring for a few battles until the recruit catches up. That cost is intended. The simulator reports it (R14).
+This is superseded by [`multiple-parties.md`](multiple-parties.md) §4.3. A second party of green heroes holds the home rings, and meets the vanguard to promote its best hero when the vanguard loses one. Recruits stay green, at the guild hall's level.
 
 ### 4.4 Edge cases
 
@@ -361,9 +359,7 @@ Each nest's encounter is a lead kind with its minions, as Troll Lair is. The imp
 
 ### 5.6 Recruits (R13)
 
-*Proposed* in [`src/game/guildHall.ts`](../../src/game/guildHall.ts): `recruitLevel(game) = max(1, min(lowest, highest − RECRUIT_LAG))`, with `RECRUIT_LAG = 2` and lowest and highest the party's member levels.
-
-The guild hall's level no longer caps it: it still sets the party limit and costs as now. The Guild Hall scene's line already reads `recruitLevel`.
+This is superseded by [`multiple-parties.md`](multiple-parties.md) §4.1 and §5.2: `recruitLevel` is the guild hall's level, and the hall's levels 4 and 5 add parties.
 
 ### 5.7 The simulator (R14)
 
@@ -478,7 +474,7 @@ None of these block step 1. They are recorded with the default taken.
 | 8.1 | Ring threats past 5: 7, 9, 12, 15 and 18, then 20 at the Source? | Yes. The steps widen as levels cost more. |
 | 8.2 | Bandits built from hero rules, rather than authored blocks? | Yes. It gives humanoid foes that scale to any level for free, and they mirror the party. |
 | 8.3 | Area attacks ignore resistance and deal half on a miss? | Ignore resistance, as spells do. Half on a miss for breaths only (`halfOnMiss` per ability); monster spells keep the spell rule. |
-| 8.4 | Recruits at highest − 2, no longer capped by the hall's level? | Yes. A cap of 3 makes late replacement useless. This changes the early game slightly, so re-measure A3. |
+| 8.4 | How are late losses replaced? | This is settled in [`multiple-parties.md`](multiple-parties.md): green recruits are trained by a second party and promoted. |
 | 8.5 | Every unit stays one hex? | Yes. Large units are a separate engine design. |
 | 8.6 | Blight strength capped at threat 5's push? | Yes, as a first value; the cap is the lever. |
 | 8.7 | Map 140 × 72, with nests and resources placed by hand per ring? | Yes. Procedural placement is not in scope. |
