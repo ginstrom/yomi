@@ -1,272 +1,194 @@
-# Expeditions and a growing encampment
+# Encampment facilities: the workshop and the infirmary
 
 ## 1. Purpose and status
 
-Yomi currently rewards battles with experience, levels, and equipment. This design adds a campaign loop that gives the player reasons to choose particular battles and makes their victories change the world:
+The encampment has two facilities, the guild hall and the shrine. The blight design left two more to this document ([blight.md](blight.md) §4.6, §9): the **workshop**, for crafting, and the **infirmary**, for recovery. This design adds both as encampment facilities, built and raised from the stock like the others.
 
-**Choose a goal → prepare → venture out → fight and recover rewards → return → improve capabilities → attempt a harder goal.**
+- **The workshop** turns plain gear into specialised variants, each with a tradeoff. Its recipes spend the far materials that nothing buys today (copper, crystal), so pushing the blight back pays off in gear as well as influence.
+- **The infirmary** makes a visit home worth more: wounds heal faster at the encampment, and at its top level its supplies quicken healing in the field too.
 
-The long-term backbone is a growing player encampment. Town relationships and quests provide access to people and services; crafting provides deliberate equipment choices; territory eventually provides strategic commitments and resources. These systems should feed the tactical game and give the player visible ownership of their progress.
+**Status: ready for planning.** The facility rules, recipe list and technical shape are settled enough to plan. Commerce and quests, which the earlier version of this document proposed, are open questions (§9) and are not part of the scope. Costs, recipe numbers and healing rates are starting points for the simulator, not decisions.
 
-**Status: proposed design.** The initial scope is concrete enough for implementation planning, subject to the party-size and persistence decisions in section 9. The later expansions describe intended behavior, but require separate detailed designs before implementation. Costs, reward amounts, and encounter tuning below are provisional playtest values, not decisions explicitly made by the user.
+### History
 
-The user requested a design following discussion of encampments, territory, town services, quests, crafting, and combinations of those ideas. This document records the recommended combination. It does not authorize implementation or replace the existing party-builder and saves design.
+This file first proposed an "expeditions and encampment" loop: a home camp at Oakvale, towns with trade, three quests, a workshop, and a regional stronghold. Most of it has since been built in other shapes:
+
+| Proposed here | Where it went |
+| --- | --- |
+| Home encampment at Oakvale | The encampment, the only settlement, named by the player ([blight.md](blight.md), commit 391ca73) |
+| Free Rest at home | The field camp, anywhere, at a cost in days (`src/game/camp.ts`) |
+| Party capacity from a quest; barracks; reserves | The guild hall ([guild-hall-and-watchtowers.md](guild-hall-and-watchtowers.md)) |
+| Scout lodge | Watchtowers and fog of war (same) |
+| Named resource sites, announced threats, time pressure | The blight: capture by influence, "falls in Nd", the stock ([blight.md](blight.md)) |
+| The regional stronghold | The Source and endless mode ([blight.md](blight.md) §4.10) |
+| Towns, trade, quests | Towns removed; trade and quests open (§9) |
+| Workshop, infirmary | This design |
 
 ## 2. Requirements and scope
 
-### Initial playable scope
-
 | ID | Requirement |
 | --- | --- |
-| R1 | Start at one home encampment associated with Oakvale. Show camp services, available improvements, and the expedition journal. |
-| R2 | Let the player choose and track a quest with its destination, objective, danger, and capability reward visible before departure. |
-| R3 | Provide recovery at home so wounds create a decision about continuing an expedition or returning. |
-| R4 | Provide basic trade in Oakvale and a second town: sell surplus equipment, buy ordinary equipment and common materials. |
-| R5 | Provide three one-time regional quests whose rewards unlock a craftsman, a party-capacity improvement, and a town relationship respectively. |
-| R6 | Let the player build an initial workshop and commission a small set of mutually exclusive equipment modifications. |
-| R7 | Provide a regional stronghold as a campaign milestone. Defeating it visibly secures the home region and concludes the initial arc. |
-| R8 | Apply battle, quest, and construction rewards once; prevent purchases, crafting, or construction from partially changing state when validation fails. |
-| R9 | Show costs, prerequisites, effects, and reasons an action is unavailable. No service or upgrade should require guessing what it does. |
-| R10 | Keep progression rules outside Phaser scenes and preserve deterministic battle behavior. |
-| R11 | Represent campaign progress in game state and include it in persistence when save slots are available. |
+| R1 | The encampment screen shows the workshop and the infirmary as facilities, on the two free plots, each built and raised with the stock at the encampment, with its effect, next level and cost shown as for the guild hall and shrine. |
+| R2 | The workshop, once built, opens a screen listing the recipes its level allows and the items the party could work. |
+| R3 | A recipe turns one plain item into one variant for a cost in stock. It shows the item's stats before and after, with attack AP and the attacks a turn it buys, before the player confirms. |
+| R4 | The workshop works items in the baggage and items worn or carried by party members. A worked item's variant takes its place: the same slot, backpack place or baggage place. Reserves' gear is not offered. |
+| R5 | Enchanted items and variants cannot be worked. Working is permanent. |
+| R6 | Each variant is better at something and worse at something else than its base. None is better in every stat. |
+| R7 | The infirmary raises what a day's camping at the encampment heals, by level; at its top level it also raises what a day's camping heals elsewhere. |
+| R8 | Every action validates before it changes anything; a refusal says why and changes nothing. |
+| R9 | The rules stay Phaser-free, deterministic, and in the domain layer; the world map rolls nothing for them. |
+| R10 | Facility levels and crafted items are saved and loaded. |
+| R11 | The campaign simulator builds and uses both facilities, so balance runs measure them. |
 
-The initial scope includes one camp, two functional towns, three quests, one workshop construction, basic trade, three weapon modification recipes, and one regional stronghold. Existing world exploration and ordinary monster battles remain available.
+**Non-goals:** making items from nothing; dismantling; random affixes; working enchanted items; reworking a variant; buying or selling (§9); quests (§9); resurrection, which the guild hall design reserves for very high levels; working an item away from the encampment.
 
-### Longer-term scope
-
-- Improve an infirmary, barracks, and scout lodge; expand the workshop through expedition requirements.
-- Recruit reserves and choose a deployed party from a larger roster.
-- Secure specific resource sites and defend their benefits against visible threats.
-- Add rescue, hold-position, ritual interruption, and escape objectives.
-- Give further regions their own threats and conclusions.
-- Add multiple independently controlled parties only when simultaneous objectives justify them.
-
-### Non-goals for the initial scope
-
-Hex-by-hex territorial ownership, passive resource generation, mandatory defense battles, reserve roster management, multiple parties, random item affixes, recipe discovery through grinding, consumables, item durability, a survival hunger system, and repeatable quests are outside the initial scope. Initial quests use the existing defeat-all-enemies battle objective; their narrative goals do not imply new tactical victory conditions.
-
-## 3. Current system and dependencies
+## 3. Current system
 
 Inspected facts:
 
-- [`gameState.ts`](../../src/game/gameState.ts) stores the party, world, and shared baggage. It contains no gold, material stock, camp, quest, or regional-progress state. `takeLoot` moves a defeated location's fixed equipment rewards into baggage.
-- [`worldMap.ts`](../../src/game/worldMap.ts) defines a 60×40 map. The party begins in Oakvale; towns and resource sites are visible but have no interaction. Threat increases with distance from home. Travel spends one turn per hex; scouting and waiting each spend one turn but have no further effect. Victory currently removes a monster location.
-- [`party.ts`](../../src/game/party.ts) starts four heroes and caps a party at six. Every member receives the full battle XP reward. Fallen members revive at 1 HP after a victory unless leveling heals them.
-- [`progression.ts`](../../src/character/progression.ts) heals a character fully when they level. There is no other current campaign recovery service.
-- [`inventory.ts`](../../src/inventory/inventory.ts) defines equipment as catalog items with fixed stats. Items have no prices, materials, or mutable upgrade state. Shared catalog objects must not be edited to modify one owned item.
-- [`character.ts`](../../src/character/character.ts) derives combat stats from character progression and equipment. Backpack and equipment operations pass `Item` values. Mana begins each battle at the derived maximum; this design adds HP recovery, not persistent mana recovery.
-- [`BattleScene.ts`](../../src/scenes/BattleScene.ts) currently applies loot, clears the location, synchronizes HP, and awards XP at battle completion. [`encounters.ts`](../../src/game/encounters.ts) supports six starting positions and encounter threat scaling tuned for four initial heroes.
-- [`WorldScene.ts`](../../src/scenes/WorldScene.ts) is the presentation layer for travel and encounter choices. Rules belong in the Phaser-free domain layer, as documented in [`CLAUDE.md`](../../CLAUDE.md).
+- [`encampment.ts`](../../src/game/encampment.ts) lists the facilities (`FACILITIES`: `guild_hall`, `shrine`), each with its level, effect, cost and `improve`, and `improveFacility` dispatches to the facility's own module. `improveRefusal` refuses away from the encampment or without the stock. A facility with `opens: true` has a screen of its own.
+- [`encampmentView.ts`](../../src/scenes/encampmentView.ts) draws each facility on a plot. `PLOTS` has four; two are free. Sprites are `camp_<facility>` with `level_N` frames ([`art/encampment/`](../../art/encampment/)).
+- [`buildings.ts`](../../src/game/buildings.ts) has the stock's arithmetic (`canAfford`, `spend`, `describeCost`), `atEncampment`, and the shrine's levels in `WorldState.shrine`. [`guildHall.ts`](../../src/game/guildHall.ts) keeps its level in `WorldState.guildHall`.
+- [`territory.ts`](../../src/game/territory.ts): the stock is `Partial<Record<Material, number>>` over gold, iron, timber, silver, stone, salt, copper, crystal and peat. The guild hall and watchtower spend gold and iron, the shrine gold and silver, the outpost gold and timber. **Stone, salt, copper, crystal and peat buy nothing.** Home is at (9, 19); the iron vein and timber stand are close, peat and silver middling, stone, salt and copper far, crystal beside the Source.
+- [`camp.ts`](../../src/game/camp.ts): a day's camping (`campDay`) passes a world turn, heals every member `NATURAL_HEALING_PER_DAY` (1) and fills mana; `campUntilHealed` casts heals and camps until whole or interrupted. Allowed anywhere not among monsters, the encampment included. Heroes coming out of the reserves are already rested (`guildHall.ts`, `rested`).
+- [`inventory.ts`](../../src/inventory/inventory.ts): items are catalog values with fixed `ItemStats`, found by id through `itemById` (`ITEMS_BY_ID`, over `WEAPONS`, `MAGIC_ITEMS`, the shield and the breastplate). With 8 AP, an attack cost of 4 or less buys two attacks a turn; armour piercing is the melee answer to armour. The plain gear: dagger (3 AP), shortsword (4), longsword (5, 1d8+3, pierces 15%), battle axe (6, 1d12+2, 25%), greatsword (7, two-handed), yew bow (4 AP, range 5, two-handed), oak shield (+10 AC), steel breastplate (+15 AC).
+- [`save.ts`](../../src/game/save.ts) saves items by catalog id, so any item registered with `itemById` saves without a format change. `SAVE_VERSION` is 9; a new `WorldState` field breaks the format, which the project allows ([guild-hall-and-watchtowers.md](guild-hall-and-watchtowers.md) §6).
+- Gear changes on the world map go through the Inventory scene, with the baggage as its ground (`WorldScene.ts`). The dead's gear lands in the baggage (`buryFallen`).
+- The simulator (`scripts/simulate.ts`) fights with its parties' starting gear and never uses loot. It goes home on `hallErrand` and spends there in `visitGuildHall`. Its target is beating the Source about 2 times in 3; trips home from the eastern front run to some 65 days.
 
-Related design: [`party-builder-and-saves.md`](party-builder-and-saves.md) proposes a starting party of three, a dynamic party limit, character creation, and save slots. It is ahead of the inspected implementation. This design must support either baseline explicitly, rather than assuming those features already exist. The older [`magic.md`](magic.md) design contains historical descriptions of systems since changed; current code is authoritative for current behavior.
+## 4. Proposed behaviour
 
-## 4. Player experience
+### 4.1 The workshop
 
-### Home and expedition preparation
+Built and raised at the encampment, no time passing, like the shrine. Levels (provisional costs, chosen so each level asks for land further out):
 
-The home camp occupies the Oakvale location. Arriving there offers **Camp** and **Town** views of the same location; no second location is placed on the same hex. A new game opens the camp view, with the map reachable through Leave Camp.
-
-The camp view shows the deployed party's health, services, workshop status, and journal. The player can inspect equipment and spend progression points through the existing character panel. The journal permits one tracked quest but any number of accepted quests. Tracking is a display preference, not an exclusive mission commitment.
-
-An expedition is the player's journey between home visits. It is not a separate mode, generated dungeon, or mandatory sequence. Players can change goals, visit towns, and return early. Defeated locations remain defeated; returning does not reset monsters or reroll loot.
-
-Initial recovery is a free, explicit **Rest** action at home, restoring every party member to their current maximum HP and consuming one world turn. It is available from the beginning so recovery cannot become a gold softlock. It gives no XP or materials. Repeating Rest produces no further benefit for a healthy party. Ordinary towns do not offer recovery in the initial scope, preserving home's role. Level-up healing remains in place initially and is evaluated during balancing.
-
-This version makes returning a choice about travel time and convenience. Since it has no world deadlines yet, it does not claim to impose a strategic penalty for resting. Time pressure belongs to the later threat system.
-
-### Town services and commerce
-
-Oakvale offers ordinary equipment, common materials, and a buyer for surplus items. Stonebridge offers the same basic services; its specialist inventory becomes available through a quest. Other towns continue to be visible map locations with a clear “services unavailable in this version” state, rather than silently opening an empty shop.
-
-Prices are fixed catalog data, shown before confirmation. Purchase places equipment directly into shared baggage; material purchases increase shared stock. Sales initially operate on baggage only. Equipped or backpack items must be transferred through the existing inventory panel first, avoiding hidden character-gear changes inside a shop.
-
-Common stock is unlimited; rare components and special quest equipment are not sold. Ordinary equipment sells for at most half its purchase price, rounded down. Crafted variants sell for the base item's sale price, so crafting is not a gold-making cycle. Prices and recipe costs are nonnegative integer values; transactions require sufficient gold and valid quantities and never allow a negative balance.
-
-No random price changes, merchant travel, buyback history, or item haggling are needed initially.
-
-### Quest arc and visible rewards
-
-Proposed initial content uses existing towns and nearby sites where possible. Names and exact coordinates may change for pacing; these reward relationships define the arc.
-
-| Quest | Objective | Reward and consequence |
+| Level | Cost | Brings |
 | --- | --- | --- |
-| The Missing Smith | Defeat the raiders holding Oakvale's smith. | The smith returns to camp; workshop construction becomes available. A one-time iron reward covers the first modification's material requirement. |
-| A Company Charter | Defeat a hostile patrol and recover the charter. | Returning it to Oakvale raises deployed party capacity by one and supplies a named recruit who fills the new place. |
-| The Stonebridge Road | Defeat the force blocking the road. | Stonebridge unlocks specialist trade, including a bow modification and access to additional ordinary gear. |
+| 1 | 25 gold, 15 iron | Tier 1 recipes |
+| 2 | 40 gold, 15 stone, 10 copper | Tier 2 recipes |
+| 3 | 60 gold, 10 crystal | Tier 3 recipes |
 
-All three are available from home early, with objective and reward previews. The first two should be viable with the baseline starting party; the road quest can be a somewhat harder alternative. These are one-time battles with fixed rewards, not repeated collection errands.
+The facility `opens`: its Enter button shows the workshop screen. The screen lists:
 
-Quest states are `available → active → objectiveComplete → claimed`. Accepting a quest costs nothing. Its world objective exists before acceptance: winning the relevant battle records the objective even if the player has not accepted it yet. Acceptance subsequently shows it as complete. Claiming requires visiting the named quest giver and atomically grants all rewards. No reward is lost because the player explored in a different order.
+- **Items it could work:** each party member's worn and carried items with a recipe, by member, then baggage items with a recipe. (A new hero carries every plain weapon in their backpack, so the party starts with plenty to work.) An item with recipes only at a higher level is listed greyed, saying the level it needs.
+- **For the chosen item, its recipes:** the variant's name, its cost, and its stats beside the item's own (`describeItemStats` for each). Where the attack AP differs or the attacks a turn change, say so: "2 attacks a turn → 1".
+- **Work it:** confirms "This cannot be undone", spends the stock and puts the variant where the item was: the same member's same slot or backpack place, or the same baggage place. No time passes.
 
-The initial recruit is a fixed legal character build added directly to the active party when the charter reward is claimed. There is no reserve roster yet. The capacity increase must fit the six-position technical maximum. Claiming validates space before granting anything; an incompatibility leaves the quest complete and reports the reason. If the party-builder design lands first, its creation and party-limit rules supply this integration.
+Refusals, each with its reason: not at the encampment; workshop not built or too low a level; not enough stock; the item has no such recipe; the selection is stale (§5.3).
 
-### Camp improvements
+### 4.2 The recipes
 
-Workshop construction requires the returned smith, a small gold payment, and common materials. Its preview shows the complete cost and recipes it enables. Construction completes immediately at home and consumes one world turn; timed building queues add little value at this scale.
+A variant keeps its base's slot, icon, two-handedness and the skill it strikes with. It changes two or three stats, one for the better and one for the worse, and the tradeoffs follow the weapon rules: whether an attack costs 4 AP or less, how much armour a blow pierces, range for the bow. No recipe moves the bow off 4 AP, which would cost it its second shot.
 
-The first quest rewards and gold from nearby battles must cover construction and one useful modification without requiring the player to sell starting gear. Quest services unlock access; the player still chooses how to spend the resulting resources.
+| Tier | Base | Variant | Change from the base | Cost |
+| --- | --- | --- | --- | --- |
+| 1 | Iron Longsword | Balanced Longsword | to hit +10; damage 1d8+3 → 1d8+1 | 10 gold, 5 iron |
+| 1 | Iron Battle Axe | Bearded Axe | pierces 25% → 40%; damage 1d12+2 → 1d12 | 10 gold, 5 iron |
+| 1 | Yew Bow | Recurve Bow | damage 1d6 → 1d6+1; range 5 → 4 | 10 gold, 5 timber |
+| 2 | Iron Longsword | Light Longsword | 5 AP → 4; damage 1d8+3 → 1d6; pierces 15% → 5% | 15 gold, 5 copper |
+| 2 | Oak Shield | Tower Shield | AC +10 → +15; to hit −5 | 15 gold, 5 copper, 5 stone |
+| 2 | Iron Dagger | Stiletto | pierces 20% → 40%; damage 1d4 → 1d3 | 15 gold, 5 copper |
+| 3 | Yew Bow | Longbow | range 5 → 7; to hit −5 | 20 gold, 5 crystal |
+| 3 | Steel Breastplate | Crystal-set Breastplate | AC +15 → +20; to hit −5 | 20 gold, 5 crystal |
+| 3 | Steel Greatsword | Runed Greatsword | critical +10; 7 AP → 8 | 20 gold, 5 crystal |
 
-Later improvement roles:
+R6 holds by construction: each row has a gain and a loss. Whether each is worth having is the simulator's question (§7). Light Longsword is the one to watch: two blows a turn are worth more than their damage suggests.
 
-| Improvement | Intended choice it creates |
+### 4.3 The infirmary
+
+Built and raised at the encampment, no time passing.
+
+| Level | Cost | Effect |
+| --- | --- | --- |
+| 1 | 20 gold, 10 timber | A day camped at the encampment heals each member a third of their maximum hit points (rounded up), not 1. |
+| 2 | 40 gold, 15 peat | At the encampment, a day heals every member fully. |
+| 3 | 60 gold, 20 salt | Also, field dressings: a day camped anywhere else heals each member 3, not 1. |
+
+The levels do different things rather than add percentages. Levels 1 and 2 make a trip home, already made for the guild hall and shrine, double as recovery. Level 3 is the one that changes the field, and it asks for salt from the far south. Camping still fills mana as before; casting heals (`autoHeal`) is unchanged. The infirmary cannot raise the dead.
+
+## 5. Technical design
+
+### 5.1 State
+
+`WorldState` gains `workshop: number` and `infirmary: number`, each 0 (not built) to 3, set to 0 by `newWorld`. `SAVE_VERSION` goes to 10. Crafted items need no state: they are catalog items.
+
+### 5.2 Domain modules (proposed)
+
+- **`src/inventory/crafted.ts`** (proposed): the variant items (`CRAFTED_ITEMS`), defined by spreading their base (`{ ...IRON_SWORD, id: 'balanced_longsword', name: ..., description: ..., stats: { ...IRON_SWORD.stats, toHit: 10, damage: ... } }`). `ITEMS_BY_ID` includes them, so saves and `itemById` find them. They are not in `WEAPONS` (what a new hero carries) or `MAGIC_ITEMS` (loot).
+- **`src/game/workshop.ts`** (proposed):
+  - `WORKSHOP_LEVELS`, `MAX_WORKSHOP_LEVEL`, `workshopCost(world)`, `upgradeWorkshop(world)`: as the guild hall's.
+  - `RECIPES: readonly Recipe[]`, where `Recipe = { id, base: string, result: string, tier: 1 | 2 | 3, cost: Stock }`. Module-load checks in a test: every `base` and `result` resolves through `itemById`, a result's slot equals its base's, no base is enchanted or crafted, and each result is better than its base in at least one stat and worse in one.
+  - `recipesFor(item)`: the recipes whose base is the item.
+  - `workable(game)`: what the screen lists, `WorkSource[]` with the item and whether the workshop's level allows its recipes.
+  - `craft(game, source, recipeId)`: returns a refusal string or null, as `upgradeGuildHall` does. `source` is `{ from: 'baggage', index, itemId } | { from: 'worn', member, slot, itemId } | { from: 'backpack', member, index, itemId }`, where `member` is an index into the party. All checks before any change: at the encampment, the workshop's level ≥ the recipe's tier, the stock affords it, the source still holds an item of `itemId` (a stale selection is refused rather than working whatever moved into the place), and the recipe's base is that item. Then it spends and replaces the item in place.
+- **`src/game/infirmary.ts`** (proposed): `INFIRMARY_LEVELS`, `infirmaryCost`, `raiseInfirmary`, and `restHealing(world, member): number`, what a day's camping heals that member where the party stands. `campDay` calls `restHealing` instead of using `NATURAL_HEALING_PER_DAY` directly; at level 0 it returns that constant everywhere, so camping is unchanged until the infirmary is built.
+- **`encampment.ts`:** `FacilityId` gains `'workshop'` and `'infirmary'`, and `FACILITIES` an entry each: the workshop with `opens: true`, the infirmary with `opens: false`. Their `effect` lines come from the level tables.
+
+None of this imports Phaser or rolls dice. `restHealing` is arithmetic over `maxHp`.
+
+### 5.3 Scenes
+
+- **Encampment:** two sprites, `camp_workshop` and `camp_infirmary`, with `level_1` to `level_3` frames, on the third and fourth plots. `npm run sprites` and `sprites:check` cover them.
+- **Workshop screen** (proposed `WorkshopScene`, opened from the encampment as `GuildHallScene` is, and closing back to it): the list of workable items, the recipes of the chosen one with before-and-after stats, and the Work button with its confirmation. Its state is the domain's `workable` and `craft`; the screen decides nothing. Item icons come from `itemIcons.ts` by the base's icon. It works at the 840×560 minimum and exposes its controls through the scene probes, as the other overlays do.
+- **Camping's message** (`describeCamp`) is unchanged; it already reports hit points by rest.
+
+### 5.4 The simulator
+
+- On a home visit (`visitGuildHall`), after the hall and before the shrine: build or raise the workshop if the stock affords it, then work each member's main-hand and shield and armour, best recipe first by a fixed preference list per base (chosen by the comparisons in §7), while the stock lasts. Then raise the infirmary if it affords it.
+- `campUntilHealed` uses `restHealing` through `campDay`, so a party that camps at home heals at the infirmary's rate with no new policy.
+- The summary adds the workshop's and infirmary's levels at the end, the items worked, and the days camped (already reported), so the effect on campaign length shows.
+
+The simulator's `--player-weapon` takes any id `itemById` finds, so variants can be compared battle by battle like the plain weapons (CLAUDE.md lists the flag as taking ids from `WEAPONS` or `MAGIC_ITEMS`; extend it to `CRAFTED_ITEMS`).
+
+### 5.5 Smaller changes
+
+- `debugCommands.ts`: a command to set a facility's level, for testing.
+- The player's manual (`docs/manual/README.md`): the encampment section gains the workshop and infirmary, with a screenshot of the workshop (`npm run manual:screenshots`).
+- CLAUDE.md's architecture list gains `workshop.ts`, `infirmary.ts` and `crafted.ts`.
+
+## 6. Consequences
+
+- **Saves:** version 10; older saves are refused, as before.
+- **Balance:** the workshop makes the party stronger, and the infirmary shortens or removes healing stops (days the blight would otherwise have) — both push toward the Source sooner. The 2-in-3 target is then restored by the Source's encounter, as with the guild hall, not by the nests' foe counts (`FOES_AT_THREAT`).
+- **Going home costs days.** Both facilities only work at home (the infirmary's level 3 aside). That is deliberate: they give the existing trips home more to do, rather than adding trips. If the simulator shows extra trips for crafting alone, consider letting the workshop work the items of a hero who is at home in the reserves, or an order waiting to be fetched (§9).
+- **Material use:** after this, every material buys something: stone and copper (workshop 2), crystal (workshop 3), peat and salt (infirmary). The far land then matters to the second loop.
+
+## 7. Phasing and verification
+
+Phases, each playable:
+
+1. **The infirmary:** state, levels, `restHealing`, the facility entry and sprite, the simulator's use of it. Smallest, and it tests the facility plumbing.
+2. **The workshop and tier 1:** state, `crafted.ts`, recipes, `craft`, the workshop screen, the simulator's policy.
+3. **Tiers 2 and 3** with their variants, then the campaign retune.
+
+Before each recipe is kept, compare it with its base at one cell of scaling: `npm run simulate -- --player-weapon <id> --encounter goblin_raid --threat 3 --party-level 5` against the base's run. Then judge the whole by campaign runs (`npm run simulate -- --campaign --battles 500 --seed 1`) against the current figures (about 69% beat the Source in some 314 days).
+
+| Scenario | Requirements |
 | --- | --- |
-| Infirmary | Recover more efficiently under future time pressure; do not gate basic recovery behind it. |
-| Workshop | Unlock equipment specializations and advanced recipes through materials plus a specific expedition achievement. |
-| Barracks | Recruit reserves and eventually expand deployed capacity, within encounter limits. |
-| Scout lodge | Reveal enemy composition and regional opportunities before committing to an expedition. |
+| At the encampment, build the infirmary and the workshop: the stock falls by the shown cost, each appears on its plot at level 1, and raising each to 3 shows the next effect and cost at every step. Away from home, or without the stock, each is refused with its reason. | R1, R8 |
+| Camp a wounded party at the encampment at infirmary levels 0, 1, 2: a day heals 1, a third, then all; at level 3, a day camped elsewhere heals 3. Mana refills in every case. | R7, R9 |
+| Open the workshop: worn and baggage items with recipes are listed; those whose recipes need a higher level are greyed with the level. Enchanted items and variants do not appear. | R2, R4, R5 |
+| Work one of two longswords in the baggage, a member's worn bow and a dagger in a backpack: only the chosen item changes, in its own place; the member's derived stats change accordingly; the stock falls by the shown cost. | R3, R4, R8 |
+| A selection made stale (the baggage reordered, the member's slot emptied) is refused and nothing changes. | R8 |
+| Each recipe's preview shows before-and-after stats and any change in attacks a turn; the catalog test confirms every variant is better and worse than its base somewhere. | R3, R6 |
+| Save and load after building, raising and working: levels and items are as they were. | R10 |
+| The simulator's campaign summary reports workshop and infirmary levels and items worked. | R11 |
 
-Advanced upgrades should combine common costs with a distinct adventure prerequisite, such as retrieving a forge component. Avoid a long ladder of identical buildings that only add small percentage bonuses.
+Tests: domain tests for the level tables, `restHealing`, `craft`'s refusals and atomicity, and the catalog checks; a save round trip; a scene test that the workshop screen starts and closes back to the encampment; browser tests for entering the workshop from the encampment and working an item. Run `npm test`, and `npm run test:browser` after the scene changes.
 
-### Equipment modifications
+## 8. Assumptions
 
-The first workshop modifies ordinary equipment already in baggage. It does not manufacture arbitrary gear from scratch. Buying a base item and then specializing it provides enough crafting choice for the initial scope.
+1. **Variants are catalog items**, not per-item state: no mutable stats, no affixes. Two identical swords are worked independently by where each lies.
+2. **The party's worn and carried gear can be worked directly**, not only the baggage, since trips home are long and moving gear to the baggage first adds nothing.
+3. **Working takes no time**, like raising the shrine; building takes none either. The days are in getting home.
+4. **Reserves' gear is not offered**, to keep the screen to the party and the baggage. The reserves can be swapped in first.
+5. **The level 3 infirmary is the only effect away from home.**
 
-Proposed starter recipes:
+## 9. Open questions
 
-| Base item | Variant | Effect compared with base | Access |
-| --- | --- | --- | --- |
-| Iron Longsword | Balanced Longsword | +5 percentage points to hit; −1 damage bonus | Workshop |
-| Iron Longsword | Weighted Longsword | +2 damage bonus; +1 attack AP cost | Workshop |
-| Yew Bow | Long-range Bow | +1 range; +1 attack AP cost | Workshop plus Stonebridge relationship |
+None blocks the scope above.
 
-Recipes show full resulting stats beside current stats, especially attack AP cost: small changes can alter attacks per turn. Exact effects require simulation and playtesting. The variants should have useful roles, rather than one universally strongest option.
-
-Each recipe consumes gold and common material stock, then replaces exactly one selected baggage entry with its variant. A modification is permanent in the initial scope; the confirmation says so. Variants cannot be modified again and enchanted loot cannot receive these modifications. Players may obtain another base item to choose a different specialization. Unique loot retains distinct effects and remains worth finding.
-
-Use catalog variants with their own item IDs for this small recipe set. Do not mutate an `Item.stats` object or introduce arbitrary per-instance affixes yet. Two identical swords can be modified independently by their baggage positions even though they share a base catalog definition.
-
-### Regional milestone
-
-A stronghold is visible as a longer-term objective with a recommended danger level. Its encounter is fixed by authored content, not increased automatically to match player level or party size. The three quests provide recommended preparation; the stronghold is not mechanically locked behind completing them all.
-
-Victory awards a distinct item, marks the home region secured, changes the map marker, and shows a regional conclusion naming the player's accomplishments. Claiming a journal reward twice cannot duplicate the item. The player may keep exploring afterward; subsequent regions are future content.
-
-The initial boss can use an authored composition of existing enemy kinds. A boss sprite, unique abilities, and new battle objectives are optional later work, not hidden dependencies of this design.
-
-## 5. Territory and later tactical variety
-
-Territory begins with named sites, not every world hex. An iron mine supplies metal; a watchtower supplies information; a reopened road improves access. Capturing a site should change what the player can prepare or where they can travel.
-
-Do not add automatic resources for every elapsed world turn. Travel already spends many turns, and waiting would otherwise become a wealth generator. A proposed later rule is a bounded delivery after a completed expedition objective, with a visible stock cap. Its exact production trigger, collection location, and costs need a territory design before implementation.
-
-Protection uses announced threats with enough time to choose a response. The map shows target, arrival time, consequence, and route. Travel must process scheduled events across every crossed turn, including a multi-hex move, rather than skipping directly to the final turn. Players can invest in guards or intercept attackers. A lost site suspends its benefit and can be reclaimed; it does not erase unrelated character progress. Limit simultaneous threats so expansion does not accumulate recurring chores.
-
-New battle objectives should make party preparation matter:
-
-- Rescue: reach and protect a captive, then extract.
-- Hold: keep control of a position for a defined number of rounds.
-- Interrupt: stop a ritual before a visible deadline.
-- Escape: carry recovered supplies to an exit while under pursuit.
-
-These require explicit engine victory/failure rules, objective state, AI behavior, event logging, and replay support. Narrative quest completion must not be inferred from animation timing. Each objective type needs a separate design.
-
-A reserve roster should precede multiple parties. Stable character identity, deployment, XP rules for reserves, recovery, and equipment ownership need to be settled together. Multiple parties are justified only when the world supplies competing tasks worth assigning them to; they require a time model that prevents one party acting indefinitely while others are frozen.
-
-## 6. Technical design for the initial scope
-
-### State and responsibilities
-
-Extend [`GameState`](../../src/game/gameState.ts) with a campaign state. Proposed shape:
-
-```ts
-interface CampaignState {
-  gold: number
-  materials: Partial<Record<MaterialId, number>>
-  camp: { workshopBuilt: boolean }
-  quests: Record<QuestId, QuestState>
-  trackedQuest: QuestId | null
-  resolvedObjectives: string[]
-  claimedBattleRewards: string[]
-  townRelations: Partial<Record<TownId, 'trusted'>>
-  securedRegions: RegionId[]
-  partyLimit: number
-}
-```
-
-Use closed string unions for authored IDs. `QuestState` records acceptance and claiming; objective completion is derived from recorded objective IDs so clearing a map location does not destroy quest evidence. Array entries are unique. Static quest text, costs, recipes, stock, and reward definitions live in catalogs, not saved state. Initial material IDs should be limited to `iron` and `timber`; special components arrive only with content that uses them.
-
-If the party-builder design has introduced a game-level party limit, reuse that field rather than adding another authoritative copy. Initialize it to the chosen baseline size, and cap upgrades at the encounter layout's six-member limit. Display the gameplay limit separately from the technical maximum.
-
-Proposed new domain files, with names adjustable to repository conventions:
-
-- `src/game/campaign.ts`: campaign initialization, objective evidence, and regional progress.
-- `src/game/quests.ts`: quest catalog, availability, acceptance, tracking, and atomic reward claiming.
-- `src/game/camp.ts`: recovery, construction prerequisites, and service availability.
-- `src/game/economy.ts`: prices, town stock, purchase/sale validation, and resource transactions.
-- `src/inventory/recipes.ts`: catalog recipes and equipment replacement.
-- `src/game/battleRewards.ts`: apply a completed world's battle outcome once, coordinating XP, loot, currency, objective evidence, and location changes.
-
-These modules take game state and explicit inputs. They do not import Phaser, read wall-clock time, or consult scene globals. Commands return a typed success result or a specific failure reason, such as insufficient gold, missing prerequisite, invalid selection, or already claimed. Failure leaves all state unchanged.
-
-### Rewards and transaction invariants
-
-A world encounter's authored reward definition includes gold and material amounts alongside current equipment loot. Quest rewards live in the quest catalog. Equipment loot, gold, materials, objective recording, XP, and location resolution form one domain operation keyed by a stable location ID. Repeating that outcome returns “already applied.” The scene copies final HP before calling the outcome operation. Existing battle inventory transfers are not reset by this operation.
-
-All validation precedes mutation. Commands validate integer amounts and current inventory selections. A sale or modification request includes the baggage index and expected item ID; a stale selection fails instead of acting on a shifted entry. Shop transactions occur only at a town with that service; camp transactions and recovery occur only at home. None is permitted during a battle.
-
-Equipment purchases and variants produce catalog `Item` values compatible with current character and inventory code. Modification recipes reference registered result item IDs; derive combat stats through existing readers. No engine event change is necessary merely to obtain a new catalog weapon. If future objectives change event shapes, increment `LOG_SCHEMA_VERSION`.
-
-### Map and scene integration
-
-Keep Oakvale's map kind `town`; camp access is a property of its stable ID. Town arrival offers an interaction button instead of automatically interrupting every route. Add a proposed `CampScene`/`TownScene` or shared location-service overlay, with resize behavior and controls exposed through the project's scene probes. The UI choice can share rendering, but service rules stay in domain modules.
-
-The world journal shows accepted quests, completed objectives awaiting turn-in, and the stronghold milestone. Tracking highlights a destination on the map without changing route rules. A service panel shows costs, before/after equipment stats, and unavailable reasons. Purchase, sell, construction, modification, and reward claim confirmations summarize their exact effects. Basic recovery needs only its labeled action and result message.
-
-Ordinary defeated monster sites may still be removed. The stronghold retains a resolved marker. Do not leave a resolved marker as an active `monsters` location: current confrontation and pathfinding treat that kind as hostile. Add an explicit non-hostile resolved location variant or replace it with a non-hostile point of interest; sprite mapping and location unions must handle it.
-
-### Persistence
-
-Current inspected game state is passed between scenes and has no campaign save implementation. Save slots are a dependency for a campaign intended for sustained play. When available, save every successful service transaction, quest change, rest, construction, and battle outcome, alongside existing world and battle save points.
-
-Save campaign IDs and balances, plus owned equipment by catalog ID. Register variant IDs with the serializer. Do not serialize derived combat stats as campaign character data. Follow the save design's versioning policy when state shape changes; do not claim compatibility with older files without a migration. A write failure must leave the current in-memory result intact and show the existing save-failure message rather than charging or granting rewards again.
-
-## 7. Consequences and balancing
-
-Recovery changes campaign balance substantially. The current campaign simulator carries wounds and ignores loot; its clearance rate cannot establish balance for a campaign with rest, shops, recipes, and capacity upgrades. Preserve that scenario as a baseline and add explicit campaign policies for visiting home and choosing quest rewards when implementing this feature.
-
-Evaluate early quests with both a fresh party and a partially wounded party; compare equipment variants with the simulator's weapon options; evaluate the stronghold with plausible preparation paths. Party-size upgrades add actions as well as HP and may be much stronger than individual equipment improvements. Reward the expansion as a milestone and author later challenges around its availability. Do not automatically increase every enemy count after the player unlocks it, which would hide the reward's benefit.
-
-The initial economy has finite encounter income and repeatable common purchases. Free recovery and guaranteed construction funding prevent essential services from being blocked by poor spending. Optional purchases may still delay optional crafting. Avoid extra material types until they create a distinct decision.
-
-Recovery weakens attrition as the only campaign limit. That is intentional: goals, stronger regions, and eventually visible threats provide direction. If returning home becomes tedious, shorten initial routes or add an earned travel improvement; do not add mandatory upkeep solely to punish recovery.
-
-## 8. Verification and acceptance
-
-| ID | Observable scenario | Covers |
-| --- | --- | --- |
-| A1 | New game opens Oakvale's camp; leaving and returning preserves workshop, journal, resources, and party health. | R1, R11 |
-| A2 | Track a quest and see its destination, danger, objective, and reward on the journal/map; switching tracking does not abandon another quest. | R2, R9 |
-| A3 | Rest with wounded members: HP becomes derived maximum, the world advances one turn, and gold, XP, and materials do not change. | R3 |
-| A4 | Buy equipment and materials, then sell a baggage item: exact displayed balances and inventory changes occur; insufficient funds and stale selections change nothing. | R4, R8, R9 |
-| A5 | Complete each regional objective before and after accepting its quest. Both orders permit a single turn-in with the specified unlock and reward. | R5, R8 |
-| A6 | Claim the charter: deployed capacity rises by one and the named recruit joins once; party size and limit remain within supported encounter positions. | R5, R8 |
-| A7 | Return the smith, construct the workshop, and modify one of two identical swords. Only the selected sword changes; costs match the preview; repeating construction or modifying a variant fails without cost. | R6, R8, R9 |
-| A8 | Stonebridge's special recipe is unavailable before its quest reward and available afterward. The resulting bow shows its range/AP tradeoff in equipment and battle. | R4, R5, R6 |
-| A9 | Defeat the stronghold: region is secured, distinct loot is awarded once, and its marker becomes non-hostile. The player can continue exploring. | R7, R8 |
-| A10 | Replay the same battle seed and actions with the same prepared party: battle outcomes and logs agree. Campaign service actions do not depend on Phaser or wall-clock time. | R10 |
-| A11 | With save slots integrated, reload after reward claim, trade, modification, construction, and rest: progress and balances agree, without duplicated rewards. | R11 |
-
-Implementation verification should use domain tests for transaction failure atomicity, reward idempotency, quest ordering, limits, and catalog validity. Scene smoke tests verify service views start correctly; browser scenarios verify travel-to-service transitions, journal tracking, previews, and the minimum 840×560 layout. Use existing scene probes rather than reading UI internals.
-
-Run `npm test` for implementation, and `npm run test:browser` after scene changes. Run proportionate simulator comparisons for recipes, party expansion, and revised campaign recovery. The design itself changes no runtime behavior and needs document/link review rather than new game tests.
-
-Playtesting should establish whether the player can name a next goal, whether rewards change preparation choices, whether returning home has a tolerable travel cost, and whether the stronghold feels like a payoff. Win rate alone cannot answer those questions.
-
-## 9. Assumptions, decisions to confirm, and risks
-
-The following are proposed defaults, not explicit user requirements:
-
-1. **Home at Oakvale:** camp and town share a map location. This gives the existing starting location a purpose without adding a second nearby travel stop.
-2. **Free recovery:** home restores HP for one world turn; leveling still heals. This is the simplest recovery baseline to evaluate before introducing time pressure.
-3. **Initial crafting uses fixed catalog variants:** no per-item mutable upgrade state, enchanted-item modifications, or dismantling system yet.
-4. **Narrative quests use ordinary battles initially:** tactical rescue, defense, and escape objectives need additional engine design.
-5. **Existing total-party defeat behavior is retained unless the save design lands:** there is no new injury, retreat, or resurrection economy in this scope. The save design's proposed pre-battle rollback would take precedence once implemented.
-
-Two integration decisions must be explicit before implementation planning is finalized:
-
-- **Starting party baseline:** if this feature precedes the party-builder design, use four starting heroes and a charter upgrade from four to five. If it follows that design, use three and upgrade to four. Do not silently remove an existing starter or rebalance for the wrong baseline. A later barracks upgrade may reach six; it is outside this initial scope.
-- **Persistence sequence:** recommended release order is party-builder/save slots first, then this campaign. A standalone prototype may proceed without saves, but a complete campaign release requires persistence. Determine which version is being planned and use one authoritative party-limit field.
-
-Prices, recipe effects, encounter compositions, starting gold, and reward quantities require tuning. These do not block structural design: the catalogs must satisfy the guaranteed-funding rule for workshop construction and a first modification. Exact amounts should be selected and documented during implementation balance work.
-
-Territory production, defense scheduling, reserves, multiple parties, and new tactical objectives remain future designs. Their unresolved details do not block the initial scope and must not be treated as implicit implementation requirements.
+1. **Commerce.** The towns that would have held shops are gone. If wanted, it is a facility, a trading post: selling turns the baggage's surplus (the dead's gear, loot no one uses) into gold, which the stock now has uses for. Buying is less clear, since held land supplies the stock; buying plain gear would feed the workshop. To decide: whether to have it, and whether it sells only or buys too.
+2. **Quests.** With no towns there are no quest givers, and most nests are spawned rather than placed. If wanted, quests would be authored objectives on fixed nests or sites, delivered by the story system (`src/story/`, a `StoryMoment` and a cutscene) and rewarded from the stock or with a recipe. The blight already gives the player goals; quests would need to give something it does not, such as unlocking a recipe or a facility level. To decide: whether to have them.
+3. **Working away from home.** If the simulator shows trips made for crafting alone, an outpost could take orders to be fetched, or the workshop could work the gear of heroes in the reserves.
+4. **Making plain items**, for recruits or to feed the workshop, waits on commerce: buying them would do the same job.

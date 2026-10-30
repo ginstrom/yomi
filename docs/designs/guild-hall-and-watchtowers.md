@@ -12,7 +12,7 @@ The blight design left buildings open (its §9) and gave the encampment's stock 
 
 Related:
 - [blight.md](blight.md): the stock, influence, held sites and the encampment. This design is its phase 4, in part: the guild hall is the "barracks" of its §4.6, and the watchtower is its first field building.
-- [expeditions-and-encampment.md](expeditions-and-encampment.md) warned that reserves need deployment, XP, recovery and equipment settled together (§5.4 there). §4.2 settles them for the simplest case: one party, with the roster waiting at home.
+- [expeditions-and-encampment.md](expeditions-and-encampment.md) warned that reserves need deployment, XP, recovery and equipment settled together (§5 of its earlier version). §4.2 settles them for the simplest case: one party, with the roster waiting at home.
 
 ## 2. Requirements
 
@@ -203,7 +203,7 @@ This is the largest balance change here: today a fallen hero costs only hit poin
 - **The guild hall.** The careful party goes home to upgrade once the stock affords the next level and no held site is threatened, and also whenever it has lost a member. On the visit it recruits pre-rolls (at `min(hall level, lowest level)`) to fill every empty place, spending their points with `autoAdvance`.
 - **Watchtowers.** It builds one wherever it camps on qualifying land and can afford it.
 - **New metrics:** deaths, recruits, the hall's level at the end, and towers built and lost.
-- **Retuning.** The death rule and parties of 4 and 5 both move the balance. The blight's target still holds: beat the Source about 2 times in 3 without losing the encampment. `FOES_AT_THREAT` should not grow with the party limit, which would hide the reward (the expeditions design's §8 says the same). Check the Source's encounter against a party of 5.
+- **Retuning.** The death rule and parties of 4 and 5 both move the balance. The blight's target still holds: beat the Source about 2 times in 3 without losing the encampment. `FOES_AT_THREAT` should not grow with the party limit, which would hide the reward (the expeditions design's earlier version said the same). Check the Source's encounter against a party of 5.
 
 ## 6. Consequences
 

@@ -9,7 +9,7 @@ The blight gives the world map a reason for time to matter. Today travelling, wa
 **Status: phases 1 to 5 implemented, with the Source's own encounter and the corrupted land's sprite.** Phase 4's buildings are the guild hall and watchtowers ([guild-hall-and-watchtowers.md](guild-hall-and-watchtowers.md)), the shrine and the outpost; the infirmary and the workshop are left to the expeditions design (§9), and phase 6 waits on designs of its own. The shape of the system is settled. The constants are the simulator's, not decisions. §10 records where the implementation departs from this text and the numbers it was first tuned to.
 
 Related:
-- [expeditions-and-encampment.md](expeditions-and-encampment.md) designs the encampment, towns, crafting and camp improvements. This design gives that loop its stakes: what the encampment defends and where its gold and materials come from. Its "later threat system" is this design.
+- [expeditions-and-encampment.md](expeditions-and-encampment.md) first proposed the encampment, towns, quests and crafting; it now designs the encampment's workshop and infirmary, which this design left to it.
 - The field camp (`src/game/camp.ts`, Camp and "Camp until healed") is a separate thing from the encampment and stays. Only its days now cost time.
 
 ## 2. The loops
