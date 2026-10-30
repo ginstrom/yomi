@@ -31,7 +31,7 @@ A new game first asks how you want to start:
 
 ![The party roster](images/party-roster.png)
 
-Either choice takes you to the roster, which has one row for each place in the party. You start with three places. Members can be **edited** or **removed**. An empty place can be filled in two ways: **Create** opens character creation, and **Preroll** offers a ready-built hero.
+Either choice takes you to the roster, which has one row for each place in the party. You start with three places. Members can be **edited** or **removed**. An empty place can be filled in two ways: **Create character** opens character creation, and **Choose pre-rolled** offers a ready-built hero.
 
 ![Pre-rolled characters](images/party-prerolls.png)
 
@@ -72,7 +72,7 @@ There are three skills, each a percentage:
 - **Archery**: your chance to hit with a bow.
 - **Magic**: your chance of landing a spell or a wand shot. Spell perks also require a minimum Magic.
 
-Skills start low and are set by attributes alone. **Tag** one skill: tagging adds 20% to it and makes each skill point raise it by 2% instead of 1%. You then have **10 skill points** to place. Above 80% a raise costs 2 points, and above 90% it costs 3.
+Skills start low and are set by attributes alone. **Tag** one skill: tagging adds 20% to it and makes each skill point raise it by 2% instead of 1%. You then have **10 skill points** to place. From 80% a raise costs 2 points, and from 90% it costs 3.
 
 An untrained skill sits near 10%, and against an armoured foe that becomes the minimum 5% chance to hit. A hero who specialises (tags a skill, puts all 10 points into it and takes its skill perk) starts at around 60%.
 
@@ -92,7 +92,7 @@ If a change you make leaves a perk you already took without its requirements, th
 
 ![Name and portrait](images/creation-name.png)
 
-Pick a portrait and type a name of up to 12 letters. Gear is not chosen: every hero starts holding the weapon of their tagged skill, wears a steel breastplate, and carries the other plain weapons in their backpack.
+Pick a portrait and type a name of up to 12 letters. Gear is not chosen: every hero starts holding the weapon of their tagged skill (a melee hero also holds an oak shield), wears a steel breastplate, and carries the other plain weapons, and the shield if their hands are full, in their backpack.
 
 Any skill points or picks you leave unspent stay with the character, and you can spend them later on the world map.
 
@@ -102,7 +102,7 @@ Any skill points or picks you leave unspent stay with the character, and you can
 
 ![The world map at the start](images/world-start.png)
 
-The world map is a large board of hexes, many screens wide, and the view scrolls to follow your party. Your heroes' portraits run down the left side. The header shows the turn number, how much of the explored land is blighted, and the encampment's **stock** of materials.
+The world map is a large board of hexes, many screens wide, and the view scrolls to follow your party. Your heroes' portraits run down the left side. The header shows the turn number, how much of the explored land is blighted (and, once it has grown, how much stronger the blight has become), and the encampment's **stock** of materials.
 
 **Time passes only when you act.** Each hex you walk and each day you camp takes one turn, and each turn the blight takes another day to spread (see [The blight](#8-the-blight)).
 
@@ -133,6 +133,8 @@ You can also click a hex to walk away.
 
 **Bandits.** Not every lair holds monsters. Bandits hold the **Bandit Camp** (threat 3) and the **Bandit Hideout** (threat 4), and new **Bandit Gangs** appear where the blight breeds lairs of threat 3 or more. Bandits are people, built the way your heroes are, and always led by a Captain with sword, shield and breastplate. At threat 3 a Brute with a battle axe and breastplate fights beside him; at threat 4 a Hedge-Mage takes the Brute's place, casting Magic Arrow, Flame Arrow and Shield and healing; at threat 5 a Bandit Archer stands back with a bow and shoots. They have a hero's hit points, the Captain and the Brute a hero's armour, and at threat 5 they carry Fine gear, so expect a hard fight against a party of your level: bring a heavy weapon, or spells, for the armoured ones, and close in on the Archer and the Hedge-Mage, who wear none.
 
+![Bandits at threat 5: the Captain and the Archer](images/battle-bandits.png)
+
 ### Camping and other actions
 
 When there are no monsters on your hex, the footer offers:
@@ -155,8 +157,8 @@ Press **C**, or click the portrait of the hero marked in gold, to open the chara
 | S | Skills |
 | B | Spells |
 | I | Inventory |
-| P | Perk tree (from Skills) |
-| K | Spell tree (from Spells) |
+| P | Perk tree (press again to go back to Skills) |
+| K | Spell tree (press again to go back to Spells) |
 | Esc | Close, or step back from a tree |
 
 To switch the panel to another hero, click their portrait on the left.
@@ -165,7 +167,7 @@ To switch the panel to another hero, click their portrait on the left.
 
 ![The Character tab](images/panel-character.png)
 
-This tab shows the hero's attributes, their level and experience, and what they fight with: hit points, armour class, resistance, chance to hit, damage, attack cost, how much resistance their blows pierce, action points and critical chance.
+This tab shows the hero's attributes, their level and experience, and what they fight with: hit points, armour class, resistance, chance to hit, damage, attack cost, how much resistance their blows pierce (if any), action points, critical chance and, for a caster, mana.
 
 ### Skills and perks
 
@@ -175,7 +177,7 @@ When the hero has skill points to spend, a **+** appears beside each skill. The 
 
 ![The perk tree](images/panel-perk-tree.png)
 
-Perks you can take now are drawn brightly, and a taken perk shows its ranks (for example 1/2).
+Perks you can take now are drawn brightly, and a taken perk shows its ranks (for example 1/2). Most perks also ask a minimum in their attribute, so a dim perk may be waiting for a higher attribute rather than a higher level.
 
 ### Spells
 
@@ -220,7 +222,7 @@ Hover over a hex to see the path, then click to move there. Each hex costs **1 A
 
 ![Hovering a foe shows the attack](images/battle-attack.png)
 
-**Click a foe** to attack it. If it is out of reach, the hero first walks into range along the path shown, then strikes. The weapon decides both the cost and the reach:
+**Click a foe** to attack it. If it is out of reach, the hero first walks into range along the path shown, then strikes. The **Attack** button strikes the only foe in reach, or, with several in reach, asks you to click one (it reads **Cancel** while it waits). The weapon decides both the cost and the reach:
 
 | Weapon | Damage | AP | Reach | Pierces resistance |
 | --- | --- | --- | --- | --- |
@@ -254,7 +256,7 @@ Because resistance comes off every hit, it hurts weapons that hit often for a li
 
 **Armour piercing**: melee blows ignore some points of the foe's resistance (see the table above, and the Bearded modifier and the Armour Breaker and Sunder perks). Bow and wand shots pierce nothing. Spells ignore resistance altogether, which makes a mage the other answer to armour.
 
-When you hover a foe you can attack, its nameplate shows your chance to hit and, after piercing, how much damage its armour will stop (for example "60% −3 dmg").
+When you hover a foe you can attack from where the hero stands, its nameplate shows your chance to hit, any bonus from flanking and the arc, and, after piercing, how much damage its armour will stop: "60% −3 dmg", or "70% +10 −3 dmg" from its flank.
 
 **Regeneration**: trolls heal some hit points at the start of each of their turns. Acid (Acid Arrow, which also eats 2 points of resistance while it lasts) and fire (Fireball and Flame Arrow, for the turn after) stop it.
 
@@ -294,7 +296,7 @@ A hero who knows a spell has **mana**: twice their Intelligence, plus half their
 
 ![The spell list](images/battle-spell-menu.png)
 
-To cast, select the hero and press **Cast** (or M). Pick a spell by clicking it or pressing its number. A spell you cannot cast right now is greyed out, for example because no target is in range or the hero lacks the AP or mana.
+To cast, select the hero and press **Cast** (or M); the button shows the mana the hero has left, and reads **Cancel** while you aim. Pick a spell by clicking it or pressing its number. A spell you cannot cast right now is greyed out, for example because no target is in range or the hero lacks the AP or mana.
 
 ![Choosing a spell's target](images/battle-targeting.png)
 
@@ -363,7 +365,7 @@ A hero born with an attribute of 7 can reach that attribute's masteries by takin
 
 Every hex of land has a blight level from 0 (clean) to 3 (corrupted), shown as a tint over the grass. Corrupted land also shows dark growths. Every day, sources of influence push on the hexes around them, and their strength fades by a point for each hex of distance:
 
-- **Pushing the blight forward**: monster lairs (more strongly the higher their threat), the Source itself, and corrupted land spreading to its neighbours. The blight grows stronger over time, by a tenth every 30 days.
+- **Pushing the blight forward**: monster lairs (more strongly the higher their threat), the Source itself, and corrupted land spreading to its neighbours. The blight grows stronger over time, by a tenth every 30 days, up to half again as strong.
 - **Pushing it back**: the encampment (stronger with its shrine), every resource you hold (stronger with an outpost), every watchtower, and the party itself, which grows stronger as the heroes level up.
 
 Consequences:
@@ -371,7 +373,7 @@ Consequences:
 - **Corrupted land breeds new monster lairs.** A new lair's threat depends on how far from the encampment it appears: goblins and kobolds at any threat, and bandits from threat 3.
 - **Winning a battle cleanses the land** around the lair, lowering every hex within 1 + its threat by two levels.
 - **Resources** are captured when their land is clean (level 0) and lost when it reaches level 2. While the blight gains on a site, the map shows it in orange with the number of days left until it falls. A watchtower can be lost the same way.
-- **Stock**: every 5 days, each site you hold adds its yield to the encampment's stock (gold, iron, timber, silver and so on). A site whose land is tainted yields half.
+- **Stock**: every 5 days, each site you hold adds its yield to the encampment's stock (gold, iron, timber, silver and so on), and the encampment itself adds 2 gold. A site whose land is tainted yields half.
 
 The header's percentage counts only the land you have explored.
 
@@ -408,7 +410,7 @@ When the party stands on the encampment, **Enter** (the button carries the encam
 In the encampment, click the guild hall and then **Enter the Guild Hall**. It shows your party and the reserves waiting at the hall. **Close** goes back to the encampment.
 
 - **Click a hero** to select them. Then click a hero in the other row to swap the two, or use **To reserves** / **To party**.
-- **Recruit** hires a new hero for **10 gold**, who joins the reserves.
+- **Recruit** hires a new hero for **10 gold**, who joins the reserves. The reserves hold at most 4.
 
 ![Recruiting](images/guild-hall-recruit.png)
 
