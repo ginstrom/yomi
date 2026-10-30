@@ -409,7 +409,7 @@ If the retune cannot reach about two in three without making high rings trivial 
 - a damage perk line;
 - higher-tier spells.
 
-That would be its own design.
+That design is [`gear-and-runes.md`](gear-and-runes.md): material tiers, more families, forging and runes. Its expected kit at each level (§5.8 there) replaces the bare hero table of section 3 as the hero side of the yardstick in 5.2.
 
 ### 6.5 Tuning
 
