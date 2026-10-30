@@ -75,3 +75,21 @@ Five bandit unit sprites go into the atlas, one per `BanditKind`, each with `idl
 - [ ] `make test` passes.
 - [ ] Committed once tests pass, on the current branch, without pushing. The message ends with the repo's `Co-Authored-By` attribution line.
 - [ ] The index's step 02 row set to `done`, with a completion note here: the commit, the checks run.
+
+## Completion note
+
+- **Status:** done, in the commit "Step 02: bandit sprites" (the commit that carries this note).
+- **Built:** five sources in `art/units/`, `bandit_cutthroat`, `bandit_archer`, `bandit_brute`, `bandit_mage` and `bandit_captain`, drawn as whole-frame runs with `outline = "auto"` on the `unit` canvas. Each has a `chest` point, `idle_0`/`idle_1` (`idle_1` moves the rows above the shins a pixel down: rows 0 to 24, the mage's robe 0 to 26) and `walk_0` to `walk_2` with `[anim.idle]` (600 ms) and `[anim.walk]` (`walk_0, walk_1, walk_0, walk_2`, 140 ms), as the warrior's. The gear is drawn in:
+  - Cutthroat: a dark hood, a red scarf over the mouth, a patched leather jerkin, a dagger held up;
+  - Archer: bareheaded with a red headband, a light tan tunic, a quiver of red-fletched arrows over the shoulder, a bow (its string `unoutlined`, as `gear_bow`'s);
+  - Brute: a big bald, bearded man with bare arms, a rust-flecked steel breastplate, red breeches, a double-bladed battle axe held upright;
+  - Hedge-Mage: a patched dull-red hooded robe and a white beard, a wand tipped with a gold spark;
+  - Captain: a wide-brimmed hat with a red plume, a dark cloak, a steel breastplate with a red sash across it, a round oak shield with a red band, a longsword held upright.
+- **Exported** with `npm run sprites` (68 sprites, 152 frames); no PNG edited by hand. The atlas, its animations, `sprites.json`, the manifest and the loose PNGs are committed. `public/assets/sprites/README.md` has a row for the five.
+- **Verification:**
+  - `sprite check --project art`: ok, 68 sprites, 152 frames. `npm run sprites:check`: up to date.
+  - The atlas check prints `true true true` for all five; each `idle_0` carries its `chest` point (`points` in `atlas.json`).
+  - Previews reviewed (`sprite preview` of the five, every frame, beside `warrior`, `goblin`, `hobgoblin`, `shaman` and `kobold`): each is a human silhouette in browns, dull reds and rusted steel, its role read from its weapon and dress, none in the heroes' steel limbs, horned helm and red tabard, and none green-skinned. The captain's hat was redrawn once, as a crown over a wide brim, after the first preview read as a lump.
+  - `make test`: 63 files, 713 tests passed.
+- **For step 03:** the sprite names are exactly the `BanditKind` values of C1. No code was changed.
+- **Deviations:** none.

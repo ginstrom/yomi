@@ -23,6 +23,7 @@ Infinity Engine CRPGs (Baldur's Gate 1 and 2). No third-party art is included.
 | --- | --- | --- |
 | `atlas.png`: `warrior/*` | `art/units/warrior.sprite.toml` | `UnitFigure` (`BattleScene`, `InventoryScene`, `WorldScene`) |
 | `atlas.png`: `goblin/*`, `kobold/*`, `shaman/*`, `horror/*`, `hobgoblin/*`, `troll/*`, `armored_troll/*` | `art/units/` | `UnitFigure` (`BattleScene`) |
+| `atlas.png`: `bandit_cutthroat/*`, `bandit_archer/*`, `bandit_brute/*`, `bandit_mage/*`, `bandit_captain/*` | `art/units/bandit_*.sprite.toml` | `UnitFigure` (`BattleScene`), from the bandit kinds (stage 1, step 03) |
 | `atlas.png`: `fx_*/*` | `art/effects/fx_*.sprite.toml` | `BattleScene` (arrows, missiles and bursts) |
 | `atlas.png`: `gear_*/*` | `art/gear/gear_*.sprite.toml`, and their variants | `UnitFigure`, by `GEAR_SPRITES` |
 | `icon_sword.png` | `art/icons/icon_sword.sprite.toml` | `InventoryScene` |

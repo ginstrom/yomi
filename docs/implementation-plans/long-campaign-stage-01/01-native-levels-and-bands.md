@@ -200,11 +200,11 @@ The test checks every `MonsterKind` at its native level. Each field outside its 
   - each encounter is an `EncounterDef { slots, band, counts }`, today's five sharing band 1 to 5 and counts `[2, 3, 3, 3, 4]` (`TODAY`); `encounter()` throws if `counts` is not one per threat of the band; `FOES_AT_THREAT` is gone.
 - **Yardstick test** (`src/game/encounters.test.ts`): every monster kind is within the yardstick on `ac`. The 17 named exceptions, each with a reason, are: `toHit` for all seven kinds (level 1 foes hit at 50 to 70, below the band of 80 to 100); `maxHp` for every kind but the Blight Horror; and `meanDamage` for the Horror, Hobgoblin Chief, Troll and Armoured Troll. Step 03 should hold the bandits to the yardstick and add a `BanditKind` test of its own; the test's `BLOCKS` map is typed `Record<MonsterKind, ...>`, so it keeps working when `FoeKind` widens.
 - **Verification:**
-  - `npm run -s typecheck` clean; `npx vitest run --project domain`: 54 files, 703 tests passed.
-  - `make test`: 63 files, 712 tests passed.
+  - `npm run -s typecheck` clean; `npx vitest run --project domain`: 54 files, 704 tests passed (703 at `ea3ed40`, 704 with the review's test).
+  - `make test`: 63 files, 713 tests passed (712 at `ea3ed40`).
   - Campaign guard, `--campaign --battles 500 --seed 1`, baseline taken before any code change: the summary (podman build lines filtered) is identical before and after, "Beat the Source: 320 of 500 (64.0%)".
   - Spot check, `--encounter troll_lair --threat 5 --party-level 5 --battles 200 --seed 1`: identical before and after.
 - **CLAUDE.md:** the rules of scaling now name bands, per-encounter counts, native levels, `foeStats` and `foeYardstick` in place of `FOES_AT_THREAT`.
 - **Review follow-ups:** the Armoured Troll's `toHit` exception reason reworded; `ENCOUNTER_COUNTS` (derived from each definition, like `ENCOUNTER_BANDS`) exported so that a test holds every encounter to one count per threat of its band.
-- **Deviations:** none. The `BLOCKS` stat-block map is duplicated in the test only because `FOE_STATS` is private; it is a single test-level constant.
+- **Deviations:** one addition to the contracts: `ENCOUNTER_COUNTS`, a read-only export (derived from each encounter's definition, like `ENCOUNTER_BANDS`) added in review so that the test can hold every encounter to one count per threat of its band. Nothing else departs from the task file. The `BLOCKS` stat-block map is duplicated in the test only because `FOE_STATS` is private; it is a single test-level constant.
 

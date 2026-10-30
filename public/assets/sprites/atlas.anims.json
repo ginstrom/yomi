@@ -45,6 +45,216 @@
     {
       "frames": [
         {
+          "duration": 600,
+          "frame": "bandit_archer/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "bandit_archer/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_archer/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "bandit_archer/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_archer/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_archer/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_archer/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_archer/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "bandit_brute/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "bandit_brute/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_brute/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "bandit_brute/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_brute/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_brute/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_brute/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_brute/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "bandit_captain/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "bandit_captain/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_captain/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "bandit_captain/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_captain/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_captain/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_captain/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_captain/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "bandit_cutthroat/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "bandit_cutthroat/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_cutthroat/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "bandit_cutthroat/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_cutthroat/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_cutthroat/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_cutthroat/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_cutthroat/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "bandit_mage/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "bandit_mage/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_mage/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "bandit_mage/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_mage/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_mage/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_mage/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_mage/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 260,
           "frame": "camp_fire/base",
           "key": "atlas"
