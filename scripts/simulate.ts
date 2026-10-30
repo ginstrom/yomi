@@ -15,7 +15,7 @@
 //                                 [--player-policy aggressive] [--enemy-policy aggressive]
 //                                 [--player-weapon iron_sword]
 //                                 [--encounter goblin_raid] [--threat 1] [--party-level 1]
-//                                 [--campaign]
+//                                 [--campaign] [--ready-level 7]
 import { closeSync, mkdirSync, openSync, writeSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { mulberry32, randomSeed } from '../src/combat/rng.ts'
@@ -83,6 +83,8 @@ export interface CliArgs {
   partyLevel: number
   /** Play whole campaigns over the world map instead of one encounter over and over. */
   campaign: boolean
+  /** With `campaign`, the level every member must reach before the party marches on the Source, unless nothing else is left. */
+  readyLevel: number
 }
 
 
@@ -124,6 +126,7 @@ export function parseArgs(argv: string[]): CliArgs {
     threat: 1,
     partyLevel: 1,
     campaign: false,
+    readyLevel: SOURCE_READY_LEVEL,
   }
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i]
@@ -167,6 +170,9 @@ export function parseArgs(argv: string[]): CliArgs {
       case '--campaign':
         args.campaign = true
         break
+      case '--ready-level':
+        args.readyLevel = positiveInt(flag, value())
+        break
       default:
         throw new Error(`Unknown argument: ${flag}`)
     }
@@ -174,6 +180,9 @@ export function parseArgs(argv: string[]): CliArgs {
   const refused = SINGLE_BATTLE_FLAGS.filter((flag) => argv.includes(flag))
   if (args.campaign && refused.length > 0) {
     throw new Error(`${refused.join(', ')} cannot be used with --campaign, which fights each location at its own threat`)
+  }
+  if (!args.campaign && argv.includes('--ready-level')) {
+    throw new Error('--ready-level applies only to --campaign, which marches on the Source when the party is ready')
   }
   return args
 }
@@ -274,7 +283,17 @@ export interface CampaignRecord {
   /** Items crafted, in the field and at the workshop, and the days the field crafts took. */
   crafted: number
   fieldCraftDays: number
+  /** Each member's level when the campaign ended. */
+  finalLevels: number[]
+  /** The level of each hero who died, in the order they fell. */
+  deathsAtLevel: number[]
+  /** For 5, 10, 15 and 20: how many battles had been fought when the party's lowest level first reached it; absent if never. */
+  battlesToLevel: Partial<Record<LevelMark, number>>
 }
+
+/** The levels a campaign's record notes the battles to. */
+export const LEVEL_MARKS = [5, 10, 15, 20] as const
+export type LevelMark = (typeof LEVEL_MARKS)[number]
 
 export interface Campaign {
   battles: LoggedEvent[][]
@@ -473,14 +492,14 @@ export function outpostErrand(world: WorldState): QuietLocation | null {
  * Where a careful party goes next. First the nest pushing hardest on the held
  * site nearest to falling, if the party is up to its threat; then the nearest
  * nest it is up to (a threat no higher than its lowest level), or the nearest
- * of all if none; and the Source once every member has `SOURCE_READY_LEVEL`
- * or nothing else is left.
+ * of all if none; and the Source once every member has `readyLevel`
+ * (`SOURCE_READY_LEVEL` unless told otherwise) or nothing else is left.
  */
-export function nextTarget(world: WorldState, party: Party): MonsterLocation | null {
+export function nextTarget(world: WorldState, party: Party, readyLevel = SOURCE_READY_LEVEL): MonsterLocation | null {
   const all = world.locations.filter((l): l is MonsterLocation => l.kind === 'monsters')
   const source = all.find((l) => l.source) ?? null
   const nests = all.filter((l) => !l.source)
-  if (source && (nests.length === 0 || lowestLevel(party) >= SOURCE_READY_LEVEL)) return source
+  if (source && (nests.length === 0 || lowestLevel(party) >= readyLevel)) return source
   const upTo = nests.filter((l) => l.threat <= Math.max(1, lowestLevel(party)))
   const threatened = sites(world)
     .filter((site) => world.threatened.includes(site.id))
@@ -518,6 +537,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
     outcome: 'timeout', days: 0, battles: 0, spawns: 0, captured: 0, lost: 0, blighted: 0, healedHp: 0, campDays: 0,
     towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0,
     tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, crafted: 0, fieldCraftDays: 0,
+    finalLevels: [], deathsAtLevel: [], battlesToLevel: {},
   }
   const tally = (events: readonly WorldEvent[]) => {
     for (const event of events) {
@@ -539,6 +559,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
     record.tradingPostLevel = world.tradingPost
     record.workshopLevel = world.workshop
     record.infirmaryLevel = world.infirmary
+    record.finalLevels = party.map((member) => member.level)
     return { battles, record }
   }
   /** Walks to `to`, going on whenever something on the way stops the party; false if it never gets there. */
@@ -564,7 +585,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
       record.goldFromSales += trade.goldFromSales
       record.crafted += trade.crafted
     }
-    const next = nextTarget(world, party)
+    const next = nextTarget(world, party, args.readyLevel)
     if (!next) return finish('timeout')
     // The journey stops for what happens on the way; the careful party takes note and goes on.
     const arrived = walkTo(next.position)
@@ -592,8 +613,14 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
       member.hp = unit.hp
       member.mana = unit.mana
     })
-    record.deaths += rewardVictory(party, xpReward(encounter), game.baggage).dead.length
+    const { dead } = rewardVictory(party, xpReward(encounter), game.baggage)
+    record.deaths += dead.length
+    // The fallen are buried before the experience is given, so each keeps the level it died at.
+    record.deathsAtLevel.push(...dead.map((member) => member.level))
     for (const member of party) autoAdvance(member)
+    for (const mark of LEVEL_MARKS) {
+      if (record.battlesToLevel[mark] === undefined && lowestLevel(party) >= mark) record.battlesToLevel[mark] = battles.length
+    }
     clearLocation(world, next.id)
     if (world.status === 'won') return finish('source')
     // A watchtower wherever the party stops on land that takes one and the stock affords it.
@@ -767,6 +794,13 @@ export interface CampaignSummary {
   avgGoldFromSales: number
   avgCrafted: number
   avgFieldCraftDays: number
+  /** The party's lowest and highest level at the end, on average; a campaign with no one left is left out. */
+  avgLowestFinalLevel: number
+  avgHighestFinalLevel: number
+  /** How many heroes died at each level, in rising level; only the levels some hero died at. */
+  deathsByLevel: Array<{ level: number; deaths: number }>
+  /** For each mark, how many campaigns' lowest level reached it and the battles that took on average over those (0 if none did). */
+  toLevel: Array<{ level: LevelMark; campaigns: number; avgBattles: number }>
   /** In rising order of threat; a threat no campaign reached has no row. */
   byThreat: ThreatRow[]
 }
@@ -800,6 +834,14 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
   const avg = (of: (record: CampaignRecord) => number) => records.reduce((sum, r) => sum + of(r), 0) / campaigns
   const outcomes: Record<CampaignOutcome, number> = { source: 0, fallen: 0, encampment: 0, timeout: 0 }
   for (const record of records) outcomes[record.outcome]++
+  const mean = (values: readonly number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0)
+  const ended = records.filter((r) => r.finalLevels.length > 0)
+  const deaths = new Map<number, number>()
+  for (const level of records.flatMap((r) => r.deathsAtLevel)) deaths.set(level, (deaths.get(level) ?? 0) + 1)
+  const toLevel = LEVEL_MARKS.map((level) => {
+    const reached = records.flatMap((r) => r.battlesToLevel[level] ?? [])
+    return { level, campaigns: reached.length, avgBattles: mean(reached) }
+  })
   return {
     campaigns,
     outcomes,
@@ -826,6 +868,10 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     avgGoldFromSales: avg((r) => r.goldFromSales),
     avgCrafted: avg((r) => r.crafted),
     avgFieldCraftDays: avg((r) => r.fieldCraftDays),
+    avgLowestFinalLevel: mean(ended.map((r) => Math.min(...r.finalLevels))),
+    avgHighestFinalLevel: mean(ended.map((r) => Math.max(...r.finalLevels))),
+    deathsByLevel: [...deaths.entries()].sort(([a], [b]) => a - b).map(([level, deaths]) => ({ level, deaths })),
+    toLevel,
     byThreat: threats.rows(),
   }
 }
@@ -885,6 +931,13 @@ function main(): void {
   console.log(`Guild hall: level ${summary.avgHallLevel.toFixed(1)} at the end, ${summary.avgRecruits.toFixed(1)} recruits and ${summary.avgDeaths.toFixed(1)} heroes dead a campaign`)
   console.log(
     `Hit points healed between battles: ${summary.avgHealedHp.toFixed(1)} a campaign, in ${summary.avgCampDays.toFixed(1)} days of camping`,
+  )
+  const diedAt = summary.deathsByLevel.length > 0 ? summary.deathsByLevel.map(({ level, deaths }) => `${level} (${deaths})`).join(', ') : 'none'
+  console.log(
+    `Levels at the end: lowest ${summary.avgLowestFinalLevel.toFixed(1)}, highest ${summary.avgHighestFinalLevel.toFixed(1)} on average (ready level ${args.readyLevel}); heroes died at level ${diedAt}`,
+  )
+  console.log(
+    `Battles to level ${summary.toLevel.map(({ level, campaigns, avgBattles }) => `${level}: ${campaigns > 0 ? avgBattles.toFixed(1) : '—'} (${campaigns} campaigns)`).join('; ')}`,
   )
   console.table(summary.byThreat.map((row) => ({ ...row, winRate: Number(row.winRate.toFixed(3)) })))
   console.table(tally.summary(battles))

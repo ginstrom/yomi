@@ -244,7 +244,7 @@ fight?: (encounter: EncounterId, threat: number) => void
 | 03 | [Bandits and the Bandit Camp](03-bandits-and-camp.md) | `bandits.ts`, the bandit kinds, XP, the `bandit_camp` encounter. Bandits drawn in battle. | 01, 02 | done |
 | 04 | [Bandits on the map](04-map-and-spawns.md) | Two locations become bandit camps; spawns by band with a Bandit Gang; `SAVE_VERSION` 12 | 03 | done (7ff2fb9; guard 91 of 500, see the task's note) |
 | 05 | [The debug `fight` command](05-debug-fight.md) | `fight <encounter> [threat]` starts a battle with no location | 01 | done (see the task's note) |
-| 06 | [The simulator's ready level and level record](06-simulator-ready-level.md) | `--ready-level`, `finalLevels`, `deathsAtLevel`, `battlesToLevel`, printed | — | pending |
+| 06 | [The simulator's ready level and level record](06-simulator-ready-level.md) | `--ready-level`, `finalLevels`, `deathsAtLevel`, `battlesToLevel`, printed | — | done (guard identical but for the new lines; see the task's note) |
 | 07 | [Measure, tune and document](07-measure-tune-document.md) | The guard and the bandit cells measured, counts tuned if needed, CLAUDE.md, the manual and the stage's notes updated, the play script walked | 03, 04, 05, 06 | pending |
 
 ## Execution order

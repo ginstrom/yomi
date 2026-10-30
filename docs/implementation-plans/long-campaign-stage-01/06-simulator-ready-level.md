@@ -2,7 +2,7 @@
 
 - **Plan:** [index.md](index.md)
 - **Source design:** [`docs/designs/long-campaign/stage-01-foe-foundations-and-bandits.md`](../../designs/long-campaign/stage-01-foe-foundations-and-bandits.md), S1-R6. Reference: [`reference/campaign-to-level-20.md`](../../designs/long-campaign/reference/campaign-to-level-20.md) §5.7.
-- **Status:** pending
+- **Status:** done
 
 ## Objective
 
@@ -129,14 +129,30 @@ The exact wording is the implementer's. It must say the averages, the death coun
 
 ## Completion criteria
 
-- [ ] `--ready-level` is parsed, defaults to 7, is refused without `--campaign`, and is used by `nextTarget`.
-- [ ] `CampaignRecord` has `finalLevels`, `deathsAtLevel` and `battlesToLevel` as in C9. `CampaignSummary` and the printed summary show them.
-- [ ] The new unit tests were written first, seen to fail, and now pass. `make test` passes.
-- [ ] The guard diff shows only added lines.
-- [ ] The `--ready-level 10` figures are recorded below.
-- [ ] CLAUDE.md's simulator paragraphs mention `--ready-level` and the new summary lines.
-- [ ] Committed on the current branch (not pushed), with the message ending in the repo's `Co-Authored-By` attribution line. The index's step 06 status is set to `done`, with a completion note here.
+- [x] `--ready-level` is parsed, defaults to 7, is refused without `--campaign`, and is used by `nextTarget`.
+- [x] `CampaignRecord` has `finalLevels`, `deathsAtLevel` and `battlesToLevel` as in C9. `CampaignSummary` and the printed summary show them.
+- [x] The new unit tests were written first, seen to fail, and now pass. `make test` passes.
+- [x] The guard diff shows only added lines.
+- [x] The `--ready-level 10` figures are recorded below.
+- [x] CLAUDE.md's simulator paragraphs mention `--ready-level` and the new summary lines.
+- [x] Committed on the current branch (not pushed), with the message ending in the repo's `Co-Authored-By` attribution line. The index's step 06 status is set to `done`, with a completion note here.
 
 ## Completion record
 
-_(For the implementer: the commit, the guard diff result, and the `--ready-level 10` figures.)_
+**Commit:** the step 06 commit on `armor-resistance` (parent `112793b`; its hash is in `git log --grep "Step 06"`).
+
+**What changed:** `scripts/simulate.ts` (`--ready-level`, `CliArgs.readyLevel`, `nextTarget`'s `readyLevel` parameter, `CampaignRecord.finalLevels`/`deathsAtLevel`/`battlesToLevel`, an exported `LEVEL_MARKS` = [5, 10, 15, 20] and `LevelMark` type, `CampaignSummary.avgLowestFinalLevel`/`avgHighestFinalLevel`/`deathsByLevel`/`toLevel`, two new printed lines), `scripts/simulate.test.ts` (seven new tests, written first and seen to fail: 6 failing for the expected reasons before the code), `CLAUDE.md` (the simulator paragraphs).
+
+**Checks:**
+- `npm run -s typecheck`: clean. `npx vitest run --project domain scripts/simulate.test.ts`: 25 passed.
+- `make test`: 65 files, 754 tests passed.
+- **Guard** (seed 1, 500 campaigns, before at `112793b`, after on the change, run one after the other, podman build lines stripped): `diff` shows only the header's `--out` path (`before.jsonl` vs `after.jsonl`, the file names given) and two added lines after "Hit points healed…". Every other line, "Beat the Source: 91 of 500 (18.2%)", the threat table and the battle table included, is identical. The added lines at the default:
+  ```
+  Levels at the end: lowest 4.3, highest 4.6 on average (ready level 7); heroes died at level 2 (22), 3 (214), 4 (56), 5 (80), 6 (41), 7 (94), 8 (61), 9 (12)
+  Battles to level 5: 7.5 (151 campaigns); 10: 26.0 (2 campaigns); 15: — (0 campaigns); 20: — (0 campaigns)
+  ```
+- **Smoke, `--ready-level 10`** (seed 1, 500 campaigns): Beat the Source 117 of 500 (23.4%), party fell 383; 173 days and 13.7 battles a campaign (6833 battles); final level lowest 4.9, highest 5.3 on average; heroes died at 2 (22), 3 (214), 4 (60), 5 (81), 6 (41), 7 (39), 8 (25), 9 (6), 10 (61), 11 (14); battles to level 5: 7.5 (151 campaigns), to 10: 41.4 (117 campaigns), none reached 15 or 20. Threat 5 won 1458 of 1477 (0.987). The party marches later, as expected; all 117 that reached 10 beat the Source.
+
+**Deviation (a fact in the task, not a contract):** the task says that on a `'fallen'` outcome "the dead are already gone from the party". They are not: a lost battle never reaches `rewardVictory`, so nobody is buried, and `finalLevels` then holds the levels of the whole party that fell in that last battle (`deathsAtLevel`, like the existing `deaths`, counts only heroes who fell in a won battle). This follows C9's "each member's level when the campaign ended", and it is why the averages are low: at seed 1, 82% of campaigns fall, mostly early (the untuned Bandit Camp at threat 3), so the final-level averages are dominated by fallen parties. Step 07 should read them with that in mind. CLAUDE.md says "the fallen party's, for a campaign lost in battle".
+
+**Logs:** the before, after and ready-10 logs were deleted.

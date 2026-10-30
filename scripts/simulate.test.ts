@@ -3,6 +3,7 @@ import type { SpellId } from '../src/combat/spells.ts'
 import type { CastOutcome, Side } from '../src/engine/battleEngine.ts'
 import { canAdvance } from '../src/character/progression.ts'
 import { newGame } from '../src/game/gameState.ts'
+import { heroId } from '../src/game/encounters.ts'
 import { readyMadeParty } from '../src/game/party.ts'
 import { OUTPOST_COST } from '../src/game/buildings.ts'
 import { SOURCE_ID, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
@@ -122,6 +123,16 @@ describe('parseArgs', () => {
     expect(() => parseArgs(['--player-weapon', 'ring_protection'])).toThrow('--player-weapon must be the id of a weapon')
     expect(() => parseArgs(['--player-weapon', 'iron_sword+recurve1'])).toThrow('--player-weapon must be the id of a weapon')
   })
+
+  it('takes --ready-level for a campaign only, a positive integer, by default SOURCE_READY_LEVEL', () => {
+    expect(parseArgs(['--campaign', '--ready-level', '10']).readyLevel).toBe(10)
+    expect(parseArgs([]).readyLevel).toBe(SOURCE_READY_LEVEL)
+    expect(parseArgs(['--campaign']).readyLevel).toBe(SOURCE_READY_LEVEL)
+    expect(() => parseArgs(['--ready-level', '10'])).toThrow('--ready-level')
+    expect(() => parseArgs(['--ready-level', '10'])).toThrow('--campaign')
+    expect(() => parseArgs(['--campaign', '--ready-level', '0'])).toThrow('--ready-level must be a positive integer')
+    expect(() => parseArgs(['--campaign', '--ready-level', 'x'])).toThrow('--ready-level must be a positive integer')
+  })
 })
 
 describe('a campaign', () => {
@@ -179,6 +190,61 @@ describe('a campaign', () => {
     expect(summary.byThreat.reduce((total, row) => total + row.battles, 0)).toBe(battles.length)
     expect(summary.byThreat[0]).toEqual({ threat: 1, battles: 2, won: 2, winRate: 1 })
   })
+
+  it('records the levels it ended at, the level of each hero who died, and the battles to each mark', () => {
+    const last = battles.at(-1)!
+    const end = last.at(-1)!
+    const lastStart = starts.at(-1)!
+    const lastLevels = lastStart.meta.partyLevels as number[]
+    if (record.outcome === 'source' && end.type === 'battle_end') {
+      // The members left are the heroes standing at the end of the last battle.
+      const standing = lastLevels.filter((_, i) => end.survivors[heroId(i)] !== undefined)
+      expect(record.finalLevels).toHaveLength(standing.length)
+    }
+    expect(record.finalLevels.length).toBeGreaterThan(0)
+    // Levels never drop: each member left is at least the lowest level that set out on the last battle.
+    expect(record.finalLevels.every((level) => level >= Math.min(...lastLevels))).toBe(true)
+    expect(record.deathsAtLevel).toHaveLength(record.deaths)
+    expect(record.deathsAtLevel.every((level) => level >= 1)).toBe(true)
+    const lowestEver = Math.max(...starts.map((e) => Math.min(...(e.meta.partyLevels as number[]))), Math.min(...record.finalLevels))
+    if (lowestEver >= 5) {
+      expect(record.battlesToLevel[5]).toBeGreaterThanOrEqual(1)
+      expect(record.battlesToLevel[5]).toBeLessThanOrEqual(record.battles)
+      // The party's lowest level was below 5 when the battle that brought it there began.
+      const at = record.battlesToLevel[5]!
+      expect(Math.min(...(starts[at - 1].meta.partyLevels as number[]))).toBeLessThan(5)
+      if (at < starts.length) expect(Math.min(...(starts[at].meta.partyLevels as number[]))).toBeGreaterThanOrEqual(5)
+    } else expect(record.battlesToLevel[5]).toBeUndefined()
+    expect(record.battlesToLevel[20]).toBeUndefined()
+  })
+})
+
+describe('summarizeCampaigns, the levels', () => {
+  const base = { ...runCampaign(3, 1, parseArgs(['--campaign']), 0).record }
+  const records = [
+    { ...base, finalLevels: [6, 7, 8], deathsAtLevel: [4, 3], battlesToLevel: { 5: 10 } },
+    { ...base, finalLevels: [8, 9], deathsAtLevel: [4], battlesToLevel: { 5: 14, 10: 30 } },
+    { ...base, outcome: 'fallen' as const, finalLevels: [], deathsAtLevel: [], battlesToLevel: {} },
+  ]
+  const summary = summarizeCampaigns([], records)
+
+  it('averages the lowest and highest final level, leaving out a campaign with no one left', () => {
+    expect(summary.avgLowestFinalLevel).toBe(7)
+    expect(summary.avgHighestFinalLevel).toBe(8.5)
+  })
+
+  it('counts the deaths at each level, in rising level', () => {
+    expect(summary.deathsByLevel).toEqual([{ level: 3, deaths: 1 }, { level: 4, deaths: 2 }])
+  })
+
+  it('averages the battles to each mark over the campaigns that reached it', () => {
+    expect(summary.toLevel).toEqual([
+      { level: 5, campaigns: 2, avgBattles: 12 },
+      { level: 10, campaigns: 1, avgBattles: 30 },
+      { level: 15, campaigns: 0, avgBattles: 0 },
+      { level: 20, campaigns: 0, avgBattles: 0 },
+    ])
+  })
 })
 
 describe('nextTarget', () => {
@@ -207,6 +273,17 @@ describe('nextTarget', () => {
     expect(nextTarget(world, party)?.id).not.toBe(SOURCE_ID)
     world.locations = world.locations.filter((l) => l.kind !== 'monsters' || (l.kind === 'monsters' && l.source))
     expect(nextTarget(world, party)?.id).toBe(SOURCE_ID)
+  })
+
+  it('marches on the Source once every member has the ready level it is given', () => {
+    const world = newWorld(1)
+    const party = readyMadeParty()
+    party.forEach((member, i) => (member.level = 3 + i))
+    expect(nextTarget(world, party)?.id).not.toBe(SOURCE_ID)
+    expect(nextTarget(world, party, 3)?.id).toBe(SOURCE_ID)
+    for (const member of party) member.level = SOURCE_READY_LEVEL
+    expect(nextTarget(world, party, SOURCE_READY_LEVEL + 1)?.id).not.toBe(SOURCE_ID)
+    expect(nextTarget(world, party, SOURCE_READY_LEVEL)?.id).toBe(SOURCE_ID)
   })
 })
 
