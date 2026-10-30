@@ -128,12 +128,34 @@ Check that all of these exist before starting. If `bandit_camp` is not in `ENCOU
 
 ## Completion criteria
 
-- [ ] The two locations are replaced as in C7. Spawns draw from kinds in band. `SAVE_VERSION` is 12.
-- [ ] The new and updated tests pass, including unchanged threat 1–2 spawns. `make test` passes.
-- [ ] The guard run's figures are recorded below for step 07.
-- [ ] The CLAUDE.md lines are updated.
-- [ ] Committed. The index row for 04 is set to `done`, with the commit hash.
+- [x] The two locations are replaced as in C7. Spawns draw from kinds in band. `SAVE_VERSION` is 12.
+- [x] The new and updated tests pass, including unchanged threat 1–2 spawns. `make test` passes.
+- [x] The guard run's figures are recorded below for step 07.
+- [x] The CLAUDE.md lines are updated.
+- [x] Committed. The index row for 04 is set to `done`, with the commit hash.
 
 ## Completion note
 
-_(For the implementer: commit, checks run, guard figures, anything left for step 07.)_
+- **Status:** done. Commit `COMMIT_HASH` ("Step 04: bandits on the map").
+- **Built:**
+  - `src/game/worldMap.ts`: Kobold Skulkers (30, 22) is now `bandit_camp` 'Bandit Camp', and Goblin Outriders (47, 13) `bandit_hideout` 'Bandit Hideout', both fighting `bandit_camp`, with their old loot (Cloak of Shadows, Wand of Storms). Threats 3 and 4, as measured.
+  - `src/game/blight.ts`: `SPAWN_KINDS` gains `{ encounter: 'bandit_camp', name: 'Bandit Gang' }`. `spawn` draws the position, then the kind among those whose `ENCOUNTER_BANDS` holds `threatAt(at)` (`eligible[Math.floor(rng() * eligible.length)]`), then the loot, as before. The number of draws is unchanged, so the world RNG's stream is the same as before for every spawn; only the kind at threats 3 to 5 differs.
+  - The empty-`eligible` path returns `null` before the kind is drawn, leaving `world.rng` unsaved and the pressure in place. It is covered by a comment, not a test: `threatAt` stops at `MAX_THREAT` (5), inside the goblins' and kobolds' bands, and `spawn` is private, so no clean seam gives it a threat no band holds.
+  - `src/game/save.ts`: `SAVE_VERSION` 12.
+  - CLAUDE.md: the `encounters.ts` bullet (the camp is now at two nests and in Bandit Gang spawns, no longer "not yet on the map"); the blight's spawn sentence (the kind drawn among those whose band holds the threat: Goblin Brood, Kobold Nest, and from threat 3 the Bandit Gang); the rules of scaling (a sentence after the armoured foes: the Bandit Camp, threat 3, and the Bandit Hideout, threat 4, replaced the Kobold Skulkers and Goblin Outriders).
+  - A re-run grep for `kobold_skulkers`, `goblin_outriders`, `Kobold Skulkers` and `Goblin Outriders` in `src`, `scripts`, `e2e` and `docs/manual` finds nothing.
+- **Tests:**
+  - `worldMap.test.ts`: the loot map renamed; every fixed monster location's band holds its threat; `bandit_camp` is threat 3 and `bandit_hideout` threat 4.
+  - `blight.test.ts` (`spawning`): over seeds 1 to 200 with all land at threats 1 to 5 corrupted (two hexes clear of every location) and a forced spawn, every spawn's band holds its threat; Bandit Gangs appear, and only at threat 3 or more, with `bandit_camp`; for seeds 1 to 4, three forced spawns with only the land at threats 1 and 2 corrupted give the same places, kinds and loot at threats 1 and 2 as the code before this step (captured on `70b3075` before `spawn` changed; seeds 3 and 4 also make a spawn at threat 4 or 5 on land already corrupted, before or among them, showing the draws after it are unchanged).
+  - Red first: the Bandit Gang test and the two `worldMap` tests failed before the change; the band and unchanged-spawn tests passed before it, as they should (they guard what must not change).
+- **Verification:**
+  - `npm run -s typecheck` clean; `npx vitest run --project domain`: 55 files, 730 tests passed.
+  - `make test`: 64 files, 739 tests passed.
+  - Guard, `make -s simulate ARGS="--campaign --battles 500 --seed 1"` (step 06 not done, so no `--ready-level`; 7 is the default):
+    - **Beat the Source: 91 of 500 (18.2%)**, against the baseline 320 of 500 (64%): a fall of 46 points. The party fell in 409 (81.8%); the encampment never lost; never out of days.
+    - A campaign: 126 days, 9.1 battles, 10.4 spawns (baseline 328 days, 22.5 battles); 1.2 heroes dead a campaign (baseline 1.6, but over far fewer battles); guild hall level 1.6, 1.2 recruits.
+    - Won by threat: 1, 1000 of 1000; 2, 974 of 1006 (96.8%); 3, 852 of 1171 (72.8%); 4, 972 of 985 (98.7%); 5, 326 of 371 (87.9%).
+    - Bandit Camp battles (`meta.encounter === 'bandit_camp'` in `logs/battles.jsonl`, the summary does not split them): threat 3, 364 of 683 (53.3%); threat 4, 341 of 350 (97.4%); threat 5, 66 of 78 (84.6%). By location: the fixed **Bandit Camp (threat 3) 185 of 500 (37%)**, every campaign meeting it with the party of three all at level 3; Bandit Hideout (threat 4) 74 of 78; Bandit Gang spawns 179 of 183 at threat 3, 267 of 272 at threat 4, 66 of 78 at threat 5.
+    - Battles lost: the Bandit Camp at threat 3 319 (78% of all 409 losses), Goblin Raid at threat 2 32, the Source 31, Bandit Gangs at threat 5 12 and at 4 9, Troll Lairs 6. The Goblin Raid losses are a knock-on effect: all 32 were the Goblin Reavers fought by a lone survivor (party of one at level 4) after the Bandit Camp killed two heroes. Monster encounters otherwise win as before (Goblin Raid and Kobold Scouts every battle at threats 3 to 5).
+- **For step 07:** the guard fall is almost entirely the fixed Bandit Camp at threat 3, which the campaign reaches with a level 3 party of three and wins 37% (matching step 03's cell, 35%). Later bandit fights, against a stronger, larger party, are won 85 to 99%. The lever is the threat-3 camp (its count of 3, or its gear, or the Captain's survivability); no tuning was done here, as the brief directs.
+- **Deviations:** none from the task file. The spawn-band tests corrupt land by hand (`corruptWhere`) to reach spawns at chosen threats, since forced spawns on a fresh world land only in the far east, at threats 4 and 5.

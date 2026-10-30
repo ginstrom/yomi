@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { hexDistance, hexNeighbors, offsetToHex, type Hex } from '../grid/hex.ts'
+import { hexDistance, hexNeighbors, hexToOffset, offsetToHex, type Hex } from '../grid/hex.ts'
+import { ENCOUNTER_BANDS } from './encounters.ts'
 import {
   CLEANSE_LEVELS,
   MAX_BLIGHT,
@@ -31,6 +32,13 @@ import {
 const party = readyMadeParty()
 const lairs = (world: WorldState) => world.locations.filter((l): l is MonsterLocation => l.kind === 'monsters')
 const setLevel = (world: WorldState, h: Hex, level: number) => (world.blight[boardIndex(world.board, h)] = level)
+const spawns = (world: WorldState) => lairs(world).filter((l) => l.id.startsWith('spawn_'))
+/** Corrupts the land at the threats `holds` admits, two hexes clear of every location. */
+const corruptWhere = (world: WorldState, holds: (threat: number) => boolean) =>
+  world.blight.forEach((_, i) => {
+    const h = boardHex(world.board, i)
+    if (holds(threatAt(h)) && world.locations.every((l) => hexDistance(l.position, h) >= 2)) world.blight[i] = MAX_BLIGHT
+  })
 const days = (world: WorldState, n: number, who: readonly { level: number }[] = party): WorldEvent[] =>
   Array.from({ length: n }, () => passTurn(world, who)).flat()
 
@@ -149,6 +157,79 @@ describe('spawning', () => {
       passTurn(world, party)
     }
     expect(lairs(world).length).toBe(MAX_MONSTER_LOCATIONS)
+  })
+
+  it('spawns only kinds whose encounter band holds the threat of where they lie', () => {
+    const spawned: MonsterLocation[] = []
+    for (let seed = 1; seed <= 200; seed++) {
+      const world = newWorld(seed)
+      corruptWhere(world, () => true)
+      world.spawnPressure = SPAWN_COST
+      passTurn(world, party)
+      spawned.push(...spawns(world))
+    }
+    expect(spawned.length).toBeGreaterThan(150)
+    for (const l of spawned) {
+      const band = ENCOUNTER_BANDS[l.encounter]
+      expect(l.threat).toBeGreaterThanOrEqual(band.min)
+      expect(l.threat).toBeLessThanOrEqual(band.max)
+    }
+  })
+
+  it('spawns a Bandit Gang only from threat 3, and does spawn one there', () => {
+    const gangs: MonsterLocation[] = []
+    for (let seed = 1; seed <= 200; seed++) {
+      const world = newWorld(seed)
+      corruptWhere(world, () => true)
+      world.spawnPressure = SPAWN_COST
+      passTurn(world, party)
+      gangs.push(...spawns(world).filter((l) => l.name === 'Bandit Gang'))
+    }
+    expect(gangs.length).toBeGreaterThan(0)
+    for (const l of gangs) {
+      expect(l.encounter).toBe('bandit_camp')
+      expect(l.threat).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it('spawns at threats 1 and 2 as before bandits: the same places, kinds and loot', () => {
+    // Captured from the code before the Bandit Gang joined SPAWN_KINDS: [col, row, threat, name, loot].
+    const before: Record<number, [number, number, number, string, string[]][]> = {
+      1: [
+        [6, 25, 1, 'Goblin Brood', []],
+        [2, 39, 2, 'Kobold Nest', ['Ring of Fortune']],
+        [18, 28, 2, 'Goblin Brood', []],
+      ],
+      2: [
+        [19, 29, 2, 'Goblin Brood', ['Ring of Protection']],
+        [21, 34, 2, 'Kobold Nest', ['Hawkeye Bow']],
+        [12, 30, 2, 'Goblin Brood', []],
+      ],
+      // A spawn at threat 5 comes first here: the draws after it are unchanged all the same.
+      3: [
+        [23, 30, 2, 'Goblin Brood', ['Wand of Storms']],
+        [17, 10, 2, 'Kobold Nest', ['Wand of Sparks']],
+      ],
+      4: [
+        [11, 36, 2, 'Goblin Brood', ['Wand of Sparks']],
+        [16, 9, 2, 'Kobold Nest', ['Cloak of Shadows']],
+      ],
+    }
+    for (const [seed, expected] of Object.entries(before)) {
+      const world = newWorld(Number(seed))
+      for (let d = 0; d < 3; d++) {
+        corruptWhere(world, (threat) => threat <= 2)
+        world.spawnPressure = SPAWN_COST
+        passTurn(world, party)
+      }
+      const low = spawns(world)
+        .filter((l) => l.threat <= 2)
+        .map((l) => {
+          const { col, row } = hexToOffset(l.position)
+          return [col, row, l.threat, l.name, l.loot.map((item) => item.name)]
+        })
+      expect(low).toEqual(expected)
+    }
   })
 
   it('leaves a party that waits at home a threat-1 nest to fight, however long it waits', () => {

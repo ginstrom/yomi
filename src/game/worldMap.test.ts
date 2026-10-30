@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { HexBoard, hexDistance, hexEquals, hexKey, hexToOffset, offsetToHex, type Hex } from '../grid/hex.ts'
-import { ENCOUNTERS, MAX_THREAT } from './encounters.ts'
+import { ENCOUNTERS, ENCOUNTER_BANDS, MAX_THREAT } from './encounters.ts'
 import { readyMadeParty } from './party.ts'
 import {
   DEFAULT_ENCAMPMENT_NAME,
@@ -67,6 +67,22 @@ describe('newWorld', () => {
     for (const l of monsters(world)) expect(ENCOUNTERS[l.encounter]).toBeTypeOf('function')
   })
 
+  it('sets every monster location at a threat its encounter band holds', () => {
+    for (const l of monsters(world)) {
+      const band = ENCOUNTER_BANDS[l.encounter]
+      expect(l.threat, l.name).toBeGreaterThanOrEqual(band.min)
+      expect(l.threat, l.name).toBeLessThanOrEqual(band.max)
+    }
+  })
+
+  it('has bandits at the Bandit Camp, threat 3, and the Bandit Hideout, threat 4', () => {
+    const camps = monsters(world).filter((l) => l.encounter === 'bandit_camp')
+    expect(camps.map((l) => [l.id, l.name, l.threat])).toEqual([
+      ['bandit_camp', 'Bandit Camp', 3],
+      ['bandit_hideout', 'Bandit Hideout', 4],
+    ])
+  })
+
   it('gives every monster location loot of its own, which another world does not share', () => {
     const lairs = monsters(world)
     for (const l of lairs) expect(l.loot.length).toBeGreaterThan(0)
@@ -77,10 +93,10 @@ describe('newWorld', () => {
       'Kobold Trappers': ["Sage's Circlet"],
       'Hobgoblin Warband': ['Ring of Protection'],
       'Kobold Diggers': ['Wand of Sparks'],
-      'Kobold Skulkers': ['Cloak of Shadows'],
+      'Bandit Camp': ['Cloak of Shadows'],
       'Goblin Marauders': ['Emberblade'],
       'Troll Lair': ['Hawkeye Bow'],
-      'Goblin Outriders': ['Wand of Storms'],
+      'Bandit Hideout': ['Wand of Storms'],
       'Troll Den': ["Sage's Circlet"],
       'Goblin Pillagers': ['Emberblade'],
       'The Blight Source': ['Wand of Storms'],
