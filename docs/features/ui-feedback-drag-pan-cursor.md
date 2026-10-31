@@ -1,7 +1,7 @@
 # Feature: UI feedback — inventory drag and drop, world map drag-to-pan, healing cursor
 
 **Slug:** ui-feedback-drag-pan-cursor
-**Phase:** 4. Implementation
+**Phase:** 6. Report — done; awaiting user on follow-ups and any push/PR
 
 ## Request (user's words)
 
@@ -51,3 +51,9 @@ All answered 2026-10-31 (see decision log).
 - Step 01: review round 1 clean (sonnet) at ec196d8; non-blocking: a long comment line in BattleScene refreshHover (re-wrap in step 04)
 - Step 02: review round 1 clean (opus) at 7403674; three non-blocking edge cases (release past threshold, Home mid-press, Home page scroll) fixed in 8ee7620 with browser tests; no re-review (non-blocking, covered by overall review)
 - Step 03: review round 1 clean (opus) at f54113d, incl. 75k-move fuzz (no loss/duplication); non-blocking stale-drag-after-unreported-release fixed in 53f636f with browser test, plus two test gaps filled
+- Step 04 (2026456): docs-only; its step review folded into the overall review (orchestrator decision). Cursor rendered and checked by orchestrator: reads as a cross at 16-32 px. Index row records a stale hash (a533798) — to fix in verification round. Hand check in a dev server not done by engineer; QA covered it
+
+- Overall review (opus) at 2026456: clean. Non-blocking: stale index hash, manual missing slot<->ground drags, WorldScene stale press after unreported release, retaken screenshot font. All fixed in 1844757 and ae2816f (screenshot retaken in podman). npm test 797 pass, test:browser 67 pass. No re-review (non-blocking, each fix has a test or is docs).
+- QA (sonnet) at 2026456: pass, no defects against R1–R8. Cosmetic, not fixed: a key mid-drag switches tab and silently cancels the drag; ghost stays put on resize until next move. Evidence in .git/pr-review/armor-resistance/evidence/.
+- Simulated user (sonnet, hands-on) at 2026456: all four goals achieved. Fast-drag "no drop" investigated: back-to-back drags within one frame of a redraw (documented next-tick redraw rule), not a defect. "No drag ghost" contradicted by QA evidence.
+- Out-of-scope friction, for the user: no on-screen recentre control (Home only); Heal castable on a full-health ally (wastes mana/AP); paper doll still shows armour after unequipping; placeholder story/tutorial modals.
