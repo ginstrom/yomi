@@ -273,7 +273,8 @@ export class WorldScene extends Phaser.Scene {
     })
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
       const press = this.endPress()
-      if (press && !press.panning) this.onMapClick(press)
+      // A release may carry the pointer past the threshold with no move reported before it: a drag all the same.
+      if (press && !press.panning && !pressMoved(press, pointer)) this.onMapClick(press)
       this.setHovered(over.length > 0 ? null : this.hexAt(pointer.x, pointer.y))
     })
     // Let go off the game, or left with the button down: a pan stays where it got to, and a press is no click.
@@ -290,6 +291,8 @@ export class WorldScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ESC', () => this.openMenu())
     this.input.keyboard?.on('keydown-C', () => this.openPanel(this.active))
     this.input.keyboard?.on('keydown-HOME', () => this.recentre())
+    // Kept from the browser, which would otherwise scroll a page held below the game's minimum size.
+    this.input.keyboard?.addCapture('HOME')
     // Back from a member's panel, where skill points and perks may have been spent, and
     // which tells the member it last showed. The menu resumes the map too, and tells nothing.
     // Back from field crafting, which hands back what it made and the day that passed (`CraftedData`).
@@ -307,6 +310,7 @@ export class WorldScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
       this.input.setDefaultCursor('default')
+      this.input.keyboard?.removeCapture('HOME')
       this.music?.destroy()
       this.music = null
     })
@@ -656,9 +660,9 @@ export class WorldScene extends Phaser.Scene {
     return press
   }
 
-  /** Home: back to following the party, after a pan. Moves no one and passes no time. */
+  /** Home: back to following the party, after a pan (not while the button is still down on one). Moves no one and passes no time. */
   private recentre(): void {
-    if (this.walking || this.outcomeShade.visible || this.panOrigin === null) return
+    if (this.walking || this.outcomeShade.visible || this.press || this.panOrigin === null) return
     this.panOrigin = null
     this.applyOrigin()
     // The map has scrolled under the pointer, which is over another hex now.

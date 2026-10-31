@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { WorldState, WorldStatus } from '../src/game/worldMap.ts'
 import { offsetToHex } from '../src/grid/hex.ts'
 import { WORLD_LAYOUT, boardHexCenter, boardPixelSize, type Point } from '../src/scenes/boardGeometry.ts'
-import { mapOrigin, pannedOrigin } from '../src/scenes/mapScroll.ts'
+import { clampOrigin, mapOrigin, pannedOrigin } from '../src/scenes/mapScroll.ts'
 import type { WorldProbe } from '../src/testHook.ts'
 import { RAIDERS, useGames, worldHexOnScreen, type Game } from './driver.ts'
 
@@ -126,6 +126,62 @@ describe('the world map', () => {
     expect(home.world.party).toEqual(panned.world.party)
     expect(home.world.turn).toBe(panned.world.turn)
     expect(home.walking).toBe(false)
+  })
+
+  it('does not travel on a press let go past the threshold, even with no move reported on the way', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    const at = worldHexOnScreen(start, offsetToHex(11, 19))
+    await game.holdDown(at)
+    // The release alone carries the new position, as a browser may send it after a fast flick.
+    const cdp = await game.page.context().newCDPSession(game.page)
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: at.x + 40, y: at.y, button: 'left', clickCount: 1 })
+    await game.frames()
+    const after = await game.waitFor('World')
+    expect(after.walking).toBe(false)
+    expect(after.world.party).toEqual(start.world.party)
+    expect(after.world.turn).toBe(start.world.turn)
+  })
+
+  it('ignores Home while the button is still down on a pan', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    const press = midView(start)
+    await game.holdDown(press)
+    await game.hover(plus(press, -40, -30))
+    const dragging = await game.waitFor('World', (w) => w.origin.x !== start.origin.x || w.origin.y !== start.origin.y)
+    await game.press('Home')
+    expect((await game.waitFor('World')).origin).toEqual(dragging.origin)
+    await game.letGo()
+  })
+
+  it('keeps Home from scrolling the page when the window is below the game\'s minimum size', async () => {
+    const game = await games.open()
+    await game.newGame()
+    await game.resize(800, 500)
+    await game.page.evaluate(() => window.scrollTo(0, 40))
+    const scrolled = await game.page.evaluate(() => window.scrollY)
+    expect(scrolled).toBeGreaterThan(0)
+    const before = await game.waitFor('World')
+    await pan(game, before, -40, -30)
+    await game.press('Home')
+    await game.waitFor('World', (w) => w.origin.x === before.origin.x && w.origin.y === before.origin.y)
+    expect(await game.page.evaluate(() => window.scrollY)).toBe(scrolled)
+  })
+
+  it('keeps a pan within the map when the window is resized', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    const map = boardPixelSize(start.world.board, WORLD_LAYOUT)
+    // Panned to the map's right edge, then the window grows: that edge must still meet the view's, not leave a gap.
+    const rightEdge = (w: WorldProbe): number => clampOrigin({ x: -1e6, y: w.origin.y }, map, w.view).x
+    let panned = start
+    while (panned.origin.x !== rightEdge(panned)) panned = await pan(game, panned, -500, 0)
+    await game.resize(1600, 1000)
+    const resized = await game.waitFor('World', (w) => w.view.width !== panned.view.width)
+    expect(resized.origin).toEqual(clampOrigin(resized.origin, map, resized.view))
+    expect(resized.origin.x).toBe(rightEdge(resized))
+    expect(resized.origin.x).not.toBe(panned.origin.x)
   })
 
   it('ignores Home while the party walks', async () => {

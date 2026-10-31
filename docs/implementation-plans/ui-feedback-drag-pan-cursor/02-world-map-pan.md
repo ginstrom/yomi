@@ -62,3 +62,12 @@ Deviations:
 - `driver.ts` has no `press`/`move` mouse helpers as the task named; the tests use `holdDown`, `hover` (move with the button held) and `letGo`.
 
 For step 03: import `DRAG_THRESHOLD_PX` and `pressMoved` from `./mapScroll.ts`; nothing else in this step touches the inventory.
+
+**Review round 1** (clean; three non-blocking findings, all fixed in one follow-up commit, "Step 02 review: ..."):
+- Found: `pointerup` travelled for a press released past the threshold when no move past it had been reported. Fixed: an unpanned press travels only if `!pressMoved(press, pointer)` at release. Browser test (red first: the party walked) sends the release alone through CDP, 40 px from the press.
+- Found: Home acted while the button was still down on a pan. Fixed: `recentre` ignores Home while `press` is set. Browser test (red first: the origin jumped back mid-drag).
+- Found: Home scrolled the page when the window was below the minimum size. Fixed: `addCapture('HOME')` in `create`, removed on shutdown (the debug console and manual stop key events in the capture phase, so they still get Home). Browser test (red first: `scrollY` changed from 40).
+- Added: a resize-after-pan test (a pan at the right edge, then a wider window, stays clamped to that edge). It passed before the fixes; it guards `layout()`'s re-clamp.
+- Disputed: none.
+
+Verification: `npm test` 66 files, 770 tests passed. `npm run test:browser` 9 files, 64 tests passed. `npx tsc --noEmit` clean.
