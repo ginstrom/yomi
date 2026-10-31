@@ -61,7 +61,7 @@ Produced by step 03 in `src/character/character.ts`: `equipFromBackpack(characte
 | 01 | [Healing cursor](01-healing-cursor.md) | Friendly-target spells show a green cross over a valid target; hostile spells and weapons keep the swords | none | done (0216092) |
 | 02 | [World map drag-to-pan and Home](02-world-map-pan.md) | Dragging pans the map; a short press still travels; Home recentres | none | done (9fe243d) |
 | 03 | [Inventory drag and drop](03-inventory-drag-drop.md) | Items drag between backpack, equipment and ground/baggage; clicks act on release | 02 (for `pressMoved`/`DRAG_THRESHOLD_PX`) | done (4c0dcb6) |
-| 04 | [Docs and final pass](04-docs-and-final-pass.md) | CLAUDE.md and the manual describe the changes; one manual check of all three | 01, 02, 03 | done (a533798) |
+| 04 | [Docs and final pass](04-docs-and-final-pass.md) | CLAUDE.md and the manual describe the changes; one manual check of all three | 01, 02, 03 | done (2026456) |
 
 ## Execution order
 
@@ -96,3 +96,13 @@ No blocking questions. Planner decisions (routine):
 ## For implementers
 
 Set your step to `in progress` here when starting and `done` with the commit hash when finished. Record evidence, deviations and blockers in the task file's execution record.
+
+## Execution notes
+
+**Overall review round (2026-10-31, at 2026456).** The overall review, QA and the simulated player passed with nothing blocking. Follow-ups:
+1. Step 04's row recorded the stale hash a533798; corrected to 2026456.
+2. Manual: the drag bullet now also names slot to baggage/ground and baggage/ground to slot, and the ring bullet says a dragged ring goes in the slot it is dropped on.
+3. `WorldScene`: a pan whose release went unreported (let go off the window) kept `this.press`, so Home was ignored and a later move resumed the pan. `pointermove` now ends the press when `pointer.noButtonDown()`; Phaser keeps `isDown` true without a mouseup. New browser test in `e2e/world.test.ts` ("ends a pan whose release went unreported…") failed first: the buttonless move panned on.
+4. Investigated the simulated player's "fast drag drops nothing": not a drag defect. A single drag dropped correctly in every variant tried (one move then up, down/move/up with no frame waits, stepped moves, a release with no move reported). The one failure was a second drag pressed within a frame or so of the first drop: the panel redraws on the next tick and its new slots take presses only from the frame after (CLAUDE.md's documented rule for every redrawing scene). Instrumenting showed that second `pointerdown` never reached a slot. Drags hit this window more often than clicks, because their change lands on release instead of on press, but no human press follows a drop that fast. No change.
+5. `docs/manual/images/panel-inventory.png` retaken in the podman container (`npm run manual:screenshots -t "the world map, the character panel"`); only that file kept.
+Also: CLAUDE.md's gear paragraph had the step 03 drag sentence inserted mid-sentence; moved after it, and the world-map ring rule now notes the dragged case.

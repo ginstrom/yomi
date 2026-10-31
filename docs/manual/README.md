@@ -194,11 +194,11 @@ This tab lists the spells the hero knows and the mana they are carrying. On the 
 The paper doll shows what the hero wears: head, neck, body, cloak, both hands, gloves, belt, boots and two rings. Below it is the backpack.
 
 - **Click** a backpack item to equip it, or click a worn item to stow it.
-- **Drag** an item to move it: from the backpack onto a slot to wear it, from a slot back to the backpack to stow it, and between the backpack and the baggage (or the ground in battle). Drop it somewhere that does not fit and it returns to where it came from. **Esc** cancels a drag.
+- **Drag** an item to move it: from the backpack onto a slot to wear it, from a slot back to the backpack to stow it, from a slot onto the baggage (or the ground in battle) to put it there, from the baggage (or the ground) onto a slot to take it and wear it, and between the backpack and the baggage (or the ground). Drop it somewhere that does not fit and it returns to where it came from. **Esc** cancels a drag.
 - On the world map, the right-hand grid is the party's shared **baggage**, which has no size limit. Click an item there to take it. **Right-click** (or Ctrl+click) an item to put it in the baggage. This is how you pass items between heroes.
 - In battle, the right-hand grid is the **ground** under the hero. Right-click to drop an item, and click to pick one up.
 - A two-handed weapon (the bow, the greatsword) and an off-hand item cannot be held together. Equipping one stows the other.
-- A ring goes in whichever ring slot is free.
+- A clicked ring goes in whichever ring slot is free; a dragged one goes in the ring slot you drop it on.
 
 ---
 
