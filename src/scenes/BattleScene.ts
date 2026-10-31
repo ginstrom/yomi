@@ -1055,7 +1055,8 @@ export class BattleScene extends Phaser.Scene {
   /**
    * Shows what a click on the hovered hex would do: an arrow to where the
    * selected unit would walk, and red on it and the foe it would go for, with
-   * the cursor to match (crossed swords, faded when the AP can't cover a strike; a green cross for a friendly spell).
+   * the cursor to match (crossed swords, faded when the AP can't cover a
+   * strike; a green cross for a friendly spell).
    */
   private refreshHover(): void {
     this.hoverMarks.clear()

@@ -29,3 +29,10 @@ Run the game (`npm run dev`, `?seed=` for a repeatable battle) and check, record
 - [ ] One commit; index status and hash updated.
 
 ## Execution record
+
+### Step 04 record (engineer)
+- CLAUDE.md: steps 02 and 03 had already covered pan, Home, drag and `gearDrag.ts`; added only the cursor note (`spellCursor`, `CURSORS.heal`) to the BattleScene paragraph.
+- Manual: world map pan and Home, inventory drag (and Esc), the aiming cursors. There is no world-map key table, so Home is in the prose; the battle key table has no Home. Only `panel-inventory.png` showed outdated text (the hint, now "Drag to move."); `npm run manual:screenshots` re-encoded every image, so the others were reverted and only that one kept.
+- `refreshHover` doc comment re-wrapped (step 01 review note).
+- Cursor check: the SVG from `healCursor()` rendered at 16, 24 and 32 px on three backgrounds (scratchpad `heal-cursor.png`): reads as a green-edged white-cored cross; at 16 px green is mostly the outline.
+- Manual check items 1 to 3 were NOT done by hand in a dev server; they rest on the step 02/03 browser tests. Item 4: `npm test` 797 passed, `npm run test:browser` 66 passed.

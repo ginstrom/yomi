@@ -110,6 +110,8 @@ The world map is a large board of hexes, many screens wide, and the view scrolls
 
 Click a hex to travel there. Hovering over a hex first shows the route, and a panel at the top right tells what you know of it: what stands there, its blight (as you last saw it, if it is out of sight), whether the blight is gaining or receding there, how many days away it is, and your heroes' levels and hit points on the party's own hex. The party walks one hex per turn and stops early if something important happens on the way, such as monsters coming into view, a site you hold falling under threat, or monsters standing in the road. Routes avoid known monster lairs unless the lair is where you are going.
 
+The map is larger than the window. It follows the party as it travels, but you can **drag** it with the mouse to look elsewhere; it stops at the map's edges, and a short click still travels. The view stays where you left it until the party next sets out, or you press **Home** to bring it back to the party.
+
 ### Fog of war
 
 Black hexes have never been seen. The party sees 5 hexes around it, the encampment 6, a resource you hold 2, and a watchtower 8. Land you have seen but cannot see now is drawn under a veil, showing the state it was in when you last saw it. Once you have spotted a monster lair it stays on your map. Whatever lies at the heart of the blight is as hidden as the rest, until you explore far enough to find it.
@@ -192,6 +194,7 @@ This tab lists the spells the hero knows and the mana they are carrying. On the 
 The paper doll shows what the hero wears: head, neck, body, cloak, both hands, gloves, belt, boots and two rings. Below it is the backpack.
 
 - **Click** a backpack item to equip it, or click a worn item to stow it.
+- **Drag** an item to move it: from the backpack onto a slot to wear it, from a slot back to the backpack to stow it, and between the backpack and the baggage (or the ground in battle). Drop it somewhere that does not fit and it returns to where it came from. **Esc** cancels a drag.
 - On the world map, the right-hand grid is the party's shared **baggage**, which has no size limit. Click an item there to take it. **Right-click** (or Ctrl+click) an item to put it in the baggage. This is how you pass items between heroes.
 - In battle, the right-hand grid is the **ground** under the hero. Right-click to drop an item, and click to pick one up.
 - A two-handed weapon (the bow, the greatsword) and an off-hand item cannot be held together. Equipping one stows the other.
@@ -277,6 +280,8 @@ Press **I** to open the inventory for the selected hero. Equipping, stowing, dro
 | 1–9 | Pick a spell from the open list |
 | I / C / S | Inventory / Character / Skills panel |
 | Esc | Close the spell list, cancel aiming, or open the menu |
+
+While aiming a spell the pointer is crossed swords over a valid target of an attacking spell, and a green cross over a valid target of a healing or protective one.
 
 ### Victory and defeat
 

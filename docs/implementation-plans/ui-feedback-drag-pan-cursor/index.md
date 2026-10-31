@@ -61,7 +61,7 @@ Produced by step 03 in `src/character/character.ts`: `equipFromBackpack(characte
 | 01 | [Healing cursor](01-healing-cursor.md) | Friendly-target spells show a green cross over a valid target; hostile spells and weapons keep the swords | none | done (0216092) |
 | 02 | [World map drag-to-pan and Home](02-world-map-pan.md) | Dragging pans the map; a short press still travels; Home recentres | none | done (9fe243d) |
 | 03 | [Inventory drag and drop](03-inventory-drag-drop.md) | Items drag between backpack, equipment and ground/baggage; clicks act on release | 02 (for `pressMoved`/`DRAG_THRESHOLD_PX`) | done (4c0dcb6) |
-| 04 | [Docs and final pass](04-docs-and-final-pass.md) | CLAUDE.md and the manual describe the changes; one manual check of all three | 01, 02, 03 | pending |
+| 04 | [Docs and final pass](04-docs-and-final-pass.md) | CLAUDE.md and the manual describe the changes; one manual check of all three | 01, 02, 03 | done (a533798) |
 
 ## Execution order
 

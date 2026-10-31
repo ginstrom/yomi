@@ -50,3 +50,4 @@ All answered 2026-10-31 (see decision log).
 
 - Step 01: review round 1 clean (sonnet) at ec196d8; non-blocking: a long comment line in BattleScene refreshHover (re-wrap in step 04)
 - Step 02: review round 1 clean (opus) at 7403674; three non-blocking edge cases (release past threshold, Home mid-press, Home page scroll) fixed in 8ee7620 with browser tests; no re-review (non-blocking, covered by overall review)
+- Step 03: review round 1 clean (opus) at f54113d, incl. 75k-move fuzz (no loss/duplication); non-blocking stale-drag-after-unreported-release fixed in 53f636f with browser test, plus two test gaps filled
