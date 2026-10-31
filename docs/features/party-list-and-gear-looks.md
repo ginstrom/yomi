@@ -1,7 +1,7 @@
 # Feature: world-map party list, and hero figures that show worn gear
 
 **Slug:** party-list-and-gear-looks
-**Phase:** 5. Verification
+**Phase:** 6. Report — done; awaiting user on follow-ups and any push/PR
 
 ## Request (user's words)
 
@@ -53,3 +53,7 @@ Both designer questions answered with defaults (see log). Stage 05/06 design wor
 - Step 02 (3a6c5a4): orchestrator viewed previews (fine); brown cuffs accepted (orchestrator). Review round 1 (opus) clean. Non-blocking, passed to step 03: cape shows only as a doubled outline above row 19; cape wider than designed; bare body all one brown (hair reads like a hood); index hash missing.
 - Step 03 (103885e, 08185ad): orchestrator viewed screenshots (fine). Review round 1 (opus) clean, incl. swing, hit outline and fallen fade seen in a browser. Non-blocking, folded into step 04: cape-edge wording (col 25 vs 26 rows 13–15); coverage test could require a cloak back sprite. Hit tint on layers added mid-tint: accepted.
 - Step 04 (a05b1f4): manual + 22 screenshots retaken in podman (all content changes; 10 overlay shots kept because the map behind changed — orchestrator decision). Step review folded into overall review. Design §7 hand checks not redone by engineer; QA/sim user cover them.
+- Overall review (opus) at a05b1f4: clean. Non-blocking record/manual fixes made in 89591d8. Noted for stage 06: map figure still dressed from party[0].
+- QA (sonnet) at a05b1f4: pass, no defects; Part A and B fully exercised. Not captured: fallen cloaked hero, hit outline on a cloaked hero.
+- Simulated user (sonnet) at a05b1f4: all three goals achieved. "No cape on map" investigated: cape is drawn (partyLook and enlarged pixels) but hard to see at map scale on dark grass behind shield/sword — not a defect; art change is a user decision.
+- For the user: cape readability on the map; heroes look alike (same starting breastplate); battle nameplates overlap when heroes stand in one column; party entry has no visible label; tutorial tips block drags (user said leave tutorial as is).
