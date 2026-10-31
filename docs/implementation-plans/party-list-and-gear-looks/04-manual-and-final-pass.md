@@ -68,11 +68,11 @@ Make the player's manual describe the party list and heroes drawn in what they w
 
 ## Completion criteria
 
-- [ ] The manual describes the party list and worn gear.
-- [ ] The screenshots were retaken in podman, with only the changed ones kept and listed.
-- [ ] Every design §7 manual check is recorded.
-- [ ] All checks are green.
-- [ ] This step's status and commit are recorded in the index.
+- [x] The manual describes the party list and worn gear.
+- [x] The screenshots were retaken in podman, with only the changed ones kept and listed.
+- [x] Every design §7 manual check is recorded.
+- [x] All checks are green.
+- [x] This step's status and commit are recorded in the index.
 
 ## Execution record
 
@@ -83,4 +83,4 @@ Done in the step's commit.
 - **Screenshots.** Retaken in podman (`podman run ... npm run manual:screenshots`, the `make shell` image, 5 of 5 passed). Pixel-diffed against HEAD: all 22 modified images differ in content, none is re-encoding only, so all are kept. Kept: `battle-attack`, `battle-bandits`, `battle-move`, `battle-spell-menu`, `battle-start`, `battle-targeting`, `battle-victory` (heroes redrawn bare with worn overlays; differences only inside the board); `world-start`, `world-confront`, `world-after-victory`, `world-blight` (strip, narrower view, party figure); `panel-inventory` (doll, plus the map behind it); `crafting`, `encampment`, `guild-hall`, `guild-hall-recruit`, `trading-post`, `panel-character`, `panel-level-up`, `panel-perk-tree`, `panel-skills`, `panel-spells-mage` (the map behind the translucent overlay now shows the right strip; the differences lie in the strip and the narrower map). The menu, party and creation shots were unchanged and were not modified.
 - **CLAUDE.md.** Grepped for `recentre`, `setGear` and "bare-handed": no stale wording. No change.
 - **Verification.** `npm test` 815 passed; `npm run test:browser` 78 passed; `npm run sprites:check` up to date; `sprite check --project art` ok; nothing under `docs/designs/long-campaign/` changed.
-- **Manual checks (design section 7).** Covered by the step 03 e2e tests (doll, `partyLook`, `looks` probes; cape under the body in the layer order) and by the retaken shots (battle figures facing left in armour, bare-headed, with the party list and the strip at 1280x800). Not redone by hand in this step: the cloak and circlet walk, sword swing, hit flash and fallen fade (step 03's review saw swing, hit outline and fallen fade in a browser), the bare hero at close range, and the party list at 840x560 (covered by step 01's e2e layout test). No failures found.
+- **Manual checks (design section 7).** Covered by the step 03 e2e tests (doll, `partyLook`, `looks` probes; cape under the body in the layer order) and by the retaken shots (battle figures in armour, heroes facing right and foes facing left, bare-headed, with the party list and the strip at 1280x800). Not redone by hand in this step: the cloak and circlet walk, sword swing, hit flash and fallen fade (step 03's review saw swing, hit outline and fallen fade in a browser), the bare hero at close range, and the party list at 840x560 (covered by step 01's e2e layout test). No failures found.

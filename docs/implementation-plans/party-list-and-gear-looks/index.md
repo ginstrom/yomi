@@ -95,7 +95,7 @@ In `UnitFigure`, `setGear(sprites)` becomes `setLook(look: HeroLook): this`, and
 | 01 | [Design approval and the party list](01-party-list.md) | Design marked approved. The world map has the right-hand party list: select, centre, hover summary, layout at 840×560 | none | done (`c90b008`; review round 1 in the next commit) |
 | 02 | [Bare hero body and worn-gear sprites](02-gear-sprites.md) | `warrior` redrawn bare; `gear_breastplate`, `gear_circlet`, `gear_cloak` and `gear_cloak_back` in the atlas | none | done (`3a6c5a4`) |
 | 03 | [Hero figures wear their gear](03-hero-look.md) | `heroLook` and `UnitFigure.setLook` draw worn overlays on the doll, in battle and on the map; coverage test | 02 | done (`103885e`; art touch-up and record in the next commit) |
-| 04 | [Manual, screenshots and final pass](04-manual-and-final-pass.md) | Manual §3 and §4 describe both parts; screenshots retaken in podman; manual checks recorded | 01, 03 | done (this commit) |
+| 04 | [Manual, screenshots and final pass](04-manual-and-final-pass.md) | Manual §3 and §4 describe both parts; screenshots retaken in podman; manual checks recorded | 01, 03 | done (`a05b1f4`) |
 
 ## Execution order
 
@@ -147,6 +147,14 @@ No blocking questions. Planner decisions (routine):
 3. `SINGLE_PARTY_NAME` is a named constant, so that stage 06 can find the one place a name is made up.
 4. The column's colours (`COLUMN_COLOR`, `COLUMN_EDGE` and the three frame colours) move from `PartyColumn.ts` into `partyPanel.ts` as exports, so that `PartyListView` uses the same colours.
 5. Part B's art comes before its code, because the code's atlas and coverage tests need the sprites. The cape is judged on the doll in step 03, once the wiring exists. Step 03 may adjust the art and rebuild.
+
+## Execution notes
+
+**Overall review round (at `a05b1f4`).** The overall review and QA were clean. Records fixed from the review: step 04's execution record said the battle shots show heroes facing left (heroes face right, only foes face left); step 04's row now carries `a05b1f4` and its completion boxes are ticked; the manual's map section now says a click on your party's entry also brings the view back.
+
+The design's §7 hand checks were covered by QA: the sword swing, the hit outline on a foe, the fallen fade, the walk on the map, the bare hero and the party list at 840x560 all passed. Not captured: a fallen hero wearing the cloak, and the outline pulsed on a cloaked hero.
+
+A simulated player reported the map figure showing no cape with the Cloak of Shadows on Aldric. Not a defect: reproduced with the cloak put on Aldric through the panel on the world map, `World.partyLook` is `gear_cloak_back, warrior, gear_breastplate, gear_cloak, gear_circlet, gear_sword, gear_shield` once the panel closes, and the screenshot at 1280x800 shows the cape. The player's own shots (`sim-user/16-map-dressed.png`, `20-map-cloak.png`), enlarged, show it too: the blue collar, a strip beside each arm and the dark cape beside the legs. It is present but low in contrast at the map's 2x scale, its dark blue against the grass, with the shield and the sword covering most of the strips. The art was left as it is; a brighter or wider cape at map scale is for the user to decide.
 
 ## For implementers
 

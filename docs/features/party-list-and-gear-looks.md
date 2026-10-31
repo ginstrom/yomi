@@ -1,7 +1,7 @@
 # Feature: world-map party list, and hero figures that show worn gear
 
 **Slug:** party-list-and-gear-looks
-**Phase:** 4. Implementation
+**Phase:** 5. Verification
 
 ## Request (user's words)
 
@@ -52,3 +52,4 @@ Both designer questions answered with defaults (see log). Stage 05/06 design wor
 - Step 01 (c90b008): review round 1 (opus) changes needed — party entry drawn above outcome shade (blocking) + 4 non-blocking; fixed in 4058b11 (also fixed pre-existing 0×0 outcome shade that never blocked input). Round 2 clean. Minor leftover: hover summary may not reappear on leave-and-return to the same entry (not fixed).
 - Step 02 (3a6c5a4): orchestrator viewed previews (fine); brown cuffs accepted (orchestrator). Review round 1 (opus) clean. Non-blocking, passed to step 03: cape shows only as a doubled outline above row 19; cape wider than designed; bare body all one brown (hair reads like a hood); index hash missing.
 - Step 03 (103885e, 08185ad): orchestrator viewed screenshots (fine). Review round 1 (opus) clean, incl. swing, hit outline and fallen fade seen in a browser. Non-blocking, folded into step 04: cape-edge wording (col 25 vs 26 rows 13–15); coverage test could require a cloak back sprite. Hit tint on layers added mid-tint: accepted.
+- Step 04 (a05b1f4): manual + 22 screenshots retaken in podman (all content changes; 10 overlay shots kept because the map behind changed — orchestrator decision). Step review folded into overall review. Design §7 hand checks not redone by engineer; QA/sim user cover them.
