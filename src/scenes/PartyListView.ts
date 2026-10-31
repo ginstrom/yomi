@@ -41,6 +41,12 @@ export class PartyListView {
   private readonly onHover: (id: string | null) => void
   private readonly bg: Phaser.GameObjects.Rectangle
   private readonly edge: Phaser.GameObjects.Rectangle
+  /**
+   * Holds every entry's objects, made with the strip, so that entries built
+   * later stay at its place in the display list: under whatever the scene drew
+   * after it, such as the world map's outcome screen.
+   */
+  private readonly entryLayer: Phaser.GameObjects.Container
   private tiles: EntryTile[] = []
   private entries: PartyListEntry[] = []
   private selected = ''
@@ -54,6 +60,7 @@ export class PartyListView {
     // Interactive with no handler, so a click between entries is not a click on the map under the strip.
     this.bg = scene.add.rectangle(0, 0, PARTY_LIST_W, 1, COLUMN_COLOR).setOrigin(0).setInteractive()
     this.edge = scene.add.rectangle(0, 0, 1, 1, COLUMN_EDGE).setOrigin(0)
+    this.entryLayer = scene.add.container(0, 0)
   }
 
   /** The strip runs down the right of a window `width` wide, from `top` to `bottom`. */
@@ -96,6 +103,7 @@ export class PartyListView {
         members: entry.members.length,
         selected: entry.id === this.selected,
         confronting: entry.confronting !== null,
+        hovered: entry.id === this.hovered,
       }
     })
   }
@@ -120,6 +128,7 @@ export class PartyListView {
       const hpBack = scene.add.rectangle(0, 0, 1, 1, 0x212121).setOrigin(0).setStrokeStyle(1, 0x000000)
       const hpFill = scene.add.rectangle(0, 0, 1, 1, 0x43a047).setOrigin(0)
       const tile: EntryTile = { id: entry.id, image, frame, glyph, count, alert, hpBack, hpFill }
+      this.entryLayer.add([image, frame, glyph, count, alert, hpBack, hpFill])
       frame.on('pointerover', () => this.setHovered(tile.id))
       frame.on('pointerout', () => this.setHovered(null))
       frame.on('pointerdown', () => {
@@ -159,6 +168,12 @@ export class PartyListView {
       const ratio = entry.maxHp > 0 ? Phaser.Math.Clamp(entry.hp / entry.maxHp, 0, 1) : 0
       tile.hpFill.setSize(bar.width * ratio, bar.height)
     }
+  }
+
+  /** Forgets the hovered entry without telling the scene, for a pointer that left with no `pointerout`. */
+  clearHover(): void {
+    this.hovered = null
+    for (const tile of this.tiles) this.strokeFrame(tile)
   }
 
   private setHovered(id: string | null): void {

@@ -225,3 +225,15 @@ Implemented 2026-10-31 on `armor-resistance`, one commit (hash in the index).
 - Step 03 edits `WorldScene.ts` and `testHook.ts` after this; the new fields sit beside `party` in `WorldProbe` and in `probe()`.
 - Step 04's manual text can describe the list as built: entry, "!", gold frame, hover summary, click to centre.
 
+
+### Review round 1
+
+Found 5; fixed 5 (the AC4 walking test and the "recentres" test names were accepted as they are).
+
+1. **Blocking: entries drew above the outcome shade.** `PartyListView` now makes a Container (`entryLayer`) in its constructor, before the shade, and adds every tile's objects to it, so a rebuild stays under the shade. A second, older defect came up while writing the test: `outcomeShade` was made 0×0 before `setInteractive()`, so Phaser gave it no hit area (`input` undefined) and it never swallowed a hover or click over anything, not only the list. It is now made 1×1, and `layout()`'s `setSize` grows the hit area. Test: "keeps the party list under the outcome screen, taking no hover or click" (in a `lost` state, hovering the entry leaves `parties[0].hovered` false, and a click changes neither `info` nor `origin`). It was seen failing before the fixes, and it fails again with the container removed and only the shade fixed, so the test needs both fixes. The coordinator's cursor check could not be used: over the shade the canvas cursor is already `pointer`, left over from the menu's Continue button, so the probe gained the signal instead: **`PartyListProbe.hovered: boolean`** (an addition to the index contract, which nothing later depends on).
+2. **Drag from the strip.** Test "neither pans nor travels on a drag that starts on the party list": a drag from the entry, and from the strip between entries, into mid-view leaves `origin`, `turn` and `walking` unchanged. It passed at once; the strip's interactive background already made it no map press.
+3. **Column from the selected entry.** `create()` now sets `selectedParty` first, then builds the column and `active` from `selectedMembers()` (the selected entry's members via `deployedParties`, falling back to `game.party` for an empty party), the same path as `selectParty`.
+4. **Stale party hover.** The PAUSE and GAME_OUT handlers call `clearPartyHover()`, which clears `hoveredParty`, refreshes the info panel, and calls the new `PartyListView.clearHover()` so the frame's hover stroke goes too. Test "forgets the hovered entry when the pointer leaves the game or the menu opens": it was seen failing at the GAME_OUT step before the fix. The menu half was not run red separately; without the fix `setHovered(null)` returns early when no hex is hovered, so the panel would keep the party summary.
+5. **Index:** the commit column now names `c90b008`.
+
+Verification after the round: `npm test`: 68 files, 807 tests passed. `npm run test:browser`: 9 files, 75 tests passed.

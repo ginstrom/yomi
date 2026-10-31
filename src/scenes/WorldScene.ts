@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import type { Character } from '../character/character.ts'
 import { canAdvance } from '../character/progression.ts'
 import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex, type WorldEvent } from '../game/blight.ts'
 import { atEncampment, buildOutpost, buildTower, canBuildOutpost, canBuildTower, outpostSiteRefusal, towerSiteRefusal } from '../game/buildings.ts'
@@ -205,10 +206,10 @@ export class WorldScene extends Phaser.Scene {
     this.hovered = null
     this.panOrigin = null
     this.press = null
-    // The first member with something to spend, so one click on its portrait opens its panel.
-    this.active = Math.max(0, this.gameState.party.findIndex(canAdvance))
     this.selectedParty = deployedParties(this.gameState)[0]?.id ?? FIRST_PARTY_ID
     this.hoveredParty = null
+    // The first member with something to spend, so one click on its portrait opens its panel.
+    this.active = Math.max(0, this.selectedMembers().findIndex(canAdvance))
 
     this.mapLayer = this.add.container(0, 0)
     this.buildTerrain()
@@ -260,7 +261,7 @@ export class WorldScene extends Phaser.Scene {
     this.outpostButton = this.createButton('Build Outpost', () => this.onBuildOutpost(), WIDE_BUTTON_W)
     const enter = `Enter ${encampmentName(this.world)}`
     this.encampmentButton = this.createButton(enter, () => this.openEncampment(), Math.max(BUTTON_W, enter.length * 10 + 28))
-    this.column = new PartyColumn(this, this.gameState.party, (index) => this.onPortrait(index))
+    this.column = new PartyColumn(this, this.selectedMembers(), (index) => this.onPortrait(index))
     // Before the outcome screen, which covers it.
     this.partyList = new PartyListView(
       this,
@@ -268,7 +269,8 @@ export class WorldScene extends Phaser.Scene {
       (id) => this.onPartyHover(id),
     )
 
-    this.outcomeShade = this.add.rectangle(0, 0, 0, 0, 0x000000, 0.75).setOrigin(0).setInteractive()
+    // Made 1×1, not 0×0: Phaser gives a shape of no size no hit area, and layout's setSize grows only one it has.
+    this.outcomeShade = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.75).setOrigin(0).setInteractive()
     this.outcomeText = this.add
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: '18px', color: '#ffffff', align: 'center', lineSpacing: 8 })
       .setOrigin(0.5)
@@ -299,11 +301,13 @@ export class WorldScene extends Phaser.Scene {
     this.input.on('pointerupoutside', () => this.endPress())
     this.input.on(Phaser.Input.Events.GAME_OUT, () => {
       this.endPress()
+      this.clearPartyHover()
       this.setHovered(null)
     })
     // A paused map (menu open) mustn't leave its cursor on the overlay.
     this.events.on(Phaser.Scenes.Events.PAUSE, () => {
       this.endPress()
+      this.clearPartyHover()
       this.setHovered(null)
     })
     this.input.keyboard?.on('keydown-ESC', () => this.openMenu())
@@ -821,6 +825,18 @@ export class WorldScene extends Phaser.Scene {
     g.lineStyle(7, ROUTE_EDGE, 0.5).strokePoints(points, false)
     g.lineStyle(3, ROUTE_COLOR, 1).strokePoints(points, false)
     g.lineStyle(3, toMonsters ? MONSTERS_OUTLINE : ROUTE_COLOR, 1).strokePoints(this.hexPolygon(to), true)
+  }
+
+  /** The members of the selected party, whom the column shows. */
+  private selectedMembers(): readonly Character[] {
+    return deployedParties(this.gameState).find((party) => party.id === this.selectedParty)?.members ?? this.gameState.party
+  }
+
+  /** The pointer is gone (off the game, or the map paused under an overlay): no entry is hovered, and the panel forgets it. */
+  private clearPartyHover(): void {
+    this.partyList.clearHover()
+    this.hoveredParty = null
+    this.refreshInfo()
   }
 
   /** The pointer came onto a party's entry (`id`) or left it (null): the info panel tells of the party. */

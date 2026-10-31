@@ -124,6 +124,8 @@ export interface PartyListProbe extends Point {
   selected: boolean
   /** Whether the party stands before monsters, which the entry marks with a red "!". */
   confronting: boolean
+  /** Whether the pointer is over the entry, as the entry itself heard it (nothing over it, such as the outcome screen, took the hover). */
+  hovered: boolean
 }
 
 export interface WorldProbe {

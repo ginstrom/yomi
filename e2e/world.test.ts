@@ -276,6 +276,29 @@ describe('the world map', () => {
     expect(hovered.infoRect).not.toBeNull()
   })
 
+  it('forgets the hovered entry when the pointer leaves the game or the menu opens', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    await game.hover(start.parties[0])
+    await game.waitFor('World', (w) => w.info.startsWith('Your party'))
+    // Leaving the window, as the browser reports it.
+    await game.page.evaluate(() => {
+      document.querySelector('canvas')!.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: null }))
+    })
+    await game.frames()
+    await game.waitFor('World', (w) => w.info === '')
+
+    // Back over the entry from elsewhere, so it hears the pointer come.
+    await game.hover({ x: start.parties[0].x - 120, y: start.parties[0].y })
+    await game.hover(start.parties[0])
+    await game.waitFor('World', (w) => w.info.startsWith('Your party'))
+    await game.press('Escape')
+    await game.waitForScenes(['Menu'], ['World'])
+    expect((await game.probe('World'))!.info).toBe('')
+    await game.press('Escape')
+    await game.waitForScenes(['World'])
+  })
+
   it('ignores a click on the party’s entry while the party walks', async () => {
     const game = await games.open()
     const start = await game.newGame()
@@ -290,6 +313,21 @@ describe('the world map', () => {
     const arrived = await game.waitFor('World', (w) => !w.walking && w.world.turn !== start.world.turn)
     expect(arrived.world.party).toEqual(to)
     expect(arrived.origin).toEqual(following(arrived))
+  })
+
+  it('neither pans nor travels on a drag that starts on the party list', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    await game.drag(start.parties[0], midView(start))
+    const after = await game.waitFor('World')
+    expect(after.origin).toEqual(start.origin)
+    expect(after.world.turn).toBe(start.world.turn)
+    expect(after.walking).toBe(false)
+    // A drag from the strip between entries is no map press either.
+    await game.drag({ x: start.parties[0].x, y: start.parties[0].y + 120 }, midView(start))
+    const between = await game.waitFor('World')
+    expect(between.origin).toEqual(start.origin)
+    expect(between.world.turn).toBe(start.world.turn)
   })
 
   it('marks the party’s entry while it stands before monsters, and names them on hover', async () => {
@@ -494,6 +532,20 @@ describe('the world map', () => {
     await game.click(won.buttons.end)
     await game.waitForScenes(['Menu'])
     expect(await game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!).game.world.status)).toBe('won')
+  })
+
+  it('keeps the party list under the outcome screen, taking no hover or click', async () => {
+    const game = await games.open()
+    const lost = await reloadedAs(game, 'lost')
+    expect(lost.parties).toHaveLength(1)
+    // Hovered above the shade, the entry would hear it; under it, the shade takes it.
+    await game.hover(lost.parties[0])
+    await game.frames()
+    expect((await game.waitFor('World')).parties[0].hovered).toBe(false)
+    await game.click(lost.parties[0])
+    const after = await game.waitFor('World')
+    expect(after.info).toBe('')
+    expect(after.origin).toEqual(lost.origin)
   })
 
   it('ends the playthrough when the encampment falls, freeing its slot', async () => {
