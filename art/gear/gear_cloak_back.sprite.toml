@@ -1,0 +1,35 @@
+# The back of the Cloak of Shadows: the cape, hanging from the shoulders to below the
+# knees, seen beside the arms and between the legs. Drawn whole; the game lays it UNDER
+# the body (by WORN_BACK_SPRITES in src/scenes/unitLook.ts), though it says `over` so that the outline rule
+# counts the body, and `sprite preview --on warrior` shows it on top. See art/CLAUDE.md.
+canvas = "unit"
+over = "warrior"
+
+[frames.idle_0.runs]
+11 = [[10, "kkkkkkkkkkkk"]]
+12 = [[9, "kBbBBbBBbBBbBk"]]
+13 = [[8, "kBBbBBbBBbBBbBBk"]]
+14 = [[7, "kbBBbBBbBBbBBbBBbk"]]
+15 = [[7, "kbBBbBBbBBbBBbBBbk"]]
+16 = [[6, "kcbBBbBBbBBbBBbBBbk"]]
+17 = [[6, "kcbBBbBBbBBbBBbBBbck"]]
+18 = [[6, "kcbBBbBBbBBbBBbBBbck"]]
+19 = [[5, "kbcbBBbBBbBBbBBbBBbck"]]
+20 = [[5, "kbcbBBbBBbBBbBBbBBbck"]]
+21 = [[5, "kbcbBBbBBbBBbBBbBBbcbk"]]
+22 = [[5, "kbcbBBbBBbBBbBBbBBbcbk"]]
+23 = [[4, "kBbcbBBbBBbBBbBBbBBbcbk"]]
+24 = [[4, "kBbcbBBbBBbBBbBBbBBbcbk"]]
+25 = [[4, "kBbcbBBbBBbBBbBBbBBbcbBk"]]
+26 = [[4, "kkkkkkkkkkkkkkkkkkkkkkkk"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it wears with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+like = "warrior"      # breathes with the body
+
+[anim.walk]
+rest = true           # holds idle_0 while the body walks
