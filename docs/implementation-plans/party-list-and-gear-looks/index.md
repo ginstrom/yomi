@@ -95,7 +95,7 @@ In `UnitFigure`, `setGear(sprites)` becomes `setLook(look: HeroLook): this`, and
 | 01 | [Design approval and the party list](01-party-list.md) | Design marked approved. The world map has the right-hand party list: select, centre, hover summary, layout at 840×560 | none | done (`c90b008`; review round 1 in the next commit) |
 | 02 | [Bare hero body and worn-gear sprites](02-gear-sprites.md) | `warrior` redrawn bare; `gear_breastplate`, `gear_circlet`, `gear_cloak` and `gear_cloak_back` in the atlas | none | done (`3a6c5a4`) |
 | 03 | [Hero figures wear their gear](03-hero-look.md) | `heroLook` and `UnitFigure.setLook` draw worn overlays on the doll, in battle and on the map; coverage test | 02 | done (`103885e`; art touch-up and record in the next commit) |
-| 04 | [Manual, screenshots and final pass](04-manual-and-final-pass.md) | Manual §3 and §4 describe both parts; screenshots retaken in podman; manual checks recorded | 01, 03 | pending |
+| 04 | [Manual, screenshots and final pass](04-manual-and-final-pass.md) | Manual §3 and §4 describe both parts; screenshots retaken in podman; manual checks recorded | 01, 03 | done (this commit) |
 
 ## Execution order
 

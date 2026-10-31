@@ -105,6 +105,7 @@ describe('heroLook', () => {
     const worn = [...BASE_ITEMS, ...MAGIC_ITEMS].filter((i) => (WORN_SLOTS as readonly string[]).includes(i.slot))
     expect(new Set(worn.map((i) => i.slot))).toEqual(new Set(WORN_SLOTS))
     for (const item of worn) expect(WORN_SPRITES[item.icon], item.id).toBeDefined()
+    for (const item of worn.filter((i) => i.slot === 'cloak')) expect(WORN_BACK_SPRITES[item.icon], item.id).toBeDefined()
   })
 
   it('names only worn sprites the atlas has, each with idle and walk animations', () => {

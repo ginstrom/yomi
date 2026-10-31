@@ -1,6 +1,6 @@
 # The back of the Cloak of Shadows: the cape, hanging from the shoulders to below the
 # knees, seen beside the arms and between the legs. It stands a column clear of the
-# body's outline down the arms (columns 5 to 26), so that a strip of blue shows there.
+# body's outline down the arms (column 5 on the left; on the right column 25 in rows 13 to 15, then 26), so that a strip of blue shows there.
 # Drawn whole; the game lays it UNDER the body (by WORN_BACK_SPRITES in
 # src/scenes/unitLook.ts), though it says `over` so that the outline rule counts the
 # body, and `sprite preview --on warrior` shows it on top. See art/CLAUDE.md.
