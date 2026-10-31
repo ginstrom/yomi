@@ -1767,9 +1767,9 @@
       }
     },
     "bounds": [
-      4,
+      5,
       11,
-      24,
+      22,
       17
     ],
     "canvas": "unit",
@@ -1778,18 +1778,18 @@
     "frames": {
       "idle_0": {
         "bounds": [
-          4,
+          5,
           11,
-          24,
+          22,
           16
         ],
         "file": "gear_cloak_back__idle_0.png"
       },
       "idle_1": {
         "bounds": [
-          4,
+          5,
           12,
-          24,
+          22,
           16
         ],
         "file": "gear_cloak_back__idle_1.png"

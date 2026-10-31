@@ -135,11 +135,34 @@ Each is `lookNames()`, with a doc comment.
 
 ## Completion criteria
 
-- [ ] The contracts exist exactly as in the index.
-- [ ] The domain tests were seen failing first.
-- [ ] AC5 to AC7 are covered by the tests above.
-- [ ] No `setGear` is left in `src/` or CLAUDE.md, and CLAUDE.md is updated in the same commit.
-- [ ] The first manual pass is recorded, and any art touch-ups are rebuilt and included.
-- [ ] This step's status and commit are recorded in the index.
+- [x] The contracts exist exactly as in the index.
+- [x] The domain tests were seen failing first.
+- [x] AC5 to AC7 are covered by the tests above.
+- [x] No `setGear` is left in `src/` or CLAUDE.md, and CLAUDE.md is updated in the same commit.
+- [x] The first manual pass is recorded, and any art touch-ups are rebuilt and included.
+- [x] This step's status and commit are recorded in the index.
 
 ## Execution record
+
+**Commits.** `103885e` (code, probes, tests, CLAUDE.md; step 02's hash filled in the index), then the art touch-up and this record in the step's final commit.
+
+**What was built.** `unitLook.ts` gained the index's contract exactly (`WORN_SPRITES`, `WORN_BACK_SPRITES`, `WORN_SLOTS`, `HeroLook`, `heroLook`); `gearLayers`, `GEAR_SPRITES` and `SWUNG_GEAR` are unchanged. `UnitFigure.setGear` is now `setLook(look)`, with `under` inserted below the body by `addAt` and `over` added on top, and `lookNames()` reads the container's own display list. The three callers call `setLook(heroLook(...))`. Probes: `InventoryProbe.doll` (kept as `InventoryScene.doll`, reset on each `create`), `WorldProbe.partyLook`, `BattleProbe.looks` (heroes only). Root CLAUDE.md: the assets paragraph, the `unitLook.ts` and `UnitFigure.ts` helper lines and the world-map sentence. No `setGear` remains in `src/`, `e2e/` or CLAUDE.md.
+
+**Test-first.** The eight new `heroLook` cases in `src/scenes/unitLook.test.ts` were run before `heroLook` existed and failed (8 failed, 11 passed: `heroLook`/`WORN_*` not exported); green after. Browser tests added: `e2e/character.test.ts` "dresses the doll and the map's figure… (AC5)" and "lays a cloak, a breastplate, a circlet, a sword and a shield in their order (AC6)" (equipping the magic items through the panel worked, so no deviation: `give`, a click on the baggage item, a click on the backpack item; the test also checks `World.partyLook` equals the doll after the panel closes); `e2e/battle.test.ts` "draws each hero in what it wears and holds, and a foe as its body alone" (`looks.hero_1` is `['warrior', 'gear_breastplate', 'gear_sword', 'gear_shield']`, no foe entries), and the existing gear-change test now checks the battle figure loses its weapon and keeps the breastplate when the panel closes.
+
+**Art touch-ups (passed on from step 02's review).**
+- `gear_cloak_back`: the cape now stands a column clear of the body's outline down the arms (edges at columns 5 and 26 from row 13; a `k` shoulder shelf at row 12, columns 6 to 9 and 22 to 25), so a strip of blue shows beside both arms instead of a doubled outline. The hem is straight at columns 5 to 26 (was 4 to 27 with a flare). It is not narrowed to the design's ~6 to 24: a one-pixel blue strip beside the arms needs the edge at 5 and 26 (the body's outline is at 7 and 24), and a hem narrower than the shoulders read wrong. With a sword and shield the strips are mostly covered by the blade and the shield; on a hero with the cloak alone or a bow they read clearly.
+- `warrior`: the hair is now mostly dark brown `N` (one `n` highlight on the crown), darker than the beard, within the same pixels. Optional; it separates the hair from the face and tunic a little, though the head still reads a little hood-like.
+- `sprite check --project art`: ok (72 sprites, 160 frames). `npm run sprites` rebuilt; `npm run sprites:check` up to date.
+
+**First manual pass** (screenshots of the running game, by a scratch Playwright script driving the dev server the browser tests start; before = step 02's art with this step's code, after = the touched-up art):
+- Doll facing right, full kit: layers in order, cape behind, sword in front. Seen.
+- Battle hero facing left (walked a hex west): the cape stays behind, flipped with the body. Seen.
+- Walk on the map (slowed to half speed): the legs part in front of the cape, which holds still; no overlay jitters. Seen.
+- Bare hero (armour and weapon off): body alone. Seen.
+- Map figure at 2x: the cape reads beside the shield and below the fist.
+- Sword swing, hit flash and fallen fade: not seen on screen. By the code, `swing` searches `over` (the sword is there, the cape is not), and `setFigureTint`, `setFigureAlpha`, `faceLeft`, `play` and `stop` act on `layers()`, which is `[...under, base, ...over]`; `pulseOutline` is on the container. Step 04 records the manual checks.
+
+**Verification.** `npm test`: 68 files, 815 tests passed. `npm run sprites:check`: up to date. `sprite check --project art`: ok. `npm run test:browser`: 9 files, 78 tests passed (run after the art change).
+
+**For step 04.** The probes `doll`, `partyLook` and `looks` are there for the manual's screenshots and checks. No contract changed.
