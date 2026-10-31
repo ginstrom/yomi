@@ -48,4 +48,4 @@ All answered 2026-10-31 (see decision log).
 
 ## Verification
 
-(pending)
+- Step 01: review round 1 clean (sonnet) at ec196d8; non-blocking: a long comment line in BattleScene refreshHover (re-wrap in step 04)

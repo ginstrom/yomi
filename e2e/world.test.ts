@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { WorldState, WorldStatus } from '../src/game/worldMap.ts'
 import { offsetToHex } from '../src/grid/hex.ts'
+import { WORLD_LAYOUT, boardHexCenter, boardPixelSize, type Point } from '../src/scenes/boardGeometry.ts'
+import { mapOrigin, pannedOrigin } from '../src/scenes/mapScroll.ts'
 import type { WorldProbe } from '../src/testHook.ts'
 import { RAIDERS, useGames, worldHexOnScreen, type Game } from './driver.ts'
 
@@ -44,6 +46,103 @@ describe('the world map', () => {
     expect(raiders.info).toContain('threat 1')
     await game.hover({ x: 0, y: 0 })
     await game.waitFor('World', (w) => w.info === '')
+  })
+
+  /** A point inside the map's view, clear of the bars and buttons, to press on. */
+  const midView = (w: WorldProbe): Point => ({ x: Math.round(w.view.x + w.view.width / 2), y: Math.round(w.view.y + w.view.height / 2) })
+  const plus = (p: Point, dx: number, dy: number): Point => ({ x: p.x + dx, y: p.y + dy })
+  /** Where the map sits when the view follows the party, as it does before any pan. */
+  const following = (w: WorldProbe): Point =>
+    mapOrigin(boardHexCenter(w.world.party, WORLD_LAYOUT), boardPixelSize(w.world.board, WORLD_LAYOUT), w.view)
+
+  /** Presses mid-view and drags the pointer by (dx, dy), letting go there; the map has moved with it. */
+  async function pan(game: Game, start: WorldProbe, dx: number, dy: number): Promise<WorldProbe> {
+    const press = midView(start)
+    const expected = pannedOrigin(start.origin, press, plus(press, dx, dy), boardPixelSize(start.world.board, WORLD_LAYOUT), start.view)
+    expect(expected).not.toEqual(start.origin)
+    await game.holdDown(press)
+    await game.hover(plus(press, dx / 2, dy / 2))
+    await game.hover(plus(press, dx, dy))
+    const dragging = await game.waitFor('World', (w) => w.origin.x === expected.x && w.origin.y === expected.y)
+    // A drag shows no route and tells of no hex.
+    expect(dragging.info).toBe('')
+    await game.letGo()
+    return game.waitFor('World')
+  }
+
+  it('pans the map under a drag, without moving the party or passing time', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    const panned = await pan(game, start, -40, -30)
+    expect(panned.walking).toBe(false)
+    expect(panned.world.party).toEqual(start.world.party)
+    expect(panned.world.turn).toBe(start.world.turn)
+  })
+
+  it('stops the pan at the map edge', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    // The home valley is at the map's left edge: a drag back to the right goes no further than it.
+    const left = await pan(game, start, -200, 0)
+    expect(start.origin.x).toBe(start.view.x)
+    const back = await pan(game, left, 400, 0)
+    expect(back.origin.x).toBe(start.view.x)
+  })
+
+  it('still travels on a press that moves less than the drag threshold', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    const to = offsetToHex(11, 19)
+    const at = worldHexOnScreen(start, to)
+    await game.holdDown(at)
+    await game.hover(plus(at, 3, 2))
+    await game.letGo()
+    const arrived = await game.waitFor('World', (w) => !w.walking && w.world.turn !== start.world.turn)
+    expect(arrived.world.party).toEqual(to)
+  })
+
+  it('travels to the hex under the pointer on a panned map, then follows the party again', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    const panned = await pan(game, start, -40, -30)
+    const to = offsetToHex(11, 19)
+    await game.click(worldHexOnScreen(panned, to))
+    const arrived = await game.waitFor('World', (w) => !w.walking && w.world.turn !== start.world.turn)
+    expect(arrived.world.party).toEqual(to)
+    expect(arrived.origin).toEqual(following(arrived))
+  })
+
+  it('recentres on the party on Home, moving no one and passing no time', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+
+    // With no pan, Home changes nothing.
+    await game.press('Home')
+    expect((await game.waitFor('World')).origin).toEqual(start.origin)
+
+    const panned = await pan(game, start, -40, -30)
+    await game.press('Home')
+    const home = await game.waitFor('World', (w) => w.origin.x === start.origin.x && w.origin.y === start.origin.y)
+    expect(home.world.party).toEqual(panned.world.party)
+    expect(home.world.turn).toBe(panned.world.turn)
+    expect(home.walking).toBe(false)
+  })
+
+  it('ignores Home while the party walks', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    const to = offsetToHex(11, 19)
+    // Slower than life, so the walk lasts long enough to press Home during it.
+    await game.page.evaluate(() => {
+      window.__yomi!.speed = 0.25
+    })
+    await game.click(worldHexOnScreen(start, to))
+    expect((await game.probe('World'))!.walking).toBe(true)
+    await game.press('Home')
+    expect((await game.probe('World'))!.walking).toBe(true)
+    const arrived = await game.waitFor('World', (w) => !w.walking && w.world.turn !== start.world.turn)
+    expect(arrived.world.party).toEqual(to)
+    expect(arrived.origin).toEqual(following(arrived))
   })
 
   it('holds the party among monsters until it answers them', async () => {
