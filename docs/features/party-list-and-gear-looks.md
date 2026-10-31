@@ -50,3 +50,4 @@ Both designer questions answered with defaults (see log). Stage 05/06 design wor
 ## Verification
 
 - Step 01 (c90b008): review round 1 (opus) changes needed — party entry drawn above outcome shade (blocking) + 4 non-blocking; fixed in 4058b11 (also fixed pre-existing 0×0 outcome shade that never blocked input). Round 2 clean. Minor leftover: hover summary may not reappear on leave-and-return to the same entry (not fixed).
+- Step 02 (3a6c5a4): orchestrator viewed previews (fine); brown cuffs accepted (orchestrator). Review round 1 (opus) clean. Non-blocking, passed to step 03: cape shows only as a doubled outline above row 19; cape wider than designed; bare body all one brown (hair reads like a hood); index hash missing.

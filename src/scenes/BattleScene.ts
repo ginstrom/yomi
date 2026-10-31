@@ -64,7 +64,7 @@ import { soundVolume } from './audioSettings.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
-import { CHEST_POINT, SPRITE_ATLAS, gearLayers, pointFromAnchor, spriteAnim, spriteFrame } from './unitLook.ts'
+import { CHEST_POINT, SPRITE_ATLAS, heroLook, pointFromAnchor, spriteAnim, spriteFrame } from './unitLook.ts'
 import { DEFAULT_ENCOUNTER, chooseBattle } from './battleSetup.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
 import { showStory, type StoryAnchors } from './StoryScene.ts'
@@ -518,6 +518,12 @@ export class BattleScene extends Phaser.Scene {
         }) ?? null,
       result: this.resultText.visible ? this.resultText.text.split('\n') : [],
       party: this.column.probe(),
+      looks: Object.fromEntries(
+        [...this.heroes.keys()].flatMap((id) => {
+          const figure = this.units.get(id)?.figure
+          return figure ? [[id, figure.lookNames()]] : []
+        }),
+      ),
     }
   }
 
@@ -681,9 +687,9 @@ export class BattleScene extends Phaser.Scene {
     this.floorLayer.add(floor)
   }
 
-  /** Shows each hero holding what its character does now. */
+  /** Shows each hero wearing and holding what its character does now. */
   private refreshGear(): void {
-    for (const [id, member] of this.heroes) this.units.get(id)?.figure.setGear(gearLayers(member.equipment))
+    for (const [id, member] of this.heroes) this.units.get(id)?.figure.setLook(heroLook(member.equipment))
   }
 
   private createUnit(name: string, kind: UnitKind, idleDelayMs: number): Unit {

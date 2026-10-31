@@ -32,7 +32,7 @@ import { PartyColumn } from './PartyColumn.ts'
 import { PartyListView } from './PartyListView.ts'
 import { FIRST_PARTY_ID, PARTY_LIST_W, deployedParties, partyListInfo } from './partyList.ts'
 import { UnitFigure } from './UnitFigure.ts'
-import { gearLayers, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
+import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
 import { describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
 import { hexInfo } from './hexInfo.ts'
@@ -412,6 +412,7 @@ export class WorldScene extends Phaser.Scene {
       infoRect: this.infoBox.visible
         ? { x: this.infoBox.x, y: this.infoBox.y, width: this.infoBox.width, height: this.infoBox.height }
         : null,
+      partyLook: this.party.lookNames(),
     }
   }
 
@@ -583,9 +584,9 @@ export class WorldScene extends Phaser.Scene {
     g.clear()
   }
 
-  /** Shows the party's figure holding what its first member does now. */
+  /** Shows the party's figure wearing and holding what its first member does now. */
   private refreshPartyGear(): void {
-    this.party.setGear(gearLayers(this.gameState.party[0]?.equipment ?? {}))
+    this.party.setLook(heroLook(this.gameState.party[0]?.equipment ?? {}))
   }
 
   private createButton(label: string, onClick: () => void, width = BUTTON_W): Phaser.GameObjects.Container {

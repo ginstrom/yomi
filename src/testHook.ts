@@ -171,6 +171,8 @@ export interface WorldProbe {
   selectedParty: string
   /** The info panel's bounds while it shows (a hex or a party entry hovered), else null. */
   infoRect: Rect | null
+  /** The sprites of the party's figure on the map, bottom first in drawing order (`UnitFigure.lookNames`). */
+  partyLook: string[]
 }
 
 /** A hero's face in the guild hall, by its centre on screen. */
@@ -276,6 +278,8 @@ export interface BattleProbe {
   /** The lines of the victory or defeat screen; empty until the battle is over. */
   result: string[]
   party: PortraitProbe[]
+  /** Each hero's figure's sprites, bottom first in drawing order (`UnitFigure.lookNames`); foes have no entry. */
+  looks: Record<UnitId, string[]>
 }
 
 export interface InventoryProbe {
@@ -320,6 +324,8 @@ export interface InventoryProbe {
   ground: Array<Point & { item: string }>
   /** The centres on screen of the backpack's and the ground's grids, either of which takes a dragged item anywhere on it. */
   grids: { backpack: Point; ground: Point }
+  /** The open member's doll's sprites, bottom first in drawing order (`UnitFigure.lookNames`); [] until the doll is built. */
+  doll: string[]
 }
 
 export interface StoryProbe {

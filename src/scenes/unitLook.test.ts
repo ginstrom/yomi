@@ -1,9 +1,37 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { IRON_SWORD, MAGIC_ITEMS, OAK_SHIELD, STEEL_ARMOR, STEEL_GREATSWORD, WEAPONS, YEW_BOW } from '../inventory/inventory.ts'
+import {
+  AMULET_FOCUS,
+  BASE_ITEMS,
+  IRON_SWORD,
+  itemById,
+  MAGIC_ITEMS,
+  OAK_SHIELD,
+  RING_FORTUNE,
+  RING_PROTECTION,
+  SAGE_CIRCLET,
+  SHADOW_CLOAK,
+  STEEL_ARMOR,
+  STEEL_GREATSWORD,
+  WEAPONS,
+  YEW_BOW,
+} from '../inventory/inventory.ts'
 import { FOE_XP, type UnitKind } from '../game/encounters.ts'
 import { ARROW_SPRITE, BURST_ANIM, BURST_SPRITE, EFFECT_FRAME, MISSILE_SPRITES, TIP_POINT } from './battleEffects.ts'
-import { CHEST_POINT, GEAR_SPRITES, GRIP_POINT, gearLayers, pointFromAnchor, spriteAnim, spriteFrame, UNIT_REST_FRAME } from './unitLook.ts'
+import {
+  CHEST_POINT,
+  GEAR_SPRITES,
+  GRIP_POINT,
+  gearLayers,
+  heroLook,
+  pointFromAnchor,
+  spriteAnim,
+  spriteFrame,
+  UNIT_REST_FRAME,
+  WORN_BACK_SPRITES,
+  WORN_SLOTS,
+  WORN_SPRITES,
+} from './unitLook.ts'
 
 const atlas = JSON.parse(readFileSync('public/assets/sprites/atlas.json', 'utf8')) as { frames: Record<string, unknown> }
 const anims = JSON.parse(readFileSync('public/assets/sprites/atlas.anims.json', 'utf8')) as { anims: Array<{ key: string }> }
@@ -34,6 +62,58 @@ describe('gearLayers', () => {
     for (const sprite of Object.values(GEAR_SPRITES)) {
       expect(atlas.frames[spriteFrame(sprite, UNIT_REST_FRAME)], sprite).toBeDefined()
       expect(anims.anims.map((a) => a.key)).toContain(spriteAnim(sprite, 'idle'))
+    }
+  })
+})
+
+describe('heroLook', () => {
+  it('lays nothing under or over a hero who wears and holds nothing', () => {
+    expect(heroLook({})).toEqual({ under: [], over: [] })
+  })
+
+  it('lays the breastplate over the body', () => {
+    expect(heroLook({ armor: STEEL_ARMOR })).toEqual({ under: [], over: ['gear_breastplate'] })
+  })
+
+  it('draws the cape under the body, then armour, cloak, head and the hands over it', () => {
+    const look = heroLook({
+      cloak: SHADOW_CLOAK,
+      armor: STEEL_ARMOR,
+      head: SAGE_CIRCLET,
+      mainHand: IRON_SWORD,
+      offHand: OAK_SHIELD,
+    })
+    expect(look).toEqual({
+      under: ['gear_cloak_back'],
+      over: ['gear_breastplate', 'gear_cloak', 'gear_circlet', 'gear_sword', 'gear_shield'],
+    })
+  })
+
+  it('shows nothing for the neck or the rings', () => {
+    expect(heroLook({ neck: AMULET_FOCUS, ring1: RING_PROTECTION, ring2: RING_FORTUNE })).toEqual({ under: [], over: [] })
+  })
+
+  it('still leaves the off hand out beside a two-handed weapon', () => {
+    expect(heroLook({ mainHand: STEEL_GREATSWORD, offHand: OAK_SHIELD }).over).toEqual(['gear_greatsword'])
+  })
+
+  it('dresses a graded breastplate as the plain one', () => {
+    expect(heroLook({ armor: itemById('steel_armor@2') }).over).toEqual(['gear_breastplate'])
+  })
+
+  it('has a sprite for everything that can be worn on the body, the head or the back', () => {
+    const worn = [...BASE_ITEMS, ...MAGIC_ITEMS].filter((i) => (WORN_SLOTS as readonly string[]).includes(i.slot))
+    expect(new Set(worn.map((i) => i.slot))).toEqual(new Set(WORN_SLOTS))
+    for (const item of worn) expect(WORN_SPRITES[item.icon], item.id).toBeDefined()
+  })
+
+  it('names only worn sprites the atlas has, each with idle and walk animations', () => {
+    const keys = anims.anims.map((a) => a.key)
+    const sprites = [...Object.values(WORN_SPRITES), ...Object.values(WORN_BACK_SPRITES)]
+    expect(sprites.length).toBeGreaterThan(0)
+    for (const sprite of sprites) {
+      expect(atlas.frames[spriteFrame(sprite, UNIT_REST_FRAME)], sprite).toBeDefined()
+      for (const anim of ['idle', 'walk']) expect(keys, sprite).toContain(spriteAnim(sprite, anim))
     }
   })
 })

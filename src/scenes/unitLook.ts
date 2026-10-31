@@ -2,8 +2,9 @@ import type { Equipment, ItemIcon } from '../inventory/inventory.ts'
 
 /**
  * How a unit is put together from the sprite atlas (`assets/sprites/atlas.*`,
- * built by sprite-tool and loaded by BootScene): which sprites are laid over
- * its body for what it holds, and what their frames and animations are called.
+ * built by sprite-tool and loaded by BootScene): which sprites are laid under
+ * and over a hero's body for what it wears and holds, and what their frames
+ * and animations are called.
  */
 export const SPRITE_ATLAS = 'atlas'
 
@@ -78,4 +79,37 @@ export function gearLayers(equipment: Equipment): string[] {
   // A two-handed weapon leaves no hand for what the off hand's slot may still say.
   const held = [mainHand, mainHand?.stats?.twoHanded ? undefined : offHand]
   return held.flatMap((item) => (item && GEAR_SPRITES[item.icon]) ?? [])
+}
+
+/**
+ * The sprite laid over a hero's body for an item it wears, by the item's icon
+ * (art/gear/); an item whose icon has none is worn unseen.
+ */
+export const WORN_SPRITES: Partial<Record<ItemIcon, string>> = { armor: 'gear_breastplate', circlet: 'gear_circlet', cloak: 'gear_cloak' }
+
+/** The sprite drawn under a hero's body for an item it wears: the cloak's cape, behind it whichever way it faces. */
+export const WORN_BACK_SPRITES: Partial<Record<ItemIcon, string>> = { cloak: 'gear_cloak_back' }
+
+/** The slots whose items are drawn on a hero, in the order they are laid over the body; no other slot is looked up. */
+export const WORN_SLOTS = ['armor', 'cloak', 'head'] as const
+
+/** The sprites drawn with a hero's body, each list bottom first: `under` it and `over` it. */
+export interface HeroLook {
+  under: string[]
+  over: string[]
+}
+
+/**
+ * How a hero is dressed: the cape under the body; over it the armour, the
+ * cloak's front and the head (`WORN_SLOTS`), then what it holds (`gearLayers`).
+ * The order is the same whichever way the hero faces.
+ */
+export function heroLook(equipment: Equipment): HeroLook {
+  const { cloak } = equipment
+  const back = cloak && WORN_BACK_SPRITES[cloak.icon]
+  const worn = WORN_SLOTS.flatMap((slot) => {
+    const item = equipment[slot]
+    return (item && WORN_SPRITES[item.icon]) ?? []
+  })
+  return { under: back ? [back] : [], over: [...worn, ...gearLayers(equipment)] }
 }

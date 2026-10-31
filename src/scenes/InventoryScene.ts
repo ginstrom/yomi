@@ -47,7 +47,7 @@ import { soundVolume } from './audioSettings.ts'
 import { isSecondaryClick } from './clicks.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
-import { gearLayers } from './unitLook.ts'
+import { heroLook } from './unitLook.ts'
 import { PARTY_PANEL_W, portraitKey } from './partyPanel.ts'
 import { nodeHint, perkTitle } from './perkTree.ts'
 import { PerkTreeView } from './PerkTreeView.ts'
@@ -246,6 +246,8 @@ export class InventoryScene extends Phaser.Scene {
   private characterContent!: Phaser.GameObjects.Container
   private skillsContent!: Phaser.GameObjects.Container
   private inventoryContent!: Phaser.GameObjects.Container
+  /** The open member's figure on the Inventory tab, null until it is first drawn. */
+  private doll: UnitFigure | null = null
   private treeContent!: Phaser.GameObjects.Container
   private spellsContent!: Phaser.GameObjects.Container
   private spellTreeContent!: Phaser.GameObjects.Container
@@ -274,6 +276,7 @@ export class InventoryScene extends Phaser.Scene {
     this.resumeKey = data.resume ?? 'Battle'
     this.worldCast = null
     this.press = null
+    this.doll = null
     this.setMember(data.index ?? 0)
     // Right-clicking an item drops it.
     this.input.mouse?.disableContextMenu()
@@ -403,6 +406,7 @@ export class InventoryScene extends Phaser.Scene {
         .slice(this.groundScroll.firstIndex, this.groundScroll.firstIndex + GROUND_COLS * GROUND_ROWS)
         .map((item, i) => ({ ...onScreen(slotPosition(this.groundStartX(), i, GROUND_COLS)), item: item.id })),
       grids: { backpack: onScreen(rectCentre(this.backpackBounds())), ground: onScreen(rectCentre(this.groundBounds())) },
+      doll: this.doll?.lookNames() ?? [],
     }
   }
 
@@ -915,12 +919,12 @@ export class InventoryScene extends Phaser.Scene {
       .setStrokeStyle(2, 0x4a3d28)
     this.inventoryContent.add(dollBoxBg)
 
-    // The hero as the battlefield shows it, holding what the slots beside it say.
-    const doll = new UnitFigure(this, 'warrior', DOLL_SCALE)
-      .setGear(gearLayers(this.character.equipment))
+    // The hero as the battlefield shows it, wearing and holding what the slots beside it say.
+    this.doll = new UnitFigure(this, 'warrior', DOLL_SCALE)
+      .setLook(heroLook(this.character.equipment))
       .play('idle')
       .setPosition(DOLL_X, DOLL_Y + 95)
-    this.inventoryContent.add(doll)
+    this.inventoryContent.add(this.doll)
 
     const leftX = DOLL_X - 115
     const rightX = DOLL_X + 115

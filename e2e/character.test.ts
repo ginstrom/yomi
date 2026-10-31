@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { offsetToHex } from '../src/grid/hex.ts'
-import { useGames } from './driver.ts'
+import { useGames, type Game } from './driver.ts'
+
+/** Types a line at the debug console, opening it first, and closes it again. */
+async function debugCommand(game: Game, line: string): Promise<void> {
+  await game.press('Shift+Backquote')
+  await game.page.locator('#yomi-debug input').fill(line)
+  await game.press('Enter')
+  await game.press('Escape')
+}
 
 describe('a hero’s panel', () => {
   const games = useGames()
@@ -106,6 +114,69 @@ describe('a hero’s panel', () => {
     await game.letGo()
     await game.frames()
     expect(gear((await game.probe('Inventory'))!)).toEqual(gear(settled))
+  })
+
+  it('dresses the doll and the map’s figure in the breastplate, and undresses them when it comes off (AC5)', async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    expect(world.partyLook).toContain('gear_breastplate')
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    const panel = await game.settled('Inventory', (p) => p.tab === 'inventory')
+    expect(panel.doll).toContain('gear_breastplate')
+
+    // Off at once on the doll, and off the map's figure once the panel closes.
+    await game.click(panel.equipment.armor)
+    const stowed = await game.settled('Inventory', (p) => p.equipment.armor.item === null)
+    expect(stowed.doll).not.toContain('gear_breastplate')
+    expect(stowed.doll).toContain('warrior')
+    await game.press('Escape')
+    await game.waitForScenes(['World'])
+    expect((await game.probe('World'))!.partyLook).not.toContain('gear_breastplate')
+
+    // Worn again from the backpack, it is back on both.
+    await game.click((await game.probe('World'))!.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    const reopened = await game.settled('Inventory', (p) => p.tab === 'inventory')
+    await game.click(reopened.backpack.find((slot) => slot.item === panel.equipment.armor.item)!)
+    const worn = await game.settled('Inventory', (p) => p.equipment.armor.item !== null)
+    expect(worn.doll).toContain('gear_breastplate')
+    await game.press('Escape')
+    await game.waitForScenes(['World'])
+    expect((await game.probe('World'))!.partyLook).toContain('gear_breastplate')
+  })
+
+  it('lays a cloak, a breastplate, a circlet, a sword and a shield in their order (AC6)', async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    await debugCommand(game, 'give shadow_cloak')
+    await debugCommand(game, 'give sage_circlet')
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    let panel = await game.settled('Inventory', (p) => p.tab === 'inventory' && p.ground.length === 2)
+
+    // Each from the baggage into the backpack, and from there onto the hero.
+    for (const id of ['shadow_cloak', 'sage_circlet']) {
+      await game.click(panel.ground.find((slot) => slot.item === id)!)
+      panel = await game.settled('Inventory', (p) => p.backpack.some((slot) => slot.item === id))
+      await game.click(panel.backpack.find((slot) => slot.item === id)!)
+      panel = await game.settled('Inventory', (p) => Object.values(p.equipment).some((slot) => slot.item === id))
+    }
+    expect(panel.doll).toEqual([
+      'gear_cloak_back',
+      'warrior',
+      'gear_breastplate',
+      'gear_cloak',
+      'gear_circlet',
+      'gear_sword',
+      'gear_shield',
+    ])
+    await game.press('Escape')
+    await game.waitForScenes(['World'])
+    expect((await game.probe('World'))!.partyLook).toEqual(panel.doll)
   })
 
   it('lists only the perks a hero has taken, and shows them all in the perk tree', async () => {
