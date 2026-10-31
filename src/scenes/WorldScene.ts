@@ -28,6 +28,8 @@ import { WORLD_LAYOUT, boardHexAt, boardHexCenter, boardPixelSize, type Point } 
 import { CURSORS } from './cursors.ts'
 import { clampOrigin, mapOrigin, pannedOrigin, pressMoved, rectContains, type Rect } from './mapScroll.ts'
 import { PartyColumn } from './PartyColumn.ts'
+import { PartyListView } from './PartyListView.ts'
+import { FIRST_PARTY_ID, PARTY_LIST_W, deployedParties, partyListInfo } from './partyList.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { gearLayers, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
@@ -99,7 +101,7 @@ const BUTTON_H = 44
 const BUTTON_GAP = 20
 /** Wide enough for "Camp until healed", "Build Watchtower" and "Build Outpost". */
 const WIDE_BUTTON_W = 200
-/** The info panel on the hovered hex, at the view's top right. */
+/** The info panel on the hovered hex or party, at the view's top right, left of the party list. */
 const INFO_W = 280
 const INFO_PAD = 10
 const INFO_MARGIN = 12
@@ -118,7 +120,7 @@ export class WorldScene extends Phaser.Scene {
   private panOrigin: Point | null = null
   /** A press on the map not yet let go: a click to travel until it moves past the threshold, then a pan. */
   private press: (Point & { originAtPress: Point; panning: boolean }) | null = null
-  /** The part of the screen between the bars and right of the party's column, where the map is in plain sight and takes clicks. */
+  /** The part of the screen between the bars, right of the party's column and left of the party list, where the map is in plain sight and takes clicks. */
   private view: Rect = { x: 0, y: 0, width: 0, height: 0 }
   private headerBar!: Phaser.GameObjects.Rectangle
   private footerBar!: Phaser.GameObjects.Rectangle
@@ -133,6 +135,12 @@ export class WorldScene extends Phaser.Scene {
   private column!: PartyColumn
   /** The party member marked in the column, whose panel C or a click on its portrait opens. */
   private active = 0
+  /** The company's parties down the right; a click on one selects it and centres the view on it. */
+  private partyList!: PartyListView
+  /** The id of the party the column shows and Home centres on. */
+  private selectedParty = FIRST_PARTY_ID
+  /** The party entry under the pointer, whose summary the info panel shows, or null. */
+  private hoveredParty: string | null = null
   /** What last happened, above the buttons. */
   private messageText!: Phaser.GameObjects.Text
   /** Scout, Wait and Attack, shown while the party stands among monsters. */
@@ -199,6 +207,8 @@ export class WorldScene extends Phaser.Scene {
     this.press = null
     // The first member with something to spend, so one click on its portrait opens its panel.
     this.active = Math.max(0, this.gameState.party.findIndex(canAdvance))
+    this.selectedParty = deployedParties(this.gameState)[0]?.id ?? FIRST_PARTY_ID
+    this.hoveredParty = null
 
     this.mapLayer = this.add.container(0, 0)
     this.buildTerrain()
@@ -251,6 +261,12 @@ export class WorldScene extends Phaser.Scene {
     const enter = `Enter ${encampmentName(this.world)}`
     this.encampmentButton = this.createButton(enter, () => this.openEncampment(), Math.max(BUTTON_W, enter.length * 10 + 28))
     this.column = new PartyColumn(this, this.gameState.party, (index) => this.onPortrait(index))
+    // Before the outcome screen, which covers it.
+    this.partyList = new PartyListView(
+      this,
+      (id) => this.onPartyEntry(id),
+      (id) => this.onPartyHover(id),
+    )
 
     this.outcomeShade = this.add.rectangle(0, 0, 0, 0, 0x000000, 0.75).setOrigin(0).setInteractive()
     this.outcomeText = this.add
@@ -292,7 +308,7 @@ export class WorldScene extends Phaser.Scene {
     })
     this.input.keyboard?.on('keydown-ESC', () => this.openMenu())
     this.input.keyboard?.on('keydown-C', () => this.openPanel(this.active))
-    this.input.keyboard?.on('keydown-HOME', () => this.recentre())
+    this.input.keyboard?.on('keydown-HOME', () => this.centreOnSelected())
     // Kept from the browser, which would otherwise scroll a page held below the game's minimum size.
     this.input.keyboard?.addCapture('HOME')
     // Back from a member's panel, where skill points and perks may have been spent, and
@@ -387,6 +403,11 @@ export class WorldScene extends Phaser.Scene {
         menu: buttonProbe(this.menuButton),
       },
       party: this.column.probe(),
+      parties: this.partyList.probe(),
+      selectedParty: this.selectedParty,
+      infoRect: this.infoBox.visible
+        ? { x: this.infoBox.x, y: this.infoBox.y, width: this.infoBox.width, height: this.infoBox.height }
+        : null,
     }
   }
 
@@ -583,8 +604,9 @@ export class WorldScene extends Phaser.Scene {
   // ---- layout ---------------------------------------------------------------
 
   /**
-   * Header bar at the top, the party's column down the left, message and
-   * buttons in a bar at the bottom, and the map filling the window behind them.
+   * Header bar at the top, the party's column down the left, the party list
+   * down the right, message and buttons in a bar at the bottom, and the map
+   * filling the window behind them.
    */
   private layout(): void {
     const { width, height } = this.scale
@@ -603,7 +625,7 @@ export class WorldScene extends Phaser.Scene {
     const messageY = buttonY - BUTTON_H / 2 - 26
     this.messageText.setPosition(centreX, messageY)
     this.statusText.setPosition(width - 20, 16)
-    this.infoBox.setPosition(width - INFO_MARGIN - INFO_W, HEADER_BOTTOM + INFO_MARGIN)
+    this.infoBox.setPosition(width - PARTY_LIST_W - INFO_MARGIN - INFO_W, HEADER_BOTTOM + INFO_MARGIN)
     this.infoText.setPosition(this.infoBox.x + INFO_PAD, this.infoBox.y + INFO_PAD)
     this.outcomeShade.setSize(width, height)
     const middleY = height / 2
@@ -616,10 +638,11 @@ export class WorldScene extends Phaser.Scene {
     this.headerBar.setSize(width, HEADER_BOTTOM)
     this.footerBar.setPosition(PARTY_PANEL_W, footerTop).setSize(width - PARTY_PANEL_W, height - footerTop)
     this.column.layout(height)
+    this.partyList.layout(width, HEADER_BOTTOM, footerTop)
     this.view = {
       x: PARTY_PANEL_W,
       y: HEADER_BOTTOM,
-      width: Math.max(0, width - PARTY_PANEL_W),
+      width: Math.max(0, width - PARTY_PANEL_W - PARTY_LIST_W),
       height: Math.max(0, footerTop - HEADER_BOTTOM),
     }
     // A resize keeps a pan, pulled back within the map's edges.
@@ -662,9 +685,41 @@ export class WorldScene extends Phaser.Scene {
     return press
   }
 
-  /** Home: back to following the party, after a pan (not while the button is still down on one). Moves no one and passes no time. */
-  private recentre(): void {
-    if (this.walking || this.outcomeShade.visible || this.press || this.panOrigin === null) return
+  /** A click on a party's entry: selects it and centres the view on it, but not while walking or under the outcome screen. */
+  private onPartyEntry(id: string): void {
+    if (this.walking || this.outcomeShade.visible) return
+    this.selectParty(id)
+  }
+
+  /**
+   * Makes `id` the selected party, whose members the column shows, and
+   * centres the view on it, even when it was selected already. With one party
+   * the column is never rebuilt, but a change of party rebuilds it.
+   */
+  selectParty(id: string): void {
+    if (id !== this.selectedParty) {
+      const entry = deployedParties(this.gameState).find((party) => party.id === id)
+      if (!entry) return
+      this.selectedParty = id
+      this.column.destroy()
+      this.column = new PartyColumn(this, entry.members, (index) => this.onPortrait(index))
+      this.active = Math.max(0, entry.members.findIndex(canAdvance))
+      // The new column's objects are the newest; the outcome screen stays over them.
+      for (const cover of [this.outcomeShade, this.outcomeText, this.endButton, this.endlessButton, this.menuButton]) {
+        this.children.bringToTop(cover)
+      }
+      this.refresh()
+    }
+    this.centreOnSelected()
+  }
+
+  /**
+   * Home, and a click on the selected party's entry: back to following the
+   * selected party, clearing any pan (not while the button is still down on
+   * one). Moves no one and passes no time; an unpanned view does not move.
+   */
+  centreOnSelected(): void {
+    if (this.walking || this.outcomeShade.visible || this.press) return
     this.panOrigin = null
     this.applyOrigin()
     // The map has scrolled under the pointer, which is over another hex now.
@@ -711,6 +766,7 @@ export class WorldScene extends Phaser.Scene {
       ].join('\n'),
     )
     this.column.refresh(this.active)
+    this.partyList.refresh(deployedParties(this.gameState), this.selectedParty)
     this.hintText.setText(
       world.confronting !== null
         ? 'Monsters! Scout them, wait, or attack.'
@@ -767,13 +823,23 @@ export class WorldScene extends Phaser.Scene {
     g.lineStyle(3, toMonsters ? MONSTERS_OUTLINE : ROUTE_COLOR, 1).strokePoints(this.hexPolygon(to), true)
   }
 
-  /** The info panel: what the player knows of the hovered hex. */
+  /** The pointer came onto a party's entry (`id`) or left it (null): the info panel tells of the party. */
+  private onPartyHover(id: string | null): void {
+    this.hoveredParty = id
+    this.refreshInfo()
+  }
+
+  /** The info panel: the hovered party's summary, else what the player knows of the hovered hex. */
   private refreshInfo(): void {
-    const shown = this.hovered !== null && !this.outcomeShade.visible
+    const entry =
+      this.hoveredParty === null ? undefined : deployedParties(this.gameState).find((party) => party.id === this.hoveredParty)
+    const shown = (entry !== undefined || this.hovered !== null) && !this.outcomeShade.visible
     this.infoBox.setVisible(shown)
     this.infoText.setVisible(shown)
-    if (!this.hovered || !shown) return
-    const { title, lines } = hexInfo(this.world, this.gameState.party, this.visible, this.hovered)
+    if (!shown) return
+    const { title, lines } = entry
+      ? partyListInfo(entry)
+      : hexInfo(this.world, this.gameState.party, this.visible, this.hovered!)
     this.infoText.setText([title, '', ...lines].join('\n'))
     this.infoBox.setSize(INFO_W, this.infoText.height + 2 * INFO_PAD)
   }

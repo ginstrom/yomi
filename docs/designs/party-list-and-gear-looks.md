@@ -11,7 +11,7 @@ Two independent changes, from play feedback:
 
 The two parts share no code and can be planned and shipped in either order.
 
-**Status: ready for planning.** No question blocks. Assumptions are in section 8, with two questions only the user can answer. Each has a default that the design already uses.
+**Status: approved by the user 2026-10-31.** Both questions in section 8 were answered with the defaults the design already uses.
 
 User decisions this design follows (feature record, decision log):
 - The list is built now for the single party, shaped for stage 06.
@@ -529,8 +529,10 @@ The repo splits tests this way: rules and helpers in `domain`, `*Scene.test.ts` 
 - **Q1. The horned helm.** No helm item exists until stage 03, so every hero goes bareheaded. Should heroes keep a default look until helms exist?
   - **Default: no.** The figure shows exactly what is worn. Stage 03's Helm family gets the horned helm's pixels as its overlay.
   - The alternative is a hidden default overlay for an empty head slot. It is cheap, but it would lie about gear.
+  - **Resolved 2026-10-31: no default helm; heroes show only worn gear.**
 - **Q2. A name for the single party.** The hover summary calls it "Your party" until stage 06 adds names. Should it be "First Company" now, matching stage 05's migration?
   - **Default: "Your party".**
+  - **Resolved 2026-10-31: 'Your party'.**
 
 **Assumptions:**
 - **AS1.** The list sits in an opaque strip that ends at the footer, and the view narrows by its width, so that "centre" means the middle of the visible map. The alternative was a translucent strip over the map, but then centring would be visibly off-centre.

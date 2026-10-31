@@ -115,6 +115,17 @@ export interface CreationProbe {
   notes: string[]
 }
 
+/** An entry of the world map's party list (`PartyListView`), at its tile's centre. */
+export interface PartyListProbe extends Point {
+  id: string
+  /** How many members the party has. */
+  members: number
+  /** Whether it is the selected party, which the column and Home follow. */
+  selected: boolean
+  /** Whether the party stands before monsters, which the entry marks with a red "!". */
+  confronting: boolean
+}
+
 export interface WorldProbe {
   world: WorldState
   walking: boolean
@@ -152,6 +163,12 @@ export interface WorldProbe {
     menu: ButtonProbe
   }
   party: PortraitProbe[]
+  /** The party list down the right, one entry a party in company order. */
+  parties: PartyListProbe[]
+  /** The id of the selected party. */
+  selectedParty: string
+  /** The info panel's bounds while it shows (a hex or a party entry hovered), else null. */
+  infoRect: Rect | null
 }
 
 /** A hero's face in the guild hall, by its centre on screen. */

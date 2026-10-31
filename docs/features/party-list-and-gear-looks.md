@@ -1,7 +1,7 @@
 # Feature: world-map party list, and hero figures that show worn gear
 
 **Slug:** party-list-and-gear-looks
-**Phase:** 3. Planning
+**Phase:** 4. Implementation
 
 ## Request (user's words)
 
@@ -12,7 +12,7 @@ Follow-up to `ui-feedback-drag-pan-cursor` (simulated-user findings).
 ## Links
 
 - Design: `docs/designs/party-list-and-gear-looks.md` (approved by user 2026-10-31)
-- Plan: `docs/implementation-plans/party-list-and-gear-looks/` (pending)
+- Plan: `docs/implementation-plans/party-list-and-gear-looks/index.md` (4 steps)
 - Branch: `armor-resistance` (current; CLAUDE.md says commit on the current branch)
 
 ## Path
@@ -40,6 +40,12 @@ Both designer questions answered with defaults (see log). Stage 05/06 design wor
 
 - Designer: opus (art layering plus UI that must anticipate multi-party)
 - Planner: opus (art + scene layout + multi-file refactor)
+- Step 01 party list: engineer opus, reviewer opus (scene layout/input)
+- Step 02 bare body + gear sprites: engineer opus, reviewer opus (art-heavy, needs visual judgement)
+- Step 03 hero look code: engineer opus, reviewer opus
+- Step 04 manual + screenshots: engineer sonnet, reviewer sonnet
+- Overall review: opus
+- Steps run sequentially on one branch (02 and 03 must not ship apart)
 
 ## Verification
 

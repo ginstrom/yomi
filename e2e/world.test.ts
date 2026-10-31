@@ -220,6 +220,88 @@ describe('the world map', () => {
     expect(arrived.origin).toEqual(following(arrived))
   })
 
+  /** The list down the right: one entry, selected, inside the strip; the view and the info panel end left of it. */
+  async function expectPartyListLaidOut(game: Game, w: WorldProbe): Promise<void> {
+    const { width } = await game.canvasSize()
+    expect(w.parties).toHaveLength(1)
+    const [entry] = w.parties
+    expect(entry).toMatchObject({ id: 'party_1', selected: true, members: w.party.length })
+    expect(entry.x).toBeGreaterThan(width - 80)
+    expect(entry.x).toBeLessThan(width)
+    expect(entry.y).toBeGreaterThan(64)
+    expect(w.selectedParty).toBe('party_1')
+    expect(w.view.x + w.view.width).toBeLessThanOrEqual(width - 80)
+    await game.hover(worldHexOnScreen(w, w.world.party))
+    const hovered = await game.waitFor('World', (p) => p.infoRect !== null)
+    expect(hovered.infoRect!.x + hovered.infoRect!.width).toBeLessThanOrEqual(width - 80)
+  }
+
+  it('lists the party down the right, clear of the view and the info panel, in the least window too', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    await expectPartyListLaidOut(game, start)
+
+    await game.resize(840, 560)
+    const small = await game.waitFor('World', (w) => w.view.width !== start.view.width)
+    await expectPartyListLaidOut(game, small)
+    // The footer's buttons are as before, left of the strip.
+    expect(small.buttons.camp.visible).toBe(true)
+    expect(small.buttons.camp.x).toBeLessThan(840 - 80)
+  })
+
+  it('centres the view on the party when its entry is clicked, moving no one and passing no time', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+
+    // With no pan, a click changes nothing.
+    await game.click(start.parties[0])
+    expect((await game.waitFor('World')).origin).toEqual(start.origin)
+
+    const panned = await pan(game, start, -40, -30)
+    await game.click(panned.parties[0])
+    const centred = await game.waitFor('World', (w) => w.origin.x === start.origin.x && w.origin.y === start.origin.y)
+    expect(centred.world.party).toEqual(panned.world.party)
+    expect(centred.world.turn).toBe(panned.world.turn)
+    expect(centred.selectedParty).toBe('party_1')
+  })
+
+  it('tells of the party in the info panel while its entry is hovered', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    await game.hover(start.parties[0])
+    const hovered = await game.waitFor('World', (w) => w.info !== '')
+    expect(hovered.info.startsWith('Your party')).toBe(true)
+    expect(hovered.info).toContain('3 members')
+    expect(hovered.info).toContain('Click to centre the view on it.')
+    expect(hovered.infoRect).not.toBeNull()
+  })
+
+  it('ignores a click on the party’s entry while the party walks', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    const to = offsetToHex(11, 19)
+    await game.page.evaluate(() => {
+      window.__yomi!.speed = 0.25
+    })
+    await game.click(worldHexOnScreen(start, to))
+    expect((await game.probe('World'))!.walking).toBe(true)
+    await game.click(start.parties[0])
+    expect((await game.probe('World'))!.walking).toBe(true)
+    const arrived = await game.waitFor('World', (w) => !w.walking && w.world.turn !== start.world.turn)
+    expect(arrived.world.party).toEqual(to)
+    expect(arrived.origin).toEqual(following(arrived))
+  })
+
+  it('marks the party’s entry while it stands before monsters, and names them on hover', async () => {
+    const game = await games.open()
+    await game.newGame()
+    const among = await game.travelTo(RAIDERS.position)
+    expect(among.parties[0].confronting).toBe(true)
+    await game.hover(among.parties[0])
+    const hovered = await game.waitFor('World', (w) => w.info.startsWith('Your party'))
+    expect(hovered.info).toContain('Before the Goblin Raiders')
+  })
+
   it('holds the party among monsters until it answers them', async () => {
     const game = await games.open()
     await game.newGame()
