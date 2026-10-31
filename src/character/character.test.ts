@@ -497,6 +497,19 @@ describe('equipFromBackpack', () => {
       expect(warrior.backpack[space]).toBe(OAK_SHIELD)
     })
 
+    it('chooses the slot as before when none is named', () => {
+      const named = createWarrior()
+      const omitted = createWarrior()
+      for (const warrior of [named, omitted]) {
+        warrior.equipment.ring1 = RING_FORTUNE
+        warrior.backpack[0] = RING_PROTECTION
+      }
+      expect(equipFromBackpack(omitted, 0, [], undefined)).toBe(true)
+      expect(equipFromBackpack(named, 0, [])).toBe(true)
+      expect(omitted).toEqual(named)
+      expect(omitted.equipment).toMatchObject({ ring1: RING_FORTUNE, ring2: RING_PROTECTION })
+    })
+
     it('does nothing for an empty space', () => {
       const warrior = createWarrior()
       expect(equipFromBackpack(warrior, BACKPACK_SIZE - 1, [], 'mainHand')).toBe(false)

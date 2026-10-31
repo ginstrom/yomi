@@ -95,6 +95,17 @@ describe('a hero’s panel', () => {
     await game.letGo()
     expect(await game.scenes()).toEqual({ running: ['Inventory'], paused: ['World'] })
     expect(gear((await game.probe('Inventory'))!)).toEqual(gear(settled))
+
+    // A drag whose release the browser never reported (let go off the window) ends at the next move
+    // with no button held, so a release reported late drops nothing.
+    await game.holdDown(item)
+    await game.hover(settled.grids.ground)
+    await game.page.evaluate(({ x, y }) => {
+      document.querySelector('canvas')!.dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y, buttons: 0, bubbles: true }))
+    }, settled.grids.ground)
+    await game.letGo()
+    await game.frames()
+    expect(gear((await game.probe('Inventory'))!)).toEqual(gear(settled))
   })
 
   it('lists only the perks a hero has taken, and shows them all in the perk tree', async () => {

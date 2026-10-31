@@ -188,6 +188,18 @@ describe('applyMove', () => {
     expect(pile).toEqual([])
   })
 
+  it('picks up and equips a two-handed weapon with one backpack space free, the off-hand item falling to the ground', () => {
+    const warrior = createWarrior()
+    warrior.backpack = Array<Item | null>(BACKPACK_SIZE).fill(IRON_DAGGER)
+    warrior.backpack[4] = null
+    const pile: Item[] = [STEEL_GREATSWORD]
+    expect(applyMove(warrior, pile, { kind: 'pickUpEquip', index: 0, slot: 'mainHand' })).toBe(true)
+    expect(warrior.equipment.mainHand).toBe(STEEL_GREATSWORD)
+    expect(warrior.equipment.offHand).toBeUndefined()
+    expect(warrior.backpack[4]).toBe(IRON_SWORD)
+    expect(pile).toEqual([OAK_SHIELD])
+  })
+
   it('changes nothing when the move cannot be made', () => {
     const refused = [
       // Not the item's slot: neither picked up nor equipped.

@@ -335,6 +335,14 @@ export class InventoryScene extends Phaser.Scene {
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => this.onPointerUp(pointer))
     // Let go off the game: a drag is dropped nowhere, and a press is no click.
     this.input.on('pointerupoutside', () => this.endPress())
+    // Nor is a press any longer held once the game loses focus or is hidden, as by Cmd-Tab mid-drag.
+    const lose = () => this.endPress()
+    this.game.events.on(Phaser.Core.Events.BLUR, lose)
+    this.game.events.on(Phaser.Core.Events.HIDDEN, lose)
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game.events.off(Phaser.Core.Events.BLUR, lose)
+      this.game.events.off(Phaser.Core.Events.HIDDEN, lose)
+    })
     this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _objects: unknown, _dx: number, dy: number) =>
       this.onWheel(dy),
     )
@@ -1144,6 +1152,8 @@ export class InventoryScene extends Phaser.Scene {
       this.hideTooltip()
     })
     bg.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      // A press still held from before is one whose release the browser never reported.
+      this.endPress()
       if (isSecondaryClick(pointer)) this.changeGear(secondary)
       // Gear that cannot be changed now cannot be dragged either.
       else if (this.gearApCost !== null) {
@@ -1199,6 +1209,11 @@ export class InventoryScene extends Phaser.Scene {
   private onPointerMove(pointer: Phaser.Input.Pointer): void {
     const press = this.press
     if (!press) return
+    // A move with no button held: the release went unreported (let go off the window), so the press is over.
+    if (!pointer.isDown || pointer.noButtonDown()) {
+      this.endPress()
+      return
+    }
     if (!press.drag && pressMoved(press.at, pointer)) this.startDrag(press)
     press.drag?.ghost.setPosition(pointer.x, pointer.y)
   }

@@ -88,3 +88,9 @@ Deviations and notes:
 - `InventoryScene` reuses `rectContains` and `Rect` from `mapScroll.ts`.
 - CLAUDE.md updated in this commit (gear paragraph, helper list). The manual is left for step 04, which should also mention the "Drag to move." hint.
 
+
+**Review round 1 (opus): clean, one non-blocking finding, fixed.**
+- Found: a drag could outlive a release the browser never reports (Cmd-Tab mid-drag, let go elsewhere). The ghost would follow a released pointer, and the next press could drop it or leak it. Fixed: a slot's `pointerdown` first calls `endPress()`. `onPointerMove` cancels when `!pointer.isDown || pointer.noButtonDown()`; Phaser keeps `isDown` true without a mouseup, so the move's `buttons` is what shows the release. The game's `BLUR` and `HIDDEN` events cancel too, and are unhooked on shutdown. Browser case added to "drags gear…": a synthetic `mousemove` with `buttons: 0` after a drag starts, then a late release over the baggage, changes nothing. With the move check disabled, that case failed.
+- Test gaps filled: `gearDrag.test.ts`, `pickUpEquip` of a two-hander with exactly one free backpack space (the shield falls to the ground); `character.test.ts`, `equipFromBackpack` with the slot omitted matching the old ring choice.
+- Disputed: none.
+- Verification: `npm test` 67 files, 797 tests passed. `npm run test:browser` 9 files, 66 tests passed.
