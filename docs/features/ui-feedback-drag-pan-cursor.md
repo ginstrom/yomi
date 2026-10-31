@@ -1,7 +1,7 @@
 # Feature: UI feedback — inventory drag and drop, world map drag-to-pan, healing cursor
 
 **Slug:** ui-feedback-drag-pan-cursor
-**Phase:** 3. Planning
+**Phase:** 4. Implementation
 
 ## Request (user's words)
 
@@ -10,7 +10,7 @@
 ## Links
 
 - Design: `docs/designs/ui-feedback-drag-pan-cursor.md` (approved by user 2026-10-31)
-- Plan: `docs/implementation-plans/ui-feedback-drag-pan-cursor/` (pending)
+- Plan: `docs/implementation-plans/ui-feedback-drag-pan-cursor/index.md` (4 steps)
 - Branch: `armor-resistance` (current branch; CLAUDE.md says commit on the current branch)
 
 ## Path
@@ -40,6 +40,11 @@ All answered 2026-10-31 (see decision log).
 
 - Designer: sonnet (small UI feature)
 - Planner: sonnet (small plan)
+- Step 01 healing cursor: engineer sonnet, reviewer sonnet (routine)
+- Step 02 world map pan + Home: engineer opus, reviewer opus (gesture/click interplay)
+- Step 03 inventory drag and drop: engineer opus, reviewer opus (gesture + domain change)
+- Step 04 docs and final pass: engineer sonnet, reviewer sonnet
+- Overall review: opus
 
 ## Verification
 

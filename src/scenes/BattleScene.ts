@@ -36,7 +36,7 @@ import {
 import { buttonProbe, type BattleProbe } from '../testHook.ts'
 import { planAttack, type AttackPlan } from './attackPlan.ts'
 import { FLOOR_SQUASH_Y, HEX_SIZE, boardHexAt, boardHexCenter, boardPixelSize, curvedArrow } from './boardGeometry.ts'
-import { CURSORS } from './cursors.ts'
+import { CURSORS, spellCursor } from './cursors.ts'
 import {
   ARROW_SPRITE,
   BURST_ANIM,
@@ -1055,7 +1055,7 @@ export class BattleScene extends Phaser.Scene {
   /**
    * Shows what a click on the hovered hex would do: an arrow to where the
    * selected unit would walk, and red on it and the foe it would go for, with
-   * the cursor to match (crossed swords, faded when the AP can't cover a strike).
+   * the cursor to match (crossed swords, faded when the AP can't cover a strike; a green cross for a friendly spell).
    */
   private refreshHover(): void {
     this.hoverMarks.clear()
@@ -1088,7 +1088,7 @@ export class BattleScene extends Phaser.Scene {
         break
       }
       case 'cast':
-        this.input.setDefaultCursor(CURSORS.attack)
+        this.input.setDefaultCursor(CURSORS[spellCursor(intent.action.spell)])
         this.markCast(intent.action, selectedAt())
         break
     }
