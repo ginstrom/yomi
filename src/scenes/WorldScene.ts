@@ -268,6 +268,8 @@ export class WorldScene extends Phaser.Scene {
       this.press = { x: pointer.x, y: pointer.y, originAtPress, panning: false }
     })
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
+      // A move with no button held: the release went unreported (let go off the window), so the press is over.
+      if (this.press && pointer.noButtonDown()) this.endPress()
       if (this.press && pointer.isDown && this.onDrag(pointer)) return
       this.setHovered(over.length > 0 ? null : this.hexAt(pointer.x, pointer.y))
     })

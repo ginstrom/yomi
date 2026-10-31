@@ -155,6 +155,25 @@ describe('the world map', () => {
     await game.letGo()
   })
 
+  it('ends a pan whose release went unreported at the next move with no button held', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    const press = midView(start)
+    await game.holdDown(press)
+    await game.hover(plus(press, -40, -30))
+    const dragging = await game.waitFor('World', (w) => w.origin.x !== start.origin.x || w.origin.y !== start.origin.y)
+    // Let go off the window: the browser reports only a later move, with no button held.
+    await game.page.evaluate(({ x, y }) => {
+      document.querySelector('canvas')!.dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y, buttons: 0, bubbles: true }))
+    }, plus(press, -60, -40))
+    await game.frames()
+    expect((await game.waitFor('World')).origin).toEqual(dragging.origin)
+    // The pan is over, so Home recentres.
+    await game.press('Home')
+    await game.waitFor('World', (w) => w.origin.x === start.origin.x && w.origin.y === start.origin.y)
+    await game.letGo()
+  })
+
   it('keeps Home from scrolling the page when the window is below the game\'s minimum size', async () => {
     const game = await games.open()
     await game.newGame()
