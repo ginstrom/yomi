@@ -62,8 +62,29 @@ export function applyMove(character: Character, ground: Item[], move: GearMove):
 - `InventoryScene.test.ts` still passes. `npm test` and `npm run test:browser` pass.
 
 ## Completion criteria
-- [ ] Contracts exactly as above; domain tests seen failing first.
-- [ ] Browser cases pass; R2 clicks unchanged.
-- [ ] One commit; index status and hash updated.
+- [x] Contracts exactly as above; domain tests seen failing first.
+- [x] Browser cases pass; R2 clicks unchanged.
+- [x] One commit; index status and hash updated.
 
 ## Execution record
+
+**2026-10-31, implementer (Opus).** Done.
+
+Built, test-first:
+1. `equipFromBackpack(character, index, ground, slot?)` in `character.ts`, with a new exported `fitsSlot(item, slot)` (its own slot, or either ring slot for a ring). The new `character.test.ts` cases (right slot swaps, wrong slot changes nothing, ring into a named ring slot, two-hander stows the off hand, empty space) failed first on the two that depend on the slot (wrong-slot refusal, ring2 while ring1 is empty), then passed.
+2. `src/scenes/gearDrag.ts` with `DragSource`, `DropTarget`, `GearMove`, `planDrag`, `validTargets`, `applyMove` exactly as the contract. `gearDrag.test.ts` (20 cases: every table row, refusals, ghost off hand, `validTargets` per source kind, `applyMove` all-or-nothing) failed first on the missing module; a mutation dropping `applyMove`'s pre-check on `pickUpEquip` made the all-or-nothing case fail, confirming it bites.
+3. `InventoryScene`: a primary press on an item records an `ItemPress`; right-/Ctrl+click still acts on `pointerdown`. Past `DRAG_THRESHOLD_PX` (`pressMoved`), the drag starts: a scene-level copy of the icon (scaled with the panel, depth 1) follows the pointer, the source icon is dimmed to 0.35, the tooltip hides and hover is suppressed, and each target from `validTargets` gets a gold (`0xc9a227`) outline drawn in a `Graphics` in the inventory content (a slot's square, or the whole grid's bounds). On release, drag versus click is `press.drag !== null || pressMoved(press.at, pointer)` (per the step 02 review); a click runs the old action through `changeGear`, a drag hit-tests the slots and then the two grids in panel space and runs `planDrag`/`applyMove` through `changeGear`. Esc mid-drag cancels without closing; `pointerupoutside` cancels; leaving the Inventory tab cancels; the wheel is ignored mid-drag (its redraw would take away the outlines). No press is recorded while `gearApCost === null`.
+4. `buildGearHint` gains "Drag to move." in the three variants that allow changes. Checked by screenshot at 1280x800 in battle (the longest variant): it fits above the grid titles.
+
+Browser tests: `e2e/character.test.ts` "drags gear between the equipment, the backpack and the baggage" (weapon to backpack and back, backpack item to baggage and back, a drop on a wrong slot changes nothing, a press moved 3-4 px is still a click on release, Esc mid-drag changes nothing and keeps the panel open); `e2e/battle.test.ts` "charges one action point for gear dragged in the inventory, however many moves" (two drags, 7 AP left, one `equip` with `apCost: 1`). The world-map case failed first at the drop onto the baggage. Existing click and right-click tests (`battle.test.ts`, `world.test.ts` loot) pass unchanged, covering R2.
+
+Verification: `npm test` 67 files, 795 tests passed. `npm run test:browser` 9 files, 66 tests passed. `npm run build` succeeded (the usual chunk-size warning). No paid calls.
+
+Deviations and notes:
+- The driver has `holdDown`/`hover`/`letGo` (not `press`/`move`); added `Game.drag(from, to)` on top of them, and recorded it in `e2e/CLAUDE.md`.
+- `InventoryProbe` gains `grids: { backpack, ground }` (grid centres on screen), as an empty baggage has no item positions to drop on.
+- `equipFromBackpack`'s new parameter is named `into` (the body already has a local `slot`); the type is as contracted. `gearDrag.ts` also imports the value `EQUIPMENT_SLOT_ORDER` from `inventory.ts` (Phaser-free), for the order of `validTargets`.
+- A click now fires on release anywhere within the threshold, not only over the same slot; at 6 px that is the same slot except at its very edge.
+- `InventoryScene` reuses `rectContains` and `Rect` from `mapScroll.ts`.
+- CLAUDE.md updated in this commit (gear paragraph, helper list). The manual is left for step 04, which should also mention the "Drag to move." hint.
+

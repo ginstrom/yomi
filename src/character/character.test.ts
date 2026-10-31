@@ -451,6 +451,58 @@ describe('equipFromBackpack', () => {
     expect(warrior.equipment).toMatchObject({ ring1: other, ring2: RING_PROTECTION })
     expect(warrior.backpack[2]).toBe(RING_PROTECTION)
   })
+
+  describe('into a chosen slot', () => {
+    it('equips into the slot named and swaps with what it held', () => {
+      const warrior = createWarrior()
+      const index = warrior.backpack.indexOf(IRON_DAGGER)
+      expect(equipFromBackpack(warrior, index, [], 'mainHand')).toBe(true)
+      expect(warrior.equipment.mainHand).toBe(IRON_DAGGER)
+      expect(warrior.backpack[index]).toBe(IRON_SWORD)
+    })
+
+    it('refuses a slot the item does not fit, changing nothing', () => {
+      const warrior = createWarrior()
+      const before = structuredClone(warrior)
+      const index = warrior.backpack.indexOf(IRON_DAGGER)
+      expect(equipFromBackpack(warrior, index, [], 'offHand')).toBe(false)
+      expect(equipFromBackpack(warrior, index, [], 'ring1')).toBe(false)
+      expect(warrior).toEqual(before)
+    })
+
+    it('puts a ring on whichever ring slot is named, swapping with what that slot held', () => {
+      const warrior = createWarrior()
+      warrior.backpack[0] = RING_PROTECTION
+      expect(equipFromBackpack(warrior, 0, [], 'ring2')).toBe(true)
+      expect(warrior.equipment.ring1).toBeUndefined()
+      expect(warrior.equipment.ring2).toBe(RING_PROTECTION)
+      expect(warrior.backpack[0]).toBeNull()
+
+      warrior.equipment.ring1 = RING_FORTUNE
+      const other: Item = { ...RING_PROTECTION, id: 'other_ring' }
+      warrior.backpack[0] = other
+      expect(equipFromBackpack(warrior, 0, [], 'ring2')).toBe(true)
+      expect(warrior.equipment).toMatchObject({ ring1: RING_FORTUNE, ring2: other })
+      expect(warrior.backpack[0]).toBe(RING_PROTECTION)
+    })
+
+    it('stows the off-hand item when a two-handed weapon goes into the main hand', () => {
+      const warrior = createWarrior()
+      const index = warrior.backpack.indexOf(STEEL_GREATSWORD)
+      const space = warrior.backpack.indexOf(null)
+      expect(equipFromBackpack(warrior, index, [], 'mainHand')).toBe(true)
+      expect(warrior.equipment.mainHand).toBe(STEEL_GREATSWORD)
+      expect(warrior.equipment.offHand).toBeUndefined()
+      expect(warrior.backpack[index]).toBe(IRON_SWORD)
+      expect(warrior.backpack[space]).toBe(OAK_SHIELD)
+    })
+
+    it('does nothing for an empty space', () => {
+      const warrior = createWarrior()
+      expect(equipFromBackpack(warrior, BACKPACK_SIZE - 1, [], 'mainHand')).toBe(false)
+      expect(warrior.equipment.mainHand).toBe(IRON_SWORD)
+    })
+  })
 })
 
 describe('unequipToBackpack', () => {

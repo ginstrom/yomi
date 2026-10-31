@@ -50,6 +50,26 @@ describe('a battle', () => {
     expect(battle.log.at(-1)).toMatchObject({ type: 'equip', unit: 'hero_1', apCost: 1 })
   })
 
+  it('charges one action point for gear dragged in the inventory, however many moves', async () => {
+    const game = await games.open()
+    await game.enterBattle()
+
+    await game.press('i')
+    await game.waitForScenes(['Inventory'], ['Battle'])
+    const panel = await game.settled('Inventory')
+    expect(panel.equipment.offHand.item).not.toBeNull()
+    await game.drag(panel.equipment.mainHand, panel.grids.backpack)
+    const stowed = await game.settled('Inventory', (p) => p.equipment.mainHand.item === null)
+    await game.drag(stowed.equipment.offHand, stowed.grids.backpack)
+    await game.waitFor('Inventory', (p) => p.equipment.offHand.item === null)
+
+    await game.press('Escape')
+    await game.waitForScenes(['Battle'])
+    const battle = await game.awaitTurn()
+    expect(hero(battle).ap).toBe(7)
+    expect(battle.log.at(-1)).toMatchObject({ type: 'equip', unit: 'hero_1', apCost: 1 })
+  })
+
   it('selects a hero by its portrait, and opens the hero’s panel on a second click', async () => {
     const game = await games.open()
     const start = await game.enterBattle()

@@ -49,3 +49,4 @@ All answered 2026-10-31 (see decision log).
 ## Verification
 
 - Step 01: review round 1 clean (sonnet) at ec196d8; non-blocking: a long comment line in BattleScene refreshHover (re-wrap in step 04)
+- Step 02: review round 1 clean (opus) at 7403674; three non-blocking edge cases (release past threshold, Home mid-press, Home page scroll) fixed in 8ee7620 with browser tests; no re-review (non-blocking, covered by overall review)

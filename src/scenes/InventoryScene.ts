@@ -40,6 +40,8 @@ import { formatDamage, type CombatantStats } from '../combat/combat.ts'
 import { EQUIPMENT_SLOT_LABELS, describeItemStats, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
 import type { InventoryProbe } from '../testHook.ts'
 import type { Point } from './boardGeometry.ts'
+import { pressMoved, rectContains, type Rect } from './mapScroll.ts'
+import { applyMove, planDrag, validTargets, type DragSource, type DropTarget } from './gearDrag.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
 import { soundVolume } from './audioSettings.ts'
 import { isSecondaryClick } from './clicks.ts'
@@ -162,6 +164,31 @@ const DIM = '#8a7a5a'
 const TEXT = '#d8c9a3'
 const FAINT = '#665a44'
 
+/**
+ * A primary press on an item, which acts on release: as a click if it moved no further than
+ * `DRAG_THRESHOLD_PX`, else as a drag of the item to wherever it is let go.
+ */
+interface ItemPress {
+  source: DragSource
+  at: Point
+  /** What a click on the item does. */
+  click: () => boolean
+  /** The item's icon in its slot, dimmed while it is dragged, and how opaque it was. */
+  icon: Phaser.GameObjects.Image
+  iconAlpha: number
+  /** Set once the press has moved far enough to be a drag: the copy of the icon following the pointer and the outlines of where it may go. */
+  drag: { ghost: Phaser.GameObjects.Image; outlines: Phaser.GameObjects.Graphics } | null
+}
+
+const HOVER_STROKE = 0xc9a227
+
+/** What a slot's item does: the place it is dragged from, a click on it, and a right- or Ctrl+click. */
+interface ItemActions {
+  source: DragSource
+  click: () => boolean
+  secondary: () => boolean
+}
+
 interface TabButton {
   bg: Phaser.GameObjects.Rectangle
   text: Phaser.GameObjects.Text
@@ -178,6 +205,21 @@ function slotPosition(startX: number, index: number, cols: number): { x: number;
     x: startX + (index % cols) * (SLOT_SIZE + SLOT_GAP),
     y: SLOT_GRID_Y + Math.floor(index / cols) * (SLOT_SIZE + SLOT_GAP),
   }
+}
+
+/** The bounds of a grid of `count` slots in `cols` columns whose first column is at `startX`, in the panel's own pixels. */
+function gridBounds(startX: number, cols: number, count: number): Rect {
+  const rows = Math.ceil(count / cols)
+  return {
+    x: startX - SLOT_SIZE / 2,
+    y: SLOT_GRID_Y - SLOT_SIZE / 2,
+    width: cols * SLOT_SIZE + (cols - 1) * SLOT_GAP,
+    height: rows * SLOT_SIZE + (rows - 1) * SLOT_GAP,
+  }
+}
+
+function rectCentre({ x, y, width, height }: Rect): Point {
+  return { x: x + width / 2, y: y + height / 2 }
 }
 
 export class InventoryScene extends Phaser.Scene {
@@ -213,6 +255,8 @@ export class InventoryScene extends Phaser.Scene {
   private tooltip!: Phaser.GameObjects.Container
   private tooltipText!: Phaser.GameObjects.Text
   private tooltipBg!: Phaser.GameObjects.Rectangle
+  /** The item pressed and not yet let go, if any. */
+  private press: ItemPress | null = null
 
   constructor() {
     super('Inventory')
@@ -229,6 +273,7 @@ export class InventoryScene extends Phaser.Scene {
     this.groundTitle = data.groundTitle ?? 'Ground'
     this.resumeKey = data.resume ?? 'Battle'
     this.worldCast = null
+    this.press = null
     this.setMember(data.index ?? 0)
     // Right-clicking an item drops it.
     this.input.mouse?.disableContextMenu()
@@ -278,12 +323,18 @@ export class InventoryScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-P', () => this.showTab(this.activeTab === 'perkTree' ? 'skills' : 'perkTree'))
     this.input.keyboard?.on('keydown-K', () => this.showTab(this.activeTab === 'spellTree' ? 'spells' : 'spellTree'))
     // Esc backs out of choosing whom to heal; from a tree it steps back to the tab it was opened from; from a tab it closes the panel.
+    // Esc during a drag lets go of the item where it was, and closes nothing.
     this.input.keyboard?.on('keydown-ESC', () => {
       const back = TREE_OF[this.activeTab]
-      if (this.worldCast) this.setWorldCast(null)
+      if (this.press?.drag) this.endPress()
+      else if (this.worldCast) this.setWorldCast(null)
       else if (back) this.showTab(back)
       else this.close()
     })
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => this.onPointerMove(pointer))
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => this.onPointerUp(pointer))
+    // Let go off the game: a drag is dropped nowhere, and a press is no click.
+    this.input.on('pointerupoutside', () => this.endPress())
     this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _objects: unknown, _dx: number, dy: number) =>
       this.onWheel(dy),
     )
@@ -343,6 +394,7 @@ export class InventoryScene extends Phaser.Scene {
       ground: this.ground
         .slice(this.groundScroll.firstIndex, this.groundScroll.firstIndex + GROUND_COLS * GROUND_ROWS)
         .map((item, i) => ({ ...onScreen(slotPosition(this.groundStartX(), i, GROUND_COLS)), item: item.id })),
+      grids: { backpack: onScreen(rectCentre(this.backpackBounds())), ground: onScreen(rectCentre(this.groundBounds())) },
     }
   }
 
@@ -429,7 +481,10 @@ export class InventoryScene extends Phaser.Scene {
     this.treeContent.setVisible(tab === 'perkTree')
     this.spellsContent.setVisible(tab === 'spells')
     this.spellTreeContent.setVisible(tab === 'spellTree')
-    if (tab !== 'inventory') this.hideTooltip()
+    if (tab !== 'inventory') {
+      this.hideTooltip()
+      this.endPress()
+    }
     if (tab !== 'spells' && this.worldCast) this.setWorldCast(null)
 
     // A tree is a view of its tab, whose button stays lit for it.
@@ -892,23 +947,11 @@ export class InventoryScene extends Phaser.Scene {
       const icon = this.add.image(x, y, ITEM_ICON_KEYS[item.icon]).setScale(ITEM_ICON_SCALE)
       if (ghost) icon.setAlpha(0.35)
       this.inventoryContent.add(icon)
-
-      bg.setInteractive({ useHandCursor: true })
-      bg.on('pointerover', () => {
-        bg.setStrokeStyle(2, 0xc9a227)
-        this.showTooltip(item, x, y - SLOT_SIZE / 2 - 10)
+      this.makeItemInteractive(bg, icon, item, 0x6b5a3a, {
+        source: { kind: 'equipment', slot: heldIn },
+        click: () => unequipToBackpack(this.character, heldIn),
+        secondary: () => dropEquipped(this.character, heldIn, this.ground),
       })
-      bg.on('pointerout', () => {
-        bg.setStrokeStyle(2, 0x6b5a3a)
-        this.hideTooltip()
-      })
-      bg.on('pointerdown', (pointer: Phaser.Input.Pointer) =>
-        this.changeGear(() =>
-          isSecondaryClick(pointer)
-            ? dropEquipped(this.character, heldIn, this.ground)
-            : unequipToBackpack(this.character, heldIn),
-        ),
-      )
     } else {
       const label = this.add
         .text(x, y, EQUIPMENT_SLOT_LABELS[slot], {
@@ -946,10 +989,10 @@ export class InventoryScene extends Phaser.Scene {
       this.gearApCost === null
         ? 'Gear can be changed only on your turn, with an action point to spare.'
         : this.resumeKey === 'World'
-          ? 'Click to equip, stow or take; right- or Ctrl+click to put in the baggage.'
+          ? 'Click to equip, stow or take; right- or Ctrl+click to put in the baggage. Drag to move.'
           : this.gearApCost === 0
-          ? 'Click to equip, stow or pick up; right- or Ctrl+click to drop. Free until you next move or attack.'
-          : `Click to equip, stow or pick up; right- or Ctrl+click to drop. Costs ${this.gearApCost} AP on closing, however many changes.`
+          ? 'Click to equip, stow or pick up; right- or Ctrl+click to drop. Drag to move. Free until you next move or attack.'
+          : `Click to equip, stow or pick up; right- or Ctrl+click to drop. Drag to move. Costs ${this.gearApCost} AP on closing, however many changes.`
     this.inventoryContent.add(
       this.add.text(STATS_X, 300, hint, {
         fontFamily: 'monospace',
@@ -996,12 +1039,22 @@ export class InventoryScene extends Phaser.Scene {
     const startX = this.buildSlotGrid('Backpack', DOLL_X, BACKPACK_COLS)
     this.character.backpack.forEach((item, i) => {
       const { x, y } = slotPosition(startX, i, BACKPACK_COLS)
-      this.createItemSlot(x, y, item, (pointer) =>
-        isSecondaryClick(pointer)
-          ? dropFromBackpack(this.character, i, this.ground)
-          : equipFromBackpack(this.character, i, this.ground),
-      )
+      this.createItemSlot(x, y, item, {
+        source: { kind: 'backpack', index: i },
+        click: () => equipFromBackpack(this.character, i, this.ground),
+        secondary: () => dropFromBackpack(this.character, i, this.ground),
+      })
     })
+  }
+
+  /** The backpack's grid, all of which takes a dragged item, in the panel's own pixels. */
+  private backpackBounds(): Rect {
+    return gridBounds(gridStartX(DOLL_X, BACKPACK_COLS), BACKPACK_COLS, this.character.backpack.length)
+  }
+
+  /** The ground's grid, all of which takes a dragged item, in the panel's own pixels. */
+  private groundBounds(): Rect {
+    return gridBounds(this.groundStartX(), GROUND_COLS, GROUND_COLS * GROUND_ROWS)
   }
 
   /** The x of the ground grid's first column. */
@@ -1021,7 +1074,8 @@ export class InventoryScene extends Phaser.Scene {
     for (let i = 0; i < GROUND_COLS * GROUND_ROWS; i++) {
       const { x, y } = slotPosition(startX, i, GROUND_COLS)
       const index = first + i
-      this.createItemSlot(x, y, this.ground[index] ?? null, () => pickUp(this.character, this.ground, index))
+      const take = () => pickUp(this.character, this.ground, index)
+      this.createItemSlot(x, y, this.ground[index] ?? null, { source: { kind: 'ground', index }, click: take, secondary: take })
     }
     this.buildGroundScrollbar(STATS_X + gridW + 4)
   }
@@ -1053,30 +1107,49 @@ export class InventoryScene extends Phaser.Scene {
     return gridStartX(centerX, cols)
   }
 
-  /** A backpack or ground space; clicking the item in it makes the change `onClick` returns the success of. */
-  private createItemSlot(
-    x: number,
-    y: number,
-    item: Item | null,
-    onClick: (pointer: Phaser.Input.Pointer) => boolean,
-  ): void {
+  /** A backpack or ground space, whose item, if it holds one, is clicked and dragged as `actions` say. */
+  private createItemSlot(x: number, y: number, item: Item | null, actions: ItemActions): void {
     const bg = this.add.rectangle(x, y, SLOT_SIZE, SLOT_SIZE, 0x1b1712, 0.9).setStrokeStyle(2, 0x4a3d28)
     this.inventoryContent.add(bg)
 
     if (item) {
-      this.inventoryContent.add(this.add.image(x, y, ITEM_ICON_KEYS[item.icon]).setScale(ITEM_ICON_SCALE))
-
-      bg.setInteractive({ useHandCursor: true })
-      bg.on('pointerover', () => {
-        bg.setStrokeStyle(2, 0xc9a227)
-        this.showTooltip(item, x, y - SLOT_SIZE / 2 - 10)
-      })
-      bg.on('pointerout', () => {
-        bg.setStrokeStyle(2, 0x4a3d28)
-        this.hideTooltip()
-      })
-      bg.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.changeGear(() => onClick(pointer)))
+      const icon = this.add.image(x, y, ITEM_ICON_KEYS[item.icon]).setScale(ITEM_ICON_SCALE)
+      this.inventoryContent.add(icon)
+      this.makeItemInteractive(bg, icon, item, 0x4a3d28, actions)
     }
+  }
+
+  /**
+   * Makes a slot holding `item` answer the pointer: hovering shows the item, a right- or
+   * Ctrl+click makes the secondary change at once, and a primary press waits for its release,
+   * to be a click or a drag (`onPointerUp`).
+   */
+  private makeItemInteractive(
+    bg: Phaser.GameObjects.Rectangle,
+    icon: Phaser.GameObjects.Image,
+    item: Item,
+    stroke: number,
+    { source, click, secondary }: ItemActions,
+  ): void {
+    const { x, y } = bg
+    bg.setInteractive({ useHandCursor: true })
+    bg.on('pointerover', () => {
+      // Mid-drag the outlines show where the item may go; the slots passed over say nothing.
+      if (this.press?.drag) return
+      bg.setStrokeStyle(2, HOVER_STROKE)
+      this.showTooltip(item, x, y - SLOT_SIZE / 2 - 10)
+    })
+    bg.on('pointerout', () => {
+      bg.setStrokeStyle(2, stroke)
+      this.hideTooltip()
+    })
+    bg.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (isSecondaryClick(pointer)) this.changeGear(secondary)
+      // Gear that cannot be changed now cannot be dragged either.
+      else if (this.gearApCost !== null) {
+        this.press = { source, at: { x: pointer.x, y: pointer.y }, click, icon, iconAlpha: icon.alpha, drag: null }
+      }
+    })
   }
 
   private buildTooltip(): void {
@@ -1121,6 +1194,81 @@ export class InventoryScene extends Phaser.Scene {
     this.panel.setPosition(PARTY_PANEL_W + (free - PANEL_W * scale) / 2, (height - PANEL_H * scale) / 2)
   }
 
+  // ---- drag and drop ---------------------------------------------------------
+
+  private onPointerMove(pointer: Phaser.Input.Pointer): void {
+    const press = this.press
+    if (!press) return
+    if (!press.drag && pressMoved(press.at, pointer)) this.startDrag(press)
+    press.drag?.ghost.setPosition(pointer.x, pointer.y)
+  }
+
+  /** The press has moved far enough to be a drag: a copy of the item follows the pointer, and where it may go is outlined. */
+  private startDrag(press: ItemPress): void {
+    this.hideTooltip()
+    press.icon.setAlpha(0.35)
+    const ghost = this.add
+      .image(press.at.x, press.at.y, press.icon.texture.key)
+      .setScale(ITEM_ICON_SCALE * this.panel.scale)
+      .setAlpha(0.7)
+      .setDepth(1)
+    const outlines = this.add.graphics().lineStyle(2, HOVER_STROKE)
+    for (const target of validTargets(this.character, this.ground, press.source)) {
+      const { x, y, width, height } = this.targetBounds(target)
+      outlines.strokeRect(x, y, width, height)
+    }
+    this.inventoryContent.add(outlines)
+    press.drag = { ghost, outlines }
+  }
+
+  /** Lets go of the press: a click if it never became a drag, else a drop on whatever is under the pointer. */
+  private onPointerUp(pointer: Phaser.Input.Pointer): void {
+    const press = this.press
+    if (!press) return
+    // A release may carry the pointer past the threshold with no move reported before it: a drag all the same.
+    const dragged = press.drag !== null || pressMoved(press.at, pointer)
+    this.endPress()
+    if (!dragged) {
+      this.changeGear(press.click)
+      return
+    }
+    const to = this.dropTargetAt(pointer)
+    const move = to && planDrag(this.character, this.ground, press.source, to)
+    if (move) this.changeGear(() => applyMove(this.character, this.ground, move))
+  }
+
+  /** Forgets the press, putting back what a drag changed on screen. */
+  private endPress(): void {
+    const drag = this.press?.drag
+    if (drag) {
+      // A redraw while the item was held may have taken its slot's icon away already.
+      if (this.press!.icon.active) this.press!.icon.setAlpha(this.press!.iconAlpha)
+      drag.ghost.destroy()
+      drag.outlines.destroy()
+    }
+    this.press = null
+  }
+
+  /** Where a dragged item let go at `pointer` would land: an equipment slot, or the backpack's or the ground's grid. */
+  private dropTargetAt(pointer: Point): DropTarget | null {
+    if (this.activeTab !== 'inventory') return null
+    const at = { x: (pointer.x - this.panel.x) / this.panel.scale, y: (pointer.y - this.panel.y) / this.panel.scale }
+    const targets: DropTarget[] = [
+      ...[...this.slotCentres.keys()].map((slot): DropTarget => ({ kind: 'equipment', slot })),
+      { kind: 'backpack' },
+      { kind: 'ground' },
+    ]
+    return targets.find((target) => rectContains(this.targetBounds(target), at)) ?? null
+  }
+
+  /** The area of a drop target, in the panel's own pixels. */
+  private targetBounds(target: DropTarget): Rect {
+    if (target.kind === 'backpack') return this.backpackBounds()
+    if (target.kind === 'ground') return this.groundBounds()
+    const { x, y } = this.slotCentres.get(target.slot)!
+    return { x: x - SLOT_SIZE / 2, y: y - SLOT_SIZE / 2, width: SLOT_SIZE, height: SLOT_SIZE }
+  }
+
   // ---- actions -------------------------------------------------------------
 
   /** Applies a change of gear, if the battle allows one now, and redraws the panel to match. */
@@ -1146,6 +1294,8 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   private onWheel(deltaY: number): void {
+    // Not mid-drag: the redraw would take away the outlines of where the item may go.
+    if (this.press?.drag) return
     if (this.activeTab === 'inventory' && this.groundScroll.wheel(deltaY)) this.buildContent()
   }
 

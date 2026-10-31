@@ -41,6 +41,62 @@ describe('a hero’s panel', () => {
     expect(back.party.map((member) => member.active)).toEqual([false, false, true])
   })
 
+  it('drags gear between the equipment, the backpack and the baggage', async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    const panel = await game.settled('Inventory', (p) => p.tab === 'inventory')
+    const weapon = panel.equipment.mainHand.item!
+    expect(weapon).not.toBeNull()
+    expect(panel.ground).toEqual([])
+    const carried = (p: typeof panel) => p.backpack.map((slot) => slot.item)
+
+    // The weapon in hand dragged anywhere on the backpack is stowed, and dragged back onto its slot is worn again.
+    await game.drag(panel.equipment.mainHand, panel.grids.backpack)
+    const stowed = await game.settled('Inventory', (p) => p.equipment.mainHand.item === null)
+    expect(carried(stowed)).toContain(weapon)
+    await game.drag(stowed.backpack.find((slot) => slot.item === weapon)!, stowed.equipment.mainHand)
+    const worn = await game.settled('Inventory', (p) => p.equipment.mainHand.item === weapon)
+    expect(carried(worn)).toEqual(carried(panel))
+
+    // A backpack item dragged onto the baggage goes there, and dragged back comes back.
+    const spare = worn.backpack[0]
+    await game.drag(spare, worn.grids.ground)
+    const dropped = await game.settled('Inventory', (p) => p.ground.length === 1)
+    expect(dropped.ground[0].item).toBe(spare.item)
+    expect(carried(dropped)).not.toContain(spare.item)
+    await game.drag(dropped.ground[0], dropped.grids.backpack)
+    const back = await game.settled('Inventory', (p) => p.ground.length === 0)
+    expect(carried(back)).toContain(spare.item)
+
+    // A drop on a slot the item does not fit, or a release where it was picked up, changes nothing.
+    const gear = (p: typeof panel) => ({ equipment: p.equipment, backpack: p.backpack, ground: p.ground })
+    await game.drag(back.backpack[0], back.equipment.head)
+    await game.frames()
+    expect(gear((await game.probe('Inventory'))!)).toEqual(gear(back))
+
+    // A press that hardly moves is still a click: it stows the weapon on release.
+    const at = back.equipment.mainHand
+    await game.holdDown(at)
+    await game.hover({ x: at.x + 3, y: at.y + 2 })
+    expect((await game.probe('Inventory'))!.equipment.mainHand.item).toBe(weapon)
+    await game.letGo()
+    const clicked = await game.waitFor('Inventory', (p) => p.equipment.mainHand.item === null)
+    expect(carried(clicked)).toContain(weapon)
+
+    // Esc lets go of a drag without closing the panel or moving anything.
+    const settled = await game.settled('Inventory')
+    const item = settled.backpack[0]
+    await game.holdDown(item)
+    await game.hover(settled.grids.ground)
+    await game.press('Escape')
+    await game.letGo()
+    expect(await game.scenes()).toEqual({ running: ['Inventory'], paused: ['World'] })
+    expect(gear((await game.probe('Inventory'))!)).toEqual(gear(settled))
+  })
+
   it('lists only the perks a hero has taken, and shows them all in the perk tree', async () => {
     const game = await games.open()
     const world = await game.newGame()

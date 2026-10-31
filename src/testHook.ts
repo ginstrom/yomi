@@ -299,6 +299,8 @@ export interface InventoryProbe {
   backpack: Array<Point & { item: string }>
   /** The items the ground grid shows now (on the world map, the baggage), each with its slot's centre on screen. */
   ground: Array<Point & { item: string }>
+  /** The centres on screen of the backpack's and the ground's grids, either of which takes a dragged item anywhere on it. */
+  grids: { backpack: Point; ground: Point }
 }
 
 export interface StoryProbe {
