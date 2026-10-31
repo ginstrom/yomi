@@ -47,7 +47,7 @@ export function clampOrigin(origin: Point, map: { width: number; height: number 
 
 ## Execution record
 
-**Implemented** on `armor-resistance` after `ec196d8`.
+**Implemented** in `9fe243d` on `armor-resistance`.
 
 - `src/scenes/mapScroll.ts`: `DRAG_THRESHOLD_PX`, `pressMoved`, `pannedOrigin`, `clampOrigin` as in the contract; `mapOrigin` now computes the unclamped centring origin and hands it to `clampOrigin` (same results; its old tests unchanged and green).
 - `src/scenes/WorldScene.ts`: `panOrigin` and `press` fields (reset in `create`), `applyOrigin()` replacing `follow()` (clamps and keeps a pan, else follows the party; `layout()` re-clamps), `onDrag`, `endPress`, `recentre` (Home). The scene `pointerdown` now records a press; `pointerup` travels for an unpanned press (at the press position, `onMapClick` re-checking walking/outcome shade) and ends a pan; `pointerupoutside`, `GAME_OUT` and `PAUSE` drop the press (a pan stays). A journey's start and `arrive()` clear the pan.
