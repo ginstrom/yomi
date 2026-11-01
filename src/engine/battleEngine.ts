@@ -359,7 +359,7 @@ export interface CastEvent extends EventBase {
   skill: number
   /** One for each unit touched, in roster order. */
   outcomes: CastOutcome[]
-  /** Hit points the caster regained by the spell's `drain`, no more than it had lost; 0 for any other spell. */
+  /** Hit points the caster regained by the spell's `drain` of the hit points its targets lost, no more than it had lost; 0 for any other spell. */
   drained: number
 }
 
@@ -1453,8 +1453,9 @@ export class BattleEngine {
         damage: 0, warded: 0, half: false, healed: Math.max(0, healed), hpBefore, hpAfter: unit.hp, status: laid,
       }
     })
-    // A drain heals a caster its own area left standing, by a share of what all it touched were dealt.
-    const dealt = outcomes.reduce((sum, o) => sum + o.damage, 0)
+    // A drain heals a caster its own area left standing, by a share of the hit points all it touched lost
+    // (not the overkill past what a target had left).
+    const dealt = outcomes.reduce((sum, o) => sum + (o.hpBefore - o.hpAfter), 0)
     const drained = drain && actor.hp > 0 ? Math.min(Math.floor(drain * dealt), actor.stats.maxHp - actor.hp) : 0
     actor.hp += drained
 

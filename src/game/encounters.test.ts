@@ -437,7 +437,7 @@ describe('the foe yardstick', () => {
     { kind: 'armored_troll', field: 'maxHp', reason: 'plates (resistance 5) and regeneration stand for hit points, so its pool is small' },
     { kind: 'armored_troll', field: 'meanDamage', reason: 'one heavy blow of 2d6+2 a turn, the damage of a foe that is a danger in melee' },
     { kind: 'giant_spider', field: 'maxHp', reason: 'the Giant Spider is a fragile ambusher; its Web and venom are its danger, not its hit points' },
-    { kind: 'giant_spider', field: 'meanDamage', reason: 'its fangs are weak (1d6+2); its danger is the Web and the poison of a second bite' },
+    { kind: 'giant_spider', field: 'meanDamage', reason: 'its routine of two bites (1d6+2 each, the second poisoning) is 11 a turn, above the band: the spider is built to hit hard and die fast' },
     { kind: 'salamander', field: 'maxHp', reason: 'the Salamander\'s fire ward and Fire Spit stand for hit points, so its pool is small' },
     { kind: 'armored_troll', field: 'toHit', reason: 'level 1 foes hit less often than the band; they catch up by 5 a level' },
   ]

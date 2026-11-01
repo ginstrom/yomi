@@ -1600,6 +1600,12 @@ describe('BattleEngine elements, wards and monster spells', () => {
       expect(formatEvent(event, NAMED)).toBe('Mage casts Drain Life on Goblin: rolls 34 (needs 61 or less) — HITS Goblin for 6 dmg.')
     })
 
+    it('drains only the hit points its target had left', () => {
+      const engine = battle([caster(['drain_life'], { hp: 10 }), goblinAt(hex(5, 1), { hp: 2 })], DRAIN_6)
+      expect(engine.step(on('drain_life', 'goblin'))[0]).toMatchObject({ drained: 1, outcomes: [{ damage: 6, hpAfter: 0 }] })
+      expect(unitOf(engine, 'mage').hp).toBe(11)
+    })
+
     it('drains nothing on a miss', () => {
       const engine = battle([caster(['drain_life'], { hp: 10 }), goblinAt(hex(5, 1))], [0.3])
       expect(engine.step(on('drain_life', 'goblin'))[0]).toMatchObject({ drained: 0, outcomes: [{ hit: false }] })
@@ -2098,6 +2104,12 @@ describe('BattleEngine area abilities', () => {
     expect(event.outcomes[0]).toMatchObject({ hit: false, half: true, damage: 6, hpAfter: 14, status: null })
     expect(unitOf(engine, 'warrior').statuses).toEqual([])
     expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: MISSES Warrior, 6 dmg (half).')
+  })
+
+  it('deals half the dice on a fumble too, a fumble being a miss', () => {
+    const engine = enemyTurn([playerAt('warrior', WEST_OF), SALAMANDER], [0.01, 0.66])
+    const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
+    expect(event.outcomes[0]).toMatchObject({ attackRoll: 99, fumble: true, hit: false, half: true, damage: 6, hpAfter: 14, status: null })
   })
 
   it('deals nothing on a miss without halfOnMiss, drawing no dice for it', () => {
