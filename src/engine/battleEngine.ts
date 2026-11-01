@@ -1694,9 +1694,9 @@ function hostileOutcome(outcome: CastOutcome, name: string): string {
     return outcome.half ? `${missed}, ${outcome.damage} dmg${wardedNote(outcome.warded)} (half)` : missed
   }
   if (outcome.image) return `strikes an image of ${name}`
-  const crit = outcome.critical ? ' (CRITICAL)' : ''
+  const notes = [...(outcome.critical ? ['CRITICAL'] : []), ...(outcome.warded > 0 ? [`warded ${outcome.warded}`] : [])]
   const struck = outcome.damage > 0 || outcome.warded > 0
-  const parts = struck ? [`HITS ${name} for ${outcome.damage} dmg${wardedNote(outcome.warded)}${crit}`] : []
+  const parts = struck ? [`HITS ${name} for ${outcome.damage} dmg${notes.length > 0 ? ` (${notes.join(', ')})` : ''}`] : []
   if (outcome.status) parts.push(struck ? laidPhrase(outcome.status.id).replace(/^is /, '') : `${name} ${laidPhrase(outcome.status.id)}`)
   return parts.join(', ') || `HITS ${name}`
 }

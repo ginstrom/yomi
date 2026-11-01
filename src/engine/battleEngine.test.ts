@@ -2145,6 +2145,12 @@ describe('BattleEngine area abilities', () => {
     expect(engine.getState().winner).toBe('enemy')
   })
 
+  it('puts a critical and a ward in one pair of brackets', () => {
+    const engine = enemyTurn([playerAt('warrior', WEST_OF, { stats: { ...WARRIOR_STATS, wards: { fire: 5 } } }), SALAMANDER], [0.99, 0.66])
+    const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
+    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: HITS Warrior for 19 dmg (CRITICAL, warded 5), seared.')
+  })
+
   it('strikes a mirror image on a hit, drawing no dice for it', () => {
     const MAGE: UnitSetup = playerAt('mage', WEST_OF, { stats: { ...WARRIOR_STATS, name: 'Mage', magic: { maxMana: 18, skill: 76, spells: ['mirror_image'] } } })
     const engine = new BattleEngine({ board: WIDE, units: [MAGE, playerAt('cleric', hex(1, 1)), SALAMANDER] }, { rng: sequence([0.66, MISS, 0.66]) })
@@ -2183,6 +2189,16 @@ describe('BattleEngine area abilities', () => {
       ['cleric', false, false, 0, null],
     ])
     expect(formatEvent(event, NAMED)).toBe('Spider spins a web: Warrior is webbed; MISSES Cleric.')
+  })
+
+  it('logs a web that hits a unit already webbed as webbing it, never as a miss', () => {
+    // Two spiders web the warrior in one turn: the second web finds it webbed already.
+    const engine = enemyTurn([playerAt('warrior', hex(3, 1)), SPIDER, { ...SPIDER, id: 'spider2', position: hex(6, 2) }], [0.66])
+    engine.step(web(hex(3, 1)))
+    expect(unitOf(engine, 'warrior').statuses.map((st) => st.id)).toEqual(['webbed'])
+    const [event] = engine.step({ type: 'ability', unit: 'spider2', ability: 'spider_web', at: hex(3, 1) }) as AbilityEvent[]
+    expect(event.outcomes[0]).toMatchObject({ hit: true, status: { id: 'webbed', turnsLeft: 2 } })
+    expect(formatEvent(event, { ...NAMED, spider2: 'Spider' })).toBe('Spider spins a web: Warrior is webbed.')
   })
 
   it('lists an area at each legal aim in board order, after the unit’s other actions', () => {
