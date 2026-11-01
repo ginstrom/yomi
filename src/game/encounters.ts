@@ -251,7 +251,7 @@ const TROLL_LAIR_SLOTS: readonly FoeSlot[] = [
   { id: 'whelp', kind: 'troll', name: 'Troll Whelp', at: [9, 6] },
 ]
 
-// The Spider first, so it leads at any threat; the Sneak beside it, and the second Spider from threat 5.
+// The Spider first, the Sneak beside it, and the second Spider: all three at threat 5, the only threat it is fought at.
 const SPIDER_NEST_SLOTS: readonly FoeSlot[] = [
   { id: 'spider', kind: 'giant_spider', name: 'Giant Spider', at: [8, 4] },
   { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [9, 2] },
@@ -293,8 +293,11 @@ const KOBOLD_SCOUTS: EncounterDef = { slots: KOBOLD_SCOUTS_SLOTS, ...TODAY }
 const HOBGOBLIN_WARBAND: EncounterDef = { slots: HOBGOBLIN_WARBAND_SLOTS, ...TODAY }
 const TROLL_LAIR: EncounterDef = { slots: TROLL_LAIR_SLOTS, ...TODAY }
 const SOURCE_GUARDIANS: EncounterDef = { slots: SOURCE_GUARDIANS_SLOTS, ...TODAY }
-/** The Giant Spider's nest, fought at threats 4 and 5: a spider and a Sneak, and a second spider at 5. */
-const SPIDER_NEST: EncounterDef = { slots: SPIDER_NEST_SLOTS, band: { min: 4, max: 5 }, counts: [2, 3] }
+/**
+ * The Giant Spider's nest, fought at threat 5 only (the user's choice at stage 2: at threat 4 its two foes were
+ * won 500 times in 500, and only a third foe moved that, which would have fielded as many at the band's bottom as at its top).
+ */
+const SPIDER_NEST: EncounterDef = { slots: SPIDER_NEST_SLOTS, band: { min: 5, max: 5 }, counts: [3] }
 /** The Salamander's pool, fought at threat 5 only. */
 const SALAMANDER_POOL: EncounterDef = { slots: SALAMANDER_POOL_SLOTS, band: { min: 5, max: 5 }, counts: [3] }
 /**
@@ -335,7 +338,7 @@ export function trollLair(party: readonly Fighter[], threat = 1): Encounter {
  * Giant Spiders that web a hero from range, then close and bite twice, the
  * second bite poisoning, with a Kobold Sneak; at threat 5 a second spider.
  */
-export function spiderNest(party: readonly Fighter[], threat = 4): Encounter {
+export function spiderNest(party: readonly Fighter[], threat = 5): Encounter {
   return encounter(party, SPIDER_NEST, threat)
 }
 
