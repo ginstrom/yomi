@@ -33,7 +33,7 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 17
+export const LOG_SCHEMA_VERSION = 18
 
 /** What an attacker's chance to hit gains, in percent, for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 10
@@ -41,7 +41,9 @@ export const FLANK_BONUS_PER_ALLY = 10
 /**
  * Which way a defender is struck from, relative to its facing: its three
  * front hexes, the two beside its back, or straight behind it. A shot from
- * further off strikes the arc of the neighbouring hex it comes in over.
+ * further off strikes the arc of the neighbouring hex it comes in over. A
+ * defender struck in its side or rear turns to meet the blow first, if it
+ * has not already turned this enemy turn (`turnReady`).
  */
 export type Arc = 'front' | 'side' | 'rear'
 
@@ -146,6 +148,8 @@ export interface UnitSnapshot extends CombatantStats {
   mana: number
   /** Whether the unit can still make a free attack this enemy turn. */
   reactionReady: boolean
+  /** Whether the unit can still turn to meet an attack on its side or rear this enemy turn. */
+  turnReady: boolean
   /** The lasting effects on it, in the order laid. Its stats here are as it was born to the battle; `effectiveStats` adds these. */
   statuses: ActiveStatus[]
 }
@@ -246,7 +250,11 @@ export interface AttackEvent extends EventBase {
   flankers: UnitId[]
   /** What the flankers added to the chance to hit, in percent; already included in `chance`. */
   flankBonus: number
-  /** Which of the defender's arcs the attack came from, given the defender's facing. */
+  /** The defender turned to face the attacker before the roll, which spent its `turnReady`. */
+  defenderTurned: boolean
+  /** The defender's facing when struck, after any turn. */
+  defenderFacing: number
+  /** Which of the defender's arcs the attack came from, given the defender's facing after any turn. */
   arc: Arc
   /** What the arc added to the chance to hit, in percent; already included in `chance`. */
   arcBonus: number
@@ -434,6 +442,7 @@ export interface UnitRecord {
   ap: number
   mana: number
   reactionReady: boolean
+  turnReady: boolean
   /** The unit has paid for a change of gear and not moved, attacked or cast since. */
   gearChangePaid: boolean
   statuses: ActiveStatus[]
@@ -485,6 +494,14 @@ export function attackArc(defender: Pick<UnitSnapshot, 'position' | 'facing'>, f
   const turn = (direction - defender.facing + 6) % 6
   const away = Math.min(turn, 6 - turn)
   return away <= 1 ? 'front' : away === 2 ? 'side' : 'rear'
+}
+
+/**
+ * The arc an attack from `from` will strike: the front, if the defender can
+ * still turn to meet it; otherwise the arc it is struck in as it stands.
+ */
+export function arcStruck(defender: Pick<UnitSnapshot, 'position' | 'facing' | 'turnReady'>, from: Hex): Arc {
+  return defender.turnReady ? 'front' : attackArc(defender, from)
 }
 
 /** Whether the unit has `status` in force. */
@@ -566,9 +583,11 @@ export function castTouches<U extends Placed>(units: readonly U[], caster: Place
  * until the side ends its turn. Nothing blocks a shot: there is no line of sight yet.
  * An attack gains a to-hit bonus for each other ally adjacent to the
  * defender, and another for striking the defender's side or rear: units
- * face the way they last stepped or struck. Every standing unit with a melee
- * weapon exerts a zone of control over its neighbouring hexes: a foe stepping
- * out of one provokes a free attack, at most one per unit per enemy turn.
+ * face the way they last stepped or struck, and once each enemy turn a
+ * defender turns to meet a blow on its side or rear. Every standing unit
+ * with a melee weapon exerts a zone of control over its neighbouring hexes:
+ * a foe stepping out of one, not merely to another hex beside it, provokes
+ * a free attack, at most one per unit per enemy turn.
  * A ranged weapon (`attackRange` above 1) holds no zone. A unit with magic
  * (`stats.magic`) may cast a spell it knows on a foe within the spell's
  * range, for the spell's action points and mana; mana starts full and does
@@ -633,6 +652,7 @@ export class BattleEngine {
       ap: 0,
       mana: u.stats.magic?.maxMana ?? 0,
       reactionReady: false,
+      turnReady: false,
       gearChangePaid: false,
       statuses: [],
     }))
@@ -751,7 +771,7 @@ export class BattleEngine {
     const provokes: UnitId[] = []
     let at = actor.position
     for (const step of path) {
-      for (const foe of this.reactorsAt(actor, at)) if (!provokes.includes(foe.id)) provokes.push(foe.id)
+      for (const foe of this.reactorsAt(actor, at, step)) if (!provokes.includes(foe.id)) provokes.push(foe.id)
       at = step
     }
     return { path, apCost: path.length * MOVE_AP_COST_PER_HEX, provokes }
@@ -765,7 +785,7 @@ export class BattleEngine {
     if (actor.ap < actor.stats.attackApCost || !this.canAttack(actor, foe)) return null
     const flankers = flankersOf(this.units, actor, foe)
     const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
-    const arc = attackArc(foe, actor.position)
+    const arc = arcStruck(foe, actor.position)
     const arcBonus = ARC_BONUS[arc]
     const helpless = hasStatus(foe, 'asleep') ? HELPLESS_BONUS : 0
     const attacker = effectiveStats(actor)
@@ -862,7 +882,8 @@ export class BattleEngine {
 
   /**
    * Refills the side's action points, less or more by their statuses, and
-   * readies the other side's free attacks (not a sleeper's); then deals the
+   * readies the other side's free attacks and turns to meet a blow (not a
+   * sleeper's); then deals the
    * side's statuses' damage, unit by unit in roster order, which may fell
    * units and end the battle before the side acts; then the side's units that
    * still stand regenerate, in roster order, those whose statuses allow it.
@@ -870,8 +891,13 @@ export class BattleEngine {
   private startTurn(side: Side): BattleEvent[] {
     this.phase = side
     for (const u of this.units) {
-      if (u.side === side) u.ap = u.hp > 0 ? apAfterStatuses(u, u.stats.actionPoints) : 0
-      else u.reactionReady = u.hp > 0 && !hasStatus(u, 'asleep')
+      if (u.side === side) {
+        u.ap = u.hp > 0 ? apAfterStatuses(u, u.stats.actionPoints) : 0
+        u.turnReady = false
+      } else {
+        u.reactionReady = u.hp > 0 && !hasStatus(u, 'asleep')
+        u.turnReady = u.reactionReady
+      }
       u.gearChangePaid = false
     }
     const events: BattleEvent[] = []
@@ -954,7 +980,10 @@ export class BattleEngine {
       if (rule.sleep) unit.ap = 0
       else if (rule.actionPoints) unit.ap = Math.max(0, unit.ap + rule.actionPoints)
     }
-    if (rule.sleep) unit.reactionReady = false
+    if (rule.sleep) {
+      unit.reactionReady = false
+      unit.turnReady = false
+    }
     return { ...status }
   }
 
@@ -1019,8 +1048,8 @@ export class BattleEngine {
     return side && hexDistance(target.position, actor.position) <= range
   }
 
-  /** Foes that would strike `mover` for stepping out of `hex`. */
-  private reactorsAt(mover: UnitRecord, hex: Hex): UnitRecord[] {
+  /** Foes that would strike `mover` for stepping from `hex` to `to`: those it leaves the side of. */
+  private reactorsAt(mover: UnitRecord, hex: Hex, to: Hex): UnitRecord[] {
     // Crit-focused builds may later slip through zones of control; that check belongs here.
     return this.units.filter(
       (u) =>
@@ -1029,13 +1058,15 @@ export class BattleEngine {
         u.reactionReady &&
         !hasStatus(u, 'asleep') &&
         u.stats.attackRange === 1 &&
-        hexDistance(u.position, hex) === 1,
+        hexDistance(u.position, hex) === 1 &&
+        hexDistance(u.position, to) > 1,
     )
   }
 
   /**
    * Walks the path, pausing for a free attack from each ready foe whose zone
-   * the mover steps out of. The mover turns towards each step before taking
+   * the mover steps out of; a step to another hex beside the foe provokes
+   * nothing. The mover turns towards each step before taking
    * it, so a free attack strikes whichever arc that exposes. The move ends
    * early if the mover falls.
    */
@@ -1073,7 +1104,7 @@ export class BattleEngine {
 
     for (const step of path) {
       actor.facing = hexDirection(actor.position, step)!
-      const reactors = this.reactorsAt(actor, actor.position)
+      const reactors = this.reactorsAt(actor, actor.position, step)
       if (reactors.length > 0) logSegment()
       for (const foe of reactors) {
         foe.reactionReady = false
@@ -1098,7 +1129,7 @@ export class BattleEngine {
       actor.position,
       Math.floor(actor.ap / MOVE_AP_COST_PER_HEX),
       (h) => this.board.contains(h) && !blocked(h),
-      (from) => this.reactorsAt(actor, from).map((u) => u.id),
+      (from, to) => this.reactorsAt(actor, from, to).map((u) => u.id),
     )
   }
 
@@ -1133,9 +1164,18 @@ export class BattleEngine {
     ]
   }
 
-  /** Resolves an attack already paid for; an `apCost` of null marks a free attack. */
+  /**
+   * Resolves an attack already paid for; an `apCost` of null marks a free
+   * attack. A defender struck in its side or rear turns to face the attacker
+   * first if it still can, whether the blow then lands or not.
+   */
   private attack(actor: UnitRecord, target: UnitRecord, apCost: number | null): BattleEvent[] {
     actor.facing = hexDirectionTowards(actor.position, target.position)!
+    const defenderTurned = target.turnReady && attackArc(target, actor.position) !== 'front'
+    if (defenderTurned) {
+      target.facing = hexDirectionTowards(target.position, actor.position)!
+      target.turnReady = false
+    }
     const flankers = flankersOf(this.units, actor, target)
     const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
     const arc = attackArc(target, actor.position)
@@ -1166,6 +1206,8 @@ export class BattleEngine {
         apAfter: actor.ap,
         flankers,
         flankBonus,
+        defenderTurned,
+        defenderFacing: target.facing,
         arc,
         arcBonus,
         attackerFacing: actor.facing,
@@ -1324,6 +1366,7 @@ function snapshot(unit: UnitRecord): UnitSnapshot {
     ap: unit.ap,
     mana: unit.mana,
     reactionReady: unit.reactionReady,
+    turnReady: unit.turnReady,
     statuses: unit.statuses.map((status) => ({ ...status })),
   }
 }
@@ -1413,7 +1456,8 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
     case 'attack': {
       const attackerName = names[event.attacker]
       const defenderName = names[event.defender]
-      const opening = event.opportunity ? `${defenderName} breaks away — free attack! ` : ''
+      const breaking = event.opportunity ? `${defenderName} breaks away — free attack! ` : ''
+      const opening = `${breaking}${event.defenderTurned ? `${defenderName} turns to face ${attackerName}. ` : ''}`
       if (event.fumble) return `${opening}${attackerName} rolls ${event.attackRoll} — fumbles the attack!`
       const flank = event.flankBonus > 0 ? `, +${event.flankBonus} flanking` : ''
       const from = event.arc === 'rear' ? 'from behind' : 'from the side'

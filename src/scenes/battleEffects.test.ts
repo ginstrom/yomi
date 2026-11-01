@@ -21,7 +21,7 @@ function attack(distance: number): AttackEvent {
     type: 'attack', seq: 0, round: 1, attacker: 'hero', defender: 'goblin', opportunity: false,
     weapon: null, distance, apCost: 4, apAfter: 4, toHit: 70, defenderAc: 15, defenderResistance: 0, armorPierce: 0,
     damageDice: { count: 1, sides: 6, bonus: 0 }, rolled: 3, defenderHpBefore: 10,
-    flankers: [], flankBonus: 0, arc: 'front', arcBonus: 0, attackerFacing: 0, helpless: false, image: false,
+    flankers: [], flankBonus: 0, defenderTurned: false, defenderFacing: 0, arc: 'front', arcBonus: 0, attackerFacing: 0, helpless: false, image: false,
     attackRoll: 40, chance: 55, hit: true, critical: false, fumble: false, damage: 3, defenderHpAfter: 7,
   }
 }

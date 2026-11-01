@@ -120,6 +120,13 @@ describe('reachableHexes', () => {
     expect(reach.get(hexKey(hex(2, 0)))).toEqual([hex(1, 0), hex(2, 0)]) // the only shortest path
   })
 
+  it('asks about each step, so leaving a hex one way may provoke and another way not', () => {
+    // From (0,0), only the step east provokes; (1,1) is still two steps away either way.
+    const eastward = (from: Hex, to: Hex) => (hexEquals(from, hex(0, 0)) && hexEquals(to, hex(1, 0)) ? ['a'] : [])
+    const reach = reachableHexes(hex(0, 0), 2, () => true, eastward)
+    expect(reach.get(hexKey(hex(1, 1)))).toEqual([hex(0, 1), hex(1, 1)])
+  })
+
   it('prefers one provoker met three times over two provokers met once each', () => {
     // To (1,3): east first, then along a's edge; or south along b and c, then east.
     const foes = new Map([

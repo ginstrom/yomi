@@ -18,7 +18,7 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 12
+export const SAVE_VERSION = 13
 
 /** One slot's contents. */
 export interface SaveFile {

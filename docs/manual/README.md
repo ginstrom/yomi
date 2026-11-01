@@ -248,7 +248,7 @@ Every attack rolls 1 to 100. It **hits** if the roll is at or under:
 The chance is always kept between 5% and 95%. A hit is **critical** if the roll also falls within the attacker's critical chance. The bonuses are:
 
 - **Flanking**: +10% for each other ally standing next to the target.
-- **Arc**: +5% from the foe's side and +10% from its rear. For a ranged attack, the arc is judged by the hex next to the target that the shot comes in over.
+- **Arc**: +5% from the foe's side and +10% from its rear. For a ranged attack, the arc is judged by the hex next to the target that the shot comes in over. But a unit struck in its side or rear turns to face the attacker first, hit or miss, so the blow lands on its front. It can turn like this only once per enemy turn: strike it from one side, then from the other, and the second attack finds its back. Your heroes turn the same way on the enemy's turn. A unit breaking away from a free attack cannot turn.
 - **Helpless**: +20% against a sleeping target.
 
 ### Armour: dodging and resistance
@@ -265,7 +265,7 @@ When a hero is selected, every foe they can attack from where they stand shows o
 
 ### Zones of control and free attacks
 
-A foe holding a **melee** weapon controls the hexes next to it. **Leaving** one of those hexes gives that foe one free attack on you. Each foe gets at most one free attack per enemy turn. Ranged units, wand-wielders and sleepers have no zone of control. Pathfinding prefers routes that provoke the fewest foes, and the orange edges show where the danger is. Your heroes threaten the enemy in exactly the same way.
+A foe holding a **melee** weapon controls the hexes next to it. **Leaving** those hexes gives that foe one free attack on you; stepping to another hex next to the same foe does not. Each foe gets at most one free attack per enemy turn. Ranged units, wand-wielders and sleepers have no zone of control. Pathfinding prefers routes that provoke the fewest foes, and the orange edges show where the danger is. Your heroes threaten the enemy in exactly the same way.
 
 ### Changing gear in battle
 

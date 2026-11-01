@@ -138,8 +138,8 @@ export function reachableHexes(
   start: Hex,
   maxSteps: number,
   passable: (h: Hex) => boolean,
-  /** Ids of whoever is provoked by stepping out of `from`; each counts once per route. */
-  provokers: (from: Hex) => readonly string[] = () => [],
+  /** Ids of whoever is provoked by stepping from `from` to `to`; each counts once per route. */
+  provokers: (from: Hex, to: Hex) => readonly string[] = () => [],
 ): Map<string, Hex[]> {
   type Entry = { hex: Hex; path: Hex[]; provoked: ReadonlySet<string> }
   const isSubset = (a: ReadonlySet<string>, b: ReadonlySet<string>) => [...a].every((id) => b.has(id))
@@ -154,10 +154,10 @@ export function reachableHexes(
   for (let step = 0; step < maxSteps && frontier.length > 0; step++) {
     const next = new Map<string, Entry[]>()
     for (const { hex: from, path, provoked } of frontier) {
-      const leaving = new Set([...provoked, ...provokers(from)])
       for (const n of hexNeighbors(from)) {
         const key = hexKey(n)
         if (seen.has(key) || !passable(n)) continue
+        const leaving = new Set([...provoked, ...provokers(from, n)])
         const kept = next.get(key) ?? []
         if (kept.some((e) => isSubset(e.provoked, leaving))) continue
         const better = kept.filter((e) => !isSubset(leaving, e.provoked))

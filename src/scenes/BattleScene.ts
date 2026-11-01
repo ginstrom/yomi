@@ -1286,11 +1286,12 @@ export class BattleScene extends Phaser.Scene {
 
   /**
    * An attack: the attacker turns and strikes, a blade swung and leaned into
-   * or a shot loosed, and when it lands (`impactMs`) the defender shows how it
-   * fared, its hit points following.
+   * or a shot loosed, the defender turning to meet it if it did, and when it
+   * lands (`impactMs`) the defender shows how it fared, its hit points following.
    */
   private showAttack(event: Extract<BattleEvent, { type: 'attack' }>): void {
     this.faceUnit(event.attacker, event.attackerFacing)
+    if (event.defenderTurned) this.faceUnit(event.defender, event.defenderFacing)
     const attacker = this.units.get(event.attacker)!
     const defender = this.units.get(event.defender)!
     const look = attackLook(event, this.heroes.get(event.attacker)?.equipment.mainHand?.icon)
