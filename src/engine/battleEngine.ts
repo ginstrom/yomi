@@ -5,6 +5,7 @@ import {
   rollDamage,
   rollHitDamage,
   rollToHit,
+  warded,
   type CombatantStats,
   type DamageRoll,
   type RNG,
@@ -35,7 +36,7 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 18
+export const LOG_SCHEMA_VERSION = 19
 
 /** What an attacker's chance to hit gains, in percent, for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 10
@@ -303,8 +304,10 @@ export interface CastOutcome {
   fumble: boolean
   /** A hit that struck a mirror image instead, doing nothing. */
   image: boolean
-  /** Damage rolled; it may be more than the unit had left. */
+  /** Damage dealt, after the unit's ward; it may be more than the unit had left. */
   damage: number
+  /** The points of the rolled damage the unit's ward stopped (`warded`); 0 when none did. */
+  warded: number
   /** Hit points restored, no more than the unit had lost. */
   healed: number
   hpBefore: number
@@ -340,6 +343,8 @@ export interface CastEvent extends EventBase {
   skill: number
   /** One for each unit touched, in roster order. */
   outcomes: CastOutcome[]
+  /** Hit points the caster regained by the spell's `drain`, no more than it had lost; 0 for any other spell. */
+  drained: number
 }
 
 /** A status dealt its damage as its unit's turn began. */
@@ -347,7 +352,10 @@ export interface StatusTickEvent extends EventBase {
   type: 'status_tick'
   unit: UnitId
   status: StatusId
+  /** Damage dealt, after the unit's ward against the status's element. */
   damage: number
+  /** The points of the rolled damage the ward stopped; 0 when none did. */
+  warded: number
   hpBefore: number
   hpAfter: number
 }
@@ -917,9 +925,10 @@ export class BattleEngine {
     for (const u of this.units) {
       if (u.side !== side || u.hp <= 0) continue
       for (const status of [...u.statuses]) {
-        const tick = STATUSES[status.id].tick
+        const { tick, element } = STATUSES[status.id]
         if (!tick || u.hp <= 0 || this.winner !== null) continue
-        const damage = rollDamage(tick, this.rng)
+        const rolled = rollDamage(tick, this.rng)
+        const damage = warded(rolled, element, effectiveStats(u))
         const hpBefore = u.hp
         u.hp = Math.max(0, u.hp - damage)
         events.push(
@@ -929,6 +938,7 @@ export class BattleEngine {
             unit: u.id,
             status: status.id,
             damage,
+            warded: rolled - damage,
             hpBefore,
             hpAfter: u.hp,
           }),
@@ -1260,7 +1270,7 @@ export class BattleEngine {
    * wakings, images spent and falls, and at most one end of the battle.
    */
   private cast(actor: UnitRecord, spell: SpellId, aim: CastAim): BattleEvent[] {
-    const { apCost, manaCost, hostile, damage: dice, heal, status } = SPELLS[spell]
+    const { apCost, manaCost, hostile, damage: dice, element, drain, heal, status } = SPELLS[spell]
     const touched = castTouches(this.units, actor, spell, aim)
     const at = aimHex(this.units, aim)!
     actor.ap -= apCost
@@ -1276,19 +1286,24 @@ export class BattleEngine {
         const healed = heal ? Math.min(rollDamage(heal, this.rng), unit.stats.maxHp - unit.hp) : 0
         unit.hp += Math.max(0, healed)
         const laid = status ? this.layStatus(unit, status) : null
-        return { ...blank, hit: true, image: false, damage: 0, healed: Math.max(0, healed), hpBefore, hpAfter: unit.hp, status: laid }
+        return { ...blank, hit: true, image: false, damage: 0, warded: 0, healed: Math.max(0, healed), hpBefore, hpAfter: unit.hp, status: laid }
       }
       const defenderAc = effectiveStats(unit).ac
       const roll = rollToHit(caster, defenderAc, this.rng)
       const image = roll.hit && this.strikeImage(unit)
-      const damage = roll.hit && !image && dice ? rollHitDamage(dice, roll.critical, this.rng) : 0
+      const rolled = roll.hit && !image && dice ? rollHitDamage(dice, roll.critical, this.rng) : 0
+      const damage = warded(rolled, element, effectiveStats(unit))
       unit.hp = Math.max(0, unit.hp - damage)
       // A blow that wakes a sleeper wakes it before anything it lays; Sleep itself deals none.
       const woke = damage > 0 && unit.hp > 0 && hasStatus(unit, 'asleep')
       if (woke) unit.statuses = unit.statuses.filter((s) => s.id !== 'asleep')
       const laid = roll.hit && !image && status && unit.hp > 0 ? this.layStatus(unit, status) : null
-      return { ...blank, ...roll, defenderAc, image, damage, healed: 0, hpBefore, hpAfter: unit.hp, status: laid, woke }
+      return { ...blank, ...roll, defenderAc, image, damage, warded: rolled - damage, healed: 0, hpBefore, hpAfter: unit.hp, status: laid, woke }
     })
+    // A drain heals a caster its own area left standing, by a share of what all it touched were dealt.
+    const dealt = outcomes.reduce((sum, o) => sum + o.damage, 0)
+    const drained = drain && actor.hp > 0 ? Math.min(Math.floor(drain * dealt), actor.stats.maxHp - actor.hp) : 0
+    actor.hp += drained
 
     const events: BattleEvent[] = [
       this.record<CastEvent>({
@@ -1306,6 +1321,7 @@ export class BattleEngine {
         casterFacing: actor.facing,
         skill: caster.toHit,
         outcomes: outcomes.map(({ woke: _, ...outcome }) => outcome),
+        drained,
       }),
     ]
     for (const outcome of outcomes) {
@@ -1423,13 +1439,19 @@ function laidPhrase(status: StatusId): string {
   return status === 'asleep' ? 'falls asleep' : `is ${STATUSES[status].adjective}`
 }
 
+/** " (warded N)" after a damage the ward took N off, else nothing. */
+function wardedNote(points: number): string {
+  return points > 0 ? ` (warded ${points})` : ''
+}
+
 /** What one unit made of a hostile cast: "HITS Goblin for 7 dmg", "Goblin falls asleep", "MISSES Goblin". */
 function hostileOutcome(outcome: CastOutcome, name: string): string {
   if (!outcome.hit) return outcome.fumble ? `fumbles at ${name}` : `MISSES ${name}`
   if (outcome.image) return `strikes an image of ${name}`
   const crit = outcome.critical ? ' (CRITICAL)' : ''
-  const parts = outcome.damage > 0 ? [`HITS ${name} for ${outcome.damage} dmg${crit}`] : []
-  if (outcome.status) parts.push(outcome.damage > 0 ? laidPhrase(outcome.status.id).replace(/^is /, '') : `${name} ${laidPhrase(outcome.status.id)}`)
+  const struck = outcome.damage > 0 || outcome.warded > 0
+  const parts = struck ? [`HITS ${name} for ${outcome.damage} dmg${wardedNote(outcome.warded)}${crit}`] : []
+  if (outcome.status) parts.push(struck ? laidPhrase(outcome.status.id).replace(/^is /, '') : `${name} ${laidPhrase(outcome.status.id)}`)
   return parts.join(', ') || `HITS ${name}`
 }
 
@@ -1451,12 +1473,13 @@ function describeCast(event: CastEvent, names: Readonly<Record<UnitId, string>>)
     const status = spell.status ? STATUSES[spell.status.id].adjective : 'helped'
     return `${opening}: ${who} ${outcomes.length === 1 ? 'is' : 'are'} ${status}.`
   }
+  const drains = event.drained > 0 ? ` and drains ${event.drained}` : ''
   if (spell.target !== 'area' && outcomes.length === 1) {
     const [o] = outcomes
     if (o.fumble) return `${opening}: rolls ${o.attackRoll} — fumbles the spell!`
-    return `${opening}: rolls ${o.attackRoll} (needs ${o.chance} or less) — ${hostileOutcome(o, names[o.unit])}.`
+    return `${opening}: rolls ${o.attackRoll} (needs ${o.chance} or less) — ${hostileOutcome(o, names[o.unit])}${drains}.`
   }
-  return `${opening}: ${outcomes.map((o) => hostileOutcome(o, names[o.unit])).join('; ')}.`
+  return `${opening}: ${outcomes.map((o) => hostileOutcome(o, names[o.unit])).join('; ')}${drains}.`
 }
 
 /**
@@ -1492,7 +1515,7 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
     case 'cast':
       return describeCast(event, names)
     case 'status_tick':
-      return `${names[event.unit]} takes ${event.damage} from ${STATUSES[event.status].tickName ?? STATUSES[event.status].adjective}.`
+      return `${names[event.unit]} takes ${event.damage} from ${STATUSES[event.status].tickName ?? STATUSES[event.status].adjective}${wardedNote(event.warded)}.`
     case 'regenerate':
       return `${names[event.unit]} regenerates ${event.healed}.`
     case 'status_end':

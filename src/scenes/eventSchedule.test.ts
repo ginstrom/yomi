@@ -96,7 +96,7 @@ describe('scheduleEvents', () => {
   })
 
   it('gives each status’s damage at a turn’s start a pause of its own', () => {
-    const tick = (seq: number): BattleEvent => ({ type: 'status_tick', seq, round: 1, unit: 'g', status: 'poisoned', damage: 2, hpBefore: 5, hpAfter: 3 })
+    const tick = (seq: number): BattleEvent => ({ type: 'status_tick', seq, round: 1, unit: 'g', status: 'poisoned', damage: 2, warded: 0, hpBefore: 5, hpAfter: 3 })
     const { beats, totalMs } = scheduleEvents([tick(0), tick(1)], { moveStepMs: 100, opportunityPauseMs: 400, tickPauseMs: 300 })
     expect(beats.map((beat) => beat.at)).toEqual([0, 300])
     expect(totalMs).toBe(600)

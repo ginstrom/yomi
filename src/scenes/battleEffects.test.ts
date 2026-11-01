@@ -29,7 +29,7 @@ function attack(distance: number): AttackEvent {
 function cast(distance: number): CastEvent {
   return {
     type: 'cast', seq: 0, round: 1, caster: 'hero', spell: 'shield', target: 'hero', at: { q: 0, r: 0 }, distance,
-    apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76, outcomes: [],
+    apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76, outcomes: [], drained: 0,
   }
 }
 

@@ -72,11 +72,11 @@ describe('summarize, with spells', () => {
     const unit = (id: string, side: Side) => ({ id, side }) as (typeof start.units)[number]
     const outcome = (target: string, damage: number, healed = 0, status: CastOutcome['status'] = null): CastOutcome => ({
       unit: target, attackRoll: 40, chance: 61, defenderAc: 15, hit: damage > 0, critical: false, fumble: false,
-      image: false, damage, healed, hpBefore: 12, hpAfter: 12 - damage + healed, status,
+      image: false, damage, warded: 0, healed, hpBefore: 12, hpAfter: 12 - damage + healed, status,
     })
     const cast = (caster: string, spell: SpellId, outcomes: CastOutcome[]): LoggedEvent => ({
       type: 'cast', battleId: 0, seq: 1, round: 1, caster, spell, target: outcomes[0].unit, at: { q: 0, r: 0 },
-      distance: 4, apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76, outcomes,
+      distance: 4, apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76, outcomes, drained: 0,
     })
     return [
       { ...start, units: [unit('mage', 'player'), unit('shaman', 'enemy')] },
@@ -85,7 +85,7 @@ describe('summarize, with spells', () => {
       cast('shaman', 'magic_arrow', [outcome('mage', 4)]),
       cast('shaman', 'heal', [outcome('shaman', 0, 6)]),
       cast('mage', 'sleep', [outcome('shaman', 0, 0, { id: 'asleep', turnsLeft: 2 })]),
-      { type: 'status_tick', battleId: 0, seq: 2, round: 2, unit: 'shaman', status: 'poisoned', damage: 3, hpBefore: 5, hpAfter: 2 },
+      { type: 'status_tick', battleId: 0, seq: 2, round: 2, unit: 'shaman', status: 'poisoned', damage: 3, warded: 0, hpBefore: 5, hpAfter: 2 },
       end,
     ]
   }

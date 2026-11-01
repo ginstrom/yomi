@@ -1,4 +1,4 @@
-import { damageThrough, effectiveResistance, hitChance, type DamageRoll, type RNG } from '../combat/combat.ts'
+import { damageThrough, effectiveResistance, hitChance, warded, type DamageRoll, type RNG } from '../combat/combat.ts'
 import { HELPLESS_BONUS, SPELLS, isHealing, type SpellId } from '../combat/spells.ts'
 import { hexDistance, type Hex } from '../grid/hex.ts'
 import {
@@ -36,11 +36,14 @@ const END_TURN: Action = { type: 'end_turn' }
 /**
  * Takes each unit in roster order and gives it the first useful thing to do;
  * ends the turn when no unit has one. A caster first heals an ally at half
- * its hit points or less; guards itself with Mirror Image or Shield when a
- * foe stands beside it; throws a hostile area spell where it touches two
- * foes or more and no ally; blesses two allies or more; puts the
- * healthiest foe to sleep while two stand; strikes the weakest foe with its
- * hardest-hitting spell. A caster that knows a heal keeps the mana for its
+ * its hit points or less; guards itself with Mirror Image or Shield (Dark
+ * Shield after Shield) when a foe stands beside it; throws a hostile area
+ * spell where it touches two foes or more and no ally (the Web spell where
+ * it touches one foe or more not yet webbed and no ally); blesses two allies
+ * or more; puts the healthiest foe to sleep while two stand; curses the
+ * healthiest foe not yet cursed while two stand; strikes the weakest foe
+ * with its hardest-hitting spell, reckoning its damage after the foe's ward
+ * against the spell's element. A caster that knows a heal keeps the mana for its
  * cheapest, spending it only on healing. Protect and Haste it never casts.
  * Otherwise a unit attacks the foe in range it would do the most harm to if
  * it can afford to: the chance to hit (flanking, side and rear included)
@@ -63,6 +66,7 @@ const aggressive: Policy = ({ state, legal }) => {
       areaCast(casts) ??
       blessCast(casts) ??
       sleepCast(state, casts) ??
+      curseCast(state, casts) ??
       strikeCast(casts) ??
       bestAttack(state, self, own) ??
       closingMove(state, self, own)
@@ -141,18 +145,24 @@ function healCast(casts: readonly CastOption[]): Action | null {
   return best(heals, (c) => restored(c) - SPELLS[c.spell].manaCost / 1000)?.action ?? null
 }
 
-/** With a foe beside it, Mirror Image if it has none, else Shield if it has none. */
+/** With a foe beside it, Mirror Image if it has none, else Shield, else Dark Shield, if it is not shielded. */
 function guardCast(state: BattleState, self: UnitSnapshot, casts: readonly CastOption[]): Action | null {
   const pressed = state.units.some((u) => u.side !== self.side && u.hp > 0 && hexDistance(u.position, self.position) === 1)
   if (!pressed) return null
   const guard = (spell: SpellId) => casts.find((c) => c.spell === spell && c.withinReserve)?.action ?? null
-  return (!hasStatus(self, 'mirrored') ? guard('mirror_image') : null) ?? (!hasStatus(self, 'shielded') ? guard('shield') : null)
+  return (!hasStatus(self, 'mirrored') ? guard('mirror_image') : null) ?? (!hasStatus(self, 'shielded') ? (guard('shield') ?? guard('dark_shield')) : null)
 }
 
-/** The hostile area cast that touches the most foes, two at least, and no ally, the caster included. */
+/**
+ * The hostile area cast that touches no ally, the caster included, and the
+ * most foes: two at least, or for the Web spell one at least not already
+ * webbed, counting only those.
+ */
 function areaCast(casts: readonly CastOption[]): Action | null {
   const areas = casts.filter((c) => SPELLS[c.spell].target === 'area' && SPELLS[c.spell].hostile && c.withinReserve && c.allies.length === 0)
-  return best(areas, (c) => c.foes.length, 1)?.action ?? null
+  const foesTouched = (c: CastOption) =>
+    c.spell === 'web' ? c.foes.filter((u) => !hasStatus(u, 'webbed')).length : c.foes.length >= 2 ? c.foes.length : 0
+  return best(areas, foesTouched)?.action ?? null
 }
 
 /** Bless, when it would touch two allies or more not already blessed. */
@@ -169,11 +179,23 @@ function sleepCast(state: BattleState, casts: readonly CastOption[]): Action | n
   return best(sleeps, (c) => c.foes[0].hp)?.action ?? null
 }
 
-/** The damaging spell of a single foe with the highest average damage, on the foe with the fewest hit points. */
+/** Curse on the foe in range with the most hit points that is not cursed, while two foes or more stand. */
+function curseCast(state: BattleState, casts: readonly CastOption[]): Action | null {
+  const caster = casts[0] && state.units.find((u) => u.id === casts[0].action.unit)
+  if (!caster || state.units.filter((u) => u.side !== caster.side && u.hp > 0).length < 2) return null
+  const curses = casts.filter((c) => c.spell === 'curse' && c.withinReserve && c.foes.length === 1 && !hasStatus(c.foes[0], 'cursed'))
+  return best(curses, (c) => c.foes[0].hp)?.action ?? null
+}
+
+/**
+ * The damaging spell of a single foe with the highest average damage after
+ * the foe's ward against its element, on the foe with the fewest hit points.
+ */
 function strikeCast(casts: readonly CastOption[]): Action | null {
   const strikes = casts.filter((c) => SPELLS[c.spell].target === 'foe' && SPELLS[c.spell].damage && c.withinReserve && c.foes.length === 1)
+  const damage = (c: CastOption) => warded(mean(SPELLS[c.spell].damage), SPELLS[c.spell].element, c.foes[0])
   // Damage first, then the weaker foe: hit points are below 1000.
-  return best(strikes, (c) => mean(SPELLS[c.spell].damage) * 1000 - c.foes[0].hp, -Infinity)?.action ?? null
+  return best(strikes, (c) => damage(c) * 1000 - c.foes[0].hp, -Infinity)?.action ?? null
 }
 
 /**

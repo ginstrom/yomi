@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, damageThrough, effectiveResistance, foeAtLevel, foeYardstick, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, type CombatantStats } from './combat.ts'
+import { GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, damageThrough, effectiveResistance, foeAtLevel, foeYardstick, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, warded, type CombatantStats } from './combat.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -145,6 +145,34 @@ describe('sameCombatStats', () => {
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, resistance: 2 })).toBe(false)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, regeneration: 2 })).toBe(false)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, damage: { count: 1, sides: 8, bonus: 0 } })).toBe(false)
+  })
+
+  it('compares wards, a missing one as 0', () => {
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, wards: {} })).toBe(true)
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, wards: { fire: 0 } })).toBe(true)
+    expect(sameCombatStats({ ...WARRIOR_STATS, wards: { fire: 3 } }, { ...WARRIOR_STATS, wards: { fire: 3 } })).toBe(true)
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, wards: { fire: 3 } })).toBe(false)
+    expect(sameCombatStats({ ...WARRIOR_STATS, wards: { fire: 3 } }, WARRIOR_STATS)).toBe(false)
+    expect(sameCombatStats({ ...WARRIOR_STATS, wards: { fire: 3 } }, { ...WARRIOR_STATS, wards: { fire: 2 } })).toBe(false)
+    expect(sameCombatStats({ ...WARRIOR_STATS, wards: { fire: 3 } }, { ...WARRIOR_STATS, wards: { frost: 3 } })).toBe(false)
+  })
+})
+
+describe('warded', () => {
+  const salamander: CombatantStats = { ...WARRIOR_STATS, wards: { fire: 4, poison: 2 } }
+
+  it('takes the ward of the damage’s element off it, never below 0', () => {
+    expect(warded(9, 'fire', salamander)).toBe(5)
+    expect(warded(3, 'fire', salamander)).toBe(0)
+    expect(warded(4, 'fire', salamander)).toBe(0)
+    expect(warded(5, 'poison', salamander)).toBe(3)
+  })
+
+  it('leaves damage of another element, or of none, and a unit with no ward, as it is', () => {
+    expect(warded(9, 'frost', salamander)).toBe(9)
+    expect(warded(9, undefined, salamander)).toBe(9)
+    expect(warded(9, 'fire', WARRIOR_STATS)).toBe(9)
+    expect(warded(0, 'fire', WARRIOR_STATS)).toBe(0)
   })
 })
 

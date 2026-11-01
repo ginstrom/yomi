@@ -2,7 +2,7 @@ import { deriveCombatStats, maxHp, type Character } from '../character/character
 import { draftCharacter, type CharacterDraft } from '../character/creation.ts'
 import { gainXp, type XpGain } from '../character/progression.ts'
 import { castOnWorldMap, healsOne, worldHealing, worldSpells } from '../character/worldCasting.ts'
-import type { SpellId } from '../combat/spells.ts'
+import type { HeroSpellId } from '../combat/spells.ts'
 import { listNames } from '../engine/battleEngine.ts'
 import type { Item } from '../inventory/inventory.ts'
 import type { Fighter } from './encounters.ts'
@@ -185,8 +185,8 @@ export function autoHeal(party: Party): number {
       const cheapest = Math.min(...known.map(({ spell }) => worldHealing(spell)))
       if (!party.some((member) => lost(member) >= cheapest)) break
       const affordable = known.filter((k) => k.affordable).map((k) => k.spell)
-      const strongest = (spells: SpellId[]) =>
-        spells.reduce<SpellId | null>((a, b) => (a === null || worldHealing(b) > worldHealing(a) ? b : a), null)
+      const strongest = (spells: HeroSpellId[]) =>
+        spells.reduce<HeroSpellId | null>((a, b) => (a === null || worldHealing(b) > worldHealing(a) ? b : a), null)
       const group = strongest(affordable.filter((spell) => !healsOne(spell)))
       const one = strongest(affordable.filter(healsOne))
       const target = party.reduce((a, b) => (lost(b) > lost(a) ? b : a))

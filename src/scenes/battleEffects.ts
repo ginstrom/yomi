@@ -65,6 +65,11 @@ export const SPELL_LOOKS: Record<SpellId, SpellLook> = {
   mirror_image: { ...SUPPORT, colour: 0xe0e0e0, glow: 0xffffff },
   haste: { ...SUPPORT, colour: 0xfff176, glow: 0xffffff },
   bane: { colour: 0x7b1fa2, glow: 0xce93d8, missile: 'orb', impact: 'cloud' },
+  lightning_bolt: { colour: 0xfff59d, glow: 0xffffff, missile: 'dart', impact: 'burst' },
+  drain_life: { colour: 0x8e1b1b, glow: 0xe57373, missile: 'dart', impact: 'burst' },
+  curse: { colour: 0x6a1b9a, glow: 0xb39ddb, missile: 'orb', impact: 'cloud' },
+  web: { colour: 0xbdbdbd, glow: 0xeeeeee, missile: 'orb', impact: 'ring' },
+  dark_shield: { ...SUPPORT, colour: 0x283593, glow: 0x7986cb },
 }
 
 /** From the start of a swing to the blow landing: the wind-up, then the cut. */

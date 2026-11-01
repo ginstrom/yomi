@@ -1,5 +1,10 @@
 import type { SpellId } from './spells.ts'
 
+/** The kinds of damage a ward can stand against; damage of none is a weapon's or Magic Arrow's. */
+export const ELEMENTS = ['fire', 'frost', 'lightning', 'acid', 'poison', 'blight'] as const
+
+export type Element = (typeof ELEMENTS)[number]
+
 export interface DamageRoll {
   count: number
   sides: number
@@ -19,6 +24,8 @@ export interface CombatantStats {
   armorPierce?: number
   /** Points taken off the damage of every weapon hit it takes, what it wears and its own hide together; none when left out (`damageThrough`). */
   resistance?: number
+  /** Points taken off each instance of damage of an element; none when left out (`warded`). */
+  wards?: Partial<Record<Element, number>>
   /** Hit points it regains as its side's turn begins, unless a status stops it (`StatusRule.stopsRegeneration`); none when left out. */
   regeneration?: number
   damage: DamageRoll
@@ -35,7 +42,7 @@ export interface CombatantStats {
     maxMana: number
     /** The chance in percent of a spell striking a foe of armour class 0. */
     skill: number
-    /** In SPELL_IDS order. */
+    /** In `ALL_SPELL_IDS` order. */
     spells: readonly SpellId[]
   }
 }
@@ -50,6 +57,16 @@ function sameMagic(a: CombatantStats['magic'], b: CombatantStats['magic']): bool
   )
 }
 
+function sameWards(a: CombatantStats['wards'], b: CombatantStats['wards']): boolean {
+  return ELEMENTS.every((element) => (a?.[element] ?? 0) === (b?.[element] ?? 0))
+}
+
+/** Damage of `element` after `stats`' ward against it: max(0, damage − ward); damage of no element is unchanged. */
+export function warded(damage: number, element: Element | undefined, stats: CombatantStats): number {
+  const ward = element ? (stats.wards?.[element] ?? 0) : 0
+  return ward > 0 ? Math.max(0, damage - ward) : damage
+}
+
 /** Whether two stat blocks are the same in every respect. */
 export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
   return (
@@ -61,6 +78,7 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     (a.armorPierce ?? 0) === (b.armorPierce ?? 0) &&
     (a.resistance ?? 0) === (b.resistance ?? 0) &&
     (a.regeneration ?? 0) === (b.regeneration ?? 0) &&
+    sameWards(a.wards, b.wards) &&
     a.damage.count === b.damage.count &&
     a.damage.sides === b.damage.sides &&
     a.damage.bonus === b.damage.bonus &&

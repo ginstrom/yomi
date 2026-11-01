@@ -24,7 +24,7 @@ import {
 } from '../character/perks.ts'
 import { hasPickFor, hasSpellcasting, nextPerkLevel, nextSpellLevel, takePerk, xpToNextLevel } from '../character/progression.ts'
 import { castOnWorldMap, healsOne, worldHealing, worldSpells } from '../character/worldCasting.ts'
-import { SPELLS, type SpellId } from '../combat/spells.ts'
+import { SPELLS, type HeroSpellId, type SpellId } from '../combat/spells.ts'
 import {
   SKILL_COST_TIERS,
   SKILLS,
@@ -252,7 +252,7 @@ export class InventoryScene extends Phaser.Scene {
   private spellsContent!: Phaser.GameObjects.Container
   private spellTreeContent!: Phaser.GameObjects.Container
   /** A one-member heal being cast on the world map, waiting for a portrait to be clicked; null otherwise. */
-  private worldCast: SpellId | null = null
+  private worldCast: HeroSpellId | null = null
   private tabButtons: Record<MainTab, TabButton> = {} as Record<MainTab, TabButton>
   private tooltip!: Phaser.GameObjects.Container
   private tooltipText!: Phaser.GameObjects.Text
@@ -852,7 +852,7 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   /** A heal's Cast button: a heal of one asks whom, a heal of all heals at once. */
-  private buildCastButton(spell: SpellId, index: number): void {
+  private buildCastButton(spell: HeroSpellId, index: number): void {
     const { x, y } = this.castButtonAt(index)
     const enabled = this.canCastHere(spell)
     const choosing = this.worldCast === spell
@@ -874,7 +874,7 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   /** Waits for a portrait to be clicked to cast `spell` on, or stops waiting. */
-  private setWorldCast(spell: SpellId | null): void {
+  private setWorldCast(spell: HeroSpellId | null): void {
     this.worldCast = spell
     // Next tick: the redraw destroys the button whose click handler this runs in.
     this.time.delayedCall(0, () => this.buildContent())
@@ -889,7 +889,7 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   /** Casts a heal out of battle, on `target` or on the whole party, and redraws. */
-  private heal(spell: SpellId, target?: Character): void {
+  private heal(spell: HeroSpellId, target?: Character): void {
     const party = this.members.map((member) => member.character)
     if (castOnWorldMap(this.character, spell, party, target)) this.sound.play('sfx_heal', { volume: soundVolume('sfx_heal') })
     this.time.delayedCall(0, () => this.buildContent())

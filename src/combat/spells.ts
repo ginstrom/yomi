@@ -1,5 +1,5 @@
 import type { AreaShape } from '../grid/hex.ts'
-import type { DamageRoll } from './combat.ts'
+import type { DamageRoll, Element } from './combat.ts'
 
 /**
  * Spells, as the engine casts them. A spell says what it costs, what it can
@@ -39,7 +39,18 @@ export const SPELL_IDS = [
   'bane',
 ] as const
 
-export type SpellId = (typeof SPELL_IDS)[number]
+/** The heroes' spells: the spell tree, the perks and casting on the world map read these, and only these. */
+export type HeroSpellId = (typeof SPELL_IDS)[number]
+
+/** Spells only monsters cast: no perk teaches them, so no hero can learn one. */
+export const MONSTER_SPELL_IDS = ['lightning_bolt', 'drain_life', 'curse', 'web', 'dark_shield'] as const
+
+export type MonsterSpellId = (typeof MONSTER_SPELL_IDS)[number]
+
+export type SpellId = HeroSpellId | MonsterSpellId
+
+/** Every spell, the heroes' first: the order a stat block's `magic.spells` keeps. */
+export const ALL_SPELL_IDS: readonly SpellId[] = [...SPELL_IDS, ...MONSTER_SPELL_IDS]
 
 /**
  * What a spell is aimed at: a unit of the other side, a unit of the caster's
@@ -60,6 +71,8 @@ export const STATUS_IDS = [
   'hasted',
   'mirrored',
   'seared',
+  'cursed',
+  'webbed',
 ] as const
 
 export type StatusId = (typeof STATUS_IDS)[number]
@@ -93,6 +106,10 @@ export interface Spell {
    */
   hostile: boolean
   damage?: DamageRoll
+  /** What its damage is, for a ward against it; none when left out. */
+  element?: Element
+  /** The share of the damage it deals, to all it touches, that heals the caster. */
+  drain?: number
   heal?: DamageRoll
   status?: StatusLaid
 }
@@ -121,6 +138,7 @@ export const SPELLS: Record<SpellId, Spell> = {
     target: 'foe',
     hostile: true,
     damage: dice(2, 8),
+    element: 'fire',
     status: { id: 'seared', turns: 1 },
   },
   sleep: {
@@ -145,6 +163,7 @@ export const SPELLS: Record<SpellId, Spell> = {
     radius: 1,
     hostile: true,
     damage: dice(1, 8),
+    element: 'frost',
     status: { id: 'chilled', turns: 1 },
   },
   fireball: {
@@ -158,6 +177,7 @@ export const SPELLS: Record<SpellId, Spell> = {
     radius: 1,
     hostile: true,
     damage: dice(3, 6),
+    element: 'fire',
     status: { id: 'seared', turns: 1 },
   },
   acid_arrow: {
@@ -170,6 +190,7 @@ export const SPELLS: Record<SpellId, Spell> = {
     target: 'foe',
     hostile: true,
     damage: dice(1, 8),
+    element: 'acid',
     status: { id: 'corroded', turns: 3 },
   },
   death_cloud: {
@@ -182,6 +203,7 @@ export const SPELLS: Record<SpellId, Spell> = {
     target: 'area',
     radius: 1,
     hostile: true,
+    element: 'poison',
     status: { id: 'poisoned', turns: 3 },
   },
   heal: {
@@ -298,6 +320,66 @@ export const SPELLS: Record<SpellId, Spell> = {
     hostile: true,
     status: { id: 'baned', turns: 3 },
   },
+  lightning_bolt: {
+    name: 'Lightning Bolt',
+    school: 'offence',
+    description: '4d6 to everyone in a line 6 hexes long from the caster',
+    manaCost: 8,
+    apCost: 5,
+    range: 6,
+    target: 'area',
+    shape: 'line',
+    hostile: true,
+    damage: dice(4, 6),
+    element: 'lightning',
+  },
+  drain_life: {
+    name: 'Drain Life',
+    school: 'offence',
+    description: '3d6 to a foe within 5 hexes, half of it healing the caster',
+    manaCost: 6,
+    apCost: 4,
+    range: 5,
+    target: 'foe',
+    hostile: true,
+    damage: dice(3, 6),
+    drain: 0.5,
+  },
+  curse: {
+    name: 'Curse',
+    school: 'offence',
+    description: '-15 to hit and -5 AC to a foe within 5 hexes, for 3 turns',
+    manaCost: 5,
+    apCost: 4,
+    range: 5,
+    target: 'foe',
+    hostile: true,
+    status: { id: 'cursed', turns: 3 },
+  },
+  web: {
+    name: 'Web',
+    school: 'offence',
+    description: '-4 AP for 2 turns to everyone within 1 hex of a point within 4 hexes',
+    manaCost: 5,
+    apCost: 4,
+    range: 4,
+    target: 'area',
+    radius: 1,
+    shape: 'burst',
+    hostile: true,
+    status: { id: 'webbed', turns: 2 },
+  },
+  dark_shield: {
+    name: 'Dark Shield',
+    school: 'support',
+    description: '+15 AC to the caster for 3 turns',
+    manaCost: 4,
+    apCost: 2,
+    range: 0,
+    target: 'self',
+    hostile: false,
+    status: { id: 'shielded', turns: 3 },
+  },
 }
 
 /** What a status does while it lasts. */
@@ -321,6 +403,8 @@ export interface StatusRule {
   /** Dealt at the start of its turns, and what the log says it is from. */
   tick?: DamageRoll
   tickName?: string
+  /** What its tick's damage is, for a ward against it; none when left out. */
+  element?: Element
   /** No AP, no zone of control, `HELPLESS_BONUS` to attacks on it, ended by damage. */
   sleep?: true
   /** Each hit on it strikes an image instead, while images are left. */
@@ -330,8 +414,8 @@ export interface StatusRule {
 export const STATUSES: Record<StatusId, StatusRule> = {
   asleep: { name: 'Asleep', adjective: 'asleep', mark: 'Z', colour: 0xb0a0ff, sleep: true },
   chilled: { name: 'Chilled', adjective: 'chilled', mark: 'C', colour: 0x8fd8ff, actionPoints: -3 },
-  corroded: { name: 'Corroded', adjective: 'corroded', mark: 'A', colour: 0xb8d040, armorClass: -5, resistance: -2, tick: dice(1, 4), tickName: 'acid', stopsRegeneration: true },
-  poisoned: { name: 'Poisoned', adjective: 'poisoned', mark: 'P', colour: 0x60c040, tick: dice(1, 6), tickName: 'poison' },
+  corroded: { name: 'Corroded', adjective: 'corroded', mark: 'A', colour: 0xb8d040, armorClass: -5, resistance: -2, tick: dice(1, 4), tickName: 'acid', element: 'acid', stopsRegeneration: true },
+  poisoned: { name: 'Poisoned', adjective: 'poisoned', mark: 'P', colour: 0x60c040, tick: dice(1, 6), tickName: 'poison', element: 'poison' },
   shielded: { name: 'Shielded', adjective: 'shielded', mark: 'S', colour: 0x80b0ff, armorClass: 15 },
   protected: { name: 'Protected', adjective: 'protected', mark: 'D', colour: 0x6090e0, armorClass: 10 },
   blessed: { name: 'Blessed', adjective: 'blessed', mark: 'B', colour: 0xffe070, toHit: 10 },
@@ -339,6 +423,8 @@ export const STATUSES: Record<StatusId, StatusRule> = {
   hasted: { name: 'Hasted', adjective: 'hasted', mark: 'H', colour: 0xffa040, actionPoints: 3 },
   mirrored: { name: 'Mirrored', adjective: 'mirrored', mark: 'M', colour: 0xe0e0ff, images: true },
   seared: { name: 'Seared', adjective: 'seared', mark: 'F', colour: 0xff7030, stopsRegeneration: true },
+  cursed: { name: 'Cursed', adjective: 'cursed', mark: 'K', colour: 0x8a3cb8, toHit: -15, armorClass: -5 },
+  webbed: { name: 'Webbed', adjective: 'webbed', mark: 'W', colour: 0xc8c8c0, actionPoints: -4 },
 }
 
 /** What an attack on a sleeping unit adds to its chance to hit, in percent. */

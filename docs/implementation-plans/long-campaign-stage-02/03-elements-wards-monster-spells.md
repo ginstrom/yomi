@@ -241,3 +241,27 @@ All but Dark Shield are hostile. The mana and AP are first values (correction 11
 - [ ] The index's step 03 row is set to `done` with the commit. Any contract this step had to change is amended in the index, marked "step 03".
 
 ## Execution record
+
+**Status:** done (commit: see the index row; the orchestrator fills in the hash).
+
+**What was built**
+- `combat.ts`: `ELEMENTS`, `Element`, `CombatantStats.wards`, `warded`; `sameCombatStats` compares wards (a missing key as 0). The `magic.spells` comment reads "In `ALL_SPELL_IDS` order".
+- `spells.ts`: `HeroSpellId`, `MONSTER_SPELL_IDS`, `MonsterSpellId`, the widened `SpellId`, `ALL_SPELL_IDS`; `Spell.element` and `drain`; `StatusRule.element`; elements on Flame Arrow, Fireball (fire), Frost Blast (frost), Acid Arrow and Corroded (acid), Death Cloud and Poisoned (poison); the five monster spells per C3 (Web sets `shape: 'burst'` explicitly, Lightning Bolt `'line'`); Cursed (`K`, 0x8a3cb8) and Webbed (`W`, 0xc8c8c0).
+- `battleEngine.ts`: `warded` after `rollHitDamage` on each hostile outcome and after each tick's roll (no draw added, moved or dropped); `CastOutcome.warded`, `StatusTickEvent.warded`, `CastEvent.drained`; drain heals a caster still standing, `floor(drain × Σ damage dealt)`, capped at what it lost; the log's " (warded N)" (a hit warded to 0 now prints "HITS X for 0 dmg (warded N)") and " and drains N"; `LOG_SCHEMA_VERSION` 19.
+- Hero paths narrowed to `HeroSpellId`: `perks.ts` (`Perk.spell`, `spellPerk`, `spellPerkOf`, `knownSpells`), `worldCasting.ts` (`worldSpells`, `castOnWorldMap`), `party.ts` (`autoHeal`'s helper), `InventoryScene.ts` (world casting fields).
+- `battleEffects.ts`: `SPELL_LOOKS` for the five monster spells.
+- `policies.ts`: `strikeCast` ranks by `warded(mean)` against the target; `areaCast` scores Web by foes touched not yet webbed (one suffices), every other hostile area as before (two foes or more); `guardCast` adds Dark Shield after Shield while not shielded; new `curseCast` between `sleepCast` and `strikeCast`; the doc comment over `aggressive`.
+- CLAUDE.md: the `combat/` bullet, the rules of casting, the `policies.ts` bullet.
+
+**Tests added**: `combat.test.ts` (`warded`, wards in `sameCombatStats`); new `spells.test.ts` (ids disjoint, `ALL_SPELL_IDS` order, `SPELLS` and `STATUSES` complete, elements, the monster spell table, Cursed and Webbed); `perks.test.ts` (perks teach every hero spell and no monster spell); `perkTree.test.ts` (the spell tree draws no monster spell); `battleEngine.test.ts` (warded hit and its line, a ward after a critical, Fireball stopped whole and Seared laid, other elements untouched, warded and unwarded ticks and their lines, a sleeper not woken by a tick warded to 0, Drain Life with its cap, miss and line, Web's AP, Curse's to-hit and AC, Dark Shield, Lightning Bolt's line of six over both sides, its legal aims through `legalActions` — 1 to 6 hexes, the caster's own hex and 7 hexes refused, by `previewCast` and `step` too — and a lightning ward, schema 19); `policies.test.ts` (ward-aware strike and spell choice, Drain Life as a strike, Lightning Bolt on two foes, Web's rule, Curse's rule, Dark Shield). Existing fixtures gained `warded: 0` / `drained: 0` (`simulate.test.ts`, `battleEffects.test.ts`, `eventSchedule.test.ts`, `sounds.test.ts`) and the schema assertion 18 → 19.
+
+**Checks run**
+- `npm run -s typecheck`: clean. `npx vitest run --project domain`: 876 passed.
+- `make test`: 69 files, 885 tests passed.
+- `make -s simulate ARGS="--campaign --ready-level 7 --battles 500 --seed 1"`: the summary from the "Simulated ..." line on is **identical** to step 01's (diffed line for line, 43 lines): 243 of 500, 281 days, 19.0 battles.
+- `SAVE_VERSION` unchanged at 13.
+
+**Deviations and notes for later steps**
+- None from the contracts. Web's `shape: 'burst'` is written out though "left out" would mean the same.
+- `strikeCast` keeps today's floor (`-Infinity`), so a caster whose every damaging spell is warded to 0 still casts one; `reach` does not look at wards either, so such a caster holds at its spell's range. No unit has a ward until step 08 (the Salamander's fire 99, where the heroes' Flame Arrow and Fireball meet it); step 09 should watch for a mage wasting Flame Arrows on the Salamander.
+- `BattleScene.showCast` refreshes the hit points of the units a cast touched, not the caster's after a drain; no kind casts Drain Life yet. Step 06 should refresh the caster's bar when `drained > 0`.

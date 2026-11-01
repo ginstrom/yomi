@@ -17,11 +17,11 @@ function attack(hit: boolean, critical = false): AttackEvent {
 function cast(hit: boolean, critical = false, spell: SpellId = 'magic_arrow'): CastEvent {
   return {
     type: 'cast', seq: 0, round: 1, caster: 'hero', spell, target: 'goblin', at: { q: 4, r: 0 }, distance: 4,
-    apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76,
+    apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76, drained: 0,
     outcomes: [
       {
         unit: 'goblin', attackRoll: 40, chance: 61, defenderAc: 15, hit, critical, fumble: false, image: false,
-        damage: hit ? 5 : 0, healed: 0, hpBefore: 12, hpAfter: hit ? 7 : 12, status: null,
+        damage: hit ? 5 : 0, warded: 0, healed: 0, hpBefore: 12, hpAfter: hit ? 7 : 12, status: null,
       },
     ],
   }

@@ -1,4 +1,4 @@
-import { SPELLS, averageRoll, isHealing, type SpellId } from '../combat/spells.ts'
+import { SPELLS, averageRoll, isHealing, type HeroSpellId, type SpellId } from '../combat/spells.ts'
 import { manaOf, maxHp, maxMana, type Character } from './character.ts'
 import { knownSpells } from './perks.ts'
 
@@ -16,7 +16,7 @@ export function healsOne(spell: SpellId): boolean {
 }
 
 /** The healing spells the character knows, in `SPELL_IDS` order, with whether it has the mana for each now. */
-export function worldSpells(caster: Character): Array<{ spell: SpellId; affordable: boolean }> {
+export function worldSpells(caster: Character): Array<{ spell: HeroSpellId; affordable: boolean }> {
   return knownSpells(caster)
     .filter(isHealing)
     .map((spell) => ({ spell, affordable: manaOf(caster) >= SPELLS[spell].manaCost }))
@@ -35,7 +35,7 @@ export function worldHealing(spell: SpellId): number {
  * false, changing nothing, if the caster does not know it, has not the mana,
  * or a one-member spell has no target.
  */
-export function castOnWorldMap(caster: Character, spell: SpellId, party: readonly Character[], target?: Character): boolean {
+export function castOnWorldMap(caster: Character, spell: HeroSpellId, party: readonly Character[], target?: Character): boolean {
   if (!worldSpells(caster).some((known) => known.spell === spell && known.affordable)) return false
   const touched = healsOne(spell) ? (target ? [target] : []) : party
   if (touched.length === 0) return false

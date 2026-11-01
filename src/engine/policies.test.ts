@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GOBLIN_STATS } from '../combat/combat.ts'
+import { GOBLIN_STATS, type CombatantStats } from '../combat/combat.ts'
 import { hex, type Hex } from '../grid/hex.ts'
 import { BattleEngine, castTouches, type Action } from './battleEngine.ts'
 import type { SpellId } from '../combat/spells.ts'
@@ -92,15 +92,18 @@ describe('policies', () => {
       actionPoints: 12,
       magic: { maxMana, skill: 70, spells },
     })
-    type Placing = { id: string; side: 'player' | 'enemy'; at: Hex; hp?: number }
-    const field = (spells: SpellId[], others: Placing[], maxMana?: number) =>
-      new BattleEngine({
-        board: { cols: 9, rows: 4 },
-        units: [
-          { id: 'p1', side: 'player', stats: caster(spells, maxMana), position: hex(0, 1) },
-          ...others.map(({ id, side, at, hp }) => ({ id, side, stats: GOBLIN_STATS, position: at, hp })),
-        ],
-      })
+    type Placing = { id: string; side: 'player' | 'enemy'; at: Hex; hp?: number; stats?: CombatantStats }
+    const field = (spells: SpellId[], others: Placing[], maxMana?: number, rng?: () => number) =>
+      new BattleEngine(
+        {
+          board: { cols: 9, rows: 4 },
+          units: [
+            { id: 'p1', side: 'player', stats: caster(spells, maxMana), position: hex(0, 1) },
+            ...others.map(({ id, side, at, hp, stats }) => ({ id, side, stats: stats ?? GOBLIN_STATS, position: at, hp })),
+          ],
+        },
+        rng ? { rng } : {},
+      )
 
     it('heals an ally at half its hit points or less before it strikes', () => {
       const engine = field(['magic_arrow', 'heal'], [
@@ -156,6 +159,88 @@ describe('policies', () => {
       expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'bless', at: hex(0, 1) })
       engine.step(choose(engine))
       expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'sleep', target: 'e2' })
+    })
+
+    describe('with wards and monster spells (stage 2)', () => {
+      const warded = (wards: CombatantStats['wards']): CombatantStats => ({ ...GOBLIN_STATS, wards })
+
+      it('scores a strike after the target’s ward: of two equal foes, the one without', () => {
+        const engine = field(['flame_arrow'], [
+          { id: 'e1', side: 'enemy', at: hex(4, 1), stats: warded({ fire: 5 }) },
+          { id: 'e2', side: 'enemy', at: hex(4, 2) },
+        ])
+        expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'flame_arrow', target: 'e2' })
+        // Unwarded, the first of two equal foes, as ever.
+        const even = field(['flame_arrow'], [{ id: 'e1', side: 'enemy', at: hex(4, 1) }, { id: 'e2', side: 'enemy', at: hex(4, 2) }])
+        expect(choose(even)).toEqual({ type: 'cast', unit: 'p1', spell: 'flame_arrow', target: 'e1' })
+      })
+
+      it('casts a weaker spell where a ward would stop its hardest-hitting one', () => {
+        const engine = field(['magic_arrow', 'flame_arrow'], [{ id: 'e1', side: 'enemy', at: hex(4, 1), stats: warded({ fire: 99 }) }])
+        expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'magic_arrow', target: 'e1' })
+        const bare = field(['magic_arrow', 'flame_arrow'], [{ id: 'e1', side: 'enemy', at: hex(4, 1) }])
+        expect(choose(bare)).toEqual({ type: 'cast', unit: 'p1', spell: 'flame_arrow', target: 'e1' })
+      })
+
+      it('strikes with Drain Life as with any damaging spell of one foe', () => {
+        const engine = field(['drain_life'], [{ id: 'e1', side: 'enemy', at: hex(4, 1) }])
+        expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'drain_life', target: 'e1' })
+      })
+
+      it('throws Lightning Bolt where its line touches two foes and no ally', () => {
+        const engine = field(['lightning_bolt'], [{ id: 'e1', side: 'enemy', at: hex(3, 1) }, { id: 'e2', side: 'enemy', at: hex(5, 1) }])
+        const cast = choose(engine)
+        expect(cast).toMatchObject({ type: 'cast', spell: 'lightning_bolt' })
+        const touched = castTouches(engine.getState().units, unitAt(engine, 'p1'), 'lightning_bolt', { at: (cast as { at: Hex }).at })
+        expect(touched.map((u) => u.id)).toEqual(['e1', 'e2'])
+      })
+
+      it('casts Web on one foe not yet webbed, never on an ally, and not again on a webbed foe', () => {
+        // Every roll a 1: the web always lands.
+        const engine = field(['web'], [{ id: 'e1', side: 'enemy', at: hex(4, 1) }], undefined, () => 0.999)
+        const cast = choose(engine)
+        expect(cast).toMatchObject({ type: 'cast', spell: 'web' })
+        engine.step(cast)
+        expect(unitAt(engine, 'e1').statuses.map((s) => s.id)).toEqual(['webbed'])
+        expect(choose(engine)).not.toMatchObject({ type: 'cast' })
+        // With an ally beside the foe on every side but the far one, no centre touches the foe alone.
+        const crowded = field(['web'], [
+          { id: 'e1', side: 'enemy', at: hex(4, 1) },
+          { id: 'p2', side: 'player', at: hex(3, 1) },
+          { id: 'p3', side: 'player', at: hex(3, 2) },
+          { id: 'p4', side: 'player', at: hex(4, 0) },
+          { id: 'p5', side: 'player', at: hex(5, 0) },
+          { id: 'p6', side: 'player', at: hex(4, 2) },
+          { id: 'p7', side: 'player', at: hex(5, 1) },
+        ])
+        expect(choose(crowded)).not.toMatchObject({ type: 'cast', spell: 'web' })
+      })
+
+      it('curses the healthiest foe not yet cursed while two stand', () => {
+        const engine = field(['curse'], [
+          { id: 'e1', side: 'enemy', at: hex(4, 1), hp: 5 },
+          { id: 'e2', side: 'enemy', at: hex(4, 2) },
+        ], undefined, () => 0.999)
+        expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'curse', target: 'e2' })
+        engine.step(choose(engine))
+        expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'curse', target: 'e1' })
+        const alone = field(['curse'], [{ id: 'e1', side: 'enemy', at: hex(4, 1) }])
+        expect(choose(alone)).not.toMatchObject({ type: 'cast' })
+      })
+
+      it('guards itself with Dark Shield when a foe stands beside it and it is not shielded', () => {
+        const engine = field(['magic_arrow', 'dark_shield'], [{ id: 'e1', side: 'enemy', at: hex(1, 1) }])
+        expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'dark_shield', target: 'p1' })
+        engine.step(choose(engine))
+        expect(choose(engine)).toMatchObject({ spell: 'magic_arrow' })
+        const far = field(['magic_arrow', 'dark_shield'], [{ id: 'e1', side: 'enemy', at: hex(4, 1) }])
+        expect(choose(far)).toMatchObject({ spell: 'magic_arrow' })
+        // Shield first, and Dark Shield not on top of it.
+        const both = field(['shield', 'magic_arrow', 'dark_shield'], [{ id: 'e1', side: 'enemy', at: hex(1, 1) }])
+        expect(choose(both)).toMatchObject({ spell: 'shield' })
+        both.step(choose(both))
+        expect(choose(both)).toMatchObject({ spell: 'magic_arrow' })
+      })
     })
 
     it('never casts Protect or Haste', () => {
