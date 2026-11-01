@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GOBLIN_STATS, type CombatantStats } from '../combat/combat.ts'
+import { GOBLIN_STATS, KOBOLD_STATS, TROLL_STATS, type CombatantStats } from '../combat/combat.ts'
 import { hex, type Hex } from '../grid/hex.ts'
 import { BattleEngine, castTouches, type Action } from './battleEngine.ts'
 import type { SpellId } from '../combat/spells.ts'
@@ -308,6 +308,54 @@ describe('policies', () => {
     expect(choose(engine)).toEqual({ type: 'move', unit: 'p1', to: hex(3, 1) }) // 3 AP, 5 left
     engine.step(choose(engine))
     expect(choose(engine)).toEqual(ATTACK_E1)
+  })
+
+  describe('aggressive with a strike routine', () => {
+    const versus = (stats: CombatantStats, trollAt: Hex, foe: CombatantStats = GOBLIN_STATS) =>
+      new BattleEngine({
+        board: { cols: 8, rows: 3 },
+        units: [
+          { id: 'p1', side: 'player', stats, position: trollAt },
+          { id: 'e1', side: 'enemy', stats: foe, position: hex(2, 1) },
+        ],
+      })
+    const routine = (ability: 'troll_claws' | 'spider_bite'): Action => ({ type: 'ability', unit: 'p1', ability, target: 'e1' })
+
+    it('uses the Troll’s claws, two strikes, rather than one claw standing still', () => {
+      const engine = versus(TROLL_STATS, hex(1, 1))
+      expect(engine.legalActions('p1')).toContainEqual(ATTACK_E1)
+      expect(choose(engine)).toEqual(routine('troll_claws'))
+    })
+
+    it('claws once with its weapon when it has moved and the routine is beyond its AP', () => {
+      const engine = versus(TROLL_STATS, hex(0, 1))
+      expect(choose(engine)).toEqual({ type: 'move', unit: 'p1', to: hex(1, 1) })
+      engine.step(choose(engine))
+      expect(choose(engine)).toEqual(ATTACK_E1)
+      engine.step(choose(engine))
+      expect(choose(engine)).toEqual(END_TURN)
+    })
+
+    it('takes a routine on a tie with its weapon, and the weapon when it does more harm', () => {
+      // Two bites of 1d6+2 against one blow of 2d6+4 or 2d6+5, at a foe nothing armours.
+      const biter = (bonus: number) => ({ ...GOBLIN_STATS, damage: { count: 2, sides: 6, bonus }, abilities: ['spider_bite' as const] })
+      expect(choose(versus(biter(4), hex(1, 1), KOBOLD_STATS))).toEqual(routine('spider_bite'))
+      expect(choose(versus(biter(5), hex(1, 1), KOBOLD_STATS))).toEqual(ATTACK_E1)
+    })
+
+    it('counts the unit’s ability damage bonus in a routine’s harm', () => {
+      const biter = { ...GOBLIN_STATS, damage: { count: 2, sides: 6, bonus: 5 }, abilities: ['spider_bite' as const], abilityDamageBonus: 1 }
+      expect(choose(versus(biter, hex(1, 1), KOBOLD_STATS))).toEqual(routine('spider_bite'))
+    })
+
+    it('strikes with its weapon while its routine recharges', () => {
+      const biter = { ...GOBLIN_STATS, attackApCost: 4, abilities: ['spider_bite' as const] }
+      const engine = versus(biter, hex(1, 1), { ...GOBLIN_STATS, maxHp: 60 })
+      expect(choose(engine)).toEqual(routine('spider_bite'))
+      engine.step(choose(engine))
+      expect(engine.legalActions('p1').some((a) => a.type === 'ability')).toBe(false)
+      expect(choose(engine)).toEqual(ATTACK_E1)
+    })
   })
 
   it('random picks among legal actions using the supplied rng', () => {

@@ -199,3 +199,29 @@ In this step only the `target` form of the action is added; step 05 adds the `at
 - [ ] The index's step 04 row set to `done` with the commit.
 
 ## Execution record
+
+**Status:** done (commit: see the index row; the orchestrator fills in the hash).
+
+**What was built**
+- `src/combat/abilities.ts` (new): `Strike`, `AreaAttack`, `Ability`, the `AreaShape` re-export, `ABILITY_IDS = ['troll_claws', 'spider_bite']`, `ABILITIES` per the C4 table. Type-only imports from `combat.ts`, `spells.ts` and `hex.ts`.
+- `combat.ts`: `CombatantStats.abilities` and `abilityDamageBonus`; `sameCombatStats` compares both (missing abilities as `[]`, missing bonus as 0); `foeAtLevel` sets `abilityDamageBonus` for a block with abilities only; `TROLL_STATS.abilities = ['troll_claws']`.
+- `battleEngine.ts`: the `ability` action (routine form); `recharging` on `UnitRecord` (set to `{}` when the battle starts) and `UnitSnapshot` (copied in `snapshot()`), so it is kept in snapshots and `restore`; `canUse` / `canStrike`; `legalActions` lists routines after casts; `step` throws "X cannot use A on T" for an illegal one; `routine()` pays AP, clears `gearChangePaid`, sets the counter, and makes each strike through `attack()` with an optional strike argument (dice, ability, strike), retargeting with `nearestFoeInReach` and stopping once the battle is over; the strike's status is laid on a hit (not on a mirror image) that leaves the target standing; the countdown runs at the end of `startTurn`, after ticks and regeneration, and only if the battle goes on, for standing units, sleepers included; `AttackEvent.ability`, `strike` and `status` (these keys are absent on plain and free attacks, so those events are byte-identical); `formatEvent` names the strike's verb ("Troll claws Warrior: rolls 34 (needs 40 or less) — HITS Warrior for 5 dmg.") and appends a status laid (", poisoned"); `LOG_SCHEMA_VERSION` 20.
+- `policies.ts`: `expectedHarm` takes optional dice; `bestAttack` is now `bestStrike` (plain attacks and routines, a routine summing its strikes with `abilityDamageBonus`, a routine winning a tie with a plain attack, the first routine winning a tie among routines).
+- `save.ts`: `SAVE_VERSION` 14.
+- `encounters.test.ts`: the yardstick's `meanDamage` is the better of the weapon's turn and each routine's turn; the exceptions are unchanged.
+- CLAUDE.md: the `combat/` bullet (abilities, `abilityDamageBonus`, the yardstick's routine turn), the engine bullet (the `ability` action, retargeting, `recharging`), the policies bullet (the best strike), and the Troll in the rules of scaling (its claws as an 8 AP routine standing still, one 4 AP claw after a move).
+
+**Tests added**: `abilities.test.ts` (each ability has exactly one of strikes and area; the two tables; the Troll's block; `sameCombatStats` on abilities and on the bonus; `foeAtLevel`'s bonus); `battleEngine.test.ts` "strike routines and recharge" (one event per strike with AP 8 then 0; the bonus on the dice; plain attacks without strike fields; the verb in the log line; the Venom Bite's poison recorded, and none laid on a miss or a felling bite; retargeting to the lowest id on a tie, and to the nearest over a lower id for a ranged routine; no further event with none in reach; stopping when the battle ends; the defender turns once; legal listing after casts and refusals; recharge 0 keeps the routine listed; `spider_bite` blocked, then ready again as its side's turn begins; the countdown with regeneration; a sleeper's countdown; snapshot round-trip through JSON then identical play-out; schema 20); `policies.test.ts` (claws over one claw; one weapon claw after a move; routine on a tie, weapon when higher; the bonus counted; the weapon while recharging); `encounters.test.ts` (routine-turn arithmetic); `save.test.ts` (`SAVE_VERSION` 14). Changed on purpose: the schema assertions 19 → 20, and `foeAtLevel(TROLL_STATS, native)` now equals the block plus `abilityDamageBonus: 0`.
+
+**Checks run**
+- `npm run -s typecheck`: clean. `npx vitest run --project domain`: 908 passed.
+- `make test`: 70 files, 917 tests passed.
+- `make -s simulate ARGS="--encounter troll_lair --threat 4 --party-level 4 --battles 500 --seed 1"`: **222 of 500** (baseline 218, +0.8 points, within noise); 15.62 rounds (15.482); enemy damage 102.31 (103.3); enemy hit rate 0.6752 (0.6776).
+- Same at `--threat 5 --party-level 5`: **0 of 500** (baseline 0); 7.548 rounds (7.48); enemy damage 146.73 (147.002). A weak check: the cell was already 0.
+- `make -s simulate ARGS="--campaign --ready-level 7 --battles 500 --seed 1"`: **Source beaten 242 of 500** (48.4%; baseline 243, −1). Party fell 258, encampment lost 0, out of days 0. A campaign: 280 days, 18.9 battles, 1.8 heroes dead (baseline 281, 19.0, 1.8). Per threat, won/battles: 1: 1009/1009; 2: 1777/1795; 3: 2021/2075 (0.974); 4: 3041/3064 (0.992; was 3053/3076); 5: 1358/1521 (0.893; was 1361/1523). The Troll changes draws only in battles it fights, so the small drift is expected and well inside 5 points.
+- `make test-browser` not run: no scene code changed.
+
+**Deviations and notes for later steps**
+- No contract changed. Settled within it: a strike's status is laid before the wake check, so the `AttackEvent` carries it; a missing `abilities` compares equal to `[]`; the log appends a laid status as ", poisoned" (the contract shows only the hit line).
+- Step 05: `Action` has only the `target` form; `canUse` is shared, and `canStrike` rejects an ability without strikes, so an area ability needs its own aim check and resolver. `strikeVerb` assumes `event.ability` is a routine.
+- Step 06: a routine's strikes are ordinary `AttackEvent`s, so the scene already plays them; `UnitSnapshot.recharging` is ready for `foeInfoLines`.

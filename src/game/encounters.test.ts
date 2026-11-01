@@ -16,7 +16,9 @@ import {
   foeAtLevel,
   foeYardstick,
   type CombatantStats,
+  type DamageRoll,
 } from '../combat/combat.ts'
+import { ABILITIES, type AbilityId } from '../combat/abilities.ts'
 import { BANDIT_ROLE, banditStats } from './bandits.ts'
 import {
   ENCOUNTERS,
@@ -355,8 +357,19 @@ describe('the foe yardstick', () => {
     { kind: 'armored_troll', field: 'toHit', reason: 'level 1 foes hit less often than the band; they catch up by 5 a level' },
   ]
 
+  const mean = (roll: DamageRoll, bonus = 0) => (roll.count * (roll.sides + 1)) / 2 + roll.bonus + bonus
+  /** A routine's turn: its strikes' means, times the uses a turn its AP allow, once at most if it recharges. */
+  const routineTurn = (s: CombatantStats, id: AbilityId) => {
+    const { strikes = [], apCost, recharge } = ABILITIES[id]
+    const uses = Math.floor(s.actionPoints / apCost)
+    return (recharge >= 1 ? Math.min(1, uses) : uses) * strikes.reduce((sum, strike) => sum + mean(strike.damage, s.abilityDamageBonus), 0)
+  }
+  /** The better of the weapon's turn and the best routine's. */
   const meanDamage = (s: CombatantStats) =>
-    Math.max(1, Math.floor(s.actionPoints / s.attackApCost)) * ((s.damage.count * (s.damage.sides + 1)) / 2 + s.damage.bonus)
+    Math.max(
+      Math.max(1, Math.floor(s.actionPoints / s.attackApCost)) * mean(s.damage),
+      ...(s.abilities ?? []).map((id) => routineTurn(s, id)),
+    )
 
   it.each(Object.keys(BLOCKS) as MonsterKind[])('holds the %s to the yardstick at its native level, but for named exceptions', (kind) => {
     const level = FOE_NATIVE_LEVEL[kind]
@@ -368,6 +381,13 @@ describe('the foe yardstick', () => {
     )
     const named = EXCEPTIONS.filter((e) => e.kind === kind).map((e) => e.field)
     expect(outside.sort(), `${kind}: ${outside.map((f) => `${f} ${values[f]} outside [${yardstick[f]}]`).join('; ')}`).toEqual(named.sort())
+  })
+
+  it('counts a routine’s turn: the Troll’s claws are its two weapon claws, a recharging routine once a turn', () => {
+    expect(meanDamage(TROLL_STATS)).toBe(9)
+    expect(routineTurn(TROLL_STATS, 'troll_claws')).toBe(9)
+    expect(routineTurn({ ...GOBLIN_STATS, abilityDamageBonus: 1 }, 'spider_bite')).toBe(13)
+    expect(meanDamage({ ...GOBLIN_STATS, abilities: ['spider_bite'] })).toBe(11)
   })
 
   it('names a reason for every exception', () => {

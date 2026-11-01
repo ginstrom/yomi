@@ -1,3 +1,4 @@
+import { ABILITIES, type AbilityId } from '../combat/abilities.ts'
 import { damageThrough, effectiveResistance, hitChance, warded, type DamageRoll, type RNG } from '../combat/combat.ts'
 import { HELPLESS_BONUS, SPELLS, isHealing, type SpellId } from '../combat/spells.ts'
 import { hexDistance, type Hex } from '../grid/hex.ts'
@@ -45,10 +46,11 @@ const END_TURN: Action = { type: 'end_turn' }
  * with its hardest-hitting spell, reckoning its damage after the foe's ward
  * against the spell's element. A caster that knows a heal keeps the mana for its
  * cheapest, spending it only on healing. Protect and Haste it never casts.
- * Otherwise a unit attacks the foe in range it would do the most harm to if
- * it can afford to: the chance to hit (flanking, side and rear included)
- * times the damage of a hit through the foe's resistance, so that it leaves
- * the heavily armoured to weapons that pierce them; otherwise, if no foe
+ * Otherwise a unit makes the strike that would do the most harm, if it can
+ * afford one: a plain attack or a routine of strikes (`bestStrike`), each
+ * strike the chance to hit (flanking, side and rear included) times the
+ * damage of a hit through the foe's resistance, so that it leaves the
+ * heavily armoured to weapons that pierce them; otherwise, if no foe
  * is in reach, it closes on the nearest one, preferring the cheapest move
  * that leaves AP to strike from where it ends, then the smallest gap, then
  * the cheapest move. Its reach is that of a damaging spell of one foe it has
@@ -68,7 +70,7 @@ const aggressive: Policy = ({ state, legal }) => {
       sleepCast(state, casts) ??
       curseCast(state, casts) ??
       strikeCast(casts) ??
-      bestAttack(state, self, own) ??
+      bestStrike(state, self, own) ??
       closingMove(state, self, own)
     if (choice) return choice
   }
@@ -211,32 +213,55 @@ function reach(self: UnitSnapshot): { range: number; apCost: number } {
   return spell ? { range: spell.range, apCost: spell.apCost } : { range: self.attackRange, apCost: self.attackApCost }
 }
 
-/** The harm an attack would do on average: its chance to hit times the average hit through the target's resistance, near enough. */
-function expectedHarm(state: BattleState, self: UnitSnapshot, target: UnitSnapshot): number {
+/**
+ * The harm an attack would do on average: its chance to hit times the
+ * average hit of `dice` (the unit's weapon's unless given) through the
+ * target's resistance, near enough.
+ */
+function expectedHarm(state: BattleState, self: UnitSnapshot, target: UnitSnapshot, dice?: DamageRoll): number {
   const attacker = effectiveStats({ stats: self, statuses: self.statuses })
   const defender = effectiveStats({ stats: target, statuses: target.statuses })
   const bonus =
     flankersOf(state.units, self, target).length * FLANK_BONUS_PER_ALLY +
     ARC_BONUS[arcStruck(target, self.position, self.attackRange)] +
     (hasStatus(target, 'asleep') ? HELPLESS_BONUS : 0)
-  const { count, sides, bonus: flat } = attacker.damage
+  const { count, sides, bonus: flat } = dice ?? attacker.damage
   const averageHit = damageThrough(count * ((sides + 1) / 2) + flat, effectiveResistance(attacker, defender.resistance ?? 0))
   return hitChance(attacker, defender.ac, bonus) * averageHit
 }
 
-function bestAttack(state: BattleState, self: UnitSnapshot, own: readonly Action[]): Action | null {
+/**
+ * The best strike: of the legal plain attacks and routines, the one that
+ * would do the most harm, a routine scoring the sum of its strikes' (each
+ * with its own dice and the unit's `abilityDamageBonus`) against its first
+ * target. A routine wins a tie with a plain attack.
+ */
+function bestStrike(state: BattleState, self: UnitSnapshot, own: readonly Action[]): Action | null {
   let best: Action | null = null
   let bestHarm = -1
+  let bestIsRoutine = false
   for (const action of own) {
-    if (action.type !== 'attack') continue
+    if (action.type !== 'attack' && action.type !== 'ability') continue
     const target = state.units.find((u) => u.id === action.target)
-    const harm = target ? expectedHarm(state, self, target) : 0
-    if (harm > bestHarm) {
+    if (!target) continue
+    const routine = action.type === 'ability'
+    const harm = routine ? routineHarm(state, self, target, action.ability) : expectedHarm(state, self, target)
+    if (harm > bestHarm || (routine && !bestIsRoutine && harm === bestHarm)) {
       best = action
       bestHarm = harm
+      bestIsRoutine = routine
     }
   }
   return best
+}
+
+/** The summed expected harm of a routine's strikes on `target`. */
+function routineHarm(state: BattleState, self: UnitSnapshot, target: UnitSnapshot, ability: AbilityId): number {
+  const bonus = self.abilityDamageBonus ?? 0
+  return (ABILITIES[ability].strikes ?? []).reduce(
+    (sum, strike) => sum + expectedHarm(state, self, target, { ...strike.damage, bonus: strike.damage.bonus + bonus }),
+    0,
+  )
 }
 
 function closingMove(state: BattleState, self: UnitSnapshot, own: readonly Action[]): Action | null {

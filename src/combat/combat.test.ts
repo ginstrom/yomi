@@ -211,8 +211,9 @@ describe('foeAtLevel', () => {
   })
 
   it('leaves a monster as it is at its native level, and treats a lower level as the native one', () => {
-    expect(foeAtLevel(TROLL_STATS, 15, 15)).toEqual(TROLL_STATS)
-    expect(foeAtLevel(TROLL_STATS, 9, 15)).toEqual(TROLL_STATS)
+    // A block with abilities gains an explicit ability damage bonus, 0 at its native level.
+    expect(foeAtLevel(TROLL_STATS, 15, 15)).toEqual({ ...TROLL_STATS, abilityDamageBonus: 0 })
+    expect(foeAtLevel(TROLL_STATS, 9, 15)).toEqual({ ...TROLL_STATS, abilityDamageBonus: 0 })
     expect(foeAtLevel(GOBLIN_SHAMAN_STATS, 3, 8)).toEqual(GOBLIN_SHAMAN_STATS)
   })
 

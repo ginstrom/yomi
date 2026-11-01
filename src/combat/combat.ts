@@ -1,3 +1,4 @@
+import type { AbilityId } from './abilities.ts'
 import type { SpellId } from './spells.ts'
 
 /** The kinds of damage a ward can stand against; damage of none is a weapon's or Magic Arrow's. */
@@ -45,6 +46,10 @@ export interface CombatantStats {
     /** In `ALL_SPELL_IDS` order. */
     spells: readonly SpellId[]
   }
+  /** What the unit can do besides its weapon and spells (abilities.ts), in ABILITY_IDS order; none when left out. */
+  abilities?: readonly AbilityId[]
+  /** Added to the damage bonus of every strike and area of its abilities (foeAtLevel's damage step); 0 when left out. */
+  abilityDamageBonus?: number
 }
 
 function sameMagic(a: CombatantStats['magic'], b: CombatantStats['magic']): boolean {
@@ -55,6 +60,12 @@ function sameMagic(a: CombatantStats['magic'], b: CombatantStats['magic']): bool
     a.spells.length === b.spells.length &&
     a.spells.every((spell, i) => spell === b.spells[i])
   )
+}
+
+function sameAbilities(a: CombatantStats['abilities'], b: CombatantStats['abilities']): boolean {
+  const left = a ?? []
+  const right = b ?? []
+  return left.length === right.length && left.every((ability, i) => ability === right[i])
 }
 
 function sameWards(a: CombatantStats['wards'], b: CombatantStats['wards']): boolean {
@@ -86,7 +97,9 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     a.attackApCost === b.attackApCost &&
     a.attackRange === b.attackRange &&
     a.actionPoints === b.actionPoints &&
-    sameMagic(a.magic, b.magic)
+    sameMagic(a.magic, b.magic) &&
+    sameAbilities(a.abilities, b.abilities) &&
+    (a.abilityDamageBonus ?? 0) === (b.abilityDamageBonus ?? 0)
   )
 }
 
@@ -295,7 +308,8 @@ export const HOBGOBLIN_CHIEF_STATS: CombatantStats = {
 }
 
 /**
- * A gangling brute that rakes twice a turn with its claws and knits its
+ * A gangling brute that rakes twice a turn with its claws, both at once
+ * standing still (`troll_claws`) or one after a move, and knits its
  * wounds back together as its turn begins, unless acid or fire has caught it
  * (`STATUSES`, `stopsRegeneration`). Its hide is thick, but no armour.
  */
@@ -312,6 +326,7 @@ export const TROLL_STATS: CombatantStats = {
   attackApCost: 4,
   attackRange: 1,
   actionPoints: 8,
+  abilities: ['troll_claws'],
 }
 
 /**
@@ -358,7 +373,8 @@ export const FOE_MANA_PER_LEVEL = 3
  * it with, and a regeneration that grew with its hit points outpaced what a
  * party deals in a round. A kind with a `native` level above 1 has its block
  * written for that level: it is that block at `native` (a lower level is
- * taken as `native`), and grows from there by the same steps.
+ * taken as `native`), and grows from there by the same steps. A kind with
+ * abilities gains the damage step on them too (`abilityDamageBonus`).
  */
 export function foeAtLevel(base: CombatantStats, level: number, native = 1): CombatantStats {
   const at = Math.max(level, native)
@@ -378,6 +394,7 @@ export function foeAtLevel(base: CombatantStats, level: number, native = 1): Com
           },
         }
       : {}),
+    ...(base.abilities ? { abilityDamageBonus: (base.abilityDamageBonus ?? 0) + Math.floor(above / FOE_DAMAGE_LEVEL_STEP) } : {}),
   }
 }
 
