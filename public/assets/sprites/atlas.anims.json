@@ -702,6 +702,48 @@
     {
       "frames": [
         {
+          "duration": 600,
+          "frame": "giant_spider/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "giant_spider/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "giant_spider/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "giant_spider/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "giant_spider/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "giant_spider/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "giant_spider/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "giant_spider/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 500,
           "frame": "goblin/idle_0",
           "key": "atlas"
@@ -965,6 +1007,48 @@
         }
       ],
       "key": "map_watchtower/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "salamander/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "salamander/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "salamander/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "salamander/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "salamander/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "salamander/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "salamander/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "salamander/walk",
       "repeat": -1
     },
     {

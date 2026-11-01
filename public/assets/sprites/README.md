@@ -24,6 +24,7 @@ Infinity Engine CRPGs (Baldur's Gate 1 and 2). No third-party art is included.
 | `atlas.png`: `warrior/*` | `art/units/warrior.sprite.toml` (every hero's body, bare: what it wears and holds is laid over it) | `UnitFigure` (`BattleScene`, `InventoryScene`, `WorldScene`) |
 | `atlas.png`: `goblin/*`, `kobold/*`, `shaman/*`, `horror/*`, `hobgoblin/*`, `troll/*`, `armored_troll/*` | `art/units/` | `UnitFigure` (`BattleScene`) |
 | `atlas.png`: `bandit_cutthroat/*`, `bandit_archer/*`, `bandit_brute/*`, `bandit_mage/*`, `bandit_captain/*` | `art/units/bandit_*.sprite.toml` | `UnitFigure` (`BattleScene`), from the bandit kinds (stage 1, step 03) |
+| `atlas.png`: `giant_spider/*`, `salamander/*` | `art/units/giant_spider.sprite.toml`, `art/units/salamander.sprite.toml` | `UnitFigure` (`BattleScene`), from the Giant Spider and Salamander kinds (long campaign stage 2, step 07) |
 | `atlas.png`: `fx_*/*` | `art/effects/fx_*.sprite.toml` | `BattleScene` (arrows, missiles and bursts) |
 | `atlas.png`: `gear_*/*` | `art/gear/gear_*.sprite.toml`, and their variants | `UnitFigure`, by `GEAR_SPRITES` |
 | `atlas.png`: `gear_breastplate/*`, `gear_circlet/*`, `gear_cloak/*`, `gear_cloak_back/*` | `art/gear/` (what a hero wears: armour, head and cloak, the cloak's back drawn under the body) | `UnitFigure`, by `GEAR_SPRITES`, `WORN_SPRITES` and `WORN_BACK_SPRITES` |

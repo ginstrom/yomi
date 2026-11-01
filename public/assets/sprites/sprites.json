@@ -2313,6 +2313,140 @@
       32
     ]
   },
+  "giant_spider": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_1",
+            "ms": 140
+          },
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_2",
+            "ms": 140
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      7,
+      32,
+      25
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "giant_spider.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          0,
+          7,
+          32,
+          25
+        ],
+        "file": "giant_spider__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          0,
+          8,
+          32,
+          24
+        ],
+        "file": "giant_spider__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          0,
+          7,
+          32,
+          25
+        ],
+        "file": "giant_spider__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          0,
+          7,
+          32,
+          25
+        ],
+        "file": "giant_spider__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          0,
+          7,
+          32,
+          25
+        ],
+        "file": "giant_spider__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          18.5,
+          20.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          18.5,
+          21.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          18.5,
+          20.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          18.5,
+          20.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          18.5,
+          20.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
   "goblin": {
     "anchor": [
       16,
@@ -3921,6 +4055,140 @@
           32
         ],
         "file": "portrait_wizard.png"
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "salamander": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_1",
+            "ms": 140
+          },
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_2",
+            "ms": 140
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      11,
+      31,
+      21
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "salamander.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          0,
+          11,
+          31,
+          21
+        ],
+        "file": "salamander__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          0,
+          12,
+          31,
+          20
+        ],
+        "file": "salamander__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          0,
+          11,
+          31,
+          21
+        ],
+        "file": "salamander__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          0,
+          11,
+          31,
+          21
+        ],
+        "file": "salamander__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          0,
+          11,
+          31,
+          21
+        ],
+        "file": "salamander__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          15.5,
+          20.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          15.5,
+          21.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          15.5,
+          20.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          15.5,
+          20.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          15.5,
+          20.5
+        ]
       }
     },
     "size": [

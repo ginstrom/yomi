@@ -79,3 +79,16 @@ Two unit sprites go into the atlas, `giant_spider` and `salamander`, each with `
 - [ ] The index's step 07 row set to `done` with the commit, and the execution record below filled in.
 
 ## Execution record
+
+- **Drawn** (as whole-frame runs, `outline = "auto"`, no generator script), by the session model:
+  - `art/units/giant_spider.sprite.toml`: a dark brown body, a bulging abdomen with a moss-green hourglass mark, red eyes and bone fangs; eight legs, the four near ones tan with high knees (a front and a back arch, two low legs), the four far ones dark brown. Wide and low: columns 1 to 30, knees at row 8, body rows 14 to 24. `chest = [18, 20]` (the cephalothorax). `idle_1` moves rows 0 to 26 down a pixel, so the body sinks and the knees bend while the feet stay; `walk_1` and `walk_2` lift alternate sets of four feet (near back and front-low with far back-low and front, then the others).
+  - `art/units/salamander.sprite.toml`: a long, low, splay-legged lizard of red scales (`R` spine, `r` sides) and a rust-orange belly, four tongues of flame (`o`, `y`, `Y`) along its spine, a flame-tipped tail curled up behind, and a wide mouth line with a gold glow in the jaw. `chest = [15, 20]`. `idle_1` moves rows 0 to 25 down a pixel (everything above the feet); `walk_1` and `walk_2` lift the diagonal pairs in turn (near back with far front, then near front with far back), and the tail tip sways forward a pixel on each lift.
+  - Timings as the bandits': `idle` 600 ms, `walk` 140 ms (`walk_0`, `walk_1`, `walk_0`, `walk_2`). `walk_0` is `idle_0` unchanged for both (neither body has a "legs apart" stance distinct from its rest).
+- **Verification:**
+  - `sprite check --project art`: `ok: 74 sprites, 170 frames`.
+  - `npm run sprites`: `built: 74 sprites, 170 frames, 2 targets`; `npm run sprites:check`: `up to date`.
+  - Atlas check (the task's script, with `atlas.frames` an object keyed by name): `giant_spider true true true` and `salamander true true true`; `atlas.frames["giant_spider/idle_0"].points` is `{"chest":[18.5,20.5]}` and the salamander's `{"chest":[15.5,20.5]}` (each sinking a pixel in `idle_1`).
+  - Previews (`sprite preview ... --anim walk|idle`, `--points`, and the exported `idle_0` at 3x over the battle board's slate and taupe floor beside `troll`, `kobold` and `goblin`): the spider reads as a spider and the salamander as a fire lizard at a glance; neither resembles another unit (the salamander shares the kobold's reds but is a horizontal quadruped with a flame crest).
+  - `make test`: 71 files, 956 tests passed.
+- **Deviations:** none. No code change; `unitLook.test.ts` starts requiring the two sprites when step 08 adds the kinds to `FOE_XP`.
+- **For step 08:** the atlas sprites are `giant_spider` and `salamander`, each with `idle_0`, `idle`, `walk` and a `chest` point.
