@@ -51,3 +51,4 @@ None yet. Stage 1's play script is still for the user to walk.
 
 - Step 01 (0804545): guard 243 of 500 (was 238 before fdc0593/51cecb5); Troll Lair 218/500 at threat 4, 0/500 at threat 5. Review (sonnet) clean.
 - Step 02 (1465f7a): summary identical to step 01. Review (sonnet) clean. Non-blocking, passed to step 03: no test of cone/line legality in `canCast`. Step 09: stale `areaHexes` in reference/campaign-to-level-20.md:116.
+- Step 03 (405f8d5): summary identical (engineer and reviewer each re-ran). Review (opus) clean. Non-blocking, carried forward: drain heals from overkill damage (step 09 decides a cap); `drained` not in the simulator's healing tally (step 08/09); a warded mage still casts a fully-warded spell (step 09 checks vs Salamander); scene doesn't redraw the drainer's HP (step 06).
