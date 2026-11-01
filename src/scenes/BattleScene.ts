@@ -60,7 +60,7 @@ import {
   impactMs,
   type SpellLook,
 } from './battleEffects.ts'
-import { foeInfoLines } from './foeInfo.ts'
+import { DESCRIPTION_INDENT, foeInfoLines } from './foeInfo.ts'
 import { scheduleEvents, type Cue } from './eventSchedule.ts'
 import { ScrollingLog } from './scrollingLog.ts'
 import { SEED_KEY } from './seed.ts'
@@ -1128,20 +1128,31 @@ export class BattleScene extends Phaser.Scene {
     if (lines.length === 0) return
     this.foeInfo = lines
     const { x, y } = boardHexCenter(at)
-    const text = this.add
-      .text(x + HEX_SIZE, y, lines.join('\n'), {
-        fontFamily: 'monospace',
-        fontSize: '11px',
-        color: '#ffffff',
-        backgroundColor: '#000000cc',
-        padding: { x: 4, y: 2 },
-      })
-      .setOrigin(0, 0.5)
-    // Kept on the board: to the foe's left when its right would overrun it.
+    // A line apiece, stacked: the foe's name as the title, each ability's name and readiness, and, dimmer
+    // and indented, what the ability does.
+    const style = { fontFamily: 'monospace', fontSize: '11px', backgroundColor: '#000000cc', padding: { x: 4, y: 1 } }
+    const texts = lines.map((line, i) =>
+      this.add.text(0, 0, line, {
+        ...style,
+        color: i === 0 ? '#ffd166' : line.startsWith(DESCRIPTION_INDENT) ? '#b8c0c8' : '#ffffff',
+        fontStyle: i === 0 ? 'bold' : 'normal',
+      }),
+    )
+    // The panel lies in the board's layer, which is scaled to fit the screen; its text is scaled back, so that it
+    // reads at its own size however small the board is drawn. Widths and heights below are in the board's units.
+    const unscale = 1 / (this.foePanel.scaleX || 1)
+    const screenWidth = Math.max(...texts.map((t) => t.width))
+    const width = screenWidth * unscale
+    const height = texts.reduce((sum, t) => sum + t.height, 0) * unscale
+    // Beside the foe, kept on the board: to its left when its right would overrun it.
     const board = boardPixelSize(this.board.size)
-    if (text.x + text.width > board.width) text.setX(x - HEX_SIZE).setOrigin(1, 0.5)
-    text.setY(Phaser.Math.Clamp(text.y, text.height / 2, Math.max(text.height / 2, board.height - text.height / 2)))
-    this.foePanel.add(text)
+    const left = Phaser.Math.Clamp(x + HEX_SIZE + width > board.width ? x - HEX_SIZE - width : x + HEX_SIZE, 0, Math.max(0, board.width - width))
+    let top = Phaser.Math.Clamp(y - height / 2, 0, Math.max(0, board.height - height))
+    for (const text of texts) {
+      text.setFixedSize(screenWidth, 0).setScale(unscale).setPosition(left, top)
+      top += text.height * unscale
+    }
+    this.foePanel.add(texts)
   }
 
   /**

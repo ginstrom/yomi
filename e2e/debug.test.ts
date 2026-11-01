@@ -87,13 +87,13 @@ describe('the debug console', () => {
     const hero = battle.state.units.find((u) => u.side === 'player')!
 
     await game.hover(battleHexOnScreen(battle, troll.position))
-    await game.waitFor('Battle', (b) => b.foeInfo.length === 1)
-    expect((await game.waitFor('Battle')).foeInfo).toEqual(['Claws: ready'])
+    await game.waitFor('Battle', (b) => b.foeInfo.length === 3)
+    expect((await game.waitFor('Battle')).foeInfo).toEqual(['Troll', 'Claws: ready', '  claw 1d4+3, claw 1d4+3'])
     await game.hover(battleHexOnScreen(battle, hero.position))
     await game.waitFor('Battle', (b) => b.foeInfo.length === 0)
     // Moving from a foe onto a control clears the panel too.
     await game.hover(battleHexOnScreen(battle, troll.position))
-    await game.waitFor('Battle', (b) => b.foeInfo.length === 1)
+    await game.waitFor('Battle', (b) => b.foeInfo.length === 3)
     await game.hover(battle.buttons.endTurn)
     await game.waitFor('Battle', (b) => b.foeInfo.length === 0)
 
