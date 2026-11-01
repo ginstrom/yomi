@@ -5,7 +5,6 @@ import { mulberry32, randomSeed, type SeededRng } from '../combat/rng.ts'
 import { SPELLS, STATUSES, type ActiveStatus, type SpellId } from '../combat/spells.ts'
 import {
   BattleEngine,
-  areaHexes,
   formatEvent,
   listNames,
   type Action,
@@ -26,6 +25,7 @@ import type { Equipment, Item } from '../inventory/inventory.ts'
 import {
   HEX_DIRECTIONS,
   HexBoard,
+  areaOf,
   hexCorners,
   hexDirection,
   hexEquals,
@@ -1110,8 +1110,10 @@ export class BattleScene extends Phaser.Scene {
   private markCast(action: CastAction, from: Hex): void {
     const state = this.engine.getState()
     const aim = 'at' in action ? action.at : state.units.find((u) => u.id === action.target)!.position
-    const { radius = 0, hostile, target } = SPELLS[action.spell]
-    const hexes = target === 'area' ? areaHexes(aim, radius).filter((h) => this.board.contains(h)) : [aim]
+    const { radius = 0, hostile, target, shape = 'burst', range } = SPELLS[action.spell]
+    const caster = state.units.find((u) => u.id === action.unit)!
+    const hexes =
+      target === 'area' ? areaOf(shape, caster.position, aim, range, radius).filter((h) => this.board.contains(h)) : [aim]
     this.hoverMarks.lineStyle(3, SPELL_HIGHLIGHT, 1)
     for (const h of [from, ...hexes]) this.hoverMarks.strokePoints(this.hexPolygon(h), true)
     if (target !== 'area') return
@@ -1334,12 +1336,14 @@ export class BattleScene extends Phaser.Scene {
   private showCast(event: Extract<BattleEvent, { type: 'cast' }>): void {
     this.faceUnit(event.caster, event.casterFacing)
     const units = this.engine.getState().units
-    const { target, radius = 0 } = SPELLS[event.spell]
+    const { target, radius = 0, shape = 'burst', range } = SPELLS[event.spell]
     const look = SPELL_LOOKS[event.spell]
     const caster = this.units.get(event.caster)!
     caster.figure.pulseOutline(look.colour, RELEASE_MS + 200)
     const land = () => {
-      const area = target === 'area' ? areaHexes(event.at, radius).filter((h) => this.board.contains(h)) : []
+      const origin = units.find((u) => u.id === event.caster)!.position
+      const area =
+        target === 'area' ? areaOf(shape, origin, event.at, range, radius).filter((h) => this.board.contains(h)) : []
       if (target === 'area') this.flashArea(area, look.colour)
       this.spellImpact(event, look, area)
       for (const outcome of event.outcomes) {

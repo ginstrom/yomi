@@ -137,3 +137,9 @@ export function areaTouches<U extends Placed>(units: readonly U[], caster: Place
 - [ ] The index's step 02 row set to `done` with the commit, and the record below filled in.
 
 ## Execution record
+
+- **Built:** `AreaShape` and `areaOf` in `src/grid/hex.ts`; `AreaSpec` and `areaTouches` in `battleEngine.ts` (`areaHexes` removed); `castTouches` built on them; `canCast` needs a cone or line aimed at distance 1 to `range`; `Spell.shape` (set by no spell); `BattleScene.markCast` and `showCast` draw through `areaOf`; CLAUDE.md's hex.ts and casting lines updated.
+- **Tests:** `hex.test.ts` gained 22 cases (all six directions for cone and line, the off-axis line, between-direction cone, range-3 cone, origin aim, burst, small board); `battleEngine.test.ts` gained four `areaTouches` cases. The task file's hand-computed examples all matched the implementation; no correction needed. Two cases of mine corrected on first run: a 5-column board's row holds 4 hexes east of the corner, not 5 (test error, not code). Red was seen first (`areaOf` missing, 22 failures).
+- **Checks:** `npm run -s typecheck` clean; `make test` 68 files, 847 tests passed; `make test-browser ARGS="-t casts"` 1 passed; `make -s simulate ARGS="--campaign --ready-level 7 --battles 500 --seed 1"` identical to step 01's record from the "Simulated ..." line on (diffed line by line; 243 of 500).
+- **Departures:** none. `areaTouches` takes a set of hexes from `areaOf` (keyed by `hexKey`), which for a burst equals the old distance test.
+- **For later steps:** `canCast` rejects a cone or line aimed at the caster's own hex (distance 0); `castTouches` passes the caster's position as the origin, so a spell shape depends on where the caster stands.

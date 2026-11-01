@@ -9,6 +9,7 @@ import {
   EQUIP_AP_COST,
   FLANK_BONUS_PER_ALLY,
   LOG_SCHEMA_VERSION,
+  areaTouches,
   attackArc,
   flankersOf,
   formatEvent,
@@ -1546,5 +1547,52 @@ describe('BattleEngine snapshots', () => {
 
   it('cannot be taken of an engine given its own rng', () => {
     expect(() => new BattleEngine(DUEL, { rng: sequence([0.5]) }).snapshot()).toThrow('cannot be snapshotted')
+  })
+})
+
+describe('areaTouches', () => {
+  const unit = (id: string, side: 'player' | 'enemy', q: number, r: number, hp = 5) => ({
+    id,
+    side,
+    hp,
+    position: hex(q, r),
+  })
+  const caster = unit('caster', 'player', 0, 0)
+  const units = [
+    unit('far', 'enemy', 5, 0),
+    caster,
+    unit('ally', 'player', 2, 0),
+    unit('foe', 'enemy', 1, 1),
+    unit('dead', 'enemy', 1, 0, 0),
+    unit('off', 'enemy', 0, 3),
+  ]
+  const ids = (touched: { id: string }[]) => touched.map((u) => u.id)
+
+  it('touches the standing units on a cone, both sides when hostile, in roster order', () => {
+    const cone = { shape: 'cone', range: 2 } as const
+    expect(ids(areaTouches(units, caster, cone, hex(1, 0), true))).toEqual(['ally', 'foe'])
+    expect(ids(areaTouches(units, caster, { shape: 'cone', range: 6 }, hex(1, 0), true))).toEqual(['far', 'ally', 'foe'])
+  })
+
+  it('touches the standing units on a line, the caster excluded', () => {
+    const line = { shape: 'line', range: 5 } as const
+    expect(ids(areaTouches(units, caster, line, hex(1, 0), true))).toEqual(['far', 'ally'])
+  })
+
+  it('touches only the caster\'s side when not hostile', () => {
+    const line = { shape: 'line', range: 5 } as const
+    expect(ids(areaTouches(units, caster, line, hex(1, 0), false))).toEqual(['ally'])
+    expect(ids(areaTouches(units, caster, { shape: 'burst', range: 4, radius: 2 }, hex(1, 0), false))).toEqual([
+      'caster',
+      'ally',
+    ])
+  })
+
+  it('touches a burst\'s units within the radius of the aim', () => {
+    expect(ids(areaTouches(units, caster, { shape: 'burst', range: 4, radius: 1 }, hex(1, 0), true))).toEqual([
+      'caster',
+      'ally',
+      'foe',
+    ])
   })
 })

@@ -22,12 +22,14 @@ import {
 import {
   HEX_DIRECTIONS,
   HexBoard,
+  areaOf,
   hexDirection,
   hexDirectionTowards,
   hexDistance,
   hexEquals,
   hexKey,
   reachableHexes,
+  type AreaShape,
   type BoardSize,
   type Hex,
 } from '../grid/hex.ts'
@@ -540,42 +542,47 @@ export function effectiveStats(unit: { stats: CombatantStats; statuses: readonly
   }
 }
 
-/** Every hex within `radius` of `center`, on the board or off it. */
-export function areaHexes(center: Hex, radius: number): Hex[] {
-  const hexes: Hex[] = []
-  for (let q = -radius; q <= radius; q++) {
-    for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
-      hexes.push({ q: center.q + q, r: center.r + r })
-    }
-  }
-  return hexes
-}
-
 /** The hex a cast is aimed at: its target's, or the area's centre. Null for a target not on the roster. */
 export function aimHex(units: readonly Placed[], aim: CastAim): Hex | null {
   if ('at' in aim) return aim.at
   return units.find((u) => u.id === aim.target)?.position ?? null
 }
 
+export interface AreaSpec {
+  shape: AreaShape
+  range: number
+  radius?: number
+}
+
+/** The standing units an area of `area` from `caster` aimed at `at` touches, in roster order: everyone if `hostile`, else the caster's side. */
+export function areaTouches<U extends Placed>(
+  units: readonly U[],
+  caster: Placed,
+  area: AreaSpec,
+  at: Hex,
+  hostile: boolean,
+): U[] {
+  const covered = new Set(areaOf(area.shape, caster.position, at, area.range, area.radius ?? 0).map(hexKey))
+  return units.filter((u) => u.hp > 0 && covered.has(hexKey(u.position)) && (hostile || u.side === caster.side))
+}
+
 /**
  * The units a cast of `spell` by `caster` aimed at `aim` would touch, in
  * roster order, whether or not it is legal: the standing target of a spell
- * aimed at a unit; for an area, every standing unit within its radius of the
- * centre, everyone for a hostile spell, the caster's own side for a friendly
+ * aimed at a unit; for an area, every standing unit in its shape (`areaTouches`),
+ * everyone for a hostile spell, the caster's own side for a friendly
  * one. The engine resolves a cast over these, and the policies and the
  * battle screen judge one by them, so that the three agree.
  */
 export function castTouches<U extends Placed>(units: readonly U[], caster: Placed, spell: SpellId, aim: CastAim): U[] {
-  const { target, radius = 0, hostile } = SPELLS[spell]
+  const { target, range, radius, shape = 'burst', hostile } = SPELLS[spell]
   if (target !== 'area') {
     if (!('target' in aim)) return []
     return units.filter((u) => u.id === aim.target && u.hp > 0)
   }
   const center = aimHex(units, aim)
   if (!center) return []
-  return units.filter(
-    (u) => u.hp > 0 && hexDistance(u.position, center) <= radius && (hostile || u.side === caster.side),
-  )
+  return areaTouches(units, caster, { shape, range, radius }, center, hostile)
 }
 
 /**
@@ -1041,9 +1048,11 @@ export class BattleEngine {
    */
   private canCast(actor: UnitRecord, spell: SpellId, aim: CastAim): boolean {
     if (!this.canPayFor(actor, spell)) return false
-    const { target: kind, range, hostile } = SPELLS[spell]
+    const { target: kind, range, hostile, shape = 'burst' } = SPELLS[spell]
     if (kind === 'area') {
-      if (!('at' in aim) || !this.board.contains(aim.at) || hexDistance(aim.at, actor.position) > range) return false
+      if (!('at' in aim) || !this.board.contains(aim.at)) return false
+      const distance = hexDistance(aim.at, actor.position)
+      if (distance > range || (shape !== 'burst' && distance < 1)) return false
       return !hostile || castTouches(this.units, actor, spell, aim).some((u) => u.side !== actor.side)
     }
     if (!('target' in aim)) return false

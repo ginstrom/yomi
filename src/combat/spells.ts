@@ -1,3 +1,4 @@
+import type { AreaShape } from '../grid/hex.ts'
 import type { DamageRoll } from './combat.ts'
 
 /**
@@ -83,6 +84,8 @@ export interface Spell {
   target: SpellTarget
   /** For an area: how many hexes from its centre it reaches. */
   radius?: number
+  /** For an area: its shape; a burst when left out. A cone or line is aimed 1 to `range` hexes from the caster and reaches `range`. */
+  shape?: AreaShape
   /**
    * A hostile spell rolls to hit each unit it touches, and an area of it
    * touches everyone, the caster's side included. A friendly one never misses
