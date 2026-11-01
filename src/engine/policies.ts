@@ -163,12 +163,21 @@ function guardCast(state: BattleState, self: UnitSnapshot, casts: readonly CastO
 /**
  * The hostile area cast that touches no ally, the caster included, and the
  * most foes: two at least, or for the Web spell one at least not already
- * webbed, counting only those.
+ * webbed, counting only those. A spell with damage counts only the foes its
+ * average damage gets through the ward of (a foe warded against all of it
+ * is no reason to throw it).
  */
 function areaCast(casts: readonly CastOption[]): Action | null {
   const areas = casts.filter((c) => SPELLS[c.spell].target === 'area' && SPELLS[c.spell].hostile && c.withinReserve && c.allies.length === 0)
-  const foesTouched = (c: CastOption) =>
-    c.spell === 'web' ? c.foes.filter((u) => !hasStatus(u, 'webbed')).length : c.foes.length >= 2 ? c.foes.length : 0
+  const hurt = (c: CastOption) => {
+    const { damage, element } = SPELLS[c.spell]
+    return damage ? c.foes.filter((u) => warded(mean(damage), element, u) > 0) : c.foes
+  }
+  const foesTouched = (c: CastOption) => {
+    if (c.spell === 'web') return c.foes.filter((u) => !hasStatus(u, 'webbed')).length
+    const counted = hurt(c).length
+    return counted >= 2 ? counted : 0
+  }
   return best(areas, foesTouched)?.action ?? null
 }
 

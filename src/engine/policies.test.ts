@@ -191,6 +191,14 @@ describe('policies', () => {
         expect(choose(bare)).toEqual({ type: 'cast', unit: 'p1', spell: 'flame_arrow', target: 'e1' })
       })
 
+      it('counts no foe a hostile area spell’s element is fully warded against towards its two foes; a partly warded one still counts', () => {
+        // Fireball's 3d6 averages 10.5: a fire ward of 99 stops it all, a ward of 5 leaves 5.5.
+        const shut = field(['fireball'], [{ id: 'e1', side: 'enemy', at: hex(4, 1), stats: warded({ fire: 99 }) }, { id: 'e2', side: 'enemy', at: hex(5, 1) }])
+        expect(choose(shut)).not.toMatchObject({ type: 'cast' })
+        const partly = field(['fireball'], [{ id: 'e1', side: 'enemy', at: hex(4, 1), stats: warded({ fire: 5 }) }, { id: 'e2', side: 'enemy', at: hex(5, 1) }])
+        expect(choose(partly)).toMatchObject({ type: 'cast', spell: 'fireball' })
+      })
+
       it('strikes with Drain Life as with any damaging spell of one foe', () => {
         const engine = field(['drain_life'], [{ id: 'e1', side: 'enemy', at: hex(4, 1) }])
         expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'drain_life', target: 'e1' })
