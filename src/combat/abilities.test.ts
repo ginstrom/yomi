@@ -29,6 +29,24 @@ describe('abilities', () => {
       { name: 'Venom Bite', verb: 'bites', damage: { count: 1, sides: 6, bonus: 2 }, status: { id: 'poisoned', turns: 3 } },
     ])
   })
+
+  it('lists the area abilities after the routines', () => {
+    expect(ABILITY_IDS).toEqual(['troll_claws', 'spider_bite', 'spider_web', 'fire_spit'])
+  })
+
+  it('makes the spider’s web a burst that only webs, every third turn', () => {
+    const web = ABILITIES.spider_web
+    expect(web).toMatchObject({ name: 'Web', verb: 'spins a web', apCost: 4, recharge: 3 })
+    expect(web.area).toEqual({ shape: 'burst', range: 4, radius: 1, status: { id: 'webbed', turns: 2 }, halfOnMiss: false })
+  })
+
+  it('makes fire spit a cone of fire that sears, half on a miss, every other turn', () => {
+    const spit = ABILITIES.fire_spit
+    expect(spit).toMatchObject({ name: 'Fire Spit', verb: 'spits fire', apCost: 4, recharge: 2 })
+    expect(spit.area).toEqual({
+      shape: 'cone', range: 2, damage: { count: 3, sides: 6, bonus: 0 }, element: 'fire', status: { id: 'seared', turns: 1 }, halfOnMiss: true,
+    })
+  })
 })
 
 describe('stat blocks with abilities', () => {

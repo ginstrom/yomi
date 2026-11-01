@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { GOBLIN_STATS, KOBOLD_STATS, TROLL_STATS, type CombatantStats } from '../combat/combat.ts'
 import { hex, type Hex } from '../grid/hex.ts'
-import { BattleEngine, castTouches, type Action } from './battleEngine.ts'
+import { BattleEngine, areaTouches, castTouches, type Action } from './battleEngine.ts'
+import { ABILITIES } from '../combat/abilities.ts'
 import type { SpellId } from '../combat/spells.ts'
 import { POLICIES, isPolicyName, type PolicyContext } from './policies.ts'
 
@@ -24,6 +25,14 @@ const choose = (engine: BattleEngine) =>
   POLICIES.aggressive({ state: engine.getState(), legal: engine.legalActions(), rng: () => 0 })
 
 const unitAt = (engine: BattleEngine, id: string) => engine.getState().units.find((u) => u.id === id)!
+
+/** The ids of the units an area ability action would touch. */
+function castTouchesArea(engine: BattleEngine, action: Action): string[] {
+  if (action.type !== 'ability' || !('at' in action)) throw new Error('expected an area ability')
+  const { units } = engine.getState()
+  const self = units.find((u) => u.id === action.unit)!
+  return areaTouches(units, self, ABILITIES[action.ability].area!, action.at, true).map((u) => u.id)
+}
 
 const ATTACK_E1: Action = { type: 'attack', unit: 'p1', target: 'e1' }
 const END_TURN: Action = { type: 'end_turn' }
@@ -355,6 +364,88 @@ describe('policies', () => {
       engine.step(choose(engine))
       expect(engine.legalActions('p1').some((a) => a.type === 'ability')).toBe(false)
       expect(choose(engine)).toEqual(ATTACK_E1)
+    })
+  })
+
+  describe('aggressive with an area ability', () => {
+    // At (3,1), a cone of fire west of it covers (2,1), then (1,1), (1,2) and (2,0).
+    const SPITTER: CombatantStats = { ...GOBLIN_STATS, name: 'Salamander', toHit: 80, attackApCost: 4, abilities: ['fire_spit'] }
+    const BIG_GOBLIN: CombatantStats = { ...GOBLIN_STATS, maxHp: 60 }
+    type Placing = [id: string, side: 'player' | 'enemy', at: Hex, stats?: CombatantStats]
+    const field = (self: CombatantStats, selfAt: Hex, ...others: Placing[]) =>
+      new BattleEngine({
+        board: { cols: 8, rows: 3 },
+        units: [
+          { id: 'p1', side: 'player', stats: self, position: selfAt },
+          ...others.map(([id, side, position, stats = BIG_GOBLIN]) => ({ id, side, stats, position })),
+        ],
+      })
+    const isSpit = (action: Action) => action.type === 'ability' && action.ability === 'fire_spit'
+
+    it('breathes where it touches two foes and no ally, but not where it would touch two allies and one foe', () => {
+      const foes = field(SPITTER, hex(3, 1), ['e1', 'enemy', hex(2, 1)], ['e2', 'enemy', hex(2, 0)])
+      const chosen = choose(foes)
+      expect(isSpit(chosen)).toBe(true)
+      expect(castTouchesArea(foes, chosen).sort()).toEqual(['e1', 'e2'])
+
+      const crowded = field(SPITTER, hex(3, 1), ['e1', 'enemy', hex(2, 1)], ['p2', 'player', hex(1, 1)], ['p3', 'player', hex(1, 2)])
+      expect(crowded.legalActions('p1').some(isSpit)).toBe(true)
+      expect(choose(crowded)).toEqual(ATTACK_E1)
+    })
+
+    it('takes an area over a strike only when its net harm is greater', () => {
+      // A 6d6+10 blow, some 19.5 a turn on a goblin, against fire's 8.6.
+      const heavy = { ...SPITTER, damage: { count: 6, sides: 6, bonus: 10 } }
+      expect(choose(field(heavy, hex(3, 1), ['e1', 'enemy', hex(2, 1)]))).toEqual(ATTACK_E1)
+      expect(isSpit(choose(field(SPITTER, hex(3, 1), ['e1', 'enemy', hex(2, 1)])))).toBe(true)
+    })
+
+    it('scores a fire-warded foe lower', () => {
+      // A 2d6+3 blow, 5.85 through the goblin's hide at 65%: under the cone's 8.6, over its 5.6 against a ward of 3.
+      const armed = { ...SPITTER, damage: { count: 2, sides: 6, bonus: 3 } }
+      expect(isSpit(choose(field(armed, hex(3, 1), ['e1', 'enemy', hex(2, 1)])))).toBe(true)
+      const warded = { ...BIG_GOBLIN, wards: { fire: 3 } }
+      expect(choose(field(armed, hex(3, 1), ['e1', 'enemy', hex(2, 1), warded]))).toEqual(ATTACK_E1)
+      expect(choose(field(SPITTER, hex(3, 1), ['e1', 'enemy', hex(2, 1), { ...BIG_GOBLIN, wards: { fire: 99 } }]))).toEqual(ATTACK_E1)
+    })
+
+    it('strikes while its area recharges', () => {
+      const engine = field(SPITTER, hex(3, 1), ['e1', 'enemy', hex(2, 1)])
+      engine.step(choose(engine))
+      expect(engine.getState().units[0].recharging).toEqual({ fire_spit: 2 })
+      expect(choose(engine)).toEqual(ATTACK_E1)
+    })
+
+    describe('a status-only area (Web)', () => {
+      const SPINNER: CombatantStats = { ...GOBLIN_STATS, name: 'Spider', abilities: ['spider_web'] }
+      const isWeb = (action: Action) => action.type === 'ability' && action.ability === 'spider_web'
+
+      it('webs a foe from range when no strike is in reach', () => {
+        const engine = field(SPINNER, hex(0, 1), ['e1', 'enemy', hex(4, 1)])
+        const chosen = choose(engine)
+        expect(isWeb(chosen)).toBe(true)
+        expect(castTouchesArea(engine, chosen)).toEqual(['e1'])
+      })
+
+      it('strikes instead when a foe is in reach', () => {
+        expect(choose(field(SPINNER, hex(0, 1), ['e1', 'enemy', hex(1, 1)]))).toEqual(ATTACK_E1)
+      })
+
+      it('never webs where it would touch an ally, nor a foe already webbed', () => {
+        const near = field(SPINNER, hex(0, 1), ['e1', 'enemy', hex(4, 1)], ['p2', 'player', hex(3, 1)])
+        expect(near.legalActions('p1').some(isWeb)).toBe(true)
+        expect(choose(near).type).toBe('move')
+
+        const seeded = new BattleEngine(
+          { board: { cols: 8, rows: 3 }, units: [{ id: 'p1', side: 'player', stats: SPINNER, position: hex(0, 1) }, { id: 'e1', side: 'enemy', stats: BIG_GOBLIN, position: hex(4, 1) }] },
+          { seed: 1 },
+        )
+        const snapshot = seeded.snapshot()
+        snapshot.units[1].statuses = [{ id: 'webbed', turnsLeft: 2 }]
+        const webbed = BattleEngine.restore(snapshot)
+        expect(webbed.legalActions('p1').some(isWeb)).toBe(true)
+        expect(choose(webbed).type).toBe('move')
+      })
     })
   })
 

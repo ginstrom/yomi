@@ -72,7 +72,7 @@ describe('summarize, with spells', () => {
     const unit = (id: string, side: Side) => ({ id, side }) as (typeof start.units)[number]
     const outcome = (target: string, damage: number, healed = 0, status: CastOutcome['status'] = null): CastOutcome => ({
       unit: target, attackRoll: 40, chance: 61, defenderAc: 15, hit: damage > 0, critical: false, fumble: false,
-      image: false, damage, warded: 0, healed, hpBefore: 12, hpAfter: 12 - damage + healed, status,
+      image: false, damage, warded: 0, half: false, healed, hpBefore: 12, hpAfter: 12 - damage + healed, status,
     })
     const cast = (caster: string, spell: SpellId, outcomes: CastOutcome[]): LoggedEvent => ({
       type: 'cast', battleId: 0, seq: 1, round: 1, caster, spell, target: outcomes[0].unit, at: { q: 0, r: 0 },
@@ -104,6 +104,52 @@ describe('summarize, with spells', () => {
       enemyHitRate: 0,
     })
     expect(summarize(battle(0, 3, 'player'), 1)).toMatchObject({ avgPlayerCasts: 0, avgEnemyCasts: 0 })
+  })
+})
+
+describe('summarize, with area abilities', () => {
+  const events = (): LoggedEvent[] => {
+    const [start, end] = battle(0, 3, 'player')
+    if (start.type !== 'battle_start') throw new Error('expected a battle_start')
+    const unit = (id: string, side: Side) => ({ id, side }) as (typeof start.units)[number]
+    const outcome = (target: string, damage: number, status: CastOutcome['status'] = null): CastOutcome => ({
+      unit: target, attackRoll: 40, chance: 61, defenderAc: 15, hit: status !== null, critical: false, fumble: false,
+      image: false, damage, warded: 0, half: status === null, healed: 0, hpBefore: 12, hpAfter: 12 - damage, status,
+    })
+    const area = (user: string, outcomes: CastOutcome[]): LoggedEvent => ({
+      type: 'ability', battleId: 0, seq: 1, round: 1, unit: user, ability: 'fire_spit', at: { q: 0, r: 0 }, shape: 'cone', hexes: [],
+      distance: 1, apCost: 4, apAfter: 4, facing: 0, skill: 80, outcomes,
+    })
+    return [
+      { ...start, units: [unit('hero', 'player'), unit('newt', 'enemy'), unit('goblin', 'enemy')] },
+      area('newt', [outcome('hero', 9, { id: 'seared', turnsLeft: 1 }), outcome('goblin', 4)]),
+      area('newt', [outcome('hero', 3)]),
+      end,
+    ]
+  }
+
+  it('counts area attacks by side, adding their damage and statuses to the user’s side, not among the attacks or casts', () => {
+    expect(summarize(events(), 1)).toMatchObject({
+      avgEnemyAreaAttacks: 2,
+      avgPlayerAreaAttacks: 0,
+      avgEnemyDamageDealt: 16,
+      avgPlayerDamageDealt: 0,
+      avgEnemyStatuses: 1,
+      avgEnemyCasts: 0,
+      enemyHitRate: 0,
+    })
+    expect(summarize(battle(0, 3, 'player'), 1)).toMatchObject({ avgPlayerAreaAttacks: 0, avgEnemyAreaAttacks: 0 })
+  })
+
+  it('counts a drain’s healing with the caster’s side', () => {
+    const [start, end] = battle(0, 3, 'player')
+    if (start.type !== 'battle_start') throw new Error('expected a battle_start')
+    const drain: LoggedEvent = {
+      type: 'cast', battleId: 0, seq: 1, round: 1, caster: 'witch', spell: 'drain_life', target: 'hero', at: { q: 0, r: 0 },
+      distance: 2, apCost: 4, apAfter: 4, manaCost: 6, manaAfter: 0, casterFacing: 0, skill: 70, drained: 5, outcomes: [],
+    }
+    const units = [{ id: 'hero', side: 'player' }, { id: 'witch', side: 'enemy' }] as typeof start.units
+    expect(summarize([{ ...start, units }, drain, end], 1)).toMatchObject({ avgEnemyHealing: 5, avgPlayerHealing: 0 })
   })
 })
 

@@ -7,6 +7,7 @@ import {
   FLANK_BONUS_PER_ALLY,
   MOVE_AP_COST_PER_HEX,
   arcStruck,
+  areaTouches,
   castTouches,
   effectiveStats,
   flankersOf,
@@ -50,8 +51,11 @@ const END_TURN: Action = { type: 'end_turn' }
  * afford one: a plain attack or a routine of strikes (`bestStrike`), each
  * strike the chance to hit (flanking, side and rear included) times the
  * damage of a hit through the foe's resistance, so that it leaves the
- * heavily armoured to weapons that pierce them; otherwise, if no foe
- * is in reach, it closes on the nearest one, preferring the cheapest move
+ * heavily armoured to weapons that pierce them, or an area ability with
+ * damage whose net harm (to foes, less to its own side) is above 0 and
+ * above that strike's; otherwise an area ability that only lays a status
+ * (Web), where it touches a foe without it and none of its own side;
+ * otherwise, if no foe is in reach, it closes on the nearest one, preferring the cheapest move
  * that leaves AP to strike from where it ends, then the smallest gap, then
  * the cheapest move. Its reach is that of a damaging spell of one foe it has
  * the mana for, if it knows one, and else its weapon's: so a mage holds off at its
@@ -71,6 +75,7 @@ const aggressive: Policy = ({ state, legal }) => {
       curseCast(state, casts) ??
       strikeCast(casts) ??
       bestStrike(state, self, own) ??
+      statusArea(state, self, own) ??
       closingMove(state, self, own)
     if (choice) return choice
   }
@@ -230,29 +235,75 @@ function expectedHarm(state: BattleState, self: UnitSnapshot, target: UnitSnapsh
   return hitChance(attacker, defender.ac, bonus) * averageHit
 }
 
+type AbilityAction = Extract<Action, { type: 'ability' }>
+type AreaAction = Extract<AbilityAction, { at: Hex }>
+
+const isArea = (action: Action): action is AreaAction => action.type === 'ability' && 'at' in action
+
 /**
  * The best strike: of the legal plain attacks and routines, the one that
  * would do the most harm, a routine scoring the sum of its strikes' (each
  * with its own dice and the unit's `abilityDamageBonus`) against its first
- * target. A routine wins a tie with a plain attack.
+ * target, a routine winning a tie with a plain attack; then an area ability
+ * with damage in its place if its net harm (`areaHarm`) is above 0 and
+ * above the strike's, the first of the highest.
  */
 function bestStrike(state: BattleState, self: UnitSnapshot, own: readonly Action[]): Action | null {
-  let best: Action | null = null
+  let chosen: Action | null = null
   let bestHarm = -1
   let bestIsRoutine = false
   for (const action of own) {
-    if (action.type !== 'attack' && action.type !== 'ability') continue
+    if ((action.type !== 'attack' && action.type !== 'ability') || isArea(action)) continue
     const target = state.units.find((u) => u.id === action.target)
     if (!target) continue
     const routine = action.type === 'ability'
     const harm = routine ? routineHarm(state, self, target, action.ability) : expectedHarm(state, self, target)
     if (harm > bestHarm || (routine && !bestIsRoutine && harm === bestHarm)) {
-      best = action
+      chosen = action
       bestHarm = harm
       bestIsRoutine = routine
     }
   }
-  return best
+  const areas = own.filter(isArea).filter((a) => ABILITIES[a.ability].area?.damage)
+  return best(areas, (a) => areaHarm(state, self, a), Math.max(0, bestHarm)) ?? chosen
+}
+
+/**
+ * An area ability's net harm: over each unit it would touch, its chance to
+ * hit times the mean of the dice (with `abilityDamageBonus`) after the
+ * unit's ward, plus with `halfOnMiss` its chance to miss times half that
+ * mean, rounded down, after the ward; added for a foe and taken off for a
+ * unit of its own side, itself included.
+ */
+function areaHarm(state: BattleState, self: UnitSnapshot, action: AreaAction): number {
+  const area = ABILITIES[action.ability].area!
+  const attacker = effectiveStats({ stats: self, statuses: self.statuses })
+  const average = mean(area.damage) + (self.abilityDamageBonus ?? 0)
+  return areaTouches(state.units, self, area, action.at, true).reduce((sum, unit) => {
+    const chance = hitChance(attacker, effectiveStats({ stats: unit, statuses: unit.statuses }).ac)
+    const missed = area.halfOnMiss ? (1 - chance) * warded(Math.floor(average / 2), area.element, unit) : 0
+    const harm = chance * warded(average, area.element, unit) + missed
+    return unit.side === self.side ? sum - harm : sum + harm
+  }, 0)
+}
+
+/**
+ * An area ability that only lays a status (Web), where it touches a foe
+ * not already under it and no unit of its own side: the aim touching the
+ * most such foes, the first on a tie.
+ */
+function statusArea(state: BattleState, self: UnitSnapshot, own: readonly Action[]): Action | null {
+  const areas = own.filter(isArea).filter((a) => {
+    const area = ABILITIES[a.ability].area!
+    return !area.damage && area.status
+  })
+  const fresh = (action: AreaAction) => {
+    const area = ABILITIES[action.ability].area!
+    const touched = areaTouches(state.units, self, area, action.at, true)
+    if (touched.some((u) => u.side === self.side)) return 0
+    return touched.filter((u) => !hasStatus(u, area.status!.id)).length
+  }
+  return best(areas, fresh)
 }
 
 /** The summed expected harm of a routine's strikes on `target`. */

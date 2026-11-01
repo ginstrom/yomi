@@ -208,15 +208,40 @@ Update the lines this change makes wrong or incomplete: the engine's bullet (the
 
 ## 6. Completion criteria
 
-- [ ] `spider_web` and `fire_spit` in `ABILITY_IDS` and `ABILITIES` as in C4.
-- [ ] `AbilityEvent`, `CastOutcome.half`, the area's legal aims and resolution as in C5; `formatEvent` lines.
-- [ ] The policy's area and status-area rules as in C6, with its tests.
-- [ ] The simulator's tally and summary lines.
-- [ ] `LOG_SCHEMA_VERSION` is 21.
-- [ ] The tests listed above, and `make test`, pass.
-- [ ] The campaign summary identical to step 04's (area attacks at 0), recorded below.
-- [ ] CLAUDE.md lines updated.
-- [ ] Committed on the current branch, without pushing; the message ends with the repo's `Co-Authored-By` attribution line.
-- [ ] The index's step 05 row set to `done` with the commit; the execution record below filled in.
+- [x] `spider_web` and `fire_spit` in `ABILITY_IDS` and `ABILITIES` as in C4.
+- [x] `AbilityEvent`, `CastOutcome.half`, the area's legal aims and resolution as in C5; `formatEvent` lines.
+- [x] The policy's area and status-area rules as in C6, with its tests.
+- [x] The simulator's tally and summary lines.
+- [x] `LOG_SCHEMA_VERSION` is 21.
+- [x] The tests listed above, and `make test`, pass.
+- [x] The campaign summary identical to step 04's (area attacks at 0), recorded below.
+- [x] CLAUDE.md lines updated.
+- [x] Committed on the current branch, without pushing; the message ends with the repo's `Co-Authored-By` attribution line.
+- [x] The index's step 05 row set to `done` with the commit; the execution record below filled in.
 
 ## Execution record
+
+**Status:** done (commit: see the index row; the orchestrator fills in the hash).
+
+**What was built**
+- `abilities.ts`: `ABILITY_IDS` gains `spider_web` and `fire_spit`, with the C4 table's values and a description each.
+- `battleEngine.ts`: the `ability` action's `at` form; `AbilityEvent` (C5) in `BattleEvent`; `CastOutcome.half`; `canAim` (on the board, a burst within range, a cone or line 1 to range, touching a standing foe); `legalActions` lists an area ability at each legal aim in board order, in the unit's `abilities` order after its casts; `step` throws "X cannot use A at q,r" on an illegal aim; `areaAttack` pays (AP, `gearChangePaid`, recharge), turns to `at`, and resolves each touched unit in roster order. `cast` and `areaAttack` share `strikeUnit` (roll with the attacker's chance; image; dice on a hit, doubled on a critical; half the dice, floor, on a miss with `halfOnMiss`; ward; wake; status on a hit left standing) and `aftermath` (wakings, images spent, `fellAll`). A cast's draws are unchanged (half is never set for a cast). `formatEvent` renders an `AbilityEvent` ("Salamander spits fire: HITS Warrior for 13 dmg, seared."; "MISSES Warrior, 4 dmg (warded 2) (half)"; "Spider spins a web: Warrior is webbed; MISSES Cleric."; "…: it touches no one."). `LOG_SCHEMA_VERSION` 21.
+- `policies.ts`: `bestStrike` skips area actions when choosing the plain attack or routine, then takes the first damaging area ability whose net harm (`areaHarm`) is above 0 and above that strike's harm; `statusArea` (after the best strike, before closing in) takes the status-only area touching the most foes without its status and no unit of its own side.
+- `scripts/simulate.ts`: the tally counts an `AbilityEvent`'s damage and statuses for the user's side; `Summary.avgPlayerAreaAttacks` / `avgEnemyAreaAttacks`, printed after the casts. Also, from step 03's note: `CastEvent.drained` now counts in the caster's side's healing (summary-neutral: no kind casts Drain Life).
+- CLAUDE.md: the simulator's summary line, the engine bullet (the area form), the policies bullet (net harm, the status area), and the battle rules (an area ability owes nothing to resistance).
+
+**Tests added**: `abilities.test.ts` (the two new entries, the id order); `battleEngine.test.ts` "area abilities" (cone, line and burst touches and board-filtered `hexes`; payment, facing, distance, skill; a hit with bonus and resistance ignored; half on a miss with no status; a miss without `halfOnMiss` drawing no dice; a ward of 99 and of 2, with the status still laid; a critical that fells and ends the battle; a mirror image drawing no dice; a sleeper woken; Web's hit and miss; listing in board order after the other actions; refusals of a foeless aim, an own-hex cone, a burst out of range and the target form; recharge across rounds 1–3; the empty line; snapshot round-trip and identical play-out); `policies.test.ts` "aggressive with an area ability" (two foes vs two allies; area vs a heavy blow; a fire ward lowering the score; striking while recharging; Web from range, not with a strike in reach, not touching an ally, not on a webbed foe); `simulate.test.ts` (area tallies; drain healing). Changed on purpose: the schema pins 20 → 21, `half: false` in the cast `toEqual` test and in the `CastOutcome` fixtures of `sounds.test.ts` and `simulate.test.ts`.
+
+The line shape and a damaging miss without `halfOnMiss` belong to no listed ability, so `battleEngine.test.ts` adds a test-only `test_bolt` to `ABILITIES` in `beforeAll` and removes it in `afterAll`.
+
+**Checks run**
+- `npm run -s typecheck`: clean. `npx vitest run --project domain`: 939 passed.
+- Policy tests checked against mutations (no area choice; no ward in the score; allies not subtracted): each fails at least one test.
+- `make test`: 70 files, 948 tests passed.
+- `make -s simulate ARGS="--campaign --ready-level 7 --battles 500 --seed 1"`, run on step 04's tree first and again after the change: from the "Simulated" line on, the output is identical but for the two new rows `avgPlayerAreaAttacks 0` and `avgEnemyAreaAttacks 0`. Source beaten 242 of 500; 280 days, 18.9 battles, 1.8 heroes dead.
+- `make test-browser` not run: no scene code changed.
+
+**Notes for later steps**
+- No contract changed. Choices made within it: a half miss's damage is drawn without the critical doubling and halved after the bonus, then warded; a fumble counts as a miss (half still dealt); "(warded N)" comes before "(half)"; an area aimed at the user's own hex (a burst) leaves its facing alone, as a cast does.
+- Step 06: `BattleScene` does not yet handle `AbilityEvent` (no unit has an area until step 08). `AbilityEvent.hexes` is already board-filtered; `CastOutcome.half` tells a half miss.
+- Still open from step 03: drain heals from overkill damage (step 09 decides).

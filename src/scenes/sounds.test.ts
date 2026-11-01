@@ -21,7 +21,7 @@ function cast(hit: boolean, critical = false, spell: SpellId = 'magic_arrow'): C
     outcomes: [
       {
         unit: 'goblin', attackRoll: 40, chance: 61, defenderAc: 15, hit, critical, fumble: false, image: false,
-        damage: hit ? 5 : 0, warded: 0, healed: 0, hpBefore: 12, hpAfter: hit ? 7 : 12, status: null,
+        damage: hit ? 5 : 0, warded: 0, half: false, healed: 0, hpBefore: 12, hpAfter: hit ? 7 : 12, status: null,
       },
     ],
   }

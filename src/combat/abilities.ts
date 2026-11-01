@@ -50,7 +50,7 @@ export interface Ability {
   area?: AreaAttack
 }
 
-export const ABILITY_IDS = ['troll_claws', 'spider_bite'] as const
+export const ABILITY_IDS = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit'] as const
 
 export type AbilityId = (typeof ABILITY_IDS)[number]
 
@@ -76,5 +76,28 @@ export const ABILITIES: Record<AbilityId, Ability> = {
       { name: 'Bite', verb: 'bites', damage: FANG },
       { name: 'Venom Bite', verb: 'bites', damage: FANG, status: { id: 'poisoned', turns: 3 } },
     ],
+  },
+  spider_web: {
+    name: 'Web',
+    verb: 'spins a web',
+    description: 'A web 4 hexes off that catches all within a hex of its centre: webbed for 2 turns, 4 fewer action points.',
+    apCost: 4,
+    recharge: 3,
+    area: { shape: 'burst', range: 4, radius: 1, status: { id: 'webbed', turns: 2 }, halfOnMiss: false },
+  },
+  fire_spit: {
+    name: 'Fire Spit',
+    verb: 'spits fire',
+    description: 'A cone of fire 2 hexes long: 3d6, half on a miss, and no regeneration next turn.',
+    apCost: 4,
+    recharge: 2,
+    area: {
+      shape: 'cone',
+      range: 2,
+      damage: { count: 3, sides: 6, bonus: 0 },
+      element: 'fire',
+      status: { id: 'seared', turns: 1 },
+      halfOnMiss: true,
+    },
   },
 }

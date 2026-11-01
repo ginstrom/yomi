@@ -667,10 +667,13 @@ export interface Summary {
   /** Spells cast, per battle. A spell's damage counts in the damage dealt, and so does a status's damage, to the side it hurt the foes of; the hit and critical rates are of weapon attacks only. */
   avgPlayerCasts: number
   avgEnemyCasts: number
-  /** Hit points restored by spells in battle, per battle, by the caster's side. */
+  /** Area abilities used, per battle. Their damage counts in the damage dealt by the user's side, and their statuses in its statuses laid. */
+  avgPlayerAreaAttacks: number
+  avgEnemyAreaAttacks: number
+  /** Hit points restored by spells in battle, a drain's included, per battle, by the caster's side. */
   avgPlayerHealing: number
   avgEnemyHealing: number
-  /** Statuses laid by spells, per battle, by the caster's side. */
+  /** Statuses laid by spells and area abilities, per battle, by the caster's or user's side. */
   avgPlayerStatuses: number
   avgEnemyStatuses: number
 }
@@ -685,6 +688,7 @@ class Tally {
   private hits: Record<Side, number> = { player: 0, enemy: 0 }
   private crits: Record<Side, number> = { player: 0, enemy: 0 }
   private casts: Record<Side, number> = { player: 0, enemy: 0 }
+  private areaAttacks: Record<Side, number> = { player: 0, enemy: 0 }
   private healing: Record<Side, number> = { player: 0, enemy: 0 }
   private statuses: Record<Side, number> = { player: 0, enemy: 0 }
   private opportunityAttacks = 0
@@ -713,9 +717,18 @@ class Tally {
     if (event.type === 'cast') {
       const side = this.sideOf.get(event.caster) === 'player' ? 'player' : 'enemy'
       this.casts[side]++
+      this.healing[side] += event.drained
       for (const outcome of event.outcomes) {
         this.damage[side] += outcome.damage
         this.healing[side] += outcome.healed
+        if (outcome.status) this.statuses[side]++
+      }
+    }
+    if (event.type === 'ability') {
+      const side = this.sideOf.get(event.unit) === 'player' ? 'player' : 'enemy'
+      this.areaAttacks[side]++
+      for (const outcome of event.outcomes) {
+        this.damage[side] += outcome.damage
         if (outcome.status) this.statuses[side]++
       }
     }
@@ -744,6 +757,8 @@ class Tally {
       avgRearAttacks: this.rearAttacks / battles,
       avgPlayerCasts: this.casts.player / battles,
       avgEnemyCasts: this.casts.enemy / battles,
+      avgPlayerAreaAttacks: this.areaAttacks.player / battles,
+      avgEnemyAreaAttacks: this.areaAttacks.enemy / battles,
       avgPlayerHealing: this.healing.player / battles,
       avgEnemyHealing: this.healing.enemy / battles,
       avgPlayerStatuses: this.statuses.player / battles,
