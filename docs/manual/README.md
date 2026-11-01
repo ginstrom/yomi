@@ -137,6 +137,13 @@ You can also click a hex to walk away.
 
 ![Bandits at threat 5: the Captain and the Archer](images/battle-bandits.png)
 
+**Spiders and salamanders.** Far to the east, two lairs hold monsters that fight in new ways:
+
+- The **Spider Nest** holds **Giant Spiders** with a Kobold Sneak. A spider spins a **web** at a hero up to 4 hexes off, catching everyone within a hex of where it lands: a webbed hero has 4 fewer AP for 2 turns. Up close it bites twice in one action, and the second bite poisons. Spiders are quick to kill but hit hard; deal with them before they reach your archer and mage.
+- The **Salamander Pool** holds a **Salamander** between two Kobolds. Every other turn the Salamander spits a **cone of fire** 2 hexes long that burns everyone in it, its own kobolds too if they stand in the way. Even when the spit misses a unit, the unit still takes half the damage. Fire does nothing to a Salamander: Flame Arrow and Fireball deal it 0 (the log says "warded"). Use blades, arrows and Magic Arrow on it, and don't stand bunched up in front of it.
+
+![The Salamander Pool, with the Salamander's abilities and ward shown on hover](images/battle-salamander.png)
+
 ### Camping and other actions
 
 When there are no monsters on your hex, the footer offers:
@@ -263,6 +270,16 @@ When a hero is selected, every foe they can attack from where they stand shows o
 
 **Regeneration**: trolls heal some hit points at the start of each of their turns. Acid (Acid Arrow, which also eats 2 points of resistance while it lasts) and fire (Fireball and Flame Arrow, for the turn after) stop it.
 
+### Monsters' special attacks
+
+Some monsters can do more than swing a weapon:
+
+- **Routines**: several strikes as one action, such as a Troll's two claws or a Giant Spider's two bites. Each strike rolls on its own. If the target falls before the last strike, the rest go to the nearest other foe in reach.
+- **Area attacks**: a burst, a cone or a line. An area attack rolls against everyone in it, friend or foe. Armour's resistance does not reduce its damage, and some area attacks (such as the Salamander's fire) still deal half damage on a miss.
+- **Recharge**: a special attack costs no mana, but once used it has to wait some rounds before it can be used again.
+
+**Hover over a monster** to see what it can do: a small panel beside it lists each special attack as "ready" or "recharging, 2 rounds", and any wards it has ("Wards: fire 99").
+
 ### Zones of control and free attacks
 
 A foe holding a **melee** weapon controls the hexes next to it. **Leaving** those hexes gives that foe one free attack on you; stepping to another hex next to the same foe does not. Each foe gets at most one free attack per enemy turn. Ranged units, wand-wielders and sleepers have no zone of control. Pathfinding prefers routes that provoke the fewest foes, and the orange edges show where the danger is. Your heroes threaten the enemy in exactly the same way.
@@ -311,6 +328,12 @@ The spell then asks for a target. Valid targets are outlined, and hovering over 
 - **Area spells** touch **everyone** in the area, including your own heroes and the caster. Hovering over the centre of an area outlines it and shows the odds for every unit inside.
 - **Friendly spells** never miss.
 
+### Elements and wards
+
+Some spells and effects carry an **element**. Flame Arrow and Fireball are fire, Frost Blast is frost, Acid Arrow and its corrosion are acid, and Death Cloud and its poison are poison. Magic Arrow has no element. A monster may have a **ward** against an element: the ward takes that many points off each hit and each tick of that element, and the log notes it, for example "HITS Salamander for 0 dmg (warded 9)". A ward never stops an effect from landing, only its damage. Choose spells with no element, or a different one, against a warded foe.
+
+Monsters have spells of their own that heroes cannot learn, among them Web and Curse.
+
 ### Lasting effects
 
 The letters beside a unit's health bar show its current effects. An effect lasts for that unit's own turns. Casting the same effect again keeps whichever duration is longer, and different effects stack.
@@ -328,6 +351,8 @@ The letters beside a unit's health bar show its current effects. An effect lasts
 | Hasted | +3 AP |
 | Mirrored | Images take the next hits, and a hit on an image deals no damage |
 | Seared | No regeneration for a turn |
+| Cursed | −15 to hit and −5 armour class (laid by monsters) |
+| Webbed | −4 AP (laid by a Giant Spider's web) |
 
 Damage over time strikes at the start of the affected unit's side's turn. Section 11 lists every spell.
 

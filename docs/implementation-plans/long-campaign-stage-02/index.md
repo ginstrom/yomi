@@ -114,7 +114,7 @@ export function warded(damage: number, element: Element | undefined, stats: Comb
 - **Events:**
   - `CastOutcome` gains `warded: number`: the points the ward stopped (0 when none). `damage` is what was dealt after the ward.
   - `StatusTickEvent` gains `warded: number`, the same way.
-  - `CastEvent` gains `drained: number`: the hit points the caster regained by `drain` (floor of `drain` × the damage dealt to all it touched, no more than the caster had lost), 0 for any other spell.
+  - `CastEvent` gains `drained: number`: the hit points the caster regained by `drain` (floor of `drain` × the damage dealt to all it touched, no more than the caster had lost; amended at step 09: the damage counted is the hit points each target lost, not overkill past what it had left), 0 for any other spell.
 - **Log:** a warded outcome adds `(warded N)` after its damage, as in "HITS Salamander for 0 dmg (warded 9)" and "Goblin takes 1 from poison (warded 2).". A drain adds "and drains N".
 - `LOG_SCHEMA_VERSION` 18 → 19.
 
@@ -307,8 +307,8 @@ export function salamanderPool(party: readonly Fighter[], threat = 5): Encounter
 
 | Encounter | Band | Counts | Slots in order (id, kind, name, position) |
 | --- | --- | --- | --- |
-| `spider_nest` | 4–5 | [2, 3] | `spider` giant_spider Giant Spider (8, 4); `sneak` kobold Kobold Sneak (9, 2); `spider2` giant_spider Giant Spider (8, 6) |
-| `salamander_pool` | 5–5 | [3] | `salamander` salamander Salamander (8, 4); `kobold` kobold Kobold (8, 2); `kobold2` kobold Kobold (8, 6) |
+| `spider_nest` | 4–5 | [2, 3] | `spider` giant_spider Giant Spider (8, 4); `sneak` kobold Kobold Sneak (9, 2); `spider2` giant_spider Brood Spider (8, 6) (name amended at step 08) |
+| `salamander_pool` | 5–5 | [3] | `salamander` salamander Salamander (8, 4); `kobold` kobold Kobold Stoker (8, 2); `kobold2` kobold Kobold Warden (8, 6) (names amended at step 08: every foe in a battle needs a name of its own) |
 
 - **The map** (`src/game/worldMap.ts` `newWorld`), positions and loot kept:
 
@@ -344,7 +344,7 @@ export function foeInfoLines(unit: UnitSnapshot): string[]
 | 06 | [The battle screen](06-battle-screen.md) | Routines and area abilities played back, schedule and sounds, the foe info panel, probe and tests | 05 | moderate: pattern-following on the spell-effect path (sonnet can; session model for review) | done (b523a7f, 3b70c70) |
 | 07 | [Spider and Salamander sprites](07-sprites.md) | `giant_spider` and `salamander` in the atlas with `idle` and `walk`, the sprites README | — | art judgement (session model) | done (0daf6bf) |
 | 08 | [The new kinds and nests](08-kinds-and-nests.md) | The two stat blocks, kinds, XP, `spider_nest` and `salamander_pool`, the two map places, yardstick exceptions; SAVE 15 | 05, 07 | routine, following stage 1's bandit steps (sonnet) | done (8b5cf18) |
-| 09 | [Measure, tune and document](09-measure-tune-document.md) | The guard against step 01, the nests' and Troll's cells, tuning, CLAUDE.md, the manual and screenshots, the stage notes and index status, the play script | 06, 08 | balance judgement (session model); the doc pass may be sonnet | pending |
+| 09 | [Measure, tune and document](09-measure-tune-document.md) | The guard against step 01, the nests' and Troll's cells, tuning, CLAUDE.md, the manual and screenshots, the stage notes and index status, the play script | 06, 08 | balance judgement (session model); the doc pass may be sonnet | done (guard 248 of 500, no tuning kept; Spider Nest threat 4 left at 500/500 for the user) |
 
 ## Execution order
 
@@ -379,15 +379,15 @@ export function foeInfoLines(unit: UnitSnapshot): string[]
 
 ## Overall completion criteria
 
-- [ ] Every step is done, with `make test` passing at each commit.
-- [ ] The guard is measured at step 01 and after step 08, and judged in 09: within about 5 points of step 01's figure, or the move explained in CLAUDE.md's rules of scaling and the stage notes.
-- [ ] The summary is identical to the baseline after steps 02 and 03, and to step 04's after 05.
-- [ ] Cells recorded: `--encounter spider_nest --threat 4 --party-level 4`, `--encounter spider_nest --threat 5 --party-level 5` and `--encounter salamander_pool --threat 5 --party-level 5` are hard but winnable (a party of the threat's level wins most but not all; roughly 60% to 95%); `--encounter troll_lair --threat 4 --party-level 4` (and 5) within noise of step 01's.
-- [ ] `giant_spider` and `salamander` are drawn sprites, not placeholders.
-- [ ] `LOG_SCHEMA_VERSION` is 21 and `SAVE_VERSION` 15.
-- [ ] CLAUDE.md describes shapes, elements and wards, monster spells, abilities and recharge, the policy's new rules, the foe info panel, the new kinds and nests; the manual describes them, its screenshots retaken (with one of a new nest).
-- [ ] The stage design gets an "Implementation notes" section with the figures; the stages index's stage 2 row says done.
-- [ ] The design's play script has been walked in the game (`make dev`), or the steps not walked are listed for the user in step 09's record.
+- [x] Every step is done, with `make test` passing at each commit.
+- [x] The guard is measured at step 01 and after step 08, and judged in 09: within about 5 points of step 01's figure, or the move explained in CLAUDE.md's rules of scaling and the stage notes.
+- [x] The summary is identical to the baseline after steps 02 and 03, and to step 04's after 05.
+- [ ] (Recorded; the Spider Nest's threat-4 cell is 500 of 500, above the range, left for the user: see step 09's record.) Cells recorded: `--encounter spider_nest --threat 4 --party-level 4`, `--encounter spider_nest --threat 5 --party-level 5` and `--encounter salamander_pool --threat 5 --party-level 5` are hard but winnable (a party of the threat's level wins most but not all; roughly 60% to 95%); `--encounter troll_lair --threat 4 --party-level 4` (and 5) within noise of step 01's.
+- [x] `giant_spider` and `salamander` are drawn sprites, not placeholders.
+- [x] `LOG_SCHEMA_VERSION` is 21 and `SAVE_VERSION` 15.
+- [x] CLAUDE.md describes shapes, elements and wards, monster spells, abilities and recharge, the policy's new rules, the foe info panel, the new kinds and nests; the manual describes them, its screenshots retaken (with one of a new nest).
+- [x] The stage design gets an "Implementation notes" section with the figures; the stages index's stage 2 row says done.
+- [x] The design's play script has been walked in the game (`make dev`), or the steps not walked are listed for the user in step 09's record.
 
 ## Open questions
 

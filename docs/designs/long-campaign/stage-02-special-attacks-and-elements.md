@@ -16,7 +16,7 @@ Two new nests on today's map show all of this in play.
 
 Hero wards and weapon on-hit damage come with runes (stage 4). This stage builds the battle rules they need.
 
-**Status:** ready for planning.
+**Status:** implemented; see the [implementation notes](#implementation-notes). The guard is 248 of 500 (243 at the stage's start). The play script was walked in headless Chromium, but for retargeting, which was not seen.
 
 ## 2. Scope
 
@@ -125,3 +125,98 @@ Hero wards and weapon on-hit damage come with runes (stage 4). This stage builds
 - **Half on a miss makes breath reliable.** Keep the recharge at 2 or more.
 
 **Done when:** all tests pass, the guard holds, the two nests are hard but fair at their threats, and the play script has been walked.
+
+## Implementation notes
+
+Built from the plan in [`docs/implementation-plans/long-campaign-stage-02/`](../../implementation-plans/long-campaign-stage-02/index.md), on branch `armor-resistance`.
+
+**Commits:**
+- Step 01, the baseline: `0804545`.
+- Step 02, area shapes: `1465f7a`.
+- Step 03, elements, wards and monster spells: `405f8d5`.
+- Step 04, routines, recharge and the Troll's claws: `b104227`.
+- Step 05, area abilities, Web and Fire Spit: `09b679a`.
+- Step 06, the battle screen and the foe info panel: `b523a7f`, `3b70c70`.
+- Step 07, the Giant Spider and Salamander sprites: `0daf6bf`.
+- Step 08, the kinds, the nests and the map: `8b5cf18`.
+- Step 09, measure, tune and document: the commits titled "Stage 2 step 09" (`0a2dbbc` and those after it).
+
+**Departures from this design** (the plan's corrections, in brief):
+1. The Troll's routine `troll_claws` costs 8 AP, not 4, so that each turn's expected damage is today's (two 4-AP claws standing still, one after a move).
+2. Both replaced places lie at threat 5 on today's map (`threatAt`): the Troll Den became the Salamander Pool, the Goblin Pillagers the Spider Nest. The Spider Nest's threat 4 is fought only in the simulator or with `fight spider_nest 4`.
+3. The spider's Web is an area ability, `spider_web` (burst 1 at range 4, recharge 3). The Web spell exists for monster casters; no kind casts it.
+4. There was no foe tooltip, so a small hover panel was added (`foeInfo.ts`).
+5. `foeAtLevel` raises ability damage through `abilityDamageBonus`.
+6. `AreaShape` lives in `hex.ts`, beside `areaOf`.
+7. A strike that is not made emits nothing (reference §5.4).
+8. Names the design left open: `verb` on abilities and strikes, `CastEvent.drained`, `warded` as the points stopped, `AbilityEvent.distance`.
+9. An area's aims must touch a standing foe.
+10. Recharge N sets a counter that falls as the unit's side's turn begins: recharge 1 is once a turn, 2 every other turn.
+11. The open numbers were first values, checked here.
+12. The new nests do not spawn.
+13. The hero spells' policy is unchanged: the heroes' Fireball still counts the Salamander as a foe for its two-foe rule (see below).
+14. A status is laid whatever a ward stops.
+15. `LOG_SCHEMA_VERSION` went 18 → 21 and `SAVE_VERSION` 13 → 15, a bump per step that changed a shape.
+16. The yardstick test counts routines.
+- Also, from step 08: the second spider is the **Brood Spider** and the pool's Kobolds the **Kobold Stoker** and the **Kobold Warden**, as every foe in a battle needs a name of its own.
+- And from step 09: Drain Life heals from the hit points its targets lost, not from damage past what a target had left (no kind casts it yet).
+
+**The early-game guard** (`make -s simulate ARGS="--campaign --ready-level 7 --battles 500 --seed 1"`):
+
+| | Step 01 (baseline) | Step 04 (Troll routine) | Step 08 and step 09 (no tuning) |
+| --- | --- | --- | --- |
+| Beat the Source | 243 (48.6%) | 242 | 248 (49.6%) |
+| Party fell | 257 | — | 252 |
+| Days, battles a campaign | 281, 19.0 | — | 274, 18.7 |
+| Heroes dead a campaign | 1.8 | — | 1.7 |
+| Won at threat 5 | 1361 of 1523 (89.4%) | — | 1411 of 1568 (90.0%) |
+
+At step 09, battles won by threat: 1010 of 1010, 1770 of 1788, 1963 of 2017, 2924 of 2947, 1411 of 1568. Lowest and highest level at the end 6.8 and 7.3. Area attacks: 0.03 a battle by the enemy.
+
+The move is +5, at the edge of "about 5", and comes from the replaced places. Losses by place, step 01 against step 09 (the baseline re-run from `0804545` for this breakdown, again 243):
+- the Troll Den (a Troll Lair at threat 5): 32 lost in 100 fights; the Salamander Pool in its place: 0 in 100;
+- the Goblin Pillagers: 0 in 69; the Spider Nest in its place: 0 in 67;
+- so 405 parties reach the Source rather than 373, and it is won 248 times rather than 243 (61% against 65% of the parties that reach it);
+- everything else as it was (the fixed Bandit Camp 54 lost, the Troll Lairs 20, the Goblin Reavers 18).
+
+It is explained in CLAUDE.md's rules of scaling, not retuned away: making the Salamander Pool lose campaigns would mean pushing its own cell below the bandits'.
+
+**The cells** (`--encounter E --threat T --party-level T --battles 500 --seed 1`; wins of 500, average rounds, the enemy's damage dealt and area attacks a battle):
+
+| Cell | Wins | Rounds | Enemy damage | Enemy area attacks |
+| --- | --- | --- | --- | --- |
+| Spider Nest, threat 4 | 500 (100%) | 3.7 | 16.2 | 1.0 |
+| Spider Nest, threat 5 | 451 (90.2%) | 6.9 | 60.4 | 3.0 |
+| Salamander Pool, threat 5 | 470 (94%) | 8.4 | 69.6 | 3.5 |
+| Troll Lair, threat 4 | 222 (step 01: 218) | 15.6 | 102.3 | 0 |
+| Troll Lair, threat 5 | 0 (step 01: 0) | 7.5 | 146.7 | 0 |
+| Goblin Raid, threat 5 | 357 (71.4%) | 13.1 | 101.3 | 0 |
+| Bandit Camp, threat 5 | 470 (94%) | 8.4 | 65.1 | 0 |
+
+Also: the Spider Nest at threat 4 with a party of level 3 won 499 of 500.
+
+**Tuning: none kept.** The two cells fought on the map, the Spider Nest and the Salamander Pool at threat 5, are won 451 and 470 times in 500, which is where CLAUDE.md puts a fair cell (the bandits' 444 to 473 for a party of the threat's level). The Spider Nest at threat 4 (a Giant Spider and a Kobold Sneak) is trivial at 500 of 500, but it is fought nowhere on today's map. The levers tried for it, in the design's order, each measured at threats 4 and 5:
+
+| Change | Threat 4 | Threat 5 |
+| --- | --- | --- |
+| None | 500 | 451 |
+| `spider_web` recharge 3 → 2 | 500 | 437 |
+| Spider bites 1d6+2 → 1d8+2 | 500 | 423 |
+| Spider counts [2, 3] → [3, 3] | 479 (95.8%); 439 with a party of level 3 | unchanged |
+| Giant Spider hit points 20 → 26 | 500 | 377 |
+| Giant Spider hit points 20 → 32 | 500 | 269 |
+
+Damage, recharge and hit points do not move a two-foe fight that lasts under 4 rounds; they only make threat 5 harder. Only a third foe at threat 4 does, but then the nest would field as many foes at the bottom of its band as at the top, which the encounter tests forbid (every band grows). So threat 4 was left as it is. Whether to make the Spider Nest a threat-5-only nest, like the Salamander Pool, or to accept three foes at both threats is for the user.
+
+**Checked in the simulator:**
+- The Salamander's spit never caught its own Kobolds: 0 of 1762 spits in the pool's cell, 0 of 133 in the guard. The net-harm rule spares its side. In the cell, 1676 spits touched one hero and 86 touched two; in the guard, 33 touched one, 97 two and 3 three.
+- The Spider Nest at threat 5: 1510 webs, 947 of them webbing a hero; 5830 bite strikes.
+- **Heroes' mages against the Salamander.** `strikeCast` ranks by the warded damage, so the mage casts Magic Arrow at the Salamander rather than Flame Arrow (Flame Arrow at it: never in the cell). But the heroes' Fireball counts the Salamander as one of its two foes: 1484 Fireballs touched it in the pool's cell, and in 475 of them the only hits were on the Salamander, for 0. The fix (count only foes the spell can hurt) is cheap, but it changes the pool's battles and goes against correction 13, so it was recorded, not made.
+- **Retargeting.** In 416 routines whose first strike felled its target (spider and Troll cells), no other foe was in reach, so the second strike was not made; a retargeted strike was never seen. The engine's tests cover it.
+
+**The play script**, walked in headless Chromium through a scratch in-browser script (the e2e driver, the debug console, a save and a reload), with the log and screenshots looked at:
+1. **The Salamander Pool** (`xp 2000 all`, then `goto salamander_pool` and Attack, so that the battle is saved). Hovering the Salamander showed "Fire Spit: ready" and "Wards: fire 99", then "Fire Spit: recharging, 2 rounds" and "…, 1 round" turn by turn. With the party standing in its starting column, the spit touched two heroes every time it was used ("Salamander spits fire: HITS Aldric for 11 dmg, seared; HITS Delwyn for 11 dmg, seared."; "MISSES Delwyn, 3 dmg (half)"; a fumble still did half). On screen the cone's four hexes flashed orange with fire marks and the heroes in it pulsed red. It is one flash rather than a sweep, but it reads clearly, so it was left. A Flame Arrow at it: "HITS Salamander for 0 dmg (warded 11), seared." The spit did not catch a Kobold, as the Kobolds stood beside it and not in its cone. Not walked: spreading the party out to watch where the spit aims (the heroes stood still).
+2. **The Spider Nest** (`fight spider_nest 4`). On its first turn the spider webbed Aldric from range ("Giant Spider spins a web: Aldric is webbed."), and Aldric began his next turn with 4 AP. The bite routine struck twice, each logged "Giant Spider bites Aldric", the second laying Poisoned. The panel showed "Bite: ready" and "Web: recharging, 3 rounds". A Bite with recharge 1 shows "recharging, 1 round" on the player's turn though it is ready on the spider's next. Not seen: a retarget, as each kill came on the second bite.
+3. **The Troll Lair** (`fight troll_lair 4`). Standing still, the Troll's two claws came as one action ("Troll claws Aldric: …" twice in a row); after a move it struck once.
+4. **Save and reload.** At the pool, after the spit, the battle saved as the player's turn began. A reload and Continue brought back the battle with `fire_spit` still recharging (2), and the panel said so.
+No console errors were logged. The user may want to walk step 1's spreading out, and to see a retarget, by hand.

@@ -199,3 +199,54 @@ If the game cannot be driven from this session (no browser), list each unwalked 
 - [ ] Step 09's row in [index.md](index.md) is set to `done` with the commit, the overall completion checklist is ticked where met, and the execution record below is filled.
 
 ## Execution record
+
+Done on the tree at `95fe30b`. Each simulator run was made in podman, one at a time, from seed 1 with 500 battles. The logs (`logs/s09-*`) were deleted afterwards. Full figures, tables and reasoning are in the stage design's [implementation notes](../../designs/long-campaign/stage-02-special-attacks-and-elements.md#implementation-notes).
+
+**Runs:**
+- **Cells:**
+  - Spider Nest t4/L4: 500 (3.67 rounds, enemy damage 16.2, 1.01 areas).
+  - Spider Nest t5/L5: 451 (6.94; 60.4; 3.02).
+  - Salamander Pool t5/L5: 470 (8.37; 69.6; 3.52).
+  - Troll Lair t4/L4: 222 (step 01: 218). Troll Lair t5/L5: 0 (step 01: 0).
+  - Goblin Raid t5/L5: 357. Bandit Camp t5/L5: 470. Spider Nest t4 with a party of level 3: 499.
+- **Tuning tried** (Spider Nest t4 / t5):
+  - `spider_web` recharge 2: 500 / 437.
+  - Bites 1d8+2: 500 / 423.
+  - Counts [3, 3]: 479 at t4 (439 with a party of level 3).
+  - Spider HP 26: 500 / 377. HP 32: 500 / 269.
+  - Every change was reverted.
+- **Guard:** 248 of 500, identical to step 08's (274 days, 18.7 battles, 1.7 heroes dead; threat 5 1411 of 1568). For the location breakdown, the step 01 tree (`0804545`) was re-run from a temporary worktree: again 243. The Troll Den lost 32 of 100 there, and the Salamander Pool loses 0 of 100 here. 405 parties reach the Source rather than 373.
+
+**Decisions:**
+- **No tuning kept.** Both map cells (t5) sit in the bandits' fair range.
+- **Spider Nest threat 4** (500/500, not on the map): left as it is. Only a third foe moves it, which breaks the band-growth invariant the encounter tests hold. This is for the user: make the nest threat-5-only, or take [3, 3] and relax that test for it.
+- **Guard +5:** explained in CLAUDE.md's rules of scaling and the stage notes, not retuned.
+
+**Carried items:**
+- **Drain Life overkill:** capped at the hit points lost. A failing test came first, then the fix in `battleEngine.ts`. C2 was amended. Summary-neutral, as no kind casts it.
+- **Mages vs the Salamander:** checked in the pool's cell.
+  - `strikeCast` avoids Flame Arrow on it (never cast at it).
+  - The heroes' Fireball still counts it as a foe: 1484 Fireballs touched it, and in 475 the only hits were on it, for 0.
+  - Recorded, not fixed: the fix changes the pool's battles, and correction 13 keeps the hero spells' area rule.
+- **Spider yardstick reason:** reworded (its routine is 11 a turn, above the band's 8.6).
+- **C7 slot rows:** amended with Brood Spider, Kobold Stoker and Kobold Warden, marked step 08.
+- **`docs/designs/magic.md:212`:** left as historical. Its loot table also still lists the Kobold Skulkers and Goblin Outriders, which stage 1 replaced; it describes the map as that design was written.
+- **Stale `areaHexes`:** the reference line marked as written before stage 2.
+- **Fumble on a half area:** test added; it passes as written, pinning half damage on a fumble.
+- **Cone sweep:** seen on screen (the cone's four hexes flash orange, and the units in it pulse). One flash, but it reads clearly, so it was left.
+
+**Play script:** walked in headless Chromium with a scratch in-browser script (not committed), at speed 1 to 2 with screenshots each few frames. See the notes.
+- Not seen: a retarget (no case in the browser, and none in the simulator's 416 first-strike kills, as no other foe was in reach), and the spit's aim with the party spread out.
+
+**Docs:**
+- CLAUDE.md: the drain rule, the rules of scaling (cells, tuning tried, the guard's history), and the Fireball note.
+- Manual: Monsters (Spider Nest, Salamander Pool), Battle (special attacks, the hover panel), Magic (elements and wards), Lasting effects (Cursed, Webbed).
+- Screenshots retaken in podman (`npm run manual:screenshots`), with a new `battle-salamander` after the bandits'.
+- Stage design status and notes; stages index row and guard line.
+
+**Checks:**
+- `make test`: 71 files, 984 tests passed.
+- `npm run -s typecheck`: clean.
+- `npm run -s sprites:check`: up to date (74 sprites).
+- Manual screenshots: 6 of 6.
+- No scene code changed, so no in-browser test was rerun beyond the walk and the shots.
