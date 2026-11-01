@@ -139,10 +139,10 @@ You can also click a hex to walk away.
 
 **Spiders and salamanders.** Far to the east, two lairs hold monsters that fight in new ways:
 
-- The **Spider Nest** holds **Giant Spiders** with a Kobold Sneak. A spider spins a **web** at a hero up to 4 hexes off, catching everyone within a hex of where it lands: a webbed hero has 4 fewer AP for 2 turns. Up close it bites twice in one action, and the second bite poisons. Spiders are quick to kill but hit hard; deal with them before they reach your archer and mage.
+- The **Spider Nest** holds **Giant Spiders** with a Kobold Sneak. A spider spins a **web** at a hero up to 4 hexes off, which can catch everyone within a hex of where it lands (it rolls to hit each of them): a webbed hero has 4 fewer AP for 2 turns. Up close it bites twice in one action, and the second bite poisons. Spiders are quick to kill but hit hard; deal with them before they reach your archer and mage.
 - The **Salamander Pool** holds a **Salamander** between two Kobolds. Every other turn the Salamander spits a **cone of fire** 2 hexes long that burns everyone in it, its own kobolds too if they stand in the way. Even when the spit misses a unit, the unit still takes half the damage. Fire does nothing to a Salamander: Flame Arrow and Fireball deal it 0 (the log says "warded"). Use blades, arrows and Magic Arrow on it, and don't stand bunched up in front of it.
 
-![The Salamander Pool, with the Salamander's abilities and ward shown on hover](images/battle-salamander.png)
+![The Salamander Pool, with the Salamander's Fire Spit and ward shown on hover](images/battle-salamander.png)
 
 ### Camping and other actions
 
@@ -276,9 +276,9 @@ Some monsters can do more than swing a weapon:
 
 - **Routines**: several strikes as one action, such as a Troll's two claws or a Giant Spider's two bites. Each strike rolls on its own. If the target falls before the last strike, the rest go to the nearest other foe in reach.
 - **Area attacks**: a burst, a cone or a line. An area attack rolls against everyone in it, friend or foe. Armour's resistance does not reduce its damage, and some area attacks (such as the Salamander's fire) still deal half damage on a miss.
-- **Recharge**: a special attack costs no mana, but once used it has to wait some rounds before it can be used again.
+- **Recharge**: special attacks cost no mana, but some of them, once used, have to wait some turns before they can be used again.
 
-**Hover over a monster** to see what it can do: a small panel beside it lists each special attack as "ready" or "recharging, 2 rounds", and any wards it has ("Wards: fire 99").
+**Hover over a monster** to see what it can do: a small panel beside it, headed with its name, lists each special attack as "ready", "ready next turn" or "ready in 2 turns" (counting the monster's own turns), with what it does underneath (for example "cone 2: 3d6 fire, half on a miss" and "seared 1 turn (no regeneration)"), and any wards it has ("Wards: fire 99").
 
 ### Zones of control and free attacks
 

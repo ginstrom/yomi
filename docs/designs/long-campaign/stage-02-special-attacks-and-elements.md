@@ -16,7 +16,7 @@ Two new nests on today's map show all of this in play.
 
 Hero wards and weapon on-hit damage come with runes (stage 4). This stage builds the battle rules they need.
 
-**Status:** implemented; see the [implementation notes](#implementation-notes). The guard is 248 of 500 (243 at the stage's start). The play script was walked in headless Chromium, but for retargeting, which was not seen.
+**Status:** implemented; see the [implementation notes](#implementation-notes). The guard is 249 of 500 (243 at the stage's start). The play script was walked in headless Chromium, but for retargeting, which was not seen.
 
 ## 2. Scope
 
@@ -42,7 +42,7 @@ Hero wards and weapon on-hit damage come with runes (stage 4). This stage builds
   - the `AbilityEvent` reuses the spell effect path, with the touched hexes drawn;
   - schedule and sound entries;
   - log lines ("breathes fire", "warded 4");
-  - a foe's tooltip lists its abilities, their recharge, and its wards.
+  - a foe's tooltip lists its abilities, their recharge, and its wards. (Extended after the stage, the user's decision of 2026-11-01: the panel is headed with the foe's name and describes each ability under it, from its data: shape and reach, dice and element, half on a miss, the status and its effect, a routine's strikes.)
 - **Two new kinds and nests on today's map**, inside the threat 4 and 5 rings:
 
   | Kind | Native | Block (first values) | Special |
@@ -78,7 +78,7 @@ Hero wards and weapon on-hit damage come with runes (stage 4). This stage builds
 
 - **A Salamander** turns toward the front rank and spits a cone of fire. The cone's hexes flash, and every unit in it, its own kobolds included, takes fire damage. A miss still burns for half. The trolls next door have a reason to fear it, and so does the party: Seared stops nothing on a hero, but the damage is real. Its fire ward makes Flame Arrow and Fireball useless against it.
 - **Giant Spiders** web the party's archer from range, which takes 4 AP from it for 2 turns, then close and bite twice, the second bite poisoning.
-- **Hovering a foe** lists its abilities, with "ready" or "recharging, 2 rounds", and its wards.
+- **Hovering a foe** lists its abilities, with "ready" or "recharging, 2 rounds", and its wards. (As built: headed with its name; "ready", "ready next turn" or "ready in 2 turns", counted in the foe's turns; and under each ability what it does, as "cone 2: 3d6 fire, half on a miss".)
 
 ## 5. Technical notes
 
@@ -154,7 +154,7 @@ Built from the plan in [`docs/implementation-plans/long-campaign-stage-02/`](../
 10. Recharge N sets a counter that falls as the unit's side's turn begins: recharge 1 is once a turn, 2 every other turn.
 11. The open numbers were first values, checked here.
 12. The new nests do not spawn.
-13. The hero spells' policy is unchanged: the heroes' Fireball still counts the Salamander as a foe for its two-foe rule (see below).
+13. The hero spells' policy was left unchanged, then changed by the user's decision (below): a damaging area spell no longer counts a foe fully warded against it.
 14. A status is laid whatever a ward stops.
 15. `LOG_SCHEMA_VERSION` went 18 → 21 and `SAVE_VERSION` 13 → 15, a bump per step that changed a shape.
 16. The yardstick test counts routines.
@@ -220,3 +220,19 @@ Damage, recharge and hit points do not move a two-foe fight that lasts under 4 r
 3. **The Troll Lair** (`fight troll_lair 4`). Standing still, the Troll's two claws came as one action ("Troll claws Aldric: …" twice in a row); after a move it struck once.
 4. **Save and reload.** At the pool, after the spit, the battle saved as the player's turn began. A reload and Continue brought back the battle with `fire_spit` still recharging (2), and the panel said so.
 No console errors were logged. The user may want to walk step 1's spreading out, and to see a retarget, by hand.
+
+**After verification** (the user's decisions of 2026-11-01, and the fixes QA and the overall review asked for):
+- **The Spider Nest is fought at threat 5 only** (band 5 to 5, count 3, the same three foes as before at 5). Its threat-5 cell is unchanged at 451 of 500, and the old threat-4 cell is gone: `--threat 4` is now fought as 5, and a party of level 4 wins it 362 times in 500.
+- **The heroes' Fireball no longer counts a foe fully warded against it** toward its two foes; a partly warded foe still counts while the average damage gets through. This overrides correction 13.
+  - The Salamander Pool cell went from 470 to 493 of 500 (8.4 rounds to 6.9). The move is not small. Before, the mage spent 10 mana a time on Fireballs that touched the Salamander and one Kobold (1484 in 500 battles, 475 hurting nothing but the Kobold, which they missed). Now it throws none and casts Flame Arrow at the Kobolds (2695 in 500 battles), so they fall fast and the Salamander is left alone. At 98.6% the cell is above the 60 to 95% target. It was not retuned, which is for the user to decide.
+  - The guard went from 248 to 249 of 500 (274 days, 18.7 battles, 1.7 heroes dead; threat 5 won 1417 of 1573).
+- **The foe panel** now has the foe's name as its title. It counts recharge in the foe's own turns ("ready next turn", "ready in N turns"), as the old "recharging, 1 round" read one too high on the player's turn. Under each ability, worked out from its data and `STATUSES`, it describes what the ability does, with the foe's level-scaled dice (`abilityDamageBonus`):
+  - "claw 1d4+2, claw 1d4+2";
+  - "bite 1d6+2, venom bite 1d6+2" and "venom bite: poisoned 3 turns (1d6 poison a turn)";
+  - "burst 1, range 4: webbed 2 turns (−4 AP)";
+  - "cone 2: 3d6 fire, half on a miss" and "seared 1 turn (no regeneration)".
+  
+  Its text is drawn at its own size however far the board is scaled. It was checked by eye at 840×560 and at 1280×800, and the manual's `battle-salamander` screenshot was retaken.
+- **The log** now puts a critical and a ward in one bracket: "HITS X for N dmg (CRITICAL, warded M)".
+- **"MISSES Brenna" while she was webbed** was not a bug. A web logs "is webbed" on every hit, a unit already webbed included (now pinned by a test), and in 1510 simulated webs every hit laid Webbed and every miss laid nothing. Webbed lasts 2 of the hero's own turns, so a web from an earlier round leaves her webbed in a round whose webs miss.
+- **The manual:** some special attacks recharge (the Troll's Claws do not), and a web can catch everyone in its area, rolling for each.

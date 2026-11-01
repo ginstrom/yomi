@@ -250,3 +250,30 @@ Done on the tree at `95fe30b`. Each simulator run was made in podman, one at a t
 - `npm run -s sprites:check`: up to date (74 sprites).
 - Manual screenshots: 6 of 6.
 - No scene code changed, so no in-browser test was rerun beyond the walk and the shots.
+
+**Follow-up after verification** (the user's decisions of 2026-11-01, and the QA and review fixes):
+1. **Spider Nest threat 5 only:** band 5–5, count [3] (`c8c23b5`); tests first. Its threat-5 cell is unchanged at 451/500. `--threat 4` is now fought as 5: 362/500 for a level-4 party.
+2. **Fireball rule** (`5c205f3`):
+   - `areaCast` counts only foes whose ward lets some of a damaging spell's average through; a test covers a ward of 99 against a ward of 5. This amends correction 13.
+   - The Salamander Pool went from 470 to **493**/500 (8.4 to 6.9 rounds). The mage casts no Fireball there now, and 2695 Flame Arrows at the Kobolds.
+   - The guard went from 248 to **249**/500. Threat 5 was won 1417 of 1573.
+   - The pool cell is now above 95%; it was not retuned, which is for the user.
+3. **Recharge wording** (`7539056`): "ready next turn" for 1, and "ready in N turns" for more, counted in the foe's turns. Tests added.
+4. and 5. **Manual:** "some" special attacks recharge; a web "can catch" everyone in its area.
+6. **Web log:** not a bug.
+   - In 1510 simulated webs, every hit laid Webbed and logged "is webbed", and every miss laid nothing.
+   - The webbed state seen in round 4 was left by an earlier web, as Webbed lasts 2 of the hero's turns.
+   - A test pins a second web on an already webbed unit (`13ddea9`).
+7. **Panel title:** the foe's name, as a gold title line (`7539056`). `foeInfoLines` returns it first, and C8 is amended.
+8. **Brackets:** "(CRITICAL, warded N)" in one bracket (`13ddea9`). The "(warded N) (half)" of a half miss was left, since a test pins it.
+9. **Descriptions** (`7539056`):
+   - Generated from the ability data and `STATUSES`, with the foe's `abilityDamageBonus` added to the dice: the snapshot has its stats.
+   - The panel draws each line, the descriptions dimmer and indented, and scales its text back from the board's scale.
+   - It was looked at by eye at 840×560 for the Giant Spider, the Brood Spider and the Salamander.
+   - Tests cover each of today's four abilities and the level bonus. C8 is amended.
+
+**Checks:**
+- `make test`: 71 files, 993 tests.
+- `make test-browser ARGS="e2e/debug.test.ts"`: 4/4.
+- `make test-browser ARGS="e2e/battle.test.ts"`: 11/11.
+- Manual screenshots: 6/6. Only `battle-salamander.png` was kept as changed; two others differed by noise and were restored.

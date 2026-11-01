@@ -28,7 +28,7 @@ The plan follows the design except where the design contradicts itself or the co
 10. **Recharge.** Using an ability with `recharge` N ≥ 1 sets its counter to N. The counter falls by 1 as the unit's side's turn begins, after status ticks and regeneration, and the ability is usable at 0. So recharge 1 is once a turn, and recharge 2 every other turn. Recharge 0 limits nothing but AP.
 11. **Numbers the design leaves open are first values here** (the new kinds' AP and attack costs, the abilities' AP costs, the monster spells' mana and AP, the nests' counts, positions and `FOE_XP`). Step 09 tunes them in the simulator, as the design asks ("tune recharge and damage first").
 12. **The new nests do not spawn.** `SPAWN_KINDS` (`blight.ts`) is unchanged, so the blight spawns what it does today; the design names no spawn kind. Stage 9 fills the outer rings.
-13. **The hero spells' policy rules are unchanged.** The design asks the policy to score "areas by expected harm to foes minus harm to allies". The plan applies that to area *abilities*. The rule for hostile area *spells* (two foes or more, no ally) stays as it is, because changing it would move the guard through the heroes' and bandits' Fireball. Wards lower a spell's score only where a ward exists. Monster spells fit the existing rules (C7).
+13. **The hero spells' policy rules are unchanged** (amended, user, 2026-11-01: a damaging hostile area spell no longer counts a foe whose ward stops all of its average damage toward its two foes; see step 09's record). The design asks the policy to score "areas by expected harm to foes minus harm to allies". The plan applies that to area *abilities*. The rule for hostile area *spells* (two foes or more, no ally) stays as it is, because changing it would move the guard through the heroes' and bandits' Fireball. Wards lower a spell's score only where a ward exists. Monster spells fit the existing rules (C7).
 14. **Statuses are laid whatever a ward stops.** A ward lowers damage only. Flame Arrow on the Salamander deals 0 and still lays Seared, which does nothing to a foe that does not regenerate.
 15. **Versions are raised once per step that changes a shape.** `LOG_SCHEMA_VERSION` 18 → 19 (step 03), 20 (step 04), 21 (step 05). `SAVE_VERSION` 13 → 14 (step 04, the snapshot's `recharging`), 15 (step 08, the replaced locations). The design says each "is bumped"; one bump per step keeps every commit's logs and saves honest.
 16. **The yardstick test counts routines.** Its mean damage a turn becomes the better of the weapon's turn and the routine's turn (C4), so the Troll's numbers and exceptions are unchanged.
@@ -295,7 +295,7 @@ export const SALAMANDER_STATS: CombatantStats    // native 5
 // src/game/encounters.ts
 export type MonsterKind = /* existing */ | 'giant_spider' | 'salamander'
 // FOE_NATIVE_LEVEL: giant_spider 4, salamander 5. FOE_XP: giant_spider 100, salamander 120.
-export function spiderNest(party: readonly Fighter[], threat = 4): Encounter
+export function spiderNest(party: readonly Fighter[], threat = 5): Encounter  // amended, user, 2026-11-01 (was 4)
 export function salamanderPool(party: readonly Fighter[], threat = 5): Encounter
 // ENCOUNTERS gains spider_nest: spiderNest, salamander_pool: salamanderPool
 ```
@@ -307,7 +307,7 @@ export function salamanderPool(party: readonly Fighter[], threat = 5): Encounter
 
 | Encounter | Band | Counts | Slots in order (id, kind, name, position) |
 | --- | --- | --- | --- |
-| `spider_nest` | 4–5 | [2, 3] | `spider` giant_spider Giant Spider (8, 4); `sneak` kobold Kobold Sneak (9, 2); `spider2` giant_spider Brood Spider (8, 6) (name amended at step 08) |
+| `spider_nest` | 5–5 (amended, user, 2026-11-01; was 4–5) | [3] (was [2, 3]) | `spider` giant_spider Giant Spider (8, 4); `sneak` kobold Kobold Sneak (9, 2); `spider2` giant_spider Brood Spider (8, 6) (name amended at step 08) |
 | `salamander_pool` | 5–5 | [3] | `salamander` salamander Salamander (8, 4); `kobold` kobold Kobold Stoker (8, 2); `kobold2` kobold Kobold Warden (8, 6) (names amended at step 08: every foe in a battle needs a name of its own) |
 
 - **The map** (`src/game/worldMap.ts` `newWorld`), positions and loot kept:
@@ -324,8 +324,8 @@ export function salamanderPool(party: readonly Fighter[], threat = 5): Encounter
 
 ```ts
 // src/scenes/foeInfo.ts (new, Phaser-free)
-/** What hovering a foe tells: a line per ability ("Fire Spit: ready", "Web: recharging, 2 rounds"), then its wards ("Wards: fire 99"); [] for a unit with neither. */
-export function foeInfoLines(unit: UnitSnapshot): string[]
+/** What hovering a foe tells: its name (the title); per ability its readiness ("Fire Spit: ready", "Web: ready next turn", "… ready in 2 turns", counted in the foe's turns) and, indented under it, what it does, from its data ("  cone 2: 3d6 fire, half on a miss", "  seared 1 turn (no regeneration)"); then its wards ("Wards: fire 99"); [] for a unit with neither abilities nor wards. */
+export function foeInfoLines(unit: UnitSnapshot): string[]  // amended, user, 2026-11-01: the title line, the readiness wording and the descriptions
 ```
 
 - `BattleScene` shows those lines in a small panel beside an enemy unit while the pointer is over its hex, and nothing for a unit whose lines are empty. Its probe gains `foeInfo: string[]` (the lines shown, [] when none).
@@ -344,7 +344,7 @@ export function foeInfoLines(unit: UnitSnapshot): string[]
 | 06 | [The battle screen](06-battle-screen.md) | Routines and area abilities played back, schedule and sounds, the foe info panel, probe and tests | 05 | moderate: pattern-following on the spell-effect path (sonnet can; session model for review) | done (b523a7f, 3b70c70) |
 | 07 | [Spider and Salamander sprites](07-sprites.md) | `giant_spider` and `salamander` in the atlas with `idle` and `walk`, the sprites README | — | art judgement (session model) | done (0daf6bf) |
 | 08 | [The new kinds and nests](08-kinds-and-nests.md) | The two stat blocks, kinds, XP, `spider_nest` and `salamander_pool`, the two map places, yardstick exceptions; SAVE 15 | 05, 07 | routine, following stage 1's bandit steps (sonnet) | done (8b5cf18) |
-| 09 | [Measure, tune and document](09-measure-tune-document.md) | The guard against step 01, the nests' and Troll's cells, tuning, CLAUDE.md, the manual and screenshots, the stage notes and index status, the play script | 06, 08 | balance judgement (session model); the doc pass may be sonnet | done (guard 248 of 500, no tuning kept; Spider Nest threat 4 left at 500/500 for the user) |
+| 09 | [Measure, tune and document](09-measure-tune-document.md) | The guard against step 01, the nests' and Troll's cells, tuning, CLAUDE.md, the manual and screenshots, the stage notes and index status, the play script | 06, 08 | balance judgement (session model); the doc pass may be sonnet | done (guard 248 of 500, then 249 after the Fireball rule; no tuning kept; Spider Nest made threat 5 only and the foe panel extended, by the user's decisions) |
 
 ## Execution order
 
@@ -382,7 +382,7 @@ export function foeInfoLines(unit: UnitSnapshot): string[]
 - [x] Every step is done, with `make test` passing at each commit.
 - [x] The guard is measured at step 01 and after step 08, and judged in 09: within about 5 points of step 01's figure, or the move explained in CLAUDE.md's rules of scaling and the stage notes.
 - [x] The summary is identical to the baseline after steps 02 and 03, and to step 04's after 05.
-- [ ] (Recorded; the Spider Nest's threat-4 cell is 500 of 500, above the range, left for the user: see step 09's record.) Cells recorded: `--encounter spider_nest --threat 4 --party-level 4`, `--encounter spider_nest --threat 5 --party-level 5` and `--encounter salamander_pool --threat 5 --party-level 5` are hard but winnable (a party of the threat's level wins most but not all; roughly 60% to 95%); `--encounter troll_lair --threat 4 --party-level 4` (and 5) within noise of step 01's.
+- [x] (The Spider Nest's threat-4 cell, 500 of 500, went with its band: the nest is threat 5 only, the user's decision.) Cells recorded: `--encounter spider_nest --threat 4 --party-level 4`, `--encounter spider_nest --threat 5 --party-level 5` and `--encounter salamander_pool --threat 5 --party-level 5` are hard but winnable (a party of the threat's level wins most but not all; roughly 60% to 95%); `--encounter troll_lair --threat 4 --party-level 4` (and 5) within noise of step 01's.
 - [x] `giant_spider` and `salamander` are drawn sprites, not placeholders.
 - [x] `LOG_SCHEMA_VERSION` is 21 and `SAVE_VERSION` 15.
 - [x] CLAUDE.md describes shapes, elements and wards, monster spells, abilities and recharge, the policy's new rules, the foe info panel, the new kinds and nests; the manual describes them, its screenshots retaken (with one of a new nest).
