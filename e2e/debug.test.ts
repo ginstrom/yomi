@@ -91,6 +91,11 @@ describe('the debug console', () => {
     expect((await game.waitFor('Battle')).foeInfo).toEqual(['Claws: ready'])
     await game.hover(battleHexOnScreen(battle, hero.position))
     await game.waitFor('Battle', (b) => b.foeInfo.length === 0)
+    // Moving from a foe onto a control clears the panel too.
+    await game.hover(battleHexOnScreen(battle, troll.position))
+    await game.waitFor('Battle', (b) => b.foeInfo.length === 1)
+    await game.hover(battle.buttons.endTurn)
+    await game.waitFor('Battle', (b) => b.foeInfo.length === 0)
 
     // The foe's turn plays whatever the troll does (a move, or a routine of two claws) without a console error.
     await game.click(battle.buttons.endTurn)

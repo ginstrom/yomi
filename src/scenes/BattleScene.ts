@@ -1026,6 +1026,7 @@ export class BattleScene extends Phaser.Scene {
       this.input.manager.defaultCursor = CURSORS.move
       this.hovered = null
       this.hoverMarks.clear()
+      this.refreshFoeInfo()
       return
     }
     this.setHovered(this.hexAt(pointer.x, pointer.y))
@@ -1119,7 +1120,8 @@ export class BattleScene extends Phaser.Scene {
   private refreshFoeInfo(): void {
     this.foePanel.removeAll(true)
     this.foeInfo = []
-    if (!this.hovered || this.scene.isPaused()) return
+    // Not while events play: the engine's state is ahead of them. Control returning redraws it.
+    if (!this.hovered || this.scene.isPaused() || !this.playerControl) return
     const at = this.hovered
     const foe = this.engine.getState().units.find((u) => u.hp > 0 && u.side === 'enemy' && hexEquals(u.position, at))
     const lines = foe ? foeInfoLines(foe) : []
