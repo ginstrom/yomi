@@ -336,7 +336,7 @@ export function foeInfoLines(unit: UnitSnapshot): string[]
 
 | Step | Task | Outcome | Depends on | Difficulty (model) | Status |
 | --- | --- | --- | --- | --- | --- |
-| 01 | [Baseline measurement](01-baseline-measurement.md) | The guard and the Troll Lair cells measured on this tree, recorded here and in CLAUDE.md if moved | — | routine (sonnet) | pending |
+| 01 | [Baseline measurement](01-baseline-measurement.md) | The guard and the Troll Lair cells measured on this tree, recorded here and in CLAUDE.md if moved | — | routine (sonnet) | done |
 | 02 | [Area shapes](02-area-shapes.md) | `areaOf`, `AreaShape`, `areaTouches`, `Spell.shape`; the scene uses them. The summary is identical. | 01 | moderate: geometry with worked tests (sonnet, or session model for the cone) | pending |
 | 03 | [Elements, wards and monster spells](03-elements-wards-monster-spells.md) | `Element`, wards, `warded` on casts and ticks, `drained`, five monster spells, Cursed and Webbed, the policy's spell rules; LOG 19. The summary is identical. | 02 | intricate engine and policy (session model) | pending |
 | 04 | [Abilities, routines and recharge](04-routines-and-recharge.md) | `abilities.ts`, the routine action, retargeting, `recharging`, the Troll's routine, the policy's best strike, the yardstick test; LOG 20, SAVE 14. Troll cells within noise. | 03 | intricate engine and policy (session model) | pending |
@@ -359,6 +359,8 @@ export function foeInfoLines(unit: UnitSnapshot): string[]
 - After 04: the Troll Lair cells within noise of step 01's; the guard measured and recorded.
 - After 05: the summary identical to step 04's (the tally's new area-attack lines aside, at 0).
 - After 08: the guard measured; 09 judges it.
+
+**Baseline (step 01)**, tree at `51cecb5` code, seed 1: the guard (`--ready-level 7`) is **243 of 500** (48.6%; was 238 before `fdc0593` and `51cecb5`), 281 days and 19.0 battles a campaign, 1.8 heroes dead. Troll Lair at threat 4, party level 4: 218 of 500 won, 15.5 rounds. At threat 5, party level 5: 0 of 500 won, 7.5 rounds. The full summary is in [step 01's execution record](01-baseline-measurement.md).
 
 ## Requirement map
 

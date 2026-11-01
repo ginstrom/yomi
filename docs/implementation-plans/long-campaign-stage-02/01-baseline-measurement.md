@@ -75,3 +75,117 @@ Measure the early-game guard and the Troll Lair cells on the tree as it stands, 
 - [ ] `make test` passes; committed on the current branch, without pushing, the message ending with the repo's `Co-Authored-By` attribution line.
 
 ## Execution record
+
+Measured on tree at `0c7cf2e` (code at `51cecb5`; only docs differed from it, no code changes), in podman, one command after another. The podman build lines before each summary are omitted below.
+
+**Guard:** `make -s simulate ARGS="--campaign --ready-level 7 --battles 500 --seed 1"`: **Source beaten 243 of 500** (48.6%), party fell 257, encampment lost 0, out of days 0. A campaign: 281 days, 19.0 battles, 1.8 heroes dead. It moved from 238 (+5), so CLAUDE.md's rules of scaling now says so (`fdc0593` and `51cecb5`: 243 of 500).
+
+Full summary, verbatim, for the later "identical" checks:
+
+```
+Simulated 500 campaigns, 9482 battles in all (seed 1, player aggressive vs enemy aggressive) -> logs/battles.jsonl
+Beat the Source: 243 of 500 (48.6%); party fell: 257 (51.4%); encampment lost: 0 (0.0%); out of days: 0
+A campaign: 281 days, 19.0 battles, 26.1 spawns, 3.1 sites captured and 0.1 lost, 38% of the land blighted at the end
+Watchtowers: 1.8 built a campaign, 0.0 lost
+Shrine: level 1.0 at the end; outposts: 0.5 built a campaign
+Trading post, workshop, infirmary: levels 1.2, 0.7, 0.5 at the end; 7 gold on gear and 63 from sales, 4.7 items crafted (2.7 days in the field) a campaign
+Guild hall: level 2.4 at the end, 2.2 recruits and 1.8 heroes dead a campaign
+Hit points healed between battles: 129.9 a campaign, in 22.2 days of camping
+Levels at the end: lowest 6.7, highest 7.4 on average (ready level 7); heroes died at level 2 (44), 3 (175), 4 (33), 5 (100), 6 (36), 7 (254), 8 (222), 9 (31), 10 (1)
+Battles to level 5: 6.8 (427 campaigns); 10: 33.5 (2 campaigns); 15: — (0 campaigns); 20: — (0 campaigns)
+┌─────────┬────────┬─────────┬──────┬─────────┐
+│ (index) │ threat │ battles │ won  │ winRate │
+├─────────┼────────┼─────────┼──────┼─────────┤
+│ 0       │ 1      │ 1009    │ 1009 │ 1       │
+│ 1       │ 2      │ 1795    │ 1777 │ 0.99    │
+│ 2       │ 3      │ 2079    │ 2025 │ 0.974   │
+│ 3       │ 4      │ 3076    │ 3053 │ 0.993   │
+│ 4       │ 5      │ 1523    │ 1361 │ 0.894   │
+└─────────┴────────┴─────────┴──────┴─────────┘
+┌───────────────────────┬─────────────────────┐
+│ (index)               │ Values              │
+├───────────────────────┼─────────────────────┤
+│ battles               │ 9482                │
+│ playerWins            │ 9225                │
+│ enemyWins             │ 257                 │
+│ unresolved            │ 0                   │
+│ avgRounds             │ 4.892216831892006   │
+│ avgPlayerDamageDealt  │ 99.84950432398229   │
+│ avgEnemyDamageDealt   │ 27.72569078253533   │
+│ playerHitRate         │ 0.6709713604157497  │
+│ enemyHitRate          │ 0.6002209021968993  │
+│ playerCritRate        │ 0.04398171155948713 │
+│ enemyCritRate         │ 0.04859848331784324 │
+│ avgOpportunityAttacks │ 0                   │
+│ avgSideAttacks        │ 1.1010335372284328  │
+│ avgRearAttacks        │ 0.1468044716304577  │
+│ avgPlayerCasts        │ 4.682029107783168   │
+│ avgEnemyCasts         │ 2.111790761442734   │
+│ avgPlayerHealing      │ 2.4655136047247415  │
+│ avgEnemyHealing       │ 6.6378401181185405  │
+│ avgPlayerStatuses     │ 3.16062012233706    │
+│ avgEnemyStatuses      │ 0.7160936511284539  │
+└───────────────────────┴─────────────────────┘
+```
+
+**Troll Lair threat 4, party level 4** (`--encounter troll_lair --threat 4 --party-level 4 --battles 500 --seed 1`): wins **218 of 500**, average rounds 15.482; player damage dealt 146.212, hit rate 0.5908; enemy damage dealt 103.3, hit rate 0.6776.
+
+**Troll Lair threat 5, party level 5** (`--encounter troll_lair --threat 5 --party-level 5 --battles 500 --seed 1`): wins **0 of 500**, average rounds 7.48; player damage dealt 102.866, hit rate 0.5944; enemy damage dealt 147.002, hit rate 0.8023.
+
+Full cell output:
+
+```
+Simulated 500 battles of troll_lair at threat 4, party level 4 (seed 1, player aggressive vs enemy aggressive) -> logs/battles.jsonl
+┌───────────────────────┬─────────────────────┐
+│ (index)               │ Values              │
+├───────────────────────┼─────────────────────┤
+│ battles               │ 500                 │
+│ playerWins            │ 218                 │
+│ enemyWins             │ 282                 │
+│ unresolved            │ 0                   │
+│ avgRounds             │ 15.482              │
+│ avgPlayerDamageDealt  │ 146.212             │
+│ avgEnemyDamageDealt   │ 103.3               │
+│ playerHitRate         │ 0.5907841401481619  │
+│ enemyHitRate          │ 0.6776235695154614  │
+│ playerCritRate        │ 0.05003960303778596 │
+│ enemyCritRate         │ 0.04957389822254687 │
+│ avgOpportunityAttacks │ 0                   │
+│ avgSideAttacks        │ 5.066               │
+│ avgRearAttacks        │ 2.808               │
+│ avgPlayerCasts        │ 6.032               │
+│ avgEnemyCasts         │ 0                   │
+│ avgPlayerHealing      │ 6.596               │
+│ avgEnemyHealing       │ 0                   │
+│ avgPlayerStatuses     │ 2.566               │
+│ avgEnemyStatuses      │ 0                   │
+└───────────────────────┴─────────────────────┘
+
+Simulated 500 battles of troll_lair at threat 5, party level 5 (seed 1, player aggressive vs enemy aggressive) -> logs/battles.jsonl
+┌───────────────────────┬─────────────────────┐
+│ (index)               │ Values              │
+├───────────────────────┼─────────────────────┤
+│ battles               │ 500                 │
+│ playerWins            │ 0                   │
+│ enemyWins             │ 500                 │
+│ unresolved            │ 0                   │
+│ avgRounds             │ 7.48                │
+│ avgPlayerDamageDealt  │ 102.866             │
+│ avgEnemyDamageDealt   │ 147.002             │
+│ playerHitRate         │ 0.594391947411668   │
+│ enemyHitRate          │ 0.8022888214466363  │
+│ playerCritRate        │ 0.04909613804437141 │
+│ enemyCritRate         │ 0.04590288315629742 │
+│ avgOpportunityAttacks │ 0                   │
+│ avgSideAttacks        │ 7.714               │
+│ avgRearAttacks        │ 0.354               │
+│ avgPlayerCasts        │ 3.946               │
+│ avgEnemyCasts         │ 0                   │
+│ avgPlayerHealing      │ 6.2                 │
+│ avgEnemyHealing       │ 0                   │
+│ avgPlayerStatuses     │ 4.23                │
+│ avgEnemyStatuses      │ 0                   │
+└───────────────────────┴─────────────────────┘
+```
+
+`make test`: 68 files, 821 tests passed.
