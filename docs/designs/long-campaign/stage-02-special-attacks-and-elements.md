@@ -16,7 +16,7 @@ Two new nests on today's map show all of this in play.
 
 Hero wards and weapon on-hit damage come with runes (stage 4). This stage builds the battle rules they need.
 
-**Status:** implemented; see the [implementation notes](#implementation-notes). The guard is 249 of 500 (243 at the stage's start). The play script was walked in headless Chromium, but for retargeting, which was not seen.
+**Status:** implemented; see the [implementation notes](#implementation-notes). The guard is 248 of 500 (243 at the stage's start). The play script was walked in headless Chromium, but for retargeting, which was not seen.
 
 ## 2. Scope
 
@@ -48,7 +48,7 @@ Hero wards and weapon on-hit damage come with runes (stage 4). This stage builds
   | Kind | Native | Block (first values) | Special |
   | --- | --- | --- | --- |
   | Giant Spider | 4 | HP 20, AC 25, to hit 80, 1d6+2 bite, resistance 1 | Routine: Bite (1d6+2), Bite (lays Poisoned). The Web spell at range 4, recharge 3. |
-  | Salamander | 5 | HP 26, AC 30, to hit 85, 1d8+2 claws, resistance 2, fire ward 99 | Fire Spit: cone 2, 3d6 fire, half on a miss, lays Seared, recharge 2 |
+  | Salamander | 5 | HP 26, AC 30, to hit 85, 1d8+2 claws, resistance 2, fire ward 99 | Fire Spit: cone 2, 3d6 fire (4d6+2 as tuned after the stage), half on a miss, lays Seared, recharge 2 |
 
   The encounters are:
   - **Spider Nest:** band 4–5, Giant Spider, Kobold Sneak and Giant Spider.
@@ -78,7 +78,7 @@ Hero wards and weapon on-hit damage come with runes (stage 4). This stage builds
 
 - **A Salamander** turns toward the front rank and spits a cone of fire. The cone's hexes flash, and every unit in it, its own kobolds included, takes fire damage. A miss still burns for half. The trolls next door have a reason to fear it, and so does the party: Seared stops nothing on a hero, but the damage is real. Its fire ward makes Flame Arrow and Fireball useless against it.
 - **Giant Spiders** web the party's archer from range, which takes 4 AP from it for 2 turns, then close and bite twice, the second bite poisoning.
-- **Hovering a foe** lists its abilities, with "ready" or "recharging, 2 rounds", and its wards. (As built: headed with its name; "ready", "ready next turn" or "ready in 2 turns", counted in the foe's turns; and under each ability what it does, as "cone 2: 3d6 fire, half on a miss".)
+- **Hovering a foe** lists its abilities, with "ready" or "recharging, 2 rounds", and its wards. (As built: headed with its name; "ready", "ready next turn" or "ready in 2 turns", counted in the foe's turns; and under each ability what it does, as "cone 2: 4d6+2 fire, half on a miss".)
 
 ## 5. Technical notes
 
@@ -230,9 +230,24 @@ No console errors were logged. The user may want to walk step 1's spreading out,
   - "claw 1d4+2, claw 1d4+2";
   - "bite 1d6+2, venom bite 1d6+2" and "venom bite: poisoned 3 turns (1d6 poison a turn)";
   - "burst 1, range 4: webbed 2 turns (−4 AP)";
-  - "cone 2: 3d6 fire, half on a miss" and "seared 1 turn (no regeneration)".
+  - "cone 2: 3d6 fire, half on a miss" (4d6+2 since the retune below) and "seared 1 turn (no regeneration)".
   
   Its text is drawn at its own size however far the board is scaled. It was checked by eye at 840×560 and at 1280×800, and the manual's `battle-salamander` screenshot was retaken.
 - **The log** now puts a critical and a ward in one bracket: "HITS X for N dmg (CRITICAL, warded M)".
 - **"MISSES Brenna" while she was webbed** was not a bug. A web logs "is webbed" on every hit, a unit already webbed included (now pinned by a test), and in 1510 simulated webs every hit laid Webbed and every miss laid nothing. Webbed lasts 2 of the hero's own turns, so a web from an earlier round leaves her webbed in a round whose webs miss.
 - **The manual:** some special attacks recharge (the Troll's Claws do not), and a web can catch everyone in its area, rolling for each.
+
+**Retuning the Salamander Pool** (the user's decision of 2026-11-01: a level-5 party should win about 445 to 470 of 500 at threat 5, against 493 after the Fireball rule). The levers were tried in the design's order, damage and recharge first, keeping the recharge at 2. Each run is `--encounter salamander_pool --threat 5 --party-level 5 --battles 500 --seed 1`:
+
+| Change | Wins | Rounds | Enemy damage | Enemy areas a battle |
+| --- | --- | --- | --- | --- |
+| None (3d6) | 493 | 6.9 | 58.8 | — |
+| Fire Spit 4d6 | 471 | 7.3 | 74.7 | 3.24 |
+| **Fire Spit 4d6+2 (kept)** | **456** | 7.5 | 83.6 | 3.37 |
+| Fire Spit 4d6+1 | 468 | 7.4 | 78.8 | 3.29 |
+| Fire Spit 5d6 | 425 | 7.9 | 92.4 | 3.61 |
+| Cone range 3 (3d6) | 492 | 6.9 | 58.9 | 2.99 |
+| Salamander 36 hit points (3d6) | 485 | 8.1 | 71.0 | 3.74 |
+| Fire Spit 4d6 and 32 hit points | 453 | 8.2 | 84.9 | 3.80 |
+
+Fire Spit at 4d6+2 keeps the fight about the spit: the Salamander's block and the Kobolds are unchanged, and it stays inside its yardstick exceptions, since the yardstick counts a routine, not an area. The panel now reads "cone 2: 4d6+2 fire, half on a miss", and `battle-salamander` was retaken. The guard is **248 of 500** (274 days, 18.7 battles, 1.7 heroes dead; threat 5 won 1416 of 1573). The campaign's parties meet the pool above level 5 and still never lose it (100 of 100), so the guard is where it was before the Fireball rule, +5 on step 01's 243, for the reasons above.

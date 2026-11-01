@@ -277,3 +277,14 @@ Done on the tree at `95fe30b`. Each simulator run was made in podman, one at a t
 - `make test-browser ARGS="e2e/debug.test.ts"`: 4/4.
 - `make test-browser ARGS="e2e/battle.test.ts"`: 11/11.
 - Manual screenshots: 6/6. Only `battle-salamander.png` was kept as changed; two others differed by noise and were restored.
+
+**Salamander Pool retune** (user, 2026-11-01; target 445 to 470 of 500):
+- **Runs** (pool cell, seed 1):
+  - 4d6: 471. **4d6+2: 456 (kept).** 4d6+1: 468. 5d6: 425.
+  - Cone range 3: 492. Salamander HP 36: 485. 4d6 with HP 32: 453.
+  - Every variant was reverted before the next.
+- **Kept:** `fire_spit` damage 4d6+2. Recharge 2 is unchanged.
+- **Tests:** the expectations that pinned 3d6 were updated (engine area tests, `abilities.test.ts`, the policy's ward test now uses a 4d6+4 blow, the panel's tests).
+- **Docs:** C4 amended.
+- **Guard:** 248 of 500 (threat 5 1416/1573); the pool is 100/100 in the campaign.
+- **Checks:** `make test` passed; `battle-salamander.png` retaken.

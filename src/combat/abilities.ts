@@ -88,13 +88,13 @@ export const ABILITIES: Record<AbilityId, Ability> = {
   fire_spit: {
     name: 'Fire Spit',
     verb: 'spits fire',
-    description: 'A cone of fire 2 hexes long: 3d6, half on a miss, and no regeneration next turn.',
+    description: 'A cone of fire 2 hexes long: 4d6+2, half on a miss, and no regeneration next turn.',
     apCost: 4,
     recharge: 2,
     area: {
       shape: 'cone',
       range: 2,
-      damage: { count: 3, sides: 6, bonus: 0 },
+      damage: { count: 4, sides: 6, bonus: 2 },
       element: 'fire',
       status: { id: 'seared', turns: 1 },
       halfOnMiss: true,

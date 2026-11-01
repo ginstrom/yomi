@@ -44,7 +44,7 @@ describe('foeInfoLines', () => {
     it('Fire Spit: the cone, its dice and element, half on a miss, and the status it lays', () => {
       expect(describe1({ abilities: ['fire_spit'] })).toEqual([
         'Fire Spit: ready',
-        '  cone 2: 3d6 fire, half on a miss',
+        '  cone 2: 4d6+2 fire, half on a miss',
         '  seared 1 turn (no regeneration)',
       ])
     })
@@ -54,7 +54,7 @@ describe('foeInfoLines', () => {
         'Claws: ready',
         '  claw 1d4+4, claw 1d4+4',
         'Fire Spit: ready',
-        '  cone 2: 3d6+2 fire, half on a miss',
+        '  cone 2: 4d6+4 fire, half on a miss',
         '  seared 1 turn (no regeneration)',
       ])
     })

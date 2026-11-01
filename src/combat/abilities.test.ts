@@ -44,7 +44,7 @@ describe('abilities', () => {
     const spit = ABILITIES.fire_spit
     expect(spit).toMatchObject({ name: 'Fire Spit', verb: 'spits fire', apCost: 4, recharge: 2 })
     expect(spit.area).toEqual({
-      shape: 'cone', range: 2, damage: { count: 3, sides: 6, bonus: 0 }, element: 'fire', status: { id: 'seared', turns: 1 }, halfOnMiss: true,
+      shape: 'cone', range: 2, damage: { count: 4, sides: 6, bonus: 2 }, element: 'fire', status: { id: 'seared', turns: 1 }, halfOnMiss: true,
     })
   })
 })

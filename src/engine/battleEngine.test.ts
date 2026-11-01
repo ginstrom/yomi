@@ -2087,29 +2087,29 @@ describe('BattleEngine area abilities', () => {
       { ...SALAMANDER, stats: { ...SALAMANDER_STATS, abilityDamageBonus: 1 } },
     ])
     const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
-    // A roll of 34 within 55%; 4 + 4 + 4 on the dice, +1.
+    // A roll of 34 within 55%; 4 + 4 + 4 + 4 on the dice, +2, +1.
     expect(event.outcomes).toEqual([
       {
         unit: 'warrior', attackRoll: 34, chance: 55, defenderAc: 25, hit: true, critical: false, fumble: false, image: false,
-        damage: 13, warded: 0, half: false, healed: 0, hpBefore: 20, hpAfter: 7, status: { id: 'seared', turnsLeft: 1 },
+        damage: 19, warded: 0, half: false, healed: 0, hpBefore: 20, hpAfter: 1, status: { id: 'seared', turnsLeft: 1 },
       },
     ])
-    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: HITS Warrior for 13 dmg, seared.')
+    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: HITS Warrior for 19 dmg, seared.')
   })
 
   it('deals half the dice, rounded down, on a miss with halfOnMiss, and lays nothing', () => {
     const engine = enemyTurn([playerAt('warrior', WEST_OF), { ...SALAMANDER, stats: { ...SALAMANDER_STATS, abilityDamageBonus: 1 } }], [MISS, 0.66])
     const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
-    // 12 on the dice, +1, halved.
-    expect(event.outcomes[0]).toMatchObject({ hit: false, half: true, damage: 6, hpAfter: 14, status: null })
+    // 16 on the dice, +2, +1, halved.
+    expect(event.outcomes[0]).toMatchObject({ hit: false, half: true, damage: 9, hpAfter: 11, status: null })
     expect(unitOf(engine, 'warrior').statuses).toEqual([])
-    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: MISSES Warrior, 6 dmg (half).')
+    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: MISSES Warrior, 9 dmg (half).')
   })
 
   it('deals half the dice on a fumble too, a fumble being a miss', () => {
     const engine = enemyTurn([playerAt('warrior', WEST_OF), SALAMANDER], [0.01, 0.66])
     const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
-    expect(event.outcomes[0]).toMatchObject({ attackRoll: 99, fumble: true, hit: false, half: true, damage: 6, hpAfter: 14, status: null })
+    expect(event.outcomes[0]).toMatchObject({ attackRoll: 99, fumble: true, hit: false, half: true, damage: 9, hpAfter: 11, status: null })
   })
 
   it('deals nothing on a miss without halfOnMiss, drawing no dice for it', () => {
@@ -2125,30 +2125,30 @@ describe('BattleEngine area abilities', () => {
   it('cuts its element by a ward, recording the points stopped, and still lays its status', () => {
     const engine = enemyTurn([playerAt('warrior', WEST_OF, { stats: { ...WARRIOR_STATS, wards: { fire: 99 } } }), SALAMANDER])
     const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
-    expect(event.outcomes[0]).toMatchObject({ hit: true, damage: 0, warded: 12, hpAfter: 20, status: { id: 'seared', turnsLeft: 1 } })
-    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: HITS Warrior for 0 dmg (warded 12), seared.')
+    expect(event.outcomes[0]).toMatchObject({ hit: true, damage: 0, warded: 18, hpAfter: 20, status: { id: 'seared', turnsLeft: 1 } })
+    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: HITS Warrior for 0 dmg (warded 18), seared.')
   })
 
   it('cuts a half miss by its ward too', () => {
     const engine = enemyTurn([playerAt('warrior', WEST_OF, { stats: { ...WARRIOR_STATS, wards: { fire: 2 } } }), SALAMANDER], [MISS, 0.66])
     const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
-    expect(event.outcomes[0]).toMatchObject({ hit: false, half: true, damage: 4, warded: 2 })
-    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: MISSES Warrior, 4 dmg (warded 2) (half).')
+    expect(event.outcomes[0]).toMatchObject({ hit: false, half: true, damage: 7, warded: 2 })
+    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: MISSES Warrior, 7 dmg (warded 2) (half).')
   })
 
   it('doubles the dice on a critical, and fells and ends the battle as a cast does', () => {
     const engine = enemyTurn([playerAt('warrior', WEST_OF), SALAMANDER], [0.99, 0.66])
     const events = engine.step(spit(WEST_OF))
     expect(events.map((e) => e.type)).toEqual(['ability', 'unit_down', 'battle_end'])
-    // Six dice of 4.
-    expect((events[0] as AbilityEvent).outcomes[0]).toMatchObject({ critical: true, damage: 24, hpAfter: 0, status: null })
+    // Eight dice of 4, +2.
+    expect((events[0] as AbilityEvent).outcomes[0]).toMatchObject({ critical: true, damage: 34, hpAfter: 0, status: null })
     expect(engine.getState().winner).toBe('enemy')
   })
 
   it('puts a critical and a ward in one pair of brackets', () => {
-    const engine = enemyTurn([playerAt('warrior', WEST_OF, { stats: { ...WARRIOR_STATS, wards: { fire: 5 } } }), SALAMANDER], [0.99, 0.66])
+    const engine = enemyTurn([playerAt('warrior', WEST_OF, { stats: { ...WARRIOR_STATS, maxHp: 40, wards: { fire: 5 } } }), SALAMANDER], [0.99, 0.66])
     const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
-    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: HITS Warrior for 19 dmg (CRITICAL, warded 5), seared.')
+    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: HITS Warrior for 29 dmg (CRITICAL, warded 5), seared.')
   })
 
   it('strikes a mirror image on a hit, drawing no dice for it', () => {
@@ -2157,10 +2157,10 @@ describe('BattleEngine area abilities', () => {
     engine.step({ type: 'cast', unit: 'mage', spell: 'mirror_image', target: 'mage' })
     engine.step(END_TURN)
     const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
-    // The cleric's roll and dice follow the mage's roll at once: 80 misses, then 12 halved.
+    // The cleric's roll and dice follow the mage's roll at once: 80 misses, then 18 halved.
     expect(event.outcomes.map((o) => [o.unit, o.hit, o.image, o.damage])).toEqual([
       ['mage', true, true, 0],
-      ['cleric', false, false, 6],
+      ['cleric', false, false, 9],
     ])
     expect(unitOf(engine, 'mage').statuses).toEqual([{ id: 'mirrored', turnsLeft: 2, images: 2 }])
   })

@@ -197,7 +197,7 @@ export const ABILITIES: Record<AbilityId, Ability>
 | `troll_claws` | Claws | claws | 8 | 0 | strikes: Claw (verb "claws", 1d4+2), Claw (verb "claws", 1d4+2) | 04 |
 | `spider_bite` | Bite | bites | 4 | 1 | strikes: Bite (verb "bites", 1d6+2), Venom Bite (verb "bites", 1d6+2, lays Poisoned 3 turns) | 04 |
 | `spider_web` | Web | spins a web | 4 | 3 | area: burst, range 4, radius 1, no damage, lays Webbed 2 turns, `halfOnMiss: false` | 05 |
-| `fire_spit` | Fire Spit | spits fire | 4 | 2 | area: cone, range 2, 3d6, fire, lays Seared 1 turn, `halfOnMiss: true` | 05 |
+| `fire_spit` | Fire Spit | spits fire | 4 | 2 | area: cone, range 2, 4d6+2 (amended at step 09, user, 2026-11-01; was 3d6), fire, lays Seared 1 turn, `halfOnMiss: true` | 05 |
 
 ```ts
 // src/combat/combat.ts — CombatantStats gains (step 04):
@@ -324,7 +324,7 @@ export function salamanderPool(party: readonly Fighter[], threat = 5): Encounter
 
 ```ts
 // src/scenes/foeInfo.ts (new, Phaser-free)
-/** What hovering a foe tells: its name (the title); per ability its readiness ("Fire Spit: ready", "Web: ready next turn", "… ready in 2 turns", counted in the foe's turns) and, indented under it, what it does, from its data ("  cone 2: 3d6 fire, half on a miss", "  seared 1 turn (no regeneration)"); then its wards ("Wards: fire 99"); [] for a unit with neither abilities nor wards. */
+/** What hovering a foe tells: its name (the title); per ability its readiness ("Fire Spit: ready", "Web: ready next turn", "… ready in 2 turns", counted in the foe's turns) and, indented under it, what it does, from its data ("  cone 2: 4d6+2 fire, half on a miss", "  seared 1 turn (no regeneration)"); then its wards ("Wards: fire 99"); [] for a unit with neither abilities nor wards. */
 export function foeInfoLines(unit: UnitSnapshot): string[]  // amended, user, 2026-11-01: the title line, the readiness wording and the descriptions
 ```
 

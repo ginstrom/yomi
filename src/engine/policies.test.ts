@@ -402,15 +402,15 @@ describe('policies', () => {
     })
 
     it('takes an area over a strike only when its net harm is greater', () => {
-      // A 6d6+10 blow, some 19.5 a turn on a goblin, against fire's 8.6.
+      // A 6d6+10 blow, some 19.5 a turn on a goblin, against fire's 13.2.
       const heavy = { ...SPITTER, damage: { count: 6, sides: 6, bonus: 10 } }
       expect(choose(field(heavy, hex(3, 1), ['e1', 'enemy', hex(2, 1)]))).toEqual(ATTACK_E1)
       expect(isSpit(choose(field(SPITTER, hex(3, 1), ['e1', 'enemy', hex(2, 1)])))).toBe(true)
     })
 
     it('scores a fire-warded foe lower', () => {
-      // A 2d6+3 blow, 5.85 through the goblin's hide at 65%: under the cone's 8.6, over its 5.6 against a ward of 3.
-      const armed = { ...SPITTER, damage: { count: 2, sides: 6, bonus: 3 } }
+      // A 4d6+4 blow, 11.05 through the goblin's hide at 65%: under the cone's 13.2, over its 10.2 against a ward of 3.
+      const armed = { ...SPITTER, damage: { count: 4, sides: 6, bonus: 4 } }
       expect(isSpit(choose(field(armed, hex(3, 1), ['e1', 'enemy', hex(2, 1)])))).toBe(true)
       const warded = { ...BIG_GOBLIN, wards: { fire: 3 } }
       expect(choose(field(armed, hex(3, 1), ['e1', 'enemy', hex(2, 1), warded]))).toEqual(ATTACK_E1)
