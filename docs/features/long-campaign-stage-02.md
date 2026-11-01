@@ -49,4 +49,5 @@ None yet. Stage 1's play script is still for the user to walk.
 
 ## Verification
 
-(none yet)
+- Step 01 (0804545): guard 243 of 500 (was 238 before fdc0593/51cecb5); Troll Lair 218/500 at threat 4, 0/500 at threat 5. Review (sonnet) clean.
+- Step 02 (1465f7a): summary identical to step 01. Review (sonnet) clean. Non-blocking, passed to step 03: no test of cone/line legality in `canCast`. Step 09: stale `areaHexes` in reference/campaign-to-level-20.md:116.

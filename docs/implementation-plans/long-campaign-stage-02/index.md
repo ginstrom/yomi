@@ -336,8 +336,8 @@ export function foeInfoLines(unit: UnitSnapshot): string[]
 
 | Step | Task | Outcome | Depends on | Difficulty (model) | Status |
 | --- | --- | --- | --- | --- | --- |
-| 01 | [Baseline measurement](01-baseline-measurement.md) | The guard and the Troll Lair cells measured on this tree, recorded here and in CLAUDE.md if moved | — | routine (sonnet) | done |
-| 02 | [Area shapes](02-area-shapes.md) | `areaOf`, `AreaShape`, `areaTouches`, `Spell.shape`; the scene uses them. The summary is identical. | 01 | moderate: geometry with worked tests (sonnet, or session model for the cone) | done (commit below) |
+| 01 | [Baseline measurement](01-baseline-measurement.md) | The guard and the Troll Lair cells measured on this tree, recorded here and in CLAUDE.md if moved | — | routine (sonnet) | done (0804545; guard 243 of 500) |
+| 02 | [Area shapes](02-area-shapes.md) | `areaOf`, `AreaShape`, `areaTouches`, `Spell.shape`; the scene uses them. The summary is identical. | 01 | moderate: geometry with worked tests (sonnet, or session model for the cone) | done (1465f7a) |
 | 03 | [Elements, wards and monster spells](03-elements-wards-monster-spells.md) | `Element`, wards, `warded` on casts and ticks, `drained`, five monster spells, Cursed and Webbed, the policy's spell rules; LOG 19. The summary is identical. | 02 | intricate engine and policy (session model) | pending |
 | 04 | [Abilities, routines and recharge](04-routines-and-recharge.md) | `abilities.ts`, the routine action, retargeting, `recharging`, the Troll's routine, the policy's best strike, the yardstick test; LOG 20, SAVE 14. Troll cells within noise. | 03 | intricate engine and policy (session model) | pending |
 | 05 | [Area abilities](05-area-abilities.md) | `AbilityEvent`, half on a miss, wards on areas, `spider_web` and `fire_spit`, the policy's areas, the simulator's tally; LOG 21. The summary is identical to step 04's. | 04 | intricate engine and policy (session model) | pending |
