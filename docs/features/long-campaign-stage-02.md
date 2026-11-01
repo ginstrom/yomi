@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 2 (special attacks and elements)
 
 **Slug:** long-campaign-stage-02
-**Phase:** 4. Implementation
+**Phase:** 6. Report — done; awaiting the user on push/PR and the hand-walked play script
 
 ## Request (user's words)
 
@@ -62,3 +62,11 @@ None yet. Stage 1's play script is still for the user to walk.
 - Step 06 (b523a7f, 3b70c70): review round 1 (opus) clean with two panel fixes asked (panel stayed up over a control; panel drew from state ahead of playback), fixed in 3b70c70; round 2 clean. Reviewer saw the Troll's routine play as two strikes with "claws" log lines in a browser. Not yet seen: an AbilityEvent in a browser (step 08/09); cone/line sweep shows only a single flash (judge once visible).
 - Step 07 (0daf6bf): orchestrator viewed battle-scale previews (both read clearly, distinct from kobold/troll). Review (opus) clean. Cosmetic, left: salamander tail flicks rather than sways; small foot lifts; one foot touches a leg outline in salamander walk_2.
 - Step 08 (8b5cf18): spider_nest t4/L4 500/500, t5/L5 451/500; salamander_pool t5/L5 470/500; guard 248 (+5 vs 243). Fire Spit seen in a headless browser log (no console errors), not by eye. Departures: duplicate foe names renamed (Brood Spider, Kobold Stoker, Kobold Warden); band-growth test applies only when max > min. Review (sonnet) clean; passed to step 09: spider meanDamage exception reason is backwards (the routine is why); C7 slot rows not amended for the renames; magic.md:212 still lists Goblin Pillagers.
+- Step 09 (0a2dbbc, 13d8e9a, 87dbbc3): guard 248 (+5, explained); no tuning kept at first; Drain Life capped at HP lost; play script walked headless (spread aim and retarget not seen). Review folded into the overall review.
+- Overall review round 1 (opus) at 87dbbc3: clean; make test 984, build OK, browser 79/81 (failures from another agent's scratch file and a load timeout). Non-blocking: recharge count one high; manual wording on recharge and Web.
+- QA round 1 (sonnet) at 87dbbc3: pass; saw the Salamander's spread aim and a routine retarget (seed 8), save/reload with recharge. Minor: recharge wording; crit/ward brackets.
+- Simulated user (sonnet, hands-on) at 87dbbc3: all four goals met; fire-ward lesson learned from the log. Friction: abilities not described in the panel (user chose to add descriptions); panel overlapped a neighbour's name (title added); a reported web "MISSES" vs webbed mismatch investigated — not a bug (earlier web).
+- Fixes c8c23b5, 5c205f3, 13ddea9, 7539056, c33acc4, a176ad4 (engineer opus): spider nest threat 5 only; area-spell rule ignores fully-warded foes (pool went 470→493); one bracket for crit+ward; panel title, recharge "ready next turn", generated descriptions; manual; Fire Spit 3d6→4d6+2 (pool 456, guard 248).
+- Overall review round 2 (opus) at a176ad4: clean; make test 993; browser debug 4/4, battle 11/11. Two doc nits fixed by the orchestrator.
+- QA round 2 (sonnet) at a975aa9: pass; recharge wording right through each cycle; panel readable at 840×560 and full size. Not seen live: a warded critical log line (unit-tested).
+- Not done by any agent: the play script walked by hand by the user.

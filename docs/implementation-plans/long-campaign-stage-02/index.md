@@ -382,7 +382,7 @@ export function foeInfoLines(unit: UnitSnapshot): string[]  // amended, user, 20
 - [x] Every step is done, with `make test` passing at each commit.
 - [x] The guard is measured at step 01 and after step 08, and judged in 09: within about 5 points of step 01's figure, or the move explained in CLAUDE.md's rules of scaling and the stage notes.
 - [x] The summary is identical to the baseline after steps 02 and 03, and to step 04's after 05.
-- [x] (The Spider Nest's threat-4 cell, 500 of 500, went with its band: the nest is threat 5 only, the user's decision.) Cells recorded: `--encounter spider_nest --threat 4 --party-level 4`, `--encounter spider_nest --threat 5 --party-level 5` and `--encounter salamander_pool --threat 5 --party-level 5` are hard but winnable (a party of the threat's level wins most but not all; roughly 60% to 95%); `--encounter troll_lair --threat 4 --party-level 4` (and 5) within noise of step 01's.
+- [x] (The Spider Nest's threat-4 cell, 500 of 500, went with its band: the nest is threat 5 only, the user's decision.) Cells recorded: `--encounter spider_nest --threat 5 --party-level 5` and `--encounter salamander_pool --threat 5 --party-level 5` are hard but winnable (a party of the threat's level wins most but not all; roughly 60% to 95%); `--encounter troll_lair --threat 4 --party-level 4` (and 5) within noise of step 01's.
 - [x] `giant_spider` and `salamander` are drawn sprites, not placeholders.
 - [x] `LOG_SCHEMA_VERSION` is 21 and `SAVE_VERSION` 15.
 - [x] CLAUDE.md describes shapes, elements and wards, monster spells, abilities and recharge, the policy's new rules, the foe info panel, the new kinds and nests; the manual describes them, its screenshots retaken (with one of a new nest).

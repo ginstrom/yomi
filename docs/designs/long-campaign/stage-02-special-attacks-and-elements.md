@@ -185,9 +185,9 @@ It is explained in CLAUDE.md's rules of scaling, not retuned away: making the Sa
 
 | Cell | Wins | Rounds | Enemy damage | Enemy area attacks |
 | --- | --- | --- | --- | --- |
-| Spider Nest, threat 4 | 500 (100%) | 3.7 | 16.2 | 1.0 |
+| Spider Nest, threat 4 (since made threat 5 only) | 500 (100%) | 3.7 | 16.2 | 1.0 |
 | Spider Nest, threat 5 | 451 (90.2%) | 6.9 | 60.4 | 3.0 |
-| Salamander Pool, threat 5 | 470 (94%) | 8.4 | 69.6 | 3.5 |
+| Salamander Pool, threat 5 (before the Fireball fix and retune; now 456) | 470 (94%) | 8.4 | 69.6 | 3.5 |
 | Troll Lair, threat 4 | 222 (step 01: 218) | 15.6 | 102.3 | 0 |
 | Troll Lair, threat 5 | 0 (step 01: 0) | 7.5 | 146.7 | 0 |
 | Goblin Raid, threat 5 | 357 (71.4%) | 13.1 | 101.3 | 0 |
