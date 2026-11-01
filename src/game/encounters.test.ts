@@ -8,10 +8,12 @@ import { hexDistance, offsetToHex } from '../grid/hex.ts'
 import {
   ARMORED_TROLL_STATS,
   BLIGHT_HORROR_STATS,
+  GIANT_SPIDER_STATS,
   GOBLIN_SHAMAN_STATS,
   GOBLIN_STATS,
   HOBGOBLIN_CHIEF_STATS,
   KOBOLD_STATS,
+  SALAMANDER_STATS,
   TROLL_STATS,
   foeAtLevel,
   foeYardstick,
@@ -37,7 +39,9 @@ import {
   heroId,
   hobgoblinWarband,
   koboldScouts,
+  salamanderPool,
   sourceGuardians,
+  spiderNest,
   trollLair,
   xpReward,
 } from './encounters.ts'
@@ -92,7 +96,7 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
         expect(foes(threat)[0].stats.maxHp).toBeGreaterThan(foes(threat - 1)[0].stats.maxHp)
       }
     }
-    expect(foes(max).length).toBeGreaterThan(foes(min).length)
+    if (max > min) expect(foes(max).length).toBeGreaterThan(foes(min).length)
   })
 
   it('is worth more the higher the threat', () => {
@@ -258,10 +262,85 @@ describe('banditCamp', () => {
   })
 })
 
+describe('spiderNest', () => {
+  const field = (threat: number) =>
+    spiderNest(party(), threat)
+      .setup.units.filter((u) => u.side === 'enemy')
+      .map((u) => u.id)
+
+  it('is registered, with the band 4 to 5 and the counts 2, 3', () => {
+    expect(ENCOUNTERS.spider_nest).toBe(spiderNest)
+    expect(ENCOUNTER_BANDS.spider_nest).toEqual({ min: 4, max: 5 })
+    expect(ENCOUNTER_COUNTS.spider_nest).toEqual([2, 3])
+  })
+
+  it('fields a Giant Spider and a Kobold Sneak at threat 4, and a second spider at 5, clamped either side', () => {
+    expect(field(4)).toEqual(['spider', 'sneak'])
+    expect(field(5)).toEqual(['spider', 'sneak', 'spider2'])
+    expect(spiderNest(party(), 1)).toEqual(spiderNest(party(), 4))
+    expect(spiderNest(party(), 9)).toEqual(spiderNest(party(), 5))
+    expect(spiderNest(party()).threat).toBe(4)
+  })
+
+  it('names and places its foes', () => {
+    const units = spiderNest(party(), 5).setup.units.filter((u) => u.side === 'enemy')
+    expect(units.map((u) => [u.id, u.stats.name, u.position])).toEqual([
+      ['spider', 'Giant Spider', offsetToHex(8, 4)],
+      ['sneak', 'Kobold Sneak', offsetToHex(9, 2)],
+      ['spider2', 'Brood Spider', offsetToHex(8, 6)],
+    ])
+  })
+
+  it('pays (100 + 50) x 4 at threat 4', () => {
+    expect(xpReward(spiderNest(party(), 4))).toBe((100 + 50) * 4)
+  })
+})
+
+describe('salamanderPool', () => {
+  it('is registered, with the band 5 to 5 and the count 3', () => {
+    expect(ENCOUNTERS.salamander_pool).toBe(salamanderPool)
+    expect(ENCOUNTER_BANDS.salamander_pool).toEqual({ min: 5, max: 5 })
+    expect(ENCOUNTER_COUNTS.salamander_pool).toEqual([3])
+  })
+
+  it('fields a Salamander between two Kobolds at any threat, fought as threat 5', () => {
+    for (const threat of [1, 5, 9]) {
+      const pool = salamanderPool(party(), threat)
+      expect(pool.threat).toBe(5)
+      expect(pool.setup.units.filter((u) => u.side === 'enemy').map((u) => [u.id, u.stats.name, u.position])).toEqual([
+        ['salamander', 'Salamander', offsetToHex(8, 4)],
+        ['kobold', 'Kobold Stoker', offsetToHex(8, 2)],
+        ['kobold2', 'Kobold Warden', offsetToHex(8, 6)],
+      ])
+    }
+    expect(salamanderPool(party()).threat).toBe(5)
+  })
+
+  it('pays (120 + 50 + 50) x 5', () => {
+    expect(xpReward(salamanderPool(party(), 5))).toBe((120 + 50 + 50) * 5)
+  })
+})
+
+describe('the Giant Spider and the Salamander', () => {
+  it('keeps the spider\'s block at its native level, a level on at 5', () => {
+    expect(foeStats('giant_spider', 4)).toEqual({ ...GIANT_SPIDER_STATS, abilityDamageBonus: 0 })
+    expect(foeStats('giant_spider', 5)).toEqual(foeAtLevel(GIANT_SPIDER_STATS, 5, 4))
+    expect(foeStats('giant_spider', 4).abilities).toEqual(['spider_bite', 'spider_web'])
+    expect(GIANT_SPIDER_STATS.magic).toBeUndefined()
+  })
+
+  it('wards the Salamander against fire and gives it the Fire Spit', () => {
+    const stats = foeStats('salamander', 5)
+    expect(stats.wards?.fire).toBe(99)
+    expect(stats.abilities).toEqual(['fire_spit'])
+    expect(stats).toEqual({ ...SALAMANDER_STATS, abilityDamageBonus: 0 })
+  })
+})
+
 describe('the encounters\' bands and counts', () => {
   const ids = Object.keys(ENCOUNTERS) as EncounterId[]
   /** The five encounters the map had before bandits, which keep the band 1 to 5. */
-  const today = ids.filter((id) => id !== 'bandit_camp')
+  const today = ids.filter((id) => !['bandit_camp', 'spider_nest', 'salamander_pool'].includes(id))
   const foeCount = (id: EncounterId, threat: number) =>
     ENCOUNTERS[id](party(), threat).setup.units.filter((u) => u.side === 'enemy').length
 
@@ -295,7 +374,8 @@ describe('the encounters\' bands and counts', () => {
     expect(encountersFor(1)).toEqual(today)
     expect(encountersFor(2)).toEqual(today)
     expect(encountersFor(3)).toEqual([...today, 'bandit_camp'])
-    expect(encountersFor(5)).toEqual([...today, 'bandit_camp'])
+    expect(encountersFor(4)).toEqual([...today, 'bandit_camp', 'spider_nest'])
+    expect(encountersFor(5)).toEqual([...today, 'bandit_camp', 'spider_nest', 'salamander_pool'])
     expect(encountersFor(6)).toEqual(['bandit_camp'])
     expect(encountersFor(7)).toEqual(['bandit_camp'])
     expect(encountersFor(8)).toEqual([])
@@ -316,13 +396,15 @@ const BLOCKS: Record<MonsterKind, CombatantStats> = {
   hobgoblin: HOBGOBLIN_CHIEF_STATS,
   troll: TROLL_STATS,
   armored_troll: ARMORED_TROLL_STATS,
+  giant_spider: GIANT_SPIDER_STATS,
+  salamander: SALAMANDER_STATS,
 }
 
 describe('foeStats', () => {
   const kinds = Object.keys(BLOCKS) as MonsterKind[]
 
-  it('gives every monster kind a native level, 1 for today\'s', () => {
-    for (const kind of kinds) expect(FOE_NATIVE_LEVEL[kind]).toBe(1)
+  it('gives every monster kind a native level, 1 but for the Giant Spider\'s 4 and the Salamander\'s 5', () => {
+    for (const kind of kinds) expect(FOE_NATIVE_LEVEL[kind]).toBe(kind === 'giant_spider' ? 4 : kind === 'salamander' ? 5 : 1)
   })
 
   it('scales a monster from its block by foeAtLevel and its native level', () => {
@@ -354,6 +436,9 @@ describe('the foe yardstick', () => {
     { kind: 'troll', field: 'toHit', reason: 'level 1 foes hit less often than the band; they catch up by 5 a level' },
     { kind: 'armored_troll', field: 'maxHp', reason: 'plates (resistance 5) and regeneration stand for hit points, so its pool is small' },
     { kind: 'armored_troll', field: 'meanDamage', reason: 'one heavy blow of 2d6+2 a turn, the damage of a foe that is a danger in melee' },
+    { kind: 'giant_spider', field: 'maxHp', reason: 'the Giant Spider is a fragile ambusher; its Web and venom are its danger, not its hit points' },
+    { kind: 'giant_spider', field: 'meanDamage', reason: 'its fangs are weak (1d6+2); its danger is the Web and the poison of a second bite' },
+    { kind: 'salamander', field: 'maxHp', reason: 'the Salamander\'s fire ward and Fire Spit stand for hit points, so its pool is small' },
     { kind: 'armored_troll', field: 'toHit', reason: 'level 1 foes hit less often than the band; they catch up by 5 a level' },
   ]
 

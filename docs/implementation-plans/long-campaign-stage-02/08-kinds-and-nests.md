@@ -128,3 +128,23 @@ export function salamanderPool(party: readonly Fighter[], threat = 5): Encounter
 - [ ] The index's step 08 row set to `done` with the commit; this file's execution record filled in. If a contract had to change, amend it in the index, marked "step 08".
 
 ## Execution record
+
+Built test-first on the tree at `0daf6bf`.
+
+- **Built:** `GIANT_SPIDER_STATS` and `SALAMANDER_STATS` (C7's numbers); the kinds with native levels 4 and 5 and `FOE_XP` 100 and 120; `spider_nest` (band 4-5, counts 2, 3) and `salamander_pool` (band 5-5, count 3); the map's Salamander Pool (54, 28) and Spider Nest (57, 10), loot kept, both threat 5; `SAVE_VERSION` 15. Yardstick exceptions: Giant Spider `maxHp` and `meanDamage`, Salamander `maxHp` (the three fields outside the yardstick, no others). CLAUDE.md: the `encounters.ts` bullet and the rules of scaling.
+- **Deviations:**
+  - The encounter-wide tests require every foe in a battle to have a name of its own, so the C7 duplicate names are changed: the second spider is **Brood Spider** (not a second "Giant Spider"), the pool's Kobolds **Kobold Stoker** and **Kobold Warden**. Ids, kinds and positions are as in C7.
+  - The test "fields foes ... never fewer than before" ended with `foes(max) > foes(min)`; a one-threat band (`salamander_pool`, 5-5) cannot satisfy it, so it now applies only when `max > min`.
+  - Step 09 should note the Spider Nest's second spider is called "Brood Spider".
+- **`make test`:** passes (71 files, 982 tests); typecheck clean.
+- **Smoke cells** (seed 1, 500 battles, aggressive both sides):
+
+  | Cell | Player wins | Avg rounds | Enemy area attacks / battle |
+  | --- | --- | --- | --- |
+  | spider_nest, threat 4, party level 4 | 500 | 3.67 | 1.01 |
+  | spider_nest, threat 5, party level 5 | 451 | 6.94 | 3.02 |
+  | salamander_pool, threat 5, party level 5 | 470 | 8.37 | 3.52 |
+
+  The web and the spit are used. The threat-4 Spider Nest is trivial (500 of 500); for step 09.
+- **Guard** (`--campaign --ready-level 7 --battles 500 --seed 1`): **Source beaten 248 of 500** (49.6%), against step 01's 243 (+5); party fell 252, encampment lost 0. A campaign: 274 days, 18.7 battles (9330 in all), 1.7 heroes dead. Per threat won/battles: 1: 1010/1010, 2: 1770/1788, 3: 1963/2017, 4: 2924/2947 (0.992), 5: 1411/1568 (0.900). Levels at the end: lowest 6.8, highest 7.3. Step 09 judges it (within about 5 points, not tuned here). Threat 5 win rate before: see step 01's table.
+- **Browser:** a scratch browser test (not committed) ran `fight salamander_pool 5` in headless Chromium, pressed End Turn until the battle ended (round 5): the Salamander cast `fire_spit` three times (rounds 1, 3, 5; 5 hexes of cone each, hits, a half-damage miss, a Seared status laid, a hero killed), and the driver's console-error check passed. The sprites were not inspected by eye (no screenshot taken).

@@ -114,8 +114,8 @@ describe('a save', () => {
     expect(parsed.game.baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 14, whose battle units keep what they have recharging', () => {
-    expect(SAVE_VERSION).toBe(14)
+  it('is version 15, whose fixed locations are the Salamander Pool and the Spider Nest', () => {
+    expect(SAVE_VERSION).toBe(15)
   })
 
   it('writes an item as its id and nothing more', () => {

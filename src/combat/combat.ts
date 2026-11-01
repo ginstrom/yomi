@@ -351,6 +351,47 @@ export const ARMORED_TROLL_STATS: CombatantStats = {
   actionPoints: 8,
 }
 
+/**
+ * A spider the size of a dog, native to level 4: fragile, but it webs a hero
+ * from four hexes off (`spider_web`), closes, and bites twice, the second
+ * bite poisoning (`spider_bite`). It has no magic; its Web is an ability.
+ */
+export const GIANT_SPIDER_STATS: CombatantStats = {
+  name: 'Giant Spider',
+  maxHp: 20,
+  ac: 25,
+  resistance: 1,
+  toHit: 80,
+  critChance: 5,
+  damage: { count: 1, sides: 6, bonus: 2 },
+  weapon: 'Fangs',
+  attackApCost: 5,
+  attackRange: 1,
+  actionPoints: 8,
+  abilities: ['spider_bite', 'spider_web'],
+}
+
+/**
+ * A lizard of living flame, native to level 5: it spits a cone of fire that
+ * burns whatever stands in it, its own kobolds too (`fire_spit`), and is
+ * warded against fire, so that Flame Arrow and Fireball scarcely touch it.
+ */
+export const SALAMANDER_STATS: CombatantStats = {
+  name: 'Salamander',
+  maxHp: 26,
+  ac: 30,
+  resistance: 2,
+  toHit: 85,
+  critChance: 5,
+  damage: { count: 1, sides: 8, bonus: 2 },
+  weapon: 'Claws',
+  attackApCost: 5,
+  attackRange: 1,
+  actionPoints: 8,
+  wards: { fire: 99 },
+  abilities: ['fire_spit'],
+}
+
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
 export const FOE_HP_PER_LEVEL = 0.7
 /** ...this many points to its chance to hit and to its armour class... */

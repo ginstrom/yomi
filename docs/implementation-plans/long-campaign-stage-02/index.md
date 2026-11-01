@@ -343,7 +343,7 @@ export function foeInfoLines(unit: UnitSnapshot): string[]
 | 05 | [Area abilities](05-area-abilities.md) | `AbilityEvent`, half on a miss, wards on areas, `spider_web` and `fire_spit`, the policy's areas, the simulator's tally; LOG 21. The summary is identical to step 04's. | 04 | intricate engine and policy (session model) | done (09b679a) (summary identical to step 04's; area attacks 0) |
 | 06 | [The battle screen](06-battle-screen.md) | Routines and area abilities played back, schedule and sounds, the foe info panel, probe and tests | 05 | moderate: pattern-following on the spell-effect path (sonnet can; session model for review) | done (b523a7f, 3b70c70) |
 | 07 | [Spider and Salamander sprites](07-sprites.md) | `giant_spider` and `salamander` in the atlas with `idle` and `walk`, the sprites README | — | art judgement (session model) | done |
-| 08 | [The new kinds and nests](08-kinds-and-nests.md) | The two stat blocks, kinds, XP, `spider_nest` and `salamander_pool`, the two map places, yardstick exceptions; SAVE 15 | 05, 07 | routine, following stage 1's bandit steps (sonnet) | pending |
+| 08 | [The new kinds and nests](08-kinds-and-nests.md) | The two stat blocks, kinds, XP, `spider_nest` and `salamander_pool`, the two map places, yardstick exceptions; SAVE 15 | 05, 07 | routine, following stage 1's bandit steps (sonnet) | done |
 | 09 | [Measure, tune and document](09-measure-tune-document.md) | The guard against step 01, the nests' and Troll's cells, tuning, CLAUDE.md, the manual and screenshots, the stage notes and index status, the play script | 06, 08 | balance judgement (session model); the doc pass may be sonnet | pending |
 
 ## Execution order

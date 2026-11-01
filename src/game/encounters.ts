@@ -1,5 +1,7 @@
 import {
   ARMORED_TROLL_STATS,
+  GIANT_SPIDER_STATS,
+  SALAMANDER_STATS,
   BLIGHT_HORROR_STATS,
   GOBLIN_SHAMAN_STATS,
   GOBLIN_STATS,
@@ -48,7 +50,7 @@ function partyKinds(party: readonly Fighter[]): Record<UnitId, UnitKind> {
 }
 
 /** Monsters: stat blocks scaled by `foeAtLevel` from their native level. */
-export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll'
+export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll' | 'giant_spider' | 'salamander'
 
 /** Humanoids built by hero rules (bandits.ts). */
 export type BanditKind = 'bandit_cutthroat' | 'bandit_archer' | 'bandit_brute' | 'bandit_mage' | 'bandit_captain'
@@ -67,6 +69,9 @@ export type UnitKind = 'warrior' | FoeKind
  * curse, worth a little more than a Goblin; the Hobgoblin Chief, in mail,
  * and the Troll, which regenerates, about two Goblins, and the Armoured Troll
  * more; the Blight Horror, which guards the Source, as much as four Goblins.
+ * The Giant Spider and the Salamander are priced near an even foe of their
+ * native level (`EVEN_FOE_XP_PER_LEVEL`), the Salamander a little above for
+ * its spit and its ward; first values, for the simulator to tune.
  * Bandits, built by hero rules (bandits.ts), are even foes for a hero of
  * their level, whatever their role, and so worth `EVEN_FOE_XP_PER_LEVEL`.
  */
@@ -79,6 +84,8 @@ export const FOE_XP: Record<UnitKind, number> = {
   hobgoblin: 150,
   troll: 160,
   armored_troll: 220,
+  giant_spider: 100,
+  salamander: 120,
   bandit_cutthroat: 100,
   bandit_archer: 100,
   bandit_brute: 100,
@@ -121,6 +128,8 @@ const FOE_STATS: Record<MonsterKind, CombatantStats> = {
   hobgoblin: HOBGOBLIN_CHIEF_STATS,
   troll: TROLL_STATS,
   armored_troll: ARMORED_TROLL_STATS,
+  giant_spider: GIANT_SPIDER_STATS,
+  salamander: SALAMANDER_STATS,
 }
 
 /** The level each monster kind's stat block is written for; it grows from there (`foeAtLevel`). */
@@ -132,6 +141,8 @@ export const FOE_NATIVE_LEVEL: Record<MonsterKind, number> = {
   hobgoblin: 1,
   troll: 1,
   armored_troll: 1,
+  giant_spider: 4,
+  salamander: 5,
 }
 
 function isBandit(kind: FoeKind): kind is BanditKind {
@@ -240,6 +251,20 @@ const TROLL_LAIR_SLOTS: readonly FoeSlot[] = [
   { id: 'whelp', kind: 'troll', name: 'Troll Whelp', at: [9, 6] },
 ]
 
+// The Spider first, so it leads at any threat; the Sneak beside it, and the second Spider from threat 5.
+const SPIDER_NEST_SLOTS: readonly FoeSlot[] = [
+  { id: 'spider', kind: 'giant_spider', name: 'Giant Spider', at: [8, 4] },
+  { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [9, 2] },
+  { id: 'spider2', kind: 'giant_spider', name: 'Brood Spider', at: [8, 6] },
+]
+
+// The Salamander in the middle, a Kobold either side: its cone burns them too.
+const SALAMANDER_POOL_SLOTS: readonly FoeSlot[] = [
+  { id: 'salamander', kind: 'salamander', name: 'Salamander', at: [8, 4] },
+  { id: 'kobold', kind: 'kobold', name: 'Kobold Stoker', at: [8, 2] },
+  { id: 'kobold2', kind: 'kobold', name: 'Kobold Warden', at: [8, 6] },
+]
+
 // The Horror first, so it takes the field at any threat; the Source is fought at the top.
 const SOURCE_GUARDIANS_SLOTS: readonly FoeSlot[] = [
   { id: 'horror', kind: 'horror', name: 'Blight Horror', at: [8, 4] },
@@ -268,6 +293,10 @@ const KOBOLD_SCOUTS: EncounterDef = { slots: KOBOLD_SCOUTS_SLOTS, ...TODAY }
 const HOBGOBLIN_WARBAND: EncounterDef = { slots: HOBGOBLIN_WARBAND_SLOTS, ...TODAY }
 const TROLL_LAIR: EncounterDef = { slots: TROLL_LAIR_SLOTS, ...TODAY }
 const SOURCE_GUARDIANS: EncounterDef = { slots: SOURCE_GUARDIANS_SLOTS, ...TODAY }
+/** The Giant Spider's nest, fought at threats 4 and 5: a spider and a Sneak, and a second spider at 5. */
+const SPIDER_NEST: EncounterDef = { slots: SPIDER_NEST_SLOTS, band: { min: 4, max: 5 }, counts: [2, 3] }
+/** The Salamander's pool, fought at threat 5 only. */
+const SALAMANDER_POOL: EncounterDef = { slots: SALAMANDER_POOL_SLOTS, band: { min: 5, max: 5 }, counts: [3] }
 /**
  * Bandits are fought from threat 3. Two at threats 3 to 5, tuned by the simulator (a third made the camp a wall:
  * a party of the threat's level won about 2 in 5 at threat 3 and 1 in 3 at 4); the counts past 5 are the first guess, for the
@@ -300,6 +329,22 @@ export function hobgoblinWarband(party: readonly Fighter[], threat = 1): Encount
  */
 export function trollLair(party: readonly Fighter[], threat = 1): Encounter {
   return encounter(party, TROLL_LAIR, threat)
+}
+
+/**
+ * Giant Spiders that web a hero from range, then close and bite twice, the
+ * second bite poisoning, with a Kobold Sneak; at threat 5 a second spider.
+ */
+export function spiderNest(party: readonly Fighter[], threat = 4): Encounter {
+  return encounter(party, SPIDER_NEST, threat)
+}
+
+/**
+ * A Salamander, warded against fire, spitting a cone of fire that burns its
+ * own two Kobolds as well as the party.
+ */
+export function salamanderPool(party: readonly Fighter[], threat = 5): Encounter {
+  return encounter(party, SALAMANDER_POOL, threat)
 }
 
 /**
@@ -342,6 +387,8 @@ export const ENCOUNTERS = {
   troll_lair: trollLair,
   source_guardians: sourceGuardians,
   bandit_camp: banditCamp,
+  spider_nest: spiderNest,
+  salamander_pool: salamanderPool,
 } satisfies Record<string, (party: readonly Fighter[], threat?: number) => Encounter>
 
 export type EncounterId = keyof typeof ENCOUNTERS
@@ -354,6 +401,8 @@ export const ENCOUNTER_BANDS: Record<EncounterId, ThreatBand> = {
   troll_lair: TROLL_LAIR.band,
   source_guardians: SOURCE_GUARDIANS.band,
   bandit_camp: BANDIT_CAMP.band,
+  spider_nest: SPIDER_NEST.band,
+  salamander_pool: SALAMANDER_POOL.band,
 }
 
 /** How many foes each encounter fields at each threat of its band, from `band.min` up, from its definition. */
@@ -364,6 +413,8 @@ export const ENCOUNTER_COUNTS: Record<EncounterId, readonly number[]> = {
   troll_lair: TROLL_LAIR.counts,
   source_guardians: SOURCE_GUARDIANS.counts,
   bandit_camp: BANDIT_CAMP.counts,
+  spider_nest: SPIDER_NEST.counts,
+  salamander_pool: SALAMANDER_POOL.counts,
 }
 
 /** The encounters whose band holds `threat`, in `ENCOUNTERS` order. */

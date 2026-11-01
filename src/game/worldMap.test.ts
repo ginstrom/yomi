@@ -83,6 +83,18 @@ describe('newWorld', () => {
     ])
   })
 
+  it('has the Salamander Pool and the Spider Nest at threat 5, where the Troll Den and the Goblin Pillagers were', () => {
+    const at = (id: string) => monsters(world).find((l) => l.id === id)!
+    expect([at('salamander_pool').position, at('salamander_pool').encounter, at('salamander_pool').threat]).toEqual([
+      offsetToHex(54, 28),
+      'salamander_pool',
+      5,
+    ])
+    expect([at('spider_nest').position, at('spider_nest').encounter, at('spider_nest').threat]).toEqual([offsetToHex(57, 10), 'spider_nest', 5])
+    expect(world.locations.map((l) => l.id)).not.toContain('troll_den')
+    expect(world.locations.map((l) => l.id)).not.toContain('goblin_pillagers')
+  })
+
   it('gives every monster location loot of its own, which another world does not share', () => {
     const lairs = monsters(world)
     for (const l of lairs) expect(l.loot.length).toBeGreaterThan(0)
@@ -97,8 +109,8 @@ describe('newWorld', () => {
       'Goblin Marauders': ['Emberblade'],
       'Troll Lair': ['Hawkeye Bow'],
       'Bandit Hideout': ['Wand of Storms'],
-      'Troll Den': ["Sage's Circlet"],
-      'Goblin Pillagers': ['Emberblade'],
+      'Salamander Pool': ["Sage's Circlet"],
+      'Spider Nest': ['Emberblade'],
       'The Blight Source': ['Wand of Storms'],
     })
     expect(monsters(newWorld(1))[0].loot).not.toBe(lairs[0].loot)
