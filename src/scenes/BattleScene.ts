@@ -38,6 +38,7 @@ import { planAttack, type AttackPlan } from './attackPlan.ts'
 import { FLOOR_SQUASH_Y, HEX_SIZE, boardHexAt, boardHexCenter, boardPixelSize, curvedArrow } from './boardGeometry.ts'
 import { CURSORS, spellCursor } from './cursors.ts'
 import {
+  AREA_SWEEP_MS,
   ARROW_SPRITE,
   BURST_ANIM,
   BURST_SPRITE,
@@ -50,6 +51,8 @@ import {
   SPELL_LOOKS,
   SWING_IMPACT_MS,
   TIP_POINT,
+  abilityLook,
+  areaOutline,
   attackLook,
   castOutline,
   flightMs,
@@ -57,6 +60,7 @@ import {
   impactMs,
   type SpellLook,
 } from './battleEffects.ts'
+import { foeInfoLines } from './foeInfo.ts'
 import { scheduleEvents, type Cue } from './eventSchedule.ts'
 import { ScrollingLog } from './scrollingLog.ts'
 import { SEED_KEY } from './seed.ts'
@@ -115,6 +119,8 @@ interface Unit {
   apPips: Phaser.GameObjects.Graphics
   /** A letter for each status on the unit, in its colour, right of the hit point bar. */
   statusMarks: Phaser.GameObjects.Container
+  /** The hit points the nameplate shows now, which an event's playback moves ahead of the engine's. */
+  shownHp: number
 }
 
 /** Flagstone greys from art/palette.toml, so the floor sits with the sprites. */
@@ -260,6 +266,9 @@ export class BattleScene extends Phaser.Scene {
   private labelLayer!: Phaser.GameObjects.Container
   /** The odds on each unit an area spell would touch, for the hovered centre; above the other labels. */
   private hoverLabels!: Phaser.GameObjects.Container
+  /** The foe info panel (`foeInfoLines`) beside the hovered foe, and the lines it shows now. */
+  private foePanel!: Phaser.GameObjects.Container
+  private foeInfo: string[] = []
 
   /** The party's portraits down the left; the one marked is the member a panel opens for. */
   private column!: PartyColumn
@@ -346,6 +355,8 @@ export class BattleScene extends Phaser.Scene {
     this.refreshGear()
     this.labelLayer = this.add.container(0, 0)
     this.hoverLabels = this.add.container(0, 0)
+    this.foePanel = this.add.container(0, 0)
+    this.foeInfo = []
 
     this.roundText = this.add
       .text(20, 16, '', { fontFamily: 'monospace', fontSize: '20px', color: '#ffffff' })
@@ -517,6 +528,7 @@ export class BattleScene extends Phaser.Scene {
           return { spell, enabled, x: bounds.centerX, y: bounds.centerY }
         }) ?? null,
       result: this.resultText.visible ? this.resultText.text.split('\n') : [],
+      foeInfo: this.foeInfo,
       party: this.column.probe(),
       looks: Object.fromEntries(
         [...this.heroes.keys()].flatMap((id) => {
@@ -723,7 +735,7 @@ export class BattleScene extends Phaser.Scene {
     const plate = this.add.container(0, 0, [nameText, hpBarBg, hpBarFill, hpText, facingArrow, apPips, statusMarks])
     this.plateLayer.add(plate)
 
-    return { container, figure, plate, hpBarBg, hpBarFill, hpText, facingArrow, apPips, statusMarks }
+    return { container, figure, plate, hpBarBg, hpBarFill, hpText, facingArrow, apPips, statusMarks, shownHp: 0 }
   }
 
   private createButton(label: string, onClick: () => void): Phaser.GameObjects.Container {
@@ -827,7 +839,7 @@ export class BattleScene extends Phaser.Scene {
     const floorX = freeLeft + (freeW - board.width * scale) / 2
     const floorY = freeTop + (freeH - (bottom - top) * scale) / 2 - top * scale
 
-    for (const layer of [this.floorLayer, this.unitLayer, this.plateLayer, this.labelLayer, this.hoverLabels]) {
+    for (const layer of [this.floorLayer, this.unitLayer, this.plateLayer, this.labelLayer, this.hoverLabels, this.foePanel]) {
       layer.setPosition(floorX, floorY).setScale(scale)
     }
     for (const snapshot of this.engine.getState().units) this.placeUnit(snapshot.id, snapshot.position)
@@ -863,6 +875,7 @@ export class BattleScene extends Phaser.Scene {
     unit.hpBarFill.setSize(unit.hpBarBg.width * ratio, unit.hpBarBg.height)
     unit.hpBarFill.setFillStyle(ratio > 0.5 ? 0x43a047 : ratio > 0.2 ? 0xfb8c00 : 0xe53935)
     unit.hpText.setText(`${hp} / ${maxHp}`)
+    unit.shownHp = hp
   }
 
   /** A letter for each of the unit's statuses, each in its status's colour. */
@@ -1067,6 +1080,7 @@ export class BattleScene extends Phaser.Scene {
   private refreshHover(): void {
     this.hoverMarks.clear()
     this.hoverLabels.removeAll(true)
+    this.refreshFoeInfo()
     const intent: BoardIntent = this.hovered ? this.boardIntent(this.hovered) : { kind: 'none' }
     const selectedAt = () => this.engine.getState().units.find((u) => u.id === this.selected)!.position
     switch (intent.kind) {
@@ -1099,6 +1113,33 @@ export class BattleScene extends Phaser.Scene {
         this.markCast(intent.action, selectedAt())
         break
     }
+  }
+
+  /** The panel of a hovered standing foe's abilities and wards, beside its hex; nothing for a foe with neither. */
+  private refreshFoeInfo(): void {
+    this.foePanel.removeAll(true)
+    this.foeInfo = []
+    if (!this.hovered || this.scene.isPaused()) return
+    const at = this.hovered
+    const foe = this.engine.getState().units.find((u) => u.hp > 0 && u.side === 'enemy' && hexEquals(u.position, at))
+    const lines = foe ? foeInfoLines(foe) : []
+    if (lines.length === 0) return
+    this.foeInfo = lines
+    const { x, y } = boardHexCenter(at)
+    const text = this.add
+      .text(x + HEX_SIZE, y, lines.join('\n'), {
+        fontFamily: 'monospace',
+        fontSize: '11px',
+        color: '#ffffff',
+        backgroundColor: '#000000cc',
+        padding: { x: 4, y: 2 },
+      })
+      .setOrigin(0, 0.5)
+    // Kept on the board: to the foe's left when its right would overrun it.
+    const board = boardPixelSize(this.board.size)
+    if (text.x + text.width > board.width) text.setX(x - HEX_SIZE).setOrigin(1, 0.5)
+    text.setY(Phaser.Math.Clamp(text.y, text.height / 2, Math.max(text.height / 2, board.height - text.height / 2)))
+    this.foePanel.add(text)
   }
 
   /**
@@ -1269,6 +1310,10 @@ export class BattleScene extends Phaser.Scene {
     }
     if (event.type === 'attack') this.showAttack(event)
     if (event.type === 'cast') this.showCast(event)
+    if (event.type === 'ability') this.showAbility(event)
+    // What a foe's counters read changes as events play; the panel returns when playback ends.
+    this.foePanel.removeAll(true)
+    this.foeInfo = []
     if (event.type === 'status_tick') {
       const unit = this.units.get(event.unit)!
       this.flash(unit, HURT_TINT)
@@ -1280,7 +1325,11 @@ export class BattleScene extends Phaser.Scene {
       this.flash(unit, HELPED_TINT)
       this.refreshHpDisplay(unit, event.hpAfter, this.engine.getState().units.find((u) => u.id === event.unit)!.maxHp)
     }
-    if (event.type === 'cast' || event.type === 'status_end' || event.type === 'status_tick' || event.type === 'unit_down') {
+    if (
+      event.type === 'cast' ||
+      event.type === 'ability' ||
+      (event.type === 'attack' && event.status) ||
+      event.type === 'status_end' || event.type === 'status_tick' || event.type === 'unit_down') {
       this.refreshAllStatusMarks()
     }
     if (event.type === 'unit_down') this.showFallen(event.unit)
@@ -1357,11 +1406,67 @@ export class BattleScene extends Phaser.Scene {
         else if (outcome.unit !== event.caster) this.dodge(outcome.unit, event.caster)
         this.refreshHpDisplay(unit, outcome.hpAfter, units.find((u) => u.id === outcome.unit)!.maxHp)
       }
+      if (event.drained > 0) {
+        const drinker = this.units.get(event.caster)!
+        this.refreshHpDisplay(drinker, drinker.shownHp + event.drained, units.find((u) => u.id === event.caster)!.maxHp)
+        this.flash(drinker, HELPED_TINT)
+      }
     }
     this.time.delayedCall(RELEASE_MS, () => {
       if (event.distance === 0) land()
       else this.flyMissile(this.chest(event.caster), this.hexChest(event.at, event.outcomes), flightMs(event.distance), look, land)
     })
+  }
+
+  /**
+   * An area ability: the unit turns and gestures; a burst aimed away flies its
+   * missile to where it was aimed, a cone or line flashes out from the unit.
+   * Where it lands every hex lights and each unit touched shows how it fared:
+   * a hit or half damage hurts, a clean miss dodges, an image shows white.
+   */
+  private showAbility(event: Extract<BattleEvent, { type: 'ability' }>): void {
+    this.faceUnit(event.unit, event.facing)
+    const units = this.engine.getState().units
+    const look = abilityLook(event.ability)
+    this.units.get(event.unit)!.figure.pulseOutline(look.colour, RELEASE_MS + 200)
+    const area = event.hexes.filter((h) => this.board.contains(h))
+    const land = () => {
+      this.flashArea(area, look.colour)
+      this.abilityImpact(event, look, area)
+      for (const outcome of event.outcomes) {
+        const outline = areaOutline(outcome)
+        if (outcome.image) this.react(outcome.unit, event.unit, OUTLINE_IMAGE, IMAGE_TINT)
+        else if (outline !== null) this.react(outcome.unit, event.unit, outline, HURT_TINT, outcome.critical)
+        else if (outcome.unit !== event.unit) this.dodge(outcome.unit, event.unit)
+        this.refreshHpDisplay(this.units.get(outcome.unit)!, outcome.hpAfter, units.find((u) => u.id === outcome.unit)!.maxHp)
+      }
+    }
+    this.time.delayedCall(RELEASE_MS, () => {
+      // A cone or line has no missile: it sweeps out from the unit, then lands.
+      if (event.shape !== 'burst') this.time.delayedCall(AREA_SWEEP_MS, land)
+      else if (event.distance === 0) land()
+      else this.flyMissile(this.chest(event.unit), this.hexChest(event.at, event.outcomes), flightMs(event.distance), look, land)
+    })
+  }
+
+  /** What an area ability shows where it lands, as `spellImpact` does for a spell. */
+  private abilityImpact(event: Extract<BattleEvent, { type: 'ability' }>, look: SpellLook, area: readonly Hex[]): void {
+    const touched = event.outcomes.filter((o) => !o.image).map((o) => o.unit)
+    switch (look.impact) {
+      case 'burst':
+        if (event.shape === 'burst') this.burst(this.hexChest(event.at, event.outcomes), look.colour, look.glow, 2.5)
+        else for (const h of area) this.burst(boardHexCenter(h), look.colour, look.glow, 1.2)
+        break
+      case 'cloud':
+        for (const h of area) this.cloud(boardHexCenter(h), look.colour, look.glow)
+        break
+      case 'sparkle':
+        for (const id of touched) this.sparkle(id, look.colour, look.glow)
+        break
+      case 'ring':
+        for (const id of touched) this.ring(id, look.colour)
+        break
+    }
   }
 
   /** What a spell shows where it lands: a burst at its aim, a cloud over its hexes, or sparkles or a ring on each unit it touched. */
@@ -1631,6 +1736,7 @@ export class BattleScene extends Phaser.Scene {
     }
     this.refreshAllStatusMarks()
     this.refreshAllApPips()
+    this.refreshFoeInfo()
     this.column.refresh(this.activeIndex())
   }
 

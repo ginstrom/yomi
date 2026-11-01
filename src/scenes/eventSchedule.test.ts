@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { AttackEvent, BattleEvent, EndTurnEvent, MoveEvent } from '../engine/battleEngine.ts'
+import type { AbilityEvent, AttackEvent, BattleEvent, EndTurnEvent, MoveEvent } from '../engine/battleEngine.ts'
 import type { Hex } from '../grid/hex.ts'
+import { holdMs } from './battleEffects.ts'
 import { scheduleEvents } from './eventSchedule.ts'
 
 const TIMING = { moveStepMs: 140, opportunityPauseMs: 450 }
@@ -111,5 +112,18 @@ describe('scheduleEvents', () => {
       { at: 200, cues: [show(end)] },
     ])
     expect(totalMs).toBe(200)
+  })
+})
+
+describe('scheduleEvents with an area ability', () => {
+  it('holds a fall until the ability has landed', () => {
+    const ability: AbilityEvent = {
+      type: 'ability', seq: seq++, round: 1, unit: 'salamander', ability: 'fire_spit', at: { q: 2, r: 0 }, shape: 'cone',
+      hexes: [], distance: 2, apCost: 4, apAfter: 4, facing: 0, skill: 70, outcomes: [],
+    }
+    const down: BattleEvent = { type: 'unit_down', seq: seq++, round: 1, unit: 'hero' }
+    const { beats } = scheduleEvents([ability, down], { ...TIMING, holdMs })
+    expect(holdMs(ability)).toBeGreaterThan(0)
+    expect(beats.map((b) => b.at)).toEqual([0, holdMs(ability)])
   })
 })

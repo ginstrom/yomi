@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { AttackEvent, BattleEvent, CastEvent } from '../engine/battleEngine.ts'
+import type { AbilityEvent, AttackEvent, BattleEvent, CastEvent } from '../engine/battleEngine.ts'
 import {
+  ABILITY_LOOKS,
+  AREA_SWEEP_MS,
   OUTLINE_CRITICAL,
   OUTLINE_HEALED,
   OUTLINE_HELPED,
@@ -9,6 +11,8 @@ import {
   RELEASE_MS,
   SETTLE_MS,
   SWING_IMPACT_MS,
+  abilityLook,
+  areaOutline,
   attackLook,
   castOutline,
   flightMs,
@@ -32,6 +36,15 @@ function cast(distance: number): CastEvent {
     apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76, outcomes: [], drained: 0,
   }
 }
+
+function ability(shape: 'burst' | 'cone' | 'line', distance: number): AbilityEvent {
+  return {
+    type: 'ability', seq: 0, round: 1, unit: 'salamander', ability: 'fire_spit', at: { q: 2, r: 0 }, shape, hexes: [],
+    distance, apCost: 4, apAfter: 4, facing: 0, skill: 70, outcomes: [],
+  }
+}
+
+const struck = { hit: false, critical: false, image: false, half: false, damage: 0 }
 
 describe('attackLook', () => {
   it('swings a blow and shoots an arrow or, from a wand, a bolt', () => {
@@ -67,5 +80,29 @@ describe('castOutline', () => {
     expect(castOutline('fireball', { hit: true, image: true })).toBe(OUTLINE_IMAGE)
     expect(castOutline('heal', { hit: true })).toBe(OUTLINE_HEALED)
     expect(castOutline('bless', { hit: true })).toBe(OUTLINE_HELPED)
+  })
+})
+
+describe('an area ability', () => {
+  it('lands a burst aimed away after its missile flies, and a cone or line after a sweep', () => {
+    expect(impactMs(ability('burst', 3))).toBe(RELEASE_MS + flightMs(3))
+    expect(impactMs(ability('burst', 0))).toBe(RELEASE_MS)
+    expect(impactMs(ability('cone', 2))).toBe(RELEASE_MS + AREA_SWEEP_MS)
+    expect(impactMs(ability('line', 4))).toBe(RELEASE_MS + AREA_SWEEP_MS)
+    expect(holdMs(ability('cone', 2))).toBe(RELEASE_MS + AREA_SWEEP_MS + SETTLE_MS)
+  })
+
+  it('has a look for each area ability, and a fallback', () => {
+    expect(ABILITY_LOOKS.fire_spit?.impact).toBe('burst')
+    expect(abilityLook('spider_web')).toBe(ABILITY_LOOKS.spider_web)
+    expect(abilityLook('troll_claws').missile).toBe('orb')
+  })
+
+  it('outlines a hit, a critical, half damage and an image, and nothing for a clean miss', () => {
+    expect(areaOutline({ ...struck, hit: true, damage: 9 })).toBe(OUTLINE_HURT)
+    expect(areaOutline({ ...struck, hit: true, critical: true, damage: 9 })).toBe(OUTLINE_CRITICAL)
+    expect(areaOutline({ ...struck, half: true, damage: 4 })).toBe(OUTLINE_HURT)
+    expect(areaOutline(struck)).toBeNull()
+    expect(areaOutline({ ...struck, hit: true, image: true })).toBe(OUTLINE_IMAGE)
   })
 })

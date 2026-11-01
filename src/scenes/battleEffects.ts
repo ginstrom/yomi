@@ -1,3 +1,4 @@
+import type { AbilityId } from '../combat/abilities.ts'
 import { SPELLS, type SpellId } from '../combat/spells.ts'
 import type { BattleEvent } from '../engine/battleEngine.ts'
 import type { ItemIcon } from '../inventory/inventory.ts'
@@ -72,6 +73,19 @@ export const SPELL_LOOKS: Record<SpellId, SpellLook> = {
   dark_shield: { ...SUPPORT, colour: 0x283593, glow: 0x7986cb },
 }
 
+/** The area abilities' looks; a routine has none, as its strikes are blows. */
+export const ABILITY_LOOKS: Partial<Record<AbilityId, SpellLook>> = {
+  spider_web: { colour: 0xbdbdbd, glow: 0xeeeeee, missile: 'orb', impact: 'ring' },
+  fire_spit: { ...FIRE, impact: 'burst' },
+}
+
+const ABILITY_FALLBACK: SpellLook = { colour: 0xe0e0e0, glow: 0xffffff, missile: 'orb', impact: 'ring' }
+
+/** How an area ability looks. */
+export function abilityLook(ability: AbilityId): SpellLook {
+  return ABILITY_LOOKS[ability] ?? ABILITY_FALLBACK
+}
+
 /** From the start of a swing to the blow landing: the wind-up, then the cut. */
 export const SWING_IMPACT_MS = 130
 /** A shot's draw or a cast's gesture before the missile leaves. */
@@ -79,6 +93,8 @@ export const RELEASE_MS = 60
 /** A missile's flight: a moment to leave, then so long a hex. */
 export const FLIGHT_BASE_MS = 90
 export const FLIGHT_PER_HEX_MS = 45
+/** A cone or line has no missile; it sweeps out from the unit in about this long. */
+export const AREA_SWEEP_MS = 120
 
 /** How long a missile takes to cross `hexes`. */
 export function flightMs(hexes: number): number {
@@ -93,6 +109,10 @@ export function flightMs(hexes: number): number {
 export function impactMs(event: BattleEvent): number {
   if (event.type === 'attack') return event.distance <= 1 ? SWING_IMPACT_MS : RELEASE_MS + flightMs(event.distance)
   if (event.type === 'cast') return RELEASE_MS + (event.distance === 0 ? 0 : flightMs(event.distance))
+  if (event.type === 'ability') {
+    if (event.shape !== 'burst') return RELEASE_MS + AREA_SWEEP_MS
+    return RELEASE_MS + (event.distance === 0 ? 0 : flightMs(event.distance))
+  }
   return 0
 }
 
@@ -119,4 +139,11 @@ export function castOutline(spell: SpellId, outcome: { hit: boolean; critical?: 
   if (!hostile) return school === 'healing' ? OUTLINE_HEALED : OUTLINE_HELPED
   if (!outcome.hit) return null
   return outcome.critical ? OUTLINE_CRITICAL : OUTLINE_HURT
+}
+
+/** The outline for an area ability's outcome on one unit: a hit or half damage hurts, a clean miss shows nothing. */
+export function areaOutline(outcome: { hit: boolean; critical?: boolean; image?: boolean; half?: boolean; damage: number }): number | null {
+  if (outcome.image) return OUTLINE_IMAGE
+  if (outcome.hit) return outcome.critical ? OUTLINE_CRITICAL : OUTLINE_HURT
+  return outcome.half && outcome.damage > 0 ? OUTLINE_HURT : null
 }

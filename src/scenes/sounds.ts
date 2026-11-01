@@ -71,6 +71,16 @@ export function eventSounds(event: BattleEvent): SoundCue[] {
         { key: outcome, delayMs: impactMs(event) },
       ]
     }
+    case 'ability': {
+      // A miss that still burns for half is heard to strike.
+      const struck = event.outcomes.filter((o) => (o.hit || (o.half && o.damage > 0)) && !o.image)
+      const outcome: SoundKey =
+        struck.length === 0 ? 'sfx_miss' : struck.some((o) => o.critical) ? 'sfx_crit_impact' : 'sfx_hit_impact'
+      return [
+        { key: 'sfx_spell_cast', delayMs: 0 },
+        { key: outcome, delayMs: impactMs(event) },
+      ]
+    }
     case 'status_tick':
       return [{ key: 'sfx_hit_impact', delayMs: 0 }]
     case 'regenerate':

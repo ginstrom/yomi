@@ -182,3 +182,13 @@ export interface AbilityEvent extends EventBase {
 - [ ] The index's step 06 row set to `done` with the commit, and the execution record below filled in.
 
 ## Execution record
+
+Engineer: Sonnet 5.5.
+
+- Built `foeInfo.ts` (C8 as written), `ABILITY_LOOKS`/`abilityLook`/`areaOutline`/`AREA_SWEEP_MS` in `battleEffects.ts`, `impactMs` and `eventSounds` for `'ability'`, `BattleScene.showAbility`/`abilityImpact`, the foe panel (`foePanel`, `refreshFoeInfo`) and `BattleProbe.foeInfo`. `eventSchedule.ts` needed no change (a test covers the hold).
+- A routine's strikes already played as successive attacks through `showAttack`; the only addition is that an attack carrying a `status` refreshes the status marks.
+- Drain Life: the caster's nameplate now gains `CastEvent.drained` when the cast lands. The unit tracks `shownHp` (what its plate shows) for this, since the engine's state is ahead of playback.
+- Panel: cleared as each event plays, redrawn by `syncUnitsFromEngine` when playback ends and by `refreshHover`; kept on the board (flips to the foe's left).
+- Tests: domain `foeInfo`, `battleEffects` (impact, look, outline), `sounds` (hit, critical, half-damage miss, clean miss), `eventSchedule` (fall held for the ability). `make test`: 71 files, 956 tests pass. Browser: new `debug.test.ts` test (`fight troll_lair 4`, hover Troll -> `['Claws: ready']`, hover a hero -> `[]`, end turn, wait for round 2) passes; `e2e/battle.test.ts` 11/11 pass alone. Run together with `debug.test.ts`, one battle test failed in `Game.open` (driver.ts:38) under load; it passes alone.
+- Departures: none. `BattleScene.test.ts` is a registration smoke test only, so no scene-level playback test was added; the playback of an `AbilityEvent` was not seen in a browser (no unit has an area ability until step 08).
+

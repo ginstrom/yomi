@@ -277,6 +277,8 @@ export interface BattleProbe {
   spellMenu: Array<Point & { spell: SpellId; enabled: boolean }> | null
   /** The lines of the victory or defeat screen; empty until the battle is over. */
   result: string[]
+  /** The lines of the foe info panel shown beside the hovered foe now (`foeInfoLines`); empty when none shows. */
+  foeInfo: string[]
   party: PortraitProbe[]
   /** Each hero's figure's sprites, bottom first in drawing order (`UnitFigure.lookNames`); foes have no entry. */
   looks: Record<UnitId, string[]>

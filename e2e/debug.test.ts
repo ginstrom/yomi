@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { koboldScouts } from '../src/game/encounters.ts'
 import { partyFighters, readyMadeParty } from '../src/game/party.ts'
-import { useGames, type Game } from './driver.ts'
+import { battleHexOnScreen, useGames, type Game } from './driver.ts'
 
 /** Types a line at the open console and presses Enter. */
 async function command(game: Game, line: string): Promise<void> {
@@ -73,5 +73,27 @@ describe('the debug console', () => {
     const after = await game.waitFor('World')
     expect(after.world.locations.map((l) => l.id)).toEqual(before.world.locations.map((l) => l.id))
     expect(after.world.blight).toEqual(before.world.blight)
+  })
+
+  it('shows a foe with abilities its ability list on hover, and nothing over a hero, through the foe\'s turn', async () => {
+    const game = await games.open()
+    await game.newGame()
+    await game.press('Shift+Backquote')
+    await command(game, 'fight troll_lair 4')
+    await game.waitForScenes(['Battle'])
+    await game.press('Escape')
+    const battle = await game.waitFor('Battle', (b) => b.playerControl)
+    const troll = battle.state.units.find((u) => u.side === 'enemy' && u.abilities?.includes('troll_claws'))!
+    const hero = battle.state.units.find((u) => u.side === 'player')!
+
+    await game.hover(battleHexOnScreen(battle, troll.position))
+    await game.waitFor('Battle', (b) => b.foeInfo.length === 1)
+    expect((await game.waitFor('Battle')).foeInfo).toEqual(['Claws: ready'])
+    await game.hover(battleHexOnScreen(battle, hero.position))
+    await game.waitFor('Battle', (b) => b.foeInfo.length === 0)
+
+    // The foe's turn plays whatever the troll does (a move, or a routine of two claws) without a console error.
+    await game.click(battle.buttons.endTurn)
+    await game.waitFor('Battle', (b) => b.playerControl && b.state.round >= 2)
   })
 })
