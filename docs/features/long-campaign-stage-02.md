@@ -36,7 +36,19 @@ Large, but the architecture and design are already done: the stage design cuts f
 
 ## Open questions
 
-None yet. Stage 1's play script is still for the user to walk.
+None blocking. Stage 2 is implemented and verified at 8a71916 (26 commits from 0c7cf2e, nothing pushed).
+
+## Pending for the user (recorded 2026-11-01, user on a break; resume with `/orchestrator long-campaign-stage-02`)
+
+Decisions:
+1. **Push / PR.** Whether to push `armor-resistance` and open a PR. If a PR: run `pr-reviewer` on the branch first (it can reuse QA's screenshots in `.git/pr-review/armor-resistance/evidence/`, prefixed `qa-` and `qa2-`), then `pr-creator`. Both need the user's go-ahead before anything is pushed or opened.
+2. **Next stage.** After stage 2, the stages index (`docs/designs/long-campaign/index.md`) allows stage 3 (gear families, needs 1) or stage 5 (company of one, independent track). Its listed order puts stage 3 next.
+3. **Cosmetic, optional:** the Salamander's walk tail flicks rather than sways; cone/line area attacks flash all at once rather than sweeping. Left as is unless the user wants them changed.
+
+Work only the user can do:
+4. **Walk stage 2's play script by hand** (design §6): `make dev`, then the debug console (`~`): `fight salamander_pool 5` with `xp`, `fight spider_nest 5`, a Troll Lair, and a save and reload mid-battle. Automated browser scripts and QA have covered every item, including the spread-out aim and a retarget, but not by hand.
+5. **Walk stage 1's play script** (still outstanding from stage 1).
+6. **Not yet seen live:** a critical hit against a ward, which should log "(CRITICAL, warded N)" (unit-tested).
 
 ## Model tiers
 
