@@ -42,8 +42,9 @@ export const FLANK_BONUS_PER_ALLY = 10
  * Which way a defender is struck from, relative to its facing: its three
  * front hexes, the two beside its back, or straight behind it. A shot from
  * further off strikes the arc of the neighbouring hex it comes in over. A
- * defender struck in its side or rear turns to meet the blow first, if it
- * has not already turned this enemy turn (`turnReady`).
+ * defender struck in its side or rear by a melee weapon turns to meet the
+ * blow first, if it has not already turned this enemy turn (`turnReady`); a
+ * shot or a spell gives it no turn.
  */
 export type Arc = 'front' | 'side' | 'rear'
 
@@ -148,7 +149,7 @@ export interface UnitSnapshot extends CombatantStats {
   mana: number
   /** Whether the unit can still make a free attack this enemy turn. */
   reactionReady: boolean
-  /** Whether the unit can still turn to meet an attack on its side or rear this enemy turn. */
+  /** Whether the unit can still turn to meet a melee attack on its side or rear this enemy turn. */
   turnReady: boolean
   /** The lasting effects on it, in the order laid. Its stats here are as it was born to the battle; `effectiveStats` adds these. */
   statuses: ActiveStatus[]
@@ -497,11 +498,16 @@ export function attackArc(defender: Pick<UnitSnapshot, 'position' | 'facing'>, f
 }
 
 /**
- * The arc an attack from `from` will strike: the front, if the defender can
- * still turn to meet it; otherwise the arc it is struck in as it stands.
+ * The arc an attack from `from` with a weapon of `attackRange` will strike:
+ * the front, if it is a melee blow the defender can still turn to meet;
+ * otherwise the arc it is struck in as it stands.
  */
-export function arcStruck(defender: Pick<UnitSnapshot, 'position' | 'facing' | 'turnReady'>, from: Hex): Arc {
-  return defender.turnReady ? 'front' : attackArc(defender, from)
+export function arcStruck(
+  defender: Pick<UnitSnapshot, 'position' | 'facing' | 'turnReady'>,
+  from: Hex,
+  attackRange: number,
+): Arc {
+  return defender.turnReady && attackRange === 1 ? 'front' : attackArc(defender, from)
 }
 
 /** Whether the unit has `status` in force. */
@@ -584,7 +590,7 @@ export function castTouches<U extends Placed>(units: readonly U[], caster: Place
  * An attack gains a to-hit bonus for each other ally adjacent to the
  * defender, and another for striking the defender's side or rear: units
  * face the way they last stepped or struck, and once each enemy turn a
- * defender turns to meet a blow on its side or rear. Every standing unit
+ * defender turns to meet a melee blow on its side or rear. Every standing unit
  * with a melee weapon exerts a zone of control over its neighbouring hexes:
  * a foe stepping out of one, not merely to another hex beside it, provokes
  * a free attack, at most one per unit per enemy turn.
@@ -785,7 +791,7 @@ export class BattleEngine {
     if (actor.ap < actor.stats.attackApCost || !this.canAttack(actor, foe)) return null
     const flankers = flankersOf(this.units, actor, foe)
     const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
-    const arc = arcStruck(foe, actor.position)
+    const arc = arcStruck(foe, actor.position, actor.stats.attackRange)
     const arcBonus = ARC_BONUS[arc]
     const helpless = hasStatus(foe, 'asleep') ? HELPLESS_BONUS : 0
     const attacker = effectiveStats(actor)
@@ -1166,12 +1172,14 @@ export class BattleEngine {
 
   /**
    * Resolves an attack already paid for; an `apCost` of null marks a free
-   * attack. A defender struck in its side or rear turns to face the attacker
-   * first if it still can, whether the blow then lands or not.
+   * attack. A defender struck in its side or rear by a melee weapon turns to
+   * face the attacker first if it still can, whether the blow then lands or
+   * not; a shot gives it no turn.
    */
   private attack(actor: UnitRecord, target: UnitRecord, apCost: number | null): BattleEvent[] {
     actor.facing = hexDirectionTowards(actor.position, target.position)!
-    const defenderTurned = target.turnReady && attackArc(target, actor.position) !== 'front'
+    const defenderTurned =
+      target.turnReady && actor.stats.attackRange === 1 && attackArc(target, actor.position) !== 'front'
     if (defenderTurned) {
       target.facing = hexDirectionTowards(target.position, actor.position)!
       target.turnReady = false

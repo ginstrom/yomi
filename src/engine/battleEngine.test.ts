@@ -459,27 +459,27 @@ describe('BattleEngine ranged attacks', () => {
     expect(unitOf(engine, 'archer').ap).toBe(ARCHER_STATS.actionPoints - ARCHER_STATS.attackApCost)
   })
 
-  it('gains the rear bonus for a shot into the back of a foe that has already turned', () => {
-    // The first archer, west of the goblin, makes it turn; the second then shoots it from the east.
-    const engine = new BattleEngine(
-      setup([
-        { ...ARCHER, position: hex(0, 1) },
-        { ...ARCHER, id: 'archer2', position: hex(5, 1) },
-        { ...GOBLIN, position: hex(3, 1), facing: EAST },
-      ]),
-      { rng: sequence([FUMBLE, ROLL_7]) },
-    )
-    expect(engine.previewAttack('archer', 'goblin')).toMatchObject({ arc: 'front', arcBonus: 0 })
-    const [turned] = engine.step(SHOOT_GOBLIN) as [AttackEvent]
-    expect(turned).toMatchObject({ defenderTurned: true, defenderFacing: WEST, arc: 'front' })
-    expect(engine.previewAttack('archer2', 'goblin')).toMatchObject({ arc: 'rear', arcBonus: ARC_BONUS.rear })
-    const [attack] = engine.step({ type: 'attack', unit: 'archer2', target: 'goblin' }) as [AttackEvent]
+  it('gains the rear bonus for a shot into a foe’s back, which gives it no turn', () => {
+    const engine = new BattleEngine(setup([ARCHER, { ...GOBLIN, position: hex(4, 1), facing: EAST }]), {
+      rng: sequence([ROLL_7]),
+    })
+    expect(unitOf(engine, 'goblin').turnReady).toBe(true)
+    expect(engine.previewAttack('archer', 'goblin')).toMatchObject({ arc: 'rear', arcBonus: ARC_BONUS.rear })
+    const [attack] = engine.step(SHOOT_GOBLIN) as [AttackEvent]
     expect(attack).toMatchObject({
       defenderTurned: false,
+      defenderFacing: EAST,
       arc: 'rear',
       chance: ARCHER_STATS.toHit + ARC_BONUS.rear - GOBLIN.stats.ac,
       hit: true,
     })
+    expect(unitOf(engine, 'goblin')).toMatchObject({ facing: EAST, turnReady: true })
+  })
+
+  it('gives no turn against a ranged weapon even from the next hex', () => {
+    const engine = new BattleEngine(setup([ARCHER, { ...GOBLIN, facing: EAST }]), { rng: sequence([FUMBLE]) })
+    expect(engine.previewAttack('archer', 'goblin')).toMatchObject({ arc: 'rear' })
+    expect(engine.step(SHOOT_GOBLIN)[0]).toMatchObject({ defenderTurned: false, arc: 'rear' })
   })
 
   it('counts allies beside the target as flankers for a shot', () => {
@@ -673,20 +673,18 @@ describe('BattleEngine facing', () => {
     expect(unitOf(engine, 'goblin').turnReady).toBe(false)
   })
 
-  it('turns a miss into a hit when striking a back that can no longer turn', () => {
+  it('turns a miss into a hit when shooting into a back', () => {
     const attack = (warriorFacing: number) => {
-      // The goblin archer's shot from the far west comes first: from in front, or turning the warrior to face it.
+      // The goblin archer shoots from the far west.
       const engine = new BattleEngine(
         setup([
           { ...WARRIOR, position: hex(3, 1), facing: warriorFacing },
-          { ...GOBLIN, position: hex(4, 1) },
           { ...GOBLIN2, position: hex(0, 1), stats: { ...GOBLIN_STATS, attackRange: 3 } },
         ]),
-        { rng: sequence([FUMBLE, ROLL_10, 0]) },
+        { rng: sequence([ROLL_10, 0]) },
       )
       engine.step(END_TURN)
-      engine.step({ type: 'attack', unit: 'goblin2', target: 'warrior' })
-      return engine.step(ATTACK_WARRIOR)[0] as AttackEvent
+      return engine.step({ type: 'attack', unit: 'goblin2', target: 'warrior' })[0] as AttackEvent
     }
     expect(attack(WEST)).toMatchObject({ arc: 'front', arcBonus: 0, attackRoll: 55, chance: 45, hit: false })
     expect(attack(EAST)).toMatchObject({ arc: 'rear', arcBonus: ARC_BONUS.rear, chance: 55, hit: true })

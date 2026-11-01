@@ -195,7 +195,7 @@ function expectedHarm(state: BattleState, self: UnitSnapshot, target: UnitSnapsh
   const defender = effectiveStats({ stats: target, statuses: target.statuses })
   const bonus =
     flankersOf(state.units, self, target).length * FLANK_BONUS_PER_ALLY +
-    ARC_BONUS[arcStruck(target, self.position)] +
+    ARC_BONUS[arcStruck(target, self.position, self.attackRange)] +
     (hasStatus(target, 'asleep') ? HELPLESS_BONUS : 0)
   const { count, sides, bonus: flat } = attacker.damage
   const averageHit = damageThrough(count * ((sides + 1) / 2) + flat, effectiveResistance(attacker, defender.resistance ?? 0))
