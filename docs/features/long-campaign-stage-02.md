@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 2 (special attacks and elements)
 
 **Slug:** long-campaign-stage-02
-**Phase:** 3. Planning
+**Phase:** 4. Implementation
 
 ## Request (user's words)
 
@@ -13,7 +13,7 @@ The plan is the long campaign's stages (`docs/designs/long-campaign/index.md`); 
 
 - Stages overview: `docs/designs/long-campaign/index.md`
 - Design: `docs/designs/long-campaign/stage-02-special-attacks-and-elements.md` (status "ready for planning"; the stage designs were written and committed with the user, 9c740ae)
-- Plan: `docs/implementation-plans/long-campaign-stage-02/index.md` (to be written)
+- Plan: `docs/implementation-plans/long-campaign-stage-02/index.md` (9 steps, e00b2fa)
 - Branch: `armor-resistance` (current; CLAUDE.md says commit on the current branch)
 
 ## Path
@@ -26,6 +26,7 @@ Large, but the architecture and design are already done: the stage design cuts f
 |---|---|---|---|---|
 | 2026-11-01 | Next stage is stage 2 | orchestrator | stage 5 (independent track) | The index's order puts foes and gear first; user said "the next stage" |
 | 2026-11-01 | Skip architecture and design; the stage design is the approved design | orchestrator | new brief/design | Stage design marked ready for planning, written with the user |
+| 2026-11-01 | Accept the plan's corrections, notably: Troll routine is 8 AP (two 4-AP claws) to keep the design's "same expected damage"; spider Web is a recharging area ability; new nests don't spawn; hero spell policy unchanged | orchestrator | take to user | Each resolves a contradiction in the design or follows its stated intent; flagged to the user in the report |
 | 2026-11-01 | Guard re-measured at the start of the stage | orchestrator | — | Index convention; fdc0593 and 51cecb5 (free attacks, defender turning) changed battle rules after stage 1's 238 |
 
 ## Open questions
@@ -35,7 +36,16 @@ None yet. Stage 1's play script is still for the user to walk.
 ## Model tiers
 
 - Planner: opus (engine, policy, scene, art, balance)
-- Steps: assigned after the plan
+- Step 01 baseline measurement: engineer sonnet, reviewer sonnet
+- Step 02 area shapes: engineer sonnet, reviewer sonnet
+- Step 03 elements, wards, monster spells: engineer opus, reviewer opus
+- Step 04 routines, recharge, Troll: engineer opus, reviewer opus
+- Step 05 area attacks, policy: engineer opus, reviewer opus
+- Step 06 scene and foe info panel: engineer sonnet, reviewer opus
+- Step 07 sprites: engineer opus, reviewer opus (visual judgement)
+- Step 08 kinds, nests, map: engineer sonnet, reviewer sonnet
+- Step 09 tune and document: engineer opus, reviewer opus
+- Overall review: opus
 
 ## Verification
 
