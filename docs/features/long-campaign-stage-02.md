@@ -27,6 +27,11 @@ Large, but the architecture and design are already done: the stage design cuts f
 | 2026-11-01 | Next stage is stage 2 | orchestrator | stage 5 (independent track) | The index's order puts foes and gear first; user said "the next stage" |
 | 2026-11-01 | Skip architecture and design; the stage design is the approved design | orchestrator | new brief/design | Stage design marked ready for planning, written with the user |
 | 2026-11-01 | Accept the plan's corrections, notably: Troll routine is 8 AP (two 4-AP claws) to keep the design's "same expected damage"; spider Web is a recharging area ability; new nests don't spawn; hero spell policy unchanged | orchestrator | take to user | Each resolves a contradiction in the design or follows its stated intent; flagged to the user in the report |
+| 2026-11-01 | Spider Nest becomes threat-5 only (band 5–5) | user | three foes at 4 and 5; leave trivial at 4 | No map place fights it at 4; stage 9 can widen it |
+| 2026-11-01 | Fix the AI's Fireball counting a fully-warded foe toward its two-foe rule (overrides plan correction 13) | user | leave for stage 4/12 | 475 of 1484 pool Fireballs hit only the Salamander for 0 |
+| 2026-11-01 | Accept nest balance (spider 451, pool 470 of 500 at threat 5) and guard 248 (+5) | user | tune harder | Fair by the bandit cells' standard; move explained |
+| 2026-11-01 | The foe hover panel gives each ability a short description (what it does, reach/area, damage or effect, recharge) — a change to the approved design's tooltip | user | names only | Simulated user learned Fire Spit and Web only by being hit |
+| 2026-11-01 | Retune the Salamander Pool to about 445–470 of 500 after the Fireball fix took it to 493 | user | accept 493 | Keep it in the bandit cells' fair range |
 | 2026-11-01 | Guard re-measured at the start of the stage | orchestrator | — | Index convention; fdc0593 and 51cecb5 (free attacks, defender turning) changed battle rules after stage 1's 238 |
 
 ## Open questions
