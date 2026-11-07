@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 3 (gear families and the first two tiers)
 
 **Slug:** long-campaign-stage-03
-**Phase:** 6. Report — verified; decisions with the user
+**Phase:** 6. Report — done; PR #4 open (stacked on #3)
 
 ## Request (user's words)
 
@@ -68,3 +68,6 @@ None yet.
 - Fix round 1 (engineer opus): attack-click walk, panel overflow, spell skill on the Spells tab, workshop labels, typo, doc nits, ground tint, Crossbowman draft. Done: d16bcf9 + 19cb30d (planAttack no longer walks without its attack; the approach fallback dated from d0efd10, before stage 3; stage 3's 7 AP halberd and the bow's walk-to-adjacent made it bite), aa402c4 (panel layout), c853a59 (Spells tab spell skill), 86dfc3d (modifier buttons name only; detail in the preview), 5d478c6 (Crossbowman draft spread), 2fc0b21 (ground tint), 4c70df4 (docs), 78eb58a (manual screenshots). The "iten" typo is not in the repository (the text reads "an item"); the stale modifier list is the deliberate next-tick redraw, one frame. Checks: npm test 1060, build, sprites:check, browser 84/84.
 - Fix round 1 re-review (opus) at HEAD: clean; npm test 1060, browser 84/84 (4 load timeouts on a concurrent run passed on rerun). Open for the user: a click on an unreachable foe is now silent (faded swords only), sharpest when a weapon costs more AP than the unit ever has; reviewer recommends a hint. Pre-existing: the battle hint line cut at 840 wide.
 - Hint and warning (adcbca9, sonnet; review sonnet: blocking, hint stayed when moving onto a button; fixed 874789e). Orchestrator viewed both at 840x560.
+- PR stack fixed: #2 had merged into encampment-gear-and-resistance after #1 went to main, so its work wasn't on main; reopened as #3 (armor-resistance -> main), user's choice.
+- pr-reviewer at d9a464a: ready. CRISP-predicted nits fixed (e7ce4e9, 275a9f4, d9a464a; a broken intermediate commit squashed); two dismissed (simulator buys dearest, as designed; bandit gear ids, test-covered). Record .git/pr-review/long-campaign-stage-03.md.
+- PR #4 https://github.com/ginstrom/yomi/pull/4 (long-campaign-stage-03 -> armor-resistance), ready for review.
