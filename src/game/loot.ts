@@ -26,12 +26,14 @@ export const FAVOURED_CHANCE = 0.5
 
 /** The highest threat that may yield nothing, and rolls rank 1 only. */
 const LOW_THREAT = 3
+/** The chance that a battle at a low threat yields a rune at all. */
+export const LOW_THREAT_DROP_CHANCE = 0.5
 const RANK_ONE_CHANCE = 0.7
 
 /** The runes a won battle at `threat` against `encounter` yields. */
 export function rollRunes(threat: number, encounter: EncounterId, rng: RNG): RuneKey[] {
   const low = threat <= LOW_THREAT
-  if (low && !(rng() < 0.5)) return []
+  if (low && rng() >= LOW_THREAT_DROP_CHANCE) return []
   const favoured = FAVOURED_RUNES[encounter]
   const id = favoured && rng() < FAVOURED_CHANCE ? favoured : RUNE_IDS[Math.floor(rng() * RUNE_IDS.length)]
   const rank = low || rng() < RANK_ONE_CHANCE ? 1 : 2
