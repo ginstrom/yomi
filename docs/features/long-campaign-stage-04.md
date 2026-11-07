@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 4 (runes)
 
 **Slug:** long-campaign-stage-04
-**Phase:** 6. Report — done; ready for PR (not opened)
+**Phase:** 6. Report — done; PR #5 opened (stacked on #4)
 
 ## Request (user's words)
 
