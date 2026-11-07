@@ -983,8 +983,8 @@ export class BattleEngine {
    * side's statuses' damage, unit by unit in roster order, which may fell
    * units and end the battle before the side acts; then the side's units that
    * still stand regenerate, in roster order, those whose statuses allow it;
-   * then, if the battle goes on, a round comes off what the side's standing
-   * units have recharging, a sleeper's included.
+   * then a round comes off what the side's standing units have recharging, a
+   * sleeper's included (done whether or not the battle has just ended).
    */
   private startTurn(side: Side): BattleEvent[] {
     this.phase = side
