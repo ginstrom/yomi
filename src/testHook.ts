@@ -7,6 +7,7 @@ import type { SpellId } from './combat/spells.ts'
 import type { BattleEvent, BattleState, UnitId } from './engine/battleEngine.ts'
 import type { FacilityId } from './game/encampment.ts'
 import type { WorldState } from './game/worldMap.ts'
+import type { FamilyId } from './inventory/catalog.ts'
 import type { EquipmentSlot } from './inventory/inventory.ts'
 import type { Point } from './scenes/boardGeometry.ts'
 import type { Rect } from './scenes/mapScroll.ts'
@@ -207,6 +208,12 @@ export interface TradingPostProbe {
    * (`baggage:<index>`, `pack:<member>:<index>`) or `material:<material>`; a click shows its details.
    */
   rows: Array<ButtonProbe & { id: string; kind: 'item' | 'material'; price: number }>
+  /** The Buy tab's filter: the slot shown and the family, null for all of the slot. Sell is not filtered. */
+  filter: { slot: EquipmentSlot; family: FamilyId | null }
+  /** One for each slot the post sells for, in the order mainHand, offHand, armor, head, gloves, boots; empty on the Sell tab. */
+  slotButtons: Array<ButtonProbe & { slot: EquipmentSlot }>
+  /** "All" (family null), then each family of the slot shown, in FAMILIES order; empty on the Sell tab. */
+  familyButtons: Array<ButtonProbe & { family: FamilyId | null }>
   /** `confirm` buys or sells the line shown (a material two at a time); `confirmAll` sells all of a material. */
   buttons: {
     buyTab: ButtonProbe

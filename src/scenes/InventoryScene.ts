@@ -42,7 +42,7 @@ import type { InventoryProbe } from '../testHook.ts'
 import type { Point } from './boardGeometry.ts'
 import { pressMoved, rectContains, type Rect } from './mapScroll.ts'
 import { applyMove, planDrag, validTargets, type DragSource, type DropTarget } from './gearDrag.ts'
-import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
+import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, iconTint } from './itemIcons.ts'
 import { soundVolume } from './audioSettings.ts'
 import { isSecondaryClick } from './clicks.ts'
 import { PartyColumn } from './PartyColumn.ts'
@@ -957,6 +957,8 @@ export class InventoryScene extends Phaser.Scene {
 
     if (item) {
       const icon = this.add.image(x, y, ITEM_ICON_KEYS[item.icon]).setScale(ITEM_ICON_SCALE)
+      const tint = iconTint(item)
+      if (tint !== undefined) icon.setTint(tint)
       if (ghost) icon.setAlpha(0.35)
       this.inventoryContent.add(icon)
       this.makeItemInteractive(bg, icon, item, 0x6b5a3a, {
@@ -1126,6 +1128,8 @@ export class InventoryScene extends Phaser.Scene {
 
     if (item) {
       const icon = this.add.image(x, y, ITEM_ICON_KEYS[item.icon]).setScale(ITEM_ICON_SCALE)
+      const tint = iconTint(item)
+      if (tint !== undefined) icon.setTint(tint)
       this.inventoryContent.add(icon)
       this.makeItemInteractive(bg, icon, item, 0x4a3d28, actions)
     }
@@ -1178,7 +1182,7 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   private showTooltip(item: Item, x: number, y: number): void {
-    this.tooltipText.setText([item.name, item.description, ...describeItemStats(item.stats)].join('\n'))
+    this.tooltipText.setText([item.name, item.description, ...describeItemStats(item.stats, attributeLevel(this.character, 'strength'))].join('\n'))
     this.tooltipText.setPosition(-this.tooltipText.width / 2, -this.tooltipText.height - 6)
     this.tooltipBg.setSize(this.tooltipText.width + 16, this.tooltipText.height + 12)
     this.tooltipBg.setPosition(0, -this.tooltipText.height / 2 - 6)

@@ -104,6 +104,7 @@ describe('the price list', () => {
   it('prices by family, tier and grade', () => {
     expect(buyPrice(itemById('steel_longsword')!)).toBe(30)
     expect(buyPrice(itemById('steel_longsword@3')!)).toBe(240)
+    expect(buyPrice(itemById('steel_longsword@3')!)).toBe(240)
     expect(buyPrice(itemById('steel_armor')!)).toBe(20)
     expect(buyPrice(itemById('wolfhide_boots')!)).toBe(10)
   })
@@ -183,6 +184,7 @@ describe('trading post level 4', () => {
 
   it('prices tier 2 by the 2.5 multiplier', () => {
     expect(buyPrice(itemById('steel_longsword')!)).toBe(30)
+    expect(buyPrice(itemById('steel_longsword@3')!)).toBe(240)
     expect(buyPrice(itemById('ironwood_shield')!)).toBe(25)
     expect(buyPrice(itemById('silk_robe')!)).toBe(25)
   })

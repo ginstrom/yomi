@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { deriveCombatStats } from '../character/character.ts'
+import { attributeLevel } from '../character/perks.ts'
 import type { WorldEvent } from '../game/blight.ts'
 import { describeCost } from '../game/buildings.ts'
 import { craft, craftTier, craftables, highestGrade, options, type CraftOption } from '../game/crafting.ts'
@@ -12,7 +13,7 @@ import type { ButtonProbe, CraftingProbe } from '../testHook.ts'
 import { soundVolume } from './audioSettings.ts'
 import type { Point } from './boardGeometry.ts'
 import { TYPICAL_AP, compareLines, fieldCraftSummary } from './gearCompare.ts'
-import { ITEM_ICON_KEYS } from './itemIcons.ts'
+import { ITEM_ICON_KEYS, iconTint } from './itemIcons.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton } from './panelButton.ts'
 
@@ -138,10 +139,15 @@ export class CraftingScene extends Phaser.Scene {
     return place.from === 'baggage' ? TYPICAL_AP : deriveCombatStats(this.gameState.party[place.member]).actionPoints
   }
 
+  /** The strength of whoever holds the item at `place`, which tells its shortfall; none for the baggage. */
+  private strengthAt(place: ItemPlace): number | undefined {
+    return place.from === 'baggage' ? undefined : attributeLevel(this.gameState.party[place.member], 'strength')
+  }
+
   /** What working the item at `place` with `option` changes, and what it costs. */
   private preview(place: ItemPlace, option: CraftOption): string[] {
     const item = itemAt(this.gameState, place)!
-    const lines = compareLines(item, option.result, this.apAt(place))
+    const lines = compareLines(item, option.result, this.apAt(place), this.strengthAt(place))
     const replaces = item.mod ? [`Replaces ${MODIFIERS[item.mod.id].name} (${gradeNumeral(item.mod.grade)}).`] : []
     const time = craftTier(this.gameState.world) === 'field' ? ' and a day' : ''
     return [`Makes the ${option.result.name}.`, ...replaces, ...lines, `Costs ${describeCost(option.cost)}${time}.`]
@@ -213,8 +219,11 @@ export class CraftingScene extends Phaser.Scene {
         this.time.delayedCall(0, () => this.select(key))
       })
     }
+    const icon = this.add.image(LIST_X + 12, centre.y, ITEM_ICON_KEYS[item.icon]).setAlpha(refusal ? 0.4 : 1)
+    const tint = iconTint(item)
+    if (tint !== undefined) icon.setTint(tint)
     this.frame.add([
-      this.add.image(LIST_X + 12, centre.y, ITEM_ICON_KEYS[item.icon]).setAlpha(refusal ? 0.4 : 1),
+      icon,
       this.add.text(LIST_X + 26, centre.y, item.name, { fontFamily: FONT, fontSize: '11px', color: refusal ? DIM : marked ? GOLD : TEXT }).setOrigin(0, 0.5),
       this.add
         .text(LIST_X + LIST_W - 6, centre.y, refusal ?? this.whereIs(place), { fontFamily: FONT, fontSize: '10px', color: refusal ? REFUSED : DIM })

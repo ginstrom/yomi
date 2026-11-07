@@ -4,12 +4,13 @@ import type { GameState } from '../game/gameState.ts'
 import { placeKey, type ItemPlace } from '../game/itemPlace.ts'
 import type { Material } from '../game/territory.ts'
 import { MATERIALS_PER_GOLD, buy, buyPrice, buyRefusal, sell, sellMaterial, sellables, wares } from '../game/tradingPost.ts'
-import type { Item } from '../inventory/inventory.ts'
+import { FAMILIES, type FamilyId } from '../inventory/catalog.ts'
+import type { EquipmentSlot, Item } from '../inventory/inventory.ts'
 import type { ButtonProbe, TradingPostProbe } from '../testHook.ts'
 import { soundVolume } from './audioSettings.ts'
 import type { Point } from './boardGeometry.ts'
 import { TYPICAL_AP, statLines, statSummary } from './gearCompare.ts'
-import { ITEM_ICON_KEYS } from './itemIcons.ts'
+import { ITEM_ICON_KEYS, iconTint } from './itemIcons.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton } from './panelButton.ts'
 
@@ -18,6 +19,22 @@ interface TradingPostData {
 }
 
 type Tab = 'buy' | 'sell'
+
+/** The slots the post sells for, with the short word on their buttons. */
+const SLOT_BUTTONS: ReadonlyArray<readonly [EquipmentSlot, string]> = [
+  ['mainHand', 'Weapons'],
+  ['offHand', 'Shields'],
+  ['armor', 'Armor'],
+  ['head', 'Head'],
+  ['gloves', 'Hands'],
+  ['boots', 'Feet'],
+]
+
+interface Filter {
+  slot: EquipmentSlot
+  family: FamilyId | null
+}
+const OPENING_FILTER: Filter = { slot: 'mainHand', family: null }
 
 /** A line of the list: an item for sale or to sell, or a material to sell. */
 interface Row {
@@ -38,20 +55,32 @@ interface Row {
 
 /** Drawn in a frame of this size, centred over the map and scaled down (never up) to fit the window. */
 const FRAME_W = 720
-const FRAME_H = 500
+const FRAME_H = 520
 const CENTRE_X = FRAME_W / 2
 const TITLE_Y = 34
 const TAB_Y = 96
 const LIST_X = 24
 const LIST_W = 420
-const LIST_TOP = 122
+/** The Sell tab's list starts under the tabs; the Buy tab's under its filter, and so holds fewer lines. */
+const SELL_LIST_TOP = 122
+const BUY_LIST_TOP = 194
+const SELL_ROWS_PER_PAGE = 11
+const BUY_ROWS_PER_PAGE = 8
 const ROW_H = 24
-const ROWS_PER_PAGE = 11
-const PAGE_Y = LIST_TOP + ROWS_PER_PAGE * ROW_H + 18
 const DETAILS_X = 466
 const DETAILS_W = FRAME_W - DETAILS_X - 24
-const MESSAGE_Y = 432
-const BUTTON_Y = 470
+/** The details' confirming buttons, whatever the tab, and the refusal above them. */
+const CONFIRM_Y = 432
+const CONFIRM_ALL_Y = CONFIRM_Y - 40
+const REFUSAL_Y = 380
+const MESSAGE_Y = 462
+const BUTTON_Y = 495
+/** The Buy tab's filter: the slot buttons across the frame, the families of the slot under them, eight to a row. */
+const SLOT_Y = 130
+const FAMILY_Y = 156
+const FAMILY_ROW_H = 22
+const FAMILIES_PER_ROW = 8
+const FILTER_W = FRAME_W - 2 * LIST_X
 
 const FONT = 'monospace'
 const GOLD = '#e8c766'
@@ -71,12 +100,15 @@ export class TradingPostScene extends Phaser.Scene {
   private gameState!: GameState
   private tab: Tab = 'buy'
   private page = 0
+  private filter: Filter = { ...OPENING_FILTER }
   private selected: string | null = null
   private message = ''
   private bg!: Phaser.GameObjects.Rectangle
   private frame!: Phaser.GameObjects.Container
   private controls: Partial<Record<keyof TradingPostProbe['buttons'], { at: Rect; enabled: boolean }>> = {}
   private rowAt = new Map<string, Point>()
+  private slotAt = new Map<EquipmentSlot, Point>()
+  private familyAt = new Map<FamilyId | null, Point>()
 
   constructor() {
     super('TradingPost')
@@ -90,6 +122,7 @@ export class TradingPostScene extends Phaser.Scene {
     this.gameState = data.game
     this.tab = 'buy'
     this.page = 0
+    this.filter = { ...OPENING_FILTER }
     this.selected = null
     this.message = ''
     this.bg = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.7).setOrigin(0).setInteractive()
@@ -116,6 +149,9 @@ export class TradingPostScene extends Phaser.Scene {
       message: this.message,
       selected: this.selected,
       details: row ? this.details(row) : [],
+      filter: { ...this.filter },
+      slotButtons: SLOT_BUTTONS.filter(([slot]) => this.slotAt.has(slot)).map(([slot]) => ({ ...onScreen(this.slotAt.get(slot)!), visible: true, enabled: true, slot })),
+      familyButtons: [...this.familyAt].map(([family, at]) => ({ ...onScreen(at), visible: true, enabled: true, family })),
       rows: this.rows().map((r) => {
         const at = this.rowAt.get(r.id)
         return { ...onScreen(at ?? { x: 0, y: 0 }), visible: !!at, enabled: !!at, id: r.id, kind: r.kind, price: r.price }
@@ -132,6 +168,18 @@ export class TradingPostScene extends Phaser.Scene {
     }
   }
 
+  private get listTop(): number {
+    return this.tab === 'buy' ? BUY_LIST_TOP : SELL_LIST_TOP
+  }
+
+  private get rowsPerPage(): number {
+    return this.tab === 'buy' ? BUY_ROWS_PER_PAGE : SELL_ROWS_PER_PAGE
+  }
+
+  private get pageY(): number {
+    return this.listTop + this.rowsPerPage * ROW_H + 18
+  }
+
   // ---- what is shown -----------------------------------------------------------
 
   /** The lines of the tab showing, every page's. */
@@ -139,7 +187,7 @@ export class TradingPostScene extends Phaser.Scene {
     const game = this.gameState
     const apOf = (member: number) => deriveCombatStats(game.party[member]).actionPoints
     if (this.tab === 'buy') {
-      return wares(game.world).map((item) => ({ id: item.id, kind: 'item', label: item.name, detail: statSummary(item), price: buyPrice(item)!, item, ap: TYPICAL_AP }))
+      return wares(game.world, { slot: this.filter.slot, family: this.filter.family ?? undefined }).map((item) => ({ id: item.id, kind: 'item', label: item.name, detail: statSummary(item), price: buyPrice(item)!, item, ap: TYPICAL_AP }))
     }
     const items: Row[] = sellables(game).map(({ place, item, price }) => {
       const whose = place.from === 'baggage' ? 'baggage' : `${game.party[place.member].name}'s pack`
@@ -187,9 +235,11 @@ export class TradingPostScene extends Phaser.Scene {
     this.frame.removeAll(true)
     this.controls = {}
     this.rowAt = new Map()
+    this.slotAt = new Map()
+    this.familyAt = new Map()
     const { world } = this.gameState
     const rows = this.rows()
-    const pages = Math.max(1, Math.ceil(rows.length / ROWS_PER_PAGE))
+    const pages = Math.max(1, Math.ceil(rows.length / this.rowsPerPage))
     this.page = Math.min(this.page, pages - 1)
     this.frame.add([
       this.add.rectangle(CENTRE_X, FRAME_H / 2, FRAME_W, FRAME_H, 0x241d15, 0.98).setStrokeStyle(3, 0xc9a227),
@@ -203,17 +253,42 @@ export class TradingPostScene extends Phaser.Scene {
     ])
     this.button('buyTab', { x: 140, y: TAB_Y, width: 120, height: 30 }, 'Buy', () => this.show('buy'), true, this.tab === 'buy')
     this.button('sellTab', { x: 280, y: TAB_Y, width: 120, height: 30 }, 'Sell', () => this.show('sell'), true, this.tab === 'sell')
-    rows.slice(this.page * ROWS_PER_PAGE, (this.page + 1) * ROWS_PER_PAGE).forEach((row, i) => this.drawRow(row, LIST_TOP + i * ROW_H))
+    if (this.tab === 'buy') this.drawFilter()
+    rows.slice(this.page * this.rowsPerPage, (this.page + 1) * this.rowsPerPage).forEach((row, i) => this.drawRow(row, this.listTop + i * ROW_H))
     if (rows.length === 0) {
-      this.frame.add(this.add.text(LIST_X + 8, LIST_TOP, 'Nothing to sell: worn gear must be taken off first.', { fontFamily: FONT, fontSize: '13px', color: DIM }))
+      const none = this.tab === 'buy' ? 'The post sells nothing of this kind yet.' : 'Nothing to sell: worn gear must be taken off first.'
+      this.frame.add(this.add.text(LIST_X + 8, this.listTop, none, { fontFamily: FONT, fontSize: '13px', color: DIM }))
     }
     if (pages > 1) {
+      const PAGE_Y = this.pageY
       this.button('prev', { x: LIST_X + 60, y: PAGE_Y, width: 100, height: 26 }, 'Prev', () => this.turnPage(-1), this.page > 0)
       this.frame.add(this.add.text(LIST_X + LIST_W / 2, PAGE_Y, `Page ${this.page + 1} of ${pages}`, { fontFamily: FONT, fontSize: '12px', color: DIM }).setOrigin(0.5))
       this.button('next', { x: LIST_X + LIST_W - 60, y: PAGE_Y, width: 100, height: 26 }, 'Next', () => this.turnPage(1), this.page < pages - 1)
     }
     this.drawDetails(rows.find((row) => row.id === this.selected) ?? null)
     this.button('close', { x: CENTRE_X, y: BUTTON_Y, width: 160, height: 36 }, 'Close', () => this.close())
+  }
+
+  /** The Buy tab's filter: a button for each slot, and under them "All" and the slot's families. */
+  private drawFilter(): void {
+    const slotW = FILTER_W / SLOT_BUTTONS.length
+    SLOT_BUTTONS.forEach(([slot, label], i) => {
+      const at = { x: LIST_X + slotW * (i + 0.5), y: SLOT_Y, width: slotW - 6, height: 24 }
+      this.slotAt.set(slot, at)
+      this.filterButton(at, label, () => this.setFilter({ slot, family: null }), this.filter.slot === slot)
+    })
+    const familyW = FILTER_W / FAMILIES_PER_ROW
+    const families: Array<[FamilyId | null, string]> = [[null, 'All'], ...FAMILIES.filter((f) => f.slot === this.filter.slot).map((f): [FamilyId, string] => [f.id, f.name])]
+    families.forEach(([family, label], i) => {
+      const at = { x: LIST_X + familyW * ((i % FAMILIES_PER_ROW) + 0.5), y: FAMILY_Y + Math.floor(i / FAMILIES_PER_ROW) * FAMILY_ROW_H, width: familyW - 4, height: 20 }
+      this.familyAt.set(family, at)
+      this.filterButton(at, label, () => this.setFilter({ slot: this.filter.slot, family }), this.filter.family === family)
+    })
+  }
+
+  private filterButton(at: Rect, label: string, onClick: () => void, marked: boolean): void {
+    // Next tick, as every button here: the redraw destroys the button whose handler this runs in.
+    addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled: true, marked, fontSize: 10 })
   }
 
   /** A line of the list: the item's icon, name and stats, and its price; a click shows its details. */
@@ -232,7 +307,12 @@ export class TradingPostScene extends Phaser.Scene {
       this.time.delayedCall(0, () => this.select(row.id))
     })
     this.frame.add(back)
-    if (row.item) this.frame.add(this.add.image(LIST_X + 12, centre.y, ITEM_ICON_KEYS[row.item.icon]))
+    if (row.item) {
+      const icon = this.add.image(LIST_X + 12, centre.y, ITEM_ICON_KEYS[row.item.icon])
+      const tint = iconTint(row.item)
+      if (tint !== undefined) icon.setTint(tint)
+      this.frame.add(icon)
+    }
     const price = this.tab === 'buy' ? `${row.price}g` : row.kind === 'material' ? `${row.price}g/${MATERIALS_PER_GOLD}` : `+${row.price}g`
     this.frame.add([
       this.add.text(LIST_X + 26, centre.y, row.label, { fontFamily: FONT, fontSize: '12px', color: marked ? GOLD : TEXT }).setOrigin(0, 0.5),
@@ -245,25 +325,27 @@ export class TradingPostScene extends Phaser.Scene {
     const style = { fontFamily: FONT, fontSize: '12px', color: TEXT, wordWrap: { width: DETAILS_W } }
     if (!row) {
       const hint = this.tab === 'buy' ? 'Click an item to see its stats and price.' : 'Click an item or a material to see what it fetches.'
-      this.frame.add(this.add.text(DETAILS_X, LIST_TOP, hint, { ...style, color: DIM }))
+      this.frame.add(this.add.text(DETAILS_X, this.listTop, hint, { ...style, color: DIM }))
       return
     }
+    // The summary may wrap to two lines, and the stats go under whatever height it has.
+    const summary = this.add.text(DETAILS_X, this.listTop + 24, row.kind === 'item' ? row.detail.split(';')[0] : '', { ...style, color: DIM })
     this.frame.add([
-      this.add.text(DETAILS_X, LIST_TOP, row.label, { ...style, fontSize: '14px', color: GOLD }),
-      this.add.text(DETAILS_X, LIST_TOP + 26, row.kind === 'item' ? row.detail.split(';')[0] : '', { ...style, color: DIM }),
-      this.add.text(DETAILS_X, LIST_TOP + 46, this.details(row).join('\n'), { ...style, lineSpacing: 4 }),
+      this.add.text(DETAILS_X, this.listTop, row.label, { ...style, fontSize: '14px', color: GOLD }),
+      summary,
+      this.add.text(DETAILS_X, summary.y + Math.max(summary.height, 14) + 8, this.details(row).join('\n'), { ...style, lineSpacing: 4 }),
     ])
     const at = (y: number): Rect => ({ x: DETAILS_X + DETAILS_W / 2, y, width: DETAILS_W, height: 32 })
     if (this.tab === 'buy') {
       const refusal = buyRefusal(this.gameState, row.id)
-      if (refusal) this.frame.add(this.add.text(DETAILS_X, PAGE_Y - 66, refusal, { ...style, color: REFUSED }))
-      this.button('confirm', at(PAGE_Y - 16), `Buy for ${row.price} gold`, () => this.onBuy(row), refusal === null)
+      if (refusal) this.frame.add(this.add.text(DETAILS_X, REFUSAL_Y, refusal, { ...style, color: REFUSED }))
+      this.button('confirm', at(CONFIRM_Y), `Buy for ${row.price} gold`, () => this.onBuy(row), refusal === null)
     } else if (row.kind === 'item') {
-      this.button('confirm', at(PAGE_Y - 16), `Sell for ${row.price} gold`, () => this.onSell(row))
+      this.button('confirm', at(CONFIRM_Y), `Sell for ${row.price} gold`, () => this.onSell(row))
     } else {
       const all = row.amount! - (row.amount! % MATERIALS_PER_GOLD)
-      this.button('confirm', at(PAGE_Y - 56), `Sell ${MATERIALS_PER_GOLD} for 1 gold`, () => this.onSellMaterial(row, MATERIALS_PER_GOLD))
-      this.button('confirmAll', at(PAGE_Y - 16), `Sell ${all} for ${all / MATERIALS_PER_GOLD} gold`, () => this.onSellMaterial(row, all))
+      this.button('confirm', at(CONFIRM_ALL_Y), `Sell ${MATERIALS_PER_GOLD} for 1 gold`, () => this.onSellMaterial(row, MATERIALS_PER_GOLD))
+      this.button('confirmAll', at(CONFIRM_Y), `Sell ${all} for ${all / MATERIALS_PER_GOLD} gold`, () => this.onSellMaterial(row, all))
     }
   }
 
@@ -285,8 +367,17 @@ export class TradingPostScene extends Phaser.Scene {
   private show(tab: Tab): void {
     this.tab = tab
     this.page = 0
+    this.filter = { ...OPENING_FILTER }
     this.selected = null
     this.message = ''
+    this.render()
+  }
+
+  /** A new filter: back to the first page, nothing selected. */
+  private setFilter(filter: Filter): void {
+    this.filter = filter
+    this.page = 0
+    this.selected = null
     this.render()
   }
 

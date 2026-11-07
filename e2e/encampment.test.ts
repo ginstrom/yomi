@@ -3,13 +3,14 @@ import type { EncampmentProbe, GuildHallProbe } from '../src/testHook.ts'
 import { useGames, type Game } from './driver.ts'
 
 /** A new game with gold and iron (or `stock`) planted in its stock, reloaded and continued at the encampment. */
-async function richAtHome(game: Game, stock: Record<string, number> = { gold: 100, iron: 50 }) {
+async function richAtHome(game: Game, stock: Record<string, number> = { gold: 100, iron: 50 }, postLevel?: number) {
   await game.newGame()
-  await game.page.evaluate((stock) => {
+  await game.page.evaluate(([stock, level]) => {
     const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
     saved.game.world.stock = stock
+    if (level) saved.game.world.tradingPost = level
     localStorage.setItem('yomi.save.1', JSON.stringify(saved))
-  }, stock)
+  }, [stock, postLevel] as const)
   const menu = await game.reload()
   await game.click(menu.buttons.continue)
   await game.waitForScenes(['World'])
@@ -171,6 +172,46 @@ describe('the encampment', () => {
     await game.click(done.buttons.close)
     await game.waitForScenes(['Encampment'], ['World'])
     expect((await game.settled('Encampment')).selected).toBe('trading_post')
+  })
+
+  it('filters the trading post’s wares by slot and family, and buys a steel hammer and a steel helm', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 600 }, 4)
+    const camp = await enter(game)
+    await game.click(facility(camp, 'trading_post'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'trading_post')
+    await game.click(shown.buttons.open)
+    await game.waitForScenes(['TradingPost'], ['World'])
+    const post = await game.settled('TradingPost')
+    expect(post.filter).toEqual({ slot: 'mainHand', family: null })
+    expect(post.slotButtons.map((b) => b.slot)).toEqual(['mainHand', 'offHand', 'armor', 'head', 'gloves', 'boots'])
+    expect(post.familyButtons[0].family).toBeNull()
+    expect(post.familyButtons).toHaveLength(16)
+
+    await game.click(post.familyButtons.find((b) => b.family === 'war_hammer')!)
+    const hammers = await game.settled('TradingPost', (p) => p.filter.family === 'war_hammer')
+    expect(hammers.rows.length).toBeGreaterThan(0)
+    expect(hammers.rows.every((row) => row.id.endsWith('war_hammer') || row.id.includes('war_hammer@'))).toBe(true)
+    const steel = hammers.rows.find((row) => row.id === 'steel_war_hammer')!
+    await game.click(steel)
+    const picked = await game.settled('TradingPost', (p) => p.selected === 'steel_war_hammer')
+    expect(picked.details).toContain('Strength: 6')
+    await game.click(picked.buttons.confirm)
+    const bought = await game.settled('TradingPost', (p) => p.message.startsWith('Bought the Steel War Hammer'))
+
+    await game.click(bought.slotButtons.find((b) => b.slot === 'head')!)
+    const heads = await game.settled('TradingPost', (p) => p.filter.slot === 'head')
+    expect(heads.filter.family).toBeNull()
+    expect(heads.rows.length).toBeGreaterThan(0)
+    await game.click(heads.rows.find((row) => row.id === 'steel_helm')!)
+    const helm = await game.settled('TradingPost', (p) => p.selected === 'steel_helm')
+    await game.click(helm.buttons.confirm)
+    await game.settled('TradingPost', (p) => p.message.startsWith('Bought the Steel Helm'))
+
+    await game.click(bought.buttons.sellTab)
+    const selling = await game.settled('TradingPost', (p) => p.tab === 'sell')
+    expect(selling.slotButtons).toEqual([])
+    expect(selling.rows.map((row) => row.id)).toEqual(expect.arrayContaining(['baggage:0', 'baggage:1']))
   })
 
   it('builds the workshop and works the soldier’s sword there, in no time', async () => {
