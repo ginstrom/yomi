@@ -260,10 +260,10 @@ export class TradingPostScene extends Phaser.Scene {
       this.frame.add(this.add.text(LIST_X + 8, this.listTop, none, { fontFamily: FONT, fontSize: '13px', color: DIM }))
     }
     if (pages > 1) {
-      const PAGE_Y = this.pageY
-      this.button('prev', { x: LIST_X + 60, y: PAGE_Y, width: 100, height: 26 }, 'Prev', () => this.turnPage(-1), this.page > 0)
-      this.frame.add(this.add.text(LIST_X + LIST_W / 2, PAGE_Y, `Page ${this.page + 1} of ${pages}`, { fontFamily: FONT, fontSize: '12px', color: DIM }).setOrigin(0.5))
-      this.button('next', { x: LIST_X + LIST_W - 60, y: PAGE_Y, width: 100, height: 26 }, 'Next', () => this.turnPage(1), this.page < pages - 1)
+      const pageY = this.pageY
+      this.button('prev', { x: LIST_X + 60, y: pageY, width: 100, height: 26 }, 'Prev', () => this.turnPage(-1), this.page > 0)
+      this.frame.add(this.add.text(LIST_X + LIST_W / 2, pageY, `Page ${this.page + 1} of ${pages}`, { fontFamily: FONT, fontSize: '12px', color: DIM }).setOrigin(0.5))
+      this.button('next', { x: LIST_X + LIST_W - 60, y: pageY, width: 100, height: 26 }, 'Next', () => this.turnPage(1), this.page < pages - 1)
     }
     this.drawDetails(rows.find((row) => row.id === this.selected) ?? null)
     this.button('close', { x: CENTRE_X, y: BUTTON_Y, width: 160, height: 36 }, 'Close', () => this.close())
