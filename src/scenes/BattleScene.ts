@@ -1038,6 +1038,11 @@ export class BattleScene extends Phaser.Scene {
       this.hovered = null
       this.hoverMarks.clear()
       this.refreshFoeInfo()
+      // The warning for a foe belongs to the foe: leaving it for a button or portrait takes it away.
+      if (this.hoverHint !== null) {
+        this.hoverHint = null
+        this.showHint()
+      }
       return
     }
     this.setHovered(this.hexAt(pointer.x, pointer.y))

@@ -48,6 +48,11 @@ describe('a battle', () => {
     await game.hover(battleHexOnScreen(start, nearest.position))
     const warned = await game.settled('Battle', (b) => b.hint.startsWith('Too few AP'))
     expect(warned.hint).toBe('Too few AP to reach and strike')
+    // Straight onto a button, too.
+    await game.hover(warned.buttons.endTurn)
+    expect((await game.settled('Battle', (b) => !b.hint.startsWith('Too few AP'))).hint).toContain('Click a foe to attack')
+    await game.hover(battleHexOnScreen(start, nearest.position))
+    await game.settled('Battle', (b) => b.hint.startsWith('Too few AP'))
     await game.hover(battleHexOnScreen(start, self.position))
     expect((await game.settled('Battle', (b) => !b.hint.startsWith('Too few AP'))).hint).toContain('Click a foe to attack')
 
