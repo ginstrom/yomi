@@ -1,0 +1,12 @@
+canvas = "pip"
+outline = "auto"
+
+[frames]
+base = """
+......
+..DD..
+.DMMd.
+.DMMd.
+..dd..
+......
+"""

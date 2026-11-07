@@ -29,3 +29,8 @@ c = { hex = "#6384b4", name = "light blue" }
 M = { hex = "#3c3833", name = "dark stone" }
 m = { hex = "#5a544a", name = "stone" }
 a = { hex = "#787062", name = "light stone" }
+F = { hex = "#e8832a", name = "flame" }
+E = { hex = "#a8c83a", name = "acid" }
+v = { hex = "#5b3f86", name = "violet" }
+V = { hex = "#a98bd6", name = "light violet" }
+z = { hex = "#8fd0d6", name = "pale cyan" }

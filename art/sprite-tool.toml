@@ -22,6 +22,12 @@ anchor = [10, 10]
 display_scale = 2
 outline = ["k"]
 
+[canvas.pip]               # a socket pip, laid in a row along the bottom of an item icon
+size = [6, 6]
+anchor = [3, 3]
+display_scale = 2
+outline = ["k"]
+
 [canvas.map]              # points of interest on the world map
 size = [24, 24]
 anchor = [12, 12]

@@ -48,6 +48,18 @@ Infinity Engine CRPGs (Baldur's Gate 1 and 2). No third-party art is included.
 | `icon_amulet.png` | `art/icons/icon_amulet.sprite.toml` | `InventoryScene` |
 | `icon_circlet.png` | `art/icons/icon_circlet.sprite.toml` | `InventoryScene` |
 | `icon_cloak.png` | `art/icons/icon_cloak.sprite.toml` | `InventoryScene` |
+| `icon_rune_ember.png` | `art/icons/icon_rune_ember.sprite.toml` (a carved rune stone, long campaign stage 4, step 02) | `InventoryScene`, `TradingPostScene`, `CraftingScene` (wired in stage 4, step 08) |
+| `icon_rune_rime.png` | `art/icons/icon_rune_rime.sprite.toml` (a carved rune stone, long campaign stage 4, step 02) | `InventoryScene`, `TradingPostScene`, `CraftingScene` (wired in stage 4, step 08) |
+| `icon_rune_storm.png` | `art/icons/icon_rune_storm.sprite.toml` (a carved rune stone, long campaign stage 4, step 02) | `InventoryScene`, `TradingPostScene`, `CraftingScene` (wired in stage 4, step 08) |
+| `icon_rune_venom.png` | `art/icons/icon_rune_venom.sprite.toml` (a carved rune stone, long campaign stage 4, step 02) | `InventoryScene`, `TradingPostScene`, `CraftingScene` (wired in stage 4, step 08) |
+| `icon_rune_acid.png` | `art/icons/icon_rune_acid.sprite.toml` (a carved rune stone, long campaign stage 4, step 02) | `InventoryScene`, `TradingPostScene`, `CraftingScene` (wired in stage 4, step 08) |
+| `icon_rune_stone.png` | `art/icons/icon_rune_stone.sprite.toml` (a carved rune stone, long campaign stage 4, step 02) | `InventoryScene`, `TradingPostScene`, `CraftingScene` (wired in stage 4, step 08) |
+| `icon_rune_wind.png` | `art/icons/icon_rune_wind.sprite.toml` (a carved rune stone, long campaign stage 4, step 02) | `InventoryScene`, `TradingPostScene`, `CraftingScene` (wired in stage 4, step 08) |
+| `icon_rune_life.png` | `art/icons/icon_rune_life.sprite.toml` (a carved rune stone, long campaign stage 4, step 02) | `InventoryScene`, `TradingPostScene`, `CraftingScene` (wired in stage 4, step 08) |
+| `icon_rune_mind.png` | `art/icons/icon_rune_mind.sprite.toml` (a carved rune stone, long campaign stage 4, step 02) | `InventoryScene`, `TradingPostScene`, `CraftingScene` (wired in stage 4, step 08) |
+| `icon_rune_dawn.png` | `art/icons/icon_rune_dawn.sprite.toml` (a carved rune stone, long campaign stage 4, step 02) | `InventoryScene`, `TradingPostScene`, `CraftingScene` (wired in stage 4, step 08) |
+| `icon_socket_empty.png` | `art/icons/icon_socket_empty.sprite.toml` (6px `pip` canvas; the filled one is drawn light, to be tinted by the rune's colour) | `InventoryScene`, `TradingPostScene`, `CraftingScene` (wired in stage 4, step 08) |
+| `icon_socket_filled.png` | `art/icons/icon_socket_filled.sprite.toml` (6px `pip` canvas; the filled one is drawn light, to be tinted by the rune's colour) | `InventoryScene`, `TradingPostScene`, `CraftingScene` (wired in stage 4, step 08) |
 | `icon_rapier.png` | `art/icons/icon_rapier.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
 | `icon_mace.png` | `art/icons/icon_mace.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
 | `icon_spear.png` | `art/icons/icon_spear.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |

@@ -4758,6 +4758,316 @@
       20
     ]
   },
+  "icon_rune_acid": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_acid.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_acid.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_dawn": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_dawn.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_dawn.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_ember": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_ember.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_ember.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_life": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_life.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_life.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_mind": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_mind.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_mind.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_rime": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_rime.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_rime.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_stone": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_stone.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_stone.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_storm": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_storm.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_storm.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_venom": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_venom.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_venom.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_wind": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_wind.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_wind.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
   "icon_shield": {
     "anchor": [
       10,
@@ -4818,6 +5128,68 @@
     "size": [
       20,
       20
+    ]
+  },
+  "icon_socket_empty": {
+    "anchor": [
+      3,
+      3
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      0,
+      6,
+      6
+    ],
+    "canvas": "pip",
+    "display_scale": 2,
+    "file": "icon_socket_empty.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          6,
+          6
+        ],
+        "file": "icon_socket_empty.png"
+      }
+    },
+    "size": [
+      6,
+      6
+    ]
+  },
+  "icon_socket_filled": {
+    "anchor": [
+      3,
+      3
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      0,
+      6,
+      6
+    ],
+    "canvas": "pip",
+    "display_scale": 2,
+    "file": "icon_socket_filled.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          6,
+          6
+        ],
+        "file": "icon_socket_filled.png"
+      }
+    },
+    "size": [
+      6,
+      6
     ]
   },
   "icon_spear": {

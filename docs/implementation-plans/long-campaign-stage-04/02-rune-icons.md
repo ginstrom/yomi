@@ -134,3 +134,10 @@ Draw ten rune icons, one per rune kind, and two socket pips (empty and filled), 
 - [ ] Step 02's row in [index.md](index.md) set to `done` with the commit.
 
 ## Execution record
+
+- Drew ten `art/icons/icon_rune_<id>.sprite.toml` (20px, `outline = "auto"`, one shared stone-tablet body, a 8x10 glyph on a dark field) and `icon_socket_empty` / `icon_socket_filled` on a new `pip` canvas.
+- **Pip size: 6x6**, anchor 3,3, scale 2 (the drawn pixels are 4x4 inside the outline, so a pip is 12px on screen; three fit in a 40px cell with gaps).
+- **Palette:** added five keys, since none of the existing ones gave orange, acid yellow-green, violet or pale cyan: `F` flame, `E` acid, `v` violet, `V` light violet, `z` pale cyan.
+- Glyphs: Ember flame, Rime snowflake, Storm bolt, Venom drop, Acid dripping bar, Stone plain block, Wind swirl lines, Life heart, Mind eye, Dawn rising sun.
+- Checked: `sprite check` ok (121 sprites); `npm run sprites`, then `sprites:check` up to date; PNG sizes 6x6; tint test (none, orange, green) legible; `npm test` 1064 passed.
+- Previews: `art/.preview/icon_rune_ember+13more.plain.png` (ten runes beside a sword and ring and the pips), `art/.preview/icon_socket_filled+icon_socket_empty.plain.tints.png`. `art/CLAUDE.md` and the sprites README updated.

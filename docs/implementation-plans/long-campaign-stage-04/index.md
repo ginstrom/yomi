@@ -472,7 +472,7 @@ export function runecraftGear(game: GameState): { embedded: number; fused: numbe
 | Step | Task | Outcome | Depends on | Engineer / reviewer | Status |
 | --- | --- | --- | --- | --- | --- |
 | 01 | [Baseline measurement](01-baseline-measurement.md) | The guard and the Troll Lair cell measured on this tree before any change; recorded here, and in CLAUDE.md if moved | — | sonnet / sonnet | pending |
-| 02 | [Rune icons and socket pips](02-rune-icons.md) | Ten `icon_rune_<id>` icons, two socket pips and the `pip` canvas exported; README | — | opus / opus (art) | pending |
+| 02 | [Rune icons and socket pips](02-rune-icons.md) | Ten `icon_rune_<id>` icons, two socket pips and the `pip` canvas exported; README | — | opus / opus (art) | done |
 | 03 | [Runes and ids](03-runes-and-ids.md) | `runes.ts` (C1), `OnHit` and the new stat fields (C2), the `#` grammar, runed names and words, unique sockets, `craftedItem` with runes; the guard identical | 01 | opus / opus | pending |
 | 04 | [Derivation, the pouch and the save](04-derivation-pouch-save.md) | Wards, `onHit` and `maxHp` derived; `clampHp`; `GameState.runes`; save 18; debug `give`, `items` and `runes`; the guard identical | 03 | opus / opus | pending |
 | 05 | [The engine](05-engine.md) | On-hit damage, statuses, Life healing and bane; `blightborn`; `AttackEvent` fields and the log line; policy harm; the simulator's tally; LOG 23; the guard identical | 03 | opus / opus | pending |
