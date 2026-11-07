@@ -80,7 +80,7 @@ export function compareLines(before: Item, after: Item, ap = TYPICAL_AP, strengt
   const now = new Map(statWords(after.stats ?? {}, ap, strength))
   const labels = [...new Set([...was.keys(), ...now.keys()])]
   // A shortfall is kept as context even where the craft leaves it alone: it is what the holder pays.
-  const short = (label: string) => label === 'Strength' && (now.get(label) ?? '').includes('you have')
+  const short = (label: string) => label === 'Strength' && strength !== undefined && strengthShortfall(strength, after.stats ?? {}) > 0
   return labels
     .filter((label) => was.get(label) !== now.get(label) || short(label))
     .map((label) => (was.get(label) === now.get(label) ? `${label}: ${now.get(label)}` : `${label}: ${was.get(label) ?? 'none'} → ${now.get(label) ?? 'none'}`))
