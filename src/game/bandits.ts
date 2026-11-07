@@ -116,14 +116,23 @@ function equipmentFor(role: BanditRole, grade: Grade): Equipment {
 
 const cache = new Map<string, CombatantStats>()
 
+/** Freezes `value` and everything reachable from it, so a shared block cannot be changed. */
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.freeze(value)
+    for (const inner of Object.values(value)) deepFreeze(inner)
+  }
+  return value
+}
+
 /**
  * A bandit of `role` at `level` (below 1 counts as 1), its gear at `grade`.
  * Built in this order, which a hero built to match must follow: the draft
  * made a character (`draftCharacter`), its gear put on in place of the
  * starting kit (before levelling, so that `autoAdvance` raises the skill of
  * the weapon it holds), `levelUp` to `level`, one `autoAdvance`, then
- * `deriveCombatStats`. Cached per (role, level, grade): callers spread it and
- * never change it.
+ * `deriveCombatStats`. Cached per (role, level, grade) and deeply frozen:
+ * callers spread it and never change it.
  */
 export function banditStats(role: BanditRole, level: number, grade: Grade): CombatantStats {
   const target = Math.max(1, Math.floor(level))
@@ -134,7 +143,7 @@ export function banditStats(role: BanditRole, level: number, grade: Grade): Comb
   bandit.equipment = equipmentFor(role, grade)
   while (bandit.level < target) levelUp(bandit)
   autoAdvance(bandit)
-  const stats = deriveCombatStats(bandit)
+  const stats = deepFreeze(deriveCombatStats(bandit))
   cache.set(key, stats)
   return stats
 }

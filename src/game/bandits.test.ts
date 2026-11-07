@@ -117,3 +117,18 @@ describe('BANDIT_ROLE', () => {
     })
   })
 })
+
+describe('banditStats freezing', () => {
+  it('returns a deeply frozen block, shared between calls', () => {
+    const isDeepFrozen = (value: unknown): boolean =>
+      value === null ||
+      typeof value !== 'object' ||
+      (Object.isFrozen(value) && Object.values(value).every(isDeepFrozen))
+    for (const role of ROLES) {
+      const stats = banditStats(role, 5, 2)
+      expect(isDeepFrozen(stats)).toBe(true)
+      expect(banditStats(role, 5, 2)).toBe(stats)
+    }
+    expect(banditStats('mage', 5, 1).magic).toBeDefined()
+  })
+})
