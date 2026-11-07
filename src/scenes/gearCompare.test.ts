@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { IRON_SWORD, OAK_SHIELD, YEW_BOW, itemById } from '../inventory/inventory.ts'
-import { attacksPerTurn, compareLines, fieldCraftSummary, statLines, statSummary } from './gearCompare.ts'
+import { attackCostWarning, attacksPerTurn, compareLines, fieldCraftSummary, statLines, statSummary } from './gearCompare.ts'
 
 describe('gear comparisons', () => {
   it('counts the attacks a turn an item gives', () => {
@@ -61,5 +61,15 @@ describe('gear comparisons', () => {
     expect(compareLines(greatsword, balanced, 8, 3)).toContain('Strength: 6 (you have 3): to hit −15%')
     expect(compareLines(greatsword, balanced, 8, 6).join('\n')).not.toContain('Strength')
     expect(compareLines(greatsword, balanced).join('\n')).not.toContain('Strength')
+  })
+})
+
+describe('attackCostWarning', () => {
+  it('warns when the attack costs more AP than a turn gives', () => {
+    expect(attackCostWarning(7, 6)).toBe('Attack costs 7 AP, you have 6: cannot attack')
+  })
+  it('is silent when the attack fits the turn', () => {
+    expect(attackCostWarning(7, 7)).toBeNull()
+    expect(attackCostWarning(5, 8)).toBeNull()
   })
 })

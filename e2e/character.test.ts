@@ -228,6 +228,57 @@ describe('a hero’s panel', () => {
     expect(spells.spellSkill).toBe(spells.skills.magic.level - 5)
   })
 
+  it('warns on the Character tab when the weapon held costs more AP than the armour leaves a turn', async () => {
+    const game = await games.open()
+    // Aldric with agility 4 (7 AP a turn): a 7 AP halberd fits, until plate takes a point.
+    const choice = await game.openPartyScreen()
+    await game.click(choice.buttons.readyMade)
+    const ready = await game.waitFor('Party', (p) => p.view === 'roster')
+    await game.click(ready.rows[0].edit)
+    await game.waitForScenes(['Creation'])
+    const clicks = async (attribute: 'agility' | 'strength' | 'luck', side: 'plus' | 'minus', times: number) => {
+      for (let i = 0; i < times; i++) await game.click((await game.probe('Creation'))!.attributes[attribute][side])
+    }
+    await game.settled('Creation')
+    await clicks('agility', 'minus', 2)
+    await game.waitFor('Creation', (c) => c.attributePoints === 2)
+    await clicks('strength', 'plus', 1)
+    await clicks('luck', 'plus', 1)
+    const edited = await game.waitFor('Creation', (c) => c.attributePoints === 0)
+    await game.click(edited.steps.name)
+    await game.click((await game.waitFor('Creation', (c) => c.step === 'name')).buttons.create)
+    await game.waitForScenes(['Party'])
+    await game.begin(await game.settled('Party', (p) => p.view === 'roster'))
+    const world = await game.enterWorld()
+    await debugCommand(game, 'give iron_plate')
+    await debugCommand(game, 'give steel_halberd')
+    await game.click(world.party[0])
+    await game.waitFor('World', (w) => w.party[0].active)
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    let panel = await game.settled('Inventory', (p) => p.tab === 'inventory' && p.ground.some((slot) => slot.item === 'iron_plate'))
+    expect(panel.attackWarning).toBeNull()
+    for (const item of ['steel_halberd', 'iron_plate']) {
+      panel = await game.settled('Inventory', (p) => p.ground.some((slot) => slot.item === item))
+      await game.click(panel.ground.find((slot) => slot.item === item)!)
+      panel = await game.settled('Inventory', (p) => p.backpack.some((slot) => slot.item === item))
+      await game.click(panel.backpack.find((slot) => slot.item === item)!)
+      await game.settled('Inventory', (p) => Object.values(p.equipment).some((slot) => slot.item === item))
+      // With the halberd alone the 7 AP blow fits the 7 AP turn.
+      if (item === 'steel_halberd') expect((await game.probe('Inventory'))!.attackWarning).toBeNull()
+    }
+    await game.press('c')
+    for (const [width, height] of [
+      [840, 560],
+      [1400, 800],
+    ]) {
+      await game.resize(width, height)
+      const warned = await game.settled('Inventory', (p) => p.tab === 'character' && p.attackWarning !== null)
+      expect(warned.attackWarning).toBe('Attack costs 7 AP, you have 6: cannot attack')
+    }
+  })
+
   it('lists only the perks a hero has taken, and shows them all in the perk tree', async () => {
     const game = await games.open()
     const world = await game.newGame()

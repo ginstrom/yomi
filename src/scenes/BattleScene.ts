@@ -28,13 +28,14 @@ import {
   areaOf,
   hexCorners,
   hexDirection,
+  hexDistance,
   hexEquals,
   hexToPixel,
   type BoardSize,
   type Hex,
 } from '../grid/hex.ts'
 import { buttonProbe, type BattleProbe } from '../testHook.ts'
-import { planAttack, type AttackPlan } from './attackPlan.ts'
+import { noStrikeHint, planAttack, type AttackPlan } from './attackPlan.ts'
 import { FLOOR_SQUASH_Y, HEX_SIZE, boardHexAt, boardHexCenter, boardPixelSize, curvedArrow } from './boardGeometry.ts'
 import { CURSORS, spellCursor } from './cursors.ts'
 import {
@@ -274,6 +275,9 @@ export class BattleScene extends Phaser.Scene {
   private column!: PartyColumn
   private roundText!: Phaser.GameObjects.Text
   private hintText!: Phaser.GameObjects.Text
+  /** The header hint for what the unit is doing, and the warning shown instead while the pointer is over a foe no click can strike. */
+  private baseHint = ''
+  private hoverHint: string | null = null
   /** The victory or defeat screen: a shade over the battle, a banner, a line under it and one button. */
   private resultShade!: Phaser.GameObjects.Rectangle
   private bannerText!: Phaser.GameObjects.Text
@@ -512,6 +516,7 @@ export class BattleScene extends Phaser.Scene {
       state: this.engine.getState(),
       log: this.engine.getLog(),
       playerControl: this.playerControl,
+      hint: this.hintText.text,
       selected: this.selected,
       origin: { x: this.floorLayer.x, y: this.floorLayer.y },
       scale: this.floorLayer.scale,
@@ -809,6 +814,7 @@ export class BattleScene extends Phaser.Scene {
     this.castButton.setPosition(centreX, buttonY)
     this.endTurnButton.setPosition(centreX + BUTTON_SPACING, buttonY)
 
+    this.hintText.setWordWrapWidth(width - 40)
     this.resultShade.setSize(width, height)
     this.bannerText.setPosition(width / 2, height / 2 - 100)
     // A victory adds the experience won and a line for each member it levelled or stood back up,
@@ -968,15 +974,16 @@ export class BattleScene extends Phaser.Scene {
     const self = state.units.find((u) => u.id === this.selected)
     const spell = this.targeting !== null && this.targeting !== 'attack' ? this.targeting : null
     const statuses = self && self.statuses.length > 0 ? `${describeStatuses(self.statuses)}. ` : ''
-    this.hintText.setText(
+    this.baseHint = (
       spell
         ? targetingHint(spell)
         : this.targeting && self
           ? `Choose a foe to attack (${self.attackApCost} AP). Esc or Cancel to go back.`
           : actable.length === 0
             ? 'No action points left. Press End Turn.'
-            : `${statuses}Blue: move (fainter leaves too few AP to attack), orange edge provokes a free attack. Click a foe to attack.`,
+            : `${statuses}Blue: move (faint: too few AP to attack), orange edge: free attack. Click a foe to attack.`
     )
+    this.showHint()
 
     for (const id of this.targeting ? [] : actable) {
       if (id === this.selected) continue
@@ -1083,6 +1090,7 @@ export class BattleScene extends Phaser.Scene {
    * strike; a green cross for a friendly spell).
    */
   private refreshHover(): void {
+    this.hoverHint = null
     this.hoverMarks.clear()
     this.hoverLabels.removeAll(true)
     this.refreshFoeInfo()
@@ -1111,6 +1119,10 @@ export class BattleScene extends Phaser.Scene {
           this.hoverMarks.strokePoints(polygon, true)
         }
         if (intent.plan.move) this.markDestination(from, intent.plan.move.to)
+        if (!intent.plan.attack) {
+          const self = this.engine.getState().units.find((u) => u.id === this.selected)!
+          this.hoverHint = noStrikeHint(hexDistance(self.position, foeAt), self.attackRange)
+        }
         break
       }
       case 'cast':
@@ -1118,6 +1130,12 @@ export class BattleScene extends Phaser.Scene {
         this.markCast(intent.action, selectedAt())
         break
     }
+    this.showHint()
+  }
+
+  /** Shows the hint of the unit's turn, or the warning for the foe under the pointer. */
+  private showHint(): void {
+    this.hintText.setText(this.hoverHint ?? this.baseHint).setColor(this.hoverHint ? '#ffb74d' : '#9e9e9e')
   }
 
   /** The panel of a hovered standing foe's abilities and wards, beside its hex; nothing for a foe with neither. */

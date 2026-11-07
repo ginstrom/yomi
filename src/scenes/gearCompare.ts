@@ -92,3 +92,11 @@ export function fieldCraftSummary(): string {
   const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names.join('')
   return `In the field: ${list} at grade ${gradeNumeral(1)}, a day each.`
 }
+
+/**
+ * The character panel's warning when the weapon held costs more AP to strike with
+ * than a turn gives (armour's AP penalty under a heavy weapon); null when it fits.
+ */
+export function attackCostWarning(attackApCost: number, actionPoints: number): string | null {
+  return attackApCost > actionPoints ? `Attack costs ${attackApCost} AP, you have ${actionPoints}: cannot attack` : null
+}

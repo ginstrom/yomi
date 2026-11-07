@@ -42,6 +42,7 @@ import type { InventoryProbe } from '../testHook.ts'
 import type { Point } from './boardGeometry.ts'
 import { pressMoved, rectContains, type Rect } from './mapScroll.ts'
 import { applyMove, planDrag, validTargets, type DragSource, type DropTarget } from './gearDrag.ts'
+import { attackCostWarning } from './gearCompare.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, iconTint } from './itemIcons.ts'
 import { soundVolume } from './audioSettings.ts'
 import { isSecondaryClick } from './clicks.ts'
@@ -129,6 +130,7 @@ const ATTRIBUTES_W = 250
 const ATTRIBUTE_ROW_H = 36
 /** Clear of the attributes' descriptions, and wide enough for the longest stat line ("Pierces: N resistance") inside the panel. */
 const COMBAT_X = 470
+const COMBAT_W = PANEL_W - COMBAT_X - 20
 /** The badges (AC, HP, HIT) sit under the portrait and the attributes, leaving the stat column free to run down past them. */
 const BADGES_X = 255
 const BADGES_Y = 440
@@ -389,6 +391,7 @@ export class InventoryScene extends Phaser.Scene {
       armorClass: this.stats.ac,
       mana: this.shownMana(),
       spellSkill: this.shownSpellSkill(),
+      attackWarning: attackCostWarning(this.stats.attackApCost, this.stats.actionPoints),
       takenPerks: this.takenPerks().map((id) => ({ perk: id, ranks: perkRanks(this.character, id) })),
       perkTreeButton: onScreen(TREE_BUTTON),
       back: onScreen(BACK_BUTTON),
@@ -581,6 +584,17 @@ export class InventoryScene extends Phaser.Scene {
       lineSpacing: 12,
     })
     this.characterContent.add([this.heading('In battle', COMBAT_X, SHEET_Y), this.statBlock])
+    const warning = attackCostWarning(this.stats.attackApCost, this.stats.actionPoints)
+    if (warning) {
+      this.characterContent.add(
+        this.add.text(COMBAT_X, this.statBlock.y + this.statBlock.height + 8, warning, {
+          fontFamily: FONT,
+          fontSize: '13px',
+          color: WARN,
+          wordWrap: { width: COMBAT_W },
+        }),
+      )
+    }
 
     this.buildCharacterBadges(BADGES_X, BADGES_Y)
   }

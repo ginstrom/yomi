@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { GOBLIN_STATS, type CombatantStats } from '../combat/combat.ts'
 import { BattleEngine, attackArc, type UnitSetup } from '../engine/battleEngine.ts'
 import { hex, hexDistance, offsetToHex, type Hex } from '../grid/hex.ts'
-import { planAttack } from './attackPlan.ts'
+import { noStrikeHint, planAttack } from './attackPlan.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -136,5 +136,14 @@ describe('planAttack', () => {
       )
       expect(planAttack(engine, 'warrior', 'goblin')).toEqual({ move: null, attack: false })
     })
+  })
+})
+
+describe('noStrikeHint', () => {
+  it('says the walk would leave too few AP for a foe out of reach', () => {
+    expect(noStrikeHint(2, 1)).toBe('Too few AP to reach and strike')
+  })
+  it('says there are too few AP to strike for a foe already in range', () => {
+    expect(noStrikeHint(1, 1)).toBe('Too few AP to strike')
   })
 })

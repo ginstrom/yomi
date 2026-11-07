@@ -44,6 +44,13 @@ describe('a battle', () => {
     expect(hero(after)).toMatchObject({ position: self.position, ap: self.ap })
     expect(after.log.length).toBe(start.log.length)
 
+    // Hovering the foe says why, and moving off it takes the hint away.
+    await game.hover(battleHexOnScreen(start, nearest.position))
+    const warned = await game.settled('Battle', (b) => b.hint.startsWith('Too few AP'))
+    expect(warned.hint).toBe('Too few AP to reach and strike')
+    await game.hover(battleHexOnScreen(start, self.position))
+    expect((await game.settled('Battle', (b) => !b.hint.startsWith('Too few AP'))).hint).toContain('Click a foe to attack')
+
     // Once the foe is within a walk that leaves the AP for it, the click walks and strikes.
     await game.click(after.buttons.endTurn)
     let turn = await game.waitFor('Battle', (b) => b.playerControl && b.state.round === 2)

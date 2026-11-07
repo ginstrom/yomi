@@ -72,3 +72,8 @@ export function planAttack(engine: BattleEngine, unit: UnitId, target: UnitId): 
   }
   return { move: null, attack: false }
 }
+
+/** The battle's hint for a foe a click cannot strike this turn: `distance` to it, the unit's `range`. */
+export function noStrikeHint(distance: number, range: number): string {
+  return distance <= range ? 'Too few AP to strike' : 'Too few AP to reach and strike'
+}

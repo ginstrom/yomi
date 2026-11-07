@@ -272,6 +272,8 @@ export interface BattleProbe {
   state: BattleState
   log: readonly BattleEvent[]
   playerControl: boolean
+  /** The header's hint line, with the warning for a foe the pointer is over that no click can strike. */
+  hint: string
   selected: UnitId | null
   /** Where the board's top-left corner is on screen and how far it is scaled; with BATTLE_LAYOUT, that places every hex. */
   origin: Point
@@ -310,6 +312,8 @@ export interface InventoryProbe {
   mana: number | null
   /** The spell skill the Spells tab shows, gear included; null for a character that knows no spell. */
   spellSkill: number | null
+  /** The Character tab's warning that the weapon held costs more AP than a turn gives; null when it fits. */
+  attackWarning: string | null
   /** The perks the Skills tab lists: those the character has a rank of. */
   takenPerks: Array<{ perk: string; ranks: number }>
   /** The Skills tab's button that opens the perk tree, and the tree's button back, by their centres on screen. */
