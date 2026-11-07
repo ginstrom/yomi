@@ -154,6 +154,7 @@ function isBandit(kind: FoeKind): kind is BanditKind {
  * level; a bandit by `banditStats`, in the gear its level's threat calls for.
  */
 export function foeStats(kind: FoeKind, level: number): CombatantStats {
+  // A foe's level is its battle's threat (clamped to the encounter's band), so the level picks the gear grade.
   if (isBandit(kind)) return banditStats(BANDIT_ROLE[kind], level, banditGrade(level))
   return foeAtLevel(FOE_STATS[kind], level, FOE_NATIVE_LEVEL[kind])
 }
