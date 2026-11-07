@@ -50,5 +50,8 @@ None.
 - Step 03 (1e51399, opus): runes.ts, id grammar with runes, on-hit/wards/maxHp item stats, crafting keeps runes; guard identical (233). Plan amended for D1 (C3 now clampHp(character, maxBefore)).
 - Step 03 review (opus): clean; guard reproduced; nits passed on.
 - Step 04 (724a09a, sonnet): maxHp/wards/onHit derived, clampHp both ways, pouch saved, SAVE 18, debug give/runes; guard 233. Review (opus): clean; nits (rise test, CLAUDE.md wording, itemPlace not clamping) passed to step 06.
-- Step 05 (9b46d64, opus): on-hit in the engine, Horror blightborn, LOG 23, policy and tally; guard 233; review running.
+- Step 05 (9b46d64, opus): on-hit in the engine, Horror blightborn, LOG 23, policy and tally; guard 233. Review (opus): clean, guard reproduced; nameplate status redraw for on-hit statuses and duplicate status in the log line passed to step 08.
 - Steps 06 (opus) and 07 (sonnet) started in parallel.
+- Step 07 (2d7d130, sonnet): loot.ts, rune wares and prices. Review (sonnet): clean.
+- Step 06 (b1eeef1, opus): runecraft.ts (embed/extract/fuse, costs 5/10/10 a rank), itemPlace worn paths clampHp, rise test. Review (opus) running.
+- Step 08 (sonnet) running; step 10 waits for 08 to commit (shared working tree).
