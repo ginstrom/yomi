@@ -419,7 +419,7 @@ function runedItem(item: Item, runes: readonly RuneKey[]): Item {
   const runed: Item = {
     ...item,
     id: `${item.id}#${runes.join('.')}`,
-    name: `${item.name} ⟨${runes.map(runeLabel).join(', ')}⟩`,
+    name: `${item.name} [${runes.map(runeLabel).join(', ')}]`,
     stats,
     runes,
   }

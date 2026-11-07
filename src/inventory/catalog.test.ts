@@ -233,9 +233,9 @@ describe('runed ids', () => {
   })
 
   it('name the runes after the item', () => {
-    expect(item('iron_sword@3#ember1').name).toBe('Masterwork Iron Longsword ⟨Ember I⟩')
-    expect(item('steel_longsword@3#ember2.storm1').name).toBe('Masterwork Steel Longsword ⟨Ember II, Storm I⟩')
-    expect(item('emberblade#dawn1').name).toBe('Emberblade ⟨Dawn I⟩')
+    expect(item('iron_sword@3#ember1').name).toBe('Masterwork Iron Longsword [Ember I]')
+    expect(item('steel_longsword@3#ember2.storm1').name).toBe('Masterwork Steel Longsword [Ember II, Storm I]')
+    expect(item('emberblade#dawn1').name).toBe('Emberblade [Dawn I]')
   })
 
   it('fold each rune into the stats by the slot it sits in', () => {

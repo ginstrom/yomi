@@ -58,7 +58,7 @@ Close stage 4. This step:
   - 7: Mind fits only a weapon that strikes with Magic;
   - 8: the loot rows for threats 1 to 7, the Source at threat 5's row, the favoured runes, and no runes from a debug `fight`;
   - 9: `lootRng(battleSeed)`, a stream of its own;
-  - 10: rank numerals I to IV in names, "⟨Ember I⟩";
+  - 10: rank numerals I to IV in names, "[Ember I]";
   - 11: the simulator's rune policy;
   - 12: the aggressive policy counts the on-hit bonus;
   - 13: one icon per rune kind, the socket pips and the `pip` canvas;
@@ -182,7 +182,7 @@ After any tuning:
 ### 4.3 Document
 
 **CLAUDE.md.** Earlier steps updated the lines their own changes made wrong; check each, and fix what is still stale. Make a full pass:
-- **The id grammar** in the `src/character/` and `src/inventory/` paragraph: `<plain>[@<grade>][+<modifier><grade>][#<rune>(.<rune>)*]`, a unique item taking only the `#` part, and the names "⟨Ember I⟩".
+- **The id grammar** in the `src/character/` and `src/inventory/` paragraph: `<plain>[@<grade>][+<modifier><grade>][#<rune>(.<rune>)*]`, a unique item taking only the `#` part, and the names "[Ember I]".
 - **`runes.ts`**, in one line:
   - the ten runes at four ranks, each by slot class (weapon, shield, armour);
   - `socketsOf` (by tier, +1 at Masterwork, a small slot at most 1, and three unique items with 1);
@@ -265,7 +265,7 @@ Search CLAUDE.md before committing for every name the stage renamed or replaced:
 Run the game with `make dev` (or `npm run dev`), start a new game with the ready-made party, and walk the design's play script. Open the debug console with `~`.
 1. Run `stock gold 300` and `facility trading_post 3`. Enter the encampment and open the trading post. Buy a Masterwork Iron Longsword (`iron_sword@3`, one socket) and two Lesser Ember Runes from the Runes filter. Then run `facility workshop 2`.
 2. At the workshop's Runes tab, embed one Ember rune in the longsword.
-   - See the name become "Masterwork Iron Longsword ⟨Ember I⟩".
+   - See the name become "Masterwork Iron Longsword [Ember I]".
    - See the tooltip's socket lines and the pip filled.
    - Extract it, see the fee (10 gold) come off the stock, and see the rune back in the pouch.
 3. Run `give storm1 3`, and fuse the three into a Storm Rune (20 gold, workshop level 1 or more). Try to fuse it on to rank 3, and see it refused naming a level 4 workshop (correction 18).

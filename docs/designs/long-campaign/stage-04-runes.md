@@ -62,7 +62,7 @@ Elements and wards came in stage 2. This stage gives them to heroes.
 ## 4. What the player sees
 
 - **After a win:** "Found: Lesser Ember Rune".
-- **At the workshop's Runes tab:** a Masterwork Iron Longsword shows one empty socket. Embedding the Ember rune makes it "Masterwork Iron Longsword ⟨Ember I⟩".
+- **At the workshop's Runes tab:** a Masterwork Iron Longsword shows one empty socket. Embedding the Ember rune makes it "Masterwork Iron Longsword [Ember I]". (Square brackets are the user's choice, made during implementation: the ⟨ ⟩ first written here read as parentheses at the tooltip's 12px.)
 - **In battle,** hits read "HITS Troll for 8 dmg +1 fire". At rank 3 the rune lays Seared, and the troll stops regenerating.
 - **Wards.** A breastplate with a Rime rune shows "Frost ward 2". The Salamander's spit lands 2 less on that hero, as does a Giant Spider's poison tick with a Venom ward.
 

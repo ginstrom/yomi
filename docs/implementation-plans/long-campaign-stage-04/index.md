@@ -24,7 +24,7 @@ The plan follows the stage design except where it contradicts itself or the code
 7. **A Mind rune fits a weapon only if the weapon strikes with Magic** (a wand or a staff; the reference: "wands and staves only"). Anywhere else it is refused: `runeFits` is false, `itemById` returns undefined for such an id, and `embed` says why. This avoids a rune that does nothing.
 8. **Loot rows.** Only the rows for threats 1 to 7 are used. Threats 1 to 3 roll a 50% chance of one rank-1 rune. Threats 4 to 7, and anything above until stage 9, roll one rune, rank 1 at 70% and otherwise rank 2. **The Source** (threat 5) rolls threat 5's row; the reference's Source row (3 runes of ranks 3 and 4) waits for stage 9 with the rows past threat 7. Following reference §4.5, a nest led by an elemental kind favours its element at 50%: the Salamander Pool favours Ember, the Spider Nest Venom. A battle the debug console's `fight` starts rolls no runes, since CLAUDE.md says such a win takes no loot.
 9. **The loot seed.** Runes are drawn from `lootRng(battleSeed)`, a stream of their own (`mulberry32((battleSeed ^ RUNE_LOOT_SALT) >>> 0)`), so the battle's and the enemy's dice are untouched. The game reads the seed from the battle's `battle_start` event, which survives a save and reload in the snapshot's events, so a reloaded battle rolls the same runes. The simulator uses the seed it passes to `fight`.
-10. **Rank numerals go to IV.** `gradeNumeral` stops at III, so runes get `rankNumeral` (I to IV) in names: "Masterwork Iron Longsword ⟨Ember I⟩", and several as "⟨Ember I, Storm II⟩".
+10. **Rank numerals go to IV.** `gradeNumeral` stops at III, so runes get `rankNumeral` (I to IV) in names: "Masterwork Iron Longsword [Ember I]", and several as "[Ember I, Storm II]".
 11. **The simulator's rune policy.**
     - *Order.* Weapons get Ember, then Storm, then Stone; shields and armour get Stone, then Life. The reference puts "the ward of the next ring's dominant element" first for armour, but today's map has no ring with a single element, so that table waits for stage 9.
     - *Where.* It embeds only at a workshop (level 1 or more) on a home visit. It does not embed in the field, which would spend days the same as field crafts.
@@ -213,7 +213,7 @@ rune = <RuneId><Rank>                                        ember1 … dawn4
 
 **A runed item** is the unruned item with these changes:
 - `id`: the unruned id, then `#` and the keys joined by `.`;
-- `name`: `<unruned name> ⟨<runeLabel>, …⟩`, for example "Masterwork Iron Longsword ⟨Ember I⟩";
+- `name`: `<unruned name> [<runeLabel>, …]`, for example "Masterwork Iron Longsword [Ember I]" (amended before step 09, the user's choice: square brackets, where it was ⟨ ⟩, which read as parentheses at the tooltip's 12px);
 - `stats`: the unruned stats, then each rune's `runeStats(id, rank, slotClass(slot))` folded in order. Numbers add, a missing field counting 0. `damage.bonus` adds. `wards` add by element. `onHit` entries concatenate;
 - `runes`: the keys;
 - `base`: `unruned.base ?? unruned.id` for a plain item (correction 15), and absent for an enchanted one;

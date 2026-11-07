@@ -26,7 +26,7 @@ Nothing derives or resolves the new stats yet: step 04 derives wards, `onHit` an
   - **2. On-hit bonus damage is flat and draws nothing.** `OnHit.damage` is a flat number. Nothing in this step draws from any RNG.
   - **3 (the type only).** `CombatantStats` gains `blightborn?: true`, and `baneApplies(stats)` is `(stats.regeneration ?? 0) > 0 || stats.blightborn === true`. Setting it on `BLIGHT_HORROR_STATS` is step 05's.
   - **7. A Mind rune fits a weapon only if the weapon strikes with Magic** (`stats.skill === 'magic'`: a wand or a staff). Anywhere else `runeFits` is false and `itemById` returns undefined for such an id.
-  - **10. Rank numerals go to IV.** `gradeNumeral` stops at III, so `rankNumeral` gives I to IV. Names read "Masterwork Iron Longsword ⟨Ember I⟩", and several runes "⟨Ember I, Storm II⟩".
+  - **10. Rank numerals go to IV.** `gradeNumeral` stops at III, so `rankNumeral` gives I to IV. Names read "Masterwork Iron Longsword [Ember I]", and several runes "[Ember I, Storm II]".
   - **15. A runed plain item carries `base`.** A runed item keeps every field of the item it was made from (`family`, `material`, `tier`, `grade`, `mod`). A plain one gets `base` set to its plain id even at grade 1 (`unruned.base ?? unruned.id`), so `baseItem` still finds it. An enchanted one has no `base`, so `baseItem` stays null. `unruned(item)` gives the item without runes. Crafting a modifier onto a runed item keeps the runes (`craftedItem` gains a `runes` argument).
   - **17 (quoting).** Wherever an id with `#` goes on a command line (`--player-weapon`, the debug console is fine), quote it: `'iron_sword@3#ember1'`.
 - **Existing code** (inspected at `7d32a0a`):
@@ -192,7 +192,7 @@ rune = <RuneId><Rank>                                        ember1 … dawn4
 
 **A runed item** is the unruned item with these changes:
 - `id`: the unruned id, then `#` and the keys joined by `.`;
-- `name`: `<unruned name> ⟨<runeLabel>, …⟩`, for example "Masterwork Iron Longsword ⟨Ember I⟩";
+- `name`: `<unruned name> [<runeLabel>, …]`, for example "Masterwork Iron Longsword [Ember I]";
 - `stats`: the unruned stats, then each rune's `runeStats(id, rank, slotClass(slot))` folded in order. Numbers add, a missing field counting 0. `damage.bonus` adds. `wards` add by element. `onHit` entries concatenate;
 - `runes`: the keys;
 - `base`: `unruned.base ?? unruned.id` for a plain item (correction 15), and absent for an enchanted one;
@@ -239,7 +239,7 @@ The socket lines are `socketLines` (C1), which the tooltip adds.
   2. Split off the `#` part. Build the unruned item from the rest by today's rules (aliases included), then apply the runes.
   3. Return undefined for an empty rune part (`iron_sword@3#`), a key that does not parse, more runes than `socketsOf(unruned)`, or a rune where `runeFits` is false.
   4. Cache the result in `BUILT` under the id asked for, so one id is one object; an alias with runes (`steel_armor#stone1`) gives the same object as its canonical id (`iron_breastplate#stone1`), which carries the canonical id.
-- **A runed item** is built as C2's "A runed item" list says: id, name with `⟨…⟩` (the characters U+27E8 and U+27E9) and `rankNumeral`, stats folded rune by rune with `runeStats(id, rank, slotClass(slot))`, `runes`, `base` by correction 15.
+- **A runed item** is built as C2's "A runed item" list says: id, name with `[…]` (square brackets, the user's choice before step 09; it was ⟨…⟩) and `rankNumeral`, stats folded rune by rune with `runeStats(id, rank, slotClass(slot))`, `runes`, `base` by correction 15.
   - Folding: numbers add (a missing field counts 0), `damage.bonus` adds when there is a `damage`, `wards` add by element, `onHit` entries concatenate.
   - Write the fold as one small helper (for example `addStats(a, b)`), so step 04's and later readers see one rule.
 - **`unruned(item)`**: `item.runes?.length ? itemById(id before '#')! : item`.
@@ -288,7 +288,7 @@ Update the lines this step makes wrong:
 2. **`src/inventory/catalog.test.ts` (existing; extend):**
    - round trips: `itemById(id)!.id === id` for `iron_sword@3#ember1`, `steel_longsword@3+light1#ember2.storm1`, `emberblade#dawn1`, `iron_breastplate@3#life1`;
    - the same object twice for one id; an alias with runes (`steel_armor@3#stone1`) is the object of `iron_breastplate@3#stone1`;
-   - names: `itemById('iron_sword@3#ember1')!.name === 'Masterwork Iron Longsword ⟨Ember I⟩'`, and two runes "⟨Ember II, Storm I⟩";
+   - names: `itemById('iron_sword@3#ember1')!.name === 'Masterwork Iron Longsword [Ember I]'`, and two runes "[Ember II, Storm I]";
    - stats: `iron_sword@3#stone1` has its damage bonus one above `iron_sword@3`; `iron_breastplate@3#rime2` has `wards.frost` 4; `iron_sword@3#ember3` has one `onHit` entry with Seared; two Ember runes give two entries;
    - `base`, `family`, `tier`, `grade`, `mod` kept; `baseItem` of a runed plain item is its plain item, of a runed unique null; `unruned`, `withRunes` (also back to none), `craftedItem` with runes, `unmodified` keeping runes;
    - undefined for: `iron_sword#ember1` (no socket), `iron_sword@3#ember1.storm1` (too many), `iron_sword@3#mind1` (does not fit), `iron_sword@3#`, `iron_sword@3#ember5`, `iron_sword@3#fire1`, `ring_protection#ember1`, `emberblade@2#ember1`.

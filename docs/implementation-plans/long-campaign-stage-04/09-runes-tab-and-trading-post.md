@@ -19,7 +19,7 @@ The screens decide nothing: every cost, refusal and effect comes from `runecraft
 ## 2. Requirements and context
 
 - **Design §2 (Scenes):** "`CraftingScene` gains a Runes tab: the pouch, the item's sockets, and embed, extract and fuse." "The trading post gets a Runes section." Embedding works at the workshop at any level, or in the field for rank 1, taking a day. Fusing to rank 2 needs workshop level 1. Fusing to ranks 3 and 4 needs levels 4 and 5, which stage 10 adds, so the refusal names the level. Extracting needs level 2.
-- **Design §4:** at the workshop's Runes tab, a Masterwork Iron Longsword shows one empty socket. Embedding the Ember rune makes it "Masterwork Iron Longsword ⟨Ember I⟩".
+- **Design §4:** at the workshop's Runes tab, a Masterwork Iron Longsword shows one empty socket. Embedding the Ember rune makes it "Masterwork Iron Longsword [Ember I]".
 - **Design §7:** keep the flows to select, act and confirm.
 - **The play script (design §6), the parts this step's screens carry:**
   1. `stock gold 300` and `facility trading_post 3`. Buy a Masterwork longsword and two Lesser Ember runes, then `facility workshop 2`.
@@ -166,13 +166,13 @@ Update the scene layer's lines: `Crafting` has Modify and Runes tabs (the Runes 
 ## 5. Verification
 
 1. **Scene smoke tests** (`npx vitest run src/scenes/CraftingScene.test.ts src/scenes/TradingPostScene.test.ts`):
-   - Crafting opens on Modify; the Runes tab lists a planted `iron_sword@3` with one empty socket and the pouch's runes; embedding `ember1` at a workshop changes the item to `iron_sword@3#ember1` named "Masterwork Iron Longsword ⟨Ember I⟩"; a refused action shows its refusal and changes nothing.
+   - Crafting opens on Modify; the Runes tab lists a planted `iron_sword@3` with one empty socket and the pouch's runes; embedding `ember1` at a workshop changes the item to `iron_sword@3#ember1` named "Masterwork Iron Longsword [Ember I]"; a refused action shows its refusal and changes nothing.
    - Opened with `resume: 'World'` in the field, a rank-1 embed stops the scene and resumes `World` with `CraftedData`.
    - The trading post's Runes filter lists the six Lesser runes at a level 2 post and none at level 1; buying one adds it to the pouch; the Sell tab lists pouch runes at a third of their price.
 2. **Helper tests** (domain project), if a helper was added: `npx vitest run src/scenes/<helper>.test.ts`.
 3. **In-browser tests** in `e2e/encampment.test.ts` (read `e2e/CLAUDE.md`; drive through probes, wait on state, no sleeps). Plant the start with `richAtHome` (stock, post level, and by path `world.workshop`, `runes`, and an item such as `party.0.equipment.mainHand` = `'iron_sword@3'`). Cover the play script's flows:
    - buy two Lesser Ember runes at a level 2 or 3 post, and see them in the pouch;
-   - at a level 2 workshop, embed one into the Masterwork longsword: the name gains "⟨Ember I⟩" and the gold falls by 5; extract it: the gold falls by 10 and the rune is back in the pouch;
+   - at a level 2 workshop, embed one into the Masterwork longsword: the name gains "[Ember I]" and the gold falls by 5; extract it: the gold falls by 10 and the rune is back in the pouch;
    - with three `storm1` planted, fuse them into one `storm2` (gold −20); fusing the `storm2` is refused, the message naming a level 4 workshop;
    - from the map's Craft button away from the encampment, embed a rank-1 rune: the scene closes, the map's turn is one more and its message tells of the day's work.
 
