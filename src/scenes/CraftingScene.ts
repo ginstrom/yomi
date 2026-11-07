@@ -15,7 +15,7 @@ import type { ButtonProbe, CraftingProbe } from '../testHook.ts'
 import { soundVolume } from './audioSettings.ts'
 import type { Point } from './boardGeometry.ts'
 import { TYPICAL_AP, compareLines, fieldCraftSummary } from './gearCompare.ts'
-import { ITEM_ICON_KEYS, RUNE_COLOURS, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
+import { ITEM_ICON_KEYS, RUNE_COLOURS, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, cssColour, iconTint } from './itemIcons.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton, fitText } from './panelButton.ts'
 import {
@@ -382,7 +382,7 @@ export class CraftingScene extends Phaser.Scene {
           const effect = this.add.text(OPTIONS_X + 22, centre + 10, socket.effect!, { fontFamily: FONT, fontSize: '10px', color: DIM, wordWrap: { width: OPTIONS_W - 104 } })
           this.frame.add([
             this.add.image(OPTIONS_X + 8, centre, RUNE_ICON_KEYS[id]),
-            this.add.text(OPTIONS_X + 22, centre, socket.label, { fontFamily: FONT, fontSize: '12px', color: hexColour(RUNE_COLOURS[id]) }).setOrigin(0, 0.5),
+            this.add.text(OPTIONS_X + 22, centre, socket.label, { fontFamily: FONT, fontSize: '12px', color: cssColour(RUNE_COLOURS[id]) }).setOrigin(0, 0.5),
             effect,
           ])
           this.actionButton(at, 'Extract', action, ok)
@@ -611,5 +611,3 @@ export class CraftingScene extends Phaser.Scene {
 
 const optionKey = (option: CraftOption): string => `${option.modifier.id}${option.grade}`
 
-/** A colour number as the text style's string: 0xe8c766 → '#e8c766'. */
-const hexColour = (colour: number): string => `#${colour.toString(16).padStart(6, '0')}`

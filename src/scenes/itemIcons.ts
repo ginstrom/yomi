@@ -83,6 +83,11 @@ export const RUNE_COLOURS: Record<RuneId, number> = {
   dawn: 0xffe9a0,
 }
 
+/** A colour as CSS text for a Phaser text style: `0xff8a3d` → `'#ff8a3d'`. */
+export function cssColour(rgb: number): string {
+  return `#${rgb.toString(16).padStart(6, '0')}`
+}
+
 /** An item's pips, socket by socket: the rune's id where one sits, null where empty; empty for an item with no sockets. */
 export function socketPips(item: Item): Array<RuneId | null> {
   return Array.from({ length: socketsOf(item) }, (_, i) => {

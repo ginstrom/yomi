@@ -70,7 +70,7 @@ import { scheduleEvents, type Cue } from './eventSchedule.ts'
 import { ScrollingLog } from './scrollingLog.ts'
 import { SEED_KEY } from './seed.ts'
 import { soundVolume } from './audioSettings.ts'
-import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, RUNE_COLOURS, iconTint } from './itemIcons.ts'
+import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, RUNE_COLOURS, cssColour, iconTint } from './itemIcons.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { CHEST_POINT, SPRITE_ATLAS, heroLook, pointFromAnchor, spriteAnim, spriteFrame } from './unitLook.ts'
@@ -168,9 +168,6 @@ const ELEMENT_FLOAT_COLOURS: Record<DamageElement, string> = {
   blight: cssColour(RUNE_COLOURS.dawn),
 }
 
-function cssColour(rgb: number): string {
-  return `#${rgb.toString(16).padStart(6, '0')}`
-}
 const IMAGE_TINT = 0xffffff
 /** The spell list's rows, stacked upwards from over the Cast button. */
 const SPELL_ROW_W = 240
@@ -919,7 +916,7 @@ export class BattleScene extends Phaser.Scene {
           fontFamily: 'monospace',
           fontSize: '11px',
           fontStyle: 'bold',
-          color: `#${colour.toString(16).padStart(6, '0')}`,
+          color: cssColour(colour),
           stroke: '#000000',
           strokeThickness: 3,
         })

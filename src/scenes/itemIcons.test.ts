@@ -8,6 +8,7 @@ import {
   RUNE_COLOURS,
   RUNE_ICON_KEYS,
   SOCKET_PIP_KEYS,
+  cssColour,
   iconTint,
   pipOffsets,
   socketPips,
@@ -53,5 +54,13 @@ describe('item icons', () => {
     expect(three.map((p) => p.x)).toEqual([-10, 0, 10])
     // Inside a 46 px cell, whose half is 23.
     expect(three[2].x + 6).toBeLessThan(23)
+  })
+})
+
+describe('cssColour', () => {
+  it('writes a colour as CSS text, padded to six digits', () => {
+    expect(cssColour(0xff8a3d)).toBe('#ff8a3d')
+    expect(cssColour(0x00ff00)).toBe('#00ff00')
+    expect(cssColour(0)).toBe('#000000')
   })
 })
