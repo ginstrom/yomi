@@ -43,7 +43,7 @@ import type { InventoryProbe } from '../testHook.ts'
 import type { Point } from './boardGeometry.ts'
 import { pressMoved, rectContains, type Rect } from './mapScroll.ts'
 import { applyMove, planDrag, validTargets, type DragSource, type DropTarget } from './gearDrag.ts'
-import { attackCostWarning, wardsLine } from './gearCompare.ts'
+import { WARDS_WIDE_ROW_CHARS, attackCostWarning, wardsLines } from './gearCompare.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
 import { createPips } from './socketPips.ts'
 import { soundVolume } from './audioSettings.ts'
@@ -261,6 +261,8 @@ export class InventoryScene extends Phaser.Scene {
   /** The Character tab's stat column and its badges, for the probe to tell they fit. */
   private statBlock: Phaser.GameObjects.Text | null = null
   private badgeBounds: Rect | null = null
+  /** Where the Inventory tab's stat lines end, which the gear hint below keeps clear of. */
+  private statsBottom = 0
   private treeContent!: Phaser.GameObjects.Container
   private spellsContent!: Phaser.GameObjects.Container
   private spellTreeContent!: Phaser.GameObjects.Container
@@ -591,6 +593,10 @@ export class InventoryScene extends Phaser.Scene {
       color: TEXT,
       lineSpacing: 12,
     })
+    // Wards, mana and piercing each add lines: the block tightens until it ends clear of the badges.
+    const badgesTop = BADGES_Y - 28 - 6
+    let spacing = 12
+    while (this.statBlock.y + this.statBlock.height > badgesTop && spacing > 0) this.statBlock.setLineSpacing(--spacing)
     this.characterContent.add([this.heading('In battle', COMBAT_X, SHEET_Y), this.statBlock])
     const warning = attackCostWarning(this.stats.attackApCost, this.stats.actionPoints)
     if (warning) {
@@ -1042,7 +1048,7 @@ export class InventoryScene extends Phaser.Scene {
       .text(STATS_X, 94, this.classLine(), { fontFamily: 'monospace', fontSize: '13px', color: '#8a7a5a' })
       .setOrigin(0, 0.5)
 
-    const lines = this.statLines()
+    const lines = this.statLines(WARDS_WIDE_ROW_CHARS)
     // A caster's mana and a melee weapon's piercing each make a line more, and the last has to end clear of the hint below.
     const statsBody = this.add.text(STATS_X, 130, lines.join('\n'), {
       fontFamily: 'monospace',
@@ -1050,6 +1056,12 @@ export class InventoryScene extends Phaser.Scene {
       color: '#d8c9a3',
       lineSpacing: lines.length > 7 ? 4 : lines.length > 6 ? 8 : 12,
     })
+    // Wards add rows too: tighten the lines to end by y 330, and the hint below follows the block.
+    let spacing = lines.length > 7 ? 4 : lines.length > 6 ? 8 : 12
+    while (statsBody.y + statsBody.height > 330 && spacing > 0) statsBody.setLineSpacing(--spacing)
+    // With every ward, mana and piercing showing even that is not enough: a smaller face, and the hint below shrinks with it.
+    if (statsBody.y + statsBody.height > 305) statsBody.setFontSize(13)
+    this.statsBottom = statsBody.y + statsBody.height
 
     this.inventoryContent.add([nameText, classText, statsBody])
   }
@@ -1064,9 +1076,9 @@ export class InventoryScene extends Phaser.Scene {
           ? 'Click to equip, stow or pick up; right- or Ctrl+click to drop. Drag to move. Free until you next move or attack.'
           : `Click to equip, stow or pick up; right- or Ctrl+click to drop. Drag to move. Costs ${this.gearApCost} AP on closing, however many changes.`
     this.inventoryContent.add(
-      this.add.text(STATS_X, 300, hint, {
+      this.add.text(STATS_X, Math.max(300, this.statsBottom + 6), hint, {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: this.statsBottom > 310 ? '11px' : '12px',
         color: '#8a7a5a',
         wordWrap: { width: PANEL_W - STATS_X - 20 },
       }),
@@ -1079,13 +1091,13 @@ export class InventoryScene extends Phaser.Scene {
     return `Level ${level} - ${xp} / ${xpToNextLevel(level)} XP`
   }
 
-  private statLines(): string[] {
-    const wards = wardsLine(this.stats.wards)
+  /** The stat lines; `wardRowChars` is how wide a row of wards may be where they are shown. */
+  private statLines(wardRowChars?: number): string[] {
     return [
       `Hit Points:    ${this.character.hp} / ${this.stats.maxHp}`,
       `Armor Class:   ${this.stats.ac}`,
       `Resistance:    ${this.stats.resistance ?? 0}`,
-      ...(wards ? [`Wards:         ${wards}`] : []),
+      ...wardsLines(this.stats.wards, wardRowChars),
       `To Hit:        ${this.stats.toHit}%`,
       `Damage:        ${formatDamage(this.stats.damage)}`,
       `Attack Cost:   ${this.stats.attackApCost} AP`,

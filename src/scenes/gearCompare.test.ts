@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { IRON_SWORD, OAK_SHIELD, YEW_BOW, itemById } from '../inventory/inventory.ts'
-import { attackCostWarning, attacksPerTurn, compareLines, fieldCraftSummary, statLines, statSummary, wardsLine } from './gearCompare.ts'
+import { attackCostWarning, attacksPerTurn, compareLines, fieldCraftSummary, statLines, statSummary, WARDS_ROW_CHARS, WARDS_WIDE_ROW_CHARS, wardsLines } from './gearCompare.ts'
 
 describe('gear comparisons', () => {
   it('counts the attacks a turn an item gives', () => {
@@ -74,11 +74,22 @@ describe('attackCostWarning', () => {
   })
 })
 
-describe('the wards line', () => {
-  it('lists the wards above 0 in element order, and is null with none', () => {
-    expect(wardsLine({ frost: 4, fire: 2, acid: 0 })).toBe('fire 2, frost 4')
-    expect(wardsLine({ blight: 1, poison: 1, lightning: 3 })).toBe('lightning 3, poison 1, blight 1')
-    expect(wardsLine({ fire: 0 })).toBeNull()
-    expect(wardsLine(undefined)).toBeNull()
+describe('the wards lines', () => {
+  it('lists the wards above 0 in element order, and is empty with none', () => {
+    expect(wardsLines({ frost: 4, fire: 2, acid: 0 })).toEqual(['Wards:', '  fire 2, frost 4'])
+    expect(wardsLines({ fire: 0 })).toEqual([])
+    expect(wardsLines(undefined)).toEqual([])
+  })
+
+  it('wraps onto indented rows that fit the column, up to all six elements', () => {
+    const all = wardsLines({ fire: 3, frost: 3, lightning: 3, acid: 3, poison: 3, blight: 3 })
+    expect(all.join(' ').replace(/,/g, '').replace(/ +/g, ' ')).toBe('Wards: fire 3 frost 3 lightning 3 acid 3 poison 3 blight 3')
+    for (const line of all.slice(1)) expect(line.length - 2).toBeLessThanOrEqual(WARDS_ROW_CHARS)
+    expect(all.length).toBeLessThanOrEqual(5)
+    const wide = wardsLines({ fire: 3, frost: 3, lightning: 3, acid: 3, poison: 3, blight: 3 }, WARDS_WIDE_ROW_CHARS)
+    for (const line of wide.slice(1)) expect(line.length - 2).toBeLessThanOrEqual(WARDS_WIDE_ROW_CHARS)
+    expect(wide.length).toBe(3)
+    const three = wardsLines({ fire: 2, frost: 2, lightning: 2 })
+    expect(three).toEqual(['Wards:', '  fire 2, frost 2,', '  lightning 2'])
   })
 })

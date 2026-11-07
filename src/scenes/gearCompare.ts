@@ -101,8 +101,25 @@ export function attackCostWarning(attackApCost: number, actionPoints: number): s
   return attackApCost > actionPoints ? `Attack costs ${attackApCost} AP, you have ${actionPoints}: cannot attack` : null
 }
 
-/** The Character tab's wards: "fire 2, frost 4" in element order, only those above 0; null when there are none. */
-export function wardsLine(wards: Partial<Record<Element, number>> | undefined): string | null {
+/** The widest a wards row may be, in characters at 14 px: the Character tab's stat column leaves 24, the Inventory tab's 29. */
+export const WARDS_ROW_CHARS = 24
+export const WARDS_WIDE_ROW_CHARS = 29
+
+/**
+ * The stat sheet's wards: a "Wards:" line, then the wards above 0 in element order ("fire 2, frost 4"),
+ * packed into indented rows of at most `rowChars`, so that all six elements fit the column. Empty
+ * when there are none.
+ */
+export function wardsLines(wards: Partial<Record<Element, number>> | undefined, rowChars = WARDS_ROW_CHARS): string[] {
   const shown = ELEMENTS.filter((element) => (wards?.[element] ?? 0) > 0).map((element) => `${element} ${wards![element]}`)
-  return shown.length > 0 ? shown.join(', ') : null
+  if (shown.length === 0) return []
+  const rows: string[] = []
+  for (const ward of shown) {
+    const last = rows.length - 1
+    // One character is kept for the comma a row ends with when another follows.
+    if (last >= 0 && `${rows[last]}, ${ward}`.length + 1 <= rowChars) rows[last] += `, ${ward}`
+    else rows.push(ward)
+  }
+  // A row that is followed by another ends with a comma, as a list does.
+  return ['Wards:', ...rows.map((row, i) => `  ${row}${i < rows.length - 1 ? ',' : ''}`)]
 }

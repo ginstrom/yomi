@@ -104,7 +104,7 @@ The screens decide nothing: every cost, refusal and effect comes from `runecraft
   export function socketPips(item: Item): Array<RuneId | null>
   ```
 
-  Step 08 already loads these images in `InventoryScene`, `TradingPostScene` and `CraftingScene`, and draws item pips along the bottom of an icon. This step reuses those helpers. If step 08 drew the pips in one scene only, factor the drawing into a shared function rather than copying it.
+  Step 08 already loads these images in `InventoryScene`, `TradingPostScene` and `CraftingScene`, and draws item pips along the bottom of an icon in `InventoryScene` only (`createPips` in `src/scenes/socketPips.ts`, with `pipOffsets` and `socketPips` in `itemIcons.ts`). The trading post and crafting rows have no pips yet: this step should draw them with `createPips`, not a copy.
 - **From steps 03 and 04 (C1, C4):** `runeName`, `runeLabel`, `rankNumeral`, `parseRuneKey`, `pouchKeys`, `pouchCount`, `socketLines`, `RUNES[id].describe` in `src/inventory/runes.ts`. `GameState.runes: Pouch`, saved. The debug console's `give storm1 3` puts runes in the pouch.
 - **Existing code:**
   - `src/scenes/CraftingScene.ts`: today's list of craftables on the left, options on the right, the `Work it` button, paging, `CraftingData { game; resume?: 'World' }`, and `CraftedData { crafted: { item: string; events: WorldEvent[] } }`. A field craft stops the scene and resumes `World` with `CraftedData`.

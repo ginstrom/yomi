@@ -169,7 +169,7 @@ describe('a hero’s panel', () => {
     panel = await game.settled('Inventory', (p) => p.tooltip.length > 0)
     expect(panel.tooltip).toContain('Frost ward 2')
     expect(panel.tooltip).toContain('Sockets: 1 of 1')
-    expect(panel.statLines).toContain('Wards:         frost 2')
+    expect(panel.statLines).toEqual(expect.arrayContaining(['Wards:', '  frost 2']))
 
     // A socketed sword with nothing in it says so.
     const sword = panel.ground.find((slot) => slot.item === 'iron_sword@3')!
@@ -177,7 +177,7 @@ describe('a hero’s panel', () => {
     panel = await game.settled('Inventory', (p) => p.tooltip.includes('Sockets: 0 of 1'))
     await game.press('c')
     panel = await game.settled('Inventory', (p) => p.tab === 'character')
-    expect(panel.statLines).toContain('Wards:         frost 2')
+    expect(panel.statLines).toEqual(expect.arrayContaining(['Wards:', '  frost 2']))
   })
 
   it('lays a cloak, a breastplate, a circlet, a sword and a shield in their order (AC6)', async () => {
