@@ -123,7 +123,7 @@ This step adds fifteen gear sprites to the atlas, laid over the `warrior` body: 
 
 ## Execution record
 
-**Commit:** see the step's row in the index (sources, exports and README in one commit; the SHA recorded in a follow-up).
+**Commit:** `2814cc1` (sources, exports and README), its SHA recorded in a follow-up commit.
 
 **What was made.** Fifteen sources in `art/gear/`, by the exact names of C6, each hand-outlined over `warrior` as the existing gear is (no `outline = "auto"`), each with `idle_1` shifted a pixel, `[anim.idle] like = "warrior"` and `[anim.walk] rest = true`:
 - held, gripped at column 25 with row 19 open for the fist: `gear_rapier` (a one-pixel blade from row 0, longer and slimmer than the sword, over a gold cup guard), `gear_mace` (a flanged steel ball on a haft shorter than the axe's), `gear_spear` (a leaf point and a red binding on a one-pixel shaft from row 0 to 30), `gear_war_hammer` (a block face forward and a spike behind, larger than the mace's head), `gear_halberd` (spike, axe blade and a small back hook on a shaft as long as the spear's), `gear_longbow` (the bow's lower limb and an upper limb eight rows taller, rows 0 to 30, string `unoutlined`), `gear_crossbow` (a two-pixel stock held level across the arm, a steel prod at its front and the string drawn back to it, `unoutlined`), `gear_staff` (a two-pixel ash shaft, rows 0 to 30, with a knot and a blue crystal held in a fork), `gear_buckler` (a 7-pixel round steel buckler at the off hand), `gear_tower_shield` (steel-rimmed red board, rows 9 to 28, columns 2 to 11);
