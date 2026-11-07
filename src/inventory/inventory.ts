@@ -356,8 +356,7 @@ export function itemById(id: string): Item | undefined {
 
 /** The plain item `item` was made from, at its tier: itself if plain, null for an enchanted one. */
 export function baseItem(item: Item): Item | null {
-  const id = item.base ?? item.id
-  return BASES_BY_ID.get(Object.hasOwn(LEGACY_ALIASES, id) ? LEGACY_ALIASES[id] : id) ?? null
+  return BASES_BY_ID.get(item.base ?? item.id) ?? null
 }
 
 /** `item` without its modifier: the plain item at its grade. */
