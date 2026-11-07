@@ -1,8 +1,8 @@
 import { ELEMENTS, formatDamage, type Element, type OnHit } from '../combat/combat.ts'
-import { STATUSES } from '../combat/spells.ts'
 import { gradeNumeral } from '../inventory/grades.ts'
 import { SHORTFALL_TO_HIT, strengthShortfall, type Item, type ItemStats } from '../inventory/inventory.ts'
 import { MODIFIER_IDS, MODIFIERS } from '../inventory/modifiers.ts'
+import { onHitParts } from '../inventory/runes.ts'
 
 /**
  * The trading post's and the crafting screen's words for an item's stats,
@@ -45,22 +45,13 @@ function statWords(stats: ItemStats, ap: number, strength?: number): Array<[stri
   if (wards) words.push(['Wards', wards])
   if (stats.maxHp) words.push(['Max HP', signed(stats.maxHp)])
   // Every entry (a rune's each) on one line, so that a rune set or taken out changes that one line.
-  if (stats.onHit?.length) words.push(['On a hit', stats.onHit.map(onHitWords).join('; ')])
+  if (stats.onHit?.length) words.push(['On a hit', stats.onHit.map((entry) => onHitParts([entry]).join(', ')).join('; ')])
   return words
 }
 
 /** The wards above 0 in element order, "fire 2, frost 4"; empty with none. */
 const wardWords = (wards: Partial<Record<Element, number>> | undefined): string =>
   ELEMENTS.filter((element) => (wards?.[element] ?? 0) > 0).map((element) => `${element} ${wards![element]}`).join(', ')
-
-/** What one on-hit entry (a rune's) does: "+1 fire", "+3 fire, lays Seared", "heals 1", "+2 blight to the regenerating and the blighted". */
-function onHitWords(entry: OnHit): string {
-  const parts: string[] = []
-  if (entry.damage > 0) parts.push(`+${entry.damage} ${entry.element ?? 'damage'}${entry.bane ? ' to the regenerating and the blighted' : ''}`)
-  if (entry.heal) parts.push(`heals ${entry.heal}`)
-  if (entry.status) parts.push(`lays ${STATUSES[entry.status.id].name}${entry.onCrit ? ' on a critical' : ''}`)
-  return parts.join(', ')
-}
 
 /**
  * An item's stats as lines: "Damage: 1d8+3", "Attack: 5 AP, 1 attack a turn", ...;
@@ -146,16 +137,10 @@ export function wardsLines(wards: Partial<Record<Element, number>> | undefined, 
 /**
  * The stat sheet's on-hit line for the main hand (runes): an "On a hit:" line, then what a hit
  * adds in the engine's order (damage, healing, statuses), "+3 fire, lays Seared", packed into
- * indented rows as the wards are. A bane is "(bane)" here, for the column's width. Empty with none.
+ * indented rows as the wards are. It takes `onHitParts`'s short form, for the column's width. Empty with none.
  */
 export function onHitLines(onHit: readonly OnHit[] | undefined, rowChars = WARDS_ROW_CHARS): string[] {
-  const entries = onHit ?? []
-  const parts = [
-    ...entries.filter((e) => e.damage > 0).map((e) => `+${e.damage} ${e.element ?? 'damage'}${e.bane ? ' (bane)' : ''}`),
-    ...entries.filter((e) => e.heal).map((e) => `heals ${e.heal}`),
-    ...entries.filter((e) => e.status).map((e) => `lays ${STATUSES[e.status!.id].name}${e.onCrit ? ' on crit' : ''}`),
-  ]
-  return packedLines('On a hit:', parts, rowChars)
+  return packedLines('On a hit:', onHitParts(onHit ?? [], 'short'), rowChars)
 }
 
 /** `title`, then `parts` joined by commas into indented rows of at most `rowChars`, a row followed by another ending with a comma; empty with no parts. */

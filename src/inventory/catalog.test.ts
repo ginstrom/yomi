@@ -333,10 +333,8 @@ describe('the words of runed stats', () => {
         ],
       }),
     ).toEqual([
-      'On a hit: +3 fire',
-      'On a hit: lays Seared',
-      'On a hit: +3 frost',
-      'On a critical: lays Chilled',
+      'On a hit: +3 fire, lays Seared',
+      'On a hit: +3 frost, lays Chilled on a critical',
       'On a hit: +2 blight to the regenerating and the blighted',
       'On a hit: heals 1',
       'On a hit: +1 damage',

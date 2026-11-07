@@ -5,8 +5,10 @@ import {
   MAX_RANK,
   RANKS,
   RUNE_IDS,
+  RUNES,
   addToPouch,
   isRuneKey,
+  onHitParts,
   parseRuneKey,
   pouchCount,
   pouchKeys,
@@ -176,5 +178,40 @@ describe('the pouch', () => {
     addToPouch(pouch, 'ember3')
     addToPouch(pouch, 'storm1')
     expect(pouchKeys(pouch)).toEqual(['ember3', 'storm1', 'storm2', 'dawn1'])
+  })
+})
+
+describe('the words of an on-hit effect', () => {
+  const entries: OnHit[] = [
+    { damage: 3, element: 'frost', status: { id: 'chilled', turns: 1 }, onCrit: true },
+    { damage: 0, heal: 1 },
+    { damage: 2, element: 'blight', bane: true },
+    { damage: 3, element: 'fire', status: { id: 'seared', turns: 1 } },
+    { damage: 1 },
+  ]
+
+  it('are in the engine\'s order, damage then healing then statuses, each status by its own name', () => {
+    expect(onHitParts(entries)).toEqual([
+      '+3 frost',
+      '+2 blight to the regenerating and the blighted',
+      '+3 fire',
+      '+1 damage',
+      'heals 1',
+      'lays Chilled on a critical',
+      'lays Seared',
+    ])
+  })
+
+  it('have a short form for the narrow stat column', () => {
+    expect(onHitParts(entries, 'short')).toEqual(['+3 frost', '+2 blight (bane)', '+3 fire', '+1 damage', 'heals 1', 'lays Chilled on crit', 'lays Seared'])
+  })
+
+  it('are what a rune says it does in a weapon', () => {
+    expect(RUNES.ember.describe.weapon(1)).toBe('On a hit, +1 fire')
+    expect(RUNES.ember.describe.weapon(3)).toBe('On a hit, +3 fire, lays Seared')
+    expect(RUNES.rime.describe.weapon(3)).toBe('On a hit, +3 frost, lays Chilled on a critical')
+    expect(RUNES.dawn.describe.weapon(1)).toBe('On a hit, +2 blight to the regenerating and the blighted')
+    expect(RUNES.life.describe.weapon(1)).toBe('On a hit, heals 1')
+    expect(RUNES.ember.describe.armour(1)).toBe('Fire ward 2')
   })
 })

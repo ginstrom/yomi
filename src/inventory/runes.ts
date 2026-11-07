@@ -1,5 +1,5 @@
 import type { Element, OnHit } from '../combat/combat.ts'
-import type { StatusLaid } from '../combat/spells.ts'
+import { STATUSES, type StatusLaid } from '../combat/spells.ts'
 import { gearClass, type Tier } from './catalog.ts'
 import type { EquipmentSlot, Item, ItemStats } from './inventory.ts'
 
@@ -117,18 +117,36 @@ function describeRuneStats(stats: ItemStats): string {
   if (stats.spellSkill) parts.push(`spell skill +${stats.spellSkill}%`)
   if (stats.maxMana) parts.push(`mana +${stats.maxMana}`)
   for (const [element, n] of Object.entries(stats.wards ?? {})) parts.push(`${capitalised(element)} ward ${n}`)
-  for (const entry of stats.onHit ?? []) {
-    if (entry.damage > 0) parts.push(`+${entry.damage} ${entry.element ?? 'damage'} on a hit${entry.bane ? ' to the regenerating and the blighted' : ''}`)
-    if (entry.heal) parts.push(`heals ${entry.heal} on a hit`)
-    if (entry.status) parts.push(`lays ${STATUS_NAMES[entry.status.id] ?? entry.status.id}${entry.onCrit ? ' on a critical' : ''}`)
-  }
+  if (stats.onHit?.length) parts.push(`on a hit, ${onHitParts(stats.onHit).join(', ')}`)
   const line = parts.join(', ')
   return line.charAt(0).toUpperCase() + line.slice(1)
 }
 
-// The statuses runes lay, named here as plain data so that nothing of
-// spells.ts is called as this module loads.
-const STATUS_NAMES: Partial<Record<StatusLaid['id'], string>> = { seared: 'Seared', chilled: 'Chilled', poisoned: 'Poisoned' }
+/**
+ * How on-hit effects are told: 'long' wherever there is room (the trading post, crafting, the
+ * item tooltip, a rune's own line), 'short' in the character panel's narrow stat column.
+ */
+export type OnHitForm = 'long' | 'short'
+
+/**
+ * What a hit with these on-hit entries (a weapon's runes) adds, as words in the engine's order:
+ * every damage, then every heal, then every status: "+3 fire", "heals 1", "lays Seared". A bane
+ * and a status laid on a critical only say so, at length or, `short`, as "(bane)" and "on crit".
+ * The one phrasing of on-hit effects, which every screen joins or labels as it needs.
+ */
+export function onHitParts(entries: readonly OnHit[], form: OnHitForm = 'long'): string[] {
+  const short = form === 'short'
+  return [
+    ...entries
+      .filter((e) => e.damage > 0)
+      .map((e) => `+${e.damage} ${e.element ?? 'damage'}${e.bane ? (short ? ' (bane)' : ' to the regenerating and the blighted') : ''}`),
+    ...entries.filter((e) => e.heal).map((e) => `heals ${e.heal}`),
+    // STATUSES is read only when words are asked for, never as this module loads.
+    ...entries
+      .filter((e) => e.status)
+      .map((e) => `lays ${STATUSES[e.status!.id].name}${e.onCrit ? (short ? ' on crit' : ' on a critical') : ''}`),
+  ]
+}
 
 export const capitalised = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1)
 

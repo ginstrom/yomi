@@ -1,6 +1,5 @@
 import { SKILLS, type SkillId } from '../character/skills.ts'
 import { ELEMENTS, formatDamage, type DamageRoll, type Element, type OnHit } from '../combat/combat.ts'
-import { STATUSES } from '../combat/spells.ts'
 import {
   FAMILIES,
   LEGACY_ALIASES,
@@ -17,6 +16,7 @@ import { MODIFIERS, isModifierId, modifiedItem, type ModifierId } from './modifi
 import {
   capitalised,
   isRuneKey,
+  onHitParts,
   parseRuneKey,
   runeFits,
   runeLabel,
@@ -196,13 +196,8 @@ export function describeItemStats(stats: ItemStats = {}, wearerStrength?: number
     if (ward) lines.push(`${capitalised(element)} ward ${ward}`)
   }
   if (stats.maxHp) lines.push(`Max HP: ${signed(stats.maxHp)}`)
-  for (const entry of stats.onHit ?? []) {
-    if (entry.damage > 0) {
-      lines.push(`On a hit: +${entry.damage} ${entry.element ?? 'damage'}${entry.bane ? ' to the regenerating and the blighted' : ''}`)
-    }
-    if (entry.heal) lines.push(`On a hit: heals ${entry.heal}`)
-    if (entry.status) lines.push(`On a ${entry.onCrit ? 'critical' : 'hit'}: lays ${STATUSES[entry.status.id].name}`)
-  }
+  // A line an entry (a rune's each).
+  for (const entry of stats.onHit ?? []) lines.push(`On a hit: ${onHitParts([entry]).join(', ')}`)
   return lines
 }
 

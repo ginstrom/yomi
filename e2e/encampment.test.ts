@@ -243,7 +243,7 @@ describe('the encampment', () => {
     await game.click(runes.rows.find((row) => row.id === 'rune:ember1')!)
     const ember = await game.settled('TradingPost', (p) => p.selected === 'rune:ember1')
     expect(ember.details).toEqual([
-      'In a weapon: +1 fire on a hit',
+      'In a weapon: On a hit, +1 fire',
       'In armour: Fire ward 2',
       'In a shield: Fire ward 2',
       'Set in a socketed item: tier-2 or Masterwork gear.',
@@ -302,7 +302,7 @@ describe('the encampment', () => {
     const hovered = await game.settled('Crafting', (c) => c.tooltip.length > 0)
     expect(hovered.tooltip).toEqual([
       'Lesser Ember Rune',
-      'In a weapon: +1 fire on a hit',
+      'In a weapon: On a hit, +1 fire',
       'In armour: Fire ward 2',
       'In a shield: Fire ward 2',
       'Set in a socketed item: tier-2 or Masterwork gear.',

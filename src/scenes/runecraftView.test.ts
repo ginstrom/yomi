@@ -57,7 +57,7 @@ describe('the Runes tab', () => {
 
   it('lists an item\'s sockets, filled ones first with what each rune does there, then the empty', () => {
     expect(socketRows(itemById('steel_longsword@3#ember1')!)).toEqual([
-      { index: 0, rune: 'ember1', label: 'Ember I', effect: '+1 fire on a hit' },
+      { index: 0, rune: 'ember1', label: 'Ember I', effect: 'On a hit, +1 fire' },
       { index: 1, rune: null, label: 'Empty socket', effect: null },
     ])
     expect(socketRows(itemById('iron_breastplate@3#ember1')!)[0].effect).toBe('Fire ward 2')
@@ -74,7 +74,7 @@ describe('the Runes tab', () => {
   })
 
   it('says what a rune does in each place', () => {
-    expect(runeEffectLines('ember1')).toEqual(['In a weapon: +1 fire on a hit', 'In armour: Fire ward 2', 'In a shield: Fire ward 2'])
+    expect(runeEffectLines('ember1')).toEqual(['In a weapon: On a hit, +1 fire', 'In armour: Fire ward 2', 'In a shield: Fire ward 2'])
   })
 
   it('previews an embed: the item made, what changes and the cost', () => {
