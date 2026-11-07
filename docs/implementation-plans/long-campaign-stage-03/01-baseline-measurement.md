@@ -92,3 +92,70 @@ Measure the early-game guard and the reference cells on the tree as it stands, b
 - [ ] `npm test` passes, and the step is committed on `long-campaign-stage-03` without pushing, with a message ending in the repo's `Co-Authored-By` attribution line.
 
 ## Execution record
+
+Run at HEAD `11b1ca0` (tree clean, Node 26, `logs/` gitignored; steps 02 and 03 not yet committed). No code changed.
+
+**Guard: 248 of 500** (`npm run simulate -- --campaign --ready-level 7 --battles 500 --seed 1`). Unmoved from stage 2's 248; CLAUDE.md left alone. Spawns (26.8) and sites captured (3.1) are the post-`55f4668` figures (field-craft days' events now tallied); outcomes unchanged.
+
+Guard summary, verbatim:
+
+```
+
+Simulated 500 campaigns, 9338 battles in all (seed 1, player aggressive vs enemy aggressive) -> logs/s3-baseline-guard.jsonl
+Beat the Source: 248 of 500 (49.6%); party fell: 252 (50.4%); encampment lost: 0 (0.0%); out of days: 0
+A campaign: 274 days, 18.7 battles, 26.8 spawns, 3.1 sites captured and 0.1 lost, 38% of the land blighted at the end
+Watchtowers: 1.8 built a campaign, 0.0 lost
+Shrine: level 1.0 at the end; outposts: 0.5 built a campaign
+Trading post, workshop, infirmary: levels 1.1, 0.7, 0.4 at the end; 2 gold on gear and 50 from sales, 4.4 items crafted (2.6 days in the field) a campaign
+Guild hall: level 2.4 at the end, 2.1 recruits and 1.7 heroes dead a campaign
+Hit points healed between battles: 131.2 a campaign, in 21.9 days of camping
+Levels at the end: lowest 6.8, highest 7.3 on average (ready level 7); heroes died at level 2 (44), 3 (175), 4 (32), 5 (96), 6 (15), 7 (250), 8 (221), 9 (29)
+Battles to level 5: 6.8 (427 campaigns); 10: — (0 campaigns); 15: — (0 campaigns); 20: — (0 campaigns)
+┌─────────┬────────┬─────────┬──────┬─────────┐
+│ (index) │ threat │ battles │ won  │ winRate │
+├─────────┼────────┼─────────┼──────┼─────────┤
+│ 0       │ 1      │ 1010    │ 1010 │ 1       │
+│ 1       │ 2      │ 1789    │ 1771 │ 0.99    │
+│ 2       │ 3      │ 2016    │ 1962 │ 0.973   │
+│ 3       │ 4      │ 2950    │ 2927 │ 0.992   │
+│ 4       │ 5      │ 1573    │ 1416 │ 0.9     │
+└─────────┴────────┴─────────┴──────┴─────────┘
+┌───────────────────────┬──────────────────────┐
+│ (index)               │ Values               │
+├───────────────────────┼──────────────────────┤
+│ battles               │ 9338                 │
+│ playerWins            │ 9086                 │
+│ enemyWins             │ 252                  │
+│ unresolved            │ 0                    │
+│ avgRounds             │ 4.859605911330049    │
+│ avgPlayerDamageDealt  │ 98.36945812807882    │
+│ avgEnemyDamageDealt   │ 27.845148854144355   │
+│ playerHitRate         │ 0.6679363083401567   │
+│ enemyHitRate          │ 0.598630852555467    │
+│ playerCritRate        │ 0.043828225523453036 │
+│ enemyCritRate         │ 0.04870370879498529  │
+│ avgOpportunityAttacks │ 0                    │
+│ avgSideAttacks        │ 1.1152281002355966   │
+│ avgRearAttacks        │ 0.1507817519811523   │
+│ avgPlayerCasts        │ 4.686763760976654    │
+│ avgEnemyCasts         │ 2.1052687941743415   │
+│ avgPlayerAreaAttacks  │ 0                    │
+│ avgEnemyAreaAttacks   │ 0.027200685371599913 │
+│ avgPlayerHealing      │ 2.4565217391304346   │
+│ avgEnemyHealing       │ 6.544977511244378    │
+│ avgPlayerStatuses     │ 3.1138359391732706   │
+│ avgEnemyStatuses      │ 0.7514457057185693   │
+└───────────────────────┴──────────────────────┘
+```
+
+Reference cells (`--battles 500 --seed 1`, each in `logs/s3-baseline-<name>.jsonl`):
+
+| Cell | Wins of 500 | Avg rounds | Player dmg | Enemy dmg | Player hit | Enemy hit |
+| --- | --- | --- | --- | --- | --- | --- |
+| troll5 (iron_sword, troll_lair, threat 5, level 5) | 0 | 7.154 | 44.834 | 147.954 | 0.2007 | 0.8005 |
+| raid3 (iron_sword, goblin_raid, threat 3, level 3) | 487 | 11.794 | 96.99 | 44.82 | 0.2833 | 0.5192 |
+| camp3 (bandit_camp, threat 3, level 3) | 444 | 9.96 | 97.87 | 62.05 | 0.5653 | 0.5115 |
+| camp4 (bandit_camp, threat 4, level 4) | 473 | 9.466 | 106.27 | 64.792 | 0.6170 | 0.6054 |
+| camp5 (bandit_camp, threat 5, level 5) | 470 | 8.394 | 102.5 | 65.144 | 0.5961 | 0.6259 |
+
+Note: troll5 is 0 of 500 with the longsword in every hand (the war hammer in step 10 is judged against that; the player's hit rate is only 20% there).

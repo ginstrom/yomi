@@ -392,7 +392,7 @@ export type BanditKind = /* existing */ | 'bandit_crossbowman'     // FOE_XP 100
 
 | Step | Task | Outcome | Depends on | Engineer / reviewer | Status |
 | --- | --- | --- | --- | --- | --- |
-| 01 | [Baseline measurement](01-baseline-measurement.md) | The guard and the reference cells measured on this tree before any change; recorded here and in CLAUDE.md if moved | — | sonnet / sonnet | pending |
+| 01 | [Baseline measurement](01-baseline-measurement.md) | The guard and the reference cells measured on this tree before any change; recorded here and in CLAUDE.md if moved | — | sonnet / sonnet | done |
 | 02 | [Item icons and the trading post's level 4](02-icons.md) | 19 `icon_<icon>` sprites and `camp_trading_post/level_4` exported; README | — | opus / opus (art) | pending |
 | 03 | [Gear sprites](03-gear-sprites.md) | 15 `gear_<icon>` sprites in the atlas over `warrior`; README | 02 (the atlas is rebuilt by each, so one after the other) | opus / opus (art) | pending |
 | 04 | [The catalog and ids](04-catalog-and-ids.md) | `catalog.ts`, the new `Item`/`ItemStats` fields and words, ids and aliases, `BASE_ITEMS` generated, grades by class, modifiers by family, prices, renames, the wand made plain, icon and sprite tables, `PREFERRED_MODIFIERS` by family; SAVE 16. Guard identical but for the wand. | 01, 02, 03 | opus / opus | pending (Q1 sets three family rows before commit; `blocked (Q1)` if still unanswered then) |
@@ -415,6 +415,8 @@ export type BanditKind = /* existing */ | 'bandit_crossbowman'     // FOE_XP 100
 - **After 05:** identical to step 04's. No simulated hero holds a reach weapon or a crossbow; Q1 decides any strength penalty.
 - **After 06:** the guard measured, with tier-2 items bought and the trading post's final level. Step 10 judges it.
 - **After 09:** the guard measured, and the Bandit Camp cells at threats 3 to 5 against step 01's.
+
+**Baseline (step 01)**, at `11b1ca0`, seed 1, 500 battles each (full summary in [step 01's record](01-baseline-measurement.md)): guard **248 of 500** (unmoved; 274 days, 18.7 battles, 1.7 heroes dead a campaign; 2 gold on gear, 50 from sales, 4.4 items crafted; trading post, workshop, infirmary 1.1, 0.7, 0.4). Cells: Troll Lair longsword threat 5 level 5 0 wins (7.15 rounds); Goblin Raid longsword threat 3 level 3 487; Bandit Camp threat 3 level 3 444, threat 4 level 4 473, threat 5 level 5 470.
 
 ## Requirement map
 
