@@ -58,6 +58,7 @@ export const STATUS_IDS = [
   'baned',
   'hasted',
   'mirrored',
+  'seared',
 ] as const
 
 export type StatusId = (typeof STATUS_IDS)[number]
@@ -110,13 +111,14 @@ export const SPELLS: Record<SpellId, Spell> = {
   flame_arrow: {
     name: 'Flame Arrow',
     school: 'offence',
-    description: '2d8 to a foe within 5 hexes',
+    description: '2d8 to a foe within 5 hexes, and no regeneration next turn',
     manaCost: 5,
     apCost: 4,
     range: 5,
     target: 'foe',
     hostile: true,
     damage: dice(2, 8),
+    status: { id: 'seared', turns: 1 },
   },
   sleep: {
     name: 'Sleep',
@@ -145,7 +147,7 @@ export const SPELLS: Record<SpellId, Spell> = {
   fireball: {
     name: 'Fireball',
     school: 'offence',
-    description: '3d6 to everyone within 1 hex of a point within 6 hexes',
+    description: '3d6 to everyone within 1 hex of a point within 6 hexes, and no regeneration next turn',
     manaCost: 10,
     apCost: 6,
     range: 6,
@@ -153,11 +155,12 @@ export const SPELLS: Record<SpellId, Spell> = {
     radius: 1,
     hostile: true,
     damage: dice(3, 6),
+    status: { id: 'seared', turns: 1 },
   },
   acid_arrow: {
     name: 'Acid Arrow',
     school: 'offence',
-    description: '1d8 to a foe within 5 hexes, and -5 AC and 1d4 a turn for 3 turns',
+    description: '1d8 to a foe within 5 hexes, and -5 AC, -2 resistance, 1d4 a turn and no regeneration for 3 turns',
     manaCost: 7,
     apCost: 4,
     range: 5,
@@ -304,6 +307,10 @@ export interface StatusRule {
   colour: number
   /** Added to its armour class; armour never goes below 0 by a status. */
   armorClass?: number
+  /** Added to its resistance, which never goes below 0 by a status. */
+  resistance?: number
+  /** It regains no hit points by regeneration while this lasts. */
+  stopsRegeneration?: true
   /** Added to its chance to hit, weapon and spell alike. */
   toHit?: number
   /** Added to its AP at the start of its turns (and at once if laid on its own turn); never below 0. */
@@ -320,7 +327,7 @@ export interface StatusRule {
 export const STATUSES: Record<StatusId, StatusRule> = {
   asleep: { name: 'Asleep', adjective: 'asleep', mark: 'Z', colour: 0xb0a0ff, sleep: true },
   chilled: { name: 'Chilled', adjective: 'chilled', mark: 'C', colour: 0x8fd8ff, actionPoints: -3 },
-  corroded: { name: 'Corroded', adjective: 'corroded', mark: 'A', colour: 0xb8d040, armorClass: -5, tick: dice(1, 4), tickName: 'acid' },
+  corroded: { name: 'Corroded', adjective: 'corroded', mark: 'A', colour: 0xb8d040, armorClass: -5, resistance: -2, tick: dice(1, 4), tickName: 'acid', stopsRegeneration: true },
   poisoned: { name: 'Poisoned', adjective: 'poisoned', mark: 'P', colour: 0x60c040, tick: dice(1, 6), tickName: 'poison' },
   shielded: { name: 'Shielded', adjective: 'shielded', mark: 'S', colour: 0x80b0ff, armorClass: 15 },
   protected: { name: 'Protected', adjective: 'protected', mark: 'D', colour: 0x6090e0, armorClass: 10 },
@@ -328,6 +335,7 @@ export const STATUSES: Record<StatusId, StatusRule> = {
   baned: { name: 'Baned', adjective: 'baned', mark: 'X', colour: 0xc060c0, toHit: -15 },
   hasted: { name: 'Hasted', adjective: 'hasted', mark: 'H', colour: 0xffa040, actionPoints: 3 },
   mirrored: { name: 'Mirrored', adjective: 'mirrored', mark: 'M', colour: 0xe0e0ff, images: true },
+  seared: { name: 'Seared', adjective: 'seared', mark: 'F', colour: 0xff7030, stopsRegeneration: true },
 }
 
 /** What an attack on a sleeping unit adds to its chance to hit, in percent. */

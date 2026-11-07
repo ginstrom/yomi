@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { AttackEvent, BattleEndEvent, CastEvent, Side } from '../engine/battleEngine.ts'
 import type { SpellId } from '../combat/spells.ts'
-import { IMPACT_DELAY_MS, STING_DELAY_MS, eventSounds } from './sounds.ts'
+import { impactMs } from './battleEffects.ts'
+import { STING_DELAY_MS, eventSounds } from './sounds.ts'
 
 function attack(hit: boolean, critical = false): AttackEvent {
   return {
     type: 'attack', seq: 0, round: 1, attacker: 'goblin', defender: 'hero', opportunity: false,
-    weapon: null, distance: 1, apCost: 2, apAfter: 0, toHit: 70, defenderAc: 15, armorPierce: 0,
-    damageDice: { count: 1, sides: 6, bonus: 0 }, defenderHpBefore: 10,
+    weapon: null, distance: 1, apCost: 2, apAfter: 0, toHit: 70, defenderAc: 15, defenderResistance: 0, armorPierce: 0,
+    damageDice: { count: 1, sides: 6, bonus: 0 }, rolled: 3, defenderHpBefore: 10,
     flankers: [], flankBonus: 0, arc: 'front', arcBonus: 0, attackerFacing: 3, helpless: false, image: false,
     attackRoll: 40, chance: 55, hit, critical, fumble: false, damage: hit ? 3 : 0, defenderHpAfter: 7,
   }
@@ -33,17 +34,17 @@ function battleEnd(winner: Side | null): BattleEndEvent {
 describe('eventSounds', () => {
   it('swings, then lands a hit, a critical or a miss', () => {
     const swing = { key: 'sfx_melee_swing', delayMs: 0 }
-    expect(eventSounds(attack(true))).toEqual([swing, { key: 'sfx_hit_impact', delayMs: IMPACT_DELAY_MS }])
-    expect(eventSounds(attack(true, true))).toEqual([swing, { key: 'sfx_crit_impact', delayMs: IMPACT_DELAY_MS }])
-    expect(eventSounds(attack(false))).toEqual([swing, { key: 'sfx_miss', delayMs: IMPACT_DELAY_MS }])
+    expect(eventSounds(attack(true))).toEqual([swing, { key: 'sfx_hit_impact', delayMs: impactMs(attack(true)) }])
+    expect(eventSounds(attack(true, true))).toEqual([swing, { key: 'sfx_crit_impact', delayMs: impactMs(attack(true, true)) }])
+    expect(eventSounds(attack(false))).toEqual([swing, { key: 'sfx_miss', delayMs: impactMs(attack(false)) }])
   })
 
   it('sounds a spell, then how it lands', () => {
     const spell = { key: 'sfx_spell_cast', delayMs: 0 }
-    expect(eventSounds(cast(true))).toEqual([spell, { key: 'sfx_hit_impact', delayMs: IMPACT_DELAY_MS }])
-    expect(eventSounds(cast(true, true))).toEqual([spell, { key: 'sfx_crit_impact', delayMs: IMPACT_DELAY_MS }])
-    expect(eventSounds(cast(false))).toEqual([spell, { key: 'sfx_miss', delayMs: IMPACT_DELAY_MS }])
-    expect(eventSounds(cast(true, false, 'heal'))).toEqual([spell, { key: 'sfx_heal', delayMs: IMPACT_DELAY_MS }])
+    expect(eventSounds(cast(true))).toEqual([spell, { key: 'sfx_hit_impact', delayMs: impactMs(cast(true)) }])
+    expect(eventSounds(cast(true, true))).toEqual([spell, { key: 'sfx_crit_impact', delayMs: impactMs(cast(true, true)) }])
+    expect(eventSounds(cast(false))).toEqual([spell, { key: 'sfx_miss', delayMs: impactMs(cast(false)) }])
+    expect(eventSounds(cast(true, false, 'heal'))).toEqual([spell, { key: 'sfx_heal', delayMs: impactMs(cast(true, false, 'heal')) }])
   })
 
   it('marks a fallen unit', () => {

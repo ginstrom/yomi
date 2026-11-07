@@ -2,7 +2,10 @@ import { SHRINE_STRENGTH } from './blight.ts'
 import { MAX_SHRINE_LEVEL, atEncampment, canAfford, describeCost, raiseShrine, shrineCost } from './buildings.ts'
 import type { GameState } from './gameState.ts'
 import { GUILD_HALL_LEVELS, MAX_GUILD_HALL_LEVEL, upgradeCost, upgradeGuildHall } from './guildHall.ts'
+import { MAX_WORKSHOP_LEVEL, upgradeWorkshop, workshopCost } from './crafting.ts'
+import { MAX_INFIRMARY_LEVEL, infirmaryCost, infirmaryEffect, raiseInfirmary } from './infirmary.ts'
 import type { Stock } from './territory.ts'
+import { MAX_TRADING_POST_LEVEL, raiseTradingPost, tradingPostCost } from './tradingPost.ts'
 import { encampmentName } from './worldMap.ts'
 
 /**
@@ -11,10 +14,11 @@ import { encampmentName } from './worldMap.ts'
  * encampment screen draws one building for each facility, or an empty plot for
  * one not built yet, from this list alone, so a new facility needs an entry in
  * `FACILITIES` and a sprite. Each facility's own rules stay in its module
- * (guildHall.ts, buildings.ts); this only reads them and calls them.
+ * (guildHall.ts, buildings.ts, tradingPost.ts, crafting.ts, infirmary.ts);
+ * this only reads them and calls them.
  */
 
-export type FacilityId = 'guild_hall' | 'shrine'
+export type FacilityId = 'guild_hall' | 'shrine' | 'trading_post' | 'workshop' | 'infirmary'
 
 /** What the encampment screen shows of a facility. */
 export interface FacilityView {
@@ -35,7 +39,7 @@ export interface FacilityView {
   action: string | null
   /** Why the next level cannot be bought now, or null when it can (or there is none). */
   refusal: string | null
-  /** Whether the facility has a screen of its own to open (the guild hall's roster). */
+  /** Whether the facility has a screen of its own to open (the guild hall's roster), which it has once built. */
   opens: boolean
 }
 
@@ -77,6 +81,44 @@ const FACILITIES: readonly Facility[] = [
     improve: (game) => raiseShrine(game.world),
     opens: false,
   },
+  {
+    id: 'trading_post',
+    name: 'Trading Post',
+    maxLevel: MAX_TRADING_POST_LEVEL,
+    level: (game) => game.world.tradingPost,
+    about: () => 'Merchants sell plain gear for gold and buy what the party no longer needs.',
+    effect: (_, level) => `Sells ${['plain', 'plain and Fine', 'plain, Fine and Masterwork'][level - 1]} gear.`,
+    cost: (game) => tradingPostCost(game.world),
+    improve: raiseTradingPost,
+    opens: true,
+  },
+  {
+    id: 'workshop',
+    name: 'Workshop',
+    maxLevel: MAX_WORKSHOP_LEVEL,
+    level: (game) => game.world.workshop,
+    about: () => 'Smiths and bowyers rework gear, trading one strength of an item for another.',
+    effect: (_, level) =>
+      [
+        'Makes the field modifiers, and Bearded, Keen and Braced, at grade 1.',
+        'Makes Light, Long and Reinforced too, at up to grade 2.',
+        'Makes every modifier at up to grade 3.',
+      ][level - 1],
+    cost: (game) => workshopCost(game.world),
+    improve: upgradeWorkshop,
+    opens: true,
+  },
+  {
+    id: 'infirmary',
+    name: 'Infirmary',
+    maxLevel: MAX_INFIRMARY_LEVEL,
+    level: (game) => game.world.infirmary,
+    about: (game) => `Healers tend the wounded who rest at ${encampmentName(game.world)}.`,
+    effect: (game, level) => infirmaryEffect(level, encampmentName(game.world)),
+    cost: (game) => infirmaryCost(game.world),
+    improve: raiseInfirmary,
+    opens: false,
+  },
 ]
 
 /** Every facility of the encampment, built or not, in the order the screen lays them out. */
@@ -96,7 +138,7 @@ export function facilities(game: GameState): FacilityView[] {
       cost: top ? null : cost,
       action: top ? null : level === 0 ? 'Build' : `Raise to level ${level + 1}`,
       refusal: top ? null : improveRefusal(game, cost),
-      opens: facility.opens,
+      opens: facility.opens && level > 0,
     }
   })
 }
@@ -106,6 +148,12 @@ export function improveFacility(game: GameState, id: FacilityId): string | null 
   const facility = FACILITIES.find((f) => f.id === id)
   if (!facility) return 'There is no such facility.'
   return facility.improve(game)
+}
+
+/** Sets a facility's level outright, for the debug console; the caller keeps it within the facility's levels. */
+export function setFacilityLevel(game: GameState, id: FacilityId, level: number): void {
+  const field = { guild_hall: 'guildHall', shrine: 'shrine', trading_post: 'tradingPost', workshop: 'workshop', infirmary: 'infirmary' } as const
+  game.world[field[id]] = level
 }
 
 function improveRefusal(game: GameState, cost: Stock | null): string | null {

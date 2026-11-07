@@ -970,10 +970,11 @@ export class InventoryScene extends Phaser.Scene {
     return [
       `Hit Points:    ${this.character.hp} / ${this.stats.maxHp}`,
       `Armor Class:   ${this.stats.ac}`,
+      `Resistance:    ${this.stats.resistance ?? 0}`,
       `To Hit:        ${this.stats.toHit}%`,
       `Damage:        ${formatDamage(this.stats.damage)}`,
       `Attack Cost:   ${this.stats.attackApCost} AP`,
-      ...(this.stats.armorPierce ? [`Pierces:       ${this.stats.armorPierce}% armor`] : []),
+      ...(this.stats.armorPierce ? [`Pierces:       ${this.stats.armorPierce} resistance`] : []),
       `Action Points: ${this.stats.actionPoints}`,
       ...(this.stats.magic ? [`Mana:          ${this.manaLine()}`] : []),
     ]

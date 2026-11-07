@@ -13,6 +13,9 @@ import { spriteFrame } from './unitLook.ts'
 export const FACILITY_SPRITES: Record<FacilityId, string> = {
   guild_hall: 'camp_guild_hall',
   shrine: 'camp_shrine',
+  trading_post: 'camp_trading_post',
+  workshop: 'camp_workshop',
+  infirmary: 'camp_infirmary',
 }
 
 /** Where a facility not yet built is drawn: its plot, staked out. */
@@ -25,14 +28,16 @@ export function facilityFrame(facility: Pick<FacilityView, 'id' | 'level'>): str
 
 /**
  * Where each plot's building stands, its bottom centre, in the screen's
- * frame (720 by 500), in the order `facilities` lists them: left to right
- * across the clearing, a row further back once the first is full.
+ * frame (720 by 500), in the order `facilities` lists them: two across the
+ * front of the clearing, either side of the campfire, then three along the
+ * back, the middle one behind the fire, the tents between them.
  */
 const PLOTS: readonly Point[] = [
   { x: 230, y: 312 },
   { x: 500, y: 312 },
   { x: 120, y: 236 },
   { x: 610, y: 236 },
+  { x: 365, y: 222 },
 ]
 
 export function plotAt(index: number): Point {

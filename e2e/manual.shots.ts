@@ -140,6 +140,53 @@ describe('the manual’s screenshots', () => {
     await shot(game, 'panel-level-up')
   })
 
+  it('the trading post and the workshop', async () => {
+    const game = await games.open()
+    await game.newGame()
+    await game.page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      saved.game.world.stock = { gold: 300, iron: 50, timber: 20, stone: 30, copper: 20 }
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    })
+    const menu = await game.reload()
+    await game.click(menu.buttons.continue)
+    await game.waitForScenes(['World'])
+    await game.click((await game.settled('World')).buttons.enterEncampment)
+    await game.waitForScenes(['Encampment'], ['World'])
+    let camp = await game.settled('Encampment')
+    const facility = (c: typeof camp, id: string) => c.facilities.find((f) => f.id === id)!
+    for (const [id, level] of [['trading_post', 2], ['workshop', 1], ['workshop', 2]] as const) {
+      await game.click(facility(camp, id))
+      const shown = await game.settled('Encampment', (c) => c.selected === id)
+      await game.click(shown.buttons.improve)
+      camp = await game.settled('Encampment', (c) => facility(c, id).level === level)
+    }
+    await game.click(facility(camp, 'trading_post'))
+    await game.click((await game.settled('Encampment', (c) => c.selected === 'trading_post')).buttons.open)
+    await game.waitForScenes(['TradingPost'], ['World'])
+    const post = await game.settled('TradingPost')
+    await game.click(post.rows.find((row) => row.id === 'iron_sword@2')!)
+    await game.settled('TradingPost', (p) => p.selected === 'iron_sword@2')
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'trading-post')
+    await game.press('Escape')
+    await game.settled('TradingPost', (p) => p.selected === null)
+    await game.press('Escape')
+    await game.waitForScenes(['Encampment'], ['World'])
+    camp = await game.settled('Encampment', (c) => c.selected === 'trading_post')
+    await game.click(facility(camp, 'workshop'))
+    camp = await game.settled('Encampment', (c) => c.selected === 'workshop')
+    await game.click(camp.buttons.open)
+    await game.waitForScenes(['Crafting'], ['World'])
+    const bench = await game.settled('Crafting')
+    await game.click(bench.items.find((item) => item.id === 'worn:0:mainHand')!)
+    const sword = await game.settled('Crafting', (c) => c.selected === 'worn:0:mainHand')
+    await game.click(sword.options.find((o) => o.id === 'light2')!)
+    await game.settled('Crafting', (c) => c.chosen === 'light2')
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'crafting')
+  })
+
   it('the encampment, the guild hall and the blight', async () => {
     const game = await games.open()
     await game.newGame()

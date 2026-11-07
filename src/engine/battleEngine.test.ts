@@ -543,6 +543,7 @@ describe('BattleEngine flanking', () => {
       arc: 'front',
       arcBonus: 0,
       hitChance: 0.7,
+      resistance: 1,
     })
     expect(engine.previewAttack('warrior', 'goblin2')).toEqual({
       flankers: [],
@@ -550,6 +551,7 @@ describe('BattleEngine flanking', () => {
       arc: 'front',
       arcBonus: 0,
       hitChance: 0.6,
+      resistance: 1,
     })
     expect(engine.previewAttack('cleric', 'goblin2')).toBeNull() // not adjacent
     expect(engine.previewAttack('goblin', 'warrior')).toBeNull() // not the enemy's turn
@@ -558,12 +560,24 @@ describe('BattleEngine flanking', () => {
     expect(engine.previewAttack('warrior', 'goblin')).toBeNull() // too few AP
   })
 
-  it('takes the share of armour a weapon pierces off the chance, and logs it', () => {
-    // 75 to hit against the goblin's 15: 60%, and 63% with 12 of it left by a 25% pierce.
-    const piercer = { ...WARRIOR, stats: { ...WARRIOR_STATS, armorPierce: 25 } }
-    const engine = new BattleEngine(setup([piercer, GOBLIN]), { rng: sequence([FUMBLE]) })
-    expect(engine.previewAttack('warrior', 'goblin')?.hitChance).toBe(0.63)
-    expect(engine.step(ATTACK_GOBLIN)[0]).toMatchObject({ chance: 63, defenderAc: 15, armorPierce: 25 })
+  it('takes the resistance a weapon leaves unpierced off the damage of a hit, never its chance, and logs both', () => {
+    const armoured = { ...GOBLIN, stats: { ...GOBLIN_STATS, resistance: 4 } }
+    const hit = (pierce: number) => {
+      const piercer = { ...WARRIOR, stats: { ...WARRIOR_STATS, armorPierce: pierce } }
+      // A roll of 50 hits; the d8 comes up 5, and +2: 7 rolled.
+      const engine = new BattleEngine(setup([piercer, armoured]), { rng: sequence([0.5, 0.5]) })
+      expect(engine.previewAttack('warrior', 'goblin')).toMatchObject({ hitChance: 0.6, resistance: Math.max(0, 4 - pierce) })
+      return engine.step(ATTACK_GOBLIN)[0] as AttackEvent
+    }
+    expect(hit(0)).toMatchObject({ chance: 60, defenderAc: 15, defenderResistance: 4, armorPierce: 0, rolled: 7, damage: 3 })
+    expect(hit(2)).toMatchObject({ chance: 60, armorPierce: 2, rolled: 7, damage: 5 })
+    expect(hit(9)).toMatchObject({ rolled: 7, damage: 7 })
+  })
+
+  it('lets a hit through the heaviest armour for 1 at least', () => {
+    const plated = { ...GOBLIN, stats: { ...GOBLIN_STATS, resistance: 30 } }
+    const engine = new BattleEngine(setup([WARRIOR, plated]), { rng: sequence([0.5, 0]) })
+    expect(engine.step(ATTACK_GOBLIN)[0]).toMatchObject({ hit: true, rolled: 3, damage: 1 })
   })
 })
 
@@ -702,7 +716,7 @@ describe('formatEvent', () => {
       rng: sequence([ROLL_7, 0]),
     })
     expect(formatEvent(engine.step(ATTACK_GOBLIN)[0], NAMES)).toBe(
-      'Warrior rolls 70 (needs 70 or less, +10 flanking) — HITS Goblin for 3 dmg.',
+      'Warrior rolls 70 (needs 70 or less, +10 flanking) — HITS Goblin for 2 dmg (armour stops 1).',
     )
   })
 
@@ -929,7 +943,7 @@ describe('BattleEngine spells', () => {
     const engine = battle([MAGE, FAR_GOBLIN])
     expect(unitOf(engine, 'mage').mana).toBe(18)
     expect(unitOf(engine, 'goblin').mana).toBe(0)
-    expect(engine.getLog()[0]).toMatchObject({ schemaVersion: 16, units: [{ mana: 18, magic: MAGE_STATS.magic }, {}] })
+    expect(engine.getLog()[0]).toMatchObject({ schemaVersion: 17, units: [{ mana: 18, magic: MAGE_STATS.magic }, {}] })
   })
 
   it('lists a cast on each foe in the spell’s range, and pays its action points and mana', () => {
@@ -1151,7 +1165,8 @@ describe('BattleEngine spells of every kind', () => {
           { unit: 'goblin', attackRoll: 34, chance: 61, hit: true, damage: 12, hpAfter: 0 },
         ],
       })
-      expect(formatEvent(events[0], NAMED)).toBe('Mage casts Fireball: HITS Cleric for 12 dmg; HITS Goblin for 12 dmg.')
+      // A spell owes nothing to armour: the goblin's resistance takes nothing off. Fireball sears whoever it leaves standing.
+      expect(formatEvent(events[0], NAMED)).toBe('Mage casts Fireball: HITS Cleric for 12 dmg, seared; HITS Goblin for 12 dmg.')
     })
 
     it('is not legal where its area holds no foe', () => {
@@ -1232,7 +1247,7 @@ describe('BattleEngine spells of every kind', () => {
       expect(engine.previewAttack('cleric', 'goblin')?.hitChance).toBe(0.8)
       const events = engine.step({ type: 'attack', unit: 'cleric', target: 'goblin' })
       expect(events.map((e) => e.type)).toEqual(['attack', 'status_end'])
-      expect(events[0]).toMatchObject({ helpless: true, chance: 80, damage: 8 })
+      expect(events[0]).toMatchObject({ helpless: true, chance: 80, rolled: 8, damage: 7 })
       expect(events[1]).toMatchObject({ unit: 'goblin', status: 'asleep', reason: 'woke' })
       expect(formatEvent(events[1], NAMED)).toBe('Goblin wakes.')
     })
@@ -1265,6 +1280,47 @@ describe('BattleEngine spells of every kind', () => {
     const third = engine.step(END_TURN)
     expect(third.map((e) => e.type)).toEqual(['end_turn', 'status_tick', 'unit_down', 'battle_end'])
     expect(engine.getState()).toMatchObject({ phase: 'over', winner: 'player' })
+  })
+
+  describe('regeneration', () => {
+    const troll = (extra: Partial<CombatantStats> = {}, hp?: number) =>
+      goblinAt(hex(5, 1), { stats: { ...GOBLIN_STATS, maxHp: 30, regeneration: 3, ...extra }, hp })
+
+    it('heals a regenerating unit as its side’s turn begins, never past its maximum', () => {
+      const engine = battle([caster(['magic_arrow']), troll({}, 28)])
+      const events = engine.step(END_TURN)
+      expect(events.map((e) => e.type)).toEqual(['end_turn', 'regenerate'])
+      expect(events[1]).toMatchObject({ unit: 'goblin', healed: 2, hpBefore: 28, hpAfter: 30 })
+      expect(formatEvent(events[1], NAMED)).toBe('Goblin regenerates 2.')
+      engine.step(END_TURN)
+      expect(engine.step(END_TURN).map((e) => e.type)).toEqual(['end_turn'])
+    })
+
+    it('is stopped by acid while it lasts', () => {
+      // A roll of 34 hits; a 6 on the d8, then 3 of acid as the goblin's turn begins.
+      const engine = battle([caster(['acid_arrow']), troll()])
+      engine.step(on('acid_arrow', 'goblin'))
+      expect(unitOf(engine, 'goblin').hp).toBe(24)
+      expect(engine.step(END_TURN).map((e) => e.type)).toEqual(['end_turn', 'status_tick'])
+      expect(unitOf(engine, 'goblin').hp).toBe(21)
+    })
+
+    it('is stopped by fire for the turn after', () => {
+      const engine = battle([caster(['fireball']), troll()])
+      engine.step(at('fireball', hex(5, 1)))
+      expect(statusesOf(engine, 'goblin')).toEqual([{ id: 'seared', turnsLeft: 1 }])
+      expect(engine.step(END_TURN).map((e) => e.type)).toEqual(['end_turn'])
+      expect(engine.step(END_TURN).map((e) => e.type)).toEqual(['status_end', 'end_turn'])
+      expect(engine.step(END_TURN).map((e) => e.type)).toEqual(['end_turn', 'regenerate'])
+    })
+
+    it('takes 2 points of resistance off while acid lasts', () => {
+      const quick = { ...WARRIOR_STATS, name: 'Mage', attackApCost: 2, magic: { maxMana: 60, skill: 76, spells: ['acid_arrow' as const] } }
+      const engine = battle([caster(['acid_arrow'], { position: hex(4, 1), stats: quick }), troll({ resistance: 5 })])
+      expect(engine.previewAttack('mage', 'goblin')?.resistance).toBe(5)
+      engine.step(on('acid_arrow', 'goblin'))
+      expect(engine.previewAttack('mage', 'goblin')?.resistance).toBe(3)
+    })
   })
 
   it('lets mirror images take three hits, drawing no damage dice for them, and the fourth hurt (A8)', () => {

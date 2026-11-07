@@ -1,0 +1,13 @@
+# An arrow in flight: drawn pointing right, turned by BattleScene along its arc.
+# Edged in `k` so the tan shaft shows over the floor; `tip` is where it strikes.
+canvas = "effect"
+
+[points]
+tip = [15, 8]
+
+[frames.main.runs]
+6 = [[1, "kk"], [12, "k"]]
+7 = [[0, "kWWkkkkkkkkkdkk"]]
+8 = [[1, "kWWttttttttdlwk"]]
+9 = [[0, "kWWkkkkkkkkkdkk"]]
+10 = [[1, "kk"], [12, "k"]]

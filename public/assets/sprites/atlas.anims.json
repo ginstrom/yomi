@@ -3,6 +3,48 @@
     {
       "frames": [
         {
+          "duration": 560,
+          "frame": "armored_troll/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 560,
+          "frame": "armored_troll/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "armored_troll/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 160,
+          "frame": "armored_troll/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "armored_troll/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "armored_troll/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "armored_troll/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "armored_troll/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 260,
           "frame": "camp_fire/base",
           "key": "atlas"
@@ -19,6 +61,32 @@
     {
       "frames": [
         {
+          "duration": 70,
+          "frame": "fx_burst/burst_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 70,
+          "frame": "fx_burst/burst_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 70,
+          "frame": "fx_burst/burst_2",
+          "key": "atlas"
+        },
+        {
+          "duration": 40,
+          "frame": "fx_burst/burst_3",
+          "key": "atlas"
+        }
+      ],
+      "key": "fx_burst/burst",
+      "repeat": 0
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "gear_axe/idle_0",
           "key": "atlas"
@@ -30,6 +98,17 @@
         }
       ],
       "key": "gear_axe/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_axe/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_axe/walk",
       "repeat": -1
     },
     {
@@ -51,6 +130,17 @@
     {
       "frames": [
         {
+          "duration": 560,
+          "frame": "gear_bow/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_bow/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "gear_bow_hawk/idle_0",
           "key": "atlas"
@@ -62,6 +152,17 @@
         }
       ],
       "key": "gear_bow_hawk/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_bow_hawk/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_bow_hawk/walk",
       "repeat": -1
     },
     {
@@ -83,6 +184,17 @@
     {
       "frames": [
         {
+          "duration": 560,
+          "frame": "gear_dagger/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_dagger/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "gear_greatsword/idle_0",
           "key": "atlas"
@@ -94,6 +206,17 @@
         }
       ],
       "key": "gear_greatsword/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_greatsword/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_greatsword/walk",
       "repeat": -1
     },
     {
@@ -115,6 +238,17 @@
     {
       "frames": [
         {
+          "duration": 560,
+          "frame": "gear_shield/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_shield/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "gear_shortsword/idle_0",
           "key": "atlas"
@@ -126,6 +260,17 @@
         }
       ],
       "key": "gear_shortsword/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_shortsword/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_shortsword/walk",
       "repeat": -1
     },
     {
@@ -147,6 +292,17 @@
     {
       "frames": [
         {
+          "duration": 560,
+          "frame": "gear_sword/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_sword/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "gear_sword_ember/idle_0",
           "key": "atlas"
@@ -158,6 +314,17 @@
         }
       ],
       "key": "gear_sword_ember/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_sword_ember/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_sword_ember/walk",
       "repeat": -1
     },
     {
@@ -179,6 +346,17 @@
     {
       "frames": [
         {
+          "duration": 560,
+          "frame": "gear_wand/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_wand/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 600,
           "frame": "gear_wand_storm/idle_0",
           "key": "atlas"
@@ -190,6 +368,17 @@
         }
       ],
       "key": "gear_wand_storm/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_wand_storm/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_wand_storm/walk",
       "repeat": -1
     },
     {
@@ -217,11 +406,63 @@
         },
         {
           "duration": 140,
-          "frame": "goblin/idle_0",
+          "frame": "goblin/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "goblin/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "goblin/walk_2",
           "key": "atlas"
         }
       ],
       "key": "goblin/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 520,
+          "frame": "hobgoblin/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 520,
+          "frame": "hobgoblin/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "hobgoblin/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "hobgoblin/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "hobgoblin/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "hobgoblin/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "hobgoblin/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "hobgoblin/walk",
       "repeat": -1
     },
     {
@@ -249,7 +490,17 @@
         },
         {
           "duration": 160,
-          "frame": "horror/idle_0",
+          "frame": "horror/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "horror/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "horror/walk_2",
           "key": "atlas"
         }
       ],
@@ -281,7 +532,17 @@
         },
         {
           "duration": 140,
-          "frame": "kobold/idle_0",
+          "frame": "kobold/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "kobold/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "kobold/walk_2",
           "key": "atlas"
         }
       ],
@@ -413,11 +674,63 @@
         },
         {
           "duration": 140,
-          "frame": "shaman/idle_0",
+          "frame": "shaman/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "shaman/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "shaman/walk_2",
           "key": "atlas"
         }
       ],
       "key": "shaman/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "troll/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 560,
+          "frame": "troll/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "troll/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 160,
+          "frame": "troll/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "troll/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "troll/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 160,
+          "frame": "troll/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "troll/walk",
       "repeat": -1
     },
     {
@@ -445,7 +758,17 @@
         },
         {
           "duration": 140,
-          "frame": "warrior/idle_0",
+          "frame": "warrior/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "warrior/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "warrior/walk_2",
           "key": "atlas"
         }
       ],

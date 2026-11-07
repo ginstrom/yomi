@@ -25,9 +25,21 @@ import { autoAdvance, levelUp } from '../src/character/progression.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/encounters.ts'
 import { PREROLLS, readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
 import { blightedShare, monsterStrength, type WorldEvent } from '../src/game/blight.ts'
-import { OUTPOST_COST, buildOutpost, buildTower, canAfford, canBuildOutpost, canBuildTower, raiseShrine } from '../src/game/buildings.ts'
+import {
+  OUTPOST_COST,
+  SHRINE_COSTS,
+  TOWER_COST,
+  buildOutpost,
+  buildTower,
+  canAfford,
+  canBuildOutpost,
+  canBuildTower,
+  raiseShrine,
+} from '../src/game/buildings.ts'
+import { WORKSHOP_COSTS, craft, craftTier, highestGrade, upgradeWorkshop } from '../src/game/crafting.ts'
 import { newGame, type GameState } from '../src/game/gameState.ts'
 import {
+  GUILD_HALL_LEVELS,
   RECRUIT_COST,
   atGuildHall,
   partyLimit,
@@ -38,7 +50,9 @@ import {
   upgradeGuildHall,
 } from '../src/game/guildHall.ts'
 import { campUntilHealed, canCamp, partyWounded } from '../src/game/camp.ts'
-import { daysToFall, sites } from '../src/game/territory.ts'
+import { INFIRMARY_COSTS, raiseInfirmary } from '../src/game/infirmary.ts'
+import { TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial } from '../src/game/tradingPost.ts'
+import { daysToFall, sites, type Material, type Stock } from '../src/game/territory.ts'
 import {
   ENCAMPMENT_ID,
   clearLocation,
@@ -49,7 +63,9 @@ import {
   type WorldState,
 } from '../src/game/worldMap.ts'
 import { hexDistance, hexEquals, type Hex } from '../src/grid/hex.ts'
-import { MAGIC_ITEMS, WEAPONS, type Item } from '../src/inventory/inventory.ts'
+import { GRADES, type Grade } from '../src/inventory/grades.ts'
+import { baseItem, craftedItem, itemById, type EquipmentSlot, type Item } from '../src/inventory/inventory.ts'
+import { MODIFIERS, type ModifierId } from '../src/inventory/modifiers.ts'
 
 export interface CliArgs {
   /** How many battles to fight, or with `campaign` how many campaigns. */
@@ -58,7 +74,7 @@ export interface CliArgs {
   seed: number | null
   maxRounds: number
   policies: Record<Side, PolicyName>
-  /** The weapon every party member fights with; null leaves the starting gear as it is. */
+  /** The weapon every party member fights with, graded or modified if its id says so; null leaves the starting gear as it is. */
   playerWeapon: Item | null
   encounter: EncounterId
   /** How dangerous the encounter is made: 1 is the party's home country. */
@@ -69,8 +85,6 @@ export interface CliArgs {
   campaign: boolean
 }
 
-/** Every item that goes in the weapon hand, the enchanted ones included. */
-const HAND_WEAPONS: readonly Item[] = [...WEAPONS, ...MAGIC_ITEMS.filter((item) => item.slot === 'mainHand')]
 
 function positiveInt(flag: string, raw: string): number {
   const n = Number(raw)
@@ -83,9 +97,10 @@ function policyName(flag: string, raw: string): PolicyName {
   return raw
 }
 
+/** Any item that goes in the weapon hand, by any id `itemById` builds: graded and modified ones too. */
 function weapon(flag: string, raw: string): Item {
-  const item = HAND_WEAPONS.find((w) => w.id === raw)
-  if (!item) throw new Error(`${flag} must be one of ${HAND_WEAPONS.map((w) => w.id).join(', ')}, got "${raw}"`)
+  const item = itemById(raw)
+  if (!item || item.slot !== 'mainHand') throw new Error(`${flag} must be the id of a weapon, such as iron_sword, yew_bow@2 or iron_sword+light1, got "${raw}"`)
   return item
 }
 
@@ -249,6 +264,16 @@ export interface CampaignRecord {
   /** The shrine's level at the end, and the outposts built. */
   shrineLevel: number
   outpostsBuilt: number
+  /** The trading post's, workshop's and infirmary's levels at the end. */
+  tradingPostLevel: number
+  workshopLevel: number
+  infirmaryLevel: number
+  /** Gold spent on gear at the trading post, and taken there for the baggage and surplus materials. */
+  goldOnGear: number
+  goldFromSales: number
+  /** Items crafted, in the field and at the workshop, and the days the field crafts took. */
+  crafted: number
+  fieldCraftDays: number
 }
 
 export interface Campaign {
@@ -273,8 +298,7 @@ export function hallErrand(game: GameState): boolean {
 /**
  * At the guild hall: raises it as far as the stock allows, then fills the
  * party's empty places with recruits, the pre-rolls in turn (renamed when the
- * name is taken), their points spent by `autoAdvance`, and raises the shrine
- * with what is left.
+ * name is taken), their points spent by `autoAdvance`. Returns how many it hired.
  */
 export function visitGuildHall(game: GameState): number {
   while (upgradeGuildHall(game) === null);
@@ -289,8 +313,139 @@ export function visitGuildHall(game: GameState): number {
     autoAdvance(game.party.at(-1)!)
     hired++
   }
-  while (raiseShrine(game.world) === null);
   return hired
+}
+
+/** What a home visit or a field craft traded and made, for the campaign's record. */
+export interface Trade {
+  goldOnGear: number
+  goldFromSales: number
+  crafted: number
+}
+
+/**
+ * The modifier the careful party wants on each plain item, best first: the
+ * first of them the place makes is the one put on. Chosen by comparing one
+ * cell of scaling (`--player-weapon <id> --encounter goblin_raid --threat 3
+ * --party-level 5`) against the plain item; the field's modifiers come first
+ * where the workshop's were no better.
+ */
+export const PREFERRED_MODIFIERS: Readonly<Record<string, readonly ModifierId[]>> = {
+  iron_dagger: ['keen'],
+  iron_shortsword: ['keen', 'balanced'],
+  iron_sword: ['light', 'balanced', 'keen'],
+  iron_battle_axe: ['light', 'bearded'],
+  steel_greatsword: ['balanced'],
+  yew_bow: ['recurve', 'long'],
+  oak_shield: ['braced'],
+  steel_armor: ['reinforced'],
+}
+
+/** The slots whose gear the careful party buys better grades of and crafts: its weapon, shield and armour. */
+const GEAR_SLOTS: readonly EquipmentSlot[] = ['mainHand', 'offHand', 'armor']
+
+/** How a modifier at a grade ranks for an item: lower is better; an item without one ranks last. */
+function modifierRank(baseId: string, mod: { id: ModifierId; grade: Grade } | undefined): number {
+  const preferred = PREFERRED_MODIFIERS[baseId] ?? []
+  const at = mod ? preferred.indexOf(mod.id) : -1
+  return at < 0 ? Infinity : at * 10 - mod!.grade
+}
+
+/**
+ * Crafts what the careful party wants on every member's weapon, shield and
+ * armour that the place makes better than what it has: the first preferred
+ * modifier unlocked here, at the best grade the stock affords. In the field
+ * that is a day each, so it does `limit` at most.
+ */
+export function craftGear(game: GameState, limit = Infinity): number {
+  let crafted = 0
+  const tier = craftTier(game.world)
+  for (const [member, hero] of game.party.entries()) {
+    for (const slot of GEAR_SLOTS) {
+      const item = hero.equipment[slot]
+      const base = item && baseItem(item)
+      if (!item || !base || crafted >= limit) continue
+      for (const id of PREFERRED_MODIFIERS[base.id] ?? []) {
+        const unlocked = MODIFIERS[id].unlock <= (tier === 'field' ? 0 : tier)
+        if (!unlocked) continue
+        const grade = [...GRADES].reverse().find(
+          (g) => g <= highestGrade(tier) && modifierRank(base.id, { id, grade: g }) < modifierRank(base.id, item.mod) &&
+            craft(game, { from: 'worn', member, slot, itemId: item.id }, id, g).refusal === null,
+        )
+        if (grade !== undefined) crafted++
+        break
+      }
+    }
+  }
+  return crafted
+}
+
+/** What the stock should keep of each material for what the careful party still means to buy: every level left of every building, and a craft for each place in the party. */
+export function materialNeeds(game: GameState): Stock {
+  const { world } = game
+  const needs: Stock = {}
+  const add = (cost: Stock) => {
+    for (const [material, amount] of Object.entries(cost)) needs[material as Material] = (needs[material as Material] ?? 0) + (amount ?? 0)
+  }
+  GUILD_HALL_LEVELS.slice(world.guildHall).forEach(({ cost }) => add(cost))
+  SHRINE_COSTS.slice(world.shrine).forEach(add)
+  TRADING_POST_COSTS.slice(world.tradingPost).forEach(add)
+  WORKSHOP_COSTS.slice(world.workshop).forEach(add)
+  INFIRMARY_COSTS.slice(world.infirmary).forEach(add)
+  add(TOWER_COST)
+  add(OUTPOST_COST)
+  for (const material of ['iron', 'timber', 'copper', 'crystal'] as const) add({ [material]: 5 * partyLimit(world) })
+  return needs
+}
+
+/**
+ * At the encampment, after the guild hall: sells the baggage (the careful
+ * party fights without loot, so all of it is surplus) and the materials
+ * beyond `materialNeeds`; raises the trading post, the workshop and the
+ * infirmary as the stock allows; buys each member the best grade it can of
+ * its weapon, shield and armour, the old one sold; crafts the best it can on
+ * them (`craftGear`); and raises the shrine with what is left.
+ */
+export function visitFacilities(game: GameState): Trade {
+  const { world } = game
+  const trade: Trade = { goldOnGear: 0, goldFromSales: 0, crafted: 0 }
+  const gold = () => world.stock.gold ?? 0
+  const sellAll = () => {
+    while (game.baggage.length > 0) {
+      trade.goldFromSales += salePrice(game.baggage[0])
+      sell(game, { from: 'baggage', index: 0, itemId: game.baggage[0].id })
+    }
+  }
+  sellAll()
+  const needs = materialNeeds(game)
+  for (const [material, amount] of Object.entries(world.stock) as [Material, number][]) {
+    const surplus = amount - (needs[material] ?? 0)
+    const lots = surplus - (surplus % 2)
+    if (material !== 'gold' && lots >= 2 && sellMaterial(game, material, lots) === null) trade.goldFromSales += lots / 2
+  }
+  while (raiseTradingPost(game) === null);
+  while (upgradeWorkshop(game) === null);
+  while (raiseInfirmary(game) === null);
+  for (const hero of game.party) {
+    for (const slot of GEAR_SLOTS) {
+      const worn = hero.equipment[slot]
+      const base = worn && baseItem(worn)
+      if (!worn || !base) continue
+      const better = [...GRADES].reverse().find((g) => g > (worn.grade ?? 1) && g <= world.tradingPost && gold() >= buyPrice(craftedItem(base, g))!)
+      if (better === undefined) continue
+      const bought = craftedItem(base, better)
+      buy(game, bought.id)
+      trade.goldOnGear += buyPrice(bought)!
+      game.baggage.pop()
+      hero.equipment[slot] = bought
+      game.baggage.push(worn)
+    }
+  }
+  sellAll()
+  // Without a workshop, crafting here would be the field's, a day each: that waits for the road.
+  if (craftTier(world) !== 'field') trade.crafted += craftGear(game)
+  while (raiseShrine(world) === null);
+  return trade
 }
 
 /** How far the careful party goes out of its way, after a win, to put an outpost on a held site. */
@@ -352,7 +507,7 @@ export function nextTarget(world: WorldState, party: Party): MonsterLocation | n
  * (`campUntilHealed`, again whenever an event breaks camp). The campaign ends
  * when the Source is beaten, a battle is not won, the encampment falls, or
  * `MAX_CAMPAIGN_DAYS` pass. Loot is left alone: the heroes keep their
- * starting gear.
+ * starting gear, bettered at the trading post and by crafting.
  */
 export function runCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0): Campaign {
   const game = newGame(startingParty(args), null, seed)
@@ -362,6 +517,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
   const record: CampaignRecord = {
     outcome: 'timeout', days: 0, battles: 0, spawns: 0, captured: 0, lost: 0, blighted: 0, healedHp: 0, campDays: 0,
     towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0,
+    tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, crafted: 0, fieldCraftDays: 0,
   }
   const tally = (events: readonly WorldEvent[]) => {
     for (const event of events) {
@@ -380,6 +536,9 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
     record.blighted = blightedShare(world)
     record.hallLevel = world.guildHall
     record.shrineLevel = world.shrine
+    record.tradingPostLevel = world.tradingPost
+    record.workshopLevel = world.workshop
+    record.infirmaryLevel = world.infirmary
     return { battles, record }
   }
   /** Walks to `to`, going on whenever something on the way stops the party; false if it never gets there. */
@@ -398,7 +557,13 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
       if (!walkTo(home)) return finish(worldActive(world) ? 'timeout' : 'encampment')
     }
     // Done at once, whatever brought the party home.
-    if (atGuildHall(world)) record.recruits += visitGuildHall(game)
+    if (atGuildHall(world)) {
+      record.recruits += visitGuildHall(game)
+      const trade = visitFacilities(game)
+      record.goldOnGear += trade.goldOnGear
+      record.goldFromSales += trade.goldFromSales
+      record.crafted += trade.crafted
+    }
     const next = nextTarget(world, party)
     if (!next) return finish('timeout')
     // The journey stops for what happens on the way; the careful party takes note and goes on.
@@ -436,6 +601,13 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
     // An outpost on a held site nearby, if the stock affords one; the party camps there.
     const outpost = outpostErrand(world)
     if (outpost && walkTo(outpost.position) && canBuildOutpost(world) === null) tally(buildOutpost(world, party)!)
+    // A field craft on one piece of gear the stock affords, a day's work.
+    if (canCamp(world)) {
+      const turn = world.turn
+      const crafted = craftGear(game, 1)
+      record.crafted += crafted
+      record.fieldCraftDays += world.turn - turn
+    }
     if (!worldActive(world)) return finish('encampment')
     while (partyWounded(party) && canCamp(world)) {
       const camp = campUntilHealed(world, party)!
@@ -588,6 +760,13 @@ export interface CampaignSummary {
   avgHallLevel: number
   avgShrineLevel: number
   avgOutpostsBuilt: number
+  avgTradingPostLevel: number
+  avgWorkshopLevel: number
+  avgInfirmaryLevel: number
+  avgGoldOnGear: number
+  avgGoldFromSales: number
+  avgCrafted: number
+  avgFieldCraftDays: number
   /** In rising order of threat; a threat no campaign reached has no row. */
   byThreat: ThreatRow[]
 }
@@ -640,6 +819,13 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     avgHallLevel: avg((r) => r.hallLevel),
     avgShrineLevel: avg((r) => r.shrineLevel),
     avgOutpostsBuilt: avg((r) => r.outpostsBuilt),
+    avgTradingPostLevel: avg((r) => r.tradingPostLevel),
+    avgWorkshopLevel: avg((r) => r.workshopLevel),
+    avgInfirmaryLevel: avg((r) => r.infirmaryLevel),
+    avgGoldOnGear: avg((r) => r.goldOnGear),
+    avgGoldFromSales: avg((r) => r.goldFromSales),
+    avgCrafted: avg((r) => r.crafted),
+    avgFieldCraftDays: avg((r) => r.fieldCraftDays),
     byThreat: threats.rows(),
   }
 }
@@ -693,6 +879,9 @@ function main(): void {
   )
   console.log(`Watchtowers: ${summary.avgTowersBuilt.toFixed(1)} built a campaign, ${summary.avgTowersLost.toFixed(1)} lost`)
   console.log(`Shrine: level ${summary.avgShrineLevel.toFixed(1)} at the end; outposts: ${summary.avgOutpostsBuilt.toFixed(1)} built a campaign`)
+  console.log(
+    `Trading post, workshop, infirmary: levels ${summary.avgTradingPostLevel.toFixed(1)}, ${summary.avgWorkshopLevel.toFixed(1)}, ${summary.avgInfirmaryLevel.toFixed(1)} at the end; ${summary.avgGoldOnGear.toFixed(0)} gold on gear and ${summary.avgGoldFromSales.toFixed(0)} from sales, ${summary.avgCrafted.toFixed(1)} items crafted (${summary.avgFieldCraftDays.toFixed(1)} days in the field) a campaign`,
+  )
   console.log(`Guild hall: level ${summary.avgHallLevel.toFixed(1)} at the end, ${summary.avgRecruits.toFixed(1)} recruits and ${summary.avgDeaths.toFixed(1)} heroes dead a campaign`)
   console.log(
     `Hit points healed between battles: ${summary.avgHealedHp.toFixed(1)} a campaign, in ${summary.avgCampDays.toFixed(1)} days of camping`,

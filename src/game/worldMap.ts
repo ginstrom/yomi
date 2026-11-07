@@ -103,6 +103,12 @@ export interface WorldState {
   shrine: number
   /** The ids of the held sites with an outpost (buildings.ts), which adds to a site's strength and yield; razed when the site is lost. */
   outposts: string[]
+  /** The trading post's level at the encampment, 1 to `MAX_TRADING_POST_LEVEL` (tradingPost.ts): the grades it sells. */
+  tradingPost: number
+  /** The workshop's level at the encampment, 0 (none) to `MAX_WORKSHOP_LEVEL` (crafting.ts): the modifiers and grades it makes. */
+  workshop: number
+  /** The infirmary's level at the encampment, 0 (none) to `MAX_INFIRMARY_LEVEL` (infirmary.ts): what a day's camping heals. */
+  infirmary: number
   /** The held sites and towers the blight is gaining on, as of the last day. */
   threatened: string[]
   /** What held sites have yielded, kept at the encampment, which buildings and the guild hall spend. */
@@ -196,13 +202,13 @@ export function newWorld(seed: number = randomSeed(), encampmentName: string = D
       resource('crystal_cave', 'Crystal Cave', 56, 24),
       monsters('goblin_reavers', 'Goblin Reavers', 12, 8, 'goblin_raid', [RING_FORTUNE]),
       monsters('kobold_trappers', 'Kobold Trappers', 8, 30, 'kobold_scouts', [SAGE_CIRCLET]),
-      monsters('goblin_warband', 'Goblin Warband', 24, 10, 'goblin_raid', [RING_PROTECTION]),
+      monsters('hobgoblin_warband', 'Hobgoblin Warband', 24, 10, 'hobgoblin_warband', [RING_PROTECTION]),
       monsters('kobold_diggers', 'Kobold Diggers', 22, 25, 'kobold_scouts', [SPARK_WAND]),
       monsters('kobold_skulkers', 'Kobold Skulkers', 30, 22, 'kobold_scouts', [SHADOW_CLOAK]),
       monsters('goblin_marauders', 'Goblin Marauders', 34, 17, 'goblin_raid', [EMBERBLADE]),
-      monsters('kobold_lurkers', 'Kobold Lurkers', 39, 31, 'kobold_scouts', [HAWK_BOW]),
+      monsters('troll_lair', 'Troll Lair', 39, 31, 'troll_lair', [HAWK_BOW]),
       monsters('goblin_outriders', 'Goblin Outriders', 47, 13, 'goblin_raid', [STORM_WAND]),
-      monsters('kobold_tunnellers', 'Kobold Tunnellers', 54, 28, 'kobold_scouts', [SAGE_CIRCLET]),
+      monsters('troll_den', 'Troll Den', 54, 28, 'troll_lair', [SAGE_CIRCLET]),
       monsters('goblin_pillagers', 'Goblin Pillagers', 57, 10, 'goblin_raid', [EMBERBLADE]),
       { ...(monsters(SOURCE_ID, 'The Blight Source', 58, 19, 'source_guardians', [STORM_WAND]) as MonsterLocation), source: true },
     ],
@@ -221,6 +227,9 @@ export function newWorld(seed: number = randomSeed(), encampmentName: string = D
     towersBuilt: 0,
     shrine: 0,
     outposts: [],
+    tradingPost: 1,
+    workshop: 0,
+    infirmary: 0,
     stock: {},
     status: 'playing',
   }

@@ -1,4 +1,6 @@
 import {
+  damageThrough,
+  effectiveResistance,
   hitChance,
   rollDamage,
   rollHitDamage,
@@ -31,7 +33,7 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 16
+export const LOG_SCHEMA_VERSION = 17
 
 /** What an attacker's chance to hit gains, in percent, for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 10
@@ -173,6 +175,8 @@ export interface AttackPreview {
   arcBonus: number
   /** Probability of a hit, from 0.05 to 0.95. */
   hitChance: number
+  /** The points the target's resistance takes off each hit, once the attacker's weapon has pierced it. */
+  resistance: number
 }
 
 /** What a cast would cost and whom it would touch, with the odds on each, before the dice are rolled. */
@@ -256,8 +260,10 @@ export interface AttackEvent extends EventBase {
   toHit: number
   /** The chance to hit in percent, after bonuses, armour class and the limits on both ends. */
   chance: number
-  /** The defender's armour class, of which the weapon pierced `armorPierce` percent before it came off the chance. */
+  /** The defender's armour class, which came off the chance. */
   defenderAc: number
+  /** The defender's resistance, of which the weapon pierced `armorPierce` points before the rest came off the damage. */
+  defenderResistance: number
   armorPierce: number
   hit: boolean
   critical: boolean
@@ -266,7 +272,9 @@ export interface AttackEvent extends EventBase {
   image: boolean
   /** The dice a hit rolls, before a critical doubles their count. */
   damageDice: DamageRoll
-  /** Damage rolled; it may be more than the defender had left. */
+  /** The damage dice's roll, before the defender's resistance. */
+  rolled: number
+  /** Damage dealt through the defender's resistance (`damageThrough`); it may be more than the defender had left. */
   damage: number
   defenderHpBefore: number
   defenderHpAfter: number
@@ -333,6 +341,16 @@ export interface StatusTickEvent extends EventBase {
   hpAfter: number
 }
 
+/** A unit regained hit points by its own regeneration as its side's turn began. */
+export interface RegenerateEvent extends EventBase {
+  type: 'regenerate'
+  unit: UnitId
+  /** Hit points regained, no more than it had lost. */
+  healed: number
+  hpBefore: number
+  hpAfter: number
+}
+
 /** A status ended: its turns ran out, a sleeper was hurt awake, or the last mirror image was struck. */
 export interface StatusEndEvent extends EventBase {
   type: 'status_end'
@@ -390,6 +408,7 @@ export type BattleEvent =
   | AttackEvent
   | CastEvent
   | StatusTickEvent
+  | RegenerateEvent
   | StatusEndEvent
   | EquipEvent
   | UnitDownEvent
@@ -475,21 +494,24 @@ export function hasStatus(unit: { statuses: readonly ActiveStatus[] }, status: S
 
 /**
  * The stats every rule reads: the unit's own, with what its statuses add to
- * its armour class (never below 0 by a status), its chance to hit and its
- * spells' chance.
+ * its armour class and resistance (neither below 0 by a status), its chance
+ * to hit and its spells' chance.
  */
 export function effectiveStats(unit: { stats: CombatantStats; statuses: readonly ActiveStatus[] }): CombatantStats {
   if (unit.statuses.length === 0) return unit.stats
   let ac = 0
   let toHit = 0
+  let resistance = 0
   for (const { id } of unit.statuses) {
     ac += STATUSES[id].armorClass ?? 0
     toHit += STATUSES[id].toHit ?? 0
+    resistance += STATUSES[id].resistance ?? 0
   }
   const { stats } = unit
   return {
     ...stats,
     ac: ac === 0 ? stats.ac : Math.max(0, stats.ac + ac),
+    ...(resistance === 0 ? {} : { resistance: Math.max(0, (stats.resistance ?? 0) + resistance) }),
     toHit: stats.toHit + toHit,
     ...(stats.magic ? { magic: { ...stats.magic, skill: stats.magic.skill + toHit } } : {}),
   }
@@ -746,8 +768,10 @@ export class BattleEngine {
     const arc = attackArc(foe, actor.position)
     const arcBonus = ARC_BONUS[arc]
     const helpless = hasStatus(foe, 'asleep') ? HELPLESS_BONUS : 0
-    const chance = hitChance(effectiveStats(actor), effectiveStats(foe).ac, flankBonus + arcBonus + helpless)
-    return { flankers, flankBonus, arc, arcBonus, hitChance: chance }
+    const attacker = effectiveStats(actor)
+    const defender = effectiveStats(foe)
+    const chance = hitChance(attacker, defender.ac, flankBonus + arcBonus + helpless)
+    return { flankers, flankBonus, arc, arcBonus, hitChance: chance, resistance: effectiveResistance(attacker, defender.resistance ?? 0) }
   }
 
   /**
@@ -840,7 +864,8 @@ export class BattleEngine {
    * Refills the side's action points, less or more by their statuses, and
    * readies the other side's free attacks (not a sleeper's); then deals the
    * side's statuses' damage, unit by unit in roster order, which may fell
-   * units and end the battle before the side acts.
+   * units and end the battle before the side acts; then the side's units that
+   * still stand regenerate, in roster order, those whose statuses allow it.
    */
   private startTurn(side: Side): BattleEvent[] {
     this.phase = side
@@ -871,6 +896,16 @@ export class BattleEngine {
         )
         events.push(...this.wake(u, damage), ...this.fell(u))
       }
+    }
+    if (this.winner !== null) return events
+    for (const u of this.units) {
+      if (u.side !== side || u.hp <= 0 || !u.stats.regeneration) continue
+      if (u.statuses.some(({ id }) => STATUSES[id].stopsRegeneration)) continue
+      const healed = Math.min(u.stats.regeneration, u.stats.maxHp - u.hp)
+      if (healed <= 0) continue
+      const hpBefore = u.hp
+      u.hp += healed
+      events.push(this.record<RegenerateEvent>({ type: 'regenerate', round: this.round, unit: u.id, healed, hpBefore, hpAfter: u.hp }))
     }
     return events
   }
@@ -1107,10 +1142,13 @@ export class BattleEngine {
     const arcBonus = ARC_BONUS[arc]
     const helpless = hasStatus(target, 'asleep')
     const attacker = effectiveStats(actor)
-    const defenderAc = effectiveStats(target).ac
+    const defender = effectiveStats(target)
+    const defenderAc = defender.ac
+    const defenderResistance = defender.resistance ?? 0
     const roll = rollToHit(attacker, defenderAc, this.rng, flankBonus + arcBonus + (helpless ? HELPLESS_BONUS : 0))
     const image = roll.hit && this.strikeImage(target)
-    const damage = roll.hit && !image ? rollHitDamage(attacker.damage, roll.critical, this.rng) : 0
+    const rolled = roll.hit && !image ? rollHitDamage(attacker.damage, roll.critical, this.rng) : 0
+    const damage = damageThrough(rolled, effectiveResistance(attacker, defenderResistance))
     const result = { ...roll, damage }
     const defenderHpBefore = target.hp
     target.hp = Math.max(0, target.hp - damage)
@@ -1136,12 +1174,14 @@ export class BattleEngine {
         toHit: attacker.toHit,
         chance: result.chance,
         defenderAc,
+        defenderResistance,
         armorPierce: actor.stats.armorPierce ?? 0,
         hit: result.hit,
         critical: result.critical,
         fumble: result.fumble,
         image,
         damageDice: actor.stats.damage,
+        rolled,
         damage: result.damage,
         defenderHpBefore,
         defenderHpAfter: target.hp,
@@ -1295,7 +1335,7 @@ function apAfterStatuses(unit: UnitRecord, base: number): number {
   return Math.max(0, base + change)
 }
 
-/** The caster as `rollToHit` sees it casting `spell`: its spell skill for its chance, the spell's dice for its damage, and no weapon's piercing. */
+/** The caster as `rollToHit` sees it casting `spell`: its spell skill for its chance and the spell's dice for its damage; a spell's damage owes nothing to resistance, so no weapon's piercing either. */
 function spellcaster(stats: CombatantStats, spell: SpellId): CombatantStats {
   return { ...stats, toHit: stats.magic?.skill ?? 0, damage: SPELLS[spell].damage ?? NO_DAMAGE, armorPierce: 0 }
 }
@@ -1382,7 +1422,9 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
       if (event.image) return `${roll} — strikes an image of ${defenderName}.`
       if (event.hit) {
         const crit = event.critical ? ' CRITICAL HIT!' : ''
-        return `${roll} — HITS ${defenderName} for ${event.damage} dmg.${crit}`
+        const absorbed = event.rolled - event.damage
+        const armour = absorbed > 0 ? ` (armour stops ${absorbed})` : ''
+        return `${roll} — HITS ${defenderName} for ${event.damage} dmg${armour}.${crit}`
       }
       return `${roll} — MISSES ${defenderName}.`
     }
@@ -1390,6 +1432,8 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
       return describeCast(event, names)
     case 'status_tick':
       return `${names[event.unit]} takes ${event.damage} from ${STATUSES[event.status].tickName ?? STATUSES[event.status].adjective}.`
+    case 'regenerate':
+      return `${names[event.unit]} regenerates ${event.healed}.`
     case 'status_end':
       if (event.reason === 'woke') return `${names[event.unit]} wakes.`
       if (event.reason === 'spent') return `The last image of ${names[event.unit]} is gone.`

@@ -42,6 +42,9 @@ const buttonAt = (index: number, of: number): Rect => ({
   height: 36,
 })
 
+/** The scene each facility with a screen of its own opens. */
+const OPENS: Partial<Record<FacilityId, string>> = { guild_hall: 'GuildHall', trading_post: 'TradingPost', workshop: 'Crafting' }
+
 const FONT = 'monospace'
 const GOLD = '#e8c766'
 const DIM = '#8a7a5a'
@@ -57,7 +60,7 @@ const STAKE_EDGE = 0x14100c
  * there: a picture of the place, every facility on its plot (encampment.ts
  * says which; encampmentView.ts how each is drawn), built or not. A click on
  * one shows what it does and what its next level costs, with a button to buy
- * it, and for the guild hall one to go in. Leaving starts the world map again,
+ * it, and for the guild hall, trading post and workshop one to go in. Leaving starts the world map again,
  * as the party may have changed under its column.
  */
 export class EncampmentScene extends Phaser.Scene {
@@ -164,7 +167,7 @@ export class EncampmentScene extends Phaser.Scene {
         .sprite(at.x, at.y, SPRITE_ATLAS, spriteFrame(sprite, 'base'))
         .setOrigin(0.5, 1)
         .setScale(DECOR_SCALE)
-    this.frame.add([decor('camp_tent', { x: 330, y: 214 }), decor('camp_tent', { x: 390, y: 206 })])
+    this.frame.add([decor('camp_tent', { x: 248, y: 176 }), decor('camp_tent', { x: 484, y: 172 })])
     this.frame.add(decor('camp_fire', { x: CENTRE_X + 4, y: 296 }).play(spriteAnim('camp_fire', 'idle')))
   }
 
@@ -273,11 +276,12 @@ export class EncampmentScene extends Phaser.Scene {
     this.render()
   }
 
-  /** The guild hall's own screen, which comes back here when it closes. */
+  /** A facility's own screen (the guild hall's, the trading post's, the workshop's), which comes back here when it closes. */
   private openFacility(id: FacilityId): void {
-    if (id !== 'guild_hall') return
-    this.scene.start('GuildHall', { game: this.gameState })
-    this.scene.bringToTop('GuildHall')
+    const key = OPENS[id]
+    if (!key) return
+    this.scene.start(key, { game: this.gameState })
+    this.scene.bringToTop(key)
   }
 
   /** Back to the map, started again: the party under its column may have changed, and the map saves as it opens. */

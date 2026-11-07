@@ -12,12 +12,18 @@ function rich() {
 const view = (game: ReturnType<typeof newGame>, id: string) => facilities(game).find((f) => f.id === id)!
 
 describe('the encampment', () => {
-  it('starts with the guild hall built and the shrine an empty plot', () => {
+  it('starts with the guild hall and trading post built, the rest empty plots', () => {
     const game = newGame(undefined, null, 1, 'Hearthold')
     expect(facilities(game).map((f) => [f.id, f.level])).toEqual([
       ['guild_hall', 1],
       ['shrine', 0],
+      ['trading_post', 1],
+      ['workshop', 0],
+      ['infirmary', 0],
     ])
+    expect(view(game, 'trading_post').opens).toBe(true)
+    expect(view(game, 'workshop').opens).toBe(false)
+    expect(view(game, 'infirmary').opens).toBe(false)
     const shrine = view(game, 'shrine')
     expect(shrine.action).toBe('Build')
     expect(shrine.effect).toMatch(/^Not built/)
@@ -34,6 +40,31 @@ describe('the encampment', () => {
     expect(view(game, 'shrine').action).toBe('Raise to level 2')
     expect(improveFacility(game, 'guild_hall')).toBeNull()
     expect(game.world.guildHall).toBe(2)
+  })
+
+  it('builds and raises the trading post, workshop and infirmary for their shown costs', () => {
+    const game = newGame(undefined, null, 1, 'Hearthold')
+    game.world.stock = { gold: 1000, iron: 100, timber: 100, stone: 100, copper: 100, crystal: 100, peat: 100, salt: 100 }
+    for (const id of ['trading_post', 'workshop', 'infirmary'] as const) {
+      while (view(game, id).action) {
+        const before = { ...game.world.stock }
+        const { cost, level } = view(game, id)
+        expect(improveFacility(game, id)).toBeNull()
+        expect(view(game, id).level).toBe(level + 1)
+        for (const [material, amount] of Object.entries(cost!)) {
+          expect(game.world.stock[material as keyof typeof before]).toBe(before[material as keyof typeof before]! - amount!)
+        }
+      }
+    }
+    expect([game.world.tradingPost, game.world.workshop, game.world.infirmary]).toEqual([3, 3, 3])
+    expect(view(game, 'workshop').opens).toBe(true)
+  })
+
+  it('refuses a new facility without the stock, changing nothing', () => {
+    const game = newGame(undefined, null, 1, 'Hearthold')
+    expect(view(game, 'workshop').refusal).toMatch(/costs 25 gold, 15 iron/)
+    expect(improveFacility(game, 'workshop')).toMatch(/more than the stock/)
+    expect(game.world.workshop).toBe(0)
   })
 
   it('offers nothing past the top level', () => {

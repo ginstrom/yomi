@@ -1,0 +1,76 @@
+# The trading post: a merchant's stall under a striped awning, wares hung on
+# its back wall and laid on its counter. Each level adds to it, as the
+# encampment screen shows the frame of the post's level: crates and a barrel
+# at level 2, a gilded sign over the awning at level 3.
+canvas = "building"
+outline = "auto"
+
+[frames.level_1.runs]
+16 = [[12, "nnnnnnnnnnnnnnnnnnnnnnnn"]]
+17 = [[11, "rrrWWWWrrrrWWWWrrrrWWWWrrr"]]
+18 = [[10, "rrrrWWWWrrrrWWWWrrrrWWWWrrrr"]]
+19 = [[10, "rrrrWWWWrrrrWWWWrrrrWWWWrrrr"]]
+20 = [[10, "rrrrWWWWrrrrWWWWrrrrWWWWrrrr"]]
+21 = [[10, "rrrrWWWWrrrrWWWWrrrrWWWWrrrr"]]
+22 = [[10, "RRRRwwwwRRRRwwwwRRRRwwwwRRRR"]]
+23 = [[11, "RR"], [15, "ww"], [19, "RR"], [23, "ww"], [27, "RR"], [31, "ww"], [35, "RR"]]
+24 = [[11, "nNNNNNNNNNNNNNNNNNNNNNNNnN"]]
+25 = [[11, "nNNNNyNNNNNNNtNNNNNNyNNNnN"]]
+26 = [[11, "nNNNyyyNNNNNNNtNNNNyyyNNnN"]]
+27 = [[11, "nNNNNwNNNNNNNNtNNNNNwNNNnN"]]
+28 = [[11, "nNNNNwNNNNNNNNtNNNNNwNNNnN"]]
+29 = [[11, "nNNNNwNNNNNNNNtNNNNNwNNNnN"]]
+30 = [[11, "nNNNNwNNNNNNNtNNNNNNwNNNnN"]]
+31 = [[11, "nNNNNNNNNNNNNNNNNNNNNNNNnN"]]
+32 = [[11, "nNNNyyNNrrNNNNllNNNNYYNNnN"]]
+33 = [[10, "tttttttttttttttttttttttttttt"]]
+34 = [[10, "TTTTTTTTTTTTTTTTTTTTTTTTTTTT"]]
+35 = [[11, "nNttttNttttttNttttttNtttnN"]]
+36 = [[11, "nNttttNttttttNttttttNtttnN"]]
+37 = [[11, "nNttttNttttttNttttttNtttnN"]]
+38 = [[11, "nNttttNttttttNttttttNtttnN"]]
+39 = [[11, "nNttttNttttttNttttttNtttnN"]]
+40 = [[11, "nNttttNttttttNttttttNtttnN"]]
+41 = [[11, "nNttttNttttttNttttttNtttnN"]]
+42 = [[11, "nNttttNttttttNttttttNtttnN"]]
+43 = [[11, "nNttttNttttttNttttttNtttnN"]]
+44 = [[9, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]]
+45 = [[9, "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"]]
+46 = [[5, "gggggggggggggggggggggggggggggggggggggg"]]
+
+# Level 2: crates stacked on the west side, a barrel on the east.
+[frames.level_2]
+from = "level_1"
+
+[frames.level_2.runs]
+32 = [[2, "nnnnnn"]]
+33 = [[2, "nTttTn"]]
+34 = [[2, "nttttn"]]
+35 = [[2, "nTttTn"]]
+36 = [[2, "nnnnnn"], [40, "nnnn"]]
+37 = [[1, "nnnnnnnn"], [39, "nttttn"]]
+38 = [[1, "nTttttTn"], [39, "OOOOOO"]]
+39 = [[1, "ntTttTtn"], [39, "nTtttn"]]
+40 = [[1, "nttTTttn"], [39, "nTtttn"]]
+41 = [[1, "ntTttTtn"], [39, "OOOOOO"]]
+42 = [[1, "nTttttTn"], [39, "nttttn"]]
+43 = [[1, "nnnnnnnn"], [40, "nnnn"]]
+44 = [[1, "aaaaaaaa"], [39, "aaaaaaa"]]
+45 = [[1, "mmmmmmmm"], [39, "mmmmmmm"]]
+46 = [[1, "gggg"], [43, "gggg"]]
+
+# Level 3: a gilded sign with a coin on it, stood on the awning's ridge.
+[frames.level_3]
+from = "level_2"
+
+[frames.level_3.runs]
+6 = [[15, "OOOOOOOOOOOOOOOOOO"]]
+7 = [[15, "OyyyyyyyyyyyyyyyyO"]]
+8 = [[15, "OyyyyyyyYYyyyyyyyO"]]
+9 = [[15, "OyyyyyyYOOYyyyyyyO"]]
+10 = [[15, "OyyyyyyYOOYyyyyyyO"]]
+11 = [[15, "OyyyyyyyYYyyyyyyyO"]]
+12 = [[15, "OOOOOOOOOOOOOOOOOO"]]
+13 = [[17, "nN"], [29, "nN"]]
+14 = [[17, "nN"], [29, "nN"]]
+15 = [[17, "nN"], [29, "nN"]]

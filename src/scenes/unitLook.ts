@@ -36,6 +36,42 @@ export const GEAR_SPRITES: Partial<Record<ItemIcon, string>> = {
   shield: 'gear_shield',
 }
 
+/** The gear sprites a strike swings: blades and axes, not a bow, a wand or a shield. */
+export const SWUNG_GEAR: ReadonlySet<string> = new Set([
+  'gear_sword',
+  'gear_sword_ember',
+  'gear_shortsword',
+  'gear_greatsword',
+  'gear_dagger',
+  'gear_axe',
+])
+
+/** The point a held weapon is gripped at, and turns about when it swings: the warrior's fist. */
+export const GRIP_POINT = 'grip'
+
+/** The point a shot or a spell is aimed at and flies from: the middle of a unit's body. */
+export const CHEST_POINT = 'chest'
+
+/** What sprite-tool writes on each frame of the atlas, which Phaser keeps as the frame's `customData`. */
+interface AtlasFrameData {
+  pivot?: { x: number; y: number }
+  sourceSize?: { w: number; h: number }
+  /** The sprite's named points (`[points]` in its source), each the centre of a pixel, from the canvas's top left. */
+  points?: Record<string, [number, number]>
+}
+
+/**
+ * Where a frame's named point is, from its anchor (a unit's feet), in canvas
+ * pixels; null when the frame has no such point. `frameData` is an atlas
+ * frame's `customData`.
+ */
+export function pointFromAnchor(frameData: unknown, name: string): { x: number; y: number } | null {
+  const { pivot, sourceSize, points } = (frameData ?? {}) as AtlasFrameData
+  const point = points?.[name]
+  if (!point || !pivot || !sourceSize) return null
+  return { x: point[0] - pivot.x * sourceSize.w, y: point[1] - pivot.y * sourceSize.h }
+}
+
 /** The sprites to lay over a body for what it holds, in drawing order: the weapon, then the off hand's. */
 export function gearLayers(equipment: Equipment): string[] {
   const { mainHand, offHand } = equipment

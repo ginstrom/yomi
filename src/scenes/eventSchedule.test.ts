@@ -23,8 +23,8 @@ function move(from: number, ...steps: number[]): MoveEvent {
 function attack(opportunity: boolean): AttackEvent {
   return {
     type: 'attack', seq: seq++, round: 1, attacker: 'goblin', defender: 'hero', opportunity,
-    weapon: null, distance: 1, apCost: 0, apAfter: 0, toHit: 70, defenderAc: 15, armorPierce: 0,
-    damageDice: { count: 1, sides: 6, bonus: 0 }, defenderHpBefore: 10,
+    weapon: null, distance: 1, apCost: 0, apAfter: 0, toHit: 70, defenderAc: 15, defenderResistance: 0, armorPierce: 0,
+    damageDice: { count: 1, sides: 6, bonus: 0 }, rolled: 3, defenderHpBefore: 10,
     flankers: [], flankBonus: 0, arc: 'front', arcBonus: 0, attackerFacing: 3, helpless: false, image: false,
     attackRoll: 40, chance: 55, hit: true, critical: false, fumble: false, damage: 3, defenderHpAfter: 7,
   }
@@ -100,5 +100,16 @@ describe('scheduleEvents', () => {
     const { beats, totalMs } = scheduleEvents([tick(0), tick(1)], { moveStepMs: 100, opportunityPauseMs: 400, tickPauseMs: 300 })
     expect(beats.map((beat) => beat.at)).toEqual([0, 300])
     expect(totalMs).toBe(600)
+  })
+
+  it('holds what follows a blow until it has landed', () => {
+    const strike = attack(false)
+    const end = endTurn()
+    const { beats, totalMs } = scheduleEvents([strike, end], { ...TIMING, holdMs: (e) => (e.type === 'attack' ? 200 : 0) })
+    expect(beats).toEqual([
+      { at: 0, cues: [show(strike)] },
+      { at: 200, cues: [show(end)] },
+    ])
+    expect(totalMs).toBe(200)
   })
 })

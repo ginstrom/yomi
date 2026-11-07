@@ -1,5 +1,23 @@
 import Phaser from 'phaser'
-import { SPRITE_ATLAS, spriteAnim, spriteFrame, UNIT_REST_FRAME, type UnitAnim } from './unitLook.ts'
+import {
+  GRIP_POINT,
+  SPRITE_ATLAS,
+  SWUNG_GEAR,
+  pointFromAnchor,
+  spriteAnim,
+  spriteFrame,
+  UNIT_REST_FRAME,
+  type UnitAnim,
+} from './unitLook.ts'
+
+/** How far a swing raises the weapon back, and how far past upright it cuts, in degrees. */
+const SWING_RAISE = -55
+const SWING_CUT = 85
+/** How long the weapon takes to come back upright after the cut. */
+const SWING_RECOVER_MS = 170
+/** How strong a pulsed outline starts, and how far it reaches, in screen pixels. */
+const OUTLINE_STRENGTH = 5
+const OUTLINE_DISTANCE = 5
 
 /**
  * A unit as it is drawn: its body's sprite and, over it, a sprite for each
@@ -14,6 +32,8 @@ export class UnitFigure extends Phaser.GameObjects.Container {
   private readonly spriteScale: number
   private flipped = false
   private playing: UnitAnim | null = null
+  /** The outline a hit pulses, made the first time one does. */
+  private outline: Phaser.Filters.Glow | null = null
 
   /** `spriteScale` is how much the sprites are enlarged: a unit's canvas class is drawn for 3. */
   constructor(scene: Phaser.Scene, kind: string, spriteScale: number) {
@@ -78,6 +98,90 @@ export class UnitFigure extends Phaser.GameObjects.Container {
     for (const sprite of this.layers()) {
       if (tint === null) sprite.clearTint()
       else sprite.setTint(tint)
+    }
+    return this
+  }
+
+  /**
+   * Where the body's point `name` is in the frame it shows now, from the feet
+   * in screen pixels, the way it faces; null for a body without it.
+   */
+  point(name: string): { x: number; y: number } | null {
+    const at = pointFromAnchor(this.base.frame.customData, name)
+    if (!at) return null
+    return { x: at.x * this.spriteScale * (this.flipped ? -1 : 1), y: at.y * this.spriteScale }
+  }
+
+  /**
+   * Swings the blade or axe in the weapon hand about the fist: raised back over
+   * `raiseMs`, cut down past upright over `cutMs`, then brought back. A figure
+   * holding nothing that swings (a bow, a wand, bare hands, a monster's own
+   * claws) does nothing here; its lunge is the blow.
+   */
+  swing(raiseMs: number, cutMs: number): this {
+    const weapon = this.gear.find((sprite) => SWUNG_GEAR.has(sprite.name))
+    // The fist is the body's, a point of the frame it shows now (it sinks as the body breathes).
+    const grip = this.point(GRIP_POINT)
+    if (!weapon || !grip) return this
+    const turn = { angle: 0 }
+    const side = this.flipped ? -1 : 1
+    // The sprite turns about its origin, the feet; moving it keeps the grip where the fist is.
+    const apply = () => {
+      const radians = Phaser.Math.DegToRad(turn.angle * side)
+      const cos = Math.cos(radians)
+      const sin = Math.sin(radians)
+      weapon.setRotation(radians)
+      weapon.setPosition(grip.x - (grip.x * cos - grip.y * sin), grip.y - (grip.x * sin + grip.y * cos))
+    }
+    this.scene.tweens.killTweensOf(turn)
+    this.scene.tweens.chain({
+      targets: turn,
+      tweens: [
+        { angle: SWING_RAISE, duration: raiseMs, ease: 'Quad.easeOut', onUpdate: apply },
+        { angle: SWING_CUT, duration: cutMs, ease: 'Quad.easeIn', onUpdate: apply },
+        { angle: 0, duration: SWING_RECOVER_MS, ease: 'Quad.easeOut', onUpdate: apply },
+      ],
+      onComplete: () => weapon.active && weapon.setRotation(0).setPosition(0, 0),
+    })
+    return this
+  }
+
+  /**
+   * Rings the figure in `colour` for a moment, fading out over `durationMs`:
+   * what a hit, a heal or a spell's help shows on the unit it lands on. Only
+   * the WebGL renderer draws filters, so elsewhere it shows nothing.
+   */
+  pulseOutline(colour: number, durationMs: number): this {
+    if (this.scene.renderer.type !== Phaser.WEBGL) return this
+    if (!this.outline) {
+      this.enableFilters()
+      this.outline = this.filters!.internal.addGlow(colour, 0, 0, 1, false, 10, OUTLINE_DISTANCE)
+      this.outline.setPaddingOverride(null)
+    }
+    const outline = this.outline
+    outline.color = colour
+    this.renderFilters = true
+    this.scene.tweens.killTweensOf(outline)
+    this.scene.tweens.add({
+      targets: outline,
+      outerStrength: { from: OUTLINE_STRENGTH, to: 0 },
+      duration: durationMs,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        this.renderFilters = false
+      },
+    })
+    return this
+  }
+
+  /**
+   * Stops a pulsed outline at once. A faded figure (a fallen unit) is all edge
+   * to the glow, which would fill it rather than ring it.
+   */
+  clearOutline(): this {
+    if (this.outline) {
+      this.scene.tweens.killTweensOf(this.outline)
+      this.renderFilters = false
     }
     return this
   }

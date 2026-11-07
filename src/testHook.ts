@@ -145,6 +145,8 @@ export interface WorldProbe {
     buildOutpost: ButtonProbe
     /** Shows while the party stands at the encampment: goes in, to its facilities. */
     enterEncampment: ButtonProbe
+    /** Shows wherever the party may camp: opens field crafting. */
+    craft: ButtonProbe
     end: ButtonProbe
     endless: ButtonProbe
     menu: ButtonProbe
@@ -166,8 +168,52 @@ export interface EncampmentProbe {
   message: string
   /** Every facility, built or an empty plot, at its building's centre: a click shows its details. `frame` is the atlas frame drawn. */
   facilities: Array<ButtonProbe & { id: FacilityId; level: number; frame: string }>
-  /** `improve` builds or raises the facility shown, `open` goes into it (the guild hall), `leave` goes back to the map. */
+  /** `improve` builds or raises the facility shown, `open` goes into it (the guild hall, trading post or workshop), `leave` goes back to the map. */
   buttons: { improve: ButtonProbe; open: ButtonProbe; leave: ButtonProbe }
+}
+
+export interface TradingPostProbe {
+  tab: 'buy' | 'sell'
+  /** The gold in the stock. */
+  gold: number
+  /** What the last action did, or why it was refused. */
+  message: string
+  /** The line clicked, by its id, and the details shown of it. */
+  selected: string | null
+  details: string[]
+  /**
+   * Every line of the tab, those of other pages not visible: an item's id when buying, else where it lies
+   * (`baggage:<index>`, `pack:<member>:<index>`) or `material:<material>`; a click shows its details.
+   */
+  rows: Array<ButtonProbe & { id: string; kind: 'item' | 'material'; price: number }>
+  /** `confirm` buys or sells the line shown (a material two at a time); `confirmAll` sells all of a material. */
+  buttons: {
+    buyTab: ButtonProbe
+    sellTab: ButtonProbe
+    confirm: ButtonProbe
+    confirmAll: ButtonProbe
+    prev: ButtonProbe
+    next: ButtonProbe
+    close: ButtonProbe
+  }
+}
+
+export interface CraftingProbe {
+  /** 'field', or the workshop's level. */
+  tier: 'field' | number
+  /** What the last action did, or why it was refused. */
+  message: string
+  /** Every item that could be worked, by where it lies (`worn:<member>:<slot>`, `pack:<member>:<index>`, `baggage:<index>`), greyed when nothing here fits it. */
+  items: Array<ButtonProbe & { id: string; itemId: string }>
+  /** The item clicked, by where it lies. */
+  selected: string | null
+  /** The modifiers and grades on offer for it (`<modifier><grade>`), each greyed when it cannot be done now. */
+  options: Array<ButtonProbe & { id: string }>
+  /** The option clicked, and the lines saying what it changes. */
+  chosen: string | null
+  preview: string[]
+  /** `work` confirms the option chosen. */
+  buttons: { work: ButtonProbe; prev: ButtonProbe; next: ButtonProbe; close: ButtonProbe }
 }
 
 export interface GuildHallProbe {
@@ -283,6 +329,8 @@ export interface Probes {
   Inventory: InventoryProbe
   Encampment: EncampmentProbe
   GuildHall: GuildHallProbe
+  TradingPost: TradingPostProbe
+  Crafting: CraftingProbe
   Story: StoryProbe
 }
 

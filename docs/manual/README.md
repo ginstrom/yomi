@@ -116,7 +116,7 @@ Black hexes have never been seen. The party sees 5 hexes around it, the encampme
 
 ### Places
 
-- **Your encampment**, the only settlement left, where the guild hall and the shrine stand.
+- **Your encampment**, the only settlement left, where the guild hall, the trading post and the rest of your facilities stand.
 - **Resources** (Iron Vein, Gold Seam, Timber Stand and others). A held site's name is starred and drawn in green. A site under threat is drawn in orange, along with the number of days left until it falls.
 - **Monster lairs**, marked with a skull, each with a **threat** from 1 to 5. The further a lair is from the encampment, the higher its threat.
 
@@ -135,8 +135,9 @@ You can also click a hex to walk away.
 
 When there are no monsters on your hex, the footer offers:
 
-- **Camp**: rest for a day. Each day of camping heals every hero 1 hit point and refills every caster's mana.
+- **Camp**: rest for a day. Each day of camping heals every hero 1 hit point (more with an infirmary, see [The infirmary](#the-infirmary)) and refills every caster's mana.
 - **Camp until healed**: your healers cast their heals with the mana they have, then the party camps a day and casts again, repeating until everyone is whole. Anything important that happens breaks camp.
+- **Craft**: rework a piece of gear in the field, a day's work (see [Crafting](#crafting)).
 - **Build Watchtower** or **Build Outpost**, where the land allows (see [Building](#9-building)).
 - **Enter** the encampment, when the party stands on it (see [The encampment](#the-encampment)).
 
@@ -162,7 +163,7 @@ To switch the panel to another hero, click their portrait on the left.
 
 ![The Character tab](images/panel-character.png)
 
-This tab shows the hero's attributes, their level and experience, and what they fight with: hit points, armour class, chance to hit, damage, attack cost, how much armour their blows pierce, action points and critical chance.
+This tab shows the hero's attributes, their level and experience, and what they fight with: hit points, armour class, resistance, chance to hit, damage, attack cost, how much resistance their blows pierce, action points and critical chance.
 
 ### Skills and perks
 
@@ -219,13 +220,13 @@ Hover over a hex to see the path, then click to move there. Each hex costs **1 A
 
 **Click a foe** to attack it. If it is out of reach, the hero first walks into range along the path shown, then strikes. The weapon decides both the cost and the reach:
 
-| Weapon | Damage | AP | Reach | Pierces armour |
+| Weapon | Damage | AP | Reach | Pierces resistance |
 | --- | --- | --- | --- | --- |
-| Iron Dagger | 1d4 | 3 | 1 | 20% |
-| Iron Shortsword | 1d3+1 | 4 | 1 | 10% |
-| Iron Longsword | 1d8+3 | 5 | 1 | 15% |
-| Iron Battle Axe | 1d12+2 | 6 | 1 | 25% |
-| Steel Greatsword (two hands) | 2d6+3 | 7 | 1 | 25% |
+| Iron Dagger | 1d4 | 3 | 1 | — |
+| Iron Shortsword | 1d3+1 | 4 | 1 | — |
+| Iron Longsword | 1d8+3 | 5 | 1 | 1 |
+| Iron Battle Axe | 1d12+2 | 6 | 1 | 2 |
+| Steel Greatsword (two hands) | 2d6+3 | 7 | 1 | 2 |
 | Yew Bow (two hands) | 1d6 | 4 | 5 | — |
 | Wand of Sparks | 1d6 | 5 | 4 | — |
 
@@ -243,7 +244,17 @@ The chance is always kept between 5% and 95%. A hit is **critical** if the roll 
 - **Arc**: +5% from the foe's side and +10% from its rear. For a ranged attack, the arc is judged by the hex next to the target that the shot comes in over.
 - **Helpless**: +20% against a sleeping target.
 
-**Armour piercing**: melee blows ignore part of the foe's armour class (see the table above, and the Armour Breaker and Sunder perks). This makes heavy weapons the answer to heavy armour. Bow shots, wand shots and spells pierce nothing.
+### Armour: dodging and resistance
+
+Defence works in two ways. **Armour class** (from agility, shields and some magic) makes a hero or monster harder to hit. **Resistance** (from body armour, or a monster's own hide or bone plates) takes that many points off the damage of every weapon hit. A hit always does at least 1.
+
+Because resistance comes off every hit, it hurts weapons that hit often for a little, such as the dagger, the shortsword and the bow, much more than weapons that hit hard. Those quick weapons are best against lightly armoured foes. Against heavily armoured ones, reach for a heavy weapon.
+
+**Armour piercing**: melee blows ignore some points of the foe's resistance (see the table above, and the Bearded modifier and the Armour Breaker and Sunder perks). Bow and wand shots pierce nothing. Spells ignore resistance altogether, which makes a mage the other answer to armour.
+
+When you hover a foe you can attack, its nameplate shows your chance to hit and, after piercing, how much damage its armour will stop (for example "60% −3 dmg").
+
+**Regeneration**: trolls heal some hit points at the start of each of their turns. Acid (Acid Arrow, which also eats 2 points of resistance while it lasts) and fire (Fireball and Flame Arrow, for the turn after) stop it.
 
 ### Zones of control and free attacks
 
@@ -299,7 +310,7 @@ The letters beside a unit's health bar show its current effects. An effect lasts
 | --- | --- |
 | Asleep | No AP, no zone of control, easy to hit. Any damage wakes it. |
 | Chilled | −3 AP for a turn |
-| Corroded | −5 armour class, 1d4 damage a turn |
+| Corroded | −5 armour class, −2 resistance, 1d4 damage a turn, no regeneration |
 | Poisoned | 1d6 damage a turn |
 | Shielded | +15 armour class |
 | Protected | +10 armour class |
@@ -307,6 +318,7 @@ The letters beside a unit's health bar show its current effects. An effect lasts
 | Baned | −15 to hit |
 | Hasted | +3 AP |
 | Mirrored | Images take the next hits, and a hit on an image deals no damage |
+| Seared | No regeneration for a turn |
 
 Damage over time strikes at the start of the affected unit's side's turn. Section 11 lists every spell.
 
@@ -373,6 +385,11 @@ The stock pays for everything you build.
 | Outpost | A held resource without one | 15 gold, 10 timber | A day | The site resists the blight more strongly and yields more. Lost with the site. |
 | Shrine | The encampment's empty plot | 20 gold, then 40 gold + 15 silver, then 80 gold + 30 silver | Instant | Each level strengthens the encampment against the blight |
 | Guild hall | The encampment | 30 gold + 15 iron, then 60 gold + 30 iron | Instant | Party limit 3, then 4, then 5 |
+| Trading post | The encampment | 40 gold + 15 stone, then 80 gold + 15 copper | Instant | Sells plain gear, then Fine, then Masterwork |
+| Workshop | The encampment's empty plot | 25 gold + 15 iron, then 40 gold + 15 stone, then 60 gold + 10 crystal | Instant | Crafts more modifiers, at higher grades |
+| Infirmary | The encampment's empty plot | 20 gold + 10 timber, then 40 gold + 15 peat, then 60 gold + 20 salt | Instant | Faster healing while you camp |
+
+The guild hall and the trading post stand from the start. The far-off materials (stone, copper, crystal, peat, salt) buy the higher levels, so the land you hold decides how far your encampment can grow.
 
 If you click a build button without enough stock, the game tells you the cost.
 
@@ -394,6 +411,62 @@ In the encampment, click the guild hall and then **Enter the Guild Hall**. It sh
 ![Recruiting](images/guild-hall-recruit.png)
 
 You can recruit one of the pre-rolled heroes not already in your company, or **Create new** to make one with character creation. A recruit joins at the hall's level or your party's lowest level, whichever is lower, with that level's points left for you to spend.
+
+### Gear grades
+
+Every plain weapon, the shield and the breastplate come in three **grades**: plain, **Fine** and **Masterwork**. A Fine weapon does 1 more damage, and a Masterwork one 2 more and hits 5% more often; a Fine shield adds 3 to armour class and a Masterwork one 6; a Fine breastplate adds 1 to resistance and a Masterwork one 2. A grade never changes a weapon's AP cost, reach or armour piercing. Enchanted items have no grade.
+
+### The trading post
+
+![The trading post](images/trading-post.png)
+
+In the encampment, click the trading post and then **Enter the Trading Post**. Click a line to see the item's stats and price, then confirm with the button under them.
+
+- **Buy** lists every plain item at each grade the post sells: plain at level 1, Fine from level 2, Masterwork at level 3. A Fine item costs 3 times the plain price and a Masterwork one 8 times. What you buy goes into the baggage; equip it from the character panel.
+- **Sell** lists the baggage first, then what the heroes carry in their packs: each item fetches half its price, a modifier adding nothing, and an enchanted item half its worth. Worn gear is not offered, so take off anything you want to sell first. The stock's materials sell at 1 gold for every 2. The post never sells materials.
+
+| Item | Plain price |
+| --- | --- |
+| Iron Dagger | 6 |
+| Iron Shortsword | 8 |
+| Oak Shield | 10 |
+| Iron Longsword, Yew Bow | 12 |
+| Iron Battle Axe | 14 |
+| Steel Greatsword, Steel Breastplate | 20 |
+
+### Crafting
+
+![Crafting](images/crafting.png)
+
+Crafting puts a **modifier** on a plain or graded item (never an enchanted one): it makes the item better at one thing and worse at another. An item carries one modifier, and working it again replaces the old one, at the full cost of the new.
+
+- **In the field**: the world map's **Craft** button, anywhere you could camp, makes Balanced and Recurve at grade I, and takes a day.
+- **At the workshop**: in the encampment, click the workshop and **Enter the Workshop**. It takes no time. A level 1 workshop also makes Bearded, Keen and Braced; level 2 adds Light, Long and Reinforced and makes grade II; level 3 makes grade III.
+
+The screen lists every item your heroes wear or carry, then the baggage's, that a modifier fits; one that needs a better workshop is greyed and says so. Click an item, then a modifier and grade, to see what it changes, attacks a turn included, and what it costs; **Work it** confirms.
+
+| Modifier | Fits | Better (grade I / II / III) | Worse |
+| --- | --- | --- | --- |
+| Balanced | shortsword, longsword, greatsword | to hit +5 / +10 / +15% | damage −1 |
+| Recurve | bow | damage +1 / +2 / +3 | range −1 |
+| Bearded | battle axe | pierces 1 / 2 / 3 more points of resistance | damage −2 |
+| Keen | dagger, shortsword, longsword | critical +5 / +10 / +15% | damage −1 |
+| Braced | shield | armour class +3 / +5 / +7 | to hit −5% |
+| Light | longsword, battle axe | attack AP −1 | damage −3 / −2 / −1 |
+| Long | bow | range +1 / +2 / +3 | to hit −5% |
+| Reinforced | breastplate | resistance +1 / +2 / +3 | to hit −5% |
+
+A craft costs 5 gold and 5 iron (5 timber for a bow or shield) at grade I, 10 gold and 5 copper at grade II, and 20 gold and 5 crystal at grade III. A Light Longsword costs 4 AP a blow, so a hero who stands still strikes twice a turn.
+
+### The infirmary
+
+The infirmary heals faster while you camp:
+
+- **Level 1**: a day camped at the encampment heals each hero a third of their hit points.
+- **Level 2**: a day camped at the encampment heals everyone fully.
+- **Level 3**: as level 2, and elsewhere field dressings heal 3 hit points a day instead of 1.
+
+It cannot raise the dead.
 
 ---
 
@@ -440,10 +513,10 @@ Spells further out in a school need the spell before them, and their tier asks m
 | --- | --- | --- |
 | Strength | Heavy Hand | +1 melee damage |
 | | Weapon Training | +5% Melee Weapons |
-| | Armour Breaker | Melee blows pierce 15% of armour |
+| | Armour Breaker | Melee blows pierce 1 point of resistance |
 | | Mighty Blow | +2 melee damage |
 | | Weapon Mastery | +10% Melee Weapons |
-| | Sunder | Melee blows pierce 20% more armour |
+| | Sunder | Melee blows pierce 2 more points of resistance |
 | Perception | Deadly Aim | +1 ranged damage |
 | | Marksmanship | +5% Archery |
 | | Far Shot | Ranged weapons reach 2 hexes further |
@@ -470,7 +543,7 @@ Lairs hold loot. Among the items you may find:
 | Item | Effect |
 | --- | --- |
 | Wand of Storms | 1d10+1, 5 AP, reach 5, uses Magic skill |
-| Emberblade | 1d8+4, 5 AP, +10% to hit, pierces 15% |
+| Emberblade | 1d8+4, 5 AP, +10% to hit, pierces 1 |
 | Hawkeye Bow | 1d6+2, 4 AP, reach 6, +10% to hit |
 | Ring of Protection | +5 AC |
 | Ring of Fortune | +5% critical chance |

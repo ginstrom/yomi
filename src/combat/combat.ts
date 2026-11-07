@@ -15,8 +15,12 @@ export interface CombatantStats {
   toHit: number
   /** The chance in percent that an attack is a critical hit; one that would not hit at all cannot be. */
   critChance: number
-  /** The share in percent of a foe's armour class its weapon passes through, none when left out (`effectiveAc`). */
+  /** Points of a foe's resistance its weapon passes through, none when left out (`effectiveResistance`). */
   armorPierce?: number
+  /** Points taken off the damage of every weapon hit it takes, what it wears and its own hide together; none when left out (`damageThrough`). */
+  resistance?: number
+  /** Hit points it regains as its side's turn begins, unless a status stops it (`StatusRule.stopsRegeneration`); none when left out. */
+  regeneration?: number
   damage: DamageRoll
   /** The weapon by name, for the log; left out for a unit that names none. */
   weapon?: string
@@ -55,6 +59,8 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     a.toHit === b.toHit &&
     a.critChance === b.critChance &&
     (a.armorPierce ?? 0) === (b.armorPierce ?? 0) &&
+    (a.resistance ?? 0) === (b.resistance ?? 0) &&
+    (a.regeneration ?? 0) === (b.regeneration ?? 0) &&
     a.damage.count === b.damage.count &&
     a.damage.sides === b.damage.sides &&
     a.damage.bonus === b.damage.bonus &&
@@ -96,31 +102,43 @@ export const MIN_HIT_CHANCE = 5
 export const MAX_HIT_CHANCE = 95
 
 /**
- * The armour class that counts against the attacker: the defender's, less the
- * share of it the attacker's weapon pierces, rounded in the defender's favour.
- * A share and not a sum, so that piercing tells most against the heaviest
- * armour and is not merely a chance to hit by another name.
+ * The chance in percent that an attack hits: the attacker's `toHit`, plus any
+ * situational bonus (flanking, say), less the defender's armour class, kept
+ * between `MIN_HIT_CHANCE` and `MAX_HIT_CHANCE`. Armour class is what turns a
+ * blow aside; what the blow then does against armour is resistance's
+ * business (`damageThrough`), and no weapon pierces armour class.
  */
-export function effectiveAc(attacker: CombatantStats, defenderAc: number): number {
-  const pierce = Math.min(100, Math.max(0, attacker.armorPierce ?? 0))
-  return defenderAc - Math.floor((defenderAc * pierce) / 100)
+export function hitPercent(attacker: CombatantStats, defenderAc: number, situationalBonus = 0): number {
+  return Math.min(MAX_HIT_CHANCE, Math.max(MIN_HIT_CHANCE, attacker.toHit + situationalBonus - defenderAc))
+}
+
+/** A weapon hit that does any harm does at least this much, however heavy the armour. */
+export const MIN_HIT_DAMAGE = 1
+
+/**
+ * The defender's resistance that counts against the attacker: what is left of
+ * it once the attacker's weapon has pierced its points, never below 0.
+ */
+export function effectiveResistance(attacker: CombatantStats, defenderResistance: number): number {
+  return Math.max(0, defenderResistance - Math.max(0, attacker.armorPierce ?? 0))
 }
 
 /**
- * The chance in percent that an attack hits: the attacker's `toHit`, plus any
- * situational bonus (flanking, say), less the defender's armour class as the
- * attacker's weapon leaves it (`effectiveAc`), kept between `MIN_HIT_CHANCE`
- * and `MAX_HIT_CHANCE`.
+ * What a weapon hit that rolled `rolled` does through `resistance` (already
+ * pierced): the roll less the resistance, but at least `MIN_HIT_DAMAGE`
+ * unless the roll itself came to nothing. A flat cut and not a share, so that
+ * armour tells most against the weapons that hit often and lightly, and the
+ * heavy ones, which also pierce more, are its answer.
  */
-export function hitPercent(attacker: CombatantStats, defenderAc: number, situationalBonus = 0): number {
-  const ac = effectiveAc(attacker, defenderAc)
-  return Math.min(MAX_HIT_CHANCE, Math.max(MIN_HIT_CHANCE, attacker.toHit + situationalBonus - ac))
+export function damageThrough(rolled: number, resistance: number): number {
+  return rolled <= 0 ? 0 : Math.max(MIN_HIT_DAMAGE, rolled - Math.max(0, resistance))
 }
 
 /**
  * Percentile resolution: a roll of 1 to 100 hits when it is no higher than
  * the chance to hit (`hitPercent`), and a hit is critical, doubling the
  * damage dice, when the roll is also within the attacker's `critChance`. A
+ * hit's damage comes through the defender's resistance (`damageThrough`). A
  * roll above `MAX_HIT_CHANCE` always misses and is a fumble. The roll counts
  * down from the top of `rng`'s range, so a high `rng()` is a lucky one.
  */
@@ -129,9 +147,12 @@ export function resolveAttack(
   defenderAc: number,
   rng: RNG = Math.random,
   situationalBonus = 0,
+  defenderResistance = 0,
 ): AttackResult {
   const roll = rollToHit(attacker, defenderAc, rng, situationalBonus)
-  return { ...roll, damage: roll.hit ? rollHitDamage(attacker.damage, roll.critical, rng) : 0 }
+  if (!roll.hit) return { ...roll, damage: 0 }
+  const rolled = rollHitDamage(attacker.damage, roll.critical, rng)
+  return { ...roll, damage: damageThrough(rolled, effectiveResistance(attacker, defenderResistance)) }
 }
 
 /**
@@ -153,9 +174,9 @@ export function rollToHit(
   return { attackRoll, chance, hit, critical, fumble }
 }
 
-/** The second half of `resolveAttack`: the damage of a hit, a critical doubling the dice. */
+/** The second half of `resolveAttack`: the damage of a hit, a critical doubling the dice; never below 0, as a modifier may lower a weapon's bonus. */
 export function rollHitDamage(dice: DamageRoll, critical: boolean, rng: RNG = Math.random): number {
-  return rollDamage(critical ? { ...dice, count: dice.count * 2 } : dice, rng)
+  return Math.max(0, rollDamage(critical ? { ...dice, count: dice.count * 2 } : dice, rng))
 }
 
 /** Probability that resolveAttack hits, from 0.05 to 0.95. */
@@ -169,10 +190,12 @@ export function formatDamage(roll: DamageRoll): string {
   return `${roll.count}d${roll.sides}${bonus}`
 }
 
+/** A goblin in a leather jerkin, which turns a little of a blow. */
 export const GOBLIN_STATS: CombatantStats = {
   name: 'Goblin',
   maxHp: 12,
   ac: 15,
+  resistance: 1,
   toHit: 70,
   critChance: 5,
   damage: { count: 1, sides: 6, bonus: 1 },
@@ -181,7 +204,7 @@ export const GOBLIN_STATS: CombatantStats = {
   actionPoints: 8,
 }
 
-/** A fragile skirmisher: harder to hit than a Goblin, but light on hit points and damage. */
+/** A fragile skirmisher: harder to hit than a Goblin, but light on hit points and damage, and nothing on it stops a blow. */
 export const KOBOLD_STATS: CombatantStats = {
   name: 'Kobold',
   maxHp: 7,
@@ -220,17 +243,79 @@ export const GOBLIN_SHAMAN_STATS: CombatantStats = {
  */
 export const BLIGHT_HORROR_STATS: CombatantStats = {
   name: 'Blight Horror',
-  maxHp: 50,
+  maxHp: 55,
   ac: 15,
   toHit: 70,
   critChance: 5,
-  armorPierce: 25,
+  armorPierce: 2,
   damage: { count: 2, sides: 6, bonus: 2 },
   weapon: 'Claws',
   attackApCost: 4,
   attackRange: 1,
   actionPoints: 8,
   magic: { maxMana: 16, skill: 60, spells: ['death_cloud', 'bane'] },
+}
+
+/**
+ * A goblin war leader in a coat of mail: slow to dodge, but the mail stops
+ * most of what a dagger or a shortsword does, and its morning star bites
+ * through a little armour. A foe for the heavy weapons and the spells.
+ */
+export const HOBGOBLIN_CHIEF_STATS: CombatantStats = {
+  name: 'Hobgoblin Chief',
+  maxHp: 16,
+  ac: 10,
+  resistance: 4,
+  toHit: 70,
+  critChance: 5,
+  armorPierce: 1,
+  damage: { count: 1, sides: 8, bonus: 2 },
+  weapon: 'Morning Star',
+  attackApCost: 5,
+  attackRange: 1,
+  actionPoints: 8,
+}
+
+/**
+ * A gangling brute that rakes twice a turn with its claws and knits its
+ * wounds back together as its turn begins, unless acid or fire has caught it
+ * (`STATUSES`, `stopsRegeneration`). Its hide is thick, but no armour.
+ */
+export const TROLL_STATS: CombatantStats = {
+  name: 'Troll',
+  maxHp: 16,
+  ac: 10,
+  resistance: 1,
+  regeneration: 3,
+  toHit: 65,
+  critChance: 5,
+  damage: { count: 1, sides: 4, bonus: 2 },
+  weapon: 'Claws',
+  attackApCost: 4,
+  attackRange: 1,
+  actionPoints: 8,
+}
+
+/**
+ * A troll grown over with plates of bone: easy to hit and hard to hurt, so
+ * that the light blades and the bow scarcely scratch it while it regenerates
+ * as a troll does, and so heavy that it swings once a turn, not twice.
+ * Fielded only at the higher threats (`FoeSlot.fromThreat`).
+ */
+export const ARMORED_TROLL_STATS: CombatantStats = {
+  name: 'Armoured Troll',
+  maxHp: 18,
+  ac: 5,
+  resistance: 5,
+  regeneration: 2,
+  toHit: 65,
+  critChance: 5,
+  armorPierce: 1,
+  damage: { count: 2, sides: 6, bonus: 2 },
+  weapon: 'Claws',
+  attackApCost: 5,
+  attackRange: 1,
+  actionPoints: 8,
 }
 
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
@@ -250,7 +335,10 @@ export const FOE_MANA_PER_LEVEL = 3
  * who does not, and its armour grows where a hero's does not
  * (character.ts, progression.ts): the lands further out are meant to be
  * harder for the party that has earned its way there, not merely to keep
- * pace with it.
+ * pace with it. Its resistance and regeneration are its kind's at any
+ * level: how heavily a monster is armoured is what sets the weapons to fight
+ * it with, and a regeneration that grew with its hit points outpaced what a
+ * party deals in a round.
  */
 export function foeAtLevel(base: CombatantStats, level: number): CombatantStats {
   const above = Math.max(0, level - 1)

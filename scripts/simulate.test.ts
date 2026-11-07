@@ -17,6 +17,9 @@ import {
   runCampaign,
   summarize,
   summarizeCampaigns,
+  craftGear,
+  materialNeeds,
+  visitFacilities,
   visitGuildHall,
   type LoggedEvent,
 } from './simulate.ts'
@@ -113,9 +116,11 @@ describe('parseArgs', () => {
     }
   })
 
-  it('arms the party with any weapon, the enchanted ones too', () => {
+  it('arms the party with any weapon, the enchanted, graded and modified ones too', () => {
     expect(parseArgs(['--player-weapon', 'storm_wand']).playerWeapon?.name).toBe('Wand of Storms')
-    expect(() => parseArgs(['--player-weapon', 'ring_protection'])).toThrow('--player-weapon must be one of')
+    expect(parseArgs(['--player-weapon', 'iron_sword@2+light1']).playerWeapon?.name).toBe('Light Fine Iron Longsword (I)')
+    expect(() => parseArgs(['--player-weapon', 'ring_protection'])).toThrow('--player-weapon must be the id of a weapon')
+    expect(() => parseArgs(['--player-weapon', 'iron_sword+recurve1'])).toThrow('--player-weapon must be the id of a weapon')
   })
 })
 
@@ -230,14 +235,15 @@ describe('the guild hall in a campaign', () => {
 })
 
 describe('the shrine and outposts in a campaign', () => {
-  it('raises the shrine with what the guild hall leaves', () => {
+  it('raises the shrine with what the guild hall and the other facilities leave', () => {
     const game = newGame(undefined, null, 1)
     game.world.stock = { gold: 100, iron: 50, silver: 15 }
     visitGuildHall(game)
-    // The hall's 90 gold first, then the shrine's first level would want 20.
+    visitFacilities(game)
+    // The hall's 90 gold first; the shrine's first level would want 20.
     expect(game.world.shrine).toBe(0)
-    game.world.stock.gold = 70
-    visitGuildHall(game)
+    game.world.stock.gold = 60
+    visitFacilities(game)
     expect(game.world.shrine).toBe(2)
     expect(game.world.stock).toMatchObject({ gold: 0, silver: 0 })
   })
@@ -255,5 +261,39 @@ describe('the shrine and outposts in a campaign', () => {
     world.outposts = []
     world.party = { q: goldSeam.position.q + OUTPOST_ERRAND_RADIUS + 8, r: goldSeam.position.r }
     expect(outpostErrand(world)?.id).not.toBe('gold_seam')
+  })
+})
+
+describe('the trading post and crafting in a campaign', () => {
+  it('sells the baggage and surplus, builds, buys better grades and crafts at home', () => {
+    const game = newGame(undefined, null, 1)
+    game.baggage.push(game.party[0].backpack[0]!)
+    game.world.stock = { gold: 400, iron: 60, timber: 40, stone: 60, copper: 40, salt: 9 }
+    const trade = visitFacilities(game)
+    expect(game.baggage).toEqual([])
+    expect(trade.goldFromSales).toBeGreaterThan(0)
+    expect([game.world.tradingPost, game.world.workshop, game.world.infirmary]).toEqual([3, 2, 1])
+    const sword = game.party[0].equipment.mainHand!
+    expect([sword.base, sword.grade, sword.mod?.id]).toEqual(['iron_sword', 3, 'light'])
+    expect(trade.goldOnGear).toBeGreaterThan(0)
+    expect(trade.crafted).toBeGreaterThan(0)
+  })
+
+  it('keeps what the buildings still want, and sells the rest in pairs', () => {
+    const game = newGame(undefined, null, 1)
+    expect(materialNeeds(game).iron).toBeGreaterThan(0)
+    expect(materialNeeds(game).salt).toBe(20)
+  })
+
+  it('crafts one piece in the field, a day, and nothing it already has', () => {
+    const game = newGame(undefined, null, 1)
+    game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
+    game.world.stock = { gold: 50, iron: 50, timber: 50 }
+    expect(craftGear(game, 1)).toBe(1)
+    expect(game.world.turn).toBe(2)
+    expect(game.party[0].equipment.mainHand!.id).toBe('iron_sword+balanced1')
+    expect(craftGear(game, 1)).toBe(1)
+    expect(game.party[1].equipment.mainHand!.id).toBe('yew_bow+recurve1')
+    expect(craftGear(game, 1)).toBe(0)
   })
 })

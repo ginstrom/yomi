@@ -1,0 +1,38 @@
+# A one-shot burst about the centre, where a shot or a spell lands: drawn pale and
+# tinted by BattleScene in the spell's colour, played once and then removed.
+canvas = "effect"
+
+[frames.burst_0.runs]
+6 = [[7, "ww"]]
+7 = [[6, "wWWw"]]
+8 = [[6, "wWWw"]]
+9 = [[7, "ww"]]
+
+[frames.burst_1.runs]
+5 = [[7, "ww"]]
+6 = [[6, "wllw"]]
+7 = [[5, "wlWWlw"]]
+8 = [[5, "wlWWlw"]]
+9 = [[6, "wllw"]]
+10 = [[7, "ww"]]
+
+[frames.burst_2.runs]
+3 = [[4, "l"], [7, "ww"], [11, "l"]]
+4 = [[5, "w"], [10, "w"]]
+7 = [[3, "w"], [7, "WW"], [12, "w"]]
+8 = [[3, "w"], [7, "WW"], [12, "w"]]
+11 = [[5, "w"], [10, "w"]]
+12 = [[4, "l"], [7, "ww"], [11, "l"]]
+
+[frames.burst_3.runs]
+1 = [[7, "ll"]]
+2 = [[2, "l"], [13, "l"]]
+7 = [[1, "l"], [14, "l"]]
+8 = [[1, "l"], [14, "l"]]
+13 = [[2, "l"], [13, "l"]]
+14 = [[7, "ll"]]
+
+[anim.burst]
+frames = ["burst_0", "burst_1", "burst_2", { frame = "burst_3", ms = 40 }]
+ms = 70
+loop = false

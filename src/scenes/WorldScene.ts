@@ -22,6 +22,7 @@ import {
 } from '../game/worldMap.ts'
 import { HexBoard, hexCorners, hexEquals, hexNeighbors, type Hex } from '../grid/hex.ts'
 import { buttonProbe, type WorldProbe } from '../testHook.ts'
+import type { CraftedData } from './CraftingScene.ts'
 import { soundVolume } from './audioSettings.ts'
 import { WORLD_LAYOUT, boardHexAt, boardHexCenter, boardPixelSize } from './boardGeometry.ts'
 import { CURSORS } from './cursors.ts'
@@ -132,7 +133,7 @@ export class WorldScene extends Phaser.Scene {
   private messageText!: Phaser.GameObjects.Text
   /** Scout, Wait and Attack, shown while the party stands among monsters. */
   private buttons: Phaser.GameObjects.Container[] = []
-  /** Camp and Camp until healed, shown wherever else the party stands still, and Build Watchtower where one may stand. */
+  /** Camp, Camp until healed and Craft, shown wherever else the party stands still, and Build Watchtower where one may stand. */
   private campButtons: Phaser.GameObjects.Container[] = []
   private towerButton!: Phaser.GameObjects.Container
   /** Shown on a held town or resource that has no outpost yet. */
@@ -237,6 +238,7 @@ export class WorldScene extends Phaser.Scene {
     this.campButtons = [
       this.createButton('Camp', () => this.onCamp()),
       this.createButton('Camp until healed', () => this.onCampUntilHealed(), WIDE_BUTTON_W),
+      this.createButton('Craft', () => this.openCrafting()),
     ]
     this.towerButton = this.createButton('Build Watchtower', () => this.onBuildTower(), WIDE_BUTTON_W)
     this.outpostButton = this.createButton('Build Outpost', () => this.onBuildOutpost(), WIDE_BUTTON_W)
@@ -266,11 +268,13 @@ export class WorldScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-C', () => this.openPanel(this.active))
     // Back from a member's panel, where skill points and perks may have been spent, and
     // which tells the member it last showed. The menu resumes the map too, and tells nothing.
-    this.events.on(Phaser.Scenes.Events.RESUME, (_sys: Phaser.Scenes.Systems, data?: { member?: number }) => {
+    // Back from field crafting, which hands back what it made and the day that passed (`CraftedData`).
+    this.events.on(Phaser.Scenes.Events.RESUME, (_sys: Phaser.Scenes.Systems, data?: { member?: number } & Partial<CraftedData>) => {
       // The menu pauses the theme; the options there may have changed its volume.
       this.resumeMusic()
       this.active = data?.member ?? this.active
       this.refreshPartyGear()
+      if (data?.crafted) this.crafted(data.crafted)
       this.refresh()
       this.save()
     })
@@ -345,6 +349,7 @@ export class WorldScene extends Phaser.Scene {
         buildTower: buttonProbe(this.towerButton),
         buildOutpost: buttonProbe(this.outpostButton),
         enterEncampment: buttonProbe(this.encampmentButton),
+        craft: buttonProbe(this.campButtons[2]),
         end: buttonProbe(this.endButton),
         endless: buttonProbe(this.endlessButton),
         menu: buttonProbe(this.menuButton),
@@ -919,6 +924,23 @@ export class WorldScene extends Phaser.Scene {
     this.scene.launch('Inventory', { members, index, tab, canAdvance: true, resume: 'World', groundTitle: 'Baggage' })
     this.scene.bringToTop('Inventory')
     this.scene.pause()
+  }
+
+  /** Field crafting over the map (CraftingScene), wherever the party may camp; it resumes the map with what it made. */
+  private openCrafting(): void {
+    if (this.scene.isPaused() || this.walking || !canCamp(this.world)) return
+    this.scene.launch('Crafting', { game: this.gameState, resume: 'World' })
+    this.scene.bringToTop('Crafting')
+    this.scene.pause()
+  }
+
+  /** Tells what a field craft made and what its day brought, as after camping. */
+  private crafted({ item, events }: CraftedData['crafted']): void {
+    const told = describeWorldEvents(events, events.find((event) => isNotable(this.world, event)) ?? null)
+    this.messageText.setText(`A day's work makes the ${item}.${told ? ` ${told}` : ''}`)
+    this.checkOutcome()
+    // After the redraw and save the resume does.
+    this.time.delayedCall(0, () => this.tell({ kind: 'world_turn', events }))
   }
 
   /** The encampment over the map, while the party stands there; it starts the map again when it closes. */
