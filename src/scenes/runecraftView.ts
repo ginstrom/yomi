@@ -50,7 +50,7 @@ export function socketSources(): SocketSources {
   const bare = BASE_ITEMS.find((item) => socketsOf(item) === 0)
   const adds = (grade: Grade) => !!bare && grade > 1 && socketsOf(itemById(`${bare.id}@${grade}`)!) > 0
   sources = {
-    tiers: [...new Set(socketed.map((item) => item.tier!))].sort(),
+    tiers: [...new Set(socketed.map((item) => item.tier!))].sort((a, b) => a - b),
     materials: MATERIALS.filter((m) => socketed.some((item) => item.material === m.id)).map((m) => m.name.toLowerCase()),
     grades: GRADES.filter(adds).map((grade) => GRADE_DEFS[grade].prefix.trim()),
     uniques: MAGIC_ITEMS.filter((item) => socketsOf(item) > 0).map((item) => item.name),
