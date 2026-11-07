@@ -208,3 +208,10 @@ Search CLAUDE.md for every name changed here before committing.
 **Departures.** (1) No jsdom smoke assertions on the scene's filter: the scene test file only checks registration (the scenes project has no harness that creates a running scene), so the filter is covered by the in-browser test through the probe. (2) The drag ghost in `InventoryScene` is not tinted (tier only tints icons in slots). (3) The inventory tooltip's and crafting comparison's strength lines were checked through `gearCompare.test.ts` and typecheck, not by eye in a browser. (4) Frame height 500 to 520 and Buy rows 11 to 8 to make room for the filter.
 
 **Final runs.** `npm test`: 73 files, 1050 tests passed. Full `npm run test:browser`: 78 of 80 passed; `saves` ("deletes the slot of a party that falls", timeout) and `world` ("ignores Home while the party walks") failed while another engineer's work shared the machine, and both files pass on rerun (38 of 38).
+
+### Review round 1
+
+- **Fixed (ccebdb1):** the crafting comparison never showed the holder's shortfall, as `compareLines` drops rows equal before and after and no modifier changes `strength`. A strength the holder falls short of is now kept as context ("Strength: 6 (you have 3): to hit −15%", no arrow); `gearCompare.test.ts` has a case for it and for its absence when the holder is not short or unknown; a new in-browser test crafts Balanced I on a weak archer's greatsword and reads the line from the probe's preview (screenshot at 840x560: `/private/tmp/claude-501/-Users-ryan-personal-yomi/9864f087-b236-4a3d-9319-44800c0a8111/scratchpad/shots/craft_shortfall_840.png`). The earlier test of identical items with strength 3 now uses strength 6 (the shortfall line is a deliberate exception to "equal rows are left out").
+- **Fixed (ccebdb1):** the crafting screen's refusal text is anchored by its bottom above the Work it button, so a wrapped refusal no longer runs under it. Not looked at in a browser (no refusal case was planted).
+- **Records:** step 09's CLAUDE.md lines (bandits, rules of scaling) landed in 0ddaa77 because the tree was shared; they were true from 0dc549b, step 09's commit.
+

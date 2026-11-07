@@ -198,3 +198,5 @@ Guard: 233 of 500 (46.6%), as step 06; 272 days, 18.3 battles; threat 5 won 1353
 **For step 10.**
 - The threat-5 cell fell from 469 to 256 on steel alone; threats 6 and 7 (Captain, Archer, Hedge-Mage, Crossbowman at party level 6 and 7) are won 2 and 1 times in 500: the counts of 4 there were a first guess and need tuning (or the cells need parties with tier-2 gear).
 - CLAUDE.md's rules of scaling still quote the old cells (444, 473, 470) and the campaign narrative; the manual's bandit paragraph should mention the Crossbowman and steel from threat 5.
+
+Note (from step 07's review): this step's CLAUDE.md lines (bandits, rules of scaling) were committed in 0ddaa77, step 07's commit, because the working tree was shared; they were true from this step's commit 0dc549b.
