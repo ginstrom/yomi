@@ -139,6 +139,12 @@ No tints: tiers tint icons only (correction 10).
 3. Previews over `warrior` (`sprite preview ... --on warrior`): the fist shows at row 19 under every held sprite; the face is open under the cap and helm; no worn sprite touches the fist box.
 4. `npm test`: 71 files, 997 tests passed (no code changed).
 
-**Deviations:** none. The robe ends at row 21 (the hips), as the layering rules allow nothing worn below it, so it reads as a long tunic rather than a floor-length robe.
+**Deviations:** the sources are outlined by hand, not drawn with `outline = "auto"` as §2 says, to match every existing `art/gear/` sprite (whose interiors meet the body without an outline where they overlap it, which `auto` would edge in `k`); `sprite check` holds them to the same outline rule. The robe ends at row 21 (the hips), as the layering rules allow nothing worn below it, so it reads as a long tunic rather than a floor-length robe.
 
 **For step 04:** map the icons to these names in `GEAR_SPRITES`, the five worn ones in `WORN_SPRITES`, and the six melee ones (rapier, mace, spear, war_hammer, halberd, staff) in `SWUNG_GEAR`. The long weapons swing about the grip as the greatsword does; their butts sweep across the legs on the raise, which looked right in the composite.
+
+**Review round 1 (polish, found by the orchestrator's review):**
+- `gear_leather` barely showed at battle scale (the body's own browns, no sleeves): fixed. It is now oxblood leather (`r`, shaded `R`, edged `N`) with leather shoulder pieces that stand out past the arms (rows 11 to 14, out to columns 7 and 24), so the outline changes and not only the colour, plus a stitched seam and the strap and buckle. A rust (`o`) version was tried and judged too loud beside the oxblood.
+- `gear_cap` read as a haircut: fixed. A light tan crown with a pale highlight over a red brim band.
+- The record's "Deviations: none" now lists the hand outlining (above).
+- Checks: `sprite check` ok; `npm run sprites` built; `npm run sprites:check` up to date; `npm test` passed. The 3x loadout composite was regenerated.

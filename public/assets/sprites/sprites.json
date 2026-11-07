@@ -2288,10 +2288,10 @@
       }
     },
     "bounds": [
-      9,
-      12,
-      13,
-      10
+      7,
+      11,
+      18,
+      11
     ],
     "canvas": "unit",
     "display_scale": 3,
@@ -2299,19 +2299,19 @@
     "frames": {
       "idle_0": {
         "bounds": [
-          9,
-          12,
-          13,
-          9
+          7,
+          11,
+          18,
+          10
         ],
         "file": "gear_leather__idle_0.png"
       },
       "idle_1": {
         "bounds": [
-          9,
-          13,
-          13,
-          9
+          7,
+          12,
+          18,
+          10
         ],
         "file": "gear_leather__idle_1.png"
       }

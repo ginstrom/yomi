@@ -6,9 +6,9 @@ over = "warrior"
 
 [frames.idle_0.runs]
 3 = [[13, "kkkkk"]]
-4 = [[12, "ktTTTTk"]]
-5 = [[12, "knttTnTk"]]
-6 = [[12, "kNNNNNNNk"]]
+4 = [[12, "kTTWWTk"]]
+5 = [[12, "ktTTTTTk"]]
+6 = [[12, "kRrrrrrRk"]]
 
 # The hero's breath: the body's idle_1 sinks a pixel, and what it wears with it.
 [frames.idle_1]
