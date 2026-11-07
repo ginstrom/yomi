@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 4 (runes)
 
 **Slug:** long-campaign-stage-04
-**Phase:** 4. Implementation
+**Phase:** 6. Report — done; ready for PR (not opened)
 
 ## Request (user's words)
 
@@ -68,4 +68,5 @@ None.
 - Overall review (opus) at 9d1b7d2: clean; npm test 1188, build, sprites:check, browser 89/89. Non-blocking: battle panel HP can disagree with the engine (character's share rule vs engine clamp on in-battle equip); CLAUDE.md comma; unticked checklists in 05, 06, 08, 10, 11; stages index row omits the Seared letter; "none → +1 fire".
 - Simulated user (sonnet, hands-on) at 9d1b7d2: all 6 goals met (goal 1 partly from in-game). Friction: Runes tab's "nothing with a socket" dead end with no hint which gear has sockets; character sheet damage omits on-hit; pouch rows don't say what a rune does; stale last-action message; placeholder tutorial; workshop blurb wording. Evidence su-* in .git/pr-review/long-campaign-stage-04/evidence/.
 - QA (sonnet) at 9d1b7d2: pass. Saw the floating "+3 fire" at impact and Seared's "F" on the troll (evidence 41, 42). Minor: tooltip repeats the rune line; character sheet damage omits on-hit; stale bottom message; tooltip covers figure at 840. Gaps: in-battle Life equip, Dawn/Salamander ward not driven in play.
-- Fix round 1 (opus) running: battle panel HP, stale message, "none →", tooltip repeat, docs, plus the three UX fixes the user chose.
+- Fix round 1 (opus): 3d21e16 (battle panel caps hp), afa845c (stale message; no "none →"), c3c7e9f (socket line names runes), be3cb26 (socket hint, pouch hover), ca95bc6 (On a hit on the Character tab), f4be440 (docs, play script walked). Orchestrator viewed the hint, pouch hover, Character tab and runed tooltip. Re-review (opus): clean; npm test 1197, browser 89/89. CLAUDE.md grammar nit fixed by the orchestrator (the comma was already there).
+- Known issues for the PR: a runed weapon's tooltip lists each on-hit effect on its own line (long with two runes, per C2); no On-a-hit line on the Inventory tab (tooltip has it); the simulator never fills a socket (accepted); Ember III doesn't win the Troll Lair t5 cell (accepted); tutorial still placeholder; world header's stock is stale under overlays (pre-existing); Dawn bane and a hero ward vs the Salamander checked in tests, not driven in play.
