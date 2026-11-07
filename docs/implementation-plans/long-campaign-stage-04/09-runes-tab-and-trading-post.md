@@ -182,13 +182,38 @@ Update the scene layer's lines: `Crafting` has Modify and Runes tabs (the Runes 
 
 ## 6. Completion criteria
 
-- [ ] Crafting has Modify and Runes tabs; embed, extract and fuse work through select, act and confirm, every refusal shown from the domain.
-- [ ] A field embed passes a day and is reported on the map as a field craft.
-- [ ] The trading post buys runes through a Runes filter and sells the pouch's runes.
-- [ ] The encampment's workshop and trading post lines say what each level does for runes.
-- [ ] `CraftingProbe` and `TradingPostProbe` carry the fields of C10.
-- [ ] Scene smoke tests and the in-browser tests above pass; `npm test` passes.
-- [ ] CLAUDE.md's scene lines updated.
-- [ ] One commit on `long-campaign-stage-04`; the index's step 09 row set to `done` with the commit; the execution record below filled.
+- [x] Crafting has Modify and Runes tabs; embed, extract and fuse work through select, act and confirm, every refusal shown from the domain.
+- [x] A field embed passes a day and is reported on the map as a field craft.
+- [x] The trading post buys runes through a Runes filter and sells the pouch's runes.
+- [x] The encampment's workshop and trading post lines say what each level does for runes.
+- [x] `CraftingProbe` and `TradingPostProbe` carry the fields of C10.
+- [x] Scene smoke tests and the in-browser tests above pass; `npm test` passes.
+- [x] CLAUDE.md's scene lines updated.
+- [x] One commit on `long-campaign-stage-04`; the index's step 09 row set to `done` with the commit; the execution record below filled.
 
 ## 7. Execution record
+
+**Commits.** `cea4f9b` (runed names in square brackets, the user's choice: `inventory.ts`, its test, C2 and correction 10 in the index, the stage design's §4 example with a note, and task files 03, 09 and 11); `d106d2c` (review follow-ups from steps 06 and 10: runecraft refusals' article, "an Ember Rune"; the field embed's events test now embeds on a day that has events, and asserts they are not empty; the simulator test of runes sold with the old item asserts the sale counted the rune's half price and no extraction fee was paid; C11 amended to the order as built; index hashes for 08 and 10); then this step's commit (the Runes tab, the post's runes, the encampment lines, probes, tests, CLAUDE.md).
+
+**Built.**
+- `CraftingScene`: Modify and Runes tabs (`modifyTab`, `runesTab`; opens on Modify; switching clears the selection, the action and the message). The Modify list moved down 28 px for the tabs and holds 11 lines a page (was 12). The Runes tab: the socketed items (`socketables`, 5 a page) over the rune pouch (4 a page, its own Prev/Next, `pouchPrev`/`pouchNext` in the probe); on the right the selected item's sockets (rune icon, label in the rune's colour, its effect there, Extract), then the chosen action's preview and refusal, and Confirm. Every Embed, Fuse and Extract button is greyed when refused but still clickable, so its refusal can be read (`addPanelButton` gained `dimmed`). A field embed opened from the map closes the scene and resumes `World` with `CraftedData`, as a field craft does. Item rows in both tabs show socket pips (`createPips`), and a long name is cut with an ellipsis before the "where" text (`fitText`, new in `panelButton.ts`).
+- `src/scenes/runecraftView.ts` (new, Phaser-free, with `runecraftView.test.ts`): action ids (`embed:<key>`, `extract:<index>`, `fuse:<key>`), socket rows, pouch rows, a rune's effect lines by place, the fuse line, each action's preview, refusal (the domain's; an embed with no item asks for one) and done message.
+- `gearCompare.ts`: `statWords` gained Wards, Max HP and one "On a hit" line per on-hit entry ("On a hit (2)" for the second), so `compareLines` shows what a rune changes ("On a hit: none → +1 fire", "Wards: none → frost 2"); `statSummary` gained wards, hp and on-hit damage.
+- `TradingPostScene`: a Runes filter button after the six slot buttons (seven across now), listing `runeWares` (kind `rune`, id `rune:<key>`, price `runePrice`, the rune's icon); the details are the rune's effect in a weapon, armour and a shield and its price; Confirm buys (`buyRune`, `buyRuneRefusal` shown). Below level 2, "A level 2 trading post sells runes." The Sell tab lists the pouch's runes after the materials ("2 × Lesser Ember Rune", "+5g each"), Confirm sells one (`sellRune`), the line kept selected while any is left. Item rows show pips; long labels are cut before the price.
+- `encampment.ts`: the trading post's effect adds "and Lesser runes" from level 2 and "and runes of the first two ranks" at 4 (from `RUNE_RANK_LEVELS`), and its `about` mentions runes; the workshop's level 1 adds "Sets runes, and fuses three Lesser runes into one." and level 2 "Takes runes out again, for a fee."; level 3 unchanged.
+- Probes as C10 (`CraftingProbe`: `tab`, `sockets`, `pouch`, `modifyTab`, `runesTab`, `confirm`, plus `pouchPrev`/`pouchNext`; on the Runes tab `chosen` is the action id and `preview` ends with the refusal if any. `TradingPostProbe`: `kind: 'rune'`, `filter.slot: 'runes'`, `runesButton`).
+- CLAUDE.md: the `TradingPost` and `Crafting` scene sentences, `gearCompare.ts`'s new lines, `runecraftView.ts`, `panelButton.ts`'s `dimmed` and `fitText`; e2e/CLAUDE.md's encampment line.
+
+**Verification.**
+- `npx vitest run src/scenes/runecraftView.test.ts src/scenes/gearCompare.test.ts src/game/encampment.test.ts`: 31 passed.
+- `npm test`: 78 files, 1188 tests passed. `npm run build`: built.
+- `npm run test:browser` (whole suite): 9 files, 89 tests passed, no console errors. New in `e2e/encampment.test.ts`: a level 1 post's Runes filter is empty (in the first post test); "buys Lesser runes under the post's Runes filter and sells one from the pouch" (six Lesser runes at 15 at a level 2 post, two bought, one sold for 5 from the last page of Sell); "embeds, extracts and fuses runes on the workshop's Runes tab, a refusal naming the level it needs" (embed gold −5 and the name "[Ember I]", extract −10 with the rune back, fuse three storm1 −20 to a storm2, the storm2's greyed Fuse previewing "Fusing to a Greater Storm Rune needs a level 4 workshop."); "embeds a Lesser rune in the field from the map's Craft button, a day passing" (turn 2, gold −5, the map's "A day's work makes the Masterwork Iron Longsword [Ember I].").
+- By eye at 840×560 and 1600×1000 (a scratch in-browser script, not committed, `/private/tmp/claude-501/-Users-ryan-personal-yomi/60b65517-05ed-4711-a327-4356c80f7c2b/scratchpad/zzshots.test.ts`; screenshots in `/private/tmp/claude-501/-Users-ryan-personal-yomi/60b65517-05ed-4711-a327-4356c80f7c2b/scratchpad/shots/`): the Runes tab with nothing selected, an embed preview, after an embed, an extract preview, a fuse preview, a refused fuse, a refused embed (sockets full), the post's Runes filter and its Sell tab's runes, and the encampment's workshop and post lines. Everything fits the frame; two fixes came from it (a wrapped socket effect ran into the next socket, and runed names ran over the "where" text).
+
+**Deviations.**
+- The scene smoke tests (`*Scene.test.ts`) stay as they are, registering the key: every scene's smoke test in this repo does only that, as the jsdom canvas mock does not run a scene's `create`. The flows the task lists for them (opens on Modify, the Runes tab's list and pouch, embedding `ember1` to `iron_sword@3#ember1`, a refusal changing nothing, a field embed resuming `World`, the post's Runes filter at levels 1 and 2, buying, selling at a third) are covered by the in-browser tests above and `runecraftView.test.ts`, with the rules in steps 06 and 07's domain tests.
+- `CraftingProbe.buttons` gained `pouchPrev` and `pouchNext` beyond C10, as the pouch pages on its own.
+- `gearCompare.ts`'s stat words gained the rune stats (wards, Max HP, on-hit), so that the embed and extract previews show what changes through `compareLines` as the task asks; without them an Ember rune's preview had no change lines.
+- The workshop's `about` line is unchanged (a rune clause made the encampment's text panel too tall at level 1); its effect lines carry the runes.
+
+**For step 11.** The manual's crafting and trading post sections and screenshots need the Runes tab and filter. The pouch on the Runes tab holds 4 lines a page; a long pouch pages.

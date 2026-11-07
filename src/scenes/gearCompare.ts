@@ -1,4 +1,5 @@
-import { ELEMENTS, formatDamage, type Element } from '../combat/combat.ts'
+import { ELEMENTS, formatDamage, type Element, type OnHit } from '../combat/combat.ts'
+import { STATUSES } from '../combat/spells.ts'
 import { gradeNumeral } from '../inventory/grades.ts'
 import { SHORTFALL_TO_HIT, strengthShortfall, type Item, type ItemStats } from '../inventory/inventory.ts'
 import { MODIFIER_IDS, MODIFIERS } from '../inventory/modifiers.ts'
@@ -40,7 +41,25 @@ function statWords(stats: ItemStats, ap: number, strength?: number): Array<[stri
   if (stats.spellSkill) words.push(['Spell Skill', signed(stats.spellSkill, '%')])
   if (stats.maxMana) words.push(['Mana', signed(stats.maxMana)])
   if (stats.critChance) words.push(['Critical', signed(stats.critChance, '%')])
+  const wards = wardWords(stats.wards)
+  if (wards) words.push(['Wards', wards])
+  if (stats.maxHp) words.push(['Max HP', signed(stats.maxHp)])
+  // One line an entry (a rune's), so that a rune set or taken out shows as its own line in a comparison.
+  stats.onHit?.forEach((entry, i) => words.push([i === 0 ? 'On a hit' : `On a hit (${i + 1})`, onHitWords(entry)]))
   return words
+}
+
+/** The wards above 0 in element order, "fire 2, frost 4"; empty with none. */
+const wardWords = (wards: Partial<Record<Element, number>> | undefined): string =>
+  ELEMENTS.filter((element) => (wards?.[element] ?? 0) > 0).map((element) => `${element} ${wards![element]}`).join(', ')
+
+/** What one on-hit entry (a rune's) does: "+1 fire", "+3 fire, lays Seared", "heals 1", "+2 blight to the regenerating and the blighted". */
+function onHitWords(entry: OnHit): string {
+  const parts: string[] = []
+  if (entry.damage > 0) parts.push(`+${entry.damage} ${entry.element ?? 'damage'}${entry.bane ? ' to the regenerating and the blighted' : ''}`)
+  if (entry.heal) parts.push(`heals ${entry.heal}`)
+  if (entry.status) parts.push(`lays ${STATUSES[entry.status.id].name}${entry.onCrit ? ' on a critical' : ''}`)
+  return parts.join(', ')
 }
 
 /**
@@ -67,6 +86,9 @@ export function statSummary(item: Item): string {
   if (s.spellSkill) parts.push(`spell ${signed(s.spellSkill, '%')}`)
   if (s.maxMana) parts.push(`mana ${signed(s.maxMana)}`)
   if (s.critChance) parts.push(`crit ${signed(s.critChance, '%')}`)
+  for (const element of ELEMENTS) if (s.wards?.[element]) parts.push(`${element} ward ${s.wards[element]}`)
+  if (s.maxHp) parts.push(`hp ${signed(s.maxHp)}`)
+  for (const entry of s.onHit ?? []) if (entry.damage > 0) parts.push(`+${entry.damage} ${entry.element ?? 'damage'}`)
   return parts.join(', ')
 }
 

@@ -3,16 +3,35 @@ import { deriveCombatStats } from '../character/character.ts'
 import type { GameState } from '../game/gameState.ts'
 import { placeKey, type ItemPlace } from '../game/itemPlace.ts'
 import type { Material } from '../game/territory.ts'
-import { MATERIALS_PER_GOLD, buy, buyPrice, buyRefusal, sell, sellMaterial, sellables, wares } from '../game/tradingPost.ts'
+import {
+  MATERIALS_PER_GOLD,
+  RUNE_RANK_LEVELS,
+  buy,
+  buyPrice,
+  buyRefusal,
+  buyRune,
+  buyRuneRefusal,
+  runePrice,
+  runeSalePrice,
+  runeWares,
+  sell,
+  sellMaterial,
+  sellRune,
+  sellables,
+  wares,
+} from '../game/tradingPost.ts'
 import { FAMILIES, type FamilyId } from '../inventory/catalog.ts'
 import type { EquipmentSlot, Item } from '../inventory/inventory.ts'
+import { parseRuneKey, pouchCount, pouchKeys, runeName, type RuneKey } from '../inventory/runes.ts'
 import type { ButtonProbe, TradingPostProbe } from '../testHook.ts'
 import { soundVolume } from './audioSettings.ts'
 import type { Point } from './boardGeometry.ts'
 import { TYPICAL_AP, statLines, statSummary } from './gearCompare.ts'
 import { ITEM_ICON_KEYS, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
 import type { Rect } from './mapScroll.ts'
-import { addPanelButton } from './panelButton.ts'
+import { addPanelButton, fitText } from './panelButton.ts'
+import { runeEffectLines } from './runecraftView.ts'
+import { createPips } from './socketPips.ts'
 
 interface TradingPostData {
   game: GameState
@@ -31,15 +50,16 @@ const SLOT_BUTTONS: ReadonlyArray<readonly [EquipmentSlot, string]> = [
 ]
 
 interface Filter {
-  slot: EquipmentSlot
+  /** A slot's gear, or 'runes', the runes the post sells. */
+  slot: EquipmentSlot | 'runes'
   family: FamilyId | null
 }
 const OPENING_FILTER: Filter = { slot: 'mainHand', family: null }
 
-/** A line of the list: an item for sale or to sell, or a material to sell. */
+/** A line of the list: an item or a rune for sale or to sell, or a material to sell. */
 interface Row {
   id: string
-  kind: 'item' | 'material'
+  kind: 'item' | 'material' | 'rune'
   label: string
   /** Under the name: the item's stats, and whose it is when selling. */
   detail: string
@@ -49,6 +69,7 @@ interface Row {
   place?: ItemPlace
   material?: Material
   amount?: number
+  rune?: RuneKey
   /** The AP of the hero who holds it, which tells its attacks a turn. */
   ap: number
 }
@@ -75,7 +96,7 @@ const CONFIRM_ALL_Y = CONFIRM_Y - 40
 const REFUSAL_Y = 380
 const MESSAGE_Y = 462
 const BUTTON_Y = 495
-/** The Buy tab's filter: the slot buttons across the frame, the families of the slot under them, eight to a row. */
+/** The Buy tab's filter: the slot buttons (and Runes) across the frame, the families of the slot under them, eight to a row. */
 const SLOT_Y = 130
 const FAMILY_Y = 156
 const FAMILY_ROW_H = 22
@@ -91,8 +112,8 @@ const REFUSED = '#ffb74d'
 /**
  * The trading post, entered from the encampment (EncampmentScene) over the
  * paused world map: Buy lists every plain item at the grades the post's
- * level allows, Sell what the party carries and the baggage holds, and the
- * stock's materials. A click on a line shows the item's stats and price, and
+ * level allows, and under its Runes filter the runes it sells; Sell what the
+ * party carries and the baggage holds, the stock's materials and the rune pouch. A click on a line shows the item's stats and price, and
  * a button confirms. Every action calls a function of tradingPost.ts.
  * Closing it goes back to the encampment.
  */
@@ -108,6 +129,7 @@ export class TradingPostScene extends Phaser.Scene {
   private controls: Partial<Record<keyof TradingPostProbe['buttons'], { at: Rect; enabled: boolean }>> = {}
   private rowAt = new Map<string, Point>()
   private slotAt = new Map<EquipmentSlot, Point>()
+  private runesAt: Point | null = null
   private familyAt = new Map<FamilyId | null, Point>()
 
   constructor() {
@@ -153,6 +175,7 @@ export class TradingPostScene extends Phaser.Scene {
       details: row ? this.details(row) : [],
       filter: { ...this.filter },
       slotButtons: SLOT_BUTTONS.filter(([slot]) => this.slotAt.has(slot)).map(([slot]) => ({ ...onScreen(this.slotAt.get(slot)!), visible: true, enabled: true, slot })),
+      runesButton: this.runesAt ? { ...onScreen(this.runesAt), visible: true, enabled: true } : { x: 0, y: 0, visible: false, enabled: false },
       familyButtons: [...this.familyAt].map(([family, at]) => ({ ...onScreen(at), visible: true, enabled: true, family })),
       rows: this.rows().map((r) => {
         const at = this.rowAt.get(r.id)
@@ -188,8 +211,12 @@ export class TradingPostScene extends Phaser.Scene {
   private rows(): Row[] {
     const game = this.gameState
     const apOf = (member: number) => deriveCombatStats(game.party[member]).actionPoints
+    const { slot, family } = this.filter
     if (this.tab === 'buy') {
-      return wares(game.world, { slot: this.filter.slot, family: this.filter.family ?? undefined }).map((item) => ({ id: item.id, kind: 'item', label: item.name, detail: statSummary(item), price: buyPrice(item)!, item, ap: TYPICAL_AP }))
+      if (slot === 'runes') {
+        return runeWares(game.world).map((key) => ({ id: `rune:${key}`, kind: 'rune', label: runeName(key), detail: '', price: runePrice(key), rune: key, ap: TYPICAL_AP }))
+      }
+      return wares(game.world, { slot, family: family ?? undefined }).map((item) => ({ id: item.id, kind: 'item', label: item.name, detail: statSummary(item), price: buyPrice(item)!, item, ap: TYPICAL_AP }))
     }
     const items: Row[] = sellables(game).map(({ place, item, price }) => {
       const whose = place.from === 'baggage' ? 'baggage' : `${game.party[place.member].name}'s pack`
@@ -216,9 +243,18 @@ export class TradingPostScene extends Phaser.Scene {
         amount: amount!,
         ap: TYPICAL_AP,
       }))
+    const runes: Row[] = pouchKeys(game.runes).map((key) => ({
+      id: `rune:${key}`,
+      kind: 'rune',
+      label: `${pouchCount(game.runes, key)} × ${runeName(key)}`,
+      detail: 'the pouch',
+      price: runeSalePrice(key),
+      rune: key,
+      ap: TYPICAL_AP,
+    }))
     // The baggage first: loot, and the gear of the fallen, is what is sold most.
     const baggage = items.filter((row) => row.place!.from === 'baggage')
-    return [...baggage, ...items.filter((row) => row.place!.from !== 'baggage'), ...materials]
+    return [...baggage, ...items.filter((row) => row.place!.from !== 'baggage'), ...materials, ...runes]
   }
 
   /** The details of the line clicked: the item's stats and what it costs or fetches. */
@@ -227,7 +263,8 @@ export class TradingPostScene extends Phaser.Scene {
       const lots = Math.floor(row.amount! / MATERIALS_PER_GOLD)
       return [`The stock holds ${row.label}.`, `The post pays 1 gold for every ${MATERIALS_PER_GOLD}: ${lots} gold for all of it.`]
     }
-    const price = this.tab === 'buy' ? `Costs ${row.price} gold.` : `Fetches ${row.price} gold.`
+    const price = this.tab === 'buy' ? `Costs ${row.price} gold.` : `Fetches ${row.price} gold${row.kind === 'rune' ? ' each' : ''}.`
+    if (row.kind === 'rune') return [...runeEffectLines(row.rune!), price]
     return [...statLines(row.item!, row.ap), price]
   }
 
@@ -238,6 +275,7 @@ export class TradingPostScene extends Phaser.Scene {
     this.controls = {}
     this.rowAt = new Map()
     this.slotAt = new Map()
+    this.runesAt = null
     this.familyAt = new Map()
     const { world } = this.gameState
     const rows = this.rows()
@@ -258,7 +296,12 @@ export class TradingPostScene extends Phaser.Scene {
     if (this.tab === 'buy') this.drawFilter()
     rows.slice(this.page * this.rowsPerPage, (this.page + 1) * this.rowsPerPage).forEach((row, i) => this.drawRow(row, this.listTop + i * ROW_H))
     if (rows.length === 0) {
-      const none = this.tab === 'buy' ? 'The post sells nothing of this kind yet.' : 'Nothing to sell: worn gear must be taken off first.'
+      const none =
+        this.tab === 'sell'
+          ? 'Nothing to sell: worn gear must be taken off first.'
+          : this.filter.slot === 'runes'
+            ? `A level ${RUNE_RANK_LEVELS[1]} trading post sells runes.`
+            : 'The post sells nothing of this kind yet.'
       this.frame.add(this.add.text(LIST_X + 8, this.listTop, none, { fontFamily: FONT, fontSize: '13px', color: DIM }))
     }
     if (pages > 1) {
@@ -273,12 +316,16 @@ export class TradingPostScene extends Phaser.Scene {
 
   /** The Buy tab's filter: a button for each slot, and under them "All" and the slot's families. */
   private drawFilter(): void {
-    const slotW = FILTER_W / SLOT_BUTTONS.length
+    const slotW = FILTER_W / (SLOT_BUTTONS.length + 1)
     SLOT_BUTTONS.forEach(([slot, label], i) => {
       const at = { x: LIST_X + slotW * (i + 0.5), y: SLOT_Y, width: slotW - 6, height: 24 }
       this.slotAt.set(slot, at)
       this.filterButton(at, label, () => this.setFilter({ slot, family: null }), this.filter.slot === slot)
     })
+    const runesAt = { x: LIST_X + slotW * (SLOT_BUTTONS.length + 0.5), y: SLOT_Y, width: slotW - 6, height: 24 }
+    this.runesAt = runesAt
+    this.filterButton(runesAt, 'Runes', () => this.setFilter({ slot: 'runes', family: null }), this.filter.slot === 'runes')
+    if (this.filter.slot === 'runes') return
     const familyW = FILTER_W / FAMILIES_PER_ROW
     const families: Array<[FamilyId | null, string]> = [[null, 'All'], ...FAMILIES.filter((f) => f.slot === this.filter.slot).map((f): [FamilyId, string] => [f.id, f.name])]
     families.forEach(([family, label], i) => {
@@ -313,13 +360,14 @@ export class TradingPostScene extends Phaser.Scene {
       const icon = this.add.image(LIST_X + 12, centre.y, ITEM_ICON_KEYS[row.item.icon])
       const tint = iconTint(row.item)
       if (tint !== undefined) icon.setTint(tint)
-      this.frame.add(icon)
+      this.frame.add([icon, ...createPips(this, row.item, LIST_X + 12, centre.y, 1)])
     }
-    const price = this.tab === 'buy' ? `${row.price}g` : row.kind === 'material' ? `${row.price}g/${MATERIALS_PER_GOLD}` : `+${row.price}g`
-    this.frame.add([
-      this.add.text(LIST_X + 26, centre.y, row.label, { fontFamily: FONT, fontSize: '12px', color: marked ? GOLD : TEXT }).setOrigin(0, 0.5),
-      this.add.text(LIST_X + LIST_W - 8, centre.y, price, { fontFamily: FONT, fontSize: '12px', color: GOLD }).setOrigin(1, 0.5),
-    ])
+    if (row.rune) this.frame.add(this.add.image(LIST_X + 12, centre.y, RUNE_ICON_KEYS[parseRuneKey(row.rune)!.id]))
+    const price = this.tab === 'buy' ? `${row.price}g` : row.kind === 'material' ? `${row.price}g/${MATERIALS_PER_GOLD}` : row.kind === 'rune' ? `+${row.price}g each` : `+${row.price}g`
+    const priceText = this.add.text(LIST_X + LIST_W - 8, centre.y, price, { fontFamily: FONT, fontSize: '12px', color: GOLD }).setOrigin(1, 0.5)
+    const label = this.add.text(LIST_X + 26, centre.y, row.label, { fontFamily: FONT, fontSize: '12px', color: marked ? GOLD : TEXT }).setOrigin(0, 0.5)
+    fitText(label, LIST_W - 26 - priceText.width - 16)
+    this.frame.add([label, priceText])
   }
 
   /** The line clicked: what it is, its stats, its price and the button that confirms; a hint while none is. */
@@ -339,9 +387,11 @@ export class TradingPostScene extends Phaser.Scene {
     ])
     const at = (y: number): Rect => ({ x: DETAILS_X + DETAILS_W / 2, y, width: DETAILS_W, height: 32 })
     if (this.tab === 'buy') {
-      const refusal = buyRefusal(this.gameState, row.id)
+      const refusal = row.rune ? buyRuneRefusal(this.gameState, row.rune) : buyRefusal(this.gameState, row.id)
       if (refusal) this.frame.add(this.add.text(DETAILS_X, REFUSAL_Y, refusal, { ...style, color: REFUSED }))
-      this.button('confirm', at(CONFIRM_Y), `Buy for ${row.price} gold`, () => this.onBuy(row), refusal === null)
+      this.button('confirm', at(CONFIRM_Y), `Buy for ${row.price} gold`, () => (row.rune ? this.onBuyRune(row) : this.onBuy(row)), refusal === null)
+    } else if (row.kind === 'rune') {
+      this.button('confirm', at(CONFIRM_Y), `Sell one for ${row.price} gold`, () => this.onSellRune(row))
     } else if (row.kind === 'item') {
       this.button('confirm', at(CONFIRM_Y), `Sell for ${row.price} gold`, () => this.onSell(row))
     } else {
@@ -402,6 +452,16 @@ export class TradingPostScene extends Phaser.Scene {
 
   private onBuy(row: Row): void {
     this.act(buy(this.gameState, row.id), `Bought the ${row.label} for ${row.price} gold. It is in the baggage.`, true)
+  }
+
+  private onBuyRune(row: Row): void {
+    this.act(buyRune(this.gameState, row.rune!), `Bought the ${row.label} for ${row.price} gold. It is in the rune pouch.`, true)
+  }
+
+  /** Sells one rune of the line; the line stays selected while the pouch holds more of it. */
+  private onSellRune(row: Row): void {
+    const left = pouchCount(this.gameState.runes, row.rune!) - 1
+    this.act(sellRune(this.gameState, row.rune!), `Sold the ${runeName(row.rune!)} for ${row.price} gold.`, left > 0)
   }
 
   private onSell(row: Row): void {

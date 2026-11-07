@@ -9,6 +9,7 @@ import type { FacilityId } from './game/encampment.ts'
 import type { WorldState } from './game/worldMap.ts'
 import type { FamilyId } from './inventory/catalog.ts'
 import type { EquipmentSlot } from './inventory/inventory.ts'
+import type { RuneKey } from './inventory/runes.ts'
 import type { Point } from './scenes/boardGeometry.ts'
 import type { Rect } from './scenes/mapScroll.ts'
 
@@ -207,11 +208,13 @@ export interface TradingPostProbe {
    * Every line of the tab, those of other pages not visible: an item's id when buying, else where it lies
    * (`baggage:<index>`, `pack:<member>:<index>`) or `material:<material>`; a click shows its details.
    */
-  rows: Array<ButtonProbe & { id: string; kind: 'item' | 'material'; price: number }>
-  /** The Buy tab's filter: the slot shown and the family, null for all of the slot. Sell is not filtered. */
-  filter: { slot: EquipmentSlot; family: FamilyId | null }
+  rows: Array<ButtonProbe & { id: string; kind: 'item' | 'material' | 'rune'; price: number }>
+  /** The Buy tab's filter: the slot shown (or 'runes', the runes it sells, `rune:<key>`) and the family, null for all of the slot. Sell is not filtered; it lists the pouch's runes after the materials. */
+  filter: { slot: EquipmentSlot | 'runes'; family: FamilyId | null }
   /** One for each slot the post sells for, in the order mainHand, offHand, armor, head, gloves, boots; empty on the Sell tab. */
   slotButtons: Array<ButtonProbe & { slot: EquipmentSlot }>
+  /** The Buy tab's Runes filter, after the slot buttons; not visible on the Sell tab. */
+  runesButton: ButtonProbe
   /** "All" (family null), then each family of the slot shown, in FAMILIES order; empty on the Sell tab. */
   familyButtons: Array<ButtonProbe & { family: FamilyId | null }>
   /** `confirm` buys or sells the line shown (a material two at a time); `confirmAll` sells all of a material. */
@@ -229,19 +232,38 @@ export interface TradingPostProbe {
 export interface CraftingProbe {
   /** 'field', or the workshop's level. */
   tier: 'field' | number
+  /** Modify (modifiers, the screen it opens on) or Runes (sockets and the pouch). */
+  tab: 'modify' | 'runes'
   /** What the last action did, or why it was refused. */
   message: string
-  /** Every item that could be worked, by where it lies (`worn:<member>:<slot>`, `pack:<member>:<index>`, `baggage:<index>`), greyed when nothing here fits it. */
+  /**
+   * Modify: every item that could be worked, by where it lies (`worn:<member>:<slot>`, `pack:<member>:<index>`, `baggage:<index>`), greyed when nothing here fits it.
+   * Runes: every item with a socket, the same way.
+   */
   items: Array<ButtonProbe & { id: string; itemId: string }>
   /** The item clicked, by where it lies. */
   selected: string | null
-  /** The modifiers and grades on offer for it (`<modifier><grade>`), each greyed when it cannot be done now, with its button's words. */
+  /** The modifiers and grades on offer for it (`<modifier><grade>`), each greyed when it cannot be done now, with its button's words; empty on the Runes tab. */
   options: Array<ButtonProbe & { id: string; label: string }>
-  /** The option clicked, and the lines saying what it changes. */
+  /** The option clicked (`<modifier><grade>`), or on the Runes tab the action (`embed:<key>`, `extract:<index>`, `fuse:<key>`); and the lines of its preview, its refusal last if any. */
   chosen: string | null
   preview: string[]
-  /** `work` confirms the option chosen. */
-  buttons: { work: ButtonProbe; prev: ButtonProbe; next: ButtonProbe; close: ButtonProbe }
+  /** Runes: the selected item's sockets, each its Extract button (greyed when refused, and for an empty socket not visible), with the rune in it. */
+  sockets: Array<ButtonProbe & { index: number; rune: RuneKey | null }>
+  /** Runes: the pouch, each key with its Embed and Fuse buttons, greyed when refused but still clickable to read why; those of other pages not visible. */
+  pouch: Array<{ key: RuneKey; count: number; embed: ButtonProbe; fuse: ButtonProbe }>
+  /** `work` confirms the option chosen, `confirm` the rune action; `prev` and `next` page the item list, `pouchPrev` and `pouchNext` the pouch. */
+  buttons: {
+    work: ButtonProbe
+    confirm: ButtonProbe
+    modifyTab: ButtonProbe
+    runesTab: ButtonProbe
+    prev: ButtonProbe
+    next: ButtonProbe
+    pouchPrev: ButtonProbe
+    pouchNext: ButtonProbe
+    close: ButtonProbe
+  }
 }
 
 export interface GuildHallProbe {

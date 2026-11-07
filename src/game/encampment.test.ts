@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SHRINE_COSTS } from './buildings.ts'
-import { facilities, improveFacility } from './encampment.ts'
+import { facilities, improveFacility, setFacilityLevel } from './encampment.ts'
 import { newGame } from './gameState.ts'
 
 /** A new game at home, with gold, iron and silver enough for anything. */
@@ -58,8 +58,28 @@ describe('the encampment', () => {
     }
     expect([game.world.tradingPost, game.world.workshop, game.world.infirmary]).toEqual([4, 3, 3])
     expect(view(game, 'trading_post').maxLevel).toBe(4)
-    expect(view(game, 'trading_post').effect).toBe('Sells plain, Fine and Masterwork gear, in iron and steel.')
+    expect(view(game, 'trading_post').effect).toBe('Sells plain, Fine and Masterwork gear, in iron and steel, and runes of the first two ranks.')
     expect(view(game, 'workshop').opens).toBe(true)
+  })
+
+  it('says what each level of the trading post and the workshop does for runes', () => {
+    const game = newGame(undefined, null, 1, 'Hearthold')
+    const effects = (id: 'trading_post' | 'workshop', levels: number[]) =>
+      levels.map((level) => {
+        setFacilityLevel(game, id, level)
+        return view(game, id).effect
+      })
+    expect(effects('trading_post', [1, 2, 3, 4])).toEqual([
+      'Sells plain gear.',
+      'Sells plain and Fine gear, and Lesser runes.',
+      'Sells plain, Fine and Masterwork gear, and Lesser runes.',
+      'Sells plain, Fine and Masterwork gear, in iron and steel, and runes of the first two ranks.',
+    ])
+    expect(effects('workshop', [1, 2, 3])).toEqual([
+      'Makes the field modifiers, and Bearded, Keen and Braced, at grade 1. Sets runes, and fuses three Lesser runes into one.',
+      'Makes Light, Long and Reinforced too, at up to grade 2. Takes runes out again, for a fee.',
+      'Makes every modifier at up to grade 3.',
+    ])
   })
 
   it('refuses a new facility without the stock, changing nothing', () => {

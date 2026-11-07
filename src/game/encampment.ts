@@ -5,7 +5,7 @@ import { GUILD_HALL_LEVELS, MAX_GUILD_HALL_LEVEL, upgradeCost, upgradeGuildHall 
 import { MAX_WORKSHOP_LEVEL, upgradeWorkshop, workshopCost } from './crafting.ts'
 import { MAX_INFIRMARY_LEVEL, infirmaryCost, infirmaryEffect, raiseInfirmary } from './infirmary.ts'
 import type { Stock } from './territory.ts'
-import { MAX_TRADING_POST_LEVEL, raiseTradingPost, tradingPostCost } from './tradingPost.ts'
+import { MAX_TRADING_POST_LEVEL, RUNE_RANK_LEVELS, raiseTradingPost, tradingPostCost } from './tradingPost.ts'
 import { encampmentName } from './worldMap.ts'
 
 /**
@@ -86,9 +86,13 @@ const FACILITIES: readonly Facility[] = [
     name: 'Trading Post',
     maxLevel: MAX_TRADING_POST_LEVEL,
     level: (game) => game.world.tradingPost,
-    about: () => 'Merchants sell plain gear for gold and buy what the party no longer needs.',
-    effect: (_, level) =>
-      level >= 4 ? 'Sells plain, Fine and Masterwork gear, in iron and steel.' : `Sells ${['plain', 'plain and Fine', 'plain, Fine and Masterwork'][level - 1]} gear.`,
+    about: () => 'Merchants sell plain gear and runes for gold and buy what the party no longer needs.',
+    effect: (_, level) => {
+      const gear = level >= 4 ? 'plain, Fine and Masterwork gear, in iron and steel' : `${['plain', 'plain and Fine', 'plain, Fine and Masterwork'][level - 1]} gear`
+      // The runes it sells (RUNE_RANK_LEVELS): Lesser from level 2, the rank above from level 4.
+      const runes = level >= RUNE_RANK_LEVELS[2]! ? ', and runes of the first two ranks' : level >= RUNE_RANK_LEVELS[1]! ? ', and Lesser runes' : ''
+      return `Sells ${gear}${runes}.`
+    },
     cost: (game) => tradingPostCost(game.world),
     improve: raiseTradingPost,
     opens: true,
@@ -101,8 +105,8 @@ const FACILITIES: readonly Facility[] = [
     about: () => 'Smiths and bowyers rework gear, trading one strength of an item for another.',
     effect: (_, level) =>
       [
-        'Makes the field modifiers, and Bearded, Keen and Braced, at grade 1.',
-        'Makes Light, Long and Reinforced too, at up to grade 2.',
+        'Makes the field modifiers, and Bearded, Keen and Braced, at grade 1. Sets runes, and fuses three Lesser runes into one.',
+        'Makes Light, Long and Reinforced too, at up to grade 2. Takes runes out again, for a fee.',
         'Makes every modifier at up to grade 3.',
       ][level - 1],
     cost: (game) => workshopCost(game.world),

@@ -10,6 +10,8 @@ export interface PanelButtonLook {
   enabled?: boolean
   /** Gold-edged: the one to press next, or the one chosen. */
   marked?: boolean
+  /** Drawn faint as a disabled one is, but still taking clicks: an action refused now, whose refusal a click shows. */
+  dimmed?: boolean
   fontSize?: number
 }
 
@@ -24,10 +26,11 @@ export function addPanelButton(
   at: Rect,
   label: string,
   onClick: () => void,
-  { enabled = true, marked = false, fontSize = 14 }: PanelButtonLook = {},
+  { enabled = true, marked = false, dimmed = false, fontSize = 14 }: PanelButtonLook = {},
 ): void {
-  const edge = !enabled ? 0x3a3024 : marked ? 0xc9a227 : 0x6b5a3a
-  const color = !enabled ? '#5a4f3c' : marked ? '#e8c766' : '#d8c9a3'
+  const faint = !enabled || dimmed
+  const edge = !enabled ? 0x3a3024 : marked ? 0xc9a227 : faint ? 0x3a3024 : 0x6b5a3a
+  const color = faint ? '#5a4f3c' : marked ? '#e8c766' : '#d8c9a3'
   const bg = scene.add.rectangle(at.x, at.y, at.width, at.height, 0x1b1712, 0.95).setStrokeStyle(2, edge)
   const text = scene.add.text(at.x, at.y, label, { fontFamily: FONT, fontSize: `${fontSize}px`, color }).setOrigin(0.5)
   // A label too long for its button shrinks to fit, as a save slot's line can be.
@@ -41,4 +44,10 @@ export function addPanelButton(
     scene.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
     onClick()
   })
+}
+
+/** Cuts `text` short with an ellipsis until it is no wider than `width`: a long name in a list line, rather than one run over what sits beside it. */
+export function fitText(text: Phaser.GameObjects.Text, width: number): void {
+  const full = text.text
+  for (let n = full.length; text.width > width && n > 1; n--) text.setText(`${full.slice(0, n - 1).trimEnd()}…`)
 }

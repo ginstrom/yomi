@@ -55,6 +55,19 @@ describe('gear comparisons', () => {
     expect(compareLines(hammer, hammer, 8, 6)).toEqual([])
   })
 
+  it('tells what runes add: wards, maximum hit points and what a hit does', () => {
+    const sword = itemById('iron_sword@3')!
+    expect(compareLines(sword, itemById('iron_sword@3#ember1')!)).toEqual(['On a hit: none → +1 fire'])
+    expect(compareLines(sword, itemById('iron_sword@3#ember3')!)).toEqual(['On a hit: none → +3 fire, lays Seared'])
+    expect(statLines(itemById('steel_longsword@3#ember1.life1')!)).toEqual(expect.arrayContaining(['On a hit: +1 fire', 'On a hit (2): heals 1']))
+    expect(compareLines(itemById('steel_longsword@3#venom2')!, itemById('steel_longsword@3#venom2.ember1')!)).toEqual(['On a hit (2): none → +1 fire'])
+    expect(statLines(itemById('steel_longsword@3#venom2')!)).toContain('On a hit: +2 poison, lays Poisoned on a critical')
+    const plate = itemById('iron_breastplate@3')!
+    expect(compareLines(plate, itemById('iron_breastplate@3#rime1')!)).toEqual(['Wards: none → frost 2'])
+    expect(compareLines(plate, itemById('iron_breastplate@3#life1')!)).toEqual(['Max HP: none → +4'])
+    expect(statSummary(itemById('iron_breastplate@3#rime1')!)).toContain('frost ward 2')
+  })
+
   it('keeps the holder\'s strength shortfall in a comparison though the craft leaves it alone', () => {
     const greatsword = itemById('iron_greatsword')!
     const balanced = itemById('iron_greatsword+balanced1')!
