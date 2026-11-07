@@ -44,3 +44,4 @@ None yet.
 - Step 01 (864d9f0): guard 248/500 unchanged; Troll Lair longsword t5/L5 0/500; Goblin Raid longsword t3/L3 487; Bandit Camp t3/t4/t5 444/473/470.
 - Step 01 review (sonnet): clean; reviewer reproduced the guard and two cells.
 - Step 02 (d6212f2): 19 family icons and trading post level 4. Orchestrator viewed the previews. Review (opus) clean; non-blocking: longbow could use the full height; greaves and cap are the weakest reads; keep tier tints pale.
+- Step 03 (2814cc1, daa9aa8, cab3a4d): 15 gear sprites on the body. Orchestrator viewed the loadouts. Review (opus) clean; leather and cap were weak reads at battle scale, polished by the same engineer in cab3a4d (oxblood leather with pauldrons, cap with a light crown and red brim), orchestrator viewed. Robe stops at the hips (layering rule).
