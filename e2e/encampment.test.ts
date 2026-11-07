@@ -252,7 +252,8 @@ describe('the encampment', () => {
     await game.settled('Crafting', (c) => c.selected === 'baggage:0')
     await game.click((await game.settled('Crafting')).options.find((o) => o.id === 'balanced1')!)
     const loose = await game.settled('Crafting', (c) => c.selected === 'baggage:0' && c.chosen === 'balanced1')
-    expect(loose.preview[0]).toBe('Makes the Balanced Iron Greatsword (I).')
+    expect(loose.preview[0]).toBe('Balanced I: to hit +5%, damage −1.')
+    expect(loose.preview[1]).toBe('Makes the Balanced Iron Greatsword (I).')
     expect(loose.preview.some((line) => line.includes('you have'))).toBe(false)
   })
 
@@ -274,6 +275,8 @@ describe('the encampment', () => {
     await game.click(bench.items.find((item) => item.id === 'worn:0:mainHand')!)
     const sword = await game.settled('Crafting', (c) => c.selected === 'worn:0:mainHand')
     expect(sword.options.map((o) => o.id)).toEqual(['balanced1', 'balanced2', 'keen1', 'keen2', 'light1', 'light2'])
+    // Each button names its modifier and grade, short enough to read; the preview says what it does.
+    expect(sword.options.map((o) => o.label)).toEqual(['Balanced I', 'Balanced II', 'Keen I', 'Keen II', 'Light I', 'Light II'])
     await game.click(sword.options.find((o) => o.id === 'light1')!)
     const light = await game.settled('Crafting', (c) => c.chosen === 'light1')
     expect(light.preview).toContain('Attack: 5 AP, 1 attack a turn → 4 AP, 2 attacks a turn')

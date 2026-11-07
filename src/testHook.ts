@@ -235,8 +235,8 @@ export interface CraftingProbe {
   items: Array<ButtonProbe & { id: string; itemId: string }>
   /** The item clicked, by where it lies. */
   selected: string | null
-  /** The modifiers and grades on offer for it (`<modifier><grade>`), each greyed when it cannot be done now. */
-  options: Array<ButtonProbe & { id: string }>
+  /** The modifiers and grades on offer for it (`<modifier><grade>`), each greyed when it cannot be done now, with its button's words. */
+  options: Array<ButtonProbe & { id: string; label: string }>
   /** The option clicked, and the lines saying what it changes. */
   chosen: string | null
   preview: string[]

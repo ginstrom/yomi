@@ -72,7 +72,7 @@ export class CraftingScene extends Phaser.Scene {
   private frame!: Phaser.GameObjects.Container
   private controls: Partial<Record<keyof CraftingProbe['buttons'], { at: Rect; enabled: boolean }>> = {}
   private itemAt = new Map<string, Point>()
-  private optionAt = new Map<string, { at: Point; enabled: boolean }>()
+  private optionAt = new Map<string, { at: Point; enabled: boolean; label: string }>()
 
   constructor() {
     super('Crafting')
@@ -118,7 +118,7 @@ export class CraftingScene extends Phaser.Scene {
         const at = this.itemAt.get(placeKey(place))
         return { ...onScreen(at ?? { x: 0, y: 0 }), visible: !!at, enabled: !!at && refusal === null, id: placeKey(place), itemId: item.id }
       }),
-      options: [...this.optionAt].map(([id, { at, enabled }]) => ({ ...onScreen(at), visible: true, enabled, id })),
+      options: [...this.optionAt].map(([id, { at, enabled, label }]) => ({ ...onScreen(at), visible: true, enabled, id, label })),
       buttons: { work: control('work'), prev: control('prev'), next: control('next'), close: control('close') },
     }
   }
@@ -150,7 +150,8 @@ export class CraftingScene extends Phaser.Scene {
     const lines = compareLines(item, option.result, this.apAt(place), this.strengthAt(place))
     const replaces = item.mod ? [`Replaces ${MODIFIERS[item.mod.id].name} (${gradeNumeral(item.mod.grade)}).`] : []
     const time = craftTier(this.gameState.world) === 'field' ? ' and a day' : ''
-    return [`Makes the ${option.result.name}.`, ...replaces, ...lines, `Costs ${describeCost(option.cost)}${time}.`]
+    const does = `${option.modifier.name} ${gradeNumeral(option.grade)}: ${option.modifier.better(option.grade)}, ${option.modifier.worse(option.grade)}.`
+    return [does, `Makes the ${option.result.name}.`, ...replaces, ...lines, `Costs ${describeCost(option.cost)}${time}.`]
   }
 
   /** Where an item lies, in words: "Aldric, Weapon (worn)", "Brenna's pack", "baggage". */
@@ -243,8 +244,9 @@ export class CraftingScene extends Phaser.Scene {
     all.forEach((option, i) => {
       const key = optionKey(option)
       const at: Rect = { x: OPTIONS_X + OPTIONS_W / 2, y: LIST_TOP + i * OPTION_H + OPTION_H / 2, width: OPTIONS_W, height: OPTION_H - 2 }
-      const label = `${option.modifier.name} ${gradeNumeral(option.grade)}: ${option.modifier.better(option.grade)}, ${option.modifier.worse(option.grade)}`
-      this.optionAt.set(key, { at, enabled: true })
+      // The name alone, which fits its button however long the modifier's words; the preview says what it does.
+      const label = `${option.modifier.name} ${gradeNumeral(option.grade)}`
+      this.optionAt.set(key, { at, enabled: true, label })
       addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, () => this.choose(key)), { marked: key === this.chosen, fontSize: 11 })
     })
     const option = all.find((o) => optionKey(o) === this.chosen)
