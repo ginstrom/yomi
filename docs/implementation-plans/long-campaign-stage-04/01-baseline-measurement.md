@@ -89,3 +89,68 @@ Measure the early-game guard and the Troll Lair reference cells on the tree as i
 - [ ] One commit on `long-campaign-stage-04` (this file, the index and any CLAUDE.md line), not pushed.
 
 ## Execution record
+
+- Tree at `205f76c` (HEAD); `git status` clean at the start. Step 02 had already committed (`7dab325`, art only). Node v26.13.0 locally.
+- Guard: `npm run simulate -- --campaign --ready-level 7 --battles 500 --seed 1 --out logs/s4-baseline-guard.jsonl` (5m37s). **233 of 500, unchanged from stage 3.** CLAUDE.md left alone.
+- Cells (`--battles 500 --seed 1 --encounter troll_lair --threat 5 --party-level 5`):
+
+| Cell | Wins | Avg rounds | Damage (player / enemy) | Hit rate (player / enemy) |
+| --- | --- | --- | --- | --- |
+| `--player-weapon 'iron_sword@3'` | 0 of 500 | 7.12 | 49.788 / 147.986 | 0.2435 / 0.7990 |
+| `--player-weapon iron_sword` | 0 of 500 | 7.09 | 42.304 / 147.772 | 0.2011 / 0.8007 |
+
+- No deviations. Logs: `logs/s4-baseline-guard.jsonl`, `s4-baseline-troll5-mw.jsonl`, `s4-baseline-troll5.jsonl` (gitignored).
+
+Full guard summary, for diffing:
+
+```
+> yomi@0.0.0 simulate
+> node scripts/simulate.ts --campaign --ready-level 7 --battles 500 --seed 1 --out logs/s4-baseline-guard.jsonl
+
+Simulated 500 campaigns, 9107 battles in all (seed 1, player aggressive vs enemy aggressive) -> logs/s4-baseline-guard.jsonl
+Beat the Source: 233 of 500 (46.6%); party fell: 267 (53.4%); encampment lost: 0 (0.0%); out of days: 0
+A campaign: 269 days, 18.2 battles, 26.0 spawns, 3.1 sites captured and 0.1 lost, 38% of the land blighted at the end
+Watchtowers: 1.8 built a campaign, 0.0 lost
+Shrine: level 1.0 at the end; outposts: 0.5 built a campaign
+Trading post, workshop, infirmary: levels 1.1, 0.6, 0.5 at the end; 2 gold on gear and 51 from sales, 4.4 items crafted (2.7 days in the field) a campaign
+Tier-2 items bought: 0.0 a campaign
+Guild hall: level 2.4 at the end, 2.1 recruits and 1.8 heroes dead a campaign
+Hit points healed between battles: 130.5 a campaign, in 21.9 days of camping
+Levels at the end: lowest 6.7, highest 7.2 on average (ready level 7); heroes died at level 2 (35), 3 (190), 4 (38), 5 (114), 6 (17), 7 (264), 8 (220), 9 (25)
+Battles to level 5: 6.8 (412 campaigns); 10: — (0 campaigns); 15: — (0 campaigns); 20: — (0 campaigns)
+┌─────────┬────────┬─────────┬──────┬─────────┐
+│ (index) │ threat │ battles │ won  │ winRate │
+├─────────┼────────┼─────────┼──────┼─────────┤
+│ 0       │ 1      │ 1007    │ 1007 │ 1       │
+│ 1       │ 2      │ 1756    │ 1732 │ 0.986   │
+│ 2       │ 3      │ 1990    │ 1927 │ 0.968   │
+│ 3       │ 4      │ 2848    │ 2825 │ 0.992   │
+│ 4       │ 5      │ 1506    │ 1349 │ 0.896   │
+└─────────┴────────┴─────────┴──────┴─────────┘
+┌───────────────────────┬──────────────────────┐
+│ (index)               │ Values               │
+├───────────────────────┼──────────────────────┤
+│ battles               │ 9107                 │
+│ playerWins            │ 8840                 │
+│ enemyWins             │ 267                  │
+│ unresolved            │ 0                    │
+│ avgRounds             │ 5.023278796530142    │
+│ avgPlayerDamageDealt  │ 98.14702975732952    │
+│ avgEnemyDamageDealt   │ 28.931151861205667   │
+│ playerHitRate         │ 0.6663674360484323   │
+│ enemyHitRate          │ 0.6007521826729348   │
+│ playerCritRate        │ 0.04431006994814932  │
+│ enemyCritRate         │ 0.049012760241773    │
+│ avgOpportunityAttacks │ 0                    │
+│ avgSideAttacks        │ 1.2353134951136489   │
+│ avgRearAttacks        │ 0.1614142966948501   │
+│ avgPlayerCasts        │ 4.747007796200725    │
+│ avgEnemyCasts         │ 2.153947512902163    │
+│ avgPlayerAreaAttacks  │ 0                    │
+│ avgEnemyAreaAttacks   │ 0.024816075546283078 │
+│ avgPlayerHealing      │ 2.468540682991106    │
+│ avgEnemyHealing       │ 6.618095970132865    │
+│ avgPlayerStatuses     │ 2.9326891402218074   │
+│ avgEnemyStatuses      │ 0.7756670692873614   │
+└───────────────────────┴──────────────────────┘
+```

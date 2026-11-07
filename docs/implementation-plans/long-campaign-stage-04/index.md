@@ -471,7 +471,7 @@ export function runecraftGear(game: GameState): { embedded: number; fused: numbe
 
 | Step | Task | Outcome | Depends on | Engineer / reviewer | Status |
 | --- | --- | --- | --- | --- | --- |
-| 01 | [Baseline measurement](01-baseline-measurement.md) | The guard and the Troll Lair cell measured on this tree before any change; recorded here, and in CLAUDE.md if moved | — | sonnet / sonnet | pending |
+| 01 | [Baseline measurement](01-baseline-measurement.md) | The guard and the Troll Lair cell measured on this tree before any change; recorded here, and in CLAUDE.md if moved | — | sonnet / sonnet | done |
 | 02 | [Rune icons and socket pips](02-rune-icons.md) | Ten `icon_rune_<id>` icons, two socket pips and the `pip` canvas exported; README | — | opus / opus (art) | done |
 | 03 | [Runes and ids](03-runes-and-ids.md) | `runes.ts` (C1), `OnHit` and the new stat fields (C2), the `#` grammar, runed names and words, unique sockets, `craftedItem` with runes; the guard identical | 01 | opus / opus | pending |
 | 04 | [Derivation, the pouch and the save](04-derivation-pouch-save.md) | Wards, `onHit` and `maxHp` derived; `clampHp`; `GameState.runes`; save 18; debug `give`, `items` and `runes`; the guard identical | 03 | opus / opus | pending |
@@ -503,6 +503,7 @@ Parallel steps each edit only their own lines of CLAUDE.md, and the second to co
 
 **Checkpoints** (the guard command, compared with step 01's summary):
 - **After 03, 04, 05, 06 and 07:** identical to step 01's, because the simulator neither loots nor embeds runes, and nothing draws differently (correction 2). Any difference is a bug. Steps 06 and 07 add only new functions, so their run may be skipped if they do not touch `simulate.ts` or anything it calls.
+- **Baseline (step 01), tree at `205f76c`, unchanged from stage 3:** the guard is **233 of 500** (46.6%; party fell 267, encampment lost 0), 269 days, 18.2 battles, 1.8 heroes dead a campaign. Troll Lair threat 5, party level 5, 500 battles from seed 1: `iron_sword@3` 0 wins (7.12 rounds, damage 49.8 to 148.0, hit rates 0.243 and 0.799); `iron_sword` 0 wins (7.09 rounds, damage 42.3 to 147.8, hit rates 0.201 and 0.801). The full summary is in step 01's execution record.
 - **After 10:** measured, with the runes found, bought and fused and the sockets filled. Step 11 judges it.
 
 ## Requirement map
