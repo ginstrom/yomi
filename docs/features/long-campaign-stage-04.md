@@ -56,5 +56,6 @@ None.
 - Step 07 (2d7d130, sonnet): loot.ts, rune wares and prices. Review (sonnet): clean.
 - Step 06 (b1eeef1, opus): runecraft.ts (embed/extract/fuse, costs 5/10/10 a rank), itemPlace worn paths clampHp, rise test. Review (opus) running.
 - Step 06 review (opus): clean, guard reproduced; nits ("a Ember" article, weak field-day events test, CLAUDE.md runecraft clamp note) to step 09.
-- Step 08 (4c55ee9, 12b061b, sonnet): pips, tooltips, wards line, +N element text, victory runes, step 05 follow-ups. Review round 1 (opus): blocking, Wards line overflowed the panel; fixed in f1e71e7 (wardsLines wraps), orchestrator viewed; re-review running.
-- Step 10 (5e04803, opus): simulator rune loot, RUNE_ORDER/runecraftGear, all gear writes clamp; guard 230 (-3): runes found ~13/campaign but sockets almost never worn, so they sit in the pouch. Deviation: baggage sold once. Review (opus) running.
+- Step 08 (4c55ee9, 12b061b, sonnet): pips, tooltips, wards line, +N element text, victory runes, step 05 follow-ups. Review round 1 (opus): blocking, Wards line overflowed the panel; fixed in f1e71e7 (wardsLines wraps), orchestrator viewed; re-review: clean (reviewer eyeballed wards+mana+piercing at 840 and 1280; browser timeouts under load passed alone).
+- Step 10 (5e04803, opus): simulator rune loot, RUNE_ORDER/runecraftGear, all gear writes clamp; guard 230 (-3): runes found ~13/campaign but sockets almost never worn, so they sit in the pouch. Deviation: baggage sold once. Review (opus): clean, guard 230 reproduced; deviation accepted (second sale would be empty); nits to step 09.
+- Step 09 (opus) started, with the bracket change and review nits from 06 and 10.
