@@ -2,6 +2,7 @@ import { withRunes, type Item } from '../inventory/inventory.ts'
 import {
   MAX_RANK,
   addToPouch,
+  capitalised,
   parseRuneKey,
   pouchCount,
   runeFits,
@@ -70,8 +71,6 @@ export const aRune = (key: RuneKey): string => {
   return `${/^[AEIOU]/.test(name) ? 'an' : 'a'} ${name}`
 }
 
-const capitalise = (text: string): string => text[0].toUpperCase() + text.slice(1)
-
 const unaffordable = (cost: Stock): string => `It costs ${describeCost(cost)}, more than the stock holds.`
 
 /** Where the workshop is, for a refusal given away from it. */
@@ -92,7 +91,7 @@ export function embedRefusal(game: GameState, place: ItemPlace, key: RuneKey): s
   if ((item.runes?.length ?? 0) >= sockets) return `Its sockets are full; extract one first.`
   if (pouchCount(game.runes, key) === 0) return `The pouch holds no ${runeName(key)}.`
   const { id, rank } = parseRuneKey(key)!
-  if (!runeFits(id, item)) return `${capitalise(aRune(key))} does nothing in ${item.name}; it fits only a wand or a staff.`
+  if (!runeFits(id, item)) return `${capitalised(aRune(key))} does nothing in ${item.name}; it fits only a wand or a staff.`
   if (craftTier(world) === 'field') {
     if (!canCamp(world)) return 'Nothing can be embedded here now.'
     if (rank > 1) return `Only a Lesser rune can be embedded in the field; ${aRune(key)} needs the workshop.${workshopIsAt(world)}`
