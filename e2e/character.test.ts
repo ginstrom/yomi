@@ -179,6 +179,41 @@ describe('a hero’s panel', () => {
     expect((await game.probe('World'))!.partyLook).toEqual(panel.doll)
   })
 
+  it('fits the Character tab’s stats in the panel with a weapon that pierces, narrow and wide', async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    await debugCommand(game, 'give steel_war_hammer')
+    // The mage, whose mana makes the longest stat column.
+    await game.click(world.party[2])
+    await game.waitFor('World', (w) => w.party[2].active)
+    await game.click(world.party[2])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    let panel = await game.settled('Inventory', (p) => p.tab === 'inventory' && p.ground.some((slot) => slot.item === 'steel_war_hammer'))
+    await game.click(panel.ground.find((slot) => slot.item === 'steel_war_hammer')!)
+    panel = await game.settled('Inventory', (p) => p.backpack.some((slot) => slot.item === 'steel_war_hammer'))
+    await game.click(panel.backpack.find((slot) => slot.item === 'steel_war_hammer')!)
+    await game.settled('Inventory', (p) => p.equipment.mainHand.item === 'steel_war_hammer')
+    await game.press('c')
+    for (const [width, height] of [
+      [840, 560],
+      [1400, 800],
+    ]) {
+      await game.resize(width, height)
+      const { characterSheet: sheet } = await game.settled('Inventory', (p) => p.tab === 'character')
+      // The stat column, its Pierces line the longest, ends inside the panel's border with room to spare, and
+      // clear of the badges (a gap of 8 of the panel's pixels either way, the border being drawn over its edge).
+      const margin = (8 * sheet.panel.width) / 720
+      expect(sheet.stats.x + sheet.stats.width).toBeLessThanOrEqual(sheet.panel.x + sheet.panel.width - margin)
+      expect(sheet.stats.y + sheet.stats.height).toBeLessThanOrEqual(sheet.panel.y + sheet.panel.height - margin)
+      const apart =
+        sheet.stats.x >= sheet.badges.x + sheet.badges.width + margin ||
+        sheet.badges.x >= sheet.stats.x + sheet.stats.width + margin ||
+        sheet.badges.y >= sheet.stats.y + sheet.stats.height + margin
+      expect(apart).toBe(true)
+    }
+  })
+
   it('lists only the perks a hero has taken, and shows them all in the perk tree', async () => {
     const game = await games.open()
     const world = await game.newGame()

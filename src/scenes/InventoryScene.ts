@@ -127,7 +127,11 @@ const PORTRAIT_SCALE = 4
 const ATTRIBUTES_X = 215
 const ATTRIBUTES_W = 250
 const ATTRIBUTE_ROW_H = 36
-const COMBAT_X = 490
+/** Clear of the attributes' descriptions, and wide enough for the longest stat line ("Pierces: N resistance") inside the panel. */
+const COMBAT_X = 470
+/** The badges (AC, HP, HIT) sit under the portrait and the attributes, leaving the stat column free to run down past them. */
+const BADGES_X = 255
+const BADGES_Y = 440
 const SHEET_Y = 140
 
 /** The skills tab: skills down the left, each with a button to raise it, and down the right the perks taken and the button to the perk tree. */
@@ -248,6 +252,9 @@ export class InventoryScene extends Phaser.Scene {
   private inventoryContent!: Phaser.GameObjects.Container
   /** The open member's figure on the Inventory tab, null until it is first drawn. */
   private doll: UnitFigure | null = null
+  /** The Character tab's stat column and its badges, for the probe to tell they fit. */
+  private statBlock: Phaser.GameObjects.Text | null = null
+  private badgeBounds: Rect | null = null
   private treeContent!: Phaser.GameObjects.Container
   private spellsContent!: Phaser.GameObjects.Container
   private spellTreeContent!: Phaser.GameObjects.Container
@@ -357,6 +364,11 @@ export class InventoryScene extends Phaser.Scene {
       x: this.panel.x + x * this.panel.scale,
       y: this.panel.y + y * this.panel.scale,
     })
+    const onScreenRect = ({ x, y, width, height }: Rect): Rect => ({
+      ...onScreen({ x, y }),
+      width: width * this.panel.scale,
+      height: height * this.panel.scale,
+    })
     const { equipment, backpack } = this.character
     const startX = gridStartX(DOLL_X, BACKPACK_COLS)
     return {
@@ -407,6 +419,15 @@ export class InventoryScene extends Phaser.Scene {
         .map((item, i) => ({ ...onScreen(slotPosition(this.groundStartX(), i, GROUND_COLS)), item: item.id })),
       grids: { backpack: onScreen(rectCentre(this.backpackBounds())), ground: onScreen(rectCentre(this.groundBounds())) },
       doll: this.doll?.lookNames() ?? [],
+      characterSheet: {
+        panel: onScreenRect({ x: 0, y: 0, width: PANEL_W, height: PANEL_H }),
+        stats: onScreenRect(
+          this.statBlock
+            ? { x: this.statBlock.x, y: this.statBlock.y, width: this.statBlock.width, height: this.statBlock.height }
+            : { x: 0, y: 0, width: 0, height: 0 },
+        ),
+        badges: onScreenRect(this.badgeBounds ?? { x: 0, y: 0, width: 0, height: 0 }),
+      },
     }
   }
 
@@ -550,24 +571,22 @@ export class InventoryScene extends Phaser.Scene {
 
     // Top-aligned with the attributes, so the block ends clear of the badges below.
     const lines = [...this.statLines(), `Critical:      ${this.stats.critChance}%`]
-    this.characterContent.add([
-      this.heading('In battle', COMBAT_X, SHEET_Y),
-      this.add.text(COMBAT_X, SHEET_Y + 26, lines.join('\n'), {
-        fontFamily: FONT,
-        fontSize: '14px',
-        color: TEXT,
-        lineSpacing: 12,
-      }),
-    ])
+    this.statBlock = this.add.text(COMBAT_X, SHEET_Y + 26, lines.join('\n'), {
+      fontFamily: FONT,
+      fontSize: '14px',
+      color: TEXT,
+      lineSpacing: 12,
+    })
+    this.characterContent.add([this.heading('In battle', COMBAT_X, SHEET_Y), this.statBlock])
 
-    this.buildCharacterBadges(440)
+    this.buildCharacterBadges(BADGES_X, BADGES_Y)
   }
 
   private heading(label: string, x: number, y: number): Phaser.GameObjects.Text {
     return this.add.text(x, y, label, { fontFamily: FONT, fontSize: '14px', color: DIM })
   }
 
-  private buildCharacterBadges(y: number): void {
+  private buildCharacterBadges(centerX: number, y: number): void {
     const badges: Array<{ label: string; value: string }> = [
       { label: 'AC', value: `${this.stats.ac}` },
       { label: 'HP', value: `${this.character.hp}/${this.stats.maxHp}` },
@@ -576,9 +595,9 @@ export class InventoryScene extends Phaser.Scene {
     const badgeW = 90
     const badgeH = 56
     const gap = 14
-    const centerX = PANEL_W / 2
     const totalW = badges.length * badgeW + (badges.length - 1) * gap
     const startX = centerX - totalW / 2 + badgeW / 2
+    this.badgeBounds = { x: centerX - totalW / 2, y: y - badgeH / 2, width: totalW, height: badgeH }
 
     badges.forEach((badge, i) => {
       const x = startX + i * (badgeW + gap)

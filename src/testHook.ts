@@ -335,6 +335,8 @@ export interface InventoryProbe {
   grids: { backpack: Point; ground: Point }
   /** The open member's doll's sprites, bottom first in drawing order (`UnitFigure.lookNames`); [] until the doll is built. */
   doll: string[]
+  /** On screen: the panel, the Character tab's stat column ("In battle") and its row of badges, so a test can tell the column fits. */
+  characterSheet: { panel: Rect; stats: Rect; badges: Rect }
 }
 
 export interface StoryProbe {
