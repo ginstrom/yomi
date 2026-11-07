@@ -618,7 +618,7 @@ export class BattleScene extends Phaser.Scene {
       const items = this.ground.pileAt(unit.position)
       this.openPiles!.push({ unit: unit.id, items, before: [...items] })
       const gearApCost = this.playerControl ? this.engine.equipCost(unit.id) : null
-      return { character, gearApCost, ground: items, mana: unit.mana }
+      return { character, gearApCost, ground: items, mana: unit.mana, hpRule: 'cap' as const }
     })
     this.scene.launch('Inventory', { members, index, tab })
     this.scene.pause()

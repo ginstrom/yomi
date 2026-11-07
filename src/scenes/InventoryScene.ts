@@ -10,6 +10,7 @@ import {
   pickUp,
   unequipToBackpack,
   type Character,
+  type HpRule,
 } from '../character/character.ts'
 import {
   PERKS,
@@ -77,6 +78,11 @@ export interface PanelMember {
    * Null or absent makes the member's gear view-only.
    */
   gearApCost?: number | null
+  /**
+   * How hit points follow a maximum moved by gear (`clampHp`): 'cap' in battle, where the
+   * engine's `equip` only caps them, so the panel shows what the engine will hold; 'share' otherwise.
+   */
+  hpRule?: HpRule
   /**
    * The pile that drops go onto and pick-ups come off: in battle the one on the hex the
    * character stands on, on the world map the party's baggage.
@@ -241,6 +247,7 @@ export class InventoryScene extends Phaser.Scene {
   private character!: Character
   private stats!: CombatantStats
   private gearApCost: number | null = null
+  private hpRule: HpRule = 'share'
   private ground: Item[] = []
   private groundTitle = 'Ground'
   /** The mana the member has left in battle; null where the most it has is shown instead. */
@@ -453,6 +460,7 @@ export class InventoryScene extends Phaser.Scene {
     this.index = index
     this.character = member.character
     this.gearApCost = member.gearApCost ?? null
+    this.hpRule = member.hpRule ?? 'share'
     this.ground = member.ground ?? []
     this.mana = member.mana ?? null
     this.groundScroll = new SlotScroll(GROUND_COLS, GROUND_ROWS)
@@ -1025,8 +1033,8 @@ export class InventoryScene extends Phaser.Scene {
       if (!ghost) this.inventoryContent.add(createPips(this, item, x, y, ITEM_ICON_SCALE))
       this.makeItemInteractive(bg, icon, item, 0x6b5a3a, {
         source: { kind: 'equipment', slot: heldIn },
-        click: () => unequipToBackpack(this.character, heldIn),
-        secondary: () => dropEquipped(this.character, heldIn, this.ground),
+        click: () => unequipToBackpack(this.character, heldIn, this.hpRule),
+        secondary: () => dropEquipped(this.character, heldIn, this.ground, this.hpRule),
       })
     } else {
       const label = this.add
@@ -1130,7 +1138,7 @@ export class InventoryScene extends Phaser.Scene {
       const { x, y } = slotPosition(startX, i, BACKPACK_COLS)
       this.createItemSlot(x, y, item, {
         source: { kind: 'backpack', index: i },
-        click: () => equipFromBackpack(this.character, i, this.ground),
+        click: () => equipFromBackpack(this.character, i, this.ground, undefined, this.hpRule),
         secondary: () => dropFromBackpack(this.character, i, this.ground),
       })
     })
@@ -1338,7 +1346,7 @@ export class InventoryScene extends Phaser.Scene {
     }
     const to = this.dropTargetAt(pointer)
     const move = to && planDrag(this.character, this.ground, press.source, to)
-    if (move) this.changeGear(() => applyMove(this.character, this.ground, move))
+    if (move) this.changeGear(() => applyMove(this.character, this.ground, move, this.hpRule))
   }
 
   /** Forgets the press, putting back what a drag changed on screen. */

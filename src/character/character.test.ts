@@ -816,6 +816,35 @@ describe('rune stats and hit points', () => {
     expect(Math.abs(c.hp - wounded)).toBeLessThanOrEqual(1)
   })
 
+  describe('in battle (the cap rule, matching the engine’s equip)', () => {
+    it('clampHp with cap only lowers hp to the new maximum, never scales it', () => {
+      const c = dressed('steel_breastplate@3#life2.life2')
+      c.hp = 18
+      clampHp(c, 36, 'cap')
+      expect(c.hp).toBe(18)
+      const plain = createWarrior()
+      plain.hp = maxHp(plain) + 4
+      clampHp(plain, maxHp(plain) + 4, 'cap')
+      expect(plain.hp).toBe(maxHp(plain))
+    })
+    it('a wounded hero keeps its hit points when Life armour comes off, goes on or is dropped', () => {
+      const c = dressed('iron_breastplate@3#life1')
+      c.hp = 20
+      expect(unequipToBackpack(c, 'armor', 'cap')).toBe(true)
+      expect(c.hp).toBe(20)
+      equipFromBackpack(c, c.backpack.findIndex((i) => i?.id === 'iron_breastplate@3#life1'), [], undefined, 'cap')
+      expect(c.hp).toBe(20)
+      dropEquipped(c, 'armor', [], 'cap')
+      expect(c.hp).toBe(20)
+    })
+    it('a full hero loses the excess when Life armour comes off', () => {
+      const c = dressed('iron_breastplate@3#life1')
+      c.hp = maxHp(c)
+      unequipToBackpack(c, 'armor', 'cap')
+      expect(c.hp).toBe(maxHp(c))
+    })
+  })
+
   it('clamps on dropping and on replacing Life armour with plain', () => {
     const dropped = dressed('iron_breastplate@3#life1')
     dropped.hp = maxHp(dropped)

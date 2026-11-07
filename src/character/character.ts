@@ -83,15 +83,24 @@ export function maxHp(character: Character): number {
 }
 
 /**
- * Keeps hit points within the maximum after a change to what is worn: if the
- * maximum moved from `maxBefore` and hp > 0, the hero keeps the same share of
- * its hit points, hp = min(max, max(1, round(hp * max / maxBefore))), so a
- * swap of Life gear off and on leaves it where it was; otherwise
+ * How hit points follow a change of the maximum when gear changes: 'share'
+ * outside battle, 'cap' in battle, where the engine's `equip` only lowers hit
+ * points to the new maximum (so that Life armour put on mid-fight heals nothing,
+ * and the character panel shows what the engine holds).
+ */
+export type HpRule = 'share' | 'cap'
+
+/**
+ * Keeps hit points within the maximum after a change to what is worn. By the
+ * 'share' rule, if the maximum moved from `maxBefore` and hp > 0, the hero
+ * keeps the same share of its hit points,
+ * hp = min(max, max(1, round(hp * max / maxBefore))), so a swap of Life gear
+ * off and on leaves it where it was; otherwise, and always by the 'cap' rule,
  * hp = min(hp, max). A hero at 0 stays at 0.
  */
-export function clampHp(character: Character, maxBefore: number): void {
+export function clampHp(character: Character, maxBefore: number, rule: HpRule = 'share'): void {
   const max = maxHp(character)
-  if (character.hp > 0 && max !== maxBefore && maxBefore > 0) {
+  if (rule === 'share' && character.hp > 0 && max !== maxBefore && maxBefore > 0) {
     character.hp = Math.min(max, Math.max(1, Math.round((character.hp * max) / maxBefore)))
   } else {
     character.hp = Math.min(character.hp, max)
@@ -235,8 +244,15 @@ export function isTwoHanded(item: Item | undefined): boolean {
  *
  * Given `into`, the item goes into that slot instead (a ring into either ring
  * slot, as dragged there), and nothing changes if it does not fit there.
+ * Hit points follow the new maximum by `hpRule` (`clampHp`): 'cap' in battle.
  */
-export function equipFromBackpack(character: Character, index: number, ground: Item[], into?: EquipmentSlot): boolean {
+export function equipFromBackpack(
+  character: Character,
+  index: number,
+  ground: Item[],
+  into?: EquipmentSlot,
+  hpRule: HpRule = 'share',
+): boolean {
   const { equipment, backpack } = character
   const item = backpack[index]
   if (!item) return false
@@ -265,22 +281,22 @@ export function equipFromBackpack(character: Character, index: number, ground: I
     }
   }
   equipment[slot] = item
-  clampHp(character, before)
+  clampHp(character, before, hpRule)
   return true
 }
 
 /**
  * Stows the item in `slot` in the first empty backpack space. Returns false
- * if the slot is empty or the backpack is full.
+ * if the slot is empty or the backpack is full. Hit points follow by `hpRule`.
  */
-export function unequipToBackpack(character: Character, slot: EquipmentSlot): boolean {
+export function unequipToBackpack(character: Character, slot: EquipmentSlot, hpRule: HpRule = 'share'): boolean {
   const item = character.equipment[slot]
   const space = character.backpack.indexOf(null)
   if (!item || space === -1) return false
   const before = maxHp(character)
   character.backpack[space] = item
   delete character.equipment[slot]
-  clampHp(character, before)
+  clampHp(character, before, hpRule)
   return true
 }
 
@@ -293,14 +309,14 @@ export function dropFromBackpack(character: Character, index: number, ground: It
   return true
 }
 
-/** Drops the item in `slot` onto `ground`. Returns false if the slot is empty. */
-export function dropEquipped(character: Character, slot: EquipmentSlot, ground: Item[]): boolean {
+/** Drops the item in `slot` onto `ground`. Returns false if the slot is empty. Hit points follow by `hpRule`. */
+export function dropEquipped(character: Character, slot: EquipmentSlot, ground: Item[], hpRule: HpRule = 'share'): boolean {
   const item = character.equipment[slot]
   if (!item) return false
   const before = maxHp(character)
   delete character.equipment[slot]
   ground.push(item)
-  clampHp(character, before)
+  clampHp(character, before, hpRule)
   return true
 }
 

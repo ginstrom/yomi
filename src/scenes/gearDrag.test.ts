@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createWarrior, type Character } from '../character/character.ts'
+import { createWarrior, maxHp, type Character } from '../character/character.ts'
 import {
   BACKPACK_SIZE,
   IRON_DAGGER,
@@ -10,6 +10,7 @@ import {
   IRON_BREASTPLATE,
   IRON_GREATSWORD,
   type EquipmentSlot,
+  itemById,
   type Item,
 } from '../inventory/inventory.ts'
 import { applyMove, planDrag, validTargets, type DragSource, type DropTarget } from './gearDrag.ts'
@@ -151,6 +152,31 @@ describe('validTargets', () => {
 })
 
 describe('applyMove', () => {
+  it('in battle caps hit points only, as the engine does, by the cap rule', () => {
+    const life = itemById('iron_breastplate@3#life1')!
+    for (const move of [
+      { kind: 'unequip', slot: 'armor' },
+      { kind: 'dropEquipped', slot: 'armor' },
+    ] as const) {
+      const warrior = createWarrior()
+      warrior.equipment.armor = life
+      warrior.hp = 20
+      expect(applyMove(warrior, [], move, 'cap')).toBe(true)
+      expect(warrior.hp).toBe(20)
+    }
+    const warrior = warriorCarrying(life)
+    warrior.hp = 20
+    expect(applyMove(warrior, [], { kind: 'equip', index: 0, slot: 'armor' }, 'cap')).toBe(true)
+    expect(warrior.hp).toBe(20)
+    expect(maxHp(warrior)).toBeGreaterThan(20)
+    const pile = [life]
+    const picker = warriorCarrying()
+    picker.equipment.armor = undefined
+    picker.hp = 20
+    expect(applyMove(picker, pile, { kind: 'pickUpEquip', index: 0, slot: 'armor' }, 'cap')).toBe(true)
+    expect(picker.hp).toBe(20)
+  })
+
   it('makes each kind of move', () => {
     const warrior = warriorCarrying(IRON_DAGGER)
     const pile: Item[] = []
