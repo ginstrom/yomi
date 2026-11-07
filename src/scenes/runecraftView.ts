@@ -4,7 +4,7 @@ import { describeCost } from '../game/buildings.ts'
 import { craftTier } from '../game/crafting.ts'
 import type { GameState } from '../game/gameState.ts'
 import { itemAt, type ItemPlace } from '../game/itemPlace.ts'
-import { embedCost, embedRefusal, extractCost, extractRefusal, fuseCost, fuseRefusal, FUSE_COUNT } from '../game/runecraft.ts'
+import { aRune, embedCost, embedRefusal, extractCost, extractRefusal, fuseCost, fuseRefusal, FUSE_COUNT } from '../game/runecraft.ts'
 import { withRunes, type Item } from '../inventory/inventory.ts'
 import {
   MAX_RANK,
@@ -87,6 +87,9 @@ export function fuseLine(from: RuneKey): string {
   return `${FUSE_COUNT} × ${runeName(from)} → ${runeName(runeKey(id, (rank + 1) as Rank))}`
 }
 
+/** FUSE_COUNT in words, for the message. */
+const FUSE_WORDS: Record<number, string> = { 2: 'two', 3: 'three', 4: 'four', 5: 'five' }
+
 const NO_ITEM = 'Click an item to set the rune in first.'
 
 /** Why `action` cannot be done now, as runecraft.ts says, or null; an embed or extract with no item selected asks for one. */
@@ -113,7 +116,7 @@ export function actionPreview(game: GameState, place: ItemPlace | null, action: 
   if (action.kind === 'embed') {
     const day = craftTier(game.world) === 'field' ? ' and a day' : ''
     return [
-      `Set ${withArticle(runeName(action.key))} in the ${item.name}.`,
+      `Set ${aRune(action.key)} in the ${item.name}.`,
       ...compare(withRunes(item, [...(item.runes ?? []), action.key])),
       `Costs ${describeCost(embedCost(action.key))}${day}.`,
     ]
@@ -131,10 +134,8 @@ export function actionPreview(game: GameState, place: ItemPlace | null, action: 
 export function doneMessage(action: RuneAction, made?: Item, rune?: RuneKey): string {
   if (action.kind === 'fuse') {
     const { id, rank } = parseRuneKey(action.key)!
-    return `Fused three ${runeName(action.key)}s into one ${runeName(runeKey(id, (rank + 1) as Rank))}.`
+    return `Fused ${FUSE_WORDS[FUSE_COUNT] ?? FUSE_COUNT} ${runeName(action.key)}s into one ${runeName(runeKey(id, (rank + 1) as Rank))}.`
   }
   if (action.kind === 'embed') return `Set the ${runeName(action.key)}: the ${made!.name}.`
   return `Took the ${runeName(rune!)} out of the ${made!.name}; it is back in the pouch.`
 }
-
-const withArticle = (name: string): string => `${/^[AEIOU]/.test(name) ? 'an' : 'a'} ${name}`

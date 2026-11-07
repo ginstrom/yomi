@@ -346,7 +346,13 @@ describe('the encampment', () => {
   it('embeds a Lesser rune in the field from the map\'s Craft button, a day passing', async () => {
     const game = await games.open()
     const home = await richAtHome(game, { gold: 20 }, undefined, { 'party.0.equipment.mainHand': 'iron_sword@3', runes: { ember1: 1 } })
-    await game.click(home.buttons.craft)
+    // A hex off the encampment, out in the field proper.
+    const { q, r } = home.world.party
+    await game.travelTo({ q: q + 1, r })
+    const away = await game.settled('World', (w) => !w.walking)
+    expect(away.world.turn).toBe(2)
+    expect(away.buttons.enterEncampment.visible).toBe(false)
+    await game.click(away.buttons.craft)
     await game.waitForScenes(['Crafting'], ['World'])
     const bench = await game.settled('Crafting')
     expect(bench.tier).toBe('field')
@@ -362,7 +368,7 @@ describe('the encampment', () => {
     await game.skipStory()
     const after = await game.settled('World', (w) => w.message.includes('[Ember I]'))
     expect(after.message).toMatch(/^A day's work makes the Masterwork Iron Longsword \[Ember I\]\./)
-    expect(after.world.turn).toBe(2)
+    expect(after.world.turn).toBe(3)
     expect(after.world.stock.gold).toBe(15)
   })
 

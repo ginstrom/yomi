@@ -59,8 +59,11 @@ describe('gear comparisons', () => {
     const sword = itemById('iron_sword@3')!
     expect(compareLines(sword, itemById('iron_sword@3#ember1')!)).toEqual(['On a hit: none → +1 fire'])
     expect(compareLines(sword, itemById('iron_sword@3#ember3')!)).toEqual(['On a hit: none → +3 fire, lays Seared'])
-    expect(statLines(itemById('steel_longsword@3#ember1.life1')!)).toEqual(expect.arrayContaining(['On a hit: +1 fire', 'On a hit (2): heals 1']))
-    expect(compareLines(itemById('steel_longsword@3#venom2')!, itemById('steel_longsword@3#venom2.ember1')!)).toEqual(['On a hit (2): none → +1 fire'])
+    expect(statLines(itemById('steel_longsword@3#ember1.life1')!)).toContain('On a hit: +1 fire; heals 1')
+    const venom = 'On a hit: +2 poison, lays Poisoned on a critical'
+    expect(compareLines(itemById('steel_longsword@3#venom2')!, itemById('steel_longsword@3#venom2.ember1')!)).toEqual([`${venom} → +2 poison, lays Poisoned on a critical; +1 fire`])
+    // Taking out the first of two runes changes the one line.
+    expect(compareLines(itemById('steel_longsword@3#venom2.ember1')!, itemById('steel_longsword@3#ember1')!)).toEqual(['On a hit: +2 poison, lays Poisoned on a critical; +1 fire → +1 fire'])
     expect(statLines(itemById('steel_longsword@3#venom2')!)).toContain('On a hit: +2 poison, lays Poisoned on a critical')
     const plate = itemById('iron_breastplate@3')!
     expect(compareLines(plate, itemById('iron_breastplate@3#rime1')!)).toEqual(['Wards: none → frost 2'])

@@ -44,8 +44,8 @@ function statWords(stats: ItemStats, ap: number, strength?: number): Array<[stri
   const wards = wardWords(stats.wards)
   if (wards) words.push(['Wards', wards])
   if (stats.maxHp) words.push(['Max HP', signed(stats.maxHp)])
-  // One line an entry (a rune's), so that a rune set or taken out shows as its own line in a comparison.
-  stats.onHit?.forEach((entry, i) => words.push([i === 0 ? 'On a hit' : `On a hit (${i + 1})`, onHitWords(entry)]))
+  // Every entry (a rune's each) on one line, so that a rune set or taken out changes that one line.
+  if (stats.onHit?.length) words.push(['On a hit', stats.onHit.map(onHitWords).join('; ')])
   return words
 }
 

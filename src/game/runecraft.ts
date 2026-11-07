@@ -65,7 +65,7 @@ export function socketables(game: GameState): Array<{ place: ItemPlace; item: It
 }
 
 /** A rune's name with its article: "a Lesser Ember Rune", "an Ember Rune". */
-const aRune = (key: RuneKey): string => {
+export const aRune = (key: RuneKey): string => {
   const name = runeName(key)
   return `${/^[AEIOU]/.test(name) ? 'an' : 'a'} ${name}`
 }

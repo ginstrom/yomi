@@ -16,7 +16,7 @@ import { maxHp } from '../src/character/character.ts'
 import { lootRng, rollRunes } from '../src/game/loot.ts'
 import { runePrice, salePrice } from '../src/game/tradingPost.ts'
 import { pouchKeys } from '../src/inventory/runes.ts'
-import { embedCost } from '../src/game/runecraft.ts'
+import { extractRefusal } from '../src/game/runecraft.ts'
 import type { EncounterId } from '../src/game/encounters.ts'
 import { SOURCE_ID, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
 import {
@@ -683,12 +683,14 @@ describe('runes in a campaign', () => {
 
     it('sells the runes with the old item below a level 2 workshop', () => {
       const game = replacing(1, { mainHand: 'iron_sword@3#storm1' })
+      // No extraction fee can be paid: a level 1 workshop refuses to take the rune out.
+      expect(extractRefusal(game, { from: 'worn', member: 0, slot: 'mainHand', itemId: 'iron_sword@3#storm1' }, 0)).toMatch(/level 2 workshop/)
       const trade = visitFacilities(game)
-      // The rune went with the sword: its half price is in the sale, and no extraction fee was paid.
+      expect(game.world.workshop).toBe(1)
+      // The rune went with the sword: its half price is in the sale.
       const runed = itemById('iron_sword@3#storm1')!
       expect(salePrice(runed)).toBeGreaterThan(salePrice(unruned(runed)))
       expect(trade.goldFromSales).toBe(salePrice(runed))
-      expect(trade.goldOnRunes).toBe(trade.runesBought * runePrice('ember1') + trade.runesEmbedded * (embedCost('ember1').gold ?? 0))
       const sword = game.party[0].equipment.mainHand!
       expect(sword.tier).toBe(2)
       expect([...(sword.runes ?? []), ...pouchKeys(game.runes)]).not.toContain('storm1')
