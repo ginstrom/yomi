@@ -82,15 +82,15 @@ Measure the early-game guard and the Troll Lair reference cells on the tree as i
 
 ## 6. Completion criteria
 
-- [ ] The guard measured on the unchanged tree, with its full summary in this file's execution record.
-- [ ] The two Troll Lair cells measured and recorded.
-- [ ] The "Baseline (step 01)" note added to the index, and step 01's row set to `done` with the commit.
-- [ ] CLAUDE.md updated only if the guard moved from 233, and the record says which.
-- [ ] One commit on `long-campaign-stage-04` (this file, the index and any CLAUDE.md line), not pushed.
+- [x] The guard measured on the unchanged tree, with its full summary in this file's execution record.
+- [x] The two Troll Lair cells measured and recorded.
+- [x] The "Baseline (step 01)" note added to the index, and step 01's row set to `done` with the commit.
+- [x] CLAUDE.md updated only if the guard moved from 233, and the record says which.
+- [x] One commit on `long-campaign-stage-04` (this file, the index and any CLAUDE.md line), not pushed.
 
 ## Execution record
 
-- Tree at `205f76c` (HEAD); `git status` clean at the start. Step 02 had already committed (`7dab325`, art only). Node v26.13.0 locally.
+- Tree at `7dab325` (HEAD, step 02's art commit, which changed no code since `205f76c`); `git status` clean at the start. (First recorded as `205f76c`; corrected in step 03's commit after review.) Node v26.13.0 locally.
 - Guard: `npm run simulate -- --campaign --ready-level 7 --battles 500 --seed 1 --out logs/s4-baseline-guard.jsonl` (5m37s). **233 of 500, unchanged from stage 3.** CLAUDE.md left alone.
 - Cells (`--battles 500 --seed 1 --encounter troll_lair --threat 5 --party-level 5`):
 

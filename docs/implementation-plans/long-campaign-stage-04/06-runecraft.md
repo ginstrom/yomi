@@ -17,7 +17,7 @@ Add `src/game/runecraft.ts`. It embeds a rune from the party's pouch into an ite
 - **Reference §4.4 costs:** embed 5 gold × rank; fuse 10 gold × the new rank; extract 10 gold × rank. Embedding into a full item is refused: extract first.
 - **Corrections from the index this step relies on:**
   - **1.** Runes sit compact in their sockets: filled sockets first, an empty one never written. `embed` takes no socket index and fills the next empty socket. `extract` takes the index of the rune in `item.runes`, and the rest close up. `fuse` takes the rune key being fused from (`fuse(game, 'storm1')` makes a `storm2`).
-  - **4.** Life runes change maximum hit points. After any change to a worn item, `clampHp(character)` runs on its wearer, so `hp <= maxHp` holds. Extracting a Life rune from worn armour loses the hit points above the new maximum.
+  - **4.** Life runes change maximum hit points. After any change to a worn item, `clampHp(character, maxBefore)` runs on its wearer, with the maximum read before the change, so `hp <= maxHp` holds. Extracting a Life rune from worn armour keeps the wearer's share of its hit points (the user's answer to D1; C3 as amended in step 03's commit).
   - **16** (context, for step 09). A field embed reports as a field craft does: the scene closes and resumes `World` with `CraftedData`. This step returns the day's events in `RuneResult` for that.
   - **18.** Fusing checks the workshop level before the count. With one rank-2 rune in the pouch, a fuse to rank 3 is refused naming workshop level 4, not "three are needed".
 
@@ -88,7 +88,7 @@ export function fuse(game: GameState, from: RuneKey): string | null
   - `withRunes(item, runes)`: the item with exactly those runes, the same object `itemById` gives for that id, or undefined if they do not fit;
   - `unruned(item)`.
 - **From step 04 (C3 and C4):**
-  - `clampHp(character)` in `src/character/character.ts`;
+  - `clampHp(character, maxBefore)` in `src/character/character.ts` (read `maxHp` of the wearer before the change);
   - `GameState.runes: Pouch` (`newGame` starts it at `{}`).
 
 **Existing code it reuses** (at `7d32a0a`):

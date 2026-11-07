@@ -163,6 +163,7 @@ This step needs steps 02, 05 and 07 done, and through them 03 and 04. It consume
   - An empty socket is `SOCKET_PIP_KEYS.empty`, untinted.
   - A filled one is `SOCKET_PIP_KEYS.filled`, tinted `RUNE_COLOURS[id]`.
   - Draw at the icon's scale (`ITEM_ICON_SCALE` in the panel), so the pips' pixels match the icon's.
+  - **From step 02's review:** the empty pip is drawn in dark greys and may all but vanish on a dark cell; check it on the panel's slot and backpack cells and give it a light rim or backing if it does. Three 6px pips (12px each at 2×) fill 36 of a 40px cell, so leave no gap wider than 2px between them at 2× and keep the row inside the cell.
 - **Where it lives.** Write one small drawing function, used wherever an item icon is drawn: for example a `drawPips(scene, container, x, y, item, scale)` in a Phaser-importing helper next to the scene, or a private method. The pips' positions (offsets from the icon's centre, for n sockets at a scale) are logic. Put that in `itemIcons.ts` as a Phaser-free function (for example `pipOffsets(count, scale)`) with a test, so the scene only places sprites.
 - **In `InventoryScene`:** the equipment slots, the backpack grid and the ground pile (design §2; C10).
 - **In `TradingPostScene` and `CraftingScene`:** pips on a row's icon only if it is the same few lines with the shared function. Otherwise leave them to step 09 and say so in the record. Step 09 owns those two scenes' other rune work.

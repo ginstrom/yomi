@@ -112,7 +112,7 @@ export function options(game: GameState, place: ItemPlace): CraftOption[] {
       GRADES.filter((grade) => grade <= highestGrade(tier)).map((grade) => {
         const cost = craftCost(item, grade)
         const afford = canAfford(game.world.stock, cost) ? null : `It costs ${describeCost(cost)}, more than the stock holds.`
-        return { modifier, grade, cost, result: craftedItem(base, item.grade ?? 1, { id: modifier.id, grade }), refusal: where ?? afford }
+        return { modifier, grade, cost, result: craftedItem(base, item.grade ?? 1, { id: modifier.id, grade }, item.runes), refusal: where ?? afford }
       }),
     )
 }

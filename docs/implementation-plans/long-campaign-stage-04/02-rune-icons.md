@@ -126,12 +126,12 @@ Draw ten rune icons, one per rune kind, and two socket pips (empty and filled), 
 
 ## Completion criteria
 
-- [ ] Ten `icon_rune_<id>` and two `icon_socket_<state>` sources in `art/icons/`, finished drawings, each passing `sprite check`.
-- [ ] `[canvas.pip]` in `art/sprite-tool.toml`, its final size recorded below.
-- [ ] The exports, the atlas and the manifest rebuilt and committed; `npm run sprites:check` clean.
-- [ ] `public/assets/sprites/README.md` has the twelve rows.
-- [ ] `npm test` passes; one commit on `long-campaign-stage-04`, not pushed.
-- [ ] Step 02's row in [index.md](index.md) set to `done` with the commit.
+- [x] Ten `icon_rune_<id>` and two `icon_socket_<state>` sources in `art/icons/`, finished drawings, each passing `sprite check`.
+- [x] `[canvas.pip]` in `art/sprite-tool.toml`, its final size recorded below.
+- [x] The exports, the atlas and the manifest rebuilt and committed; `npm run sprites:check` clean.
+- [x] `public/assets/sprites/README.md` has the twelve rows.
+- [x] `npm test` passes; one commit on `long-campaign-stage-04`, not pushed.
+- [x] Step 02's row in [index.md](index.md) set to `done` with the commit.
 
 ## Execution record
 

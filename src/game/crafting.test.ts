@@ -77,6 +77,20 @@ describe('crafting', () => {
     expect(game.baggage[0].id).toBe('iron_breastplate@2+reinforced1')
   })
 
+  it('keeps the runes of a runed item, worn or in the baggage', () => {
+    const game = home()
+    game.world.workshop = 2
+    game.party[0].equipment.mainHand = itemById('iron_sword@3#ember1')
+    expect(craftables(game).some(({ item }) => item.id === 'iron_sword@3#ember1')).toBe(true)
+    expect(craft(game, sword(game), 'balanced', 2).refusal).toBeNull()
+    expect(game.party[0].equipment.mainHand).toBe(itemById('iron_sword@3+balanced2#ember1'))
+    game.baggage.push(itemById('steel_breastplate@3+reinforced1#stone1.life1')!)
+    const place: ItemPlace = { from: 'baggage', index: 0, itemId: 'steel_breastplate@3+reinforced1#stone1.life1' }
+    expect(craft(game, place, 'reinforced', 2).refusal).toBeNull()
+    expect(game.baggage[0]).toBe(itemById('steel_breastplate@3+reinforced2#stone1.life1'))
+    expect(game.baggage[0].runes).toEqual(['stone1', 'life1'])
+  })
+
   it('never works an enchanted item, and lists it nowhere', () => {
     const game = home()
     game.baggage.push(STORM_WAND)

@@ -9,7 +9,7 @@
 Make the rune stats that step 03 put on items count for a character, and give the party a saved rune pouch:
 - `maxHp` adds the items' `maxHp` (Life runes in armour and shields);
 - `deriveCombatStats` sums wards over everything worn, and takes on-hit effects from the main hand only;
-- `clampHp` keeps `hp <= maxHp` whenever gear comes off outside battle;
+- `clampHp` keeps `hp <= maxHp` whenever gear comes off outside battle, keeping the hero's share of its hit points when the maximum drops (the user's answer to D1);
 - `GameState.runes`, the pouch, is saved and loaded, and `SAVE_VERSION` goes to 18;
 - the debug console's `give` puts runes in the pouch, `items` lists the rune keys, and a new `runes` command shows the pouch.
 
@@ -20,7 +20,7 @@ The simulator's party carries no runes yet, so the guard must stay identical to 
 - **Design S4-R5 (part):** hero wards and Life's hit points. Wards sum over everything worn, on-hit effects come from the main hand only, and `maxHp` comes from Life runes in armour (stage design §2 "New stats").
 - **Design §2 "The pouch":** `GameState.runes` is saved.
 - **Design §5:** `SAVE_VERSION` is bumped (the pouch, and ids with runes). The project does not migrate: older saves read as unreadable (CLAUDE.md, "Rules of saving").
-- **Correction 4 (index):** Life runes break CLAUDE.md's rule that no item changes maximum hit points. The engine already clamps hit points on an `equip` action (`battleEngine.ts`, `equip`: `actor.hp = Math.min(actor.hp, stats.maxHp)`). Outside battle, every change to what a character wears now ends with `clampHp(character)`. This step covers `equipFromBackpack`, `unequipToBackpack` and `dropEquipped`; step 06 covers runecraft on a worn item, and step 10 the simulator's direct gear writes. Taking off Life-runed armour therefore loses the hit points above the new maximum, and putting it back on does not return them; healing fills the maximum. Rewrite the rule in CLAUDE.md to say this.
+- **Correction 4 (index):** Life runes break CLAUDE.md's rule that no item changes maximum hit points. The engine already clamps hit points on an `equip` action (`battleEngine.ts`, `equip`: `actor.hp = Math.min(actor.hp, stats.maxHp)`). Outside battle, every change to what a character wears now ends with `clampHp(character, maxBefore)`, the maximum read before the change. This step covers `equipFromBackpack`, `unequipToBackpack` and `dropEquipped`; step 06 covers runecraft on a worn item, and step 10 the simulator's direct gear writes. **The user's answer to D1** (it replaces the plan's first default, which lost the excess): when the maximum drops, the hero keeps the same share of its hit points, `hp = min(max, max(1, round(hp × max / maxBefore)))` for `hp > 0`: never above the new maximum, never to 0 from a positive value, so a hero at full health stays full and one at 20 of 40 is at 18 of 36. When the maximum rises (Life armour put on), `hp` is left as it is. A hero at 0 stays at 0. In battle the engine's `equip` still clamps as it does; the rule is for gear changed outside battle. Rewrite the rule in CLAUDE.md to say this.
 - **Correction 19 (index):** `give` takes rune keys. `give storm1 3` puts three Lesser Storm Runes in the pouch (the play script's "give them via debug"), and `items` lists the rune keys.
 - **Contract C3** (index, copied unchanged):
 
@@ -30,9 +30,14 @@ The simulator's party carries no runes yet, so the guard must stay identical to 
   // deriveCombatStats adds:
   //   wards: summed by element over every item worn; left out when every element is 0
   //   onHit: the main hand's stats.onHit, exactly; left out when it has none
-  /** Keeps hit points within the maximum after a change to what is worn (correction 4). */
-  export function clampHp(character: Character): void          // character.hp = Math.min(character.hp, maxHp(character))
-  // equipFromBackpack, unequipToBackpack and dropEquipped end with clampHp(character) when they changed anything.
+  /**
+   * Keeps hit points within the maximum after a change to what is worn (correction 4, D1 as the user chose):
+   * if the maximum fell below `maxBefore` and hp > 0, the hero keeps the same share of its hit points,
+   * hp = min(max, max(1, round(hp × max / maxBefore))); otherwise hp = min(hp, max).
+   */
+  export function clampHp(character: Character, maxBefore: number): void
+  // equipFromBackpack, unequipToBackpack and dropEquipped read maxHp(character) before the change and end with clampHp(character, before) when they changed anything.
+  // (C3 as amended in step 03's commit for the user's answer to D1.)
   ```
 
 - **Contract C4** (index, copied unchanged):
@@ -107,12 +112,13 @@ The simulator's party carries no runes yet, so the guard must stay identical to 
    - **`wards`:** sum `stats.wards` by element over `wornStats` (the loop that sums resistance). Put `wards` on the result only when some element is above 0, as `resistance` is left out at 0. Iterate `ELEMENTS` (`combat.ts`) so the object's keys are in a fixed order.
    - **`onHit`:** `character.equipment.mainHand?.stats?.onHit`, exactly, put on the result only when it is non-empty. Ignore `onHit` on every other slot. No rune gives one there, but the rule is the main hand only.
    - Nothing else changes: Stone, Wind, Storm, Acid and Mind already fold into `damage`, `acBonus`, `resistance`, `toHit`, `critChance`, `armorPierce`, `spellSkill` and `maxMana`, which the loop sums today.
-3. **`clampHp(character)`:** export it. `equipFromBackpack`, `unequipToBackpack` and `dropEquipped` call it on every path that changed the equipment. `pickUp` and `dropFromBackpack` touch only the backpack and need nothing.
+3. **`clampHp(character, maxBefore)`:** export it (C3 as amended). `equipFromBackpack`, `unequipToBackpack` and `dropEquipped` read `maxHp(character)` before they change anything and call it on every path that changed the equipment. `pickUp` and `dropFromBackpack` touch only the backpack and need nothing.
    - In battle, the inventory edits the `Character` and `BattleScene` sends an `equip` action that the engine clamps. Clamping the character too is harmless: the battle's own hit points are the engine's, copied back at the end.
    - Raising the maximum (putting Life armour on) leaves `hp` as it is.
+   - Lowering it keeps the share (the user's D1): `hp = min(max, max(1, round(hp × max / maxBefore)))` when `hp > 0`. `Math.round` is the rounding (halves up).
 4. **CLAUDE.md's hit-point rule.** It is under "On the world map the same panel changes gear at no cost": "No item changes maximum hit points, which is what keeps `hp <= maxHp` true however gear is changed outside battle; keep it so." Rewrite it to say:
    - only a Life rune's `maxHp` changes maximum hit points;
-   - every change to what is worn ends with `clampHp`, so hit points above a new, lower maximum are lost and healing fills the maximum again;
+   - every change to what is worn ends with `clampHp`, so when the maximum drops the hero keeps the same share of its hit points (never above the new maximum, never to 0 from a positive value), and when it rises its hit points stay as they were;
    - a new way of changing what a character wears must call `clampHp`.
 
    Also fix the other places CLAUDE.md says no item touches maximum hit points (search for "maximum hit points" and "maxHp"). For example, the inventory line "no tier, grade or modifier touches maximum hit points" stays true, but add that a Life rune does.
@@ -143,7 +149,7 @@ The simulator's party carries no runes yet, so the guard must stay identical to 
    - **shield under a two-handed weapon:** the same shield's ward counts for nothing while a two-handed weapon is in the main hand. Set `equipment` directly, as `wornStats` does for gear put together some other way.
    - **`onHit` from the main hand only:** `iron_sword@3#ember1` in the main hand gives `onHit` equal to that item's `stats.onHit`. With a plain main hand, `onHit` is absent.
    - **Life `maxHp`:** `iron_breastplate@3#life1` raises `maxHp(character)` and `deriveCombatStats(...).maxHp` by 4 over the plain `iron_breastplate@3`.
-   - **`clampHp` after unequipping:** a character at full health in Life armour, after `unequipToBackpack(c, 'armor')`, has `hp === maxHp(c)`, 4 lower than before. Equipping it again leaves `hp` unchanged. Also cover `dropEquipped`, and an `equipFromBackpack` that replaces Life armour with plain.
+   - **`clampHp` after unequipping:** a character at full health in Life armour, after `unequipToBackpack(c, 'armor')`, has `hp === maxHp(c)`, 4 lower than before. A wounded one keeps its share, rounded to the nearest (for example 20 of 40 becomes 18 of 36), and one at 1 stays at 1 however far the maximum falls. Equipping it again leaves `hp` unchanged. Also cover `dropEquipped`, and an `equipFromBackpack` that replaces Life armour with plain. Test `clampHp` directly too: a fall keeps the share, a rise or no change leaves `hp` (at most the maximum), and `hp` 0 stays 0.
 2. **`src/game/save.test.ts`** (existing):
    - a game with `runes: { ember1: 2, storm2: 1 }` and an item `iron_sword@3#ember1` in the baggage and worn round-trips: the same pouch, and the identical item object (`toBe` against `itemById`);
    - a save whose pouch holds a bad key (`fire1`, `ember5`) or a count of 0, −1 or 1.5 reads as unreadable (`null`);
@@ -168,7 +174,7 @@ The simulator's party carries no runes yet, so the guard must stay identical to 
 ## 6. Completion criteria
 
 - [ ] `maxHp` adds worn items' `maxHp`. `deriveCombatStats` gives `wards` (summed, left out at 0) and `onHit` (main hand only, left out when none).
-- [ ] `clampHp` exported, and called by `equipFromBackpack`, `unequipToBackpack` and `dropEquipped`.
+- [ ] `clampHp(character, maxBefore)` exported, keeping the share on a fall (D1), and called by `equipFromBackpack`, `unequipToBackpack` and `dropEquipped`.
 - [ ] `GameState.runes` with `newGame` giving `{}`. The pouch is saved and validated on load. `SAVE_VERSION` is 18.
 - [ ] `give` takes rune keys, `items` lists them and the grammar, and `runes` shows the pouch.
 - [ ] Tests for all of the above pass. `npm test` passes.

@@ -301,13 +301,28 @@ Update the lines this step makes wrong:
 
 ## 7. Completion criteria
 
-- [ ] `runes.ts` exists with every export of C1; `combat.ts` and `inventory.ts` have C2's types, fields and functions; the three uniques have `sockets: 1`.
-- [ ] `itemById` builds, names and caches runed ids, refuses the malformed and over-socketed ones, and resolves aliases with runes.
-- [ ] Crafting keeps runes.
-- [ ] The tests of §6 pass, and `npm test` passes.
-- [ ] The guard's summary is identical to step 01's (recorded).
-- [ ] CLAUDE.md updated as §5.6 says.
-- [ ] One commit on `long-campaign-stage-04`; the index's step 03 row set to `done` with the commit, and the execution record below filled.
+- [x] `runes.ts` exists with every export of C1; `combat.ts` and `inventory.ts` have C2's types, fields and functions; the three uniques have `sockets: 1`.
+- [x] `itemById` builds, names and caches runed ids, refuses the malformed and over-socketed ones, and resolves aliases with runes.
+- [x] Crafting keeps runes.
+- [x] The tests of §6 pass, and `npm test` passes.
+- [x] The guard's summary is identical to step 01's (recorded).
+- [x] CLAUDE.md updated as §5.6 says.
+- [x] One commit on `long-campaign-stage-04`; the index's step 03 row set to `done` with the commit, and the execution record below filled.
 
 ## Execution record
+
+- Commit: this step's one commit on `long-campaign-stage-04` (the hash is in the index's row). Node v26.13.0 locally. Baseline `npm test` green before any change (73 files, 1064 tests).
+- Built: `src/inventory/runes.ts` (C1, every export; the rune table as rank ladders, each `describe` worded from the rune's own stats); `OnHit`, `CombatantStats.onHit` and `blightborn`, `baneApplies` and the deep `sameCombatStats` in `combat.ts`; `ItemStats.wards`, `onHit`, `maxHp`, `Item.runes` and `sockets`, `sockets: 1` on the Emberblade, the Wand of Storms and the Hawkeye Bow; the `#` part in `itemById` (split off at the first `#` before `ID_GRAMMAR` is matched, rather than a longer regex: the same grammar, and an enchanted id goes through the same path), runed names, the fold (`addStats`, exported for step 04's readers), `unruned`, `withRunes`, `craftedItem(…, runes)`, `unmodified` keeping runes; the tooltip words in `describeItemStats`; `crafting.ts` `options()` passing `item.runes`.
+- Tests: `src/inventory/runes.test.ts` (new: the whole 10 × 3 × 4 table, names, keys, sockets, `runeFits`, `socketLines`, the pouch); `catalog.test.ts` (runed ids: round trips, aliases, names, folded stats, order, kept fields and `base`, `unruned`/`withRunes`/`craftedItem`/`unmodified`, the refused ids, the words); `combat.test.ts` (`sameCombatStats` on `onHit` and `blightborn`, `baneApplies`); `crafting.test.ts` (a craft keeps runes, worn and in the baggage). The `sameOnHit` comparison and the crafting change were each reverted once to see their tests fail, then restored.
+- `npm test`: 74 files, 1086 tests, all pass; `tsc` clean.
+- Smoke (§6.8): `--player-weapon 'iron_sword@3#ember1'` and `'iron_sword@3'`, `--encounter troll_lair --threat 5 --party-level 5 --battles 20 --seed 1`: identical summaries but for the log path (0 of 20 wins, 6.85 rounds, damage 37.25 / 146.85, hit rates 0.2019 / 0.8016), as nothing resolves the rune yet.
+- Guard (§6.7): `npm run simulate -- --campaign --ready-level 7 --battles 500 --seed 1 --out logs/s4-step03-guard.jsonl`: **233 of 500**, the whole printed summary identical to step 01's line for line but for the log path. (The run started after the code was in place; the only source edits made while it ran were the socket lines' wording in `runes.ts`, which the simulator never reads.)
+- Deviations:
+  - The grammar is parsed by splitting at `#` rather than by extending `ID_GRAMMAR` (§5.3 offered the regex as an example). Same ids accepted and refused.
+  - Stone's weapon effect is `{ damage: { count: 0, sides: 0, bonus: n } }`, a roll of no dice whose bonus the fold adds to the weapon's (C2: "`damage.bonus` adds when there is a `damage`").
+  - `socketsOf` reads the item's own `tier`, `grade` and `sockets`, which a runed item keeps, instead of calling `unruned`; so `runes.ts` calls nothing of `inventory.ts` at all.
+  - `runes.ts` names the three statuses runes lay as plain data (`STATUS_NAMES`) for its socket lines; `describeItemStats` reads `STATUSES` from `spells.ts`.
+  - The socket lines' words are the implementer's: "Ember III: +3 fire on a hit, lays Seared", "Rime III: +3 frost on a hit, lays Chilled on a critical", "Dawn I: +2 blight on a hit to the regenerating and the blighted", "Life I: Heals 1 on a hit", "Stone II: Armour class +5", "Storm II: To hit +6%", "Rime II: Frost ward 4".
+- Record changes carried in this commit, from the orchestrator: D1 answered by the user (the hero keeps its share of hit points when the maximum drops), recorded in the index's correction 4, C3 (`clampHp(character, maxBefore)`), D1 row, and in steps 04, 06, 10 and 11 wherever they said clamp; D2 to D4 marked accepted; step 01's tree corrected to `7dab325`; steps 01 and 02's boxes ticked and hashes added to their rows; a note for step 08 on the empty pip's contrast and the three pips' width.
+- For later steps: `addStats(a, b)` is the one fold of item stats (export of `inventory.ts`). Nothing derives `wards`, `onHit` or `maxHp` yet (step 04) or resolves them (step 05). Raising the maximum by putting Life gear on leaves `hp` as it is in the amended C3; the user's answer named only the drop, so step 04 should confirm that with the orchestrator if it matters.
 

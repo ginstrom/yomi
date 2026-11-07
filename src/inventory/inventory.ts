@@ -1,5 +1,6 @@
 import { SKILLS, type SkillId } from '../character/skills.ts'
-import { formatDamage, type DamageRoll } from '../combat/combat.ts'
+import { ELEMENTS, formatDamage, type DamageRoll, type Element, type OnHit } from '../combat/combat.ts'
+import { STATUSES } from '../combat/spells.ts'
 import {
   FAMILIES,
   LEGACY_ALIASES,
@@ -13,6 +14,17 @@ import {
 } from './catalog.ts'
 import { gradedItem, isGrade, type Grade } from './grades.ts'
 import { MODIFIERS, isModifierId, modifiedItem, type ModifierId } from './modifiers.ts'
+import {
+  capitalised,
+  isRuneKey,
+  parseRuneKey,
+  runeFits,
+  runeLabel,
+  runeStats,
+  slotClass,
+  socketsOf,
+  type RuneKey,
+} from './runes.ts'
 
 export type EquipmentSlot =
   | 'head'
@@ -114,6 +126,12 @@ export interface ItemStats {
   strength?: number
   /** Action points it takes from its wearer every turn. */
   apPenalty?: number
+  /** Points off each instance of damage of an element its wearer takes (runes). */
+  wards?: Partial<Record<Element, number>>
+  /** What the weapon does on a hit besides its dice; counted from the main hand only. */
+  onHit?: readonly OnHit[]
+  /** What the item adds to its wearer's maximum hit points (Life runes); see clampHp. */
+  maxHp?: number
 }
 
 export interface Item {
@@ -134,6 +152,10 @@ export interface Item {
   family?: FamilyId
   material?: string
   tier?: Tier
+  /** The runes embedded, in socket order, filled sockets first (inventory/runes.ts). */
+  runes?: readonly RuneKey[]
+  /** On an enchanted item: its sockets (Emberblade, Wand of Storms, Hawkeye Bow 1; the rest none). Plain items' come from socketsOf. */
+  sockets?: number
 }
 
 export type Equipment = Partial<Record<EquipmentSlot, Item>>
@@ -169,6 +191,18 @@ export function describeItemStats(stats: ItemStats = {}, wearerStrength?: number
   if (stats.maxMana) lines.push(`Mana: +${stats.maxMana}`)
   if (stats.spellSkill) lines.push(`Spell Skill: ${signed(stats.spellSkill)}%`)
   if (stats.critChance) lines.push(`Critical: ${signed(stats.critChance)}%`)
+  for (const element of ELEMENTS) {
+    const ward = stats.wards?.[element]
+    if (ward) lines.push(`${capitalised(element)} ward ${ward}`)
+  }
+  if (stats.maxHp) lines.push(`Max HP: ${signed(stats.maxHp)}`)
+  for (const entry of stats.onHit ?? []) {
+    if (entry.damage > 0) {
+      lines.push(`On a hit: +${entry.damage} ${entry.element ?? 'damage'}${entry.bane ? ' to the regenerating and the blighted' : ''}`)
+    }
+    if (entry.heal) lines.push(`On a hit: heals ${entry.heal}`)
+    if (entry.status) lines.push(`On a ${entry.onCrit ? 'critical' : 'hit'}: lays ${STATUSES[entry.status.id].name}`)
+  }
   return lines
 }
 
@@ -228,6 +262,7 @@ export const STORM_WAND: Item = {
   description: 'Crackles with caught lightning.',
   stats: { damage: { count: 1, sides: 10, bonus: 1 }, attackApCost: 5, attackRange: 5, skill: 'magic' },
   icon: 'wand_storm',
+  sockets: 1,
 }
 
 export const EMBERBLADE: Item = {
@@ -237,6 +272,7 @@ export const EMBERBLADE: Item = {
   description: 'Its edge glows like a banked fire.',
   stats: { damage: { count: 1, sides: 8, bonus: 4 }, attackApCost: 5, armorPierce: 1, toHit: 10 },
   icon: 'sword_ember',
+  sockets: 1,
 }
 
 export const HAWK_BOW: Item = {
@@ -246,6 +282,7 @@ export const HAWK_BOW: Item = {
   description: 'Its arrows seem to seek their mark.',
   stats: { damage: { count: 1, sides: 6, bonus: 2 }, attackApCost: 4, attackRange: 6, twoHanded: true, toHit: 10 },
   icon: 'bow_hawk',
+  sockets: 1,
 }
 
 export const RING_PROTECTION: Item = {
@@ -316,6 +353,9 @@ const BUILT = new Map<string, Item>()
  * `<plain>[@<grade>][+<modifier><grade>]`, where a plain id is `<material>_<family>`,
  * a family's own tier-1 id (`iron_sword`, `oak_shield`) or a legacy alias
  * (`LEGACY_ALIASES`); a grade of 1 is never written, so each item has one id.
+ * Runes come after it, `#<rune>(.<rune>)*` (`iron_sword@3#ember1`; an
+ * enchanted item takes them too, `emberblade#dawn1`), split off by `itemById`
+ * before this is matched.
  */
 const ID_GRAMMAR = /^([a-z_]+)(?:@([23]))?(?:\+([a-z]+)([123]))?$/
 
@@ -327,11 +367,14 @@ const ID_GRAMMAR = /^([a-z_]+)(?:@([23]))?(?:\+([a-z]+)([123]))?$/
  * its canonical id, which that object carries. Undefined for an id that is not
  * an item: one that does not parse, a material or family that does not exist
  * or do not go together, a modifier that does not fit its family, or a grade
- * or modifier on an enchanted item.
+ * or modifier on an enchanted item; or, with runes, an empty rune part, a rune
+ * that does not parse or fit (`runeFits`), or more runes than its sockets.
  */
 export function itemById(id: string): Item | undefined {
   const known = ITEMS_BY_ID.get(id) ?? BUILT.get(id)
   if (known) return known
+  const hash = id.indexOf('#')
+  if (hash >= 0) return runedById(id, id.slice(0, hash), id.slice(hash + 1).split('.'))
   const match = ID_GRAMMAR.exec(id)
   if (!match) return undefined
   const [, baseId, gradeText, modId, modGradeText] = match
@@ -354,21 +397,97 @@ export function itemById(id: string): Item | undefined {
   return item
 }
 
+/** The item of `id`, `unrunedId` with `keys` embedded, built and remembered; under its canonical id too, for an alias. */
+function runedById(id: string, unrunedId: string, keys: readonly string[]): Item | undefined {
+  const unrunedItem = itemById(unrunedId)
+  if (!unrunedItem || unrunedItem.runes || !keys.every(isRuneKey) || keys.length > socketsOf(unrunedItem)) return undefined
+  if (!keys.every((key) => runeFits(parseRuneKey(key)!.id, unrunedItem))) return undefined
+  const canonical = `${unrunedItem.id}#${keys.join('.')}`
+  const item = BUILT.get(canonical) ?? runedItem(unrunedItem, keys as readonly RuneKey[])
+  BUILT.set(canonical, item)
+  BUILT.set(id, item)
+  return item
+}
+
+/** `item` (unruned) with `runes` embedded: its stats folded rune by rune, its name and id telling them. */
+function runedItem(item: Item, runes: readonly RuneKey[]): Item {
+  const cls = slotClass(item.slot)
+  const stats = runes.reduce((sum, key) => {
+    const { id, rank } = parseRuneKey(key)!
+    return addStats(sum, runeStats(id, rank, cls))
+  }, item.stats ?? {})
+  const runed: Item = {
+    ...item,
+    id: `${item.id}#${runes.join('.')}`,
+    name: `${item.name} ⟨${runes.map(runeLabel).join(', ')}⟩`,
+    stats,
+    runes,
+  }
+  if (item.family) runed.base = item.base ?? item.id
+  return runed
+}
+
+type NumericStat = { [K in keyof ItemStats]-?: ItemStats[K] extends number | undefined ? K : never }[keyof ItemStats]
+
+/**
+ * `a` with `b` added: numbers add, a missing field counting 0; a damage roll's
+ * bonus adds where `a` has a roll; wards add by element; on-hit entries
+ * concatenate; any other field is `a`'s, else `b`'s.
+ */
+export function addStats(a: ItemStats, b: ItemStats): ItemStats {
+  const sum: ItemStats = { ...a }
+  for (const key of Object.keys(b) as (keyof ItemStats)[]) {
+    if (key === 'damage') {
+      if (a.damage && b.damage) sum.damage = { ...a.damage, bonus: a.damage.bonus + b.damage.bonus }
+    } else if (key === 'wards') {
+      const wards = { ...a.wards }
+      for (const element of ELEMENTS) {
+        const n = b.wards?.[element]
+        if (n) wards[element] = (wards[element] ?? 0) + n
+      }
+      sum.wards = wards
+    } else if (key === 'onHit') {
+      sum.onHit = [...(a.onHit ?? []), ...(b.onHit ?? [])]
+    } else if (typeof b[key] === 'number') {
+      const field = key as NumericStat
+      sum[field] = (a[field] ?? 0) + b[field]!
+    } else if (sum[key] === undefined) {
+      ;(sum as Record<string, unknown>)[key] = b[key]
+    }
+  }
+  return sum
+}
+
+/** The item without its runes: itself if it has none. */
+export function unruned(item: Item): Item {
+  return item.runes?.length ? itemById(item.id.slice(0, item.id.indexOf('#')))! : item
+}
+
+/** `item` (runed or not) with exactly `runes`: the same object itemById gives for that id; undefined if they do not fit. */
+export function withRunes(item: Item, runes: readonly RuneKey[]): Item | undefined {
+  return itemById(`${unruned(item).id}${runeSuffix(runes)}`)
+}
+
+const runeSuffix = (runes: readonly RuneKey[] | undefined): string => (runes?.length ? `#${runes.join('.')}` : '')
+
 /** The plain item `item` was made from, at its tier: itself if plain, null for an enchanted one. */
 export function baseItem(item: Item): Item | null {
   return BASES_BY_ID.get(item.base ?? item.id) ?? null
 }
 
-/** `item` without its modifier: the plain item at its grade. */
+/** `item` without its modifier: the plain item at its grade, with any runes it has. */
 export function unmodified(item: Item): Item {
   const base = baseItem(item)
   if (!base || !item.mod) return item
-  return craftedItem(base, item.grade ?? 1)
+  return craftedItem(base, item.grade ?? 1, undefined, item.runes)
 }
 
-/** The item `base` would be at `grade`, with `mod` at `modGrade` if given: the same object `itemById` gives. */
-export function craftedItem(base: Item, grade: Grade, mod?: { id: ModifierId; grade: Grade }): Item {
-  const id = `${base.id}${grade > 1 ? `@${grade}` : ''}${mod ? `+${mod.id}${mod.grade}` : ''}`
+/**
+ * The item `base` would be at `grade`, with `mod` at `modGrade` if given and
+ * `runes` embedded: the same object `itemById` gives.
+ */
+export function craftedItem(base: Item, grade: Grade, mod?: { id: ModifierId; grade: Grade }, runes?: readonly RuneKey[]): Item {
+  const id = `${base.id}${grade > 1 ? `@${grade}` : ''}${mod ? `+${mod.id}${mod.grade}` : ''}${runeSuffix(runes)}`
   return itemById(id)!
 }
 

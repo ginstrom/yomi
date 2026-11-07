@@ -24,7 +24,7 @@ Then the guard is measured with all of this in play. Step 11 judges the figure.
   - *Replacing gear.* Before it replaces a runed item, it extracts the runes if extracting is allowed and affordable. Otherwise they are sold with the item.
 - **Correction 9:** rune loot draws from its own stream, seeded from the battle's seed. The simulator uses the seed it passes to `fight`.
 - **Correction 8:** the loot rows for threats 1 to 7 only; the Source rolls threat 5's row; the Salamander Pool favours Ember and the Spider Nest Venom. These are `rollRunes`'s (step 07); this step only calls `takeRunes`.
-- **Correction 4:** a direct write to a member's equipment (as `visitFacilities` does when it buys gear) ends with `clampHp(member)`.
+- **Correction 4:** a direct write to a member's equipment (as `visitFacilities` does when it buys gear) ends with `clampHp(member, maxBefore)`, the maximum read before the write (C3 as amended for the user's answer to D1: a fall keeps the share of hit points).
 - **The design's expectation** (§6, check 1): rune loot and Masterwork sockets lift the guard a few points at most. Sockets exist only on tier-1 Masterwork (grade 3) and tier-2 items, which the careful party seldom buys (stage 3: 2 gold on gear a campaign, tier 2 never bought), so few sockets will be filled. Record what happens; do not tune here.
 
 ### Contract C11 (from the index, unchanged)
@@ -52,7 +52,7 @@ Steps 05, 06 and 07 are done. This step may run alongside 08 and 09, which touch
 **What it consumes, as the earlier steps produce it** (copied from the index):
 
 - **C1 (step 03), `src/inventory/runes.ts`:** `RUNE_IDS`, `RuneId`, `Rank`, `RuneKey`, `SlotClass`, `slotClass(slot)`, `runeKey(id, rank)`, `parseRuneKey`, `socketsOf(item)`, `runeFits(rune, item)`, `Pouch`, `pouchCount`, `pouchKeys`. `item.runes` lists the embedded keys, filled sockets first.
-- **C3 (step 04), `src/character/character.ts`:** `clampHp(character): void`, which sets `character.hp = Math.min(character.hp, maxHp(character))`.
+- **C3 (step 04), `src/character/character.ts`:** `clampHp(character, maxBefore): void`: if the maximum fell below `maxBefore` and `hp > 0`, `hp = min(max, max(1, round(hp × max / maxBefore)))` (the user's answer to D1); otherwise `hp = min(hp, max)`.
 - **C4 (step 04):** `GameState.runes: Pouch` (`newGame` gives `{}`).
 - **C5 (step 05):** `Tally.add` in `scripts/simulate.ts` already counts an attack's damage as `damage + Σ bonus[].damage`, `healed` as healing and on-hit statuses as statuses laid. **Do not change it again.**
 - **C6 (step 06), `src/game/runecraft.ts`:**
@@ -104,7 +104,7 @@ Steps 05, 06 and 07 are done. This step may run alongside 08 and 09, which touch
    "Highest rank first" means that within a kind a higher rank is embedded before a lower one. It does not mean that the order's kinds are reordered by rank.
 3. **`visitFacilities`.**
    - In the buy loop, before it replaces a worn item that has `runes`, extract them one at a time (index 0 while any remain) while `extractRefusal(...) === null`, adding the fees to the rune gold. The runes go to the pouch, and runes left in the item are sold with it (at half their price, via `salePrice`).
-   - After `hero.equipment[slot] = bought`, call `clampHp(hero)`.
+   - Read `maxHp(hero)` before `hero.equipment[slot] = bought`, and call `clampHp(hero, before)` after it.
    - After the gear loop, call `runecraftGear(game)` before the existing `craftGear`, so a new item is fused and runed and then modified (crafting keeps runes).
    - Then sell the baggage again and raise the shrine as now. Move the existing second `sellAll()` if needed so that this order holds.
    - Add `runesBought`, `runesFused`, `runesEmbedded` (internal, for tests) and `goldOnRunes` to `Trade`.

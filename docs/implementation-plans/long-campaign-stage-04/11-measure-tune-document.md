@@ -188,7 +188,7 @@ After any tuning:
   - `socketsOf` (by tier, +1 at Masterwork, a small slot at most 1, and three unique items with 1);
   - `runeFits` (Mind only in a magic weapon);
   - the pouch.
-- **The hit-point rule** (correction 4). Search for "No item changes maximum hit points" and every line that leans on it, in the gear-in-battle paragraph and the rules of characters. Rewrite it: only a Life rune adds maximum hit points, and every gear change outside battle ends with `clampHp`, as the engine clamps on `equip`.
+- **The hit-point rule** (correction 4). Search for "No item changes maximum hit points" and every line that leans on it, in the gear-in-battle paragraph and the rules of characters. Rewrite it: only a Life rune adds maximum hit points, and every gear change outside battle ends with `clampHp`, which keeps the hero's share of its hit points when the maximum drops (the user's answer to D1), while the engine clamps on `equip` in battle.
 - **The rules of the battle system:**
   - on-hit effects: flat damage after resistance, warded, not doubled by a critical, no RNG draw;
   - statuses laid after the damage, an `onCrit` one only on a critical;
