@@ -5,7 +5,9 @@ import { craftTier } from '../game/crafting.ts'
 import type { GameState } from '../game/gameState.ts'
 import { itemAt, type ItemPlace } from '../game/itemPlace.ts'
 import { aRune, embedCost, embedRefusal, extractCost, extractRefusal, fuseCost, fuseRefusal, FUSE_COUNT } from '../game/runecraft.ts'
-import { withRunes, type Item } from '../inventory/inventory.ts'
+import { MATERIALS } from '../inventory/catalog.ts'
+import { GRADES, GRADE_DEFS, type Grade } from '../inventory/grades.ts'
+import { BASE_ITEMS, MAGIC_ITEMS, itemById, withRunes, type Item } from '../inventory/inventory.ts'
 import {
   MAX_RANK,
   RUNES,
@@ -30,6 +32,52 @@ import { TYPICAL_AP, compareLines } from './gearCompare.ts'
  * its refusal and what the message says once it is done. Every rule and
  * number is runecraft.ts's; this only words them.
  */
+
+/** Which gear has sockets, as socketsOf decides: the tiers and materials whose plain items have one, the grades that add one, the uniques with one. */
+export interface SocketSources {
+  tiers: number[]
+  materials: string[]
+  grades: string[]
+  uniques: string[]
+}
+
+let sources: SocketSources | null = null
+
+/** Where sockets come from, read off socketsOf over the catalog (so it cannot drift from the rule), worked out once. */
+export function socketSources(): SocketSources {
+  if (sources) return sources
+  const socketed = BASE_ITEMS.filter((item) => socketsOf(item) > 0)
+  const bare = BASE_ITEMS.find((item) => socketsOf(item) === 0)
+  const adds = (grade: Grade) => !!bare && grade > 1 && socketsOf(itemById(`${bare.id}@${grade}`)!) > 0
+  sources = {
+    tiers: [...new Set(socketed.map((item) => item.tier!))].sort(),
+    materials: MATERIALS.filter((m) => socketed.some((item) => item.material === m.id)).map((m) => m.name.toLowerCase()),
+    grades: GRADES.filter(adds).map((grade) => GRADE_DEFS[grade].prefix.trim()),
+    uniques: MAGIC_ITEMS.filter((item) => socketsOf(item) > 0).map((item) => item.name),
+  }
+  return sources
+}
+
+/** "a", "a and b", "a, b and c". */
+const listed = (words: readonly string[], last = 'and'): string =>
+  words.length > 1 ? `${words.slice(0, -1).join(', ')} ${last} ${words[words.length - 1]}` : (words[0] ?? '')
+
+/** The Runes tab's line when the party has nothing with a socket: which gear has them. */
+export function noSocketsHint(): string {
+  const { materials, grades, uniques } = socketSources()
+  const where = [
+    ...(materials.length ? [`${listed(materials)} gear`] : []),
+    ...grades.map((grade) => `${grade} gear`),
+    ...(uniques.length ? [`the ${listed(uniques)}`] : []),
+  ].map((place) => `on ${place}`)
+  return `Nothing the party has takes a rune. Sockets come ${listed(where)}.`
+}
+
+/** A rune's tooltip line (the trading post's, the pouch's): where a rune goes, in short. */
+export function runeSocketLine(): string {
+  const { tiers, grades } = socketSources()
+  return `Set in a socketed item: ${listed([...tiers.map((tier) => `tier-${tier}`), ...grades], 'or')} gear.`
+}
 
 /** What the player may do on the Runes tab: set a rune from the pouch, take one out of the item selected, or fuse three. */
 export type RuneAction = { kind: 'embed'; key: RuneKey } | { kind: 'extract'; index: number } | { kind: 'fuse'; key: RuneKey }

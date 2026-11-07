@@ -10,8 +10,11 @@ import {
   fuseLine,
   parseActionId,
   pouchRows,
+  noSocketsHint,
   runeEffectLines,
+  runeSocketLine,
   socketRows,
+  socketSources,
 } from './runecraftView.ts'
 
 /** A new game at home with a level 2 workshop and gold to spare, the soldier wielding `id`. */
@@ -22,6 +25,25 @@ function home(id = 'iron_sword@3', workshop = 2): { game: GameState; place: Item
   game.party[0].equipment.mainHand = itemById(id)!
   return { game, place: { from: 'worn', member: 0, slot: 'mainHand', itemId: id } }
 }
+
+describe('where sockets come from', () => {
+  it('is worked out from socketsOf: the tier-2 materials, Masterwork and the socketed uniques', () => {
+    expect(socketSources()).toEqual({
+      tiers: [2],
+      materials: ['steel', 'ironwood', 'wolfhide', 'silk'],
+      grades: ['Masterwork'],
+      uniques: ['Wand of Storms', 'Emberblade', 'Hawkeye Bow'],
+    })
+  })
+  it('tells the party with nothing socketed which gear has sockets', () => {
+    expect(noSocketsHint()).toBe(
+      'Nothing the party has takes a rune. Sockets come on steel, ironwood, wolfhide and silk gear, on Masterwork gear and on the Wand of Storms, Emberblade and Hawkeye Bow.',
+    )
+  })
+  it('tells a rune\'s reader that it goes in a socketed item', () => {
+    expect(runeSocketLine()).toBe('Set in a socketed item: tier-2 or Masterwork gear.')
+  })
+})
 
 describe('the Runes tab', () => {
   it('names each action by an id it can be read back from', () => {

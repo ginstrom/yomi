@@ -242,7 +242,13 @@ describe('the encampment', () => {
     )
     await game.click(runes.rows.find((row) => row.id === 'rune:ember1')!)
     const ember = await game.settled('TradingPost', (p) => p.selected === 'rune:ember1')
-    expect(ember.details).toEqual(['In a weapon: +1 fire on a hit', 'In armour: Fire ward 2', 'In a shield: Fire ward 2', 'Costs 15 gold.'])
+    expect(ember.details).toEqual([
+      'In a weapon: +1 fire on a hit',
+      'In armour: Fire ward 2',
+      'In a shield: Fire ward 2',
+      'Set in a socketed item: tier-2 or Masterwork gear.',
+      'Costs 15 gold.',
+    ])
     await game.click(ember.buttons.confirm)
     await game.settled('TradingPost', (p) => p.gold === 85)
     await game.click(ember.buttons.confirm)
@@ -290,6 +296,17 @@ describe('the encampment', () => {
     const runes = await game.settled('Crafting', (c) => c.tab === 'runes')
     expect(runes.items.map((item) => [item.id, item.itemId])).toEqual([['worn:0:mainHand', 'iron_sword@3']])
     expect(runes.pouch.map((p) => [p.key, p.count])).toEqual([['ember1', 1], ['storm1', 3]])
+    expect(runes.itemsHint).toBe('')
+    // Hovering a pouch row tells what the rune does in each place and where it goes.
+    await game.hover(runes.pouch[0].row)
+    const hovered = await game.settled('Crafting', (c) => c.tooltip.length > 0)
+    expect(hovered.tooltip).toEqual([
+      'Lesser Ember Rune',
+      'In a weapon: +1 fire on a hit',
+      'In armour: Fire ward 2',
+      'In a shield: Fire ward 2',
+      'Set in a socketed item: tier-2 or Masterwork gear.',
+    ])
     // No item is selected yet, so Embed is greyed; Fuse needs none.
     expect(runes.pouch[0].embed.enabled).toBe(false)
     expect(runes.pouch[1].fuse.enabled).toBe(true)
@@ -455,8 +472,15 @@ describe('the encampment', () => {
     expect(home.buttons.craft.visible).toBe(true)
     await game.click(home.buttons.craft)
     await game.waitForScenes(['Crafting'], ['World'])
-    const bench = await game.settled('Crafting')
-    expect(bench.tier).toBe('field')
+    const opened = await game.settled('Crafting')
+    expect(opened.tier).toBe('field')
+    // A new party has nothing with a socket: the Runes tab says which gear has them.
+    await game.click(opened.buttons.runesTab)
+    const runes = await game.settled('Crafting', (c) => c.tab === 'runes')
+    expect(runes.items).toEqual([])
+    expect(runes.itemsHint).toMatch(/^Nothing the party has takes a rune\. Sockets come on steel, ironwood, wolfhide and silk gear, on Masterwork gear/)
+    await game.click(runes.buttons.modifyTab)
+    const bench = await game.settled('Crafting', (c) => c.tab === 'modify')
     await game.click(bench.items.find((item) => item.id === 'worn:0:mainHand')!)
     const sword = await game.settled('Crafting', (c) => c.selected === 'worn:0:mainHand')
     expect(sword.options.map((o) => o.id)).toEqual(['balanced1'])

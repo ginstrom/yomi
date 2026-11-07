@@ -18,7 +18,19 @@ import { TYPICAL_AP, compareLines, fieldCraftSummary } from './gearCompare.ts'
 import { ITEM_ICON_KEYS, RUNE_COLOURS, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton, fitText } from './panelButton.ts'
-import { actionId, actionPreview, actionRefusal, doneMessage, parseActionId, pouchRows, socketRows, type RuneAction } from './runecraftView.ts'
+import {
+  actionId,
+  actionPreview,
+  actionRefusal,
+  doneMessage,
+  noSocketsHint,
+  parseActionId,
+  pouchRows,
+  runeEffectLines,
+  runeSocketLine,
+  socketRows,
+  type RuneAction,
+} from './runecraftView.ts'
 import { createPips } from './socketPips.ts'
 
 interface CraftingData {
@@ -95,7 +107,12 @@ export class CraftingScene extends Phaser.Scene {
   private itemAt = new Map<string, Point>()
   private optionAt = new Map<string, { at: Point; enabled: boolean; label: string }>()
   private socketAt = new Map<number, { at: Point; enabled: boolean }>()
-  private pouchAt = new Map<RuneKey, { embed: { at: Point; enabled: boolean }; fuse: { at: Point; enabled: boolean } }>()
+  private pouchAt = new Map<RuneKey, { row: Point; embed: { at: Point; enabled: boolean }; fuse: { at: Point; enabled: boolean } }>()
+  /** The hover panel over a pouch row: what the rune does where it may sit. */
+  private tip: Phaser.GameObjects.Container | null = null
+  private tipLines: string[] = []
+  /** What the Runes tab's item list says when it lists nothing. */
+  private itemsHint = ''
 
   constructor() {
     super('Crafting')
@@ -146,6 +163,8 @@ export class CraftingScene extends Phaser.Scene {
       tier: craftTier(this.gameState.world),
       tab: this.tab,
       message: this.message,
+      itemsHint: this.itemsHint,
+      tooltip: this.tipLines,
       selected: this.selected,
       chosen: this.chosen,
       preview: action ? this.runePreview(action) : option && item ? this.preview(item, option) : [],
@@ -158,7 +177,8 @@ export class CraftingScene extends Phaser.Scene {
       pouch: runes
         ? pouchRows(this.gameState).map(({ key, count }) => {
             const at = this.pouchAt.get(key)
-            return { key, count, embed: shown(at?.embed), fuse: shown(at?.fuse) }
+            const row = at ? { ...onScreen(at.row), visible: true, enabled: true } : { x: 0, y: 0, visible: false, enabled: false }
+            return { key, count, row, embed: shown(at?.embed), fuse: shown(at?.fuse) }
           })
         : [],
       buttons: {
@@ -231,6 +251,9 @@ export class CraftingScene extends Phaser.Scene {
     this.optionAt = new Map()
     this.socketAt = new Map()
     this.pouchAt = new Map()
+    this.tip = null
+    this.tipLines = []
+    this.itemsHint = ''
     const { world } = this.gameState
     const tier = craftTier(world)
     const title = tier === 'field' ? 'Field Crafting' : 'Workshop'
@@ -281,7 +304,9 @@ export class CraftingScene extends Phaser.Scene {
     this.page = Math.min(this.page, pages - 1)
     items.slice(this.page * RUNE_ITEM_ROWS, (this.page + 1) * RUNE_ITEM_ROWS).forEach(({ place, item }, i) => this.drawItem(place, item, null, LIST_TOP + i * ROW_H))
     if (items.length === 0) {
-      this.frame.add(this.add.text(LIST_X + 8, LIST_TOP, 'The party has nothing with a socket.', { fontFamily: FONT, fontSize: '13px', color: DIM }))
+      // Not a dead end: which gear has sockets, as socketsOf decides.
+      this.itemsHint = noSocketsHint()
+      this.frame.add(this.add.text(LIST_X + 8, LIST_TOP, this.itemsHint, { fontFamily: FONT, fontSize: '12px', color: DIM, wordWrap: { width: LIST_W - 16 }, lineSpacing: 3 }))
     }
     if (pages > 1) this.pager('prev', 'next', RUNE_ITEM_PAGE_Y, this.page, pages, (by) => this.turnPage(by))
     this.drawPouch()
@@ -309,8 +334,13 @@ export class CraftingScene extends Phaser.Scene {
     rows.slice(this.pouchPage * POUCH_ROWS, (this.pouchPage + 1) * POUCH_ROWS).forEach(({ key, count, name }, i) => {
       const y = POUCH_TOP + i * ROW_H + ROW_H / 2
       const { id } = parseRuneKey(key)!
+      const back = this.add.rectangle(LIST_X + LIST_W / 2, y, LIST_W, ROW_H - 2, 0x1b1712, 0.95).setStrokeStyle(1, 0x3a3024)
+      // Hovering the row tells what the rune does in a weapon, armour and a shield, and where it goes.
+      back.setInteractive()
+      back.on('pointerover', () => this.showTip([name, ...runeEffectLines(key), runeSocketLine()], y))
+      back.on('pointerout', () => this.hideTip())
       this.frame.add([
-        this.add.rectangle(LIST_X + LIST_W / 2, y, LIST_W, ROW_H - 2, 0x1b1712, 0.95).setStrokeStyle(1, 0x3a3024),
+        back,
         this.add.image(LIST_X + 12, y, RUNE_ICON_KEYS[id]),
         this.add.text(LIST_X + 26, y, `${count} × ${name}`, { fontFamily: FONT, fontSize: '11px', color: TEXT }).setOrigin(0, 0.5),
       ])
@@ -320,7 +350,7 @@ export class CraftingScene extends Phaser.Scene {
       const fuseAt = { x: LIST_X + LIST_W - 34, y, width: 60, height: ROW_H - 6 }
       const embedOk = actionRefusal(this.gameState, place, embedAction) === null
       const fuseOk = actionRefusal(this.gameState, place, fuseAction) === null
-      this.pouchAt.set(key, { embed: { at: embedAt, enabled: embedOk }, fuse: { at: fuseAt, enabled: fuseOk } })
+      this.pouchAt.set(key, { row: { x: LIST_X + 120, y }, embed: { at: embedAt, enabled: embedOk }, fuse: { at: fuseAt, enabled: fuseOk } })
       this.actionButton(embedAt, 'Embed', embedAction, embedOk)
       this.actionButton(fuseAt, 'Fuse', fuseAction, fuseOk)
     })
@@ -378,6 +408,32 @@ export class CraftingScene extends Phaser.Scene {
     if (refusal) this.frame.add(this.add.text(OPTIONS_X, PAGE_Y - 18, refusal, { ...style, fontSize: '11px', color: REFUSED }).setOrigin(0, 1))
     const label = { embed: 'Embed', extract: 'Extract', fuse: 'Fuse' }[action.kind]
     this.button('confirm', { x: OPTIONS_X + OPTIONS_W / 2, y: PAGE_Y, width: OPTIONS_W, height: 26 }, `${label}: confirm`, () => this.onRune(action), refusal === null)
+  }
+
+  /** The hover panel beside a pouch row at `y`, over the right side: the rune's name, then what it does. */
+  private showTip(lines: string[], y: number): void {
+    this.hideTip()
+    const pad = 8
+    const text = this.add.text(OPTIONS_X + pad, y, lines.join('\n'), {
+      fontFamily: FONT,
+      fontSize: '11px',
+      color: TEXT,
+      lineSpacing: 3,
+      wordWrap: { width: OPTIONS_W - 2 * pad },
+    })
+    // Kept within the frame: a low row's panel opens upward.
+    const top = Math.min(y - 10, FRAME_H - text.height - 2 * pad - 8)
+    text.setY(top + pad)
+    const back = this.add.rectangle(OPTIONS_X, top, OPTIONS_W, text.height + 2 * pad, 0x14110d, 0.98).setOrigin(0).setStrokeStyle(1, 0xc9a227)
+    this.tip = this.add.container(0, 0, [back, text])
+    this.frame.add(this.tip)
+    this.tipLines = lines
+  }
+
+  private hideTip(): void {
+    this.tip?.destroy()
+    this.tip = null
+    this.tipLines = []
   }
 
   /** A rune action's button: a click shows its preview; one refused now is greyed, but still shows why. */

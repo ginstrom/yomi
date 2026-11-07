@@ -236,6 +236,10 @@ export interface CraftingProbe {
   tab: 'modify' | 'runes'
   /** What the last action did, or why it was refused. */
   message: string
+  /** Runes: what the item list says when the party has nothing with a socket (which gear has them); '' otherwise. */
+  itemsHint: string
+  /** Runes: the lines of the panel a hovered pouch row shows (the rune, what it does in each place, where it goes); empty when none is hovered. */
+  tooltip: string[]
   /**
    * Modify: every item that could be worked, by where it lies (`worn:<member>:<slot>`, `pack:<member>:<index>`, `baggage:<index>`), greyed when nothing here fits it.
    * Runes: every item with a socket, the same way.
@@ -250,8 +254,8 @@ export interface CraftingProbe {
   preview: string[]
   /** Runes: the selected item's sockets, each its Extract button (greyed when refused, and for an empty socket not visible), with the rune in it. */
   sockets: Array<ButtonProbe & { index: number; rune: RuneKey | null }>
-  /** Runes: the pouch, each key with its Embed and Fuse buttons, greyed when refused but still clickable to read why; those of other pages not visible. */
-  pouch: Array<{ key: RuneKey; count: number; embed: ButtonProbe; fuse: ButtonProbe }>
+  /** Runes: the pouch, each key with its row (to hover for what it does) and its Embed and Fuse buttons, greyed when refused but still clickable to read why; those of other pages not visible. */
+  pouch: Array<{ key: RuneKey; count: number; row: ButtonProbe; embed: ButtonProbe; fuse: ButtonProbe }>
   /** `work` confirms the option chosen, `confirm` the rune action; `prev` and `next` page the item list, `pouchPrev` and `pouchNext` the pouch. */
   buttons: {
     work: ButtonProbe

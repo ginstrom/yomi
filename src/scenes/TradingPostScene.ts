@@ -30,7 +30,7 @@ import { TYPICAL_AP, statLines, statSummary } from './gearCompare.ts'
 import { ITEM_ICON_KEYS, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton, fitText } from './panelButton.ts'
-import { runeEffectLines } from './runecraftView.ts'
+import { runeEffectLines, runeSocketLine } from './runecraftView.ts'
 import { createPips } from './socketPips.ts'
 
 interface TradingPostData {
@@ -264,7 +264,7 @@ export class TradingPostScene extends Phaser.Scene {
       return [`The stock holds ${row.label}.`, `The post pays 1 gold for every ${MATERIALS_PER_GOLD}: ${lots} gold for all of it.`]
     }
     const price = this.tab === 'buy' ? `Costs ${row.price} gold.` : `Fetches ${row.price} gold${row.kind === 'rune' ? ' each' : ''}.`
-    if (row.kind === 'rune') return [...runeEffectLines(row.rune!), price]
+    if (row.kind === 'rune') return [...runeEffectLines(row.rune!), runeSocketLine(), price]
     return [...statLines(row.item!, row.ap), price]
   }
 
