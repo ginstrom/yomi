@@ -48,3 +48,7 @@ None.
 - Step 02 (7dab325, sonnet): ten rune icons, socket pips on a 6px pip canvas. Orchestrator viewed the preview: reads well.
 - Step 01 review (sonnet): clean, guard and cell reproduced. Step 02 review (opus): clean; empty pip contrast and pip crowding noted for step 08.
 - Step 03 (1e51399, opus): runes.ts, id grammar with runes, on-hit/wards/maxHp item stats, crafting keeps runes; guard identical (233). Plan amended for D1 (C3 now clampHp(character, maxBefore)).
+- Step 03 review (opus): clean; guard reproduced; nits passed on.
+- Step 04 (724a09a, sonnet): maxHp/wards/onHit derived, clampHp both ways, pouch saved, SAVE 18, debug give/runes; guard 233. Review (opus): clean; nits (rise test, CLAUDE.md wording, itemPlace not clamping) passed to step 06.
+- Step 05 (9b46d64, opus): on-hit in the engine, Horror blightborn, LOG 23, policy and tally; guard 233; review running.
+- Steps 06 (opus) and 07 (sonnet) started in parallel.
