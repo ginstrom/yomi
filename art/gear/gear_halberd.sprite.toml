@@ -1,0 +1,48 @@
+# A halberd: an axe blade, a spike above it and a hook behind, on a shaft as long as the spear's.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md.
+canvas = "unit"
+over = "warrior"
+
+[frames.idle_0.runs]
+0 = [[25, "k"]]
+1 = [[24, "kwk"]]
+2 = [[24, "kwk"]]
+3 = [[24, "klk"]]
+4 = [[24, "kDkkkk"]]
+5 = [[23, "kkDwwwlk"]]
+6 = [[22, "kdkDwlllk"]]
+7 = [[23, "kkDwlldk"]]
+8 = [[24, "kDlldk"]]
+9 = [[24, "kDldk"]]
+10 = [[24, "kDkk"]]
+11 = [[24, "knk"]]
+12 = [[24, "knk"]]
+13 = [[24, "knk"]]
+14 = [[24, "knk"]]
+15 = [[24, "knk"]]
+16 = [[24, "knk"]]
+17 = [[24, "knk"]]
+18 = [[24, "knk"]]
+20 = [[25, "n"]]
+21 = [[24, "knk"]]
+22 = [[24, "knk"]]
+23 = [[24, "knk"]]
+24 = [[24, "knk"]]
+25 = [[24, "knk"]]
+26 = [[24, "knk"]]
+27 = [[24, "knk"]]
+28 = [[24, "knk"]]
+29 = [[24, "kDk"]]
+30 = [[25, "k"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it holds with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+like = "warrior"      # breathes with the body
+
+[anim.walk]
+rest = true           # holds idle_0 while the body walks

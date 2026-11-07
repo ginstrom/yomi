@@ -28,6 +28,8 @@ Infinity Engine CRPGs (Baldur's Gate 1 and 2). No third-party art is included.
 | `atlas.png`: `fx_*/*` | `art/effects/fx_*.sprite.toml` | `BattleScene` (arrows, missiles and bursts) |
 | `atlas.png`: `gear_*/*` | `art/gear/gear_*.sprite.toml`, and their variants | `UnitFigure`, by `GEAR_SPRITES` |
 | `atlas.png`: `gear_breastplate/*`, `gear_circlet/*`, `gear_cloak/*`, `gear_cloak_back/*` | `art/gear/` (what a hero wears: armour, head and cloak, the cloak's back drawn under the body) | `UnitFigure`, by `GEAR_SPRITES`, `WORN_SPRITES` and `WORN_BACK_SPRITES` |
+| `atlas.png`: `gear_rapier/*`, `gear_mace/*`, `gear_spear/*`, `gear_war_hammer/*`, `gear_halberd/*`, `gear_longbow/*`, `gear_crossbow/*`, `gear_staff/*`, `gear_buckler/*`, `gear_tower_shield/*` | `art/gear/` (what a hero holds, a gear family of long campaign stage 3) | `UnitFigure`, by `GEAR_SPRITES` and, for the melee ones, `SWUNG_GEAR` (wired in its step 04) |
+| `atlas.png`: `gear_robe/*`, `gear_leather/*`, `gear_plate/*`, `gear_cap/*`, `gear_helm/*` | `art/gear/` (what a hero wears, armour and head, a gear family of long campaign stage 3) | `UnitFigure`, by `GEAR_SPRITES` and `WORN_SPRITES` (wired in its step 04) |
 | `icon_sword.png` | `art/icons/icon_sword.sprite.toml` | `InventoryScene` |
 | `icon_sword_ember.png` | `art/icons/icon_sword.sprite.toml` (variant `ember`) | `InventoryScene` |
 | `icon_dagger.png` | `art/icons/icon_dagger.sprite.toml` | `InventoryScene` |

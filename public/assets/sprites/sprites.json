@@ -1618,6 +1618,134 @@
       32
     ]
   },
+  "gear_buckler": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      5,
+      15,
+      7,
+      8
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_buckler.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          5,
+          15,
+          7,
+          7
+        ],
+        "file": "gear_buckler__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          5,
+          16,
+          7,
+          7
+        ],
+        "file": "gear_buckler__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_cap": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      12,
+      3,
+      9,
+      5
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_cap.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          12,
+          3,
+          9,
+          4
+        ],
+        "file": "gear_cap__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          12,
+          4,
+          9,
+          4
+        ],
+        "file": "gear_cap__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
   "gear_circlet": {
     "anchor": [
       16,
@@ -1810,6 +1938,70 @@
       32
     ]
   },
+  "gear_crossbow": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      19,
+      12,
+      13,
+      12
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_crossbow.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          19,
+          12,
+          13,
+          11
+        ],
+        "file": "gear_crossbow__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          19,
+          13,
+          13,
+          11
+        ],
+        "file": "gear_crossbow__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
   "gear_dagger": {
     "anchor": [
       16,
@@ -1930,6 +2122,518 @@
           24
         ],
         "file": "gear_greatsword__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_halberd": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      22,
+      0,
+      9,
+      32
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_halberd.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          22,
+          0,
+          9,
+          31
+        ],
+        "file": "gear_halberd__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          22,
+          1,
+          9,
+          31
+        ],
+        "file": "gear_halberd__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_helm": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      12,
+      2,
+      9,
+      9
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_helm.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          12,
+          2,
+          9,
+          8
+        ],
+        "file": "gear_helm__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          12,
+          3,
+          9,
+          8
+        ],
+        "file": "gear_helm__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_leather": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      9,
+      12,
+      13,
+      10
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_leather.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          9,
+          12,
+          13,
+          9
+        ],
+        "file": "gear_leather__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          9,
+          13,
+          13,
+          9
+        ],
+        "file": "gear_leather__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_longbow": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      22,
+      0,
+      8,
+      32
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_longbow.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          22,
+          0,
+          8,
+          31
+        ],
+        "file": "gear_longbow__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          22,
+          1,
+          8,
+          31
+        ],
+        "file": "gear_longbow__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_mace": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      21,
+      6,
+      9,
+      18
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_mace.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          21,
+          6,
+          9,
+          17
+        ],
+        "file": "gear_mace__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          21,
+          7,
+          9,
+          17
+        ],
+        "file": "gear_mace__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_plate": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      6,
+      11,
+      18,
+      12
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_plate.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          6,
+          11,
+          18,
+          11
+        ],
+        "file": "gear_plate__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          6,
+          12,
+          18,
+          11
+        ],
+        "file": "gear_plate__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_rapier": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      22,
+      0,
+      7,
+      24
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_rapier.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          22,
+          0,
+          7,
+          23
+        ],
+        "file": "gear_rapier__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          22,
+          1,
+          7,
+          23
+        ],
+        "file": "gear_rapier__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_robe": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      8,
+      12,
+      16,
+      11
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_robe.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          8,
+          12,
+          16,
+          10
+        ],
+        "file": "gear_robe__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          8,
+          13,
+          16,
+          10
+        ],
+        "file": "gear_robe__idle_1.png"
       }
     },
     "over": "warrior",
@@ -2066,6 +2770,134 @@
       32
     ]
   },
+  "gear_spear": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      23,
+      0,
+      5,
+      32
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_spear.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          23,
+          0,
+          5,
+          31
+        ],
+        "file": "gear_spear__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          23,
+          1,
+          5,
+          31
+        ],
+        "file": "gear_spear__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_staff": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      22,
+      0,
+      8,
+      32
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_staff.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          22,
+          0,
+          8,
+          31
+        ],
+        "file": "gear_staff__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          22,
+          1,
+          8,
+          31
+        ],
+        "file": "gear_staff__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
   "gear_sword": {
     "anchor": [
       16,
@@ -2194,6 +3026,70 @@
       32
     ]
   },
+  "gear_tower_shield": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      2,
+      9,
+      10,
+      21
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_tower_shield.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          2,
+          9,
+          10,
+          20
+        ],
+        "file": "gear_tower_shield__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          2,
+          10,
+          10,
+          20
+        ],
+        "file": "gear_tower_shield__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
   "gear_wand": {
     "anchor": [
       16,
@@ -2314,6 +3210,70 @@
           15
         ],
         "file": "gear_wand_storm__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_war_hammer": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      20,
+      2,
+      11,
+      22
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_war_hammer.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          20,
+          2,
+          11,
+          21
+        ],
+        "file": "gear_war_hammer__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          20,
+          3,
+          11,
+          21
+        ],
+        "file": "gear_war_hammer__idle_1.png"
       }
     },
     "over": "warrior",

@@ -1,0 +1,26 @@
+# An open-faced steel helm, round-topped, with a brow band and a guard down the back of the neck.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md. It leaves the face open.
+canvas = "unit"
+over = "warrior"
+
+[frames.idle_0.runs]
+2 = [[15, "kk"]]
+3 = [[13, "kkwlkk"]]
+4 = [[13, "kwwlldk"]]
+5 = [[12, "kwlllldDk"]]
+6 = [[12, "kDdyddydk"]]
+7 = [[12, "kDd"]]
+8 = [[12, "kDd"]]
+9 = [[12, "kD"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it wears with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+like = "warrior"      # breathes with the body
+
+[anim.walk]
+rest = true           # holds idle_0 while the body walks

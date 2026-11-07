@@ -122,3 +122,23 @@ This step adds fifteen gear sprites to the atlas, laid over the `warrior` body: 
 - [ ] Step 03's row in the index set to `done` with the commit, and this file's execution record filled.
 
 ## Execution record
+
+**Commit:** see the step's row in the index (sources, exports and README in one commit; the SHA recorded in a follow-up).
+
+**What was made.** Fifteen sources in `art/gear/`, by the exact names of C6, each hand-outlined over `warrior` as the existing gear is (no `outline = "auto"`), each with `idle_1` shifted a pixel, `[anim.idle] like = "warrior"` and `[anim.walk] rest = true`:
+- held, gripped at column 25 with row 19 open for the fist: `gear_rapier` (a one-pixel blade from row 0, longer and slimmer than the sword, over a gold cup guard), `gear_mace` (a flanged steel ball on a haft shorter than the axe's), `gear_spear` (a leaf point and a red binding on a one-pixel shaft from row 0 to 30), `gear_war_hammer` (a block face forward and a spike behind, larger than the mace's head), `gear_halberd` (spike, axe blade and a small back hook on a shaft as long as the spear's), `gear_longbow` (the bow's lower limb and an upper limb eight rows taller, rows 0 to 30, string `unoutlined`), `gear_crossbow` (a two-pixel stock held level across the arm, a steel prod at its front and the string drawn back to it, `unoutlined`), `gear_staff` (a two-pixel ash shaft, rows 0 to 30, with a knot and a blue crystal held in a fork), `gear_buckler` (a 7-pixel round steel buckler at the off hand), `gear_tower_shield` (steel-rimmed red board, rows 9 to 28, columns 2 to 11);
+- worn, inside the body's regions (nothing in the fist box or off hand, nothing below row 21, the face open): `gear_robe` (blue, a gold front edge and hem, a red sash at the belt), `gear_leather` (a dark brown jerkin, sleeveless, with a stitched seam, a strap with a gold buckle and a skirt of strips), `gear_plate` (broad pauldrons, plated arms, a ridged cuirass and lames to row 21), `gear_cap` (a tan leather cap with a dark brim, rows 3 to 6), `gear_helm` (a round steel helm with a brow band and a neck guard behind, rows 2 to 9).
+
+No tints: tiers tint icons only (correction 10).
+
+**Judged on the body** with a scratch composite (`uv run --with pillow`, not committed) of twelve loadouts at 3x beside today's gear: idle_0, idle_1, walk_1, walk_2, the swing's raise (−55°) and cut (85°) about the grip for the melee ones, and facing left. Each family reads as itself: the spear, halberd and staff are clearly longer than the greatsword, the longbow taller than the bow, the buckler smaller and the tower shield larger than the shield, the plate heavier than the breastplate, the leather plainly not steel. Changes made from looking: the halberd's hook shortened so it no longer reaches the face, the crossbow's stock thickened and its string added, the buckler rounded, the leather's stray outline pixels on the shoulders removed.
+
+**Verification:**
+1. `sprite check --project art`: `ok: 108 sprites, 220 frames`. `npm run sprites:check`: `up to date: 108 sprites, 220 frames, 2 targets`.
+2. The anims check from §5: `all present`; `atlas.json` has `gear_<icon>/idle_0` and `idle_1` for all fifteen.
+3. Previews over `warrior` (`sprite preview ... --on warrior`): the fist shows at row 19 under every held sprite; the face is open under the cap and helm; no worn sprite touches the fist box.
+4. `npm test`: 71 files, 997 tests passed (no code changed).
+
+**Deviations:** none. The robe ends at row 21 (the hips), as the layering rules allow nothing worn below it, so it reads as a long tunic rather than a floor-length robe.
+
+**For step 04:** map the icons to these names in `GEAR_SPRITES`, the five worn ones in `WORN_SPRITES`, and the six melee ones (rapier, mace, spear, war_hammer, halberd, staff) in `SWUNG_GEAR`. The long weapons swing about the grip as the greatsword does; their butts sweep across the legs on the raise, which looked right in the composite.
