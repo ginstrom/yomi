@@ -100,9 +100,9 @@ describe('banditStats', () => {
     expect(banditStats('brute', 3, G1).ac).toBeLessThan(agilityAc('brute') + 20)
   })
 
-  it('shows tier 2 in the captain\'s stats at threat 5', () => {
-    const t1 = banditStats('captain', 5, G2)
-    const t2 = banditStats('captain', 5, T2)
+  it('shows tier 2 in the captain\'s stats at threat 6', () => {
+    const t1 = banditStats('captain', 6, G2)
+    const t2 = banditStats('captain', 6, T2)
     expect(t2.damage.bonus).toBe(t1.damage.bonus + 2)
     expect(t2.resistance).toBe(t1.resistance! + 1)
     expect(t2.ac).toBe(t1.ac + 4)
@@ -124,10 +124,11 @@ describe('banditStats', () => {
 })
 
 describe('banditGear', () => {
-  it('is tier 1 plain below threat 5 and tier 2 Fine from it', () => {
-    expect([3, 4, 5, 7].map(banditGear)).toEqual([
+  it('is tier 1 plain below threat 5, tier 1 Fine at threat 5 and tier 2 Fine from threat 6', () => {
+    expect([3, 4, 5, 6, 7].map(banditGear)).toEqual([
       { tier: 1, grade: 1 },
       { tier: 1, grade: 1 },
+      { tier: 1, grade: 2 },
       { tier: 2, grade: 2 },
       { tier: 2, grade: 2 },
     ])

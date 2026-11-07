@@ -158,7 +158,12 @@ export function banditStats(role: BanditRole, level: number, gear: BanditGear): 
   return stats
 }
 
-/** The gear bandits wear at a threat: plain iron and oak below threat 5, Fine steel and ironwood (tier 2, grade 2) from it. */
+/**
+ * The gear bandits wear at a threat: plain iron and oak below threat 5, Fine
+ * iron and oak at threat 5 (today's map's last ring), and Fine steel and
+ * ironwood (tier 2, grade 2) from threat 6, which the outer rings bring.
+ */
 export function banditGear(threat: number): BanditGear {
-  return threat >= 5 ? { tier: 2, grade: 2 } : { tier: 1, grade: 1 }
+  if (threat >= 6) return { tier: 2, grade: 2 }
+  return threat >= 5 ? { tier: 1, grade: 2 } : { tier: 1, grade: 1 }
 }

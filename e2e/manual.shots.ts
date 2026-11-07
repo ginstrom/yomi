@@ -86,6 +86,11 @@ describe('the manual’s screenshots', () => {
     await game.press('b')
     await game.settled('Inventory', (p) => p.tab === 'spells')
     await shot(game, 'panel-spells-mage')
+    // The mage, of strength 3, hovering the Iron Greatsword it carries, which asks 6.
+    await game.press('i')
+    const pack = await game.settled('Inventory', (p) => p.tab === 'inventory')
+    await game.hover(pack.backpack.find((slot) => slot.item === 'iron_greatsword')!)
+    await shot(game, 'panel-strength')
     await game.press('Escape')
     await game.waitForScenes(['World'])
 
@@ -179,7 +184,7 @@ describe('the manual’s screenshots', () => {
     await game.newGame()
     await game.page.evaluate(() => {
       const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
-      saved.game.world.stock = { gold: 300, iron: 50, timber: 20, stone: 30, copper: 20 }
+      saved.game.world.stock = { gold: 600, iron: 50, timber: 20, stone: 40, copper: 40, silver: 30 }
       localStorage.setItem('yomi.save.1', JSON.stringify(saved))
     })
     const menu = await game.reload()
@@ -189,7 +194,7 @@ describe('the manual’s screenshots', () => {
     await game.waitForScenes(['Encampment'], ['World'])
     let camp = await game.settled('Encampment')
     const facility = (c: typeof camp, id: string) => c.facilities.find((f) => f.id === id)!
-    for (const [id, level] of [['trading_post', 2], ['workshop', 1], ['workshop', 2]] as const) {
+    for (const [id, level] of [['trading_post', 2], ['trading_post', 3], ['trading_post', 4], ['workshop', 1], ['workshop', 2]] as const) {
       await game.click(facility(camp, id))
       const shown = await game.settled('Encampment', (c) => c.selected === id)
       await game.click(shown.buttons.improve)
@@ -198,9 +203,12 @@ describe('the manual’s screenshots', () => {
     await game.click(facility(camp, 'trading_post'))
     await game.click((await game.settled('Encampment', (c) => c.selected === 'trading_post')).buttons.open)
     await game.waitForScenes(['TradingPost'], ['World'])
-    const post = await game.settled('TradingPost')
-    await game.click(post.rows.find((row) => row.id === 'iron_sword@2')!)
-    await game.settled('TradingPost', (p) => p.selected === 'iron_sword@2')
+    // The Buy tab opens on weapons; the war hammer's family button narrows it, steel included at level 4.
+    const post = await game.settled('TradingPost', (p) => p.filter.slot === 'mainHand')
+    await game.click(post.familyButtons.find((b) => b.family === 'war_hammer')!)
+    const hammers = await game.settled('TradingPost', (p) => p.filter.family === 'war_hammer')
+    await game.click(hammers.rows.find((row) => row.id === 'steel_war_hammer')!)
+    await game.settled('TradingPost', (p) => p.selected === 'steel_war_hammer')
     await game.hover({ x: 0, y: 0 })
     await shot(game, 'trading-post')
     await game.press('Escape')

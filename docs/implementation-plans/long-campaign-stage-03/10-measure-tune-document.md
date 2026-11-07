@@ -289,3 +289,25 @@ If the game cannot be driven by hand from this session, drive it headless with t
 - [ ] Step 10's row in [index.md](index.md) is set to `done` with the commit, the overall completion checklist is ticked where met, and the execution record below is filled.
 
 ## Execution record
+
+**Go-ahead and decisions carried by the brief** (the user's, through the orchestrator): bandit gear tier 2 from threat 6, not 5 (amends Q2 (a)); the guard at 233 accepted and documented, not tuned back; threats 6 and 7 left for stage 9; tier 2 never bought judged under §4.2.
+
+**Code change (beyond the plan's levers, by the user's decision):** `banditGear` (`src/game/bandits.ts`) gives tier 1 plain below threat 5, tier 1 Fine at 5 and tier 2 Fine from 6. Test first: `bandits.test.ts`'s `banditGear` test (threats 3 to 7) failed red, then passed; `encounters.test.ts`'s camp test now pins threat 5 at `{ tier: 1, grade: 2 }` and threat 6 (the Captain and the Crossbowman) at tier 2; the captain's tier-2 comparison test moved to threat 6. `encounters.ts`'s doc comment updated. No `SAVE_VERSION` change (no shape changed).
+
+**Measurements** (seed 1, 500 each, scratch runs with distinct `--out` under the scratchpad, logs deleted):
+- Guard: **233 of 500** (46.6%), party fell 267, encampment lost 0; 269 days, 18.2 battles, 26.0 spawns, 1.8 heroes dead a campaign; threats 1 to 5 won 1.000, 0.986, 0.968, 0.992, 0.896; post, workshop, infirmary 1.1, 0.6, 0.5; 2 gold on gear, 51 from sales; tier-2 items bought 0.0. Step 01 248, step 04 231, step 05 175 (231 with strength 3), step 06 233, step 09 233.
+- Check 2 (Troll Lair t5/L5): steel_war_hammer 0 wins, 7.09 rounds, 48.1 dealt, hit 0.222; iron_sword 0, 7.09, 42.3, 0.201; steel_longsword 0, 7.09, 46.6, 0.200. Not met in wins (the cell is lost whatever the weapon, 0 at step 01 too); recorded for the user.
+- Check 3 (Goblin Raid t3/L3): iron_spear 443 (14.3 rounds), iron_sword 486 (12.0): a gap of 43, beyond 25; recorded for the user.
+- Reach cells: Goblin Raid t3/L3: iron_halberd 476, steel_spear 472, steel_halberd 486, steel_longsword 494; Bandit Camp t4/L4: iron_sword 433, iron_spear 283, iron_halberd 349, steel_longsword 466, steel_spear 371, steel_halberd 395. No reach weapon beats the longsword of its tier: no §7 finding.
+- Bandit cells (L = threat): t3 429, t4 473, t5 **469** (256 with steel at step 09; 470 at step 01), t6 2, t7 1.
+
+**Tuning: none.** The move from 248 to 233 has no gear or economy cause (the breastplate's spell skill −5 on the mage, isolated at steps 04 and 05; the user accepted it), so §4.2's levers were not touched. Tier 2 is never bought because the post ends at level 1.1: §4.2 tunes only to bring the guard back, which lowering level 4's price would not do (and could only cost the guard gold), so it was left; recorded in CLAUDE.md and the notes.
+
+**Docs:** CLAUDE.md (the simulator flag's catalog ids, `banditGear`, the bandit cells, the stage-3 guard history and the check and reach cells in the rules of scaling); the manual (the Iron Breastplate at creation, every weapon family in the attack table with strength, reach and the crossbow's piercing, zones of control for reach, a new "Gear families" section with armour, tiers and weight, grades on every family, the trading post's level 4, filter and per-family prices, the modifiers' new fits, the Crossbowman and steel beyond threat 5); every screenshot retaken (`npm run manual:screenshots`, 6 passed), with the trading post shot filtered to war hammers at level 4 (`manual.shots.ts` now clicks the War Hammer family, raises the post to 4) and a new `panel-strength.png` (the mage hovering the Iron Greatsword: "Strength: 6 (you have 3): to hit −15%"); the stage design's status and implementation notes; the stages index's row and guard sentence.
+
+**Review hand-offs:** the manual shot no longer depends on `iron_sword@2`'s page (it filters by family); the e2e crafting test "…and none for the baggage" now checks the baggage: it pages to `baggage:0`, an Iron Greatsword, and finds no "you have" line.
+
+**Play script:** walked headless with a scratch e2e file on `e2e/driver.ts` (deleted, not committed); see the stage design's notes. Seen: the filter opening on weapons, ×2.5 prices, buying a Steel War Hammer and Steel Helm, the mage's tooltip shortfall line and To Hit −11%, a spear strike at distance 2 over an ally (`melee: true`), 7 AP in plate with one shortsword blow. Not seen, for the user: the spear's swing animation, a spearman's free attack at 1 hex and none at 2, the mage's nameplate preview, and the steel tint (pale, hard to tell at list size).
+
+**Verification:** `npm test` 1053 passed; `npm run build` ok; `npm run sprites:check` up to date (109 sprites); `npm run test:browser` 9 files, 81 tests passed.
+

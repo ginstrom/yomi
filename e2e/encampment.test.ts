@@ -225,6 +225,7 @@ describe('the encampment', () => {
     await richAtHome(game, { gold: 200, iron: 50, stone: 20, copper: 10 }, undefined, {
       'world.workshop': 2,
       'party.1.equipment.mainHand': 'iron_greatsword',
+      baggage: ['iron_greatsword'],
     })
     const camp = await enter(game)
     await game.click(facility(camp, 'workshop'))
@@ -238,6 +239,21 @@ describe('the encampment', () => {
     await game.click(options.find((o) => o.id === 'balanced1')!)
     const chosen = await game.settled('Crafting', (c) => c.chosen === 'balanced1')
     expect(chosen.preview.some((line) => /^Strength: \d+ \(you have \d+\): to hit −\d+%$/.test(line))).toBe(true)
+
+    // The same greatsword in the baggage has no holder, so no shortfall.
+    // The baggage comes last, on a later page of the list.
+    let page = chosen
+    while (!page.items.find((item) => item.id === 'baggage:0')!.visible) {
+      const before = page.items.filter((item) => item.visible).map((item) => item.id).join()
+      await game.click(page.buttons.next)
+      page = await game.settled('Crafting', (c) => c.items.filter((item) => item.visible).map((item) => item.id).join() !== before)
+    }
+    await game.click(page.items.find((item) => item.id === 'baggage:0')!)
+    await game.settled('Crafting', (c) => c.selected === 'baggage:0')
+    await game.click((await game.settled('Crafting')).options.find((o) => o.id === 'balanced1')!)
+    const loose = await game.settled('Crafting', (c) => c.selected === 'baggage:0' && c.chosen === 'balanced1')
+    expect(loose.preview[0]).toBe('Makes the Balanced Iron Greatsword (I).')
+    expect(loose.preview.some((line) => line.includes('you have'))).toBe(false)
   })
 
   it('builds the workshop and works the soldier’s sword there, in no time', async () => {

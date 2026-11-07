@@ -380,7 +380,7 @@ What Q2 decides: whether a Crossbowman role takes the field, and where, and whet
 ```ts
 // src/game/bandits.ts
 export type BanditRole = /* existing */ | 'crossbowman'
-/** The tier and grade of bandit gear at a threat: tier 2 from threat 5 (Q2), grade as banditGrade. */
+/** The tier and grade of bandit gear at a threat: tier 2 from threat 6 (amended at step 10; Q2 said 5), grade as banditGrade. */
 export function banditGear(threat: number): { tier: Tier; grade: Grade }
 /** Was (role, level, grade); the tier joins the cache key. */
 export function banditStats(role: BanditRole, level: number, gear: { tier: Tier; grade: Grade }): CombatantStats
@@ -401,7 +401,7 @@ export type BanditKind = /* existing */ | 'bandit_crossbowman'     // FOE_XP 100
 | 07 | [The screens](07-screens.md) | Trading post filter and probe, tooltip and comparison lines with the shortfall, tints in three scenes, scene and in-browser tests | 06 | sonnet / opus | done (0ddaa77, review fix ccebdb1) |
 | 08 | [Crossbowman sprite](08-crossbowman-sprite.md) | `bandit_crossbowman` unit sprite (only if Q2 adds the role) | Q2 (a); may run after 03 | opus / opus (art) | done (a3b34ba) |
 | 09 | [Bandits in crossbows and steel](09-bandits.md) | Bandit gear by tier and grade, the Crossbowman role and kind, the camp's slots, as Q2 decides; cells measured | 06, 08; Q2 (a) | sonnet / sonnet | done (Q2 (a); SAVE 17; guard 233) |
-| 10 | [Measure, tune and document](10-measure-tune-document.md) | The guard against step 01, checks 2 and 3, the spear and halberd cells, tuning, CLAUDE.md, the manual and screenshots, the stage notes and index status, the play script | 07, 09 | opus / opus | pending |
+| 10 | [Measure, tune and document](10-measure-tune-document.md) | The guard against step 01, checks 2 and 3, the spear and halberd cells, tuning, CLAUDE.md, the manual and screenshots, the stage notes and index status, the play script | 07, 09 | opus / opus | done (guard 233, accepted; bandit steel from threat 6, t5 cell 469; see its record) |
 
 ## Execution order
 
@@ -419,6 +419,8 @@ export type BanditKind = /* existing */ | 'bandit_crossbowman'     // FOE_XP 100
 **Step 04's guard** (Q1 (b)): **231 of 500** (269 days, 18.2 battles, 1.8 heroes dead; 2 gold on gear). The whole move is the breastplate's spell skill −5 on the mage: the wand is never bought (the run with the wand skipped is identical), and the run with the Q1 values out and the wand skipped is identical to step 01's. See [step 04's record](04-catalog-and-ids.md).
 
 **Step 05's guard** (Q1 (b)): **175 of 500** (249 days, 17.1 battles, 1.4 heroes dead; 1 gold on gear). The run with the breastplate's `strength` removed is identical to step 04's line for line, so the whole fall of 56 is the breastplate's strength 4 on the strength-3 archer and mage. Threat 5 won 0.862 (0.895 at step 04), threat 3 0.958 (0.968). Step 10 judges or retunes it. See [step 05's record](05-weight-and-reach.md).
+
+**Step 10:** bandit gear tier 2 from threat 6, not 5 (the user's amendment to Q2 (a); C9's "tier 2 from threat 5" is amended at step 10): the threat-5 camp cell is back to **469**; the guard is **233 of 500** (269 days, 18.2 battles, 1.8 heroes dead), accepted by the user and not tuned; tier 2 still never bought (post 1.1). See [step 10's record](10-measure-tune-document.md).
 
 **Step 09's guard** (Q2 (a)): **233 of 500**, unmoved from step 06's (272 days, 18.3 battles, 26.1 spawns, 1.8 heroes dead; threat 5 won 0.896, threat 3 0.969). Cells (party level = threat, 500 each, seed 1): threat 3 429 (rounds 10.3), threat 4 473, threat 5 256 (11.0 rounds; 469 at 8.8 rounds without steel), threat 6 2, threat 7 1. Step 10 judges and tunes. See [step 09's record](09-bandits.md).
 
@@ -443,14 +445,14 @@ export type BanditKind = /* existing */ | 'bandit_crossbowman'     // FOE_XP 100
 
 ## Overall completion criteria
 
-- [ ] Every step done (08 and 09 as Q2 decides), `npm test` passing at each commit, and the in-browser tests after 05 and 07.
-- [ ] The guard measured at 01, after 04, 06 and 09, and judged in 10: within about 5 points of step 01's figure, or the move explained in CLAUDE.md's rules of scaling and the stage notes.
-- [ ] Checks 2 and 3 recorded: `steel_war_hammer` beats `iron_sword` at `--encounter troll_lair --threat 5 --party-level 5`; `iron_spear` is comparable to `iron_sword` at `--encounter goblin_raid --threat 3 --party-level 3`. The spear and halberd cells are watched (design §7).
-- [ ] Every new icon and gear sprite is a finished drawing; `sprites:check` is clean.
-- [ ] `SAVE_VERSION` is 16 (17 if step 09 changes the camp's slots), and `LOG_SCHEMA_VERSION` is 22.
-- [ ] CLAUDE.md describes the catalog, ids, weight, reach, the trading post's level 4 and filter, and the new tables. The manual describes them, and its screenshots are retaken.
-- [ ] The stage design has "Implementation notes" with the figures, and the stages index's stage 3 row says done.
-- [ ] The design's play script has been walked in the game (`make dev`), or the steps not walked are listed for the user in step 10's record.
+- [x] Every step done (08 and 09 as Q2 decides), `npm test` passing at each commit, and the in-browser tests after 05 and 07.
+- [x] The guard measured at 01, after 04, 06 and 09, and judged in 10: within about 5 points of step 01's figure, or the move explained in CLAUDE.md's rules of scaling and the stage notes.
+- [x] Checks 2 and 3 recorded: `steel_war_hammer` beats `iron_sword` at `--encounter troll_lair --threat 5 --party-level 5`; `iron_spear` is comparable to `iron_sword` at `--encounter goblin_raid --threat 3 --party-level 3`. The spear and halberd cells are watched (design §7). Recorded at step 10, both not met as written: the hammer wins 0 like the swords (it deals more), and the spear trails the longsword by 43; for the user.
+- [x] Every new icon and gear sprite is a finished drawing; `sprites:check` is clean.
+- [x] `SAVE_VERSION` is 16 (17 if step 09 changes the camp's slots), and `LOG_SCHEMA_VERSION` is 22.
+- [x] CLAUDE.md describes the catalog, ids, weight, reach, the trading post's level 4 and filter, and the new tables. The manual describes them, and its screenshots are retaken.
+- [x] The stage design has "Implementation notes" with the figures, and the stages index's stage 3 row says done.
+- [x] The design's play script has been walked in the game (`make dev`), or the steps not walked are listed for the user in step 10's record.
 
 ## Open questions
 

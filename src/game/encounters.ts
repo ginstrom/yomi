@@ -368,8 +368,8 @@ export function sourceGuardians(party: readonly Fighter[], threat = 1): Encounte
  * and breastplate, and a Brute with an axe and breastplate at threat 3; at
  * threat 4 a Hedge-Mage in the Brute's place, and at threat 5 an Archer, their
  * gear Fine at 5. From threat 6 four fight, the Captain, Archer, Hedge-Mage and
- * Brute; the Cutthroat, fifth in the slot order, takes the field only once a
- * later stage raises a count to 5 (stage 9).
+ * Crossbowman, in Fine steel and ironwood; the Brute and the Cutthroat take the
+ * field only once a later stage raises a count to 5 (stage 9).
  */
 export function banditCamp(party: readonly Fighter[], threat = 3): Encounter {
   return encounter(party, BANDIT_CAMP, threat)

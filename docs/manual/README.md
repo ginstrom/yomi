@@ -92,7 +92,7 @@ If a change you make leaves a perk you already took without its requirements, th
 
 ![Name and portrait](images/creation-name.png)
 
-Pick a portrait and type a name of up to 12 letters. Gear is not chosen: every hero starts holding the weapon of their tagged skill (a melee hero also holds an oak shield), wears a steel breastplate, and carries the other plain weapons in their backpack, and the oak shield too, unless they hold it.
+Pick a portrait and type a name of up to 12 letters. Gear is not chosen: every hero starts holding the weapon of their tagged skill (a melee hero also holds an oak shield), wears an Iron Breastplate, and carries the other plain weapons in their backpack, and the oak shield too, unless they hold it.
 
 Any skill points or picks you leave unspent stay with the character, and you can spend them later on the world map.
 
@@ -133,7 +133,7 @@ When you walk onto a monster lair, the footer offers three actions:
 
 You can also click a hex to walk away.
 
-**Bandits.** Not every lair holds monsters. Bandits hold the **Bandit Camp** (threat 3) and the **Bandit Hideout** (threat 4), and new **Bandit Gangs** appear where the blight breeds lairs of threat 3 or more. Bandits are people, built the way your heroes are, and always led by a Captain with sword, shield and breastplate. At threat 3 a Brute with a battle axe and breastplate fights beside him; at threat 4 a Hedge-Mage takes the Brute's place, casting Magic Arrow, Flame Arrow and Shield and healing; at threat 5 a Bandit Archer takes the Hedge-Mage's place, standing back with a bow and shooting. They have a hero's hit points, the Captain and the Brute a hero's armour, and at threat 5 they carry Fine gear, so expect a hard fight against a party of your level: bring a heavy weapon, or spells, for the armoured ones, and close in on the Archer and the Hedge-Mage, who wear none.
+**Bandits.** Not every lair holds monsters. Bandits hold the **Bandit Camp** (threat 3) and the **Bandit Hideout** (threat 4), and new **Bandit Gangs** appear where the blight breeds lairs of threat 3 or more. Bandits are people, built the way your heroes are, and always led by a Captain with sword, shield and breastplate. At threat 3 a Brute with a battle axe and breastplate fights beside him; at threat 4 a Hedge-Mage takes the Brute's place, casting Magic Arrow, Flame Arrow and Shield and healing; at threat 5 a Bandit Archer takes the Hedge-Mage's place, standing back with a bow and shooting. They have a hero's hit points, the Captain and the Brute a hero's armour, and at threat 5 they carry Fine gear. Further out still, beyond threat 5, four bandits take the field together, a **Crossbowman** among them whose bolts punch through armour, all in Fine steel. Expect a hard fight against a party of your level: bring a heavy weapon, or spells, for the armoured ones, and close in on the Archer and the Hedge-Mage, who wear none.
 
 ![Bandits at threat 5: the Captain and the Archer](images/battle-bandits.png)
 
@@ -204,7 +204,7 @@ The paper doll shows what the hero wears: head, neck, body, cloak, both hands, g
 - **Drag** an item to move it: from the backpack onto a slot to wear it, from a slot back to the backpack to stow it, from a slot onto the baggage (or the ground in battle) to put it there, from the baggage (or the ground) onto a slot to take it and wear it, and between the backpack and the baggage (or the ground). Drop it somewhere that does not fit and it returns to where it came from. **Esc** cancels a drag.
 - On the world map, the right-hand grid is the party's shared **baggage**, which has no size limit. Click an item there to take it. **Right-click** (or Ctrl+click) an item to put it in the baggage. This is how you pass items between heroes.
 - In battle, the right-hand grid is the **ground** under the hero. Right-click to drop an item, and click to pick one up.
-- A two-handed weapon (the bow, the greatsword) and an off-hand item cannot be held together. Equipping one stows the other.
+- A two-handed weapon (the bows, the crossbow, the greatsword, the halberd, the staff) and an off-hand item cannot be held together. Equipping one stows the other.
 - A clicked ring goes in whichever ring slot is free; a dragged one goes in the ring slot you drop it on.
 
 ---
@@ -234,15 +234,27 @@ Hover over a hex to see the path, then click to move there. Each hex costs **1 A
 
 **Click a foe** to attack it. If it is out of reach, the hero first walks into range along the path shown, then strikes. The **Attack** button strikes the only foe in reach, or, with several in reach, asks you to click one (it reads **Cancel** while it waits). The weapon decides both the cost and the reach:
 
-| Weapon | Damage | AP | Reach | Pierces resistance |
-| --- | --- | --- | --- | --- |
-| Iron Dagger | 1d4 | 3 | 1 | — |
-| Iron Shortsword | 1d3+1 | 4 | 1 | — |
-| Iron Longsword | 1d8+3 | 5 | 1 | 1 |
-| Iron Battle Axe | 1d12+2 | 6 | 1 | 2 |
-| Steel Greatsword (two hands) | 2d6+3 | 7 | 1 | 2 |
-| Yew Bow (two hands) | 1d6 | 4 | 5 | — |
-| Wand of Sparks | 1d6 | 5 | 4 | — |
+| Weapon | Damage | AP | Reach | Pierces resistance | Strength |
+| --- | --- | --- | --- | --- | --- |
+| Iron Dagger | 1d4 | 3 | 1 | — | — |
+| Iron Shortsword | 1d3+1 | 4 | 1 | — | — |
+| Iron Rapier (critical +5%) | 1d6 | 4 | 1 | — | — |
+| Iron Longsword | 1d8+3 | 5 | 1 | 1 | — |
+| Iron Mace | 1d6+3 | 5 | 1 | 2 | 5 |
+| Iron Spear | 1d8+1 | 5 | 2 | 1 | — |
+| Iron Battle Axe | 1d12+2 | 6 | 1 | 2 | 5 |
+| Iron War Hammer (to hit −5%) | 1d10+3 | 6 | 1 | 3 | 6 |
+| Iron Greatsword (two hands) | 2d6+3 | 7 | 1 | 2 | 6 |
+| Iron Halberd (two hands) | 1d12+3 | 7 | 2 | 2 | 6 |
+| Yew Bow (two hands) | 1d6 | 4 | 5 | — | — |
+| Yew Longbow (two hands) | 1d8 | 5 | 7 | — | 5 |
+| Yew Crossbow (two hands) | 1d10 | 6 | 5 | 2 | — |
+| Wand of Sparks (Magic) | 1d6 | 5 | 4 | — | — |
+| Ash Staff (two hands, Magic; spells +5%, mana +4) | 1d6+1 | 5 | 1 | — | — |
+
+These are the iron (and yew, and ash) weapons. Their **steel** and **ironwood** versions do 2 more damage and are otherwise the same. A hero weaker than a weapon's **Strength** loses 5% to hit with it for every point short (see "Gear families" in chapter 9).
+
+The **spear** and the **halberd** strike from the second hex, past an ally standing in front, and count as melee weapons in every way: they use Melee Weapons, add strength's damage and pierce armour. Their zone of control is still only the hexes next to the wielder. The **crossbow** is the only shot that pierces armour.
 
 A weapon costing 4 AP or less lets a hero who stands still attack twice in one turn.
 
@@ -264,7 +276,7 @@ Defence works in two ways. **Armour class** (from agility, shields and some magi
 
 Because resistance comes off every hit, it hurts weapons that hit often for a little, such as the dagger, the shortsword and the bow, much more than weapons that hit hard. Those quick weapons are best against lightly armoured foes. Against heavily armoured ones, reach for a heavy weapon.
 
-**Armour piercing**: melee blows ignore some points of the foe's resistance (see the table above, and the Bearded modifier and the Armour Breaker and Sunder perks). Bow and wand shots pierce nothing. Spells ignore resistance altogether, which makes a mage the other answer to armour.
+**Armour piercing**: melee blows ignore some points of the foe's resistance (see the table above, and the Bearded modifier and the Armour Breaker and Sunder perks). Bow and wand shots pierce nothing; a crossbow bolt pierces its own 2 points, but not the perks'. Spells ignore resistance altogether, which makes a mage the other answer to armour.
 
 When a hero is selected, every foe they can attack from where they stand shows on its nameplate your chance to hit, any bonus from flanking and the arc, and, after piercing, how much damage its armour will stop: "60% −3 dmg", or "70% +10 −3 dmg" from its flank.
 
@@ -282,7 +294,7 @@ Some monsters can do more than swing a weapon:
 
 ### Zones of control and free attacks
 
-A foe holding a **melee** weapon controls the hexes next to it. **Leaving** those hexes gives that foe one free attack on you; stepping to another hex next to the same foe does not. Each foe gets at most one free attack per enemy turn. Ranged units, wand-wielders and sleepers have no zone of control. Pathfinding prefers routes that provoke the fewest foes, and the orange edges show where the danger is. Your heroes threaten the enemy in exactly the same way.
+A foe holding a **melee** weapon controls the hexes next to it. **Leaving** those hexes gives that foe one free attack on you; stepping to another hex next to the same foe does not. Each foe gets at most one free attack per enemy turn. A spear or halberd controls only the hexes next to it too, though it strikes from two. Ranged units (bows, crossbows, wands) and sleepers have no zone of control. Pathfinding prefers routes that provoke the fewest foes, and the orange edges show where the danger is. Your heroes threaten the enemy in exactly the same way.
 
 ### Changing gear in battle
 
@@ -419,7 +431,7 @@ The stock pays for everything you build.
 | Outpost | A held resource without one | 15 gold, 10 timber | A day | The site resists the blight more strongly and yields more. Lost with the site. |
 | Shrine | The encampment's empty plot | 20 gold, then 40 gold + 15 silver, then 80 gold + 30 silver | Instant | Each level strengthens the encampment against the blight |
 | Guild hall | The encampment | 30 gold + 15 iron, then 60 gold + 30 iron | Instant | Party limit 3, then 4, then 5 |
-| Trading post | The encampment | 40 gold + 15 stone, then 80 gold + 15 copper | Instant | Sells plain gear, then Fine, then Masterwork |
+| Trading post | The encampment | 40 gold + 15 stone, then 80 gold + 15 copper, then 120 gold + 20 silver | Instant | Sells plain gear, then Fine, then Masterwork, then steel |
 | Workshop | The encampment's empty plot | 25 gold + 15 iron, then 40 gold + 15 stone, then 60 gold + 10 crystal | Instant | Crafts more modifiers, at higher grades |
 | Infirmary | The encampment's empty plot | 20 gold + 10 timber, then 40 gold + 15 peat, then 60 gold + 20 salt | Instant | Faster healing while you camp |
 
@@ -446,27 +458,55 @@ In the encampment, click the guild hall and then **Enter the Guild Hall**. It sh
 
 You can recruit one of the pre-rolled heroes not already in your company, or **Create new** to make one with character creation. A recruit joins at the hall's level or your party's lowest level, whichever is lower, with that level's points left for you to spend.
 
+### Gear families
+
+Gear comes in **families**, each a trade-off: the weapons in the table in chapter 5, three shields, four body armours, and a light and a heavy choice for the head, hands and feet.
+
+| Item | Armour class | Resistance | Strength | Other |
+| --- | --- | --- | --- | --- |
+| Iron Buckler | +6 | — | — | |
+| Oak Shield | +10 | — | — | |
+| Iron Tower Shield | +16 | 1 | 6 | AP −1 |
+| Linen Robe | — | — | — | spells +5%, mana +6 |
+| Leather Armor | +12 | 1 | — | |
+| Iron Breastplate | +10 | 2 | 3 | spells −5% |
+| Iron Plate | +6 | 4 | 6 | AP −1, spells −15% |
+| Leather Cap / Leather Boots | +3 | — | — | |
+| Leather Gloves | — | — | — | to hit +2% |
+| Iron Helm | +2 | 1 | 4 | spells −5% |
+| Iron Gauntlets | — | 1 | 4 | spells −5% |
+| Iron Greaves | — | 1 | 4 | |
+
+**Tiers.** Each family comes in a first and a second material: iron and **steel** for metal, yew or oak and **ironwood** for wood, leather and **wolfhide** for hide, linen and **silk** for cloth. The second tier is better: a weapon does 2 more damage, a shield adds 2 to armour class, body armour 2 to armour class and 1 to resistance, and a head, hands or feet item 1 to armour class. In the trading post and the inventory a second-tier item's icon is tinted. Only a level 4 trading post sells them.
+
+**Weight.** Heavy gear asks for strength. For every point of strength a hero lacks for an item, they lose 5% to hit with weapon attacks (spells are not affected), and each item counts on its own: a strength 3 hero with a War Hammer (6) and Iron Gauntlets (4) loses 15% + 5%. An item's tooltip shows it, as "Strength: 6 (you have 3): to hit −15%".
+
+![A mage of strength 3 looking at the Iron Greatsword, which asks 6](images/panel-strength.png)
+ Plate and the tower shield also take **1 AP** off every turn, and metal armour lowers the chance of a hero's **spells** (the breastplate, helm and gauntlets by 5% each, plate by 15%), which is the price a mage pays for armour.
+
 ### Gear grades
 
-Every plain weapon, the shield and the breastplate come in three **grades**: plain, **Fine** and **Masterwork**. A Fine weapon does 1 more damage, and a Masterwork one 2 more and hits 5% more often; a Fine shield adds 3 to armour class and a Masterwork one 6; a Fine breastplate adds 1 to resistance and a Masterwork one 2. A grade never changes a weapon's AP cost, reach or armour piercing. Enchanted items have no grade.
+Every plain item comes in three **grades**: plain, **Fine** and **Masterwork**. A Fine weapon does 1 more damage, and a Masterwork one 2 more and hits 5% more often; a Fine shield adds 3 to armour class and a Masterwork one 6; Fine body armour adds 1 to resistance and Masterwork 2; a Fine head, hands or feet item adds 1 to armour class and a Masterwork one 2. A grade never changes a weapon's AP cost, reach, armour piercing or the strength it asks. Enchanted items have no grade.
 
 ### The trading post
 
-![The trading post](images/trading-post.png)
+![The trading post at level 4, its Buy tab filtered to war hammers](images/trading-post.png)
 
 In the encampment, click the trading post and then **Enter the Trading Post**. Click a line to see the item's stats and price, then confirm with the button under them.
 
-- **Buy** lists every plain item at each grade the post sells: plain at level 1, Fine from level 2, Masterwork at level 3. A Fine item costs 3 times the plain price and a Masterwork one 8 times. What you buy goes into the baggage; equip it from the character panel.
+- **Buy** lists every plain item at each grade the post sells: plain at level 1, Fine from level 2, Masterwork at level 3, and from level 4 the second tier (steel, ironwood, wolfhide, silk) at every grade. The buttons along the top filter the list by slot (**Weapons**, **Shields**, **Armor**, **Head**, **Hands**, **Feet**) and, under them, by family, or **All** of the slot; the tab opens on weapons. A second-tier item costs 2.5 times the first tier's price, a Fine item 3 times the plain price and a Masterwork one 8 times: a Masterwork Steel Longsword costs 12 × 2.5 × 8 = 240 gold. What you buy goes into the baggage; equip it from the character panel.
 - **Sell** lists the baggage first, then what the heroes carry in their packs: each item fetches half its price, a modifier adding nothing, and an enchanted item half its worth. Worn gear is not offered, so take off anything you want to sell first. The stock's materials sell at 1 gold for every 2. The post never sells materials.
 
-| Item | Plain price |
-| --- | --- |
-| Iron Dagger | 6 |
-| Iron Shortsword | 8 |
-| Oak Shield | 10 |
-| Iron Longsword, Yew Bow | 12 |
-| Iron Battle Axe | 14 |
-| Steel Greatsword, Steel Breastplate | 20 |
+The price of each family's plain first-tier item:
+
+| Family | Price | Family | Price |
+| --- | --- | --- | --- |
+| Dagger, Buckler | 6 | Bow, Longsword, Mace, Spear | 12 |
+| Shortsword | 8 | Battle Axe, Leather | 14 |
+| Rapier, Shield, Robe | 10 | Staff, Longbow | 16 |
+| Cap, Gloves, Boots | 4 | War Hammer, Crossbow, Tower Shield | 18 |
+| Helm, Gauntlets, Greaves | 6 | Greatsword, Breastplate | 20 |
+| Halberd | 22 | Wand, Plate | 30 |
 
 ### Crafting
 
@@ -481,14 +521,14 @@ The screen lists every item your heroes wear or carry, then the baggage's, that 
 
 | Modifier | Fits | Better (grade I / II / III) | Worse |
 | --- | --- | --- | --- |
-| Balanced | shortsword, longsword, greatsword | to hit +5 / +10 / +15% | damage −1 |
+| Balanced | shortsword, longsword, greatsword, spear | to hit +5 / +10 / +15% | damage −1 |
 | Recurve | bow | damage +1 / +2 / +3 | range −1 |
-| Bearded | battle axe | pierces 1 / 2 / 3 more points of resistance | damage −2 |
+| Bearded | battle axe, mace | pierces 1 / 2 / 3 more points of resistance | damage −2 |
 | Keen | dagger, shortsword, longsword | critical +5 / +10 / +15% | damage −1 |
 | Braced | shield | armour class +3 / +5 / +7 | to hit −5% |
 | Light | longsword, battle axe | attack AP −1 | damage −3 / −2 / −1 |
-| Long | bow | range +1 / +2 / +3 | to hit −5% |
-| Reinforced | breastplate | resistance +1 / +2 / +3 | to hit −5% |
+| Long | bow, crossbow | range +1 / +2 / +3 | to hit −5% |
+| Reinforced | breastplate, leather | resistance +1 / +2 / +3 | to hit −5% |
 
 A craft costs 5 gold and 5 iron (5 timber for a bow or shield) at grade I, 10 gold and 5 copper at grade II, and 20 gold and 5 crystal at grade III. A Light Longsword costs 4 AP a blow, so a hero who stands still strikes twice a turn.
 
