@@ -206,7 +206,7 @@ The paper doll shows what the hero wears: head, neck, body, cloak, both hands, g
 - In battle, the right-hand grid is the **ground** under the hero. Right-click to drop an item, and click to pick one up.
 - A two-handed weapon (the bows, the crossbow, the greatsword, the halberd, the staff) and an off-hand item cannot be held together. Equipping one stows the other.
 - A clicked ring goes in whichever ring slot is free; a dragged one goes in the ring slot you drop it on.
-- **Hover** an item to see its stats. An item with **sockets** shows small pips along the bottom of its icon, one a socket, filled in the rune's colour where a rune sits; its tooltip ends with "Sockets: 1 of 2" and a line for each rune and what it does there, such as "Ember I: +1 fire on a hit".
+- **Hover** an item to see its stats. An item with **sockets** shows small pips along the bottom of its icon, one a socket, filled in the rune's colour where a rune sits; its tooltip ends with the sockets filled and the runes in them, such as "Sockets: 1 of 2 (Ember I)", while what the runes do is in the stat lines above it, such as "On a hit: +1 fire".
 
 ---
 

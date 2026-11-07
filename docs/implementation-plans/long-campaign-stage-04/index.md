@@ -118,7 +118,7 @@ export const SOCKETS_BY_TIER: Record<Tier, number>       // { 1: 0, 2: 1 }
 export const MAX_SOCKETS = 3
 /** Whether `rune` may sit in `item`: false for Mind in a weapon whose stats do not strike with Magic (correction 7), true otherwise. */
 export function runeFits(rune: RuneId, item: Item): boolean
-/** The tooltip's socket lines: "Sockets: 1 of 2", then one line a rune, "Ember I: +1 fire on a hit". Empty for an item with no sockets. */
+/** The tooltip's socket line: "Sockets: 1 of 2 (Ember I)", the runes by name only (amended in fix round 1: it was a line a rune with its effect, which the stat lines above already told). Empty for an item with no sockets. */
 export function socketLines(item: Item): string[]
 /** The party's rune pouch: a count for each rune key held; a key at 0 is left out. */
 export type Pouch = Partial<Record<RuneKey, number>>

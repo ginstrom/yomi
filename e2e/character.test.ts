@@ -168,7 +168,9 @@ describe('a hero’s panel', () => {
     await game.hover(panel.equipment.armor)
     panel = await game.settled('Inventory', (p) => p.tooltip.length > 0)
     expect(panel.tooltip).toContain('Frost ward 2')
-    expect(panel.tooltip).toContain('Sockets: 1 of 1')
+    // The socket line names the rune; what it does is the ward line above, told once.
+    expect(panel.tooltip).toContain('Sockets: 1 of 1 (Rime I)')
+    expect(panel.tooltip.filter((line) => line.includes('Frost ward 2'))).toHaveLength(1)
     expect(panel.statLines).toEqual(expect.arrayContaining(['Wards:', '  frost 2']))
 
     // A socketed sword with nothing in it says so.

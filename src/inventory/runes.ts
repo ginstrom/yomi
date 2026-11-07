@@ -192,19 +192,17 @@ export function runeFits(rune: RuneId, item: Item): boolean {
   return !(rune === 'mind' && item.slot === 'mainHand' && item.stats?.skill !== 'magic')
 }
 
-/** The tooltip's socket lines: "Sockets: 1 of 2", then one line a rune, "Ember I: +1 fire on a hit". Empty for an item with no sockets. */
+/**
+ * The tooltip's socket line: "Sockets: 1 of 2 (Ember I)", the runes by name only, as the
+ * item's stat lines already fold in what they do; "Sockets: 0 of 2" with none set. Empty
+ * for an item with no sockets.
+ */
 export function socketLines(item: Item): string[] {
   const sockets = socketsOf(item)
   if (sockets === 0) return []
   const runes = item.runes ?? []
-  const cls = slotClass(item.slot)
-  return [
-    `Sockets: ${runes.length} of ${sockets}`,
-    ...runes.map((key) => {
-      const { id, rank } = parseRuneKey(key)!
-      return `${runeLabel(key)}: ${RUNES[id].describe[cls](rank)}`
-    }),
-  ]
+  const names = runes.length ? ` (${runes.map(runeLabel).join(', ')})` : ''
+  return [`Sockets: ${runes.length} of ${sockets}${names}`]
 }
 
 /** The party's rune pouch: a count for each rune key held; a key at 0 is left out. */

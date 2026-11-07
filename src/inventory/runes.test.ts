@@ -144,19 +144,13 @@ describe('sockets', () => {
     expect(runeFits('ember', item('iron_sword@3'))).toBe(true)
   })
 
-  it('are told in the tooltip: the count filled, then each rune', () => {
+  it('are told in the tooltip in one line, the runes by name only (the stat lines above already hold what they do)', () => {
     expect(socketLines(item('iron_sword'))).toEqual([])
     expect(socketLines(item('steel_longsword@3'))).toEqual(['Sockets: 0 of 2'])
-    expect(socketLines(item('steel_longsword@3#ember1.storm2'))).toEqual(['Sockets: 2 of 2', 'Ember I: +1 fire on a hit', 'Storm II: To hit +6%'])
-    expect(socketLines(item('steel_longsword@3#rime3.dawn1'))).toEqual([
-      'Sockets: 2 of 2',
-      'Rime III: +3 frost on a hit, lays Chilled on a critical',
-      'Dawn I: +2 blight on a hit to the regenerating and the blighted',
-    ])
-    expect(socketLines(item('oak_shield@3#stone2'))).toEqual(['Sockets: 1 of 1', 'Stone II: Armour class +5'])
-    expect(socketLines(item('iron_sword@3#life1'))).toEqual(['Sockets: 1 of 1', 'Life I: Heals 1 on a hit'])
-    expect(socketLines(item('iron_breastplate@3#rime2'))).toEqual(['Sockets: 1 of 1', 'Rime II: Frost ward 4'])
-    expect(socketLines(item('iron_sword@3#ember3'))).toEqual(['Sockets: 1 of 1', 'Ember III: +3 fire on a hit, lays Seared'])
+    expect(socketLines(item('steel_longsword@3#ember1.storm2'))).toEqual(['Sockets: 2 of 2 (Ember I, Storm II)'])
+    expect(socketLines(item('steel_longsword@3#rime3'))).toEqual(['Sockets: 1 of 2 (Rime III)'])
+    expect(socketLines(item('iron_sword@3#ember3'))).toEqual(['Sockets: 1 of 1 (Ember III)'])
+    expect(socketLines(item('iron_sword@3#ember3')).join('\n')).not.toContain('fire')
   })
 })
 
