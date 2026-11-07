@@ -2,18 +2,9 @@ import { deriveCombatStats } from '../character/character.ts'
 import { draftCharacter, type CharacterDraft } from '../character/creation.ts'
 import { autoAdvance, levelUp } from '../character/progression.ts'
 import type { CombatantStats } from '../combat/combat.ts'
+import type { Tier } from '../inventory/catalog.ts'
 import { gradedItem, type Grade } from '../inventory/grades.ts'
-import {
-  IRON_BATTLE_AXE,
-  IRON_DAGGER,
-  IRON_SWORD,
-  OAK_SHIELD,
-  SPARK_WAND,
-  IRON_BREASTPLATE,
-  YEW_BOW,
-  type Equipment,
-  type Item,
-} from '../inventory/inventory.ts'
+import { itemById, type Equipment } from '../inventory/inventory.ts'
 import type { BanditKind } from './encounters.ts'
 
 /**
@@ -24,7 +15,7 @@ import type { BanditKind } from './encounters.ts'
  * rule of its own: a hero built the same way fights with the same numbers.
  */
 
-export type BanditRole = 'cutthroat' | 'archer' | 'brute' | 'mage' | 'captain'
+export type BanditRole = 'cutthroat' | 'archer' | 'brute' | 'mage' | 'captain' | 'crossbowman'
 
 /** The role behind each bandit kind. */
 export const BANDIT_ROLE: Record<BanditKind, BanditRole> = {
@@ -33,6 +24,7 @@ export const BANDIT_ROLE: Record<BanditKind, BanditRole> = {
   bandit_brute: 'brute',
   bandit_mage: 'mage',
   bandit_captain: 'captain',
+  bandit_crossbowman: 'crossbowman',
 }
 
 /**
@@ -75,6 +67,14 @@ const DRAFTS: Record<BanditRole, CharacterDraft> = {
     // Spellcasting's two spell picks buy the last two; autoAdvance adds a heal and Flame Arrow by level 3.
     perks: ['spellcasting', 'arcane_study', 'keen_eye', 'magic_arrow', 'shield'],
   },
+  crossbowman: {
+    name: 'Bandit Crossbowman',
+    portrait: 'ranger',
+    attributes: { strength: 3, perception: 9, endurance: 5, intelligence: 4, agility: 7, luck: 4 },
+    tagged: 'archery',
+    raises: { melee: 0, archery: 10, magic: 0 },
+    perks: ['marksmanship', 'deadly_aim', 'dodger'],
+  },
   captain: {
     name: 'Bandit Captain',
     portrait: 'knight',
@@ -91,21 +91,36 @@ export function banditDraft(role: BanditRole): CharacterDraft {
   return { ...draft, attributes: { ...draft.attributes }, raises: { ...draft.raises }, perks: [...draft.perks] }
 }
 
+/** The ids of one item of a role's gear at each tier, by catalog family: iron or oak and yew at tier 1, steel and ironwood at tier 2. */
+type GearIds = readonly [tier1: string, tier2: string]
+
 /** What each role wears and holds; nothing else (no starting breastplate or shield of its own). */
-const GEAR: Record<BanditRole, { mainHand: Item; offHand?: Item; armor?: Item }> = {
-  cutthroat: { mainHand: IRON_DAGGER },
-  archer: { mainHand: YEW_BOW },
-  brute: { mainHand: IRON_BATTLE_AXE, armor: IRON_BREASTPLATE },
-  mage: { mainHand: SPARK_WAND },
-  captain: { mainHand: IRON_SWORD, offHand: OAK_SHIELD, armor: IRON_BREASTPLATE },
+const GEAR: Record<BanditRole, { mainHand: GearIds; offHand?: GearIds; armor?: GearIds }> = {
+  cutthroat: { mainHand: ['iron_dagger', 'steel_dagger'] },
+  archer: { mainHand: ['yew_bow', 'ironwood_bow'] },
+  brute: { mainHand: ['iron_battle_axe', 'steel_battle_axe'], armor: ['iron_breastplate', 'steel_breastplate'] },
+  mage: { mainHand: ['spark_wand', 'ironwood_wand'] },
+  captain: {
+    mainHand: ['iron_sword', 'steel_longsword'],
+    offHand: ['oak_shield', 'ironwood_shield'],
+    armor: ['iron_breastplate', 'steel_breastplate'],
+  },
+  crossbowman: { mainHand: ['yew_crossbow', 'ironwood_crossbow'] },
 }
 
-function equipmentFor(role: BanditRole, grade: Grade): Equipment {
+/** The tier and grade a bandit's gear is made at. */
+export interface BanditGear {
+  tier: Tier
+  grade: Grade
+}
+
+function equipmentFor(role: BanditRole, { tier, grade }: BanditGear): Equipment {
   const { mainHand, offHand, armor } = GEAR[role]
+  const made = (ids: GearIds) => gradedItem(itemById(ids[tier - 1])!, grade)
   return {
-    mainHand: gradedItem(mainHand, grade),
-    ...(offHand ? { offHand: gradedItem(offHand, grade) } : {}),
-    ...(armor ? { armor: gradedItem(armor, grade) } : {}),
+    mainHand: made(mainHand),
+    ...(offHand ? { offHand: made(offHand) } : {}),
+    ...(armor ? { armor: made(armor) } : {}),
   }
 }
 
@@ -121,21 +136,21 @@ function deepFreeze<T>(value: T): T {
 }
 
 /**
- * A bandit of `role` at `level` (below 1 counts as 1), its gear at `grade`.
+ * A bandit of `role` at `level` (below 1 counts as 1), its gear at `gear`'s tier and grade.
  * Built in this order, which a hero built to match must follow: the draft
  * made a character (`draftCharacter`), its gear put on in place of the
  * starting kit (before levelling, so that `autoAdvance` raises the skill of
  * the weapon it holds), `levelUp` to `level`, one `autoAdvance`, then
- * `deriveCombatStats`. Cached per (role, level, grade) and deeply frozen:
+ * `deriveCombatStats`. Cached per (role, level, tier, grade) and deeply frozen:
  * callers spread it and never change it.
  */
-export function banditStats(role: BanditRole, level: number, grade: Grade): CombatantStats {
+export function banditStats(role: BanditRole, level: number, gear: BanditGear): CombatantStats {
   const target = Math.max(1, Math.floor(level))
-  const key = `${role}:${target}:${grade}`
+  const key = `${role}:${target}:${gear.tier}:${gear.grade}`
   const known = cache.get(key)
   if (known) return known
   const bandit = draftCharacter(DRAFTS[role])
-  bandit.equipment = equipmentFor(role, grade)
+  bandit.equipment = equipmentFor(role, gear)
   while (bandit.level < target) levelUp(bandit)
   autoAdvance(bandit)
   const stats = deepFreeze(deriveCombatStats(bandit))
@@ -143,7 +158,7 @@ export function banditStats(role: BanditRole, level: number, grade: Grade): Comb
   return stats
 }
 
-/** The gear grade bandits wear at a threat: plain below threat 5, Fine (2) from it. */
-export function banditGrade(threat: number): Grade {
-  return threat >= 5 ? 2 : 1
+/** The gear bandits wear at a threat: plain iron and oak below threat 5, Fine steel and ironwood (tier 2, grade 2) from it. */
+export function banditGear(threat: number): BanditGear {
+  return threat >= 5 ? { tier: 2, grade: 2 } : { tier: 1, grade: 1 }
 }

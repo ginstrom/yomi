@@ -13,7 +13,7 @@ import {
 } from '../combat/combat.ts'
 import type { BattleSetup, UnitId, UnitSetup } from '../engine/battleEngine.ts'
 import { offsetToHex } from '../grid/hex.ts'
-import { BANDIT_ROLE, banditGrade, banditStats } from './bandits.ts'
+import { BANDIT_ROLE, banditGear, banditStats } from './bandits.ts'
 
 /** A party member as it enters a battle: its stats, and the hit points it has left if wounded. */
 export interface Fighter {
@@ -53,7 +53,7 @@ function partyKinds(party: readonly Fighter[]): Record<UnitId, UnitKind> {
 export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll' | 'giant_spider' | 'salamander'
 
 /** Humanoids built by hero rules (bandits.ts). */
-export type BanditKind = 'bandit_cutthroat' | 'bandit_archer' | 'bandit_brute' | 'bandit_mage' | 'bandit_captain'
+export type BanditKind = 'bandit_cutthroat' | 'bandit_archer' | 'bandit_brute' | 'bandit_mage' | 'bandit_captain' | 'bandit_crossbowman'
 
 /** What a foe can be: a monster, or a bandit. */
 export type FoeKind = MonsterKind | BanditKind
@@ -91,6 +91,7 @@ export const FOE_XP: Record<UnitKind, number> = {
   bandit_brute: 100,
   bandit_mage: 100,
   bandit_captain: 100,
+  bandit_crossbowman: 100,
 }
 
 export interface Encounter {
@@ -155,7 +156,7 @@ function isBandit(kind: FoeKind): kind is BanditKind {
  */
 export function foeStats(kind: FoeKind, level: number): CombatantStats {
   // A foe's level is its battle's threat (clamped to the encounter's band), so the level picks the gear grade.
-  if (isBandit(kind)) return banditStats(BANDIT_ROLE[kind], level, banditGrade(level))
+  if (isBandit(kind)) return banditStats(BANDIT_ROLE[kind], level, banditGear(level))
   return foeAtLevel(FOE_STATS[kind], level, FOE_NATIVE_LEVEL[kind])
 }
 
@@ -275,13 +276,15 @@ const SOURCE_GUARDIANS_SLOTS: readonly FoeSlot[] = [
   { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [9, 6] },
 ]
 
-// The Captain first, so it leads at every threat; then the Archer from threat 5 and the Hedge-Mage from threat 4,
-// ahead of the Brute, so that each threat of today's map has its own second bandit (the Brute at 3, the Hedge-Mage
-// at 4, the Archer at 5), and the Cutthroat last.
+// The Captain first, so it leads at every threat; then the Archer from threat 5, the Hedge-Mage from threat 4 and the
+// Crossbowman from threat 6, ahead of the Brute, so that each threat of today's map has its own second bandit (the
+// Brute at 3, the Hedge-Mage at 4, the Archer at 5) and threats 6 and 7 field the Captain, Archer, Hedge-Mage and
+// Crossbowman; the Brute waits for a count of 5 there, and the Cutthroat is last.
 const BANDIT_CAMP_SLOTS: readonly FoeSlot[] = [
   { id: 'captain', kind: 'bandit_captain', name: 'Bandit Captain', at: [8, 4] },
   { id: 'archer', kind: 'bandit_archer', name: 'Bandit Archer', at: [9, 6], fromThreat: 5 },
   { id: 'mage', kind: 'bandit_mage', name: 'Hedge-Mage', at: [9, 4], fromThreat: 4 },
+  { id: 'crossbowman', kind: 'bandit_crossbowman', name: 'Bandit Crossbowman', at: [9, 2], fromThreat: 6 },
   { id: 'brute', kind: 'bandit_brute', name: 'Bandit Brute', at: [8, 2] },
   { id: 'cutthroat', kind: 'bandit_cutthroat', name: 'Cutthroat', at: [8, 6] },
 ]

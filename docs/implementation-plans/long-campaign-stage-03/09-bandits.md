@@ -4,7 +4,7 @@
 
 **Difficulty:** routine, following stage 1's bandit steps and stage 2's step 08 (a new kind, a slot, a test). Engineer `model: "sonnet"`, reviewer `model: "sonnet"`.
 
-**Status: blocked on Q2.** Do not start until the user has answered Q2 (index, "Open questions"). This file describes option (a) in full and says what changes under the others.
+**Status: done (Q2 (a)).** Do not start until the user has answered Q2 (index, "Open questions"). This file describes option (a) in full and says what changes under the others.
 
 ## 1. Objective
 
@@ -173,3 +173,28 @@ Bandits use the stage's new gear. The camp's gear becomes tier 2 (steel, ironwoo
 - [ ] `npm test` passes; committed on `long-campaign-stage-03`, without pushing, the message ending with the repo's `Co-Authored-By` attribution line.
 
 ## Execution record
+
+**Q2: (a)**, with the user's confirmation of the order: a Crossbowman slot from threat 6 after the Hedge-Mage and before the Brute (threats 6 and 7 field the Captain, Archer, Hedge-Mage and Crossbowman; the Brute waits for a count of 5), and tier 2 (steel, ironwood) Fine gear from threat 5.
+
+**Done.**
+- `bandits.ts`: `BanditRole` gains `crossbowman` (the Archer's attributes, skill and perks, name "Bandit Crossbowman"); `GEAR` names two ids per item (tier 1, tier 2); `banditGear(threat)` (`{ tier, grade }`: tier 1 plain below 5, tier 2 Fine from 5) replaces `banditGrade`; `banditStats(role, level, gear)` keys its cache by tier.
+- `encounters.ts`: `bandit_crossbowman` in `BanditKind` and `FOE_XP` (100), a slot `crossbowman` at `[9, 2]`, `fromThreat: 6`; `SAVE_VERSION` 17 (`save.test.ts` updated); `LOG_SCHEMA_VERSION` unchanged.
+- Tests: hero twin over six roles and both tiers; legality; `banditGear`; tier 2 in the Captain's stats; the Crossbowman's crossbow; the camp's fields at threats 3 to 7 and hero-rule stats at each.
+- CLAUDE.md: the `bandits.ts` entry and the camp's slots in the rules of scaling were corrected (they were swept into step 07's commit `0ddaa77`, as the other engineer committed CLAUDE.md while my edit was in the tree).
+- `npm test`: 73 files, 1052 tests pass.
+
+**Measured** (seed 1, 500 battles; `--party-level` = threat). Step 01's cells predate steps 04 and 05, so threat 3 is compared with a run at `HEAD` before this step (429, identical to now):
+
+| Cell | Wins | Rounds | Party / foes damage a battle | Party / foes hit rate |
+| --- | --- | --- | --- | --- |
+| threat 3 (step 01: 444; HEAD 429) | 429 | 10.3 | 96.7 / 64.7 | 0.565 / 0.515 |
+| threat 4 (step 01: 473) | 473 | 9.7 | 105.6 / 67.4 | 0.617 / 0.610 |
+| threat 5 (step 01: 470; HEAD 469, 8.8 rounds) | 256 | 11.0 | 91.6 / 121.9 | 0.565 / 0.637 |
+| threat 6 | 2 | 7.0 | 121.0 / 188.7 | 0.801 / 0.781 |
+| threat 7 | 1 | 7.2 | 133.4 / 204.9 | 0.815 / 0.861 |
+
+Guard: 233 of 500 (46.6%), as step 06; 272 days, 18.3 battles; threat 5 won 1353 of 1510 (0.896, as at step 06), threat 3 0.969. The campaign party is far above level 5 when it meets threat-5 camps, so steel moves the campaign little though it halves the level-5 cell.
+
+**For step 10.**
+- The threat-5 cell fell from 469 to 256 on steel alone; threats 6 and 7 (Captain, Archer, Hedge-Mage, Crossbowman at party level 6 and 7) are won 2 and 1 times in 500: the counts of 4 there were a first guess and need tuning (or the cells need parties with tier-2 gear).
+- CLAUDE.md's rules of scaling still quote the old cells (444, 473, 470) and the campaign narrative; the manual's bandit paragraph should mention the Crossbowman and steel from threat 5.

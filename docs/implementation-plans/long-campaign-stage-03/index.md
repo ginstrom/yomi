@@ -66,7 +66,7 @@ The plan follows the design except where the design contradicts itself or the co
 - **Test layout:** `src/**/*.test.ts` and `scripts/**/*.test.ts` run in the Node `domain` project; `src/scenes/*Scene.test.ts` under jsdom with Phaser (smoke tests); in-browser tests in `e2e/`.
 - **The early-game guard.** It was 248 of 500 after stage 2. Step 01 re-measures it before any change. A move of more than about 5 points from step 01's figure must be explained in CLAUDE.md's rules of scaling and the stage's notes, or retuned away. Step 10 judges it.
 - **Versions:**
-  - `SAVE_VERSION` (`src/game/save.ts`, now 15) goes to 16 in step 04 (item ids), and to 17 in step 09 if it changes the Bandit Camp's slots (a saved battle rebuilds its encounter).
+  - `SAVE_VERSION` (`src/game/save.ts`, now 17) went to 16 in step 04 (item ids) and to 17 in step 09 (the Bandit Camp's Crossbowman slot; a saved battle rebuilds its encounter).
   - `LOG_SCHEMA_VERSION` (`src/engine/battleEngine.ts`, now 21) goes to 22 in step 05 (`AttackEvent.melee`).
 - **Determinism.** No step adds, drops or reorders an RNG draw in today's battles. Steps 04 and 05 must leave the campaign summary as their checkpoints say.
 - **Commits:** one commit per step (art steps may commit sources and exports together), once `npm test` passes, on `long-campaign-stage-03`, without pushing. Never switch branches, and never commit on `armor-resistance` or `encampment-gear-and-resistance`. Messages end with the repo's `Co-Authored-By` attribution line.
@@ -400,7 +400,7 @@ export type BanditKind = /* existing */ | 'bandit_crossbowman'     // FOE_XP 100
 | 06 | [Trading post level 4 and the simulator](06-trading-post-level-4.md) | Level 4, tier-2 wares, `sells`, `wares` filter, refusals, the encampment line, the simulator's tier-2 buying and tally; guard measured: 233 of 500 (vs 231), 0.0 tier-2 items bought, post level 1.1 at the end | 05 | sonnet / opus | done (2ea4b87) |
 | 07 | [The screens](07-screens.md) | Trading post filter and probe, tooltip and comparison lines with the shortfall, tints in three scenes, scene and in-browser tests | 06 | sonnet / opus | done (see its record) |
 | 08 | [Crossbowman sprite](08-crossbowman-sprite.md) | `bandit_crossbowman` unit sprite (only if Q2 adds the role) | Q2 (a); may run after 03 | opus / opus (art) | done (a3b34ba) |
-| 09 | [Bandits in crossbows and steel](09-bandits.md) | Bandit gear by tier and grade, the Crossbowman role and kind, the camp's slots, as Q2 decides; cells measured | 06, 08; Q2 (a) | sonnet / sonnet | pending |
+| 09 | [Bandits in crossbows and steel](09-bandits.md) | Bandit gear by tier and grade, the Crossbowman role and kind, the camp's slots, as Q2 decides; cells measured | 06, 08; Q2 (a) | sonnet / sonnet | done (Q2 (a); SAVE 17; guard 233) |
 | 10 | [Measure, tune and document](10-measure-tune-document.md) | The guard against step 01, checks 2 and 3, the spear and halberd cells, tuning, CLAUDE.md, the manual and screenshots, the stage notes and index status, the play script | 07, 09 | opus / opus | pending |
 
 ## Execution order
@@ -419,6 +419,8 @@ export type BanditKind = /* existing */ | 'bandit_crossbowman'     // FOE_XP 100
 **Step 04's guard** (Q1 (b)): **231 of 500** (269 days, 18.2 battles, 1.8 heroes dead; 2 gold on gear). The whole move is the breastplate's spell skill −5 on the mage: the wand is never bought (the run with the wand skipped is identical), and the run with the Q1 values out and the wand skipped is identical to step 01's. See [step 04's record](04-catalog-and-ids.md).
 
 **Step 05's guard** (Q1 (b)): **175 of 500** (249 days, 17.1 battles, 1.4 heroes dead; 1 gold on gear). The run with the breastplate's `strength` removed is identical to step 04's line for line, so the whole fall of 56 is the breastplate's strength 4 on the strength-3 archer and mage. Threat 5 won 0.862 (0.895 at step 04), threat 3 0.958 (0.968). Step 10 judges or retunes it. See [step 05's record](05-weight-and-reach.md).
+
+**Step 09's guard** (Q2 (a)): **233 of 500**, unmoved from step 06's (272 days, 18.3 battles, 26.1 spawns, 1.8 heroes dead; threat 5 won 0.896, threat 3 0.969). Cells (party level = threat, 500 each, seed 1): threat 3 429 (rounds 10.3), threat 4 473, threat 5 256 (11.0 rounds; 469 at 8.8 rounds without steel), threat 6 2, threat 7 1. Step 10 judges and tunes. See [step 09's record](09-bandits.md).
 
 **Step 05 follow-up** (the user, 2026-11-07: the breastplate's strength 4 lowered to 3): **231 of 500**, identical to step 04's summary (269 days, 18.2 battles, 1.8 heroes dead, 2 gold on gear, threat 5 won 0.895). **Step 06 measures against 231.**
 

@@ -116,8 +116,8 @@ describe('a save', () => {
     expect(parsed.game.baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 16, whose items are named by material and family', () => {
-    expect(SAVE_VERSION).toBe(16)
+  it('is version 17, whose bandit camp has a Crossbowman slot', () => {
+    expect(SAVE_VERSION).toBe(17)
   })
 
   it('writes an item as its id and nothing more', () => {
