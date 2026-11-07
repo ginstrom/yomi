@@ -20,10 +20,11 @@ import {
   impactMs,
 } from './battleEffects.ts'
 
-function attack(distance: number): AttackEvent {
+/** An attack from `distance` hexes: a blow from the next hex, a shot from further, unless told. */
+function attack(distance: number, melee = distance <= 1): AttackEvent {
   return {
     type: 'attack', seq: 0, round: 1, attacker: 'hero', defender: 'goblin', opportunity: false,
-    weapon: null, distance, apCost: 4, apAfter: 4, toHit: 70, defenderAc: 15, defenderResistance: 0, armorPierce: 0,
+    weapon: null, distance, melee, apCost: 4, apAfter: 4, toHit: 70, defenderAc: 15, defenderResistance: 0, armorPierce: 0,
     damageDice: { count: 1, sides: 6, bonus: 0 }, rolled: 3, defenderHpBefore: 10,
     flankers: [], flankBonus: 0, defenderTurned: false, defenderFacing: 0, arc: 'front', arcBonus: 0, attackerFacing: 0, helpless: false, image: false,
     attackRoll: 40, chance: 55, hit: true, critical: false, fumble: false, damage: 3, defenderHpAfter: 7,
@@ -54,12 +55,20 @@ describe('attackLook', () => {
     expect(attackLook(attack(4), 'bow_hawk')).toBe('arrow')
     expect(attackLook(attack(3), 'wand_storm')).toBe('bolt')
   })
+
+  it('swings a reach weapon’s blow from two hexes, and shoots from the next hex', () => {
+    expect(attackLook(attack(2, true), 'spear')).toBe('swing')
+    expect(attackLook(attack(1, false), 'bow')).toBe('arrow')
+    expect(attackLook(attack(1, false), 'wand')).toBe('bolt')
+  })
 })
 
 describe('impactMs and holdMs', () => {
   it('lands a blow after the swing and a missile after its flight, further for further', () => {
     expect(impactMs(attack(1))).toBe(SWING_IMPACT_MS)
     expect(impactMs(attack(4))).toBe(RELEASE_MS + flightMs(4))
+    expect(impactMs(attack(2, true))).toBe(SWING_IMPACT_MS)
+    expect(impactMs(attack(1, false))).toBe(RELEASE_MS + flightMs(1))
     expect(flightMs(5)).toBeGreaterThan(flightMs(2))
     expect(impactMs(cast(3))).toBe(RELEASE_MS + flightMs(3))
     expect(impactMs(cast(0))).toBe(RELEASE_MS)

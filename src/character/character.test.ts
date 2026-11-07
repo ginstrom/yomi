@@ -13,6 +13,7 @@ import {
   IRON_GREATSWORD,
   WEAPONS,
   YEW_BOW,
+  itemById,
   type Item,
 } from '../inventory/inventory.ts'
 import {
@@ -243,6 +244,110 @@ describe('what a character’s numbers come from', () => {
     warrior.equipment = { mainHand: YEW_BOW }
     expect(deriveCombatStats(warrior)).toMatchObject({ attackRange: 7, damage: { count: 1, sides: 6, bonus: 1 } })
     expect(deriveCombatStats(warrior).armorPierce).toBeUndefined()
+  })
+})
+
+describe('weight and reach', () => {
+  const item = (id: string): Item => itemById(id)!
+  /** The warrior (strength 7, agility 6, Melee Weapons 33) at the strength given, holding `mainHand` and wearing `worn`. */
+  const wearer = (strength: number, mainHand: Item | undefined, ...worn: Item[]) => {
+    const warrior = createWarrior()
+    warrior.attributes.strength = strength
+    warrior.equipment = mainHand ? { mainHand } : {}
+    for (const piece of worn) warrior.equipment[piece.slot] = piece
+    return warrior
+  }
+
+  it('costs 5 to hit for each point of strength an item asks beyond the wearer’s', () => {
+    const bare = deriveCombatStats(wearer(3, IRON_SWORD)).toHit
+    // Plate asks 6, and adds nothing to hit of its own.
+    expect(deriveCombatStats(wearer(3, IRON_SWORD, item('iron_plate'))).toHit).toBe(bare - 15)
+  })
+
+  it('adds up the shortfall item by item', () => {
+    const bare = deriveCombatStats(wearer(3, IRON_SWORD)).toHit
+    // Plate 6 and a helm 4: 3 short and 1 short.
+    expect(deriveCombatStats(wearer(3, IRON_SWORD, item('iron_plate'), item('iron_helm'))).toHit).toBe(bare - 20)
+  })
+
+  it('costs nothing at or above the strength asked', () => {
+    const bare = deriveCombatStats(wearer(6, IRON_SWORD)).toHit
+    expect(deriveCombatStats(wearer(6, IRON_SWORD, item('iron_plate'))).toHit).toBe(bare)
+  })
+
+  it('leaves out an off-hand item under a two-handed weapon, its weight and its action points too', () => {
+    const halberd = item('iron_halberd')
+    const alone = deriveCombatStats(wearer(3, halberd))
+    expect(alone.toHit).toBe(skillLevel(wearer(3, halberd), 'melee') - 15)
+    const behind = deriveCombatStats(wearer(3, halberd, item('iron_tower_shield')))
+    expect([behind.toHit, behind.actionPoints]).toEqual([alone.toHit, alone.actionPoints])
+  })
+
+  it('counts strength a perk has raised', () => {
+    const warrior = wearer(5, IRON_SWORD, item('iron_plate'))
+    warrior.perks = { gain_strength: 1 }
+    expect(deriveCombatStats(warrior).toHit).toBe(skillLevel(warrior, 'melee'))
+  })
+
+  it('takes an item’s action points off its wearer’s', () => {
+    const bare = deriveCombatStats(wearer(10, IRON_SWORD)).actionPoints
+    expect(deriveCombatStats(wearer(10, IRON_SWORD, item('iron_plate'))).actionPoints).toBe(bare - 1)
+    expect(deriveCombatStats(wearer(10, IRON_SWORD, item('iron_plate'), item('iron_tower_shield'))).actionPoints).toBe(bare - 2)
+  })
+
+  it('lowers a caster’s spells for heavy gear and raises them for a robe or a staff', () => {
+    const skill = (mainHand: Item | undefined, ...worn: Item[]) => {
+      const mage = wearer(7, mainHand, ...worn)
+      mage.perks = { magic_arrow: 1 }
+      return deriveCombatStats(mage).magic!.skill
+    }
+    const bare = skill(undefined)
+    expect(skill(undefined, item('iron_plate'))).toBe(bare - 15)
+    expect(skill(undefined, item('iron_plate'), item('iron_helm'))).toBe(bare - 20)
+    expect(skill(undefined, item('linen_robe'))).toBe(bare + 5)
+    expect(skill(item('ash_staff'))).toBe(bare + 5)
+  })
+
+  it('makes a reach weapon melee in every respect but its range', () => {
+    const spear = item('iron_spear')
+    expect(weaponSkill(spear)).toBe('melee')
+    const warrior = wearer(7, spear)
+    // The spear's 1d8+1, and 1 for strength 7.
+    expect(deriveCombatStats(warrior)).toMatchObject({
+      toHit: skillLevel(warrior, 'melee'),
+      attackRange: 2,
+      reach: true,
+      armorPierce: 1,
+      damage: { count: 1, sides: 8, bonus: 2 },
+    })
+    // The swordsman's perks tell, the archer's do not, and nothing lengthens the reach.
+    warrior.perks = { heavy_hand: 2, armor_breaker: 2, deadly_aim: 1, far_shot: 1 }
+    expect(deriveCombatStats(warrior)).toMatchObject({
+      attackRange: 2,
+      armorPierce: 3,
+      damage: { count: 1, sides: 8, bonus: 4 },
+    })
+  })
+
+  it('lets a crossbow’s own piercing count at range, and not the strength perks’', () => {
+    const crossbow = item('yew_crossbow')
+    expect(weaponSkill(crossbow)).toBe('archery')
+    const warrior = wearer(7, crossbow)
+    expect(deriveCombatStats(warrior)).toMatchObject({ attackRange: 5, armorPierce: 2, damage: { count: 1, sides: 10, bonus: 0 } })
+    expect(deriveCombatStats(warrior).reach).toBeUndefined()
+    warrior.perks = { armor_breaker: 2 }
+    expect(deriveCombatStats(warrior).armorPierce).toBe(2)
+    // A bow pierces nothing still.
+    expect(deriveCombatStats(wearer(7, YEW_BOW)).armorPierce).toBeUndefined()
+  })
+
+  it('strikes with Magic through a wand, at range, and through a staff, as a blow', () => {
+    expect([weaponSkill(SPARK_WAND), weaponSkill(item('ash_staff'))]).toEqual(['magic', 'magic'])
+    expect(deriveCombatStats(wearer(7, SPARK_WAND))).toMatchObject({ attackRange: 4, damage: { count: 1, sides: 6, bonus: 0 } })
+    const staff = deriveCombatStats(wearer(7, item('ash_staff')))
+    // The staff's 1d6+1, and 1 for strength 7.
+    expect(staff).toMatchObject({ attackRange: 1, damage: { count: 1, sides: 6, bonus: 2 } })
+    expect(staff.reach).toBeUndefined()
   })
 })
 

@@ -7,8 +7,10 @@ import {
   OAK_SHIELD,
   SPARK_WAND,
   IRON_BREASTPLATE,
+  SHORTFALL_TO_HIT,
   WEAPONS,
   YEW_BOW,
+  strengthShortfall,
   type Equipment,
   type EquipmentSlot,
   type Item,
@@ -83,11 +85,16 @@ export function maxHp(character: Character): number {
  * The skill a character strikes with, holding `weapon` or nothing: its chance
  * to hit comes from that skill. A weapon may name its own, as a wand does;
  * otherwise a ranged one is shot with Archery and anything else, bare hands
- * included, is swung with Melee Weapons.
+ * and a reach weapon such as the spear included, is swung with Melee Weapons.
  */
 export function weaponSkill(weapon: Item | undefined): SkillId {
   if (weapon?.stats?.skill) return weapon.stats.skill
-  return (weapon?.stats?.attackRange ?? MELEE_RANGE) > MELEE_RANGE ? 'archery' : 'melee'
+  return isRangedWeapon(weapon?.stats) ? 'archery' : 'melee'
+}
+
+/** Whether a weapon of `stats` is shot: it strikes beyond the next hex and has no reach. Bare hands are not. */
+function isRangedWeapon(stats: ItemStats | undefined): boolean {
+  return (stats?.attackRange ?? MELEE_RANGE) > MELEE_RANGE && !stats?.reach
 }
 
 /** What the character's gear gives it: every item it wears but an off-hand one under a two-handed weapon. */
@@ -130,6 +137,8 @@ export function deriveCombatStats(character: Character): CombatantStats {
   let attackRange = MELEE_RANGE
   let armorPierce = 0
   let resistance = 0
+  let shortfall = 0
+  let apPenalty = 0
   for (const stats of wornStats(character)) {
     if (stats.damage) damage = stats.damage
     if (stats.attackApCost !== undefined) attackApCost = stats.attackApCost
@@ -140,14 +149,21 @@ export function deriveCombatStats(character: Character): CombatantStats {
     toHit += stats.toHit ?? 0
     critChance += stats.critChance ?? 0
     spellSkill += stats.spellSkill ?? 0
+    // Gear heavier than the wearer can carry spoils its aim, item by item; spells pay through spellSkill instead.
+    shortfall += strengthShortfall(strength, stats)
+    apPenalty += stats.apPenalty ?? 0
   }
-  // By its reach and not its skill: a wand is a ranged weapon that strikes with Magic.
-  const ranged = attackRange > MELEE_RANGE
+  toHit -= SHORTFALL_TO_HIT * shortfall
+  const weapon = character.equipment.mainHand?.stats
+  // By its range and not its skill: a wand is a ranged weapon that strikes with Magic,
+  // and a spear, which reaches two hexes, is a melee one.
+  const ranged = isRangedWeapon(weapon)
   // Strength tells in a blow, not in a shot.
   const might = ranged ? 0 : Math.max(0, Math.floor((strength - 5) / 2))
   const damageBonus = might + perkBonus(character, ranged ? 'rangedDamage' : 'meleeDamage')
-  // Piercing is the melee fighter's answer to armour, as reach is the archer's.
-  const pierce = ranged ? 0 : armorPierce + perkBonus(character, 'armorPierce')
+  // Piercing is the melee fighter's answer to armour, as range is the archer's; a crossbow's
+  // bolts pierce by their own weight, but the strength perks' piercing is in a blow.
+  const pierce = ranged ? (weapon?.rangedPierce ? armorPierce : 0) : armorPierce + perkBonus(character, 'armorPierce')
   const spells = knownSpells(character)
 
   return {
@@ -162,7 +178,8 @@ export function deriveCombatStats(character: Character): CombatantStats {
     weapon: character.equipment.mainHand?.name ?? UNARMED_WEAPON,
     attackApCost,
     attackRange: attackRange + (ranged ? perkBonus(character, 'range') : 0),
-    actionPoints: BASE_ACTION_POINTS + Math.floor(agility / 2) + perkBonus(character, 'actionPoints'),
+    ...(weapon?.reach ? { reach: true as const } : {}),
+    actionPoints: BASE_ACTION_POINTS + Math.floor(agility / 2) + perkBonus(character, 'actionPoints') - apPenalty,
     ...(spells.length > 0 ? { magic: { maxMana: maxMana(character), skill: spellSkill, spells } } : {}),
   }
 }

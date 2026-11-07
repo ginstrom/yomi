@@ -38,7 +38,7 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 21
+export const LOG_SCHEMA_VERSION = 22
 
 /** What an attacker's chance to hit gains, in percent, for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 10
@@ -252,8 +252,10 @@ export interface AttackEvent extends EventBase {
   opportunity: boolean
   /** The attacker's weapon by name; null if its stats name none. */
   weapon: string | null
-  /** Hexes between attacker and defender: 1 for a blow, more for a shot. */
+  /** Hexes between attacker and defender: 1 for most blows, 2 for a reach weapon's, more for a shot. */
   distance: number
+  /** The blow was struck with a melee weapon, reach included; false for a shot. */
+  melee: boolean
   /** The attacker's `attackApCost`, or 0 for a free attack. */
   apCost: number
   /** The attacker's action points once the attack is paid for. */
@@ -553,17 +555,22 @@ export function attackArc(defender: Pick<UnitSnapshot, 'position' | 'facing'>, f
   return away <= 1 ? 'front' : away === 2 ? 'side' : 'rear'
 }
 
+/** A weapon that strikes as melee: range 1, or reach (a spear, from two hexes). */
+export function isMelee(stats: Pick<CombatantStats, 'attackRange' | 'reach'>): boolean {
+  return stats.attackRange === 1 || stats.reach === true
+}
+
 /**
- * The arc an attack from `from` with a weapon of `attackRange` will strike:
- * the front, if it is a melee blow the defender can still turn to meet;
- * otherwise the arc it is struck in as it stands.
+ * The arc an attack from `from` will strike: the front, if it is a blow with
+ * a melee weapon (`melee`, reach included) the defender can still turn to
+ * meet; otherwise the arc it is struck in as it stands.
  */
 export function arcStruck(
   defender: Pick<UnitSnapshot, 'position' | 'facing' | 'turnReady'>,
   from: Hex,
-  attackRange: number,
+  melee: boolean,
 ): Arc {
-  return defender.turnReady && attackRange === 1 ? 'front' : attackArc(defender, from)
+  return defender.turnReady && melee ? 'front' : attackArc(defender, from)
 }
 
 /** Whether the unit has `status` in force. */
@@ -655,7 +662,9 @@ export function castTouches<U extends Placed>(units: readonly U[], caster: Place
  * with a melee weapon exerts a zone of control over its neighbouring hexes:
  * a foe stepping out of one, not merely to another hex beside it, provokes
  * a free attack, at most one per unit per enemy turn.
- * A ranged weapon (`attackRange` above 1) holds no zone. A unit with magic
+ * A melee weapon is one of range 1, or with `reach` (`isMelee`): a spear strikes
+ * from two hexes but holds its zone over the next hexes only. A ranged weapon
+ * holds no zone. A unit with magic
  * (`stats.magic`) may cast a spell it knows on a foe within the spell's
  * range, for the spell's action points and mana; mana starts full and does
  * not come back during the battle. A cast provokes nothing. A unit may change
@@ -868,7 +877,7 @@ export class BattleEngine {
     if (actor.ap < actor.stats.attackApCost || !this.canAttack(actor, foe)) return null
     const flankers = flankersOf(this.units, actor, foe)
     const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
-    const arc = arcStruck(foe, actor.position, actor.stats.attackRange)
+    const arc = arcStruck(foe, actor.position, isMelee(actor.stats))
     const arcBonus = ARC_BONUS[arc]
     const helpless = hasStatus(foe, 'asleep') ? HELPLESS_BONUS : 0
     const attacker = effectiveStats(actor)
@@ -1195,7 +1204,7 @@ export class BattleEngine {
         u.hp > 0 &&
         u.reactionReady &&
         !hasStatus(u, 'asleep') &&
-        u.stats.attackRange === 1 &&
+        isMelee(u.stats) &&
         hexDistance(u.position, hex) === 1 &&
         hexDistance(u.position, to) > 1,
     )
@@ -1357,7 +1366,7 @@ export class BattleEngine {
   ): BattleEvent[] {
     actor.facing = hexDirectionTowards(actor.position, target.position)!
     const defenderTurned =
-      target.turnReady && actor.stats.attackRange === 1 && attackArc(target, actor.position) !== 'front'
+      target.turnReady && isMelee(actor.stats) && attackArc(target, actor.position) !== 'front'
     if (defenderTurned) {
       target.facing = hexDirectionTowards(target.position, actor.position)!
       target.turnReady = false
@@ -1390,6 +1399,7 @@ export class BattleEngine {
         opportunity: apCost === null,
         weapon: actor.stats.weapon ?? null,
         distance: hexDistance(actor.position, target.position),
+        melee: isMelee(actor.stats),
         apCost: apCost ?? 0,
         apAfter: actor.ap,
         flankers,

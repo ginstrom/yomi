@@ -130,6 +130,8 @@ describe('sameCombatStats', () => {
   it('compares every stat, damage dice included', () => {
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, damage: { ...WARRIOR_STATS.damage } })).toBe(true)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, attackRange: 5 })).toBe(false)
+    expect(sameCombatStats({ ...WARRIOR_STATS, attackRange: 2 }, { ...WARRIOR_STATS, attackRange: 2, reach: true })).toBe(false)
+    expect(sameCombatStats({ ...WARRIOR_STATS, reach: true }, { ...WARRIOR_STATS, reach: true })).toBe(true)
     const magic = { maxMana: 18, skill: 76, spells: ['magic_arrow' as const] }
     const mage = { ...WARRIOR_STATS, magic }
     expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, spells: [...magic.spells] } })).toBe(true)

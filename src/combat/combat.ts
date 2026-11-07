@@ -34,8 +34,10 @@ export interface CombatantStats {
   weapon?: string
   /** Action points one attack costs; set by the weapon. */
   attackApCost: number
-  /** How many hexes away the unit can strike: 1 for a melee weapon, more for a ranged one. */
+  /** How many hexes away the unit can strike: 1 for a melee weapon, more for a ranged one or one with `reach`. */
   attackRange: number
+  /** Its weapon is melee though it strikes beyond the next hex (a spear); none when left out. */
+  reach?: true
   /** Action points the unit gets at the start of each of its side's turns. */
   actionPoints: number
   /** What the unit casts with; left out for a unit that knows no spell. */
@@ -96,6 +98,7 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     a.weapon === b.weapon &&
     a.attackApCost === b.attackApCost &&
     a.attackRange === b.attackRange &&
+    (a.reach ?? false) === (b.reach ?? false) &&
     a.actionPoints === b.actionPoints &&
     sameMagic(a.magic, b.magic) &&
     sameAbilities(a.abilities, b.abilities) &&

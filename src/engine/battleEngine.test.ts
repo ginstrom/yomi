@@ -11,10 +11,12 @@ import {
   FLANK_BONUS_PER_ALLY,
   LOG_SCHEMA_VERSION,
   areaTouches,
+  arcStruck,
   attackArc,
   effectiveStats,
   flankersOf,
   formatEvent,
+  isMelee,
   type AbilityEvent,
   type Action,
   type AttackEvent,
@@ -471,6 +473,7 @@ describe('BattleEngine ranged attacks', () => {
     expect(engine.previewAttack('archer', 'goblin')).toMatchObject({ arc: 'rear', arcBonus: ARC_BONUS.rear })
     const [attack] = engine.step(SHOOT_GOBLIN) as [AttackEvent]
     expect(attack).toMatchObject({
+      melee: false,
       defenderTurned: false,
       defenderFacing: EAST,
       arc: 'rear',
@@ -507,6 +510,69 @@ describe('BattleEngine ranged attacks', () => {
     const engine = new BattleEngine(setup([ARCHER, GOBLIN]), { rng: sequence([FUMBLE]) })
     const events = engine.step(move('archer', hex(0, 1)))
     expect(events.map((e) => e.type)).toEqual(['move', 'attack', 'move'])
+  })
+})
+
+describe('BattleEngine reach', () => {
+  // A spear: a melee weapon that strikes from two hexes.
+  const SPEAR_STATS: CombatantStats = { ...WARRIOR_STATS, name: 'Spearman', attackRange: 2, reach: true, armorPierce: 1 }
+  const SPEARMAN: UnitSetup = { id: 'spearman', side: 'player', stats: SPEAR_STATS, position: hex(1, 1) }
+  const THRUST: Action = { type: 'attack', unit: 'spearman', target: 'goblin' }
+  const opportunity = (events: readonly BattleEvent[]) =>
+    events.filter((e): e is AttackEvent => e.type === 'attack' && e.opportunity)
+
+  it('tells a melee weapon by a range of 1 or by reach', () => {
+    expect(isMelee({ attackRange: 1 })).toBe(true)
+    expect(isMelee({ attackRange: 2, reach: true })).toBe(true)
+    expect(isMelee({ attackRange: 5 })).toBe(false)
+  })
+
+  it('strikes a foe two hexes off without moving, as a melee blow the foe turns to meet', () => {
+    // The goblin, two hexes east, faces east: the spearman comes at its back.
+    const engine = new BattleEngine(setup([SPEARMAN, { ...GOBLIN, position: hex(3, 1), facing: EAST }]), {
+      rng: sequence([FUMBLE]),
+    })
+    expect(nonMoves(engine)).toEqual([THRUST, END_TURN])
+    expect(engine.previewAttack('spearman', 'goblin')).toMatchObject({ arc: 'front', arcBonus: 0 })
+    const [attack] = engine.step(THRUST) as [AttackEvent]
+    expect(attack).toMatchObject({
+      distance: 2,
+      melee: true,
+      armorPierce: 1,
+      defenderTurned: true,
+      defenderFacing: WEST,
+      arc: 'front',
+    })
+    expect(unitOf(engine, 'goblin').turnReady).toBe(false)
+  })
+
+  it('holds a zone of control over the next hexes only', () => {
+    const near = new BattleEngine(setup([SPEARMAN, GOBLIN]), { rng: sequence([FUMBLE]) })
+    near.step(END_TURN)
+    // From beside the spearman to two hexes off: one free attack, a melee one.
+    expect(opportunity(near.step(move('goblin', hex(3, 1))))).toEqual([
+      expect.objectContaining({ attacker: 'spearman', defender: 'goblin', melee: true, distance: 1 }),
+    ])
+
+    const far = new BattleEngine(setup([SPEARMAN, { ...GOBLIN, position: hex(3, 1) }]), { rng: sequence([FUMBLE]) })
+    far.step(END_TURN)
+    expect(far.previewMove('goblin', hex(4, 1))!.provokes).toEqual([])
+    expect(opportunity(far.step(move('goblin', hex(4, 1))))).toEqual([])
+    expect(opportunity(far.step(move('goblin', hex(3, 0))))).toEqual([])
+  })
+
+  it('does not provoke a slide from one hex beside the spearman to another', () => {
+    const engine = new BattleEngine(setup([SPEARMAN, GOBLIN]), { rng: sequence([FUMBLE]) })
+    engine.step(END_TURN)
+    expect(engine.previewMove('goblin', hex(2, 0))!.provokes).toEqual([])
+    expect(opportunity(engine.step(move('goblin', hex(2, 0))))).toEqual([])
+  })
+
+  it('judges the arc of a blow as the front of a foe that can still turn, and of a shot as it stands', () => {
+    const defender = { position: hex(2, 1), facing: EAST, turnReady: true }
+    expect(arcStruck(defender, hex(0, 1), true)).toBe('front')
+    expect(arcStruck(defender, hex(0, 1), false)).toBe('rear')
+    expect(arcStruck({ ...defender, turnReady: false }, hex(0, 1), true)).toBe('rear')
   })
 })
 
@@ -1017,7 +1083,7 @@ describe('BattleEngine spells', () => {
     const engine = battle([MAGE, FAR_GOBLIN])
     expect(unitOf(engine, 'mage').mana).toBe(18)
     expect(unitOf(engine, 'goblin').mana).toBe(0)
-    expect(engine.getLog()[0]).toMatchObject({ schemaVersion: 21, units: [{ mana: 18, magic: MAGE_STATS.magic }, {}] })
+    expect(engine.getLog()[0]).toMatchObject({ schemaVersion: LOG_SCHEMA_VERSION, units: [{ mana: 18, magic: MAGE_STATS.magic }, {}] })
   })
 
   it('lists a cast on each foe in the spell’s range, and pays its action points and mana', () => {
@@ -1803,8 +1869,8 @@ describe('BattleEngine strike routines and recharge', () => {
   const bite = (target: string): Action => ({ type: 'ability', unit: 'spider', ability: 'spider_bite', target })
   const NAMED = { ...NAMES, troll: 'Troll', spider: 'Spider', zed: 'Zed' }
 
-  it('raises the log schema to 21 (step 05, area abilities)', () => {
-    expect(LOG_SCHEMA_VERSION).toBe(21)
+  it('raises the log schema to 22 (stage 3 step 05, AttackEvent.melee)', () => {
+    expect(LOG_SCHEMA_VERSION).toBe(22)
   })
 
   it('makes one attack per strike, the first carrying the ability’s AP and the rest none', () => {
@@ -1812,7 +1878,7 @@ describe('BattleEngine strike routines and recharge', () => {
     const events = engine.step(claws('warrior'))
     expect(events.map((e) => e.type)).toEqual(['attack', 'attack'])
     // A roll of 34 within the Troll's 40% against the Warrior; a 3 on the d4, +2.
-    const strike = { attacker: 'troll', defender: 'warrior', ability: 'troll_claws', strike: 'Claw', opportunity: false, weapon: 'Claws' }
+    const strike = { attacker: 'troll', defender: 'warrior', ability: 'troll_claws', strike: 'Claw', opportunity: false, weapon: 'Claws', melee: true }
     expect(events[0]).toMatchObject({ ...strike, apCost: 8, apAfter: 0, hit: true, damageDice: TROLL_STATS.damage, rolled: 5, damage: 5, defenderHpAfter: 15 })
     expect(events[1]).toMatchObject({ ...strike, apCost: 0, apAfter: 0, hit: true, rolled: 5, damage: 5, defenderHpAfter: 10 })
     expect(events[0]).not.toHaveProperty('status')

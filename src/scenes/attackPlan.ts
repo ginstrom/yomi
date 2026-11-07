@@ -1,6 +1,7 @@
 import {
   ARC_BONUS,
   arcStruck,
+  isMelee,
   type Action,
   type BattleEngine,
   type MovePreview,
@@ -61,7 +62,7 @@ export function planAttack(engine: BattleEngine, unit: UnitId, target: UnitId): 
   if (strikes.length > 0) {
     const move = pick(strikes, (m) => [
       m.preview.provokes.length,
-      -ARC_BONUS[arcStruck(foe, m.action.to, actor.attackRange)],
+      -ARC_BONUS[arcStruck(foe, m.action.to, isMelee(actor))],
       m.preview.path.length,
     ])
     return { move, attack: true }

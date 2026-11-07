@@ -55,6 +55,18 @@ describe('policies', () => {
     expect(choose(engine)).toEqual(END_TURN)
   })
 
+  it('aggressive thrusts with a spear from two hexes rather than walking up', () => {
+    const spearman = { ...GOBLIN_STATS, attackRange: 2, reach: true as const }
+    const engine = new BattleEngine({
+      board: { cols: 8, rows: 3 },
+      units: [
+        { id: 'p1', side: 'player', stats: spearman, position: hex(0, 1) },
+        { id: 'e1', side: 'enemy', stats: GOBLIN_STATS, position: hex(2, 1) },
+      ],
+    })
+    expect(choose(engine)).toEqual(ATTACK_E1)
+  })
+
   describe('aggressive with a caster', () => {
     // A wand that reaches 4 hexes for 5 AP, and Magic Arrow, which reaches 5 for 4 AP and 3 mana.
     const mage = (maxMana: number) => ({

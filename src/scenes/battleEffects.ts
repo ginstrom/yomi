@@ -21,12 +21,12 @@ export const BURST_ANIM = 'burst'
 export const EFFECT_FRAME = 'main'
 export const TIP_POINT = 'tip'
 
-/** A blow is swung; a shot flies, as an arrow from a bow or a bolt from a wand. */
+/** A blow (a melee weapon's, reach included) is swung; a shot flies, as an arrow from a bow or a bolt from a wand. */
 export type AttackLook = 'swing' | 'arrow' | 'bolt'
 
 /** What a hero holds in its weapon hand decides the look of a shot; a foe holds none, and only strikes. */
 export function attackLook(event: Extract<BattleEvent, { type: 'attack' }>, heldIcon?: ItemIcon): AttackLook {
-  if (event.distance <= 1) return 'swing'
+  if (event.melee) return 'swing'
   return heldIcon?.startsWith('wand') ? 'bolt' : 'arrow'
 }
 
@@ -107,7 +107,7 @@ export function flightMs(hexes: number): number {
  * What follows it in the log (a fall, a battle's end) waits for it (`holdMs`).
  */
 export function impactMs(event: BattleEvent): number {
-  if (event.type === 'attack') return event.distance <= 1 ? SWING_IMPACT_MS : RELEASE_MS + flightMs(event.distance)
+  if (event.type === 'attack') return event.melee ? SWING_IMPACT_MS : RELEASE_MS + flightMs(event.distance)
   if (event.type === 'cast') return RELEASE_MS + (event.distance === 0 ? 0 : flightMs(event.distance))
   if (event.type === 'ability') {
     if (event.shape !== 'burst') return RELEASE_MS + AREA_SWEEP_MS
