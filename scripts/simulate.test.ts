@@ -6,6 +6,7 @@ import { newGame } from '../src/game/gameState.ts'
 import { heroId } from '../src/game/encounters.ts'
 import { readyMadeParty } from '../src/game/party.ts'
 import { OUTPOST_COST } from '../src/game/buildings.ts'
+import { craft } from '../src/game/crafting.ts'
 import { SOURCE_ID, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
 import {
   MAX_CAMPAIGN_DAYS,
@@ -412,11 +413,25 @@ describe('the trading post and crafting in a campaign', () => {
     const game = newGame(undefined, null, 1)
     game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
     game.world.stock = { gold: 50, iron: 50, timber: 50 }
-    expect(craftGear(game, 1)).toBe(1)
+    expect(craftGear(game, 1).crafted).toBe(1)
     expect(game.world.turn).toBe(2)
     expect(game.party[0].equipment.mainHand!.id).toBe('iron_sword+balanced1')
-    expect(craftGear(game, 1)).toBe(1)
+    expect(craftGear(game, 1).crafted).toBe(1)
     expect(game.party[1].equipment.mainHand!.id).toBe('yew_bow+recurve1')
-    expect(craftGear(game, 1)).toBe(0)
+    expect(craftGear(game, 1).crafted).toBe(0)
+  })
+
+  it('hands back the events of the days a field craft passes, for the campaign to tally', () => {
+    const make = () => {
+      const game = newGame(undefined, null, 1)
+      game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
+      game.world.stock = { gold: 50, iron: 50, timber: 50 }
+      return game
+    }
+    const direct = make()
+    const expected = craft(direct, { from: 'worn', member: 0, slot: 'mainHand', itemId: direct.party[0].equipment.mainHand!.id }, 'balanced', 1)
+    const result = craftGear(make(), 1)
+    expect(expected.refusal).toBeNull()
+    expect(result.events).toEqual('events' in expected ? expected.events : undefined)
   })
 })

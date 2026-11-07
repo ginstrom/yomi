@@ -374,10 +374,12 @@ function modifierRank(baseId: string, mod: { id: ModifierId; grade: Grade } | un
  * Crafts what the careful party wants on every member's weapon, shield and
  * armour that the place makes better than what it has: the first preferred
  * modifier unlocked here, at the best grade the stock affords. In the field
- * that is a day each, so it does `limit` at most.
+ * that is a day each, so it does `limit` at most. Returns how many it made and
+ * the events of the days it took (none at a workshop), for the caller to tally.
  */
-export function craftGear(game: GameState, limit = Infinity): number {
+export function craftGear(game: GameState, limit = Infinity): { crafted: number; events: WorldEvent[] } {
   let crafted = 0
+  const events: WorldEvent[] = []
   const tier = craftTier(game.world)
   for (const [member, hero] of game.party.entries()) {
     for (const slot of GEAR_SLOTS) {
@@ -387,16 +389,19 @@ export function craftGear(game: GameState, limit = Infinity): number {
       for (const id of PREFERRED_MODIFIERS[base.id] ?? []) {
         const unlocked = MODIFIERS[id].unlock <= (tier === 'field' ? 0 : tier)
         if (!unlocked) continue
-        const grade = [...GRADES].reverse().find(
-          (g) => g <= highestGrade(tier) && modifierRank(base.id, { id, grade: g }) < modifierRank(base.id, item.mod) &&
-            craft(game, { from: 'worn', member, slot, itemId: item.id }, id, g).refusal === null,
-        )
-        if (grade !== undefined) crafted++
+        for (const grade of [...GRADES].reverse()) {
+          if (grade > highestGrade(tier) || modifierRank(base.id, { id, grade }) >= modifierRank(base.id, item.mod)) continue
+          const result = craft(game, { from: 'worn', member, slot, itemId: item.id }, id, grade)
+          if (result.refusal !== null) continue
+          crafted++
+          events.push(...result.events)
+          break
+        }
         break
       }
     }
   }
-  return crafted
+  return { crafted, events }
 }
 
 /** What the stock should keep of each material for what the careful party still means to buy: every level left of every building, and a craft for each place in the party. */
@@ -453,7 +458,7 @@ export function visitFacilities(game: GameState): Trade {
       const better = [...GRADES].reverse().find((g) => g > (worn.grade ?? 1) && g <= world.tradingPost && gold() >= buyPrice(craftedItem(base, g))!)
       if (better === undefined) continue
       const bought = craftedItem(base, better)
-      buy(game, bought.id)
+      if (buy(game, bought.id) !== null) continue
       trade.goldOnGear += buyPrice(bought)!
       game.baggage.pop()
       hero.equipment[slot] = bought
@@ -462,7 +467,7 @@ export function visitFacilities(game: GameState): Trade {
   }
   sellAll()
   // Without a workshop, crafting here would be the field's, a day each: that waits for the road.
-  if (craftTier(world) !== 'field') trade.crafted += craftGear(game)
+  if (craftTier(world) !== 'field') trade.crafted += craftGear(game).crafted
   while (raiseShrine(world) === null);
   return trade
 }
@@ -631,7 +636,8 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
     // A field craft on one piece of gear the stock affords, a day's work.
     if (canCamp(world)) {
       const turn = world.turn
-      const crafted = craftGear(game, 1)
+      const { crafted, events } = craftGear(game, 1)
+      tally(events)
       record.crafted += crafted
       record.fieldCraftDays += world.turn - turn
     }
