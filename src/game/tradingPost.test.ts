@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { IRON_SWORD, SPARK_WAND, itemById } from '../inventory/inventory.ts'
+import { BASE_ITEMS, IRON_SWORD, SPARK_WAND, itemById } from '../inventory/inventory.ts'
 import { newGame } from './gameState.ts'
 import { buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, sellables, wares } from './tradingPost.ts'
 
@@ -86,5 +86,15 @@ describe('the trading post', () => {
     expect(sellMaterial(game, 'salt', 2)).toMatch(/at Hearthold/)
     expect(raiseTradingPost(game)).toMatch(/at Hearthold/)
     expect(game.world.stock.gold).toBe(100)
+  })
+})
+
+describe('the price list', () => {
+  it('prices every plain item with a finite, positive number', () => {
+    for (const item of BASE_ITEMS) {
+      const price = buyPrice(item)
+      expect(Number.isFinite(price), item.id).toBe(true)
+      expect(price!, item.id).toBeGreaterThan(0)
+    }
   })
 })
