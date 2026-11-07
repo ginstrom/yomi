@@ -771,6 +771,13 @@ describe('rune stats and hit points', () => {
       clampHp(c, max + 4)
       expect(c.hp).toBe(max)
     })
+    it('keeps the share on a rise: 18 of 36 becomes 20 of 40', () => {
+      const c = dressed('steel_breastplate@3#life2.life2')
+      expect(maxHp(c)).toBe(40)
+      c.hp = 18
+      clampHp(c, 36)
+      expect(c.hp).toBe(20)
+    })
     it('scales up on a rise, and leaves 0 at 0 and an unchanged maximum alone', () => {
       const c = createWarrior()
       const max = maxHp(c)
