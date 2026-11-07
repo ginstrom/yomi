@@ -29,6 +29,7 @@ Large, but the architecture and design are done (the stage design cuts from refe
 | 2026-11-07 | Own branch off long-campaign-stage-03 | orchestrator | commit on stage-03 | Stage 3 is under review as PR #4; keep it fixed |
 | 2026-11-07 | D1: when a Life rune's max HP drops (gear off outside battle), keep the same share of HP, not clamp | user | clamp, lose the excess (planner default) | — ; step 04 amends the plan and implements it |
 | 2026-11-07 | D1 applies both ways: max HP rising (Life gear put on) also keeps the share, so a swap is reversible | orchestrator | rise leaves hp unchanged (plan) | Taking Life gear off and on otherwise bled HP (20/40 -> 18/36 -> 18/40); symmetric reading of the user's 'keep the same share' |
+| 2026-11-07 | Runed item names use square brackets, "Masterwork Iron Longsword [Ember I]", not ⟨ ⟩ (design §4, C2) | user | keep ⟨ ⟩; ‹ › | ⟨ ⟩ read as ( ) at the tooltip's 12px; step 09 makes the change |
 | 2026-11-07 | D2 Source loot uses threat 5's row; D4 rank 3/4 prices 135/405; D3 simulator rune order Ember>Storm>Stone weapons, Stone>Life armour, workshop only | user | — | Defaults accepted |
 | 2026-11-07 | Accept the planner's 19 corrections (index); D1-D4 defaults put to the user | orchestrator | — | Each settles a contradiction with the code or fills a gap |
 | 2026-11-07 | Skip architecture and design; the stage design is the approved design | orchestrator | new design | Stage design marked ready for planning |
@@ -54,4 +55,6 @@ None.
 - Steps 06 (opus) and 07 (sonnet) started in parallel.
 - Step 07 (2d7d130, sonnet): loot.ts, rune wares and prices. Review (sonnet): clean.
 - Step 06 (b1eeef1, opus): runecraft.ts (embed/extract/fuse, costs 5/10/10 a rank), itemPlace worn paths clampHp, rise test. Review (opus) running.
-- Step 08 (sonnet) running; step 10 waits for 08 to commit (shared working tree).
+- Step 06 review (opus): clean, guard reproduced; nits ("a Ember" article, weak field-day events test, CLAUDE.md runecraft clamp note) to step 09.
+- Step 08 (4c55ee9, 12b061b, sonnet): pips, tooltips, wards line, +N element text, victory runes, step 05 follow-ups. Review round 1 (opus): blocking, Wards line overflowed the panel; fixed in f1e71e7 (wardsLines wraps), orchestrator viewed; re-review running.
+- Step 10 (5e04803, opus): simulator rune loot, RUNE_ORDER/runecraftGear, all gear writes clamp; guard 230 (-3): runes found ~13/campaign but sockets almost never worn, so they sit in the pouch. Deviation: baggage sold once. Review (opus) running.
