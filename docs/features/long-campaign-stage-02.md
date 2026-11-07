@@ -35,6 +35,8 @@ Large, but the architecture and design are already done: the stage design cuts f
 | 2026-11-01 | Guard re-measured at the start of the stage | orchestrator | — | Index convention; fdc0593 and 51cecb5 (free attacks, defender turning) changed battle rules after stage 1's 238 |
 | 2026-11-07 | Review and open a PR for `armor-resistance` | user | keep local; push only | — |
 | 2026-11-07 | Next stage is stage 3 (gear families) | user | stage 5; stop | Index order |
+| 2026-11-07 | Split into two stacked PRs at 9c740ae (PR A `encampment-gear-and-resistance`, PR B `armor-resistance`) | user | one PR without CRISP; hold | Whole branch is 335 files, over CRISP's 300 |
+| 2026-11-07 | Fix all nine pr-reviewer findings on armor-resistance (PR A unchanged; its description points at the fixes) | user | subset; none | Small, and avoids rewriting PR A |
 | 2026-11-07 | Leave the cosmetic leftovers (tail flick, cone/line flash) | user | fix both; fix sweep | No effect on the rules |
 
 ## Open questions
@@ -85,3 +87,4 @@ Work only the user can do:
 - Overall review round 2 (opus) at a176ad4: clean; make test 993; browser debug 4/4, battle 11/11. Two doc nits fixed by the orchestrator.
 - QA round 2 (sonnet) at a975aa9: pass; recharge wording right through each cycle; panel readable at 840×560 and full size. Not seen live: a warded critical log line (unit-tested).
 - Not done by any agent: the play script walked by hand by the user.
+- pr-reviewer (2026-11-07): PR A at 9c740ae ready; PR B at efe3888 ready after 8 fix commits (6ea3064..efe3888, engineer sonnet; delta CRISP check sonnet clean). Records in .git/pr-review/{encampment-gear-and-resistance,armor-resistance}.md.
