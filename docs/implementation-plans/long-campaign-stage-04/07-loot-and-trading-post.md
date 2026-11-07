@@ -161,11 +161,18 @@ PATH=/opt/homebrew/opt/node@26/bin:$PATH npm test
 
 ## 6. Completion criteria
 
-- [ ] `src/game/loot.ts` implements C7 exactly, with the draw order pinned by a scripted-RNG test.
-- [ ] `src/game/tradingPost.ts` implements C8; runed items are never wares; `salePrice` includes runes.
-- [ ] `loot.test.ts` and the new `tradingPost.test.ts` cases pass; `npm test` passes.
-- [ ] CLAUDE.md's lines for `loot.ts` and the trading post updated (and the `takeLoot` sentence handled as §4 says).
-- [ ] One commit on `long-campaign-stage-04`, not pushed.
-- [ ] Step 07's row in [index.md](index.md) set to `done` with the commit; this file's execution record filled.
+- [x] `src/game/loot.ts` implements C7 exactly, with the draw order pinned by a scripted-RNG test.
+- [x] `src/game/tradingPost.ts` implements C8; runed items are never wares; `salePrice` includes runes.
+- [x] `loot.test.ts` and the new `tradingPost.test.ts` cases pass; `npm test` passes.
+- [x] CLAUDE.md's lines for `loot.ts` and the trading post updated (and the `takeLoot` sentence handled as §4 says).
+- [x] One commit on `long-campaign-stage-04`, not pushed.
+- [x] Step 07's row in [index.md](index.md) set to `done` with the commit; this file's execution record filled.
 
 ## Execution record
+
+Engineer: step 07 done. Commands: `npx vitest run src/game/loot.test.ts src/game/tradingPost.test.ts` green; `npm test` (tsc + vitest): 75 files, 1130 tests passed.
+
+- Built `src/game/loot.ts` (C7, draws in the stated order, pinned by scripted-RNG tests) and C8 in `src/game/tradingPost.ts`; `salePrice`, `sells` and `buyRefusal` handle runed items. `buyPrice` of a runed item already gave the plain price.
+- Deviations: none. In the test for a two-rune item the item is `steel_longsword@3#ember1.rime2` (tier 2 at Masterwork has 2 sockets; the plan's un-graded id has 1).
+- Guard: skipped; `simulate.ts` and what it calls are unchanged in behaviour (only new functions, and `salePrice` differs only for runed items).
+- CLAUDE.md: added the `loot.ts` entry and extended the `tradingPost.ts` entry. The world-map sentence on `takeLoot` is left to step 08, which wires `takeRunes` into `BattleScene.endBattle`.

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { BASE_ITEMS, IRON_SWORD, SPARK_WAND, STORM_WAND, itemById } from '../inventory/inventory.ts'
 import { newGame } from './gameState.ts'
-import { MAX_TRADING_POST_LEVEL, TIER_TWO_LEVEL, TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, sellables, sells, wares } from './tradingPost.ts'
+import type { RuneKey } from '../inventory/runes.ts'
+import { MAX_TRADING_POST_LEVEL, TIER_TWO_LEVEL, TRADING_POST_COSTS, VALUES, buy, buyPrice, buyRefusal, buyRune, raiseTradingPost, runePrice, runeSalePrice, runeWares, salePrice, sell, sellMaterial, sellRune, sellables, sells, wares } from './tradingPost.ts'
 
 /** A new game at home, with 100 gold. */
 function home() {
@@ -194,5 +195,82 @@ describe('trading post level 4', () => {
     game.world.tradingPost = 4
     expect(buy(game, 'steel_longsword')).toBeNull()
     expect(game.world.stock.gold).toBe(70)
+  })
+})
+
+describe('the trading post\'s runes', () => {
+  const away = () => {
+    const game = home()
+    game.world.party = { q: game.world.party.q + 3, r: game.world.party.r }
+    return game
+  }
+
+  it('sells six kinds at rank 1 from level 2 and at rank 2 from level 4', () => {
+    const game = home()
+    const six = ['ember', 'rime', 'storm', 'stone', 'wind', 'life']
+    expect(runeWares(game.world)).toEqual([])
+    game.world.tradingPost = 2
+    expect(runeWares(game.world)).toEqual(six.map((k) => `${k}1`))
+    game.world.tradingPost = 3
+    expect(runeWares(game.world)).toHaveLength(6)
+    game.world.tradingPost = 4
+    expect(runeWares(game.world)).toEqual([...six.map((k) => `${k}1`), ...six.map((k) => `${k}2`)])
+  })
+
+  it('prices runes by rank and pays a third', () => {
+    expect([1, 2, 3, 4].map((r) => runePrice(`dawn${r}` as RuneKey))).toEqual([15, 45, 135, 405])
+    expect([1, 2, 3, 4].map((r) => runeSalePrice(`ember${r}` as RuneKey))).toEqual([5, 15, 45, 135])
+  })
+
+  it('buys into the pouch, and refuses without changing anything', () => {
+    const game = home()
+    game.world.tradingPost = 2
+    expect(buyRune(game, 'ember1')).toBeNull()
+    expect(game.world.stock.gold).toBe(85)
+    expect(game.runes).toEqual({ ember1: 1 })
+    const stock = { ...game.world.stock }
+    for (const key of ['venom1', 'dawn1', 'ember2', 'ember3'] as RuneKey[]) expect(buyRune(game, key)).not.toBeNull()
+    expect(buyRune(game, 'ember2')).toMatch(/level 4/)
+    game.world.tradingPost = 1
+    expect(buyRune(game, 'ember1')).toMatch(/level 2/)
+    game.world.tradingPost = 2
+    game.world.stock.gold = 14
+    expect(buyRune(game, 'rime1')).toMatch(/costs 15 gold/)
+    expect(game.world.stock.gold).toBe(14)
+    expect({ ...game.world.stock, gold: 85 }).toEqual(stock)
+    expect(game.runes).toEqual({ ember1: 1 })
+    const gone = away()
+    gone.world.tradingPost = 2
+    expect(buyRune(gone, 'ember1')).toMatch(/trading post is at/)
+    expect(gone.runes).toEqual({})
+  })
+
+  it('sells any rune from the pouch', () => {
+    const game = home()
+    game.runes = { dawn3: 1 }
+    expect(sellRune(game, 'dawn3')).toBeNull()
+    expect(game.world.stock.gold).toBe(145)
+    expect(game.runes.dawn3 ?? 0).toBe(0)
+    expect(sellRune(game, 'dawn3')).toMatch(/holds no/)
+    const gone = away()
+    gone.runes = { ember1: 1 }
+    expect(sellRune(gone, 'ember1')).toMatch(/trading post is at/)
+    expect(gone.runes.ember1).toBe(1)
+  })
+
+  it('never sells a runed item, and prices one by its plain item and its runes', () => {
+    const runed = itemById('iron_sword@3#ember1')!
+    expect(runed).toBeDefined()
+    for (let level = 1; level <= 4; level++) {
+      const game = home()
+      game.world.tradingPost = level
+      expect(sells(game.world, runed)).toBe(false)
+      expect(buyRefusal(game, runed.id)).toMatch(/does not sell/)
+      expect(wares(game.world).some((item) => item.runes?.length)).toBe(false)
+    }
+    expect(buyPrice(runed)).toBe(buyPrice(itemById('iron_sword@3')!))
+    expect(salePrice(runed)).toBe(Math.floor((96 + 15) / 2))
+    expect(salePrice(itemById('steel_longsword@3#ember1.rime2')!)).toBe(Math.floor((buyPrice(itemById('steel_longsword@3')!)! + 60) / 2))
+    expect(salePrice(itemById('emberblade#dawn1')!)).toBe(Math.floor((VALUES.emberblade + 15) / 2))
   })
 })
