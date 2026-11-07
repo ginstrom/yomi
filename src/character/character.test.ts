@@ -9,8 +9,8 @@ import {
   RING_PROTECTION,
   SAGE_CIRCLET,
   SPARK_WAND,
-  STEEL_ARMOR,
-  STEEL_GREATSWORD,
+  IRON_BREASTPLATE,
+  IRON_GREATSWORD,
   WEAPONS,
   YEW_BOW,
   type Item,
@@ -38,7 +38,7 @@ describe('createWarrior', () => {
     const warrior = createWarrior()
     expect([warrior.level, warrior.xp, warrior.skillPoints, warrior.perkPicks]).toEqual([1, 0, 0, 0])
     expect(warrior.hp).toBe(maxHp(warrior))
-    expect(warrior.equipment).toEqual({ armor: STEEL_ARMOR, mainHand: IRON_SWORD, offHand: OAK_SHIELD })
+    expect(warrior.equipment).toEqual({ armor: IRON_BREASTPLATE, mainHand: IRON_SWORD, offHand: OAK_SHIELD })
     expect(warrior.backpack).toHaveLength(BACKPACK_SIZE)
     const carried = warrior.backpack.filter((slot) => slot !== null)
     expect(carried).toEqual(WEAPONS.filter((weapon) => weapon !== IRON_SWORD))
@@ -111,7 +111,7 @@ describe('deriveCombatStats', () => {
 
   it('gets nothing from a shield while wielding a two-handed weapon', () => {
     const warrior = createWarrior()
-    warrior.equipment.mainHand = STEEL_GREATSWORD
+    warrior.equipment.mainHand = IRON_GREATSWORD
     expect(deriveCombatStats(warrior).ac).toBe(16)
     warrior.equipment.mainHand = IRON_DAGGER
     expect(deriveCombatStats(warrior).ac).toBe(26)
@@ -122,7 +122,7 @@ describe('deriveCombatStats', () => {
     delete warrior.equipment.offHand
     expect(deriveCombatStats(warrior).ac).toBe(16)
 
-    const ring: Item = { ...STEEL_ARMOR, id: 'ring', slot: 'ring1', stats: { toHit: 5, acBonus: 5 } }
+    const ring: Item = { ...IRON_BREASTPLATE, id: 'ring', slot: 'ring1', stats: { toHit: 5, acBonus: 5 } }
     warrior.equipment.ring1 = ring
     expect(deriveCombatStats(warrior)).toMatchObject({ ac: 21, toHit: 38 })
   })
@@ -138,7 +138,7 @@ describe('createCharacter', () => {
 
   it('puts the build’s weapon in hand and the rest in the backpack, the shield too when both hands are full', () => {
     const archer = createCharacter('Archer', ARCHER)
-    expect(archer.equipment).toEqual({ armor: STEEL_ARMOR, mainHand: YEW_BOW })
+    expect(archer.equipment).toEqual({ armor: IRON_BREASTPLATE, mainHand: YEW_BOW })
     const carried = archer.backpack.filter((slot) => slot !== null)
     expect(carried).toEqual([...WEAPONS.filter((weapon) => weapon !== YEW_BOW), OAK_SHIELD])
     expect(archer.hp).toBe(10 + 4 + 5)
@@ -161,7 +161,7 @@ describe('createCharacter', () => {
 
 describe('what a character’s numbers come from', () => {
   it('strikes with the skill of the weapon in hand', () => {
-    expect([undefined, IRON_SWORD, STEEL_GREATSWORD, YEW_BOW, SPARK_WAND].map(weaponSkill)).toEqual([
+    expect([undefined, IRON_SWORD, IRON_GREATSWORD, YEW_BOW, SPARK_WAND].map(weaponSkill)).toEqual([
       'melee',
       'melee',
       'melee',
@@ -272,10 +272,11 @@ describe('magic', () => {
 
   it('fights with the spells its perks teach, at its Magic and what its gear adds to a spell', () => {
     const mage = caster()
-    expect(deriveCombatStats(mage).magic).toEqual({ maxMana: 8, skill: 8, spells: ['magic_arrow'] })
+    // Its Magic of 8, less the breastplate's 5.
+    expect(deriveCombatStats(mage).magic).toEqual({ maxMana: 8, skill: 3, spells: ['magic_arrow'] })
     mage.equipment.neck = AMULET_FOCUS
     mage.trained.magic = 4
-    expect(deriveCombatStats(mage).magic).toMatchObject({ skill: 22 })
+    expect(deriveCombatStats(mage).magic).toMatchObject({ skill: 17 })
     // The amulet helps a spell, not a wand.
     mage.equipment.mainHand = SPARK_WAND
     expect(deriveCombatStats(mage).toHit).toBe(12)
@@ -376,12 +377,12 @@ describe('equipFromBackpack', () => {
 
   it('stows a two-handed weapon when a shield is equipped', () => {
     const warrior = createWarrior()
-    equipFromBackpack(warrior, warrior.backpack.indexOf(STEEL_GREATSWORD), [])
+    equipFromBackpack(warrior, warrior.backpack.indexOf(IRON_GREATSWORD), [])
     const index = warrior.backpack.indexOf(OAK_SHIELD)
     expect(equipFromBackpack(warrior, index, [])).toBe(true)
     expect(warrior.equipment.offHand).toBe(OAK_SHIELD)
     expect(warrior.equipment.mainHand).toBeUndefined()
-    expect(warrior.backpack[index]).toBe(STEEL_GREATSWORD)
+    expect(warrior.backpack[index]).toBe(IRON_GREATSWORD)
   })
 
   it('puts the shield in the space the two-handed weapon left when the main hand was empty', () => {
@@ -401,7 +402,7 @@ describe('equipFromBackpack', () => {
     warrior.backpack.fill(IRON_DAGGER, warrior.backpack.indexOf(null))
     const ground: Item[] = []
     expect(equipFromBackpack(warrior, index, ground)).toBe(true)
-    expect(warrior.equipment).toEqual({ armor: STEEL_ARMOR, mainHand: YEW_BOW })
+    expect(warrior.equipment).toEqual({ armor: IRON_BREASTPLATE, mainHand: YEW_BOW })
     expect(warrior.backpack[index]).toBe(IRON_SWORD)
     expect(warrior.backpack).not.toContain(null)
     expect(ground).toEqual([OAK_SHIELD])
@@ -488,10 +489,10 @@ describe('equipFromBackpack', () => {
 
     it('stows the off-hand item when a two-handed weapon goes into the main hand', () => {
       const warrior = createWarrior()
-      const index = warrior.backpack.indexOf(STEEL_GREATSWORD)
+      const index = warrior.backpack.indexOf(IRON_GREATSWORD)
       const space = warrior.backpack.indexOf(null)
       expect(equipFromBackpack(warrior, index, [], 'mainHand')).toBe(true)
-      expect(warrior.equipment.mainHand).toBe(STEEL_GREATSWORD)
+      expect(warrior.equipment.mainHand).toBe(IRON_GREATSWORD)
       expect(warrior.equipment.offHand).toBeUndefined()
       expect(warrior.backpack[index]).toBe(IRON_SWORD)
       expect(warrior.backpack[space]).toBe(OAK_SHIELD)
@@ -559,10 +560,10 @@ describe('dropping and picking up', () => {
 
   it('picks an item up into the first empty backpack space', () => {
     const warrior = createWarrior()
-    const ground: Item[] = [OAK_SHIELD, STEEL_ARMOR]
+    const ground: Item[] = [OAK_SHIELD, IRON_BREASTPLATE]
     const space = warrior.backpack.indexOf(null)
     expect(pickUp(warrior, ground, 1)).toBe(true)
-    expect(warrior.backpack[space]).toBe(STEEL_ARMOR)
+    expect(warrior.backpack[space]).toBe(IRON_BREASTPLATE)
     expect(ground).toEqual([OAK_SHIELD])
   })
 

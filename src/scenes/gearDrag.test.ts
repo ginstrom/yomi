@@ -7,8 +7,8 @@ import {
   OAK_SHIELD,
   RING_FORTUNE,
   RING_PROTECTION,
-  STEEL_ARMOR,
-  STEEL_GREATSWORD,
+  IRON_BREASTPLATE,
+  IRON_GREATSWORD,
   type EquipmentSlot,
   type Item,
 } from '../inventory/inventory.ts'
@@ -112,7 +112,7 @@ describe('planDrag', () => {
 
   it('takes a ghosted off hand for the two-handed weapon in the main hand', () => {
     const warrior = warriorCarrying()
-    warrior.equipment = { mainHand: STEEL_GREATSWORD }
+    warrior.equipment = { mainHand: IRON_GREATSWORD }
     const ghost: DragSource = { kind: 'equipment', slot: 'offHand' }
     expect(planDrag(warrior, [], ghost, backpack)).toEqual({ kind: 'unequip', slot: 'mainHand' })
     expect(planDrag(warrior, [], ghost, ground)).toEqual({ kind: 'dropEquipped', slot: 'mainHand' })
@@ -141,8 +141,8 @@ describe('validTargets', () => {
   it('lists the backpack and the item’s slot for a ground item, and nothing with the backpack full', () => {
     const warrior = warriorCarrying()
     const from: DragSource = { kind: 'ground', index: 0 }
-    expect(validTargets(warrior, [STEEL_ARMOR], from)).toEqual([slot('armor'), backpack])
-    expect(validTargets(fullBackpack(warrior), [STEEL_ARMOR], from)).toEqual([])
+    expect(validTargets(warrior, [IRON_BREASTPLATE], from)).toEqual([slot('armor'), backpack])
+    expect(validTargets(fullBackpack(warrior), [IRON_BREASTPLATE], from)).toEqual([])
   })
 
   it('lists nothing for an empty source', () => {
@@ -180,9 +180,9 @@ describe('applyMove', () => {
 
   it('picks up and equips in place of what the slot held, which takes the space the item came into', () => {
     const warrior = warriorCarrying(IRON_DAGGER)
-    const pile: Item[] = [STEEL_GREATSWORD]
+    const pile: Item[] = [IRON_GREATSWORD]
     expect(applyMove(warrior, pile, { kind: 'pickUpEquip', index: 0, slot: 'mainHand' })).toBe(true)
-    expect(warrior.equipment.mainHand).toBe(STEEL_GREATSWORD)
+    expect(warrior.equipment.mainHand).toBe(IRON_GREATSWORD)
     expect(warrior.equipment.offHand).toBeUndefined()
     expect(warrior.backpack.slice(0, 3)).toEqual([IRON_DAGGER, IRON_SWORD, OAK_SHIELD])
     expect(pile).toEqual([])
@@ -192,9 +192,9 @@ describe('applyMove', () => {
     const warrior = createWarrior()
     warrior.backpack = Array<Item | null>(BACKPACK_SIZE).fill(IRON_DAGGER)
     warrior.backpack[4] = null
-    const pile: Item[] = [STEEL_GREATSWORD]
+    const pile: Item[] = [IRON_GREATSWORD]
     expect(applyMove(warrior, pile, { kind: 'pickUpEquip', index: 0, slot: 'mainHand' })).toBe(true)
-    expect(warrior.equipment.mainHand).toBe(STEEL_GREATSWORD)
+    expect(warrior.equipment.mainHand).toBe(IRON_GREATSWORD)
     expect(warrior.equipment.offHand).toBeUndefined()
     expect(warrior.backpack[4]).toBe(IRON_SWORD)
     expect(pile).toEqual([OAK_SHIELD])
@@ -213,7 +213,7 @@ describe('applyMove', () => {
     ] as const
     for (const move of refused) {
       const warrior = warriorCarrying(IRON_DAGGER)
-      const pile: Item[] = [STEEL_ARMOR]
+      const pile: Item[] = [IRON_BREASTPLATE]
       const before = structuredClone({ warrior, pile })
       expect(applyMove(warrior, pile, move), move.kind).toBe(false)
       expect({ warrior, pile }, move.kind).toEqual(before)

@@ -274,7 +274,7 @@ Search CLAUDE.md for `attackRange === 1`, "ranged weapons, wands among them, hol
 
 1. `npm test` passes (typecheck included: every `arcStruck` caller and every `AttackEvent` literal in tests updated).
 2. **The guard checkpoint.** Run `npm run simulate -- --campaign --ready-level 7 --battles 500 --seed 1`. The printed summary must be **identical to step 04's** recorded summary: no simulated hero holds a reach weapon, a crossbow or a strength item, and every existing unit's `isMelee` equals its old `attackRange === 1`.
-   - **Q1 caveat:** if Q1 was answered (b) (the breastplate takes strength 4 and spell skill −5), step 04's rows already moved the guard. This step then must match step 04's (b) run, and must not move it further.
+   - **Q1 caveat (amended at step 04; Q1 was answered (b)):** step 04's breastplate rows already moved the guard through its spell skill −5 (248 → 231). This step moves it again: the breastplate asks strength 4, and the ready-made archer and mage (and Brenna and Delwyn among the pre-rolls) have strength 3, so each loses `SHORTFALL_TO_HIT` (5) to hit with its weapon. No bandit is short (the Archer and the Hedge-Mage wear no armour; the Brute and the Captain have 10 and 6). So: (i) a **scratch** run with the breastplate's `strength` removed (an edit reverted, never committed) must be **identical** to step 04's recorded guard (231 of 500); (ii) the committed code's guard is recorded as this step's figure, and step 10 judges it.
    - If the summary differs, find the draw or choice that changed before committing.
 3. **Event logs:** in the guard's JSONL, attack events now carry `melee`. Spot-check that free attacks and routine strikes have `melee: true` and arrows `false`.
 4. **In-browser battle tests:** `npm run test:browser -- -t battle` (or `make test-browser ARGS="-t battle"`), since `battleEffects.ts` changed. Optionally, in `make dev`, run `give iron_spear` and `fight goblin_raid 3`. Equip the spear on the fighter, and attack a goblin from two hexes behind an ally: the fighter lunges and swings, no arrow flies, and the log line reads as a blow.
@@ -287,7 +287,7 @@ Search CLAUDE.md for `attackRange === 1`, "ranged weapons, wands among them, hol
 - [ ] `AttackEvent.melee` set on every attack; `LOG_SCHEMA_VERSION` is 22.
 - [ ] `attackLook` and `impactMs` key on `melee`.
 - [ ] The unit tests above added. `npm test` passes, and the in-browser battle tests pass.
-- [ ] The guard summary is identical to step 04's (or, under Q1 (b), no further move), and recorded in the execution record.
+- [ ] The scratch guard (breastplate strength removed) is identical to step 04's; the committed guard is recorded in the execution record.
 - [ ] CLAUDE.md updated (§4.6).
 - [ ] Committed on `long-campaign-stage-03` without pushing. Step 05's row in the index set to `done` with the commit.
 

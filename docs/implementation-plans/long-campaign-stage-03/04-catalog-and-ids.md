@@ -482,3 +482,83 @@ The comparison and list words (`gearCompare.ts`) are step 07's; do not change `g
 - [ ] Committed on `long-campaign-stage-03` without pushing, the message ending with the `Co-Authored-By` line; the index's step 04 row set to `done` with the commit.
 
 ## Execution record
+
+Commit `__SHA__` on `long-campaign-stage-03` (Node 26). Q1 was answered (b): `battle_axe` strength 5, `greatsword` strength 6, `breastplate` strength 4 and spell skill −5, as written in `catalog.ts`; the legacy-equality test in `catalog.test.ts` names those additions.
+
+**Built:** `src/inventory/catalog.ts` (C1, with helpers `familyById` and `tierStats`); `ItemStats.strength`/`apPenalty`/`reach`/`rangedPierce`, `Item.family`/`material`/`tier`, `SHORTFALL_TO_HIT`, `strengthShortfall`, the new `describeItemStats` lines (spell skill signed); `BASE_ITEMS` generated (56), the named constants lookups of it, `WEAPONS` the six, `MAGIC_ITEMS` eight; `itemById` per C2 with `LEGACY_ALIASES` (aliases cached to the canonical object; `Object.hasOwn` so `constructor` and the like are no alias); grades by class (C3, `GRADE_DEFS.small`); modifiers by family (C4); `PRICES` by family, `TIER_PRICE`, `wares` tier 1 only, tier 2 refused (C5); `ITEM_ICON_KEYS` +19, `GEAR_SPRITES` +10, `SWUNG_GEAR` +6, `WORN_SPRITES` +5, `MATERIAL_TINTS` (pale: steel `0xc8d8f0`, ironwood `0xd8c8b8`, wolfhide `0xd0d0d0`, silk `0xe8d8f8`, after step 03's warning that dark tints muddy) and `iconTint`; renames everywhere; `bandits.ts`'s wand special case gone; `PREFERRED_MODIFIERS` by family; `SAVE_VERSION` 16; CLAUDE.md (the inventory bullet with `catalog.ts`, the bandit, trading post, encampment-gear, creation and assets lines). The debug `items` column (`padEnd(18)`) fits the longest id, `steel_tower_shield` (18), as it is followed by a space.
+
+**Tests:** new `src/inventory/catalog.test.ts` and `src/scenes/itemIcons.test.ts` (every item's icon PNG exists; tints); additions to `grades.test.ts`, `tradingPost.test.ts`, `inventory.test.ts`, `save.test.ts` (a `steel_longsword@2+light1` round trip), `scripts/simulate.test.ts`. Expectations changed deliberately:
+- `blight.test.ts` spawn table: the same places, kinds and draws; the loot names change as `MAGIC_ITEMS` has eight items (seed 2 Ring of Protection → Ring of Fortune; seed 3 Wand of Storms, Wand of Sparks → Emberblade, Wand of Storms; seed 4 Wand of Sparks → Wand of Storms).
+- `character.test.ts` (a caster's spell skill 8 → 3, 22 → 17) and `party.test.ts` (Delwyn 63 → 58): the breastplate's spell skill −5 (Q1 b). `deriveCombatStats` already summed worn spell skill, so this part of Q1 takes effect now, not at step 05.
+- `grades.test.ts`'s refusal list: `spark_wand@2` is now an item, so `storm_wand@2` stands in; `crafting.test.ts` and `tradingPost.test.ts` use the Wand of Storms as the enchanted wand (it sells for 25).
+
+**Commands:** `npm test` 1016 passed (997 at baseline); `npm run test:browser -- -t "encampment|character|trading"` 8 passed; full `npm run test:browser` 79 passed.
+
+**Checkpoint** (the guard command with `--out` per run; seed 1, 500 campaigns):
+
+| Run | Code | Source | Days | Battles | Heroes dead | Gold on gear |
+| --- | --- | --- | --- | --- | --- | --- |
+| step 01 | baseline | 248 | 274 | 18.7 | 1.7 | 2 |
+| A (committed) | Q1 (b), wand buyable | **231** | 269 | 18.2 | 1.8 | 2 |
+| B (scratch) | Q1 values out, wand skipped | 248, **identical to step 01** line for line (run with step 01's `--out` path) | 274 | 18.7 | 1.7 | 2 |
+| C (scratch) | Q1 (b), wand skipped | 231, identical to A | 269 | 18.2 | 1.8 | 2 |
+
+So the wand moves nothing (the simulator's mage never affords a Fine wand: the post averages level 1.1 and 2 gold goes on gear a campaign), and the whole fall of 17 is the breastplate's spell skill −5 on the ready-made mage (Q1 b). Threat 5 won 1349 of 1508 (0.895) against 1416 of 1573; threat 3 0.968 against 0.973. Run A's summary, verbatim:
+
+```
+Simulated 500 campaigns, 9107 battles in all (seed 1, player aggressive vs enemy aggressive) -> logs/s3-step04-guard.jsonl
+Beat the Source: 231 of 500 (46.2%); party fell: 269 (53.8%); encampment lost: 0 (0.0%); out of days: 0
+A campaign: 269 days, 18.2 battles, 26.0 spawns, 3.1 sites captured and 0.1 lost, 38% of the land blighted at the end
+Watchtowers: 1.8 built a campaign, 0.0 lost
+Shrine: level 1.0 at the end; outposts: 0.5 built a campaign
+Trading post, workshop, infirmary: levels 1.1, 0.6, 0.5 at the end; 2 gold on gear and 53 from sales, 4.4 items crafted (2.7 days in the field) a campaign
+Guild hall: level 2.4 at the end, 2.1 recruits and 1.8 heroes dead a campaign
+Hit points healed between battles: 130.9 a campaign, in 22.0 days of camping
+Levels at the end: lowest 6.7, highest 7.2 on average (ready level 7); heroes died at level 2 (35), 3 (190), 4 (38), 5 (114), 6 (17), 7 (260), 8 (220), 9 (24)
+Battles to level 5: 6.8 (412 campaigns); 10: — (0 campaigns); 15: — (0 campaigns); 20: — (0 campaigns)
+┌─────────┬────────┬─────────┬──────┬─────────┐
+│ (index) │ threat │ battles │ won  │ winRate │
+├─────────┼────────┼─────────┼──────┼─────────┤
+│ 0       │ 1      │ 1007    │ 1007 │ 1       │
+│ 1       │ 2      │ 1756    │ 1732 │ 0.986   │
+│ 2       │ 3      │ 1991    │ 1928 │ 0.968   │
+│ 3       │ 4      │ 2845    │ 2822 │ 0.992   │
+│ 4       │ 5      │ 1508    │ 1349 │ 0.895   │
+└─────────┴────────┴─────────┴──────┴─────────┘
+┌───────────────────────┬──────────────────────┐
+│ (index)               │ Values               │
+├───────────────────────┼──────────────────────┤
+│ battles               │ 9107                 │
+│ playerWins            │ 8838                 │
+│ enemyWins             │ 269                  │
+│ unresolved            │ 0                    │
+│ avgRounds             │ 5.023937630394202    │
+│ avgPlayerDamageDealt  │ 98.18710881739321    │
+│ avgEnemyDamageDealt   │ 28.930712638629625   │
+│ playerHitRate         │ 0.666345836146586    │
+│ enemyHitRate          │ 0.6012084592145015   │
+│ playerCritRate        │ 0.04446136386490641  │
+│ enemyCritRate         │ 0.04871433366901645  │
+│ avgOpportunityAttacks │ 0                    │
+│ avgSideAttacks        │ 1.216207313055891    │
+│ avgRearAttacks        │ 0.16009662896672888  │
+│ avgPlayerCasts        │ 4.747227407488745    │
+│ avgEnemyCasts         │ 2.1565828483584055   │
+│ avgPlayerAreaAttacks  │ 0                    │
+│ avgEnemyAreaAttacks   │ 0.024706269902272978 │
+│ avgPlayerHealing      │ 2.4552542000658835   │
+│ avgEnemyHealing       │ 6.626990227297683    │
+│ avgPlayerStatuses     │ 2.932030306357747    │
+│ avgEnemyStatuses      │ 0.7785220160316241   │
+└───────────────────────┴──────────────────────┘
+```
+
+**Deviations:**
+- The plan's modifier check `itemById('steel_crossbow@3+long1')` cannot build: the crossbow is a wood family (C1), so its tier 2 is `ironwood_crossbow`. The test asserts `steel_crossbow@3+long1` is undefined and `ironwood_crossbow@3+long1` builds.
+- The legacy-equality test reads the expected stats from literals, with Q1's additions written in, as §2 said.
+- Not strictly red-first: the catalog test was written before the code but run first against the finished catalog.
+
+**For later steps:**
+- **Step 05's checkpoint is amended** (here, in the index and in step 05 §5): under Q1 (b) step 05 moves the guard again, since the breastplate's strength 4 costs the strength-3 archer and mage 5 to hit. Its scratch run, with the breastplate's `strength` removed, must equal run A (231).
+- `catalog.ts` exports `familyById` and `tierStats` besides C1. `modifiersFor` takes a `FamilyId`; callers pass `baseItem(item).family!`.
+- Step 10 judges the fall to 231; the breastplate's spell skill is the lever (C, against B).

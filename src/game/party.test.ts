@@ -90,7 +90,8 @@ describe('readyMadeParty', () => {
       weapon: 'Wand of Sparks',
       toHit: 63,
       attackRange: 4,
-      magic: { maxMana: 18, skill: 63, spells: ['magic_arrow', 'heal'] },
+      // Magic 63, less the iron breastplate's 5.
+      magic: { maxMana: 18, skill: 58, spells: ['magic_arrow', 'heal'] },
     })
   })
 

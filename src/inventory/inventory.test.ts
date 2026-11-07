@@ -17,6 +17,7 @@ describe('inventory', () => {
       describeItemStats({ damage: { count: 1, sides: 8, bonus: 0 }, attackApCost: 5, attackRange: 5, twoHanded: true }),
     ).toEqual(['Damage: 1d8', 'Attack Cost: 5 AP', 'Range: 5 hexes', 'Two-handed'])
     expect(describeItemStats({ acBonus: 10, toHit: 5 })).toEqual(['Armor Class: +10', 'To Hit: +5%'])
+    expect(describeItemStats({ spellSkill: -15 })).toEqual(['Spell Skill: −15%'])
     expect(describeItemStats({ skill: 'magic', maxMana: 6, spellSkill: 10, critChance: 5 })).toEqual([
       'Strikes with Magic',
       'Mana: +6',
@@ -36,15 +37,13 @@ describe('inventory', () => {
   })
 
   it('keeps the magic items apart from the plain weapons, each with an id of its own', () => {
-    expect(MAGIC_ITEMS).toHaveLength(9)
-    expect(new Set([...WEAPONS, ...MAGIC_ITEMS].map((item) => item.id)).size).toBe(WEAPONS.length + 9)
+    expect(MAGIC_ITEMS).toHaveLength(8)
+    expect(new Set([...WEAPONS, ...MAGIC_ITEMS].map((item) => item.id)).size).toBe(WEAPONS.length + 8)
     for (const item of MAGIC_ITEMS) expect(describeItemStats(item.stats).length).toBeGreaterThan(0)
     // A ring fits either ring slot; nothing gives hit points, which gear must not change.
     expect(MAGIC_ITEMS.filter((item) => item.ring).map((item) => item.slot)).toEqual(['ring1', 'ring1'])
-    expect(MAGIC_ITEMS.filter((item) => item.stats?.skill === 'magic').map((item) => item.id)).toEqual([
-      'spark_wand',
-      'storm_wand',
-    ])
+    // The Wand of Sparks is plain now (the wand family's tier 1); the Wand of Storms is the enchanted wand.
+    expect(MAGIC_ITEMS.filter((item) => item.stats?.skill === 'magic').map((item) => item.id)).toEqual(['storm_wand'])
     expect(new Set(MAGIC_ITEMS.map((item) => item.slot))).toEqual(new Set(['mainHand', 'ring1', 'neck', 'head', 'cloak']))
   })
 

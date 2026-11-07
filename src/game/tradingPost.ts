@@ -1,3 +1,4 @@
+import type { FamilyId, Tier } from '../inventory/catalog.ts'
 import { GRADES, type Grade } from '../inventory/grades.ts'
 import { BASE_ITEMS, baseItem, craftedItem, itemById, type Item } from '../inventory/inventory.ts'
 import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
@@ -18,24 +19,46 @@ import { encampmentName, type WorldState } from './worldMap.ts'
 export const TRADING_POST_COSTS: readonly Stock[] = [{}, { gold: 40, stone: 15 }, { gold: 80, copper: 15 }]
 export const MAX_TRADING_POST_LEVEL = TRADING_POST_COSTS.length
 
-/** What each plain item costs at grade 1. */
-export const PRICES: Readonly<Record<string, number>> = {
-  iron_dagger: 6,
-  iron_shortsword: 8,
-  iron_sword: 12,
-  yew_bow: 12,
-  oak_shield: 10,
-  iron_battle_axe: 14,
-  steel_greatsword: 20,
-  steel_armor: 20,
+/** What a plain item of each family costs at tier 1 and grade 1. */
+export const PRICES: Readonly<Record<FamilyId, number>> = {
+  dagger: 6,
+  shortsword: 8,
+  rapier: 10,
+  longsword: 12,
+  mace: 12,
+  spear: 12,
+  battle_axe: 14,
+  war_hammer: 18,
+  greatsword: 20,
+  halberd: 22,
+  bow: 12,
+  longbow: 16,
+  crossbow: 18,
+  wand: 30,
+  staff: 16,
+  buckler: 6,
+  shield: 10,
+  tower_shield: 18,
+  robe: 10,
+  leather: 14,
+  breastplate: 20,
+  plate: 30,
+  cap: 4,
+  helm: 6,
+  gloves: 4,
+  gauntlets: 6,
+  boots: 4,
+  greaves: 6,
 }
+
+/** What a tier multiplies a plain price by; every price is even, so tier 2's is whole. */
+export const TIER_PRICE: Record<Tier, number> = { 1: 1, 2: 2.5 }
 
 /** What a grade multiplies a plain price by. */
 export const GRADE_PRICE: Record<Grade, number> = { 1: 1, 2: 3, 3: 8 }
 
 /** What each enchanted item is worth; never bought, it sells for half. */
 export const VALUES: Readonly<Record<string, number>> = {
-  spark_wand: 30,
   storm_wand: 50,
   emberblade: 60,
   hawk_bow: 60,
@@ -67,11 +90,11 @@ export function raiseTradingPost(game: GameState): string | null {
   return null
 }
 
-/** What the post asks for a plain item at its grade, modifier aside; null for one it never sells. */
+/** What the post asks for a plain item at its tier and grade, modifier aside; null for an enchanted one, which it never sells. */
 export function buyPrice(item: Item): number | null {
   const base = baseItem(item)
-  if (!base) return null
-  return PRICES[base.id] * GRADE_PRICE[item.grade ?? 1]
+  if (!base?.family) return null
+  return PRICES[base.family] * TIER_PRICE[base.tier ?? 1] * GRADE_PRICE[item.grade ?? 1]
 }
 
 /** What the post pays for an item: half its base-and-grade price, or half an enchanted item's value, rounded down. A modifier adds nothing. */
@@ -79,9 +102,10 @@ export function salePrice(item: Item): number {
   return Math.floor((buyPrice(item) ?? VALUES[item.id] ?? 0) / 2)
 }
 
-/** Every plain item at every grade the post's level allows, plain first. */
+/** Every tier-1 plain item at every grade the post's level allows, plain first. */
 export function wares(world: WorldState): Item[] {
-  return GRADES.filter((grade) => grade <= world.tradingPost).flatMap((grade) => BASE_ITEMS.map((base) => craftedItem(base, grade)))
+  const tierOne = BASE_ITEMS.filter((base) => base.tier === 1)
+  return GRADES.filter((grade) => grade <= world.tradingPost).flatMap((grade) => tierOne.map((base) => craftedItem(base, grade)))
 }
 
 /** Why `itemId` cannot be bought now, or null when it can. */
@@ -90,7 +114,7 @@ export function buyRefusal(game: GameState, itemId: string): string | null {
   if (!atEncampment(world)) return notHere(world)
   const item = itemById(itemId)
   const price = item && !item.mod ? buyPrice(item) : null
-  if (!item || price === null) return 'The trading post does not sell that.'
+  if (!item || price === null || item.tier !== 1) return 'The trading post does not sell that.'
   if ((item.grade ?? 1) > world.tradingPost) return `A level ${item.grade} trading post sells that.`
   if ((world.stock.gold ?? 0) < price) return `It costs ${price} gold, more than the stock holds.`
   return null

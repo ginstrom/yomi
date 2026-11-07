@@ -1,5 +1,16 @@
 import { SKILLS, type SkillId } from '../character/skills.ts'
 import { formatDamage, type DamageRoll } from '../combat/combat.ts'
+import {
+  FAMILIES,
+  LEGACY_ALIASES,
+  MATERIALS,
+  gearClass,
+  tierStats,
+  type FamilyDef,
+  type FamilyId,
+  type MaterialDef,
+  type Tier,
+} from './catalog.ts'
 import { gradedItem, isGrade, type Grade } from './grades.ts'
 import { MODIFIERS, isModifierId, modifiedItem, type ModifierId } from './modifiers.ts'
 
@@ -49,6 +60,25 @@ export type ItemIcon =
   | 'sword_ember'
   | 'bow_hawk'
   | 'ring_fortune'
+  | 'rapier'
+  | 'mace'
+  | 'spear'
+  | 'war_hammer'
+  | 'halberd'
+  | 'longbow'
+  | 'crossbow'
+  | 'staff'
+  | 'buckler'
+  | 'tower_shield'
+  | 'robe'
+  | 'leather'
+  | 'plate'
+  | 'cap'
+  | 'helm'
+  | 'gloves'
+  | 'gauntlets'
+  | 'boots'
+  | 'greaves'
 
 /** What an item contributes to its wearer's combat stats; see deriveCombatStats(). */
 export interface ItemStats {
@@ -58,8 +88,12 @@ export interface ItemStats {
   attackApCost?: number
   /** How many hexes away the weapon can strike; a melee weapon leaves it out and reaches 1. */
   attackRange?: number
-  /** Points of a foe's resistance a melee weapon's blows pass through; nothing for a ranged one. */
+  /** Points of a foe's resistance a melee weapon's blows pass through; nothing for a ranged one but with `rangedPierce`. */
   armorPierce?: number
+  /** A melee weapon that strikes beyond the next hex (the spear, the halberd): melee for skill, strength, piercing and the engine. */
+  reach?: true
+  /** A ranged weapon whose `armorPierce` counts though it is shot (the crossbow). */
+  rangedPierce?: true
   /** A main-hand weapon that takes both hands: whatever is in the off hand counts for nothing. */
   twoHanded?: boolean
   /** What the item adds to its wearer's armour class, in percent. */
@@ -76,6 +110,10 @@ export interface ItemStats {
   spellSkill?: number
   /** What the item adds to its wearer's chance of a critical hit, in percent. */
   critChance?: number
+  /** The strength the item asks; each point its wearer lacks costs `SHORTFALL_TO_HIT` to hit. */
+  strength?: number
+  /** Action points it takes from its wearer every turn. */
+  apPenalty?: number
 }
 
 export interface Item {
@@ -92,135 +130,96 @@ export interface Item {
   grade?: Grade
   /** On a modified item: its modifier and the modifier's grade (inventory/modifiers.ts). */
   mod?: { id: ModifierId; grade: Grade }
+  /** On a plain item and every graded or modified copy of it: its family, material and tier (inventory/catalog.ts). */
+  family?: FamilyId
+  material?: string
+  tier?: Tier
 }
 
 export type Equipment = Partial<Record<EquipmentSlot, Item>>
 
-/** Human-readable stat lines for tooltips, generated from the item's data. */
-export function describeItemStats(stats: ItemStats = {}): string[] {
+/** What a wearer loses to hit for each point of strength an item asks beyond its own. */
+export const SHORTFALL_TO_HIT = 5
+
+/** Points of strength `stats` asks beyond `strength`. */
+export function strengthShortfall(strength: number, stats: ItemStats | undefined): number {
+  return Math.max(0, (stats?.strength ?? 0) - strength)
+}
+
+/**
+ * Human-readable stat lines for tooltips, generated from the item's data; with
+ * `wearerStrength`, the strength line tells what a shortfall costs.
+ */
+export function describeItemStats(stats: ItemStats = {}, wearerStrength?: number): string[] {
   const lines: string[] = []
   if (stats.damage) lines.push(`Damage: ${formatDamage(stats.damage)}`)
   if (stats.attackApCost !== undefined) lines.push(`Attack Cost: ${stats.attackApCost} AP`)
-  if (stats.attackRange !== undefined) lines.push(`Range: ${stats.attackRange} hexes`)
-  if (stats.armorPierce) lines.push(`Pierces ${stats.armorPierce} resistance`)
+  if (stats.attackRange !== undefined) lines.push(`${stats.reach ? 'Reach' : 'Range'}: ${stats.attackRange} hexes`)
+  if (stats.armorPierce) lines.push(`Pierces ${stats.armorPierce} resistance${stats.rangedPierce ? ', even at range' : ''}`)
   if (stats.twoHanded) lines.push('Two-handed')
+  if (stats.strength) {
+    const short = wearerStrength === undefined ? 0 : strengthShortfall(wearerStrength, stats)
+    lines.push(`Strength: ${stats.strength}${short > 0 ? ` (you have ${wearerStrength}): to hit ${signed(-SHORTFALL_TO_HIT * short)}%` : ''}`)
+  }
+  if (stats.apPenalty) lines.push(`Action Points: ${signed(-stats.apPenalty)}`)
   if (stats.acBonus) lines.push(`Armor Class: ${signed(stats.acBonus)}`)
   if (stats.resistance) lines.push(`Resistance: ${signed(stats.resistance)}`)
   if (stats.toHit) lines.push(`To Hit: ${signed(stats.toHit)}%`)
   if (stats.skill) lines.push(`Strikes with ${SKILLS[stats.skill].name}`)
   if (stats.maxMana) lines.push(`Mana: +${stats.maxMana}`)
-  if (stats.spellSkill) lines.push(`Spell Skill: +${stats.spellSkill}%`)
+  if (stats.spellSkill) lines.push(`Spell Skill: ${signed(stats.spellSkill)}%`)
   if (stats.critChance) lines.push(`Critical: ${signed(stats.critChance)}%`)
   return lines
 }
 
 const signed = (n: number): string => (n < 0 ? `−${-n}` : `+${n}`)
 
-export const IRON_SWORD: Item = {
-  id: 'iron_sword',
-  name: 'Iron Longsword',
-  slot: 'mainHand',
-  description: 'A well-balanced blade.',
-  stats: { damage: { count: 1, sides: 8, bonus: 3 }, attackApCost: 5, armorPierce: 1 },
-  icon: 'sword',
+/** A plain item: `family` in `material`, at the material's tier. */
+function plainItem(family: FamilyDef, material: MaterialDef): Item {
+  const named = material.tier === 1 ? family.tier1 : undefined
+  return {
+    id: named?.id ?? `${material.id}_${family.id}`,
+    name: named?.name ?? `${material.name} ${family.name}`,
+    slot: family.slot,
+    description: family.description,
+    stats: tierStats(family.stats, gearClass(family.slot), material.tier),
+    icon: family.icon,
+    family: family.id,
+    material: material.id,
+    tier: material.tier,
+  }
 }
 
-// Weapons trade damage against action points: with 8 AP a turn, a cost of 4 or
-// less buys two attacks from a unit that stands still, and every point above
-// that is a hex it cannot also walk. Two attacks a turn are worth more than
-// their summed damage suggests, which is why the light weapons and the bow
-// roll so low: `npm run simulate -- --player-weapon <id>` compares them. But
-// a foe's resistance comes off every hit (`damageThrough`), so armour takes
-// the most from those many small hits: the light blades and the bow are the
-// weapons for the lightly armoured, and the heavy ones, whose big hits also
-// pierce points of resistance (`armorPierce`), the answer to the armoured.
+/**
+ * Every plain item, which the trading post sells at a grade and crafting
+ * modifies (docs/designs/long-campaign/stage-03-gear-families.md): each family
+ * of the catalog in each material of its kind, in `FAMILIES` order, tier 1
+ * before tier 2. Enchanted items stand outside the ladder.
+ */
+export const BASE_ITEMS: readonly Item[] = FAMILIES.flatMap((family) =>
+  MATERIALS.filter((material) => material.kind === family.kind).map((material) => plainItem(family, material)),
+)
 
-export const IRON_DAGGER: Item = {
-  id: 'iron_dagger',
-  name: 'Iron Dagger',
-  slot: 'mainHand',
-  description: 'Short, light and quick.',
-  stats: { damage: { count: 1, sides: 4, bonus: 0 }, attackApCost: 3 },
-  icon: 'dagger',
-}
+const BASES_BY_ID: ReadonlyMap<string, Item> = new Map(BASE_ITEMS.map((item) => [item.id, item]))
+const plain = (id: string): Item => BASES_BY_ID.get(id)!
 
-export const IRON_SHORTSWORD: Item = {
-  id: 'iron_shortsword',
-  name: 'Iron Shortsword',
-  slot: 'mainHand',
-  description: 'A handy stabbing blade.',
-  stats: { damage: { count: 1, sides: 3, bonus: 1 }, attackApCost: 4 },
-  icon: 'shortsword',
-}
+export const IRON_DAGGER = plain('iron_dagger')
+export const IRON_SHORTSWORD = plain('iron_shortsword')
+export const IRON_SWORD = plain('iron_sword')
+export const IRON_BATTLE_AXE = plain('iron_battle_axe')
+export const IRON_GREATSWORD = plain('iron_greatsword')
+export const YEW_BOW = plain('yew_bow')
+export const OAK_SHIELD = plain('oak_shield')
+export const IRON_BREASTPLATE = plain('iron_breastplate')
+/** A wand is a ranged weapon that strikes with Magic and costs no mana. */
+export const SPARK_WAND = plain('spark_wand')
 
-export const IRON_BATTLE_AXE: Item = {
-  id: 'iron_battle_axe',
-  name: 'Iron Battle Axe',
-  slot: 'mainHand',
-  description: 'A heavy head on a long haft.',
-  stats: { damage: { count: 1, sides: 12, bonus: 2 }, attackApCost: 6, armorPierce: 2 },
-  icon: 'axe',
-}
-
-export const STEEL_GREATSWORD: Item = {
-  id: 'steel_greatsword',
-  name: 'Steel Greatsword',
-  slot: 'mainHand',
-  description: 'A blade as tall as its wielder.',
-  stats: { damage: { count: 2, sides: 6, bonus: 3 }, attackApCost: 7, armorPierce: 2, twoHanded: true },
-  icon: 'greatsword',
-}
-
-export const YEW_BOW: Item = {
-  id: 'yew_bow',
-  name: 'Yew Bow',
-  slot: 'mainHand',
-  description: 'Strikes from across the field.',
-  stats: { damage: { count: 1, sides: 6, bonus: 0 }, attackApCost: 4, attackRange: 5, twoHanded: true },
-  icon: 'bow',
-}
-
-/** Every plain weapon, lightest first: what a new hero carries. The enchanted ones are in `MAGIC_ITEMS`. */
-export const WEAPONS: readonly Item[] = [
-  IRON_DAGGER,
-  IRON_SHORTSWORD,
-  IRON_SWORD,
-  IRON_BATTLE_AXE,
-  STEEL_GREATSWORD,
-  YEW_BOW,
-]
-
-export const OAK_SHIELD: Item = {
-  id: 'oak_shield',
-  name: 'Oak Shield',
-  slot: 'offHand',
-  description: 'Iron-banded oak shield.',
-  stats: { acBonus: 10 },
-  icon: 'shield',
-}
-
-export const STEEL_ARMOR: Item = {
-  id: 'steel_armor',
-  name: 'Steel Breastplate',
-  slot: 'armor',
-  description: 'Sturdy plate armor.',
-  stats: { acBonus: 10, resistance: 2 },
-  icon: 'armor',
-}
+/** The plain weapons a new hero carries, lightest first; `BASE_ITEMS` has every family. */
+export const WEAPONS: readonly Item[] = [IRON_DAGGER, IRON_SHORTSWORD, IRON_SWORD, IRON_BATTLE_AXE, IRON_GREATSWORD, YEW_BOW]
 
 // Magic items are won as loot (game/worldMap.ts), so none is in `WEAPONS`. They
 // are modest on purpose: the simulator's parties fight without them, so the
 // game as played runs a little easier than the tuned figures.
-
-/** A wand is a ranged weapon that strikes with Magic and costs no mana. */
-export const SPARK_WAND: Item = {
-  id: 'spark_wand',
-  name: 'Wand of Sparks',
-  slot: 'mainHand',
-  description: 'Spits stinging sparks.',
-  stats: { damage: { count: 1, sides: 6, bonus: 0 }, attackApCost: 5, attackRange: 4, skill: 'magic' },
-  icon: 'wand',
-}
 
 export const STORM_WAND: Item = {
   id: 'storm_wand',
@@ -298,7 +297,6 @@ export const SHADOW_CLOAK: Item = {
 
 /** Every enchanted item in the game. */
 export const MAGIC_ITEMS: readonly Item[] = [
-  SPARK_WAND,
   STORM_WAND,
   EMBERBLADE,
   HAWK_BOW,
@@ -309,28 +307,26 @@ export const MAGIC_ITEMS: readonly Item[] = [
   SHADOW_CLOAK,
 ]
 
-/**
- * Every plain item, which the trading post sells at a grade and crafting
- * modifies (docs/designs/expeditions-and-encampment.md): the plain weapons,
- * the shield and the breastplate. Enchanted items stand outside the ladder.
- */
-export const BASE_ITEMS: readonly Item[] = [...WEAPONS, OAK_SHIELD, STEEL_ARMOR]
-
 const ITEMS_BY_ID: ReadonlyMap<string, Item> = new Map([...BASE_ITEMS, ...MAGIC_ITEMS].map((item) => [item.id, item]))
-const BASES_BY_ID: ReadonlyMap<string, Item> = new Map(BASE_ITEMS.map((item) => [item.id, item]))
 
-/** Graded and modified items as built, by id, so that one id is always one object. */
+/** Graded, modified and aliased items as built, by id, so that one id is always one object. */
 const BUILT = new Map<string, Item>()
 
-/** `<base>[@<grade>][+<modifier><grade>]`; a grade of 1 is never written, so each item has one id. */
+/**
+ * `<plain>[@<grade>][+<modifier><grade>]`, where a plain id is `<material>_<family>`,
+ * a family's own tier-1 id (`iron_sword`, `oak_shield`) or a legacy alias
+ * (`LEGACY_ALIASES`); a grade of 1 is never written, so each item has one id.
+ */
 const ID_GRAMMAR = /^([a-z_]+)(?:@([23]))?(?:\+([a-z]+)([123]))?$/
 
 /**
- * The item with this id: a constant of this module, or a graded or modified
- * plain item built from its id (`iron_sword@2+balanced1`) and remembered, so
- * that the same id always gives the same object and identity comparisons
- * hold after a load (game/save.ts). Undefined for an id that is not an item:
- * one that does not parse, a modifier that does not fit its base, or a grade
+ * The item with this id: a plain or enchanted item, or a graded or modified
+ * plain item built from its id (`steel_longsword@2+balanced1`) and remembered,
+ * so that the same id always gives the same object and identity comparisons
+ * hold after a load (game/save.ts). A legacy alias gives the same object as
+ * its canonical id, which that object carries. Undefined for an id that is not
+ * an item: one that does not parse, a material or family that does not exist
+ * or do not go together, a modifier that does not fit its family, or a grade
  * or modifier on an enchanted item.
  */
 export function itemById(id: string): Item | undefined {
@@ -339,6 +335,11 @@ export function itemById(id: string): Item | undefined {
   const match = ID_GRAMMAR.exec(id)
   if (!match) return undefined
   const [, baseId, gradeText, modId, modGradeText] = match
+  if (Object.hasOwn(LEGACY_ALIASES, baseId)) {
+    const item = itemById(id.replace(baseId, LEGACY_ALIASES[baseId]))
+    if (item) BUILT.set(id, item)
+    return item
+  }
   const base = BASES_BY_ID.get(baseId)
   if (!base) return undefined
   const grade = Number(gradeText ?? 1)
@@ -346,16 +347,17 @@ export function itemById(id: string): Item | undefined {
   let item = gradedItem(base, grade)
   if (modId !== undefined) {
     const modGrade = Number(modGradeText)
-    if (!isModifierId(modId) || !isGrade(modGrade) || !MODIFIERS[modId].fits.includes(baseId)) return undefined
+    if (!isModifierId(modId) || !isGrade(modGrade) || !MODIFIERS[modId].fits.includes(base.family!)) return undefined
     item = modifiedItem(item, modId, modGrade)
   }
   BUILT.set(id, item)
   return item
 }
 
-/** The plain item `item` was made from: itself if plain, null for an enchanted one. */
+/** The plain item `item` was made from, at its tier: itself if plain, null for an enchanted one. */
 export function baseItem(item: Item): Item | null {
-  return BASES_BY_ID.get(item.base ?? item.id) ?? null
+  const id = item.base ?? item.id
+  return BASES_BY_ID.get(Object.hasOwn(LEGACY_ALIASES, id) ? LEGACY_ALIASES[id] : id) ?? null
 }
 
 /** `item` without its modifier: the plain item at its grade. */

@@ -9,7 +9,7 @@ import {
   IRON_SWORD,
   OAK_SHIELD,
   SPARK_WAND,
-  STEEL_ARMOR,
+  IRON_BREASTPLATE,
   YEW_BOW,
   type Item,
 } from '../inventory/inventory.ts'
@@ -17,20 +17,20 @@ import { BANDIT_ROLE, banditDraft, banditGrade, banditStats, type BanditRole } f
 
 const ROLES: readonly BanditRole[] = ['cutthroat', 'archer', 'brute', 'mage', 'captain']
 
-/** The gear table, as the task gives it; the wand is enchanted and so never graded. */
+/** The gear table, as the task gives it; every item is plain, the wand included, and takes the grade. */
 const GEAR: Record<BanditRole, { mainHand: Item; offHand?: Item; armor?: Item }> = {
   cutthroat: { mainHand: IRON_DAGGER },
   archer: { mainHand: YEW_BOW },
-  brute: { mainHand: IRON_BATTLE_AXE, armor: STEEL_ARMOR },
+  brute: { mainHand: IRON_BATTLE_AXE, armor: IRON_BREASTPLATE },
   mage: { mainHand: SPARK_WAND },
-  captain: { mainHand: IRON_SWORD, offHand: OAK_SHIELD, armor: STEEL_ARMOR },
+  captain: { mainHand: IRON_SWORD, offHand: OAK_SHIELD, armor: IRON_BREASTPLATE },
 }
 
 /** A hero built by hand the way bandits.ts says it builds a bandit: draft, gear, levels, then one autoAdvance. */
 function heroLike(role: BanditRole, level: number, grade: Grade): Character {
   const hero = draftCharacter(banditDraft(role))
   const { mainHand, offHand, armor } = GEAR[role]
-  const graded = (item: Item) => (item === SPARK_WAND ? item : gradedItem(item, grade))
+  const graded = (item: Item) => gradedItem(item, grade)
   hero.equipment = {
     mainHand: graded(mainHand),
     ...(offHand ? { offHand: graded(offHand) } : {}),
@@ -79,9 +79,9 @@ describe('banditStats', () => {
     expect(banditStats('cutthroat', 3, 1).resistance).toBeUndefined()
     expect(banditStats('archer', 3, 1).resistance).toBeUndefined()
     expect(banditStats('mage', 3, 1).resistance).toBeUndefined()
-    expect(banditStats('brute', 3, 1).resistance).toBe(STEEL_ARMOR.stats!.resistance)
-    expect(banditStats('captain', 3, 1).resistance).toBe(STEEL_ARMOR.stats!.resistance)
-    expect(banditStats('brute', 3, 2).resistance).toBe(STEEL_ARMOR.stats!.resistance! + 1)
+    expect(banditStats('brute', 3, 1).resistance).toBe(IRON_BREASTPLATE.stats!.resistance)
+    expect(banditStats('captain', 3, 1).resistance).toBe(IRON_BREASTPLATE.stats!.resistance)
+    expect(banditStats('brute', 3, 2).resistance).toBe(IRON_BREASTPLATE.stats!.resistance! + 1)
     expect(banditStats('cutthroat', 3, 1).weapon).toBe(IRON_DAGGER.name)
     expect(banditStats('archer', 3, 1).attackRange).toBeGreaterThan(1)
     expect(banditStats('brute', 3, 1).weapon).toBe(IRON_BATTLE_AXE.name)

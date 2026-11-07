@@ -6,7 +6,7 @@ import {
   IRON_SWORD,
   OAK_SHIELD,
   SPARK_WAND,
-  STEEL_ARMOR,
+  IRON_BREASTPLATE,
   WEAPONS,
   YEW_BOW,
   type Equipment,
@@ -306,7 +306,7 @@ export const WARRIOR_BUILD: Build = {
 }
 
 /**
- * A level 1 character at full hit points, in a steel breastplate, with every
+ * A level 1 character at full hit points, in an iron breastplate, with every
  * plain weapon it does not hold in its backpack, and the shield too if its
  * hands are full. It has no perks and nothing to spend: creation.ts gives a
  * created character those.
@@ -327,7 +327,7 @@ export function createCharacter(name: string, build: Build): Character {
     spellPicks: 0,
     hp: 0,
     mana: 0,
-    equipment: { armor: STEEL_ARMOR, mainHand: build.mainHand, ...(build.offHand ? { offHand: build.offHand } : {}) },
+    equipment: { armor: IRON_BREASTPLATE, mainHand: build.mainHand, ...(build.offHand ? { offHand: build.offHand } : {}) },
     backpack: Array.from({ length: BACKPACK_SIZE }, (_, i) => spare[i] ?? null),
   }
   character.hp = maxHp(character)

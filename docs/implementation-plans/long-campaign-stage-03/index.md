@@ -395,7 +395,7 @@ export type BanditKind = /* existing */ | 'bandit_crossbowman'     // FOE_XP 100
 | 01 | [Baseline measurement](01-baseline-measurement.md) | The guard and the reference cells measured on this tree before any change; recorded here and in CLAUDE.md if moved | — | sonnet / sonnet | done |
 | 02 | [Item icons and the trading post's level 4](02-icons.md) | 19 `icon_<icon>` sprites and `camp_trading_post/level_4` exported; README | — | opus / opus (art) | done (d6212f2) |
 | 03 | [Gear sprites](03-gear-sprites.md) | 15 `gear_<icon>` sprites in the atlas over `warrior`; README | 02 (the atlas is rebuilt by each, so one after the other) | opus / opus (art) | done (2814cc1) |
-| 04 | [The catalog and ids](04-catalog-and-ids.md) | `catalog.ts`, the new `Item`/`ItemStats` fields and words, ids and aliases, `BASE_ITEMS` generated, grades by class, modifiers by family, prices, renames, the wand made plain, icon and sprite tables, `PREFERRED_MODIFIERS` by family; SAVE 16. Guard identical but for the wand. | 01, 02, 03 | opus / opus | pending (Q1 answered: (b)) |
+| 04 | [The catalog and ids](04-catalog-and-ids.md) | `catalog.ts`, the new `Item`/`ItemStats` fields and words, ids and aliases, `BASE_ITEMS` generated, grades by class, modifiers by family, prices, renames, the wand made plain, icon and sprite tables, `PREFERRED_MODIFIERS` by family; SAVE 16. Guard identical but for the wand. | 01, 02, 03 | opus / opus | done (__SHA__; Q1 (b): guard 231) |
 | 05 | [Weight and reach](05-weight-and-reach.md) | Strength shortfall, AP penalty, reach as melee, crossbow piercing, `isMelee`, `AttackEvent.melee`, the swing look; LOG 22. Summary identical to step 04's. | 04 | opus / opus | pending |
 | 06 | [Trading post level 4 and the simulator](06-trading-post-level-4.md) | Level 4, tier-2 wares, `sells`, `wares` filter, refusals, the encampment line, the simulator's tier-2 buying and tally; guard measured | 05 | sonnet / opus | pending |
 | 07 | [The screens](07-screens.md) | Trading post filter and probe, tooltip and comparison lines with the shortfall, tints in three scenes, scene and in-browser tests | 06 | sonnet / opus | pending |
@@ -412,9 +412,11 @@ export type BanditKind = /* existing */ | 'bandit_crossbowman'     // FOE_XP 100
 
 **Checkpoints** (the guard command, compared with step 01's summary):
 - **After 04:** identical but for the mage's wand, which the simulator may now buy graded. The engineer confirms this with a scratch run in which `visitFacilities` skips the wand, which must be identical to step 01 and is not committed. Record the guard and the gold spent on gear. Under Q1 (b), the breastplate's strength and spell-skill rows also move it; record both runs.
-- **After 05:** identical to step 04's. No simulated hero holds a reach weapon or a crossbow; Q1 decides any strength penalty.
+- **After 05:** no simulated hero holds a reach weapon or a crossbow, but under Q1 (b) the breastplate's strength 4 costs the strength-3 archer and mage 5 to hit, so the guard moves again (amended at step 04). A scratch run with the breastplate's `strength` removed must be identical to step 04's (231 of 500); the committed run is recorded.
 - **After 06:** the guard measured, with tier-2 items bought and the trading post's final level. Step 10 judges it.
 - **After 09:** the guard measured, and the Bandit Camp cells at threats 3 to 5 against step 01's.
+
+**Step 04's guard** (Q1 (b)): **231 of 500** (269 days, 18.2 battles, 1.8 heroes dead; 2 gold on gear). The whole move is the breastplate's spell skill −5 on the mage: the wand is never bought (the run with the wand skipped is identical), and the run with the Q1 values out and the wand skipped is identical to step 01's. See [step 04's record](04-catalog-and-ids.md).
 
 **Baseline (step 01)**, at `11b1ca0`, seed 1, 500 battles each (full summary in [step 01's record](01-baseline-measurement.md)): guard **248 of 500** (unmoved; 274 days, 18.7 battles, 1.7 heroes dead a campaign; 2 gold on gear, 50 from sales, 4.4 items crafted; trading post, workshop, infirmary 1.1, 0.7, 0.4). Cells: Troll Lair longsword threat 5 level 5 0 wins (7.15 rounds); Goblin Raid longsword threat 3 level 3 487; Bandit Camp threat 3 level 3 444, threat 4 level 4 473, threat 5 level 5 470.
 

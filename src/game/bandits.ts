@@ -9,7 +9,7 @@ import {
   IRON_SWORD,
   OAK_SHIELD,
   SPARK_WAND,
-  STEEL_ARMOR,
+  IRON_BREASTPLATE,
   YEW_BOW,
   type Equipment,
   type Item,
@@ -95,22 +95,17 @@ export function banditDraft(role: BanditRole): CharacterDraft {
 const GEAR: Record<BanditRole, { mainHand: Item; offHand?: Item; armor?: Item }> = {
   cutthroat: { mainHand: IRON_DAGGER },
   archer: { mainHand: YEW_BOW },
-  brute: { mainHand: IRON_BATTLE_AXE, armor: STEEL_ARMOR },
+  brute: { mainHand: IRON_BATTLE_AXE, armor: IRON_BREASTPLATE },
   mage: { mainHand: SPARK_WAND },
-  captain: { mainHand: IRON_SWORD, offHand: OAK_SHIELD, armor: STEEL_ARMOR },
-}
-
-/** A plain item at `grade`. The wand is enchanted, and enchanted items take no grade, so it stays as it is. */
-function atGrade(item: Item, grade: Grade): Item {
-  return item === SPARK_WAND ? item : gradedItem(item, grade)
+  captain: { mainHand: IRON_SWORD, offHand: OAK_SHIELD, armor: IRON_BREASTPLATE },
 }
 
 function equipmentFor(role: BanditRole, grade: Grade): Equipment {
   const { mainHand, offHand, armor } = GEAR[role]
   return {
-    mainHand: atGrade(mainHand, grade),
-    ...(offHand ? { offHand: atGrade(offHand, grade) } : {}),
-    ...(armor ? { armor: atGrade(armor, grade) } : {}),
+    mainHand: gradedItem(mainHand, grade),
+    ...(offHand ? { offHand: gradedItem(offHand, grade) } : {}),
+    ...(armor ? { armor: gradedItem(armor, grade) } : {}),
   }
 }
 

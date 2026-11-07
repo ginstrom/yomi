@@ -7,6 +7,8 @@ import { heroId } from '../src/game/encounters.ts'
 import { readyMadeParty } from '../src/game/party.ts'
 import { OUTPOST_COST } from '../src/game/buildings.ts'
 import { craft } from '../src/game/crafting.ts'
+import type { FamilyId } from '../src/inventory/catalog.ts'
+import { modifiersFor } from '../src/inventory/modifiers.ts'
 import { SOURCE_ID, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
 import {
   MAX_CAMPAIGN_DAYS,
@@ -22,6 +24,7 @@ import {
   craftGear,
   materialNeeds,
   visitFacilities,
+  PREFERRED_MODIFIERS,
   visitGuildHall,
   type LoggedEvent,
 } from './simulate.ts'
@@ -401,6 +404,14 @@ describe('the trading post and crafting in a campaign', () => {
     expect([sword.base, sword.grade, sword.mod?.id]).toEqual(['iron_sword', 3, 'light'])
     expect(trade.goldOnGear).toBeGreaterThan(0)
     expect(trade.crafted).toBeGreaterThan(0)
+  })
+
+  it('prefers, family by family, only modifiers that fit the family', () => {
+    expect(Object.keys(PREFERRED_MODIFIERS)).toEqual(['dagger', 'shortsword', 'longsword', 'battle_axe', 'greatsword', 'bow', 'shield', 'breastplate'])
+    for (const [family, preferred] of Object.entries(PREFERRED_MODIFIERS)) {
+      const fitting = modifiersFor(family as FamilyId).map((m) => m.id)
+      for (const id of preferred!) expect(fitting, `${family} ${id}`).toContain(id)
+    }
   })
 
   it('keeps what the buildings still want, and sells the rest in pairs', () => {

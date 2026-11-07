@@ -63,6 +63,7 @@ import {
   type WorldState,
 } from '../src/game/worldMap.ts'
 import { hexDistance, hexEquals, type Hex } from '../src/grid/hex.ts'
+import type { FamilyId } from '../src/inventory/catalog.ts'
 import { GRADES, type Grade } from '../src/inventory/grades.ts'
 import { baseItem, craftedItem, itemById, type EquipmentSlot, type Item } from '../src/inventory/inventory.ts'
 import { MODIFIERS, type ModifierId } from '../src/inventory/modifiers.ts'
@@ -349,23 +350,23 @@ export interface Trade {
  * --party-level 5`) against the plain item; the field's modifiers come first
  * where the workshop's were no better.
  */
-export const PREFERRED_MODIFIERS: Readonly<Record<string, readonly ModifierId[]>> = {
-  iron_dagger: ['keen'],
-  iron_shortsword: ['keen', 'balanced'],
-  iron_sword: ['light', 'balanced', 'keen'],
-  iron_battle_axe: ['light', 'bearded'],
-  steel_greatsword: ['balanced'],
-  yew_bow: ['recurve', 'long'],
-  oak_shield: ['braced'],
-  steel_armor: ['reinforced'],
+export const PREFERRED_MODIFIERS: Readonly<Partial<Record<FamilyId, readonly ModifierId[]>>> = {
+  dagger: ['keen'],
+  shortsword: ['keen', 'balanced'],
+  longsword: ['light', 'balanced', 'keen'],
+  battle_axe: ['light', 'bearded'],
+  greatsword: ['balanced'],
+  bow: ['recurve', 'long'],
+  shield: ['braced'],
+  breastplate: ['reinforced'],
 }
 
 /** The slots whose gear the careful party buys better grades of and crafts: its weapon, shield and armour. */
 const GEAR_SLOTS: readonly EquipmentSlot[] = ['mainHand', 'offHand', 'armor']
 
 /** How a modifier at a grade ranks for an item: lower is better; an item without one ranks last. */
-function modifierRank(baseId: string, mod: { id: ModifierId; grade: Grade } | undefined): number {
-  const preferred = PREFERRED_MODIFIERS[baseId] ?? []
+function modifierRank(family: FamilyId | undefined, mod: { id: ModifierId; grade: Grade } | undefined): number {
+  const preferred = (family && PREFERRED_MODIFIERS[family]) || []
   const at = mod ? preferred.indexOf(mod.id) : -1
   return at < 0 ? Infinity : at * 10 - mod!.grade
 }
@@ -386,11 +387,11 @@ export function craftGear(game: GameState, limit = Infinity): { crafted: number;
       const item = hero.equipment[slot]
       const base = item && baseItem(item)
       if (!item || !base || crafted >= limit) continue
-      for (const id of PREFERRED_MODIFIERS[base.id] ?? []) {
+      for (const id of (base.family && PREFERRED_MODIFIERS[base.family]) || []) {
         const unlocked = MODIFIERS[id].unlock <= (tier === 'field' ? 0 : tier)
         if (!unlocked) continue
         for (const grade of [...GRADES].reverse()) {
-          if (grade > highestGrade(tier) || modifierRank(base.id, { id, grade }) >= modifierRank(base.id, item.mod)) continue
+          if (grade > highestGrade(tier) || modifierRank(base.family, { id, grade }) >= modifierRank(base.family, item.mod)) continue
           const result = craft(game, { from: 'worn', member, slot, itemId: item.id }, id, grade)
           if (result.refusal !== null) continue
           crafted++

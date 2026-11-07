@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BASE_ITEMS, IRON_SWORD, SPARK_WAND, itemById } from '../inventory/inventory.ts'
+import { BASE_ITEMS, IRON_SWORD, SPARK_WAND, STORM_WAND, itemById } from '../inventory/inventory.ts'
 import { newGame } from './gameState.ts'
 import { buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, sellables, wares } from './tradingPost.ts'
 
@@ -17,7 +17,10 @@ describe('the trading post', () => {
     expect(buyPrice(itemById('iron_sword@3')!)).toBe(96)
     expect(salePrice(itemById('iron_sword@2')!)).toBe(18)
     expect(salePrice(itemById('iron_sword+balanced1')!)).toBe(6)
-    expect(buyPrice(SPARK_WAND)).toBeNull()
+    expect(buyPrice(STORM_WAND)).toBeNull()
+    expect(salePrice(STORM_WAND)).toBe(25)
+    // The Wand of Sparks is plain: the wand family's tier 1, sold and bought as it was valued.
+    expect(buyPrice(SPARK_WAND)).toBe(30)
     expect(salePrice(SPARK_WAND)).toBe(15)
   })
 
@@ -40,13 +43,13 @@ describe('the trading post', () => {
   it('never sells a modified or enchanted item', () => {
     const game = home()
     expect(buy(game, 'iron_sword+balanced1')).toMatch(/does not sell/)
-    expect(buy(game, 'spark_wand')).toMatch(/does not sell/)
+    expect(buy(game, 'storm_wand')).toMatch(/does not sell/)
     expect(game.world.stock.gold).toBe(100)
   })
 
   it('buys from the baggage and backpacks for half, never what is worn', () => {
     const game = home()
-    game.baggage.push(SPARK_WAND)
+    game.baggage.push(STORM_WAND)
     const offered = sellables(game)
     expect(offered.some(({ place }) => place.from === 'worn')).toBe(false)
     const fromPack = offered.find(({ place }) => place.from === 'backpack')!
@@ -54,7 +57,7 @@ describe('the trading post', () => {
     expect(sell(game, fromPack.place)).toBeNull()
     expect(game.world.stock.gold).toBe(100 + fromPack.price)
     expect(sell(game, fromBaggage.place)).toBeNull()
-    expect(game.world.stock.gold).toBe(100 + fromPack.price + 15)
+    expect(game.world.stock.gold).toBe(100 + fromPack.price + 25)
     expect(game.baggage).toEqual([])
     const worn = { from: 'worn' as const, member: 0, slot: 'mainHand' as const, itemId: game.party[0].equipment.mainHand!.id }
     expect(sell(game, worn)).toMatch(/Take it off/)
@@ -90,11 +93,37 @@ describe('the trading post', () => {
 })
 
 describe('the price list', () => {
-  it('prices every plain item with a finite, positive number', () => {
+  it('prices every plain item with a finite, positive, whole number', () => {
     for (const item of BASE_ITEMS) {
       const price = buyPrice(item)
-      expect(Number.isFinite(price), item.id).toBe(true)
+      expect(Number.isInteger(price), item.id).toBe(true)
       expect(price!, item.id).toBeGreaterThan(0)
     }
+  })
+
+  it('prices by family, tier and grade', () => {
+    expect(buyPrice(itemById('steel_longsword')!)).toBe(30)
+    expect(buyPrice(itemById('steel_longsword@3')!)).toBe(240)
+    expect(buyPrice(itemById('steel_armor')!)).toBe(20)
+    expect(buyPrice(itemById('wolfhide_boots')!)).toBe(10)
+  })
+
+  it('lists tier 1 only, every family, at grades up to its level', () => {
+    const game = home()
+    for (const level of [1, 2, 3]) {
+      game.world.tradingPost = level
+      const listed = wares(game.world)
+      expect(listed.every((item) => item.tier === 1)).toBe(true)
+      expect(new Set(listed.map((item) => item.family)).size).toBe(28)
+      expect(Math.max(...listed.map((item) => item.grade ?? 1))).toBe(level)
+      expect(listed).toHaveLength(28 * level)
+    }
+  })
+
+  it('refuses a tier-2 item', () => {
+    const game = home()
+    game.world.tradingPost = 3
+    expect(buy(game, 'steel_longsword')).toMatch(/does not sell/)
+    expect(game.world.stock.gold).toBe(100)
   })
 })
