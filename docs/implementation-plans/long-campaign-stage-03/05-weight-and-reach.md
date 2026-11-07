@@ -292,3 +292,116 @@ Search CLAUDE.md for `attackRange === 1`, "ranged weapons, wands among them, hol
 - [ ] Committed on `long-campaign-stage-03` without pushing. Step 05's row in the index set to `done` with the commit.
 
 ## Execution record
+
+Commit `6514b5c` on `long-campaign-stage-03` (Node 26).
+
+**Built** (C7 as written):
+- `character.ts`: `weaponSkill` and `deriveCombatStats` decide "ranged" through one private `isRangedWeapon` (range above 1 and no `reach`, from the main hand's stats). The strength shortfall is summed per item over `wornStats` and taken off `toHit` (`SHORTFALL_TO_HIT`). `apPenalty` is summed and taken off action points. Piercing is the weapon's own at range only with `rangedPierce`, and the perks' only in a blow. `reach: true` is spread onto the stats only when the weapon has it.
+- `combat.ts`: `CombatantStats.reach`, compared in `sameCombatStats`.
+- `battleEngine.ts`: `isMelee` exported. It is used in `reactorsAt`, in the defender's turn, in `previewAttack` and in `AttackEvent.melee`. `arcStruck` takes `melee: boolean`. `LOG_SCHEMA_VERSION` is 22. The module doc says a reach weapon holds its zone over the next hexes only.
+- `policies.ts` and `attackPlan.ts` pass `isMelee(...)` to `arcStruck`.
+- `battleEffects.ts`: `attackLook` and `impactMs` key on `event.melee`. `eventSchedule.ts` and `sounds.ts` needed nothing, since they time by `impactMs`. Neither does `BattleScene.ts`, since it calls `attackLook`.
+- CLAUDE.md (§4.6):
+  - the rules of the battle system: melee is `isMelee`, and reach strikes from two hexes; the zone of control is held "reach included", still over the neighbouring hexes; the crossbow is among the ranged weapons that hold no zone; the crossbow's own piercing is the exception to "a shot pierces nothing"; a defender turns to a melee blow, reach included; `arcStruck` judges by `isMelee`;
+  - `AttackEvent.melee` in the events paragraph;
+  - the rules of characters: `weaponSkill` "and has no reach", and weight (shortfall, `apPenalty`, negative spell skill, the breastplate on the strength-3 archer and mage);
+  - the catalog line no longer says "which nothing derives yet".
+
+**Tests**:
+- `character.test.ts` gains a "weight and reach" block of 10 tests, the §5 list: one item's shortfall, the items added up, nothing at or above the strength asked, an off hand under a two-handed weapon left out (to hit and AP), strength raised by a perk, the AP penalty, spell skill, the spear as melee with its perks, the crossbow, the wand and the staff.
+- `party.test.ts`: the ready-made three's `toHit` (Aldric unchanged; Brenna and Delwyn −5). Delwyn's 63 → 58 is a deliberate change of expectation (Q1 b).
+- `combat.test.ts`: `reach` in `sameCombatStats`.
+- `battleEngine.test.ts` gains a "BattleEngine reach" block:
+  - `isMelee`;
+  - a thrust from 2 hexes: legal without moving, `distance` 2, `melee` true, the piercing recorded, the defender turned, the arc `front` in the preview and the event;
+  - the zone at 1 hex only: a free attack with `melee` true; nothing provoked from 2 hexes off; nothing for a slide beside the spearman;
+  - `arcStruck` with `melee` true and false.
+
+  It also checks `melee: false` on a shot and `melee: true` on routine strikes. The schema test reads 22, and the caster test's pinned `schemaVersion: 21` now reads the constant.
+- `policies.test.ts`: `aggressive` thrusts from two hexes.
+- `battleEffects.test.ts`: a reach blow swings and lands at `SWING_IMPACT_MS`; a bow or wand shot from the next hex flies.
+- The `AttackEvent` literals in `eventSchedule.test.ts` and `sounds.test.ts` gain `melee`.
+- Red was seen before green for each new behaviour. Some tests passed at once because the code already did that (the slide test, spell skill, the staff, the perk-raised strength), and they are kept as guards.
+
+**Commands:**
+- `npm test`: 1034 passed (1016 at baseline).
+- `npm run test:browser` (all, not only `-t battle`): 9 files, 79 passed.
+- The in-game spear check from §5 check 4 (`make dev`, `give iron_spear`) was not walked; the domain and browser tests cover the look.
+
+**Checkpoint** (the guard command with `--out` per run; seed 1, 500 campaigns):
+
+| Run | Code | Source | Days | Battles | Heroes dead | Gold on gear |
+| --- | --- | --- | --- | --- | --- | --- |
+| step 04 (A) | step 04 | 231 | 269 | 18.2 | 1.8 | 2 |
+| reference | step 04's tree re-run before any change | 231, same | 269 | 18.2 | 1.8 | 2 |
+| scratch | step 05, breastplate `strength` removed (reverted, not committed) | 231, **identical to step 04's summary line for line** (run with step 04's `--out` path, `diff` empty) | 269 | 18.2 | 1.8 | 2 |
+| **committed** | step 05 | **175** | 249 | 17.1 | 1.4 | 1 |
+
+So everything in this step is neutral for today's gear, and the whole fall of 56 (231 → 175) is the breastplate's strength 4. It costs 5 to hit with their weapons to the ready-made archer and mage (strength 3), and to any strength-3 pre-roll recruited. Win rates by threat: 1 1.000, 2 0.984, 3 0.958, 4 0.988, 5 0.862 (against 1.000, 0.986, 0.968, 0.992 and 0.895 at step 04). Player hit rate 0.634 (0.666). Fewer heroes die a campaign (1.4 against 1.8) only because campaigns end sooner (249 days, 17.1 battles). This is far more than the "about 5 points" the guard allows, and step 10 must judge it or retune it. The levers are the breastplate's strength (4 → 3 would cost the strength-3 heroes nothing) or its spell skill.
+
+**Event logs** (§5 check 3), counted over the committed guard's JSONL:
+- plain attacks from more than a hex: 79901, all `melee: false`;
+- plain attacks from the next hex: 112836 `melee: true` and 6522 `melee: false` (bows and wands shot at point blank, which used to play as a swing and now fly);
+- routine strikes: 2706, all `melee: true`.
+
+The simulator records no free attacks (`avgOpportunityAttacks` 0), so the free-attack case is checked only by the engine test.
+
+Committed summary, verbatim:
+
+```
+Simulated 500 campaigns, 8558 battles in all (seed 1, player aggressive vs enemy aggressive) -> logs/s3-step05-guard.jsonl
+Beat the Source: 175 of 500 (35.0%); party fell: 325 (65.0%); encampment lost: 0 (0.0%); out of days: 0
+A campaign: 249 days, 17.1 battles, 24.4 spawns, 2.8 sites captured and 0.1 lost, 38% of the land blighted at the end
+Watchtowers: 1.7 built a campaign, 0.0 lost
+Shrine: level 0.9 at the end; outposts: 0.4 built a campaign
+Trading post, workshop, infirmary: levels 1.1, 0.5, 0.4 at the end; 1 gold on gear and 46 from sales, 3.9 items crafted (2.5 days in the field) a campaign
+Guild hall: level 2.3 at the end, 1.8 recruits and 1.4 heroes dead a campaign
+Hit points healed between battles: 120.6 a campaign, in 19.5 days of camping
+Levels at the end: lowest 6.4, highest 6.9 on average (ready level 7); heroes died at level 2 (36), 3 (175), 4 (38), 5 (80), 6 (12), 7 (193), 8 (162), 9 (20)
+Battles to level 5: 6.8 (390 campaigns); 10: — (0 campaigns); 15: — (0 campaigns); 20: — (0 campaigns)
+┌─────────┬────────┬─────────┬──────┬─────────┐
+│ (index) │ threat │ battles │ won  │ winRate │
+├─────────┼────────┼─────────┼──────┼─────────┤
+│ 0       │ 1      │ 1012    │ 1012 │ 1       │
+│ 1       │ 2      │ 1708    │ 1680 │ 0.984   │
+│ 2       │ 3      │ 1891    │ 1811 │ 0.958   │
+│ 3       │ 4      │ 2591    │ 2561 │ 0.988   │
+│ 4       │ 5      │ 1356    │ 1169 │ 0.862   │
+└─────────┴────────┴─────────┴──────┴─────────┘
+┌───────────────────────┬──────────────────────┐
+│ (index)               │ Values               │
+├───────────────────────┼──────────────────────┤
+│ battles               │ 8558                 │
+│ playerWins            │ 8233                 │
+│ enemyWins             │ 325                  │
+│ unresolved            │ 0                    │
+│ avgRounds             │ 5.1039962608086      │
+│ avgPlayerDamageDealt  │ 96.05667211965412    │
+│ avgEnemyDamageDealt   │ 29.41972423463426    │
+│ playerHitRate         │ 0.6342574922520267   │
+│ enemyHitRate          │ 0.5975226526499725   │
+│ playerCritRate        │ 0.044571838597884    │
+│ enemyCritRate         │ 0.049039640375970577 │
+│ avgOpportunityAttacks │ 0                    │
+│ avgSideAttacks        │ 1.2816078523019396   │
+│ avgRearAttacks        │ 0.15739658798784764  │
+│ avgPlayerCasts        │ 4.82425800420659     │
+│ avgEnemyCasts         │ 2.0766534236971257   │
+│ avgPlayerAreaAttacks  │ 0                    │
+│ avgEnemyAreaAttacks   │ 0.022201448936667447 │
+│ avgPlayerHealing      │ 2.53119887824258     │
+│ avgEnemyHealing       │ 6.335826127599907    │
+│ avgPlayerStatuses     │ 2.936667445664875    │
+│ avgEnemyStatuses      │ 0.7411778452909559   │
+└───────────────────────┴──────────────────────┘
+```
+
+**Deviations:**
+- A ranged weapon shot at the next hex now plays as a shot, where `distance <= 1` used to swing it. That follows C7 (`attackLook` keys on `melee`); it is a change on screen only.
+- The policy test is the optional one from §5.
+- CLAUDE.md's rules of scaling still give step 01's figures. Step 04 did not add its 231 there either, so both moves are left to step 10's documentation pass, as the index's guard rule assigns.
+
+**For later steps:**
+- Step 06 measures against **175**, not 231.
+- `isMelee`, `CombatantStats.reach` and `AttackEvent.melee` are in place for step 07 and step 10's cells.
+

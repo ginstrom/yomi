@@ -455,7 +455,7 @@ The comparison and list words (`gearCompare.ts`) are step 07's; do not change `g
   - today's eight grade exactly as before (the existing expectations).
 - **Modifiers** (in `catalog.test.ts` or a `modifiers.test.ts`):
   - `modifiersFor('spear')` is [balanced], `mace` [bearded], `crossbow` [long] and `leather` [reinforced];
-  - `itemById('steel_spear+balanced2')` builds, and so does `steel_crossbow@3+long1`;
+  - `itemById('steel_spear+balanced2')` builds, and so does `ironwood_crossbow@3+long1` (the crossbow is wood; `steel_crossbow@3+long1` is undefined, corrected at step 05's records);
   - `craftCost(itemById('yew_crossbow')!, 1)` asks timber; `craftCost(itemById('leather_armor')!, 1)` asks iron.
 - **`src/game/tradingPost.test.ts`:**
   - every `BASE_ITEMS` item has a finite, positive whole price;
