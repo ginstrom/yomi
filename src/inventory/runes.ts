@@ -142,9 +142,9 @@ export function onHitParts(entries: readonly OnHit[], form: OnHitForm = 'long'):
       .map((e) => `+${e.damage} ${e.element ?? 'damage'}${e.bane ? (short ? ' (bane)' : ' to the regenerating and the blighted') : ''}`),
     ...entries.filter((e) => e.heal).map((e) => `heals ${e.heal}`),
     // STATUSES is read only when words are asked for, never as this module loads.
-    ...entries
-      .filter((e) => e.status)
-      .map((e) => `lays ${STATUSES[e.status!.id].name}${e.onCrit ? (short ? ' on crit' : ' on a critical') : ''}`),
+    ...entries.flatMap((e) => e.status
+      ? [`lays ${STATUSES[e.status.id].name}${e.onCrit ? (short ? ' on crit' : ' on a critical') : ''}`]
+      : []),
   ]
 }
 

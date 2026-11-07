@@ -644,15 +644,14 @@ export class InventoryScene extends Phaser.Scene {
       { label: 'HIT', value: `${this.stats.toHit}%` },
     ]
     const badgeW = 90
-    const badgeH = BADGE_H
     const gap = 14
     const totalW = badges.length * badgeW + (badges.length - 1) * gap
     const startX = centerX - totalW / 2 + badgeW / 2
-    this.badgeBounds = { x: centerX - totalW / 2, y: y - badgeH / 2, width: totalW, height: badgeH }
+    this.badgeBounds = { x: centerX - totalW / 2, y: y - BADGE_H / 2, width: totalW, height: BADGE_H }
 
     badges.forEach((badge, i) => {
       const x = startX + i * (badgeW + gap)
-      const bg = this.add.rectangle(x, y, badgeW, badgeH, 0x1b1712, 0.9).setStrokeStyle(2, 0x6b5a3a)
+      const bg = this.add.rectangle(x, y, badgeW, BADGE_H, 0x1b1712, 0.9).setStrokeStyle(2, 0x6b5a3a)
       const label = this.add
         .text(x, y - 14, badge.label, { fontFamily: 'monospace', fontSize: '11px', color: '#8a7a5a' })
         .setOrigin(0.5)
