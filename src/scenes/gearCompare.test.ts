@@ -17,7 +17,7 @@ describe('gear comparisons', () => {
   })
 
   it('names what a modifier adds and takes', () => {
-    expect(compareLines(OAK_SHIELD, itemById('oak_shield+braced1')!)).toEqual(['Armor Class: +10 → +13', 'To Hit: none → −5%'])
+    expect(compareLines(OAK_SHIELD, itemById('oak_shield+braced1')!)).toEqual(['Armor Class: +10 → +13', 'To Hit: −5%'])
     expect(statLines(IRON_SWORD)).toEqual(['Damage: 1d8+3', 'Attack: 5 AP, 1 attack a turn', 'Range: 1 hex', 'Pierces: 1 resistance'])
     expect(statSummary(itemById('yew_bow@3')!)).toBe('1d6+2, 4 AP, range 5, hit +5%')
   })
@@ -51,14 +51,14 @@ describe('gear comparisons', () => {
   it('compares the strength a craft changes and leaves equal rows out', () => {
     const sword = itemById('steel_longsword')!
     const hammer = itemById('steel_war_hammer')!
-    expect(compareLines(sword, hammer, 8, 3)).toContain('Strength: none → 6 (you have 3): to hit −15%')
+    expect(compareLines(sword, hammer, 8, 3)).toContain('Strength: 6 (you have 3): to hit −15%')
     expect(compareLines(hammer, hammer, 8, 6)).toEqual([])
   })
 
   it('tells what runes add: wards, maximum hit points and what a hit does', () => {
     const sword = itemById('iron_sword@3')!
-    expect(compareLines(sword, itemById('iron_sword@3#ember1')!)).toEqual(['On a hit: none → +1 fire'])
-    expect(compareLines(sword, itemById('iron_sword@3#ember3')!)).toEqual(['On a hit: none → +3 fire, lays Seared'])
+    expect(compareLines(sword, itemById('iron_sword@3#ember1')!)).toEqual(['On a hit: +1 fire'])
+    expect(compareLines(sword, itemById('iron_sword@3#ember3')!)).toEqual(['On a hit: +3 fire, lays Seared'])
     expect(statLines(itemById('steel_longsword@3#ember1.life1')!)).toContain('On a hit: +1 fire; heals 1')
     const venom = 'On a hit: +2 poison, lays Poisoned on a critical'
     expect(compareLines(itemById('steel_longsword@3#venom2')!, itemById('steel_longsword@3#venom2.ember1')!)).toEqual([`${venom} → +2 poison, lays Poisoned on a critical; +1 fire`])
@@ -66,8 +66,10 @@ describe('gear comparisons', () => {
     expect(compareLines(itemById('steel_longsword@3#venom2.ember1')!, itemById('steel_longsword@3#ember1')!)).toEqual(['On a hit: +2 poison, lays Poisoned on a critical; +1 fire → +1 fire'])
     expect(statLines(itemById('steel_longsword@3#venom2')!)).toContain('On a hit: +2 poison, lays Poisoned on a critical')
     const plate = itemById('iron_breastplate@3')!
-    expect(compareLines(plate, itemById('iron_breastplate@3#rime1')!)).toEqual(['Wards: none → frost 2'])
-    expect(compareLines(plate, itemById('iron_breastplate@3#life1')!)).toEqual(['Max HP: none → +4'])
+    expect(compareLines(plate, itemById('iron_breastplate@3#rime1')!)).toEqual(['Wards: frost 2'])
+    expect(compareLines(plate, itemById('iron_breastplate@3#life1')!)).toEqual(['Max HP: +4'])
+    expect(compareLines(itemById('iron_breastplate@3#rime1')!, plate)).toEqual(['Wards: no longer frost 2'])
+    expect(compareLines(sword, itemById('iron_sword@3#ember1')!).join('\n')).not.toContain('none')
     expect(statSummary(itemById('iron_breastplate@3#rime1')!)).toContain('frost ward 2')
   })
 

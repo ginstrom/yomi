@@ -61,7 +61,7 @@ describe('the Runes tab', () => {
     expect(actionPreview(game, place, { kind: 'embed', key: 'ember1' })).toEqual([
       'Set a Lesser Ember Rune in the Masterwork Iron Longsword.',
       'Makes the Masterwork Iron Longsword [Ember I].',
-      'On a hit: none → +1 fire',
+      'On a hit: +1 fire',
       'Costs 5 gold.',
     ])
     expect(actionRefusal(game, place, { kind: 'embed', key: 'ember1' })).toBeNull()
@@ -79,7 +79,7 @@ describe('the Runes tab', () => {
     expect(actionPreview(game, place, { kind: 'extract', index: 0 })).toEqual([
       'Take the Lesser Ember Rune out of the Masterwork Iron Longsword [Ember I], intact, into the pouch.',
       'Makes the Masterwork Iron Longsword.',
-      'On a hit: +1 fire → none',
+      'On a hit: no longer +1 fire',
       'Costs 10 gold.',
     ])
   })

@@ -473,8 +473,10 @@ export class CraftingScene extends Phaser.Scene {
     this.render()
   }
 
+  /** Another action or modifier previewed: the message of the last one done is cleared, as it no longer speaks to what is shown. */
   private choose(key: string): void {
     this.chosen = key
+    this.message = ''
     this.render()
   }
 

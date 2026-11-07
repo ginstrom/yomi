@@ -302,7 +302,7 @@ describe('the encampment', () => {
     expect(embedding.preview).toEqual([
       'Set a Lesser Ember Rune in the Masterwork Iron Longsword.',
       'Makes the Masterwork Iron Longsword [Ember I].',
-      'On a hit: none → +1 fire',
+      'On a hit: +1 fire',
       'Costs 5 gold.',
     ])
     await game.click(embedding.buttons.confirm)
@@ -322,6 +322,8 @@ describe('the encampment', () => {
 
     await game.click(extracted.pouch.find((p) => p.key === 'storm1')!.fuse)
     const fusing = await game.settled('Crafting', (c) => c.chosen === 'fuse:storm1')
+    // The last action's message goes once another is previewed.
+    expect(fusing.message).toBe('')
     expect(fusing.preview).toEqual(['3 × Lesser Storm Rune → Storm Rune', 'Costs 20 gold.'])
     await game.click(fusing.buttons.confirm)
     const fused = await game.settled('Crafting', (c) => c.pouch.some((p) => p.key === 'storm2'))
@@ -331,6 +333,7 @@ describe('the encampment', () => {
     expect(storm.fuse.enabled).toBe(false)
     await game.click(storm.fuse)
     const refused = await game.settled('Crafting', (c) => c.chosen === 'fuse:storm2')
+    expect(refused.message).toBe('')
     expect(refused.preview.at(-1)).toMatch(/^Fusing to a Greater Storm Rune needs a level 4 workshop\.$/)
     expect(refused.buttons.confirm.enabled).toBe(false)
 

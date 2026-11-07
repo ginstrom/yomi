@@ -94,7 +94,8 @@ export function statSummary(item: Item): string {
 
 /**
  * What changes from `before` to `after`, a line a stat: "Damage: 1d8+3 → 1d8+2",
- * "Attack: 5 AP, 1 attack a turn → 4 AP, 2 attacks a turn"; a stat both have
+ * "Attack: 5 AP, 1 attack a turn → 4 AP, 2 attacks a turn", a stat gained as
+ * what it now is and one lost as "no longer ..." (never "none"); a stat both have
  * alike is left out, but for a strength the holder falls short of, which stays as context.
  */
 export function compareLines(before: Item, after: Item, ap = TYPICAL_AP, strength?: number): string[] {
@@ -103,9 +104,14 @@ export function compareLines(before: Item, after: Item, ap = TYPICAL_AP, strengt
   const labels = [...new Set([...was.keys(), ...now.keys()])]
   // A shortfall is kept as context even where the craft leaves it alone: it is what the holder pays.
   const short = (label: string) => label === 'Strength' && strength !== undefined && strengthShortfall(strength, after.stats ?? {}) > 0
-  return labels
-    .filter((label) => was.get(label) !== now.get(label) || short(label))
-    .map((label) => (was.get(label) === now.get(label) ? `${label}: ${now.get(label)}` : `${label}: ${was.get(label) ?? 'none'} → ${now.get(label) ?? 'none'}`))
+  return labels.filter((label) => was.get(label) !== now.get(label) || short(label)).map((label) => changeLine(label, was.get(label), now.get(label)))
+}
+
+/** One stat's change: "Damage: 1d8+3 → 1d8+2"; gained, only what it now is ("On a hit: +1 fire"); lost, "Wards: no longer frost 2". */
+function changeLine(label: string, was: string | undefined, now: string | undefined): string {
+  if (was === now || was === undefined) return `${label}: ${now}`
+  if (now === undefined) return `${label}: no longer ${was}`
+  return `${label}: ${was} → ${now}`
 }
 
 /** The crafting screen's line on what the field makes: the modifiers that need no workshop, at grade I, a day each. */
