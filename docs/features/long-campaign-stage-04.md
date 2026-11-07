@@ -28,6 +28,7 @@ Large, but the architecture and design are done (the stage design cuts from refe
 | 2026-11-07 | Stage 4 next | user | stage 5; wait for merges | Index order; depends on 2 and 3, both done |
 | 2026-11-07 | Own branch off long-campaign-stage-03 | orchestrator | commit on stage-03 | Stage 3 is under review as PR #4; keep it fixed |
 | 2026-11-07 | D1: when a Life rune's max HP drops (gear off outside battle), keep the same share of HP, not clamp | user | clamp, lose the excess (planner default) | — ; step 04 amends the plan and implements it |
+| 2026-11-07 | D1 applies both ways: max HP rising (Life gear put on) also keeps the share, so a swap is reversible | orchestrator | rise leaves hp unchanged (plan) | Taking Life gear off and on otherwise bled HP (20/40 -> 18/36 -> 18/40); symmetric reading of the user's 'keep the same share' |
 | 2026-11-07 | D2 Source loot uses threat 5's row; D4 rank 3/4 prices 135/405; D3 simulator rune order Ember>Storm>Stone weapons, Stone>Life armour, workshop only | user | — | Defaults accepted |
 | 2026-11-07 | Accept the planner's 19 corrections (index); D1-D4 defaults put to the user | orchestrator | — | Each settles a contradiction with the code or fills a gap |
 | 2026-11-07 | Skip architecture and design; the stage design is the approved design | orchestrator | new design | Stage design marked ready for planning |
@@ -45,3 +46,5 @@ None.
 
 - Step 01 (6ad6ab4, sonnet): guard 233/500 unchanged from stage 3; Troll Lair t5/L5 iron_sword@3 0/500 (49.8 dmg), iron_sword 0/500 (42.3).
 - Step 02 (7dab325, sonnet): ten rune icons, socket pips on a 6px pip canvas. Orchestrator viewed the preview: reads well.
+- Step 01 review (sonnet): clean, guard and cell reproduced. Step 02 review (opus): clean; empty pip contrast and pip crowding noted for step 08.
+- Step 03 (1e51399, opus): runes.ts, id grammar with runes, on-hit/wards/maxHp item stats, crafting keeps runes; guard identical (233). Plan amended for D1 (C3 now clampHp(character, maxBefore)).
