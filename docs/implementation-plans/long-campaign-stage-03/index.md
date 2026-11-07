@@ -399,7 +399,7 @@ export type BanditKind = /* existing */ | 'bandit_crossbowman'     // FOE_XP 100
 | 05 | [Weight and reach](05-weight-and-reach.md) | Strength shortfall, AP penalty, reach as melee, crossbow piercing, `isMelee`, `AttackEvent.melee`, the swing look; LOG 22. Neutral but for the breastplate's strength under Q1 (b): guard 175. | 04 | opus / opus | done (6514b5c; guard 175) |
 | 06 | [Trading post level 4 and the simulator](06-trading-post-level-4.md) | Level 4, tier-2 wares, `sells`, `wares` filter, refusals, the encampment line, the simulator's tier-2 buying and tally; guard measured: 233 of 500 (vs 231), 0.0 tier-2 items bought, post level 1.1 at the end | 05 | sonnet / opus | done |
 | 07 | [The screens](07-screens.md) | Trading post filter and probe, tooltip and comparison lines with the shortfall, tints in three scenes, scene and in-browser tests | 06 | sonnet / opus | pending |
-| 08 | [Crossbowman sprite](08-crossbowman-sprite.md) | `bandit_crossbowman` unit sprite (only if Q2 adds the role) | Q2 (a); may run after 03 | opus / opus (art) | pending |
+| 08 | [Crossbowman sprite](08-crossbowman-sprite.md) | `bandit_crossbowman` unit sprite (only if Q2 adds the role) | Q2 (a); may run after 03 | opus / opus (art) | done |
 | 09 | [Bandits in crossbows and steel](09-bandits.md) | Bandit gear by tier and grade, the Crossbowman role and kind, the camp's slots, as Q2 decides; cells measured | 06, 08; Q2 (a) | sonnet / sonnet | pending |
 | 10 | [Measure, tune and document](10-measure-tune-document.md) | The guard against step 01, checks 2 and 3, the spear and halberd cells, tuning, CLAUDE.md, the manual and screenshots, the stage notes and index status, the play script | 07, 09 | opus / opus | pending |
 

@@ -172,6 +172,48 @@
       "frames": [
         {
           "duration": 600,
+          "frame": "bandit_crossbowman/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "bandit_crossbowman/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_crossbowman/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "bandit_crossbowman/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_crossbowman/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_crossbowman/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_crossbowman/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_crossbowman/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
           "frame": "bandit_cutthroat/idle_0",
           "key": "atlas"
         },

@@ -24,6 +24,7 @@ Infinity Engine CRPGs (Baldur's Gate 1 and 2). No third-party art is included.
 | `atlas.png`: `warrior/*` | `art/units/warrior.sprite.toml` (every hero's body, bare: what it wears and holds is laid over it) | `UnitFigure` (`BattleScene`, `InventoryScene`, `WorldScene`) |
 | `atlas.png`: `goblin/*`, `kobold/*`, `shaman/*`, `horror/*`, `hobgoblin/*`, `troll/*`, `armored_troll/*` | `art/units/` | `UnitFigure` (`BattleScene`) |
 | `atlas.png`: `bandit_cutthroat/*`, `bandit_archer/*`, `bandit_brute/*`, `bandit_mage/*`, `bandit_captain/*` | `art/units/bandit_*.sprite.toml` | `UnitFigure` (`BattleScene`), from the bandit kinds (stage 1, step 03) |
+| `atlas.png`: `bandit_crossbowman/*` | `art/units/bandit_crossbowman.sprite.toml` (a bandit in an olive tunic, a crossbow held level, matching `gear_crossbow`) | `UnitFigure` (`BattleScene`), from the Bandit Crossbowman kind (long campaign stage 3, step 08; the kind is added in its step 09) |
 | `atlas.png`: `giant_spider/*`, `salamander/*` | `art/units/giant_spider.sprite.toml`, `art/units/salamander.sprite.toml` | `UnitFigure` (`BattleScene`), from the Giant Spider and Salamander kinds (long campaign stage 2, step 07) |
 | `atlas.png`: `fx_*/*` | `art/effects/fx_*.sprite.toml` | `BattleScene` (arrows, missiles and bursts) |
 | `atlas.png`: `gear_*/*` | `art/gear/gear_*.sprite.toml`, and their variants | `UnitFigure`, by `GEAR_SPRITES` |

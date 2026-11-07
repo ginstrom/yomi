@@ -111,3 +111,13 @@ Put one unit sprite into the atlas, `bandit_crossbowman`, with `idle` and `walk`
 
 ## Execution record
 
+
+**2026-11-07, engineer.** Q2 answered (a) by the user: a Crossbowman role from threat 6, so the sprite was drawn.
+
+- `art/units/bandit_crossbowman.sprite.toml`: runs with `outline = "auto"`, the body and legs on `bandit_archer`'s build (same frame names, `idle_1` by `move` rows 0 to 24, the same walk beats, 600 ms and 140 ms). A brown leather cap with a short brim, a red kerchief at the throat (the bandits' red), an olive tunic (the archer's is light tan, the cutthroat's brown), a quiver of bolts at the back hip (the archer's quiver is at the shoulder), and a crossbow held level at the belt in the near fist: a tan and brown stock, a steel bow-arm (`l`, `d`, `D`) at its front, the string in `W` (unoutlined) drawn back to the nut, in `gear_crossbow`'s colours. `chest = [16, 15]`, as the archer's.
+- `sprite check --project art`: `ok: 109 sprites, 225 frames`. `npm run sprites`: built; `npm run sprites:check`: up to date.
+- The atlas check of section 5: `bandit_crossbowman/idle true`, `bandit_crossbowman/walk true`, `idle_0 true`; the chest point is on every frame (grid preview with `--points`).
+- `npm test`: 73 files, 1050 tests passed (with step 07's uncommitted work in the tree).
+- Previews looked at: `art/.preview/bandit_crossbowman+bandit_archer+bandit_cutthroat+bandit_captain+bandit_brute+bandit_mage.plain.png` (every frame of each bandit at display scale, 3x), `art/.preview/bandit_crossbowman.grid.png` (with points), `art/.preview/bandit_crossbowman.anim-walk.gif`. Beside the archer it reads as one of the family and is told apart at a glance by the green tunic and the level crossbow against the tall upright bow. Facings: the game mirrors the sprite; nothing in it is one-sided beyond what every unit has.
+- `public/assets/sprites/README.md`: a row for `bandit_crossbowman/*`.
+- For step 09: the atlas sprite `bandit_crossbowman` exists, with `idle_0`, `idle`, `walk` and `chest`; adding the kind to `FOE_XP` will be checked by `unitLook.test.ts`.
