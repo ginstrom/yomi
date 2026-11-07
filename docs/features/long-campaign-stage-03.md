@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 3 (gear families and the first two tiers)
 
 **Slug:** long-campaign-stage-03
-**Phase:** 4. Implementation
+**Phase:** 5. Verification
 
 ## Request (user's words)
 
@@ -57,3 +57,4 @@ None yet.
 - Step 08 (a3b34ba, 718c776): bandit_crossbowman sprite. Orchestrator viewed it beside the bandits. Review (opus) clean; optional: the white string slightly outshines the bow-arm.
 - Step 07 (0ddaa77, ccebdb1, f5fe678): screens. Review round 1 (opus): blocking, crafting never showed the holder's strength shortfall (plan gap); fixed in ccebdb1 with the refusal-under-button layout; round 2 clean. Hand-off to step 10: manual.shots.ts can't reach iron_sword@2 on page 1 (click the Longsword family first); nit: an e2e test name says baggage but doesn't check it.
 - Step 09 (0dc549b): bandits in tier 2 from threat 5, Crossbowman from threat 6, SAVE 17. Cells t3 429 (moved by steps 04/05), t4 473, t5 256 (from 469), t6 2, t7 1; guard 233. Review (sonnet) clean, t5 cell reproduced. User then chose steel from threat 6 (step 10).
+- Step 10 (6dd07c3, f3d7c01): bandit steel from threat 6 (t5 cell 469), guard 233 documented, docs and manual with screenshots. Check 2 (hammer vs armoured troll: 0 wins for every weapon, hammer most damage) and check 3 (spear 443 vs longsword 486 at Goblin Raid t3) not met: for the user. Review (opus) clean, guard and cells reproduced; doc nits (manual image paragraph at ~484; crossbow takes timber; silver missing from CLAUDE.md's far materials) to fix in verification.
