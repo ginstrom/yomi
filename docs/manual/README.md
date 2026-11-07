@@ -555,7 +555,7 @@ Some gear has **sockets**, and a **rune** set in a socket adds to what the item 
 | Rime | +1 frost on a hit (rank III and up: a critical lays Chilled) | Frost ward 2 | Frost ward 2 |
 | Storm | to hit +3% | Lightning ward 2 | Lightning ward 2 |
 | Venom | +1 poison on a hit (rank II and up: a critical lays Poisoned) | Poison ward 2 | Poison ward 2 |
-| Acid | pierces 1 more point of resistance (melee weapons and the crossbow) | Acid ward 2 | Acid ward 2 |
+| Acid | pierces 1 more point of resistance (a melee weapon or the crossbow only: it cannot be set in a bow or a wand) | Acid ward 2 | Acid ward 2 |
 | Stone | damage +1 | resistance +1 | armour class +3 |
 | Wind | critical +3% | armour class +3 | armour class +2 |
 | Life | heals the wielder 1 on a hit | max HP +4 | max HP +4 |

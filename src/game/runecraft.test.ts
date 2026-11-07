@@ -147,7 +147,7 @@ describe('embed', () => {
     refused(among, () => embed(among, amongPlace, 'ember1'), /Nothing can be embedded/)
   })
 
-  it('refuses, changing nothing: stale, no sockets, full, not held, Mind in a longsword, unaffordable', () => {
+  it('refuses, changing nothing: stale, no sockets, full, not held, Mind in a longsword, unaffordable, Acid in a bow', () => {
     const game = home()
     game.runes = { ember1: 3, mind1: 1 }
     const sword = wield(game, 'iron_sword@3')
@@ -162,6 +162,10 @@ describe('embed', () => {
     game.world.stock = { gold: 4 }
     refused(game, () => embed(game, longsword, 'ember1'), /costs 5 gold/)
     expect(embedRefusal(game, longsword, 'ember1')).toMatch(/more than the stock/)
+    game.world.stock = { gold: 100 }
+    game.runes.acid1 = 1
+    const bow = wield(game, 'yew_bow@3')
+    refused(game, () => embed(game, bow, 'acid1'), /^A Lesser Acid Rune does nothing in Masterwork Yew Bow; it fits only a melee weapon or a crossbow\.$/)
   })
 })
 

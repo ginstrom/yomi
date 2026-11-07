@@ -5,7 +5,7 @@ import {
   capitalised,
   parseRuneKey,
   pouchCount,
-  runeFits,
+  runeFitsOnly,
   runeKey,
   runeName,
   socketsOf,
@@ -91,7 +91,8 @@ export function embedRefusal(game: GameState, place: ItemPlace, key: RuneKey): s
   if ((item.runes?.length ?? 0) >= sockets) return `Its sockets are full; extract one first.`
   if (pouchCount(game.runes, key) === 0) return `The pouch holds no ${runeName(key)}.`
   const { id, rank } = parseRuneKey(key)!
-  if (!runeFits(id, item)) return `${capitalised(aRune(key))} does nothing in ${item.name}; it fits only a wand or a staff.`
+  const fitsOnly = runeFitsOnly(id, item)
+  if (fitsOnly) return `${capitalised(aRune(key))} does nothing in ${item.name}; it fits only ${fitsOnly}.`
   if (craftTier(world) === 'field') {
     if (!canCamp(world)) return 'Nothing can be embedded here now.'
     if (rank > 1) return `Only a Lesser rune can be embedded in the field; ${aRune(key)} needs the workshop.${workshopIsAt(world)}`

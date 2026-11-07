@@ -146,6 +146,21 @@ describe('sockets', () => {
     expect(runeFits('ember', item('iron_sword@3'))).toBe(true)
   })
 
+  it('take Acid in a weapon only if it would use the piercing: a melee weapon, reach included, or the crossbow', () => {
+    expect(runeFits('acid', item('iron_sword@3'))).toBe(true)
+    expect(runeFits('acid', item('iron_spear@3'))).toBe(true)
+    expect(runeFits('acid', item('ash_staff@3'))).toBe(true)
+    expect(runeFits('acid', item('yew_crossbow@3'))).toBe(true)
+    expect(runeFits('acid', item('yew_bow@3'))).toBe(false)
+    expect(runeFits('acid', item('spark_wand@3'))).toBe(false)
+    expect(runeFits('acid', item('hawk_bow'))).toBe(false)
+    expect(runeFits('acid', item('iron_breastplate@3'))).toBe(true)
+    expect(runeFits('acid', item('oak_shield@3'))).toBe(true)
+    expect(runeFits('ember', item('yew_bow@3'))).toBe(true)
+    expect(itemById('yew_bow@3#acid1')).toBeUndefined()
+    expect(itemById('yew_crossbow@3#acid1')?.stats?.armorPierce).toBe(item('yew_crossbow@3').stats!.armorPierce! + 1)
+  })
+
   it('are told in the tooltip in one line, the runes by name only (the stat lines above already hold what they do)', () => {
     expect(socketLines(item('iron_sword'))).toEqual([])
     expect(socketLines(item('steel_longsword@3'))).toEqual(['Sockets: 0 of 2'])

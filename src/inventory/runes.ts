@@ -205,9 +205,27 @@ export function socketsOf(item: Item): number {
   return gearClass(item.slot) === 'small' ? Math.min(1, sockets) : sockets
 }
 
-/** Whether `rune` may sit in `item`: false for Mind in a weapon whose stats do not strike with Magic (correction 7), true otherwise. */
+/**
+ * Where `rune` fits, when `item` is not such a place, so that it would do nothing there; null
+ * when it fits. Only two runes are refused, and only in a weapon: Mind in one that does not
+ * strike with Magic (correction 7), and Acid in one that would not use its piercing, a ranged
+ * weapon other than the crossbow, as a shot pierces only with `rangedPierce`. A shot is what
+ * `deriveCombatStats` takes for one (beyond a hex, no reach), written out so that nothing here
+ * loads the engine or the character.
+ */
+export function runeFitsOnly(rune: RuneId, item: Item): string | null {
+  if (item.slot !== 'mainHand') return null
+  const stats = item.stats ?? {}
+  if (rune === 'mind' && stats.skill !== 'magic') return 'a wand or a staff'
+  // Shot: it strikes beyond the next hex (a weapon names no range for 1) and has no reach.
+  const shot = (stats.attackRange ?? 1) > 1 && !stats.reach
+  if (rune === 'acid' && shot && !stats.rangedPierce) return 'a melee weapon or a crossbow'
+  return null
+}
+
+/** Whether `rune` may sit in `item`: everywhere but where `runeFitsOnly` names somewhere else. */
 export function runeFits(rune: RuneId, item: Item): boolean {
-  return !(rune === 'mind' && item.slot === 'mainHand' && item.stats?.skill !== 'magic')
+  return runeFitsOnly(rune, item) === null
 }
 
 /**

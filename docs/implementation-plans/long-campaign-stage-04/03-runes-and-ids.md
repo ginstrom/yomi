@@ -123,7 +123,7 @@ export function pouchKeys(pouch: Pouch): RuneKey[]
 | `mind` | none | `spellSkill` 3/6/9/12 (only in a weapon with `skill: 'magic'`, correction 7) | `maxMana` 3/6/9/12 | as armour |
 | `dawn` | blight | onHit `{ damage: 2/3/5/7, element: 'blight', bane: true }` | blight ward 2/4/6/9 | as armour |
 
-- Acid's piercing follows the existing rule: it counts for melee weapons and the crossbow (`rangedPierce`), and not for a bow or a wand.
+- Acid's piercing follows the existing rule: it counts for melee weapons and the crossbow (`rangedPierce`), and not for a bow or a wand. (Amended after stage 4's review, the user's choice: an Acid rune is refused in a bow or a wand, as Mind is outside a wand or staff, so that no item shows piercing it does not have.)
 - Each rune adds its own on-hit entry. Two Ember runes make two entries, each warded on its own (the reference: a ward comes off "each instance of damage").
 
 ### C2. The item model and ids (step 03)
