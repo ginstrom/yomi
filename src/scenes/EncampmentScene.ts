@@ -31,7 +31,7 @@ const BUILDING_SIZE = 48 * BUILDING_SCALE
 const DECOR_SCALE = 2
 const LABEL_DY = 6
 /** The details of the facility clicked, under the picture. */
-const DETAILS_Y = 378
+const DETAILS_Y = 372
 const MESSAGE_Y = 446
 const BUTTON_Y = 474
 const BUTTON_W = 190
@@ -225,12 +225,15 @@ export class EncampmentScene extends Phaser.Scene {
     const level = facility.level > 0 ? `level ${facility.level} of ${facility.maxLevel}` : 'not built'
     const next = facility.next && facility.cost ? `Next: ${facility.next}  Cost: ${describeCost(facility.cost) || 'nothing'}.` : 'It is as great as it gets.'
     const left = 40
-    this.frame.add([
-      this.add.text(left, DETAILS_Y - 16, `${facility.name}, ${level}`, { fontFamily: FONT, fontSize: '16px', color: GOLD }),
-      this.add.text(left, DETAILS_Y + 6, facility.about, { fontFamily: FONT, fontSize: '12px', color: DIM, wordWrap: { width: FRAME_W - 2 * left } }),
-      this.add.text(left, DETAILS_Y + 24, facility.effect, { fontFamily: FONT, fontSize: '12px', color: TEXT, wordWrap: { width: FRAME_W - 2 * left } }),
-      this.add.text(left, DETAILS_Y + 42, next, { fontFamily: FONT, fontSize: '12px', color: facility.refusal ? REFUSED : TEXT, wordWrap: { width: FRAME_W - 2 * left } }),
-    ])
+    const wrap = { wordWrap: { width: FRAME_W - 2 * left } }
+    this.frame.add(this.add.text(left, DETAILS_Y - 16, `${facility.name}, ${level}`, { fontFamily: FONT, fontSize: '16px', color: GOLD }))
+    // Each line sits below the one before at its wrapped height, so a long description cannot print over the next.
+    let y = DETAILS_Y + 6
+    for (const [text, color] of [[facility.about, DIM], [facility.effect, TEXT], [next, facility.refusal ? REFUSED : TEXT]] as const) {
+      const line = this.add.text(left, y, text, { fontFamily: FONT, fontSize: '12px', color, ...wrap })
+      this.frame.add(line)
+      y += line.height + 4
+    }
     const of = 2 + (facility.opens ? 1 : 0)
     let slot = 0
     if (facility.action) {
