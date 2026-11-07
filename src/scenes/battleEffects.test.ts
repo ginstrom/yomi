@@ -145,4 +145,11 @@ describe('the nameplates\' status letters', () => {
     expect(changesStatusMarks({ ...base, onHitStatuses: [] })).toBe(false)
     expect(changesStatusMarks(base)).toBe(false)
   })
+
+  it('are drawn again after every cast, area ability, status\'s end or tick and fall, and not for a move', () => {
+    for (const type of ['cast', 'ability', 'status_end', 'status_tick', 'unit_down'] as const) {
+      expect(changesStatusMarks({ type } as BattleEvent)).toBe(true)
+    }
+    expect(changesStatusMarks({ type: 'move' } as BattleEvent)).toBe(false)
+  })
 })

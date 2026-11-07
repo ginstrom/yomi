@@ -1386,13 +1386,7 @@ export class BattleScene extends Phaser.Scene {
       this.flash(unit, HELPED_TINT)
       this.refreshHpDisplay(unit, event.hpAfter, this.engine.getState().units.find((u) => u.id === event.unit)!.maxHp)
     }
-    if (
-      event.type === 'cast' ||
-      event.type === 'ability' ||
-      event.type === 'attack' && changesStatusMarks(event) ||
-      event.type === 'status_end' || event.type === 'status_tick' || event.type === 'unit_down') {
-      this.refreshAllStatusMarks()
-    }
+    if (changesStatusMarks(event)) this.refreshAllStatusMarks()
     if (event.type === 'unit_down') this.showFallen(event.unit)
   }
 
