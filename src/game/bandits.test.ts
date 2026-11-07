@@ -109,6 +109,10 @@ describe('banditStats', () => {
     expect(t2.weapon).toBe('Fine Steel Longsword')
   })
 
+  it('drafts the crossbowman as the archer, but for its name', () => {
+    expect(banditDraft('crossbowman')).toEqual({ ...banditDraft('archer'), name: 'Bandit Crossbowman' })
+  })
+
   it('arms the crossbowman with a crossbow that pierces at range', () => {
     const stats = banditStats('crossbowman', 6, T2)
     expect(stats.weapon).toBe('Fine Ironwood Crossbow')

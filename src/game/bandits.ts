@@ -27,6 +27,16 @@ export const BANDIT_ROLE: Record<BanditKind, BanditRole> = {
   bandit_crossbowman: 'crossbowman',
 }
 
+/** The archer's draft, which the crossbowman shares. */
+const ARCHER_DRAFT: CharacterDraft = {
+  name: 'Bandit Archer',
+  portrait: 'ranger',
+  attributes: { strength: 3, perception: 9, endurance: 5, intelligence: 4, agility: 7, luck: 4 },
+  tagged: 'archery',
+  raises: { melee: 0, archery: 10, magic: 0 },
+  perks: ['marksmanship', 'deadly_aim', 'dodger'],
+}
+
 /**
  * Each role's draft, a legal creation like the pre-rolls it is modelled on:
  * the captain and brute on Aldric, the archer on Brenna, the mage on Delwyn,
@@ -42,14 +52,7 @@ const DRAFTS: Record<BanditRole, CharacterDraft> = {
     raises: { melee: 10, archery: 0, magic: 0 },
     perks: ['weapon_training', 'dodger', 'toughness'],
   },
-  archer: {
-    name: 'Bandit Archer',
-    portrait: 'ranger',
-    attributes: { strength: 3, perception: 9, endurance: 5, intelligence: 4, agility: 7, luck: 4 },
-    tagged: 'archery',
-    raises: { melee: 0, archery: 10, magic: 0 },
-    perks: ['marksmanship', 'deadly_aim', 'dodger'],
-  },
+  archer: ARCHER_DRAFT,
   brute: {
     name: 'Bandit Brute',
     portrait: 'barbarian',
@@ -67,14 +70,8 @@ const DRAFTS: Record<BanditRole, CharacterDraft> = {
     // Spellcasting's two spell picks buy the last two; autoAdvance adds a heal and Flame Arrow by level 3.
     perks: ['spellcasting', 'arcane_study', 'keen_eye', 'magic_arrow', 'shield'],
   },
-  crossbowman: {
-    name: 'Bandit Crossbowman',
-    portrait: 'ranger',
-    attributes: { strength: 3, perception: 9, endurance: 5, intelligence: 4, agility: 7, luck: 4 },
-    tagged: 'archery',
-    raises: { melee: 0, archery: 10, magic: 0 },
-    perks: ['marksmanship', 'deadly_aim', 'dodger'],
-  },
+  // The archer with a crossbow: the same draft, so that the two cannot drift apart.
+  crossbowman: { ...ARCHER_DRAFT, name: 'Bandit Crossbowman' },
   captain: {
     name: 'Bandit Captain',
     portrait: 'knight',
