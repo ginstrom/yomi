@@ -29,6 +29,10 @@ Large, but the architecture and design are done (the stage design cuts from refe
 | 2026-11-07 | Bandit steel from threat 6, not 5 (amends Q2 (a)) after step 09 took the threat-5 camp cell 469 -> 256 | user | keep steel at 5 and retune; accept 256 | Today's map tops out at 5; steel comes with the outer rings |
 | 2026-11-07 | Accept and document the guard at 233 (from 248; the breastplate's spell skill -5 on the mage) | user | breastplate spell skill 0; retune the economy | Armour hampering casting is the point of weight |
 | 2026-11-07 | Threats 6 and 7 camp cells (2 and 1 of 500) left for stage 9 | orchestrator | tune now | Off today's map; counts there are a first guess the stage-9 rings retune |
+| 2026-11-07 | A click on a foe that no walk can reach with the attack's AP does nothing (was: walk as close as possible), plus a hint line and a panel warning when a weapon costs more AP than the hero has | user | silent; walk closer again | The old walk wasted the turn's attack (halberd, bow into melee) |
+| 2026-11-07 | Accept design checks 2 and 3 as unmet (hammer: most damage, 0 wins for all; spear 443 vs 486, second rank not simulated) | user | tune the spear; tune both | Weapon balance revisited with runes and high tiers |
+| 2026-11-07 | Simulated user's friction (robe warning, halberd AP visibility, two-click equip, steel-at-level-4 hint, placeholder tutorial) listed as known issues, not fixed | user | cheap text fixes; all but tutorial | Outside the stage's design |
+| 2026-11-07 | Open stage 3 as PR #3 stacked on #2 | user | not yet | — |
 | 2026-11-07 | Q2: Crossbowman from threat 6, steel from threat 5 (a) | user | Archer's place at 5; steel only; defer | Builds the role without reshaping today's threat-5 fight |
 | 2026-11-07 | Accept the planner's renames (Iron Greatsword/Breastplate, cloth robe ladder, Leather Armor/Wolfhide) and the plain Wand of Sparks | user | keep the wand enchanted; other names | Follow the design's naming rule |
 | 2026-11-07 | Accept the planner's other corrections (21, index) | orchestrator | — | Each resolves a contradiction with the code or CLAUDE.md |
