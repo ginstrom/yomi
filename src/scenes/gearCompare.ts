@@ -140,14 +140,33 @@ export const WARDS_WIDE_ROW_CHARS = 29
  */
 export function wardsLines(wards: Partial<Record<Element, number>> | undefined, rowChars = WARDS_ROW_CHARS): string[] {
   const shown = ELEMENTS.filter((element) => (wards?.[element] ?? 0) > 0).map((element) => `${element} ${wards![element]}`)
-  if (shown.length === 0) return []
+  return packedLines('Wards:', shown, rowChars)
+}
+
+/**
+ * The stat sheet's on-hit line for the main hand (runes): an "On a hit:" line, then what a hit
+ * adds in the engine's order (damage, healing, statuses), "+3 fire, lays Seared", packed into
+ * indented rows as the wards are. A bane is "(bane)" here, for the column's width. Empty with none.
+ */
+export function onHitLines(onHit: readonly OnHit[] | undefined, rowChars = WARDS_ROW_CHARS): string[] {
+  const entries = onHit ?? []
+  const parts = [
+    ...entries.filter((e) => e.damage > 0).map((e) => `+${e.damage} ${e.element ?? 'damage'}${e.bane ? ' (bane)' : ''}`),
+    ...entries.filter((e) => e.heal).map((e) => `heals ${e.heal}`),
+    ...entries.filter((e) => e.status).map((e) => `lays ${STATUSES[e.status!.id].name}${e.onCrit ? ' on crit' : ''}`),
+  ]
+  return packedLines('On a hit:', parts, rowChars)
+}
+
+/** `title`, then `parts` joined by commas into indented rows of at most `rowChars`, a row followed by another ending with a comma; empty with no parts. */
+function packedLines(title: string, parts: readonly string[], rowChars: number): string[] {
+  if (parts.length === 0) return []
   const rows: string[] = []
-  for (const ward of shown) {
+  for (const part of parts) {
     const last = rows.length - 1
     // One character is kept for the comma a row ends with when another follows.
-    if (last >= 0 && `${rows[last]}, ${ward}`.length + 1 <= rowChars) rows[last] += `, ${ward}`
-    else rows.push(ward)
+    if (last >= 0 && `${rows[last]}, ${part}`.length + 1 <= rowChars) rows[last] += `, ${part}`
+    else rows.push(part)
   }
-  // A row that is followed by another ends with a comma, as a list does.
-  return ['Wards:', ...rows.map((row, i) => `  ${row}${i < rows.length - 1 ? ',' : ''}`)]
+  return [title, ...rows.map((row, i) => `  ${row}${i < rows.length - 1 ? ',' : ''}`)]
 }

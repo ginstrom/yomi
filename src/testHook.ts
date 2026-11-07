@@ -340,7 +340,7 @@ export interface InventoryProbe {
   spellSkill: number | null
   /** The Character tab's warning that the weapon held costs more AP than a turn gives; null when it fits. */
   attackWarning: string | null
-  /** The stat lines the Character tab and the Inventory tab list ("Wards:         frost 2" among them). */
+  /** The Character tab's stat lines ("Wards:" and "On a hit:" among them, each with its indented rows); the Inventory tab lists the same but the on-hit rows. */
   statLines: string[]
   /** The lines of the item tooltip shown now, from the hovered item's name down to its sockets; empty when hidden. */
   tooltip: string[]

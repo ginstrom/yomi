@@ -44,7 +44,7 @@ import type { InventoryProbe } from '../testHook.ts'
 import type { Point } from './boardGeometry.ts'
 import { pressMoved, rectContains, type Rect } from './mapScroll.ts'
 import { applyMove, planDrag, validTargets, type DragSource, type DropTarget } from './gearDrag.ts'
-import { WARDS_WIDE_ROW_CHARS, attackCostWarning, wardsLines } from './gearCompare.ts'
+import { WARDS_WIDE_ROW_CHARS, attackCostWarning, onHitLines, wardsLines } from './gearCompare.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
 import { createPips } from './socketPips.ts'
 import { soundVolume } from './audioSettings.ts'
@@ -1056,7 +1056,7 @@ export class InventoryScene extends Phaser.Scene {
       .text(STATS_X, 94, this.classLine(), { fontFamily: 'monospace', fontSize: '13px', color: '#8a7a5a' })
       .setOrigin(0, 0.5)
 
-    const lines = this.statLines(WARDS_WIDE_ROW_CHARS)
+    const lines = this.statLines(WARDS_WIDE_ROW_CHARS, false)
     // A caster's mana and a melee weapon's piercing each make a line more, and the last has to end clear of the hint below.
     const statsBody = this.add.text(STATS_X, 130, lines.join('\n'), {
       fontFamily: 'monospace',
@@ -1099,8 +1099,12 @@ export class InventoryScene extends Phaser.Scene {
     return `Level ${level} - ${xp} / ${xpToNextLevel(level)} XP`
   }
 
-  /** The stat lines; `wardRowChars` is how wide a row of wards may be where they are shown. */
-  private statLines(wardRowChars?: number): string[] {
+  /**
+   * The stat lines; `wardRowChars` is how wide a row of wards may be where they are shown. `onHit`
+   * adds what the main hand does on a hit (the Character tab's; the Inventory tab, its column
+   * shared with the ground below, has no room, and the weapon's tooltip tells it there).
+   */
+  private statLines(wardRowChars?: number, onHit = true): string[] {
     return [
       `Hit Points:    ${this.character.hp} / ${this.stats.maxHp}`,
       `Armor Class:   ${this.stats.ac}`,
@@ -1108,6 +1112,7 @@ export class InventoryScene extends Phaser.Scene {
       ...wardsLines(this.stats.wards, wardRowChars),
       `To Hit:        ${this.stats.toHit}%`,
       `Damage:        ${formatDamage(this.stats.damage)}`,
+      ...(onHit ? onHitLines(this.stats.onHit, wardRowChars) : []),
       `Attack Cost:   ${this.stats.attackApCost} AP`,
       ...(this.stats.armorPierce ? [`Pierces:       ${this.stats.armorPierce} resistance`] : []),
       `Action Points: ${this.stats.actionPoints}`,

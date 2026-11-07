@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { IRON_SWORD, OAK_SHIELD, YEW_BOW, itemById } from '../inventory/inventory.ts'
-import { attackCostWarning, attacksPerTurn, compareLines, fieldCraftSummary, statLines, statSummary, WARDS_ROW_CHARS, WARDS_WIDE_ROW_CHARS, wardsLines } from './gearCompare.ts'
+import { attackCostWarning, attacksPerTurn, compareLines, fieldCraftSummary, onHitLines, statLines, statSummary, WARDS_ROW_CHARS, WARDS_WIDE_ROW_CHARS, wardsLines } from './gearCompare.ts'
 
 describe('gear comparisons', () => {
   it('counts the attacks a turn an item gives', () => {
@@ -109,5 +109,22 @@ describe('the wards lines', () => {
     expect(wide.length).toBe(3)
     const three = wardsLines({ fire: 2, frost: 2, lightning: 2 })
     expect(three).toEqual(['Wards:', '  fire 2, frost 2,', '  lightning 2'])
+  })
+})
+
+describe('the on-hit lines', () => {
+  const onHit = (id: string) => itemById(id)!.stats!.onHit
+  it('tells what the main hand does on a hit, wrapped as the wards are, and is empty with nothing', () => {
+    expect(onHitLines(onHit('iron_sword@3#ember3'))).toEqual(['On a hit:', '  +3 fire, lays Seared'])
+    expect(onHitLines(onHit('iron_sword@3'))).toEqual([])
+    expect(onHitLines(undefined)).toEqual([])
+    expect(onHitLines(onHit('steel_longsword@3#rime3.life1'))).toEqual(['On a hit:', '  +3 frost, heals 1,', '  lays Chilled on crit'])
+  })
+  it('names a bane briefly, and keeps every row within the column', () => {
+    const lines = onHitLines(onHit('steel_longsword@3#dawn4.venom4'))
+    expect(lines[0]).toBe('On a hit:')
+    expect(lines.join(' ')).toContain('+7 blight (bane)')
+    expect(lines.join(' ')).toContain('lays Poisoned on crit')
+    for (const line of lines.slice(1)) expect(line.length - 2).toBeLessThanOrEqual(WARDS_ROW_CHARS)
   })
 })
