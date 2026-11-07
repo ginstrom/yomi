@@ -214,6 +214,20 @@ describe('a hero’s panel', () => {
     }
   })
 
+  it('shows on the Spells tab the spell skill the caster’s gear leaves it', async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    // The mage's breastplate takes 5 from its spells.
+    await game.click(world.party[2])
+    const marked = await game.waitFor('World', (w) => w.party[2].active)
+    await game.click(marked.party[2])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('b')
+    const spells = await game.settled('Inventory', (p) => p.tab === 'spells')
+    expect(spells.equipment.armor.item).toBe('iron_breastplate')
+    expect(spells.spellSkill).toBe(spells.skills.magic.level - 5)
+  })
+
   it('lists only the perks a hero has taken, and shows them all in the perk tree', async () => {
     const game = await games.open()
     const world = await game.newGame()

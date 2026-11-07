@@ -167,6 +167,8 @@ const GOLD = '#e8c766'
 const DIM = '#8a7a5a'
 const TEXT = '#d8c9a3'
 const FAINT = '#665a44'
+/** A cost the gear puts on the character, such as the spell skill armour takes. */
+const WARN = '#ffb74d'
 
 /**
  * A primary press on an item, which acts on release: as a click if it moved no further than
@@ -386,6 +388,7 @@ export class InventoryScene extends Phaser.Scene {
       attributes: attributesOf(this.character),
       armorClass: this.stats.ac,
       mana: this.shownMana(),
+      spellSkill: this.shownSpellSkill(),
       takenPerks: this.takenPerks().map((id) => ({ perk: id, ranks: perkRanks(this.character, id) })),
       perkTreeButton: onScreen(TREE_BUTTON),
       back: onScreen(BACK_BUTTON),
@@ -838,6 +841,17 @@ export class InventoryScene extends Phaser.Scene {
     const max = this.stats.magic?.maxMana ?? 0
     const mana = max > 0 ? `Mana ${this.shownMana()} / ${max}` : 'No mana: knows no spell'
     content.add(this.add.text(SPELLS_X, 88, mana, { fontFamily: FONT, fontSize: '14px', color: max > 0 ? GOLD : DIM }))
+    // The chance spells strike with, gear included, so that what armour costs a caster shows here and not only on the item.
+    const skill = this.shownSpellSkill()
+    if (skill !== null) {
+      const gear = skill - skillLevel(this.character, 'magic')
+      const line = `Spell skill ${skill}%${gear === 0 ? '' : ` (gear ${gear > 0 ? '+' : ''}${gear})`}`
+      content.add(
+        this.add
+          .text(PANEL_W - SPELLS_X, 88, line, { fontFamily: FONT, fontSize: '14px', color: gear < 0 ? WARN : GOLD })
+          .setOrigin(1, 0),
+      )
+    }
 
     const known = knownSpells(this.character)
     known.forEach((spell, i) => {
@@ -1054,6 +1068,11 @@ export class InventoryScene extends Phaser.Scene {
       `Action Points: ${this.stats.actionPoints}`,
       ...(this.stats.magic ? [`Mana:          ${this.manaLine()}`] : []),
     ]
+  }
+
+  /** The chance in percent spells strike with, before the foe's armour, gear included; null for a character that knows no spell. */
+  private shownSpellSkill(): number | null {
+    return this.stats.magic?.skill ?? null
   }
 
   /** The mana to show: what is left in battle, within what the gear now worn allows; else what the character carries. Null without magic. */

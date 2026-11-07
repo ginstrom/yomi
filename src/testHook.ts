@@ -308,6 +308,8 @@ export interface InventoryProbe {
   armorClass: number
   /** The mana shown: what is left in battle, what the character carries on the world map; null for a character without magic. */
   mana: number | null
+  /** The spell skill the Spells tab shows, gear included; null for a character that knows no spell. */
+  spellSkill: number | null
   /** The perks the Skills tab lists: those the character has a rank of. */
   takenPerks: Array<{ perk: string; ranks: number }>
   /** The Skills tab's button that opens the perk tree, and the tree's button back, by their centres on screen. */
