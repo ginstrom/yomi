@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 2 (special attacks and elements)
 
 **Slug:** long-campaign-stage-02
-**Phase:** 6. Report — done; awaiting the user on push/PR and the hand-walked play script
+**Phase:** 6. Report — PR in preparation (pr-reviewer, then pr-creator); hand-walked play script still the user's
 
 ## Request (user's words)
 
@@ -33,6 +33,9 @@ Large, but the architecture and design are already done: the stage design cuts f
 | 2026-11-01 | The foe hover panel gives each ability a short description (what it does, reach/area, damage or effect, recharge) — a change to the approved design's tooltip | user | names only | Simulated user learned Fire Spit and Web only by being hit |
 | 2026-11-01 | Retune the Salamander Pool to about 445–470 of 500 after the Fireball fix took it to 493 | user | accept 493 | Keep it in the bandit cells' fair range |
 | 2026-11-01 | Guard re-measured at the start of the stage | orchestrator | — | Index convention; fdc0593 and 51cecb5 (free attacks, defender turning) changed battle rules after stage 1's 238 |
+| 2026-11-07 | Review and open a PR for `armor-resistance` | user | keep local; push only | — |
+| 2026-11-07 | Next stage is stage 3 (gear families) | user | stage 5; stop | Index order |
+| 2026-11-07 | Leave the cosmetic leftovers (tail flick, cone/line flash) | user | fix both; fix sweep | No effect on the rules |
 
 ## Open questions
 
