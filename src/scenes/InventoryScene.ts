@@ -121,6 +121,15 @@ const GROUND_ROWS = 2
 const SLOT_GAP = 8
 const SLOT_TITLE_Y = 367
 const SLOT_GRID_Y = 404
+/** The Inventory tab's gear hint: at this y under the stat lines, or `GEAR_HINT_GAP` under them when they run past it. */
+const GEAR_HINT_Y = 300
+const GEAR_HINT_GAP = 6
+/** The stat lines tighten their spacing to end by here, so that the hint under them still ends above the slots' titles. */
+const STATS_BOTTOM_MAX = GEAR_HINT_Y + 30
+/** Stat lines that still end past here take a smaller face. */
+const STATS_SHRINK_BOTTOM = GEAR_HINT_Y + 5
+/** Stat lines ending past here push the hint down, and it takes a smaller face to fit above the slots' titles. */
+const HINT_SHRINK_BOTTOM = GEAR_HINT_Y + 10
 const SCROLLBAR_W = 8
 const TAB_W = 118
 const TAB_H = 32
@@ -142,6 +151,10 @@ const COMBAT_W = PANEL_W - COMBAT_X - 20
 /** The badges (AC, HP, HIT) sit under the portrait and the attributes, leaving the stat column free to run down past them. */
 const BADGES_X = 255
 const BADGES_Y = 440
+const BADGE_H = 56
+/** The stat column tightens until it ends this far above the badges' top. */
+const BADGE_CLEARANCE = 6
+const STAT_BLOCK_BOTTOM_MAX = BADGES_Y - BADGE_H / 2 - BADGE_CLEARANCE
 const SHEET_Y = 140
 
 /** The skills tab: skills down the left, each with a button to raise it, and down the right the perks taken and the button to the perk tree. */
@@ -602,9 +615,8 @@ export class InventoryScene extends Phaser.Scene {
       lineSpacing: 12,
     })
     // Wards, mana and piercing each add lines: the block tightens until it ends clear of the badges.
-    const badgesTop = BADGES_Y - 28 - 6
     let spacing = 12
-    while (this.statBlock.y + this.statBlock.height > badgesTop && spacing > 0) this.statBlock.setLineSpacing(--spacing)
+    while (this.statBlock.y + this.statBlock.height > STAT_BLOCK_BOTTOM_MAX && spacing > 0) this.statBlock.setLineSpacing(--spacing)
     this.characterContent.add([this.heading('In battle', COMBAT_X, SHEET_Y), this.statBlock])
     const warning = attackCostWarning(this.stats.attackApCost, this.stats.actionPoints)
     if (warning) {
@@ -632,7 +644,7 @@ export class InventoryScene extends Phaser.Scene {
       { label: 'HIT', value: `${this.stats.toHit}%` },
     ]
     const badgeW = 90
-    const badgeH = 56
+    const badgeH = BADGE_H
     const gap = 14
     const totalW = badges.length * badgeW + (badges.length - 1) * gap
     const startX = centerX - totalW / 2 + badgeW / 2
@@ -1064,11 +1076,11 @@ export class InventoryScene extends Phaser.Scene {
       color: '#d8c9a3',
       lineSpacing: lines.length > 7 ? 4 : lines.length > 6 ? 8 : 12,
     })
-    // Wards add rows too: tighten the lines to end by y 330, and the hint below follows the block.
+    // Wards add rows too: tighten the lines to end by STATS_BOTTOM_MAX, and the hint below follows the block.
     let spacing = lines.length > 7 ? 4 : lines.length > 6 ? 8 : 12
-    while (statsBody.y + statsBody.height > 330 && spacing > 0) statsBody.setLineSpacing(--spacing)
+    while (statsBody.y + statsBody.height > STATS_BOTTOM_MAX && spacing > 0) statsBody.setLineSpacing(--spacing)
     // With every ward, mana and piercing showing even that is not enough: a smaller face, and the hint below shrinks with it.
-    if (statsBody.y + statsBody.height > 305) statsBody.setFontSize(13)
+    if (statsBody.y + statsBody.height > STATS_SHRINK_BOTTOM) statsBody.setFontSize(13)
     this.statsBottom = statsBody.y + statsBody.height
 
     this.inventoryContent.add([nameText, classText, statsBody])
@@ -1084,9 +1096,9 @@ export class InventoryScene extends Phaser.Scene {
           ? 'Click to equip, stow or pick up; right- or Ctrl+click to drop. Drag to move. Free until you next move or attack.'
           : `Click to equip, stow or pick up; right- or Ctrl+click to drop. Drag to move. Costs ${this.gearApCost} AP on closing, however many changes.`
     this.inventoryContent.add(
-      this.add.text(STATS_X, Math.max(300, this.statsBottom + 6), hint, {
+      this.add.text(STATS_X, Math.max(GEAR_HINT_Y, this.statsBottom + GEAR_HINT_GAP), hint, {
         fontFamily: 'monospace',
-        fontSize: this.statsBottom > 310 ? '11px' : '12px',
+        fontSize: this.statsBottom > HINT_SHRINK_BOTTOM ? '11px' : '12px',
         color: '#8a7a5a',
         wordWrap: { width: PANEL_W - STATS_X - 20 },
       }),
