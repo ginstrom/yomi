@@ -45,8 +45,27 @@ Infinity Engine CRPGs (Baldur's Gate 1 and 2). No third-party art is included.
 | `icon_amulet.png` | `art/icons/icon_amulet.sprite.toml` | `InventoryScene` |
 | `icon_circlet.png` | `art/icons/icon_circlet.sprite.toml` | `InventoryScene` |
 | `icon_cloak.png` | `art/icons/icon_cloak.sprite.toml` | `InventoryScene` |
+| `icon_rapier.png` | `art/icons/icon_rapier.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_mace.png` | `art/icons/icon_mace.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_spear.png` | `art/icons/icon_spear.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_war_hammer.png` | `art/icons/icon_war_hammer.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_halberd.png` | `art/icons/icon_halberd.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_longbow.png` | `art/icons/icon_longbow.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_crossbow.png` | `art/icons/icon_crossbow.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_staff.png` | `art/icons/icon_staff.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_buckler.png` | `art/icons/icon_buckler.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_tower_shield.png` | `art/icons/icon_tower_shield.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_robe.png` | `art/icons/icon_robe.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_leather.png` | `art/icons/icon_leather.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_plate.png` | `art/icons/icon_plate.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_cap.png` | `art/icons/icon_cap.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_helm.png` | `art/icons/icon_helm.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_gloves.png` | `art/icons/icon_gloves.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_gauntlets.png` | `art/icons/icon_gauntlets.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_boots.png` | `art/icons/icon_boots.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
+| `icon_greaves.png` | `art/icons/icon_greaves.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
 | `atlas.png`: `map_*/*` | `art/map/map_*.sprite.toml` | `WorldScene` |
-| `atlas.png`: `camp_*/*` | `art/encampment/camp_*.sprite.toml` | `EncampmentScene` |
+| `atlas.png`: `camp_*/*` | `art/encampment/camp_*.sprite.toml` (`camp_trading_post` has frames `level_1` to `level_4`; `level_4`, the market that sells steel, adds a banner and a rack of blades, long campaign stage 3) | `EncampmentScene` |
 | `portrait_knight.png` | `art/portraits/portrait_knight.sprite.toml` | `PartyColumn`, `InventoryScene` |
 | `portrait_ranger.png` | `art/portraits/portrait_ranger.sprite.toml` | `PartyColumn`, `InventoryScene` |
 | `portrait_rogue.png` | `art/portraits/portrait_rogue.sprite.toml` | `PartyColumn`, `InventoryScene` |

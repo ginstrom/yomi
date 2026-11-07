@@ -1074,9 +1074,9 @@
     "anims": {},
     "bounds": [
       0,
-      5,
+      2,
       48,
-      43
+      46
     ],
     "canvas": "building",
     "display_scale": 3,
@@ -1108,6 +1108,15 @@
           43
         ],
         "file": "camp_trading_post__level_3.png"
+      },
+      "level_4": {
+        "bounds": [
+          0,
+          2,
+          48,
+          46
+        ],
+        "file": "camp_trading_post__level_4.png"
       }
     },
     "size": [
@@ -2942,6 +2951,37 @@
       20
     ]
   },
+  "icon_boots": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      2,
+      20,
+      17
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_boots.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          2,
+          20,
+          17
+        ],
+        "file": "icon_boots.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
   "icon_bow": {
     "anchor": [
       10,
@@ -2997,6 +3037,68 @@
           20
         ],
         "file": "icon_bow_hawk.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_buckler": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      3,
+      14,
+      14
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_buckler.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          3,
+          14,
+          14
+        ],
+        "file": "icon_buckler.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_cap": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      1,
+      4,
+      18,
+      11
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_cap.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          1,
+          4,
+          18,
+          11
+        ],
+        "file": "icon_cap.png"
       }
     },
     "size": [
@@ -3066,6 +3168,37 @@
       20
     ]
   },
+  "icon_crossbow": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      1,
+      20,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_crossbow.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          1,
+          20,
+          18
+        ],
+        "file": "icon_crossbow.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
   "icon_dagger": {
     "anchor": [
       10,
@@ -3097,6 +3230,68 @@
       20
     ]
   },
+  "icon_gauntlets": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      1,
+      19,
+      19
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_gauntlets.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          1,
+          19,
+          19
+        ],
+        "file": "icon_gauntlets.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_gloves": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      1,
+      19,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_gloves.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          1,
+          19,
+          18
+        ],
+        "file": "icon_gloves.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
   "icon_greatsword": {
     "anchor": [
       10,
@@ -3121,6 +3316,254 @@
           19
         ],
         "file": "icon_greatsword.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_greaves": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      2,
+      1,
+      16,
+      16
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_greaves.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          2,
+          1,
+          16,
+          16
+        ],
+        "file": "icon_greaves.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_halberd": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      0,
+      20,
+      19
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_halberd.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          20,
+          19
+        ],
+        "file": "icon_halberd.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_helm": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      14
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_helm.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          14
+        ],
+        "file": "icon_helm.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_leather": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      1,
+      1,
+      18,
+      15
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_leather.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          1,
+          1,
+          18,
+          15
+        ],
+        "file": "icon_leather.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_longbow": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      7,
+      0,
+      8,
+      20
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_longbow.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          7,
+          0,
+          8,
+          20
+        ],
+        "file": "icon_longbow.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_mace": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      2,
+      0,
+      17,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_mace.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          2,
+          0,
+          17,
+          18
+        ],
+        "file": "icon_mace.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_plate": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      0,
+      20,
+      19
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_plate.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          20,
+          19
+        ],
+        "file": "icon_plate.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rapier": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      1,
+      0,
+      19,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rapier.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          1,
+          0,
+          19,
+          18
+        ],
+        "file": "icon_rapier.png"
       }
     },
     "size": [
@@ -3190,6 +3633,37 @@
       20
     ]
   },
+  "icon_robe": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      0,
+      20,
+      19
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_robe.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          20,
+          19
+        ],
+        "file": "icon_robe.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
   "icon_shield": {
     "anchor": [
       10,
@@ -3245,6 +3719,68 @@
           13
         ],
         "file": "icon_shortsword.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_spear": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      0,
+      20,
+      19
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_spear.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          20,
+          19
+        ],
+        "file": "icon_spear.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_staff": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      0,
+      20,
+      20
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_staff.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          20,
+          20
+        ],
+        "file": "icon_staff.png"
       }
     },
     "size": [
@@ -3314,6 +3850,37 @@
       20
     ]
   },
+  "icon_tower_shield": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      4,
+      0,
+      12,
+      20
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_tower_shield.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          4,
+          0,
+          12,
+          20
+        ],
+        "file": "icon_tower_shield.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
   "icon_wand": {
     "anchor": [
       10,
@@ -3369,6 +3936,37 @@
           16
         ],
         "file": "icon_wand_storm.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_war_hammer": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      2,
+      2,
+      18,
+      16
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_war_hammer.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          2,
+          2,
+          18,
+          16
+        ],
+        "file": "icon_war_hammer.png"
       }
     },
     "size": [

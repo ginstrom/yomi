@@ -393,7 +393,7 @@ export type BanditKind = /* existing */ | 'bandit_crossbowman'     // FOE_XP 100
 | Step | Task | Outcome | Depends on | Engineer / reviewer | Status |
 | --- | --- | --- | --- | --- | --- |
 | 01 | [Baseline measurement](01-baseline-measurement.md) | The guard and the reference cells measured on this tree before any change; recorded here and in CLAUDE.md if moved | — | sonnet / sonnet | done |
-| 02 | [Item icons and the trading post's level 4](02-icons.md) | 19 `icon_<icon>` sprites and `camp_trading_post/level_4` exported; README | — | opus / opus (art) | pending |
+| 02 | [Item icons and the trading post's level 4](02-icons.md) | 19 `icon_<icon>` sprites and `camp_trading_post/level_4` exported; README | — | opus / opus (art) | done (this step's commit) |
 | 03 | [Gear sprites](03-gear-sprites.md) | 15 `gear_<icon>` sprites in the atlas over `warrior`; README | 02 (the atlas is rebuilt by each, so one after the other) | opus / opus (art) | pending |
 | 04 | [The catalog and ids](04-catalog-and-ids.md) | `catalog.ts`, the new `Item`/`ItemStats` fields and words, ids and aliases, `BASE_ITEMS` generated, grades by class, modifiers by family, prices, renames, the wand made plain, icon and sprite tables, `PREFERRED_MODIFIERS` by family; SAVE 16. Guard identical but for the wand. | 01, 02, 03 | opus / opus | pending (Q1 answered: (b)) |
 | 05 | [Weight and reach](05-weight-and-reach.md) | Strength shortfall, AP penalty, reach as melee, crossbow piercing, `isMelee`, `AttackEvent.melee`, the swing look; LOG 22. Summary identical to step 04's. | 04 | opus / opus | pending |
