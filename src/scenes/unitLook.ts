@@ -2,8 +2,9 @@ import type { Equipment, ItemIcon } from '../inventory/inventory.ts'
 
 /**
  * How a unit is put together from the sprite atlas (`assets/sprites/atlas.*`,
- * built by sprite-tool and loaded by BootScene): which sprites are laid over
- * its body for what it holds, and what their frames and animations are called.
+ * built by sprite-tool and loaded by BootScene): which sprites are laid under
+ * and over a hero's body for what it wears and holds, and what their frames
+ * and animations are called.
  */
 export const SPRITE_ATLAS = 'atlas'
 
@@ -34,9 +35,19 @@ export const GEAR_SPRITES: Partial<Record<ItemIcon, string>> = {
   wand: 'gear_wand',
   wand_storm: 'gear_wand_storm',
   shield: 'gear_shield',
+  rapier: 'gear_rapier',
+  mace: 'gear_mace',
+  spear: 'gear_spear',
+  war_hammer: 'gear_war_hammer',
+  halberd: 'gear_halberd',
+  longbow: 'gear_longbow',
+  crossbow: 'gear_crossbow',
+  staff: 'gear_staff',
+  buckler: 'gear_buckler',
+  tower_shield: 'gear_tower_shield',
 }
 
-/** The gear sprites a strike swings: blades and axes, not a bow, a wand or a shield. */
+/** The gear sprites a strike swings: blades, axes, hafts and the staff, not a bow, a crossbow, a wand or a shield. */
 export const SWUNG_GEAR: ReadonlySet<string> = new Set([
   'gear_sword',
   'gear_sword_ember',
@@ -44,6 +55,12 @@ export const SWUNG_GEAR: ReadonlySet<string> = new Set([
   'gear_greatsword',
   'gear_dagger',
   'gear_axe',
+  'gear_rapier',
+  'gear_mace',
+  'gear_spear',
+  'gear_war_hammer',
+  'gear_halberd',
+  'gear_staff',
 ])
 
 /** The point a held weapon is gripped at, and turns about when it swings: the warrior's fist. */
@@ -78,4 +95,46 @@ export function gearLayers(equipment: Equipment): string[] {
   // A two-handed weapon leaves no hand for what the off hand's slot may still say.
   const held = [mainHand, mainHand?.stats?.twoHanded ? undefined : offHand]
   return held.flatMap((item) => (item && GEAR_SPRITES[item.icon]) ?? [])
+}
+
+/**
+ * The sprite laid over a hero's body for an item it wears, by the item's icon
+ * (art/gear/); an item whose icon has none is worn unseen.
+ */
+export const WORN_SPRITES: Partial<Record<ItemIcon, string>> = {
+  armor: 'gear_breastplate',
+  robe: 'gear_robe',
+  leather: 'gear_leather',
+  plate: 'gear_plate',
+  circlet: 'gear_circlet',
+  cap: 'gear_cap',
+  helm: 'gear_helm',
+  cloak: 'gear_cloak',
+}
+
+/** The sprite drawn under a hero's body for an item it wears: the cloak's cape, behind it whichever way it faces. */
+export const WORN_BACK_SPRITES: Partial<Record<ItemIcon, string>> = { cloak: 'gear_cloak_back' }
+
+/** The slots whose items are drawn on a hero, in the order they are laid over the body; no other slot is looked up. */
+export const WORN_SLOTS = ['armor', 'cloak', 'head'] as const
+
+/** The sprites drawn with a hero's body, each list bottom first: `under` it and `over` it. */
+export interface HeroLook {
+  under: string[]
+  over: string[]
+}
+
+/**
+ * How a hero is dressed: the cape under the body; over it the armour, the
+ * cloak's front and the head (`WORN_SLOTS`), then what it holds (`gearLayers`).
+ * The order is the same whichever way the hero faces.
+ */
+export function heroLook(equipment: Equipment): HeroLook {
+  const { cloak } = equipment
+  const back = cloak && WORN_BACK_SPRITES[cloak.icon]
+  const worn = WORN_SLOTS.flatMap((slot) => {
+    const item = equipment[slot]
+    return (item && WORN_SPRITES[item.icon]) ?? []
+  })
+  return { under: back ? [back] : [], over: [...worn, ...gearLayers(equipment)] }
 }

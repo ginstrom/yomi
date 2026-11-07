@@ -5,7 +5,13 @@ import { canAdvance } from '../character/progression.ts'
 import type { PortraitProbe } from '../testHook.ts'
 import { soundVolume } from './audioSettings.ts'
 import {
+  COLUMN_COLOR,
+  COLUMN_EDGE,
+  FRAME_ACTIVE_COLOR,
+  FRAME_COLOR,
+  FRAME_HOVER_COLOR,
   HEADER_BOTTOM,
+  hpBarColor,
   PARTY_PANEL_W,
   PORTRAIT_SCALE,
   portraitBarRect,
@@ -13,11 +19,6 @@ import {
   portraitRect,
 } from './partyPanel.ts'
 
-const COLUMN_COLOR = 0x17130f
-const COLUMN_EDGE = 0x4a3d28
-const FRAME_COLOR = 0x6b5a3a
-const FRAME_HOVER_COLOR = 0xd8c9a3
-const FRAME_ACTIVE_COLOR = 0xe8c766
 const ADVANCE_COLOR = '#9ccc65'
 /** How faint the portrait of a member who has fallen is. */
 const FALLEN_ALPHA = 0.3
@@ -42,6 +43,8 @@ export class PartyColumn {
   private readonly bg: Phaser.GameObjects.Rectangle
   private readonly edge: Phaser.GameObjects.Rectangle
   private readonly tiles: Tile[]
+  /** Everything the column drew, for `destroy`. */
+  private readonly objects: Phaser.GameObjects.GameObject[] = []
   private active: number | null = null
   private hovered: number | null = null
 
@@ -74,14 +77,25 @@ export class PartyColumn {
       const advance = scene.add
         .text(at.x + at.width - 3, at.y - 1, '+', { ...outlined, fontSize: '15px', color: ADVANCE_COLOR })
         .setOrigin(1, 0)
-      scene.add
+      const name = scene.add
         .text(centreX, at.y + at.height - 1, member.name, { ...outlined, fontSize: '10px', color: '#ffffff' })
         .setOrigin(0.5, 1)
-      scene.add.rectangle(bar.x, bar.y, bar.width, bar.height, 0x212121).setOrigin(0).setStrokeStyle(1, 0x000000)
+      const hpBack = scene.add
+        .rectangle(bar.x, bar.y, bar.width, bar.height, 0x212121)
+        .setOrigin(0)
+        .setStrokeStyle(1, 0x000000)
       const hpFill = scene.add.rectangle(bar.x, bar.y, bar.width, bar.height, 0x43a047).setOrigin(0)
+      this.objects.push(image, frame, level, advance, name, hpBack, hpFill)
       return { frame, image, level, advance, hpFill }
     })
+    this.objects.push(this.bg, this.edge)
     this.refresh(null)
+  }
+
+  /** Takes everything the column drew off its scene, as when another party's column replaces it. */
+  destroy(): void {
+    for (const object of this.objects) object.destroy()
+    this.objects.length = 0
   }
 
   /** The column reaches from the header to the bottom of a window `height` tall. */
@@ -103,7 +117,7 @@ export class PartyColumn {
       advance.setVisible(canAdvance(member))
       // setSize, not a bare width assignment, so the shape's geometry and path follow.
       hpFill.setSize(bar.width * ratio, bar.height)
-      hpFill.setFillStyle(ratio > 0.5 ? 0x43a047 : ratio > 0.2 ? 0xfb8c00 : 0xe53935)
+      hpFill.setFillStyle(hpBarColor(ratio))
       this.strokeFrame(index)
     })
   }

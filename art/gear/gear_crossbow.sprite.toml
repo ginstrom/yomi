@@ -1,0 +1,30 @@
+# A crossbow: a stock held level at the hip, the steel bow-arm across its front.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md.
+canvas = "unit"
+over = "warrior"
+unoutlined = ["W"]    # the string, one pixel wide
+
+[frames.idle_0.runs]
+12 = [[29, "kkk"]]
+13 = [[28, "Wkwk"]]
+14 = [[27, "W"], [29, "kdk"]]
+15 = [[20, "kkkkkkkkk"], [29, "kdk"]]
+16 = [[19, "kntttttttTdDk"]]
+17 = [[19, "kNnnnnnnnndDk"]]
+18 = [[19, "kkkkkkkkkk"], [29, "kdk"]]
+19 = [[29, "kdk"]]
+20 = [[27, "W"], [29, "kdk"]]
+21 = [[28, "W"], [29, "kDk"]]
+22 = [[29, "kkk"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it holds with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+like = "warrior"      # breathes with the body
+
+[anim.walk]
+rest = true           # holds idle_0 while the body walks

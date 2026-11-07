@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   HEX_DIRECTIONS,
+  areaOf,
   HexBoard,
   hex,
   hexAdd,
@@ -120,6 +121,13 @@ describe('reachableHexes', () => {
     expect(reach.get(hexKey(hex(2, 0)))).toEqual([hex(1, 0), hex(2, 0)]) // the only shortest path
   })
 
+  it('asks about each step, so leaving a hex one way may provoke and another way not', () => {
+    // From (0,0), only the step east provokes; (1,1) is still two steps away either way.
+    const eastward = (from: Hex, to: Hex) => (hexEquals(from, hex(0, 0)) && hexEquals(to, hex(1, 0)) ? ['a'] : [])
+    const reach = reachableHexes(hex(0, 0), 2, () => true, eastward)
+    expect(reach.get(hexKey(hex(1, 1)))).toEqual([hex(0, 1), hex(1, 1)])
+  })
+
   it('prefers one provoker met three times over two provokers met once each', () => {
     // To (1,3): east first, then along a's edge; or south along b and c, then east.
     const foes = new Map([
@@ -161,5 +169,94 @@ describe('pixel conversion', () => {
     expect(corners).toHaveLength(6)
     for (const c of corners) expect(Math.hypot(c.x, c.y)).toBeCloseTo(10)
     expect(corners.some((c) => Math.abs(c.x) < 1e-9 && c.y < 0)).toBe(true)
+  })
+})
+
+describe('areaOf', () => {
+  const o = hex(0, 0)
+  const hs = (...pairs: [number, number][]): Hex[] => pairs.map(([q, r]) => hex(q, r))
+  const coneCases: [number, Hex[]][] = [
+    [0, hs([1, 0], [1, 1], [2, -1], [2, 0])],
+    [1, hs([1, -1], [1, -2], [2, -2], [2, -1])],
+    [2, hs([0, -1], [-1, -1], [0, -2], [1, -2])],
+    [3, hs([-1, 0], [-2, 0], [-2, 1], [-1, -1])],
+    [4, hs([-1, 1], [-2, 1], [-2, 2], [-1, 2])],
+    [5, hs([0, 1], [-1, 2], [0, 2], [1, 1])],
+  ]
+
+  it.each(coneCases)('a cone of range 2 aimed at direction %i', (i, expected) => {
+    expect(areaOf('cone', o, HEX_DIRECTIONS[i], 2)).toEqual(expected)
+  })
+
+  const lineCases: [number, Hex[]][] = [
+    [0, hs([1, 0], [2, 0], [3, 0])],
+    [1, hs([1, -1], [2, -2], [3, -3])],
+    [2, hs([0, -1], [0, -2], [0, -3])],
+    [3, hs([-1, 0], [-2, 0], [-3, 0])],
+    [4, hs([-1, 1], [-2, 2], [-3, 3])],
+    [5, hs([0, 1], [0, 2], [0, 3])],
+  ]
+
+  it.each(lineCases)('a line of range 3 aimed at direction %i', (i, expected) => {
+    expect(areaOf('line', o, HEX_DIRECTIONS[i], 3)).toEqual(expected)
+  })
+
+  it('cuts a line aimed beyond its range to the range', () => {
+    expect(areaOf('line', o, hex(5, 0), 3)).toEqual(hs([1, 0], [2, 0], [3, 0]))
+  })
+
+  it('runs a line past an aim short of its range', () => {
+    expect(areaOf('line', o, hex(1, 0), 3)).toEqual(hs([1, 0], [2, 0], [3, 0]))
+  })
+
+  it('draws an off-axis line through the aim', () => {
+    expect(areaOf('line', o, hex(2, -1), 6)).toEqual(hs([1, 0], [2, -1], [3, -1], [4, -2], [5, -2], [6, -3]))
+  })
+
+  it('measures a line from an origin that is not (0, 0)', () => {
+    expect(areaOf('line', hex(3, 2), hex(3, 3), 2)).toEqual(hs([3, 3], [3, 4]))
+  })
+
+  it('takes a cone aimed between two directions from both', () => {
+    expect(areaOf('cone', o, hex(2, -1), 2)).toEqual(hs([1, -1], [1, 0], [2, -2], [2, -1], [2, 0]))
+  })
+
+  it('widens a cone with its range', () => {
+    expect(areaOf('cone', o, hex(1, 0), 3)).toEqual(hs([1, 0], [1, 1], [2, -1], [2, 0], [2, 1], [3, -1], [3, 0]))
+  })
+
+  it('is empty for a cone or line aimed at the origin', () => {
+    expect(areaOf('cone', o, o, 3)).toEqual([])
+    expect(areaOf('line', o, o, 3)).toEqual([])
+  })
+
+  it('keeps a burst as the hexes within the radius of the aim, whatever the origin', () => {
+    for (const [radius, count] of [[0, 1], [1, 7], [2, 19]] as const) {
+      const aim = hex(3, -2)
+      const area = areaOf('burst', hex(-4, 5), aim, 6, radius)
+      expect(area).toHaveLength(count)
+      expect(area.every((h) => hexDistance(h, aim) <= radius)).toBe(true)
+    }
+    expect(areaOf('burst', o, hex(1, 1), 4, 1)[0]).toEqual(hex(0, 1))
+  })
+
+  it('bursts at the hex two steps out in each direction', () => {
+    for (const d of HEX_DIRECTIONS) {
+      const aim = hexAdd(d, d)
+      const area = areaOf('burst', o, aim, 2, 1)
+      expect(area).toHaveLength(7)
+      expect(area).toContainEqual(aim)
+      for (const n of hexNeighbors(aim)) expect(area).toContainEqual(n)
+    }
+  })
+
+  it('drops off-board hexes of a cone or line cut by a small board', () => {
+    const board = new HexBoard({ cols: 5, rows: 5 })
+    const corner = offsetToHex(0, 0)
+    const cone = areaOf('cone', corner, hexAdd(corner, HEX_DIRECTIONS[3]), 2).filter((h) => board.contains(h))
+    expect(cone).toEqual([])
+    const line = areaOf('line', corner, hexAdd(corner, HEX_DIRECTIONS[0]), 6).filter((h) => board.contains(h))
+    expect(line).toEqual([hex(1, 0), hex(2, 0), hex(3, 0), hex(4, 0)])
+    expect(line[0]).toEqual(hex(1, 0))
   })
 })

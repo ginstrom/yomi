@@ -22,6 +22,19 @@ const PORTRAIT_MARGIN = 8
 /** From one portrait's top to the next: a full party of six fits the least window (MIN_GAME_SIZE in main.ts). */
 const PORTRAIT_PITCH = PORTRAIT_SIZE + PORTRAIT_BAR_GAP + PORTRAIT_BAR_H + 6
 
+/** The column's background and its edge, which the world map's party list shares. */
+export const COLUMN_COLOR = 0x17130f
+export const COLUMN_EDGE = 0x4a3d28
+/** A portrait's frame: at rest, hovered, and round the active member (or the selected party). */
+export const FRAME_COLOR = 0x6b5a3a
+export const FRAME_HOVER_COLOR = 0xd8c9a3
+export const FRAME_ACTIVE_COLOR = 0xe8c766
+
+/** A hit point bar's fill for the share `ratio` left: green above half, orange above a fifth, else red. */
+export function hpBarColor(ratio: number): number {
+  return ratio > 0.5 ? 0x43a047 : ratio > 0.2 ? 0xfb8c00 : 0xe53935
+}
+
 /** A portrait's texture key; each is loaded from assets/sprites/<key>.png. */
 export function portraitKey(id: PortraitId): string {
   return `portrait_${id}`

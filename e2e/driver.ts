@@ -154,6 +154,14 @@ export class Game {
     await this.frames()
   }
 
+  /** Presses at `from`, moves by way of the midpoint to `to` and lets go there, as a drag and drop does. */
+  async drag(from: Point, to: Point): Promise<void> {
+    await this.holdDown(from)
+    await this.hover({ x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 })
+    await this.hover(to)
+    await this.letGo()
+  }
+
   async press(key: string): Promise<void> {
     await this.page.keyboard.press(key)
     await this.frames()

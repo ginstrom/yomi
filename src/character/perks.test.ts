@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SPELLS, SPELL_IDS } from '../combat/spells.ts'
+import { MONSTER_SPELL_IDS, SPELLS, SPELL_IDS } from '../combat/spells.ts'
 import { ATTRIBUTE_IDS } from './attributes.ts'
 import { createWarrior } from './character.ts'
 import {
@@ -48,6 +48,12 @@ describe('PERKS', () => {
       if (perk.spell) expect(SPELL_IDS).toContain(perk.spell)
     }
     expect(JSON.stringify(PERKS)).not.toMatch(/first aid|firstAid|healer/i)
+  })
+
+  it('teaches every hero spell and no monster spell, whatever a character takes', () => {
+    const taught = PERK_IDS.map((id) => (PERKS[id] as Perk).spell).filter((spell) => spell !== undefined)
+    expect([...taught].sort()).toEqual([...SPELL_IDS].sort())
+    for (const spell of MONSTER_SPELL_IDS) expect(taught as string[]).not.toContain(spell)
   })
 })
 

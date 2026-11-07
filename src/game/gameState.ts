@@ -1,5 +1,6 @@
 import type { Character } from '../character/character.ts'
 import type { Item } from '../inventory/inventory.ts'
+import type { Pouch } from '../inventory/runes.ts'
 import { newStoryState, type StoryState } from '../story/story.ts'
 import { readyMadeParty, type Party } from './party.ts'
 import type { SlotId } from './saveSlots.ts'
@@ -19,6 +20,8 @@ export interface GameState {
    * into it, which is how an item passes from one to another.
    */
   baggage: Item[]
+  /** The party's rune pouch (runes.ts): runes found, bought and fused, waiting to be embedded or sold. */
+  runes: Pouch
   /**
    * The heroes waiting at the guild hall, not in the party (guildHall.ts).
    * The party's limit is the hall's level's (`partyLimit`), not stored.
@@ -43,7 +46,7 @@ export function newGame(
   encampmentName?: string,
   tutorial = false,
 ): GameState {
-  return { party, world: newWorld(seed, encampmentName), baggage: [], reserves: [], slot, story: newStoryState(tutorial) }
+  return { party, world: newWorld(seed, encampmentName), baggage: [], runes: {}, reserves: [], slot, story: newStoryState(tutorial) }
 }
 
 /** Moves the loot of a beaten monster location into the baggage, and returns what was found. */

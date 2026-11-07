@@ -86,6 +86,11 @@ describe('the manual’s screenshots', () => {
     await game.press('b')
     await game.settled('Inventory', (p) => p.tab === 'spells')
     await shot(game, 'panel-spells-mage')
+    // The mage, of strength 3, hovering the Iron Greatsword it carries, which asks 6.
+    await game.press('i')
+    const pack = await game.settled('Inventory', (p) => p.tab === 'inventory')
+    await game.hover(pack.backpack.find((slot) => slot.item === 'iron_greatsword')!)
+    await shot(game, 'panel-strength')
     await game.press('Escape')
     await game.waitForScenes(['World'])
 
@@ -104,7 +109,15 @@ describe('the manual’s screenshots', () => {
     const nearest = foes.reduce((a, b) => (hexDistance(hero.position, b.position) < hexDistance(hero.position, a.position) ? b : a))
     await game.hover(battleHexOnScreen(battle, offsetToHex(5, 4)))
     await shot(game, 'battle-move')
-    await game.hover(battleHexOnScreen(battle, nearest.position))
+    // The archer, who can walk into range of a foe and still shoot it this turn: the path and the crossed swords.
+    await game.click(battle.party[1])
+    await game.waitFor('Battle', (b) => b.selected === 'hero_2')
+    const archer = battle.state.units.find((u) => u.id === 'hero_2')!
+    const walkable = (foe: (typeof foes)[number]) => {
+      const beyond = hexDistance(archer.position, foe.position) - archer.attackRange
+      return beyond > 0 && beyond <= archer.ap - archer.attackApCost
+    }
+    await game.hover(battleHexOnScreen(battle, (foes.find(walkable) ?? nearest).position))
     await shot(game, 'battle-attack')
 
     // The mage steps two hexes forward, to bring a foe within Magic Arrow's reach.
@@ -140,12 +153,49 @@ describe('the manual’s screenshots', () => {
     await shot(game, 'panel-level-up')
   })
 
+  it('a battle with bandits', async () => {
+    // Started from the debug console, at threat 5, where the Captain and the Archer take the field.
+    const game = await games.open()
+    await game.newGame()
+    await game.press('Shift+Backquote')
+    for (const line of ['xp 2000 all', 'fight bandit_camp 5']) {
+      await game.page.locator('#yomi-debug input').fill(line)
+      await game.press('Enter')
+    }
+    await game.waitForScenes(['Battle'])
+    await game.press('Escape')
+    await game.waitFor('Battle', (b) => b.playerControl)
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'battle-bandits')
+  })
+
+  it('a battle at the Salamander Pool', async () => {
+    // Started from the debug console; hovering the Salamander shows its abilities and ward.
+    const game = await games.open()
+    await game.newGame()
+    await game.press('Shift+Backquote')
+    for (const line of ['xp 2000 all', 'fight salamander_pool 5']) {
+      await game.page.locator('#yomi-debug input').fill(line)
+      await game.press('Enter')
+    }
+    await game.waitForScenes(['Battle'])
+    await game.press('Escape')
+    const battle = await game.waitFor('Battle', (b) => b.playerControl)
+    const salamander = battle.state.units.find((u) => u.id === 'salamander')!
+    await game.hover(battleHexOnScreen(battle, salamander.position))
+    await game.waitFor('Battle', (b) => b.foeInfo.length > 0)
+    await shot(game, 'battle-salamander')
+  })
+
   it('the trading post and the workshop', async () => {
     const game = await games.open()
     await game.newGame()
     await game.page.evaluate(() => {
       const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
-      saved.game.world.stock = { gold: 300, iron: 50, timber: 20, stone: 30, copper: 20 }
+      saved.game.world.stock = { gold: 600, iron: 50, timber: 20, stone: 40, copper: 40, silver: 30 }
+      // A Masterwork Steel Longsword with a Storm rune in one of its two sockets, and runes in the pouch, for the Runes tab.
+      saved.game.baggage.push('steel_longsword@3#storm1')
+      saved.game.runes = { ember1: 2, life1: 1 }
       localStorage.setItem('yomi.save.1', JSON.stringify(saved))
     })
     const menu = await game.reload()
@@ -155,7 +205,7 @@ describe('the manual’s screenshots', () => {
     await game.waitForScenes(['Encampment'], ['World'])
     let camp = await game.settled('Encampment')
     const facility = (c: typeof camp, id: string) => c.facilities.find((f) => f.id === id)!
-    for (const [id, level] of [['trading_post', 2], ['workshop', 1], ['workshop', 2]] as const) {
+    for (const [id, level] of [['trading_post', 2], ['trading_post', 3], ['trading_post', 4], ['workshop', 1], ['workshop', 2]] as const) {
       await game.click(facility(camp, id))
       const shown = await game.settled('Encampment', (c) => c.selected === id)
       await game.click(shown.buttons.improve)
@@ -164,13 +214,20 @@ describe('the manual’s screenshots', () => {
     await game.click(facility(camp, 'trading_post'))
     await game.click((await game.settled('Encampment', (c) => c.selected === 'trading_post')).buttons.open)
     await game.waitForScenes(['TradingPost'], ['World'])
-    const post = await game.settled('TradingPost')
-    await game.click(post.rows.find((row) => row.id === 'iron_sword@2')!)
-    await game.settled('TradingPost', (p) => p.selected === 'iron_sword@2')
+    // The Buy tab opens on weapons; the war hammer's family button narrows it, steel included at level 4.
+    const post = await game.settled('TradingPost', (p) => p.filter.slot === 'mainHand')
+    await game.click(post.familyButtons.find((b) => b.family === 'war_hammer')!)
+    const hammers = await game.settled('TradingPost', (p) => p.filter.family === 'war_hammer')
+    await game.click(hammers.rows.find((row) => row.id === 'steel_war_hammer')!)
+    await game.settled('TradingPost', (p) => p.selected === 'steel_war_hammer')
     await game.hover({ x: 0, y: 0 })
     await shot(game, 'trading-post')
     await game.press('Escape')
-    await game.settled('TradingPost', (p) => p.selected === null)
+    const unselected = await game.settled('TradingPost', (p) => p.selected === null)
+    await game.click(unselected.runesButton)
+    await game.settled('TradingPost', (p) => p.filter.slot === 'runes' && p.rows.length > 0)
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'trading-post-runes')
     await game.press('Escape')
     await game.waitForScenes(['Encampment'], ['World'])
     camp = await game.settled('Encampment', (c) => c.selected === 'trading_post')
@@ -185,6 +242,16 @@ describe('the manual’s screenshots', () => {
     await game.settled('Crafting', (c) => c.chosen === 'light2')
     await game.hover({ x: 0, y: 0 })
     await shot(game, 'crafting')
+    const modify = await game.settled('Crafting')
+    await game.click(modify.buttons.runesTab)
+    const runes = await game.settled('Crafting', (c) => c.tab === 'runes')
+    const longsword = runes.items.find((item) => item.itemId === 'steel_longsword@3#storm1')!
+    await game.click(longsword)
+    const chosen = await game.settled('Crafting', (c) => c.selected === longsword.id)
+    await game.click(chosen.pouch.find((p) => p.key === 'ember1')!.embed)
+    await game.settled('Crafting', (c) => c.chosen === 'embed:ember1')
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'crafting-runes')
   })
 
   it('the encampment, the guild hall and the blight', async () => {

@@ -31,7 +31,7 @@ A new game first asks how you want to start:
 
 ![The party roster](images/party-roster.png)
 
-Either choice takes you to the roster, which has one row for each place in the party. You start with three places. Members can be **edited** or **removed**. An empty place can be filled in two ways: **Create** opens character creation, and **Preroll** offers a ready-built hero.
+Either choice takes you to the roster, which has one row for each place in the party. You start with three places. Members can be **edited** or **removed**. An empty place can be filled in two ways: **Create character** opens character creation, and **Choose pre-rolled** offers a ready-built hero.
 
 ![Pre-rolled characters](images/party-prerolls.png)
 
@@ -72,7 +72,7 @@ There are three skills, each a percentage:
 - **Archery**: your chance to hit with a bow.
 - **Magic**: your chance of landing a spell or a wand shot. Spell perks also require a minimum Magic.
 
-Skills start low and are set by attributes alone. **Tag** one skill: tagging adds 20% to it and makes each skill point raise it by 2% instead of 1%. You then have **10 skill points** to place. Above 80% a raise costs 2 points, and above 90% it costs 3.
+Skills start low and are set by attributes alone. **Tag** one skill: tagging adds 20% to it and makes each skill point raise it by 2% instead of 1%. You then have **10 skill points** to place. From 80% a raise costs 2 points, and from 90% it costs 3.
 
 An untrained skill sits near 10%, and against an armoured foe that becomes the minimum 5% chance to hit. A hero who specialises (tags a skill, puts all 10 points into it and takes its skill perk) starts at around 60%.
 
@@ -92,7 +92,7 @@ If a change you make leaves a perk you already took without its requirements, th
 
 ![Name and portrait](images/creation-name.png)
 
-Pick a portrait and type a name of up to 12 letters. Gear is not chosen: every hero starts holding the weapon of their tagged skill, wears a steel breastplate, and carries the other plain weapons in their backpack.
+Pick a portrait and type a name of up to 12 letters. Gear is not chosen: every hero starts holding the weapon of their tagged skill (a melee hero also holds an oak shield), wears an Iron Breastplate, and carries the other plain weapons in their backpack, and the oak shield too, unless they hold it.
 
 Any skill points or picks you leave unspent stay with the character, and you can spend them later on the world map.
 
@@ -102,13 +102,15 @@ Any skill points or picks you leave unspent stay with the character, and you can
 
 ![The world map at the start](images/world-start.png)
 
-The world map is a large board of hexes, many screens wide, and the view scrolls to follow your party. Your heroes' portraits run down the left side. The header shows the turn number, how much of the explored land is blighted, and the encampment's **stock** of materials.
+The world map is a large board of hexes, many screens wide, and the view scrolls to follow your party. Your heroes' portraits run down the left side. Your party is listed down the right side of the map, with its leader's face and its hit points; click it to bring the view back to it (as **Home** does). The header shows the turn number, how much of the explored land is blighted (and, once it has grown, how much stronger the blight has become), and the encampment's **stock** of materials.
 
 **Time passes only when you act.** Each hex you walk and each day you camp takes one turn, and each turn the blight takes another day to spread (see [The blight](#8-the-blight)).
 
 ### Travel
 
 Click a hex to travel there. Hovering over a hex first shows the route, and a panel at the top right tells what you know of it: what stands there, its blight (as you last saw it, if it is out of sight), whether the blight is gaining or receding there, how many days away it is, and your heroes' levels and hit points on the party's own hex. The party walks one hex per turn and stops early if something important happens on the way, such as monsters coming into view, a site you hold falling under threat, or monsters standing in the road. Routes avoid known monster lairs unless the lair is where you are going.
+
+The map is larger than the window. It follows the party as it travels, but you can **drag** it with the mouse to look elsewhere; it stops at the map's edges, and a short click still travels. The view stays where you left it until the party next sets out, or you press **Home** or click your party's entry to bring it back to the party.
 
 ### Fog of war
 
@@ -130,6 +132,17 @@ When you walk onto a monster lair, the footer offers three actions:
 - **Scout** and **Wait** each pass a turn without fighting. Neither does more yet.
 
 You can also click a hex to walk away.
+
+**Bandits.** Not every lair holds monsters. Bandits hold the **Bandit Camp** (threat 3) and the **Bandit Hideout** (threat 4), and new **Bandit Gangs** appear where the blight breeds lairs of threat 3 or more. Bandits are people, built the way your heroes are, and always led by a Captain with sword, shield and breastplate. At threat 3 a Brute with a battle axe and breastplate fights beside him; at threat 4 a Hedge-Mage takes the Brute's place, casting Magic Arrow, Flame Arrow and Shield and healing; at threat 5 a Bandit Archer takes the Hedge-Mage's place, standing back with a bow and shooting. They have a hero's hit points, the Captain and the Brute a hero's armour, and at threat 5 they carry Fine gear. Further out still, beyond threat 5, four bandits take the field together, a **Crossbowman** among them whose bolts punch through armour, all in Fine steel. Expect a hard fight against a party of your level: bring a heavy weapon, or spells, for the armoured ones, and close in on the Archer and the Hedge-Mage, who wear none.
+
+![Bandits at threat 5: the Captain and the Archer](images/battle-bandits.png)
+
+**Spiders and salamanders.** Far to the east, two lairs hold monsters that fight in new ways:
+
+- The **Spider Nest** holds **Giant Spiders** with a Kobold Sneak. A spider spins a **web** at a hero up to 4 hexes off, which can catch everyone within a hex of where it lands (it rolls to hit each of them): a webbed hero has 4 fewer AP for 2 turns. Up close it bites twice in one action, and the second bite poisons. Spiders are quick to kill but hit hard; deal with them before they reach your archer and mage.
+- The **Salamander Pool** holds a **Salamander** between two Kobolds. Every other turn the Salamander spits a **cone of fire** 2 hexes long that burns everyone in it, its own kobolds too if they stand in the way. Even when the spit misses a unit, the unit still takes half the damage. Fire does nothing to a Salamander: Flame Arrow and Fireball deal it 0 (the log says "warded"). Use blades, arrows and Magic Arrow on it, and don't stand bunched up in front of it.
+
+![The Salamander Pool, with the Salamander's Fire Spit and ward shown on hover](images/battle-salamander.png)
 
 ### Camping and other actions
 
@@ -153,8 +166,8 @@ Press **C**, or click the portrait of the hero marked in gold, to open the chara
 | S | Skills |
 | B | Spells |
 | I | Inventory |
-| P | Perk tree (from Skills) |
-| K | Spell tree (from Spells) |
+| P | Perk tree (press again to go back to Skills) |
+| K | Spell tree (press again to go back to Spells) |
 | Esc | Close, or step back from a tree |
 
 To switch the panel to another hero, click their portrait on the left.
@@ -163,7 +176,7 @@ To switch the panel to another hero, click their portrait on the left.
 
 ![The Character tab](images/panel-character.png)
 
-This tab shows the hero's attributes, their level and experience, and what they fight with: hit points, armour class, resistance, chance to hit, damage, attack cost, how much resistance their blows pierce, action points and critical chance.
+This tab shows the hero's attributes, their level and experience, and what they fight with: hit points, armour class, resistance, chance to hit, damage, attack cost, how much resistance their blows pierce (if any), action points, critical chance and, for a caster, mana. A hero with runes that ward against an element shows a **Wards** line, for example "Wards: fire 2, frost 4", and one whose weapon has runes that add to a hit an **On a hit** line, for example "On a hit: +3 fire, lays Seared" (see "Runes" in chapter 9).
 
 ### Skills and perks
 
@@ -173,25 +186,27 @@ When the hero has skill points to spend, a **+** appears beside each skill. The 
 
 ![The perk tree](images/panel-perk-tree.png)
 
-Perks you can take now are drawn brightly, and a taken perk shows its ranks (for example 1/2).
+Perks you can take now are drawn brightly, and a taken perk shows its ranks (for example 1/2). Most perks also ask a minimum in their attribute, so a dim perk may be waiting for a higher attribute rather than a higher level.
 
 ### Spells
 
 ![The Spells tab](images/panel-spells-mage.png)
 
-This tab lists the spells the hero knows and the mana they are carrying. On the world map, the **Cast** button beside a heal casts it out of battle. A heal on one hero asks you to click that hero's portrait. A heal cast on the world map always restores the average of its dice. **Spell Tree** (or K) opens the spell tree.
+This tab lists the spells the hero knows, the mana they are carrying and their **spell skill**, the chance a spell strikes before the foe's armour, with what their gear adds or takes shown beside it. On the world map, the **Cast** button beside a heal casts it out of battle. A heal on one hero asks you to click that hero's portrait. A heal cast on the world map always restores the average of its dice. **Spell Tree** (or K) opens the spell tree.
 
 ### Inventory
 
 ![The Inventory tab](images/panel-inventory.png)
 
-The paper doll shows what the hero wears: head, neck, body, cloak, both hands, gloves, belt, boots and two rings. Below it is the backpack.
+The paper doll shows what the hero wears: head, neck, body, cloak, both hands, gloves, belt, boots and two rings. Below it is the backpack. Heroes are drawn in the armour, headgear and cloak they wear, here, on the world map and in battle.
 
 - **Click** a backpack item to equip it, or click a worn item to stow it.
+- **Drag** an item to move it: from the backpack onto a slot to wear it, from a slot back to the backpack to stow it, from a slot onto the baggage (or the ground in battle) to put it there, from the baggage (or the ground) onto a slot to take it and wear it, and between the backpack and the baggage (or the ground). Drop it somewhere that does not fit and it returns to where it came from. **Esc** cancels a drag.
 - On the world map, the right-hand grid is the party's shared **baggage**, which has no size limit. Click an item there to take it. **Right-click** (or Ctrl+click) an item to put it in the baggage. This is how you pass items between heroes.
 - In battle, the right-hand grid is the **ground** under the hero. Right-click to drop an item, and click to pick one up.
-- A two-handed weapon (the bow, the greatsword) and an off-hand item cannot be held together. Equipping one stows the other.
-- A ring goes in whichever ring slot is free.
+- A two-handed weapon (the bows, the crossbow, the greatsword, the halberd, the staff) and an off-hand item cannot be held together. Equipping one stows the other.
+- A clicked ring goes in whichever ring slot is free; a dragged one goes in the ring slot you drop it on.
+- **Hover** an item to see its stats. An item with **sockets** shows small pips along the bottom of its icon, one a socket, filled in the rune's colour where a rune sits; its tooltip ends with the sockets filled and the runes in them, such as "Sockets: 1 of 2 (Ember I)", while what the runes do is in the stat lines above it, such as "On a hit: +1 fire".
 
 ---
 
@@ -218,19 +233,33 @@ Hover over a hex to see the path, then click to move there. Each hex costs **1 A
 
 ![Hovering a foe shows the attack](images/battle-attack.png)
 
-**Click a foe** to attack it. If it is out of reach, the hero first walks into range along the path shown, then strikes. The weapon decides both the cost and the reach:
+**Click a foe** to attack it. If it is out of reach, the hero first walks into range along the path shown, then strikes. If the walk would leave too few action points for the attack, the crossed swords are faded, the line under the round says "Too few AP to reach and strike" and a click does nothing: walk closer by clicking a hex. The **Attack** button strikes the only foe in reach, or, with several in reach, asks you to click one (it reads **Cancel** while it waits). The weapon decides both the cost and the reach:
 
-| Weapon | Damage | AP | Reach | Pierces resistance |
-| --- | --- | --- | --- | --- |
-| Iron Dagger | 1d4 | 3 | 1 | — |
-| Iron Shortsword | 1d3+1 | 4 | 1 | — |
-| Iron Longsword | 1d8+3 | 5 | 1 | 1 |
-| Iron Battle Axe | 1d12+2 | 6 | 1 | 2 |
-| Steel Greatsword (two hands) | 2d6+3 | 7 | 1 | 2 |
-| Yew Bow (two hands) | 1d6 | 4 | 5 | — |
-| Wand of Sparks | 1d6 | 5 | 4 | — |
+| Weapon | Damage | AP | Reach | Pierces resistance | Strength |
+| --- | --- | --- | --- | --- | --- |
+| Iron Dagger | 1d4 | 3 | 1 | — | — |
+| Iron Shortsword | 1d3+1 | 4 | 1 | — | — |
+| Iron Rapier (critical +5%) | 1d6 | 4 | 1 | — | — |
+| Iron Longsword | 1d8+3 | 5 | 1 | 1 | — |
+| Iron Mace | 1d6+3 | 5 | 1 | 2 | 5 |
+| Iron Spear | 1d8+1 | 5 | 2 | 1 | — |
+| Iron Battle Axe | 1d12+2 | 6 | 1 | 2 | 5 |
+| Iron War Hammer (to hit −5%) | 1d10+3 | 6 | 1 | 3 | 6 |
+| Iron Greatsword (two hands) | 2d6+3 | 7 | 1 | 2 | 6 |
+| Iron Halberd (two hands) | 1d12+3 | 7 | 2 | 2 | 6 |
+| Yew Bow (two hands) | 1d6 | 4 | 5 | — | — |
+| Yew Longbow (two hands) | 1d8 | 5 | 7 | — | 5 |
+| Yew Crossbow (two hands) | 1d10 | 6 | 5 | 2 | — |
+| Wand of Sparks (Magic) | 1d6 | 5 | 4 | — | — |
+| Ash Staff (two hands, Magic; spells +5%, mana +4) | 1d6+1 | 5 | 1 | — | — |
+
+These are the iron (and yew, and ash) weapons. Their **steel** and **ironwood** versions do 2 more damage and are otherwise the same. A hero weaker than a weapon's **Strength** loses 5% to hit with it for every point short (see "Gear families" in chapter 9).
+
+The **spear** and the **halberd** strike from the second hex, past an ally standing in front, and count as melee weapons in every way: they use Melee Weapons, add strength's damage and pierce armour. Their zone of control is still only the hexes next to the wielder. The **crossbow** is the only shot that pierces armour.
 
 A weapon costing 4 AP or less lets a hero who stands still attack twice in one turn.
+
+A weapon with runes in it may do more on a hit (see "Runes" in chapter 9). An Ember rune adds fire damage: the hit reads "HITS Troll for 8 dmg +1 fire" in the log, and "+1 fire" rises from the foe. This extra damage is a fixed amount, not rolled: armour's resistance does not reduce it, a critical does not double it, and only a ward against its element does ("+1 fire (warded 1)"). A higher-ranked rune may also lay a lasting effect on the foe, such as Seared, which stops a troll regenerating for its next turn. A Life rune in a weapon heals the wielder a little on every hit.
 
 ### How a hit is rolled
 
@@ -241,7 +270,7 @@ Every attack rolls 1 to 100. It **hits** if the roll is at or under:
 The chance is always kept between 5% and 95%. A hit is **critical** if the roll also falls within the attacker's critical chance. The bonuses are:
 
 - **Flanking**: +10% for each other ally standing next to the target.
-- **Arc**: +5% from the foe's side and +10% from its rear. For a ranged attack, the arc is judged by the hex next to the target that the shot comes in over.
+- **Arc**: +5% from the foe's side and +10% from its rear. For a ranged attack, the arc is judged by the hex next to the target that the shot comes in over. But a unit struck in its side or rear by a melee weapon turns to face the attacker first, hit or miss, so the blow lands on its front. Bow and wand shots give no time to turn: they always strike the arc they come in over. It can turn like this only once per enemy turn: strike it from one side, then from the other, and the second attack finds its back. Your heroes turn the same way on the enemy's turn. A unit breaking away from a free attack cannot turn.
 - **Helpless**: +20% against a sleeping target.
 
 ### Armour: dodging and resistance
@@ -250,15 +279,25 @@ Defence works in two ways. **Armour class** (from agility, shields and some magi
 
 Because resistance comes off every hit, it hurts weapons that hit often for a little, such as the dagger, the shortsword and the bow, much more than weapons that hit hard. Those quick weapons are best against lightly armoured foes. Against heavily armoured ones, reach for a heavy weapon.
 
-**Armour piercing**: melee blows ignore some points of the foe's resistance (see the table above, and the Bearded modifier and the Armour Breaker and Sunder perks). Bow and wand shots pierce nothing. Spells ignore resistance altogether, which makes a mage the other answer to armour.
+**Armour piercing**: melee blows ignore some points of the foe's resistance (see the table above, and the Bearded modifier and the Armour Breaker and Sunder perks). Bow and wand shots pierce nothing; a crossbow bolt pierces its own 2 points, but not the perks'. Spells ignore resistance altogether, which makes a mage the other answer to armour.
 
-When you hover a foe you can attack, its nameplate shows your chance to hit and, after piercing, how much damage its armour will stop (for example "60% −3 dmg").
+When a hero is selected, every foe they can attack from where they stand shows on its nameplate your chance to hit, any bonus from flanking and the arc, and, after piercing, how much damage its armour will stop: "60% −3 dmg", or "70% +10 −3 dmg" from its flank.
 
 **Regeneration**: trolls heal some hit points at the start of each of their turns. Acid (Acid Arrow, which also eats 2 points of resistance while it lasts) and fire (Fireball and Flame Arrow, for the turn after) stop it.
 
+### Monsters' special attacks
+
+Some monsters can do more than swing a weapon:
+
+- **Routines**: several strikes as one action, such as a Troll's two claws or a Giant Spider's two bites. Each strike rolls on its own. If the target falls before the last strike, the rest go to the nearest other foe in reach.
+- **Area attacks**: a burst, a cone or a line. An area attack rolls against everyone in it, friend or foe. Armour's resistance does not reduce its damage, and some area attacks (such as the Salamander's fire) still deal half damage on a miss.
+- **Recharge**: special attacks cost no mana, but some of them, once used, have to wait some turns before they can be used again.
+
+**Hover over a monster** to see what it can do: a small panel beside it, headed with its name, lists each special attack as "ready", "ready next turn" or "ready in 2 turns" (counting the monster's own turns), with what it does underneath (for example "cone 2: 4d6+2 fire, half on a miss" and "seared 1 turn (no regeneration)"), and any wards it has ("Wards: fire 99").
+
 ### Zones of control and free attacks
 
-A foe holding a **melee** weapon controls the hexes next to it. **Leaving** one of those hexes gives that foe one free attack on you. Each foe gets at most one free attack per enemy turn. Ranged units, wand-wielders and sleepers have no zone of control. Pathfinding prefers routes that provoke the fewest foes, and the orange edges show where the danger is. Your heroes threaten the enemy in exactly the same way.
+A foe holding a **melee** weapon controls the hexes next to it. **Leaving** those hexes gives that foe one free attack on you; stepping to another hex next to the same foe does not. Each foe gets at most one free attack per enemy turn. A spear or halberd controls only the hexes next to it too, though it strikes from two. Ranged units (bows, crossbows, wands) and sleepers have no zone of control. Pathfinding prefers routes that provoke the fewest foes, and the orange edges show where the danger is. Your heroes threaten the enemy in exactly the same way.
 
 ### Changing gear in battle
 
@@ -274,11 +313,13 @@ Press **I** to open the inventory for the selected hero. Equipping, stowing, dro
 | I / C / S | Inventory / Character / Skills panel |
 | Esc | Close the spell list, cancel aiming, or open the menu |
 
+While aiming a spell the pointer is crossed swords over a valid target of an attacking spell, and a green cross over a valid target of a healing or protective one.
+
 ### Victory and defeat
 
 ![Victory](images/battle-victory.png)
 
-You win when every foe has fallen. Every surviving hero earns the full experience reward. The lair disappears from the map, the land around it is cleansed, and its loot goes into the baggage.
+You win when every foe has fallen. Every surviving hero earns the full experience reward. The lair disappears from the map, the land around it is cleansed, and its loot goes into the baggage. A lair may also yield a **rune**, which goes into the party's rune pouch: the victory screen names it, as in "Found: Lesser Ember Rune". Lairs of threat 1 to 3 give a Lesser rune half the time; from threat 4 every win gives one, sometimes of the second rank. The Salamander Pool favours Ember runes and the Spider Nest Venom.
 
 **Death is permanent.** A hero who fell in a battle you won is gone for good. Their gear goes to the baggage, and the party fights on smaller until the guild hall fills the place. If **every** hero falls, the game is over and its save is deleted.
 
@@ -292,7 +333,7 @@ A hero who knows a spell has **mana**: twice their Intelligence, plus half their
 
 ![The spell list](images/battle-spell-menu.png)
 
-To cast, select the hero and press **Cast** (or M). Pick a spell by clicking it or pressing its number. A spell you cannot cast right now is greyed out, for example because no target is in range or the hero lacks the AP or mana.
+To cast, select the hero and press **Cast** (or M); the button shows the mana the hero has left, and reads **Cancel** while you aim. Pick a spell by clicking it or pressing its number. A spell you cannot cast right now is greyed out, for example because no target is in range or the hero lacks the AP or mana.
 
 ![Choosing a spell's target](images/battle-targeting.png)
 
@@ -301,6 +342,14 @@ The spell then asks for a target. Valid targets are outlined, and hovering over 
 - **Hostile spells** roll to hit like an attack, using the caster's Magic skill. Flanking and facing add nothing, so spells are the reliable strike while blades reward good positioning.
 - **Area spells** touch **everyone** in the area, including your own heroes and the caster. Hovering over the centre of an area outlines it and shows the odds for every unit inside.
 - **Friendly spells** never miss.
+
+### Elements and wards
+
+Some spells and effects carry an **element**. Flame Arrow and Fireball are fire, Frost Blast is frost, Acid Arrow and its corrosion are acid, and Death Cloud and its poison are poison. Magic Arrow has no element. A monster may have a **ward** against an element: the ward takes that many points off each hit and each tick of that element, and the log notes it, for example "HITS Salamander for 0 dmg (warded 9)". A ward never stops an effect from landing, only its damage. Choose spells with no element, or a different one, against a warded foe.
+
+Heroes can have wards too, from **runes** in their armour and shields (see "Runes" in chapter 9): a breastplate with a Rime rune gives "Frost ward 2", and a Venom rune makes a Giant Spider's poison tick 2 less. Wards from every item worn add up.
+
+Monsters have spells of their own that heroes cannot learn, among them Web and Curse.
 
 ### Lasting effects
 
@@ -319,6 +368,8 @@ The letters beside a unit's health bar show its current effects. An effect lasts
 | Hasted | +3 AP |
 | Mirrored | Images take the next hits, and a hit on an image deals no damage |
 | Seared | No regeneration for a turn |
+| Cursed | −15 to hit and −5 armour class (laid by monsters) |
+| Webbed | −4 AP (laid by a Giant Spider's web) |
 
 Damage over time strikes at the start of the affected unit's side's turn. Section 11 lists every spell.
 
@@ -361,15 +412,15 @@ A hero born with an attribute of 7 can reach that attribute's masteries by takin
 
 Every hex of land has a blight level from 0 (clean) to 3 (corrupted), shown as a tint over the grass. Corrupted land also shows dark growths. Every day, sources of influence push on the hexes around them, and their strength fades by a point for each hex of distance:
 
-- **Pushing the blight forward**: monster lairs (more strongly the higher their threat), the Source itself, and corrupted land spreading to its neighbours. The blight grows stronger over time, by a tenth every 30 days.
+- **Pushing the blight forward**: monster lairs (more strongly the higher their threat), the Source itself, and corrupted land spreading to its neighbours. The blight grows stronger over time, by a tenth every 30 days, up to half again as strong.
 - **Pushing it back**: the encampment (stronger with its shrine), every resource you hold (stronger with an outpost), every watchtower, and the party itself, which grows stronger as the heroes level up.
 
 Consequences:
 
-- **Corrupted land breeds new monster lairs.** A new lair's threat depends on how far from the encampment it appears.
+- **Corrupted land breeds new monster lairs.** A new lair's threat depends on how far from the encampment it appears: goblins and kobolds at any threat, and bandits from threat 3.
 - **Winning a battle cleanses the land** around the lair, lowering every hex within 1 + its threat by two levels.
 - **Resources** are captured when their land is clean (level 0) and lost when it reaches level 2. While the blight gains on a site, the map shows it in orange with the number of days left until it falls. A watchtower can be lost the same way.
-- **Stock**: every 5 days, each site you hold adds its yield to the encampment's stock (gold, iron, timber, silver and so on). A site whose land is tainted yields half.
+- **Stock**: every 5 days, each site you hold adds its yield to the encampment's stock (gold, iron, timber, silver and so on), and the encampment itself adds 2 gold. A site whose land is tainted yields half.
 
 The header's percentage counts only the land you have explored.
 
@@ -385,8 +436,8 @@ The stock pays for everything you build.
 | Outpost | A held resource without one | 15 gold, 10 timber | A day | The site resists the blight more strongly and yields more. Lost with the site. |
 | Shrine | The encampment's empty plot | 20 gold, then 40 gold + 15 silver, then 80 gold + 30 silver | Instant | Each level strengthens the encampment against the blight |
 | Guild hall | The encampment | 30 gold + 15 iron, then 60 gold + 30 iron | Instant | Party limit 3, then 4, then 5 |
-| Trading post | The encampment | 40 gold + 15 stone, then 80 gold + 15 copper | Instant | Sells plain gear, then Fine, then Masterwork |
-| Workshop | The encampment's empty plot | 25 gold + 15 iron, then 40 gold + 15 stone, then 60 gold + 10 crystal | Instant | Crafts more modifiers, at higher grades |
+| Trading post | The encampment | 40 gold + 15 stone, then 80 gold + 15 copper, then 120 gold + 20 silver | Instant | Sells plain gear, then Fine and Lesser runes, then Masterwork, then steel and second-rank runes |
+| Workshop | The encampment's empty plot | 25 gold + 15 iron, then 40 gold + 15 stone, then 60 gold + 10 crystal | Instant | Crafts more modifiers, at higher grades; sets and fuses runes from level 1, takes them out from level 2 |
 | Infirmary | The encampment's empty plot | 20 gold + 10 timber, then 40 gold + 15 peat, then 60 gold + 20 salt | Instant | Faster healing while you camp |
 
 The guild hall and the trading post stand from the start. The far-off materials (stone, copper, crystal, peat, salt) buy the higher levels, so the land you hold decides how far your encampment can grow.
@@ -406,33 +457,65 @@ When the party stands on the encampment, **Enter** (the button carries the encam
 In the encampment, click the guild hall and then **Enter the Guild Hall**. It shows your party and the reserves waiting at the hall. **Close** goes back to the encampment.
 
 - **Click a hero** to select them. Then click a hero in the other row to swap the two, or use **To reserves** / **To party**.
-- **Recruit** hires a new hero for **10 gold**, who joins the reserves.
+- **Recruit** hires a new hero for **10 gold**, who joins the reserves. The reserves hold at most 4.
 
 ![Recruiting](images/guild-hall-recruit.png)
 
 You can recruit one of the pre-rolled heroes not already in your company, or **Create new** to make one with character creation. A recruit joins at the hall's level or your party's lowest level, whichever is lower, with that level's points left for you to spend.
 
+### Gear families
+
+Gear comes in **families**, each a trade-off: the weapons in the table in chapter 5, three shields, four body armours, and a light and a heavy choice for the head, hands and feet.
+
+| Item | Armour class | Resistance | Strength | Other |
+| --- | --- | --- | --- | --- |
+| Iron Buckler | +6 | — | — | |
+| Oak Shield | +10 | — | — | |
+| Iron Tower Shield | +16 | 1 | 6 | AP −1 |
+| Linen Robe | — | — | — | spells +5%, mana +6 |
+| Leather Armor | +12 | 1 | — | |
+| Iron Breastplate | +10 | 2 | 3 | spells −5% |
+| Iron Plate | +6 | 4 | 6 | AP −1, spells −15% |
+| Leather Cap / Leather Boots | +3 | — | — | |
+| Leather Gloves | — | — | — | to hit +2% |
+| Iron Helm | +2 | 1 | 4 | spells −5% |
+| Iron Gauntlets | — | 1 | 4 | spells −5% |
+| Iron Greaves | — | 1 | 4 | |
+
+**Tiers.** Each family comes in a first and a second material: iron and **steel** for metal, yew or oak and **ironwood** for wood, leather and **wolfhide** for hide, linen and **silk** for cloth. The second tier is better: a weapon does 2 more damage, a shield adds 2 to armour class, body armour 2 to armour class and 1 to resistance, and a head, hands or feet item 1 to armour class. In the trading post and the inventory a second-tier item's icon is tinted. Only a level 4 trading post sells them.
+
+**Weight.** Heavy gear asks for strength. For every point of strength a hero lacks for an item, they lose 5% to hit with weapon attacks (spells are not affected), and each item counts on its own: a strength 3 hero with a War Hammer (6) and Iron Gauntlets (4) loses 15% + 5%. An item's tooltip shows it, as "Strength: 6 (you have 3): to hit −15%".
+
+Plate and the tower shield also take **1 AP** off every turn, and metal armour lowers the chance of a hero's **spells** (the breastplate, helm and gauntlets by 5% each, plate by 15%), which is the price a mage pays for armour. The Spells tab shows a caster's spell skill with its gear counted. If the AP a hero's gear leaves is fewer than its weapon's attack costs (plate and a 7 AP halberd on a hero of 7 AP), the Character tab warns in amber, "Attack costs 7 AP, you have 6: cannot attack", as the hero could never strike.
+
+![A mage of strength 3 looking at the Iron Greatsword, which asks 6](images/panel-strength.png)
+
 ### Gear grades
 
-Every plain weapon, the shield and the breastplate come in three **grades**: plain, **Fine** and **Masterwork**. A Fine weapon does 1 more damage, and a Masterwork one 2 more and hits 5% more often; a Fine shield adds 3 to armour class and a Masterwork one 6; a Fine breastplate adds 1 to resistance and a Masterwork one 2. A grade never changes a weapon's AP cost, reach or armour piercing. Enchanted items have no grade.
+Every plain item comes in three **grades**: plain, **Fine** and **Masterwork**. A Fine weapon does 1 more damage, and a Masterwork one 2 more and hits 5% more often; a Fine shield adds 3 to armour class and a Masterwork one 6; Fine body armour adds 1 to resistance and Masterwork 2; a Fine head, hands or feet item adds 1 to armour class and a Masterwork one 2. A grade never changes a weapon's AP cost, reach, armour piercing or the strength it asks. Enchanted items have no grade.
 
 ### The trading post
 
-![The trading post](images/trading-post.png)
+![The trading post at level 4, its Buy tab filtered to war hammers](images/trading-post.png)
+
+![The trading post's Runes filter at level 4](images/trading-post-runes.png)
 
 In the encampment, click the trading post and then **Enter the Trading Post**. Click a line to see the item's stats and price, then confirm with the button under them.
 
-- **Buy** lists every plain item at each grade the post sells: plain at level 1, Fine from level 2, Masterwork at level 3. A Fine item costs 3 times the plain price and a Masterwork one 8 times. What you buy goes into the baggage; equip it from the character panel.
-- **Sell** lists the baggage first, then what the heroes carry in their packs: each item fetches half its price, a modifier adding nothing, and an enchanted item half its worth. Worn gear is not offered, so take off anything you want to sell first. The stock's materials sell at 1 gold for every 2. The post never sells materials.
+- **Buy** lists every plain item at each grade the post sells: plain at level 1, Fine from level 2, Masterwork at level 3, and from level 4 the second tier (steel, ironwood, wolfhide, silk) at every grade. The buttons along the top filter the list by slot (**Weapons**, **Shields**, **Armor**, **Head**, **Hands**, **Feet**) and, under them, by family, or **All** of the slot; the tab opens on weapons. A second-tier item costs 2.5 times the first tier's price, a Fine item 3 times the plain price and a Masterwork one 8 times: a Masterwork Steel Longsword costs 12 × 2.5 × 8 = 240 gold. What you buy goes into the baggage; equip it from the character panel.
+- **Runes**, the button after the slot buttons, lists the runes the post sells: Lesser Ember, Rime, Storm, Stone, Wind and Life runes from level 2, for 15 gold each, and the same six of the second rank from level 4, for 45. Clicking a rune tells what it does in a weapon, in armour and in a shield, and that it is set in a socketed item. A rune bought goes into the pouch. Venom, Acid, Mind and Dawn runes, and anything of a higher rank, come only from lairs and fusing.
+- **Sell** lists the baggage first, then what the heroes carry in their packs: each item fetches half its price, a modifier adding nothing, and an enchanted item half its worth. An item with runes in it fetches half its runes' prices on top. Worn gear is not offered, so take off anything you want to sell first. Then come the stock's materials, which sell at 1 gold for every 2, and the pouch's runes, which sell one at a time for a third of their price (5 gold for a Lesser rune). The post never sells materials, nor an item with runes in it.
 
-| Item | Plain price |
-| --- | --- |
-| Iron Dagger | 6 |
-| Iron Shortsword | 8 |
-| Oak Shield | 10 |
-| Iron Longsword, Yew Bow | 12 |
-| Iron Battle Axe | 14 |
-| Steel Greatsword, Steel Breastplate | 20 |
+The price of each family's plain first-tier item:
+
+| Family | Price | Family | Price |
+| --- | --- | --- | --- |
+| Dagger, Buckler | 6 | Bow, Longsword, Mace, Spear | 12 |
+| Shortsword | 8 | Battle Axe, Leather | 14 |
+| Rapier, Shield, Robe | 10 | Staff, Longbow | 16 |
+| Cap, Gloves, Boots | 4 | War Hammer, Crossbow, Tower Shield | 18 |
+| Helm, Gauntlets, Greaves | 6 | Greatsword, Breastplate | 20 |
+| Halberd | 22 | Wand, Plate | 30 |
 
 ### Crafting
 
@@ -443,20 +526,55 @@ Crafting puts a **modifier** on a plain or graded item (never an enchanted one):
 - **In the field**: the world map's **Craft** button, anywhere you could camp, makes Balanced and Recurve at grade I, and takes a day.
 - **At the workshop**: in the encampment, click the workshop and **Enter the Workshop**. It takes no time. A level 1 workshop also makes Bearded, Keen and Braced; level 2 adds Light, Long and Reinforced and makes grade II; level 3 makes grade III.
 
-The screen lists every item your heroes wear or carry, then the baggage's, that a modifier fits; one that needs a better workshop is greyed and says so. Click an item, then a modifier and grade, to see what it changes, attacks a turn included, and what it costs; **Work it** confirms.
+The screen opens on its **Modify** tab (its **Runes** tab is for runes, below). It lists every item your heroes wear or carry, then the baggage's, that a modifier fits; one that needs a better workshop is greyed and says so. Click an item, then a modifier and grade, to see what it changes, attacks a turn included, and what it costs; **Work it** confirms.
 
 | Modifier | Fits | Better (grade I / II / III) | Worse |
 | --- | --- | --- | --- |
-| Balanced | shortsword, longsword, greatsword | to hit +5 / +10 / +15% | damage −1 |
+| Balanced | shortsword, longsword, greatsword, spear | to hit +5 / +10 / +15% | damage −1 |
 | Recurve | bow | damage +1 / +2 / +3 | range −1 |
-| Bearded | battle axe | pierces 1 / 2 / 3 more points of resistance | damage −2 |
+| Bearded | battle axe, mace | pierces 1 / 2 / 3 more points of resistance | damage −2 |
 | Keen | dagger, shortsword, longsword | critical +5 / +10 / +15% | damage −1 |
 | Braced | shield | armour class +3 / +5 / +7 | to hit −5% |
 | Light | longsword, battle axe | attack AP −1 | damage −3 / −2 / −1 |
-| Long | bow | range +1 / +2 / +3 | to hit −5% |
-| Reinforced | breastplate | resistance +1 / +2 / +3 | to hit −5% |
+| Long | bow, crossbow | range +1 / +2 / +3 | to hit −5% |
+| Reinforced | breastplate, leather | resistance +1 / +2 / +3 | to hit −5% |
 
-A craft costs 5 gold and 5 iron (5 timber for a bow or shield) at grade I, 10 gold and 5 copper at grade II, and 20 gold and 5 crystal at grade III. A Light Longsword costs 4 AP a blow, so a hero who stands still strikes twice a turn.
+A craft costs 5 gold and 5 iron (5 timber for a bow, crossbow or wooden shield) at grade I, 10 gold and 5 copper at grade II, and 20 gold and 5 crystal at grade III. A Light Longsword costs 4 AP a blow, so a hero who stands still strikes twice a turn.
+
+### Runes
+
+Some gear has **sockets**, and a **rune** set in a socket adds to what the item does. Runes are found in lairs after a win, bought at the trading post and made by fusing. The party keeps them in its **rune pouch** until they are set; the pouch is shared, like the baggage.
+
+**Sockets.** A first-tier item (iron, yew, leather, linen) has none, and a second-tier one (steel, ironwood, wolfhide, silk) has 1. A Masterwork item has one more: a Masterwork Iron Longsword has 1, a Masterwork Steel Longsword 2. A head, hands or feet item has at most 1. Among the magic items, the Emberblade, the Wand of Storms and the Hawkeye Bow have 1 socket each, and the rest none. An item with runes is named for them, as "Masterwork Iron Longsword [Ember I]".
+
+**Ranks.** Each rune comes in four ranks, Lesser (I), plain (II), Greater (III) and Grand (IV), each stronger than the last. A rune does one thing in a weapon, another in armour (anything worn but a weapon or a shield) and another in a shield. At rank I:
+
+| Rune | In a weapon | In armour | In a shield |
+| --- | --- | --- | --- |
+| Ember | +1 fire on a hit (rank III and up: also lays Seared) | Fire ward 2 | Fire ward 2 |
+| Rime | +1 frost on a hit (rank III and up: a critical lays Chilled) | Frost ward 2 | Frost ward 2 |
+| Storm | to hit +3% | Lightning ward 2 | Lightning ward 2 |
+| Venom | +1 poison on a hit (rank II and up: a critical lays Poisoned) | Poison ward 2 | Poison ward 2 |
+| Acid | pierces 1 more point of resistance (a melee weapon or the crossbow only: it cannot be set in a bow or a wand) | Acid ward 2 | Acid ward 2 |
+| Stone | damage +1 | resistance +1 | armour class +3 |
+| Wind | critical +3% | armour class +3 | armour class +2 |
+| Life | heals the wielder 1 on a hit | max HP +4 | max HP +4 |
+| Mind | spells +3% (a wand or a staff only) | mana +3 | mana +3 |
+| Dawn | +2 blight on a hit, against regenerating foes and the blight's own | Blight ward 2 | Blight ward 2 |
+
+The higher ranks raise the numbers: a ward is 2, 4, 6 and 9 by rank, and Ember's and Rime's damage 1, 2, 3 and 5. An item's stat lines tell what its runes add, at their ranks. A rune's on-hit damage is fixed, not rolled, and passes armour's resistance; only a ward against its element reduces it (chapter 5, "Attacking").
+
+A **Life** rune in armour or a shield raises the hero's maximum hit points. When it comes off, or goes on, on the world map, the hero keeps the same share of their hit points: a hero at full health stays at full health, and one at half stays at about half. In battle, a change of gear never heals: putting Life armour on raises the maximum but not the hit points, and taking it off only lowers them to the new maximum if they were above it.
+
+![The workshop's Runes tab: a Masterwork Steel Longsword with a Storm rune in one of its two sockets, and a Lesser Ember Rune about to be set in the other](images/crafting-runes.png)
+
+**Runecraft** is done on the **Runes** tab of the crafting screen. It lists every item with a socket, worn, carried or in the baggage, above the pouch; when the party has none, it says which gear has sockets instead. Hover a rune in the pouch to see what it does in a weapon, in armour and in a shield. Click an item to see its sockets, then:
+
+- **Embed** beside a rune in the pouch sets it in the item's next empty socket, for 5 gold a rank. A full item must have a rune taken out first.
+- **Extract** beside a socket takes its rune out, intact, back into the pouch, for 10 gold a rank. It needs a level 2 workshop.
+- **Fuse** beside a rune makes three of the same rune and rank into one of the next rank, for 10 gold a rank of the new rune: three Lesser Storm Runes become a Storm Rune for 20 gold. A level 1 workshop fuses to the second rank; fusing higher needs a better workshop than can be built yet, and the button says so.
+
+Each action shows what it does and costs before **Confirm** does it. At the workshop runecraft takes no time. In the field, the world map's **Craft** button opens the same screen anywhere you could camp, but there only a **Lesser** rune can be set, and it takes a day: the screen closes and the map reports the day, as a field craft does.
 
 ### The infirmary
 
@@ -542,9 +660,9 @@ Lairs hold loot. Among the items you may find:
 
 | Item | Effect |
 | --- | --- |
-| Wand of Storms | 1d10+1, 5 AP, reach 5, uses Magic skill |
-| Emberblade | 1d8+4, 5 AP, +10% to hit, pierces 1 |
-| Hawkeye Bow | 1d6+2, 4 AP, reach 6, +10% to hit |
+| Wand of Storms | 1d10+1, 5 AP, reach 5, uses Magic skill; 1 socket |
+| Emberblade | 1d8+4, 5 AP, +10% to hit, pierces 1; 1 socket |
+| Hawkeye Bow | 1d6+2, 4 AP, reach 6, +10% to hit; 1 socket |
 | Ring of Protection | +5 AC |
 | Ring of Fortune | +5% critical chance |
 | Amulet of Focus | +10% to spell chance |

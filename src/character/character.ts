@@ -1,4 +1,4 @@
-import type { CombatantStats, DamageRoll } from '../combat/combat.ts'
+import { ELEMENTS, type CombatantStats, type DamageRoll, type Element } from '../combat/combat.ts'
 import type { GearChange } from '../engine/battleEngine.ts'
 import {
   BACKPACK_SIZE,
@@ -6,9 +6,11 @@ import {
   IRON_SWORD,
   OAK_SHIELD,
   SPARK_WAND,
-  STEEL_ARMOR,
+  IRON_BREASTPLATE,
+  SHORTFALL_TO_HIT,
   WEAPONS,
   YEW_BOW,
+  strengthShortfall,
   type Equipment,
   type EquipmentSlot,
   type Item,
@@ -76,18 +78,49 @@ export function hpPerLevel(character: Character): number {
 
 export function maxHp(character: Character): number {
   const { strength, endurance } = attributesOf(character)
-  return BASE_HP + strength + endurance + (character.level - 1) * hpPerLevel(character) + perkBonus(character, 'maxHp')
+  const gear = wornStats(character).reduce((total, stats) => total + (stats.maxHp ?? 0), 0)
+  return BASE_HP + strength + endurance + (character.level - 1) * hpPerLevel(character) + perkBonus(character, 'maxHp') + gear
+}
+
+/**
+ * How hit points follow a change of the maximum when gear changes: 'share'
+ * outside battle, 'cap' in battle, where the engine's `equip` only lowers hit
+ * points to the new maximum (so that Life armour put on mid-fight heals nothing,
+ * and the character panel shows what the engine holds).
+ */
+export type HpRule = 'share' | 'cap'
+
+/**
+ * Keeps hit points within the maximum after a change to what is worn. By the
+ * 'share' rule, if the maximum moved from `maxBefore` and hp > 0, the hero
+ * keeps the same share of its hit points,
+ * hp = min(max, max(1, round(hp * max / maxBefore))), so a swap of Life gear
+ * off and on leaves it where it was; otherwise, and always by the 'cap' rule,
+ * hp = min(hp, max). A hero at 0 stays at 0.
+ */
+export function clampHp(character: Character, maxBefore: number, rule: HpRule = 'share'): void {
+  const max = maxHp(character)
+  if (rule === 'share' && character.hp > 0 && max !== maxBefore && maxBefore > 0) {
+    character.hp = Math.min(max, Math.max(1, Math.round((character.hp * max) / maxBefore)))
+  } else {
+    character.hp = Math.min(character.hp, max)
+  }
 }
 
 /**
  * The skill a character strikes with, holding `weapon` or nothing: its chance
  * to hit comes from that skill. A weapon may name its own, as a wand does;
  * otherwise a ranged one is shot with Archery and anything else, bare hands
- * included, is swung with Melee Weapons.
+ * and a reach weapon such as the spear included, is swung with Melee Weapons.
  */
 export function weaponSkill(weapon: Item | undefined): SkillId {
   if (weapon?.stats?.skill) return weapon.stats.skill
-  return (weapon?.stats?.attackRange ?? MELEE_RANGE) > MELEE_RANGE ? 'archery' : 'melee'
+  return isRangedWeapon(weapon?.stats) ? 'archery' : 'melee'
+}
+
+/** Whether a weapon of `stats` is shot: it strikes beyond the next hex and has no reach. Bare hands are not. */
+function isRangedWeapon(stats: ItemStats | undefined): boolean {
+  return (stats?.attackRange ?? MELEE_RANGE) > MELEE_RANGE && !stats?.reach
 }
 
 /** What the character's gear gives it: every item it wears but an off-hand one under a two-handed weapon. */
@@ -130,6 +163,9 @@ export function deriveCombatStats(character: Character): CombatantStats {
   let attackRange = MELEE_RANGE
   let armorPierce = 0
   let resistance = 0
+  const wardTotals: Partial<Record<Element, number>> = {}
+  let shortfall = 0
+  let apPenalty = 0
   for (const stats of wornStats(character)) {
     if (stats.damage) damage = stats.damage
     if (stats.attackApCost !== undefined) attackApCost = stats.attackApCost
@@ -137,18 +173,32 @@ export function deriveCombatStats(character: Character): CombatantStats {
     ac += stats.acBonus ?? 0
     armorPierce += stats.armorPierce ?? 0
     resistance += stats.resistance ?? 0
+    for (const element of ELEMENTS) {
+      const ward = stats.wards?.[element] ?? 0
+      if (ward > 0) wardTotals[element] = (wardTotals[element] ?? 0) + ward
+    }
     toHit += stats.toHit ?? 0
     critChance += stats.critChance ?? 0
     spellSkill += stats.spellSkill ?? 0
+    // Gear heavier than the wearer can carry spoils its aim, item by item; spells pay through spellSkill instead.
+    shortfall += strengthShortfall(strength, stats)
+    apPenalty += stats.apPenalty ?? 0
   }
-  // By its reach and not its skill: a wand is a ranged weapon that strikes with Magic.
-  const ranged = attackRange > MELEE_RANGE
+  toHit -= SHORTFALL_TO_HIT * shortfall
+  const weapon = character.equipment.mainHand?.stats
+  // By its range and not its skill: a wand is a ranged weapon that strikes with Magic,
+  // and a spear, which reaches two hexes, is a melee one.
+  const ranged = isRangedWeapon(weapon)
   // Strength tells in a blow, not in a shot.
   const might = ranged ? 0 : Math.max(0, Math.floor((strength - 5) / 2))
   const damageBonus = might + perkBonus(character, ranged ? 'rangedDamage' : 'meleeDamage')
-  // Piercing is the melee fighter's answer to armour, as reach is the archer's.
-  const pierce = ranged ? 0 : armorPierce + perkBonus(character, 'armorPierce')
+  // Piercing is the melee fighter's answer to armour, as range is the archer's; a crossbow's
+  // bolts pierce by their own weight, but the strength perks' piercing is in a blow.
+  const pierce = ranged ? (weapon?.rangedPierce ? armorPierce : 0) : armorPierce + perkBonus(character, 'armorPierce')
   const spells = knownSpells(character)
+  const wards: Partial<Record<Element, number>> = {}
+  for (const element of ELEMENTS) if (wardTotals[element]) wards[element] = wardTotals[element]
+  const onHit = weapon?.onHit
 
   return {
     name: character.name,
@@ -158,16 +208,24 @@ export function deriveCombatStats(character: Character): CombatantStats {
     critChance,
     ...(pierce > 0 ? { armorPierce: pierce } : {}),
     ...(resistance > 0 ? { resistance } : {}),
+    ...(Object.keys(wards).length > 0 ? { wards } : {}),
+    ...(onHit && onHit.length > 0 ? { onHit } : {}),
     damage: { ...damage, bonus: damage.bonus + damageBonus },
     weapon: character.equipment.mainHand?.name ?? UNARMED_WEAPON,
     attackApCost,
     attackRange: attackRange + (ranged ? perkBonus(character, 'range') : 0),
-    actionPoints: BASE_ACTION_POINTS + Math.floor(agility / 2) + perkBonus(character, 'actionPoints'),
+    ...(weapon?.reach ? { reach: true as const } : {}),
+    actionPoints: BASE_ACTION_POINTS + Math.floor(agility / 2) + perkBonus(character, 'actionPoints') - apPenalty,
     ...(spells.length > 0 ? { magic: { maxMana: maxMana(character), skill: spellSkill, spells } } : {}),
   }
 }
 
 const RING_SLOTS: readonly EquipmentSlot[] = ['ring1', 'ring2']
+
+/** Whether `item` can be worn in `slot`: its own slot, or either ring slot for a ring. */
+export function fitsSlot(item: Item, slot: EquipmentSlot): boolean {
+  return slot === item.slot || (item.ring === true && RING_SLOTS.includes(slot))
+}
 
 /** Whether `item` is a weapon that takes both hands, leaving none for the off hand. */
 export function isTwoHanded(item: Item | undefined): boolean {
@@ -183,13 +241,26 @@ export function isTwoHanded(item: Item | undefined): boolean {
  * both hands come off and the backpack has room for only one, the other-hand
  * item falls onto `ground`, the pile at the character's feet. Returns false if
  * that backpack space is empty.
+ *
+ * Given `into`, the item goes into that slot instead (a ring into either ring
+ * slot, as dragged there), and nothing changes if it does not fit there.
+ * Hit points follow the new maximum by `hpRule` (`clampHp`): 'cap' in battle.
  */
-export function equipFromBackpack(character: Character, index: number, ground: Item[]): boolean {
+export function equipFromBackpack(
+  character: Character,
+  index: number,
+  ground: Item[],
+  into?: EquipmentSlot,
+  hpRule: HpRule = 'share',
+): boolean {
   const { equipment, backpack } = character
   const item = backpack[index]
   if (!item) return false
+  if (into && !fitsSlot(item, into)) return false
 
-  const slot: EquipmentSlot = item.ring ? (RING_SLOTS.find((ring) => !equipment[ring]) ?? RING_SLOTS[0]) : item.slot
+  const slot: EquipmentSlot =
+    into ?? (item.ring ? (RING_SLOTS.find((ring) => !equipment[ring]) ?? RING_SLOTS[0]) : item.slot)
+  const before = maxHp(character)
   const replaced = equipment[slot] ?? null
   const otherHand: EquipmentSlot | null =
     slot === 'mainHand' && isTwoHanded(item)
@@ -210,19 +281,22 @@ export function equipFromBackpack(character: Character, index: number, ground: I
     }
   }
   equipment[slot] = item
+  clampHp(character, before, hpRule)
   return true
 }
 
 /**
  * Stows the item in `slot` in the first empty backpack space. Returns false
- * if the slot is empty or the backpack is full.
+ * if the slot is empty or the backpack is full. Hit points follow by `hpRule`.
  */
-export function unequipToBackpack(character: Character, slot: EquipmentSlot): boolean {
+export function unequipToBackpack(character: Character, slot: EquipmentSlot, hpRule: HpRule = 'share'): boolean {
   const item = character.equipment[slot]
   const space = character.backpack.indexOf(null)
   if (!item || space === -1) return false
+  const before = maxHp(character)
   character.backpack[space] = item
   delete character.equipment[slot]
+  clampHp(character, before, hpRule)
   return true
 }
 
@@ -235,12 +309,14 @@ export function dropFromBackpack(character: Character, index: number, ground: It
   return true
 }
 
-/** Drops the item in `slot` onto `ground`. Returns false if the slot is empty. */
-export function dropEquipped(character: Character, slot: EquipmentSlot, ground: Item[]): boolean {
+/** Drops the item in `slot` onto `ground`. Returns false if the slot is empty. Hit points follow by `hpRule`. */
+export function dropEquipped(character: Character, slot: EquipmentSlot, ground: Item[], hpRule: HpRule = 'share'): boolean {
   const item = character.equipment[slot]
   if (!item) return false
+  const before = maxHp(character)
   delete character.equipment[slot]
   ground.push(item)
+  clampHp(character, before, hpRule)
   return true
 }
 
@@ -296,7 +372,7 @@ export const WARRIOR_BUILD: Build = {
 }
 
 /**
- * A level 1 character at full hit points, in a steel breastplate, with every
+ * A level 1 character at full hit points, in an iron breastplate, with every
  * plain weapon it does not hold in its backpack, and the shield too if its
  * hands are full. It has no perks and nothing to spend: creation.ts gives a
  * created character those.
@@ -317,7 +393,7 @@ export function createCharacter(name: string, build: Build): Character {
     spellPicks: 0,
     hp: 0,
     mana: 0,
-    equipment: { armor: STEEL_ARMOR, mainHand: build.mainHand, ...(build.offHand ? { offHand: build.offHand } : {}) },
+    equipment: { armor: IRON_BREASTPLATE, mainHand: build.mainHand, ...(build.offHand ? { offHand: build.offHand } : {}) },
     backpack: Array.from({ length: BACKPACK_SIZE }, (_, i) => spare[i] ?? null),
   }
   character.hp = maxHp(character)

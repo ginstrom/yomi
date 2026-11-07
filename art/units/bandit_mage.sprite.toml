@@ -1,0 +1,70 @@
+# A bandit hedge-mage: an old man with a white beard in a patched, dull red
+# hooded robe tied with a rope, a wand tipped with a spark held up in the near fist.
+canvas = "unit"
+
+outline = "auto"
+
+[points]
+chest = [16, 15]
+
+[frames.idle_0.runs]
+3 = [[11, "R"]]
+4 = [[11, "RRr"]]
+5 = [[12, "RRrrr"]]
+6 = [[12, "RRrrrrR"]]
+7 = [[12, "RrrSsks"]]
+8 = [[12, "RrrSsss"]]
+9 = [[12, "RrrSWWW"]]
+10 = [[13, "RrWWW"], [26, "yY"]]
+11 = [[10, "rrRrWWWRrr"], [26, "Yy"]]
+12 = [[9, "rRkRrrrWrrrkrR"], [25, "nt"]]
+13 = [[9, "rRkRTTrrrrrkrR"], [24, "nt"]]
+14 = [[9, "rRkRTTrroorkrR"], [23, "nt"]]
+15 = [[9, "rRkTTTTyTTTkrRss"]]
+16 = [[9, "sskRrrrrrrr"], [23, "ss"]]
+17 = [[11, "Rrrrrrrrrr"]]
+18 = [[11, "RrrrrTTrrr"]]
+19 = [[11, "RroorTTrrr"]]
+20 = [[10, "RrroorrrrrR"]]
+21 = [[10, "Rrrrrrrrrrr"]]
+22 = [[10, "RrrrrrrTTrr"]]
+23 = [[10, "RrrrrrrTTrrr"]]
+24 = [[9, "RRrrrrrrrrrr"]]
+25 = [[9, "Rrrrrrrrrorrr"]]
+26 = [[9, "Rrrrrrrroorrr"]]
+27 = [[9, "RRrrrrrrrrrrr"]]
+28 = [[9, "rRr.Rrr.rRr.r"]]
+29 = [[11, "MMm"], [17, "MMm"]]
+30 = [[11, "MMmm"], [17, "MMmm"]]
+
+# A breath: everything above the hem sinks a pixel.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [0, 26], by = [0, 1] }
+
+# A stride: under the robe only the feet show, and only they move.
+[frames.walk_0]
+from = "idle_0"
+[frames.walk_0.runs]
+29 = [[10, "MMm.....MMm"]]
+30 = [[9, "MMmm.......MMmm"]]
+
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.runs]
+29 = [[11, "..."]]
+30 = [[11, "...."]]
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.runs]
+29 = [[17, "..."]]
+30 = [[17, "...."]]
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 600
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 140

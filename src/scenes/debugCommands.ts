@@ -2,13 +2,15 @@ import { maxHp, maxMana, manaOf, type Character } from '../character/character.t
 import { gainXp, xpToNextLevel } from '../character/progression.ts'
 import type { BattleState } from '../engine/battleEngine.ts'
 import { facilities, setFacilityLevel, type FacilityId } from '../game/encampment.ts'
+import { ENCOUNTERS, type EncounterId } from '../game/encounters.ts'
 import type { GameState } from '../game/gameState.ts'
 import type { Material } from '../game/territory.ts'
 import { updateSight } from '../game/vision.ts'
-import { isNotable, monstersHere, passTurn, worldActive, type WorldLocation } from '../game/worldMap.ts'
+import { isNotable, monstersHere, passTurn, threatAt, worldActive, type WorldLocation } from '../game/worldMap.ts'
 import { HexBoard, hexToOffset, offsetToHex } from '../grid/hex.ts'
 import { BASE_ITEMS, MAGIC_ITEMS, itemById } from '../inventory/inventory.ts'
 import { MODIFIER_IDS } from '../inventory/modifiers.ts'
+import { RANKS, RUNE_IDS, addToPouch, isRuneKey, pouchKeys, runeKey, runeName } from '../inventory/runes.ts'
 import { describeWorldEvent } from './worldEvents.ts'
 
 /**
@@ -25,6 +27,8 @@ export interface DebugSource {
   battle?: { state: BattleState; names: Readonly<Record<string, string>> }
   /** Redraws and saves after a command changed the game; absent where changes are refused. */
   changed?: () => void
+  /** Starts a battle of `encounter` at `threat` against the party, as if a location were attacked; absent where battles can't start. */
+  fight?: (encounter: EncounterId, threat: number) => void
 }
 
 export interface DebugContext {
@@ -189,6 +193,8 @@ const COMMANDS: Record<string, Command> = {
     run: () => [
       ...[...BASE_ITEMS, ...MAGIC_ITEMS].map((item) => `${item.id.padEnd(18)} ${item.name}`),
       `Grades: <id>@2 (Fine), <id>@3 (Masterwork). Modifiers: <id>+<modifier><1-3>, of ${MODIFIER_IDS.join(', ')}.`,
+      'Runes: <id>#<rune>[.<rune>…], as iron_sword@3#ember1; a unique item takes runes only, as emberblade#dawn1.',
+      ...RUNE_IDS.map((id) => `${id.padEnd(6)} ${RANKS.map((rank) => runeKey(id, rank)).join(' ')}  (${runeName(runeKey(id, 2))})`),
     ],
   },
   facility: {
@@ -209,16 +215,31 @@ const COMMANDS: Record<string, Command> = {
     },
   },
   give: {
-    usage: 'give <item> [count]',
-    summary: "Put an item, by its id, in the party's baggage.",
+    usage: 'give <item|rune> [count]',
+    summary: "Put an item, by its id, in the party's baggage, or a rune, by its key (storm1), in the pouch.",
     changes: true,
     run([id, count], context) {
+      if (id !== undefined && isRuneKey(id)) {
+        const n = count === undefined ? 1 : integer(count, 'the count')
+        if (n < 1) throw new DebugError('The count must be at least 1.')
+        addToPouch(gameOf(context).runes, id, n)
+        return [`${n} × ${runeName(id)} put in the pouch.`]
+      }
       const item = id === undefined ? undefined : itemById(id)
       if (!item) throw new DebugError(`No item "${id ?? ''}"; \`items\` lists them.`)
       const n = count === undefined ? 1 : integer(count, 'the count')
       if (n < 1) throw new DebugError('The count must be at least 1.')
       gameOf(context).baggage.push(...Array.from({ length: n }, () => item))
       return [`${n} × ${item.name} put in the baggage.`]
+    },
+  },
+  runes: {
+    usage: 'runes',
+    summary: "The party's rune pouch.",
+    run: (_args, context) => {
+      const { runes } = gameOf(context)
+      const keys = pouchKeys(runes)
+      return keys.length === 0 ? ['The pouch is empty.'] : keys.map((key) => `${key.padEnd(8)} ${runes[key]} × ${runeName(key)}`)
     },
   },
   locations: {
@@ -292,6 +313,25 @@ const COMMANDS: Record<string, Command> = {
         }
       }
       return [`${passed} ${passed === 1 ? 'day passes' : 'days pass'}; it is turn ${game.world.turn}.`, ...told]
+    },
+  },
+  fight: {
+    usage: 'fight <encounter> [threat]',
+    summary: "Fight an encounter at a threat (default: the party's hex's), clearing no location and taking no loot.",
+    changes: true,
+    run([id, threat], context) {
+      const { world } = gameOf(context)
+      if (id === undefined || !Object.hasOwn(ENCOUNTERS, id)) {
+        throw new DebugError(`No encounter "${id ?? ''}"; there are ${Object.keys(ENCOUNTERS).join(', ')}.`)
+      }
+      const at = threat === undefined ? threatAt(world.party) : integer(threat, 'the threat')
+      if (at < 1) throw new DebugError('The threat must be at least 1.')
+      const fight = context.source?.fight
+      if (!fight) throw new DebugError('Battles start only from the world map.')
+      // The world map is redrawn and saved after this, as after any change, before the
+      // scene manager starts the battle on its next step: the game is unchanged until then.
+      fight(id as EncounterId, at)
+      return [`Fighting ${id} at threat ${at}.`]
     },
   },
   units: {

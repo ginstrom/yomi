@@ -1,6 +1,7 @@
 import {
   ARC_BONUS,
-  attackArc,
+  arcStruck,
+  isMelee,
   type Action,
   type BattleEngine,
   type MovePreview,
@@ -12,8 +13,8 @@ type MoveAction = Extract<Action, { type: 'move' }>
 
 /**
  * What clicking a foe does: an optional move, then an attack if `attack` is
- * set. With neither, there is nothing to do (e.g. already beside the foe
- * with too few AP to strike).
+ * set. A move comes only with an attack. With neither, there is nothing to do
+ * (the attack cannot be made this turn).
  */
 export interface AttackPlan {
   move: MoveAction | null
@@ -24,8 +25,11 @@ export interface AttackPlan {
  * Plans `unit` going for `target`. If it can strike now, it does. Otherwise, if
  * a hex within its attack range of the foe leaves AP for an attack, it moves there and strikes:
  * provoking the fewest free attacks, then hitting the weakest arc, then
- * walking the least. Failing that it closes in without attacking, as near
- * as it can get.
+ * walking the least. Failing that it does nothing: a click on a foe asks
+ * for an attack, and a walk that leaves too few AP for it (a halberd's blow
+ * costs every AP its bearer has, and a bow would walk up to the foe) would
+ * spend the turn on something the player did not ask for. Closing in is a
+ * plain move, a click on a hex.
  */
 export function planAttack(engine: BattleEngine, unit: UnitId, target: UnitId): AttackPlan {
   const state = engine.getState()
@@ -61,17 +65,15 @@ export function planAttack(engine: BattleEngine, unit: UnitId, target: UnitId): 
   if (strikes.length > 0) {
     const move = pick(strikes, (m) => [
       m.preview.provokes.length,
-      -ARC_BONUS[attackArc(foe, m.action.to)],
+      -ARC_BONUS[arcStruck(foe, m.action.to, isMelee(actor))],
       m.preview.path.length,
     ])
     return { move, attack: true }
   }
-  const distance = hexDistance(actor.position, foe.position)
-  const closer = moves.filter((m) => hexDistance(m.action.to, foe.position) < distance)
-  const move = pick(closer, (m) => [
-    hexDistance(m.action.to, foe.position),
-    m.preview.path.length,
-    m.preview.provokes.length,
-  ])
-  return { move, attack: false }
+  return { move: null, attack: false }
+}
+
+/** The battle's hint for a foe a click cannot strike this turn: `distance` to it, the unit's `range`. */
+export function noStrikeHint(distance: number, range: number): string {
+  return distance <= range ? 'Too few AP to strike' : 'Too few AP to reach and strike'
 }

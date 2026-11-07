@@ -1,0 +1,25 @@
+# A buckler: a small round steel shield with a boss, in the hero's other fist.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md.
+canvas = "unit"
+over = "warrior"
+
+[frames.idle_0.runs]
+15 = [[7, "kkk"]]
+16 = [[6, "kwldk"]]
+17 = [[5, "kwllldk"]]
+18 = [[5, "klwWldk"]]
+19 = [[5, "klllddk"]]
+20 = [[6, "kdDDk"]]
+21 = [[7, "kkk"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it holds with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+like = "warrior"      # breathes with the body
+
+[anim.walk]
+rest = true           # holds idle_0 while the body walks

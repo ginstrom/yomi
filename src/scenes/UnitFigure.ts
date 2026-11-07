@@ -7,6 +7,7 @@ import {
   spriteAnim,
   spriteFrame,
   UNIT_REST_FRAME,
+  type HeroLook,
   type UnitAnim,
 } from './unitLook.ts'
 
@@ -20,14 +21,16 @@ const OUTLINE_STRENGTH = 5
 const OUTLINE_DISTANCE = 5
 
 /**
- * A unit as it is drawn: its body's sprite and, over it, a sprite for each
- * thing it holds (`gearLayers` in unitLook.ts says which), all from the atlas
- * and animated as one. Its position is where the unit's feet are. It has no
- * logic of its own: the scene says what it holds and what it does.
+ * A unit as it is drawn: its body's sprite and, under and over it, a sprite
+ * for each thing it wears and holds (`heroLook` in unitLook.ts says which, and
+ * in what order), all from the atlas and animated as one. Its position is where
+ * the unit's feet are. It has no logic of its own: the scene says what it wears,
+ * what it holds and what it does.
  */
 export class UnitFigure extends Phaser.GameObjects.Container {
   private readonly base: Phaser.GameObjects.Sprite
-  private gear: Phaser.GameObjects.Sprite[] = []
+  private under: Phaser.GameObjects.Sprite[] = []
+  private over: Phaser.GameObjects.Sprite[] = []
   private readonly kind: string
   private readonly spriteScale: number
   private flipped = false
@@ -50,15 +53,22 @@ export class UnitFigure extends Phaser.GameObjects.Container {
     return this.base.displayHeight
   }
 
-  /** Lays these sprites over the body, the first lowest, in place of what was there. */
-  setGear(sprites: readonly string[]): this {
-    for (const sprite of this.gear) sprite.destroy()
-    this.gear = sprites.map((sprite) => this.layer(sprite))
-    this.add(this.gear)
-    for (const sprite of this.gear) sprite.setFlipX(this.flipped).setAlpha(this.base.alpha)
+  /** Lays `look.under` beneath the body and `look.over` on it, each the first lowest, in place of what was there. */
+  setLook(look: HeroLook): this {
+    for (const sprite of [...this.under, ...this.over]) sprite.destroy()
+    this.under = look.under.map((sprite) => this.layer(sprite))
+    this.over = look.over.map((sprite) => this.layer(sprite))
+    this.under.forEach((sprite, index) => this.addAt(sprite, index))
+    this.add(this.over)
+    for (const sprite of [...this.under, ...this.over]) sprite.setFlipX(this.flipped).setAlpha(this.base.alpha)
     // From the top, so that the layers breathe together.
     if (this.playing) this.play(this.playing)
     return this
+  }
+
+  /** The names of the sprites drawn, bottom first, as the container orders them: a foe's figure is its kind alone. */
+  lookNames(): string[] {
+    return this.list.flatMap((child) => (child instanceof Phaser.GameObjects.Sprite ? [child.name] : []))
   }
 
   /** Sprites are drawn facing right. */
@@ -119,7 +129,7 @@ export class UnitFigure extends Phaser.GameObjects.Container {
    * claws) does nothing here; its lunge is the blow.
    */
   swing(raiseMs: number, cutMs: number): this {
-    const weapon = this.gear.find((sprite) => SWUNG_GEAR.has(sprite.name))
+    const weapon = this.over.find((sprite) => SWUNG_GEAR.has(sprite.name))
     // The fist is the body's, a point of the frame it shows now (it sinks as the body breathes).
     const grip = this.point(GRIP_POINT)
     if (!weapon || !grip) return this
@@ -187,7 +197,7 @@ export class UnitFigure extends Phaser.GameObjects.Container {
   }
 
   private layers(): Phaser.GameObjects.Sprite[] {
-    return [this.base, ...this.gear]
+    return [...this.under, this.base, ...this.over]
   }
 
   private layer(sprite: string): Phaser.GameObjects.Sprite {

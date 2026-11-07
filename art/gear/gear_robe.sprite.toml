@@ -1,0 +1,29 @@
+# A linen robe in blue, gold-edged down its front and at the hem, tied with a red sash.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md. It stops short of the
+# fist (rows 17 to 21, columns 20 to 27) and the off hand (rows 17 to 19, columns 7 to 10).
+canvas = "unit"
+over = "warrior"
+
+[frames.idle_0.runs]
+12 = [[10, "BbbbbyBbbbcc"]]
+13 = [[9, "BbbBbbybbbcBcc"]]
+14 = [[8, "BbbBbbbybbbcBcc"]]
+15 = [[8, "BbbBbbbybbbcBcc"]]
+16 = [[8, "Bb"], [11, "Bbbbybbbc"], [21, "bcc"]]
+17 = [[11, "RrrrOrrrr"]]
+18 = [[11, "Bbbbybbbc"]]
+19 = [[11, "Bbbbybbbc"]]
+20 = [[10, "kBbbbybbbc"]]
+21 = [[10, "kOyyyyyyy"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it wears with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+like = "warrior"      # breathes with the body
+
+[anim.walk]
+rest = true           # holds idle_0 while the body walks

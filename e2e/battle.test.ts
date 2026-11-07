@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { offsetToHex } from '../src/grid/hex.ts'
+import { hexDistance, offsetToHex } from '../src/grid/hex.ts'
+import { itemById } from '../src/inventory/inventory.ts'
+import { GEAR_SPRITES } from '../src/scenes/unitLook.ts'
 import type { BattleProbe } from '../src/testHook.ts'
 import { RAIDERS, battleHexOnScreen, useGames } from './driver.ts'
 
@@ -27,6 +29,52 @@ describe('a battle', () => {
     expect(hero(next).ap).toBe(8)
   })
 
+  it('does not walk a hero towards a foe it cannot strike this turn, and strikes one it can', async () => {
+    const game = await games.open()
+    const start = await game.enterBattle()
+    const self = hero(start)
+    const foes = start.state.units.filter((u) => u.side === 'enemy')
+    const nearest = foes.reduce((a, b) => (hexDistance(self.position, b.position) < hexDistance(self.position, a.position) ? b : a))
+    // Out of reach this turn: the walk beside it would leave too few AP for the blow.
+    expect(hexDistance(self.position, nearest.position) - self.attackRange).toBeGreaterThan(self.ap - self.attackApCost)
+    await game.click(battleHexOnScreen(start, nearest.position))
+    await game.frames(4)
+    const after = (await game.probe('Battle'))!
+    expect(after.playerControl).toBe(true)
+    expect(hero(after)).toMatchObject({ position: self.position, ap: self.ap })
+    expect(after.log.length).toBe(start.log.length)
+
+    // Hovering the foe says why, and moving off it takes the hint away.
+    await game.hover(battleHexOnScreen(start, nearest.position))
+    const warned = await game.settled('Battle', (b) => b.hint.startsWith('Too few AP'))
+    expect(warned.hint).toBe('Too few AP to reach and strike')
+    // Straight onto a button, too.
+    await game.hover(warned.buttons.endTurn)
+    expect((await game.settled('Battle', (b) => !b.hint.startsWith('Too few AP'))).hint).toContain('Click a foe to attack')
+    await game.hover(battleHexOnScreen(start, nearest.position))
+    await game.settled('Battle', (b) => b.hint.startsWith('Too few AP'))
+    await game.hover(battleHexOnScreen(start, self.position))
+    expect((await game.settled('Battle', (b) => !b.hint.startsWith('Too few AP'))).hint).toContain('Click a foe to attack')
+
+    // Once the foe is within a walk that leaves the AP for it, the click walks and strikes.
+    await game.click(after.buttons.endTurn)
+    let turn = await game.waitFor('Battle', (b) => b.playerControl && b.state.round === 2)
+    const near = (b: BattleProbe) => {
+      const me = hero(b)
+      return b.state.units
+        .filter((u) => u.side === 'enemy' && u.hp > 0)
+        .find((u) => hexDistance(me.position, u.position) - me.attackRange <= me.ap - me.attackApCost)
+    }
+    while (!near(turn)) {
+      await game.click(turn.buttons.endTurn)
+      turn = await game.waitFor('Battle', (b) => b.playerControl && b.state.round === turn.state.round + 1)
+    }
+    const foe = near(turn)!
+    await game.click(battleHexOnScreen(turn, foe.position))
+    const struck = await game.waitFor('Battle', (b) => b.log.length > turn.log.length && b.log.some((e, i) => i >= turn.log.length && e.type === 'attack'))
+    expect(struck.log.slice(turn.log.length).find((e) => e.type === 'attack')).toMatchObject({ attacker: 'hero_1', defender: foe.id })
+  })
+
   it('tells the engine of gear changed in the inventory, for an action point', async () => {
     const game = await games.open()
     await game.enterBattle()
@@ -42,6 +90,39 @@ describe('a battle', () => {
     await game.click(panel.equipment.mainHand)
     const stowed = await game.waitFor('Inventory', (p) => p.equipment.mainHand.item === null)
     expect(stowed.backpack.map((slot) => slot.item)).toContain(weapon)
+
+    await game.press('Escape')
+    await game.waitForScenes(['Battle'])
+    const battle = await game.awaitTurn()
+    expect(hero(battle).ap).toBe(7)
+    expect(battle.log.at(-1)).toMatchObject({ type: 'equip', unit: 'hero_1', apCost: 1 })
+    // The hero's figure is dressed again as the panel closes, the weapon gone and the breastplate kept.
+    expect(battle.looks.hero_1).not.toContain(GEAR_SPRITES[itemById(weapon!)!.icon])
+    expect(battle.looks.hero_1).toContain('gear_breastplate')
+  })
+
+  it('draws each hero in what it wears and holds, and a foe as its body alone', async () => {
+    const game = await games.open()
+    const battle = await game.enterBattle()
+    const heroes = battle.state.units.filter((u) => u.side === 'player')
+    expect(Object.keys(battle.looks).sort()).toEqual(heroes.map((u) => u.id).sort())
+    // The ready-made soldier: the body, the breastplate over it, then its sword and shield.
+    expect(battle.looks.hero_1).toEqual(['warrior', 'gear_breastplate', 'gear_sword', 'gear_shield'])
+    for (const foe of battle.state.units.filter((u) => u.side === 'enemy')) expect(battle.looks[foe.id]).toBeUndefined()
+  })
+
+  it('charges one action point for gear dragged in the inventory, however many moves', async () => {
+    const game = await games.open()
+    await game.enterBattle()
+
+    await game.press('i')
+    await game.waitForScenes(['Inventory'], ['Battle'])
+    const panel = await game.settled('Inventory')
+    expect(panel.equipment.offHand.item).not.toBeNull()
+    await game.drag(panel.equipment.mainHand, panel.grids.backpack)
+    const stowed = await game.settled('Inventory', (p) => p.equipment.mainHand.item === null)
+    await game.drag(stowed.equipment.offHand, stowed.grids.backpack)
+    await game.waitFor('Inventory', (p) => p.equipment.offHand.item === null)
 
     await game.press('Escape')
     await game.waitForScenes(['Battle'])

@@ -1,11 +1,14 @@
+import { gearClass, type GearClass } from './catalog.ts'
 import type { Item, ItemStats } from './inventory.ts'
 
 /**
  * The grades of a plain item (docs/designs/expeditions-and-encampment.md
  * §4.1): plain, Fine and Masterwork, sold by the trading post. A grade adds
- * damage (and at the top, to hit) to a weapon, armour class to a shield and
- * resistance to armour; it never changes attack AP, range, piercing or two-handedness, so a
- * weapon keeps its place among the AP thresholds.
+ * by the item's gear class (catalog.ts): damage (and at the top, to hit) to a
+ * weapon, armour class to a shield or a small-slot item (head, gloves, boots),
+ * and resistance to body armour, the robe included; it never changes attack
+ * AP, range, piercing, two-handedness, strength or a penalty, so a weapon
+ * keeps its place among the AP thresholds.
  */
 
 export type Grade = 1 | 2 | 3
@@ -18,15 +21,17 @@ interface GradeDef {
   /** What it adds to a weapon's damage bonus, and to its chance to hit. */
   damage: number
   toHit: number
-  /** What it adds to a shield's armour class, and to armour's resistance. */
+  /** What it adds to a shield's armour class, and to body armour's resistance. */
   ac: number
   resistance: number
+  /** What it adds to a small-slot item's armour class. */
+  small: number
 }
 
 export const GRADE_DEFS: Record<Grade, GradeDef> = {
-  1: { prefix: '', damage: 0, toHit: 0, ac: 0, resistance: 0 },
-  2: { prefix: 'Fine ', damage: 1, toHit: 0, ac: 3, resistance: 1 },
-  3: { prefix: 'Masterwork ', damage: 2, toHit: 5, ac: 6, resistance: 2 },
+  1: { prefix: '', damage: 0, toHit: 0, ac: 0, resistance: 0, small: 0 },
+  2: { prefix: 'Fine ', damage: 1, toHit: 0, ac: 3, resistance: 1, small: 1 },
+  3: { prefix: 'Masterwork ', damage: 2, toHit: 5, ac: 6, resistance: 2, small: 2 },
 }
 
 export function isGrade(n: number): n is Grade {
@@ -38,17 +43,18 @@ export function gradeNumeral(grade: Grade): string {
   return ['I', 'II', 'III'][grade - 1]
 }
 
-/** What `grade` makes of a plain item's stats. */
-export function gradedStats(stats: ItemStats, grade: Grade): ItemStats {
+/** What `grade` makes of the stats of a plain item of gear class `cls`. */
+export function gradedStats(stats: ItemStats, grade: Grade, cls: GearClass): ItemStats {
   const def = GRADE_DEFS[grade]
   const graded = { ...stats }
-  if (stats.damage) {
-    graded.damage = { ...stats.damage, bonus: stats.damage.bonus + def.damage }
+  if (grade === 1) return graded
+  if (cls === 'weapon') {
+    if (stats.damage) graded.damage = { ...stats.damage, bonus: stats.damage.bonus + def.damage }
     if (def.toHit) graded.toHit = (stats.toHit ?? 0) + def.toHit
-  } else if (stats.resistance !== undefined && def.resistance) {
-    graded.resistance = stats.resistance + def.resistance
-  } else if (stats.acBonus !== undefined && def.ac) {
-    graded.acBonus = stats.acBonus + def.ac
+  } else if (cls === 'armour') {
+    graded.resistance = (stats.resistance ?? 0) + def.resistance
+  } else {
+    graded.acBonus = (stats.acBonus ?? 0) + (cls === 'shield' ? def.ac : def.small)
   }
   return graded
 }
@@ -60,7 +66,7 @@ export function gradedItem(base: Item, grade: Grade): Item {
     ...base,
     id: `${base.id}@${grade}`,
     name: `${GRADE_DEFS[grade].prefix}${base.name}`,
-    stats: gradedStats(base.stats ?? {}, grade),
+    stats: gradedStats(base.stats ?? {}, grade, gearClass(base.slot)),
     base: base.id,
     grade,
   }

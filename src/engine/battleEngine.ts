@@ -1,12 +1,16 @@
+import { ABILITIES, type AbilityId, type Strike } from '../combat/abilities.ts'
 import {
+  baneApplies,
   damageThrough,
   effectiveResistance,
   hitChance,
   rollDamage,
   rollHitDamage,
   rollToHit,
+  warded,
   type CombatantStats,
   type DamageRoll,
+  type Element,
   type RNG,
 } from '../combat/combat.ts'
 import { mulberry32, randomSeed, type SeededRng } from '../combat/rng.ts'
@@ -22,18 +26,20 @@ import {
 import {
   HEX_DIRECTIONS,
   HexBoard,
+  areaOf,
   hexDirection,
   hexDirectionTowards,
   hexDistance,
   hexEquals,
   hexKey,
   reachableHexes,
+  type AreaShape,
   type BoardSize,
   type Hex,
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 17
+export const LOG_SCHEMA_VERSION = 23
 
 /** What an attacker's chance to hit gains, in percent, for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 10
@@ -41,7 +47,10 @@ export const FLANK_BONUS_PER_ALLY = 10
 /**
  * Which way a defender is struck from, relative to its facing: its three
  * front hexes, the two beside its back, or straight behind it. A shot from
- * further off strikes the arc of the neighbouring hex it comes in over.
+ * further off strikes the arc of the neighbouring hex it comes in over. A
+ * defender struck in its side or rear by a melee weapon turns to meet the
+ * blow first, if it has not already turned this enemy turn (`turnReady`); a
+ * shot or a spell gives it no turn.
  */
 export type Arc = 'front' | 'side' | 'rear'
 
@@ -88,9 +97,11 @@ export interface GearChange {
 export type CastAim = { target: UnitId } | { at: Hex }
 
 /**
- * Moves, attacks, casts and gear changes name the acting unit; end_turn ends
- * the whole side's turn. A cast names a spell the unit knows and what it is
- * aimed at (`CastAim`). An equip action carries the stats the unit fights with
+ * Moves, attacks, casts, abilities and gear changes name the acting unit;
+ * end_turn ends the whole side's turn. A cast names a spell the unit knows
+ * and what it is aimed at (`CastAim`); an ability, one the unit has and, for
+ * a routine of strikes, the foe it strikes first, or for an area, the hex it
+ * is aimed at. An equip action carries the stats the unit fights with
  * from then on, since the engine knows stats and not the items behind them;
  * `changes` says which items those were, and `dropped` and `pickedUp` which
  * went onto or came off the ground of the unit's hex. All three are only
@@ -101,6 +112,8 @@ export type Action =
   | { type: 'attack'; unit: UnitId; target: UnitId }
   | { type: 'cast'; unit: UnitId; spell: SpellId; target: UnitId }
   | { type: 'cast'; unit: UnitId; spell: SpellId; at: Hex }
+  | { type: 'ability'; unit: UnitId; ability: AbilityId; target: UnitId }
+  | { type: 'ability'; unit: UnitId; ability: AbilityId; at: Hex }
   | {
       type: 'equip'
       unit: UnitId
@@ -146,8 +159,12 @@ export interface UnitSnapshot extends CombatantStats {
   mana: number
   /** Whether the unit can still make a free attack this enemy turn. */
   reactionReady: boolean
+  /** Whether the unit can still turn to meet a melee attack on its side or rear this enemy turn. */
+  turnReady: boolean
   /** The lasting effects on it, in the order laid. Its stats here are as it was born to the battle; `effectiveStats` adds these. */
   statuses: ActiveStatus[]
+  /** Rounds until each ability that is recharging can be used again; an ability absent here is ready. */
+  recharging: Partial<Record<AbilityId, number>>
 }
 
 export interface BattleState {
@@ -236,8 +253,10 @@ export interface AttackEvent extends EventBase {
   opportunity: boolean
   /** The attacker's weapon by name; null if its stats name none. */
   weapon: string | null
-  /** Hexes between attacker and defender: 1 for a blow, more for a shot. */
+  /** Hexes between attacker and defender: 1 for most blows, 2 for a reach weapon's, more for a shot. */
   distance: number
+  /** The blow was struck with a melee weapon, reach included; false for a shot. */
+  melee: boolean
   /** The attacker's `attackApCost`, or 0 for a free attack. */
   apCost: number
   /** The attacker's action points once the attack is paid for. */
@@ -246,7 +265,11 @@ export interface AttackEvent extends EventBase {
   flankers: UnitId[]
   /** What the flankers added to the chance to hit, in percent; already included in `chance`. */
   flankBonus: number
-  /** Which of the defender's arcs the attack came from, given the defender's facing. */
+  /** The defender turned to face the attacker before the roll, which spent its `turnReady`. */
+  defenderTurned: boolean
+  /** The defender's facing when struck, after any turn. */
+  defenderFacing: number
+  /** Which of the defender's arcs the attack came from, given the defender's facing after any turn. */
   arc: Arc
   /** What the arc added to the chance to hit, in percent; already included in `chance`. */
   arcBonus: number
@@ -278,6 +301,32 @@ export interface AttackEvent extends EventBase {
   damage: number
   defenderHpBefore: number
   defenderHpAfter: number
+  /** On a routine's strikes only: the ability, by id. */
+  ability?: AbilityId
+  /** On a routine's strikes only: the strike's name. */
+  strike?: string
+  /** On a routine's strikes only: the status the strike laid, as it stands after; absent if none. */
+  status?: ActiveStatus
+  /**
+   * The weapon's on-hit damage (runes), one per entry with damage that applied
+   * (a bane only where `baneApplies`), on a hit that struck no image; empty
+   * otherwise. The defender lost `damage` and every `bonus[].damage`.
+   */
+  bonus: AttackBonus[]
+  /** On a hit that struck no image, by a weapon with an on-hit heal: hit points the attacker regained (0 at full health); absent otherwise. */
+  healed?: number
+  /** The on-hit statuses laid, as they stand after; absent if none. */
+  onHitStatuses?: ActiveStatus[]
+}
+
+/** One on-hit entry's damage on an attack: flat, after resistance, cut by the defender's ward, never doubled by a critical. */
+export interface AttackBonus {
+  element?: Element
+  bane?: true
+  /** The on-hit damage before the defender's ward. */
+  rolled: number
+  /** What came through the ward: max(0, rolled − ward). */
+  damage: number
 }
 
 /** What a cast did to one unit it touched. */
@@ -292,8 +341,12 @@ export interface CastOutcome {
   fumble: boolean
   /** A hit that struck a mirror image instead, doing nothing. */
   image: boolean
-  /** Damage rolled; it may be more than the unit had left. */
+  /** Damage dealt, after the unit's ward; it may be more than the unit had left. */
   damage: number
+  /** The points of the rolled damage the unit's ward stopped (`warded`); 0 when none did. */
+  warded: number
+  /** The damage is half the dice for a miss (an area ability's `halfOnMiss`); false on every cast outcome. */
+  half: boolean
   /** Hit points restored, no more than the unit had lost. */
   healed: number
   hpBefore: number
@@ -329,6 +382,35 @@ export interface CastEvent extends EventBase {
   skill: number
   /** One for each unit touched, in roster order. */
   outcomes: CastOutcome[]
+  /** Hit points the caster regained by the spell's `drain` of the hit points its targets lost, no more than it had lost; 0 for any other spell. */
+  drained: number
+}
+
+/**
+ * An area ability used: rolled against each unit it touches, both sides, as
+ * a hostile area spell is, with the unit's chance to hit; resistance is
+ * ignored, a ward cuts its element, and a miss deals half the dice where
+ * the area has `halfOnMiss`.
+ */
+export interface AbilityEvent extends EventBase {
+  type: 'ability'
+  unit: UnitId
+  ability: AbilityId
+  /** The hex aimed at. */
+  at: Hex
+  shape: AreaShape
+  /** Every hex of the area on the board, in areaOf's order. */
+  hexes: Hex[]
+  /** Hexes between the unit and `at`. */
+  distance: number
+  apCost: number
+  apAfter: number
+  /** The unit's facing after turning to its aim. */
+  facing: number
+  /** The unit's toHit, its statuses included: the chance before each target's armour class. */
+  skill: number
+  /** One for each unit touched, in roster order. */
+  outcomes: CastOutcome[]
 }
 
 /** A status dealt its damage as its unit's turn began. */
@@ -336,7 +418,10 @@ export interface StatusTickEvent extends EventBase {
   type: 'status_tick'
   unit: UnitId
   status: StatusId
+  /** Damage dealt, after the unit's ward against the status's element. */
   damage: number
+  /** The points of the rolled damage the ward stopped; 0 when none did. */
+  warded: number
   hpBefore: number
   hpAfter: number
 }
@@ -407,6 +492,7 @@ export type BattleEvent =
   | MoveEvent
   | AttackEvent
   | CastEvent
+  | AbilityEvent
   | StatusTickEvent
   | RegenerateEvent
   | StatusEndEvent
@@ -434,9 +520,12 @@ export interface UnitRecord {
   ap: number
   mana: number
   reactionReady: boolean
+  turnReady: boolean
   /** The unit has paid for a change of gear and not moved, attacked or cast since. */
   gearChangePaid: boolean
   statuses: ActiveStatus[]
+  /** Rounds until each ability that is recharging can be used again; an ability absent here is ready. */
+  recharging: Partial<Record<AbilityId, number>>
 }
 
 /**
@@ -487,6 +576,24 @@ export function attackArc(defender: Pick<UnitSnapshot, 'position' | 'facing'>, f
   return away <= 1 ? 'front' : away === 2 ? 'side' : 'rear'
 }
 
+/** A weapon that strikes as melee: range 1, or reach (a spear, from two hexes). */
+export function isMelee(stats: Pick<CombatantStats, 'attackRange' | 'reach'>): boolean {
+  return stats.attackRange === 1 || stats.reach === true
+}
+
+/**
+ * The arc an attack from `from` will strike: the front, if it is a blow with
+ * a melee weapon (`melee`, reach included) the defender can still turn to
+ * meet; otherwise the arc it is struck in as it stands.
+ */
+export function arcStruck(
+  defender: Pick<UnitSnapshot, 'position' | 'facing' | 'turnReady'>,
+  from: Hex,
+  melee: boolean,
+): Arc {
+  return defender.turnReady && melee ? 'front' : attackArc(defender, from)
+}
+
 /** Whether the unit has `status` in force. */
 export function hasStatus(unit: { statuses: readonly ActiveStatus[] }, status: StatusId): boolean {
   return unit.statuses.some((s) => s.id === status)
@@ -517,42 +624,47 @@ export function effectiveStats(unit: { stats: CombatantStats; statuses: readonly
   }
 }
 
-/** Every hex within `radius` of `center`, on the board or off it. */
-export function areaHexes(center: Hex, radius: number): Hex[] {
-  const hexes: Hex[] = []
-  for (let q = -radius; q <= radius; q++) {
-    for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
-      hexes.push({ q: center.q + q, r: center.r + r })
-    }
-  }
-  return hexes
-}
-
 /** The hex a cast is aimed at: its target's, or the area's centre. Null for a target not on the roster. */
 export function aimHex(units: readonly Placed[], aim: CastAim): Hex | null {
   if ('at' in aim) return aim.at
   return units.find((u) => u.id === aim.target)?.position ?? null
 }
 
+export interface AreaSpec {
+  shape: AreaShape
+  range: number
+  radius?: number
+}
+
+/** The standing units an area of `area` from `caster` aimed at `at` touches, in roster order: everyone if `hostile`, else the caster's side. */
+export function areaTouches<U extends Placed>(
+  units: readonly U[],
+  caster: Placed,
+  area: AreaSpec,
+  at: Hex,
+  hostile: boolean,
+): U[] {
+  const covered = new Set(areaOf(area.shape, caster.position, at, area.range, area.radius ?? 0).map(hexKey))
+  return units.filter((u) => u.hp > 0 && covered.has(hexKey(u.position)) && (hostile || u.side === caster.side))
+}
+
 /**
  * The units a cast of `spell` by `caster` aimed at `aim` would touch, in
  * roster order, whether or not it is legal: the standing target of a spell
- * aimed at a unit; for an area, every standing unit within its radius of the
- * centre, everyone for a hostile spell, the caster's own side for a friendly
+ * aimed at a unit; for an area, every standing unit in its shape (`areaTouches`),
+ * everyone for a hostile spell, the caster's own side for a friendly
  * one. The engine resolves a cast over these, and the policies and the
  * battle screen judge one by them, so that the three agree.
  */
 export function castTouches<U extends Placed>(units: readonly U[], caster: Placed, spell: SpellId, aim: CastAim): U[] {
-  const { target, radius = 0, hostile } = SPELLS[spell]
+  const { target, range, radius, shape = 'burst', hostile } = SPELLS[spell]
   if (target !== 'area') {
     if (!('target' in aim)) return []
     return units.filter((u) => u.id === aim.target && u.hp > 0)
   }
   const center = aimHex(units, aim)
   if (!center) return []
-  return units.filter(
-    (u) => u.hp > 0 && hexDistance(u.position, center) <= radius && (hostile || u.side === caster.side),
-  )
+  return areaTouches(units, caster, { shape, range, radius }, center, hostile)
 }
 
 /**
@@ -566,10 +678,14 @@ export function castTouches<U extends Placed>(units: readonly U[], caster: Place
  * until the side ends its turn. Nothing blocks a shot: there is no line of sight yet.
  * An attack gains a to-hit bonus for each other ally adjacent to the
  * defender, and another for striking the defender's side or rear: units
- * face the way they last stepped or struck. Every standing unit with a melee
- * weapon exerts a zone of control over its neighbouring hexes: a foe stepping
- * out of one provokes a free attack, at most one per unit per enemy turn.
- * A ranged weapon (`attackRange` above 1) holds no zone. A unit with magic
+ * face the way they last stepped or struck, and once each enemy turn a
+ * defender turns to meet a melee blow on its side or rear. Every standing unit
+ * with a melee weapon exerts a zone of control over its neighbouring hexes:
+ * a foe stepping out of one, not merely to another hex beside it, provokes
+ * a free attack, at most one per unit per enemy turn.
+ * A melee weapon is one of range 1, or with `reach` (`isMelee`): a spear strikes
+ * from two hexes but holds its zone over the next hexes only. A ranged weapon
+ * holds no zone. A unit with magic
  * (`stats.magic`) may cast a spell it knows on a foe within the spell's
  * range, for the spell's action points and mana; mana starts full and does
  * not come back during the battle. A cast provokes nothing. A unit may change
@@ -633,8 +749,10 @@ export class BattleEngine {
       ap: 0,
       mana: u.stats.magic?.maxMana ?? 0,
       reactionReady: false,
+      turnReady: false,
       gearChangePaid: false,
       statuses: [],
+      recharging: {},
     }))
 
     let seed: number | null = null
@@ -707,7 +825,10 @@ export class BattleEngine {
    * hex its AP can reach, an attack on each standing foe in range if it can
    * afford one, and for each spell it knows and can pay for, in `SPELL_IDS`
    * order, a cast at each legal aim: units in roster order, or an area's
-   * centres in board order (row, then column); then end_turn. Empty once the battle is over. Equip actions
+   * centres in board order (row, then column); then for each ability it has
+   * the AP for and is not recharging, in its `abilities` order, a routine at
+   * each standing foe in its attack range, in roster order, or an area at
+   * each legal aim in board order; then end_turn. Empty once the battle is over. Equip actions
    * are not listed, as the engine cannot know what gear a unit carries: see
    * equipCost().
    */
@@ -737,6 +858,18 @@ export class BattleEngine {
           }
         }
       }
+      for (const ability of actor.stats.abilities ?? []) {
+        if (!this.canUse(actor, ability)) continue
+        if (ABILITIES[ability].area) {
+          for (const at of this.board.hexes) {
+            if (this.canAim(actor, ability, at)) actions.push({ type: 'ability', unit: actor.id, ability, at })
+          }
+          continue
+        }
+        for (const foe of this.units) {
+          if (this.canStrike(actor, ability, foe)) actions.push({ type: 'ability', unit: actor.id, ability, target: foe.id })
+        }
+      }
     }
     actions.push({ type: 'end_turn' })
     return actions
@@ -751,7 +884,7 @@ export class BattleEngine {
     const provokes: UnitId[] = []
     let at = actor.position
     for (const step of path) {
-      for (const foe of this.reactorsAt(actor, at)) if (!provokes.includes(foe.id)) provokes.push(foe.id)
+      for (const foe of this.reactorsAt(actor, at, step)) if (!provokes.includes(foe.id)) provokes.push(foe.id)
       at = step
     }
     return { path, apCost: path.length * MOVE_AP_COST_PER_HEX, provokes }
@@ -765,7 +898,7 @@ export class BattleEngine {
     if (actor.ap < actor.stats.attackApCost || !this.canAttack(actor, foe)) return null
     const flankers = flankersOf(this.units, actor, foe)
     const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
-    const arc = attackArc(foe, actor.position)
+    const arc = arcStruck(foe, actor.position, isMelee(actor.stats))
     const arcBonus = ARC_BONUS[arc]
     const helpless = hasStatus(foe, 'asleep') ? HELPLESS_BONUS : 0
     const attacker = effectiveStats(actor)
@@ -837,6 +970,19 @@ export class BattleEngine {
       }
       return this.cast(actor, action.spell, aim)
     }
+    if (action.type === 'ability' && 'at' in action) {
+      if (!this.canAim(actor, action.ability, action.at)) {
+        throw new Error(`${actor.id} cannot use ${action.ability} at ${hexKey(action.at)}`)
+      }
+      return this.areaAttack(actor, action.ability, action.at)
+    }
+    if (action.type === 'ability') {
+      const target = this.units.find((u) => u.id === action.target)
+      if (!target || !this.canStrike(actor, action.ability, target)) {
+        throw new Error(`${actor.id} cannot use ${action.ability} on ${action.target}`)
+      }
+      return this.routine(actor, action.ability, target)
+    }
     const target = this.units.find((u) => u.id === action.target)
     if (!target || !this.canAttack(actor, target)) throw new Error(`${actor.id} cannot attack ${action.target}`)
     if (actor.ap < actor.stats.attackApCost) throw new Error(`${actor.id} has too few action points to attack`)
@@ -862,25 +1008,34 @@ export class BattleEngine {
 
   /**
    * Refills the side's action points, less or more by their statuses, and
-   * readies the other side's free attacks (not a sleeper's); then deals the
+   * readies the other side's free attacks and turns to meet a blow (not a
+   * sleeper's); then deals the
    * side's statuses' damage, unit by unit in roster order, which may fell
    * units and end the battle before the side acts; then the side's units that
-   * still stand regenerate, in roster order, those whose statuses allow it.
+   * still stand regenerate, in roster order, those whose statuses allow it;
+   * then a round comes off what the side's standing units have recharging, a
+   * sleeper's included (done whether or not the battle has just ended).
    */
   private startTurn(side: Side): BattleEvent[] {
     this.phase = side
     for (const u of this.units) {
-      if (u.side === side) u.ap = u.hp > 0 ? apAfterStatuses(u, u.stats.actionPoints) : 0
-      else u.reactionReady = u.hp > 0 && !hasStatus(u, 'asleep')
+      if (u.side === side) {
+        u.ap = u.hp > 0 ? apAfterStatuses(u, u.stats.actionPoints) : 0
+        u.turnReady = false
+      } else {
+        u.reactionReady = u.hp > 0 && !hasStatus(u, 'asleep')
+        u.turnReady = u.reactionReady
+      }
       u.gearChangePaid = false
     }
     const events: BattleEvent[] = []
     for (const u of this.units) {
       if (u.side !== side || u.hp <= 0) continue
       for (const status of [...u.statuses]) {
-        const tick = STATUSES[status.id].tick
+        const { tick, element } = STATUSES[status.id]
         if (!tick || u.hp <= 0 || this.winner !== null) continue
-        const damage = rollDamage(tick, this.rng)
+        const rolled = rollDamage(tick, this.rng)
+        const damage = warded(rolled, element, effectiveStats(u))
         const hpBefore = u.hp
         u.hp = Math.max(0, u.hp - damage)
         events.push(
@@ -890,6 +1045,7 @@ export class BattleEngine {
             unit: u.id,
             status: status.id,
             damage,
+            warded: rolled - damage,
             hpBefore,
             hpAfter: u.hp,
           }),
@@ -906,6 +1062,13 @@ export class BattleEngine {
       const hpBefore = u.hp
       u.hp += healed
       events.push(this.record<RegenerateEvent>({ type: 'regenerate', round: this.round, unit: u.id, healed, hpBefore, hpAfter: u.hp }))
+    }
+    for (const u of this.units) {
+      if (u.side !== side || u.hp <= 0) continue
+      for (const [ability, rounds] of Object.entries(u.recharging) as Array<[AbilityId, number]>) {
+        if (rounds <= 1) delete u.recharging[ability]
+        else u.recharging[ability] = rounds - 1
+      }
     }
     return events
   }
@@ -954,7 +1117,10 @@ export class BattleEngine {
       if (rule.sleep) unit.ap = 0
       else if (rule.actionPoints) unit.ap = Math.max(0, unit.ap + rule.actionPoints)
     }
-    if (rule.sleep) unit.reactionReady = false
+    if (rule.sleep) {
+      unit.reactionReady = false
+      unit.turnReady = false
+    }
     return { ...status }
   }
 
@@ -987,6 +1153,35 @@ export class BattleEngine {
     )
   }
 
+  /** Whether `actor` has `ability`, has the action points for it, and it is not recharging. */
+  private canUse(actor: UnitRecord, ability: AbilityId): boolean {
+    const known = ABILITIES[ability]
+    return (
+      known !== undefined &&
+      actor.stats.abilities?.includes(ability) === true &&
+      actor.ap >= known.apCost &&
+      (actor.recharging[ability] ?? 0) <= 0
+    )
+  }
+
+  /** Whether `actor` can use the routine `ability` on `target`: it can use it, and the target is a standing foe within its attack range. */
+  private canStrike(actor: UnitRecord, ability: AbilityId, target: UnitRecord): boolean {
+    return this.canUse(actor, ability) && ABILITIES[ability].strikes !== undefined && this.canAttack(actor, target)
+  }
+
+  /**
+   * Whether `actor` can use the area `ability` aimed at `at`: it can use it,
+   * `at` is on the board, within range for a burst or 1 to range away for a
+   * cone or line, and the area touches a standing foe.
+   */
+  private canAim(actor: UnitRecord, ability: AbilityId, at: Hex): boolean {
+    const area = ABILITIES[ability]?.area
+    if (!area || !this.canUse(actor, ability) || !this.board.contains(at)) return false
+    const distance = hexDistance(at, actor.position)
+    if (distance > area.range || (area.shape !== 'burst' && distance < 1)) return false
+    return areaTouches(this.units, actor, area, at, true).some((u) => u.side !== actor.side)
+  }
+
   /** Whether `actor` knows `spell` and has the action points and mana for it. */
   private canPayFor(actor: UnitRecord, spell: SpellId): boolean {
     const known = SPELLS[spell]
@@ -1006,9 +1201,11 @@ export class BattleEngine {
    */
   private canCast(actor: UnitRecord, spell: SpellId, aim: CastAim): boolean {
     if (!this.canPayFor(actor, spell)) return false
-    const { target: kind, range, hostile } = SPELLS[spell]
+    const { target: kind, range, hostile, shape = 'burst' } = SPELLS[spell]
     if (kind === 'area') {
-      if (!('at' in aim) || !this.board.contains(aim.at) || hexDistance(aim.at, actor.position) > range) return false
+      if (!('at' in aim) || !this.board.contains(aim.at)) return false
+      const distance = hexDistance(aim.at, actor.position)
+      if (distance > range || (shape !== 'burst' && distance < 1)) return false
       return !hostile || castTouches(this.units, actor, spell, aim).some((u) => u.side !== actor.side)
     }
     if (!('target' in aim)) return false
@@ -1019,8 +1216,8 @@ export class BattleEngine {
     return side && hexDistance(target.position, actor.position) <= range
   }
 
-  /** Foes that would strike `mover` for stepping out of `hex`. */
-  private reactorsAt(mover: UnitRecord, hex: Hex): UnitRecord[] {
+  /** Foes that would strike `mover` for stepping from `hex` to `to`: those it leaves the side of. */
+  private reactorsAt(mover: UnitRecord, hex: Hex, to: Hex): UnitRecord[] {
     // Crit-focused builds may later slip through zones of control; that check belongs here.
     return this.units.filter(
       (u) =>
@@ -1028,14 +1225,16 @@ export class BattleEngine {
         u.hp > 0 &&
         u.reactionReady &&
         !hasStatus(u, 'asleep') &&
-        u.stats.attackRange === 1 &&
-        hexDistance(u.position, hex) === 1,
+        isMelee(u.stats) &&
+        hexDistance(u.position, hex) === 1 &&
+        hexDistance(u.position, to) > 1,
     )
   }
 
   /**
    * Walks the path, pausing for a free attack from each ready foe whose zone
-   * the mover steps out of. The mover turns towards each step before taking
+   * the mover steps out of; a step to another hex beside the foe provokes
+   * nothing. The mover turns towards each step before taking
    * it, so a free attack strikes whichever arc that exposes. The move ends
    * early if the mover falls.
    */
@@ -1073,7 +1272,7 @@ export class BattleEngine {
 
     for (const step of path) {
       actor.facing = hexDirection(actor.position, step)!
-      const reactors = this.reactorsAt(actor, actor.position)
+      const reactors = this.reactorsAt(actor, actor.position, step)
       if (reactors.length > 0) logSegment()
       for (const foe of reactors) {
         foe.reactionReady = false
@@ -1098,7 +1297,7 @@ export class BattleEngine {
       actor.position,
       Math.floor(actor.ap / MOVE_AP_COST_PER_HEX),
       (h) => this.board.contains(h) && !blocked(h),
-      (from) => this.reactorsAt(actor, from).map((u) => u.id),
+      (from, to) => this.reactorsAt(actor, from, to).map((u) => u.id),
     )
   }
 
@@ -1133,9 +1332,66 @@ export class BattleEngine {
     ]
   }
 
-  /** Resolves an attack already paid for; an `apCost` of null marks a free attack. */
-  private attack(actor: UnitRecord, target: UnitRecord, apCost: number | null): BattleEvent[] {
+  /**
+   * Pays for a legal routine and makes its strikes in order, each a weapon
+   * attack with the strike's dice and the unit's `abilityDamageBonus`. A
+   * strike whose target has fallen goes to the nearest standing foe in
+   * reach, the lowest id on a tie; with none, it and the rest are not made.
+   * The routine stops when the battle ends.
+   */
+  private routine(actor: UnitRecord, abilityId: AbilityId, target: UnitRecord): BattleEvent[] {
+    const ability = ABILITIES[abilityId]
+    actor.ap -= ability.apCost
+    actor.gearChangePaid = false
+    if (ability.recharge >= 1) actor.recharging[abilityId] = ability.recharge
+    const bonus = actor.stats.abilityDamageBonus ?? 0
+    const events: BattleEvent[] = []
+    let foe: UnitRecord | null = target
+    for (const [i, strike] of (ability.strikes ?? []).entries()) {
+      if (this.phase === 'over') break
+      if (foe.hp <= 0) foe = this.nearestFoeInReach(actor)
+      if (!foe) break
+      const dice = { ...strike.damage, bonus: strike.damage.bonus + bonus }
+      events.push(...this.attack(actor, foe, i === 0 ? ability.apCost : 0, { ability: abilityId, strike, dice }))
+    }
+    return events
+  }
+
+  /** The standing foe within `actor`'s attack range nearest it, the lowest id on a tie; null if none. */
+  private nearestFoeInReach(actor: UnitRecord): UnitRecord | null {
+    let nearest: UnitRecord | null = null
+    let gap = Infinity
+    for (const u of this.units) {
+      if (!this.canAttack(actor, u)) continue
+      const d = hexDistance(actor.position, u.position)
+      if (d < gap || (d === gap && nearest !== null && u.id < nearest.id)) {
+        nearest = u
+        gap = d
+      }
+    }
+    return nearest
+  }
+
+  /**
+   * Resolves an attack already paid for; an `apCost` of null marks a free
+   * attack. A defender struck in its side or rear by a melee weapon turns to
+   * face the attacker first if it still can, whether the blow then lands or
+   * not; a shot gives it no turn. A routine's strike rolls its own `dice` and
+   * lays its status on a hit that leaves the target standing.
+   */
+  private attack(
+    actor: UnitRecord,
+    target: UnitRecord,
+    apCost: number | null,
+    strike?: { ability: AbilityId; strike: Strike; dice: DamageRoll },
+  ): BattleEvent[] {
     actor.facing = hexDirectionTowards(actor.position, target.position)!
+    const defenderTurned =
+      target.turnReady && isMelee(actor.stats) && attackArc(target, actor.position) !== 'front'
+    if (defenderTurned) {
+      target.facing = hexDirectionTowards(target.position, actor.position)!
+      target.turnReady = false
+    }
     const flankers = flankersOf(this.units, actor, target)
     const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
     const arc = attackArc(target, actor.position)
@@ -1147,11 +1403,31 @@ export class BattleEngine {
     const defenderResistance = defender.resistance ?? 0
     const roll = rollToHit(attacker, defenderAc, this.rng, flankBonus + arcBonus + (helpless ? HELPLESS_BONUS : 0))
     const image = roll.hit && this.strikeImage(target)
-    const rolled = roll.hit && !image ? rollHitDamage(attacker.damage, roll.critical, this.rng) : 0
+    const dice = strike?.dice ?? attacker.damage
+    const rolled = roll.hit && !image ? rollHitDamage(dice, roll.critical, this.rng) : 0
     const damage = damageThrough(rolled, effectiveResistance(attacker, defenderResistance))
     const result = { ...roll, damage }
+    const landed = roll.hit && !image
+    const onHit = landed ? (attacker.onHit ?? []) : []
+    const bonus: AttackBonus[] = onHit
+      .filter((entry) => entry.damage > 0 && (!entry.bane || baneApplies(defender)))
+      .map((entry) => ({
+        ...(entry.element ? { element: entry.element } : {}),
+        ...(entry.bane ? { bane: true as const } : {}),
+        rolled: entry.damage,
+        damage: warded(entry.damage, entry.element, defender),
+      }))
+    const total = damage + bonus.reduce((sum, b) => sum + b.damage, 0)
     const defenderHpBefore = target.hp
-    target.hp = Math.max(0, target.hp - damage)
+    target.hp = Math.max(0, target.hp - total)
+    const heals = onHit.some((entry) => entry.heal !== undefined)
+    const healing = onHit.reduce((sum, entry) => sum + (entry.heal ?? 0), 0)
+    const healed = heals ? Math.min(healing, Math.max(0, actor.stats.maxHp - actor.hp)) : 0
+    actor.hp += healed
+    const laid = strike?.strike.status && landed && target.hp > 0 ? this.layStatus(target, strike.strike.status) : null
+    const onHitStatuses = onHit
+      .filter((entry) => entry.status && (!entry.onCrit || roll.critical))
+      .flatMap((entry) => (target.hp > 0 ? [this.layStatus(target, entry.status!)] : []))
 
     const events: BattleEvent[] = [
       this.record<AttackEvent>({
@@ -1162,10 +1438,13 @@ export class BattleEngine {
         opportunity: apCost === null,
         weapon: actor.stats.weapon ?? null,
         distance: hexDistance(actor.position, target.position),
+        melee: isMelee(actor.stats),
         apCost: apCost ?? 0,
         apAfter: actor.ap,
         flankers,
         flankBonus,
+        defenderTurned,
+        defenderFacing: target.facing,
         arc,
         arcBonus,
         attackerFacing: actor.facing,
@@ -1180,15 +1459,20 @@ export class BattleEngine {
         critical: result.critical,
         fumble: result.fumble,
         image,
-        damageDice: actor.stats.damage,
+        damageDice: strike ? dice : actor.stats.damage,
         rolled,
         damage: result.damage,
         defenderHpBefore,
         defenderHpAfter: target.hp,
+        ...(strike ? { ability: strike.ability, strike: strike.strike.name } : {}),
+        ...(laid ? { status: laid } : {}),
+        bonus,
+        ...(heals ? { healed } : {}),
+        ...(onHitStatuses.length > 0 ? { onHitStatuses } : {}),
       }),
     ]
 
-    events.push(...this.imagesSpent(target), ...this.wake(target, damage), ...this.fell(target))
+    events.push(...this.imagesSpent(target), ...this.wake(target, total), ...this.fell(target))
     return events
   }
 
@@ -1201,7 +1485,7 @@ export class BattleEngine {
    * wakings, images spent and falls, and at most one end of the battle.
    */
   private cast(actor: UnitRecord, spell: SpellId, aim: CastAim): BattleEvent[] {
-    const { apCost, manaCost, hostile, damage: dice, heal, status } = SPELLS[spell]
+    const { apCost, manaCost, hostile, damage: dice, element, drain, heal, status } = SPELLS[spell]
     const touched = castTouches(this.units, actor, spell, aim)
     const at = aimHex(this.units, aim)!
     actor.ap -= apCost
@@ -1210,45 +1494,121 @@ export class BattleEngine {
     if (!hexEquals(at, actor.position)) actor.facing = hexDirectionTowards(actor.position, at)!
     const caster = spellcaster(effectiveStats(actor), spell)
 
-    const outcomes: Array<CastOutcome & { woke?: boolean }> = touched.map((unit) => {
+    const outcomes: StruckOutcome[] = touched.map((unit) => {
+      if (hostile) return this.strikeUnit(unit, caster, { dice, element, status, halfOnMiss: false })
       const hpBefore = unit.hp
-      const blank = { unit: unit.id, attackRoll: null, chance: null, defenderAc: null, critical: false, fumble: false }
-      if (!hostile) {
-        const healed = heal ? Math.min(rollDamage(heal, this.rng), unit.stats.maxHp - unit.hp) : 0
-        unit.hp += Math.max(0, healed)
-        const laid = status ? this.layStatus(unit, status) : null
-        return { ...blank, hit: true, image: false, damage: 0, healed: Math.max(0, healed), hpBefore, hpAfter: unit.hp, status: laid }
+      const healed = heal ? Math.min(rollDamage(heal, this.rng), unit.stats.maxHp - unit.hp) : 0
+      unit.hp += Math.max(0, healed)
+      const laid = status ? this.layStatus(unit, status) : null
+      return {
+        unit: unit.id, attackRoll: null, chance: null, defenderAc: null, hit: true, critical: false, fumble: false, image: false,
+        damage: 0, warded: 0, half: false, healed: Math.max(0, healed), hpBefore, hpAfter: unit.hp, status: laid,
       }
-      const defenderAc = effectiveStats(unit).ac
-      const roll = rollToHit(caster, defenderAc, this.rng)
-      const image = roll.hit && this.strikeImage(unit)
-      const damage = roll.hit && !image && dice ? rollHitDamage(dice, roll.critical, this.rng) : 0
-      unit.hp = Math.max(0, unit.hp - damage)
-      // A blow that wakes a sleeper wakes it before anything it lays; Sleep itself deals none.
-      const woke = damage > 0 && unit.hp > 0 && hasStatus(unit, 'asleep')
-      if (woke) unit.statuses = unit.statuses.filter((s) => s.id !== 'asleep')
-      const laid = roll.hit && !image && status && unit.hp > 0 ? this.layStatus(unit, status) : null
-      return { ...blank, ...roll, defenderAc, image, damage, healed: 0, hpBefore, hpAfter: unit.hp, status: laid, woke }
     })
+    // A drain heals a caster its own area left standing, by a share of the hit points all it touched lost
+    // (not the overkill past what a target had left).
+    const dealt = outcomes.reduce((sum, o) => sum + (o.hpBefore - o.hpAfter), 0)
+    const drained = drain && actor.hp > 0 ? Math.min(Math.floor(drain * dealt), actor.stats.maxHp - actor.hp) : 0
+    actor.hp += drained
 
-    const events: BattleEvent[] = [
-      this.record<CastEvent>({
-        type: 'cast',
-        round: this.round,
-        caster: actor.id,
-        spell,
-        target: 'target' in aim ? aim.target : null,
-        at,
-        distance: hexDistance(actor.position, at),
-        apCost,
-        apAfter: actor.ap,
-        manaCost,
-        manaAfter: actor.mana,
-        casterFacing: actor.facing,
-        skill: caster.toHit,
-        outcomes: outcomes.map(({ woke: _, ...outcome }) => outcome),
-      }),
-    ]
+    const event = this.record<CastEvent>({
+      type: 'cast',
+      round: this.round,
+      caster: actor.id,
+      spell,
+      target: 'target' in aim ? aim.target : null,
+      at,
+      distance: hexDistance(actor.position, at),
+      apCost,
+      apAfter: actor.ap,
+      manaCost,
+      manaAfter: actor.mana,
+      casterFacing: actor.facing,
+      skill: caster.toHit,
+      outcomes: outcomes.map(({ woke: _, ...outcome }) => outcome),
+      drained,
+    })
+    return [event, ...this.aftermath(outcomes, touched)]
+  }
+
+  /**
+   * Pays for a legal area ability and resolves it over every unit it
+   * touches, both sides, in roster order: each rolled as a hostile spell
+   * rolls, with the unit's own chance to hit, resistance ignored, its
+   * element cut by each ward, and half the dice on a miss where the area has
+   * `halfOnMiss`. Then the wakings, images spent and falls, as a cast's.
+   */
+  private areaAttack(actor: UnitRecord, abilityId: AbilityId, at: Hex): BattleEvent[] {
+    const ability = ABILITIES[abilityId]
+    const area = ability.area!
+    const touched = areaTouches(this.units, actor, area, at, true)
+    actor.ap -= ability.apCost
+    actor.gearChangePaid = false
+    if (ability.recharge >= 1) actor.recharging[abilityId] = ability.recharge
+    if (!hexEquals(at, actor.position)) actor.facing = hexDirectionTowards(actor.position, at)!
+    const attacker = effectiveStats(actor)
+    const bonus = actor.stats.abilityDamageBonus ?? 0
+    const dice = area.damage && { ...area.damage, bonus: area.damage.bonus + bonus }
+
+    const outcomes = touched.map((unit) =>
+      this.strikeUnit(unit, attacker, { dice, element: area.element, status: area.status, halfOnMiss: area.halfOnMiss }),
+    )
+    const event = this.record<AbilityEvent>({
+      type: 'ability',
+      round: this.round,
+      unit: actor.id,
+      ability: abilityId,
+      at,
+      shape: area.shape,
+      hexes: areaOf(area.shape, actor.position, at, area.range, area.radius ?? 0).filter((h) => this.board.contains(h)),
+      distance: hexDistance(actor.position, at),
+      apCost: ability.apCost,
+      apAfter: actor.ap,
+      facing: actor.facing,
+      skill: attacker.toHit,
+      outcomes: outcomes.map(({ woke: _, ...outcome }) => outcome),
+    })
+    return [event, ...this.aftermath(outcomes, touched)]
+  }
+
+  /**
+   * One unit's share of a hostile cast or area: the roll to hit with
+   * `attacker`'s chance against its armour class; on a hit, a mirror image
+   * takes it if there is one, drawing nothing more, and otherwise the dice
+   * (doubled on a critical) less its ward; on a miss with `halfOnMiss`, half
+   * the dice, rounded down, less its ward. A blow that wakes a sleeper wakes
+   * it before the status is laid, on a hit that left it standing.
+   */
+  private strikeUnit(
+    unit: UnitRecord,
+    attacker: CombatantStats,
+    blow: { dice: DamageRoll | undefined; element: Element | undefined; status: StatusLaid | undefined; halfOnMiss: boolean },
+  ): StruckOutcome {
+    const hpBefore = unit.hp
+    const defenderAc = effectiveStats(unit).ac
+    const roll = rollToHit(attacker, defenderAc, this.rng)
+    const image = roll.hit && this.strikeImage(unit)
+    const half = !roll.hit && blow.halfOnMiss && blow.dice !== undefined
+    const rolled =
+      roll.hit && !image && blow.dice
+        ? rollHitDamage(blow.dice, roll.critical, this.rng)
+        : half
+          ? Math.floor(Math.max(0, rollDamage(blow.dice!, this.rng)) / 2)
+          : 0
+    const damage = warded(rolled, blow.element, effectiveStats(unit))
+    unit.hp = Math.max(0, unit.hp - damage)
+    // A blow that wakes a sleeper wakes it before anything it lays; Sleep itself deals none.
+    const woke = damage > 0 && unit.hp > 0 && hasStatus(unit, 'asleep')
+    if (woke) unit.statuses = unit.statuses.filter((s) => s.id !== 'asleep')
+    const laid = roll.hit && !image && blow.status && unit.hp > 0 ? this.layStatus(unit, blow.status) : null
+    return {
+      unit: unit.id, ...roll, defenderAc, image, damage, warded: rolled - damage, half, healed: 0, hpBefore, hpAfter: unit.hp, status: laid, woke,
+    }
+  }
+
+  /** What follows a cast or an area: each sleeper woken and image spent, in roster order, then the falls and at most one end of the battle. */
+  private aftermath(outcomes: readonly StruckOutcome[], touched: readonly UnitRecord[]): BattleEvent[] {
+    const events: BattleEvent[] = []
     for (const outcome of outcomes) {
       const unit = this.units.find((u) => u.id === outcome.unit)!
       if (outcome.woke) {
@@ -1313,6 +1673,9 @@ export class BattleEngine {
   }
 }
 
+/** A cast or area outcome, with whether it woke its unit, which the event does not keep. */
+type StruckOutcome = CastOutcome & { woke?: boolean }
+
 function snapshot(unit: UnitRecord): UnitSnapshot {
   return {
     ...unit.stats,
@@ -1324,7 +1687,9 @@ function snapshot(unit: UnitRecord): UnitSnapshot {
     ap: unit.ap,
     mana: unit.mana,
     reactionReady: unit.reactionReady,
+    turnReady: unit.turnReady,
     statuses: unit.statuses.map((status) => ({ ...status })),
+    recharging: { ...unit.recharging },
   }
 }
 
@@ -1363,13 +1728,28 @@ function laidPhrase(status: StatusId): string {
   return status === 'asleep' ? 'falls asleep' : `is ${STATUSES[status].adjective}`
 }
 
+/** The verb of a routine's strike, by its name: "claws", "bites". */
+function strikeVerb(event: AttackEvent): string {
+  const ability = ABILITIES[event.ability!]
+  return ability.strikes?.find((s) => s.name === event.strike)?.verb ?? ability.verb
+}
+
+/** " (warded N)" after a damage the ward took N off, else nothing. */
+function wardedNote(points: number): string {
+  return points > 0 ? ` (warded ${points})` : ''
+}
+
 /** What one unit made of a hostile cast: "HITS Goblin for 7 dmg", "Goblin falls asleep", "MISSES Goblin". */
 function hostileOutcome(outcome: CastOutcome, name: string): string {
-  if (!outcome.hit) return outcome.fumble ? `fumbles at ${name}` : `MISSES ${name}`
+  if (!outcome.hit) {
+    const missed = outcome.fumble ? `fumbles at ${name}` : `MISSES ${name}`
+    return outcome.half ? `${missed}, ${outcome.damage} dmg${wardedNote(outcome.warded)} (half)` : missed
+  }
   if (outcome.image) return `strikes an image of ${name}`
-  const crit = outcome.critical ? ' (CRITICAL)' : ''
-  const parts = outcome.damage > 0 ? [`HITS ${name} for ${outcome.damage} dmg${crit}`] : []
-  if (outcome.status) parts.push(outcome.damage > 0 ? laidPhrase(outcome.status.id).replace(/^is /, '') : `${name} ${laidPhrase(outcome.status.id)}`)
+  const notes = [...(outcome.critical ? ['CRITICAL'] : []), ...(outcome.warded > 0 ? [`warded ${outcome.warded}`] : [])]
+  const struck = outcome.damage > 0 || outcome.warded > 0
+  const parts = struck ? [`HITS ${name} for ${outcome.damage} dmg${notes.length > 0 ? ` (${notes.join(', ')})` : ''}`] : []
+  if (outcome.status) parts.push(struck ? laidPhrase(outcome.status.id).replace(/^is /, '') : `${name} ${laidPhrase(outcome.status.id)}`)
   return parts.join(', ') || `HITS ${name}`
 }
 
@@ -1391,12 +1771,20 @@ function describeCast(event: CastEvent, names: Readonly<Record<UnitId, string>>)
     const status = spell.status ? STATUSES[spell.status.id].adjective : 'helped'
     return `${opening}: ${who} ${outcomes.length === 1 ? 'is' : 'are'} ${status}.`
   }
+  const drains = event.drained > 0 ? ` and drains ${event.drained}` : ''
   if (spell.target !== 'area' && outcomes.length === 1) {
     const [o] = outcomes
     if (o.fumble) return `${opening}: rolls ${o.attackRoll} — fumbles the spell!`
-    return `${opening}: rolls ${o.attackRoll} (needs ${o.chance} or less) — ${hostileOutcome(o, names[o.unit])}.`
+    return `${opening}: rolls ${o.attackRoll} (needs ${o.chance} or less) — ${hostileOutcome(o, names[o.unit])}${drains}.`
   }
-  return `${opening}: ${outcomes.map((o) => hostileOutcome(o, names[o.unit])).join('; ')}.`
+  return `${opening}: ${outcomes.map((o) => hostileOutcome(o, names[o.unit])).join('; ')}${drains}.`
+}
+
+/** An area ability's line: "Salamander spits fire: HITS Aldric for 9 dmg; MISSES Bryn, 4 dmg (half)." */
+function describeAbility(event: AbilityEvent, names: Readonly<Record<UnitId, string>>): string {
+  const opening = `${names[event.unit]} ${ABILITIES[event.ability].verb}`
+  if (event.outcomes.length === 0) return `${opening}: it touches no one.`
+  return `${opening}: ${event.outcomes.map((o) => hostileOutcome(o, names[o.unit])).join('; ')}.`
 }
 
 /**
@@ -1413,25 +1801,37 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
     case 'attack': {
       const attackerName = names[event.attacker]
       const defenderName = names[event.defender]
-      const opening = event.opportunity ? `${defenderName} breaks away — free attack! ` : ''
-      if (event.fumble) return `${opening}${attackerName} rolls ${event.attackRoll} — fumbles the attack!`
+      const breaking = event.opportunity ? `${defenderName} breaks away — free attack! ` : ''
+      const opening = `${breaking}${event.defenderTurned ? `${defenderName} turns to face ${attackerName}. ` : ''}`
+      // A routine's strike names its verb: "Troll claws Aldric: rolls 23".
+      const striker = event.ability ? `${attackerName} ${strikeVerb(event)} ${defenderName}:` : attackerName
+      if (event.fumble) return `${opening}${striker} rolls ${event.attackRoll} — fumbles the attack!`
       const flank = event.flankBonus > 0 ? `, +${event.flankBonus} flanking` : ''
       const from = event.arc === 'rear' ? 'from behind' : 'from the side'
       const arc = event.arcBonus > 0 ? `, +${event.arcBonus} ${from}` : ''
-      const roll = `${opening}${attackerName} rolls ${event.attackRoll} (needs ${event.chance} or less${flank}${arc})`
+      const roll = `${opening}${striker} rolls ${event.attackRoll} (needs ${event.chance} or less${flank}${arc})`
       if (event.image) return `${roll} — strikes an image of ${defenderName}.`
       if (event.hit) {
         const crit = event.critical ? ' CRITICAL HIT!' : ''
         const absorbed = event.rolled - event.damage
         const armour = absorbed > 0 ? ` (armour stops ${absorbed})` : ''
-        return `${roll} — HITS ${defenderName} for ${event.damage} dmg${armour}.${crit}`
+        const bonus = event.bonus
+          .filter((b) => b.damage > 0)
+          .map((b) => ` +${b.damage}${b.element ? ` ${b.element}` : ''}${wardedNote(b.rolled - b.damage)}`)
+          .join('')
+        const statuses = new Set([...(event.status ? [event.status] : []), ...(event.onHitStatuses ?? [])].map((s) => s.id))
+        const laid = [...statuses].map((id) => `, ${laidPhrase(id).replace(/^is /, '')}`).join('')
+        const heals = (event.healed ?? 0) > 0 ? ` ${attackerName} heals ${event.healed}.` : ''
+        return `${roll} — HITS ${defenderName} for ${event.damage} dmg${armour}${bonus}${laid}.${crit}${heals}`
       }
       return `${roll} — MISSES ${defenderName}.`
     }
     case 'cast':
       return describeCast(event, names)
+    case 'ability':
+      return describeAbility(event, names)
     case 'status_tick':
-      return `${names[event.unit]} takes ${event.damage} from ${STATUSES[event.status].tickName ?? STATUSES[event.status].adjective}.`
+      return `${names[event.unit]} takes ${event.damage} from ${STATUSES[event.status].tickName ?? STATUSES[event.status].adjective}${wardedNote(event.warded)}.`
     case 'regenerate':
       return `${names[event.unit]} regenerates ${event.healed}.`
     case 'status_end':

@@ -7,7 +7,9 @@ import type { SpellId } from './combat/spells.ts'
 import type { BattleEvent, BattleState, UnitId } from './engine/battleEngine.ts'
 import type { FacilityId } from './game/encampment.ts'
 import type { WorldState } from './game/worldMap.ts'
+import type { FamilyId } from './inventory/catalog.ts'
 import type { EquipmentSlot } from './inventory/inventory.ts'
+import type { RuneKey } from './inventory/runes.ts'
 import type { Point } from './scenes/boardGeometry.ts'
 import type { Rect } from './scenes/mapScroll.ts'
 
@@ -115,6 +117,19 @@ export interface CreationProbe {
   notes: string[]
 }
 
+/** An entry of the world map's party list (`PartyListView`), at its tile's centre. */
+export interface PartyListProbe extends Point {
+  id: string
+  /** How many members the party has. */
+  members: number
+  /** Whether it is the selected party, which the column and Home follow. */
+  selected: boolean
+  /** Whether the party stands before monsters, which the entry marks with a red "!". */
+  confronting: boolean
+  /** Whether the pointer is over the entry, as the entry itself heard it (nothing over it, such as the outcome screen, took the hover). */
+  hovered: boolean
+}
+
 export interface WorldProbe {
   world: WorldState
   walking: boolean
@@ -152,6 +167,14 @@ export interface WorldProbe {
     menu: ButtonProbe
   }
   party: PortraitProbe[]
+  /** The party list down the right, one entry a party in company order. */
+  parties: PartyListProbe[]
+  /** The id of the selected party. */
+  selectedParty: string
+  /** The info panel's bounds while it shows (a hex or a party entry hovered), else null. */
+  infoRect: Rect | null
+  /** The sprites of the party's figure on the map, bottom first in drawing order (`UnitFigure.lookNames`). */
+  partyLook: string[]
 }
 
 /** A hero's face in the guild hall, by its centre on screen. */
@@ -185,7 +208,15 @@ export interface TradingPostProbe {
    * Every line of the tab, those of other pages not visible: an item's id when buying, else where it lies
    * (`baggage:<index>`, `pack:<member>:<index>`) or `material:<material>`; a click shows its details.
    */
-  rows: Array<ButtonProbe & { id: string; kind: 'item' | 'material'; price: number }>
+  rows: Array<ButtonProbe & { id: string; kind: 'item' | 'material' | 'rune'; price: number }>
+  /** The Buy tab's filter: the slot shown (or 'runes', the runes it sells, `rune:<key>`) and the family, null for all of the slot. Sell is not filtered; it lists the pouch's runes after the materials. */
+  filter: { slot: EquipmentSlot | 'runes'; family: FamilyId | null }
+  /** One for each slot the post sells for, in the order mainHand, offHand, armor, head, gloves, boots; empty on the Sell tab. */
+  slotButtons: Array<ButtonProbe & { slot: EquipmentSlot }>
+  /** The Buy tab's Runes filter, after the slot buttons; not visible on the Sell tab. */
+  runesButton: ButtonProbe
+  /** "All" (family null), then each family of the slot shown, in FAMILIES order; empty on the Sell tab. */
+  familyButtons: Array<ButtonProbe & { family: FamilyId | null }>
   /** `confirm` buys or sells the line shown (a material two at a time); `confirmAll` sells all of a material. */
   buttons: {
     buyTab: ButtonProbe
@@ -201,19 +232,42 @@ export interface TradingPostProbe {
 export interface CraftingProbe {
   /** 'field', or the workshop's level. */
   tier: 'field' | number
+  /** Modify (modifiers, the screen it opens on) or Runes (sockets and the pouch). */
+  tab: 'modify' | 'runes'
   /** What the last action did, or why it was refused. */
   message: string
-  /** Every item that could be worked, by where it lies (`worn:<member>:<slot>`, `pack:<member>:<index>`, `baggage:<index>`), greyed when nothing here fits it. */
+  /** Runes: what the item list says when the party has nothing with a socket (which gear has them); '' otherwise. */
+  itemsHint: string
+  /** Runes: the lines of the panel a hovered pouch row shows (the rune, what it does in each place, where it goes); empty when none is hovered. */
+  tooltip: string[]
+  /**
+   * Modify: every item that could be worked, by where it lies (`worn:<member>:<slot>`, `pack:<member>:<index>`, `baggage:<index>`), greyed when nothing here fits it.
+   * Runes: every item with a socket, the same way.
+   */
   items: Array<ButtonProbe & { id: string; itemId: string }>
   /** The item clicked, by where it lies. */
   selected: string | null
-  /** The modifiers and grades on offer for it (`<modifier><grade>`), each greyed when it cannot be done now. */
-  options: Array<ButtonProbe & { id: string }>
-  /** The option clicked, and the lines saying what it changes. */
+  /** The modifiers and grades on offer for it (`<modifier><grade>`), each greyed when it cannot be done now, with its button's words; empty on the Runes tab. */
+  options: Array<ButtonProbe & { id: string; label: string }>
+  /** The option clicked (`<modifier><grade>`), or on the Runes tab the action (`embed:<key>`, `extract:<index>`, `fuse:<key>`); and the lines of its preview, its refusal last if any. */
   chosen: string | null
   preview: string[]
-  /** `work` confirms the option chosen. */
-  buttons: { work: ButtonProbe; prev: ButtonProbe; next: ButtonProbe; close: ButtonProbe }
+  /** Runes: the selected item's sockets, each its Extract button (greyed when refused, and for an empty socket not visible), with the rune in it. */
+  sockets: Array<ButtonProbe & { index: number; rune: RuneKey | null }>
+  /** Runes: the pouch, each key with its row (to hover for what it does) and its Embed and Fuse buttons, greyed when refused but still clickable to read why; those of other pages not visible. */
+  pouch: Array<{ key: RuneKey; count: number; row: ButtonProbe; embed: ButtonProbe; fuse: ButtonProbe }>
+  /** `work` confirms the option chosen, `confirm` the rune action; `prev` and `next` page the item list, `pouchPrev` and `pouchNext` the pouch. */
+  buttons: {
+    work: ButtonProbe
+    confirm: ButtonProbe
+    modifyTab: ButtonProbe
+    runesTab: ButtonProbe
+    prev: ButtonProbe
+    next: ButtonProbe
+    pouchPrev: ButtonProbe
+    pouchNext: ButtonProbe
+    close: ButtonProbe
+  }
 }
 
 export interface GuildHallProbe {
@@ -244,6 +298,8 @@ export interface BattleProbe {
   state: BattleState
   log: readonly BattleEvent[]
   playerControl: boolean
+  /** The header's hint line, with the warning for a foe the pointer is over that no click can strike. */
+  hint: string
   selected: UnitId | null
   /** Where the board's top-left corner is on screen and how far it is scaled; with BATTLE_LAYOUT, that places every hex. */
   origin: Point
@@ -256,7 +312,11 @@ export interface BattleProbe {
   spellMenu: Array<Point & { spell: SpellId; enabled: boolean }> | null
   /** The lines of the victory or defeat screen; empty until the battle is over. */
   result: string[]
+  /** The lines of the foe info panel shown beside the hovered foe now (`foeInfoLines`: its name, then its abilities and wards); empty when none shows. */
+  foeInfo: string[]
   party: PortraitProbe[]
+  /** Each hero's figure's sprites, bottom first in drawing order (`UnitFigure.lookNames`); foes have no entry. */
+  looks: Record<UnitId, string[]>
 }
 
 export interface InventoryProbe {
@@ -276,6 +336,14 @@ export interface InventoryProbe {
   armorClass: number
   /** The mana shown: what is left in battle, what the character carries on the world map; null for a character without magic. */
   mana: number | null
+  /** The spell skill the Spells tab shows, gear included; null for a character that knows no spell. */
+  spellSkill: number | null
+  /** The Character tab's warning that the weapon held costs more AP than a turn gives; null when it fits. */
+  attackWarning: string | null
+  /** The Character tab's stat lines ("Wards:" and "On a hit:" among them, each with its indented rows); the Inventory tab lists the same but the on-hit rows. */
+  statLines: string[]
+  /** The lines of the item tooltip shown now, from the hovered item's name down to its sockets; empty when hidden. */
+  tooltip: string[]
   /** The perks the Skills tab lists: those the character has a rank of. */
   takenPerks: Array<{ perk: string; ranks: number }>
   /** The Skills tab's button that opens the perk tree, and the tree's button back, by their centres on screen. */
@@ -299,6 +367,12 @@ export interface InventoryProbe {
   backpack: Array<Point & { item: string }>
   /** The items the ground grid shows now (on the world map, the baggage), each with its slot's centre on screen. */
   ground: Array<Point & { item: string }>
+  /** The centres on screen of the backpack's and the ground's grids, either of which takes a dragged item anywhere on it. */
+  grids: { backpack: Point; ground: Point }
+  /** The open member's doll's sprites, bottom first in drawing order (`UnitFigure.lookNames`); [] until the doll is built. */
+  doll: string[]
+  /** On screen: the panel, the Character tab's stat column ("In battle") and its row of badges, so a test can tell the column fits. */
+  characterSheet: { panel: Rect; stats: Rect; badges: Rect }
 }
 
 export interface StoryProbe {

@@ -1,0 +1,30 @@
+# Full plate: broad pauldrons, plated arms and a ridged cuirass over lames down to the thighs.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md. It stops short of the
+# fist (rows 17 to 21, columns 20 to 27) and the off hand (rows 17 to 19, columns 7 to 10).
+canvas = "unit"
+over = "warrior"
+
+[frames.idle_0.runs]
+11 = [[8, "kkkkkD"], [18, "kkkkkk"]]
+12 = [[7, "kdlllDdllwldwwlk"]]
+13 = [[6, "kdllllDdlwwldDwwlk"]]
+14 = [[6, "kDdddkDdllwldkDddk"]]
+15 = [[7, "kdlkDdllwldkdwlk"]]
+16 = [[7, "kdlkddllwldkdwlk"]]
+17 = [[11, "DDDDyDDDD"]]
+18 = [[11, "ddllwlldd"]]
+19 = [[11, "DDDDDDDDD"]]
+20 = [[11, "kdllwlldl"]]
+21 = [[12, "DDDDDDD"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it wears with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+like = "warrior"      # breathes with the body
+
+[anim.walk]
+rest = true           # holds idle_0 while the body walks

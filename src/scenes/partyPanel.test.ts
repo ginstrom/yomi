@@ -3,6 +3,7 @@ import { PORTRAIT_IDS } from '../character/portraits.ts'
 import { MAX_PARTY_SIZE } from '../game/party.ts'
 import {
   HEADER_BOTTOM,
+  hpBarColor,
   PARTY_PANEL_W,
   partyColumnBottom,
   portraitBarRect,
@@ -50,5 +51,15 @@ describe('portraitClick', () => {
 
   it('opens the panel at once of a member that cannot be made active', () => {
     expect(portraitClick(1, 0, false)).toBe('open')
+  })
+})
+
+describe('hpBarColor', () => {
+  it('is green above half, orange above a fifth and red at or below it', () => {
+    expect(hpBarColor(0.6)).toBe(0x43a047)
+    expect(hpBarColor(0.5)).toBe(0xfb8c00)
+    expect(hpBarColor(0.3)).toBe(0xfb8c00)
+    expect(hpBarColor(0.2)).toBe(0xe53935)
+    expect(hpBarColor(0)).toBe(0xe53935)
   })
 })

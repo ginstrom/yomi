@@ -1,5 +1,7 @@
+import type { AbilityId } from '../combat/abilities.ts'
+import type { Element } from '../combat/combat.ts'
 import { SPELLS, type SpellId } from '../combat/spells.ts'
-import type { BattleEvent } from '../engine/battleEngine.ts'
+import type { AttackEvent, BattleEvent } from '../engine/battleEngine.ts'
 import type { ItemIcon } from '../inventory/inventory.ts'
 
 /**
@@ -20,12 +22,12 @@ export const BURST_ANIM = 'burst'
 export const EFFECT_FRAME = 'main'
 export const TIP_POINT = 'tip'
 
-/** A blow is swung; a shot flies, as an arrow from a bow or a bolt from a wand. */
+/** A blow (a melee weapon's, reach included) is swung; a shot flies, as an arrow from a bow or a bolt from a wand. */
 export type AttackLook = 'swing' | 'arrow' | 'bolt'
 
 /** What a hero holds in its weapon hand decides the look of a shot; a foe holds none, and only strikes. */
 export function attackLook(event: Extract<BattleEvent, { type: 'attack' }>, heldIcon?: ItemIcon): AttackLook {
-  if (event.distance <= 1) return 'swing'
+  if (event.melee) return 'swing'
   return heldIcon?.startsWith('wand') ? 'bolt' : 'arrow'
 }
 
@@ -65,6 +67,24 @@ export const SPELL_LOOKS: Record<SpellId, SpellLook> = {
   mirror_image: { ...SUPPORT, colour: 0xe0e0e0, glow: 0xffffff },
   haste: { ...SUPPORT, colour: 0xfff176, glow: 0xffffff },
   bane: { colour: 0x7b1fa2, glow: 0xce93d8, missile: 'orb', impact: 'cloud' },
+  lightning_bolt: { colour: 0xfff59d, glow: 0xffffff, missile: 'dart', impact: 'burst' },
+  drain_life: { colour: 0x8e1b1b, glow: 0xe57373, missile: 'dart', impact: 'burst' },
+  curse: { colour: 0x6a1b9a, glow: 0xb39ddb, missile: 'orb', impact: 'cloud' },
+  web: { colour: 0xbdbdbd, glow: 0xeeeeee, missile: 'orb', impact: 'ring' },
+  dark_shield: { ...SUPPORT, colour: 0x283593, glow: 0x7986cb },
+}
+
+/** The area abilities' looks; a routine has none, as its strikes are blows. */
+export const ABILITY_LOOKS: Partial<Record<AbilityId, SpellLook>> = {
+  spider_web: { colour: 0xbdbdbd, glow: 0xeeeeee, missile: 'orb', impact: 'ring' },
+  fire_spit: { ...FIRE, impact: 'burst' },
+}
+
+const ABILITY_FALLBACK: SpellLook = { colour: 0xe0e0e0, glow: 0xffffff, missile: 'orb', impact: 'ring' }
+
+/** How an area ability looks. */
+export function abilityLook(ability: AbilityId): SpellLook {
+  return ABILITY_LOOKS[ability] ?? ABILITY_FALLBACK
 }
 
 /** From the start of a swing to the blow landing: the wind-up, then the cut. */
@@ -74,6 +94,8 @@ export const RELEASE_MS = 60
 /** A missile's flight: a moment to leave, then so long a hex. */
 export const FLIGHT_BASE_MS = 90
 export const FLIGHT_PER_HEX_MS = 45
+/** A cone or line has no missile; it sweeps out from the unit in about this long. */
+export const AREA_SWEEP_MS = 120
 
 /** How long a missile takes to cross `hexes`. */
 export function flightMs(hexes: number): number {
@@ -86,8 +108,12 @@ export function flightMs(hexes: number): number {
  * What follows it in the log (a fall, a battle's end) waits for it (`holdMs`).
  */
 export function impactMs(event: BattleEvent): number {
-  if (event.type === 'attack') return event.distance <= 1 ? SWING_IMPACT_MS : RELEASE_MS + flightMs(event.distance)
+  if (event.type === 'attack') return event.melee ? SWING_IMPACT_MS : RELEASE_MS + flightMs(event.distance)
   if (event.type === 'cast') return RELEASE_MS + (event.distance === 0 ? 0 : flightMs(event.distance))
+  if (event.type === 'ability') {
+    if (event.shape !== 'burst') return RELEASE_MS + AREA_SWEEP_MS
+    return RELEASE_MS + (event.distance === 0 ? 0 : flightMs(event.distance))
+  }
   return 0
 }
 
@@ -114,4 +140,38 @@ export function castOutline(spell: SpellId, outcome: { hit: boolean; critical?: 
   if (!hostile) return school === 'healing' ? OUTLINE_HEALED : OUTLINE_HELPED
   if (!outcome.hit) return null
   return outcome.critical ? OUTLINE_CRITICAL : OUTLINE_HURT
+}
+
+/** The outline for an area ability's outcome on one unit: a hit or half damage hurts, a clean miss shows nothing. */
+export function areaOutline(outcome: { hit: boolean; critical?: boolean; image?: boolean; half?: boolean; damage: number }): number | null {
+  if (outcome.image) return OUTLINE_IMAGE
+  if (outcome.hit) return outcome.critical ? OUTLINE_CRITICAL : OUTLINE_HURT
+  return outcome.half && outcome.damage > 0 ? OUTLINE_HURT : null
+}
+
+/** The floating text of an attack's on-hit damage: "+3 fire", several joined by a space ("+1 fire +2 blight"); null when none came through. */
+export function bonusText(event: AttackEvent): string | null {
+  const parts = event.bonus.filter((b) => b.damage > 0).map((b) => `+${b.damage}${b.element ? ` ${b.element}` : ''}`)
+  return parts.length > 0 ? parts.join(' ') : null
+}
+
+/** The element of the first on-hit damage that came through, which colours the floating text; undefined when none had one. */
+export function bonusElement(event: AttackEvent): Element | undefined {
+  return event.bonus.find((b) => b.damage > 0)?.element
+}
+
+/** Whether an event may have laid or ended a status, so that the nameplates' status letters need drawing again. */
+export function changesStatusMarks(event: BattleEvent): boolean {
+  switch (event.type) {
+    case 'attack':
+      return event.status !== undefined || (event.onHitStatuses?.length ?? 0) > 0
+    case 'cast':
+    case 'ability':
+    case 'status_end':
+    case 'status_tick':
+    case 'unit_down':
+      return true
+    default:
+      return false
+  }
 }

@@ -4,7 +4,7 @@ import { gainXp, takePerk } from '../character/progression.ts'
 import { mulberry32 } from '../combat/rng.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
 import { hex } from '../grid/hex.ts'
-import { IRON_DAGGER, MAGIC_ITEMS, OAK_SHIELD, RING_PROTECTION, STEEL_ARMOR, WEAPONS, itemById } from '../inventory/inventory.ts'
+import { BASE_ITEMS, IRON_DAGGER, MAGIC_ITEMS, OAK_SHIELD, RING_PROTECTION, IRON_BREASTPLATE, itemById } from '../inventory/inventory.ts'
 import { ENCOUNTERS } from './encounters.ts'
 import { newGame, takeLoot, type GameState } from './gameState.ts'
 import { Ground } from './ground.ts'
@@ -53,19 +53,21 @@ describe('the encampment’s facilities and graded gear', () => {
     game.world.stock = { gold: 7, copper: 3 }
     game.party[0].equipment.mainHand = itemById('iron_sword@3+light2')
     game.party[1].backpack[0] = itemById('yew_bow+recurve1')!
-    game.baggage.push(itemById('steel_armor@2')!)
+    game.baggage.push(itemById('iron_breastplate@2')!)
+    game.baggage.push(itemById('steel_longsword@2+light1')!)
     const loaded = parseSave(serializeSave({ game, battle: null, savedAt: 1 }))!.game
     expect([loaded.world.tradingPost, loaded.world.workshop, loaded.world.infirmary]).toEqual([3, 2, 1])
     expect(loaded.world.stock).toEqual({ gold: 7, copper: 3 })
     expect(loaded.party[0].equipment.mainHand).toBe(itemById('iron_sword@3+light2'))
     expect(loaded.party[1].backpack[0]).toBe(game.party[1].backpack[0])
-    expect(loaded.baggage.at(-1)).toBe(itemById('steel_armor@2'))
+    expect(loaded.baggage.at(-2)).toBe(itemById('iron_breastplate@2'))
+    expect(loaded.baggage.at(-1)).toBe(itemById('steel_longsword@2+light1'))
   })
 })
 
 describe('itemById', () => {
   it('finds every item there is, as the constant itself', () => {
-    for (const item of [...WEAPONS, ...MAGIC_ITEMS, OAK_SHIELD, STEEL_ARMOR]) expect(itemById(item.id)).toBe(item)
+    for (const item of [...BASE_ITEMS, ...MAGIC_ITEMS]) expect(itemById(item.id)).toBe(item)
     expect(itemById('vorpal_spoon')).toBeUndefined()
   })
 
@@ -114,12 +116,41 @@ describe('a save', () => {
     expect(parsed.game.baggage.length).toBeGreaterThan(0)
   })
 
+  it('is version 18, whose game holds a rune pouch', () => {
+    expect(SAVE_VERSION).toBe(18)
+  })
+
+  it('keeps the pouch and an item with runes', () => {
+    const game = gameUnderWay()
+    game.runes = { ember1: 2, storm2: 1 }
+    const runed = itemById('iron_sword@3#ember1')!
+    game.baggage.push(runed)
+    game.party[0].equipment.mainHand = runed
+    const parsed = parseSave(serializeSave({ game, battle: null, savedAt: 5 }))!
+    expect(parsed.game.runes).toEqual({ ember1: 2, storm2: 1 })
+    expect(parsed.game.baggage.at(-1)).toBe(runed)
+    expect(parsed.game.party[0].equipment.mainHand).toBe(runed)
+  })
+
+  it('reads a bad pouch, or a save of version 17, as unreadable', () => {
+    const rewrite = (change: (saved: any) => void) => {
+      const saved = JSON.parse(serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 }))
+      change(saved)
+      return JSON.stringify(saved)
+    }
+    for (const runes of [{ fire1: 1 }, { ember5: 1 }, { ember1: 0 }, { ember1: -1 }, { ember1: 1.5 }, [], null]) {
+      expect(parseSave(rewrite((saved) => (saved.game.runes = runes)))).toBeNull()
+    }
+    expect(parseSave(rewrite((saved) => (saved.version = 17)))).toBeNull()
+    expect(parseSave(rewrite(() => {}))).not.toBeNull()
+  })
+
   it('writes an item as its id and nothing more', () => {
     const raw = serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 })
     expect(JSON.parse(raw)).toMatchObject({ version: SAVE_VERSION, savedAt: 5, game: { slot: 2, world: { guildHall: 2 } } })
-    expect(JSON.parse(raw).game.reserves[0].equipment).toMatchObject({ armor: 'steel_armor' })
-    expect(JSON.parse(raw).game.party[0].equipment).toMatchObject({ armor: 'steel_armor', ring1: 'ring_protection' })
-    expect(raw).not.toContain(STEEL_ARMOR.description)
+    expect(JSON.parse(raw).game.reserves[0].equipment).toMatchObject({ armor: 'iron_breastplate' })
+    expect(JSON.parse(raw).game.party[0].equipment).toMatchObject({ armor: 'iron_breastplate', ring1: 'ring_protection' })
+    expect(raw).not.toContain(IRON_BREASTPLATE.description)
   })
 
   it('leaves the game it wrote untouched', () => {
@@ -127,7 +158,7 @@ describe('a save', () => {
     const before = structuredClone(game)
     serializeSave({ game, battle: battleOf(game), savedAt: 5 })
     expect(game).toEqual(before)
-    expect(game.party[0].equipment.armor).toBe(STEEL_ARMOR)
+    expect(game.party[0].equipment.armor).toBe(IRON_BREASTPLATE)
   })
 })
 

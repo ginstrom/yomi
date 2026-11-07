@@ -1,10 +1,23 @@
 import { describe, expect, it } from 'vitest'
 import type { SpellId } from '../src/combat/spells.ts'
-import type { CastOutcome, Side } from '../src/engine/battleEngine.ts'
+import { BattleEngine, type CastOutcome, type Side } from '../src/engine/battleEngine.ts'
+import { GOBLIN_STATS } from '../src/combat/combat.ts'
+import { hex } from '../src/grid/hex.ts'
 import { canAdvance } from '../src/character/progression.ts'
 import { newGame } from '../src/game/gameState.ts'
+import { heroId } from '../src/game/encounters.ts'
 import { readyMadeParty } from '../src/game/party.ts'
 import { OUTPOST_COST } from '../src/game/buildings.ts'
+import { craft } from '../src/game/crafting.ts'
+import type { FamilyId } from '../src/inventory/catalog.ts'
+import { itemById, unruned } from '../src/inventory/inventory.ts'
+import { modifiersFor } from '../src/inventory/modifiers.ts'
+import { maxHp } from '../src/character/character.ts'
+import { lootRng, rollRunes } from '../src/game/loot.ts'
+import { runePrice, salePrice } from '../src/game/tradingPost.ts'
+import { pouchKeys } from '../src/inventory/runes.ts'
+import { extractRefusal } from '../src/game/runecraft.ts'
+import type { EncounterId } from '../src/game/encounters.ts'
 import { SOURCE_ID, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
 import {
   MAX_CAMPAIGN_DAYS,
@@ -20,6 +33,9 @@ import {
   craftGear,
   materialNeeds,
   visitFacilities,
+  PREFERRED_MODIFIERS,
+  RUNE_ORDER,
+  runecraftGear,
   visitGuildHall,
   type LoggedEvent,
 } from './simulate.ts'
@@ -71,11 +87,11 @@ describe('summarize, with spells', () => {
     const unit = (id: string, side: Side) => ({ id, side }) as (typeof start.units)[number]
     const outcome = (target: string, damage: number, healed = 0, status: CastOutcome['status'] = null): CastOutcome => ({
       unit: target, attackRoll: 40, chance: 61, defenderAc: 15, hit: damage > 0, critical: false, fumble: false,
-      image: false, damage, healed, hpBefore: 12, hpAfter: 12 - damage + healed, status,
+      image: false, damage, warded: 0, half: false, healed, hpBefore: 12, hpAfter: 12 - damage + healed, status,
     })
     const cast = (caster: string, spell: SpellId, outcomes: CastOutcome[]): LoggedEvent => ({
       type: 'cast', battleId: 0, seq: 1, round: 1, caster, spell, target: outcomes[0].unit, at: { q: 0, r: 0 },
-      distance: 4, apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76, outcomes,
+      distance: 4, apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76, outcomes, drained: 0,
     })
     return [
       { ...start, units: [unit('mage', 'player'), unit('shaman', 'enemy')] },
@@ -84,7 +100,7 @@ describe('summarize, with spells', () => {
       cast('shaman', 'magic_arrow', [outcome('mage', 4)]),
       cast('shaman', 'heal', [outcome('shaman', 0, 6)]),
       cast('mage', 'sleep', [outcome('shaman', 0, 0, { id: 'asleep', turnsLeft: 2 })]),
-      { type: 'status_tick', battleId: 0, seq: 2, round: 2, unit: 'shaman', status: 'poisoned', damage: 3, hpBefore: 5, hpAfter: 2 },
+      { type: 'status_tick', battleId: 0, seq: 2, round: 2, unit: 'shaman', status: 'poisoned', damage: 3, warded: 0, hpBefore: 5, hpAfter: 2 },
       end,
     ]
   }
@@ -106,6 +122,69 @@ describe('summarize, with spells', () => {
   })
 })
 
+describe('summarize, with on-hit effects', () => {
+  it('counts an attack’s on-hit damage with its weapon’s, its heal as healing and its statuses', () => {
+    // A roll of 50 hits the goblin for 7, 6 through its resistance, then 3 of fire that sears it; the striker heals 1.
+    const striker = { ...GOBLIN_STATS, name: 'Striker', toHit: 75, damage: { count: 1, sides: 8, bonus: 2 }, onHit: [{ damage: 3, element: 'fire' as const, status: { id: 'seared' as const, turns: 1 } }, { damage: 0, heal: 1 }] }
+    const engine = new BattleEngine(
+      { board: { cols: 4, rows: 3 }, units: [
+        { id: 'hero', side: 'player', stats: striker, position: hex(1, 1), hp: 10 },
+        { id: 'goblin', side: 'enemy', stats: { ...GOBLIN_STATS, maxHp: 30 }, position: hex(2, 1) },
+      ] },
+      { rng: () => 0.5 },
+    )
+    engine.step({ type: 'attack', unit: 'hero', target: 'goblin' })
+    const events = engine.getLog().map((event) => ({ ...event, battleId: 0 }) as LoggedEvent)
+    expect(summarize(events, 1)).toMatchObject({ avgPlayerDamageDealt: 9, avgPlayerHealing: 1, avgPlayerStatuses: 1, playerHitRate: 1 })
+  })
+})
+
+describe('summarize, with area abilities', () => {
+  const events = (): LoggedEvent[] => {
+    const [start, end] = battle(0, 3, 'player')
+    if (start.type !== 'battle_start') throw new Error('expected a battle_start')
+    const unit = (id: string, side: Side) => ({ id, side }) as (typeof start.units)[number]
+    const outcome = (target: string, damage: number, status: CastOutcome['status'] = null): CastOutcome => ({
+      unit: target, attackRoll: 40, chance: 61, defenderAc: 15, hit: status !== null, critical: false, fumble: false,
+      image: false, damage, warded: 0, half: status === null, healed: 0, hpBefore: 12, hpAfter: 12 - damage, status,
+    })
+    const area = (user: string, outcomes: CastOutcome[]): LoggedEvent => ({
+      type: 'ability', battleId: 0, seq: 1, round: 1, unit: user, ability: 'fire_spit', at: { q: 0, r: 0 }, shape: 'cone', hexes: [],
+      distance: 1, apCost: 4, apAfter: 4, facing: 0, skill: 80, outcomes,
+    })
+    return [
+      { ...start, units: [unit('hero', 'player'), unit('newt', 'enemy'), unit('goblin', 'enemy')] },
+      area('newt', [outcome('hero', 9, { id: 'seared', turnsLeft: 1 }), outcome('goblin', 4)]),
+      area('newt', [outcome('hero', 3)]),
+      end,
+    ]
+  }
+
+  it('counts area attacks by side, adding their damage and statuses to the user’s side, not among the attacks or casts', () => {
+    expect(summarize(events(), 1)).toMatchObject({
+      avgEnemyAreaAttacks: 2,
+      avgPlayerAreaAttacks: 0,
+      avgEnemyDamageDealt: 16,
+      avgPlayerDamageDealt: 0,
+      avgEnemyStatuses: 1,
+      avgEnemyCasts: 0,
+      enemyHitRate: 0,
+    })
+    expect(summarize(battle(0, 3, 'player'), 1)).toMatchObject({ avgPlayerAreaAttacks: 0, avgEnemyAreaAttacks: 0 })
+  })
+
+  it('counts a drain’s healing with the caster’s side', () => {
+    const [start, end] = battle(0, 3, 'player')
+    if (start.type !== 'battle_start') throw new Error('expected a battle_start')
+    const drain: LoggedEvent = {
+      type: 'cast', battleId: 0, seq: 1, round: 1, caster: 'witch', spell: 'drain_life', target: 'hero', at: { q: 0, r: 0 },
+      distance: 2, apCost: 4, apAfter: 4, manaCost: 6, manaAfter: 0, casterFacing: 0, skill: 70, drained: 5, outcomes: [],
+    }
+    const units = [{ id: 'hero', side: 'player' }, { id: 'witch', side: 'enemy' }] as typeof start.units
+    expect(summarize([{ ...start, units }, drain, end], 1)).toMatchObject({ avgEnemyHealing: 5, avgPlayerHealing: 0 })
+  })
+})
+
 describe('parseArgs', () => {
   it('takes --campaign, and with it refuses the flags that pick one battle', () => {
     expect(parseArgs(['--battles', '5'])).toMatchObject({ battles: 5, campaign: false })
@@ -121,6 +200,16 @@ describe('parseArgs', () => {
     expect(parseArgs(['--player-weapon', 'iron_sword@2+light1']).playerWeapon?.name).toBe('Light Fine Iron Longsword (I)')
     expect(() => parseArgs(['--player-weapon', 'ring_protection'])).toThrow('--player-weapon must be the id of a weapon')
     expect(() => parseArgs(['--player-weapon', 'iron_sword+recurve1'])).toThrow('--player-weapon must be the id of a weapon')
+  })
+
+  it('takes --ready-level for a campaign only, a positive integer, by default SOURCE_READY_LEVEL', () => {
+    expect(parseArgs(['--campaign', '--ready-level', '10']).readyLevel).toBe(10)
+    expect(parseArgs([]).readyLevel).toBe(SOURCE_READY_LEVEL)
+    expect(parseArgs(['--campaign']).readyLevel).toBe(SOURCE_READY_LEVEL)
+    expect(() => parseArgs(['--ready-level', '10'])).toThrow('--ready-level')
+    expect(() => parseArgs(['--ready-level', '10'])).toThrow('--campaign')
+    expect(() => parseArgs(['--campaign', '--ready-level', '0'])).toThrow('--ready-level must be a positive integer')
+    expect(() => parseArgs(['--campaign', '--ready-level', 'x'])).toThrow('--ready-level must be a positive integer')
   })
 })
 
@@ -164,6 +253,19 @@ describe('a campaign', () => {
     expect(heroes.every((u) => u.hp <= u.maxHp && u.hp > 0)).toBe(true)
   })
 
+  it('takes rune loot after each win, from the seed the battle was fought with', () => {
+    const won = starts.filter((_, i) => winners[i] === 'player')
+    const expected = won.reduce(
+      (n, e) => n + rollRunes(e.meta.threat as number, e.meta.encounter as EncounterId, lootRng(e.seed!)).length,
+      0,
+    )
+    expect(record.runesFound).toBeGreaterThan(0)
+    expect(record.runesFound).toBe(expected)
+    for (const field of ['runesFound', 'runesBought', 'runesFused', 'socketsFilled', 'goldOnRunes'] as const) {
+      expect(typeof record[field], field).toBe('number')
+    }
+  })
+
   it('plays out the same from the same seed, casts included', () => {
     expect(runCampaign(3, 1, args, 100)).toEqual({ battles, record })
     expect(battles.flat().some((e) => e.type === 'cast')).toBe(true)
@@ -178,6 +280,61 @@ describe('a campaign', () => {
     expect(summary.byThreat.map((row) => row.threat)).toEqual([...new Set(starts.map((e) => e.meta.threat as number))].sort())
     expect(summary.byThreat.reduce((total, row) => total + row.battles, 0)).toBe(battles.length)
     expect(summary.byThreat[0]).toEqual({ threat: 1, battles: 2, won: 2, winRate: 1 })
+  })
+
+  it('records the levels it ended at, the level of each hero who died, and the battles to each mark', () => {
+    const last = battles.at(-1)!
+    const end = last.at(-1)!
+    const lastStart = starts.at(-1)!
+    const lastLevels = lastStart.meta.partyLevels as number[]
+    if (record.outcome === 'source' && end.type === 'battle_end') {
+      // The members left are the heroes standing at the end of the last battle.
+      const standing = lastLevels.filter((_, i) => end.survivors[heroId(i)] !== undefined)
+      expect(record.finalLevels).toHaveLength(standing.length)
+    }
+    expect(record.finalLevels.length).toBeGreaterThan(0)
+    // Levels never drop: each member left is at least the lowest level that set out on the last battle.
+    expect(record.finalLevels.every((level) => level >= Math.min(...lastLevels))).toBe(true)
+    expect(record.deathsAtLevel).toHaveLength(record.deaths)
+    expect(record.deathsAtLevel.every((level) => level >= 1)).toBe(true)
+    const lowestEver = Math.max(...starts.map((e) => Math.min(...(e.meta.partyLevels as number[]))), Math.min(...record.finalLevels))
+    if (lowestEver >= 5) {
+      expect(record.battlesToLevel[5]).toBeGreaterThanOrEqual(1)
+      expect(record.battlesToLevel[5]).toBeLessThanOrEqual(record.battles)
+      // The party's lowest level was below 5 when the battle that brought it there began.
+      const at = record.battlesToLevel[5]!
+      expect(Math.min(...(starts[at - 1].meta.partyLevels as number[]))).toBeLessThan(5)
+      if (at < starts.length) expect(Math.min(...(starts[at].meta.partyLevels as number[]))).toBeGreaterThanOrEqual(5)
+    } else expect(record.battlesToLevel[5]).toBeUndefined()
+    expect(record.battlesToLevel[20]).toBeUndefined()
+  })
+})
+
+describe('summarizeCampaigns, the levels', () => {
+  const base = { ...runCampaign(3, 1, parseArgs(['--campaign']), 0).record }
+  const records = [
+    { ...base, finalLevels: [6, 7, 8], deathsAtLevel: [4, 3], battlesToLevel: { 5: 10 } },
+    { ...base, finalLevels: [8, 9], deathsAtLevel: [4], battlesToLevel: { 5: 14, 10: 30 } },
+    { ...base, outcome: 'fallen' as const, finalLevels: [], deathsAtLevel: [], battlesToLevel: {} },
+  ]
+  const summary = summarizeCampaigns([], records)
+
+  it('averages the lowest and highest final level, leaving out a campaign with no one left', () => {
+    expect(summary.avgLowestFinalLevel).toBe(7)
+    expect(summary.avgHighestFinalLevel).toBe(8.5)
+  })
+
+  it('counts the deaths at each level, in rising level', () => {
+    expect(summary.deathsByLevel).toEqual([{ level: 3, deaths: 1 }, { level: 4, deaths: 2 }])
+  })
+
+  it('averages the battles to each mark over the campaigns that reached it', () => {
+    expect(summary.toLevel).toEqual([
+      { level: 5, campaigns: 2, avgBattles: 12 },
+      { level: 10, campaigns: 1, avgBattles: 30 },
+      { level: 15, campaigns: 0, avgBattles: 0 },
+      { level: 20, campaigns: 0, avgBattles: 0 },
+    ])
   })
 })
 
@@ -207,6 +364,17 @@ describe('nextTarget', () => {
     expect(nextTarget(world, party)?.id).not.toBe(SOURCE_ID)
     world.locations = world.locations.filter((l) => l.kind !== 'monsters' || (l.kind === 'monsters' && l.source))
     expect(nextTarget(world, party)?.id).toBe(SOURCE_ID)
+  })
+
+  it('marches on the Source once every member has the ready level it is given', () => {
+    const world = newWorld(1)
+    const party = readyMadeParty()
+    party.forEach((member, i) => (member.level = 3 + i))
+    expect(nextTarget(world, party)?.id).not.toBe(SOURCE_ID)
+    expect(nextTarget(world, party, 3)?.id).toBe(SOURCE_ID)
+    for (const member of party) member.level = SOURCE_READY_LEVEL
+    expect(nextTarget(world, party, SOURCE_READY_LEVEL + 1)?.id).not.toBe(SOURCE_ID)
+    expect(nextTarget(world, party, SOURCE_READY_LEVEL)?.id).toBe(SOURCE_ID)
   })
 })
 
@@ -279,6 +447,76 @@ describe('the trading post and crafting in a campaign', () => {
     expect(trade.crafted).toBeGreaterThan(0)
   })
 
+  describe('buying the dearest of the family the post sells', () => {
+    const shopping = (level: number, gold: number) => {
+      const game = newGame(undefined, null, 1)
+      game.world.tradingPost = level
+      game.world.stock = { gold }
+      // Keep every other facility out of the way: only the gear is under test.
+      game.world.workshop = 3
+      game.world.infirmary = 3
+      game.world.shrine = 3
+      game.party = [game.party[0]]
+      game.party[0].equipment.mainHand = itemById('iron_sword')!
+      return game
+    }
+
+    it('buys iron at grade 3 from a level 3 post, no tier 2', () => {
+      const game = shopping(3, 500)
+      const trade = visitFacilities(game)
+      // Its socket takes a rune bought there.
+      expect(unruned(game.party[0].equipment.mainHand!).id).toBe('iron_sword@3')
+      expect(trade.tierTwoBought).toBe(0)
+    })
+
+    it('buys steel at grade 3 from a level 4 post, and counts it', () => {
+      const game = shopping(4, 500)
+      const trade = visitFacilities(game)
+      expect(unruned(game.party[0].equipment.mainHand!).id).toBe('steel_longsword@3')
+      expect(trade.tierTwoBought).toBeGreaterThanOrEqual(1)
+    })
+
+    it('buys the dearest it affords', () => {
+      const game = shopping(4, 35)
+      const trade = visitFacilities(game)
+      expect(game.party[0].equipment.mainHand!.id).toBe('steel_longsword')
+      expect(trade.tierTwoBought).toBe(1)
+    })
+
+    it('buys nothing when nothing dearer is affordable', () => {
+      const game = shopping(4, 12)
+      const trade = visitFacilities(game)
+      expect(game.party[0].equipment.mainHand!.id).toBe('iron_sword')
+      expect(trade.tierTwoBought).toBe(0)
+      expect(trade.goldOnGear).toBe(0)
+    })
+
+    it('sells the old item back', () => {
+      const game = shopping(3, 500)
+      const trade = visitFacilities(game)
+      expect(game.baggage).toEqual([])
+      expect(trade.goldFromSales).toBeGreaterThan(0)
+    })
+  })
+
+  it('keeps 20 silver for the post while it is below level 4', () => {
+    const game = newGame(undefined, null, 1)
+    game.world.tradingPost = 3
+    expect(materialNeeds(game).silver).toBeGreaterThanOrEqual(20)
+    game.world.tradingPost = 4
+    const withPost = materialNeeds(game).silver ?? 0
+    game.world.tradingPost = 3
+    expect(materialNeeds(game).silver! - withPost).toBe(20)
+  })
+
+  it('prefers, family by family, only modifiers that fit the family', () => {
+    expect(Object.keys(PREFERRED_MODIFIERS)).toEqual(['dagger', 'shortsword', 'longsword', 'battle_axe', 'greatsword', 'bow', 'shield', 'breastplate'])
+    for (const [family, preferred] of Object.entries(PREFERRED_MODIFIERS)) {
+      const fitting = modifiersFor(family as FamilyId).map((m) => m.id)
+      for (const id of preferred!) expect(fitting, `${family} ${id}`).toContain(id)
+    }
+  })
+
   it('keeps what the buildings still want, and sells the rest in pairs', () => {
     const game = newGame(undefined, null, 1)
     expect(materialNeeds(game).iron).toBeGreaterThan(0)
@@ -289,11 +527,184 @@ describe('the trading post and crafting in a campaign', () => {
     const game = newGame(undefined, null, 1)
     game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
     game.world.stock = { gold: 50, iron: 50, timber: 50 }
-    expect(craftGear(game, 1)).toBe(1)
+    expect(craftGear(game, 1).crafted).toBe(1)
     expect(game.world.turn).toBe(2)
     expect(game.party[0].equipment.mainHand!.id).toBe('iron_sword+balanced1')
-    expect(craftGear(game, 1)).toBe(1)
+    expect(craftGear(game, 1).crafted).toBe(1)
     expect(game.party[1].equipment.mainHand!.id).toBe('yew_bow+recurve1')
-    expect(craftGear(game, 1)).toBe(0)
+    expect(craftGear(game, 1).crafted).toBe(0)
+  })
+
+  it('hands back the events of the days a field craft passes, for the campaign to tally', () => {
+    const make = () => {
+      const game = newGame(undefined, null, 1)
+      game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
+      game.world.stock = { gold: 50, iron: 50, timber: 50 }
+      return game
+    }
+    const direct = make()
+    const expected = craft(direct, { from: 'worn', member: 0, slot: 'mainHand', itemId: direct.party[0].equipment.mainHand!.id }, 'balanced', 1)
+    const result = craftGear(make(), 1)
+    expect(expected.refusal).toBeNull()
+    expect(result.events).toEqual('events' in expected ? expected.events : undefined)
+  })
+})
+
+describe('summarizeCampaigns, the runes', () => {
+  it('averages the runes found, bought and fused, the sockets filled and the gold on runes', () => {
+    const base = { ...runCampaign(3, 1, parseArgs(['--campaign']), 0).record }
+    const records = [
+      { ...base, runesFound: 4, runesBought: 1, runesFused: 0, socketsFilled: 2, goldOnRunes: 30 },
+      { ...base, runesFound: 2, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 10 },
+    ]
+    expect(summarizeCampaigns([], records)).toMatchObject({
+      avgRunesFound: 3,
+      avgRunesBought: 0.5,
+      avgRunesFused: 0.5,
+      avgSocketsFilled: 1,
+      avgGoldOnRunes: 20,
+    })
+  }, 20_000)
+})
+
+describe('runes in a campaign', () => {
+  /** One hero at the encampment, its gear and pouch set, the facilities set so that only the runes are at work. */
+  const atHome = (opts: { workshop?: number; post?: number; gold?: number; runes?: Record<string, number>; gear?: Record<string, string> }) => {
+    const game = newGame(undefined, null, 1)
+    game.party = [game.party[0]]
+    game.world.workshop = opts.workshop ?? 1
+    game.world.tradingPost = opts.post ?? 1
+    game.world.stock = { gold: opts.gold ?? 100 }
+    game.runes = { ...opts.runes }
+    const hero = game.party[0]
+    for (const [slot, id] of Object.entries(opts.gear ?? {})) hero.equipment[slot as 'mainHand'] = itemById(id)!
+    hero.hp = maxHp(hero)
+    return game
+  }
+  const worn = (game: ReturnType<typeof atHome>, slot: 'mainHand' | 'offHand' | 'armor') => game.party[0].equipment[slot]?.id
+
+  it('embeds weapons by Ember, Storm, Stone and armour and shields by Stone, Life', () => {
+    expect(RUNE_ORDER).toEqual({ weapon: ['ember', 'storm', 'stone'], shield: ['stone', 'life'], armour: ['stone', 'life'] })
+  })
+
+  it('does nothing in the field: no workshop', () => {
+    const game = atHome({ workshop: 0, post: 2, runes: { ember1: 3 }, gear: { mainHand: 'iron_sword@3' } })
+    expect(runecraftGear(game)).toEqual({ embedded: 0, fused: 0, bought: 0, gold: 0 })
+    expect(game.runes).toEqual({ ember1: 3 })
+    expect(game.world.stock).toEqual({ gold: 100 })
+    expect(worn(game, 'mainHand')).toBe('iron_sword@3')
+  })
+
+  it('fuses three Lesser runes into one, and leaves the rest', () => {
+    const three = atHome({ runes: { ember1: 3 } })
+    expect(runecraftGear(three)).toMatchObject({ fused: 1, gold: 20 })
+    expect(three.runes).toEqual({ ember2: 1 })
+    const five = atHome({ runes: { ember1: 5 } })
+    expect(runecraftGear(five).fused).toBe(1)
+    expect(five.runes).toEqual({ ember1: 2, ember2: 1 })
+  })
+
+  it('embeds a rune from the pouch in an empty socket, for its fee', () => {
+    const game = atHome({ runes: { ember1: 1 }, gear: { mainHand: 'iron_sword@3' } })
+    expect(runecraftGear(game)).toEqual({ embedded: 1, fused: 0, bought: 0, gold: 5 })
+    expect(worn(game, 'mainHand')).toBe('iron_sword@3#ember1')
+    expect(game.runes).toEqual({})
+    expect(game.world.stock.gold).toBe(95)
+  })
+
+  it('buys a Lesser rune for a socket the pouch cannot fill, where the post sells one', () => {
+    const game = atHome({ post: 2, gear: { mainHand: 'iron_sword@3' } })
+    expect(runecraftGear(game)).toEqual({ embedded: 1, fused: 0, bought: 1, gold: runePrice('ember1') + 5 })
+    expect(worn(game, 'mainHand')).toBe('iron_sword@3#ember1')
+    const unsold = atHome({ post: 1, gear: { mainHand: 'iron_sword@3' } })
+    expect(runecraftGear(unsold)).toEqual({ embedded: 0, fused: 0, bought: 0, gold: 0 })
+    expect(worn(unsold, 'mainHand')).toBe('iron_sword@3')
+  })
+
+  it('buys only what the pouch lacks, a rune for each socket', () => {
+    const game = atHome({ post: 2, runes: { storm1: 1 }, gear: { mainHand: 'steel_longsword@3' } })
+    expect(runecraftGear(game)).toMatchObject({ embedded: 2, bought: 1 })
+    expect(worn(game, 'mainHand')).toBe('steel_longsword@3#ember1.storm1')
+  })
+
+  it('embeds the highest rank of a kind first', () => {
+    const game = atHome({ runes: { ember1: 1, ember2: 1 }, gear: { mainHand: 'iron_sword@3' } })
+    runecraftGear(game)
+    expect(worn(game, 'mainHand')).toBe('iron_sword@3#ember2')
+    expect(game.runes).toEqual({ ember1: 1 })
+  })
+
+  it('puts Stone, then Life, in armour, and never a Mind rune', () => {
+    const stone = atHome({ runes: { life1: 1, stone1: 1, mind1: 1 }, gear: { armor: 'iron_breastplate@3' } })
+    runecraftGear(stone)
+    expect(worn(stone, 'armor')).toBe('iron_breastplate@3#stone1')
+    const life = atHome({ runes: { life1: 1, mind1: 1 }, gear: { armor: 'iron_breastplate@3' } })
+    runecraftGear(life)
+    expect(worn(life, 'armor')).toBe('iron_breastplate@3#life1')
+    const mind = atHome({ runes: { mind1: 1 }, gear: { armor: 'iron_breastplate@3', mainHand: 'spark_wand@3' } })
+    expect(runecraftGear(mind).embedded).toBe(0)
+    expect(mind.runes).toEqual({ mind1: 1 })
+  })
+
+  it('keeps a full hero at full health when a Life rune goes in', () => {
+    const game = atHome({ runes: { life1: 1 }, gear: { armor: 'iron_breastplate@3' } })
+    runecraftGear(game)
+    expect(game.party[0].hp).toBe(maxHp(game.party[0]))
+  })
+
+  it('embeds nothing it cannot pay for, and leaves the pouch as it was', () => {
+    const game = atHome({ gold: 4, runes: { ember1: 1 }, gear: { mainHand: 'iron_sword@3' } })
+    expect(runecraftGear(game)).toEqual({ embedded: 0, fused: 0, bought: 0, gold: 0 })
+    expect(game.runes).toEqual({ ember1: 1 })
+    expect(worn(game, 'mainHand')).toBe('iron_sword@3')
+  })
+
+  describe('replacing runed gear at the trading post', () => {
+    /** A level 4 post that sells a dearer sword and breastplate; the other facilities out of the way. */
+    const replacing = (workshop: number, gear: Record<string, string>) => {
+      const game = atHome({ workshop, post: 4, gold: 500 })
+      // Only the item under test is worn, so that nothing else takes the gold.
+      game.party[0].equipment = Object.fromEntries(Object.entries(gear).map(([slot, id]) => [slot, itemById(id)!]))
+      game.party[0].hp = maxHp(game.party[0])
+      game.world.infirmary = 3
+      game.world.shrine = 3
+      return game
+    }
+
+    it('extracts the runes first at a level 2 workshop, for the fee, and embeds them again', () => {
+      const game = replacing(2, { mainHand: 'iron_sword@3#storm1' })
+      const trade = visitFacilities(game)
+      const sword = game.party[0].equipment.mainHand!
+      expect(sword.family).toBe('longsword')
+      expect(sword.tier).toBe(2)
+      expect([...(sword.runes ?? []), ...pouchKeys(game.runes)]).toContain('storm1')
+      expect(trade.goldOnRunes).toBeGreaterThanOrEqual(10)
+    })
+
+    it('sells the runes with the old item below a level 2 workshop', () => {
+      const game = replacing(1, { mainHand: 'iron_sword@3#storm1' })
+      // No extraction fee can be paid: a level 1 workshop refuses to take the rune out.
+      expect(extractRefusal(game, { from: 'worn', member: 0, slot: 'mainHand', itemId: 'iron_sword@3#storm1' }, 0)).toMatch(/level 2 workshop/)
+      const trade = visitFacilities(game)
+      expect(game.world.workshop).toBe(1)
+      // The rune went with the sword: its half price is in the sale.
+      const runed = itemById('iron_sword@3#storm1')!
+      expect(salePrice(runed)).toBeGreaterThan(salePrice(unruned(runed)))
+      expect(trade.goldFromSales).toBe(salePrice(runed))
+      const sword = game.party[0].equipment.mainHand!
+      expect(sword.tier).toBe(2)
+      expect([...(sword.runes ?? []), ...pouchKeys(game.runes)]).not.toContain('storm1')
+      expect(game.baggage).toEqual([])
+    })
+
+    it('keeps hit points within the maximum when Life-runed armour is replaced, no rune going in after', () => {
+      const game = replacing(0, { armor: 'iron_breastplate@3#life1' })
+      const hero = game.party[0]
+      const before = maxHp(hero)
+      visitFacilities(game)
+      expect(hero.equipment.armor!.runes ?? []).not.toContain('life1')
+      expect(maxHp(hero)).toBeLessThan(before)
+      expect(hero.hp).toBe(maxHp(hero))
+    })
   })
 })

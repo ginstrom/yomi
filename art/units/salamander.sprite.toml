@@ -1,0 +1,62 @@
+# A salamander: a long, low lizard of red scales and an orange belly, splay-legged,
+# with tongues of flame along its spine and its tail tip, and a wide mouth glowing within.
+canvas = "unit"
+
+outline = "auto"
+
+[points]
+chest = [15, 20]
+
+[frames.idle_0.runs]
+12 = [[12, "Y"]]
+13 = [[1, "Y"], [12, "Yy"]]
+14 = [[1, "Yy"], [12, "yYy"], [16, "Y"]]
+15 = [[1, "yY"], [8, "Y"], [12, "yYy"], [16, "Yy"]]
+16 = [[1, "yo"], [8, "Yy"], [12, "oyYyyYy"], [20, "Y"]]
+17 = [[1, "or"], [8, "yyo"], [12, "oyyooyyoy"]]
+18 = [[1, "rr"], [7, "oooooooooooooooo"]]
+19 = [[1, "rr"], [6, "RRRRRRRRRRRRRRRRRRRRRR"]]
+20 = [[1, "rr"], [5, "RrrrrrrrrrrrrrrrrrrrYrrr"]]
+21 = [[1, "rrrrrrrrrrrrrrrrrrrrrrrrrrrrr"]]
+22 = [[2, "rrrrrrrrrrrrrrrrrrrrrrkkkkkk"]]
+23 = [[3, "rrrrroooooooooooooorroooYYo"]]
+24 = [[4, "rrrRoooooooooooorrrooooo"]]
+25 = [[8, "Rrrrrrrrrrrrr"], [25, "RR"]]
+26 = [[6, "rrr"], [12, "RR"], [19, "rrr"], [26, "RR"]]
+27 = [[5, "rro"], [12, "RR"], [20, "rro"], [26, "RR"]]
+28 = [[4, "rro"], [13, "RR"], [21, "rro"], [27, "RR"]]
+29 = [[4, "ro"], [13, "RR"], [22, "ro"], [27, "RR"]]
+30 = [[3, "WroW"], [12, "WRRW"], [21, "WroW"], [26, "WRRW"]]
+
+# A breath: everything above the feet sinks a pixel.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [0, 25], by = [0, 1] }
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 600
+
+# A stride: the legs as they stand.
+[frames.walk_0]
+from = "idle_0"
+
+# A lizard's gait, the diagonal pairs in turn: the near back and far front feet lift,
+# then the near front and far back. The flaming tail tip sways forward on each lift.
+[frames.walk_1]
+from = "idle_0"
+move = { rows = [12, 17], cols = [0, 3], by = [1, 0] }
+[frames.walk_1.runs]
+29 = [[3, "WroW"], [26, "WRRW"]]
+30 = [[3, "...."], [26, "...."]]
+
+[frames.walk_2]
+from = "idle_0"
+move = { rows = [12, 17], cols = [0, 3], by = [1, 0] }
+[frames.walk_2.runs]
+29 = [[12, "WRRW"], [21, "WroW"]]
+30 = [[12, "...."], [21, "...."]]
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 140

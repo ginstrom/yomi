@@ -1,7 +1,8 @@
 # The trading post: a merchant's stall under a striped awning, wares hung on
 # its back wall and laid on its counter. Each level adds to it, as the
 # encampment screen shows the frame of the post's level: crates and a barrel
-# at level 2, a gilded sign over the awning at level 3.
+# at level 2, a gilded sign over the awning at level 3, and at level 4, the
+# market that sells steel, a blue banner on a pole and a rack of steel blades.
 canvas = "building"
 outline = "auto"
 
@@ -74,3 +75,54 @@ from = "level_2"
 13 = [[17, "nN"], [29, "nN"]]
 14 = [[17, "nN"], [29, "nN"]]
 15 = [[17, "nN"], [29, "nN"]]
+
+# Level 4, the market that sells steel: a blue banner with a gold mark on a
+# pole west of the stall, and a rack of steel blades east of it, behind the
+# barrel.
+[frames.level_4]
+from = "level_3"
+
+[frames.level_4.runs]
+3 = [[9, "y"]]
+4 = [[9, "n"]]
+5 = [[1, "bbbbbbbbn"]]
+6 = [[1, "bcccbbbbn"]]
+7 = [[1, "bcbbyybbn"]]
+8 = [[1, "bbbyYYybn"]]
+9 = [[1, "bbbbyybbn"]]
+10 = [[1, "bbbbbbbbn"]]
+11 = [[1, "BB"], [4, "BBBBBn"]]
+12 = [[1, "B"], [5, "BBBBn"]]
+13 = [[9, "n"]]
+14 = [[9, "n"]]
+15 = [[9, "n"]]
+16 = [[9, "n"]]
+17 = [[9, "n"]]
+18 = [[9, "n"]]
+19 = [[9, "n"]]
+20 = [[9, "n"]]
+21 = [[9, "n"]]
+22 = [[9, "n"], [38, "n"], [46, "n"]]
+23 = [[9, "n"], [38, "NNNNNNNNN"]]
+24 = [[9, "n"], [38, "n"], [40, "W"], [42, "W"], [44, "W"], [46, "n"]]
+25 = [[9, "n"], [38, "n"], [40, "w"], [42, "w"], [44, "w"], [46, "n"]]
+26 = [[9, "n"], [38, "n"], [40, "w"], [42, "w"], [44, "w"], [46, "n"]]
+27 = [[9, "n"], [38, "n"], [40, "l"], [42, "w"], [44, "l"], [46, "n"]]
+28 = [[9, "n"], [38, "n"], [40, "w"], [42, "l"], [44, "w"], [46, "n"]]
+29 = [[9, "n"], [38, "n"], [40, "l"], [42, "w"], [44, "l"], [46, "n"]]
+30 = [[9, "n"], [38, "nOyOyOyOn"]]
+31 = [[9, "n"], [38, "n"], [40, "n"], [42, "n"], [44, "n"], [46, "n"]]
+32 = [[9, "n"], [38, "NNNNNNNNN"]]
+33 = [[9, "n"], [38, "n"], [46, "n"]]
+34 = [[9, "n"], [38, "n"], [46, "n"]]
+35 = [[9, "n"], [38, "n"], [46, "n"]]
+36 = [[9, "n"], [38, "n"], [46, "n"]]
+37 = [[9, "n"], [38, "n"], [46, "n"]]
+38 = [[9, "n"], [38, "n"], [46, "n"]]
+39 = [[9, "n"], [38, "n"], [46, "n"]]
+40 = [[9, "n"], [38, "n"], [46, "n"]]
+41 = [[9, "n"], [38, "n"], [46, "n"]]
+42 = [[9, "n"], [38, "n"], [46, "n"]]
+43 = [[9, "n"], [38, "n"], [46, "n"]]
+44 = [[46, "a"]]
+45 = [[46, "m"]]

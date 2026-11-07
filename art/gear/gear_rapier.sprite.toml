@@ -1,0 +1,40 @@
+# A rapier: a long, slim thrusting blade over a gold cup guard.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md.
+canvas = "unit"
+over = "warrior"
+
+[frames.idle_0.runs]
+0 = [[25, "k"]]
+1 = [[24, "kwk"]]
+2 = [[24, "kwk"]]
+3 = [[24, "kwk"]]
+4 = [[24, "kwk"]]
+5 = [[24, "kwk"]]
+6 = [[24, "kwk"]]
+7 = [[24, "kwk"]]
+8 = [[24, "kwk"]]
+9 = [[24, "kwk"]]
+10 = [[24, "kwk"]]
+11 = [[24, "kwk"]]
+12 = [[24, "kwk"]]
+13 = [[24, "kwk"]]
+14 = [[24, "klk"]]
+15 = [[24, "klk"]]
+16 = [[23, "kklkk"]]
+17 = [[22, "kyYlYyk"]]
+18 = [[23, "kOyOk"]]
+20 = [[25, "n"]]
+21 = [[24, "kYk"]]
+22 = [[25, "k"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it holds with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+like = "warrior"      # breathes with the body
+
+[anim.walk]
+rest = true           # holds idle_0 while the body walks

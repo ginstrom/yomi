@@ -1,0 +1,38 @@
+# A tower shield: a tall steel-rimmed board in red, covering the hero's side from shoulder to shin.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md.
+canvas = "unit"
+over = "warrior"
+
+[frames.idle_0.runs]
+9 = [[2, "kkkkkkkkkk"]]
+10 = [[2, "kdllwllldk"]]
+11 = [[2, "kdrrwlrRDk"]]
+12 = [[2, "kdrrwlrRDk"]]
+13 = [[2, "kdrrwlrRDk"]]
+14 = [[2, "kdrrwlrRDk"]]
+15 = [[2, "kdrrwlrRDk"]]
+16 = [[2, "kdrrwlrRDk"]]
+17 = [[2, "kdrwWwlRDk"]]
+18 = [[2, "kdwlWwldDk"]]
+19 = [[2, "kdrlwldRDk"]]
+20 = [[2, "kdrrwlrRDk"]]
+21 = [[2, "kdrrwlrRDk"]]
+22 = [[2, "kdrrwlrRDk"]]
+23 = [[2, "kdrrwlrRDk"]]
+24 = [[2, "kdrrwlrRDk"]]
+25 = [[2, "kdrrwlrRDk"]]
+26 = [[2, "kdrrwlrRDk"]]
+27 = [[2, "kDdddddDDk"]]
+28 = [[2, "kkkkkkkkkk"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it holds with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+like = "warrior"      # breathes with the body
+
+[anim.walk]
+rest = true           # holds idle_0 while the body walks

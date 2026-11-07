@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { IRON_SWORD, SPARK_WAND, itemById } from '../inventory/inventory.ts'
+import { IRON_SWORD, STORM_WAND, itemById } from '../inventory/inventory.ts'
 import { craft, craftTier, craftables, options, upgradeWorkshop } from './crafting.ts'
 import { newGame } from './gameState.ts'
 import type { ItemPlace } from './itemPlace.ts'
@@ -70,19 +70,33 @@ describe('crafting', () => {
 
   it('keeps a grade under a modifier', () => {
     const game = home()
-    game.baggage.push(itemById('steel_armor@2')!)
+    game.baggage.push(itemById('iron_breastplate@2')!)
     game.world.workshop = 2
-    const place: ItemPlace = { from: 'baggage', index: 0, itemId: 'steel_armor@2' }
+    const place: ItemPlace = { from: 'baggage', index: 0, itemId: 'iron_breastplate@2' }
     expect(craft(game, place, 'reinforced', 1).refusal).toBeNull()
-    expect(game.baggage[0].id).toBe('steel_armor@2+reinforced1')
+    expect(game.baggage[0].id).toBe('iron_breastplate@2+reinforced1')
+  })
+
+  it('keeps the runes of a runed item, worn or in the baggage', () => {
+    const game = home()
+    game.world.workshop = 2
+    game.party[0].equipment.mainHand = itemById('iron_sword@3#ember1')
+    expect(craftables(game).some(({ item }) => item.id === 'iron_sword@3#ember1')).toBe(true)
+    expect(craft(game, sword(game), 'balanced', 2).refusal).toBeNull()
+    expect(game.party[0].equipment.mainHand).toBe(itemById('iron_sword@3+balanced2#ember1'))
+    game.baggage.push(itemById('steel_breastplate@3+reinforced1#stone1.life1')!)
+    const place: ItemPlace = { from: 'baggage', index: 0, itemId: 'steel_breastplate@3+reinforced1#stone1.life1' }
+    expect(craft(game, place, 'reinforced', 2).refusal).toBeNull()
+    expect(game.baggage[0]).toBe(itemById('steel_breastplate@3+reinforced2#stone1.life1'))
+    expect(game.baggage[0].runes).toEqual(['stone1', 'life1'])
   })
 
   it('never works an enchanted item, and lists it nowhere', () => {
     const game = home()
-    game.baggage.push(SPARK_WAND)
+    game.baggage.push(STORM_WAND)
     game.world.workshop = 3
-    expect(craft(game, { from: 'baggage', index: 0, itemId: 'spark_wand' }, 'balanced', 1).refusal).toMatch(/enchanted/)
-    expect(craftables(game).some(({ item }) => item === SPARK_WAND)).toBe(false)
+    expect(craft(game, { from: 'baggage', index: 0, itemId: 'storm_wand' }, 'balanced', 1).refusal).toMatch(/enchanted/)
+    expect(craftables(game).some(({ item }) => item === STORM_WAND)).toBe(false)
   })
 
   it('greys an item whose modifiers all need a workshop', () => {
