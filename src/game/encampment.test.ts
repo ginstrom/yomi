@@ -44,7 +44,7 @@ describe('the encampment', () => {
 
   it('builds and raises the trading post, workshop and infirmary for their shown costs', () => {
     const game = newGame(undefined, null, 1, 'Hearthold')
-    game.world.stock = { gold: 1000, iron: 100, timber: 100, stone: 100, copper: 100, crystal: 100, peat: 100, salt: 100 }
+    game.world.stock = { gold: 1000, iron: 100, timber: 100, stone: 100, copper: 100, crystal: 100, peat: 100, salt: 100, silver: 100 }
     for (const id of ['trading_post', 'workshop', 'infirmary'] as const) {
       while (view(game, id).action) {
         const before = { ...game.world.stock }
@@ -56,7 +56,9 @@ describe('the encampment', () => {
         }
       }
     }
-    expect([game.world.tradingPost, game.world.workshop, game.world.infirmary]).toEqual([3, 3, 3])
+    expect([game.world.tradingPost, game.world.workshop, game.world.infirmary]).toEqual([4, 3, 3])
+    expect(view(game, 'trading_post').maxLevel).toBe(4)
+    expect(view(game, 'trading_post').effect).toBe('Sells plain, Fine and Masterwork gear, in iron and steel.')
     expect(view(game, 'workshop').opens).toBe(true)
   })
 

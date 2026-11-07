@@ -171,3 +171,11 @@ export function wares(world: WorldState, filter?: WaresFilter): Item[]
 - [ ] One commit on `long-campaign-stage-03`, not pushed, with the attribution line; the index row set to `done` with the commit.
 
 ## Execution record
+
+### Done (engineer, sonnet)
+
+- `tradingPost.ts`: level 4 `{ gold: 120, silver: 20 }` (max level 4), `TIER_TWO_LEVEL`, `sells`, `WaresFilter`, `wares(world, filter)` (tier, grade, family order), `buyRefusal` uses `sells` ("A level N trading post sells that."). `encampment.ts` effect line for level 4. `simulate.ts`: `visitFacilities` buys per correction 20 (dearest of the family the post sells, dearer than the worn item unmodified and affordable; a tie goes to the later in `wares`), `Trade.tierTwoBought`, tallied and printed on its own line. CLAUDE.md's tradingPost and simulator lines updated.
+- Tests: `tradingPost.test.ts` (level 4, `sells`, `wares` count/order/filters, refusals, prices), `encampment.test.ts` (max level 4, effect line; the raise loop now needs silver), `simulate.test.ts` (buying at levels 3 and 4, 35 gold buys `steel_longsword`, nothing dearer affordable, old item sold, silver kept), `debugCommands.test.ts` (facility range text "1 to 4"). `npm test`: 73 files, 1047 tests pass.
+- **Guard** (`npm run simulate -- --campaign --ready-level 7 --battles 500 --seed 1`, against step 04's and the follow-up's 231): **233 of 500 (46.6%)**, 269 days, 18.2 battles, 1.8 heroes dead, 26.0 spawns, 2 gold on gear and 51 from sales, **tier-2 items bought 0.0 a campaign**, trading post final level 1.1 (workshop 0.6, infirmary 0.5), threat 5 won 0.896, threat 3 0.968. Step 01's was 248; the move from 231 is +2, within noise: no campaign gets near level 4 (the post averages 1.1 because gold goes to the hall and recruits first), so the only live change is that `materialNeeds` now keeps 20 silver, which shifts a few sales by a gold piece or two and, through the world RNG's later draws, a few campaigns. No tuning.
+- Departure: the tier-2 line is printed as its own `console.log` (the first draft passed it as a second argument and printed on the same line as the trading post's).
+

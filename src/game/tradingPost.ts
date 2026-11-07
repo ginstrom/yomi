@@ -1,6 +1,6 @@
 import type { FamilyId, Tier } from '../inventory/catalog.ts'
 import { GRADES, type Grade } from '../inventory/grades.ts'
-import { BASE_ITEMS, baseItem, craftedItem, itemById, type Item } from '../inventory/inventory.ts'
+import { BASE_ITEMS, baseItem, craftedItem, itemById, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
 import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
 import type { GameState } from './gameState.ts'
 import { STALE, allPlaces, itemAt, removeAt, type ItemPlace } from './itemPlace.ts'
@@ -15,9 +15,12 @@ import { encampmentName, type WorldState } from './worldMap.ts'
  * start; each action returns why it was refused, or null when done.
  */
 
-/** What raising the post to each level costs, from level 1 (built); the level is the highest grade it sells. */
-export const TRADING_POST_COSTS: readonly Stock[] = [{}, { gold: 40, stone: 15 }, { gold: 80, copper: 15 }]
+/** What raising the post to each level costs, from level 1 (built). Levels 1 to 3 sell tier 1 at grades up to the level; level 4 adds tier 2 at every grade. */
+export const TRADING_POST_COSTS: readonly Stock[] = [{}, { gold: 40, stone: 15 }, { gold: 80, copper: 15 }, { gold: 120, silver: 20 }]
 export const MAX_TRADING_POST_LEVEL = TRADING_POST_COSTS.length
+
+/** The level from which the post sells tier 2. */
+export const TIER_TWO_LEVEL = 4
 
 /** What a plain item of each family costs at tier 1 and grade 1. */
 export const PRICES: Readonly<Record<FamilyId, number>> = {
@@ -102,10 +105,39 @@ export function salePrice(item: Item): number {
   return Math.floor((buyPrice(item) ?? VALUES[item.id] ?? 0) / 2)
 }
 
-/** Every tier-1 plain item at every grade the post's level allows, plain first. */
-export function wares(world: WorldState): Item[] {
-  const tierOne = BASE_ITEMS.filter((base) => base.tier === 1)
-  return GRADES.filter((grade) => grade <= world.tradingPost).flatMap((grade) => tierOne.map((base) => craftedItem(base, grade)))
+/** Whether the post at its level sells `item`: tier 1 at grades up to min(level, 3); tier 2 at every grade from `TIER_TWO_LEVEL`. */
+export function sells(world: WorldState, item: Item): boolean {
+  const base = baseItem(item)
+  if (!base || item.mod) return false
+  if (base.tier === 2) return world.tradingPost >= TIER_TWO_LEVEL
+  return (item.grade ?? 1) <= Math.min(world.tradingPost, 3)
+}
+
+/** The lowest level whose post sells the plain item `item`. */
+function sellingLevel(item: Item): number {
+  return item.tier === 2 ? TIER_TWO_LEVEL : (item.grade ?? 1)
+}
+
+export interface WaresFilter {
+  slot?: EquipmentSlot
+  family?: FamilyId
+}
+
+/** What the post sells, narrowed by `filter`: by tier, then grade, then `FAMILIES` order. */
+export function wares(world: WorldState, filter: WaresFilter = {}): Item[] {
+  const listed: Item[] = []
+  for (const tier of [1, 2]) {
+    for (const grade of GRADES) {
+      for (const base of BASE_ITEMS) {
+        if (base.tier !== tier) continue
+        if (filter.slot && base.slot !== filter.slot) continue
+        if (filter.family && base.family !== filter.family) continue
+        const item = craftedItem(base, grade)
+        if (sells(world, item)) listed.push(item)
+      }
+    }
+  }
+  return listed
 }
 
 /** Why `itemId` cannot be bought now, or null when it can. */
@@ -114,8 +146,8 @@ export function buyRefusal(game: GameState, itemId: string): string | null {
   if (!atEncampment(world)) return notHere(world)
   const item = itemById(itemId)
   const price = item && !item.mod ? buyPrice(item) : null
-  if (!item || price === null || item.tier !== 1) return 'The trading post does not sell that.'
-  if ((item.grade ?? 1) > world.tradingPost) return `A level ${item.grade} trading post sells that.`
+  if (!item || price === null) return 'The trading post does not sell that.'
+  if (!sells(world, item)) return `A level ${sellingLevel(item)} trading post sells that.`
   if ((world.stock.gold ?? 0) < price) return `It costs ${price} gold, more than the stock holds.`
   return null
 }

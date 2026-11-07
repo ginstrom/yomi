@@ -87,7 +87,8 @@ const FACILITIES: readonly Facility[] = [
     maxLevel: MAX_TRADING_POST_LEVEL,
     level: (game) => game.world.tradingPost,
     about: () => 'Merchants sell plain gear for gold and buy what the party no longer needs.',
-    effect: (_, level) => `Sells ${['plain', 'plain and Fine', 'plain, Fine and Masterwork'][level - 1]} gear.`,
+    effect: (_, level) =>
+      level >= 4 ? 'Sells plain, Fine and Masterwork gear, in iron and steel.' : `Sells ${['plain', 'plain and Fine', 'plain, Fine and Masterwork'][level - 1]} gear.`,
     cost: (game) => tradingPostCost(game.world),
     improve: raiseTradingPost,
     opens: true,

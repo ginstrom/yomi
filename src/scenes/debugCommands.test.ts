@@ -110,7 +110,7 @@ describe('debug commands', () => {
     expect(runCommand('facility workshop 2', context).changed).toBe(true)
     expect(world.workshop).toBe(2)
     expect(runCommand('facility workshop 4', context).lines[0]).toMatch(/from 0 to 3/)
-    expect(runCommand('facility trading_post 0', context).lines[0]).toMatch(/from 1 to 3/)
+    expect(runCommand('facility trading_post 0', context).lines[0]).toMatch(/from 1 to 4/)
     runCommand('give iron_sword@3+light2', context)
     expect(baggage.at(-1)!.name).toBe('Light Masterwork Iron Longsword (II)')
   })

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BASE_ITEMS, IRON_SWORD, SPARK_WAND, STORM_WAND, itemById } from '../inventory/inventory.ts'
 import { newGame } from './gameState.ts'
-import { buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, sellables, wares } from './tradingPost.ts'
+import { MAX_TRADING_POST_LEVEL, TIER_TWO_LEVEL, TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, sellables, sells, wares } from './tradingPost.ts'
 
 /** A new game at home, with 100 gold. */
 function home() {
@@ -108,7 +108,7 @@ describe('the price list', () => {
     expect(buyPrice(itemById('wolfhide_boots')!)).toBe(10)
   })
 
-  it('lists tier 1 only, every family, at grades up to its level', () => {
+  it('lists tier 1 only below level 4, every family, at grades up to its level', () => {
     const game = home()
     for (const level of [1, 2, 3]) {
       game.world.tradingPost = level
@@ -120,10 +120,77 @@ describe('the price list', () => {
     }
   })
 
-  it('refuses a tier-2 item', () => {
+  it('refuses a tier-2 item below level 4, naming the level', () => {
     const game = home()
     game.world.tradingPost = 3
-    expect(buy(game, 'steel_longsword')).toMatch(/does not sell/)
+    expect(buy(game, 'steel_longsword')).toBe('A level 4 trading post sells that.')
+    game.world.tradingPost = 2
+    expect(buy(game, 'iron_sword@3')).toBe('A level 3 trading post sells that.')
     expect(game.world.stock.gold).toBe(100)
+  })
+})
+
+describe('trading post level 4', () => {
+  it('costs 120 gold and 20 silver, and is the last level', () => {
+    expect(TRADING_POST_COSTS[3]).toEqual({ gold: 120, silver: 20 })
+    expect(MAX_TRADING_POST_LEVEL).toBe(4)
+    const game = home()
+    game.world.tradingPost = 3
+    game.world.stock = { gold: 130, silver: 25 }
+    expect(raiseTradingPost(game)).toBeNull()
+    expect(game.world.stock).toMatchObject({ gold: 10, silver: 5 })
+    expect(raiseTradingPost(game)).toBe('The trading post is as great as it gets.')
+    game.world.tradingPost = 3
+    expect(raiseTradingPost(game)).toMatch(/costs/)
+  })
+
+  it('sells tier 1 up to grade 3 and tier 2 at every grade from level 4', () => {
+    const game = home()
+    const tierOne = (grade: number) => itemById(grade === 1 ? 'iron_sword' : `iron_sword@${grade}`)!
+    const tierTwo = (grade: number) => itemById(grade === 1 ? 'steel_longsword' : `steel_longsword@${grade}`)!
+    for (const level of [1, 2, 3, 4]) {
+      game.world.tradingPost = level
+      for (const grade of [1, 2, 3]) {
+        expect(sells(game.world, tierOne(grade)), `iron ${grade} at ${level}`).toBe(grade <= level)
+        expect(sells(game.world, tierTwo(grade)), `steel ${grade} at ${level}`).toBe(level >= TIER_TWO_LEVEL)
+      }
+    }
+    expect(sells(game.world, itemById('iron_sword+balanced1')!)).toBe(false)
+    expect(sells(game.world, STORM_WAND)).toBe(false)
+  })
+
+  it('lists 56 bases at three grades, tier 1 first and grades ascending', () => {
+    const game = home()
+    game.world.tradingPost = 4
+    const listed = wares(game.world)
+    expect(listed).toHaveLength(168)
+    expect(listed.slice(0, 84).every((item) => item.tier === 1)).toBe(true)
+    expect(listed.slice(84).every((item) => item.tier === 2)).toBe(true)
+    const key = (item: (typeof listed)[number]) => (item.tier! - 1) * 3 + (item.grade ?? 1)
+    expect(listed.map(key)).toEqual([...listed.map(key)].sort((a, b) => a - b))
+  })
+
+  it('narrows by slot and by family', () => {
+    const game = home()
+    game.world.tradingPost = 4
+    const heads = wares(game.world, { slot: 'head' })
+    expect(new Set(heads.map((item) => item.family))).toEqual(new Set(['cap', 'helm']))
+    expect(new Set(heads.map((item) => item.tier))).toEqual(new Set([1, 2]))
+    expect(wares(game.world, { family: 'longsword' }).map((item) => item.id)).toEqual([
+      'iron_sword', 'iron_sword@2', 'iron_sword@3', 'steel_longsword', 'steel_longsword@2', 'steel_longsword@3',
+    ])
+  })
+
+  it('prices tier 2 by the 2.5 multiplier', () => {
+    expect(buyPrice(itemById('steel_longsword')!)).toBe(30)
+    expect(buyPrice(itemById('ironwood_shield')!)).toBe(25)
+    expect(buyPrice(itemById('silk_robe')!)).toBe(25)
+  })
+
+  it('sells tier 2 into the baggage', () => {
+    const game = home()
+    game.world.tradingPost = 4
+    expect(buy(game, 'steel_longsword')).toBeNull()
+    expect(game.world.stock.gold).toBe(70)
   })
 })

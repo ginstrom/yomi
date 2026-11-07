@@ -8,6 +8,7 @@ import { readyMadeParty } from '../src/game/party.ts'
 import { OUTPOST_COST } from '../src/game/buildings.ts'
 import { craft } from '../src/game/crafting.ts'
 import type { FamilyId } from '../src/inventory/catalog.ts'
+import { itemById } from '../src/inventory/inventory.ts'
 import { modifiersFor } from '../src/inventory/modifiers.ts'
 import { SOURCE_ID, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
 import {
@@ -404,6 +405,67 @@ describe('the trading post and crafting in a campaign', () => {
     expect([sword.base, sword.grade, sword.mod?.id]).toEqual(['iron_sword', 3, 'light'])
     expect(trade.goldOnGear).toBeGreaterThan(0)
     expect(trade.crafted).toBeGreaterThan(0)
+  })
+
+  describe('buying the dearest of the family the post sells', () => {
+    const shopping = (level: number, gold: number) => {
+      const game = newGame(undefined, null, 1)
+      game.world.tradingPost = level
+      game.world.stock = { gold }
+      // Keep every other facility out of the way: only the gear is under test.
+      game.world.workshop = 3
+      game.world.infirmary = 3
+      game.world.shrine = 3
+      game.party = [game.party[0]]
+      game.party[0].equipment.mainHand = itemById('iron_sword')!
+      return game
+    }
+
+    it('buys iron at grade 3 from a level 3 post, no tier 2', () => {
+      const game = shopping(3, 500)
+      const trade = visitFacilities(game)
+      expect(game.party[0].equipment.mainHand!.id).toBe('iron_sword@3')
+      expect(trade.tierTwoBought).toBe(0)
+    })
+
+    it('buys steel at grade 3 from a level 4 post, and counts it', () => {
+      const game = shopping(4, 500)
+      const trade = visitFacilities(game)
+      expect(game.party[0].equipment.mainHand!.id).toBe('steel_longsword@3')
+      expect(trade.tierTwoBought).toBeGreaterThanOrEqual(1)
+    })
+
+    it('buys the dearest it affords', () => {
+      const game = shopping(4, 35)
+      const trade = visitFacilities(game)
+      expect(game.party[0].equipment.mainHand!.id).toBe('steel_longsword')
+      expect(trade.tierTwoBought).toBe(1)
+    })
+
+    it('buys nothing when nothing dearer is affordable', () => {
+      const game = shopping(4, 12)
+      const trade = visitFacilities(game)
+      expect(game.party[0].equipment.mainHand!.id).toBe('iron_sword')
+      expect(trade.tierTwoBought).toBe(0)
+      expect(trade.goldOnGear).toBe(0)
+    })
+
+    it('sells the old item back', () => {
+      const game = shopping(3, 500)
+      const trade = visitFacilities(game)
+      expect(game.baggage).toEqual([])
+      expect(trade.goldFromSales).toBeGreaterThan(0)
+    })
+  })
+
+  it('keeps 20 silver for the post while it is below level 4', () => {
+    const game = newGame(undefined, null, 1)
+    game.world.tradingPost = 3
+    expect(materialNeeds(game).silver).toBeGreaterThanOrEqual(20)
+    game.world.tradingPost = 4
+    const withPost = materialNeeds(game).silver ?? 0
+    game.world.tradingPost = 3
+    expect(materialNeeds(game).silver! - withPost).toBe(20)
   })
 
   it('prefers, family by family, only modifiers that fit the family', () => {

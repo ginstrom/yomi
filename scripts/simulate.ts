@@ -51,7 +51,7 @@ import {
 } from '../src/game/guildHall.ts'
 import { campUntilHealed, canCamp, partyWounded } from '../src/game/camp.ts'
 import { INFIRMARY_COSTS, raiseInfirmary } from '../src/game/infirmary.ts'
-import { TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial } from '../src/game/tradingPost.ts'
+import { TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, wares } from '../src/game/tradingPost.ts'
 import { daysToFall, sites, type Material, type Stock } from '../src/game/territory.ts'
 import {
   ENCAMPMENT_ID,
@@ -281,6 +281,8 @@ export interface CampaignRecord {
   /** Gold spent on gear at the trading post, and taken there for the baggage and surplus materials. */
   goldOnGear: number
   goldFromSales: number
+  /** Tier-2 items bought. */
+  tierTwoBought: number
   /** Items crafted, in the field and at the workshop, and the days the field crafts took. */
   crafted: number
   fieldCraftDays: number
@@ -341,6 +343,8 @@ export interface Trade {
   goldOnGear: number
   goldFromSales: number
   crafted: number
+  /** Tier-2 items bought. */
+  tierTwoBought: number
 }
 
 /**
@@ -433,7 +437,7 @@ export function materialNeeds(game: GameState): Stock {
  */
 export function visitFacilities(game: GameState): Trade {
   const { world } = game
-  const trade: Trade = { goldOnGear: 0, goldFromSales: 0, crafted: 0 }
+  const trade: Trade = { goldOnGear: 0, goldFromSales: 0, crafted: 0, tierTwoBought: 0 }
   const gold = () => world.stock.gold ?? 0
   const sellAll = () => {
     while (game.baggage.length > 0) {
@@ -456,11 +460,17 @@ export function visitFacilities(game: GameState): Trade {
       const worn = hero.equipment[slot]
       const base = worn && baseItem(worn)
       if (!worn || !base) continue
-      const better = [...GRADES].reverse().find((g) => g > (worn.grade ?? 1) && g <= world.tradingPost && gold() >= buyPrice(craftedItem(base, g))!)
-      if (better === undefined) continue
-      const bought = craftedItem(base, better)
-      if (buy(game, bought.id) !== null) continue
+      if (!worn.family) continue
+      // The dearest item of the family the post sells that costs more than the worn one (modifier aside); a tie goes to the later, the higher tier or grade.
+      const wornPrice = buyPrice(craftedItem(base, worn.grade ?? 1))!
+      let bought: Item | undefined
+      for (const candidate of wares(world, { family: worn.family })) {
+        const price = buyPrice(candidate)!
+        if (price > wornPrice && price <= gold() && (!bought || price >= buyPrice(bought)!)) bought = candidate
+      }
+      if (!bought || buy(game, bought.id) !== null) continue
       trade.goldOnGear += buyPrice(bought)!
+      if (bought.tier === 2) trade.tierTwoBought += 1
       game.baggage.pop()
       hero.equipment[slot] = bought
       game.baggage.push(worn)
@@ -542,7 +552,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
   const record: CampaignRecord = {
     outcome: 'timeout', days: 0, battles: 0, spawns: 0, captured: 0, lost: 0, blighted: 0, healedHp: 0, campDays: 0,
     towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0,
-    tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, crafted: 0, fieldCraftDays: 0,
+    tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 0, fieldCraftDays: 0,
     finalLevels: [], deathsAtLevel: [], battlesToLevel: {},
   }
   const tally = (events: readonly WorldEvent[]) => {
@@ -589,6 +599,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
       const trade = visitFacilities(game)
       record.goldOnGear += trade.goldOnGear
       record.goldFromSales += trade.goldFromSales
+      record.tierTwoBought += trade.tierTwoBought
       record.crafted += trade.crafted
     }
     const next = nextTarget(world, party, args.readyLevel)
@@ -813,6 +824,7 @@ export interface CampaignSummary {
   avgWorkshopLevel: number
   avgInfirmaryLevel: number
   avgGoldOnGear: number
+  avgTierTwoBought: number
   avgGoldFromSales: number
   avgCrafted: number
   avgFieldCraftDays: number
@@ -887,6 +899,7 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     avgWorkshopLevel: avg((r) => r.workshopLevel),
     avgInfirmaryLevel: avg((r) => r.infirmaryLevel),
     avgGoldOnGear: avg((r) => r.goldOnGear),
+    avgTierTwoBought: avg((r) => r.tierTwoBought),
     avgGoldFromSales: avg((r) => r.goldFromSales),
     avgCrafted: avg((r) => r.crafted),
     avgFieldCraftDays: avg((r) => r.fieldCraftDays),
@@ -950,6 +963,7 @@ function main(): void {
   console.log(
     `Trading post, workshop, infirmary: levels ${summary.avgTradingPostLevel.toFixed(1)}, ${summary.avgWorkshopLevel.toFixed(1)}, ${summary.avgInfirmaryLevel.toFixed(1)} at the end; ${summary.avgGoldOnGear.toFixed(0)} gold on gear and ${summary.avgGoldFromSales.toFixed(0)} from sales, ${summary.avgCrafted.toFixed(1)} items crafted (${summary.avgFieldCraftDays.toFixed(1)} days in the field) a campaign`,
   )
+  console.log(`Tier-2 items bought: ${summary.avgTierTwoBought.toFixed(1)} a campaign`)
   console.log(`Guild hall: level ${summary.avgHallLevel.toFixed(1)} at the end, ${summary.avgRecruits.toFixed(1)} recruits and ${summary.avgDeaths.toFixed(1)} heroes dead a campaign`)
   console.log(
     `Hit points healed between battles: ${summary.avgHealedHp.toFixed(1)} a campaign, in ${summary.avgCampDays.toFixed(1)} days of camping`,
