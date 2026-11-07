@@ -65,7 +65,7 @@ import { scheduleEvents, type Cue } from './eventSchedule.ts'
 import { ScrollingLog } from './scrollingLog.ts'
 import { SEED_KEY } from './seed.ts'
 import { soundVolume } from './audioSettings.ts'
-import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
+import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, iconTint } from './itemIcons.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { CHEST_POINT, SPRITE_ATLAS, heroLook, pointFromAnchor, spriteAnim, spriteFrame } from './unitLook.ts'
@@ -646,7 +646,11 @@ export class BattleScene extends Phaser.Scene {
     for (const { hex, items } of this.ground.piles()) {
       const { x, y } = boardHexCenter(hex)
       const top = items[items.length - 1]
-      this.groundMarks.add(this.add.image(x, y, ITEM_ICON_KEYS[top.icon]).setScale(ITEM_ICON_SCALE))
+      const mark = this.add.image(x, y, ITEM_ICON_KEYS[top.icon]).setScale(ITEM_ICON_SCALE)
+      // A second-tier item's icon is tinted here as in the inventory, so steel does not look like iron.
+      const tint = iconTint(top)
+      if (tint !== undefined) mark.setTint(tint)
+      this.groundMarks.add(mark)
     }
   }
 
