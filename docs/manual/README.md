@@ -192,7 +192,7 @@ Perks you can take now are drawn brightly, and a taken perk shows its ranks (for
 
 ![The Spells tab](images/panel-spells-mage.png)
 
-This tab lists the spells the hero knows and the mana they are carrying. On the world map, the **Cast** button beside a heal casts it out of battle. A heal on one hero asks you to click that hero's portrait. A heal cast on the world map always restores the average of its dice. **Spell Tree** (or K) opens the spell tree.
+This tab lists the spells the hero knows, the mana they are carrying and their **spell skill**, the chance a spell strikes before the foe's armour, with what their gear adds or takes shown beside it. On the world map, the **Cast** button beside a heal casts it out of battle. A heal on one hero asks you to click that hero's portrait. A heal cast on the world map always restores the average of its dice. **Spell Tree** (or K) opens the spell tree.
 
 ### Inventory
 
@@ -481,8 +481,9 @@ Gear comes in **families**, each a trade-off: the weapons in the table in chapte
 
 **Weight.** Heavy gear asks for strength. For every point of strength a hero lacks for an item, they lose 5% to hit with weapon attacks (spells are not affected), and each item counts on its own: a strength 3 hero with a War Hammer (6) and Iron Gauntlets (4) loses 15% + 5%. An item's tooltip shows it, as "Strength: 6 (you have 3): to hit −15%".
 
+Plate and the tower shield also take **1 AP** off every turn, and metal armour lowers the chance of a hero's **spells** (the breastplate, helm and gauntlets by 5% each, plate by 15%), which is the price a mage pays for armour. The Spells tab shows a caster's spell skill with its gear counted.
+
 ![A mage of strength 3 looking at the Iron Greatsword, which asks 6](images/panel-strength.png)
- Plate and the tower shield also take **1 AP** off every turn, and metal armour lowers the chance of a hero's **spells** (the breastplate, helm and gauntlets by 5% each, plate by 15%), which is the price a mage pays for armour.
 
 ### Gear grades
 
@@ -530,7 +531,7 @@ The screen lists every item your heroes wear or carry, then the baggage's, that 
 | Long | bow, crossbow | range +1 / +2 / +3 | to hit −5% |
 | Reinforced | breastplate, leather | resistance +1 / +2 / +3 | to hit −5% |
 
-A craft costs 5 gold and 5 iron (5 timber for a bow or shield) at grade I, 10 gold and 5 copper at grade II, and 20 gold and 5 crystal at grade III. A Light Longsword costs 4 AP a blow, so a hero who stands still strikes twice a turn.
+A craft costs 5 gold and 5 iron (5 timber for a bow, crossbow or wooden shield) at grade I, 10 gold and 5 copper at grade II, and 20 gold and 5 crystal at grade III. A Light Longsword costs 4 AP a blow, so a hero who stands still strikes twice a turn.
 
 ### The infirmary
 
