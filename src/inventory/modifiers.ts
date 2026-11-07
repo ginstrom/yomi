@@ -1,3 +1,4 @@
+import type { FamilyId } from './catalog.ts'
 import { gradeNumeral, type Grade } from './grades.ts'
 import type { Item, ItemStats } from './inventory.ts'
 
@@ -12,8 +13,8 @@ export type ModifierId = 'balanced' | 'recurve' | 'bearded' | 'keen' | 'braced' 
 export interface Modifier {
   id: ModifierId
   name: string
-  /** The ids of the plain items it can be put on. */
-  fits: readonly string[]
+  /** The families it can be put on, every tier of each. */
+  fits: readonly FamilyId[]
   /** The workshop level that makes it: 0 for one made in the field. */
   unlock: number
   /** What it does to an item's stats at a grade. */
@@ -36,7 +37,7 @@ export const MODIFIERS: Record<ModifierId, Modifier> = {
   balanced: {
     id: 'balanced',
     name: 'Balanced',
-    fits: ['iron_shortsword', 'iron_sword', 'steel_greatsword'],
+    fits: ['shortsword', 'longsword', 'greatsword', 'spear'],
     unlock: 0,
     apply: (s, g) => addDamage(add(s, 'toHit', 5 * g), -1),
     better: (g) => `to hit +${5 * g}%`,
@@ -45,7 +46,7 @@ export const MODIFIERS: Record<ModifierId, Modifier> = {
   recurve: {
     id: 'recurve',
     name: 'Recurve',
-    fits: ['yew_bow'],
+    fits: ['bow'],
     unlock: 0,
     apply: (s, g) => add(addDamage(s, g), 'attackRange', -1),
     better: (g) => `damage +${g}`,
@@ -54,7 +55,7 @@ export const MODIFIERS: Record<ModifierId, Modifier> = {
   bearded: {
     id: 'bearded',
     name: 'Bearded',
-    fits: ['iron_battle_axe'],
+    fits: ['battle_axe', 'mace'],
     unlock: 1,
     apply: (s, g) => addDamage(add(s, 'armorPierce', g), -2),
     better: (g) => `pierces ${g} more ${g === 1 ? 'point' : 'points'} of resistance`,
@@ -63,7 +64,7 @@ export const MODIFIERS: Record<ModifierId, Modifier> = {
   keen: {
     id: 'keen',
     name: 'Keen',
-    fits: ['iron_dagger', 'iron_shortsword', 'iron_sword'],
+    fits: ['dagger', 'shortsword', 'longsword'],
     unlock: 1,
     apply: (s, g) => addDamage(add(s, 'critChance', 5 * g), -1),
     better: (g) => `critical +${5 * g}%`,
@@ -72,7 +73,7 @@ export const MODIFIERS: Record<ModifierId, Modifier> = {
   braced: {
     id: 'braced',
     name: 'Braced',
-    fits: ['oak_shield'],
+    fits: ['shield'],
     unlock: 1,
     apply: (s, g) => add(add(s, 'acBonus', step([3, 5, 7], g)), 'toHit', -5),
     better: (g) => `armour class +${step([3, 5, 7], g)}`,
@@ -81,7 +82,7 @@ export const MODIFIERS: Record<ModifierId, Modifier> = {
   light: {
     id: 'light',
     name: 'Light',
-    fits: ['iron_sword', 'iron_battle_axe'],
+    fits: ['longsword', 'battle_axe'],
     unlock: 2,
     apply: (s, g) => addDamage(add(s, 'attackApCost', -1), -step([3, 2, 1], g)),
     better: () => 'attack AP −1',
@@ -90,7 +91,7 @@ export const MODIFIERS: Record<ModifierId, Modifier> = {
   long: {
     id: 'long',
     name: 'Long',
-    fits: ['yew_bow'],
+    fits: ['bow', 'crossbow'],
     unlock: 2,
     apply: (s, g) => add(add(s, 'attackRange', g), 'toHit', -5),
     better: (g) => `range +${g}`,
@@ -99,7 +100,7 @@ export const MODIFIERS: Record<ModifierId, Modifier> = {
   reinforced: {
     id: 'reinforced',
     name: 'Reinforced',
-    fits: ['steel_armor'],
+    fits: ['breastplate', 'leather'],
     unlock: 2,
     apply: (s, g) => add(add(s, 'resistance', g), 'toHit', -5),
     better: (g) => `resistance +${g}`,
@@ -113,9 +114,9 @@ export function isModifierId(id: string): id is ModifierId {
   return Object.hasOwn(MODIFIERS, id)
 }
 
-/** The modifiers that fit the plain item `baseId`. */
-export function modifiersFor(baseId: string): Modifier[] {
-  return MODIFIER_IDS.map((id) => MODIFIERS[id]).filter((mod) => mod.fits.includes(baseId))
+/** The modifiers that fit the items of `family`. */
+export function modifiersFor(family: FamilyId): Modifier[] {
+  return MODIFIER_IDS.map((id) => MODIFIERS[id]).filter((mod) => mod.fits.includes(family))
 }
 
 /**

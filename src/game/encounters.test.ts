@@ -212,6 +212,7 @@ describe('banditCamp', () => {
   const SLOTS = {
     captain: { kind: 'bandit_captain', name: 'Bandit Captain', at: [8, 4] },
     mage: { kind: 'bandit_mage', name: 'Hedge-Mage', at: [9, 4] },
+    crossbowman: { kind: 'bandit_crossbowman', name: 'Bandit Crossbowman', at: [9, 2] },
     brute: { kind: 'bandit_brute', name: 'Bandit Brute', at: [8, 2] },
     archer: { kind: 'bandit_archer', name: 'Bandit Archer', at: [9, 6] },
     cutthroat: { kind: 'bandit_cutthroat', name: 'Cutthroat', at: [8, 6] },
@@ -223,16 +224,16 @@ describe('banditCamp', () => {
     expect(ENCOUNTER_COUNTS.bandit_camp).toEqual([2, 2, 2, 4, 4])
   })
 
-  it('fields the Captain with the Brute at threat 3, the Hedge-Mage at 4 and the Archer at 5, and four from 6', () => {
+  it('fields the Captain with the Brute at threat 3, the Hedge-Mage at 4 and the Archer at 5, and the Crossbowman in the fourth place from 6', () => {
     expect(field(3)).toEqual(['captain', 'brute'])
     expect(field(4)).toEqual(['captain', 'mage'])
     expect(field(5)).toEqual(['captain', 'archer'])
-    expect(field(6)).toEqual(['captain', 'archer', 'mage', 'brute'])
-    expect(field(7)).toEqual(['captain', 'archer', 'mage', 'brute'])
+    expect(field(6)).toEqual(['captain', 'archer', 'mage', 'crossbowman'])
+    expect(field(7)).toEqual(['captain', 'archer', 'mage', 'crossbowman'])
   })
 
   it('gives each bandit its kind, name and hex, and stats built by hero rules at the threat\'s level and grade', () => {
-    for (const threat of [3, 4, 5]) {
+    for (const threat of [3, 4, 5, 6, 7]) {
       const camp = banditCamp(party(), threat)
       for (const unit of camp.setup.units.filter((u) => u.side === 'enemy')) {
         const slot = SLOTS[unit.id as keyof typeof SLOTS]
@@ -241,9 +242,11 @@ describe('banditCamp', () => {
         expect(unit.stats).toEqual({ ...foeStats(slot.kind, threat), name: slot.name })
       }
     }
-    expect(foeStats('bandit_captain', 5)).toEqual(banditStats('captain', 5, 2))
-    expect(foeStats('bandit_mage', 4)).toEqual(banditStats('mage', 4, 1))
-    expect(foeStats('bandit_archer', 5)).toEqual(banditStats('archer', 5, 2))
+    expect(foeStats('bandit_captain', 5)).toEqual(banditStats('captain', 5, { tier: 1, grade: 2 }))
+    expect(foeStats('bandit_mage', 4)).toEqual(banditStats('mage', 4, { tier: 1, grade: 1 }))
+    expect(foeStats('bandit_archer', 5)).toEqual(banditStats('archer', 5, { tier: 1, grade: 2 }))
+    expect(foeStats('bandit_captain', 6)).toEqual(banditStats('captain', 6, { tier: 2, grade: 2 }))
+    expect(foeStats('bandit_crossbowman', 6)).toEqual(banditStats('crossbowman', 6, { tier: 2, grade: 2 }))
   })
 
   it('fights a threat outside its band as the nearest in it', () => {

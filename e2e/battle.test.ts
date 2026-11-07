@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { offsetToHex } from '../src/grid/hex.ts'
+import { hexDistance, offsetToHex } from '../src/grid/hex.ts'
 import { itemById } from '../src/inventory/inventory.ts'
 import { GEAR_SPRITES } from '../src/scenes/unitLook.ts'
 import type { BattleProbe } from '../src/testHook.ts'
@@ -27,6 +27,52 @@ describe('a battle', () => {
     const foes = ['goblin', 'kobold']
     expect(next.log.some((e) => e.type === 'move' && foes.includes(e.unit))).toBe(true)
     expect(hero(next).ap).toBe(8)
+  })
+
+  it('does not walk a hero towards a foe it cannot strike this turn, and strikes one it can', async () => {
+    const game = await games.open()
+    const start = await game.enterBattle()
+    const self = hero(start)
+    const foes = start.state.units.filter((u) => u.side === 'enemy')
+    const nearest = foes.reduce((a, b) => (hexDistance(self.position, b.position) < hexDistance(self.position, a.position) ? b : a))
+    // Out of reach this turn: the walk beside it would leave too few AP for the blow.
+    expect(hexDistance(self.position, nearest.position) - self.attackRange).toBeGreaterThan(self.ap - self.attackApCost)
+    await game.click(battleHexOnScreen(start, nearest.position))
+    await game.frames(4)
+    const after = (await game.probe('Battle'))!
+    expect(after.playerControl).toBe(true)
+    expect(hero(after)).toMatchObject({ position: self.position, ap: self.ap })
+    expect(after.log.length).toBe(start.log.length)
+
+    // Hovering the foe says why, and moving off it takes the hint away.
+    await game.hover(battleHexOnScreen(start, nearest.position))
+    const warned = await game.settled('Battle', (b) => b.hint.startsWith('Too few AP'))
+    expect(warned.hint).toBe('Too few AP to reach and strike')
+    // Straight onto a button, too.
+    await game.hover(warned.buttons.endTurn)
+    expect((await game.settled('Battle', (b) => !b.hint.startsWith('Too few AP'))).hint).toContain('Click a foe to attack')
+    await game.hover(battleHexOnScreen(start, nearest.position))
+    await game.settled('Battle', (b) => b.hint.startsWith('Too few AP'))
+    await game.hover(battleHexOnScreen(start, self.position))
+    expect((await game.settled('Battle', (b) => !b.hint.startsWith('Too few AP'))).hint).toContain('Click a foe to attack')
+
+    // Once the foe is within a walk that leaves the AP for it, the click walks and strikes.
+    await game.click(after.buttons.endTurn)
+    let turn = await game.waitFor('Battle', (b) => b.playerControl && b.state.round === 2)
+    const near = (b: BattleProbe) => {
+      const me = hero(b)
+      return b.state.units
+        .filter((u) => u.side === 'enemy' && u.hp > 0)
+        .find((u) => hexDistance(me.position, u.position) - me.attackRange <= me.ap - me.attackApCost)
+    }
+    while (!near(turn)) {
+      await game.click(turn.buttons.endTurn)
+      turn = await game.waitFor('Battle', (b) => b.playerControl && b.state.round === turn.state.round + 1)
+    }
+    const foe = near(turn)!
+    await game.click(battleHexOnScreen(turn, foe.position))
+    const struck = await game.waitFor('Battle', (b) => b.log.length > turn.log.length && b.log.some((e, i) => i >= turn.log.length && e.type === 'attack'))
+    expect(struck.log.slice(turn.log.length).find((e) => e.type === 'attack')).toMatchObject({ attacker: 'hero_1', defender: foe.id })
   })
 
   it('tells the engine of gear changed in the inventory, for an action point', async () => {

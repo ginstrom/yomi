@@ -148,6 +148,40 @@ describe('a hero’s panel', () => {
     expect((await game.probe('World'))!.partyLook).toContain('gear_breastplate')
   })
 
+  it('shows sockets and runes in a tooltip, and the wards of what is worn (ward)', async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    await debugCommand(game, 'give iron_breastplate@3#rime1')
+    await debugCommand(game, 'give iron_sword@3')
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    let panel = await game.settled('Inventory', (p) => p.tab === 'inventory' && p.ground.length === 2)
+    expect(panel.tooltip).toEqual([])
+
+    // The breastplate's rune is a ward on the sheet, and its pip and rune icon loaded without a failed request.
+    await game.click(panel.ground.find((slot) => slot.item === 'iron_breastplate@3#rime1')!)
+    panel = await game.settled('Inventory', (p) => p.backpack.some((slot) => slot.item === 'iron_breastplate@3#rime1'))
+    expect(panel.statLines.some((line) => line.startsWith('Wards:'))).toBe(false)
+    await game.click(panel.backpack.find((slot) => slot.item === 'iron_breastplate@3#rime1')!)
+    panel = await game.settled('Inventory', (p) => p.equipment.armor.item === 'iron_breastplate@3#rime1')
+    await game.hover(panel.equipment.armor)
+    panel = await game.settled('Inventory', (p) => p.tooltip.length > 0)
+    expect(panel.tooltip).toContain('Frost ward 2')
+    // The socket line names the rune; what it does is the ward line above, told once.
+    expect(panel.tooltip).toContain('Sockets: 1 of 1 (Rime I)')
+    expect(panel.tooltip.filter((line) => line.includes('Frost ward 2'))).toHaveLength(1)
+    expect(panel.statLines).toEqual(expect.arrayContaining(['Wards:', '  frost 2']))
+
+    // A socketed sword with nothing in it says so.
+    const sword = panel.ground.find((slot) => slot.item === 'iron_sword@3')!
+    await game.hover(sword)
+    panel = await game.settled('Inventory', (p) => p.tooltip.includes('Sockets: 0 of 1'))
+    await game.press('c')
+    panel = await game.settled('Inventory', (p) => p.tab === 'character')
+    expect(panel.statLines).toEqual(expect.arrayContaining(['Wards:', '  frost 2']))
+  })
+
   it('lays a cloak, a breastplate, a circlet, a sword and a shield in their order (AC6)', async () => {
     const game = await games.open()
     const world = await game.newGame()
@@ -177,6 +211,111 @@ describe('a hero’s panel', () => {
     await game.press('Escape')
     await game.waitForScenes(['World'])
     expect((await game.probe('World'))!.partyLook).toEqual(panel.doll)
+  })
+
+  it('fits the Character tab’s stats in the panel with a weapon that pierces and runes, narrow and wide', async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    // A runed hammer (piercing and two on-hit runes) and runed armour (two wards), on the mage, whose mana makes the longest stat column.
+    const gear = ['steel_war_hammer@3#ember3.venom2', 'steel_breastplate@3#rime1.acid1']
+    for (const id of gear) await debugCommand(game, `give ${id}`)
+    await game.click(world.party[2])
+    await game.waitFor('World', (w) => w.party[2].active)
+    await game.click(world.party[2])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    let panel = await game.settled('Inventory', (p) => p.tab === 'inventory' && gear.every((id) => p.ground.some((slot) => slot.item === id)))
+    for (const id of gear) {
+      await game.click(panel.ground.find((slot) => slot.item === id)!)
+      panel = await game.settled('Inventory', (p) => p.backpack.some((slot) => slot.item === id))
+      await game.click(panel.backpack.find((slot) => slot.item === id)!)
+      panel = await game.settled('Inventory', (p) => Object.values(p.equipment).some((slot) => slot.item === id))
+    }
+    // The Inventory tab leaves the on-hit rows to the weapon's tooltip; the Character tab shows them.
+    expect(panel.statLines).toEqual(expect.arrayContaining(['On a hit:', '  +3 fire, +2 poison,', 'Wards:', '  frost 2, acid 2']))
+    await game.press('c')
+    for (const [width, height] of [
+      [840, 560],
+      [1400, 800],
+    ]) {
+      await game.resize(width, height)
+      const { characterSheet: sheet } = await game.settled('Inventory', (p) => p.tab === 'character')
+      // The stat column, its Pierces line the longest, ends inside the panel's border with room to spare, and
+      // clear of the badges (a gap of 8 of the panel's pixels either way, the border being drawn over its edge).
+      const margin = (8 * sheet.panel.width) / 720
+      expect(sheet.stats.x + sheet.stats.width).toBeLessThanOrEqual(sheet.panel.x + sheet.panel.width - margin)
+      expect(sheet.stats.y + sheet.stats.height).toBeLessThanOrEqual(sheet.panel.y + sheet.panel.height - margin)
+      const apart =
+        sheet.stats.x >= sheet.badges.x + sheet.badges.width + margin ||
+        sheet.badges.x >= sheet.stats.x + sheet.stats.width + margin ||
+        sheet.badges.y >= sheet.stats.y + sheet.stats.height + margin
+      expect(apart).toBe(true)
+    }
+  })
+
+  it('shows on the Spells tab the spell skill the caster’s gear leaves it', async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    // The mage's breastplate takes 5 from its spells.
+    await game.click(world.party[2])
+    const marked = await game.waitFor('World', (w) => w.party[2].active)
+    await game.click(marked.party[2])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('b')
+    const spells = await game.settled('Inventory', (p) => p.tab === 'spells')
+    expect(spells.equipment.armor.item).toBe('iron_breastplate')
+    expect(spells.spellSkill).toBe(spells.skills.magic.level - 5)
+  })
+
+  it('warns on the Character tab when the weapon held costs more AP than the armour leaves a turn', async () => {
+    const game = await games.open()
+    // Aldric with agility 4 (7 AP a turn): a 7 AP halberd fits, until plate takes a point.
+    const choice = await game.openPartyScreen()
+    await game.click(choice.buttons.readyMade)
+    const ready = await game.waitFor('Party', (p) => p.view === 'roster')
+    await game.click(ready.rows[0].edit)
+    await game.waitForScenes(['Creation'])
+    const clicks = async (attribute: 'agility' | 'strength' | 'luck', side: 'plus' | 'minus', times: number) => {
+      for (let i = 0; i < times; i++) await game.click((await game.probe('Creation'))!.attributes[attribute][side])
+    }
+    await game.settled('Creation')
+    await clicks('agility', 'minus', 2)
+    await game.waitFor('Creation', (c) => c.attributePoints === 2)
+    await clicks('strength', 'plus', 1)
+    await clicks('luck', 'plus', 1)
+    const edited = await game.waitFor('Creation', (c) => c.attributePoints === 0)
+    await game.click(edited.steps.name)
+    await game.click((await game.waitFor('Creation', (c) => c.step === 'name')).buttons.create)
+    await game.waitForScenes(['Party'])
+    await game.begin(await game.settled('Party', (p) => p.view === 'roster'))
+    const world = await game.enterWorld()
+    await debugCommand(game, 'give iron_plate')
+    await debugCommand(game, 'give steel_halberd')
+    await game.click(world.party[0])
+    await game.waitFor('World', (w) => w.party[0].active)
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    let panel = await game.settled('Inventory', (p) => p.tab === 'inventory' && p.ground.some((slot) => slot.item === 'iron_plate'))
+    expect(panel.attackWarning).toBeNull()
+    for (const item of ['steel_halberd', 'iron_plate']) {
+      panel = await game.settled('Inventory', (p) => p.ground.some((slot) => slot.item === item))
+      await game.click(panel.ground.find((slot) => slot.item === item)!)
+      panel = await game.settled('Inventory', (p) => p.backpack.some((slot) => slot.item === item))
+      await game.click(panel.backpack.find((slot) => slot.item === item)!)
+      await game.settled('Inventory', (p) => Object.values(p.equipment).some((slot) => slot.item === item))
+      // With the halberd alone the 7 AP blow fits the 7 AP turn.
+      if (item === 'steel_halberd') expect((await game.probe('Inventory'))!.attackWarning).toBeNull()
+    }
+    await game.press('c')
+    for (const [width, height] of [
+      [840, 560],
+      [1400, 800],
+    ]) {
+      await game.resize(width, height)
+      const warned = await game.settled('Inventory', (p) => p.tab === 'character' && p.attackWarning !== null)
+      expect(warned.attackWarning).toBe('Attack costs 7 AP, you have 6: cannot attack')
+    }
   })
 
   it('lists only the perks a hero has taken, and shows them all in the perk tree', async () => {

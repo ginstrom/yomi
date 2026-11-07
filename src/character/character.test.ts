@@ -9,10 +9,11 @@ import {
   RING_PROTECTION,
   SAGE_CIRCLET,
   SPARK_WAND,
-  STEEL_ARMOR,
-  STEEL_GREATSWORD,
+  IRON_BREASTPLATE,
+  IRON_GREATSWORD,
   WEAPONS,
   YEW_BOW,
+  itemById,
   type Item,
 } from '../inventory/inventory.ts'
 import {
@@ -21,6 +22,7 @@ import {
   deriveCombatStats,
   dropEquipped,
   dropFromBackpack,
+  clampHp,
   equipFromBackpack,
   gearChanges,
   maxHp,
@@ -38,7 +40,7 @@ describe('createWarrior', () => {
     const warrior = createWarrior()
     expect([warrior.level, warrior.xp, warrior.skillPoints, warrior.perkPicks]).toEqual([1, 0, 0, 0])
     expect(warrior.hp).toBe(maxHp(warrior))
-    expect(warrior.equipment).toEqual({ armor: STEEL_ARMOR, mainHand: IRON_SWORD, offHand: OAK_SHIELD })
+    expect(warrior.equipment).toEqual({ armor: IRON_BREASTPLATE, mainHand: IRON_SWORD, offHand: OAK_SHIELD })
     expect(warrior.backpack).toHaveLength(BACKPACK_SIZE)
     const carried = warrior.backpack.filter((slot) => slot !== null)
     expect(carried).toEqual(WEAPONS.filter((weapon) => weapon !== IRON_SWORD))
@@ -111,7 +113,7 @@ describe('deriveCombatStats', () => {
 
   it('gets nothing from a shield while wielding a two-handed weapon', () => {
     const warrior = createWarrior()
-    warrior.equipment.mainHand = STEEL_GREATSWORD
+    warrior.equipment.mainHand = IRON_GREATSWORD
     expect(deriveCombatStats(warrior).ac).toBe(16)
     warrior.equipment.mainHand = IRON_DAGGER
     expect(deriveCombatStats(warrior).ac).toBe(26)
@@ -122,7 +124,7 @@ describe('deriveCombatStats', () => {
     delete warrior.equipment.offHand
     expect(deriveCombatStats(warrior).ac).toBe(16)
 
-    const ring: Item = { ...STEEL_ARMOR, id: 'ring', slot: 'ring1', stats: { toHit: 5, acBonus: 5 } }
+    const ring: Item = { ...IRON_BREASTPLATE, id: 'ring', slot: 'ring1', stats: { toHit: 5, acBonus: 5 } }
     warrior.equipment.ring1 = ring
     expect(deriveCombatStats(warrior)).toMatchObject({ ac: 21, toHit: 38 })
   })
@@ -138,7 +140,7 @@ describe('createCharacter', () => {
 
   it('puts the build’s weapon in hand and the rest in the backpack, the shield too when both hands are full', () => {
     const archer = createCharacter('Archer', ARCHER)
-    expect(archer.equipment).toEqual({ armor: STEEL_ARMOR, mainHand: YEW_BOW })
+    expect(archer.equipment).toEqual({ armor: IRON_BREASTPLATE, mainHand: YEW_BOW })
     const carried = archer.backpack.filter((slot) => slot !== null)
     expect(carried).toEqual([...WEAPONS.filter((weapon) => weapon !== YEW_BOW), OAK_SHIELD])
     expect(archer.hp).toBe(10 + 4 + 5)
@@ -161,7 +163,7 @@ describe('createCharacter', () => {
 
 describe('what a character’s numbers come from', () => {
   it('strikes with the skill of the weapon in hand', () => {
-    expect([undefined, IRON_SWORD, STEEL_GREATSWORD, YEW_BOW, SPARK_WAND].map(weaponSkill)).toEqual([
+    expect([undefined, IRON_SWORD, IRON_GREATSWORD, YEW_BOW, SPARK_WAND].map(weaponSkill)).toEqual([
       'melee',
       'melee',
       'melee',
@@ -246,6 +248,117 @@ describe('what a character’s numbers come from', () => {
   })
 })
 
+describe('weight and reach', () => {
+  const item = (id: string): Item => itemById(id)!
+  /** The warrior (strength 7, agility 6, Melee Weapons 33) at the strength given, holding `mainHand` and wearing `worn`. */
+  const wearer = (strength: number, mainHand: Item | undefined, ...worn: Item[]) => {
+    const warrior = createWarrior()
+    warrior.attributes.strength = strength
+    warrior.equipment = mainHand ? { mainHand } : {}
+    for (const piece of worn) warrior.equipment[piece.slot] = piece
+    return warrior
+  }
+
+  it('costs 5 to hit for each point of strength an item asks beyond the wearer’s', () => {
+    const bare = deriveCombatStats(wearer(3, IRON_SWORD)).toHit
+    // Plate asks 6, and adds nothing to hit of its own.
+    expect(deriveCombatStats(wearer(3, IRON_SWORD, item('iron_plate'))).toHit).toBe(bare - 15)
+  })
+
+  it('asks strength 3 of the breastplate: a strength-3 wearer loses nothing, a strength-2 wearer 5', () => {
+    const plain = deriveCombatStats(wearer(3, IRON_SWORD)).toHit
+    expect(deriveCombatStats(wearer(3, IRON_SWORD, item('iron_breastplate'))).toHit).toBe(plain)
+    const weak = deriveCombatStats(wearer(2, IRON_SWORD)).toHit
+    expect(deriveCombatStats(wearer(2, IRON_SWORD, item('iron_breastplate'))).toHit).toBe(weak - 5)
+  })
+
+  it('adds up the shortfall item by item', () => {
+    const bare = deriveCombatStats(wearer(3, IRON_SWORD)).toHit
+    // Plate 6 and a helm 4: 3 short and 1 short.
+    expect(deriveCombatStats(wearer(3, IRON_SWORD, item('iron_plate'), item('iron_helm'))).toHit).toBe(bare - 20)
+  })
+
+  it('costs nothing at or above the strength asked', () => {
+    const bare = deriveCombatStats(wearer(6, IRON_SWORD)).toHit
+    expect(deriveCombatStats(wearer(6, IRON_SWORD, item('iron_plate'))).toHit).toBe(bare)
+  })
+
+  it('leaves out an off-hand item under a two-handed weapon, its weight and its action points too', () => {
+    const halberd = item('iron_halberd')
+    const alone = deriveCombatStats(wearer(3, halberd))
+    expect(alone.toHit).toBe(skillLevel(wearer(3, halberd), 'melee') - 15)
+    const behind = deriveCombatStats(wearer(3, halberd, item('iron_tower_shield')))
+    expect([behind.toHit, behind.actionPoints]).toEqual([alone.toHit, alone.actionPoints])
+  })
+
+  it('counts strength a perk has raised', () => {
+    const warrior = wearer(5, IRON_SWORD, item('iron_plate'))
+    warrior.perks = { gain_strength: 1 }
+    expect(deriveCombatStats(warrior).toHit).toBe(skillLevel(warrior, 'melee'))
+  })
+
+  it('takes an item’s action points off its wearer’s', () => {
+    const bare = deriveCombatStats(wearer(10, IRON_SWORD)).actionPoints
+    expect(deriveCombatStats(wearer(10, IRON_SWORD, item('iron_plate'))).actionPoints).toBe(bare - 1)
+    expect(deriveCombatStats(wearer(10, IRON_SWORD, item('iron_plate'), item('iron_tower_shield'))).actionPoints).toBe(bare - 2)
+  })
+
+  it('lowers a caster’s spells for heavy gear and raises them for a robe or a staff', () => {
+    const skill = (mainHand: Item | undefined, ...worn: Item[]) => {
+      const mage = wearer(7, mainHand, ...worn)
+      mage.perks = { magic_arrow: 1 }
+      return deriveCombatStats(mage).magic!.skill
+    }
+    const bare = skill(undefined)
+    expect(skill(undefined, item('iron_plate'))).toBe(bare - 15)
+    expect(skill(undefined, item('iron_plate'), item('iron_helm'))).toBe(bare - 20)
+    expect(skill(undefined, item('linen_robe'))).toBe(bare + 5)
+    expect(skill(item('ash_staff'))).toBe(bare + 5)
+  })
+
+  it('makes a reach weapon melee in every respect but its range', () => {
+    const spear = item('iron_spear')
+    expect(weaponSkill(spear)).toBe('melee')
+    const warrior = wearer(7, spear)
+    // The spear's 1d8+1, and 1 for strength 7.
+    expect(deriveCombatStats(warrior)).toMatchObject({
+      toHit: skillLevel(warrior, 'melee'),
+      attackRange: 2,
+      reach: true,
+      armorPierce: 1,
+      damage: { count: 1, sides: 8, bonus: 2 },
+    })
+    // The swordsman's perks tell, the archer's do not, and nothing lengthens the reach.
+    warrior.perks = { heavy_hand: 2, armor_breaker: 2, deadly_aim: 1, far_shot: 1 }
+    expect(deriveCombatStats(warrior)).toMatchObject({
+      attackRange: 2,
+      armorPierce: 3,
+      damage: { count: 1, sides: 8, bonus: 4 },
+    })
+  })
+
+  it('lets a crossbow’s own piercing count at range, and not the strength perks’', () => {
+    const crossbow = item('yew_crossbow')
+    expect(weaponSkill(crossbow)).toBe('archery')
+    const warrior = wearer(7, crossbow)
+    expect(deriveCombatStats(warrior)).toMatchObject({ attackRange: 5, armorPierce: 2, damage: { count: 1, sides: 10, bonus: 0 } })
+    expect(deriveCombatStats(warrior).reach).toBeUndefined()
+    warrior.perks = { armor_breaker: 2 }
+    expect(deriveCombatStats(warrior).armorPierce).toBe(2)
+    // A bow pierces nothing still.
+    expect(deriveCombatStats(wearer(7, YEW_BOW)).armorPierce).toBeUndefined()
+  })
+
+  it('strikes with Magic through a wand, at range, and through a staff, as a blow', () => {
+    expect([weaponSkill(SPARK_WAND), weaponSkill(item('ash_staff'))]).toEqual(['magic', 'magic'])
+    expect(deriveCombatStats(wearer(7, SPARK_WAND))).toMatchObject({ attackRange: 4, damage: { count: 1, sides: 6, bonus: 0 } })
+    const staff = deriveCombatStats(wearer(7, item('ash_staff')))
+    // The staff's 1d6+1, and 1 for strength 7.
+    expect(staff).toMatchObject({ attackRange: 1, damage: { count: 1, sides: 6, bonus: 2 } })
+    expect(staff.reach).toBeUndefined()
+  })
+})
+
 describe('magic', () => {
   /** The warrior, intelligence 4, taught Magic Arrow. */
   const caster = () => ({ ...createWarrior(), perks: { magic_arrow: 1 } })
@@ -272,10 +385,11 @@ describe('magic', () => {
 
   it('fights with the spells its perks teach, at its Magic and what its gear adds to a spell', () => {
     const mage = caster()
-    expect(deriveCombatStats(mage).magic).toEqual({ maxMana: 8, skill: 8, spells: ['magic_arrow'] })
+    // Its Magic of 8, less the breastplate's 5.
+    expect(deriveCombatStats(mage).magic).toEqual({ maxMana: 8, skill: 3, spells: ['magic_arrow'] })
     mage.equipment.neck = AMULET_FOCUS
     mage.trained.magic = 4
-    expect(deriveCombatStats(mage).magic).toMatchObject({ skill: 22 })
+    expect(deriveCombatStats(mage).magic).toMatchObject({ skill: 17 })
     // The amulet helps a spell, not a wand.
     mage.equipment.mainHand = SPARK_WAND
     expect(deriveCombatStats(mage).toHit).toBe(12)
@@ -376,12 +490,12 @@ describe('equipFromBackpack', () => {
 
   it('stows a two-handed weapon when a shield is equipped', () => {
     const warrior = createWarrior()
-    equipFromBackpack(warrior, warrior.backpack.indexOf(STEEL_GREATSWORD), [])
+    equipFromBackpack(warrior, warrior.backpack.indexOf(IRON_GREATSWORD), [])
     const index = warrior.backpack.indexOf(OAK_SHIELD)
     expect(equipFromBackpack(warrior, index, [])).toBe(true)
     expect(warrior.equipment.offHand).toBe(OAK_SHIELD)
     expect(warrior.equipment.mainHand).toBeUndefined()
-    expect(warrior.backpack[index]).toBe(STEEL_GREATSWORD)
+    expect(warrior.backpack[index]).toBe(IRON_GREATSWORD)
   })
 
   it('puts the shield in the space the two-handed weapon left when the main hand was empty', () => {
@@ -401,7 +515,7 @@ describe('equipFromBackpack', () => {
     warrior.backpack.fill(IRON_DAGGER, warrior.backpack.indexOf(null))
     const ground: Item[] = []
     expect(equipFromBackpack(warrior, index, ground)).toBe(true)
-    expect(warrior.equipment).toEqual({ armor: STEEL_ARMOR, mainHand: YEW_BOW })
+    expect(warrior.equipment).toEqual({ armor: IRON_BREASTPLATE, mainHand: YEW_BOW })
     expect(warrior.backpack[index]).toBe(IRON_SWORD)
     expect(warrior.backpack).not.toContain(null)
     expect(ground).toEqual([OAK_SHIELD])
@@ -488,10 +602,10 @@ describe('equipFromBackpack', () => {
 
     it('stows the off-hand item when a two-handed weapon goes into the main hand', () => {
       const warrior = createWarrior()
-      const index = warrior.backpack.indexOf(STEEL_GREATSWORD)
+      const index = warrior.backpack.indexOf(IRON_GREATSWORD)
       const space = warrior.backpack.indexOf(null)
       expect(equipFromBackpack(warrior, index, [], 'mainHand')).toBe(true)
-      expect(warrior.equipment.mainHand).toBe(STEEL_GREATSWORD)
+      expect(warrior.equipment.mainHand).toBe(IRON_GREATSWORD)
       expect(warrior.equipment.offHand).toBeUndefined()
       expect(warrior.backpack[index]).toBe(IRON_SWORD)
       expect(warrior.backpack[space]).toBe(OAK_SHIELD)
@@ -559,10 +673,10 @@ describe('dropping and picking up', () => {
 
   it('picks an item up into the first empty backpack space', () => {
     const warrior = createWarrior()
-    const ground: Item[] = [OAK_SHIELD, STEEL_ARMOR]
+    const ground: Item[] = [OAK_SHIELD, IRON_BREASTPLATE]
     const space = warrior.backpack.indexOf(null)
     expect(pickUp(warrior, ground, 1)).toBe(true)
-    expect(warrior.backpack[space]).toBe(STEEL_ARMOR)
+    expect(warrior.backpack[space]).toBe(IRON_BREASTPLATE)
     expect(ground).toEqual([OAK_SHIELD])
   })
 
@@ -596,5 +710,150 @@ describe('deriveCombatStats weapon name', () => {
     expect(deriveCombatStats(warrior).weapon).toBe('Iron Longsword')
     delete warrior.equipment.mainHand
     expect(deriveCombatStats(warrior).weapon).toBe('Fists')
+  })
+})
+
+describe('rune stats and hit points', () => {
+  const dressed = (armor: string, extra: Partial<Record<'mainHand' | 'offHand', string>> = {}) => {
+    const c = createWarrior()
+    c.equipment.armor = itemById(armor)!
+    for (const [slot, id] of Object.entries(extra)) c.equipment[slot as 'mainHand'] = itemById(id)!
+    return c
+  }
+
+  it('sums wards over everything worn, and leaves them out at none', () => {
+    expect(deriveCombatStats(createWarrior())).not.toHaveProperty('wards')
+    const c = dressed('iron_breastplate@3#ember1', { offHand: 'ironwood_shield#ember1' })
+    const armourWard = itemById('iron_breastplate@3#ember1')!.stats!.wards!.fire!
+    const shieldWard = itemById('ironwood_shield#ember1')!.stats!.wards!.fire!
+    expect(deriveCombatStats(c).wards).toEqual({ fire: armourWard + shieldWard })
+  })
+
+  it('counts a shield’s ward for nothing under a two-handed weapon', () => {
+    const c = dressed('iron_breastplate', { offHand: 'ironwood_shield#ember1', mainHand: 'iron_greatsword' })
+    expect(deriveCombatStats(c)).not.toHaveProperty('wards')
+  })
+
+  it('takes onHit from the main hand only', () => {
+    const sword = itemById('iron_sword@3#ember1')!
+    const c = createWarrior()
+    c.equipment.mainHand = sword
+    expect(deriveCombatStats(c).onHit).toEqual(sword.stats!.onHit)
+    expect(deriveCombatStats(createWarrior())).not.toHaveProperty('onHit')
+    const off = createWarrior()
+    off.equipment.offHand = { ...OAK_SHIELD, stats: { ...OAK_SHIELD.stats, onHit: [{ damage: 1 }] } }
+    expect(deriveCombatStats(off)).not.toHaveProperty('onHit')
+  })
+
+  it('adds a Life rune’s hit points to the maximum', () => {
+    const plain = dressed('iron_breastplate@3')
+    const life = dressed('iron_breastplate@3#life1')
+    expect(maxHp(life)).toBe(maxHp(plain) + 4)
+    expect(deriveCombatStats(life).maxHp).toBe(maxHp(plain) + 4)
+  })
+
+  describe('clampHp', () => {
+    const at = (hp: number, max: number) => {
+      const c = createWarrior()
+      c.hp = hp
+      return { c, before: max }
+    }
+    it('keeps the share on a fall, never above the maximum or 0 from a positive value', () => {
+      const c = createWarrior()
+      const max = maxHp(c)
+      c.hp = Math.round(max / 2)
+      clampHp(c, max + 4)
+      expect(c.hp).toBe(Math.round((Math.round(max / 2) * max) / (max + 4)))
+      c.hp = 1
+      clampHp(c, 1000)
+      expect(c.hp).toBe(1)
+      c.hp = max + 4
+      clampHp(c, max + 4)
+      expect(c.hp).toBe(max)
+    })
+    it('keeps the share on a rise: 18 of 36 becomes 20 of 40', () => {
+      const c = dressed('steel_breastplate@3#life2.life2')
+      expect(maxHp(c)).toBe(40)
+      c.hp = 18
+      clampHp(c, 36)
+      expect(c.hp).toBe(20)
+    })
+    it('scales up on a rise, and leaves 0 at 0 and an unchanged maximum alone', () => {
+      const c = createWarrior()
+      const max = maxHp(c)
+      c.hp = max
+      clampHp(c, max - 4)
+      expect(c.hp).toBe(max)
+      const z = at(0, max).c
+      clampHp(z, max + 4)
+      expect(z.hp).toBe(0)
+      const same = at(3, max).c
+      clampHp(same, max)
+      expect(same.hp).toBe(3)
+      const over = at(max + 10, max).c
+      clampHp(over, max)
+      expect(over.hp).toBe(max)
+    })
+  })
+
+  it('keeps the share when Life armour comes off, and a full hero stays full through an off-and-on swap', () => {
+    const c = dressed('iron_breastplate@3#life1')
+    c.hp = maxHp(c)
+    const full = c.hp
+    expect(unequipToBackpack(c, 'armor')).toBe(true)
+    expect(c.hp).toBe(maxHp(c))
+    expect(c.hp).toBe(full - 4)
+    equipFromBackpack(c, c.backpack.findIndex((i) => i?.id === 'iron_breastplate@3#life1'), [])
+    expect(c.hp).toBe(full)
+  })
+
+  it('round-trips a wounded hero through an off-and-on swap within a point', () => {
+    const c = dressed('iron_breastplate@3#life1')
+    c.hp = Math.round(maxHp(c) / 2)
+    const wounded = c.hp
+    unequipToBackpack(c, 'armor')
+    equipFromBackpack(c, c.backpack.findIndex((i) => i?.id === 'iron_breastplate@3#life1'), [])
+    expect(Math.abs(c.hp - wounded)).toBeLessThanOrEqual(1)
+  })
+
+  describe('in battle (the cap rule, matching the engine’s equip)', () => {
+    it('clampHp with cap only lowers hp to the new maximum, never scales it', () => {
+      const c = dressed('steel_breastplate@3#life2.life2')
+      c.hp = 18
+      clampHp(c, 36, 'cap')
+      expect(c.hp).toBe(18)
+      const plain = createWarrior()
+      plain.hp = maxHp(plain) + 4
+      clampHp(plain, maxHp(plain) + 4, 'cap')
+      expect(plain.hp).toBe(maxHp(plain))
+    })
+    it('a wounded hero keeps its hit points when Life armour comes off, goes on or is dropped', () => {
+      const c = dressed('iron_breastplate@3#life1')
+      c.hp = 20
+      expect(unequipToBackpack(c, 'armor', 'cap')).toBe(true)
+      expect(c.hp).toBe(20)
+      equipFromBackpack(c, c.backpack.findIndex((i) => i?.id === 'iron_breastplate@3#life1'), [], undefined, 'cap')
+      expect(c.hp).toBe(20)
+      dropEquipped(c, 'armor', [], 'cap')
+      expect(c.hp).toBe(20)
+    })
+    it('a full hero loses the excess when Life armour comes off', () => {
+      const c = dressed('iron_breastplate@3#life1')
+      c.hp = maxHp(c)
+      unequipToBackpack(c, 'armor', 'cap')
+      expect(c.hp).toBe(maxHp(c))
+    })
+  })
+
+  it('clamps on dropping and on replacing Life armour with plain', () => {
+    const dropped = dressed('iron_breastplate@3#life1')
+    dropped.hp = maxHp(dropped)
+    dropEquipped(dropped, 'armor', [])
+    expect(dropped.hp).toBe(maxHp(dropped))
+    const swapped = dressed('iron_breastplate@3#life1')
+    swapped.hp = maxHp(swapped)
+    swapped.backpack[0] = itemById('iron_breastplate@3')!
+    equipFromBackpack(swapped, 0, [])
+    expect(swapped.hp).toBe(maxHp(swapped))
   })
 })

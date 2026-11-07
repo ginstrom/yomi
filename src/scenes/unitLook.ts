@@ -35,9 +35,19 @@ export const GEAR_SPRITES: Partial<Record<ItemIcon, string>> = {
   wand: 'gear_wand',
   wand_storm: 'gear_wand_storm',
   shield: 'gear_shield',
+  rapier: 'gear_rapier',
+  mace: 'gear_mace',
+  spear: 'gear_spear',
+  war_hammer: 'gear_war_hammer',
+  halberd: 'gear_halberd',
+  longbow: 'gear_longbow',
+  crossbow: 'gear_crossbow',
+  staff: 'gear_staff',
+  buckler: 'gear_buckler',
+  tower_shield: 'gear_tower_shield',
 }
 
-/** The gear sprites a strike swings: blades and axes, not a bow, a wand or a shield. */
+/** The gear sprites a strike swings: blades, axes, hafts and the staff, not a bow, a crossbow, a wand or a shield. */
 export const SWUNG_GEAR: ReadonlySet<string> = new Set([
   'gear_sword',
   'gear_sword_ember',
@@ -45,6 +55,12 @@ export const SWUNG_GEAR: ReadonlySet<string> = new Set([
   'gear_greatsword',
   'gear_dagger',
   'gear_axe',
+  'gear_rapier',
+  'gear_mace',
+  'gear_spear',
+  'gear_war_hammer',
+  'gear_halberd',
+  'gear_staff',
 ])
 
 /** The point a held weapon is gripped at, and turns about when it swings: the warrior's fist. */
@@ -85,7 +101,16 @@ export function gearLayers(equipment: Equipment): string[] {
  * The sprite laid over a hero's body for an item it wears, by the item's icon
  * (art/gear/); an item whose icon has none is worn unseen.
  */
-export const WORN_SPRITES: Partial<Record<ItemIcon, string>> = { armor: 'gear_breastplate', circlet: 'gear_circlet', cloak: 'gear_cloak' }
+export const WORN_SPRITES: Partial<Record<ItemIcon, string>> = {
+  armor: 'gear_breastplate',
+  robe: 'gear_robe',
+  leather: 'gear_leather',
+  plate: 'gear_plate',
+  circlet: 'gear_circlet',
+  cap: 'gear_cap',
+  helm: 'gear_helm',
+  cloak: 'gear_cloak',
+}
 
 /** The sprite drawn under a hero's body for an item it wears: the cloak's cape, behind it whichever way it faces. */
 export const WORN_BACK_SPRITES: Partial<Record<ItemIcon, string>> = { cloak: 'gear_cloak_back' }

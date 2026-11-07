@@ -1,0 +1,29 @@
+# A leather jerkin, dark and stitched, with a strap from the shoulder and a skirt of strips.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md. It stops short of the
+# fist (rows 17 to 21, columns 20 to 27) and the off hand (rows 17 to 19, columns 7 to 10).
+canvas = "unit"
+over = "warrior"
+
+[frames.idle_0.runs]
+11 = [[8, "kk"], [22, "kk"]]
+12 = [[7, "kNRrNRrrrrrOrNrork"]]
+13 = [[7, "kNRrNRrorrOrrNrrrk"]]
+14 = [[7, "kkkkNRorrOrrNkkkkk"]]
+15 = [[11, "NRoryrrrN"]]
+16 = [[11, "NRoOrrrrN"]]
+17 = [[11, "NONNNNNON"]]
+18 = [[11, "NRrkorkrN"]]
+19 = [[11, "NRrkorkrN"]]
+20 = [[12, "RrkorkrN"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it wears with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+like = "warrior"      # breathes with the body
+
+[anim.walk]
+rest = true           # holds idle_0 while the body walks

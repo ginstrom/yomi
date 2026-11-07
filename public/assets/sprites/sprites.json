@@ -535,6 +535,140 @@
       32
     ]
   },
+  "bandit_crossbowman": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_1",
+            "ms": 140
+          },
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_2",
+            "ms": 140
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      5,
+      3,
+      25,
+      29
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "bandit_crossbowman.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          5,
+          3,
+          25,
+          29
+        ],
+        "file": "bandit_crossbowman__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          5,
+          4,
+          25,
+          28
+        ],
+        "file": "bandit_crossbowman__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          5,
+          3,
+          25,
+          29
+        ],
+        "file": "bandit_crossbowman__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          5,
+          3,
+          25,
+          29
+        ],
+        "file": "bandit_crossbowman__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          5,
+          3,
+          25,
+          29
+        ],
+        "file": "bandit_crossbowman__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          16.5,
+          16.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
   "bandit_cutthroat": {
     "anchor": [
       16,
@@ -1074,9 +1208,9 @@
     "anims": {},
     "bounds": [
       0,
-      5,
+      2,
       48,
-      43
+      46
     ],
     "canvas": "building",
     "display_scale": 3,
@@ -1108,6 +1242,15 @@
           43
         ],
         "file": "camp_trading_post__level_3.png"
+      },
+      "level_4": {
+        "bounds": [
+          0,
+          2,
+          48,
+          46
+        ],
+        "file": "camp_trading_post__level_4.png"
       }
     },
     "size": [
@@ -1609,6 +1752,134 @@
       32
     ]
   },
+  "gear_buckler": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      5,
+      15,
+      7,
+      8
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_buckler.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          5,
+          15,
+          7,
+          7
+        ],
+        "file": "gear_buckler__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          5,
+          16,
+          7,
+          7
+        ],
+        "file": "gear_buckler__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_cap": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      12,
+      3,
+      9,
+      5
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_cap.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          12,
+          3,
+          9,
+          4
+        ],
+        "file": "gear_cap__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          12,
+          4,
+          9,
+          4
+        ],
+        "file": "gear_cap__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
   "gear_circlet": {
     "anchor": [
       16,
@@ -1801,6 +2072,70 @@
       32
     ]
   },
+  "gear_crossbow": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      19,
+      12,
+      13,
+      12
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_crossbow.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          19,
+          12,
+          13,
+          11
+        ],
+        "file": "gear_crossbow__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          19,
+          13,
+          13,
+          11
+        ],
+        "file": "gear_crossbow__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
   "gear_dagger": {
     "anchor": [
       16,
@@ -1921,6 +2256,518 @@
           24
         ],
         "file": "gear_greatsword__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_halberd": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      22,
+      0,
+      9,
+      32
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_halberd.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          22,
+          0,
+          9,
+          31
+        ],
+        "file": "gear_halberd__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          22,
+          1,
+          9,
+          31
+        ],
+        "file": "gear_halberd__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_helm": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      12,
+      2,
+      9,
+      9
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_helm.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          12,
+          2,
+          9,
+          8
+        ],
+        "file": "gear_helm__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          12,
+          3,
+          9,
+          8
+        ],
+        "file": "gear_helm__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_leather": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      7,
+      11,
+      18,
+      11
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_leather.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          7,
+          11,
+          18,
+          10
+        ],
+        "file": "gear_leather__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          7,
+          12,
+          18,
+          10
+        ],
+        "file": "gear_leather__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_longbow": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      22,
+      0,
+      8,
+      32
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_longbow.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          22,
+          0,
+          8,
+          31
+        ],
+        "file": "gear_longbow__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          22,
+          1,
+          8,
+          31
+        ],
+        "file": "gear_longbow__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_mace": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      21,
+      6,
+      9,
+      18
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_mace.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          21,
+          6,
+          9,
+          17
+        ],
+        "file": "gear_mace__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          21,
+          7,
+          9,
+          17
+        ],
+        "file": "gear_mace__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_plate": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      6,
+      11,
+      18,
+      12
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_plate.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          6,
+          11,
+          18,
+          11
+        ],
+        "file": "gear_plate__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          6,
+          12,
+          18,
+          11
+        ],
+        "file": "gear_plate__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_rapier": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      22,
+      0,
+      7,
+      24
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_rapier.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          22,
+          0,
+          7,
+          23
+        ],
+        "file": "gear_rapier__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          22,
+          1,
+          7,
+          23
+        ],
+        "file": "gear_rapier__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_robe": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      8,
+      12,
+      16,
+      11
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_robe.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          8,
+          12,
+          16,
+          10
+        ],
+        "file": "gear_robe__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          8,
+          13,
+          16,
+          10
+        ],
+        "file": "gear_robe__idle_1.png"
       }
     },
     "over": "warrior",
@@ -2057,6 +2904,134 @@
       32
     ]
   },
+  "gear_spear": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      23,
+      0,
+      5,
+      32
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_spear.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          23,
+          0,
+          5,
+          31
+        ],
+        "file": "gear_spear__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          23,
+          1,
+          5,
+          31
+        ],
+        "file": "gear_spear__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_staff": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      22,
+      0,
+      8,
+      32
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_staff.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          22,
+          0,
+          8,
+          31
+        ],
+        "file": "gear_staff__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          22,
+          1,
+          8,
+          31
+        ],
+        "file": "gear_staff__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
   "gear_sword": {
     "anchor": [
       16,
@@ -2185,6 +3160,70 @@
       32
     ]
   },
+  "gear_tower_shield": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      2,
+      9,
+      10,
+      21
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_tower_shield.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          2,
+          9,
+          10,
+          20
+        ],
+        "file": "gear_tower_shield__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          2,
+          10,
+          10,
+          20
+        ],
+        "file": "gear_tower_shield__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
   "gear_wand": {
     "anchor": [
       16,
@@ -2305,6 +3344,70 @@
           15
         ],
         "file": "gear_wand_storm__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_war_hammer": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      20,
+      2,
+      11,
+      22
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_war_hammer.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          20,
+          2,
+          11,
+          21
+        ],
+        "file": "gear_war_hammer__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          20,
+          3,
+          11,
+          21
+        ],
+        "file": "gear_war_hammer__idle_1.png"
       }
     },
     "over": "warrior",
@@ -2942,6 +4045,37 @@
       20
     ]
   },
+  "icon_boots": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      2,
+      20,
+      17
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_boots.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          2,
+          20,
+          17
+        ],
+        "file": "icon_boots.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
   "icon_bow": {
     "anchor": [
       10,
@@ -2997,6 +4131,68 @@
           20
         ],
         "file": "icon_bow_hawk.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_buckler": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      3,
+      14,
+      14
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_buckler.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          3,
+          14,
+          14
+        ],
+        "file": "icon_buckler.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_cap": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      1,
+      4,
+      18,
+      11
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_cap.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          1,
+          4,
+          18,
+          11
+        ],
+        "file": "icon_cap.png"
       }
     },
     "size": [
@@ -3066,6 +4262,37 @@
       20
     ]
   },
+  "icon_crossbow": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      1,
+      20,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_crossbow.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          1,
+          20,
+          18
+        ],
+        "file": "icon_crossbow.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
   "icon_dagger": {
     "anchor": [
       10,
@@ -3097,6 +4324,68 @@
       20
     ]
   },
+  "icon_gauntlets": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      1,
+      19,
+      19
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_gauntlets.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          1,
+          19,
+          19
+        ],
+        "file": "icon_gauntlets.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_gloves": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      1,
+      19,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_gloves.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          1,
+          19,
+          18
+        ],
+        "file": "icon_gloves.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
   "icon_greatsword": {
     "anchor": [
       10,
@@ -3121,6 +4410,254 @@
           19
         ],
         "file": "icon_greatsword.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_greaves": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      2,
+      1,
+      16,
+      16
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_greaves.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          2,
+          1,
+          16,
+          16
+        ],
+        "file": "icon_greaves.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_halberd": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      0,
+      20,
+      19
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_halberd.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          20,
+          19
+        ],
+        "file": "icon_halberd.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_helm": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      14
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_helm.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          14
+        ],
+        "file": "icon_helm.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_leather": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      1,
+      1,
+      18,
+      15
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_leather.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          1,
+          1,
+          18,
+          15
+        ],
+        "file": "icon_leather.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_longbow": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      7,
+      0,
+      8,
+      20
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_longbow.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          7,
+          0,
+          8,
+          20
+        ],
+        "file": "icon_longbow.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_mace": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      2,
+      0,
+      17,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_mace.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          2,
+          0,
+          17,
+          18
+        ],
+        "file": "icon_mace.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_plate": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      0,
+      20,
+      19
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_plate.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          20,
+          19
+        ],
+        "file": "icon_plate.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rapier": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      1,
+      0,
+      19,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rapier.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          1,
+          0,
+          19,
+          18
+        ],
+        "file": "icon_rapier.png"
       }
     },
     "size": [
@@ -3190,6 +4727,347 @@
       20
     ]
   },
+  "icon_robe": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      0,
+      20,
+      19
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_robe.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          20,
+          19
+        ],
+        "file": "icon_robe.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_acid": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_acid.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_acid.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_dawn": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_dawn.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_dawn.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_ember": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_ember.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_ember.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_life": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_life.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_life.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_mind": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_mind.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_mind.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_rime": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_rime.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_rime.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_stone": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_stone.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_stone.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_storm": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_storm.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_storm.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_venom": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_venom.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_venom.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_rune_wind": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      3,
+      1,
+      14,
+      18
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_rune_wind.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          3,
+          1,
+          14,
+          18
+        ],
+        "file": "icon_rune_wind.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
   "icon_shield": {
     "anchor": [
       10,
@@ -3245,6 +5123,130 @@
           13
         ],
         "file": "icon_shortsword.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_socket_empty": {
+    "anchor": [
+      3,
+      3
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      0,
+      6,
+      6
+    ],
+    "canvas": "pip",
+    "display_scale": 2,
+    "file": "icon_socket_empty.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          6,
+          6
+        ],
+        "file": "icon_socket_empty.png"
+      }
+    },
+    "size": [
+      6,
+      6
+    ]
+  },
+  "icon_socket_filled": {
+    "anchor": [
+      3,
+      3
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      0,
+      6,
+      6
+    ],
+    "canvas": "pip",
+    "display_scale": 2,
+    "file": "icon_socket_filled.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          6,
+          6
+        ],
+        "file": "icon_socket_filled.png"
+      }
+    },
+    "size": [
+      6,
+      6
+    ]
+  },
+  "icon_spear": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      0,
+      20,
+      19
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_spear.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          20,
+          19
+        ],
+        "file": "icon_spear.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_staff": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      0,
+      20,
+      20
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_staff.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          20,
+          20
+        ],
+        "file": "icon_staff.png"
       }
     },
     "size": [
@@ -3314,6 +5316,37 @@
       20
     ]
   },
+  "icon_tower_shield": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      4,
+      0,
+      12,
+      20
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_tower_shield.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          4,
+          0,
+          12,
+          20
+        ],
+        "file": "icon_tower_shield.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
   "icon_wand": {
     "anchor": [
       10,
@@ -3369,6 +5402,37 @@
           16
         ],
         "file": "icon_wand_storm.png"
+      }
+    },
+    "size": [
+      20,
+      20
+    ]
+  },
+  "icon_war_hammer": {
+    "anchor": [
+      10,
+      10
+    ],
+    "anims": {},
+    "bounds": [
+      2,
+      2,
+      18,
+      16
+    ],
+    "canvas": "icon",
+    "display_scale": 2,
+    "file": "icon_war_hammer.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          2,
+          2,
+          18,
+          16
+        ],
+        "file": "icon_war_hammer.png"
       }
     },
     "size": [

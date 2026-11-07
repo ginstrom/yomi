@@ -1,6 +1,7 @@
 import type { AbilityId } from '../combat/abilities.ts'
+import type { Element } from '../combat/combat.ts'
 import { SPELLS, type SpellId } from '../combat/spells.ts'
-import type { BattleEvent } from '../engine/battleEngine.ts'
+import type { AttackEvent, BattleEvent } from '../engine/battleEngine.ts'
 import type { ItemIcon } from '../inventory/inventory.ts'
 
 /**
@@ -21,12 +22,12 @@ export const BURST_ANIM = 'burst'
 export const EFFECT_FRAME = 'main'
 export const TIP_POINT = 'tip'
 
-/** A blow is swung; a shot flies, as an arrow from a bow or a bolt from a wand. */
+/** A blow (a melee weapon's, reach included) is swung; a shot flies, as an arrow from a bow or a bolt from a wand. */
 export type AttackLook = 'swing' | 'arrow' | 'bolt'
 
 /** What a hero holds in its weapon hand decides the look of a shot; a foe holds none, and only strikes. */
 export function attackLook(event: Extract<BattleEvent, { type: 'attack' }>, heldIcon?: ItemIcon): AttackLook {
-  if (event.distance <= 1) return 'swing'
+  if (event.melee) return 'swing'
   return heldIcon?.startsWith('wand') ? 'bolt' : 'arrow'
 }
 
@@ -107,7 +108,7 @@ export function flightMs(hexes: number): number {
  * What follows it in the log (a fall, a battle's end) waits for it (`holdMs`).
  */
 export function impactMs(event: BattleEvent): number {
-  if (event.type === 'attack') return event.distance <= 1 ? SWING_IMPACT_MS : RELEASE_MS + flightMs(event.distance)
+  if (event.type === 'attack') return event.melee ? SWING_IMPACT_MS : RELEASE_MS + flightMs(event.distance)
   if (event.type === 'cast') return RELEASE_MS + (event.distance === 0 ? 0 : flightMs(event.distance))
   if (event.type === 'ability') {
     if (event.shape !== 'burst') return RELEASE_MS + AREA_SWEEP_MS
@@ -146,4 +147,31 @@ export function areaOutline(outcome: { hit: boolean; critical?: boolean; image?:
   if (outcome.image) return OUTLINE_IMAGE
   if (outcome.hit) return outcome.critical ? OUTLINE_CRITICAL : OUTLINE_HURT
   return outcome.half && outcome.damage > 0 ? OUTLINE_HURT : null
+}
+
+/** The floating text of an attack's on-hit damage: "+3 fire", several joined by a space ("+1 fire +2 blight"); null when none came through. */
+export function bonusText(event: AttackEvent): string | null {
+  const parts = event.bonus.filter((b) => b.damage > 0).map((b) => `+${b.damage}${b.element ? ` ${b.element}` : ''}`)
+  return parts.length > 0 ? parts.join(' ') : null
+}
+
+/** The element of the first on-hit damage that came through, which colours the floating text; undefined when none had one. */
+export function bonusElement(event: AttackEvent): Element | undefined {
+  return event.bonus.find((b) => b.damage > 0)?.element
+}
+
+/** Whether an event may have laid or ended a status, so that the nameplates' status letters need drawing again. */
+export function changesStatusMarks(event: BattleEvent): boolean {
+  switch (event.type) {
+    case 'attack':
+      return event.status !== undefined || (event.onHitStatuses?.length ?? 0) > 0
+    case 'cast':
+    case 'ability':
+    case 'status_end':
+    case 'status_tick':
+    case 'unit_down':
+      return true
+    default:
+      return false
+  }
 }

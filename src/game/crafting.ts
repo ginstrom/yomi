@@ -1,3 +1,4 @@
+import { familyById } from '../inventory/catalog.ts'
 import { GRADES, type Grade } from '../inventory/grades.ts'
 import { baseItem, craftedItem, type Item } from '../inventory/inventory.ts'
 import { MODIFIERS, modifiersFor, type Modifier, type ModifierId } from '../inventory/modifiers.ts'
@@ -56,12 +57,12 @@ export function craftTier(world: WorldState): CraftTier {
 const tierLevel = (tier: CraftTier): number => (tier === 'field' ? 0 : tier)
 export const highestGrade = (tier: CraftTier): Grade => Math.max(1, tierLevel(tier)) as Grade
 
-/** What putting a modifier on `item` at `grade` costs: gold, and iron for metal or timber for wood at grade 1, copper at 2, crystal at 3. */
+/** What putting a modifier on `item` at `grade` costs: gold, and timber for a wood family or iron for any other at grade 1, copper at 2, crystal at 3. */
 export function craftCost(item: Item, grade: Grade): Stock {
   if (grade === 3) return { gold: 20, crystal: 5 }
   if (grade === 2) return { gold: 10, copper: 5 }
-  const wood = ['yew_bow', 'oak_shield'].includes(baseItem(item)?.id ?? '')
-  return wood ? { gold: 5, timber: 5 } : { gold: 5, iron: 5 }
+  const family = baseItem(item)?.family
+  return family && familyById(family).kind === 'wood' ? { gold: 5, timber: 5 } : { gold: 5, iron: 5 }
 }
 
 /** One modifier at one grade that can be put on an item here: what it costs, what the item becomes, and why it cannot be done now, or null. */
@@ -77,7 +78,7 @@ export interface CraftOption {
 export function itemRefusal(item: Item, tier: CraftTier): string | null {
   const base = baseItem(item)
   if (!base) return 'An enchanted item cannot be worked.'
-  const fitting = modifiersFor(base.id)
+  const fitting = modifiersFor(base.family!)
   if (fitting.length === 0) return 'No modifier fits it.'
   if (!fitting.some((mod) => mod.unlock <= tierLevel(tier))) {
     return `Needs a level ${Math.min(...fitting.map((mod) => mod.unlock))} workshop.`
@@ -89,7 +90,7 @@ export function itemRefusal(item: Item, tier: CraftTier): string | null {
 export function craftables(game: GameState): Array<{ place: ItemPlace; item: Item; refusal: string | null }> {
   const tier = craftTier(game.world)
   return allPlaces(game)
-    .filter(({ item }) => baseItem(item) && modifiersFor(baseItem(item)!.id).length > 0)
+    .filter(({ item }) => baseItem(item) && modifiersFor(baseItem(item)!.family!).length > 0)
     .map(({ place, item }) => ({ place, item, refusal: itemRefusal(item, tier) }))
 }
 
@@ -105,13 +106,13 @@ export function options(game: GameState, place: ItemPlace): CraftOption[] {
   if (!item || !base) return []
   const tier = craftTier(game.world)
   const where = placeRefusal(game.world, tier)
-  return modifiersFor(base.id)
+  return modifiersFor(base.family!)
     .filter((mod) => mod.unlock <= tierLevel(tier))
     .flatMap((modifier) =>
       GRADES.filter((grade) => grade <= highestGrade(tier)).map((grade) => {
         const cost = craftCost(item, grade)
         const afford = canAfford(game.world.stock, cost) ? null : `It costs ${describeCost(cost)}, more than the stock holds.`
-        return { modifier, grade, cost, result: craftedItem(base, item.grade ?? 1, { id: modifier.id, grade }), refusal: where ?? afford }
+        return { modifier, grade, cost, result: craftedItem(base, item.grade ?? 1, { id: modifier.id, grade }, item.runes), refusal: where ?? afford }
       }),
     )
 }
@@ -133,7 +134,7 @@ export function craft(game: GameState, place: ItemPlace, modifier: ModifierId, g
   const option = options(game, place).find((o) => o.modifier.id === modifier && o.grade === grade)
   if (!option) {
     const mod = MODIFIERS[modifier]
-    if (!mod || !mod.fits.includes(baseItem(item)!.id)) return { refusal: `${mod?.name ?? 'That modifier'} does not fit it.` }
+    if (!mod || !mod.fits.includes(baseItem(item)!.family!)) return { refusal: `${mod?.name ?? 'That modifier'} does not fit it.` }
     if (mod.unlock > tierLevel(tier)) return { refusal: `${mod.name} needs a level ${mod.unlock} workshop.` }
     return { refusal: tier === 'field' ? 'The field makes grade 1 only.' : `A level ${tier} workshop makes up to grade ${highestGrade(tier)}.` }
   }

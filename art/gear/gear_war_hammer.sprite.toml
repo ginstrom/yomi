@@ -1,0 +1,38 @@
+# A war hammer: a blocky steel head, its face forward and a spike behind, on a long haft.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md.
+canvas = "unit"
+over = "warrior"
+
+[frames.idle_0.runs]
+2 = [[25, "k"]]
+3 = [[24, "kwk"]]
+4 = [[24, "kdkkkkk"]]
+5 = [[21, "kkkdDwwwlk"]]
+6 = [[20, "kdddDDwlllk"]]
+7 = [[21, "kkkdDwlldk"]]
+8 = [[24, "kDlddDk"]]
+9 = [[24, "knkkkkk"]]
+10 = [[24, "knk"]]
+11 = [[24, "knk"]]
+12 = [[24, "knk"]]
+13 = [[24, "knk"]]
+14 = [[24, "knk"]]
+15 = [[24, "knk"]]
+16 = [[24, "knk"]]
+17 = [[24, "knk"]]
+18 = [[24, "kNk"]]
+20 = [[25, "N"]]
+21 = [[24, "kdk"]]
+22 = [[25, "k"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it holds with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+like = "warrior"      # breathes with the body
+
+[anim.walk]
+rest = true           # holds idle_0 while the body walks

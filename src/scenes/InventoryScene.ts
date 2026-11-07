@@ -10,6 +10,7 @@ import {
   pickUp,
   unequipToBackpack,
   type Character,
+  type HpRule,
 } from '../character/character.ts'
 import {
   PERKS,
@@ -38,11 +39,14 @@ import {
 } from '../character/skills.ts'
 import { formatDamage, type CombatantStats } from '../combat/combat.ts'
 import { EQUIPMENT_SLOT_LABELS, describeItemStats, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
+import { socketLines } from '../inventory/runes.ts'
 import type { InventoryProbe } from '../testHook.ts'
 import type { Point } from './boardGeometry.ts'
 import { pressMoved, rectContains, type Rect } from './mapScroll.ts'
 import { applyMove, planDrag, validTargets, type DragSource, type DropTarget } from './gearDrag.ts'
-import { ITEM_ICON_KEYS, ITEM_ICON_SCALE } from './itemIcons.ts'
+import { WARDS_WIDE_ROW_CHARS, attackCostWarning, onHitLines, wardsLines } from './gearCompare.ts'
+import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
+import { createPips } from './socketPips.ts'
 import { soundVolume } from './audioSettings.ts'
 import { isSecondaryClick } from './clicks.ts'
 import { PartyColumn } from './PartyColumn.ts'
@@ -74,6 +78,11 @@ export interface PanelMember {
    * Null or absent makes the member's gear view-only.
    */
   gearApCost?: number | null
+  /**
+   * How hit points follow a maximum moved by gear (`clampHp`): 'cap' in battle, where the
+   * engine's `equip` only caps them, so the panel shows what the engine will hold; 'share' otherwise.
+   */
+  hpRule?: HpRule
   /**
    * The pile that drops go onto and pick-ups come off: in battle the one on the hex the
    * character stands on, on the world map the party's baggage.
@@ -112,6 +121,15 @@ const GROUND_ROWS = 2
 const SLOT_GAP = 8
 const SLOT_TITLE_Y = 367
 const SLOT_GRID_Y = 404
+/** The Inventory tab's gear hint: at this y under the stat lines, or `GEAR_HINT_GAP` under them when they run past it. */
+const GEAR_HINT_Y = 300
+const GEAR_HINT_GAP = 6
+/** The stat lines tighten their spacing to end by here, so that the hint under them still ends above the slots' titles. */
+const STATS_BOTTOM_MAX = GEAR_HINT_Y + 30
+/** Stat lines that still end past here take a smaller face. */
+const STATS_SHRINK_BOTTOM = GEAR_HINT_Y + 5
+/** Stat lines ending past here push the hint down, and it takes a smaller face to fit above the slots' titles. */
+const HINT_SHRINK_BOTTOM = GEAR_HINT_Y + 10
 const SCROLLBAR_W = 8
 const TAB_W = 118
 const TAB_H = 32
@@ -127,7 +145,16 @@ const PORTRAIT_SCALE = 4
 const ATTRIBUTES_X = 215
 const ATTRIBUTES_W = 250
 const ATTRIBUTE_ROW_H = 36
-const COMBAT_X = 490
+/** Clear of the attributes' descriptions, and wide enough for the longest stat line ("Pierces: N resistance") inside the panel. */
+const COMBAT_X = 470
+const COMBAT_W = PANEL_W - COMBAT_X - 20
+/** The badges (AC, HP, HIT) sit under the portrait and the attributes, leaving the stat column free to run down past them. */
+const BADGES_X = 255
+const BADGES_Y = 440
+const BADGE_H = 56
+/** The stat column tightens until it ends this far above the badges' top. */
+const BADGE_CLEARANCE = 6
+const STAT_BLOCK_BOTTOM_MAX = BADGES_Y - BADGE_H / 2 - BADGE_CLEARANCE
 const SHEET_Y = 140
 
 /** The skills tab: skills down the left, each with a button to raise it, and down the right the perks taken and the button to the perk tree. */
@@ -163,6 +190,8 @@ const GOLD = '#e8c766'
 const DIM = '#8a7a5a'
 const TEXT = '#d8c9a3'
 const FAINT = '#665a44'
+/** A cost the gear puts on the character, such as the spell skill armour takes. */
+const WARN = '#ffb74d'
 
 /**
  * A primary press on an item, which acts on release: as a click if it moved no further than
@@ -231,6 +260,7 @@ export class InventoryScene extends Phaser.Scene {
   private character!: Character
   private stats!: CombatantStats
   private gearApCost: number | null = null
+  private hpRule: HpRule = 'share'
   private ground: Item[] = []
   private groundTitle = 'Ground'
   /** The mana the member has left in battle; null where the most it has is shown instead. */
@@ -248,6 +278,11 @@ export class InventoryScene extends Phaser.Scene {
   private inventoryContent!: Phaser.GameObjects.Container
   /** The open member's figure on the Inventory tab, null until it is first drawn. */
   private doll: UnitFigure | null = null
+  /** The Character tab's stat column and its badges, for the probe to tell they fit. */
+  private statBlock: Phaser.GameObjects.Text | null = null
+  private badgeBounds: Rect | null = null
+  /** Where the Inventory tab's stat lines end, which the gear hint below keeps clear of. */
+  private statsBottom = 0
   private treeContent!: Phaser.GameObjects.Container
   private spellsContent!: Phaser.GameObjects.Container
   private spellTreeContent!: Phaser.GameObjects.Container
@@ -257,6 +292,8 @@ export class InventoryScene extends Phaser.Scene {
   private tooltip!: Phaser.GameObjects.Container
   private tooltipText!: Phaser.GameObjects.Text
   private tooltipBg!: Phaser.GameObjects.Rectangle
+  /** The lines the tooltip shows now; empty while it is hidden. */
+  private tooltipLines: string[] = []
   /** The item pressed and not yet let go, if any. */
   private press: ItemPress | null = null
 
@@ -265,7 +302,9 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   preload(): void {
-    for (const key of Object.values(ITEM_ICON_KEYS)) this.load.image(key, `assets/sprites/${key}.png`)
+    for (const key of [...Object.values(ITEM_ICON_KEYS), ...Object.values(RUNE_ICON_KEYS), ...Object.values(SOCKET_PIP_KEYS)]) {
+      this.load.image(key, `assets/sprites/${key}.png`)
+    }
     PartyColumn.preload(this)
   }
 
@@ -357,6 +396,11 @@ export class InventoryScene extends Phaser.Scene {
       x: this.panel.x + x * this.panel.scale,
       y: this.panel.y + y * this.panel.scale,
     })
+    const onScreenRect = ({ x, y, width, height }: Rect): Rect => ({
+      ...onScreen({ x, y }),
+      width: width * this.panel.scale,
+      height: height * this.panel.scale,
+    })
     const { equipment, backpack } = this.character
     const startX = gridStartX(DOLL_X, BACKPACK_COLS)
     return {
@@ -374,6 +418,10 @@ export class InventoryScene extends Phaser.Scene {
       attributes: attributesOf(this.character),
       armorClass: this.stats.ac,
       mana: this.shownMana(),
+      spellSkill: this.shownSpellSkill(),
+      attackWarning: attackCostWarning(this.stats.attackApCost, this.stats.actionPoints),
+      statLines: this.statLines(),
+      tooltip: this.tooltipLines,
       takenPerks: this.takenPerks().map((id) => ({ perk: id, ranks: perkRanks(this.character, id) })),
       perkTreeButton: onScreen(TREE_BUTTON),
       back: onScreen(BACK_BUTTON),
@@ -407,6 +455,15 @@ export class InventoryScene extends Phaser.Scene {
         .map((item, i) => ({ ...onScreen(slotPosition(this.groundStartX(), i, GROUND_COLS)), item: item.id })),
       grids: { backpack: onScreen(rectCentre(this.backpackBounds())), ground: onScreen(rectCentre(this.groundBounds())) },
       doll: this.doll?.lookNames() ?? [],
+      characterSheet: {
+        panel: onScreenRect({ x: 0, y: 0, width: PANEL_W, height: PANEL_H }),
+        stats: onScreenRect(
+          this.statBlock
+            ? { x: this.statBlock.x, y: this.statBlock.y, width: this.statBlock.width, height: this.statBlock.height }
+            : { x: 0, y: 0, width: 0, height: 0 },
+        ),
+        badges: onScreenRect(this.badgeBounds ?? { x: 0, y: 0, width: 0, height: 0 }),
+      },
     }
   }
 
@@ -416,6 +473,7 @@ export class InventoryScene extends Phaser.Scene {
     this.index = index
     this.character = member.character
     this.gearApCost = member.gearApCost ?? null
+    this.hpRule = member.hpRule ?? 'share'
     this.ground = member.ground ?? []
     this.mana = member.mana ?? null
     this.groundScroll = new SlotScroll(GROUND_COLS, GROUND_ROWS)
@@ -550,39 +608,50 @@ export class InventoryScene extends Phaser.Scene {
 
     // Top-aligned with the attributes, so the block ends clear of the badges below.
     const lines = [...this.statLines(), `Critical:      ${this.stats.critChance}%`]
-    this.characterContent.add([
-      this.heading('In battle', COMBAT_X, SHEET_Y),
-      this.add.text(COMBAT_X, SHEET_Y + 26, lines.join('\n'), {
-        fontFamily: FONT,
-        fontSize: '14px',
-        color: TEXT,
-        lineSpacing: 12,
-      }),
-    ])
+    this.statBlock = this.add.text(COMBAT_X, SHEET_Y + 26, lines.join('\n'), {
+      fontFamily: FONT,
+      fontSize: '14px',
+      color: TEXT,
+      lineSpacing: 12,
+    })
+    // Wards, mana and piercing each add lines: the block tightens until it ends clear of the badges.
+    let spacing = 12
+    while (this.statBlock.y + this.statBlock.height > STAT_BLOCK_BOTTOM_MAX && spacing > 0) this.statBlock.setLineSpacing(--spacing)
+    this.characterContent.add([this.heading('In battle', COMBAT_X, SHEET_Y), this.statBlock])
+    const warning = attackCostWarning(this.stats.attackApCost, this.stats.actionPoints)
+    if (warning) {
+      this.characterContent.add(
+        this.add.text(COMBAT_X, this.statBlock.y + this.statBlock.height + 8, warning, {
+          fontFamily: FONT,
+          fontSize: '13px',
+          color: WARN,
+          wordWrap: { width: COMBAT_W },
+        }),
+      )
+    }
 
-    this.buildCharacterBadges(440)
+    this.buildCharacterBadges(BADGES_X, BADGES_Y)
   }
 
   private heading(label: string, x: number, y: number): Phaser.GameObjects.Text {
     return this.add.text(x, y, label, { fontFamily: FONT, fontSize: '14px', color: DIM })
   }
 
-  private buildCharacterBadges(y: number): void {
+  private buildCharacterBadges(centerX: number, y: number): void {
     const badges: Array<{ label: string; value: string }> = [
       { label: 'AC', value: `${this.stats.ac}` },
       { label: 'HP', value: `${this.character.hp}/${this.stats.maxHp}` },
       { label: 'HIT', value: `${this.stats.toHit}%` },
     ]
     const badgeW = 90
-    const badgeH = 56
     const gap = 14
-    const centerX = PANEL_W / 2
     const totalW = badges.length * badgeW + (badges.length - 1) * gap
     const startX = centerX - totalW / 2 + badgeW / 2
+    this.badgeBounds = { x: centerX - totalW / 2, y: y - BADGE_H / 2, width: totalW, height: BADGE_H }
 
     badges.forEach((badge, i) => {
       const x = startX + i * (badgeW + gap)
-      const bg = this.add.rectangle(x, y, badgeW, badgeH, 0x1b1712, 0.9).setStrokeStyle(2, 0x6b5a3a)
+      const bg = this.add.rectangle(x, y, badgeW, BADGE_H, 0x1b1712, 0.9).setStrokeStyle(2, 0x6b5a3a)
       const label = this.add
         .text(x, y - 14, badge.label, { fontFamily: 'monospace', fontSize: '11px', color: '#8a7a5a' })
         .setOrigin(0.5)
@@ -819,6 +888,17 @@ export class InventoryScene extends Phaser.Scene {
     const max = this.stats.magic?.maxMana ?? 0
     const mana = max > 0 ? `Mana ${this.shownMana()} / ${max}` : 'No mana: knows no spell'
     content.add(this.add.text(SPELLS_X, 88, mana, { fontFamily: FONT, fontSize: '14px', color: max > 0 ? GOLD : DIM }))
+    // The chance spells strike with, gear included, so that what armour costs a caster shows here and not only on the item.
+    const skill = this.shownSpellSkill()
+    if (skill !== null) {
+      const gear = skill - skillLevel(this.character, 'magic')
+      const line = `Spell skill ${skill}%${gear === 0 ? '' : ` (gear ${gear > 0 ? '+' : ''}${gear})`}`
+      content.add(
+        this.add
+          .text(PANEL_W - SPELLS_X, 88, line, { fontFamily: FONT, fontSize: '14px', color: gear < 0 ? WARN : GOLD })
+          .setOrigin(1, 0),
+      )
+    }
 
     const known = knownSpells(this.character)
     known.forEach((spell, i) => {
@@ -957,12 +1037,15 @@ export class InventoryScene extends Phaser.Scene {
 
     if (item) {
       const icon = this.add.image(x, y, ITEM_ICON_KEYS[item.icon]).setScale(ITEM_ICON_SCALE)
+      const tint = iconTint(item)
+      if (tint !== undefined) icon.setTint(tint)
       if (ghost) icon.setAlpha(0.35)
       this.inventoryContent.add(icon)
+      if (!ghost) this.inventoryContent.add(createPips(this, item, x, y, ITEM_ICON_SCALE))
       this.makeItemInteractive(bg, icon, item, 0x6b5a3a, {
         source: { kind: 'equipment', slot: heldIn },
-        click: () => unequipToBackpack(this.character, heldIn),
-        secondary: () => dropEquipped(this.character, heldIn, this.ground),
+        click: () => unequipToBackpack(this.character, heldIn, this.hpRule),
+        secondary: () => dropEquipped(this.character, heldIn, this.ground, this.hpRule),
       })
     } else {
       const label = this.add
@@ -984,7 +1067,7 @@ export class InventoryScene extends Phaser.Scene {
       .text(STATS_X, 94, this.classLine(), { fontFamily: 'monospace', fontSize: '13px', color: '#8a7a5a' })
       .setOrigin(0, 0.5)
 
-    const lines = this.statLines()
+    const lines = this.statLines(WARDS_WIDE_ROW_CHARS, false)
     // A caster's mana and a melee weapon's piercing each make a line more, and the last has to end clear of the hint below.
     const statsBody = this.add.text(STATS_X, 130, lines.join('\n'), {
       fontFamily: 'monospace',
@@ -992,6 +1075,12 @@ export class InventoryScene extends Phaser.Scene {
       color: '#d8c9a3',
       lineSpacing: lines.length > 7 ? 4 : lines.length > 6 ? 8 : 12,
     })
+    // Wards add rows too: tighten the lines to end by STATS_BOTTOM_MAX, and the hint below follows the block.
+    let spacing = lines.length > 7 ? 4 : lines.length > 6 ? 8 : 12
+    while (statsBody.y + statsBody.height > STATS_BOTTOM_MAX && spacing > 0) statsBody.setLineSpacing(--spacing)
+    // With every ward, mana and piercing showing even that is not enough: a smaller face, and the hint below shrinks with it.
+    if (statsBody.y + statsBody.height > STATS_SHRINK_BOTTOM) statsBody.setFontSize(13)
+    this.statsBottom = statsBody.y + statsBody.height
 
     this.inventoryContent.add([nameText, classText, statsBody])
   }
@@ -1006,9 +1095,9 @@ export class InventoryScene extends Phaser.Scene {
           ? 'Click to equip, stow or pick up; right- or Ctrl+click to drop. Drag to move. Free until you next move or attack.'
           : `Click to equip, stow or pick up; right- or Ctrl+click to drop. Drag to move. Costs ${this.gearApCost} AP on closing, however many changes.`
     this.inventoryContent.add(
-      this.add.text(STATS_X, 300, hint, {
+      this.add.text(STATS_X, Math.max(GEAR_HINT_Y, this.statsBottom + GEAR_HINT_GAP), hint, {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: this.statsBottom > HINT_SHRINK_BOTTOM ? '11px' : '12px',
         color: '#8a7a5a',
         wordWrap: { width: PANEL_W - STATS_X - 20 },
       }),
@@ -1021,18 +1110,30 @@ export class InventoryScene extends Phaser.Scene {
     return `Level ${level} - ${xp} / ${xpToNextLevel(level)} XP`
   }
 
-  private statLines(): string[] {
+  /**
+   * The stat lines; `wardRowChars` is how wide a row of wards may be where they are shown. `onHit`
+   * adds what the main hand does on a hit (the Character tab's; the Inventory tab, its column
+   * shared with the ground below, has no room, and the weapon's tooltip tells it there).
+   */
+  private statLines(wardRowChars?: number, onHit = true): string[] {
     return [
       `Hit Points:    ${this.character.hp} / ${this.stats.maxHp}`,
       `Armor Class:   ${this.stats.ac}`,
       `Resistance:    ${this.stats.resistance ?? 0}`,
+      ...wardsLines(this.stats.wards, wardRowChars),
       `To Hit:        ${this.stats.toHit}%`,
       `Damage:        ${formatDamage(this.stats.damage)}`,
+      ...(onHit ? onHitLines(this.stats.onHit, wardRowChars) : []),
       `Attack Cost:   ${this.stats.attackApCost} AP`,
       ...(this.stats.armorPierce ? [`Pierces:       ${this.stats.armorPierce} resistance`] : []),
       `Action Points: ${this.stats.actionPoints}`,
       ...(this.stats.magic ? [`Mana:          ${this.manaLine()}`] : []),
     ]
+  }
+
+  /** The chance in percent spells strike with, before the foe's armour, gear included; null for a character that knows no spell. */
+  private shownSpellSkill(): number | null {
+    return this.stats.magic?.skill ?? null
   }
 
   /** The mana to show: what is left in battle, within what the gear now worn allows; else what the character carries. Null without magic. */
@@ -1053,7 +1154,7 @@ export class InventoryScene extends Phaser.Scene {
       const { x, y } = slotPosition(startX, i, BACKPACK_COLS)
       this.createItemSlot(x, y, item, {
         source: { kind: 'backpack', index: i },
-        click: () => equipFromBackpack(this.character, i, this.ground),
+        click: () => equipFromBackpack(this.character, i, this.ground, undefined, this.hpRule),
         secondary: () => dropFromBackpack(this.character, i, this.ground),
       })
     })
@@ -1126,7 +1227,10 @@ export class InventoryScene extends Phaser.Scene {
 
     if (item) {
       const icon = this.add.image(x, y, ITEM_ICON_KEYS[item.icon]).setScale(ITEM_ICON_SCALE)
+      const tint = iconTint(item)
+      if (tint !== undefined) icon.setTint(tint)
       this.inventoryContent.add(icon)
+      this.inventoryContent.add(createPips(this, item, x, y, ITEM_ICON_SCALE))
       this.makeItemInteractive(bg, icon, item, 0x4a3d28, actions)
     }
   }
@@ -1178,17 +1282,22 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   private showTooltip(item: Item, x: number, y: number): void {
-    this.tooltipText.setText([item.name, item.description, ...describeItemStats(item.stats)].join('\n'))
+    this.tooltipLines = [item.name, item.description, ...describeItemStats(item.stats, attributeLevel(this.character, 'strength')), ...socketLines(item)]
+    this.tooltipText.setText(this.tooltipLines.join('\n'))
     this.tooltipText.setPosition(-this.tooltipText.width / 2, -this.tooltipText.height - 6)
     this.tooltipBg.setSize(this.tooltipText.width + 16, this.tooltipText.height + 12)
     this.tooltipBg.setPosition(0, -this.tooltipText.height / 2 - 6)
     // Kept inside the panel: the slots at its edges are narrower than their tooltips.
     const reach = this.tooltipBg.width / 2 + 4
-    this.tooltip.setPosition(Phaser.Math.Clamp(x, reach, PANEL_W - reach), y)
+    // Above the slot, or below it where the slot is too near the panel's top for the lines to fit (a runed item has many).
+    const above = y - this.tooltipText.height - 12 >= 4
+    const belowY = y + 10 + SLOT_SIZE + 6 + this.tooltipText.height + 6
+    this.tooltip.setPosition(Phaser.Math.Clamp(x, reach, PANEL_W - reach), above ? y : belowY)
     this.tooltip.setVisible(true)
   }
 
   private hideTooltip(): void {
+    this.tooltipLines = []
     this.tooltip.setVisible(false)
   }
 
@@ -1253,7 +1362,7 @@ export class InventoryScene extends Phaser.Scene {
     }
     const to = this.dropTargetAt(pointer)
     const move = to && planDrag(this.character, this.ground, press.source, to)
-    if (move) this.changeGear(() => applyMove(this.character, this.ground, move))
+    if (move) this.changeGear(() => applyMove(this.character, this.ground, move, this.hpRule))
   }
 
   /** Forgets the press, putting back what a drag changed on screen. */

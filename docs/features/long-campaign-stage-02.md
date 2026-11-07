@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 2 (special attacks and elements)
 
 **Slug:** long-campaign-stage-02
-**Phase:** 6. Report — PR in preparation (pr-reviewer, then pr-creator); hand-walked play script still the user's
+**Phase:** 6. Report — PRs open: #1 (encampment-gear-and-resistance → main), #2 (armor-resistance → #1's branch); hand-walked play script still the user's
 
 ## Request (user's words)
 
@@ -88,3 +88,4 @@ Work only the user can do:
 - QA round 2 (sonnet) at a975aa9: pass; recharge wording right through each cycle; panel readable at 840×560 and full size. Not seen live: a warded critical log line (unit-tested).
 - Not done by any agent: the play script walked by hand by the user.
 - pr-reviewer (2026-11-07): PR A at 9c740ae ready; PR B at efe3888 ready after 8 fix commits (6ea3064..efe3888, engineer sonnet; delta CRISP check sonnet clean). Records in .git/pr-review/{encampment-gear-and-resistance,armor-resistance}.md.
+- PRs opened 2026-11-07, ready for review: https://github.com/ginstrom/yomi/pull/1 (head 9c740ae), https://github.com/ginstrom/yomi/pull/2 (head 3f9744e). Recorded on long-campaign-stage-03, as armor-resistance is under review.

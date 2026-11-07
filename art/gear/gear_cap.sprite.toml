@@ -1,0 +1,22 @@
+# A leather cap, close to the skull, with a stitched seam and a stiff brim.
+# Drawn over the hero's body (art/units/warrior.sprite.toml), so it is outlined by hand
+# and leaves open what the body shows through: see art/CLAUDE.md. It leaves the face open.
+canvas = "unit"
+over = "warrior"
+
+[frames.idle_0.runs]
+3 = [[13, "kkkkk"]]
+4 = [[12, "kTTWWTk"]]
+5 = [[12, "ktTTTTTk"]]
+6 = [[12, "kRrrrrrRk"]]
+
+# The hero's breath: the body's idle_1 sinks a pixel, and what it wears with it.
+[frames.idle_1]
+from = "idle_0"
+shift = [0, 1]
+
+[anim.idle]
+like = "warrior"      # breathes with the body
+
+[anim.walk]
+rest = true           # holds idle_0 while the body walks

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { GOBLIN_STATS, type CombatantStats } from '../combat/combat.ts'
 import { BattleEngine, attackArc, type UnitSetup } from '../engine/battleEngine.ts'
 import { hex, hexDistance, offsetToHex, type Hex } from '../grid/hex.ts'
-import { planAttack } from './attackPlan.ts'
+import { noStrikeHint, planAttack } from './attackPlan.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -35,14 +35,18 @@ describe('planAttack', () => {
     expect(hexDistance(plan.move!.to, hex(4, 1))).toBe(1)
   })
 
-  it('walks the shortest way beside a foe when too few AP are left to strike', () => {
-    const plan = planAttack(battle(hex(0, 1), hex(4, 1), { actionPoints: 4 }), 'warrior', 'goblin')
-    expect(plan).toEqual({ move: { type: 'move', unit: 'warrior', to: hex(3, 1) }, attack: false })
+  it('does not move when too few AP would be left to strike after the walk', () => {
+    expect(planAttack(battle(hex(0, 1), hex(4, 1), { actionPoints: 4 }), 'warrior', 'goblin')).toEqual({
+      move: null,
+      attack: false,
+    })
   })
 
-  it('closes in as far as it can when no hex beside the foe is in reach', () => {
-    const plan = planAttack(battle(hex(0, 1), hex(7, 1), { actionPoints: 2 }), 'warrior', 'goblin')
-    expect(plan).toEqual({ move: { type: 'move', unit: 'warrior', to: hex(2, 1) }, attack: false })
+  it('does not move when no hex in reach of the foe can be walked to this turn', () => {
+    expect(planAttack(battle(hex(0, 1), hex(7, 1), { actionPoints: 2 }), 'warrior', 'goblin')).toEqual({
+      move: null,
+      attack: false,
+    })
   })
 
   it('does nothing beside a foe it cannot afford to strike', () => {
@@ -78,5 +82,68 @@ describe('planAttack', () => {
     const engine = battle(hex(0, 1), hex(3, 1), { attackRange: 5 })
     engine.step({ type: 'attack', unit: 'warrior', target: 'goblin' })
     expect(planAttack(engine, 'warrior', 'goblin')).toEqual({ move: null, attack: false })
+  })
+
+  describe('a reach weapon whose blow costs every AP the unit has (a halberd: 7 AP, two hexes)', () => {
+    const HALBERD = { attackApCost: 7, attackRange: 2, reach: true as const, actionPoints: 7 }
+
+    it('strikes an adjacent foe from where it stands', () => {
+      expect(planAttack(battle(hex(1, 1), hex(2, 1), HALBERD), 'warrior', 'goblin')).toEqual({ move: null, attack: true })
+    })
+
+    it('strikes a foe two hexes off from where it stands', () => {
+      expect(planAttack(battle(hex(1, 1), hex(3, 1), HALBERD), 'warrior', 'goblin')).toEqual({ move: null, attack: true })
+    })
+
+    it('does not walk towards a foe three hexes off, as any step leaves too few AP for the blow', () => {
+      expect(planAttack(battle(hex(0, 1), hex(3, 1), HALBERD), 'warrior', 'goblin')).toEqual({ move: null, attack: false })
+    })
+  })
+
+  describe('a bow (4 AP, five hexes)', () => {
+    const BOW = { attackApCost: 4, attackRange: 5 }
+
+    it('shoots an adjacent foe from where it stands', () => {
+      expect(planAttack(battle(hex(1, 1), hex(2, 1), BOW), 'warrior', 'goblin')).toEqual({ move: null, attack: true })
+    })
+
+    it('walks only into range, not up to the foe, and shoots', () => {
+      const engine = new BattleEngine(
+        {
+          board: { cols: 14, rows: 3 },
+          units: [
+            { id: 'warrior', side: 'player', stats: { ...WARRIOR_STATS, ...BOW }, position: hex(0, 1) },
+            { id: 'goblin', side: 'enemy', stats: GOBLIN_STATS, position: hex(8, 1) },
+          ],
+        },
+        { seed: 1 },
+      )
+      const plan = planAttack(engine, 'warrior', 'goblin')
+      expect(plan.attack).toBe(true)
+      expect(hexDistance(plan.move!.to, hex(8, 1))).toBe(5)
+    })
+
+    it('does not walk into melee with a foe out of range this turn', () => {
+      const engine = new BattleEngine(
+        {
+          board: { cols: 14, rows: 3 },
+          units: [
+            { id: 'warrior', side: 'player', stats: { ...WARRIOR_STATS, ...BOW }, position: hex(0, 1) },
+            { id: 'goblin', side: 'enemy', stats: GOBLIN_STATS, position: hex(12, 1) },
+          ],
+        },
+        { seed: 1 },
+      )
+      expect(planAttack(engine, 'warrior', 'goblin')).toEqual({ move: null, attack: false })
+    })
+  })
+})
+
+describe('noStrikeHint', () => {
+  it('says the walk would leave too few AP for a foe out of reach', () => {
+    expect(noStrikeHint(2, 1)).toBe('Too few AP to reach and strike')
+  })
+  it('says there are too few AP to strike for a foe already in range', () => {
+    expect(noStrikeHint(1, 1)).toBe('Too few AP to strike')
   })
 })

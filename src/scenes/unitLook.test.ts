@@ -11,8 +11,8 @@ import {
   RING_PROTECTION,
   SAGE_CIRCLET,
   SHADOW_CLOAK,
-  STEEL_ARMOR,
-  STEEL_GREATSWORD,
+  IRON_BREASTPLATE,
+  IRON_GREATSWORD,
   WEAPONS,
   YEW_BOW,
 } from '../inventory/inventory.ts'
@@ -39,7 +39,7 @@ const anims = JSON.parse(readFileSync('public/assets/sprites/atlas.anims.json', 
 describe('gearLayers', () => {
   it('shows nothing over empty hands', () => {
     expect(gearLayers({})).toEqual([])
-    expect(gearLayers({ armor: STEEL_ARMOR })).toEqual([])
+    expect(gearLayers({ armor: IRON_BREASTPLATE })).toEqual([])
   })
 
   it('draws the weapon, then the shield over it', () => {
@@ -49,11 +49,11 @@ describe('gearLayers', () => {
   })
 
   it('leaves the off hand out beside a two-handed weapon', () => {
-    expect(gearLayers({ mainHand: STEEL_GREATSWORD, offHand: OAK_SHIELD })).toEqual(['gear_greatsword'])
+    expect(gearLayers({ mainHand: IRON_GREATSWORD, offHand: OAK_SHIELD })).toEqual(['gear_greatsword'])
   })
 
   it('has a sprite for everything that can be held', () => {
-    const held = [...WEAPONS, ...MAGIC_ITEMS, OAK_SHIELD].filter((i) => i.slot === 'mainHand' || i.slot === 'offHand')
+    const held = [...BASE_ITEMS, ...MAGIC_ITEMS].filter((i) => i.slot === 'mainHand' || i.slot === 'offHand')
     expect(held.length).toBeGreaterThan(WEAPONS.length)
     for (const item of held) expect(GEAR_SPRITES[item.icon], item.id).toBeDefined()
   })
@@ -72,13 +72,13 @@ describe('heroLook', () => {
   })
 
   it('lays the breastplate over the body', () => {
-    expect(heroLook({ armor: STEEL_ARMOR })).toEqual({ under: [], over: ['gear_breastplate'] })
+    expect(heroLook({ armor: IRON_BREASTPLATE })).toEqual({ under: [], over: ['gear_breastplate'] })
   })
 
   it('draws the cape under the body, then armour, cloak, head and the hands over it', () => {
     const look = heroLook({
       cloak: SHADOW_CLOAK,
-      armor: STEEL_ARMOR,
+      armor: IRON_BREASTPLATE,
       head: SAGE_CIRCLET,
       mainHand: IRON_SWORD,
       offHand: OAK_SHIELD,
@@ -94,11 +94,11 @@ describe('heroLook', () => {
   })
 
   it('still leaves the off hand out beside a two-handed weapon', () => {
-    expect(heroLook({ mainHand: STEEL_GREATSWORD, offHand: OAK_SHIELD }).over).toEqual(['gear_greatsword'])
+    expect(heroLook({ mainHand: IRON_GREATSWORD, offHand: OAK_SHIELD }).over).toEqual(['gear_greatsword'])
   })
 
   it('dresses a graded breastplate as the plain one', () => {
-    expect(heroLook({ armor: itemById('steel_armor@2') }).over).toEqual(['gear_breastplate'])
+    expect(heroLook({ armor: itemById('iron_breastplate@2') }).over).toEqual(['gear_breastplate'])
   })
 
   it('has a sprite for everything that can be worn on the body, the head or the back', () => {

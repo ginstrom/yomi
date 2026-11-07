@@ -51,7 +51,7 @@ import {
 } from '../src/game/guildHall.ts'
 import { campUntilHealed, canCamp, partyWounded } from '../src/game/camp.ts'
 import { INFIRMARY_COSTS, raiseInfirmary } from '../src/game/infirmary.ts'
-import { TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial } from '../src/game/tradingPost.ts'
+import { TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, wares } from '../src/game/tradingPost.ts'
 import { daysToFall, sites, type Material, type Stock } from '../src/game/territory.ts'
 import {
   ENCAMPMENT_ID,
@@ -63,9 +63,16 @@ import {
   type WorldState,
 } from '../src/game/worldMap.ts'
 import { hexDistance, hexEquals, type Hex } from '../src/grid/hex.ts'
+import type { FamilyId } from '../src/inventory/catalog.ts'
 import { GRADES, type Grade } from '../src/inventory/grades.ts'
 import { baseItem, craftedItem, itemById, type EquipmentSlot, type Item } from '../src/inventory/inventory.ts'
 import { MODIFIERS, type ModifierId } from '../src/inventory/modifiers.ts'
+import { RANKS, pouchCount, pouchKeys, runeFits, runeKey, slotClass, socketsOf, type RuneId, type RuneKey, type SlotClass } from '../src/inventory/runes.ts'
+import { clampHp, maxHp } from '../src/character/character.ts'
+import { replaceAt } from '../src/game/itemPlace.ts'
+import { takeRunes } from '../src/game/loot.ts'
+import { embed, extract, extractCost, extractRefusal, fuse, fuseCost, fuseRefusal, embedCost } from '../src/game/runecraft.ts'
+import { buyRune, buyRuneRefusal, runePrice, runeWares } from '../src/game/tradingPost.ts'
 
 export interface CliArgs {
   /** How many battles to fight, or with `campaign` how many campaigns. */
@@ -192,7 +199,13 @@ export type LoggedEvent = BattleEvent & { battleId: number }
 /** A new game's party, with the weapon the run asks for in every hand. */
 function startingParty(args: CliArgs): Party {
   const party = readyMadeParty()
-  if (args.playerWeapon) for (const member of party) member.equipment.mainHand = args.playerWeapon
+  if (args.playerWeapon) {
+    for (const member of party) {
+      const before = maxHp(member)
+      member.equipment.mainHand = args.playerWeapon
+      clampHp(member, before)
+    }
+  }
   return party
 }
 
@@ -280,9 +293,19 @@ export interface CampaignRecord {
   /** Gold spent on gear at the trading post, and taken there for the baggage and surplus materials. */
   goldOnGear: number
   goldFromSales: number
+  /** Tier-2 items bought. */
+  tierTwoBought: number
   /** Items crafted, in the field and at the workshop, and the days the field crafts took. */
   crafted: number
   fieldCraftDays: number
+  /** Runes taken as loot after wins, bought at the trading post, and made by fusing. */
+  runesFound: number
+  runesBought: number
+  runesFused: number
+  /** Runes sitting in the party's worn gear at the end. */
+  socketsFilled: number
+  /** Gold spent on runes: buying, fusing, embedding and extracting. */
+  goldOnRunes: number
   /** Each member's level when the campaign ended. */
   finalLevels: number[]
   /** The level of each hero who died, in the order they fell. */
@@ -340,6 +363,13 @@ export interface Trade {
   goldOnGear: number
   goldFromSales: number
   crafted: number
+  /** Tier-2 items bought. */
+  tierTwoBought: number
+  /** Runes bought, fused and embedded, and the gold spent on them, extractions included. */
+  runesBought: number
+  runesFused: number
+  runesEmbedded: number
+  goldOnRunes: number
 }
 
 /**
@@ -349,23 +379,23 @@ export interface Trade {
  * --party-level 5`) against the plain item; the field's modifiers come first
  * where the workshop's were no better.
  */
-export const PREFERRED_MODIFIERS: Readonly<Record<string, readonly ModifierId[]>> = {
-  iron_dagger: ['keen'],
-  iron_shortsword: ['keen', 'balanced'],
-  iron_sword: ['light', 'balanced', 'keen'],
-  iron_battle_axe: ['light', 'bearded'],
-  steel_greatsword: ['balanced'],
-  yew_bow: ['recurve', 'long'],
-  oak_shield: ['braced'],
-  steel_armor: ['reinforced'],
+export const PREFERRED_MODIFIERS: Readonly<Partial<Record<FamilyId, readonly ModifierId[]>>> = {
+  dagger: ['keen'],
+  shortsword: ['keen', 'balanced'],
+  longsword: ['light', 'balanced', 'keen'],
+  battle_axe: ['light', 'bearded'],
+  greatsword: ['balanced'],
+  bow: ['recurve', 'long'],
+  shield: ['braced'],
+  breastplate: ['reinforced'],
 }
 
 /** The slots whose gear the careful party buys better grades of and crafts: its weapon, shield and armour. */
 const GEAR_SLOTS: readonly EquipmentSlot[] = ['mainHand', 'offHand', 'armor']
 
 /** How a modifier at a grade ranks for an item: lower is better; an item without one ranks last. */
-function modifierRank(baseId: string, mod: { id: ModifierId; grade: Grade } | undefined): number {
-  const preferred = PREFERRED_MODIFIERS[baseId] ?? []
+function modifierRank(family: FamilyId | undefined, mod: { id: ModifierId; grade: Grade } | undefined): number {
+  const preferred = (family && PREFERRED_MODIFIERS[family]) || []
   const at = mod ? preferred.indexOf(mod.id) : -1
   return at < 0 ? Infinity : at * 10 - mod!.grade
 }
@@ -386,11 +416,11 @@ export function craftGear(game: GameState, limit = Infinity): { crafted: number;
       const item = hero.equipment[slot]
       const base = item && baseItem(item)
       if (!item || !base || crafted >= limit) continue
-      for (const id of PREFERRED_MODIFIERS[base.id] ?? []) {
+      for (const id of (base.family && PREFERRED_MODIFIERS[base.family]) || []) {
         const unlocked = MODIFIERS[id].unlock <= (tier === 'field' ? 0 : tier)
         if (!unlocked) continue
         for (const grade of [...GRADES].reverse()) {
-          if (grade > highestGrade(tier) || modifierRank(base.id, { id, grade }) >= modifierRank(base.id, item.mod)) continue
+          if (grade > highestGrade(tier) || modifierRank(base.family, { id, grade }) >= modifierRank(base.family, item.mod)) continue
           const result = craft(game, { from: 'worn', member, slot, itemId: item.id }, id, grade)
           if (result.refusal !== null) continue
           crafted++
@@ -422,17 +452,91 @@ export function materialNeeds(game: GameState): Stock {
   return needs
 }
 
+/** The careful party's rune order by where the rune sits; the ward of the next ring's element waits for a ring of one element (stage 9). */
+export const RUNE_ORDER: Record<SlotClass, readonly RuneId[]> = {
+  weapon: ['ember', 'storm', 'stone'],
+  shield: ['stone', 'life'],
+  armour: ['stone', 'life'],
+}
+
+/** The rune of the pouch, less what is claimed, that the order puts in `item` next: the first kind that fits and is held, at the highest rank held. */
+function nextRune(item: Item, kinds: readonly RuneId[], held: (key: RuneKey) => number): RuneKey | null {
+  for (const id of kinds) {
+    if (!runeFits(id, item)) continue
+    for (const rank of [...RANKS].reverse()) if (held(runeKey(id, rank)) > 0) return runeKey(id, rank)
+  }
+  return null
+}
+
+/**
+ * At a workshop: fuses every Lesser triple it may; buys, for each empty
+ * socket of each member's weapon, shield and armour that the pouch cannot
+ * fill, a Lesser rune of the first kind of `RUNE_ORDER` the post sells; then
+ * embeds by `RUNE_ORDER`, a kind's highest rank first, until a socket is
+ * refused. Nothing in the field: embedding there would cost days.
+ */
+export function runecraftGear(game: GameState): { embedded: number; fused: number; bought: number; gold: number } {
+  const done = { embedded: 0, fused: 0, bought: 0, gold: 0 }
+  const { world } = game
+  if (craftTier(world) === 'field') return done
+  for (const key of pouchKeys(game.runes)) {
+    if (!key.endsWith('1')) continue
+    while (fuseRefusal(game, key) === null) {
+      done.gold += fuseCost(key).gold ?? 0
+      fuse(game, key)
+      done.fused++
+    }
+  }
+  const sold = runeWares(world)
+  const claimed: Partial<Record<RuneKey, number>> = {}
+  const unclaimed = (key: RuneKey) => pouchCount(game.runes, key) - (claimed[key] ?? 0)
+  for (const hero of game.party) {
+    for (const slot of GEAR_SLOTS) {
+      const item = hero.equipment[slot]
+      if (!item) continue
+      const kinds = RUNE_ORDER[slotClass(slot)]
+      for (let empty = socketsOf(item) - (item.runes?.length ?? 0); empty > 0; empty--) {
+        let key = nextRune(item, kinds, unclaimed)
+        if (!key) {
+          const kind = kinds.find((id) => runeFits(id, item) && sold.includes(runeKey(id, 1)))
+          if (!kind || buyRuneRefusal(game, runeKey(kind, 1)) !== null) continue
+          key = runeKey(kind, 1)
+          buyRune(game, key)
+          done.bought++
+          done.gold += runePrice(key)
+        }
+        claimed[key] = (claimed[key] ?? 0) + 1
+      }
+    }
+  }
+  for (const [member, hero] of game.party.entries()) {
+    for (const slot of GEAR_SLOTS) {
+      for (let item = hero.equipment[slot]; item && (item.runes?.length ?? 0) < socketsOf(item); item = hero.equipment[slot]) {
+        const key = nextRune(item, RUNE_ORDER[slotClass(slot)], (k) => pouchCount(game.runes, k))
+        if (!key || embed(game, { from: 'worn', member, slot, itemId: item.id }, key).refusal !== null) break
+        done.embedded++
+        done.gold += embedCost(key).gold ?? 0
+      }
+    }
+  }
+  return done
+}
+
 /**
  * At the encampment, after the guild hall: sells the baggage (the careful
  * party fights without loot, so all of it is surplus) and the materials
  * beyond `materialNeeds`; raises the trading post, the workshop and the
  * infirmary as the stock allows; buys each member the best grade it can of
- * its weapon, shield and armour, the old one sold; crafts the best it can on
- * them (`craftGear`); and raises the shrine with what is left.
+ * its weapon, shield and armour, the old one sold (its runes taken out first
+ * where the workshop can, else sold with it); fuses, buys and embeds runes (`runecraftGear`);
+ * crafts the best it can on them (`craftGear`); and raises the shrine with
+ * what is left.
  */
 export function visitFacilities(game: GameState): Trade {
   const { world } = game
-  const trade: Trade = { goldOnGear: 0, goldFromSales: 0, crafted: 0 }
+  const trade: Trade = {
+    goldOnGear: 0, goldFromSales: 0, crafted: 0, tierTwoBought: 0, runesBought: 0, runesFused: 0, runesEmbedded: 0, goldOnRunes: 0,
+  }
   const gold = () => world.stock.gold ?? 0
   const sellAll = () => {
     while (game.baggage.length > 0) {
@@ -450,22 +554,42 @@ export function visitFacilities(game: GameState): Trade {
   while (raiseTradingPost(game) === null);
   while (upgradeWorkshop(game) === null);
   while (raiseInfirmary(game) === null);
-  for (const hero of game.party) {
+  for (const [member, hero] of game.party.entries()) {
     for (const slot of GEAR_SLOTS) {
       const worn = hero.equipment[slot]
       const base = worn && baseItem(worn)
       if (!worn || !base) continue
-      const better = [...GRADES].reverse().find((g) => g > (worn.grade ?? 1) && g <= world.tradingPost && gold() >= buyPrice(craftedItem(base, g))!)
-      if (better === undefined) continue
-      const bought = craftedItem(base, better)
-      if (buy(game, bought.id) !== null) continue
+      if (!worn.family) continue
+      // The dearest item of the family the post sells that costs more than the worn one (modifier aside); a tie goes to the later, the higher tier or grade.
+      const wornPrice = buyPrice(craftedItem(base, worn.grade ?? 1))!
+      let bought: Item | undefined
+      for (const candidate of wares(world, { family: worn.family })) {
+        const price = buyPrice(candidate)!
+        if (price > wornPrice && price <= gold() && (!bought || price >= buyPrice(bought)!)) bought = candidate
+      }
+      if (!bought || buy(game, bought.id) !== null) continue
       trade.goldOnGear += buyPrice(bought)!
+      if (bought.tier === 2) trade.tierTwoBought += 1
       game.baggage.pop()
-      hero.equipment[slot] = bought
-      game.baggage.push(worn)
+      // The old item's runes come back to the pouch where the workshop can take them out; any left are sold with it.
+      for (let old = worn; old.runes?.length; old = hero.equipment[slot]!) {
+        const place = { from: 'worn', member, slot, itemId: old.id } as const
+        if (extractRefusal(game, place, 0) !== null) break
+        trade.goldOnRunes += extractCost(old.runes[0]).gold ?? 0
+        extract(game, place, 0)
+      }
+      const old = hero.equipment[slot]!
+      replaceAt(game, { from: 'worn', member, slot, itemId: old.id }, bought)
+      game.baggage.push(old)
     }
   }
+  // What was replaced is sold before the runes and the crafts, which the gold may pay for.
   sellAll()
+  const runes = runecraftGear(game)
+  trade.runesBought += runes.bought
+  trade.runesFused += runes.fused
+  trade.runesEmbedded += runes.embedded
+  trade.goldOnRunes += runes.gold
   // Without a workshop, crafting here would be the field's, a day each: that waits for the road.
   if (craftTier(world) !== 'field') trade.crafted += craftGear(game).crafted
   while (raiseShrine(world) === null);
@@ -530,8 +654,9 @@ export function nextTarget(world: WorldState, party: Party, readyLevel = SOURCE_
  * `autoAdvance`, and camps where it won until its wounds are healed
  * (`campUntilHealed`, again whenever an event breaks camp). The campaign ends
  * when the Source is beaten, a battle is not won, the encampment falls, or
- * `MAX_CAMPAIGN_DAYS` pass. Loot is left alone: the heroes keep their
- * starting gear, bettered at the trading post and by crafting.
+ * `MAX_CAMPAIGN_DAYS` pass. Item loot is left alone: the heroes keep their
+ * starting gear, bettered at the trading post and by crafting; rune loot is
+ * taken after each win (`takeRunes`) and embedded at the workshop.
  */
 export function runCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0): Campaign {
   const game = newGame(startingParty(args), null, seed)
@@ -541,7 +666,8 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
   const record: CampaignRecord = {
     outcome: 'timeout', days: 0, battles: 0, spawns: 0, captured: 0, lost: 0, blighted: 0, healedHp: 0, campDays: 0,
     towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0,
-    tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, crafted: 0, fieldCraftDays: 0,
+    tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 0, fieldCraftDays: 0,
+    runesFound: 0, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0,
     finalLevels: [], deathsAtLevel: [], battlesToLevel: {},
   }
   const tally = (events: readonly WorldEvent[]) => {
@@ -565,6 +691,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
     record.workshopLevel = world.workshop
     record.infirmaryLevel = world.infirmary
     record.finalLevels = party.map((member) => member.level)
+    record.socketsFilled = party.reduce((n, member) => n + Object.values(member.equipment).reduce((m, item) => m + (item?.runes?.length ?? 0), 0), 0)
     return { battles, record }
   }
   /** Walks to `to`, going on whenever something on the way stops the party; false if it never gets there. */
@@ -588,7 +715,11 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
       const trade = visitFacilities(game)
       record.goldOnGear += trade.goldOnGear
       record.goldFromSales += trade.goldFromSales
+      record.tierTwoBought += trade.tierTwoBought
       record.crafted += trade.crafted
+      record.runesBought += trade.runesBought
+      record.runesFused += trade.runesFused
+      record.goldOnRunes += trade.goldOnRunes
     }
     const next = nextTarget(world, party, args.readyLevel)
     if (!next) return finish('timeout')
@@ -607,7 +738,8 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
       partyLevels: party.map((member) => member.level),
     }
     const battleId = firstBattleId + battles.length
-    const engine = fight(encounter.setup, (seed + battles.length) >>> 0, party, args, meta)
+    const battleSeed = (seed + battles.length) >>> 0
+    const engine = fight(encounter.setup, battleSeed, party, args, meta)
     battles.push(engine.getLog().map((event) => ({ ...event, battleId })))
 
     const state = engine.getState()
@@ -626,6 +758,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
     for (const mark of LEVEL_MARKS) {
       if (record.battlesToLevel[mark] === undefined && lowestLevel(party) >= mark) record.battlesToLevel[mark] = battles.length
     }
+    record.runesFound += takeRunes(game, next.threat, next.encounter, battleSeed).length
     clearLocation(world, next.id)
     if (world.status === 'won') return finish('source')
     // A watchtower wherever the party stops on land that takes one and the stock affords it.
@@ -716,7 +849,11 @@ class Tally {
       if (event.arc === 'rear') this.rearAttacks++
       const side = this.sideOf.get(event.attacker) === 'player' ? 'player' : 'enemy'
       this.attacks[side]++
+      // The weapon's damage, then its on-hit damage, heal and statuses (runes).
       this.damage[side] += event.damage
+      for (const bonus of event.bonus) this.damage[side] += bonus.damage
+      this.healing[side] += event.healed ?? 0
+      this.statuses[side] += event.onHitStatuses?.length ?? 0
       if (event.hit) this.hits[side]++
       if (event.critical) this.crits[side]++
     }
@@ -812,9 +949,16 @@ export interface CampaignSummary {
   avgWorkshopLevel: number
   avgInfirmaryLevel: number
   avgGoldOnGear: number
+  avgTierTwoBought: number
   avgGoldFromSales: number
   avgCrafted: number
   avgFieldCraftDays: number
+  /** Runes found, bought and fused, sockets filled at the end, and gold on runes, a campaign. */
+  avgRunesFound: number
+  avgRunesBought: number
+  avgRunesFused: number
+  avgSocketsFilled: number
+  avgGoldOnRunes: number
   /** The party's lowest and highest level at the end, on average; a campaign with no one left is left out. */
   avgLowestFinalLevel: number
   avgHighestFinalLevel: number
@@ -886,9 +1030,15 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     avgWorkshopLevel: avg((r) => r.workshopLevel),
     avgInfirmaryLevel: avg((r) => r.infirmaryLevel),
     avgGoldOnGear: avg((r) => r.goldOnGear),
+    avgTierTwoBought: avg((r) => r.tierTwoBought),
     avgGoldFromSales: avg((r) => r.goldFromSales),
     avgCrafted: avg((r) => r.crafted),
     avgFieldCraftDays: avg((r) => r.fieldCraftDays),
+    avgRunesFound: avg((r) => r.runesFound),
+    avgRunesBought: avg((r) => r.runesBought),
+    avgRunesFused: avg((r) => r.runesFused),
+    avgSocketsFilled: avg((r) => r.socketsFilled),
+    avgGoldOnRunes: avg((r) => r.goldOnRunes),
     avgLowestFinalLevel: mean(ended.map((r) => Math.min(...r.finalLevels))),
     avgHighestFinalLevel: mean(ended.map((r) => Math.max(...r.finalLevels))),
     deathsByLevel: [...deaths.entries()].sort(([a], [b]) => a - b).map(([level, deaths]) => ({ level, deaths })),
@@ -948,6 +1098,10 @@ function main(): void {
   console.log(`Shrine: level ${summary.avgShrineLevel.toFixed(1)} at the end; outposts: ${summary.avgOutpostsBuilt.toFixed(1)} built a campaign`)
   console.log(
     `Trading post, workshop, infirmary: levels ${summary.avgTradingPostLevel.toFixed(1)}, ${summary.avgWorkshopLevel.toFixed(1)}, ${summary.avgInfirmaryLevel.toFixed(1)} at the end; ${summary.avgGoldOnGear.toFixed(0)} gold on gear and ${summary.avgGoldFromSales.toFixed(0)} from sales, ${summary.avgCrafted.toFixed(1)} items crafted (${summary.avgFieldCraftDays.toFixed(1)} days in the field) a campaign`,
+  )
+  console.log(`Tier-2 items bought: ${summary.avgTierTwoBought.toFixed(1)} a campaign`)
+  console.log(
+    `Runes: ${summary.avgRunesFound.toFixed(1)} found, ${summary.avgRunesBought.toFixed(1)} bought and ${summary.avgRunesFused.toFixed(1)} fused a campaign, ${summary.avgGoldOnRunes.toFixed(0)} gold on runes; ${summary.avgSocketsFilled.toFixed(1)} sockets filled at the end`,
   )
   console.log(`Guild hall: level ${summary.avgHallLevel.toFixed(1)} at the end, ${summary.avgRecruits.toFixed(1)} recruits and ${summary.avgDeaths.toFixed(1)} heroes dead a campaign`)
   console.log(

@@ -1,5 +1,5 @@
 import { ABILITIES, type AbilityId } from '../combat/abilities.ts'
-import { damageThrough, effectiveResistance, hitChance, warded, type DamageRoll, type RNG } from '../combat/combat.ts'
+import { baneApplies, damageThrough, effectiveResistance, hitChance, warded, type CombatantStats, type DamageRoll, type RNG } from '../combat/combat.ts'
 import { HELPLESS_BONUS, SPELLS, isHealing, type SpellId } from '../combat/spells.ts'
 import { hexDistance, type Hex } from '../grid/hex.ts'
 import {
@@ -12,6 +12,7 @@ import {
   effectiveStats,
   flankersOf,
   hasStatus,
+  isMelee,
   type Action,
   type BattleState,
   type CastAim,
@@ -230,18 +231,28 @@ function reach(self: UnitSnapshot): { range: number; apCost: number } {
 /**
  * The harm an attack would do on average: its chance to hit times the
  * average hit of `dice` (the unit's weapon's unless given) through the
- * target's resistance, near enough.
+ * target's resistance, near enough, and its weapon's on-hit damage through
+ * the target's wards.
  */
 function expectedHarm(state: BattleState, self: UnitSnapshot, target: UnitSnapshot, dice?: DamageRoll): number {
   const attacker = effectiveStats({ stats: self, statuses: self.statuses })
   const defender = effectiveStats({ stats: target, statuses: target.statuses })
   const bonus =
     flankersOf(state.units, self, target).length * FLANK_BONUS_PER_ALLY +
-    ARC_BONUS[arcStruck(target, self.position, self.attackRange)] +
+    ARC_BONUS[arcStruck(target, self.position, isMelee(self))] +
     (hasStatus(target, 'asleep') ? HELPLESS_BONUS : 0)
   const { count, sides, bonus: flat } = dice ?? attacker.damage
   const averageHit = damageThrough(count * ((sides + 1) / 2) + flat, effectiveResistance(attacker, defender.resistance ?? 0))
-  return hitChance(attacker, defender.ac, bonus) * averageHit
+  return hitChance(attacker, defender.ac, bonus) * (averageHit + onHitDamage(attacker, defender))
+}
+
+/** A weapon's on-hit damage (runes) against `defender`: each entry through its ward, a bane only where it applies. */
+function onHitDamage(attacker: CombatantStats, defender: CombatantStats): number {
+  let total = 0
+  for (const entry of attacker.onHit ?? []) {
+    if (entry.damage > 0 && (!entry.bane || baneApplies(defender))) total += warded(entry.damage, entry.element, defender)
+  }
+  return total
 }
 
 type AbilityAction = Extract<Action, { type: 'ability' }>

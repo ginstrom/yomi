@@ -198,6 +198,8 @@ describe('spawning', () => {
 
   it('spawns at threats 1 and 2 as before bandits: the same places, kinds and loot', () => {
     // Captured from the code before the Bandit Gang joined SPAWN_KINDS: [col, row, threat, name, loot].
+    // The loot was captured again when the Wand of Sparks left the enchanted items (stage 3):
+    // the same draws, over eight items rather than nine.
     const before: Record<number, [number, number, number, string, string[]][]> = {
       1: [
         [6, 25, 1, 'Goblin Brood', []],
@@ -205,17 +207,17 @@ describe('spawning', () => {
         [18, 28, 2, 'Goblin Brood', []],
       ],
       2: [
-        [19, 29, 2, 'Goblin Brood', ['Ring of Protection']],
+        [19, 29, 2, 'Goblin Brood', ['Ring of Fortune']],
         [21, 34, 2, 'Kobold Nest', ['Hawkeye Bow']],
         [12, 30, 2, 'Goblin Brood', []],
       ],
       // A spawn at threat 5 comes first here: the draws after it are unchanged all the same.
       3: [
-        [23, 30, 2, 'Goblin Brood', ['Wand of Storms']],
-        [17, 10, 2, 'Kobold Nest', ['Wand of Sparks']],
+        [23, 30, 2, 'Goblin Brood', ['Emberblade']],
+        [17, 10, 2, 'Kobold Nest', ['Wand of Storms']],
       ],
       4: [
-        [11, 36, 2, 'Goblin Brood', ['Wand of Sparks']],
+        [11, 36, 2, 'Goblin Brood', ['Wand of Storms']],
         [16, 9, 2, 'Kobold Nest', ['Cloak of Shadows']],
       ],
     }

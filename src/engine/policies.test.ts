@@ -55,6 +55,21 @@ describe('policies', () => {
     expect(choose(engine)).toEqual(END_TURN)
   })
 
+  it('aggressive thrusts with a spear from two hexes rather than walking up', () => {
+    const spearman = { ...GOBLIN_STATS, attackRange: 2, reach: true as const }
+    const engine = new BattleEngine({
+      board: { cols: 8, rows: 3 },
+      units: [
+        { id: 'p1', side: 'player', stats: spearman, position: hex(0, 1) },
+        { id: 'e1', side: 'enemy', stats: GOBLIN_STATS, position: hex(2, 1) },
+      ],
+    })
+    expect(choose(engine)).toEqual(ATTACK_E1)
+    // Only reach makes it a melee blow, which the foe may turn to meet.
+    const events = engine.step(ATTACK_E1)
+    expect(events.find((e) => e.type === 'attack')).toMatchObject({ melee: true, distance: 2 })
+  })
+
   describe('aggressive with a caster', () => {
     // A wand that reaches 4 hexes for 5 AP, and Magic Arrow, which reaches 5 for 4 AP and 3 mana.
     const mage = (maxMana: number) => ({
@@ -372,6 +387,38 @@ describe('policies', () => {
       engine.step(choose(engine))
       expect(engine.legalActions('p1').some((a) => a.type === 'ability')).toBe(false)
       expect(choose(engine)).toEqual(ATTACK_E1)
+    })
+  })
+
+  describe('aggressive with an on-hit weapon', () => {
+    const EMBER: CombatantStats = { ...GOBLIN_STATS, onHit: [{ damage: 3, element: 'fire' }] }
+    const FOE: CombatantStats = { ...GOBLIN_STATS, maxHp: 60 }
+    const WARDED: CombatantStats = { ...FOE, wards: { fire: 3 } }
+    const pair = (self: CombatantStats, e1: CombatantStats, e2: CombatantStats) =>
+      new BattleEngine({
+        board: { cols: 8, rows: 3 },
+        units: [
+          { id: 'p1', side: 'player', stats: self, position: hex(1, 1) },
+          { id: 'e1', side: 'enemy', stats: e1, position: hex(2, 1) },
+          { id: 'e2', side: 'enemy', stats: e2, position: hex(2, 0) },
+        ],
+      })
+    const at = (target: string): Action => ({ type: 'attack', unit: 'p1', target })
+
+    it('strikes the foe its fire gets through to', () => {
+      expect(choose(pair(GOBLIN_STATS, FOE, FOE))).toEqual(at('e1'))
+      expect(choose(pair(EMBER, WARDED, FOE))).toEqual(at('e2'))
+      expect(choose(pair(EMBER, FOE, WARDED))).toEqual(at('e1'))
+    })
+
+    it('makes today’s choice without one, wards or not', () => {
+      expect(choose(pair(GOBLIN_STATS, WARDED, FOE))).toEqual(at('e1'))
+    })
+
+    it('counts a bane only against the regenerating', () => {
+      const dawn: CombatantStats = { ...GOBLIN_STATS, onHit: [{ damage: 3, element: 'blight', bane: true }] }
+      expect(choose(pair(dawn, FOE, { ...FOE, regeneration: 1 }))).toEqual(at('e2'))
+      expect(choose(pair(dawn, { ...FOE, regeneration: 1 }, FOE))).toEqual(at('e1'))
     })
   })
 

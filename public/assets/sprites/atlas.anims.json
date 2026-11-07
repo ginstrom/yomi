@@ -172,6 +172,48 @@
       "frames": [
         {
           "duration": 600,
+          "frame": "bandit_crossbowman/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "bandit_crossbowman/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_crossbowman/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "bandit_crossbowman/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_crossbowman/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_crossbowman/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_crossbowman/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_crossbowman/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
           "frame": "bandit_cutthroat/idle_0",
           "key": "atlas"
         },
@@ -406,6 +448,60 @@
       "frames": [
         {
           "duration": 600,
+          "frame": "gear_buckler/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_buckler/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_buckler/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_buckler/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_buckler/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_cap/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_cap/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_cap/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_cap/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_cap/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
           "frame": "gear_circlet/idle_0",
           "key": "atlas"
         },
@@ -487,6 +583,33 @@
       "frames": [
         {
           "duration": 600,
+          "frame": "gear_crossbow/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_crossbow/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_crossbow/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_crossbow/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_crossbow/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
           "frame": "gear_dagger/idle_0",
           "key": "atlas"
         },
@@ -535,6 +658,222 @@
         }
       ],
       "key": "gear_greatsword/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_halberd/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_halberd/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_halberd/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_halberd/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_halberd/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_helm/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_helm/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_helm/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_helm/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_helm/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_leather/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_leather/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_leather/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_leather/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_leather/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_longbow/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_longbow/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_longbow/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_longbow/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_longbow/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_mace/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_mace/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_mace/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_mace/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_mace/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_plate/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_plate/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_plate/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_plate/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_plate/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_rapier/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_rapier/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_rapier/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_rapier/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_rapier/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_robe/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_robe/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_robe/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_robe/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_robe/walk",
       "repeat": -1
     },
     {
@@ -595,6 +934,60 @@
       "frames": [
         {
           "duration": 600,
+          "frame": "gear_spear/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_spear/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_spear/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_spear/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_spear/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_staff/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_staff/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_staff/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_staff/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_staff/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
           "frame": "gear_sword/idle_0",
           "key": "atlas"
         },
@@ -649,6 +1042,33 @@
       "frames": [
         {
           "duration": 600,
+          "frame": "gear_tower_shield/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_tower_shield/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_tower_shield/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_tower_shield/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_tower_shield/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
           "frame": "gear_wand/idle_0",
           "key": "atlas"
         },
@@ -697,6 +1117,33 @@
         }
       ],
       "key": "gear_wand_storm/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_war_hammer/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_war_hammer/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_war_hammer/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_war_hammer/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_war_hammer/walk",
       "repeat": -1
     },
     {

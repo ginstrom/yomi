@@ -7,6 +7,7 @@ import {
   pickUp,
   unequipToBackpack,
   type Character,
+  type HpRule,
 } from '../character/character.ts'
 import { EQUIPMENT_SLOT_ORDER, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
 
@@ -86,17 +87,20 @@ export function validTargets(character: Character, ground: Item[], from: DragSou
   return ALL_TARGETS.filter((to) => planDrag(character, ground, from, to) !== null)
 }
 
-/** Makes `move`, returning whether it did; a move that cannot be made changes nothing. */
-export function applyMove(character: Character, ground: Item[], move: GearMove): boolean {
+/**
+ * Makes `move`, returning whether it did; a move that cannot be made changes nothing.
+ * Hit points follow a changed maximum by `hpRule` (`clampHp`): 'cap' in battle.
+ */
+export function applyMove(character: Character, ground: Item[], move: GearMove, hpRule: HpRule = 'share'): boolean {
   switch (move.kind) {
     case 'equip':
-      return equipFromBackpack(character, move.index, ground, move.slot)
+      return equipFromBackpack(character, move.index, ground, move.slot, hpRule)
     case 'unequip':
-      return unequipToBackpack(character, move.slot)
+      return unequipToBackpack(character, move.slot, hpRule)
     case 'dropBackpack':
       return dropFromBackpack(character, move.index, ground)
     case 'dropEquipped':
-      return dropEquipped(character, move.slot, ground)
+      return dropEquipped(character, move.slot, ground, hpRule)
     case 'pickUp':
       return pickUp(character, ground, move.index)
     case 'pickUpEquip': {
@@ -105,7 +109,7 @@ export function applyMove(character: Character, ground: Item[], move: GearMove):
       const space = character.backpack.indexOf(null)
       if (!item || space === -1 || !fitsSlot(item, move.slot)) return false
       pickUp(character, ground, move.index)
-      return equipFromBackpack(character, space, ground, move.slot)
+      return equipFromBackpack(character, space, ground, move.slot, hpRule)
     }
   }
 }

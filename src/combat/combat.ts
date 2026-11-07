@@ -1,5 +1,5 @@
 import type { AbilityId } from './abilities.ts'
-import type { SpellId } from './spells.ts'
+import type { SpellId, StatusLaid } from './spells.ts'
 
 /** The kinds of damage a ward can stand against; damage of none is a weapon's or Magic Arrow's. */
 export const ELEMENTS = ['fire', 'frost', 'lightning', 'acid', 'poison', 'blight'] as const
@@ -10,6 +10,20 @@ export interface DamageRoll {
   count: number
   sides: number
   bonus: number
+}
+
+/** What a weapon does on a hit besides its dice (runes): flat damage after resistance, warded by its element; a status; healing. Draws nothing. */
+export interface OnHit {
+  /** Flat damage added after resistance, less the defender's ward of `element`; 0 for an effect that only heals or lays. */
+  damage: number
+  element?: Element
+  /** Only against a unit with regeneration or `blightborn` (the Dawn rune). */
+  bane?: true
+  /** Laid on the defender after all the damage, if it still stands: on every hit, or with `onCrit` on a critical only. */
+  status?: StatusLaid
+  onCrit?: true
+  /** Hit points the wielder regains on a hit, up to its maximum (Life). */
+  heal?: number
 }
 
 export interface CombatantStats {
@@ -34,8 +48,10 @@ export interface CombatantStats {
   weapon?: string
   /** Action points one attack costs; set by the weapon. */
   attackApCost: number
-  /** How many hexes away the unit can strike: 1 for a melee weapon, more for a ranged one. */
+  /** How many hexes away the unit can strike: 1 for a melee weapon, more for a ranged one or one with `reach`. */
   attackRange: number
+  /** Its weapon is melee though it strikes beyond the next hex (a spear); none when left out. */
+  reach?: true
   /** Action points the unit gets at the start of each of its side's turns. */
   actionPoints: number
   /** What the unit casts with; left out for a unit that knows no spell. */
@@ -50,6 +66,15 @@ export interface CombatantStats {
   abilities?: readonly AbilityId[]
   /** Added to the damage bonus of every strike and area of its abilities (foeAtLevel's damage step); 0 when left out. */
   abilityDamageBonus?: number
+  /** What its main hand's weapon does on a hit besides its dice (runes); none when left out. */
+  onHit?: readonly OnHit[]
+  /** The blight's own: a Dawn rune's bane applies to it (`baneApplies`). */
+  blightborn?: true
+}
+
+/** Whether a bane (the Dawn rune's on-hit damage) applies to a unit of `stats`: one that regenerates or is the blight's own. */
+export function baneApplies(stats: CombatantStats): boolean {
+  return (stats.regeneration ?? 0) > 0 || stats.blightborn === true
 }
 
 function sameMagic(a: CombatantStats['magic'], b: CombatantStats['magic']): boolean {
@@ -66,6 +91,27 @@ function sameAbilities(a: CombatantStats['abilities'], b: CombatantStats['abilit
   const left = a ?? []
   const right = b ?? []
   return left.length === right.length && left.every((ability, i) => ability === right[i])
+}
+
+function sameOnHit(a: CombatantStats['onHit'], b: CombatantStats['onHit']): boolean {
+  const left = a ?? []
+  const right = b ?? []
+  return (
+    left.length === right.length &&
+    left.every((x, i) => {
+      const y = right[i]
+      return (
+        x.damage === y.damage &&
+        x.element === y.element &&
+        (x.bane ?? false) === (y.bane ?? false) &&
+        (x.onCrit ?? false) === (y.onCrit ?? false) &&
+        (x.heal ?? 0) === (y.heal ?? 0) &&
+        x.status?.id === y.status?.id &&
+        x.status?.turns === y.status?.turns &&
+        x.status?.images === y.status?.images
+      )
+    })
+  )
 }
 
 function sameWards(a: CombatantStats['wards'], b: CombatantStats['wards']): boolean {
@@ -96,10 +142,13 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     a.weapon === b.weapon &&
     a.attackApCost === b.attackApCost &&
     a.attackRange === b.attackRange &&
+    (a.reach ?? false) === (b.reach ?? false) &&
     a.actionPoints === b.actionPoints &&
     sameMagic(a.magic, b.magic) &&
     sameAbilities(a.abilities, b.abilities) &&
-    (a.abilityDamageBonus ?? 0) === (b.abilityDamageBonus ?? 0)
+    (a.abilityDamageBonus ?? 0) === (b.abilityDamageBonus ?? 0) &&
+    sameOnHit(a.onHit, b.onHit) &&
+    (a.blightborn ?? false) === (b.blightborn ?? false)
   )
 }
 
@@ -285,6 +334,7 @@ export const BLIGHT_HORROR_STATS: CombatantStats = {
   attackRange: 1,
   actionPoints: 8,
   magic: { maxMana: 16, skill: 60, spells: ['death_cloud', 'bane'] },
+  blightborn: true,
 }
 
 /**

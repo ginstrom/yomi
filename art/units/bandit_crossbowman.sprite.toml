@@ -1,0 +1,84 @@
+# A bandit crossbowman: a brown leather cap with a short brim, a red kerchief at the
+# throat, an olive tunic and a quiver of bolts at the back hip, a crossbow held
+# level across the body in the near fist, its steel bow-arm at the front.
+canvas = "unit"
+
+outline = "auto"
+unoutlined = ["W"]    # the string, one pixel wide
+
+[points]
+chest = [16, 15]
+
+[frames.idle_0.runs]
+4 = [[14, "nntt"]]
+5 = [[13, "Nnnttt"]]
+6 = [[13, "NNnnnnnt"]]
+7 = [[13, "NnSsks"]]
+8 = [[13, "NnSsss"]]
+9 = [[14, "NSss"]]
+10 = [[14, "Sss"]]
+11 = [[10, "gggGrrrrggg"], [27, "d"]]
+12 = [[9, "gGkGggggggekgG"], [26, "Wl"]]
+13 = [[9, "gGkGggggggekgG"], [25, "W"], [28, "l"]]
+14 = [[6, "rw"], [9, "gGkGggggggek"], [21, "ss"], [24, "W"], [28, "l"]]
+15 = [[6, "nNk"], [9, "gGkGggg"], [16, "ttttt"], [21, "ss"], [23, "tttt"], [27, "dl"]]
+16 = [[6, "nNk"], [9, "gGkNNyN"], [16, "nnnnn"], [21, "ss"], [23, "nnnn"], [27, "Dd"]]
+17 = [[6, "nNk"], [9, "gGkGggggggek"], [24, "W"], [28, "l"]]
+18 = [[6, "nNk"], [9, "gGkGggggggek"], [25, "W"], [28, "d"]]
+19 = [[6, "nNk"], [9, "sskGgGgGgGg"], [26, "Wd"]]
+20 = [[12, "nnnnnnnn"], [27, "d"]]
+21 = [[12, "nnt"], [17, "nnt"]]
+22 = [[12, "nnt"], [17, "nnt"]]
+23 = [[12, "nnt"], [17, "nnt"]]
+24 = [[12, "nnt"], [17, "nnt"]]
+25 = [[12, "nnt"], [17, "nnt"]]
+26 = [[12, "nnt"], [17, "nnt"]]
+27 = [[12, "nnt"], [17, "nnt"]]
+28 = [[12, "MMm"], [17, "MMm"]]
+29 = [[12, "MMm"], [17, "MMm"]]
+30 = [[12, "MMmm"], [17, "MMmm"]]
+
+# A breath: everything above the shins sinks a pixel, the crossbow with it.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [0, 24], by = [0, 1] }
+
+# A stride: the legs part and nothing above them moves.
+[frames.walk_0]
+from = "idle_0"
+[frames.walk_0.runs]
+23 = [[11, "nnt....nnt"]]
+24 = [[11, "nnt....nnt"]]
+25 = [[10, "nnt......nnt"]]
+26 = [[10, "nnt......nnt"]]
+27 = [[9, "nnt........nnt"]]
+28 = [[9, "MMm........MMm"]]
+29 = [[9, "MMm........MMm"]]
+30 = [[9, "MMmm.......MMmm"]]
+
+# The near foot lifts: the left, then the right. Only the leg rows change.
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.runs]
+26 = [[12, "MMm"]]
+27 = [[12, "MMmm"]]
+28 = [[12, "..."]]
+29 = [[12, "..."]]
+30 = [[12, "...."]]
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.runs]
+26 = [[17, "MMm"]]
+27 = [[17, "MMmm"]]
+28 = [[17, "..."]]
+29 = [[17, "..."]]
+30 = [[17, "...."]]
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 600
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 140
