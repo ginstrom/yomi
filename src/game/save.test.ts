@@ -116,8 +116,33 @@ describe('a save', () => {
     expect(parsed.game.baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 17, whose bandit camp has a Crossbowman slot', () => {
-    expect(SAVE_VERSION).toBe(17)
+  it('is version 18, whose game holds a rune pouch', () => {
+    expect(SAVE_VERSION).toBe(18)
+  })
+
+  it('keeps the pouch and an item with runes', () => {
+    const game = gameUnderWay()
+    game.runes = { ember1: 2, storm2: 1 }
+    const runed = itemById('iron_sword@3#ember1')!
+    game.baggage.push(runed)
+    game.party[0].equipment.mainHand = runed
+    const parsed = parseSave(serializeSave({ game, battle: null, savedAt: 5 }))!
+    expect(parsed.game.runes).toEqual({ ember1: 2, storm2: 1 })
+    expect(parsed.game.baggage.at(-1)).toBe(runed)
+    expect(parsed.game.party[0].equipment.mainHand).toBe(runed)
+  })
+
+  it('reads a bad pouch, or a save of version 17, as unreadable', () => {
+    const rewrite = (change: (saved: any) => void) => {
+      const saved = JSON.parse(serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 }))
+      change(saved)
+      return JSON.stringify(saved)
+    }
+    for (const runes of [{ fire1: 1 }, { ember5: 1 }, { ember1: 0 }, { ember1: -1 }, { ember1: 1.5 }, [], null]) {
+      expect(parseSave(rewrite((saved) => (saved.game.runes = runes)))).toBeNull()
+    }
+    expect(parseSave(rewrite((saved) => (saved.version = 17)))).toBeNull()
+    expect(parseSave(rewrite(() => {}))).not.toBeNull()
   })
 
   it('writes an item as its id and nothing more', () => {

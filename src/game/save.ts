@@ -3,6 +3,7 @@ import { PERK_IDS } from '../character/perks.ts'
 import { SKILL_IDS } from '../character/skills.ts'
 import type { BattleSnapshot } from '../engine/battleEngine.ts'
 import { itemById, type Equipment, type Item } from '../inventory/inventory.ts'
+import { isRuneKey } from '../inventory/runes.ts'
 import type { GameState } from './gameState.ts'
 import type { GroundPile } from './ground.ts'
 import type { WorldLocation } from './worldMap.ts'
@@ -18,7 +19,7 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 17
+export const SAVE_VERSION = 18
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -131,6 +132,8 @@ export function parseSave(raw: string | null): SaveFile | null {
     check(typeof world.tradingPost === 'number' && typeof world.workshop === 'number' && typeof world.infirmary === 'number')
     check(Array.isArray(world.held) && Array.isArray(world.threatened) && world.stock && typeof world.stock === 'object')
     check(typeof world.rng === 'number' && typeof world.spawnPressure === 'number' && typeof world.status === 'string')
+    check(game.runes && typeof game.runes === 'object' && !Array.isArray(game.runes))
+    check(Object.entries(game.runes).every(([key, n]) => isRuneKey(key) && Number.isInteger(n) && (n as number) >= 1))
     check(Array.isArray(game.reserves) && typeof world.guildHall === 'number')
     check(game.slot === null || typeof game.slot === 'number')
     const { story } = game

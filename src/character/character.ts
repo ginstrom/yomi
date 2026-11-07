@@ -1,4 +1,4 @@
-import type { CombatantStats, DamageRoll } from '../combat/combat.ts'
+import { ELEMENTS, type CombatantStats, type DamageRoll, type Element } from '../combat/combat.ts'
 import type { GearChange } from '../engine/battleEngine.ts'
 import {
   BACKPACK_SIZE,
@@ -78,7 +78,24 @@ export function hpPerLevel(character: Character): number {
 
 export function maxHp(character: Character): number {
   const { strength, endurance } = attributesOf(character)
-  return BASE_HP + strength + endurance + (character.level - 1) * hpPerLevel(character) + perkBonus(character, 'maxHp')
+  const gear = wornStats(character).reduce((total, stats) => total + (stats.maxHp ?? 0), 0)
+  return BASE_HP + strength + endurance + (character.level - 1) * hpPerLevel(character) + perkBonus(character, 'maxHp') + gear
+}
+
+/**
+ * Keeps hit points within the maximum after a change to what is worn: if the
+ * maximum moved from `maxBefore` and hp > 0, the hero keeps the same share of
+ * its hit points, hp = min(max, max(1, round(hp * max / maxBefore))), so a
+ * swap of Life gear off and on leaves it where it was; otherwise
+ * hp = min(hp, max). A hero at 0 stays at 0.
+ */
+export function clampHp(character: Character, maxBefore: number): void {
+  const max = maxHp(character)
+  if (character.hp > 0 && max !== maxBefore && maxBefore > 0) {
+    character.hp = Math.min(max, Math.max(1, Math.round((character.hp * max) / maxBefore)))
+  } else {
+    character.hp = Math.min(character.hp, max)
+  }
 }
 
 /**
@@ -137,6 +154,7 @@ export function deriveCombatStats(character: Character): CombatantStats {
   let attackRange = MELEE_RANGE
   let armorPierce = 0
   let resistance = 0
+  const wardTotals: Partial<Record<Element, number>> = {}
   let shortfall = 0
   let apPenalty = 0
   for (const stats of wornStats(character)) {
@@ -146,6 +164,10 @@ export function deriveCombatStats(character: Character): CombatantStats {
     ac += stats.acBonus ?? 0
     armorPierce += stats.armorPierce ?? 0
     resistance += stats.resistance ?? 0
+    for (const element of ELEMENTS) {
+      const ward = stats.wards?.[element] ?? 0
+      if (ward > 0) wardTotals[element] = (wardTotals[element] ?? 0) + ward
+    }
     toHit += stats.toHit ?? 0
     critChance += stats.critChance ?? 0
     spellSkill += stats.spellSkill ?? 0
@@ -165,6 +187,9 @@ export function deriveCombatStats(character: Character): CombatantStats {
   // bolts pierce by their own weight, but the strength perks' piercing is in a blow.
   const pierce = ranged ? (weapon?.rangedPierce ? armorPierce : 0) : armorPierce + perkBonus(character, 'armorPierce')
   const spells = knownSpells(character)
+  const wards: Partial<Record<Element, number>> = {}
+  for (const element of ELEMENTS) if (wardTotals[element]) wards[element] = wardTotals[element]
+  const onHit = weapon?.onHit
 
   return {
     name: character.name,
@@ -174,6 +199,8 @@ export function deriveCombatStats(character: Character): CombatantStats {
     critChance,
     ...(pierce > 0 ? { armorPierce: pierce } : {}),
     ...(resistance > 0 ? { resistance } : {}),
+    ...(Object.keys(wards).length > 0 ? { wards } : {}),
+    ...(onHit && onHit.length > 0 ? { onHit } : {}),
     damage: { ...damage, bonus: damage.bonus + damageBonus },
     weapon: character.equipment.mainHand?.name ?? UNARMED_WEAPON,
     attackApCost,
@@ -217,6 +244,7 @@ export function equipFromBackpack(character: Character, index: number, ground: I
 
   const slot: EquipmentSlot =
     into ?? (item.ring ? (RING_SLOTS.find((ring) => !equipment[ring]) ?? RING_SLOTS[0]) : item.slot)
+  const before = maxHp(character)
   const replaced = equipment[slot] ?? null
   const otherHand: EquipmentSlot | null =
     slot === 'mainHand' && isTwoHanded(item)
@@ -237,6 +265,7 @@ export function equipFromBackpack(character: Character, index: number, ground: I
     }
   }
   equipment[slot] = item
+  clampHp(character, before)
   return true
 }
 
@@ -248,8 +277,10 @@ export function unequipToBackpack(character: Character, slot: EquipmentSlot): bo
   const item = character.equipment[slot]
   const space = character.backpack.indexOf(null)
   if (!item || space === -1) return false
+  const before = maxHp(character)
   character.backpack[space] = item
   delete character.equipment[slot]
+  clampHp(character, before)
   return true
 }
 
@@ -266,8 +297,10 @@ export function dropFromBackpack(character: Character, index: number, ground: It
 export function dropEquipped(character: Character, slot: EquipmentSlot, ground: Item[]): boolean {
   const item = character.equipment[slot]
   if (!item) return false
+  const before = maxHp(character)
   delete character.equipment[slot]
   ground.push(item)
+  clampHp(character, before)
   return true
 }
 

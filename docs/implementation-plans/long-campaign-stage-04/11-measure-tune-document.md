@@ -43,7 +43,7 @@ Close stage 4. This step:
 
   | # | Decision | Default taken |
   | --- | --- | --- |
-  | D1 | Hit points above a new, lower maximum when Life-runed gear comes off | Lost; healing fills the maximum again (correction 4) |
+  | D1 | Hit points when Life-runed gear comes off or goes on | The user chose to keep the hero's share (both ways, the orchestrator extending it to a rise); the default was to lose the excess (correction 4) |
   | D2 | The Source's rune loot | Threat 5's row; the reference's Source row waits for stage 9 (correction 8) |
   | D3 | The simulator's rune policy | Ember, Storm, Stone for weapons; Stone, Life for armour and shields; embeds only at a workshop (correction 11) |
   | D4 | Rune prices at ranks 3 and 4 | 135 and 405 (correction 6) |

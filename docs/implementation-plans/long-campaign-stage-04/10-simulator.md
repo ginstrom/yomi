@@ -52,7 +52,7 @@ Steps 05, 06 and 07 are done. This step may run alongside 08 and 09, which touch
 **What it consumes, as the earlier steps produce it** (copied from the index):
 
 - **C1 (step 03), `src/inventory/runes.ts`:** `RUNE_IDS`, `RuneId`, `Rank`, `RuneKey`, `SlotClass`, `slotClass(slot)`, `runeKey(id, rank)`, `parseRuneKey`, `socketsOf(item)`, `runeFits(rune, item)`, `Pouch`, `pouchCount`, `pouchKeys`. `item.runes` lists the embedded keys, filled sockets first.
-- **C3 (step 04), `src/character/character.ts`:** `clampHp(character, maxBefore): void`: if the maximum fell below `maxBefore` and `hp > 0`, `hp = min(max, max(1, round(hp × max / maxBefore)))` (the user's answer to D1); otherwise `hp = min(hp, max)`.
+- **C3 (step 04), `src/character/character.ts`:** `clampHp(character, maxBefore): void`: if the maximum changed from `maxBefore` and `hp > 0`, `hp = min(max, max(1, round(hp × max / maxBefore)))` (the user's answer to D1); otherwise `hp = min(hp, max)`.
 - **C4 (step 04):** `GameState.runes: Pouch` (`newGame` gives `{}`).
 - **C5 (step 05):** `Tally.add` in `scripts/simulate.ts` already counts an attack's damage as `damage + Σ bonus[].damage`, `healed` as healing and on-hit statuses as statuses laid. **Do not change it again.**
 - **C6 (step 06), `src/game/runecraft.ts`:**

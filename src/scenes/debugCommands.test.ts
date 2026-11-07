@@ -72,6 +72,21 @@ describe('debug commands', () => {
     expect(runCommand('give nothing', context).lines[0]).toMatch(/No item/)
   })
 
+  it('puts runes in the pouch, lists them, and lists the rune keys', () => {
+    const context = onWorldMap()
+    expect(runCommand('runes', context).lines).toEqual(['The pouch is empty.'])
+    const answer = runCommand('give storm1 3', context)
+    expect(answer).toEqual({ lines: ['3 × Lesser Storm Rune put in the pouch.'], changed: true })
+    expect(context.source!.game.runes.storm1).toBe(3)
+    expect(runCommand('runes', context).lines[0]).toMatch(/storm1\s+3 × Lesser Storm Rune/)
+    runCommand('give iron_sword@3#ember1', context)
+    expect(context.source!.game.baggage.at(-1)!.id).toBe('iron_sword@3#ember1')
+    expect(runCommand('give storm1 0', context).lines[0]).toMatch(/at least 1/)
+    const items = runCommand('items', context).lines.join('\n')
+    expect(items).toContain('storm1')
+    expect(items).toContain('Runes: <id>#')
+  })
+
   it('reveals the map, and moves the party onto a location, confronting its monsters', () => {
     const context = onWorldMap()
     const { world } = context.source!.game

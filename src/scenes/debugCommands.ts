@@ -10,6 +10,7 @@ import { isNotable, monstersHere, passTurn, threatAt, worldActive, type WorldLoc
 import { HexBoard, hexToOffset, offsetToHex } from '../grid/hex.ts'
 import { BASE_ITEMS, MAGIC_ITEMS, itemById } from '../inventory/inventory.ts'
 import { MODIFIER_IDS } from '../inventory/modifiers.ts'
+import { RANKS, RUNE_IDS, addToPouch, isRuneKey, pouchKeys, runeKey, runeName } from '../inventory/runes.ts'
 import { describeWorldEvent } from './worldEvents.ts'
 
 /**
@@ -192,6 +193,8 @@ const COMMANDS: Record<string, Command> = {
     run: () => [
       ...[...BASE_ITEMS, ...MAGIC_ITEMS].map((item) => `${item.id.padEnd(18)} ${item.name}`),
       `Grades: <id>@2 (Fine), <id>@3 (Masterwork). Modifiers: <id>+<modifier><1-3>, of ${MODIFIER_IDS.join(', ')}.`,
+      'Runes: <id>#<rune>[.<rune>…], as iron_sword@3#ember1; a unique item takes runes only, as emberblade#dawn1.',
+      ...RUNE_IDS.map((id) => `${id.padEnd(6)} ${RANKS.map((rank) => runeKey(id, rank)).join(' ')}  (${runeName(runeKey(id, 2))})`),
     ],
   },
   facility: {
@@ -212,16 +215,31 @@ const COMMANDS: Record<string, Command> = {
     },
   },
   give: {
-    usage: 'give <item> [count]',
-    summary: "Put an item, by its id, in the party's baggage.",
+    usage: 'give <item|rune> [count]',
+    summary: "Put an item, by its id, in the party's baggage, or a rune, by its key (storm1), in the pouch.",
     changes: true,
     run([id, count], context) {
+      if (id !== undefined && isRuneKey(id)) {
+        const n = count === undefined ? 1 : integer(count, 'the count')
+        if (n < 1) throw new DebugError('The count must be at least 1.')
+        addToPouch(gameOf(context).runes, id, n)
+        return [`${n} × ${runeName(id)} put in the pouch.`]
+      }
       const item = id === undefined ? undefined : itemById(id)
       if (!item) throw new DebugError(`No item "${id ?? ''}"; \`items\` lists them.`)
       const n = count === undefined ? 1 : integer(count, 'the count')
       if (n < 1) throw new DebugError('The count must be at least 1.')
       gameOf(context).baggage.push(...Array.from({ length: n }, () => item))
       return [`${n} × ${item.name} put in the baggage.`]
+    },
+  },
+  runes: {
+    usage: 'runes',
+    summary: "The party's rune pouch.",
+    run: (_args, context) => {
+      const { runes } = gameOf(context)
+      const keys = pouchKeys(runes)
+      return keys.length === 0 ? ['The pouch is empty.'] : keys.map((key) => `${key.padEnd(8)} ${runes[key]} × ${runeName(key)}`)
     },
   },
   locations: {
