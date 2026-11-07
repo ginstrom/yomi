@@ -52,6 +52,14 @@ describe('gear comparisons', () => {
     const sword = itemById('steel_longsword')!
     const hammer = itemById('steel_war_hammer')!
     expect(compareLines(sword, hammer, 8, 3)).toContain('Strength: none → 6 (you have 3): to hit −15%')
-    expect(compareLines(hammer, hammer, 8, 3)).toEqual([])
+    expect(compareLines(hammer, hammer, 8, 6)).toEqual([])
+  })
+
+  it('keeps the holder\'s strength shortfall in a comparison though the craft leaves it alone', () => {
+    const greatsword = itemById('iron_greatsword')!
+    const balanced = itemById('iron_greatsword+balanced1')!
+    expect(compareLines(greatsword, balanced, 8, 3)).toContain('Strength: 6 (you have 3): to hit −15%')
+    expect(compareLines(greatsword, balanced, 8, 6).join('\n')).not.toContain('Strength')
+    expect(compareLines(greatsword, balanced).join('\n')).not.toContain('Strength')
   })
 })

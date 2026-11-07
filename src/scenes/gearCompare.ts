@@ -73,15 +73,17 @@ export function statSummary(item: Item): string {
 /**
  * What changes from `before` to `after`, a line a stat: "Damage: 1d8+3 → 1d8+2",
  * "Attack: 5 AP, 1 attack a turn → 4 AP, 2 attacks a turn"; a stat both have
- * alike is left out.
+ * alike is left out, but for a strength the holder falls short of, which stays as context.
  */
 export function compareLines(before: Item, after: Item, ap = TYPICAL_AP, strength?: number): string[] {
   const was = new Map(statWords(before.stats ?? {}, ap, strength))
   const now = new Map(statWords(after.stats ?? {}, ap, strength))
   const labels = [...new Set([...was.keys(), ...now.keys()])]
+  // A shortfall is kept as context even where the craft leaves it alone: it is what the holder pays.
+  const short = (label: string) => label === 'Strength' && (now.get(label) ?? '').includes('you have')
   return labels
-    .filter((label) => was.get(label) !== now.get(label))
-    .map((label) => `${label}: ${was.get(label) ?? 'none'} → ${now.get(label) ?? 'none'}`)
+    .filter((label) => was.get(label) !== now.get(label) || short(label))
+    .map((label) => (was.get(label) === now.get(label) ? `${label}: ${now.get(label)}` : `${label}: ${was.get(label) ?? 'none'} → ${now.get(label) ?? 'none'}`))
 }
 
 /** The crafting screen's line on what the field makes: the modifiers that need no workshop, at grade I, a day each. */

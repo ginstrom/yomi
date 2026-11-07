@@ -3,14 +3,20 @@ import type { EncampmentProbe, GuildHallProbe } from '../src/testHook.ts'
 import { useGames, type Game } from './driver.ts'
 
 /** A new game with gold and iron (or `stock`) planted in its stock, reloaded and continued at the encampment. */
-async function richAtHome(game: Game, stock: Record<string, number> = { gold: 100, iron: 50 }, postLevel?: number) {
+async function richAtHome(game: Game, stock: Record<string, number> = { gold: 100, iron: 50 }, postLevel?: number, plant: Record<string, unknown> = {}) {
   await game.newGame()
-  await game.page.evaluate(([stock, level]) => {
+  await game.page.evaluate(([stock, level, plant]) => {
     const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
     saved.game.world.stock = stock
     if (level) saved.game.world.tradingPost = level
+    // `plant` sets values in the saved game by dotted path: 'world.workshop', 'party.1.equipment.mainHand'.
+    for (const [path, value] of Object.entries(plant)) {
+      const keys = path.split('.')
+      const last = keys.pop()!
+      keys.reduce((node, key) => node[key], saved.game)[last] = value
+    }
     localStorage.setItem('yomi.save.1', JSON.stringify(saved))
-  }, [stock, postLevel] as const)
+  }, [stock, postLevel, plant] as const)
   const menu = await game.reload()
   await game.click(menu.buttons.continue)
   await game.waitForScenes(['World'])
@@ -212,6 +218,26 @@ describe('the encampment', () => {
     const selling = await game.settled('TradingPost', (p) => p.tab === 'sell')
     expect(selling.slotButtons).toEqual([])
     expect(selling.rows.map((row) => row.id)).toEqual(expect.arrayContaining(['baggage:0', 'baggage:1']))
+  })
+
+  it('shows a hero\'s strength shortfall when crafting on what they carry, and none for the baggage', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 200, iron: 50, stone: 20, copper: 10 }, undefined, {
+      'world.workshop': 2,
+      'party.1.equipment.mainHand': 'iron_greatsword',
+    })
+    const camp = await enter(game)
+    await game.click(facility(camp, 'workshop'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'workshop')
+    await game.click(shown.buttons.open)
+    await game.waitForScenes(['Crafting'], ['World'])
+    const bench = await game.settled('Crafting')
+    await game.click(bench.items.find((item) => item.id === 'worn:1:mainHand')!)
+    await game.settled('Crafting', (c) => c.selected === 'worn:1:mainHand')
+    const options = (await game.settled('Crafting')).options
+    await game.click(options.find((o) => o.id === 'balanced1')!)
+    const chosen = await game.settled('Crafting', (c) => c.chosen === 'balanced1')
+    expect(chosen.preview.some((line) => /^Strength: \d+ \(you have \d+\): to hit −\d+%$/.test(line))).toBe(true)
   })
 
   it('builds the workshop and works the soldier’s sword there, in no time', async () => {

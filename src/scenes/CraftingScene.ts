@@ -254,7 +254,7 @@ export class CraftingScene extends Phaser.Scene {
       return
     }
     this.frame.add(this.add.text(OPTIONS_X, previewY, this.preview(place, option).join('\n'), { ...style, fontSize: '11px', lineSpacing: 3 }))
-    if (option.refusal) this.frame.add(this.add.text(OPTIONS_X, PAGE_Y - 34, option.refusal, { ...style, fontSize: '11px', color: REFUSED }))
+    if (option.refusal) this.frame.add(this.add.text(OPTIONS_X, PAGE_Y - 22, option.refusal, { ...style, fontSize: '11px', color: REFUSED }).setOrigin(0, 1))
     this.button('work', { x: OPTIONS_X + OPTIONS_W / 2, y: PAGE_Y, width: OPTIONS_W, height: 30 }, 'Work it', () => this.onWork(place, option), option.refusal === null)
   }
 
