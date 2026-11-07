@@ -109,7 +109,15 @@ describe('the manual’s screenshots', () => {
     const nearest = foes.reduce((a, b) => (hexDistance(hero.position, b.position) < hexDistance(hero.position, a.position) ? b : a))
     await game.hover(battleHexOnScreen(battle, offsetToHex(5, 4)))
     await shot(game, 'battle-move')
-    await game.hover(battleHexOnScreen(battle, nearest.position))
+    // The archer, who can walk into range of a foe and still shoot it this turn: the path and the crossed swords.
+    await game.click(battle.party[1])
+    await game.waitFor('Battle', (b) => b.selected === 'hero_2')
+    const archer = battle.state.units.find((u) => u.id === 'hero_2')!
+    const walkable = (foe: (typeof foes)[number]) => {
+      const beyond = hexDistance(archer.position, foe.position) - archer.attackRange
+      return beyond > 0 && beyond <= archer.ap - archer.attackApCost
+    }
+    await game.hover(battleHexOnScreen(battle, (foes.find(walkable) ?? nearest).position))
     await shot(game, 'battle-attack')
 
     // The mage steps two hexes forward, to bring a foe within Magic Arrow's reach.
