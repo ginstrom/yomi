@@ -51,3 +51,4 @@ None yet.
 - Breastplate follow-up (7ed89c6, sonnet): strength 3, guard 231 identical to step 04; spear test now asserts melee at distance 2. Reviewed with step 06.
 - Step 06 (2ea4b87): trading post level 4, filter, simulator buying. Guard 233 (+2: the 20 silver kept for level 4 shifts sales; reviewer's isolating run gives 231). Tier 2 never bought in the simulator (post ends at 1.1). Review (opus) clean; nits passed to step 07 (steel_longsword@3 = 240 assertion; index rows for step 05/Q1 and step 06's SHA).
 - Steps 07 and 08 run in parallel (plan allows; separate files).
+- Step 08 (a3b34ba, 718c776): bandit_crossbowman sprite. Orchestrator viewed it beside the bandits. Review (opus) clean; optional: the white string slightly outshines the bow-arm.
