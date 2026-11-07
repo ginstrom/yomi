@@ -1,5 +1,6 @@
 import { ABILITIES, type AbilityId, type Strike } from '../combat/abilities.ts'
 import {
+  baneApplies,
   damageThrough,
   effectiveResistance,
   hitChance,
@@ -38,7 +39,7 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 22
+export const LOG_SCHEMA_VERSION = 23
 
 /** What an attacker's chance to hit gains, in percent, for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 10
@@ -306,6 +307,26 @@ export interface AttackEvent extends EventBase {
   strike?: string
   /** On a routine's strikes only: the status the strike laid, as it stands after; absent if none. */
   status?: ActiveStatus
+  /**
+   * The weapon's on-hit damage (runes), one per entry with damage that applied
+   * (a bane only where `baneApplies`), on a hit that struck no image; empty
+   * otherwise. The defender lost `damage` and every `bonus[].damage`.
+   */
+  bonus: AttackBonus[]
+  /** On a hit that struck no image, by a weapon with an on-hit heal: hit points the attacker regained (0 at full health); absent otherwise. */
+  healed?: number
+  /** The on-hit statuses laid, as they stand after; absent if none. */
+  onHitStatuses?: ActiveStatus[]
+}
+
+/** One on-hit entry's damage on an attack: flat, after resistance, cut by the defender's ward, never doubled by a critical. */
+export interface AttackBonus {
+  element?: Element
+  bane?: true
+  /** The on-hit damage before the defender's ward. */
+  rolled: number
+  /** What came through the ward: max(0, rolled − ward). */
+  damage: number
 }
 
 /** What a cast did to one unit it touched. */
@@ -1386,9 +1407,27 @@ export class BattleEngine {
     const rolled = roll.hit && !image ? rollHitDamage(dice, roll.critical, this.rng) : 0
     const damage = damageThrough(rolled, effectiveResistance(attacker, defenderResistance))
     const result = { ...roll, damage }
+    const landed = roll.hit && !image
+    const onHit = landed ? (attacker.onHit ?? []) : []
+    const bonus: AttackBonus[] = onHit
+      .filter((entry) => entry.damage > 0 && (!entry.bane || baneApplies(defender)))
+      .map((entry) => ({
+        ...(entry.element ? { element: entry.element } : {}),
+        ...(entry.bane ? { bane: true as const } : {}),
+        rolled: entry.damage,
+        damage: warded(entry.damage, entry.element, defender),
+      }))
+    const total = damage + bonus.reduce((sum, b) => sum + b.damage, 0)
     const defenderHpBefore = target.hp
-    target.hp = Math.max(0, target.hp - damage)
-    const laid = strike?.strike.status && roll.hit && !image && target.hp > 0 ? this.layStatus(target, strike.strike.status) : null
+    target.hp = Math.max(0, target.hp - total)
+    const heals = onHit.some((entry) => entry.heal !== undefined)
+    const healing = onHit.reduce((sum, entry) => sum + (entry.heal ?? 0), 0)
+    const healed = heals ? Math.min(healing, Math.max(0, actor.stats.maxHp - actor.hp)) : 0
+    actor.hp += healed
+    const laid = strike?.strike.status && landed && target.hp > 0 ? this.layStatus(target, strike.strike.status) : null
+    const onHitStatuses = onHit
+      .filter((entry) => entry.status && (!entry.onCrit || roll.critical))
+      .flatMap((entry) => (target.hp > 0 ? [this.layStatus(target, entry.status!)] : []))
 
     const events: BattleEvent[] = [
       this.record<AttackEvent>({
@@ -1427,10 +1466,13 @@ export class BattleEngine {
         defenderHpAfter: target.hp,
         ...(strike ? { ability: strike.ability, strike: strike.strike.name } : {}),
         ...(laid ? { status: laid } : {}),
+        bonus,
+        ...(heals ? { healed } : {}),
+        ...(onHitStatuses.length > 0 ? { onHitStatuses } : {}),
       }),
     ]
 
-    events.push(...this.imagesSpent(target), ...this.wake(target, damage), ...this.fell(target))
+    events.push(...this.imagesSpent(target), ...this.wake(target, total), ...this.fell(target))
     return events
   }
 
@@ -1773,8 +1815,14 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
         const crit = event.critical ? ' CRITICAL HIT!' : ''
         const absorbed = event.rolled - event.damage
         const armour = absorbed > 0 ? ` (armour stops ${absorbed})` : ''
-        const laid = event.status ? `, ${laidPhrase(event.status.id).replace(/^is /, '')}` : ''
-        return `${roll} — HITS ${defenderName} for ${event.damage} dmg${armour}${laid}.${crit}`
+        const bonus = event.bonus
+          .filter((b) => b.damage > 0)
+          .map((b) => ` +${b.damage}${b.element ? ` ${b.element}` : ''}${wardedNote(b.rolled - b.damage)}`)
+          .join('')
+        const statuses = [...(event.status ? [event.status] : []), ...(event.onHitStatuses ?? [])]
+        const laid = statuses.map((s) => `, ${laidPhrase(s.id).replace(/^is /, '')}`).join('')
+        const heals = (event.healed ?? 0) > 0 ? ` ${attackerName} heals ${event.healed}.` : ''
+        return `${roll} — HITS ${defenderName} for ${event.damage} dmg${armour}${bonus}${laid}.${crit}${heals}`
       }
       return `${roll} — MISSES ${defenderName}.`
     }

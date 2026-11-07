@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, baneApplies, damageThrough, effectiveResistance, foeAtLevel, foeYardstick, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, warded, type CombatantStats } from './combat.ts'
+import { BLIGHT_HORROR_STATS, GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, baneApplies, damageThrough, effectiveResistance, foeAtLevel, foeYardstick, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, warded, type CombatantStats } from './combat.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -296,5 +296,12 @@ describe('baneApplies', () => {
     expect(baneApplies(WARRIOR_STATS)).toBe(false)
     expect(baneApplies({ ...WARRIOR_STATS, regeneration: 0 })).toBe(false)
     expect(baneApplies(TROLL_STATS)).toBe(true)
+  })
+
+  it('holds for the Blight Horror, the blight\'s own, at every level', () => {
+    expect(BLIGHT_HORROR_STATS.blightborn).toBe(true)
+    expect(foeAtLevel(BLIGHT_HORROR_STATS, 5).blightborn).toBe(true)
+    expect(baneApplies(foeAtLevel(BLIGHT_HORROR_STATS, 5))).toBe(true)
+    expect(baneApplies(GOBLIN_STATS)).toBe(false)
   })
 })

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { ABILITIES, type Ability, type AbilityId } from '../combat/abilities.ts'
-import { GOBLIN_STATS, TROLL_STATS, type CombatantStats } from '../combat/combat.ts'
+import { GOBLIN_STATS, TROLL_STATS, type CombatantStats, type OnHit } from '../combat/combat.ts'
 import { mulberry32 } from '../combat/rng.ts'
 import { SPELL_IDS, type SpellId } from '../combat/spells.ts'
 import { HEX_DIRECTIONS, areaOf, hex, hexAdd, hexDistance, hexKey, type Hex } from '../grid/hex.ts'
@@ -1869,8 +1869,8 @@ describe('BattleEngine strike routines and recharge', () => {
   const bite = (target: string): Action => ({ type: 'ability', unit: 'spider', ability: 'spider_bite', target })
   const NAMED = { ...NAMES, troll: 'Troll', spider: 'Spider', zed: 'Zed' }
 
-  it('raises the log schema to 22 (stage 3 step 05, AttackEvent.melee)', () => {
-    expect(LOG_SCHEMA_VERSION).toBe(22)
+  it('raises the log schema to 23 (stage 4 step 05, AttackEvent.bonus; 22 was stage 3 step 05, AttackEvent.melee)', () => {
+    expect(LOG_SCHEMA_VERSION).toBe(23)
   })
 
   it('makes one attack per strike, the first carrying the ability’s AP and the rest none', () => {
@@ -2343,5 +2343,203 @@ describe('BattleEngine area abilities', () => {
     const log = play(restored, () => 0)
     expect(log).toEqual(play(straight, () => 0))
     expect(log.filter((e) => e.type === 'ability').length).toBeGreaterThan(1)
+  })
+})
+
+describe('BattleEngine on-hit effects', () => {
+  const EMBER3: OnHit = { damage: 3, element: 'fire', status: { id: 'seared', turns: 1 } }
+  const striker = (onHit: OnHit[], extra: Partial<UnitSetup> = {}): UnitSetup => ({
+    ...WARRIOR,
+    stats: { ...WARRIOR_STATS, onHit },
+    ...extra,
+  })
+  const foe = (stats: Partial<CombatantStats> = {}, extra: Partial<UnitSetup> = {}): UnitSetup => ({
+    ...GOBLIN,
+    stats: { ...GOBLIN_STATS, maxHp: 30, ...stats },
+    ...extra,
+  })
+  const first = (units: UnitSetup[], rng: number[]) => {
+    const engine = new BattleEngine(setup(units), { rng: sequence(rng) })
+    const events = engine.step(ATTACK_GOBLIN)
+    return { engine, events, attack: events[0] as AttackEvent }
+  }
+  /** A roll of 50 (a plain hit at 60%), then a 5 on the d8: 7, 6 through the goblin's resistance. */
+  const HIT = [0.5, 0.5]
+  /** A roll of 1 (a critical), then two 5s: 12, 11 through resistance. */
+  const CRIT = [0.99, 0.5, 0.5]
+  /** A roll of 90: a miss. */
+  const MISS = [0.1]
+  const NAMED = { ...NAMES, goblin: 'Troll' }
+
+  it('adds its flat damage on a hit, after resistance, and nothing on a miss', () => {
+    const { attack, engine } = first([striker([EMBER3]), foe()], HIT)
+    expect(attack).toMatchObject({ hit: true, rolled: 7, damage: 6, bonus: [{ element: 'fire', rolled: 3, damage: 3 }] })
+    expect(attack.defenderHpBefore - attack.defenderHpAfter).toBe(9)
+    expect(unitOf(engine, 'goblin').hp).toBe(21)
+    const missed = first([striker([EMBER3, { damage: 0, heal: 2 }]), foe()], MISS).attack
+    expect(missed).toMatchObject({ hit: false, bonus: [] })
+    expect(missed.healed).toBeUndefined()
+    expect(missed.onHitStatuses).toBeUndefined()
+  })
+
+  it('is not doubled by a critical', () => {
+    const plain = first([striker([EMBER3]), foe()], HIT).attack
+    const critical = first([striker([EMBER3]), foe()], CRIT).attack
+    expect(critical).toMatchObject({ critical: true, damage: 11 })
+    expect(critical.bonus).toEqual(plain.bonus)
+  })
+
+  it('owes nothing to resistance', () => {
+    const { attack } = first([striker([EMBER3]), foe({ resistance: 5 })], HIT)
+    expect(attack).toMatchObject({ damage: 2, bonus: [{ rolled: 3, damage: 3 }] })
+    expect(attack.defenderHpBefore - attack.defenderHpAfter).toBe(5)
+  })
+
+  it('is cut by the defender’s ward, and the log says so', () => {
+    const { attack } = first([striker([{ damage: 3, element: 'fire' }]), foe({ wards: { fire: 2 } })], HIT)
+    expect(attack.bonus).toEqual([{ element: 'fire', rolled: 3, damage: 1 }])
+    expect(attack.defenderHpAfter).toBe(30 - 7)
+    expect(formatEvent(attack, NAMED)).toBe('Warrior rolls 50 (needs 60 or less) — HITS Troll for 6 dmg (armour stops 1) +1 fire (warded 2).')
+    const stopped = first([striker([{ damage: 3, element: 'fire' }]), foe({ wards: { fire: 9 } })], HIT).attack
+    expect(stopped.bonus).toEqual([{ element: 'fire', rolled: 3, damage: 0 }])
+    expect(formatEvent(stopped, NAMED)).toBe('Warrior rolls 50 (needs 60 or less) — HITS Troll for 6 dmg (armour stops 1).')
+  })
+
+  it('wards each entry on its own', () => {
+    const { attack } = first([striker([{ damage: 3, element: 'fire' }, { damage: 3, element: 'fire' }]), foe({ wards: { fire: 2 } })], HIT)
+    expect(attack.bonus.map((b) => b.damage)).toEqual([1, 1])
+    expect(attack.defenderHpAfter).toBe(30 - 8)
+  })
+
+  it('takes the total off at once, floored at 0, and fells on the bonus alone', () => {
+    const { attack, events, engine } = first([striker([EMBER3]), foe({}, { hp: 8 })], HIT)
+    expect(attack).toMatchObject({ damage: 6, defenderHpBefore: 8, defenderHpAfter: 0 })
+    expect(attack.onHitStatuses).toBeUndefined()
+    expect(events.map((e) => e.type)).toEqual(['attack', 'unit_down', 'battle_end'])
+    expect(engine.getState()).toMatchObject({ phase: 'over', winner: 'player' })
+  })
+
+  it('wakes a sleeper with the bonus alone', () => {
+    // The mage's Sleep hits on a roll of 34; the striker's dice roll 0 on a hit of 50, its fire 2 then waking the goblin.
+    const mage: UnitSetup = {
+      id: 'mage',
+      side: 'player',
+      stats: { ...WARRIOR_STATS, name: 'Mage', magic: { maxMana: 20, skill: 76, spells: ['sleep'] } },
+      position: hex(0, 1),
+    }
+    const dud = striker([{ damage: 2, element: 'fire' }], { stats: { ...WARRIOR_STATS, damage: { count: 1, sides: 1, bonus: -1 }, onHit: [{ damage: 2, element: 'fire' }] } })
+    const engine = new BattleEngine(setup([mage, dud, foe()]), { rng: sequence([0.66, 0.5, 0.5]) })
+    engine.step({ type: 'cast', unit: 'mage', spell: 'sleep', target: 'goblin' })
+    expect(unitOf(engine, 'goblin').statuses).toEqual([{ id: 'asleep', turnsLeft: 2 }])
+    const events = engine.step(ATTACK_GOBLIN)
+    expect(events[0]).toMatchObject({ hit: true, damage: 0, bonus: [{ damage: 2 }] })
+    expect(events.map((e) => e.type)).toEqual(['attack', 'status_end'])
+    expect(events[1]).toMatchObject({ unit: 'goblin', status: 'asleep', reason: 'woke' })
+  })
+
+  it('records nothing when the hit strikes an image', () => {
+    const mage: UnitSetup = {
+      id: 'mage',
+      side: 'enemy',
+      stats: { ...GOBLIN_STATS, name: 'Mage', maxHp: 30, magic: { maxMana: 20, skill: 76, spells: ['mirror_image'] } },
+      position: hex(2, 1),
+    }
+    const engine = new BattleEngine(setup([striker([EMBER3, { damage: 0, heal: 2 }], { hp: 10 }), mage]), { rng: sequence(HIT) })
+    engine.step(END_TURN)
+    engine.step({ type: 'cast', unit: 'mage', spell: 'mirror_image', target: 'mage' })
+    engine.step(END_TURN)
+    const [attack] = engine.step({ type: 'attack', unit: 'warrior', target: 'mage' }) as AttackEvent[]
+    expect(attack).toMatchObject({ hit: true, image: true, damage: 0, bonus: [], defenderHpAfter: 30 })
+    expect(attack.healed).toBeUndefined()
+    expect(attack.onHitStatuses).toBeUndefined()
+    expect(unitOf(engine, 'warrior').hp).toBe(10)
+  })
+
+  it('sears with an Ember III, which stops a troll’s regeneration', () => {
+    const troll: UnitSetup = { ...GOBLIN, stats: TROLL_STATS }
+    // A roll of 50 within 65%, then 7 on the dice: 6 through the troll's resistance, then 3 of fire.
+    const { attack, engine } = first([striker([EMBER3]), troll], HIT)
+    expect(attack).toMatchObject({ damage: 6, bonus: [{ element: 'fire', rolled: 3, damage: 3 }], defenderHpAfter: 7 })
+    expect(attack.onHitStatuses).toEqual([{ id: 'seared', turnsLeft: 1 }])
+    expect(formatEvent(attack, NAMED)).toBe('Warrior rolls 50 (needs 65 or less) — HITS Troll for 6 dmg (armour stops 1) +3 fire, seared.')
+    expect(engine.step(END_TURN).map((e) => e.type)).toEqual(['end_turn'])
+    const plain = first([striker([{ damage: 3, element: 'fire' }]), troll], HIT).engine
+    expect(plain.step(END_TURN).map((e) => e.type)).toEqual(['end_turn', 'regenerate'])
+  })
+
+  it('lays an on-crit status only on a critical', () => {
+    const venom: OnHit = { damage: 2, element: 'poison', status: { id: 'poisoned', turns: 3 }, onCrit: true }
+    const rime: OnHit = { damage: 3, element: 'frost', status: { id: 'chilled', turns: 1 }, onCrit: true }
+    const plain = first([striker([venom, rime]), foe()], HIT)
+    expect(plain.attack.onHitStatuses).toBeUndefined()
+    expect(unitOf(plain.engine, 'goblin').statuses).toEqual([])
+    const critical = first([striker([venom, rime]), foe()], CRIT)
+    expect(critical.attack.onHitStatuses).toEqual([
+      { id: 'poisoned', turnsLeft: 3 },
+      { id: 'chilled', turnsLeft: 1 },
+    ])
+    expect(formatEvent(critical.attack, NAMED)).toBe(
+      'Warrior rolls 1 (needs 60 or less) — HITS Troll for 11 dmg (armour stops 1) +2 poison +3 frost, poisoned, chilled. CRITICAL HIT!',
+    )
+  })
+
+  it('heals the wielder on a hit, up to its maximum', () => {
+    const life: OnHit = { damage: 0, heal: 2 }
+    const wounded = first([striker([life], { hp: 19 }), foe()], HIT)
+    expect(wounded.attack).toMatchObject({ healed: 1, bonus: [] })
+    expect(unitOf(wounded.engine, 'warrior').hp).toBe(20)
+    expect(formatEvent(wounded.attack, NAMED)).toBe('Warrior rolls 50 (needs 60 or less) — HITS Troll for 6 dmg (armour stops 1). Warrior heals 1.')
+    expect(first([striker([life]), foe()], HIT).attack).toMatchObject({ healed: 0 })
+    expect(first([striker([life], { hp: 19 }), foe()], MISS).attack.healed).toBeUndefined()
+    expect(first([striker([]), foe()], HIT).attack.healed).toBeUndefined()
+  })
+
+  it('deals a bane only to the regenerating and the blight’s own', () => {
+    const dawn: OnHit = { damage: 2, element: 'blight', bane: true }
+    expect(first([striker([dawn]), foe({ regeneration: 3 })], HIT).attack.bonus).toEqual([{ element: 'blight', bane: true, rolled: 2, damage: 2 }])
+    expect(first([striker([dawn]), foe({ blightborn: true })], HIT).attack.bonus).toEqual([{ element: 'blight', bane: true, rolled: 2, damage: 2 }])
+    const goblin = first([striker([dawn]), foe()], HIT).attack
+    expect(goblin.bonus).toEqual([])
+    expect(goblin.defenderHpAfter).toBe(24)
+    expect(first([striker([dawn]), foe({ blightborn: true, wards: { blight: 1 } })], HIT).attack.bonus[0].damage).toBe(1)
+  })
+
+  it('comes with free attacks too', () => {
+    // The goblin steps away from the warrior, which strikes it on a roll of 50 for 6 and 3 of fire.
+    const engine = new BattleEngine(setup([striker([EMBER3]), foe()]), { rng: sequence(HIT) })
+    engine.step(END_TURN)
+    const events = engine.step({ type: 'move', unit: 'goblin', to: hex(3, 1) })
+    const free = events.find((e): e is AttackEvent => e.type === 'attack')!
+    expect(free).toMatchObject({ opportunity: true, damage: 6, bonus: [{ damage: 3 }], onHitStatuses: [{ id: 'seared', turnsLeft: 1 }] })
+  })
+
+  it('draws nothing from the battle’s RNG', () => {
+    const counted = () => {
+      const rng = mulberry32(7)
+      let draws = 0
+      return { rng: () => (draws++, rng()), draws: () => draws }
+    }
+    const play = (onHit: OnHit[]) => {
+      const { rng, draws } = counted()
+      const engine = new BattleEngine(setup([striker(onHit, { hp: 15 }), foe()]), { rng })
+      const log = [ATTACK_GOBLIN, END_TURN, ATTACK_WARRIOR, END_TURN, ATTACK_GOBLIN].flatMap((action) => engine.step(action))
+      return { draws: draws(), rolls: log.filter((e): e is AttackEvent => e.type === 'attack').map((e) => [e.attackRoll, e.rolled]) }
+    }
+    const runes = play([EMBER3, { damage: 1, element: 'poison', status: { id: 'poisoned', turns: 3 }, onCrit: true }, { damage: 0, heal: 1 }])
+    expect(runes).toEqual(play([]))
+    expect(runes.draws).toBeGreaterThan(0)
+  })
+
+  it('leaves a plain hit’s event and line as they were', () => {
+    const { attack } = first([WARRIOR, foe()], HIT)
+    expect(attack.bonus).toEqual([])
+    expect('healed' in attack).toBe(false)
+    expect('onHitStatuses' in attack).toBe(false)
+    expect(formatEvent(attack, NAMED)).toBe('Warrior rolls 50 (needs 60 or less) — HITS Troll for 6 dmg (armour stops 1).')
+  })
+
+  it('is logged under schema version 23', () => {
+    expect(LOG_SCHEMA_VERSION).toBe(23)
+    expect(new BattleEngine(DUEL).getLog()[0]).toMatchObject({ schemaVersion: 23 })
   })
 })

@@ -208,3 +208,22 @@ Tests in this step build `CombatantStats` with `onHit` directly. They do not nee
 - [ ] One commit on `long-campaign-stage-04`; step 05's row in the index set to `done` with the commit.
 
 ## 7. Execution record
+
+**Built** (one commit, "Stage 4 step 05: the engine"), on top of step 04 (`724a09a`):
+- `battleEngine.ts`: `AttackBonus`; `AttackEvent.bonus` (always present), `healed`, `onHitStatuses`; `attack()` resolves the on-hit entries in C5's order from `effectiveStats(actor).onHit`, warding with the defender's effective stats, `baneApplies` on the defender's, one subtraction of the total, the heal within `actor.stats.maxHp`, the strike's status then the on-hit ones while the defender stands; `wake` gets the total. No draw added. `formatEvent` adds ` +N element (warded W)` for each bonus with damage above 0, every status laid (the strike's, then the on-hit ones), then ` <Attacker> heals N.` after the sentence (and after "CRITICAL HIT!"). `LOG_SCHEMA_VERSION` 23.
+- `combat.ts`: `BLIGHT_HORROR_STATS.blightborn = true`.
+- `policies.ts`: `expectedHarm` = chance × (average hit + `onHitDamage`), the warded, bane-filtered on-hit damage.
+- `scripts/simulate.ts` `Tally.add`: the attack's damage plus `bonus[].damage`, `healed` as healing, each on-hit status as a status laid. Nothing else in the file.
+- CLAUDE.md: the engine bullet, the battle rules (on-hit damage owes nothing to resistance but is warded; bane; Seared from an Ember rune), the policy bullet.
+
+**Tests:** `battleEngine.test.ts` gains "BattleEngine on-hit effects" (16 cases: a hit only, a miss and an image record nothing; not doubled by a critical; resistance ignored; warded and the "(warded 2)" line, a fully warded entry left out of the line; two entries warded each; the total floored and a fell; a sleeper woken by the bonus alone; Ember III sears a Troll and stops its regeneration, with the line "HITS Troll for 6 dmg (armour stops 1) +3 fire, seared."; Venom and Rime `onCrit`; Life's heal 1, 0 and absent; bane against a regenerator, a blightborn unit and not a goblin, and cut by a blight ward; free attacks; the RNG's draws counted equal with and without on-hit entries; a plain hit's event and line unchanged; schema 23). The old "raises the log schema to 22" case now says 23. `policies.test.ts`: "aggressive with an on-hit weapon" (3 cases). `combat.test.ts`: the Horror is blightborn, also through `foeAtLevel`. `simulate.test.ts`: the tally counts on-hit damage, heal and status from a real engine's events. The hero-ward-against-Fire-Spit case already existed ("cuts a half miss by its ward too", "cuts its element by a ward…"), so none was added. Three scene test fixtures (`battleEffects`, `eventSchedule`, `sounds`) gained `bonus: []`, as the field is required.
+
+**Checks:**
+- `npx vitest run src/engine src/combat`: pass.
+- `npm test`: 74 files, 1119 tests, pass (tsc clean).
+- The guard (`--out logs/s4-step05-guard.jsonl`, tree = step 04's commit plus this step): **identical** to step 01's summary line for line (233 of 500, 9107 battles, every tally value the same), after stripping the log path.
+- `npm run test:browser -- -t battle`: 6 files, 17 tests, pass.
+
+**Deviations:** none in behaviour. Choices C5 left open: a fully warded bonus (damage 0) stays in `bonus[]` but is left out of the line, as C5 says "each bonus with damage > 0"; `healed` is present whenever an entry has a `heal` key, even `heal: 0`.
+
+**For later steps:** step 08's `bonusText` reads `bonus[].damage > 0`; step 10's tally already counts runes.

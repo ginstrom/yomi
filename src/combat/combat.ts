@@ -334,6 +334,7 @@ export const BLIGHT_HORROR_STATS: CombatantStats = {
   attackRange: 1,
   actionPoints: 8,
   magic: { maxMana: 16, skill: 60, spells: ['death_cloud', 'bane'] },
+  blightborn: true,
 }
 
 /**

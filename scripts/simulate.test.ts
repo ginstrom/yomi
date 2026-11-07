@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { SpellId } from '../src/combat/spells.ts'
-import type { CastOutcome, Side } from '../src/engine/battleEngine.ts'
+import { BattleEngine, type CastOutcome, type Side } from '../src/engine/battleEngine.ts'
+import { GOBLIN_STATS } from '../src/combat/combat.ts'
+import { hex } from '../src/grid/hex.ts'
 import { canAdvance } from '../src/character/progression.ts'
 import { newGame } from '../src/game/gameState.ts'
 import { heroId } from '../src/game/encounters.ts'
@@ -109,6 +111,23 @@ describe('summarize, with spells', () => {
       enemyHitRate: 0,
     })
     expect(summarize(battle(0, 3, 'player'), 1)).toMatchObject({ avgPlayerCasts: 0, avgEnemyCasts: 0 })
+  })
+})
+
+describe('summarize, with on-hit effects', () => {
+  it('counts an attack’s on-hit damage with its weapon’s, its heal as healing and its statuses', () => {
+    // A roll of 50 hits the goblin for 7, 6 through its resistance, then 3 of fire that sears it; the striker heals 1.
+    const striker = { ...GOBLIN_STATS, name: 'Striker', toHit: 75, damage: { count: 1, sides: 8, bonus: 2 }, onHit: [{ damage: 3, element: 'fire' as const, status: { id: 'seared' as const, turns: 1 } }, { damage: 0, heal: 1 }] }
+    const engine = new BattleEngine(
+      { board: { cols: 4, rows: 3 }, units: [
+        { id: 'hero', side: 'player', stats: striker, position: hex(1, 1), hp: 10 },
+        { id: 'goblin', side: 'enemy', stats: { ...GOBLIN_STATS, maxHp: 30 }, position: hex(2, 1) },
+      ] },
+      { rng: () => 0.5 },
+    )
+    engine.step({ type: 'attack', unit: 'hero', target: 'goblin' })
+    const events = engine.getLog().map((event) => ({ ...event, battleId: 0 }) as LoggedEvent)
+    expect(summarize(events, 1)).toMatchObject({ avgPlayerDamageDealt: 9, avgPlayerHealing: 1, avgPlayerStatuses: 1, playerHitRate: 1 })
   })
 })
 

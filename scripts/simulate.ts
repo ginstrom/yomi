@@ -728,7 +728,11 @@ class Tally {
       if (event.arc === 'rear') this.rearAttacks++
       const side = this.sideOf.get(event.attacker) === 'player' ? 'player' : 'enemy'
       this.attacks[side]++
+      // The weapon's damage, then its on-hit damage, heal and statuses (runes).
       this.damage[side] += event.damage
+      for (const bonus of event.bonus) this.damage[side] += bonus.damage
+      this.healing[side] += event.healed ?? 0
+      this.statuses[side] += event.onHitStatuses?.length ?? 0
       if (event.hit) this.hits[side]++
       if (event.critical) this.crits[side]++
     }
