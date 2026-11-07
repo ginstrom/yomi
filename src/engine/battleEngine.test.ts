@@ -815,6 +815,18 @@ describe('BattleEngine facing', () => {
 })
 
 describe('formatEvent', () => {
+  it('names a status laid twice by one blow once', () => {
+    const base = {
+      type: 'attack', attacker: 'warrior', defender: 'goblin', attackRoll: 10, chance: 80, hit: true, critical: false, image: false,
+      rolled: 5, damage: 5, bonus: [], flank: 0, arcBonus: 0, arc: 'front',
+    } as unknown as BattleEvent
+    const line = formatEvent(
+      { ...base, onHitStatuses: [{ id: 'seared', turnsLeft: 1 }, { id: 'seared', turnsLeft: 1 }] } as BattleEvent,
+      NAMES,
+    )
+    expect(line.match(/seared/g)).toHaveLength(1)
+  })
+
   it('introduces the battle by side', () => {
     expect(formatEvent(new BattleEngine(DUEL).getLog()[0], NAMES)).toBe("Goblin blocks Warrior's path. Battle begins!")
     const party = new BattleEngine(setup([WARRIOR, GOBLIN, CLERIC, GOBLIN2]))

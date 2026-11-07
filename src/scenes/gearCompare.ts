@@ -1,4 +1,4 @@
-import { formatDamage } from '../combat/combat.ts'
+import { ELEMENTS, formatDamage, type Element } from '../combat/combat.ts'
 import { gradeNumeral } from '../inventory/grades.ts'
 import { SHORTFALL_TO_HIT, strengthShortfall, type Item, type ItemStats } from '../inventory/inventory.ts'
 import { MODIFIER_IDS, MODIFIERS } from '../inventory/modifiers.ts'
@@ -99,4 +99,10 @@ export function fieldCraftSummary(): string {
  */
 export function attackCostWarning(attackApCost: number, actionPoints: number): string | null {
   return attackApCost > actionPoints ? `Attack costs ${attackApCost} AP, you have ${actionPoints}: cannot attack` : null
+}
+
+/** The Character tab's wards: "fire 2, frost 4" in element order, only those above 0; null when there are none. */
+export function wardsLine(wards: Partial<Record<Element, number>> | undefined): string | null {
+  const shown = ELEMENTS.filter((element) => (wards?.[element] ?? 0) > 0).map((element) => `${element} ${wards![element]}`)
+  return shown.length > 0 ? shown.join(', ') : null
 }

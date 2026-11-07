@@ -1,3 +1,5 @@
+import { runeName, type RuneKey } from '../inventory/runes.ts'
+import type { BattleEvent } from '../engine/battleEngine.ts'
 import type { EncounterId } from '../game/encounters.ts'
 import type { MonsterLocation, WorldState } from '../game/worldMap.ts'
 
@@ -32,4 +34,15 @@ export function chooseBattle(world: WorldState, request: BattleRequest | undefin
     encounter: location?.encounter ?? request?.encounter ?? DEFAULT_ENCOUNTER,
     threat: location?.threat ?? request?.threat,
   }
+}
+
+/** The seed a battle was started with, from its log's first event (`battle_start`, which a saved battle keeps); null when it had none. */
+export function battleSeed(log: readonly BattleEvent[]): number | null {
+  const first = log[0]
+  return first?.type === 'battle_start' ? first.seed : null
+}
+
+/** The names the victory screen's "Found:" line lists: the items first, then each rune, in the order found. */
+export function foundNames(items: readonly { name: string }[], runes: readonly RuneKey[]): string[] {
+  return [...items.map((item) => item.name), ...runes.map(runeName)]
 }

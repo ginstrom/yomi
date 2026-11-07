@@ -281,3 +281,19 @@ Change nothing about the rules here: steps 03 to 07 own those lines.
 
 ## 7. Execution record
 
+
+Built by the step 08 engineer. Domain tests first (`itemIcons`, `battleEffects`, `gearCompare`, `battleSetup`, `battleEngine`), then the scenes.
+
+- **Built:**
+  - `itemIcons.ts`: `RUNE_ICON_KEYS`, `SOCKET_PIP_KEYS`, `RUNE_COLOURS`, `socketPips` (C9) and `pipOffsets(count, scale)`: a step of 5 px a pip (the drawing is 6 wide with 4 showing, so 1 px, 2 at 2x, between two), centred, at 8.5 px below the icon's centre.
+  - `socketPips.ts` (new, a type-only Phaser import): `createPips(scene, item, x, y, scale)`. `InventoryScene` draws pips in the equipment slots (not the ghost of a two-hander), the backpack and the ground. Trading post and crafting rows draw none: their icons are unscaled and a row is a few pixels high, so step 09 decides there; all three scenes do load the rune and pip images.
+  - The tooltip adds `socketLines`. Where the item's slot is too near the panel's top for the lines to fit above it (the head slot with a runed helm), the tooltip opens below the slot.
+  - `wardsLine` (`gearCompare.ts`): `Wards:         fire 2, frost 4` in `statLines()`, so on the Character tab's "In battle" column and the Inventory tab's stats. `InventoryProbe` gains `tooltip: string[]` and `statLines: string[]` (the task named only `tooltip`; the stat lines are the only way a test reads the wards).
+  - `battleEffects.ts`: `bonusText` (C10), `bonusElement` and `changesStatusMarks`. `BattleScene` floats the text from the defender's chest at impact, in a `floatLayer` of its own (`labelLayer` is emptied by `refreshHighlights`), unscaled to its own size, coloured by the element's rune colour. A Life heal refreshes and flashes the attacker.
+  - `endBattle` rolls `takeRunes` after `takeLoot` and before the save, seeded by `battleSeed(log)` (`battleSetup.ts`); with no location or no seed it rolls none. `foundNames(items, runes)` builds the "Found:" list.
+- **Review follow-ups from step 05:** the nameplates' status letters are redrawn for an attack with `onHitStatuses` (`changesStatusMarks`, tested); `formatEvent` names a status laid twice once (", seared", test added to `battleEngine.test.ts`). `LOG_SCHEMA_VERSION` is unchanged: the event's shape did not change.
+- **Pips by eye** (1280x800 and 840x560, `scratchpad/inv-840.png`): the empty pip is a mid-grey with a dark outline, visible on the dark cells, so no rim or backing was added and no art changed. Two pips (a Masterwork tier-2 sword) sit clear of each other and inside the 46 px cell; three would span 32 px. They overlap the icon's lowest rows a little.
+- **Floating text by eye:** `+1 fire` in orange, rising from a goblin hit by an Ember sword, the log reading "HITS Goblin for 9 dmg +1 fire." (captured at a tenth of normal speed, `scratchpad/c_battle-0-20.png`).
+- **Not done:** scene smoke tests beyond the existing ones (the harness only checks registration; the in-browser test covers the tooltip and the wards). The victory line needed no new e2e: the existing loot test in `world.test.ts` (seed 1, the first nest) now ends "Found: Ring of Protection and Lesser Life Rune.", which proves the seeded roll and the line; its expectation was updated.
+- **Verification:** `npm test` (tsc and 1158 tests) passes. In-browser: the full suite (86 tests) passes after the world loot test's expectation changed, and the new test ("shows sockets and runes in a tooltip, and the wards of what is worn (ward)") passes. The guard is untouched: no `scripts/` change, and the one domain change is the log line's text.
+- **For later steps:** step 09 can use `RUNE_COLOURS`, `RUNE_ICON_KEYS` and `createPips`; the icons are already loaded by `TradingPostScene` and `CraftingScene`.

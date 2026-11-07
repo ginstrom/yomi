@@ -10,7 +10,7 @@ import type { ButtonProbe, TradingPostProbe } from '../testHook.ts'
 import { soundVolume } from './audioSettings.ts'
 import type { Point } from './boardGeometry.ts'
 import { TYPICAL_AP, statLines, statSummary } from './gearCompare.ts'
-import { ITEM_ICON_KEYS, iconTint } from './itemIcons.ts'
+import { ITEM_ICON_KEYS, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton } from './panelButton.ts'
 
@@ -115,7 +115,9 @@ export class TradingPostScene extends Phaser.Scene {
   }
 
   preload(): void {
-    for (const key of Object.values(ITEM_ICON_KEYS)) this.load.image(key, `assets/sprites/${key}.png`)
+    for (const key of [...Object.values(ITEM_ICON_KEYS), ...Object.values(RUNE_ICON_KEYS), ...Object.values(SOCKET_PIP_KEYS)]) {
+      this.load.image(key, `assets/sprites/${key}.png`)
+    }
   }
 
   create(data: TradingPostData): void {

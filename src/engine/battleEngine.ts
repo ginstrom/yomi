@@ -1819,8 +1819,8 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
           .filter((b) => b.damage > 0)
           .map((b) => ` +${b.damage}${b.element ? ` ${b.element}` : ''}${wardedNote(b.rolled - b.damage)}`)
           .join('')
-        const statuses = [...(event.status ? [event.status] : []), ...(event.onHitStatuses ?? [])]
-        const laid = statuses.map((s) => `, ${laidPhrase(s.id).replace(/^is /, '')}`).join('')
+        const statuses = new Set([...(event.status ? [event.status] : []), ...(event.onHitStatuses ?? [])].map((s) => s.id))
+        const laid = [...statuses].map((id) => `, ${laidPhrase(id).replace(/^is /, '')}`).join('')
         const heals = (event.healed ?? 0) > 0 ? ` ${attackerName} heals ${event.healed}.` : ''
         return `${roll} — HITS ${defenderName} for ${event.damage} dmg${armour}${bonus}${laid}.${crit}${heals}`
       }

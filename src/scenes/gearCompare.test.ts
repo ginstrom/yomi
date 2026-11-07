@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { IRON_SWORD, OAK_SHIELD, YEW_BOW, itemById } from '../inventory/inventory.ts'
-import { attackCostWarning, attacksPerTurn, compareLines, fieldCraftSummary, statLines, statSummary } from './gearCompare.ts'
+import { attackCostWarning, attacksPerTurn, compareLines, fieldCraftSummary, statLines, statSummary, wardsLine } from './gearCompare.ts'
 
 describe('gear comparisons', () => {
   it('counts the attacks a turn an item gives', () => {
@@ -71,5 +71,14 @@ describe('attackCostWarning', () => {
   it('is silent when the attack fits the turn', () => {
     expect(attackCostWarning(7, 7)).toBeNull()
     expect(attackCostWarning(5, 8)).toBeNull()
+  })
+})
+
+describe('the wards line', () => {
+  it('lists the wards above 0 in element order, and is null with none', () => {
+    expect(wardsLine({ frost: 4, fire: 2, acid: 0 })).toBe('fire 2, frost 4')
+    expect(wardsLine({ blight: 1, poison: 1, lightning: 3 })).toBe('lightning 3, poison 1, blight 1')
+    expect(wardsLine({ fire: 0 })).toBeNull()
+    expect(wardsLine(undefined)).toBeNull()
   })
 })

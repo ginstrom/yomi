@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { AbilityEvent, AttackEvent, BattleEvent, CastEvent } from '../engine/battleEngine.ts'
 import {
   ABILITY_LOOKS,
+  bonusElement,
+  bonusText,
+  changesStatusMarks,
   AREA_SWEEP_MS,
   OUTLINE_CRITICAL,
   OUTLINE_HEALED,
@@ -113,5 +116,33 @@ describe('an area ability', () => {
     expect(areaOutline({ ...struck, half: true, damage: 4 })).toBe(OUTLINE_HURT)
     expect(areaOutline(struck)).toBeNull()
     expect(areaOutline({ ...struck, hit: true, image: true })).toBe(OUTLINE_IMAGE)
+  })
+})
+
+describe('an attack\'s on-hit damage', () => {
+  const hit = (bonus: AttackEvent['bonus']): AttackEvent => ({ ...attack(1), hit: true, bonus })
+
+  it('reads "+3 fire", several joined by a space, and nothing when none came through', () => {
+    expect(bonusText(hit([{ element: 'fire', rolled: 3, damage: 3 }]))).toBe('+3 fire')
+    expect(bonusText(hit([{ element: 'fire', rolled: 1, damage: 1 }, { element: 'blight', bane: true, rolled: 2, damage: 2 }]))).toBe('+1 fire +2 blight')
+    expect(bonusText(hit([{ element: 'fire', rolled: 2, damage: 0 }]))).toBeNull()
+    expect(bonusText(hit([{ element: 'fire', rolled: 2, damage: 0 }, { element: 'frost', rolled: 1, damage: 1 }]))).toBe('+1 frost')
+    expect(bonusText(hit([{ rolled: 2, damage: 2 }]))).toBe('+2')
+    expect(bonusText(hit([]))).toBeNull()
+  })
+
+  it('colours it by the first element that came through', () => {
+    expect(bonusElement(hit([{ element: 'fire', rolled: 2, damage: 0 }, { element: 'frost', rolled: 1, damage: 1 }]))).toBe('frost')
+    expect(bonusElement(hit([]))).toBeUndefined()
+  })
+})
+
+describe('the nameplates\' status letters', () => {
+  it('are drawn again for a status laid by an attack, its own or a rune\'s', () => {
+    const base = attack(1)
+    expect(changesStatusMarks({ ...base, status: { id: 'webbed', turnsLeft: 2 } })).toBe(true)
+    expect(changesStatusMarks({ ...base, onHitStatuses: [{ id: 'seared', turnsLeft: 1 }] })).toBe(true)
+    expect(changesStatusMarks({ ...base, onHitStatuses: [] })).toBe(false)
+    expect(changesStatusMarks(base)).toBe(false)
   })
 })

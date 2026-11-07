@@ -38,12 +38,14 @@ import {
 } from '../character/skills.ts'
 import { formatDamage, type CombatantStats } from '../combat/combat.ts'
 import { EQUIPMENT_SLOT_LABELS, describeItemStats, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
+import { socketLines } from '../inventory/runes.ts'
 import type { InventoryProbe } from '../testHook.ts'
 import type { Point } from './boardGeometry.ts'
 import { pressMoved, rectContains, type Rect } from './mapScroll.ts'
 import { applyMove, planDrag, validTargets, type DragSource, type DropTarget } from './gearDrag.ts'
-import { attackCostWarning } from './gearCompare.ts'
-import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, iconTint } from './itemIcons.ts'
+import { attackCostWarning, wardsLine } from './gearCompare.ts'
+import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
+import { createPips } from './socketPips.ts'
 import { soundVolume } from './audioSettings.ts'
 import { isSecondaryClick } from './clicks.ts'
 import { PartyColumn } from './PartyColumn.ts'
@@ -268,6 +270,8 @@ export class InventoryScene extends Phaser.Scene {
   private tooltip!: Phaser.GameObjects.Container
   private tooltipText!: Phaser.GameObjects.Text
   private tooltipBg!: Phaser.GameObjects.Rectangle
+  /** The lines the tooltip shows now; empty while it is hidden. */
+  private tooltipLines: string[] = []
   /** The item pressed and not yet let go, if any. */
   private press: ItemPress | null = null
 
@@ -276,7 +280,9 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   preload(): void {
-    for (const key of Object.values(ITEM_ICON_KEYS)) this.load.image(key, `assets/sprites/${key}.png`)
+    for (const key of [...Object.values(ITEM_ICON_KEYS), ...Object.values(RUNE_ICON_KEYS), ...Object.values(SOCKET_PIP_KEYS)]) {
+      this.load.image(key, `assets/sprites/${key}.png`)
+    }
     PartyColumn.preload(this)
   }
 
@@ -392,6 +398,8 @@ export class InventoryScene extends Phaser.Scene {
       mana: this.shownMana(),
       spellSkill: this.shownSpellSkill(),
       attackWarning: attackCostWarning(this.stats.attackApCost, this.stats.actionPoints),
+      statLines: this.statLines(),
+      tooltip: this.tooltipLines,
       takenPerks: this.takenPerks().map((id) => ({ perk: id, ranks: perkRanks(this.character, id) })),
       perkTreeButton: onScreen(TREE_BUTTON),
       back: onScreen(BACK_BUTTON),
@@ -1008,6 +1016,7 @@ export class InventoryScene extends Phaser.Scene {
       if (tint !== undefined) icon.setTint(tint)
       if (ghost) icon.setAlpha(0.35)
       this.inventoryContent.add(icon)
+      if (!ghost) this.inventoryContent.add(createPips(this, item, x, y, ITEM_ICON_SCALE))
       this.makeItemInteractive(bg, icon, item, 0x6b5a3a, {
         source: { kind: 'equipment', slot: heldIn },
         click: () => unequipToBackpack(this.character, heldIn),
@@ -1071,10 +1080,12 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   private statLines(): string[] {
+    const wards = wardsLine(this.stats.wards)
     return [
       `Hit Points:    ${this.character.hp} / ${this.stats.maxHp}`,
       `Armor Class:   ${this.stats.ac}`,
       `Resistance:    ${this.stats.resistance ?? 0}`,
+      ...(wards ? [`Wards:         ${wards}`] : []),
       `To Hit:        ${this.stats.toHit}%`,
       `Damage:        ${formatDamage(this.stats.damage)}`,
       `Attack Cost:   ${this.stats.attackApCost} AP`,
@@ -1183,6 +1194,7 @@ export class InventoryScene extends Phaser.Scene {
       const tint = iconTint(item)
       if (tint !== undefined) icon.setTint(tint)
       this.inventoryContent.add(icon)
+      this.inventoryContent.add(createPips(this, item, x, y, ITEM_ICON_SCALE))
       this.makeItemInteractive(bg, icon, item, 0x4a3d28, actions)
     }
   }
@@ -1234,17 +1246,22 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   private showTooltip(item: Item, x: number, y: number): void {
-    this.tooltipText.setText([item.name, item.description, ...describeItemStats(item.stats, attributeLevel(this.character, 'strength'))].join('\n'))
+    this.tooltipLines = [item.name, item.description, ...describeItemStats(item.stats, attributeLevel(this.character, 'strength')), ...socketLines(item)]
+    this.tooltipText.setText(this.tooltipLines.join('\n'))
     this.tooltipText.setPosition(-this.tooltipText.width / 2, -this.tooltipText.height - 6)
     this.tooltipBg.setSize(this.tooltipText.width + 16, this.tooltipText.height + 12)
     this.tooltipBg.setPosition(0, -this.tooltipText.height / 2 - 6)
     // Kept inside the panel: the slots at its edges are narrower than their tooltips.
     const reach = this.tooltipBg.width / 2 + 4
-    this.tooltip.setPosition(Phaser.Math.Clamp(x, reach, PANEL_W - reach), y)
+    // Above the slot, or below it where the slot is too near the panel's top for the lines to fit (a runed item has many).
+    const above = y - this.tooltipText.height - 12 >= 4
+    const belowY = y + 10 + SLOT_SIZE + 6 + this.tooltipText.height + 6
+    this.tooltip.setPosition(Phaser.Math.Clamp(x, reach, PANEL_W - reach), above ? y : belowY)
     this.tooltip.setVisible(true)
   }
 
   private hideTooltip(): void {
+    this.tooltipLines = []
     this.tooltip.setVisible(false)
   }
 

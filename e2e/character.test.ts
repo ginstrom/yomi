@@ -148,6 +148,38 @@ describe('a hero’s panel', () => {
     expect((await game.probe('World'))!.partyLook).toContain('gear_breastplate')
   })
 
+  it('shows sockets and runes in a tooltip, and the wards of what is worn (ward)', async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    await debugCommand(game, 'give iron_breastplate@3#rime1')
+    await debugCommand(game, 'give iron_sword@3')
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    let panel = await game.settled('Inventory', (p) => p.tab === 'inventory' && p.ground.length === 2)
+    expect(panel.tooltip).toEqual([])
+
+    // The breastplate's rune is a ward on the sheet, and its pip and rune icon loaded without a failed request.
+    await game.click(panel.ground.find((slot) => slot.item === 'iron_breastplate@3#rime1')!)
+    panel = await game.settled('Inventory', (p) => p.backpack.some((slot) => slot.item === 'iron_breastplate@3#rime1'))
+    expect(panel.statLines.some((line) => line.startsWith('Wards:'))).toBe(false)
+    await game.click(panel.backpack.find((slot) => slot.item === 'iron_breastplate@3#rime1')!)
+    panel = await game.settled('Inventory', (p) => p.equipment.armor.item === 'iron_breastplate@3#rime1')
+    await game.hover(panel.equipment.armor)
+    panel = await game.settled('Inventory', (p) => p.tooltip.length > 0)
+    expect(panel.tooltip).toContain('Frost ward 2')
+    expect(panel.tooltip).toContain('Sockets: 1 of 1')
+    expect(panel.statLines).toContain('Wards:         frost 2')
+
+    // A socketed sword with nothing in it says so.
+    const sword = panel.ground.find((slot) => slot.item === 'iron_sword@3')!
+    await game.hover(sword)
+    panel = await game.settled('Inventory', (p) => p.tooltip.includes('Sockets: 0 of 1'))
+    await game.press('c')
+    panel = await game.settled('Inventory', (p) => p.tab === 'character')
+    expect(panel.statLines).toContain('Wards:         frost 2')
+  })
+
   it('lays a cloak, a breastplate, a circlet, a sword and a shield in their order (AC6)', async () => {
     const game = await games.open()
     const world = await game.newGame()

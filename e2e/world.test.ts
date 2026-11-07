@@ -374,7 +374,8 @@ describe('the world map', () => {
     await game.enterBattle()
     const over = await game.fightBattle()
     expect(over.state.winner).toBe('player')
-    expect(over.result.at(-1)).toBe('Found: Ring of Protection.')
+    // The first nest's seed also rolls a rune, named after the item on the same line (steps 07 and 08).
+    expect(over.result.at(-1)).toBe('Found: Ring of Protection and Lesser Life Rune.')
     await game.click(over.buttons.result)
     await game.waitForScenes(['World'])
 

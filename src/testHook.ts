@@ -314,6 +314,10 @@ export interface InventoryProbe {
   spellSkill: number | null
   /** The Character tab's warning that the weapon held costs more AP than a turn gives; null when it fits. */
   attackWarning: string | null
+  /** The stat lines the Character tab and the Inventory tab list ("Wards:         frost 2" among them). */
+  statLines: string[]
+  /** The lines of the item tooltip shown now, from the hovered item's name down to its sockets; empty when hidden. */
+  tooltip: string[]
   /** The perks the Skills tab lists: those the character has a rank of. */
   takenPerks: Array<{ perk: string; ranks: number }>
   /** The Skills tab's button that opens the perk tree, and the tree's button back, by their centres on screen. */

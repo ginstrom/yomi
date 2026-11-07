@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { deriveCombatStats, gearChanges, type Character } from '../character/character.ts'
-import { sameCombatStats } from '../combat/combat.ts'
+import { sameCombatStats, type Element as DamageElement } from '../combat/combat.ts'
 import { mulberry32, randomSeed, type SeededRng } from '../combat/rng.ts'
 import { SPELLS, STATUSES, type ActiveStatus, type SpellId } from '../combat/spells.ts'
 import {
@@ -16,6 +16,7 @@ import {
 import { POLICIES, type PolicyName } from '../engine/policies.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId, type UnitKind } from '../game/encounters.ts'
 import { newGame, takeLoot, type GameState } from '../game/gameState.ts'
+import { takeRunes } from '../game/loot.ts'
 import { Ground, pileChanges } from '../game/ground.ts'
 import { describeRewards, partyFighters, rewardVictory } from '../game/party.ts'
 import type { SavedBattle } from '../game/save.ts'
@@ -60,17 +61,20 @@ import {
   holdMs,
   impactMs,
   type SpellLook,
+  bonusElement,
+  bonusText,
+  changesStatusMarks,
 } from './battleEffects.ts'
 import { DESCRIPTION_INDENT, foeInfoLines } from './foeInfo.ts'
 import { scheduleEvents, type Cue } from './eventSchedule.ts'
 import { ScrollingLog } from './scrollingLog.ts'
 import { SEED_KEY } from './seed.ts'
 import { soundVolume } from './audioSettings.ts'
-import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, iconTint } from './itemIcons.ts'
+import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, RUNE_COLOURS, iconTint } from './itemIcons.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { CHEST_POINT, SPRITE_ATLAS, heroLook, pointFromAnchor, spriteAnim, spriteFrame } from './unitLook.ts'
-import { DEFAULT_ENCOUNTER, chooseBattle } from './battleSetup.ts'
+import { DEFAULT_ENCOUNTER, battleSeed, chooseBattle, foundNames } from './battleSetup.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
 import { showStory, type StoryAnchors } from './StoryScene.ts'
 import { storyFor, type StoryItem } from '../story/story.ts'
@@ -153,6 +157,20 @@ const TICK_PAUSE_MS = 350
 /** What a unit flashes: hurt, healed or helped, or an image struck in its place. */
 const HURT_TINT = 0xff8a80
 const HELPED_TINT = 0xa5f5a5
+/** The floating on-hit text's colour: the element's, else a plain warm one. */
+const FLOAT_COLOUR = '#ffd27a'
+const ELEMENT_FLOAT_COLOURS: Record<DamageElement, string> = {
+  fire: cssColour(RUNE_COLOURS.ember),
+  frost: cssColour(RUNE_COLOURS.rime),
+  lightning: cssColour(RUNE_COLOURS.storm),
+  poison: cssColour(RUNE_COLOURS.venom),
+  acid: cssColour(RUNE_COLOURS.acid),
+  blight: cssColour(RUNE_COLOURS.dawn),
+}
+
+function cssColour(rgb: number): string {
+  return `#${rgb.toString(16).padStart(6, '0')}`
+}
 const IMAGE_TINT = 0xffffff
 /** The spell list's rows, stacked upwards from over the Cast button. */
 const SPELL_ROW_W = 240
@@ -265,6 +283,8 @@ export class BattleScene extends Phaser.Scene {
   private plateLayer!: Phaser.GameObjects.Container
   /** Hit-chance labels on attackable foes, drawn above the nameplates. */
   private labelLayer!: Phaser.GameObjects.Container
+  /** The floating text of on-hit damage, apart from the labels so that redrawing the highlights leaves it be. */
+  private floatLayer!: Phaser.GameObjects.Container
   /** The odds on each unit an area spell would touch, for the hovered centre; above the other labels. */
   private hoverLabels!: Phaser.GameObjects.Container
   /** The foe info panel (`foeInfoLines`) beside the hovered foe, and the lines it shows now. */
@@ -359,6 +379,7 @@ export class BattleScene extends Phaser.Scene {
     this.refreshGear()
     this.labelLayer = this.add.container(0, 0)
     this.hoverLabels = this.add.container(0, 0)
+    this.floatLayer = this.add.container(0, 0)
     this.foePanel = this.add.container(0, 0)
     this.foeInfo = []
 
@@ -849,7 +870,7 @@ export class BattleScene extends Phaser.Scene {
     const floorX = freeLeft + (freeW - board.width * scale) / 2
     const floorY = freeTop + (freeH - (bottom - top) * scale) / 2 - top * scale
 
-    for (const layer of [this.floorLayer, this.unitLayer, this.plateLayer, this.labelLayer, this.hoverLabels, this.foePanel]) {
+    for (const layer of [this.floorLayer, this.unitLayer, this.plateLayer, this.labelLayer, this.hoverLabels, this.floatLayer, this.foePanel]) {
       layer.setPosition(floorX, floorY).setScale(scale)
     }
     for (const snapshot of this.engine.getState().units) this.placeUnit(snapshot.id, snapshot.position)
@@ -1368,7 +1389,7 @@ export class BattleScene extends Phaser.Scene {
     if (
       event.type === 'cast' ||
       event.type === 'ability' ||
-      (event.type === 'attack' && event.status) ||
+      event.type === 'attack' && changesStatusMarks(event) ||
       event.type === 'status_end' || event.type === 'status_tick' || event.type === 'unit_down') {
       this.refreshAllStatusMarks()
     }
@@ -1393,6 +1414,13 @@ export class BattleScene extends Phaser.Scene {
       else this.dodge(event.defender, event.attacker)
       const maxHp = this.engine.getState().units.find((u) => u.id === event.defender)!.maxHp
       this.refreshHpDisplay(defender, event.defenderHpAfter, maxHp)
+      this.floatBonus(event)
+      // A Life rune heals the attacker as it strikes.
+      if ((event.healed ?? 0) > 0) {
+        const attackerMax = this.engine.getState().units.find((u) => u.id === event.attacker)!.maxHp
+        this.refreshHpDisplay(attacker, Math.min(attackerMax, attacker.shownHp + event.healed!), attackerMax)
+        this.flash(attacker, HELPED_TINT)
+      }
     }
     if (look === 'swing') {
       const raiseMs = SWING_IMPACT_MS - LUNGE_MS
@@ -1413,6 +1441,30 @@ export class BattleScene extends Phaser.Scene {
         if (event.hit) this.burst(to, WAND_BOLT, 0xffffff, 1)
         land()
       })
+    })
+  }
+
+  /** A hit's on-hit damage ("+3 fire") rising from the defender, at its own size however far the board is scaled down. */
+  private floatBonus(event: Extract<BattleEvent, { type: 'attack' }>): void {
+    const message = bonusText(event)
+    if (message === null) return
+    const element = bonusElement(event)
+    const at = this.chest(event.defender)
+    const colour = element ? ELEMENT_FLOAT_COLOURS[element] : FLOAT_COLOUR
+    const unscale = 1 / (this.floatLayer.scaleX || 1)
+    const text = this.add
+      .text(at.x, at.y - 20, message, { fontFamily: 'monospace', fontSize: '14px', fontStyle: 'bold', color: colour, stroke: '#000000', strokeThickness: 3 })
+      .setOrigin(0.5)
+      .setScale(unscale)
+    this.floatLayer.add(text)
+    this.tweens.add({
+      targets: text,
+      y: text.y - 26 * unscale,
+      alpha: 0,
+      delay: 250,
+      duration: 800,
+      ease: 'Quad.easeOut',
+      onComplete: () => text.destroy(),
     })
   }
 
@@ -2053,6 +2105,9 @@ export class BattleScene extends Phaser.Scene {
     this.endTurnButton.setVisible(false)
     // The win and what it won are the world's from here on, however the scene is left.
     const found = playerWon && this.location ? takeLoot(this.gameState, this.location) : []
+    // Runes roll from the battle's own seed, so a reloaded battle finds the same; a debug fight has no location and none.
+    const seed = battleSeed(this.engine.getLog())
+    const foundRunes = playerWon && this.location && seed !== null ? takeRunes(this.gameState, this.location.threat, this.location.encounter, seed) : []
     if (playerWon && this.location) clearLocation(this.gameState.world, this.location.id)
     const foes = this.location ? `The ${this.location.name}` : 'Your foes'
     // The reward goes by the hit points the party ended on: who fell, and so who is dead.
@@ -2075,7 +2130,8 @@ export class BattleScene extends Phaser.Scene {
       deleteSlot(this.gameState.slot)
       this.gameState.slot = null
     }
-    const lootLines = found.length > 0 ? [`Found: ${listNames(found.map((item) => item.name))}.`] : []
+    const foundAll = foundNames(found, foundRunes)
+    const lootLines = foundAll.length > 0 ? [`Found: ${listNames(foundAll)}.`] : []
     this.bannerText.setText(playerWon ? 'VICTORY!' : 'DEFEAT')
     this.bannerText.setColor(playerWon ? '#66bb6a' : '#ef5350')
     this.resultText.setText(
