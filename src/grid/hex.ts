@@ -138,8 +138,8 @@ export function reachableHexes(
   start: Hex,
   maxSteps: number,
   passable: (h: Hex) => boolean,
-  /** Ids of whoever is provoked by stepping out of `from`; each counts once per route. */
-  provokers: (from: Hex) => readonly string[] = () => [],
+  /** Ids of whoever is provoked by stepping from `from` to `to`; each counts once per route. */
+  provokers: (from: Hex, to: Hex) => readonly string[] = () => [],
 ): Map<string, Hex[]> {
   type Entry = { hex: Hex; path: Hex[]; provoked: ReadonlySet<string> }
   const isSubset = (a: ReadonlySet<string>, b: ReadonlySet<string>) => [...a].every((id) => b.has(id))
@@ -154,10 +154,10 @@ export function reachableHexes(
   for (let step = 0; step < maxSteps && frontier.length > 0; step++) {
     const next = new Map<string, Entry[]>()
     for (const { hex: from, path, provoked } of frontier) {
-      const leaving = new Set([...provoked, ...provokers(from)])
       for (const n of hexNeighbors(from)) {
         const key = hexKey(n)
         if (seen.has(key) || !passable(n)) continue
+        const leaving = new Set([...provoked, ...provokers(from, n)])
         const kept = next.get(key) ?? []
         if (kept.some((e) => isSubset(e.provoked, leaving))) continue
         const better = kept.filter((e) => !isSubset(leaving, e.provoked))
@@ -192,4 +192,50 @@ export function hexCorners(size: number): { x: number; y: number }[] {
     const angle = (Math.PI / 180) * (60 * i - 30)
     return { x: size * Math.cos(angle), y: size * Math.sin(angle) }
   })
+}
+
+export type AreaShape = 'burst' | 'cone' | 'line'
+
+/**
+ * The hexes an area of `shape` covers, on the board or off it (callers filter):
+ * burst: every hex within `radius` of `aim` (the caller checks `aim` is within `range` of `origin`);
+ * line: `range` hexes from `origin` towards `aim`, the origin excluded;
+ * cone: the hexes 1 to `range` from `origin` whose direction from it is within 30 degrees of the direction to `aim`.
+ * Cone and line are [] when `aim` is `origin`.
+ */
+export function areaOf(shape: AreaShape, origin: Hex, aim: Hex, range: number, radius = 0): Hex[] {
+  if (shape === 'burst') {
+    const hexes: Hex[] = []
+    for (let q = -radius; q <= radius; q++) {
+      for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
+        hexes.push(hex(aim.q + q, aim.r + r))
+      }
+    }
+    return hexes
+  }
+  const n = hexDistance(origin, aim)
+  if (n === 0) return []
+  if (shape === 'line') {
+    const k = Math.ceil(range / n)
+    const far = hex(origin.q + (aim.q - origin.q) * k, origin.r + (aim.r - origin.r) * k)
+    return hexLine(origin, far).slice(1, range + 1)
+  }
+  const at = hexToPixel(origin, 1)
+  const toAim = hexToPixel(aim, 1)
+  const ax = toAim.x - at.x
+  const ay = toAim.y - at.y
+  const aimLength = Math.hypot(ax, ay)
+  const hexes: Hex[] = []
+  for (let q = -range; q <= range; q++) {
+    for (let r = Math.max(-range, -q - range); r <= Math.min(range, -q + range); r++) {
+      if (q === 0 && r === 0) continue
+      const h = hex(origin.q + q, origin.r + r)
+      const p = hexToPixel(h, 1)
+      const dx = p.x - at.x
+      const dy = p.y - at.y
+      const cos = (dx * ax + dy * ay) / (Math.hypot(dx, dy) * aimLength)
+      if (Math.acos(Math.max(-1, Math.min(1, cos))) <= Math.PI / 6 + 1e-9) hexes.push(h)
+    }
+  }
+  return hexes.sort((a, b) => hexDistance(origin, a) - hexDistance(origin, b) || a.q - b.q || a.r - b.r)
 }

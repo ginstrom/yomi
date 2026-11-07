@@ -1,5 +1,7 @@
 import {
   ARMORED_TROLL_STATS,
+  GIANT_SPIDER_STATS,
+  SALAMANDER_STATS,
   BLIGHT_HORROR_STATS,
   GOBLIN_SHAMAN_STATS,
   GOBLIN_STATS,
@@ -11,6 +13,7 @@ import {
 } from '../combat/combat.ts'
 import type { BattleSetup, UnitId, UnitSetup } from '../engine/battleEngine.ts'
 import { offsetToHex } from '../grid/hex.ts'
+import { BANDIT_ROLE, banditGrade, banditStats } from './bandits.ts'
 
 /** A party member as it enters a battle: its stats, and the hit points it has left if wounded. */
 export interface Fighter {
@@ -46,8 +49,17 @@ function partyKinds(party: readonly Fighter[]): Record<UnitId, UnitKind> {
   return Object.fromEntries(party.map((_, i) => [heroId(i), 'warrior']))
 }
 
+/** Monsters: stat blocks scaled by `foeAtLevel` from their native level. */
+export type MonsterKind = 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll' | 'giant_spider' | 'salamander'
+
+/** Humanoids built by hero rules (bandits.ts). */
+export type BanditKind = 'bandit_cutthroat' | 'bandit_archer' | 'bandit_brute' | 'bandit_mage' | 'bandit_captain'
+
+/** What a foe can be: a monster, or a bandit. */
+export type FoeKind = MonsterKind | BanditKind
+
 /** What a unit is, for drawing it; the engine only knows its stats. */
-export type UnitKind = 'warrior' | 'goblin' | 'kobold' | 'shaman' | 'horror' | 'hobgoblin' | 'troll' | 'armored_troll'
+export type UnitKind = 'warrior' | FoeKind
 
 /**
  * The experience beating a level 1 unit of each kind is worth. An even match for a
@@ -57,6 +69,11 @@ export type UnitKind = 'warrior' | 'goblin' | 'kobold' | 'shaman' | 'horror' | '
  * curse, worth a little more than a Goblin; the Hobgoblin Chief, in mail,
  * and the Troll, which regenerates, about two Goblins, and the Armoured Troll
  * more; the Blight Horror, which guards the Source, as much as four Goblins.
+ * The Giant Spider and the Salamander are priced near an even foe of their
+ * native level (`EVEN_FOE_XP_PER_LEVEL`), the Salamander a little above for
+ * its spit and its ward; first values, for the simulator to tune.
+ * Bandits, built by hero rules (bandits.ts), are even foes for a hero of
+ * their level, whatever their role, and so worth `EVEN_FOE_XP_PER_LEVEL`.
  */
 export const FOE_XP: Record<UnitKind, number> = {
   warrior: 0,
@@ -67,6 +84,13 @@ export const FOE_XP: Record<UnitKind, number> = {
   hobgoblin: 150,
   troll: 160,
   armored_troll: 220,
+  giant_spider: 100,
+  salamander: 120,
+  bandit_cutthroat: 100,
+  bandit_archer: 100,
+  bandit_brute: 100,
+  bandit_mage: 100,
+  bandit_captain: 100,
 }
 
 export interface Encounter {
@@ -76,23 +100,19 @@ export interface Encounter {
   threat: number
 }
 
-/**
- * How many foes a battle has at each threat, from 1 up, tuned for a new
- * game's ready-made party of three. Numbers tell more than levels do, and they tell
- * twice: a foe more is a harder battle now and, by the experience it is
- * worth, a stronger party in every battle after. So a count raised at one
- * threat can make the next threat easier; judge a change by a campaign run
- * (`npm run simulate -- --campaign`), not by the battle it changes.
- */
-const FOES_AT_THREAT = [2, 3, 3, 3, 4]
+/** The highest threat on today's map, and `threatAt`'s cap until the map grows. */
+export const MAX_THREAT = 5
 
-/** The most dangerous a battle gets; any threat above it is fought as this. */
-export const MAX_THREAT = FOES_AT_THREAT.length
+/** The threats an encounter is fought at, from `min` to `max`; any threat outside is fought as the nearest in it. */
+export interface ThreatBand {
+  min: number
+  max: number
+}
 
 /** A foe an encounter can field; a setup fields the first few of its list. */
 interface FoeSlot {
   id: UnitId
-  kind: Exclude<UnitKind, 'warrior'>
+  kind: FoeKind
   /** Each foe of a battle has a name of its own, so the log tells them apart. */
   name: string
   at: readonly [number, number]
@@ -100,7 +120,7 @@ interface FoeSlot {
   fromThreat?: number
 }
 
-const FOE_STATS: Record<FoeSlot['kind'], CombatantStats> = {
+const FOE_STATS: Record<MonsterKind, CombatantStats> = {
   goblin: GOBLIN_STATS,
   kobold: KOBOLD_STATS,
   shaman: GOBLIN_SHAMAN_STATS,
@@ -108,6 +128,35 @@ const FOE_STATS: Record<FoeSlot['kind'], CombatantStats> = {
   hobgoblin: HOBGOBLIN_CHIEF_STATS,
   troll: TROLL_STATS,
   armored_troll: ARMORED_TROLL_STATS,
+  giant_spider: GIANT_SPIDER_STATS,
+  salamander: SALAMANDER_STATS,
+}
+
+/** The level each monster kind's stat block is written for; it grows from there (`foeAtLevel`). */
+export const FOE_NATIVE_LEVEL: Record<MonsterKind, number> = {
+  goblin: 1,
+  kobold: 1,
+  shaman: 1,
+  horror: 1,
+  hobgoblin: 1,
+  troll: 1,
+  armored_troll: 1,
+  giant_spider: 4,
+  salamander: 5,
+}
+
+function isBandit(kind: FoeKind): kind is BanditKind {
+  return kind in BANDIT_ROLE
+}
+
+/**
+ * A foe of `kind` at `level`: a monster by `foeAtLevel` from its native
+ * level; a bandit by `banditStats`, in the gear its level's threat calls for.
+ */
+export function foeStats(kind: FoeKind, level: number): CombatantStats {
+  // A foe's level is its battle's threat (clamped to the encounter's band), so the level picks the gear grade.
+  if (isBandit(kind)) return banditStats(BANDIT_ROLE[kind], level, banditGrade(level))
+  return foeAtLevel(FOE_STATS[kind], level, FOE_NATIVE_LEVEL[kind])
 }
 
 /**
@@ -118,14 +167,35 @@ const FOE_STATS: Record<FoeSlot['kind'], CombatantStats> = {
 const BOARD = { cols: 12, rows: 9 }
 
 /**
- * The party against the foes `threat` calls for: the first `FOES_AT_THREAT`
- * of `slots` that take the field at that threat (`fromThreat`), every one at
- * level `threat` (`foeAtLevel`). The numbers behind
- * both were chosen with the simulator; see the rules of scaling in CLAUDE.md.
+ * An encounter as data: the foes it can field, in the order they take the
+ * field, the threats it is fought at, and how many of them fight at each.
  */
-function encounter(party: readonly Fighter[], slots: readonly FoeSlot[], threat: number): Encounter {
-  const level = Math.min(Math.max(1, Math.floor(threat)), MAX_THREAT)
-  const foes = slots.filter((slot) => (slot.fromThreat ?? 1) <= level).slice(0, FOES_AT_THREAT[level - 1])
+interface EncounterDef {
+  slots: readonly FoeSlot[]
+  band: ThreatBand
+  /**
+   * How many foes fight at each threat of the band, from `band.min` up, tuned
+   * for a new game's ready-made party of three. Numbers tell more than
+   * levels do, and they tell twice: a foe more is a harder battle now and, by
+   * the experience it is worth, a stronger party in every battle after. So a
+   * count raised at one threat can make the next threat easier; judge a change
+   * by a campaign run (`npm run simulate -- --campaign`), not by the battle it
+   * changes. One count for each threat of the band.
+   */
+  counts: readonly number[]
+}
+
+/**
+ * The party against the foes `threat` calls for. The level is the threat
+ * (a whole number) held within the band; the foes are the slots that take the
+ * field at that level (`fromThreat`), cut to the band's count for it, each
+ * a foe at that level (`foeStats`). The numbers behind the counts were
+ * chosen with the simulator; see the rules of scaling in CLAUDE.md.
+ */
+function encounter(party: readonly Fighter[], { slots, band, counts }: EncounterDef, threat: number): Encounter {
+  if (counts.length !== band.max - band.min + 1) throw new Error('An encounter needs a foe count for each threat of its band')
+  const level = Math.min(Math.max(Math.floor(threat), band.min), band.max)
+  const foes = slots.filter((slot) => (slot.fromThreat ?? 1) <= level).slice(0, counts[level - band.min])
   return {
     setup: {
       board: BOARD,
@@ -134,7 +204,7 @@ function encounter(party: readonly Fighter[], slots: readonly FoeSlot[], threat:
         ...foes.map(({ id, kind, name, at }): UnitSetup => ({
           id,
           side: 'enemy',
-          stats: { ...foeAtLevel(FOE_STATS[kind], level), name },
+          stats: { ...foeStats(kind, level), name },
           position: offsetToHex(...at),
         })),
       ],
@@ -144,7 +214,7 @@ function encounter(party: readonly Fighter[], slots: readonly FoeSlot[], threat:
   }
 }
 
-const GOBLIN_RAID: readonly FoeSlot[] = [
+const GOBLIN_RAID_SLOTS: readonly FoeSlot[] = [
   { id: 'goblin', kind: 'goblin', name: 'Goblin', at: [8, 4] },
   { id: 'kobold', kind: 'kobold', name: 'Kobold', at: [9, 2] },
   // Third, so it takes the field from threat 2; at the back, off the party's hexes.
@@ -154,7 +224,7 @@ const GOBLIN_RAID: readonly FoeSlot[] = [
   { id: 'brute', kind: 'goblin', name: 'Goblin Brute', at: [9, 3] },
 ]
 
-const KOBOLD_SCOUTS: readonly FoeSlot[] = [
+const KOBOLD_SCOUTS_SLOTS: readonly FoeSlot[] = [
   { id: 'scout', kind: 'kobold', name: 'Kobold Scout', at: [8, 2] },
   { id: 'tracker', kind: 'kobold', name: 'Kobold Tracker', at: [8, 6] },
   { id: 'trapper', kind: 'kobold', name: 'Kobold Trapper', at: [9, 4] },
@@ -163,7 +233,7 @@ const KOBOLD_SCOUTS: readonly FoeSlot[] = [
 ]
 
 // The Chief first, so it takes the field at any threat: the armoured foe of the near lands.
-const HOBGOBLIN_WARBAND: readonly FoeSlot[] = [
+const HOBGOBLIN_WARBAND_SLOTS: readonly FoeSlot[] = [
   { id: 'chief', kind: 'hobgoblin', name: 'Hobgoblin Chief', at: [8, 4] },
   { id: 'goblin', kind: 'goblin', name: 'Goblin', at: [8, 2] },
   { id: 'shaman', kind: 'shaman', name: 'Goblin Shaman', at: [9, 4] },
@@ -174,7 +244,7 @@ const HOBGOBLIN_WARBAND: readonly FoeSlot[] = [
 // The Armoured Troll only at threat 5, a minion of the far lands; below that a goblin fills its place. At
 // threat 4 the ready-made party, a longsword, a bow and a wand, could not get through its armour and its
 // regeneration together (7 battles won in 500 at the party's level).
-const TROLL_LAIR: readonly FoeSlot[] = [
+const TROLL_LAIR_SLOTS: readonly FoeSlot[] = [
   { id: 'troll', kind: 'troll', name: 'Troll', at: [8, 4] },
   { id: 'goblin', kind: 'goblin', name: 'Goblin Herder', at: [8, 2] },
   { id: 'armored', kind: 'armored_troll', name: 'Armoured Troll', at: [9, 4], fromThreat: 5 },
@@ -182,14 +252,61 @@ const TROLL_LAIR: readonly FoeSlot[] = [
   { id: 'whelp', kind: 'troll', name: 'Troll Whelp', at: [9, 6] },
 ]
 
+// The Spider first, the Sneak beside it, and the second Spider: all three at threat 5, the only threat it is fought at.
+const SPIDER_NEST_SLOTS: readonly FoeSlot[] = [
+  { id: 'spider', kind: 'giant_spider', name: 'Giant Spider', at: [8, 4] },
+  { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [9, 2] },
+  { id: 'spider2', kind: 'giant_spider', name: 'Brood Spider', at: [8, 6] },
+]
+
+// The Salamander in the middle, a Kobold either side: its cone burns them too.
+const SALAMANDER_POOL_SLOTS: readonly FoeSlot[] = [
+  { id: 'salamander', kind: 'salamander', name: 'Salamander', at: [8, 4] },
+  { id: 'kobold', kind: 'kobold', name: 'Kobold Stoker', at: [8, 2] },
+  { id: 'kobold2', kind: 'kobold', name: 'Kobold Warden', at: [8, 6] },
+]
+
 // The Horror first, so it takes the field at any threat; the Source is fought at the top.
-const SOURCE_GUARDIANS: readonly FoeSlot[] = [
+const SOURCE_GUARDIANS_SLOTS: readonly FoeSlot[] = [
   { id: 'horror', kind: 'horror', name: 'Blight Horror', at: [8, 4] },
   { id: 'brute', kind: 'goblin', name: 'Goblin Brute', at: [8, 2] },
   { id: 'shaman', kind: 'shaman', name: 'Blight Shaman', at: [9, 4] },
   { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [8, 6] },
   { id: 'cutter', kind: 'goblin', name: 'Goblin Cutter', at: [9, 6] },
 ]
+
+// The Captain first, so it leads at every threat; then the Archer from threat 5 and the Hedge-Mage from threat 4,
+// ahead of the Brute, so that each threat of today's map has its own second bandit (the Brute at 3, the Hedge-Mage
+// at 4, the Archer at 5), and the Cutthroat last.
+const BANDIT_CAMP_SLOTS: readonly FoeSlot[] = [
+  { id: 'captain', kind: 'bandit_captain', name: 'Bandit Captain', at: [8, 4] },
+  { id: 'archer', kind: 'bandit_archer', name: 'Bandit Archer', at: [9, 6], fromThreat: 5 },
+  { id: 'mage', kind: 'bandit_mage', name: 'Hedge-Mage', at: [9, 4], fromThreat: 4 },
+  { id: 'brute', kind: 'bandit_brute', name: 'Bandit Brute', at: [8, 2] },
+  { id: 'cutthroat', kind: 'bandit_cutthroat', name: 'Cutthroat', at: [8, 6] },
+]
+
+/** Today's encounters are fought at threats 1 to 5, with these many foes at each. */
+const TODAY = { band: { min: 1, max: 5 }, counts: [2, 3, 3, 3, 4] } as const satisfies Omit<EncounterDef, 'slots'>
+
+const GOBLIN_RAID: EncounterDef = { slots: GOBLIN_RAID_SLOTS, ...TODAY }
+const KOBOLD_SCOUTS: EncounterDef = { slots: KOBOLD_SCOUTS_SLOTS, ...TODAY }
+const HOBGOBLIN_WARBAND: EncounterDef = { slots: HOBGOBLIN_WARBAND_SLOTS, ...TODAY }
+const TROLL_LAIR: EncounterDef = { slots: TROLL_LAIR_SLOTS, ...TODAY }
+const SOURCE_GUARDIANS: EncounterDef = { slots: SOURCE_GUARDIANS_SLOTS, ...TODAY }
+/**
+ * The Giant Spider's nest, fought at threat 5 only (the user's choice at stage 2: at threat 4 its two foes were
+ * won 500 times in 500, and only a third foe moved that, which would have fielded as many at the band's bottom as at its top).
+ */
+const SPIDER_NEST: EncounterDef = { slots: SPIDER_NEST_SLOTS, band: { min: 5, max: 5 }, counts: [3] }
+/** The Salamander's pool, fought at threat 5 only. */
+const SALAMANDER_POOL: EncounterDef = { slots: SALAMANDER_POOL_SLOTS, band: { min: 5, max: 5 }, counts: [3] }
+/**
+ * Bandits are fought from threat 3. Two at threats 3 to 5, tuned by the simulator (a third made the camp a wall:
+ * a party of the threat's level won about 2 in 5 at threat 3 and 1 in 3 at 4); the counts past 5 are the first guess, for the
+ * stage that grows the map to tune.
+ */
+const BANDIT_CAMP: EncounterDef = { slots: BANDIT_CAMP_SLOTS, band: { min: 3, max: 7 }, counts: [2, 2, 2, 4, 4] }
 
 /**
  * A Goblin and a Kobold across the board from the party; where the threat is
@@ -219,12 +336,40 @@ export function trollLair(party: readonly Fighter[], threat = 1): Encounter {
 }
 
 /**
+ * Giant Spiders that web a hero from range, then close and bite twice, the
+ * second bite poisoning, with a Kobold Sneak; at threat 5 a second spider.
+ */
+export function spiderNest(party: readonly Fighter[], threat = 5): Encounter {
+  return encounter(party, SPIDER_NEST, threat)
+}
+
+/**
+ * A Salamander, warded against fire, spitting a cone of fire that burns its
+ * own two Kobolds as well as the party.
+ */
+export function salamanderPool(party: readonly Fighter[], threat = 5): Encounter {
+  return encounter(party, SALAMANDER_POOL, threat)
+}
+
+/**
  * What guards the blight's Source: the Blight Horror, with a Goblin Brute
  * beside it and, at the threat the Source is fought at, a shaman and a
  * Kobold Sneak behind.
  */
 export function sourceGuardians(party: readonly Fighter[], threat = 1): Encounter {
   return encounter(party, SOURCE_GUARDIANS, threat)
+}
+
+/**
+ * Bandits, built by the rules heroes are: a Bandit Captain with sword, shield
+ * and breastplate, and a Brute with an axe and breastplate at threat 3; at
+ * threat 4 a Hedge-Mage in the Brute's place, and at threat 5 an Archer, their
+ * gear Fine at 5. From threat 6 four fight, the Captain, Archer, Hedge-Mage and
+ * Brute; the Cutthroat, fifth in the slot order, takes the field only once a
+ * later stage raises a count to 5 (stage 9).
+ */
+export function banditCamp(party: readonly Fighter[], threat = 3): Encounter {
+  return encounter(party, BANDIT_CAMP, threat)
 }
 
 /**
@@ -245,6 +390,40 @@ export const ENCOUNTERS = {
   hobgoblin_warband: hobgoblinWarband,
   troll_lair: trollLair,
   source_guardians: sourceGuardians,
+  bandit_camp: banditCamp,
+  spider_nest: spiderNest,
+  salamander_pool: salamanderPool,
 } satisfies Record<string, (party: readonly Fighter[], threat?: number) => Encounter>
 
 export type EncounterId = keyof typeof ENCOUNTERS
+
+/** The threats each encounter is fought at, from its definition. */
+export const ENCOUNTER_BANDS: Record<EncounterId, ThreatBand> = {
+  goblin_raid: GOBLIN_RAID.band,
+  kobold_scouts: KOBOLD_SCOUTS.band,
+  hobgoblin_warband: HOBGOBLIN_WARBAND.band,
+  troll_lair: TROLL_LAIR.band,
+  source_guardians: SOURCE_GUARDIANS.band,
+  bandit_camp: BANDIT_CAMP.band,
+  spider_nest: SPIDER_NEST.band,
+  salamander_pool: SALAMANDER_POOL.band,
+}
+
+/** How many foes each encounter fields at each threat of its band, from `band.min` up, from its definition. */
+export const ENCOUNTER_COUNTS: Record<EncounterId, readonly number[]> = {
+  goblin_raid: GOBLIN_RAID.counts,
+  kobold_scouts: KOBOLD_SCOUTS.counts,
+  hobgoblin_warband: HOBGOBLIN_WARBAND.counts,
+  troll_lair: TROLL_LAIR.counts,
+  source_guardians: SOURCE_GUARDIANS.counts,
+  bandit_camp: BANDIT_CAMP.counts,
+  spider_nest: SPIDER_NEST.counts,
+  salamander_pool: SALAMANDER_POOL.counts,
+}
+
+/** The encounters whose band holds `threat`, in `ENCOUNTERS` order. */
+export function encountersFor(threat: number): EncounterId[] {
+  return (Object.keys(ENCOUNTERS) as EncounterId[]).filter(
+    (id) => threat >= ENCOUNTER_BANDS[id].min && threat <= ENCOUNTER_BANDS[id].max,
+  )
+}

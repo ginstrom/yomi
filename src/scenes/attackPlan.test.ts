@@ -52,10 +52,12 @@ describe('planAttack', () => {
     expect(planAttack(engine, 'warrior', 'goblin')).toEqual({ move: null, attack: false })
   })
 
-  it("prefers a hex that strikes the foe's rear when it is as safe to reach", () => {
-    // The goblin faces west; from the north-east its side and its back are equally near.
+  it("prefers a hex that strikes the foe's rear when it is as safe to reach and the foe cannot turn", () => {
+    // The goblin faces west, and has turned once already; from the north-east its side and its back are equally near.
     const goblin = offsetToHex(4, 2)
-    const plan = planAttack(battle(offsetToHex(6, 0), goblin), 'warrior', 'goblin')
+    const snapshot = battle(offsetToHex(6, 0), goblin).snapshot()
+    snapshot.units.find((u) => u.id === 'goblin')!.turnReady = false
+    const plan = planAttack(BattleEngine.restore(snapshot), 'warrior', 'goblin')
     expect(plan.attack).toBe(true)
     expect(attackArc({ position: goblin, facing: 3 }, plan.move!.to)).toBe('rear')
   })

@@ -31,7 +31,7 @@ A new game first asks how you want to start:
 
 ![The party roster](images/party-roster.png)
 
-Either choice takes you to the roster, which has one row for each place in the party. You start with three places. Members can be **edited** or **removed**. An empty place can be filled in two ways: **Create** opens character creation, and **Preroll** offers a ready-built hero.
+Either choice takes you to the roster, which has one row for each place in the party. You start with three places. Members can be **edited** or **removed**. An empty place can be filled in two ways: **Create character** opens character creation, and **Choose pre-rolled** offers a ready-built hero.
 
 ![Pre-rolled characters](images/party-prerolls.png)
 
@@ -72,7 +72,7 @@ There are three skills, each a percentage:
 - **Archery**: your chance to hit with a bow.
 - **Magic**: your chance of landing a spell or a wand shot. Spell perks also require a minimum Magic.
 
-Skills start low and are set by attributes alone. **Tag** one skill: tagging adds 20% to it and makes each skill point raise it by 2% instead of 1%. You then have **10 skill points** to place. Above 80% a raise costs 2 points, and above 90% it costs 3.
+Skills start low and are set by attributes alone. **Tag** one skill: tagging adds 20% to it and makes each skill point raise it by 2% instead of 1%. You then have **10 skill points** to place. From 80% a raise costs 2 points, and from 90% it costs 3.
 
 An untrained skill sits near 10%, and against an armoured foe that becomes the minimum 5% chance to hit. A hero who specialises (tags a skill, puts all 10 points into it and takes its skill perk) starts at around 60%.
 
@@ -92,7 +92,7 @@ If a change you make leaves a perk you already took without its requirements, th
 
 ![Name and portrait](images/creation-name.png)
 
-Pick a portrait and type a name of up to 12 letters. Gear is not chosen: every hero starts holding the weapon of their tagged skill, wears a steel breastplate, and carries the other plain weapons in their backpack.
+Pick a portrait and type a name of up to 12 letters. Gear is not chosen: every hero starts holding the weapon of their tagged skill (a melee hero also holds an oak shield), wears a steel breastplate, and carries the other plain weapons in their backpack, and the oak shield too, unless they hold it.
 
 Any skill points or picks you leave unspent stay with the character, and you can spend them later on the world map.
 
@@ -102,13 +102,15 @@ Any skill points or picks you leave unspent stay with the character, and you can
 
 ![The world map at the start](images/world-start.png)
 
-The world map is a large board of hexes, many screens wide, and the view scrolls to follow your party. Your heroes' portraits run down the left side. The header shows the turn number, how much of the explored land is blighted, and the encampment's **stock** of materials.
+The world map is a large board of hexes, many screens wide, and the view scrolls to follow your party. Your heroes' portraits run down the left side. Your party is listed down the right side of the map, with its leader's face and its hit points; click it to bring the view back to it (as **Home** does). The header shows the turn number, how much of the explored land is blighted (and, once it has grown, how much stronger the blight has become), and the encampment's **stock** of materials.
 
 **Time passes only when you act.** Each hex you walk and each day you camp takes one turn, and each turn the blight takes another day to spread (see [The blight](#8-the-blight)).
 
 ### Travel
 
 Click a hex to travel there. Hovering over a hex first shows the route, and a panel at the top right tells what you know of it: what stands there, its blight (as you last saw it, if it is out of sight), whether the blight is gaining or receding there, how many days away it is, and your heroes' levels and hit points on the party's own hex. The party walks one hex per turn and stops early if something important happens on the way, such as monsters coming into view, a site you hold falling under threat, or monsters standing in the road. Routes avoid known monster lairs unless the lair is where you are going.
+
+The map is larger than the window. It follows the party as it travels, but you can **drag** it with the mouse to look elsewhere; it stops at the map's edges, and a short click still travels. The view stays where you left it until the party next sets out, or you press **Home** or click your party's entry to bring it back to the party.
 
 ### Fog of war
 
@@ -130,6 +132,17 @@ When you walk onto a monster lair, the footer offers three actions:
 - **Scout** and **Wait** each pass a turn without fighting. Neither does more yet.
 
 You can also click a hex to walk away.
+
+**Bandits.** Not every lair holds monsters. Bandits hold the **Bandit Camp** (threat 3) and the **Bandit Hideout** (threat 4), and new **Bandit Gangs** appear where the blight breeds lairs of threat 3 or more. Bandits are people, built the way your heroes are, and always led by a Captain with sword, shield and breastplate. At threat 3 a Brute with a battle axe and breastplate fights beside him; at threat 4 a Hedge-Mage takes the Brute's place, casting Magic Arrow, Flame Arrow and Shield and healing; at threat 5 a Bandit Archer takes the Hedge-Mage's place, standing back with a bow and shooting. They have a hero's hit points, the Captain and the Brute a hero's armour, and at threat 5 they carry Fine gear, so expect a hard fight against a party of your level: bring a heavy weapon, or spells, for the armoured ones, and close in on the Archer and the Hedge-Mage, who wear none.
+
+![Bandits at threat 5: the Captain and the Archer](images/battle-bandits.png)
+
+**Spiders and salamanders.** Far to the east, two lairs hold monsters that fight in new ways:
+
+- The **Spider Nest** holds **Giant Spiders** with a Kobold Sneak. A spider spins a **web** at a hero up to 4 hexes off, which can catch everyone within a hex of where it lands (it rolls to hit each of them): a webbed hero has 4 fewer AP for 2 turns. Up close it bites twice in one action, and the second bite poisons. Spiders are quick to kill but hit hard; deal with them before they reach your archer and mage.
+- The **Salamander Pool** holds a **Salamander** between two Kobolds. Every other turn the Salamander spits a **cone of fire** 2 hexes long that burns everyone in it, its own kobolds too if they stand in the way. Even when the spit misses a unit, the unit still takes half the damage. Fire does nothing to a Salamander: Flame Arrow and Fireball deal it 0 (the log says "warded"). Use blades, arrows and Magic Arrow on it, and don't stand bunched up in front of it.
+
+![The Salamander Pool, with the Salamander's Fire Spit and ward shown on hover](images/battle-salamander.png)
 
 ### Camping and other actions
 
@@ -153,8 +166,8 @@ Press **C**, or click the portrait of the hero marked in gold, to open the chara
 | S | Skills |
 | B | Spells |
 | I | Inventory |
-| P | Perk tree (from Skills) |
-| K | Spell tree (from Spells) |
+| P | Perk tree (press again to go back to Skills) |
+| K | Spell tree (press again to go back to Spells) |
 | Esc | Close, or step back from a tree |
 
 To switch the panel to another hero, click their portrait on the left.
@@ -163,7 +176,7 @@ To switch the panel to another hero, click their portrait on the left.
 
 ![The Character tab](images/panel-character.png)
 
-This tab shows the hero's attributes, their level and experience, and what they fight with: hit points, armour class, resistance, chance to hit, damage, attack cost, how much resistance their blows pierce, action points and critical chance.
+This tab shows the hero's attributes, their level and experience, and what they fight with: hit points, armour class, resistance, chance to hit, damage, attack cost, how much resistance their blows pierce (if any), action points, critical chance and, for a caster, mana.
 
 ### Skills and perks
 
@@ -173,7 +186,7 @@ When the hero has skill points to spend, a **+** appears beside each skill. The 
 
 ![The perk tree](images/panel-perk-tree.png)
 
-Perks you can take now are drawn brightly, and a taken perk shows its ranks (for example 1/2).
+Perks you can take now are drawn brightly, and a taken perk shows its ranks (for example 1/2). Most perks also ask a minimum in their attribute, so a dim perk may be waiting for a higher attribute rather than a higher level.
 
 ### Spells
 
@@ -185,13 +198,14 @@ This tab lists the spells the hero knows and the mana they are carrying. On the 
 
 ![The Inventory tab](images/panel-inventory.png)
 
-The paper doll shows what the hero wears: head, neck, body, cloak, both hands, gloves, belt, boots and two rings. Below it is the backpack.
+The paper doll shows what the hero wears: head, neck, body, cloak, both hands, gloves, belt, boots and two rings. Below it is the backpack. Heroes are drawn in the armour, headgear and cloak they wear, here, on the world map and in battle.
 
 - **Click** a backpack item to equip it, or click a worn item to stow it.
+- **Drag** an item to move it: from the backpack onto a slot to wear it, from a slot back to the backpack to stow it, from a slot onto the baggage (or the ground in battle) to put it there, from the baggage (or the ground) onto a slot to take it and wear it, and between the backpack and the baggage (or the ground). Drop it somewhere that does not fit and it returns to where it came from. **Esc** cancels a drag.
 - On the world map, the right-hand grid is the party's shared **baggage**, which has no size limit. Click an item there to take it. **Right-click** (or Ctrl+click) an item to put it in the baggage. This is how you pass items between heroes.
 - In battle, the right-hand grid is the **ground** under the hero. Right-click to drop an item, and click to pick one up.
 - A two-handed weapon (the bow, the greatsword) and an off-hand item cannot be held together. Equipping one stows the other.
-- A ring goes in whichever ring slot is free.
+- A clicked ring goes in whichever ring slot is free; a dragged one goes in the ring slot you drop it on.
 
 ---
 
@@ -218,7 +232,7 @@ Hover over a hex to see the path, then click to move there. Each hex costs **1 A
 
 ![Hovering a foe shows the attack](images/battle-attack.png)
 
-**Click a foe** to attack it. If it is out of reach, the hero first walks into range along the path shown, then strikes. The weapon decides both the cost and the reach:
+**Click a foe** to attack it. If it is out of reach, the hero first walks into range along the path shown, then strikes. The **Attack** button strikes the only foe in reach, or, with several in reach, asks you to click one (it reads **Cancel** while it waits). The weapon decides both the cost and the reach:
 
 | Weapon | Damage | AP | Reach | Pierces resistance |
 | --- | --- | --- | --- | --- |
@@ -241,7 +255,7 @@ Every attack rolls 1 to 100. It **hits** if the roll is at or under:
 The chance is always kept between 5% and 95%. A hit is **critical** if the roll also falls within the attacker's critical chance. The bonuses are:
 
 - **Flanking**: +10% for each other ally standing next to the target.
-- **Arc**: +5% from the foe's side and +10% from its rear. For a ranged attack, the arc is judged by the hex next to the target that the shot comes in over.
+- **Arc**: +5% from the foe's side and +10% from its rear. For a ranged attack, the arc is judged by the hex next to the target that the shot comes in over. But a unit struck in its side or rear by a melee weapon turns to face the attacker first, hit or miss, so the blow lands on its front. Bow and wand shots give no time to turn: they always strike the arc they come in over. It can turn like this only once per enemy turn: strike it from one side, then from the other, and the second attack finds its back. Your heroes turn the same way on the enemy's turn. A unit breaking away from a free attack cannot turn.
 - **Helpless**: +20% against a sleeping target.
 
 ### Armour: dodging and resistance
@@ -252,13 +266,23 @@ Because resistance comes off every hit, it hurts weapons that hit often for a li
 
 **Armour piercing**: melee blows ignore some points of the foe's resistance (see the table above, and the Bearded modifier and the Armour Breaker and Sunder perks). Bow and wand shots pierce nothing. Spells ignore resistance altogether, which makes a mage the other answer to armour.
 
-When you hover a foe you can attack, its nameplate shows your chance to hit and, after piercing, how much damage its armour will stop (for example "60% −3 dmg").
+When a hero is selected, every foe they can attack from where they stand shows on its nameplate your chance to hit, any bonus from flanking and the arc, and, after piercing, how much damage its armour will stop: "60% −3 dmg", or "70% +10 −3 dmg" from its flank.
 
 **Regeneration**: trolls heal some hit points at the start of each of their turns. Acid (Acid Arrow, which also eats 2 points of resistance while it lasts) and fire (Fireball and Flame Arrow, for the turn after) stop it.
 
+### Monsters' special attacks
+
+Some monsters can do more than swing a weapon:
+
+- **Routines**: several strikes as one action, such as a Troll's two claws or a Giant Spider's two bites. Each strike rolls on its own. If the target falls before the last strike, the rest go to the nearest other foe in reach.
+- **Area attacks**: a burst, a cone or a line. An area attack rolls against everyone in it, friend or foe. Armour's resistance does not reduce its damage, and some area attacks (such as the Salamander's fire) still deal half damage on a miss.
+- **Recharge**: special attacks cost no mana, but some of them, once used, have to wait some turns before they can be used again.
+
+**Hover over a monster** to see what it can do: a small panel beside it, headed with its name, lists each special attack as "ready", "ready next turn" or "ready in 2 turns" (counting the monster's own turns), with what it does underneath (for example "cone 2: 4d6+2 fire, half on a miss" and "seared 1 turn (no regeneration)"), and any wards it has ("Wards: fire 99").
+
 ### Zones of control and free attacks
 
-A foe holding a **melee** weapon controls the hexes next to it. **Leaving** one of those hexes gives that foe one free attack on you. Each foe gets at most one free attack per enemy turn. Ranged units, wand-wielders and sleepers have no zone of control. Pathfinding prefers routes that provoke the fewest foes, and the orange edges show where the danger is. Your heroes threaten the enemy in exactly the same way.
+A foe holding a **melee** weapon controls the hexes next to it. **Leaving** those hexes gives that foe one free attack on you; stepping to another hex next to the same foe does not. Each foe gets at most one free attack per enemy turn. Ranged units, wand-wielders and sleepers have no zone of control. Pathfinding prefers routes that provoke the fewest foes, and the orange edges show where the danger is. Your heroes threaten the enemy in exactly the same way.
 
 ### Changing gear in battle
 
@@ -273,6 +297,8 @@ Press **I** to open the inventory for the selected hero. Equipping, stowing, dro
 | 1–9 | Pick a spell from the open list |
 | I / C / S | Inventory / Character / Skills panel |
 | Esc | Close the spell list, cancel aiming, or open the menu |
+
+While aiming a spell the pointer is crossed swords over a valid target of an attacking spell, and a green cross over a valid target of a healing or protective one.
 
 ### Victory and defeat
 
@@ -292,7 +318,7 @@ A hero who knows a spell has **mana**: twice their Intelligence, plus half their
 
 ![The spell list](images/battle-spell-menu.png)
 
-To cast, select the hero and press **Cast** (or M). Pick a spell by clicking it or pressing its number. A spell you cannot cast right now is greyed out, for example because no target is in range or the hero lacks the AP or mana.
+To cast, select the hero and press **Cast** (or M); the button shows the mana the hero has left, and reads **Cancel** while you aim. Pick a spell by clicking it or pressing its number. A spell you cannot cast right now is greyed out, for example because no target is in range or the hero lacks the AP or mana.
 
 ![Choosing a spell's target](images/battle-targeting.png)
 
@@ -301,6 +327,12 @@ The spell then asks for a target. Valid targets are outlined, and hovering over 
 - **Hostile spells** roll to hit like an attack, using the caster's Magic skill. Flanking and facing add nothing, so spells are the reliable strike while blades reward good positioning.
 - **Area spells** touch **everyone** in the area, including your own heroes and the caster. Hovering over the centre of an area outlines it and shows the odds for every unit inside.
 - **Friendly spells** never miss.
+
+### Elements and wards
+
+Some spells and effects carry an **element**. Flame Arrow and Fireball are fire, Frost Blast is frost, Acid Arrow and its corrosion are acid, and Death Cloud and its poison are poison. Magic Arrow has no element. A monster may have a **ward** against an element: the ward takes that many points off each hit and each tick of that element, and the log notes it, for example "HITS Salamander for 0 dmg (warded 9)". A ward never stops an effect from landing, only its damage. Choose spells with no element, or a different one, against a warded foe.
+
+Monsters have spells of their own that heroes cannot learn, among them Web and Curse.
 
 ### Lasting effects
 
@@ -319,6 +351,8 @@ The letters beside a unit's health bar show its current effects. An effect lasts
 | Hasted | +3 AP |
 | Mirrored | Images take the next hits, and a hit on an image deals no damage |
 | Seared | No regeneration for a turn |
+| Cursed | −15 to hit and −5 armour class (laid by monsters) |
+| Webbed | −4 AP (laid by a Giant Spider's web) |
 
 Damage over time strikes at the start of the affected unit's side's turn. Section 11 lists every spell.
 
@@ -361,15 +395,15 @@ A hero born with an attribute of 7 can reach that attribute's masteries by takin
 
 Every hex of land has a blight level from 0 (clean) to 3 (corrupted), shown as a tint over the grass. Corrupted land also shows dark growths. Every day, sources of influence push on the hexes around them, and their strength fades by a point for each hex of distance:
 
-- **Pushing the blight forward**: monster lairs (more strongly the higher their threat), the Source itself, and corrupted land spreading to its neighbours. The blight grows stronger over time, by a tenth every 30 days.
+- **Pushing the blight forward**: monster lairs (more strongly the higher their threat), the Source itself, and corrupted land spreading to its neighbours. The blight grows stronger over time, by a tenth every 30 days, up to half again as strong.
 - **Pushing it back**: the encampment (stronger with its shrine), every resource you hold (stronger with an outpost), every watchtower, and the party itself, which grows stronger as the heroes level up.
 
 Consequences:
 
-- **Corrupted land breeds new monster lairs.** A new lair's threat depends on how far from the encampment it appears.
+- **Corrupted land breeds new monster lairs.** A new lair's threat depends on how far from the encampment it appears: goblins and kobolds at any threat, and bandits from threat 3.
 - **Winning a battle cleanses the land** around the lair, lowering every hex within 1 + its threat by two levels.
 - **Resources** are captured when their land is clean (level 0) and lost when it reaches level 2. While the blight gains on a site, the map shows it in orange with the number of days left until it falls. A watchtower can be lost the same way.
-- **Stock**: every 5 days, each site you hold adds its yield to the encampment's stock (gold, iron, timber, silver and so on). A site whose land is tainted yields half.
+- **Stock**: every 5 days, each site you hold adds its yield to the encampment's stock (gold, iron, timber, silver and so on), and the encampment itself adds 2 gold. A site whose land is tainted yields half.
 
 The header's percentage counts only the land you have explored.
 
@@ -406,7 +440,7 @@ When the party stands on the encampment, **Enter** (the button carries the encam
 In the encampment, click the guild hall and then **Enter the Guild Hall**. It shows your party and the reserves waiting at the hall. **Close** goes back to the encampment.
 
 - **Click a hero** to select them. Then click a hero in the other row to swap the two, or use **To reserves** / **To party**.
-- **Recruit** hires a new hero for **10 gold**, who joins the reserves.
+- **Recruit** hires a new hero for **10 gold**, who joins the reserves. The reserves hold at most 4.
 
 ![Recruiting](images/guild-hall-recruit.png)
 

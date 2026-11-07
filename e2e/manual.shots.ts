@@ -140,6 +140,40 @@ describe('the manual’s screenshots', () => {
     await shot(game, 'panel-level-up')
   })
 
+  it('a battle with bandits', async () => {
+    // Started from the debug console, at threat 5, where the Captain and the Archer take the field.
+    const game = await games.open()
+    await game.newGame()
+    await game.press('Shift+Backquote')
+    for (const line of ['xp 2000 all', 'fight bandit_camp 5']) {
+      await game.page.locator('#yomi-debug input').fill(line)
+      await game.press('Enter')
+    }
+    await game.waitForScenes(['Battle'])
+    await game.press('Escape')
+    await game.waitFor('Battle', (b) => b.playerControl)
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'battle-bandits')
+  })
+
+  it('a battle at the Salamander Pool', async () => {
+    // Started from the debug console; hovering the Salamander shows its abilities and ward.
+    const game = await games.open()
+    await game.newGame()
+    await game.press('Shift+Backquote')
+    for (const line of ['xp 2000 all', 'fight salamander_pool 5']) {
+      await game.page.locator('#yomi-debug input').fill(line)
+      await game.press('Enter')
+    }
+    await game.waitForScenes(['Battle'])
+    await game.press('Escape')
+    const battle = await game.waitFor('Battle', (b) => b.playerControl)
+    const salamander = battle.state.units.find((u) => u.id === 'salamander')!
+    await game.hover(battleHexOnScreen(battle, salamander.position))
+    await game.waitFor('Battle', (b) => b.foeInfo.length > 0)
+    await shot(game, 'battle-salamander')
+  })
+
   it('the trading post and the workshop', async () => {
     const game = await games.open()
     await game.newGame()

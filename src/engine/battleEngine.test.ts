@@ -1,17 +1,21 @@
-import { describe, expect, it } from 'vitest'
-import { GOBLIN_STATS, type CombatantStats } from '../combat/combat.ts'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { ABILITIES, type Ability, type AbilityId } from '../combat/abilities.ts'
+import { GOBLIN_STATS, TROLL_STATS, type CombatantStats } from '../combat/combat.ts'
 import { mulberry32 } from '../combat/rng.ts'
 import { SPELL_IDS, type SpellId } from '../combat/spells.ts'
-import { HEX_DIRECTIONS, hex, hexAdd, hexKey, type Hex } from '../grid/hex.ts'
+import { HEX_DIRECTIONS, areaOf, hex, hexAdd, hexDistance, hexKey, type Hex } from '../grid/hex.ts'
 import {
   ARC_BONUS,
   BattleEngine,
   EQUIP_AP_COST,
   FLANK_BONUS_PER_ALLY,
   LOG_SCHEMA_VERSION,
+  areaTouches,
   attackArc,
+  effectiveStats,
   flankersOf,
   formatEvent,
+  type AbilityEvent,
   type Action,
   type AttackEvent,
   type BattleEvent,
@@ -360,12 +364,22 @@ describe('BattleEngine zones of control', () => {
     expect(unitOf(engine, 'warrior')).toMatchObject({ position: hex(0, 1), ap: 7 })
   })
 
-  it('provokes even when sliding to another hex beside the foe, but each foe strikes once per turn', () => {
+  it('does not provoke a slide to another hex beside the foe', () => {
     const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE]) })
-    expect(opportunity(engine.step(move('warrior', hex(1, 2))))).toHaveLength(1) // (1,2) also touches the goblin
-    expect(opportunity(engine.step(move('warrior', hex(1, 1))))).toHaveLength(0) // reaction spent
+    expect(engine.previewMove('warrior', hex(1, 2))!.provokes).toEqual([]) // (1,2) also touches the goblin
+    expect(opportunity(engine.step(move('warrior', hex(1, 2))))).toEqual([])
+    expect(opportunity(engine.step(move('warrior', hex(1, 1))))).toEqual([])
+    expect(unitOf(engine, 'goblin').reactionReady).toBe(true)
+  })
+
+  it('gives each foe one free attack per turn', () => {
+    const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE]) })
+    expect(opportunity(engine.step(move('warrior', hex(0, 1))))).toHaveLength(1)
+    engine.step(move('warrior', hex(1, 1)))
+    expect(opportunity(engine.step(move('warrior', hex(0, 1))))).toHaveLength(0) // reaction spent
     engine.step(END_TURN)
     engine.step(END_TURN)
+    engine.step(move('warrior', hex(1, 1)))
     expect(opportunity(engine.step(move('warrior', hex(0, 1))))).toHaveLength(1) // ready again
   })
 
@@ -449,13 +463,27 @@ describe('BattleEngine ranged attacks', () => {
     expect(unitOf(engine, 'archer').ap).toBe(ARCHER_STATS.actionPoints - ARCHER_STATS.attackApCost)
   })
 
-  it('gains the rear bonus for a shot into a foe’s back', () => {
+  it('gains the rear bonus for a shot into a foe’s back, which gives it no turn', () => {
     const engine = new BattleEngine(setup([ARCHER, { ...GOBLIN, position: hex(4, 1), facing: EAST }]), {
       rng: sequence([ROLL_7]),
     })
+    expect(unitOf(engine, 'goblin').turnReady).toBe(true)
     expect(engine.previewAttack('archer', 'goblin')).toMatchObject({ arc: 'rear', arcBonus: ARC_BONUS.rear })
     const [attack] = engine.step(SHOOT_GOBLIN) as [AttackEvent]
-    expect(attack).toMatchObject({ arc: 'rear', chance: ARCHER_STATS.toHit + ARC_BONUS.rear - GOBLIN.stats.ac, hit: true })
+    expect(attack).toMatchObject({
+      defenderTurned: false,
+      defenderFacing: EAST,
+      arc: 'rear',
+      chance: ARCHER_STATS.toHit + ARC_BONUS.rear - GOBLIN.stats.ac,
+      hit: true,
+    })
+    expect(unitOf(engine, 'goblin')).toMatchObject({ facing: EAST, turnReady: true })
+  })
+
+  it('gives no turn against a ranged weapon even from the next hex', () => {
+    const engine = new BattleEngine(setup([ARCHER, { ...GOBLIN, facing: EAST }]), { rng: sequence([FUMBLE]) })
+    expect(engine.previewAttack('archer', 'goblin')).toMatchObject({ arc: 'rear' })
+    expect(engine.step(SHOOT_GOBLIN)[0]).toMatchObject({ defenderTurned: false, arc: 'rear' })
   })
 
   it('counts allies beside the target as flankers for a shot', () => {
@@ -614,31 +642,72 @@ describe('BattleEngine facing', () => {
     expect(facingOf(engine, 'warrior')).toBe(NORTH_WEST)
   })
 
-  it('turns an attacker towards its target, but not the defender towards the attacker', () => {
+  it('turns an attacker towards its target, and not a defender struck in front', () => {
     const engine = new BattleEngine(setup([{ ...WARRIOR, facing: WEST }, GOBLIN]), { rng: sequence([FUMBLE]) })
     const [attack] = engine.step(ATTACK_GOBLIN) as [AttackEvent]
-    expect(attack.attackerFacing).toBe(EAST)
+    expect(attack).toMatchObject({ attackerFacing: EAST, defenderTurned: false, defenderFacing: WEST })
     expect(facingOf(engine, 'warrior')).toBe(EAST)
     expect(facingOf(engine, 'goblin')).toBe(WEST)
+    expect(unitOf(engine, 'goblin').turnReady).toBe(true)
   })
 
-  it('turns a miss into a hit when striking from behind', () => {
-    const attack = (warriorFacing: number) => {
-      const engine = new BattleEngine(setup([{ ...WARRIOR, facing: warriorFacing }, GOBLIN]), {
-        rng: sequence([ROLL_10, 0]),
-      })
-      engine.step(END_TURN)
-      return engine.step(ATTACK_WARRIOR)[0] as AttackEvent
-    }
-    expect(attack(EAST)).toMatchObject({ arc: 'front', arcBonus: 0, attackRoll: 55, chance: 45, hit: false })
-    expect(attack(WEST)).toMatchObject({ arc: 'rear', arcBonus: ARC_BONUS.rear, chance: 55, hit: true })
-  })
-
-  it('stacks the arc bonus with flanking in the preview', () => {
+  it('turns a defender struck in its side or rear to face the attacker, even for a miss, once a turn', () => {
+    // The goblin faces east; the warrior strikes from its west (rear), then the cleric from its east (now its rear).
     const engine = new BattleEngine(
-      setup([WARRIOR, { ...GOBLIN, facing: SOUTH_EAST }, { ...CLERIC, position: hex(2, 2) }]),
+      setup([WARRIOR, { ...GOBLIN, facing: EAST }, { ...CLERIC, position: hex(3, 1) }]),
+      { rng: sequence([FUMBLE]) },
     )
-    // The warrior strikes from the goblin's west, beside its back: 75%, +10 flanking and +5, less the goblin's armour class of 15.
+    expect(unitOf(engine, 'goblin').turnReady).toBe(true)
+    const [first] = engine.step(ATTACK_GOBLIN) as [AttackEvent]
+    expect(first).toMatchObject({ defenderTurned: true, defenderFacing: WEST, arc: 'front', arcBonus: 0, hit: false })
+    expect(unitOf(engine, 'goblin')).toMatchObject({ facing: WEST, turnReady: false })
+    const [second] = engine.step({ type: 'attack', unit: 'cleric', target: 'goblin' }) as [AttackEvent]
+    expect(second).toMatchObject({ defenderTurned: false, defenderFacing: WEST, arc: 'rear', arcBonus: ARC_BONUS.rear })
+    engine.step(END_TURN)
+    engine.step(END_TURN)
+    expect(unitOf(engine, 'goblin').turnReady).toBe(true) // ready again on the player's next turn
+  })
+
+  it('readies a turn only for the side not taking its turn', () => {
+    const engine = new BattleEngine(DUEL)
+    expect(unitOf(engine, 'warrior').turnReady).toBe(false)
+    expect(unitOf(engine, 'goblin').turnReady).toBe(true)
+    engine.step(END_TURN)
+    expect(unitOf(engine, 'warrior').turnReady).toBe(true)
+    expect(unitOf(engine, 'goblin').turnReady).toBe(false)
+  })
+
+  it('turns a miss into a hit when shooting into a back', () => {
+    const attack = (warriorFacing: number) => {
+      // The goblin archer shoots from the far west.
+      const engine = new BattleEngine(
+        setup([
+          { ...WARRIOR, position: hex(3, 1), facing: warriorFacing },
+          { ...GOBLIN2, position: hex(0, 1), stats: { ...GOBLIN_STATS, attackRange: 3 } },
+        ]),
+        { rng: sequence([ROLL_10, 0]) },
+      )
+      engine.step(END_TURN)
+      return engine.step({ type: 'attack', unit: 'goblin2', target: 'warrior' })[0] as AttackEvent
+    }
+    expect(attack(WEST)).toMatchObject({ arc: 'front', arcBonus: 0, attackRoll: 55, chance: 45, hit: false })
+    expect(attack(EAST)).toMatchObject({ arc: 'rear', arcBonus: ARC_BONUS.rear, chance: 55, hit: true })
+  })
+
+  it('previews the front for a foe that will turn, and stacks the arc bonus with flanking once it cannot', () => {
+    // The goblin faces east. The cleric strikes from its north-west and it turns that way, which puts the
+    // warrior, south-west of it, beside its back.
+    const engine = new BattleEngine(
+      setup([
+        { ...WARRIOR, position: hex(1, 2) },
+        { ...GOBLIN, facing: EAST },
+        { ...CLERIC, position: hex(2, 0) },
+      ]),
+      { rng: sequence([FUMBLE]) },
+    )
+    expect(engine.previewAttack('warrior', 'goblin')).toMatchObject({ arc: 'front', arcBonus: 0, hitChance: 0.7 })
+    engine.step({ type: 'attack', unit: 'cleric', target: 'goblin' })
+    // 75%, +10 flanking and +5, less the goblin's armour class of 15.
     expect(engine.previewAttack('warrior', 'goblin')).toMatchObject({
       flankBonus: FLANK_BONUS_PER_ALLY,
       arc: 'side',
@@ -654,7 +723,8 @@ describe('BattleEngine facing', () => {
         units: [
           { ...WARRIOR, position: hex(1, 1) },
           { ...GOBLIN, position: hex(0, 0) },
-          { ...GOBLIN2, position: hex(0, 2) },
+          { ...GOBLIN2, position: hex(1, 2) },
+          { ...CLERIC, position: hex(0, 2) }, // blocks the way round
         ],
       },
       { rng: sequence([FUMBLE]) },
@@ -665,18 +735,16 @@ describe('BattleEngine facing', () => {
     expect(moves.map((m) => m.path)).toEqual([[], [hex(0, 1)], [hex(-1, 2)]])
     expect(moves[1].facing).toBe(SOUTH_WEST)
     expect(attacks.map((a) => [a.attacker, a.arc])).toEqual([
-      ['goblin2', 'front'],
-      ['goblin', 'side'],
+      ['goblin2', 'side'],
+      ['goblin', 'side'], // facing west still, it would be the front
     ])
+    expect(attacks.every((a) => !a.defenderTurned)).toBe(true)
   })
 
-  it('exposes the back of a unit that retreats straight away, but not of one that slides aside', () => {
-    const freeAttackOn = (to: Hex) => {
-      const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE]) })
-      return engine.step(move('warrior', to)).find((e): e is AttackEvent => e.type === 'attack')!
-    }
-    expect(freeAttackOn(hex(0, 1))).toMatchObject({ arc: 'rear', arcBonus: ARC_BONUS.rear })
-    expect(freeAttackOn(hex(1, 2))).toMatchObject({ arc: 'front', arcBonus: 0 })
+  it('exposes the back of a unit that retreats straight away, which cannot turn on its own turn', () => {
+    const engine = new BattleEngine(DUEL, { rng: sequence([FUMBLE]) })
+    const attack = engine.step(move('warrior', hex(0, 1))).find((e): e is AttackEvent => e.type === 'attack')!
+    expect(attack).toMatchObject({ arc: 'rear', arcBonus: ARC_BONUS.rear, defenderTurned: false })
   })
 })
 
@@ -721,12 +789,18 @@ describe('formatEvent', () => {
   })
 
   it('describes a side or rear attack in the roll', () => {
-    const engine = new BattleEngine(setup([{ ...WARRIOR, facing: WEST }, GOBLIN]), {
-      rng: sequence([ROLL_10, 0]),
-    })
+    const engine = new BattleEngine(DUEL, { rng: sequence([ROLL_10, 0]) })
+    const attack = engine.step(move('warrior', hex(0, 1))).find((e) => e.type === 'attack')!
+    expect(formatEvent(attack, NAMES)).toBe(
+      'Warrior breaks away — free attack! Goblin rolls 55 (needs 55 or less, +10 from behind) — HITS Warrior for 2 dmg.',
+    )
+  })
+
+  it('describes a defender turning to meet the attack', () => {
+    const engine = new BattleEngine(setup([{ ...WARRIOR, facing: WEST }, GOBLIN]), { rng: sequence([ROLL_10, 0]) })
     engine.step(END_TURN)
     expect(formatEvent(engine.step(ATTACK_WARRIOR)[0], NAMES)).toBe(
-      'Goblin rolls 55 (needs 55 or less, +10 from behind) — HITS Warrior for 2 dmg.',
+      'Warrior turns to face Goblin. Goblin rolls 55 (needs 45 or less) — MISSES Warrior.',
     )
   })
 
@@ -943,7 +1017,7 @@ describe('BattleEngine spells', () => {
     const engine = battle([MAGE, FAR_GOBLIN])
     expect(unitOf(engine, 'mage').mana).toBe(18)
     expect(unitOf(engine, 'goblin').mana).toBe(0)
-    expect(engine.getLog()[0]).toMatchObject({ schemaVersion: 17, units: [{ mana: 18, magic: MAGE_STATS.magic }, {}] })
+    expect(engine.getLog()[0]).toMatchObject({ schemaVersion: 21, units: [{ mana: 18, magic: MAGE_STATS.magic }, {}] })
   })
 
   it('lists a cast on each foe in the spell’s range, and pays its action points and mana', () => {
@@ -977,6 +1051,8 @@ describe('BattleEngine spells', () => {
             fumble: false,
             image: false,
             damage: 7,
+            warded: 0,
+            half: false,
             healed: 0,
             hpBefore: 12,
             hpAfter: 5,
@@ -1420,6 +1496,191 @@ describe('BattleEngine spells of every kind', () => {
   })
 })
 
+describe('BattleEngine elements, wards and monster spells', () => {
+  const WIDE = { cols: 9, rows: 3 }
+  const caster = (spells: SpellId[], extra: Partial<UnitSetup> = {}): UnitSetup => ({
+    id: 'mage',
+    side: 'player',
+    stats: { ...WARRIOR_STATS, name: 'Mage', magic: { maxMana: 60, skill: 76, spells } },
+    position: hex(1, 1),
+    ...extra,
+  })
+  const goblinAt = (position: Hex, extra: Partial<UnitSetup> = {}): UnitSetup => ({ ...GOBLIN, position, ...extra })
+  const wardedGoblin = (position: Hex, wards: CombatantStats['wards'], extra: Partial<UnitSetup> = {}): UnitSetup =>
+    goblinAt(position, { stats: { ...GOBLIN_STATS, wards }, ...extra })
+  const allyAt = (position: Hex, extra: Partial<UnitSetup> = {}): UnitSetup => ({ ...CLERIC, position, ...extra })
+  /** Every draw 0.66 unless told otherwise: a roll of 34, a 4 on a d6, a 6 on a d8. */
+  const battle = (units: UnitSetup[], rng: number[] = [0.66]) => new BattleEngine({ board: WIDE, units }, { rng: sequence(rng) })
+  const at = (spell: SpellId, centre: Hex): Action => ({ type: 'cast', unit: 'mage', spell, at: centre })
+  const on = (spell: SpellId, target: string): Action => ({ type: 'cast', unit: 'mage', spell, target })
+  const NAMED = { ...NAMES, mage: 'Mage' }
+
+  describe('a ward', () => {
+    it('takes its points off a hit of its element, recording what it stopped', () => {
+      const engine = battle([caster(['flame_arrow']), wardedGoblin(hex(5, 1), { fire: 4 })])
+      const [event] = engine.step(on('flame_arrow', 'goblin'))
+      // 2d8, two 6s: 12, less 4.
+      expect(event).toMatchObject({ drained: 0, outcomes: [{ hit: true, damage: 8, warded: 4, hpAfter: 4, status: { id: 'seared' } }] })
+      expect(formatEvent(event, NAMED)).toBe(
+        'Mage casts Flame Arrow on Goblin: rolls 34 (needs 61 or less) — HITS Goblin for 8 dmg (warded 4), seared.',
+      )
+    })
+
+    it('stands against a critical hit after the dice are doubled', () => {
+      const engine = battle([caster(['flame_arrow']), wardedGoblin(hex(5, 1), { fire: 20 }, { stats: { ...GOBLIN_STATS, maxHp: 40, wards: { fire: 20 } } })], [0.95, 0.66])
+      const [event] = engine.step(on('flame_arrow', 'goblin'))
+      // 4d8 of 6s: 24, less 20.
+      expect(event).toMatchObject({ outcomes: [{ critical: true, damage: 4, warded: 20 }] })
+    })
+
+    it('stops a whole Fireball, and Seared is laid all the same', () => {
+      const engine = battle([caster(['fireball']), wardedGoblin(hex(5, 1), { fire: 99 })])
+      const [event] = engine.step(at('fireball', hex(5, 1)))
+      expect(event).toMatchObject({ outcomes: [{ hit: true, damage: 0, warded: 12, hpBefore: 12, hpAfter: 12, status: { id: 'seared' } }] })
+      expect(unitOf(engine, 'goblin').statuses).toEqual([{ id: 'seared', turnsLeft: 1 }])
+      expect(formatEvent(event, NAMED)).toBe('Mage casts Fireball: HITS Goblin for 0 dmg (warded 12), seared.')
+    })
+
+    it('leaves a spell of another element, or of none, as it was', () => {
+      const frost = battle([caster(['frost_blast']), wardedGoblin(hex(5, 1), { fire: 99 })]).step(at('frost_blast', hex(5, 1)))
+      expect(frost[0]).toMatchObject({ outcomes: [{ damage: 6, warded: 0 }] })
+      const arrow = battle([caster(['magic_arrow']), wardedGoblin(hex(5, 1), { fire: 99, poison: 99 })]).step(on('magic_arrow', 'goblin'))
+      expect(arrow[0]).toMatchObject({ outcomes: [{ damage: 7, warded: 0 }] })
+      expect(formatEvent(arrow[0], NAMED)).toBe('Mage casts Magic Arrow on Goblin: rolls 34 (needs 61 or less) — HITS Goblin for 7 dmg.')
+    })
+
+    it('takes its points off each tick of a status of its element', () => {
+      const engine = battle([caster(['death_cloud']), wardedGoblin(hex(5, 1), { poison: 3 })])
+      engine.step(at('death_cloud', hex(5, 1)))
+      const [, tick] = engine.step(END_TURN)
+      // A 4 on the d6, less 3.
+      expect(tick).toMatchObject({ type: 'status_tick', status: 'poisoned', damage: 1, warded: 3, hpBefore: 12, hpAfter: 11 })
+      expect(formatEvent(tick, NAMED)).toBe('Goblin takes 1 from poison (warded 3).')
+    })
+
+    it('records no ward on an unwarded tick, and its line is as it was', () => {
+      const engine = battle([caster(['death_cloud']), goblinAt(hex(5, 1))])
+      engine.step(at('death_cloud', hex(5, 1)))
+      const [, tick] = engine.step(END_TURN)
+      expect(tick).toMatchObject({ damage: 4, warded: 0 })
+      expect(formatEvent(tick, NAMED)).toBe('Goblin takes 4 from poison.')
+    })
+
+    it('lets a sleeper sleep on through a tick it stops whole', () => {
+      const mage = caster(['sleep', 'death_cloud'])
+      const engine = battle([{ ...mage, stats: { ...mage.stats, actionPoints: 20 } }, wardedGoblin(hex(5, 1), { poison: 6 }), { ...GOBLIN2, position: hex(8, 0) }])
+      engine.step(on('sleep', 'goblin'))
+      engine.step(at('death_cloud', hex(5, 1)))
+      const events = engine.step(END_TURN)
+      expect(events.map((e) => e.type)).toEqual(['end_turn', 'status_tick'])
+      expect(events[1]).toMatchObject({ damage: 0, warded: 4, hpAfter: 12 })
+      expect(unitOf(engine, 'goblin').statuses.map((s) => s.id)).toContain('asleep')
+    })
+  })
+
+  describe('Drain Life', () => {
+    // A roll of 34, then three 2s on the d6: 6 damage.
+    const DRAIN_6 = [0.66, 0.3]
+
+    it('heals its caster by half the damage dealt, rounded down', () => {
+      const engine = battle([caster(['drain_life'], { hp: 10 }), goblinAt(hex(5, 1))], DRAIN_6)
+      const [event] = engine.step(on('drain_life', 'goblin'))
+      expect(event).toMatchObject({ drained: 3, outcomes: [{ damage: 6, hpAfter: 6 }] })
+      expect(unitOf(engine, 'mage').hp).toBe(13)
+      expect(formatEvent(event, NAMED)).toBe('Mage casts Drain Life on Goblin: rolls 34 (needs 61 or less) — HITS Goblin for 6 dmg and drains 3.')
+    })
+
+    it('heals no more than its caster had lost', () => {
+      const engine = battle([caster(['drain_life'], { hp: 19 }), goblinAt(hex(5, 1))], DRAIN_6)
+      expect(engine.step(on('drain_life', 'goblin'))[0]).toMatchObject({ drained: 1 })
+      expect(unitOf(engine, 'mage').hp).toBe(20)
+      const whole = battle([caster(['drain_life']), goblinAt(hex(5, 1))], DRAIN_6)
+      const [event] = whole.step(on('drain_life', 'goblin'))
+      expect(event).toMatchObject({ drained: 0 })
+      expect(formatEvent(event, NAMED)).toBe('Mage casts Drain Life on Goblin: rolls 34 (needs 61 or less) — HITS Goblin for 6 dmg.')
+    })
+
+    it('drains only the hit points its target had left', () => {
+      const engine = battle([caster(['drain_life'], { hp: 10 }), goblinAt(hex(5, 1), { hp: 2 })], DRAIN_6)
+      expect(engine.step(on('drain_life', 'goblin'))[0]).toMatchObject({ drained: 1, outcomes: [{ damage: 6, hpAfter: 0 }] })
+      expect(unitOf(engine, 'mage').hp).toBe(11)
+    })
+
+    it('drains nothing on a miss', () => {
+      const engine = battle([caster(['drain_life'], { hp: 10 }), goblinAt(hex(5, 1))], [0.3])
+      expect(engine.step(on('drain_life', 'goblin'))[0]).toMatchObject({ drained: 0, outcomes: [{ hit: false }] })
+      expect(unitOf(engine, 'mage').hp).toBe(10)
+    })
+  })
+
+  it('Web lays Webbed, and the webbed unit has 4 AP fewer on its next turn', () => {
+    const engine = battle([caster(['web']), goblinAt(hex(5, 1))])
+    const [event] = engine.step(at('web', hex(5, 1)))
+    expect(event).toMatchObject({ outcomes: [{ unit: 'goblin', hit: true, damage: 0, warded: 0, status: { id: 'webbed', turnsLeft: 2 } }] })
+    expect(formatEvent(event, NAMED)).toBe('Mage casts Web: Goblin is webbed.')
+    engine.step(END_TURN)
+    expect(unitOf(engine, 'goblin').ap).toBe(GOBLIN_STATS.actionPoints - 4)
+  })
+
+  it('Curse takes 15 off the chance to hit and 5 off armour class', () => {
+    const engine = battle([caster(['curse']), goblinAt(hex(5, 1))])
+    engine.step(on('curse', 'goblin'))
+    const goblin = unitOf(engine, 'goblin')
+    expect(goblin.statuses).toEqual([{ id: 'cursed', turnsLeft: 3 }])
+    expect(effectiveStats({ stats: goblin, statuses: goblin.statuses })).toMatchObject({ toHit: GOBLIN_STATS.toHit - 15, ac: GOBLIN_STATS.ac - 5 })
+  })
+
+  it('Dark Shield lays Shielded on its caster', () => {
+    const engine = battle([caster(['dark_shield']), goblinAt(hex(5, 1))])
+    expect(nonMoves(engine).filter((a) => a.type === 'cast')).toEqual([on('dark_shield', 'mage')])
+    const [event] = engine.step(on('dark_shield', 'mage'))
+    expect(event).toMatchObject({ drained: 0, outcomes: [{ unit: 'mage', warded: 0, status: { id: 'shielded', turnsLeft: 3 } }] })
+    expect(formatEvent(event, NAMED)).toBe('Mage casts Dark Shield: Mage is shielded.')
+  })
+
+  describe('Lightning Bolt', () => {
+    const units = () => [caster(['lightning_bolt']), allyAt(hex(3, 1)), goblinAt(hex(5, 1)), { ...GOBLIN2, position: hex(8, 0) }]
+
+    it('strikes everyone in a line six hexes long, both sides', () => {
+      const engine = battle(units())
+      const [event] = engine.step(at('lightning_bolt', hex(2, 1)))
+      // 4d6 of 4s: 16 to each.
+      expect(event).toMatchObject({
+        target: null,
+        at: hex(2, 1),
+        outcomes: [
+          { unit: 'cleric', hit: true, damage: 16, warded: 0, hpAfter: 4 },
+          { unit: 'goblin', hit: true, damage: 16, warded: 0, hpAfter: 0 },
+        ],
+      })
+      expect(formatEvent(event, NAMED)).toBe('Mage casts Lightning Bolt: HITS Cleric for 16 dmg; HITS Goblin for 16 dmg.')
+    })
+
+    it('is aimed 1 to 6 hexes from its caster, never at the caster’s own hex', () => {
+      const engine = battle(units())
+      const aims = engine
+        .legalActions('mage')
+        .filter((a) => a.type === 'cast' && a.spell === 'lightning_bolt')
+        .map((a) => ('at' in a ? a.at : null)!)
+      expect(aims).toContainEqual(hex(2, 1))
+      expect(aims).toContainEqual(hex(7, 1))
+      expect(aims).not.toContainEqual(hex(1, 1))
+      expect(aims.map((h) => hexDistance(hex(1, 1), h)).every((d) => d >= 1 && d <= 6)).toBe(true)
+      expect(aims).not.toContainEqual(hex(8, 1))
+      expect(engine.previewCast('mage', 'lightning_bolt', hex(1, 1))).toBeNull()
+      expect(() => engine.step(at('lightning_bolt', hex(1, 1)))).toThrow('cannot cast lightning_bolt at')
+      expect(() => engine.step(at('lightning_bolt', hex(8, 1)))).toThrow('cannot cast lightning_bolt at')
+    })
+
+    it('a ward against lightning stands against it', () => {
+      const engine = battle([caster(['lightning_bolt']), wardedGoblin(hex(5, 1), { lightning: 10 }), { ...GOBLIN2, position: hex(8, 0) }])
+      const [event] = engine.step(at('lightning_bolt', hex(2, 1)))
+      expect(event).toMatchObject({ outcomes: [{ unit: 'goblin', damage: 6, warded: 10 }] })
+      expect(formatEvent(event, NAMED)).toBe('Mage casts Lightning Bolt: HITS Goblin for 6 dmg (warded 10).')
+    })
+  })
+})
+
 describe('BattleEngine snapshots', () => {
   const FIELD = { board: { cols: 8, rows: 5 }, units: [WARRIOR, CLERIC, { ...GOBLIN, position: hex(6, 1) }, { ...GOBLIN2, position: hex(6, 3) }] }
 
@@ -1476,5 +1737,545 @@ describe('BattleEngine snapshots', () => {
 
   it('cannot be taken of an engine given its own rng', () => {
     expect(() => new BattleEngine(DUEL, { rng: sequence([0.5]) }).snapshot()).toThrow('cannot be snapshotted')
+  })
+})
+
+describe('areaTouches', () => {
+  const unit = (id: string, side: 'player' | 'enemy', q: number, r: number, hp = 5) => ({
+    id,
+    side,
+    hp,
+    position: hex(q, r),
+  })
+  const caster = unit('caster', 'player', 0, 0)
+  const units = [
+    unit('far', 'enemy', 5, 0),
+    caster,
+    unit('ally', 'player', 2, 0),
+    unit('foe', 'enemy', 1, 1),
+    unit('dead', 'enemy', 1, 0, 0),
+    unit('off', 'enemy', 0, 3),
+  ]
+  const ids = (touched: { id: string }[]) => touched.map((u) => u.id)
+
+  it('touches the standing units on a cone, both sides when hostile, in roster order', () => {
+    const cone = { shape: 'cone', range: 2 } as const
+    expect(ids(areaTouches(units, caster, cone, hex(1, 0), true))).toEqual(['ally', 'foe'])
+    expect(ids(areaTouches(units, caster, { shape: 'cone', range: 6 }, hex(1, 0), true))).toEqual(['far', 'ally', 'foe'])
+  })
+
+  it('touches the standing units on a line, the caster excluded', () => {
+    const line = { shape: 'line', range: 5 } as const
+    expect(ids(areaTouches(units, caster, line, hex(1, 0), true))).toEqual(['far', 'ally'])
+  })
+
+  it('touches only the caster\'s side when not hostile', () => {
+    const line = { shape: 'line', range: 5 } as const
+    expect(ids(areaTouches(units, caster, line, hex(1, 0), false))).toEqual(['ally'])
+    expect(ids(areaTouches(units, caster, { shape: 'burst', range: 4, radius: 2 }, hex(1, 0), false))).toEqual([
+      'caster',
+      'ally',
+    ])
+  })
+
+  it('touches a burst\'s units within the radius of the aim', () => {
+    expect(ids(areaTouches(units, caster, { shape: 'burst', range: 4, radius: 1 }, hex(1, 0), true))).toEqual([
+      'caster',
+      'ally',
+      'foe',
+    ])
+  })
+})
+
+describe('BattleEngine strike routines and recharge', () => {
+  const WIDE = { cols: 9, rows: 3 }
+  const TROLL: UnitSetup = { id: 'troll', side: 'enemy', stats: TROLL_STATS, position: hex(2, 1) }
+  const SPIDER_STATS: CombatantStats = { ...GOBLIN_STATS, name: 'Spider', attackApCost: 4, abilities: ['spider_bite'] }
+  const SPIDER: UnitSetup = { id: 'spider', side: 'enemy', stats: SPIDER_STATS, position: hex(2, 1) }
+  const playerAt = (id: string, position: Hex, extra: Partial<UnitSetup> = {}): UnitSetup => ({ ...WARRIOR, id, position, ...extra })
+  /** Every draw 0.66 unless told otherwise: a roll of 34, a 3 on a d4, a 4 on a d6. Starts on the enemy's turn. */
+  const enemyTurn = (units: UnitSetup[], rng: number[] = [0.66]) => {
+    const engine = new BattleEngine({ board: WIDE, units }, { rng: sequence(rng) })
+    engine.step(END_TURN)
+    return engine
+  }
+  const claws = (target: string, unit = 'troll'): Action => ({ type: 'ability', unit, ability: 'troll_claws', target })
+  const bite = (target: string): Action => ({ type: 'ability', unit: 'spider', ability: 'spider_bite', target })
+  const NAMED = { ...NAMES, troll: 'Troll', spider: 'Spider', zed: 'Zed' }
+
+  it('raises the log schema to 21 (step 05, area abilities)', () => {
+    expect(LOG_SCHEMA_VERSION).toBe(21)
+  })
+
+  it('makes one attack per strike, the first carrying the ability’s AP and the rest none', () => {
+    const engine = enemyTurn([WARRIOR, TROLL])
+    const events = engine.step(claws('warrior'))
+    expect(events.map((e) => e.type)).toEqual(['attack', 'attack'])
+    // A roll of 34 within the Troll's 40% against the Warrior; a 3 on the d4, +2.
+    const strike = { attacker: 'troll', defender: 'warrior', ability: 'troll_claws', strike: 'Claw', opportunity: false, weapon: 'Claws' }
+    expect(events[0]).toMatchObject({ ...strike, apCost: 8, apAfter: 0, hit: true, damageDice: TROLL_STATS.damage, rolled: 5, damage: 5, defenderHpAfter: 15 })
+    expect(events[1]).toMatchObject({ ...strike, apCost: 0, apAfter: 0, hit: true, rolled: 5, damage: 5, defenderHpAfter: 10 })
+    expect(events[0]).not.toHaveProperty('status')
+    expect(unitOf(engine, 'troll').ap).toBe(0)
+  })
+
+  it('adds the unit’s ability damage bonus to each strike’s dice', () => {
+    const engine = enemyTurn([WARRIOR, { ...TROLL, stats: { ...TROLL_STATS, abilityDamageBonus: 2 } }])
+    const events = engine.step(claws('warrior')) as AttackEvent[]
+    expect(events.map((e) => [e.damageDice, e.rolled])).toEqual([
+      [{ count: 1, sides: 4, bonus: 4 }, 7],
+      [{ count: 1, sides: 4, bonus: 4 }, 7],
+    ])
+  })
+
+  it('leaves a plain attack and a free attack without the strike fields', () => {
+    const engine = enemyTurn([WARRIOR, TROLL])
+    const [event] = engine.step({ type: 'attack', unit: 'troll', target: 'warrior' })
+    expect(Object.keys(event)).not.toEqual(expect.arrayContaining(['ability']))
+    expect(event).not.toHaveProperty('strike')
+    expect(event).not.toHaveProperty('status')
+  })
+
+  it('names the strike’s verb in the log line', () => {
+    const engine = enemyTurn([WARRIOR, TROLL])
+    const [first] = engine.step(claws('warrior'))
+    expect(formatEvent(first, NAMED)).toBe('Troll claws Warrior: rolls 34 (needs 40 or less) — HITS Warrior for 5 dmg.')
+  })
+
+  it('lays the Venom Bite’s poison on a hit that leaves the target standing, and records it', () => {
+    const engine = enemyTurn([WARRIOR, SPIDER])
+    const events = engine.step(bite('warrior')) as AttackEvent[]
+    expect(events.map((e) => [e.strike, e.damage, e.status])).toEqual([
+      ['Bite', 6, undefined],
+      ['Venom Bite', 6, { id: 'poisoned', turnsLeft: 3 }],
+    ])
+    expect(unitOf(engine, 'warrior').statuses).toEqual([{ id: 'poisoned', turnsLeft: 3 }])
+    expect(formatEvent(events[1], NAMED)).toBe('Spider bites Warrior: rolls 34 (needs 45 or less) — HITS Warrior for 6 dmg, poisoned.')
+  })
+
+  it('lays no poison on a miss, nor on a bite that fells the target', () => {
+    // The second roll is a 100.
+    const missed = enemyTurn([WARRIOR, SPIDER], [0.66, 0.66, 0])
+    const events = missed.step(bite('warrior')) as AttackEvent[]
+    expect(events[1]).toMatchObject({ strike: 'Venom Bite', hit: false })
+    expect(events[1]).not.toHaveProperty('status')
+    expect(unitOf(missed, 'warrior').statuses).toEqual([])
+
+    const felled = enemyTurn([playerAt('warrior', hex(1, 1), { hp: 8 }), playerAt('cleric', hex(7, 1)), SPIDER])
+    const fell = felled.step(bite('warrior'))
+    expect(fell.map((e) => e.type)).toEqual(['attack', 'attack', 'unit_down'])
+    expect(fell[1]).not.toHaveProperty('status')
+  })
+
+  it('turns a strike whose target has fallen on the nearest standing foe in reach, the lowest id on a tie', () => {
+    // Zed stands before the cleric in the roster; both are beside the Troll.
+    const engine = enemyTurn([playerAt('warrior', hex(1, 1), { hp: 3 }), playerAt('zed', hex(3, 1)), playerAt('cleric', hex(2, 2)), TROLL])
+    const events = engine.step(claws('warrior'))
+    expect(events.map((e) => e.type)).toEqual(['attack', 'unit_down', 'attack'])
+    expect(events[2]).toMatchObject({ defender: 'cleric', strike: 'Claw', apCost: 0 })
+  })
+
+  it('turns a ranged routine on the nearest foe before a lower id further off', () => {
+    const reaching = { ...TROLL, stats: { ...TROLL_STATS, attackRange: 3 } }
+    const engine = enemyTurn([playerAt('warrior', hex(3, 1), { hp: 3 }), playerAt('cleric', hex(5, 1)), playerAt('zed', hex(4, 1)), reaching])
+    const events = engine.step(claws('warrior'))
+    expect(events.map((e) => e.type)).toEqual(['attack', 'unit_down', 'attack'])
+    expect(events[2]).toMatchObject({ defender: 'zed' })
+  })
+
+  it('makes no further strike, and logs nothing for it, with no foe left in reach', () => {
+    const engine = enemyTurn([playerAt('warrior', hex(1, 1), { hp: 3 }), playerAt('cleric', hex(7, 1)), TROLL])
+    expect(engine.step(claws('warrior')).map((e) => e.type)).toEqual(['attack', 'unit_down'])
+    expect(engine.getState().phase).toBe('enemy')
+  })
+
+  it('stops a routine when the battle ends', () => {
+    const engine = enemyTurn([playerAt('warrior', hex(1, 1), { hp: 3 }), TROLL])
+    expect(engine.step(claws('warrior')).map((e) => e.type)).toEqual(['attack', 'unit_down', 'battle_end'])
+  })
+
+  it('lets the first melee strike on a side turn the defender, and the second find it turned', () => {
+    // The Warrior faces east; the Troll comes at its back from the west.
+    const engine = enemyTurn([WARRIOR, { ...TROLL, position: hex(0, 1) }])
+    const events = engine.step(claws('warrior')) as AttackEvent[]
+    expect(events.map((e) => [e.defenderTurned, e.arc])).toEqual([
+      [true, 'front'],
+      [false, 'front'],
+    ])
+    expect(unitOf(engine, 'warrior').turnReady).toBe(false)
+  })
+
+  it('lists a routine at each foe in reach after the unit’s casts, and not without the AP', () => {
+    const caster = { ...TROLL, stats: { ...TROLL_STATS, magic: { maxMana: 10, skill: 60, spells: ['magic_arrow' as const] } } }
+    const engine = enemyTurn([WARRIOR, playerAt('cleric', hex(2, 2)), playerAt('zed', hex(8, 1)), caster])
+    expect(nonMoves(engine, 'troll')).toEqual([
+      { type: 'attack', unit: 'troll', target: 'warrior' },
+      { type: 'attack', unit: 'troll', target: 'cleric' },
+      { type: 'cast', unit: 'troll', spell: 'magic_arrow', target: 'warrior' },
+      { type: 'cast', unit: 'troll', spell: 'magic_arrow', target: 'cleric' },
+      claws('warrior'),
+      claws('cleric'),
+      END_TURN,
+    ])
+    engine.step({ type: 'attack', unit: 'troll', target: 'warrior' })
+    expect(nonMoves(engine, 'troll').filter((a) => a.type === 'ability')).toEqual([])
+    expect(() => engine.step(claws('warrior'))).toThrow('troll cannot use troll_claws on warrior')
+  })
+
+  it('refuses a routine at a foe out of reach, or by a unit without the ability', () => {
+    const engine = enemyTurn([WARRIOR, playerAt('zed', hex(7, 1)), TROLL, { ...GOBLIN, position: hex(1, 0) }])
+    expect(() => engine.step(claws('zed'))).toThrow('troll cannot use troll_claws on zed')
+    expect(() => engine.step(claws('warrior', 'goblin'))).toThrow('goblin cannot use troll_claws on warrior')
+  })
+
+  it('keeps an ability of no recharge listed while the AP allow, and records nothing recharging', () => {
+    const engine = enemyTurn([playerAt('warrior', hex(1, 1), { stats: { ...WARRIOR_STATS, maxHp: 60 } }), TROLL])
+    for (let turn = 0; turn < 2; turn++) {
+      expect(nonMoves(engine, 'troll')).toContainEqual(claws('warrior'))
+      engine.step(claws('warrior'))
+      expect(unitOf(engine, 'troll').recharging).toEqual({})
+      engine.step(END_TURN)
+      engine.step(END_TURN)
+    }
+  })
+
+  it('recharges the spider’s bite: not again the same turn, ready again as its side’s next turn begins', () => {
+    const engine = enemyTurn([playerAt('warrior', hex(1, 1), { stats: { ...WARRIOR_STATS, maxHp: 60 } }), SPIDER])
+    expect(unitOf(engine, 'spider').recharging).toEqual({})
+    engine.step(bite('warrior'))
+    expect(unitOf(engine, 'spider')).toMatchObject({ ap: 4, recharging: { spider_bite: 1 } })
+    expect(nonMoves(engine, 'spider')).toEqual([{ type: 'attack', unit: 'spider', target: 'warrior' }, END_TURN])
+    expect(() => engine.step(bite('warrior'))).toThrow('spider cannot use spider_bite on warrior')
+    engine.step(END_TURN)
+    // The player's turn begins: the spider's counter waits for its own side's.
+    expect(unitOf(engine, 'spider').recharging).toEqual({ spider_bite: 1 })
+    engine.step(END_TURN)
+    expect(unitOf(engine, 'spider').recharging).toEqual({})
+    expect(nonMoves(engine, 'spider')).toContainEqual(bite('warrior'))
+  })
+
+  it('counts a recharge down as its side’s turn begins, with its regeneration', () => {
+    // A wounded troll that bites as the spider does, so that it regenerates.
+    const slow = { ...TROLL, stats: { ...TROLL_STATS, abilities: ['spider_bite' as const] }, hp: 10 }
+    const engine = enemyTurn([playerAt('warrior', hex(1, 1), { stats: { ...WARRIOR_STATS, maxHp: 60 } }), slow])
+    engine.step({ type: 'ability', unit: 'troll', ability: 'spider_bite', target: 'warrior' })
+    expect(unitOf(engine, 'troll').recharging).toEqual({ spider_bite: 1 })
+    engine.step(END_TURN)
+    const events = engine.step(END_TURN)
+    expect(events.map((e) => e.type)).toEqual(['end_turn', 'regenerate'])
+    expect(unitOf(engine, 'troll').recharging).toEqual({})
+  })
+
+  it('counts a sleeper’s recharge down too', () => {
+    const mage: UnitSetup = playerAt('mage', hex(6, 1), { stats: { ...WARRIOR_STATS, name: 'Mage', magic: { maxMana: 20, skill: 76, spells: ['sleep'] } } })
+    const engine = enemyTurn([playerAt('warrior', hex(1, 1), { stats: { ...WARRIOR_STATS, maxHp: 60 } }), mage, SPIDER])
+    engine.step(bite('warrior'))
+    engine.step(END_TURN)
+    engine.step({ type: 'cast', unit: 'mage', spell: 'sleep', target: 'spider' })
+    expect(unitOf(engine, 'spider').statuses).toContainEqual({ id: 'asleep', turnsLeft: 2 })
+    engine.step(END_TURN)
+    expect(unitOf(engine, 'spider')).toMatchObject({ ap: 0, recharging: {} })
+  })
+
+  it('keeps what is recharging through a snapshot, and plays on identically', () => {
+    const field = {
+      board: { cols: 8, rows: 5 },
+      units: [
+        playerAt('warrior', hex(1, 1), { stats: { ...WARRIOR_STATS, maxHp: 40 } }),
+        playerAt('cleric', hex(1, 3)),
+        { ...SPIDER, position: hex(2, 1) },
+        { ...TROLL, position: hex(2, 3) },
+      ],
+    }
+    const play = (engine: BattleEngine, rng: () => number) => {
+      for (let state = engine.getState(); state.phase !== 'over'; state = engine.getState()) {
+        engine.step(POLICIES.aggressive({ state, legal: engine.legalActions(), rng }))
+      }
+      return engine.getLog()
+    }
+    const straight = new BattleEngine(field, { seed: 4 })
+    straight.step(END_TURN)
+    straight.step(bite('warrior'))
+    expect(unitOf(straight, 'spider').recharging).toEqual({ spider_bite: 1 })
+    const restored = BattleEngine.restore(JSON.parse(JSON.stringify(straight.snapshot())))
+    expect(unitOf(restored, 'spider').recharging).toEqual({ spider_bite: 1 })
+    expect(restored.legalActions()).toEqual(straight.legalActions())
+    const log = play(restored, () => 0)
+    expect(log).toEqual(play(straight, () => 0))
+    expect(log.some((e) => e.type === 'attack' && e.ability === 'troll_claws')).toBe(true)
+  })
+})
+
+describe('BattleEngine area abilities', () => {
+  const WIDE = { cols: 9, rows: 3 }
+  const SALAMANDER_STATS: CombatantStats = { ...GOBLIN_STATS, name: 'Salamander', toHit: 80, abilities: ['fire_spit'] }
+  // At (3,1), west of it the warrior's (2,1): a cone of 2 aimed there is (2,1), then (1,1), (1,2) and (2,0).
+  const SALAMANDER: UnitSetup = { id: 'salamander', side: 'enemy', stats: SALAMANDER_STATS, position: hex(3, 1) }
+  const SPIDER_STATS: CombatantStats = { ...GOBLIN_STATS, name: 'Spider', toHit: 80, abilities: ['spider_web'] }
+  const SPIDER: UnitSetup = { id: 'spider', side: 'enemy', stats: SPIDER_STATS, position: hex(6, 1) }
+  const BOLTER: UnitSetup = { id: 'bolter', side: 'enemy', stats: { ...SALAMANDER_STATS, name: 'Bolter', abilities: ['test_bolt' as AbilityId] }, position: hex(5, 1) }
+  const playerAt = (id: string, position: Hex, extra: Partial<UnitSetup> = {}): UnitSetup => ({ ...WARRIOR, id, position, ...extra })
+  const goblinAt = (id: string, position: Hex, extra: Partial<UnitSetup> = {}): UnitSetup => ({ ...GOBLIN, id, position, ...extra })
+  /** Every draw 0.66 unless told otherwise: a roll of 34, a 4 on a d6. Starts on the enemy's turn. */
+  const enemyTurn = (units: UnitSetup[], rng: number[] = [0.66]) => {
+    const engine = new BattleEngine({ board: WIDE, units }, { rng: sequence(rng) })
+    engine.step(END_TURN)
+    return engine
+  }
+  const spit = (at: Hex, unit = 'salamander'): Action => ({ type: 'ability', unit, ability: 'fire_spit', at })
+  const web = (at: Hex): Action => ({ type: 'ability', unit: 'spider', ability: 'spider_web', at })
+  const NAMED = { ...NAMES, salamander: 'Salamander', spider: 'Spider', bolter: 'Bolter', mage: 'Mage', zed: 'Zed' }
+  const WEST_OF = hex(2, 1)
+  /** A roll of 80: over the Salamander's 55% against the Warrior. */
+  const MISS = 0.2
+  const onBoard = (h: Hex) => {
+    const col = h.q + (h.r - (h.r & 1)) / 2
+    return h.r >= 0 && h.r < WIDE.rows && col >= 0 && col < WIDE.cols
+  }
+
+  // A line with damage and no half on a miss exists only here, to try the rules no listed ability exercises.
+  const TEST_BOLT: Ability = {
+    name: 'Test Bolt', verb: 'bolts', description: 'A test line.', apCost: 4, recharge: 0,
+    area: { shape: 'line', range: 3, damage: { count: 1, sides: 6, bonus: 0 }, halfOnMiss: false },
+  }
+  beforeAll(() => {
+    ;(ABILITIES as Record<string, Ability>).test_bolt = TEST_BOLT
+  })
+  afterAll(() => {
+    delete (ABILITIES as Record<string, Ability>).test_bolt
+  })
+
+  it('touches every unit on a cone’s hexes, both sides, the user excluded, in roster order', () => {
+    const engine = enemyTurn([
+      playerAt('warrior', WEST_OF),
+      goblinAt('goblin', hex(2, 0)),
+      playerAt('cleric', hex(1, 2)),
+      SALAMANDER,
+      playerAt('zed', hex(5, 1)),
+    ], [MISS])
+    const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
+    expect(event.type).toBe('ability')
+    expect(event.shape).toBe('cone')
+    expect(event.hexes).toEqual([hex(2, 1), hex(1, 1), hex(1, 2), hex(2, 0)])
+    expect(event.outcomes.map((o) => o.unit)).toEqual(['warrior', 'goblin', 'cleric'])
+  })
+
+  it('touches the units on a line and a burst, with only the board’s hexes recorded', () => {
+    const line = enemyTurn([playerAt('warrior', hex(4, 1)), playerAt('cleric', hex(2, 1)), playerAt('zed', hex(1, 1)), BOLTER], [MISS])
+    const [bolt] = line.step({ type: 'ability', unit: 'bolter', ability: 'test_bolt' as AbilityId, at: hex(4, 1) }) as AbilityEvent[]
+    expect(bolt.hexes).toEqual([hex(4, 1), hex(3, 1), hex(2, 1)])
+    expect(bolt.outcomes.map((o) => o.unit)).toEqual(['warrior', 'cleric'])
+
+    // A burst of 1 on the top row: the three hexes above it are off the board.
+    const burst = enemyTurn([playerAt('warrior', hex(3, 0)), playerAt('cleric', hex(2, 1)), playerAt('zed', hex(4, 1)), SPIDER], [MISS])
+    const [webbed] = burst.step(web(hex(3, 0))) as AbilityEvent[]
+    expect(webbed.hexes).toEqual(areaOf('burst', hex(6, 1), hex(3, 0), 4, 1).filter(onBoard))
+    expect(webbed.hexes).toHaveLength(5)
+    expect(webbed.outcomes.map((o) => o.unit)).toEqual(['warrior', 'cleric'])
+  })
+
+  it('pays its AP and starts its recharge, turns the user to its aim and records the distance and skill', () => {
+    const engine = enemyTurn([playerAt('warrior', WEST_OF), SALAMANDER], [MISS])
+    const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
+    expect(event).toMatchObject({ unit: 'salamander', ability: 'fire_spit', at: WEST_OF, distance: 1, apCost: 4, apAfter: 4, facing: WEST, skill: 80 })
+    expect(unitOf(engine, 'salamander')).toMatchObject({ ap: 4, facing: WEST, recharging: { fire_spit: 2 } })
+  })
+
+  it('deals the dice and the ability damage bonus on a hit, with nothing off for resistance, and lays its status', () => {
+    const engine = enemyTurn([
+      playerAt('warrior', WEST_OF, { stats: { ...WARRIOR_STATS, resistance: 4 } }),
+      { ...SALAMANDER, stats: { ...SALAMANDER_STATS, abilityDamageBonus: 1 } },
+    ])
+    const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
+    // A roll of 34 within 55%; 4 + 4 + 4 + 4 on the dice, +2, +1.
+    expect(event.outcomes).toEqual([
+      {
+        unit: 'warrior', attackRoll: 34, chance: 55, defenderAc: 25, hit: true, critical: false, fumble: false, image: false,
+        damage: 19, warded: 0, half: false, healed: 0, hpBefore: 20, hpAfter: 1, status: { id: 'seared', turnsLeft: 1 },
+      },
+    ])
+    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: HITS Warrior for 19 dmg, seared.')
+  })
+
+  it('deals half the dice, rounded down, on a miss with halfOnMiss, and lays nothing', () => {
+    const engine = enemyTurn([playerAt('warrior', WEST_OF), { ...SALAMANDER, stats: { ...SALAMANDER_STATS, abilityDamageBonus: 1 } }], [MISS, 0.66])
+    const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
+    // 16 on the dice, +2, +1, halved.
+    expect(event.outcomes[0]).toMatchObject({ hit: false, half: true, damage: 9, hpAfter: 11, status: null })
+    expect(unitOf(engine, 'warrior').statuses).toEqual([])
+    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: MISSES Warrior, 9 dmg (half).')
+  })
+
+  it('deals half the dice on a fumble too, a fumble being a miss', () => {
+    const engine = enemyTurn([playerAt('warrior', WEST_OF), SALAMANDER], [0.01, 0.66])
+    const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
+    expect(event.outcomes[0]).toMatchObject({ attackRoll: 99, fumble: true, hit: false, half: true, damage: 9, hpAfter: 11, status: null })
+  })
+
+  it('deals nothing on a miss without halfOnMiss, drawing no dice for it', () => {
+    // The warrior is missed; the cleric's roll is the next draw, a 34 that hits, then a 4.
+    const engine = enemyTurn([playerAt('warrior', hex(4, 1)), playerAt('cleric', hex(3, 1)), BOLTER], [MISS, 0.66])
+    const [event] = engine.step({ type: 'ability', unit: 'bolter', ability: 'test_bolt' as AbilityId, at: hex(4, 1) }) as AbilityEvent[]
+    expect(event.outcomes.map((o) => [o.unit, o.hit, o.half, o.damage])).toEqual([
+      ['warrior', false, false, 0],
+      ['cleric', true, false, 4],
+    ])
+  })
+
+  it('cuts its element by a ward, recording the points stopped, and still lays its status', () => {
+    const engine = enemyTurn([playerAt('warrior', WEST_OF, { stats: { ...WARRIOR_STATS, wards: { fire: 99 } } }), SALAMANDER])
+    const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
+    expect(event.outcomes[0]).toMatchObject({ hit: true, damage: 0, warded: 18, hpAfter: 20, status: { id: 'seared', turnsLeft: 1 } })
+    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: HITS Warrior for 0 dmg (warded 18), seared.')
+  })
+
+  it('cuts a half miss by its ward too', () => {
+    const engine = enemyTurn([playerAt('warrior', WEST_OF, { stats: { ...WARRIOR_STATS, wards: { fire: 2 } } }), SALAMANDER], [MISS, 0.66])
+    const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
+    expect(event.outcomes[0]).toMatchObject({ hit: false, half: true, damage: 7, warded: 2 })
+    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: MISSES Warrior, 7 dmg (warded 2) (half).')
+  })
+
+  it('doubles the dice on a critical, and fells and ends the battle as a cast does', () => {
+    const engine = enemyTurn([playerAt('warrior', WEST_OF), SALAMANDER], [0.99, 0.66])
+    const events = engine.step(spit(WEST_OF))
+    expect(events.map((e) => e.type)).toEqual(['ability', 'unit_down', 'battle_end'])
+    // Eight dice of 4, +2.
+    expect((events[0] as AbilityEvent).outcomes[0]).toMatchObject({ critical: true, damage: 34, hpAfter: 0, status: null })
+    expect(engine.getState().winner).toBe('enemy')
+  })
+
+  it('puts a critical and a ward in one pair of brackets', () => {
+    const engine = enemyTurn([playerAt('warrior', WEST_OF, { stats: { ...WARRIOR_STATS, maxHp: 40, wards: { fire: 5 } } }), SALAMANDER], [0.99, 0.66])
+    const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
+    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: HITS Warrior for 29 dmg (CRITICAL, warded 5), seared.')
+  })
+
+  it('strikes a mirror image on a hit, drawing no dice for it', () => {
+    const MAGE: UnitSetup = playerAt('mage', WEST_OF, { stats: { ...WARRIOR_STATS, name: 'Mage', magic: { maxMana: 18, skill: 76, spells: ['mirror_image'] } } })
+    const engine = new BattleEngine({ board: WIDE, units: [MAGE, playerAt('cleric', hex(1, 1)), SALAMANDER] }, { rng: sequence([0.66, MISS, 0.66]) })
+    engine.step({ type: 'cast', unit: 'mage', spell: 'mirror_image', target: 'mage' })
+    engine.step(END_TURN)
+    const [event] = engine.step(spit(WEST_OF)) as AbilityEvent[]
+    // The cleric's roll and dice follow the mage's roll at once: 80 misses, then 18 halved.
+    expect(event.outcomes.map((o) => [o.unit, o.hit, o.image, o.damage])).toEqual([
+      ['mage', true, true, 0],
+      ['cleric', false, false, 9],
+    ])
+    expect(unitOf(engine, 'mage').statuses).toEqual([{ id: 'mirrored', turnsLeft: 2, images: 2 }])
+  })
+
+  it('wakes a sleeper it hurts, as a cast does', () => {
+    const MAGE: UnitSetup = playerAt('mage', hex(6, 1), { stats: { ...WARRIOR_STATS, name: 'Mage', magic: { maxMana: 18, skill: 76, spells: ['sleep'] } } })
+    const engine = new BattleEngine(
+      { board: WIDE, units: [MAGE, playerAt('warrior', WEST_OF), goblinAt('goblin', hex(2, 0), { stats: { ...GOBLIN_STATS, maxHp: 30 } }), SALAMANDER] },
+      { rng: sequence([0.66]) },
+    )
+    engine.step({ type: 'cast', unit: 'mage', spell: 'sleep', target: 'goblin' })
+    engine.step(END_TURN)
+    expect(unitOf(engine, 'goblin').statuses.map((s) => s.id)).toEqual(['asleep'])
+    const events = engine.step(spit(WEST_OF))
+    expect(events.map((e) => e.type)).toEqual(['ability', 'status_end'])
+    expect(events[1]).toMatchObject({ unit: 'goblin', status: 'asleep', reason: 'woke' })
+    expect(unitOf(engine, 'goblin').statuses.map((s) => s.id)).toEqual(['seared'])
+  })
+
+  it('webs on a hit with Web, which has no dice to draw', () => {
+    // The warrior is hit; the cleric's roll is the very next draw, an 80 that misses.
+    const engine = enemyTurn([playerAt('warrior', hex(3, 1)), playerAt('cleric', hex(2, 1)), SPIDER], [0.66, MISS])
+    const [event] = engine.step(web(hex(3, 1))) as AbilityEvent[]
+    expect(event.outcomes.map((o) => [o.unit, o.hit, o.half, o.damage, o.status])).toEqual([
+      ['warrior', true, false, 0, { id: 'webbed', turnsLeft: 2 }],
+      ['cleric', false, false, 0, null],
+    ])
+    expect(formatEvent(event, NAMED)).toBe('Spider spins a web: Warrior is webbed; MISSES Cleric.')
+  })
+
+  it('logs a web that hits a unit already webbed as webbing it, never as a miss', () => {
+    // Two spiders web the warrior in one turn: the second web finds it webbed already.
+    const engine = enemyTurn([playerAt('warrior', hex(3, 1)), SPIDER, { ...SPIDER, id: 'spider2', position: hex(6, 2) }], [0.66])
+    engine.step(web(hex(3, 1)))
+    expect(unitOf(engine, 'warrior').statuses.map((st) => st.id)).toEqual(['webbed'])
+    const [event] = engine.step({ type: 'ability', unit: 'spider2', ability: 'spider_web', at: hex(3, 1) }) as AbilityEvent[]
+    expect(event.outcomes[0]).toMatchObject({ hit: true, status: { id: 'webbed', turnsLeft: 2 } })
+    expect(formatEvent(event, { ...NAMED, spider2: 'Spider' })).toBe('Spider spins a web: Warrior is webbed.')
+  })
+
+  it('lists an area at each legal aim in board order, after the unit’s other actions', () => {
+    const engine = enemyTurn([playerAt('warrior', WEST_OF), SALAMANDER])
+    const actions = engine.legalActions('salamander')
+    const areas = actions.filter((a) => a.type === 'ability')
+    const expected = [...Array(WIDE.rows).keys()]
+      .flatMap((row) => [...Array(WIDE.cols).keys()].map((col) => hex(col - (row - (row & 1)) / 2, row)))
+      .filter((h) => {
+        const d = hexDistance(h, SALAMANDER.position)
+        return d >= 1 && d <= 2 && areaOf('cone', SALAMANDER.position, h, 2).some((c) => hexKey(c) === hexKey(WEST_OF))
+      })
+    expect(expected.length).toBeGreaterThan(1)
+    expect(areas).toEqual(expected.map((at) => spit(at)))
+    expect(actions.slice(actions.length - areas.length - 1, -1)).toEqual(areas)
+  })
+
+  it('refuses an aim that touches no foe, a cone or line at the user’s own hex, and a burst beyond its range', () => {
+    const engine = enemyTurn([playerAt('warrior', WEST_OF), goblinAt('goblin', hex(4, 1)), SALAMANDER, { ...SPIDER, position: hex(8, 1) }])
+    const listed = (at: Hex, ability: AbilityId = 'fire_spit', unit = 'salamander') =>
+      engine.legalActions().some((a) => a.type === 'ability' && a.ability === ability && a.unit === unit && 'at' in a && hexKey(a.at) === hexKey(at))
+    // Eastwards the cone holds only the salamander's ally.
+    expect(listed(hex(4, 1))).toBe(false)
+    expect(() => engine.step(spit(hex(4, 1)))).toThrow('salamander cannot use fire_spit at 4,1')
+    expect(listed(SALAMANDER.position)).toBe(false)
+    expect(() => engine.step(spit(SALAMANDER.position))).toThrow()
+    // The warrior is 6 hexes from the spider; a burst of 1 around it is aimed 5 or 6 away.
+    expect(listed(WEST_OF, 'spider_web', 'spider')).toBe(false)
+    expect(() => engine.step({ type: 'ability', unit: 'spider', ability: 'spider_web', at: hex(3, 1) })).toThrow()
+    // A routine's target form is refused for an area, and an area's aim for a routine.
+    expect(() => engine.step({ type: 'ability', unit: 'salamander', ability: 'fire_spit', target: 'warrior' })).toThrow()
+  })
+
+  it('is not listed while it recharges, and is again once its counter runs out', () => {
+    const engine = enemyTurn([playerAt('warrior', WEST_OF, { stats: { ...WARRIOR_STATS, maxHp: 99 } }), SALAMANDER], [MISS, 0.66])
+    const spits = () => engine.legalActions('salamander').filter((a) => a.type === 'ability').length
+    expect(engine.getState().round).toBe(1)
+    engine.step(spit(WEST_OF))
+    expect(spits()).toBe(0)
+    engine.step(END_TURN)
+    engine.step(END_TURN)
+    expect(engine.getState().round).toBe(2)
+    expect(spits()).toBe(0)
+    expect(() => engine.step(spit(WEST_OF))).toThrow()
+    engine.step(END_TURN)
+    engine.step(END_TURN)
+    expect(engine.getState().round).toBe(3)
+    expect(spits()).toBeGreaterThan(0)
+  })
+
+  it('names "touches no one" for an area that touched nobody', () => {
+    const event: AbilityEvent = {
+      type: 'ability', seq: 0, round: 1, unit: 'salamander', ability: 'fire_spit', at: WEST_OF, shape: 'cone', hexes: [],
+      distance: 1, apCost: 4, apAfter: 4, facing: WEST, skill: 80, outcomes: [],
+    }
+    expect(formatEvent(event, NAMED)).toBe('Salamander spits fire: it touches no one.')
+  })
+
+  it('restores from a snapshot taken after an area attack and plays on identically', () => {
+    const field = {
+      board: WIDE,
+      units: [playerAt('warrior', WEST_OF, { stats: { ...WARRIOR_STATS, maxHp: 60 } }), playerAt('cleric', hex(1, 2)), { ...SALAMANDER, stats: { ...SALAMANDER_STATS, maxHp: 80 } }],
+    }
+    const play = (engine: BattleEngine, rng: () => number) => {
+      for (let state = engine.getState(); state.phase !== 'over'; state = engine.getState()) {
+        engine.step(POLICIES.aggressive({ state, legal: engine.legalActions(), rng }))
+      }
+      return engine.getLog()
+    }
+    const straight = new BattleEngine(field, { seed: 7 })
+    straight.step(END_TURN)
+    straight.step(spit(WEST_OF))
+    const restored = BattleEngine.restore(JSON.parse(JSON.stringify(straight.snapshot())))
+    expect(unitOf(restored, 'salamander').recharging).toEqual({ fire_spit: 2 })
+    expect(restored.legalActions()).toEqual(straight.legalActions())
+    const log = play(restored, () => 0)
+    expect(log).toEqual(play(straight, () => 0))
+    expect(log.filter((e) => e.type === 'ability').length).toBeGreaterThan(1)
   })
 })

@@ -133,6 +133,676 @@
       32
     ]
   },
+  "bandit_archer": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_1",
+            "ms": 140
+          },
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_2",
+            "ms": 140
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      7,
+      3,
+      22,
+      29
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "bandit_archer.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          7,
+          3,
+          22,
+          29
+        ],
+        "file": "bandit_archer__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          7,
+          4,
+          22,
+          28
+        ],
+        "file": "bandit_archer__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          7,
+          3,
+          22,
+          29
+        ],
+        "file": "bandit_archer__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          7,
+          3,
+          22,
+          29
+        ],
+        "file": "bandit_archer__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          7,
+          3,
+          22,
+          29
+        ],
+        "file": "bandit_archer__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          16.5,
+          16.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "bandit_brute": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_1",
+            "ms": 140
+          },
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_2",
+            "ms": 140
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      6,
+      2,
+      26,
+      30
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "bandit_brute.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          6,
+          2,
+          26,
+          30
+        ],
+        "file": "bandit_brute__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          6,
+          3,
+          26,
+          29
+        ],
+        "file": "bandit_brute__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          6,
+          2,
+          26,
+          30
+        ],
+        "file": "bandit_brute__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          6,
+          2,
+          26,
+          30
+        ],
+        "file": "bandit_brute__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          6,
+          2,
+          26,
+          30
+        ],
+        "file": "bandit_brute__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          16.5,
+          14.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          16.5,
+          14.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          16.5,
+          14.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          16.5,
+          14.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "bandit_captain": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_1",
+            "ms": 140
+          },
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_2",
+            "ms": 140
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      4,
+      0,
+      24,
+      32
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "bandit_captain.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          4,
+          0,
+          24,
+          32
+        ],
+        "file": "bandit_captain__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          4,
+          1,
+          24,
+          31
+        ],
+        "file": "bandit_captain__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          4,
+          0,
+          24,
+          32
+        ],
+        "file": "bandit_captain__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          4,
+          0,
+          24,
+          32
+        ],
+        "file": "bandit_captain__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          4,
+          0,
+          24,
+          32
+        ],
+        "file": "bandit_captain__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          16.5,
+          16.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "bandit_cutthroat": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_1",
+            "ms": 140
+          },
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_2",
+            "ms": 140
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      8,
+      3,
+      20,
+      29
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "bandit_cutthroat.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          8,
+          3,
+          20,
+          29
+        ],
+        "file": "bandit_cutthroat__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          8,
+          4,
+          20,
+          28
+        ],
+        "file": "bandit_cutthroat__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          8,
+          3,
+          20,
+          29
+        ],
+        "file": "bandit_cutthroat__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          8,
+          3,
+          20,
+          29
+        ],
+        "file": "bandit_cutthroat__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          8,
+          3,
+          20,
+          29
+        ],
+        "file": "bandit_cutthroat__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          16.5,
+          16.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
+  "bandit_mage": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_1",
+            "ms": 140
+          },
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_2",
+            "ms": 140
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      8,
+      2,
+      21,
+      30
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "bandit_mage.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          8,
+          2,
+          21,
+          30
+        ],
+        "file": "bandit_mage__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          8,
+          3,
+          21,
+          29
+        ],
+        "file": "bandit_mage__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          8,
+          2,
+          21,
+          30
+        ],
+        "file": "bandit_mage__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          8,
+          2,
+          21,
+          30
+        ],
+        "file": "bandit_mage__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          8,
+          2,
+          21,
+          30
+        ],
+        "file": "bandit_mage__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          16.5,
+          16.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          16.5,
+          15.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
   "camp_fire": {
     "anchor": [
       12,
@@ -875,6 +1545,262 @@
       32
     ]
   },
+  "gear_breastplate": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      7,
+      11,
+      18,
+      12
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_breastplate.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          7,
+          11,
+          18,
+          11
+        ],
+        "file": "gear_breastplate__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          7,
+          12,
+          18,
+          11
+        ],
+        "file": "gear_breastplate__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_circlet": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      13,
+      6,
+      6,
+      2
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_circlet.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          13,
+          6,
+          6,
+          1
+        ],
+        "file": "gear_circlet__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          13,
+          7,
+          6,
+          1
+        ],
+        "file": "gear_circlet__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_cloak": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      10,
+      11,
+      12,
+      3
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_cloak.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          10,
+          11,
+          12,
+          2
+        ],
+        "file": "gear_cloak__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          10,
+          12,
+          12,
+          2
+        ],
+        "file": "gear_cloak__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "gear_cloak_back": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 560
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      5,
+      11,
+      22,
+      17
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "gear_cloak_back.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          5,
+          11,
+          22,
+          16
+        ],
+        "file": "gear_cloak_back__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          5,
+          12,
+          22,
+          16
+        ],
+        "file": "gear_cloak_back__idle_1.png"
+      }
+    },
+    "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
   "gear_dagger": {
     "anchor": [
       16,
@@ -1382,6 +2308,140 @@
       }
     },
     "over": "warrior",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "giant_spider": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_1",
+            "ms": 140
+          },
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_2",
+            "ms": 140
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      7,
+      32,
+      25
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "giant_spider.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          0,
+          7,
+          32,
+          25
+        ],
+        "file": "giant_spider__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          0,
+          8,
+          32,
+          24
+        ],
+        "file": "giant_spider__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          0,
+          7,
+          32,
+          25
+        ],
+        "file": "giant_spider__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          0,
+          7,
+          32,
+          25
+        ],
+        "file": "giant_spider__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          0,
+          7,
+          32,
+          25
+        ],
+        "file": "giant_spider__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          18.5,
+          20.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          18.5,
+          21.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          18.5,
+          20.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          18.5,
+          20.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          18.5,
+          20.5
+        ]
+      }
+    },
     "size": [
       32,
       32
@@ -3002,6 +4062,140 @@
       32
     ]
   },
+  "salamander": {
+    "anchor": [
+      16,
+      32
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "idle_0",
+            "ms": 600
+          },
+          {
+            "frame": "idle_1",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      },
+      "walk": {
+        "frames": [
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_1",
+            "ms": 140
+          },
+          {
+            "frame": "walk_0",
+            "ms": 140
+          },
+          {
+            "frame": "walk_2",
+            "ms": 140
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      11,
+      31,
+      21
+    ],
+    "canvas": "unit",
+    "display_scale": 3,
+    "file": "salamander.png",
+    "frames": {
+      "idle_0": {
+        "bounds": [
+          0,
+          11,
+          31,
+          21
+        ],
+        "file": "salamander__idle_0.png"
+      },
+      "idle_1": {
+        "bounds": [
+          0,
+          12,
+          31,
+          20
+        ],
+        "file": "salamander__idle_1.png"
+      },
+      "walk_0": {
+        "bounds": [
+          0,
+          11,
+          31,
+          21
+        ],
+        "file": "salamander__walk_0.png"
+      },
+      "walk_1": {
+        "bounds": [
+          0,
+          11,
+          31,
+          21
+        ],
+        "file": "salamander__walk_1.png"
+      },
+      "walk_2": {
+        "bounds": [
+          0,
+          11,
+          31,
+          21
+        ],
+        "file": "salamander__walk_2.png"
+      }
+    },
+    "points": {
+      "idle_0": {
+        "chest": [
+          15.5,
+          20.5
+        ]
+      },
+      "idle_1": {
+        "chest": [
+          15.5,
+          21.5
+        ]
+      },
+      "walk_0": {
+        "chest": [
+          15.5,
+          20.5
+        ]
+      },
+      "walk_1": {
+        "chest": [
+          15.5,
+          20.5
+        ]
+      },
+      "walk_2": {
+        "chest": [
+          15.5,
+          20.5
+        ]
+      }
+    },
+    "size": [
+      32,
+      32
+    ]
+  },
   "shaman": {
     "anchor": [
       16,
@@ -3375,9 +4569,9 @@
     },
     "bounds": [
       7,
-      3,
+      4,
       21,
-      29
+      28
     ],
     "canvas": "unit",
     "display_scale": 3,
@@ -3386,45 +4580,45 @@
       "idle_0": {
         "bounds": [
           7,
-          3,
+          4,
           21,
-          29
+          28
         ],
         "file": "warrior__idle_0.png"
       },
       "idle_1": {
         "bounds": [
           7,
-          4,
+          5,
           21,
-          28
+          27
         ],
         "file": "warrior__idle_1.png"
       },
       "walk_0": {
         "bounds": [
           7,
-          3,
+          4,
           21,
-          29
+          28
         ],
         "file": "warrior__walk_0.png"
       },
       "walk_1": {
         "bounds": [
           7,
-          3,
+          4,
           21,
-          29
+          28
         ],
         "file": "warrior__walk_1.png"
       },
       "walk_2": {
         "bounds": [
           7,
-          3,
+          4,
           21,
-          29
+          28
         ],
         "file": "warrior__walk_2.png"
       }

@@ -1,0 +1,83 @@
+# A bandit archer: bareheaded with a red headband, a light tan tunic and a quiver
+# over the shoulder, a bow held out in the near fist.
+canvas = "unit"
+
+outline = "auto"
+unoutlined = ["W"]    # the bowstring, one pixel wide
+
+[points]
+chest = [16, 15]
+
+[frames.idle_0.runs]
+4 = [[14, "NNnn"]]
+5 = [[13, "NnnnN"], [23, "nt"]]
+6 = [[8, "oTo"], [13, "rrrrrr"], [23, "W"], [24, "nt"]]
+7 = [[8, "ToT"], [13, "NnSsks"], [23, "W"], [25, "nt"]]
+8 = [[9, "nN"], [13, "NnSsss"], [23, "W"], [25, "nt"]]
+9 = [[9, "nNn"], [14, "NSss"], [23, "W"], [26, "nt"]]
+10 = [[10, "nNn"], [14, "Sss"], [23, "W"], [26, "nt"]]
+11 = [[10, "tTTnTTTTTTt"], [23, "W"], [26, "nt"]]
+12 = [[9, "TtkTTNTTTTtkTt"], [23, "W"], [26, "nt"]]
+13 = [[9, "TtkTTTNTTTtkTt"], [23, "W"], [26, "nt"]]
+14 = [[9, "TtkTTTTNTTtkTtTsss"], [27, "t"]]
+15 = [[9, "TtkTTTTTNTtkTtTsss"], [27, "t"]]
+16 = [[9, "TtkNNNNyNNt"], [23, "W"], [26, "nt"]]
+17 = [[9, "TtkTTTTTTTt"], [23, "W"], [26, "nt"]]
+18 = [[9, "TtkTtTTtTtT"], [23, "W"], [26, "nt"]]
+19 = [[9, "sskTtTtTtTt"], [23, "W"], [26, "nt"]]
+20 = [[12, "nnnnnnnn"], [23, "W"], [26, "nt"]]
+21 = [[12, "nnt"], [17, "nnt"], [23, "W"], [25, "nt"]]
+22 = [[12, "nnt"], [17, "nnt"], [23, "W"], [25, "nt"]]
+23 = [[12, "nnt"], [17, "nnt"], [23, "W"], [24, "nt"]]
+24 = [[12, "nnt"], [17, "nnt"], [23, "nt"]]
+25 = [[12, "nnt"], [17, "nnt"]]
+26 = [[12, "nnt"], [17, "nnt"]]
+27 = [[12, "nnt"], [17, "nnt"]]
+28 = [[12, "MMm"], [17, "MMm"]]
+29 = [[12, "MMm"], [17, "MMm"]]
+30 = [[12, "MMmm"], [17, "MMmm"]]
+
+# A breath: everything above the shins sinks a pixel, the bow with it.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [0, 24], by = [0, 1] }
+
+# A stride: the legs part and nothing above them moves.
+[frames.walk_0]
+from = "idle_0"
+[frames.walk_0.runs]
+23 = [[11, "nnt....nnt"]]
+24 = [[11, "nnt....nnt"]]
+25 = [[10, "nnt......nnt"]]
+26 = [[10, "nnt......nnt"]]
+27 = [[9, "nnt........nnt"]]
+28 = [[9, "MMm........MMm"]]
+29 = [[9, "MMm........MMm"]]
+30 = [[9, "MMmm.......MMmm"]]
+
+# The near foot lifts: the left, then the right. Only the leg rows change.
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.runs]
+26 = [[12, "MMm"]]
+27 = [[12, "MMmm"]]
+28 = [[12, "..."]]
+29 = [[12, "..."]]
+30 = [[12, "...."]]
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.runs]
+26 = [[17, "MMm"]]
+27 = [[17, "MMmm"]]
+28 = [[17, "..."]]
+29 = [[17, "..."]]
+30 = [[17, "...."]]
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 600
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 140

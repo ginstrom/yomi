@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { offsetToHex } from '../src/grid/hex.ts'
-import { useGames } from './driver.ts'
+import { useGames, type Game } from './driver.ts'
+
+/** Types a line at the debug console, opening it first, and closes it again. */
+async function debugCommand(game: Game, line: string): Promise<void> {
+  await game.press('Shift+Backquote')
+  await game.page.locator('#yomi-debug input').fill(line)
+  await game.press('Enter')
+  await game.press('Escape')
+}
 
 describe('a hero’s panel', () => {
   const games = useGames()
@@ -39,6 +47,136 @@ describe('a hero’s panel', () => {
     expect(back.world).toEqual(world.world)
     // The hero the panel last showed is the one marked on the map.
     expect(back.party.map((member) => member.active)).toEqual([false, false, true])
+  })
+
+  it('drags gear between the equipment, the backpack and the baggage', async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    const panel = await game.settled('Inventory', (p) => p.tab === 'inventory')
+    const weapon = panel.equipment.mainHand.item!
+    expect(weapon).not.toBeNull()
+    expect(panel.ground).toEqual([])
+    const carried = (p: typeof panel) => p.backpack.map((slot) => slot.item)
+
+    // The weapon in hand dragged anywhere on the backpack is stowed, and dragged back onto its slot is worn again.
+    await game.drag(panel.equipment.mainHand, panel.grids.backpack)
+    const stowed = await game.settled('Inventory', (p) => p.equipment.mainHand.item === null)
+    expect(carried(stowed)).toContain(weapon)
+    await game.drag(stowed.backpack.find((slot) => slot.item === weapon)!, stowed.equipment.mainHand)
+    const worn = await game.settled('Inventory', (p) => p.equipment.mainHand.item === weapon)
+    expect(carried(worn)).toEqual(carried(panel))
+
+    // A backpack item dragged onto the baggage goes there, and dragged back comes back.
+    const spare = worn.backpack[0]
+    await game.drag(spare, worn.grids.ground)
+    const dropped = await game.settled('Inventory', (p) => p.ground.length === 1)
+    expect(dropped.ground[0].item).toBe(spare.item)
+    expect(carried(dropped)).not.toContain(spare.item)
+    await game.drag(dropped.ground[0], dropped.grids.backpack)
+    const back = await game.settled('Inventory', (p) => p.ground.length === 0)
+    expect(carried(back)).toContain(spare.item)
+
+    // A drop on a slot the item does not fit, or a release where it was picked up, changes nothing.
+    const gear = (p: typeof panel) => ({ equipment: p.equipment, backpack: p.backpack, ground: p.ground })
+    await game.drag(back.backpack[0], back.equipment.head)
+    await game.frames()
+    expect(gear((await game.probe('Inventory'))!)).toEqual(gear(back))
+
+    // A press that hardly moves is still a click: it stows the weapon on release.
+    const at = back.equipment.mainHand
+    await game.holdDown(at)
+    await game.hover({ x: at.x + 3, y: at.y + 2 })
+    expect((await game.probe('Inventory'))!.equipment.mainHand.item).toBe(weapon)
+    await game.letGo()
+    const clicked = await game.waitFor('Inventory', (p) => p.equipment.mainHand.item === null)
+    expect(carried(clicked)).toContain(weapon)
+
+    // Esc lets go of a drag without closing the panel or moving anything.
+    const settled = await game.settled('Inventory')
+    const item = settled.backpack[0]
+    await game.holdDown(item)
+    await game.hover(settled.grids.ground)
+    await game.press('Escape')
+    await game.letGo()
+    expect(await game.scenes()).toEqual({ running: ['Inventory'], paused: ['World'] })
+    expect(gear((await game.probe('Inventory'))!)).toEqual(gear(settled))
+
+    // A drag whose release the browser never reported (let go off the window) ends at the next move
+    // with no button held, so a release reported late drops nothing.
+    await game.holdDown(item)
+    await game.hover(settled.grids.ground)
+    await game.page.evaluate(({ x, y }) => {
+      document.querySelector('canvas')!.dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y, buttons: 0, bubbles: true }))
+    }, settled.grids.ground)
+    await game.letGo()
+    await game.frames()
+    expect(gear((await game.probe('Inventory'))!)).toEqual(gear(settled))
+  })
+
+  it('dresses the doll and the map’s figure in the breastplate, and undresses them when it comes off (AC5)', async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    expect(world.partyLook).toContain('gear_breastplate')
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    const panel = await game.settled('Inventory', (p) => p.tab === 'inventory')
+    expect(panel.doll).toContain('gear_breastplate')
+
+    // Off at once on the doll, and off the map's figure once the panel closes.
+    await game.click(panel.equipment.armor)
+    const stowed = await game.settled('Inventory', (p) => p.equipment.armor.item === null)
+    expect(stowed.doll).not.toContain('gear_breastplate')
+    expect(stowed.doll).toContain('warrior')
+    await game.press('Escape')
+    await game.waitForScenes(['World'])
+    expect((await game.probe('World'))!.partyLook).not.toContain('gear_breastplate')
+
+    // Worn again from the backpack, it is back on both.
+    await game.click((await game.probe('World'))!.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    const reopened = await game.settled('Inventory', (p) => p.tab === 'inventory')
+    await game.click(reopened.backpack.find((slot) => slot.item === panel.equipment.armor.item)!)
+    const worn = await game.settled('Inventory', (p) => p.equipment.armor.item !== null)
+    expect(worn.doll).toContain('gear_breastplate')
+    await game.press('Escape')
+    await game.waitForScenes(['World'])
+    expect((await game.probe('World'))!.partyLook).toContain('gear_breastplate')
+  })
+
+  it('lays a cloak, a breastplate, a circlet, a sword and a shield in their order (AC6)', async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    await debugCommand(game, 'give shadow_cloak')
+    await debugCommand(game, 'give sage_circlet')
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    let panel = await game.settled('Inventory', (p) => p.tab === 'inventory' && p.ground.length === 2)
+
+    // Each from the baggage into the backpack, and from there onto the hero.
+    for (const id of ['shadow_cloak', 'sage_circlet']) {
+      await game.click(panel.ground.find((slot) => slot.item === id)!)
+      panel = await game.settled('Inventory', (p) => p.backpack.some((slot) => slot.item === id))
+      await game.click(panel.backpack.find((slot) => slot.item === id)!)
+      panel = await game.settled('Inventory', (p) => Object.values(p.equipment).some((slot) => slot.item === id))
+    }
+    expect(panel.doll).toEqual([
+      'gear_cloak_back',
+      'warrior',
+      'gear_breastplate',
+      'gear_cloak',
+      'gear_circlet',
+      'gear_sword',
+      'gear_shield',
+    ])
+    await game.press('Escape')
+    await game.waitForScenes(['World'])
+    expect((await game.probe('World'))!.partyLook).toEqual(panel.doll)
   })
 
   it('lists only the perks a hero has taken, and shows them all in the perk tree', async () => {

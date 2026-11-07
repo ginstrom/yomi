@@ -1,4 +1,10 @@
+import type { AbilityId } from './abilities.ts'
 import type { SpellId } from './spells.ts'
+
+/** The kinds of damage a ward can stand against; damage of none is a weapon's or Magic Arrow's. */
+export const ELEMENTS = ['fire', 'frost', 'lightning', 'acid', 'poison', 'blight'] as const
+
+export type Element = (typeof ELEMENTS)[number]
 
 export interface DamageRoll {
   count: number
@@ -19,6 +25,8 @@ export interface CombatantStats {
   armorPierce?: number
   /** Points taken off the damage of every weapon hit it takes, what it wears and its own hide together; none when left out (`damageThrough`). */
   resistance?: number
+  /** Points taken off each instance of damage of an element; none when left out (`warded`). */
+  wards?: Partial<Record<Element, number>>
   /** Hit points it regains as its side's turn begins, unless a status stops it (`StatusRule.stopsRegeneration`); none when left out. */
   regeneration?: number
   damage: DamageRoll
@@ -35,9 +43,13 @@ export interface CombatantStats {
     maxMana: number
     /** The chance in percent of a spell striking a foe of armour class 0. */
     skill: number
-    /** In SPELL_IDS order. */
+    /** In `ALL_SPELL_IDS` order. */
     spells: readonly SpellId[]
   }
+  /** What the unit can do besides its weapon and spells (abilities.ts), in ABILITY_IDS order; none when left out. */
+  abilities?: readonly AbilityId[]
+  /** Added to the damage bonus of every strike and area of its abilities (foeAtLevel's damage step); 0 when left out. */
+  abilityDamageBonus?: number
 }
 
 function sameMagic(a: CombatantStats['magic'], b: CombatantStats['magic']): boolean {
@@ -48,6 +60,22 @@ function sameMagic(a: CombatantStats['magic'], b: CombatantStats['magic']): bool
     a.spells.length === b.spells.length &&
     a.spells.every((spell, i) => spell === b.spells[i])
   )
+}
+
+function sameAbilities(a: CombatantStats['abilities'], b: CombatantStats['abilities']): boolean {
+  const left = a ?? []
+  const right = b ?? []
+  return left.length === right.length && left.every((ability, i) => ability === right[i])
+}
+
+function sameWards(a: CombatantStats['wards'], b: CombatantStats['wards']): boolean {
+  return ELEMENTS.every((element) => (a?.[element] ?? 0) === (b?.[element] ?? 0))
+}
+
+/** Damage of `element` after `stats`' ward against it: max(0, damage − ward); damage of no element is unchanged. */
+export function warded(damage: number, element: Element | undefined, stats: CombatantStats): number {
+  const ward = element ? (stats.wards?.[element] ?? 0) : 0
+  return ward > 0 ? Math.max(0, damage - ward) : damage
 }
 
 /** Whether two stat blocks are the same in every respect. */
@@ -61,6 +89,7 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     (a.armorPierce ?? 0) === (b.armorPierce ?? 0) &&
     (a.resistance ?? 0) === (b.resistance ?? 0) &&
     (a.regeneration ?? 0) === (b.regeneration ?? 0) &&
+    sameWards(a.wards, b.wards) &&
     a.damage.count === b.damage.count &&
     a.damage.sides === b.damage.sides &&
     a.damage.bonus === b.damage.bonus &&
@@ -68,7 +97,9 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     a.attackApCost === b.attackApCost &&
     a.attackRange === b.attackRange &&
     a.actionPoints === b.actionPoints &&
-    sameMagic(a.magic, b.magic)
+    sameMagic(a.magic, b.magic) &&
+    sameAbilities(a.abilities, b.abilities) &&
+    (a.abilityDamageBonus ?? 0) === (b.abilityDamageBonus ?? 0)
   )
 }
 
@@ -277,7 +308,8 @@ export const HOBGOBLIN_CHIEF_STATS: CombatantStats = {
 }
 
 /**
- * A gangling brute that rakes twice a turn with its claws and knits its
+ * A gangling brute that rakes twice a turn with its claws, both at once
+ * standing still (`troll_claws`) or one after a move, and knits its
  * wounds back together as its turn begins, unless acid or fire has caught it
  * (`STATUSES`, `stopsRegeneration`). Its hide is thick, but no armour.
  */
@@ -294,6 +326,7 @@ export const TROLL_STATS: CombatantStats = {
   attackApCost: 4,
   attackRange: 1,
   actionPoints: 8,
+  abilities: ['troll_claws'],
 }
 
 /**
@@ -318,6 +351,47 @@ export const ARMORED_TROLL_STATS: CombatantStats = {
   actionPoints: 8,
 }
 
+/**
+ * A spider the size of a dog, native to level 4: fragile, but it webs a hero
+ * from four hexes off (`spider_web`), closes, and bites twice, the second
+ * bite poisoning (`spider_bite`). It has no magic; its Web is an ability.
+ */
+export const GIANT_SPIDER_STATS: CombatantStats = {
+  name: 'Giant Spider',
+  maxHp: 20,
+  ac: 25,
+  resistance: 1,
+  toHit: 80,
+  critChance: 5,
+  damage: { count: 1, sides: 6, bonus: 2 },
+  weapon: 'Fangs',
+  attackApCost: 5,
+  attackRange: 1,
+  actionPoints: 8,
+  abilities: ['spider_bite', 'spider_web'],
+}
+
+/**
+ * A lizard of living flame, native to level 5: it spits a cone of fire that
+ * burns whatever stands in it, its own kobolds too (`fire_spit`), and is
+ * warded against fire, so that Flame Arrow and Fireball scarcely touch it.
+ */
+export const SALAMANDER_STATS: CombatantStats = {
+  name: 'Salamander',
+  maxHp: 26,
+  ac: 30,
+  resistance: 2,
+  toHit: 85,
+  critChance: 5,
+  damage: { count: 1, sides: 8, bonus: 2 },
+  weapon: 'Claws',
+  attackApCost: 5,
+  attackRange: 1,
+  actionPoints: 8,
+  wards: { fire: 99 },
+  abilities: ['fire_spit'],
+}
+
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
 export const FOE_HP_PER_LEVEL = 0.7
 /** ...this many points to its chance to hit and to its armour class... */
@@ -338,13 +412,17 @@ export const FOE_MANA_PER_LEVEL = 3
  * pace with it. Its resistance and regeneration are its kind's at any
  * level: how heavily a monster is armoured is what sets the weapons to fight
  * it with, and a regeneration that grew with its hit points outpaced what a
- * party deals in a round.
+ * party deals in a round. A kind with a `native` level above 1 has its block
+ * written for that level: it is that block at `native` (a lower level is
+ * taken as `native`), and grows from there by the same steps. A kind with
+ * abilities gains the damage step on them too (`abilityDamageBonus`).
  */
-export function foeAtLevel(base: CombatantStats, level: number): CombatantStats {
-  const above = Math.max(0, level - 1)
+export function foeAtLevel(base: CombatantStats, level: number, native = 1): CombatantStats {
+  const at = Math.max(level, native)
+  const above = at - native
   return {
     ...base,
-    maxHp: Math.round(base.maxHp * (1 + FOE_HP_PER_LEVEL * above)),
+    maxHp: Math.round((base.maxHp * (1 + FOE_HP_PER_LEVEL * (at - 1))) / (1 + FOE_HP_PER_LEVEL * (native - 1))),
     ac: base.ac + FOE_AC_PER_LEVEL * above,
     toHit: base.toHit + FOE_TO_HIT_PER_LEVEL * above,
     damage: { ...base.damage, bonus: base.damage.bonus + Math.floor(above / FOE_DAMAGE_LEVEL_STEP) },
@@ -357,5 +435,54 @@ export function foeAtLevel(base: CombatantStats, level: number): CombatantStats 
           },
         }
       : {}),
+    ...(base.abilities ? { abilityDamageBonus: (base.abilityDamageBonus ?? 0) + Math.floor(above / FOE_DAMAGE_LEVEL_STEP) } : {}),
+  }
+}
+
+/** The measured growth of the ready-made fighter (campaign reference §3) at the levels it was measured: [level, hero hit, hit points, mean damage a turn]. */
+const FIGHTER_GROWTH: ReadonlyArray<readonly [number, number, number, number]> = [
+  [1, 60, 32, 10.5],
+  [5, 82, 58, 10.5],
+  [10, 104, 83, 12.5],
+  [15, 114, 108, 12.5],
+  [20, 124, 133, 13.5],
+]
+
+/** The fighter's `column` at `level`: linear between the levels measured, held at the first and the last outside them. */
+function fighterGrowth(level: number, column: 1 | 2 | 3): number {
+  const last = FIGHTER_GROWTH[FIGHTER_GROWTH.length - 1]
+  if (level <= FIGHTER_GROWTH[0][0]) return FIGHTER_GROWTH[0][column]
+  if (level >= last[0]) return last[column]
+  const next = FIGHTER_GROWTH.findIndex((row) => row[0] >= level)
+  const from = FIGHTER_GROWTH[next - 1]
+  const to = FIGHTER_GROWTH[next]
+  return from[column] + ((to[column] - from[column]) * (level - from[0])) / (to[0] - from[0])
+}
+
+/** The ranges a foe of a level should sit in, as [low, high]; see `foeYardstick`. */
+export interface FoeYardstick {
+  ac: readonly [number, number]
+  toHit: readonly [number, number]
+  maxHp: readonly [number, number]
+  /** Mean damage a turn: attacks a turn (floor(actionPoints / attackApCost), at least 1) times the mean of its damage roll. */
+  meanDamage: readonly [number, number]
+}
+
+/**
+ * What a foe of `level` should look like against the ready-made fighter's
+ * growth: armour class 35 to 55 below the hero's chance to hit, a chance to
+ * hit of 80 to 100, hit points 3 to 6 of the fighter's blows, and a turn's
+ * damage a sixth to a tenth of the fighter's hit points. A yardstick for
+ * a new kind, not a rule: a kind outside it should say why.
+ */
+export function foeYardstick(level: number): FoeYardstick {
+  const hit = fighterGrowth(level, 1)
+  const hp = fighterGrowth(level, 2)
+  const damage = fighterGrowth(level, 3)
+  return {
+    ac: [hit - 55, hit - 35],
+    toHit: [80, 100],
+    maxHp: [3 * damage, 6 * damage],
+    meanDamage: [hp / 10, hp / 6],
   }
 }

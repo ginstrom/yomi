@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, damageThrough, effectiveResistance, foeAtLevel, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, type CombatantStats } from './combat.ts'
+import { GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, damageThrough, effectiveResistance, foeAtLevel, foeYardstick, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, warded, type CombatantStats } from './combat.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -146,6 +146,34 @@ describe('sameCombatStats', () => {
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, regeneration: 2 })).toBe(false)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, damage: { count: 1, sides: 8, bonus: 0 } })).toBe(false)
   })
+
+  it('compares wards, a missing one as 0', () => {
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, wards: {} })).toBe(true)
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, wards: { fire: 0 } })).toBe(true)
+    expect(sameCombatStats({ ...WARRIOR_STATS, wards: { fire: 3 } }, { ...WARRIOR_STATS, wards: { fire: 3 } })).toBe(true)
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, wards: { fire: 3 } })).toBe(false)
+    expect(sameCombatStats({ ...WARRIOR_STATS, wards: { fire: 3 } }, WARRIOR_STATS)).toBe(false)
+    expect(sameCombatStats({ ...WARRIOR_STATS, wards: { fire: 3 } }, { ...WARRIOR_STATS, wards: { fire: 2 } })).toBe(false)
+    expect(sameCombatStats({ ...WARRIOR_STATS, wards: { fire: 3 } }, { ...WARRIOR_STATS, wards: { frost: 3 } })).toBe(false)
+  })
+})
+
+describe('warded', () => {
+  const salamander: CombatantStats = { ...WARRIOR_STATS, wards: { fire: 4, poison: 2 } }
+
+  it('takes the ward of the damage’s element off it, never below 0', () => {
+    expect(warded(9, 'fire', salamander)).toBe(5)
+    expect(warded(3, 'fire', salamander)).toBe(0)
+    expect(warded(4, 'fire', salamander)).toBe(0)
+    expect(warded(5, 'poison', salamander)).toBe(3)
+  })
+
+  it('leaves damage of another element, or of none, and a unit with no ward, as it is', () => {
+    expect(warded(9, 'frost', salamander)).toBe(9)
+    expect(warded(9, undefined, salamander)).toBe(9)
+    expect(warded(9, 'fire', WARRIOR_STATS)).toBe(9)
+    expect(warded(0, 'fire', WARRIOR_STATS)).toBe(0)
+  })
 })
 
 describe('foeAtLevel', () => {
@@ -173,5 +201,69 @@ describe('foeAtLevel', () => {
     expect(foeAtLevel(GOBLIN_STATS, 5).resistance).toBe(GOBLIN_STATS.resistance)
     expect(foeAtLevel(TROLL_STATS, 4).regeneration).toBe(TROLL_STATS.regeneration)
     expect(foeAtLevel(GOBLIN_STATS, 4).regeneration).toBeUndefined()
+  })
+
+  it('is the same with a native level of 1 as without one', () => {
+    for (let level = 0; level <= 6; level++) {
+      expect(foeAtLevel(GOBLIN_STATS, level, 1)).toEqual(foeAtLevel(GOBLIN_STATS, level))
+      expect(foeAtLevel(GOBLIN_SHAMAN_STATS, level, 1)).toEqual(foeAtLevel(GOBLIN_SHAMAN_STATS, level))
+    }
+  })
+
+  it('leaves a monster as it is at its native level, and treats a lower level as the native one', () => {
+    // A block with abilities gains an explicit ability damage bonus, 0 at its native level.
+    expect(foeAtLevel(TROLL_STATS, 15, 15)).toEqual({ ...TROLL_STATS, abilityDamageBonus: 0 })
+    expect(foeAtLevel(TROLL_STATS, 9, 15)).toEqual({ ...TROLL_STATS, abilityDamageBonus: 0 })
+    expect(foeAtLevel(GOBLIN_SHAMAN_STATS, 3, 8)).toEqual(GOBLIN_SHAMAN_STATS)
+  })
+
+  it('adds to a monster the steps of the levels above its native one', () => {
+    const base = { ...GOBLIN_STATS, maxHp: 60 }
+    expect(foeAtLevel(base, 16, 15)).toEqual({ ...base, maxHp: 64, ac: base.ac + 5, toHit: base.toHit + 5 })
+    expect(foeAtLevel(base, 17, 15)).toEqual({
+      ...base,
+      maxHp: Math.round((60 * (1 + 0.7 * 16)) / (1 + 0.7 * 14)),
+      ac: base.ac + 10,
+      toHit: base.toHit + 10,
+      damage: { ...base.damage, bonus: base.damage.bonus + 1 },
+    })
+  })
+
+  it('adds mana and spell chance to a caster from its native level up', () => {
+    expect(foeAtLevel(GOBLIN_SHAMAN_STATS, 7, 5).magic).toEqual({
+      ...GOBLIN_SHAMAN_STATS.magic,
+      maxMana: GOBLIN_SHAMAN_STATS.magic!.maxMana + 6,
+      skill: GOBLIN_SHAMAN_STATS.magic!.skill + 10,
+    })
+  })
+})
+
+describe('foeYardstick', () => {
+  it('is the ready-made fighter\'s growth at level 1', () => {
+    const y = foeYardstick(1)
+    expect(y.ac).toEqual([5, 25])
+    expect(y.toHit).toEqual([80, 100])
+    expect(y.maxHp[0]).toBeCloseTo(31.5)
+    expect(y.maxHp[1]).toBeCloseTo(63)
+    expect(y.meanDamage[0]).toBeCloseTo(3.2)
+    expect(y.meanDamage[1]).toBeCloseTo(32 / 6)
+  })
+
+  it('interpolates linearly between the levels measured', () => {
+    // Level 7 is two fifths of the way from 5 to 10: hit 90.8, fighter 68 HP, 11.3 damage.
+    const y = foeYardstick(7)
+    expect(y.ac[0]).toBeCloseTo(35.8)
+    expect(y.ac[1]).toBeCloseTo(55.8)
+    expect(y.toHit).toEqual([80, 100])
+    expect(y.maxHp[0]).toBeCloseTo(33.9)
+    expect(y.maxHp[1]).toBeCloseTo(67.8)
+    expect(y.meanDamage[0]).toBeCloseTo(6.8)
+    expect(y.meanDamage[1]).toBeCloseTo(68 / 6)
+  })
+
+  it('holds the level 20 figures past level 20', () => {
+    expect(foeYardstick(25)).toEqual(foeYardstick(20))
+    expect(foeYardstick(20).ac).toEqual([69, 89])
+    expect(foeYardstick(20).meanDamage[0]).toBeCloseTo(13.3)
   })
 })

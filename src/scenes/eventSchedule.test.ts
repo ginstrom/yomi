@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { AttackEvent, BattleEvent, EndTurnEvent, MoveEvent } from '../engine/battleEngine.ts'
+import type { AbilityEvent, AttackEvent, BattleEvent, EndTurnEvent, MoveEvent } from '../engine/battleEngine.ts'
 import type { Hex } from '../grid/hex.ts'
+import { holdMs } from './battleEffects.ts'
 import { scheduleEvents } from './eventSchedule.ts'
 
 const TIMING = { moveStepMs: 140, opportunityPauseMs: 450 }
@@ -25,7 +26,7 @@ function attack(opportunity: boolean): AttackEvent {
     type: 'attack', seq: seq++, round: 1, attacker: 'goblin', defender: 'hero', opportunity,
     weapon: null, distance: 1, apCost: 0, apAfter: 0, toHit: 70, defenderAc: 15, defenderResistance: 0, armorPierce: 0,
     damageDice: { count: 1, sides: 6, bonus: 0 }, rolled: 3, defenderHpBefore: 10,
-    flankers: [], flankBonus: 0, arc: 'front', arcBonus: 0, attackerFacing: 3, helpless: false, image: false,
+    flankers: [], flankBonus: 0, defenderTurned: false, defenderFacing: 0, arc: 'front', arcBonus: 0, attackerFacing: 3, helpless: false, image: false,
     attackRoll: 40, chance: 55, hit: true, critical: false, fumble: false, damage: 3, defenderHpAfter: 7,
   }
 }
@@ -96,7 +97,7 @@ describe('scheduleEvents', () => {
   })
 
   it('gives each status’s damage at a turn’s start a pause of its own', () => {
-    const tick = (seq: number): BattleEvent => ({ type: 'status_tick', seq, round: 1, unit: 'g', status: 'poisoned', damage: 2, hpBefore: 5, hpAfter: 3 })
+    const tick = (seq: number): BattleEvent => ({ type: 'status_tick', seq, round: 1, unit: 'g', status: 'poisoned', damage: 2, warded: 0, hpBefore: 5, hpAfter: 3 })
     const { beats, totalMs } = scheduleEvents([tick(0), tick(1)], { moveStepMs: 100, opportunityPauseMs: 400, tickPauseMs: 300 })
     expect(beats.map((beat) => beat.at)).toEqual([0, 300])
     expect(totalMs).toBe(600)
@@ -111,5 +112,18 @@ describe('scheduleEvents', () => {
       { at: 200, cues: [show(end)] },
     ])
     expect(totalMs).toBe(200)
+  })
+})
+
+describe('scheduleEvents with an area ability', () => {
+  it('holds a fall until the ability has landed', () => {
+    const ability: AbilityEvent = {
+      type: 'ability', seq: seq++, round: 1, unit: 'salamander', ability: 'fire_spit', at: { q: 2, r: 0 }, shape: 'cone',
+      hexes: [], distance: 2, apCost: 4, apAfter: 4, facing: 0, skill: 70, outcomes: [],
+    }
+    const down: BattleEvent = { type: 'unit_down', seq: seq++, round: 1, unit: 'hero' }
+    const { beats } = scheduleEvents([ability, down], { ...TIMING, holdMs })
+    expect(holdMs(ability)).toBeGreaterThan(0)
+    expect(beats.map((b) => b.at)).toEqual([0, holdMs(ability)])
   })
 })

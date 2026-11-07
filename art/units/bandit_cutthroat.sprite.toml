@@ -1,0 +1,82 @@
+# A bandit cutthroat: lean, in a dark hood with a red scarf over the mouth and a
+# patched leather jerkin, a dagger held up in the near fist.
+canvas = "unit"
+
+outline = "auto"
+
+[points]
+chest = [16, 15]
+
+[frames.idle_0.runs]
+4 = [[14, "MMm"]]
+5 = [[13, "MMmmm"]]
+6 = [[12, "MMmmmmm"]]
+7 = [[12, "MmmSsks"]]
+8 = [[12, "MmmSsss"]]
+9 = [[12, "MMmrrrr"]]
+10 = [[13, "Mmrrr"], [25, "w"]]
+11 = [[10, "nnMnnnnnMnn"], [25, "wl"]]
+12 = [[9, "tnkNnttTtnnknt"], [25, "wl"]]
+13 = [[9, "tnkNnttttnTknt"], [25, "wl"]]
+14 = [[9, "tnkNnttttnnknt"], [24, "ddd"]]
+15 = [[9, "tnkNtTtttnnknttsss"]]
+16 = [[9, "tnkNyNNNNNNknttsss"]]
+17 = [[9, "tnkNnttttnn"]]
+18 = [[9, "tnkNntttTnn"]]
+19 = [[9, "sskNnnnnnnn"]]
+20 = [[12, "NnnnnnnN"]]
+21 = [[12, "Mmm"], [17, "Mmm"]]
+22 = [[12, "Mmm"], [17, "Mmm"]]
+23 = [[12, "Mmm"], [17, "Mmm"]]
+24 = [[12, "Mmm"], [17, "Mmm"]]
+25 = [[12, "Mmm"], [17, "Mmm"]]
+26 = [[12, "Mmm"], [17, "Mmm"]]
+27 = [[12, "Mmm"], [17, "Mmm"]]
+28 = [[12, "Nnn"], [17, "Nnn"]]
+29 = [[12, "Nnn"], [17, "Nnn"]]
+30 = [[12, "Nnnt"], [17, "Nnnt"]]
+
+# A breath: everything above the shins sinks a pixel.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [0, 24], by = [0, 1] }
+
+# A stride: the legs part and nothing above them moves.
+[frames.walk_0]
+from = "idle_0"
+[frames.walk_0.runs]
+23 = [[11, "Mmm....Mmm"]]
+24 = [[11, "Mmm....Mmm"]]
+25 = [[10, "Mmm......Mmm"]]
+26 = [[10, "Mmm......Mmm"]]
+27 = [[9, "Mmm........Mmm"]]
+28 = [[9, "Nnn........Nnn"]]
+29 = [[9, "Nnn........Nnn"]]
+30 = [[9, "Nnnt.......Nnnt"]]
+
+# The near foot lifts: the left, then the right. Only the leg rows change.
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.runs]
+26 = [[12, "Nnn"]]
+27 = [[12, "Nnnt"]]
+28 = [[12, "..."]]
+29 = [[12, "..."]]
+30 = [[12, "...."]]
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.runs]
+26 = [[17, "Nnn"]]
+27 = [[17, "Nnnt"]]
+28 = [[17, "..."]]
+29 = [[17, "..."]]
+30 = [[17, "...."]]
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 600
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 140

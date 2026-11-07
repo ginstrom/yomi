@@ -45,6 +45,216 @@
     {
       "frames": [
         {
+          "duration": 600,
+          "frame": "bandit_archer/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "bandit_archer/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_archer/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "bandit_archer/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_archer/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_archer/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_archer/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_archer/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "bandit_brute/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "bandit_brute/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_brute/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "bandit_brute/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_brute/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_brute/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_brute/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_brute/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "bandit_captain/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "bandit_captain/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_captain/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "bandit_captain/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_captain/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_captain/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_captain/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_captain/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "bandit_cutthroat/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "bandit_cutthroat/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_cutthroat/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "bandit_cutthroat/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_cutthroat/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_cutthroat/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_cutthroat/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_cutthroat/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "bandit_mage/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "bandit_mage/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_mage/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "bandit_mage/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_mage/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_mage/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "bandit_mage/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "bandit_mage/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 260,
           "frame": "camp_fire/base",
           "key": "atlas"
@@ -163,6 +373,114 @@
         }
       ],
       "key": "gear_bow_hawk/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_breastplate/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_breastplate/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_breastplate/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_breastplate/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_breastplate/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_circlet/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_circlet/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_circlet/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_circlet/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_circlet/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_cloak/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_cloak/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_cloak/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_cloak/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_cloak/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "gear_cloak_back/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "gear_cloak_back/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_cloak_back/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 560,
+          "frame": "gear_cloak_back/idle_0",
+          "key": "atlas"
+        }
+      ],
+      "key": "gear_cloak_back/walk",
       "repeat": -1
     },
     {
@@ -379,6 +697,48 @@
         }
       ],
       "key": "gear_wand_storm/walk",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "giant_spider/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "giant_spider/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "giant_spider/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "giant_spider/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "giant_spider/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "giant_spider/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "giant_spider/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "giant_spider/walk",
       "repeat": -1
     },
     {
@@ -647,6 +1007,48 @@
         }
       ],
       "key": "map_watchtower/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 600,
+          "frame": "salamander/idle_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "salamander/idle_1",
+          "key": "atlas"
+        }
+      ],
+      "key": "salamander/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 140,
+          "frame": "salamander/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "salamander/walk_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "salamander/walk_0",
+          "key": "atlas"
+        },
+        {
+          "duration": 140,
+          "frame": "salamander/walk_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "salamander/walk",
       "repeat": -1
     },
     {

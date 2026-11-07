@@ -1,3 +1,5 @@
+import { SPELLS, type SpellId } from '../combat/spells.ts'
+
 /** Two crossed swords, hotspot at the crossing; `faded` greys them out for an attack the AP can't cover. */
 function swordsCursor(faded: boolean): string {
   const blade = faded ? '#9e9e9e' : '#eceff1'
@@ -20,6 +22,19 @@ function swordsCursor(faded: boolean): string {
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 16 16, crosshair`
 }
 
+/** A plus-shaped green cross, hotspot at its centre, for aiming a friendly spell at a valid target. */
+export function healCursor(): string {
+  const cross = "<path d='M16 5V27M5 16H27'"
+  const svg =
+    `<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'>` +
+    `<g stroke-linecap='round' fill='none'>` +
+    `${cross} stroke='#000' stroke-width='11'/>` +
+    `${cross} stroke='#58b858' stroke-width='9'/>` +
+    `${cross} stroke='#eaffea' stroke-width='5'/>` +
+    `</g></svg>`
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 16 16, crosshair`
+}
+
 /** CSS cursors for the battle board. */
 export const CURSORS = {
   /** Over a hex the selected unit can move to, or anywhere with nothing to do. */
@@ -28,4 +43,13 @@ export const CURSORS = {
   select: 'pointer',
   attack: swordsCursor(false),
   attackDisabled: swordsCursor(true),
+  /** Over a valid target of a friendly spell. */
+  heal: healCursor(),
 } as const
+
+export type CursorKey = keyof typeof CURSORS
+
+/** The cursor for aiming a spell: the green cross for a friendly one, the swords for a hostile one. */
+export function spellCursor(spell: SpellId): CursorKey {
+  return SPELLS[spell].hostile ? 'attack' : 'heal'
+}

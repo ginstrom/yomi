@@ -115,6 +115,19 @@ export interface CreationProbe {
   notes: string[]
 }
 
+/** An entry of the world map's party list (`PartyListView`), at its tile's centre. */
+export interface PartyListProbe extends Point {
+  id: string
+  /** How many members the party has. */
+  members: number
+  /** Whether it is the selected party, which the column and Home follow. */
+  selected: boolean
+  /** Whether the party stands before monsters, which the entry marks with a red "!". */
+  confronting: boolean
+  /** Whether the pointer is over the entry, as the entry itself heard it (nothing over it, such as the outcome screen, took the hover). */
+  hovered: boolean
+}
+
 export interface WorldProbe {
   world: WorldState
   walking: boolean
@@ -152,6 +165,14 @@ export interface WorldProbe {
     menu: ButtonProbe
   }
   party: PortraitProbe[]
+  /** The party list down the right, one entry a party in company order. */
+  parties: PartyListProbe[]
+  /** The id of the selected party. */
+  selectedParty: string
+  /** The info panel's bounds while it shows (a hex or a party entry hovered), else null. */
+  infoRect: Rect | null
+  /** The sprites of the party's figure on the map, bottom first in drawing order (`UnitFigure.lookNames`). */
+  partyLook: string[]
 }
 
 /** A hero's face in the guild hall, by its centre on screen. */
@@ -256,7 +277,11 @@ export interface BattleProbe {
   spellMenu: Array<Point & { spell: SpellId; enabled: boolean }> | null
   /** The lines of the victory or defeat screen; empty until the battle is over. */
   result: string[]
+  /** The lines of the foe info panel shown beside the hovered foe now (`foeInfoLines`: its name, then its abilities and wards); empty when none shows. */
+  foeInfo: string[]
   party: PortraitProbe[]
+  /** Each hero's figure's sprites, bottom first in drawing order (`UnitFigure.lookNames`); foes have no entry. */
+  looks: Record<UnitId, string[]>
 }
 
 export interface InventoryProbe {
@@ -299,6 +324,10 @@ export interface InventoryProbe {
   backpack: Array<Point & { item: string }>
   /** The items the ground grid shows now (on the world map, the baggage), each with its slot's centre on screen. */
   ground: Array<Point & { item: string }>
+  /** The centres on screen of the backpack's and the ground's grids, either of which takes a dragged item anywhere on it. */
+  grids: { backpack: Point; ground: Point }
+  /** The open member's doll's sprites, bottom first in drawing order (`UnitFigure.lookNames`); [] until the doll is built. */
+  doll: string[]
 }
 
 export interface StoryProbe {

@@ -1,7 +1,7 @@
 import { mulberry32 } from '../combat/rng.ts'
 import { HexBoard, hexDistance, hexNeighbors, hexToOffset, offsetToHex, type BoardSize, type Hex } from '../grid/hex.ts'
 import { MAGIC_ITEMS, type Item } from '../inventory/inventory.ts'
-import type { EncounterId } from './encounters.ts'
+import { ENCOUNTER_BANDS, type EncounterId } from './encounters.ts'
 import type { Material } from './territory.ts'
 import { ENCAMPMENT_ID, threatAt, type MonsterLocation, type WorldState } from './worldMap.ts'
 
@@ -269,10 +269,11 @@ export function advanceDay(world: WorldState, party: readonly { level: number }[
   return events
 }
 
-/** What corrupted land spawns: a nest that fights one of these encounters, by its name. */
+/** What corrupted land spawns: a nest that fights one of these encounters, by its name, where the encounter's band holds the threat. */
 const SPAWN_KINDS: ReadonlyArray<{ encounter: EncounterId; name: string }> = [
   { encounter: 'goblin_raid', name: 'Goblin Brood' },
   { encounter: 'kobold_scouts', name: 'Kobold Nest' },
+  { encounter: 'bandit_camp', name: 'Bandit Gang' },
 ]
 
 function spawn(world: WorldState, pinned: Set<number>, partyIndex: number): WorldEvent | null {
@@ -297,7 +298,13 @@ function spawn(world: WorldState, pinned: Set<number>, partyIndex: number): Worl
 
   const rng = mulberry32(world.rng)
   const at = hexes[candidates[Math.floor(rng() * candidates.length)]]
-  const kind = SPAWN_KINDS[Math.floor(rng() * SPAWN_KINDS.length)]
+  // By distance, never by the blight or the date: home's nests stay ones a weak party can beat.
+  const threat = threatAt(at)
+  const eligible = SPAWN_KINDS.filter((k) => threat >= ENCOUNTER_BANDS[k.encounter].min && threat <= ENCOUNTER_BANDS[k.encounter].max)
+  // No kind for this threat: no spawn, the world RNG left as it was and the pressure kept for another day.
+  // Unreachable on today's map, as threatAt stops at MAX_THREAT, inside the goblins' and kobolds' bands (1 to 5).
+  if (eligible.length === 0) return null
+  const kind = eligible[Math.floor(rng() * eligible.length)]
   const loot: Item[] = rng() < SPAWN_LOOT_CHANCE ? [MAGIC_ITEMS[Math.floor(rng() * MAGIC_ITEMS.length)]] : []
   world.rng = rng.state()
   world.spawnPressure -= SPAWN_COST
@@ -308,8 +315,7 @@ function spawn(world: WorldState, pinned: Set<number>, partyIndex: number): Worl
     name: kind.name,
     position: at,
     encounter: kind.encounter,
-    // By distance, never by the blight or the date: home's nests stay ones a weak party can beat.
-    threat: threatAt(at),
+    threat,
     loot,
   }
   world.locations.push(location)

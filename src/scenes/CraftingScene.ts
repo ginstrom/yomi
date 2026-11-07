@@ -11,7 +11,7 @@ import { MODIFIERS } from '../inventory/modifiers.ts'
 import type { ButtonProbe, CraftingProbe } from '../testHook.ts'
 import { soundVolume } from './audioSettings.ts'
 import type { Point } from './boardGeometry.ts'
-import { TYPICAL_AP, compareLines } from './gearCompare.ts'
+import { TYPICAL_AP, compareLines, fieldCraftSummary } from './gearCompare.ts'
 import { ITEM_ICON_KEYS } from './itemIcons.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton } from './panelButton.ts'
@@ -166,7 +166,7 @@ export class CraftingScene extends Phaser.Scene {
     const title = tier === 'field' ? 'Field Crafting' : 'Workshop'
     const about =
       tier === 'field'
-        ? 'In the field: Balanced and Recurve at grade I, a day each.'
+        ? fieldCraftSummary()
         : `Level ${tier}: modifiers up to grade ${gradeNumeral(highestGrade(tier))}, at once.`
     const stock = (['gold', 'iron', 'timber', 'copper', 'crystal'] as const).map((m) => `${world.stock[m] ?? 0} ${m}`).join(', ')
     this.frame.add([

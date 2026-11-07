@@ -169,6 +169,11 @@ export function deriveCombatStats(character: Character): CombatantStats {
 
 const RING_SLOTS: readonly EquipmentSlot[] = ['ring1', 'ring2']
 
+/** Whether `item` can be worn in `slot`: its own slot, or either ring slot for a ring. */
+export function fitsSlot(item: Item, slot: EquipmentSlot): boolean {
+  return slot === item.slot || (item.ring === true && RING_SLOTS.includes(slot))
+}
+
 /** Whether `item` is a weapon that takes both hands, leaving none for the off hand. */
 export function isTwoHanded(item: Item | undefined): boolean {
   return item?.stats?.twoHanded === true
@@ -183,13 +188,18 @@ export function isTwoHanded(item: Item | undefined): boolean {
  * both hands come off and the backpack has room for only one, the other-hand
  * item falls onto `ground`, the pile at the character's feet. Returns false if
  * that backpack space is empty.
+ *
+ * Given `into`, the item goes into that slot instead (a ring into either ring
+ * slot, as dragged there), and nothing changes if it does not fit there.
  */
-export function equipFromBackpack(character: Character, index: number, ground: Item[]): boolean {
+export function equipFromBackpack(character: Character, index: number, ground: Item[], into?: EquipmentSlot): boolean {
   const { equipment, backpack } = character
   const item = backpack[index]
   if (!item) return false
+  if (into && !fitsSlot(item, into)) return false
 
-  const slot: EquipmentSlot = item.ring ? (RING_SLOTS.find((ring) => !equipment[ring]) ?? RING_SLOTS[0]) : item.slot
+  const slot: EquipmentSlot =
+    into ?? (item.ring ? (RING_SLOTS.find((ring) => !equipment[ring]) ?? RING_SLOTS[0]) : item.slot)
   const replaced = equipment[slot] ?? null
   const otherHand: EquipmentSlot | null =
     slot === 'mainHand' && isTwoHanded(item)

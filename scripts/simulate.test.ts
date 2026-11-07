@@ -3,8 +3,10 @@ import type { SpellId } from '../src/combat/spells.ts'
 import type { CastOutcome, Side } from '../src/engine/battleEngine.ts'
 import { canAdvance } from '../src/character/progression.ts'
 import { newGame } from '../src/game/gameState.ts'
+import { heroId } from '../src/game/encounters.ts'
 import { readyMadeParty } from '../src/game/party.ts'
 import { OUTPOST_COST } from '../src/game/buildings.ts'
+import { craft } from '../src/game/crafting.ts'
 import { SOURCE_ID, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
 import {
   MAX_CAMPAIGN_DAYS,
@@ -71,11 +73,11 @@ describe('summarize, with spells', () => {
     const unit = (id: string, side: Side) => ({ id, side }) as (typeof start.units)[number]
     const outcome = (target: string, damage: number, healed = 0, status: CastOutcome['status'] = null): CastOutcome => ({
       unit: target, attackRoll: 40, chance: 61, defenderAc: 15, hit: damage > 0, critical: false, fumble: false,
-      image: false, damage, healed, hpBefore: 12, hpAfter: 12 - damage + healed, status,
+      image: false, damage, warded: 0, half: false, healed, hpBefore: 12, hpAfter: 12 - damage + healed, status,
     })
     const cast = (caster: string, spell: SpellId, outcomes: CastOutcome[]): LoggedEvent => ({
       type: 'cast', battleId: 0, seq: 1, round: 1, caster, spell, target: outcomes[0].unit, at: { q: 0, r: 0 },
-      distance: 4, apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76, outcomes,
+      distance: 4, apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76, outcomes, drained: 0,
     })
     return [
       { ...start, units: [unit('mage', 'player'), unit('shaman', 'enemy')] },
@@ -84,7 +86,7 @@ describe('summarize, with spells', () => {
       cast('shaman', 'magic_arrow', [outcome('mage', 4)]),
       cast('shaman', 'heal', [outcome('shaman', 0, 6)]),
       cast('mage', 'sleep', [outcome('shaman', 0, 0, { id: 'asleep', turnsLeft: 2 })]),
-      { type: 'status_tick', battleId: 0, seq: 2, round: 2, unit: 'shaman', status: 'poisoned', damage: 3, hpBefore: 5, hpAfter: 2 },
+      { type: 'status_tick', battleId: 0, seq: 2, round: 2, unit: 'shaman', status: 'poisoned', damage: 3, warded: 0, hpBefore: 5, hpAfter: 2 },
       end,
     ]
   }
@@ -106,6 +108,52 @@ describe('summarize, with spells', () => {
   })
 })
 
+describe('summarize, with area abilities', () => {
+  const events = (): LoggedEvent[] => {
+    const [start, end] = battle(0, 3, 'player')
+    if (start.type !== 'battle_start') throw new Error('expected a battle_start')
+    const unit = (id: string, side: Side) => ({ id, side }) as (typeof start.units)[number]
+    const outcome = (target: string, damage: number, status: CastOutcome['status'] = null): CastOutcome => ({
+      unit: target, attackRoll: 40, chance: 61, defenderAc: 15, hit: status !== null, critical: false, fumble: false,
+      image: false, damage, warded: 0, half: status === null, healed: 0, hpBefore: 12, hpAfter: 12 - damage, status,
+    })
+    const area = (user: string, outcomes: CastOutcome[]): LoggedEvent => ({
+      type: 'ability', battleId: 0, seq: 1, round: 1, unit: user, ability: 'fire_spit', at: { q: 0, r: 0 }, shape: 'cone', hexes: [],
+      distance: 1, apCost: 4, apAfter: 4, facing: 0, skill: 80, outcomes,
+    })
+    return [
+      { ...start, units: [unit('hero', 'player'), unit('newt', 'enemy'), unit('goblin', 'enemy')] },
+      area('newt', [outcome('hero', 9, { id: 'seared', turnsLeft: 1 }), outcome('goblin', 4)]),
+      area('newt', [outcome('hero', 3)]),
+      end,
+    ]
+  }
+
+  it('counts area attacks by side, adding their damage and statuses to the user’s side, not among the attacks or casts', () => {
+    expect(summarize(events(), 1)).toMatchObject({
+      avgEnemyAreaAttacks: 2,
+      avgPlayerAreaAttacks: 0,
+      avgEnemyDamageDealt: 16,
+      avgPlayerDamageDealt: 0,
+      avgEnemyStatuses: 1,
+      avgEnemyCasts: 0,
+      enemyHitRate: 0,
+    })
+    expect(summarize(battle(0, 3, 'player'), 1)).toMatchObject({ avgPlayerAreaAttacks: 0, avgEnemyAreaAttacks: 0 })
+  })
+
+  it('counts a drain’s healing with the caster’s side', () => {
+    const [start, end] = battle(0, 3, 'player')
+    if (start.type !== 'battle_start') throw new Error('expected a battle_start')
+    const drain: LoggedEvent = {
+      type: 'cast', battleId: 0, seq: 1, round: 1, caster: 'witch', spell: 'drain_life', target: 'hero', at: { q: 0, r: 0 },
+      distance: 2, apCost: 4, apAfter: 4, manaCost: 6, manaAfter: 0, casterFacing: 0, skill: 70, drained: 5, outcomes: [],
+    }
+    const units = [{ id: 'hero', side: 'player' }, { id: 'witch', side: 'enemy' }] as typeof start.units
+    expect(summarize([{ ...start, units }, drain, end], 1)).toMatchObject({ avgEnemyHealing: 5, avgPlayerHealing: 0 })
+  })
+})
+
 describe('parseArgs', () => {
   it('takes --campaign, and with it refuses the flags that pick one battle', () => {
     expect(parseArgs(['--battles', '5'])).toMatchObject({ battles: 5, campaign: false })
@@ -121,6 +169,16 @@ describe('parseArgs', () => {
     expect(parseArgs(['--player-weapon', 'iron_sword@2+light1']).playerWeapon?.name).toBe('Light Fine Iron Longsword (I)')
     expect(() => parseArgs(['--player-weapon', 'ring_protection'])).toThrow('--player-weapon must be the id of a weapon')
     expect(() => parseArgs(['--player-weapon', 'iron_sword+recurve1'])).toThrow('--player-weapon must be the id of a weapon')
+  })
+
+  it('takes --ready-level for a campaign only, a positive integer, by default SOURCE_READY_LEVEL', () => {
+    expect(parseArgs(['--campaign', '--ready-level', '10']).readyLevel).toBe(10)
+    expect(parseArgs([]).readyLevel).toBe(SOURCE_READY_LEVEL)
+    expect(parseArgs(['--campaign']).readyLevel).toBe(SOURCE_READY_LEVEL)
+    expect(() => parseArgs(['--ready-level', '10'])).toThrow('--ready-level')
+    expect(() => parseArgs(['--ready-level', '10'])).toThrow('--campaign')
+    expect(() => parseArgs(['--campaign', '--ready-level', '0'])).toThrow('--ready-level must be a positive integer')
+    expect(() => parseArgs(['--campaign', '--ready-level', 'x'])).toThrow('--ready-level must be a positive integer')
   })
 })
 
@@ -179,6 +237,61 @@ describe('a campaign', () => {
     expect(summary.byThreat.reduce((total, row) => total + row.battles, 0)).toBe(battles.length)
     expect(summary.byThreat[0]).toEqual({ threat: 1, battles: 2, won: 2, winRate: 1 })
   })
+
+  it('records the levels it ended at, the level of each hero who died, and the battles to each mark', () => {
+    const last = battles.at(-1)!
+    const end = last.at(-1)!
+    const lastStart = starts.at(-1)!
+    const lastLevels = lastStart.meta.partyLevels as number[]
+    if (record.outcome === 'source' && end.type === 'battle_end') {
+      // The members left are the heroes standing at the end of the last battle.
+      const standing = lastLevels.filter((_, i) => end.survivors[heroId(i)] !== undefined)
+      expect(record.finalLevels).toHaveLength(standing.length)
+    }
+    expect(record.finalLevels.length).toBeGreaterThan(0)
+    // Levels never drop: each member left is at least the lowest level that set out on the last battle.
+    expect(record.finalLevels.every((level) => level >= Math.min(...lastLevels))).toBe(true)
+    expect(record.deathsAtLevel).toHaveLength(record.deaths)
+    expect(record.deathsAtLevel.every((level) => level >= 1)).toBe(true)
+    const lowestEver = Math.max(...starts.map((e) => Math.min(...(e.meta.partyLevels as number[]))), Math.min(...record.finalLevels))
+    if (lowestEver >= 5) {
+      expect(record.battlesToLevel[5]).toBeGreaterThanOrEqual(1)
+      expect(record.battlesToLevel[5]).toBeLessThanOrEqual(record.battles)
+      // The party's lowest level was below 5 when the battle that brought it there began.
+      const at = record.battlesToLevel[5]!
+      expect(Math.min(...(starts[at - 1].meta.partyLevels as number[]))).toBeLessThan(5)
+      if (at < starts.length) expect(Math.min(...(starts[at].meta.partyLevels as number[]))).toBeGreaterThanOrEqual(5)
+    } else expect(record.battlesToLevel[5]).toBeUndefined()
+    expect(record.battlesToLevel[20]).toBeUndefined()
+  })
+})
+
+describe('summarizeCampaigns, the levels', () => {
+  const base = { ...runCampaign(3, 1, parseArgs(['--campaign']), 0).record }
+  const records = [
+    { ...base, finalLevels: [6, 7, 8], deathsAtLevel: [4, 3], battlesToLevel: { 5: 10 } },
+    { ...base, finalLevels: [8, 9], deathsAtLevel: [4], battlesToLevel: { 5: 14, 10: 30 } },
+    { ...base, outcome: 'fallen' as const, finalLevels: [], deathsAtLevel: [], battlesToLevel: {} },
+  ]
+  const summary = summarizeCampaigns([], records)
+
+  it('averages the lowest and highest final level, leaving out a campaign with no one left', () => {
+    expect(summary.avgLowestFinalLevel).toBe(7)
+    expect(summary.avgHighestFinalLevel).toBe(8.5)
+  })
+
+  it('counts the deaths at each level, in rising level', () => {
+    expect(summary.deathsByLevel).toEqual([{ level: 3, deaths: 1 }, { level: 4, deaths: 2 }])
+  })
+
+  it('averages the battles to each mark over the campaigns that reached it', () => {
+    expect(summary.toLevel).toEqual([
+      { level: 5, campaigns: 2, avgBattles: 12 },
+      { level: 10, campaigns: 1, avgBattles: 30 },
+      { level: 15, campaigns: 0, avgBattles: 0 },
+      { level: 20, campaigns: 0, avgBattles: 0 },
+    ])
+  })
 })
 
 describe('nextTarget', () => {
@@ -207,6 +320,17 @@ describe('nextTarget', () => {
     expect(nextTarget(world, party)?.id).not.toBe(SOURCE_ID)
     world.locations = world.locations.filter((l) => l.kind !== 'monsters' || (l.kind === 'monsters' && l.source))
     expect(nextTarget(world, party)?.id).toBe(SOURCE_ID)
+  })
+
+  it('marches on the Source once every member has the ready level it is given', () => {
+    const world = newWorld(1)
+    const party = readyMadeParty()
+    party.forEach((member, i) => (member.level = 3 + i))
+    expect(nextTarget(world, party)?.id).not.toBe(SOURCE_ID)
+    expect(nextTarget(world, party, 3)?.id).toBe(SOURCE_ID)
+    for (const member of party) member.level = SOURCE_READY_LEVEL
+    expect(nextTarget(world, party, SOURCE_READY_LEVEL + 1)?.id).not.toBe(SOURCE_ID)
+    expect(nextTarget(world, party, SOURCE_READY_LEVEL)?.id).toBe(SOURCE_ID)
   })
 })
 
@@ -289,11 +413,25 @@ describe('the trading post and crafting in a campaign', () => {
     const game = newGame(undefined, null, 1)
     game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
     game.world.stock = { gold: 50, iron: 50, timber: 50 }
-    expect(craftGear(game, 1)).toBe(1)
+    expect(craftGear(game, 1).crafted).toBe(1)
     expect(game.world.turn).toBe(2)
     expect(game.party[0].equipment.mainHand!.id).toBe('iron_sword+balanced1')
-    expect(craftGear(game, 1)).toBe(1)
+    expect(craftGear(game, 1).crafted).toBe(1)
     expect(game.party[1].equipment.mainHand!.id).toBe('yew_bow+recurve1')
-    expect(craftGear(game, 1)).toBe(0)
+    expect(craftGear(game, 1).crafted).toBe(0)
+  })
+
+  it('hands back the events of the days a field craft passes, for the campaign to tally', () => {
+    const make = () => {
+      const game = newGame(undefined, null, 1)
+      game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
+      game.world.stock = { gold: 50, iron: 50, timber: 50 }
+      return game
+    }
+    const direct = make()
+    const expected = craft(direct, { from: 'worn', member: 0, slot: 'mainHand', itemId: direct.party[0].equipment.mainHand!.id }, 'balanced', 1)
+    const result = craftGear(make(), 1)
+    expect(expected.refusal).toBeNull()
+    expect(result.events).toEqual('events' in expected ? expected.events : undefined)
   })
 })

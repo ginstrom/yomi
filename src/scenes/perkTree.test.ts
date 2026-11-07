@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { ATTRIBUTE_IDS } from '../character/attributes.ts'
 import { createWarrior } from '../character/character.ts'
-import { PERKS, PERK_IDS, SPELL_PERK_IDS, TRUNK_PERKS, isSpellPerk, perkParent } from '../character/perks.ts'
+import { MONSTER_SPELL_IDS, SPELL_IDS } from '../combat/spells.ts'
+import { PERKS, PERK_IDS, type Perk, SPELL_PERK_IDS, TRUNK_PERKS, isSpellPerk, perkParent } from '../character/perks.ts'
 import { newDraft, type CharacterDraft } from '../character/creation.ts'
 import { draftNodeHint, nodeHint, nodeLabel, nodeState, perkTitle, perkTreeLayout } from './perkTree.ts'
 
@@ -11,6 +12,12 @@ const warriorAt = (level: number, perkPicks = 0) => ({ ...createWarrior(), level
 describe('perkTreeLayout', () => {
   const nodes = perkTreeLayout()
   const at = (perk: string) => nodes.find((node) => node.perk === perk)!
+
+  it('draws the heroes’ spells in the spell tree, and no monster spell', () => {
+    const spells = perkTreeLayout('spells').map((node) => (PERKS[node.perk] as Perk).spell as string)
+    expect([...spells].sort()).toEqual([...SPELL_IDS].sort())
+    for (const spell of MONSTER_SPELL_IDS) expect(spells).not.toContain(spell)
+  })
 
   it('places every perk but the spells once, no two on one cell', () => {
     expect(nodes.map((node) => node.perk).sort()).toEqual(PERK_IDS.filter((id) => !isSpellPerk(id)).sort())

@@ -2,9 +2,15 @@ import { describe, expect, it, vi } from 'vitest'
 import { maxHp } from '../character/character.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { UNEXPLORED } from '../game/vision.ts'
-import { SOURCE_ID } from '../game/worldMap.ts'
+import { SOURCE_ID, threatAt } from '../game/worldMap.ts'
 import { hexToOffset } from '../grid/hex.ts'
 import { completions, runCommand, COMMAND_NAMES, type DebugContext } from './debugCommands.ts'
+
+/** A context on the world map that can start battles, recording the ones it was asked for. */
+function withFight(game: GameState = newGame(undefined, null, 7)): DebugContext & { fight: ReturnType<typeof vi.fn> } {
+  const fight = vi.fn()
+  return { scenes: ['World'], seed: 42, source: { game, changed: vi.fn(), fight }, fight }
+}
 
 /** A context on the world map, which takes changes, unless `changed` is left out. */
 function onWorldMap(game: GameState = newGame(undefined, null, 7)): DebugContext & { changed: ReturnType<typeof vi.fn> } {
@@ -107,5 +113,49 @@ describe('debug commands', () => {
     expect(runCommand('facility trading_post 0', context).lines[0]).toMatch(/from 1 to 3/)
     runCommand('give iron_sword@3+light2', context)
     expect(baggage.at(-1)!.name).toBe('Light Masterwork Iron Longsword (II)')
+  })
+
+  describe('fight', () => {
+    it('starts a battle of the encounter at the threat given', () => {
+      const context = withFight()
+      const result = runCommand('fight goblin_raid 3', context)
+      expect(context.fight).toHaveBeenCalledWith('goblin_raid', 3)
+      expect(result.lines).toEqual(['Fighting goblin_raid at threat 3.'])
+    })
+
+    it('fights at the threat of the party’s hex when none is given', () => {
+      const context = withFight()
+      const { world } = context.source!.game
+      runCommand('fight kobold_scouts', context)
+      expect(context.fight).toHaveBeenLastCalledWith('kobold_scouts', threatAt(world.party))
+      const far = world.locations.find((location) => location.id === 'bandit_camp')!
+      world.party = far.position
+      expect(threatAt(world.party)).toBe(3)
+      runCommand('fight kobold_scouts', context)
+      expect(context.fight).toHaveBeenLastCalledWith('kobold_scouts', 3)
+    })
+
+    it('refuses an unknown or missing encounter and a threat below 1 or not a whole number', () => {
+      const context = withFight()
+      expect(runCommand('fight dragons 2', context).lines[0]).toMatch(/No encounter "dragons"; there are .*goblin_raid.*bandit_camp/)
+      expect(runCommand('fight', context).lines[0]).toMatch(/No encounter ""/)
+      expect(runCommand('fight goblin_raid 0', context).lines[0]).toMatch(/at least 1/)
+      expect(runCommand('fight goblin_raid -1', context).lines[0]).toMatch(/at least 1/)
+      expect(runCommand('fight goblin_raid x', context).lines[0]).toMatch(/whole number/)
+      expect(context.fight).not.toHaveBeenCalled()
+    })
+
+    it('is refused where battles cannot start, and off the world map', () => {
+      expect(runCommand('fight goblin_raid 2', onWorldMap()).lines).toEqual(['Battles start only from the world map.'])
+      const game = newGame(undefined, null, 7)
+      const fight = vi.fn()
+      const inBattle: DebugContext = { scenes: ['Battle'], seed: null, source: { game, fight } }
+      expect(runCommand('fight goblin_raid 2', inBattle)).toEqual({ lines: ['fight changes the game, which works only on the world map.'], changed: false })
+      expect(fight).not.toHaveBeenCalled()
+    })
+
+    it('is listed by help', () => {
+      expect(runCommand('help', onWorldMap()).lines.some((line) => line.startsWith('fight <encounter> [threat]'))).toBe(true)
+    })
   })
 })

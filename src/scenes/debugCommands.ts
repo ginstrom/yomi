@@ -2,10 +2,11 @@ import { maxHp, maxMana, manaOf, type Character } from '../character/character.t
 import { gainXp, xpToNextLevel } from '../character/progression.ts'
 import type { BattleState } from '../engine/battleEngine.ts'
 import { facilities, setFacilityLevel, type FacilityId } from '../game/encampment.ts'
+import { ENCOUNTERS, type EncounterId } from '../game/encounters.ts'
 import type { GameState } from '../game/gameState.ts'
 import type { Material } from '../game/territory.ts'
 import { updateSight } from '../game/vision.ts'
-import { isNotable, monstersHere, passTurn, worldActive, type WorldLocation } from '../game/worldMap.ts'
+import { isNotable, monstersHere, passTurn, threatAt, worldActive, type WorldLocation } from '../game/worldMap.ts'
 import { HexBoard, hexToOffset, offsetToHex } from '../grid/hex.ts'
 import { BASE_ITEMS, MAGIC_ITEMS, itemById } from '../inventory/inventory.ts'
 import { MODIFIER_IDS } from '../inventory/modifiers.ts'
@@ -25,6 +26,8 @@ export interface DebugSource {
   battle?: { state: BattleState; names: Readonly<Record<string, string>> }
   /** Redraws and saves after a command changed the game; absent where changes are refused. */
   changed?: () => void
+  /** Starts a battle of `encounter` at `threat` against the party, as if a location were attacked; absent where battles can't start. */
+  fight?: (encounter: EncounterId, threat: number) => void
 }
 
 export interface DebugContext {
@@ -292,6 +295,25 @@ const COMMANDS: Record<string, Command> = {
         }
       }
       return [`${passed} ${passed === 1 ? 'day passes' : 'days pass'}; it is turn ${game.world.turn}.`, ...told]
+    },
+  },
+  fight: {
+    usage: 'fight <encounter> [threat]',
+    summary: "Fight an encounter at a threat (default: the party's hex's), clearing no location and taking no loot.",
+    changes: true,
+    run([id, threat], context) {
+      const { world } = gameOf(context)
+      if (id === undefined || !Object.hasOwn(ENCOUNTERS, id)) {
+        throw new DebugError(`No encounter "${id ?? ''}"; there are ${Object.keys(ENCOUNTERS).join(', ')}.`)
+      }
+      const at = threat === undefined ? threatAt(world.party) : integer(threat, 'the threat')
+      if (at < 1) throw new DebugError('The threat must be at least 1.')
+      const fight = context.source?.fight
+      if (!fight) throw new DebugError('Battles start only from the world map.')
+      // The world map is redrawn and saved after this, as after any change, before the
+      // scene manager starts the battle on its next step: the game is unchanged until then.
+      fight(id as EncounterId, at)
+      return [`Fighting ${id} at threat ${at}.`]
     },
   },
   units: {

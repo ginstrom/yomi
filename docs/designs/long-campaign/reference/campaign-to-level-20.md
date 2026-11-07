@@ -113,7 +113,7 @@ Where those documents and the code differ, the code is right.
   - `MAX_MONSTER_LOCATIONS` is 24.
   - `advanceDay` visits every hex once a day.
 - **Spells and the engine.** In [`src/combat/spells.ts`](../../../../src/combat/spells.ts) and [`src/engine/battleEngine.ts`](../../../../src/engine/battleEngine.ts):
-  - Areas are bursts only: a `radius` around a centre (`castTouches`, `areaHexes`).
+  - Areas are bursts only: a `radius` around a centre (`castTouches`, `areaHexes`). (As written; stage 2 replaced `areaHexes` with `areaOf` in `hex.ts`, with cones and lines.)
   - Monsters already cast through `CombatantStats.magic` (the Goblin Shaman).
   - Several attacks a turn already come from action points (the Troll's two claws).
   - Actions are `move`, `attack`, `cast`, `equip` and `end_turn`.

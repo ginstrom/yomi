@@ -1,6 +1,6 @@
 import { ATTRIBUTES, ATTRIBUTE_IDS, MAX_ATTRIBUTE, type AttributeId, type Attributes } from './attributes.ts'
 import type { Character } from './character.ts'
-import { SPELLS, SPELL_IDS, type SchoolId, type SpellId } from '../combat/spells.ts'
+import { SPELLS, SPELL_IDS, type HeroSpellId, type SchoolId } from '../combat/spells.ts'
 import { SKILLS, SKILL_IDS, skillLevel, type SkillId } from './skills.ts'
 
 /**
@@ -62,7 +62,7 @@ export interface Perk {
   requires?: string
   effects: PerkEffects
   /** The spell a rank of it teaches. */
-  spell?: SpellId
+  spell?: HeroSpellId
   /**
    * Its school, which makes it a spell perk: it sits in the spell tree and not
    * the perk tree, and is bought with a spell pick if there is one.
@@ -81,7 +81,7 @@ export const SPELL_TIERS = {
  * The perk that teaches `spell`: a node of the spell tree, asking its tier's
  * level and Magic and a rank of `requires`, Spellcasting at a school's root.
  */
-function spellPerk(spell: SpellId, tier: keyof typeof SPELL_TIERS, requires: string): Perk {
+function spellPerk(spell: HeroSpellId, tier: keyof typeof SPELL_TIERS, requires: string): Perk {
   const { name, description, school, manaCost, apCost } = SPELLS[spell]
   return {
     name,
@@ -398,7 +398,7 @@ export function isSpellPerk(perk: PerkId): boolean {
 export const SPELL_PERK_IDS: readonly PerkId[] = PERK_IDS.filter(isSpellPerk)
 
 /** The perk that teaches `spell`. */
-export function spellPerkOf(spell: SpellId): PerkId {
+export function spellPerkOf(spell: HeroSpellId): PerkId {
   return PERK_IDS.find((id) => (PERKS[id] as Perk).spell === spell)!
 }
 
@@ -408,7 +408,7 @@ export function perkParent(perk: PerkId): PerkId | null {
 }
 
 /** The spells the character knows, in `SPELL_IDS` order: those a perk it has a rank of teaches. */
-export function knownSpells(character: Character): SpellId[] {
+export function knownSpells(character: Character): HeroSpellId[] {
   return SPELL_IDS.filter((spell) =>
     PERK_IDS.some((id) => (PERKS[id] as Perk).spell === spell && perkRanks(character, id) > 0),
   )

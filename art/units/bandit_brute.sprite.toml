@@ -1,0 +1,83 @@
+# A bandit brute: a big, bald, bearded man with bare arms, a rust-flecked
+# breastplate over red breeches, and a great battle axe held upright.
+canvas = "unit"
+
+outline = "auto"
+
+[points]
+chest = [16, 14]
+
+[frames.idle_0.runs]
+3 = [[14, "SssS"], [26, "Nnd"]]
+4 = [[13, "Sssssh"], [26, "Nndl"]]
+5 = [[13, "Ssssss"], [24, "dlNndlw"]]
+6 = [[13, "SSsskh"], [24, "dlNndlw"]]
+7 = [[13, "Ssssss"], [24, "dlNndlw"]]
+8 = [[13, "Snnnnn"], [26, "Nndl"]]
+9 = [[14, "nnnn"], [26, "Nnd"]]
+10 = [[8, "nnnnnDdlwllldnnnn"], [26, "Nn"]]
+11 = [[7, "SsskdllwwllllDkssh"], [26, "Nn"]]
+12 = [[7, "SsskdlowwllolDkssh"], [26, "Nn"]]
+13 = [[7, "SsskdllwwlllDDkssh"], [26, "Nn"]]
+14 = [[7, "SsskdDllwllldDksshssss"]]
+15 = [[7, "SsskddlowlldDDkssssss"]]
+16 = [[7, "SsskNnnnyynnnN"], [26, "Nn"]]
+17 = [[7, "Ssskntttttttn"], [26, "Nn"]]
+18 = [[7, "ssskntNttNttn"], [26, "Nn"]]
+19 = [[11, "nttttttttn"], [26, "Nn"]]
+20 = [[11, "RrrrrrrrrR"], [26, "Nn"]]
+21 = [[11, "Rrrr"], [17, "Rrrr"], [26, "Nn"]]
+22 = [[11, "Rrrr"], [17, "Rrrr"], [26, "Nn"]]
+23 = [[11, "Rrrr"], [17, "Rrrr"], [26, "Nn"]]
+24 = [[11, "Rrrr"], [17, "Rrrr"], [26, "Nn"]]
+25 = [[11, "Rrrr"], [17, "Rrrr"]]
+26 = [[11, "Rrrr"], [17, "Rrrr"]]
+27 = [[11, "Rrrr"], [17, "Rrrr"]]
+28 = [[11, "NNnn"], [17, "NNnn"]]
+29 = [[11, "NNnn"], [17, "NNnn"]]
+30 = [[11, "NNnnt"], [17, "NNnnt"]]
+
+# A breath: everything above the shins sinks a pixel, the axe with it.
+[frames.idle_1]
+from = "idle_0"
+move = { rows = [0, 24], by = [0, 1] }
+
+# A stride: the legs part and nothing above them moves.
+[frames.walk_0]
+from = "idle_0"
+[frames.walk_0.runs]
+23 = [[10, "Rrrr....Rrrr"]]
+24 = [[10, "Rrrr....Rrrr"]]
+25 = [[9, "Rrrr......Rrrr"]]
+26 = [[9, "Rrrr......Rrrr"]]
+27 = [[8, "Rrrr........Rrrr"]]
+28 = [[8, "NNnn........NNnn"]]
+29 = [[8, "NNnn........NNnn"]]
+30 = [[8, "NNnnt.......NNnnt"]]
+
+# The near foot lifts: the left, then the right. Only the leg rows change.
+[frames.walk_1]
+from = "idle_0"
+[frames.walk_1.runs]
+26 = [[11, "NNnn"]]
+27 = [[11, "NNnnt"]]
+28 = [[11, "...."]]
+29 = [[11, "...."]]
+30 = [[11, "....."]]
+
+[frames.walk_2]
+from = "idle_0"
+[frames.walk_2.runs]
+26 = [[17, "NNnn"]]
+27 = [[17, "NNnnt"]]
+28 = [[17, "...."]]
+29 = [[17, "...."]]
+30 = [[17, "....."]]
+
+[anim.idle]
+frames = ["idle_0", "idle_1"]
+ms = 600
+
+[anim.walk]
+frames = ["walk_0", "walk_1", "walk_0", "walk_2"]
+ms = 140

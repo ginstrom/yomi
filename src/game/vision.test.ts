@@ -48,7 +48,7 @@ describe('a new world', () => {
     expect(world.sighted).not.toContain(SOURCE_ID)
     expect(world.sighted).toContain('goblin_raiders')
     expect(seenAt(world, offsetToHex(40, 2))).toBe(UNEXPLORED)
-    expect(world.sighted).not.toContain('goblin_pillagers')
+    expect(world.sighted).not.toContain('spider_nest')
   })
 
   it('counts the blighted share over the land explored only', () => {

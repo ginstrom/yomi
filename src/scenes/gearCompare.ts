@@ -1,5 +1,7 @@
 import { formatDamage } from '../combat/combat.ts'
+import { gradeNumeral } from '../inventory/grades.ts'
 import type { Item, ItemStats } from '../inventory/inventory.ts'
+import { MODIFIER_IDS, MODIFIERS } from '../inventory/modifiers.ts'
 
 /**
  * The trading post's and the crafting screen's words for an item's stats,
@@ -66,4 +68,11 @@ export function compareLines(before: Item, after: Item, ap = TYPICAL_AP): string
   return labels
     .filter((label) => was.get(label) !== now.get(label))
     .map((label) => `${label}: ${was.get(label) ?? 'none'} → ${now.get(label) ?? 'none'}`)
+}
+
+/** The crafting screen's line on what the field makes: the modifiers that need no workshop, at grade I, a day each. */
+export function fieldCraftSummary(): string {
+  const names = MODIFIER_IDS.map((id) => MODIFIERS[id]).filter((mod) => mod.unlock === 0).map((mod) => mod.name)
+  const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names.join('')
+  return `In the field: ${list} at grade ${gradeNumeral(1)}, a day each.`
 }

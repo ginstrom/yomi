@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { offsetToHex } from '../src/grid/hex.ts'
+import { itemById } from '../src/inventory/inventory.ts'
+import { GEAR_SPRITES } from '../src/scenes/unitLook.ts'
 import type { BattleProbe } from '../src/testHook.ts'
 import { RAIDERS, battleHexOnScreen, useGames } from './driver.ts'
 
@@ -42,6 +44,39 @@ describe('a battle', () => {
     await game.click(panel.equipment.mainHand)
     const stowed = await game.waitFor('Inventory', (p) => p.equipment.mainHand.item === null)
     expect(stowed.backpack.map((slot) => slot.item)).toContain(weapon)
+
+    await game.press('Escape')
+    await game.waitForScenes(['Battle'])
+    const battle = await game.awaitTurn()
+    expect(hero(battle).ap).toBe(7)
+    expect(battle.log.at(-1)).toMatchObject({ type: 'equip', unit: 'hero_1', apCost: 1 })
+    // The hero's figure is dressed again as the panel closes, the weapon gone and the breastplate kept.
+    expect(battle.looks.hero_1).not.toContain(GEAR_SPRITES[itemById(weapon!)!.icon])
+    expect(battle.looks.hero_1).toContain('gear_breastplate')
+  })
+
+  it('draws each hero in what it wears and holds, and a foe as its body alone', async () => {
+    const game = await games.open()
+    const battle = await game.enterBattle()
+    const heroes = battle.state.units.filter((u) => u.side === 'player')
+    expect(Object.keys(battle.looks).sort()).toEqual(heroes.map((u) => u.id).sort())
+    // The ready-made soldier: the body, the breastplate over it, then its sword and shield.
+    expect(battle.looks.hero_1).toEqual(['warrior', 'gear_breastplate', 'gear_sword', 'gear_shield'])
+    for (const foe of battle.state.units.filter((u) => u.side === 'enemy')) expect(battle.looks[foe.id]).toBeUndefined()
+  })
+
+  it('charges one action point for gear dragged in the inventory, however many moves', async () => {
+    const game = await games.open()
+    await game.enterBattle()
+
+    await game.press('i')
+    await game.waitForScenes(['Inventory'], ['Battle'])
+    const panel = await game.settled('Inventory')
+    expect(panel.equipment.offHand.item).not.toBeNull()
+    await game.drag(panel.equipment.mainHand, panel.grids.backpack)
+    const stowed = await game.settled('Inventory', (p) => p.equipment.mainHand.item === null)
+    await game.drag(stowed.equipment.offHand, stowed.grids.backpack)
+    await game.waitFor('Inventory', (p) => p.equipment.offHand.item === null)
 
     await game.press('Escape')
     await game.waitForScenes(['Battle'])

@@ -114,6 +114,10 @@ describe('a save', () => {
     expect(parsed.game.baggage.length).toBeGreaterThan(0)
   })
 
+  it('is version 15, whose fixed locations are the Salamander Pool and the Spider Nest', () => {
+    expect(SAVE_VERSION).toBe(15)
+  })
+
   it('writes an item as its id and nothing more', () => {
     const raw = serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 })
     expect(JSON.parse(raw)).toMatchObject({ version: SAVE_VERSION, savedAt: 5, game: { slot: 2, world: { guildHall: 2 } } })

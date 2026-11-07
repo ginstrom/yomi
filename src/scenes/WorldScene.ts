@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import type { Character } from '../character/character.ts'
 import { canAdvance } from '../character/progression.ts'
 import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex, type WorldEvent } from '../game/blight.ts'
 import { atEncampment, buildOutpost, buildTower, canBuildOutpost, canBuildTower, outpostSiteRefusal, towerSiteRefusal } from '../game/buildings.ts'
@@ -24,12 +25,14 @@ import { HexBoard, hexCorners, hexEquals, hexNeighbors, type Hex } from '../grid
 import { buttonProbe, type WorldProbe } from '../testHook.ts'
 import type { CraftedData } from './CraftingScene.ts'
 import { soundVolume } from './audioSettings.ts'
-import { WORLD_LAYOUT, boardHexAt, boardHexCenter, boardPixelSize } from './boardGeometry.ts'
+import { WORLD_LAYOUT, boardHexAt, boardHexCenter, boardPixelSize, type Point } from './boardGeometry.ts'
 import { CURSORS } from './cursors.ts'
-import { mapOrigin, rectContains, type Rect } from './mapScroll.ts'
+import { clampOrigin, mapOrigin, pannedOrigin, pressMoved, rectContains, type Rect } from './mapScroll.ts'
 import { PartyColumn } from './PartyColumn.ts'
+import { PartyListView } from './PartyListView.ts'
+import { FIRST_PARTY_ID, PARTY_LIST_W, deployedParties, partyListInfo } from './partyList.ts'
 import { UnitFigure } from './UnitFigure.ts'
-import { gearLayers, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
+import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
 import { describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
 import { hexInfo } from './hexInfo.ts'
@@ -99,7 +102,7 @@ const BUTTON_H = 44
 const BUTTON_GAP = 20
 /** Wide enough for "Camp until healed", "Build Watchtower" and "Build Outpost". */
 const WIDE_BUTTON_W = 200
-/** The info panel on the hovered hex, at the view's top right. */
+/** The info panel on the hovered hex or party, at the view's top right, left of the party list. */
 const INFO_W = 280
 const INFO_PAD = 10
 const INFO_MARGIN = 12
@@ -112,9 +115,13 @@ export class WorldScene extends Phaser.Scene {
   /** The map hex under the pointer, or null when it is off the map or over a button. */
   private hovered: Hex | null = null
 
-  /** The whole map, most of it off screen; `follow` scrolls it to keep the party in view. */
+  /** The whole map, most of it off screen; `applyOrigin` scrolls it to keep the party in view, or where a drag left it. */
   private mapLayer!: Phaser.GameObjects.Container
-  /** The part of the screen between the bars and right of the party's column, where the map is in plain sight and takes clicks. */
+  /** Where a drag has put the map's top-left corner, or null while the view follows the party. */
+  private panOrigin: Point | null = null
+  /** A press on the map not yet let go: a click to travel until it moves past the threshold, then a pan. */
+  private press: (Point & { originAtPress: Point; panning: boolean }) | null = null
+  /** The part of the screen between the bars, right of the party's column and left of the party list, where the map is in plain sight and takes clicks. */
   private view: Rect = { x: 0, y: 0, width: 0, height: 0 }
   private headerBar!: Phaser.GameObjects.Rectangle
   private footerBar!: Phaser.GameObjects.Rectangle
@@ -129,6 +136,12 @@ export class WorldScene extends Phaser.Scene {
   private column!: PartyColumn
   /** The party member marked in the column, whose panel C or a click on its portrait opens. */
   private active = 0
+  /** The company's parties down the right; a click on one selects it and centres the view on it. */
+  private partyList!: PartyListView
+  /** The id of the party the column shows and Home centres on. */
+  private selectedParty = FIRST_PARTY_ID
+  /** The party entry under the pointer, whose summary the info panel shows, or null. */
+  private hoveredParty: string | null = null
   /** What last happened, above the buttons. */
   private messageText!: Phaser.GameObjects.Text
   /** Scout, Wait and Attack, shown while the party stands among monsters. */
@@ -191,8 +204,12 @@ export class WorldScene extends Phaser.Scene {
     // Phaser reuses the scene instance on restart, so field initializers don't run again.
     this.walking = false
     this.hovered = null
+    this.panOrigin = null
+    this.press = null
+    this.selectedParty = deployedParties(this.gameState)[0]?.id ?? FIRST_PARTY_ID
+    this.hoveredParty = null
     // The first member with something to spend, so one click on its portrait opens its panel.
-    this.active = Math.max(0, this.gameState.party.findIndex(canAdvance))
+    this.active = Math.max(0, this.selectedMembers().findIndex(canAdvance))
 
     this.mapLayer = this.add.container(0, 0)
     this.buildTerrain()
@@ -244,9 +261,16 @@ export class WorldScene extends Phaser.Scene {
     this.outpostButton = this.createButton('Build Outpost', () => this.onBuildOutpost(), WIDE_BUTTON_W)
     const enter = `Enter ${encampmentName(this.world)}`
     this.encampmentButton = this.createButton(enter, () => this.openEncampment(), Math.max(BUTTON_W, enter.length * 10 + 28))
-    this.column = new PartyColumn(this, this.gameState.party, (index) => this.onPortrait(index))
+    this.column = new PartyColumn(this, this.selectedMembers(), (index) => this.onPortrait(index))
+    // Before the outcome screen, which covers it.
+    this.partyList = new PartyListView(
+      this,
+      (id) => this.onPartyEntry(id),
+      (id) => this.onPartyHover(id),
+    )
 
-    this.outcomeShade = this.add.rectangle(0, 0, 0, 0, 0x000000, 0.75).setOrigin(0).setInteractive()
+    // Made 1×1, not 0×0: Phaser gives a shape of no size no hit area, and layout's setSize grows only one it has.
+    this.outcomeShade = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.75).setOrigin(0).setInteractive()
     this.outcomeText = this.add
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: '18px', color: '#ffffff', align: 'center', lineSpacing: 8 })
       .setOrigin(0.5)
@@ -254,18 +278,43 @@ export class WorldScene extends Phaser.Scene {
     this.endlessButton = this.createButton('Continue', () => this.onEndless())
     this.menuButton = this.createButton('Main Menu', () => this.scene.start('Menu'))
 
-    // Phaser passes the interactive objects under the pointer; a click on a button is not a map click.
+    // Phaser passes the interactive objects under the pointer; a press on a button is not a press on the map.
+    // A press travels when let go, unless it moved far enough to be a drag, which pans the map instead.
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
-      if (over.length === 0) this.onMapClick(pointer)
+      if (over.length > 0 || !rectContains(this.view, pointer) || this.walking || this.outcomeShade.visible) return
+      const originAtPress = { x: this.mapLayer.x, y: this.mapLayer.y }
+      this.press = { x: pointer.x, y: pointer.y, originAtPress, panning: false }
     })
-    this.input.on('pointermove', (pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) =>
-      this.setHovered(over.length > 0 ? null : this.hexAt(pointer.x, pointer.y)),
-    )
-    this.input.on(Phaser.Input.Events.GAME_OUT, () => this.setHovered(null))
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
+      // A move with no button held: the release went unreported (let go off the window), so the press is over.
+      if (this.press && pointer.noButtonDown()) this.endPress()
+      if (this.press && pointer.isDown && this.onDrag(pointer)) return
+      this.setHovered(over.length > 0 ? null : this.hexAt(pointer.x, pointer.y))
+    })
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
+      const press = this.endPress()
+      // A release may carry the pointer past the threshold with no move reported before it: a drag all the same.
+      if (press && !press.panning && !pressMoved(press, pointer)) this.onMapClick(press)
+      this.setHovered(over.length > 0 ? null : this.hexAt(pointer.x, pointer.y))
+    })
+    // Let go off the game, or left with the button down: a pan stays where it got to, and a press is no click.
+    this.input.on('pointerupoutside', () => this.endPress())
+    this.input.on(Phaser.Input.Events.GAME_OUT, () => {
+      this.endPress()
+      this.clearPartyHover()
+      this.setHovered(null)
+    })
     // A paused map (menu open) mustn't leave its cursor on the overlay.
-    this.events.on(Phaser.Scenes.Events.PAUSE, () => this.setHovered(null))
+    this.events.on(Phaser.Scenes.Events.PAUSE, () => {
+      this.endPress()
+      this.clearPartyHover()
+      this.setHovered(null)
+    })
     this.input.keyboard?.on('keydown-ESC', () => this.openMenu())
     this.input.keyboard?.on('keydown-C', () => this.openPanel(this.active))
+    this.input.keyboard?.on('keydown-HOME', () => this.centreOnSelected())
+    // Kept from the browser, which would otherwise scroll a page held below the game's minimum size.
+    this.input.keyboard?.addCapture('HOME')
     // Back from a member's panel, where skill points and perks may have been spent, and
     // which tells the member it last showed. The menu resumes the map too, and tells nothing.
     // Back from field crafting, which hands back what it made and the day that passed (`CraftedData`).
@@ -283,6 +332,7 @@ export class WorldScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
       this.input.setDefaultCursor('default')
+      this.input.keyboard?.removeCapture('HOME')
       this.music?.destroy()
       this.music = null
     })
@@ -310,7 +360,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   update(): void {
-    if (this.walking) this.follow()
+    if (this.walking) this.applyOrigin()
   }
 
   /** What the in-browser tests see of the world map; see testHook.ts. */
@@ -324,6 +374,8 @@ export class WorldScene extends Phaser.Scene {
         this.save()
         this.checkOutcome()
       },
+      // As an attack on a location would, but with none behind it: it clears none and takes no loot.
+      fight: (encounter, threat) => this.scene.start('Battle', { game: this.gameState, encounter, threat }),
     }
   }
 
@@ -355,6 +407,12 @@ export class WorldScene extends Phaser.Scene {
         menu: buttonProbe(this.menuButton),
       },
       party: this.column.probe(),
+      parties: this.partyList.probe(),
+      selectedParty: this.selectedParty,
+      infoRect: this.infoBox.visible
+        ? { x: this.infoBox.x, y: this.infoBox.y, width: this.infoBox.width, height: this.infoBox.height }
+        : null,
+      partyLook: this.party.lookNames(),
     }
   }
 
@@ -526,9 +584,9 @@ export class WorldScene extends Phaser.Scene {
     g.clear()
   }
 
-  /** Shows the party's figure holding what its first member does now. */
+  /** Shows the party's figure wearing and holding what its first member does now. */
   private refreshPartyGear(): void {
-    this.party.setGear(gearLayers(this.gameState.party[0]?.equipment ?? {}))
+    this.party.setLook(heroLook(this.gameState.party[0]?.equipment ?? {}))
   }
 
   private createButton(label: string, onClick: () => void, width = BUTTON_W): Phaser.GameObjects.Container {
@@ -551,8 +609,9 @@ export class WorldScene extends Phaser.Scene {
   // ---- layout ---------------------------------------------------------------
 
   /**
-   * Header bar at the top, the party's column down the left, message and
-   * buttons in a bar at the bottom, and the map filling the window behind them.
+   * Header bar at the top, the party's column down the left, the party list
+   * down the right, message and buttons in a bar at the bottom, and the map
+   * filling the window behind them.
    */
   private layout(): void {
     const { width, height } = this.scale
@@ -571,7 +630,7 @@ export class WorldScene extends Phaser.Scene {
     const messageY = buttonY - BUTTON_H / 2 - 26
     this.messageText.setPosition(centreX, messageY)
     this.statusText.setPosition(width - 20, 16)
-    this.infoBox.setPosition(width - INFO_MARGIN - INFO_W, HEADER_BOTTOM + INFO_MARGIN)
+    this.infoBox.setPosition(width - PARTY_LIST_W - INFO_MARGIN - INFO_W, HEADER_BOTTOM + INFO_MARGIN)
     this.infoText.setPosition(this.infoBox.x + INFO_PAD, this.infoBox.y + INFO_PAD)
     this.outcomeShade.setSize(width, height)
     const middleY = height / 2
@@ -584,24 +643,93 @@ export class WorldScene extends Phaser.Scene {
     this.headerBar.setSize(width, HEADER_BOTTOM)
     this.footerBar.setPosition(PARTY_PANEL_W, footerTop).setSize(width - PARTY_PANEL_W, height - footerTop)
     this.column.layout(height)
+    this.partyList.layout(width, HEADER_BOTTOM, footerTop)
     this.view = {
       x: PARTY_PANEL_W,
       y: HEADER_BOTTOM,
-      width: Math.max(0, width - PARTY_PANEL_W),
+      width: Math.max(0, width - PARTY_PANEL_W - PARTY_LIST_W),
       height: Math.max(0, footerTop - HEADER_BOTTOM),
     }
-    this.follow()
+    // A resize keeps a pan, pulled back within the map's edges.
+    this.applyOrigin()
   }
 
   /**
    * Scrolls the map to keep the party mid-view, as far as the map's edges
-   * allow. The edges stop at the view's, not the window's, so the party is
-   * never left standing under a bar.
+   * allow, or to where a drag panned it. The edges stop at the view's, not the
+   * window's, so the party is never left standing under a bar.
    */
-  private follow(): void {
+  private applyOrigin(): void {
     const map = boardPixelSize(this.world.board, WORLD_LAYOUT)
-    const { x, y } = mapOrigin({ x: this.party.x, y: this.party.y - PARTY_FEET_Y }, map, this.view)
+    if (this.panOrigin) this.panOrigin = clampOrigin(this.panOrigin, map, this.view)
+    const { x, y } = this.panOrigin ?? mapOrigin({ x: this.party.x, y: this.party.y - PARTY_FEET_Y }, map, this.view)
     this.mapLayer.setPosition(x, y)
+  }
+
+  /** The pointer moved with the button down on the map: pans once the press is a drag. True while it pans. */
+  private onDrag(pointer: Phaser.Input.Pointer): boolean {
+    const press = this.press!
+    if (!press.panning) {
+      if (!pressMoved(press, pointer)) return false
+      press.panning = true
+      // A drag walks nowhere: no route, nothing told of a hex.
+      this.setHovered(null)
+      this.input.setDefaultCursor('grabbing')
+    }
+    const map = boardPixelSize(this.world.board, WORLD_LAYOUT)
+    this.panOrigin = pannedOrigin(press.originAtPress, press, pointer, map, this.view)
+    this.applyOrigin()
+    return true
+  }
+
+  /** Ends a press, handing it back; a pan's grabbing cursor goes, to be set again by the next hover. */
+  private endPress(): WorldScene['press'] {
+    const press = this.press
+    this.press = null
+    if (press?.panning) this.refreshHover()
+    return press
+  }
+
+  /** A click on a party's entry: selects it and centres the view on it, but not while walking or under the outcome screen. */
+  private onPartyEntry(id: string): void {
+    if (this.walking || this.outcomeShade.visible) return
+    this.selectParty(id)
+  }
+
+  /**
+   * Makes `id` the selected party, whose members the column shows, and
+   * centres the view on it, even when it was selected already. With one party
+   * the column is never rebuilt, but a change of party rebuilds it.
+   */
+  selectParty(id: string): void {
+    if (id !== this.selectedParty) {
+      const entry = deployedParties(this.gameState).find((party) => party.id === id)
+      if (!entry) return
+      this.selectedParty = id
+      this.column.destroy()
+      this.column = new PartyColumn(this, entry.members, (index) => this.onPortrait(index))
+      this.active = Math.max(0, entry.members.findIndex(canAdvance))
+      // The new column's objects are the newest; the outcome screen stays over them.
+      for (const cover of [this.outcomeShade, this.outcomeText, this.endButton, this.endlessButton, this.menuButton]) {
+        this.children.bringToTop(cover)
+      }
+      this.refresh()
+    }
+    this.centreOnSelected()
+  }
+
+  /**
+   * Home, and a click on the selected party's entry: back to following the
+   * selected party, clearing any pan (not while the button is still down on
+   * one). Moves no one and passes no time; an unpanned view does not move.
+   */
+  centreOnSelected(): void {
+    if (this.walking || this.outcomeShade.visible || this.press) return
+    this.panOrigin = null
+    this.applyOrigin()
+    // The map has scrolled under the pointer, which is over another hex now.
+    const pointer = this.input.activePointer
+    this.setHovered(this.hexAt(pointer.x, pointer.y))
   }
 
   /** The map hex under a screen position, or null when off the map or under a bar. */
@@ -643,6 +771,7 @@ export class WorldScene extends Phaser.Scene {
       ].join('\n'),
     )
     this.column.refresh(this.active)
+    this.partyList.refresh(deployedParties(this.gameState), this.selectedParty)
     this.hintText.setText(
       world.confronting !== null
         ? 'Monsters! Scout them, wait, or attack.'
@@ -699,28 +828,53 @@ export class WorldScene extends Phaser.Scene {
     g.lineStyle(3, toMonsters ? MONSTERS_OUTLINE : ROUTE_COLOR, 1).strokePoints(this.hexPolygon(to), true)
   }
 
-  /** The info panel: what the player knows of the hovered hex. */
+  /** The members of the selected party, whom the column shows. */
+  private selectedMembers(): readonly Character[] {
+    return deployedParties(this.gameState).find((party) => party.id === this.selectedParty)?.members ?? this.gameState.party
+  }
+
+  /** The pointer is gone (off the game, or the map paused under an overlay): no entry is hovered, and the panel forgets it. */
+  private clearPartyHover(): void {
+    this.partyList.clearHover()
+    this.hoveredParty = null
+    this.refreshInfo()
+  }
+
+  /** The pointer came onto a party's entry (`id`) or left it (null): the info panel tells of the party. */
+  private onPartyHover(id: string | null): void {
+    this.hoveredParty = id
+    this.refreshInfo()
+  }
+
+  /** The info panel: the hovered party's summary, else what the player knows of the hovered hex. */
   private refreshInfo(): void {
-    const shown = this.hovered !== null && !this.outcomeShade.visible
+    const entry =
+      this.hoveredParty === null ? undefined : deployedParties(this.gameState).find((party) => party.id === this.hoveredParty)
+    const shown = (entry !== undefined || this.hovered !== null) && !this.outcomeShade.visible
     this.infoBox.setVisible(shown)
     this.infoText.setVisible(shown)
-    if (!this.hovered || !shown) return
-    const { title, lines } = hexInfo(this.world, this.gameState.party, this.visible, this.hovered)
+    if (!shown) return
+    const { title, lines } = entry
+      ? partyListInfo(entry)
+      : hexInfo(this.world, this.gameState.party, this.visible, this.hovered!)
     this.infoText.setText([title, '', ...lines].join('\n'))
     this.infoBox.setSize(INFO_W, this.infoText.height + 2 * INFO_PAD)
   }
 
   // ---- actions ---------------------------------------------------------------
 
-  private onMapClick(pointer: Phaser.Input.Pointer): void {
+  /** A press let go where it was made: travels to the hex there. */
+  private onMapClick(at: Point): void {
     if (this.walking || this.outcomeShade.visible) return
-    const clicked = this.hexAt(pointer.x, pointer.y)
+    const clicked = this.hexAt(at.x, at.y)
     if (!clicked) return
     const journey = travel(this.world, clicked, this.gameState.party)
     const route = journey.walked
     if (route.length === 0) return
 
     this.walking = true
+    // A journey brings the view back to the party.
+    this.panOrigin = null
     this.messageText.setText('')
     // The journey is made as far as the world goes; the walk only shows it.
     this.save()
@@ -750,7 +904,8 @@ export class WorldScene extends Phaser.Scene {
   /** The walk is over: `told` is what happened on the way (`events`), and `stopped` whether that cut the journey short. */
   private arrive(told: string, stopped: boolean, events: WorldEvent[]): void {
     this.walking = false
-    this.follow()
+    this.panOrigin = null
+    this.applyOrigin()
     // The map has scrolled under the pointer, which is over another hex now.
     const pointer = this.input.activePointer
     this.hovered = this.hexAt(pointer.x, pointer.y)

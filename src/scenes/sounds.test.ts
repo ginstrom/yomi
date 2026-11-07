@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { AttackEvent, BattleEndEvent, CastEvent, Side } from '../engine/battleEngine.ts'
+import type { AbilityEvent, AttackEvent, BattleEndEvent, CastEvent, Side } from '../engine/battleEngine.ts'
 import type { SpellId } from '../combat/spells.ts'
 import { impactMs } from './battleEffects.ts'
 import { STING_DELAY_MS, eventSounds } from './sounds.ts'
@@ -9,7 +9,7 @@ function attack(hit: boolean, critical = false): AttackEvent {
     type: 'attack', seq: 0, round: 1, attacker: 'goblin', defender: 'hero', opportunity: false,
     weapon: null, distance: 1, apCost: 2, apAfter: 0, toHit: 70, defenderAc: 15, defenderResistance: 0, armorPierce: 0,
     damageDice: { count: 1, sides: 6, bonus: 0 }, rolled: 3, defenderHpBefore: 10,
-    flankers: [], flankBonus: 0, arc: 'front', arcBonus: 0, attackerFacing: 3, helpless: false, image: false,
+    flankers: [], flankBonus: 0, defenderTurned: false, defenderFacing: 0, arc: 'front', arcBonus: 0, attackerFacing: 3, helpless: false, image: false,
     attackRoll: 40, chance: 55, hit, critical, fumble: false, damage: hit ? 3 : 0, defenderHpAfter: 7,
   }
 }
@@ -17,11 +17,11 @@ function attack(hit: boolean, critical = false): AttackEvent {
 function cast(hit: boolean, critical = false, spell: SpellId = 'magic_arrow'): CastEvent {
   return {
     type: 'cast', seq: 0, round: 1, caster: 'hero', spell, target: 'goblin', at: { q: 4, r: 0 }, distance: 4,
-    apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76,
+    apCost: 4, apAfter: 4, manaCost: 3, manaAfter: 15, casterFacing: 0, skill: 76, drained: 0,
     outcomes: [
       {
         unit: 'goblin', attackRoll: 40, chance: 61, defenderAc: 15, hit, critical, fumble: false, image: false,
-        damage: hit ? 5 : 0, healed: 0, hpBefore: 12, hpAfter: hit ? 7 : 12, status: null,
+        damage: hit ? 5 : 0, warded: 0, half: false, healed: 0, hpBefore: 12, hpAfter: hit ? 7 : 12, status: null,
       },
     ],
   }
@@ -61,5 +61,26 @@ describe('eventSounds', () => {
 
   it('stays quiet for moves and turn changes', () => {
     expect(eventSounds({ type: 'end_turn', seq: 0, round: 1, side: 'player', unspentAp: {} })).toEqual([])
+  })
+})
+
+describe('eventSounds for an area ability', () => {
+  const ability = (hit: boolean, half: boolean, critical = false): AbilityEvent => ({
+    type: 'ability', seq: 0, round: 1, unit: 'salamander', ability: 'fire_spit', at: { q: 2, r: 0 }, shape: 'cone',
+    hexes: [], distance: 2, apCost: 4, apAfter: 4, facing: 0, skill: 70,
+    outcomes: [
+      {
+        unit: 'hero', attackRoll: 40, chance: 61, defenderAc: 15, hit, critical, fumble: false, image: false,
+        damage: hit ? 9 : half ? 4 : 0, warded: 0, half, healed: 0, hpBefore: 12, hpAfter: 5, status: null,
+      },
+    ],
+  })
+
+  it('casts, then lands as the best outcome does; a half-damage miss is still heard to strike', () => {
+    const cue = { key: 'sfx_spell_cast', delayMs: 0 }
+    expect(eventSounds(ability(true, false))).toEqual([cue, { key: 'sfx_hit_impact', delayMs: impactMs(ability(true, false)) }])
+    expect(eventSounds(ability(true, false, true))[1].key).toBe('sfx_crit_impact')
+    expect(eventSounds(ability(false, true))[1].key).toBe('sfx_hit_impact')
+    expect(eventSounds(ability(false, false))[1].key).toBe('sfx_miss')
   })
 })
