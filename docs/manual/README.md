@@ -232,7 +232,7 @@ Hover over a hex to see the path, then click to move there. Each hex costs **1 A
 
 ![Hovering a foe shows the attack](images/battle-attack.png)
 
-**Click a foe** to attack it. If it is out of reach, the hero first walks into range along the path shown, then strikes. The **Attack** button strikes the only foe in reach, or, with several in reach, asks you to click one (it reads **Cancel** while it waits). The weapon decides both the cost and the reach:
+**Click a foe** to attack it. If it is out of reach, the hero first walks into range along the path shown, then strikes. If the walk would leave too few action points for the attack, the crossed swords are faded and a click does nothing: walk closer by clicking a hex. The **Attack** button strikes the only foe in reach, or, with several in reach, asks you to click one (it reads **Cancel** while it waits). The weapon decides both the cost and the reach:
 
 | Weapon | Damage | AP | Reach | Pierces resistance | Strength |
 | --- | --- | --- | --- | --- | --- |
