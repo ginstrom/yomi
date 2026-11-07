@@ -173,13 +173,13 @@ Steps 05, 06 and 07 are done. This step may run alongside 08 and 09, which touch
 
 ## 6. Completion criteria
 
-- [ ] `RUNE_ORDER` and `runecraftGear` exist as C11 says, and `visitFacilities` and `runCampaign` follow §4.
-- [ ] The five record fields are recorded, averaged and printed.
-- [ ] The tests above pass, and `npm test` passes.
-- [ ] The guard is measured and recorded here and in the index's checkpoints, with the rune figures.
-- [ ] CLAUDE.md's simulator paragraph is updated.
-- [ ] One commit on `long-campaign-stage-04`, not pushed, with the message ending in the repo's `Co-Authored-By` attribution line. Never switch branches.
-- [ ] The index's step 10 row says `done` with the commit.
+- [x] `RUNE_ORDER` and `runecraftGear` exist as C11 says, and `visitFacilities` and `runCampaign` follow §4.
+- [x] The five record fields are recorded, averaged and printed.
+- [x] The tests above pass, and `npm test` passes.
+- [x] The guard is measured and recorded here and in the index's checkpoints, with the rune figures.
+- [x] CLAUDE.md's simulator paragraph is updated.
+- [x] One commit on `long-campaign-stage-04`, not pushed, with the message ending in the repo's `Co-Authored-By` attribution line. Never switch branches.
+- [x] The index's step 10 row says `done` with the commit.
 
 ## Execution record
 

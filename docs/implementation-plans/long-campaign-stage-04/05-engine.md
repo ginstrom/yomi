@@ -198,14 +198,14 @@ Tests in this step build `CombatantStats` with `onHit` directly. They do not nee
 
 ## 6. Completion criteria
 
-- [ ] `AttackBonus`, `bonus`, `healed` and `onHitStatuses` as C5; the order of operations as C5; no new RNG draws.
-- [ ] `BLIGHT_HORROR_STATS.blightborn` is true.
-- [ ] `formatEvent`, `expectedHarm` and `Tally.add` as C5.
-- [ ] `LOG_SCHEMA_VERSION` is 23.
-- [ ] The tests of §5 pass, and so does `npm test`.
-- [ ] The guard is identical to step 01's, with the run recorded below.
-- [ ] CLAUDE.md's engine, battle-rule and policy lines updated.
-- [ ] One commit on `long-campaign-stage-04`; step 05's row in the index set to `done` with the commit.
+- [x] `AttackBonus`, `bonus`, `healed` and `onHitStatuses` as C5; the order of operations as C5; no new RNG draws.
+- [x] `BLIGHT_HORROR_STATS.blightborn` is true.
+- [x] `formatEvent`, `expectedHarm` and `Tally.add` as C5.
+- [x] `LOG_SCHEMA_VERSION` is 23.
+- [x] The tests of §5 pass, and so does `npm test`.
+- [x] The guard is identical to step 01's, with the run recorded below.
+- [x] CLAUDE.md's engine, battle-rule and policy lines updated.
+- [x] One commit on `long-campaign-stage-04`; step 05's row in the index set to `done` with the commit.
 
 ## 7. Execution record
 

@@ -270,14 +270,14 @@ Change nothing about the rules here: steps 03 to 07 own those lines.
 
 ## 6. Completion criteria
 
-- [ ] `RUNE_ICON_KEYS`, `SOCKET_PIP_KEYS`, `RUNE_COLOURS` and `socketPips` in `itemIcons.ts`, Phaser-free, as in C9, with tests.
-- [ ] The three item scenes load the rune icons and pips. The inventory draws pips in slots, the backpack and the ground (the trading post and crafting rows too, or left to step 09 and said so).
-- [ ] The tooltip adds `socketLines`. The character tab has the wards line. `InventoryProbe.tooltip` exists.
-- [ ] `bonusText` in `battleEffects.ts`, as in C10, with tests. The floating text shows at impact, and a Life heal refreshes the attacker's hit points.
-- [ ] `endBattle` calls `takeRunes` for a win at a location, seeded from `battle_start`, before saving. The "Found:" line names the runes. Debug fights roll none.
-- [ ] Scene smoke tests and an in-browser test cover the tooltip and the wards line. `npm test` and `npm run test:browser` pass.
-- [ ] CLAUDE.md updated (4.9).
-- [ ] One commit on `long-campaign-stage-04`. The index row for step 08 is set to `done` with the commit, and the execution record below is filled.
+- [x] `RUNE_ICON_KEYS`, `SOCKET_PIP_KEYS`, `RUNE_COLOURS` and `socketPips` in `itemIcons.ts`, Phaser-free, as in C9, with tests.
+- [x] The three item scenes load the rune icons and pips. The inventory draws pips in slots, the backpack and the ground (the trading post and crafting rows too, or left to step 09 and said so).
+- [x] The tooltip adds `socketLines`. The character tab has the wards line. `InventoryProbe.tooltip` exists.
+- [x] `bonusText` in `battleEffects.ts`, as in C10, with tests. The floating text shows at impact, and a Life heal refreshes the attacker's hit points.
+- [x] `endBattle` calls `takeRunes` for a win at a location, seeded from `battle_start`, before saving. The "Found:" line names the runes. Debug fights roll none.
+- [x] Scene smoke tests and an in-browser test cover the tooltip and the wards line. `npm test` and `npm run test:browser` pass.
+- [x] CLAUDE.md updated (4.9).
+- [x] One commit on `long-campaign-stage-04`. The index row for step 08 is set to `done` with the commit, and the execution record below is filled.
 
 ## 7. Execution record
 

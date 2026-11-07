@@ -549,6 +549,23 @@ No question blocks a step. These were the defaults taken; the user has answered 
 | D3 | The simulator's rune policy | Ember, Storm, Stone for weapons; Stone, Life for armour and shields; embeds only at a workshop (correction 11). **Accepted by the user.** | 10 |
 | D4 | Rune prices at ranks 3 and 4 | 135 and 405 (correction 6). **Accepted by the user.** | 07 |
 
+## Execution notes
+
+### Fix round 1 (after the overall review, QA and the simulated user)
+
+Commits: `3d21e16`, `afa845c`, `c3c7e9f`, `be3cb26`, `ca95bc6`, and the docs commit that carries this note.
+
+1. **Battle HP mismatch** (`3d21e16`). `clampHp`, `equipFromBackpack`, `unequipToBackpack`, `dropEquipped` and `gearDrag.applyMove` take an `HpRule` ('share' by default, 'cap' in battle). `BattleScene` hands the panel `hpRule: 'cap'` per member, so the panel's hit points match the engine's `equip` (which only caps). Correction 4 and C3 stand outside battle; CLAUDE.md says so. Tests: `character.test.ts` (the cap rule on all three functions) and `gearDrag.test.ts` (each kind of move), red first.
+2. **Stale message** (`afa845c`). `CraftingScene.choose` clears the message, on both tabs. The Runes in-browser test checks it after an extract and after a fuse; it failed before the fix.
+3. **"none →"** (`afa845c`). `compareLines` shows a gained stat as what it now is ("On a hit: +1 fire") and a lost one as "On a hit: no longer +1 fire"; this applies to every stat, so the Modify tab's "To Hit: none → −5%" is now "To Hit: −5%".
+4. **Tooltip redundancy** (`c3c7e9f`). `socketLines` is one line, "Sockets: 1 of 2 (Ember I)", the runes by name only (C1 amended), as the stat lines already fold in what they do.
+5. **Docs** (the docs commit). CLAUDE.md's comma; steps 05, 06, 08, 10 and 11's checklists ticked; the stage design's notes and the stages index say the play script is fully walked, with QA's evidence for the floating text and the Seared letter.
+6. **Socket hint** (`be3cb26`). `runecraftView.socketSources()` reads off `socketsOf` over `BASE_ITEMS`, the grades and `MAGIC_ITEMS` which tiers, materials, grades and uniques have sockets; `noSocketsHint()` replaces "The party has nothing with a socket.", and `runeSocketLine()` ("Set in a socketed item: tier-2 or Masterwork gear.") ends a rune's details at the trading post and its pouch hover panel.
+7. **On-hit on the sheet** (`ca95bc6`). `gearCompare.onHitLines` packs the main hand's on-hit effects into "On a hit:" and indented rows, as `wardsLines` does (a shared `packedLines`); a bane reads "(bane)" and an on-crit status "on crit" for the column's width. Shown on the Character tab, after Damage. **Deviation:** not on the Inventory tab, whose stat column already shrinks its face with every ward, mana and piercing and has the ground grid under it; the weapon's tooltip tells it there. The in-browser layout check now puts a runed hammer (piercing, Ember III and Venom II) and runed armour (two wards) on the mage and still fits at 840×560 and 1400×800.
+8. **Pouch rows** (`be3cb26`). Hovering a pouch row opens a panel over the right side: the rune's name, what it does in a weapon, in armour and in a shield, and the socket line. The row has no room for the effects at 11px beside Embed and Fuse. `CraftingProbe` gains `itemsHint`, `tooltip` and `pouch[].row`.
+
+Checks: `npm test` 1197 passed; `npm run build` clean; the in-browser suite 89 passed; `npm run manual:screenshots` retook all, and only `crafting-runes.png` changed in content ("On a hit: +1 fire"), so the other five images whose bytes moved were left as they were. The manual says the in-battle cap, the On a hit line, the socket line, the hint and the hover.
+
 ## For implementers
 
 After working on a step, update its row's status here (`in progress`, `done` or `blocked`) with the commit. Fill the task file's execution record: the commit, the checks run and their results, deviations, and anything left for a later step. If a step is blocked, say on what. A contract changed by a step is amended here, marked with the step, as stage 3's plan did.

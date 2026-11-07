@@ -302,13 +302,13 @@ If the game cannot be driven by hand from this session, drive it headless with t
 
 ## 6. Completion criteria
 
-- [ ] The guard and check 2's three cells have been run, with their figures and the record's rune figures in the stage's implementation notes.
-- [ ] Any tuning is recorded with its effect, the guard re-run after it, and any changed contract amended in index.md. Moves not tuned are explained or taken to the user.
-- [ ] D1 to D4 are reported for the user.
-- [ ] CLAUDE.md, `docs/manual/README.md` (with retaken screenshots), the stage design's implementation notes and status line, and `docs/designs/long-campaign/index.md` are updated.
-- [ ] The play script is walked, or its unwalked steps are listed for the user.
-- [ ] `npm test` passes. One commit for the step, on `long-campaign-stage-04`, not pushed, the message ending with the repo's `Co-Authored-By` attribution line. The screenshots may go in a commit of their own.
-- [ ] Step 11's row in [index.md](index.md) is set to `done` with the commit, the overall completion checklist is ticked where met, and the execution record below is filled.
+- [x] The guard and check 2's three cells have been run, with their figures and the record's rune figures in the stage's implementation notes.
+- [x] Any tuning is recorded with its effect, the guard re-run after it, and any changed contract amended in index.md. Moves not tuned are explained or taken to the user.
+- [x] D1 to D4 are reported for the user.
+- [x] CLAUDE.md, `docs/manual/README.md` (with retaken screenshots), the stage design's implementation notes and status line, and `docs/designs/long-campaign/index.md` are updated.
+- [x] The play script is walked, or its unwalked steps are listed for the user.
+- [x] `npm test` passes. One commit for the step, on `long-campaign-stage-04`, not pushed, the message ending with the repo's `Co-Authored-By` attribution line. The screenshots may go in a commit of their own.
+- [x] Step 11's row in [index.md](index.md) is set to `done` with the commit, the overall completion checklist is ticked where met, and the execution record below is filled.
 
 ## Execution record
 

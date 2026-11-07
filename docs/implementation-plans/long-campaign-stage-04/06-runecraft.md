@@ -224,11 +224,11 @@ Both pass. No simulator run is required (the guard is untouched; see the shared 
 
 ## 6. Completion criteria
 
-- [ ] `src/game/runecraft.ts` exports exactly C6, and every action checks everything before changing anything.
-- [ ] `runecraft.test.ts` covers every item of §5 and passes, as does `npm test`.
-- [ ] CLAUDE.md has the runecraft module line and its rules.
-- [ ] One commit on `long-campaign-stage-04`, not pushed.
-- [ ] Step 06's row in [index.md](index.md) is `done` with the commit, and the execution record below is filled.
+- [x] `src/game/runecraft.ts` exports exactly C6, and every action checks everything before changing anything.
+- [x] `runecraft.test.ts` covers every item of §5 and passes, as does `npm test`.
+- [x] CLAUDE.md has the runecraft module line and its rules.
+- [x] One commit on `long-campaign-stage-04`, not pushed.
+- [x] Step 06's row in [index.md](index.md) is `done` with the commit, and the execution record below is filled.
 
 ## Execution record
 
