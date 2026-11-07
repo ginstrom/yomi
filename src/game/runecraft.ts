@@ -64,6 +64,14 @@ export function socketables(game: GameState): Array<{ place: ItemPlace; item: It
     .filter(({ sockets }) => sockets > 0)
 }
 
+/** A rune's name with its article: "a Lesser Ember Rune", "an Ember Rune". */
+const aRune = (key: RuneKey): string => {
+  const name = runeName(key)
+  return `${/^[AEIOU]/.test(name) ? 'an' : 'a'} ${name}`
+}
+
+const capitalise = (text: string): string => text[0].toUpperCase() + text.slice(1)
+
 const unaffordable = (cost: Stock): string => `It costs ${describeCost(cost)}, more than the stock holds.`
 
 /** Where the workshop is, for a refusal given away from it. */
@@ -84,10 +92,10 @@ export function embedRefusal(game: GameState, place: ItemPlace, key: RuneKey): s
   if ((item.runes?.length ?? 0) >= sockets) return `Its sockets are full; extract one first.`
   if (pouchCount(game.runes, key) === 0) return `The pouch holds no ${runeName(key)}.`
   const { id, rank } = parseRuneKey(key)!
-  if (!runeFits(id, item)) return `A ${runeName(key)} does nothing in ${item.name}; it fits only a wand or a staff.`
+  if (!runeFits(id, item)) return `${capitalise(aRune(key))} does nothing in ${item.name}; it fits only a wand or a staff.`
   if (craftTier(world) === 'field') {
     if (!canCamp(world)) return 'Nothing can be embedded here now.'
-    if (rank > 1) return `Only a Lesser rune can be embedded in the field; a ${runeName(key)} needs the workshop.${workshopIsAt(world)}`
+    if (rank > 1) return `Only a Lesser rune can be embedded in the field; ${aRune(key)} needs the workshop.${workshopIsAt(world)}`
   }
   const cost = embedCost(key)
   return canAfford(world.stock, cost) ? null : unaffordable(cost)
@@ -138,7 +146,7 @@ export function fuseRefusal(game: GameState, from: RuneKey): string | null {
   if (rank === MAX_RANK) return 'A Grand rune is the highest rank.'
   const next = runeKey(id, (rank + 1) as Rank)
   const level = FUSE_LEVELS[(rank + 1) as 2 | 3 | 4]
-  if (workshopHere(world) < level) return `Fusing to a ${runeName(next)} needs a level ${level} workshop.${workshopIsAt(world)}`
+  if (workshopHere(world) < level) return `Fusing to ${aRune(next)} needs a level ${level} workshop.${workshopIsAt(world)}`
   const held = pouchCount(game.runes, from)
   if (held < FUSE_COUNT) return `Fusing takes ${FUSE_COUNT} of the ${runeName(from)}; the pouch holds ${held}.`
   const cost = fuseCost(from)

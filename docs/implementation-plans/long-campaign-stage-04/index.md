@@ -468,8 +468,7 @@ export function runecraftGear(game: GameState): { embedded: number; fused: numbe
 - After each win, `takeRunes(game, next.threat, next.encounter, battleSeed)` runs, with the seed passed to `fight` (`(seed + battles.length) >>> 0`, before the battle is pushed).
 - `visitFacilities`:
   - before it replaces a runed worn item, it extracts the runes when `extractRefusal` is null;
-  - it calls `runecraftGear` after the gear is bought and before `craftGear`;
-  - then it sells the baggage again, and raises the shrine.
+  - it sells the baggage again (what was replaced), then calls `runecraftGear`, then `craftGear`, and raises the shrine (amended after step 10's review: as built, the second sale comes before runecraft and crafting, whose gold it may pay, not after them).
 - The summary prints the five new fields.
 
 ## Tasks
@@ -483,9 +482,9 @@ export function runecraftGear(game: GameState): { embedded: number; fused: numbe
 | 05 | [The engine](05-engine.md) | On-hit damage, statuses, Life healing and bane; `blightborn`; `AttackEvent` fields and the log line; policy harm; the simulator's tally; LOG 23; the guard identical | 03 | opus / opus | done (`9b46d64`) |
 | 06 | [Runecraft](06-runecraft.md) | `runecraft.ts` (C6) with every refusal and the field day | 04 | opus / opus | done (`b1eeef1`) |
 | 07 | [Loot and the trading post's runes](07-loot-and-trading-post.md) | `loot.ts` (C7); rune wares, prices and sales (C8); runed items' sale price | 04 | sonnet / opus | done (`2d7d130`) |
-| 08 | [Tooltips, pips, wards and battle text](08-inventory-and-battle-screens.md) | The icon tables (C9), the tooltip's socket lines, the wards line, the pips, `bonusText` and floating text, runes on the victory screen; scene and in-browser tests | 02, 05, 07 | sonnet / opus | done (`4c55ee9`) |
-| 09 | [The Runes tab and the trading post's Runes](09-runes-tab-and-trading-post.md) | Crafting's Modify and Runes tabs, the field embed, the post's Runes filter and rune sales, the encampment lines, the probes; scene and in-browser tests | 06, 07, 08 | opus / opus | pending |
-| 10 | [The simulator](10-simulator.md) | Rune loot taken, `runecraftGear`, extraction before replacement, the record and summary; the guard measured | 05, 06, 07 | opus / opus | done |
+| 08 | [Tooltips, pips, wards and battle text](08-inventory-and-battle-screens.md) | The icon tables (C9), the tooltip's socket lines, the wards line, the pips, `bonusText` and floating text, runes on the victory screen; scene and in-browser tests | 02, 05, 07 | sonnet / opus | done (`4c55ee9`, `f1e71e7`) |
+| 09 | [The Runes tab and the trading post's Runes](09-runes-tab-and-trading-post.md) | Crafting's Modify and Runes tabs, the field embed, the post's Runes filter and rune sales, the encampment lines, the probes; scene and in-browser tests | 06, 07, 08 | opus / opus | in progress |
+| 10 | [The simulator](10-simulator.md) | Rune loot taken, `runecraftGear`, extraction before replacement, the record and summary; the guard measured | 05, 06, 07 | opus / opus | done (`5e04803`) |
 | 11 | [Measure, tune and document](11-measure-tune-document.md) | The guard judged against 01, check 2's cells, any tuning, CLAUDE.md, the manual and screenshots, the stage notes and index status, the play script | 08, 09, 10 | opus / opus | pending |
 
 ## Execution order

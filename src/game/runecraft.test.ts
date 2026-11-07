@@ -101,16 +101,36 @@ describe('embed', () => {
   })
 
   it('returns the events of the day it passes, as passTurn gives them', () => {
+    // The first day in the field that brings an event, found on a scout game,
+    // so that the embed's own day is one with something to return.
+    const scout = home()
+    intoField(scout)
+    let quiet = 0
+    while (passTurn(scout.world, scout.party).length === 0) quiet++
     const game = home()
     intoField(game)
-    game.runes = { stone1: 1 }
-    const place = wield(game, 'iron_sword@3')
     const twin = home()
     intoField(twin)
+    for (let day = 0; day < quiet; day++) {
+      passTurn(game.world, game.party)
+      passTurn(twin.world, twin.party)
+    }
+    game.runes = { stone1: 1 }
+    const place = wield(game, 'iron_sword@3')
     const expected = passTurn(twin.world, twin.party)
+    expect(expected.length).toBeGreaterThan(0)
     const result = embed(game, place, 'stone1')
     expect(result.refusal).toBeNull()
     if (result.refusal === null) expect(result.events).toEqual(expected)
+  })
+
+  it('names a rune with the right article in its refusals', () => {
+    const game = home(0)
+    intoField(game)
+    game.runes = { ember2: 1, acid1: 3 }
+    const place = wield(game, 'iron_sword@3')
+    refused(game, () => embed(game, place, 'ember2'), /; an Ember Rune needs the workshop/)
+    refused(game, () => fuse(game, 'acid1'), /^Fusing to an Acid Rune needs a level 1 workshop/)
   })
 
   it('refuses a rune above rank 1 in the field, and anywhere among monsters', () => {
