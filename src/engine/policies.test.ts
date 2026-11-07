@@ -390,6 +390,38 @@ describe('policies', () => {
     })
   })
 
+  describe('aggressive with an on-hit weapon', () => {
+    const EMBER: CombatantStats = { ...GOBLIN_STATS, onHit: [{ damage: 3, element: 'fire' }] }
+    const FOE: CombatantStats = { ...GOBLIN_STATS, maxHp: 60 }
+    const WARDED: CombatantStats = { ...FOE, wards: { fire: 3 } }
+    const pair = (self: CombatantStats, e1: CombatantStats, e2: CombatantStats) =>
+      new BattleEngine({
+        board: { cols: 8, rows: 3 },
+        units: [
+          { id: 'p1', side: 'player', stats: self, position: hex(1, 1) },
+          { id: 'e1', side: 'enemy', stats: e1, position: hex(2, 1) },
+          { id: 'e2', side: 'enemy', stats: e2, position: hex(2, 0) },
+        ],
+      })
+    const at = (target: string): Action => ({ type: 'attack', unit: 'p1', target })
+
+    it('strikes the foe its fire gets through to', () => {
+      expect(choose(pair(GOBLIN_STATS, FOE, FOE))).toEqual(at('e1'))
+      expect(choose(pair(EMBER, WARDED, FOE))).toEqual(at('e2'))
+      expect(choose(pair(EMBER, FOE, WARDED))).toEqual(at('e1'))
+    })
+
+    it('makes today’s choice without one, wards or not', () => {
+      expect(choose(pair(GOBLIN_STATS, WARDED, FOE))).toEqual(at('e1'))
+    })
+
+    it('counts a bane only against the regenerating', () => {
+      const dawn: CombatantStats = { ...GOBLIN_STATS, onHit: [{ damage: 3, element: 'blight', bane: true }] }
+      expect(choose(pair(dawn, FOE, { ...FOE, regeneration: 1 }))).toEqual(at('e2'))
+      expect(choose(pair(dawn, { ...FOE, regeneration: 1 }, FOE))).toEqual(at('e1'))
+    })
+  })
+
   describe('aggressive with an area ability', () => {
     // At (3,1), a cone of fire west of it covers (2,1), then (1,1), (1,2) and (2,0).
     const SPITTER: CombatantStats = { ...GOBLIN_STATS, name: 'Salamander', toHit: 80, attackApCost: 4, abilities: ['fire_spit'] }

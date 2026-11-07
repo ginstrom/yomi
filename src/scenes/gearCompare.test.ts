@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { IRON_SWORD, OAK_SHIELD, YEW_BOW, itemById } from '../inventory/inventory.ts'
-import { attackCostWarning, attacksPerTurn, compareLines, fieldCraftSummary, statLines, statSummary } from './gearCompare.ts'
+import { attackCostWarning, attacksPerTurn, compareLines, fieldCraftSummary, onHitLines, statLines, statSummary, WARDS_ROW_CHARS, WARDS_WIDE_ROW_CHARS, wardsLines } from './gearCompare.ts'
 
 describe('gear comparisons', () => {
   it('counts the attacks a turn an item gives', () => {
@@ -17,7 +17,7 @@ describe('gear comparisons', () => {
   })
 
   it('names what a modifier adds and takes', () => {
-    expect(compareLines(OAK_SHIELD, itemById('oak_shield+braced1')!)).toEqual(['Armor Class: +10 → +13', 'To Hit: none → −5%'])
+    expect(compareLines(OAK_SHIELD, itemById('oak_shield+braced1')!)).toEqual(['Armor Class: +10 → +13', 'To Hit: −5%'])
     expect(statLines(IRON_SWORD)).toEqual(['Damage: 1d8+3', 'Attack: 5 AP, 1 attack a turn', 'Range: 1 hex', 'Pierces: 1 resistance'])
     expect(statSummary(itemById('yew_bow@3')!)).toBe('1d6+2, 4 AP, range 5, hit +5%')
   })
@@ -51,8 +51,26 @@ describe('gear comparisons', () => {
   it('compares the strength a craft changes and leaves equal rows out', () => {
     const sword = itemById('steel_longsword')!
     const hammer = itemById('steel_war_hammer')!
-    expect(compareLines(sword, hammer, 8, 3)).toContain('Strength: none → 6 (you have 3): to hit −15%')
+    expect(compareLines(sword, hammer, 8, 3)).toContain('Strength: 6 (you have 3): to hit −15%')
     expect(compareLines(hammer, hammer, 8, 6)).toEqual([])
+  })
+
+  it('tells what runes add: wards, maximum hit points and what a hit does', () => {
+    const sword = itemById('iron_sword@3')!
+    expect(compareLines(sword, itemById('iron_sword@3#ember1')!)).toEqual(['On a hit: +1 fire'])
+    expect(compareLines(sword, itemById('iron_sword@3#ember3')!)).toEqual(['On a hit: +3 fire, lays Seared'])
+    expect(statLines(itemById('steel_longsword@3#ember1.life1')!)).toContain('On a hit: +1 fire; heals 1')
+    const venom = 'On a hit: +2 poison, lays Poisoned on a critical'
+    expect(compareLines(itemById('steel_longsword@3#venom2')!, itemById('steel_longsword@3#venom2.ember1')!)).toEqual([`${venom} → +2 poison, lays Poisoned on a critical; +1 fire`])
+    // Taking out the first of two runes changes the one line.
+    expect(compareLines(itemById('steel_longsword@3#venom2.ember1')!, itemById('steel_longsword@3#ember1')!)).toEqual(['On a hit: +2 poison, lays Poisoned on a critical; +1 fire → +1 fire'])
+    expect(statLines(itemById('steel_longsword@3#venom2')!)).toContain('On a hit: +2 poison, lays Poisoned on a critical')
+    const plate = itemById('iron_breastplate@3')!
+    expect(compareLines(plate, itemById('iron_breastplate@3#rime1')!)).toEqual(['Wards: frost 2'])
+    expect(compareLines(plate, itemById('iron_breastplate@3#life1')!)).toEqual(['Max HP: +4'])
+    expect(compareLines(itemById('iron_breastplate@3#rime1')!, plate)).toEqual(['Wards: no longer frost 2'])
+    expect(compareLines(sword, itemById('iron_sword@3#ember1')!).join('\n')).not.toContain('none')
+    expect(statSummary(itemById('iron_breastplate@3#rime1')!)).toContain('frost ward 2')
   })
 
   it('keeps the holder\'s strength shortfall in a comparison though the craft leaves it alone', () => {
@@ -71,5 +89,42 @@ describe('attackCostWarning', () => {
   it('is silent when the attack fits the turn', () => {
     expect(attackCostWarning(7, 7)).toBeNull()
     expect(attackCostWarning(5, 8)).toBeNull()
+  })
+})
+
+describe('the wards lines', () => {
+  it('lists the wards above 0 in element order, and is empty with none', () => {
+    expect(wardsLines({ frost: 4, fire: 2, acid: 0 })).toEqual(['Wards:', '  fire 2, frost 4'])
+    expect(wardsLines({ fire: 0 })).toEqual([])
+    expect(wardsLines(undefined)).toEqual([])
+  })
+
+  it('wraps onto indented rows that fit the column, up to all six elements', () => {
+    const all = wardsLines({ fire: 3, frost: 3, lightning: 3, acid: 3, poison: 3, blight: 3 })
+    expect(all.join(' ').replace(/,/g, '').replace(/ +/g, ' ')).toBe('Wards: fire 3 frost 3 lightning 3 acid 3 poison 3 blight 3')
+    for (const line of all.slice(1)) expect(line.length - 2).toBeLessThanOrEqual(WARDS_ROW_CHARS)
+    expect(all.length).toBeLessThanOrEqual(5)
+    const wide = wardsLines({ fire: 3, frost: 3, lightning: 3, acid: 3, poison: 3, blight: 3 }, WARDS_WIDE_ROW_CHARS)
+    for (const line of wide.slice(1)) expect(line.length - 2).toBeLessThanOrEqual(WARDS_WIDE_ROW_CHARS)
+    expect(wide.length).toBe(3)
+    const three = wardsLines({ fire: 2, frost: 2, lightning: 2 })
+    expect(three).toEqual(['Wards:', '  fire 2, frost 2,', '  lightning 2'])
+  })
+})
+
+describe('the on-hit lines', () => {
+  const onHit = (id: string) => itemById(id)!.stats!.onHit
+  it('tells what the main hand does on a hit, wrapped as the wards are, and is empty with nothing', () => {
+    expect(onHitLines(onHit('iron_sword@3#ember3'))).toEqual(['On a hit:', '  +3 fire, lays Seared'])
+    expect(onHitLines(onHit('iron_sword@3'))).toEqual([])
+    expect(onHitLines(undefined)).toEqual([])
+    expect(onHitLines(onHit('steel_longsword@3#rime3.life1'))).toEqual(['On a hit:', '  +3 frost, heals 1,', '  lays Chilled on crit'])
+  })
+  it('names a bane briefly, and keeps every row within the column', () => {
+    const lines = onHitLines(onHit('steel_longsword@3#dawn4.venom4'))
+    expect(lines[0]).toBe('On a hit:')
+    expect(lines.join(' ')).toContain('+7 blight (bane)')
+    expect(lines.join(' ')).toContain('lays Poisoned on crit')
+    for (const line of lines.slice(1)) expect(line.length - 2).toBeLessThanOrEqual(WARDS_ROW_CHARS)
   })
 })

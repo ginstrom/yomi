@@ -1,7 +1,8 @@
-import { formatDamage } from '../combat/combat.ts'
+import { ELEMENTS, formatDamage, type Element, type OnHit } from '../combat/combat.ts'
 import { gradeNumeral } from '../inventory/grades.ts'
 import { SHORTFALL_TO_HIT, strengthShortfall, type Item, type ItemStats } from '../inventory/inventory.ts'
 import { MODIFIER_IDS, MODIFIERS } from '../inventory/modifiers.ts'
+import { onHitParts } from '../inventory/runes.ts'
 
 /**
  * The trading post's and the crafting screen's words for an item's stats,
@@ -40,8 +41,17 @@ function statWords(stats: ItemStats, ap: number, strength?: number): Array<[stri
   if (stats.spellSkill) words.push(['Spell Skill', signed(stats.spellSkill, '%')])
   if (stats.maxMana) words.push(['Mana', signed(stats.maxMana)])
   if (stats.critChance) words.push(['Critical', signed(stats.critChance, '%')])
+  const wards = wardWords(stats.wards)
+  if (wards) words.push(['Wards', wards])
+  if (stats.maxHp) words.push(['Max HP', signed(stats.maxHp)])
+  // Every entry (a rune's each) on one line, so that a rune set or taken out changes that one line.
+  if (stats.onHit?.length) words.push(['On a hit', stats.onHit.map((entry) => onHitParts([entry]).join(', ')).join('; ')])
   return words
 }
+
+/** The wards above 0 in element order, "fire 2, frost 4"; empty with none. */
+const wardWords = (wards: Partial<Record<Element, number>> | undefined): string =>
+  ELEMENTS.filter((element) => (wards?.[element] ?? 0) > 0).map((element) => `${element} ${wards![element]}`).join(', ')
 
 /**
  * An item's stats as lines: "Damage: 1d8+3", "Attack: 5 AP, 1 attack a turn", ...;
@@ -67,12 +77,16 @@ export function statSummary(item: Item): string {
   if (s.spellSkill) parts.push(`spell ${signed(s.spellSkill, '%')}`)
   if (s.maxMana) parts.push(`mana ${signed(s.maxMana)}`)
   if (s.critChance) parts.push(`crit ${signed(s.critChance, '%')}`)
+  for (const element of ELEMENTS) if (s.wards?.[element]) parts.push(`${element} ward ${s.wards[element]}`)
+  if (s.maxHp) parts.push(`hp ${signed(s.maxHp)}`)
+  for (const entry of s.onHit ?? []) if (entry.damage > 0) parts.push(`+${entry.damage} ${entry.element ?? 'damage'}`)
   return parts.join(', ')
 }
 
 /**
  * What changes from `before` to `after`, a line a stat: "Damage: 1d8+3 → 1d8+2",
- * "Attack: 5 AP, 1 attack a turn → 4 AP, 2 attacks a turn"; a stat both have
+ * "Attack: 5 AP, 1 attack a turn → 4 AP, 2 attacks a turn", a stat gained as
+ * what it now is and one lost as "no longer ..." (never "none"); a stat both have
  * alike is left out, but for a strength the holder falls short of, which stays as context.
  */
 export function compareLines(before: Item, after: Item, ap = TYPICAL_AP, strength?: number): string[] {
@@ -81,9 +95,14 @@ export function compareLines(before: Item, after: Item, ap = TYPICAL_AP, strengt
   const labels = [...new Set([...was.keys(), ...now.keys()])]
   // A shortfall is kept as context even where the craft leaves it alone: it is what the holder pays.
   const short = (label: string) => label === 'Strength' && strength !== undefined && strengthShortfall(strength, after.stats ?? {}) > 0
-  return labels
-    .filter((label) => was.get(label) !== now.get(label) || short(label))
-    .map((label) => (was.get(label) === now.get(label) ? `${label}: ${now.get(label)}` : `${label}: ${was.get(label) ?? 'none'} → ${now.get(label) ?? 'none'}`))
+  return labels.filter((label) => was.get(label) !== now.get(label) || short(label)).map((label) => changeLine(label, was.get(label), now.get(label)))
+}
+
+/** One stat's change: "Damage: 1d8+3 → 1d8+2"; gained, only what it now is ("On a hit: +1 fire"); lost, "Wards: no longer frost 2". */
+function changeLine(label: string, was: string | undefined, now: string | undefined): string {
+  if (was === now || was === undefined) return `${label}: ${now}`
+  if (now === undefined) return `${label}: no longer ${was}`
+  return `${label}: ${was} → ${now}`
 }
 
 /** The crafting screen's line on what the field makes: the modifiers that need no workshop, at grade I, a day each. */
@@ -99,4 +118,40 @@ export function fieldCraftSummary(): string {
  */
 export function attackCostWarning(attackApCost: number, actionPoints: number): string | null {
   return attackApCost > actionPoints ? `Attack costs ${attackApCost} AP, you have ${actionPoints}: cannot attack` : null
+}
+
+/** The widest a wards row may be, in characters at 14 px: the Character tab's stat column leaves 24, the Inventory tab's 29. */
+export const WARDS_ROW_CHARS = 24
+export const WARDS_WIDE_ROW_CHARS = 29
+
+/**
+ * The stat sheet's wards: a "Wards:" line, then the wards above 0 in element order ("fire 2, frost 4"),
+ * packed into indented rows of at most `rowChars`, so that all six elements fit the column. Empty
+ * when there are none.
+ */
+export function wardsLines(wards: Partial<Record<Element, number>> | undefined, rowChars = WARDS_ROW_CHARS): string[] {
+  const shown = ELEMENTS.filter((element) => (wards?.[element] ?? 0) > 0).map((element) => `${element} ${wards![element]}`)
+  return packedLines('Wards:', shown, rowChars)
+}
+
+/**
+ * The stat sheet's on-hit line for the main hand (runes): an "On a hit:" line, then what a hit
+ * adds in the engine's order (damage, healing, statuses), "+3 fire, lays Seared", packed into
+ * indented rows as the wards are. It takes `onHitParts`'s short form, for the column's width. Empty with none.
+ */
+export function onHitLines(onHit: readonly OnHit[] | undefined, rowChars = WARDS_ROW_CHARS): string[] {
+  return packedLines('On a hit:', onHitParts(onHit ?? [], 'short'), rowChars)
+}
+
+/** `title`, then `parts` joined by commas into indented rows of at most `rowChars`, a row followed by another ending with a comma; empty with no parts. */
+function packedLines(title: string, parts: readonly string[], rowChars: number): string[] {
+  if (parts.length === 0) return []
+  const rows: string[] = []
+  for (const part of parts) {
+    const last = rows.length - 1
+    // One character is kept for the comma a row ends with when another follows.
+    if (last >= 0 && `${rows[last]}, ${part}`.length + 1 <= rowChars) rows[last] += `, ${part}`
+    else rows.push(part)
+  }
+  return [title, ...rows.map((row, i) => `  ${row}${i < rows.length - 1 ? ',' : ''}`)]
 }

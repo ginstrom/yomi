@@ -151,6 +151,11 @@ describe('the encampment', () => {
     await game.waitForScenes(['TradingPost'], ['World'])
     const post = await game.settled('TradingPost')
     expect(post.rows.some((row) => row.id.includes('@'))).toBe(false)
+    // A level 1 post sells no runes.
+    await game.click(post.runesButton)
+    expect((await game.settled('TradingPost', (p) => p.filter.slot === 'runes')).rows).toEqual([])
+    await game.click(post.slotButtons.find((b) => b.slot === 'mainHand')!)
+    await game.settled('TradingPost', (p) => p.filter.slot === 'mainHand')
 
     const sword = post.rows.find((row) => row.id === 'iron_sword')!
     await game.click(sword)
@@ -218,6 +223,173 @@ describe('the encampment', () => {
     const selling = await game.settled('TradingPost', (p) => p.tab === 'sell')
     expect(selling.slotButtons).toEqual([])
     expect(selling.rows.map((row) => row.id)).toEqual(expect.arrayContaining(['baggage:0', 'baggage:1']))
+  })
+
+  it('buys Lesser runes under the post\'s Runes filter and sells one from the pouch', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 100 }, 2)
+    const camp = await enter(game)
+    await game.click(facility(camp, 'trading_post'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'trading_post')
+    await game.click(shown.buttons.open)
+    await game.waitForScenes(['TradingPost'], ['World'])
+    const post = await game.settled('TradingPost')
+    await game.click(post.runesButton)
+    const runes = await game.settled('TradingPost', (p) => p.filter.slot === 'runes')
+    expect(runes.familyButtons).toEqual([])
+    expect(runes.rows.map((row) => [row.id, row.kind, row.price])).toEqual(
+      ['ember1', 'rime1', 'storm1', 'stone1', 'wind1', 'life1'].map((key) => [`rune:${key}`, 'rune', 15]),
+    )
+    await game.click(runes.rows.find((row) => row.id === 'rune:ember1')!)
+    const ember = await game.settled('TradingPost', (p) => p.selected === 'rune:ember1')
+    expect(ember.details).toEqual([
+      'In a weapon: On a hit, +1 fire',
+      'In armour: Fire ward 2',
+      'In a shield: Fire ward 2',
+      'Set in a socketed item: tier-2 or Masterwork gear.',
+      'Costs 15 gold.',
+    ])
+    await game.click(ember.buttons.confirm)
+    await game.settled('TradingPost', (p) => p.gold === 85)
+    await game.click(ember.buttons.confirm)
+    const bought = await game.settled('TradingPost', (p) => p.gold === 70)
+    expect(bought.message).toBe('Bought the Lesser Ember Rune for 15 gold. It is in the rune pouch.')
+
+    await game.click(bought.buttons.sellTab)
+    let selling = await game.settled('TradingPost', (p) => p.tab === 'sell')
+    expect(selling.runesButton.visible).toBe(false)
+    // The pouch's runes come last, after the packs and the materials.
+    expect(selling.rows.at(-1)!.id).toBe('rune:ember1')
+    const shownRows = (p: typeof selling) => p.rows.filter((r) => r.visible).map((r) => r.id).join()
+    while (!selling.rows.at(-1)!.visible) {
+      const before = shownRows(selling)
+      await game.click(selling.buttons.next)
+      selling = await game.settled('TradingPost', (p) => shownRows(p) !== before)
+    }
+    const row = selling.rows.find((r) => r.id === 'rune:ember1')!
+    expect([row.kind, row.price]).toEqual(['rune', 5])
+    await game.click(row)
+    const toSell = await game.settled('TradingPost', (p) => p.selected === 'rune:ember1')
+    expect(toSell.details.at(-1)).toBe('Fetches 5 gold each.')
+    await game.click(toSell.buttons.confirm)
+    const sold = await game.settled('TradingPost', (p) => p.gold === 75)
+    expect(sold.message).toBe('Sold the Lesser Ember Rune for 5 gold.')
+    // One is left, and the line with it.
+    expect(sold.selected).toBe('rune:ember1')
+  })
+
+  it('embeds, extracts and fuses runes on the workshop\'s Runes tab, a refusal naming the level it needs', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 100 }, undefined, {
+      'world.workshop': 2,
+      'party.0.equipment.mainHand': 'iron_sword@3',
+      runes: { ember1: 1, storm1: 3 },
+    })
+    const camp = await enter(game)
+    await game.click(facility(camp, 'workshop'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'workshop')
+    await game.click(shown.buttons.open)
+    await game.waitForScenes(['Crafting'], ['World'])
+    const bench = await game.settled('Crafting')
+    expect(bench.tab).toBe('modify')
+    await game.click(bench.buttons.runesTab)
+    const runes = await game.settled('Crafting', (c) => c.tab === 'runes')
+    expect(runes.items.map((item) => [item.id, item.itemId])).toEqual([['worn:0:mainHand', 'iron_sword@3']])
+    expect(runes.pouch.map((p) => [p.key, p.count])).toEqual([['ember1', 1], ['storm1', 3]])
+    expect(runes.itemsHint).toBe('')
+    // Hovering a pouch row tells what the rune does in each place and where it goes.
+    await game.hover(runes.pouch[0].row)
+    const hovered = await game.settled('Crafting', (c) => c.tooltip.length > 0)
+    expect(hovered.tooltip).toEqual([
+      'Lesser Ember Rune',
+      'In a weapon: On a hit, +1 fire',
+      'In armour: Fire ward 2',
+      'In a shield: Fire ward 2',
+      'Set in a socketed item: tier-2 or Masterwork gear.',
+    ])
+    // No item is selected yet, so Embed is greyed; Fuse needs none.
+    expect(runes.pouch[0].embed.enabled).toBe(false)
+    expect(runes.pouch[1].fuse.enabled).toBe(true)
+
+    await game.click(runes.items[0])
+    const sword = await game.settled('Crafting', (c) => c.selected === 'worn:0:mainHand')
+    expect(sword.sockets).toMatchObject([{ index: 0, rune: null, visible: false }])
+    await game.click(sword.pouch.find((p) => p.key === 'ember1')!.embed)
+    const embedding = await game.settled('Crafting', (c) => c.chosen === 'embed:ember1')
+    expect(embedding.preview).toEqual([
+      'Set a Lesser Ember Rune in the Masterwork Iron Longsword.',
+      'Makes the Masterwork Iron Longsword [Ember I].',
+      'On a hit: +1 fire',
+      'Costs 5 gold.',
+    ])
+    await game.click(embedding.buttons.confirm)
+    const embedded = await game.settled('Crafting', (c) => c.items[0].itemId === 'iron_sword@3#ember1')
+    expect(embedded.message).toBe('Set the Lesser Ember Rune: the Masterwork Iron Longsword [Ember I].')
+    expect(embedded.selected).toBe('worn:0:mainHand')
+    expect(embedded.sockets).toMatchObject([{ index: 0, rune: 'ember1', visible: true, enabled: true }])
+    expect(embedded.pouch.map((p) => p.key)).toEqual(['storm1'])
+
+    await game.click(embedded.sockets[0])
+    const extracting = await game.settled('Crafting', (c) => c.chosen === 'extract:0')
+    expect(extracting.preview.at(-1)).toBe('Costs 10 gold.')
+    await game.click(extracting.buttons.confirm)
+    const extracted = await game.settled('Crafting', (c) => c.items[0].itemId === 'iron_sword@3')
+    expect(extracted.message).toBe('Took the Lesser Ember Rune out of the Masterwork Iron Longsword; it is back in the pouch.')
+    expect(extracted.pouch.map((p) => [p.key, p.count])).toEqual([['ember1', 1], ['storm1', 3]])
+
+    await game.click(extracted.pouch.find((p) => p.key === 'storm1')!.fuse)
+    const fusing = await game.settled('Crafting', (c) => c.chosen === 'fuse:storm1')
+    // The last action's message goes once another is previewed.
+    expect(fusing.message).toBe('')
+    expect(fusing.preview).toEqual(['3 × Lesser Storm Rune → Storm Rune', 'Costs 20 gold.'])
+    await game.click(fusing.buttons.confirm)
+    const fused = await game.settled('Crafting', (c) => c.pouch.some((p) => p.key === 'storm2'))
+    expect(fused.message).toBe('Fused three Lesser Storm Runes into one Storm Rune.')
+    // A greyed Fuse still shows why: the next rank needs a workshop stage 10 adds.
+    const storm = fused.pouch.find((p) => p.key === 'storm2')!
+    expect(storm.fuse.enabled).toBe(false)
+    await game.click(storm.fuse)
+    const refused = await game.settled('Crafting', (c) => c.chosen === 'fuse:storm2')
+    expect(refused.message).toBe('')
+    expect(refused.preview.at(-1)).toMatch(/^Fusing to a Greater Storm Rune needs a level 4 workshop\.$/)
+    expect(refused.buttons.confirm.enabled).toBe(false)
+
+    await game.click(refused.buttons.close)
+    await game.waitForScenes(['Encampment'], ['World'])
+    await game.click((await game.settled('Encampment')).buttons.leave)
+    await game.waitForScenes(['World'])
+    const world = (await game.settled('World')).world
+    expect(world.turn).toBe(1)
+    expect(world.stock.gold).toBe(100 - 5 - 10 - 20)
+  })
+
+  it('embeds a Lesser rune in the field from the map\'s Craft button, a day passing', async () => {
+    const game = await games.open()
+    const home = await richAtHome(game, { gold: 20 }, undefined, { 'party.0.equipment.mainHand': 'iron_sword@3', runes: { ember1: 1 } })
+    // A hex off the encampment, out in the field proper.
+    const { q, r } = home.world.party
+    await game.travelTo({ q: q + 1, r })
+    const away = await game.settled('World', (w) => !w.walking)
+    expect(away.world.turn).toBe(2)
+    expect(away.buttons.enterEncampment.visible).toBe(false)
+    await game.click(away.buttons.craft)
+    await game.waitForScenes(['Crafting'], ['World'])
+    const bench = await game.settled('Crafting')
+    expect(bench.tier).toBe('field')
+    await game.click(bench.buttons.runesTab)
+    const runes = await game.settled('Crafting', (c) => c.tab === 'runes')
+    await game.click(runes.items.find((item) => item.id === 'worn:0:mainHand')!)
+    const sword = await game.settled('Crafting', (c) => c.selected === 'worn:0:mainHand')
+    await game.click(sword.pouch[0].embed)
+    const chosen = await game.settled('Crafting', (c) => c.chosen === 'embed:ember1')
+    expect(chosen.preview.at(-1)).toBe('Costs 5 gold and a day.')
+    await game.click(chosen.buttons.confirm)
+    await game.waitForScenes(['World'])
+    await game.skipStory()
+    const after = await game.settled('World', (w) => w.message.includes('[Ember I]'))
+    expect(after.message).toMatch(/^A day's work makes the Masterwork Iron Longsword \[Ember I\]\./)
+    expect(after.world.turn).toBe(3)
+    expect(after.world.stock.gold).toBe(15)
   })
 
   it('shows a hero\'s strength shortfall when crafting on what they carry, and none for the baggage', async () => {
@@ -300,8 +472,15 @@ describe('the encampment', () => {
     expect(home.buttons.craft.visible).toBe(true)
     await game.click(home.buttons.craft)
     await game.waitForScenes(['Crafting'], ['World'])
-    const bench = await game.settled('Crafting')
-    expect(bench.tier).toBe('field')
+    const opened = await game.settled('Crafting')
+    expect(opened.tier).toBe('field')
+    // A new party has nothing with a socket: the Runes tab says which gear has them.
+    await game.click(opened.buttons.runesTab)
+    const runes = await game.settled('Crafting', (c) => c.tab === 'runes')
+    expect(runes.items).toEqual([])
+    expect(runes.itemsHint).toMatch(/^Nothing the party has takes a rune\. Sockets come on steel, ironwood, wolfhide and silk gear, on Masterwork gear/)
+    await game.click(runes.buttons.modifyTab)
+    const bench = await game.settled('Crafting', (c) => c.tab === 'modify')
     await game.click(bench.items.find((item) => item.id === 'worn:0:mainHand')!)
     const sword = await game.settled('Crafting', (c) => c.selected === 'worn:0:mainHand')
     expect(sword.options.map((o) => o.id)).toEqual(['balanced1'])

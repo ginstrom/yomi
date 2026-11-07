@@ -1,3 +1,4 @@
+import { clampHp, maxHp } from '../character/character.ts'
 import type { EquipmentSlot, Item } from '../inventory/inventory.ts'
 import type { GameState } from './gameState.ts'
 
@@ -33,18 +34,30 @@ function lookUp(game: GameState, place: ItemPlace): Item | null {
   return (place.from === 'worn' ? member.equipment[place.slot] : member.backpack[place.index]) ?? null
 }
 
-/** Puts `item` at `place` in place of what is there, which `itemAt` must have found. */
+/**
+ * Puts `item` at `place` in place of what is there, which `itemAt` must have
+ * found. A worn change keeps the wearer's hit points within its maximum
+ * (`clampHp`), as a Life rune may move it.
+ */
 export function replaceAt(game: GameState, place: ItemPlace, item: Item): void {
   if (place.from === 'baggage') game.baggage[place.index] = item
-  else if (place.from === 'worn') game.party[place.member].equipment[place.slot] = item
+  else if (place.from === 'worn') changeWorn(game, place.member, (member) => (member.equipment[place.slot] = item))
   else game.party[place.member].backpack[place.index] = item
 }
 
-/** Takes the item at `place` away: out of the baggage, or leaving its slot empty. */
+/** Takes the item at `place` away: out of the baggage, or leaving its slot empty (the wearer's hit points kept within its maximum). */
 export function removeAt(game: GameState, place: ItemPlace): void {
   if (place.from === 'baggage') game.baggage.splice(place.index, 1)
-  else if (place.from === 'worn') delete game.party[place.member].equipment[place.slot]
+  else if (place.from === 'worn') changeWorn(game, place.member, (member) => delete member.equipment[place.slot])
   else game.party[place.member].backpack[place.index] = null
+}
+
+/** Changes what member `m` wears, then clamps its hit points against the maximum read before. */
+function changeWorn(game: GameState, m: number, change: (member: GameState['party'][number]) => void): void {
+  const member = game.party[m]
+  const before = maxHp(member)
+  change(member)
+  clampHp(member, before)
 }
 
 /** Every item the party has, member by member (worn, then carried), then the baggage's, each with its place. */

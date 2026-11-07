@@ -22,6 +22,7 @@ import {
   deriveCombatStats,
   dropEquipped,
   dropFromBackpack,
+  clampHp,
   equipFromBackpack,
   gearChanges,
   maxHp,
@@ -709,5 +710,150 @@ describe('deriveCombatStats weapon name', () => {
     expect(deriveCombatStats(warrior).weapon).toBe('Iron Longsword')
     delete warrior.equipment.mainHand
     expect(deriveCombatStats(warrior).weapon).toBe('Fists')
+  })
+})
+
+describe('rune stats and hit points', () => {
+  const dressed = (armor: string, extra: Partial<Record<'mainHand' | 'offHand', string>> = {}) => {
+    const c = createWarrior()
+    c.equipment.armor = itemById(armor)!
+    for (const [slot, id] of Object.entries(extra)) c.equipment[slot as 'mainHand'] = itemById(id)!
+    return c
+  }
+
+  it('sums wards over everything worn, and leaves them out at none', () => {
+    expect(deriveCombatStats(createWarrior())).not.toHaveProperty('wards')
+    const c = dressed('iron_breastplate@3#ember1', { offHand: 'ironwood_shield#ember1' })
+    const armourWard = itemById('iron_breastplate@3#ember1')!.stats!.wards!.fire!
+    const shieldWard = itemById('ironwood_shield#ember1')!.stats!.wards!.fire!
+    expect(deriveCombatStats(c).wards).toEqual({ fire: armourWard + shieldWard })
+  })
+
+  it('counts a shield’s ward for nothing under a two-handed weapon', () => {
+    const c = dressed('iron_breastplate', { offHand: 'ironwood_shield#ember1', mainHand: 'iron_greatsword' })
+    expect(deriveCombatStats(c)).not.toHaveProperty('wards')
+  })
+
+  it('takes onHit from the main hand only', () => {
+    const sword = itemById('iron_sword@3#ember1')!
+    const c = createWarrior()
+    c.equipment.mainHand = sword
+    expect(deriveCombatStats(c).onHit).toEqual(sword.stats!.onHit)
+    expect(deriveCombatStats(createWarrior())).not.toHaveProperty('onHit')
+    const off = createWarrior()
+    off.equipment.offHand = { ...OAK_SHIELD, stats: { ...OAK_SHIELD.stats, onHit: [{ damage: 1 }] } }
+    expect(deriveCombatStats(off)).not.toHaveProperty('onHit')
+  })
+
+  it('adds a Life rune’s hit points to the maximum', () => {
+    const plain = dressed('iron_breastplate@3')
+    const life = dressed('iron_breastplate@3#life1')
+    expect(maxHp(life)).toBe(maxHp(plain) + 4)
+    expect(deriveCombatStats(life).maxHp).toBe(maxHp(plain) + 4)
+  })
+
+  describe('clampHp', () => {
+    const at = (hp: number, max: number) => {
+      const c = createWarrior()
+      c.hp = hp
+      return { c, before: max }
+    }
+    it('keeps the share on a fall, never above the maximum or 0 from a positive value', () => {
+      const c = createWarrior()
+      const max = maxHp(c)
+      c.hp = Math.round(max / 2)
+      clampHp(c, max + 4)
+      expect(c.hp).toBe(Math.round((Math.round(max / 2) * max) / (max + 4)))
+      c.hp = 1
+      clampHp(c, 1000)
+      expect(c.hp).toBe(1)
+      c.hp = max + 4
+      clampHp(c, max + 4)
+      expect(c.hp).toBe(max)
+    })
+    it('keeps the share on a rise: 18 of 36 becomes 20 of 40', () => {
+      const c = dressed('steel_breastplate@3#life2.life2')
+      expect(maxHp(c)).toBe(40)
+      c.hp = 18
+      clampHp(c, 36)
+      expect(c.hp).toBe(20)
+    })
+    it('scales up on a rise, and leaves 0 at 0 and an unchanged maximum alone', () => {
+      const c = createWarrior()
+      const max = maxHp(c)
+      c.hp = max
+      clampHp(c, max - 4)
+      expect(c.hp).toBe(max)
+      const z = at(0, max).c
+      clampHp(z, max + 4)
+      expect(z.hp).toBe(0)
+      const same = at(3, max).c
+      clampHp(same, max)
+      expect(same.hp).toBe(3)
+      const over = at(max + 10, max).c
+      clampHp(over, max)
+      expect(over.hp).toBe(max)
+    })
+  })
+
+  it('keeps the share when Life armour comes off, and a full hero stays full through an off-and-on swap', () => {
+    const c = dressed('iron_breastplate@3#life1')
+    c.hp = maxHp(c)
+    const full = c.hp
+    expect(unequipToBackpack(c, 'armor')).toBe(true)
+    expect(c.hp).toBe(maxHp(c))
+    expect(c.hp).toBe(full - 4)
+    equipFromBackpack(c, c.backpack.findIndex((i) => i?.id === 'iron_breastplate@3#life1'), [])
+    expect(c.hp).toBe(full)
+  })
+
+  it('round-trips a wounded hero through an off-and-on swap within a point', () => {
+    const c = dressed('iron_breastplate@3#life1')
+    c.hp = Math.round(maxHp(c) / 2)
+    const wounded = c.hp
+    unequipToBackpack(c, 'armor')
+    equipFromBackpack(c, c.backpack.findIndex((i) => i?.id === 'iron_breastplate@3#life1'), [])
+    expect(Math.abs(c.hp - wounded)).toBeLessThanOrEqual(1)
+  })
+
+  describe('in battle (the cap rule, matching the engine’s equip)', () => {
+    it('clampHp with cap only lowers hp to the new maximum, never scales it', () => {
+      const c = dressed('steel_breastplate@3#life2.life2')
+      c.hp = 18
+      clampHp(c, 36, 'cap')
+      expect(c.hp).toBe(18)
+      const plain = createWarrior()
+      plain.hp = maxHp(plain) + 4
+      clampHp(plain, maxHp(plain) + 4, 'cap')
+      expect(plain.hp).toBe(maxHp(plain))
+    })
+    it('a wounded hero keeps its hit points when Life armour comes off, goes on or is dropped', () => {
+      const c = dressed('iron_breastplate@3#life1')
+      c.hp = 20
+      expect(unequipToBackpack(c, 'armor', 'cap')).toBe(true)
+      expect(c.hp).toBe(20)
+      equipFromBackpack(c, c.backpack.findIndex((i) => i?.id === 'iron_breastplate@3#life1'), [], undefined, 'cap')
+      expect(c.hp).toBe(20)
+      dropEquipped(c, 'armor', [], 'cap')
+      expect(c.hp).toBe(20)
+    })
+    it('a full hero loses the excess when Life armour comes off', () => {
+      const c = dressed('iron_breastplate@3#life1')
+      c.hp = maxHp(c)
+      unequipToBackpack(c, 'armor', 'cap')
+      expect(c.hp).toBe(maxHp(c))
+    })
+  })
+
+  it('clamps on dropping and on replacing Life armour with plain', () => {
+    const dropped = dressed('iron_breastplate@3#life1')
+    dropped.hp = maxHp(dropped)
+    dropEquipped(dropped, 'armor', [])
+    expect(dropped.hp).toBe(maxHp(dropped))
+    const swapped = dressed('iron_breastplate@3#life1')
+    swapped.hp = maxHp(swapped)
+    swapped.backpack[0] = itemById('iron_breastplate@3')!
+    equipFromBackpack(swapped, 0, [])
+    expect(swapped.hp).toBe(maxHp(swapped))
   })
 })

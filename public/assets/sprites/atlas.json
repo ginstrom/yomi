@@ -1534,8 +1534,8 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 400,
-        "y": 454
+        "x": 106,
+        "y": 475
       },
       "pivot": {
         "x": 0.5,
@@ -1564,8 +1564,8 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 417,
-        "y": 454
+        "x": 123,
+        "y": 475
       },
       "pivot": {
         "x": 0.5,
@@ -1588,8 +1588,8 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 434,
-        "y": 454
+        "x": 140,
+        "y": 475
       },
       "pivot": {
         "x": 0.5,
@@ -1612,8 +1612,8 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 451,
-        "y": 454
+        "x": 157,
+        "y": 475
       },
       "pivot": {
         "x": 0.5,
@@ -1636,8 +1636,8 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 468,
-        "y": 454
+        "x": 174,
+        "y": 475
       },
       "pivot": {
         "x": 0.5,
@@ -1660,8 +1660,8 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 485,
-        "y": 454
+        "x": 191,
+        "y": 475
       },
       "pivot": {
         "x": 0.5,
@@ -1690,7 +1690,7 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 1,
+        "x": 208,
         "y": 475
       },
       "pivot": {
@@ -4374,7 +4374,7 @@
       },
       "trimmed": false
     },
-    "icon_shield/base": {
+    "icon_rune_acid/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4398,7 +4398,7 @@
       },
       "trimmed": false
     },
-    "icon_shortsword/base": {
+    "icon_rune_dawn/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4422,7 +4422,7 @@
       },
       "trimmed": false
     },
-    "icon_spear/base": {
+    "icon_rune_ember/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4446,7 +4446,7 @@
       },
       "trimmed": false
     },
-    "icon_staff/base": {
+    "icon_rune_life/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4470,7 +4470,7 @@
       },
       "trimmed": false
     },
-    "icon_sword/base": {
+    "icon_rune_mind/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4494,7 +4494,7 @@
       },
       "trimmed": false
     },
-    "icon_sword_ember/base": {
+    "icon_rune_rime/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4518,7 +4518,7 @@
       },
       "trimmed": false
     },
-    "icon_tower_shield/base": {
+    "icon_rune_stone/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4542,7 +4542,7 @@
       },
       "trimmed": false
     },
-    "icon_wand/base": {
+    "icon_rune_storm/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4566,7 +4566,7 @@
       },
       "trimmed": false
     },
-    "icon_wand_storm/base": {
+    "icon_rune_venom/base": {
       "frame": {
         "h": 20,
         "w": 20,
@@ -4590,12 +4590,300 @@
       },
       "trimmed": false
     },
-    "icon_war_hammer/base": {
+    "icon_rune_wind/base": {
       "frame": {
         "h": 20,
         "w": 20,
         "x": 379,
         "y": 454
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_shield/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 400,
+        "y": 454
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_shortsword/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 421,
+        "y": 454
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_socket_empty/base": {
+      "frame": {
+        "h": 6,
+        "w": 6,
+        "x": 259,
+        "y": 475
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 6,
+        "w": 6
+      },
+      "spriteSourceSize": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_socket_filled/base": {
+      "frame": {
+        "h": 6,
+        "w": 6,
+        "x": 266,
+        "y": 475
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 6,
+        "w": 6
+      },
+      "spriteSourceSize": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_spear/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 442,
+        "y": 454
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_staff/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 463,
+        "y": 454
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_sword/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 484,
+        "y": 454
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_sword_ember/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 1,
+        "y": 475
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_tower_shield/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 22,
+        "y": 475
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_wand/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 43,
+        "y": 475
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_wand_storm/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 64,
+        "y": 475
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 20,
+        "w": 20
+      },
+      "spriteSourceSize": {
+        "h": 20,
+        "w": 20,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_war_hammer/base": {
+      "frame": {
+        "h": 20,
+        "w": 20,
+        "x": 85,
+        "y": 475
       },
       "pivot": {
         "x": 0.5,
@@ -5548,7 +5836,7 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 18,
+        "x": 225,
         "y": 475
       },
       "pivot": {
@@ -5572,7 +5860,7 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 35,
+        "x": 242,
         "y": 475
       },
       "pivot": {
@@ -5918,7 +6206,7 @@
     "image": "atlas.png",
     "scale": "1",
     "size": {
-      "h": 492,
+      "h": 496,
       "w": 512
     }
   }

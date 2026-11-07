@@ -15,10 +15,15 @@ import {
   SPARK_WAND,
   WEAPONS,
   YEW_BOW,
+  EMBERBLADE,
+  baseItem,
   craftedItem,
   describeItemStats,
   itemById,
   strengthShortfall,
+  unmodified,
+  unruned,
+  withRunes,
   type ItemStats,
 } from './inventory.ts'
 import { modifiersFor } from './modifiers.ts'
@@ -208,5 +213,131 @@ describe('weight', () => {
     expect(describeItemStats(itemById('iron_plate')!.stats, 6)).toContain('Strength: 6')
     expect(describeItemStats(itemById('iron_plate')!.stats, 8)).toContain('Strength: 6')
     expect(describeItemStats({ spellSkill: 5 })).toEqual(['Spell Skill: +5%'])
+  })
+})
+
+describe('runed ids', () => {
+  const item = (id: string) => itemById(id)!
+
+  it('round-trip, one object an id', () => {
+    for (const id of ['iron_sword@3#ember1', 'steel_longsword@3+light1#ember2.storm1', 'emberblade#dawn1', 'iron_breastplate@3#life1']) {
+      expect(itemById(id), id).toBeDefined()
+      expect(item(id).id).toBe(id)
+      expect(itemById(id)).toBe(itemById(id))
+    }
+  })
+
+  it('resolve an alias with runes to the canonical item', () => {
+    expect(itemById('steel_armor@3#stone1')).toBe(itemById('iron_breastplate@3#stone1'))
+    expect(item('steel_armor@3#stone1').id).toBe('iron_breastplate@3#stone1')
+  })
+
+  it('name the runes after the item', () => {
+    expect(item('iron_sword@3#ember1').name).toBe('Masterwork Iron Longsword [Ember I]')
+    expect(item('steel_longsword@3#ember2.storm1').name).toBe('Masterwork Steel Longsword [Ember II, Storm I]')
+    expect(item('emberblade#dawn1').name).toBe('Emberblade [Dawn I]')
+  })
+
+  it('fold each rune into the stats by the slot it sits in', () => {
+    const sword = item('iron_sword@3')
+    expect(item('iron_sword@3#stone1').stats!.damage!.bonus).toBe(sword.stats!.damage!.bonus + 1)
+    expect(item('iron_sword@3#stone1').stats).toEqual({ ...sword.stats, damage: { ...sword.stats!.damage!, bonus: sword.stats!.damage!.bonus + 1 } })
+    expect(item('iron_breastplate@3#rime2').stats!.wards).toEqual({ frost: 4 })
+    expect(item('iron_breastplate@3#stone1').stats!.resistance).toBe(item('iron_breastplate@3').stats!.resistance! + 1)
+    expect(item('iron_breastplate@3#life2').stats!.maxHp).toBe(8)
+    expect(item('iron_sword@3#ember3').stats!.onHit).toEqual([{ damage: 3, element: 'fire', status: { id: 'seared', turns: 1 } }])
+    expect(item('steel_longsword@3#ember1.ember2').stats!.onHit).toEqual([
+      { damage: 1, element: 'fire' },
+      { damage: 2, element: 'fire' },
+    ])
+    expect(item('steel_breastplate@3#rime1.rime2').stats!.wards).toEqual({ frost: 6 })
+    expect(item('steel_longsword@3#storm1').stats!.toHit).toBe(item('steel_longsword@3').stats!.toHit! + 3)
+    expect(item('emberblade#acid1').stats!.armorPierce).toBe(EMBERBLADE.stats!.armorPierce! + 1)
+  })
+
+  it('make another id, and an equal item, of the same runes in another order', () => {
+    const a = item('steel_longsword@3#ember1.storm1')
+    const b = item('steel_longsword@3#storm1.ember1')
+    expect(a).not.toBe(b)
+    expect(b.id).toBe('steel_longsword@3#storm1.ember1')
+    expect(b.stats).toEqual(a.stats)
+  })
+
+  it('keep the family, material, tier, grade and modifier, and a base for a plain item', () => {
+    const runed = item('steel_longsword@3+light1#ember2')
+    const unrunedItem = item('steel_longsword@3+light1')
+    expect([runed.family, runed.material, runed.tier, runed.grade, runed.mod]).toEqual([
+      unrunedItem.family,
+      unrunedItem.material,
+      unrunedItem.tier,
+      unrunedItem.grade,
+      unrunedItem.mod,
+    ])
+    expect(runed.runes).toEqual(['ember2'])
+    expect(runed.base).toBe('steel_longsword')
+    expect(item('steel_longsword#ember1').base).toBe('steel_longsword')
+    expect(baseItem(item('iron_sword@3#ember1'))).toBe(IRON_SWORD)
+    expect(baseItem(item('steel_longsword#ember1'))).toBe(itemById('steel_longsword'))
+    expect(item('emberblade#ember1').base).toBeUndefined()
+    expect(baseItem(item('emberblade#ember1'))).toBeNull()
+    expect(item('emberblade#ember1').sockets).toBe(1)
+  })
+
+  it('come off and go on again as the same objects itemById gives', () => {
+    const runed = item('steel_longsword@3+light1#ember2.storm1')
+    expect(unruned(runed)).toBe(itemById('steel_longsword@3+light1'))
+    expect(unruned(IRON_SWORD)).toBe(IRON_SWORD)
+    expect(withRunes(runed, [])).toBe(itemById('steel_longsword@3+light1'))
+    expect(withRunes(runed, ['stone1'])).toBe(itemById('steel_longsword@3+light1#stone1'))
+    expect(withRunes(item('iron_sword@3'), ['ember1'])).toBe(itemById('iron_sword@3#ember1'))
+    expect(withRunes(item('iron_sword@3'), ['ember1', 'storm1'])).toBeUndefined()
+    expect(withRunes(EMBERBLADE, ['dawn1'])).toBe(itemById('emberblade#dawn1'))
+    expect(craftedItem(itemById('steel_longsword')!, 3, { id: 'light', grade: 1 }, ['ember2', 'storm1'])).toBe(runed)
+    expect(craftedItem(itemById('steel_longsword')!, 3, undefined, [])).toBe(itemById('steel_longsword@3'))
+    expect(unmodified(runed)).toBe(itemById('steel_longsword@3#ember2.storm1'))
+  })
+
+  it('refuse a rune part that is empty, malformed, unfitting or more than the sockets', () => {
+    for (const id of [
+      'iron_sword#ember1',
+      'iron_sword@3#ember1.storm1',
+      'iron_sword@3#mind1',
+      'iron_sword@3#',
+      'iron_sword@3#ember5',
+      'iron_sword@3#fire1',
+      'iron_sword@3#ember1.',
+      'iron_sword@3#ember1#storm1',
+      'ring_protection#ember1',
+      'emberblade@2#ember1',
+      'emberblade#ember1.storm1',
+      'mithril_sword@3#ember1',
+    ]) {
+      expect(itemById(id), id).toBeUndefined()
+    }
+    expect(itemById('spark_wand@3#mind1')!.stats!.spellSkill).toBe(3)
+  })
+})
+
+describe('the words of runed stats', () => {
+  it('tell wards in element order, maximum hit points and each on-hit effect', () => {
+    expect(describeItemStats({ wards: { poison: 2, fire: 4, frost: 0 } })).toEqual(['Fire ward 4', 'Poison ward 2'])
+    expect(describeItemStats({ maxHp: 8 })).toEqual(['Max HP: +8'])
+    expect(
+      describeItemStats({
+        onHit: [
+          { damage: 3, element: 'fire', status: { id: 'seared', turns: 1 } },
+          { damage: 3, element: 'frost', status: { id: 'chilled', turns: 1 }, onCrit: true },
+          { damage: 2, element: 'blight', bane: true },
+          { damage: 0, heal: 1 },
+          { damage: 1 },
+        ],
+      }),
+    ).toEqual([
+      'On a hit: +3 fire, lays Seared',
+      'On a hit: +3 frost, lays Chilled on a critical',
+      'On a hit: +2 blight to the regenerating and the blighted',
+      'On a hit: heals 1',
+      'On a hit: +1 damage',
+    ])
   })
 })

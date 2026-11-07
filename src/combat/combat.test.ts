@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, damageThrough, effectiveResistance, foeAtLevel, foeYardstick, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, warded, type CombatantStats } from './combat.ts'
+import { BLIGHT_HORROR_STATS, GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, baneApplies, damageThrough, effectiveResistance, foeAtLevel, foeYardstick, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, warded, type CombatantStats } from './combat.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -158,6 +158,25 @@ describe('sameCombatStats', () => {
     expect(sameCombatStats({ ...WARRIOR_STATS, wards: { fire: 3 } }, { ...WARRIOR_STATS, wards: { fire: 2 } })).toBe(false)
     expect(sameCombatStats({ ...WARRIOR_STATS, wards: { fire: 3 } }, { ...WARRIOR_STATS, wards: { frost: 3 } })).toBe(false)
   })
+
+  it('compares on-hit effects deeply and in order, a missing list as empty, and blightborn', () => {
+    const fire = { damage: 1, element: 'fire' as const }
+    const seared = { damage: 3, element: 'fire' as const, status: { id: 'seared' as const, turns: 1 } }
+    const ember = { ...WARRIOR_STATS, onHit: [fire, seared] }
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, onHit: [] })).toBe(true)
+    expect(sameCombatStats(ember, { ...WARRIOR_STATS, onHit: [{ ...fire }, { ...seared, status: { ...seared.status } }] })).toBe(true)
+    expect(sameCombatStats(ember, WARRIOR_STATS)).toBe(false)
+    expect(sameCombatStats(ember, { ...WARRIOR_STATS, onHit: [fire] })).toBe(false)
+    expect(sameCombatStats(ember, { ...WARRIOR_STATS, onHit: [seared, fire] })).toBe(false)
+    expect(sameCombatStats(ember, { ...WARRIOR_STATS, onHit: [fire, { ...seared, status: { id: 'chilled', turns: 1 } }] })).toBe(false)
+    expect(sameCombatStats(ember, { ...WARRIOR_STATS, onHit: [fire, { ...seared, status: { id: 'seared', turns: 2 } }] })).toBe(false)
+    expect(sameCombatStats(ember, { ...WARRIOR_STATS, onHit: [fire, { ...seared, onCrit: true }] })).toBe(false)
+    expect(sameCombatStats(ember, { ...WARRIOR_STATS, onHit: [{ ...fire, element: 'frost' }, seared] })).toBe(false)
+    expect(sameCombatStats(ember, { ...WARRIOR_STATS, onHit: [{ ...fire, bane: true }, seared] })).toBe(false)
+    expect(sameCombatStats({ ...WARRIOR_STATS, onHit: [{ damage: 0, heal: 1 }] }, { ...WARRIOR_STATS, onHit: [{ damage: 0, heal: 2 }] })).toBe(false)
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, blightborn: true })).toBe(false)
+    expect(sameCombatStats({ ...WARRIOR_STATS, blightborn: true }, { ...WARRIOR_STATS, blightborn: true })).toBe(true)
+  })
 })
 
 describe('warded', () => {
@@ -267,5 +286,22 @@ describe('foeYardstick', () => {
     expect(foeYardstick(25)).toEqual(foeYardstick(20))
     expect(foeYardstick(20).ac).toEqual([69, 89])
     expect(foeYardstick(20).meanDamage[0]).toBeCloseTo(13.3)
+  })
+})
+
+describe('baneApplies', () => {
+  it('holds for a unit that regenerates or is the blight\'s own, and no other', () => {
+    expect(baneApplies({ ...WARRIOR_STATS, regeneration: 2 })).toBe(true)
+    expect(baneApplies({ ...WARRIOR_STATS, blightborn: true })).toBe(true)
+    expect(baneApplies(WARRIOR_STATS)).toBe(false)
+    expect(baneApplies({ ...WARRIOR_STATS, regeneration: 0 })).toBe(false)
+    expect(baneApplies(TROLL_STATS)).toBe(true)
+  })
+
+  it('holds for the Blight Horror, the blight\'s own, at every level', () => {
+    expect(BLIGHT_HORROR_STATS.blightborn).toBe(true)
+    expect(foeAtLevel(BLIGHT_HORROR_STATS, 5).blightborn).toBe(true)
+    expect(baneApplies(foeAtLevel(BLIGHT_HORROR_STATS, 5))).toBe(true)
+    expect(baneApplies(GOBLIN_STATS)).toBe(false)
   })
 })

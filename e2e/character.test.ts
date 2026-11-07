@@ -148,6 +148,40 @@ describe('a hero’s panel', () => {
     expect((await game.probe('World'))!.partyLook).toContain('gear_breastplate')
   })
 
+  it('shows sockets and runes in a tooltip, and the wards of what is worn (ward)', async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    await debugCommand(game, 'give iron_breastplate@3#rime1')
+    await debugCommand(game, 'give iron_sword@3')
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('i')
+    let panel = await game.settled('Inventory', (p) => p.tab === 'inventory' && p.ground.length === 2)
+    expect(panel.tooltip).toEqual([])
+
+    // The breastplate's rune is a ward on the sheet, and its pip and rune icon loaded without a failed request.
+    await game.click(panel.ground.find((slot) => slot.item === 'iron_breastplate@3#rime1')!)
+    panel = await game.settled('Inventory', (p) => p.backpack.some((slot) => slot.item === 'iron_breastplate@3#rime1'))
+    expect(panel.statLines.some((line) => line.startsWith('Wards:'))).toBe(false)
+    await game.click(panel.backpack.find((slot) => slot.item === 'iron_breastplate@3#rime1')!)
+    panel = await game.settled('Inventory', (p) => p.equipment.armor.item === 'iron_breastplate@3#rime1')
+    await game.hover(panel.equipment.armor)
+    panel = await game.settled('Inventory', (p) => p.tooltip.length > 0)
+    expect(panel.tooltip).toContain('Frost ward 2')
+    // The socket line names the rune; what it does is the ward line above, told once.
+    expect(panel.tooltip).toContain('Sockets: 1 of 1 (Rime I)')
+    expect(panel.tooltip.filter((line) => line.includes('Frost ward 2'))).toHaveLength(1)
+    expect(panel.statLines).toEqual(expect.arrayContaining(['Wards:', '  frost 2']))
+
+    // A socketed sword with nothing in it says so.
+    const sword = panel.ground.find((slot) => slot.item === 'iron_sword@3')!
+    await game.hover(sword)
+    panel = await game.settled('Inventory', (p) => p.tooltip.includes('Sockets: 0 of 1'))
+    await game.press('c')
+    panel = await game.settled('Inventory', (p) => p.tab === 'character')
+    expect(panel.statLines).toEqual(expect.arrayContaining(['Wards:', '  frost 2']))
+  })
+
   it('lays a cloak, a breastplate, a circlet, a sword and a shield in their order (AC6)', async () => {
     const game = await games.open()
     const world = await game.newGame()
@@ -179,21 +213,26 @@ describe('a hero’s panel', () => {
     expect((await game.probe('World'))!.partyLook).toEqual(panel.doll)
   })
 
-  it('fits the Character tab’s stats in the panel with a weapon that pierces, narrow and wide', async () => {
+  it('fits the Character tab’s stats in the panel with a weapon that pierces and runes, narrow and wide', async () => {
     const game = await games.open()
     const world = await game.newGame()
-    await debugCommand(game, 'give steel_war_hammer')
-    // The mage, whose mana makes the longest stat column.
+    // A runed hammer (piercing and two on-hit runes) and runed armour (two wards), on the mage, whose mana makes the longest stat column.
+    const gear = ['steel_war_hammer@3#ember3.venom2', 'steel_breastplate@3#rime1.acid1']
+    for (const id of gear) await debugCommand(game, `give ${id}`)
     await game.click(world.party[2])
     await game.waitFor('World', (w) => w.party[2].active)
     await game.click(world.party[2])
     await game.waitForScenes(['Inventory'], ['World'])
     await game.press('i')
-    let panel = await game.settled('Inventory', (p) => p.tab === 'inventory' && p.ground.some((slot) => slot.item === 'steel_war_hammer'))
-    await game.click(panel.ground.find((slot) => slot.item === 'steel_war_hammer')!)
-    panel = await game.settled('Inventory', (p) => p.backpack.some((slot) => slot.item === 'steel_war_hammer'))
-    await game.click(panel.backpack.find((slot) => slot.item === 'steel_war_hammer')!)
-    await game.settled('Inventory', (p) => p.equipment.mainHand.item === 'steel_war_hammer')
+    let panel = await game.settled('Inventory', (p) => p.tab === 'inventory' && gear.every((id) => p.ground.some((slot) => slot.item === id)))
+    for (const id of gear) {
+      await game.click(panel.ground.find((slot) => slot.item === id)!)
+      panel = await game.settled('Inventory', (p) => p.backpack.some((slot) => slot.item === id))
+      await game.click(panel.backpack.find((slot) => slot.item === id)!)
+      panel = await game.settled('Inventory', (p) => Object.values(p.equipment).some((slot) => slot.item === id))
+    }
+    // The Inventory tab leaves the on-hit rows to the weapon's tooltip; the Character tab shows them.
+    expect(panel.statLines).toEqual(expect.arrayContaining(['On a hit:', '  +3 fire, +2 poison,', 'Wards:', '  frost 2, acid 2']))
     await game.press('c')
     for (const [width, height] of [
       [840, 560],
