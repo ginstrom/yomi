@@ -155,7 +155,7 @@ export const FAMILIES: readonly FamilyDef[] = [
     stats: { acBonus: 12, resistance: 1 },
     tier1: { id: 'leather_armor', name: 'Leather Armor' },
   },
-  { id: 'breastplate', name: 'Breastplate', slot: 'armor', kind: 'metal', icon: 'armor', description: 'Sturdy plate armor.', stats: { acBonus: 10, resistance: 2, spellSkill: -5, strength: 4 } },
+  { id: 'breastplate', name: 'Breastplate', slot: 'armor', kind: 'metal', icon: 'armor', description: 'Sturdy plate armor.', stats: { acBonus: 10, resistance: 2, spellSkill: -5, strength: 3 } },
   { id: 'plate', name: 'Plate', slot: 'armor', kind: 'metal', icon: 'plate', description: 'Head to toe in steel plates.', stats: { acBonus: 6, resistance: 4, apPenalty: 1, spellSkill: -15, strength: 6 } },
   { id: 'cap', name: 'Cap', slot: 'head', kind: 'hide', icon: 'cap', description: 'A padded leather cap.', stats: { acBonus: 3 } },
   { id: 'helm', name: 'Helm', slot: 'head', kind: 'metal', icon: 'helm', description: 'A close helm.', stats: { acBonus: 2, resistance: 1, spellSkill: -5, strength: 4 } },

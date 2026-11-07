@@ -78,8 +78,8 @@ describe('the catalog', () => {
       [IRON_GREATSWORD, 'iron_greatsword', 'Iron Greatsword', { damage: { count: 2, sides: 6, bonus: 3 }, attackApCost: 7, armorPierce: 2, twoHanded: true, strength: 6 }],
       [YEW_BOW, 'yew_bow', 'Yew Bow', { damage: { count: 1, sides: 6, bonus: 0 }, attackApCost: 4, attackRange: 5, twoHanded: true }],
       [OAK_SHIELD, 'oak_shield', 'Oak Shield', { acBonus: 10 }],
-      // Renamed from steel_armor; Q1 (b): strength 4 and spell skill −5.
-      [IRON_BREASTPLATE, 'iron_breastplate', 'Iron Breastplate', { acBonus: 10, resistance: 2, strength: 4, spellSkill: -5 }],
+      // Renamed from steel_armor; Q1 (b): strength 3 (the user, 2026-11-07) and spell skill −5.
+      [IRON_BREASTPLATE, 'iron_breastplate', 'Iron Breastplate', { acBonus: 10, resistance: 2, strength: 3, spellSkill: -5 }],
       [SPARK_WAND, 'spark_wand', 'Wand of Sparks', { damage: { count: 1, sides: 6, bonus: 0 }, attackApCost: 5, attackRange: 4, skill: 'magic' }],
     ]
     for (const [item, id, name, stats] of today) {

@@ -405,3 +405,9 @@ Battles to level 5: 6.8 (390 campaigns); 10: — (0 campaigns); 15: — (0 campa
 - Step 06 measures against **175**, not 231.
 - `isMelee`, `CombatantStats.reach` and `AttackEvent.melee` are in place for step 07 and step 10's cells.
 
+
+### Follow-up: the breastplate's strength 3 (the user's decision, 2026-11-07)
+
+The user lowered the breastplate's `strength` from 4 to 3 (spell skill −5, the axe's 5 and the greatsword's 6 unchanged), because step 05's 175 was all the breastplate's strength 4 on the strength-3 archer and mage. Done test-first: `character.test.ts` (a strength-3 wearer loses nothing to the breastplate, a strength-2 wearer 5), `party.test.ts` (the archer, mage and soldier lose nothing to hit; the mage's `toHit` is 63, its spell skill still 58) and `catalog.test.ts` (the row says 3). CLAUDE.md's rules of characters and the index's C1 row now say 3. The policy test "aggressive thrusts with a spear from two hexes" now also asserts the attack event is `melee: true` at `distance: 2`, which fails without `reach: true` (checked by removing it).
+
+**Guard: 231 of 500** (`npm run simulate -- --campaign --battles 500 --seed 1`), 269 days, 18.2 battles, 1.8 heroes dead, 2 gold on gear, threat 5 won 0.895, threat 3 0.968: identical to step 04's summary, as expected, since the strength-3 archer and mage now lose nothing. Step 06 measures against 231.

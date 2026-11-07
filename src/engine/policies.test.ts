@@ -65,6 +65,9 @@ describe('policies', () => {
       ],
     })
     expect(choose(engine)).toEqual(ATTACK_E1)
+    // Only reach makes it a melee blow, which the foe may turn to meet.
+    const events = engine.step(ATTACK_E1)
+    expect(events.find((e) => e.type === 'attack')).toMatchObject({ melee: true, distance: 2 })
   })
 
   describe('aggressive with a caster', () => {

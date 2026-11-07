@@ -147,7 +147,7 @@ export const LEGACY_ALIASES: Readonly<Record<string, string>>  // { steel_armor:
 | `tower_shield` | Tower Shield | offHand | metal | `tower_shield` | | | | | acBonus 16, resistance 1, apPenalty 1 | 6 | `iron_tower_shield` Iron Tower Shield |
 | `robe` | Robe | armor | cloth | `robe` | | | | | maxMana 6, spellSkill 5 | | `linen_robe` Linen Robe |
 | `leather` | Leather | armor | hide | `leather` | | | | | acBonus 12, resistance 1 | | **`leather_armor`** Leather Armor (tier1) |
-| `breastplate` | Breastplate | armor | metal | `armor` | | | | | acBonus 10, resistance 2; Q1 (spellSkill −5) | Q1 (4) | `iron_breastplate` Iron Breastplate |
+| `breastplate` | Breastplate | armor | metal | `armor` | | | | | acBonus 10, resistance 2; Q1 (spellSkill −5) | Q1 (3; was 4, lowered by the user on 2026-11-07 after step 05) | `iron_breastplate` Iron Breastplate |
 | `plate` | Plate | armor | metal | `plate` | | | | | acBonus 6, resistance 4, apPenalty 1, spellSkill −15 | 6 | `iron_plate` Iron Plate |
 | `cap` | Cap | head | hide | `cap` | | | | | acBonus 3 | | `leather_cap` Leather Cap |
 | `helm` | Helm | head | metal | `helm` | | | | | acBonus 2, resistance 1, spellSkill −5 | 4 | `iron_helm` Iron Helm |
@@ -419,6 +419,8 @@ export type BanditKind = /* existing */ | 'bandit_crossbowman'     // FOE_XP 100
 **Step 04's guard** (Q1 (b)): **231 of 500** (269 days, 18.2 battles, 1.8 heroes dead; 2 gold on gear). The whole move is the breastplate's spell skill −5 on the mage: the wand is never bought (the run with the wand skipped is identical), and the run with the Q1 values out and the wand skipped is identical to step 01's. See [step 04's record](04-catalog-and-ids.md).
 
 **Step 05's guard** (Q1 (b)): **175 of 500** (249 days, 17.1 battles, 1.4 heroes dead; 1 gold on gear). The run with the breastplate's `strength` removed is identical to step 04's line for line, so the whole fall of 56 is the breastplate's strength 4 on the strength-3 archer and mage. Threat 5 won 0.862 (0.895 at step 04), threat 3 0.958 (0.968). Step 10 judges or retunes it. See [step 05's record](05-weight-and-reach.md).
+
+**Step 05 follow-up** (the user, 2026-11-07: the breastplate's strength 4 lowered to 3): **231 of 500**, identical to step 04's summary (269 days, 18.2 battles, 1.8 heroes dead, 2 gold on gear, threat 5 won 0.895). **Step 06 measures against 231.**
 
 **Baseline (step 01)**, at `11b1ca0`, seed 1, 500 battles each (full summary in [step 01's record](01-baseline-measurement.md)): guard **248 of 500** (unmoved; 274 days, 18.7 battles, 1.7 heroes dead a campaign; 2 gold on gear, 50 from sales, 4.4 items crafted; trading post, workshop, infirmary 1.1, 0.7, 0.4). Cells: Troll Lair longsword threat 5 level 5 0 wins (7.15 rounds); Goblin Raid longsword threat 3 level 3 487; Bandit Camp threat 3 level 3 444, threat 4 level 4 473, threat 5 level 5 470.
 

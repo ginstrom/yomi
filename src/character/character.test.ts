@@ -264,6 +264,13 @@ describe('weight and reach', () => {
     expect(deriveCombatStats(wearer(3, IRON_SWORD, item('iron_plate'))).toHit).toBe(bare - 15)
   })
 
+  it('asks strength 3 of the breastplate: a strength-3 wearer loses nothing, a strength-2 wearer 5', () => {
+    const plain = deriveCombatStats(wearer(3, IRON_SWORD)).toHit
+    expect(deriveCombatStats(wearer(3, IRON_SWORD, item('iron_breastplate'))).toHit).toBe(plain)
+    const weak = deriveCombatStats(wearer(2, IRON_SWORD)).toHit
+    expect(deriveCombatStats(wearer(2, IRON_SWORD, item('iron_breastplate'))).toHit).toBe(weak - 5)
+  })
+
   it('adds up the shortfall item by item', () => {
     const bare = deriveCombatStats(wearer(3, IRON_SWORD)).toHit
     // Plate 6 and a helm 4: 3 short and 1 short.

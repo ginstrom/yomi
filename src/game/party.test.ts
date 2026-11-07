@@ -88,20 +88,20 @@ describe('readyMadeParty', () => {
     expect(deriveCombatStats(mage)).toMatchObject({
       actionPoints: 8,
       weapon: 'Wand of Sparks',
-      // Magic 63, less 5 for the iron breastplate's strength 4 against its 3.
-      toHit: 58,
+      // Magic 63; the breastplate asks strength 3, which it has.
+      toHit: 63,
       attackRange: 4,
       // Magic 63, less the iron breastplate's 5.
       magic: { maxMana: 18, skill: 58, spells: ['magic_arrow', 'heal'] },
     })
   })
 
-  it('costs the archer and the mage, of strength 3, 5 to hit for the breastplate, and the soldier nothing', () => {
+  it('costs the archer, the mage and the soldier nothing to hit for the breastplate, which asks strength 3', () => {
     const [aldric, brenna, delwyn] = readyMadeParty()
     expect([aldric, brenna, delwyn].map((m) => deriveCombatStats(m).toHit)).toEqual([
       skillLevel(aldric, 'melee'),
-      skillLevel(brenna, 'archery') - 5,
-      skillLevel(delwyn, 'magic') - 5,
+      skillLevel(brenna, 'archery'),
+      skillLevel(delwyn, 'magic'),
     ])
     expect(readyMadeParty().map((m) => deriveCombatStats(m).actionPoints)).toEqual([8, 8, 8])
   })
