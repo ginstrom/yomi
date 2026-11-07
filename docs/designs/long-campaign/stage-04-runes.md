@@ -8,7 +8,7 @@ Gear gets sockets, and the party gets a rune pouch. There are ten runes at four 
 
 Elements and wards came in stage 2. This stage gives them to heroes.
 
-**Status:** ready for planning.
+**Status:** done; see the [implementation notes](#implementation-notes).
 
 ## 2. Scope
 
@@ -114,3 +114,65 @@ Elements and wards came in stage 2. This stage gives them to heroes.
 - **Stacking Life runes.** Sockets cap it at tiers 1 and 2.
 
 **Done when:** all tests pass, the guard holds, and the play script has been walked.
+
+## Implementation notes
+
+Built from the plan in [`docs/implementation-plans/long-campaign-stage-04/`](../../implementation-plans/long-campaign-stage-04/index.md), on branch `long-campaign-stage-04` (off `long-campaign-stage-03`).
+
+**Commits:**
+- Step 01, the baseline: `6ad6ab4`.
+- Step 02, rune icons and socket pips: `7dab325`.
+- Step 03, runes and ids: `1e51399`.
+- Step 04, derivation, the pouch and the save (`SAVE_VERSION` 18): `724a09a`.
+- Step 05, the engine (`LOG_SCHEMA_VERSION` 23): `9b46d64`.
+- Step 06, runecraft: `b1eeef1`.
+- Step 07, loot and the trading post's runes: `2d7d130`.
+- Step 08, tooltips, pips, wards and battle text: `4c55ee9`, `f1e71e7`.
+- Step 09, the Runes tab and the trading post's runes: `cea4f9b` (square brackets), `d106d2c`, `c68c69a`, `58805d7`.
+- Step 10, the simulator: `5e04803`.
+- Step 11, measure, tune and document: the commit titled "Stage 4 step 11".
+
+**Departures from this design** (the plan's corrections and the user's answers, in brief):
+1. Runes sit compact in their sockets: embedding fills the next empty socket, extracting takes a rune by its index and the rest close up, and fusing names the rune fused from.
+2. On-hit damage is flat and draws nothing from the battle's dice: added after resistance, cut by the defender's ward, never doubled by a critical. `AttackEvent.damage` stays the weapon's; the rune's is in `bonus[]`, with `healed` and `onHitStatuses`.
+3. "The blight's own" is `CombatantStats.blightborn`, set on the Blight Horror; a Dawn rune's bane applies against it and against anything that regenerates.
+4. **D1, the user's choice:** a Life rune changes maximum hit points, and every change of gear outside battle keeps the hero's share of its hit points, both when the maximum falls and when it rises (`clampHp`); the engine still clamps on `equip` in battle.
+5. Rune prices exist for every rank: 15, 45, 135 and 405 (**D4**, accepted); a rune sells for a third, and an embedded one adds half its price to an item's sale. The post sells six kinds, rank 1 from level 2 and rank 2 from level 4, and never a runed item.
+6. A Mind rune fits a weapon only if it strikes with Magic (a wand or a staff).
+7. Loot rows for threats 1 to 7 only; the Source rolls threat 5's (**D2**, accepted); the Salamander Pool favours Ember and the Spider Nest Venom at 50%; a debug `fight` rolls none. Runes are drawn from a stream of their own, seeded from the battle's seed.
+8. Rank numerals go to IV, and a runed item is named with square brackets, "Masterwork Iron Longsword [Ember I]" (the user's choice during step 09; the ⟨ ⟩ first written read as parentheses at the tooltip's 12px).
+9. The simulator's rune policy (**D3**, accepted): Ember, Storm, Stone in weapons and Stone, Life in shields and armour, embedded only at a workshop on a home visit; it fuses every triple it may and buys Lesser runes only for sockets the pouch cannot fill. The aggressive policy counts the on-hit bonus in the harm it expects.
+10. Fusing checks the workshop's level before the count; fusing to ranks 3 and 4 waits for stage 10's workshop levels. A field embed reports as a field craft does. `give` takes rune keys.
+
+**The early-game guard** (`npm run simulate -- --campaign --ready-level 7 --battles 500 --seed 1`):
+
+| | Step 01 (baseline) | Steps 03 to 07 | Step 10 | Step 11 (final) |
+| --- | --- | --- | --- | --- |
+| Beat the Source | 233 | 233 (identical) | 230 | **230 (46.0%)** |
+| Days, battles a campaign | 269, 18.2 | | 270, 18.2 | 270, 18.2 |
+| Heroes dead a campaign | 1.8 | | 1.8 | 1.8 |
+
+The final run: the party fell in 270 campaigns, the encampment never; 26.0 spawns; won at threats 1 to 5: 1007 of 1007, 1732 of 1756, 1932 of 1995, 2847 of 2870, 1333 of 1493 (step 01: 1349 of 1506 at threat 5); trading post, workshop, infirmary 1.1, 0.6, 0.5 at the end; 1 gold on gear and 51 from sales a campaign; 0.0 tier-2 items bought. **Runes a campaign: 13.1 found, 0.0 bought, 0.1 fused, 3 gold on runes, 0.0 sockets filled at the end.**
+
+**No tuning.** The move of 3 is inside the guard's 5 points. Its cause: the simulated party almost never wears a socketed item (no tier 2 is bought, the post ending at level 1.1, and Masterwork is rare), so the runes it finds sit in the pouch, and the difference is the gold of the few fuses moving a purchase or a craft. The design expected rune loot and Masterwork sockets to lift the guard a few points; in the simulator they cannot, as it has no sockets to fill. A real player who buys Masterwork or steel will feel runes; the simulator's economy was not retuned to make it use them.
+
+**Check 2** (Troll Lair, threat 5, party level 5, `--player-weapon` in every hand, 500 battles from seed 1):
+
+| Weapon | Wins | Rounds | Damage dealt a battle | Hit rate | Statuses laid a battle |
+| --- | --- | --- | --- | --- | --- |
+| `iron_sword@3` | 0 | 7.12 | 49.8 | 0.243 | 1.3 |
+| `'iron_sword@3#ember1'` | 0 | 7.13 | 52.6 | 0.244 | 1.3 |
+| `'iron_sword@3#ember3'` | 2 | 7.22 | 58.9 | 0.248 | 3.9 |
+
+The plain Masterwork cell is unchanged from step 01. Rank 1 adds 2.8 damage a battle (the "modest gain" is met in damage, as the cell is lost either way); rank 3 adds 9.1 and wins 2, which is not the "large gain" the design expected. The log shows Seared working as designed: 1315 laid on hits over the 500 battles, no troll regenerating while seared (checked event by event), and regenerations down from 3139 to 2285. The cell is lost whatever the party holds (stage 3's hammer and steel swords won 0 too): the trolls deal 148 a battle and the Armoured Troll's resistance 5 takes most of each blow. Recorded for the user; the rune numbers were not tuned.
+
+**The play script**, walked in headless Chromium with a scratch script on the in-browser test driver (not committed), with screenshots looked at:
+1. `stock gold 300`, `facility trading_post 3`: the Masterwork Iron Longsword bought for 96 gold; under the Runes filter the six Lesser runes at 15 gold each, two Lesser Ember Runes bought into the pouch; `facility workshop 2`, and `runes` listed the two.
+2. On the workshop's Runes tab, the Ember rune embedded for 5 gold: the item became "Masterwork Iron Longsword [Ember I]"; the character panel's tooltip ended "Sockets: 1 of 1" and "Ember I: +1 fire on a hit", and the sword's pip was filled in orange. Extracted for 10 gold, back in the pouch (2 again).
+3. `give storm1 3`, fused into a Storm Rune for 20 gold; fusing it on was refused, "Fusing to a Greater Storm Rune needs a level 4 workshop.", the Confirm greyed.
+4. With the Ember sword on Aldric, `fight troll_lair 4`: the log read "HITS Troll for 10 dmg +1 fire." on his hits. With `give iron_sword@3#ember3`: "HITS Troll for 10 dmg +3 fire, seared.", then "Troll is no longer seared."; Seared was laid 3 times and no troll regenerated while seared (both battles were lost, as a level 1 party loses a threat-4 lair).
+5. A hex off the encampment, from the Craft button's Runes tab, a Lesser Ember Rune embedded in a Masterwork longsword: the preview said "Costs 5 gold and a day.", the screen closed, the turn went from 2 to 3, 5 gold came off and the map reported "A day's work makes the Masterwork Iron Longsword [Ember I]."
+
+Also seen: the Character tab's "Wards:" line with "frost 2" under it for a Rime-runed breastplate, and after a win over the Goblin Raiders the victory screen's "Found: Ring of Protection and Lesser Life Rune."
+
+**Left for the user to walk:** the floating "+1 fire" rising from the defender at impact (a still screenshot after the hit missed it: it had faded at the test driver's tenfold speed), and the Seared letter on a troll's nameplate.

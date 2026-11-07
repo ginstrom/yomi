@@ -483,9 +483,9 @@ export function runecraftGear(game: GameState): { embedded: number; fused: numbe
 | 06 | [Runecraft](06-runecraft.md) | `runecraft.ts` (C6) with every refusal and the field day | 04 | opus / opus | done (`b1eeef1`) |
 | 07 | [Loot and the trading post's runes](07-loot-and-trading-post.md) | `loot.ts` (C7); rune wares, prices and sales (C8); runed items' sale price | 04 | sonnet / opus | done (`2d7d130`) |
 | 08 | [Tooltips, pips, wards and battle text](08-inventory-and-battle-screens.md) | The icon tables (C9), the tooltip's socket lines, the wards line, the pips, `bonusText` and floating text, runes on the victory screen; scene and in-browser tests | 02, 05, 07 | sonnet / opus | done (`4c55ee9`, `f1e71e7`) |
-| 09 | [The Runes tab and the trading post's Runes](09-runes-tab-and-trading-post.md) | Crafting's Modify and Runes tabs, the field embed, the post's Runes filter and rune sales, the encampment lines, the probes; scene and in-browser tests | 06, 07, 08 | opus / opus | done (`cea4f9b`, `d106d2c`, `c68c69a`) |
+| 09 | [The Runes tab and the trading post's Runes](09-runes-tab-and-trading-post.md) | Crafting's Modify and Runes tabs, the field embed, the post's Runes filter and rune sales, the encampment lines, the probes; scene and in-browser tests | 06, 07, 08 | opus / opus | done (`cea4f9b`, `d106d2c`, `c68c69a`, `58805d7`) |
 | 10 | [The simulator](10-simulator.md) | Rune loot taken, `runecraftGear`, extraction before replacement, the record and summary; the guard measured | 05, 06, 07 | opus / opus | done (`5e04803`) |
-| 11 | [Measure, tune and document](11-measure-tune-document.md) | The guard judged against 01, check 2's cells, any tuning, CLAUDE.md, the manual and screenshots, the stage notes and index status, the play script | 08, 09, 10 | opus / opus | pending |
+| 11 | [Measure, tune and document](11-measure-tune-document.md) | The guard judged against 01, check 2's cells, any tuning, CLAUDE.md, the manual and screenshots, the stage notes and index status, the play script | 08, 09, 10 | opus / opus | done ("Stage 4 step 11") |
 
 ## Execution order
 
@@ -508,7 +508,7 @@ Parallel steps each edit only their own lines of CLAUDE.md, and the second to co
 **Checkpoints** (the guard command, compared with step 01's summary):
 - **After 03, 04, 05, 06 and 07:** identical to step 01's, because the simulator neither loots nor embeds runes, and nothing draws differently (correction 2). Any difference is a bug. Steps 06 and 07 add only new functions, so their run may be skipped if they do not touch `simulate.ts` or anything it calls.
 - **Baseline (step 01), tree at `7dab325` (step 02's art commit, no code changed since `205f76c`), unchanged from stage 3:** the guard is **233 of 500** (46.6%; party fell 267, encampment lost 0), 269 days, 18.2 battles, 1.8 heroes dead a campaign. Troll Lair threat 5, party level 5, 500 battles from seed 1: `iron_sword@3` 0 wins (7.12 rounds, damage 49.8 to 148.0, hit rates 0.243 and 0.799); `iron_sword` 0 wins (7.09 rounds, damage 42.3 to 147.8, hit rates 0.201 and 0.801). The full summary is in step 01's execution record.
-- **After 10:** measured, with the runes found, bought and fused and the sockets filled. Step 11 judges it. **Measured (step 10): 230 of 500** (46.0%; party fell 270, encampment lost 0), 270 days, 18.2 battles, 1.8 heroes dead a campaign; 1 gold on gear and 51 from sales; runes 13.1 found, 0.0 bought and 0.1 fused a campaign, 3 gold on runes, 0.0 sockets filled at the end. Threat 5 won 1333 of 1493 (1349 of 1506 at step 01). Within 3 points of step 01's 233: the party almost never wears a socketed item (tier 2 never bought, Masterwork rare), so the runes found sit in the pouch, and the change is the gold of the few fuses moving purchases.
+- **After 10:** measured, with the runes found, bought and fused and the sockets filled. Step 11 judges it. **Measured (step 10): 230 of 500** (46.0%; party fell 270, encampment lost 0), 270 days, 18.2 battles, 1.8 heroes dead a campaign; 1 gold on gear and 51 from sales; runes 13.1 found, 0.0 bought and 0.1 fused a campaign, 3 gold on runes, 0.0 sockets filled at the end. Threat 5 won 1333 of 1493 (1349 of 1506 at step 01). **Re-run at step 11: identical (230).** Within 3 points of step 01's 233: the party almost never wears a socketed item (tier 2 never bought, Masterwork rare), so the runes found sit in the pouch, and the change is the gold of the few fuses moving purchases.
 
 ## Requirement map
 
@@ -529,14 +529,14 @@ Parallel steps each edit only their own lines of CLAUDE.md, and the second to co
 
 ## Overall completion criteria
 
-- [ ] Every step done, `npm test` passing at each commit, and the in-browser tests passing after 08 and 09.
-- [ ] The guard measured at 01, checked identical after 03 to 07, measured after 10, and judged in 11: within about 5 points of step 01's figure, or the move explained in CLAUDE.md's rules of scaling and the stage notes.
-- [ ] Check 2 recorded at `--encounter troll_lair --threat 5 --party-level 5` for `'iron_sword@3'`, `'iron_sword@3#ember1'` and `'iron_sword@3#ember3'`: a modest gain at rank 1, a large one at rank 3.
-- [ ] Every rune icon and pip is a finished drawing, and `sprites:check` is clean.
-- [ ] `SAVE_VERSION` is 18 and `LOG_SCHEMA_VERSION` 23.
-- [ ] CLAUDE.md describes runes, sockets, the id grammar, wards and on-hit effects, the hit-point rule (correction 4), runecraft, rune loot, the trading post's runes, the new modules and tables, and the simulator's record. The manual describes them, and its screenshots are retaken.
-- [ ] The stage design has "Implementation notes" with the figures, and the stages index's stage 4 row says done.
-- [ ] The design's play script has been walked in the game (`make dev`), or the steps not walked are listed for the user in step 11's record.
+- [x] Every step done, `npm test` passing at each commit, and the in-browser tests passing after 08 and 09.
+- [x] The guard measured at 01, checked identical after 03 to 07, measured after 10, and judged in 11: within about 5 points of step 01's figure, or the move explained in CLAUDE.md's rules of scaling and the stage notes.
+- [x] Check 2 recorded at `--encounter troll_lair --threat 5 --party-level 5` for `'iron_sword@3'`, `'iron_sword@3#ember1'` and `'iron_sword@3#ember3'`: a modest gain at rank 1, a large one at rank 3. (Step 11: 0, 0 and 2 wins; 49.8, 52.6 and 58.9 damage. Rank 1's gain is met in damage; rank 3's is not large in wins, recorded for the user.)
+- [x] Every rune icon and pip is a finished drawing, and `sprites:check` is clean.
+- [x] `SAVE_VERSION` is 18 and `LOG_SCHEMA_VERSION` 23.
+- [x] CLAUDE.md describes runes, sockets, the id grammar, wards and on-hit effects, the hit-point rule (correction 4), runecraft, rune loot, the trading post's runes, the new modules and tables, and the simulator's record. The manual describes them, and its screenshots are retaken.
+- [x] The stage design has "Implementation notes" with the figures, and the stages index's stage 4 row says done.
+- [x] The design's play script has been walked in the game (`make dev`), or the steps not walked are listed for the user in step 11's record.
 
 ## Open questions
 

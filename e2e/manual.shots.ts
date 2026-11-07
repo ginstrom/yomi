@@ -193,6 +193,9 @@ describe('the manual’s screenshots', () => {
     await game.page.evaluate(() => {
       const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
       saved.game.world.stock = { gold: 600, iron: 50, timber: 20, stone: 40, copper: 40, silver: 30 }
+      // A Masterwork Steel Longsword with a Storm rune in one of its two sockets, and runes in the pouch, for the Runes tab.
+      saved.game.baggage.push('steel_longsword@3#storm1')
+      saved.game.runes = { ember1: 2, life1: 1 }
       localStorage.setItem('yomi.save.1', JSON.stringify(saved))
     })
     const menu = await game.reload()
@@ -220,7 +223,11 @@ describe('the manual’s screenshots', () => {
     await game.hover({ x: 0, y: 0 })
     await shot(game, 'trading-post')
     await game.press('Escape')
-    await game.settled('TradingPost', (p) => p.selected === null)
+    const unselected = await game.settled('TradingPost', (p) => p.selected === null)
+    await game.click(unselected.runesButton)
+    await game.settled('TradingPost', (p) => p.filter.slot === 'runes' && p.rows.length > 0)
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'trading-post-runes')
     await game.press('Escape')
     await game.waitForScenes(['Encampment'], ['World'])
     camp = await game.settled('Encampment', (c) => c.selected === 'trading_post')
@@ -235,6 +242,16 @@ describe('the manual’s screenshots', () => {
     await game.settled('Crafting', (c) => c.chosen === 'light2')
     await game.hover({ x: 0, y: 0 })
     await shot(game, 'crafting')
+    const modify = await game.settled('Crafting')
+    await game.click(modify.buttons.runesTab)
+    const runes = await game.settled('Crafting', (c) => c.tab === 'runes')
+    const longsword = runes.items.find((item) => item.itemId === 'steel_longsword@3#storm1')!
+    await game.click(longsword)
+    const chosen = await game.settled('Crafting', (c) => c.selected === longsword.id)
+    await game.click(chosen.pouch.find((p) => p.key === 'ember1')!.embed)
+    await game.settled('Crafting', (c) => c.chosen === 'embed:ember1')
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'crafting-runes')
   })
 
   it('the encampment, the guild hall and the blight', async () => {
