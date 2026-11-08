@@ -961,6 +961,7 @@ export function carryOut(run: CampaignRun, party: Expedition, decision: Decision
         return 'standing'
       }
       // A fresh route from where the party stands; one that cannot start (no way there, or a nest on its first hex) gets it nowhere.
+      // This mirrors the start of `travel` in worldMap.ts, which carries the same guards: a refused order returns at once there too, leaving `confronting` as it was, and a blocked first hex clears the order and sets `confronting`. Keep the two in step.
       if (setOrder(game, party.id, order) !== null) {
         plan.stalled = true
         return null

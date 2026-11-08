@@ -355,7 +355,7 @@ export function act(game: GameState, party: string, action: DayAction): string |
 | 07 | [Day actions as orders](07-day-actions.md) | `act` and every `DayAction`; `campDay`, `linger`, `buildTower`, `buildOutpost`, field craft and embed on the loop; guard identical | 06 | opus / opus | done (8811e0f) |
 | 08 | [The simulator on the loop](08-simulator-on-loop.md) | `runCampaign` as a day loop with an idle-party policy making today's decisions; guard identical | 07 | opus / opus | done (7491dd8) |
 | 09 | [The world map's time controls](09-world-map-controls.md) | The order line (C7); Next day and Until something happens; probes, scene and in-browser tests; guard identical | 07 | sonnet / opus | done (1bd8749) |
-| 10 | [Measure, document, play](10-measure-document-play.md) | The 500-campaign figure identical to step 01's; CLAUDE.md pass; the manual and screenshots; stage notes and index status; the play script walked | 08, 09 | sonnet / opus | pending |
+| 10 | [Measure, document, play](10-measure-document-play.md) | The 500-campaign figure identical to step 01's; CLAUDE.md pass; the manual and screenshots; stage notes and index status; the play script walked | 08, 09 | sonnet / opus | done |
 
 **Tiers.** "opus" means leave the engineer's model unset (it inherits the session's), as CLAUDE.md asks for intricate or determinism-sensitive work. "sonnet" means `model: "sonnet"`.
 - Steps 03 and 05 are wide but mechanical, with fixed contracts.

@@ -67,6 +67,14 @@ describe('the manual’s screenshots', () => {
     await game.hover(worldHexOnScreen(world, RAIDERS.position))
     await shot(game, 'world-start')
 
+    // A walk cut short keeps its order: the line says where the party is going.
+    await game.click(worldHexOnScreen(world, offsetToHex(19, 19)))
+    const cut = await game.waitFor('World', (w) => !w.walking && w.world.turn > world.world.turn)
+    if (cut.parties[0].order.startsWith('Travelling')) {
+      await game.hover({ x: 0, y: 0 })
+      await shot(game, 'world-travelling')
+    }
+
     await game.press('c')
     await game.waitForScenes(['Inventory'], ['World'])
     await game.settled('Inventory')

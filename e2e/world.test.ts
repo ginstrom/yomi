@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { WorldState, WorldStatus } from '../src/game/worldMap.ts'
-import { offsetToHex } from '../src/grid/hex.ts'
+import { hexDistance, offsetToHex } from '../src/grid/hex.ts'
 import { WORLD_LAYOUT, boardHexCenter, boardPixelSize, type Point } from '../src/scenes/boardGeometry.ts'
 import { clampOrigin, mapOrigin, pannedOrigin } from '../src/scenes/mapScroll.ts'
 import type { WorldProbe } from '../src/testHook.ts'
@@ -466,8 +466,10 @@ describe('the world map', () => {
       expect(order(stopped)).toMatch(/^Travelling/)
       await game.click(stopped.buttons.nextDay)
       const next = await game.waitFor('World', (w) => w.world.turn === stopped.world.turn + 1 && !w.walking)
-      expect(next.partyAt).not.toEqual(stopped.partyAt)
+      // Exactly one hex along the road: a neighbour of where it stood.
+      expect(hexDistance(next.partyAt, stopped.partyAt)).toBe(1)
       expect(next.world.turn).toBe(stopped.world.turn + 1)
+      expect(order(next)).toMatch(/^Travelling/)
     })
 
     it('passes days until something happens, or until thirty have passed quietly', async () => {
@@ -476,23 +478,30 @@ describe('the world map', () => {
       await game.click(home.buttons.untilSomething)
       const after = await game.waitFor('World', (w) => w.world.turn > home.world.turn)
       expect(after.world.turn - home.world.turn).toBeLessThanOrEqual(30)
-      expect(after.message).toMatch(/^30 days passed quietly\.|^After \d+ days: |^[A-Z]/)
-      if (after.message.startsWith('30 days')) expect(after.world.turn - home.world.turn).toBe(30)
+      // Either thirty quiet days, or something told: a lone first-day event has no "After" prefix.
+      if (after.message.startsWith('30 days passed quietly.')) expect(after.world.turn - home.world.turn).toBe(30)
+      else {
+        expect(after.message).toMatch(/^(After \d+ days: )?\S/)
+        expect(after.message).not.toMatch(/quiet day/i)
+      }
     })
 
     it('shows Camping while a wounded party camps, and Idle once it is whole', async () => {
       const game = await games.open()
       await game.newGame()
+      // A camp order planted in the save, with a wounded member, and loaded.
       await game.page.evaluate(() => {
         const save = JSON.parse(localStorage.getItem('yomi.save.1')!)
         save.game.parties[0].members[0].hp = 1
+        save.game.parties[0].order = { kind: 'camp' }
         localStorage.setItem('yomi.save.1', JSON.stringify(save))
       })
       await game.click((await game.reload()).buttons.continue)
       await game.waitForScenes(['World'])
       const hurt = await game.settled('World', (w) => w.buttons.campUntilHealed.enabled)
-      await game.click(hurt.buttons.campUntilHealed)
-      const healed = await game.waitFor('World', (w) => !w.buttons.campUntilHealed.enabled)
+      expect(order(hurt)).toBe('Camping')
+      await game.click(hurt.buttons.nextDay)
+      const healed = await game.waitFor('World', (w) => w.world.turn > hurt.world.turn && !w.buttons.campUntilHealed.enabled)
       expect(order(healed)).toBe('Idle')
     })
 

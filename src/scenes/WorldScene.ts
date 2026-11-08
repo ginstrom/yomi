@@ -816,7 +816,7 @@ export class WorldScene extends Phaser.Scene {
         ? 'Monsters! Scout them, wait, or attack.'
         : here
           ? 'Scout, wait or attack, or click a hex to move away.'
-          : 'Click a hex to travel there, or camp. Each hex, or day of camping, takes a turn.',
+          : 'Click a hex to travel there, or camp or pass days below. Each day takes a turn.',
     )
     for (const button of this.buttons) button.setVisible(here !== null && !this.walking && world.status !== 'lost')
     for (const button of this.timeButtons) button.setVisible(worldActive(world) && expedition.confronting === null && !this.walking)

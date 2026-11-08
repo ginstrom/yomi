@@ -167,3 +167,22 @@ Walk it in a headless browser against the dev server: Playwright with Chromium, 
 - [ ] The index's row 10 set to done, with the commit.
 
 ## 7. Execution record
+
+Engineer: Sonnet-class subagent, Node 26 (`PATH=/opt/homebrew/opt/node@26/bin:$PATH`), on `long-campaign-stage-05`.
+
+**Measured (no code change affects them; the one `scripts/simulate.ts` edit is a comment).**
+- 500 campaigns, `--battles 500 --seed 1 --out logs/s5-final-500.jsonl`: 9121 battles, "Beat the Source: 230 of 500 (46.0%)", SHA-256 `d17e6dca65137917aaa7e1bb873ab241b323dbe6152e338c141ae618b51613fd`, the same as step 01's. `diff` of the printed summary against step 01's record: only line 1 (the `--out` path) differs.
+- 50 campaigns, `--out logs/guard-50.jsonl`: SHA-256 `068016a82040ec5be673084265005a7218f0ce927629880565c1a27a8cf52d76`, summary identical to step 01's.
+
+**Follow-ups folded in.**
+1. `scripts/simulate.ts` `carryOut`'s travel branch: a comment pointing at `worldMap.travel`. The guards are already identical, so no code changed: a refused `setOrder` returns at once in both, leaving `confronting` as it was (the convenience returns before it sets it, as `carryOut` does), and a blocked first hex clears the order and sets `confronting = monstersHere` in both.
+2. `e2e/world.test.ts` time controls: the "Until something happens" test no longer accepts any capital letter (thirty quiet days must be exactly 30; otherwise the message must not be the quiet-day one); the Camping test plants a `camp` order and a wounded member in the save, asserts "Camping" on load and "Idle" once Next day has healed it (a day's camp at the encampment heals the planted member at once, so Camping cannot be observed across a Next day); the walk test asserts the party moved exactly one hex (`hexDistance` 1) and still says Travelling.
+3. The world map's header hint is now "Click a hex to travel there, or camp or pass days below. Each day takes a turn." (80 characters, as before; it fits the header at 1280, and is no longer than the old text, which fit at 840).
+4. The manual: a paragraph for the order line, Next day, Until something happens and orders that persist, and a new shot `world-travelling` (a walk cut short; `e2e/manual.shots.ts` takes it). All 20 existing images changed on a retake, and the world map's footer is the reason (shown under each overlay too); I looked at `world-start`, `world-travelling` and `panel-character`, and the rest differ the same way. CLAUDE.md pass: nearly everything was written by steps 03 to 09; added stage 5's line to the rules of scaling.
+
+**Docs.** Implementation notes in the stage design, its row and the guard sentence in the stages index.
+
+**Play script.** Recorded in the stage design's implementation notes: walked headless in full except the "Camping" line during a camp until healed (observed in the in-browser tests instead) and the comparison with the walk at `4a2b824`.
+
+**Plan did not anticipate.** (1) `sed -i` on this machine needs an empty suffix; used Python edits. (2) The loaded v18 save opens a Story overlay (the tutorial is on), so the script must skip it. (3) A tutorial-free walk: `travelTo` the far hexes the e2e tests use does not get cut short from the fixture's position, as the party has already sighted most things nearby; a hex to the south-east does.
+
