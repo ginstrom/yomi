@@ -8,8 +8,8 @@ import { FIELD_DRESSING_PER_DAY, NATURAL_HEALING_PER_DAY, raiseInfirmary, restHe
 function wounded(infirmary: number) {
   const game = newGame(undefined, null, 1, 'Hearthold')
   game.world.infirmary = infirmary
-  game.party[0].hp = 1
-  game.party[2].mana = 0
+  game.parties[0].members[0].hp = 1
+  game.parties[0].members[2].mana = 0
   return game
 }
 
@@ -21,10 +21,10 @@ describe('the infirmary', () => {
       [2, (max: number) => max],
     ] as const) {
       const game = wounded(level)
-      const soldier = game.party[0]
-      campDay(game.world, game.party)
+      const soldier = game.parties[0].members[0]
+      campDay(game, game.parties[0])
       expect(soldier.hp, `level ${level}`).toBe(expected(maxHp(soldier)))
-      expect(game.party[2].mana).toBe(maxMana(game.party[2]))
+      expect(game.parties[0].members[2].mana).toBe(maxMana(game.parties[0].members[2]))
     }
   })
 
@@ -34,19 +34,19 @@ describe('the infirmary', () => {
       [3, FIELD_DRESSING_PER_DAY],
     ]) {
       const game = wounded(level)
-      game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
-      expect(restHealing(game.world, game.party[0])).toBe(healed)
-      campDay(game.world, game.party)
-      expect(game.party[0].hp).toBe(1 + healed)
-      expect(game.party[2].mana).toBe(maxMana(game.party[2]))
+      game.parties[0].position = { q: game.parties[0].position.q + 1, r: game.parties[0].position.r }
+      expect(restHealing(game.world, game.parties[0], game.parties[0].members[0])).toBe(healed)
+      campDay(game, game.parties[0])
+      expect(game.parties[0].members[0].hp).toBe(1 + healed)
+      expect(game.parties[0].members[2].mana).toBe(maxMana(game.parties[0].members[2]))
     }
   })
 
   it('is built and raised at the encampment for the stock', () => {
     const game = newGame(undefined, null, 1, 'Hearthold')
-    expect(raiseInfirmary(game)).toMatch(/costs 20 gold, 10 timber/)
+    expect(raiseInfirmary(game, game.parties[0])).toMatch(/costs 20 gold, 10 timber/)
     game.world.stock = { gold: 20, timber: 10 }
-    expect(raiseInfirmary(game)).toBeNull()
+    expect(raiseInfirmary(game, game.parties[0])).toBeNull()
     expect([game.world.infirmary, game.world.stock.gold]).toEqual([1, 0])
   })
 })

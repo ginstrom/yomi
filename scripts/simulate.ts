@@ -23,25 +23,25 @@ import { BattleEngine, type BattleEvent, type BattleSetup, type Side, type UnitI
 import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.ts'
 import { autoAdvance, levelUp } from '../src/character/progression.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/encounters.ts'
-import { PREROLLS, readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
+import { PREROLLS, autoHeal, readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
 import { blightedShare, monsterStrength, type WorldEvent } from '../src/game/blight.ts'
 import {
   OUTPOST_COST,
   SHRINE_COSTS,
   TOWER_COST,
-  buildOutpost,
-  buildTower,
   canAfford,
   canBuildOutpost,
   canBuildTower,
   raiseShrine,
 } from '../src/game/buildings.ts'
 import { WORKSHOP_COSTS, craft, craftTier, highestGrade, upgradeWorkshop } from '../src/game/crafting.ts'
+import { presenceOf, type DayAction, type Expedition } from '../src/game/expedition.ts'
 import { newGame, type GameState } from '../src/game/gameState.ts'
 import {
   GUILD_HALL_LEVELS,
   RECRUIT_COST,
   atGuildHall,
+  company,
   partyLimit,
   recruit,
   recruitRefusal,
@@ -49,14 +49,15 @@ import {
   upgradeCost,
   upgradeGuildHall,
 } from '../src/game/guildHall.ts'
-import { campUntilHealed, canCamp, partyWounded } from '../src/game/camp.ts'
+import { canCamp, partyWounded } from '../src/game/camp.ts'
+import { act, advance, roadBlocked, setOrder, type DayReport, type OrderRequest } from '../src/game/company.ts'
 import { INFIRMARY_COSTS, raiseInfirmary } from '../src/game/infirmary.ts'
 import { TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, wares } from '../src/game/tradingPost.ts'
 import { daysToFall, sites, type Material, type Stock } from '../src/game/territory.ts'
 import {
   ENCAMPMENT_ID,
   clearLocation,
-  travel,
+  monstersHere,
   worldActive,
   type MonsterLocation,
   type QuietLocation,
@@ -251,7 +252,7 @@ function runBattle(battleId: number, seed: number, args: CliArgs): LoggedEvent[]
 }
 
 /** Seeds apart for the battles of one campaign: more than a campaign fights. */
-const CAMPAIGN_SEED_STEP = 1000
+export const CAMPAIGN_SEED_STEP = 1000
 
 /** The days a campaign may last before it is called off. */
 export const MAX_CAMPAIGN_DAYS = 2000
@@ -330,11 +331,11 @@ const lowestLevel = (party: Party) => Math.min(...party.map((member) => member.l
  * once the stock affords the next level and no held site is under threat, or
  * to fill an empty place in the party when the stock affords a recruit.
  */
-export function hallErrand(game: GameState): boolean {
+export function hallErrand(game: GameState, party: Expedition): boolean {
   const { world } = game
   const cost = upgradeCost(world)
   if (cost && canAfford(world.stock, cost) && world.threatened.length === 0) return true
-  return game.party.length < partyLimit(world) && canAfford(world.stock, RECRUIT_COST)
+  return party.members.length < partyLimit(world) && canAfford(world.stock, RECRUIT_COST)
 }
 
 /**
@@ -342,17 +343,17 @@ export function hallErrand(game: GameState): boolean {
  * party's empty places with recruits, the pre-rolls in turn (renamed when the
  * name is taken), their points spent by `autoAdvance`. Returns how many it hired.
  */
-export function visitGuildHall(game: GameState): number {
-  while (upgradeGuildHall(game) === null);
+export function visitGuildHall(game: GameState, party: Expedition): number {
+  while (upgradeGuildHall(game, party) === null);
   let hired = 0
-  while (game.party.length < partyLimit(game.world) && recruitRefusal(game) === null) {
-    const taken = [...game.party, ...game.reserves].map((member) => member.name)
-    const base = PREROLLS[(game.party.length + game.reserves.length) % PREROLLS.length].draft
+  while (party.members.length < partyLimit(game.world) && recruitRefusal(game, party) === null) {
+    const taken = company(game).map((member) => member.name)
+    const base = PREROLLS[(party.members.length + game.reserves.length) % PREROLLS.length].draft
     let name = base.name
     for (let n = 2; taken.includes(name); n++) name = `${base.name} ${n}`
-    if (recruit(game, { ...base, name }) !== null) break
-    toParty(game, game.reserves.length - 1)
-    autoAdvance(game.party.at(-1)!)
+    if (recruit(game, party, { ...base, name }) !== null) break
+    toParty(game, party, game.reserves.length - 1)
+    autoAdvance(party.members.at(-1)!)
     hired++
   }
   return hired
@@ -407,11 +408,11 @@ function modifierRank(family: FamilyId | undefined, mod: { id: ModifierId; grade
  * that is a day each, so it does `limit` at most. Returns how many it made and
  * the events of the days it took (none at a workshop), for the caller to tally.
  */
-export function craftGear(game: GameState, limit = Infinity): { crafted: number; events: WorldEvent[] } {
+export function craftGear(game: GameState, party: Expedition, limit = Infinity): { crafted: number; events: WorldEvent[] } {
   let crafted = 0
   const events: WorldEvent[] = []
-  const tier = craftTier(game.world)
-  for (const [member, hero] of game.party.entries()) {
+  const tier = craftTier(game.world, party)
+  for (const [member, hero] of party.members.entries()) {
     for (const slot of GEAR_SLOTS) {
       const item = hero.equipment[slot]
       const base = item && baseItem(item)
@@ -421,7 +422,7 @@ export function craftGear(game: GameState, limit = Infinity): { crafted: number;
         if (!unlocked) continue
         for (const grade of [...GRADES].reverse()) {
           if (grade > highestGrade(tier) || modifierRank(base.family, { id, grade }) >= modifierRank(base.family, item.mod)) continue
-          const result = craft(game, { from: 'worn', member, slot, itemId: item.id }, id, grade)
+          const result = craft(game, { from: 'worn', party: party.id, member, slot, itemId: item.id }, id, grade)
           if (result.refusal !== null) continue
           crafted++
           events.push(...result.events)
@@ -475,22 +476,22 @@ function nextRune(item: Item, kinds: readonly RuneId[], held: (key: RuneKey) => 
  * embeds by `RUNE_ORDER`, a kind's highest rank first, until a socket is
  * refused. Nothing in the field: embedding there would cost days.
  */
-export function runecraftGear(game: GameState): { embedded: number; fused: number; bought: number; gold: number } {
+export function runecraftGear(game: GameState, party: Expedition): { embedded: number; fused: number; bought: number; gold: number } {
   const done = { embedded: 0, fused: 0, bought: 0, gold: 0 }
   const { world } = game
-  if (craftTier(world) === 'field') return done
+  if (craftTier(world, party) === 'field') return done
   for (const key of pouchKeys(game.runes)) {
     if (!key.endsWith('1')) continue
-    while (fuseRefusal(game, key) === null) {
+    while (fuseRefusal(game, party, key) === null) {
       done.gold += fuseCost(key).gold ?? 0
-      fuse(game, key)
+      fuse(game, party, key)
       done.fused++
     }
   }
   const sold = runeWares(world)
   const claimed: Partial<Record<RuneKey, number>> = {}
   const unclaimed = (key: RuneKey) => pouchCount(game.runes, key) - (claimed[key] ?? 0)
-  for (const hero of game.party) {
+  for (const hero of party.members) {
     for (const slot of GEAR_SLOTS) {
       const item = hero.equipment[slot]
       if (!item) continue
@@ -499,9 +500,9 @@ export function runecraftGear(game: GameState): { embedded: number; fused: numbe
         let key = nextRune(item, kinds, unclaimed)
         if (!key) {
           const kind = kinds.find((id) => runeFits(id, item) && sold.includes(runeKey(id, 1)))
-          if (!kind || buyRuneRefusal(game, runeKey(kind, 1)) !== null) continue
+          if (!kind || buyRuneRefusal(game, party, runeKey(kind, 1)) !== null) continue
           key = runeKey(kind, 1)
-          buyRune(game, key)
+          buyRune(game, party, key)
           done.bought++
           done.gold += runePrice(key)
         }
@@ -509,11 +510,11 @@ export function runecraftGear(game: GameState): { embedded: number; fused: numbe
       }
     }
   }
-  for (const [member, hero] of game.party.entries()) {
+  for (const [member, hero] of party.members.entries()) {
     for (const slot of GEAR_SLOTS) {
       for (let item = hero.equipment[slot]; item && (item.runes?.length ?? 0) < socketsOf(item); item = hero.equipment[slot]) {
         const key = nextRune(item, RUNE_ORDER[slotClass(slot)], (k) => pouchCount(game.runes, k))
-        if (!key || embed(game, { from: 'worn', member, slot, itemId: item.id }, key).refusal !== null) break
+        if (!key || embed(game, { from: 'worn', party: party.id, member, slot, itemId: item.id }, key).refusal !== null) break
         done.embedded++
         done.gold += embedCost(key).gold ?? 0
       }
@@ -532,16 +533,16 @@ export function runecraftGear(game: GameState): { embedded: number; fused: numbe
  * crafts the best it can on them (`craftGear`); and raises the shrine with
  * what is left.
  */
-export function visitFacilities(game: GameState): Trade {
+export function visitFacilities(game: GameState, party: Expedition): Trade {
   const { world } = game
   const trade: Trade = {
     goldOnGear: 0, goldFromSales: 0, crafted: 0, tierTwoBought: 0, runesBought: 0, runesFused: 0, runesEmbedded: 0, goldOnRunes: 0,
   }
   const gold = () => world.stock.gold ?? 0
   const sellAll = () => {
-    while (game.baggage.length > 0) {
-      trade.goldFromSales += salePrice(game.baggage[0])
-      sell(game, { from: 'baggage', index: 0, itemId: game.baggage[0].id })
+    while (party.baggage.length > 0) {
+      trade.goldFromSales += salePrice(party.baggage[0])
+      sell(game, { from: 'baggage', party: party.id, index: 0, itemId: party.baggage[0].id })
     }
   }
   sellAll()
@@ -549,12 +550,12 @@ export function visitFacilities(game: GameState): Trade {
   for (const [material, amount] of Object.entries(world.stock) as [Material, number][]) {
     const surplus = amount - (needs[material] ?? 0)
     const lots = surplus - (surplus % 2)
-    if (material !== 'gold' && lots >= 2 && sellMaterial(game, material, lots) === null) trade.goldFromSales += lots / 2
+    if (material !== 'gold' && lots >= 2 && sellMaterial(game, party, material, lots) === null) trade.goldFromSales += lots / 2
   }
-  while (raiseTradingPost(game) === null);
-  while (upgradeWorkshop(game) === null);
-  while (raiseInfirmary(game) === null);
-  for (const [member, hero] of game.party.entries()) {
+  while (raiseTradingPost(game, party) === null);
+  while (upgradeWorkshop(game, party) === null);
+  while (raiseInfirmary(game, party) === null);
+  for (const [member, hero] of party.members.entries()) {
     for (const slot of GEAR_SLOTS) {
       const worn = hero.equipment[slot]
       const base = worn && baseItem(worn)
@@ -567,32 +568,32 @@ export function visitFacilities(game: GameState): Trade {
         const price = buyPrice(candidate)!
         if (price > wornPrice && price <= gold() && (!bought || price >= buyPrice(bought)!)) bought = candidate
       }
-      if (!bought || buy(game, bought.id) !== null) continue
+      if (!bought || buy(game, party, bought.id) !== null) continue
       trade.goldOnGear += buyPrice(bought)!
       if (bought.tier === 2) trade.tierTwoBought += 1
-      game.baggage.pop()
+      party.baggage.pop()
       // The old item's runes come back to the pouch where the workshop can take them out; any left are sold with it.
       for (let old = worn; old.runes?.length; old = hero.equipment[slot]!) {
-        const place = { from: 'worn', member, slot, itemId: old.id } as const
+        const place = { from: 'worn', party: party.id, member, slot, itemId: old.id } as const
         if (extractRefusal(game, place, 0) !== null) break
         trade.goldOnRunes += extractCost(old.runes[0]).gold ?? 0
         extract(game, place, 0)
       }
       const old = hero.equipment[slot]!
-      replaceAt(game, { from: 'worn', member, slot, itemId: old.id }, bought)
-      game.baggage.push(old)
+      replaceAt(game, { from: 'worn', party: party.id, member, slot, itemId: old.id }, bought)
+      party.baggage.push(old)
     }
   }
   // What was replaced is sold before the runes and the crafts, which the gold may pay for.
   sellAll()
-  const runes = runecraftGear(game)
+  const runes = runecraftGear(game, party)
   trade.runesBought += runes.bought
   trade.runesFused += runes.fused
   trade.runesEmbedded += runes.embedded
   trade.goldOnRunes += runes.gold
   // Without a workshop, crafting here would be the field's, a day each: that waits for the road.
-  if (craftTier(world) !== 'field') trade.crafted += craftGear(game).crafted
-  while (raiseShrine(world) === null);
+  if (craftTier(world, party) !== 'field') trade.crafted += craftGear(game, party).crafted
+  while (raiseShrine(world, party) === null);
   return trade
 }
 
@@ -604,17 +605,17 @@ export const OUTPOST_ERRAND_RADIUS = 6
  * nearest within `OUTPOST_ERRAND_RADIUS` that has none, when the stock affords
  * one; the encampment has its shrine instead.
  */
-export function outpostErrand(world: WorldState): QuietLocation | null {
+export function outpostErrand(world: WorldState, party: Expedition): QuietLocation | null {
   if (!canAfford(world.stock, OUTPOST_COST)) return null
   const near = sites(world).filter(
     (site) =>
       site.id !== ENCAMPMENT_ID &&
       world.held.includes(site.id) &&
       !world.outposts.includes(site.id) &&
-      hexDistance(site.position, world.party) <= OUTPOST_ERRAND_RADIUS,
+      hexDistance(site.position, party.position) <= OUTPOST_ERRAND_RADIUS,
   )
   if (near.length === 0) return null
-  return near.reduce((a, b) => (hexDistance(world.party, b.position) < hexDistance(world.party, a.position) ? b : a))
+  return near.reduce((a, b) => (hexDistance(party.position, b.position) < hexDistance(party.position, a.position) ? b : a))
 }
 
 /**
@@ -624,15 +625,16 @@ export function outpostErrand(world: WorldState): QuietLocation | null {
  * of all if none; and the Source once every member has `readyLevel`
  * (`SOURCE_READY_LEVEL` unless told otherwise) or nothing else is left.
  */
-export function nextTarget(world: WorldState, party: Party, readyLevel = SOURCE_READY_LEVEL): MonsterLocation | null {
+export function nextTarget(world: WorldState, party: Expedition, readyLevel = SOURCE_READY_LEVEL): MonsterLocation | null {
+  const members = party.members
   const all = world.locations.filter((l): l is MonsterLocation => l.kind === 'monsters')
   const source = all.find((l) => l.source) ?? null
   const nests = all.filter((l) => !l.source)
-  if (source && (nests.length === 0 || lowestLevel(party) >= readyLevel)) return source
-  const upTo = nests.filter((l) => l.threat <= Math.max(1, lowestLevel(party)))
+  if (source && (nests.length === 0 || lowestLevel(members) >= readyLevel)) return source
+  const upTo = nests.filter((l) => l.threat <= Math.max(1, lowestLevel(members)))
   const threatened = sites(world)
     .filter((site) => world.threatened.includes(site.id))
-    .map((site) => ({ site, days: daysToFall(world, party, site) ?? Infinity }))
+    .map((site) => ({ site, days: daysToFall(world, [presenceOf(party)], site) ?? Infinity }))
     .sort((a, b) => a.days - b.days)
   for (const { site } of threatened) {
     const push = (l: MonsterLocation) => monsterStrength(l) - hexDistance(l.position, site.position)
@@ -641,28 +643,81 @@ export function nextTarget(world: WorldState, party: Party, readyLevel = SOURCE_
   }
   const pool = upTo.length > 0 ? upTo : nests
   if (pool.length === 0) return null
-  return pool.reduce((a, b) => (hexDistance(world.party, b.position) < hexDistance(world.party, a.position) ? b : a))
+  return pool.reduce((a, b) => (hexDistance(party.position, b.position) < hexDistance(party.position, a.position) ? b : a))
 }
 
 /**
- * Plays one campaign and returns each battle's events, in the order fought,
- * with a record of the rest. A new party sets out from the encampment of a
- * new world (seeded with the campaign's seed) and goes where `nextTarget`
- * sends it, walking there a day a hex as the blight goes on, each nest at
- * its own threat. It carries its hit points from battle to battle, takes
- * `rewardVictory` after each win and spends what that brought with
- * `autoAdvance`, and camps where it won until its wounds are healed
- * (`campUntilHealed`, again whenever an event breaks camp). The campaign ends
- * when the Source is beaten, a battle is not won, the encampment falls, or
- * `MAX_CAMPAIGN_DAYS` pass. Item loot is left alone: the heroes keep their
- * starting gear, bettered at the trading post and by crafting; rune loot is
- * taken after each win (`takeRunes`) and embedded at the workshop.
+ * Where a party stands in the careful party's round, which runs: home to the
+ * guild hall when there is a hall errand (`home`), the hall's and facilities'
+ * errands there (`hall`), the walk to the next target (`target`), the battle
+ * (`fight`, then `won`), a watchtower (`tower`), the outpost errand
+ * (`outpost`, then `build` once there), a field craft (`craft`, then
+ * `crafted`), camping until healed (`heal`, casting the party's heals, then
+ * `camp`, the camp order), and back to the top (`start`).
  */
-export function runCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0): Campaign {
-  const game = newGame(startingParty(args), null, seed)
-  const { party, world } = game
-  const home = world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
-  const battles: LoggedEvent[][] = []
+export type Phase =
+  | 'start'
+  | 'home'
+  | 'hall'
+  | 'choose'
+  | 'target'
+  | 'fight'
+  | 'won'
+  | 'tower'
+  | 'outpost'
+  | 'build'
+  | 'craft'
+  | 'crafted'
+  | 'heal'
+  | 'camp'
+
+/** A party's place in the round, and what it is walking to. */
+export interface Plan {
+  phase: Phase
+  /** Where the walk of a walking phase (`home`, `target`, `build`) is going. */
+  to: Hex | null
+  /** The nest or the Source it is walking to and fights. */
+  target: MonsterLocation | null
+  /** Whether the walk's last order got the party nowhere: no way there, or a nest on the road's first hex. */
+  stalled: boolean
+  /** The order whose days the next `advance` runs for it, if any. */
+  running: 'travel' | 'camp' | null
+}
+
+export function newPlan(): Plan {
+  return { phase: 'start', to: null, target: null, stalled: false, running: null }
+}
+
+/** What the policy has a party do next. */
+export type Decision =
+  | { kind: 'finish'; outcome: CampaignOutcome }
+  /** At the guild hall: `visitGuildHall`, then `visitFacilities`; no time passes. */
+  | { kind: 'hall' }
+  /** Fight the target it confronts. */
+  | { kind: 'fight'; target: MonsterLocation }
+  /** A standing order, whose days `advance` runs (none for idle). */
+  | { kind: 'order'; order: OrderRequest }
+  /** A one-day action. */
+  | { kind: 'act'; action: DayAction }
+  /** One field craft (`craftGear` with a limit of 1), a day's act where it makes one. */
+  | { kind: 'craft' }
+  /** Cast the party's heals (`autoHeal`); no time passes. */
+  | { kind: 'heal' }
+
+/** A campaign under way: the game, what it has fought and recorded, and each party's plan by id. */
+export interface CampaignRun {
+  campaign: number
+  seed: number
+  args: CliArgs
+  firstBattleId: number
+  game: GameState
+  battles: LoggedEvent[][]
+  record: CampaignRecord
+  plans: Map<string, Plan>
+}
+
+/** A campaign about to begin, from a new game of the run's party unless one is given. */
+export function startCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0, game = newGame(startingParty(args), null, seed)): CampaignRun {
   const record: CampaignRecord = {
     outcome: 'timeout', days: 0, battles: 0, spawns: 0, captured: 0, lost: 0, blighted: 0, healedHp: 0, campDays: 0,
     towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0,
@@ -670,49 +725,203 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
     runesFound: 0, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0,
     finalLevels: [], deathsAtLevel: [], battlesToLevel: {},
   }
-  const tally = (events: readonly WorldEvent[]) => {
-    for (const event of events) {
-      if (event.type === 'spawned') record.spawns++
-      if (event.type === 'site_captured') record.captured++
-      if (event.type === 'site_lost') record.lost++
-      if (event.type === 'tower_built') record.towersBuilt++
-      if (event.type === 'tower_lost') record.towersLost++
-      if (event.type === 'outpost_built') record.outpostsBuilt++
-    }
-  }
-  const finish = (outcome: CampaignOutcome): Campaign => {
-    record.outcome = outcome
-    record.days = world.turn
-    record.battles = battles.length
-    record.blighted = blightedShare(world)
-    record.hallLevel = world.guildHall
-    record.shrineLevel = world.shrine
-    record.tradingPostLevel = world.tradingPost
-    record.workshopLevel = world.workshop
-    record.infirmaryLevel = world.infirmary
-    record.finalLevels = party.map((member) => member.level)
-    record.socketsFilled = party.reduce((n, member) => n + Object.values(member.equipment).reduce((m, item) => m + (item?.runes?.length ?? 0), 0), 0)
-    return { battles, record }
-  }
-  /** Walks to `to`, going on whenever something on the way stops the party; false if it never gets there. */
-  const walkTo = (to: Hex): boolean => {
-    while (!hexEquals(world.party, to) && worldActive(world) && world.turn <= MAX_CAMPAIGN_DAYS) {
-      const journey = travel(world, to, party)
-      tally(journey.events)
-      if (journey.walked.length === 0) return false
-    }
-    return hexEquals(world.party, to)
-  }
+  return { campaign, seed, args, firstBattleId, game, battles: [], record, plans: new Map(game.parties.map((party) => [party.id, newPlan()])) }
+}
+
+/** The plan of party `party`, a new one if it has none yet. */
+export function planOf(run: CampaignRun, party: Expedition): Plan {
+  let plan = run.plans.get(party.id)
+  if (!plan) run.plans.set(party.id, (plan = newPlan()))
+  return plan
+}
+
+/** Starts a walk to `to` in the plan's next phase. */
+function walk(plan: Plan, phase: Phase, to: Hex): void {
+  plan.phase = phase
+  plan.to = to
+  plan.stalled = false
+}
+
+/**
+ * Where a walk stands: arrived (true), given up (false: its last order got
+ * nowhere, the game is over or the days are out), or `'go'`, a fresh travel
+ * order wanted, planned from where the party stands.
+ */
+function walking(world: WorldState, party: Expedition, plan: Plan): boolean | 'go' {
+  if (plan.stalled) return false
+  if (hexEquals(party.position, plan.to!)) return true
+  if (!worldActive(world) || world.turn > MAX_CAMPAIGN_DAYS) return false
+  return 'go'
+}
+
+/**
+ * The careful party's policy: what `party` does next, moving its plan on
+ * through the phases that need nothing done. Asked whenever the party is idle
+ * or its order was cut short; a walk cut short is ordered again to the same
+ * hex, and a camp cut short casts the party's heals again before its next
+ * camp order, as calling `travel` and `campUntilHealed` again did.
+ */
+export function decide(run: CampaignRun, party: Expedition): Decision {
+  const { game, args } = run
+  const { world } = game
+  const plan = planOf(run, party)
+  const finish = (outcome: CampaignOutcome): Decision => ({ kind: 'finish', outcome })
   for (;;) {
-    if (world.status === 'lost') return finish('encampment')
-    if (world.turn > MAX_CAMPAIGN_DAYS) return finish('timeout')
-    if (hallErrand(game) && !hexEquals(world.party, home)) {
-      if (!walkTo(home)) return finish(worldActive(world) ? 'timeout' : 'encampment')
+    switch (plan.phase) {
+      case 'start': {
+        if (world.status === 'lost') return finish('encampment')
+        if (world.turn > MAX_CAMPAIGN_DAYS) return finish('timeout')
+        const home = world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
+        if (hallErrand(game, party) && !hexEquals(party.position, home)) walk(plan, 'home', home)
+        else plan.phase = 'hall'
+        continue
+      }
+      case 'home': {
+        const walked = walking(world, party, plan)
+        if (walked === 'go') return { kind: 'order', order: { kind: 'travel', to: plan.to! } }
+        if (!walked) return finish(worldActive(world) ? 'timeout' : 'encampment')
+        plan.phase = 'hall'
+        continue
+      }
+      case 'hall':
+        // Done at once, whatever brought the party home.
+        plan.phase = 'choose'
+        if (atGuildHall(world, party)) return { kind: 'hall' }
+        continue
+      case 'choose': {
+        const next = nextTarget(world, party, args.readyLevel)
+        if (!next) return finish('timeout')
+        plan.target = next
+        walk(plan, 'target', next.position)
+        continue
+      }
+      case 'target': {
+        // The journey stops for what happens on the way; the careful party takes note and goes on.
+        const walked = walking(world, party, plan)
+        if (walked === 'go') return { kind: 'order', order: { kind: 'travel', to: plan.to! } }
+        if (!worldActive(world)) return finish('encampment')
+        if (!walked) return finish('timeout')
+        plan.phase = 'fight'
+        continue
+      }
+      case 'fight':
+        plan.phase = 'won'
+        return { kind: 'fight', target: plan.target! }
+      case 'won':
+        if (world.status === 'won') return finish('source')
+        plan.phase = 'tower'
+        continue
+      case 'tower':
+        // A watchtower wherever the party stops on land that takes one and the stock affords it.
+        plan.phase = 'outpost'
+        if (canBuildTower(world, party) === null) return { kind: 'act', action: { kind: 'tower' } }
+        continue
+      case 'outpost': {
+        // An outpost on a held site nearby, if the stock affords one; the party camps there.
+        const site = outpostErrand(world, party)
+        if (site) walk(plan, 'build', site.position)
+        else plan.phase = 'craft'
+        continue
+      }
+      case 'build': {
+        const walked = walking(world, party, plan)
+        if (walked === 'go') return { kind: 'order', order: { kind: 'travel', to: plan.to! } }
+        plan.phase = 'craft'
+        if (walked && canBuildOutpost(world, party) === null) return { kind: 'act', action: { kind: 'outpost' } }
+        continue
+      }
+      case 'craft':
+        // A field craft on one piece of gear the stock affords, a day's work.
+        plan.phase = 'crafted'
+        if (canCamp(world, party)) return { kind: 'craft' }
+        continue
+      case 'crafted':
+        if (!worldActive(world)) return finish('encampment')
+        plan.phase = 'heal'
+        continue
+      case 'heal':
+        if (partyWounded(party.members) && canCamp(world, party)) {
+          plan.phase = 'camp'
+          return { kind: 'heal' }
+        }
+        plan.phase = 'start'
+        continue
+      case 'camp':
+        // Whole after the cast, it camps no day and stands under no order.
+        plan.phase = 'heal'
+        return { kind: 'order', order: partyWounded(party.members) ? { kind: 'camp' } : { kind: 'idle' } }
     }
-    // Done at once, whatever brought the party home.
-    if (atGuildHall(world)) {
-      record.recruits += visitGuildHall(game)
-      const trade = visitFacilities(game)
+  }
+}
+
+/** Sums what a stretch of days brought into the record: the world's events counted by `tally`. */
+function tally(record: CampaignRecord, events: readonly WorldEvent[]): void {
+  for (const event of events) {
+    if (event.type === 'spawned') record.spawns++
+    if (event.type === 'site_captured') record.captured++
+    if (event.type === 'site_lost') record.lost++
+    if (event.type === 'tower_built') record.towersBuilt++
+    if (event.type === 'tower_lost') record.towersLost++
+    if (event.type === 'outpost_built') record.outpostsBuilt++
+  }
+}
+
+/** Fights `target`, which the party confronts: the battle logged, and on a win the party's wounds, rewards and runes taken and the location cleared. False if it was lost. */
+function fightAt(run: CampaignRun, party: Expedition, target: MonsterLocation): boolean {
+  const { game, record, battles } = run
+  const members = party.members
+  const encounter = ENCOUNTERS[target.encounter](partyFighters(members), target.threat)
+  const meta = {
+    campaign: run.campaign,
+    location: target.id,
+    encounter: target.encounter,
+    threat: target.threat,
+    day: game.world.turn,
+    partyLevels: members.map((member) => member.level),
+  }
+  const battleId = run.firstBattleId + battles.length
+  const battleSeed = (run.seed + battles.length) >>> 0
+  const engine = fight(encounter.setup, battleSeed, members, run.args, meta)
+  battles.push(engine.getLog().map((event) => ({ ...event, battleId })))
+
+  const state = engine.getState()
+  if (state.winner !== 'player') return false
+  // The party's wounds and mana left are its own from here on, as BattleScene makes them.
+  members.forEach((member, i) => {
+    const unit = state.units.find((u) => u.id === heroId(i))!
+    member.hp = unit.hp
+    member.mana = unit.mana
+  })
+  const { dead } = rewardVictory(members, xpReward(encounter), party.baggage)
+  record.deaths += dead.length
+  // The fallen are buried before the experience is given, so each keeps the level it died at.
+  record.deathsAtLevel.push(...dead.map((member) => member.level))
+  for (const member of members) autoAdvance(member)
+  for (const mark of LEVEL_MARKS) {
+    if (record.battlesToLevel[mark] === undefined && lowestLevel(members) >= mark) record.battlesToLevel[mark] = battles.length
+  }
+  record.runesFound += takeRunes(game, target.threat, target.encounter, battleSeed).length
+  clearLocation(game, target.id)
+  return true
+}
+
+/**
+ * Carries out a decision for `party`: an errand or a day's act at once, or an
+ * order given for `advance` to run. Returns the outcome when the campaign
+ * ends, `'standing'` when the party now holds an order whose days are to run,
+ * else null, to be asked again.
+ */
+export function carryOut(run: CampaignRun, party: Expedition, decision: Decision): CampaignOutcome | 'standing' | null {
+  const { game, record } = run
+  const { world } = game
+  const plan = planOf(run, party)
+  plan.running = null
+  switch (decision.kind) {
+    case 'finish':
+      return decision.outcome
+    case 'hall': {
+      record.recruits += visitGuildHall(game, party)
+      const trade = visitFacilities(game, party)
       record.goldOnGear += trade.goldOnGear
       record.goldFromSales += trade.goldFromSales
       record.tierTwoBought += trade.tierTwoBought
@@ -720,67 +929,130 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
       record.runesBought += trade.runesBought
       record.runesFused += trade.runesFused
       record.goldOnRunes += trade.goldOnRunes
+      return null
     }
-    const next = nextTarget(world, party, args.readyLevel)
-    if (!next) return finish('timeout')
-    // The journey stops for what happens on the way; the careful party takes note and goes on.
-    const arrived = walkTo(next.position)
-    if (!worldActive(world)) return finish('encampment')
-    if (!arrived) return finish('timeout')
-
-    const encounter = ENCOUNTERS[next.encounter](partyFighters(party), next.threat)
-    const meta = {
-      campaign,
-      location: next.id,
-      encounter: next.encounter,
-      threat: next.threat,
-      day: world.turn,
-      partyLevels: party.map((member) => member.level),
+    case 'fight':
+      return fightAt(run, party, decision.target) ? null : 'fallen'
+    case 'act': {
+      const report = act(game, party.id, decision.action)
+      if (typeof report !== 'string') tally(record, report.events)
+      return null
     }
-    const battleId = firstBattleId + battles.length
-    const battleSeed = (seed + battles.length) >>> 0
-    const engine = fight(encounter.setup, battleSeed, party, args, meta)
-    battles.push(engine.getLog().map((event) => ({ ...event, battleId })))
-
-    const state = engine.getState()
-    if (state.winner !== 'player') return finish('fallen')
-    // The party's wounds and mana left are its own from here on, as BattleScene makes them.
-    party.forEach((member, i) => {
-      const unit = state.units.find((u) => u.id === heroId(i))!
-      member.hp = unit.hp
-      member.mana = unit.mana
-    })
-    const { dead } = rewardVictory(party, xpReward(encounter), game.baggage)
-    record.deaths += dead.length
-    // The fallen are buried before the experience is given, so each keeps the level it died at.
-    record.deathsAtLevel.push(...dead.map((member) => member.level))
-    for (const member of party) autoAdvance(member)
-    for (const mark of LEVEL_MARKS) {
-      if (record.battlesToLevel[mark] === undefined && lowestLevel(party) >= mark) record.battlesToLevel[mark] = battles.length
-    }
-    record.runesFound += takeRunes(game, next.threat, next.encounter, battleSeed).length
-    clearLocation(world, next.id)
-    if (world.status === 'won') return finish('source')
-    // A watchtower wherever the party stops on land that takes one and the stock affords it.
-    if (canBuildTower(world) === null) tally(buildTower(world, party)!)
-    // An outpost on a held site nearby, if the stock affords one; the party camps there.
-    const outpost = outpostErrand(world)
-    if (outpost && walkTo(outpost.position) && canBuildOutpost(world) === null) tally(buildOutpost(world, party)!)
-    // A field craft on one piece of gear the stock affords, a day's work.
-    if (canCamp(world)) {
+    case 'craft': {
       const turn = world.turn
-      const { crafted, events } = craftGear(game, 1)
-      tally(events)
+      const { crafted, events } = craftGear(game, party, 1)
+      tally(record, events)
       record.crafted += crafted
       record.fieldCraftDays += world.turn - turn
+      return null
     }
-    if (!worldActive(world)) return finish('encampment')
-    while (partyWounded(party) && canCamp(world)) {
-      const camp = campUntilHealed(world, party)!
-      tally(camp.events)
-      record.healedHp += camp.rested + camp.cast
-      record.campDays += camp.days
+    case 'heal':
+      record.healedHp += autoHeal(party.members)
+      return null
+    case 'order': {
+      const { order } = decision
+      if (order.kind === 'idle') {
+        setOrder(game, party.id, order)
+        return null
+      }
+      if (order.kind === 'camp') {
+        setOrder(game, party.id, order)
+        plan.running = 'camp'
+        return 'standing'
+      }
+      // A fresh route from where the party stands; one that cannot start (no way there, or a nest on its first hex) gets it nowhere.
+      // This mirrors the start of `travel` in worldMap.ts, which carries the same guards: a refused order returns at once there too, leaving `confronting` as it was, and a blocked first hex clears the order and sets `confronting`. Keep the two in step.
+      if (setOrder(game, party.id, order) !== null) {
+        plan.stalled = true
+        return null
+      }
+      if (party.order.kind === 'travel' && roadBlocked(world, party.order)) {
+        party.order = { kind: 'idle' }
+        plan.stalled = true
+        party.confronting = monstersHere(world, party)?.id ?? null
+        return null
+      }
+      plan.running = 'travel'
+      return 'standing'
     }
+  }
+}
+
+/** Takes in the days `advance` ran: the events tallied, and each running order's walk or camp recorded on its party. */
+function takeDays(run: CampaignRun, reports: readonly DayReport[]): void {
+  const { game, record } = run
+  for (const report of reports) tally(record, report.events)
+  for (const party of game.parties) {
+    const plan = planOf(run, party)
+    const days = reports.map((report) => report.parties.find((day) => day.party === party.id))
+    if (plan.running === 'travel') {
+      plan.stalled = !days.some((day) => day?.walked)
+      party.confronting = monstersHere(game.world, party)?.id ?? null
+    }
+    if (plan.running === 'camp') {
+      record.campDays += reports.length
+      for (const day of days) record.healedHp += (day?.rested ?? 0) + (day?.cast ?? 0)
+    }
+  }
+}
+
+/** Whether `party` is to be asked again after the days `advance` ran: it is idle, or what stopped the days concerns it or every party. */
+function needsDecision(game: GameState, party: Expedition, last: DayReport | undefined): boolean {
+  if (party.order.kind === 'idle' || !last || !worldActive(game.world)) return true
+  return !last.interrupt || last.interrupt.party === null || last.interrupt.party === party.id
+}
+
+/** The campaign's record filled in at its end. */
+function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Campaign {
+  const { game, record, battles } = run
+  const { world } = game
+  const members = game.parties[0].members
+  record.outcome = outcome
+  record.days = world.turn
+  record.battles = battles.length
+  record.blighted = blightedShare(world)
+  record.hallLevel = world.guildHall
+  record.shrineLevel = world.shrine
+  record.tradingPostLevel = world.tradingPost
+  record.workshopLevel = world.workshop
+  record.infirmaryLevel = world.infirmary
+  record.finalLevels = members.map((member) => member.level)
+  record.socketsFilled = members.reduce((n, member) => n + Object.values(member.equipment).reduce((m, item) => m + (item?.runes?.length ?? 0), 0), 0)
+  return { battles, record }
+}
+
+/**
+ * Plays one campaign and returns each battle's events, in the order fought,
+ * with a record of the rest. A new party sets out from the encampment of a
+ * new world (seeded with the campaign's seed) and goes where `nextTarget`
+ * sends it, each nest at its own threat. Its days run on the company's day
+ * loop (company.ts): the policy (`decide`) gives the party its next order,
+ * errand or day's act whenever it is idle or its order was cut short, and
+ * `advance` runs the orders' days, the blight going on. It carries its hit
+ * points from battle to battle, takes `rewardVictory` after each win and
+ * spends what that brought with `autoAdvance`, and camps where it won until
+ * its wounds are healed, again whenever an event breaks camp. The campaign
+ * ends when the Source is beaten, a battle is not won, the encampment falls,
+ * or `MAX_CAMPAIGN_DAYS` pass. Item loot is left alone: the heroes keep their
+ * starting gear, bettered at the trading post and by crafting; rune loot is
+ * taken after each win (`takeRunes`) and embedded at the workshop.
+ */
+export function runCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0): Campaign {
+  const run = startCampaign(campaign, seed, args, firstBattleId)
+  const { game } = run
+  let last: DayReport | undefined
+  for (;;) {
+    for (const party of game.parties) {
+      if (!needsDecision(game, party, last)) continue
+      for (;;) {
+        const done = carryOut(run, party, decide(run, party))
+        if (done === 'standing') break
+        if (done !== null) return finishCampaign(run, done)
+      }
+    }
+    const reports = advance(game, Infinity)
+    takeDays(run, reports)
+    last = reports.at(-1)
   }
 }
 

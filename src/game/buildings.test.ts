@@ -17,21 +17,27 @@ import {
   shrineCost,
   spend,
 } from './buildings.ts'
+import { presences } from './expedition.ts'
+import { newGame } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
 import { LOSS_LEVEL, OUTPOST_YIELD, YIELD_DAYS, siteYield, sites, updateTerritory } from './territory.ts'
 import { TOWER_VISION, visibleHexes } from './vision.ts'
-import { ENCAMPMENT_ID, isNotable, locationAt, newWorld, passTurn, type MonsterLocation, type WorldState } from './worldMap.ts'
+import { ENCAMPMENT_ID, isNotable, locationAt, passTurn, type MonsterLocation } from './worldMap.ts'
 
-const party = readyMadeParty()
+/** A new game on world 1: the game, its world and its one party, the ready-made three, at home. */
+function solo() {
+  const game = newGame(readyMadeParty(), null, 1)
+  return { game, world: game.world, party: game.parties[0] }
+}
 
-/** A new world with the party on clean, empty land near home and the stock to build. */
-function ready(): WorldState {
-  const world = newWorld(1)
-  world.party = offsetToHex(7, 17)
-  expect(locationAt(world, world.party)).toBeNull()
-  expect(world.blight[boardIndex(world.board, world.party)]).toBe(0)
-  world.stock = { gold: 6, iron: 12, timber: 4 }
-  return world
+/** A new game with the party on clean, empty land near home and the stock to build. */
+function ready() {
+  const it = solo()
+  it.party.position = offsetToHex(7, 17)
+  expect(locationAt(it.world, it.party.position)).toBeNull()
+  expect(it.world.blight[boardIndex(it.world.board, it.party.position)]).toBe(0)
+  it.world.stock = { gold: 6, iron: 12, timber: 4 }
+  return it
 }
 
 describe('the stock', () => {
@@ -48,63 +54,63 @@ describe('the stock', () => {
 
 describe('a watchtower', () => {
   it('is built where the party stands, for the stock and a day', () => {
-    const world = ready()
-    expect(canBuildTower(world)).toBeNull()
-    const events = buildTower(world, party)!
-    expect(events[0]).toEqual({ type: 'tower_built', tower: 'tower_1', at: world.party })
-    expect(world.towers).toEqual([{ id: 'tower_1', position: world.party }])
+    const { game, world, party } = ready()
+    expect(canBuildTower(world, party)).toBeNull()
+    const events = buildTower(game, party)!
+    expect(events[0]).toEqual({ type: 'tower_built', tower: 'tower_1', at: party.position })
+    expect(world.towers).toEqual([{ id: 'tower_1', position: party.position }])
     expect(world.stock).toEqual({ gold: 1, iron: 2, timber: 4 })
     expect(world.turn).toBe(2)
   })
 
   it('is refused without the stock, on tainted land, on a location, beside another tower or among monsters', () => {
-    const poor = ready()
+    const { game: poorGame, world: poor, party: poorParty } = ready()
     poor.stock = { iron: 9, gold: 5 }
-    expect(canBuildTower(poor)).toMatch(/costs 10 iron, 5 gold/)
-    expect(buildTower(poor, party)).toBeNull()
+    expect(canBuildTower(poor, poorParty)).toMatch(/costs 10 iron, 5 gold/)
+    expect(buildTower(poorGame, poorParty)).toBeNull()
     expect(poor.turn).toBe(1)
 
-    const tainted = ready()
-    tainted.blight[boardIndex(tainted.board, tainted.party)] = 1
-    expect(canBuildTower(tainted)).toMatch(/clean land/)
+    const { world: tainted, party: taintedParty } = ready()
+    tainted.blight[boardIndex(tainted.board, taintedParty.position)] = 1
+    expect(canBuildTower(tainted, taintedParty)).toMatch(/clean land/)
 
-    const onHome = ready()
-    onHome.party = offsetToHex(9, 19)
-    expect(canBuildTower(onHome)).toMatch(/encampment or a resource/)
+    const { world: onHome, party: onHomeParty } = ready()
+    onHomeParty.position = offsetToHex(9, 19)
+    expect(canBuildTower(onHome, onHomeParty)).toMatch(/encampment or a resource/)
 
-    const crowded = ready()
-    buildTower(crowded, party)
-    expect(canBuildTower(crowded)).toMatch(/already stands/)
-    crowded.party = offsetToHex(7 + TOWER_SPACING - 1, 17)
+    const { game: crowdedGame, world: crowded, party: crowdedParty } = ready()
+    buildTower(crowdedGame, crowdedParty)
+    expect(canBuildTower(crowded, crowdedParty)).toMatch(/already stands/)
+    crowdedParty.position = offsetToHex(7 + TOWER_SPACING - 1, 17)
     crowded.stock = { ...TOWER_COST }
-    expect(canBuildTower(crowded)).toMatch(/apart/)
+    expect(canBuildTower(crowded, crowdedParty)).toMatch(/apart/)
 
-    const among = ready()
-    among.locations.push({ ...(among.locations.find((l) => l.kind === 'monsters') as MonsterLocation), id: 'here', position: among.party })
-    expect(canBuildTower(among)).not.toBeNull()
+    const { world: among, party: amongParty } = ready()
+    among.locations.push({ ...(among.locations.find((l) => l.kind === 'monsters') as MonsterLocation), id: 'here', position: amongParty.position })
+    expect(canBuildTower(among, amongParty)).not.toBeNull()
   })
 
   it('pushes back the blight with TOWER_STRENGTH and sees TOWER_VISION hexes around', () => {
-    const world = ready()
-    const at = world.party
+    const { game, world, party } = ready()
+    const at = party.position
     const away = offsetToHex(30, 2)
-    world.party = away
-    const before = netInfluence(world, party, at)
-    world.party = at
-    buildTower(world, party)
-    world.party = away
-    expect(netInfluence(world, party, at)).toBeCloseTo(before - TOWER_STRENGTH * 1.0)
-    const visible = visibleHexes(world)
+    party.position = away
+    const before = netInfluence(world, presences(game.parties), at)
+    party.position = at
+    buildTower(game, party)
+    party.position = away
+    expect(netInfluence(world, presences(game.parties), at)).toBeCloseTo(before - TOWER_STRENGTH * 1.0)
+    const visible = visibleHexes(world, presences(game.parties))
     const edge: Hex = { q: at.q, r: at.r - TOWER_VISION }
     expect(hexDistance(at, edge)).toBe(TOWER_VISION)
     expect(visible.has(boardIndex(world.board, edge))).toBe(true)
   })
 
   it('warns as it comes under threat, and falls at LOSS_LEVEL, its sight with it', () => {
-    const world = ready()
-    const at = world.party
-    buildTower(world, party)
-    world.party = offsetToHex(30, 2)
+    const { game, world, party } = ready()
+    const at = party.position
+    buildTower(game, party)
+    party.position = offsetToHex(30, 2)
     world.locations.push({
       id: 'besiegers',
       kind: 'monsters',
@@ -116,50 +122,50 @@ describe('a watchtower', () => {
       // As strong as the Source, to outpush Oakvale nearby.
       source: true,
     })
-    const warned = passTurn(world, party).find((e) => e.type === 'site_threatened' && e.site === 'tower_1')
+    const warned = passTurn(world, presences(game.parties)).find((e) => e.type === 'site_threatened' && e.site === 'tower_1')
     expect(warned).toMatchObject({ site: 'tower_1', name: 'A watchtower' })
-    expect(isNotable(world, warned!)).toBe(true)
+    expect(isNotable(world, warned!, presences(game.parties))).toBe(true)
 
     world.blight[boardIndex(world.board, at)] = LOSS_LEVEL
-    const lost = passTurn(world, party).find((e) => e.type === 'tower_lost')
+    const lost = passTurn(world, presences(game.parties)).find((e) => e.type === 'tower_lost')
     expect(lost).toEqual({ type: 'tower_lost', tower: 'tower_1', at })
-    expect(isNotable(world, lost!)).toBe(true)
+    expect(isNotable(world, lost!, presences(game.parties))).toBe(true)
     expect(world.towers).toEqual([])
-    expect(visibleHexes(world).has(boardIndex(world.board, { q: at.q, r: at.r - TOWER_VISION }))).toBe(false)
+    expect(visibleHexes(world, presences(game.parties)).has(boardIndex(world.board, { q: at.q, r: at.r - TOWER_VISION }))).toBe(false)
   })
 })
 
 describe('the shrine', () => {
   it('is raised a level at a time at Oakvale, for the stock and no time, each level adding SHRINE_STRENGTH to the encampment', () => {
-    const world = newWorld(1)
+    const { game, world, party } = solo()
     const oakvale = world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
     world.stock = { gold: 1000, silver: 1000 }
     const away = offsetToHex(30, 2)
-    world.party = away
-    const before = netInfluence(world, party, oakvale)
-    world.party = oakvale
+    party.position = away
+    const before = netInfluence(world, presences(game.parties), oakvale)
+    party.position = oakvale
     for (let level = 1; level <= MAX_SHRINE_LEVEL; level++) {
       expect(shrineCost(world)).toEqual(SHRINE_COSTS[level - 1])
-      expect(raiseShrine(world)).toBeNull()
+      expect(raiseShrine(world, party)).toBeNull()
       expect(world.shrine).toBe(level)
     }
     expect(shrineCost(world)).toBeNull()
-    expect(raiseShrine(world)).toMatch(/as great as it gets/)
+    expect(raiseShrine(world, party)).toMatch(/as great as it gets/)
     expect(world.turn).toBe(1)
     const spent = SHRINE_COSTS.reduce((sum, cost) => sum + (cost.gold ?? 0), 0)
     expect(world.stock.gold).toBe(1000 - spent)
-    world.party = away
-    expect(netInfluence(world, party, oakvale)).toBeCloseTo(before - SHRINE_STRENGTH * MAX_SHRINE_LEVEL)
+    party.position = away
+    expect(netInfluence(world, presences(game.parties), oakvale)).toBeCloseTo(before - SHRINE_STRENGTH * MAX_SHRINE_LEVEL)
   })
 
   it('is refused away from Oakvale or without the stock', () => {
-    const world = newWorld(1)
+    const { world, party } = solo()
     world.stock = { gold: 1000 }
-    world.party = offsetToHex(7, 17)
-    expect(raiseShrine(world)).toMatch(/at Oakvale/)
-    world.party = world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
+    party.position = offsetToHex(7, 17)
+    expect(raiseShrine(world, party)).toMatch(/at Oakvale/)
+    party.position = world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
     world.stock = { gold: 19 }
-    expect(raiseShrine(world)).toMatch(/costs 20 gold/)
+    expect(raiseShrine(world, party)).toMatch(/costs 20 gold/)
     expect(world.shrine).toBe(0)
     expect(world.stock).toEqual({ gold: 19 })
   })
@@ -167,71 +173,158 @@ describe('the shrine', () => {
 
 describe('an outpost', () => {
   /** A new world with the party at held Stonebridge and the stock to build. */
-  function atStonebridge(): WorldState {
-    const world = newWorld(1)
-    world.held = [...new Set([...world.held, 'gold_seam'])]
-    world.party = world.locations.find((l) => l.id === 'gold_seam')!.position
-    world.stock = { gold: 20, timber: 12 }
-    return world
+  function atStonebridge() {
+    const it = solo()
+    it.world.held = [...new Set([...it.world.held, 'gold_seam'])]
+    it.party.position = it.world.locations.find((l) => l.id === 'gold_seam')!.position
+    it.world.stock = { gold: 20, timber: 12 }
+    return it
   }
 
   it('is built at the held site the party stands on, for the stock and a day', () => {
-    const world = atStonebridge()
-    expect(canBuildOutpost(world)).toBeNull()
-    const events = buildOutpost(world, party)!
+    const { game, world, party } = atStonebridge()
+    expect(canBuildOutpost(world, party)).toBeNull()
+    const events = buildOutpost(game, party)!
     expect(events[0]).toEqual({ type: 'outpost_built', site: 'gold_seam', name: 'Gold Seam' })
     expect(world.outposts).toEqual(['gold_seam'])
     expect(world.stock).toEqual({ gold: 5, timber: 2 })
     expect(world.turn).toBe(2)
-    expect(canBuildOutpost(world)).toMatch(/already has an outpost/)
+    expect(canBuildOutpost(world, party)).toMatch(/already has an outpost/)
   })
 
   it('is refused off a held site, at Oakvale, or without the stock', () => {
-    const empty = atStonebridge()
-    empty.party = offsetToHex(7, 17)
-    expect(canBuildOutpost(empty)).toMatch(/held resource/)
+    const { world: empty, party: emptyParty } = atStonebridge()
+    emptyParty.position = offsetToHex(7, 17)
+    expect(canBuildOutpost(empty, emptyParty)).toMatch(/held resource/)
 
-    const home = atStonebridge()
-    home.party = home.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
-    expect(canBuildOutpost(home)).toMatch(/held resource/)
+    const { world: home, party: homeParty } = atStonebridge()
+    homeParty.position = home.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
+    expect(canBuildOutpost(home, homeParty)).toMatch(/held resource/)
 
-    const unheld = atStonebridge()
+    const { world: unheld, party: unheldParty } = atStonebridge()
     unheld.held = unheld.held.filter((id) => id !== 'gold_seam')
-    expect(canBuildOutpost(unheld)).toMatch(/held resource/)
+    expect(canBuildOutpost(unheld, unheldParty)).toMatch(/held resource/)
 
-    const poor = atStonebridge()
+    const { game: poorGame, world: poor, party: poorParty } = atStonebridge()
     poor.stock = { gold: 15, timber: 9 }
-    expect(canBuildOutpost(poor)).toBe(`An outpost costs ${describeCost(OUTPOST_COST)}, more than the stock holds.`)
-    expect(buildOutpost(poor, party)).toBeNull()
+    expect(canBuildOutpost(poor, poorParty)).toBe(`An outpost costs ${describeCost(OUTPOST_COST)}, more than the stock holds.`)
+    expect(buildOutpost(poorGame, poorParty)).toBeNull()
     expect(poor.turn).toBe(1)
   })
 
   it('adds OUTPOST_STRENGTH to its site and OUTPOST_YIELD to what it yields', () => {
-    const world = atStonebridge()
-    const at = world.party
+    const { game, world, party } = atStonebridge()
+    const at = party.position
     const away = offsetToHex(30, 2)
-    world.party = away
-    const before = netInfluence(world, party, at)
+    party.position = away
+    const before = netInfluence(world, presences(game.parties), at)
     const goldSeam = sites(world).find((l) => l.id === 'gold_seam')!
     const yieldBefore = siteYield(world, goldSeam).amount
-    world.party = at
-    buildOutpost(world, party)
-    world.party = away
-    expect(netInfluence(world, party, at)).toBeCloseTo(before - OUTPOST_STRENGTH)
+    party.position = at
+    buildOutpost(game, party)
+    party.position = away
+    expect(netInfluence(world, presences(game.parties), at)).toBeCloseTo(before - OUTPOST_STRENGTH)
     expect(siteYield(world, goldSeam).amount).toBe(yieldBefore + OUTPOST_YIELD)
     world.blight[boardIndex(world.board, at)] = 0
     world.stock = {}
     world.turn = YIELD_DAYS
-    const yielded = updateTerritory(world, party).find((e) => e.type === 'yield' && e.site === 'gold_seam')
+    const yielded = updateTerritory(world, presences(game.parties)).find((e) => e.type === 'yield' && e.site === 'gold_seam')
     expect(yielded).toMatchObject({ amount: yieldBefore + OUTPOST_YIELD })
   })
 
   it('is razed when its site is lost', () => {
-    const world = atStonebridge()
-    buildOutpost(world, party)
-    world.blight[boardIndex(world.board, world.party)] = LOSS_LEVEL
-    const lost = updateTerritory(world, party).find((e) => e.type === 'site_lost')
+    const { game, world, party } = atStonebridge()
+    buildOutpost(game, party)
+    world.blight[boardIndex(world.board, party.position)] = LOSS_LEVEL
+    const lost = updateTerritory(world, presences(game.parties)).find((e) => e.type === 'site_lost')
     expect(lost).toEqual({ type: 'site_lost', site: 'gold_seam', name: 'Gold Seam', outpost: true })
     expect(world.outposts).toEqual([])
+  })
+})
+
+/** Two games built alike by `setup`, each moved on to the first day that brings an event. */
+function eventfulTwins<T extends ReturnType<typeof solo>>(setup: () => T): [T, T] {
+  const scout = setup()
+  let quiet = 0
+  while (passTurn(scout.world, presences(scout.game.parties)).length === 0) quiet++
+  const make = () => {
+    const it = setup()
+    for (let day = 0; day < quiet; day++) passTurn(it.world, presences(it.game.parties))
+    return it
+  }
+  return [make(), make()]
+}
+
+/** Expects `build` to be refused with null, changing nothing in the game. */
+function refusedUnchanged(game: ReturnType<typeof solo>['game'], build: () => unknown) {
+  const before = JSON.stringify(game)
+  expect(build()).toBeNull()
+  expect(JSON.stringify(game)).toBe(before)
+}
+
+describe('building, as it is (characterization)', () => {
+  /** A held Gold Seam to stand on, with the stock for an outpost. */
+  function atGoldSeam() {
+    const it = solo()
+    it.world.held = [...new Set([...it.world.held, 'gold_seam'])]
+    it.party.position = it.world.locations.find((l) => l.id === 'gold_seam')!.position
+    it.world.stock = { gold: 20, timber: 12 }
+    return it
+  }
+
+  it('a watchtower is spent for, stands, and then the day passes: the same events and game as by hand', () => {
+    const [now, then] = eventfulTwins(ready)
+    const turn = now.world.turn
+    spend(then.world.stock, TOWER_COST)
+    then.world.towersBuilt += 1
+    then.world.towers.push({ id: 'tower_1', position: then.party.position })
+    const day = passTurn(then.world, presences(then.game.parties))
+    expect(day.length).toBeGreaterThan(0)
+    expect(buildTower(now.game, now.party)).toEqual([{ type: 'tower_built', tower: 'tower_1', at: now.party.position }, ...day])
+    expect(now.world.turn).toBe(turn + 1)
+    expect(now.party.confronting).toBeNull()
+    expect(JSON.stringify(now.game)).toBe(JSON.stringify(then.game))
+  })
+
+  it('an outpost is spent for, stands, and then the day passes: the same events and game as by hand', () => {
+    const [now, then] = eventfulTwins(atGoldSeam)
+    const turn = now.world.turn
+    spend(then.world.stock, OUTPOST_COST)
+    then.world.outposts.push('gold_seam')
+    const day = passTurn(then.world, presences(then.game.parties))
+    expect(day.length).toBeGreaterThan(0)
+    expect(buildOutpost(now.game, now.party)).toEqual([{ type: 'outpost_built', site: 'gold_seam', name: 'Gold Seam' }, ...day])
+    expect(now.world.turn).toBe(turn + 1)
+    expect(now.party.confronting).toBeNull()
+    expect(JSON.stringify(now.game)).toBe(JSON.stringify(then.game))
+  })
+
+  it.each(['lost', 'won'] as const)('both are refused, changing nothing, once the game is %s', (status) => {
+    const tower = ready()
+    tower.world.status = status
+    refusedUnchanged(tower.game, () => buildTower(tower.game, tower.party))
+    const outpost = atGoldSeam()
+    outpost.world.status = status
+    refusedUnchanged(outpost.game, () => buildOutpost(outpost.game, outpost.party))
+  })
+
+  it('both are refused, changing nothing, without the stock, on the wrong land or among monsters', () => {
+    const poorTower = ready()
+    poorTower.world.stock = { iron: 9, gold: 5 }
+    refusedUnchanged(poorTower.game, () => buildTower(poorTower.game, poorTower.party))
+    const tainted = ready()
+    tainted.world.blight[boardIndex(tainted.world.board, tainted.party.position)] = 1
+    refusedUnchanged(tainted.game, () => buildTower(tainted.game, tainted.party))
+    const poorOutpost = atGoldSeam()
+    poorOutpost.world.stock = { gold: 15, timber: 9 }
+    refusedUnchanged(poorOutpost.game, () => buildOutpost(poorOutpost.game, poorOutpost.party))
+    const offSite = atGoldSeam()
+    offSite.party.position = offsetToHex(7, 17)
+    refusedUnchanged(offSite.game, () => buildOutpost(offSite.game, offSite.party))
+    const among = ready()
+    const nest = among.world.locations.find((l) => l.kind === 'monsters') as MonsterLocation
+    among.world.locations.push({ ...nest, id: 'here', position: among.party.position })
+    refusedUnchanged(among.game, () => buildTower(among.game, among.party))
+    refusedUnchanged(among.game, () => buildOutpost(among.game, among.party))
   })
 })

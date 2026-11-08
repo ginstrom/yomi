@@ -2,6 +2,7 @@ import { mulberry32 } from '../combat/rng.ts'
 import { HexBoard, hexDistance, hexNeighbors, hexToOffset, offsetToHex, type BoardSize, type Hex } from '../grid/hex.ts'
 import { MAGIC_ITEMS, type Item } from '../inventory/inventory.ts'
 import { ENCOUNTER_BANDS, type EncounterId } from './encounters.ts'
+import type { PartyPresence } from './expedition.ts'
 import type { Material } from './territory.ts'
 import { ENCAMPMENT_ID, threatAt, type MonsterLocation, type WorldState } from './worldMap.ts'
 
@@ -10,7 +11,7 @@ import { ENCAMPMENT_ID, threatAt, type MonsterLocation, type WorldState } from '
  * from 0 (clean) to 3 (corrupted), and each day blight and clean influence
  * contend for it. Monster locations, the Source and corrupted land push the
  * blight; the encampment (with its shrine), held sites (with their outposts),
- * watchtowers and the party push back. A hex's `shift`
+ * watchtowers and every party push back. A hex's `shift`
  * counter moves by the difference each day, and a level goes up or down when
  * it reaches `SHIFT_COST` either way. Corrupted land spawns new monster
  * locations. Phaser-free; worldMap.ts calls `advanceDay` once a world turn.
@@ -37,7 +38,7 @@ export const TOWER_STRENGTH = 4
 export const SHRINE_STRENGTH = 3
 /** What an outpost adds to its held site's strength (buildings.ts). */
 export const OUTPOST_STRENGTH = 3
-/** The party pushes with this plus half the sum of its members' levels. */
+/** A party pushes with this plus half the sum of its members' levels. */
 export const PARTY_BASE = 2
 /** How far a hex's shift counter must go, either way, to move its level by one. */
 export const SHIFT_COST = 60
@@ -51,7 +52,7 @@ export const MAX_BLIGHT_GROWTH = 0.5
 export const SPAWN_DIVISOR = 200
 /** ...and a monster location appears when it reaches this. */
 export const SPAWN_COST = 30
-/** A spawn keeps this many hexes from the party, other monster locations, held sites and watchtowers. */
+/** A spawn keeps this many hexes from every party, other monster locations, held sites and watchtowers. */
 export const SPAWN_CLEARANCE = 4
 export const MAX_MONSTER_LOCATIONS = 24
 /** The chance a spawned location guards an item. */
@@ -102,9 +103,9 @@ export function blightGrowth(turn: number): number {
   return 1 + Math.min(MAX_BLIGHT_GROWTH, BLIGHT_GROWTH * Math.floor((turn - 1) / GROWTH_DAYS))
 }
 
-/** How hard the party pushes: `PARTY_BASE` plus half its levels together. Gear and perks do not count. */
-export function partyStrength(party: readonly { level: number }[]): number {
-  return PARTY_BASE + Math.floor(party.reduce((sum, member) => sum + member.level, 0) / 2)
+/** How hard a party pushes: `PARTY_BASE` plus half its members' levels together. Gear and perks do not count. */
+export function partyStrength(levels: readonly number[]): number {
+  return PARTY_BASE + Math.floor(levels.reduce((sum, level) => sum + level, 0) / 2)
 }
 
 export function monsterStrength(location: MonsterLocation): number {
@@ -139,7 +140,7 @@ function geometry(board: BoardSize): Geometry {
   return found
 }
 
-/** The influence of everything but the party and creeping corruption, at every hex: what changes only when a location or a held site does. */
+/** The influence of everything but the parties and creeping corruption, at every hex: what changes only when a location or a held site does. */
 interface Fields {
   key: string
   /** Before growth. */
@@ -188,32 +189,39 @@ function monsterHexes(world: WorldState): Set<number> {
   )
 }
 
+/** The board indices of the hexes the parties stand on, which are neutral ground. */
+function neutralHexes(world: WorldState, presences: readonly PartyPresence[]): Set<number> {
+  return new Set(presences.map((p) => boardIndex(world.board, p.position)))
+}
+
 /**
  * The day's net influence at hex `i`, blight less clean, as `advanceDay` works
- * it out from the levels `levels` (the day before's): the party's own hex is
- * neutral, so no blight rises on it, though the party's influence still lowers it.
+ * it out from the levels `levels` (the day before's). Each party adds its
+ * reach to the clean side, in list order. A party's own hex is neutral
+ * (`neutral`), so no blight rises on it and none creeps from it, though the
+ * parties' influence still lowers it.
  */
 function netAt(
   world: WorldState,
-  party: readonly { level: number }[],
+  presences: readonly PartyPresence[],
   i: number,
   levels: readonly number[],
   field: Fields,
-  partyIndex: number,
+  neutral: ReadonlySet<number>,
 ): number {
   const { hexes, neighbours } = geometry(world.board)
-  const reach = partyStrength(party) - hexDistance(world.party, hexes[i])
-  const clean = field.clean[i] + Math.max(0, reach)
-  if (i === partyIndex) return -clean
+  let clean = field.clean[i]
+  for (const p of presences) clean += Math.max(0, partyStrength(p.levels) - hexDistance(p.position, hexes[i]))
+  if (neutral.has(i)) return -clean
   let creep = 0
-  for (const n of neighbours[i]) if (levels[n] >= MAX_BLIGHT && n !== partyIndex) creep += CREEP
+  for (const n of neighbours[i]) if (levels[n] >= MAX_BLIGHT && !neutral.has(n)) creep += CREEP
   return (field.blight[i] + creep) * blightGrowth(world.turn) - clean
 }
 
 /** Today's net influence at `h`, blight less clean: above 0 the blight is gaining there. */
-export function netInfluence(world: WorldState, party: readonly { level: number }[], h: Hex): number {
+export function netInfluence(world: WorldState, presences: readonly PartyPresence[], h: Hex): number {
   const i = boardIndex(world.board, h)
-  return netAt(world, party, i, world.blight, fields(world), boardIndex(world.board, world.party))
+  return netAt(world, presences, i, world.blight, fields(world), neutralHexes(world, presences))
 }
 
 /** The levels a new world starts with: what its sources make of land already tainted. Monsters' hexes are at least blighted. */
@@ -234,12 +242,12 @@ export function seedBlight(world: WorldState): void {
  * its level with it, then spawn pressure grows with the corrupted land and may
  * spawn a monster location. Called by `passTurn` after the turn is counted.
  */
-export function advanceDay(world: WorldState, party: readonly { level: number }[]): WorldEvent[] {
+export function advanceDay(world: WorldState, presences: readonly PartyPresence[]): WorldEvent[] {
   const events: WorldEvent[] = []
   const field = fields(world)
   const { hexes } = geometry(world.board)
   const pinned = monsterHexes(world)
-  const partyIndex = boardIndex(world.board, world.party)
+  const neutral = neutralHexes(world, presences)
   const before = world.blight.slice()
   for (let i = 0; i < hexes.length; i++) {
     if (pinned.has(i)) {
@@ -247,7 +255,7 @@ export function advanceDay(world: WorldState, party: readonly { level: number }[
       world.shift[i] = 0
       continue
     }
-    let shift = world.shift[i] + netAt(world, party, i, before, field, partyIndex)
+    let shift = world.shift[i] + netAt(world, presences, i, before, field, neutral)
     let level = before[i]
     if (shift >= SHIFT_COST) {
       shift = 0
@@ -264,7 +272,7 @@ export function advanceDay(world: WorldState, party: readonly { level: number }[
       events.push({ type: 'level_changed', at: hexes[i], from: before[i], to: level })
     }
   }
-  const spawned = spawn(world, pinned, partyIndex)
+  const spawned = spawn(world, presences, pinned, neutral)
   if (spawned) events.push(spawned)
   return events
 }
@@ -276,17 +284,22 @@ const SPAWN_KINDS: ReadonlyArray<{ encounter: EncounterId; name: string }> = [
   { encounter: 'bandit_camp', name: 'Bandit Gang' },
 ]
 
-function spawn(world: WorldState, pinned: Set<number>, partyIndex: number): WorldEvent | null {
+function spawn(
+  world: WorldState,
+  presences: readonly PartyPresence[],
+  pinned: Set<number>,
+  neutral: ReadonlySet<number>,
+): WorldEvent | null {
   const { hexes } = geometry(world.board)
   const corrupted: number[] = []
-  for (let i = 0; i < hexes.length; i++) if (world.blight[i] >= MAX_BLIGHT && !pinned.has(i) && i !== partyIndex) corrupted.push(i)
+  for (let i = 0; i < hexes.length; i++) if (world.blight[i] >= MAX_BLIGHT && !pinned.has(i) && !neutral.has(i)) corrupted.push(i)
   world.spawnPressure += (corrupted.length / SPAWN_DIVISOR) * blightGrowth(world.turn)
   if (world.spawnPressure < SPAWN_COST) return null
   // Pressure waits, but no more than one spawn's worth, for room on the map.
   world.spawnPressure = SPAWN_COST
   if (world.locations.filter((l) => l.kind === 'monsters').length >= MAX_MONSTER_LOCATIONS) return null
   const keepClear = [
-    world.party,
+    ...presences.map((p) => p.position),
     ...world.locations.filter((l) => l.kind === 'monsters' || world.held.includes(l.id)).map((l) => l.position),
     ...world.towers.map((tower) => tower.position),
   ]

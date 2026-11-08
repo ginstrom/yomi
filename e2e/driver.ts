@@ -243,7 +243,7 @@ export class Game {
    * stops it short.
    */
   async travelTo(to: Hex): Promise<WorldProbe> {
-    const arrived = (w: WorldProbe) => w.world.party.q === to.q && w.world.party.r === to.r
+    const arrived = (w: WorldProbe) => w.partyAt.q === to.q && w.partyAt.r === to.r
     let world = await this.waitFor('World', (w) => !w.walking)
     for (let tries = 0; tries < 5 && !arrived(world); tries++) {
       const turn = world.world.turn

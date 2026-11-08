@@ -1,10 +1,11 @@
 import { hexToOffset, type Hex } from '../grid/hex.ts'
 import { boardIndex, type WorldEvent } from './blight.ts'
+import type { PartyPresence } from './expedition.ts'
 import { ENCAMPMENT_ID, type WorldState } from './worldMap.ts'
 
 /**
  * Fog of war (docs/designs/guild-hall-and-watchtowers.md §4.6): what the
- * player knows of the world map. The party, the encampment, the held sites
+ * player knows of the world map. Every party, the encampment, the held sites
  * and the watchtowers see every hex within a radius; nothing blocks sight. A
  * hex once seen stays explored, remembered at the blight level it had when last in sight
  * (`WorldState.seen`), and a monster location once seen stays known
@@ -32,10 +33,10 @@ function hexesWithin(world: WorldState, at: Hex, radius: number, into: Set<numbe
   }
 }
 
-/** The hexes in sight now, by `boardIndex`: within sight of the party, the encampment, a held site or a watchtower. */
-export function visibleHexes(world: WorldState): Set<number> {
+/** The hexes in sight now, by `boardIndex`: within sight of a party (`presences`), the encampment, a held site or a watchtower. */
+export function visibleHexes(world: WorldState, presences: readonly PartyPresence[]): Set<number> {
   const visible = new Set<number>()
-  hexesWithin(world, world.party, PARTY_VISION, visible)
+  for (const p of presences) hexesWithin(world, p.position, PARTY_VISION, visible)
   for (const location of world.locations) {
     if (location.kind === 'monsters' || !world.held.includes(location.id)) continue
     const radius = location.id === ENCAMPMENT_ID ? CAMP_VISION : SITE_VISION
@@ -51,8 +52,8 @@ export function visibleHexes(world: WorldState): Set<number> {
  * newly seen one told as a `sighted` event. Called after every change to the
  * land (`passTurn`, `clearLocation`, a new world).
  */
-export function updateSight(world: WorldState): WorldEvent[] {
-  const visible = visibleHexes(world)
+export function updateSight(world: WorldState, presences: readonly PartyPresence[]): WorldEvent[] {
+  const visible = visibleHexes(world, presences)
   for (const i of visible) world.seen[i] = world.blight[i]
   const events: WorldEvent[] = []
   for (const location of world.locations) {
@@ -72,13 +73,14 @@ export function updateSight(world: WorldState): WorldEvent[] {
 }
 
 /**
- * A new world's knowledge: all unexplored but what its watchers see. The
- * Source too is unknown, a mystery until the party's exploring finds it.
+ * A new world's knowledge: all unexplored but what its watchers and the
+ * parties (`presences`) see. The Source too is unknown, a mystery until the
+ * parties' exploring finds it.
  */
-export function seedSight(world: WorldState): void {
+export function seedSight(world: WorldState, presences: readonly PartyPresence[]): void {
   world.seen = world.blight.map(() => UNEXPLORED)
   world.sighted = []
-  updateSight(world)
+  updateSight(world, presences)
 }
 
 /** Whether the player knows of the monster location `id`. */

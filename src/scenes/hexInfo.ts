@@ -1,6 +1,8 @@
-import { maxHp, type Character } from '../character/character.ts'
+import { maxHp } from '../character/character.ts'
 import { BLIGHT_NAMES, boardIndex, netInfluence } from '../game/blight.ts'
 import { MAX_SHRINE_LEVEL } from '../game/buildings.ts'
+import { presences, type Expedition, type PartyPresence } from '../game/expedition.ts'
+import type { GameState } from '../game/gameState.ts'
 import { MAX_GUILD_HALL_LEVEL } from '../game/guildHall.ts'
 import { daysToFall, siteYield } from '../game/territory.ts'
 import { UNEXPLORED } from '../game/vision.ts'
@@ -20,7 +22,9 @@ export interface HexInfo {
  * many days' walk it is. Tells nothing the fog hides: a monster location only
  * once sighted, a resource only once its land is explored.
  */
-export function hexInfo(world: WorldState, party: readonly Character[], visible: ReadonlySet<number>, at: Hex): HexInfo {
+export function hexInfo(game: GameState, party: Expedition, visible: ReadonlySet<number>, at: Hex): HexInfo {
+  const { world } = game
+  const present = presences(game.parties)
   const i = boardIndex(world.board, at)
   const seen = world.seen[i]
   const inSight = visible.has(i)
@@ -44,17 +48,17 @@ export function hexInfo(world: WorldState, party: readonly Character[], visible:
         const { material, amount } = siteYield(world, location)
         lines.push(`Yields ${amount} ${material}${held ? '' : ' once held'}${world.outposts.includes(location.id) ? ', with an outpost' : ''}.`)
       }
-      if (held && world.threatened.includes(location.id)) lines.push(fallsIn(world, party, location.position))
+      if (held && world.threatened.includes(location.id)) lines.push(fallsIn(world, present, location.position))
     }
   } else if (tower) {
     title = 'Watchtower'
-    if (world.threatened.includes(tower.id)) lines.push(fallsIn(world, party, tower.position))
+    if (world.threatened.includes(tower.id)) lines.push(fallsIn(world, present, tower.position))
   }
 
   if (seen !== UNEXPLORED) {
     lines.push(`Blight: ${BLIGHT_NAMES[seen]}${inSight ? '' : ' (as last seen)'}.`)
     if (inSight) {
-      const net = netInfluence(world, party, at)
+      const net = netInfluence(world, present, at)
       if (net > 0) lines.push('The blight is gaining here.')
       else if (net < 0 && seen > 0) lines.push('The blight is receding here.')
     } else {
@@ -62,17 +66,17 @@ export function hexInfo(world: WorldState, party: readonly Character[], visible:
     }
   }
 
-  if (hexEquals(at, world.party)) {
+  if (hexEquals(at, party.position)) {
     lines.push('Your party:')
-    for (const member of party) lines.push(`  ${member.name}, level ${member.level}, ${member.hp}/${maxHp(member)} hp`)
+    for (const member of party.members) lines.push(`  ${member.name}, level ${member.level}, ${member.hp}/${maxHp(member)} hp`)
   } else {
-    const route = routeTo(world, at)
+    const route = routeTo(world, party, at)
     if (route) lines.push(`${route.length} ${route.length === 1 ? 'day' : 'days'} away.`)
   }
   return { title, lines }
 }
 
-function fallsIn(world: WorldState, party: readonly Character[], at: Hex): string {
-  const days = daysToFall(world, party, { position: at })
+function fallsIn(world: WorldState, present: readonly PartyPresence[], at: Hex): string {
+  const days = daysToFall(world, present, { position: at })
   return days === null ? 'Under threat.' : `Under threat: falls in ${days} ${days === 1 ? 'day' : 'days'}.`
 }

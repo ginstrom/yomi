@@ -106,6 +106,17 @@ The world map is a large board of hexes, many screens wide, and the view scrolls
 
 **Time passes only when you act.** Each hex you walk and each day you camp takes one turn, and each turn the blight takes another day to spread (see [The blight](#8-the-blight)).
 
+Under each party's entry in the list is a line saying what it is doing: **Idle**, **Travelling to** a place you know of, **Camping**, or the day's work it is at (scouting, waiting, building, crafting). While it stands before monsters, the line names them.
+
+Two buttons in the footer let days pass without a walk or a camp of your own:
+
+- **Next day** passes one day. A party that is travelling or camping carries on with it; an idle one stays where it is.
+- **Until something happens** passes days one after another until something important happens, the party arrives or finishes what it was doing, or thirty quiet days have gone by, in which case the map says so.
+
+A walk cut short, or a stretch of camping interrupted, keeps its order: the line still says where the party was going, or that it is camping, and a walk's remaining road stays drawn on the map in amber to where it was going (hovering another hex shows that hex's route in its place until the pointer moves off), and **Next day** carries it on, a hex further along the road or another day of rest. Clicking a hex or a button gives the party a new order. Neither time button shows while the party stands at a monsters' lair, even once it has scouted them: there you scout, wait or attack, or walk away.
+
+![A walk cut short, still travelling](images/world-travelling.png)
+
 ### Travel
 
 Click a hex to travel there. Hovering over a hex first shows the route, and a panel at the top right tells what you know of it: what stands there, its blight (as you last saw it, if it is out of sight), whether the blight is gaining or receding there, how many days away it is, and your heroes' levels and hit points on the party's own hex. The party walks one hex per turn and stops early if something important happens on the way, such as monsters coming into view, a site you hold falling under threat, or monsters standing in the road. Routes avoid known monster lairs unless the lair is where you are going.

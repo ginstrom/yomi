@@ -58,7 +58,7 @@ export const TUTORIAL: TutorialTip[] = [
     id: 'world_monsters',
     title: 'Monsters',
     text: '[Placeholder] What to do when the party comes upon monsters.',
-    when: (moment, game) => moment.kind === 'world_turn' && game.world.confronting !== null,
+    when: (moment, game) => moment.kind === 'world_turn' && game.parties.some((party) => party.confronting !== null),
     anchor: 'world.attack',
   },
   {

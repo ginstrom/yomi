@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
-import type { GameState } from '../game/gameState.ts'
+import type { Expedition } from '../game/expedition.ts'
+import { selectedParty, type GameState } from '../game/gameState.ts'
 import { CUTSCENES, type CutsceneBeat } from '../story/cutscenes.ts'
 import { fillText, setTutorial, storyFor, type StoryItem, type StoryMoment } from '../story/story.ts'
 import { tutorialTip, type TutorialAnchor } from '../story/tutorial.ts'
@@ -18,6 +19,8 @@ interface StoryData {
   /** What to show, in order: `storyFor`'s choice at a moment. */
   items: StoryItem[]
   resume: StoryResume
+  /** The id of the party the story is told for, whose leader `{leader}` and the 'leader' portrait mean; the first if left out. */
+  party?: string
   /** Where on screen the scene under the story has the controls a tip may point at. */
   anchors: StoryAnchors
 }
@@ -31,14 +34,14 @@ export type StoryAnchors = Partial<Record<TutorialAnchor, Point>>
  * pauses it until the last item is done. Returns whether it did. What
  * `storyFor` marks shown is in the game for the scene's next save.
  */
-export function tellStory(scene: Phaser.Scene, game: GameState, moment: StoryMoment, anchors: StoryAnchors = {}): boolean {
-  return showStory(scene, game, storyFor(game, moment), anchors)
+export function tellStory(scene: Phaser.Scene, game: GameState, moment: StoryMoment, anchors: StoryAnchors = {}, party?: string): boolean {
+  return showStory(scene, game, storyFor(game, moment), anchors, party)
 }
 
 /** Lays these items over the scene, which pauses until they are done; nothing, if there are none. */
-export function showStory(scene: Phaser.Scene, game: GameState, items: StoryItem[], anchors: StoryAnchors = {}): boolean {
+export function showStory(scene: Phaser.Scene, game: GameState, items: StoryItem[], anchors: StoryAnchors = {}, party?: string): boolean {
   if (items.length === 0) return false
-  const data: StoryData = { game, items, resume: scene.scene.key as StoryResume, anchors }
+  const data: StoryData = { game, items, resume: scene.scene.key as StoryResume, party, anchors }
   scene.scene.launch('Story', data)
   scene.scene.bringToTop('Story')
   scene.scene.pause()
@@ -78,6 +81,7 @@ const BUTTON_H = 34
  */
 export class StoryScene extends Phaser.Scene {
   private gameState!: GameState
+  private expedition!: Expedition
   private items: StoryItem[] = []
   private resumeKey: StoryResume = 'World'
   private anchors: StoryData['anchors'] = {}
@@ -107,6 +111,7 @@ export class StoryScene extends Phaser.Scene {
 
   create(data: StoryData): void {
     this.gameState = data.game
+    this.expedition = selectedParty(data.game, data.party)
     this.items = [...data.items]
     this.resumeKey = data.resume
     this.anchors = data.anchors ?? {}
@@ -141,8 +146,8 @@ export class StoryScene extends Phaser.Scene {
       id: item?.id ?? null,
       beat: this.beat,
       beats: beats.length,
-      speaker: beats[this.beat]?.speaker ? fillText(beats[this.beat].speaker!, this.gameState) : null,
-      text: item?.kind === 'cutscene' ? fillText(beats[this.beat]?.text ?? '', this.gameState) : tip ? fillText(tip.text, this.gameState) : '',
+      speaker: beats[this.beat]?.speaker ? fillText(beats[this.beat].speaker!, this.gameState, this.expedition) : null,
+      text: item?.kind === 'cutscene' ? fillText(beats[this.beat]?.text ?? '', this.gameState, this.expedition) : tip ? fillText(tip.text, this.gameState, this.expedition) : '',
       anchor: (tip?.anchor && this.anchors[tip.anchor]) || null,
       tutorial: this.gameState.story.tutorial,
       buttons: { next: control('next'), skip: control('skip'), tutorialOff: control('tutorialOff') },
@@ -195,7 +200,7 @@ export class StoryScene extends Phaser.Scene {
     const top = height - DIALOGUE_MARGIN - DIALOGUE_H
     this.content.add(this.add.rectangle(left, top, boxW, DIALOGUE_H, PANEL_FILL, 0.95).setOrigin(0).setStrokeStyle(2, PANEL_EDGE))
     let textX = left + DIALOGUE_PAD
-    const portrait = beat.portrait === 'leader' ? this.gameState.party[0]?.portrait : beat.portrait
+    const portrait = beat.portrait === 'leader' ? this.expedition.members[0]?.portrait : beat.portrait
     if (portrait) {
       const at = { x: textX + PORTRAIT_SIZE / 2, y: top + DIALOGUE_PAD + PORTRAIT_SIZE / 2 }
       this.content.add([
@@ -206,11 +211,11 @@ export class StoryScene extends Phaser.Scene {
     }
     let textY = top + DIALOGUE_PAD
     if (beat.speaker) {
-      this.content.add(this.add.text(textX, textY, fillText(beat.speaker, this.gameState), { fontFamily: FONT, fontSize: '16px', color: GOLD }))
+      this.content.add(this.add.text(textX, textY, fillText(beat.speaker, this.gameState, this.expedition), { fontFamily: FONT, fontSize: '16px', color: GOLD }))
       textY += 26
     }
     this.content.add(
-      this.add.text(textX, textY, fillText(beat.text, this.gameState), {
+      this.add.text(textX, textY, fillText(beat.text, this.gameState, this.expedition), {
         fontFamily: FONT,
         fontSize: '15px',
         color: TEXT,
@@ -235,8 +240,8 @@ export class StoryScene extends Phaser.Scene {
     if (!tip) return
     const { width, height } = this.scale
     const anchor = tip.anchor && this.anchors[tip.anchor]
-    const title = this.add.text(0, 0, fillText(tip.title, this.gameState), { fontFamily: FONT, fontSize: '18px', color: GOLD })
-    const body = this.add.text(0, 0, fillText(tip.text, this.gameState), {
+    const title = this.add.text(0, 0, fillText(tip.title, this.gameState, this.expedition), { fontFamily: FONT, fontSize: '18px', color: GOLD })
+    const body = this.add.text(0, 0, fillText(tip.text, this.gameState, this.expedition), {
       fontFamily: FONT,
       fontSize: '14px',
       color: TEXT,

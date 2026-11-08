@@ -13,7 +13,10 @@ import {
   type Item,
 } from '../inventory/inventory.ts'
 import { advanceDay, cleanse, seedBlight, type WorldEvent } from './blight.ts'
+import { act, advance, roadBlocked, setOrder, worldInterrupt } from './company.ts'
 import { MAX_THREAT, type EncounterId } from './encounters.ts'
+import { presences, type Expedition, type PartyPresence } from './expedition.ts'
+import type { GameState } from './gameState.ts'
 import { initialHeld, updateTerritory, type Stock } from './territory.ts'
 import { seedSight, updateSight } from './vision.ts'
 
@@ -64,16 +67,9 @@ export type LocationKind = WorldLocation['kind']
 
 export interface WorldState {
   board: BoardSize
-  /** The hex the party stands on. */
-  party: Hex
   /** Counts from 1. */
   turn: number
   locations: WorldLocation[]
-  /**
-   * The id of the monster location the party has walked into and not yet
-   * answered. Until it scouts, waits or attacks, it cannot travel on.
-   */
-  confronting: string | null
   /** Every hex's blight level, 0 to 3, by `boardIndex` (blight.ts). */
   blight: number[]
   /** Every hex's shift counter, by `boardIndex`: how far the day's influence has pushed it toward its next level. */
@@ -182,7 +178,6 @@ const monsters = (
 export function newWorld(seed: number = randomSeed(), encampmentName: string = DEFAULT_ENCAMPMENT_NAME): WorldState {
   const world: WorldState = {
     board: WORLD_SIZE,
-    party: HOME,
     turn: 1,
     // The party's home country first, in the west, then the lands further out,
     // whose monsters are the more dangerous the further they lie (threatAt).
@@ -212,7 +207,6 @@ export function newWorld(seed: number = randomSeed(), encampmentName: string = D
       monsters('spider_nest', 'Spider Nest', 57, 10, 'spider_nest', [EMBERBLADE]),
       { ...(monsters(SOURCE_ID, 'The Blight Source', 58, 19, 'source_guardians', [STORM_WAND]) as MonsterLocation), source: true },
     ],
-    confronting: null,
     blight: [],
     shift: [],
     seen: [],
@@ -237,7 +231,8 @@ export function newWorld(seed: number = randomSeed(), encampmentName: string = D
   world.held = initialHeld(world)
   // The sites taken at the start push back from the start.
   seedBlight(world)
-  seedSight(world)
+  // Every new game's party starts at home.
+  seedSight(world, [{ position: HOME, levels: [] }])
   return world
 }
 
@@ -261,22 +256,22 @@ export function worldActive(world: WorldState): boolean {
  * and what comes into sight, and returns what happened. Every way of spending
  * time comes through here.
  */
-export function passTurn(world: WorldState, party: readonly { level: number }[]): WorldEvent[] {
+export function passTurn(world: WorldState, presences: readonly PartyPresence[]): WorldEvent[] {
   world.turn += 1
-  return [...advanceDay(world, party), ...updateTerritory(world, party), ...updateSight(world)]
+  return [...advanceDay(world, presences), ...updateTerritory(world, presences), ...updateSight(world, presences)]
 }
 
 /**
  * Whether an event stops a journey or a stretch of camping: monsters sighted
- * near the party, the Source found wherever it is sighted, a held site
+ * near a party (within `NOTICE_RADIUS` of some presence), the Source found wherever it is sighted, a held site
  * threatened or lost, the encampment lost. A
  * spawn is not seen as such: it is told when it comes into sight. A tower
  * under threat is told as a site is.
  */
-export function isNotable(world: WorldState, event: WorldEvent): boolean {
+export function isNotable(_world: WorldState, event: WorldEvent, presences: readonly PartyPresence[]): boolean {
   switch (event.type) {
     case 'sighted':
-      return event.source === true || hexDistance(world.party, event.at) <= NOTICE_RADIUS
+      return event.source === true || presences.some((p) => hexDistance(p.position, event.at) <= NOTICE_RADIUS)
     case 'site_threatened':
     case 'site_lost':
     case 'tower_lost':
@@ -287,13 +282,29 @@ export function isNotable(world: WorldState, event: WorldEvent): boolean {
   }
 }
 
+/** A location's name inside a sentence: a leading article lower-cased ("The Blight Source" reads "the Blight Source"). */
+export function midSentence(name: string): string {
+  return /^the /i.test(name) ? `the ${name.slice(4)}` : name
+}
+
+/** A location's name with "the" in front, unless it has its own article: "the Goblin Raiders", "the Blight Source". */
+export function theName(name: string): string {
+  return /^the /i.test(name) ? midSentence(name) : `the ${name}`
+}
+
+/** `theName` to begin a sentence: "The Goblin Raiders", "The Blight Source". */
+export function theNameCapital(name: string): string {
+  const named = theName(name)
+  return named.charAt(0).toUpperCase() + named.slice(1)
+}
+
 export function locationAt(world: WorldState, at: Hex): WorldLocation | null {
   return world.locations.find((l) => hexEquals(l.position, at)) ?? null
 }
 
 /** The monster location the party stands on, if any: the one it may scout, wait at or attack. */
-export function monstersHere(world: WorldState): MonsterLocation | null {
-  const here = locationAt(world, world.party)
+export function monstersHere(world: WorldState, party: Expedition): MonsterLocation | null {
+  const here = locationAt(world, party.position)
   return here?.kind === 'monsters' ? here : null
 }
 
@@ -304,16 +315,16 @@ export function monstersHere(world: WorldState): MonsterLocation | null {
  * clear of every monster location the player knows of (`sighted`) except one
  * it ends on, and is planned through the unexplored as through open land.
  */
-export function routeTo(world: WorldState, to: Hex): Hex[] | null {
+export function routeTo(world: WorldState, party: Expedition, to: Hex): Hex[] | null {
   const board = new HexBoard(world.board)
-  if (world.confronting !== null || !board.contains(to)) return null
+  if (party.confronting !== null || !board.contains(to)) return null
   const known = new Set(
     world.locations
       .filter((l) => l.kind === 'monsters' && world.sighted.includes(l.id))
       .map((l) => hexKey(l.position)),
   )
   const passable = (h: Hex) => board.contains(h) && (hexEquals(h, to) || !known.has(hexKey(h)))
-  return reachableHexes(world.party, board.hexes.length, passable).get(hexKey(to)) ?? null
+  return reachableHexes(party.position, board.hexes.length, passable).get(hexKey(to)) ?? null
 }
 
 /** What came of a journey: the hexes walked, what happened on the way, and the event that cut it short if one did. */
@@ -328,49 +339,54 @@ export interface Journey {
  * a notable event (`isNotable`) or where monsters stand on the road: sighted
  * since the route was planned, as they are long before the party reaches them.
  * Walks nowhere if there is no route. Arriving among monsters confronts the
- * party with them.
+ * party with them. It gives the party a travel order and runs the day loop
+ * (company.ts) until something happens; cut short, the order stands.
  */
-export function travel(world: WorldState, to: Hex, party: readonly { level: number }[]): Journey {
+export function travel(game: GameState, party: Expedition, to: Hex): Journey {
+  const world = game.world
   const journey: Journey = { walked: [], events: [], interruptedBy: null }
-  const route = worldActive(world) ? routeTo(world, to) : null
-  if (!route) return journey
-  for (const h of route) {
-    // A nest spawned on the road since the route was planned.
-    if (!hexEquals(h, to) && locationAt(world, h)?.kind === 'monsters') break
-    world.party = h
-    journey.walked.push(h)
-    const day = passTurn(world, party)
-    journey.events.push(...day)
-    journey.interruptedBy = day.find((event) => isNotable(world, event)) ?? null
-    if (journey.interruptedBy || !worldActive(world)) break
+  if (setOrder(game, party.id, { kind: 'travel', to }) !== null) return journey
+  // A nest on the first hex of the road: the loop checks the road only after a day.
+  if (party.order.kind === 'travel' && roadBlocked(world, party.order)) party.order = { kind: 'idle' }
+  else {
+    for (const report of advance(game, Infinity)) {
+      const walked = report.parties.find((day) => day.party === party.id)?.walked
+      if (walked) journey.walked.push(walked)
+      journey.events.push(...report.events)
+      journey.interruptedBy = worldInterrupt(report)
+    }
   }
-  world.confronting = monstersHere(world)?.id ?? null
+  party.confronting = monstersHere(world, party)?.id ?? null
   return journey
 }
 
 /**
  * Spends a turn scouting or waiting at the monsters the party stands among,
- * which frees it to travel on. Neither does more yet: scouting learns nothing
- * and the monsters never answer. Returns false when there are no monsters here.
+ * which frees it to travel on: a one-day order on the day loop (`act`).
+ * Neither does more yet: scouting learns nothing and the monsters never
+ * answer. Returns the day's events, or null when there are no monsters here
+ * or the game is over.
  */
-export function linger(world: WorldState, _how: Lingering, party: readonly { level: number }[]): WorldEvent[] | null {
-  if (!monstersHere(world) || !worldActive(world)) return null
-  world.confronting = null
-  return passTurn(world, party)
+export function linger(game: GameState, party: Expedition, how: Lingering): WorldEvent[] | null {
+  const world = game.world
+  if (!monstersHere(world, party) || !worldActive(world)) return null
+  const report = act(game, party.id, { kind: how })
+  return typeof report === 'string' ? null : report.events
 }
 
 /**
  * Takes a location off the map, as when its monsters are beaten, and cleanses
  * the land around it (`cleanse`). Beating the Source wins the game.
  */
-export function clearLocation(world: WorldState, id: string): void {
+export function clearLocation(game: GameState, id: string): void {
+  const world = game.world
   const location = world.locations.find((l) => l.id === id)
   world.locations = world.locations.filter((l) => l.id !== id)
   world.sighted = world.sighted.filter((sighted) => sighted !== id)
-  if (world.confronting === id) world.confronting = null
+  for (const party of game.parties) if (party.confronting === id) party.confronting = null
   if (location?.kind !== 'monsters') return
   cleanse(world, location.position, location.threat)
-  // The party sees the land it has just cleansed.
-  updateSight(world)
+  // The parties see the land just cleansed.
+  updateSight(world, presences(game.parties))
   if (location.source && world.status === 'playing') world.status = 'won'
 }

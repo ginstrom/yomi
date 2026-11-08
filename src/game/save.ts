@@ -2,8 +2,11 @@ import type { Character } from '../character/character.ts'
 import { PERK_IDS } from '../character/perks.ts'
 import { SKILL_IDS } from '../character/skills.ts'
 import type { BattleSnapshot } from '../engine/battleEngine.ts'
-import { itemById, type Equipment, type Item } from '../inventory/inventory.ts'
+import { GRADES } from '../inventory/grades.ts'
+import { EQUIPMENT_SLOT_LABELS, itemById, type Equipment, type Item } from '../inventory/inventory.ts'
+import { MODIFIER_IDS } from '../inventory/modifiers.ts'
 import { isRuneKey } from '../inventory/runes.ts'
+import { FIRST_PARTY_ID, FIRST_PARTY_NAME, ORDER_KINDS, type Expedition } from './expedition.ts'
 import type { GameState } from './gameState.ts'
 import type { GroundPile } from './ground.ts'
 import type { WorldLocation } from './worldMap.ts'
@@ -14,12 +17,15 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * back. Storage-free; saveSlots.ts keeps the strings.
  *
  * Raise `SAVE_VERSION` whenever the shape of `GameState`, `Character`,
- * `WorldState` or `BattleSnapshot` changes: there is no migration, so a save
- * of another version reads as unreadable. Rules and item numbers may change
+ * `WorldState` or `BattleSnapshot` changes. A migration is written only when
+ * a stage's design asks for one (stage 5's does: `migrateFrom18`, reading a
+ * version-18 save straight to this version; version 19 was never released
+ * and reads as unreadable); otherwise a save of another version reads as
+ * unreadable. Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 18
+export const SAVE_VERSION = 20
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -75,9 +81,8 @@ export function serializeSave(file: SaveFile): string {
     version: SAVE_VERSION,
     savedAt: file.savedAt,
     game: withKeys(game, {
-      party: game.party.map(characterIds),
+      parties: game.parties.map((party) => withKeys(party, { members: party.members.map(characterIds), baggage: party.baggage.map(itemId) })),
       reserves: game.reserves.map(characterIds),
-      baggage: game.baggage.map(itemId),
       world: withKeys(game.world, {
         locations: game.world.locations.map((location) =>
           location.kind === 'monsters' ? withKeys(location, { loot: location.loot.map(itemId) }) : location,
@@ -113,16 +118,101 @@ function locationOf(saved: WorldLocation): WorldLocation {
   return saved.kind === 'monsters' ? { ...saved, loot: itemsOf(saved.loot) } : saved
 }
 
-/** Null for anything that is not a save of this version, or names an item, perk or skill the game does not have. */
+/**
+ * A version-18 game (one `party` and one `baggage`, the world holding where it
+ * stands and what it confronts) as a version-20 one: a company of one, the
+ * party's position and confrontation its expedition's.
+ */
+function migrateFrom18(game: Record<string, unknown>): void {
+  check(Array.isArray(game.party) && Array.isArray(game.baggage))
+  const world = game.world as Record<string, unknown> | undefined
+  check(world && typeof world === 'object')
+  game.parties = [
+    {
+      id: FIRST_PARTY_ID,
+      name: FIRST_PARTY_NAME,
+      members: game.party,
+      baggage: game.baggage,
+      position: world.party,
+      order: { kind: 'idle' },
+      confronting: world.confronting,
+    },
+  ]
+  delete game.party
+  delete game.baggage
+  delete world.party
+  delete world.confronting
+}
+
+const isHex = (hex: unknown): boolean =>
+  typeof hex === 'object' && hex !== null && typeof (hex as { q: unknown }).q === 'number' && typeof (hex as { r: unknown }).r === 'number'
+
+const isIndex = (n: unknown): boolean => Number.isInteger(n) && (n as number) >= 0
+
+/** Whether `place` is an `ItemPlace` as a day action names one (stale or not is the action's to judge). */
+function isPlace(place: unknown): boolean {
+  if (typeof place !== 'object' || place === null) return false
+  const p = place as Record<string, unknown>
+  if (typeof p.party !== 'string' || typeof p.itemId !== 'string') return false
+  switch (p.from) {
+    case 'baggage':
+      return isIndex(p.index)
+    case 'backpack':
+      return isIndex(p.member) && isIndex(p.index)
+    case 'worn':
+      return isIndex(p.member) && typeof p.slot === 'string' && Object.hasOwn(EQUIPMENT_SLOT_LABELS, p.slot)
+    default:
+      return false
+  }
+}
+
+/** Whether `action` is a `DayAction`: a known kind, with a craft's or an embed's fields. */
+function isDayAction(action: unknown): boolean {
+  if (typeof action !== 'object' || action === null) return false
+  const a = action as Record<string, unknown>
+  switch (a.kind) {
+    case 'scout':
+    case 'wait':
+    case 'camp':
+    case 'tower':
+    case 'outpost':
+      return true
+    case 'craft':
+      return isPlace(a.place) && (MODIFIER_IDS as unknown[]).includes(a.modifier) && (GRADES as unknown[]).includes(a.grade)
+    case 'embed':
+      return isPlace(a.place) && typeof a.rune === 'string' && isRuneKey(a.rune)
+    default:
+      return false
+  }
+}
+
+/** Whether `order` is an `Order`: a known kind, a travel order with its destination and the hexes still to walk, a day order with its action. */
+function isOrder(order: unknown): boolean {
+  if (typeof order !== 'object' || order === null) return false
+  const o = order as Record<string, unknown>
+  if (!ORDER_KINDS.includes(o.kind as never)) return false
+  if (o.kind === 'travel') return isHex(o.to) && Array.isArray(o.route) && o.route.every(isHex)
+  if (o.kind === 'day') return isDayAction(o.action)
+  return true
+}
+
+/** Null for anything that is not a save of this version (or version 18, migrated), or names an item, perk or skill the game does not have. */
 export function parseSave(raw: string | null): SaveFile | null {
   if (raw === null) return null
   try {
     // What `serializeSave` wrote has the file's shape but for its items, which are ids until put back below.
     const saved = JSON.parse(raw) as SaveFile & { version: unknown }
-    check(saved && typeof saved === 'object' && saved.version === SAVE_VERSION)
+    check(saved && typeof saved === 'object' && (saved.version === SAVE_VERSION || saved.version === 18))
     check(typeof saved.savedAt === 'number')
     const { game, battle } = saved
-    check(game && typeof game === 'object' && Array.isArray(game.party) && game.party.length > 0)
+    check(game && typeof game === 'object')
+    if (saved.version === 18) migrateFrom18(game as unknown as Record<string, unknown>)
+    check(Array.isArray(game.parties) && game.parties.length > 0)
+    check(game.parties.every((party) => party && typeof party.id === 'string' && typeof party.name === 'string'))
+    check(new Set(game.parties.map((party) => party.id)).size === game.parties.length)
+    check(game.parties.every((party) => Array.isArray(party.members) && party.members.length > 0 && Array.isArray(party.baggage)))
+    check(game.parties.every((party) => isOrder(party.order)))
+    check(game.parties.every((party) => isHex(party.position) && (party.confronting === null || typeof party.confronting === 'string')))
     check(game.world && typeof game.world === 'object' && Array.isArray(game.world.locations))
     const { world } = game
     check(world.board && Array.isArray(world.blight) && Array.isArray(world.shift) && world.blight.length === world.board.cols * world.board.rows)
@@ -146,9 +236,8 @@ export function parseSave(raw: string | null): SaveFile | null {
     return {
       game: {
         ...game,
-        party: game.party.map(characterOf),
+        parties: game.parties.map((party): Expedition => ({ ...party, members: party.members.map(characterOf), baggage: itemsOf(party.baggage) })),
         reserves: game.reserves.map(characterOf),
-        baggage: itemsOf(game.baggage),
         world: { ...game.world, locations: game.world.locations.map(locationOf) },
       },
       battle: battle && { ...battle, ground: battle.ground.map(({ hex, items }) => ({ hex, items: itemsOf(items) })) },
@@ -173,9 +262,10 @@ export interface SaveSummary {
 
 export function saveSummary({ game, battle, savedAt }: SaveFile): SaveSummary {
   const fought = battle && game.world.locations.find((location) => location.id === battle.location)
+  const members = game.parties.flatMap((party) => party.members)
   return {
-    names: game.party.map((member) => member.name),
-    level: Math.max(...game.party.map((member) => member.level)),
+    names: members.map((member) => member.name),
+    level: Math.max(...members.map((member) => member.level)),
     turn: game.world.turn,
     battle: battle ? (fought?.name ?? 'a battle') : null,
     savedAt,

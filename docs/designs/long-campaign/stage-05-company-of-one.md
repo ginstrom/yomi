@@ -85,3 +85,24 @@ The same game:
 - **The refactor's breadth.** The guard makes any drift visible at once. Keep step A and step B as separate commits.
 
 **Done when:** the guard matches exactly, all tests pass, and the play script has been walked.
+
+## Implementation notes
+
+Built as ten steps (`docs/implementation-plans/long-campaign-stage-05/`).
+
+**The figures.** The 5-campaign refactor guard (`scripts/simulate.test.ts`) was identical through every step. The 50-campaign run from seed 1 gives the same summary and log hash as before the stage (SHA-256 `068016a82040ec5be673084265005a7218f0ce927629880565c1a27a8cf52d76`, 852 battles, 23 of 50). The 500-campaign run gives **230 of 500 (46.0%)**, 9121 battles, line for line the summary measured before the stage, and the same log (SHA-256 `d17e6dca65137917aaa7e1bb873ab241b323dbe6152e338c141ae618b51613fd`). Only the printed `--out` path differs.
+
+**Save 20.** `SAVE_VERSION` went from 18 to 20 and migrates from 18 (19 was never released). `LOG_SCHEMA_VERSION` is unchanged at 23. CLAUDE.md's old "there is no migration" now reads: a migration is written when a stage's design asks for one.
+
+**The plan's corrections, as taken.** 1 two save bumps, one migration; 2 the migration against CLAUDE.md's old rule; 3 the party shows as "Your party" while it is the only one, stored as "First Company" (**default, for the user to confirm**); 4 a travel order carries its planned route; 5 orders are idle, travel, camp and day; 6 the day-passing functions keep their names and homes as conveniences over the loop; 7 `DayReport` carries more than the reference's; 8 the rune pouch stays the company's; 9 Until something happens stops after 30 quiet days and says so (**default, to confirm**); 10 orders persist past an interrupt (**default, to confirm**); 11 the order is shown in the world map's party list (**default, to confirm**); 12 `placeKey` keeps its format; 13 `leader(game)` is gone, every reader taking an explicit party.
+
+**What stage 6 inherits.** `placeKey` without the party (it changes format with a second party), the company's single rune pouch (whether a party in the field may embed from it is open), and the orders home, garrison and meet, still to add to the `Order` union. The simulator's `carryOut` mirrors the start of `worldMap.travel` for a travel order; both must change together.
+
+**The play script, walked headless** (Playwright through the in-browser driver, against the dev server, with the debug console):
+1. Loading `src/game/fixtures/save-v18.json` from slot 1: the three heroes, their hit points, the two items in the baggage, the party on the hex it stood on and the confrontation with the Goblin Raiders came through; Scout, Wait and Attack showed and Next day and Until something happens did not; the party list hover said "Your party" and "Before the Goblin Raiders"; debug `party` showed `party_1 (First Company)`.
+2. After Wait freed the party, a click on a far hex walked it until "You sight a Kobold Diggers" stopped it (the order line "Travelling"); it returned, attacked the Goblin Raiders and won through the real battle, and Camp passed a day. Not observed: the "Camping" line during a camp until healed, as the party was whole after the win (a level-up heals), though the in-browser tests plant a wounded party and a camp order and see it. Not done: the same walk from the same save at the commit before the stage; the guard covers the walk's rules.
+3. Five Next days: the turn rose by exactly 5, the blight's total rose, and the stock went from gold 20, iron 10 to gold 24, iron 12 across a yield day.
+4. The cut-short walk kept "Travelling"; Next day moved the party exactly one hex and the turn by 1.
+5. With gold and iron added, Build Watchtower stood one tower and passed one day.
+Also: Until something happens with the idle party passed 30 days and said "30 days passed quietly."; Next day and Until something happens are hidden while the party stands before monsters (the refusal is `advanceRefusal`, tested in `company.test.ts`).
+

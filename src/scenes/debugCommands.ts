@@ -1,12 +1,14 @@
 import { maxHp, maxMana, manaOf, type Character } from '../character/character.ts'
 import { gainXp, xpToNextLevel } from '../character/progression.ts'
 import type { BattleState } from '../engine/battleEngine.ts'
+import { advanceRefusal, passDay, setOrder } from '../game/company.ts'
 import { facilities, setFacilityLevel, type FacilityId } from '../game/encampment.ts'
+import { presences, type Expedition } from '../game/expedition.ts'
 import { ENCOUNTERS, type EncounterId } from '../game/encounters.ts'
-import type { GameState } from '../game/gameState.ts'
+import { selectedParty, type GameState } from '../game/gameState.ts'
 import type { Material } from '../game/territory.ts'
 import { updateSight } from '../game/vision.ts'
-import { isNotable, monstersHere, passTurn, threatAt, worldActive, type WorldLocation } from '../game/worldMap.ts'
+import { isNotable, monstersHere, theName, threatAt, worldActive, type WorldLocation } from '../game/worldMap.ts'
 import { HexBoard, hexToOffset, offsetToHex } from '../grid/hex.ts'
 import { BASE_ITEMS, MAGIC_ITEMS, itemById } from '../inventory/inventory.ts'
 import { MODIFIER_IDS } from '../inventory/modifiers.ts'
@@ -28,7 +30,9 @@ export interface DebugSource {
   /** Redraws and saves after a command changed the game; absent where changes are refused. */
   changed?: () => void
   /** Starts a battle of `encounter` at `threat` against the party, as if a location were attacked; absent where battles can't start. */
-  fight?: (encounter: EncounterId, threat: number) => void
+  fight?: (encounter: EncounterId, threat: number, party: string) => void
+  /** The id of the party the scene shows or has selected, which a command acts on when it is given no `@<party>`. */
+  party?: string
 }
 
 export interface DebugContext {
@@ -37,6 +41,8 @@ export interface DebugContext {
   /** The session's seed, from the page's address, or null when each battle draws its own. */
   seed: number | null
   source: DebugSource | null
+  /** The party a command's `@<party>` named, as typed; `runCommand` sets it. */
+  party?: string
 }
 
 export interface DebugResult {
@@ -48,6 +54,8 @@ export interface DebugResult {
 interface Command {
   usage: string
   summary: string
+  /** Acts on a party, so may end in `@<party>` (an id, or the start of a name). */
+  acts?: true
   /** Changes the game, and so needs the world map in front: always, or only when given arguments. */
   changes?: true | 'withArgs'
   run(args: string[], context: DebugContext): string[]
@@ -72,16 +80,31 @@ function integer(text: string | undefined, what: string): number {
   return n
 }
 
-/** The members a command names: by number (from 1) or by the start of a name, or all of them with none named. */
-function members(game: GameState, who: string | undefined): Character[] {
-  if (who === undefined || who === 'all') return game.party
+const partyLabel = (party: Expedition): string => `${party.id} (${party.name})`
+
+/** The party `@<name>` means: an exact id, else the first whose name starts with it, ignoring case. */
+function namedParty(game: GameState, name: string): Expedition {
+  const found = name === '' ? undefined : game.parties.find((party) => party.id === name) ?? game.parties.find((party) => party.name.toLowerCase().startsWith(name.toLowerCase()))
+  if (!found) throw new DebugError(`No party "@${name}"; there are ${game.parties.map(partyLabel).join(', ')}.`)
+  return found
+}
+
+/** The party a command acts on: the one `@<party>` named, else the scene's own, else the first. */
+function partyOf(context: DebugContext): Expedition {
+  const game = gameOf(context)
+  return context.party !== undefined ? namedParty(game, context.party) : selectedParty(game, context.source?.party)
+}
+
+/** The members of `party` a command names: by number (from 1) or by the start of a name, or all of them with none named. */
+function members(party: Expedition, who: string | undefined): Character[] {
+  if (who === undefined || who === 'all') return party.members
   const index = Number(who)
   if (Number.isInteger(index)) {
-    const member = game.party[index - 1]
-    if (!member) throw new DebugError(`No party member ${who}; there are ${game.party.length}.`)
+    const member = party.members[index - 1]
+    if (!member) throw new DebugError(`No party member ${who}; there are ${party.members.length}.`)
     return [member]
   }
-  const named = game.party.filter((member) => member.name.toLowerCase().startsWith(who.toLowerCase()))
+  const named = party.members.filter((member) => member.name.toLowerCase().startsWith(who.toLowerCase()))
   if (named.length !== 1) throw new DebugError(named.length === 0 ? `No party member named "${who}".` : `"${who}" names ${named.length} members.`)
   return named
 }
@@ -127,8 +150,9 @@ const COMMANDS: Record<string, Command> = {
     ],
   },
   party: {
-    usage: 'party',
-    summary: 'The party: level, experience, hit points, mana and what each has to spend.',
+    usage: 'party [@party]',
+    summary: 'The company: each party (id, name, hex, order, confrontation) with its members: level, experience, hit points, mana and what each has to spend.',
+    acts: true,
     run(_args, context) {
       const game = gameOf(context)
       const row = (character: Character, i: number | null): string => {
@@ -140,18 +164,23 @@ const COMMANDS: Record<string, Command> = {
         ].filter(Boolean)
         return `${i === null ? ' -' : `${i + 1}.`} ${character.name.padEnd(12)} L${character.level} xp ${character.xp}/${xpToNextLevel(character.level)} hp ${character.hp}/${maxHp(character)}${mana}${spend.length ? `  (${spend.join(', ')})` : ''}`
       }
+      const listed = context.party !== undefined ? [namedParty(game, context.party)] : game.parties
       return [
-        ...game.party.map((character, i) => row(character, i)),
+        ...listed.flatMap((party) => [
+          `${partyLabel(party)} at ${offset(party)}, order ${party.order.kind}${party.confronting ? `, before ${party.confronting}` : ''}`,
+          ...party.members.map((character, i) => row(character, i)),
+        ]),
         ...(game.reserves.length ? ['Reserves:', ...game.reserves.map((character) => row(character, null))] : []),
       ]
     },
   },
   heal: {
-    usage: 'heal [member|all]',
+    usage: 'heal [member|all] [@party]',
+    acts: true,
     summary: 'Restore hit points and mana in full.',
     changes: true,
     run([who], context) {
-      const healed = members(gameOf(context), who)
+      const healed = members(partyOf(context), who)
       for (const character of healed) {
         character.hp = maxHp(character)
         character.mana = maxMana(character)
@@ -160,13 +189,14 @@ const COMMANDS: Record<string, Command> = {
     },
   },
   xp: {
-    usage: 'xp <amount> [member|all]',
+    usage: 'xp <amount> [member|all] [@party]',
+    acts: true,
     summary: 'Give experience, which may raise levels.',
     changes: true,
     run([amount, who], context) {
       const xp = integer(amount, 'the experience')
       if (xp <= 0) throw new DebugError('Experience must be more than 0.')
-      return members(gameOf(context), who).map((character) => {
+      return members(partyOf(context), who).map((character) => {
         const gain = gainXp(character, xp)
         return `${character.name} gains ${gain.xp} xp${gain.levelsGained ? `, now level ${character.level}` : ''}.`
       })
@@ -204,19 +234,20 @@ const COMMANDS: Record<string, Command> = {
     run([id, level], context) {
       const game = gameOf(context)
       if (id !== undefined) {
-        const facility = facilities(game).find((f) => f.id === id)
-        if (!facility) throw new DebugError(`No facility "${id}"; there are ${facilities(game).map((f) => f.id).join(', ')}.`)
+        const facility = facilities(game, partyOf(context)).find((f) => f.id === id)
+        if (!facility) throw new DebugError(`No facility "${id}"; there are ${facilities(game, partyOf(context)).map((f) => f.id).join(', ')}.`)
         const n = integer(level, 'the level')
         const lowest = id === 'guild_hall' || id === 'trading_post' ? 1 : 0
         if (n < lowest || n > facility.maxLevel) throw new DebugError(`${facility.name}'s level goes from ${lowest} to ${facility.maxLevel}.`)
         setFacilityLevel(game, id as FacilityId, n)
       }
-      return facilities(game).map((f) => `${f.id.padEnd(14)} level ${f.level} of ${f.maxLevel}`)
+      return facilities(game, partyOf(context)).map((f) => `${f.id.padEnd(14)} level ${f.level} of ${f.maxLevel}`)
     },
   },
   give: {
-    usage: 'give <item|rune> [count]',
-    summary: "Put an item, by its id, in the party's baggage, or a rune, by its key (storm1), in the pouch.",
+    usage: 'give <item|rune> [count] [@party]',
+    acts: true,
+    summary: "Put an item, by its id, in a party's baggage, or a rune, by its key (storm1), in the pouch.",
     changes: true,
     run([id, count], context) {
       if (id !== undefined && isRuneKey(id)) {
@@ -229,7 +260,7 @@ const COMMANDS: Record<string, Command> = {
       if (!item) throw new DebugError(`No item "${id ?? ''}"; \`items\` lists them.`)
       const n = count === undefined ? 1 : integer(count, 'the count')
       if (n < 1) throw new DebugError('The count must be at least 1.')
-      gameOf(context).baggage.push(...Array.from({ length: n }, () => item))
+      partyOf(context).baggage.push(...Array.from({ length: n }, () => item))
       return [`${n} × ${item.name} put in the baggage.`]
     },
   },
@@ -246,7 +277,8 @@ const COMMANDS: Record<string, Command> = {
     usage: 'locations [all]',
     summary: 'The locations known (or all of them): id, kind, threat and col,row.',
     run([all], context) {
-      const { world } = gameOf(context)
+      const game = gameOf(context)
+      const { world } = game
       const known = (location: WorldLocation) =>
         location.kind !== 'monsters' || world.sighted.includes(location.id)
       const listed = world.locations.filter((location) => all === 'all' || known(location))
@@ -256,7 +288,7 @@ const COMMANDS: Record<string, Command> = {
           const tags = [world.held.includes(location.id) ? 'held' : '', known(location) ? '' : 'unknown'].filter(Boolean)
           return `${location.id.padEnd(16)} ${location.name} (${what}) at ${offset(location)}${tags.length ? ` [${tags.join(', ')}]` : ''}`
         }),
-        `Party at ${offset({ position: world.party })}.`,
+        ...game.parties.map((party) => `${partyLabel(party)} at ${offset(party)}.`),
       ]
     },
   },
@@ -272,11 +304,13 @@ const COMMANDS: Record<string, Command> = {
     },
   },
   goto: {
-    usage: 'goto <col> <row> | goto <location>',
-    summary: 'Put the party on a hex, or on a location by id, with no time passing.',
+    usage: 'goto <col> <row> | goto <location> [@party]',
+    acts: true,
+    summary: 'Put the party on a hex, or on a location by id, with no time passing; its order ends.',
     changes: true,
     run(args, context) {
-      const { world } = gameOf(context)
+      const game = gameOf(context)
+      const { world } = game
       let to
       if (args.length >= 2) {
         to = offsetToHex(integer(args[0], 'the column'), integer(args[1], 'the row'))
@@ -286,16 +320,19 @@ const COMMANDS: Record<string, Command> = {
         if (!location) throw new DebugError(`No location "${args[0] ?? ''}"; \`locations all\` lists them.`)
         to = location.position
       }
-      world.party = to
-      const here = monstersHere(world)
-      world.confronting = here?.id ?? null
-      updateSight(world)
-      return [`The party stands at ${offset({ position: to })}${here ? `, before the ${here.name}` : ''}.`]
+      const party = partyOf(context)
+      party.position = to
+      // An order given where it stood is no order here.
+      setOrder(game, party.id, { kind: 'idle' })
+      const here = monstersHere(world, party)
+      party.confronting = here?.id ?? null
+      updateSight(world, presences(game.parties))
+      return [`The party stands at ${offset({ position: to })}${here ? `, before ${theName(here.name)}` : ''}.`]
     },
   },
   days: {
     usage: 'days <count>',
-    summary: 'Pass days where the party stands, as waiting does, telling what they brought.',
+    summary: 'Pass days through the day loop, each party carrying out its order, telling what they brought.',
     changes: true,
     run([count], context) {
       const game = gameOf(context)
@@ -304,10 +341,15 @@ const COMMANDS: Record<string, Command> = {
       const told: string[] = []
       let passed = 0
       while (passed < n && worldActive(game.world)) {
-        const events = passTurn(game.world, game.party)
+        const report = passDay(game)
+        if (!report) {
+          told.push(`  ${advanceRefusal(game)}`)
+          break
+        }
         passed += 1
-        for (const event of events) {
-          if (isNotable(game.world, event) || event.type === 'spawned') {
+        const present = presences(game.parties)
+        for (const event of report.events) {
+          if (isNotable(game.world, event, present) || event.type === 'spawned') {
             told.push(`  day ${game.world.turn}: ${describeWorldEvent(event) || `${event.type} ${'name' in event ? event.name : ''}`}`)
           }
         }
@@ -316,21 +358,22 @@ const COMMANDS: Record<string, Command> = {
     },
   },
   fight: {
-    usage: 'fight <encounter> [threat]',
+    usage: 'fight <encounter> [threat] [@party]',
+    acts: true,
     summary: "Fight an encounter at a threat (default: the party's hex's), clearing no location and taking no loot.",
     changes: true,
     run([id, threat], context) {
-      const { world } = gameOf(context)
+      const party = partyOf(context)
       if (id === undefined || !Object.hasOwn(ENCOUNTERS, id)) {
         throw new DebugError(`No encounter "${id ?? ''}"; there are ${Object.keys(ENCOUNTERS).join(', ')}.`)
       }
-      const at = threat === undefined ? threatAt(world.party) : integer(threat, 'the threat')
+      const at = threat === undefined ? threatAt(party.position) : integer(threat, 'the threat')
       if (at < 1) throw new DebugError('The threat must be at least 1.')
       const fight = context.source?.fight
       if (!fight) throw new DebugError('Battles start only from the world map.')
       // The world map is redrawn and saved after this, as after any change, before the
       // scene manager starts the battle on its next step: the game is unchanged until then.
-      fight(id as EncounterId, at)
+      fight(id as EncounterId, at, party.id)
       return [`Fighting ${id} at threat ${at}.`]
     },
   },
@@ -357,10 +400,15 @@ export const COMMAND_NAMES: readonly string[] = Object.keys(COMMANDS)
 
 /** Runs a line typed at the console. An empty line does nothing; a mistake is told, not thrown. */
 export function runCommand(line: string, context: DebugContext): DebugResult {
-  const [name, ...args] = line.trim().split(/\s+/).filter(Boolean)
+  const [name, ...typed] = line.trim().split(/\s+/).filter(Boolean)
   if (name === undefined) return { lines: [], changed: false }
   const command = COMMANDS[name.toLowerCase()]
   if (!command) return { lines: [`Unknown command "${name}". Type help for the list.`], changed: false }
+  // A last argument starting with @ names the party a command acts on; it is not one of the command's own.
+  const last = typed.at(-1)
+  const named = command.acts && last?.startsWith('@') ? last.slice(1) : undefined
+  const args = named === undefined ? typed : typed.slice(0, -1)
+  if (named !== undefined) context = { ...context, party: named }
   const changes = command.changes === true || (command.changes === 'withArgs' && args.length > 0)
   if (changes && !context.source?.changed) {
     return { lines: [`${name} changes the game, which works only on the world map.`], changed: false }

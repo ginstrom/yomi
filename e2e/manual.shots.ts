@@ -1,4 +1,4 @@
-import { describe, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import type { CreationStep } from '../src/testHook.ts'
 import { WORLD_SIZE } from '../src/game/worldMap.ts'
 import { hexDistance, offsetToHex, type Hex } from '../src/grid/hex.ts'
@@ -66,6 +66,14 @@ describe('the manual’s screenshots', () => {
     const world = await game.newGame()
     await game.hover(worldHexOnScreen(world, RAIDERS.position))
     await shot(game, 'world-start')
+
+    // A walk cut short keeps its order: the line says where the party is going.
+    await game.click(worldHexOnScreen(world, offsetToHex(19, 19)))
+    const cut = await game.waitFor('World', (w) => !w.walking && w.world.turn > world.world.turn)
+    // The seed cuts this walk short; if a change of rules lets it arrive, pick another hex, or the image goes stale.
+    expect(cut.parties[0].order).toMatch(/^Travelling/)
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'world-travelling')
 
     await game.press('c')
     await game.waitForScenes(['Inventory'], ['World'])
@@ -194,7 +202,7 @@ describe('the manual’s screenshots', () => {
       const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
       saved.game.world.stock = { gold: 600, iron: 50, timber: 20, stone: 40, copper: 40, silver: 30 }
       // A Masterwork Steel Longsword with a Storm rune in one of its two sockets, and runes in the pouch, for the Runes tab.
-      saved.game.baggage.push('steel_longsword@3#storm1')
+      saved.game.parties[0].baggage.push('steel_longsword@3#storm1')
       saved.game.runes = { ember1: 2, life1: 1 }
       localStorage.setItem('yomi.save.1', JSON.stringify(saved))
     })
@@ -304,7 +312,8 @@ describe('the manual’s screenshots', () => {
 
     // Then a walk to the edge of the nearest corrupted land, to see it.
     const camped = await game.settled('World')
-    const { party, blight } = camped.world
+    const { blight } = camped.world
+    const party = camped.partyAt
     const hexAt = (i: number) => offsetToHex(i % WORLD_SIZE.cols, Math.floor(i / WORLD_SIZE.cols))
     const byDistance = (from: Hex) => (a: number, b: number) => hexDistance(from, hexAt(a)) - hexDistance(from, hexAt(b))
     const corrupted = blight.map((_, i) => i).filter((i) => blight[i] === 3).sort(byDistance(party))[0]

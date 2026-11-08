@@ -3,8 +3,10 @@ import type { Character } from '../character/character.ts'
 import { canAdvance } from '../character/progression.ts'
 import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex, type WorldEvent } from '../game/blight.ts'
 import { atEncampment, buildOutpost, buildTower, canBuildOutpost, canBuildTower, outpostSiteRefusal, towerSiteRefusal } from '../game/buildings.ts'
+import { UNTIL_LIMIT, advance, advanceRefusal, passDay, type DayReport } from '../game/company.ts'
 import { campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from '../game/camp.ts'
-import { newGame, type GameState } from '../game/gameState.ts'
+import { FIRST_PARTY_ID, presences, type Expedition, type PartyPresence } from '../game/expedition.ts'
+import { newGame, selectedParty, type GameState } from '../game/gameState.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
 import { daysToFall } from '../game/territory.ts'
 import { UNEXPLORED, knownBlightedShare, visibleHexes } from '../game/vision.ts'
@@ -15,7 +17,10 @@ import {
   locationAt,
   monstersHere,
   routeTo,
+  theName,
+  theNameCapital,
   travel,
+  worldActive,
   type Lingering,
   type LocationKind,
   type WorldLocation,
@@ -30,11 +35,11 @@ import { CURSORS } from './cursors.ts'
 import { clampOrigin, mapOrigin, pannedOrigin, pressMoved, rectContains, type Rect } from './mapScroll.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { PartyListView } from './PartyListView.ts'
-import { FIRST_PARTY_ID, PARTY_LIST_W, deployedParties, partyListInfo } from './partyList.ts'
+import { PARTY_LIST_W, deployedParties, orderLabel, partyListInfo, standingRoute, travelLabel, type PartyListEntry, type ShownOrder } from './partyList.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
-import { describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
+import { describeDays, describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
 import { hexInfo } from './hexInfo.ts'
 import { tellStory, type StoryAnchors } from './StoryScene.ts'
 import type { StoryMoment } from '../story/story.ts'
@@ -42,6 +47,8 @@ import type { DebugSource } from './debugCommands.ts'
 
 interface WorldData {
   game?: GameState
+  /** The id of the party to show selected; the first if left out or unknown. */
+  party?: string
 }
 
 /** Each kind of location's sprite in the atlas (art/map/), which has an `idle` animation for each. */
@@ -71,6 +78,8 @@ const GRASS_EDGE = 0x14100c
 const ROUTE_COLOR = 0xffffff
 const ROUTE_EDGE = 0x000000
 const MONSTERS_OUTLINE = 0xe53935
+/** The standing route: what is left of the selected party's travel order, drawn while no hover route is. */
+const ORDER_ROUTE_COLOR = 0xffd54f
 const PARTY_OUTLINE = 0xffffff
 const WALK_STEP_MS = 140
 
@@ -102,6 +111,10 @@ const BUTTON_H = 44
 const BUTTON_GAP = 20
 /** Wide enough for "Camp until healed", "Build Watchtower" and "Build Outpost". */
 const WIDE_BUTTON_W = 200
+/** Wide enough for "Until something happens". */
+const TIME_WIDE_BUTTON_W = 250
+/** The footer's rows are this far apart: the time buttons over the action buttons. */
+const ROW_PITCH = BUTTON_H + 8
 /** The info panel on the hovered hex or party, at the view's top right, left of the party list. */
 const INFO_W = 280
 const INFO_PAD = 10
@@ -112,6 +125,10 @@ export class WorldScene extends Phaser.Scene {
   private board!: HexBoard
   /** True while the party walks; clicks wait for it to arrive. */
   private walking = false
+  /** While a walk plays: the order line the walking party shows, the order it walked by, which the game may already have ended. */
+  private walkingOrder: ShownOrder | null = null
+  /** The standing route as drawn now: empty while a hover route is drawn in its place, or there is none. */
+  private drawnStandingRoute: readonly Hex[] = []
   /** The map hex under the pointer, or null when it is off the map or over a button. */
   private hovered: Hex | null = null
 
@@ -148,6 +165,8 @@ export class WorldScene extends Phaser.Scene {
   private buttons: Phaser.GameObjects.Container[] = []
   /** Camp, Camp until healed and Craft, shown wherever else the party stands still, and Build Watchtower where one may stand. */
   private campButtons: Phaser.GameObjects.Container[] = []
+  /** Next day and Until something happens, in a row over the others, shown while the game is active and the party is not before monsters. */
+  private timeButtons: Phaser.GameObjects.Container[] = []
   private towerButton!: Phaser.GameObjects.Container
   /** Shown on a held town or resource that has no outpost yet. */
   private outpostButton!: Phaser.GameObjects.Container
@@ -206,7 +225,7 @@ export class WorldScene extends Phaser.Scene {
     this.hovered = null
     this.panOrigin = null
     this.press = null
-    this.selectedParty = deployedParties(this.gameState)[0]?.id ?? FIRST_PARTY_ID
+    this.selectedParty = selectedParty(this.gameState, data?.party).id
     this.hoveredParty = null
     // The first member with something to spend, so one click on its portrait opens its panel.
     this.active = Math.max(0, this.selectedMembers().findIndex(canAdvance))
@@ -251,6 +270,10 @@ export class WorldScene extends Phaser.Scene {
       this.createButton('Scout', () => this.onLinger('scout')),
       this.createButton('Wait', () => this.onLinger('wait')),
       this.createButton('Attack', () => this.onAttack()),
+    ]
+    this.timeButtons = [
+      this.createButton('Next day', () => this.onNextDay()),
+      this.createButton('Until something happens', () => this.onUntilSomething(), TIME_WIDE_BUTTON_W),
     ]
     this.campButtons = [
       this.createButton('Camp', () => this.onCamp()),
@@ -340,13 +363,13 @@ export class WorldScene extends Phaser.Scene {
     this.music = this.sound.add('music_world_map', { loop: true, volume: soundVolume('music_world_map') })
     this.music.play()
 
-    const here = monstersHere(this.world)
+    const here = monstersHere(this.world, this.expedition())
     this.messageText.setText(
       this.world.status === 'won'
         ? ''
         : here
-        ? `You stand before the ${here.name} (threat ${here.threat}).`
-        : this.gameState.party.some(canAdvance)
+        ? `You stand before ${theName(here.name)} (threat ${here.threat}).`
+        : this.expedition().members.some(canAdvance)
           ? 'Your heroes have grown: click the portrait of one marked "+" to spend its skill points and perks.'
           : '',
     )
@@ -368,6 +391,7 @@ export class WorldScene extends Phaser.Scene {
   debugSource(): DebugSource {
     return {
       game: this.gameState,
+      party: this.selectedParty,
       changed: () => {
         this.refreshPartyGear()
         this.refresh()
@@ -375,16 +399,20 @@ export class WorldScene extends Phaser.Scene {
         this.checkOutcome()
       },
       // As an attack on a location would, but with none behind it: it clears none and takes no loot.
-      fight: (encounter, threat) => this.scene.start('Battle', { game: this.gameState, encounter, threat }),
+      fight: (encounter, threat, party) => this.scene.start('Battle', { game: this.gameState, encounter, threat, party }),
     }
   }
 
   probe(): WorldProbe {
     const [scout, wait, attack] = this.buttons.map((button) => buttonProbe(button))
+    const [nextDay, untilSomething] = this.timeButtons.map((button) => buttonProbe(button))
     const camp = buttonProbe(this.campButtons[0])
-    const campUntilHealed = buttonProbe(this.campButtons[1], partyWounded(this.gameState.party))
+    const campUntilHealed = buttonProbe(this.campButtons[1], partyWounded(this.expedition().members))
     return {
       world: this.world,
+      partyAt: this.expedition().position,
+      confronting: this.expedition().confronting,
+      standingRoute: [...this.drawnStandingRoute],
       walking: this.walking,
       origin: { x: this.mapLayer.x, y: this.mapLayer.y },
       view: this.view,
@@ -396,6 +424,8 @@ export class WorldScene extends Phaser.Scene {
         scout,
         wait,
         attack,
+        nextDay,
+        untilSomething,
         camp,
         campUntilHealed,
         buildTower: buttonProbe(this.towerButton),
@@ -493,7 +523,7 @@ export class WorldScene extends Phaser.Scene {
       const held = this.world.held.includes(location.id)
       const days =
         location.kind !== 'monsters' && this.world.threatened.includes(location.id)
-          ? daysToFall(this.world, this.gameState.party, location)
+          ? daysToFall(this.world, this.presences(), location)
           : null
       const lines = [held ? `${location.name} *` : location.name]
       if (this.world.outposts.includes(location.id)) lines.push('outpost')
@@ -514,7 +544,7 @@ export class WorldScene extends Phaser.Scene {
     }
     // A tower goes unnamed until the blight gains on it.
     for (const tower of this.world.towers) {
-      const days = this.world.threatened.includes(tower.id) ? daysToFall(this.world, this.gameState.party, tower) : null
+      const days = this.world.threatened.includes(tower.id) ? daysToFall(this.world, this.presences(), tower) : null
       if (days === null) continue
       const { x, y } = boardHexCenter(tower.position, WORLD_LAYOUT)
       this.siteLabels.add(
@@ -586,7 +616,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Shows the party's figure wearing and holding what its first member does now. */
   private refreshPartyGear(): void {
-    this.party.setLook(heroLook(this.gameState.party[0]?.equipment ?? {}))
+    this.party.setLook(heroLook(this.expedition().members[0]?.equipment ?? {}))
   }
 
   private createButton(label: string, onClick: () => void, width = BUTTON_W): Phaser.GameObjects.Container {
@@ -618,16 +648,22 @@ export class WorldScene extends Phaser.Scene {
     const centreX = PARTY_PANEL_W + (width - PARTY_PANEL_W) / 2
     const buttonY = height - 50
     // Only the buttons shown take room: the camp row has one of the tower's, the outpost's and the encampment's at most.
-    for (const all of [this.buttons, [...this.campButtons, this.towerButton, this.outpostButton, this.encampmentButton]]) {
+    const timeY = buttonY - ROW_PITCH
+    const rows: [Phaser.GameObjects.Container[], number][] = [
+      [this.timeButtons, timeY],
+      [this.buttons, buttonY],
+      [[...this.campButtons, this.towerButton, this.outpostButton, this.encampmentButton], buttonY],
+    ]
+    for (const [all, y] of rows) {
       const row = all.filter((button) => button.visible)
       // A row centred under the map, its buttons BUTTON_GAP apart.
       let x = centreX - (row.reduce((sum, button) => sum + button.width, 0) + (row.length - 1) * BUTTON_GAP) / 2
       for (const button of row) {
-        button.setPosition(x + button.width / 2, buttonY)
+        button.setPosition(x + button.width / 2, y)
         x += button.width + BUTTON_GAP
       }
     }
-    const messageY = buttonY - BUTTON_H / 2 - 26
+    const messageY = timeY - BUTTON_H / 2 - 26
     this.messageText.setPosition(centreX, messageY)
     this.statusText.setPosition(width - 20, 16)
     this.infoBox.setPosition(width - PARTY_LIST_W - INFO_MARGIN - INFO_W, HEADER_BOTTOM + INFO_MARGIN)
@@ -703,7 +739,7 @@ export class WorldScene extends Phaser.Scene {
    */
   selectParty(id: string): void {
     if (id !== this.selectedParty) {
-      const entry = deployedParties(this.gameState).find((party) => party.id === id)
+      const entry = this.listedParties().find((party) => party.id === id)
       if (!entry) return
       this.selectedParty = id
       this.column.destroy()
@@ -742,17 +778,33 @@ export class WorldScene extends Phaser.Scene {
 
   // ---- display ---------------------------------------------------------------
 
+  /** The company's parties as the world's rules see them. */
+  private presences(): PartyPresence[] {
+    return presences(this.gameState.parties)
+  }
+
+  /** The company's parties as the list shows them, a walking party by the order it walks by. */
+  private listedParties(): PartyListEntry[] {
+    return deployedParties(this.gameState, this.walkingOrder)
+  }
+
+  /** The party the map acts for: the selected one. */
+  private expedition(): Expedition {
+    return selectedParty(this.gameState, this.selectedParty)
+  }
+
   /** Redraws everything that follows the world's state: the party, the header and which buttons show. */
   private refresh(): void {
     const world = this.world
-    const here = monstersHere(world)
-    const { x, y } = boardHexCenter(world.party, WORLD_LAYOUT)
+    const expedition = this.expedition()
+    const here = monstersHere(world, expedition)
+    const { x, y } = boardHexCenter(expedition.position, WORLD_LAYOUT)
     this.party.setPosition(x, y + PARTY_FEET_Y)
-    this.partyMark.clear().lineStyle(3, PARTY_OUTLINE, 1).strokePoints(this.hexPolygon(world.party), true)
-    this.visible = visibleHexes(world)
+    this.partyMark.clear().lineStyle(3, PARTY_OUTLINE, 1).strokePoints(this.hexPolygon(expedition.position), true)
+    this.visible = visibleHexes(world, this.presences())
     // Blighted land the party stands on is neutral while it stays.
-    if (blightAt(world, world.party) > 0) {
-      const c = boardHexCenter(world.party, WORLD_LAYOUT)
+    if (blightAt(world, expedition.position) > 0) {
+      const c = boardHexCenter(expedition.position, WORLD_LAYOUT)
       this.partyMark.lineStyle(2, NEUTRAL_RING, 0.9).strokeCircle(c.x, c.y, WORLD_LAYOUT.hexSize * 0.6)
     }
     this.refreshBlight()
@@ -771,19 +823,22 @@ export class WorldScene extends Phaser.Scene {
       ].join('\n'),
     )
     this.column.refresh(this.active)
-    this.partyList.refresh(deployedParties(this.gameState), this.selectedParty)
+    this.partyList.refresh(this.listedParties(), this.selectedParty)
     this.hintText.setText(
-      world.confronting !== null
+      expedition.confronting !== null
         ? 'Monsters! Scout them, wait, or attack.'
         : here
           ? 'Scout, wait or attack, or click a hex to move away.'
-          : 'Click a hex to travel there, or camp. Each hex, or day of camping, takes a turn.',
+          : 'Click a hex to travel there, or camp or pass days below. Each day takes a turn.',
     )
     for (const button of this.buttons) button.setVisible(here !== null && !this.walking && world.status !== 'lost')
-    for (const button of this.campButtons) button.setVisible(canCamp(world) && !this.walking)
-    this.towerButton.setVisible(canCamp(world) && !this.walking && towerSiteRefusal(world) === null)
-    this.outpostButton.setVisible(canCamp(world) && !this.walking && outpostSiteRefusal(world) === null)
-    this.encampmentButton.setVisible(atEncampment(world) && !this.walking)
+    // Among monsters, confronting them or not, the footer offers only Scout, Wait and Attack.
+    for (const button of this.timeButtons) button.setVisible(worldActive(world) && here === null && !this.walking)
+    const campable = canCamp(world, expedition)
+    for (const button of this.campButtons) button.setVisible(campable && !this.walking)
+    this.towerButton.setVisible(campable && !this.walking && towerSiteRefusal(world, expedition) === null)
+    this.outpostButton.setVisible(campable && !this.walking && outpostSiteRefusal(world, expedition) === null)
+    this.encampmentButton.setVisible(atEncampment(world, expedition) && !this.walking)
     this.layout()
     const over = world.status === 'won' || world.status === 'lost'
     this.outcomeShade.setVisible(over)
@@ -804,33 +859,50 @@ export class WorldScene extends Phaser.Scene {
     if (!same) this.refreshHover()
   }
 
-  /** Draws the route a click on the hovered hex would walk, red-ringed where it ends among monsters, and tells of the hex. */
+  /**
+   * Draws the route a click on the hovered hex would walk, red-ringed where it
+   * ends among monsters, and tells of the hex; with no hover route, draws the
+   * standing route instead, what is left of the selected party's travel order
+   * (none while a walk plays).
+   */
   private refreshHover(): void {
     this.refreshInfo()
-    const g = this.hoverMarks.clear()
-    const route = this.hovered && !this.walking ? routeTo(this.world, this.hovered) : null
+    this.hoverMarks.clear()
+    this.drawnStandingRoute = []
+    const route = this.hovered && !this.walking ? routeTo(this.world, this.expedition(), this.hovered) : null
     if (!route) {
       this.input.setDefaultCursor(CURSORS.move)
+      const standing = this.walking ? [] : standingRoute(this.expedition())
+      if (standing.length > 0) {
+        this.drawRoute(standing, ORDER_ROUTE_COLOR)
+        this.drawnStandingRoute = standing
+      }
       return
     }
+    const toMonsters = this.drawRoute(route, ROUTE_COLOR)
+    this.input.setDefaultCursor(toMonsters ? CURSORS.attack : CURSORS.select)
+  }
+
+  /** Draws `route` from the selected party's hex in `color`, its end ringed, red where it ends among sighted monsters; returns whether it does. */
+  private drawRoute(route: readonly Hex[], color: number): boolean {
+    const g = this.hoverMarks
     const to = route[route.length - 1]
     const there = locationAt(this.world, to)
     const toMonsters = there?.kind === 'monsters' && this.world.sighted.includes(there.id)
-    this.input.setDefaultCursor(toMonsters ? CURSORS.attack : CURSORS.select)
-
-    const points = [this.world.party, ...route].map((h) => {
+    const points = [this.expedition().position, ...route].map((h) => {
       const c = boardHexCenter(h, WORLD_LAYOUT)
       return new Phaser.Math.Vector2(c.x, c.y)
     })
     // A dark edge under the line keeps it visible over every shade of grass.
     g.lineStyle(7, ROUTE_EDGE, 0.5).strokePoints(points, false)
-    g.lineStyle(3, ROUTE_COLOR, 1).strokePoints(points, false)
-    g.lineStyle(3, toMonsters ? MONSTERS_OUTLINE : ROUTE_COLOR, 1).strokePoints(this.hexPolygon(to), true)
+    g.lineStyle(3, color, 1).strokePoints(points, false)
+    g.lineStyle(3, toMonsters ? MONSTERS_OUTLINE : color, 1).strokePoints(this.hexPolygon(to), true)
+    return toMonsters
   }
 
   /** The members of the selected party, whom the column shows. */
   private selectedMembers(): readonly Character[] {
-    return deployedParties(this.gameState).find((party) => party.id === this.selectedParty)?.members ?? this.gameState.party
+    return this.expedition().members
   }
 
   /** The pointer is gone (off the game, or the map paused under an overlay): no entry is hovered, and the panel forgets it. */
@@ -849,14 +921,14 @@ export class WorldScene extends Phaser.Scene {
   /** The info panel: the hovered party's summary, else what the player knows of the hovered hex. */
   private refreshInfo(): void {
     const entry =
-      this.hoveredParty === null ? undefined : deployedParties(this.gameState).find((party) => party.id === this.hoveredParty)
+      this.hoveredParty === null ? undefined : this.listedParties().find((party) => party.id === this.hoveredParty)
     const shown = (entry !== undefined || this.hovered !== null) && !this.outcomeShade.visible
     this.infoBox.setVisible(shown)
     this.infoText.setVisible(shown)
     if (!shown) return
     const { title, lines } = entry
       ? partyListInfo(entry)
-      : hexInfo(this.world, this.gameState.party, this.visible, this.hovered!)
+      : hexInfo(this.gameState, this.expedition(), this.visible, this.hovered!)
     this.infoText.setText([title, '', ...lines].join('\n'))
     this.infoBox.setSize(INFO_W, this.infoText.height + 2 * INFO_PAD)
   }
@@ -868,16 +940,28 @@ export class WorldScene extends Phaser.Scene {
     if (this.walking || this.outcomeShade.visible) return
     const clicked = this.hexAt(at.x, at.y)
     if (!clicked) return
-    const journey = travel(this.world, clicked, this.gameState.party)
+    const order = travelLabel(this.world, clicked)
+    const journey = travel(this.gameState, this.expedition(), clicked)
     const route = journey.walked
     if (route.length === 0) return
+    // The journey is made as far as the world goes; the walk only shows it.
+    this.save()
 
+    this.playWalk(route, order, () =>
+      this.arrive(describeWorldEvents(journey.events, journey.interruptedBy), journey.interruptedBy !== null, journey.events),
+    )
+  }
+
+  /**
+   * Shows the selected party walking `route` (already made in the game, and
+   * saved), its order line saying `order` until the walk ends, then calls `done`.
+   */
+  private playWalk(route: Hex[], order: string, done: () => void): void {
     this.walking = true
+    this.walkingOrder = { party: this.selectedParty, order }
     // A journey brings the view back to the party.
     this.panOrigin = null
     this.messageText.setText('')
-    // The journey is made as far as the world goes; the walk only shows it.
-    this.save()
     this.refreshWalking()
     this.party.play('walk')
     this.tweens.chain({
@@ -889,7 +973,7 @@ export class WorldScene extends Phaser.Scene {
       }),
       onComplete: () => {
         this.party.play('idle')
-        this.arrive(describeWorldEvents(journey.events, journey.interruptedBy), journey.interruptedBy !== null, journey.events)
+        done()
       },
     })
   }
@@ -897,37 +981,97 @@ export class WorldScene extends Phaser.Scene {
   /** While the party walks, nothing else can be done and its hex is not yet where it stands. */
   private refreshWalking(): void {
     this.partyMark.clear()
-    for (const button of [...this.buttons, ...this.campButtons, this.towerButton, this.outpostButton, this.encampmentButton]) button.setVisible(false)
+    for (const button of [...this.buttons, ...this.timeButtons, ...this.campButtons, this.towerButton, this.outpostButton, this.encampmentButton]) button.setVisible(false)
+    this.partyList.refresh(this.listedParties(), this.selectedParty)
     this.refreshHover()
   }
 
-  /** The walk is over: `told` is what happened on the way (`events`), and `stopped` whether that cut the journey short. */
-  private arrive(told: string, stopped: boolean, events: WorldEvent[]): void {
+  /** The walk has been shown: the party stands where the game has it. */
+  private endWalk(): void {
     this.walking = false
+    this.walkingOrder = null
     this.panOrigin = null
     this.applyOrigin()
     // The map has scrolled under the pointer, which is over another hex now.
     const pointer = this.input.activePointer
     this.hovered = this.hexAt(pointer.x, pointer.y)
-    const here = monstersHere(this.world)
+  }
+
+  /** The walk is over: `told` is what happened on the way (`events`), and `stopped` whether that cut the journey short. */
+  private arrive(told: string, stopped: boolean, events: WorldEvent[]): void {
+    this.endWalk()
+    const here = monstersHere(this.world, this.expedition())
     this.messageText.setText(
-      stopped ? `Your journey stops. ${told}` : here ? `You come upon the ${here.name} (threat ${here.threat}).` : told,
+      stopped ? `Your journey stops. ${told}` : here ? `You come upon ${theName(here.name)} (threat ${here.threat}).` : told,
     )
     this.refresh()
     this.checkOutcome()
     this.tell({ kind: 'world_turn', events })
   }
 
+  /** One day passes, every party carrying on its order. */
+  private onNextDay(): void {
+    if (this.scene.isPaused() || this.walking || this.outcomeShade.visible) return
+    const refusal = advanceRefusal(this.gameState)
+    if (refusal !== null) {
+      this.messageText.setText(refusal)
+      return
+    }
+    const order = orderLabel(this.world, this.expedition())
+    this.daysPassed([passDay(this.gameState)!], 1, order)
+  }
+
+  /** Days pass until something happens, or until `UNTIL_LIMIT` of them have passed quietly. */
+  private onUntilSomething(): void {
+    if (this.scene.isPaused() || this.walking || this.outcomeShade.visible) return
+    const refusal = advanceRefusal(this.gameState)
+    if (refusal !== null) {
+      this.messageText.setText(refusal)
+      return
+    }
+    const order = orderLabel(this.world, this.expedition())
+    this.daysPassed(advance(this.gameState), UNTIL_LIMIT, order)
+  }
+
+  /**
+   * After the days in `reports` have passed in the game: saves them, as a
+   * journey is saved as it begins, shows the selected party's steps, its line
+   * saying `order` (its order before the days) while they play, then tells
+   * what happened and selects and centres the party an interrupt concerns.
+   */
+  private daysPassed(reports: DayReport[], limit: number, order: string): void {
+    this.save()
+    const steps = reports.flatMap((report) => report.parties.flatMap((day) => (day.party === this.selectedParty && day.walked ? [day.walked] : [])))
+    const events = reports.flatMap((report) => report.events)
+    const told = describeDays(reports, this.world, limit)
+    const interrupted = reports.at(-1)?.interrupt?.party ?? null
+    const finish = () => {
+      if (interrupted !== null) this.selectParty(interrupted)
+      this.messageText.setText(told)
+      this.refresh()
+      this.checkOutcome()
+      this.tell({ kind: 'world_turn', events })
+    }
+    if (steps.length === 0) {
+      finish()
+      return
+    }
+    this.playWalk(steps, order, () => {
+      this.endWalk()
+      finish()
+    })
+  }
+
   /** Scouting and waiting each pass a turn among the monsters; nothing comes of either yet. */
   private onLinger(how: Lingering): void {
-    const here = monstersHere(this.world)
-    const events = here ? linger(this.world, how, this.gameState.party) : null
+    const here = monstersHere(this.world, this.expedition())
+    const events = here ? linger(this.gameState, this.expedition(), how) : null
     if (!here || !events) return
     this.messageText.setText(
       describeWorldEvents(events) ||
         (how === 'scout'
-          ? `You scout the ${here.name}, but learn nothing new.`
-          : `You wait a turn. The ${here.name} do not stir.`),
+          ? `You scout ${theName(here.name)}, but learn nothing new.`
+          : `You wait a turn. ${theNameCapital(here.name)} do not stir.`),
     )
     this.refresh()
     this.save()
@@ -937,7 +1081,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** A day's rest where the party stands: a hit point each, and every caster's mana back. */
   private onCamp(): void {
-    const day = campDay(this.world, this.gameState.party)
+    const day = campDay(this.gameState, this.expedition())
     if (day === null) return
     const told = describeWorldEvents(day.events)
     this.messageText.setText(
@@ -951,7 +1095,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Days of rest, with the casters healing what they can each day, until no one is wounded. */
   private onCampUntilHealed(): void {
-    const result = campUntilHealed(this.world, this.gameState.party)
+    const result = campUntilHealed(this.gameState, this.expedition())
     if (result === null) return
     const told = describeWorldEvents(result.events, result.interruptedBy)
     const days = `${result.days} ${result.days === 1 ? 'day' : 'days'}`
@@ -966,14 +1110,14 @@ export class WorldScene extends Phaser.Scene {
 
   /** Builds a watchtower where the party stands, a day's work, or says why it cannot (the stock, most often). */
   private onBuildTower(): void {
-    const refusal = canBuildTower(this.world)
-    this.built(refusal, refusal ? null : buildTower(this.world, this.gameState.party))
+    const refusal = canBuildTower(this.world, this.expedition())
+    this.built(refusal, refusal ? null : buildTower(this.gameState, this.expedition()))
   }
 
   /** Builds an outpost at the held site the party stands on, a day's work, or says why it cannot. */
   private onBuildOutpost(): void {
-    const refusal = canBuildOutpost(this.world)
-    this.built(refusal, refusal ? null : buildOutpost(this.world, this.gameState.party))
+    const refusal = canBuildOutpost(this.world, this.expedition())
+    this.built(refusal, refusal ? null : buildOutpost(this.gameState, this.expedition()))
   }
 
   /** Tells what a building's day brought, or why it was refused. */
@@ -984,7 +1128,7 @@ export class WorldScene extends Phaser.Scene {
     }
     // The first event is the tower's own; the rest are the day's.
     const [built, ...day] = events
-    const told = describeWorldEvents(day, day.find((event) => isNotable(this.world, event)) ?? null)
+    const told = describeWorldEvents(day, day.find((event) => isNotable(this.world, event, this.presences())) ?? null)
     this.messageText.setText(`${describeWorldEvent(built)}${told ? ` ${told}` : ''}`)
     this.refresh()
     this.save()
@@ -997,7 +1141,7 @@ export class WorldScene extends Phaser.Scene {
    * while it is told; the map saves what was shown as it resumes.
    */
   private tell(moment: StoryMoment): void {
-    tellStory(this, this.gameState, moment, this.anchors())
+    tellStory(this, this.gameState, moment, this.anchors(), this.selectedParty)
   }
 
   /** Where the controls a tutorial tip may point at are on screen, those that show. */
@@ -1048,8 +1192,8 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private onAttack(): void {
-    const here = monstersHere(this.world)
-    if (here) this.scene.start('Battle', { game: this.gameState, location: here.id })
+    const here = monstersHere(this.world, this.expedition())
+    if (here) this.scene.start('Battle', { game: this.gameState, location: here.id, party: this.selectedParty })
   }
 
   /** A click on a portrait marks that member, and a click on the one marked opens its panel. */
@@ -1069,13 +1213,14 @@ export class WorldScene extends Phaser.Scene {
    */
   private openPanel(index: number): void {
     if (this.scene.isPaused() || this.walking) return
-    const party = this.gameState.party
+    const expedition = this.expedition()
+    const party = expedition.members
     const character = party[index]
     if (!character) return
     const tab = canAdvance(character) ? 'skills' : 'character'
     // Gear is changed freely here, and the ground is the party's baggage, through which items
     // pass between members. The panel edits the characters and the baggage in place.
-    const members = party.map((member) => ({ character: member, gearApCost: 0, ground: this.gameState.baggage }))
+    const members = party.map((member) => ({ character: member, gearApCost: 0, ground: expedition.baggage }))
     this.scene.launch('Inventory', { members, index, tab, canAdvance: true, resume: 'World', groundTitle: 'Baggage' })
     this.scene.bringToTop('Inventory')
     this.scene.pause()
@@ -1083,15 +1228,15 @@ export class WorldScene extends Phaser.Scene {
 
   /** Field crafting over the map (CraftingScene), wherever the party may camp; it resumes the map with what it made. */
   private openCrafting(): void {
-    if (this.scene.isPaused() || this.walking || !canCamp(this.world)) return
-    this.scene.launch('Crafting', { game: this.gameState, resume: 'World' })
+    if (this.scene.isPaused() || this.walking || !canCamp(this.world, this.expedition())) return
+    this.scene.launch('Crafting', { game: this.gameState, resume: 'World', party: this.selectedParty })
     this.scene.bringToTop('Crafting')
     this.scene.pause()
   }
 
   /** Tells what a field craft made and what its day brought, as after camping. */
   private crafted({ item, events }: CraftedData['crafted']): void {
-    const told = describeWorldEvents(events, events.find((event) => isNotable(this.world, event)) ?? null)
+    const told = describeWorldEvents(events, events.find((event) => isNotable(this.world, event, this.presences())) ?? null)
     this.messageText.setText(`A day's work makes the ${item}.${told ? ` ${told}` : ''}`)
     this.checkOutcome()
     // After the redraw and save the resume does.
@@ -1100,8 +1245,8 @@ export class WorldScene extends Phaser.Scene {
 
   /** The encampment over the map, while the party stands there; it starts the map again when it closes. */
   private openEncampment(): void {
-    if (this.scene.isPaused() || this.walking || !atEncampment(this.world)) return
-    this.scene.launch('Encampment', { game: this.gameState })
+    if (this.scene.isPaused() || this.walking || !atEncampment(this.world, this.expedition())) return
+    this.scene.launch('Encampment', { game: this.gameState, party: this.selectedParty })
     this.scene.bringToTop('Encampment')
     this.scene.pause()
   }

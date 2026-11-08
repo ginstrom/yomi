@@ -1,7 +1,8 @@
 import Phaser from 'phaser'
 import { describeCost } from '../game/buildings.ts'
 import { facilities, improveFacility, type FacilityId, type FacilityView } from '../game/encampment.ts'
-import type { GameState } from '../game/gameState.ts'
+import type { Expedition } from '../game/expedition.ts'
+import { selectedParty, type GameState } from '../game/gameState.ts'
 import { encampmentName } from '../game/worldMap.ts'
 import type { ButtonProbe, EncampmentProbe } from '../testHook.ts'
 import { soundVolume } from './audioSettings.ts'
@@ -14,6 +15,8 @@ import { SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 
 interface EncampmentData {
   game: GameState
+  /** The id of the party at the encampment; the first if left out or unknown. */
+  party?: string
   /** The facility to show the details of, as the guild hall hands back. */
   select?: FacilityId
 }
@@ -65,6 +68,7 @@ const STAKE_EDGE = 0x14100c
  */
 export class EncampmentScene extends Phaser.Scene {
   private gameState!: GameState
+  private expedition!: Expedition
   private selected: FacilityId | null = null
   private hovered: FacilityId | null = null
   private message = ''
@@ -78,6 +82,7 @@ export class EncampmentScene extends Phaser.Scene {
 
   create(data: EncampmentData): void {
     this.gameState = data.game
+    this.expedition = selectedParty(data.game, data.party)
     this.selected = data.select ?? null
     this.hovered = null
     this.message = ''
@@ -89,7 +94,7 @@ export class EncampmentScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this))
     this.input.keyboard?.on('keydown-ESC', () => (this.selected ? this.select(null) : this.leave()))
     const leave = this.controls.leave?.at
-    tellStory(this, this.gameState, { kind: 'encampment_opened' }, leave ? { 'encampment.leave': this.onScreen(leave) } : {})
+    tellStory(this, this.gameState, { kind: 'encampment_opened' }, leave ? { 'encampment.leave': this.onScreen(leave) } : {}, this.expedition.id)
   }
 
   /** Where a point of the frame is on screen. */
@@ -109,7 +114,7 @@ export class EncampmentScene extends Phaser.Scene {
       name: encampmentName(this.gameState.world),
       selected: this.selected,
       message: this.message,
-      facilities: facilities(this.gameState).map((facility, index) => ({
+      facilities: facilities(this.gameState, this.expedition).map((facility, index) => ({
         ...onScreen(this.buildingCentre(index)),
         visible: true,
         enabled: true,
@@ -137,7 +142,7 @@ export class EncampmentScene extends Phaser.Scene {
       this.add.text(CENTRE_X, TITLE_Y + 28, `Your encampment.  Stock: ${stock || 'nothing'}`, { fontFamily: FONT, fontSize: '13px', color: DIM }).setOrigin(0.5),
     ])
     this.drawGrounds()
-    const all = facilities(this.gameState)
+    const all = facilities(this.gameState, this.expedition)
     all.forEach((facility, index) => this.drawFacility(facility, index))
     this.drawDetails(all.find((f) => f.id === this.selected) ?? null)
     this.frame.add(
@@ -274,7 +279,7 @@ export class EncampmentScene extends Phaser.Scene {
 
   /** Builds or raises the facility, and says what came of it. */
   private improve(facility: FacilityView): void {
-    const refusal = improveFacility(this.gameState, facility.id)
+    const refusal = improveFacility(this.gameState, this.expedition, facility.id)
     this.message = refusal ?? (facility.level === 0 ? `The ${facility.name} is built.` : `The ${facility.name} is raised to level ${facility.level + 1}.`)
     this.render()
   }
@@ -283,12 +288,12 @@ export class EncampmentScene extends Phaser.Scene {
   private openFacility(id: FacilityId): void {
     const key = OPENS[id]
     if (!key) return
-    this.scene.start(key, { game: this.gameState })
+    this.scene.start(key, { game: this.gameState, party: this.expedition.id })
     this.scene.bringToTop(key)
   }
 
   /** Back to the map, started again: the party under its column may have changed, and the map saves as it opens. */
   private leave(): void {
-    this.scene.start('World', { game: this.gameState })
+    this.scene.start('World', { game: this.gameState, party: this.expedition.id })
   }
 }

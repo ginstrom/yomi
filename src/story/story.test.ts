@@ -59,7 +59,7 @@ describe('storyFor', () => {
 describe('fillText', () => {
   it('names the encampment and the party\'s leader', () => {
     const game = newGame(undefined, null, 1, 'Hearthold')
-    expect(fillText('{leader} of {encampment}', game)).toBe(`${game.party[0].name} of Hearthold`)
+    expect(fillText('{leader} of {encampment}', game)).toBe(`${game.parties[0].members[0].name} of Hearthold`)
   })
 })
 

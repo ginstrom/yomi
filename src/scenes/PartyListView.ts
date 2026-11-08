@@ -11,7 +11,16 @@ import {
   hpBarColor,
   portraitKey,
 } from './partyPanel.ts'
-import { PARTY_LIST_W, partyEntryBarRect, partyEntryRect, type PartyListEntry } from './partyList.ts'
+import {
+  ORDER_FONT_PX,
+  ORDER_LINE_H,
+  PARTY_LIST_W,
+  orderLines,
+  partyEntryBarRect,
+  partyEntryOrderRect,
+  partyEntryRect,
+  type PartyListEntry,
+} from './partyList.ts'
 
 const CONFRONTING_COLOR = '#e53935'
 const OUTLINED = { fontFamily: 'monospace', fontSize: '11px', stroke: '#000000', strokeThickness: 3 }
@@ -27,6 +36,8 @@ interface EntryTile {
   alert: Phaser.GameObjects.Text
   hpBack: Phaser.GameObjects.Rectangle
   hpFill: Phaser.GameObjects.Rectangle
+  /** What the party is doing, wrapped under the bar. */
+  order: Phaser.GameObjects.Text
 }
 
 /**
@@ -88,6 +99,7 @@ export class PartyListView {
       tile.count.setText(`${entry.members.length}`)
       tile.alert.setVisible(entry.confronting !== null)
       tile.hpFill.setSize(bar.width * ratio, bar.height).setFillStyle(hpBarColor(ratio))
+      tile.order.setText(orderLines(entry.order).join('\n'))
       this.strokeFrame(tile)
     })
   }
@@ -103,6 +115,7 @@ export class PartyListView {
         members: entry.members.length,
         selected: entry.id === this.selected,
         confronting: entry.confronting !== null,
+        order: entry.order,
         hovered: entry.id === this.hovered,
       }
     })
@@ -110,7 +123,7 @@ export class PartyListView {
 
   private rebuild(entries: PartyListEntry[]): void {
     for (const tile of this.tiles) {
-      for (const object of [tile.image, tile.frame, tile.glyph, tile.count, tile.alert, tile.hpBack, tile.hpFill]) object.destroy()
+      for (const object of [tile.image, tile.frame, tile.glyph, tile.count, tile.alert, tile.hpBack, tile.hpFill, tile.order]) object.destroy()
     }
     if (this.hovered !== null && !entries.some((entry) => entry.id === this.hovered)) {
       this.hovered = null
@@ -127,8 +140,11 @@ export class PartyListView {
         .setOrigin(1, 0)
       const hpBack = scene.add.rectangle(0, 0, 1, 1, 0x212121).setOrigin(0).setStrokeStyle(1, 0x000000)
       const hpFill = scene.add.rectangle(0, 0, 1, 1, 0x43a047).setOrigin(0)
-      const tile: EntryTile = { id: entry.id, image, frame, glyph, count, alert, hpBack, hpFill }
-      this.entryLayer.add([image, frame, glyph, count, alert, hpBack, hpFill])
+      const order = scene.add
+        .text(0, 0, '', { fontFamily: 'monospace', fontSize: `${ORDER_FONT_PX}px`, color: '#cfd8dc', align: 'center', lineSpacing: ORDER_LINE_H - ORDER_FONT_PX - 2 })
+        .setOrigin(0.5, 0)
+      const tile: EntryTile = { id: entry.id, image, frame, glyph, count, alert, hpBack, hpFill, order }
+      this.entryLayer.add([image, frame, glyph, count, alert, hpBack, hpFill, order])
       frame.on('pointerover', () => this.setHovered(tile.id))
       frame.on('pointerout', () => this.setHovered(null))
       frame.on('pointerdown', () => {
@@ -163,6 +179,8 @@ export class PartyListView {
     tile.alert.setPosition(at.x + at.width - 3, at.y - 1)
     tile.hpBack.setPosition(bar.x, bar.y).setSize(bar.width, bar.height)
     tile.hpFill.setPosition(bar.x, bar.y)
+    const line = partyEntryOrderRect(index, this.width)
+    tile.order.setPosition(line.x + line.width / 2, line.y)
     const entry = this.entries[index]
     if (entry) {
       const ratio = entry.maxHp > 0 ? Phaser.Math.Clamp(entry.hp / entry.maxHp, 0, 1) : 0

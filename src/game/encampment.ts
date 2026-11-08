@@ -1,5 +1,6 @@
 import { SHRINE_STRENGTH } from './blight.ts'
 import { MAX_SHRINE_LEVEL, atEncampment, canAfford, describeCost, raiseShrine, shrineCost } from './buildings.ts'
+import type { Expedition } from './expedition.ts'
 import type { GameState } from './gameState.ts'
 import { GUILD_HALL_LEVELS, MAX_GUILD_HALL_LEVEL, upgradeCost, upgradeGuildHall } from './guildHall.ts'
 import { MAX_WORKSHOP_LEVEL, upgradeWorkshop, workshopCost } from './crafting.ts'
@@ -54,7 +55,7 @@ interface Facility {
   effect: (game: GameState, level: number) => string
   cost: (game: GameState) => Stock | null
   /** Buys the next level; returns why it cannot, or null when done. */
-  improve: (game: GameState) => string | null
+  improve: (game: GameState, party: Expedition) => string | null
   opens: boolean
 }
 
@@ -78,7 +79,7 @@ const FACILITIES: readonly Facility[] = [
     about: (game) => `A holy place whose wards help ${encampmentName(game.world)} hold its land against the blight.`,
     effect: (game, level) => `${encampmentName(game.world)} pushes back the blight with ${SHRINE_STRENGTH * level} more strength.`,
     cost: (game) => shrineCost(game.world),
-    improve: (game) => raiseShrine(game.world),
+    improve: (game, party) => raiseShrine(game.world, party),
     opens: false,
   },
   {
@@ -127,7 +128,7 @@ const FACILITIES: readonly Facility[] = [
 ]
 
 /** Every facility of the encampment, built or not, in the order the screen lays them out. */
-export function facilities(game: GameState): FacilityView[] {
+export function facilities(game: GameState, party: Expedition): FacilityView[] {
   return FACILITIES.map((facility) => {
     const level = facility.level(game)
     const cost = facility.cost(game)
@@ -142,17 +143,17 @@ export function facilities(game: GameState): FacilityView[] {
       next: top ? null : facility.effect(game, level + 1),
       cost: top ? null : cost,
       action: top ? null : level === 0 ? 'Build' : `Raise to level ${level + 1}`,
-      refusal: top ? null : improveRefusal(game, cost),
+      refusal: top ? null : improveRefusal(game, party, cost),
       opens: facility.opens && level > 0,
     }
   })
 }
 
 /** Builds the facility, or raises it a level, for the stock; returns why it cannot, or null when done. */
-export function improveFacility(game: GameState, id: FacilityId): string | null {
+export function improveFacility(game: GameState, party: Expedition, id: FacilityId): string | null {
   const facility = FACILITIES.find((f) => f.id === id)
   if (!facility) return 'There is no such facility.'
-  return facility.improve(game)
+  return facility.improve(game, party)
 }
 
 /** Sets a facility's level outright, for the debug console; the caller keeps it within the facility's levels. */
@@ -161,8 +162,8 @@ export function setFacilityLevel(game: GameState, id: FacilityId, level: number)
   game.world[field[id]] = level
 }
 
-function improveRefusal(game: GameState, cost: Stock | null): string | null {
-  if (!atEncampment(game.world)) return `The party is not at ${encampmentName(game.world)}.`
+function improveRefusal(game: GameState, party: Expedition, cost: Stock | null): string | null {
+  if (!atEncampment(game.world, party)) return `The party is not at ${encampmentName(game.world)}.`
   if (cost && !canAfford(game.world.stock, cost)) return `It costs ${describeCost(cost)}, more than the stock holds.`
   return null
 }

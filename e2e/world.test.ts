@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { WorldState, WorldStatus } from '../src/game/worldMap.ts'
-import { offsetToHex } from '../src/grid/hex.ts'
+import { hexDistance, offsetToHex } from '../src/grid/hex.ts'
 import { WORLD_LAYOUT, boardHexCenter, boardPixelSize, type Point } from '../src/scenes/boardGeometry.ts'
 import { clampOrigin, mapOrigin, pannedOrigin } from '../src/scenes/mapScroll.ts'
 import type { WorldProbe } from '../src/testHook.ts'
@@ -13,12 +13,12 @@ describe('the world map', () => {
     const game = await games.open()
     const start = await game.newGame()
     expect(start.world.turn).toBe(1)
-    expect(start.world.party).toEqual(offsetToHex(9, 19))
+    expect(start.partyAt).toEqual(offsetToHex(9, 19))
     expect(start.buttons.attack.visible).toBe(false)
 
     const arrived = await game.travelTo(offsetToHex(11, 19))
     expect(arrived.world.turn).toBe(3)
-    expect(arrived.world.confronting).toBeNull()
+    expect(arrived.confronting).toBeNull()
   })
 
   it('opens on the home valley, the rest unexplored and the Source unknown, and reveals land as the party travels', async () => {
@@ -30,7 +30,7 @@ describe('the world map', () => {
     expect(start.world.seen[index(9, 28)]).toBe(-1)
     expect(start.world.sighted).not.toContain('blight_source')
 
-    const south = await game.travelTo(offsetToHex(9, 25))
+    const south = await game.travelTo(offsetToHex(9, 23))
     expect(south.visible).toContain(index(9, 28))
     expect(south.world.seen[index(9, 28)]).toBeGreaterThanOrEqual(0)
   })
@@ -38,7 +38,7 @@ describe('the world map', () => {
   it('tells of the hovered hex in the info panel', async () => {
     const game = await games.open()
     const start = await game.newGame()
-    await game.hover(worldHexOnScreen(start, start.world.party))
+    await game.hover(worldHexOnScreen(start, start.partyAt))
     const here = await game.waitFor('World', (w) => w.info !== '')
     expect(here.info).toContain('Your party:')
     await game.hover(worldHexOnScreen(start, RAIDERS.position))
@@ -53,7 +53,7 @@ describe('the world map', () => {
   const plus = (p: Point, dx: number, dy: number): Point => ({ x: p.x + dx, y: p.y + dy })
   /** Where the map sits when the view follows the party, as it does before any pan. */
   const following = (w: WorldProbe): Point =>
-    mapOrigin(boardHexCenter(w.world.party, WORLD_LAYOUT), boardPixelSize(w.world.board, WORLD_LAYOUT), w.view)
+    mapOrigin(boardHexCenter(w.partyAt, WORLD_LAYOUT), boardPixelSize(w.world.board, WORLD_LAYOUT), w.view)
 
   /** Presses mid-view and drags the pointer by (dx, dy), letting go there; the map has moved with it. */
   async function pan(game: Game, start: WorldProbe, dx: number, dy: number): Promise<WorldProbe> {
@@ -75,7 +75,7 @@ describe('the world map', () => {
     const start = await game.newGame()
     const panned = await pan(game, start, -40, -30)
     expect(panned.walking).toBe(false)
-    expect(panned.world.party).toEqual(start.world.party)
+    expect(panned.partyAt).toEqual(start.partyAt)
     expect(panned.world.turn).toBe(start.world.turn)
   })
 
@@ -98,7 +98,7 @@ describe('the world map', () => {
     await game.hover(plus(at, 3, 2))
     await game.letGo()
     const arrived = await game.waitFor('World', (w) => !w.walking && w.world.turn !== start.world.turn)
-    expect(arrived.world.party).toEqual(to)
+    expect(arrived.partyAt).toEqual(to)
   })
 
   it('travels to the hex under the pointer on a panned map, then follows the party again', async () => {
@@ -108,7 +108,7 @@ describe('the world map', () => {
     const to = offsetToHex(11, 19)
     await game.click(worldHexOnScreen(panned, to))
     const arrived = await game.waitFor('World', (w) => !w.walking && w.world.turn !== start.world.turn)
-    expect(arrived.world.party).toEqual(to)
+    expect(arrived.partyAt).toEqual(to)
     expect(arrived.origin).toEqual(following(arrived))
   })
 
@@ -123,7 +123,7 @@ describe('the world map', () => {
     const panned = await pan(game, start, -40, -30)
     await game.press('Home')
     const home = await game.waitFor('World', (w) => w.origin.x === start.origin.x && w.origin.y === start.origin.y)
-    expect(home.world.party).toEqual(panned.world.party)
+    expect(home.partyAt).toEqual(panned.partyAt)
     expect(home.world.turn).toBe(panned.world.turn)
     expect(home.walking).toBe(false)
   })
@@ -139,7 +139,7 @@ describe('the world map', () => {
     await game.frames()
     const after = await game.waitFor('World')
     expect(after.walking).toBe(false)
-    expect(after.world.party).toEqual(start.world.party)
+    expect(after.partyAt).toEqual(start.partyAt)
     expect(after.world.turn).toBe(start.world.turn)
   })
 
@@ -216,7 +216,7 @@ describe('the world map', () => {
     await game.press('Home')
     expect((await game.probe('World'))!.walking).toBe(true)
     const arrived = await game.waitFor('World', (w) => !w.walking && w.world.turn !== start.world.turn)
-    expect(arrived.world.party).toEqual(to)
+    expect(arrived.partyAt).toEqual(to)
     expect(arrived.origin).toEqual(following(arrived))
   })
 
@@ -231,7 +231,7 @@ describe('the world map', () => {
     expect(entry.y).toBeGreaterThan(64)
     expect(w.selectedParty).toBe('party_1')
     expect(w.view.x + w.view.width).toBeLessThanOrEqual(width - 80)
-    await game.hover(worldHexOnScreen(w, w.world.party))
+    await game.hover(worldHexOnScreen(w, w.partyAt))
     const hovered = await game.waitFor('World', (p) => p.infoRect !== null)
     expect(hovered.infoRect!.x + hovered.infoRect!.width).toBeLessThanOrEqual(width - 80)
   }
@@ -260,7 +260,7 @@ describe('the world map', () => {
     const panned = await pan(game, start, -40, -30)
     await game.click(panned.parties[0])
     const centred = await game.waitFor('World', (w) => w.origin.x === start.origin.x && w.origin.y === start.origin.y)
-    expect(centred.world.party).toEqual(panned.world.party)
+    expect(centred.partyAt).toEqual(panned.partyAt)
     expect(centred.world.turn).toBe(panned.world.turn)
     expect(centred.selectedParty).toBe('party_1')
   })
@@ -311,7 +311,7 @@ describe('the world map', () => {
     await game.click(start.parties[0])
     expect((await game.probe('World'))!.walking).toBe(true)
     const arrived = await game.waitFor('World', (w) => !w.walking && w.world.turn !== start.world.turn)
-    expect(arrived.world.party).toEqual(to)
+    expect(arrived.partyAt).toEqual(to)
     expect(arrived.origin).toEqual(following(arrived))
   })
 
@@ -344,7 +344,7 @@ describe('the world map', () => {
     const game = await games.open()
     await game.newGame()
     const among = await game.travelTo(RAIDERS.position)
-    expect(among.world.confronting).toBe(RAIDERS.id)
+    expect(among.confronting).toBe(RAIDERS.id)
     expect(among.message).toContain('Goblin Raiders')
     expect(among.buttons.attack.visible).toBe(true)
 
@@ -352,10 +352,10 @@ describe('the world map', () => {
     await game.click(worldHexOnScreen(among, offsetToHex(11, 19)))
     const held = (await game.probe('World'))!
     expect(held.walking).toBe(false)
-    expect(held.world.party).toEqual(RAIDERS.position)
+    expect(held.partyAt).toEqual(RAIDERS.position)
 
     await game.click(among.buttons.wait)
-    const waited = await game.waitFor('World', (w) => w.world.confronting === null)
+    const waited = await game.waitFor('World', (w) => w.confronting === null)
     expect(waited.world.turn).toBe(among.world.turn + 1)
     await game.travelTo(offsetToHex(11, 19))
   })
@@ -421,14 +421,14 @@ describe('the world map', () => {
     expect(among.buttons.camp.visible).toBe(false)
     expect(among.buttons.campUntilHealed.visible).toBe(false)
     await game.click(among.buttons.wait)
-    await game.waitFor('World', (w) => w.world.confronting === null)
+    await game.waitFor('World', (w) => w.confronting === null)
     await game.travelTo(offsetToHex(11, 19))
 
     // Wounded as a battle leaves a party: planted in the save, and loaded.
     await game.page.evaluate(() => {
       const save = JSON.parse(localStorage.getItem('yomi.save.1')!)
-      save.game.party[0].hp = 1
-      save.game.party[1].hp = 2
+      save.game.parties[0].members[0].hp = 1
+      save.game.parties[0].members[1].hp = 2
       localStorage.setItem('yomi.save.1', JSON.stringify(save))
     })
     await game.click((await game.reload()).buttons.continue)
@@ -438,6 +438,171 @@ describe('the world map', () => {
     const healed = await game.waitFor('World', (w) => !w.buttons.campUntilHealed.enabled)
     expect(healed.message).toMatch(/^Camped \d+ days?: \d+ hp healed \(\d+ by rest, \d+ by spells\)\.$/)
     expect(healed.world.turn).toBeGreaterThan(hurt.world.turn)
+  })
+
+  describe('the time controls', () => {
+    const order = (w: WorldProbe) => w.parties[0].order
+
+    it('passes a day on Next day, the idle party staying idle', async () => {
+      const game = await games.open()
+      const home = await game.newGame()
+      expect(order(home)).toBe('Idle')
+      expect(home.buttons.nextDay.visible).toBe(true)
+      expect(home.buttons.untilSomething.visible).toBe(true)
+      await game.click(home.buttons.nextDay)
+      const next = await game.waitFor('World', (w) => w.world.turn === home.world.turn + 1)
+      expect(order(next)).toBe('Idle')
+      expect(next.partyAt).toEqual(home.partyAt)
+      expect(next.message).not.toBe('')
+    })
+
+    it('carries a walk cut short on, a hex a day, the line saying where', async () => {
+      const game = await games.open()
+      const home = await game.newGame()
+      const far = offsetToHex(19, 19)
+      await game.click(worldHexOnScreen(home, far))
+      const stopped = await game.waitFor('World', (w) => !w.walking && w.world.turn > home.world.turn)
+      expect(stopped.partyAt).not.toEqual(far)
+      expect(order(stopped)).toMatch(/^Travelling/)
+      await game.click(stopped.buttons.nextDay)
+      const next = await game.waitFor('World', (w) => w.world.turn === stopped.world.turn + 1 && !w.walking)
+      // Exactly one hex along the road: a neighbour of where it stood.
+      expect(hexDistance(next.partyAt, stopped.partyAt)).toBe(1)
+      expect(next.world.turn).toBe(stopped.world.turn + 1)
+      expect(order(next)).toMatch(/^Travelling/)
+    })
+
+    it('passes days until something happens, or until thirty have passed quietly', async () => {
+      const game = await games.open()
+      const home = await game.newGame()
+      await game.click(home.buttons.untilSomething)
+      const after = await game.waitFor('World', (w) => w.world.turn > home.world.turn)
+      expect(after.world.turn - home.world.turn).toBeLessThanOrEqual(30)
+      // Either thirty quiet days, or something told: a lone first-day event has no "After" prefix.
+      if (after.message.startsWith('30 days passed quietly.')) expect(after.world.turn - home.world.turn).toBe(30)
+      else {
+        expect(after.message).toMatch(/^(After \d+ days: )?\S/)
+        expect(after.message).not.toMatch(/quiet day/i)
+      }
+    })
+
+    it('shows Camping while a wounded party camps, and Idle once it is whole', async () => {
+      const game = await games.open()
+      await game.newGame()
+      // A camp order planted in the save, with a wounded member, and loaded.
+      await game.page.evaluate(() => {
+        const save = JSON.parse(localStorage.getItem('yomi.save.1')!)
+        save.game.parties[0].members[0].hp = 1
+        save.game.parties[0].order = { kind: 'camp' }
+        localStorage.setItem('yomi.save.1', JSON.stringify(save))
+      })
+      await game.click((await game.reload()).buttons.continue)
+      await game.waitForScenes(['World'])
+      const hurt = await game.settled('World', (w) => w.buttons.campUntilHealed.enabled)
+      expect(order(hurt)).toBe('Camping')
+      await game.click(hurt.buttons.nextDay)
+      const healed = await game.waitFor('World', (w) => w.world.turn > hurt.world.turn && !w.buttons.campUntilHealed.enabled)
+      expect(order(healed)).toBe('Idle')
+    })
+
+    it('hides both buttons while the party stands before monsters, and after it scouts them', async () => {
+      const game = await games.open()
+      await game.newGame()
+      const among = await game.travelTo(RAIDERS.position)
+      expect(among.buttons.nextDay.visible).toBe(false)
+      expect(among.buttons.untilSomething.visible).toBe(false)
+      expect(among.parties[0].order).toBe(`Before the Goblin Raiders`)
+      // Scouting answers the monsters, but the party still stands among them: Scout, Wait and Attack are all the footer offers.
+      await game.click(among.buttons.scout)
+      const scouted = await game.waitFor('World', (w) => w.world.turn === among.world.turn + 1)
+      expect(scouted.confronting).toBeNull()
+      expect(scouted.buttons.attack.visible).toBe(true)
+      expect(scouted.buttons.nextDay.visible).toBe(false)
+      expect(scouted.buttons.untilSomething.visible).toBe(false)
+    })
+
+    /** Slows the game below life speed, so that a walk lasts long enough to be seen under way however slow the frames. */
+    const slowly = (game: Game) => game.page.evaluate(() => (window.__yomi!.speed = 0.2))
+    const savedTurn = (game: Game) => game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!).game.world.turn as number)
+
+    it('draws what is left of a walk cut short until it arrives, across a reload', async () => {
+      const game = await games.open()
+      const home = await game.newGame()
+      const far = offsetToHex(19, 19)
+      await game.click(worldHexOnScreen(home, far))
+      await game.waitFor('World', (w) => !w.walking && w.world.turn > home.world.turn)
+      // Off the map, nothing is hovered: the standing route is drawn, from where the party stands to where it was going.
+      await game.hover({ x: 0, y: 0 })
+      const stopped = await game.waitFor('World', (w) => w.standingRoute.length > 0)
+      expect(order(stopped)).toMatch(/^Travelling/)
+      expect(hexDistance(stopped.standingRoute[0], stopped.partyAt)).toBe(1)
+      // A hovered hex draws its own route in its place, and the standing route comes back when the hover ends.
+      await game.hover(worldHexOnScreen(stopped, home.partyAt))
+      expect((await game.waitFor('World', (w) => w.standingRoute.length === 0)).walking).toBe(false)
+      await game.hover({ x: 0, y: 0 })
+      await game.waitFor('World', (w) => w.standingRoute.length === stopped.standingRoute.length)
+
+      await game.click((await game.reload()).buttons.continue)
+      await game.waitForScenes(['World'])
+      const loaded = await game.settled('World')
+      await game.hover({ x: 0, y: 0 })
+      const reloaded = await game.waitFor('World', (w) => w.standingRoute.length > 0)
+      expect(reloaded.standingRoute).toEqual(stopped.standingRoute)
+      expect(loaded.partyAt).toEqual(stopped.partyAt)
+
+      // Days pass until the walk is done; the order ends and its route with it.
+      let world = reloaded
+      while (order(world).startsWith('Travelling') && world.buttons.untilSomething.visible) {
+        await game.click(world.buttons.untilSomething)
+        world = await game.waitFor('World', (w) => !w.walking && w.world.turn > world.world.turn)
+      }
+      expect(world.standingRoute).toEqual([])
+    })
+
+    it('says the party is travelling while its walk plays, and has saved the days walked', async () => {
+      const game = await games.open()
+      const home = await game.newGame()
+      await slowly(game)
+      await game.click(worldHexOnScreen(home, offsetToHex(19, 19)))
+      const walking = await game.waitFor('World', (w) => w.walking)
+      expect(order(walking)).toMatch(/^Travelling/)
+      expect(await savedTurn(game)).toBe(walking.world.turn)
+      const stopped = await game.waitFor('World', (w) => !w.walking)
+      expect(order(stopped)).toMatch(/^(Travelling|Idle$)/)
+    })
+
+    it('says the party is travelling while Next day and Until something happens play its walk, and saves before', async () => {
+      const game = await games.open()
+      const home = await game.newGame()
+      const far = offsetToHex(19, 19)
+      await game.click(worldHexOnScreen(home, far))
+      const stopped = await game.waitFor('World', (w) => !w.walking && w.world.turn > home.world.turn)
+      expect(order(stopped)).toMatch(/^Travelling/)
+      await slowly(game)
+      for (const button of ['nextDay', 'untilSomething'] as const) {
+        const before = await game.waitFor('World', (w) => !w.walking)
+        if (!order(before).startsWith('Travelling')) break
+        await game.click(before.buttons[button])
+        const walking = await game.waitFor('World', (w) => w.walking)
+        expect(order(walking)).toMatch(/^Travelling/)
+        expect(await savedTurn(game)).toBe(walking.world.turn)
+        expect(walking.world.turn).toBeGreaterThan(before.world.turn)
+      }
+    })
+
+    it('fits the footer and the order line in the least window', async () => {
+      const game = await games.open()
+      await game.newGame()
+      await game.resize(840, 560)
+      const small = await game.waitFor('World', (w) => w.view.width < 700)
+      for (const button of [small.buttons.nextDay, small.buttons.untilSomething, small.buttons.camp, small.buttons.campUntilHealed, small.buttons.craft, small.buttons.enterEncampment]) {
+        expect(button.visible).toBe(true)
+        expect(button.x).toBeGreaterThan(80)
+        expect(button.x).toBeLessThan(840 - 80)
+        expect(button.y).toBeLessThan(560)
+      }
+      expect(small.buttons.nextDay.y).toBeLessThan(small.buttons.camp.y)
+    })
   })
 
   it('pauses under the menu on Esc and resumes where it was', async () => {

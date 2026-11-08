@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import type { SpellId } from '../src/combat/spells.ts'
 import { BattleEngine, type CastOutcome, type Side } from '../src/engine/battleEngine.ts'
@@ -7,19 +8,22 @@ import { canAdvance } from '../src/character/progression.ts'
 import { newGame } from '../src/game/gameState.ts'
 import { heroId } from '../src/game/encounters.ts'
 import { readyMadeParty } from '../src/game/party.ts'
-import { OUTPOST_COST } from '../src/game/buildings.ts'
+import { OUTPOST_COST, TOWER_COST } from '../src/game/buildings.ts'
+import { advance } from '../src/game/company.ts'
 import { craft } from '../src/game/crafting.ts'
 import type { FamilyId } from '../src/inventory/catalog.ts'
 import { itemById, unruned } from '../src/inventory/inventory.ts'
 import { modifiersFor } from '../src/inventory/modifiers.ts'
 import { maxHp } from '../src/character/character.ts'
+import { worldHealing } from '../src/character/worldCasting.ts'
 import { lootRng, rollRunes } from '../src/game/loot.ts'
 import { runePrice, salePrice } from '../src/game/tradingPost.ts'
 import { pouchKeys } from '../src/inventory/runes.ts'
 import { extractRefusal } from '../src/game/runecraft.ts'
 import type { EncounterId } from '../src/game/encounters.ts'
-import { SOURCE_ID, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
+import { ENCAMPMENT_ID, SOURCE_ID, routeTo, type MonsterLocation } from '../src/game/worldMap.ts'
 import {
+  CAMPAIGN_SEED_STEP,
   MAX_CAMPAIGN_DAYS,
   OUTPOST_ERRAND_RADIUS,
   SOURCE_READY_LEVEL,
@@ -37,6 +41,11 @@ import {
   RUNE_ORDER,
   runecraftGear,
   visitGuildHall,
+  carryOut,
+  decide,
+  planOf,
+  startCampaign,
+  type CampaignRecord,
   type LoggedEvent,
 } from './simulate.ts'
 
@@ -340,8 +349,9 @@ describe('summarizeCampaigns, the levels', () => {
 
 describe('nextTarget', () => {
   it('answers the nest pushing on a threatened site before the nearest', () => {
-    const world = newWorld(1)
-    const party = readyMadeParty()
+    const game = newGame(readyMadeParty(), null, 1)
+    const { world } = game
+    const party = game.parties[0]
     expect(nextTarget(world, party)?.id).toBe('goblin_raiders')
     const goldSeam = world.locations.find((l) => l.id === 'gold_seam')!
     const besiegers: MonsterLocation = {
@@ -356,23 +366,25 @@ describe('nextTarget', () => {
   })
 
   it('marches on the Source once every member is ready, or nothing else is left', () => {
-    const world = newWorld(1)
-    const party = readyMadeParty()
-    for (const member of party) member.level = SOURCE_READY_LEVEL
+    const game = newGame(readyMadeParty(), null, 1)
+    const { world } = game
+    const party = game.parties[0]
+    for (const member of party.members) member.level = SOURCE_READY_LEVEL
     expect(nextTarget(world, party)?.id).toBe(SOURCE_ID)
-    party[0].level = 1
+    party.members[0].level = 1
     expect(nextTarget(world, party)?.id).not.toBe(SOURCE_ID)
     world.locations = world.locations.filter((l) => l.kind !== 'monsters' || (l.kind === 'monsters' && l.source))
     expect(nextTarget(world, party)?.id).toBe(SOURCE_ID)
   })
 
   it('marches on the Source once every member has the ready level it is given', () => {
-    const world = newWorld(1)
-    const party = readyMadeParty()
-    party.forEach((member, i) => (member.level = 3 + i))
+    const game = newGame(readyMadeParty(), null, 1)
+    const { world } = game
+    const party = game.parties[0]
+    party.members.forEach((member, i) => (member.level = 3 + i))
     expect(nextTarget(world, party)?.id).not.toBe(SOURCE_ID)
     expect(nextTarget(world, party, 3)?.id).toBe(SOURCE_ID)
-    for (const member of party) member.level = SOURCE_READY_LEVEL
+    for (const member of party.members) member.level = SOURCE_READY_LEVEL
     expect(nextTarget(world, party, SOURCE_READY_LEVEL + 1)?.id).not.toBe(SOURCE_ID)
     expect(nextTarget(world, party, SOURCE_READY_LEVEL)?.id).toBe(SOURCE_ID)
   })
@@ -381,24 +393,24 @@ describe('nextTarget', () => {
 describe('the guild hall in a campaign', () => {
   it('sends the party home when the stock affords an upgrade, which raises the hall and fills the new places', () => {
     const game = newGame(undefined, null, 1)
-    expect(hallErrand(game)).toBe(false)
+    expect(hallErrand(game, game.parties[0])).toBe(false)
     game.world.stock = { gold: 100, iron: 50 }
-    expect(hallErrand(game)).toBe(true)
+    expect(hallErrand(game, game.parties[0])).toBe(true)
     game.world.threatened = ['iron_vein']
-    expect(hallErrand(game)).toBe(false)
+    expect(hallErrand(game, game.parties[0])).toBe(false)
     game.world.threatened = []
 
-    expect(visitGuildHall(game)).toBe(1)
+    expect(visitGuildHall(game, game.parties[0])).toBe(1)
     expect(game.world.guildHall).toBe(3)
-    expect(game.party.map((member) => member.name)).toEqual(['Aldric', 'Brenna', 'Delwyn', 'Garrick'])
-    expect(canAdvance(game.party[3])).toBe(false)
+    expect(game.parties[0].members.map((member) => member.name)).toEqual(['Aldric', 'Brenna', 'Delwyn', 'Garrick'])
+    expect(canAdvance(game.parties[0].members[3])).toBe(false)
     expect(game.world.stock).toEqual({ gold: 0, iron: 5 })
     // A fifth place, and no gold to fill it.
-    expect(hallErrand(game)).toBe(false)
+    expect(hallErrand(game, game.parties[0])).toBe(false)
     game.world.stock.gold = 10
-    expect(hallErrand(game)).toBe(true)
-    expect(visitGuildHall(game)).toBe(1)
-    expect(game.party.at(-1)!.name).toBe('Aldric 2')
+    expect(hallErrand(game, game.parties[0])).toBe(true)
+    expect(visitGuildHall(game, game.parties[0])).toBe(1)
+    expect(game.parties[0].members.at(-1)!.name).toBe('Aldric 2')
   })
 })
 
@@ -406,42 +418,44 @@ describe('the shrine and outposts in a campaign', () => {
   it('raises the shrine with what the guild hall and the other facilities leave', () => {
     const game = newGame(undefined, null, 1)
     game.world.stock = { gold: 100, iron: 50, silver: 15 }
-    visitGuildHall(game)
-    visitFacilities(game)
+    visitGuildHall(game, game.parties[0])
+    visitFacilities(game, game.parties[0])
     // The hall's 90 gold first; the shrine's first level would want 20.
     expect(game.world.shrine).toBe(0)
     game.world.stock.gold = 60
-    visitFacilities(game)
+    visitFacilities(game, game.parties[0])
     expect(game.world.shrine).toBe(2)
     expect(game.world.stock).toMatchObject({ gold: 0, silver: 0 })
   })
 
   it('puts an outpost on the nearest held site without one, within reach, when the stock affords it', () => {
-    const world = newWorld(1)
+    const game = newGame(undefined, null, 1)
+    const { world } = game
+    const party = game.parties[0]
     const goldSeam = world.locations.find((l) => l.id === 'gold_seam')!
     world.held = [...new Set([...world.held, 'gold_seam'])]
-    world.party = { q: goldSeam.position.q - 2, r: goldSeam.position.r }
-    expect(outpostErrand(world)).toBeNull()
+    party.position = { q: goldSeam.position.q - 2, r: goldSeam.position.r }
+    expect(outpostErrand(world, party)).toBeNull()
     world.stock = { ...OUTPOST_COST }
-    expect(outpostErrand(world)?.id).toBe('gold_seam')
+    expect(outpostErrand(world, party)?.id).toBe('gold_seam')
     world.outposts = ['gold_seam']
-    expect(outpostErrand(world)?.id).not.toBe('gold_seam')
+    expect(outpostErrand(world, party)?.id).not.toBe('gold_seam')
     world.outposts = []
-    world.party = { q: goldSeam.position.q + OUTPOST_ERRAND_RADIUS + 8, r: goldSeam.position.r }
-    expect(outpostErrand(world)?.id).not.toBe('gold_seam')
+    party.position = { q: goldSeam.position.q + OUTPOST_ERRAND_RADIUS + 8, r: goldSeam.position.r }
+    expect(outpostErrand(world, party)?.id).not.toBe('gold_seam')
   })
 })
 
 describe('the trading post and crafting in a campaign', () => {
   it('sells the baggage and surplus, builds, buys better grades and crafts at home', () => {
     const game = newGame(undefined, null, 1)
-    game.baggage.push(game.party[0].backpack[0]!)
+    game.parties[0].baggage.push(game.parties[0].members[0].backpack[0]!)
     game.world.stock = { gold: 400, iron: 60, timber: 40, stone: 60, copper: 40, salt: 9 }
-    const trade = visitFacilities(game)
-    expect(game.baggage).toEqual([])
+    const trade = visitFacilities(game, game.parties[0])
+    expect(game.parties[0].baggage).toEqual([])
     expect(trade.goldFromSales).toBeGreaterThan(0)
     expect([game.world.tradingPost, game.world.workshop, game.world.infirmary]).toEqual([3, 2, 1])
-    const sword = game.party[0].equipment.mainHand!
+    const sword = game.parties[0].members[0].equipment.mainHand!
     expect([sword.base, sword.grade, sword.mod?.id]).toEqual(['iron_sword', 3, 'light'])
     expect(trade.goldOnGear).toBeGreaterThan(0)
     expect(trade.crafted).toBeGreaterThan(0)
@@ -456,45 +470,45 @@ describe('the trading post and crafting in a campaign', () => {
       game.world.workshop = 3
       game.world.infirmary = 3
       game.world.shrine = 3
-      game.party = [game.party[0]]
-      game.party[0].equipment.mainHand = itemById('iron_sword')!
+      game.parties[0].members = [game.parties[0].members[0]]
+      game.parties[0].members[0].equipment.mainHand = itemById('iron_sword')!
       return game
     }
 
     it('buys iron at grade 3 from a level 3 post, no tier 2', () => {
       const game = shopping(3, 500)
-      const trade = visitFacilities(game)
+      const trade = visitFacilities(game, game.parties[0])
       // Its socket takes a rune bought there.
-      expect(unruned(game.party[0].equipment.mainHand!).id).toBe('iron_sword@3')
+      expect(unruned(game.parties[0].members[0].equipment.mainHand!).id).toBe('iron_sword@3')
       expect(trade.tierTwoBought).toBe(0)
     })
 
     it('buys steel at grade 3 from a level 4 post, and counts it', () => {
       const game = shopping(4, 500)
-      const trade = visitFacilities(game)
-      expect(unruned(game.party[0].equipment.mainHand!).id).toBe('steel_longsword@3')
+      const trade = visitFacilities(game, game.parties[0])
+      expect(unruned(game.parties[0].members[0].equipment.mainHand!).id).toBe('steel_longsword@3')
       expect(trade.tierTwoBought).toBeGreaterThanOrEqual(1)
     })
 
     it('buys the dearest it affords', () => {
       const game = shopping(4, 35)
-      const trade = visitFacilities(game)
-      expect(game.party[0].equipment.mainHand!.id).toBe('steel_longsword')
+      const trade = visitFacilities(game, game.parties[0])
+      expect(game.parties[0].members[0].equipment.mainHand!.id).toBe('steel_longsword')
       expect(trade.tierTwoBought).toBe(1)
     })
 
     it('buys nothing when nothing dearer is affordable', () => {
       const game = shopping(4, 12)
-      const trade = visitFacilities(game)
-      expect(game.party[0].equipment.mainHand!.id).toBe('iron_sword')
+      const trade = visitFacilities(game, game.parties[0])
+      expect(game.parties[0].members[0].equipment.mainHand!.id).toBe('iron_sword')
       expect(trade.tierTwoBought).toBe(0)
       expect(trade.goldOnGear).toBe(0)
     })
 
     it('sells the old item back', () => {
       const game = shopping(3, 500)
-      const trade = visitFacilities(game)
-      expect(game.baggage).toEqual([])
+      const trade = visitFacilities(game, game.parties[0])
+      expect(game.parties[0].baggage).toEqual([])
       expect(trade.goldFromSales).toBeGreaterThan(0)
     })
   })
@@ -525,26 +539,26 @@ describe('the trading post and crafting in a campaign', () => {
 
   it('crafts one piece in the field, a day, and nothing it already has', () => {
     const game = newGame(undefined, null, 1)
-    game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
+    game.parties[0].position = { q: game.parties[0].position.q + 1, r: game.parties[0].position.r }
     game.world.stock = { gold: 50, iron: 50, timber: 50 }
-    expect(craftGear(game, 1).crafted).toBe(1)
+    expect(craftGear(game, game.parties[0], 1).crafted).toBe(1)
     expect(game.world.turn).toBe(2)
-    expect(game.party[0].equipment.mainHand!.id).toBe('iron_sword+balanced1')
-    expect(craftGear(game, 1).crafted).toBe(1)
-    expect(game.party[1].equipment.mainHand!.id).toBe('yew_bow+recurve1')
-    expect(craftGear(game, 1).crafted).toBe(0)
+    expect(game.parties[0].members[0].equipment.mainHand!.id).toBe('iron_sword+balanced1')
+    expect(craftGear(game, game.parties[0], 1).crafted).toBe(1)
+    expect(game.parties[0].members[1].equipment.mainHand!.id).toBe('yew_bow+recurve1')
+    expect(craftGear(game, game.parties[0], 1).crafted).toBe(0)
   })
 
   it('hands back the events of the days a field craft passes, for the campaign to tally', () => {
     const make = () => {
       const game = newGame(undefined, null, 1)
-      game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
+      game.parties[0].position = { q: game.parties[0].position.q + 1, r: game.parties[0].position.r }
       game.world.stock = { gold: 50, iron: 50, timber: 50 }
       return game
     }
     const direct = make()
-    const expected = craft(direct, { from: 'worn', member: 0, slot: 'mainHand', itemId: direct.party[0].equipment.mainHand!.id }, 'balanced', 1)
-    const result = craftGear(make(), 1)
+    const expected = craft(direct, { from: 'worn', party: 'party_1', member: 0, slot: 'mainHand', itemId: direct.parties[0].members[0].equipment.mainHand!.id }, 'balanced', 1)
+    const result = (() => { const g = make(); return craftGear(g, g.parties[0], 1) })()
     expect(expected.refusal).toBeNull()
     expect(result.events).toEqual('events' in expected ? expected.events : undefined)
   })
@@ -571,17 +585,17 @@ describe('runes in a campaign', () => {
   /** One hero at the encampment, its gear and pouch set, the facilities set so that only the runes are at work. */
   const atHome = (opts: { workshop?: number; post?: number; gold?: number; runes?: Record<string, number>; gear?: Record<string, string> }) => {
     const game = newGame(undefined, null, 1)
-    game.party = [game.party[0]]
+    game.parties[0].members = [game.parties[0].members[0]]
     game.world.workshop = opts.workshop ?? 1
     game.world.tradingPost = opts.post ?? 1
     game.world.stock = { gold: opts.gold ?? 100 }
     game.runes = { ...opts.runes }
-    const hero = game.party[0]
+    const hero = game.parties[0].members[0]
     for (const [slot, id] of Object.entries(opts.gear ?? {})) hero.equipment[slot as 'mainHand'] = itemById(id)!
     hero.hp = maxHp(hero)
     return game
   }
-  const worn = (game: ReturnType<typeof atHome>, slot: 'mainHand' | 'offHand' | 'armor') => game.party[0].equipment[slot]?.id
+  const worn = (game: ReturnType<typeof atHome>, slot: 'mainHand' | 'offHand' | 'armor') => game.parties[0].members[0].equipment[slot]?.id
 
   it('embeds weapons by Ember, Storm, Stone and armour and shields by Stone, Life', () => {
     expect(RUNE_ORDER).toEqual({ weapon: ['ember', 'storm', 'stone'], shield: ['stone', 'life'], armour: ['stone', 'life'] })
@@ -589,7 +603,7 @@ describe('runes in a campaign', () => {
 
   it('does nothing in the field: no workshop', () => {
     const game = atHome({ workshop: 0, post: 2, runes: { ember1: 3 }, gear: { mainHand: 'iron_sword@3' } })
-    expect(runecraftGear(game)).toEqual({ embedded: 0, fused: 0, bought: 0, gold: 0 })
+    expect(runecraftGear(game, game.parties[0])).toEqual({ embedded: 0, fused: 0, bought: 0, gold: 0 })
     expect(game.runes).toEqual({ ember1: 3 })
     expect(game.world.stock).toEqual({ gold: 100 })
     expect(worn(game, 'mainHand')).toBe('iron_sword@3')
@@ -597,16 +611,16 @@ describe('runes in a campaign', () => {
 
   it('fuses three Lesser runes into one, and leaves the rest', () => {
     const three = atHome({ runes: { ember1: 3 } })
-    expect(runecraftGear(three)).toMatchObject({ fused: 1, gold: 20 })
+    expect(runecraftGear(three, three.parties[0])).toMatchObject({ fused: 1, gold: 20 })
     expect(three.runes).toEqual({ ember2: 1 })
     const five = atHome({ runes: { ember1: 5 } })
-    expect(runecraftGear(five).fused).toBe(1)
+    expect(runecraftGear(five, five.parties[0]).fused).toBe(1)
     expect(five.runes).toEqual({ ember1: 2, ember2: 1 })
   })
 
   it('embeds a rune from the pouch in an empty socket, for its fee', () => {
     const game = atHome({ runes: { ember1: 1 }, gear: { mainHand: 'iron_sword@3' } })
-    expect(runecraftGear(game)).toEqual({ embedded: 1, fused: 0, bought: 0, gold: 5 })
+    expect(runecraftGear(game, game.parties[0])).toEqual({ embedded: 1, fused: 0, bought: 0, gold: 5 })
     expect(worn(game, 'mainHand')).toBe('iron_sword@3#ember1')
     expect(game.runes).toEqual({})
     expect(game.world.stock.gold).toBe(95)
@@ -614,47 +628,47 @@ describe('runes in a campaign', () => {
 
   it('buys a Lesser rune for a socket the pouch cannot fill, where the post sells one', () => {
     const game = atHome({ post: 2, gear: { mainHand: 'iron_sword@3' } })
-    expect(runecraftGear(game)).toEqual({ embedded: 1, fused: 0, bought: 1, gold: runePrice('ember1') + 5 })
+    expect(runecraftGear(game, game.parties[0])).toEqual({ embedded: 1, fused: 0, bought: 1, gold: runePrice('ember1') + 5 })
     expect(worn(game, 'mainHand')).toBe('iron_sword@3#ember1')
     const unsold = atHome({ post: 1, gear: { mainHand: 'iron_sword@3' } })
-    expect(runecraftGear(unsold)).toEqual({ embedded: 0, fused: 0, bought: 0, gold: 0 })
+    expect(runecraftGear(unsold, unsold.parties[0])).toEqual({ embedded: 0, fused: 0, bought: 0, gold: 0 })
     expect(worn(unsold, 'mainHand')).toBe('iron_sword@3')
   })
 
   it('buys only what the pouch lacks, a rune for each socket', () => {
     const game = atHome({ post: 2, runes: { storm1: 1 }, gear: { mainHand: 'steel_longsword@3' } })
-    expect(runecraftGear(game)).toMatchObject({ embedded: 2, bought: 1 })
+    expect(runecraftGear(game, game.parties[0])).toMatchObject({ embedded: 2, bought: 1 })
     expect(worn(game, 'mainHand')).toBe('steel_longsword@3#ember1.storm1')
   })
 
   it('embeds the highest rank of a kind first', () => {
     const game = atHome({ runes: { ember1: 1, ember2: 1 }, gear: { mainHand: 'iron_sword@3' } })
-    runecraftGear(game)
+    runecraftGear(game, game.parties[0])
     expect(worn(game, 'mainHand')).toBe('iron_sword@3#ember2')
     expect(game.runes).toEqual({ ember1: 1 })
   })
 
   it('puts Stone, then Life, in armour, and never a Mind rune', () => {
     const stone = atHome({ runes: { life1: 1, stone1: 1, mind1: 1 }, gear: { armor: 'iron_breastplate@3' } })
-    runecraftGear(stone)
+    runecraftGear(stone, stone.parties[0])
     expect(worn(stone, 'armor')).toBe('iron_breastplate@3#stone1')
     const life = atHome({ runes: { life1: 1, mind1: 1 }, gear: { armor: 'iron_breastplate@3' } })
-    runecraftGear(life)
+    runecraftGear(life, life.parties[0])
     expect(worn(life, 'armor')).toBe('iron_breastplate@3#life1')
     const mind = atHome({ runes: { mind1: 1 }, gear: { armor: 'iron_breastplate@3', mainHand: 'spark_wand@3' } })
-    expect(runecraftGear(mind).embedded).toBe(0)
+    expect(runecraftGear(mind, mind.parties[0]).embedded).toBe(0)
     expect(mind.runes).toEqual({ mind1: 1 })
   })
 
   it('keeps a full hero at full health when a Life rune goes in', () => {
     const game = atHome({ runes: { life1: 1 }, gear: { armor: 'iron_breastplate@3' } })
-    runecraftGear(game)
-    expect(game.party[0].hp).toBe(maxHp(game.party[0]))
+    runecraftGear(game, game.parties[0])
+    expect(game.parties[0].members[0].hp).toBe(maxHp(game.parties[0].members[0]))
   })
 
   it('embeds nothing it cannot pay for, and leaves the pouch as it was', () => {
     const game = atHome({ gold: 4, runes: { ember1: 1 }, gear: { mainHand: 'iron_sword@3' } })
-    expect(runecraftGear(game)).toEqual({ embedded: 0, fused: 0, bought: 0, gold: 0 })
+    expect(runecraftGear(game, game.parties[0])).toEqual({ embedded: 0, fused: 0, bought: 0, gold: 0 })
     expect(game.runes).toEqual({ ember1: 1 })
     expect(worn(game, 'mainHand')).toBe('iron_sword@3')
   })
@@ -664,8 +678,8 @@ describe('runes in a campaign', () => {
     const replacing = (workshop: number, gear: Record<string, string>) => {
       const game = atHome({ workshop, post: 4, gold: 500 })
       // Only the item under test is worn, so that nothing else takes the gold.
-      game.party[0].equipment = Object.fromEntries(Object.entries(gear).map(([slot, id]) => [slot, itemById(id)!]))
-      game.party[0].hp = maxHp(game.party[0])
+      game.parties[0].members[0].equipment = Object.fromEntries(Object.entries(gear).map(([slot, id]) => [slot, itemById(id)!]))
+      game.parties[0].members[0].hp = maxHp(game.parties[0].members[0])
       game.world.infirmary = 3
       game.world.shrine = 3
       return game
@@ -673,8 +687,8 @@ describe('runes in a campaign', () => {
 
     it('extracts the runes first at a level 2 workshop, for the fee, and embeds them again', () => {
       const game = replacing(2, { mainHand: 'iron_sword@3#storm1' })
-      const trade = visitFacilities(game)
-      const sword = game.party[0].equipment.mainHand!
+      const trade = visitFacilities(game, game.parties[0])
+      const sword = game.parties[0].members[0].equipment.mainHand!
       expect(sword.family).toBe('longsword')
       expect(sword.tier).toBe(2)
       expect([...(sword.runes ?? []), ...pouchKeys(game.runes)]).toContain('storm1')
@@ -684,27 +698,165 @@ describe('runes in a campaign', () => {
     it('sells the runes with the old item below a level 2 workshop', () => {
       const game = replacing(1, { mainHand: 'iron_sword@3#storm1' })
       // No extraction fee can be paid: a level 1 workshop refuses to take the rune out.
-      expect(extractRefusal(game, { from: 'worn', member: 0, slot: 'mainHand', itemId: 'iron_sword@3#storm1' }, 0)).toMatch(/level 2 workshop/)
-      const trade = visitFacilities(game)
+      expect(extractRefusal(game, { from: 'worn', party: 'party_1', member: 0, slot: 'mainHand', itemId: 'iron_sword@3#storm1' }, 0)).toMatch(/level 2 workshop/)
+      const trade = visitFacilities(game, game.parties[0])
       expect(game.world.workshop).toBe(1)
       // The rune went with the sword: its half price is in the sale.
       const runed = itemById('iron_sword@3#storm1')!
       expect(salePrice(runed)).toBeGreaterThan(salePrice(unruned(runed)))
       expect(trade.goldFromSales).toBe(salePrice(runed))
-      const sword = game.party[0].equipment.mainHand!
+      const sword = game.parties[0].members[0].equipment.mainHand!
       expect(sword.tier).toBe(2)
       expect([...(sword.runes ?? []), ...pouchKeys(game.runes)]).not.toContain('storm1')
-      expect(game.baggage).toEqual([])
+      expect(game.parties[0].baggage).toEqual([])
     })
 
     it('keeps hit points within the maximum when Life-runed armour is replaced, no rune going in after', () => {
       const game = replacing(0, { armor: 'iron_breastplate@3#life1' })
-      const hero = game.party[0]
+      const hero = game.parties[0].members[0]
       const before = maxHp(hero)
-      visitFacilities(game)
+      visitFacilities(game, game.parties[0])
       expect(hero.equipment.armor!.runes ?? []).not.toContain('life1')
       expect(maxHp(hero)).toBeLessThan(before)
       expect(hero.hp).toBe(maxHp(hero))
     })
   })
+})
+
+/**
+ * The refactor guard for stage 5: the output of `--campaign --battles 5 --seed 1` at commit 4a2b824, before any
+ * change. Never edit it. A mismatch means a step changed behaviour.
+ */
+const GUARD_RECORDS: CampaignRecord[] = [
+  { outcome: 'source', days: 333, battles: 20, spawns: 30, captured: 2, lost: 0, blighted: 0.41, healedHp: 138, campDays: 18, towersBuilt: 3, towersLost: 0, deaths: 4, recruits: 2, hallLevel: 3, shrineLevel: 1, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 5, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 16, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8], deathsAtLevel: [8, 8, 7, 7], battlesToLevel: { 5: 6 } },
+  { outcome: 'fallen', days: 234, battles: 18, spawns: 28, captured: 4, lost: 0, blighted: 0.42875, healedHp: 68, campDays: 6, towersBuilt: 3, towersLost: 0, deaths: 1, recruits: 2, hallLevel: 2, shrineLevel: 1, outpostsBuilt: 3, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 3, fieldCraftDays: 3, runesFound: 11, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [7, 7, 7, 7], deathsAtLevel: [3], battlesToLevel: {5: 10} },
+  { outcome: 'fallen', days: 426, battles: 20, spawns: 30, captured: 4, lost: 1, blighted: 0.4425, healedHp: 148, campDays: 29, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 5, hallLevel: 3, shrineLevel: 3, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 184, tierTwoBought: 0, crafted: 9, fieldCraftDays: 3, runesFound: 12, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7, 7, 7], deathsAtLevel: [3, 4, 2], battlesToLevel: {5: 9} },
+  { outcome: 'fallen', days: 125, battles: 9, spawns: 17, captured: 0, lost: 0, blighted: 0.4066666666666667, healedHp: 57, campDays: 6, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 5, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [5, 5, 5], deathsAtLevel: [], battlesToLevel: { 5: 6 } },
+  { outcome: 'fallen', days: 62, battles: 5, spawns: 6, captured: 0, lost: 0, blighted: 0.41791666666666666, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 2, recruits: 0, hallLevel: 2, shrineLevel: 1, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 102, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 3, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [4], deathsAtLevel: [3, 3], battlesToLevel: {} },
+]
+const GUARD_EVENTS_SHA256 = 'c5c83f8e83d614381e6bd76e5bee1075e5d7b66c6cf9b5873eafce41453b2769'
+
+describe('the campaign’s policy on the day loop', () => {
+  const args = parseArgs(['--campaign'])
+  const campaignOf = (setUp: (game: ReturnType<typeof newGame>) => void = () => {}) => {
+    const game = newGame(undefined, null, 1)
+    setUp(game)
+    const run = startCampaign(0, 1, args, 0, game)
+    return { run, game, party: game.parties[0], plan: planOf(run, game.parties[0]) }
+  }
+  const home = (game: ReturnType<typeof newGame>) => game.world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
+
+  it('runs the home errands at the guild hall, then orders the walk to the next target', () => {
+    const { run, game, party } = campaignOf((game) => (game.world.stock = { gold: 100, iron: 50 }))
+    expect(hallErrand(game, party)).toBe(true)
+    expect(decide(run, party)).toEqual({ kind: 'hall' })
+    expect(carryOut(run, party, { kind: 'hall' })).toBeNull()
+    expect(game.world.guildHall).toBe(3)
+    expect(party.members).toHaveLength(4)
+    expect(run.record.recruits).toBe(1)
+    const target = nextTarget(game.world, party, args.readyLevel)!
+    expect(decide(run, party)).toEqual({ kind: 'order', order: { kind: 'travel', to: target.position } })
+    expect(game.world.turn).toBe(1)
+  })
+
+  it('orders the walk home when there is a hall errand away from home', () => {
+    const { run, game, party } = campaignOf((game) => {
+      game.world.stock = { gold: 100, iron: 50 }
+      game.parties[0].position = { q: game.parties[0].position.q + 2, r: game.parties[0].position.r }
+    })
+    expect(decide(run, party)).toEqual({ kind: 'order', order: { kind: 'travel', to: home(game) } })
+    expect(carryOut(run, party, decide(run, party))).toBe('standing')
+    expect(party.order).toMatchObject({ kind: 'travel', to: home(game) })
+  })
+
+  it('fights the target it has walked to and confronts, giving no new order', () => {
+    const { run, game, party, plan } = campaignOf()
+    const target = nextTarget(game.world, party, args.readyLevel)!
+    party.position = target.position
+    party.confronting = target.id
+    Object.assign(plan, { phase: 'target', to: target.position, target })
+    expect(decide(run, party)).toEqual({ kind: 'fight', target })
+    expect(party.order.kind).toBe('idle')
+  })
+
+  it('casts the heals and orders a camp for a party wounded after a win, and no camp for one the cast makes whole', () => {
+    const away = (game: ReturnType<typeof newGame>) => (game.parties[0].position = { q: game.parties[0].position.q + 1, r: game.parties[0].position.r })
+    const wounded = campaignOf(away)
+    wounded.plan.phase = 'heal'
+    wounded.party.members[0].hp = 1
+    for (const member of wounded.party.members) member.mana = 0
+    expect(decide(wounded.run, wounded.party)).toEqual({ kind: 'heal' })
+    expect(carryOut(wounded.run, wounded.party, { kind: 'heal' })).toBeNull()
+    expect(decide(wounded.run, wounded.party)).toEqual({ kind: 'order', order: { kind: 'camp' } })
+    expect(carryOut(wounded.run, wounded.party, { kind: 'order', order: { kind: 'camp' } })).toBe('standing')
+    expect(wounded.party.order.kind).toBe('camp')
+
+    const scratched = campaignOf(away)
+    scratched.plan.phase = 'heal'
+    // Wounded by what one Heal restores, which the mage casts.
+    scratched.party.members[0].hp = maxHp(scratched.party.members[0]) - worldHealing('heal')
+    expect(decide(scratched.run, scratched.party)).toEqual({ kind: 'heal' })
+    carryOut(scratched.run, scratched.party, { kind: 'heal' })
+    expect(scratched.run.record.healedHp).toBe(worldHealing('heal'))
+    expect(decide(scratched.run, scratched.party)).toEqual({ kind: 'order', order: { kind: 'idle' } })
+    expect(carryOut(scratched.run, scratched.party, { kind: 'order', order: { kind: 'idle' } })).toBeNull()
+    // Whole, it goes round again: home's errands, then the next target.
+    expect(decide(scratched.run, scratched.party)).toMatchObject({ kind: 'order', order: { kind: 'travel' } })
+    expect(scratched.game.world.turn).toBe(1)
+  })
+
+  it('orders a walk cut short again, on a route planned afresh from where the party stands', () => {
+    const { run, game, party, plan } = campaignOf()
+    const to = { q: party.position.q + 20, r: party.position.r }
+    Object.assign(plan, { phase: 'target', to, target: null })
+    expect(decide(run, party)).toEqual({ kind: 'order', order: { kind: 'travel', to } })
+    expect(carryOut(run, party, { kind: 'order', order: { kind: 'travel', to } })).toBe('standing')
+    const reports = advance(game, Infinity)
+    expect(reports.at(-1)!.interrupt?.event.type).toBe('sighted')
+    expect(party.position).not.toEqual(to)
+    // The order still stands on its old route; the policy replaces it.
+    expect(party.order.kind).toBe('travel')
+    if (party.order.kind === 'travel') party.order.route = [to]
+    const decision = decide(run, party)
+    expect(decision).toEqual({ kind: 'order', order: { kind: 'travel', to } })
+    const fresh = routeTo(game.world, party, to)
+    carryOut(run, party, decision)
+    expect(party.order).toEqual({ kind: 'travel', to, route: fresh })
+  })
+
+  it('builds the tower and makes the field craft after a win as acts, a day each', () => {
+    const { run, game, party, plan } = campaignOf((game) => {
+      game.parties[0].position = { q: game.parties[0].position.q + 2, r: game.parties[0].position.r }
+      game.world.stock = { ...TOWER_COST, gold: (TOWER_COST.gold ?? 0) + 50, iron: (TOWER_COST.iron ?? 0) + 50, timber: 9 }
+    })
+    plan.phase = 'tower'
+    expect(decide(run, party)).toEqual({ kind: 'act', action: { kind: 'tower' } })
+    carryOut(run, party, { kind: 'act', action: { kind: 'tower' } })
+    expect(game.world.turn).toBe(2)
+    expect(game.world.towers).toHaveLength(1)
+    expect(run.record.towersBuilt).toBe(1)
+    // No outpost: the stock lacks its timber.
+    expect(decide(run, party)).toEqual({ kind: 'craft' })
+    carryOut(run, party, { kind: 'craft' })
+    expect(game.world.turn).toBe(3)
+    expect(run.record).toMatchObject({ crafted: 1, fieldCraftDays: 1 })
+    expect(party.order.kind).toBe('idle')
+  })
+})
+
+describe('the refactor guard', () => {
+  it('plays 5 seeded campaigns exactly as it did before stage 5', () => {
+    const args = parseArgs(['--campaign', '--battles', '5', '--seed', '1'])
+    const records: CampaignRecord[] = []
+    const lines: string[] = []
+    let firstBattleId = 0
+    for (let run = 0; run < 5; run++) {
+      const { battles, record } = runCampaign(run, (1 + run * CAMPAIGN_SEED_STEP) >>> 0, args, firstBattleId)
+      firstBattleId += battles.length
+      records.push(record)
+      for (const events of battles) for (const event of events) lines.push(JSON.stringify(event))
+    }
+    expect(records).toEqual(GUARD_RECORDS)
+    expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe(GUARD_EVENTS_SHA256)
+  }, 60_000)
 })

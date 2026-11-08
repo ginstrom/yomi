@@ -9,7 +9,7 @@ async function richAtHome(game: Game, stock: Record<string, number> = { gold: 10
     const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
     saved.game.world.stock = stock
     if (level) saved.game.world.tradingPost = level
-    // `plant` sets values in the saved game by dotted path: 'world.workshop', 'party.1.equipment.mainHand'.
+    // `plant` sets values in the saved game by dotted path: 'world.workshop', 'parties.0.members.1.equipment.mainHand'.
     for (const [path, value] of Object.entries(plant)) {
       const keys = path.split('.')
       const last = keys.pop()!
@@ -282,7 +282,7 @@ describe('the encampment', () => {
     const game = await games.open()
     await richAtHome(game, { gold: 100 }, undefined, {
       'world.workshop': 2,
-      'party.0.equipment.mainHand': 'iron_sword@3',
+      'parties.0.members.0.equipment.mainHand': 'iron_sword@3',
       runes: { ember1: 1, storm1: 3 },
     })
     const camp = await enter(game)
@@ -365,9 +365,9 @@ describe('the encampment', () => {
 
   it('embeds a Lesser rune in the field from the map\'s Craft button, a day passing', async () => {
     const game = await games.open()
-    const home = await richAtHome(game, { gold: 20 }, undefined, { 'party.0.equipment.mainHand': 'iron_sword@3', runes: { ember1: 1 } })
+    const home = await richAtHome(game, { gold: 20 }, undefined, { 'parties.0.members.0.equipment.mainHand': 'iron_sword@3', runes: { ember1: 1 } })
     // A hex off the encampment, out in the field proper.
-    const { q, r } = home.world.party
+    const { q, r } = home.partyAt
     await game.travelTo({ q: q + 1, r })
     const away = await game.settled('World', (w) => !w.walking)
     expect(away.world.turn).toBe(2)
@@ -396,8 +396,8 @@ describe('the encampment', () => {
     const game = await games.open()
     await richAtHome(game, { gold: 200, iron: 50, stone: 20, copper: 10 }, undefined, {
       'world.workshop': 2,
-      'party.1.equipment.mainHand': 'iron_greatsword',
-      baggage: ['iron_greatsword'],
+      'parties.0.members.1.equipment.mainHand': 'iron_greatsword',
+      'parties.0.baggage': ['iron_greatsword'],
     })
     const camp = await enter(game)
     await game.click(facility(camp, 'workshop'))
