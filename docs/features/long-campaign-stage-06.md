@@ -68,4 +68,7 @@ Large/structural, but the stage design is the approved design (marked ready for 
 - Step 05 review (opus): clean; 10 rule mutations all caught. Finding: C/I/S on the defeat screen after a wipe crashed the panel (members empty, index -1). Fixed 8f9697e (openPanel returns on phase over or index<0; e2e presses C/I/S). Side effect accepted: panel no longer opens on the victory screen (heroes viewable on the map). Accepted without re-review (guard + e2e that failed before).
 - Step 06 merged into the stage branch (index-row conflict resolved; sprites:check, tsc ok).
 - Step 09 runs in a worktree (branch long-campaign-stage-06-simrecord) in parallel with step 07 on the main tree.
+- Step 09 (564772c, opus, worktree branch long-campaign-stage-06-simrecord): --parties (default 1), roles, C8 record fields, wipes via wipeParty, LOG_SCHEMA 24, two-party finishCampaign test; guard fixture re-recorded once (--parties 1); npm test 1433. BattleScene meta party line left for after step 07.
+- Step 09 review (opus): clean; independently: 50-campaign log identical after normalising battle_start (hash 068016a8…), 300 campaign records identical minus new fields. Nits to step 10: socketsFilled counts 0 for a wiped party (count before wipe or document); deaths excludes wiped parties (decide for the summary); Vanguard levels line covers only campaigns ending with a vanguard (say so).
+- Step 10 runs in the step-09 worktree in parallel with step 07.
 
