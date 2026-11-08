@@ -144,6 +144,10 @@ export function setOrder(game: GameState, id: string, request: OrderRequest): st
     case 'travel': {
       if (!worldActive(world)) return 'The game is over.'
       if (party.confronting !== null) return `${partyNoun(game, party)} must first answer the monsters it faces.`
+      // Its walk would stop a hex short of them (partyDay): those monsters are the other party's, and a meet joins it there.
+      const there = locationAt(world, request.to)
+      const holder = there?.kind === 'monsters' ? game.parties.find((p) => p !== party && hexEquals(p.position, request.to)) : undefined
+      if (there && holder) return `${holder.name} already stands before ${theName(there.name)}: meet it there instead.`
       const route = routeTo(world, party, request.to)
       if (!route) return 'There is no way there.'
       party.order = { kind: 'travel', to: request.to, route }

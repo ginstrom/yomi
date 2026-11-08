@@ -102,26 +102,38 @@ Any skill points or picks you leave unspent stay with the character, and you can
 
 ![The world map at the start](images/world-start.png)
 
-The world map is a large board of hexes, many screens wide, and the view scrolls to follow your party. Your heroes' portraits run down the left side. Your party is listed down the right side of the map, with its leader's face and its hit points; click it to bring the view back to it (as **Home** does). The header shows the turn number, how much of the explored land is blighted (and, once it has grown, how much stronger the blight has become), and the encampment's **stock** of materials.
+The world map is a large board of hexes, many screens wide, and the view scrolls to follow your party. Your heroes' portraits run down the left side. Your party is listed down the right side of the map, with its leader's face, its banner and its hit points; click it to bring the view back to it (as the **Home** key does). Once the guild hall has raised a second or third party (see [Parties](#parties)), each is listed there by its name, and the left side shows the heroes of the party you have selected. The header shows the turn number, how much of the explored land is blighted (and, once it has grown, how much stronger the blight has become), and the encampment's **stock** of materials.
 
 **Time passes only when you act.** Each hex you walk and each day you camp takes one turn, and each turn the blight takes another day to spread (see [The blight](#8-the-blight)).
 
-Under each party's entry in the list is a line saying what it is doing: **Idle**, **Travelling to** a place you know of, **Camping**, or the day's work it is at (scouting, waiting, building, crafting). While it stands before monsters, the line names them.
+Under each party's entry in the list is a line saying what it is doing: **Idle**, **Travelling to** a place you know of, **Returning home**, **Camping**, **Garrisoning** a site, **Meeting** another party, or the day's work it is at (scouting, waiting, building, crafting). While it stands before monsters, the line names them.
 
 Two buttons in the footer let days pass without a walk or a camp of your own:
 
-- **Next day** passes one day. A party that is travelling or camping carries on with it; an idle one stays where it is.
-- **Until something happens** passes days one after another until something important happens, the party arrives or finishes what it was doing, or thirty quiet days have gone by, in which case the map says so.
+- **Next day** passes one day. Every party carries on with its order: a party that is travelling or camping carries on with it; an idle one stays where it is.
+- **Until something happens** passes days one after another until something important happens, a party arrives or finishes what it was doing, or thirty quiet days have gone by, in which case the map says so.
+- **Home**, shown while the party is away from the encampment, sends it walking home.
+- **Garrison**, shown on a resource you hold, keeps the party there to guard it until you give it another order. No day passes.
 
-A walk cut short, or a stretch of camping interrupted, keeps its order: the line still says where the party was going, or that it is camping, and a walk's remaining road stays drawn on the map in amber to where it was going (hovering another hex shows that hex's route in its place until the pointer moves off), and **Next day** carries it on, a hex further along the road or another day of rest. Clicking a hex or a button gives the party a new order. Neither time button shows while the party stands at a monsters' lair, even once it has scouted them: there you scout, wait or attack, or walk away.
+A walk cut short, or a stretch of camping interrupted, keeps its order: the line still says where the party was going, or that it is camping, and a walk's remaining road stays drawn on the map in amber to where it was going (hovering another hex shows that hex's route in its place until the pointer moves off), and **Next day** carries it on, a hex further along the road or another day of rest. Clicking a hex or a button gives the party a new order. Neither time button shows while the party stands at a monsters' lair, even once it has scouted them: there you scout, wait or attack, or walk away. While any other party stands before monsters it has not answered, no day can pass: the time buttons say so and select that party, so that you can scout, wait or attack with it.
 
 ![A walk cut short, still travelling](images/world-travelling.png)
 
 ### Travel
 
-Click a hex to travel there. Hovering over a hex first shows the route, and a panel at the top right tells what you know of it: what stands there, its blight (as you last saw it, if it is out of sight), whether the blight is gaining or receding there, how many days away it is, and your heroes' levels and hit points on the party's own hex. The party walks one hex per turn and stops early if something important happens on the way, such as monsters coming into view, a site you hold falling under threat, or monsters standing in the road. Routes avoid known monster lairs unless the lair is where you are going.
+Click a hex to travel there. Hovering over a hex first shows the route, and a panel at the top right tells what you know of it: what stands there, its blight (as you last saw it, if it is out of sight), whether the blight is gaining or receding there, how many days away it is, and the heroes' levels and hit points of every party standing on it. The party walks one hex per turn and stops early if something important happens on the way, such as monsters coming into view, a site you hold falling under threat, or monsters standing in the road. Routes avoid known monster lairs unless the lair is where you are going.
 
-The map is larger than the window. It follows the party as it travels, but you can **drag** it with the mouse to look elsewhere; it stops at the map's edges, and a short click still travels. The view stays where you left it until the party next sets out, or you press **Home** or click your party's entry to bring it back to the party.
+The map is larger than the window. It follows the party as it travels, but you can **drag** it with the mouse to look elsewhere; it stops at the map's edges, and a short click still travels. The view stays where you left it until the party next sets out, or you press the **Home** key or click your party's entry to bring it back to the party.
+
+### Parties
+
+Raise the guild hall to level 4 and it can field a second party, at level 5 a third (see [The guild hall](#the-guild-hall)). Each party has its own banner, crimson, azure or green, drawn beside its leader on the map and on its entry in the list, and its own baggage; the stock and the rune pouch are the company's.
+
+- **Select** a party by clicking its entry down the right. Its heroes fill the left side, and the footer's buttons act for it.
+- **Every party moves at once.** Each carries on with its order whenever days pass, whoever you have selected. Only the selected party's walk is animated; the others step to where they have got to when it ends.
+- **Meet** another party by clicking the hex it stands on (the header says "Meet Second Company" as you hover it). The selected party walks to it, following it if it moves, until the two stand together. A party that walks onto monsters another party already faces stands before them too.
+- **Interruptions name the party.** When something stops the days, the message leads with the party it concerns ("Second Company: arrived at Kobold Scouts."), and the map selects that party and centres on it.
+- Two parties never fight the same lair at once. A party cannot be sent to a lair another party already stands at (meet it there instead), and of two parties reaching a lair on the same day the first in the list takes it, the other waiting a hex short.
 
 ### Fog of war
 
@@ -163,6 +175,7 @@ When there are no monsters on your hex, the footer offers:
 - **Camp until healed**: your healers cast their heals with the mana they have, then the party camps a day and casts again, repeating until everyone is whole. Anything important that happens breaks camp.
 - **Craft**: rework a piece of gear in the field, a day's work (see [Crafting](#crafting)).
 - **Build Watchtower** or **Build Outpost**, where the land allows (see [Building](#9-building)).
+- **Home** and **Garrison**, in the row above (see above).
 - **Enter** the encampment, when the party stands on it (see [The encampment](#the-encampment)).
 
 ---

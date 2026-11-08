@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { facilities } from '../game/encampment.ts'
 import { newGame } from '../game/gameState.ts'
@@ -10,10 +11,14 @@ describe('the encampment screen', () => {
     expect(facilityFrame({ id: 'guild_hall', level: 1 })).toBe('camp_guild_hall/level_1')
   })
 
-  it('draws the guild hall at level 3 until the barracks are drawn', () => {
-    expect(facilityFrame({ id: 'guild_hall', level: 4 })).toBe('camp_guild_hall/level_3')
-    expect(facilityFrame({ id: 'guild_hall', level: 5 })).toBe('camp_guild_hall/level_3')
-    expect(facilityFrame({ id: 'shrine', level: 3 })).toBe('camp_shrine/level_3')
+  it('draws the guild hall’s barracks at levels 4 and 5, frames the atlas has, as it has every facility’s every level', () => {
+    expect(facilityFrame({ id: 'guild_hall', level: 4 })).toBe('camp_guild_hall/level_4')
+    expect(facilityFrame({ id: 'guild_hall', level: 5 })).toBe('camp_guild_hall/level_5')
+    const atlas = JSON.parse(readFileSync('public/assets/sprites/atlas.json', 'utf8')) as { frames: Record<string, unknown> }
+    const names = new Set(Object.keys(atlas.frames))
+    for (const facility of facilities(newGame(), newGame().parties[0])) {
+      for (let level = 1; level <= facility.maxLevel; level++) expect(names, `${facility.id} ${level}`).toContain(facilityFrame({ id: facility.id, level }))
+    }
   })
 
   it('labels each by its name and level', () => {

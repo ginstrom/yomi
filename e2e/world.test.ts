@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { WorldState, WorldStatus } from '../src/game/worldMap.ts'
-import { hexDistance, offsetToHex } from '../src/grid/hex.ts'
+import { hexDistance, offsetToHex, type Hex } from '../src/grid/hex.ts'
 import { WORLD_LAYOUT, boardHexCenter, boardPixelSize, type Point } from '../src/scenes/boardGeometry.ts'
 import { clampOrigin, mapOrigin, pannedOrigin } from '../src/scenes/mapScroll.ts'
 import type { WorldProbe } from '../src/testHook.ts'
+import { FIGURE_SPREAD } from '../src/scenes/partyList.ts'
 import { RAIDERS, useGames, worldHexOnScreen, type Game } from './driver.ts'
 
 describe('the world map', () => {
@@ -643,6 +644,135 @@ describe('the world map', () => {
     await game.newGame()
     return reloadedWith(game, { status })
   }
+
+  describe('a company of parties', () => {
+    type Planted = { id: string; name: string; at: Hex; members?: number; order?: unknown; confronting?: string | null }
+    /**
+     * A new game whose slot is given more parties, each a copy of the first
+     * (its heroes renamed), standing and ordered as told, then reloaded and
+     * continued: a company as the guild hall would form it.
+     */
+    async function company(game: Game, parties: Planted[], first: Partial<Planted> = {}): Promise<WorldProbe> {
+      await game.newGame()
+      await game.page.evaluate(
+        ({ parties, first }) => {
+          const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+          const lead = saved.game.parties[0]
+          Object.assign(lead, first)
+          for (const planted of parties) {
+            const party = JSON.parse(JSON.stringify(lead))
+            party.members = party.members.slice(0, planted.members ?? party.members.length)
+            for (const member of party.members) member.name = `${member.name}${planted.id.slice(-1)}`
+            Object.assign(party, { id: planted.id, name: planted.name, position: planted.at, order: planted.order ?? { kind: 'idle' }, confronting: planted.confronting ?? null, baggage: [] })
+            saved.game.parties.push(party)
+          }
+          saved.game.world.guildHall = 5
+          localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+        },
+        { parties, first },
+      )
+      const menu = await game.reload()
+      await game.click(menu.buttons.continue)
+      await game.waitForScenes(['World'])
+      return game.settled('World', (w) => w.figures.length === parties.length + 1)
+    }
+    const at = (col: number, row: number) => offsetToHex(col, row)
+    const walk = (...hexes: Hex[]) => ({ kind: 'travel', to: hexes.at(-1)!, route: hexes })
+
+    it('draws every party with its banner and lists each by its name', async () => {
+      const game = await games.open()
+      const world = await company(game, [
+        { id: 'party_2', name: 'Second Company', at: at(9, 19) },
+        { id: 'party_3', name: 'Third Company', at: at(11, 19), members: 1 },
+      ])
+      expect(world.parties.map((p) => [p.id, p.name, p.banner, p.members])).toEqual([
+        ['party_1', 'First Company', 1, 3],
+        ['party_2', 'Second Company', 2, 3],
+        ['party_3', 'Third Company', 3, 1],
+      ])
+      expect(world.figures.map((f) => f.id)).toEqual(['party_1', 'party_2', 'party_3'])
+      // Two on one hex are drawn side by side.
+      const [first, second, third] = world.figures
+      expect(first.at).toEqual(second.at)
+      expect(first.screen.y).toBe(second.screen.y)
+      expect(second.screen.x - first.screen.x).toBe(FIGURE_SPREAD)
+      expect(third.screen.x).toBe(worldHexOnScreen(world, third.at).x)
+      await game.hover(worldHexOnScreen(world, at(9, 19)))
+      const told = await game.waitFor('World', (w) => w.info.includes('Second Company:'))
+      expect(told.info).toContain('First Company:')
+    })
+
+    it('moves every party on Until something happens, then selects the one whose arrival stopped the days and names it', async () => {
+      const game = await games.open()
+      const world = await company(
+        game,
+        [{ id: 'party_2', name: 'Second Company', at: at(9, 19), order: walk(at(10, 19), at(11, 19)) }],
+        { order: walk(at(8, 19), at(7, 19), at(6, 19), at(5, 19)) },
+      )
+      expect(world.selectedParty).toBe('party_1')
+      await game.click(world.buttons.untilSomething)
+      const stopped = await game.waitFor('World', (w) => !w.walking && w.world.turn > world.world.turn)
+      expect(stopped.selectedParty).toBe('party_2')
+      expect(stopped.parties[1].selected).toBe(true)
+      expect(stopped.message).toMatch(/^Second Company(, after 2 days)?: arrived/)
+      expect(stopped.figures.find((f) => f.id === 'party_2')!.at).toEqual(at(11, 19))
+      expect(stopped.figures.find((f) => f.id === 'party_1')!.at).toEqual(at(7, 19))
+      expect(stopped.partyAt).toEqual(at(11, 19))
+    })
+
+    it('refuses the days while another party stands before monsters, selecting it with Scout, Wait and Attack', async () => {
+      const game = await games.open()
+      const world = await company(game, [{ id: 'party_2', name: 'Second Company', at: RAIDERS.position, confronting: RAIDERS.id }])
+      expect(world.selectedParty).toBe('party_1')
+      expect(world.parties[1].confronting).toBe(true)
+      await game.click(world.buttons.nextDay)
+      const refused = await game.waitFor('World', (w) => w.selectedParty === 'party_2')
+      expect(refused.world.turn).toBe(world.world.turn)
+      expect(refused.message).toBe('Second Company stands before the Goblin Raiders: scout, wait or attack.')
+      expect([refused.buttons.scout.visible, refused.buttons.wait.visible, refused.buttons.attack.visible]).toEqual([true, true, true])
+      expect(refused.buttons.nextDay.visible).toBe(false)
+    })
+
+    it('sends the selected party to meet another on a click on its hex, the two ending on one hex', async () => {
+      const game = await games.open()
+      const world = await company(game, [{ id: 'party_2', name: 'Second Company', at: at(11, 19) }])
+      const there = worldHexOnScreen(world, at(11, 19))
+      await game.hover(there)
+      const hovering = await game.waitFor('World', (w) => w.hint.startsWith('Meet Second Company'))
+      expect(hovering.info).toContain('Second Company:')
+      await game.click(there)
+      const met = await game.waitFor('World', (w) => !w.walking && w.world.turn > world.world.turn)
+      expect(met.partyAt).toEqual(at(11, 19))
+      expect(met.figures.map((f) => f.at)).toEqual([at(11, 19), at(11, 19)])
+      expect(met.message).toBe('First Company: met Second Company.')
+      expect(met.parties.map((p) => p.order)).toEqual(['Idle', 'Idle'])
+    })
+  })
+
+  it('walks the party home on Home, and garrisons a held site on Garrison, passing no day', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    expect(start.buttons.home.visible).toBe(false)
+    expect(start.buttons.garrison.visible).toBe(false)
+    // Iron Vein, held from the start.
+    const vein = await game.travelTo(offsetToHex(11, 21))
+    expect(vein.buttons.home.visible).toBe(true)
+    expect(vein.buttons.garrison.visible).toBe(true)
+    await game.click(vein.buttons.garrison)
+    const holding = await game.waitFor('World', (w) => w.parties[0].order.startsWith('Garrisoning'))
+    expect(holding.parties[0].order).toBe('Garrisoning Iron Vein')
+    expect(holding.world.turn).toBe(vein.world.turn)
+    expect(holding.message).toBe('The party garrisons Iron Vein until given another order.')
+    expect(holding.buttons.garrison.visible).toBe(false)
+
+    await game.click(holding.buttons.home)
+    const walking = await game.waitFor('World', (w) => w.walking)
+    expect(walking.parties[0].order).toBe('Returning home')
+    const home = await game.waitFor('World', (w) => !w.walking && w.partyAt.q === start.partyAt.q && w.partyAt.r === start.partyAt.r)
+    expect(home.parties[0].order).toBe('Idle')
+    expect(home.buttons.home.visible).toBe(false)
+    expect(home.buttons.enterEncampment.visible).toBe(true)
+  })
 
   it('builds a watchtower on clean land with the stock, and says what it costs without', async () => {
     const game = await games.open()

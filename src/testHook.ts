@@ -131,6 +131,10 @@ export interface PartyListProbe extends Point {
   order: string
   /** Whether the pointer is over the entry, as the entry itself heard it (nothing over it, such as the outcome screen, took the hover). */
   hovered: boolean
+  /** What the entry calls the party: "Your party" while the company has one, else the party's name. */
+  name: string
+  /** The banner drawn on the entry's portrait, by number (1 crimson, 2 azure, 3 green), from the party's id. */
+  banner: number
 }
 
 export interface WorldProbe {
@@ -147,6 +151,8 @@ export interface WorldProbe {
   /** The part of the screen where the map takes clicks. */
   view: Rect
   message: string
+  /** The header's hint under the turn: what the selected party may do, or "Meet <name>: …" while the pointer is over another party's hex. */
+  hint: string
   /** The words of the victory or defeat screen over the map, or '' while the game goes on. The blight, held sites and status are in `world`. */
   outcome: string
   /** The hexes in sight, by `boardIndex`, in order; what the player remembers of the rest is `world.seen`. */
@@ -165,6 +171,10 @@ export interface WorldProbe {
     nextDay: ButtonProbe
     /** Passes days until something happens, or `UNTIL_LIMIT` of them quietly. Shows with `nextDay`. */
     untilSomething: ButtonProbe
+    /** In the time row: walks the selected party back to the encampment. Shows with `nextDay` while it is away from home. */
+    home: ButtonProbe
+    /** In the time row: the selected party holds the held resource it stands on. Shows with `nextDay` there, unless it garrisons it already. */
+    garrison: ButtonProbe
     camp: ButtonProbe
     campUntilHealed: ButtonProbe
     /** Shows where the party may camp on land a watchtower could stand on; a click without the stock says why in the message. */
@@ -186,8 +196,10 @@ export interface WorldProbe {
   selectedParty: string
   /** The info panel's bounds while it shows (a hex or a party entry hovered), else null. */
   infoRect: Rect | null
-  /** The sprites of the party's figure on the map, bottom first in drawing order (`UnitFigure.lookNames`). */
+  /** The sprites of the selected party's figure on the map, bottom first in drawing order (`UnitFigure.lookNames`). */
   partyLook: string[]
+  /** Every party's figure on the map, in company order: the party's id, the hex it stands on, and where its figure's feet are on screen (spread across a shared hex). During a walk the walking party's `screen` moves and the others' wait for its end. */
+  figures: Array<{ id: string; at: Hex; screen: Point }>
 }
 
 /** A hero's face in the guild hall, by its centre on screen. */

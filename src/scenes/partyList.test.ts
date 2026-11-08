@@ -9,8 +9,13 @@ import { SOURCE_ID, locationAt, theName, theNameCapital, travel } from '../game/
 import { hexEquals } from '../grid/hex.ts'
 import { HEADER_BOTTOM } from './partyPanel.ts'
 import {
+  BANNER_SPRITES,
   ORDER_COLS,
   PARTY_LIST_W,
+  bannerOf,
+  FIGURE_SPREAD,
+  figureOffsets,
+  meetTarget,
   SINGLE_PARTY_NAME,
   deployedParties,
   orderLabel,
@@ -287,5 +292,48 @@ describe('partyListInfo', () => {
   it('says “1 member” for one', () => {
     const entry: PartyListEntry = { ...base, members: base.members.slice(0, 1) }
     expect(partyListInfo(entry).lines[0]).toBe('1 member')
+  })
+})
+
+describe('the parties on the map', () => {
+  const company = () => {
+    const game = newGame(undefined, null, 1)
+    const home = game.parties[0].position
+    game.parties.push({ ...newExpedition(readyMadeParty(), home), id: 'party_2', name: 'Second Company' })
+    game.parties.push({ ...newExpedition(readyMadeParty(), { q: home.q + 2, r: home.r }), id: 'party_3', name: 'Third Company' })
+    return game
+  }
+
+  it('gives each party the banner of its number, whatever its place in the list', () => {
+    expect(bannerOf('party_1')).toBe(1)
+    expect(bannerOf('party_2')).toBe(2)
+    expect(bannerOf('party_3')).toBe(3)
+    expect(bannerOf('elsewhere')).toBe(1)
+    expect([1, 2, 3].map((n) => BANNER_SPRITES[n])).toEqual(['map_banner', 'map_banner_azure', 'map_banner_green'])
+    const game = company()
+    game.parties.splice(0, 1)
+    expect(deployedParties(game).map((entry) => entry.banner)).toEqual([2, 3])
+  })
+
+  it('spreads parties sharing a hex, in list order, and leaves a party alone on its hex where it stands', () => {
+    const game = company()
+    const offsets = figureOffsets(game.parties)
+    expect(offsets.get('party_1')).toBeLessThan(0)
+    expect(offsets.get('party_2')).toBe(-offsets.get('party_1')!)
+    expect(offsets.get('party_3')).toBe(0)
+    game.parties[2].position = game.parties[0].position
+    const three = figureOffsets(game.parties)
+    expect([three.get('party_1'), three.get('party_2'), three.get('party_3')]).toEqual([-FIGURE_SPREAD, 0, FIGURE_SPREAD])
+  })
+
+  it('meets the first other party on a hex, and none on the party’s own or an empty one', () => {
+    const game = company()
+    const [first, second, third] = game.parties
+    expect(meetTarget(game, first, third.position)).toBe(third)
+    third.position = { q: third.position.q + 1, r: third.position.r }
+    second.position = third.position
+    expect(meetTarget(game, first, third.position)).toBe(second)
+    expect(meetTarget(game, second, second.position)).toBeNull()
+    expect(meetTarget(game, first, { q: 0, r: 0 })).toBeNull()
   })
 })

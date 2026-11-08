@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { boardHex, boardIndex } from '../game/blight.ts'
-import { presences } from '../game/expedition.ts'
+import { newExpedition, presences } from '../game/expedition.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { readyMadeParty } from '../game/party.ts'
 import { UNEXPLORED, visibleHexes } from '../game/vision.ts'
@@ -19,6 +19,20 @@ function info(game: GameState, at: Hex = game.parties[0].position) {
 }
 
 describe('hexInfo', () => {
+  it('names every party standing on the hex, with its members, and how far the selected party is from it', () => {
+    const { game, party } = solo()
+    const there = { q: party.position.q + 2, r: party.position.r }
+    game.parties.push({ ...newExpedition(readyMadeParty(), there), id: 'party_2', name: 'Second Company' })
+    game.parties.push({ ...newExpedition(readyMadeParty().slice(0, 1), there), id: 'party_3', name: 'Third Company' })
+    const { lines } = info(game, there)
+    expect(lines).toContain('Second Company:')
+    expect(lines).toContain('Third Company:')
+    expect(lines).not.toContain('First Company:')
+    expect(lines.indexOf('Third Company:')).toBe(lines.indexOf('Second Company:') + 4)
+    expect(lines.at(-1)).toBe('2 days away.')
+    expect(info(game)).toMatchObject({ lines: expect.arrayContaining(['First Company:']) })
+  })
+
   it('tells of the encampment, the party standing there and its blight', () => {
     const { game, world, party } = solo()
     const oakvale = world.locations.find((l) => l.id === ENCAMPMENT_ID)!

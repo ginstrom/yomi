@@ -828,18 +828,31 @@ describe('stopping short of another party’s monsters', () => {
     expect(second.confronting).toBeNull()
   })
 
-  it('stops a travel or home order short of a nest another party already stands on', () => {
+  it('refuses a travel order to a nest another party already stands on, naming it, and changes nothing', () => {
+    const { game, world, party, second } = withSecond(quiet())
+    const at = { q: party.position.q + 2, r: party.position.r }
+    nestAt(world, 'held_up', at)
+    party.position = at
+    second.position = { q: at.q + 2, r: at.r }
+    expect(setOrder(game, second.id, { kind: 'travel', to: at })).toBe('First Company already stands before the Nest: meet it there instead.')
+    expect(second.order).toEqual({ kind: 'idle' })
+    expect(startTravel(game, second, at)).toBe('refused')
+    // A meet goes there all the same, and confronts the nest too.
+    expect(setOrder(game, second.id, { kind: 'meet', party: party.id })).toBeNull()
+  })
+
+  it('stops a travel order whose road another party’s nest has come onto, and a home order short of a nest another party stands on', () => {
     for (const kind of ['travel', 'home'] as const) {
       const { game, world, party, second } = withSecond(quiet())
       const home = encampment(world).position
       const at = { q: home.q + 1, r: home.r }
-      nestAt(world, 'held_up', at)
       party.position = at // as after a wait there
       second.position = { q: at.q + 1, r: at.r }
-      // Home's route runs through the nest only if it is not known; forget it for the home order.
-      if (kind === 'home') world.sighted = world.sighted.filter((id) => id !== 'held_up')
-      const request = kind === 'travel' ? { kind, to: at } : { kind }
+      // A travel order given before the nest was there, its road running through it; home's route runs through a nest only if it is not known.
+      const request = kind === 'travel' ? { kind, to: home } : { kind }
       expect(setOrder(game, second.id, request)).toBeNull()
+      nestAt(world, 'held_up', at)
+      if (kind === 'home') world.sighted = world.sighted.filter((id) => id !== 'held_up')
       expect(second.order.kind === kind && second.order.route[0]).toEqual(at)
       const report = passDay(game)!
       expect(report.parties[1].walked).toBeNull()

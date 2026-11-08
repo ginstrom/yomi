@@ -3,22 +3,54 @@ import type { Expedition } from '../game/expedition.ts'
 import type { GameState } from '../game/gameState.ts'
 import { UNEXPLORED, isSighted } from '../game/vision.ts'
 import { boardIndex } from '../game/blight.ts'
-import { locationAt, midSentence, theName, type WorldState } from '../game/worldMap.ts'
-import type { Hex } from '../grid/hex.ts'
+import { locationAt, midSentence, theName, type WorldLocation, type WorldState } from '../game/worldMap.ts'
+import { hexEquals, hexKey, type Hex } from '../grid/hex.ts'
 import type { Rect } from './mapScroll.ts'
 import { HEADER_BOTTOM } from './partyPanel.ts'
 
 /**
  * The parties the world map lists down its right side, and where each entry
- * sits. `deployedParties` maps the company's parties (`game.parties`), one
- * entry each; while there is only one it is called "Your party", and that
- * holds until stage 06 names parties.
+ * sits; and where their figures stand on the map. `deployedParties` maps the
+ * company's parties (`game.parties`), one entry each; while there is only one
+ * it is called "Your party", and once there are more each goes by its name.
+ * Each party carries the banner of its number (`bannerOf`), on the map and in
+ * the list.
  */
 
 /** The strip down the world map's right side; the map's view keeps to the left of it. */
 export const PARTY_LIST_W = 80
-/** What the single party is called until stage 06 names parties (design Q2, answered). */
+/** What the single party is called while the company has no other (stage 5's design Q2, answered); with more, each goes by its name. */
 export const SINGLE_PARTY_NAME = 'Your party'
+
+/** Each banner's atlas sprite (art/map/), by banner number, each with an `idle` animation: crimson, azure, green. */
+export const BANNER_SPRITES: Readonly<Record<number, string>> = { 1: 'map_banner', 2: 'map_banner_azure', 3: 'map_banner_green' }
+
+/** A party's banner number, from its id (`party_2` is 2), so that a colour stays with its party whatever its place in the list; 1 for an id of no known number. */
+export function bannerOf(id: string): number {
+  const n = Number(/^party_(\d+)$/.exec(id)?.[1])
+  return n in BANNER_SPRITES ? n : 1
+}
+
+/** How far apart, in pixels across, the figures of parties sharing a hex stand. */
+export const FIGURE_SPREAD = 14
+
+/** Each party's figure's offset across from its hex's centre: 0 for a party alone on its hex, and parties sharing one spread `FIGURE_SPREAD` apart in list order, centred on it. */
+export function figureOffsets(parties: readonly Pick<Expedition, 'id' | 'position'>[]): Map<string, number> {
+  const byHex = new Map<string, string[]>()
+  for (const party of parties) {
+    const key = hexKey(party.position)
+    byHex.set(key, [...(byHex.get(key) ?? []), party.id])
+  }
+  const offsets = new Map<string, number>()
+  for (const ids of byHex.values()) ids.forEach((id, i) => offsets.set(id, (i - (ids.length - 1) / 2) * FIGURE_SPREAD))
+  return offsets
+}
+
+/** The party a click on `at` sends `party` to meet: the first other party of the company standing there, in list order, or null (none there, or `party` stands there itself). */
+export function meetTarget(game: GameState, party: Expedition, at: Hex): Expedition | null {
+  if (hexEquals(party.position, at)) return null
+  return game.parties.find((other) => other !== party && other.members.length > 0 && hexEquals(other.position, at)) ?? null
+}
 
 const ENTRY_SIZE = 64
 const ENTRY_MARGIN = 8
@@ -36,6 +68,8 @@ export const ORDER_COLS = Math.floor(PARTY_LIST_W / (ORDER_FONT_PX * 0.6))
 export interface PartyListEntry {
   id: string
   name: string
+  /** The banner's number (`bannerOf`), 1 to 3. */
+  banner: number
   /** The leader is `members[0]`, the member the map figure is dressed from. */
   members: readonly Character[]
   position: Hex
@@ -103,9 +137,16 @@ export function standingRoute(party: Expedition): readonly Hex[] {
 
 /** A travel order's line: the name of what lies at `to`, but only if the player knows of it. */
 export function travelLabel(world: WorldState, to: Hex): string {
-  const location = locationAt(world, to)
-  const known = location && (location.kind === 'monsters' ? isSighted(world, location.id) : world.seen[boardIndex(world.board, location.position)] !== UNEXPLORED)
-  return known ? `Travelling to ${midSentence(location.name)}` : 'Travelling'
+  const location = knownLocationAt(world, to)
+  return location ? `Travelling to ${midSentence(location.name)}` : 'Travelling'
+}
+
+/** The location at `at` if the player knows of it (monsters sighted, a quiet place on explored land), else null. */
+export function knownLocationAt(world: WorldState, at: Hex): WorldLocation | null {
+  const location = locationAt(world, at)
+  if (!location) return null
+  const known = location.kind === 'monsters' ? isSighted(world, location.id) : world.seen[boardIndex(world.board, location.position)] !== UNEXPLORED
+  return known ? location : null
 }
 
 /** `label` wrapped onto at most `ORDER_LINES` lines of `ORDER_COLS` columns, the last cut short with an ellipsis if it does not fit. */
@@ -148,6 +189,7 @@ export function deployedParties(game: GameState, shown: ShownOrder | null = null
       return {
         id: expedition.id,
         name: game.parties.length === 1 ? SINGLE_PARTY_NAME : expedition.name,
+        banner: bannerOf(expedition.id),
         members: party,
         position: expedition.position,
         order: shown?.party === expedition.id ? shown.order : orderLabel(world, expedition, game.parties),

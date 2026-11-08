@@ -8,6 +8,7 @@ import { daysToFall, siteYield } from '../game/territory.ts'
 import { UNEXPLORED } from '../game/vision.ts'
 import { ENCAMPMENT_ID, locationAt, routeTo, type WorldState } from '../game/worldMap.ts'
 import { hexEquals, type Hex } from '../grid/hex.ts'
+import { SINGLE_PARTY_NAME } from './partyList.ts'
 
 /** What the world map's info panel says of a hex: a title and the lines under it. */
 export interface HexInfo {
@@ -18,8 +19,8 @@ export interface HexInfo {
 /**
  * What the player knows of the hex under the pointer, for the world map's
  * info panel: what stands there, its blight as last seen (and, in sight,
- * whether the blight is gaining on it), the party if it is there, and how
- * many days' walk it is. Tells nothing the fog hides: a monster location only
+ * whether the blight is gaining on it), every party of the company there, and how
+ * many days' walk it is for the selected party. Tells nothing the fog hides: a monster location only
  * once sighted, a resource only once its land is explored.
  */
 export function hexInfo(game: GameState, party: Expedition, visible: ReadonlySet<number>, at: Hex): HexInfo {
@@ -66,10 +67,12 @@ export function hexInfo(game: GameState, party: Expedition, visible: ReadonlySet
     }
   }
 
-  if (hexEquals(at, party.position)) {
-    lines.push('Your party:')
-    for (const member of party.members) lines.push(`  ${member.name}, level ${member.level}, ${member.hp}/${maxHp(member)} hp`)
-  } else {
+  // The company's own parties are always known, fog or not.
+  for (const here of game.parties.filter((p) => p.members.length > 0 && hexEquals(p.position, at))) {
+    lines.push(`${game.parties.length === 1 ? SINGLE_PARTY_NAME : here.name}:`)
+    for (const member of here.members) lines.push(`  ${member.name}, level ${member.level}, ${member.hp}/${maxHp(member)} hp`)
+  }
+  if (!hexEquals(at, party.position)) {
     const route = routeTo(world, party, at)
     if (route) lines.push(`${route.length} ${route.length === 1 ? 'day' : 'days'} away.`)
   }

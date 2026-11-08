@@ -22,10 +22,12 @@ import {
   newWorld,
   passTurn,
   routeTo,
+  followOrder,
   threatAt,
   travel,
   type WorldState,
 } from './worldMap.ts'
+import { newExpedition } from './expedition.ts'
 
 const monsters = (world: WorldState) => world.locations.filter((l) => l.kind === 'monsters')
 /** The monster locations other than the Source. */
@@ -193,6 +195,38 @@ describe('travel', () => {
     journeyTo(game, resource.position)
     expect(party.confronting).toBeNull()
     expect(routeTo(world, party, offsetToHex(0, 0))).not.toBeNull()
+  })
+})
+
+describe('followOrder', () => {
+  it('walks a home order to the encampment, the reports and the steps gathered as a journey', () => {
+    const { game, world, party } = fresh()
+    world.sighted = monsters(world).map((l) => l.id)
+    const home = encampment(world).position
+    party.position = offsetToHex(hexToOffset(home).col + 3, hexToOffset(home).row)
+    const journey = followOrder(game, party, { kind: 'home' })
+    if (typeof journey === 'string') throw new Error(journey)
+    expect(party.position).toEqual(home)
+    expect(journey.journey.walked.at(-1)).toEqual(home)
+    expect(journey.reports).toHaveLength(journey.journey.walked.length)
+    expect(journey.reports.at(-1)!.interrupt?.event.type).toBe('arrived')
+    expect(followOrder(game, party, { kind: 'home' })).toBe('The party is already home.')
+  })
+
+  it('walks a meet order until the two parties stand together, within its limit', () => {
+    const { game, world, party } = fresh()
+    world.sighted = monsters(world).map((l) => l.id)
+    const at = party.position
+    const other = { ...newExpedition(readyMadeParty(), offsetToHex(hexToOffset(at).col + 4, hexToOffset(at).row)), id: 'party_2', name: 'Second Company' }
+    game.parties.push(other)
+    const short = followOrder(game, party, { kind: 'meet', party: other.id }, 2)
+    if (typeof short === 'string') throw new Error(short)
+    expect(short.journey.walked).toHaveLength(2)
+    expect(party.order).toEqual({ kind: 'meet', party: other.id })
+    const met = followOrder(game, party, { kind: 'meet', party: other.id })
+    if (typeof met === 'string') throw new Error(met)
+    expect(party.position).toEqual(other.position)
+    expect(met.reports.at(-1)!.interrupt?.event).toEqual({ type: 'met', party: party.id, other: other.id })
   })
 })
 

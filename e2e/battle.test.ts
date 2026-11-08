@@ -339,6 +339,14 @@ describe('a battle', () => {
     const after = await game.waitFor('World')
     expect(after.selectedParty).toBe('party_1')
     expect(after.parties.map((p) => p.id)).toEqual(['party_1'])
+    // Only the first party is drawn, and the view follows it, its figure mid-view at home.
+    expect(after.figures.map((f) => f.id)).toEqual(['party_1'])
+    const { screen } = after.figures[0]
+    expect(screen.x).toBeGreaterThan(after.view.x)
+    expect(screen.x).toBeLessThan(after.view.x + after.view.width)
+    expect(screen.y).toBeGreaterThan(after.view.y)
+    expect(screen.y).toBeLessThan(after.view.y + after.view.height)
+    expect(after.buttons.enterEncampment.visible).toBe(true)
     const raiders = after.world.locations.find((l) => l.id === RAIDERS.id)
     expect(raiders?.kind === 'monsters' && raiders.loot.map((item) => item.id)).toContain('iron_sword')
     // The slot is still the playthrough's, and loads.
