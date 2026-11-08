@@ -15,7 +15,7 @@
 //                                 [--player-policy aggressive] [--enemy-policy aggressive]
 //                                 [--player-weapon iron_sword]
 //                                 [--encounter goblin_raid] [--threat 1] [--party-level 1]
-//                                 [--campaign] [--ready-level 7]
+//                                 [--campaign] [--ready-level 7] [--parties 1]
 import { closeSync, mkdirSync, openSync, writeSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { mulberry32, randomSeed } from '../src/combat/rng.ts'
@@ -35,7 +35,7 @@ import {
   raiseShrine,
 } from '../src/game/buildings.ts'
 import { WORKSHOP_COSTS, craft, craftRefusal, craftTier, highestGrade, upgradeWorkshop } from '../src/game/crafting.ts'
-import { presenceOf, type DayAction, type Expedition } from '../src/game/expedition.ts'
+import { MAX_PARTIES, presenceOf, type DayAction, type Expedition } from '../src/game/expedition.ts'
 import { newGame, type GameState } from '../src/game/gameState.ts'
 import {
   GUILD_HALL_LEVELS,
@@ -50,7 +50,7 @@ import {
   upgradeGuildHall,
 } from '../src/game/guildHall.ts'
 import { canCamp, partyWounded } from '../src/game/camp.ts'
-import { advance, orderAction, setOrder, startTravel, type DayReport, type OrderRequest } from '../src/game/company.ts'
+import { advance, orderAction, setOrder, startTravel, wipeParty, type DayReport, type OrderRequest } from '../src/game/company.ts'
 import { INFIRMARY_COSTS, raiseInfirmary } from '../src/game/infirmary.ts'
 import { TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, wares } from '../src/game/tradingPost.ts'
 import { daysToFall, sites, type Material, type Stock } from '../src/game/territory.ts'
@@ -93,6 +93,11 @@ export interface CliArgs {
   campaign: boolean
   /** With `campaign`, the level every member must reach before the party marches on the Source, unless nothing else is left. */
   readyLevel: number
+  /**
+   * With `campaign`, how many parties the company may field (1 to `MAX_PARTIES`): a vanguard and the rest
+   * home guards. Until the guard policy comes (stage 6 step 10) no guard is formed, so every value plays as 1.
+   */
+  parties: number
 }
 
 
@@ -135,6 +140,7 @@ export function parseArgs(argv: string[]): CliArgs {
     partyLevel: 1,
     campaign: false,
     readyLevel: SOURCE_READY_LEVEL,
+    parties: 1,
   }
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i]
@@ -181,6 +187,13 @@ export function parseArgs(argv: string[]): CliArgs {
       case '--ready-level':
         args.readyLevel = positiveInt(flag, value())
         break
+      case '--parties': {
+        const raw = value()
+        const n = Number(raw)
+        if (!Number.isInteger(n) || n < 1 || n > MAX_PARTIES) throw new Error(`--parties must be from 1 to ${MAX_PARTIES}, got "${raw}"`)
+        args.parties = n
+        break
+      }
       default:
         throw new Error(`Unknown argument: ${flag}`)
     }
@@ -191,6 +204,9 @@ export function parseArgs(argv: string[]): CliArgs {
   }
   if (!args.campaign && argv.includes('--ready-level')) {
     throw new Error('--ready-level applies only to --campaign, which marches on the Source when the party is ready')
+  }
+  if (!args.campaign && argv.includes('--parties')) {
+    throw new Error('--parties applies only to --campaign, whose company fields its parties')
   }
   return args
 }
@@ -259,7 +275,7 @@ export const MAX_CAMPAIGN_DAYS = 2000
 /** The level every member must reach before the party marches on the Source, unless nothing else is left. */
 export const SOURCE_READY_LEVEL = 7
 
-/** How a campaign ended: the Source beaten, the party fallen, the encampment lost, or out of days (or of routes). */
+/** How a campaign ended: the Source beaten, the company fallen (no hero left), the encampment lost, or out of days (or of routes). */
 export type CampaignOutcome = 'source' | 'fallen' | 'encampment' | 'timeout'
 
 /** What a campaign did besides its battles. */
@@ -313,7 +329,20 @@ export interface CampaignRecord {
   deathsAtLevel: number[]
   /** For 5, 10, 15 and 20: how many battles had been fought when the party's lowest level first reached it; absent if never. */
   battlesToLevel: Partial<Record<LevelMark, number>>
+  /** By role: battles fought, battles lost (each a party wiped), and each party's member levels at the end, in list order. */
+  roles: Record<Role, { battles: number; wipes: number; finalLevels: number[][] }>
+  /** Parties wiped out in a lost battle, of any role. */
+  wipes: number
+  /** Heroes moved from a guard to the vanguard (step 10). */
+  promotions: number
+  /** Days the vanguard walked on its way home to the guild hall. */
+  vanguardWalkHomeDays: number
+  /** Battles fought by guards. */
+  guardBattles: number
 }
+
+/** A party's part in the company: the vanguard marches on the nests and the Source, a guard keeps the land near home. */
+export type Role = 'vanguard' | 'guard'
 
 /** The levels a campaign's record notes the battles to. */
 export const LEVEL_MARKS = [5, 10, 15, 20] as const
@@ -743,6 +772,20 @@ export interface CampaignRun {
   plans: Map<string, Plan>
   /** The vanguard's party id: the party that marches on the nests and the Source, whose levels the record ends with. */
   vanguard: string
+  /** Each party's role, by id; `vanguard` is the one truth for which party is the vanguard. */
+  roles: Map<string, Role>
+}
+
+/** Party `party`'s role in the run, a guard's for a party the run has no role for. */
+export function roleOf(run: CampaignRun, party: Expedition): Role {
+  return run.roles.get(party.id) ?? 'guard'
+}
+
+/** Makes party `id` the vanguard, the one it replaces a guard. */
+export function setVanguard(run: CampaignRun, id: string): void {
+  if (run.roles.get(run.vanguard) === 'vanguard') run.roles.set(run.vanguard, 'guard')
+  run.vanguard = id
+  run.roles.set(id, 'vanguard')
 }
 
 /** A campaign about to begin, from a new game of the run's party unless one is given. */
@@ -753,8 +796,12 @@ export function startCampaign(campaign: number, seed: number, args: CliArgs, fir
     tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 0, fieldCraftDays: 0,
     runesFound: 0, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0,
     finalLevels: [], deathsAtLevel: [], battlesToLevel: {},
+    roles: { vanguard: { battles: 0, wipes: 0, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } },
+    wipes: 0, promotions: 0, vanguardWalkHomeDays: 0, guardBattles: 0,
   }
-  return { campaign, seed, args, firstBattleId, game, battles: [], record, plans: new Map(game.parties.map((party) => [party.id, newPlan()])), vanguard: game.parties[0].id }
+  const vanguard = game.parties[0].id
+  const roles = new Map<string, Role>(game.parties.map((party) => [party.id, party.id === vanguard ? 'vanguard' : 'guard']))
+  return { campaign, seed, args, firstBattleId, game, battles: [], record, plans: new Map(game.parties.map((party) => [party.id, newPlan()])), vanguard, roles }
 }
 
 /** The plan of party `party`, a new one if it has none yet. */
@@ -895,10 +942,17 @@ function tally(record: CampaignRecord, events: readonly WorldEvent[]): void {
   }
 }
 
-/** Fights `target`, which the party confronts: the battle logged, and on a win the party's wounds, rewards and runes taken and the location cleared. False if it was lost. */
-function fightAt(run: CampaignRun, party: Expedition, target: MonsterLocation): boolean {
+/**
+ * Fights `target`, which the party confronts: the battle logged, and on a win
+ * the party's wounds, rewards and runes taken and the location cleared
+ * (`'won'`). A battle not won wipes the party out (`wipeParty`, its gear and
+ * baggage left on the location): `'fallen'` when no hero is left in the
+ * company, else `'wiped'`, the campaign going on without it.
+ */
+function fightAt(run: CampaignRun, party: Expedition, target: MonsterLocation): 'won' | 'wiped' | 'fallen' {
   const { game, record, battles } = run
   const members = party.members
+  const role = roleOf(run, party)
   const encounter = ENCOUNTERS[target.encounter](partyFighters(members), target.threat)
   const meta = {
     campaign: run.campaign,
@@ -907,14 +961,18 @@ function fightAt(run: CampaignRun, party: Expedition, target: MonsterLocation): 
     threat: target.threat,
     day: game.world.turn,
     partyLevels: members.map((member) => member.level),
+    party: party.id,
+    role,
   }
   const battleId = run.firstBattleId + battles.length
   const battleSeed = (run.seed + battles.length) >>> 0
   const engine = fight(encounter.setup, battleSeed, members, run.args, meta)
   battles.push(engine.getLog().map((event) => ({ ...event, battleId })))
+  record.roles[role].battles++
+  if (role === 'guard') record.guardBattles++
 
   const state = engine.getState()
-  if (state.winner !== 'player') return false
+  if (state.winner !== 'player') return wipe(run, party, target)
   // The party's wounds and mana left are its own from here on, as BattleScene makes them.
   members.forEach((member, i) => {
     const unit = state.units.find((u) => u.id === heroId(i))!
@@ -931,7 +989,27 @@ function fightAt(run: CampaignRun, party: Expedition, target: MonsterLocation): 
   }
   record.runesFound += takeRunes(game, target.threat, target.encounter, battleSeed).length
   clearLocation(game, target.id)
-  return true
+  return 'won'
+}
+
+/**
+ * Party `party`, beaten at `target`, is wiped out (`wipeParty`) and leaves the
+ * run: its plan and role go. The vanguard's levels as it fell are the record's
+ * until another vanguard ends the campaign, and if the vanguard was wiped the
+ * company's first party (or the one the reserves formed) takes its place.
+ */
+function wipe(run: CampaignRun, party: Expedition, target: MonsterLocation): 'wiped' | 'fallen' {
+  const { game, record } = run
+  const role = roleOf(run, party)
+  record.wipes++
+  record.roles[role].wipes++
+  if (role === 'vanguard') record.finalLevels = party.members.map((member) => member.level)
+  const { lost, reformed } = wipeParty(game, party.id, target)
+  run.plans.delete(party.id)
+  run.roles.delete(party.id)
+  if (lost) return 'fallen'
+  if (role === 'vanguard') setVanguard(run, reformed?.id ?? game.parties[0].id)
+  return 'wiped'
 }
 
 /**
@@ -960,8 +1038,11 @@ export function carryOut(run: CampaignRun, party: Expedition, decision: Decision
       record.goldOnRunes += trade.goldOnRunes
       return null
     }
-    case 'fight':
-      return fightAt(run, party, decision.target) ? null : 'fallen'
+    case 'fight': {
+      const result = fightAt(run, party, decision.target)
+      // A wiped party is gone, with nothing more to ask of it.
+      return result === 'won' ? null : result === 'wiped' ? 'standing' : 'fallen'
+    }
     case 'act':
       // A day order, whose day the next `advance` runs with every other party's.
       if (orderAction(game, party.id, decision.action) !== null) return null
@@ -1016,6 +1097,7 @@ export function takeDays(run: CampaignRun, reports: readonly DayReport[]): void 
     const days = reports.map((report) => report.parties.find((day) => day.party === party.id))
     if (plan.running === 'travel') {
       plan.stalled = !days.some((day) => day?.walked)
+      if (party.id === run.vanguard && plan.phase === 'home') record.vanguardWalkHomeDays += days.filter((day) => day?.walked).length
       party.confronting = monstersHere(game.world, party)?.id ?? null
     }
     if (plan.running === 'camp') {
@@ -1036,11 +1118,11 @@ function needsDecision(game: GameState, party: Expedition, last: DayReport | und
   return !last.interrupt || last.interrupt.party === null || last.interrupt.party === party.id
 }
 
-/** The campaign's record filled in at its end. */
-function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Campaign {
+/** The campaign's record filled in at its end: the vanguard's levels (as it fell, if it was wiped), each role's, and the sockets of every party. */
+export function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Campaign {
   const { game, record, battles } = run
   const { world } = game
-  const members = game.parties.find((party) => party.id === run.vanguard)!.members
+  const vanguard = game.parties.find((party) => party.id === run.vanguard)
   record.outcome = outcome
   record.days = world.turn
   record.battles = battles.length
@@ -1050,7 +1132,10 @@ function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Campaign {
   record.tradingPostLevel = world.tradingPost
   record.workshopLevel = world.workshop
   record.infirmaryLevel = world.infirmary
-  record.finalLevels = members.map((member) => member.level)
+  if (vanguard) record.finalLevels = vanguard.members.map((member) => member.level)
+  for (const role of ['vanguard', 'guard'] as const) {
+    record.roles[role].finalLevels = game.parties.filter((party) => roleOf(run, party) === role).map((party) => party.members.map((member) => member.level))
+  }
   record.socketsFilled = game.parties.flatMap((party) => party.members).reduce((n, member) => n + Object.values(member.equipment).reduce((m, item) => m + (item?.runes?.length ?? 0), 0), 0)
   return { battles, record }
 }
@@ -1076,7 +1161,10 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
   const { game } = run
   let last: DayReport | undefined
   for (;;) {
-    for (const party of game.parties) {
+    // Each party once a round, in list order, a party a wipe formed included and a wiped one left out.
+    const asked = new Set<Expedition>()
+    for (let party; (party = game.parties.find((p) => !asked.has(p))); ) {
+      asked.add(party)
       if (!needsDecision(game, party, last)) continue
       for (;;) {
         const done = carryOut(run, party, decide(run, party))
@@ -1274,6 +1362,20 @@ export interface CampaignSummary {
   toLevel: Array<{ level: LevelMark; campaigns: number; avgBattles: number }>
   /** In rising order of threat; a threat no campaign reached has no row. */
   byThreat: ThreatRow[]
+  /** Parties wiped, heroes promoted to the vanguard, the vanguard's days walking home and the guards' battles, a campaign. */
+  avgWipes: number
+  avgPromotions: number
+  avgVanguardWalkHomeDays: number
+  avgGuardBattles: number
+  /** By role: battles and wipes a campaign, and the lowest and highest level of its parties at the end, over the campaigns that ended with one. */
+  roles: Record<Role, RoleSummary>
+}
+
+export interface RoleSummary {
+  avgBattles: number
+  avgWipes: number
+  avgLowestFinalLevel: number
+  avgHighestFinalLevel: number
 }
 
 /** Adds up the battles at each threat, an event at a time. */
@@ -1350,6 +1452,21 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     deathsByLevel: [...deaths.entries()].sort(([a], [b]) => a - b).map(([level, deaths]) => ({ level, deaths })),
     toLevel,
     byThreat: threats.rows(),
+    avgWipes: avg((r) => r.wipes),
+    avgPromotions: avg((r) => r.promotions),
+    avgVanguardWalkHomeDays: avg((r) => r.vanguardWalkHomeDays),
+    avgGuardBattles: avg((r) => r.guardBattles),
+    roles: { vanguard: roleSummary('vanguard'), guard: roleSummary('guard') },
+  }
+
+  function roleSummary(role: Role): RoleSummary {
+    const levels = records.map((r) => r.roles[role].finalLevels.flat()).filter((l) => l.length > 0)
+    return {
+      avgBattles: avg((r) => r.roles[role].battles),
+      avgWipes: avg((r) => r.roles[role].wipes),
+      avgLowestFinalLevel: mean(levels.map((l) => Math.min(...l))),
+      avgHighestFinalLevel: mean(levels.map((l) => Math.max(...l))),
+    }
   }
 }
 
@@ -1420,6 +1537,15 @@ function main(): void {
   console.log(
     `Battles to level ${summary.toLevel.map(({ level, campaigns, avgBattles }) => `${level}: ${campaigns > 0 ? avgBattles.toFixed(1) : '—'} (${campaigns} campaigns)`).join('; ')}`,
   )
+  console.log(
+    `Company (${args.parties} ${args.parties === 1 ? 'party' : 'parties'} allowed): ${summary.avgWipes.toFixed(1)} parties wiped, ${summary.avgPromotions.toFixed(1)} promotions, ${summary.avgVanguardWalkHomeDays.toFixed(1)} days the vanguard walked home and ${summary.avgGuardBattles.toFixed(1)} guard battles a campaign`,
+  )
+  for (const role of ['vanguard', 'guard'] as const) {
+    const r = summary.roles[role]
+    console.log(
+      `${role === 'vanguard' ? 'Vanguard' : 'Guards'}: ${r.avgBattles.toFixed(1)} battles and ${r.avgWipes.toFixed(1)} wipes a campaign; levels at the end lowest ${r.avgLowestFinalLevel.toFixed(1)}, highest ${r.avgHighestFinalLevel.toFixed(1)}`,
+    )
+  }
   console.table(summary.byThreat.map((row) => ({ ...row, winRate: Number(row.winRate.toFixed(3)) })))
   console.table(tally.summary(battles))
 }

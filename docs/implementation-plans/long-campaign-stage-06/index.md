@@ -218,7 +218,7 @@ guardBattles: number
 | 06 | [Sprites: barracks and banners](06-sprites.md) | Guild hall levels 4–5 frames; three banners (C7) | — | sonnet / opus | done (e26c81f, 6ad9a75) |
 | 07 | [The world map's company](07-world-map-company.md) | Party bar banners, every party on the map, Home, Garrison, meet by click, interrupt and refusal focus (C6); manual text; in-browser tests | 05, 06 | opus / opus | pending |
 | 08 | [Guild hall columns and exchange](08-guild-hall-and-exchange-scenes.md) | Guild Hall columns, Form party, Rename, Disband; the `Exchange` scene from the character panel; acting party shown; manual text; in-browser tests | 07 | sonnet / opus | pending |
-| 09 | [The simulator's company record](09-simulator-record.md) | `--parties`, roles, record fields, meta and `LOG_SCHEMA_VERSION` 24 (C8); the guard re-recorded once with `--parties 1` | 05 | opus / opus | pending |
+| 09 | [The simulator's company record](09-simulator-record.md) | `--parties`, roles, record fields, meta and `LOG_SCHEMA_VERSION` 24 (C8); the guard re-recorded once with `--parties 1` | 05 | opus / opus | in progress: all but `BattleScene`'s meta `party` (src/scenes barred to this worktree; see the record) |
 | 10 | [The simulator's company policy](10-simulator-policy.md) | Guard formation, reinforce/defend/train/garrison, vanguard succession, `--parties` default 3, policy tests on fixed states; guard green | 09, 03 | opus / opus | pending |
 | 11 | [Measure, document, play](11-measure-document-play.md) | Guard figure, hall-4 frequency, `--ready-level 10` comparison; CLAUDE.md, manual and screenshots; implementation notes; play script walked | 08, 10 | sonnet / opus | pending |
 

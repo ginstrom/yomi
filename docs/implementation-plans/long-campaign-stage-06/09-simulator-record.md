@@ -193,3 +193,36 @@ export function heroesLeft(game: GameState): number    // every party's members 
 
 ## 7. Execution record
 
+Branch `long-campaign-stage-06-simrecord`, off `long-campaign-stage-06` at `6fc5440` (worked in a worktree in parallel with the scenes track, as the orchestrator asked).
+
+**Done.**
+- `--parties` (1 to `MAX_PARTIES`, default 1; refused outside the range or without `--campaign`). `Role`, `CampaignRun.roles`, `roleOf` (the map, a guard's by default) and `setVanguard` (keeps `run.vanguard` and the map in step; step 10 uses it for succession).
+- `CampaignRecord.roles`, `wipes`, `promotions` (0), `vanguardWalkHomeDays` (the vanguard's walking days while its plan is in `'home'`), `guardBattles`, at the end of the record. `finishCampaign` (now exported) fills `roles[*].finalLevels` per party in list order.
+- `fightAt` returns `'won' | 'wiped' | 'fallen'`; a battle not won (an abandoned one too) calls `wipeParty` through `wipe()`: plan and role dropped; `'fallen'` only when `lost`; a wiped vanguard is replaced by the reformed party or `parties[0]` (`setVanguard`). The vanguard's levels as it fell go to `record.finalLevels`, so a fallen campaign's `finalLevels` is as before. Wipe deaths are not added to `deaths`/`deathsAtLevel` (those stay "heroes who fell in a won battle", which keeps the old fields identical); `wipes` counts them.
+- `runCampaign` asks each party once a round by identity (a party a wipe formed is asked, a wiped one skipped); with one party this is the same order.
+- `battle_start` meta gains `party` and `role` after the old keys; `LOG_SCHEMA_VERSION` 24 (two engine tests that pinned 23 updated).
+- Summary: `avgWipes`, `avgPromotions`, `avgVanguardWalkHomeDays`, `avgGuardBattles`, `roles` (per role battles, wipes, lowest/highest final level over the campaigns with a party of that role); `main` prints three new lines after "Battles to level", before the two tables.
+- Folded in from step 01's review: a two-party test that `finishCampaign` reads the vanguard (set to the second party), not `parties[0]`, and counts sockets over every party (2 runes, one in each party).
+- CLAUDE.md: `--parties`, the meta keys, `fallen`/wipes, the record's new fields.
+
+**Not done: `BattleScene`'s meta `party`.** The orchestrator's brief barred `src/scenes` for this step (the scenes track is editing it). The one line, `meta: { source: 'game', enemyPolicy: ENEMY_POLICY, party: this.expedition.id }`, is left to whoever merges, with the in-browser checks (`-t victorious`, battle, saves) after it. No in-browser test was run here, as nothing in scenes changed.
+
+**The guard's re-record (4.7).**
+1. Before the fixture was touched, the guard test failed only on `toEqual` (36 keys against 31) and the hash.
+2. Arguments now `['--campaign', '--battles', '5', '--seed', '1', '--parties', '1']`.
+3. A scratch test (deleted) ran the 5 campaigns: each new record with the five new fields removed `toEqual` the old `GUARD_RECORDS`: **passed**, every field.
+4. Event log: 72 battles; every `battle_start` with `schemaVersion` set back to 23 and `meta.party`/`meta.role` deleted hashes to the **old** `GUARD_EVENTS_SHA256` (`c5c83f8e…2769`) exactly, so nothing else in the log moved. New hash `820e5b5d2740ee6549069200270ab5c882e3e95033d37dc1b5eb191c5c472cf1`.
+5. New fields per campaign: vanguard battles 20, 18, 20, 9, 5 (= `battles`), wipes 0, 1, 1, 1, 1 (one per `fallen`), `vanguardWalkHomeDays` 66, 33, 129, 0, 22, guard all 0, promotions 0; `roles.vanguard.finalLevels` `[[8]]` for the Source win and `[]` for the fallen (no party left).
+
+**50-campaign check.**
+- Before: `068016a82040ec5be673084265005a7218f0ce927629880565c1a27a8cf52d76` (stage 5's hash), Beat the Source 23 of 50, 852 battles.
+- After: `47043dc0bca21b318808860abbcedb688947bfa7ba16e0db12b5838c72c5d41c`. `diff` of the summaries: only the `--out` path (the before run wrote `guard-50-before.jsonl`) and three added lines:
+  ```
+  Company (1 party allowed): 0.5 parties wiped, 0.0 promotions, 55.3 days the vanguard walked home and 0.0 guard battles a campaign
+  Vanguard: 17.0 battles and 0.5 wipes a campaign; levels at the end lowest 7.7, highest 8.6
+  Guards: 0.0 battles and 0.0 wipes a campaign; levels at the end lowest 0.0, highest 0.0
+  ```
+- Log: 45276 lines both; the lines without `battle_start` hash the same before and after (`06266281…9f36`); all 852 differing lines are `battle_start`s, identical once the schema is set back and `party` (`party_1`) and `role` (`vanguard`) removed.
+- The vanguard's level line averages only the campaigns that end with a vanguard (the 23 Source wins), so it reads higher than the old "Levels at the end" line, which includes the fallen party's levels.
+
+**Tests.** `npx tsc` clean; `npx vitest run scripts/simulate.test.ts src/engine/battleEngine.test.ts` 282 passed; `npm test` 80 files, 1433 tests passed.

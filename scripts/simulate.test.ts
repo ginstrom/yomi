@@ -10,6 +10,7 @@ import { heroId } from '../src/game/encounters.ts'
 import { readyMadeParty } from '../src/game/party.ts'
 import { OUTPOST_COST, TOWER_COST } from '../src/game/buildings.ts'
 import { advance } from '../src/game/company.ts'
+import { MAX_PARTIES } from '../src/game/expedition.ts'
 import { craft } from '../src/game/crafting.ts'
 import type { FamilyId } from '../src/inventory/catalog.ts'
 import { itemById, unruned } from '../src/inventory/inventory.ts'
@@ -47,7 +48,10 @@ import {
   fieldCraft,
   takeDays,
   planOf,
+  roleOf,
+  setVanguard,
   startCampaign,
+  finishCampaign,
   type CampaignRecord,
   type LoggedEvent,
 } from './simulate.ts'
@@ -222,6 +226,17 @@ describe('parseArgs', () => {
     expect(() => parseArgs(['--ready-level', '10'])).toThrow('--campaign')
     expect(() => parseArgs(['--campaign', '--ready-level', '0'])).toThrow('--ready-level must be a positive integer')
     expect(() => parseArgs(['--campaign', '--ready-level', 'x'])).toThrow('--ready-level must be a positive integer')
+  })
+
+  it('takes --parties for a campaign only, 1 to MAX_PARTIES, by default 1', () => {
+    expect(parseArgs(['--campaign', '--parties', '2']).parties).toBe(2)
+    expect(parseArgs(['--campaign', '--parties', String(MAX_PARTIES)]).parties).toBe(MAX_PARTIES)
+    expect(parseArgs(['--campaign']).parties).toBe(1)
+    expect(parseArgs([]).parties).toBe(1)
+    for (const raw of ['0', String(MAX_PARTIES + 1), 'x']) {
+      expect(() => parseArgs(['--campaign', '--parties', raw])).toThrow(`--parties must be from 1 to ${MAX_PARTIES}`)
+    }
+    expect(() => parseArgs(['--parties', '2'])).toThrow('--parties applies only to --campaign')
   })
 })
 
@@ -752,17 +767,19 @@ describe('runes in a campaign', () => {
 })
 
 /**
- * The refactor guard for stage 5: the output of `--campaign --battles 5 --seed 1` at commit 4a2b824, before any
- * change. Never edit it. A mismatch means a step changed behaviour.
+ * The refactor guard: the output of `--campaign --battles 5 --seed 1`, first recorded for stage 5 at commit 4a2b824.
+ * Re-recorded in stage 6 step 09, from `--parties 1`, for `LOG_SCHEMA_VERSION` 24 (battle_start meta `party` and
+ * `role`) and the company record's new fields, every old field and every other event unchanged; never edited again
+ * in this stage. A mismatch means a step changed behaviour.
  */
 const GUARD_RECORDS: CampaignRecord[] = [
-  { outcome: 'source', days: 333, battles: 20, spawns: 30, captured: 2, lost: 0, blighted: 0.41, healedHp: 138, campDays: 18, towersBuilt: 3, towersLost: 0, deaths: 4, recruits: 2, hallLevel: 3, shrineLevel: 1, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 5, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 16, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8], deathsAtLevel: [8, 8, 7, 7], battlesToLevel: { 5: 6 } },
-  { outcome: 'fallen', days: 234, battles: 18, spawns: 28, captured: 4, lost: 0, blighted: 0.42875, healedHp: 68, campDays: 6, towersBuilt: 3, towersLost: 0, deaths: 1, recruits: 2, hallLevel: 2, shrineLevel: 1, outpostsBuilt: 3, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 3, fieldCraftDays: 3, runesFound: 11, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [7, 7, 7, 7], deathsAtLevel: [3], battlesToLevel: {5: 10} },
-  { outcome: 'fallen', days: 426, battles: 20, spawns: 30, captured: 4, lost: 1, blighted: 0.4425, healedHp: 148, campDays: 29, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 5, hallLevel: 3, shrineLevel: 3, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 184, tierTwoBought: 0, crafted: 9, fieldCraftDays: 3, runesFound: 12, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7, 7, 7], deathsAtLevel: [3, 4, 2], battlesToLevel: {5: 9} },
-  { outcome: 'fallen', days: 125, battles: 9, spawns: 17, captured: 0, lost: 0, blighted: 0.4066666666666667, healedHp: 57, campDays: 6, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 5, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [5, 5, 5], deathsAtLevel: [], battlesToLevel: { 5: 6 } },
-  { outcome: 'fallen', days: 62, battles: 5, spawns: 6, captured: 0, lost: 0, blighted: 0.41791666666666666, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 2, recruits: 0, hallLevel: 2, shrineLevel: 1, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 102, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 3, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [4], deathsAtLevel: [3, 3], battlesToLevel: {} },
+  { outcome: 'source', days: 333, battles: 20, spawns: 30, captured: 2, lost: 0, blighted: 0.41, healedHp: 138, campDays: 18, towersBuilt: 3, towersLost: 0, deaths: 4, recruits: 2, hallLevel: 3, shrineLevel: 1, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 5, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 16, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8], deathsAtLevel: [8, 8, 7, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 20, wipes: 0, finalLevels: [[8]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 66, guardBattles: 0 },
+  { outcome: 'fallen', days: 234, battles: 18, spawns: 28, captured: 4, lost: 0, blighted: 0.42875, healedHp: 68, campDays: 6, towersBuilt: 3, towersLost: 0, deaths: 1, recruits: 2, hallLevel: 2, shrineLevel: 1, outpostsBuilt: 3, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 3, fieldCraftDays: 3, runesFound: 11, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [7, 7, 7, 7], deathsAtLevel: [3], battlesToLevel: {5: 10}, roles: { vanguard: { battles: 18, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 33, guardBattles: 0 },
+  { outcome: 'fallen', days: 426, battles: 20, spawns: 30, captured: 4, lost: 1, blighted: 0.4425, healedHp: 148, campDays: 29, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 5, hallLevel: 3, shrineLevel: 3, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 184, tierTwoBought: 0, crafted: 9, fieldCraftDays: 3, runesFound: 12, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7, 7, 7], deathsAtLevel: [3, 4, 2], battlesToLevel: {5: 9}, roles: { vanguard: { battles: 20, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 129, guardBattles: 0 },
+  { outcome: 'fallen', days: 125, battles: 9, spawns: 17, captured: 0, lost: 0, blighted: 0.4066666666666667, healedHp: 57, campDays: 6, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 5, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [5, 5, 5], deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 9, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 0, guardBattles: 0 },
+  { outcome: 'fallen', days: 62, battles: 5, spawns: 6, captured: 0, lost: 0, blighted: 0.41791666666666666, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 2, recruits: 0, hallLevel: 2, shrineLevel: 1, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 102, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 3, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [4], deathsAtLevel: [3, 3], battlesToLevel: {}, roles: { vanguard: { battles: 5, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 22, guardBattles: 0 },
 ]
-const GUARD_EVENTS_SHA256 = 'c5c83f8e83d614381e6bd76e5bee1075e5d7b66c6cf9b5873eafce41453b2769'
+const GUARD_EVENTS_SHA256 = '820e5b5d2740ee6549069200270ab5c882e3e95033d37dc1b5eb191c5c472cf1'
 
 describe('the campaign’s policy on the day loop', () => {
   const args = parseArgs(['--campaign'])
@@ -960,9 +977,156 @@ describe('the campaign’s policy on the day loop', () => {
   })
 })
 
+describe('the company’s record', () => {
+  const args = parseArgs(['--campaign'])
+  const campaignOf = (setUp: (game: ReturnType<typeof newGame>) => void = () => {}) => {
+    const game = newGame(undefined, null, 1)
+    setUp(game)
+    const run = startCampaign(0, 1, args, 0, game)
+    return { run, game, party: game.parties[0] }
+  }
+  /** A party of one hero at 1 hit point, standing before the Source, whose battle it is sure to lose. */
+  const doomed = (game: ReturnType<typeof newGame>) => {
+    const party = game.parties[0]
+    const source = game.world.locations.find((l) => l.id === SOURCE_ID) as MonsterLocation
+    party.members.splice(1)
+    party.members[0].hp = 1
+    party.position = { ...source.position }
+    party.confronting = source.id
+    return source
+  }
+  const secondParty = (game: ReturnType<typeof newGame>) => {
+    const first = game.parties[0]
+    const second = { ...structuredClone(first), id: 'party_2', name: 'Second Company', baggage: [], order: { kind: 'idle' as const } }
+    game.parties.push(second)
+    return second
+  }
+
+  it('starts with the new fields at zero, the first party the vanguard', () => {
+    const { run, party } = campaignOf()
+    expect(run.record).toMatchObject({
+      roles: { vanguard: { battles: 0, wipes: 0, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } },
+      wipes: 0, promotions: 0, vanguardWalkHomeDays: 0, guardBattles: 0,
+    })
+    expect(roleOf(run, party)).toBe('vanguard')
+    expect(roleOf(run, { ...party, id: 'party_9' })).toBe('guard')
+    setVanguard(run, 'party_9')
+    expect(roleOf(run, { ...party, id: 'party_9' })).toBe('vanguard')
+    expect(roleOf(run, party)).toBe('guard')
+  })
+
+  it('logs the party and its role on battle_start, under schema version 24, and counts the battle to the role', () => {
+    const { run, game, party } = campaignOf()
+    const target = nextTarget(game.world, party, args.readyLevel)!
+    party.position = { ...target.position }
+    party.confronting = target.id
+    carryOut(run, party, { kind: 'fight', target })
+    const start = run.battles[0][0]
+    expect(start).toMatchObject({ type: 'battle_start', schemaVersion: 24, meta: { party: 'party_1', role: 'vanguard' } })
+    // The new keys come after the old, so the old keys keep their order in the log.
+    if (start.type !== 'battle_start') throw new Error('no battle_start')
+    expect(Object.keys(start.meta).slice(-2)).toEqual(['party', 'role'])
+    expect(run.record.roles.vanguard.battles).toBe(1)
+    expect(run.record.guardBattles).toBe(0)
+  })
+
+  it('counts a guard’s battle to the guards and to guardBattles', () => {
+    const { run, game } = campaignOf()
+    const guard = secondParty(game)
+    const target = nextTarget(game.world, guard, args.readyLevel)!
+    guard.position = { ...target.position }
+    guard.confronting = target.id
+    carryOut(run, guard, { kind: 'fight', target })
+    expect(run.battles[0][0]).toMatchObject({ meta: { party: 'party_2', role: 'guard' } })
+    expect(run.record.roles.guard.battles).toBe(1)
+    expect(run.record.guardBattles).toBe(1)
+    expect(run.record.roles.vanguard.battles).toBe(0)
+  })
+
+  it('wipes a party that loses, and goes on while a hero is left in the reserves', () => {
+    let source!: MonsterLocation
+    const { run, game, party } = campaignOf((game) => {
+      source = doomed(game)
+      game.reserves.push(readyMadeParty()[1])
+    })
+    const gear = Object.values(party.members[0].equipment)
+    expect(carryOut(run, party, { kind: 'fight', target: source })).not.toBe('fallen')
+    expect(run.battles[0].at(-1)).toMatchObject({ type: 'battle_end', winner: 'enemy' })
+    expect(run.record.wipes).toBe(1)
+    expect(run.record.roles.vanguard.wipes).toBe(1)
+    // The wiped party is gone; the reserves stand at the encampment as a new party, the vanguard now.
+    expect(game.parties).toHaveLength(1)
+    expect(game.parties[0]).not.toBe(party)
+    const home = game.world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
+    expect(game.parties[0].position).toEqual(home)
+    expect(run.vanguard).toBe(game.parties[0].id)
+    expect(roleOf(run, game.parties[0])).toBe('vanguard')
+    expect(source.loot).toEqual(expect.arrayContaining(gear))
+  })
+
+  it('ends the campaign fallen when the wipe leaves no hero, its levels the fallen party’s', () => {
+    let source!: MonsterLocation
+    const { run, game, party } = campaignOf((game) => (source = doomed(game)))
+    const levels = party.members.map((m) => m.level)
+    expect(carryOut(run, party, { kind: 'fight', target: source })).toBe('fallen')
+    expect(game.parties).toHaveLength(0)
+    const { record } = finishCampaign(run, 'fallen')
+    expect(record).toMatchObject({ outcome: 'fallen', wipes: 1, finalLevels: levels })
+    expect(record.roles.vanguard.finalLevels).toEqual([])
+  })
+
+  it('reads the vanguard’s levels, not the first party’s, and counts sockets over every party', () => {
+    const { run, game } = campaignOf()
+    const guard = secondParty(game)
+    for (const member of guard.members) member.level = 9
+    guard.members[0].equipment.armor = itemById('steel_breastplate#stone1')!
+    setVanguard(run, guard.id)
+    const first = game.parties[0]
+    first.members[0].equipment.mainHand = itemById('steel_longsword#ember1')!
+    const { record } = finishCampaign(run, 'timeout')
+    expect(record.finalLevels).toEqual(guard.members.map(() => 9))
+    expect(record.socketsFilled).toBe(2)
+    expect(record.roles.vanguard.finalLevels).toEqual([guard.members.map(() => 9)])
+    expect(record.roles.guard.finalLevels).toEqual([first.members.map((m) => m.level)])
+  })
+
+  it('counts the vanguard’s days walking home', () => {
+    const { run, game, party } = campaignOf((game) => {
+      game.world.stock = { gold: 100, iron: 50 }
+      game.parties[0].position = { q: game.parties[0].position.q + 3, r: game.parties[0].position.r }
+    })
+    expect(carryOut(run, party, decide(run, party))).toBe('standing')
+    expect(planOf(run, party).phase).toBe('home')
+    const reports = advance(game, Infinity)
+    takeDays(run, reports)
+    const walked = reports.filter((r) => r.parties.find((d) => d.party === party.id)?.walked).length
+    expect(walked).toBeGreaterThan(0)
+    expect(run.record.vanguardWalkHomeDays).toBe(walked)
+  })
+
+  it('has as many vanguard battles as battles in a one-party campaign, and no guard battles', () => {
+    const { record } = runCampaign(1, 1 + CAMPAIGN_SEED_STEP, args)
+    expect(record.roles.vanguard.battles).toBe(record.battles)
+    expect(record.guardBattles).toBe(0)
+    expect(record.roles.guard).toEqual({ battles: 0, wipes: 0, finalLevels: [] })
+    expect(record.promotions).toBe(0)
+  }, 20_000)
+
+  it('is summed up with the wipes, promotions, walks home, guard battles and each role’s battles, wipes and levels', () => {
+    const { run } = campaignOf()
+    const a = { ...run.record, wipes: 1, vanguardWalkHomeDays: 10, guardBattles: 2, roles: { vanguard: { battles: 4, wipes: 1, finalLevels: [[3, 5]] }, guard: { battles: 2, wipes: 0, finalLevels: [[2], [4]] } } }
+    const b = { ...run.record, wipes: 0, vanguardWalkHomeDays: 20, guardBattles: 0, roles: { vanguard: { battles: 6, wipes: 0, finalLevels: [[7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } } }
+    const summary = summarizeCampaigns([], [a, b])
+    expect(summary).toMatchObject({ avgWipes: 0.5, avgPromotions: 0, avgVanguardWalkHomeDays: 15, avgGuardBattles: 1 })
+    expect(summary.roles.vanguard).toEqual({ avgBattles: 5, avgWipes: 0.5, avgLowestFinalLevel: 5, avgHighestFinalLevel: 6 })
+    // A campaign with no party of the role is left out of its levels.
+    expect(summary.roles.guard).toEqual({ avgBattles: 1, avgWipes: 0, avgLowestFinalLevel: 2, avgHighestFinalLevel: 4 })
+  })
+})
+
 describe('the refactor guard', () => {
-  it('plays 5 seeded campaigns exactly as it did before stage 5', () => {
-    const args = parseArgs(['--campaign', '--battles', '5', '--seed', '1'])
+  it('plays 5 seeded campaigns exactly as it did before stage 5, with one party', () => {
+    const args = parseArgs(['--campaign', '--battles', '5', '--seed', '1', '--parties', '1'])
     const records: CampaignRecord[] = []
     const lines: string[] = []
     let firstBattleId = 0
