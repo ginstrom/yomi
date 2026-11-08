@@ -1,4 +1,3 @@
-import { FIRST_PARTY_ID } from '../game/expedition.ts'
 import Phaser from 'phaser'
 import type { Character } from '../character/character.ts'
 import { canAdvance } from '../character/progression.ts'
@@ -6,7 +5,7 @@ import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex, type WorldEve
 import { atEncampment, buildOutpost, buildTower, canBuildOutpost, canBuildTower, outpostSiteRefusal, towerSiteRefusal } from '../game/buildings.ts'
 import { UNTIL_LIMIT, advance, advanceRefusal, passDay, type DayReport } from '../game/company.ts'
 import { campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from '../game/camp.ts'
-import { presences, type Expedition, type PartyPresence } from '../game/expedition.ts'
+import { FIRST_PARTY_ID, presences, type Expedition, type PartyPresence } from '../game/expedition.ts'
 import { newGame, selectedParty, type GameState } from '../game/gameState.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
 import { daysToFall } from '../game/territory.ts'
