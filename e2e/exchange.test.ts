@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { offsetToHex } from '../src/grid/hex.ts'
+import { offsetToHex, type Hex } from '../src/grid/hex.ts'
 import { useGames, type Game } from './driver.ts'
 
 /**
@@ -7,10 +7,10 @@ import { useGames, type Game } from './driver.ts'
  * first party's hex (or on `apart`), with items in the first party's baggage,
  * reloaded and continued.
  */
-async function twoParties(game: Game, { members = 1, apart = false, away: awayFromHome = false }: { members?: number; apart?: boolean; away?: boolean } = {}) {
+async function twoParties(game: Game, { members = 1, apart = false, away: awayFromHome = false, at }: { members?: number; apart?: boolean; away?: boolean; at?: Hex } = {}) {
   await game.newGame()
   await game.page.evaluate(
-    ([members, apart, away, awayFromHome]) => {
+    ([members, apart, away, awayFromHome, at]) => {
       const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
       const lead = saved.game.parties[0]
       lead.baggage = ['iron_sword', 'oak_shield']
@@ -19,12 +19,12 @@ async function twoParties(game: Game, { members = 1, apart = false, away: awayFr
       for (const member of second.members) member.name = `${member.name}2`
       Object.assign(second, { id: 'party_2', name: 'Second Company', order: { kind: 'idle' }, confronting: null, baggage: [] })
       if (apart) second.position = away
-      if (awayFromHome) lead.position = second.position = away
+      if (awayFromHome) lead.position = second.position = at ?? away
       saved.game.parties.push(second)
       saved.game.world.guildHall = 4
       localStorage.setItem('yomi.save.1', JSON.stringify(saved))
     },
-    [members, apart, offsetToHex(7, 19), awayFromHome] as const,
+    [members, apart, offsetToHex(7, 19), awayFromHome, at ?? null] as const,
   )
   const menu = await game.reload()
   await game.click(menu.buttons.continue)
@@ -102,6 +102,27 @@ describe('exchange', () => {
       expect(button.y).toBeLessThan(560)
     }
     expect(small.buttons.exchange.x).toBeGreaterThan(small.buttons.home.x)
+  })
+
+  it('fits all five time buttons in the least window with two parties on a held site', async () => {
+    const game = await games.open()
+    await twoParties(game, { away: true, at: offsetToHex(11, 21) })
+    await game.resize(840, 560)
+    const busy = await game.waitFor('World', (w) => w.view.width < 700 && w.buttons.exchange.visible && w.buttons.garrison.visible)
+    // A footer button is as wide as its label needs, but for 96px (WorldScene's footerWidth).
+    const width = (label: string) => Math.max(96, label.length * 10 + 24)
+    const shown: Array<[string, { x: number; visible: boolean }]> = [
+      ['Next day', busy.buttons.nextDay],
+      ['Until something happens', busy.buttons.untilSomething],
+      ['Return home', busy.buttons.home],
+      ['Garrison', busy.buttons.garrison],
+      ['Exchange', busy.buttons.exchange],
+    ]
+    for (const [label, button] of shown) {
+      expect(button.visible).toBe(true)
+      expect(button.x - width(label) / 2).toBeGreaterThanOrEqual(80)
+      expect(button.x + width(label) / 2).toBeLessThanOrEqual(840)
+    }
   })
 
   it('offers no exchange while the parties stand apart', async () => {

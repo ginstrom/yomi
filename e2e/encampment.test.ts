@@ -172,6 +172,19 @@ describe('the encampment', () => {
     await game.waitForScenes(['World'])
     const map = await game.settled('World')
     expect(map.parties.map((p) => [p.name, p.members])).toEqual([['First Company', 2], ['Scouts', 2]])
+
+    // Back in the hall, Disband sends the second party's heroes to the reserves.
+    const camp2 = await enter(game)
+    await game.click(facility(camp2, 'guild_hall'))
+    await game.click((await game.settled('Encampment', (c) => c.selected === 'guild_hall')).buttons.open)
+    await game.waitForScenes(['GuildHall'], ['World'])
+    const hall2 = await game.settled('GuildHall', (h) => h.columns.length === 3)
+    await game.click(hall2.columns[1].faces[0])
+    const second = await game.settled('GuildHall', (h) => h.selected?.party === 'party_2')
+    await game.click(second.buttons.disband)
+    const disbanded = await game.settled('GuildHall', (h) => h.columns.length === 2)
+    expect(disbanded.reserves).toHaveLength(2)
+    expect(disbanded.message).toContain('Scouts is disbanded')
   })
 
   it('refuses a second party at hall level 3 and the last party disbanded', async () => {

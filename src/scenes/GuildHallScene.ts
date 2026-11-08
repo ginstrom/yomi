@@ -71,7 +71,7 @@ const headerAt = (column: number, count: number): Point => ({ x: columnLeft(colu
 const rosterFaceAt = (column: number, count: number, index: number): Point => ({ x: columnLeft(column, count) + FACE_SIZE / 2 + 8, y: FIRST_FACE_Y + index * FACE_ROW_PITCH })
 
 /** What the message line says until something is done. */
-const HINT = 'Click a hero, then a hero of another column to swap the two, or that column\'s heading to move it there.'
+const HINT = 'Click a hero, then a hero of another column to swap the two, or that column\'s heading to move it there. Pick a hero to Form party, or a party\'s hero to Rename or Disband it.'
 const FONT = 'monospace'
 const GOLD = '#e8c766'
 const DIM = '#8a7a5a'
@@ -363,11 +363,13 @@ export class GuildHallScene extends Phaser.Scene {
   private act(refusal: string | null, done: string): void {
     this.message = refusal ?? done
     this.selected = null
+    this.renaming = null
     this.render()
   }
 
   private onFace(party: string | null, index: number): void {
     const picked = this.selected
+    this.renaming = null
     if (picked && picked.party !== party) {
       const [leaving, joining] = [this.heroAt(picked), this.heroAt({ party, index })]
       this.act(hallAct(this.gameState, picked, { party, index }), `${leaving} and ${joining} change places.`)
