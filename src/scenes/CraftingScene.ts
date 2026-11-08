@@ -5,7 +5,7 @@ import type { WorldEvent } from '../game/blight.ts'
 import { describeCost } from '../game/buildings.ts'
 import { craft, craftTier, craftables, highestGrade, options, type CraftOption } from '../game/crafting.ts'
 import type { Expedition } from '../game/expedition.ts'
-import { partyById, selectedParty, type GameState } from '../game/gameState.ts'
+import { selectedParty, type GameState } from '../game/gameState.ts'
 import { itemAt, placeKey, type ItemPlace } from '../game/itemPlace.ts'
 import { embed, extract, fuse, socketables } from '../game/runecraft.ts'
 import { gradeNumeral } from '../inventory/grades.ts'
@@ -222,12 +222,12 @@ export class CraftingScene extends Phaser.Scene {
 
   /** The AP of whoever holds the item at `place`, which tells its attacks a turn. */
   private apAt(place: ItemPlace): number {
-    return place.from === 'baggage' ? TYPICAL_AP : deriveCombatStats(this.ownerOf(place).members[place.member]).actionPoints
+    return place.from === 'baggage' ? TYPICAL_AP : deriveCombatStats(this.expedition.members[place.member]).actionPoints
   }
 
   /** The strength of whoever holds the item at `place`, which tells its shortfall; none for the baggage. */
   private strengthAt(place: ItemPlace): number | undefined {
-    return place.from === 'baggage' ? undefined : attributeLevel(this.ownerOf(place).members[place.member], 'strength')
+    return place.from === 'baggage' ? undefined : attributeLevel(this.expedition.members[place.member], 'strength')
   }
 
   /** What working the item at `place` with `option` changes, and what it costs. */
@@ -240,15 +240,10 @@ export class CraftingScene extends Phaser.Scene {
     return [does, `Makes the ${option.result.name}.`, ...replaces, ...lines, `Costs ${describeCost(option.cost)}${time}.`]
   }
 
-  /** The party whose place it is. */
-  private ownerOf(place: ItemPlace): Expedition {
-    return partyById(this.gameState, place.party) ?? this.expedition
-  }
-
   /** Where an item lies, in words: "Aldric, Weapon (worn)", "Brenna's pack", "baggage". */
   private whereIs(place: ItemPlace): string {
     if (place.from === 'baggage') return 'baggage'
-    const name = this.ownerOf(place).members[place.member].name
+    const name = this.expedition.members[place.member].name
     return place.from === 'worn' ? `${name}, ${EQUIPMENT_SLOT_LABELS[place.slot].toLowerCase()}` : `${name}'s pack`
   }
 
