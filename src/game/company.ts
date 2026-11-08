@@ -7,7 +7,7 @@ import { canCamp, partyWounded, rest } from './camp.ts'
 import { applyCraft, craftRefusal, craftTier } from './crafting.ts'
 import { MAX_PARTIES, PARTY_NAMES, newExpedition, partyId, presences, type DayAction, type Expedition, type Order, type PartyPresence } from './expedition.ts'
 import { partyById, type GameState } from './gameState.ts'
-import { MAX_RESERVES, homeParties, maxParties, partyLimit, rested } from './guildHall.ts'
+import { MAX_RESERVES, homeParties, noPartyHome, maxParties, partyLimit, rested } from './guildHall.ts'
 import { autoHeal } from './party.ts'
 import { applyEmbed, embedRefusal } from './runecraft.ts'
 import { NOTICE_RADIUS, encampment, encampmentName, isNotable, locationAt, monstersHere, passTurn, routeTo, theName, worldActive, type WorldState } from './worldMap.ts'
@@ -500,8 +500,6 @@ function nameRefusal(game: GameState, name: string, except?: string): string | n
   if (game.parties.some((p) => p.id !== except && p.name.toLowerCase() === trimmed.toLowerCase())) return `${trimmed} is already a party's name.`
   return null
 }
-
-const noPartyHome = (game: GameState): string => `No party is at ${encampmentName(game.world)}.`
 
 interface Located {
   hero: Character

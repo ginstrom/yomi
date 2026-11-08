@@ -197,3 +197,7 @@ Done by the engineer, one commit "Stage 6 step 04: the guild hall's company".
 - Simulator: `SIM_HALL_CAP = 3` in `hallErrand`, `visitGuildHall` and `materialNeeds`; step 10 replaces it with the `--parties` mapping.
 - Evidence: `npm test` 80 files, 1407 tests passed; the refactor guard unedited and green. 50-campaign check (`--campaign --battles 50 --seed 1`): output identical to step 01's apart from the path, hash `068016a82040ec5be673084265005a7218f0ce927629880565c1a27a8cf52d76` (the recruit rule moved nothing in 50 campaigns). Steps 05-08 match this unchanged baseline.
 - The 500-campaign figure was not re-run (step 11).
+
+### Review round 1 (coordinator)
+
+Review clean; three nits, all fixed in a follow-up commit: the manual's recruit sentence (now "at the hall's level"), CLAUDE.md's simulator line (hall raised only to level 3, `SIM_HALL_CAP`), and `noPartyHome` exported once from `guildHall.ts` and imported by `company.ts` and `encampment.ts`.

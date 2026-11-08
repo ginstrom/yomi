@@ -2,7 +2,7 @@ import { SHRINE_STRENGTH } from './blight.ts'
 import { MAX_SHRINE_LEVEL, canAfford, describeCost, raiseShrine, shrineCost } from './buildings.ts'
 import type { Expedition } from './expedition.ts'
 import type { GameState } from './gameState.ts'
-import { GUILD_HALL_LEVELS, MAX_GUILD_HALL_LEVEL, homeParty, upgradeCost, upgradeGuildHall } from './guildHall.ts'
+import { GUILD_HALL_LEVELS, MAX_GUILD_HALL_LEVEL, homeParty, noPartyHome, upgradeCost, upgradeGuildHall } from './guildHall.ts'
 import { MAX_WORKSHOP_LEVEL, upgradeWorkshop, workshopCost } from './crafting.ts'
 import { MAX_INFIRMARY_LEVEL, infirmaryCost, infirmaryEffect, raiseInfirmary } from './infirmary.ts'
 import type { Stock } from './territory.ts'
@@ -166,8 +166,6 @@ export function setFacilityLevel(game: GameState, id: FacilityId, level: number)
   const field = { guild_hall: 'guildHall', shrine: 'shrine', trading_post: 'tradingPost', workshop: 'workshop', infirmary: 'infirmary' } as const
   game.world[field[id]] = level
 }
-
-const noPartyHome = (game: GameState): string => `No party is at ${encampmentName(game.world)}.`
 
 /** The encampment acts for the party at home (`homeParty`): `party` if it is, else the first that is. */
 function improveRefusal(game: GameState, party: Expedition, cost: Stock | null): string | null {

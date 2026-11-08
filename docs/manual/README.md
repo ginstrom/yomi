@@ -472,7 +472,7 @@ In the encampment, click the guild hall and then **Enter the Guild Hall**. It sh
 
 ![Recruiting](images/guild-hall-recruit.png)
 
-You can recruit one of the pre-rolled heroes not already in your company, or **Create new** to make one with character creation. A recruit joins at the hall's level or your party's lowest level, whichever is lower, with that level's points left for you to spend.
+You can recruit one of the pre-rolled heroes not already in your company, or **Create new** to make one with character creation. A recruit joins at the hall's level, with that level's points left for you to spend.
 
 ### Gear families
 

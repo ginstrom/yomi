@@ -79,6 +79,9 @@ export function homeParties(game: GameState): Expedition[] {
   return game.parties.filter((party) => atGuildHall(game.world, party))
 }
 
+/** Why nothing can be done at the encampment: no party stands there. */
+export const noPartyHome = (game: GameState): string => `No party is at ${encampmentName(game.world)}.`
+
 /** The party the encampment acts for: `preferred` if it is at home, else the first party at home, else none. */
 export function homeParty(game: GameState, preferred?: string): Expedition | null {
   const home = homeParties(game)
