@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 6 (multiple parties)
 
 **Slug:** long-campaign-stage-06
-**Phase:** implementation (steps 07, 09)
+**Phase:** implementation (steps 08, 10 review)
 
 ## Request (user's words)
 
@@ -73,4 +73,6 @@ Large/structural, but the stage design is the approved design (marked ready for 
 - Step 10 runs in the step-09 worktree in parallel with step 07.
 - Step 07 (ad65dcb, d1332d4, opus): banners, every party drawn, Home/Garrison, meet by click, interrupt/refusal focus, walkTo/followOrder; carry-overs: setOrder refuses travel to a nest another party holds (refuse, not warn), hall level cap removed, defeat focuses parties[0]; npm test 1434; browser 104/104; build; 50 hash identical.
 - Step 07 review (opus): clean; confirmed orchestrator's screenshot impressions. Fixing: shared-hex figures overlap (spread 14px), banner pole foot under the strip's hp bar, selected figure unmarked on a shared hex, Home button vs Home key (→ 'Return home'). Orchestrator amends decision 10: strip entries show a short party name when 2+ parties.
+- Step 07 fix (58c042f): figures 30px apart, banners kept visible; banner inside the portrait; short names on the strip with 2+ parties; gold ring + pointer on the selected figure; 'Return home'. npm test 1435; world+battle e2e 59. Orchestrator viewed retaken 840 shot: reads well; accepted without re-review.
+- Step 10 (4b23fac, 7e015f9, opus, worktree): guard policy; --parties default 3; --parties 1 hash 47043dc0… unchanged; npm test 1457. 500 × --parties 3: 240/500, hall ≥4 in 16, 0.0 promotions, 0.3 guard battles, 57.9 vanguard walk-home days. Unplanned rule: vanguard walks home to form a guard. Runtime ~7.5 min (contended). Under review: why 0 promotions.
 
