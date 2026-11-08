@@ -1881,8 +1881,8 @@ describe('BattleEngine strike routines and recharge', () => {
   const bite = (target: string): Action => ({ type: 'ability', unit: 'spider', ability: 'spider_bite', target })
   const NAMED = { ...NAMES, troll: 'Troll', spider: 'Spider', zed: 'Zed' }
 
-  it('raises the log schema to 23 (stage 4 step 05, AttackEvent.bonus; 22 was stage 3 step 05, AttackEvent.melee)', () => {
-    expect(LOG_SCHEMA_VERSION).toBe(23)
+  it('raises the log schema to 24 (stage 6 step 09, battle_start meta party and role; 23 was stage 4 step 05, AttackEvent.bonus)', () => {
+    expect(LOG_SCHEMA_VERSION).toBe(24)
   })
 
   it('makes one attack per strike, the first carrying the ability’s AP and the rest none', () => {
@@ -2550,8 +2550,8 @@ describe('BattleEngine on-hit effects', () => {
     expect(formatEvent(attack, NAMED)).toBe('Warrior rolls 50 (needs 60 or less) — HITS Troll for 6 dmg (armour stops 1).')
   })
 
-  it('is logged under schema version 23', () => {
-    expect(LOG_SCHEMA_VERSION).toBe(23)
-    expect(new BattleEngine(DUEL).getLog()[0]).toMatchObject({ schemaVersion: 23 })
+  it('is logged under schema version 24', () => {
+    expect(LOG_SCHEMA_VERSION).toBe(24)
+    expect(new BattleEngine(DUEL).getLog()[0]).toMatchObject({ schemaVersion: 24 })
   })
 })

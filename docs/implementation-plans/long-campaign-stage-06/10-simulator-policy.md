@@ -210,14 +210,44 @@ No change to the vanguard's targeting beyond 4.1 and the distinct-targets skip; 
 
 ## 6. Completion criteria
 
-- [ ] `HALL_FOR_PARTIES` replaces `SIM_HALL_CAP` in `hallErrand`, `visitGuildHall` and `materialNeeds`.
-- [ ] Guards are formed at the hall (decision 16) and decide reinforce → defend → train → garrison → home/idle, with distinct targets and never the Source; promotions run through `exchange`.
-- [ ] The vanguard drops the recruit errand while a guard exists; succession after a vanguard wipe; `fallen` only with no hero left.
-- [ ] `needsDecision` re-asks garrisoned or idle guards after every `advance`; `advance`'s limit is `IDLE_DAYS` when nothing runs.
-- [ ] `--parties` defaults to 3.
-- [ ] Policy tests on fixed states pass; the guard test and the 50-campaign check (`--parties 1`) identical to step 09's.
-- [ ] The 20-campaign smoke run recorded, with promotions and guard battles above 0 (or explained).
-- [ ] CLAUDE.md's simulator paragraph updated; one commit; the index row updated with status and hash.
+- [x] `HALL_FOR_PARTIES` replaces `SIM_HALL_CAP` in `hallErrand`, `visitGuildHall` and `materialNeeds`.
+- [x] Guards are formed at the hall (decision 16) and decide reinforce → defend → train → garrison → home/idle, with distinct targets and never the Source; promotions run through `exchange`.
+- [x] The vanguard drops the recruit errand while a guard exists; succession after a vanguard wipe; `fallen` only with no hero left.
+- [x] `needsDecision` re-asks garrisoned or idle guards after every `advance`; `advance`'s limit is `IDLE_DAYS` when nothing runs.
+- [x] `--parties` defaults to 3.
+- [x] Policy tests on fixed states pass; the guard test and the 50-campaign check (`--parties 1`) identical to step 09's.
+- [x] The 20-campaign smoke run recorded, with promotions and guard battles above 0 (or explained).
+- [x] CLAUDE.md's simulator paragraph updated; one commit; the index row updated with status and hash.
 
 ## 7. Execution record
 
+Branch `long-campaign-stage-06-simrecord` (worktree, off step 09's `564772c`), the user having confirmed decision 16 as written.
+
+**Done** (all in `scripts/simulate.ts`, `scripts/simulate.test.ts`, CLAUDE.md's simulator paragraph):
+- `HALL_FOR_PARTIES = [3, 4, 5]`, `hallCap(parties)`; `hallErrand(game, party, parties = 1, guarded = false)`, `visitGuildHall(game, party, parties = 1)`, `materialNeeds(game, parties = 1)`, `visitFacilities(game, party, parties = 1)` (defaults keep the old one-party behaviour for the existing tests). `SIM_HALL_CAP` is gone.
+- `formGuard(game, parties)`, run from `carryOut`'s `hall` after `visitGuildHall` (the acting party filled first) and before `visitFacilities`; it loops, so a level 5 hall can form two at once. Role `guard`, a new plan, recruits counted.
+- `guardChoice` / `decideGuard` (decision 16), the Decision union widened to every `OrderRequest`, plus `promote` (the exchange, `promotedIndex`) and `stand` (idle, or garrison kept; returns `'standing'`). The vanguard's chain from `fight` to `camp` is now `afterBattle`, shared by both policies. `takenTargets` keeps nests distinct; `nextTarget` gained `taken` (falls back to every nest when a guard holds them all). Guards never take the Source.
+- Succession: `strongestParty`; the new vanguard's plan reset, its guard walk stopped (idle), or, if it already confronts a nest, aimed at it; `decide`'s `start` fights a nest the party confronts (never reached with one party).
+- Loop: `playRound` (one round; `runCampaign` loops it), `needsDecision(run, …)` re-asks garrisoned guards, `advanceLimit` (`IDLE_DAYS` 10 when nothing runs). A walk stopped a hex short of another party's monsters is not stalled. `--parties` defaults to 3.
+- Review items from step 09: (1) `socketsFilled` is now counted before the wipe when the company falls (stage 5's meaning); (2) `deaths`/`deathsAtLevel` stay heroes dead in battles won (record fields are fixture-bound), and the summary line now says "heroes dead in battles won (a wiped party's not counted)"; wipes stay on the Company line; (3) the Vanguard/Guards lines name the campaigns their levels cover (`RoleSummary.campaigns`). The summary also counts campaigns ending with the hall at 4+ and 5 (`hallFour`, `hallFive`).
+
+**Deviations.** `hallErrand` has a third clause, walking home to form a guard (`guardWanted`: under `--parties` and the hall's parties, 3 heroes affordable); without it a guard formed only by chance on another errand. Never true with `--parties 1`. Guards run the hall's errands when they arrive home and when idle at home with a hall errand (once a day at most).
+
+**Verification.**
+- Refactor guard (fixture untouched) green. 50-campaign `--parties 1`: `47043dc0bca21b318808860abbcedb688947bfa7ba16e0db12b5838c72c5d41c`, identical to step 09; the summary differs only in the labels of three lines and the added hall counts (all figures equal).
+- `npm test`: 80 files, 1457 tests passed. Simulator file: 100 tests, 23 new under `the company policy` (each branch, reinforcement end to end, refused exchange, succession, fallen only at `heroesLeft` 0, sockets as fallen, distinct targets/no Source, hall cap 1/2, form errand, forming, re-asking, `IDLE_DAYS`, rounds without spinning). Mutations of the promoted hero, the advance limit, the garrison re-ask, the taken-target filter and succession order each fail a test.
+- Smoke, 20 campaigns, default parties: Source 11, fallen 9, timeout 0; promotions 0.0, guard battles 0.6, wipes 0.5, hall 2.5 (1 campaign at 4+), vanguard walk-home 64.8 days. With `--ready-level 10`: Source 15, fallen 5; promotions 0.0, guard battles 6.5, wipes 0.4, hall 3.2 (12 at 4+, 1 at 5), walk-home 101.6 days.
+- 500 campaigns, default (`--parties 3`), seed 1: Source 240 of 500 (48.0%), fallen 260, 274 days, 18.6 battles; hall 2.4, at 4+ in 16 campaigns, 5 in 0; promotions 0.0, guard battles 0.3, wipes 0.5, walk-home 57.9 days. It took 7.5 min of CPU against about a minute before (partly an `npm test` run alongside); step 11 should time it alone.
+
+**Why promotions are 0.** Guards exist only from hall 4, which few campaigns reach before the Source at `--ready-level 7`. At `--ready-level 10` (100 campaigns, a scratch tally): 64 reached hall 4, still 0 promotions. Over 40 campaigns the vanguard was short of its limit while a guard existed in exactly one round each in 17 campaigns, always after the Source battle that ended the campaign: by hall 4 the vanguard (level 8+, full) no longer loses heroes in won battles. Reinforcement works on fixed states (the end-to-end test). Step 11's `--ready-level 10` measure will show this; making promotions happen is a tuning question for the user (for example the hall costs), not this step's.
+
+**A bug found by the smoke run** (fixed and tested): a guard made the vanguard while walking reached its nest under a vanguard plan, so its `home` walk was refused (confronting) and the campaign ended `timeout` on day 480.
+
+**Review round 1** (found 2, fixed 2, disputed 0; the review otherwise clean, the 7.5 min being contention: alone 100 campaigns take about 61 s at `--parties 1` and 63 s at 3).
+1. The defend test did not pin the hardest push or the site nearest to falling. New test: two threatened held sites, the old quarry (the later id) falling at once (level `LOSS_LEVEL`) and the crystal cave in 6 days, and at the quarry the hardest pusher beside it and a weaker one (lower id) two hexes off: the guard defends against the hardest at the quarry. Breaking the days sort or the hardest-push choice each fails it.
+2. A guard worn below `GUARD_MIN_SIZE` never went home to refill. `guardChoice` now sends it home (after reinforce, before defend) while a recruit can be had (`canHire`: the stock affords one, room in the company and the reserves); there the hall fills its places. Fixed-state test written first (red: it chose train).
+- Verification: 50-campaign `--parties 1` hash `47043dc0…c5d41c` unchanged; `npm test` 80 files, 1459 tests; simulator file 102. Smoke 20 at `--ready-level 10`: Source 15, fallen 5, guard battles 5.6, wipes 0.3, promotions 0.0.
+
+**Round 2: the swap promotion** (decision 16 amended by the user; the index's text updated). `canReinforce` also holds when the vanguard is full and the guard's best outranks its lowest by `SWAP_LEVELS` (2) or more (no guard-size condition: a swap leaves the guard its size); `promote` then makes `exchange`'s `swap` of the guard's best (`promotedIndex`) and the vanguard's weakest (`weakestIndex`, the first on a tie), counted in `promotions`, the guard recalled home as after any promotion. The short-vanguard promotion is unchanged. Tests first (red: the choice was train): a full vanguard at +2 reinforces, at +1 does not, and the swap end to end. Three earlier tests whose guards outranked a level 1 vanguard (the refill, train/home and distinct-targets tests) now raise the vanguard to the guard's level, so they still test what they meant.
+- 50-campaign `--parties 1` hash `47043dc0…c5d41c` unchanged; `npm test` 80 files, 1462 tests; simulator file 105.
+- 100 campaigns, seed 1, `--ready-level 10`: `--parties 3` Source 78, fallen 22, promotions 0.1, guard battles 5.9, wipes 0.3, vanguard walk-home 93.9 days (hall 4+ in 64); `--parties 1` Source 78, fallen 22, promotions 0.0, guard battles 0.0, wipes 0.2, walk-home 64.5 days. Swaps are rare because guards end near level 6 against a level 10 vanguard: the +2 rule seldom holds.
