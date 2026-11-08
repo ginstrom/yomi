@@ -215,12 +215,31 @@ Run the guard test and the 50-campaign check. They must be identical before you 
 
 ## 6. Completion criteria
 
-- [ ] `runCampaign` passes time only through `advance`, `passDay` or `act`, with a per-party policy deciding for each idle or interrupted party.
-- [ ] Re-issuing on an interrupt matches today's re-calls: fresh travel routes, and `autoHeal` before each new camp order.
-- [ ] The guard test passes unchanged. The 50-campaign summary and hash are identical to step 01's, after both build stages, recorded below.
-- [ ] The policy's decision tests are added and pass. `npm test` passes.
-- [ ] CLAUDE.md's simulator paragraph (`--campaign`) says that a campaign runs on the company's day loop, a policy giving the idle party its next order, errand or day's act, with the same decisions as before. Search CLAUDE.md for any other line this makes wrong (for example "walks a day a hex", "calls `travel` and `campUntilHealed`").
-- [ ] One commit, `Stage 5 step 08: the simulator on the day loop`. The index's table shows step 08 as done with its hash.
+- [x] `runCampaign` passes time only through `advance`, `passDay` or `act`, with a per-party policy deciding for each idle or interrupted party.
+- [x] Re-issuing on an interrupt matches today's re-calls: fresh travel routes, and `autoHeal` before each new camp order.
+- [x] The guard test passes unchanged. The 50-campaign summary and hash are identical to step 01's, after both build stages, recorded below.
+- [x] The policy's decision tests are added and pass. `npm test` passes.
+- [x] CLAUDE.md's simulator paragraph (`--campaign`) says that a campaign runs on the company's day loop, a policy giving the idle party its next order, errand or day's act, with the same decisions as before. Search CLAUDE.md for any other line this makes wrong (for example "walks a day a hex", "calls `travel` and `campUntilHealed`").
+- [x] One commit, `Stage 5 step 08: the simulator on the day loop`. The index's table shows step 08 as done with its hash.
 
 ## 7. Execution record
 
+Run on `long-campaign-stage-05` from `073ba25`, Node 26.13.0.
+
+**Stage 1 (swap the calls).** Already done by steps 06 and 07: at `073ba25`, `runCampaign` reached time only through `travel`, `campUntilHealed`, `buildTower`, `buildOutpost` and `craftGear` (→ `craft`), all conveniences over `advance` or `act`. So stage 1 changed no code; the guard was run on the tree as found: `npm run -s simulate -- --campaign --battles 50 --seed 1 --out logs/guard-50.jsonl > logs/guard-50.txt` gave SHA-256 `068016a82040ec5be673084265005a7218f0ce927629880565c1a27a8cf52d76` and a summary identical to step 01's (`diff` empty). **Guard identical.**
+
+**Stage 2 (the policy loop).** `scripts/simulate.ts`:
+- `Plan` (a `Phase`, the walk's `to`, the `target`, `stalled`, the `running` order), one per party by id in `CampaignRun.plans` (`planOf`), so stage 6 can add a second party's plan or policy by id.
+- `decide(run, party): Decision` moves the plan through today's phases (start → home → hall → choose → target → fight → won → tower → outpost → build → craft → crafted → heal ⇄ camp → start) and returns `finish`, `hall`, `fight`, `order` (travel, camp or idle), `act` (tower, outpost) or `craft`, or `heal` (the `autoHeal` that `campUntilHealed` cast before each camp).
+- `carryOut(run, party, decision)` does it: errands at once, acts through `act` (the field craft through `craftGear` → `craft` → `act`), orders through `setOrder`. A travel order mirrors the `travel` convenience: refused, it changes nothing; with a nest on the first hex it goes idle and sets `confronting` from `monstersHere`; either way the walk is `stalled` (today's empty journey, `walkTo` false).
+- `runCampaign` asks the policy for every party that is idle or concerned by the last report's interrupt (or every party when the days stopped for another reason) until each holds an order, then `advance(game, Infinity)`; `takeDays` tallies every report's events, sets `stalled` and `confronting` after a walk, and adds a camp's days, rest and casts to the record. Time passes only through `advance` and `act`.
+- `walkTo`'s checks are `walking()`: stalled → false, at `to` → true, world not active or `turn > MAX_CAMPAIGN_DAYS` → false, else a fresh travel order. Each outcome feeds the same `finish` at the same point as before.
+- Exported for the tests: `Phase`, `Plan`, `newPlan`, `Decision`, `CampaignRun`, `startCampaign`, `planOf`, `decide`, `carryOut`. The other exported helpers are unchanged.
+
+**Guard after stage 2.** Same command: SHA-256 `068016a82040ec5be673084265005a7218f0ce927629880565c1a27a8cf52d76`, summary identical to step 01's line for line (`diff` empty), run twice (before and after the docs and tests). `npx vitest run scripts/simulate.test.ts -t "refactor guard"`: 1 passed, fixture untouched. **Guard identical.**
+
+**Tests.** New `describe('the campaign’s policy on the day loop')` in `scripts/simulate.test.ts`, 6 tests: home errands then a travel order to `nextTarget`; away with a hall errand, a travel order home; at and confronting its target, a fight; wounded after a win, a heal then a camp order, and a party whole after the cast an idle order and no day camped; a walk cut short by a `sighted` interrupt ordered again to the same hex on a freshly planned route (the stale route overwritten in the test to prove it is replaced); the tower and the field craft as acts, a day each. They were written after the code; each was checked to fail against a mutation of the behaviour it covers (no re-plan, camping when whole, no tower, no hall errand). `npm test`: 80 files, 1321 tests passed.
+
+**Docs.** CLAUDE.md's `--campaign` paragraph says the campaign runs on the company's day loop, through `decide` and `carryOut`, with the same decisions; its `campUntilHealed` mention there is replaced by the `autoHeal` and camp it now does.
+
+**Deviations.** None in behaviour. `company.ts` is unchanged. The 500-campaign check was not run (step 10's). For stage 6: acts run inside a party's decision, so with two parties a party's act would pass a day for both; stage 6 should gather acts as day orders before one `passDay`.

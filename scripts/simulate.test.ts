@@ -8,18 +8,20 @@ import { canAdvance } from '../src/character/progression.ts'
 import { newGame } from '../src/game/gameState.ts'
 import { heroId } from '../src/game/encounters.ts'
 import { readyMadeParty } from '../src/game/party.ts'
-import { OUTPOST_COST } from '../src/game/buildings.ts'
+import { OUTPOST_COST, TOWER_COST } from '../src/game/buildings.ts'
+import { advance } from '../src/game/company.ts'
 import { craft } from '../src/game/crafting.ts'
 import type { FamilyId } from '../src/inventory/catalog.ts'
 import { itemById, unruned } from '../src/inventory/inventory.ts'
 import { modifiersFor } from '../src/inventory/modifiers.ts'
 import { maxHp } from '../src/character/character.ts'
+import { worldHealing } from '../src/character/worldCasting.ts'
 import { lootRng, rollRunes } from '../src/game/loot.ts'
 import { runePrice, salePrice } from '../src/game/tradingPost.ts'
 import { pouchKeys } from '../src/inventory/runes.ts'
 import { extractRefusal } from '../src/game/runecraft.ts'
 import type { EncounterId } from '../src/game/encounters.ts'
-import { SOURCE_ID, type MonsterLocation } from '../src/game/worldMap.ts'
+import { ENCAMPMENT_ID, SOURCE_ID, routeTo, type MonsterLocation } from '../src/game/worldMap.ts'
 import {
   CAMPAIGN_SEED_STEP,
   MAX_CAMPAIGN_DAYS,
@@ -39,6 +41,10 @@ import {
   RUNE_ORDER,
   runecraftGear,
   visitGuildHall,
+  carryOut,
+  decide,
+  planOf,
+  startCampaign,
   type CampaignRecord,
   type LoggedEvent,
 } from './simulate.ts'
@@ -729,6 +735,114 @@ const GUARD_RECORDS: CampaignRecord[] = [
   { outcome: 'fallen', days: 62, battles: 5, spawns: 6, captured: 0, lost: 0, blighted: 0.41791666666666666, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 2, recruits: 0, hallLevel: 2, shrineLevel: 1, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 102, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 3, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [4], deathsAtLevel: [3, 3], battlesToLevel: {} },
 ]
 const GUARD_EVENTS_SHA256 = 'c5c83f8e83d614381e6bd76e5bee1075e5d7b66c6cf9b5873eafce41453b2769'
+
+describe('the campaign’s policy on the day loop', () => {
+  const args = parseArgs(['--campaign'])
+  const campaignOf = (setUp: (game: ReturnType<typeof newGame>) => void = () => {}) => {
+    const game = newGame(undefined, null, 1)
+    setUp(game)
+    const run = startCampaign(0, 1, args, 0, game)
+    return { run, game, party: game.parties[0], plan: planOf(run, game.parties[0]) }
+  }
+  const home = (game: ReturnType<typeof newGame>) => game.world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
+
+  it('runs the home errands at the guild hall, then orders the walk to the next target', () => {
+    const { run, game, party } = campaignOf((game) => (game.world.stock = { gold: 100, iron: 50 }))
+    expect(hallErrand(game, party)).toBe(true)
+    expect(decide(run, party)).toEqual({ kind: 'hall' })
+    expect(carryOut(run, party, { kind: 'hall' })).toBeNull()
+    expect(game.world.guildHall).toBe(3)
+    expect(party.members).toHaveLength(4)
+    expect(run.record.recruits).toBe(1)
+    const target = nextTarget(game.world, party, args.readyLevel)!
+    expect(decide(run, party)).toEqual({ kind: 'order', order: { kind: 'travel', to: target.position } })
+    expect(game.world.turn).toBe(1)
+  })
+
+  it('orders the walk home when there is a hall errand away from home', () => {
+    const { run, game, party } = campaignOf((game) => {
+      game.world.stock = { gold: 100, iron: 50 }
+      game.parties[0].position = { q: game.parties[0].position.q + 2, r: game.parties[0].position.r }
+    })
+    expect(decide(run, party)).toEqual({ kind: 'order', order: { kind: 'travel', to: home(game) } })
+    expect(carryOut(run, party, decide(run, party))).toBe('standing')
+    expect(party.order).toMatchObject({ kind: 'travel', to: home(game) })
+  })
+
+  it('fights the target it has walked to and confronts, giving no new order', () => {
+    const { run, game, party, plan } = campaignOf()
+    const target = nextTarget(game.world, party, args.readyLevel)!
+    party.position = target.position
+    party.confronting = target.id
+    Object.assign(plan, { phase: 'target', to: target.position, target })
+    expect(decide(run, party)).toEqual({ kind: 'fight', target })
+    expect(party.order.kind).toBe('idle')
+  })
+
+  it('casts the heals and orders a camp for a party wounded after a win, and no camp for one the cast makes whole', () => {
+    const away = (game: ReturnType<typeof newGame>) => (game.parties[0].position = { q: game.parties[0].position.q + 1, r: game.parties[0].position.r })
+    const wounded = campaignOf(away)
+    wounded.plan.phase = 'heal'
+    wounded.party.members[0].hp = 1
+    for (const member of wounded.party.members) member.mana = 0
+    expect(decide(wounded.run, wounded.party)).toEqual({ kind: 'heal' })
+    expect(carryOut(wounded.run, wounded.party, { kind: 'heal' })).toBeNull()
+    expect(decide(wounded.run, wounded.party)).toEqual({ kind: 'order', order: { kind: 'camp' } })
+    expect(carryOut(wounded.run, wounded.party, { kind: 'order', order: { kind: 'camp' } })).toBe('standing')
+    expect(wounded.party.order.kind).toBe('camp')
+
+    const scratched = campaignOf(away)
+    scratched.plan.phase = 'heal'
+    // Wounded by what one Heal restores, which the mage casts.
+    scratched.party.members[0].hp = maxHp(scratched.party.members[0]) - worldHealing('heal')
+    expect(decide(scratched.run, scratched.party)).toEqual({ kind: 'heal' })
+    carryOut(scratched.run, scratched.party, { kind: 'heal' })
+    expect(scratched.run.record.healedHp).toBe(worldHealing('heal'))
+    expect(decide(scratched.run, scratched.party)).toEqual({ kind: 'order', order: { kind: 'idle' } })
+    expect(carryOut(scratched.run, scratched.party, { kind: 'order', order: { kind: 'idle' } })).toBeNull()
+    // Whole, it goes round again: home's errands, then the next target.
+    expect(decide(scratched.run, scratched.party)).toMatchObject({ kind: 'order', order: { kind: 'travel' } })
+    expect(scratched.game.world.turn).toBe(1)
+  })
+
+  it('orders a walk cut short again, on a route planned afresh from where the party stands', () => {
+    const { run, game, party, plan } = campaignOf()
+    const to = { q: party.position.q + 20, r: party.position.r }
+    Object.assign(plan, { phase: 'target', to, target: null })
+    expect(decide(run, party)).toEqual({ kind: 'order', order: { kind: 'travel', to } })
+    expect(carryOut(run, party, { kind: 'order', order: { kind: 'travel', to } })).toBe('standing')
+    const reports = advance(game, Infinity)
+    expect(reports.at(-1)!.interrupt?.event.type).toBe('sighted')
+    expect(party.position).not.toEqual(to)
+    // The order still stands on its old route; the policy replaces it.
+    expect(party.order.kind).toBe('travel')
+    if (party.order.kind === 'travel') party.order.route = [to]
+    const decision = decide(run, party)
+    expect(decision).toEqual({ kind: 'order', order: { kind: 'travel', to } })
+    const fresh = routeTo(game.world, party, to)
+    carryOut(run, party, decision)
+    expect(party.order).toEqual({ kind: 'travel', to, route: fresh })
+  })
+
+  it('builds the tower and makes the field craft after a win as acts, a day each', () => {
+    const { run, game, party, plan } = campaignOf((game) => {
+      game.parties[0].position = { q: game.parties[0].position.q + 2, r: game.parties[0].position.r }
+      game.world.stock = { ...TOWER_COST, gold: (TOWER_COST.gold ?? 0) + 50, iron: (TOWER_COST.iron ?? 0) + 50, timber: 9 }
+    })
+    plan.phase = 'tower'
+    expect(decide(run, party)).toEqual({ kind: 'act', action: { kind: 'tower' } })
+    carryOut(run, party, { kind: 'act', action: { kind: 'tower' } })
+    expect(game.world.turn).toBe(2)
+    expect(game.world.towers).toHaveLength(1)
+    expect(run.record.towersBuilt).toBe(1)
+    // No outpost: the stock lacks its timber.
+    expect(decide(run, party)).toEqual({ kind: 'craft' })
+    carryOut(run, party, { kind: 'craft' })
+    expect(game.world.turn).toBe(3)
+    expect(run.record).toMatchObject({ crafted: 1, fieldCraftDays: 1 })
+    expect(party.order.kind).toBe('idle')
+  })
+})
 
 describe('the refactor guard', () => {
   it('plays 5 seeded campaigns exactly as it did before stage 5', () => {
