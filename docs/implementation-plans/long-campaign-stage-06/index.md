@@ -211,7 +211,7 @@ guardBattles: number
 | Step | Task | Outcome | Depends on | Engineer / reviewer | Status |
 | --- | --- | --- | --- | --- | --- |
 | 01 | [The simulator's days on the loop](01-simulator-days.md) | Baseline figures; `startTravel`, `orderAction` (C1); acts and field crafts as day orders; vanguard in the run; `campDays` once; guard identical | — | opus / opus | done (d71a415) |
-| 02 | [A saved battle names its party](02-saved-battle-party.md) | `SavedBattle.party`, save 21 (C2); load fights the right party; guard identical | — | sonnet / opus | done |
+| 02 | [A saved battle names its party](02-saved-battle-party.md) | `SavedBattle.party`, save 21 (C2); load fights the right party; guard identical | — | sonnet / opus | done (8971db5) |
 | 03 | [Orders for a company](03-company-orders.md) | home, garrison, meet; `met`; stopping short; `partyNoun`, `blockingParty`; save 22; two-party tests (A3–A6); guard identical | 01, 02 | opus / opus | pending |
 | 04 | [The guild hall's company](04-guild-hall-company.md) | Hall levels 4 and 5; form, rename, disband, move heroes; recruits at the hall's level; encampment acts for the party at home (C4); guard test green | 03 | sonnet / opus | pending |
 | 05 | [Exchange and wipes](05-exchange-and-wipes.md) | `exchange`, `wipeParty` (C5); the new loss condition; BattleScene's defeat; debug `hp`; guard identical | 04 | opus / opus | pending |
