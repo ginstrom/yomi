@@ -55,3 +55,4 @@ Large/structural refactor, but architecture and design are done (the stage desig
 - Orchestrator removed the plan's Co-Authored-By instruction from the remaining task files (session rule).
 - Step 04 review (opus): clean; hash + summary identical, npm test 1230, browser 89/89. Nit: a results line in 04's §5 duplicated from §7 (to step 05).
 - Step 05 (b3de3e1, cd16acc, sonnet): item places name the party; selectedParty; scenes carry `party`; debug @<party>, `party` lists the company; leader deleted, story cycle gone; guard + hash identical; npm test 1240; browser 89/89. Note for stage 6: a saved battle carries no party id (loads fight the first party).
+- Step 05 review (opus): clean; hash + 47-line summary identical; npm test 1240; browser 89/89; hand-offs, rewards and @-parsing checked. Nits to step 06: bare `@` selects the first party; simulator visitGuildHall names should use company(game).
