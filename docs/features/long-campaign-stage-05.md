@@ -64,3 +64,4 @@ Large/structural refactor, but architecture and design are done (the stage desig
 - Step 07 review (opus): clean; twin tests pass on the pre-change tree and fail on injected reorderings; hash + summary identical; npm test 1315; browser 89/89. To step 09: craft refusal uses party.name not partyNoun; comment the run-time re-check in runAction; triple refusal check (optional).
 - Steps 08 (main tree) and 09 (separate worktree, merged after) run in parallel.
 - Step 08 (7491dd8, 1316fed, opus): runCampaign on the loop (per-party plans, decide/carryOut, advance); company.ts untouched; guard + hash + summary identical; npm test 1321.
+- Step 08 review (opus): clean; every phase traced against the old runCampaign; hash + summary identical. To step 10: comment carryOut's travel branch as a mirror of worldMap.travel (and the refused-setOrder confronting gap). Stage-6 notes: campDays double-count with two campers; finishCampaign reads parties[0].
