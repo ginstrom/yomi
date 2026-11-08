@@ -37,6 +37,7 @@ Large/structural refactor, but architecture and design are done (the stage desig
 ## Open questions
 
 - For stage 6 (not blocking): saved battles must record which party is fighting.
+- For stage 6 (not blocking): advanceRefusal stops the whole company while any party is confronting (per C6); revisit with several parties.
 
 ## Model tiers
 
@@ -57,3 +58,4 @@ Large/structural refactor, but architecture and design are done (the stage desig
 - Step 05 (b3de3e1, cd16acc, sonnet): item places name the party; selectedParty; scenes carry `party`; debug @<party>, `party` lists the company; leader deleted, story cycle gone; guard + hash identical; npm test 1240; browser 89/89. Note for stage 6: a saved battle carries no party id (loads fight the first party).
 - Step 05 review (opus): clean; hash + 47-line summary identical; npm test 1240; browser 89/89; hand-offs, rewards and @-parsing checked. Nits to step 06: bare `@` selects the first party; simulator visitGuildHall names should use company(game).
 - Step 06 (4f3a336, 82f31b1, opus): company.ts (setOrder, advanceRefusal, passDay, advance, UNTIL_LIMIT 30); travel and campUntilHealed on the loop; characterization tests first (incl. a hashed 26-walk session); debug days runs passDay; step 05 nits fixed; guard + hash identical; npm test 1277; browser 89/89. Debug goto leaves a stale travel order — to step 07.
+- Step 06 review (opus): clean; characterization tests pass on the pre-change tree; hash identical; npm test 1277; browser 89/89. To step 07: CLAUDE.md expedition.ts line stale; campUntilHealed early return keeps an old order; worldInterrupt uses object identity. Accepted: a blocked road makes a travel order idle even on an interrupt day (road is blocked; correction 10 is about orders that can go on).
