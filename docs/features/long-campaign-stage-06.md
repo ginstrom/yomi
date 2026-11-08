@@ -62,4 +62,6 @@ Large/structural, but the stage design is the approved design (marked ready for 
 - Step 04 (a36f444, b315625, sonnet): hall levels 4–5 (C4), formParty/renameParty/disband/moveHero, recruits at the hall's level, encampment acts for homeParty, SIM_HALL_CAP 3; npm test 1407; encampment e2e 12/12 (recruit-level expectation 1→2, the intended rule); 50-campaign hash unchanged (recruit rule moves nothing in 50).
 - Step 04 review (opus): clean; hash verified. Nits fixed in 9b0d30b (manual recruit sentence, CLAUDE.md SIM_HALL_CAP, noPartyHome shared); accepted without re-review (docs + a moved helper). To step 07: drop encampmentView DRAWN_LEVELS cap once step 06's frames exist.
 - Steps 05 (main tree) and 06 (worktree) run in parallel; 06 touches only art/ and sprites.
+- Step 06 (e26c81f, sonnet, worktree branch long-campaign-stage-06-sprites): hall level_4/level_5, banners map_banner / _azure / _green with idle flutter; sprites:check 124; npm test 1407.
+- Step 06 review (opus): changes needed — blank barracks wall and lost roof edge, levels 4/5 indistinguishable, weak flutter, missing hash. Fixed in 6ad9a75, 35d980a (outline, timber, windows; level 5 palisade + gate + banner; flutter a row). Orchestrator viewed new previews: reads well; accepted without a second review. Merge into the stage branch after step 05 commits.
 
