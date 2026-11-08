@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 5 (a company of one)
 
 **Slug:** long-campaign-stage-05
-**Phase:** 5. Verification
+**Phase:** 6. Report — done; awaiting the user's go-ahead for PR
 
 ## Request (user's words)
 
@@ -78,3 +78,5 @@ Large/structural refactor, but architecture and design are done (the stage desig
 - QA (sonnet) at 3486667: pass. Minor: time buttons show on a monster hex after Scout (30 quiet days on a nest); "Before the The Blight Source". Endless mode, reload mid-order, debug console, 840×560 all pass. Evidence qa-*.
 - Fix round 1 (a9706a1, opus): order line shows the travel order during playback; article-aware names (theName); time buttons hidden on monster hexes; time buttons save before playback, journeys too; parseSave validates order route/action; manual shot asserted; manual sentence; index 03 hash. npm test 1344; browser 97/97; guard hash identical. Follow-up sent: keep route drawn (user), theName in two WorldScene messages.
 - Fix round 2 (f039a0b, opus): standing travel route drawn in amber (probe standingRoute; survives reload; hover replaces it); theName/theNameCapital moved to worldMap.ts and used for every 'the <location>' line; world-travelling shot retaken (orchestrator viewed: route reads clearly). npm test 1345; browser 98/98; guard hash identical. Left: 'You sight a Kobold Scouts' article (pre-existing).
+- Re-review of fix rounds (opus) at f039a0b: clean; npm test 1345, browser 98/98 first run, build, guard hash identical; fixes 1, 3, A, 2 seen in the real game (evidence fix-*). Non-blocking, accepted as known issues: a reload during the walk animation loses that turn's story moment (pre-existing for hex clicks; could skip the source_sighted cutscene); amber route can run under the party list at 840 wide; order line reads Idle after Scout at a lair (pre-existing).
+- Known issues for the PR: the above three; 'You sight a Kobold Scouts' article (pre-existing); 'until affordable'/'wait N days' deferred (user); stage-6 hazards listed above and in the overall review.
