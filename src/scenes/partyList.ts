@@ -110,6 +110,7 @@ export function orderLines(label: string): string[] {
     }
   }
   if (line !== '') lines.push(line)
+  if (lines.length === 0) return []
   const kept = lines.slice(0, ORDER_LINES)
   const cut = lines.length > ORDER_LINES
   const last = kept.length - 1

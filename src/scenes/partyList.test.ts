@@ -203,6 +203,11 @@ describe('orderLabel', () => {
 })
 
 describe('orderLines', () => {
+  it('gives no lines for an empty or blank label', () => {
+    expect(orderLines('')).toEqual([])
+    expect(orderLines('   ')).toEqual([])
+  })
+
   it('keeps a short label on one line', () => {
     expect(orderLines('Idle')).toEqual(['Idle'])
   })
