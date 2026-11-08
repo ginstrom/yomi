@@ -157,7 +157,7 @@ No new order kinds, no second party in the game, no `--parties` flag, no change 
 
   (The 50-campaign baseline was run from a clean `git archive HEAD` tree, as the code was being edited while the 500-campaign run was going.)
 
-## Execution record
+### Implementation
 
 - **Done:** `startTravel` and `orderAction` in `company.ts` (C1); `act` = `orderAction` then `passDay`; `worldMap.travel` over `startTravel`. Simulator: an `act` decision is a day order (`'standing'`, `plan.running = 'day'`); a field craft is chosen by `fieldCraft` and runs as a day order, sharing `craftGear`'s loop (`eachWantedCraft`); at a workshop `craft` crafts at once as before; `takeDays` (now exported) records a day order's `made` as `crafted` and `fieldCraftDays`, and adds `campDays` once a day when any party camps; `CampaignRun.vanguard`; `finishCampaign` reads the vanguard's members and counts sockets over every party; the mirror comment is gone.
 - **Tests:** `company.test.ts` gains `startTravel` (refused, blocked, blocked after lingering, started) and `orderAction` (refuses as `act`, same words; leaves the day to `passDay`, equal to `act`; two parties' actions in one day). `scripts/simulate.test.ts`: the tower/craft test now expects `'standing'` and runs the day by `advance` + `takeDays`; new: a refused act asks again; `fieldCraft` matches `craftGear(game, party, 1)` (two picking cases, two picking-nothing cases); two campers count their days once and both heals.

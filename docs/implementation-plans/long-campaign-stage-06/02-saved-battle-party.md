@@ -83,3 +83,7 @@ export const SAVE_VERSION = 21
 
 ## 7. Execution record
 
+- **Done:** `SavedBattle.party` (written by `BattleScene.save` from `this.expedition.id`, validated by `parseSave` against `game.parties`); `SAVE_VERSION` 21; `MenuScene` Load passes `party: file.battle.party` (the only place a `SavedBattle` starts `Battle`; Continue resumes the paused scene). `migrateFrom18` path: a v18 battle, if any, gets `party: 'party_1'` in `parseSave`. v20 reads as unreadable.
+- **Tests:** `save.test.ts` (version 21, second party round trip, missing/unknown/non-string party, v20 unreadable, v18 battle migrates to `party_1`); `saveSlots.test.ts` fixture battle gained `party`. The v18 fixture has no battle, so the migrated battle is tested by hand-attaching one.
+- **Gates:** `npm test` 1362 passed (80 files); `npm run test:browser` 98 passed (9 files), the existing "saved in battle" test already asserts `restored.party` equals the saved one, which is the single party here (no multi-party e2e possible until step 03). 50-campaign check: 23 of 50, log SHA-256 `068016a8...2d76`, identical to step 01 and stage 5.
+- **Deviation:** none. CLAUDE.md's rules of saving updated.

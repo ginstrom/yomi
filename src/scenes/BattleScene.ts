@@ -2050,6 +2050,7 @@ export class BattleScene extends Phaser.Scene {
       ? null
       : {
           location: this.location!.id,
+          party: this.expedition.id,
           engine: this.engine.snapshot(),
           enemyRng: this.enemyRng.state(),
           ground: this.ground.piles(),

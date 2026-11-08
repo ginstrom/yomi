@@ -287,7 +287,7 @@ export class MenuScene extends Phaser.Scene {
     const file = readSlot(slot)
     if (file === null || file === 'unreadable') return
     if (this.resumeKey) this.scene.stop(this.resumeKey)
-    if (file.battle) this.scene.start('Battle', { game: file.game, location: file.battle.location, saved: file.battle })
+    if (file.battle) this.scene.start('Battle', { game: file.game, location: file.battle.location, saved: file.battle, party: file.battle.party })
     else this.scene.start('World', { game: file.game })
   }
 

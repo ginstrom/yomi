@@ -6,7 +6,7 @@ import { mulberry32 } from '../combat/rng.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
 import { hex } from '../grid/hex.ts'
 import { BASE_ITEMS, IRON_DAGGER, MAGIC_ITEMS, OAK_SHIELD, RING_PROTECTION, IRON_BREASTPLATE, itemById } from '../inventory/inventory.ts'
-import { FIRST_PARTY_ID, FIRST_PARTY_NAME } from './expedition.ts'
+import { FIRST_PARTY_ID, FIRST_PARTY_NAME, type Expedition } from './expedition.ts'
 import { ENCOUNTERS } from './encounters.ts'
 import { newGame, takeLoot, type GameState } from './gameState.ts'
 import { Ground } from './ground.ts'
@@ -45,7 +45,7 @@ function battleOf(game: GameState): SavedBattle {
   ground.pileAt(hex(1, 2)).push(OAK_SHIELD, IRON_DAGGER)
   const enemyRng = mulberry32(10)
   enemyRng()
-  return { location: location.id, engine: engine.snapshot(), enemyRng: enemyRng.state(), ground: ground.piles() }
+  return { location: location.id, party: game.parties[0].id, engine: engine.snapshot(), enemyRng: enemyRng.state(), ground: ground.piles() }
 }
 
 describe('the encampment’s facilities and graded gear', () => {
@@ -118,8 +118,38 @@ describe('a save', () => {
     expect(parsed.game.parties[0].baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 20, whose company holds where each party stands and what it confronts', () => {
-    expect(SAVE_VERSION).toBe(20)
+  it('is version 21, whose battle names the party fighting', () => {
+    expect(SAVE_VERSION).toBe(21)
+  })
+
+  it('keeps the party a battle was saved in, the second one’s included', () => {
+    const game = gameUnderWay()
+    const second: Expedition = { ...game.parties[0], id: 'party_2', name: 'Second', members: partyFromDrafts([PREROLLS[3].draft]), baggage: [] }
+    game.parties.push(second)
+    const battle = { ...battleOf(game), party: 'party_2' }
+    expect(parseSave(serializeSave({ game, battle, savedAt: 5 }))!.battle!.party).toBe('party_2')
+  })
+
+  it('reads a battle with no party, or one that names none of the game’s, as unreadable', () => {
+    const game = gameUnderWay()
+    const raw = serializeSave({ game, battle: battleOf(game), savedAt: 5 })
+    const edit = (change: (saved: any) => void) => {
+      const saved = JSON.parse(raw)
+      change(saved)
+      return JSON.stringify(saved)
+    }
+    expect(parseSave(edit((s) => delete s.battle.party))).toBeNull()
+    expect(parseSave(edit((s) => (s.battle.party = 'party_9')))).toBeNull()
+    expect(parseSave(edit((s) => (s.battle.party = 1)))).toBeNull()
+    expect(parseSave(edit((s) => (s.version = 20)))).toBeNull()
+  })
+
+  it('migrates a version-18 battle to the first party', () => {
+    const game = gameUnderWay()
+    const v = JSON.parse(readFileSync(new URL('./fixtures/save-v18.json', import.meta.url), 'utf8'))
+    const battle = JSON.parse(serializeSave({ game, battle: battleOf(game), savedAt: 5 })).battle
+    delete battle.party
+    expect(parseSave(JSON.stringify({ ...v, battle }))!.battle!.party).toBe(FIRST_PARTY_ID)
   })
 
   it('keeps the pouch and an item with runes', () => {

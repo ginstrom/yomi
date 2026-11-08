@@ -25,7 +25,7 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 20
+export const SAVE_VERSION = 21
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -45,6 +45,8 @@ export interface SaveFile {
 export interface SavedBattle {
   /** The monster location's id in `game.world`. */
   location: string
+  /** The id of the expedition fighting, one of `game.parties`. */
+  party: string
   engine: BattleSnapshot
   /** Where the enemy policy's RNG stands. */
   enemyRng: number
@@ -120,7 +122,7 @@ function locationOf(saved: WorldLocation): WorldLocation {
 
 /**
  * A version-18 game (one `party` and one `baggage`, the world holding where it
- * stands and what it confronts) as a version-20 one: a company of one, the
+ * stands and what it confronts) as a version-21 one: a company of one, the
  * party's position and confrontation its expedition's.
  */
 function migrateFrom18(game: Record<string, unknown>): void {
@@ -206,7 +208,11 @@ export function parseSave(raw: string | null): SaveFile | null {
     check(typeof saved.savedAt === 'number')
     const { game, battle } = saved
     check(game && typeof game === 'object')
-    if (saved.version === 18) migrateFrom18(game as unknown as Record<string, unknown>)
+    if (saved.version === 18) {
+      migrateFrom18(game as unknown as Record<string, unknown>)
+      // The only party a version-18 game has is the one that was fighting.
+      if (battle && typeof battle === 'object') (battle as { party?: string }).party = FIRST_PARTY_ID
+    }
     check(Array.isArray(game.parties) && game.parties.length > 0)
     check(game.parties.every((party) => party && typeof party.id === 'string' && typeof party.name === 'string'))
     check(new Set(game.parties.map((party) => party.id)).size === game.parties.length)
@@ -231,6 +237,7 @@ export function parseSave(raw: string | null): SaveFile | null {
     check(Array.isArray(story.played) && story.played.every((id) => CUTSCENE_IDS.includes(id)))
     check(Array.isArray(story.tipsShown) && story.tipsShown.every((id) => typeof id === 'string'))
     check(battle === null || (typeof battle === 'object' && typeof battle.location === 'string'))
+    check(battle === null || (typeof battle.party === 'string' && game.parties.some((party) => party.id === battle.party)))
     check(battle === null || (typeof battle.enemyRng === 'number' && Array.isArray(battle.ground)))
     check(battle === null || (battle.engine && Array.isArray(battle.engine.units) && Array.isArray(battle.engine.events)))
     return {
