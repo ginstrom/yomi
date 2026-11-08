@@ -1,0 +1,59 @@
+# A party's banner: a crimson pennant on a pole, shown beside its figure on the
+# world map and in the party bar. The azure and green banners are recolours.
+canvas = "map"
+outline = "auto"
+
+[frames.base.runs]
+2 = [[11, "t"]]
+3 = [[11, "n"], [12, "oorrrr"]]
+4 = [[11, "n"], [12, "orrrrrrr"]]
+5 = [[11, "n"], [12, "orrrrrrrrR"]]
+6 = [[11, "n"], [12, "rrrrrrRR"]]
+7 = [[11, "n"], [12, "rrrrRR"]]
+8 = [[11, "n"], [12, "rrRR"]]
+9 = [[11, "n"]]
+10 = [[11, "n"]]
+11 = [[11, "n"]]
+12 = [[11, "n"]]
+13 = [[11, "n"]]
+14 = [[11, "n"]]
+15 = [[11, "n"]]
+16 = [[11, "n"]]
+17 = [[11, "n"]]
+18 = [[11, "n"]]
+19 = [[11, "n"]]
+20 = [[10, "TNT"]]
+
+# The cloth stirs in the wind: the tail lifts, then dips.
+[frames.flutter_1]
+from = "base"
+
+[frames.flutter_1.runs]
+3 = [[12, "ooorrrr"]]
+4 = [[12, "orrrrrrrr"]]
+5 = [[12, "orrrrrrrR"]]
+6 = [[12, "rrrrrRRR"]]
+7 = [[12, "rrrRR"]]
+8 = [[12, "rR"]]
+
+[frames.flutter_2]
+from = "base"
+
+[frames.flutter_2.runs]
+3 = [[12, "oorrr"]]
+4 = [[12, "orrrrrr"]]
+5 = [[12, "orrrrrrR"]]
+6 = [[12, "rrrrrrRRR"]]
+7 = [[12, "rrrrrRRR"]]
+8 = [[12, "rrrRRR"]]
+9 = [[13, "RR"]]
+
+[anim.idle]
+frames = ["base", "flutter_1", "base", "flutter_2"]
+ms = 220
+
+[variants.azure]
+swap = { r = "b", R = "B", o = "c" }
+
+[variants.green]
+swap = { r = "g", R = "G", o = "e" }

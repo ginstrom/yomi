@@ -1,6 +1,7 @@
 # The guild hall: a timber longhouse with a gold sign over its door. Each level
 # adds to it, as the encampment screen shows the frame of the hall's level: a
-# wing at level 2, a stone tower at level 3.
+# wing at level 2, a stone tower at level 3, a barracks behind the hall at level 4
+# and its pennant and crossed blades at level 5.
 canvas = "building"
 outline = "auto"
 
@@ -116,3 +117,49 @@ from = "level_2"
 44 = [[38, "aaaaaaaa"]]
 45 = [[38, "mmmmmmmm"]]
 46 = [[43, "gggg"]]
+
+# Level 4: the Barracks, a long low timber hall behind the guild hall, a chimney
+# smoking at its west end.
+[frames.level_4]
+from = "level_3"
+
+[frames.level_4.runs]
+1 = [[13, "l"]]
+2 = [[12, "mM"]]
+3 = [[12, "mM"]]
+4 = [[10, "orrrrrrrrrrrrrrrrrrR"]]
+5 = [[8, "orrrrrrrrrrrrrrrrrrrrrrR"]]
+6 = [[6, "orrrrrrrrrrrrrrrrrrrrrrrrrrrR"]]
+7 = [[4, "orrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrR"]]
+8 = [[4, "RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR"]]
+9 = [[6, "nnnnnnnnnnnnnnnnnnnnnnnnnnnn"]]
+10 = [[6, "nT"], [9, "NN"], [11, "TTTT"], [15, "NN"], [17, "TTTTTT"], [23, "NN"], [25, "TTTT"], [29, "NN"], [31, "Tn"]]
+11 = [[6, "nT"], [9, "Ny"], [11, "TTTT"], [15, "Ny"], [17, "TTTTTT"], [23, "Ny"], [25, "TTTT"], [29, "Ny"], [31, "Tn"]]
+
+12 = [[6, "nTTTTTTTTTTTTTTTT"], [25, "TTTTTTTTn"]]
+13 = [[6, "nTTTTTTTTTTTTTTT"], [26, "TTTTTTTn"]]
+14 = [[6, "nTTTTTTTTTTTTTT"], [27, "TTTTTTn"]]
+15 = [[6, "nTTTTTTTTTTTTT"], [28, "TTTTTn"]]
+16 = [[6, "nTTTTTTTTTTTT"], [29, "TTTTn"]]
+17 = [[6, "nTTTTTTTTTTT"], [30, "TTTn"]]
+18 = [[6, "nTTTTTTTTTT"], [31, "TTn"]]
+19 = [[6, "nTTTTTTTTT"], [32, "Tn"]]
+20 = [[6, "nTTTTTTTT"], [33, "n"]]
+21 = [[6, "nTTTTTTT"]]
+22 = [[6, "nTTTTTT"]]
+23 = [[6, "nTTTTT"]]
+
+# Level 5: a pennant on the Barracks' ridge, a gold ridge-line and crossed blades
+# over its middle, and a second pennant on the east end.
+[frames.level_5]
+from = "level_4"
+
+[frames.level_5.runs]
+1 = [[13, "l"], [20, "nrrr"]]
+2 = [[12, "mM"], [20, "nrrR"]]
+3 = [[12, "mM"], [20, "n"]]
+4 = [[10, "orrrrrrrrrrYYrrrrrrR"]]
+5 = [[8, "orrrrrrrrrrrrrrrrrrrrrrR"]]
+9 = [[6, "nnnnnnnnnnnnnnnyynnnnnnnnnnn"]]
+10 = [[6, "nT"], [9, "NN"], [11, "TTTT"], [15, "NN"], [17, "TT"], [19, "w"], [21, "w"], [23, "NN"], [25, "TTTT"], [29, "NN"], [31, "Tn"]]
+11 = [[6, "nT"], [9, "Ny"], [11, "TTTT"], [15, "Ny"], [17, "TTT"], [20, "w"], [22, "TT"], [24, "TTT"], [27, "T"], [29, "Ny"], [31, "Tn"]]

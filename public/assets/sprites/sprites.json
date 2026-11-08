@@ -999,9 +999,9 @@
     "anims": {},
     "bounds": [
       0,
-      1,
+      0,
       48,
-      47
+      48
     ],
     "canvas": "building",
     "display_scale": 3,
@@ -1033,6 +1033,24 @@
           47
         ],
         "file": "camp_guild_hall__level_3.png"
+      },
+      "level_4": {
+        "bounds": [
+          0,
+          0,
+          48,
+          48
+        ],
+        "file": "camp_guild_hall__level_4.png"
+      },
+      "level_5": {
+        "bounds": [
+          0,
+          0,
+          48,
+          48
+        ],
+        "file": "camp_guild_hall__level_5.png"
       }
     },
     "size": [
@@ -5572,6 +5590,219 @@
     "size": [
       32,
       32
+    ]
+  },
+  "map_banner": {
+    "anchor": [
+      12,
+      12
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 220
+          },
+          {
+            "frame": "flutter_1",
+            "ms": 220
+          },
+          {
+            "frame": "base",
+            "ms": 220
+          },
+          {
+            "frame": "flutter_2",
+            "ms": 220
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      9,
+      1,
+      14,
+      21
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "map_banner.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          9,
+          1,
+          14,
+          21
+        ],
+        "file": "map_banner__base.png"
+      },
+      "flutter_1": {
+        "bounds": [
+          9,
+          1,
+          14,
+          21
+        ],
+        "file": "map_banner__flutter_1.png"
+      },
+      "flutter_2": {
+        "bounds": [
+          9,
+          1,
+          14,
+          21
+        ],
+        "file": "map_banner__flutter_2.png"
+      }
+    },
+    "size": [
+      24,
+      24
+    ]
+  },
+  "map_banner_azure": {
+    "anchor": [
+      12,
+      12
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 220
+          },
+          {
+            "frame": "flutter_1",
+            "ms": 220
+          },
+          {
+            "frame": "base",
+            "ms": 220
+          },
+          {
+            "frame": "flutter_2",
+            "ms": 220
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      9,
+      1,
+      14,
+      21
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "map_banner_azure.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          9,
+          1,
+          14,
+          21
+        ],
+        "file": "map_banner_azure__base.png"
+      },
+      "flutter_1": {
+        "bounds": [
+          9,
+          1,
+          14,
+          21
+        ],
+        "file": "map_banner_azure__flutter_1.png"
+      },
+      "flutter_2": {
+        "bounds": [
+          9,
+          1,
+          14,
+          21
+        ],
+        "file": "map_banner_azure__flutter_2.png"
+      }
+    },
+    "size": [
+      24,
+      24
+    ]
+  },
+  "map_banner_green": {
+    "anchor": [
+      12,
+      12
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 220
+          },
+          {
+            "frame": "flutter_1",
+            "ms": 220
+          },
+          {
+            "frame": "base",
+            "ms": 220
+          },
+          {
+            "frame": "flutter_2",
+            "ms": 220
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      9,
+      1,
+      14,
+      21
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "map_banner_green.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          9,
+          1,
+          14,
+          21
+        ],
+        "file": "map_banner_green__base.png"
+      },
+      "flutter_1": {
+        "bounds": [
+          9,
+          1,
+          14,
+          21
+        ],
+        "file": "map_banner_green__flutter_1.png"
+      },
+      "flutter_2": {
+        "bounds": [
+          9,
+          1,
+          14,
+          21
+        ],
+        "file": "map_banner_green__flutter_2.png"
+      }
+    },
+    "size": [
+      24,
+      24
     ]
   },
   "map_blight": {
