@@ -346,7 +346,7 @@ export function act(game: GameState, party: string, action: DayAction): string |
 | Step | Task | Outcome | Depends on | Engineer / reviewer | Status |
 | --- | --- | --- | --- | --- | --- |
 | 01 | [The refactor guard](01-refactor-guard.md) | The 500-campaign figure and the 50-campaign summary and log hash recorded; the 5-campaign guard test (C1) committed | — | sonnet / sonnet | done (8477c15) |
-| 02 | [World rules over presences](02-presences.md) | `PartyPresence` (C2); blight, vision, territory, `passTurn` and `isNotable` over a list; tests for presences of one; guard identical | 01 | opus / opus | done (see commit "Stage 5 step 02: world rules over presences") |
+| 02 | [World rules over presences](02-presences.md) | `PartyPresence` (C2); blight, vision, territory, `passTurn` and `isNotable` over a list; tests for presences of one; guard identical | 01 | opus / opus | done (f4b1af0) |
 | 03 | [The company: parties, members and baggage](03-company-state.md) | `Expedition` and `GameState.parties` (C3); `leader`; party and baggage moved; save 19 with migration and the v18 fixture; CLAUDE.md's rule of saving; guard identical | 02 | sonnet / opus | pending |
 | 04 | [Position and confrontation in the expedition](04-position-and-confrontation.md) | `WorldState.party` and `confronting` moved (C4); position-dependent rules take the expedition; `presences(game.parties)`; save 20; probes and in-browser tests; guard identical | 03 | opus / opus | pending |
 | 05 | [Explicit expeditions](05-explicit-expeditions.md) | Item places name the party (C5); scenes take the party from scene data; debug `@<party>` and `party`; `leader` deleted; guard identical | 04 | sonnet / opus | pending |
