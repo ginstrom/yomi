@@ -408,16 +408,17 @@ function guardWanted(game: GameState, parties: number): boolean {
 /**
  * Whether the careful party should go home to the guild hall: to raise it,
  * once the stock affords the next level up to `hallCap(parties)` and no held
- * site is under threat; to form a guard the hall allows and the company can
- * man; or to fill an empty place in the party when the stock affords a recruit,
- * unless `guarded` (the vanguard of a company with a guard, whose places the
- * guard fills by promotion).
+ * site is under threat; or to fill an empty place in the party when the stock
+ * affords a recruit, unless `guarded` (the vanguard of a company with a guard,
+ * whose places the guard fills by promotion). It never walks home only to
+ * form a guard: `formGuard` forms one when the party is home for another
+ * errand (stage 6 step 11 measured that walk as costing walking days for no
+ * more wins).
  */
 export function hallErrand(game: GameState, party: Expedition, parties = 1, guarded = false): boolean {
   const { world } = game
   const cost = world.guildHall < hallCap(parties) ? upgradeCost(world) : null
   if (cost && canAfford(world.stock, cost) && world.threatened.length === 0) return true
-  if (guardWanted(game, parties)) return true
   return !guarded && party.members.length < partyLimit(world) && canAfford(world.stock, RECRUIT_COST)
 }
 

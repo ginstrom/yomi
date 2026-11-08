@@ -367,7 +367,7 @@ describe('the world map', () => {
     expect(await game.scenes()).toEqual({ running: ['Battle'], paused: [] })
     expect(battle.state).toMatchObject({ round: 1, phase: 'player' })
     expect(battle.state.units.filter((u) => u.side === 'player')).toHaveLength(3)
-    expect(battle.log[0]).toMatchObject({ type: 'battle_start', seed: 1 })
+    expect(battle.log[0]).toMatchObject({ type: 'battle_start', seed: 1, meta: { source: 'game', party: 'party_1' } })
   })
 
   it('puts a beaten location’s loot in the baggage, from which a hero takes it and wears it', async () => {

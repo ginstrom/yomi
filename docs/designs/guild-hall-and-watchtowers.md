@@ -31,7 +31,7 @@ Related:
 
 **Non-goals:**
 - Other improvements: shrine, infirmary, workshop and crafting.
-- Multiple parties. The roster waits at home and does not act.
+- Multiple parties. The roster waits at home and does not act. (Answered by [stage 6](long-campaign/stage-06-multiple-parties.md): hall levels 4 and 5 field a second and third party.)
 - Moving monsters, and line of sight on the world map. Vision is a radius; nothing blocks it.
 - Gear for recruits beyond the starting kit that creation already gives.
 
@@ -83,7 +83,7 @@ Related:
 - What they wore and carried goes into the baggage, so gear is not lost.
 - The party goes on smaller until the player recruits or swaps at the guild hall.
 - The victory screen names the dead.
-- A party wipe still ends the game, reserves or not. Forming a new party from the reserves waits for multiple parties.
+- A party wipe still ends the game, reserves or not. Forming a new party from the reserves waits for multiple parties. (Answered by [stage 6](long-campaign/stage-06-multiple-parties.md): a wipe ends the game only when no hero is left; the last party wiped with reserves left is re-formed from them at the encampment.)
 - Resurrection will come later, as a very high-level spell.
 
 This is the largest balance change here: today a fallen hero costs only hit points, and losing one raised to a high level is meant to hurt. It needs a campaign retune.
@@ -248,8 +248,8 @@ Closing notes: the retune was done in the blight's Source encounter (`source_gua
 ## 9. Decisions made
 
 1. **Death:** permadeath. Losing party members should hurt, especially after raising them up. Resurrection comes later, at very high levels.
-2. **A recruit's level:** `min(guild hall level, the party's lowest level)`. Training scrub recruits up is a later mechanic: stationing them in guard posts or watchtowers to grow levels passively, training facilities in the encampment, special low-level scouting parties.
-3. **A wipe with reserves at home:** it ends the game for now. Forming a new party comes with multiple parties.
+2. **A recruit's level:** `min(guild hall level, the party's lowest level)` (since [stage 6](long-campaign/stage-06-multiple-parties.md), the hall's level alone). Training scrub recruits up is a later mechanic: stationing them in guard posts or watchtowers to grow levels passively, training facilities in the encampment, special low-level scouting parties.
+3. **A wipe with reserves at home:** it ends the game for now. Forming a new party comes with multiple parties. (Answered by [stage 6](long-campaign/stage-06-multiple-parties.md).)
 4. **Fog:** as proposed. Unexplored hexes are black, explored ones show the blight as last seen, and the Source is known from the start.
 
 Costs, strengths, radii, `TOWER_SPACING` and `MAX_RESERVES` remain starting points for the simulator.

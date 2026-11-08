@@ -1484,16 +1484,14 @@ describe('the company policy', () => {
       expect(game.world.guildHall).toBe(3)
       expect(hallErrand(game, party, 1)).toBe(false)
     })
-    it('walks home to form a guard the hall allows and the stock can man, under more than one party', () => {
+    it('never walks home only to form a guard: one forms when the vanguard is home for another errand (step 11 measured the walk as no help)', () => {
       const { game, party } = fullCompany(2)
       game.world.guildHall = 4
       game.world.stock = { gold: 10 * GUARD_MIN_SIZE }
       party.position = { q: party.position.q + 3, r: party.position.r }
       expect(party.members).toHaveLength(3)
-      expect(hallErrand(game, party, 2, true)).toBe(true)
-      expect(hallErrand(game, party, 1, true)).toBe(false)
-      game.world.stock = { gold: 10 * (GUARD_MIN_SIZE - 1) }
       expect(hallErrand(game, party, 2, true)).toBe(false)
+      expect(hallErrand(game, party, 1, true)).toBe(false)
     })
     it('drops the recruit errand for the vanguard of a company with a guard', () => {
       const { game, party } = fullCompany(1)

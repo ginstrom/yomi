@@ -226,6 +226,8 @@ Monster locations stay put for now. Later, a location will be able to move along
 
 ### 5.4 Multiple parties (separate design)
 
+**Answered by [stage 6](long-campaign/stage-06-multiple-parties.md)** (the long campaign): up to three parties, garrisons that hold a site by this rule, and parties that meet and exchange heroes.
+
 More parties are the natural way to hold a longer front. A party left at a site keeps its hex neutral and adds its influence there, and a second party can answer a threat while the first pushes on.
 
 Before that, the reserve roster, deployment and a turn model for several parties need deciding, as the expeditions design already notes. This design leaves room for it: party influence is summed over a list of parties and occupation over a list of units, so a second party needs no new rule.

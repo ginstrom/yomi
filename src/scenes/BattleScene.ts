@@ -352,7 +352,7 @@ export class BattleScene extends Phaser.Scene {
     } else {
       // Every battle is seeded, by the page's address or at random, so every battle can be saved and replayed.
       const seed = (this.registry.get(SEED_KEY) as number | null | undefined) ?? randomSeed()
-      this.engine = new BattleEngine(setup, { seed, meta: { source: 'game', enemyPolicy: ENEMY_POLICY } })
+      this.engine = new BattleEngine(setup, { seed, meta: { source: 'game', enemyPolicy: ENEMY_POLICY, party: this.expedition.id } })
       // A stream of its own, so the enemy's choices do not shift the engine's dice.
       this.enemyRng = mulberry32(seed + 1)
       this.ground = new Ground()
