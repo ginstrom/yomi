@@ -1,23 +1,29 @@
-import { FIRST_PARTY_ID, newExpedition } from '../game/expedition.ts'
+import { FIRST_PARTY_ID, newExpedition, type Expedition, type Order } from '../game/expedition.ts'
 import { describe, expect, it } from 'vitest'
 import { maxHp } from '../character/character.ts'
 import { newGame } from '../game/gameState.ts'
 import { readyMadeParty } from '../game/party.ts'
-import { travel } from '../game/worldMap.ts'
+import { boardIndex } from '../game/blight.ts'
+import { UNEXPLORED } from '../game/vision.ts'
+import { locationAt, travel } from '../game/worldMap.ts'
 import { hexEquals } from '../grid/hex.ts'
 import { HEADER_BOTTOM } from './partyPanel.ts'
 import {
+  ORDER_COLS,
   PARTY_LIST_W,
   SINGLE_PARTY_NAME,
   deployedParties,
+  orderLabel,
+  orderLines,
   partyEntryBarRect,
+  partyEntryOrderRect,
   partyEntryRect,
   partyListInfo,
   type PartyListEntry,
 } from './partyList.ts'
 
-/** Where the footer starts in the least window (840×560): WorldScene's messageY − 20. */
-const LEAST_FOOTER_TOP = 442
+/** Where the footer starts in the least window (840×560): WorldScene's messageY − 20, the footer having a row of time buttons over its row of actions. */
+const LEAST_FOOTER_TOP = 390
 
 describe('deployedParties', () => {
   it('lists the one party of a new game, with its members, place and hit points', () => {
@@ -78,8 +84,112 @@ describe('the party list’s layout', () => {
   })
 
   it('fits three entries above the footer of the least window', () => {
-    const bar = partyEntryBarRect(2, 840)
-    expect(bar.y + bar.height).toBeLessThanOrEqual(LEAST_FOOTER_TOP)
+    const order = partyEntryOrderRect(2, 840)
+    expect(order.y + order.height).toBeLessThanOrEqual(LEAST_FOOTER_TOP)
+  })
+})
+
+describe('orderLabel', () => {
+  const setup = () => {
+    const game = newGame(undefined, null, 1)
+    const party = game.parties[0]
+    const world = game.world
+    const monsters = world.locations.find((l) => l.kind === 'monsters')!
+    const resource = world.locations.find((l) => l.kind === 'resource')!
+    const order = (o: Order) => {
+      party.order = o
+      return orderLabel(world, party)
+    }
+    return { world, party, monsters, resource, order }
+  }
+  const far = { q: 1, r: 1 }
+
+  it('says Idle for a party with no order', () => {
+    expect(setup().order({ kind: 'idle' })).toBe('Idle')
+  })
+
+  it('names a sighted nest a party travels to, but not an unsighted one', () => {
+    const { world, monsters, order } = setup()
+    world.sighted = []
+    expect(order({ kind: 'travel', to: monsters.position, route: [monsters.position] })).toBe('Travelling')
+    world.sighted = [monsters.id]
+    expect(order({ kind: 'travel', to: monsters.position, route: [monsters.position] })).toBe(`Travelling to ${monsters.name}`)
+  })
+
+  it('names a quiet location only on explored land', () => {
+    const { world, resource, order } = setup()
+    const index = boardIndex(world.board, resource.position)
+    world.seen[index] = UNEXPLORED
+    expect(order({ kind: 'travel', to: resource.position, route: [resource.position] })).toBe('Travelling')
+    world.seen[index] = 0
+    expect(order({ kind: 'travel', to: resource.position, route: [resource.position] })).toBe(`Travelling to ${resource.name}`)
+  })
+
+  it('says only Travelling to a plain hex', () => {
+    const { world, order } = setup()
+    const empty = [far, { q: 2, r: 1 }, { q: 3, r: 1 }].find((h) => locationAt(world, h) === null)!
+    expect(order({ kind: 'travel', to: empty, route: [empty] })).toBe('Travelling')
+  })
+
+  it('says Camping for a camp order, and each day action in a word', () => {
+    const { order } = setup()
+    expect(order({ kind: 'camp' })).toBe('Camping')
+    const day = (action: Extract<Order, { kind: 'day' }>['action']) => order({ kind: 'day', action })
+    expect(day({ kind: 'scout' })).toBe('Scouting')
+    expect(day({ kind: 'wait' })).toBe('Waiting')
+    expect(day({ kind: 'camp' })).toBe('Camping')
+    expect(day({ kind: 'tower' })).toBe('Building')
+    expect(day({ kind: 'outpost' })).toBe('Building')
+    const place = { party: FIRST_PARTY_ID, kind: 'baggage', index: 0, id: 'x' } as never
+    expect(day({ kind: 'craft', place, modifier: 'light', grade: 1 })).toBe('Crafting')
+    expect(day({ kind: 'embed', place, rune: 'ember1' })).toBe('Crafting')
+  })
+
+  it('says which monsters a confronting party stands before, whatever its order', () => {
+    const { party, world, monsters } = setup()
+    party.confronting = monsters.id
+    party.order = { kind: 'idle' }
+    expect(orderLabel(world, party)).toBe(`Before the ${monsters.name}`)
+  })
+
+  it('is carried by the party list’s entries', () => {
+    const game = newGame(undefined, null, 1)
+    expect(deployedParties(game)[0].order).toBe('Idle')
+    const camp: Expedition = game.parties[0]
+    camp.order = { kind: 'camp' }
+    expect(deployedParties(game)[0].order).toBe('Camping')
+  })
+})
+
+describe('orderLines', () => {
+  it('keeps a short label on one line', () => {
+    expect(orderLines('Idle')).toEqual(['Idle'])
+  })
+
+  it('wraps onto two lines within the strip', () => {
+    expect(orderLines('Travelling to Troll')).toEqual(['Travelling to', 'Troll'])
+  })
+
+  it('cuts what does not fit in two lines with an ellipsis', () => {
+    const lines = orderLines('Travelling to Salamander Pool')
+    expect(lines).toHaveLength(2)
+    expect(lines[1].endsWith('…')).toBe(true)
+    for (const line of lines) expect(line.length).toBeLessThanOrEqual(ORDER_COLS)
+  })
+
+  it('cuts a word too long for a line', () => {
+    expect(orderLines('Supercalifragilistic')[0]).toHaveLength(ORDER_COLS)
+  })
+})
+
+describe('the order line’s place', () => {
+  it('lies under the bar, inside the strip, and clear of the next entry', () => {
+    const bar = partyEntryBarRect(0, 840)
+    const order = partyEntryOrderRect(0, 840)
+    expect(order.y).toBeGreaterThanOrEqual(bar.y + bar.height)
+    expect(order.x).toBeGreaterThanOrEqual(840 - PARTY_LIST_W)
+    expect(order.x + order.width).toBeLessThanOrEqual(840)
+    expect(order.y + order.height).toBeLessThanOrEqual(partyEntryRect(1, 840).y)
   })
 })
 
@@ -91,12 +201,12 @@ describe('partyListInfo', () => {
     const entry: PartyListEntry = { ...base, hp: 20, maxHp: 45 }
     expect(partyListInfo(entry)).toEqual({
       title: 'Your party',
-      lines: [`${base.members.length} members`, 'Hit points: 20 / 45', 'Click to centre the view on it.'],
+      lines: [`${base.members.length} members`, 'Hit points: 20 / 45', 'Idle', 'Click to centre the view on it.'],
     })
   })
 
-  it('tells the monsters a confronting party stands before', () => {
-    const entry: PartyListEntry = { ...base, confronting: { id: 'm', name: 'Goblin Raid' } }
+  it('tells the monsters a confronting party stands before, once', () => {
+    const entry: PartyListEntry = { ...base, confronting: { id: 'm', name: 'Goblin Raid' }, order: 'Before the Goblin Raid' }
     expect(partyListInfo(entry).lines).toEqual([
       `${base.members.length} members`,
       `Hit points: ${base.hp} / ${base.maxHp}`,

@@ -30,7 +30,7 @@ describe('the world map', () => {
     expect(start.world.seen[index(9, 28)]).toBe(-1)
     expect(start.world.sighted).not.toContain('blight_source')
 
-    const south = await game.travelTo(offsetToHex(9, 25))
+    const south = await game.travelTo(offsetToHex(9, 23))
     expect(south.visible).toContain(index(9, 28))
     expect(south.world.seen[index(9, 28)]).toBeGreaterThanOrEqual(0)
   })
@@ -438,6 +438,86 @@ describe('the world map', () => {
     const healed = await game.waitFor('World', (w) => !w.buttons.campUntilHealed.enabled)
     expect(healed.message).toMatch(/^Camped \d+ days?: \d+ hp healed \(\d+ by rest, \d+ by spells\)\.$/)
     expect(healed.world.turn).toBeGreaterThan(hurt.world.turn)
+  })
+
+  describe('the time controls', () => {
+    const order = (w: WorldProbe) => w.parties[0].order
+
+    it('passes a day on Next day, the idle party staying idle', async () => {
+      const game = await games.open()
+      const home = await game.newGame()
+      expect(order(home)).toBe('Idle')
+      expect(home.buttons.nextDay.visible).toBe(true)
+      expect(home.buttons.untilSomething.visible).toBe(true)
+      await game.click(home.buttons.nextDay)
+      const next = await game.waitFor('World', (w) => w.world.turn === home.world.turn + 1)
+      expect(order(next)).toBe('Idle')
+      expect(next.partyAt).toEqual(home.partyAt)
+      expect(next.message).not.toBe('')
+    })
+
+    it('carries a walk cut short on, a hex a day, the line saying where', async () => {
+      const game = await games.open()
+      const home = await game.newGame()
+      const far = offsetToHex(19, 19)
+      await game.click(worldHexOnScreen(home, far))
+      const stopped = await game.waitFor('World', (w) => !w.walking && w.world.turn > home.world.turn)
+      expect(stopped.partyAt).not.toEqual(far)
+      expect(order(stopped)).toMatch(/^Travelling/)
+      await game.click(stopped.buttons.nextDay)
+      const next = await game.waitFor('World', (w) => w.world.turn === stopped.world.turn + 1 && !w.walking)
+      expect(next.partyAt).not.toEqual(stopped.partyAt)
+      expect(next.world.turn).toBe(stopped.world.turn + 1)
+    })
+
+    it('passes days until something happens, or until thirty have passed quietly', async () => {
+      const game = await games.open()
+      const home = await game.newGame()
+      await game.click(home.buttons.untilSomething)
+      const after = await game.waitFor('World', (w) => w.world.turn > home.world.turn)
+      expect(after.world.turn - home.world.turn).toBeLessThanOrEqual(30)
+      expect(after.message).toMatch(/^30 days passed quietly\.|^After \d+ days: |^[A-Z]/)
+      if (after.message.startsWith('30 days')) expect(after.world.turn - home.world.turn).toBe(30)
+    })
+
+    it('shows Camping while a wounded party camps, and Idle once it is whole', async () => {
+      const game = await games.open()
+      await game.newGame()
+      await game.page.evaluate(() => {
+        const save = JSON.parse(localStorage.getItem('yomi.save.1')!)
+        save.game.parties[0].members[0].hp = 1
+        localStorage.setItem('yomi.save.1', JSON.stringify(save))
+      })
+      await game.click((await game.reload()).buttons.continue)
+      await game.waitForScenes(['World'])
+      const hurt = await game.settled('World', (w) => w.buttons.campUntilHealed.enabled)
+      await game.click(hurt.buttons.campUntilHealed)
+      const healed = await game.waitFor('World', (w) => !w.buttons.campUntilHealed.enabled)
+      expect(order(healed)).toBe('Idle')
+    })
+
+    it('hides both buttons while the party stands before monsters', async () => {
+      const game = await games.open()
+      await game.newGame()
+      const among = await game.travelTo(RAIDERS.position)
+      expect(among.buttons.nextDay.visible).toBe(false)
+      expect(among.buttons.untilSomething.visible).toBe(false)
+      expect(among.parties[0].order).toBe(`Before the Goblin Raiders`)
+    })
+
+    it('fits the footer and the order line in the least window', async () => {
+      const game = await games.open()
+      await game.newGame()
+      await game.resize(840, 560)
+      const small = await game.waitFor('World', (w) => w.view.width < 700)
+      for (const button of [small.buttons.nextDay, small.buttons.untilSomething, small.buttons.camp, small.buttons.campUntilHealed, small.buttons.craft, small.buttons.enterEncampment]) {
+        expect(button.visible).toBe(true)
+        expect(button.x).toBeGreaterThan(80)
+        expect(button.x).toBeLessThan(840 - 80)
+        expect(button.y).toBeLessThan(560)
+      }
+      expect(small.buttons.nextDay.y).toBeLessThan(small.buttons.camp.y)
+    })
   })
 
   it('pauses under the menu on Esc and resumes where it was', async () => {
