@@ -4,6 +4,7 @@ import type { Character } from '../character/character.ts'
 import { canAdvance } from '../character/progression.ts'
 import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex, type WorldEvent } from '../game/blight.ts'
 import { atEncampment, buildOutpost, buildTower, canBuildOutpost, canBuildTower, outpostSiteRefusal, towerSiteRefusal } from '../game/buildings.ts'
+import { UNTIL_LIMIT, advance, advanceRefusal, passDay, type DayReport } from '../game/company.ts'
 import { campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from '../game/camp.ts'
 import { presences, type Expedition, type PartyPresence } from '../game/expedition.ts'
 import { newGame, selectedParty, type GameState } from '../game/gameState.ts'
@@ -18,6 +19,7 @@ import {
   monstersHere,
   routeTo,
   travel,
+  worldActive,
   type Lingering,
   type LocationKind,
   type WorldLocation,
@@ -36,7 +38,7 @@ import { PARTY_LIST_W, deployedParties, partyListInfo } from './partyList.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
-import { describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
+import { describeDays, describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
 import { hexInfo } from './hexInfo.ts'
 import { tellStory, type StoryAnchors } from './StoryScene.ts'
 import type { StoryMoment } from '../story/story.ts'
@@ -106,6 +108,10 @@ const BUTTON_H = 44
 const BUTTON_GAP = 20
 /** Wide enough for "Camp until healed", "Build Watchtower" and "Build Outpost". */
 const WIDE_BUTTON_W = 200
+/** Wide enough for "Until something happens". */
+const TIME_WIDE_BUTTON_W = 250
+/** The footer's rows are this far apart: the time buttons over the action buttons. */
+const ROW_PITCH = BUTTON_H + 8
 /** The info panel on the hovered hex or party, at the view's top right, left of the party list. */
 const INFO_W = 280
 const INFO_PAD = 10
@@ -152,6 +158,8 @@ export class WorldScene extends Phaser.Scene {
   private buttons: Phaser.GameObjects.Container[] = []
   /** Camp, Camp until healed and Craft, shown wherever else the party stands still, and Build Watchtower where one may stand. */
   private campButtons: Phaser.GameObjects.Container[] = []
+  /** Next day and Until something happens, in a row over the others, shown while the game is active and the party is not before monsters. */
+  private timeButtons: Phaser.GameObjects.Container[] = []
   private towerButton!: Phaser.GameObjects.Container
   /** Shown on a held town or resource that has no outpost yet. */
   private outpostButton!: Phaser.GameObjects.Container
@@ -255,6 +263,10 @@ export class WorldScene extends Phaser.Scene {
       this.createButton('Scout', () => this.onLinger('scout')),
       this.createButton('Wait', () => this.onLinger('wait')),
       this.createButton('Attack', () => this.onAttack()),
+    ]
+    this.timeButtons = [
+      this.createButton('Next day', () => this.onNextDay()),
+      this.createButton('Until something happens', () => this.onUntilSomething(), TIME_WIDE_BUTTON_W),
     ]
     this.campButtons = [
       this.createButton('Camp', () => this.onCamp()),
@@ -386,6 +398,7 @@ export class WorldScene extends Phaser.Scene {
 
   probe(): WorldProbe {
     const [scout, wait, attack] = this.buttons.map((button) => buttonProbe(button))
+    const [nextDay, untilSomething] = this.timeButtons.map((button) => buttonProbe(button))
     const camp = buttonProbe(this.campButtons[0])
     const campUntilHealed = buttonProbe(this.campButtons[1], partyWounded(this.expedition().members))
     return {
@@ -403,6 +416,8 @@ export class WorldScene extends Phaser.Scene {
         scout,
         wait,
         attack,
+        nextDay,
+        untilSomething,
         camp,
         campUntilHealed,
         buildTower: buttonProbe(this.towerButton),
@@ -625,16 +640,22 @@ export class WorldScene extends Phaser.Scene {
     const centreX = PARTY_PANEL_W + (width - PARTY_PANEL_W) / 2
     const buttonY = height - 50
     // Only the buttons shown take room: the camp row has one of the tower's, the outpost's and the encampment's at most.
-    for (const all of [this.buttons, [...this.campButtons, this.towerButton, this.outpostButton, this.encampmentButton]]) {
+    const timeY = buttonY - ROW_PITCH
+    const rows: [Phaser.GameObjects.Container[], number][] = [
+      [this.timeButtons, timeY],
+      [this.buttons, buttonY],
+      [[...this.campButtons, this.towerButton, this.outpostButton, this.encampmentButton], buttonY],
+    ]
+    for (const [all, y] of rows) {
       const row = all.filter((button) => button.visible)
       // A row centred under the map, its buttons BUTTON_GAP apart.
       let x = centreX - (row.reduce((sum, button) => sum + button.width, 0) + (row.length - 1) * BUTTON_GAP) / 2
       for (const button of row) {
-        button.setPosition(x + button.width / 2, buttonY)
+        button.setPosition(x + button.width / 2, y)
         x += button.width + BUTTON_GAP
       }
     }
-    const messageY = buttonY - BUTTON_H / 2 - 26
+    const messageY = timeY - BUTTON_H / 2 - 26
     this.messageText.setPosition(centreX, messageY)
     this.statusText.setPosition(width - 20, 16)
     this.infoBox.setPosition(width - PARTY_LIST_W - INFO_MARGIN - INFO_W, HEADER_BOTTOM + INFO_MARGIN)
@@ -798,6 +819,7 @@ export class WorldScene extends Phaser.Scene {
           : 'Click a hex to travel there, or camp. Each hex, or day of camping, takes a turn.',
     )
     for (const button of this.buttons) button.setVisible(here !== null && !this.walking && world.status !== 'lost')
+    for (const button of this.timeButtons) button.setVisible(worldActive(world) && expedition.confronting === null && !this.walking)
     const campable = canCamp(world, expedition)
     for (const button of this.campButtons) button.setVisible(campable && !this.walking)
     this.towerButton.setVisible(campable && !this.walking && towerSiteRefusal(world, expedition) === null)
@@ -891,6 +913,13 @@ export class WorldScene extends Phaser.Scene {
     const route = journey.walked
     if (route.length === 0) return
 
+    this.playWalk(route, () =>
+      this.arrive(describeWorldEvents(journey.events, journey.interruptedBy), journey.interruptedBy !== null, journey.events),
+    )
+  }
+
+  /** Shows the selected party walking `route` (already made in the game), then calls `done`. */
+  private playWalk(route: Hex[], done: () => void): void {
     this.walking = true
     // A journey brings the view back to the party.
     this.panOrigin = null
@@ -908,7 +937,7 @@ export class WorldScene extends Phaser.Scene {
       }),
       onComplete: () => {
         this.party.play('idle')
-        this.arrive(describeWorldEvents(journey.events, journey.interruptedBy), journey.interruptedBy !== null, journey.events)
+        done()
       },
     })
   }
@@ -916,18 +945,23 @@ export class WorldScene extends Phaser.Scene {
   /** While the party walks, nothing else can be done and its hex is not yet where it stands. */
   private refreshWalking(): void {
     this.partyMark.clear()
-    for (const button of [...this.buttons, ...this.campButtons, this.towerButton, this.outpostButton, this.encampmentButton]) button.setVisible(false)
+    for (const button of [...this.buttons, ...this.timeButtons, ...this.campButtons, this.towerButton, this.outpostButton, this.encampmentButton]) button.setVisible(false)
     this.refreshHover()
   }
 
-  /** The walk is over: `told` is what happened on the way (`events`), and `stopped` whether that cut the journey short. */
-  private arrive(told: string, stopped: boolean, events: WorldEvent[]): void {
+  /** The walk has been shown: the party stands where the game has it. */
+  private endWalk(): void {
     this.walking = false
     this.panOrigin = null
     this.applyOrigin()
     // The map has scrolled under the pointer, which is over another hex now.
     const pointer = this.input.activePointer
     this.hovered = this.hexAt(pointer.x, pointer.y)
+  }
+
+  /** The walk is over: `told` is what happened on the way (`events`), and `stopped` whether that cut the journey short. */
+  private arrive(told: string, stopped: boolean, events: WorldEvent[]): void {
+    this.endWalk()
     const here = monstersHere(this.world, this.expedition())
     this.messageText.setText(
       stopped ? `Your journey stops. ${told}` : here ? `You come upon the ${here.name} (threat ${here.threat}).` : told,
@@ -935,6 +969,56 @@ export class WorldScene extends Phaser.Scene {
     this.refresh()
     this.checkOutcome()
     this.tell({ kind: 'world_turn', events })
+  }
+
+  /** One day passes, every party carrying on its order. */
+  private onNextDay(): void {
+    if (this.scene.isPaused() || this.walking || this.outcomeShade.visible) return
+    const refusal = advanceRefusal(this.gameState)
+    if (refusal !== null) {
+      this.messageText.setText(refusal)
+      return
+    }
+    this.daysPassed([passDay(this.gameState)!], 1)
+  }
+
+  /** Days pass until something happens, or until `UNTIL_LIMIT` of them have passed quietly. */
+  private onUntilSomething(): void {
+    if (this.scene.isPaused() || this.walking || this.outcomeShade.visible) return
+    const refusal = advanceRefusal(this.gameState)
+    if (refusal !== null) {
+      this.messageText.setText(refusal)
+      return
+    }
+    this.daysPassed(advance(this.gameState), UNTIL_LIMIT)
+  }
+
+  /**
+   * After the days in `reports` have passed in the game: shows the selected
+   * party's steps, then tells what happened, selects and centres the party an
+   * interrupt concerns, and saves.
+   */
+  private daysPassed(reports: DayReport[], limit: number): void {
+    const steps = reports.flatMap((report) => report.parties.flatMap((day) => (day.party === this.selectedParty && day.walked ? [day.walked] : [])))
+    const events = reports.flatMap((report) => report.events)
+    const told = describeDays(reports, this.world, limit)
+    const interrupted = reports.at(-1)?.interrupt?.party ?? null
+    const finish = () => {
+      if (interrupted !== null) this.selectParty(interrupted)
+      this.messageText.setText(told)
+      this.refresh()
+      this.save()
+      this.checkOutcome()
+      this.tell({ kind: 'world_turn', events })
+    }
+    if (steps.length === 0) {
+      finish()
+      return
+    }
+    this.playWalk(steps, () => {
+      this.endWalk()
+      finish()
+    })
   }
 
   /** Scouting and waiting each pass a turn among the monsters; nothing comes of either yet. */

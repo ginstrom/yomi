@@ -153,7 +153,7 @@ function actionRefusal(game: GameState, party: Expedition, action: DayAction): s
       return canBuildOutpost(world, party)
     case 'craft':
     case 'embed': {
-      if (action.place.party !== party.id) return `That item is not ${party.name}'s.`
+      if (action.place.party !== party.id) return `That item is not ${partyNoun(game, party)}'s.`
       if (craftTier(world, party) !== 'field') return 'At the workshop that is done at once, not as a day’s work.'
       return action.kind === 'craft'
         ? craftRefusal(game, action.place, action.modifier, action.grade)
@@ -170,6 +170,7 @@ interface PartyDayDone {
 
 /** A day order's action, run with no time passing, if it can still be taken. */
 function runAction(game: GameState, party: Expedition, action: DayAction, done: PartyDayDone): void {
+  // Checked again at run time, as the order may have been given on an earlier day: a refused action does nothing, but the day still passes.
   if (actionRefusal(game, party, action) !== null) return
   const { world } = game
   switch (action.kind) {

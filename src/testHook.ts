@@ -127,6 +127,8 @@ export interface PartyListProbe extends Point {
   selected: boolean
   /** Whether the party stands before monsters, which the entry marks with a red "!". */
   confronting: boolean
+  /** The party's order in words, in full as `orderLabel` gives it ("Travelling to Troll Lair", "Camping", "Idle"), not as the strip wraps it. */
+  order: string
   /** Whether the pointer is over the entry, as the entry itself heard it (nothing over it, such as the outcome screen, took the hover). */
   hovered: boolean
 }
@@ -150,13 +152,17 @@ export interface WorldProbe {
   /** The info panel's words on the hovered hex, or '' while no hex is hovered. */
   info: string
   /**
-   * Scout, Wait and Attack show among monsters, the camp buttons elsewhere; `campUntilHealed` is enabled while someone is wounded.
+   * Scout, Wait and Attack show among monsters, the camp buttons and the time buttons elsewhere (so, with the game still going); `campUntilHealed` is enabled while someone is wounded.
    * `end` and `endless` show on the victory screen, `menu` on the defeat screen.
    */
   buttons: {
     scout: ButtonProbe
     wait: ButtonProbe
     attack: ButtonProbe
+    /** Passes one day, every party carrying on its order. Shows while the selected party is not before monsters and the game is active. */
+    nextDay: ButtonProbe
+    /** Passes days until something happens, or `UNTIL_LIMIT` of them quietly. Shows with `nextDay`. */
+    untilSomething: ButtonProbe
     camp: ButtonProbe
     campUntilHealed: ButtonProbe
     /** Shows where the party may camp on land a watchtower could stand on; a click without the stock says why in the message. */

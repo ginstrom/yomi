@@ -187,3 +187,25 @@ Search CLAUDE.md for `deployedParties` and "Your party" and fix any line this st
 - [ ] The index's table shows this step done with its commit.
 
 ## 7. Execution record
+
+Engineer: Sonnet, on branch `stage05-step09` (off `long-campaign-stage-05` at 073ba25), while step 08 was committed in the main checkout. Node 26 via `PATH=/opt/homebrew/opt/node@26/bin:$PATH`.
+
+**Built**
+- `partyList.ts`: `orderLabel`, `orderLines` (two lines of `ORDER_COLS` = 13 columns at a 9 px font, the rest cut with an ellipsis), `partyEntryOrderRect`, `PartyListEntry.order`; `ENTRY_PITCH` 80 to 104 to make room; the hover summary has the order line in place of the separate "Before the ..." line (`orderLabel` says that for a confronting party).
+- `PartyListView.ts` draws the order text under each bar; `PartyListProbe.order` is the full label.
+- `worldEvents.ts`: `describeDays` (interrupt words, "After N days: ...", "30 days passed quietly.", "A quiet day.", "Rest heals N hp.") and `describePartyEvent`; a party that arrives among monsters is told once, as coming upon them.
+- `WorldScene.ts`: `timeButtons` (Next day 140 wide, Until something happens 250 wide) in a row over the action row (`ROW_PITCH` 52), always reserved so the map's view does not jump; handlers `onNextDay`, `onUntilSomething` and `daysPassed`; the walk tween was pulled out of `onMapClick` into `playWalk` and `endWalk`; probes `buttons.nextDay`, `buttons.untilSomething`.
+- `company.ts` follow-ups from step 07's review: the craft/embed refusal uses `partyNoun`; a comment on `runAction`'s run-time re-check. The triple refusal check was left (optional; `act` checks before giving the order and `runAction` must check again for an order given on an earlier day). `company.ts`'s contract is unchanged; the per-action refusal stayed private.
+- CLAUDE.md: the world map's footer, the party list's entry and the `partyList.ts` line.
+
+**Widths and layout.** The footer is two rows at 840 px: Next day 140 + Until something happens 250 + 20 gap = 410 px; the action row is unchanged (Camp, Camp until healed, Craft, Build Watchtower: 700 px of the 760 available; Enter at the encampment). The footer is 52 px taller, so the map's view is 52 px shorter and the footer top at 840x560 is 390 (was 442); three entries of the party list still fit above it (`LEAST_FOOTER_TOP` in `partyList.test.ts` updated, as the entry pitch too).
+
+**Deviations.** (1) `e2e/world.test.ts` "opens on the home valley..." travelled to (9,25), which the shorter view now puts under the footer; it travels to (9,23) instead (assertions unchanged and still hold). (2) The existing `partyListInfo` confronting test passes `order: 'Before the Goblin Raid'` with the entry. Nothing else existing was changed.
+
+**Verification**
+- `npm test`: 80 files, 1332 tests pass, the guard test untouched.
+- Guard: `npm run simulate -- --campaign --battles 50 --seed 1 --out logs/guard-50.jsonl` gives SHA-256 `068016a82040ec5be673084265005a7218f0ce927629880565c1a27a8cf52d76`, 852 battles, "Beat the Source: 23 of 50", summary identical to step 01's.
+- `npm run test:browser`: all pass (95 tests, the six new "time controls" tests included).
+- Screenshots (scratch, not committed): `/private/tmp/claude-501/-Users-ryan-personal-yomi/9989dc1f-edd4-4934-a4c4-ff8a981ae79b/scratchpad/shots/` has `wide-home.png`, `wide-travelling.png` and `least-travelling.png` (840x560).
+
+**For later steps.** The manual's world-map screenshots (step 10) show the new footer rows and the order line and need retaking.
