@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 5 (a company of one)
 
 **Slug:** long-campaign-stage-05
-**Phase:** 4. Implementation
+**Phase:** 5. Verification
 
 ## Request (user's words)
 
@@ -28,6 +28,7 @@ Large/structural refactor, but architecture and design are done (the stage desig
 | 2026-11-08 | Orders persist after an interrupt; Next day resumes | user | drop to Idle | Planner default (D10); closest to stage 6 |
 | 2026-11-08 | Order line in the right-hand party list | user | left portrait column | Planner default (D11) |
 | 2026-11-08 | Map keeps showing "Your party" while one party; stored name "First Company" | user | show "First Company" | Keeps party-list design Q2 |
+| 2026-11-08 | Step 10 reviewed by the overall review rather than a separate step review | orchestrator | separate review | Step 10 is docs and measurement; the overall review covers it |
 | 2026-11-08 | Accept planner decisions 1,2,4–8,12,13: saves 19 then 20 with one migration from 18; CLAUDE.md save rule rewritten; travel order stores its route; orders idle/travel/camp/day action; conveniences keep names (safe import cycles); DayReport richer; pouch company-wide; item place keys unchanged; leader() removed by step 05 | orchestrator | — | Each keeps the guard exact or defers to stage 6 |
 | 2026-11-08 | Stripped the planner's Co-Authored-By trailer from the plan commit | orchestrator | — | Session rule: no attribution lines |
 | 2026-11-08 | Stage 5 next | user | stage 7 | Stage 6 depends on it; tree is quiet |
@@ -67,3 +68,5 @@ Large/structural refactor, but architecture and design are done (the stage desig
 - Step 08 review (opus): clean; every phase traced against the old runCampaign; hash + summary identical. To step 10: comment carryOut's travel branch as a mirror of worldMap.travel (and the refused-setOrder confronting gap). Stage-6 notes: campDays double-count with two campers; finishCampaign reads parties[0].
 - Step 09 (1bd8749, sonnet, worktree; merged 44eb32e): order line in the party list (Travelling to…/Camping/Idle, full text in hover and probe), Next day and Until something happens (30-day cap), footer now two rows (map 52px shorter), ENTRY_PITCH 104; step 07 nits (partyNoun, runAction comment) done; guard hash identical; npm test 1332; browser 95/95. Orchestrator viewed 840×560 and 1280 screenshots: fits; at 840 the order line shows just "Travelling".
 - Step 09 review (opus): clean on the merged tree; npm test 1338; browser 95/95; hash identical; all states screenshotted. To step 10: weak e2e assertions (until-something-happens regex, Camping never asserted, one-hex check); header hint doesn't mention the new buttons; manual screenshots.
+- Step 10 (4ec97a2, 24b36f3, sonnet): 500 campaigns 230/500, 9121 battles, log sha d17e6dca… identical; 50 identical; npm test 1338; browser 95/95; e2e assertions strengthened; header hint updated; manual section + new world-travelling shot, all 20 shots retaken; play script walked headless (v18 load, walk stop, battle, 5 Next days with yields, watchtower one day, 30 quiet days) except Camping during a real camp-until-healed.
+- Step 10 reviewed by the overall review (as in stage 4).
