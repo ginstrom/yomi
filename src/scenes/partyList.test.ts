@@ -5,7 +5,7 @@ import { newGame } from '../game/gameState.ts'
 import { readyMadeParty } from '../game/party.ts'
 import { boardIndex } from '../game/blight.ts'
 import { UNEXPLORED } from '../game/vision.ts'
-import { SOURCE_ID, locationAt, travel } from '../game/worldMap.ts'
+import { SOURCE_ID, locationAt, theName, theNameCapital, travel } from '../game/worldMap.ts'
 import { hexEquals } from '../grid/hex.ts'
 import { HEADER_BOTTOM } from './partyPanel.ts'
 import {
@@ -19,7 +19,7 @@ import {
   partyEntryOrderRect,
   partyEntryRect,
   partyListInfo,
-  theName,
+  standingRoute,
   travelLabel,
   type PartyListEntry,
 } from './partyList.ts'
@@ -165,6 +165,18 @@ describe('orderLabel', () => {
     party.order = { kind: 'travel', to: source.position, route: [source.position] }
     expect(orderLabel(world, party)).toBe('Travelling to the Blight Source')
     expect(theName('Goblin Raiders')).toBe('the Goblin Raiders')
+    expect(theNameCapital('Goblin Raiders')).toBe('The Goblin Raiders')
+    expect(theNameCapital('The Blight Source')).toBe('The Blight Source')
+  })
+
+  it('gives a travel order’s remaining route as the standing route, and none for any other order', () => {
+    const { party } = setup()
+    party.order = { kind: 'travel', to: far, route: [{ q: 2, r: 1 }, far] }
+    expect(standingRoute(party)).toEqual([{ q: 2, r: 1 }, far])
+    for (const order of [{ kind: 'idle' }, { kind: 'camp' }, { kind: 'day', action: { kind: 'wait' } }] as Order[]) {
+      party.order = order
+      expect(standingRoute(party)).toEqual([])
+    }
   })
 
   it('gives a travel order’s line for a destination alone', () => {

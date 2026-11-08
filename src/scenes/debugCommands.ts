@@ -8,7 +8,7 @@ import { ENCOUNTERS, type EncounterId } from '../game/encounters.ts'
 import { selectedParty, type GameState } from '../game/gameState.ts'
 import type { Material } from '../game/territory.ts'
 import { updateSight } from '../game/vision.ts'
-import { isNotable, monstersHere, threatAt, worldActive, type WorldLocation } from '../game/worldMap.ts'
+import { isNotable, monstersHere, theName, threatAt, worldActive, type WorldLocation } from '../game/worldMap.ts'
 import { HexBoard, hexToOffset, offsetToHex } from '../grid/hex.ts'
 import { BASE_ITEMS, MAGIC_ITEMS, itemById } from '../inventory/inventory.ts'
 import { MODIFIER_IDS } from '../inventory/modifiers.ts'
@@ -327,7 +327,7 @@ const COMMANDS: Record<string, Command> = {
       const here = monstersHere(world, party)
       party.confronting = here?.id ?? null
       updateSight(world, presences(game.parties))
-      return [`The party stands at ${offset({ position: to })}${here ? `, before the ${here.name}` : ''}.`]
+      return [`The party stands at ${offset({ position: to })}${here ? `, before ${theName(here.name)}` : ''}.`]
     },
   },
   days: {

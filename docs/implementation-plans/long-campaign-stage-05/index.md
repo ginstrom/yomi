@@ -419,6 +419,11 @@ None blocks the plan. Corrections 3, 9, 10 and 11 are defaults taken for the use
 - step 03's row gained its hash.
 - evidence: the new tests failed before the fix (save: 2 order tests; e2e: the scout and hex-click walking tests; the Next day/Until test passes either way, as the stale line already said Travelling and `playWalk` already saved), then `npm test` 1344 passed, `npm run test:browser` 97 passed, the 50-campaign guard log 068016a8…2d76 (identical), the guard test untouched; no screenshot changed (only the footer's visibility among monsters, which no shot shows after a scout).
 
+**Fix round 2** (user's decision and a follow-up):
+- the selected party's standing route, what is left of its travel order, is drawn in amber while no hover route is and no walk plays (`standingRoute` in `partyList.ts`; `WorldProbe.standingRoute`); it survives a reload and goes when the order ends;
+- the article helpers moved to `worldMap.ts` (`theName`, `theNameCapital`, `midSentence`) and are used by every location-name line: the world map's stand/come upon/scout/wait messages, `describePartyEvent`, the Source's sighting, `advanceRefusal`, the debug `goto`, the battle's victory line;
+- `world-travelling.png` retaken (the other images the run rewrote differed only in animation frames and were kept as they were).
+
 ## For implementers
 
 When you start or finish a step, update its status and commits in the table above. Record evidence (commands and their output, the guard's result), deviations and blockers in your task file's "Execution record". Keep this index short; every implementer reads it.

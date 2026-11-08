@@ -8,7 +8,7 @@ import { presences, type DayAction, type Expedition, type Order, type PartyPrese
 import { partyById, type GameState } from './gameState.ts'
 import { autoHeal } from './party.ts'
 import { applyEmbed, embedRefusal } from './runecraft.ts'
-import { NOTICE_RADIUS, isNotable, locationAt, monstersHere, passTurn, routeTo, worldActive, type WorldState } from './worldMap.ts'
+import { NOTICE_RADIUS, isNotable, locationAt, monstersHere, passTurn, routeTo, theName, worldActive, type WorldState } from './worldMap.ts'
 
 /**
  * The company's one clock. Every day passes through `passDay`: each party
@@ -97,7 +97,7 @@ function dayRefusal(game: GameState, orderOf: (party: Expedition) => Order): str
   for (const party of game.parties) {
     if (party.confronting === null || answersMonsters(orderOf(party))) continue
     const name = world.locations.find((l) => l.id === party.confronting)?.name ?? 'monsters'
-    return `${partyNoun(game, party)} stands before the ${name}: scout, wait or attack.`
+    return `${partyNoun(game, party)} stands before ${theName(name)}: scout, wait or attack.`
   }
   return null
 }

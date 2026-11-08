@@ -3,7 +3,7 @@ import type { Expedition } from '../game/expedition.ts'
 import type { GameState } from '../game/gameState.ts'
 import { UNEXPLORED, isSighted } from '../game/vision.ts'
 import { boardIndex } from '../game/blight.ts'
-import { locationAt, type WorldState } from '../game/worldMap.ts'
+import { locationAt, midSentence, theName, type WorldState } from '../game/worldMap.ts'
 import type { Hex } from '../grid/hex.ts'
 import type { Rect } from './mapScroll.ts'
 import { HEADER_BOTTOM } from './partyPanel.ts'
@@ -49,16 +49,6 @@ export interface PartyListEntry {
   maxHp: number
 }
 
-/** A location's name inside a sentence: a leading article lower-cased ("The Blight Source" reads "the Blight Source"). */
-export function midSentence(name: string): string {
-  return /^the /i.test(name) ? `the ${name.slice(4)}` : name
-}
-
-/** A location's name with "the" in front, unless it has its own article: "the Goblin Raiders", "the Blight Source". */
-export function theName(name: string): string {
-  return /^the /i.test(name) ? midSentence(name) : `the ${name}`
-}
-
 /**
  * What a party is doing, in a few words: facing monsters, idle, travelling
  * (to the name of what lies at its destination, but only if the player knows
@@ -93,6 +83,11 @@ export function orderLabel(world: WorldState, party: Expedition): string {
           return 'Crafting'
       }
   }
+}
+
+/** What is left of a party's travel order, its destination last, which the world map draws while nothing is hovered; empty for any other order. */
+export function standingRoute(party: Expedition): readonly Hex[] {
+  return party.order.kind === 'travel' ? party.order.route : []
 }
 
 /** A travel order's line: the name of what lies at `to`, but only if the player knows of it. */

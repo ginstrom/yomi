@@ -525,6 +525,40 @@ describe('the world map', () => {
     const slowly = (game: Game) => game.page.evaluate(() => (window.__yomi!.speed = 0.2))
     const savedTurn = (game: Game) => game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!).game.world.turn as number)
 
+    it('draws what is left of a walk cut short until it arrives, across a reload', async () => {
+      const game = await games.open()
+      const home = await game.newGame()
+      const far = offsetToHex(19, 19)
+      await game.click(worldHexOnScreen(home, far))
+      await game.waitFor('World', (w) => !w.walking && w.world.turn > home.world.turn)
+      // Off the map, nothing is hovered: the standing route is drawn, from where the party stands to where it was going.
+      await game.hover({ x: 0, y: 0 })
+      const stopped = await game.waitFor('World', (w) => w.standingRoute.length > 0)
+      expect(order(stopped)).toMatch(/^Travelling/)
+      expect(hexDistance(stopped.standingRoute[0], stopped.partyAt)).toBe(1)
+      // A hovered hex draws its own route in its place, and the standing route comes back when the hover ends.
+      await game.hover(worldHexOnScreen(stopped, home.partyAt))
+      expect((await game.waitFor('World', (w) => w.standingRoute.length === 0)).walking).toBe(false)
+      await game.hover({ x: 0, y: 0 })
+      await game.waitFor('World', (w) => w.standingRoute.length === stopped.standingRoute.length)
+
+      await game.click((await game.reload()).buttons.continue)
+      await game.waitForScenes(['World'])
+      const loaded = await game.settled('World')
+      await game.hover({ x: 0, y: 0 })
+      const reloaded = await game.waitFor('World', (w) => w.standingRoute.length > 0)
+      expect(reloaded.standingRoute).toEqual(stopped.standingRoute)
+      expect(loaded.partyAt).toEqual(stopped.partyAt)
+
+      // Days pass until the walk is done; the order ends and its route with it.
+      let world = reloaded
+      while (order(world).startsWith('Travelling') && world.buttons.untilSomething.visible) {
+        await game.click(world.buttons.untilSomething)
+        world = await game.waitFor('World', (w) => !w.walking && w.world.turn > world.world.turn)
+      }
+      expect(world.standingRoute).toEqual([])
+    })
+
     it('says the party is travelling while its walk plays, and has saved the days walked', async () => {
       const game = await games.open()
       const home = await game.newGame()

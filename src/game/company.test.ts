@@ -247,7 +247,10 @@ describe('advance', () => {
   it('passes no day while the party is confronting, and says why', () => {
     const { game, world, party } = quiet()
     party.confronting = 'goblin_raiders'
-    expect(advanceRefusal(game)).toMatch(/Goblin Raiders/)
+    expect(advanceRefusal(game)).toMatch(/before the Goblin Raiders/)
+    party.confronting = 'blight_source'
+    expect(advanceRefusal(game)).toMatch(/before the Blight Source:/)
+    party.confronting = 'goblin_raiders'
     expect(advance(game)).toEqual([])
     expect(passDay(game)).toBeNull()
     expect(world.turn).toBe(1)

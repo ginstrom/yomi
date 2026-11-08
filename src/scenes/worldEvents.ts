@@ -1,13 +1,13 @@
 import type { WorldEvent } from '../game/blight.ts'
 import type { DayReport, Interrupt, PartyEvent } from '../game/company.ts'
-import type { MonsterLocation, WorldState } from '../game/worldMap.ts'
+import { midSentence, theName, type MonsterLocation, type WorldState } from '../game/worldMap.ts'
 
 /** The world map's line for an event, or '' for one too small to tell (a hex's level changing). */
 export function describeWorldEvent(event: WorldEvent): string {
   switch (event.type) {
     case 'sighted':
       return event.source
-        ? `You have found the heart of the blight, ${event.name} (threat ${event.threat}). Destroy it to end the blight.`
+        ? `You have found the heart of the blight, ${midSentence(event.name)} (threat ${event.threat}). Destroy it to end the blight.`
         : `You sight a ${event.name} (threat ${event.threat}).`
     case 'site_threatened':
       return `${event.name} is under threat: the blight takes it in ${event.days} ${event.days === 1 ? 'day' : 'days'}.`
@@ -54,7 +54,7 @@ export function describePartyEvent(event: PartyEvent, world: WorldState): string
       return 'The party arrives.'
     case 'confronting': {
       const location = world.locations.find((l): l is MonsterLocation => l.id === event.location && l.kind === 'monsters')
-      return location ? `You come upon the ${location.name} (threat ${location.threat}).` : ''
+      return location ? `You come upon ${theName(location.name)} (threat ${location.threat}).` : ''
     }
     case 'order_done':
       return 'The party has done what it was set to.'

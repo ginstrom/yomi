@@ -282,6 +282,22 @@ export function isNotable(_world: WorldState, event: WorldEvent, presences: read
   }
 }
 
+/** A location's name inside a sentence: a leading article lower-cased ("The Blight Source" reads "the Blight Source"). */
+export function midSentence(name: string): string {
+  return /^the /i.test(name) ? `the ${name.slice(4)}` : name
+}
+
+/** A location's name with "the" in front, unless it has its own article: "the Goblin Raiders", "the Blight Source". */
+export function theName(name: string): string {
+  return /^the /i.test(name) ? midSentence(name) : `the ${name}`
+}
+
+/** `theName` to begin a sentence: "The Goblin Raiders", "The Blight Source". */
+export function theNameCapital(name: string): string {
+  const named = theName(name)
+  return named.charAt(0).toUpperCase() + named.slice(1)
+}
+
 export function locationAt(world: WorldState, at: Hex): WorldLocation | null {
   return world.locations.find((l) => hexEquals(l.position, at)) ?? null
 }

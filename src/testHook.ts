@@ -139,6 +139,8 @@ export interface WorldProbe {
   partyAt: Hex
   /** The monster location the selected party walked into and has not answered, or null. */
   confronting: string | null
+  /** The selected party's standing route as drawn now (what is left of its travel order, its destination last): empty while a hover route is drawn instead, a walk plays, or it has none. */
+  standingRoute: Hex[]
   walking: boolean
   /** Where the map's top-left corner is on screen; with WORLD_LAYOUT, that places every hex. */
   origin: Point

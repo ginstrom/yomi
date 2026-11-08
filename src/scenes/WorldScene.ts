@@ -18,6 +18,8 @@ import {
   locationAt,
   monstersHere,
   routeTo,
+  theName,
+  theNameCapital,
   travel,
   worldActive,
   type Lingering,
@@ -34,7 +36,7 @@ import { CURSORS } from './cursors.ts'
 import { clampOrigin, mapOrigin, pannedOrigin, pressMoved, rectContains, type Rect } from './mapScroll.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { PartyListView } from './PartyListView.ts'
-import { PARTY_LIST_W, deployedParties, orderLabel, partyListInfo, travelLabel, type PartyListEntry, type ShownOrder } from './partyList.ts'
+import { PARTY_LIST_W, deployedParties, orderLabel, partyListInfo, standingRoute, travelLabel, type PartyListEntry, type ShownOrder } from './partyList.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
@@ -77,6 +79,8 @@ const GRASS_EDGE = 0x14100c
 const ROUTE_COLOR = 0xffffff
 const ROUTE_EDGE = 0x000000
 const MONSTERS_OUTLINE = 0xe53935
+/** The standing route: what is left of the selected party's travel order, drawn while no hover route is. */
+const ORDER_ROUTE_COLOR = 0xffd54f
 const PARTY_OUTLINE = 0xffffff
 const WALK_STEP_MS = 140
 
@@ -124,6 +128,8 @@ export class WorldScene extends Phaser.Scene {
   private walking = false
   /** While a walk plays: the order line the walking party shows, the order it walked by, which the game may already have ended. */
   private walkingOrder: ShownOrder | null = null
+  /** The standing route as drawn now: empty while a hover route is drawn in its place, or there is none. */
+  private drawnStandingRoute: readonly Hex[] = []
   /** The map hex under the pointer, or null when it is off the map or over a button. */
   private hovered: Hex | null = null
 
@@ -363,7 +369,7 @@ export class WorldScene extends Phaser.Scene {
       this.world.status === 'won'
         ? ''
         : here
-        ? `You stand before the ${here.name} (threat ${here.threat}).`
+        ? `You stand before ${theName(here.name)} (threat ${here.threat}).`
         : this.expedition().members.some(canAdvance)
           ? 'Your heroes have grown: click the portrait of one marked "+" to spend its skill points and perks.'
           : '',
@@ -407,6 +413,7 @@ export class WorldScene extends Phaser.Scene {
       world: this.world,
       partyAt: this.expedition().position,
       confronting: this.expedition().confronting,
+      standingRoute: [...this.drawnStandingRoute],
       walking: this.walking,
       origin: { x: this.mapLayer.x, y: this.mapLayer.y },
       view: this.view,
@@ -853,28 +860,45 @@ export class WorldScene extends Phaser.Scene {
     if (!same) this.refreshHover()
   }
 
-  /** Draws the route a click on the hovered hex would walk, red-ringed where it ends among monsters, and tells of the hex. */
+  /**
+   * Draws the route a click on the hovered hex would walk, red-ringed where it
+   * ends among monsters, and tells of the hex; with no hover route, draws the
+   * standing route instead, what is left of the selected party's travel order
+   * (none while a walk plays).
+   */
   private refreshHover(): void {
     this.refreshInfo()
-    const g = this.hoverMarks.clear()
+    this.hoverMarks.clear()
+    this.drawnStandingRoute = []
     const route = this.hovered && !this.walking ? routeTo(this.world, this.expedition(), this.hovered) : null
     if (!route) {
       this.input.setDefaultCursor(CURSORS.move)
+      const standing = this.walking ? [] : standingRoute(this.expedition())
+      if (standing.length > 0) {
+        this.drawRoute(standing, ORDER_ROUTE_COLOR)
+        this.drawnStandingRoute = standing
+      }
       return
     }
+    const toMonsters = this.drawRoute(route, ROUTE_COLOR)
+    this.input.setDefaultCursor(toMonsters ? CURSORS.attack : CURSORS.select)
+  }
+
+  /** Draws `route` from the selected party's hex in `color`, its end ringed, red where it ends among sighted monsters; returns whether it does. */
+  private drawRoute(route: readonly Hex[], color: number): boolean {
+    const g = this.hoverMarks
     const to = route[route.length - 1]
     const there = locationAt(this.world, to)
     const toMonsters = there?.kind === 'monsters' && this.world.sighted.includes(there.id)
-    this.input.setDefaultCursor(toMonsters ? CURSORS.attack : CURSORS.select)
-
     const points = [this.expedition().position, ...route].map((h) => {
       const c = boardHexCenter(h, WORLD_LAYOUT)
       return new Phaser.Math.Vector2(c.x, c.y)
     })
     // A dark edge under the line keeps it visible over every shade of grass.
     g.lineStyle(7, ROUTE_EDGE, 0.5).strokePoints(points, false)
-    g.lineStyle(3, ROUTE_COLOR, 1).strokePoints(points, false)
-    g.lineStyle(3, toMonsters ? MONSTERS_OUTLINE : ROUTE_COLOR, 1).strokePoints(this.hexPolygon(to), true)
+    g.lineStyle(3, color, 1).strokePoints(points, false)
+    g.lineStyle(3, toMonsters ? MONSTERS_OUTLINE : color, 1).strokePoints(this.hexPolygon(to), true)
+    return toMonsters
   }
 
   /** The members of the selected party, whom the column shows. */
@@ -979,7 +1003,7 @@ export class WorldScene extends Phaser.Scene {
     this.endWalk()
     const here = monstersHere(this.world, this.expedition())
     this.messageText.setText(
-      stopped ? `Your journey stops. ${told}` : here ? `You come upon the ${here.name} (threat ${here.threat}).` : told,
+      stopped ? `Your journey stops. ${told}` : here ? `You come upon ${theName(here.name)} (threat ${here.threat}).` : told,
     )
     this.refresh()
     this.checkOutcome()
@@ -1047,8 +1071,8 @@ export class WorldScene extends Phaser.Scene {
     this.messageText.setText(
       describeWorldEvents(events) ||
         (how === 'scout'
-          ? `You scout the ${here.name}, but learn nothing new.`
-          : `You wait a turn. The ${here.name} do not stir.`),
+          ? `You scout ${theName(here.name)}, but learn nothing new.`
+          : `You wait a turn. ${theNameCapital(here.name)} do not stir.`),
     )
     this.refresh()
     this.save()

@@ -15,7 +15,7 @@ describe('describeWorldEvent', () => {
   it('tells each event, and nothing of a level changing or of a spawn, which is told when sighted', () => {
     expect(describeWorldEvent(sighted)).toBe('You sight a Kobold Nest (threat 2).')
     expect(describeWorldEvent({ ...sighted, name: 'The Blight Source', threat: 5, source: true })).toBe(
-      'You have found the heart of the blight, The Blight Source (threat 5). Destroy it to end the blight.',
+      'You have found the heart of the blight, the Blight Source (threat 5). Destroy it to end the blight.',
     )
     expect(describeWorldEvent(spawned)).toBe('')
     expect(describeWorldEvent(threatened)).toBe('Iron Vein is under threat: the blight takes it in 1 day.')
@@ -63,6 +63,8 @@ describe('describeDays', () => {
     expect(describeDays([report], world, 30)).toBe(describePartyEvent(confronting, world))
     expect(describeDays([report], world, 30)).toMatch(/^You come upon the /)
     expect(describeDays([{ ...report, partyEvents: [arrived] }], world, 30)).toBe('The party arrives.')
+    const source = world.locations.find((l) => l.id === 'blight_source')!
+    expect(describePartyEvent({ ...confronting, location: source.id }, world)).toBe('You come upon the Blight Source (threat 5).')
   })
 
   it('adds the hit points rest healed', () => {

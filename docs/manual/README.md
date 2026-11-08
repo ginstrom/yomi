@@ -113,7 +113,7 @@ Two buttons in the footer let days pass without a walk or a camp of your own:
 - **Next day** passes one day. A party that is travelling or camping carries on with it; an idle one stays where it is.
 - **Until something happens** passes days one after another until something important happens, the party arrives or finishes what it was doing, or thirty quiet days have gone by, in which case the map says so.
 
-A walk cut short, or a stretch of camping interrupted, keeps its order: the line still says where the party was going, or that it is camping, and **Next day** carries it on, a hex further along the road or another day of rest. Clicking a hex or a button gives the party a new order. Neither time button shows while the party stands at a monsters' lair, even once it has scouted them: there you scout, wait or attack, or walk away.
+A walk cut short, or a stretch of camping interrupted, keeps its order: the line still says where the party was going, or that it is camping, and a walk's remaining road stays drawn on the map in amber to where it was going (hovering another hex shows that hex's route in its place until the pointer moves off), and **Next day** carries it on, a hex further along the road or another day of rest. Clicking a hex or a button gives the party a new order. Neither time button shows while the party stands at a monsters' lair, even once it has scouted them: there you scout, wait or attack, or walk away.
 
 ![A walk cut short, still travelling](images/world-travelling.png)
 

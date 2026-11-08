@@ -22,7 +22,7 @@ import { Ground, pileChanges } from '../game/ground.ts'
 import { describeRewards, partyFighters, rewardVictory } from '../game/party.ts'
 import type { SavedBattle } from '../game/save.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
-import { clearLocation, type MonsterLocation } from '../game/worldMap.ts'
+import { clearLocation, theNameCapital, type MonsterLocation } from '../game/worldMap.ts'
 import type { Equipment, Item } from '../inventory/inventory.ts'
 import {
   HEX_DIRECTIONS,
@@ -2106,7 +2106,7 @@ export class BattleScene extends Phaser.Scene {
     const seed = battleSeed(this.engine.getLog())
     const foundRunes = playerWon && this.location && seed !== null ? takeRunes(this.gameState, this.location.threat, this.location.encounter, seed) : []
     if (playerWon && this.location) clearLocation(this.gameState, this.location.id)
-    const foes = this.location ? `The ${this.location.name}` : 'Your foes'
+    const foes = this.location ? theNameCapital(this.location.name) : 'Your foes'
     // The reward goes by the hit points the party ended on: who fell, and so who is dead.
     this.syncUnitsFromEngine()
     // What mana a winner has left is its own, to heal with on the world map; a level or a day of camping fills it.
