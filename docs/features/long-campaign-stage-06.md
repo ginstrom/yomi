@@ -35,12 +35,16 @@ Large/structural, but the stage design is the approved design (marked ready for 
 |---|---|---|---|---|
 | 2026-11-08 | Merged PR #6 (merge commit ab37e14) | orchestrator (user delegated) | — | Review verdict ready, mergeable, branch up to date |
 | 2026-11-08 | Skip architecture and design; the stage design is the approved design | orchestrator | new design | Stage design marked ready for planning; precedent stages 2–5 |
+| 2026-11-08 | Decision 7: last party wiped with reserves left → new party auto-formed at home | user | game over; wait for player | Recommended |
+| 2026-11-08 | Decision 8: Exchange is its own overlay scene (faces + two baggage lists) | user | inside character panel | Recommended |
+| 2026-11-08 | Decision 11: click on a party's hex = meet; only the selected party animates | user | animate all; click selects | Recommended |
+| 2026-11-08 | Decision 16: guard policy reinforce > defend > train > garrison > home, never the Source | user | defend first | Recommended |
 | 2026-11-08 | Accept planner decisions 1–6, 9, 10, 12–15, 17, 18 (see plan index); hazards placeKey/pouch/{leader}/other-party animation/pre-existing reload & 840 route deferred with reasons | orchestrator | — | Each follows the design or reference; none changes an approved document |
 | 2026-11-08 | Own branch `long-campaign-stage-06` off main | orchestrator | commit on main | Precedent: one branch and PR per stage |
 
 ## Open questions
 
-- Planner decisions 7 (wipes; new party from reserves), 8 (Exchange overlay), 11 (map clicks meet; only selected party animated), 16 (guard policy order): put to the user. Block steps 05, 08, 07, 10 respectively.
+(none; decisions 7, 8, 11, 16 answered by the user as planned)
 
 ## Model tiers
 
@@ -49,4 +53,4 @@ Large/structural, but the stage design is the approved design (marked ready for 
 
 ## Verification
 
-(none yet)
+- Step 01 (d71a415, f5b9f3a, opus): startTravel/orderAction in company.ts; simulator acts as day orders; vanguard tracked; campDays once. Baselines 230/500 (sha d17e6dca…), 50: 23/50; guard + 50 hash identical; npm test 1359. Note: takeDays counts any made item as a field craft (fine until field embeds).
