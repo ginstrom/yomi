@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 6 (multiple parties)
 
 **Slug:** long-campaign-stage-06
-**Phase:** implementation (steps 08, 10 review)
+**Phase:** implementation (step 11)
 
 ## Request (user's words)
 
@@ -51,7 +51,7 @@ Large/structural, but the stage design is the approved design (marked ready for 
 ## Model tiers
 
 - Planner: opus
-- Steps (engineer / reviewer): 01 opus/opus; 02 sonnet/opus; 03 opus/opus; 04 sonnet/opus; 05 opus/opus; 06 sonnet/opus; 07 opus/opus; 08 sonnet/opus; 09 opus/opus; 10 opus/opus; 11 sonnet/opus; overall review opus
+- Steps (engineer / reviewer): 01 opus/opus; 02 sonnet/opus; 03 opus/opus; 04 sonnet/opus; 05 opus/opus; 06 sonnet/opus; 07 opus/opus; 08 sonnet/opus; 09 opus/opus; 10 opus/opus; 11 opus/opus (escalated: measurement judgment); overall review opus
 
 ## Verification
 
@@ -80,4 +80,7 @@ Large/structural, but the stage design is the approved design (marked ready for 
 - Step 10 review (opus): clean; 0 promotions by design (vanguard never short after hall-4 visit fills it; guards 3+ levels below). Timing alone: 100 campaigns 61 s (--parties 1) vs 63 s (3); CLAUDE.md's 'about a minute' for 500 is stale (~5 min) — to step 11. Unplanned guardWanted rule raises vanguard walk-home days (60.0 vs 58.2) — step 11 to report. Fixed in 4d642f6: defend test pins hardest push and nearest-to-fall; guard under GUARD_MIN_SIZE goes home to refill. npm test 1459; --parties 1 hash unchanged. Swap promotion (user) in progress.
 - Step 08 (4df8911, 8cd619d, sonnet): Guild Hall columns, Form/Rename/Disband, Exchange overlay (footer + Inventory tab), 'For: <party>'; npm test 1448; browser 109/109 before a late tweak; 50 hash identical. Known: footer time row overflows at 840 when all five buttons show (two parties on a held site) — orchestrator considers blocking; manual guild-hall.png stale (step 11). Orchestrator viewed 840 shots of Guild Hall and Exchange: read well.
 - Step 10 swap promotion (bec5c0f): tests first; --parties 1 hash unchanged; npm test 1462. 100 × ready-level 10 seed 1: Source 78 (3 parties) vs 78 (1); promotions 0.1; guard battles 5.9; wipes 0.3 vs 0.2; vanguard walk-home 93.9 vs 64.5; hall 4 in 64/100. Accepted without re-review (small, tests-first, pinned); overall review covers it.
+- Step 08 review (opus): clean; footer fits at 840 in the busiest state (x 85–835; engineer had compared with the map's width). Nits fixed in 1659377 (busiest-footer e2e, rename field cleared on act/pick, hint, a real disband test); npm test 1448; encampment+exchange+world e2e 63.
+- Merged steps 09–10 (simulator branch) into the stage branch (index rows conflict resolved); tsc ok; npm test 1487.
+- Step 11 escalated to opus (engineer): it carries the guardWanted measurement and judgment the user asked for, plus step 09's BattleScene meta party line.
 
