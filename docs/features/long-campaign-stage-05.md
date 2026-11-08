@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 5 (a company of one)
 
 **Slug:** long-campaign-stage-05
-**Phase:** 6. Report — done; awaiting the user's go-ahead for PR
+**Phase:** PR — pr-reviewer ready; opening PR
 
 ## Request (user's words)
 
@@ -80,3 +80,4 @@ Large/structural refactor, but architecture and design are done (the stage desig
 - Fix round 2 (f039a0b, opus): standing travel route drawn in amber (probe standingRoute; survives reload; hover replaces it); theName/theNameCapital moved to worldMap.ts and used for every 'the <location>' line; world-travelling shot retaken (orchestrator viewed: route reads clearly). npm test 1345; browser 98/98; guard hash identical. Left: 'You sight a Kobold Scouts' article (pre-existing).
 - Re-review of fix rounds (opus) at f039a0b: clean; npm test 1345, browser 98/98 first run, build, guard hash identical; fixes 1, 3, A, 2 seen in the real game (evidence fix-*). Non-blocking, accepted as known issues: a reload during the walk animation loses that turn's story moment (pre-existing for hex clicks; could skip the source_sighted cutscene); amber route can run under the party list at 840 wide; order line reads Idle after Scout at a lair (pre-existing).
 - Known issues for the PR: the above three; 'You sight a Kobold Scouts' article (pre-existing); 'until affordable'/'wait N days' deferred (user); stage-6 hazards listed above and in the overall review.
+- PR review (2026-11-08): checks pass at f4be587 (npm test 1345, build, sprites:check, browser 97/98 with one load-timing flake passing alone twice). Local CRISP: 0 critical, 6 observations; 4 fixed (90dd69b, 4a4bdb4, cbf2f32, cb67220; sonnet), 2 dismissed (simulator travel mirror, convention params). Verdict ready. Record: .git/pr-review/long-campaign-stage-05.md
