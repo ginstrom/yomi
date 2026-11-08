@@ -141,3 +141,26 @@ No new order kinds, no second party in the game, no `--parties` flag, no change 
 - [ ] Index row 01 set to done with the commit hash; one commit "Stage 6 step 01: the simulator's days on the loop", no attribution lines.
 
 ## Execution record
+
+### Baseline (before any change, at `b9682cd`)
+
+- `npm run simulate -- --campaign --battles 500 --seed 1 --out logs/base-500.jsonl`: **230 of 500** beat the Source (46.0%), party fell 270, encampment lost 0, out of days 0; 270 days, 18.2 battles, 26.0 spawns a campaign; 9121 battles. Log SHA-256 `d17e6dca65137917aaa7e1bb873ab241b323dbe6152e338c141ae618b51613fd` (stage 5's).
+- `npm run simulate -- --campaign --battles 50 --seed 1 --out logs/guard-50.jsonl`: log SHA-256 `068016a82040ec5be673084265005a7218f0ce927629880565c1a27a8cf52d76` (stage 5's). Summary:
+  - Beat the Source: 23 of 50 (46.0%); party fell: 27 (54.0%); encampment lost: 0; out of days: 0
+  - A campaign: 266 days, 17.0 battles, 24.3 spawns, 2.9 sites captured and 0.1 lost, 38% of the land blighted at the end
+  - Watchtowers 1.8 built, 0.0 lost; shrine 1.0; outposts 0.5
+  - Trading post, workshop, infirmary 1.1, 0.6, 0.5; 6 gold on gear, 61 from sales, 4.4 items crafted (2.8 days in the field)
+  - Tier-2 bought 0.0; runes 12.1 found, 0.0 bought, 0.1 fused, 3 gold; 0.0 sockets filled
+  - Guild hall 2.4, 2.2 recruits, 1.8 heroes dead; 109.4 hp healed in 25.0 days of camping
+  - Levels at the end: lowest 6.4, highest 6.9; battles to level 5: 6.8 (38 campaigns)
+  - Battles by threat (battles/won): 1 101/101, 2 170/167, 3 189/180, 4 262/261, 5 130/116; 852 battles, 825 player wins, 27 enemy wins
+
+  (The 50-campaign baseline was run from a clean `git archive HEAD` tree, as the code was being edited while the 500-campaign run was going.)
+
+## Execution record
+
+- **Done:** `startTravel` and `orderAction` in `company.ts` (C1); `act` = `orderAction` then `passDay`; `worldMap.travel` over `startTravel`. Simulator: an `act` decision is a day order (`'standing'`, `plan.running = 'day'`); a field craft is chosen by `fieldCraft` and runs as a day order, sharing `craftGear`'s loop (`eachWantedCraft`); at a workshop `craft` crafts at once as before; `takeDays` (now exported) records a day order's `made` as `crafted` and `fieldCraftDays`, and adds `campDays` once a day when any party camps; `CampaignRun.vanguard`; `finishCampaign` reads the vanguard's members and counts sockets over every party; the mirror comment is gone.
+- **Tests:** `company.test.ts` gains `startTravel` (refused, blocked, blocked after lingering, started) and `orderAction` (refuses as `act`, same words; leaves the day to `passDay`, equal to `act`; two parties' actions in one day). `scripts/simulate.test.ts`: the tower/craft test now expects `'standing'` and runs the day by `advance` + `takeDays`; new: a refused act asks again; `fieldCraft` matches `craftGear(game, party, 1)` (two picking cases, two picking-nothing cases); two campers count their days once and both heals.
+- **Gates:** `npx vitest run src/game/company.test.ts src/game/worldMap.test.ts` 86 passed; `npx vitest run scripts/simulate.test.ts` 64 passed (the refactor guard unedited and green); `npm test` 80 files, 1359 tests passed; 50-campaign check after the change: hash `068016a8…2d76` and summary identical line for line (**guard identical**). No scene changed, so no in-browser run.
+- **Deviations:** `takeDays` is exported, for the two-camper test. The old tower/craft test's expectations changed deliberately (an act no longer passes its day inside `carryOut`).
+- **For later steps:** a day order's `made` counts as a field craft in `takeDays`; if the simulator ever embeds in the field, tell the two apart there.

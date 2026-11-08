@@ -34,7 +34,7 @@ import {
   canBuildTower,
   raiseShrine,
 } from '../src/game/buildings.ts'
-import { WORKSHOP_COSTS, craft, craftTier, highestGrade, upgradeWorkshop } from '../src/game/crafting.ts'
+import { WORKSHOP_COSTS, craft, craftRefusal, craftTier, highestGrade, upgradeWorkshop } from '../src/game/crafting.ts'
 import { presenceOf, type DayAction, type Expedition } from '../src/game/expedition.ts'
 import { newGame, type GameState } from '../src/game/gameState.ts'
 import {
@@ -50,7 +50,7 @@ import {
   upgradeGuildHall,
 } from '../src/game/guildHall.ts'
 import { canCamp, partyWounded } from '../src/game/camp.ts'
-import { act, advance, roadBlocked, setOrder, type DayReport, type OrderRequest } from '../src/game/company.ts'
+import { advance, orderAction, setOrder, startTravel, type DayReport, type OrderRequest } from '../src/game/company.ts'
 import { INFIRMARY_COSTS, raiseInfirmary } from '../src/game/infirmary.ts'
 import { TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, wares } from '../src/game/tradingPost.ts'
 import { daysToFall, sites, type Material, type Stock } from '../src/game/territory.ts'
@@ -70,7 +70,7 @@ import { baseItem, craftedItem, itemById, type EquipmentSlot, type Item } from '
 import { MODIFIERS, type ModifierId } from '../src/inventory/modifiers.ts'
 import { RANKS, pouchCount, pouchKeys, runeFits, runeKey, slotClass, socketsOf, type RuneId, type RuneKey, type SlotClass } from '../src/inventory/runes.ts'
 import { clampHp, maxHp } from '../src/character/character.ts'
-import { replaceAt } from '../src/game/itemPlace.ts'
+import { replaceAt, type ItemPlace } from '../src/game/itemPlace.ts'
 import { takeRunes } from '../src/game/loot.ts'
 import { embed, extract, extractCost, extractRefusal, fuse, fuseCost, fuseRefusal, embedCost } from '../src/game/runecraft.ts'
 import { buyRune, buyRuneRefusal, runePrice, runeWares } from '../src/game/tradingPost.ts'
@@ -402,6 +402,33 @@ function modifierRank(family: FamilyId | undefined, mod: { id: ModifierId; grade
 }
 
 /**
+ * Walks the crafts the careful party wants, in its order: every member's
+ * weapon, shield and armour, the first preferred modifier unlocked where the
+ * party stands, the grades best first, skipping any not better than what the
+ * item has. `attempt` tries one and says whether it was made, which moves on
+ * to the next piece; `done` stops the walk before the next piece.
+ */
+function eachWantedCraft(game: GameState, party: Expedition, done: () => boolean, attempt: (place: ItemPlace, modifier: ModifierId, grade: Grade) => boolean): void {
+  const tier = craftTier(game.world, party)
+  for (const [member, hero] of party.members.entries()) {
+    for (const slot of GEAR_SLOTS) {
+      const item = hero.equipment[slot]
+      const base = item && baseItem(item)
+      if (!item || !base || done()) continue
+      for (const id of (base.family && PREFERRED_MODIFIERS[base.family]) || []) {
+        const unlocked = MODIFIERS[id].unlock <= (tier === 'field' ? 0 : tier)
+        if (!unlocked) continue
+        for (const grade of [...GRADES].reverse()) {
+          if (grade > highestGrade(tier) || modifierRank(base.family, { id, grade }) >= modifierRank(base.family, item.mod)) continue
+          if (attempt({ from: 'worn', party: party.id, member, slot, itemId: item.id }, id, grade)) break
+        }
+        break
+      }
+    }
+  }
+}
+
+/**
  * Crafts what the careful party wants on every member's weapon, shield and
  * armour that the place makes better than what it has: the first preferred
  * modifier unlocked here, at the best grade the stock affords. In the field
@@ -411,28 +438,25 @@ function modifierRank(family: FamilyId | undefined, mod: { id: ModifierId; grade
 export function craftGear(game: GameState, party: Expedition, limit = Infinity): { crafted: number; events: WorldEvent[] } {
   let crafted = 0
   const events: WorldEvent[] = []
-  const tier = craftTier(game.world, party)
-  for (const [member, hero] of party.members.entries()) {
-    for (const slot of GEAR_SLOTS) {
-      const item = hero.equipment[slot]
-      const base = item && baseItem(item)
-      if (!item || !base || crafted >= limit) continue
-      for (const id of (base.family && PREFERRED_MODIFIERS[base.family]) || []) {
-        const unlocked = MODIFIERS[id].unlock <= (tier === 'field' ? 0 : tier)
-        if (!unlocked) continue
-        for (const grade of [...GRADES].reverse()) {
-          if (grade > highestGrade(tier) || modifierRank(base.family, { id, grade }) >= modifierRank(base.family, item.mod)) continue
-          const result = craft(game, { from: 'worn', party: party.id, member, slot, itemId: item.id }, id, grade)
-          if (result.refusal !== null) continue
-          crafted++
-          events.push(...result.events)
-          break
-        }
-        break
-      }
-    }
-  }
+  eachWantedCraft(game, party, () => crafted >= limit, (place, id, grade) => {
+    const result = craft(game, place, id, grade)
+    if (result.refusal !== null) return false
+    crafted++
+    events.push(...result.events)
+    return true
+  })
   return { crafted, events }
+}
+
+/** The field craft `craftGear(game, party, 1)` would make, as a day's action, without making it; null if it would make none. */
+export function fieldCraft(game: GameState, party: Expedition): Extract<DayAction, { kind: 'craft' }> | null {
+  let action: Extract<DayAction, { kind: 'craft' }> | null = null
+  eachWantedCraft(game, party, () => action !== null, (place, modifier, grade) => {
+    if (craftRefusal(game, place, modifier, grade) !== null) return false
+    action = { kind: 'craft', place, modifier, grade }
+    return true
+  })
+  return action
 }
 
 /** What the stock should keep of each material for what the careful party still means to buy: every level left of every building, and a craft for each place in the party. */
@@ -681,7 +705,7 @@ export interface Plan {
   /** Whether the walk's last order got the party nowhere: no way there, or a nest on the road's first hex. */
   stalled: boolean
   /** The order whose days the next `advance` runs for it, if any. */
-  running: 'travel' | 'camp' | null
+  running: 'travel' | 'camp' | 'day' | null
 }
 
 export function newPlan(): Plan {
@@ -699,7 +723,7 @@ export type Decision =
   | { kind: 'order'; order: OrderRequest }
   /** A one-day action. */
   | { kind: 'act'; action: DayAction }
-  /** One field craft (`craftGear` with a limit of 1), a day's act where it makes one. */
+  /** One craft: at a workshop `craftGear` with a limit of 1, at once; in the field the one it would make (`fieldCraft`), a day's act. */
   | { kind: 'craft' }
   /** Cast the party's heals (`autoHeal`); no time passes. */
   | { kind: 'heal' }
@@ -714,6 +738,8 @@ export interface CampaignRun {
   battles: LoggedEvent[][]
   record: CampaignRecord
   plans: Map<string, Plan>
+  /** The vanguard's party id: the party that marches on the nests and the Source, whose levels the record ends with. */
+  vanguard: string
 }
 
 /** A campaign about to begin, from a new game of the run's party unless one is given. */
@@ -725,7 +751,7 @@ export function startCampaign(campaign: number, seed: number, args: CliArgs, fir
     runesFound: 0, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0,
     finalLevels: [], deathsAtLevel: [], battlesToLevel: {},
   }
-  return { campaign, seed, args, firstBattleId, game, battles: [], record, plans: new Map(game.parties.map((party) => [party.id, newPlan()])) }
+  return { campaign, seed, args, firstBattleId, game, battles: [], record, plans: new Map(game.parties.map((party) => [party.id, newPlan()])), vanguard: game.parties[0].id }
 }
 
 /** The plan of party `party`, a new one if it has none yet. */
@@ -933,18 +959,20 @@ export function carryOut(run: CampaignRun, party: Expedition, decision: Decision
     }
     case 'fight':
       return fightAt(run, party, decision.target) ? null : 'fallen'
-    case 'act': {
-      const report = act(game, party.id, decision.action)
-      if (typeof report !== 'string') tally(record, report.events)
-      return null
-    }
+    case 'act':
+      // A day order, whose day the next `advance` runs with every other party's.
+      if (orderAction(game, party.id, decision.action) !== null) return null
+      plan.running = 'day'
+      return 'standing'
     case 'craft': {
-      const turn = world.turn
-      const { crafted, events } = craftGear(game, party, 1)
-      tally(record, events)
-      record.crafted += crafted
-      record.fieldCraftDays += world.turn - turn
-      return null
+      if (craftTier(world, party) !== 'field') {
+        record.crafted += craftGear(game, party, 1).crafted
+        return null
+      }
+      const action = fieldCraft(game, party)
+      if (!action || orderAction(game, party.id, action) !== null) return null
+      plan.running = 'day'
+      return 'standing'
     }
     case 'heal':
       record.healedHp += autoHeal(party.members)
@@ -961,15 +989,8 @@ export function carryOut(run: CampaignRun, party: Expedition, decision: Decision
         return 'standing'
       }
       // A fresh route from where the party stands; one that cannot start (no way there, or a nest on its first hex) gets it nowhere.
-      // This mirrors the start of `travel` in worldMap.ts, which carries the same guards: a refused order returns at once there too, leaving `confronting` as it was, and a blocked first hex clears the order and sets `confronting`. Keep the two in step.
-      if (setOrder(game, party.id, order) !== null) {
+      if (startTravel(game, party, order.to) !== 'started') {
         plan.stalled = true
-        return null
-      }
-      if (party.order.kind === 'travel' && roadBlocked(world, party.order)) {
-        party.order = { kind: 'idle' }
-        plan.stalled = true
-        party.confronting = monstersHere(world, party)?.id ?? null
         return null
       }
       plan.running = 'travel'
@@ -978,10 +999,15 @@ export function carryOut(run: CampaignRun, party: Expedition, decision: Decision
   }
 }
 
-/** Takes in the days `advance` ran: the events tallied, and each running order's walk or camp recorded on its party. */
-function takeDays(run: CampaignRun, reports: readonly DayReport[]): void {
+/**
+ * Takes in the days `advance` ran: the events tallied, and each running
+ * order's walk, camp or day's craft recorded on its party. A day any party
+ * camped counts once in `campDays`; every camper's healing counts.
+ */
+export function takeDays(run: CampaignRun, reports: readonly DayReport[]): void {
   const { game, record } = run
   for (const report of reports) tally(record, report.events)
+  if (game.parties.some((party) => planOf(run, party).running === 'camp')) record.campDays += reports.length
   for (const party of game.parties) {
     const plan = planOf(run, party)
     const days = reports.map((report) => report.parties.find((day) => day.party === party.id))
@@ -990,8 +1016,13 @@ function takeDays(run: CampaignRun, reports: readonly DayReport[]): void {
       party.confronting = monstersHere(game.world, party)?.id ?? null
     }
     if (plan.running === 'camp') {
-      record.campDays += reports.length
       for (const day of days) record.healedHp += (day?.rested ?? 0) + (day?.cast ?? 0)
+    }
+    if (plan.running === 'day') {
+      // A field craft made is a day in the field; the simulator embeds only at the workshop.
+      const made = days.filter((day) => day?.made).length
+      record.crafted += made
+      record.fieldCraftDays += made
     }
   }
 }
@@ -1006,7 +1037,7 @@ function needsDecision(game: GameState, party: Expedition, last: DayReport | und
 function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Campaign {
   const { game, record, battles } = run
   const { world } = game
-  const members = game.parties[0].members
+  const members = game.parties.find((party) => party.id === run.vanguard)!.members
   record.outcome = outcome
   record.days = world.turn
   record.battles = battles.length
@@ -1017,7 +1048,7 @@ function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Campaign {
   record.workshopLevel = world.workshop
   record.infirmaryLevel = world.infirmary
   record.finalLevels = members.map((member) => member.level)
-  record.socketsFilled = members.reduce((n, member) => n + Object.values(member.equipment).reduce((m, item) => m + (item?.runes?.length ?? 0), 0), 0)
+  record.socketsFilled = game.parties.flatMap((party) => party.members).reduce((n, member) => n + Object.values(member.equipment).reduce((m, item) => m + (item?.runes?.length ?? 0), 0), 0)
   return { battles, record }
 }
 

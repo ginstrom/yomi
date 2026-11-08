@@ -18,7 +18,9 @@ import { NOTICE_RADIUS, isNotable, locationAt, monstersHere, passTurn, routeTo, 
  * (`travel`) and camping until healed (`campUntilHealed`) are orders run this
  * way; an order outlasts an interrupt, so the next day carries it on. A
  * one-day action (scouting, waiting, a day's camp, a building, a field craft
- * or embed) is a day order given and run at once (`act`), which ends idle.
+ * or embed) is a day order, given (`orderAction`) for the next day to run, or
+ * given and run at once (`act`); it ends idle. A journey starts with
+ * `startTravel`.
  *
  * This module and the ones whose day-passing functions call it (worldMap.ts,
  * camp.ts, buildings.ts, crafting.ts, runecraft.ts) import one another, which
@@ -135,6 +137,26 @@ export function setOrder(game: GameState, id: string, request: OrderRequest): st
 export function roadBlocked(world: WorldState, order: Extract<Order, { kind: 'travel' }>): boolean {
   const next = order.route[0]
   return next !== undefined && !hexEquals(next, order.to) && locationAt(world, next)?.kind === 'monsters'
+}
+
+/** How `startTravel` went: refused (nothing changed), blocked at its first hex, or started. */
+export type TravelStart = 'started' | 'blocked' | 'refused'
+
+/**
+ * Starts party `party`'s travel order to `to`, passing no day: 'refused'
+ * where `setOrder` says no (nothing changed); 'blocked' where a nest stands on
+ * the route's first hex short of `to` (the loop checks the road only after a
+ * day), leaving the party idle and confronting whatever stands where it is;
+ * else 'started', the order standing for the loop to walk.
+ */
+export function startTravel(game: GameState, party: Expedition, to: Hex): TravelStart {
+  if (setOrder(game, party.id, { kind: 'travel', to }) !== null) return 'refused'
+  if (party.order.kind === 'travel' && roadBlocked(game.world, party.order)) {
+    party.order = IDLE
+    party.confronting = monstersHere(game.world, party)?.id ?? null
+    return 'blocked'
+  }
+  return 'started'
 }
 
 /** Why `party` cannot take the one-day action now, or null when it can; the game's own refusal to pass a day aside. */
@@ -306,21 +328,29 @@ export function passDay(game: GameState): DayReport | null {
 }
 
 /**
- * Party `id`'s one-day action: refused, changing nothing (its standing order
- * included), where the action cannot be taken or no day can pass with it
- * (`advanceRefusal`, which a party's own scout or wait answers when it
- * confronts monsters); else gives the order `{ kind: 'day', action }` and
- * passes one day, after which the party is idle. Workshop work takes no day,
- * and so is refused here.
+ * Gives party `id` the one-day action as its order, `{ kind: 'day', action }`,
+ * for the next day to run, passing no day: refused, changing nothing (its
+ * standing order included), where the action cannot be taken or no day could
+ * pass with it (`advanceRefusal`, which a party's own scout or wait answers
+ * when it confronts monsters). Workshop work takes no day, and so is refused.
  */
-export function act(game: GameState, id: string, action: DayAction): string | DayReport {
+export function orderAction(game: GameState, id: string, action: DayAction): string | null {
   const party = partyById(game, id)
   if (!party) return `No party "${id}".`
   const order: Order = { kind: 'day', action }
   const refusal = actionRefusal(game, party, action) ?? dayRefusal(game, (p) => (p === party ? order : p.order))
   if (refusal) return refusal
   party.order = order
-  return passDay(game)!
+  return null
+}
+
+/**
+ * Party `id`'s one-day action, given (`orderAction`) and run at once: one day
+ * passes, after which the party is idle. Refused, changing nothing, as
+ * `orderAction` is.
+ */
+export function act(game: GameState, id: string, action: DayAction): string | DayReport {
+  return orderAction(game, id, action) ?? passDay(game)!
 }
 
 /** Days until a report has an interrupt, the game stops being active, `advanceRefusal` says no, or `limit` days pass. */

@@ -13,7 +13,7 @@ import {
   type Item,
 } from '../inventory/inventory.ts'
 import { advanceDay, cleanse, seedBlight, type WorldEvent } from './blight.ts'
-import { act, advance, roadBlocked, setOrder, worldInterrupt } from './company.ts'
+import { act, advance, startTravel, worldInterrupt } from './company.ts'
 import { MAX_THREAT, type EncounterId } from './encounters.ts'
 import { presences, type Expedition, type PartyPresence } from './expedition.ts'
 import type { GameState } from './gameState.ts'
@@ -345,16 +345,13 @@ export interface Journey {
 export function travel(game: GameState, party: Expedition, to: Hex): Journey {
   const world = game.world
   const journey: Journey = { walked: [], events: [], interruptedBy: null }
-  if (setOrder(game, party.id, { kind: 'travel', to }) !== null) return journey
-  // A nest on the first hex of the road: the loop checks the road only after a day.
-  if (party.order.kind === 'travel' && roadBlocked(world, party.order)) party.order = { kind: 'idle' }
-  else {
-    for (const report of advance(game, Infinity)) {
-      const walked = report.parties.find((day) => day.party === party.id)?.walked
-      if (walked) journey.walked.push(walked)
-      journey.events.push(...report.events)
-      journey.interruptedBy = worldInterrupt(report)
-    }
+  // Refused, nothing changes; blocked at the first hex, startTravel has left the party idle, confronting what stands here.
+  if (startTravel(game, party, to) !== 'started') return journey
+  for (const report of advance(game, Infinity)) {
+    const walked = report.parties.find((day) => day.party === party.id)?.walked
+    if (walked) journey.walked.push(walked)
+    journey.events.push(...report.events)
+    journey.interruptedBy = worldInterrupt(report)
   }
   party.confronting = monstersHere(world, party)?.id ?? null
   return journey

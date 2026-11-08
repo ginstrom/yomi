@@ -4,7 +4,7 @@ import { hexEquals, offsetToHex, type Hex } from '../grid/hex.ts'
 import { itemById } from '../inventory/inventory.ts'
 import { boardIndex } from './blight.ts'
 import { campUntilHealed, partyWounded } from './camp.ts'
-import { UNTIL_LIMIT, act, advance, advanceRefusal, passDay, setOrder, worldInterrupt, type DayReport } from './company.ts'
+import { UNTIL_LIMIT, act, advance, advanceRefusal, orderAction, passDay, setOrder, startTravel, worldInterrupt, type DayReport } from './company.ts'
 import { presences, type DayAction } from './expedition.ts'
 import { newGame, type GameState } from './gameState.ts'
 import type { ItemPlace } from './itemPlace.ts'
@@ -487,6 +487,93 @@ describe('act refused', () => {
     party.order = { kind: 'camp' }
     expect(advance(game)).toEqual([])
     expect(game.world.turn).toBe(2)
+  })
+})
+
+describe('startTravel', () => {
+  it('changes nothing for a refused order', () => {
+    const { game, party } = withStandingOrder(confronting())
+    const before = JSON.stringify(game)
+    expect(startTravel(game, party, NEAR())).toBe('refused')
+    expect(JSON.stringify(game)).toBe(before)
+  })
+
+  it('leaves the party idle, confronting what stands where it is, when a nest blocks the first hex', () => {
+    const { game, world, party } = quiet()
+    const route = routeTo(world, party, NEAR())!
+    // A nest the player has not seen, which the route does not avoid.
+    world.locations.push({ id: 'hidden_nest', kind: 'monsters', name: 'Nest', position: route[0], encounter: 'goblin_raid', threat: 1, loot: [] })
+    expect(startTravel(game, party, NEAR())).toBe('blocked')
+    expect(party.order).toEqual({ kind: 'idle' })
+    expect(party.confronting).toBeNull()
+    expect(world.turn).toBe(1)
+  })
+
+  it('confronts again the monsters it lingered at when the first hex is blocked', () => {
+    const { game, world, party } = confronting()
+    act(game, party.id, { kind: 'wait' })
+    expect(party.confronting).toBeNull()
+    const route = routeTo(world, party, NEAR())!
+    world.locations.push({ id: 'hidden_nest', kind: 'monsters', name: 'Nest', position: route[0], encounter: 'goblin_raid', threat: 1, loot: [] })
+    expect(startTravel(game, party, NEAR())).toBe('blocked')
+    expect(party.confronting).toBe('close_nest')
+  })
+
+  it('gives the travel order and passes no day when the road is open', () => {
+    const { game, world, party } = quiet()
+    const route = routeTo(world, party, NEAR())!
+    expect(startTravel(game, party, NEAR())).toBe('started')
+    expect(party.order).toEqual({ kind: 'travel', to: NEAR(), route })
+    expect(world.turn).toBe(1)
+  })
+})
+
+describe('orderAction', () => {
+  it('refuses what act refuses, with the same words, changing nothing', () => {
+    const cases: Array<[ReturnType<typeof quiet>, string, DayAction]> = [
+      [withStandingOrder(quiet()), 'party_9', { kind: 'camp' }],
+      [withStandingOrder(quiet()), 'party_1', { kind: 'scout' }],
+      [confronting(), 'party_1', { kind: 'camp' }],
+      [withStandingOrder(onCleanLand()), 'party_1', { kind: 'outpost' }],
+    ]
+    for (const [it, id, action] of cases) {
+      const twin = structuredClone(it.game)
+      const before = JSON.stringify(it.game)
+      const refusal = orderAction(it.game, id, action)
+      expect(refusal).toBe(act(twin, id, action))
+      expect(refusal).not.toBeNull()
+      expect(JSON.stringify(it.game)).toBe(before)
+    }
+  })
+
+  it('gives the day order and leaves the day to passDay, which does what act does', () => {
+    const a = onCleanLand()
+    const b = onCleanLand()
+    expect(orderAction(a.game, a.party.id, { kind: 'tower' })).toBeNull()
+    expect(a.party.order).toEqual({ kind: 'day', action: { kind: 'tower' } })
+    expect(a.world.turn).toBe(1)
+    expect(a.world.towers).toEqual([])
+    const report = passDay(a.game)!
+    expect(report).toEqual(act(b.game, b.party.id, { kind: 'tower' }))
+    expect(a.game).toEqual(b.game)
+  })
+
+  it('lets two parties each take a day’s action, both done in one day', () => {
+    const { game, world, party } = onCleanLand()
+    const second = { ...structuredClone(party), id: 'party_2', name: 'Second Company', position: offsetToHex(3, 1) }
+    second.members.forEach((m) => (m.hp = 1))
+    game.parties.push(second)
+    expect(orderAction(game, party.id, { kind: 'tower' })).toBeNull()
+    expect(orderAction(game, 'party_2', { kind: 'camp' })).toBeNull()
+    const report = passDay(game)!
+    expect(world.turn).toBe(2)
+    expect(world.towers).toEqual([{ id: 'tower_1', position: party.position }])
+    expect(report.parties[1].rested).toBeGreaterThan(0)
+    expect(report.partyEvents).toEqual([
+      { type: 'order_done', party: party.id },
+      { type: 'order_done', party: 'party_2' },
+    ])
+    expect(game.parties.map((p) => p.order)).toEqual([{ kind: 'idle' }, { kind: 'idle' }])
   })
 })
 

@@ -43,6 +43,8 @@ import {
   visitGuildHall,
   carryOut,
   decide,
+  fieldCraft,
+  takeDays,
   planOf,
   startCampaign,
   type CampaignRecord,
@@ -831,16 +833,104 @@ describe('the campaign’s policy on the day loop', () => {
     })
     plan.phase = 'tower'
     expect(decide(run, party)).toEqual({ kind: 'act', action: { kind: 'tower' } })
-    carryOut(run, party, { kind: 'act', action: { kind: 'tower' } })
+    // The act is a day order: no day passes until the loop's next advance.
+    expect(carryOut(run, party, { kind: 'act', action: { kind: 'tower' } })).toBe('standing')
+    expect(game.world.turn).toBe(1)
+    expect(party.order).toEqual({ kind: 'day', action: { kind: 'tower' } })
+    expect(plan.running).toBe('day')
+    let reports = advance(game, Infinity)
+    expect(reports).toHaveLength(1)
+    takeDays(run, reports)
     expect(game.world.turn).toBe(2)
     expect(game.world.towers).toHaveLength(1)
     expect(run.record.towersBuilt).toBe(1)
     // No outpost: the stock lacks its timber.
     expect(decide(run, party)).toEqual({ kind: 'craft' })
-    carryOut(run, party, { kind: 'craft' })
+    expect(carryOut(run, party, { kind: 'craft' })).toBe('standing')
+    expect(game.world.turn).toBe(2)
+    expect(party.order).toMatchObject({ kind: 'day', action: { kind: 'craft' } })
+    reports = advance(game, Infinity)
+    expect(reports).toHaveLength(1)
+    takeDays(run, reports)
     expect(game.world.turn).toBe(3)
     expect(run.record).toMatchObject({ crafted: 1, fieldCraftDays: 1 })
     expect(party.order.kind).toBe('idle')
+  })
+
+  it('asks again, passing no day, when an act is refused', () => {
+    const { run, game, party } = campaignOf()
+    // At the encampment: no watchtower there.
+    expect(carryOut(run, party, { kind: 'act', action: { kind: 'tower' } })).toBeNull()
+    expect(party.order.kind).toBe('idle')
+    expect(game.world.turn).toBe(1)
+  })
+
+  describe('fieldCraft', () => {
+    const field = (setUp: (game: ReturnType<typeof newGame>) => void = () => {}) => {
+      const game = newGame(undefined, null, 1)
+      game.parties[0].position = { q: game.parties[0].position.q + 1, r: game.parties[0].position.r }
+      game.world.stock = { gold: 50, iron: 50, timber: 50 }
+      setUp(game)
+      return game
+    }
+    /** What craftGear(game, party, 1) makes on a twin, as the place it changed and the item it put there. */
+    const madeByCraftGear = (setUp?: (game: ReturnType<typeof newGame>) => void) => {
+      const game = field(setUp)
+      const before = structuredClone(game.parties[0].members.map((m) => m.equipment))
+      const { crafted } = craftGear(game, game.parties[0], 1)
+      if (crafted === 0) return null
+      for (const [member, hero] of game.parties[0].members.entries()) {
+        for (const slot of ['mainHand', 'offHand', 'armor'] as const) {
+          if (hero.equipment[slot]?.id !== before[member][slot]?.id) return { member, slot, item: hero.equipment[slot]!.id }
+        }
+      }
+      throw new Error('crafted, but nothing changed')
+    }
+    const cases: Array<[string, (game: ReturnType<typeof newGame>) => void]> = [
+      ['the first piece', () => {}],
+      ['past a piece that has it', (game) => (game.parties[0].members[0].equipment.mainHand = itemById('iron_sword+balanced1')!)],
+    ]
+    it.each(cases)('picks the craft craftGear makes: %s', (_, setUp) => {
+      const game = field(setUp)
+      const action = fieldCraft(game, game.parties[0])
+      const made = madeByCraftGear(setUp)
+      expect(made).not.toBeNull()
+      expect(action).not.toBeNull()
+      expect(action!.place).toMatchObject({ from: 'worn', party: 'party_1', member: made!.member, slot: made!.slot })
+      expect(`${action!.place.itemId.split('+')[0]}+${action!.modifier}${action!.grade}`).toBe(made!.item)
+      expect(game.world.turn).toBe(1)
+    })
+
+    it.each<[string, (game: ReturnType<typeof newGame>) => void]>([
+      ['with no stock', (game) => (game.world.stock = {})],
+      ['when every piece it would craft in the field has it', (game) => {
+        game.parties[0].members[0].equipment.mainHand = itemById('iron_sword+balanced1')!
+        game.parties[0].members[1].equipment.mainHand = itemById('yew_bow+recurve1')!
+      }],
+    ])('picks nothing where craftGear makes nothing: %s', (_, setUp) => {
+      expect(madeByCraftGear(setUp)).toBeNull()
+      const game = field(setUp)
+      expect(fieldCraft(game, game.parties[0])).toBeNull()
+    })
+  })
+
+  it('counts the days of two camping parties once, and the healing of both', () => {
+    const { run, game, party } = campaignOf((game) => (game.parties[0].position = { q: game.parties[0].position.q + 1, r: game.parties[0].position.r }))
+    const second = { ...structuredClone(party), id: 'party_2', name: 'Second Company', position: { q: party.position.q + 1, r: party.position.r } }
+    game.parties.push(second)
+    for (const p of game.parties) {
+      p.members[0].hp = 1
+      for (const m of p.members) m.mana = 0
+      expect(carryOut(run, p, { kind: 'order', order: { kind: 'camp' } })).toBe('standing')
+    }
+    const reports = advance(game, Infinity)
+    // Both camped every day the reports cover, so counting each camper would double them.
+    expect(reports.every((r) => r.parties.every((day) => day.rested > 0))).toBe(true)
+    takeDays(run, reports)
+    expect(run.record.campDays).toBe(reports.length)
+    const healed = reports.flatMap((r) => r.parties).reduce((n, day) => n + day.rested + day.cast, 0)
+    expect(healed).toBeGreaterThan(0)
+    expect(run.record.healedHp).toBe(healed)
   })
 })
 
