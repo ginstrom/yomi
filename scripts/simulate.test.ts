@@ -20,6 +20,8 @@ import { worldHealing } from '../src/character/worldCasting.ts'
 import { lootRng, rollRunes } from '../src/game/loot.ts'
 import { runePrice, salePrice } from '../src/game/tradingPost.ts'
 import { pouchKeys } from '../src/inventory/runes.ts'
+import { boardIndex, monsterStrength } from '../src/game/blight.ts'
+import { LOSS_LEVEL, daysToFall } from '../src/game/territory.ts'
 import { extractRefusal } from '../src/game/runecraft.ts'
 import type { EncounterId } from '../src/game/encounters.ts'
 import { ENCAMPMENT_ID, SOURCE_ID, routeTo, type MonsterLocation } from '../src/game/worldMap.ts'
@@ -1213,6 +1215,43 @@ describe('the company policy', () => {
       // Above its level, the pushing nest is not its to fight.
       besiegers.threat = 2
       expect(guardChoice(run, guard).kind).toBe('train')
+    })
+
+    it('defends the site nearest to falling first, from the nest pushing hardest on it, whatever the ids', () => {
+      const { run, game, guards: [guard] } = companyOf([[2, 2, 2]])
+      const { world } = game
+      const quarry = world.locations.find((l) => l.id === 'old_quarry')!
+      const cave = world.locations.find((l) => l.id === 'crystal_cave')!
+      world.held.push(quarry.id, cave.id)
+      world.threatened = [cave.id, quarry.id]
+      // The quarry, the later id, falls at once; the cave takes days.
+      world.blight[boardIndex(world.board, quarry.position)] = LOSS_LEVEL
+      world.blight[boardIndex(world.board, cave.position)] = 0
+      const nest = (id: string, at: { q: number; r: number }, dq: number): MonsterLocation => ({
+        id, kind: 'monsters', name: id, position: { q: at.q + dq, r: at.r }, encounter: 'goblin_raid', threat: 2, loot: [],
+      })
+      const hardest = nest('quarry_besiegers', quarry.position, 1)
+      const weaker = nest('a_quarry_skulkers', quarry.position, 2)
+      const caveRaiders = nest('a_cave_raiders', cave.position, 1)
+      world.locations = [...world.locations, hardest, weaker, caveRaiders]
+      const presence = [{ position: guard.position, levels: guard.members.map((m) => m.level) }]
+      expect(daysToFall(world, presence, quarry)).toBe(0)
+      expect(daysToFall(world, presence, cave)).toBeGreaterThan(0)
+      expect(monsterStrength(weaker) - 2).toBeGreaterThan(0)
+      expect(guardChoice(run, guard)).toEqual({ kind: 'defend', target: hardest })
+    })
+
+    it('goes home to refill a guard worn below its smallest size when a recruit is affordable', () => {
+      const { run, game, guards: [guard] } = companyOf([[5]])
+      away(game, guard, 3)
+      game.world.stock = { gold: 9 }
+      expect(guardChoice(run, guard).kind).toBe('train')
+      game.world.stock = { gold: 10 }
+      expect(guardChoice(run, guard)).toEqual({ kind: 'home' })
+      guard.position = { ...home(game) }
+      expect(decideGuard(run, guard)).toEqual({ kind: 'hall' })
+      carryOut(run, guard, { kind: 'hall' })
+      expect(guard.members).toHaveLength(2)
     })
 
     it('trains on the nearest nest it is up to when nothing is threatened, never the Source', () => {

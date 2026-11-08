@@ -39,6 +39,7 @@ import { MAX_PARTIES, presenceOf, type DayAction, type Expedition } from '../src
 import { newGame, partyById, type GameState } from '../src/game/gameState.ts'
 import {
   GUILD_HALL_LEVELS,
+  MAX_RESERVES,
   RECRUIT_COST,
   atGuildHall,
   company,
@@ -390,6 +391,12 @@ function heroesForGuard(game: GameState): number {
   const { world } = game
   const affordable = Math.floor((world.stock.gold ?? 0) / (RECRUIT_COST.gold ?? 1))
   return game.reserves.length + Math.max(0, Math.min(affordable, companyLimit(world) - company(game).length))
+}
+
+/** Whether the hall could hire a recruit now, wherever the party stands: the stock affords one and the company and the reserves have room. */
+function canHire(game: GameState): boolean {
+  const { world } = game
+  return canAfford(world.stock, RECRUIT_COST) && company(game).length < companyLimit(world) && game.reserves.length < MAX_RESERVES
 }
 
 /** Whether the company should form another party: the hall allows one, it fields fewer than `parties`, and a guard of `GUARD_MIN_SIZE` can be had. */
@@ -1117,7 +1124,8 @@ const byId = (a: { id: string }, b: { id: string }) => (a.id < b.id ? -1 : a.id 
  * threatened held resource site with the fewest days to fall; else go home.
  * Only nests of a threat no higher than the guard's lowest level (at least 1),
  * never the Source, and none another party's plan is after; no site another
- * guard garrisons. Back home first after a promotion.
+ * guard garrisons. Back home first after a promotion, and home to refill
+ * when worn below `GUARD_MIN_SIZE` while a recruit can be had.
  */
 export function guardChoice(run: CampaignRun, party: Expedition): GuardChoice {
   const { world } = run.game
@@ -1125,6 +1133,8 @@ export function guardChoice(run: CampaignRun, party: Expedition): GuardChoice {
   if (plan.recall) return { kind: 'home' }
   const vanguard = partyById(run.game, run.vanguard)
   if (!plan.skipReinforce && vanguard && vanguard !== party && canReinforce(world, party, vanguard)) return { kind: 'reinforce' }
+  // Worn below a guard's smallest size, it goes home to refill while a recruit can be had.
+  if (party.members.length < GUARD_MIN_SIZE && canHire(run.game)) return { kind: 'home' }
   const level = Math.max(1, lowestLevel(party.members))
   const taken = takenTargets(run, party)
   const nests = world.locations
