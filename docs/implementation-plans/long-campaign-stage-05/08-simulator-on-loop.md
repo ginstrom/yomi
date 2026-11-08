@@ -243,3 +243,5 @@ Run on `long-campaign-stage-05` from `073ba25`, Node 26.13.0.
 **Docs.** CLAUDE.md's `--campaign` paragraph says the campaign runs on the company's day loop, through `decide` and `carryOut`, with the same decisions; its `campUntilHealed` mention there is replaced by the `autoHeal` and camp it now does.
 
 **Deviations.** None in behaviour. `company.ts` is unchanged. The 500-campaign check was not run (step 10's). For stage 6: acts run inside a party's decision, so with two parties a party's act would pass a day for both; stage 6 should gather acts as day orders before one `passDay`.
+
+**Commit.** `7491dd8` Stage 5 step 08: the simulator on the day loop.
