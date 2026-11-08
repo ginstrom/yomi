@@ -1,14 +1,14 @@
 import { hexDistance, hexEquals, type Hex } from '../grid/hex.ts'
 import type { Item } from '../inventory/inventory.ts'
 import type { WorldEvent } from './blight.ts'
-import { canBuildOutpost, canBuildTower, raiseOutpost, raiseTower } from './buildings.ts'
+import { canBuildOutpost, canBuildTower, outpostSite, raiseOutpost, raiseTower } from './buildings.ts'
 import { canCamp, partyWounded, rest } from './camp.ts'
 import { applyCraft, craftRefusal, craftTier } from './crafting.ts'
 import { presences, type DayAction, type Expedition, type Order, type PartyPresence } from './expedition.ts'
 import { partyById, type GameState } from './gameState.ts'
 import { autoHeal } from './party.ts'
 import { applyEmbed, embedRefusal } from './runecraft.ts'
-import { NOTICE_RADIUS, isNotable, locationAt, monstersHere, passTurn, routeTo, theName, worldActive, type WorldState } from './worldMap.ts'
+import { NOTICE_RADIUS, encampment, isNotable, locationAt, monstersHere, passTurn, routeTo, theName, worldActive, type WorldState } from './worldMap.ts'
 
 /**
  * The company's one clock. Every day passes through `passDay`: each party
@@ -30,9 +30,10 @@ import { NOTICE_RADIUS, isNotable, locationAt, monstersHere, passTurn, routeTo, 
 
 /** What happened to a party's order in a day. */
 export type PartyEvent =
-  | { type: 'arrived'; party: string; at: Hex } // a travel order reached `to`
+  | { type: 'arrived'; party: string; at: Hex } // a travel or home order reached `to`
   | { type: 'confronting'; party: string; location: string } // it stepped onto monsters
-  | { type: 'order_done'; party: string } // a camp order healed everyone or could camp no more, a day action ended, a road was blocked
+  | { type: 'order_done'; party: string } // a camp order healed everyone or could camp no more, a day action ended, a road was blocked, it stopped short of another party's monsters, the party it went to meet is gone
+  | { type: 'met'; party: string; other: string } // a meet order (`party`'s) reached the party it went to meet (`other`)
 
 /** What stops `advance`, and the party it concerns, if any. */
 export interface Interrupt {
@@ -65,7 +66,13 @@ export interface DayReport {
 }
 
 /** An order as it is given; a travel order's route is planned from it. */
-export type OrderRequest = { kind: 'idle' } | { kind: 'travel'; to: Hex } | { kind: 'camp' }
+export type OrderRequest =
+  | { kind: 'idle' }
+  | { kind: 'travel'; to: Hex }
+  | { kind: 'home' }
+  | { kind: 'camp' }
+  | { kind: 'garrison' }
+  | { kind: 'meet'; party: string }
 
 /** The days `advance` passes at most when nothing happens. */
 export const UNTIL_LIMIT = 30
@@ -81,27 +88,39 @@ const PARTY_EVENT_TYPES: Record<PartyEvent['type'], true> & Record<Extract<World
   arrived: true,
   confronting: true,
   order_done: true,
+  met: true,
 }
 
 export const isPartyEvent = (event: WorldEvent | PartyEvent): event is PartyEvent => event.type in PARTY_EVENT_TYPES
 
-const partyNoun = (game: GameState, party: Expedition): string => (game.parties.length === 1 ? 'The party' : party.name)
+/** How a refusal or a message names a party: 'The party' while the company has one, else its name. */
+export function partyNoun(game: GameState, party: Expedition): string {
+  return game.parties.length === 1 ? 'The party' : party.name
+}
 
 /** Whether a day order lets a party confronting monsters pass the day: scouting or waiting does. */
 function answersMonsters(order: Order): boolean {
   return order.kind === 'day' && (order.action.kind === 'scout' || order.action.kind === 'wait')
 }
 
+/** The first party, in list order, whose unanswered monsters stop the day with each party's order as `orderOf` gives it. */
+function firstBlocking(game: GameState, orderOf: (party: Expedition) => Order): Expedition | null {
+  return game.parties.find((party) => party.confronting !== null && !answersMonsters(orderOf(party))) ?? null
+}
+
 /** Why no day can pass with each party's order as `orderOf` gives it, or null when one can. */
 function dayRefusal(game: GameState, orderOf: (party: Expedition) => Order): string | null {
   const { world } = game
   if (!worldActive(world)) return 'The game is over.'
-  for (const party of game.parties) {
-    if (party.confronting === null || answersMonsters(orderOf(party))) continue
-    const name = world.locations.find((l) => l.id === party.confronting)?.name ?? 'monsters'
-    return `${partyNoun(game, party)} stands before ${theName(name)}: scout, wait or attack.`
-  }
-  return null
+  const party = firstBlocking(game, orderOf)
+  if (!party) return null
+  const name = world.locations.find((l) => l.id === party.confronting)?.name ?? 'monsters'
+  return `${partyNoun(game, party)} stands before ${theName(name)}: scout, wait or attack.`
+}
+
+/** The first party whose confrontation makes `advanceRefusal` refuse, or null: the one the map should show. */
+export function blockingParty(game: GameState): Expedition | null {
+  return firstBlocking(game, (party) => party.order)
 }
 
 /** Why no day can pass now, or null when one can. */
@@ -126,15 +145,45 @@ export function setOrder(game: GameState, id: string, request: OrderRequest): st
       party.order = { kind: 'travel', to: request.to, route }
       return null
     }
+    case 'home': {
+      if (!worldActive(world)) return 'The game is over.'
+      if (party.confronting !== null) return `${partyNoun(game, party)} must first answer the monsters it faces.`
+      const to = encampment(world).position
+      if (hexEquals(party.position, to)) return `${partyNoun(game, party)} is already home.`
+      const route = routeTo(world, party, to)
+      if (!route) return 'There is no way home.'
+      party.order = { kind: 'home', to, route }
+      return null
+    }
     case 'camp':
       if (!canCamp(world, party)) return `${partyNoun(game, party)} cannot camp here.`
       party.order = { kind: 'camp' }
       return null
+    case 'garrison':
+      if (!worldActive(world)) return 'The game is over.'
+      if (party.confronting !== null) return `${partyNoun(game, party)} must first answer the monsters it faces.`
+      if (!outpostSite(world, party)) return 'Only a held resource can be garrisoned.'
+      party.order = { kind: 'garrison' }
+      return null
+    case 'meet': {
+      if (!worldActive(world)) return 'The game is over.'
+      if (request.party === party.id) return `${partyNoun(game, party)} cannot meet itself.`
+      const other = partyById(game, request.party)
+      if (!other) return `No party "${request.party}".`
+      if (party.confronting !== null) return `${partyNoun(game, party)} must first answer the monsters it faces.`
+      if (hexEquals(party.position, other.position)) return `${partyNoun(game, party)} and ${other.name} are already together.`
+      if (!routeTo(world, party, other.position)) return `There is no way to ${other.name}.`
+      party.order = { kind: 'meet', party: other.id }
+      return null
+    }
   }
 }
 
-/** Whether a travel order's next hex, short of its destination, holds monsters: a nest come onto the road since it was planned. */
-export function roadBlocked(world: WorldState, order: Extract<Order, { kind: 'travel' }>): boolean {
+/** A travel or home order: a walk along a route planned when it was given. */
+type Walk = Extract<Order, { kind: 'travel' | 'home' }>
+
+/** Whether a walk's next hex, short of its destination, holds monsters: a nest come onto the road since it was planned. */
+export function roadBlocked(world: WorldState, order: Walk): boolean {
   const next = order.route[0]
   return next !== undefined && !hexEquals(next, order.to) && locationAt(world, next)?.kind === 'monsters'
 }
@@ -188,6 +237,8 @@ function actionRefusal(game: GameState, party: Expedition, action: DayAction): s
 interface PartyDayDone {
   day: PartyDay
   built: WorldEvent | null
+  /** It stopped short of monsters another party stands on, its walk ended (told after the world's day, as `order_done`). */
+  stoppedShort: boolean
 }
 
 /** A day order's action, run with no time passing, if it can still be taken. */
@@ -218,19 +269,41 @@ function runAction(game: GameState, party: Expedition, action: DayAction, done: 
   }
 }
 
+/** Whether `at` is a monster location on which a party other than `party` stands. */
+function othersMonsters(game: GameState, party: Expedition, at: Hex): boolean {
+  return locationAt(game.world, at)?.kind === 'monsters' && game.parties.some((p) => p !== party && hexEquals(p.position, at))
+}
+
 /** A party's day by its order, before the world's day. It changes only that party, and what its own action spends and builds. */
 function partyDay(game: GameState, party: Expedition): PartyDayDone {
   const { world } = game
-  const done: PartyDayDone = { day: { party: party.id, walked: null, rested: 0, cast: 0, made: null }, built: null }
+  const done: PartyDayDone = { day: { party: party.id, walked: null, rested: 0, cast: 0, made: null }, built: null, stoppedShort: false }
   const order = party.order
   switch (order.kind) {
     case 'idle':
+    case 'garrison':
       break
-    case 'travel': {
+    case 'travel':
+    case 'home': {
       const [hex, ...remaining] = order.route
       if (hex === undefined) break
+      if (othersMonsters(game, party, hex)) {
+        // The earlier party in the list has the monsters; this one waits a hex short (stage 6, design §4.4).
+        party.order = IDLE
+        done.stoppedShort = true
+        break
+      }
       party.position = hex
       party.order = { ...order, route: remaining }
+      done.day.walked = hex
+      break
+    }
+    case 'meet': {
+      const other = partyById(game, order.party)
+      if (!other) break
+      const [hex] = routeTo(world, party, other.position) ?? []
+      if (hex === undefined) break
+      party.position = hex
       done.day.walked = hex
       break
     }
@@ -247,13 +320,17 @@ function partyDay(game: GameState, party: Expedition): PartyDayDone {
   return done
 }
 
-/** A party's order checked against what the day brought: whether it arrived, was blocked or is done. */
-function afterDay(world: WorldState, party: Expedition): PartyEvent[] {
+/** A party's order checked against what the day brought: whether it arrived, met, was blocked or is done. */
+function afterDay(game: GameState, party: Expedition, done: PartyDayDone): PartyEvent[] {
+  const { world } = game
+  if (done.stoppedShort) return [{ type: 'order_done', party: party.id }]
   const order = party.order
   switch (order.kind) {
     case 'idle':
+    case 'garrison':
       return []
-    case 'travel': {
+    case 'travel':
+    case 'home': {
       if (hexEquals(party.position, order.to)) {
         const events: PartyEvent[] = [{ type: 'arrived', party: party.id, at: order.to }]
         const here = monstersHere(world, party)
@@ -269,6 +346,22 @@ function afterDay(world: WorldState, party: Expedition): PartyEvent[] {
         return [{ type: 'order_done', party: party.id }]
       }
       return []
+    }
+    case 'meet': {
+      const other = partyById(game, order.party)
+      if (!other) {
+        party.order = IDLE
+        return [{ type: 'order_done', party: party.id }]
+      }
+      if (!hexEquals(party.position, other.position)) return []
+      const events: PartyEvent[] = [{ type: 'met', party: party.id, other: other.id }]
+      const here = monstersHere(world, party)
+      if (here) {
+        party.confronting = here.id
+        events.push({ type: 'confronting', party: party.id, location: here.id })
+      }
+      party.order = IDLE
+      return events
     }
     case 'camp':
       if (partyWounded(party.members) && canCamp(world, party)) return []
@@ -323,7 +416,7 @@ export function passDay(game: GameState): DayReport | null {
   const present = presences(game.parties)
   const events = done.flatMap(({ built }) => (built ? [built] : []))
   events.push(...passTurn(world, present))
-  const partyEvents = game.parties.flatMap((party) => afterDay(world, party))
+  const partyEvents = game.parties.flatMap((party, i) => afterDay(game, party, done[i]))
   return { events, partyEvents, parties: done.map(({ day }) => day), interrupt: interruptOf(game, events, partyEvents, present) }
 }
 

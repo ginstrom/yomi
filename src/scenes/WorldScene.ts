@@ -1017,7 +1017,7 @@ export class WorldScene extends Phaser.Scene {
       this.messageText.setText(refusal)
       return
     }
-    const order = orderLabel(this.world, this.expedition())
+    const order = orderLabel(this.world, this.expedition(), this.gameState.parties)
     this.daysPassed([passDay(this.gameState)!], 1, order)
   }
 
@@ -1029,7 +1029,7 @@ export class WorldScene extends Phaser.Scene {
       this.messageText.setText(refusal)
       return
     }
-    const order = orderLabel(this.world, this.expedition())
+    const order = orderLabel(this.world, this.expedition(), this.gameState.parties)
     this.daysPassed(advance(this.gameState), UNTIL_LIMIT, order)
   }
 

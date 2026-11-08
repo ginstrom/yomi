@@ -65,6 +65,7 @@ describe('describeDays', () => {
     expect(describeDays([{ ...report, partyEvents: [arrived] }], world, 30)).toBe('The party arrives.')
     const source = world.locations.find((l) => l.id === 'blight_source')!
     expect(describePartyEvent({ ...confronting, location: source.id }, world)).toBe('You come upon the Blight Source (threat 5).')
+    expect(describePartyEvent({ type: 'met', party: 'party_1', other: 'party_2' }, world)).toBe('The parties meet.')
   })
 
   it('adds the hit points rest healed', () => {

@@ -58,6 +58,8 @@ export function describePartyEvent(event: PartyEvent, world: WorldState): string
     }
     case 'order_done':
       return 'The party has done what it was set to.'
+    case 'met':
+      return 'The parties meet.'
   }
 }
 

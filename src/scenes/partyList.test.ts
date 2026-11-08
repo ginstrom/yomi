@@ -147,6 +147,26 @@ describe('orderLabel', () => {
     expect(day({ kind: 'embed', place, rune: 'ember1' })).toBe('Crafting')
   })
 
+  it('says Returning home, Garrisoning the site it stands on, and Meeting the party it seeks', () => {
+    const { world, party, resource, order } = setup()
+    expect(order({ kind: 'home', to: far, route: [far] })).toBe('Returning home')
+    party.position = resource.position
+    expect(order({ kind: 'garrison' })).toBe(`Garrisoning ${resource.name}`)
+    party.position = [far, { q: 2, r: 1 }, { q: 3, r: 1 }].find((h) => locationAt(world, h) === null)!
+    expect(order({ kind: 'garrison' })).toBe('Garrisoning')
+    party.order = { kind: 'meet', party: 'party_2' }
+    const second = { ...newExpedition(readyMadeParty(), far), id: 'party_2', name: 'Second Company' }
+    expect(orderLabel(world, party, [party, second])).toBe('Meeting Second Company')
+    expect(orderLabel(world, party, [party])).toBe('Meeting')
+  })
+
+  it('names the party a meet seeks in the list of the company', () => {
+    const game = newGame(undefined, null, 1)
+    game.parties.push({ ...newExpedition(readyMadeParty(), { q: 1, r: 1 }), id: 'party_2', name: 'Second Company' })
+    game.parties[0].order = { kind: 'meet', party: 'party_2' }
+    expect(deployedParties(game)[0].order).toBe('Meeting Second Company')
+  })
+
   it('says which monsters a confronting party stands before, whatever its order', () => {
     const { party, world, monsters } = setup()
     party.confronting = monsters.id
@@ -169,11 +189,14 @@ describe('orderLabel', () => {
     expect(theNameCapital('The Blight Source')).toBe('The Blight Source')
   })
 
-  it('gives a travel order’s remaining route as the standing route, and none for any other order', () => {
+  it('gives a travel or home order’s remaining route as the standing route, and none for any other order', () => {
     const { party } = setup()
     party.order = { kind: 'travel', to: far, route: [{ q: 2, r: 1 }, far] }
     expect(standingRoute(party)).toEqual([{ q: 2, r: 1 }, far])
-    for (const order of [{ kind: 'idle' }, { kind: 'camp' }, { kind: 'day', action: { kind: 'wait' } }] as Order[]) {
+    party.order = { kind: 'home', to: far, route: [{ q: 2, r: 1 }, far] }
+    expect(standingRoute(party)).toEqual([{ q: 2, r: 1 }, far])
+    const others: Order[] = [{ kind: 'idle' }, { kind: 'camp' }, { kind: 'garrison' }, { kind: 'meet', party: 'party_2' }, { kind: 'day', action: { kind: 'wait' } }]
+    for (const order of others) {
       party.order = order
       expect(standingRoute(party)).toEqual([])
     }

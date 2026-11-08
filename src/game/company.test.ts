@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { maxHp, maxMana } from '../character/character.ts'
-import { hexEquals, offsetToHex, type Hex } from '../grid/hex.ts'
+import { hexDistance, hexEquals, offsetToHex, type Hex } from '../grid/hex.ts'
 import { itemById } from '../inventory/inventory.ts'
 import { boardIndex } from './blight.ts'
 import { campUntilHealed, partyWounded } from './camp.ts'
-import { UNTIL_LIMIT, act, advance, advanceRefusal, orderAction, passDay, setOrder, startTravel, worldInterrupt, type DayReport } from './company.ts'
-import { presences, type DayAction } from './expedition.ts'
+import { UNTIL_LIMIT, act, advance, advanceRefusal, blockingParty, orderAction, partyNoun, passDay, setOrder, startTravel, worldInterrupt, type DayReport } from './company.ts'
+import { PARTY_NAMES, newExpedition, partyId, presences, type DayAction } from './expedition.ts'
 import { newGame, type GameState } from './gameState.ts'
 import type { ItemPlace } from './itemPlace.ts'
 import { readyMadeParty } from './party.ts'
-import { passTurn, routeTo, travel, type MonsterLocation, type WorldState } from './worldMap.ts'
+import { NOTICE_RADIUS, encampment, locationAt, passTurn, routeTo, travel, type MonsterLocation, type WorldState } from './worldMap.ts'
 
 /** A new game on world 1 with the ready-made three: the game, its world and its one party. */
 function fresh() {
@@ -594,5 +594,256 @@ describe('campUntilHealed for a party already whole', () => {
     expect(campUntilHealed(game, party)).toMatchObject({ days: 0, rested: 0 })
     expect(party.order).toEqual({ kind: 'idle' })
     expect(world.turn).toBe(1)
+  })
+})
+
+/** `it` with a second party, of fresh characters, standing at `at` (the first party's hex by default), idle. */
+function withSecond<T extends ReturnType<typeof fresh>>(it: T, at: Hex = it.party.position) {
+  const second = newExpedition(readyMadeParty(), at, partyId(2), PARTY_NAMES[1])
+  it.game.parties.push(second)
+  return { ...it, second }
+}
+
+/** The day reports of `n` passDays, each expected to pass. */
+function days(game: GameState, n: number): DayReport[] {
+  return Array.from({ length: n }, () => passDay(game)!)
+}
+
+describe('a company of two on the day loop', () => {
+  it('walks both travel orders a hex a day, in list order, the world’s day once a day (A3)', () => {
+    const { game, world, party, second } = withSecond(quiet())
+    const [toA, toB] = [NEAR(), offsetToHex(1, 5)]
+    const [routeA, routeB] = [routeTo(world, party, toA)!, routeTo(world, second, toB)!]
+    expect(setOrder(game, party.id, { kind: 'travel', to: toA })).toBeNull()
+    expect(setOrder(game, second.id, { kind: 'travel', to: toB })).toBeNull()
+    const longest = Math.max(routeA.length, routeB.length)
+    const reports = days(game, longest)
+    expect(world.turn).toBe(1 + longest)
+    expect(reports.map((r) => r.parties.map((d) => d.party))).toEqual(reports.map(() => [party.id, second.id]))
+    expect(reports.slice(0, routeA.length).map((r) => r.parties[0].walked)).toEqual(routeA)
+    expect(reports.slice(0, routeB.length).map((r) => r.parties[1].walked)).toEqual(routeB)
+    expect(reports[routeA.length - 1].partyEvents).toContainEqual({ type: 'arrived', party: party.id, at: toA })
+    expect(reports[routeB.length - 1].partyEvents).toContainEqual({ type: 'arrived', party: second.id, at: toB })
+    expect([party.position, second.position]).toEqual([toA, toB])
+  })
+
+  it('passes the day for both when one takes a day’s action (A4)', () => {
+    const { game, world, party, second } = withSecond(quiet())
+    const route = routeTo(world, second, offsetToHex(1, 5))!
+    setOrder(game, second.id, { kind: 'travel', to: offsetToHex(1, 5) })
+    const report = act(game, party.id, { kind: 'camp' })
+    if (typeof report === 'string') throw new Error(report)
+    expect(world.turn).toBe(2)
+    expect(report.parties[1].walked).toEqual(route[0])
+    expect(second.position).toEqual(route[0])
+    expect(party.order).toEqual({ kind: 'idle' })
+    expect(second.order).toMatchObject({ kind: 'travel', route: route.slice(1) })
+  })
+
+  it('stops on a sighting near only the second party, naming it (A5)', () => {
+    const { game, world } = quiet()
+    const home = game.parties[0].position
+    const far = world.locations.find((l) => l.kind === 'monsters' && hexDistance(l.position, home) > 3 * NOTICE_RADIUS)!
+    world.sighted = world.sighted.filter((id) => id !== far.id)
+    const beside = { q: far.position.q - 1, r: far.position.r }
+    expect(locationAt(world, beside)).toBeNull()
+    const { second } = withSecond({ game, world, party: game.parties[0] }, beside)
+    const reports = advance(game)
+    expect(reports).toHaveLength(1)
+    expect(reports[0].interrupt).toMatchObject({ party: second.id, event: { type: 'sighted', location: far.id } })
+  })
+
+  it('stops on the second party’s arrival when nothing notable happens (A5)', () => {
+    const { game, party, second } = withSecond(quiet())
+    const to = { q: party.position.q + 1, r: party.position.r }
+    setOrder(game, second.id, { kind: 'travel', to })
+    const reports = advance(game)
+    expect(reports).toHaveLength(1)
+    expect(reports[0].interrupt).toEqual({ party: second.id, event: { type: 'arrived', party: second.id, at: to } })
+  })
+
+  it('refuses a day while either confronts monsters, naming it, and blockingParty finds it (A5)', () => {
+    const { game, world, party, second } = withSecond(quiet())
+    expect(blockingParty(game)).toBeNull()
+    party.confronting = 'goblin_raiders'
+    expect(passDay(game)).toBeNull()
+    expect(advanceRefusal(game)).toBe('First Company stands before the Goblin Raiders: scout, wait or attack.')
+    expect(blockingParty(game)).toBe(party)
+    party.confronting = null
+    second.confronting = 'goblin_raiders'
+    expect(blockingParty(game)).toBe(second)
+    expect(advanceRefusal(game)).toMatch(/^Second Company stands before/)
+    second.order = { kind: 'day', action: { kind: 'wait' } }
+    expect(blockingParty(game)).toBeNull()
+    expect(advanceRefusal(game)).toBeNull()
+    expect(world.turn).toBe(1)
+  })
+
+  it('names a party as “The party” alone and by its name in a company', () => {
+    const { game, party } = quiet()
+    expect(partyNoun(game, party)).toBe('The party')
+    const { second } = withSecond({ game, world: game.world, party })
+    expect([partyNoun(game, party), partyNoun(game, second)]).toEqual(['First Company', 'Second Company'])
+  })
+})
+
+describe('the home order', () => {
+  it('walks routeTo the encampment, arrives and goes idle', () => {
+    const { game, world, party } = quiet()
+    const home = encampment(world).position
+    party.position = NEAR()
+    const route = routeTo(world, party, home)!
+    expect(setOrder(game, party.id, { kind: 'home' })).toBeNull()
+    expect(party.order).toEqual({ kind: 'home', to: home, route })
+    const reports = advance(game)
+    expect(reports.map((r) => r.parties[0].walked)).toEqual(route)
+    expect(reports.at(-1)!.interrupt).toEqual({ party: party.id, event: { type: 'arrived', party: party.id, at: home } })
+    expect(party.position).toEqual(home)
+    expect(party.order).toEqual({ kind: 'idle' })
+  })
+
+  it('is refused at home and while confronting', () => {
+    const { game, party } = quiet()
+    expect(setOrder(game, party.id, { kind: 'home' })).toBe('The party is already home.')
+    const { second } = withSecond({ game, world: game.world, party })
+    expect(setOrder(game, second.id, { kind: 'home' })).toBe('Second Company is already home.')
+    party.position = NEAR()
+    party.confronting = 'goblin_raiders'
+    expect(setOrder(game, party.id, { kind: 'home' })).toMatch(/must first answer/)
+    expect(party.order).toEqual({ kind: 'idle' })
+  })
+})
+
+describe('the garrison order', () => {
+  it('is given on a held resource and never ends, the party telling nothing of its own for 30 days', () => {
+    const { game, party } = onGoldSeam()
+    expect(setOrder(game, party.id, { kind: 'garrison' })).toBeNull()
+    const reports = days(game, 30)
+    expect(reports.every((r) => r.partyEvents.length === 0 && r.parties[0].walked === null)).toBe(true)
+    expect(party.order).toEqual({ kind: 'garrison' })
+  })
+
+  it('is refused on the encampment, on an unheld site, off any site and while confronting', () => {
+    const home = quiet()
+    expect(setOrder(home.game, home.party.id, { kind: 'garrison' })).toMatch(/held resource/)
+    const unheld = onGoldSeam()
+    unheld.world.held = unheld.world.held.filter((id) => id !== 'gold_seam')
+    expect(setOrder(unheld.game, unheld.party.id, { kind: 'garrison' })).toMatch(/held resource/)
+    const off = onCleanLand()
+    expect(setOrder(off.game, off.party.id, { kind: 'garrison' })).toMatch(/held resource/)
+    const facing = onGoldSeam()
+    facing.party.confronting = 'goblin_raiders'
+    expect(setOrder(facing.game, facing.party.id, { kind: 'garrison' })).toMatch(/must first answer/)
+    for (const { party } of [home, unheld, off, facing]) expect(party.order).toEqual({ kind: 'idle' })
+  })
+})
+
+describe('the meet order', () => {
+  it('closes a hex a day on a party standing still, ending with met and idle', () => {
+    const { game, party, second } = withSecond(quiet(), offsetToHex(5, 4))
+    const apart = hexDistance(party.position, second.position)
+    expect(apart).toBeGreaterThan(2)
+    expect(setOrder(game, party.id, { kind: 'meet', party: second.id })).toBeNull()
+    expect(party.order).toEqual({ kind: 'meet', party: second.id })
+    const reports = advance(game)
+    expect(reports).toHaveLength(apart)
+    reports.forEach((r, i) => expect(hexDistance(r.parties[0].walked!, second.position)).toBe(apart - i - 1))
+    expect(reports.at(-1)!.interrupt).toEqual({ party: party.id, event: { type: 'met', party: party.id, other: second.id } })
+    expect(party.position).toEqual(second.position)
+    expect(party.order).toEqual({ kind: 'idle' })
+    expect(party.confronting).toBeNull()
+  })
+
+  it('brings two parties meeting each other together', () => {
+    const { game, party, second } = withSecond(quiet(), offsetToHex(5, 4))
+    setOrder(game, party.id, { kind: 'meet', party: second.id })
+    setOrder(game, second.id, { kind: 'meet', party: party.id })
+    const apart = hexDistance(party.position, second.position)
+    const reports = advance(game)
+    expect(reports.length).toBeLessThan(apart)
+    expect(party.position).toEqual(second.position)
+    expect(reports.at(-1)!.partyEvents.filter((e) => e.type === 'met')).toEqual([
+      { type: 'met', party: party.id, other: second.id },
+      { type: 'met', party: second.id, other: party.id },
+    ])
+    expect([party.order, second.order]).toEqual([{ kind: 'idle' }, { kind: 'idle' }])
+  })
+
+  it('is refused for itself, an unknown party, the same hex and while confronting', () => {
+    const { game, party, second } = withSecond(quiet())
+    expect(setOrder(game, party.id, { kind: 'meet', party: party.id })).toMatch(/itself/)
+    expect(setOrder(game, party.id, { kind: 'meet', party: 'party_9' })).toMatch(/party_9/)
+    expect(setOrder(game, party.id, { kind: 'meet', party: second.id })).toBe('First Company and Second Company are already together.')
+    second.position = offsetToHex(5, 4)
+    party.confronting = 'goblin_raiders'
+    expect(setOrder(game, party.id, { kind: 'meet', party: second.id })).toMatch(/must first answer/)
+    expect(party.order).toEqual({ kind: 'idle' })
+  })
+
+  it('ends idle, with order_done, when the other party is gone', () => {
+    const { game, party, second } = withSecond(quiet(), offsetToHex(5, 4))
+    setOrder(game, party.id, { kind: 'meet', party: second.id })
+    passDay(game)
+    game.parties.splice(game.parties.indexOf(second), 1)
+    const report = passDay(game)!
+    expect(report.parties[0].walked).toBeNull()
+    expect(report.partyEvents).toEqual([{ type: 'order_done', party: party.id }])
+    expect(party.order).toEqual({ kind: 'idle' })
+  })
+
+  it('confronts the monsters the other party stands on, after met', () => {
+    const { game, world, party, second } = withSecond(quiet())
+    const at = { q: party.position.q + 2, r: party.position.r }
+    nestAt(world, 'shared_nest', at)
+    second.position = at // as after a wait there: on the nest, confronting nothing
+    setOrder(game, party.id, { kind: 'meet', party: second.id })
+    const reports = advance(game)
+    expect(reports.at(-1)!.partyEvents).toEqual([
+      { type: 'met', party: party.id, other: second.id },
+      { type: 'confronting', party: party.id, location: 'shared_nest' },
+    ])
+    expect(party.confronting).toBe('shared_nest')
+  })
+})
+
+describe('stopping short of another party’s monsters', () => {
+  it('lets the first in list order onto a nest both would step onto, the second staying a hex short, idle', () => {
+    const { game, world, party, second } = withSecond(quiet())
+    const at = { q: party.position.q + 2, r: party.position.r }
+    nestAt(world, 'contested', at)
+    party.position = { q: at.q - 1, r: at.r }
+    second.position = { q: at.q + 1, r: at.r }
+    setOrder(game, party.id, { kind: 'travel', to: at })
+    setOrder(game, second.id, { kind: 'travel', to: at })
+    const report = passDay(game)!
+    expect(report.parties.map((d) => d.walked)).toEqual([at, null])
+    expect(report.partyEvents).toEqual([
+      { type: 'arrived', party: party.id, at },
+      { type: 'confronting', party: party.id, location: 'contested' },
+      { type: 'order_done', party: second.id },
+    ])
+    expect(second.position).toEqual({ q: at.q + 1, r: at.r })
+    expect(second.order).toEqual({ kind: 'idle' })
+    expect(second.confronting).toBeNull()
+  })
+
+  it('stops a travel or home order short of a nest another party already stands on', () => {
+    for (const kind of ['travel', 'home'] as const) {
+      const { game, world, party, second } = withSecond(quiet())
+      const home = encampment(world).position
+      const at = { q: home.q + 1, r: home.r }
+      nestAt(world, 'held_up', at)
+      party.position = at // as after a wait there
+      second.position = { q: at.q + 1, r: at.r }
+      // Home's route runs through the nest only if it is not known; forget it for the home order.
+      if (kind === 'home') world.sighted = world.sighted.filter((id) => id !== 'held_up')
+      const request = kind === 'travel' ? { kind, to: at } : { kind }
+      expect(setOrder(game, second.id, request)).toBeNull()
+      expect(second.order.kind === kind && second.order.route[0]).toEqual(at)
+      const report = passDay(game)!
+      expect(report.parties[1].walked).toBeNull()
+      expect(report.partyEvents).toEqual([{ type: 'order_done', party: second.id }])
+      expect(second.order).toEqual({ kind: 'idle' })
+    }
   })
 })

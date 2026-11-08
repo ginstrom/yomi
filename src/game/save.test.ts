@@ -6,7 +6,7 @@ import { mulberry32 } from '../combat/rng.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
 import { hex } from '../grid/hex.ts'
 import { BASE_ITEMS, IRON_DAGGER, MAGIC_ITEMS, OAK_SHIELD, RING_PROTECTION, IRON_BREASTPLATE, itemById } from '../inventory/inventory.ts'
-import { FIRST_PARTY_ID, FIRST_PARTY_NAME, type Expedition } from './expedition.ts'
+import { FIRST_PARTY_ID, FIRST_PARTY_NAME, PARTY_NAMES, newExpedition, partyId, type Expedition, type Order } from './expedition.ts'
 import { ENCOUNTERS } from './encounters.ts'
 import { newGame, takeLoot, type GameState } from './gameState.ts'
 import { Ground } from './ground.ts'
@@ -118,8 +118,13 @@ describe('a save', () => {
     expect(parsed.game.parties[0].baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 21, whose battle names the party fighting', () => {
-    expect(SAVE_VERSION).toBe(21)
+  it('is version 22, whose battle names the party fighting and whose orders include home, garrison and meet', () => {
+    expect(SAVE_VERSION).toBe(22)
+  })
+
+  it('reads a current save marked version 20 or 21, never released past stage 5, as unreadable', () => {
+    const saved = JSON.parse(serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 }))
+    for (const version of [20, 21]) expect(parseSave(JSON.stringify({ ...saved, version }))).toBeNull()
   })
 
   it('keeps the party a battle was saved in, the second one’s included', () => {
@@ -287,6 +292,39 @@ describe('parseSave', () => {
 })
 
 describe('a company', () => {
+  it('round-trips a company of two with home, garrison and meet orders', () => {
+    const game = gameUnderWay()
+    const second: Expedition = newExpedition(partyFromDrafts([PREROLLS[3].draft]), hex(4, 6), partyId(2), PARTY_NAMES[1])
+    game.parties.push(second)
+    const orders: Order[] = [
+      { kind: 'home', to: encampment(game.world).position, route: [hex(4, 6), encampment(game.world).position] },
+      { kind: 'garrison' },
+      { kind: 'meet', party: 'party_1' },
+    ]
+    for (const order of orders) {
+      second.order = order
+      game.parties[0].order = order.kind === 'meet' ? { kind: 'meet', party: 'party_2' } : { kind: 'idle' }
+      const parsed = parseSave(serializeSave({ game, battle: null, savedAt: 5 }))!
+      expect(parsed.game).toEqual(game)
+      expect(parsed.game.parties.map((p) => p.order)).toEqual(game.parties.map((p) => p.order))
+    }
+  })
+
+  it('reads a meet naming no party of the save, or an order of an unknown kind, as unreadable', () => {
+    const game = gameUnderWay()
+    const raw = serializeSave({ game, battle: null, savedAt: 5 })
+    const edit = (change: (saved: any) => void) => {
+      const saved = JSON.parse(raw)
+      change(saved)
+      return JSON.stringify(saved)
+    }
+    expect(parseSave(edit((s) => (s.game.parties[0].order = { kind: 'meet', party: 'party_9' })))).toBeNull()
+    expect(parseSave(edit((s) => (s.game.parties[0].order = { kind: 'meet' })))).toBeNull()
+    expect(parseSave(edit((s) => (s.game.parties[0].order = { kind: 'home', to: { q: 0, r: 0 } })))).toBeNull()
+    expect(parseSave(edit((s) => (s.game.parties[0].order = { kind: 'patrol' })))).toBeNull()
+    expect(parseSave(edit((s) => (s.game.parties[0].order = { kind: 'garrison' })))).not.toBeNull()
+  })
+
   it('round-trips with its id, name, position, order, confrontation, members and baggage', () => {
     const game = gameUnderWay()
     game.parties[0].order = { kind: 'travel', to: hex(5, 6), route: [hex(4, 6), hex(5, 6)] }
@@ -341,6 +379,8 @@ describe('a version-18 save', () => {
     expect(party.confronting).toBe('goblin_raiders')
     expect('party' in game.world || 'confronting' in game.world).toBe(false)
     expect(game.runes).toEqual({ storm1: 1 })
+    expect(JSON.parse(serializeSave(loaded)).version).toBe(22)
+    expect(parseSave(serializeSave(loaded))!.game).toEqual(game)
   })
 
   it('is checked as strictly as a current one', () => {

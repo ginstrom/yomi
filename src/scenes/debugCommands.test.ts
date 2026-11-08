@@ -286,6 +286,17 @@ describe('debug commands', () => {
       expect(all[0]).toMatch(/^party_1 \(First Company\) at \d+,\d+, order idle$/)
       expect(all[1]).toMatch(/^1\. /)
       expect(all[1 + context.source!.game.parties[0].members.length]).toMatch(/^party_2 \(Second Company\)/)
+      const [first, second] = context.source!.game.parties
+      first.order = { kind: 'meet', party: 'party_2' }
+      second.order = { kind: 'travel', to: offsetToHex(4, 2), route: [offsetToHex(4, 2)] }
+      const orders = runCommand('party', context).lines.filter((line) => /^party_\d /.test(line))
+      expect(orders).toEqual([expect.stringMatching(/, order meet party_2$/), expect.stringMatching(/, order travel to 4,2$/)])
+      first.order = { kind: 'garrison' }
+      second.order = { kind: 'day', action: { kind: 'camp' } }
+      expect(runCommand('party', context).lines.filter((line) => /^party_\d /.test(line))).toEqual([
+        expect.stringMatching(/, order garrison$/),
+        expect.stringMatching(/, order day camp$/),
+      ])
       const one = runCommand('party @second', context).lines
       expect(one).toHaveLength(1 + context.source!.game.parties[1].members.length)
       expect(one[0]).toMatch(/^party_2 /)

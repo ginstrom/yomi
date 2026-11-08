@@ -719,8 +719,8 @@ export type Decision =
   | { kind: 'hall' }
   /** Fight the target it confronts. */
   | { kind: 'fight'; target: MonsterLocation }
-  /** A standing order, whose days `advance` runs (none for idle). */
-  | { kind: 'order'; order: OrderRequest }
+  /** A standing order, whose days `advance` runs (none for idle); the policy gives no home, garrison or meet yet. */
+  | { kind: 'order'; order: Extract<OrderRequest, { kind: 'idle' | 'travel' | 'camp' }> }
   /** A one-day action. */
   | { kind: 'act'; action: DayAction }
   /** One craft: at a workshop `craftGear` with a limit of 1, at once; in the field the one it would make (`fieldCraft`), a day's act. */

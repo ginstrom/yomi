@@ -52,9 +52,10 @@ export interface PartyListEntry {
 /**
  * What a party is doing, in a few words: facing monsters, idle, travelling
  * (to the name of what lies at its destination, but only if the player knows
- * of it), camping, or the day's work it is doing.
+ * of it), returning home, camping, garrisoning the site it stands on, meeting
+ * another of `parties` (the company's), or the day's work it is doing.
  */
-export function orderLabel(world: WorldState, party: Expedition): string {
+export function orderLabel(world: WorldState, party: Expedition, parties: readonly Expedition[] = [party]): string {
   if (party.confronting !== null) {
     const location = world.locations.find((l) => l.id === party.confronting)
     if (location) return `Before ${theName(location.name)}`
@@ -65,8 +66,18 @@ export function orderLabel(world: WorldState, party: Expedition): string {
       return 'Idle'
     case 'travel':
       return travelLabel(world, order.to)
+    case 'home':
+      return 'Returning home'
     case 'camp':
       return 'Camping'
+    case 'garrison': {
+      const site = locationAt(world, party.position)
+      return site ? `Garrisoning ${midSentence(site.name)}` : 'Garrisoning'
+    }
+    case 'meet': {
+      const other = parties.find((p) => p.id === order.party)
+      return other ? `Meeting ${other.name}` : 'Meeting'
+    }
     case 'day':
       switch (order.action.kind) {
         case 'scout':
@@ -85,9 +96,9 @@ export function orderLabel(world: WorldState, party: Expedition): string {
   }
 }
 
-/** What is left of a party's travel order, its destination last, which the world map draws while nothing is hovered; empty for any other order. */
+/** What is left of a party's travel or home order, its destination last, which the world map draws while nothing is hovered; empty for any other order. */
 export function standingRoute(party: Expedition): readonly Hex[] {
-  return party.order.kind === 'travel' ? party.order.route : []
+  return party.order.kind === 'travel' || party.order.kind === 'home' ? party.order.route : []
 }
 
 /** A travel order's line: the name of what lies at `to`, but only if the player knows of it. */
@@ -139,7 +150,7 @@ export function deployedParties(game: GameState, shown: ShownOrder | null = null
         name: game.parties.length === 1 ? SINGLE_PARTY_NAME : expedition.name,
         members: party,
         position: expedition.position,
-        order: shown?.party === expedition.id ? shown.order : orderLabel(world, expedition),
+        order: shown?.party === expedition.id ? shown.order : orderLabel(world, expedition, game.parties),
         confronting: location ? { id: location.id, name: location.name } : null,
         hp: party.reduce((sum, member) => sum + member.hp, 0),
         maxHp: party.reduce((sum, member) => sum + maxHp(member), 0),

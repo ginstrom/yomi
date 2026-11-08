@@ -19,13 +19,14 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * Raise `SAVE_VERSION` whenever the shape of `GameState`, `Character`,
  * `WorldState` or `BattleSnapshot` changes. A migration is written only when
  * a stage's design asks for one (stage 5's does: `migrateFrom18`, reading a
- * version-18 save straight to this version; version 19 was never released
- * and reads as unreadable); otherwise a save of another version reads as
- * unreadable. Rules and item numbers may change
+ * version-18 save straight to this version; versions 19 and 21 were never
+ * released, and they and stage 5's 20 read as unreadable); otherwise a save
+ * of another version reads as unreadable. Version 22 (stage 6) adds the
+ * home, garrison and meet orders. Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 21
+export const SAVE_VERSION = 22
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -188,12 +189,13 @@ function isDayAction(action: unknown): boolean {
   }
 }
 
-/** Whether `order` is an `Order`: a known kind, a travel order with its destination and the hexes still to walk, a day order with its action. */
-function isOrder(order: unknown): boolean {
+/** Whether `order` is an `Order`: a known kind, a travel or home order with its destination and the hexes still to walk, a meet order naming one of `partyIds`, a day order with its action. */
+function isOrder(order: unknown, partyIds: readonly string[]): boolean {
   if (typeof order !== 'object' || order === null) return false
   const o = order as Record<string, unknown>
   if (!ORDER_KINDS.includes(o.kind as never)) return false
-  if (o.kind === 'travel') return isHex(o.to) && Array.isArray(o.route) && o.route.every(isHex)
+  if (o.kind === 'travel' || o.kind === 'home') return isHex(o.to) && Array.isArray(o.route) && o.route.every(isHex)
+  if (o.kind === 'meet') return typeof o.party === 'string' && partyIds.includes(o.party)
   if (o.kind === 'day') return isDayAction(o.action)
   return true
 }
@@ -217,7 +219,7 @@ export function parseSave(raw: string | null): SaveFile | null {
     check(game.parties.every((party) => party && typeof party.id === 'string' && typeof party.name === 'string'))
     check(new Set(game.parties.map((party) => party.id)).size === game.parties.length)
     check(game.parties.every((party) => Array.isArray(party.members) && party.members.length > 0 && Array.isArray(party.baggage)))
-    check(game.parties.every((party) => isOrder(party.order)))
+    check(game.parties.every((party) => isOrder(party.order, game.parties.map((p) => p.id))))
     check(game.parties.every((party) => isHex(party.position) && (party.confronting === null || typeof party.confronting === 'string')))
     check(game.world && typeof game.world === 'object' && Array.isArray(game.world.locations))
     const { world } = game
