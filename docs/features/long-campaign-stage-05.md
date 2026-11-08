@@ -38,6 +38,7 @@ Large/structural refactor, but architecture and design are done (the stage desig
 
 - For stage 6 (not blocking): saved battles must record which party is fighting.
 - For stage 6 (not blocking): advanceRefusal stops the whole company while any party is confronting (per C6); revisit with several parties.
+- For stage 6 (not blocking): the simulator runs a one-day act while deciding for its party, so with two parties it would pass a day for both; collect acts as day orders in one passDay.
 
 ## Model tiers
 
@@ -62,3 +63,4 @@ Large/structural refactor, but architecture and design are done (the stage desig
 - Step 07 (8811e0f, aeaf9fb, opus): act() for scout/wait/camp day/tower/outpost/field craft/field embed; time-free parts (rest, raiseTower, raiseOutpost, applyCraft, applyEmbed); step 06 follow-ups folded; twin-game characterization tests; guard + hash identical; npm test 1315; browser 89/89. One-day actions replace a standing order (party ends idle), per correction 10.
 - Step 07 review (opus): clean; twin tests pass on the pre-change tree and fail on injected reorderings; hash + summary identical; npm test 1315; browser 89/89. To step 09: craft refusal uses party.name not partyNoun; comment the run-time re-check in runAction; triple refusal check (optional).
 - Steps 08 (main tree) and 09 (separate worktree, merged after) run in parallel.
+- Step 08 (7491dd8, 1316fed, opus): runCampaign on the loop (per-party plans, decide/carryOut, advance); company.ts untouched; guard + hash + summary identical; npm test 1321.
