@@ -195,3 +195,9 @@ A party formed stands at the encampment, idle, with no baggage; it takes the low
 - **Deviations:** `ButtonProbe` has no label, so the e2e test tells "went on" from "game over" by the `result` lines and the scene it lands in; no `wiped` probe field was needed. A lost game leaves `game.parties` empty (the contract's "remove the party"); nothing reads it after, as the slot is deleted and the OK goes to `Menu`, but a debug command typed on that result screen would find no party.
 - **Docs:** CLAUDE.md (company.ts line, debug `hp`, rules of the world map, progression, saving, the scene layer) and the manual's defeat text (sections on victory and defeat, and winning, losing and saving).
 - **For later steps:** step 09's `'fallen'` should read `heroesLeft`; the simulator still calls neither `wipeParty` nor `exchange`.
+
+### Review round 1
+
+- **Found:** on the defeat screen, C, I and S still opened the character panel; after a wipe `expedition.members` is empty, `activeIndex()` gave -1, and `InventoryScene.setMember` threw on `members[-1]`, leaving Battle paused.
+- **Fixed:** `BattleScene.openPanel` returns early for an index below 0 or once the battle's phase is `over`. The e2e wipe test now presses C, I and S on the result screen and expects Battle still running, unpaused; it failed before the fix (Battle paused, an uncaught error) and passes after.
+- **Evidence:** `npm test` 80 files, 1423 tests passed; `npm run test:browser -- e2e/battle.test.ts` 13 passed.

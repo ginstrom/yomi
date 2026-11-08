@@ -615,7 +615,8 @@ export class BattleScene extends Phaser.Scene {
    * the player has control.
    */
   private openPanel(tab: 'inventory' | 'character' | 'skills', index = this.activeIndex()): void {
-    if (this.scene.isPaused() || index === null) return
+    // Once the battle is over the panel has nothing to change, and after a wipe no member to show.
+    if (this.scene.isPaused() || index === null || index < 0 || this.engine.getState().phase === 'over') return
     const units = this.engine.getState().units
     this.openPiles = []
     const members = this.expedition.members.map((character, i) => {

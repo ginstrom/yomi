@@ -330,6 +330,9 @@ describe('a battle', () => {
     const saved = await game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!))
     expect(saved.battle).toBeNull()
     expect(saved.game.parties.map((p: { id: string }) => p.id)).toEqual(['party_1'])
+    // The fallen party's panel has no one left to show: C, I and S do nothing on the result screen.
+    for (const key of ['KeyC', 'KeyI', 'KeyS']) await game.press(key)
+    await game.waitForScenes(['Battle'])
 
     await game.click(over.buttons.result)
     await game.waitForScenes(['World'])
