@@ -1,5 +1,7 @@
+import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { HexBoard, hexDistance, hexEquals, hexKey, hexToOffset, offsetToHex, type Hex } from '../grid/hex.ts'
+import { campUntilHealed } from './camp.ts'
 import { ENCOUNTERS, ENCOUNTER_BANDS, MAX_THREAT } from './encounters.ts'
 import type { PartyPresence } from './expedition.ts'
 import { newGame, type GameState } from './gameState.ts'
@@ -294,3 +296,181 @@ describe('isNotable over several parties', () => {
     expect(isNotable(world, sightedAt(a.position), [])).toBe(false)
   })
 })
+
+/**
+ * Calls `then` as the world's turn is counted to `turn` (in `passTurn`, before
+ * that day's blight), which lets a test change the world in the middle of a walk.
+ */
+function onTurn(world: WorldState, turn: number, then: () => void): void {
+  let value = world.turn
+  Object.defineProperty(world, 'turn', {
+    configurable: true,
+    enumerable: true,
+    get: () => value,
+    set: (next: number) => {
+      value = next
+      if (next === turn) then()
+    },
+  })
+}
+
+/** A nest of the goblins' encounter put down at `at`, known to the player when `known`. */
+function nestAt(world: WorldState, id: string, at: Hex, known: boolean, threat = 1): void {
+  world.locations.push({ id, kind: 'monsters', name: 'Nest', position: at, encounter: 'goblin_raid', threat, loot: [] })
+  if (known) world.sighted.push(id)
+}
+
+describe('travel, as it is (characterization)', () => {
+  /** A fresh game whose monsters are all known, so that no sighting cuts a walk short. */
+  function quiet() {
+    const { game, world, party } = fresh()
+    world.sighted = monsters(world).map((l) => l.id)
+    return { game, world, party }
+  }
+
+  it('changes nothing with no route: off the map, the hex it stands on, or while confronting', () => {
+    const { game, world, party } = fresh()
+    const before = structuredClone({ world, party })
+    for (const to of [offsetToHex(-1, 0), party.position]) {
+      expect(travel(game, party, to)).toEqual({ walked: [], events: [], interruptedBy: null })
+    }
+    party.confronting = 'goblin_raiders'
+    expect(travel(game, party, offsetToHex(3, 1))).toEqual({ walked: [], events: [], interruptedBy: null })
+    party.confronting = null
+    expect(structuredClone({ world, party })).toEqual(before)
+  })
+
+  it('changes nothing once the game is over', () => {
+    const { game, world, party } = quiet()
+    world.status = 'won'
+    const before = structuredClone({ world, party })
+    expect(travel(game, party, offsetToHex(3, 1))).toEqual({ walked: [], events: [], interruptedBy: null })
+    expect(structuredClone({ world, party })).toEqual(before)
+  })
+
+  it('stops on the first notable event of a day, short of the destination, confronting nothing', () => {
+    const { game, world, party } = fresh()
+    const to = offsetToHex(40, 20)
+    const route = routeTo(world, party, to)!
+    const journey = travel(game, party, to)
+    expect(journey.interruptedBy).not.toBeNull()
+    expect(journey.interruptedBy!.type).toBe('sighted')
+    expect(journey.walked).toEqual(route.slice(0, journey.walked.length))
+    expect(journey.walked.length).toBeLessThan(route.length)
+    expect(party.position).toEqual(journey.walked.at(-1))
+    expect(party.confronting).toBeNull()
+    expect(world.turn).toBe(1 + journey.walked.length)
+    // The first notable event of the last day: nothing notable came before it.
+    const present = [{ position: party.position, levels: party.members.map((m) => m.level) }]
+    const notable = journey.events.filter((event) => isNotable(world, event, present))
+    expect(notable[0]).toBe(journey.interruptedBy)
+  })
+
+  it('confronts the monsters it arrives at, even when a notable event cuts the arrival day short', () => {
+    const { game, world, party } = quiet()
+    const at = { q: party.position.q + 1, r: party.position.r }
+    expect(locationAt(world, at)).toBeNull()
+    nestAt(world, 'close_nest', at, true)
+    // A threat-5 nest beside the Gold Seam threatens it from the first day.
+    const seam = world.locations.find((l) => l.id === 'gold_seam')!.position
+    nestAt(world, 'besiegers', { q: seam.q + 2, r: seam.r }, true, 5)
+    const journey = travel(game, party, at)
+    expect(journey.walked).toEqual([at])
+    expect(journey.interruptedBy).toMatchObject({ type: 'site_threatened', site: 'gold_seam' })
+    expect(party.confronting).toBe('close_nest')
+    expect(world.turn).toBe(2)
+  })
+
+  it('arrives at monsters confronting them, and on open land confronting nothing', () => {
+    const { game, world, party } = quiet()
+    const at = { q: party.position.q + 2, r: party.position.r }
+    nestAt(world, 'close_nest', at, true)
+    const journey = travel(game, party, at)
+    expect(journey.interruptedBy).toBeNull()
+    expect(journey.walked.at(-1)).toEqual(at)
+    expect(party.confronting).toBe('close_nest')
+    expect(world.turn).toBe(1 + journey.walked.length)
+
+    const other = quiet()
+    const open = offsetToHex(3, 1)
+    const walk = travel(other.game, other.party, open)
+    expect(walk.walked.at(-1)).toEqual(open)
+    expect(other.party.confronting).toBeNull()
+  })
+
+  it('stops short of a nest that came onto the road since the route was planned, passing no day for it', () => {
+    const { game, world, party } = quiet()
+    const to = offsetToHex(3, 1)
+    const route = routeTo(world, party, to)!
+    expect(route.length).toBeGreaterThan(3)
+    // As the first day is counted, a nest comes down on the road's second hex.
+    onTurn(world, 2, () => nestAt(world, 'road_nest', route[1], true))
+    const journey = travel(game, party, to)
+    expect(journey.walked).toEqual([route[0]])
+    expect(journey.interruptedBy).toBeNull()
+    expect(party.position).toEqual(route[0])
+    expect(party.confronting).toBeNull()
+    expect(world.turn).toBe(2)
+  })
+
+  it('walks nowhere when the road is blocked at its first hex, confronting what stands where it is', () => {
+    const { game, world, party } = quiet()
+    const to = offsetToHex(3, 1)
+    const route = routeTo(world, party, to)!
+    // A nest the player has not seen, which the route does not avoid.
+    nestAt(world, 'hidden_nest', route[0], false)
+    expect(travel(game, party, to)).toEqual({ walked: [], events: [], interruptedBy: null })
+    expect(party.confronting).toBeNull()
+    expect(world.turn).toBe(1)
+  })
+
+  it('confronts again, walking nowhere, the monsters it lingered at when its road is blocked at once', () => {
+    const { game, world, party } = quiet()
+    const [goblins] = lairs(world)
+    journeyTo(game, goblins.position)
+    expect(linger(game, party, 'wait')).not.toBeNull()
+    expect(party.confronting).toBeNull()
+    const to = offsetToHex(3, 1)
+    const route = routeTo(world, party, to)!
+    nestAt(world, 'hidden_nest', route[0], false)
+    const turn = world.turn
+    expect(travel(game, party, to).walked).toEqual([])
+    expect(party.confronting).toBe(goblins.id)
+    expect(world.turn).toBe(turn)
+  })
+
+  it('stops after the day the game ends', () => {
+    const { game, world, party } = quiet()
+    const to = offsetToHex(3, 1)
+    onTurn(world, 3, () => (world.status = 'won'))
+    const journey = travel(game, party, to)
+    expect(journey.walked.length).toBe(2)
+    expect(journey.interruptedBy).toBeNull()
+    expect(world.turn).toBe(3)
+  })
+})
+
+describe('a seeded session of walks and camps (characterization)', () => {
+  it('gives the same journeys, camps, world and party as before the day loop', () => {
+    const { game, world, party } = fresh()
+    const results: unknown[] = []
+    const wound = () => party.members.forEach((m, i) => (m.hp = Math.max(1, m.hp - 7 - 3 * i)))
+    const targets = [offsetToHex(30, 5), offsetToHex(40, 20), offsetToHex(20, 30), offsetToHex(5, 35), offsetToHex(13, 18)]
+    for (const to of targets) {
+      for (let click = 0; click < 6 && !hexEquals(party.position, to); click++) {
+        if (party.confronting) results.push(['linger', linger(game, party, 'wait')])
+        results.push(['travel', travel(game, party, to)])
+        wound()
+        results.push(['camp', campUntilHealed(game, party)])
+      }
+    }
+    // The order is left out: the day loop keeps one past an interrupt, as nothing did before it.
+    const { order: _order, ...rest } = party
+    const digest = createHash('sha256').update(JSON.stringify({ results, world, party: rest })).digest('hex')
+    expect(world.turn).toBe(SESSION_TURN)
+    expect(digest).toBe(SESSION_SHA256)
+  })
+})
+
+const SESSION_TURN = 153
+const SESSION_SHA256 = '6cd5821ddc5fc57c6924324bf9709e39cbccd3e2b7c42325214133ad3171604e'

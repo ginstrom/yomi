@@ -328,3 +328,24 @@ Implement C6 as written. The points that keep it identical to today:
 
 ## 8. Execution record
 
+**Characterization first.** Before any change, added to `src/game/worldMap.test.ts` ("travel, as it is (characterization)", 9 tests, and "a seeded session of walks and camps", a SHA-256 of 26 journeys and camps from seed 1 ending on turn 153, the party's `order` left out of the digest as the loop keeps one past an interrupt) and `src/game/camp.test.ts` ("campUntilHealed, as it is (characterization)", 3 tests: refusal changes nothing; a wounded three to `{ days: 7, rested: 13, cast: 48 }`, 36 events, members `[[32, 0], [18, 0], [17, 18]]`; stops after the day the game ends). All green on the unchanged code (`npx vitest run src/game/worldMap.test.ts src/game/camp.test.ts`: 48 passed), and unchanged and green after. A mid-walk change (a nest put on the road, the game ending) is made by a `turn` accessor that runs as `passTurn` counts a given turn.
+
+**Built.**
+- `src/game/company.ts`: C6 as written, but `act` and the `day` order's action (step 07): `passDay`'s `day` case does nothing before the world's day and its after-day check makes the order idle with `order_done`. Per-order code is a `switch` on `order.kind` in `partyDay` (before `passTurn`) and `afterDay` (after it), each reading and changing only its own party.
+- Two exports beyond C6, used by the conveniences: `roadBlocked(world, order)` (the next hex, short of `to`, holds monsters) and `worldInterrupt(report)` (the interrupt's event when it is a world event, else null: what `Journey.interruptedBy` and `CampResult.interruptedBy` take).
+- `travel` (worldMap.ts): `setOrder` travel (refused: empty journey, nothing changed), the first-hex check (blocked: order idle, nothing walked), else `advance(game, Infinity)`; then `party.confronting = monstersHere(world, party)?.id ?? null`, as today's code ended, which keeps the case of a party that lingered at monsters and finds its road blocked at once confronting them again.
+- `campUntilHealed` (camp.ts): `canCamp`, one `autoHeal`, `days: 0` for a whole party, else `setOrder` camp and `advance(game, Infinity)`, summing the `PartyDay`s.
+- `advanceRefusal`: "The game is over." / "The party stands before the <name>: scout, wait or attack." ("The party" while the company has one party, else the party's name). `setOrder` refusals: `No party "<id>".`, "The game is over.", "The party must first answer the monsters it faces.", "There is no way there.", "The party cannot camp here."
+- Debug `days <count>` runs `passDay`, stopping with `advanceRefusal`'s line when it returns null (so it is now refused while the party faces monsters, where it used to pass days anyway).
+- Review fixes from step 05 folded in: `namedParty` refuses a bare `@` (`No party "@"; there are …`), with a test; the simulator's `visitGuildHall` collects taken names over `company(game)` (with one party, the same names in the same order; the guard identical after it).
+- CLAUDE.md: `company.ts` in the domain list with the cycle note; camp.ts's line; the world map's rules (the day loop, orders past an interrupt, the planned route); the debug console's `days`.
+
+**Verification.**
+- `npx vitest run src/game/company.test.ts src/game/worldMap.test.ts src/game/camp.test.ts src/scenes/debugCommands.test.ts`: all passed (company.test.ts 21 tests).
+- `npm test`: 80 files, 1277 tests passed; the refactor guard test passed, its fixture untouched.
+- 50-campaign check, run after the loop and again after the `visitGuildHall` change: `shasum -a 256 logs/guard-50.jsonl` = `068016a82040ec5be673084265005a7218f0ce927629880565c1a27a8cf52d76`, and the summary (less npm's banner) diffed against step 01's record: **guard identical**.
+- `npm run test:browser` (the full run): 9 files, 89 tests passed (197 s).
+
+**For later steps.**
+- Step 07: `passDay`'s `day` case is the hook (`partyDay` and `afterDay` in company.ts); `advanceRefusal` already lets a confronting party pass a day whose order is a scout or wait day action.
+- Step 08/09: an interrupted walk or camp now leaves the party's order standing (travel with the remaining route, or camp). The scenes do not show or use it yet; a saved game carries it. Debug `goto` moves a party without touching its order, so a standing travel order would walk on from the new hex along the old route on the next `days`; step 09 (or 07) may want `goto` to make the order idle.

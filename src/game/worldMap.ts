@@ -13,6 +13,7 @@ import {
   type Item,
 } from '../inventory/inventory.ts'
 import { advanceDay, cleanse, seedBlight, type WorldEvent } from './blight.ts'
+import { advance, roadBlocked, setOrder, worldInterrupt } from './company.ts'
 import { MAX_THREAT, type EncounterId } from './encounters.ts'
 import { presences, type Expedition, type PartyPresence } from './expedition.ts'
 import type { GameState } from './gameState.ts'
@@ -322,23 +323,22 @@ export interface Journey {
  * a notable event (`isNotable`) or where monsters stand on the road: sighted
  * since the route was planned, as they are long before the party reaches them.
  * Walks nowhere if there is no route. Arriving among monsters confronts the
- * party with them.
+ * party with them. It gives the party a travel order and runs the day loop
+ * (company.ts) until something happens; cut short, the order stands.
  */
 export function travel(game: GameState, party: Expedition, to: Hex): Journey {
   const world = game.world
   const journey: Journey = { walked: [], events: [], interruptedBy: null }
-  const route = worldActive(world) ? routeTo(world, party, to) : null
-  if (!route) return journey
-  for (const h of route) {
-    // A nest spawned on the road since the route was planned.
-    if (!hexEquals(h, to) && locationAt(world, h)?.kind === 'monsters') break
-    party.position = h
-    journey.walked.push(h)
-    const present = presences(game.parties)
-    const day = passTurn(world, present)
-    journey.events.push(...day)
-    journey.interruptedBy = day.find((event) => isNotable(world, event, present)) ?? null
-    if (journey.interruptedBy || !worldActive(world)) break
+  if (setOrder(game, party.id, { kind: 'travel', to }) !== null) return journey
+  // A nest on the first hex of the road: the loop checks the road only after a day.
+  if (party.order.kind === 'travel' && roadBlocked(world, party.order)) party.order = { kind: 'idle' }
+  else {
+    for (const report of advance(game, Infinity)) {
+      const walked = report.parties.find((day) => day.party === party.id)?.walked
+      if (walked) journey.walked.push(walked)
+      journey.events.push(...report.events)
+      journey.interruptedBy = worldInterrupt(report)
+    }
   }
   party.confronting = monstersHere(world, party)?.id ?? null
   return journey

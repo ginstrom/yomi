@@ -43,6 +43,7 @@ import {
   GUILD_HALL_LEVELS,
   RECRUIT_COST,
   atGuildHall,
+  company,
   partyLimit,
   recruit,
   recruitRefusal,
@@ -347,7 +348,7 @@ export function visitGuildHall(game: GameState, party: Expedition): number {
   while (upgradeGuildHall(game, party) === null);
   let hired = 0
   while (party.members.length < partyLimit(game.world) && recruitRefusal(game, party) === null) {
-    const taken = [...party.members, ...game.reserves].map((member) => member.name)
+    const taken = company(game).map((member) => member.name)
     const base = PREROLLS[(party.members.length + game.reserves.length) % PREROLLS.length].draft
     let name = base.name
     for (let n = 2; taken.includes(name); n++) name = `${base.name} ${n}`

@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import { maxHp } from '../character/character.ts'
+import { setOrder } from '../game/company.ts'
 import { newExpedition } from '../game/expedition.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { readyMadeParty } from '../game/party.ts'
 import { UNEXPLORED } from '../game/vision.ts'
 import { SOURCE_ID, threatAt } from '../game/worldMap.ts'
-import { hexToOffset } from '../grid/hex.ts'
+import { hexToOffset, offsetToHex } from '../grid/hex.ts'
 import { completions, runCommand, COMMAND_NAMES, type DebugContext } from './debugCommands.ts'
 
 /** A context on the world map that can start battles, recording the ones it was asked for. */
@@ -111,6 +112,29 @@ describe('debug commands', () => {
     runCommand('days 5', context)
     expect(world.turn).toBe(turn + 5)
     expect(runCommand('days x', context).lines[0]).toMatch(/whole number/)
+  })
+
+  it('passes days through the day loop, so the party carries out its order', () => {
+    const context = onWorldMap()
+    const game = context.source!.game
+    const party = game.parties[0]
+    game.world.sighted = game.world.locations.filter((l) => l.kind === 'monsters').map((l) => l.id)
+    expect(setOrder(game, party.id, { kind: 'travel', to: offsetToHex(3, 1) })).toBeNull()
+    const route = party.order.kind === 'travel' ? [...party.order.route] : []
+    runCommand('days 2', context)
+    expect(party.position).toEqual(route[1])
+  })
+
+  it('stops passing days, saying why, while the party faces monsters', () => {
+    const context = onWorldMap()
+    const { world, parties } = context.source!.game
+    parties[0].confronting = 'goblin_raiders'
+    const turn = world.turn
+    expect(runCommand('days 3', context).lines).toEqual([
+      `0 days pass; it is turn ${turn}.`,
+      '  The party stands before the Goblin Raiders: scout, wait or attack.',
+    ])
+    expect(world.turn).toBe(turn)
   })
 
   it('lists units only in battle', () => {
@@ -235,6 +259,14 @@ describe('debug commands', () => {
       const result = runCommand('heal @nobody', context)
       expect(result.changed).toBe(false)
       expect(result.lines).toEqual(['No party "@nobody"; there are party_1 (First Company).'])
+    })
+
+    it('refuses a bare @, naming no party', () => {
+      const context = twoParties()
+      const result = runCommand('give yew_bow @', context)
+      expect(result.changed).toBe(false)
+      expect(result.lines[0]).toMatch(/^No party "@"/)
+      expect(context.source!.game.parties.every((party) => party.baggage.length === 0)).toBe(true)
     })
 
     it('lists the company with `party`, or one party with `party @name`', () => {

@@ -110,3 +110,46 @@ describe('describeCamp', () => {
     expect(describeCamp({ days: 0, rested: 0, cast: 0 })).toBe('No one is wounded.')
   })
 })
+
+describe('campUntilHealed, as it is (characterization)', () => {
+  it('changes nothing where it cannot camp', () => {
+    const { game, world, party, members } = solo()
+    members[0].hp = 1
+    world.status = 'won'
+    const before = structuredClone({ world, party })
+    expect(campUntilHealed(game, party)).toBeNull()
+    expect(structuredClone({ world, party })).toEqual(before)
+  })
+
+  it('heals a wounded party by rest and spells, day by day, to the same hit points and mana', () => {
+    const { game, world, party, members } = solo()
+    const [aldric, brenna, delwyn] = members
+    aldric.hp = 1
+    brenna.hp = 3
+    delwyn.hp = 2
+    delwyn.mana = 1
+    const result = campUntilHealed(game, party)!
+    expect({ ...result, events: result.events.length }).toEqual(RESULT)
+    expect(world.turn).toBe(1 + result.days)
+    expect(members.map((m) => [m.hp, m.mana])).toEqual(MEMBERS)
+  })
+
+  it('stops after the day the game ends', () => {
+    const { game, world, party, members } = solo()
+    members.pop()
+    members[0].hp = 1
+    let turn = world.turn
+    Object.defineProperty(world, 'turn', {
+      get: () => turn,
+      set: (next: number) => {
+        turn = next
+        if (next === 3) world.status = 'won'
+      },
+    })
+    expect(campUntilHealed(game, party)).toMatchObject({ days: 2, rested: 2, cast: 0, interruptedBy: null })
+    expect(members[0].hp).toBe(3)
+  })
+})
+
+const RESULT = { days: 7, rested: 13, cast: 48, events: 36, interruptedBy: null }
+const MEMBERS = [[32, 0], [18, 0], [17, 18]]

@@ -1,10 +1,11 @@
 import { maxHp, maxMana } from '../character/character.ts'
 import type { WorldEvent } from './blight.ts'
+import { advance, setOrder, worldInterrupt } from './company.ts'
 import { presences, type Expedition } from './expedition.ts'
 import type { GameState } from './gameState.ts'
 import { restHealing } from './infirmary.ts'
 import { autoHeal, type Party } from './party.ts'
-import { isNotable, monstersHere, passTurn, worldActive, type WorldState } from './worldMap.ts'
+import { monstersHere, passTurn, worldActive, type WorldState } from './worldMap.ts'
 
 /**
  * Camping on the world map: the party rests where it stands, a day at a
@@ -72,23 +73,23 @@ export function campDay(game: GameState, party: Expedition): CampDay | null {
  * Heals the whole party: casts its heals with the mana it has (`autoHeal`),
  * then while anyone is wounded camps a day and casts again, until a notable
  * event breaks camp or the game ends. A party already whole camps no day.
- * Returns null, changing nothing, where the party cannot camp.
+ * Returns null, changing nothing, where the party cannot camp. The days are
+ * a camp order run on the day loop (company.ts); broken off, the order stands.
  */
 export function campUntilHealed(game: GameState, party: Expedition): CampResult | null {
-  const { world } = game
-  if (!canCamp(world, party)) return null
+  if (!canCamp(game.world, party)) return null
   const members = party.members
   const result: CampResult = { days: 0, rested: 0, cast: autoHeal(members), events: [], interruptedBy: null }
+  if (!partyWounded(members)) return result
+  setOrder(game, party.id, { kind: 'camp' })
   // Ends: each day heals every wounded member at least a hit point.
-  while (partyWounded(members) && canCamp(world, party)) {
-    const day = campDay(game, party)!
-    result.rested += day.healed
-    result.events.push(...day.events)
+  for (const report of advance(game, Infinity)) {
+    const day = report.parties.find((d) => d.party === party.id)
     result.days += 1
-    result.cast += autoHeal(members)
-    const present = presences(game.parties)
-    result.interruptedBy = day.events.find((event) => isNotable(world, event, present)) ?? null
-    if (result.interruptedBy) break
+    result.rested += day?.rested ?? 0
+    result.cast += day?.cast ?? 0
+    result.events.push(...report.events)
+    result.interruptedBy = worldInterrupt(report)
   }
   return result
 }

@@ -1,13 +1,14 @@
 import { maxHp, maxMana, manaOf, type Character } from '../character/character.ts'
 import { gainXp, xpToNextLevel } from '../character/progression.ts'
 import type { BattleState } from '../engine/battleEngine.ts'
+import { advanceRefusal, passDay } from '../game/company.ts'
 import { facilities, setFacilityLevel, type FacilityId } from '../game/encampment.ts'
 import { presences, type Expedition } from '../game/expedition.ts'
 import { ENCOUNTERS, type EncounterId } from '../game/encounters.ts'
 import { selectedParty, type GameState } from '../game/gameState.ts'
 import type { Material } from '../game/territory.ts'
 import { updateSight } from '../game/vision.ts'
-import { isNotable, monstersHere, passTurn, threatAt, worldActive, type WorldLocation } from '../game/worldMap.ts'
+import { isNotable, monstersHere, threatAt, worldActive, type WorldLocation } from '../game/worldMap.ts'
 import { HexBoard, hexToOffset, offsetToHex } from '../grid/hex.ts'
 import { BASE_ITEMS, MAGIC_ITEMS, itemById } from '../inventory/inventory.ts'
 import { MODIFIER_IDS } from '../inventory/modifiers.ts'
@@ -83,7 +84,7 @@ const partyLabel = (party: Expedition): string => `${party.id} (${party.name})`
 
 /** The party `@<name>` means: an exact id, else the first whose name starts with it, ignoring case. */
 function namedParty(game: GameState, name: string): Expedition {
-  const found = game.parties.find((party) => party.id === name) ?? game.parties.find((party) => party.name.toLowerCase().startsWith(name.toLowerCase()))
+  const found = name === '' ? undefined : game.parties.find((party) => party.id === name) ?? game.parties.find((party) => party.name.toLowerCase().startsWith(name.toLowerCase()))
   if (!found) throw new DebugError(`No party "@${name}"; there are ${game.parties.map(partyLabel).join(', ')}.`)
   return found
 }
@@ -329,7 +330,7 @@ const COMMANDS: Record<string, Command> = {
   },
   days: {
     usage: 'days <count>',
-    summary: 'Pass days where the party stands, as waiting does, telling what they brought.',
+    summary: 'Pass days through the day loop, each party carrying out its order, telling what they brought.',
     changes: true,
     run([count], context) {
       const game = gameOf(context)
@@ -338,10 +339,14 @@ const COMMANDS: Record<string, Command> = {
       const told: string[] = []
       let passed = 0
       while (passed < n && worldActive(game.world)) {
-        const present = presences(game.parties)
-        const events = passTurn(game.world, present)
+        const report = passDay(game)
+        if (!report) {
+          told.push(`  ${advanceRefusal(game)}`)
+          break
+        }
         passed += 1
-        for (const event of events) {
+        const present = presences(game.parties)
+        for (const event of report.events) {
           if (isNotable(game.world, event, present) || event.type === 'spawned') {
             told.push(`  day ${game.world.turn}: ${describeWorldEvent(event) || `${event.type} ${'name' in event ? event.name : ''}`}`)
           }
