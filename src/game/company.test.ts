@@ -847,3 +847,34 @@ describe('stopping short of another party’s monsters', () => {
     }
   })
 })
+
+describe('a meet cut short', () => {
+  it('confronts the monsters it steps onto though the other party has walked on', () => {
+    const { game, world, party, second } = withSecond(quiet())
+    const at = { q: party.position.q + 1, r: party.position.r }
+    nestAt(world, 'left_behind', at)
+    second.position = at // as after a wait there: on the nest, confronting nothing
+    expect(setOrder(game, party.id, { kind: 'meet', party: second.id })).toBeNull()
+    expect(setOrder(game, second.id, { kind: 'travel', to: { q: at.q + 3, r: at.r } })).toBeNull()
+    const report = passDay(game)!
+    expect(report.parties.map((d) => d.walked)).toEqual([at, { q: at.q + 1, r: at.r }])
+    expect(report.partyEvents).toEqual([{ type: 'confronting', party: party.id, location: 'left_behind' }])
+    expect(party.confronting).toBe('left_behind')
+    expect(party.order).toEqual({ kind: 'idle' })
+  })
+
+  it('ends idle, with order_done, once no way to the other party is left', () => {
+    const { game, world, party, second } = withSecond(quiet(), offsetToHex(5, 4))
+    expect(setOrder(game, party.id, { kind: 'meet', party: second.id })).toBeNull()
+    // Known nests on every hex around the other party close every way to it.
+    const around = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]].map(([dq, dr]) => ({ q: second.position.q + dq, r: second.position.r + dr }))
+    around.forEach((h, i) => nestAt(world, `ring_${i}`, h))
+    expect(routeTo(world, party, second.position)).toBeNull()
+    const before = party.position
+    const report = passDay(game)!
+    expect(report.parties[0].walked).toBeNull()
+    expect(report.partyEvents).toEqual([{ type: 'order_done', party: party.id }])
+    expect(party.position).toEqual(before)
+    expect(party.order).toEqual({ kind: 'idle' })
+  })
+})

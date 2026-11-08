@@ -237,7 +237,7 @@ function actionRefusal(game: GameState, party: Expedition, action: DayAction): s
 interface PartyDayDone {
   day: PartyDay
   built: WorldEvent | null
-  /** It stopped short of monsters another party stands on, its walk ended (told after the world's day, as `order_done`). */
+  /** Its walk ended this day: a travel or home order stopped short of monsters another party stands on, or a meet found no way to the other party (told after the world's day, as `order_done`). */
   stoppedShort: boolean
 }
 
@@ -300,8 +300,15 @@ function partyDay(game: GameState, party: Expedition): PartyDayDone {
     }
     case 'meet': {
       const other = partyById(game, order.party)
-      if (!other) break
-      const [hex] = routeTo(world, party, other.position) ?? []
+      if (!other || hexEquals(party.position, other.position)) break
+      const route = routeTo(world, party, other.position)
+      if (!route) {
+        // No way left to the other party: the meet ends, as a blocked road ends a walk.
+        party.order = IDLE
+        done.stoppedShort = true
+        break
+      }
+      const [hex] = route
       if (hex === undefined) break
       party.position = hex
       done.day.walked = hex
@@ -353,9 +360,15 @@ function afterDay(game: GameState, party: Expedition, done: PartyDayDone): Party
         party.order = IDLE
         return [{ type: 'order_done', party: party.id }]
       }
-      if (!hexEquals(party.position, other.position)) return []
-      const events: PartyEvent[] = [{ type: 'met', party: party.id, other: other.id }]
       const here = monstersHere(world, party)
+      if (!hexEquals(party.position, other.position)) {
+        if (!here) return []
+        // It stepped onto the monsters the other party stood on as that party walked away: they are its to answer now.
+        party.confronting = here.id
+        party.order = IDLE
+        return [{ type: 'confronting', party: party.id, location: here.id }]
+      }
+      const events: PartyEvent[] = [{ type: 'met', party: party.id, other: other.id }]
       if (here) {
         party.confronting = here.id
         events.push({ type: 'confronting', party: party.id, location: here.id })
