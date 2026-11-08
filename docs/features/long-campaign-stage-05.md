@@ -53,3 +53,4 @@ None yet.
 - Step 03 review (opus): clean; fixture reproduced from the pre-change tree; full browser 89/89; nits (double import in itemPlace.ts, temporary story↔gameState cycle until leader goes) to step 04/05.
 - Step 04 (5f0e851, a199d5a, opus): Expedition gets position and confronting; presences(); C4 signatures (+raiseShrine, hexInfo); SAVE 20 migrating from 18; probe partyAt/confronting; guard + hash identical; npm test 1230; browser 89/89 (one saves.test fix). `_world` on isNotable kept (plan contract) — orchestrator: leave to stage 6.
 - Orchestrator removed the plan's Co-Authored-By instruction from the remaining task files (session rule).
+- Step 04 review (opus): clean; hash + summary identical, npm test 1230, browser 89/89. Nit: a results line in 04's §5 duplicated from §7 (to step 05).
