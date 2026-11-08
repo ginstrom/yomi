@@ -1242,7 +1242,9 @@ describe('the company policy', () => {
     })
 
     it('goes home to refill a guard worn below its smallest size when a recruit is affordable', () => {
-      const { run, game, guards: [guard] } = companyOf([[5]])
+      const { run, game, vanguard, guards: [guard] } = companyOf([[5]])
+      // A vanguard as strong: no swap to be had.
+      for (const m of vanguard.members) m.level = 5
       away(game, guard, 3)
       game.world.stock = { gold: 9 }
       expect(guardChoice(run, guard).kind).toBe('train')
@@ -1265,7 +1267,7 @@ describe('the company policy', () => {
       expect(choice.target.source).toBeFalsy()
       expect(nextTarget(game.world, guard)).toBe(choice.target)
       expect(distance(choice.target)).toBeGreaterThan(0)
-      for (const m of guard.members) m.level = 30
+      for (const m of [...guard.members, ...game.parties[0].members]) m.level = 30
       game.world.locations = game.world.locations.filter((l) => l.kind !== 'monsters' || l.source)
       expect(guardChoice(run, guard)).toEqual({ kind: 'home' })
     })
@@ -1326,6 +1328,48 @@ describe('the company policy', () => {
     expect(guard.members).not.toContain(best)
     expect(run.record.promotions).toBe(1)
     expect(decideGuard(run, guard)).toEqual({ kind: 'order', order: { kind: 'home' } })
+  })
+
+  describe('the swap promotion (decision 16 as amended)', () => {
+    /** A full vanguard (5 at a level 5 hall), its weakest at level 5 in the middle, and a guard whose best is `best`. */
+    const fullOf = (best: number) => {
+      const c = companyOf([[3, best, 4]])
+      c.vanguard.members.forEach((m, i) => (m.level = i === 2 ? 5 : 8))
+      away(c.game, c.vanguard, 4)
+      return c
+    }
+
+    it('reinforces a full vanguard when the guard’s best outranks its lowest by 2 levels or more', () => {
+      const { run, vanguard, guards: [guard] } = fullOf(7)
+      expect(vanguard.members).toHaveLength(5)
+      expect(guardChoice(run, guard)).toEqual({ kind: 'reinforce' })
+      expect(decideGuard(run, guard)).toEqual({ kind: 'order', order: { kind: 'meet', party: vanguard.id } })
+    })
+
+    it('does not reinforce a full vanguard when the guard’s best is only 1 level above its lowest', () => {
+      const { run, guards: [guard] } = fullOf(6)
+      expect(guardChoice(run, guard).kind).not.toBe('reinforce')
+    })
+
+    it('swaps the guard’s best for the vanguard’s weakest on meeting, counts a promotion and sends the guard home', () => {
+      const { run, game, vanguard, guards: [guard] } = fullOf(7)
+      const best = guard.members[1]
+      const weakest = vanguard.members[2]
+      expect(carryOut(run, guard, decideGuard(run, guard))).toBe('standing')
+      let reports: DayReport[] = []
+      for (let i = 0; i < 10 && !reports.some((r) => r.partyEvents.some((e) => e.type === 'met')); i++) {
+        reports = advance(game, Infinity)
+        takeDays(run, reports)
+      }
+      expect(reports.at(-1)!.partyEvents).toContainEqual({ type: 'met', party: guard.id, other: vanguard.id })
+      expect(decideGuard(run, guard)).toEqual({ kind: 'promote' })
+      expect(carryOut(run, guard, { kind: 'promote' })).toBeNull()
+      expect(vanguard.members).toHaveLength(5)
+      expect(vanguard.members[2]).toBe(best)
+      expect(guard.members[1]).toBe(weakest)
+      expect(run.record.promotions).toBe(1)
+      expect(decideGuard(run, guard)).toEqual({ kind: 'order', order: { kind: 'home' } })
+    })
   })
 
   it('takes its next priority when the exchange is refused', () => {
@@ -1414,7 +1458,7 @@ describe('the company policy', () => {
     decide(run, vanguard)
     expect(vanguardPlan.target).not.toBe(guardTarget)
     // Strong as they come, with only the Source left, a guard goes home.
-    for (const m of guards[1].members) m.level = 30
+    for (const m of [...guards[1].members, ...vanguard.members]) m.level = 30
     game.world.locations = game.world.locations.filter((l) => l.kind !== 'monsters' || l.source)
     expect(guardChoice(run, guards[1])).toEqual({ kind: 'home' })
   })

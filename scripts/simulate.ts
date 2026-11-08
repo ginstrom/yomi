@@ -65,6 +65,7 @@ import {
   startTravel,
   wipeParty,
   type DayReport,
+  type ExchangeMove,
   type OrderRequest,
 } from '../src/game/company.ts'
 import { INFIRMARY_COSTS, raiseInfirmary } from '../src/game/infirmary.ts'
@@ -1102,16 +1103,30 @@ export type GuardChoice =
   | { kind: 'garrison'; site: QuietLocation }
   | { kind: 'home' }
 
-/** Whether `guard` can reinforce `vanguard`: the vanguard is under the party limit, and the guard has two heroes or more, one within 3 levels of the vanguard's lowest. */
+/** How many levels a guard's best must outrank a full vanguard's lowest by for the two to swap (decision 16 as amended by the user). */
+export const SWAP_LEVELS = 2
+
+/**
+ * Whether `guard` can reinforce `vanguard`: by joining it, when the vanguard
+ * is under the party limit and the guard has two heroes or more, one within 3
+ * levels of the vanguard's lowest; or by a swap, when the vanguard is full and
+ * the guard's best outranks its lowest by `SWAP_LEVELS` or more.
+ */
 export function canReinforce(world: WorldState, guard: Expedition, vanguard: Expedition): boolean {
-  if (vanguard.members.length >= partyLimit(world) || guard.members.length < 2) return false
   const lowest = lowestLevel(vanguard.members)
+  if (vanguard.members.length >= partyLimit(world)) return guard.members[promotedIndex(guard)].level >= lowest + SWAP_LEVELS
+  if (guard.members.length < 2) return false
   return guard.members.some((member) => member.level >= lowest - 3)
 }
 
 /** The guard's hero a promotion sends to the vanguard: the highest level, the first on a tie. */
 export function promotedIndex(guard: Expedition): number {
   return guard.members.reduce((best, member, i) => (member.level > guard.members[best].level ? i : best), 0)
+}
+
+/** The vanguard's hero a swap sends to the guard: the lowest level, the first on a tie. */
+export function weakestIndex(party: Expedition): number {
+  return party.members.reduce((worst, member, i) => (member.level < party.members[worst].level ? i : worst), 0)
 }
 
 /** Ties go to the lower location id. */
@@ -1433,7 +1448,11 @@ export function carryOut(run: CampaignRun, party: Expedition, decision: Decision
       return null
     case 'promote': {
       const vanguard = partyById(game, run.vanguard)
-      const moved = vanguard && vanguard !== party ? exchange(game, party.id, vanguard.id, [{ kind: 'member', from: party.id, index: promotedIndex(party) }]) : 'No vanguard.'
+      // Into an empty place, or, the vanguard full, in place of its weakest, who joins the guard.
+      const move: ExchangeMove | null = !vanguard || vanguard === party ? null
+        : vanguard.members.length >= partyLimit(world) ? { kind: 'swap', a: promotedIndex(party), b: weakestIndex(vanguard) }
+        : { kind: 'member', from: party.id, index: promotedIndex(party) }
+      const moved = move ? exchange(game, party.id, vanguard!.id, [move]) : 'No vanguard.'
       plan.phase = 'start'
       if (moved !== null) {
         // Refused (the vanguard full by now, or one of them facing monsters): the guard takes its next priority.
