@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 6 (multiple parties)
 
 **Slug:** long-campaign-stage-06
-**Phase:** planning
+**Phase:** implementation (step 01)
 
 ## Request (user's words)
 
@@ -13,7 +13,7 @@
 - Design: `docs/designs/long-campaign/stage-06-multiple-parties.md` (status "ready for planning")
 - Reference: `docs/designs/long-campaign/reference/multiple-parties.md` (all but §R10 road guards)
 - Previous stage: `docs/features/long-campaign-stage-05.md` (hazards under Open questions and Verification), `.git/pr-review/long-campaign-stage-05.md`
-- Plan: `docs/implementation-plans/long-campaign-stage-06/` (to come)
+- Plan: `docs/implementation-plans/long-campaign-stage-06/` (11 steps, 86ca66a)
 - Branch: `long-campaign-stage-06`, off main (ab37e14)
 
 ## Path
@@ -35,15 +35,17 @@ Large/structural, but the stage design is the approved design (marked ready for 
 |---|---|---|---|---|
 | 2026-11-08 | Merged PR #6 (merge commit ab37e14) | orchestrator (user delegated) | — | Review verdict ready, mergeable, branch up to date |
 | 2026-11-08 | Skip architecture and design; the stage design is the approved design | orchestrator | new design | Stage design marked ready for planning; precedent stages 2–5 |
+| 2026-11-08 | Accept planner decisions 1–6, 9, 10, 12–15, 17, 18 (see plan index); hazards placeKey/pouch/{leader}/other-party animation/pre-existing reload & 840 route deferred with reasons | orchestrator | — | Each follows the design or reference; none changes an approved document |
 | 2026-11-08 | Own branch `long-campaign-stage-06` off main | orchestrator | commit on main | Precedent: one branch and PR per stage |
 
 ## Open questions
 
-(none yet)
+- Planner decisions 7 (wipes; new party from reserves), 8 (Exchange overlay), 11 (map clicks meet; only selected party animated), 16 (guard policy order): put to the user. Block steps 05, 08, 07, 10 respectively.
 
 ## Model tiers
 
 - Planner: opus
+- Steps (engineer / reviewer): 01 opus/opus; 02 sonnet/opus; 03 opus/opus; 04 sonnet/opus; 05 opus/opus; 06 sonnet/opus; 07 opus/opus; 08 sonnet/opus; 09 opus/opus; 10 opus/opus; 11 sonnet/opus; overall review opus
 
 ## Verification
 
