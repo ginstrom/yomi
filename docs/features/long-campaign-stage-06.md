@@ -54,3 +54,4 @@ Large/structural, but the stage design is the approved design (marked ready for 
 ## Verification
 
 - Step 01 (d71a415, f5b9f3a, opus): startTravel/orderAction in company.ts; simulator acts as day orders; vanguard tracked; campDays once. Baselines 230/500 (sha d17e6dca…), 50: 23/50; guard + 50 hash identical; npm test 1359. Note: takeDays counts any made item as a field craft (fine until field embeds).
+- Step 01 review (opus): clean; 50-campaign log identical on clean copies of b9682cd and f5b9f3a; npm test 1359. Nits: no two-party finishCampaign test (to step 09); duplicate 'Execution record' heading in 01's task file and a curly apostrophe in index row 01 (to step 02).
