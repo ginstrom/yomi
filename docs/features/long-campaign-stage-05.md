@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 5 (a company of one)
 
 **Slug:** long-campaign-stage-05
-**Phase:** PR — pr-reviewer ready; opening PR
+**Phase:** PR open — https://github.com/ginstrom/yomi/pull/6 (ready for review)
 
 ## Request (user's words)
 
