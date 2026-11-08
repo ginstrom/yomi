@@ -46,3 +46,5 @@ None yet.
 ## Verification
 
 - Step 01 (8477c15, 9660944, sonnet): guard test (5 campaigns, records + events SHA). Baselines: 500 campaigns 230/500, 9121 battles, log sha d17e6dca…; 50 campaigns 23/50, 852 battles, log sha 068016a8…
+- Step 01 review (sonnet): clean; 50-campaign baseline reproduced; guard shown to fail on a changed record or hash.
+- Step 02 (f4b1af0, b8ac7a2, opus): expedition.ts PartyPresence/soloPresences; blight, vision, territory, passTurn, isNotable, clearLocation over presences; guard + 50-campaign hash identical; npm test 1217, browser 89/89.
