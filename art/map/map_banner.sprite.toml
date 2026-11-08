@@ -24,29 +24,32 @@ outline = "auto"
 19 = [[11, "n"]]
 20 = [[10, "TNT"]]
 
-# The cloth stirs in the wind: the tail lifts, then dips.
+# The cloth stirs in the wind: a ripple runs along it, the tail lifting a full
+# row in flutter_1 and dropping a row in flutter_2.
 [frames.flutter_1]
 from = "base"
 
 [frames.flutter_1.runs]
-3 = [[12, "ooorrrr"]]
-4 = [[12, "orrrrrrrr"]]
-5 = [[12, "orrrrrrrR"]]
-6 = [[12, "rrrrrRRR"]]
-7 = [[12, "rrrRR"]]
-8 = [[12, "rR"]]
+2 = [[12, "oo"]]
+3 = [[12, "orrrrR"]]
+4 = [[12, "rrrrrrrR"]]
+5 = [[12, "rrrrrrrRR"]]
+6 = [[12, "rrrrRRR"]]
+7 = [[12, "rrRR"]]
+8 = [[12, "...."]]
 
 [frames.flutter_2]
 from = "base"
 
 [frames.flutter_2.runs]
-3 = [[12, "oorrr"]]
-4 = [[12, "orrrrrr"]]
+3 = [[12, "ooor"]]
+4 = [[12, "orrrrr"]]
 5 = [[12, "orrrrrrR"]]
-6 = [[12, "rrrrrrRRR"]]
-7 = [[12, "rrrrrRRR"]]
-8 = [[12, "rrrRRR"]]
-9 = [[13, "RR"]]
+6 = [[12, "rrrrrrrRR"]]
+7 = [[12, "rrrrrrRR"]]
+8 = [[12, "rrrrRR"]]
+9 = [[13, "rRR"]]
+10 = [[14, "R"]]
 
 [anim.idle]
 frames = ["base", "flutter_1", "base", "flutter_2"]

@@ -136,21 +136,22 @@ from = "level_3"
 10 = [[6, "nT"], [9, "NN"], [11, "TTTT"], [15, "NN"], [17, "TTTTTT"], [23, "NN"], [25, "TTTT"], [29, "NN"], [31, "Tn"]]
 11 = [[6, "nT"], [9, "Ny"], [11, "TTTT"], [15, "Ny"], [17, "TTTTTT"], [23, "Ny"], [25, "TTTT"], [29, "Ny"], [31, "Tn"]]
 
-12 = [[6, "nTTTTTTTTTTTTTTTT"], [25, "TTTTTTTTn"]]
-13 = [[6, "nTTTTTTTTTTTTTTT"], [26, "TTTTTTTn"]]
-14 = [[6, "nTTTTTTTTTTTTTT"], [27, "TTTTTTn"]]
-15 = [[6, "nTTTTTTTTTTTTT"], [28, "TTTTTn"]]
-16 = [[6, "nTTTTTTTTTTTT"], [29, "TTTTn"]]
-17 = [[6, "nTTTTTTTTTTT"], [30, "TTTn"]]
-18 = [[6, "nTTTTTTTTTT"], [31, "TTn"]]
-19 = [[6, "nTTTTTTTTT"], [32, "Tn"]]
-20 = [[6, "nTTTTTTTT"], [33, "n"]]
-21 = [[6, "nTTTTTTT"]]
-22 = [[6, "nTTTTTT"]]
-23 = [[6, "nTTTTT"]]
 
-# Level 5: a pennant on the Barracks' ridge, a gold ridge-line and crossed blades
-# over its middle, and a second pennant on the east end.
+12 = [[6, "nTTTTTnTTTTTTTTTk"], [23, "R"], [25, "kTTTTTTTn"]]
+13 = [[6, "nTNNTTnTTTTTTTTk"], [22, "R"], [26, "kTTTNNTn"]]
+14 = [[6, "nTNyTTnTTTTTTTk"], [21, "R"], [27, "kTTNyTn"]]
+15 = [[6, "nTTTTTnTTTTTTk"], [20, "R"], [28, "kTTTTn"]]
+16 = [[6, "nTTTTTnTTTTTk"], [19, "R"], [29, "kTTTn"]]
+17 = [[6, "nTTTTTnTTTTk"], [18, "R"], [30, "kTTn"]]
+18 = [[6, "nnnnnnnnnnk"], [17, "R"], [31, "knn"]]
+19 = [[6, "nTTTTTnTTk"], [16, "R"], [32, "kn"]]
+20 = [[6, "nTTTTTnTk"], [15, "R"], [33, "kn"]]
+21 = [[6, "nTTTTTTk"], [14, "R"]]
+22 = [[6, "nTTTTTk"], [13, "R"]]
+23 = [[6, "nTTTTk"], [12, "R"]]
+
+# Level 5: a palisade across the front with a gate, a banner hung from its
+# lintel, and a pennant, gold ridge-line and crossed blades on the Barracks.
 [frames.level_5]
 from = "level_4"
 
@@ -163,3 +164,12 @@ from = "level_4"
 9 = [[6, "nnnnnnnnnnnnnnnyynnnnnnnnnnn"]]
 10 = [[6, "nT"], [9, "NN"], [11, "TTTT"], [15, "NN"], [17, "TT"], [19, "w"], [21, "w"], [23, "NN"], [25, "TTTT"], [29, "NN"], [31, "Tn"]]
 11 = [[6, "nT"], [9, "Ny"], [11, "TTTT"], [15, "Ny"], [17, "TTT"], [20, "w"], [22, "TT"], [24, "TTT"], [27, "T"], [29, "Ny"], [31, "Tn"]]
+37 = [[18, "NnN"], [28, "NnN"]]
+38 = [[18, "NnN"], [21, "nnnnnnn"], [28, "NnN"]]
+39 = [[18, "NnN"], [22, "rrrr"], [28, "NnN"]]
+40 = [[4, "Tn"], [8, "Tn"], [12, "Tn"], [16, "Tn"], [18, "NnN"], [22, "rRRr"], [28, "NnN"], [32, "Tn"], [36, "Tn"], [40, "Tn"], [44, "Tn"]]
+41 = [[2, "Tn"], [4, "tn"], [6, "Tn"], [8, "tn"], [10, "Tn"], [12, "tn"], [14, "Tn"], [16, "tn"], [18, "NnN"], [23, "rR"], [28, "NnN"], [30, "Tn"], [32, "tn"], [34, "Tn"], [36, "tn"], [38, "Tn"], [40, "tn"], [42, "Tn"], [44, "tn"]]
+42 = [[2, "tn"], [4, "tn"], [6, "tn"], [8, "tn"], [10, "tn"], [12, "tn"], [14, "tn"], [16, "tn"], [18, "NnN"], [28, "NnN"], [30, "tn"], [32, "tn"], [34, "tn"], [36, "tn"], [38, "tn"], [40, "tn"], [42, "tn"], [44, "tn"]]
+43 = [[2, "tn"], [4, "tn"], [6, "tn"], [8, "tn"], [10, "tn"], [12, "tn"], [14, "tn"], [16, "tn"], [18, "NnN"], [28, "NnN"], [30, "tn"], [32, "tn"], [34, "tn"], [36, "tn"], [38, "tn"], [40, "tn"], [42, "tn"], [44, "tn"]]
+44 = [[2, "tn"], [4, "tn"], [6, "tn"], [8, "tn"], [10, "tn"], [12, "tn"], [14, "tn"], [16, "tn"], [18, "NnN"], [28, "NnN"], [30, "tn"], [32, "tn"], [34, "tn"], [36, "tn"], [38, "tn"], [40, "tn"], [42, "tn"], [44, "tn"]]
+45 = [[2, "tn"], [4, "tn"], [6, "tn"], [8, "tn"], [10, "tn"], [12, "tn"], [14, "tn"], [16, "tn"], [18, "NnN"], [28, "NnN"], [30, "tn"], [32, "tn"], [34, "tn"], [36, "tn"], [38, "tn"], [40, "tn"], [42, "tn"], [44, "tn"]]
