@@ -248,6 +248,30 @@ describe('debug commands', () => {
       expect(second.baggage.map((item) => item.id)).toEqual(['iron_sword'])
     })
 
+    it('sets hit points with `hp`, for one member or all of a named party, kept within 0 and the maximum', () => {
+      const context = twoParties()
+      const [first, second] = context.source!.game.parties
+      const result = runCommand('hp 1 1', context)
+      expect(result.changed).toBe(true)
+      expect(result.lines).toEqual([`${first.members[0].name} now has 1/${maxHp(first.members[0])} hit points.`])
+      expect(first.members.map((m) => m.hp)).toEqual([1, maxHp(first.members[1]), maxHp(first.members[2])])
+      expect(runCommand('hp 0 all @second', context).lines).toHaveLength(3)
+      expect(second.members.every((m) => m.hp === 0)).toBe(true)
+      runCommand('hp 9999 2', context)
+      expect(first.members[1].hp).toBe(maxHp(first.members[1]))
+    })
+
+    it('refuses `hp` without a whole number of 0 or more, changing nothing', () => {
+      const context = twoParties()
+      const before = structuredClone(context.source!.game)
+      for (const line of ['hp', 'hp -1', 'hp 1.5 1', 'hp x', 'hp 1 9']) {
+        const result = runCommand(line, context)
+        expect(result.changed).toBe(false)
+        expect(result.lines[0]).toMatch(/whole number|0 or more|No party member/)
+      }
+      expect(context.source!.game).toEqual(before)
+    })
+
     it('reads the member and the hex within the named party', () => {
       const context = twoParties()
       const [first, second] = context.source!.game.parties

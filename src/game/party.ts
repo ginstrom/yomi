@@ -125,7 +125,15 @@ export interface VictoryReward {
  * gear is lost with them. Returns the dead, in party order.
  */
 export function buryFallen(party: Party, baggage: Item[]): Character[] {
-  const dead = party.filter((member) => member.hp <= 0)
+  return bury(party, party.filter((member) => member.hp <= 0), baggage)
+}
+
+/** Takes every member out of the party for good, as `buryFallen` does the fallen: a party wiped out. Returns them, in party order. */
+export function buryAll(party: Party, baggage: Item[]): Character[] {
+  return bury(party, [...party], baggage)
+}
+
+function bury(party: Party, dead: Character[], baggage: Item[]): Character[] {
   for (const member of dead) {
     baggage.push(...Object.values(member.equipment), ...member.backpack.filter((item): item is Item => item !== null))
     member.equipment = {}

@@ -202,6 +202,20 @@ const COMMANDS: Record<string, Command> = {
       return [`Healed ${healed.map((character) => character.name).join(', ')}.`]
     },
   },
+  hp: {
+    usage: 'hp <amount> [member|all] [@party]',
+    acts: true,
+    summary: 'Set hit points, kept within 0 and the maximum.',
+    changes: true,
+    run([amount, who], context) {
+      const hp = integer(amount, 'the hit points')
+      if (hp < 0) throw new DebugError('Hit points must be 0 or more.')
+      return members(partyOf(context), who).map((character) => {
+        character.hp = Math.min(hp, maxHp(character))
+        return `${character.name} now has ${character.hp}/${maxHp(character)} hit points.`
+      })
+    },
+  },
   xp: {
     usage: 'xp <amount> [member|all] [@party]',
     acts: true,

@@ -22,7 +22,8 @@ import { Ground, pileChanges } from '../game/ground.ts'
 import { describeRewards, partyFighters, rewardVictory } from '../game/party.ts'
 import type { SavedBattle } from '../game/save.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
-import { clearLocation, theNameCapital, type MonsterLocation } from '../game/worldMap.ts'
+import { clearLocation, encampmentName, theName, theNameCapital, type MonsterLocation } from '../game/worldMap.ts'
+import { wipeParty, type Wipe } from '../game/company.ts'
 import type { Equipment, Item } from '../inventory/inventory.ts'
 import {
   HEX_DIRECTIONS,
@@ -255,6 +256,8 @@ export class BattleScene extends Phaser.Scene {
   private enemyRng: SeededRng = mulberry32(0)
   /** The round whose start was last saved, so that each of the player's turns is saved once. */
   private savedRound: number | null = null
+  /** What a lost battle did to the company (`wipeParty`), once it is lost; null until then, and after a win. */
+  private wipe: Wipe | null = null
   private board!: HexBoard
   private names!: Record<UnitId, string>
   private logDumped = false
@@ -696,9 +699,10 @@ export class BattleScene extends Phaser.Scene {
     this.scene.pause()
   }
 
-  /** Leaves the finished battle: back to the world map after a victory, to the main menu otherwise. */
+  /** Leaves the finished battle: back to the world map after a victory, or after a defeat that left heroes elsewhere (the first party selected); to the main menu when the game is lost. */
   private leaveBattle(): void {
     if (this.engine.getState().winner === 'player') this.scene.start('World', { game: this.gameState, party: this.expedition.id })
+    else if (this.wipe && !this.wipe.lost) this.scene.start('World', { game: this.gameState, party: this.gameState.parties[0].id })
     else this.scene.start('Menu')
   }
 
@@ -2120,11 +2124,14 @@ export class BattleScene extends Phaser.Scene {
     // The fallen are dead: out of the party, their gear in the baggage.
     const xpLines = playerWon ? describeRewards(rewardVictory(this.expedition.members, this.xpReward, this.expedition.baggage)) : []
     this.xpReward = 0
-    if (playerWon) {
-      // Kept as it happens: a page reloaded on the victory screen opens the world map with the win.
+    // A lost battle wipes the party out: its heroes dead, what they had left lying here.
+    const wipe = playerWon ? null : wipeParty(this.gameState, this.expedition.id, this.location)
+    this.wipe = wipe
+    if (!wipe?.lost) {
+      // Kept as it happens: a page reloaded on the result screen opens the world map with the win, or without the fallen party.
       this.save()
     } else if (this.gameState.slot !== null) {
-      // Permadeath: the playthrough is over and its slot is free. Nothing writes it back.
+      // Permadeath: no hero is left, the playthrough is over and its slot is free. Nothing writes it back.
       deleteSlot(this.gameState.slot)
       this.gameState.slot = null
     }
@@ -2132,18 +2139,23 @@ export class BattleScene extends Phaser.Scene {
     const lootLines = foundAll.length > 0 ? [`Found: ${listNames(foundAll)}.`] : []
     this.bannerText.setText(playerWon ? 'VICTORY!' : 'DEFEAT')
     this.bannerText.setColor(playerWon ? '#66bb6a' : '#ef5350')
-    this.resultText.setText(
-      playerWon
-        ? [`${foes} are beaten.`, ...xpLines, ...lootLines].join('\n')
-        : 'The party has fallen. The journey ends here.',
-    )
-    this.setButtonLabel(this.menuButton, playerWon ? 'OK' : 'Main Menu')
+    this.resultText.setText(playerWon ? [`${foes} are beaten.`, ...xpLines, ...lootLines].join('\n') : this.defeatLines(wipe!).join('\n'))
+    this.setButtonLabel(this.menuButton, wipe?.lost ? 'Main Menu' : 'OK')
     this.layout()
     for (const part of [this.resultShade, this.bannerText, this.resultText, this.menuButton]) part.setVisible(true)
     this.updateRoundText()
     // The reward may have raised levels and healed wounds.
     this.column.refresh(this.activeIndex())
     this.dumpLog()
+  }
+
+  /** The defeat screen's lines: the game's end, or the fallen party, where its baggage lies, and the party the reserves formed. */
+  private defeatLines(wipe: Wipe): string[] {
+    if (wipe.lost) return ['The party has fallen. The journey ends here.']
+    const fallen = `The ${this.expedition.name} has fallen.`
+    const lines = [this.location ? `${fallen} Its baggage lies at ${theName(this.location.name)}.` : fallen]
+    if (wipe.reformed) lines.push(`The reserves form the ${wipe.reformed.name} at ${encampmentName(this.gameState.world)}.`)
+    return lines
   }
 
   /** Structured dump for balancing/AI tooling to scrape from devtools; once per battle. */

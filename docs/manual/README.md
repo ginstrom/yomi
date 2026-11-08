@@ -332,7 +332,7 @@ While aiming a spell the pointer is crossed swords over a valid target of an att
 
 You win when every foe has fallen. Every surviving hero earns the full experience reward. The lair disappears from the map, the land around it is cleansed, and its loot goes into the baggage. A lair may also yield a **rune**, which goes into the party's rune pouch: the victory screen names it, as in "Found: Lesser Ember Rune". Lairs of threat 1 to 3 give a Lesser rune half the time; from threat 4 every win gives one, sometimes of the second rank. The Salamander Pool favours Ember runes and the Spider Nest Venom.
 
-**Death is permanent.** A hero who fell in a battle you won is gone for good. Their gear goes to the baggage, and the party fights on smaller until the guild hall fills the place. If **every** hero falls, the game is over and its save is deleted.
+**Death is permanent.** A hero who fell in a battle you won is gone for good. Their gear goes to the baggage, and the party fights on smaller until the guild hall fills the place. If **every** hero in the battle falls, that party is wiped out: its heroes are dead, and everything they wore and carried, with the party's baggage, lies at the lair as its loot, for whoever beats it. The game goes on while you have a hero anywhere, in another party or in the guild hall's reserves; if the last party falls with reserves left, they form a new party at the encampment at once. Only when no hero is left is the game over and its save deleted.
 
 Wounds carry over from battle to battle. Heal before you go looking for the next fight.
 
@@ -602,9 +602,9 @@ It cannot raise the dead.
 ## 10. Winning, losing and saving
 
 - **Victory**: find the heart of the blight and destroy it. It is not on your map when the game begins: explore, and the moment your party or a watchtower sights it, wherever it is, your journey stops and it is marked. What guards it fights at threat 5, so plan to arrive with heroes around level 7. After the victory you can **End** the game or carry on in **endless** mode.
-- **Defeat**: the game ends if your whole party falls in a battle, or if your encampment falls to the blight.
+- **Defeat**: the game ends if a lost battle leaves you no hero in any party or the reserves, or if your encampment falls to the blight.
 
-**Saving is automatic.** Each playthrough lives in one of three slots, and there is no save button. The world map saves after each journey, camp and panel change. A battle saves at the start of each of your turns, so reloading during a battle rewinds to the start of that turn with the same dice. A defeat deletes its slot.
+**Saving is automatic.** Each playthrough lives in one of three slots, and there is no save button. The world map saves after each journey, camp and panel change. A battle saves at the start of each of your turns, so reloading during a battle rewinds to the start of that turn with the same dice. A defeat that leaves no hero deletes its slot.
 
 **Seeds**: add `?seed=42` (or any number) to the game's address to fight every battle in that session with fixed dice.
 

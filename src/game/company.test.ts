@@ -4,7 +4,7 @@ import { hexDistance, hexEquals, offsetToHex, type Hex } from '../grid/hex.ts'
 import { itemById } from '../inventory/inventory.ts'
 import { boardIndex } from './blight.ts'
 import { campUntilHealed, partyWounded } from './camp.ts'
-import { UNTIL_LIMIT, act, defaultPartyName, disband, formParty, moveHero, renameParty, advance, advanceRefusal, blockingParty, orderAction, partyNoun, passDay, setOrder, startTravel, worldInterrupt, type DayReport } from './company.ts'
+import { UNTIL_LIMIT, act, defaultPartyName, disband, exchange, formParty, heroesLeft, wipeParty, type ExchangeMove, moveHero, renameParty, advance, advanceRefusal, blockingParty, orderAction, partyNoun, passDay, setOrder, startTravel, worldInterrupt, type DayReport } from './company.ts'
 import { PARTY_NAMES, newExpedition, type Expedition, partyId, presences, type DayAction } from './expedition.ts'
 import { MAX_RESERVES } from './guildHall.ts'
 import { newGame, type GameState } from './gameState.ts'
@@ -1037,5 +1037,220 @@ describe('the guild hall’s company', () => {
       expect(refuses(game, () => moveHero(game, from0, { party: second.id }))).toMatch(/not at/)
       expect(refuses(game, () => moveHero(game, { from: 'party', party: second.id, index: 0 }, { party: party.id }))).toMatch(/not at/)
     })
+  })
+})
+
+describe('exchange (A7)', () => {
+  /** Two parties of the ready-made three on one hex in the field, at a hall of `level`; the second's names marked so the two can be told apart. */
+  function together(level = 2) {
+    const it = withSecond(quiet(), offsetToHex(11, 19))
+    it.party.position = offsetToHex(11, 19)
+    it.world.guildHall = level
+    for (const member of it.second.members) member.name = `${member.name}2`
+    return it
+  }
+
+  /** Runs `exchange`, which must refuse, and checks that it changed nothing. */
+  function refused(game: GameState, a: string, b: string, moves: ExchangeMove[], pattern: RegExp): void {
+    const before = structuredClone(game)
+    const result = exchange(game, a, b, moves)
+    expect(result).toMatch(pattern)
+    expect(game).toEqual(before)
+  }
+
+  const names = (party: Expedition) => party.members.map((m) => m.name)
+
+  it('moves a member to the other party’s end, with what it wears, carries and its wounds', () => {
+    const { game, party, second } = together()
+    const brenna = party.members[1]
+    brenna.hp = 3
+    const worn = { ...brenna.equipment }
+    expect(exchange(game, party.id, second.id, [{ kind: 'member', from: party.id, index: 1 }])).toBeNull()
+    expect(names(party)).toEqual(['Aldric', 'Delwyn'])
+    expect(names(second)).toEqual(['Aldric2', 'Brenna2', 'Delwyn2', 'Brenna'])
+    expect(second.members[3]).toBe(brenna)
+    expect(brenna.hp).toBe(3)
+    expect(brenna.equipment).toEqual(worn)
+  })
+
+  it('swaps two members, each taking the other’s place in the battle order', () => {
+    const { game, party, second } = together(1)
+    expect(exchange(game, party.id, second.id, [{ kind: 'swap', a: 0, b: 2 }])).toBeNull()
+    expect(names(party)).toEqual(['Delwyn2', 'Brenna', 'Delwyn'])
+    expect(names(second)).toEqual(['Aldric2', 'Brenna2', 'Aldric'])
+  })
+
+  it('moves baggage items either way, to the end of the other’s baggage', () => {
+    const { game, party, second } = together()
+    party.baggage.push(itemById('iron_sword')!, itemById('yew_bow')!)
+    second.baggage.push(itemById('oak_shield')!)
+    expect(exchange(game, second.id, party.id, [
+      { kind: 'item', from: party.id, index: 1 },
+      { kind: 'item', from: second.id, index: 0 },
+    ])).toBeNull()
+    expect(party.baggage.map((i) => i.id)).toEqual(['iron_sword', 'oak_shield'])
+    expect(second.baggage.map((i) => i.id)).toEqual(['yew_bow'])
+  })
+
+  it('reads each move’s indices as the earlier moves left the lists', () => {
+    const { game, party, second } = together(3)
+    expect(exchange(game, party.id, second.id, [
+      { kind: 'member', from: party.id, index: 0 },
+      { kind: 'member', from: second.id, index: 3 },
+      { kind: 'swap', a: 2, b: 0 },
+    ])).toBeNull()
+    expect(names(party)).toEqual(['Brenna', 'Delwyn', 'Aldric2'])
+    expect(names(second)).toEqual(['Aldric', 'Brenna2', 'Delwyn2'])
+  })
+
+  it('is allowed when both confront the same monsters', () => {
+    const { game, world, party, second } = together()
+    nestAt(world, 'shared', party.position)
+    party.confronting = second.confronting = 'shared'
+    expect(exchange(game, party.id, second.id, [{ kind: 'member', from: second.id, index: 0 }])).toBeNull()
+    expect(party.members).toHaveLength(4)
+  })
+
+  it('is refused on different hexes, for unknown or the same party, and while one confronts monsters', () => {
+    const { game, world, party, second } = together()
+    const move: ExchangeMove[] = [{ kind: 'item', from: party.id, index: 0 }]
+    party.baggage.push(itemById('iron_sword')!)
+    refused(game, party.id, 'party_9', move, /party_9/)
+    refused(game, party.id, party.id, move, /itself/)
+    second.position = offsetToHex(12, 19)
+    refused(game, party.id, second.id, move, /First Company and Second Company are not on the same hex/)
+    second.position = { ...party.position }
+    nestAt(world, 'shared', party.position)
+    party.confronting = 'shared'
+    refused(game, party.id, second.id, move, /First Company must first answer/)
+    nestAt(world, 'other', offsetToHex(30, 30))
+    second.confronting = 'other'
+    refused(game, party.id, second.id, move, /must first answer/)
+  })
+
+  it('refuses the whole list, earlier valid moves included, for a bad index, an emptied party or one over the limit', () => {
+    const { game, party, second } = together(1)
+    party.baggage.push(itemById('iron_sword')!)
+    const item = { kind: 'item', from: party.id, index: 0 } as const
+    refused(game, party.id, second.id, [item, { kind: 'item', from: party.id, index: 0 }], /no such item/i)
+    refused(game, party.id, second.id, [item, { kind: 'member', from: party.id, index: 5 }], /no such hero/i)
+    refused(game, party.id, second.id, [item, { kind: 'swap', a: 0, b: 3 }], /no such hero/i)
+    refused(game, party.id, second.id, [item, { kind: 'member', from: 'party_9', index: 0 }], /party_9/)
+    refused(game, party.id, second.id, [item, { kind: 'member', from: party.id, index: 0 }], /Second Company is full/)
+    game.world.guildHall = 3
+    refused(game, party.id, second.id, [
+      item,
+      { kind: 'member', from: party.id, index: 0 },
+      { kind: 'member', from: party.id, index: 0 },
+      { kind: 'member', from: party.id, index: 0 },
+    ], /First Company cannot be left empty/)
+  })
+
+  it('reaches no reserve: the guild hall will not move one to a party away from home', () => {
+    const { game, party } = together()
+    game.reserves.push(structuredClone(party.members[0]))
+    const before = structuredClone(game)
+    expect(moveHero(game, { from: 'reserves', index: 0 }, { party: party.id })).toMatch(/not at/)
+    expect(game).toEqual(before)
+  })
+})
+
+describe('wipeParty (A9)', () => {
+  /** The second party standing on a nest in the field, fallen to the last hero, its baggage holding a sword. */
+  function beaten() {
+    const it = withSecond(quiet(), offsetToHex(11, 19))
+    const nest = nestAt(it.world, 'wiper', it.second.position)
+    it.second.confronting = nest.id
+    it.second.baggage.push(itemById('iron_sword')!)
+    for (const member of it.second.members) member.hp = 0
+    return { ...it, nest }
+  }
+
+  /** Every item a party's members wear and carry, then its baggage's: what a wipe leaves. */
+  const belongings = (party: Expedition): string[] => [
+    ...party.members.flatMap((m) => [...Object.values(m.equipment), ...m.backpack.filter((i) => i !== null)].map((i) => i!.id)),
+    ...party.baggage.map((i) => i.id),
+  ]
+
+  it('removes the party, its heroes dead and what they had left as the location’s loot', () => {
+    const { game, second, nest } = beaten()
+    nest.loot.push(itemById('oak_shield')!)
+    const members = [...second.members]
+    const had = belongings(second)
+    const wipe = wipeParty(game, second.id, nest)
+    expect(game.parties.map((p) => p.id)).toEqual(['party_1'])
+    expect(wipe.dead).toEqual(members)
+    expect(wipe.left.map((i) => i.id).sort()).toEqual([...had].sort())
+    expect(nest.loot.map((i) => i.id).sort()).toEqual(['oak_shield', ...had].sort())
+    expect(members.every((m) => Object.keys(m.equipment).length === 0 && m.backpack.every((i) => i === null))).toBe(true)
+    expect(wipe.lost).toBe(false)
+    expect(wipe.reformed).toBeNull()
+    expect(heroesLeft(game)).toBe(3)
+  })
+
+  it('leaves the location on the map and another party confronting it', () => {
+    const { game, world, party, second, nest } = beaten()
+    party.position = { ...second.position }
+    party.confronting = nest.id
+    const status = world.status
+    wipeParty(game, second.id, nest)
+    expect(world.locations).toContain(nest)
+    expect(party.confronting).toBe(nest.id)
+    expect(world.status).toBe(status)
+  })
+
+  it('loses the items of a fight with no location', () => {
+    const { game, second, nest } = beaten()
+    const wipe = wipeParty(game, second.id, null)
+    expect(wipe.left.length).toBeGreaterThan(0)
+    expect(nest.loot).toEqual([])
+    expect(game.parties).toHaveLength(1)
+  })
+
+  it('is not lost while a reserve lives, forming a party of the reserves at the encampment', () => {
+    const { game, world, party } = fresh()
+    const nest = nestAt(world, 'wiper', offsetToHex(11, 19))
+    party.position = nest.position
+    world.guildHall = 1
+    for (let i = 0; i < 4; i++) {
+      const reserve = structuredClone(party.members[i % 3])
+      reserve.name = `Reserve${i}`
+      reserve.hp = 1
+      game.reserves.push(reserve)
+    }
+    const wipe = wipeParty(game, party.id, nest)
+    expect(wipe.lost).toBe(false)
+    const reformed = wipe.reformed!
+    expect(game.parties).toEqual([reformed])
+    expect([reformed.id, reformed.name]).toEqual(['party_1', 'First Company'])
+    expect(reformed.position).toEqual(encampment(world).position)
+    expect(reformed.order).toEqual({ kind: 'idle' })
+    expect(reformed.confronting).toBeNull()
+    expect(reformed.baggage).toEqual([])
+    expect(reformed.members.map((m) => m.name)).toEqual(['Reserve0', 'Reserve1', 'Reserve2'])
+    expect(reformed.members.every((m) => m.hp === maxHp(m) && m.mana === maxMana(m))).toBe(true)
+    expect(game.reserves.map((m) => m.name)).toEqual(['Reserve3'])
+    expect(heroesLeft(game)).toBe(4)
+  })
+
+  it('reforms under the lowest free id when the last party standing was another', () => {
+    const { game, second, nest } = beaten()
+    game.parties.splice(0, 1)
+    game.reserves.push(structuredClone(second.members[0]))
+    game.reserves[0].hp = 1
+    const wipe = wipeParty(game, second.id, nest)
+    expect(wipe.reformed?.id).toBe('party_1')
+    expect(wipe.reformed?.name).toBe('First Company')
+  })
+
+  it('is lost when the last party falls with no reserves', () => {
+    const { game, world, party } = fresh()
+    const nest = nestAt(world, 'wiper', offsetToHex(11, 19))
+    const wipe = wipeParty(game, party.id, nest)
+    expect(wipe.lost).toBe(true)
+    expect(wipe.reformed).toBeNull()
+    expect(game.parties).toEqual([])
+    expect(heroesLeft(game)).toBe(0)
+    expect(world.status).toBe('playing')
   })
 })

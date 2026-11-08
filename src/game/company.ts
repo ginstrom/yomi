@@ -8,9 +8,9 @@ import { applyCraft, craftRefusal, craftTier } from './crafting.ts'
 import { MAX_PARTIES, PARTY_NAMES, newExpedition, partyId, presences, type DayAction, type Expedition, type Order, type PartyPresence } from './expedition.ts'
 import { partyById, type GameState } from './gameState.ts'
 import { MAX_RESERVES, homeParties, noPartyHome, maxParties, partyLimit, rested } from './guildHall.ts'
-import { autoHeal } from './party.ts'
+import { autoHeal, buryAll } from './party.ts'
 import { applyEmbed, embedRefusal } from './runecraft.ts'
-import { NOTICE_RADIUS, encampment, encampmentName, isNotable, locationAt, monstersHere, passTurn, routeTo, theName, worldActive, type WorldState } from './worldMap.ts'
+import { NOTICE_RADIUS, encampment, encampmentName, isNotable, locationAt, monstersHere, passTurn, routeTo, theName, worldActive, type MonsterLocation, type WorldState } from './worldMap.ts'
 
 /**
  * The company's one clock. Every day passes through `passDay`: each party
@@ -22,7 +22,9 @@ import { NOTICE_RADIUS, encampment, encampmentName, isNotable, locationAt, monst
  * one-day action (scouting, waiting, a day's camp, a building, a field craft
  * or embed) is a day order, given (`orderAction`) for the next day to run, or
  * given and run at once (`act`); it ends idle. A journey starts with
- * `startTravel`.
+ * `startTravel`. Below the clock: the guild hall's company (forming,
+ * renaming, disbanding, moving heroes), two parties' exchange in the field and
+ * a party wiped out in battle.
  *
  * This module and the ones whose day-passing functions call it (worldMap.ts,
  * camp.ts, buildings.ts, crafting.ts, runecraft.ts) import one another, which
@@ -592,4 +594,121 @@ export function moveHero(game: GameState, hero: HeroRef, to: { party: string } |
   if (target) target.members.push(from.party ? member : rested(member))
   else game.reserves.push(member)
   return null
+}
+
+// Two parties in the field: an exchange of heroes and baggage on a shared hex.
+
+/** One change an exchange makes between parties A and B. */
+export type ExchangeMove =
+  | { kind: 'member'; from: string; index: number } // member `index` of party `from` joins the other party, at its end
+  | { kind: 'swap'; a: number; b: number } // member a of party A and member b of party B trade places
+  | { kind: 'item'; from: string; index: number } // baggage item `index` of party `from` goes to the other's baggage
+
+/** The two lists an exchange changes for one party. */
+interface Side {
+  members: Character[]
+  baggage: Item[]
+}
+
+/** Applies `move` to the two sides, or returns why it cannot be made as they stand. */
+function exchangeMove(game: GameState, parties: [Expedition, Expedition], sides: [Side, Side], move: ExchangeMove): string | null {
+  if (move.kind === 'swap') {
+    const [a, b] = sides
+    if (!a.members[move.a] || !b.members[move.b]) return 'There is no such hero.'
+    ;[a.members[move.a], b.members[move.b]] = [b.members[move.b], a.members[move.a]]
+    return null
+  }
+  const i = parties.findIndex((party) => party.id === move.from)
+  if (i < 0) return `Party "${move.from}" is not in this exchange.`
+  const [from, to] = [sides[i], sides[1 - i]]
+  if (move.kind === 'item') {
+    if (!from.baggage[move.index]) return 'There is no such item.'
+    to.baggage.push(...from.baggage.splice(move.index, 1))
+    return null
+  }
+  if (!from.members[move.index]) return 'There is no such hero.'
+  if (from.members.length <= 1) return `${partyNoun(game, parties[i])} cannot be left empty.`
+  const limit = partyLimit(game.world)
+  if (to.members.length >= limit) return `${partyNoun(game, parties[1 - i])} is full: the guild hall's level ${game.world.guildHall} allows ${limit}.`
+  to.members.push(...from.members.splice(move.index, 1))
+  return null
+}
+
+/**
+ * Exchanges heroes and baggage between parties `a` and `b`, standing on one
+ * hex, by `moves` in order, each move's indices read as the earlier moves left
+ * the lists. A hero keeps what it wears and carries and its wounds. Refused,
+ * changing nothing, on different hexes, while either faces monsters the other
+ * does not, or where any move cannot be made (no such hero or item, a party
+ * left empty, one over the party limit). No move names a reserve: a reserve
+ * joins or leaves a party only at the guild hall (`moveHero`).
+ */
+export function exchange(game: GameState, a: string, b: string, moves: readonly ExchangeMove[]): string | null {
+  const first = partyById(game, a)
+  if (!first) return `No party "${a}".`
+  const second = partyById(game, b)
+  if (!second) return `No party "${b}".`
+  if (first === second) return `${partyNoun(game, first)} cannot exchange with itself.`
+  if (!hexEquals(first.position, second.position)) return `${partyNoun(game, first)} and ${partyNoun(game, second)} are not on the same hex.`
+  if (first.confronting !== second.confronting) {
+    const facing = first.confronting !== null ? first : second
+    return `${partyNoun(game, facing)} must first answer the monsters it faces.`
+  }
+  const parties: [Expedition, Expedition] = [first, second]
+  const sides = parties.map((party) => ({ members: [...party.members], baggage: [...party.baggage] })) as [Side, Side]
+  for (const move of moves) {
+    const refusal = exchangeMove(game, parties, sides, move)
+    if (refusal) return refusal
+  }
+  for (const [i, party] of parties.entries()) {
+    party.members.splice(0, party.members.length, ...sides[i].members)
+    party.baggage.splice(0, party.baggage.length, ...sides[i].baggage)
+  }
+  return null
+}
+
+// A party wiped out in battle.
+
+/** What a wipe did: the dead, what they left, whether the game is lost, and the party the reserves formed, if any. */
+export interface Wipe {
+  /** The party's members, in battle order: dead, their gear gone to `left`. */
+  dead: Character[]
+  /** Everything they wore and carried and the party's baggage: the location's loot now, or lost in a fight with no location. */
+  left: Item[]
+  /** No hero is left in any party or the reserves. */
+  lost: boolean
+  /** The party the reserves formed at the encampment, when the last party fell with reserves left; else null. */
+  reformed: Expedition | null
+}
+
+/** Every hero the company has: each party's members and the reserves. */
+export function heroesLeft(game: GameState): number {
+  return game.parties.reduce((sum, party) => sum + party.members.length, 0) + game.reserves.length
+}
+
+/**
+ * Party `id`, beaten in battle at `location` (null for a fight with no
+ * location), is gone: its members are dead, what they wore and carried goes
+ * with its baggage onto the location's loot (lost with no location), and it
+ * leaves the company. The location is otherwise untouched. If it was the last
+ * party and reserves are left, they form a party at once at the encampment
+ * (up to the party limit, rested, idle, with no baggage), so the company is
+ * never without one while it has a hero. Changes no world status: whoever
+ * called it ends the game when `lost`.
+ */
+export function wipeParty(game: GameState, id: string, location: MonsterLocation | null): Wipe {
+  const party = partyById(game, id)
+  if (!party) throw new Error(`No party "${id}".`)
+  const left = party.baggage
+  const dead = buryAll(party.members, left)
+  party.baggage = []
+  location?.loot.push(...left)
+  game.parties.splice(game.parties.indexOf(party), 1)
+  let reformed: Expedition | null = null
+  if (game.parties.length === 0 && game.reserves.length > 0) {
+    const members = game.reserves.splice(0, partyLimit(game.world)).map(rested)
+    reformed = newExpedition(members, { ...encampment(game.world).position }, partyId(lowestFreeNumber(game)), defaultPartyName(game))
+    game.parties.push(reformed)
+  }
+  return { dead, left, lost: heroesLeft(game) === 0, reformed }
 }
