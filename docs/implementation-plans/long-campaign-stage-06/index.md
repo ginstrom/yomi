@@ -214,7 +214,7 @@ guardBattles: number
 | 02 | [A saved battle names its party](02-saved-battle-party.md) | `SavedBattle.party`, save 21 (C2); load fights the right party; guard identical | — | sonnet / opus | done (8971db5) |
 | 03 | [Orders for a company](03-company-orders.md) | home, garrison, meet; `met`; stopping short; `partyNoun`, `blockingParty`; save 22; two-party tests (A3–A6); guard identical | 01, 02 | opus / opus | done (b425c77) |
 | 04 | [The guild hall's company](04-guild-hall-company.md) | Hall levels 4 and 5; form, rename, disband, move heroes; recruits at the hall's level; encampment acts for the party at home (C4); guard test green | 03 | sonnet / opus | done (a36f444) |
-| 05 | [Exchange and wipes](05-exchange-and-wipes.md) | `exchange`, `wipeParty` (C5); the new loss condition; BattleScene's defeat; debug `hp`; guard identical | 04 | opus / opus | done (see git log: "Stage 6 step 05") |
+| 05 | [Exchange and wipes](05-exchange-and-wipes.md) | `exchange`, `wipeParty` (C5); the new loss condition; BattleScene's defeat; debug `hp`; guard identical | 04 | opus / opus | done (a9e8c0c) |
 | 06 | [Sprites: barracks and banners](06-sprites.md) | Guild hall levels 4–5 frames; three banners (C7) | — | sonnet / opus | pending |
 | 07 | [The world map's company](07-world-map-company.md) | Party bar banners, every party on the map, Home, Garrison, meet by click, interrupt and refusal focus (C6); manual text; in-browser tests | 05, 06 | opus / opus | pending |
 | 08 | [Guild hall columns and exchange](08-guild-hall-and-exchange-scenes.md) | Guild Hall columns, Form party, Rename, Disband; the `Exchange` scene from the character panel; acting party shown; manual text; in-browser tests | 07 | sonnet / opus | pending |
