@@ -241,3 +241,90 @@ describe('an outpost', () => {
     expect(world.outposts).toEqual([])
   })
 })
+
+/** Two games built alike by `setup`, each moved on to the first day that brings an event. */
+function eventfulTwins<T extends ReturnType<typeof solo>>(setup: () => T): [T, T] {
+  const scout = setup()
+  let quiet = 0
+  while (passTurn(scout.world, presences(scout.game.parties)).length === 0) quiet++
+  const make = () => {
+    const it = setup()
+    for (let day = 0; day < quiet; day++) passTurn(it.world, presences(it.game.parties))
+    return it
+  }
+  return [make(), make()]
+}
+
+/** Expects `build` to be refused with null, changing nothing in the game. */
+function refusedUnchanged(game: ReturnType<typeof solo>['game'], build: () => unknown) {
+  const before = JSON.stringify(game)
+  expect(build()).toBeNull()
+  expect(JSON.stringify(game)).toBe(before)
+}
+
+describe('building, as it is (characterization)', () => {
+  /** A held Gold Seam to stand on, with the stock for an outpost. */
+  function atGoldSeam() {
+    const it = solo()
+    it.world.held = [...new Set([...it.world.held, 'gold_seam'])]
+    it.party.position = it.world.locations.find((l) => l.id === 'gold_seam')!.position
+    it.world.stock = { gold: 20, timber: 12 }
+    return it
+  }
+
+  it('a watchtower is spent for, stands, and then the day passes: the same events and game as by hand', () => {
+    const [now, then] = eventfulTwins(ready)
+    const turn = now.world.turn
+    spend(then.world.stock, TOWER_COST)
+    then.world.towersBuilt += 1
+    then.world.towers.push({ id: 'tower_1', position: then.party.position })
+    const day = passTurn(then.world, presences(then.game.parties))
+    expect(day.length).toBeGreaterThan(0)
+    expect(buildTower(now.game, now.party)).toEqual([{ type: 'tower_built', tower: 'tower_1', at: now.party.position }, ...day])
+    expect(now.world.turn).toBe(turn + 1)
+    expect(now.party.confronting).toBeNull()
+    expect(JSON.stringify(now.game)).toBe(JSON.stringify(then.game))
+  })
+
+  it('an outpost is spent for, stands, and then the day passes: the same events and game as by hand', () => {
+    const [now, then] = eventfulTwins(atGoldSeam)
+    const turn = now.world.turn
+    spend(then.world.stock, OUTPOST_COST)
+    then.world.outposts.push('gold_seam')
+    const day = passTurn(then.world, presences(then.game.parties))
+    expect(day.length).toBeGreaterThan(0)
+    expect(buildOutpost(now.game, now.party)).toEqual([{ type: 'outpost_built', site: 'gold_seam', name: 'Gold Seam' }, ...day])
+    expect(now.world.turn).toBe(turn + 1)
+    expect(now.party.confronting).toBeNull()
+    expect(JSON.stringify(now.game)).toBe(JSON.stringify(then.game))
+  })
+
+  it.each(['lost', 'won'] as const)('both are refused, changing nothing, once the game is %s', (status) => {
+    const tower = ready()
+    tower.world.status = status
+    refusedUnchanged(tower.game, () => buildTower(tower.game, tower.party))
+    const outpost = atGoldSeam()
+    outpost.world.status = status
+    refusedUnchanged(outpost.game, () => buildOutpost(outpost.game, outpost.party))
+  })
+
+  it('both are refused, changing nothing, without the stock, on the wrong land or among monsters', () => {
+    const poorTower = ready()
+    poorTower.world.stock = { iron: 9, gold: 5 }
+    refusedUnchanged(poorTower.game, () => buildTower(poorTower.game, poorTower.party))
+    const tainted = ready()
+    tainted.world.blight[boardIndex(tainted.world.board, tainted.party.position)] = 1
+    refusedUnchanged(tainted.game, () => buildTower(tainted.game, tainted.party))
+    const poorOutpost = atGoldSeam()
+    poorOutpost.world.stock = { gold: 15, timber: 9 }
+    refusedUnchanged(poorOutpost.game, () => buildOutpost(poorOutpost.game, poorOutpost.party))
+    const offSite = atGoldSeam()
+    offSite.party.position = offsetToHex(7, 17)
+    refusedUnchanged(offSite.game, () => buildOutpost(offSite.game, offSite.party))
+    const among = ready()
+    const nest = among.world.locations.find((l) => l.kind === 'monsters') as MonsterLocation
+    among.world.locations.push({ ...nest, id: 'here', position: among.party.position })
+    refusedUnchanged(among.game, () => buildTower(among.game, among.party))
+    refusedUnchanged(among.game, () => buildOutpost(among.game, among.party))
+  })
+})

@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { maxHp, maxMana } from '../character/character.ts'
 import { hexEquals, offsetToHex, type Hex } from '../grid/hex.ts'
-import { partyWounded } from './camp.ts'
-import { UNTIL_LIMIT, advance, advanceRefusal, passDay, setOrder, type DayReport } from './company.ts'
-import { presences } from './expedition.ts'
-import { newGame } from './gameState.ts'
+import { itemById } from '../inventory/inventory.ts'
+import { boardIndex } from './blight.ts'
+import { campUntilHealed, partyWounded } from './camp.ts'
+import { UNTIL_LIMIT, act, advance, advanceRefusal, passDay, setOrder, worldInterrupt, type DayReport } from './company.ts'
+import { presences, type DayAction } from './expedition.ts'
+import { newGame, type GameState } from './gameState.ts'
+import type { ItemPlace } from './itemPlace.ts'
 import { readyMadeParty } from './party.ts'
 import { passTurn, routeTo, travel, type MonsterLocation, type WorldState } from './worldMap.ts'
 
@@ -289,5 +292,217 @@ describe('travel on the loop', () => {
     expect(journey.interruptedBy).toEqual(reports.at(-1)!.interrupt!.event)
     expect(a.world).toEqual(b.world)
     expect(hexEquals(a.party.position, b.party.position)).toBe(true)
+  })
+})
+
+/** A party in a quiet land given a standing travel order, so that a refusal can be seen to leave it. */
+function withStandingOrder(it: ReturnType<typeof fresh>) {
+  const to = offsetToHex(40, 20)
+  it.party.order = { kind: 'travel', to, route: routeTo(it.world, it.party, to) ?? [] }
+  return it
+}
+
+/** On clean, empty land near home, with the stock for a watchtower. */
+function onCleanLand() {
+  const it = quiet()
+  it.party.position = offsetToHex(7, 17)
+  expect(it.world.blight[boardIndex(it.world.board, it.party.position)]).toBe(0)
+  it.world.stock = { gold: 6, iron: 12 }
+  return it
+}
+
+/** On the held Gold Seam, with the stock for an outpost. */
+function onGoldSeam() {
+  const it = quiet()
+  it.world.held = [...new Set([...it.world.held, 'gold_seam'])]
+  it.party.position = it.world.locations.find((l) => l.id === 'gold_seam')!.position
+  it.world.stock = { gold: 20, timber: 12 }
+  return it
+}
+
+/** A step off the encampment (the field), a Masterwork sword in the soldier's hand, a Lesser Stone Rune and gold and iron to work with. */
+function inTheField() {
+  const it = quiet()
+  it.party.position = { q: it.party.position.q + 1, r: it.party.position.r }
+  it.world.stock = { gold: 50, iron: 50 }
+  it.game.runes = { stone1: 1 }
+  it.party.members[0].equipment.mainHand = itemById('iron_sword@3')!
+  const place: ItemPlace = { from: 'worn', party: it.party.id, member: 0, slot: 'mainHand', itemId: 'iron_sword@3' }
+  return { ...it, place }
+}
+
+/** Standing before a nest beside it, confronting it. */
+function confronting() {
+  const it = quiet()
+  const at = { q: it.party.position.q + 1, r: it.party.position.r }
+  nestAt(it.world, 'close_nest', at)
+  travel(it.game, it.party, at)
+  expect(it.party.confronting).toBe('close_nest')
+  return it
+}
+
+/** Expects `act` to pass one day, ending the day order idle with order_done, and returns its report. */
+function actedDay(game: GameState, action: DayAction): DayReport {
+  const party = game.parties[0]
+  const turn = game.world.turn
+  const report = act(game, party.id, action)
+  if (typeof report === 'string') throw new Error(`refused: ${report}`)
+  expect(game.world.turn).toBe(turn + 1)
+  expect(party.order).toEqual({ kind: 'idle' })
+  expect(report.partyEvents).toEqual([{ type: 'order_done', party: party.id }])
+  return report
+}
+
+describe('act with one party', () => {
+  it.each(['scout', 'wait'] as const)('lets a confronting party %s for a day, freeing it', (kind) => {
+    const { game, party } = confronting()
+    const twin = structuredClone(game)
+    twin.parties[0].confronting = null
+    const expected = passTurn(twin.world, presences(twin.parties))
+    const report = actedDay(game, { kind })
+    expect(report.events).toEqual(expected)
+    expect(report.parties).toEqual([{ party: party.id, walked: null, rested: 0, cast: 0, made: null }])
+    expect(party.confronting).toBeNull()
+    expect(game.world).toEqual(twin.world)
+  })
+
+  it('camps a day: rests each member, fills the mana, casts nothing', () => {
+    const { game, party } = quiet()
+    party.members[0].hp = 5
+    party.members[2].hp = 3
+    party.members[2].mana = 0
+    const report = actedDay(game, { kind: 'camp' })
+    expect(report.parties[0]).toMatchObject({ rested: 2, cast: 0, made: null })
+    expect(party.members.map((m) => m.hp)).toEqual([6, maxHp(party.members[1]), 4])
+    expect(party.members[2].mana).toBe(maxMana(party.members[2]))
+  })
+
+  it('builds a watchtower, its event before the day’s', () => {
+    const { game, world, party } = onCleanLand()
+    const report = actedDay(game, { kind: 'tower' })
+    expect(report.events[0]).toEqual({ type: 'tower_built', tower: 'tower_1', at: party.position })
+    expect(report.events.slice(1).some((e) => e.type === 'tower_built')).toBe(false)
+    expect(world.towers).toEqual([{ id: 'tower_1', position: party.position }])
+    expect(world.stock).toEqual({ gold: 1, iron: 2 })
+  })
+
+  it('builds an outpost, its event before the day’s', () => {
+    const { game, world } = onGoldSeam()
+    const report = actedDay(game, { kind: 'outpost' })
+    expect(report.events[0]).toEqual({ type: 'outpost_built', site: 'gold_seam', name: 'Gold Seam' })
+    expect(world.outposts).toEqual(['gold_seam'])
+    expect(world.stock).toEqual({ gold: 5, timber: 2 })
+  })
+
+  it('crafts in the field, recording the item it made', () => {
+    const { game, party, place } = inTheField()
+    const report = actedDay(game, { kind: 'craft', place, modifier: 'balanced', grade: 1 })
+    const made = itemById('iron_sword@3+balanced1')
+    expect(report.parties[0].made).toBe(made)
+    expect(party.members[0].equipment.mainHand).toBe(made)
+    expect(game.world.stock).toEqual({ gold: 45, iron: 45 })
+  })
+
+  it('embeds a Lesser rune in the field, recording the item it made', () => {
+    const { game, party, place } = inTheField()
+    const report = actedDay(game, { kind: 'embed', place, rune: 'stone1' })
+    const made = itemById('iron_sword@3#stone1')
+    expect(report.parties[0].made).toBe(made)
+    expect(party.members[0].equipment.mainHand).toBe(made)
+    expect(game.runes).toEqual({})
+    expect(game.world.stock.gold).toBe(45)
+  })
+})
+
+describe('act refused', () => {
+  /** Expects `act` refused with a message matching `pattern`, the game unchanged, its standing order included. */
+  function refused(game: GameState, party: string, action: DayAction, pattern: RegExp) {
+    const before = JSON.stringify(game)
+    expect(act(game, party, action)).toMatch(pattern)
+    expect(JSON.stringify(game)).toBe(before)
+  }
+
+  it('for a party it does not know', () => {
+    const { game } = withStandingOrder(quiet())
+    refused(game, 'party_9', { kind: 'camp' }, /No party "party_9"/)
+  })
+
+  it.each(['scout', 'wait'] as const)('to %s away from monsters, or once the game is over', (kind) => {
+    const { game, party } = withStandingOrder(quiet())
+    refused(game, party.id, { kind }, /no monsters here/i)
+    const over = confronting()
+    over.world.status = 'lost'
+    refused(over.game, over.party.id, { kind }, /game is over/)
+  })
+
+  it('to camp among monsters, or once the game is over', () => {
+    const among = confronting()
+    refused(among.game, among.party.id, { kind: 'camp' }, /cannot camp here/)
+    const over = withStandingOrder(quiet())
+    over.world.status = 'won'
+    refused(over.game, over.party.id, { kind: 'camp' }, /cannot camp here/)
+  })
+
+  it('to build without the stock or on the wrong land', () => {
+    const poor = withStandingOrder(onCleanLand())
+    poor.world.stock = { gold: 5, iron: 9 }
+    refused(poor.game, poor.party.id, { kind: 'tower' }, /more than the stock holds/)
+    const site = withStandingOrder(onGoldSeam())
+    refused(site.game, site.party.id, { kind: 'tower' }, /cannot stand on the encampment or a resource/)
+    const land = withStandingOrder(onCleanLand())
+    land.world.stock = { gold: 20, timber: 12 }
+    refused(land.game, land.party.id, { kind: 'outpost' }, /held resource/)
+  })
+
+  it('to craft or embed at the workshop, which is no day’s work, or for a stale place', () => {
+    const home = withStandingOrder(quiet())
+    home.world.workshop = 1
+    home.world.stock = { gold: 50, iron: 50 }
+    home.game.runes = { stone1: 1 }
+    home.party.members[0].equipment.mainHand = itemById('iron_sword@3')!
+    const place: ItemPlace = { from: 'worn', party: home.party.id, member: 0, slot: 'mainHand', itemId: 'iron_sword@3' }
+    refused(home.game, home.party.id, { kind: 'craft', place, modifier: 'balanced', grade: 1 }, /workshop/)
+    refused(home.game, home.party.id, { kind: 'embed', place, rune: 'stone1' }, /workshop/)
+    const field = inTheField()
+    withStandingOrder(field)
+    const stale = { ...field.place, itemId: 'iron_dagger' }
+    refused(field.game, field.party.id, { kind: 'craft', place: stale, modifier: 'balanced', grade: 1 }, /no longer there/)
+    refused(field.game, field.party.id, { kind: 'embed', place: stale, rune: 'stone1' }, /no longer there/)
+    refused(field.game, field.party.id, { kind: 'embed', place: field.place, rune: 'ember1' }, /pouch holds no/)
+  })
+
+  it('while another party confronts monsters, for any action but its own scout or wait', () => {
+    const { game, party } = withStandingOrder(quiet())
+    game.parties.push({ ...structuredClone(party), id: 'party_2', confronting: 'goblin_raiders', order: { kind: 'idle' } })
+    refused(game, party.id, { kind: 'camp' }, /Goblin Raiders/)
+  })
+
+  it('leaves passDay refused while confronting with any order but a scout or wait', () => {
+    const { game, party } = confronting()
+    party.order = { kind: 'day', action: { kind: 'camp' } }
+    expect(passDay(game)).toBeNull()
+    party.order = { kind: 'camp' }
+    expect(advance(game)).toEqual([])
+    expect(game.world.turn).toBe(2)
+  })
+})
+
+describe('worldInterrupt', () => {
+  it('tells a world event from a party event by its kind, not by which array holds it', () => {
+    const { game } = quiet()
+    const report = passDay(game)!
+    const event = { type: 'site_threatened', site: 'gold_seam', name: 'Gold Seam', days: 3 } as const
+    expect(worldInterrupt({ ...report, interrupt: { party: null, event: { ...event } } })).toEqual(event)
+    expect(worldInterrupt({ ...report, interrupt: { party: 'party_1', event: { type: 'order_done', party: 'party_1' } } })).toBeNull()
+    expect(worldInterrupt({ ...report, interrupt: null })).toBeNull()
+  })
+})
+
+describe('campUntilHealed for a party already whole', () => {
+  it('camps no day and leaves the party idle, its old order gone', () => {
+    const { game, world, party } = withStandingOrder(quiet())
+    expect(campUntilHealed(game, party)).toMatchObject({ days: 0, rested: 0 })
+    expect(party.order).toEqual({ kind: 'idle' })
+    expect(world.turn).toBe(1)
   })
 })

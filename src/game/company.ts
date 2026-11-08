@@ -1,12 +1,13 @@
-import { maxHp, maxMana } from '../character/character.ts'
 import { hexDistance, hexEquals, type Hex } from '../grid/hex.ts'
 import type { Item } from '../inventory/inventory.ts'
 import type { WorldEvent } from './blight.ts'
-import { canCamp, partyWounded } from './camp.ts'
-import { presences, type Expedition, type Order, type PartyPresence } from './expedition.ts'
+import { canBuildOutpost, canBuildTower, raiseOutpost, raiseTower } from './buildings.ts'
+import { canCamp, partyWounded, rest } from './camp.ts'
+import { applyCraft, craftRefusal, craftTier } from './crafting.ts'
+import { presences, type DayAction, type Expedition, type Order, type PartyPresence } from './expedition.ts'
 import { partyById, type GameState } from './gameState.ts'
-import { restHealing } from './infirmary.ts'
 import { autoHeal } from './party.ts'
+import { applyEmbed, embedRefusal } from './runecraft.ts'
 import { NOTICE_RADIUS, isNotable, locationAt, monstersHere, passTurn, routeTo, worldActive, type WorldState } from './worldMap.ts'
 
 /**
@@ -15,11 +16,14 @@ import { NOTICE_RADIUS, isNotable, locationAt, monstersHere, passTurn, routeTo, 
  * day passes once (`passTurn`) and each party's order is checked against what
  * the day brought. `advance` runs days until something happens. A journey
  * (`travel`) and camping until healed (`campUntilHealed`) are orders run this
- * way; an order outlasts an interrupt, so the next day carries it on.
+ * way; an order outlasts an interrupt, so the next day carries it on. A
+ * one-day action (scouting, waiting, a day's camp, a building, a field craft
+ * or embed) is a day order given and run at once (`act`), which ends idle.
  *
  * This module and the ones whose day-passing functions call it (worldMap.ts,
- * camp.ts) import one another, which is safe while none calls another as its
- * module loads.
+ * camp.ts, buildings.ts, crafting.ts, runecraft.ts) import one another, which
+ * is safe while none calls another as its module loads. This module calls
+ * only their time-free parts and refusals, never their conveniences.
  */
 
 /** What happened to a party's order in a day. */
@@ -66,6 +70,19 @@ export const UNTIL_LIMIT = 30
 
 const IDLE: Order = { kind: 'idle' }
 
+/**
+ * The kinds of party event, each `true`. Keyed also by any kind a world event
+ * shares with a party event, as `never`, so that a clash fails to compile and
+ * the kind alone tells the two apart (`worldInterrupt`).
+ */
+const PARTY_EVENT_TYPES: Record<PartyEvent['type'], true> & Record<Extract<WorldEvent['type'], PartyEvent['type']>, never> = {
+  arrived: true,
+  confronting: true,
+  order_done: true,
+}
+
+const isPartyEvent = (event: WorldEvent | PartyEvent): event is PartyEvent => event.type in PARTY_EVENT_TYPES
+
 const partyNoun = (game: GameState, party: Expedition): string => (game.parties.length === 1 ? 'The party' : party.name)
 
 /** Whether a day order lets a party confronting monsters pass the day: scouting or waiting does. */
@@ -73,16 +90,21 @@ function answersMonsters(order: Order): boolean {
   return order.kind === 'day' && (order.action.kind === 'scout' || order.action.kind === 'wait')
 }
 
-/** Why no day can pass now, or null when one can. */
-export function advanceRefusal(game: GameState): string | null {
+/** Why no day can pass with each party's order as `orderOf` gives it, or null when one can. */
+function dayRefusal(game: GameState, orderOf: (party: Expedition) => Order): string | null {
   const { world } = game
   if (!worldActive(world)) return 'The game is over.'
   for (const party of game.parties) {
-    if (party.confronting === null || answersMonsters(party.order)) continue
+    if (party.confronting === null || answersMonsters(orderOf(party))) continue
     const name = world.locations.find((l) => l.id === party.confronting)?.name ?? 'monsters'
     return `${partyNoun(game, party)} stands before the ${name}: scout, wait or attack.`
   }
   return null
+}
+
+/** Why no day can pass now, or null when one can. */
+export function advanceRefusal(game: GameState): string | null {
+  return dayRefusal(game, (party) => party.order)
 }
 
 /** Gives party `id` an order, replacing the one it had. Returns the refusal, or null. */
@@ -115,43 +137,91 @@ export function roadBlocked(world: WorldState, order: Extract<Order, { kind: 'tr
   return next !== undefined && !hexEquals(next, order.to) && locationAt(world, next)?.kind === 'monsters'
 }
 
-const totalHp = (party: Expedition) => party.members.reduce((sum, member) => sum + member.hp, 0)
+/** Why `party` cannot take the one-day action now, or null when it can; the game's own refusal to pass a day aside. */
+function actionRefusal(game: GameState, party: Expedition, action: DayAction): string | null {
+  const { world } = game
+  switch (action.kind) {
+    case 'scout':
+    case 'wait':
+      if (!worldActive(world)) return 'The game is over.'
+      return monstersHere(world, party) ? null : 'There are no monsters here to scout or wait at.'
+    case 'camp':
+      return canCamp(world, party) ? null : `${partyNoun(game, party)} cannot camp here.`
+    case 'tower':
+      return canBuildTower(world, party)
+    case 'outpost':
+      return canBuildOutpost(world, party)
+    case 'craft':
+    case 'embed': {
+      if (action.place.party !== party.id) return `That item is not ${party.name}'s.`
+      if (craftTier(world, party) !== 'field') return 'At the workshop that is done at once, not as a day’s work.'
+      return action.kind === 'craft'
+        ? craftRefusal(game, action.place, action.modifier, action.grade)
+        : embedRefusal(game, action.place, action.rune)
+    }
+  }
+}
 
-/** A party's day by its order, before the world's day. It reads and changes only that party (and the world, read-only). */
-function partyDay(world: WorldState, party: Expedition): PartyDay {
-  const day: PartyDay = { party: party.id, walked: null, rested: 0, cast: 0, made: null }
+/** What a party's day did, and the event of anything it built (which comes before the world's day). */
+interface PartyDayDone {
+  day: PartyDay
+  built: WorldEvent | null
+}
+
+/** A day order's action, run with no time passing, if it can still be taken. */
+function runAction(game: GameState, party: Expedition, action: DayAction, done: PartyDayDone): void {
+  if (actionRefusal(game, party, action) !== null) return
+  const { world } = game
+  switch (action.kind) {
+    case 'scout':
+    case 'wait':
+      party.confronting = null
+      break
+    case 'camp':
+      done.day.rested = rest(world, party)
+      break
+    case 'tower':
+      done.built = raiseTower(world, party)
+      break
+    case 'outpost':
+      done.built = raiseOutpost(world, party)
+      break
+    case 'craft':
+      done.day.made = applyCraft(game, action.place, action.modifier, action.grade)
+      break
+    case 'embed':
+      done.day.made = applyEmbed(game, action.place, action.rune)
+      break
+  }
+}
+
+/** A party's day by its order, before the world's day. It changes only that party, and what its own action spends and builds. */
+function partyDay(game: GameState, party: Expedition): PartyDayDone {
+  const { world } = game
+  const done: PartyDayDone = { day: { party: party.id, walked: null, rested: 0, cast: 0, made: null }, built: null }
   const order = party.order
   switch (order.kind) {
     case 'idle':
       break
     case 'travel': {
-      const [hex, ...rest] = order.route
+      const [hex, ...remaining] = order.route
       if (hex === undefined) break
       party.position = hex
-      party.order = { ...order, route: rest }
-      day.walked = hex
+      party.order = { ...order, route: remaining }
+      done.day.walked = hex
       break
     }
-    case 'camp': {
+    case 'camp':
       if (!canCamp(world, party)) break
-      // restHealing reads where the party stands and the infirmary, never hit
-      // points, and the world's day reads no hit points or mana, so resting
-      // before the day comes to what resting after it would.
-      const before = totalHp(party)
-      const healing = party.members.map((member) => restHealing(world, party, member))
-      for (const [i, member] of party.members.entries()) {
-        member.hp = Math.min(maxHp(member), member.hp + healing[i])
-        member.mana = maxMana(member)
-      }
-      day.rested = totalHp(party) - before
-      day.cast = autoHeal(party.members)
+      done.day.rested = rest(world, party)
+      done.day.cast = autoHeal(party.members)
       break
-    }
     case 'day':
-      // Step 07 runs the action here.
+      // The order stays until after the world's day, which ends it (afterDay).
+      runAction(game, party, order.action, done)
       break
   }
-  return day
+  return done
 }
 
 /** A party's order checked against what the day brought: whether it arrived, was blocked or is done. */
@@ -214,7 +284,7 @@ function interruptOf(game: GameState, events: WorldEvent[], partyEvents: PartyEv
 /** The interrupt's event when it is a world event (what a journey or a camp is "interrupted by"), else null. */
 export function worldInterrupt(report: DayReport): WorldEvent | null {
   const event = report.interrupt?.event
-  return event !== undefined && (report.events as readonly unknown[]).includes(event) ? (event as WorldEvent) : null
+  return event === undefined || isPartyEvent(event) ? null : event
 }
 
 /**
@@ -225,12 +295,31 @@ export function worldInterrupt(report: DayReport): WorldEvent | null {
 export function passDay(game: GameState): DayReport | null {
   if (advanceRefusal(game) !== null) return null
   const { world } = game
-  const parties = game.parties.map((party) => partyDay(world, party))
-  // Measured after the day's moves; the world's day moves no party.
+  const done = game.parties.map((party) => partyDay(game, party))
+  // Measured after the day's moves and buildings; the world's day moves no party.
   const present = presences(game.parties)
-  const events = passTurn(world, present)
+  const events = done.flatMap(({ built }) => (built ? [built] : []))
+  events.push(...passTurn(world, present))
   const partyEvents = game.parties.flatMap((party) => afterDay(world, party))
-  return { events, partyEvents, parties, interrupt: interruptOf(game, events, partyEvents, present) }
+  return { events, partyEvents, parties: done.map(({ day }) => day), interrupt: interruptOf(game, events, partyEvents, present) }
+}
+
+/**
+ * Party `id`'s one-day action: refused, changing nothing (its standing order
+ * included), where the action cannot be taken or no day can pass with it
+ * (`advanceRefusal`, which a party's own scout or wait answers when it
+ * confronts monsters); else gives the order `{ kind: 'day', action }` and
+ * passes one day, after which the party is idle. Workshop work takes no day,
+ * and so is refused here.
+ */
+export function act(game: GameState, id: string, action: DayAction): string | DayReport {
+  const party = partyById(game, id)
+  if (!party) return `No party "${id}".`
+  const order: Order = { kind: 'day', action }
+  const refusal = actionRefusal(game, party, action) ?? dayRefusal(game, (p) => (p === party ? order : p.order))
+  if (refusal) return refusal
+  party.order = order
+  return passDay(game)!
 }
 
 /** Days until a report has an interrupt, the game stops being active, `advanceRefusal` says no, or `limit` days pass. */

@@ -5,11 +5,12 @@ import { MODIFIERS, modifiersFor, type Modifier, type ModifierId } from '../inve
 import type { WorldEvent } from './blight.ts'
 import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
 import { canCamp } from './camp.ts'
-import { presences, type Expedition } from './expedition.ts'
+import { act } from './company.ts'
+import type { Expedition } from './expedition.ts'
 import { partyById, type GameState } from './gameState.ts'
 import { STALE, allPlaces, itemAt, replaceAt, type ItemPlace } from './itemPlace.ts'
 import type { Stock } from './territory.ts'
-import { encampmentName, passTurn, type WorldState } from './worldMap.ts'
+import { encampmentName, type WorldState } from './worldMap.ts'
 
 /**
  * Crafting (docs/designs/expeditions-and-encampment.md §4.3): putting a
@@ -121,29 +122,53 @@ export function options(game: GameState, place: ItemPlace): CraftOption[] {
 
 export type CraftResult = { refusal: string } | { refusal: null; item: Item; events: WorldEvent[] }
 
-/**
- * Puts `modifier` at `grade` on the item at `place`, spending the stock and
- * leaving the new item where the old one was; in the field the day passes
- * (`passTurn`) and its events come back for the scene to report.
- */
-export function craft(game: GameState, place: ItemPlace, modifier: ModifierId, grade: Grade): CraftResult {
-  const { world } = game
+/** Why `modifier` at `grade` cannot be put on the item at `place` where its party stands, or null when it can. */
+export function craftRefusal(game: GameState, place: ItemPlace, modifier: ModifierId, grade: Grade): string | null {
   const item = itemAt(game, place)
-  if (!item) return { refusal: STALE }
+  if (!item) return STALE
   const party = partyById(game, place.party)!
-  const tier = craftTier(world, party)
+  const tier = craftTier(game.world, party)
   const refusal = placeRefusal(game, party, tier) ?? itemRefusal(item, tier)
-  if (refusal) return { refusal }
-  const option = options(game, place).find((o) => o.modifier.id === modifier && o.grade === grade)
+  if (refusal) return refusal
+  const option = craftOption(game, place, modifier, grade)
   if (!option) {
     const mod = MODIFIERS[modifier]
-    if (!mod || !mod.fits.includes(baseItem(item)!.family!)) return { refusal: `${mod?.name ?? 'That modifier'} does not fit it.` }
-    if (mod.unlock > tierLevel(tier)) return { refusal: `${mod.name} needs a level ${mod.unlock} workshop.` }
-    return { refusal: tier === 'field' ? 'The field makes grade 1 only.' : `A level ${tier} workshop makes up to grade ${highestGrade(tier)}.` }
+    if (!mod || !mod.fits.includes(baseItem(item)!.family!)) return `${mod?.name ?? 'That modifier'} does not fit it.`
+    if (mod.unlock > tierLevel(tier)) return `${mod.name} needs a level ${mod.unlock} workshop.`
+    return tier === 'field' ? 'The field makes grade 1 only.' : `A level ${tier} workshop makes up to grade ${highestGrade(tier)}.`
   }
-  if (option.refusal) return { refusal: option.refusal }
-  spend(world.stock, option.cost)
+  return option.refusal
+}
+
+const craftOption = (game: GameState, place: ItemPlace, modifier: ModifierId, grade: Grade): CraftOption | undefined =>
+  options(game, place).find((o) => o.modifier.id === modifier && o.grade === grade)
+
+/**
+ * Puts `modifier` at `grade` on the item at `place`, with no time passing:
+ * spends the stock and leaves the new item where the old one was. Assumes
+ * `craftRefusal` said null. Returns the new item.
+ */
+export function applyCraft(game: GameState, place: ItemPlace, modifier: ModifierId, grade: Grade): Item {
+  const option = craftOption(game, place, modifier, grade)!
+  spend(game.world.stock, option.cost)
   replaceAt(game, place, option.result)
-  const events = tier === 'field' ? passTurn(world, presences(game.parties)) : []
-  return { refusal: null, item: option.result, events }
+  return option.result
+}
+
+/**
+ * Puts `modifier` at `grade` on the item at `place`, spending the stock and
+ * leaving the new item where the old one was. At the workshop no time passes;
+ * in the field it is a one-day order on the day loop (`act`), and the day's
+ * events come back for the scene to report.
+ */
+export function craft(game: GameState, place: ItemPlace, modifier: ModifierId, grade: Grade): CraftResult {
+  const refusal = craftRefusal(game, place, modifier, grade)
+  if (refusal) return { refusal }
+  if (craftTier(game.world, partyById(game, place.party)!) !== 'field') {
+    return { refusal: null, item: applyCraft(game, place, modifier, grade), events: [] }
+  }
+  const report = act(game, place.party, { kind: 'craft', place, modifier, grade })
+  if (typeof report === 'string') return { refusal: report }
+  const made = report.parties.find((day) => day.party === place.party)!.made!
+  return { refusal: null, item: made, events: report.events }
 }

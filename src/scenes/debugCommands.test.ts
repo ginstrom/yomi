@@ -105,6 +105,17 @@ describe('debug commands', () => {
     expect(runCommand('goto 999 0', context).lines[0]).toMatch(/off the map/)
   })
 
+  it('leaves a party it moves idle, so that the days after walk no old route', () => {
+    const context = onWorldMap()
+    const { game } = context.source!
+    const party = game.parties[0]
+    expect(setOrder(game, party.id, { kind: 'travel', to: offsetToHex(30, 10) })).toBeNull()
+    runCommand('goto 2 3', context)
+    expect(party.order).toEqual({ kind: 'idle' })
+    runCommand('days 2', context)
+    expect(hexToOffset(party.position)).toEqual({ col: 2, row: 3 })
+  })
+
   it('passes days', () => {
     const context = onWorldMap()
     const { world } = context.source!.game

@@ -1,7 +1,7 @@
 import { maxHp, maxMana, manaOf, type Character } from '../character/character.ts'
 import { gainXp, xpToNextLevel } from '../character/progression.ts'
 import type { BattleState } from '../engine/battleEngine.ts'
-import { advanceRefusal, passDay } from '../game/company.ts'
+import { advanceRefusal, passDay, setOrder } from '../game/company.ts'
 import { facilities, setFacilityLevel, type FacilityId } from '../game/encampment.ts'
 import { presences, type Expedition } from '../game/expedition.ts'
 import { ENCOUNTERS, type EncounterId } from '../game/encounters.ts'
@@ -306,7 +306,7 @@ const COMMANDS: Record<string, Command> = {
   goto: {
     usage: 'goto <col> <row> | goto <location> [@party]',
     acts: true,
-    summary: 'Put the party on a hex, or on a location by id, with no time passing.',
+    summary: 'Put the party on a hex, or on a location by id, with no time passing; its order ends.',
     changes: true,
     run(args, context) {
       const game = gameOf(context)
@@ -322,6 +322,8 @@ const COMMANDS: Record<string, Command> = {
       }
       const party = partyOf(context)
       party.position = to
+      // An order given where it stood is no order here.
+      setOrder(game, party.id, { kind: 'idle' })
       const here = monstersHere(world, party)
       party.confronting = here?.id ?? null
       updateSight(world, presences(game.parties))

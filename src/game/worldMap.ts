@@ -13,7 +13,7 @@ import {
   type Item,
 } from '../inventory/inventory.ts'
 import { advanceDay, cleanse, seedBlight, type WorldEvent } from './blight.ts'
-import { advance, roadBlocked, setOrder, worldInterrupt } from './company.ts'
+import { act, advance, roadBlocked, setOrder, worldInterrupt } from './company.ts'
 import { MAX_THREAT, type EncounterId } from './encounters.ts'
 import { presences, type Expedition, type PartyPresence } from './expedition.ts'
 import type { GameState } from './gameState.ts'
@@ -346,14 +346,16 @@ export function travel(game: GameState, party: Expedition, to: Hex): Journey {
 
 /**
  * Spends a turn scouting or waiting at the monsters the party stands among,
- * which frees it to travel on. Neither does more yet: scouting learns nothing
- * and the monsters never answer. Returns false when there are no monsters here.
+ * which frees it to travel on: a one-day order on the day loop (`act`).
+ * Neither does more yet: scouting learns nothing and the monsters never
+ * answer. Returns the day's events, or null when there are no monsters here
+ * or the game is over.
  */
-export function linger(game: GameState, party: Expedition, _how: Lingering): WorldEvent[] | null {
+export function linger(game: GameState, party: Expedition, how: Lingering): WorldEvent[] | null {
   const world = game.world
   if (!monstersHere(world, party) || !worldActive(world)) return null
-  party.confronting = null
-  return passTurn(world, presences(game.parties))
+  const report = act(game, party.id, { kind: how })
+  return typeof report === 'string' ? null : report.events
 }
 
 /**

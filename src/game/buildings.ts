@@ -1,9 +1,10 @@
 import { hexDistance, hexEquals } from '../grid/hex.ts'
 import { blightAt, type WorldEvent } from './blight.ts'
-import { presences, type Expedition } from './expedition.ts'
+import { act } from './company.ts'
+import type { Expedition } from './expedition.ts'
 import type { GameState } from './gameState.ts'
 import type { Material, Stock } from './territory.ts'
-import { ENCAMPMENT_ID, encampmentName, locationAt, monstersHere, passTurn, worldActive, type QuietLocation, type WorldState } from './worldMap.ts'
+import { ENCAMPMENT_ID, encampmentName, locationAt, monstersHere, worldActive, type QuietLocation, type WorldState } from './worldMap.ts'
 
 /**
  * What the encampment's stock builds, and the stock's arithmetic. Everything
@@ -69,18 +70,28 @@ export function canBuildTower(world: WorldState, party: Expedition): string | nu
 }
 
 /**
- * Builds a watchtower where the party stands: the stock pays, and the day the
- * building takes passes with the tower already standing. Null, and nothing
- * done, when `canBuildTower` refuses.
+ * Raises a watchtower where the party stands, with no time passing: the stock
+ * pays and the tower stands. Assumes `canBuildTower` said null. Returns the
+ * `tower_built` event.
  */
-export function buildTower(game: GameState, party: Expedition): WorldEvent[] | null {
-  const world = game.world
-  if (canBuildTower(world, party)) return null
+export function raiseTower(world: WorldState, party: Expedition): WorldEvent {
   spend(world.stock, TOWER_COST)
   world.towersBuilt += 1
   const tower = { id: `tower_${world.towersBuilt}`, position: party.position }
   world.towers.push(tower)
-  return [{ type: 'tower_built', tower: tower.id, at: tower.position }, ...passTurn(world, presences(game.parties))]
+  return { type: 'tower_built', tower: tower.id, at: tower.position }
+}
+
+/**
+ * Builds a watchtower where the party stands, a one-day order on the day loop
+ * (`act`): the tower is raised, then the day passes with it standing. Returns
+ * the `tower_built` event and the day's, or null, and nothing done, when
+ * `canBuildTower` refuses.
+ */
+export function buildTower(game: GameState, party: Expedition): WorldEvent[] | null {
+  if (canBuildTower(game.world, party)) return null
+  const report = act(game, party.id, { kind: 'tower' })
+  return typeof report === 'string' ? null : report.events
 }
 
 /** What raising the shrine to each level costs, from level 1; silver, from further out, buys the higher ones. */
@@ -137,15 +148,25 @@ export function canBuildOutpost(world: WorldState, party: Expedition): string | 
 }
 
 /**
- * Builds an outpost at the held site the party stands on: the stock pays, and
- * the day the building takes passes with the outpost already standing. Null,
- * and nothing done, when `canBuildOutpost` refuses.
+ * Raises an outpost at the held site the party stands on, with no time
+ * passing: the stock pays and the outpost stands. Assumes `canBuildOutpost`
+ * said null. Returns the `outpost_built` event.
  */
-export function buildOutpost(game: GameState, party: Expedition): WorldEvent[] | null {
-  const world = game.world
-  if (canBuildOutpost(world, party)) return null
+export function raiseOutpost(world: WorldState, party: Expedition): WorldEvent {
   const site = outpostSite(world, party)!
   spend(world.stock, OUTPOST_COST)
   world.outposts.push(site.id)
-  return [{ type: 'outpost_built', site: site.id, name: site.name }, ...passTurn(world, presences(game.parties))]
+  return { type: 'outpost_built', site: site.id, name: site.name }
+}
+
+/**
+ * Builds an outpost at the held site the party stands on, a one-day order on
+ * the day loop (`act`): the outpost is raised, then the day passes with it
+ * standing. Returns the `outpost_built` event and the day's, or null, and
+ * nothing done, when `canBuildOutpost` refuses.
+ */
+export function buildOutpost(game: GameState, party: Expedition): WorldEvent[] | null {
+  if (canBuildOutpost(game.world, party)) return null
+  const report = act(game, party.id, { kind: 'outpost' })
+  return typeof report === 'string' ? null : report.events
 }

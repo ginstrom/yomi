@@ -245,3 +245,24 @@ From C6, the parts this step implements:
 - [ ] Committed as "Stage 5 step 07: day actions as orders". The index's row is updated with status and commit.
 
 ## Execution record
+
+### Round 1 (implementation)
+
+**What was built.**
+- Characterization tests first, each comparing the function's result, events and the whole game (`JSON.stringify(game)`) with a twin game that did the old sequence by hand around `passTurn`, on the first day that brings an event, plus game-over (`lost`, `won`), stock, land, monsters and stale-place refusals changing nothing: `camp.test.ts` (campDay), `worldMap.test.ts` (linger, scout and wait), `buildings.test.ts` (tower, outpost), `crafting.test.ts` (field and workshop craft), `runecraft.test.ts` (field embed). All passed before the change and pass unedited after it.
+- Time-free parts: `rest(world, party)` (camp.ts, now also the camp order's rest, replacing step 06's inline copy in company.ts), `raiseTower` / `raiseOutpost` (buildings.ts), `craftRefusal` / `applyCraft` (crafting.ts), `applyEmbed` (runecraft.ts).
+- `act(game, party, action)` in company.ts: unknown party, then the action's own refusal (`actionRefusal`: scout/wait "The game is over." / "There are no monsters here to scout or wait at."; camp "<The party> cannot camp here."; `canBuildTower`; `canBuildOutpost`; craft/embed: the place must be this party's, field only ("At the workshop that is done at once, not as a day’s work."), then `craftRefusal` / `embedRefusal`), then `advanceRefusal` as if the party held the day order (`dayRefusal` with an order override; `advanceRefusal` is that with each party's own order). A refused act changes nothing, its standing order included.
+- `passDay`: a party's day for a `day` order runs the action (re-checking its refusal, which is pure), records `rested` / `made`, and puts a building's event before `passTurn`'s, in party order.
+- Conveniences over `act`, result shapes unchanged: `campDay`, `linger`, `buildTower`, `buildOutpost`, field `craft`, field `embed` (workshop craft and embed stay immediate). No caller changed.
+- Follow-ups folded in: (1) debug `goto` sets the party's order idle (test: a travel order, then `goto`, then `days 2` leaves it where it was put); (2) `campUntilHealed` for an already-whole party sets the order idle after its `autoHeal` (guard untouched: same check, same result); (3) `worldInterrupt` tells world from party events by kind (`PARTY_EVENT_TYPES`, typed so that a world event kind clashing with a party event kind fails to compile), not by array identity (test with a structurally equal copy); (4) CLAUDE.md's expedition.ts line describes the standing order run by company.ts.
+- CLAUDE.md: camp.ts, buildings.ts, crafting.ts, runecraft.ts, expedition.ts and company.ts lines, and the rules of the world map ("until stage 5 step 07" removed), describe the day actions as one-day orders through `act`; company.ts's line names the new import cycles.
+
+**Deviation.** The task says the party's day step makes the order idle; the order instead stays `day` through `passTurn` and `afterDay` (step 06's code) makes it idle as it emits `order_done`, as `afterDay` needs to know it was a day order. Nothing reads the order between the two, so the result is the same.
+
+**Verification.**
+- `npm test`: 80 files, 1315 tests passed (baseline before the change: 1277). Guard test in `scripts/simulate.test.ts` untouched and passing.
+- `npx vitest run src/game/company.test.ts`: every `DayAction` through `act`, refusals of each kind changing nothing, a second party's confrontation refusing a camp, `passDay`/`advance` refused while confronting with a camp or day-camp order, `worldInterrupt`, the whole-party `campUntilHealed`.
+- 50-campaign check: `npm run simulate -- --campaign --battles 50 --seed 1 --out logs/guard-50.jsonl > logs/guard-50.txt`: summary identical to step 01's line for line (diffed); `shasum -a 256 logs/guard-50.jsonl` = `068016a82040ec5be673084265005a7218f0ce927629880565c1a27a8cf52d76`. **Guard identical.**
+- `npm run test:browser`: 9 files, 89 tests passed (186 s).
+
+**For later steps.** `act` is the entry for step 09's buttons if they want the `DayReport`; step 08's simulator already reaches the loop through the conveniences. An action's refusal is internal (`actionRefusal`); export it if a scene needs to grey a button by it.

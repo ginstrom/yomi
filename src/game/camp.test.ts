@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { maxHp, maxMana } from '../character/character.ts'
 import { NATURAL_HEALING_PER_DAY, campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from './camp.ts'
+import { presences } from './expedition.ts'
 import { newGame } from './gameState.ts'
+import { restHealing } from './infirmary.ts'
 import { readyMadeParty } from './party.ts'
-import { monstersHere, travel, type MonsterLocation, type WorldState } from './worldMap.ts'
+import { monstersHere, passTurn, travel, type MonsterLocation, type WorldState } from './worldMap.ts'
 
 /** A new game on world 1 with the ready-made three, the mage (Heal, 3 mana for 6 hp) last: the game, its world, its party and the party's members. */
 function solo() {
@@ -153,3 +155,53 @@ describe('campUntilHealed, as it is (characterization)', () => {
 
 const RESULT = { days: 7, rested: 13, cast: 48, events: 36, interruptedBy: null }
 const MEMBERS = [[32, 0], [18, 0], [17, 18]]
+
+/** Two games built alike by `setup`, each moved on to the first day that brings an event. */
+function eventfulTwins<T extends ReturnType<typeof solo>>(setup: () => T): [T, T] {
+  const scout = setup()
+  let quiet = 0
+  while (passTurn(scout.world, presences(scout.game.parties)).length === 0) quiet++
+  const make = () => {
+    const it = setup()
+    for (let day = 0; day < quiet; day++) passTurn(it.world, presences(it.game.parties))
+    return it
+  }
+  return [make(), make()]
+}
+
+describe('campDay, as it is (characterization)', () => {
+  it('rests through a day of the world: the same result, events and game as resting by hand around passTurn', () => {
+    const [now, then] = eventfulTwins(() => {
+      const it = solo()
+      it.members[0].hp = 5
+      it.members[2].hp = 3
+      it.members[2].mana = 0
+      return it
+    })
+    const turn = now.world.turn
+    // By hand, as campDay did: judged where it camps, then the day, then the rest.
+    const before = then.members.reduce((sum, m) => sum + m.hp, 0)
+    const healing = then.members.map((m) => restHealing(then.world, then.party, m))
+    const events = passTurn(then.world, presences(then.game.parties))
+    for (const [i, m] of then.members.entries()) {
+      m.hp = Math.min(maxHp(m), m.hp + healing[i])
+      m.mana = maxMana(m)
+    }
+    const healed = then.members.reduce((sum, m) => sum + m.hp, 0) - before
+    expect(events.length).toBeGreaterThan(0)
+    expect(healed).toBe(2 * NATURAL_HEALING_PER_DAY)
+    expect(campDay(now.game, now.party)).toEqual({ healed, events })
+    expect(now.world.turn).toBe(turn + 1)
+    expect(now.party.confronting).toBeNull()
+    expect(JSON.stringify(now.game)).toBe(JSON.stringify(then.game))
+  })
+
+  it.each(['lost', 'won'] as const)('is refused, changing nothing, once the game is %s', (status) => {
+    const { game, world, party, members } = solo()
+    members[0].hp = 1
+    world.status = status
+    const before = JSON.stringify(game)
+    expect(campDay(game, party)).toBeNull()
+    expect(JSON.stringify(game)).toBe(before)
+  })
+})

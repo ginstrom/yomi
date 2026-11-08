@@ -1,11 +1,11 @@
 import { maxHp, maxMana } from '../character/character.ts'
 import type { WorldEvent } from './blight.ts'
-import { advance, setOrder, worldInterrupt } from './company.ts'
-import { presences, type Expedition } from './expedition.ts'
+import { act, advance, setOrder, worldInterrupt } from './company.ts'
+import type { Expedition } from './expedition.ts'
 import type { GameState } from './gameState.ts'
 import { restHealing } from './infirmary.ts'
 import { autoHeal, type Party } from './party.ts'
-import { monstersHere, passTurn, worldActive, type WorldState } from './worldMap.ts'
+import { monstersHere, worldActive, type WorldState } from './worldMap.ts'
 
 /**
  * Camping on the world map: the party rests where it stands, a day at a
@@ -49,24 +49,34 @@ export function partyWounded(party: Party): boolean {
 const totalHp = (party: Party) => party.reduce((sum, member) => sum + member.hp, 0)
 
 /**
- * Camps one day: a world turn passes (`passTurn`), every member heals
- * `restHealing` up to its maximum and every caster's mana is
- * full. Returns the hit points restored and the day's events, or null,
- * changing nothing, where the party cannot camp.
+ * A day's rest, with no time passing: every member heals `restHealing` (judged
+ * where the party stands) up to its maximum and every caster's mana is
+ * filled. Returns the hit points restored. The day loop (company.ts) rests a
+ * party before the world's day, which reads no hit points or mana, so that
+ * resting before it comes to what resting after it would.
  */
-export function campDay(game: GameState, party: Expedition): CampDay | null {
-  const { world } = game
-  if (!canCamp(world, party)) return null
+export function rest(world: WorldState, party: Expedition): number {
   const members = party.members
   const before = totalHp(members)
-  // Judged where the party camps, before the day's events can change it.
   const healing = members.map((member) => restHealing(world, party, member))
-  const events = passTurn(world, presences(game.parties))
   for (const [i, member] of members.entries()) {
     member.hp = Math.min(maxHp(member), member.hp + healing[i])
     member.mana = maxMana(member)
   }
-  return { healed: totalHp(members) - before, events }
+  return totalHp(members) - before
+}
+
+/**
+ * Camps one day, a one-day order on the day loop (`act`): the party rests
+ * (`rest`) and a world turn passes. Returns the hit points restored and the
+ * day's events, or null, changing nothing, where the party cannot camp.
+ */
+export function campDay(game: GameState, party: Expedition): CampDay | null {
+  if (!canCamp(game.world, party)) return null
+  const report = act(game, party.id, { kind: 'camp' })
+  if (typeof report === 'string') return null
+  const day = report.parties.find((d) => d.party === party.id)
+  return { healed: day?.rested ?? 0, events: report.events }
 }
 
 /**
@@ -80,7 +90,11 @@ export function campUntilHealed(game: GameState, party: Expedition): CampResult 
   if (!canCamp(game.world, party)) return null
   const members = party.members
   const result: CampResult = { days: 0, rested: 0, cast: autoHeal(members), events: [], interruptedBy: null }
-  if (!partyWounded(members)) return result
+  if (!partyWounded(members)) {
+    // As every convenience gives its own order, this one leaves none standing.
+    setOrder(game, party.id, { kind: 'idle' })
+    return result
+  }
   setOrder(game, party.id, { kind: 'camp' })
   // Ends: each day heals every wounded member at least a hit point.
   for (const report of advance(game, Infinity)) {

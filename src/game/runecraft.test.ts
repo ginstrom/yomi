@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { maxHp } from '../character/character.ts'
 import { itemById } from '../inventory/inventory.ts'
 import { presences } from './expedition.ts'
+import { spend } from './buildings.ts'
 import { newGame, type GameState } from './gameState.ts'
-import type { ItemPlace } from './itemPlace.ts'
+import { replaceAt, type ItemPlace } from './itemPlace.ts'
 import {
   EXTRACT_LEVEL,
+  embedCost,
   FUSE_LEVELS,
   embed,
   embedRefusal,
@@ -282,5 +284,41 @@ describe('socketables', () => {
       ['worn', 'steel_breastplate', 1],
       ['baggage', 'iron_sword@3', 1],
     ])
+  })
+})
+
+describe('embed in the field, as it is (characterization)', () => {
+  /** A field game with a Lesser Stone Rune and a Masterwork sword in hand, moved on `quiet` days. */
+  function field(quiet: number) {
+    const game = home()
+    intoField(game)
+    for (let day = 0; day < quiet; day++) passTurn(game.world, presences(game.parties))
+    game.runes = { stone1: 1 }
+    return { game, place: wield(game, 'iron_sword@3') }
+  }
+
+  it('takes the rune, spends, replaces the item and then passes the day: the same result, events and game as by hand', () => {
+    const scout = field(0).game
+    let quiet = 0
+    while (passTurn(scout.world, presences(scout.parties)).length === 0) quiet++
+    const now = field(quiet)
+    const then = field(quiet)
+    const turn = now.game.world.turn
+    const item = itemById('iron_sword@3#stone1')!
+    then.game.runes = {}
+    spend(then.game.world.stock, embedCost('stone1'))
+    replaceAt(then.game, then.place, item)
+    const events = passTurn(then.game.world, presences(then.game.parties))
+    expect(events.length).toBeGreaterThan(0)
+    expect(embed(now.game, now.place, 'stone1')).toEqual({ refusal: null, item, events })
+    expect(now.game.world.turn).toBe(turn + 1)
+    expect(now.game.parties[0].confronting).toBeNull()
+    expect(JSON.stringify(now.game)).toBe(JSON.stringify(then.game))
+  })
+
+  it.each(['lost', 'won'] as const)('is refused, changing nothing, once the game is %s', (status) => {
+    const { game, place } = field(0)
+    game.world.status = status
+    refused(game, () => embed(game, place, 'stone1'), /^Nothing can be embedded here now\.$/)
   })
 })

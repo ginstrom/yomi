@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { HexBoard, hexDistance, hexEquals, hexKey, hexToOffset, offsetToHex, type Hex } from '../grid/hex.ts'
 import { campUntilHealed } from './camp.ts'
 import { ENCOUNTERS, ENCOUNTER_BANDS, MAX_THREAT } from './encounters.ts'
-import type { PartyPresence } from './expedition.ts'
+import { presences, type PartyPresence } from './expedition.ts'
 import { newGame, type GameState } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
 import {
@@ -20,6 +20,7 @@ import {
   locationAt,
   monstersHere,
   newWorld,
+  passTurn,
   routeTo,
   threatAt,
   travel,
@@ -258,6 +259,43 @@ describe('linger', () => {
     const { game, world, party } = fresh()
     expect(linger(game, party, 'wait')).toBeNull()
     expect(world.turn).toBe(1)
+  })
+})
+
+describe('linger, as it is (characterization)', () => {
+  /** The party walked into the first monsters, then moved on to the first day that brings an event. */
+  function confronted(quiet: number) {
+    const it = fresh()
+    journeyTo(it.game, monsters(it.world)[0].position)
+    for (let day = 0; day < quiet; day++) passTurn(it.world, presences(it.game.parties))
+    return it
+  }
+  function eventfulTwins() {
+    const scout = confronted(0)
+    let quiet = 0
+    while (passTurn(scout.world, presences(scout.game.parties)).length === 0) quiet++
+    return [confronted(quiet), confronted(quiet)]
+  }
+
+  it.each(['scout', 'wait'] as const)('to %s frees the party and passes the day: the same events and game as by hand', (how) => {
+    const [now, then] = eventfulTwins()
+    expect(now.party.confronting).not.toBeNull()
+    const turn = now.world.turn
+    then.party.confronting = null
+    const events = passTurn(then.world, presences(then.game.parties))
+    expect(events.length).toBeGreaterThan(0)
+    expect(linger(now.game, now.party, how)).toEqual(events)
+    expect(now.world.turn).toBe(turn + 1)
+    expect(now.party.confronting).toBeNull()
+    expect(JSON.stringify(now.game)).toBe(JSON.stringify(then.game))
+  })
+
+  it.each(['lost', 'won'] as const)('is refused, changing nothing, once the game is %s', (status) => {
+    const { game, world, party } = confronted(0)
+    world.status = status
+    const before = JSON.stringify(game)
+    expect(linger(game, party, 'scout')).toBeNull()
+    expect(JSON.stringify(game)).toBe(before)
   })
 })
 

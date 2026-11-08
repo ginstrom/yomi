@@ -16,12 +16,13 @@ import {
 import type { WorldEvent } from './blight.ts'
 import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
 import { canCamp } from './camp.ts'
+import { act } from './company.ts'
 import { craftTier } from './crafting.ts'
-import { presences, type Expedition } from './expedition.ts'
+import type { Expedition } from './expedition.ts'
 import { partyById, type GameState } from './gameState.ts'
 import { STALE, allPlaces, itemAt, replaceAt, type ItemPlace } from './itemPlace.ts'
 import type { Stock } from './territory.ts'
-import { encampmentName, passTurn } from './worldMap.ts'
+import { encampmentName } from './worldMap.ts'
 
 /**
  * Runecraft (docs/designs/long-campaign/stage-04-runes.md §2): runes moved
@@ -103,18 +104,35 @@ export function embedRefusal(game: GameState, place: ItemPlace, key: RuneKey): s
   return canAfford(world.stock, cost) ? null : unaffordable(cost)
 }
 
-/** Takes `key` from the pouch into the item's next empty socket, spending the cost; in the field (rank 1 only) the day passes (passTurn) and its events come back. */
-export function embed(game: GameState, place: ItemPlace, key: RuneKey): RuneResult {
-  const refusal = embedRefusal(game, place, key)
-  if (refusal) return { refusal }
-  const { world } = game
+/**
+ * Takes `key` from the pouch into the next empty socket of the item at
+ * `place`, with no time passing, spending the cost. Assumes `embedRefusal`
+ * said null. Returns the new item.
+ */
+export function applyEmbed(game: GameState, place: ItemPlace, key: RuneKey): Item {
   const item = itemAt(game, place)!
   const result = withRunes(item, [...(item.runes ?? []), key])!
   takeFromPouch(game.runes, key)
-  spend(world.stock, embedCost(key))
+  spend(game.world.stock, embedCost(key))
   replaceAt(game, place, result)
-  const events = craftTier(world, partyById(game, place.party)!) === 'field' ? passTurn(world, presences(game.parties)) : []
-  return { refusal: null, item: result, events }
+  return result
+}
+
+/**
+ * Takes `key` from the pouch into the item's next empty socket, spending the
+ * cost. At the workshop no time passes; in the field (rank 1 only) it is a
+ * one-day order on the day loop (`act`), and the day's events come back.
+ */
+export function embed(game: GameState, place: ItemPlace, key: RuneKey): RuneResult {
+  const refusal = embedRefusal(game, place, key)
+  if (refusal) return { refusal }
+  if (craftTier(game.world, partyById(game, place.party)!) !== 'field') {
+    return { refusal: null, item: applyEmbed(game, place, key), events: [] }
+  }
+  const report = act(game, place.party, { kind: 'embed', place, rune: key })
+  if (typeof report === 'string') return { refusal: report }
+  const made = report.parties.find((day) => day.party === place.party)!.made!
+  return { refusal: null, item: made, events: report.events }
 }
 
 export function extractRefusal(game: GameState, place: ItemPlace, index: number): string | null {

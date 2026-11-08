@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { IRON_SWORD, STORM_WAND, itemById } from '../inventory/inventory.ts'
+import { spend } from './buildings.ts'
 import { craft, craftTier, craftables, options, upgradeWorkshop } from './crafting.ts'
-import { newGame } from './gameState.ts'
-import type { ItemPlace } from './itemPlace.ts'
-import { locationAt, monstersHere, travel } from './worldMap.ts'
+import { presences } from './expedition.ts'
+import { newGame, type GameState } from './gameState.ts'
+import { replaceAt, type ItemPlace } from './itemPlace.ts'
+import { locationAt, monstersHere, passTurn, travel } from './worldMap.ts'
 
 /** A new game at home, the stock full of everything crafting asks. */
 function home() {
@@ -122,5 +124,75 @@ describe('crafting', () => {
     while (!monstersHere(game.world, game.parties[0])) travel(game, game.parties[0], raiders.position)
     expect(craft(game, sword(game), 'balanced', 1).refusal).toMatch(/Nothing can be crafted/)
     expect(options(game, sword(game))[0].refusal).toMatch(/Nothing can be crafted/)
+  })
+})
+
+describe('craft, as it is (characterization)', () => {
+  /** Two games in the field, built alike, each moved on to the first day that brings an event. */
+  function eventfulTwins(): [GameState, GameState] {
+    const field = () => {
+      const game = home()
+      intoField(game)
+      return game
+    }
+    const scout = field()
+    let quiet = 0
+    while (passTurn(scout.world, presences(scout.parties)).length === 0) quiet++
+    const make = () => {
+      const game = field()
+      for (let day = 0; day < quiet; day++) passTurn(game.world, presences(game.parties))
+      return game
+    }
+    return [make(), make()]
+  }
+
+  it('in the field spends, replaces the item and then passes the day: the same result, events and game as by hand', () => {
+    const [now, then] = eventfulTwins()
+    const turn = now.world.turn
+    const option = options(then, sword(then)).find((o) => o.modifier.id === 'balanced' && o.grade === 1)!
+    spend(then.world.stock, option.cost)
+    replaceAt(then, sword(then), option.result)
+    const events = passTurn(then.world, presences(then.parties))
+    expect(events.length).toBeGreaterThan(0)
+    expect(craft(now, sword(now), 'balanced', 1)).toEqual({ refusal: null, item: itemById('iron_sword+balanced1'), events })
+    expect(now.world.turn).toBe(turn + 1)
+    expect(now.parties[0].confronting).toBeNull()
+    expect(JSON.stringify(now)).toBe(JSON.stringify(then))
+  })
+
+  it('at a workshop passes no day and returns no events', () => {
+    const game = home()
+    game.world.workshop = 1
+    const turn = game.world.turn
+    expect(craft(game, sword(game), 'keen', 1)).toEqual({ refusal: null, item: itemById('iron_sword+keen1'), events: [] })
+    expect(game.world.turn).toBe(turn)
+  })
+
+  it.each(['lost', 'won'] as const)('is refused, changing nothing, once the game is %s, in the field or at the workshop', (status) => {
+    for (const workshop of [0, 1]) {
+      const game = home()
+      game.world.workshop = workshop
+      if (workshop === 0) intoField(game)
+      game.world.status = status
+      const before = JSON.stringify(game)
+      expect(craft(game, sword(game), 'balanced', 1)).toEqual({ refusal: 'Nothing can be crafted here now.' })
+      expect(JSON.stringify(game)).toBe(before)
+    }
+  })
+
+  it('is refused, changing nothing, without the stock or for a stale place', () => {
+    const poor = home()
+    intoField(poor)
+    poor.world.stock = { gold: 4, iron: 100 }
+    const stale = home()
+    intoField(stale)
+    for (const [game, place, pattern] of [
+      [poor, sword(poor), /more than the stock/],
+      [stale, { ...sword(stale), itemId: 'iron_dagger' }, /no longer there/],
+    ] as const) {
+      const before = JSON.stringify(game)
+      expect(craft(game, place, 'balanced', 1).refusal).toMatch(pattern)
+      expect(JSON.stringify(game)).toBe(before)
+    }
   })
 })
