@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 6 (multiple parties)
 
 **Slug:** long-campaign-stage-06
-**Phase:** implementation (step 04)
+**Phase:** implementation (steps 05, 06)
 
 ## Request (user's words)
 
@@ -59,4 +59,7 @@ Large/structural, but the stage design is the approved design (marked ready for 
 - Step 02 review (opus): clean. Nits: CLAUDE.md abbreviates the 50-campaign hash as ...2765 (full ends ...f52d76) — to step 11; two-party reload in the browser waits for step 03+.
 - Step 03 (b425c77, 3a0e909, opus): home/garrison/meet orders, met event, stop short of another party's nest, partyNoun/blockingParty, SAVE 22; npm test 1385; guard + 50 hash identical. Simulator order type narrowed to idle/travel/camp (step 10 widens).
 - Step 03 review (opus): clean; 2 edge cases fixed anyway (679043e: meet left on unconfronted monsters confronts; meet with no route ends idle); re-review clean; npm test 1387. Note to step 07: travel to a nest another party holds is accepted then stops short next day — refuse or warn up front.
+- Step 04 (a36f444, b315625, sonnet): hall levels 4–5 (C4), formParty/renameParty/disband/moveHero, recruits at the hall's level, encampment acts for homeParty, SIM_HALL_CAP 3; npm test 1407; encampment e2e 12/12 (recruit-level expectation 1→2, the intended rule); 50-campaign hash unchanged (recruit rule moves nothing in 50).
+- Step 04 review (opus): clean; hash verified. Nits fixed in 9b0d30b (manual recruit sentence, CLAUDE.md SIM_HALL_CAP, noPartyHome shared); accepted without re-review (docs + a moved helper). To step 07: drop encampmentView DRAWN_LEVELS cap once step 06's frames exist.
+- Steps 05 (main tree) and 06 (worktree) run in parallel; 06 touches only art/ and sprites.
 
