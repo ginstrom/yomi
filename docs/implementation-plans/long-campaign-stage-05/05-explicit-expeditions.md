@@ -46,7 +46,7 @@ Play is unchanged, and the refactor guard is identical.
 
     The summary must equal step 01's recorded output line for line, and the hash must equal step 01's. Record "guard identical" (or the diff) in the execution record.
 - **Determinism.** No draw of the world or battle RNG is added, dropped or reordered. No order or arithmetic of the blight's sums or of a day's events changes.
-- **Commits.** One commit on `long-campaign-stage-05`, once `npm test` passes and the guard holds. Don't push, and never switch branches. The message is "Stage 5 step 05: explicit expeditions", ending with the repo's `Co-Authored-By` attribution line.
+- **Commits.** One commit on `long-campaign-stage-05`, once `npm test` passes and the guard holds. Don't push, and never switch branches. The message is "Stage 5 step 05: explicit expeditions", with no attribution lines.
 - **Docs.** CLAUDE.md must stay current. Search it for every name this step renames or removes (`leader`, `takeLoot`, `deployedParties`, `ItemPlace`, `allPlaces`, `DebugSource`, …) and fix those lines.
 
 ## 3. Dependencies and prerequisites

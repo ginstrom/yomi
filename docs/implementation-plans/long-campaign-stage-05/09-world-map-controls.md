@@ -50,7 +50,7 @@ A click on a hex works exactly as before. The game is otherwise unchanged, and t
 
       The summary must equal, line for line, the one in step 01's execution record, and the hash must equal step 01's. This step changes no domain rule, so any difference is a bug in it.
   - **Determinism.** No change to a world or battle RNG draw, or to the order of a day's events.
-  - **Commits.** One commit, once `npm test` passes and the guard holds, on `long-campaign-stage-05`, without pushing. Never switch branches. Message: `Stage 5 step 09: the world map's time controls`, ending with the repo's `Co-Authored-By` attribution line.
+  - **Commits.** One commit, once `npm test` passes and the guard holds, on `long-campaign-stage-05`, without pushing. Never switch branches. Message: `Stage 5 step 09: the world map's time controls`, with no attribution lines.
   - **Docs.** Keep CLAUDE.md current for what this step changes (see §4.6). The manual's text and screenshots are step 10's.
 
 ## 3. Dependencies and prerequisites

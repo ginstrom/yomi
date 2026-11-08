@@ -51,3 +51,5 @@ None yet.
 - Step 02 review (opus): clean; pinned numbers reproduced on the pre-change tree; nits (redundant assertion in blight.test, `_world` on isNotable) passed to step 04.
 - Step 03 (d343bdf, sonnet): Expedition/Order types, GameState.parties, leader(), partyById; SAVE 19 with migrateFrom18 and v18 fixture; CLAUDE.md save rule rewritten; guard + 50-campaign hash identical; npm test 1224; browser: encampment.test raw-save paths fixed and that file rerun 11/11 (full suite not rerun).
 - Step 03 review (opus): clean; fixture reproduced from the pre-change tree; full browser 89/89; nits (double import in itemPlace.ts, temporary story↔gameState cycle until leader goes) to step 04/05.
+- Step 04 (5f0e851, a199d5a, opus): Expedition gets position and confronting; presences(); C4 signatures (+raiseShrine, hexInfo); SAVE 20 migrating from 18; probe partyAt/confronting; guard + hash identical; npm test 1230; browser 89/89 (one saves.test fix). `_world` on isNotable kept (plan contract) — orchestrator: leave to stage 6.
+- Orchestrator removed the plan's Co-Authored-By instruction from the remaining task files (session rule).

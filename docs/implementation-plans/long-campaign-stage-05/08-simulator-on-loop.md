@@ -130,7 +130,7 @@ export interface Expedition { id: string; name: string; members: Party; baggage:
 
     The printed summary must equal step 01's line for line (its execution record), and the hash must equal step 01's. Use exactly this `--out` path, since the first line prints it. `logs/` is gitignored, so never commit a log. Never run two `make simulate` at once.
 - **Determinism.** No world or battle RNG draw is added, dropped or reordered. Battle seeds stay `(seed + battles.length) >>> 0`. The meta of `battle_start` (`campaign`, `location`, `encounter`, `threat`, `day`, `partyLevels`) is unchanged, and `LOG_SCHEMA_VERSION` stays 23.
-- **Commit:** one commit on `long-campaign-stage-05`, without pushing, never switching branches, titled `Stage 5 step 08: the simulator on the day loop`. The message ends with the repo's `Co-Authored-By` attribution line.
+- **Commit:** one commit on `long-campaign-stage-05`, without pushing, never switching branches, titled `Stage 5 step 08: the simulator on the day loop`. No attribution lines in the message.
 - **Parallel work:** step 09 (the scenes) may run alongside this step. Do not change `company.ts`'s contract. If you must, say so in the record and coordinate; whichever step commits second rebases on the other.
 
 ## 3. Dependencies and prerequisites

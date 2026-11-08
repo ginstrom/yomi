@@ -131,7 +131,7 @@ From C6, the parts this step implements:
   - `npx vitest run <file>` for one file;
   - `npm run test:browser -- -t <name>` after a scene change (read `e2e/CLAUDE.md` first);
   - give each simulator run its own `--out` under `logs/`, and never run two `make simulate` at once.
-- **Commits.** One commit for this step, once `npm test` passes and the guard holds, on `long-campaign-stage-05`, without pushing. Never switch branches. The message is "Stage 5 step 07: day actions as orders", ending with the repo's `Co-Authored-By` attribution line. This is one of step B's commits.
+- **Commits.** One commit for this step, once `npm test` passes and the guard holds, on `long-campaign-stage-05`, without pushing. Never switch branches. The message is "Stage 5 step 07: day actions as orders", with no attribution lines. This is one of step B's commits.
 - **Docs.** CLAUDE.md must stay current. Fix the lines this change makes wrong, and search it for every name you rename or remove.
 
 ## 3. Dependencies and prerequisites

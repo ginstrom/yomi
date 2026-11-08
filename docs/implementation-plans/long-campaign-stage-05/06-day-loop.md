@@ -52,7 +52,7 @@ The `day` order and `act` (scout, wait, camp a day, build, field craft and embed
 
     The summary must equal step 01's record line for line, and the hash must equal step 01's. Record "guard identical" (or the diff) below.
 - **Determinism.** No step adds, drops or reorders a draw of the world RNG or a battle's RNG, or changes the order or arithmetic of the blight's sums or of the events a day returns.
-- **Commits.** One commit, `Stage 5 step 06: the day loop`, once `npm test` passes and the guard holds, on `long-campaign-stage-05`, without pushing. Never switch branches. The message ends with the repo's `Co-Authored-By` attribution line. This is the first commit of the design's step B.
+- **Commits.** One commit, `Stage 5 step 06: the day loop`, once `npm test` passes and the guard holds, on `long-campaign-stage-05`, without pushing. Never switch branches. No attribution lines in the message. This is the first commit of the design's step B.
 - **Docs.** CLAUDE.md stays current (its "Keeping this file current" section): fix the lines this change makes wrong.
 
 ## 3. Dependencies and prerequisites

@@ -40,7 +40,7 @@ Close the stage:
     - `npm run simulate -- <flags>`: give each run its own `--out` under `logs/` (gitignored, never committed). Never run two `make simulate` at once. A 500-campaign run takes about a minute and writes about 70 MB.
   - **The refactor guard.** The test in `scripts/simulate.test.ts` (`describe('the refactor guard')`) is never edited after step 01. A mismatch is a bug in an earlier step: report it, do not tune or re-fixture.
   - **Determinism.** This step changes no rule. If a measurement differs, stop and report it.
-  - **Commits.** One commit on `long-campaign-stage-05`, without pushing. Never switch branches. The message ends with the repo's `Co-Authored-By` attribution line.
+  - **Commits.** One commit on `long-campaign-stage-05`, without pushing. Never switch branches. No attribution lines in the message.
 
 ## 3. Dependencies and prerequisites
 
