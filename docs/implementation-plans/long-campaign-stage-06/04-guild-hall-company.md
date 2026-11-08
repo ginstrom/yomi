@@ -188,3 +188,12 @@ The atlas has `camp_guild_hall/level_1` to `level_3` only. **Decision for this s
 
 ## 7. Execution record
 
+
+Done by the engineer, one commit "Stage 6 step 04: the guild hall's company".
+
+- Built as written (C4). `rested` in `guildHall.ts` is now exported, for `formParty` and `moveHero`; `toReserves`, `toParty` and `swap` are untouched. Extra helper `defaultPartyName(game)` in `company.ts`.
+- `renameParty` is allowed anywhere (the plan's choice). `improveRefusal` now says "No party is at <encampment>." when no party is home (it used to say "The party is not at ..."); the old encampment test's regex was updated to match. `improveFacility` acts for `homeParty(game, party.id)`.
+- Frame cap: `DRAWN_LEVELS = { guild_hall: 3 }` in `src/scenes/encampmentView.ts` (tested). **Step 07 removes it** once step 06 has drawn `level_4` and `level_5`, and changes the test to expect the new frames.
+- Simulator: `SIM_HALL_CAP = 3` in `hallErrand`, `visitGuildHall` and `materialNeeds`; step 10 replaces it with the `--parties` mapping.
+- Evidence: `npm test` 80 files, 1407 tests passed; the refactor guard unedited and green. 50-campaign check (`--campaign --battles 50 --seed 1`): output identical to step 01's apart from the path, hash `068016a82040ec5be673084265005a7218f0ce927629880565c1a27a8cf52d76` (the recruit rule moved nothing in 50 campaigns). Steps 05-08 match this unchanged baseline.
+- The 500-campaign figure was not re-run (step 11).

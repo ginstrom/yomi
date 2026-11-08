@@ -85,7 +85,7 @@ describe('the encampment', () => {
     expect(offer.prerolls.map((p) => p.name)).toEqual(['Garrick'])
     await game.click(offer.prerolls[0])
     const hired = await game.settled('GuildHall', (h) => h.view === 'roster' && h.reserves.length === 1)
-    expect(hired.reserves[0]).toMatchObject({ name: 'Garrick', level: 1 })
+    expect(hired.reserves[0]).toMatchObject({ name: 'Garrick', level: 2 })
 
     // A reserve clicked, then To party, while the party is under its limit.
     await game.click(hired.reserves[0])

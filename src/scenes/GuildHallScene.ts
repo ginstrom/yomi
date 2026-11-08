@@ -207,7 +207,7 @@ export class GuildHallScene extends Phaser.Scene {
     const refusal = recruitRefusal(this.gameState, this.expedition)
     this.frame.add(
       this.add
-        .text(CENTRE_X, 110, `A recruit costs ${describeCost(RECRUIT_COST)} and joins the reserves at level ${recruitLevel(this.gameState, this.expedition)}.\n${refusal ?? 'Choose a pre-rolled hero, or create one.'}`, {
+        .text(CENTRE_X, 110, `A recruit costs ${describeCost(RECRUIT_COST)} and joins the reserves at level ${recruitLevel(this.gameState)}.\n${refusal ?? 'Choose a pre-rolled hero, or create one.'}`, {
           fontFamily: FONT,
           fontSize: '13px',
           color: refusal ? '#ffb74d' : TEXT,

@@ -324,6 +324,9 @@ export interface Campaign {
   record: CampaignRecord
 }
 
+/** The guild hall level the careful company raises the hall to: all that one party uses (step 10 follows `--parties`). */
+export const SIM_HALL_CAP = 3
+
 const lowestLevel = (party: Party) => Math.min(...party.map((member) => member.level))
 
 /**
@@ -333,7 +336,7 @@ const lowestLevel = (party: Party) => Math.min(...party.map((member) => member.l
  */
 export function hallErrand(game: GameState, party: Expedition): boolean {
   const { world } = game
-  const cost = upgradeCost(world)
+  const cost = world.guildHall < SIM_HALL_CAP ? upgradeCost(world) : null
   if (cost && canAfford(world.stock, cost) && world.threatened.length === 0) return true
   return party.members.length < partyLimit(world) && canAfford(world.stock, RECRUIT_COST)
 }
@@ -344,7 +347,7 @@ export function hallErrand(game: GameState, party: Expedition): boolean {
  * name is taken), their points spent by `autoAdvance`. Returns how many it hired.
  */
 export function visitGuildHall(game: GameState, party: Expedition): number {
-  while (upgradeGuildHall(game, party) === null);
+  while (game.world.guildHall < SIM_HALL_CAP && upgradeGuildHall(game, party) === null);
   let hired = 0
   while (party.members.length < partyLimit(game.world) && recruitRefusal(game, party) === null) {
     const taken = company(game).map((member) => member.name)
@@ -466,7 +469,7 @@ export function materialNeeds(game: GameState): Stock {
   const add = (cost: Stock) => {
     for (const [material, amount] of Object.entries(cost)) needs[material as Material] = (needs[material as Material] ?? 0) + (amount ?? 0)
   }
-  GUILD_HALL_LEVELS.slice(world.guildHall).forEach(({ cost }) => add(cost))
+  GUILD_HALL_LEVELS.slice(world.guildHall, SIM_HALL_CAP).forEach(({ cost }) => add(cost))
   SHRINE_COSTS.slice(world.shrine).forEach(add)
   TRADING_POST_COSTS.slice(world.tradingPost).forEach(add)
   WORKSHOP_COSTS.slice(world.workshop).forEach(add)

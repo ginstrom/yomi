@@ -1,14 +1,16 @@
 import { hexDistance, hexEquals, type Hex } from '../grid/hex.ts'
+import type { Character } from '../character/character.ts'
 import type { Item } from '../inventory/inventory.ts'
 import type { WorldEvent } from './blight.ts'
 import { canBuildOutpost, canBuildTower, outpostSite, raiseOutpost, raiseTower } from './buildings.ts'
 import { canCamp, partyWounded, rest } from './camp.ts'
 import { applyCraft, craftRefusal, craftTier } from './crafting.ts'
-import { presences, type DayAction, type Expedition, type Order, type PartyPresence } from './expedition.ts'
+import { MAX_PARTIES, PARTY_NAMES, newExpedition, partyId, presences, type DayAction, type Expedition, type Order, type PartyPresence } from './expedition.ts'
 import { partyById, type GameState } from './gameState.ts'
+import { MAX_RESERVES, homeParties, maxParties, partyLimit, rested } from './guildHall.ts'
 import { autoHeal } from './party.ts'
 import { applyEmbed, embedRefusal } from './runecraft.ts'
-import { NOTICE_RADIUS, encampment, isNotable, locationAt, monstersHere, passTurn, routeTo, theName, worldActive, type WorldState } from './worldMap.ts'
+import { NOTICE_RADIUS, encampment, encampmentName, isNotable, locationAt, monstersHere, passTurn, routeTo, theName, worldActive, type WorldState } from './worldMap.ts'
 
 /**
  * The company's one clock. Every day passes through `passDay`: each party
@@ -469,4 +471,127 @@ export function advance(game: GameState, limit: number = UNTIL_LIMIT): DayReport
     if (report.interrupt || !worldActive(game.world)) break
   }
   return reports
+}
+
+// The guild hall's company: forming, renaming and disbanding parties and moving
+// heroes between them and the reserves. Each needs the parties it touches at
+// home, checks everything first and changes nothing when it refuses.
+
+/** A hero of a party, or of the reserves, by its place in the list. */
+export type HeroRef = { from: 'party'; party: string; index: number } | { from: 'reserves'; index: number }
+
+const MAX_NAME_LENGTH = 16
+
+/** The default name of the next party formed: the one for the lowest free number. */
+export function defaultPartyName(game: GameState): string {
+  return PARTY_NAMES[lowestFreeNumber(game) - 1]
+}
+
+function lowestFreeNumber(game: GameState): number {
+  for (let n = 1; n <= MAX_PARTIES; n++) if (!game.parties.some((p) => p.id === partyId(n))) return n
+  return MAX_PARTIES + 1
+}
+
+/** Why `name` cannot name a party (other than `except`), or null when it can. */
+function nameRefusal(game: GameState, name: string, except?: string): string | null {
+  const trimmed = name.trim()
+  if (trimmed.length === 0) return 'A party needs a name.'
+  if (trimmed.length > MAX_NAME_LENGTH) return `A party's name is at most ${MAX_NAME_LENGTH} letters.`
+  if (game.parties.some((p) => p.id !== except && p.name.toLowerCase() === trimmed.toLowerCase())) return `${trimmed} is already a party's name.`
+  return null
+}
+
+const noPartyHome = (game: GameState): string => `No party is at ${encampmentName(game.world)}.`
+
+interface Located {
+  hero: Character
+  /** The list it stands in, and so the party it leaves (null for the reserves). */
+  list: Character[]
+  party: Expedition | null
+}
+
+/** Where `ref` stands, or why it cannot be reached: a party must be at home, the reserves always are. */
+function locate(game: GameState, ref: HeroRef): string | Located {
+  let list: Character[]
+  let party: Expedition | null = null
+  if (ref.from === 'reserves') list = game.reserves
+  else {
+    party = partyById(game, ref.party) ?? null
+    if (!party) return `No party "${ref.party}".`
+    if (!homeParties(game).includes(party)) return `${partyNoun(game, party)} is not at ${encampmentName(game.world)}.`
+    list = party.members
+  }
+  const hero = list[ref.index]
+  if (!hero) return 'There is no such hero.'
+  return { hero, list, party }
+}
+
+/** Why a hero cannot leave its party: the party is never left empty. */
+const leavingRefusal = (game: GameState, from: Located): string | null =>
+  from.party && from.party.members.length <= 1 ? `${partyNoun(game, from.party)} cannot be left empty.` : null
+
+/**
+ * Forms a party named `name` from `hero`, standing at the encampment, idle,
+ * with no baggage, under the lowest free id. Returns it, or why not.
+ */
+export function formParty(game: GameState, name: string, hero: HeroRef): string | Expedition {
+  if (homeParties(game).length === 0) return noPartyHome(game)
+  const { world } = game
+  if (game.parties.length >= maxParties(world)) return `The guild hall's level ${world.guildHall} allows ${maxParties(world)} ${maxParties(world) === 1 ? 'party' : 'parties'}.`
+  const from = locate(game, hero)
+  if (typeof from === 'string') return from
+  const refusal = leavingRefusal(game, from) ?? nameRefusal(game, name)
+  if (refusal) return refusal
+  const [member] = from.list.splice(hero.index, 1)
+  const party = newExpedition([from.party ? member : rested(member)], { ...encampment(world).position }, partyId(lowestFreeNumber(game)), name.trim())
+  game.parties.push(party)
+  return party
+}
+
+/** Renames party `id`; allowed wherever the party is, as a name is not a hall action. */
+export function renameParty(game: GameState, id: string, name: string): string | null {
+  const party = partyById(game, id)
+  if (!party) return `No party "${id}".`
+  const refusal = nameRefusal(game, name, id)
+  if (refusal) return refusal
+  party.name = name.trim()
+  return null
+}
+
+/** Disbands party `id`: its members go to the reserves, its baggage to the first other party at home. Never the last party. */
+export function disband(game: GameState, id: string): string | null {
+  const party = partyById(game, id)
+  if (!party) return `No party "${id}".`
+  const home = homeParties(game)
+  if (!home.includes(party)) return `${partyNoun(game, party)} is not at ${encampmentName(game.world)}.`
+  if (game.parties.length <= 1) return 'The last party cannot be disbanded.'
+  const heir = home.find((p) => p !== party)
+  if (!heir) return 'Its baggage needs another party at home to take it.'
+  if (game.reserves.length + party.members.length > MAX_RESERVES) return `The guild hall keeps no more than ${MAX_RESERVES} heroes in reserve.`
+  game.reserves.push(...party.members)
+  heir.baggage.push(...party.baggage)
+  game.parties.splice(game.parties.indexOf(party), 1)
+  return null
+}
+
+/** Moves `hero` to the end of party `to.party`, or to the reserves. Both ends must be at home. */
+export function moveHero(game: GameState, hero: HeroRef, to: { party: string } | 'reserves'): string | null {
+  const from = locate(game, hero)
+  if (typeof from === 'string') return from
+  let target: Expedition | null = null
+  if (to !== 'reserves') {
+    target = partyById(game, to.party) ?? null
+    if (!target) return `No party "${to.party}".`
+    if (!homeParties(game).includes(target)) return `${partyNoun(game, target)} is not at ${encampmentName(game.world)}.`
+  }
+  if (from.party === target) return 'The hero is already there.'
+  const refusal = leavingRefusal(game, from)
+  if (refusal) return refusal
+  if (target) {
+    if (target.members.length >= partyLimit(game.world)) return `${partyNoun(game, target)} is full: the guild hall's level ${game.world.guildHall} allows ${partyLimit(game.world)}.`
+  } else if (game.reserves.length >= MAX_RESERVES) return `The guild hall keeps no more than ${MAX_RESERVES} heroes in reserve.`
+  const [member] = from.list.splice(hero.index, 1)
+  if (target) target.members.push(from.party ? member : rested(member))
+  else game.reserves.push(member)
+  return null
 }

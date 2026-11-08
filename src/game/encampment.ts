@@ -1,8 +1,8 @@
 import { SHRINE_STRENGTH } from './blight.ts'
-import { MAX_SHRINE_LEVEL, atEncampment, canAfford, describeCost, raiseShrine, shrineCost } from './buildings.ts'
+import { MAX_SHRINE_LEVEL, canAfford, describeCost, raiseShrine, shrineCost } from './buildings.ts'
 import type { Expedition } from './expedition.ts'
 import type { GameState } from './gameState.ts'
-import { GUILD_HALL_LEVELS, MAX_GUILD_HALL_LEVEL, upgradeCost, upgradeGuildHall } from './guildHall.ts'
+import { GUILD_HALL_LEVELS, MAX_GUILD_HALL_LEVEL, homeParty, upgradeCost, upgradeGuildHall } from './guildHall.ts'
 import { MAX_WORKSHOP_LEVEL, upgradeWorkshop, workshopCost } from './crafting.ts'
 import { MAX_INFIRMARY_LEVEL, infirmaryCost, infirmaryEffect, raiseInfirmary } from './infirmary.ts'
 import type { Stock } from './territory.ts'
@@ -66,7 +66,10 @@ const FACILITIES: readonly Facility[] = [
     maxLevel: MAX_GUILD_HALL_LEVEL,
     level: (game) => game.world.guildHall,
     about: () => 'Heroes gather here: the reserves wait, recruits are hired, and the party is chosen.',
-    effect: (_, level) => `A party of up to ${GUILD_HALL_LEVELS[level - 1].partyLimit}; recruits join at up to level ${level}.`,
+    effect: (_, level) => {
+      const { partyLimit, parties } = GUILD_HALL_LEVELS[level - 1]
+      return `A party of up to ${partyLimit}${parties > 1 ? `, ${parties} parties in the company` : ''}; recruits join at level ${level}.`
+    },
     cost: (game) => upgradeCost(game.world),
     improve: upgradeGuildHall,
     opens: true,
@@ -153,7 +156,9 @@ export function facilities(game: GameState, party: Expedition): FacilityView[] {
 export function improveFacility(game: GameState, party: Expedition, id: FacilityId): string | null {
   const facility = FACILITIES.find((f) => f.id === id)
   if (!facility) return 'There is no such facility.'
-  return facility.improve(game, party)
+  const acting = homeParty(game, party.id)
+  if (!acting) return noPartyHome(game)
+  return facility.improve(game, acting)
 }
 
 /** Sets a facility's level outright, for the debug console; the caller keeps it within the facility's levels. */
@@ -162,8 +167,11 @@ export function setFacilityLevel(game: GameState, id: FacilityId, level: number)
   game.world[field[id]] = level
 }
 
+const noPartyHome = (game: GameState): string => `No party is at ${encampmentName(game.world)}.`
+
+/** The encampment acts for the party at home (`homeParty`): `party` if it is, else the first that is. */
 function improveRefusal(game: GameState, party: Expedition, cost: Stock | null): string | null {
-  if (!atEncampment(game.world, party)) return `The party is not at ${encampmentName(game.world)}.`
+  if (!homeParty(game, party.id)) return noPartyHome(game)
   if (cost && !canAfford(game.world.stock, cost)) return `It costs ${describeCost(cost)}, more than the stock holds.`
   return null
 }

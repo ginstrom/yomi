@@ -10,6 +10,12 @@ describe('the encampment screen', () => {
     expect(facilityFrame({ id: 'guild_hall', level: 1 })).toBe('camp_guild_hall/level_1')
   })
 
+  it('draws the guild hall at level 3 until the barracks are drawn', () => {
+    expect(facilityFrame({ id: 'guild_hall', level: 4 })).toBe('camp_guild_hall/level_3')
+    expect(facilityFrame({ id: 'guild_hall', level: 5 })).toBe('camp_guild_hall/level_3')
+    expect(facilityFrame({ id: 'shrine', level: 3 })).toBe('camp_shrine/level_3')
+  })
+
   it('labels each by its name and level', () => {
     expect(facilityLabel({ name: 'Shrine', level: 0, maxLevel: 3 })).toBe('Shrine: empty plot')
     expect(facilityLabel({ name: 'Guild Hall', level: 2, maxLevel: 3 })).toBe('Guild Hall 2/3')

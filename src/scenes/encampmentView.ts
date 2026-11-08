@@ -21,9 +21,13 @@ export const FACILITY_SPRITES: Record<FacilityId, string> = {
 /** Where a facility not yet built is drawn: its plot, staked out. */
 export const EMPTY_PLOT = 'camp_plot'
 
+/** The highest level the atlas draws of a facility, where it has fewer frames than levels (the guild hall's 4 and 5 wait for their sprites). */
+const DRAWN_LEVELS: Partial<Record<FacilityId, number>> = { guild_hall: 3 }
+
 /** The atlas frame that shows `facility` as it stands. */
 export function facilityFrame(facility: Pick<FacilityView, 'id' | 'level'>): string {
-  return facility.level > 0 ? spriteFrame(FACILITY_SPRITES[facility.id], `level_${facility.level}`) : spriteFrame(EMPTY_PLOT, 'base')
+  const drawn = Math.min(facility.level, DRAWN_LEVELS[facility.id] ?? facility.level)
+  return facility.level > 0 ? spriteFrame(FACILITY_SPRITES[facility.id], `level_${drawn}`) : spriteFrame(EMPTY_PLOT, 'base')
 }
 
 /**

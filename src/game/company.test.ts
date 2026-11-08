@@ -4,8 +4,9 @@ import { hexDistance, hexEquals, offsetToHex, type Hex } from '../grid/hex.ts'
 import { itemById } from '../inventory/inventory.ts'
 import { boardIndex } from './blight.ts'
 import { campUntilHealed, partyWounded } from './camp.ts'
-import { UNTIL_LIMIT, act, advance, advanceRefusal, blockingParty, orderAction, partyNoun, passDay, setOrder, startTravel, worldInterrupt, type DayReport } from './company.ts'
-import { PARTY_NAMES, newExpedition, partyId, presences, type DayAction } from './expedition.ts'
+import { UNTIL_LIMIT, act, defaultPartyName, disband, formParty, moveHero, renameParty, advance, advanceRefusal, blockingParty, orderAction, partyNoun, passDay, setOrder, startTravel, worldInterrupt, type DayReport } from './company.ts'
+import { PARTY_NAMES, newExpedition, type Expedition, partyId, presences, type DayAction } from './expedition.ts'
+import { MAX_RESERVES } from './guildHall.ts'
 import { newGame, type GameState } from './gameState.ts'
 import type { ItemPlace } from './itemPlace.ts'
 import { readyMadeParty } from './party.ts'
@@ -876,5 +877,165 @@ describe('a meet cut short', () => {
     expect(report.partyEvents).toEqual([{ type: 'order_done', party: party.id }])
     expect(party.position).toEqual(before)
     expect(party.order).toEqual({ kind: 'idle' })
+  })
+})
+
+describe('the guild hall’s company', () => {
+  /** A hall of level 4 with a reserve and the ready-made three at home. */
+  function hall(level = 4) {
+    const { game, world, party } = fresh()
+    world.guildHall = level
+    game.reserves.push(structuredClone(party.members[0]))
+    game.reserves[0].name = 'Reserve'
+    game.reserves[0].hp = 1
+    return { game, world, party }
+  }
+
+  /** Runs `act`, which must refuse, and checks that it changed nothing. */
+  function refuses(game: GameState, act: () => string | null | object): string {
+    const before = structuredClone(game)
+    const result = act()
+    expect(typeof result).toBe('string')
+    expect(game).toEqual(before)
+    return result as string
+  }
+
+  describe('formParty', () => {
+    it('makes a party from a reserve, resting it, at the encampment, idle and with no baggage', () => {
+      const { game, world } = hall()
+      const made = formParty(game, defaultPartyName(game), { from: 'reserves', index: 0 })
+      expect(typeof made).not.toBe('string')
+      const second = made as Expedition
+      expect([second.id, second.name]).toEqual(['party_2', 'Second Company'])
+      expect(second.position).toEqual(encampment(world).position)
+      expect(second.order).toEqual({ kind: 'idle' })
+      expect(second.baggage).toEqual([])
+      expect(second.members.map((m) => m.name)).toEqual(['Reserve'])
+      expect(second.members[0].hp).toBe(maxHp(second.members[0]))
+      expect(game.reserves).toEqual([])
+      expect(game.parties).toHaveLength(2)
+    })
+
+    it('makes a party from a home party’s member', () => {
+      const { game, party } = hall()
+      const made = formParty(game, '  Scouts ', { from: 'party', party: party.id, index: 1 }) as Expedition
+      expect(made.name).toBe('Scouts')
+      expect(made.members.map((m) => m.name)).toEqual(['Brenna'])
+      expect(party.members.map((m) => m.name)).toEqual(['Aldric', 'Delwyn'])
+    })
+
+    it('reuses the lowest free id after a disband', () => {
+      const { game, party } = hall(5)
+      formParty(game, 'B', { from: 'party', party: party.id, index: 1 })
+      formParty(game, 'C', { from: 'party', party: party.id, index: 1 })
+      expect(game.parties.map((p) => p.id)).toEqual(['party_1', 'party_2', 'party_3'])
+      expect(disband(game, 'party_2')).toBeNull()
+      expect(defaultPartyName(game)).toBe('Second Company')
+      expect((formParty(game, 'D', { from: 'reserves', index: 0 }) as Expedition).id).toBe('party_2')
+    })
+
+    it('is refused over the hall’s parties, away from home, leaving a party empty, for a bad name or an unknown hero', () => {
+      const { game, party } = hall(3)
+      expect(refuses(game, () => formParty(game, 'Two', { from: 'reserves', index: 0 }))).toMatch(/level 3 allows 1 party/)
+      game.world.guildHall = 4
+      expect(refuses(game, () => formParty(game, 'Two', { from: 'reserves', index: 5 }))).toMatch(/no such hero/)
+      expect(refuses(game, () => formParty(game, 'Two', { from: 'party', party: 'party_9', index: 0 }))).toMatch(/party_9/)
+      expect(refuses(game, () => formParty(game, '   ', { from: 'reserves', index: 0 }))).toMatch(/needs a name/)
+      expect(refuses(game, () => formParty(game, 'x'.repeat(17), { from: 'reserves', index: 0 }))).toMatch(/at most 16/)
+      expect(refuses(game, () => formParty(game, 'first company', { from: 'reserves', index: 0 }))).toMatch(/already/)
+      party.members.length = 1
+      expect(refuses(game, () => formParty(game, 'Two', { from: 'party', party: party.id, index: 0 }))).toMatch(/cannot be left empty/)
+      party.position = offsetToHex(11, 19)
+      expect(refuses(game, () => formParty(game, 'Two', { from: 'reserves', index: 0 }))).toMatch(/No party is at/)
+    })
+
+    it('is refused for a third party at level 4, and a member of an away party', () => {
+      const { game, party } = hall(4)
+      formParty(game, 'B', { from: 'reserves', index: 0 })
+      expect(refuses(game, () => formParty(game, 'C', { from: 'party', party: party.id, index: 0 }))).toMatch(/allows 2 parties/)
+      game.world.guildHall = 5
+      game.parties[1].position = offsetToHex(11, 19)
+      expect(refuses(game, () => formParty(game, 'C', { from: 'party', party: 'party_2', index: 0 }))).toMatch(/not at/)
+    })
+  })
+
+  describe('renameParty', () => {
+    it('renames, trimmed, anywhere, and allows the party’s own name in another case', () => {
+      const { game, party } = hall()
+      party.position = offsetToHex(11, 19)
+      expect(renameParty(game, party.id, ' Vanguard ')).toBeNull()
+      expect(party.name).toBe('Vanguard')
+      expect(renameParty(game, party.id, 'VANGUARD')).toBeNull()
+      expect(party.name).toBe('VANGUARD')
+    })
+
+    it('refuses an empty, long or duplicate name and an unknown party', () => {
+      const { game, party } = hall()
+      formParty(game, 'Scouts', { from: 'reserves', index: 0 })
+      expect(refuses(game, () => renameParty(game, party.id, ''))).toMatch(/needs a name/)
+      expect(refuses(game, () => renameParty(game, party.id, 'y'.repeat(17)))).toMatch(/at most 16/)
+      expect(refuses(game, () => renameParty(game, party.id, 'scouts'))).toMatch(/already/)
+      expect(refuses(game, () => renameParty(game, 'party_9', 'Z'))).toMatch(/party_9/)
+      expect(renameParty(game, party.id, 'y'.repeat(16))).toBeNull()
+    })
+  })
+
+  describe('disband', () => {
+    it('sends the members to the reserves and the baggage to the first other party at home', () => {
+      const { game, party } = hall()
+      party.baggage.push(itemById('iron_sword')!)
+      const second = formParty(game, 'B', { from: 'party', party: party.id, index: 2 }) as Expedition
+      second.baggage.push(itemById('oak_shield')!)
+      expect(disband(game, second.id)).toBeNull()
+      expect(game.parties.map((p) => p.id)).toEqual(['party_1'])
+      expect(game.reserves.map((m) => m.name)).toEqual(['Reserve', 'Delwyn'])
+      expect(party.baggage.map((i) => i.id)).toEqual(['iron_sword', 'oak_shield'])
+    })
+
+    it('is refused for the last party, away from home, with the reserves full or no other party at home', () => {
+      const { game, party } = hall()
+      expect(refuses(game, () => disband(game, party.id))).toMatch(/last party/)
+      const second = formParty(game, 'B', { from: 'party', party: party.id, index: 2 }) as Expedition
+      expect(refuses(game, () => disband(game, 'party_9'))).toMatch(/party_9/)
+      second.position = offsetToHex(11, 19)
+      expect(refuses(game, () => disband(game, second.id))).toMatch(/not at/)
+      expect(refuses(game, () => disband(game, party.id))).toMatch(/another party at home/)
+      second.position = { ...party.position }
+      while (game.reserves.length < MAX_RESERVES) game.reserves.push(structuredClone(game.reserves[0]))
+      expect(refuses(game, () => disband(game, second.id))).toMatch(/no more than 4/)
+    })
+  })
+
+  describe('moveHero', () => {
+    it('moves a hero between two home parties, to the reserves and out of them, to the target’s end', () => {
+      const { game, party } = hall()
+      const second = formParty(game, 'B', { from: 'party', party: party.id, index: 2 }) as Expedition
+      expect(moveHero(game, { from: 'party', party: party.id, index: 0 }, { party: second.id })).toBeNull()
+      expect(second.members.map((m) => m.name)).toEqual(['Delwyn', 'Aldric'])
+      expect(moveHero(game, { from: 'party', party: second.id, index: 0 }, 'reserves')).toBeNull()
+      expect(game.reserves.map((m) => m.name)).toEqual(['Reserve', 'Delwyn'])
+      expect(moveHero(game, { from: 'reserves', index: 0 }, { party: party.id })).toBeNull()
+      expect(party.members.map((m) => m.name)).toEqual(['Brenna', 'Reserve'])
+      expect(party.members[1].hp).toBe(maxHp(party.members[1]))
+      expect(party.members[1].mana).toBe(maxMana(party.members[1]))
+    })
+
+    it('is refused away from home, over the party limit or the reserves, emptying a party, or to where it is', () => {
+      const { game, party } = hall()
+      const second = formParty(game, 'B', { from: 'party', party: party.id, index: 2 }) as Expedition
+      const from0 = { from: 'party', party: party.id, index: 0 } as const
+      expect(refuses(game, () => moveHero(game, from0, { party: party.id }))).toMatch(/already there/)
+      expect(refuses(game, () => moveHero(game, { from: 'reserves', index: 0 }, 'reserves'))).toMatch(/already there/)
+      expect(refuses(game, () => moveHero(game, { from: 'party', party: second.id, index: 0 }, { party: party.id }))).toMatch(/cannot be left empty/)
+      expect(refuses(game, () => moveHero(game, from0, { party: 'party_9' }))).toMatch(/party_9/)
+      expect(refuses(game, () => moveHero(game, { from: 'party', party: party.id, index: 7 }, { party: second.id }))).toMatch(/no such hero/)
+      while (game.reserves.length < MAX_RESERVES) game.reserves.push(structuredClone(game.reserves[0]))
+      expect(refuses(game, () => moveHero(game, from0, 'reserves'))).toMatch(/no more than 4/)
+      while (second.members.length < 5) second.members.push(structuredClone(party.members[0]))
+      expect(refuses(game, () => moveHero(game, from0, { party: second.id }))).toMatch(/is full/)
+      second.position = offsetToHex(11, 19)
+      expect(refuses(game, () => moveHero(game, from0, { party: second.id }))).toMatch(/not at/)
+      expect(refuses(game, () => moveHero(game, { from: 'party', party: second.id, index: 0 }, { party: party.id }))).toMatch(/not at/)
+    })
   })
 })

@@ -27,6 +27,7 @@ import {
   MAX_CAMPAIGN_DAYS,
   OUTPOST_ERRAND_RADIUS,
   SOURCE_READY_LEVEL,
+  SIM_HALL_CAP,
   hallErrand,
   nextTarget,
   outpostErrand,
@@ -413,6 +414,31 @@ describe('the guild hall in a campaign', () => {
     expect(hallErrand(game, game.parties[0])).toBe(true)
     expect(visitGuildHall(game, game.parties[0])).toBe(1)
     expect(game.parties[0].members.at(-1)!.name).toBe('Aldric 2')
+  })
+})
+
+describe('the guild hall’s cap in the simulator', () => {
+  it('raises the hall no further than SIM_HALL_CAP, and keeps no stone or silver back for the barracks', () => {
+    const game = newGame(undefined, null, 1)
+    game.world.stock = { gold: 1000, iron: 500, stone: 100, silver: 100 }
+    visitGuildHall(game, game.parties[0])
+    expect(game.world.guildHall).toBe(SIM_HALL_CAP)
+    expect(game.world.stock).toMatchObject({ stone: 100, silver: 100 })
+    expect(hallErrand(game, game.parties[0])).toBe(false)
+    const needs = materialNeeds(game)
+    game.world.stock = {}
+    const unbought = { ...needs }
+    game.world.guildHall = 5
+    // The hall's own levels add nothing to what is kept once the cap is reached.
+    expect(materialNeeds(game)).toEqual(unbought)
+  })
+
+  it('recruits join at the hall’s level', () => {
+    const game = newGame(undefined, null, 1)
+    game.world.stock = { gold: 100, iron: 50 }
+    game.parties[0].members.length = 2
+    visitGuildHall(game, game.parties[0])
+    expect(game.parties[0].members.at(-1)!.level).toBe(3)
   })
 })
 

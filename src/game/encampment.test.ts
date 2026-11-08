@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SHRINE_COSTS } from './buildings.ts'
+import { newExpedition } from './expedition.ts'
 import { facilities, improveFacility, setFacilityLevel } from './encampment.ts'
 import { newGame } from './gameState.ts'
 
@@ -100,7 +101,28 @@ describe('the encampment', () => {
   it('is refused away from home', () => {
     const game = rich()
     game.parties[0].position = { q: game.parties[0].position.q + 1, r: game.parties[0].position.r }
-    expect(view(game, 'shrine').refusal).toMatch(/not at Hearthold/)
+    expect(view(game, 'shrine').refusal).toMatch(/No party is at Hearthold/)
     expect(improveFacility(game, game.parties[0], 'shrine')).toMatch(/at Hearthold/)
+  })
+
+  it('shows the guild hall to level 5 and what each level brings', () => {
+    const game = rich()
+    expect(view(game, 'guild_hall').maxLevel).toBe(5)
+    setFacilityLevel(game, 'guild_hall', 4)
+    expect(view(game, 'guild_hall').effect).toBe('A party of up to 5, 2 parties in the company; recruits join at level 4.')
+    expect(view(game, 'guild_hall').next).toMatch(/3 parties/)
+  })
+
+  it('acts for the party at home when the selected one is away, and refuses with none at home', () => {
+    const game = rich()
+    const away = newExpedition([structuredClone(game.parties[0].members[0])], { q: game.parties[0].position.q + 3, r: game.parties[0].position.r }, 'party_2', 'Second Company')
+    game.parties.push(away)
+    expect(view(game, 'shrine').refusal).toBeNull()
+    expect(improveFacility(game, away, 'shrine')).toBeNull()
+    expect(game.world.shrine).toBe(1)
+    game.parties[0].position = away.position
+    expect(improveFacility(game, away, 'shrine')).toMatch(/No party is at Hearthold/)
+    expect(facilities(game, away).find((f) => f.id === 'shrine')!.refusal).toMatch(/No party is at Hearthold/)
+    expect(game.world.shrine).toBe(1)
   })
 })
