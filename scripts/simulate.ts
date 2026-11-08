@@ -15,7 +15,7 @@
 //                                 [--player-policy aggressive] [--enemy-policy aggressive]
 //                                 [--player-weapon iron_sword]
 //                                 [--encounter goblin_raid] [--threat 1] [--party-level 1]
-//                                 [--campaign] [--ready-level 7] [--parties 1]
+//                                 [--campaign] [--ready-level 7] [--parties 3]
 import { closeSync, mkdirSync, openSync, writeSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { mulberry32, randomSeed } from '../src/combat/rng.ts'
@@ -36,12 +36,15 @@ import {
 } from '../src/game/buildings.ts'
 import { WORKSHOP_COSTS, craft, craftRefusal, craftTier, highestGrade, upgradeWorkshop } from '../src/game/crafting.ts'
 import { MAX_PARTIES, presenceOf, type DayAction, type Expedition } from '../src/game/expedition.ts'
-import { newGame, type GameState } from '../src/game/gameState.ts'
+import { newGame, partyById, type GameState } from '../src/game/gameState.ts'
 import {
   GUILD_HALL_LEVELS,
   RECRUIT_COST,
   atGuildHall,
   company,
+  companyLimit,
+  homeParties,
+  maxParties,
   partyLimit,
   recruit,
   recruitRefusal,
@@ -50,13 +53,26 @@ import {
   upgradeGuildHall,
 } from '../src/game/guildHall.ts'
 import { canCamp, partyWounded } from '../src/game/camp.ts'
-import { advance, orderAction, setOrder, startTravel, wipeParty, type DayReport, type OrderRequest } from '../src/game/company.ts'
+import {
+  advance,
+  defaultPartyName,
+  exchange,
+  formParty,
+  moveHero,
+  orderAction,
+  setOrder,
+  startTravel,
+  wipeParty,
+  type DayReport,
+  type OrderRequest,
+} from '../src/game/company.ts'
 import { INFIRMARY_COSTS, raiseInfirmary } from '../src/game/infirmary.ts'
 import { TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, wares } from '../src/game/tradingPost.ts'
 import { daysToFall, sites, type Material, type Stock } from '../src/game/territory.ts'
 import {
   ENCAMPMENT_ID,
   clearLocation,
+  encampment,
   monstersHere,
   worldActive,
   type MonsterLocation,
@@ -95,7 +111,7 @@ export interface CliArgs {
   readyLevel: number
   /**
    * With `campaign`, how many parties the company may field (1 to `MAX_PARTIES`): a vanguard and the rest
-   * home guards. Until the guard policy comes (stage 6 step 10) no guard is formed, so every value plays as 1.
+   * home guards, formed at the guild hall once its level allows them (`HALL_FOR_PARTIES`).
    */
   parties: number
 }
@@ -140,7 +156,7 @@ export function parseArgs(argv: string[]): CliArgs {
     partyLevel: 1,
     campaign: false,
     readyLevel: SOURCE_READY_LEVEL,
-    parties: 1,
+    parties: MAX_PARTIES,
   }
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i]
@@ -295,7 +311,7 @@ export interface CampaignRecord {
   /** Watchtowers built, and lost to the blight. */
   towersBuilt: number
   towersLost: number
-  /** Heroes who fell in a won battle, gone for good. */
+  /** Heroes who fell in a won battle, gone for good; those of a wiped party are not counted (see `wipes`). */
   deaths: number
   /** Heroes hired at the guild hall, and its level at the end. */
   recruits: number
@@ -319,13 +335,13 @@ export interface CampaignRecord {
   runesFound: number
   runesBought: number
   runesFused: number
-  /** Runes sitting in the party's worn gear at the end. */
+  /** Runes sitting in the company's worn gear at the end, or as the last party fell. */
   socketsFilled: number
   /** Gold spent on runes: buying, fusing, embedding and extracting. */
   goldOnRunes: number
   /** Each member's level when the campaign ended. */
   finalLevels: number[]
-  /** The level of each hero who died, in the order they fell. */
+  /** The level of each hero who died in a won battle, in the order they fell. */
   deathsAtLevel: number[]
   /** For 5, 10, 15 and 20: how many battles had been fought when the party's lowest level first reached it; absent if never. */
   battlesToLevel: Partial<Record<LevelMark, number>>
@@ -353,42 +369,105 @@ export interface Campaign {
   record: CampaignRecord
 }
 
-/** The guild hall level the careful company raises the hall to: all that one party uses (step 10 follows `--parties`). */
-export const SIM_HALL_CAP = 3
+/**
+ * The guild hall level the careful company raises the hall to, by `--parties`:
+ * all that its parties use (level 3 for one party of five, 4 for a second
+ * party, 5 for a third).
+ */
+export const HALL_FOR_PARTIES = [3, 4, 5] as const
+
+/** The hall level a company of at most `parties` parties raises the hall to. */
+export const hallCap = (parties: number): number => HALL_FOR_PARTIES[parties - 1]
+
+/** The fewest heroes a new guard is formed with. */
+export const GUARD_MIN_SIZE = 3
 
 const lowestLevel = (party: Party) => Math.min(...party.map((member) => member.level))
+const meanLevel = (party: Party) => party.reduce((sum, member) => sum + member.level, 0) / party.length
 
-/**
- * Whether the careful party should go home to the guild hall: to raise it,
- * once the stock affords the next level and no held site is under threat, or
- * to fill an empty place in the party when the stock affords a recruit.
- */
-export function hallErrand(game: GameState, party: Expedition): boolean {
+/** How many heroes a new guard could have now: the reserves and the recruits the stock affords and the hall has room for. */
+function heroesForGuard(game: GameState): number {
   const { world } = game
-  const cost = world.guildHall < SIM_HALL_CAP ? upgradeCost(world) : null
-  if (cost && canAfford(world.stock, cost) && world.threatened.length === 0) return true
-  return party.members.length < partyLimit(world) && canAfford(world.stock, RECRUIT_COST)
+  const affordable = Math.floor((world.stock.gold ?? 0) / (RECRUIT_COST.gold ?? 1))
+  return game.reserves.length + Math.max(0, Math.min(affordable, companyLimit(world) - company(game).length))
+}
+
+/** Whether the company should form another party: the hall allows one, it fields fewer than `parties`, and a guard of `GUARD_MIN_SIZE` can be had. */
+function guardWanted(game: GameState, parties: number): boolean {
+  return game.parties.length < Math.min(parties, maxParties(game.world)) && heroesForGuard(game) >= GUARD_MIN_SIZE
 }
 
 /**
- * At the guild hall: raises it as far as the stock allows, then fills the
- * party's empty places with recruits, the pre-rolls in turn (renamed when the
- * name is taken), their points spent by `autoAdvance`. Returns how many it hired.
+ * Whether the careful party should go home to the guild hall: to raise it,
+ * once the stock affords the next level up to `hallCap(parties)` and no held
+ * site is under threat; to form a guard the hall allows and the company can
+ * man; or to fill an empty place in the party when the stock affords a recruit,
+ * unless `guarded` (the vanguard of a company with a guard, whose places the
+ * guard fills by promotion).
  */
-export function visitGuildHall(game: GameState, party: Expedition): number {
-  while (game.world.guildHall < SIM_HALL_CAP && upgradeGuildHall(game, party) === null);
+export function hallErrand(game: GameState, party: Expedition, parties = 1, guarded = false): boolean {
+  const { world } = game
+  const cost = world.guildHall < hallCap(parties) ? upgradeCost(world) : null
+  if (cost && canAfford(world.stock, cost) && world.threatened.length === 0) return true
+  if (guardWanted(game, parties)) return true
+  return !guarded && party.members.length < partyLimit(world) && canAfford(world.stock, RECRUIT_COST)
+}
+
+/** Hires the next pre-roll into the reserves (renamed when the name is taken), the `at`th in turn, through party `party` at the hall; whether it did. */
+function hire(game: GameState, party: Expedition, at: number): boolean {
+  const taken = company(game).map((member) => member.name)
+  const base = PREROLLS[at % PREROLLS.length].draft
+  let name = base.name
+  for (let n = 2; taken.includes(name); n++) name = `${base.name} ${n}`
+  return recruit(game, party, { ...base, name }) === null
+}
+
+/**
+ * At the guild hall: raises it as far as the stock allows, up to
+ * `hallCap(parties)`, then fills the party's empty places with recruits, the
+ * pre-rolls in turn (renamed when the name is taken), their points spent by
+ * `autoAdvance`. Returns how many it hired.
+ */
+export function visitGuildHall(game: GameState, party: Expedition, parties = 1): number {
+  while (game.world.guildHall < hallCap(parties) && upgradeGuildHall(game, party) === null);
   let hired = 0
   while (party.members.length < partyLimit(game.world) && recruitRefusal(game, party) === null) {
-    const taken = company(game).map((member) => member.name)
-    const base = PREROLLS[(party.members.length + game.reserves.length) % PREROLLS.length].draft
-    let name = base.name
-    for (let n = 2; taken.includes(name); n++) name = `${base.name} ${n}`
-    if (recruit(game, party, { ...base, name }) !== null) break
+    if (!hire(game, party, party.members.length + game.reserves.length)) break
     toParty(game, party, game.reserves.length - 1)
     autoAdvance(party.members.at(-1)!)
     hired++
   }
   return hired
+}
+
+/**
+ * At the guild hall, after `visitGuildHall`: forms a guard when the hall
+ * allows another party, the company fields fewer than `parties` and at least
+ * `GUARD_MIN_SIZE` heroes can be had: from the reserves first, then recruits
+ * at the hall's level (the pre-rolls in turn), up to the party limit, each
+ * spent by `autoAdvance`. Returns the new party and the recruits it took, or
+ * null when it formed none.
+ */
+export function formGuard(game: GameState, parties: number): { party: Expedition; hired: number } | null {
+  const { world } = game
+  const at = homeParties(game)[0]
+  if (!at || !guardWanted(game, parties)) return null
+  let hired = 0
+  const more = () => {
+    if (!hire(game, at, company(game).length)) return false
+    hired++
+    return true
+  }
+  if (game.reserves.length === 0 && !more()) return null
+  const formed = formParty(game, defaultPartyName(game), { from: 'reserves', index: 0 })
+  if (typeof formed === 'string') throw new Error(`The guard could not be formed: ${formed}`)
+  autoAdvance(formed.members[0])
+  while (formed.members.length < partyLimit(world)) {
+    if (game.reserves.length === 0 && !more()) break
+    if (moveHero(game, { from: 'reserves', index: 0 }, { party: formed.id }) !== null) break
+    autoAdvance(formed.members.at(-1)!)
+  }
+  return { party: formed, hired }
 }
 
 /** What a home visit or a field craft traded and made, for the campaign's record. */
@@ -492,13 +571,13 @@ export function fieldCraft(game: GameState, party: Expedition): Extract<DayActio
 }
 
 /** What the stock should keep of each material for what the careful party still means to buy: every level left of every building, and a craft for each place in the party. */
-export function materialNeeds(game: GameState): Stock {
+export function materialNeeds(game: GameState, parties = 1): Stock {
   const { world } = game
   const needs: Stock = {}
   const add = (cost: Stock) => {
     for (const [material, amount] of Object.entries(cost)) needs[material as Material] = (needs[material as Material] ?? 0) + (amount ?? 0)
   }
-  GUILD_HALL_LEVELS.slice(world.guildHall, SIM_HALL_CAP).forEach(({ cost }) => add(cost))
+  GUILD_HALL_LEVELS.slice(world.guildHall, hallCap(parties)).forEach(({ cost }) => add(cost))
   SHRINE_COSTS.slice(world.shrine).forEach(add)
   TRADING_POST_COSTS.slice(world.tradingPost).forEach(add)
   WORKSHOP_COSTS.slice(world.workshop).forEach(add)
@@ -589,7 +668,7 @@ export function runecraftGear(game: GameState, party: Expedition): { embedded: n
  * crafts the best it can on them (`craftGear`); and raises the shrine with
  * what is left.
  */
-export function visitFacilities(game: GameState, party: Expedition): Trade {
+export function visitFacilities(game: GameState, party: Expedition, parties = 1): Trade {
   const { world } = game
   const trade: Trade = {
     goldOnGear: 0, goldFromSales: 0, crafted: 0, tierTwoBought: 0, runesBought: 0, runesFused: 0, runesEmbedded: 0, goldOnRunes: 0,
@@ -602,7 +681,7 @@ export function visitFacilities(game: GameState, party: Expedition): Trade {
     }
   }
   sellAll()
-  const needs = materialNeeds(game)
+  const needs = materialNeeds(game, parties)
   for (const [material, amount] of Object.entries(world.stock) as [Material, number][]) {
     const surplus = amount - (needs[material] ?? 0)
     const lots = surplus - (surplus % 2)
@@ -681,12 +760,15 @@ export function outpostErrand(world: WorldState, party: Expedition): QuietLocati
  * of all if none; and the Source once every member has `readyLevel`
  * (`SOURCE_READY_LEVEL` unless told otherwise) or nothing else is left.
  */
-export function nextTarget(world: WorldState, party: Expedition, readyLevel = SOURCE_READY_LEVEL): MonsterLocation | null {
+export function nextTarget(world: WorldState, party: Expedition, readyLevel = SOURCE_READY_LEVEL, taken: ReadonlySet<string> = new Set()): MonsterLocation | null {
   const members = party.members
   const all = world.locations.filter((l): l is MonsterLocation => l.kind === 'monsters')
   const source = all.find((l) => l.source) ?? null
-  const nests = all.filter((l) => !l.source)
-  if (source && (nests.length === 0 || lowestLevel(members) >= readyLevel)) return source
+  const every = all.filter((l) => !l.source)
+  if (source && (every.length === 0 || lowestLevel(members) >= readyLevel)) return source
+  // The nests a guard is after are left to it, unless they are all that is left.
+  const free = every.filter((l) => !taken.has(l.id))
+  const nests = free.length > 0 ? free : every
   const upTo = nests.filter((l) => l.threat <= Math.max(1, lowestLevel(members)))
   const threatened = sites(world)
     .filter((site) => world.threatened.includes(site.id))
@@ -709,10 +791,19 @@ export function nextTarget(world: WorldState, party: Expedition, readyLevel = SO
  * (`fight`, then `won`), a watchtower (`tower`), the outpost errand
  * (`outpost`, then `build` once there), a field craft (`craft`, then
  * `crafted`), camping until healed (`heal`, casting the party's heals, then
- * `camp`, the camp order), and back to the top (`start`).
+ * `camp`, the camp order), and back to the top (`start`). A guard's round
+ * (`decideGuard`) chooses at `start` and walks in its choice's phase
+ * (`reinforce`, `defend`, `train`, `garrison`, or `return` home, then `idle`
+ * there), sharing the vanguard's from `fight` to `camp`.
  */
 export type Phase =
   | 'start'
+  | 'reinforce'
+  | 'defend'
+  | 'train'
+  | 'garrison'
+  | 'return'
+  | 'idle'
   | 'home'
   | 'hall'
   | 'choose'
@@ -737,11 +828,20 @@ export interface Plan {
   /** Whether the walk's last order got the party nowhere: no way there, or a nest on the road's first hex. */
   stalled: boolean
   /** The order whose days the next `advance` runs for it, if any. */
-  running: 'travel' | 'camp' | 'day' | null
+  running: 'travel' | 'camp' | 'day' | 'meet' | null
+  /** A guard's: the held site it garrisons or walks to garrison. */
+  site: string | null
+  /** A guard's: reinforcing was refused (a meet or an exchange), so it takes its next priority until days pass. */
+  skipReinforce: boolean
+  /** A guard's: it promoted a hero and goes home before anything else. */
+  recall: boolean
+  /** A guard's: the day it last ran the hall's errands, and last waited on monsters, so neither repeats within a day. */
+  hallDay: number
+  waitDay: number
 }
 
 export function newPlan(): Plan {
-  return { phase: 'start', to: null, target: null, stalled: false, running: null }
+  return { phase: 'start', to: null, target: null, stalled: false, running: null, site: null, skipReinforce: false, recall: false, hallDay: -1, waitDay: -1 }
 }
 
 /** What the policy has a party do next. */
@@ -751,8 +851,12 @@ export type Decision =
   | { kind: 'hall' }
   /** Fight the target it confronts. */
   | { kind: 'fight'; target: MonsterLocation }
-  /** A standing order, whose days `advance` runs (none for idle); the policy gives no home, garrison or meet yet. */
-  | { kind: 'order'; order: Extract<OrderRequest, { kind: 'idle' | 'travel' | 'camp' }> }
+  /** A standing order, whose days `advance` runs (none for idle or garrison). */
+  | { kind: 'order'; order: OrderRequest }
+  /** A guard's: its highest-level hero joins the vanguard on its hex (`exchange`). */
+  | { kind: 'promote' }
+  /** A guard's: it stands as it is (idle, or garrisoned) while the days run. */
+  | { kind: 'stand' }
   /** A one-day action. */
   | { kind: 'act'; action: DayAction }
   /** One craft: at a workshop `craftGear` with a limit of 1, at once; in the field the one it would make (`fieldCraft`), a day's act. */
@@ -847,8 +951,16 @@ export function decide(run: CampaignRun, party: Expedition): Decision {
       case 'start': {
         if (world.status === 'lost') return finish('encampment')
         if (world.turn > MAX_CAMPAIGN_DAYS) return finish('timeout')
+        // A guard made the vanguard may come upon the nest it was walking to: that it fights first.
+        const facing = world.locations.find((l): l is MonsterLocation => l.kind === 'monsters' && l.id === party.confronting)
+        if (facing) {
+          plan.target = facing
+          walk(plan, 'target', facing.position)
+          continue
+        }
         const home = world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
-        if (hallErrand(game, party) && !hexEquals(party.position, home)) walk(plan, 'home', home)
+        const guarded = game.parties.some((p) => p !== party && roleOf(run, p) === 'guard')
+        if (hallErrand(game, party, args.parties, guarded) && !hexEquals(party.position, home)) walk(plan, 'home', home)
         else plan.phase = 'hall'
         continue
       }
@@ -865,13 +977,18 @@ export function decide(run: CampaignRun, party: Expedition): Decision {
         if (atGuildHall(world, party)) return { kind: 'hall' }
         continue
       case 'choose': {
-        const next = nextTarget(world, party, args.readyLevel)
+        const next = nextTarget(world, party, args.readyLevel, takenTargets(run, party))
         if (!next) return finish('timeout')
         plan.target = next
         walk(plan, 'target', next.position)
         continue
       }
       case 'target': {
+        // A guard may have beaten it first: the party chooses again.
+        if (plan.target && !world.locations.some((l) => l.id === plan.target!.id)) {
+          plan.phase = 'choose'
+          continue
+        }
         // The journey stops for what happens on the way; the careful party takes note and goes on.
         const walked = walking(world, party, plan)
         if (walked === 'go') return { kind: 'order', order: { kind: 'travel', to: plan.to! } }
@@ -880,6 +997,24 @@ export function decide(run: CampaignRun, party: Expedition): Decision {
         plan.phase = 'fight'
         continue
       }
+      default: {
+        const next = afterBattle(world, party, plan)
+        if (next) return next
+        continue
+      }
+    }
+  }
+}
+
+/**
+ * One step of the round the vanguard and a guard share, from the battle to
+ * camping until healed (`fight` to `camp`): the decision it makes, or null
+ * when the plan moved on with nothing to do (to `start` at its end).
+ */
+function afterBattle(world: WorldState, party: Expedition, plan: Plan): Decision | null {
+  const finish = (outcome: CampaignOutcome): Decision => ({ kind: 'finish', outcome })
+  for (;;) {
+    switch (plan.phase) {
       case 'fight':
         plan.phase = 'won'
         return { kind: 'fight', target: plan.target! }
@@ -921,14 +1056,205 @@ export function decide(run: CampaignRun, party: Expedition): Decision {
           return { kind: 'heal' }
         }
         plan.phase = 'start'
-        continue
+        return null
       case 'camp':
         // Whole after the cast, it camps no day and stands under no order.
         plan.phase = 'heal'
         return { kind: 'order', order: partyWounded(party.members) ? { kind: 'camp' } : { kind: 'idle' } }
+      default:
+        throw new Error(`Not a phase after a battle: ${plan.phase}`)
     }
   }
 }
+
+/** The nests the other parties' plans are after (a cleared one is gone from the map, and so harmless). */
+export function takenTargets(run: CampaignRun, party: Expedition): Set<string> {
+  const taken = new Set<string>()
+  for (const other of run.game.parties) {
+    const target = other === party ? null : run.plans.get(other.id)?.target
+    if (target) taken.add(target.id)
+  }
+  return taken
+}
+
+/** The held sites the other parties garrison or walk to garrison. */
+function takenSites(run: CampaignRun, party: Expedition): Set<string> {
+  const taken = new Set<string>()
+  for (const other of run.game.parties) {
+    const site = other === party ? null : run.plans.get(other.id)?.site
+    if (site) taken.add(site)
+  }
+  return taken
+}
+
+/** What a guard means to do, by its priorities (decision 16). */
+export type GuardChoice =
+  | { kind: 'reinforce' }
+  | { kind: 'defend'; target: MonsterLocation }
+  | { kind: 'train'; target: MonsterLocation }
+  | { kind: 'garrison'; site: QuietLocation }
+  | { kind: 'home' }
+
+/** Whether `guard` can reinforce `vanguard`: the vanguard is under the party limit, and the guard has two heroes or more, one within 3 levels of the vanguard's lowest. */
+export function canReinforce(world: WorldState, guard: Expedition, vanguard: Expedition): boolean {
+  if (vanguard.members.length >= partyLimit(world) || guard.members.length < 2) return false
+  const lowest = lowestLevel(vanguard.members)
+  return guard.members.some((member) => member.level >= lowest - 3)
+}
+
+/** The guard's hero a promotion sends to the vanguard: the highest level, the first on a tie. */
+export function promotedIndex(guard: Expedition): number {
+  return guard.members.reduce((best, member, i) => (member.level > guard.members[best].level ? i : best), 0)
+}
+
+/** Ties go to the lower location id. */
+const byId = (a: { id: string }, b: { id: string }) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+
+/**
+ * A guard's choice, in order (decision 16): reinforce the vanguard, by
+ * meeting it; defend the threatened held site nearest to falling from the
+ * nest pushing hardest on it; train on the nearest nest; garrison the
+ * threatened held resource site with the fewest days to fall; else go home.
+ * Only nests of a threat no higher than the guard's lowest level (at least 1),
+ * never the Source, and none another party's plan is after; no site another
+ * guard garrisons. Back home first after a promotion.
+ */
+export function guardChoice(run: CampaignRun, party: Expedition): GuardChoice {
+  const { world } = run.game
+  const plan = planOf(run, party)
+  if (plan.recall) return { kind: 'home' }
+  const vanguard = partyById(run.game, run.vanguard)
+  if (!plan.skipReinforce && vanguard && vanguard !== party && canReinforce(world, party, vanguard)) return { kind: 'reinforce' }
+  const level = Math.max(1, lowestLevel(party.members))
+  const taken = takenTargets(run, party)
+  const nests = world.locations
+    .filter((l): l is MonsterLocation => l.kind === 'monsters' && !l.source && l.threat <= level && !taken.has(l.id))
+    .sort(byId)
+  const threatened = sites(world)
+    .filter((site) => world.threatened.includes(site.id) && world.held.includes(site.id))
+    .map((site) => ({ site, days: daysToFall(world, [presenceOf(party)], site) ?? Infinity }))
+    .sort((a, b) => a.days - b.days || byId(a.site, b.site))
+  for (const { site } of threatened) {
+    const push = (l: MonsterLocation) => monsterStrength(l) - hexDistance(l.position, site.position)
+    const pushing = nests.filter((l) => push(l) > 0)
+    if (pushing.length > 0) return { kind: 'defend', target: pushing.reduce((a, b) => (push(b) > push(a) ? b : a)) }
+  }
+  if (nests.length > 0) {
+    const distance = (l: MonsterLocation) => hexDistance(party.position, l.position)
+    return { kind: 'train', target: nests.reduce((a, b) => (distance(b) < distance(a) ? b : a)) }
+  }
+  const held = takenSites(run, party)
+  const garrison = threatened.find(({ site }) => site.kind !== 'encampment' && !held.has(site.id))
+  if (garrison) return { kind: 'garrison', site: garrison.site }
+  return { kind: 'home' }
+}
+
+/**
+ * A guard's policy (decision 16), over the same plan and decisions as the
+ * vanguard's: asked whenever it is idle, garrisoned, or its order was cut
+ * short, it answers monsters it confronts (fights a nest it is up to and no
+ * one else is after, else waits a day), then makes its choice afresh
+ * (`guardChoice`) and goes on with it: meets the vanguard and promotes a hero
+ * on its hex; walks to a nest and fights it, then the vanguard's round after
+ * a battle; walks to a site and garrisons it; or goes home, where it runs the
+ * hall's errands on arrival and whenever there is a hall errand, and stands
+ * idle. A walk that gets nowhere stands for the days, to choose again.
+ */
+export function decideGuard(run: CampaignRun, party: Expedition): Decision {
+  const { game, args } = run
+  const { world } = game
+  const plan = planOf(run, party)
+  const stand = (): Decision => {
+    plan.phase = 'start'
+    plan.target = null
+    plan.site = null
+    return { kind: 'stand' }
+  }
+  for (;;) {
+    if (AFTER_BATTLE.has(plan.phase)) {
+      const next = afterBattle(world, party, plan)
+      if (next) return next
+      continue
+    }
+    if (world.status === 'lost') return { kind: 'finish', outcome: 'encampment' }
+    if (!worldActive(world)) return { kind: 'finish', outcome: 'source' }
+    if (world.turn > MAX_CAMPAIGN_DAYS) return { kind: 'finish', outcome: 'timeout' }
+    if (party.confronting !== null) {
+      const here = world.locations.find((l): l is MonsterLocation => l.id === party.confronting && l.kind === 'monsters')
+      const vanguard = partyById(game, run.vanguard)
+      const withVanguard = vanguard && vanguard !== party && hexEquals(vanguard.position, party.position)
+      if (withVanguard && !plan.skipReinforce && !plan.recall && canReinforce(world, party, vanguard)) return { kind: 'promote' }
+      if (here && !withVanguard && !here.source && here.threat <= Math.max(1, lowestLevel(party.members)) && !takenTargets(run, party).has(here.id)) {
+        plan.target = here
+        plan.site = null
+        plan.phase = 'fight'
+        continue
+      }
+      // Not its to fight: it waits a day, and walks off after.
+      if (plan.waitDay === world.turn) return stand()
+      plan.waitDay = world.turn
+      return { kind: 'act', action: { kind: 'wait' } }
+    }
+    const choice = guardChoice(run, party)
+    switch (choice.kind) {
+      case 'reinforce': {
+        plan.phase = 'reinforce'
+        plan.target = null
+        plan.site = null
+        const vanguard = partyById(game, run.vanguard)!
+        if (hexEquals(vanguard.position, party.position)) return { kind: 'promote' }
+        return { kind: 'order', order: { kind: 'meet', party: vanguard.id } }
+      }
+      case 'defend':
+      case 'train': {
+        if (plan.phase !== choice.kind || plan.target?.id !== choice.target.id) {
+          walk(plan, choice.kind, choice.target.position)
+          plan.target = choice.target
+          plan.site = null
+        }
+        const walked = walking(world, party, plan)
+        if (walked === 'go') return { kind: 'order', order: { kind: 'travel', to: plan.to! } }
+        if (!walked) return stand()
+        plan.phase = 'fight'
+        continue
+      }
+      case 'garrison': {
+        if (plan.phase !== 'garrison' || plan.site !== choice.site.id) {
+          walk(plan, 'garrison', choice.site.position)
+          plan.target = null
+          plan.site = choice.site.id
+        }
+        const walked = walking(world, party, plan)
+        if (walked === 'go') return { kind: 'order', order: { kind: 'travel', to: plan.to! } }
+        if (!walked) return stand()
+        if (party.order.kind === 'garrison') return { kind: 'stand' }
+        return { kind: 'order', order: { kind: 'garrison' } }
+      }
+      case 'home': {
+        const home = encampment(world).position
+        plan.target = null
+        plan.site = null
+        if (!hexEquals(party.position, home)) {
+          if (plan.phase !== 'return') walk(plan, 'return', home)
+          if (walking(world, party, plan) === 'go') return { kind: 'order', order: { kind: 'home' } }
+          return stand()
+        }
+        // Home: the hall's errands on arrival, and again when there is one, once a day at most.
+        const arrived = plan.phase !== 'idle'
+        plan.phase = 'idle'
+        plan.recall = false
+        if (plan.hallDay !== world.turn && (arrived || hallErrand(game, party, args.parties))) {
+          plan.hallDay = world.turn
+          return { kind: 'hall' }
+        }
+        return { kind: 'stand' }
+      }
+    }
+  }
+}
+
+/** The phases from the battle to camping until healed, which the vanguard and a guard share (`afterBattle`). */
+const AFTER_BATTLE: ReadonlySet<Phase> = new Set(['fight', 'won', 'tower', 'outpost', 'build', 'craft', 'crafted', 'heal', 'camp'])
 
 /** Sums what a stretch of days brought into the record: the world's events counted by `tally`. */
 function tally(record: CampaignRecord, events: readonly WorldEvent[]): void {
@@ -1004,12 +1330,40 @@ function wipe(run: CampaignRun, party: Expedition, target: MonsterLocation): 'wi
   record.wipes++
   record.roles[role].wipes++
   if (role === 'vanguard') record.finalLevels = party.members.map((member) => member.level)
+  // Counted before the wipe takes the party's gear, so a fallen company's sockets are those it fell with.
+  const sockets = socketsFilled(game.parties)
   const { lost, reformed } = wipeParty(game, party.id, target)
   run.plans.delete(party.id)
   run.roles.delete(party.id)
-  if (lost) return 'fallen'
-  if (role === 'vanguard') setVanguard(run, reformed?.id ?? game.parties[0].id)
+  if (lost) {
+    record.socketsFilled = sockets
+    return 'fallen'
+  }
+  if (role === 'vanguard') {
+    // The party the reserves formed, as the only one left; else the strongest left takes the lead, its round begun afresh.
+    const next = reformed ?? strongestParty(game.parties)
+    setVanguard(run, next.id)
+    const plan = newPlan()
+    // A guard that stands before the nest it walked to fights it first, as the vanguard's round would.
+    const facing = game.world.locations.find((l): l is MonsterLocation => l.kind === 'monsters' && l.id === next.confronting)
+    if (facing) Object.assign(plan, { phase: 'target', to: { ...facing.position }, target: facing })
+    // Its walk was a guard's: it stops, to be asked at once as the vanguard.
+    else setOrder(game, next.id, { kind: 'idle' })
+    run.plans.set(next.id, plan)
+  }
   return 'wiped'
+}
+
+/** The strongest of `parties`: the highest lowest level, then the highest mean level, then the lowest id. */
+export function strongestParty(parties: readonly Expedition[]): Expedition {
+  const better = (a: Expedition, b: Expedition) =>
+    lowestLevel(b.members) - lowestLevel(a.members) || meanLevel(b.members) - meanLevel(a.members) || (b.id < a.id ? 1 : -1)
+  return parties.reduce((best, party) => (better(best, party) > 0 ? party : best))
+}
+
+/** The runes in the worn gear of every member of `parties`. */
+function socketsFilled(parties: readonly Expedition[]): number {
+  return parties.flatMap((party) => party.members).reduce((n, member) => n + Object.values(member.equipment).reduce((m, item) => m + (item?.runes?.length ?? 0), 0), 0)
 }
 
 /**
@@ -1027,8 +1381,14 @@ export function carryOut(run: CampaignRun, party: Expedition, decision: Decision
     case 'finish':
       return decision.outcome
     case 'hall': {
-      record.recruits += visitGuildHall(game, party)
-      const trade = visitFacilities(game, party)
+      record.recruits += visitGuildHall(game, party, run.args.parties)
+      // Then a guard, or two, where the hall allows them and the company can man them.
+      for (let formed; (formed = formGuard(game, run.args.parties)); ) {
+        record.recruits += formed.hired
+        run.roles.set(formed.party.id, 'guard')
+        run.plans.set(formed.party.id, newPlan())
+      }
+      const trade = visitFacilities(game, party, run.args.parties)
       record.goldOnGear += trade.goldOnGear
       record.goldFromSales += trade.goldFromSales
       record.tierTwoBought += trade.tierTwoBought
@@ -1061,24 +1421,61 @@ export function carryOut(run: CampaignRun, party: Expedition, decision: Decision
     case 'heal':
       record.healedHp += autoHeal(party.members)
       return null
+    case 'promote': {
+      const vanguard = partyById(game, run.vanguard)
+      const moved = vanguard && vanguard !== party ? exchange(game, party.id, vanguard.id, [{ kind: 'member', from: party.id, index: promotedIndex(party) }]) : 'No vanguard.'
+      plan.phase = 'start'
+      if (moved !== null) {
+        // Refused (the vanguard full by now, or one of them facing monsters): the guard takes its next priority.
+        plan.skipReinforce = true
+        return null
+      }
+      record.promotions++
+      plan.recall = true
+      return null
+    }
+    case 'stand':
+      if (party.order.kind !== 'garrison') setOrder(game, party.id, { kind: 'idle' })
+      return 'standing'
     case 'order': {
       const { order } = decision
-      if (order.kind === 'idle') {
-        setOrder(game, party.id, order)
-        return null
+      switch (order.kind) {
+        case 'idle':
+          setOrder(game, party.id, order)
+          return null
+        case 'camp':
+          setOrder(game, party.id, order)
+          plan.running = 'camp'
+          return 'standing'
+        case 'garrison':
+          if (setOrder(game, party.id, order) !== null) {
+            plan.stalled = true
+            return null
+          }
+          return 'standing'
+        case 'meet':
+          if (setOrder(game, party.id, order) !== null) {
+            plan.skipReinforce = true
+            return null
+          }
+          plan.running = 'meet'
+          return 'standing'
+        case 'home':
+          if (setOrder(game, party.id, order) !== null) {
+            plan.stalled = true
+            return null
+          }
+          plan.running = 'travel'
+          return 'standing'
+        case 'travel':
+          // A fresh route from where the party stands; one that cannot start (no way there, or a nest on its first hex) gets it nowhere.
+          if (startTravel(game, party, order.to) !== 'started') {
+            plan.stalled = true
+            return null
+          }
+          plan.running = 'travel'
+          return 'standing'
       }
-      if (order.kind === 'camp') {
-        setOrder(game, party.id, order)
-        plan.running = 'camp'
-        return 'standing'
-      }
-      // A fresh route from where the party stands; one that cannot start (no way there, or a nest on its first hex) gets it nowhere.
-      if (startTravel(game, party, order.to) !== 'started') {
-        plan.stalled = true
-        return null
-      }
-      plan.running = 'travel'
-      return 'standing'
     }
   }
 }
@@ -1095,8 +1492,10 @@ export function takeDays(run: CampaignRun, reports: readonly DayReport[]): void 
   for (const party of game.parties) {
     const plan = planOf(run, party)
     const days = reports.map((report) => report.parties.find((day) => day.party === party.id))
+    if (reports.length > 0) plan.skipReinforce = false
     if (plan.running === 'travel') {
-      plan.stalled = !days.some((day) => day?.walked)
+      // Stopped a hex short of monsters another party stands on, it waits for them: not stalled.
+      plan.stalled = !days.some((day) => day?.walked) && !besideOthersMonsters(game, party)
       if (party.id === run.vanguard && plan.phase === 'home') record.vanguardWalkHomeDays += days.filter((day) => day?.walked).length
       party.confronting = monstersHere(game.world, party)?.id ?? null
     }
@@ -1112,10 +1511,28 @@ export function takeDays(run: CampaignRun, reports: readonly DayReport[]): void 
   }
 }
 
-/** Whether `party` is to be asked again after the days `advance` ran: it is idle, or what stopped the days concerns it or every party. */
-function needsDecision(game: GameState, party: Expedition, last: DayReport | undefined): boolean {
-  if (party.order.kind === 'idle' || !last || !worldActive(game.world)) return true
+/** Whether another party stands on monsters beside `party`, as a walk stops a hex short of them. */
+function besideOthersMonsters(game: GameState, party: Expedition): boolean {
+  return game.parties.some((other) => other !== party && hexDistance(other.position, party.position) === 1 && monstersHere(game.world, other) !== null)
+}
+
+/**
+ * Whether `party` is to be asked again after the days `advance` ran: it is
+ * idle, or what stopped the days concerns it or every party; and a garrisoned
+ * guard always, so that it answers a threatened site or a weakened vanguard.
+ */
+export function needsDecision(run: CampaignRun, party: Expedition, last: DayReport | undefined): boolean {
+  if (party.order.kind === 'idle' || !last || !worldActive(run.game.world)) return true
+  if (party.order.kind === 'garrison' && roleOf(run, party) === 'guard') return true
   return !last.interrupt || last.interrupt.party === null || last.interrupt.party === party.id
+}
+
+/** The days `advance` runs at most when no party holds an order whose days run (all garrisoned or idle), to ask them again. */
+export const IDLE_DAYS = 10
+
+/** How many days the next `advance` may run: until an interrupt while some party walks, meets, camps or has a day's act; else `IDLE_DAYS`. */
+export function advanceLimit(game: GameState): number {
+  return game.parties.some((party) => party.order.kind !== 'idle' && party.order.kind !== 'garrison') ? Infinity : IDLE_DAYS
 }
 
 /** The campaign's record filled in at its end: the vanguard's levels (as it fell, if it was wiped), each role's, and the sockets of every party. */
@@ -1136,7 +1553,8 @@ export function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Camp
   for (const role of ['vanguard', 'guard'] as const) {
     record.roles[role].finalLevels = game.parties.filter((party) => roleOf(run, party) === role).map((party) => party.members.map((member) => member.level))
   }
-  record.socketsFilled = game.parties.flatMap((party) => party.members).reduce((n, member) => n + Object.values(member.equipment).reduce((m, item) => m + (item?.runes?.length ?? 0), 0), 0)
+  // A fallen company's were counted as its last party fell (`wipe`).
+  if (game.parties.length > 0) record.socketsFilled = socketsFilled(game.parties)
   return { battles, record }
 }
 
@@ -1158,24 +1576,37 @@ export function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Camp
  */
 export function runCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0): Campaign {
   const run = startCampaign(campaign, seed, args, firstBattleId)
-  const { game } = run
   let last: DayReport | undefined
   for (;;) {
-    // Each party once a round, in list order, a party a wipe formed included and a wiped one left out.
-    const asked = new Set<Expedition>()
-    for (let party; (party = game.parties.find((p) => !asked.has(p))); ) {
-      asked.add(party)
-      if (!needsDecision(game, party, last)) continue
-      for (;;) {
-        const done = carryOut(run, party, decide(run, party))
-        if (done === 'standing') break
-        if (done !== null) return finishCampaign(run, done)
-      }
-    }
-    const reports = advance(game, Infinity)
-    takeDays(run, reports)
-    last = reports.at(-1)
+    const round = playRound(run, last)
+    if (!Array.isArray(round)) return finishCampaign(run, round)
+    last = round.at(-1)
   }
+}
+
+/**
+ * One round of the campaign: each party asked once, in list order (a party a
+ * wipe or the hall formed included, a wiped one left out), if it needs a
+ * decision (`needsDecision`), the vanguard by `decide` and a guard by
+ * `decideGuard`, until it stands under an order; then the days `advance`
+ * runs (`advanceLimit`), taken in. Returns those days, or how the campaign ended.
+ */
+export function playRound(run: CampaignRun, last: DayReport | undefined): DayReport[] | CampaignOutcome {
+  const { game } = run
+  const asked = new Set<Expedition>()
+  for (let party; (party = game.parties.find((p) => !asked.has(p))); ) {
+    asked.add(party)
+    if (!needsDecision(run, party, last)) continue
+    for (;;) {
+      const policy = roleOf(run, party) === 'guard' ? decideGuard : decide
+      const done = carryOut(run, party, policy(run, party))
+      if (done === 'standing') break
+      if (done !== null) return done
+    }
+  }
+  const reports = advance(game, advanceLimit(game))
+  takeDays(run, reports)
+  return reports
 }
 
 export interface Summary {
@@ -1367,6 +1798,9 @@ export interface CampaignSummary {
   avgPromotions: number
   avgVanguardWalkHomeDays: number
   avgGuardBattles: number
+  /** How many campaigns ended with the guild hall at level 4 or more (a second party allowed), and at 5 (a third). */
+  hallFour: number
+  hallFive: number
   /** By role: battles and wipes a campaign, and the lowest and highest level of its parties at the end, over the campaigns that ended with one. */
   roles: Record<Role, RoleSummary>
 }
@@ -1374,6 +1808,8 @@ export interface CampaignSummary {
 export interface RoleSummary {
   avgBattles: number
   avgWipes: number
+  /** The campaigns that ended with a party of the role, which the levels are averaged over. */
+  campaigns: number
   avgLowestFinalLevel: number
   avgHighestFinalLevel: number
 }
@@ -1456,6 +1892,8 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     avgPromotions: avg((r) => r.promotions),
     avgVanguardWalkHomeDays: avg((r) => r.vanguardWalkHomeDays),
     avgGuardBattles: avg((r) => r.guardBattles),
+    hallFour: records.filter((r) => r.hallLevel >= 4).length,
+    hallFive: records.filter((r) => r.hallLevel >= 5).length,
     roles: { vanguard: roleSummary('vanguard'), guard: roleSummary('guard') },
   }
 
@@ -1464,6 +1902,7 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     return {
       avgBattles: avg((r) => r.roles[role].battles),
       avgWipes: avg((r) => r.roles[role].wipes),
+      campaigns: levels.length,
       avgLowestFinalLevel: mean(levels.map((l) => Math.min(...l))),
       avgHighestFinalLevel: mean(levels.map((l) => Math.max(...l))),
     }
@@ -1526,24 +1965,26 @@ function main(): void {
   console.log(
     `Runes: ${summary.avgRunesFound.toFixed(1)} found, ${summary.avgRunesBought.toFixed(1)} bought and ${summary.avgRunesFused.toFixed(1)} fused a campaign, ${summary.avgGoldOnRunes.toFixed(0)} gold on runes; ${summary.avgSocketsFilled.toFixed(1)} sockets filled at the end`,
   )
-  console.log(`Guild hall: level ${summary.avgHallLevel.toFixed(1)} at the end, ${summary.avgRecruits.toFixed(1)} recruits and ${summary.avgDeaths.toFixed(1)} heroes dead a campaign`)
+  console.log(
+    `Guild hall: level ${summary.avgHallLevel.toFixed(1)} at the end, ${summary.avgRecruits.toFixed(1)} recruits and ${summary.avgDeaths.toFixed(1)} heroes dead in battles won (a wiped party's not counted) a campaign`,
+  )
   console.log(
     `Hit points healed between battles: ${summary.avgHealedHp.toFixed(1)} a campaign, in ${summary.avgCampDays.toFixed(1)} days of camping`,
   )
   const diedAt = summary.deathsByLevel.length > 0 ? summary.deathsByLevel.map(({ level, deaths }) => `${level} (${deaths})`).join(', ') : 'none'
   console.log(
-    `Levels at the end: lowest ${summary.avgLowestFinalLevel.toFixed(1)}, highest ${summary.avgHighestFinalLevel.toFixed(1)} on average (ready level ${args.readyLevel}); heroes died at level ${diedAt}`,
+    `Levels at the end (the vanguard's, or as the company fell): lowest ${summary.avgLowestFinalLevel.toFixed(1)}, highest ${summary.avgHighestFinalLevel.toFixed(1)} on average (ready level ${args.readyLevel}); heroes died at level ${diedAt}`,
   )
   console.log(
     `Battles to level ${summary.toLevel.map(({ level, campaigns, avgBattles }) => `${level}: ${campaigns > 0 ? avgBattles.toFixed(1) : '—'} (${campaigns} campaigns)`).join('; ')}`,
   )
   console.log(
-    `Company (${args.parties} ${args.parties === 1 ? 'party' : 'parties'} allowed): ${summary.avgWipes.toFixed(1)} parties wiped, ${summary.avgPromotions.toFixed(1)} promotions, ${summary.avgVanguardWalkHomeDays.toFixed(1)} days the vanguard walked home and ${summary.avgGuardBattles.toFixed(1)} guard battles a campaign`,
+    `Company (${args.parties} ${args.parties === 1 ? 'party' : 'parties'} allowed, the hall raised to ${hallCap(args.parties)} at most): ${summary.avgWipes.toFixed(1)} parties wiped, ${summary.avgPromotions.toFixed(1)} promotions, ${summary.avgVanguardWalkHomeDays.toFixed(1)} days the vanguard walked home and ${summary.avgGuardBattles.toFixed(1)} guard battles a campaign; the hall at level 4 or more at the end in ${summary.hallFour} campaigns, 5 in ${summary.hallFive}`,
   )
   for (const role of ['vanguard', 'guard'] as const) {
     const r = summary.roles[role]
     console.log(
-      `${role === 'vanguard' ? 'Vanguard' : 'Guards'}: ${r.avgBattles.toFixed(1)} battles and ${r.avgWipes.toFixed(1)} wipes a campaign; levels at the end lowest ${r.avgLowestFinalLevel.toFixed(1)}, highest ${r.avgHighestFinalLevel.toFixed(1)}`,
+      `${role === 'vanguard' ? 'Vanguard' : 'Guards'}: ${r.avgBattles.toFixed(1)} battles and ${r.avgWipes.toFixed(1)} wipes a campaign; levels at the end, over the ${r.campaigns} campaigns ending with ${role === 'vanguard' ? 'a vanguard' : 'a guard'}, lowest ${r.avgLowestFinalLevel.toFixed(1)}, highest ${r.avgHighestFinalLevel.toFixed(1)}`,
     )
   }
   console.table(summary.byThreat.map((row) => ({ ...row, winRate: Number(row.winRate.toFixed(3)) })))
