@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BASE_ITEMS, IRON_SWORD, SPARK_WAND, STORM_WAND, itemById } from '../inventory/inventory.ts'
-import { leader, newGame } from './gameState.ts'
+import { newGame } from './gameState.ts'
 import type { RuneKey } from '../inventory/runes.ts'
 import { MAX_TRADING_POST_LEVEL, TIER_TWO_LEVEL, TRADING_POST_COSTS, VALUES, buy, buyPrice, buyRefusal, buyRune, raiseTradingPost, runePrice, runeSalePrice, runeWares, salePrice, sell, sellMaterial, sellRune, sellables, sells, wares } from './tradingPost.ts'
 
@@ -28,30 +28,30 @@ describe('the trading post', () => {
   it('sells plain items at level 1, and Fine ones from level 2', () => {
     const game = home()
     expect(wares(game.world).every((item) => !item.grade)).toBe(true)
-    expect(buy(game, 'iron_sword')).toBeNull()
+    expect(buy(game, game.parties[0], 'iron_sword')).toBeNull()
     expect(game.world.stock.gold).toBe(88)
-    expect(leader(game).baggage).toEqual([IRON_SWORD])
-    expect(buy(game, 'iron_sword@2')).toMatch(/level 2 trading post/)
-    expect(raiseTradingPost(game)).toBeNull()
+    expect(game.parties[0].baggage).toEqual([IRON_SWORD])
+    expect(buy(game, game.parties[0], 'iron_sword@2')).toMatch(/level 2 trading post/)
+    expect(raiseTradingPost(game, game.parties[0])).toBeNull()
     expect(wares(game.world).some((item) => item.grade === 2)).toBe(true)
     game.world.stock.gold = 35
-    expect(buy(game, 'iron_sword@2')).toMatch(/costs 36 gold/)
+    expect(buy(game, game.parties[0], 'iron_sword@2')).toMatch(/costs 36 gold/)
     game.world.stock.gold = 36
-    expect(buy(game, 'iron_sword@2')).toBeNull()
+    expect(buy(game, game.parties[0], 'iron_sword@2')).toBeNull()
     expect(game.world.stock.gold).toBe(0)
   })
 
   it('never sells a modified or enchanted item', () => {
     const game = home()
-    expect(buy(game, 'iron_sword+balanced1')).toMatch(/does not sell/)
-    expect(buy(game, 'storm_wand')).toMatch(/does not sell/)
+    expect(buy(game, game.parties[0], 'iron_sword+balanced1')).toMatch(/does not sell/)
+    expect(buy(game, game.parties[0], 'storm_wand')).toMatch(/does not sell/)
     expect(game.world.stock.gold).toBe(100)
   })
 
   it('buys from the baggage and backpacks for half, never what is worn', () => {
     const game = home()
-    leader(game).baggage.push(STORM_WAND)
-    const offered = sellables(game)
+    game.parties[0].baggage.push(STORM_WAND)
+    const offered = sellables(game, game.parties[0])
     expect(offered.some(({ place }) => place.from === 'worn')).toBe(false)
     const fromPack = offered.find(({ place }) => place.from === 'backpack')!
     const fromBaggage = offered.find(({ place }) => place.from === 'baggage')!
@@ -59,14 +59,14 @@ describe('the trading post', () => {
     expect(game.world.stock.gold).toBe(100 + fromPack.price)
     expect(sell(game, fromBaggage.place)).toBeNull()
     expect(game.world.stock.gold).toBe(100 + fromPack.price + 25)
-    expect(leader(game).baggage).toEqual([])
-    const worn = { from: 'worn' as const, member: 0, slot: 'mainHand' as const, itemId: leader(game).members[0].equipment.mainHand!.id }
+    expect(game.parties[0].baggage).toEqual([])
+    const worn = { from: 'worn' as const, party: 'party_1', member: 0, slot: 'mainHand' as const, itemId: game.parties[0].members[0].equipment.mainHand!.id }
     expect(sell(game, worn)).toMatch(/Take it off/)
   })
 
   it('refuses a stale selection, changing nothing', () => {
     const game = home()
-    const { place } = sellables(game)[0]
+    const { place } = sellables(game, game.parties[0])[0]
     expect(sell(game, place)).toBeNull()
     const gold = game.world.stock.gold
     expect(sell(game, place)).toMatch(/no longer there/)
@@ -75,20 +75,20 @@ describe('the trading post', () => {
 
   it('buys materials in pairs, a gold piece a pair, and never gold', () => {
     const game = home()
-    expect(sellMaterial(game, 'salt', 4)).toBeNull()
+    expect(sellMaterial(game, game.parties[0], 'salt', 4)).toBeNull()
     expect(game.world.stock).toMatchObject({ gold: 102, salt: 0 })
-    expect(sellMaterial(game, 'salt', 2)).toMatch(/only 0 salt/)
-    expect(sellMaterial(game, 'stone', 3)).toMatch(/lots of 2/)
-    expect(sellMaterial(game, 'gold', 2)).toMatch(/Gold/)
+    expect(sellMaterial(game, game.parties[0], 'salt', 2)).toMatch(/only 0 salt/)
+    expect(sellMaterial(game, game.parties[0], 'stone', 3)).toMatch(/lots of 2/)
+    expect(sellMaterial(game, game.parties[0], 'gold', 2)).toMatch(/Gold/)
   })
 
   it('is refused away from home', () => {
     const game = home()
-    leader(game).position = { q: leader(game).position.q + 1, r: leader(game).position.r }
-    expect(buy(game, 'iron_sword')).toMatch(/at Hearthold/)
-    expect(sell(game, sellables(game)[0].place)).toMatch(/at Hearthold/)
-    expect(sellMaterial(game, 'salt', 2)).toMatch(/at Hearthold/)
-    expect(raiseTradingPost(game)).toMatch(/at Hearthold/)
+    game.parties[0].position = { q: game.parties[0].position.q + 1, r: game.parties[0].position.r }
+    expect(buy(game, game.parties[0], 'iron_sword')).toMatch(/at Hearthold/)
+    expect(sell(game, sellables(game, game.parties[0])[0].place)).toMatch(/at Hearthold/)
+    expect(sellMaterial(game, game.parties[0], 'salt', 2)).toMatch(/at Hearthold/)
+    expect(raiseTradingPost(game, game.parties[0])).toMatch(/at Hearthold/)
     expect(game.world.stock.gold).toBe(100)
   })
 })
@@ -125,9 +125,9 @@ describe('the price list', () => {
   it('refuses a tier-2 item below level 4, naming the level', () => {
     const game = home()
     game.world.tradingPost = 3
-    expect(buy(game, 'steel_longsword')).toBe('A level 4 trading post sells that.')
+    expect(buy(game, game.parties[0], 'steel_longsword')).toBe('A level 4 trading post sells that.')
     game.world.tradingPost = 2
-    expect(buy(game, 'iron_sword@3')).toBe('A level 3 trading post sells that.')
+    expect(buy(game, game.parties[0], 'iron_sword@3')).toBe('A level 3 trading post sells that.')
     expect(game.world.stock.gold).toBe(100)
   })
 })
@@ -139,11 +139,11 @@ describe('trading post level 4', () => {
     const game = home()
     game.world.tradingPost = 3
     game.world.stock = { gold: 130, silver: 25 }
-    expect(raiseTradingPost(game)).toBeNull()
+    expect(raiseTradingPost(game, game.parties[0])).toBeNull()
     expect(game.world.stock).toMatchObject({ gold: 10, silver: 5 })
-    expect(raiseTradingPost(game)).toBe('The trading post is as great as it gets.')
+    expect(raiseTradingPost(game, game.parties[0])).toBe('The trading post is as great as it gets.')
     game.world.tradingPost = 3
-    expect(raiseTradingPost(game)).toMatch(/costs/)
+    expect(raiseTradingPost(game, game.parties[0])).toMatch(/costs/)
   })
 
   it('sells tier 1 up to grade 3 and tier 2 at every grade from level 4', () => {
@@ -193,7 +193,7 @@ describe('trading post level 4', () => {
   it('sells tier 2 into the baggage', () => {
     const game = home()
     game.world.tradingPost = 4
-    expect(buy(game, 'steel_longsword')).toBeNull()
+    expect(buy(game, game.parties[0], 'steel_longsword')).toBeNull()
     expect(game.world.stock.gold).toBe(70)
   })
 })
@@ -201,7 +201,7 @@ describe('trading post level 4', () => {
 describe('the trading post\'s runes', () => {
   const away = () => {
     const game = home()
-    leader(game).position = { q: leader(game).position.q + 3, r: leader(game).position.r }
+    game.parties[0].position = { q: game.parties[0].position.q + 3, r: game.parties[0].position.r }
     return game
   }
 
@@ -225,36 +225,36 @@ describe('the trading post\'s runes', () => {
   it('buys into the pouch, and refuses without changing anything', () => {
     const game = home()
     game.world.tradingPost = 2
-    expect(buyRune(game, 'ember1')).toBeNull()
+    expect(buyRune(game, game.parties[0], 'ember1')).toBeNull()
     expect(game.world.stock.gold).toBe(85)
     expect(game.runes).toEqual({ ember1: 1 })
     const stock = { ...game.world.stock }
-    for (const key of ['venom1', 'dawn1', 'ember2', 'ember3'] as RuneKey[]) expect(buyRune(game, key)).not.toBeNull()
-    expect(buyRune(game, 'ember2')).toMatch(/level 4/)
+    for (const key of ['venom1', 'dawn1', 'ember2', 'ember3'] as RuneKey[]) expect(buyRune(game, game.parties[0], key)).not.toBeNull()
+    expect(buyRune(game, game.parties[0], 'ember2')).toMatch(/level 4/)
     game.world.tradingPost = 1
-    expect(buyRune(game, 'ember1')).toMatch(/level 2/)
+    expect(buyRune(game, game.parties[0], 'ember1')).toMatch(/level 2/)
     game.world.tradingPost = 2
     game.world.stock.gold = 14
-    expect(buyRune(game, 'rime1')).toMatch(/costs 15 gold/)
+    expect(buyRune(game, game.parties[0], 'rime1')).toMatch(/costs 15 gold/)
     expect(game.world.stock.gold).toBe(14)
     expect({ ...game.world.stock, gold: 85 }).toEqual(stock)
     expect(game.runes).toEqual({ ember1: 1 })
     const gone = away()
     gone.world.tradingPost = 2
-    expect(buyRune(gone, 'ember1')).toMatch(/trading post is at/)
+    expect(buyRune(gone, gone.parties[0], 'ember1')).toMatch(/trading post is at/)
     expect(gone.runes).toEqual({})
   })
 
   it('sells any rune from the pouch', () => {
     const game = home()
     game.runes = { dawn3: 1 }
-    expect(sellRune(game, 'dawn3')).toBeNull()
+    expect(sellRune(game, game.parties[0], 'dawn3')).toBeNull()
     expect(game.world.stock.gold).toBe(145)
     expect(game.runes.dawn3 ?? 0).toBe(0)
-    expect(sellRune(game, 'dawn3')).toMatch(/holds no/)
+    expect(sellRune(game, game.parties[0], 'dawn3')).toMatch(/holds no/)
     const gone = away()
     gone.runes = { ember1: 1 }
-    expect(sellRune(gone, 'ember1')).toMatch(/trading post is at/)
+    expect(sellRune(gone, gone.parties[0], 'ember1')).toMatch(/trading post is at/)
     expect(gone.runes.ember1).toBe(1)
   })
 
@@ -265,7 +265,7 @@ describe('the trading post\'s runes', () => {
       const game = home()
       game.world.tradingPost = level
       expect(sells(game.world, runed)).toBe(false)
-      expect(buyRefusal(game, runed.id)).toMatch(/does not sell/)
+      expect(buyRefusal(game, game.parties[0], runed.id)).toMatch(/does not sell/)
       expect(wares(game.world).some((item) => item.runes?.length)).toBe(false)
     }
     expect(buyPrice(runed)).toBe(buyPrice(itemById('iron_sword@3')!))

@@ -1,7 +1,7 @@
 import { maxHp, type Character } from '../character/character.ts'
 import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
 import type { Expedition } from './expedition.ts'
-import { leader, type GameState } from './gameState.ts'
+import type { GameState } from './gameState.ts'
 import type { Stock } from './territory.ts'
 import { encampmentName, type WorldState } from './worldMap.ts'
 
@@ -31,9 +31,9 @@ export function infirmaryCost(world: WorldState): Stock | null {
 }
 
 /** Builds the infirmary or raises it a level, at once; returns why it cannot, or null when done. */
-export function raiseInfirmary(game: GameState): string | null {
+export function raiseInfirmary(game: GameState, party: Expedition): string | null {
   const { world } = game
-  if (!atEncampment(world, leader(game))) return `The infirmary is at ${encampmentName(world)}.`
+  if (!atEncampment(world, party)) return `The infirmary is at ${encampmentName(world)}.`
   const cost = infirmaryCost(world)
   if (!cost) return 'The infirmary is as great as it gets.'
   if (!canAfford(world.stock, cost)) return `The next level costs ${describeCost(cost)}, more than the stock holds.`

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { maxHp, maxMana } from '../character/character.ts'
 import { canAdvance, levelUp } from '../character/progression.ts'
 import { offsetToHex } from '../grid/hex.ts'
-import { leader, newGame, type GameState } from './gameState.ts'
+import { newGame, type GameState } from './gameState.ts'
 import {
   GUILD_HALL_LEVELS,
   MAX_RESERVES,
@@ -32,31 +32,31 @@ function atHome(): GameState {
 describe('the guild hall', () => {
   it('is open only at Oakvale, while the game goes on', () => {
     const game = atHome()
-    expect(atGuildHall(game.world, leader(game))).toBe(true)
-    leader(game).position = offsetToHex(11, 19)
-    expect(atGuildHall(game.world, leader(game))).toBe(false)
-    expect(upgradeGuildHall(game)).toMatch(/Oakvale/)
-    expect(recruit(game, GARRICK)).toMatch(/Oakvale/)
-    expect(toReserves(game, 0)).toMatch(/Oakvale/)
+    expect(atGuildHall(game.world, game.parties[0])).toBe(true)
+    game.parties[0].position = offsetToHex(11, 19)
+    expect(atGuildHall(game.world, game.parties[0])).toBe(false)
+    expect(upgradeGuildHall(game, game.parties[0])).toMatch(/Oakvale/)
+    expect(recruit(game, game.parties[0], GARRICK)).toMatch(/Oakvale/)
+    expect(toReserves(game, game.parties[0], 0)).toMatch(/Oakvale/)
   })
 
   it('sets the party limit by its level, raised for the stock to 4 and then 5', () => {
     const game = atHome()
     expect(partyLimit(game.world)).toBe(3)
     expect(upgradeCost(game.world)).toEqual(GUILD_HALL_LEVELS[1].cost)
-    expect(upgradeGuildHall(game)).toBeNull()
+    expect(upgradeGuildHall(game, game.parties[0])).toBeNull()
     expect([game.world.guildHall, partyLimit(game.world)]).toEqual([2, 4])
     expect(game.world.stock).toEqual({ gold: 170, iron: 85 })
-    expect(upgradeGuildHall(game)).toBeNull()
+    expect(upgradeGuildHall(game, game.parties[0])).toBeNull()
     expect(partyLimit(game.world)).toBe(5)
     expect(upgradeCost(game.world)).toBeNull()
-    expect(upgradeGuildHall(game)).toMatch(/as large/)
+    expect(upgradeGuildHall(game, game.parties[0])).toMatch(/as large/)
   })
 
   it('refuses an upgrade the stock cannot pay for, spending nothing', () => {
     const game = atHome()
     game.world.stock = { gold: 29, iron: 15 }
-    expect(upgradeGuildHall(game)).toMatch(/30 gold, 15 iron/)
+    expect(upgradeGuildHall(game, game.parties[0])).toMatch(/30 gold, 15 iron/)
     expect(game.world.guildHall).toBe(1)
     expect(game.world.stock).toEqual({ gold: 29, iron: 15 })
   })
@@ -66,20 +66,20 @@ describe('recruiting', () => {
   it('hires a pre-roll into the reserves for the stock, and offers only those not in the company', () => {
     const game = atHome()
     expect(availablePrerolls(game).map((p) => p.draft.name)).toEqual(['Garrick'])
-    expect(recruit(game, GARRICK)).toBeNull()
+    expect(recruit(game, game.parties[0], GARRICK)).toBeNull()
     expect(game.reserves.map((hero) => hero.name)).toEqual(['Garrick'])
     expect(game.world.stock.gold).toBe(190)
     expect(availablePrerolls(game)).toEqual([])
-    expect(recruit(game, GARRICK)).toMatch(/already in the company/)
+    expect(recruit(game, game.parties[0], GARRICK)).toMatch(/already in the company/)
   })
 
   it('joins at the hall’s level or the party’s lowest, whichever is less, with its points to spend', () => {
     const game = atHome()
     game.world.guildHall = 3
-    for (const member of leader(game).members) while (member.level < 5) levelUp(member)
-    levelUp(leader(game).members[1])
-    expect(recruitLevel(game)).toBe(3)
-    recruit(game, GARRICK)
+    for (const member of game.parties[0].members) while (member.level < 5) levelUp(member)
+    levelUp(game.parties[0].members[1])
+    expect(recruitLevel(game, game.parties[0])).toBe(3)
+    recruit(game, game.parties[0], GARRICK)
     const [garrick] = game.reserves
     expect(garrick.level).toBe(3)
     expect(garrick.xp).toBe(0)
@@ -88,17 +88,17 @@ describe('recruiting', () => {
 
     const green = atHome()
     green.world.guildHall = 3
-    leader(green).members[0].level = 1
-    expect(recruitLevel(green)).toBe(1)
+    green.parties[0].members[0].level = 1
+    expect(recruitLevel(green, green.parties[0])).toBe(1)
   })
 
   it('is refused when the reserves are full or the stock short', () => {
     const game = atHome()
-    for (let i = 0; i < MAX_RESERVES; i++) expect(recruit(game, { ...GARRICK, name: `Garrick${i}` })).toBeNull()
-    expect(recruitRefusal(game)).toMatch(/no more than 4/)
+    for (let i = 0; i < MAX_RESERVES; i++) expect(recruit(game, game.parties[0], { ...GARRICK, name: `Garrick${i}` })).toBeNull()
+    expect(recruitRefusal(game, game.parties[0])).toMatch(/no more than 4/)
     const poor = atHome()
     poor.world.stock = { gold: 9 }
-    expect(recruit(poor, GARRICK)).toMatch(/10 gold/)
+    expect(recruit(poor, poor.parties[0], GARRICK)).toMatch(/10 gold/)
     expect(poor.reserves).toEqual([])
   })
 })
@@ -106,27 +106,27 @@ describe('recruiting', () => {
 describe('the roster', () => {
   it('moves members between the party and the reserves, within the limit, never emptying the party', () => {
     const game = atHome()
-    recruit(game, GARRICK)
-    expect(toParty(game, 0)).toMatch(/party is full/)
-    expect(toReserves(game, 2)).toBeNull()
-    expect(leader(game).members.map((m) => m.name)).toEqual(['Aldric', 'Brenna'])
+    recruit(game, game.parties[0], GARRICK)
+    expect(toParty(game, game.parties[0], 0)).toMatch(/party is full/)
+    expect(toReserves(game, game.parties[0], 2)).toBeNull()
+    expect(game.parties[0].members.map((m) => m.name)).toEqual(['Aldric', 'Brenna'])
     expect(game.reserves.map((m) => m.name)).toEqual(['Garrick', 'Delwyn'])
-    expect(toParty(game, 0)).toBeNull()
-    expect(leader(game).members.map((m) => m.name)).toEqual(['Aldric', 'Brenna', 'Garrick'])
-    expect(toReserves(game, 0)).toBeNull()
-    expect(toReserves(game, 0)).toBeNull()
-    expect(toReserves(game, 0)).toMatch(/empty/)
+    expect(toParty(game, game.parties[0], 0)).toBeNull()
+    expect(game.parties[0].members.map((m) => m.name)).toEqual(['Aldric', 'Brenna', 'Garrick'])
+    expect(toReserves(game, game.parties[0], 0)).toBeNull()
+    expect(toReserves(game, game.parties[0], 0)).toBeNull()
+    expect(toReserves(game, game.parties[0], 0)).toMatch(/empty/)
   })
 
   it('swaps a member for a reserve in its place, the reserve rested', () => {
     const game = atHome()
-    recruit(game, GARRICK)
+    recruit(game, game.parties[0], GARRICK)
     const [garrick] = game.reserves
     garrick.hp = 1
     garrick.mana = 0
-    const brenna = leader(game).members[1]
-    expect(swap(game, 1, 0)).toBeNull()
-    expect(leader(game).members[1]).toBe(garrick)
+    const brenna = game.parties[0].members[1]
+    expect(swap(game, game.parties[0], 1, 0)).toBeNull()
+    expect(game.parties[0].members[1]).toBe(garrick)
     expect(game.reserves[0]).toBe(brenna)
     expect([garrick.hp, garrick.mana]).toEqual([maxHp(garrick), maxMana(garrick)])
   })

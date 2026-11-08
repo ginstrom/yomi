@@ -1,15 +1,14 @@
-import { FIRST_PARTY_ID } from '../game/expedition.ts'
 import { maxHp, type Character } from '../character/character.ts'
-import { leader, type GameState } from '../game/gameState.ts'
+import type { GameState } from '../game/gameState.ts'
 import type { Hex } from '../grid/hex.ts'
 import type { Rect } from './mapScroll.ts'
 import { HEADER_BOTTOM } from './partyPanel.ts'
 
 /**
  * The parties the world map lists down its right side, and where each entry
- * sits. `deployedParties` is the only reader of the single party the game
- * holds today (`leader(game)`, its members where it stands); when stage 05 gives the
- * company several parties, it maps `game.parties` here and nothing else moves.
+ * sits. `deployedParties` maps the company's parties (`game.parties`), one
+ * entry each; while there is only one it is called "Your party", and that
+ * holds until stage 06 names parties.
  */
 
 /** The strip down the world map's right side; the map's view keeps to the left of it. */
@@ -37,24 +36,24 @@ export interface PartyListEntry {
   maxHp: number
 }
 
-/** Every party of the company, in company order: one today, none for an empty party. */
+/** Every party of the company, in company order; a party with no members is left out. */
 export function deployedParties(game: GameState): PartyListEntry[] {
-  const expedition = leader(game)
-  const party = expedition.members
   const { world } = game
-  if (party.length === 0) return []
-  const location = expedition.confronting === null ? undefined : world.locations.find((l) => l.id === expedition.confronting)
-  return [
-    {
-      id: FIRST_PARTY_ID,
-      name: SINGLE_PARTY_NAME,
-      members: party,
-      position: expedition.position,
-      confronting: location ? { id: location.id, name: location.name } : null,
-      hp: party.reduce((sum, member) => sum + member.hp, 0),
-      maxHp: party.reduce((sum, member) => sum + maxHp(member), 0),
-    },
-  ]
+  return game.parties
+    .filter((expedition) => expedition.members.length > 0)
+    .map((expedition) => {
+      const party = expedition.members
+      const location = expedition.confronting === null ? undefined : world.locations.find((l) => l.id === expedition.confronting)
+      return {
+        id: expedition.id,
+        name: game.parties.length === 1 ? SINGLE_PARTY_NAME : expedition.name,
+        members: party,
+        position: expedition.position,
+        confronting: location ? { id: location.id, name: location.name } : null,
+        hp: party.reduce((sum, member) => sum + member.hp, 0),
+        maxHp: party.reduce((sum, member) => sum + maxHp(member), 0),
+      }
+    })
 }
 
 /** Where the `index`th entry's tile is in a window `width` wide. */

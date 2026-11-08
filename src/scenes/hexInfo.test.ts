@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { boardHex, boardIndex } from '../game/blight.ts'
 import { presences } from '../game/expedition.ts'
-import { leader, newGame, type GameState } from '../game/gameState.ts'
+import { newGame, type GameState } from '../game/gameState.ts'
 import { readyMadeParty } from '../game/party.ts'
 import { UNEXPLORED, visibleHexes } from '../game/vision.ts'
 import { ENCAMPMENT_ID } from '../game/worldMap.ts'
@@ -11,11 +11,11 @@ import { hexInfo } from './hexInfo.ts'
 /** A new game on world 1: the game, its world and its one party, the ready-made three, at home. */
 function solo() {
   const game = newGame(readyMadeParty(), null, 1)
-  return { game, world: game.world, party: leader(game) }
+  return { game, world: game.world, party: game.parties[0] }
 }
 
-function info(game: GameState, at: Hex = leader(game).position) {
-  return hexInfo(game, leader(game), visibleHexes(game.world, presences(game.parties)), at)
+function info(game: GameState, at: Hex = game.parties[0].position) {
+  return hexInfo(game, game.parties[0], visibleHexes(game.world, presences(game.parties)), at)
 }
 
 describe('hexInfo', () => {

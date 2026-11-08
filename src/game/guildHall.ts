@@ -3,7 +3,7 @@ import { draftCharacter, type CharacterDraft } from '../character/creation.ts'
 import { levelUp } from '../character/progression.ts'
 import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
 import type { Expedition } from './expedition.ts'
-import { leader, type GameState } from './gameState.ts'
+import type { GameState } from './gameState.ts'
 import { MAX_PARTY_SIZE, PREROLLS, type Preroll } from './party.ts'
 import type { Stock } from './territory.ts'
 import { encampmentName, type WorldState } from './worldMap.ts'
@@ -45,9 +45,9 @@ export function upgradeCost(world: WorldState): Stock | null {
   return world.guildHall < MAX_GUILD_HALL_LEVEL ? GUILD_HALL_LEVELS[world.guildHall].cost : null
 }
 
-export function upgradeGuildHall(game: GameState): string | null {
+export function upgradeGuildHall(game: GameState, party: Expedition): string | null {
   const { world } = game
-  if (!atGuildHall(world, leader(game))) return notHere(world)
+  if (!atGuildHall(world, party)) return notHere(world)
   const cost = upgradeCost(world)
   if (!cost) return 'The guild hall is as large as it gets.'
   if (!canAfford(world.stock, cost)) return `The next level costs ${describeCost(cost)}, more than the stock holds.`
@@ -56,9 +56,9 @@ export function upgradeGuildHall(game: GameState): string | null {
   return null
 }
 
-/** Every hero of the company, party and reserves, whose names are each their own. */
+/** Every hero of the company, every party's and the reserves, whose names are each their own. */
 export function company(game: GameState): Character[] {
-  return [...leader(game).members, ...game.reserves]
+  return [...game.parties.flatMap((p) => p.members), ...game.reserves]
 }
 
 /** The pre-rolled characters not yet in the company, whom the hall can recruit. */
@@ -68,13 +68,13 @@ export function availablePrerolls(game: GameState): Preroll[] {
 }
 
 /** The level a recruit joins at: the guild hall's level, but never above the party's least experienced member. */
-export function recruitLevel(game: GameState): number {
-  return Math.max(1, Math.min(game.world.guildHall, ...leader(game).members.map((member) => member.level)))
+export function recruitLevel(game: GameState, party: Expedition): number {
+  return Math.max(1, Math.min(game.world.guildHall, ...party.members.map((member) => member.level)))
 }
 
 /** Why a recruit named `name` cannot join now, or null when one can. */
-export function recruitRefusal(game: GameState, name?: string): string | null {
-  if (!atGuildHall(game.world, leader(game))) return notHere(game.world)
+export function recruitRefusal(game: GameState, party: Expedition, name?: string): string | null {
+  if (!atGuildHall(game.world, party)) return notHere(game.world)
   if (game.reserves.length >= MAX_RESERVES) return `The guild hall keeps no more than ${MAX_RESERVES} heroes in reserve.`
   if (!canAfford(game.world.stock, RECRUIT_COST)) return `A recruit costs ${describeCost(RECRUIT_COST)}, more than the stock holds.`
   if (name !== undefined && company(game).some((member) => member.name === name.trim())) return `${name} is already in the company.`
@@ -86,11 +86,11 @@ export function recruitRefusal(game: GameState, name?: string): string | null {
  * `recruitLevel`: levelled up as experience would, with the skill points,
  * perks and spell picks of those levels left for the player to spend.
  */
-export function recruit(game: GameState, draft: CharacterDraft): string | null {
-  const refusal = recruitRefusal(game, draft.name)
+export function recruit(game: GameState, party: Expedition, draft: CharacterDraft): string | null {
+  const refusal = recruitRefusal(game, party, draft.name)
   if (refusal) return refusal
   const hero = draftCharacter(draft)
-  const level = recruitLevel(game)
+  const level = recruitLevel(game, party)
   while (hero.level < level) levelUp(hero)
   spend(game.world.stock, RECRUIT_COST)
   game.reserves.push(hero)
@@ -105,30 +105,30 @@ function rested(hero: Character): Character {
 }
 
 /** Sends party member `index` to the reserves. The party is never left empty. */
-export function toReserves(game: GameState, index: number): string | null {
-  if (!atGuildHall(game.world, leader(game))) return notHere(game.world)
-  if (!leader(game).members[index]) return 'There is no such member.'
-  if (leader(game).members.length <= 1) return 'The party cannot be left empty.'
+export function toReserves(game: GameState, party: Expedition, index: number): string | null {
+  if (!atGuildHall(game.world, party)) return notHere(game.world)
+  if (!party.members[index]) return 'There is no such member.'
+  if (party.members.length <= 1) return 'The party cannot be left empty.'
   if (game.reserves.length >= MAX_RESERVES) return `The guild hall keeps no more than ${MAX_RESERVES} heroes in reserve.`
-  game.reserves.push(...leader(game).members.splice(index, 1))
+  game.reserves.push(...party.members.splice(index, 1))
   return null
 }
 
 /** Brings reserve `index` into the party, at its end, while the party is under its limit. */
-export function toParty(game: GameState, index: number): string | null {
-  if (!atGuildHall(game.world, leader(game))) return notHere(game.world)
+export function toParty(game: GameState, party: Expedition, index: number): string | null {
+  if (!atGuildHall(game.world, party)) return notHere(game.world)
   if (!game.reserves[index]) return 'There is no such reserve.'
-  if (leader(game).members.length >= partyLimit(game.world)) return `The party is full: the guild hall's level ${game.world.guildHall} allows ${partyLimit(game.world)}.`
-  leader(game).members.push(rested(game.reserves.splice(index, 1)[0]))
+  if (party.members.length >= partyLimit(game.world)) return `The party is full: the guild hall's level ${game.world.guildHall} allows ${partyLimit(game.world)}.`
+  party.members.push(rested(game.reserves.splice(index, 1)[0]))
   return null
 }
 
 /** Exchanges party member `member` for reserve `reserve`, who takes its place in the battle order. */
-export function swap(game: GameState, member: number, reserve: number): string | null {
-  if (!atGuildHall(game.world, leader(game))) return notHere(game.world)
-  if (!leader(game).members[member] || !game.reserves[reserve]) return 'There is no such hero.'
-  const leaving = leader(game).members[member]
-  leader(game).members[member] = rested(game.reserves[reserve])
+export function swap(game: GameState, party: Expedition, member: number, reserve: number): string | null {
+  if (!atGuildHall(game.world, party)) return notHere(game.world)
+  if (!party.members[member] || !game.reserves[reserve]) return 'There is no such hero.'
+  const leaving = party.members[member]
+  party.members[member] = rested(game.reserves[reserve])
   game.reserves[reserve] = leaving
   return null
 }

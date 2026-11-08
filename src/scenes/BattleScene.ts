@@ -14,8 +14,9 @@ import {
   type UnitSnapshot,
 } from '../engine/battleEngine.ts'
 import { POLICIES, type PolicyName } from '../engine/policies.ts'
+import type { Expedition } from '../game/expedition.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId, type UnitKind } from '../game/encounters.ts'
-import { leader, newGame, takeLoot, type GameState } from '../game/gameState.ts'
+import { newGame, selectedParty, takeLoot, type GameState } from '../game/gameState.ts'
 import { takeRunes } from '../game/loot.ts'
 import { Ground, pileChanges } from '../game/ground.ts'
 import { describeRewards, partyFighters, rewardVictory } from '../game/party.ts'
@@ -84,6 +85,8 @@ import type { DebugSource } from './debugCommands.ts'
 
 interface BattleData {
   game?: GameState
+  /** The id of the party that fights; the first if left out or unknown. */
+  party?: string
   /** The id of the monster location on the world map that this battle is fought at. */
   location?: string
   /** Without a location only (the debug console's `fight`): the encounter to fight, and the threat to fight it at. */
@@ -227,6 +230,8 @@ const LUNGE_MS = 70
 
 export class BattleScene extends Phaser.Scene {
   private gameState!: GameState
+  /** The party that fights. */
+  private expedition!: Expedition
   /** The monsters being fought, which a victory clears from the world map. */
   private location: MonsterLocation | null = null
   /** The encounter fought and the threat it was built at (`Encounter.threat`, within its band). */
@@ -322,7 +327,8 @@ export class BattleScene extends Phaser.Scene {
 
   create(data: BattleData): void {
     this.gameState = data?.game ?? newGame()
-    const party = leader(this.gameState).members
+    this.expedition = selectedParty(this.gameState, data?.party)
+    const party = this.expedition.members
     const chosen = chooseBattle(this.gameState.world, data)
     this.location = chosen.location
     this.encounterId = chosen.encounter
@@ -525,7 +531,7 @@ export class BattleScene extends Phaser.Scene {
   /** What the in-browser tests see of the battle; see testHook.ts. */
   /** What the debug console (debugConsole.ts) reads: the game and the battle, which it does not change. */
   debugSource(): DebugSource {
-    return { game: this.gameState, battle: { state: this.engine.getState(), names: this.names } }
+    return { game: this.gameState, party: this.expedition.id, battle: { state: this.engine.getState(), names: this.names } }
   }
 
   probe(): BattleProbe {
@@ -574,7 +580,7 @@ export class BattleScene extends Phaser.Scene {
   /** The place in the party of the member `panelUnit` gives. */
   private activeIndex(): number | null {
     const member = this.heroes.get(this.panelUnit()?.id ?? '')
-    return member ? leader(this.gameState).members.indexOf(member) : null
+    return member ? this.expedition.members.indexOf(member) : null
   }
 
   /** Makes the `index`th member's unit the selected one, if it has anything left to do this turn. */
@@ -609,7 +615,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.scene.isPaused() || index === null) return
     const units = this.engine.getState().units
     this.openPiles = []
-    const members = leader(this.gameState).members.map((character, i) => {
+    const members = this.expedition.members.map((character, i) => {
       const unit = units.find((u) => u.id === heroId(i))
       if (!unit) return { character }
       const items = this.ground.pileAt(unit.position)
@@ -692,7 +698,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** Leaves the finished battle: back to the world map after a victory, to the main menu otherwise. */
   private leaveBattle(): void {
-    if (this.engine.getState().winner === 'player') this.scene.start('World', { game: this.gameState })
+    if (this.engine.getState().winner === 'player') this.scene.start('World', { game: this.gameState, party: this.expedition.id })
     else this.scene.start('Menu')
   }
 
@@ -2017,7 +2023,7 @@ export class BattleScene extends Phaser.Scene {
       this.save()
     }
     this.setPlayerControl(true)
-    showStory(this, this.gameState, story, this.anchors())
+    showStory(this, this.gameState, story, this.anchors(), this.expedition.id)
   }
 
   /** Where the controls a tutorial tip may point at are on screen, those that show. */
@@ -2095,7 +2101,7 @@ export class BattleScene extends Phaser.Scene {
     this.castButton.setVisible(false)
     this.endTurnButton.setVisible(false)
     // The win and what it won are the world's from here on, however the scene is left.
-    const found = playerWon && this.location ? takeLoot(this.gameState, this.location) : []
+    const found = playerWon && this.location ? takeLoot(this.expedition, this.location) : []
     // Runes roll from the battle's own seed, so a reloaded battle finds the same; a debug fight has no location and none.
     const seed = battleSeed(this.engine.getLog())
     const foundRunes = playerWon && this.location && seed !== null ? takeRunes(this.gameState, this.location.threat, this.location.encounter, seed) : []
@@ -2111,7 +2117,7 @@ export class BattleScene extends Phaser.Scene {
       }
     }
     // The fallen are dead: out of the party, their gear in the baggage.
-    const xpLines = playerWon ? describeRewards(rewardVictory(leader(this.gameState).members, this.xpReward, leader(this.gameState).baggage)) : []
+    const xpLines = playerWon ? describeRewards(rewardVictory(this.expedition.members, this.xpReward, this.expedition.baggage)) : []
     this.xpReward = 0
     if (playerWon) {
       // Kept as it happens: a page reloaded on the victory screen opens the world map with the win.

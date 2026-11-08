@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { blightAt, boardIndex } from './blight.ts'
 import { presences, type PartyPresence } from './expedition.ts'
-import { leader, newGame } from './gameState.ts'
+import { newGame } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
 import { LOSS_LEVEL, YIELD_DAYS, daysToFall, siteYield, sites, updateTerritory } from './territory.ts'
 import { ENCAMPMENT_ID, newWorld, passTurn, travel, type MonsterLocation, type QuietLocation, type WorldState } from './worldMap.ts'
@@ -9,7 +9,7 @@ import { ENCAMPMENT_ID, newWorld, passTurn, travel, type MonsterLocation, type Q
 /** A new game on world `seed`: its world and its one party, the ready-made three, at home. */
 function solo(seed: number) {
   const game = newGame(readyMadeParty(), null, seed)
-  return { game, world: game.world, party: leader(game) }
+  return { game, world: game.world, party: game.parties[0] }
 }
 const site = (world: WorldState, id: string) => sites(world).find((l) => l.id === id)!
 const setLevel = (world: WorldState, l: QuietLocation, level: number) => (world.blight[boardIndex(world.board, l.position)] = level)

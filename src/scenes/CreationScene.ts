@@ -27,7 +27,8 @@ import {
   type DraftChange,
 } from '../character/creation.ts'
 import type { PerkId } from '../character/perks.ts'
-import { leader, type GameState } from '../game/gameState.ts'
+import type { GameState } from '../game/gameState.ts'
+import { company } from '../game/guildHall.ts'
 import { PORTRAIT_IDS } from '../character/portraits.ts'
 import { SKILLS, SKILL_IDS, TAGGED_SKILL_STEP, TAG_BONUS, skillLevel } from '../character/skills.ts'
 import type { ButtonProbe, CreationProbe, CreationStep } from '../testHook.ts'
@@ -49,6 +50,8 @@ interface CreationData {
   returnTo?: 'Party' | 'GuildHall'
   /** The game the guild hall recruits into, whose company's names are taken. */
   game?: GameState
+  /** The id of the party at the guild hall, handed back to it unchanged. */
+  party?: string
   /** What the party screen has named the encampment so far, handed back to it unchanged. */
   encampmentName?: string
   /** The party screen's tutorial box, carried there and back as the name is. */
@@ -145,6 +148,8 @@ export class CreationScene extends Phaser.Scene {
   private drafts: CharacterDraft[] = []
   /** The guild hall's game when recruiting, or null when building a party. */
   private recruiting: GameState | null = null
+  /** The id of the guild hall's party, handed back with the draft. */
+  private recruitingParty: string | undefined
   /** The encampment's name as the party screen had it, to hand back. */
   private encampmentName: string | undefined
   private tutorial: boolean | undefined
@@ -174,6 +179,7 @@ export class CreationScene extends Phaser.Scene {
     this.drafts = (data?.drafts ?? []).map(copyDraft)
     this.index = data?.index ?? null
     this.recruiting = data?.returnTo === 'GuildHall' ? (data.game ?? null) : null
+    this.recruitingParty = data?.party
     this.encampmentName = data?.encampmentName
     this.tutorial = data?.tutorial
     this.draft = this.index === null ? newDraft() : copyDraft(this.drafts[this.index])
@@ -278,7 +284,7 @@ export class CreationScene extends Phaser.Scene {
 
   /** The other members' names, which this one may not take; its own, when it is edited, is no clash. A recruit's are the company's. */
   private takenNames(): string[] {
-    if (this.recruiting) return [...leader(this.recruiting).members, ...this.recruiting.reserves].map((member) => member.name)
+    if (this.recruiting) return company(this.recruiting).map((member) => member.name)
     return this.drafts.filter((_, i) => i !== this.index).map((draft) => draft.name.trim())
   }
 
@@ -552,7 +558,7 @@ export class CreationScene extends Phaser.Scene {
     if (this.problems().length > 0) return
     const made = { ...this.draft, name: this.draft.name.trim() }
     if (this.recruiting) {
-      this.scene.start('GuildHall', { game: this.recruiting, recruit: made })
+      this.scene.start('GuildHall', { game: this.recruiting, party: this.recruitingParty, recruit: made })
       return
     }
     this.finish(this.index === null ? [...this.drafts, made] : this.drafts.map((draft, i) => (i === this.index ? made : draft)))
@@ -560,7 +566,7 @@ export class CreationScene extends Phaser.Scene {
 
   /** Back to the party screen's roster with the party as it now is, or to the guild hall with no one made. */
   private finish(drafts: CharacterDraft[]): void {
-    if (this.recruiting) this.scene.start('GuildHall', { game: this.recruiting })
+    if (this.recruiting) this.scene.start('GuildHall', { game: this.recruiting, party: this.recruitingParty })
     else this.scene.start('Party', { drafts, encampmentName: this.encampmentName, tutorial: this.tutorial })
   }
 }

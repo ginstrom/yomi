@@ -53,18 +53,18 @@ export function newGame(
   return { parties: [newExpedition(party, encampment(world).position)], world, runes: {}, reserves: [], slot, story: newStoryState(tutorial) }
 }
 
-/** The first party: a stopgap while the readers move to explicit parties (stage 5 step 05 removes it). */
-export function leader(game: GameState): Expedition {
-  return game.parties[0]
-}
-
 export function partyById(game: GameState, id: string): Expedition | undefined {
   return game.parties.find((party) => party.id === id)
 }
 
-/** Moves the loot of a beaten monster location into the baggage, and returns what was found. */
-export function takeLoot(game: GameState, location: MonsterLocation): Item[] {
+/** The party a scene acts for: the one its scene data names, else the first. That is the scenes' selection rule. */
+export function selectedParty(game: GameState, id?: string): Expedition {
+  return (id === undefined ? undefined : partyById(game, id)) ?? game.parties[0]
+}
+
+/** Moves the loot of a beaten monster location into `party`'s baggage, and returns what was found. */
+export function takeLoot(party: Expedition, location: MonsterLocation): Item[] {
   const found = location.loot.splice(0)
-  leader(game).baggage.push(...found)
+  party.baggage.push(...found)
   return found
 }

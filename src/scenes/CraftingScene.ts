@@ -4,7 +4,8 @@ import { attributeLevel } from '../character/perks.ts'
 import type { WorldEvent } from '../game/blight.ts'
 import { describeCost } from '../game/buildings.ts'
 import { craft, craftTier, craftables, highestGrade, options, type CraftOption } from '../game/crafting.ts'
-import { leader, type GameState } from '../game/gameState.ts'
+import type { Expedition } from '../game/expedition.ts'
+import { partyById, selectedParty, type GameState } from '../game/gameState.ts'
 import { itemAt, placeKey, type ItemPlace } from '../game/itemPlace.ts'
 import { embed, extract, fuse, socketables } from '../game/runecraft.ts'
 import { gradeNumeral } from '../inventory/grades.ts'
@@ -35,6 +36,8 @@ import { createPips } from './socketPips.ts'
 
 interface CraftingData {
   game: GameState
+  /** The id of the party that crafts; the first if left out or unknown. */
+  party?: string
   /** 'World' when opened from the world map's footer, which it resumes on closing; else it goes back to the encampment. */
   resume?: 'World'
 }
@@ -94,6 +97,7 @@ type Tab = 'modify' | 'runes'
  */
 export class CraftingScene extends Phaser.Scene {
   private gameState!: GameState
+  private expedition!: Expedition
   private resumeTo: 'World' | null = null
   private tab: Tab = 'modify'
   private page = 0
@@ -126,6 +130,7 @@ export class CraftingScene extends Phaser.Scene {
 
   create(data: CraftingData): void {
     this.gameState = data.game
+    this.expedition = selectedParty(data.game, data.party)
     this.resumeTo = data.resume ?? null
     this.tab = 'modify'
     this.page = 0
@@ -156,11 +161,11 @@ export class CraftingScene extends Phaser.Scene {
     const item = this.selectedPlace()
     const action = runes && this.chosen ? parseActionId(this.chosen) : null
     const listed = runes
-      ? socketables(this.gameState).map(({ place, item }) => ({ place, item, refusal: null }))
-      : craftables(this.gameState)
+      ? socketables(this.gameState, this.expedition).map(({ place, item }) => ({ place, item, refusal: null }))
+      : craftables(this.gameState, this.expedition)
     const runeItem = runes && item ? itemAt(this.gameState, item) : null
     return {
-      tier: craftTier(this.gameState.world, leader(this.gameState)),
+      tier: craftTier(this.gameState.world, this.expedition),
       tab: this.tab,
       message: this.message,
       itemsHint: this.itemsHint,
@@ -199,15 +204,15 @@ export class CraftingScene extends Phaser.Scene {
 
   /** The item clicked, among the tab's list: what can be worked, or what has a socket. */
   private selectedPlace(): ItemPlace | null {
-    const listed = this.tab === 'runes' ? socketables(this.gameState) : craftables(this.gameState)
+    const listed = this.tab === 'runes' ? socketables(this.gameState, this.expedition) : craftables(this.gameState, this.expedition)
     return listed.find(({ place }) => placeKey(place) === this.selected)?.place ?? null
   }
 
   /** The preview of a rune action, its refusal last. */
   private runePreview(action: RuneAction): string[] {
     const place = this.selectedPlace()
-    const refusal = actionRefusal(this.gameState, place, action)
-    return [...actionPreview(this.gameState, place, action), ...(refusal ? [refusal] : [])]
+    const refusal = actionRefusal(this.gameState, this.expedition, place, action)
+    return [...actionPreview(this.gameState, this.expedition, place, action), ...(refusal ? [refusal] : [])]
   }
 
   private currentOptions(): CraftOption[] {
@@ -217,12 +222,12 @@ export class CraftingScene extends Phaser.Scene {
 
   /** The AP of whoever holds the item at `place`, which tells its attacks a turn. */
   private apAt(place: ItemPlace): number {
-    return place.from === 'baggage' ? TYPICAL_AP : deriveCombatStats(leader(this.gameState).members[place.member]).actionPoints
+    return place.from === 'baggage' ? TYPICAL_AP : deriveCombatStats(this.ownerOf(place).members[place.member]).actionPoints
   }
 
   /** The strength of whoever holds the item at `place`, which tells its shortfall; none for the baggage. */
   private strengthAt(place: ItemPlace): number | undefined {
-    return place.from === 'baggage' ? undefined : attributeLevel(leader(this.gameState).members[place.member], 'strength')
+    return place.from === 'baggage' ? undefined : attributeLevel(this.ownerOf(place).members[place.member], 'strength')
   }
 
   /** What working the item at `place` with `option` changes, and what it costs. */
@@ -230,15 +235,20 @@ export class CraftingScene extends Phaser.Scene {
     const item = itemAt(this.gameState, place)!
     const lines = compareLines(item, option.result, this.apAt(place), this.strengthAt(place))
     const replaces = item.mod ? [`Replaces ${MODIFIERS[item.mod.id].name} (${gradeNumeral(item.mod.grade)}).`] : []
-    const time = craftTier(this.gameState.world, leader(this.gameState)) === 'field' ? ' and a day' : ''
+    const time = craftTier(this.gameState.world, this.expedition) === 'field' ? ' and a day' : ''
     const does = `${option.modifier.name} ${gradeNumeral(option.grade)}: ${option.modifier.better(option.grade)}, ${option.modifier.worse(option.grade)}.`
     return [does, `Makes the ${option.result.name}.`, ...replaces, ...lines, `Costs ${describeCost(option.cost)}${time}.`]
+  }
+
+  /** The party whose place it is. */
+  private ownerOf(place: ItemPlace): Expedition {
+    return partyById(this.gameState, place.party) ?? this.expedition
   }
 
   /** Where an item lies, in words: "Aldric, Weapon (worn)", "Brenna's pack", "baggage". */
   private whereIs(place: ItemPlace): string {
     if (place.from === 'baggage') return 'baggage'
-    const name = leader(this.gameState).members[place.member].name
+    const name = this.ownerOf(place).members[place.member].name
     return place.from === 'worn' ? `${name}, ${EQUIPMENT_SLOT_LABELS[place.slot].toLowerCase()}` : `${name}'s pack`
   }
 
@@ -255,7 +265,7 @@ export class CraftingScene extends Phaser.Scene {
     this.tipLines = []
     this.itemsHint = ''
     const { world } = this.gameState
-    const tier = craftTier(world, leader(this.gameState))
+    const tier = craftTier(world, this.expedition)
     const title = tier === 'field' ? 'Field Crafting' : 'Workshop'
     const about =
       tier === 'field'
@@ -280,7 +290,7 @@ export class CraftingScene extends Phaser.Scene {
 
   /** The Modify tab: the items a modifier fits, and the modifiers on offer for the one clicked. */
   private renderModify(): void {
-    const items = craftables(this.gameState)
+    const items = craftables(this.gameState, this.expedition)
     const pages = Math.max(1, Math.ceil(items.length / ROWS_PER_PAGE))
     this.page = Math.min(this.page, pages - 1)
     items.slice(this.page * ROWS_PER_PAGE, (this.page + 1) * ROWS_PER_PAGE).forEach(({ place, item, refusal }, i) =>
@@ -299,7 +309,7 @@ export class CraftingScene extends Phaser.Scene {
 
   /** The Runes tab: the items with a socket over the pouch, on the left; the sockets of the one clicked and the action's preview, on the right. */
   private renderRunes(): void {
-    const items = socketables(this.gameState)
+    const items = socketables(this.gameState, this.expedition)
     const pages = Math.max(1, Math.ceil(items.length / RUNE_ITEM_ROWS))
     this.page = Math.min(this.page, pages - 1)
     items.slice(this.page * RUNE_ITEM_ROWS, (this.page + 1) * RUNE_ITEM_ROWS).forEach(({ place, item }, i) => this.drawItem(place, item, null, LIST_TOP + i * ROW_H))
@@ -348,8 +358,8 @@ export class CraftingScene extends Phaser.Scene {
       const fuseAction: RuneAction = { kind: 'fuse', key }
       const embedAt = { x: LIST_X + LIST_W - 100, y, width: 64, height: ROW_H - 6 }
       const fuseAt = { x: LIST_X + LIST_W - 34, y, width: 60, height: ROW_H - 6 }
-      const embedOk = actionRefusal(this.gameState, place, embedAction) === null
-      const fuseOk = actionRefusal(this.gameState, place, fuseAction) === null
+      const embedOk = actionRefusal(this.gameState, this.expedition, place, embedAction) === null
+      const fuseOk = actionRefusal(this.gameState, this.expedition, place, fuseAction) === null
       this.pouchAt.set(key, { row: { x: LIST_X + 120, y }, embed: { at: embedAt, enabled: embedOk }, fuse: { at: fuseAt, enabled: fuseOk } })
       this.actionButton(embedAt, 'Embed', embedAction, embedOk)
       this.actionButton(fuseAt, 'Fuse', fuseAction, fuseOk)
@@ -376,7 +386,7 @@ export class CraftingScene extends Phaser.Scene {
         if (socket.rune) {
           const { id } = parseRuneKey(socket.rune)!
           const action: RuneAction = { kind: 'extract', index: socket.index }
-          const ok = actionRefusal(this.gameState, place, action) === null
+          const ok = actionRefusal(this.gameState, this.expedition, place, action) === null
           const at = { x: OPTIONS_X + OPTIONS_W - 36, y: centre, width: 72, height: 20 }
           this.socketAt.set(socket.index, { at, enabled: ok })
           const effect = this.add.text(OPTIONS_X + 22, centre + 10, socket.effect!, { fontFamily: FONT, fontSize: '10px', color: DIM, wordWrap: { width: OPTIONS_W - 104 } })
@@ -403,8 +413,8 @@ export class CraftingScene extends Phaser.Scene {
       this.frame.add(this.add.text(OPTIONS_X, y, 'Click Embed, Extract or Fuse to see what it does and costs.', { ...style, fontSize: '11px', color: DIM }))
       return
     }
-    const refusal = actionRefusal(this.gameState, place, action)
-    this.frame.add(this.add.text(OPTIONS_X, y, actionPreview(this.gameState, place, action).join('\n'), { ...style, fontSize: '11px', lineSpacing: 3 }))
+    const refusal = actionRefusal(this.gameState, this.expedition, place, action)
+    this.frame.add(this.add.text(OPTIONS_X, y, actionPreview(this.gameState, this.expedition, place, action).join('\n'), { ...style, fontSize: '11px', lineSpacing: 3 }))
     if (refusal) this.frame.add(this.add.text(OPTIONS_X, PAGE_Y - 18, refusal, { ...style, fontSize: '11px', color: REFUSED }).setOrigin(0, 1))
     const label = { embed: 'Embed', extract: 'Extract', fuse: 'Fuse' }[action.kind]
     this.button('confirm', { x: OPTIONS_X + OPTIONS_W / 2, y: PAGE_Y, width: OPTIONS_W, height: 26 }, `${label}: confirm`, () => this.onRune(action), refusal === null)
@@ -550,9 +560,9 @@ export class CraftingScene extends Phaser.Scene {
   private onRune(action: RuneAction): void {
     const game = this.gameState
     const place = this.selectedPlace()
-    const field = craftTier(game.world, leader(game)) === 'field'
+    const field = craftTier(game.world, this.expedition) === 'field'
     if (action.kind === 'fuse') {
-      const refusal = fuse(game, action.key)
+      const refusal = fuse(game, this.expedition, action.key)
       this.message = refusal ?? doneMessage(action)
       if (!refusal) this.chosen = null
       this.render()
@@ -579,7 +589,7 @@ export class CraftingScene extends Phaser.Scene {
 
   /** Works the item; in the field the day passes, and the map takes over to report it. */
   private onWork(place: ItemPlace, option: CraftOption): void {
-    const field = craftTier(this.gameState.world, leader(this.gameState)) === 'field'
+    const field = craftTier(this.gameState.world, this.expedition) === 'field'
     const result = craft(this.gameState, place, option.modifier.id, option.grade)
     if (result.refusal !== null) {
       this.message = result.refusal
@@ -604,7 +614,7 @@ export class CraftingScene extends Phaser.Scene {
       this.scene.resume(this.resumeTo, crafted)
       return
     }
-    this.scene.start('Encampment', { game: this.gameState, select: 'workshop' })
+    this.scene.start('Encampment', { game: this.gameState, party: this.expedition.id, select: 'workshop' })
     this.scene.bringToTop('Encampment')
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { leader, newGame, type GameState } from '../game/gameState.ts'
+import { newGame, type GameState } from '../game/gameState.ts'
 import type { ItemPlace } from '../game/itemPlace.ts'
 import { itemById } from '../inventory/inventory.ts'
 import {
@@ -22,8 +22,8 @@ function home(id = 'iron_sword@3', workshop = 2): { game: GameState; place: Item
   const game = newGame(undefined, null, 1, 'Hearthold')
   game.world.workshop = workshop
   game.world.stock = { gold: 500 }
-  leader(game).members[0].equipment.mainHand = itemById(id)!
-  return { game, place: { from: 'worn', member: 0, slot: 'mainHand', itemId: id } }
+  game.parties[0].members[0].equipment.mainHand = itemById(id)!
+  return { game, place: { from: 'worn', party: 'party_1', member: 0, slot: 'mainHand', itemId: id } }
 }
 
 describe('where sockets come from', () => {
@@ -80,25 +80,25 @@ describe('the Runes tab', () => {
   it('previews an embed: the item made, what changes and the cost', () => {
     const { game, place } = home()
     game.runes = { ember1: 1 }
-    expect(actionPreview(game, place, { kind: 'embed', key: 'ember1' })).toEqual([
+    expect(actionPreview(game, game.parties[0], place, { kind: 'embed', key: 'ember1' })).toEqual([
       'Set a Lesser Ember Rune in the Masterwork Iron Longsword.',
       'Makes the Masterwork Iron Longsword [Ember I].',
       'On a hit: +1 fire',
       'Costs 5 gold.',
     ])
-    expect(actionRefusal(game, place, { kind: 'embed', key: 'ember1' })).toBeNull()
+    expect(actionRefusal(game, game.parties[0], place, { kind: 'embed', key: 'ember1' })).toBeNull()
   })
 
   it('previews a field embed as taking a day too', () => {
     const { game, place } = home('iron_sword@3', 0)
-    leader(game).position = { q: leader(game).position.q + 1, r: leader(game).position.r }
+    game.parties[0].position = { q: game.parties[0].position.q + 1, r: game.parties[0].position.r }
     game.runes = { ember1: 1 }
-    expect(actionPreview(game, place, { kind: 'embed', key: 'ember1' }).at(-1)).toBe('Costs 5 gold and a day.')
+    expect(actionPreview(game, game.parties[0], place, { kind: 'embed', key: 'ember1' }).at(-1)).toBe('Costs 5 gold and a day.')
   })
 
   it('previews an extract, the rune going back to the pouch', () => {
     const { game, place } = home('iron_sword@3#ember1')
-    expect(actionPreview(game, place, { kind: 'extract', index: 0 })).toEqual([
+    expect(actionPreview(game, game.parties[0], place, { kind: 'extract', index: 0 })).toEqual([
       'Take the Lesser Ember Rune out of the Masterwork Iron Longsword [Ember I], intact, into the pouch.',
       'Makes the Masterwork Iron Longsword.',
       'On a hit: no longer +1 fire',
@@ -109,24 +109,24 @@ describe('the Runes tab', () => {
   it('previews a fuse, which needs no item', () => {
     const { game } = home()
     game.runes = { storm1: 3 }
-    expect(actionPreview(game, null, { kind: 'fuse', key: 'storm1' })).toEqual(['3 × Lesser Storm Rune → Storm Rune', 'Costs 20 gold.'])
+    expect(actionPreview(game, game.parties[0], null, { kind: 'fuse', key: 'storm1' })).toEqual(['3 × Lesser Storm Rune → Storm Rune', 'Costs 20 gold.'])
     expect(fuseLine('storm1')).toBe('3 × Lesser Storm Rune → Storm Rune')
-    expect(actionRefusal(game, null, { kind: 'fuse', key: 'storm1' })).toBeNull()
+    expect(actionRefusal(game, game.parties[0], null, { kind: 'fuse', key: 'storm1' })).toBeNull()
   })
 
   it('previews nothing to make for a Grand rune, and gives the domain\'s refusal', () => {
     const { game } = home()
     game.runes = { stone4: 3 }
-    expect(actionPreview(game, null, { kind: 'fuse', key: 'stone4' })).toEqual([])
-    expect(actionRefusal(game, null, { kind: 'fuse', key: 'stone4' })).toMatch(/highest rank/)
+    expect(actionPreview(game, game.parties[0], null, { kind: 'fuse', key: 'stone4' })).toEqual([])
+    expect(actionRefusal(game, game.parties[0], null, { kind: 'fuse', key: 'stone4' })).toMatch(/highest rank/)
   })
 
   it('gives the domain\'s refusals, and asks for an item before an embed or extract', () => {
     const { game, place } = home()
     game.runes = { storm2: 1 }
-    expect(actionRefusal(game, null, { kind: 'embed', key: 'storm2' })).toBe('Click an item to set the rune in first.')
-    expect(actionRefusal(game, place, { kind: 'fuse', key: 'storm2' })).toMatch(/^Fusing to a Greater Storm Rune needs a level 4 workshop/)
-    expect(actionRefusal(game, place, { kind: 'extract', index: 0 })).toMatch(/no rune there/)
+    expect(actionRefusal(game, game.parties[0], null, { kind: 'embed', key: 'storm2' })).toBe('Click an item to set the rune in first.')
+    expect(actionRefusal(game, game.parties[0], place, { kind: 'fuse', key: 'storm2' })).toMatch(/^Fusing to a Greater Storm Rune needs a level 4 workshop/)
+    expect(actionRefusal(game, game.parties[0], place, { kind: 'extract', index: 0 })).toMatch(/no rune there/)
   })
 
   it('says what was done', () => {

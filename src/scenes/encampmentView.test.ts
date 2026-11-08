@@ -16,7 +16,7 @@ describe('the encampment screen', () => {
   })
 
   it('gives every facility a plot of its own', () => {
-    const plots = facilities(newGame()).map((_, i) => plotAt(i))
+    const plots = facilities(newGame(), newGame().parties[0]).map((_, i) => plotAt(i))
     expect(new Set(plots.map(({ x, y }) => `${x},${y}`)).size).toBe(plots.length)
   })
 })

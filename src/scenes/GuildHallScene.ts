@@ -3,7 +3,8 @@ import type { Character } from '../character/character.ts'
 import { canAdvance } from '../character/progression.ts'
 import type { CharacterDraft } from '../character/creation.ts'
 import { describeCost } from '../game/buildings.ts'
-import { leader, type GameState } from '../game/gameState.ts'
+import type { Expedition } from '../game/expedition.ts'
+import { selectedParty, type GameState } from '../game/gameState.ts'
 import {
   MAX_RESERVES,
   RECRUIT_COST,
@@ -25,6 +26,8 @@ import { PartyColumn } from './PartyColumn.ts'
 import { PORTRAIT_SCALE, PORTRAIT_SIZE, portraitKey } from './partyPanel.ts'
 
 interface GuildHallData {
+  /** The id of the party at the hall; the first if left out or unknown. */
+  party?: string
   game: GameState
   /** A hero made in character creation, to recruit, as creation hands back. */
   recruit?: CharacterDraft
@@ -70,6 +73,7 @@ const TEXT = '#d8c9a3'
  */
 export class GuildHallScene extends Phaser.Scene {
   private gameState!: GameState
+  private expedition!: Expedition
   private view: 'roster' | 'recruit' = 'roster'
   private selected: { row: Row; index: number } | null = null
   private message = ''
@@ -87,11 +91,12 @@ export class GuildHallScene extends Phaser.Scene {
 
   create(data: GuildHallData): void {
     this.gameState = data.game
+    this.expedition = selectedParty(data.game, data.party)
     this.view = 'roster'
     this.selected = null
     this.message = ''
     if (data.recruit) {
-      const refusal = recruit(this.gameState, data.recruit)
+      const refusal = recruit(this.gameState, this.expedition, data.recruit)
       this.message = refusal ?? `${data.recruit.name} joins the reserves at level ${this.gameState.reserves.at(-1)!.level}.`
     }
     this.bg = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.7).setOrigin(0).setInteractive()
@@ -127,7 +132,7 @@ export class GuildHallScene extends Phaser.Scene {
       partyLimit: partyLimit(this.gameState.world),
       message: this.message,
       selected: this.selected,
-      party: faces(leader(this.gameState).members, PARTY_Y),
+      party: faces(this.expedition.members, PARTY_Y),
       reserves: faces(this.gameState.reserves, RESERVES_Y),
       prerolls: prerolls.map(({ draft }, index) => ({
         ...onScreen(faceAt(index, prerolls.length, PREROLL_Y)),
@@ -184,25 +189,25 @@ export class GuildHallScene extends Phaser.Scene {
 
   private buildRoster(): void {
     const { world } = this.gameState
-    this.label(PARTY_Y, `Party (${leader(this.gameState).members.length} of ${partyLimit(world)})`)
-    leader(this.gameState).members.forEach((hero, index) => this.addFace(hero, faceAt(index, leader(this.gameState).members.length, PARTY_Y), 'party', index))
+    this.label(PARTY_Y, `Party (${this.expedition.members.length} of ${partyLimit(world)})`)
+    this.expedition.members.forEach((hero, index) => this.addFace(hero, faceAt(index, this.expedition.members.length, PARTY_Y), 'party', index))
     this.label(RESERVES_Y, `Reserves (${this.gameState.reserves.length} of ${MAX_RESERVES})`)
     this.gameState.reserves.forEach((hero, index) => this.addFace(hero, faceAt(index, this.gameState.reserves.length, RESERVES_Y), 'reserves', index))
     if (this.gameState.reserves.length === 0) {
       this.frame.add(this.add.text(CENTRE_X, RESERVES_Y, 'No one waits at the hall. Recruit someone.', { fontFamily: FONT, fontSize: '13px', color: DIM }).setOrigin(0.5))
     }
     const picked = this.selected
-    this.button('toReserves', buttonAt(0, 4), 'To reserves', () => picked && this.act(toReserves(this.gameState, picked.index), ''), picked?.row === 'party')
-    this.button('toParty', buttonAt(1, 4), 'To party', () => picked && this.act(toParty(this.gameState, picked.index), ''), picked?.row === 'reserves')
+    this.button('toReserves', buttonAt(0, 4), 'To reserves', () => picked && this.act(toReserves(this.gameState, this.expedition, picked.index), ''), picked?.row === 'party')
+    this.button('toParty', buttonAt(1, 4), 'To party', () => picked && this.act(toParty(this.gameState, this.expedition, picked.index), ''), picked?.row === 'reserves')
     this.button('recruit', buttonAt(2, 4), 'Recruit', () => this.show('recruit'))
     this.button('close', buttonAt(3, 4), 'Close', () => this.close())
   }
 
   private buildRecruit(): void {
-    const refusal = recruitRefusal(this.gameState)
+    const refusal = recruitRefusal(this.gameState, this.expedition)
     this.frame.add(
       this.add
-        .text(CENTRE_X, 110, `A recruit costs ${describeCost(RECRUIT_COST)} and joins the reserves at level ${recruitLevel(this.gameState)}.\n${refusal ?? 'Choose a pre-rolled hero, or create one.'}`, {
+        .text(CENTRE_X, 110, `A recruit costs ${describeCost(RECRUIT_COST)} and joins the reserves at level ${recruitLevel(this.gameState, this.expedition)}.\n${refusal ?? 'Choose a pre-rolled hero, or create one.'}`, {
           fontFamily: FONT,
           fontSize: '13px',
           color: refusal ? '#ffb74d' : TEXT,
@@ -214,7 +219,7 @@ export class GuildHallScene extends Phaser.Scene {
     prerolls.forEach(({ draft, role }, index) => {
       const at = faceAt(index, prerolls.length, PREROLL_Y)
       this.addPortrait(draft.portrait, draft.name, role, at, refusal === null, () => {
-        this.act(recruit(this.gameState, draft), `${draft.name} joins the reserves at level ${this.gameState.reserves.at(-1)?.level}.`)
+        this.act(recruit(this.gameState, this.expedition, draft), `${draft.name} joins the reserves at level ${this.gameState.reserves.at(-1)?.level}.`)
         this.show('roster')
       })
     })
@@ -288,8 +293,8 @@ export class GuildHallScene extends Phaser.Scene {
     const picked = this.selected
     if (picked && picked.row !== row) {
       const [member, reserve] = row === 'reserves' ? [picked.index, index] : [index, picked.index]
-      const [leaving, joining] = [leader(this.gameState).members[member].name, this.gameState.reserves[reserve].name]
-      this.act(swap(this.gameState, member, reserve), `${joining} takes ${leaving}'s place in the party.`)
+      const [leaving, joining] = [this.expedition.members[member].name, this.gameState.reserves[reserve].name]
+      this.act(swap(this.gameState, this.expedition, member, reserve), `${joining} takes ${leaving}'s place in the party.`)
       return
     }
     this.selected = picked?.row === row && picked.index === index ? null : { row, index }
@@ -298,13 +303,13 @@ export class GuildHallScene extends Phaser.Scene {
 
   /** Creation over the hall, which hands its draft back here to recruit; the names of the whole company are taken. */
   private openCreation(): void {
-    this.scene.start('Creation', { returnTo: 'GuildHall', game: this.gameState })
+    this.scene.start('Creation', { returnTo: 'GuildHall', game: this.gameState, party: this.expedition.id })
     this.scene.bringToTop('Creation')
   }
 
   /** Back to the encampment, the guild hall's details showing. */
   private close(): void {
-    this.scene.start('Encampment', { game: this.gameState, select: 'guild_hall' })
+    this.scene.start('Encampment', { game: this.gameState, party: this.expedition.id, select: 'guild_hall' })
     this.scene.bringToTop('Encampment')
   }
 }

@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { deriveCombatStats } from '../character/character.ts'
-import { leader, type GameState } from '../game/gameState.ts'
+import type { Expedition } from '../game/expedition.ts'
+import { selectedParty, type GameState } from '../game/gameState.ts'
 import { placeKey, type ItemPlace } from '../game/itemPlace.ts'
 import type { Material } from '../game/territory.ts'
 import {
@@ -35,6 +36,8 @@ import { createPips } from './socketPips.ts'
 
 interface TradingPostData {
   game: GameState
+  /** The id of the party at the post; the first if left out or unknown. */
+  party?: string
 }
 
 type Tab = 'buy' | 'sell'
@@ -119,6 +122,7 @@ const REFUSED = '#ffb74d'
  */
 export class TradingPostScene extends Phaser.Scene {
   private gameState!: GameState
+  private expedition!: Expedition
   private tab: Tab = 'buy'
   private page = 0
   private filter: Filter = { ...OPENING_FILTER }
@@ -144,6 +148,7 @@ export class TradingPostScene extends Phaser.Scene {
 
   create(data: TradingPostData): void {
     this.gameState = data.game
+    this.expedition = selectedParty(data.game, data.party)
     this.tab = 'buy'
     this.page = 0
     this.filter = { ...OPENING_FILTER }
@@ -210,7 +215,7 @@ export class TradingPostScene extends Phaser.Scene {
   /** The lines of the tab showing, every page's. */
   private rows(): Row[] {
     const game = this.gameState
-    const apOf = (member: number) => deriveCombatStats(leader(game).members[member]).actionPoints
+    const apOf = (member: number) => deriveCombatStats(this.expedition.members[member]).actionPoints
     const { slot, family } = this.filter
     if (this.tab === 'buy') {
       if (slot === 'runes') {
@@ -218,8 +223,8 @@ export class TradingPostScene extends Phaser.Scene {
       }
       return wares(game.world, { slot, family: family ?? undefined }).map((item) => ({ id: item.id, kind: 'item', label: item.name, detail: statSummary(item), price: buyPrice(item)!, item, ap: TYPICAL_AP }))
     }
-    const items: Row[] = sellables(game).map(({ place, item, price }) => {
-      const whose = place.from === 'baggage' ? 'baggage' : `${leader(game).members[place.member].name}'s pack`
+    const items: Row[] = sellables(game, this.expedition).map(({ place, item, price }) => {
+      const whose = place.from === 'baggage' ? 'baggage' : `${this.expedition.members[place.member].name}'s pack`
       return {
         id: placeKey(place),
         kind: 'item',
@@ -387,7 +392,7 @@ export class TradingPostScene extends Phaser.Scene {
     ])
     const at = (y: number): Rect => ({ x: DETAILS_X + DETAILS_W / 2, y, width: DETAILS_W, height: 32 })
     if (this.tab === 'buy') {
-      const refusal = row.rune ? buyRuneRefusal(this.gameState, row.rune) : buyRefusal(this.gameState, row.id)
+      const refusal = row.rune ? buyRuneRefusal(this.gameState, this.expedition, row.rune) : buyRefusal(this.gameState, this.expedition, row.id)
       if (refusal) this.frame.add(this.add.text(DETAILS_X, REFUSAL_Y, refusal, { ...style, color: REFUSED }))
       this.button('confirm', at(CONFIRM_Y), `Buy for ${row.price} gold`, () => (row.rune ? this.onBuyRune(row) : this.onBuy(row)), refusal === null)
     } else if (row.kind === 'rune') {
@@ -451,17 +456,17 @@ export class TradingPostScene extends Phaser.Scene {
   }
 
   private onBuy(row: Row): void {
-    this.act(buy(this.gameState, row.id), `Bought the ${row.label} for ${row.price} gold. It is in the baggage.`, true)
+    this.act(buy(this.gameState, this.expedition, row.id), `Bought the ${row.label} for ${row.price} gold. It is in the baggage.`, true)
   }
 
   private onBuyRune(row: Row): void {
-    this.act(buyRune(this.gameState, row.rune!), `Bought the ${row.label} for ${row.price} gold. It is in the rune pouch.`, true)
+    this.act(buyRune(this.gameState, this.expedition, row.rune!), `Bought the ${row.label} for ${row.price} gold. It is in the rune pouch.`, true)
   }
 
   /** Sells one rune of the line; the line stays selected while the pouch holds more of it. */
   private onSellRune(row: Row): void {
     const left = pouchCount(this.gameState.runes, row.rune!) - 1
-    this.act(sellRune(this.gameState, row.rune!), `Sold the ${runeName(row.rune!)} for ${row.price} gold.`, left > 0)
+    this.act(sellRune(this.gameState, this.expedition, row.rune!), `Sold the ${runeName(row.rune!)} for ${row.price} gold.`, left > 0)
   }
 
   private onSell(row: Row): void {
@@ -470,12 +475,12 @@ export class TradingPostScene extends Phaser.Scene {
 
   private onSellMaterial(row: Row, amount: number): void {
     const left = row.amount! - amount
-    this.act(sellMaterial(this.gameState, row.material!, amount), `Sold ${amount} ${row.material} for ${amount / MATERIALS_PER_GOLD} gold.`, left >= MATERIALS_PER_GOLD)
+    this.act(sellMaterial(this.gameState, this.expedition, row.material!, amount), `Sold ${amount} ${row.material} for ${amount / MATERIALS_PER_GOLD} gold.`, left >= MATERIALS_PER_GOLD)
   }
 
   /** Back to the encampment, the trading post's details showing. */
   private close(): void {
-    this.scene.start('Encampment', { game: this.gameState, select: 'trading_post' })
+    this.scene.start('Encampment', { game: this.gameState, party: this.expedition.id, select: 'trading_post' })
     this.scene.bringToTop('Encampment')
   }
 }

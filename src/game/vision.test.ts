@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { hexDistance, hexEquals, offsetToHex } from '../grid/hex.ts'
 import { boardHex, boardIndex } from './blight.ts'
 import { presences, type PartyPresence } from './expedition.ts'
-import { leader, newGame } from './gameState.ts'
+import { newGame } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
 import { CAMP_VISION, PARTY_VISION, UNEXPLORED, knownBlightedShare, updateSight, visibleHexes } from './vision.ts'
 import {
@@ -22,7 +22,7 @@ import {
 /** A new game on world `seed`: its world and its one party, the ready-made three, at home. */
 function solo(seed: number) {
   const game = newGame(readyMadeParty(), null, seed)
-  return { game, world: game.world, party: leader(game) }
+  return { game, world: game.world, party: game.parties[0] }
 }
 const at = (world: WorldState, id: string) => world.locations.find((l) => l.id === id)!.position
 const seenAt = (world: WorldState, h: { q: number; r: number }) => world.seen[boardIndex(world.board, h)]
@@ -133,7 +133,7 @@ describe('sight', () => {
   it('plays out the same from the same seed', () => {
     const [a, b] = [solo(5).game, solo(5).game]
     for (const game of [a, b]) {
-      const party = leader(game)
+      const party = game.parties[0]
       for (let tries = 0; tries < 10 && !hexEquals(party.position, offsetToHex(30, 20)); tries++) travel(game, party, offsetToHex(30, 20))
     }
     expect(a.world.seen).toEqual(b.world.seen)

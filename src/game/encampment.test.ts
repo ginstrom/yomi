@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SHRINE_COSTS } from './buildings.ts'
 import { facilities, improveFacility, setFacilityLevel } from './encampment.ts'
-import { leader, newGame } from './gameState.ts'
+import { newGame } from './gameState.ts'
 
 /** A new game at home, with gold, iron and silver enough for anything. */
 function rich() {
@@ -9,12 +9,12 @@ function rich() {
   game.world.stock = { gold: 500, iron: 500, silver: 500 }
   return game
 }
-const view = (game: ReturnType<typeof newGame>, id: string) => facilities(game).find((f) => f.id === id)!
+const view = (game: ReturnType<typeof newGame>, id: string) => facilities(game, game.parties[0]).find((f) => f.id === id)!
 
 describe('the encampment', () => {
   it('starts with the guild hall and trading post built, the rest empty plots', () => {
     const game = newGame(undefined, null, 1, 'Hearthold')
-    expect(facilities(game).map((f) => [f.id, f.level])).toEqual([
+    expect(facilities(game, game.parties[0]).map((f) => [f.id, f.level])).toEqual([
       ['guild_hall', 1],
       ['shrine', 0],
       ['trading_post', 1],
@@ -34,11 +34,11 @@ describe('the encampment', () => {
 
   it('builds and raises a facility for the stock, through its own rules', () => {
     const game = rich()
-    expect(improveFacility(game, 'shrine')).toBeNull()
+    expect(improveFacility(game, game.parties[0], 'shrine')).toBeNull()
     expect(game.world.shrine).toBe(1)
     expect(game.world.stock.gold).toBe(500 - SHRINE_COSTS[0].gold!)
     expect(view(game, 'shrine').action).toBe('Raise to level 2')
-    expect(improveFacility(game, 'guild_hall')).toBeNull()
+    expect(improveFacility(game, game.parties[0], 'guild_hall')).toBeNull()
     expect(game.world.guildHall).toBe(2)
   })
 
@@ -49,7 +49,7 @@ describe('the encampment', () => {
       while (view(game, id).action) {
         const before = { ...game.world.stock }
         const { cost, level } = view(game, id)
-        expect(improveFacility(game, id)).toBeNull()
+        expect(improveFacility(game, game.parties[0], id)).toBeNull()
         expect(view(game, id).level).toBe(level + 1)
         for (const [material, amount] of Object.entries(cost!)) {
           expect(game.world.stock[material as keyof typeof before]).toBe(before[material as keyof typeof before]! - amount!)
@@ -85,22 +85,22 @@ describe('the encampment', () => {
   it('refuses a new facility without the stock, changing nothing', () => {
     const game = newGame(undefined, null, 1, 'Hearthold')
     expect(view(game, 'workshop').refusal).toMatch(/costs 25 gold, 15 iron/)
-    expect(improveFacility(game, 'workshop')).toMatch(/more than the stock/)
+    expect(improveFacility(game, game.parties[0], 'workshop')).toMatch(/more than the stock/)
     expect(game.world.workshop).toBe(0)
   })
 
   it('offers nothing past the top level', () => {
     const game = rich()
-    while (improveFacility(game, 'shrine') === null);
+    while (improveFacility(game, game.parties[0], 'shrine') === null);
     const shrine = view(game, 'shrine')
     expect([shrine.level, shrine.action, shrine.cost, shrine.next, shrine.refusal]).toEqual([shrine.maxLevel, null, null, null, null])
-    expect(improveFacility(game, 'shrine')).toMatch(/as great/)
+    expect(improveFacility(game, game.parties[0], 'shrine')).toMatch(/as great/)
   })
 
   it('is refused away from home', () => {
     const game = rich()
-    leader(game).position = { q: leader(game).position.q + 1, r: leader(game).position.r }
+    game.parties[0].position = { q: game.parties[0].position.q + 1, r: game.parties[0].position.r }
     expect(view(game, 'shrine').refusal).toMatch(/not at Hearthold/)
-    expect(improveFacility(game, 'shrine')).toMatch(/at Hearthold/)
+    expect(improveFacility(game, game.parties[0], 'shrine')).toMatch(/at Hearthold/)
   })
 })

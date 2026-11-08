@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { HexBoard, hexDistance, hexEquals, hexKey, hexToOffset, offsetToHex, type Hex } from '../grid/hex.ts'
 import { ENCOUNTERS, ENCOUNTER_BANDS, MAX_THREAT } from './encounters.ts'
 import type { PartyPresence } from './expedition.ts'
-import { leader, newGame, type GameState } from './gameState.ts'
+import { newGame, type GameState } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
 import {
   DEFAULT_ENCAMPMENT_NAME,
@@ -30,11 +30,11 @@ const lairs = (world: WorldState) => monsters(world).filter((l) => l.kind === 'm
 /** A new game on world 1: the game, its world and its one party. */
 function fresh() {
   const game = newGame(readyMadeParty(), null, 1)
-  return { game, world: game.world, party: leader(game) }
+  return { game, world: game.world, party: game.parties[0] }
 }
 /** Travels on to `to` however often a sighting stops the party, as a player clicks again. */
 function journeyTo(game: GameState, to: Hex): void {
-  const party = leader(game)
+  const party = game.parties[0]
   for (let tries = 0; tries < 10 && !hexEquals(party.position, to); tries++) travel(game, party, to)
 }
 

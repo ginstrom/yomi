@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PORTRAIT_IDS } from '../character/portraits.ts'
-import { leader, newGame } from '../game/gameState.ts'
+import { newGame } from '../game/gameState.ts'
 import { parseSave, serializeSave } from '../game/save.ts'
 import { CUTSCENES } from './cutscenes.ts'
 import { fillText, setTutorial, storyFor, type StoryMoment } from './story.ts'
@@ -59,7 +59,7 @@ describe('storyFor', () => {
 describe('fillText', () => {
   it('names the encampment and the party\'s leader', () => {
     const game = newGame(undefined, null, 1, 'Hearthold')
-    expect(fillText('{leader} of {encampment}', game)).toBe(`${leader(game).members[0].name} of Hearthold`)
+    expect(fillText('{leader} of {encampment}', game)).toBe(`${game.parties[0].members[0].name} of Hearthold`)
   })
 })
 

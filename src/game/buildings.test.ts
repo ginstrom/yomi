@@ -18,7 +18,7 @@ import {
   spend,
 } from './buildings.ts'
 import { presences } from './expedition.ts'
-import { leader, newGame } from './gameState.ts'
+import { newGame } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
 import { LOSS_LEVEL, OUTPOST_YIELD, YIELD_DAYS, siteYield, sites, updateTerritory } from './territory.ts'
 import { TOWER_VISION, visibleHexes } from './vision.ts'
@@ -27,7 +27,7 @@ import { ENCAMPMENT_ID, isNotable, locationAt, passTurn, type MonsterLocation } 
 /** A new game on world 1: the game, its world and its one party, the ready-made three, at home. */
 function solo() {
   const game = newGame(readyMadeParty(), null, 1)
-  return { game, world: game.world, party: leader(game) }
+  return { game, world: game.world, party: game.parties[0] }
 }
 
 /** A new game with the party on clean, empty land near home and the stock to build. */

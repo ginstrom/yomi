@@ -2,7 +2,8 @@ import { deriveCombatStats } from '../character/character.ts'
 import { attributeLevel } from '../character/perks.ts'
 import { describeCost } from '../game/buildings.ts'
 import { craftTier } from '../game/crafting.ts'
-import { leader, type GameState } from '../game/gameState.ts'
+import type { Expedition } from '../game/expedition.ts'
+import { partyById, type GameState } from '../game/gameState.ts'
 import { itemAt, type ItemPlace } from '../game/itemPlace.ts'
 import { aRune, embedCost, embedRefusal, extractCost, extractRefusal, fuseCost, fuseRefusal, FUSE_COUNT } from '../game/runecraft.ts'
 import { MATERIALS } from '../inventory/catalog.ts'
@@ -141,28 +142,29 @@ const FUSE_WORDS: Record<number, string> = { 2: 'two', 3: 'three', 4: 'four', 5:
 const NO_ITEM = 'Click an item to set the rune in first.'
 
 /** Why `action` cannot be done now, as runecraft.ts says, or null; an embed or extract with no item selected asks for one. */
-export function actionRefusal(game: GameState, place: ItemPlace | null, action: RuneAction): string | null {
-  if (action.kind === 'fuse') return fuseRefusal(game, action.key)
+export function actionRefusal(game: GameState, party: Expedition, place: ItemPlace | null, action: RuneAction): string | null {
+  if (action.kind === 'fuse') return fuseRefusal(game, party, action.key)
   if (!place) return action.kind === 'embed' ? NO_ITEM : 'Click an item first.'
   return action.kind === 'embed' ? embedRefusal(game, place, action.key) : extractRefusal(game, place, action.index)
 }
 
 /** The preview of `action`: what it does, the item it makes and what changes, and its cost. Empty where there is nothing to make. */
-export function actionPreview(game: GameState, place: ItemPlace | null, action: RuneAction): string[] {
+export function actionPreview(game: GameState, party: Expedition, place: ItemPlace | null, action: RuneAction): string[] {
   if (action.kind === 'fuse') {
     if (parseRuneKey(action.key)!.rank === MAX_RANK) return []
     return [fuseLine(action.key), `Costs ${describeCost(fuseCost(action.key))}.`]
   }
   const item = place && itemAt(game, place)
   if (!place || !item) return []
+  const owner = partyById(game, place.party)!
   const compare = (after: Item | undefined) => {
     if (!after) return []
-    const ap = place.from === 'baggage' ? TYPICAL_AP : deriveCombatStats(leader(game).members[place.member]).actionPoints
-    const strength = place.from === 'baggage' ? undefined : attributeLevel(leader(game).members[place.member], 'strength')
+    const ap = place.from === 'baggage' ? TYPICAL_AP : deriveCombatStats(owner.members[place.member]).actionPoints
+    const strength = place.from === 'baggage' ? undefined : attributeLevel(owner.members[place.member], 'strength')
     return [`Makes the ${after.name}.`, ...compareLines(item, after, ap, strength)]
   }
   if (action.kind === 'embed') {
-    const day = craftTier(game.world, leader(game)) === 'field' ? ' and a day' : ''
+    const day = craftTier(game.world, party) === 'field' ? ' and a day' : ''
     return [
       `Set ${aRune(action.key)} in the ${item.name}.`,
       ...compare(withRunes(item, [...(item.runes ?? []), action.key])),

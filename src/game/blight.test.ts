@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { hexDistance, hexNeighbors, hexToOffset, offsetToHex, type Hex } from '../grid/hex.ts'
 import { ENCOUNTER_BANDS } from './encounters.ts'
 import { presences, type PartyPresence } from './expedition.ts'
-import { leader, newGame, type GameState } from './gameState.ts'
+import { newGame, type GameState } from './gameState.ts'
 import {
   CLEANSE_LEVELS,
   MAX_BLIGHT,
@@ -36,7 +36,7 @@ import {
 /** A new game on world `seed`: its world and its one party, the ready-made three, at home. */
 function solo(seed: number) {
   const game = newGame(readyMadeParty(), null, seed)
-  return { game, world: game.world, party: leader(game) }
+  return { game, world: game.world, party: game.parties[0] }
 }
 const lairs = (world: WorldState) => world.locations.filter((l): l is MonsterLocation => l.kind === 'monsters')
 const setLevel = (world: WorldState, h: Hex, level: number) => (world.blight[boardIndex(world.board, h)] = level)

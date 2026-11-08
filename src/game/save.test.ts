@@ -8,7 +8,7 @@ import { hex } from '../grid/hex.ts'
 import { BASE_ITEMS, IRON_DAGGER, MAGIC_ITEMS, OAK_SHIELD, RING_PROTECTION, IRON_BREASTPLATE, itemById } from '../inventory/inventory.ts'
 import { FIRST_PARTY_ID, FIRST_PARTY_NAME } from './expedition.ts'
 import { ENCOUNTERS } from './encounters.ts'
-import { leader, newGame, takeLoot, type GameState } from './gameState.ts'
+import { newGame, takeLoot, type GameState } from './gameState.ts'
 import { Ground } from './ground.ts'
 import { PREROLLS, partyFighters, partyFromDrafts } from './party.ts'
 import { SAVE_VERSION, describeSave, parseSave, saveSummary, serializeSave, type SaveFile, type SavedBattle } from './save.ts'
@@ -21,8 +21,8 @@ const monsters = (game: GameState): MonsterLocation[] =>
 function gameUnderWay(): GameState {
   const game = newGame(undefined, 2, 1)
   const [first] = monsters(game)
-  takeLoot(game, first)
-  const [aldric, brenna] = leader(game).members
+  takeLoot(game.parties[0], first)
+  const [aldric, brenna] = game.parties[0].members
   aldric.backpack[aldric.backpack.indexOf(null)] = RING_PROTECTION
   equipFromBackpack(aldric, aldric.backpack.indexOf(RING_PROTECTION), [])
   gainXp(brenna, 500)
@@ -37,7 +37,7 @@ function gameUnderWay(): GameState {
 
 function battleOf(game: GameState): SavedBattle {
   const location = monsters(game)[1]
-  const { setup } = ENCOUNTERS[location.encounter](partyFighters(leader(game).members), location.threat)
+  const { setup } = ENCOUNTERS[location.encounter](partyFighters(game.parties[0].members), location.threat)
   const engine = new BattleEngine(setup, { seed: 9, meta: { location: location.id } })
   engine.step({ type: 'end_turn' })
   engine.step({ type: 'end_turn' })
@@ -53,17 +53,17 @@ describe('the encampment’s facilities and graded gear', () => {
     const game = gameUnderWay()
     Object.assign(game.world, { tradingPost: 3, workshop: 2, infirmary: 1 })
     game.world.stock = { gold: 7, copper: 3 }
-    leader(game).members[0].equipment.mainHand = itemById('iron_sword@3+light2')
-    leader(game).members[1].backpack[0] = itemById('yew_bow+recurve1')!
-    leader(game).baggage.push(itemById('iron_breastplate@2')!)
-    leader(game).baggage.push(itemById('steel_longsword@2+light1')!)
+    game.parties[0].members[0].equipment.mainHand = itemById('iron_sword@3+light2')
+    game.parties[0].members[1].backpack[0] = itemById('yew_bow+recurve1')!
+    game.parties[0].baggage.push(itemById('iron_breastplate@2')!)
+    game.parties[0].baggage.push(itemById('steel_longsword@2+light1')!)
     const loaded = parseSave(serializeSave({ game, battle: null, savedAt: 1 }))!.game
     expect([loaded.world.tradingPost, loaded.world.workshop, loaded.world.infirmary]).toEqual([3, 2, 1])
     expect(loaded.world.stock).toEqual({ gold: 7, copper: 3 })
-    expect(leader(loaded).members[0].equipment.mainHand).toBe(itemById('iron_sword@3+light2'))
-    expect(leader(loaded).members[1].backpack[0]).toBe(leader(game).members[1].backpack[0])
-    expect(leader(loaded).baggage.at(-2)).toBe(itemById('iron_breastplate@2'))
-    expect(leader(loaded).baggage.at(-1)).toBe(itemById('steel_longsword@2+light1'))
+    expect(loaded.parties[0].members[0].equipment.mainHand).toBe(itemById('iron_sword@3+light2'))
+    expect(loaded.parties[0].members[1].backpack[0]).toBe(game.parties[0].members[1].backpack[0])
+    expect(loaded.parties[0].baggage.at(-2)).toBe(itemById('iron_breastplate@2'))
+    expect(loaded.parties[0].baggage.at(-1)).toBe(itemById('steel_longsword@2+light1'))
   })
 })
 
@@ -76,7 +76,7 @@ describe('itemById', () => {
   it('finds everything a new game can hold: kits, backpacks and loot', () => {
     const game = newGame()
     const held = [
-      ...leader(game).members.flatMap((member) => [...Object.values(member.equipment), ...member.backpack.filter((item) => item !== null)]),
+      ...game.parties[0].members.flatMap((member) => [...Object.values(member.equipment), ...member.backpack.filter((item) => item !== null)]),
       ...monsters(game).flatMap((location) => location.loot),
     ]
     expect(held.length).toBeGreaterThan(20)
@@ -105,17 +105,17 @@ describe('a save', () => {
     const game = gameUnderWay()
     const parsed = parseSave(serializeSave({ game, battle: battleOf(game), savedAt: 5 }))!
     const itemsOf = (state: GameState) => [
-      ...leader(state).members.flatMap((member) => [...Object.values(member.equipment), ...member.backpack]),
-      ...leader(state).baggage,
+      ...state.parties[0].members.flatMap((member) => [...Object.values(member.equipment), ...member.backpack]),
+      ...state.parties[0].baggage,
       ...monsters(state).flatMap((location) => location.loot),
     ]
     const before = itemsOf(game)
     const after = itemsOf(parsed.game)
     expect(after).toHaveLength(before.length)
     after.forEach((item, i) => expect(item).toBe(before[i]))
-    expect(leader(parsed.game).members[0].equipment.ring1).toBe(RING_PROTECTION)
+    expect(parsed.game.parties[0].members[0].equipment.ring1).toBe(RING_PROTECTION)
     expect(parsed.battle!.ground[0].items[0]).toBe(OAK_SHIELD)
-    expect(leader(parsed.game).baggage.length).toBeGreaterThan(0)
+    expect(parsed.game.parties[0].baggage.length).toBeGreaterThan(0)
   })
 
   it('is version 20, whose company holds where each party stands and what it confronts', () => {
@@ -126,12 +126,12 @@ describe('a save', () => {
     const game = gameUnderWay()
     game.runes = { ember1: 2, storm2: 1 }
     const runed = itemById('iron_sword@3#ember1')!
-    leader(game).baggage.push(runed)
-    leader(game).members[0].equipment.mainHand = runed
+    game.parties[0].baggage.push(runed)
+    game.parties[0].members[0].equipment.mainHand = runed
     const parsed = parseSave(serializeSave({ game, battle: null, savedAt: 5 }))!
     expect(parsed.game.runes).toEqual({ ember1: 2, storm2: 1 })
-    expect(leader(parsed.game).baggage.at(-1)).toBe(runed)
-    expect(leader(parsed.game).members[0].equipment.mainHand).toBe(runed)
+    expect(parsed.game.parties[0].baggage.at(-1)).toBe(runed)
+    expect(parsed.game.parties[0].members[0].equipment.mainHand).toBe(runed)
   })
 
   it('reads a bad pouch, or a save of version 17, as unreadable', () => {
@@ -160,7 +160,7 @@ describe('a save', () => {
     const before = structuredClone(game)
     serializeSave({ game, battle: battleOf(game), savedAt: 5 })
     expect(game).toEqual(before)
-    expect(leader(game).members[0].equipment.armor).toBe(IRON_BREASTPLATE)
+    expect(game.parties[0].members[0].equipment.armor).toBe(IRON_BREASTPLATE)
   })
 })
 
@@ -221,14 +221,14 @@ describe('parseSave', () => {
 describe('a company', () => {
   it('round-trips with its id, name, position, order, confrontation, members and baggage', () => {
     const game = gameUnderWay()
-    leader(game).order = { kind: 'travel', to: hex(5, 6), route: [hex(4, 6), hex(5, 6)] }
+    game.parties[0].order = { kind: 'travel', to: hex(5, 6), route: [hex(4, 6), hex(5, 6)] }
     const raiders = game.world.locations.find((l) => l.id === 'goblin_raiders')!
-    leader(game).position = raiders.position
-    leader(game).confronting = raiders.id
+    game.parties[0].position = raiders.position
+    game.parties[0].confronting = raiders.id
     const parsed = parseSave(serializeSave({ game, battle: null, savedAt: 5 }))!
     expect(parsed.game).toEqual(game)
     expect(parsed.game.parties).toHaveLength(1)
-    const [before, after] = [leader(game), leader(parsed.game)]
+    const [before, after] = [game.parties[0], parsed.game.parties[0]]
     expect(after.position).not.toEqual(encampment(game.world).position)
     expect([after.id, after.name, after.position, after.order, after.confronting]).toEqual([
       before.id,
@@ -259,7 +259,7 @@ describe('a version-18 save', () => {
     expect(loaded).not.toBeNull()
     const { game } = loaded
     expect(game.parties).toHaveLength(1)
-    const party = leader(game)
+    const party = game.parties[0]
     expect([party.id, party.name, party.order]).toEqual([FIRST_PARTY_ID, FIRST_PARTY_NAME, { kind: 'idle' }])
     expect(party.members.map((m) => [m.name, m.level, m.hp])).toEqual(old.game.party.map((m: any) => [m.name, m.level, m.hp]))
     party.members.forEach((m, i) =>
@@ -309,7 +309,7 @@ describe('saveSummary', () => {
   it('tells the party, its highest level, the turn and when it was written', () => {
     const game = gameUnderWay()
     const summary = saveSummary({ game, battle: null, savedAt: new Date(2026, 9, 12, 21, 40).getTime() })
-    expect(summary).toMatchObject({ names: ['Aldric', 'Brenna', 'Delwyn'], level: leader(game).members[1].level, turn: 14, battle: null })
+    expect(summary).toMatchObject({ names: ['Aldric', 'Brenna', 'Delwyn'], level: game.parties[0].members[1].level, turn: 14, battle: null })
     expect(summary.level).toBeGreaterThan(1)
     expect(describeSave(summary)).toBe(`Aldric, Brenna, Delwyn    Level ${summary.level}    Turn 14    12 Oct 21:40`)
   })

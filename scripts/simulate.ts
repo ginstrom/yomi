@@ -38,7 +38,7 @@ import {
 } from '../src/game/buildings.ts'
 import { WORKSHOP_COSTS, craft, craftTier, highestGrade, upgradeWorkshop } from '../src/game/crafting.ts'
 import { presenceOf, type Expedition } from '../src/game/expedition.ts'
-import { leader, newGame, type GameState } from '../src/game/gameState.ts'
+import { newGame, type GameState } from '../src/game/gameState.ts'
 import {
   GUILD_HALL_LEVELS,
   RECRUIT_COST,
@@ -331,11 +331,11 @@ const lowestLevel = (party: Party) => Math.min(...party.map((member) => member.l
  * once the stock affords the next level and no held site is under threat, or
  * to fill an empty place in the party when the stock affords a recruit.
  */
-export function hallErrand(game: GameState): boolean {
+export function hallErrand(game: GameState, party: Expedition): boolean {
   const { world } = game
   const cost = upgradeCost(world)
   if (cost && canAfford(world.stock, cost) && world.threatened.length === 0) return true
-  return leader(game).members.length < partyLimit(world) && canAfford(world.stock, RECRUIT_COST)
+  return party.members.length < partyLimit(world) && canAfford(world.stock, RECRUIT_COST)
 }
 
 /**
@@ -343,17 +343,17 @@ export function hallErrand(game: GameState): boolean {
  * party's empty places with recruits, the pre-rolls in turn (renamed when the
  * name is taken), their points spent by `autoAdvance`. Returns how many it hired.
  */
-export function visitGuildHall(game: GameState): number {
-  while (upgradeGuildHall(game) === null);
+export function visitGuildHall(game: GameState, party: Expedition): number {
+  while (upgradeGuildHall(game, party) === null);
   let hired = 0
-  while (leader(game).members.length < partyLimit(game.world) && recruitRefusal(game) === null) {
-    const taken = [...leader(game).members, ...game.reserves].map((member) => member.name)
-    const base = PREROLLS[(leader(game).members.length + game.reserves.length) % PREROLLS.length].draft
+  while (party.members.length < partyLimit(game.world) && recruitRefusal(game, party) === null) {
+    const taken = [...party.members, ...game.reserves].map((member) => member.name)
+    const base = PREROLLS[(party.members.length + game.reserves.length) % PREROLLS.length].draft
     let name = base.name
     for (let n = 2; taken.includes(name); n++) name = `${base.name} ${n}`
-    if (recruit(game, { ...base, name }) !== null) break
-    toParty(game, game.reserves.length - 1)
-    autoAdvance(leader(game).members.at(-1)!)
+    if (recruit(game, party, { ...base, name }) !== null) break
+    toParty(game, party, game.reserves.length - 1)
+    autoAdvance(party.members.at(-1)!)
     hired++
   }
   return hired
@@ -408,11 +408,11 @@ function modifierRank(family: FamilyId | undefined, mod: { id: ModifierId; grade
  * that is a day each, so it does `limit` at most. Returns how many it made and
  * the events of the days it took (none at a workshop), for the caller to tally.
  */
-export function craftGear(game: GameState, limit = Infinity): { crafted: number; events: WorldEvent[] } {
+export function craftGear(game: GameState, party: Expedition, limit = Infinity): { crafted: number; events: WorldEvent[] } {
   let crafted = 0
   const events: WorldEvent[] = []
-  const tier = craftTier(game.world, leader(game))
-  for (const [member, hero] of leader(game).members.entries()) {
+  const tier = craftTier(game.world, party)
+  for (const [member, hero] of party.members.entries()) {
     for (const slot of GEAR_SLOTS) {
       const item = hero.equipment[slot]
       const base = item && baseItem(item)
@@ -422,7 +422,7 @@ export function craftGear(game: GameState, limit = Infinity): { crafted: number;
         if (!unlocked) continue
         for (const grade of [...GRADES].reverse()) {
           if (grade > highestGrade(tier) || modifierRank(base.family, { id, grade }) >= modifierRank(base.family, item.mod)) continue
-          const result = craft(game, { from: 'worn', member, slot, itemId: item.id }, id, grade)
+          const result = craft(game, { from: 'worn', party: party.id, member, slot, itemId: item.id }, id, grade)
           if (result.refusal !== null) continue
           crafted++
           events.push(...result.events)
@@ -476,22 +476,22 @@ function nextRune(item: Item, kinds: readonly RuneId[], held: (key: RuneKey) => 
  * embeds by `RUNE_ORDER`, a kind's highest rank first, until a socket is
  * refused. Nothing in the field: embedding there would cost days.
  */
-export function runecraftGear(game: GameState): { embedded: number; fused: number; bought: number; gold: number } {
+export function runecraftGear(game: GameState, party: Expedition): { embedded: number; fused: number; bought: number; gold: number } {
   const done = { embedded: 0, fused: 0, bought: 0, gold: 0 }
   const { world } = game
-  if (craftTier(world, leader(game)) === 'field') return done
+  if (craftTier(world, party) === 'field') return done
   for (const key of pouchKeys(game.runes)) {
     if (!key.endsWith('1')) continue
-    while (fuseRefusal(game, key) === null) {
+    while (fuseRefusal(game, party, key) === null) {
       done.gold += fuseCost(key).gold ?? 0
-      fuse(game, key)
+      fuse(game, party, key)
       done.fused++
     }
   }
   const sold = runeWares(world)
   const claimed: Partial<Record<RuneKey, number>> = {}
   const unclaimed = (key: RuneKey) => pouchCount(game.runes, key) - (claimed[key] ?? 0)
-  for (const hero of leader(game).members) {
+  for (const hero of party.members) {
     for (const slot of GEAR_SLOTS) {
       const item = hero.equipment[slot]
       if (!item) continue
@@ -500,9 +500,9 @@ export function runecraftGear(game: GameState): { embedded: number; fused: numbe
         let key = nextRune(item, kinds, unclaimed)
         if (!key) {
           const kind = kinds.find((id) => runeFits(id, item) && sold.includes(runeKey(id, 1)))
-          if (!kind || buyRuneRefusal(game, runeKey(kind, 1)) !== null) continue
+          if (!kind || buyRuneRefusal(game, party, runeKey(kind, 1)) !== null) continue
           key = runeKey(kind, 1)
-          buyRune(game, key)
+          buyRune(game, party, key)
           done.bought++
           done.gold += runePrice(key)
         }
@@ -510,11 +510,11 @@ export function runecraftGear(game: GameState): { embedded: number; fused: numbe
       }
     }
   }
-  for (const [member, hero] of leader(game).members.entries()) {
+  for (const [member, hero] of party.members.entries()) {
     for (const slot of GEAR_SLOTS) {
       for (let item = hero.equipment[slot]; item && (item.runes?.length ?? 0) < socketsOf(item); item = hero.equipment[slot]) {
         const key = nextRune(item, RUNE_ORDER[slotClass(slot)], (k) => pouchCount(game.runes, k))
-        if (!key || embed(game, { from: 'worn', member, slot, itemId: item.id }, key).refusal !== null) break
+        if (!key || embed(game, { from: 'worn', party: party.id, member, slot, itemId: item.id }, key).refusal !== null) break
         done.embedded++
         done.gold += embedCost(key).gold ?? 0
       }
@@ -533,16 +533,16 @@ export function runecraftGear(game: GameState): { embedded: number; fused: numbe
  * crafts the best it can on them (`craftGear`); and raises the shrine with
  * what is left.
  */
-export function visitFacilities(game: GameState): Trade {
+export function visitFacilities(game: GameState, party: Expedition): Trade {
   const { world } = game
   const trade: Trade = {
     goldOnGear: 0, goldFromSales: 0, crafted: 0, tierTwoBought: 0, runesBought: 0, runesFused: 0, runesEmbedded: 0, goldOnRunes: 0,
   }
   const gold = () => world.stock.gold ?? 0
   const sellAll = () => {
-    while (leader(game).baggage.length > 0) {
-      trade.goldFromSales += salePrice(leader(game).baggage[0])
-      sell(game, { from: 'baggage', index: 0, itemId: leader(game).baggage[0].id })
+    while (party.baggage.length > 0) {
+      trade.goldFromSales += salePrice(party.baggage[0])
+      sell(game, { from: 'baggage', party: party.id, index: 0, itemId: party.baggage[0].id })
     }
   }
   sellAll()
@@ -550,12 +550,12 @@ export function visitFacilities(game: GameState): Trade {
   for (const [material, amount] of Object.entries(world.stock) as [Material, number][]) {
     const surplus = amount - (needs[material] ?? 0)
     const lots = surplus - (surplus % 2)
-    if (material !== 'gold' && lots >= 2 && sellMaterial(game, material, lots) === null) trade.goldFromSales += lots / 2
+    if (material !== 'gold' && lots >= 2 && sellMaterial(game, party, material, lots) === null) trade.goldFromSales += lots / 2
   }
-  while (raiseTradingPost(game) === null);
-  while (upgradeWorkshop(game) === null);
-  while (raiseInfirmary(game) === null);
-  for (const [member, hero] of leader(game).members.entries()) {
+  while (raiseTradingPost(game, party) === null);
+  while (upgradeWorkshop(game, party) === null);
+  while (raiseInfirmary(game, party) === null);
+  for (const [member, hero] of party.members.entries()) {
     for (const slot of GEAR_SLOTS) {
       const worn = hero.equipment[slot]
       const base = worn && baseItem(worn)
@@ -568,32 +568,32 @@ export function visitFacilities(game: GameState): Trade {
         const price = buyPrice(candidate)!
         if (price > wornPrice && price <= gold() && (!bought || price >= buyPrice(bought)!)) bought = candidate
       }
-      if (!bought || buy(game, bought.id) !== null) continue
+      if (!bought || buy(game, party, bought.id) !== null) continue
       trade.goldOnGear += buyPrice(bought)!
       if (bought.tier === 2) trade.tierTwoBought += 1
-      leader(game).baggage.pop()
+      party.baggage.pop()
       // The old item's runes come back to the pouch where the workshop can take them out; any left are sold with it.
       for (let old = worn; old.runes?.length; old = hero.equipment[slot]!) {
-        const place = { from: 'worn', member, slot, itemId: old.id } as const
+        const place = { from: 'worn', party: party.id, member, slot, itemId: old.id } as const
         if (extractRefusal(game, place, 0) !== null) break
         trade.goldOnRunes += extractCost(old.runes[0]).gold ?? 0
         extract(game, place, 0)
       }
       const old = hero.equipment[slot]!
-      replaceAt(game, { from: 'worn', member, slot, itemId: old.id }, bought)
-      leader(game).baggage.push(old)
+      replaceAt(game, { from: 'worn', party: party.id, member, slot, itemId: old.id }, bought)
+      party.baggage.push(old)
     }
   }
   // What was replaced is sold before the runes and the crafts, which the gold may pay for.
   sellAll()
-  const runes = runecraftGear(game)
+  const runes = runecraftGear(game, party)
   trade.runesBought += runes.bought
   trade.runesFused += runes.fused
   trade.runesEmbedded += runes.embedded
   trade.goldOnRunes += runes.gold
   // Without a workshop, crafting here would be the field's, a day each: that waits for the road.
-  if (craftTier(world, leader(game)) !== 'field') trade.crafted += craftGear(game).crafted
-  while (raiseShrine(world, leader(game)) === null);
+  if (craftTier(world, party) !== 'field') trade.crafted += craftGear(game, party).crafted
+  while (raiseShrine(world, party) === null);
   return trade
 }
 
@@ -662,7 +662,7 @@ export function nextTarget(world: WorldState, party: Expedition, readyLevel = SO
  */
 export function runCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0): Campaign {
   const game = newGame(startingParty(args), null, seed)
-  const expedition = leader(game)
+  const expedition = game.parties[0]
   const party = expedition.members
   const { world } = game
   const home = world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
@@ -710,13 +710,13 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
   for (;;) {
     if (world.status === 'lost') return finish('encampment')
     if (world.turn > MAX_CAMPAIGN_DAYS) return finish('timeout')
-    if (hallErrand(game) && !hexEquals(expedition.position, home)) {
+    if (hallErrand(game, expedition) && !hexEquals(expedition.position, home)) {
       if (!walkTo(home)) return finish(worldActive(world) ? 'timeout' : 'encampment')
     }
     // Done at once, whatever brought the party home.
     if (atGuildHall(world, expedition)) {
-      record.recruits += visitGuildHall(game)
-      const trade = visitFacilities(game)
+      record.recruits += visitGuildHall(game, expedition)
+      const trade = visitFacilities(game, expedition)
       record.goldOnGear += trade.goldOnGear
       record.goldFromSales += trade.goldFromSales
       record.tierTwoBought += trade.tierTwoBought
@@ -773,7 +773,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
     // A field craft on one piece of gear the stock affords, a day's work.
     if (canCamp(world, expedition)) {
       const turn = world.turn
-      const { crafted, events } = craftGear(game, 1)
+      const { crafted, events } = craftGear(game, expedition, 1)
       tally(events)
       record.crafted += crafted
       record.fieldCraftDays += world.turn - turn

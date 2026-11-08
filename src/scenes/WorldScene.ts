@@ -6,7 +6,7 @@ import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex, type WorldEve
 import { atEncampment, buildOutpost, buildTower, canBuildOutpost, canBuildTower, outpostSiteRefusal, towerSiteRefusal } from '../game/buildings.ts'
 import { campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from '../game/camp.ts'
 import { presences, type Expedition, type PartyPresence } from '../game/expedition.ts'
-import { leader, newGame, type GameState } from '../game/gameState.ts'
+import { newGame, selectedParty, type GameState } from '../game/gameState.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
 import { daysToFall } from '../game/territory.ts'
 import { UNEXPLORED, knownBlightedShare, visibleHexes } from '../game/vision.ts'
@@ -44,6 +44,8 @@ import type { DebugSource } from './debugCommands.ts'
 
 interface WorldData {
   game?: GameState
+  /** The id of the party to show selected; the first if left out or unknown. */
+  party?: string
 }
 
 /** Each kind of location's sprite in the atlas (art/map/), which has an `idle` animation for each. */
@@ -208,7 +210,7 @@ export class WorldScene extends Phaser.Scene {
     this.hovered = null
     this.panOrigin = null
     this.press = null
-    this.selectedParty = deployedParties(this.gameState)[0]?.id ?? FIRST_PARTY_ID
+    this.selectedParty = selectedParty(this.gameState, data?.party).id
     this.hoveredParty = null
     // The first member with something to spend, so one click on its portrait opens its panel.
     this.active = Math.max(0, this.selectedMembers().findIndex(canAdvance))
@@ -348,7 +350,7 @@ export class WorldScene extends Phaser.Scene {
         ? ''
         : here
         ? `You stand before the ${here.name} (threat ${here.threat}).`
-        : leader(this.gameState).members.some(canAdvance)
+        : this.expedition().members.some(canAdvance)
           ? 'Your heroes have grown: click the portrait of one marked "+" to spend its skill points and perks.'
           : '',
     )
@@ -370,6 +372,7 @@ export class WorldScene extends Phaser.Scene {
   debugSource(): DebugSource {
     return {
       game: this.gameState,
+      party: this.selectedParty,
       changed: () => {
         this.refreshPartyGear()
         this.refresh()
@@ -377,14 +380,14 @@ export class WorldScene extends Phaser.Scene {
         this.checkOutcome()
       },
       // As an attack on a location would, but with none behind it: it clears none and takes no loot.
-      fight: (encounter, threat) => this.scene.start('Battle', { game: this.gameState, encounter, threat }),
+      fight: (encounter, threat, party) => this.scene.start('Battle', { game: this.gameState, encounter, threat, party }),
     }
   }
 
   probe(): WorldProbe {
     const [scout, wait, attack] = this.buttons.map((button) => buttonProbe(button))
     const camp = buttonProbe(this.campButtons[0])
-    const campUntilHealed = buttonProbe(this.campButtons[1], partyWounded(leader(this.gameState).members))
+    const campUntilHealed = buttonProbe(this.campButtons[1], partyWounded(this.expedition().members))
     return {
       world: this.world,
       partyAt: this.expedition().position,
@@ -590,7 +593,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Shows the party's figure wearing and holding what its first member does now. */
   private refreshPartyGear(): void {
-    this.party.setLook(heroLook(leader(this.gameState).members[0]?.equipment ?? {}))
+    this.party.setLook(heroLook(this.expedition().members[0]?.equipment ?? {}))
   }
 
   private createButton(label: string, onClick: () => void, width = BUTTON_W): Phaser.GameObjects.Container {
@@ -751,9 +754,9 @@ export class WorldScene extends Phaser.Scene {
     return presences(this.gameState.parties)
   }
 
-  /** The party the map acts for: the company's only one (stage 5 step 05 takes it from the scene data). */
+  /** The party the map acts for: the selected one. */
   private expedition(): Expedition {
-    return leader(this.gameState)
+    return selectedParty(this.gameState, this.selectedParty)
   }
 
   /** Redraws everything that follows the world's state: the party, the header and which buttons show. */
@@ -846,7 +849,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** The members of the selected party, whom the column shows. */
   private selectedMembers(): readonly Character[] {
-    return deployedParties(this.gameState).find((party) => party.id === this.selectedParty)?.members ?? leader(this.gameState).members
+    return this.expedition().members
   }
 
   /** The pointer is gone (off the game, or the map paused under an overlay): no entry is hovered, and the panel forgets it. */
@@ -1013,7 +1016,7 @@ export class WorldScene extends Phaser.Scene {
    * while it is told; the map saves what was shown as it resumes.
    */
   private tell(moment: StoryMoment): void {
-    tellStory(this, this.gameState, moment, this.anchors())
+    tellStory(this, this.gameState, moment, this.anchors(), this.selectedParty)
   }
 
   /** Where the controls a tutorial tip may point at are on screen, those that show. */
@@ -1065,7 +1068,7 @@ export class WorldScene extends Phaser.Scene {
 
   private onAttack(): void {
     const here = monstersHere(this.world, this.expedition())
-    if (here) this.scene.start('Battle', { game: this.gameState, location: here.id })
+    if (here) this.scene.start('Battle', { game: this.gameState, location: here.id, party: this.selectedParty })
   }
 
   /** A click on a portrait marks that member, and a click on the one marked opens its panel. */
@@ -1085,13 +1088,14 @@ export class WorldScene extends Phaser.Scene {
    */
   private openPanel(index: number): void {
     if (this.scene.isPaused() || this.walking) return
-    const party = leader(this.gameState).members
+    const expedition = this.expedition()
+    const party = expedition.members
     const character = party[index]
     if (!character) return
     const tab = canAdvance(character) ? 'skills' : 'character'
     // Gear is changed freely here, and the ground is the party's baggage, through which items
     // pass between members. The panel edits the characters and the baggage in place.
-    const members = party.map((member) => ({ character: member, gearApCost: 0, ground: leader(this.gameState).baggage }))
+    const members = party.map((member) => ({ character: member, gearApCost: 0, ground: expedition.baggage }))
     this.scene.launch('Inventory', { members, index, tab, canAdvance: true, resume: 'World', groundTitle: 'Baggage' })
     this.scene.bringToTop('Inventory')
     this.scene.pause()
@@ -1100,7 +1104,7 @@ export class WorldScene extends Phaser.Scene {
   /** Field crafting over the map (CraftingScene), wherever the party may camp; it resumes the map with what it made. */
   private openCrafting(): void {
     if (this.scene.isPaused() || this.walking || !canCamp(this.world, this.expedition())) return
-    this.scene.launch('Crafting', { game: this.gameState, resume: 'World' })
+    this.scene.launch('Crafting', { game: this.gameState, resume: 'World', party: this.selectedParty })
     this.scene.bringToTop('Crafting')
     this.scene.pause()
   }
@@ -1117,7 +1121,7 @@ export class WorldScene extends Phaser.Scene {
   /** The encampment over the map, while the party stands there; it starts the map again when it closes. */
   private openEncampment(): void {
     if (this.scene.isPaused() || this.walking || !atEncampment(this.world, this.expedition())) return
-    this.scene.launch('Encampment', { game: this.gameState })
+    this.scene.launch('Encampment', { game: this.gameState, party: this.selectedParty })
     this.scene.bringToTop('Encampment')
     this.scene.pause()
   }

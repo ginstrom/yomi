@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { maxHp, maxMana } from '../character/character.ts'
 import { NATURAL_HEALING_PER_DAY, campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from './camp.ts'
-import { leader, newGame } from './gameState.ts'
+import { newGame } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
 import { monstersHere, travel, type MonsterLocation, type WorldState } from './worldMap.ts'
 
 /** A new game on world 1 with the ready-made three, the mage (Heal, 3 mana for 6 hp) last: the game, its world, its party and the party's members. */
 function solo() {
   const game = newGame(readyMadeParty(), null, 1)
-  const party = leader(game)
+  const party = game.parties[0]
   return { game, world: game.world, party, members: party.members }
 }
 

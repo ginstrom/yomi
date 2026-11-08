@@ -261,7 +261,6 @@ Tests that put the party somewhere set `leader(game).position` (or an expedition
 - `npx vitest run src/game` while working; then `npm test` passes, the guard test included, its fixture untouched.
 - `npm run test:browser` passes (scenes and probes changed).
 - The 50-campaign check from §2: the summary is identical to step 01's line for line, and the log's SHA-256 equals step 01's.
-- `npm run test:browser` (Node 26): first full run 88 of 89 (the `saves.test.ts` read above); after the fix `saves.test.ts` 6 of 6 and a second full run 9 files, 89 tests passed.
 - `grep -rn "world\.party\|world\.confronting\|soloPresences" src scripts e2e` finds nothing that reads the old fields. A hit on an unrelated name (e.g. the probe's `partyAt`) is fine.
 - `save.test.ts` covers the migration from the v18 fixture, the unreadable version 19 and the round trip (§4.4).
 

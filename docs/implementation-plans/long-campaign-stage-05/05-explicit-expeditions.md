@@ -233,3 +233,22 @@ Paths below were inspected at `4a2b824` (line numbers are approximate after step
 
 ## 8. Execution record
 
+
+**Done.** Node 26.13.
+
+- **Verification.**
+  - `npm test`: 79 files, 1240 tests passed. The guard test and its fixture are untouched (the diff of `scripts/simulate.test.ts` lies outside `describe('the refactor guard')`).
+  - 50-campaign check: 852 battles, "Beat the Source: 23 of 50", log SHA-256 `068016a82040ec5be673084265005a7218f0ce927629880565c1a27a8cf52d76`. **Guard identical.**
+  - `npm run test:browser`: 9 files, 89 tests passed.
+  - `grep "leader("` finds no call. Remaining `world.party` / `world.confronting` hits are the probes' party column and `confronting`, and the save migration's tests.
+- **Story conditions.** `{leader}` (`fillText(text, game, party = game.parties[0])`) and the cutscene 'leader' portrait use the party the scene data names, which `tellStory`/`showStory` now pass as a last optional `party` id. `world_monsters` asks `game.parties.some(p => p.confronting !== null)`. The story ↔ gameState runtime cycle from `leader` is gone: `story.ts` and `tutorial.ts` import `GameState` as a type only.
+- **Deviations.**
+  - `allPlaces(game, party, worn?)` keeps `game` as `_game`, unused, to match C5 exactly.
+  - `Inventory` gets no `party` in its scene data: it is handed the members and the baggage directly, and builds no places.
+  - Beyond the plan's list, these take a party: `upgradeWorkshop`, `raiseTradingPost`, `raiseInfirmary`, `upgradeGuildHall`, `sellMaterial`, the rune buys and sales, `fuse` and `fuseRefusal`, `recruit` and `recruitRefusal`, the Runes tab's `actionRefusal` and `actionPreview` (`game, party, place, action`), and the simulator's `hallErrand`, `visitGuildHall`, `craftGear(game, party, limit)`, `runecraftGear` and `visitFacilities`.
+  - `DebugSource.fight` takes the party id as a third argument and `Battle` is started with `party`.
+  - Only commands with `acts: true` read `@<party>`: `party`, `heal`, `xp`, `give`, `goto`, `fight`. `locations` lists each party's position, and `facility` uses the default party.
+  - `CreationScene` hands `party` back to `GuildHall` and uses `company(game)` for the name check.
+  - `partyList.ts`'s `deployedParties` skips a party with no members (the old single-party rule).
+- **Housekeeping.** Removed the duplicate results line from step 04's §5 Verification.
+- **For later steps.** `selectedParty(game, id?)` is in `gameState.ts`. A place's `party` is an id string. A saved battle carries no party, so a loaded one fights the first.

@@ -17,8 +17,8 @@ import type { WorldEvent } from './blight.ts'
 import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
 import { canCamp } from './camp.ts'
 import { craftTier } from './crafting.ts'
-import { presences } from './expedition.ts'
-import { leader, type GameState } from './gameState.ts'
+import { presences, type Expedition } from './expedition.ts'
+import { partyById, type GameState } from './gameState.ts'
 import { STALE, allPlaces, itemAt, replaceAt, type ItemPlace } from './itemPlace.ts'
 import type { Stock } from './territory.ts'
 import { encampmentName, passTurn } from './worldMap.ts'
@@ -59,9 +59,9 @@ export function extractCost(key: RuneKey): Stock {
 
 export type RuneResult = { refusal: string } | { refusal: null; item: Item; events: WorldEvent[] }
 
-/** Every item the party has with a socket (allPlaces order), with its sockets. */
-export function socketables(game: GameState): Array<{ place: ItemPlace; item: Item; sockets: number }> {
-  return allPlaces(game)
+/** Every item `party` has with a socket (allPlaces order), with its sockets. */
+export function socketables(game: GameState, party: Expedition): Array<{ place: ItemPlace; item: Item; sockets: number }> {
+  return allPlaces(game, party)
     .map(({ place, item }) => ({ place, item, sockets: socketsOf(item) }))
     .filter(({ sockets }) => sockets > 0)
 }
@@ -75,11 +75,11 @@ export const aRune = (key: RuneKey): string => {
 const unaffordable = (cost: Stock): string => `It costs ${describeCost(cost)}, more than the stock holds.`
 
 /** Where the workshop is, for a refusal given away from it. */
-const workshopIsAt = (game: GameState): string => (atEncampment(game.world, leader(game)) ? '' : ` The workshop is at ${encampmentName(game.world)}.`)
+const workshopIsAt = (game: GameState, party: Expedition): string => (atEncampment(game.world, party) ? '' : ` The workshop is at ${encampmentName(game.world)}.`)
 
 /** The workshop's level where the party stands: 0 in the field. */
-const workshopHere = (game: GameState): number => {
-  const tier = craftTier(game.world, leader(game))
+const workshopHere = (game: GameState, party: Expedition): number => {
+  const tier = craftTier(game.world, party)
   return tier === 'field' ? 0 : tier
 }
 
@@ -87,6 +87,7 @@ export function embedRefusal(game: GameState, place: ItemPlace, key: RuneKey): s
   const { world } = game
   const item = itemAt(game, place)
   if (!item) return STALE
+  const party = partyById(game, place.party)!
   const sockets = socketsOf(item)
   if (sockets === 0) return `${item.name} has no sockets.`
   if ((item.runes?.length ?? 0) >= sockets) return `Its sockets are full; extract one first.`
@@ -94,9 +95,9 @@ export function embedRefusal(game: GameState, place: ItemPlace, key: RuneKey): s
   const { id, rank } = parseRuneKey(key)!
   const fitsOnly = runeFitsOnly(id, item)
   if (fitsOnly) return `${capitalised(aRune(key))} does nothing in ${item.name}; it fits only ${fitsOnly}.`
-  if (craftTier(world, leader(game)) === 'field') {
-    if (!canCamp(world, leader(game))) return 'Nothing can be embedded here now.'
-    if (rank > 1) return `Only a Lesser rune can be embedded in the field; ${aRune(key)} needs the workshop.${workshopIsAt(game)}`
+  if (craftTier(world, party) === 'field') {
+    if (!canCamp(world, party)) return 'Nothing can be embedded here now.'
+    if (rank > 1) return `Only a Lesser rune can be embedded in the field; ${aRune(key)} needs the workshop.${workshopIsAt(game, party)}`
   }
   const cost = embedCost(key)
   return canAfford(world.stock, cost) ? null : unaffordable(cost)
@@ -112,7 +113,7 @@ export function embed(game: GameState, place: ItemPlace, key: RuneKey): RuneResu
   takeFromPouch(game.runes, key)
   spend(world.stock, embedCost(key))
   replaceAt(game, place, result)
-  const events = craftTier(world, leader(game)) === 'field' ? passTurn(world, presences(game.parties)) : []
+  const events = craftTier(world, partyById(game, place.party)!) === 'field' ? passTurn(world, presences(game.parties)) : []
   return { refusal: null, item: result, events }
 }
 
@@ -122,7 +123,8 @@ export function extractRefusal(game: GameState, place: ItemPlace, index: number)
   if (!item) return STALE
   const key = item.runes?.[index]
   if (!key) return `${item.name} has no rune there.`
-  if (workshopHere(game) < EXTRACT_LEVEL) return `Extracting a rune needs a level ${EXTRACT_LEVEL} workshop.${workshopIsAt(game)}`
+  const party = partyById(game, place.party)!
+  if (workshopHere(game, party) < EXTRACT_LEVEL) return `Extracting a rune needs a level ${EXTRACT_LEVEL} workshop.${workshopIsAt(game, party)}`
   const cost = extractCost(key)
   return canAfford(world.stock, cost) ? null : unaffordable(cost)
 }
@@ -141,13 +143,13 @@ export function extract(game: GameState, place: ItemPlace, index: number): RuneR
   return { refusal: null, item: result, events: [] }
 }
 
-export function fuseRefusal(game: GameState, from: RuneKey): string | null {
+export function fuseRefusal(game: GameState, party: Expedition, from: RuneKey): string | null {
   const { world } = game
   const { id, rank } = parseRuneKey(from)!
   if (rank === MAX_RANK) return 'A Grand rune is the highest rank.'
   const next = runeKey(id, (rank + 1) as Rank)
   const level = FUSE_LEVELS[(rank + 1) as 2 | 3 | 4]
-  if (workshopHere(game) < level) return `Fusing to ${aRune(next)} needs a level ${level} workshop.${workshopIsAt(game)}`
+  if (workshopHere(game, party) < level) return `Fusing to ${aRune(next)} needs a level ${level} workshop.${workshopIsAt(game, party)}`
   const held = pouchCount(game.runes, from)
   if (held < FUSE_COUNT) return `Fusing takes ${FUSE_COUNT} of the ${runeName(from)}; the pouch holds ${held}.`
   const cost = fuseCost(from)
@@ -155,8 +157,8 @@ export function fuseRefusal(game: GameState, from: RuneKey): string | null {
 }
 
 /** Three of `from` become one of the next rank, in the pouch, for the fee. No time passes. */
-export function fuse(game: GameState, from: RuneKey): string | null {
-  const refusal = fuseRefusal(game, from)
+export function fuse(game: GameState, party: Expedition, from: RuneKey): string | null {
+  const refusal = fuseRefusal(game, party, from)
   if (refusal) return refusal
   const { id, rank } = parseRuneKey(from)!
   takeFromPouch(game.runes, from, FUSE_COUNT)

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { maxHp } from '../character/character.ts'
-import { leader, newGame, type GameState } from '../game/gameState.ts'
+import { newExpedition } from '../game/expedition.ts'
+import { newGame, type GameState } from '../game/gameState.ts'
+import { readyMadeParty } from '../game/party.ts'
 import { UNEXPLORED } from '../game/vision.ts'
 import { SOURCE_ID, threatAt } from '../game/worldMap.ts'
 import { hexToOffset } from '../grid/hex.ts'
@@ -33,7 +35,7 @@ describe('debug commands', () => {
 
   it('heals a member named by the start of its name, and says the game changed', () => {
     const context = onWorldMap()
-    const [first, second] = leader(context.source!.game).members
+    const [first, second] = context.source!.game.parties[0].members
     first.hp = 1
     second.hp = 1
     const result = runCommand(`heal ${first.name.slice(0, 3).toLowerCase()}`, context)
@@ -46,7 +48,7 @@ describe('debug commands', () => {
     const game = newGame(undefined, null, 7)
     const reading: DebugContext = { scenes: ['Battle'], seed: null, source: { game } }
     expect(runCommand('xp 500', reading)).toEqual({ lines: ['xp changes the game, which works only on the world map.'], changed: false })
-    expect(runCommand('party', reading).lines).toHaveLength(leader(game).members.length)
+    expect(runCommand('party', reading).lines).toHaveLength(1 + game.parties[0].members.length)
     expect(runCommand('stock', reading).changed).toBe(false)
     expect(runCommand('stock gold 5', reading).changed).toBe(false)
   })
@@ -54,8 +56,8 @@ describe('debug commands', () => {
   it('gives experience, raising levels', () => {
     const context = onWorldMap()
     runCommand('xp 10000 1', context)
-    expect(leader(context.source!.game).members[0].level).toBeGreaterThan(1)
-    expect(leader(context.source!.game).members[1].level).toBe(1)
+    expect(context.source!.game.parties[0].members[0].level).toBeGreaterThan(1)
+    expect(context.source!.game.parties[0].members[1].level).toBe(1)
   })
 
   it('adds to the stock, and checks the material', () => {
@@ -68,7 +70,7 @@ describe('debug commands', () => {
   it('puts items in the baggage by id', () => {
     const context = onWorldMap()
     runCommand('give yew_bow 2', context)
-    expect(leader(context.source!.game).baggage.map((item) => item.id)).toEqual(['yew_bow', 'yew_bow'])
+    expect(context.source!.game.parties[0].baggage.map((item) => item.id)).toEqual(['yew_bow', 'yew_bow'])
     expect(runCommand('give nothing', context).lines[0]).toMatch(/No item/)
   })
 
@@ -80,7 +82,7 @@ describe('debug commands', () => {
     expect(context.source!.game.runes.storm1).toBe(3)
     expect(runCommand('runes', context).lines[0]).toMatch(/storm1\s+3 × Lesser Storm Rune/)
     runCommand('give iron_sword@3#ember1', context)
-    expect(leader(context.source!.game).baggage.at(-1)!.id).toBe('iron_sword@3#ember1')
+    expect(context.source!.game.parties[0].baggage.at(-1)!.id).toBe('iron_sword@3#ember1')
     expect(runCommand('give storm1 0', context).lines[0]).toMatch(/at least 1/)
     const items = runCommand('items', context).lines.join('\n')
     expect(items).toContain('storm1')
@@ -90,7 +92,7 @@ describe('debug commands', () => {
   it('reveals the map, and moves the party onto a location, confronting its monsters', () => {
     const context = onWorldMap()
     const { world } = context.source!.game
-    const party = leader(context.source!.game)
+    const party = context.source!.game.parties[0]
     runCommand('reveal', context)
     expect(world.seen.includes(UNEXPLORED)).toBe(false)
     expect(world.sighted).toContain(SOURCE_ID)
@@ -123,7 +125,7 @@ describe('debug commands', () => {
   it('sets a facility’s level, within its levels, and gives graded and modified items', () => {
     const context = onWorldMap()
     const { world } = context.source!.game
-    const { baggage } = leader(context.source!.game)
+    const { baggage } = context.source!.game.parties[0]
     expect(runCommand('facility workshop 2', context).changed).toBe(true)
     expect(world.workshop).toBe(2)
     expect(runCommand('facility workshop 4', context).lines[0]).toMatch(/from 0 to 3/)
@@ -136,21 +138,21 @@ describe('debug commands', () => {
     it('starts a battle of the encounter at the threat given', () => {
       const context = withFight()
       const result = runCommand('fight goblin_raid 3', context)
-      expect(context.fight).toHaveBeenCalledWith('goblin_raid', 3)
+      expect(context.fight).toHaveBeenCalledWith('goblin_raid', 3, 'party_1')
       expect(result.lines).toEqual(['Fighting goblin_raid at threat 3.'])
     })
 
     it('fights at the threat of the party’s hex when none is given', () => {
       const context = withFight()
       const { world } = context.source!.game
-      const party = leader(context.source!.game)
+      const party = context.source!.game.parties[0]
       runCommand('fight kobold_scouts', context)
-      expect(context.fight).toHaveBeenLastCalledWith('kobold_scouts', threatAt(party.position))
+      expect(context.fight).toHaveBeenLastCalledWith('kobold_scouts', threatAt(party.position), 'party_1')
       const far = world.locations.find((location) => location.id === 'bandit_camp')!
       party.position = far.position
       expect(threatAt(party.position)).toBe(3)
       runCommand('fight kobold_scouts', context)
-      expect(context.fight).toHaveBeenLastCalledWith('kobold_scouts', 3)
+      expect(context.fight).toHaveBeenLastCalledWith('kobold_scouts', 3, 'party_1')
     })
 
     it('refuses an unknown or missing encounter and a threat below 1 or not a whole number', () => {
@@ -174,6 +176,81 @@ describe('debug commands', () => {
 
     it('is listed by help', () => {
       expect(runCommand('help', onWorldMap()).lines.some((line) => line.startsWith('fight <encounter> [threat]'))).toBe(true)
+    })
+  })
+
+  describe('naming a party with @', () => {
+    /** A game of two parties, to tell them apart; the second has its own members and baggage. */
+    function twoParties(): DebugContext & { changed: ReturnType<typeof vi.fn> } {
+      const context = onWorldMap()
+      const game = context.source!.game
+      game.parties.push({ ...newExpedition(readyMadeParty(), game.parties[0].position), id: 'party_2', name: 'Second Company' })
+      return context
+    }
+
+    it('selects a party by id or by the start of its name, ignoring case', () => {
+      const context = twoParties()
+      const [first, second] = context.source!.game.parties
+      runCommand('give yew_bow @party_2', context)
+      runCommand('give iron_sword @first', context)
+      runCommand('give iron_spear @SEC', context)
+      expect(first.baggage.map((item) => item.id)).toEqual(['iron_sword'])
+      expect(second.baggage.map((item) => item.id)).toEqual(['yew_bow', 'iron_spear'])
+    })
+
+    it('acts on the source’s party without one, else on the first', () => {
+      const context = twoParties()
+      const [first, second] = context.source!.game.parties
+      runCommand('give yew_bow', context)
+      context.source!.party = 'party_2'
+      runCommand('give iron_sword', context)
+      context.source!.party = 'nobody'
+      runCommand('give iron_spear', context)
+      expect(first.baggage.map((item) => item.id)).toEqual(['yew_bow', 'iron_spear'])
+      expect(second.baggage.map((item) => item.id)).toEqual(['iron_sword'])
+    })
+
+    it('reads the member and the hex within the named party', () => {
+      const context = twoParties()
+      const [first, second] = context.source!.game.parties
+      first.members[0].hp = 1
+      second.members[0].hp = 1
+      expect(runCommand(`heal 1 @party_2`, context).changed).toBe(true)
+      expect(first.members[0].hp).toBe(1)
+      expect(second.members[0].hp).toBe(maxHp(second.members[0]))
+      runCommand('goto 3 4 @second', context)
+      expect(hexToOffset(second.position)).toEqual({ col: 3, row: 4 })
+      expect(hexToOffset(first.position)).not.toEqual({ col: 3, row: 4 })
+    })
+
+    it('fights with the named party', () => {
+      const context = Object.assign(twoParties(), { fight: vi.fn() })
+      context.source!.fight = context.fight
+      runCommand('fight goblin_raid 2 @party_2', context)
+      expect(context.fight).toHaveBeenCalledWith('goblin_raid', 2, 'party_2')
+    })
+
+    it('tells an unknown party, naming the company’s', () => {
+      const context = onWorldMap()
+      const result = runCommand('heal @nobody', context)
+      expect(result.changed).toBe(false)
+      expect(result.lines).toEqual(['No party "@nobody"; there are party_1 (First Company).'])
+    })
+
+    it('lists the company with `party`, or one party with `party @name`', () => {
+      const context = twoParties()
+      const all = runCommand('party', context).lines
+      expect(all[0]).toMatch(/^party_1 \(First Company\) at \d+,\d+, order idle$/)
+      expect(all[1]).toMatch(/^1\. /)
+      expect(all[1 + context.source!.game.parties[0].members.length]).toMatch(/^party_2 \(Second Company\)/)
+      const one = runCommand('party @second', context).lines
+      expect(one).toHaveLength(1 + context.source!.game.parties[1].members.length)
+      expect(one[0]).toMatch(/^party_2 /)
+    })
+
+    it('lists where each party stands with `locations`', () => {
+      const lines = runCommand('locations', twoParties()).lines
+      expect(lines.filter((line) => /^party_\d \(/.test(line))).toHaveLength(2)
     })
   })
 })

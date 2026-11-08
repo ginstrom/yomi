@@ -1,7 +1,8 @@
-import { FIRST_PARTY_ID } from '../game/expedition.ts'
+import { FIRST_PARTY_ID, newExpedition } from '../game/expedition.ts'
 import { describe, expect, it } from 'vitest'
 import { maxHp } from '../character/character.ts'
-import { leader, newGame } from '../game/gameState.ts'
+import { newGame } from '../game/gameState.ts'
+import { readyMadeParty } from '../game/party.ts'
 import { travel } from '../game/worldMap.ts'
 import { hexEquals } from '../grid/hex.ts'
 import { HEADER_BOTTOM } from './partyPanel.ts'
@@ -27,20 +28,29 @@ describe('deployedParties', () => {
     expect(entry.id).toBe(FIRST_PARTY_ID)
     expect(entry.id).toBe('party_1')
     expect(entry.name).toBe(SINGLE_PARTY_NAME)
-    expect(entry.members).toEqual(leader(game).members)
-    expect(entry.position).toEqual(leader(game).position)
-    expect(entry.hp).toBe(leader(game).members.reduce((sum, m) => sum + m.hp, 0))
-    expect(entry.maxHp).toBe(leader(game).members.reduce((sum, m) => sum + maxHp(m), 0))
+    expect(entry.members).toEqual(game.parties[0].members)
+    expect(entry.position).toEqual(game.parties[0].position)
+    expect(entry.hp).toBe(game.parties[0].members.reduce((sum, m) => sum + m.hp, 0))
+    expect(entry.maxHp).toBe(game.parties[0].members.reduce((sum, m) => sum + maxHp(m), 0))
     expect(entry.confronting).toBeNull()
+  })
+
+  it('names the parties by their own names once there are several', () => {
+    const game = newGame(undefined, null, 1)
+    game.parties.push({ ...newExpedition(readyMadeParty(), game.parties[0].position), id: 'party_2', name: 'Second Company' })
+    expect(deployedParties(game).map(({ id, name }) => [id, name])).toEqual([
+      ['party_1', 'First Company'],
+      ['party_2', 'Second Company'],
+    ])
   })
 
   it('tells which monsters the party stands before', () => {
     const game = newGame(undefined, null, 1)
     const monsters = game.world.locations.find((l) => l.kind === 'monsters')!
-    for (let tries = 0; tries < 10 && !hexEquals(leader(game).position, monsters.position); tries++) {
-      travel(game, leader(game), monsters.position)
+    for (let tries = 0; tries < 10 && !hexEquals(game.parties[0].position, monsters.position); tries++) {
+      travel(game, game.parties[0], monsters.position)
     }
-    expect(leader(game).confronting).toBe(monsters.id)
+    expect(game.parties[0].confronting).toBe(monsters.id)
     expect(deployedParties(game)[0].confronting).toEqual({ id: monsters.id, name: monsters.name })
   })
 
