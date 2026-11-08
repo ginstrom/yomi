@@ -13,6 +13,7 @@ import {
   ORDER_COLS,
   PARTY_LIST_W,
   bannerOf,
+  entryName,
   FIGURE_SPREAD,
   figureOffsets,
   meetTarget,
@@ -313,6 +314,17 @@ describe('the parties on the map', () => {
     const game = company()
     game.parties.splice(0, 1)
     expect(deployedParties(game).map((entry) => entry.banner)).toEqual([2, 3])
+  })
+
+  it('names each entry on its portrait, shortened to fit, only once the company has two parties or more', () => {
+    expect(entryName('Second Company')).toBe('Second Co.')
+    expect(entryName('Third Company')).toBe('Third Co.')
+    expect(entryName('Wolves')).toBe('Wolves')
+    expect(entryName('The Grey Wardens')).toBe('The Grey…')
+    expect(entryName('The Grey Wardens').length).toBeLessThanOrEqual(10)
+    const game = company()
+    expect(deployedParties(game).map((entry) => entry.label)).toEqual(['First Co.', 'Second Co.', 'Third Co.'])
+    expect(deployedParties(newGame(undefined, null, 1))[0].label).toBe('')
   })
 
   it('spreads parties sharing a hex, in list order, and leaves a party alone on its hex where it stands', () => {

@@ -203,3 +203,13 @@ export const SAVE_VERSION = 22   // save.ts
 - **Evidence.** `npm test` 80 files, 1434 passed (one run had `blight.test.ts`'s spawn test time out while the browser suite ran alongside; it passes alone and in the rerun). `npm run test:browser` 9 files, 104 passed (5 new world tests + the A9 additions). `npm run build` passes. Guard fixture untouched and green; 50-campaign check: hash `068016a82040ec5be673084265005a7218f0ce927629880565c1a27a8cf52d76`, output identical to step 04's: **guard identical**.
 - **Screenshots** (not committed), three parties, two sharing Iron Vein: `.git/pr-review/long-campaign-stage-06/evidence/step07-company-1280x800.png`, `step07-company-840x560.png` (footer: Next day, Until something happens, Home, Garrison over Camp, Camp until healed, Craft, Build Outpost; no overflow), `step07-meet-hover-1280x800.png`, `step07-meet-hover-840x560.png` (hint "Meet Third Company", route, info panel). 1280×800 rather than 1280×720 (the harness's default viewport).
 - **For step 08.** The action row has room for Exchange at 840 (worst case Camp, Camp until healed, Craft, Build Watchtower, Exchange ≈ 720 of 760 px). Add `exchange` to `WorldProbe.buttons`.
+
+### Review round 1 (UX findings from the orchestrator)
+
+Found 4, fixed 4:
+1. Shared hex: `FIGURE_SPREAD` 14 → 30 px; a party spread left of the centre plants its banner on its left (flipped), so every banner shows.
+2. Strip: the banner now stands inside the portrait's right edge, clear of the hp bar (no glyph under "Idle"). Decision 10 amended by the orchestrator: with two parties or more each entry shows the name across the portrait's foot, shortened (`entryName`: "Second Co.", else an ellipsis at 10 columns; `PartyListEntry.label`, `PartyListProbe.label`); with one party none, as before.
+3. The selected party's figure is marked on the map: a gold ring under its feet and a gold pointer over its head (a location's name can hide the ring), at its offset.
+4. The Home button is labelled "Return home" (the Home key centres the view); the time row fits at 840. Manual line fixed ("**Return home** and **Garrison** sit in the row above, with the time buttons."); CLAUDE.md updated.
+
+Screenshots retaken (same paths). `npm test` 80 files, 1435 passed; `e2e/world.test.ts` and `e2e/battle.test.ts`: 2 files, 59 passed. No rule touched; the guard fixture untouched.

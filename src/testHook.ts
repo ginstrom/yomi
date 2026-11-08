@@ -133,6 +133,8 @@ export interface PartyListProbe extends Point {
   hovered: boolean
   /** What the entry calls the party: "Your party" while the company has one, else the party's name. */
   name: string
+  /** The name drawn on the entry's portrait, shortened to fit ("Second Co."), or '' while the company has one party. */
+  label: string
   /** The banner drawn on the entry's portrait, by number (1 crimson, 2 azure, 3 green), from the party's id. */
   banner: number
 }

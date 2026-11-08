@@ -42,7 +42,7 @@ import { PartyListView } from './PartyListView.ts'
 import { BANNER_SPRITES, PARTY_LIST_W, bannerOf, deployedParties, figureOffsets, meetTarget, orderLabel, partyListInfo, standingRoute, travelLabel, type PartyListEntry, type ShownOrder } from './partyList.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
-import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
+import { FRAME_ACTIVE_COLOR, HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
 import { describeDays, describeWalk, describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
 import { hexInfo } from './hexInfo.ts'
 import { tellStory, type StoryAnchors } from './StoryScene.ts'
@@ -53,6 +53,7 @@ import type { DebugSource } from './debugCommands.ts'
 interface PartyToken {
   body: Phaser.GameObjects.Container
   figure: UnitFigure
+  flag: Phaser.GameObjects.Sprite
 }
 
 interface WorldData {
@@ -76,12 +77,18 @@ const PARTY_SPRITE = 'warrior'
 const PARTY_SCALE = 2
 /**
  * The banner, shown at 2x as the map's sprites are, stands behind the figure
- * and this far right of its feet; the atlas pivots it at its canvas's bottom
- * centre, which is a little below and beside its pole's foot (column 11, row 20).
+ * and this far beside its feet: on its right, or its left for a party spread
+ * left of a shared hex's centre, so the party beside it never hides it. The
+ * atlas pivots it at its canvas's bottom centre, a little below and beside its
+ * pole's foot (column 11, row 20).
  */
 const BANNER_X = 18
 const BANNER_Y = 6
 const BANNER_SCALE = 2
+/** The ring under the selected party's feet, in the gold that frames its entry in the list. */
+const SELECTED_RING = FRAME_ACTIVE_COLOR
+const SELECTED_RING_W = 30
+const SELECTED_RING_H = 10
 /** Locations stir out of step: each starts this much after the one before it. */
 const LOCATION_STAGGER_MS = 310
 /** How far below a hex's centre the party's feet stand, and a location's name starts. */
@@ -170,6 +177,8 @@ export class WorldScene extends Phaser.Scene {
   /** Every party's figure and banner on the map, by party id, in `partyLayer`, the selected one on top. */
   private figures = new Map<string, PartyToken>()
   private partyLayer!: Phaser.GameObjects.Container
+  /** A gold ring under the selected party's feet and a pointer over its head, at its figure's offset, so it is told apart on a shared hex; under every figure. */
+  private selectedMark!: Phaser.GameObjects.Graphics
 
   private turnText!: Phaser.GameObjects.Text
   private hintText!: Phaser.GameObjects.Text
@@ -270,7 +279,8 @@ export class WorldScene extends Phaser.Scene {
     this.drawnLocations = ''
     this.drawnBlight = ''
     this.visible = new Set()
-    this.partyLayer = this.add.container(0, 0)
+    this.selectedMark = this.add.graphics()
+    this.partyLayer = this.add.container(0, 0, [this.selectedMark])
     this.figures = new Map()
     this.mapLayer.add([this.blightLayer, this.blightSprites, this.hoverMarks, this.partyMark, this.siteSprites, this.partyLayer, this.siteLabels])
     this.syncFigures()
@@ -303,7 +313,8 @@ export class WorldScene extends Phaser.Scene {
       this.createButton('Next day', () => this.onNextDay()),
       this.createButton('Until something happens', () => this.onUntilSomething()),
     ]
-    this.homeButton = this.createButton('Home', () => this.onHome())
+    // Not "Home", which is the key that centres the view.
+    this.homeButton = this.createButton('Return home', () => this.onHome())
     this.garrisonButton = this.createButton('Garrison', () => this.onGarrison())
     this.campButtons = [
       this.createButton('Camp', () => this.onCamp()),
@@ -677,17 +688,32 @@ export class WorldScene extends Phaser.Scene {
           .play(spriteAnim(banner, 'idle'))
         // The banner behind the figure, so it never hides the hero's face.
         const body = this.add.container(0, 0, [flag, figure])
-        token = { body, figure }
+        token = { body, figure, flag }
         this.figures.set(party.id, token)
         this.partyLayer.add(body)
       }
       token.figure.setLook(heroLook(party.members[0].equipment))
       if (this.walking) continue
+      const offset = offsets.get(party.id) ?? 0
+      token.flag.setX(offset < 0 ? -BANNER_X : BANNER_X).setFlipX(offset < 0)
       const { x, y } = boardHexCenter(party.position, WORLD_LAYOUT)
-      token.body.setPosition(x + (offsets.get(party.id) ?? 0), y + PARTY_FEET_Y)
+      token.body.setPosition(x + offset, y + PARTY_FEET_Y)
     }
     const selected = this.selectedToken()
-    if (selected) this.partyLayer.bringToTop(selected.body)
+    this.selectedMark.clear()
+    if (!selected) return
+    this.partyLayer.bringToTop(selected.body)
+    if (!this.walking) {
+      const { x, y } = selected.body
+      this.selectedMark.lineStyle(3, SELECTED_RING, 1).strokeEllipse(x, y - 1, SELECTED_RING_W, SELECTED_RING_H)
+      // And a gold pointer over its head, which a location's name under its feet cannot hide.
+      const top = y - selected.figure.standingHeight - 4
+      this.selectedMark
+        .fillStyle(0x000000, 1)
+        .fillTriangle(x - 7, top - 9, x + 7, top - 9, x, top + 1)
+        .fillStyle(SELECTED_RING, 1)
+        .fillTriangle(x - 5, top - 8, x + 5, top - 8, x, top - 1)
+    }
   }
 
   /** The selected party's figure, if it has one. */
@@ -1140,6 +1166,7 @@ export class WorldScene extends Phaser.Scene {
   /** While the party walks, nothing else can be done and its hex is not yet where it stands. */
   private refreshWalking(): void {
     this.partyMark.clear()
+    this.selectedMark.clear()
     for (const button of [...this.buttons, ...this.timeButtons, this.homeButton, this.garrisonButton, ...this.campButtons, this.towerButton, this.outpostButton, this.encampmentButton]) button.setVisible(false)
     this.partyList.refresh(this.listedParties(), this.selectedParty)
     this.refreshHover()

@@ -112,7 +112,7 @@ Two buttons in the footer let days pass without a walk or a camp of your own:
 
 - **Next day** passes one day. Every party carries on with its order: a party that is travelling or camping carries on with it; an idle one stays where it is.
 - **Until something happens** passes days one after another until something important happens, a party arrives or finishes what it was doing, or thirty quiet days have gone by, in which case the map says so.
-- **Home**, shown while the party is away from the encampment, sends it walking home.
+- **Return home**, shown while the party is away from the encampment, sends it walking home.
 - **Garrison**, shown on a resource you hold, keeps the party there to guard it until you give it another order. No day passes.
 
 A walk cut short, or a stretch of camping interrupted, keeps its order: the line still says where the party was going, or that it is camping, and a walk's remaining road stays drawn on the map in amber to where it was going (hovering another hex shows that hex's route in its place until the pointer moves off), and **Next day** carries it on, a hex further along the road or another day of rest. Clicking a hex or a button gives the party a new order. Neither time button shows while the party stands at a monsters' lair, even once it has scouted them: there you scout, wait or attack, or walk away. While any other party stands before monsters it has not answered, no day can pass: the time buttons say so and select that party, so that you can scout, wait or attack with it.
@@ -127,9 +127,9 @@ The map is larger than the window. It follows the party as it travels, but you c
 
 ### Parties
 
-Raise the guild hall to level 4 and it can field a second party, at level 5 a third (see [The guild hall](#the-guild-hall)). Each party has its own banner, crimson, azure or green, drawn beside its leader on the map and on its entry in the list, and its own baggage; the stock and the rune pouch are the company's.
+Raise the guild hall to level 4 and it can field a second party, at level 5 a third (see [The guild hall](#the-guild-hall)). Each party has its own banner, crimson, azure or green, drawn beside its leader on the map and on its entry in the list, which also shows its name, and its own baggage; the stock and the rune pouch are the company's.
 
-- **Select** a party by clicking its entry down the right. Its heroes fill the left side, and the footer's buttons act for it.
+- **Select** a party by clicking its entry down the right. Its heroes fill the left side, a gold ring marks it on the map, and the footer's buttons act for it. Parties sharing a hex stand side by side.
 - **Every party moves at once.** Each carries on with its order whenever days pass, whoever you have selected. Only the selected party's walk is animated; the others step to where they have got to when it ends.
 - **Meet** another party by clicking the hex it stands on (the header says "Meet Second Company" as you hover it). The selected party walks to it, following it if it moves, until the two stand together. A party that walks onto monsters another party already faces stands before them too.
 - **Interruptions name the party.** When something stops the days, the message leads with the party it concerns ("Second Company: arrived at Kobold Scouts."), and the map selects that party and centres on it.
@@ -175,7 +175,7 @@ When there are no monsters on your hex, the footer offers:
 - **Camp until healed**: your healers cast their heals with the mana they have, then the party camps a day and casts again, repeating until everyone is whole. Anything important that happens breaks camp.
 - **Craft**: rework a piece of gear in the field, a day's work (see [Crafting](#crafting)).
 - **Build Watchtower** or **Build Outpost**, where the land allows (see [Building](#9-building)).
-- **Home** and **Garrison**, in the row above (see above).
+- **Return home** and **Garrison** sit in the row above, with the time buttons.
 - **Enter** the encampment, when the party stands on it (see [The encampment](#the-encampment)).
 
 ---

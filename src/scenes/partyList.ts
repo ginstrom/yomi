@@ -32,7 +32,7 @@ export function bannerOf(id: string): number {
 }
 
 /** How far apart, in pixels across, the figures of parties sharing a hex stand. */
-export const FIGURE_SPREAD = 14
+export const FIGURE_SPREAD = 30
 
 /** Each party's figure's offset across from its hex's centre: 0 for a party alone on its hex, and parties sharing one spread `FIGURE_SPREAD` apart in list order, centred on it. */
 export function figureOffsets(parties: readonly Pick<Expedition, 'id' | 'position'>[]): Map<string, number> {
@@ -52,6 +52,15 @@ export function meetTarget(game: GameState, party: Expedition, at: Hex): Expedit
   return game.parties.find((other) => other !== party && other.members.length > 0 && hexEquals(other.position, at)) ?? null
 }
 
+/** Columns of the name drawn on an entry's portrait: its width over a 10px monospace character's. */
+export const ENTRY_NAME_COLS = 10
+
+/** A party's name as its entry's portrait shows it: "Company" shortened to "Co.", and what still does not fit cut with an ellipsis. */
+export function entryName(name: string): string {
+  const short = name.replace(/ Company$/, ' Co.')
+  return short.length <= ENTRY_NAME_COLS ? short : `${short.slice(0, ENTRY_NAME_COLS - 1).trimEnd()}…`
+}
+
 const ENTRY_SIZE = 64
 const ENTRY_MARGIN = 8
 const ENTRY_PITCH = 104
@@ -68,6 +77,8 @@ export const ORDER_COLS = Math.floor(PARTY_LIST_W / (ORDER_FONT_PX * 0.6))
 export interface PartyListEntry {
   id: string
   name: string
+  /** The name on the entry's portrait (`entryName`): '' while the company has one party, which the strip leaves unnamed. */
+  label: string
   /** The banner's number (`bannerOf`), 1 to 3. */
   banner: number
   /** The leader is `members[0]`, the member the map figure is dressed from. */
@@ -189,6 +200,7 @@ export function deployedParties(game: GameState, shown: ShownOrder | null = null
       return {
         id: expedition.id,
         name: game.parties.length === 1 ? SINGLE_PARTY_NAME : expedition.name,
+        label: game.parties.length === 1 ? '' : entryName(expedition.name),
         banner: bannerOf(expedition.id),
         members: party,
         position: expedition.position,

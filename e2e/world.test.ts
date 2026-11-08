@@ -685,10 +685,10 @@ describe('the world map', () => {
         { id: 'party_2', name: 'Second Company', at: at(9, 19) },
         { id: 'party_3', name: 'Third Company', at: at(11, 19), members: 1 },
       ])
-      expect(world.parties.map((p) => [p.id, p.name, p.banner, p.members])).toEqual([
-        ['party_1', 'First Company', 1, 3],
-        ['party_2', 'Second Company', 2, 3],
-        ['party_3', 'Third Company', 3, 1],
+      expect(world.parties.map((p) => [p.id, p.name, p.label, p.banner, p.members])).toEqual([
+        ['party_1', 'First Company', 'First Co.', 1, 3],
+        ['party_2', 'Second Company', 'Second Co.', 2, 3],
+        ['party_3', 'Third Company', 'Third Co.', 3, 1],
       ])
       expect(world.figures.map((f) => f.id)).toEqual(['party_1', 'party_2', 'party_3'])
       // Two on one hex are drawn side by side.
@@ -752,6 +752,8 @@ describe('the world map', () => {
   it('walks the party home on Home, and garrisons a held site on Garrison, passing no day', async () => {
     const game = await games.open()
     const start = await game.newGame()
+    // One party: its entry is unnamed, as before there were several.
+    expect([start.parties[0].name, start.parties[0].label]).toEqual(['Your party', ''])
     expect(start.buttons.home.visible).toBe(false)
     expect(start.buttons.garrison.visible).toBe(false)
     // Iron Vein, held from the start.
