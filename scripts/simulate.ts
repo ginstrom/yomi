@@ -251,7 +251,7 @@ function runBattle(battleId: number, seed: number, args: CliArgs): LoggedEvent[]
 }
 
 /** Seeds apart for the battles of one campaign: more than a campaign fights. */
-const CAMPAIGN_SEED_STEP = 1000
+export const CAMPAIGN_SEED_STEP = 1000
 
 /** The days a campaign may last before it is called off. */
 export const MAX_CAMPAIGN_DAYS = 2000

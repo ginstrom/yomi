@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import type { SpellId } from '../src/combat/spells.ts'
 import { BattleEngine, type CastOutcome, type Side } from '../src/engine/battleEngine.ts'
@@ -20,6 +21,7 @@ import { extractRefusal } from '../src/game/runecraft.ts'
 import type { EncounterId } from '../src/game/encounters.ts'
 import { SOURCE_ID, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
 import {
+  CAMPAIGN_SEED_STEP,
   MAX_CAMPAIGN_DAYS,
   OUTPOST_ERRAND_RADIUS,
   SOURCE_READY_LEVEL,
@@ -37,6 +39,7 @@ import {
   RUNE_ORDER,
   runecraftGear,
   visitGuildHall,
+  type CampaignRecord,
   type LoggedEvent,
 } from './simulate.ts'
 
@@ -707,4 +710,34 @@ describe('runes in a campaign', () => {
       expect(hero.hp).toBe(maxHp(hero))
     })
   })
+})
+
+/**
+ * The refactor guard for stage 5: the output of `--campaign --battles 5 --seed 1` at commit 4a2b824, before any
+ * change. Never edit it. A mismatch means a step changed behaviour.
+ */
+const GUARD_RECORDS: CampaignRecord[] = [
+  { outcome: 'source', days: 333, battles: 20, spawns: 30, captured: 2, lost: 0, blighted: 0.41, healedHp: 138, campDays: 18, towersBuilt: 3, towersLost: 0, deaths: 4, recruits: 2, hallLevel: 3, shrineLevel: 1, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 5, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 16, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8], deathsAtLevel: [8, 8, 7, 7], battlesToLevel: { 5: 6 } },
+  { outcome: 'fallen', days: 234, battles: 18, spawns: 28, captured: 4, lost: 0, blighted: 0.42875, healedHp: 68, campDays: 6, towersBuilt: 3, towersLost: 0, deaths: 1, recruits: 2, hallLevel: 2, shrineLevel: 1, outpostsBuilt: 3, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 3, fieldCraftDays: 3, runesFound: 11, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [7, 7, 7, 7], deathsAtLevel: [3], battlesToLevel: {5: 10} },
+  { outcome: 'fallen', days: 426, battles: 20, spawns: 30, captured: 4, lost: 1, blighted: 0.4425, healedHp: 148, campDays: 29, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 5, hallLevel: 3, shrineLevel: 3, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 184, tierTwoBought: 0, crafted: 9, fieldCraftDays: 3, runesFound: 12, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7, 7, 7], deathsAtLevel: [3, 4, 2], battlesToLevel: {5: 9} },
+  { outcome: 'fallen', days: 125, battles: 9, spawns: 17, captured: 0, lost: 0, blighted: 0.4066666666666667, healedHp: 57, campDays: 6, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 5, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [5, 5, 5], deathsAtLevel: [], battlesToLevel: { 5: 6 } },
+  { outcome: 'fallen', days: 62, battles: 5, spawns: 6, captured: 0, lost: 0, blighted: 0.41791666666666666, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 2, recruits: 0, hallLevel: 2, shrineLevel: 1, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 102, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 3, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [4], deathsAtLevel: [3, 3], battlesToLevel: {} },
+]
+const GUARD_EVENTS_SHA256 = 'c5c83f8e83d614381e6bd76e5bee1075e5d7b66c6cf9b5873eafce41453b2769'
+
+describe('the refactor guard', () => {
+  it('plays 5 seeded campaigns exactly as it did before stage 5', () => {
+    const args = parseArgs(['--campaign', '--battles', '5', '--seed', '1'])
+    const records: CampaignRecord[] = []
+    const lines: string[] = []
+    let firstBattleId = 0
+    for (let run = 0; run < 5; run++) {
+      const { battles, record } = runCampaign(run, (1 + run * CAMPAIGN_SEED_STEP) >>> 0, args, firstBattleId)
+      firstBattleId += battles.length
+      records.push(record)
+      for (const events of battles) for (const event of events) lines.push(JSON.stringify(event))
+    }
+    expect(records).toEqual(GUARD_RECORDS)
+    expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe(GUARD_EVENTS_SHA256)
+  }, 60_000)
 })
