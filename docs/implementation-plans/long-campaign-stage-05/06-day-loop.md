@@ -349,3 +349,5 @@ Implement C6 as written. The points that keep it identical to today:
 **For later steps.**
 - Step 07: `passDay`'s `day` case is the hook (`partyDay` and `afterDay` in company.ts); `advanceRefusal` already lets a confronting party pass a day whose order is a scout or wait day action.
 - Step 08/09: an interrupted walk or camp now leaves the party's order standing (travel with the remaining route, or camp). The scenes do not show or use it yet; a saved game carries it. Debug `goto` moves a party without touching its order, so a standing travel order would walk on from the new hex along the old route on the next `days`; step 09 (or 07) may want `goto` to make the order idle.
+
+**Commit.** `4f3a336` Stage 5 step 06: the day loop.
