@@ -1359,6 +1359,84 @@
     {
       "frames": [
         {
+          "duration": 220,
+          "frame": "map_banner/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 220,
+          "frame": "map_banner/flutter_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 220,
+          "frame": "map_banner/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 220,
+          "frame": "map_banner/flutter_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "map_banner/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 220,
+          "frame": "map_banner_azure/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 220,
+          "frame": "map_banner_azure/flutter_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 220,
+          "frame": "map_banner_azure/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 220,
+          "frame": "map_banner_azure/flutter_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "map_banner_azure/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 220,
+          "frame": "map_banner_green/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 220,
+          "frame": "map_banner_green/flutter_1",
+          "key": "atlas"
+        },
+        {
+          "duration": 220,
+          "frame": "map_banner_green/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 220,
+          "frame": "map_banner_green/flutter_2",
+          "key": "atlas"
+        }
+      ],
+      "key": "map_banner_green/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 700,
           "frame": "map_blight/base",
           "key": "atlas"

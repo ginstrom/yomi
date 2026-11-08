@@ -83,3 +83,16 @@ So party 1's banner is crimson, party 2's azure and party 3's green.
 
 ## 7. Execution record
 
+
+### Execution (engineer)
+
+- `art/encampment/camp_guild_hall.sprite.toml`: `level_4` (the Barracks, a long timber hall with a chimney behind the guild hall) and `level_5` (a pennant on its ridge, gold ridge-line, crossed blades over its middle), derived from `level_3`, same 48px `building` canvas and footprint.
+- Banners: `art/map/map_banner.sprite.toml` (crimson) with variants `azure` and `green`, 24px `map` canvas, frames `base`, `flutter_1`, `flutter_2`, anim `idle` (4 beats, 220 ms). Variants export idle animations too.
+- **For step 07's `BANNER_SPRITES` (banner 1, 2, 3):** `map_banner`, `map_banner_azure`, `map_banner_green`; animation `<sprite>/idle`; frames 24x24 (pole at column 11, flag at rows 2-9, pole foot at row 20).
+- Viewed with `sprite preview ... --scale 8` and at display size; the first Barracks floated above the hall, fixed by running its wall down behind the hall's roof.
+- README provenance updated; no CLAUDE.md edit needed (no new id-to-asset table).
+- Checks: `npm run sprites:check` up to date (124 sprites, 248 frames); `npm test` 1407 passed. Guard untouched; 50-campaign check not run (no rule change).
+
+### Review round 1
+
+Found 4, fixed 4 (commit 6ad9a75 and the record commit): the Barracks wall has timber framing, windows and a dark edge along the hall roof slopes; level 5 adds a palisade with a gate and a hung banner across the front; the banner tail lifts and drops a full row; the index row carries the commits. Previews regenerated; sprites:check up to date, npm test 1407 passed.
