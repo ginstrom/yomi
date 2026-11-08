@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 5 (a company of one)
 
 **Slug:** long-campaign-stage-05
-**Phase:** PR open — https://github.com/ginstrom/yomi/pull/6 (ready for review)
+**Phase:** merged (PR #6, ab37e14, 2026-11-08)
 
 ## Request (user's words)
 
