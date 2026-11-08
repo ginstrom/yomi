@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 6 (multiple parties)
 
 **Slug:** long-campaign-stage-06
-**Phase:** implementation (steps 05, 06)
+**Phase:** implementation (steps 07, 09)
 
 ## Request (user's words)
 
@@ -64,4 +64,8 @@ Large/structural, but the stage design is the approved design (marked ready for 
 - Steps 05 (main tree) and 06 (worktree) run in parallel; 06 touches only art/ and sprites.
 - Step 06 (e26c81f, sonnet, worktree branch long-campaign-stage-06-sprites): hall level_4/level_5, banners map_banner / _azure / _green with idle flutter; sprites:check 124; npm test 1407.
 - Step 06 review (opus): changes needed — blank barracks wall and lost roof edge, levels 4/5 indistinguishable, weak flutter, missing hash. Fixed in 6ad9a75, 35d980a (outline, timber, windows; level 5 palisade + gate + banner; flutter a row). Orchestrator viewed new previews: reads well; accepted without a second review. Merge into the stage branch after step 05 commits.
+- Step 05 (a9e8c0c, 916a518, opus): exchange, wipeParty/heroesLeft (decision 7), BattleScene defeat flow, debug hp; npm test 1423; browser 99/99; build; 50 hash identical.
+- Step 05 review (opus): clean; 10 rule mutations all caught. Finding: C/I/S on the defeat screen after a wipe crashed the panel (members empty, index -1). Fixed 8f9697e (openPanel returns on phase over or index<0; e2e presses C/I/S). Side effect accepted: panel no longer opens on the victory screen (heroes viewable on the map). Accepted without re-review (guard + e2e that failed before).
+- Step 06 merged into the stage branch (index-row conflict resolved; sprites:check, tsc ok).
+- Step 09 runs in a worktree (branch long-campaign-stage-06-simrecord) in parallel with step 07 on the main tree.
 
