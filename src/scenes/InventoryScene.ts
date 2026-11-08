@@ -43,6 +43,8 @@ import { socketLines } from '../inventory/runes.ts'
 import type { InventoryProbe } from '../testHook.ts'
 import type { Point } from './boardGeometry.ts'
 import { pressMoved, rectContains, type Rect } from './mapScroll.ts'
+import { addPanelButton } from './panelButton.ts'
+import type { GameState } from '../game/gameState.ts'
 import { applyMove, planDrag, validTargets, type DragSource, type DropTarget } from './gearDrag.ts'
 import { WARDS_WIDE_ROW_CHARS, attackCostWarning, onHitLines, wardsLines } from './gearCompare.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
@@ -104,6 +106,8 @@ interface InventoryData {
   canAdvance?: boolean
   /** The scene the panel lies over, resumed when it closes. */
   resume?: 'Battle' | 'World'
+  /** On the world map, while another party stands on the party's hex: the game and the party's id, for an Exchange button that opens the Exchange scene. */
+  exchange?: { game: GameState; party: string }
 }
 
 const PANEL_W = 720
@@ -266,6 +270,8 @@ export class InventoryScene extends Phaser.Scene {
   /** The mana the member has left in battle; null where the most it has is shown instead. */
   private mana: number | null = null
   private canAdvance = false
+  private exchangeFor: InventoryData['exchange'] | null = null
+  private exchangeAt: Rect | null = null
   private resumeKey: NonNullable<InventoryData['resume']> = 'Battle'
   /** Each equipment slot's centre, in the panel's own pixels. */
   private slotCentres = new Map<EquipmentSlot, Point>()
@@ -313,6 +319,8 @@ export class InventoryScene extends Phaser.Scene {
     this.canAdvance = data.canAdvance ?? false
     this.groundTitle = data.groundTitle ?? 'Ground'
     this.resumeKey = data.resume ?? 'Battle'
+    this.exchangeFor = data.exchange ?? null
+    this.exchangeAt = null
     this.worldCast = null
     this.press = null
     this.doll = null
@@ -453,6 +461,7 @@ export class InventoryScene extends Phaser.Scene {
       ground: this.ground
         .slice(this.groundScroll.firstIndex, this.groundScroll.firstIndex + GROUND_COLS * GROUND_ROWS)
         .map((item, i) => ({ ...onScreen(slotPosition(this.groundStartX(), i, GROUND_COLS)), item: item.id })),
+      exchangeButton: { ...onScreen(this.exchangeAt ?? { x: 0, y: 0 }), visible: !!this.exchangeAt && this.activeTab === 'inventory', enabled: !!this.exchangeAt },
       grids: { backpack: onScreen(rectCentre(this.backpackBounds())), ground: onScreen(rectCentre(this.groundBounds())) },
       doll: this.doll?.lookNames() ?? [],
       characterSheet: {
@@ -1183,6 +1192,7 @@ export class InventoryScene extends Phaser.Scene {
     const title = scrolls ? `${this.groundTitle} (${this.ground.length})` : this.groundTitle
     const gridW = GROUND_COLS * SLOT_SIZE + (GROUND_COLS - 1) * SLOT_GAP
     const startX = this.buildSlotGrid(title, STATS_X + gridW / 2, GROUND_COLS)
+    this.buildExchangeButton()
     const first = this.groundScroll.firstIndex
     for (let i = 0; i < GROUND_COLS * GROUND_ROWS; i++) {
       const { x, y } = slotPosition(startX, i, GROUND_COLS)
@@ -1191,6 +1201,24 @@ export class InventoryScene extends Phaser.Scene {
       this.createItemSlot(x, y, this.ground[index] ?? null, { source: { kind: 'ground', index }, click: take, secondary: take })
     }
     this.buildGroundScrollbar(STATS_X + gridW + 4)
+  }
+
+  /** Exchange, at the left of the baggage's title: trades with the party sharing the hex. */
+  private buildExchangeButton(): void {
+    this.exchangeAt = null
+    if (!this.exchangeFor || this.resumeKey !== 'World') return
+    const at = { x: STATS_X + 38, y: SLOT_TITLE_Y, width: 76, height: 22 }
+    this.exchangeAt = at
+    addPanelButton(this, this.inventoryContent, at, 'Exchange', () => this.openExchange(), { fontSize: 11 })
+  }
+
+  /** Closes the panel and opens the Exchange scene over the map, which stays paused. */
+  private openExchange(): void {
+    const target = this.exchangeFor
+    if (!target) return
+    this.scene.stop()
+    this.scene.launch('Exchange', target)
+    this.scene.bringToTop('Exchange')
   }
 
   /** The bar beside the ground grid, drawn only when the pile is deeper than the grid. */

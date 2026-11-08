@@ -3,6 +3,7 @@ import type { Character } from '../character/character.ts'
 import { canAdvance } from '../character/progression.ts'
 import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex, type WorldEvent } from '../game/blight.ts'
 import { atEncampment, buildOutpost, buildTower, canBuildOutpost, canBuildTower, outpostSite, outpostSiteRefusal, towerSiteRefusal } from '../game/buildings.ts'
+import { exchangePartners } from './exchangeView.ts'
 import { UNTIL_LIMIT, advance, advanceRefusal, blockingParty, partyNoun, passDay, setOrder, type DayReport } from '../game/company.ts'
 import { campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from '../game/camp.ts'
 import { FIRST_PARTY_ID, presences, type Expedition, type PartyPresence } from '../game/expedition.ts'
@@ -203,6 +204,8 @@ export class WorldScene extends Phaser.Scene {
   /** In the time row: Home, away from the encampment, and Garrison, on a held resource. */
   private homeButton!: Phaser.GameObjects.Container
   private garrisonButton!: Phaser.GameObjects.Container
+  /** Also in the time row, while another party stands on the selected party's hex: opens the Exchange overlay. */
+  private exchangeButton!: Phaser.GameObjects.Container
   private towerButton!: Phaser.GameObjects.Container
   /** Shown on a held town or resource that has no outpost yet. */
   private outpostButton!: Phaser.GameObjects.Container
@@ -316,6 +319,7 @@ export class WorldScene extends Phaser.Scene {
     // Not "Home", which is the key that centres the view.
     this.homeButton = this.createButton('Return home', () => this.onHome())
     this.garrisonButton = this.createButton('Garrison', () => this.onGarrison())
+    this.exchangeButton = this.createButton('Exchange', () => this.openExchange())
     this.campButtons = [
       this.createButton('Camp', () => this.onCamp()),
       this.createButton('Camp until healed', () => this.onCampUntilHealed()),
@@ -381,10 +385,12 @@ export class WorldScene extends Phaser.Scene {
     // Back from a member's panel, where skill points and perks may have been spent, and
     // which tells the member it last showed. The menu resumes the map too, and tells nothing.
     // Back from field crafting, which hands back what it made and the day that passed (`CraftedData`).
-    this.events.on(Phaser.Scenes.Events.RESUME, (_sys: Phaser.Scenes.Systems, data?: { member?: number } & Partial<CraftedData>) => {
+    this.events.on(Phaser.Scenes.Events.RESUME, (_sys: Phaser.Scenes.Systems, data?: { member?: number; exchanged?: boolean } & Partial<CraftedData>) => {
       // The menu pauses the theme; the options there may have changed its volume.
       this.resumeMusic()
       this.active = data?.member ?? this.active
+      // An exchange changed who is in the parties: the column is built again for the selected party's members.
+      if (data?.exchanged) this.rebuildColumn()
       if (data?.crafted) this.crafted(data.crafted)
       this.refresh()
       this.save()
@@ -468,6 +474,7 @@ export class WorldScene extends Phaser.Scene {
         untilSomething,
         home: buttonProbe(this.homeButton),
         garrison: buttonProbe(this.garrisonButton),
+        exchange: buttonProbe(this.exchangeButton),
         camp,
         campUntilHealed,
         buildTower: buttonProbe(this.towerButton),
@@ -757,7 +764,7 @@ export class WorldScene extends Phaser.Scene {
     // Only the buttons shown take room: the camp row has one of the tower's, the outpost's and the encampment's at most.
     const timeY = buttonY - ROW_PITCH
     const rows: [Phaser.GameObjects.Container[], number][] = [
-      [[...this.timeButtons, this.homeButton, this.garrisonButton], timeY],
+      [[...this.timeButtons, this.homeButton, this.garrisonButton, this.exchangeButton], timeY],
       [this.buttons, buttonY],
       [[...this.campButtons, this.towerButton, this.outpostButton, this.encampmentButton], buttonY],
     ]
@@ -852,16 +859,23 @@ export class WorldScene extends Phaser.Scene {
       const entry = this.listedParties().find((party) => party.id === id)
       if (!entry) return
       this.selectedParty = id
-      this.column.destroy()
-      this.column = new PartyColumn(this, entry.members, (index) => this.onPortrait(index))
-      this.active = Math.max(0, entry.members.findIndex(canAdvance))
-      // The new column's objects are the newest; the outcome screen stays over them.
-      for (const cover of [this.outcomeShade, this.outcomeText, this.endButton, this.endlessButton, this.menuButton]) {
-        this.children.bringToTop(cover)
-      }
+      this.rebuildColumn()
       this.refresh()
     }
     this.centreOnSelected()
+  }
+
+  /** Builds the column again for the selected party's members, with the first able to advance active. */
+  private rebuildColumn(): void {
+    const members = this.selectedMembers()
+    this.column.destroy()
+    this.column = new PartyColumn(this, members, (index) => this.onPortrait(index))
+    this.active = Math.max(0, members.findIndex(canAdvance))
+    this.column.layout(this.scale.height)
+    // The new column's objects are the newest; the outcome screen stays over them.
+    for (const cover of [this.outcomeShade, this.outcomeText, this.endButton, this.endlessButton, this.menuButton]) {
+      this.children.bringToTop(cover)
+    }
   }
 
   /**
@@ -939,6 +953,7 @@ export class WorldScene extends Phaser.Scene {
     for (const button of this.timeButtons) button.setVisible(ordering)
     this.homeButton.setVisible(ordering && !hexEquals(expedition.position, encampment(world).position))
     this.garrisonButton.setVisible(ordering && outpostSite(world, expedition) !== null && expedition.order.kind !== 'garrison')
+    this.exchangeButton.setVisible(ordering && exchangePartners(this.gameState, expedition).length > 0)
     const campable = canCamp(world, expedition)
     for (const button of this.campButtons) button.setVisible(campable && !this.walking)
     this.towerButton.setVisible(campable && !this.walking && towerSiteRefusal(world, expedition) === null)
@@ -1167,7 +1182,7 @@ export class WorldScene extends Phaser.Scene {
   private refreshWalking(): void {
     this.partyMark.clear()
     this.selectedMark.clear()
-    for (const button of [...this.buttons, ...this.timeButtons, this.homeButton, this.garrisonButton, ...this.campButtons, this.towerButton, this.outpostButton, this.encampmentButton]) button.setVisible(false)
+    for (const button of [...this.buttons, ...this.timeButtons, this.homeButton, this.garrisonButton, this.exchangeButton, ...this.campButtons, this.towerButton, this.outpostButton, this.encampmentButton]) button.setVisible(false)
     this.partyList.refresh(this.listedParties(), this.selectedParty)
     this.refreshHover()
   }
@@ -1400,8 +1415,18 @@ export class WorldScene extends Phaser.Scene {
     // Gear is changed freely here, and the ground is the party's baggage, through which items
     // pass between members. The panel edits the characters and the baggage in place.
     const members = party.map((member) => ({ character: member, gearApCost: 0, ground: expedition.baggage }))
-    this.scene.launch('Inventory', { members, index, tab, canAdvance: true, resume: 'World', groundTitle: 'Baggage' })
+    const exchange = exchangePartners(this.gameState, expedition).length > 0 ? { game: this.gameState, party: expedition.id } : undefined
+    this.scene.launch('Inventory', { members, index, tab, canAdvance: true, resume: 'World', groundTitle: 'Baggage', exchange })
     this.scene.bringToTop('Inventory')
+    this.scene.pause()
+  }
+
+  /** The Exchange overlay over the map, while another party stands on the selected party's hex; it resumes the map when it closes. */
+  private openExchange(): void {
+    const expedition = this.expedition()
+    if (this.scene.isPaused() || this.walking || exchangePartners(this.gameState, expedition).length === 0) return
+    this.scene.launch('Exchange', { game: this.gameState, party: expedition.id })
+    this.scene.bringToTop('Exchange')
     this.scene.pause()
   }
 

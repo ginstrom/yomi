@@ -6,6 +6,8 @@ import { describeCost } from '../game/buildings.ts'
 import { craft, craftTier, craftables, highestGrade, options, type CraftOption } from '../game/crafting.ts'
 import type { Expedition } from '../game/expedition.ts'
 import { selectedParty, type GameState } from '../game/gameState.ts'
+import { homeParty } from '../game/guildHall.ts'
+import { actingFor } from './encampmentView.ts'
 import { itemAt, placeKey, type ItemPlace } from '../game/itemPlace.ts'
 import { embed, extract, fuse, socketables } from '../game/runecraft.ts'
 import { gradeNumeral } from '../inventory/grades.ts'
@@ -130,7 +132,7 @@ export class CraftingScene extends Phaser.Scene {
 
   create(data: CraftingData): void {
     this.gameState = data.game
-    this.expedition = selectedParty(data.game, data.party)
+    this.expedition = data.resume ? selectedParty(data.game, data.party) : (homeParty(data.game, data.party) ?? selectedParty(data.game, data.party))
     this.resumeTo = data.resume ?? null
     this.tab = 'modify'
     this.page = 0
@@ -165,6 +167,7 @@ export class CraftingScene extends Phaser.Scene {
       : craftables(this.gameState, this.expedition)
     const runeItem = runes && item ? itemAt(this.gameState, item) : null
     return {
+      actingFor: this.expedition.id,
       tier: craftTier(this.gameState.world, this.expedition),
       tab: this.tab,
       message: this.message,
@@ -271,7 +274,7 @@ export class CraftingScene extends Phaser.Scene {
       this.add.rectangle(CENTRE_X, FRAME_H / 2, FRAME_W, FRAME_H, 0x241d15, 0.98).setStrokeStyle(3, 0xc9a227),
       this.add.text(CENTRE_X, TITLE_Y, title, { fontFamily: FONT, fontSize: '28px', color: GOLD, fontStyle: 'bold' }).setOrigin(0.5),
       this.add.text(CENTRE_X, TITLE_Y + 26, about, { fontFamily: FONT, fontSize: '12px', color: DIM }).setOrigin(0.5),
-      this.add.text(CENTRE_X, TITLE_Y + 42, `Stock: ${stock}`, { fontFamily: FONT, fontSize: '12px', color: DIM }).setOrigin(0.5),
+      this.add.text(CENTRE_X, TITLE_Y + 42, `${this.resumeTo ? '' : actingFor(this.gameState, this.expedition)}Stock: ${stock}`, { fontFamily: FONT, fontSize: '12px', color: DIM }).setOrigin(0.5),
       this.add
         .text(CENTRE_X, MESSAGE_Y, this.message, { fontFamily: FONT, fontSize: '13px', color: TEXT, align: 'center', wordWrap: { width: FRAME_W - 40 } })
         .setOrigin(0.5),

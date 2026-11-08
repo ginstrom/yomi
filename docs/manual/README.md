@@ -133,7 +133,16 @@ Raise the guild hall to level 4 and it can field a second party, at level 5 a th
 - **Every party moves at once.** Each carries on with its order whenever days pass, whoever you have selected. Only the selected party's walk is animated; the others step to where they have got to when it ends.
 - **Meet** another party by clicking the hex it stands on (the header says "Meet Second Company" as you hover it). The selected party walks to it, following it if it moves, until the two stand together. A party that walks onto monsters another party already faces stands before them too.
 - **Interruptions name the party.** When something stops the days, the message leads with the party it concerns ("Second Company: arrived at Kobold Scouts."), and the map selects that party and centres on it.
+- **Exchange** heroes and baggage when two parties stand on one hex (see [Meeting and exchange](#meeting-and-exchange)).
 - Two parties never fight the same lair at once. A party cannot be sent to a lair another party already stands at (meet it there instead), and of two parties reaching a lair on the same day the first in the list takes it, the other waiting a hex short.
+
+### Meeting and exchange
+
+When another party stands on the selected party's hex, an **Exchange** button appears in the footer, and in the character panel's Inventory tab beside the baggage. It opens a screen with the two parties as two rows of faces and their two baggages below.
+
+- **Click a hero**, then a hero of the other row to swap the two, or the other row's heading to move the hero across.
+- **Click an item** in a baggage to pass it to the other party.
+- A party keeps at least one hero and at most the hall's party limit; a refusal is told at the bottom. Heroes keep what they wear and carry. Neither party may be standing before monsters the other does not face. **Close** (or Esc) goes back to the map. Reserves are not reached here; the guild hall moves them.
 
 ### Fog of war
 
@@ -478,10 +487,14 @@ When the party stands on the encampment, **Enter** (the button carries the encam
 
 ![The guild hall](images/guild-hall.png)
 
-In the encampment, click the guild hall and then **Enter the Guild Hall**. It shows your party and the reserves waiting at the hall. **Close** goes back to the encampment.
+In the encampment, click the guild hall and then **Enter the Guild Hall**. It shows a column for each party standing at the encampment and one for the reserves waiting at the hall. **Close** goes back to the encampment. Levels 4 and 5 of the hall allow a second and a third party (see [Parties](#parties)).
 
-- **Click a hero** to select them. Then click a hero in the other row to swap the two, or use **To reserves** / **To party**.
-- **Recruit** hires a new hero for **10 gold**, who joins the reserves. The reserves hold at most 4.
+- **Click a hero** to select them. Then click a hero in another column to swap the two, or that column's heading to move the hero there (a party keeps at least one hero and at most the hall's party limit; the reserves hold at most 4).
+- **Form party** makes a new party at the encampment from the selected hero, if the hall's level allows another. It takes the next default name (Second Company, Third Company).
+- **Rename** types a new name for the selected hero's party (1 to 16 letters, none shared with another party): Enter keeps it, Esc cancels.
+- **Disband** sends the selected hero's party into the reserves and its baggage to another party at the encampment. The last party cannot be disbanded.
+- **Recruit** hires a new hero for **10 gold**, who joins the reserves. The reserves hold at most 4, and the whole company is limited by the hall's level (7 heroes at level 1, up to 18 at level 5).
+- While more than one party stands at the encampment, its screens (the encampment, the guild hall, the trading post and the workshop) say which party they act for ("For: Second Company"): the selected party if it is at home, else the first at home.
 
 ![Recruiting](images/guild-hall-recruit.png)
 
