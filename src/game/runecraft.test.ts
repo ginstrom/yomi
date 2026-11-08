@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { maxHp } from '../character/character.ts'
 import { itemById } from '../inventory/inventory.ts'
 import { soloPresences } from './expedition.ts'
-import { newGame, type GameState } from './gameState.ts'
+import { leader, newGame, type GameState } from './gameState.ts'
 import type { ItemPlace } from './itemPlace.ts'
 import {
   EXTRACT_LEVEL,
@@ -29,18 +29,18 @@ const intoField = (game: GameState) => (game.world.party = { q: game.world.party
 
 /** Puts `id` in the soldier's main hand and returns its place. */
 function wield(game: GameState, id: string): ItemPlace {
-  game.party[0].equipment.mainHand = itemById(id)!
+  leader(game).members[0].equipment.mainHand = itemById(id)!
   return { from: 'worn', member: 0, slot: 'mainHand', itemId: id }
 }
 /** Puts `id` on the soldier as armour and returns its place. */
 function wear(game: GameState, id: string): ItemPlace {
-  game.party[0].equipment.armor = itemById(id)!
+  leader(game).members[0].equipment.armor = itemById(id)!
   return { from: 'worn', member: 0, slot: 'armor', itemId: id }
 }
 
 /** Everything an action might change, to show a refusal changed none of it. */
 const snapshot = (game: GameState) =>
-  JSON.stringify({ stock: game.world.stock, runes: game.runes, turn: game.world.turn, equipment: game.party.map((m) => m.equipment), hp: game.party.map((m) => m.hp), baggage: game.baggage })
+  JSON.stringify({ stock: game.world.stock, runes: game.runes, turn: game.world.turn, equipment: leader(game).members.map((m) => m.equipment), hp: leader(game).members.map((m) => m.hp), baggage: leader(game).baggage })
 
 /** Expects `act` to be refused with a message matching `pattern`, and nothing changed. */
 function refused(game: GameState, act: () => string | null | { refusal: string | null }, pattern: RegExp) {
@@ -59,7 +59,7 @@ describe('embed', () => {
     let place = wield(game, 'steel_longsword@3')
     const first = embed(game, place, 'ember1')
     expect(first.refusal).toBeNull()
-    expect(game.party[0].equipment.mainHand).toBe(itemById('steel_longsword@3#ember1'))
+    expect(leader(game).members[0].equipment.mainHand).toBe(itemById('steel_longsword@3#ember1'))
     expect(game.world.stock.gold).toBe(495)
     expect(game.runes).toEqual({ ember1: 1, storm2: 1 })
     place = { ...place, itemId: 'steel_longsword@3#ember1' }
@@ -69,7 +69,7 @@ describe('embed', () => {
       expect(second.item).toBe(itemById('steel_longsword@3#ember1.storm2'))
       expect(second.events).toEqual([])
     }
-    expect(game.party[0].equipment.mainHand).toBe(itemById('steel_longsword@3#ember1.storm2'))
+    expect(leader(game).members[0].equipment.mainHand).toBe(itemById('steel_longsword@3#ember1.storm2'))
     expect(game.world.stock.gold).toBe(485)
     expect(game.runes).toEqual({ ember1: 1 })
     expect(game.world.turn).toBe(turn)
@@ -78,11 +78,11 @@ describe('embed', () => {
   it('makes iron_sword@3#ember1 of a Masterwork iron sword in the baggage', () => {
     const game = home()
     game.runes = { ember1: 1 }
-    game.baggage.push(itemById('iron_sword@3')!)
+    leader(game).baggage.push(itemById('iron_sword@3')!)
     const result = embed(game, { from: 'baggage', index: 0, itemId: 'iron_sword@3' }, 'ember1')
     expect(result.refusal).toBeNull()
-    expect(game.baggage[0]).toBe(itemById('iron_sword@3#ember1'))
-    expect(game.baggage[0].id).toBe('iron_sword@3#ember1')
+    expect(leader(game).baggage[0]).toBe(itemById('iron_sword@3#ember1'))
+    expect(leader(game).baggage[0].id).toBe('iron_sword@3#ember1')
     expect(game.runes).toEqual({})
   })
 
@@ -96,7 +96,7 @@ describe('embed', () => {
       const result = embed(game, place, 'stone1')
       expect(result.refusal).toBeNull()
       expect(game.world.turn).toBe(turn + 1)
-      expect(game.party[0].equipment.mainHand!.id).toBe('iron_sword@3#stone1')
+      expect(leader(game).members[0].equipment.mainHand!.id).toBe('iron_sword@3#stone1')
       expect(game.world.stock.gold).toBe(495)
     }
   })
@@ -107,18 +107,18 @@ describe('embed', () => {
     const scout = home()
     intoField(scout)
     let quiet = 0
-    while (passTurn(scout.world, soloPresences(scout.world, scout.party)).length === 0) quiet++
+    while (passTurn(scout.world, soloPresences(scout.world, leader(scout).members)).length === 0) quiet++
     const game = home()
     intoField(game)
     const twin = home()
     intoField(twin)
     for (let day = 0; day < quiet; day++) {
-      passTurn(game.world, soloPresences(game.world, game.party))
-      passTurn(twin.world, soloPresences(twin.world, twin.party))
+      passTurn(game.world, soloPresences(game.world, leader(game).members))
+      passTurn(twin.world, soloPresences(twin.world, leader(twin).members))
     }
     game.runes = { stone1: 1 }
     const place = wield(game, 'iron_sword@3')
-    const expected = passTurn(twin.world, soloPresences(twin.world, twin.party))
+    const expected = passTurn(twin.world, soloPresences(twin.world, leader(twin).members))
     expect(expected.length).toBeGreaterThan(0)
     const result = embed(game, place, 'stone1')
     expect(result.refusal).toBeNull()
@@ -144,7 +144,7 @@ describe('embed', () => {
     among.runes = { ember1: 1 }
     const amongPlace = wield(among, 'iron_sword@3')
     const raiders = among.world.locations.find((l) => l.id === 'goblin_raiders')!
-    while (!monstersHere(among.world)) travel(among.world, raiders.position, among.party)
+    while (!monstersHere(among.world)) travel(among.world, raiders.position, leader(among).members)
     refused(among, () => embed(among, amongPlace, 'ember1'), /Nothing can be embedded/)
   })
 
@@ -177,14 +177,14 @@ describe('extract', () => {
     const turn = game.world.turn
     const result = extract(game, place, 0)
     expect(result.refusal).toBeNull()
-    expect(game.party[0].equipment.mainHand).toBe(itemById('steel_longsword@3#storm1'))
+    expect(leader(game).members[0].equipment.mainHand).toBe(itemById('steel_longsword@3#storm1'))
     expect(game.runes).toEqual({ ember2: 1 })
     expect(game.world.stock.gold).toBe(480)
     expect(game.world.turn).toBe(turn)
     if (result.refusal === null) expect(result.events).toEqual([])
     const last = extract(game, { ...place, itemId: 'steel_longsword@3#storm1' }, 0)
     expect(last.refusal).toBeNull()
-    expect(game.party[0].equipment.mainHand).toBe(itemById('steel_longsword@3'))
+    expect(leader(game).members[0].equipment.mainHand).toBe(itemById('steel_longsword@3'))
     expect(game.runes).toEqual({ ember2: 1, storm1: 1 })
     expect(game.world.stock.gold).toBe(470)
   })
@@ -245,7 +245,7 @@ describe('fuse', () => {
 describe('hit points', () => {
   it('a Life rune embedded in worn armour raises a full hero to the new maximum, and extracted takes it back down', () => {
     const game = home(EXTRACT_LEVEL)
-    const hero = game.party[0]
+    const hero = leader(game).members[0]
     game.runes = { life1: 1 }
     const place = wear(game, 'steel_breastplate')
     const plain = maxHp(hero)
@@ -260,7 +260,7 @@ describe('hit points', () => {
 
   it('keeps a wounded hero at its share through the change', () => {
     const game = home(EXTRACT_LEVEL)
-    const hero = game.party[0]
+    const hero = leader(game).members[0]
     const place = wear(game, 'steel_breastplate@3#life2.life2')
     const runed = maxHp(hero)
     hero.hp = Math.round(runed / 2)
@@ -274,8 +274,8 @@ describe('socketables', () => {
   it('lists the items with sockets in allPlaces order, with their sockets, and leaves out the rest', () => {
     const game = home()
     wield(game, 'steel_longsword@3#ember1')
-    game.party[1].equipment.armor = itemById('steel_breastplate')!
-    game.baggage.push(itemById('iron_sword')!, itemById('iron_sword@3')!)
+    leader(game).members[1].equipment.armor = itemById('steel_breastplate')!
+    leader(game).baggage.push(itemById('iron_sword')!, itemById('iron_sword@3')!)
     const listed = socketables(game).map(({ place, item, sockets }) => [place.from, item.id, sockets])
     expect(listed).toEqual([
       ['worn', 'steel_longsword@3#ember1', 2],

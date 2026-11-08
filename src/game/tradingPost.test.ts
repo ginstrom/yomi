@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BASE_ITEMS, IRON_SWORD, SPARK_WAND, STORM_WAND, itemById } from '../inventory/inventory.ts'
-import { newGame } from './gameState.ts'
+import { leader, newGame } from './gameState.ts'
 import type { RuneKey } from '../inventory/runes.ts'
 import { MAX_TRADING_POST_LEVEL, TIER_TWO_LEVEL, TRADING_POST_COSTS, VALUES, buy, buyPrice, buyRefusal, buyRune, raiseTradingPost, runePrice, runeSalePrice, runeWares, salePrice, sell, sellMaterial, sellRune, sellables, sells, wares } from './tradingPost.ts'
 
@@ -30,7 +30,7 @@ describe('the trading post', () => {
     expect(wares(game.world).every((item) => !item.grade)).toBe(true)
     expect(buy(game, 'iron_sword')).toBeNull()
     expect(game.world.stock.gold).toBe(88)
-    expect(game.baggage).toEqual([IRON_SWORD])
+    expect(leader(game).baggage).toEqual([IRON_SWORD])
     expect(buy(game, 'iron_sword@2')).toMatch(/level 2 trading post/)
     expect(raiseTradingPost(game)).toBeNull()
     expect(wares(game.world).some((item) => item.grade === 2)).toBe(true)
@@ -50,7 +50,7 @@ describe('the trading post', () => {
 
   it('buys from the baggage and backpacks for half, never what is worn', () => {
     const game = home()
-    game.baggage.push(STORM_WAND)
+    leader(game).baggage.push(STORM_WAND)
     const offered = sellables(game)
     expect(offered.some(({ place }) => place.from === 'worn')).toBe(false)
     const fromPack = offered.find(({ place }) => place.from === 'backpack')!
@@ -59,8 +59,8 @@ describe('the trading post', () => {
     expect(game.world.stock.gold).toBe(100 + fromPack.price)
     expect(sell(game, fromBaggage.place)).toBeNull()
     expect(game.world.stock.gold).toBe(100 + fromPack.price + 25)
-    expect(game.baggage).toEqual([])
-    const worn = { from: 'worn' as const, member: 0, slot: 'mainHand' as const, itemId: game.party[0].equipment.mainHand!.id }
+    expect(leader(game).baggage).toEqual([])
+    const worn = { from: 'worn' as const, member: 0, slot: 'mainHand' as const, itemId: leader(game).members[0].equipment.mainHand!.id }
     expect(sell(game, worn)).toMatch(/Take it off/)
   })
 

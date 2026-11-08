@@ -427,8 +427,8 @@ describe('the world map', () => {
     // Wounded as a battle leaves a party: planted in the save, and loaded.
     await game.page.evaluate(() => {
       const save = JSON.parse(localStorage.getItem('yomi.save.1')!)
-      save.game.party[0].hp = 1
-      save.game.party[1].hp = 2
+      save.game.parties[0].members[0].hp = 1
+      save.game.parties[0].members[1].hp = 2
       localStorage.setItem('yomi.save.1', JSON.stringify(save))
     })
     await game.click((await game.reload()).buttons.continue)

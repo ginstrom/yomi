@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { equipFromBackpack } from '../character/character.ts'
 import { gainXp, takePerk } from '../character/progression.ts'
@@ -5,8 +6,9 @@ import { mulberry32 } from '../combat/rng.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
 import { hex } from '../grid/hex.ts'
 import { BASE_ITEMS, IRON_DAGGER, MAGIC_ITEMS, OAK_SHIELD, RING_PROTECTION, IRON_BREASTPLATE, itemById } from '../inventory/inventory.ts'
+import { FIRST_PARTY_ID, FIRST_PARTY_NAME } from './expedition.ts'
 import { ENCOUNTERS } from './encounters.ts'
-import { newGame, takeLoot, type GameState } from './gameState.ts'
+import { leader, newGame, takeLoot, type GameState } from './gameState.ts'
 import { Ground } from './ground.ts'
 import { PREROLLS, partyFighters, partyFromDrafts } from './party.ts'
 import { SAVE_VERSION, describeSave, parseSave, saveSummary, serializeSave, type SaveFile, type SavedBattle } from './save.ts'
@@ -20,7 +22,7 @@ function gameUnderWay(): GameState {
   const game = newGame(undefined, 2, 1)
   const [first] = monsters(game)
   takeLoot(game, first)
-  const [aldric, brenna] = game.party
+  const [aldric, brenna] = leader(game).members
   aldric.backpack[aldric.backpack.indexOf(null)] = RING_PROTECTION
   equipFromBackpack(aldric, aldric.backpack.indexOf(RING_PROTECTION), [])
   gainXp(brenna, 500)
@@ -35,7 +37,7 @@ function gameUnderWay(): GameState {
 
 function battleOf(game: GameState): SavedBattle {
   const location = monsters(game)[1]
-  const { setup } = ENCOUNTERS[location.encounter](partyFighters(game.party), location.threat)
+  const { setup } = ENCOUNTERS[location.encounter](partyFighters(leader(game).members), location.threat)
   const engine = new BattleEngine(setup, { seed: 9, meta: { location: location.id } })
   engine.step({ type: 'end_turn' })
   engine.step({ type: 'end_turn' })
@@ -51,17 +53,17 @@ describe('the encampment’s facilities and graded gear', () => {
     const game = gameUnderWay()
     Object.assign(game.world, { tradingPost: 3, workshop: 2, infirmary: 1 })
     game.world.stock = { gold: 7, copper: 3 }
-    game.party[0].equipment.mainHand = itemById('iron_sword@3+light2')
-    game.party[1].backpack[0] = itemById('yew_bow+recurve1')!
-    game.baggage.push(itemById('iron_breastplate@2')!)
-    game.baggage.push(itemById('steel_longsword@2+light1')!)
+    leader(game).members[0].equipment.mainHand = itemById('iron_sword@3+light2')
+    leader(game).members[1].backpack[0] = itemById('yew_bow+recurve1')!
+    leader(game).baggage.push(itemById('iron_breastplate@2')!)
+    leader(game).baggage.push(itemById('steel_longsword@2+light1')!)
     const loaded = parseSave(serializeSave({ game, battle: null, savedAt: 1 }))!.game
     expect([loaded.world.tradingPost, loaded.world.workshop, loaded.world.infirmary]).toEqual([3, 2, 1])
     expect(loaded.world.stock).toEqual({ gold: 7, copper: 3 })
-    expect(loaded.party[0].equipment.mainHand).toBe(itemById('iron_sword@3+light2'))
-    expect(loaded.party[1].backpack[0]).toBe(game.party[1].backpack[0])
-    expect(loaded.baggage.at(-2)).toBe(itemById('iron_breastplate@2'))
-    expect(loaded.baggage.at(-1)).toBe(itemById('steel_longsword@2+light1'))
+    expect(leader(loaded).members[0].equipment.mainHand).toBe(itemById('iron_sword@3+light2'))
+    expect(leader(loaded).members[1].backpack[0]).toBe(leader(game).members[1].backpack[0])
+    expect(leader(loaded).baggage.at(-2)).toBe(itemById('iron_breastplate@2'))
+    expect(leader(loaded).baggage.at(-1)).toBe(itemById('steel_longsword@2+light1'))
   })
 })
 
@@ -74,7 +76,7 @@ describe('itemById', () => {
   it('finds everything a new game can hold: kits, backpacks and loot', () => {
     const game = newGame()
     const held = [
-      ...game.party.flatMap((member) => [...Object.values(member.equipment), ...member.backpack.filter((item) => item !== null)]),
+      ...leader(game).members.flatMap((member) => [...Object.values(member.equipment), ...member.backpack.filter((item) => item !== null)]),
       ...monsters(game).flatMap((location) => location.loot),
     ]
     expect(held.length).toBeGreaterThan(20)
@@ -103,33 +105,33 @@ describe('a save', () => {
     const game = gameUnderWay()
     const parsed = parseSave(serializeSave({ game, battle: battleOf(game), savedAt: 5 }))!
     const itemsOf = (state: GameState) => [
-      ...state.party.flatMap((member) => [...Object.values(member.equipment), ...member.backpack]),
-      ...state.baggage,
+      ...leader(state).members.flatMap((member) => [...Object.values(member.equipment), ...member.backpack]),
+      ...leader(state).baggage,
       ...monsters(state).flatMap((location) => location.loot),
     ]
     const before = itemsOf(game)
     const after = itemsOf(parsed.game)
     expect(after).toHaveLength(before.length)
     after.forEach((item, i) => expect(item).toBe(before[i]))
-    expect(parsed.game.party[0].equipment.ring1).toBe(RING_PROTECTION)
+    expect(leader(parsed.game).members[0].equipment.ring1).toBe(RING_PROTECTION)
     expect(parsed.battle!.ground[0].items[0]).toBe(OAK_SHIELD)
-    expect(parsed.game.baggage.length).toBeGreaterThan(0)
+    expect(leader(parsed.game).baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 18, whose game holds a rune pouch', () => {
-    expect(SAVE_VERSION).toBe(18)
+  it('is version 19, whose game holds a rune pouch and a company', () => {
+    expect(SAVE_VERSION).toBe(19)
   })
 
   it('keeps the pouch and an item with runes', () => {
     const game = gameUnderWay()
     game.runes = { ember1: 2, storm2: 1 }
     const runed = itemById('iron_sword@3#ember1')!
-    game.baggage.push(runed)
-    game.party[0].equipment.mainHand = runed
+    leader(game).baggage.push(runed)
+    leader(game).members[0].equipment.mainHand = runed
     const parsed = parseSave(serializeSave({ game, battle: null, savedAt: 5 }))!
     expect(parsed.game.runes).toEqual({ ember1: 2, storm2: 1 })
-    expect(parsed.game.baggage.at(-1)).toBe(runed)
-    expect(parsed.game.party[0].equipment.mainHand).toBe(runed)
+    expect(leader(parsed.game).baggage.at(-1)).toBe(runed)
+    expect(leader(parsed.game).members[0].equipment.mainHand).toBe(runed)
   })
 
   it('reads a bad pouch, or a save of version 17, as unreadable', () => {
@@ -149,7 +151,7 @@ describe('a save', () => {
     const raw = serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 })
     expect(JSON.parse(raw)).toMatchObject({ version: SAVE_VERSION, savedAt: 5, game: { slot: 2, world: { guildHall: 2 } } })
     expect(JSON.parse(raw).game.reserves[0].equipment).toMatchObject({ armor: 'iron_breastplate' })
-    expect(JSON.parse(raw).game.party[0].equipment).toMatchObject({ armor: 'iron_breastplate', ring1: 'ring_protection' })
+    expect(JSON.parse(raw).game.parties[0].members[0].equipment).toMatchObject({ armor: 'iron_breastplate', ring1: 'ring_protection' })
     expect(raw).not.toContain(IRON_BREASTPLATE.description)
   })
 
@@ -158,7 +160,7 @@ describe('a save', () => {
     const before = structuredClone(game)
     serializeSave({ game, battle: battleOf(game), savedAt: 5 })
     expect(game).toEqual(before)
-    expect(game.party[0].equipment.armor).toBe(IRON_BREASTPLATE)
+    expect(leader(game).members[0].equipment.armor).toBe(IRON_BREASTPLATE)
   })
 })
 
@@ -186,22 +188,89 @@ describe('parseSave', () => {
   })
 
   it('refuses a save that names an item, a perk or a skill the game does not have', () => {
-    expect(parseSave(changed((saved) => (saved.game.party[0].equipment.mainHand = 'vorpal_spoon')))).toBeNull()
-    expect(parseSave(changed((saved) => (saved.game.party[1].backpack[0] = 'vorpal_spoon')))).toBeNull()
-    expect(parseSave(changed((saved) => saved.game.baggage.push('vorpal_spoon')))).toBeNull()
+    expect(parseSave(changed((saved) => (saved.game.parties[0].members[0].equipment.mainHand = 'vorpal_spoon')))).toBeNull()
+    expect(parseSave(changed((saved) => (saved.game.parties[0].members[1].backpack[0] = 'vorpal_spoon')))).toBeNull()
+    expect(parseSave(changed((saved) => saved.game.parties[0].baggage.push('vorpal_spoon')))).toBeNull()
     expect(parseSave(changed((saved) => (saved.game.world.locations.find((l: any) => l.loot).loot = ['vorpal_spoon'])))).toBeNull()
-    expect(parseSave(changed((saved) => (saved.game.party[0].perks.second_wind = 1)))).toBeNull()
-    expect(parseSave(changed((saved) => (saved.game.party[0].tagged = ['stealth'])))).toBeNull()
-    expect(parseSave(changed((saved) => delete saved.game.party[0].trained.magic))).toBeNull()
+    expect(parseSave(changed((saved) => (saved.game.parties[0].members[0].perks.second_wind = 1)))).toBeNull()
+    expect(parseSave(changed((saved) => (saved.game.parties[0].members[0].tagged = ['stealth'])))).toBeNull()
+    expect(parseSave(changed((saved) => delete saved.game.parties[0].members[0].trained.magic))).toBeNull()
   })
 
   it('refuses a save with a part missing', () => {
-    for (const part of ['party', 'world', 'baggage', 'reserves']) {
+    for (const part of ['parties', 'world', 'reserves']) {
       expect(parseSave(changed((saved) => delete saved.game[part]))).toBeNull()
     }
     expect(parseSave(changed((saved) => delete saved.game))).toBeNull()
-    expect(parseSave(changed((saved) => (saved.game.party = [])))).toBeNull()
+    expect(parseSave(changed((saved) => (saved.game.parties = [])))).toBeNull()
+    expect(parseSave(changed((saved) => delete saved.game.parties[0].members))).toBeNull()
+    expect(parseSave(changed((saved) => delete saved.game.parties[0].baggage))).toBeNull()
+    expect(parseSave(changed((saved) => (saved.game.parties[0].members = [])))).toBeNull()
+    expect(parseSave(changed((saved) => (saved.game.parties[0].order = { kind: 'dance' })))).toBeNull()
+    expect(parseSave(changed((saved) => delete saved.game.parties[0].order))).toBeNull()
+    expect(parseSave(changed((saved) => saved.game.parties.push(structuredClone(saved.game.parties[0]))))).toBeNull()
     expect(parseSave(changed((saved) => (saved.battle = { location: 'goblin_raiders' })))).toBeNull()
+  })
+})
+
+describe('a company', () => {
+  it('round-trips with its id, name, order, members and baggage', () => {
+    const game = gameUnderWay()
+    leader(game).order = { kind: 'travel', to: hex(5, 6), route: [hex(4, 6), hex(5, 6)] }
+    const parsed = parseSave(serializeSave({ game, battle: null, savedAt: 5 }))!
+    expect(parsed.game.parties).toHaveLength(1)
+    const [before, after] = [leader(game), leader(parsed.game)]
+    expect([after.id, after.name, after.order]).toEqual([before.id, before.name, before.order])
+    expect(after.members).toEqual(before.members)
+    expect(after.baggage).toHaveLength(before.baggage.length)
+    after.baggage.forEach((item, i) => expect(item).toBe(before.baggage[i]))
+  })
+})
+
+describe('a version-18 save', () => {
+  const raw = readFileSync(new URL('./fixtures/save-v18.json', import.meta.url), 'utf8')
+  const old = JSON.parse(raw)
+
+  it('is the fixture the code before the company wrote', () => {
+    expect(old.version).toBe(18)
+    expect(Object.keys(old.game)).toEqual(expect.arrayContaining(['party', 'baggage']))
+    expect(old.game.world.confronting).toBe('goblin_raiders')
+    expect(old.game.world.party).not.toEqual({ q: 0, r: 19 })
+  })
+
+  it('migrates into a company of one', () => {
+    const loaded = parseSave(raw)!
+    expect(loaded).not.toBeNull()
+    const { game } = loaded
+    expect(game.parties).toHaveLength(1)
+    const party = leader(game)
+    expect([party.id, party.name, party.order]).toEqual([FIRST_PARTY_ID, FIRST_PARTY_NAME, { kind: 'idle' }])
+    expect(party.members.map((m) => [m.name, m.level, m.hp])).toEqual(old.game.party.map((m: any) => [m.name, m.level, m.hp]))
+    party.members.forEach((m, i) =>
+      expect(Object.fromEntries(Object.entries(m.equipment).map(([slot, item]) => [slot, item.id]))).toEqual(old.game.party[i].equipment),
+    )
+    expect(party.baggage).toEqual([itemById('iron_sword'), itemById('iron_sword@3#ember1')])
+    expect(party.baggage[1]).toBe(itemById('iron_sword@3#ember1'))
+    expect(party.members[0].backpack[0]).toBe(itemById('iron_sword@3#storm1'))
+    expect('party' in game || 'baggage' in game).toBe(false)
+    expect(game.world.party).toEqual(old.game.world.party)
+    expect(game.world.confronting).toBe('goblin_raiders')
+    expect(game.runes).toEqual({ storm1: 1 })
+  })
+
+  it('is checked as strictly as a current one', () => {
+    const broken = (change: (saved: any) => void) => {
+      const saved = JSON.parse(raw)
+      change(saved)
+      return JSON.stringify(saved)
+    }
+    expect(parseSave(broken((s) => (s.game.party = [])))).toBeNull()
+    expect(parseSave(broken((s) => delete s.game.baggage))).toBeNull()
+    expect(parseSave(broken((s) => s.game.baggage.push('vorpal_spoon')))).toBeNull()
+  })
+
+  it('leaves versions 17 and 20 unreadable', () => {
+    for (const version of [17, 20]) expect(parseSave(JSON.stringify({ ...old, version }))).toBeNull()
   })
 })
 
@@ -209,7 +278,7 @@ describe('saveSummary', () => {
   it('tells the party, its highest level, the turn and when it was written', () => {
     const game = gameUnderWay()
     const summary = saveSummary({ game, battle: null, savedAt: new Date(2026, 9, 12, 21, 40).getTime() })
-    expect(summary).toMatchObject({ names: ['Aldric', 'Brenna', 'Delwyn'], level: game.party[1].level, turn: 14, battle: null })
+    expect(summary).toMatchObject({ names: ['Aldric', 'Brenna', 'Delwyn'], level: leader(game).members[1].level, turn: 14, battle: null })
     expect(summary.level).toBeGreaterThan(1)
     expect(describeSave(summary)).toBe(`Aldric, Brenna, Delwyn    Level ${summary.level}    Turn 14    12 Oct 21:40`)
   })

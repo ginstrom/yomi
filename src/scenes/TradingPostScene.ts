@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { deriveCombatStats } from '../character/character.ts'
-import type { GameState } from '../game/gameState.ts'
+import { leader, type GameState } from '../game/gameState.ts'
 import { placeKey, type ItemPlace } from '../game/itemPlace.ts'
 import type { Material } from '../game/territory.ts'
 import {
@@ -210,7 +210,7 @@ export class TradingPostScene extends Phaser.Scene {
   /** The lines of the tab showing, every page's. */
   private rows(): Row[] {
     const game = this.gameState
-    const apOf = (member: number) => deriveCombatStats(game.party[member]).actionPoints
+    const apOf = (member: number) => deriveCombatStats(leader(game).members[member]).actionPoints
     const { slot, family } = this.filter
     if (this.tab === 'buy') {
       if (slot === 'runes') {
@@ -219,7 +219,7 @@ export class TradingPostScene extends Phaser.Scene {
       return wares(game.world, { slot, family: family ?? undefined }).map((item) => ({ id: item.id, kind: 'item', label: item.name, detail: statSummary(item), price: buyPrice(item)!, item, ap: TYPICAL_AP }))
     }
     const items: Row[] = sellables(game).map(({ place, item, price }) => {
-      const whose = place.from === 'baggage' ? 'baggage' : `${game.party[place.member].name}'s pack`
+      const whose = place.from === 'baggage' ? 'baggage' : `${leader(game).members[place.member].name}'s pack`
       return {
         id: placeKey(place),
         kind: 'item',

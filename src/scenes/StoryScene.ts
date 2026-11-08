@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import type { GameState } from '../game/gameState.ts'
+import { leader, type GameState } from '../game/gameState.ts'
 import { CUTSCENES, type CutsceneBeat } from '../story/cutscenes.ts'
 import { fillText, setTutorial, storyFor, type StoryItem, type StoryMoment } from '../story/story.ts'
 import { tutorialTip, type TutorialAnchor } from '../story/tutorial.ts'
@@ -195,7 +195,7 @@ export class StoryScene extends Phaser.Scene {
     const top = height - DIALOGUE_MARGIN - DIALOGUE_H
     this.content.add(this.add.rectangle(left, top, boxW, DIALOGUE_H, PANEL_FILL, 0.95).setOrigin(0).setStrokeStyle(2, PANEL_EDGE))
     let textX = left + DIALOGUE_PAD
-    const portrait = beat.portrait === 'leader' ? this.gameState.party[0]?.portrait : beat.portrait
+    const portrait = beat.portrait === 'leader' ? leader(this.gameState).members[0]?.portrait : beat.portrait
     if (portrait) {
       const at = { x: textX + PORTRAIT_SIZE / 2, y: top + DIALOGUE_PAD + PORTRAIT_SIZE / 2 }
       this.content.add([

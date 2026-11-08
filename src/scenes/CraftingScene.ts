@@ -4,7 +4,7 @@ import { attributeLevel } from '../character/perks.ts'
 import type { WorldEvent } from '../game/blight.ts'
 import { describeCost } from '../game/buildings.ts'
 import { craft, craftTier, craftables, highestGrade, options, type CraftOption } from '../game/crafting.ts'
-import type { GameState } from '../game/gameState.ts'
+import { leader, type GameState } from '../game/gameState.ts'
 import { itemAt, placeKey, type ItemPlace } from '../game/itemPlace.ts'
 import { embed, extract, fuse, socketables } from '../game/runecraft.ts'
 import { gradeNumeral } from '../inventory/grades.ts'
@@ -217,12 +217,12 @@ export class CraftingScene extends Phaser.Scene {
 
   /** The AP of whoever holds the item at `place`, which tells its attacks a turn. */
   private apAt(place: ItemPlace): number {
-    return place.from === 'baggage' ? TYPICAL_AP : deriveCombatStats(this.gameState.party[place.member]).actionPoints
+    return place.from === 'baggage' ? TYPICAL_AP : deriveCombatStats(leader(this.gameState).members[place.member]).actionPoints
   }
 
   /** The strength of whoever holds the item at `place`, which tells its shortfall; none for the baggage. */
   private strengthAt(place: ItemPlace): number | undefined {
-    return place.from === 'baggage' ? undefined : attributeLevel(this.gameState.party[place.member], 'strength')
+    return place.from === 'baggage' ? undefined : attributeLevel(leader(this.gameState).members[place.member], 'strength')
   }
 
   /** What working the item at `place` with `option` changes, and what it costs. */
@@ -238,7 +238,7 @@ export class CraftingScene extends Phaser.Scene {
   /** Where an item lies, in words: "Aldric, Weapon (worn)", "Brenna's pack", "baggage". */
   private whereIs(place: ItemPlace): string {
     if (place.from === 'baggage') return 'baggage'
-    const name = this.gameState.party[place.member].name
+    const name = leader(this.gameState).members[place.member].name
     return place.from === 'worn' ? `${name}, ${EQUIPMENT_SLOT_LABELS[place.slot].toLowerCase()}` : `${name}'s pack`
   }
 

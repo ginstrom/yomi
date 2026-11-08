@@ -18,7 +18,7 @@ import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
 import { canCamp } from './camp.ts'
 import { craftTier } from './crafting.ts'
 import { soloPresences } from './expedition.ts'
-import type { GameState } from './gameState.ts'
+import { leader, type GameState } from './gameState.ts'
 import { STALE, allPlaces, itemAt, replaceAt, type ItemPlace } from './itemPlace.ts'
 import type { Stock } from './territory.ts'
 import { encampmentName, passTurn, type WorldState } from './worldMap.ts'
@@ -112,7 +112,7 @@ export function embed(game: GameState, place: ItemPlace, key: RuneKey): RuneResu
   takeFromPouch(game.runes, key)
   spend(world.stock, embedCost(key))
   replaceAt(game, place, result)
-  const events = craftTier(world) === 'field' ? passTurn(world, soloPresences(world, game.party)) : []
+  const events = craftTier(world) === 'field' ? passTurn(world, soloPresences(world, leader(game).members)) : []
   return { refusal: null, item: result, events }
 }
 

@@ -2,7 +2,7 @@ import { deriveCombatStats } from '../character/character.ts'
 import { attributeLevel } from '../character/perks.ts'
 import { describeCost } from '../game/buildings.ts'
 import { craftTier } from '../game/crafting.ts'
-import type { GameState } from '../game/gameState.ts'
+import { leader, type GameState } from '../game/gameState.ts'
 import { itemAt, type ItemPlace } from '../game/itemPlace.ts'
 import { aRune, embedCost, embedRefusal, extractCost, extractRefusal, fuseCost, fuseRefusal, FUSE_COUNT } from '../game/runecraft.ts'
 import { MATERIALS } from '../inventory/catalog.ts'
@@ -157,8 +157,8 @@ export function actionPreview(game: GameState, place: ItemPlace | null, action: 
   if (!place || !item) return []
   const compare = (after: Item | undefined) => {
     if (!after) return []
-    const ap = place.from === 'baggage' ? TYPICAL_AP : deriveCombatStats(game.party[place.member]).actionPoints
-    const strength = place.from === 'baggage' ? undefined : attributeLevel(game.party[place.member], 'strength')
+    const ap = place.from === 'baggage' ? TYPICAL_AP : deriveCombatStats(leader(game).members[place.member]).actionPoints
+    const strength = place.from === 'baggage' ? undefined : attributeLevel(leader(game).members[place.member], 'strength')
     return [`Makes the ${after.name}.`, ...compareLines(item, after, ap, strength)]
   }
   if (action.kind === 'embed') {

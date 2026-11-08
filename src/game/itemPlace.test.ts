@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { maxHp } from '../character/character.ts'
 import { itemById } from '../inventory/inventory.ts'
-import { newGame } from './gameState.ts'
+import { leader, newGame } from './gameState.ts'
 import { removeAt, replaceAt, type ItemPlace } from './itemPlace.ts'
 
 describe('worn changes keep hit points within the maximum', () => {
   const lifeArmour = 'steel_breastplate@3#life2.life2'
   function dressed() {
     const game = newGame(undefined, null, 1, 'Hearthold')
-    const hero = game.party[0]
+    const hero = leader(game).members[0]
     hero.equipment.armor = itemById(lifeArmour)!
     hero.hp = maxHp(hero)
     const place: ItemPlace = { from: 'worn', member: 0, slot: 'armor', itemId: lifeArmour }

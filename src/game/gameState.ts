@@ -2,6 +2,7 @@ import type { Character } from '../character/character.ts'
 import type { Item } from '../inventory/inventory.ts'
 import type { Pouch } from '../inventory/runes.ts'
 import { newStoryState, type StoryState } from '../story/story.ts'
+import { newExpedition, type Expedition } from './expedition.ts'
 import { readyMadeParty, type Party } from './party.ts'
 import type { SlotId } from './saveSlots.ts'
 import { newWorld, type MonsterLocation, type WorldState } from './worldMap.ts'
@@ -12,14 +13,15 @@ import { newWorld, type MonsterLocation, type WorldState } from './worldMap.ts'
  * slot, and handed to scenes via scene data, never a module global.
  */
 export interface GameState {
-  party: Party
-  world: WorldState
   /**
-   * The party's shared pile of items, with no limit, that travels with it:
-   * loot goes into it, and on the world map members take from it and put
-   * into it, which is how an item passes from one to another.
+   * The company's parties in order (expedition.ts); never empty while the
+   * game lasts, and one today. Each holds its members and its baggage, the
+   * shared pile of items that travels with it: loot goes into it, and on the
+   * world map members take from it and put into it, which is how an item
+   * passes from one to another.
    */
-  baggage: Item[]
+  parties: Expedition[]
+  world: WorldState
   /** The party's rune pouch (runes.ts): runes found, bought and fused, waiting to be embedded or sold. */
   runes: Pouch
   /**
@@ -46,12 +48,21 @@ export function newGame(
   encampmentName?: string,
   tutorial = false,
 ): GameState {
-  return { party, world: newWorld(seed, encampmentName), baggage: [], runes: {}, reserves: [], slot, story: newStoryState(tutorial) }
+  return { parties: [newExpedition(party)], world: newWorld(seed, encampmentName), runes: {}, reserves: [], slot, story: newStoryState(tutorial) }
+}
+
+/** The first party: a stopgap while the readers move to explicit parties (stage 5 step 05 removes it). */
+export function leader(game: GameState): Expedition {
+  return game.parties[0]
+}
+
+export function partyById(game: GameState, id: string): Expedition | undefined {
+  return game.parties.find((party) => party.id === id)
 }
 
 /** Moves the loot of a beaten monster location into the baggage, and returns what was found. */
 export function takeLoot(game: GameState, location: MonsterLocation): Item[] {
   const found = location.loot.splice(0)
-  game.baggage.push(...found)
+  leader(game).baggage.push(...found)
   return found
 }

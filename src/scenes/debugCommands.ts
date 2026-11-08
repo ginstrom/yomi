@@ -4,7 +4,7 @@ import type { BattleState } from '../engine/battleEngine.ts'
 import { facilities, setFacilityLevel, type FacilityId } from '../game/encampment.ts'
 import { soloPresences } from '../game/expedition.ts'
 import { ENCOUNTERS, type EncounterId } from '../game/encounters.ts'
-import type { GameState } from '../game/gameState.ts'
+import { leader, type GameState } from '../game/gameState.ts'
 import type { Material } from '../game/territory.ts'
 import { updateSight } from '../game/vision.ts'
 import { isNotable, monstersHere, passTurn, threatAt, worldActive, type WorldLocation } from '../game/worldMap.ts'
@@ -75,14 +75,14 @@ function integer(text: string | undefined, what: string): number {
 
 /** The members a command names: by number (from 1) or by the start of a name, or all of them with none named. */
 function members(game: GameState, who: string | undefined): Character[] {
-  if (who === undefined || who === 'all') return game.party
+  if (who === undefined || who === 'all') return leader(game).members
   const index = Number(who)
   if (Number.isInteger(index)) {
-    const member = game.party[index - 1]
-    if (!member) throw new DebugError(`No party member ${who}; there are ${game.party.length}.`)
+    const member = leader(game).members[index - 1]
+    if (!member) throw new DebugError(`No party member ${who}; there are ${leader(game).members.length}.`)
     return [member]
   }
-  const named = game.party.filter((member) => member.name.toLowerCase().startsWith(who.toLowerCase()))
+  const named = leader(game).members.filter((member) => member.name.toLowerCase().startsWith(who.toLowerCase()))
   if (named.length !== 1) throw new DebugError(named.length === 0 ? `No party member named "${who}".` : `"${who}" names ${named.length} members.`)
   return named
 }
@@ -142,7 +142,7 @@ const COMMANDS: Record<string, Command> = {
         return `${i === null ? ' -' : `${i + 1}.`} ${character.name.padEnd(12)} L${character.level} xp ${character.xp}/${xpToNextLevel(character.level)} hp ${character.hp}/${maxHp(character)}${mana}${spend.length ? `  (${spend.join(', ')})` : ''}`
       }
       return [
-        ...game.party.map((character, i) => row(character, i)),
+        ...leader(game).members.map((character, i) => row(character, i)),
         ...(game.reserves.length ? ['Reserves:', ...game.reserves.map((character) => row(character, null))] : []),
       ]
     },
@@ -230,7 +230,7 @@ const COMMANDS: Record<string, Command> = {
       if (!item) throw new DebugError(`No item "${id ?? ''}"; \`items\` lists them.`)
       const n = count === undefined ? 1 : integer(count, 'the count')
       if (n < 1) throw new DebugError('The count must be at least 1.')
-      gameOf(context).baggage.push(...Array.from({ length: n }, () => item))
+      leader(gameOf(context)).baggage.push(...Array.from({ length: n }, () => item))
       return [`${n} × ${item.name} put in the baggage.`]
     },
   },
@@ -291,7 +291,7 @@ const COMMANDS: Record<string, Command> = {
       world.party = to
       const here = monstersHere(world)
       world.confronting = here?.id ?? null
-      updateSight(world, soloPresences(world, game.party))
+      updateSight(world, soloPresences(world, leader(game).members))
       return [`The party stands at ${offset({ position: to })}${here ? `, before the ${here.name}` : ''}.`]
     },
   },
@@ -306,7 +306,7 @@ const COMMANDS: Record<string, Command> = {
       const told: string[] = []
       let passed = 0
       while (passed < n && worldActive(game.world)) {
-        const presences = soloPresences(game.world, game.party)
+        const presences = soloPresences(game.world, leader(game).members)
         const events = passTurn(game.world, presences)
         passed += 1
         for (const event of events) {

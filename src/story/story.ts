@@ -1,6 +1,6 @@
 import type { WorldEvent } from '../game/blight.ts'
 import type { EncounterId } from '../game/encounters.ts'
-import type { GameState } from '../game/gameState.ts'
+import { leader, type GameState } from '../game/gameState.ts'
 import { encampmentName } from '../game/worldMap.ts'
 import { CUTSCENE_IDS, CUTSCENES, type Cutscene, type CutsceneId } from './cutscenes.ts'
 import { TUTORIAL } from './tutorial.ts'
@@ -78,5 +78,5 @@ export function setTutorial(game: GameState, on: boolean): void {
 
 /** A cutscene's or a tip's text with the game's names put in: `{encampment}` and `{leader}`, the party's first member. */
 export function fillText(text: string, game: GameState): string {
-  return text.replaceAll('{encampment}', encampmentName(game.world)).replaceAll('{leader}', game.party[0]?.name ?? 'The leader')
+  return text.replaceAll('{encampment}', encampmentName(game.world)).replaceAll('{leader}', leader(game).members[0]?.name ?? 'The leader')
 }

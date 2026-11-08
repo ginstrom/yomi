@@ -4,6 +4,7 @@ import { SKILL_IDS } from '../character/skills.ts'
 import type { BattleSnapshot } from '../engine/battleEngine.ts'
 import { itemById, type Equipment, type Item } from '../inventory/inventory.ts'
 import { isRuneKey } from '../inventory/runes.ts'
+import { FIRST_PARTY_ID, FIRST_PARTY_NAME, ORDER_KINDS, type Expedition } from './expedition.ts'
 import type { GameState } from './gameState.ts'
 import type { GroundPile } from './ground.ts'
 import type { WorldLocation } from './worldMap.ts'
@@ -14,12 +15,13 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * back. Storage-free; saveSlots.ts keeps the strings.
  *
  * Raise `SAVE_VERSION` whenever the shape of `GameState`, `Character`,
- * `WorldState` or `BattleSnapshot` changes: there is no migration, so a save
- * of another version reads as unreadable. Rules and item numbers may change
+ * `WorldState` or `BattleSnapshot` changes. A migration is written only when
+ * a stage's design asks for one (stage 5's does: `migrateFrom18`); otherwise
+ * a save of another version reads as unreadable. Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 18
+export const SAVE_VERSION = 19
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -75,9 +77,8 @@ export function serializeSave(file: SaveFile): string {
     version: SAVE_VERSION,
     savedAt: file.savedAt,
     game: withKeys(game, {
-      party: game.party.map(characterIds),
+      parties: game.parties.map((party) => withKeys(party, { members: party.members.map(characterIds), baggage: party.baggage.map(itemId) })),
       reserves: game.reserves.map(characterIds),
-      baggage: game.baggage.map(itemId),
       world: withKeys(game.world, {
         locations: game.world.locations.map((location) =>
           location.kind === 'monsters' ? withKeys(location, { loot: location.loot.map(itemId) }) : location,
@@ -113,16 +114,34 @@ function locationOf(saved: WorldLocation): WorldLocation {
   return saved.kind === 'monsters' ? { ...saved, loot: itemsOf(saved.loot) } : saved
 }
 
-/** Null for anything that is not a save of this version, or names an item, perk or skill the game does not have. */
+/**
+ * A version-18 game (one `party`, one `baggage`) as a version-19 one: a company
+ * of one. The world is left as it is. Step 04 of stage 5 replaces this with
+ * the migration from 18 to 20.
+ */
+function migrateFrom18(game: Record<string, unknown>): void {
+  check(Array.isArray(game.party) && Array.isArray(game.baggage))
+  game.parties = [{ id: FIRST_PARTY_ID, name: FIRST_PARTY_NAME, members: game.party, baggage: game.baggage, order: { kind: 'idle' } }]
+  delete game.party
+  delete game.baggage
+}
+
+/** Null for anything that is not a save of this version (or version 18, migrated), or names an item, perk or skill the game does not have. */
 export function parseSave(raw: string | null): SaveFile | null {
   if (raw === null) return null
   try {
     // What `serializeSave` wrote has the file's shape but for its items, which are ids until put back below.
     const saved = JSON.parse(raw) as SaveFile & { version: unknown }
-    check(saved && typeof saved === 'object' && saved.version === SAVE_VERSION)
+    check(saved && typeof saved === 'object' && (saved.version === SAVE_VERSION || saved.version === 18))
     check(typeof saved.savedAt === 'number')
     const { game, battle } = saved
-    check(game && typeof game === 'object' && Array.isArray(game.party) && game.party.length > 0)
+    check(game && typeof game === 'object')
+    if (saved.version === 18) migrateFrom18(game as unknown as Record<string, unknown>)
+    check(Array.isArray(game.parties) && game.parties.length > 0)
+    check(game.parties.every((party) => party && typeof party.id === 'string' && typeof party.name === 'string'))
+    check(new Set(game.parties.map((party) => party.id)).size === game.parties.length)
+    check(game.parties.every((party) => Array.isArray(party.members) && party.members.length > 0 && Array.isArray(party.baggage)))
+    check(game.parties.every((party) => party.order && ORDER_KINDS.includes(party.order.kind)))
     check(game.world && typeof game.world === 'object' && Array.isArray(game.world.locations))
     const { world } = game
     check(world.board && Array.isArray(world.blight) && Array.isArray(world.shift) && world.blight.length === world.board.cols * world.board.rows)
@@ -146,9 +165,8 @@ export function parseSave(raw: string | null): SaveFile | null {
     return {
       game: {
         ...game,
-        party: game.party.map(characterOf),
+        parties: game.parties.map((party): Expedition => ({ ...party, members: party.members.map(characterOf), baggage: itemsOf(party.baggage) })),
         reserves: game.reserves.map(characterOf),
-        baggage: itemsOf(game.baggage),
         world: { ...game.world, locations: game.world.locations.map(locationOf) },
       },
       battle: battle && { ...battle, ground: battle.ground.map(({ hex, items }) => ({ hex, items: itemsOf(items) })) },
@@ -173,9 +191,10 @@ export interface SaveSummary {
 
 export function saveSummary({ game, battle, savedAt }: SaveFile): SaveSummary {
   const fought = battle && game.world.locations.find((location) => location.id === battle.location)
+  const members = game.parties.flatMap((party) => party.members)
   return {
-    names: game.party.map((member) => member.name),
-    level: Math.max(...game.party.map((member) => member.level)),
+    names: members.map((member) => member.name),
+    level: Math.max(...members.map((member) => member.level)),
     turn: game.world.turn,
     battle: battle ? (fought?.name ?? 'a battle') : null,
     savedAt,

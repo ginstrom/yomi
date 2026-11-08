@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { newGame, type GameState } from '../game/gameState.ts'
+import { leader, newGame, type GameState } from '../game/gameState.ts'
 import type { ItemPlace } from '../game/itemPlace.ts'
 import { itemById } from '../inventory/inventory.ts'
 import {
@@ -22,7 +22,7 @@ function home(id = 'iron_sword@3', workshop = 2): { game: GameState; place: Item
   const game = newGame(undefined, null, 1, 'Hearthold')
   game.world.workshop = workshop
   game.world.stock = { gold: 500 }
-  game.party[0].equipment.mainHand = itemById(id)!
+  leader(game).members[0].equipment.mainHand = itemById(id)!
   return { game, place: { from: 'worn', member: 0, slot: 'mainHand', itemId: id } }
 }
 

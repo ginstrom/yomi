@@ -1,11 +1,11 @@
+import { FIRST_PARTY_ID } from '../game/expedition.ts'
 import { describe, expect, it } from 'vitest'
 import { maxHp } from '../character/character.ts'
-import { newGame } from '../game/gameState.ts'
+import { leader, newGame } from '../game/gameState.ts'
 import { travel } from '../game/worldMap.ts'
 import { hexEquals } from '../grid/hex.ts'
 import { HEADER_BOTTOM } from './partyPanel.ts'
 import {
-  FIRST_PARTY_ID,
   PARTY_LIST_W,
   SINGLE_PARTY_NAME,
   deployedParties,
@@ -27,10 +27,10 @@ describe('deployedParties', () => {
     expect(entry.id).toBe(FIRST_PARTY_ID)
     expect(entry.id).toBe('party_1')
     expect(entry.name).toBe(SINGLE_PARTY_NAME)
-    expect(entry.members).toEqual(game.party)
+    expect(entry.members).toEqual(leader(game).members)
     expect(entry.position).toEqual(game.world.party)
-    expect(entry.hp).toBe(game.party.reduce((sum, m) => sum + m.hp, 0))
-    expect(entry.maxHp).toBe(game.party.reduce((sum, m) => sum + maxHp(m), 0))
+    expect(entry.hp).toBe(leader(game).members.reduce((sum, m) => sum + m.hp, 0))
+    expect(entry.maxHp).toBe(leader(game).members.reduce((sum, m) => sum + maxHp(m), 0))
     expect(entry.confronting).toBeNull()
   })
 
@@ -38,7 +38,7 @@ describe('deployedParties', () => {
     const game = newGame(undefined, null, 1)
     const monsters = game.world.locations.find((l) => l.kind === 'monsters')!
     for (let tries = 0; tries < 10 && !hexEquals(game.world.party, monsters.position); tries++) {
-      travel(game.world, monsters.position, game.party)
+      travel(game.world, monsters.position, leader(game).members)
     }
     expect(game.world.confronting).toBe(monsters.id)
     expect(deployedParties(game)[0].confronting).toEqual({ id: monsters.id, name: monsters.name })

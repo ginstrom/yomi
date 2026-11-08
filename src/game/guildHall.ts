@@ -2,7 +2,7 @@ import { maxHp, maxMana, type Character } from '../character/character.ts'
 import { draftCharacter, type CharacterDraft } from '../character/creation.ts'
 import { levelUp } from '../character/progression.ts'
 import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
-import type { GameState } from './gameState.ts'
+import { leader, type GameState } from './gameState.ts'
 import { MAX_PARTY_SIZE, PREROLLS, type Preroll } from './party.ts'
 import type { Stock } from './territory.ts'
 import { encampmentName, type WorldState } from './worldMap.ts'
@@ -57,7 +57,7 @@ export function upgradeGuildHall(game: GameState): string | null {
 
 /** Every hero of the company, party and reserves, whose names are each their own. */
 export function company(game: GameState): Character[] {
-  return [...game.party, ...game.reserves]
+  return [...leader(game).members, ...game.reserves]
 }
 
 /** The pre-rolled characters not yet in the company, whom the hall can recruit. */
@@ -68,7 +68,7 @@ export function availablePrerolls(game: GameState): Preroll[] {
 
 /** The level a recruit joins at: the guild hall's level, but never above the party's least experienced member. */
 export function recruitLevel(game: GameState): number {
-  return Math.max(1, Math.min(game.world.guildHall, ...game.party.map((member) => member.level)))
+  return Math.max(1, Math.min(game.world.guildHall, ...leader(game).members.map((member) => member.level)))
 }
 
 /** Why a recruit named `name` cannot join now, or null when one can. */
@@ -106,10 +106,10 @@ function rested(hero: Character): Character {
 /** Sends party member `index` to the reserves. The party is never left empty. */
 export function toReserves(game: GameState, index: number): string | null {
   if (!atGuildHall(game.world)) return notHere(game.world)
-  if (!game.party[index]) return 'There is no such member.'
-  if (game.party.length <= 1) return 'The party cannot be left empty.'
+  if (!leader(game).members[index]) return 'There is no such member.'
+  if (leader(game).members.length <= 1) return 'The party cannot be left empty.'
   if (game.reserves.length >= MAX_RESERVES) return `The guild hall keeps no more than ${MAX_RESERVES} heroes in reserve.`
-  game.reserves.push(...game.party.splice(index, 1))
+  game.reserves.push(...leader(game).members.splice(index, 1))
   return null
 }
 
@@ -117,17 +117,17 @@ export function toReserves(game: GameState, index: number): string | null {
 export function toParty(game: GameState, index: number): string | null {
   if (!atGuildHall(game.world)) return notHere(game.world)
   if (!game.reserves[index]) return 'There is no such reserve.'
-  if (game.party.length >= partyLimit(game.world)) return `The party is full: the guild hall's level ${game.world.guildHall} allows ${partyLimit(game.world)}.`
-  game.party.push(rested(game.reserves.splice(index, 1)[0]))
+  if (leader(game).members.length >= partyLimit(game.world)) return `The party is full: the guild hall's level ${game.world.guildHall} allows ${partyLimit(game.world)}.`
+  leader(game).members.push(rested(game.reserves.splice(index, 1)[0]))
   return null
 }
 
 /** Exchanges party member `member` for reserve `reserve`, who takes its place in the battle order. */
 export function swap(game: GameState, member: number, reserve: number): string | null {
   if (!atGuildHall(game.world)) return notHere(game.world)
-  if (!game.party[member] || !game.reserves[reserve]) return 'There is no such hero.'
-  const leaving = game.party[member]
-  game.party[member] = rested(game.reserves[reserve])
+  if (!leader(game).members[member] || !game.reserves[reserve]) return 'There is no such hero.'
+  const leaving = leader(game).members[member]
+  leader(game).members[member] = rested(game.reserves[reserve])
   game.reserves[reserve] = leaving
   return null
 }

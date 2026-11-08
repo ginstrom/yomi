@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { maxHp, maxMana } from '../character/character.ts'
 import { canAdvance, levelUp } from '../character/progression.ts'
 import { offsetToHex } from '../grid/hex.ts'
-import { newGame, type GameState } from './gameState.ts'
+import { leader, newGame, type GameState } from './gameState.ts'
 import {
   GUILD_HALL_LEVELS,
   MAX_RESERVES,
@@ -76,8 +76,8 @@ describe('recruiting', () => {
   it('joins at the hall’s level or the party’s lowest, whichever is less, with its points to spend', () => {
     const game = atHome()
     game.world.guildHall = 3
-    for (const member of game.party) while (member.level < 5) levelUp(member)
-    levelUp(game.party[1])
+    for (const member of leader(game).members) while (member.level < 5) levelUp(member)
+    levelUp(leader(game).members[1])
     expect(recruitLevel(game)).toBe(3)
     recruit(game, GARRICK)
     const [garrick] = game.reserves
@@ -88,7 +88,7 @@ describe('recruiting', () => {
 
     const green = atHome()
     green.world.guildHall = 3
-    green.party[0].level = 1
+    leader(green).members[0].level = 1
     expect(recruitLevel(green)).toBe(1)
   })
 
@@ -109,10 +109,10 @@ describe('the roster', () => {
     recruit(game, GARRICK)
     expect(toParty(game, 0)).toMatch(/party is full/)
     expect(toReserves(game, 2)).toBeNull()
-    expect(game.party.map((m) => m.name)).toEqual(['Aldric', 'Brenna'])
+    expect(leader(game).members.map((m) => m.name)).toEqual(['Aldric', 'Brenna'])
     expect(game.reserves.map((m) => m.name)).toEqual(['Garrick', 'Delwyn'])
     expect(toParty(game, 0)).toBeNull()
-    expect(game.party.map((m) => m.name)).toEqual(['Aldric', 'Brenna', 'Garrick'])
+    expect(leader(game).members.map((m) => m.name)).toEqual(['Aldric', 'Brenna', 'Garrick'])
     expect(toReserves(game, 0)).toBeNull()
     expect(toReserves(game, 0)).toBeNull()
     expect(toReserves(game, 0)).toMatch(/empty/)
@@ -124,9 +124,9 @@ describe('the roster', () => {
     const [garrick] = game.reserves
     garrick.hp = 1
     garrick.mana = 0
-    const brenna = game.party[1]
+    const brenna = leader(game).members[1]
     expect(swap(game, 1, 0)).toBeNull()
-    expect(game.party[1]).toBe(garrick)
+    expect(leader(game).members[1]).toBe(garrick)
     expect(game.reserves[0]).toBe(brenna)
     expect([garrick.hp, garrick.mana]).toEqual([maxHp(garrick), maxMana(garrick)])
   })

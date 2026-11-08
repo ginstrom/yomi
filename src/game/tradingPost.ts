@@ -3,7 +3,7 @@ import { GRADES, type Grade } from '../inventory/grades.ts'
 import { BASE_ITEMS, baseItem, craftedItem, itemById, unruned, type EquipmentSlot, type Item } from '../inventory/inventory.ts'
 import { addToPouch, parseRuneKey, pouchCount, runeName, takeFromPouch, type Rank, type RuneId, type RuneKey } from '../inventory/runes.ts'
 import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
-import type { GameState } from './gameState.ts'
+import { leader, type GameState } from './gameState.ts'
 import { STALE, allPlaces, itemAt, removeAt, type ItemPlace } from './itemPlace.ts'
 import type { Material, Stock } from './territory.ts'
 import { encampmentName, type WorldState } from './worldMap.ts'
@@ -163,7 +163,7 @@ export function buy(game: GameState, itemId: string): string | null {
   if (refusal) return refusal
   const item = itemById(itemId)!
   spend(game.world.stock, { gold: buyPrice(item)! })
-  game.baggage.push(item)
+  leader(game).baggage.push(item)
   return null
 }
 

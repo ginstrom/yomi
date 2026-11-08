@@ -27,7 +27,7 @@ import {
   type DraftChange,
 } from '../character/creation.ts'
 import type { PerkId } from '../character/perks.ts'
-import type { GameState } from '../game/gameState.ts'
+import { leader, type GameState } from '../game/gameState.ts'
 import { PORTRAIT_IDS } from '../character/portraits.ts'
 import { SKILLS, SKILL_IDS, TAGGED_SKILL_STEP, TAG_BONUS, skillLevel } from '../character/skills.ts'
 import type { ButtonProbe, CreationProbe, CreationStep } from '../testHook.ts'
@@ -278,7 +278,7 @@ export class CreationScene extends Phaser.Scene {
 
   /** The other members' names, which this one may not take; its own, when it is edited, is no clash. A recruit's are the company's. */
   private takenNames(): string[] {
-    if (this.recruiting) return [...this.recruiting.party, ...this.recruiting.reserves].map((member) => member.name)
+    if (this.recruiting) return [...leader(this.recruiting).members, ...this.recruiting.reserves].map((member) => member.name)
     return this.drafts.filter((_, i) => i !== this.index).map((draft) => draft.name.trim())
   }
 

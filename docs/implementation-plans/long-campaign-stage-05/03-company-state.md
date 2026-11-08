@@ -256,3 +256,10 @@ Those are steps 04 to 07.
 
 ## 8. Execution record
 
+**Done.** Fixture captured first from the step-02 tree (SAVE_VERSION 18 there, same format as `4a2b824`), seed 7, travel to goblin_raiders (world.party at (4,18), confronting set), two baggage items, a runed backpack item, pouch `storm1`.
+- `expedition.ts`: `DayAction`, `Order`, `ORDER_KINDS`, `Expedition` (no position/confronting), `FIRST_PARTY_ID` (moved out of partyList.ts), `FIRST_PARTY_NAME`, `newExpedition(members)`. `gameState.ts`: `parties`, `leader`, `partyById`; `takeLoot` into the leader's baggage.
+- Save 19 with `migrateFrom18` in save.ts; checks on parties/ids/orders; `saveSummary` over all parties.
+- All readers moved to `leader(game).members/.baggage` (src, scripts, e2e). `e2e/encampment.test.ts` plants by path in the raw save (`parties.0.members.N...`, `parties.0.baggage`); `e2e/manual.shots.ts` likewise.
+- Results: `npm test` green (1224+ tests, guard test untouched); `npm run test:browser` all files pass (encampment's planted paths fixed after the first run); 50-campaign guard identical: 852 battles, 23 of 50, SHA-256 068016a8...2d76.
+- Deviation: `selectedParty` left to step 05. Step 04 must also update the planted e2e paths if it moves more raw-save fields.
+

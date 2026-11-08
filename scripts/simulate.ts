@@ -38,7 +38,7 @@ import {
 } from '../src/game/buildings.ts'
 import { WORKSHOP_COSTS, craft, craftTier, highestGrade, upgradeWorkshop } from '../src/game/crafting.ts'
 import { soloPresences } from '../src/game/expedition.ts'
-import { newGame, type GameState } from '../src/game/gameState.ts'
+import { leader, newGame, type GameState } from '../src/game/gameState.ts'
 import {
   GUILD_HALL_LEVELS,
   RECRUIT_COST,
@@ -335,7 +335,7 @@ export function hallErrand(game: GameState): boolean {
   const { world } = game
   const cost = upgradeCost(world)
   if (cost && canAfford(world.stock, cost) && world.threatened.length === 0) return true
-  return game.party.length < partyLimit(world) && canAfford(world.stock, RECRUIT_COST)
+  return leader(game).members.length < partyLimit(world) && canAfford(world.stock, RECRUIT_COST)
 }
 
 /**
@@ -346,14 +346,14 @@ export function hallErrand(game: GameState): boolean {
 export function visitGuildHall(game: GameState): number {
   while (upgradeGuildHall(game) === null);
   let hired = 0
-  while (game.party.length < partyLimit(game.world) && recruitRefusal(game) === null) {
-    const taken = [...game.party, ...game.reserves].map((member) => member.name)
-    const base = PREROLLS[(game.party.length + game.reserves.length) % PREROLLS.length].draft
+  while (leader(game).members.length < partyLimit(game.world) && recruitRefusal(game) === null) {
+    const taken = [...leader(game).members, ...game.reserves].map((member) => member.name)
+    const base = PREROLLS[(leader(game).members.length + game.reserves.length) % PREROLLS.length].draft
     let name = base.name
     for (let n = 2; taken.includes(name); n++) name = `${base.name} ${n}`
     if (recruit(game, { ...base, name }) !== null) break
     toParty(game, game.reserves.length - 1)
-    autoAdvance(game.party.at(-1)!)
+    autoAdvance(leader(game).members.at(-1)!)
     hired++
   }
   return hired
@@ -412,7 +412,7 @@ export function craftGear(game: GameState, limit = Infinity): { crafted: number;
   let crafted = 0
   const events: WorldEvent[] = []
   const tier = craftTier(game.world)
-  for (const [member, hero] of game.party.entries()) {
+  for (const [member, hero] of leader(game).members.entries()) {
     for (const slot of GEAR_SLOTS) {
       const item = hero.equipment[slot]
       const base = item && baseItem(item)
@@ -491,7 +491,7 @@ export function runecraftGear(game: GameState): { embedded: number; fused: numbe
   const sold = runeWares(world)
   const claimed: Partial<Record<RuneKey, number>> = {}
   const unclaimed = (key: RuneKey) => pouchCount(game.runes, key) - (claimed[key] ?? 0)
-  for (const hero of game.party) {
+  for (const hero of leader(game).members) {
     for (const slot of GEAR_SLOTS) {
       const item = hero.equipment[slot]
       if (!item) continue
@@ -510,7 +510,7 @@ export function runecraftGear(game: GameState): { embedded: number; fused: numbe
       }
     }
   }
-  for (const [member, hero] of game.party.entries()) {
+  for (const [member, hero] of leader(game).members.entries()) {
     for (const slot of GEAR_SLOTS) {
       for (let item = hero.equipment[slot]; item && (item.runes?.length ?? 0) < socketsOf(item); item = hero.equipment[slot]) {
         const key = nextRune(item, RUNE_ORDER[slotClass(slot)], (k) => pouchCount(game.runes, k))
@@ -540,9 +540,9 @@ export function visitFacilities(game: GameState): Trade {
   }
   const gold = () => world.stock.gold ?? 0
   const sellAll = () => {
-    while (game.baggage.length > 0) {
-      trade.goldFromSales += salePrice(game.baggage[0])
-      sell(game, { from: 'baggage', index: 0, itemId: game.baggage[0].id })
+    while (leader(game).baggage.length > 0) {
+      trade.goldFromSales += salePrice(leader(game).baggage[0])
+      sell(game, { from: 'baggage', index: 0, itemId: leader(game).baggage[0].id })
     }
   }
   sellAll()
@@ -555,7 +555,7 @@ export function visitFacilities(game: GameState): Trade {
   while (raiseTradingPost(game) === null);
   while (upgradeWorkshop(game) === null);
   while (raiseInfirmary(game) === null);
-  for (const [member, hero] of game.party.entries()) {
+  for (const [member, hero] of leader(game).members.entries()) {
     for (const slot of GEAR_SLOTS) {
       const worn = hero.equipment[slot]
       const base = worn && baseItem(worn)
@@ -571,7 +571,7 @@ export function visitFacilities(game: GameState): Trade {
       if (!bought || buy(game, bought.id) !== null) continue
       trade.goldOnGear += buyPrice(bought)!
       if (bought.tier === 2) trade.tierTwoBought += 1
-      game.baggage.pop()
+      leader(game).baggage.pop()
       // The old item's runes come back to the pouch where the workshop can take them out; any left are sold with it.
       for (let old = worn; old.runes?.length; old = hero.equipment[slot]!) {
         const place = { from: 'worn', member, slot, itemId: old.id } as const
@@ -581,7 +581,7 @@ export function visitFacilities(game: GameState): Trade {
       }
       const old = hero.equipment[slot]!
       replaceAt(game, { from: 'worn', member, slot, itemId: old.id }, bought)
-      game.baggage.push(old)
+      leader(game).baggage.push(old)
     }
   }
   // What was replaced is sold before the runes and the crafts, which the gold may pay for.
@@ -661,7 +661,8 @@ export function nextTarget(world: WorldState, party: Party, readyLevel = SOURCE_
  */
 export function runCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0): Campaign {
   const game = newGame(startingParty(args), null, seed)
-  const { party, world } = game
+  const party = leader(game).members
+  const { world } = game
   const home = world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
   const battles: LoggedEvent[][] = []
   const record: CampaignRecord = {
@@ -751,7 +752,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
       member.hp = unit.hp
       member.mana = unit.mana
     })
-    const { dead } = rewardVictory(party, xpReward(encounter), game.baggage)
+    const { dead } = rewardVictory(party, xpReward(encounter), leader(game).baggage)
     record.deaths += dead.length
     // The fallen are buried before the experience is given, so each keeps the level it died at.
     record.deathsAtLevel.push(...dead.map((member) => member.level))

@@ -6,7 +6,7 @@ import type { WorldEvent } from './blight.ts'
 import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
 import { canCamp } from './camp.ts'
 import { soloPresences } from './expedition.ts'
-import type { GameState } from './gameState.ts'
+import { leader, type GameState } from './gameState.ts'
 import { STALE, allPlaces, itemAt, replaceAt, type ItemPlace } from './itemPlace.ts'
 import type { Stock } from './territory.ts'
 import { encampmentName, passTurn, type WorldState } from './worldMap.ts'
@@ -142,6 +142,6 @@ export function craft(game: GameState, place: ItemPlace, modifier: ModifierId, g
   if (option.refusal) return { refusal: option.refusal }
   spend(world.stock, option.cost)
   replaceAt(game, place, option.result)
-  const events = tier === 'field' ? passTurn(world, soloPresences(world, game.party)) : []
+  const events = tier === 'field' ? passTurn(world, soloPresences(world, leader(game).members)) : []
   return { refusal: null, item: option.result, events }
 }

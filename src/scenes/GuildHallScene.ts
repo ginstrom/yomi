@@ -3,7 +3,7 @@ import type { Character } from '../character/character.ts'
 import { canAdvance } from '../character/progression.ts'
 import type { CharacterDraft } from '../character/creation.ts'
 import { describeCost } from '../game/buildings.ts'
-import type { GameState } from '../game/gameState.ts'
+import { leader, type GameState } from '../game/gameState.ts'
 import {
   MAX_RESERVES,
   RECRUIT_COST,
@@ -127,7 +127,7 @@ export class GuildHallScene extends Phaser.Scene {
       partyLimit: partyLimit(this.gameState.world),
       message: this.message,
       selected: this.selected,
-      party: faces(this.gameState.party, PARTY_Y),
+      party: faces(leader(this.gameState).members, PARTY_Y),
       reserves: faces(this.gameState.reserves, RESERVES_Y),
       prerolls: prerolls.map(({ draft }, index) => ({
         ...onScreen(faceAt(index, prerolls.length, PREROLL_Y)),
@@ -184,8 +184,8 @@ export class GuildHallScene extends Phaser.Scene {
 
   private buildRoster(): void {
     const { world } = this.gameState
-    this.label(PARTY_Y, `Party (${this.gameState.party.length} of ${partyLimit(world)})`)
-    this.gameState.party.forEach((hero, index) => this.addFace(hero, faceAt(index, this.gameState.party.length, PARTY_Y), 'party', index))
+    this.label(PARTY_Y, `Party (${leader(this.gameState).members.length} of ${partyLimit(world)})`)
+    leader(this.gameState).members.forEach((hero, index) => this.addFace(hero, faceAt(index, leader(this.gameState).members.length, PARTY_Y), 'party', index))
     this.label(RESERVES_Y, `Reserves (${this.gameState.reserves.length} of ${MAX_RESERVES})`)
     this.gameState.reserves.forEach((hero, index) => this.addFace(hero, faceAt(index, this.gameState.reserves.length, RESERVES_Y), 'reserves', index))
     if (this.gameState.reserves.length === 0) {
@@ -288,7 +288,7 @@ export class GuildHallScene extends Phaser.Scene {
     const picked = this.selected
     if (picked && picked.row !== row) {
       const [member, reserve] = row === 'reserves' ? [picked.index, index] : [index, picked.index]
-      const [leaving, joining] = [this.gameState.party[member].name, this.gameState.reserves[reserve].name]
+      const [leaving, joining] = [leader(this.gameState).members[member].name, this.gameState.reserves[reserve].name]
       this.act(swap(this.gameState, member, reserve), `${joining} takes ${leaving}'s place in the party.`)
       return
     }

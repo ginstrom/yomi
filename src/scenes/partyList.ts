@@ -1,5 +1,6 @@
+import { FIRST_PARTY_ID } from '../game/expedition.ts'
 import { maxHp, type Character } from '../character/character.ts'
-import type { GameState } from '../game/gameState.ts'
+import { leader, type GameState } from '../game/gameState.ts'
 import type { Hex } from '../grid/hex.ts'
 import type { Rect } from './mapScroll.ts'
 import { HEADER_BOTTOM } from './partyPanel.ts'
@@ -7,14 +8,12 @@ import { HEADER_BOTTOM } from './partyPanel.ts'
 /**
  * The parties the world map lists down its right side, and where each entry
  * sits. `deployedParties` is the only reader of the single party the game
- * holds today (`game.party` at `game.world.party`); when stage 05 gives the
+ * holds today (`leader(game).members` at `game.world.party`); when stage 05 gives the
  * company several parties, it maps `game.parties` here and nothing else moves.
  */
 
 /** The strip down the world map's right side; the map's view keeps to the left of it. */
 export const PARTY_LIST_W = 80
-/** The id of the one party today; stage 05's migration names the first expedition the same. */
-export const FIRST_PARTY_ID = 'party_1'
 /** What the single party is called until stage 06 names parties (design Q2, answered). */
 export const SINGLE_PARTY_NAME = 'Your party'
 
@@ -40,7 +39,8 @@ export interface PartyListEntry {
 
 /** Every party of the company, in company order: one today, none for an empty party. */
 export function deployedParties(game: GameState): PartyListEntry[] {
-  const { party, world } = game
+  const party = leader(game).members
+  const { world } = game
   if (party.length === 0) return []
   const location = world.confronting === null ? undefined : world.locations.find((l) => l.id === world.confronting)
   return [

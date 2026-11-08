@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { maxHp, maxMana } from '../character/character.ts'
 import { campDay } from './camp.ts'
-import { newGame } from './gameState.ts'
+import { leader, newGame } from './gameState.ts'
 import { FIELD_DRESSING_PER_DAY, NATURAL_HEALING_PER_DAY, raiseInfirmary, restHealing } from './infirmary.ts'
 
 /** A new game at home, the soldier at 1 hit point and the mage's mana spent. */
 function wounded(infirmary: number) {
   const game = newGame(undefined, null, 1, 'Hearthold')
   game.world.infirmary = infirmary
-  game.party[0].hp = 1
-  game.party[2].mana = 0
+  leader(game).members[0].hp = 1
+  leader(game).members[2].mana = 0
   return game
 }
 
@@ -21,10 +21,10 @@ describe('the infirmary', () => {
       [2, (max: number) => max],
     ] as const) {
       const game = wounded(level)
-      const soldier = game.party[0]
-      campDay(game.world, game.party)
+      const soldier = leader(game).members[0]
+      campDay(game.world, leader(game).members)
       expect(soldier.hp, `level ${level}`).toBe(expected(maxHp(soldier)))
-      expect(game.party[2].mana).toBe(maxMana(game.party[2]))
+      expect(leader(game).members[2].mana).toBe(maxMana(leader(game).members[2]))
     }
   })
 
@@ -35,10 +35,10 @@ describe('the infirmary', () => {
     ]) {
       const game = wounded(level)
       game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
-      expect(restHealing(game.world, game.party[0])).toBe(healed)
-      campDay(game.world, game.party)
-      expect(game.party[0].hp).toBe(1 + healed)
-      expect(game.party[2].mana).toBe(maxMana(game.party[2]))
+      expect(restHealing(game.world, leader(game).members[0])).toBe(healed)
+      campDay(game.world, leader(game).members)
+      expect(leader(game).members[0].hp).toBe(1 + healed)
+      expect(leader(game).members[2].mana).toBe(maxMana(leader(game).members[2]))
     }
   })
 

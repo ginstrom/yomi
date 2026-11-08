@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { maxHp } from '../character/character.ts'
-import { newGame, type GameState } from '../game/gameState.ts'
+import { leader, newGame, type GameState } from '../game/gameState.ts'
 import { UNEXPLORED } from '../game/vision.ts'
 import { SOURCE_ID, threatAt } from '../game/worldMap.ts'
 import { hexToOffset } from '../grid/hex.ts'
@@ -33,7 +33,7 @@ describe('debug commands', () => {
 
   it('heals a member named by the start of its name, and says the game changed', () => {
     const context = onWorldMap()
-    const [first, second] = context.source!.game.party
+    const [first, second] = leader(context.source!.game).members
     first.hp = 1
     second.hp = 1
     const result = runCommand(`heal ${first.name.slice(0, 3).toLowerCase()}`, context)
@@ -46,7 +46,7 @@ describe('debug commands', () => {
     const game = newGame(undefined, null, 7)
     const reading: DebugContext = { scenes: ['Battle'], seed: null, source: { game } }
     expect(runCommand('xp 500', reading)).toEqual({ lines: ['xp changes the game, which works only on the world map.'], changed: false })
-    expect(runCommand('party', reading).lines).toHaveLength(game.party.length)
+    expect(runCommand('party', reading).lines).toHaveLength(leader(game).members.length)
     expect(runCommand('stock', reading).changed).toBe(false)
     expect(runCommand('stock gold 5', reading).changed).toBe(false)
   })
@@ -54,8 +54,8 @@ describe('debug commands', () => {
   it('gives experience, raising levels', () => {
     const context = onWorldMap()
     runCommand('xp 10000 1', context)
-    expect(context.source!.game.party[0].level).toBeGreaterThan(1)
-    expect(context.source!.game.party[1].level).toBe(1)
+    expect(leader(context.source!.game).members[0].level).toBeGreaterThan(1)
+    expect(leader(context.source!.game).members[1].level).toBe(1)
   })
 
   it('adds to the stock, and checks the material', () => {
@@ -68,7 +68,7 @@ describe('debug commands', () => {
   it('puts items in the baggage by id', () => {
     const context = onWorldMap()
     runCommand('give yew_bow 2', context)
-    expect(context.source!.game.baggage.map((item) => item.id)).toEqual(['yew_bow', 'yew_bow'])
+    expect(leader(context.source!.game).baggage.map((item) => item.id)).toEqual(['yew_bow', 'yew_bow'])
     expect(runCommand('give nothing', context).lines[0]).toMatch(/No item/)
   })
 
@@ -80,7 +80,7 @@ describe('debug commands', () => {
     expect(context.source!.game.runes.storm1).toBe(3)
     expect(runCommand('runes', context).lines[0]).toMatch(/storm1\s+3 × Lesser Storm Rune/)
     runCommand('give iron_sword@3#ember1', context)
-    expect(context.source!.game.baggage.at(-1)!.id).toBe('iron_sword@3#ember1')
+    expect(leader(context.source!.game).baggage.at(-1)!.id).toBe('iron_sword@3#ember1')
     expect(runCommand('give storm1 0', context).lines[0]).toMatch(/at least 1/)
     const items = runCommand('items', context).lines.join('\n')
     expect(items).toContain('storm1')
@@ -121,7 +121,8 @@ describe('debug commands', () => {
 
   it('sets a facility’s level, within its levels, and gives graded and modified items', () => {
     const context = onWorldMap()
-    const { world, baggage } = context.source!.game
+    const { world } = context.source!.game
+    const { baggage } = leader(context.source!.game)
     expect(runCommand('facility workshop 2', context).changed).toBe(true)
     expect(world.workshop).toBe(2)
     expect(runCommand('facility workshop 4', context).lines[0]).toMatch(/from 0 to 3/)

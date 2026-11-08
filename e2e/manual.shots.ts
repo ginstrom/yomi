@@ -194,7 +194,7 @@ describe('the manual’s screenshots', () => {
       const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
       saved.game.world.stock = { gold: 600, iron: 50, timber: 20, stone: 40, copper: 40, silver: 30 }
       // A Masterwork Steel Longsword with a Storm rune in one of its two sockets, and runes in the pouch, for the Runes tab.
-      saved.game.baggage.push('steel_longsword@3#storm1')
+      saved.game.parties[0].baggage.push('steel_longsword@3#storm1')
       saved.game.runes = { ember1: 2, life1: 1 }
       localStorage.setItem('yomi.save.1', JSON.stringify(saved))
     })
