@@ -50,3 +50,4 @@ None yet.
 - Step 02 (f4b1af0, b8ac7a2, opus): expedition.ts PartyPresence/soloPresences; blight, vision, territory, passTurn, isNotable, clearLocation over presences; guard + 50-campaign hash identical; npm test 1217, browser 89/89.
 - Step 02 review (opus): clean; pinned numbers reproduced on the pre-change tree; nits (redundant assertion in blight.test, `_world` on isNotable) passed to step 04.
 - Step 03 (d343bdf, sonnet): Expedition/Order types, GameState.parties, leader(), partyById; SAVE 19 with migrateFrom18 and v18 fixture; CLAUDE.md save rule rewritten; guard + 50-campaign hash identical; npm test 1224; browser: encampment.test raw-save paths fixed and that file rerun 11/11 (full suite not rerun).
+- Step 03 review (opus): clean; fixture reproduced from the pre-change tree; full browser 89/89; nits (double import in itemPlace.ts, temporary story↔gameState cycle until leader goes) to step 04/05.
