@@ -1,5 +1,6 @@
 import type { Hex } from '../grid/hex.ts'
 import { SHIFT_COST, blightAt, boardIndex, netInfluence, type WorldEvent } from './blight.ts'
+import type { PartyPresence } from './expedition.ts'
 import { ENCAMPMENT_ID, type QuietLocation, type WorldState } from './worldMap.ts'
 
 /**
@@ -62,8 +63,8 @@ export function initialHeld(world: WorldState): string[] {
  * influence, or null when the blight is not gaining there. Either falls at
  * `LOSS_LEVEL`.
  */
-export function daysToFall(world: WorldState, party: readonly { level: number }[], site: { position: Hex }): number | null {
-  const net = netInfluence(world, party, site.position)
+export function daysToFall(world: WorldState, presences: readonly PartyPresence[], site: { position: Hex }): number | null {
+  const net = netInfluence(world, presences, site.position)
   if (net <= 0) return null
   const level = blightAt(world, site.position)
   if (level >= LOSS_LEVEL) return 0
@@ -76,7 +77,7 @@ export function daysToFall(world: WorldState, party: readonly { level: number }[
  * levels now stand, held sites newly under threat, and every `YIELD_DAYS` the
  * yields. Losing the encampment ends the game (`status` 'lost').
  */
-export function updateTerritory(world: WorldState, party: readonly { level: number }[]): WorldEvent[] {
+export function updateTerritory(world: WorldState, presences: readonly PartyPresence[]): WorldEvent[] {
   const events: WorldEvent[] = []
   for (const site of sites(world)) {
     const level = blightAt(world, site.position)
@@ -109,7 +110,7 @@ export function updateTerritory(world: WorldState, party: readonly { level: numb
     ...world.towers.map((tower) => ({ ...tower, name: TOWER_NAME })),
   ]
   for (const site of watched) {
-    const days = daysToFall(world, party, site)
+    const days = daysToFall(world, presences, site)
     if (days === null) continue
     threatened.push(site.id)
     if (!world.threatened.includes(site.id)) events.push({ type: 'site_threatened', site: site.id, name: site.name, days })

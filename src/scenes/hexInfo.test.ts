@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { boardHex, boardIndex } from '../game/blight.ts'
+import { soloPresences } from '../game/expedition.ts'
 import { readyMadeParty } from '../game/party.ts'
 import { UNEXPLORED, visibleHexes } from '../game/vision.ts'
 import { ENCAMPMENT_ID, newWorld, type WorldState } from '../game/worldMap.ts'
@@ -9,7 +10,7 @@ import { hexInfo } from './hexInfo.ts'
 const party = readyMadeParty()
 
 function info(world: WorldState, at: Hex = world.party) {
-  return hexInfo(world, party, visibleHexes(world), at)
+  return hexInfo(world, party, visibleHexes(world, soloPresences(world, party)), at)
 }
 
 describe('hexInfo', () => {

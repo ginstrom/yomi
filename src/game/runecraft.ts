@@ -17,6 +17,7 @@ import type { WorldEvent } from './blight.ts'
 import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
 import { canCamp } from './camp.ts'
 import { craftTier } from './crafting.ts'
+import { soloPresences } from './expedition.ts'
 import type { GameState } from './gameState.ts'
 import { STALE, allPlaces, itemAt, replaceAt, type ItemPlace } from './itemPlace.ts'
 import type { Stock } from './territory.ts'
@@ -111,7 +112,7 @@ export function embed(game: GameState, place: ItemPlace, key: RuneKey): RuneResu
   takeFromPouch(game.runes, key)
   spend(world.stock, embedCost(key))
   replaceAt(game, place, result)
-  const events = craftTier(world) === 'field' ? passTurn(world, game.party) : []
+  const events = craftTier(world) === 'field' ? passTurn(world, soloPresences(world, game.party)) : []
   return { refusal: null, item: result, events }
 }
 

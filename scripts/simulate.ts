@@ -37,6 +37,7 @@ import {
   raiseShrine,
 } from '../src/game/buildings.ts'
 import { WORKSHOP_COSTS, craft, craftTier, highestGrade, upgradeWorkshop } from '../src/game/crafting.ts'
+import { soloPresences } from '../src/game/expedition.ts'
 import { newGame, type GameState } from '../src/game/gameState.ts'
 import {
   GUILD_HALL_LEVELS,
@@ -632,7 +633,7 @@ export function nextTarget(world: WorldState, party: Party, readyLevel = SOURCE_
   const upTo = nests.filter((l) => l.threat <= Math.max(1, lowestLevel(party)))
   const threatened = sites(world)
     .filter((site) => world.threatened.includes(site.id))
-    .map((site) => ({ site, days: daysToFall(world, party, site) ?? Infinity }))
+    .map((site) => ({ site, days: daysToFall(world, soloPresences(world, party), site) ?? Infinity }))
     .sort((a, b) => a.days - b.days)
   for (const { site } of threatened) {
     const push = (l: MonsterLocation) => monsterStrength(l) - hexDistance(l.position, site.position)
@@ -759,7 +760,7 @@ export function runCampaign(campaign: number, seed: number, args: CliArgs, first
       if (record.battlesToLevel[mark] === undefined && lowestLevel(party) >= mark) record.battlesToLevel[mark] = battles.length
     }
     record.runesFound += takeRunes(game, next.threat, next.encounter, battleSeed).length
-    clearLocation(world, next.id)
+    clearLocation(world, next.id, soloPresences(world, party))
     if (world.status === 'won') return finish('source')
     // A watchtower wherever the party stops on land that takes one and the stock affords it.
     if (canBuildTower(world) === null) tally(buildTower(world, party)!)

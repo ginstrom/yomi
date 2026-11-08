@@ -1,6 +1,8 @@
+import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { hexDistance, hexNeighbors, hexToOffset, offsetToHex, type Hex } from '../grid/hex.ts'
 import { ENCOUNTER_BANDS } from './encounters.ts'
+import { soloPresences, type PartyPresence } from './expedition.ts'
 import {
   CLEANSE_LEVELS,
   MAX_BLIGHT,
@@ -8,6 +10,7 @@ import {
   SHIFT_COST,
   SPAWN_CLEARANCE,
   SPAWN_COST,
+  advanceDay,
   blightAt,
   blightGrowth,
   boardHex,
@@ -40,7 +43,7 @@ const corruptWhere = (world: WorldState, holds: (threat: number) => boolean) =>
     if (holds(threatAt(h)) && world.locations.every((l) => hexDistance(l.position, h) >= 2)) world.blight[i] = MAX_BLIGHT
   })
 const days = (world: WorldState, n: number, who: readonly { level: number }[] = party): WorldEvent[] =>
-  Array.from({ length: n }, () => passTurn(world, who)).flat()
+  Array.from({ length: n }, () => passTurn(world, soloPresences(world, who))).flat()
 
 describe('blightGrowth', () => {
   it('rises a tenth every 30 days, to half again at day 151, and no further', () => {
@@ -54,8 +57,8 @@ describe('blightGrowth', () => {
 
 describe('partyStrength', () => {
   it('is 2 and half the party’s levels together, rounded down', () => {
-    expect(partyStrength(readyMadeParty())).toBe(3)
-    expect(partyStrength([{ level: 5 }, { level: 5 }, { level: 5 }])).toBe(9)
+    expect(partyStrength(readyMadeParty().map((m) => m.level))).toBe(3)
+    expect(partyStrength([5, 5, 5])).toBe(9)
   })
 })
 
@@ -88,7 +91,7 @@ describe('the contest', () => {
     const source = lairs(world).find((l) => l.id === SOURCE_ID)!
     const at = { q: source.position.q - 3, r: source.position.r }
     setLevel(world, at, 0)
-    const net = netInfluence(world, party, at)
+    const net = netInfluence(world, soloPresences(world, party), at)
     expect(net).toBeGreaterThan(0)
     days(world, Math.ceil(SHIFT_COST / net) - 1)
     expect(blightAt(world, at)).toBe(0)
@@ -101,7 +104,7 @@ describe('the contest', () => {
     const home = world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
     const near = { q: home.q + 1, r: home.r }
     setLevel(world, near, 1)
-    expect(netInfluence(world, party, near)).toBeLessThan(0)
+    expect(netInfluence(world, soloPresences(world, party), near)).toBeLessThan(0)
     days(world, SHIFT_COST)
     expect(blightAt(world, near)).toBe(0)
   })
@@ -154,7 +157,7 @@ describe('spawning', () => {
     const world = newWorld(1)
     for (let i = 0; i < 200; i++) {
       world.spawnPressure = SPAWN_COST
-      passTurn(world, party)
+      passTurn(world, soloPresences(world, party))
     }
     expect(lairs(world).length).toBe(MAX_MONSTER_LOCATIONS)
   })
@@ -172,7 +175,7 @@ describe('spawning', () => {
         const world = newWorld(seed)
         corruptWhere(world, () => true)
         world.spawnPressure = SPAWN_COST
-        passTurn(world, party)
+        passTurn(world, soloPresences(world, party))
         forced.push(...spawns(world))
       }
     }
@@ -226,7 +229,7 @@ describe('spawning', () => {
       for (let d = 0; d < 3; d++) {
         corruptWhere(world, (threat) => threat <= 2)
         world.spawnPressure = SPAWN_COST
-        passTurn(world, party)
+        passTurn(world, soloPresences(world, party))
       }
       const low = spawns(world)
         .filter((l) => l.threat <= 2)
@@ -254,7 +257,7 @@ describe('clearLocation', () => {
     const world = newWorld(1)
     const lair = lairs(world).find((l) => l.threat === 3)!
     const before = world.blight.slice()
-    clearLocation(world, lair.id)
+    clearLocation(world, lair.id, soloPresences(world, party))
     world.blight.forEach((level, i) => {
       const h = boardHex(world.board, i)
       const near = hexDistance(h, lair.position) <= 1 + lair.threat
@@ -265,9 +268,9 @@ describe('clearLocation', () => {
 
   it('wins the game when the Source is beaten', () => {
     const world = newWorld(1)
-    clearLocation(world, lairs(world)[0].id)
+    clearLocation(world, lairs(world)[0].id, soloPresences(world, party))
     expect(world.status).toBe('playing')
-    clearLocation(world, SOURCE_ID)
+    clearLocation(world, SOURCE_ID, soloPresences(world, party))
     expect(world.status).toBe('won')
     world.status = 'endless'
     expect(days(world, 1)).toBeDefined()
@@ -278,5 +281,145 @@ describe('clearLocation', () => {
 describe('blightAt', () => {
   it('is 0 off the map', () => {
     expect(blightAt(newWorld(1), offsetToHex(-1, 0))).toBe(0)
+  })
+})
+
+/**
+ * Today's numbers, pinned from the code before the world's rules took a list of
+ * parties (stage 5 step 02): a list of one must give them exactly. Only `pinned`,
+ * which builds the rules' argument for the party, may change.
+ */
+describe('the numbers of one party, pinned', () => {
+  const members = [{ level: 3 }, { level: 4 }, { level: 5 }]
+  const pinned = (world: WorldState) => soloPresences(world, members)
+  /** A party of strength 8 standing on corrupted land beside the Source's corruption, on day 45 (growth 1.1). */
+  const scene = (): WorldState => {
+    const world = newWorld(1)
+    world.turn = 45
+    world.party = { q: 34, r: 19 }
+    setLevel(world, world.party, MAX_BLIGHT)
+    return world
+  }
+  const sha = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
+
+  it('gives the same net influence about the party', () => {
+    const world = scene()
+    const at = (q: number, r: number) => netInfluence(world, pinned(world), { q, r })
+    expect(at(34, 19)).toBe(-8) // the party's hex, neutral
+    expect([at(35, 19), at(35, 18), at(34, 18), at(33, 19), at(33, 20), at(34, 20)]).toEqual([
+      4, 4, -1.5, -2.5999999999999996, -2.5999999999999996, 0.7000000000000011,
+    ])
+    expect(at(26, 19)).toBe(4.4) // at the party's reach
+    expect(at(25, 19)).toBe(4.4) // beyond it
+    expect(at(36, 17)).toBe(6.100000000000001) // beside corrupted land
+  })
+
+  it('gives the same days: events, levels, counters, spawns and the world RNG', () => {
+    const world = scene()
+    world.spawnPressure = SPAWN_COST - 0.01
+    const events: WorldEvent[] = []
+    for (let d = 0; d < 30; d++) events.push(...passTurn(world, pinned(world)))
+    expect(events.length).toBe(663)
+    expect(sha(events)).toBe('e4d8c398717c3c242985e77f3a7a49f62a7d75eb8794df86beebf0708355ab58')
+    expect(events.filter((e) => e.type === 'spawned')).toEqual([
+      { type: 'spawned', location: 'spawn_1', name: 'Goblin Brood', at: { q: 44, r: 23 }, threat: 5 },
+      { type: 'spawned', location: 'spawn_2', name: 'Bandit Gang', at: { q: 35, r: 36 }, threat: 5 },
+      { type: 'spawned', location: 'spawn_3', name: 'Kobold Nest', at: { q: 34, r: 28 }, threat: 4 },
+    ])
+    expect(world.spawnPressure).toBe(28.11)
+    expect(world.spawns).toBe(3)
+    expect(world.rng).toBe(1135788947)
+    const cell = (q: number, r: number) => [world.blight[boardIndex(world.board, { q, r })], world.shift[boardIndex(world.board, { q, r })]]
+    expect([cell(34, 19), cell(34, 18), cell(33, 19), cell(34, 20)]).toEqual([
+      [0, 0],
+      [2, -9.900000000000004],
+      [1, -11],
+      [2, 52.80000000000003],
+    ])
+    expect(sha([world.blight, world.shift, world.seen])).toBe('3a9e5cc9fe7b870e85a089bb1dcb5245203346687cd773a02c79fc2c292d9918')
+  })
+
+  it('gives the same blight days alone', () => {
+    const world = scene()
+    world.spawnPressure = SPAWN_COST - 0.01
+    const events: WorldEvent[] = []
+    for (let d = 0; d < 30; d++) {
+      world.turn++
+      events.push(...advanceDay(world, pinned(world)))
+    }
+    expect(events.length).toBe(645)
+    expect(sha(events)).toBe('aa2219ab17b432b4186ad4d2eb48bb02530b00fdd8359716cfd1fa10512dc9ba')
+    expect(world.spawnPressure).toBe(28.11)
+    expect(world.rng).toBe(1135788947)
+    expect(sha([world.blight, world.shift])).toBe('4666e8b2d21011b459a503b3c5bf8a65a5b5c5487c0abe39a6cc7d28e6a8bd8c')
+  })
+})
+
+describe('the rules over several parties', () => {
+  /** Two parties east of home: one of strength 8, one of strength 4, three hexes apart. */
+  const a: PartyPresence = { position: { q: 30, r: 19 }, levels: [3, 4, 5] }
+  const b: PartyPresence = { position: { q: 33, r: 19 }, levels: [2, 2] }
+  const reach = (p: PartyPresence, h: Hex) => Math.max(0, partyStrength(p.levels) - hexDistance(p.position, h))
+
+  it('adds every party’s reach to the clean side', () => {
+    const world = newWorld(1)
+    for (const h of [{ q: 31, r: 20 }, { q: 36, r: 19 }, { q: 28, r: 17 }, { q: 45, r: 19 }]) {
+      const alone = netInfluence(world, [], h)
+      expect(netInfluence(world, [a, b], h)).toBeCloseTo(alone - reach(a, h) - reach(b, h))
+      expect(netInfluence(world, [a], h)).toBeCloseTo(alone - reach(a, h))
+    }
+    expect(reach(a, { q: 31, r: 20 })).toBeGreaterThan(0)
+    expect(reach(b, { q: 31, r: 20 })).toBeGreaterThan(0)
+  })
+
+  it('makes every party’s hex neutral, and lets no corruption creep from either', () => {
+    const world = newWorld(1)
+    const source = lairs(world).find((l) => l.id === SOURCE_ID)!
+    // Deep in the Source's corruption, where the blight wins every other hex.
+    const near: PartyPresence = { position: { q: source.position.q - 3, r: source.position.r }, levels: [1] }
+    const far: PartyPresence = { position: { q: source.position.q - 3, r: source.position.r + 2 }, levels: [1] }
+    const between = { q: source.position.q - 3, r: source.position.r + 1 }
+    for (const p of [near, far]) {
+      setLevel(world, p.position, MAX_BLIGHT)
+      expect(netInfluence(world, [near, far], p.position)).toBeLessThan(0)
+      expect(netInfluence(world, [near], far.position)).toBeGreaterThan(0)
+    }
+    // `between` neighbours both: with both parties there, neither corrupted hex creeps onto it.
+    const withBoth = netInfluence(world, [near, far], between)
+    setLevel(world, near.position, 2)
+    setLevel(world, far.position, 2)
+    expect(netInfluence(world, [near, far], between)).toBeCloseTo(withBoth)
+    setLevel(world, near.position, MAX_BLIGHT)
+    setLevel(world, far.position, MAX_BLIGHT)
+    expect(netInfluence(world, [near], between)).toBeGreaterThan(netInfluence(world, [near, far], between) + reach(far, between))
+    // And the days bear it out: neither party's hex rises, though the land about them is the blight's.
+    setLevel(world, near.position, 1)
+    setLevel(world, far.position, 1)
+    for (let d = 0; d < SHIFT_COST; d++) passTurn(world, [near, far])
+    expect(blightAt(world, near.position)).toBeLessThanOrEqual(1)
+    expect(blightAt(world, far.position)).toBeLessThanOrEqual(1)
+  })
+
+  it('spawns clear of every party', () => {
+    /** Corrupts the land within 6 of `a` and cleans the rest, and forces a spawn: the nest must land 4 to 6 from `a`, and only the rule keeps it from `b`. */
+    const a: PartyPresence = { position: offsetToHex(20, 12), levels: [1] }
+    const b: PartyPresence = { position: offsetToHex(26, 12), levels: [1] }
+    const nestsBeside = (parties: PartyPresence[]) =>
+      Array.from({ length: 20 }, (_, k) => {
+        const world = newWorld(k + 1)
+        world.blight.forEach((_, i) => {
+          const h = boardHex(world.board, i)
+          const near = hexDistance(a.position, h) <= 6 && world.locations.every((l) => hexDistance(l.position, h) >= 2)
+          world.blight[i] = near ? MAX_BLIGHT : 0
+        })
+        world.spawnPressure = SPAWN_COST
+        passTurn(world, parties)
+        return spawns(world)
+      }).flat()
+    const both = nestsBeside([a, b])
+    expect(both.length).toBeGreaterThan(10)
+    for (const nest of both) for (const p of [a, b]) expect(hexDistance(p.position, nest.position)).toBeGreaterThanOrEqual(SPAWN_CLEARANCE)
+    // Without `b` in the list, some nest lands too near it: the test can tell.
+    expect(nestsBeside([a]).some((nest) => hexDistance(b.position, nest.position) < SPAWN_CLEARANCE)).toBe(true)
   })
 })

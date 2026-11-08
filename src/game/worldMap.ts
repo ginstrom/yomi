@@ -14,6 +14,7 @@ import {
 } from '../inventory/inventory.ts'
 import { advanceDay, cleanse, seedBlight, type WorldEvent } from './blight.ts'
 import { MAX_THREAT, type EncounterId } from './encounters.ts'
+import { soloPresences, type PartyPresence } from './expedition.ts'
 import { initialHeld, updateTerritory, type Stock } from './territory.ts'
 import { seedSight, updateSight } from './vision.ts'
 
@@ -237,7 +238,8 @@ export function newWorld(seed: number = randomSeed(), encampmentName: string = D
   world.held = initialHeld(world)
   // The sites taken at the start push back from the start.
   seedBlight(world)
-  seedSight(world)
+  // Every new game's party starts at home.
+  seedSight(world, [{ position: HOME, levels: [] }])
   return world
 }
 
@@ -261,22 +263,22 @@ export function worldActive(world: WorldState): boolean {
  * and what comes into sight, and returns what happened. Every way of spending
  * time comes through here.
  */
-export function passTurn(world: WorldState, party: readonly { level: number }[]): WorldEvent[] {
+export function passTurn(world: WorldState, presences: readonly PartyPresence[]): WorldEvent[] {
   world.turn += 1
-  return [...advanceDay(world, party), ...updateTerritory(world, party), ...updateSight(world)]
+  return [...advanceDay(world, presences), ...updateTerritory(world, presences), ...updateSight(world, presences)]
 }
 
 /**
  * Whether an event stops a journey or a stretch of camping: monsters sighted
- * near the party, the Source found wherever it is sighted, a held site
+ * near a party (within `NOTICE_RADIUS` of some presence), the Source found wherever it is sighted, a held site
  * threatened or lost, the encampment lost. A
  * spawn is not seen as such: it is told when it comes into sight. A tower
  * under threat is told as a site is.
  */
-export function isNotable(world: WorldState, event: WorldEvent): boolean {
+export function isNotable(_world: WorldState, event: WorldEvent, presences: readonly PartyPresence[]): boolean {
   switch (event.type) {
     case 'sighted':
-      return event.source === true || hexDistance(world.party, event.at) <= NOTICE_RADIUS
+      return event.source === true || presences.some((p) => hexDistance(p.position, event.at) <= NOTICE_RADIUS)
     case 'site_threatened':
     case 'site_lost':
     case 'tower_lost':
@@ -339,9 +341,10 @@ export function travel(world: WorldState, to: Hex, party: readonly { level: numb
     if (!hexEquals(h, to) && locationAt(world, h)?.kind === 'monsters') break
     world.party = h
     journey.walked.push(h)
-    const day = passTurn(world, party)
+    const presences = soloPresences(world, party)
+    const day = passTurn(world, presences)
     journey.events.push(...day)
-    journey.interruptedBy = day.find((event) => isNotable(world, event)) ?? null
+    journey.interruptedBy = day.find((event) => isNotable(world, event, presences)) ?? null
     if (journey.interruptedBy || !worldActive(world)) break
   }
   world.confronting = monstersHere(world)?.id ?? null
@@ -356,14 +359,14 @@ export function travel(world: WorldState, to: Hex, party: readonly { level: numb
 export function linger(world: WorldState, _how: Lingering, party: readonly { level: number }[]): WorldEvent[] | null {
   if (!monstersHere(world) || !worldActive(world)) return null
   world.confronting = null
-  return passTurn(world, party)
+  return passTurn(world, soloPresences(world, party))
 }
 
 /**
  * Takes a location off the map, as when its monsters are beaten, and cleanses
  * the land around it (`cleanse`). Beating the Source wins the game.
  */
-export function clearLocation(world: WorldState, id: string): void {
+export function clearLocation(world: WorldState, id: string, presences: readonly PartyPresence[]): void {
   const location = world.locations.find((l) => l.id === id)
   world.locations = world.locations.filter((l) => l.id !== id)
   world.sighted = world.sighted.filter((sighted) => sighted !== id)
@@ -371,6 +374,6 @@ export function clearLocation(world: WorldState, id: string): void {
   if (location?.kind !== 'monsters') return
   cleanse(world, location.position, location.threat)
   // The party sees the land it has just cleansed.
-  updateSight(world)
+  updateSight(world, presences)
   if (location.source && world.status === 'playing') world.status = 'won'
 }

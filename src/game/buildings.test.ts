@@ -17,6 +17,7 @@ import {
   shrineCost,
   spend,
 } from './buildings.ts'
+import { soloPresences } from './expedition.ts'
 import { readyMadeParty } from './party.ts'
 import { LOSS_LEVEL, OUTPOST_YIELD, YIELD_DAYS, siteYield, sites, updateTerritory } from './territory.ts'
 import { TOWER_VISION, visibleHexes } from './vision.ts'
@@ -89,12 +90,12 @@ describe('a watchtower', () => {
     const at = world.party
     const away = offsetToHex(30, 2)
     world.party = away
-    const before = netInfluence(world, party, at)
+    const before = netInfluence(world, soloPresences(world, party), at)
     world.party = at
     buildTower(world, party)
     world.party = away
-    expect(netInfluence(world, party, at)).toBeCloseTo(before - TOWER_STRENGTH * 1.0)
-    const visible = visibleHexes(world)
+    expect(netInfluence(world, soloPresences(world, party), at)).toBeCloseTo(before - TOWER_STRENGTH * 1.0)
+    const visible = visibleHexes(world, soloPresences(world, party))
     const edge: Hex = { q: at.q, r: at.r - TOWER_VISION }
     expect(hexDistance(at, edge)).toBe(TOWER_VISION)
     expect(visible.has(boardIndex(world.board, edge))).toBe(true)
@@ -116,16 +117,16 @@ describe('a watchtower', () => {
       // As strong as the Source, to outpush Oakvale nearby.
       source: true,
     })
-    const warned = passTurn(world, party).find((e) => e.type === 'site_threatened' && e.site === 'tower_1')
+    const warned = passTurn(world, soloPresences(world, party)).find((e) => e.type === 'site_threatened' && e.site === 'tower_1')
     expect(warned).toMatchObject({ site: 'tower_1', name: 'A watchtower' })
-    expect(isNotable(world, warned!)).toBe(true)
+    expect(isNotable(world, warned!, soloPresences(world, party))).toBe(true)
 
     world.blight[boardIndex(world.board, at)] = LOSS_LEVEL
-    const lost = passTurn(world, party).find((e) => e.type === 'tower_lost')
+    const lost = passTurn(world, soloPresences(world, party)).find((e) => e.type === 'tower_lost')
     expect(lost).toEqual({ type: 'tower_lost', tower: 'tower_1', at })
-    expect(isNotable(world, lost!)).toBe(true)
+    expect(isNotable(world, lost!, soloPresences(world, party))).toBe(true)
     expect(world.towers).toEqual([])
-    expect(visibleHexes(world).has(boardIndex(world.board, { q: at.q, r: at.r - TOWER_VISION }))).toBe(false)
+    expect(visibleHexes(world, soloPresences(world, party)).has(boardIndex(world.board, { q: at.q, r: at.r - TOWER_VISION }))).toBe(false)
   })
 })
 
@@ -136,7 +137,7 @@ describe('the shrine', () => {
     world.stock = { gold: 1000, silver: 1000 }
     const away = offsetToHex(30, 2)
     world.party = away
-    const before = netInfluence(world, party, oakvale)
+    const before = netInfluence(world, soloPresences(world, party), oakvale)
     world.party = oakvale
     for (let level = 1; level <= MAX_SHRINE_LEVEL; level++) {
       expect(shrineCost(world)).toEqual(SHRINE_COSTS[level - 1])
@@ -149,7 +150,7 @@ describe('the shrine', () => {
     const spent = SHRINE_COSTS.reduce((sum, cost) => sum + (cost.gold ?? 0), 0)
     expect(world.stock.gold).toBe(1000 - spent)
     world.party = away
-    expect(netInfluence(world, party, oakvale)).toBeCloseTo(before - SHRINE_STRENGTH * MAX_SHRINE_LEVEL)
+    expect(netInfluence(world, soloPresences(world, party), oakvale)).toBeCloseTo(before - SHRINE_STRENGTH * MAX_SHRINE_LEVEL)
   })
 
   it('is refused away from Oakvale or without the stock', () => {
@@ -211,18 +212,18 @@ describe('an outpost', () => {
     const at = world.party
     const away = offsetToHex(30, 2)
     world.party = away
-    const before = netInfluence(world, party, at)
+    const before = netInfluence(world, soloPresences(world, party), at)
     const goldSeam = sites(world).find((l) => l.id === 'gold_seam')!
     const yieldBefore = siteYield(world, goldSeam).amount
     world.party = at
     buildOutpost(world, party)
     world.party = away
-    expect(netInfluence(world, party, at)).toBeCloseTo(before - OUTPOST_STRENGTH)
+    expect(netInfluence(world, soloPresences(world, party), at)).toBeCloseTo(before - OUTPOST_STRENGTH)
     expect(siteYield(world, goldSeam).amount).toBe(yieldBefore + OUTPOST_YIELD)
     world.blight[boardIndex(world.board, at)] = 0
     world.stock = {}
     world.turn = YIELD_DAYS
-    const yielded = updateTerritory(world, party).find((e) => e.type === 'yield' && e.site === 'gold_seam')
+    const yielded = updateTerritory(world, soloPresences(world, party)).find((e) => e.type === 'yield' && e.site === 'gold_seam')
     expect(yielded).toMatchObject({ amount: yieldBefore + OUTPOST_YIELD })
   })
 
@@ -230,7 +231,7 @@ describe('an outpost', () => {
     const world = atStonebridge()
     buildOutpost(world, party)
     world.blight[boardIndex(world.board, world.party)] = LOSS_LEVEL
-    const lost = updateTerritory(world, party).find((e) => e.type === 'site_lost')
+    const lost = updateTerritory(world, soloPresences(world, party)).find((e) => e.type === 'site_lost')
     expect(lost).toEqual({ type: 'site_lost', site: 'gold_seam', name: 'Gold Seam', outpost: true })
     expect(world.outposts).toEqual([])
   })

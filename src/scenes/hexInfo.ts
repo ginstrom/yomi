@@ -1,6 +1,7 @@
 import { maxHp, type Character } from '../character/character.ts'
 import { BLIGHT_NAMES, boardIndex, netInfluence } from '../game/blight.ts'
 import { MAX_SHRINE_LEVEL } from '../game/buildings.ts'
+import { soloPresences } from '../game/expedition.ts'
 import { MAX_GUILD_HALL_LEVEL } from '../game/guildHall.ts'
 import { daysToFall, siteYield } from '../game/territory.ts'
 import { UNEXPLORED } from '../game/vision.ts'
@@ -54,7 +55,7 @@ export function hexInfo(world: WorldState, party: readonly Character[], visible:
   if (seen !== UNEXPLORED) {
     lines.push(`Blight: ${BLIGHT_NAMES[seen]}${inSight ? '' : ' (as last seen)'}.`)
     if (inSight) {
-      const net = netInfluence(world, party, at)
+      const net = netInfluence(world, soloPresences(world, party), at)
       if (net > 0) lines.push('The blight is gaining here.')
       else if (net < 0 && seen > 0) lines.push('The blight is receding here.')
     } else {
@@ -73,6 +74,6 @@ export function hexInfo(world: WorldState, party: readonly Character[], visible:
 }
 
 function fallsIn(world: WorldState, party: readonly Character[], at: Hex): string {
-  const days = daysToFall(world, party, { position: at })
+  const days = daysToFall(world, soloPresences(world, party), { position: at })
   return days === null ? 'Under threat.' : `Under threat: falls in ${days} ${days === 1 ? 'day' : 'days'}.`
 }

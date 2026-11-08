@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { HexBoard, hexDistance, hexEquals, hexKey, hexToOffset, offsetToHex, type Hex } from '../grid/hex.ts'
 import { ENCOUNTERS, ENCOUNTER_BANDS, MAX_THREAT } from './encounters.ts'
+import { soloPresences, type PartyPresence } from './expedition.ts'
 import { readyMadeParty } from './party.ts'
 import {
   DEFAULT_ENCAMPMENT_NAME,
   ENCAMPMENT_ID,
+  NOTICE_RADIUS,
   SOURCE_ID,
   THREAT_BAND,
   clearLocation,
   encampmentName,
+  isNotable,
   linger,
   locationAt,
   monstersHere,
@@ -215,7 +218,7 @@ describe('a monster location', () => {
   it('is gone from the map once cleared, freeing the party', () => {
     const { world, id } = arrive()
     const at = world.party
-    clearLocation(world, id)
+    clearLocation(world, id, soloPresences(world, party))
     expect(locationAt(world, at)).toBeNull()
     expect(world.confronting).toBeNull()
     expect(routeTo(world, offsetToHex(0, 0))).not.toBeNull()
@@ -239,5 +242,29 @@ describe('threatAt', () => {
     expect(threatAt({ q: home.q + THREAT_BAND, r: home.r })).toBe(2)
     expect(threatAt({ q: home.q + THREAT_BAND * 2, r: home.r })).toBe(3)
     expect(threatAt({ q: home.q + THREAT_BAND * 50, r: home.r })).toBe(MAX_THREAT)
+  })
+})
+
+describe('isNotable over several parties', () => {
+  const world = newWorld(1)
+  const a: PartyPresence = { position: offsetToHex(10, 10), levels: [1] }
+  const b: PartyPresence = { position: offsetToHex(40, 30), levels: [1] }
+  const sightedAt = (at: Hex, source?: true) => ({ type: 'sighted' as const, location: 'x', name: 'x', at, threat: 1, ...(source ? { source } : {}) })
+
+  it('counts a sighting within NOTICE_RADIUS of either party', () => {
+    for (const p of [a, b]) {
+      const edge = { q: p.position.q + NOTICE_RADIUS, r: p.position.r }
+      expect(isNotable(world, sightedAt(edge), [a, b])).toBe(true)
+      expect(isNotable(world, sightedAt({ q: edge.q + 1, r: edge.r }), [a, b])).toBe(false)
+    }
+    expect(isNotable(world, sightedAt({ q: b.position.q + 1, r: b.position.r }), [a])).toBe(false)
+  })
+
+  it('counts the Source from anywhere, and with no party at all', () => {
+    const far = offsetToHex(59, 0)
+    expect(hexDistance(far, a.position)).toBeGreaterThan(NOTICE_RADIUS)
+    expect(isNotable(world, sightedAt(far, true), [a, b])).toBe(true)
+    expect(isNotable(world, sightedAt(far, true), [])).toBe(true)
+    expect(isNotable(world, sightedAt(a.position), [])).toBe(false)
   })
 })

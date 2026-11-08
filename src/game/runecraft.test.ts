@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { maxHp } from '../character/character.ts'
 import { itemById } from '../inventory/inventory.ts'
+import { soloPresences } from './expedition.ts'
 import { newGame, type GameState } from './gameState.ts'
 import type { ItemPlace } from './itemPlace.ts'
 import {
@@ -106,18 +107,18 @@ describe('embed', () => {
     const scout = home()
     intoField(scout)
     let quiet = 0
-    while (passTurn(scout.world, scout.party).length === 0) quiet++
+    while (passTurn(scout.world, soloPresences(scout.world, scout.party)).length === 0) quiet++
     const game = home()
     intoField(game)
     const twin = home()
     intoField(twin)
     for (let day = 0; day < quiet; day++) {
-      passTurn(game.world, game.party)
-      passTurn(twin.world, twin.party)
+      passTurn(game.world, soloPresences(game.world, game.party))
+      passTurn(twin.world, soloPresences(twin.world, twin.party))
     }
     game.runes = { stone1: 1 }
     const place = wield(game, 'iron_sword@3')
-    const expected = passTurn(twin.world, twin.party)
+    const expected = passTurn(twin.world, soloPresences(twin.world, twin.party))
     expect(expected.length).toBeGreaterThan(0)
     const result = embed(game, place, 'stone1')
     expect(result.refusal).toBeNull()

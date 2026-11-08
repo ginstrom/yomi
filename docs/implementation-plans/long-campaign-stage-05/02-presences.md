@@ -186,3 +186,26 @@ export function clearLocation(world: WorldState, id: string, presences: readonly
 - [ ] The index's table shows step 02 done, with its commit.
 
 ## Execution record
+
+Run on `long-campaign-stage-05` from `ff7604f`, Node 26.13.
+
+**What was done.**
+- Characterization tests written and run green on the unchanged tree first: `blight.test.ts` "the numbers of one party, pinned" (net influence at the party's hex, its six neighbours, its reach, beyond it and beside corruption, on day 45 so growth is 1.1 and the sums are fractional; 30 days of `passTurn` and of `advanceDay` alone with a forced spawn: event counts and SHA-256s, the three spawns, `spawnPressure`, `spawns`, `world.rng`, chosen hexes' levels and counters, and a SHA-256 of `blight`, `shift` and `seen`); `vision.test.ts` "the sight of one party, pinned" (`visibleHexes` size 230 and membership, `updateSight`'s sighting); `territory.test.ts` "the days to fall with one party, pinned" (`daysToFall` at five distances: null, 120, 60, 40, 30).
+- `src/game/expedition.ts`: `PartyPresence` and `soloPresences` as C2 (type-only import of `WorldState`).
+- `blight.ts`: `partyStrength(levels)`; `netAt` sums each presence's reach in list order onto `field.clean[i]`; a per-day `neutralHexes` set replaces `partyIndex` in `netAt` (neutral hex, creep) and `spawn` (corrupted list; `keepClear` starts with the presences' positions). `vision.ts`, `territory.ts`, `worldMap.ts` (`passTurn`, `isNotable`, `clearLocation`, `newWorld` seeding from `{ position: HOME, levels: [] }`) to C2's signatures. `isNotable`'s `world` parameter is now unused and named `_world` (C2 keeps it in the signature).
+- Callers pass `soloPresences(world, party)`: `travel`, `linger`, `campDay`, `campUntilHealed`, `buildTower`, `buildOutpost`, `craft`, `embed`, `hexInfo.ts`, `WorldScene` (a private `presences()`), `BattleScene` (`clearLocation`), `debugCommands.ts` (`goto`'s `updateSight`, `days`), `scripts/simulate.ts` (`nextTarget`, `clearLocation`), and the tests.
+- List tests: `blight.test.ts` "the rules over several parties" (two parties' reaches add; both hexes neutral and neither creeps, with the days bearing it out; a spawn keeps `SPAWN_CLEARANCE` from both, with a control showing that a list of one lets a nest land too near the other party); `vision.test.ts` "the sight of several parties" (the union; either party sights); `worldMap.test.ts` "isNotable over several parties" (within `NOTICE_RADIUS` of either; the Source from anywhere, even with no presence); `territory.test.ts` "the days to fall with presences" (an explicit presence gives the pinned figures).
+- Mutation check of the list tests: limiting `keepClear`, the neutral set, or the reach sum to the first presence each made the matching test fail.
+- CLAUDE.md: `expedition.ts` added to the module list; the vision line, `worldMap.ts`'s line (which functions take presences), fog of war's "each party", `isNotable`'s measure, and the blight's rules (each party's presence, `partyStrength`, each party's hex neutral, spawns clear of every party).
+
+**Verification.**
+- `npm test`: 78 files, 1217 tests passed (tsc clean).
+- Guard test (`npx vitest run scripts/simulate.test.ts -t "refactor guard"`): passed; `git diff 8477c15 -- scripts/simulate.test.ts` empty.
+- 50-campaign check (`npm run simulate -- --campaign --battles 50 --seed 1 --out logs/guard-50.jsonl > logs/guard-50.txt`): **guard identical**. `diff` against step 01's summary empty; log SHA-256 `068016a82040ec5be673084265005a7218f0ce927629880565c1a27a8cf52d76`, as step 01's.
+- `npm run test:browser`: 9 files, 89 tests passed.
+
+**Deviations.**
+- "Untouched" characterization tests: their literals are unchanged, but their calls had to change with the signatures (`pinned` in the blight and territory tests now returns `soloPresences(world, members)`; the vision test's `visibleHexes` and `updateSight` gained the presences argument).
+- No `Co-Authored-By` line in the commit, by the brief's instruction.
+
+**For later steps.** `soloPresences` is called at 16 sites outside the tests (`grep -rn "soloPresences(" src scripts`), all of which step 04 replaces with `presences(game.parties)`. `WorldScene.presences()` is the one place the world map builds them.

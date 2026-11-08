@@ -4,6 +4,7 @@ import { canAdvance } from '../character/progression.ts'
 import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex, type WorldEvent } from '../game/blight.ts'
 import { atEncampment, buildOutpost, buildTower, canBuildOutpost, canBuildTower, outpostSiteRefusal, towerSiteRefusal } from '../game/buildings.ts'
 import { campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from '../game/camp.ts'
+import { soloPresences, type PartyPresence } from '../game/expedition.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
 import { daysToFall } from '../game/territory.ts'
@@ -493,7 +494,7 @@ export class WorldScene extends Phaser.Scene {
       const held = this.world.held.includes(location.id)
       const days =
         location.kind !== 'monsters' && this.world.threatened.includes(location.id)
-          ? daysToFall(this.world, this.gameState.party, location)
+          ? daysToFall(this.world, this.presences(), location)
           : null
       const lines = [held ? `${location.name} *` : location.name]
       if (this.world.outposts.includes(location.id)) lines.push('outpost')
@@ -514,7 +515,7 @@ export class WorldScene extends Phaser.Scene {
     }
     // A tower goes unnamed until the blight gains on it.
     for (const tower of this.world.towers) {
-      const days = this.world.threatened.includes(tower.id) ? daysToFall(this.world, this.gameState.party, tower) : null
+      const days = this.world.threatened.includes(tower.id) ? daysToFall(this.world, this.presences(), tower) : null
       if (days === null) continue
       const { x, y } = boardHexCenter(tower.position, WORLD_LAYOUT)
       this.siteLabels.add(
@@ -742,6 +743,11 @@ export class WorldScene extends Phaser.Scene {
 
   // ---- display ---------------------------------------------------------------
 
+  /** The company's parties as the world's rules see them. */
+  private presences(): PartyPresence[] {
+    return soloPresences(this.world, this.gameState.party)
+  }
+
   /** Redraws everything that follows the world's state: the party, the header and which buttons show. */
   private refresh(): void {
     const world = this.world
@@ -749,7 +755,7 @@ export class WorldScene extends Phaser.Scene {
     const { x, y } = boardHexCenter(world.party, WORLD_LAYOUT)
     this.party.setPosition(x, y + PARTY_FEET_Y)
     this.partyMark.clear().lineStyle(3, PARTY_OUTLINE, 1).strokePoints(this.hexPolygon(world.party), true)
-    this.visible = visibleHexes(world)
+    this.visible = visibleHexes(world, this.presences())
     // Blighted land the party stands on is neutral while it stays.
     if (blightAt(world, world.party) > 0) {
       const c = boardHexCenter(world.party, WORLD_LAYOUT)
@@ -984,7 +990,7 @@ export class WorldScene extends Phaser.Scene {
     }
     // The first event is the tower's own; the rest are the day's.
     const [built, ...day] = events
-    const told = describeWorldEvents(day, day.find((event) => isNotable(this.world, event)) ?? null)
+    const told = describeWorldEvents(day, day.find((event) => isNotable(this.world, event, this.presences())) ?? null)
     this.messageText.setText(`${describeWorldEvent(built)}${told ? ` ${told}` : ''}`)
     this.refresh()
     this.save()
@@ -1091,7 +1097,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Tells what a field craft made and what its day brought, as after camping. */
   private crafted({ item, events }: CraftedData['crafted']): void {
-    const told = describeWorldEvents(events, events.find((event) => isNotable(this.world, event)) ?? null)
+    const told = describeWorldEvents(events, events.find((event) => isNotable(this.world, event, this.presences())) ?? null)
     this.messageText.setText(`A day's work makes the ${item}.${told ? ` ${told}` : ''}`)
     this.checkOutcome()
     // After the redraw and save the resume does.

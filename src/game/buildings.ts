@@ -1,5 +1,6 @@
 import { hexDistance, hexEquals } from '../grid/hex.ts'
 import { blightAt, type WorldEvent } from './blight.ts'
+import { soloPresences } from './expedition.ts'
 import type { Material, Stock } from './territory.ts'
 import { ENCAMPMENT_ID, encampmentName, locationAt, monstersHere, passTurn, worldActive, type QuietLocation, type WorldState } from './worldMap.ts'
 
@@ -76,7 +77,7 @@ export function buildTower(world: WorldState, party: readonly { level: number }[
   world.towersBuilt += 1
   const tower = { id: `tower_${world.towersBuilt}`, position: world.party }
   world.towers.push(tower)
-  return [{ type: 'tower_built', tower: tower.id, at: tower.position }, ...passTurn(world, party)]
+  return [{ type: 'tower_built', tower: tower.id, at: tower.position }, ...passTurn(world, soloPresences(world, party))]
 }
 
 /** What raising the shrine to each level costs, from level 1; silver, from further out, buys the higher ones. */
@@ -142,5 +143,5 @@ export function buildOutpost(world: WorldState, party: readonly { level: number 
   const site = outpostSite(world)!
   spend(world.stock, OUTPOST_COST)
   world.outposts.push(site.id)
-  return [{ type: 'outpost_built', site: site.id, name: site.name }, ...passTurn(world, party)]
+  return [{ type: 'outpost_built', site: site.id, name: site.name }, ...passTurn(world, soloPresences(world, party))]
 }

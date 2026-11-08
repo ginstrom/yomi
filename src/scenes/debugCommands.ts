@@ -2,6 +2,7 @@ import { maxHp, maxMana, manaOf, type Character } from '../character/character.t
 import { gainXp, xpToNextLevel } from '../character/progression.ts'
 import type { BattleState } from '../engine/battleEngine.ts'
 import { facilities, setFacilityLevel, type FacilityId } from '../game/encampment.ts'
+import { soloPresences } from '../game/expedition.ts'
 import { ENCOUNTERS, type EncounterId } from '../game/encounters.ts'
 import type { GameState } from '../game/gameState.ts'
 import type { Material } from '../game/territory.ts'
@@ -276,7 +277,8 @@ const COMMANDS: Record<string, Command> = {
     summary: 'Put the party on a hex, or on a location by id, with no time passing.',
     changes: true,
     run(args, context) {
-      const { world } = gameOf(context)
+      const game = gameOf(context)
+      const { world } = game
       let to
       if (args.length >= 2) {
         to = offsetToHex(integer(args[0], 'the column'), integer(args[1], 'the row'))
@@ -289,7 +291,7 @@ const COMMANDS: Record<string, Command> = {
       world.party = to
       const here = monstersHere(world)
       world.confronting = here?.id ?? null
-      updateSight(world)
+      updateSight(world, soloPresences(world, game.party))
       return [`The party stands at ${offset({ position: to })}${here ? `, before the ${here.name}` : ''}.`]
     },
   },
@@ -304,10 +306,11 @@ const COMMANDS: Record<string, Command> = {
       const told: string[] = []
       let passed = 0
       while (passed < n && worldActive(game.world)) {
-        const events = passTurn(game.world, game.party)
+        const presences = soloPresences(game.world, game.party)
+        const events = passTurn(game.world, presences)
         passed += 1
         for (const event of events) {
-          if (isNotable(game.world, event) || event.type === 'spawned') {
+          if (isNotable(game.world, event, presences) || event.type === 'spawned') {
             told.push(`  day ${game.world.turn}: ${describeWorldEvent(event) || `${event.type} ${'name' in event ? event.name : ''}`}`)
           }
         }

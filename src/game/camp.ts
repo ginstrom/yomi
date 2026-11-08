@@ -1,5 +1,6 @@
 import { maxHp, maxMana } from '../character/character.ts'
 import type { WorldEvent } from './blight.ts'
+import { soloPresences } from './expedition.ts'
 import { restHealing } from './infirmary.ts'
 import { autoHeal, type Party } from './party.ts'
 import { isNotable, monstersHere, passTurn, worldActive, type WorldState } from './worldMap.ts'
@@ -56,7 +57,7 @@ export function campDay(world: WorldState, party: Party): CampDay | null {
   const before = totalHp(party)
   // Judged where the party camps, before the day's events can change it.
   const healing = party.map((member) => restHealing(world, member))
-  const events = passTurn(world, party)
+  const events = passTurn(world, soloPresences(world, party))
   for (const [i, member] of party.entries()) {
     member.hp = Math.min(maxHp(member), member.hp + healing[i])
     member.mana = maxMana(member)
@@ -80,7 +81,8 @@ export function campUntilHealed(world: WorldState, party: Party): CampResult | n
     result.events.push(...day.events)
     result.days += 1
     result.cast += autoHeal(party)
-    result.interruptedBy = day.events.find((event) => isNotable(world, event)) ?? null
+    const presences = soloPresences(world, party)
+    result.interruptedBy = day.events.find((event) => isNotable(world, event, presences)) ?? null
     if (result.interruptedBy) break
   }
   return result
