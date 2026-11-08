@@ -81,7 +81,7 @@ const PARTY_EVENT_TYPES: Record<PartyEvent['type'], true> & Record<Extract<World
   order_done: true,
 }
 
-const isPartyEvent = (event: WorldEvent | PartyEvent): event is PartyEvent => event.type in PARTY_EVENT_TYPES
+export const isPartyEvent = (event: WorldEvent | PartyEvent): event is PartyEvent => event.type in PARTY_EVENT_TYPES
 
 const partyNoun = (game: GameState, party: Expedition): string => (game.parties.length === 1 ? 'The party' : party.name)
 

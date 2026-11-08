@@ -1,5 +1,5 @@
 import type { WorldEvent } from '../game/blight.ts'
-import type { DayReport, Interrupt, PartyEvent } from '../game/company.ts'
+import { isPartyEvent, type DayReport, type Interrupt, type PartyEvent } from '../game/company.ts'
 import { midSentence, theName, type MonsterLocation, type WorldState } from '../game/worldMap.ts'
 
 /** The world map's line for an event, or '' for one too small to tell (a hex's level changing). */
@@ -61,14 +61,12 @@ export function describePartyEvent(event: PartyEvent, world: WorldState): string
   }
 }
 
-const PARTY_EVENT_TYPES: readonly string[] = ['arrived', 'confronting', 'order_done']
-
 /** What stopped the days, in words; a party that arrived among monsters is told only of coming upon them. */
 function describeInterrupt(interrupt: Interrupt, partyEvents: readonly PartyEvent[], world: WorldState): string {
   const { event } = interrupt
-  if (!PARTY_EVENT_TYPES.includes(event.type)) return describeWorldEvent(event as WorldEvent)
+  if (!isPartyEvent(event)) return describeWorldEvent(event)
   const confronting = partyEvents.find((e) => e.type === 'confronting')
-  return describePartyEvent(confronting ?? (event as PartyEvent), world)
+  return describePartyEvent(confronting ?? event, world)
 }
 
 /**
