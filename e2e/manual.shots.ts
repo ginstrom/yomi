@@ -1,4 +1,4 @@
-import { describe, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import type { CreationStep } from '../src/testHook.ts'
 import { WORLD_SIZE } from '../src/game/worldMap.ts'
 import { hexDistance, offsetToHex, type Hex } from '../src/grid/hex.ts'
@@ -70,10 +70,10 @@ describe('the manual’s screenshots', () => {
     // A walk cut short keeps its order: the line says where the party is going.
     await game.click(worldHexOnScreen(world, offsetToHex(19, 19)))
     const cut = await game.waitFor('World', (w) => !w.walking && w.world.turn > world.world.turn)
-    if (cut.parties[0].order.startsWith('Travelling')) {
-      await game.hover({ x: 0, y: 0 })
-      await shot(game, 'world-travelling')
-    }
+    // The seed cuts this walk short; if a change of rules lets it arrive, pick another hex, or the image goes stale.
+    expect(cut.parties[0].order).toMatch(/^Travelling/)
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'world-travelling')
 
     await game.press('c')
     await game.waitForScenes(['Inventory'], ['World'])

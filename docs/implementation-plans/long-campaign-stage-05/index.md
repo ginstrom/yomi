@@ -331,16 +331,16 @@ export function act(game: GameState, party: string, action: DayAction): string |
 - `partyList.ts`:
   - `PartyListEntry` gains `order: string`;
   - `orderLabel(world: WorldState, party: Expedition): string` gives:
-    - `'Before the <name>'` while it is confronting;
+    - `'Before the <name>'` while it is confronting (a name with its own article, "The Blight Source", reads `'Before the Blight Source'`; fix round);
     - `'Idle'`;
     - `'Travelling to <name>'` where the player knows a location at `to` (a sighted monster location, or a quiet location on an explored hex), else `'Travelling'`;
     - `'Camping'`;
     - for a day order, `'Scouting'`, `'Waiting'`, `'Camping'`, `'Building'` or `'Crafting'`.
-- `deployedParties(game)` maps `game.parties`, the name being `SINGLE_PARTY_NAME` while there is one party.
+- `deployedParties(game, shown?)` maps `game.parties`, the name being `SINGLE_PARTY_NAME` while there is one party; `shown` (fix round) replaces one party's order line while the map plays a walk the game has already made.
 - **Probes.**
   - `PartyListProbe` gains `order: string`.
   - `WorldProbe.buttons` gains `nextDay: ButtonProbe` and `untilSomething: ButtonProbe`.
-  - Both buttons show in the footer whenever the game is active and the selected party is not confronting. Among monsters, the footer shows Scout, Wait and Attack as today.
+  - Both buttons show in the footer whenever the game is active and the selected party stands on no monster location (fix round: before, "is not confronting", which let them show after a scout). Among monsters, the footer shows Scout, Wait and Attack as today.
 
 ## Tasks
 
@@ -348,7 +348,7 @@ export function act(game: GameState, party: string, action: DayAction): string |
 | --- | --- | --- | --- | --- | --- |
 | 01 | [The refactor guard](01-refactor-guard.md) | The 500-campaign figure and the 50-campaign summary and log hash recorded; the 5-campaign guard test (C1) committed | — | sonnet / sonnet | done (8477c15) |
 | 02 | [World rules over presences](02-presences.md) | `PartyPresence` (C2); blight, vision, territory, `passTurn` and `isNotable` over a list; tests for presences of one; guard identical | 01 | opus / opus | done (f4b1af0) |
-| 03 | [The company: parties, members and baggage](03-company-state.md) | `Expedition` and `GameState.parties` (C3); `leader`; party and baggage moved; save 19 with migration and the v18 fixture; CLAUDE.md's rule of saving; guard identical | 02 | sonnet / opus | done |
+| 03 | [The company: parties, members and baggage](03-company-state.md) | `Expedition` and `GameState.parties` (C3); `leader`; party and baggage moved; save 19 with migration and the v18 fixture; CLAUDE.md's rule of saving; guard identical | 02 | sonnet / opus | done (d343bdf) |
 | 04 | [Position and confrontation in the expedition](04-position-and-confrontation.md) | `WorldState.party` and `confronting` moved (C4); position-dependent rules take the expedition; `presences(game.parties)`; save 20; probes and in-browser tests; guard identical | 03 | opus / opus | done (5f0e851) |
 | 05 | [Explicit expeditions](05-explicit-expeditions.md) | Item places name the party (C5); scenes take the party from scene data; debug `@<party>` and `party`; `leader` deleted; guard identical | 04 | sonnet / opus | done (b3de3e1) |
 | 06 | [The day loop](06-day-loop.md) | `company.ts` (C6): orders idle, travel and camp, `passDay`, `advance`, `setOrder`; `travel` and `campUntilHealed` on the loop; debug `days` on `passDay`; guard identical | 05 | opus / opus | done (4f3a336) |
@@ -406,6 +406,18 @@ export function act(game: GameState, party: string, action: DayAction): string |
 ## Open questions
 
 None blocks the plan. Corrections 3, 9, 10 and 11 are defaults taken for the user to confirm.
+
+## Execution notes
+
+**Fix round after the overall verification** (commits after `777e142`):
+- the order line and its probe say the order walked by ("Travelling to …"/"Travelling") while a hex click, Next day or Until something happens plays a walk (`deployedParties`' `shown`), then the real order;
+- `orderLabel` reads a name with its own article: "Before the Blight Source", "Travelling to the Blight Source" (`theName`, `midSentence`);
+- Next day and Until something happens are hidden whenever the selected party stands on a monster location, after a scout too (orchestrator's decision);
+- they save as the days are passed, before the walk plays, as a journey does (the journey's save moved from `playWalk` to the hex click);
+- `parseSave` checks a travel order's `to` and `route` and a day order's action (kind, and a craft's or embed's place, modifier, grade or rune); `SAVE_VERSION` stays 20;
+- `manual.shots.ts` asserts the walk is cut short before taking `world-travelling`; the manual's line on a cut-short walk or camp and on where the time buttons show corrected;
+- step 03's row gained its hash.
+- evidence: the new tests failed before the fix (save: 2 order tests; e2e: the scout and hex-click walking tests; the Next day/Until test passes either way, as the stale line already said Travelling and `playWalk` already saved), then `npm test` 1344 passed, `npm run test:browser` 97 passed, the 50-campaign guard log 068016a8…2d76 (identical), the guard test untouched; no screenshot changed (only the footer's visibility among monsters, which no shot shows after a scout).
 
 ## For implementers
 

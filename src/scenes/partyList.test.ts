@@ -5,7 +5,7 @@ import { newGame } from '../game/gameState.ts'
 import { readyMadeParty } from '../game/party.ts'
 import { boardIndex } from '../game/blight.ts'
 import { UNEXPLORED } from '../game/vision.ts'
-import { locationAt, travel } from '../game/worldMap.ts'
+import { SOURCE_ID, locationAt, travel } from '../game/worldMap.ts'
 import { hexEquals } from '../grid/hex.ts'
 import { HEADER_BOTTOM } from './partyPanel.ts'
 import {
@@ -19,6 +19,8 @@ import {
   partyEntryOrderRect,
   partyEntryRect,
   partyListInfo,
+  theName,
+  travelLabel,
   type PartyListEntry,
 } from './partyList.ts'
 
@@ -150,6 +152,33 @@ describe('orderLabel', () => {
     party.confronting = monsters.id
     party.order = { kind: 'idle' }
     expect(orderLabel(world, party)).toBe(`Before the ${monsters.name}`)
+  })
+
+  it('reads a name that has its own article as one: before and travelling to the Blight Source', () => {
+    const { world, party } = setup()
+    const source = world.locations.find((l) => l.id === SOURCE_ID)!
+    expect(source.name).toBe('The Blight Source')
+    party.confronting = source.id
+    expect(orderLabel(world, party)).toBe('Before the Blight Source')
+    party.confronting = null
+    world.sighted = [source.id]
+    party.order = { kind: 'travel', to: source.position, route: [source.position] }
+    expect(orderLabel(world, party)).toBe('Travelling to the Blight Source')
+    expect(theName('Goblin Raiders')).toBe('the Goblin Raiders')
+  })
+
+  it('gives a travel order’s line for a destination alone', () => {
+    const { world, monsters } = setup()
+    world.sighted = [monsters.id]
+    expect(travelLabel(world, monsters.position)).toBe(`Travelling to ${monsters.name}`)
+    expect(travelLabel(world, far)).toBe('Travelling')
+  })
+
+  it('shows an order line given in place of one party’s own, as while a walk plays', () => {
+    const game = newGame(undefined, null, 1)
+    expect(deployedParties(game, { party: FIRST_PARTY_ID, order: 'Travelling' })[0].order).toBe('Travelling')
+    expect(deployedParties(game, { party: 'party_9', order: 'Travelling' })[0].order).toBe('Idle')
+    expect(deployedParties(game, null)[0].order).toBe('Idle')
   })
 
   it('is carried by the party list’s entries', () => {

@@ -49,6 +49,16 @@ export interface PartyListEntry {
   maxHp: number
 }
 
+/** A location's name inside a sentence: a leading article lower-cased ("The Blight Source" reads "the Blight Source"). */
+export function midSentence(name: string): string {
+  return /^the /i.test(name) ? `the ${name.slice(4)}` : name
+}
+
+/** A location's name with "the" in front, unless it has its own article: "the Goblin Raiders", "the Blight Source". */
+export function theName(name: string): string {
+  return /^the /i.test(name) ? midSentence(name) : `the ${name}`
+}
+
 /**
  * What a party is doing, in a few words: facing monsters, idle, travelling
  * (to the name of what lies at its destination, but only if the player knows
@@ -57,17 +67,14 @@ export interface PartyListEntry {
 export function orderLabel(world: WorldState, party: Expedition): string {
   if (party.confronting !== null) {
     const location = world.locations.find((l) => l.id === party.confronting)
-    if (location) return `Before the ${location.name}`
+    if (location) return `Before ${theName(location.name)}`
   }
   const { order } = party
   switch (order.kind) {
     case 'idle':
       return 'Idle'
-    case 'travel': {
-      const location = locationAt(world, order.to)
-      const known = location && (location.kind === 'monsters' ? isSighted(world, location.id) : world.seen[boardIndex(world.board, location.position)] !== UNEXPLORED)
-      return known ? `Travelling to ${location.name}` : 'Travelling'
-    }
+    case 'travel':
+      return travelLabel(world, order.to)
     case 'camp':
       return 'Camping'
     case 'day':
@@ -86,6 +93,13 @@ export function orderLabel(world: WorldState, party: Expedition): string {
           return 'Crafting'
       }
   }
+}
+
+/** A travel order's line: the name of what lies at `to`, but only if the player knows of it. */
+export function travelLabel(world: WorldState, to: Hex): string {
+  const location = locationAt(world, to)
+  const known = location && (location.kind === 'monsters' ? isSighted(world, location.id) : world.seen[boardIndex(world.board, location.position)] !== UNEXPLORED)
+  return known ? `Travelling to ${midSentence(location.name)}` : 'Travelling'
 }
 
 /** `label` wrapped onto at most `ORDER_LINES` lines of `ORDER_COLS` columns, the last cut short with an ellipsis if it does not fit. */
@@ -110,8 +124,14 @@ export function orderLines(label: string): string[] {
   return kept.map((l, i) => (i < last && l.length > ORDER_COLS ? `${l.slice(0, ORDER_COLS - 1)}…` : l))
 }
 
-/** Every party of the company, in company order; a party with no members is left out. */
-export function deployedParties(game: GameState): PartyListEntry[] {
+/** An order line shown in place of a party's own: while the map plays a walk the game has already made, the order it was walking by. */
+export interface ShownOrder {
+  party: string
+  order: string
+}
+
+/** Every party of the company, in company order; a party with no members is left out. `shown` replaces one party's order line. */
+export function deployedParties(game: GameState, shown: ShownOrder | null = null): PartyListEntry[] {
   const { world } = game
   return game.parties
     .filter((expedition) => expedition.members.length > 0)
@@ -123,7 +143,7 @@ export function deployedParties(game: GameState): PartyListEntry[] {
         name: game.parties.length === 1 ? SINGLE_PARTY_NAME : expedition.name,
         members: party,
         position: expedition.position,
-        order: orderLabel(world, expedition),
+        order: shown?.party === expedition.id ? shown.order : orderLabel(world, expedition),
         confronting: location ? { id: location.id, name: location.name } : null,
         hp: party.reduce((sum, member) => sum + member.hp, 0),
         maxHp: party.reduce((sum, member) => sum + maxHp(member), 0),

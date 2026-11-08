@@ -34,7 +34,7 @@ import { CURSORS } from './cursors.ts'
 import { clampOrigin, mapOrigin, pannedOrigin, pressMoved, rectContains, type Rect } from './mapScroll.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { PartyListView } from './PartyListView.ts'
-import { PARTY_LIST_W, deployedParties, partyListInfo } from './partyList.ts'
+import { PARTY_LIST_W, deployedParties, orderLabel, partyListInfo, travelLabel, type PartyListEntry, type ShownOrder } from './partyList.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
@@ -122,6 +122,8 @@ export class WorldScene extends Phaser.Scene {
   private board!: HexBoard
   /** True while the party walks; clicks wait for it to arrive. */
   private walking = false
+  /** While a walk plays: the order line the walking party shows, the order it walked by, which the game may already have ended. */
+  private walkingOrder: ShownOrder | null = null
   /** The map hex under the pointer, or null when it is off the map or over a button. */
   private hovered: Hex | null = null
 
@@ -731,7 +733,7 @@ export class WorldScene extends Phaser.Scene {
    */
   selectParty(id: string): void {
     if (id !== this.selectedParty) {
-      const entry = deployedParties(this.gameState).find((party) => party.id === id)
+      const entry = this.listedParties().find((party) => party.id === id)
       if (!entry) return
       this.selectedParty = id
       this.column.destroy()
@@ -775,6 +777,11 @@ export class WorldScene extends Phaser.Scene {
     return presences(this.gameState.parties)
   }
 
+  /** The company's parties as the list shows them, a walking party by the order it walks by. */
+  private listedParties(): PartyListEntry[] {
+    return deployedParties(this.gameState, this.walkingOrder)
+  }
+
   /** The party the map acts for: the selected one. */
   private expedition(): Expedition {
     return selectedParty(this.gameState, this.selectedParty)
@@ -810,7 +817,7 @@ export class WorldScene extends Phaser.Scene {
       ].join('\n'),
     )
     this.column.refresh(this.active)
-    this.partyList.refresh(deployedParties(this.gameState), this.selectedParty)
+    this.partyList.refresh(this.listedParties(), this.selectedParty)
     this.hintText.setText(
       expedition.confronting !== null
         ? 'Monsters! Scout them, wait, or attack.'
@@ -819,7 +826,8 @@ export class WorldScene extends Phaser.Scene {
           : 'Click a hex to travel there, or camp or pass days below. Each day takes a turn.',
     )
     for (const button of this.buttons) button.setVisible(here !== null && !this.walking && world.status !== 'lost')
-    for (const button of this.timeButtons) button.setVisible(worldActive(world) && expedition.confronting === null && !this.walking)
+    // Among monsters, confronting them or not, the footer offers only Scout, Wait and Attack.
+    for (const button of this.timeButtons) button.setVisible(worldActive(world) && here === null && !this.walking)
     const campable = canCamp(world, expedition)
     for (const button of this.campButtons) button.setVisible(campable && !this.walking)
     this.towerButton.setVisible(campable && !this.walking && towerSiteRefusal(world, expedition) === null)
@@ -890,7 +898,7 @@ export class WorldScene extends Phaser.Scene {
   /** The info panel: the hovered party's summary, else what the player knows of the hovered hex. */
   private refreshInfo(): void {
     const entry =
-      this.hoveredParty === null ? undefined : deployedParties(this.gameState).find((party) => party.id === this.hoveredParty)
+      this.hoveredParty === null ? undefined : this.listedParties().find((party) => party.id === this.hoveredParty)
     const shown = (entry !== undefined || this.hovered !== null) && !this.outcomeShade.visible
     this.infoBox.setVisible(shown)
     this.infoText.setVisible(shown)
@@ -909,23 +917,28 @@ export class WorldScene extends Phaser.Scene {
     if (this.walking || this.outcomeShade.visible) return
     const clicked = this.hexAt(at.x, at.y)
     if (!clicked) return
+    const order = travelLabel(this.world, clicked)
     const journey = travel(this.gameState, this.expedition(), clicked)
     const route = journey.walked
     if (route.length === 0) return
+    // The journey is made as far as the world goes; the walk only shows it.
+    this.save()
 
-    this.playWalk(route, () =>
+    this.playWalk(route, order, () =>
       this.arrive(describeWorldEvents(journey.events, journey.interruptedBy), journey.interruptedBy !== null, journey.events),
     )
   }
 
-  /** Shows the selected party walking `route` (already made in the game), then calls `done`. */
-  private playWalk(route: Hex[], done: () => void): void {
+  /**
+   * Shows the selected party walking `route` (already made in the game, and
+   * saved), its order line saying `order` until the walk ends, then calls `done`.
+   */
+  private playWalk(route: Hex[], order: string, done: () => void): void {
     this.walking = true
+    this.walkingOrder = { party: this.selectedParty, order }
     // A journey brings the view back to the party.
     this.panOrigin = null
     this.messageText.setText('')
-    // The journey is made as far as the world goes; the walk only shows it.
-    this.save()
     this.refreshWalking()
     this.party.play('walk')
     this.tweens.chain({
@@ -946,12 +959,14 @@ export class WorldScene extends Phaser.Scene {
   private refreshWalking(): void {
     this.partyMark.clear()
     for (const button of [...this.buttons, ...this.timeButtons, ...this.campButtons, this.towerButton, this.outpostButton, this.encampmentButton]) button.setVisible(false)
+    this.partyList.refresh(this.listedParties(), this.selectedParty)
     this.refreshHover()
   }
 
   /** The walk has been shown: the party stands where the game has it. */
   private endWalk(): void {
     this.walking = false
+    this.walkingOrder = null
     this.panOrigin = null
     this.applyOrigin()
     // The map has scrolled under the pointer, which is over another hex now.
@@ -979,7 +994,8 @@ export class WorldScene extends Phaser.Scene {
       this.messageText.setText(refusal)
       return
     }
-    this.daysPassed([passDay(this.gameState)!], 1)
+    const order = orderLabel(this.world, this.expedition())
+    this.daysPassed([passDay(this.gameState)!], 1, order)
   }
 
   /** Days pass until something happens, or until `UNTIL_LIMIT` of them have passed quietly. */
@@ -990,15 +1006,18 @@ export class WorldScene extends Phaser.Scene {
       this.messageText.setText(refusal)
       return
     }
-    this.daysPassed(advance(this.gameState), UNTIL_LIMIT)
+    const order = orderLabel(this.world, this.expedition())
+    this.daysPassed(advance(this.gameState), UNTIL_LIMIT, order)
   }
 
   /**
-   * After the days in `reports` have passed in the game: shows the selected
-   * party's steps, then tells what happened, selects and centres the party an
-   * interrupt concerns, and saves.
+   * After the days in `reports` have passed in the game: saves them, as a
+   * journey is saved as it begins, shows the selected party's steps, its line
+   * saying `order` (its order before the days) while they play, then tells
+   * what happened and selects and centres the party an interrupt concerns.
    */
-  private daysPassed(reports: DayReport[], limit: number): void {
+  private daysPassed(reports: DayReport[], limit: number, order: string): void {
+    this.save()
     const steps = reports.flatMap((report) => report.parties.flatMap((day) => (day.party === this.selectedParty && day.walked ? [day.walked] : [])))
     const events = reports.flatMap((report) => report.events)
     const told = describeDays(reports, this.world, limit)
@@ -1007,7 +1026,6 @@ export class WorldScene extends Phaser.Scene {
       if (interrupted !== null) this.selectParty(interrupted)
       this.messageText.setText(told)
       this.refresh()
-      this.save()
       this.checkOutcome()
       this.tell({ kind: 'world_turn', events })
     }
@@ -1015,7 +1033,7 @@ export class WorldScene extends Phaser.Scene {
       finish()
       return
     }
-    this.playWalk(steps, () => {
+    this.playWalk(steps, order, () => {
       this.endWalk()
       finish()
     })

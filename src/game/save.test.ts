@@ -216,6 +216,44 @@ describe('parseSave', () => {
     expect(parseSave(changed((saved) => saved.game.parties.push(structuredClone(saved.game.parties[0]))))).toBeNull()
     expect(parseSave(changed((saved) => (saved.battle = { location: 'goblin_raiders' })))).toBeNull()
   })
+
+  describe('an order', () => {
+    const withOrder = (order: unknown) => parseSave(changed((saved) => (saved.game.parties[0].order = order)))
+    const place = { from: 'worn', party: FIRST_PARTY_ID, member: 0, slot: 'mainHand', itemId: 'iron_sword' }
+
+    it('reads a travel order with its destination and route, and a day order with its action', () => {
+      const orders = [
+        { kind: 'travel', to: hex(5, 6), route: [hex(4, 6), hex(5, 6)] },
+        { kind: 'camp' },
+        ...['scout', 'wait', 'camp', 'tower', 'outpost'].map((kind) => ({ kind: 'day', action: { kind } })),
+        { kind: 'day', action: { kind: 'craft', place, modifier: 'light', grade: 2 } },
+        { kind: 'day', action: { kind: 'embed', place: { from: 'baggage', party: FIRST_PARTY_ID, index: 0, itemId: 'x' }, rune: 'ember1' } },
+        { kind: 'day', action: { kind: 'embed', place: { from: 'backpack', party: FIRST_PARTY_ID, member: 1, index: 2, itemId: 'x' }, rune: 'storm2' } },
+      ]
+      for (const order of orders) expect(withOrder(order)?.game.parties[0].order).toEqual(order)
+    })
+
+    it('refuses a travel order without a destination or with a route that is not of hexes', () => {
+      expect(withOrder({ kind: 'travel', route: [hex(4, 6)] })).toBeNull()
+      expect(withOrder({ kind: 'travel', to: { q: 'a', r: 1 }, route: [] })).toBeNull()
+      expect(withOrder({ kind: 'travel', to: hex(5, 6) })).toBeNull()
+      expect(withOrder({ kind: 'travel', to: hex(5, 6), route: hex(5, 6) })).toBeNull()
+      expect(withOrder({ kind: 'travel', to: hex(5, 6), route: [hex(4, 6), null] })).toBeNull()
+    })
+
+    it('refuses a day order without a known action, or a craft or embed without its fields', () => {
+      expect(withOrder({ kind: 'day' })).toBeNull()
+      expect(withOrder({ kind: 'day', action: { kind: 'dance' } })).toBeNull()
+      expect(withOrder({ kind: 'day', action: { kind: 'craft', place, modifier: 'sparkly', grade: 1 } })).toBeNull()
+      expect(withOrder({ kind: 'day', action: { kind: 'craft', place, modifier: 'light', grade: 4 } })).toBeNull()
+      expect(withOrder({ kind: 'day', action: { kind: 'craft', modifier: 'light', grade: 1 } })).toBeNull()
+      expect(withOrder({ kind: 'day', action: { kind: 'craft', place: { ...place, slot: 'tail' }, modifier: 'light', grade: 1 } })).toBeNull()
+      expect(withOrder({ kind: 'day', action: { kind: 'craft', place: { ...place, from: 'pocket' }, modifier: 'light', grade: 1 } })).toBeNull()
+      expect(withOrder({ kind: 'day', action: { kind: 'craft', place: { ...place, party: 3 }, modifier: 'light', grade: 1 } })).toBeNull()
+      expect(withOrder({ kind: 'day', action: { kind: 'embed', place, rune: 'ember9' } })).toBeNull()
+      expect(withOrder({ kind: 'day', action: { kind: 'embed', place: { from: 'baggage', party: FIRST_PARTY_ID, itemId: 'x' }, rune: 'ember1' } })).toBeNull()
+    })
+  })
 })
 
 describe('a company', () => {

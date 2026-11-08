@@ -2,7 +2,9 @@ import type { Character } from '../character/character.ts'
 import { PERK_IDS } from '../character/perks.ts'
 import { SKILL_IDS } from '../character/skills.ts'
 import type { BattleSnapshot } from '../engine/battleEngine.ts'
-import { itemById, type Equipment, type Item } from '../inventory/inventory.ts'
+import { GRADES } from '../inventory/grades.ts'
+import { EQUIPMENT_SLOT_LABELS, itemById, type Equipment, type Item } from '../inventory/inventory.ts'
+import { MODIFIER_IDS } from '../inventory/modifiers.ts'
 import { isRuneKey } from '../inventory/runes.ts'
 import { FIRST_PARTY_ID, FIRST_PARTY_NAME, ORDER_KINDS, type Expedition } from './expedition.ts'
 import type { GameState } from './gameState.ts'
@@ -145,6 +147,55 @@ function migrateFrom18(game: Record<string, unknown>): void {
 const isHex = (hex: unknown): boolean =>
   typeof hex === 'object' && hex !== null && typeof (hex as { q: unknown }).q === 'number' && typeof (hex as { r: unknown }).r === 'number'
 
+const isIndex = (n: unknown): boolean => Number.isInteger(n) && (n as number) >= 0
+
+/** Whether `place` is an `ItemPlace` as a day action names one (stale or not is the action's to judge). */
+function isPlace(place: unknown): boolean {
+  if (typeof place !== 'object' || place === null) return false
+  const p = place as Record<string, unknown>
+  if (typeof p.party !== 'string' || typeof p.itemId !== 'string') return false
+  switch (p.from) {
+    case 'baggage':
+      return isIndex(p.index)
+    case 'backpack':
+      return isIndex(p.member) && isIndex(p.index)
+    case 'worn':
+      return isIndex(p.member) && typeof p.slot === 'string' && Object.hasOwn(EQUIPMENT_SLOT_LABELS, p.slot)
+    default:
+      return false
+  }
+}
+
+/** Whether `action` is a `DayAction`: a known kind, with a craft's or an embed's fields. */
+function isDayAction(action: unknown): boolean {
+  if (typeof action !== 'object' || action === null) return false
+  const a = action as Record<string, unknown>
+  switch (a.kind) {
+    case 'scout':
+    case 'wait':
+    case 'camp':
+    case 'tower':
+    case 'outpost':
+      return true
+    case 'craft':
+      return isPlace(a.place) && (MODIFIER_IDS as unknown[]).includes(a.modifier) && (GRADES as unknown[]).includes(a.grade)
+    case 'embed':
+      return isPlace(a.place) && typeof a.rune === 'string' && isRuneKey(a.rune)
+    default:
+      return false
+  }
+}
+
+/** Whether `order` is an `Order`: a known kind, a travel order with its destination and the hexes still to walk, a day order with its action. */
+function isOrder(order: unknown): boolean {
+  if (typeof order !== 'object' || order === null) return false
+  const o = order as Record<string, unknown>
+  if (!ORDER_KINDS.includes(o.kind as never)) return false
+  if (o.kind === 'travel') return isHex(o.to) && Array.isArray(o.route) && o.route.every(isHex)
+  if (o.kind === 'day') return isDayAction(o.action)
+  return true
+}
+
 /** Null for anything that is not a save of this version (or version 18, migrated), or names an item, perk or skill the game does not have. */
 export function parseSave(raw: string | null): SaveFile | null {
   if (raw === null) return null
@@ -160,7 +211,7 @@ export function parseSave(raw: string | null): SaveFile | null {
     check(game.parties.every((party) => party && typeof party.id === 'string' && typeof party.name === 'string'))
     check(new Set(game.parties.map((party) => party.id)).size === game.parties.length)
     check(game.parties.every((party) => Array.isArray(party.members) && party.members.length > 0 && Array.isArray(party.baggage)))
-    check(game.parties.every((party) => party.order && ORDER_KINDS.includes(party.order.kind)))
+    check(game.parties.every((party) => isOrder(party.order)))
     check(game.parties.every((party) => isHex(party.position) && (party.confronting === null || typeof party.confronting === 'string')))
     check(game.world && typeof game.world === 'object' && Array.isArray(game.world.locations))
     const { world } = game

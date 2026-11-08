@@ -505,13 +505,55 @@ describe('the world map', () => {
       expect(order(healed)).toBe('Idle')
     })
 
-    it('hides both buttons while the party stands before monsters', async () => {
+    it('hides both buttons while the party stands before monsters, and after it scouts them', async () => {
       const game = await games.open()
       await game.newGame()
       const among = await game.travelTo(RAIDERS.position)
       expect(among.buttons.nextDay.visible).toBe(false)
       expect(among.buttons.untilSomething.visible).toBe(false)
       expect(among.parties[0].order).toBe(`Before the Goblin Raiders`)
+      // Scouting answers the monsters, but the party still stands among them: Scout, Wait and Attack are all the footer offers.
+      await game.click(among.buttons.scout)
+      const scouted = await game.waitFor('World', (w) => w.world.turn === among.world.turn + 1)
+      expect(scouted.confronting).toBeNull()
+      expect(scouted.buttons.attack.visible).toBe(true)
+      expect(scouted.buttons.nextDay.visible).toBe(false)
+      expect(scouted.buttons.untilSomething.visible).toBe(false)
+    })
+
+    /** Slows the game below life speed, so that a walk lasts long enough to be seen under way however slow the frames. */
+    const slowly = (game: Game) => game.page.evaluate(() => (window.__yomi!.speed = 0.2))
+    const savedTurn = (game: Game) => game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!).game.world.turn as number)
+
+    it('says the party is travelling while its walk plays, and has saved the days walked', async () => {
+      const game = await games.open()
+      const home = await game.newGame()
+      await slowly(game)
+      await game.click(worldHexOnScreen(home, offsetToHex(19, 19)))
+      const walking = await game.waitFor('World', (w) => w.walking)
+      expect(order(walking)).toMatch(/^Travelling/)
+      expect(await savedTurn(game)).toBe(walking.world.turn)
+      const stopped = await game.waitFor('World', (w) => !w.walking)
+      expect(order(stopped)).toMatch(/^(Travelling|Idle$)/)
+    })
+
+    it('says the party is travelling while Next day and Until something happens play its walk, and saves before', async () => {
+      const game = await games.open()
+      const home = await game.newGame()
+      const far = offsetToHex(19, 19)
+      await game.click(worldHexOnScreen(home, far))
+      const stopped = await game.waitFor('World', (w) => !w.walking && w.world.turn > home.world.turn)
+      expect(order(stopped)).toMatch(/^Travelling/)
+      await slowly(game)
+      for (const button of ['nextDay', 'untilSomething'] as const) {
+        const before = await game.waitFor('World', (w) => !w.walking)
+        if (!order(before).startsWith('Travelling')) break
+        await game.click(before.buttons[button])
+        const walking = await game.waitFor('World', (w) => w.walking)
+        expect(order(walking)).toMatch(/^Travelling/)
+        expect(await savedTurn(game)).toBe(walking.world.turn)
+        expect(walking.world.turn).toBeGreaterThan(before.world.turn)
+      }
     })
 
     it('fits the footer and the order line in the least window', async () => {
