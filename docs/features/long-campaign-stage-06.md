@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 6 (multiple parties)
 
 **Slug:** long-campaign-stage-06
-**Phase:** implementation (step 03)
+**Phase:** implementation (step 04)
 
 ## Request (user's words)
 
@@ -57,4 +57,6 @@ Large/structural, but the stage design is the approved design (marked ready for 
 - Step 01 review (opus): clean; 50-campaign log identical on clean copies of b9682cd and f5b9f3a; npm test 1359. Nits: no two-party finishCampaign test (to step 09); duplicate 'Execution record' heading in 01's task file and a curly apostrophe in index row 01 (to step 02).
 - Step 02 (8971db5, 1dbb25d, sonnet): SavedBattle.party, SAVE 21, parseSave validates, Menu load passes party; npm test 1362; browser 98/98; guard + 50 hash identical.
 - Step 02 review (opus): clean. Nits: CLAUDE.md abbreviates the 50-campaign hash as ...2765 (full ends ...f52d76) — to step 11; two-party reload in the browser waits for step 03+.
+- Step 03 (b425c77, 3a0e909, opus): home/garrison/meet orders, met event, stop short of another party's nest, partyNoun/blockingParty, SAVE 22; npm test 1385; guard + 50 hash identical. Simulator order type narrowed to idle/travel/camp (step 10 widens).
+- Step 03 review (opus): clean; 2 edge cases fixed anyway (679043e: meet left on unconfronted monsters confronts; meet with no route ends idle); re-review clean; npm test 1387. Note to step 07: travel to a nest another party holds is accepted then stops short next day — refuse or warn up front.
 
