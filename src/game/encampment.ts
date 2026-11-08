@@ -1,6 +1,6 @@
 import { SHRINE_STRENGTH } from './blight.ts'
 import { MAX_SHRINE_LEVEL, atEncampment, canAfford, describeCost, raiseShrine, shrineCost } from './buildings.ts'
-import type { GameState } from './gameState.ts'
+import { leader, type GameState } from './gameState.ts'
 import { GUILD_HALL_LEVELS, MAX_GUILD_HALL_LEVEL, upgradeCost, upgradeGuildHall } from './guildHall.ts'
 import { MAX_WORKSHOP_LEVEL, upgradeWorkshop, workshopCost } from './crafting.ts'
 import { MAX_INFIRMARY_LEVEL, infirmaryCost, infirmaryEffect, raiseInfirmary } from './infirmary.ts'
@@ -78,7 +78,7 @@ const FACILITIES: readonly Facility[] = [
     about: (game) => `A holy place whose wards help ${encampmentName(game.world)} hold its land against the blight.`,
     effect: (game, level) => `${encampmentName(game.world)} pushes back the blight with ${SHRINE_STRENGTH * level} more strength.`,
     cost: (game) => shrineCost(game.world),
-    improve: (game) => raiseShrine(game.world),
+    improve: (game) => raiseShrine(game.world, leader(game)),
     opens: false,
   },
   {
@@ -162,7 +162,7 @@ export function setFacilityLevel(game: GameState, id: FacilityId, level: number)
 }
 
 function improveRefusal(game: GameState, cost: Stock | null): string | null {
-  if (!atEncampment(game.world)) return `The party is not at ${encampmentName(game.world)}.`
+  if (!atEncampment(game.world, leader(game))) return `The party is not at ${encampmentName(game.world)}.`
   if (cost && !canAfford(game.world.stock, cost)) return `It costs ${describeCost(cost)}, more than the stock holds.`
   return null
 }

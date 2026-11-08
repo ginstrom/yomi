@@ -28,7 +28,7 @@ describe('deployedParties', () => {
     expect(entry.id).toBe('party_1')
     expect(entry.name).toBe(SINGLE_PARTY_NAME)
     expect(entry.members).toEqual(leader(game).members)
-    expect(entry.position).toEqual(game.world.party)
+    expect(entry.position).toEqual(leader(game).position)
     expect(entry.hp).toBe(leader(game).members.reduce((sum, m) => sum + m.hp, 0))
     expect(entry.maxHp).toBe(leader(game).members.reduce((sum, m) => sum + maxHp(m), 0))
     expect(entry.confronting).toBeNull()
@@ -37,10 +37,10 @@ describe('deployedParties', () => {
   it('tells which monsters the party stands before', () => {
     const game = newGame(undefined, null, 1)
     const monsters = game.world.locations.find((l) => l.kind === 'monsters')!
-    for (let tries = 0; tries < 10 && !hexEquals(game.world.party, monsters.position); tries++) {
-      travel(game.world, monsters.position, leader(game).members)
+    for (let tries = 0; tries < 10 && !hexEquals(leader(game).position, monsters.position); tries++) {
+      travel(game, leader(game), monsters.position)
     }
-    expect(game.world.confronting).toBe(monsters.id)
+    expect(leader(game).confronting).toBe(monsters.id)
     expect(deployedParties(game)[0].confronting).toEqual({ id: monsters.id, name: monsters.name })
   })
 

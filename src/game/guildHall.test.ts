@@ -32,9 +32,9 @@ function atHome(): GameState {
 describe('the guild hall', () => {
   it('is open only at Oakvale, while the game goes on', () => {
     const game = atHome()
-    expect(atGuildHall(game.world)).toBe(true)
-    game.world.party = offsetToHex(11, 19)
-    expect(atGuildHall(game.world)).toBe(false)
+    expect(atGuildHall(game.world, leader(game))).toBe(true)
+    leader(game).position = offsetToHex(11, 19)
+    expect(atGuildHall(game.world, leader(game))).toBe(false)
     expect(upgradeGuildHall(game)).toMatch(/Oakvale/)
     expect(recruit(game, GARRICK)).toMatch(/Oakvale/)
     expect(toReserves(game, 0)).toMatch(/Oakvale/)

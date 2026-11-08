@@ -276,8 +276,8 @@ describe('a battle', () => {
     await game.waitForScenes(['World'])
     const world = await game.waitFor('World')
     expect(world.world.locations.some((l) => l.id === RAIDERS.id)).toBe(false)
-    expect(world.world.confronting).toBeNull()
-    expect(world.world.party).toEqual(RAIDERS.position)
+    expect(world.confronting).toBeNull()
+    expect(world.partyAt).toEqual(RAIDERS.position)
     expect(world.buttons.attack.visible).toBe(false)
   })
 

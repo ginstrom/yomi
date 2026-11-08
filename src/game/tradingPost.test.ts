@@ -84,7 +84,7 @@ describe('the trading post', () => {
 
   it('is refused away from home', () => {
     const game = home()
-    game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
+    leader(game).position = { q: leader(game).position.q + 1, r: leader(game).position.r }
     expect(buy(game, 'iron_sword')).toMatch(/at Hearthold/)
     expect(sell(game, sellables(game)[0].place)).toMatch(/at Hearthold/)
     expect(sellMaterial(game, 'salt', 2)).toMatch(/at Hearthold/)
@@ -201,7 +201,7 @@ describe('trading post level 4', () => {
 describe('the trading post\'s runes', () => {
   const away = () => {
     const game = home()
-    game.world.party = { q: game.world.party.q + 3, r: game.world.party.r }
+    leader(game).position = { q: leader(game).position.q + 3, r: leader(game).position.r }
     return game
   }
 

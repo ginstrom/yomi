@@ -7,6 +7,7 @@ import type { SpellId } from './combat/spells.ts'
 import type { BattleEvent, BattleState, UnitId } from './engine/battleEngine.ts'
 import type { FacilityId } from './game/encampment.ts'
 import type { WorldState } from './game/worldMap.ts'
+import type { Hex } from './grid/hex.ts'
 import type { FamilyId } from './inventory/catalog.ts'
 import type { EquipmentSlot } from './inventory/inventory.ts'
 import type { RuneKey } from './inventory/runes.ts'
@@ -132,6 +133,10 @@ export interface PartyListProbe extends Point {
 
 export interface WorldProbe {
   world: WorldState
+  /** The hex the selected party stands on. */
+  partyAt: Hex
+  /** The monster location the selected party walked into and has not answered, or null. */
+  confronting: string | null
   walking: boolean
   /** Where the map's top-left corner is on screen; with WORLD_LAYOUT, that places every hex. */
   origin: Point

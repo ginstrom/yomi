@@ -304,7 +304,8 @@ describe('the manual’s screenshots', () => {
 
     // Then a walk to the edge of the nearest corrupted land, to see it.
     const camped = await game.settled('World')
-    const { party, blight } = camped.world
+    const { blight } = camped.world
+    const party = camped.partyAt
     const hexAt = (i: number) => offsetToHex(i % WORLD_SIZE.cols, Math.floor(i / WORLD_SIZE.cols))
     const byDistance = (from: Hex) => (a: number, b: number) => hexDistance(from, hexAt(a)) - hexDistance(from, hexAt(b))
     const corrupted = blight.map((_, i) => i).filter((i) => blight[i] === 3).sort(byDistance(party))[0]

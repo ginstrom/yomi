@@ -5,7 +5,7 @@ import { MODIFIERS, modifiersFor, type Modifier, type ModifierId } from '../inve
 import type { WorldEvent } from './blight.ts'
 import { atEncampment, canAfford, describeCost, spend } from './buildings.ts'
 import { canCamp } from './camp.ts'
-import { soloPresences } from './expedition.ts'
+import { presences, type Expedition } from './expedition.ts'
 import { leader, type GameState } from './gameState.ts'
 import { STALE, allPlaces, itemAt, replaceAt, type ItemPlace } from './itemPlace.ts'
 import type { Stock } from './territory.ts'
@@ -40,7 +40,7 @@ export function workshopCost(world: WorldState): Stock | null {
 /** Builds the workshop or raises it a level, at once; returns why it cannot, or null when done. */
 export function upgradeWorkshop(game: GameState): string | null {
   const { world } = game
-  if (!atEncampment(world)) return notHere(world)
+  if (!atEncampment(world, leader(game))) return notHere(world)
   const cost = workshopCost(world)
   if (!cost) return 'The workshop is as great as it gets.'
   if (!canAfford(world.stock, cost)) return `The next level costs ${describeCost(cost)}, more than the stock holds.`
@@ -50,8 +50,8 @@ export function upgradeWorkshop(game: GameState): string | null {
 }
 
 /** The workshop, where the party stands at the encampment with one built; else the field. */
-export function craftTier(world: WorldState): CraftTier {
-  return atEncampment(world) && world.workshop > 0 ? world.workshop : 'field'
+export function craftTier(world: WorldState, party: Expedition): CraftTier {
+  return atEncampment(world, party) && world.workshop > 0 ? world.workshop : 'field'
 }
 
 /** The tier's level: the field's is 0, and it makes grade 1 like the first workshop. */
@@ -89,15 +89,15 @@ export function itemRefusal(item: Item, tier: CraftTier): string | null {
 
 /** Every item the party has that crafting could work, member by member (worn, then carried), then the baggage's; one no modifier here fits says why. */
 export function craftables(game: GameState): Array<{ place: ItemPlace; item: Item; refusal: string | null }> {
-  const tier = craftTier(game.world)
+  const tier = craftTier(game.world, leader(game))
   return allPlaces(game)
     .filter(({ item }) => baseItem(item) && modifiersFor(baseItem(item)!.family!).length > 0)
     .map(({ place, item }) => ({ place, item, refusal: itemRefusal(item, tier) }))
 }
 
 /** Why crafting cannot be done where the party stands, or null. */
-function placeRefusal(world: WorldState, tier: CraftTier): string | null {
-  return tier === 'field' && !canCamp(world) ? 'Nothing can be crafted here now.' : null
+function placeRefusal(game: GameState, tier: CraftTier): string | null {
+  return tier === 'field' && !canCamp(game.world, leader(game)) ? 'Nothing can be crafted here now.' : null
 }
 
 /** Every modifier unlocked here that fits the item at `place`, at every grade allowed here; empty for a stale place. */
@@ -105,8 +105,8 @@ export function options(game: GameState, place: ItemPlace): CraftOption[] {
   const item = itemAt(game, place)
   const base = item && baseItem(item)
   if (!item || !base) return []
-  const tier = craftTier(game.world)
-  const where = placeRefusal(game.world, tier)
+  const tier = craftTier(game.world, leader(game))
+  const where = placeRefusal(game, tier)
   return modifiersFor(base.family!)
     .filter((mod) => mod.unlock <= tierLevel(tier))
     .flatMap((modifier) =>
@@ -129,8 +129,8 @@ export function craft(game: GameState, place: ItemPlace, modifier: ModifierId, g
   const { world } = game
   const item = itemAt(game, place)
   if (!item) return { refusal: STALE }
-  const tier = craftTier(world)
-  const refusal = placeRefusal(world, tier) ?? itemRefusal(item, tier)
+  const tier = craftTier(world, leader(game))
+  const refusal = placeRefusal(game, tier) ?? itemRefusal(item, tier)
   if (refusal) return { refusal }
   const option = options(game, place).find((o) => o.modifier.id === modifier && o.grade === grade)
   if (!option) {
@@ -142,6 +142,6 @@ export function craft(game: GameState, place: ItemPlace, modifier: ModifierId, g
   if (option.refusal) return { refusal: option.refusal }
   spend(world.stock, option.cost)
   replaceAt(game, place, option.result)
-  const events = tier === 'field' ? passTurn(world, soloPresences(world, leader(game).members)) : []
+  const events = tier === 'field' ? passTurn(world, presences(game.parties)) : []
   return { refusal: null, item: option.result, events }
 }

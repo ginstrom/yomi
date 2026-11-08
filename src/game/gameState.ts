@@ -5,7 +5,7 @@ import { newStoryState, type StoryState } from '../story/story.ts'
 import { newExpedition, type Expedition } from './expedition.ts'
 import { readyMadeParty, type Party } from './party.ts'
 import type { SlotId } from './saveSlots.ts'
-import { newWorld, type MonsterLocation, type WorldState } from './worldMap.ts'
+import { encampment, newWorld, type MonsterLocation, type WorldState } from './worldMap.ts'
 
 /**
  * Everything that persists across scenes for one playthrough, and what a save
@@ -15,7 +15,8 @@ import { newWorld, type MonsterLocation, type WorldState } from './worldMap.ts'
 export interface GameState {
   /**
    * The company's parties in order (expedition.ts); never empty while the
-   * game lasts, and one today. Each holds its members and its baggage, the
+   * game lasts, and one today. Each holds its members, where it stands, the
+   * monsters it faces, and its baggage, the
    * shared pile of items that travels with it: loot goes into it, and on the
    * world map members take from it and put into it, which is how an item
    * passes from one to another.
@@ -48,7 +49,8 @@ export function newGame(
   encampmentName?: string,
   tutorial = false,
 ): GameState {
-  return { parties: [newExpedition(party)], world: newWorld(seed, encampmentName), runes: {}, reserves: [], slot, story: newStoryState(tutorial) }
+  const world = newWorld(seed, encampmentName)
+  return { parties: [newExpedition(party, encampment(world).position)], world, runes: {}, reserves: [], slot, story: newStoryState(tutorial) }
 }
 
 /** The first party: a stopgap while the readers move to explicit parties (stage 5 step 05 removes it). */

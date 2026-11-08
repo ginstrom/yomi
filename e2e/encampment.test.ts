@@ -367,7 +367,7 @@ describe('the encampment', () => {
     const game = await games.open()
     const home = await richAtHome(game, { gold: 20 }, undefined, { 'parties.0.members.0.equipment.mainHand': 'iron_sword@3', runes: { ember1: 1 } })
     // A hex off the encampment, out in the field proper.
-    const { q, r } = home.world.party
+    const { q, r } = home.partyAt
     await game.travelTo({ q: q + 1, r })
     const away = await game.settled('World', (w) => !w.walking)
     expect(away.world.turn).toBe(2)

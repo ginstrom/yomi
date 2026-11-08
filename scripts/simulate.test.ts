@@ -19,7 +19,7 @@ import { runePrice, salePrice } from '../src/game/tradingPost.ts'
 import { pouchKeys } from '../src/inventory/runes.ts'
 import { extractRefusal } from '../src/game/runecraft.ts'
 import type { EncounterId } from '../src/game/encounters.ts'
-import { SOURCE_ID, newWorld, type MonsterLocation } from '../src/game/worldMap.ts'
+import { SOURCE_ID, type MonsterLocation } from '../src/game/worldMap.ts'
 import {
   CAMPAIGN_SEED_STEP,
   MAX_CAMPAIGN_DAYS,
@@ -343,8 +343,9 @@ describe('summarizeCampaigns, the levels', () => {
 
 describe('nextTarget', () => {
   it('answers the nest pushing on a threatened site before the nearest', () => {
-    const world = newWorld(1)
-    const party = readyMadeParty()
+    const game = newGame(readyMadeParty(), null, 1)
+    const { world } = game
+    const party = leader(game)
     expect(nextTarget(world, party)?.id).toBe('goblin_raiders')
     const goldSeam = world.locations.find((l) => l.id === 'gold_seam')!
     const besiegers: MonsterLocation = {
@@ -359,23 +360,25 @@ describe('nextTarget', () => {
   })
 
   it('marches on the Source once every member is ready, or nothing else is left', () => {
-    const world = newWorld(1)
-    const party = readyMadeParty()
-    for (const member of party) member.level = SOURCE_READY_LEVEL
+    const game = newGame(readyMadeParty(), null, 1)
+    const { world } = game
+    const party = leader(game)
+    for (const member of party.members) member.level = SOURCE_READY_LEVEL
     expect(nextTarget(world, party)?.id).toBe(SOURCE_ID)
-    party[0].level = 1
+    party.members[0].level = 1
     expect(nextTarget(world, party)?.id).not.toBe(SOURCE_ID)
     world.locations = world.locations.filter((l) => l.kind !== 'monsters' || (l.kind === 'monsters' && l.source))
     expect(nextTarget(world, party)?.id).toBe(SOURCE_ID)
   })
 
   it('marches on the Source once every member has the ready level it is given', () => {
-    const world = newWorld(1)
-    const party = readyMadeParty()
-    party.forEach((member, i) => (member.level = 3 + i))
+    const game = newGame(readyMadeParty(), null, 1)
+    const { world } = game
+    const party = leader(game)
+    party.members.forEach((member, i) => (member.level = 3 + i))
     expect(nextTarget(world, party)?.id).not.toBe(SOURCE_ID)
     expect(nextTarget(world, party, 3)?.id).toBe(SOURCE_ID)
-    for (const member of party) member.level = SOURCE_READY_LEVEL
+    for (const member of party.members) member.level = SOURCE_READY_LEVEL
     expect(nextTarget(world, party, SOURCE_READY_LEVEL + 1)?.id).not.toBe(SOURCE_ID)
     expect(nextTarget(world, party, SOURCE_READY_LEVEL)?.id).toBe(SOURCE_ID)
   })
@@ -420,18 +423,20 @@ describe('the shrine and outposts in a campaign', () => {
   })
 
   it('puts an outpost on the nearest held site without one, within reach, when the stock affords it', () => {
-    const world = newWorld(1)
+    const game = newGame(undefined, null, 1)
+    const { world } = game
+    const party = leader(game)
     const goldSeam = world.locations.find((l) => l.id === 'gold_seam')!
     world.held = [...new Set([...world.held, 'gold_seam'])]
-    world.party = { q: goldSeam.position.q - 2, r: goldSeam.position.r }
-    expect(outpostErrand(world)).toBeNull()
+    party.position = { q: goldSeam.position.q - 2, r: goldSeam.position.r }
+    expect(outpostErrand(world, party)).toBeNull()
     world.stock = { ...OUTPOST_COST }
-    expect(outpostErrand(world)?.id).toBe('gold_seam')
+    expect(outpostErrand(world, party)?.id).toBe('gold_seam')
     world.outposts = ['gold_seam']
-    expect(outpostErrand(world)?.id).not.toBe('gold_seam')
+    expect(outpostErrand(world, party)?.id).not.toBe('gold_seam')
     world.outposts = []
-    world.party = { q: goldSeam.position.q + OUTPOST_ERRAND_RADIUS + 8, r: goldSeam.position.r }
-    expect(outpostErrand(world)?.id).not.toBe('gold_seam')
+    party.position = { q: goldSeam.position.q + OUTPOST_ERRAND_RADIUS + 8, r: goldSeam.position.r }
+    expect(outpostErrand(world, party)?.id).not.toBe('gold_seam')
   })
 })
 
@@ -528,7 +533,7 @@ describe('the trading post and crafting in a campaign', () => {
 
   it('crafts one piece in the field, a day, and nothing it already has', () => {
     const game = newGame(undefined, null, 1)
-    game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
+    leader(game).position = { q: leader(game).position.q + 1, r: leader(game).position.r }
     game.world.stock = { gold: 50, iron: 50, timber: 50 }
     expect(craftGear(game, 1).crafted).toBe(1)
     expect(game.world.turn).toBe(2)
@@ -541,7 +546,7 @@ describe('the trading post and crafting in a campaign', () => {
   it('hands back the events of the days a field craft passes, for the campaign to tally', () => {
     const make = () => {
       const game = newGame(undefined, null, 1)
-      game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
+      leader(game).position = { q: leader(game).position.q + 1, r: leader(game).position.r }
       game.world.stock = { gold: 50, iron: 50, timber: 50 }
       return game
     }

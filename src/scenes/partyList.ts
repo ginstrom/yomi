@@ -8,7 +8,7 @@ import { HEADER_BOTTOM } from './partyPanel.ts'
 /**
  * The parties the world map lists down its right side, and where each entry
  * sits. `deployedParties` is the only reader of the single party the game
- * holds today (`leader(game).members` at `game.world.party`); when stage 05 gives the
+ * holds today (`leader(game)`, its members where it stands); when stage 05 gives the
  * company several parties, it maps `game.parties` here and nothing else moves.
  */
 
@@ -39,16 +39,17 @@ export interface PartyListEntry {
 
 /** Every party of the company, in company order: one today, none for an empty party. */
 export function deployedParties(game: GameState): PartyListEntry[] {
-  const party = leader(game).members
+  const expedition = leader(game)
+  const party = expedition.members
   const { world } = game
   if (party.length === 0) return []
-  const location = world.confronting === null ? undefined : world.locations.find((l) => l.id === world.confronting)
+  const location = expedition.confronting === null ? undefined : world.locations.find((l) => l.id === expedition.confronting)
   return [
     {
       id: FIRST_PARTY_ID,
       name: SINGLE_PARTY_NAME,
       members: party,
-      position: world.party,
+      position: expedition.position,
       confronting: location ? { id: location.id, name: location.name } : null,
       hp: party.reduce((sum, member) => sum + member.hp, 0),
       maxHp: party.reduce((sum, member) => sum + maxHp(member), 0),

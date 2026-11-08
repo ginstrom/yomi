@@ -22,7 +22,7 @@ describe('the infirmary', () => {
     ] as const) {
       const game = wounded(level)
       const soldier = leader(game).members[0]
-      campDay(game.world, leader(game).members)
+      campDay(game, leader(game))
       expect(soldier.hp, `level ${level}`).toBe(expected(maxHp(soldier)))
       expect(leader(game).members[2].mana).toBe(maxMana(leader(game).members[2]))
     }
@@ -34,9 +34,9 @@ describe('the infirmary', () => {
       [3, FIELD_DRESSING_PER_DAY],
     ]) {
       const game = wounded(level)
-      game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
-      expect(restHealing(game.world, leader(game).members[0])).toBe(healed)
-      campDay(game.world, leader(game).members)
+      leader(game).position = { q: leader(game).position.q + 1, r: leader(game).position.r }
+      expect(restHealing(game.world, leader(game), leader(game).members[0])).toBe(healed)
+      campDay(game, leader(game))
       expect(leader(game).members[0].hp).toBe(1 + healed)
       expect(leader(game).members[2].mana).toBe(maxMana(leader(game).members[2]))
     }

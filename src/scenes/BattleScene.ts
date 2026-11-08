@@ -15,7 +15,6 @@ import {
 } from '../engine/battleEngine.ts'
 import { POLICIES, type PolicyName } from '../engine/policies.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId, type UnitKind } from '../game/encounters.ts'
-import { soloPresences } from '../game/expedition.ts'
 import { leader, newGame, takeLoot, type GameState } from '../game/gameState.ts'
 import { takeRunes } from '../game/loot.ts'
 import { Ground, pileChanges } from '../game/ground.ts'
@@ -2100,7 +2099,7 @@ export class BattleScene extends Phaser.Scene {
     // Runes roll from the battle's own seed, so a reloaded battle finds the same; a debug fight has no location and none.
     const seed = battleSeed(this.engine.getLog())
     const foundRunes = playerWon && this.location && seed !== null ? takeRunes(this.gameState, this.location.threat, this.location.encounter, seed) : []
-    if (playerWon && this.location) clearLocation(this.gameState.world, this.location.id, soloPresences(this.gameState.world, leader(this.gameState).members))
+    if (playerWon && this.location) clearLocation(this.gameState, this.location.id)
     const foes = this.location ? `The ${this.location.name}` : 'Your foes'
     // The reward goes by the hit points the party ended on: who fell, and so who is dead.
     this.syncUnitsFromEngine()

@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { blightAt, boardIndex } from './blight.ts'
-import { soloPresences } from './expedition.ts'
+import { presences, type PartyPresence } from './expedition.ts'
+import { leader, newGame } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
 import { LOSS_LEVEL, YIELD_DAYS, daysToFall, siteYield, sites, updateTerritory } from './territory.ts'
 import { ENCAMPMENT_ID, newWorld, passTurn, travel, type MonsterLocation, type QuietLocation, type WorldState } from './worldMap.ts'
 
-const party = readyMadeParty()
+/** A new game on world `seed`: its world and its one party, the ready-made three, at home. */
+function solo(seed: number) {
+  const game = newGame(readyMadeParty(), null, seed)
+  return { game, world: game.world, party: leader(game) }
+}
 const site = (world: WorldState, id: string) => sites(world).find((l) => l.id === id)!
 const setLevel = (world: WorldState, l: QuietLocation, level: number) => (world.blight[boardIndex(world.board, l.position)] = level)
 
@@ -27,14 +32,14 @@ describe('held sites', () => {
   })
 
   it('are captured when their land is clean and lost when it is blighted', () => {
-    const world = newWorld(1)
+    const { game, world } = solo(1)
     const goldSeam = site(world, 'gold_seam')
     const ironVein = site(world, 'iron_vein')
     setLevel(world, goldSeam, 0)
     setLevel(world, ironVein, LOSS_LEVEL)
     world.held = world.held.filter((id) => id !== 'gold_seam')
     if (!world.held.includes('iron_vein')) world.held.push('iron_vein')
-    const events = updateTerritory(world, soloPresences(world, party))
+    const events = updateTerritory(world, presences(game.parties))
     expect(events).toContainEqual({ type: 'site_captured', site: 'gold_seam', name: 'Gold Seam' })
     expect(events).toContainEqual({ type: 'site_lost', site: 'iron_vein', name: 'Iron Vein' })
     expect(world.held).toContain('gold_seam')
@@ -42,51 +47,51 @@ describe('held sites', () => {
   })
 
   it('come under threat once, with the days until they fall', () => {
-    const world = newWorld(1)
+    const { game, world } = solo(1)
     besiege(world, 'gold_seam')
-    const days = daysToFall(world, soloPresences(world, party), site(world, 'gold_seam'))!
+    const days = daysToFall(world, presences(game.parties), site(world, 'gold_seam'))!
     expect(days).toBeGreaterThan(0)
-    const first = passTurn(world, soloPresences(world, party))
+    const first = passTurn(world, presences(game.parties))
     expect(first.find((e) => e.type === 'site_threatened')).toMatchObject({ site: 'gold_seam' })
-    expect(passTurn(world, soloPresences(world, party)).some((e) => e.type === 'site_threatened')).toBe(false)
+    expect(passTurn(world, presences(game.parties)).some((e) => e.type === 'site_threatened')).toBe(false)
     expect(world.threatened).toContain('gold_seam')
     // It falls about when it was told it would.
     let fell = 2
     while (world.held.includes('gold_seam')) {
-      passTurn(world, soloPresences(world, party))
+      passTurn(world, presences(game.parties))
       fell++
     }
     expect(Math.abs(fell - days)).toBeLessThanOrEqual(1)
   })
 
   it('are not threatened where the clean side holds', () => {
-    const world = newWorld(1)
-    expect(daysToFall(world, soloPresences(world, party), site(world, ENCAMPMENT_ID))).toBeNull()
+    const { game, world } = solo(1)
+    expect(daysToFall(world, presences(game.parties), site(world, ENCAMPMENT_ID))).toBeNull()
   })
 })
 
 describe('the encampment', () => {
   it('lost to the blight loses the game, and nothing more can be done', () => {
-    const world = newWorld(1)
+    const { game, world, party } = solo(1)
     setLevel(world, site(world, ENCAMPMENT_ID), LOSS_LEVEL)
-    expect(updateTerritory(world, soloPresences(world, party))).toContainEqual({ type: 'encampment_lost', name: 'Oakvale' })
+    expect(updateTerritory(world, presences(game.parties))).toContainEqual({ type: 'encampment_lost', name: 'Oakvale' })
     expect(world.status).toBe('lost')
     const turn = world.turn
-    expect(travel(world, { q: world.party.q + 2, r: world.party.r }, party).walked).toEqual([])
+    expect(travel(game, party, { q: party.position.q + 2, r: party.position.r }).walked).toEqual([])
     expect(world.turn).toBe(turn)
   })
 })
 
 describe('yields', () => {
   it('come every YIELD_DAYS from each held site, half from a tainted one', () => {
-    const world = newWorld(1)
+    const { game, world } = solo(1)
     const ironVein = site(world, 'iron_vein')
     world.held = [ENCAMPMENT_ID, 'iron_vein']
     setLevel(world, ironVein, 1)
     world.turn = YIELD_DAYS - 1
-    expect(updateTerritory(world, soloPresences(world, party)).some((e) => e.type === 'yield')).toBe(false)
+    expect(updateTerritory(world, presences(game.parties)).some((e) => e.type === 'yield')).toBe(false)
     world.turn = YIELD_DAYS
-    const events = updateTerritory(world, soloPresences(world, party)).filter((e) => e.type === 'yield')
+    const events = updateTerritory(world, presences(game.parties)).filter((e) => e.type === 'yield')
     expect(events).toContainEqual({ type: 'yield', site: ENCAMPMENT_ID, name: 'Oakvale', ...siteYield(world, site(world, ENCAMPMENT_ID)) })
     expect(events).toContainEqual({ type: 'yield', site: 'iron_vein', name: 'Iron Vein', material: 'iron', amount: siteYield(world, ironVein).amount / 2 })
     // Every held site yields, the ones captured that day too, and the stock is what they yielded.
@@ -99,15 +104,14 @@ describe('yields', () => {
 /** Today's days to fall, pinned before the world's rules took a list of parties (stage 5 step 02). Only `pinned` may change. */
 describe('the days to fall with one party, pinned', () => {
   const members = [{ level: 3 }, { level: 4 }, { level: 5 }]
-  const pinned = (world: WorldState) => soloPresences(world, members)
+  const pinned = (at: PartyPresence['position']): PartyPresence[] => [{ position: at, levels: members.map((m) => m.level) }]
 
   it('counts the same days for a besieged site, the party’s reach included', () => {
     const fallsIn = (dq: number) => {
       const world = newWorld(1)
       besiege(world, 'gold_seam')
       const { position } = site(world, 'gold_seam')
-      world.party = { q: position.q + dq, r: position.r }
-      return daysToFall(world, pinned(world), site(world, 'gold_seam'))
+      return daysToFall(world, pinned({ q: position.q + dq, r: position.r }), site(world, 'gold_seam'))
     }
     expect([-4, -5, -6, -7, -8].map(fallsIn)).toEqual([null, 120, 60, 40, 30])
   })

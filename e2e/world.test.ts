@@ -13,12 +13,12 @@ describe('the world map', () => {
     const game = await games.open()
     const start = await game.newGame()
     expect(start.world.turn).toBe(1)
-    expect(start.world.party).toEqual(offsetToHex(9, 19))
+    expect(start.partyAt).toEqual(offsetToHex(9, 19))
     expect(start.buttons.attack.visible).toBe(false)
 
     const arrived = await game.travelTo(offsetToHex(11, 19))
     expect(arrived.world.turn).toBe(3)
-    expect(arrived.world.confronting).toBeNull()
+    expect(arrived.confronting).toBeNull()
   })
 
   it('opens on the home valley, the rest unexplored and the Source unknown, and reveals land as the party travels', async () => {
@@ -38,7 +38,7 @@ describe('the world map', () => {
   it('tells of the hovered hex in the info panel', async () => {
     const game = await games.open()
     const start = await game.newGame()
-    await game.hover(worldHexOnScreen(start, start.world.party))
+    await game.hover(worldHexOnScreen(start, start.partyAt))
     const here = await game.waitFor('World', (w) => w.info !== '')
     expect(here.info).toContain('Your party:')
     await game.hover(worldHexOnScreen(start, RAIDERS.position))
@@ -53,7 +53,7 @@ describe('the world map', () => {
   const plus = (p: Point, dx: number, dy: number): Point => ({ x: p.x + dx, y: p.y + dy })
   /** Where the map sits when the view follows the party, as it does before any pan. */
   const following = (w: WorldProbe): Point =>
-    mapOrigin(boardHexCenter(w.world.party, WORLD_LAYOUT), boardPixelSize(w.world.board, WORLD_LAYOUT), w.view)
+    mapOrigin(boardHexCenter(w.partyAt, WORLD_LAYOUT), boardPixelSize(w.world.board, WORLD_LAYOUT), w.view)
 
   /** Presses mid-view and drags the pointer by (dx, dy), letting go there; the map has moved with it. */
   async function pan(game: Game, start: WorldProbe, dx: number, dy: number): Promise<WorldProbe> {
@@ -75,7 +75,7 @@ describe('the world map', () => {
     const start = await game.newGame()
     const panned = await pan(game, start, -40, -30)
     expect(panned.walking).toBe(false)
-    expect(panned.world.party).toEqual(start.world.party)
+    expect(panned.partyAt).toEqual(start.partyAt)
     expect(panned.world.turn).toBe(start.world.turn)
   })
 
@@ -98,7 +98,7 @@ describe('the world map', () => {
     await game.hover(plus(at, 3, 2))
     await game.letGo()
     const arrived = await game.waitFor('World', (w) => !w.walking && w.world.turn !== start.world.turn)
-    expect(arrived.world.party).toEqual(to)
+    expect(arrived.partyAt).toEqual(to)
   })
 
   it('travels to the hex under the pointer on a panned map, then follows the party again', async () => {
@@ -108,7 +108,7 @@ describe('the world map', () => {
     const to = offsetToHex(11, 19)
     await game.click(worldHexOnScreen(panned, to))
     const arrived = await game.waitFor('World', (w) => !w.walking && w.world.turn !== start.world.turn)
-    expect(arrived.world.party).toEqual(to)
+    expect(arrived.partyAt).toEqual(to)
     expect(arrived.origin).toEqual(following(arrived))
   })
 
@@ -123,7 +123,7 @@ describe('the world map', () => {
     const panned = await pan(game, start, -40, -30)
     await game.press('Home')
     const home = await game.waitFor('World', (w) => w.origin.x === start.origin.x && w.origin.y === start.origin.y)
-    expect(home.world.party).toEqual(panned.world.party)
+    expect(home.partyAt).toEqual(panned.partyAt)
     expect(home.world.turn).toBe(panned.world.turn)
     expect(home.walking).toBe(false)
   })
@@ -139,7 +139,7 @@ describe('the world map', () => {
     await game.frames()
     const after = await game.waitFor('World')
     expect(after.walking).toBe(false)
-    expect(after.world.party).toEqual(start.world.party)
+    expect(after.partyAt).toEqual(start.partyAt)
     expect(after.world.turn).toBe(start.world.turn)
   })
 
@@ -216,7 +216,7 @@ describe('the world map', () => {
     await game.press('Home')
     expect((await game.probe('World'))!.walking).toBe(true)
     const arrived = await game.waitFor('World', (w) => !w.walking && w.world.turn !== start.world.turn)
-    expect(arrived.world.party).toEqual(to)
+    expect(arrived.partyAt).toEqual(to)
     expect(arrived.origin).toEqual(following(arrived))
   })
 
@@ -231,7 +231,7 @@ describe('the world map', () => {
     expect(entry.y).toBeGreaterThan(64)
     expect(w.selectedParty).toBe('party_1')
     expect(w.view.x + w.view.width).toBeLessThanOrEqual(width - 80)
-    await game.hover(worldHexOnScreen(w, w.world.party))
+    await game.hover(worldHexOnScreen(w, w.partyAt))
     const hovered = await game.waitFor('World', (p) => p.infoRect !== null)
     expect(hovered.infoRect!.x + hovered.infoRect!.width).toBeLessThanOrEqual(width - 80)
   }
@@ -260,7 +260,7 @@ describe('the world map', () => {
     const panned = await pan(game, start, -40, -30)
     await game.click(panned.parties[0])
     const centred = await game.waitFor('World', (w) => w.origin.x === start.origin.x && w.origin.y === start.origin.y)
-    expect(centred.world.party).toEqual(panned.world.party)
+    expect(centred.partyAt).toEqual(panned.partyAt)
     expect(centred.world.turn).toBe(panned.world.turn)
     expect(centred.selectedParty).toBe('party_1')
   })
@@ -311,7 +311,7 @@ describe('the world map', () => {
     await game.click(start.parties[0])
     expect((await game.probe('World'))!.walking).toBe(true)
     const arrived = await game.waitFor('World', (w) => !w.walking && w.world.turn !== start.world.turn)
-    expect(arrived.world.party).toEqual(to)
+    expect(arrived.partyAt).toEqual(to)
     expect(arrived.origin).toEqual(following(arrived))
   })
 
@@ -344,7 +344,7 @@ describe('the world map', () => {
     const game = await games.open()
     await game.newGame()
     const among = await game.travelTo(RAIDERS.position)
-    expect(among.world.confronting).toBe(RAIDERS.id)
+    expect(among.confronting).toBe(RAIDERS.id)
     expect(among.message).toContain('Goblin Raiders')
     expect(among.buttons.attack.visible).toBe(true)
 
@@ -352,10 +352,10 @@ describe('the world map', () => {
     await game.click(worldHexOnScreen(among, offsetToHex(11, 19)))
     const held = (await game.probe('World'))!
     expect(held.walking).toBe(false)
-    expect(held.world.party).toEqual(RAIDERS.position)
+    expect(held.partyAt).toEqual(RAIDERS.position)
 
     await game.click(among.buttons.wait)
-    const waited = await game.waitFor('World', (w) => w.world.confronting === null)
+    const waited = await game.waitFor('World', (w) => w.confronting === null)
     expect(waited.world.turn).toBe(among.world.turn + 1)
     await game.travelTo(offsetToHex(11, 19))
   })
@@ -421,7 +421,7 @@ describe('the world map', () => {
     expect(among.buttons.camp.visible).toBe(false)
     expect(among.buttons.campUntilHealed.visible).toBe(false)
     await game.click(among.buttons.wait)
-    await game.waitFor('World', (w) => w.world.confronting === null)
+    await game.waitFor('World', (w) => w.confronting === null)
     await game.travelTo(offsetToHex(11, 19))
 
     // Wounded as a battle leaves a party: planted in the save, and loaded.

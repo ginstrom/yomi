@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { RING_PROTECTION } from '../inventory/inventory.ts'
 import { readyMadeParty } from './party.ts'
 import { leader, newGame, partyById, takeLoot } from './gameState.ts'
-import type { MonsterLocation } from './worldMap.ts'
+import { encampment, type MonsterLocation } from './worldMap.ts'
 
 describe('newGame', () => {
   it('starts with a party, a world and empty baggage, none of them shared with another game', () => {
@@ -17,11 +17,20 @@ describe('newGame', () => {
 })
 
 describe('the company', () => {
-  it('is one idle party, party_1 “First Company”, holding the given members', () => {
+  it('is one idle party, party_1 “First Company”, holding the given members at the encampment, facing nothing', () => {
     const members = readyMadeParty()
     const game = newGame(members)
     expect(game.parties).toHaveLength(1)
-    expect(game.parties[0]).toEqual({ id: 'party_1', name: 'First Company', members, baggage: [], order: { kind: 'idle' } })
+    expect(game.parties[0]).toEqual({
+      id: 'party_1',
+      name: 'First Company',
+      members,
+      baggage: [],
+      position: encampment(game.world).position,
+      order: { kind: 'idle' },
+      confronting: null,
+    })
+    expect('party' in game.world || 'confronting' in game.world).toBe(false)
     expect(leader(game)).toBe(game.parties[0])
   })
 

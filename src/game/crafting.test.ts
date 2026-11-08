@@ -14,14 +14,14 @@ function home() {
 /** The soldier's longsword, as worn. */
 const sword = (game: ReturnType<typeof newGame>): ItemPlace => ({ from: 'worn', member: 0, slot: 'mainHand', itemId: leader(game).members[0].equipment.mainHand!.id })
 /** One step off the encampment: the field. */
-const intoField = (game: ReturnType<typeof newGame>) => (game.world.party = { q: game.world.party.q + 1, r: game.world.party.r })
+const intoField = (game: ReturnType<typeof newGame>) => (leader(game).position = { q: leader(game).position.q + 1, r: leader(game).position.r })
 
 describe('crafting', () => {
   it('crafts a Balanced longsword in the field: a day passes and the stock falls', () => {
     const game = home()
     intoField(game)
-    expect(locationAt(game.world, game.world.party)).toBeNull()
-    expect(craftTier(game.world)).toBe('field')
+    expect(locationAt(game.world, leader(game).position)).toBeNull()
+    expect(craftTier(game.world, leader(game))).toBe('field')
     expect(leader(game).members[0].equipment.mainHand).toBe(IRON_SWORD)
     const offered = options(game, sword(game))
     expect(offered.map((o) => `${o.modifier.id}${o.grade}`)).toEqual(['balanced1'])
@@ -55,7 +55,7 @@ describe('crafting', () => {
     leader(game).members[0].equipment.mainHand = itemById('iron_sword+balanced1')
     expect(upgradeWorkshop(game)).toBeNull()
     expect(upgradeWorkshop(game)).toBeNull()
-    expect(craftTier(game.world)).toBe(2)
+    expect(craftTier(game.world, leader(game))).toBe(2)
     const turn = game.world.turn
     const ids = options(game, sword(game)).map((o) => `${o.modifier.id}${o.grade}`)
     expect(ids).toEqual(['balanced1', 'balanced2', 'keen1', 'keen2', 'light1', 'light2'])
@@ -119,7 +119,7 @@ describe('crafting', () => {
   it('is refused in the field among monsters', () => {
     const game = home()
     const raiders = game.world.locations.find((l) => l.id === 'goblin_raiders')!
-    while (!monstersHere(game.world)) travel(game.world, raiders.position, leader(game).members)
+    while (!monstersHere(game.world, leader(game))) travel(game, leader(game), raiders.position)
     expect(craft(game, sword(game), 'balanced', 1).refusal).toMatch(/Nothing can be crafted/)
     expect(options(game, sword(game))[0].refusal).toMatch(/Nothing can be crafted/)
   })

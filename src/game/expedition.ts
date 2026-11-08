@@ -5,7 +5,6 @@ import type { ModifierId } from '../inventory/modifiers.ts'
 import type { RuneKey } from '../inventory/runes.ts'
 import type { ItemPlace } from './itemPlace.ts'
 import type { Party } from './party.ts'
-import type { WorldState } from './worldMap.ts'
 
 /**
  * The company's parties as the world's rules see them. The blight, sight,
@@ -19,9 +18,14 @@ export interface PartyPresence {
   levels: readonly number[]
 }
 
-/** The one party of today's game as a list of one presence, standing where `world.party` says. Transitional: step 04 of stage 5 removes it. */
-export function soloPresences(world: WorldState, party: readonly { level: number }[]): PartyPresence[] {
-  return [{ position: world.party, levels: party.map((m) => m.level) }]
+/** A party as the world's rules see it. */
+export function presenceOf(party: Expedition): PartyPresence {
+  return { position: party.position, levels: party.members.map((m) => m.level) }
+}
+
+/** The company's presences, one a party, in list order. */
+export function presences(parties: readonly Expedition[]): PartyPresence[] {
+  return parties.map(presenceOf)
 }
 
 /** A one-day action of a party (stage 5 step 07 runs them). */
@@ -44,7 +48,7 @@ export type Order =
 /** The kinds an `Order` may have: what a save is checked against. */
 export const ORDER_KINDS: readonly Order['kind'][] = ['idle', 'travel', 'camp', 'day']
 
-/** One party of the company: its members, its baggage and its standing order. */
+/** One party of the company: its members, its baggage, where it stands, its standing order and the monsters it faces. */
 export interface Expedition {
   /** Stable: 'party_1', … */
   id: string
@@ -54,12 +58,19 @@ export interface Expedition {
   members: Party
   /** Its shared pile of items, with no limit, that travels with it. */
   baggage: Item[]
+  /** The hex it stands on. */
+  position: Hex
   order: Order
+  /**
+   * The id of the monster location it has walked into and not yet answered.
+   * Until it scouts, waits or attacks, it cannot travel on.
+   */
+  confronting: string | null
 }
 
 export const FIRST_PARTY_ID = 'party_1'
 export const FIRST_PARTY_NAME = 'First Company'
 
-export function newExpedition(members: Party): Expedition {
-  return { id: FIRST_PARTY_ID, name: FIRST_PARTY_NAME, members, baggage: [], order: { kind: 'idle' } }
+export function newExpedition(members: Party, position: Hex): Expedition {
+  return { id: FIRST_PARTY_ID, name: FIRST_PARTY_NAME, members, baggage: [], position, order: { kind: 'idle' }, confronting: null }
 }

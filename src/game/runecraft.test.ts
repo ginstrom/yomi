@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { maxHp } from '../character/character.ts'
 import { itemById } from '../inventory/inventory.ts'
-import { soloPresences } from './expedition.ts'
+import { presences } from './expedition.ts'
 import { leader, newGame, type GameState } from './gameState.ts'
 import type { ItemPlace } from './itemPlace.ts'
 import {
@@ -25,7 +25,7 @@ function home(workshop = 1): GameState {
   return game
 }
 /** One step off the encampment: the field. */
-const intoField = (game: GameState) => (game.world.party = { q: game.world.party.q + 1, r: game.world.party.r })
+const intoField = (game: GameState) => (leader(game).position = { q: leader(game).position.q + 1, r: leader(game).position.r })
 
 /** Puts `id` in the soldier's main hand and returns its place. */
 function wield(game: GameState, id: string): ItemPlace {
@@ -107,18 +107,18 @@ describe('embed', () => {
     const scout = home()
     intoField(scout)
     let quiet = 0
-    while (passTurn(scout.world, soloPresences(scout.world, leader(scout).members)).length === 0) quiet++
+    while (passTurn(scout.world, presences(scout.parties)).length === 0) quiet++
     const game = home()
     intoField(game)
     const twin = home()
     intoField(twin)
     for (let day = 0; day < quiet; day++) {
-      passTurn(game.world, soloPresences(game.world, leader(game).members))
-      passTurn(twin.world, soloPresences(twin.world, leader(twin).members))
+      passTurn(game.world, presences(game.parties))
+      passTurn(twin.world, presences(twin.parties))
     }
     game.runes = { stone1: 1 }
     const place = wield(game, 'iron_sword@3')
-    const expected = passTurn(twin.world, soloPresences(twin.world, leader(twin).members))
+    const expected = passTurn(twin.world, presences(twin.parties))
     expect(expected.length).toBeGreaterThan(0)
     const result = embed(game, place, 'stone1')
     expect(result.refusal).toBeNull()
@@ -144,7 +144,7 @@ describe('embed', () => {
     among.runes = { ember1: 1 }
     const amongPlace = wield(among, 'iron_sword@3')
     const raiders = among.world.locations.find((l) => l.id === 'goblin_raiders')!
-    while (!monstersHere(among.world)) travel(among.world, raiders.position, leader(among).members)
+    while (!monstersHere(among.world, leader(among))) travel(among, leader(among), raiders.position)
     refused(among, () => embed(among, amongPlace, 'ember1'), /Nothing can be embedded/)
   })
 

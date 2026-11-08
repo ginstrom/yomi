@@ -1,6 +1,7 @@
 import { maxHp, maxMana } from '../character/character.ts'
 import type { WorldEvent } from './blight.ts'
-import { soloPresences } from './expedition.ts'
+import { presences, type Expedition } from './expedition.ts'
+import type { GameState } from './gameState.ts'
 import { restHealing } from './infirmary.ts'
 import { autoHeal, type Party } from './party.ts'
 import { isNotable, monstersHere, passTurn, worldActive, type WorldState } from './worldMap.ts'
@@ -35,8 +36,8 @@ export interface CampDay {
 }
 
 /** Whether the party may camp where it stands: anywhere but among monsters, while the game goes on. */
-export function canCamp(world: WorldState): boolean {
-  return worldActive(world) && world.confronting === null && monstersHere(world) === null
+export function canCamp(world: WorldState, party: Expedition): boolean {
+  return worldActive(world) && party.confronting === null && monstersHere(world, party) === null
 }
 
 /** Whether some member has lost hit points. */
@@ -52,17 +53,19 @@ const totalHp = (party: Party) => party.reduce((sum, member) => sum + member.hp,
  * full. Returns the hit points restored and the day's events, or null,
  * changing nothing, where the party cannot camp.
  */
-export function campDay(world: WorldState, party: Party): CampDay | null {
-  if (!canCamp(world)) return null
-  const before = totalHp(party)
+export function campDay(game: GameState, party: Expedition): CampDay | null {
+  const { world } = game
+  if (!canCamp(world, party)) return null
+  const members = party.members
+  const before = totalHp(members)
   // Judged where the party camps, before the day's events can change it.
-  const healing = party.map((member) => restHealing(world, member))
-  const events = passTurn(world, soloPresences(world, party))
-  for (const [i, member] of party.entries()) {
+  const healing = members.map((member) => restHealing(world, party, member))
+  const events = passTurn(world, presences(game.parties))
+  for (const [i, member] of members.entries()) {
     member.hp = Math.min(maxHp(member), member.hp + healing[i])
     member.mana = maxMana(member)
   }
-  return { healed: totalHp(party) - before, events }
+  return { healed: totalHp(members) - before, events }
 }
 
 /**
@@ -71,18 +74,20 @@ export function campDay(world: WorldState, party: Party): CampDay | null {
  * event breaks camp or the game ends. A party already whole camps no day.
  * Returns null, changing nothing, where the party cannot camp.
  */
-export function campUntilHealed(world: WorldState, party: Party): CampResult | null {
-  if (!canCamp(world)) return null
-  const result: CampResult = { days: 0, rested: 0, cast: autoHeal(party), events: [], interruptedBy: null }
+export function campUntilHealed(game: GameState, party: Expedition): CampResult | null {
+  const { world } = game
+  if (!canCamp(world, party)) return null
+  const members = party.members
+  const result: CampResult = { days: 0, rested: 0, cast: autoHeal(members), events: [], interruptedBy: null }
   // Ends: each day heals every wounded member at least a hit point.
-  while (partyWounded(party) && canCamp(world)) {
-    const day = campDay(world, party)!
+  while (partyWounded(members) && canCamp(world, party)) {
+    const day = campDay(game, party)!
     result.rested += day.healed
     result.events.push(...day.events)
     result.days += 1
-    result.cast += autoHeal(party)
-    const presences = soloPresences(world, party)
-    result.interruptedBy = day.events.find((event) => isNotable(world, event, presences)) ?? null
+    result.cast += autoHeal(members)
+    const present = presences(game.parties)
+    result.interruptedBy = day.events.find((event) => isNotable(world, event, present)) ?? null
     if (result.interruptedBy) break
   }
   return result

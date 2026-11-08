@@ -35,6 +35,7 @@ describe('save slots', () => {
     await game.waitForScenes(['World'])
     const after = await game.waitFor('World')
     expect(after.world).toEqual(before.world)
+    expect(after.partyAt).toEqual(before.partyAt)
     expect(after.party).toEqual(before.party)
     // And it plays on.
     expect((await game.travelTo(offsetToHex(11, 19))).world.turn).toBe(5)
@@ -100,7 +101,7 @@ describe('save slots', () => {
     await game.click((await openLoad(game)).slots[0])
     await game.waitForScenes(['World'])
     const first = await game.waitFor('World')
-    expect(first.world).toMatchObject({ turn: 4, party: offsetToHex(12, 19) })
+    expect(first).toMatchObject({ world: { turn: 4 }, partyAt: offsetToHex(12, 19) })
   })
 
   it('reads a damaged slot as unreadable, which neither loads nor enables Continue', async () => {

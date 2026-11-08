@@ -160,7 +160,7 @@ export class CraftingScene extends Phaser.Scene {
       : craftables(this.gameState)
     const runeItem = runes && item ? itemAt(this.gameState, item) : null
     return {
-      tier: craftTier(this.gameState.world),
+      tier: craftTier(this.gameState.world, leader(this.gameState)),
       tab: this.tab,
       message: this.message,
       itemsHint: this.itemsHint,
@@ -230,7 +230,7 @@ export class CraftingScene extends Phaser.Scene {
     const item = itemAt(this.gameState, place)!
     const lines = compareLines(item, option.result, this.apAt(place), this.strengthAt(place))
     const replaces = item.mod ? [`Replaces ${MODIFIERS[item.mod.id].name} (${gradeNumeral(item.mod.grade)}).`] : []
-    const time = craftTier(this.gameState.world) === 'field' ? ' and a day' : ''
+    const time = craftTier(this.gameState.world, leader(this.gameState)) === 'field' ? ' and a day' : ''
     const does = `${option.modifier.name} ${gradeNumeral(option.grade)}: ${option.modifier.better(option.grade)}, ${option.modifier.worse(option.grade)}.`
     return [does, `Makes the ${option.result.name}.`, ...replaces, ...lines, `Costs ${describeCost(option.cost)}${time}.`]
   }
@@ -255,7 +255,7 @@ export class CraftingScene extends Phaser.Scene {
     this.tipLines = []
     this.itemsHint = ''
     const { world } = this.gameState
-    const tier = craftTier(world)
+    const tier = craftTier(world, leader(this.gameState))
     const title = tier === 'field' ? 'Field Crafting' : 'Workshop'
     const about =
       tier === 'field'
@@ -550,7 +550,7 @@ export class CraftingScene extends Phaser.Scene {
   private onRune(action: RuneAction): void {
     const game = this.gameState
     const place = this.selectedPlace()
-    const field = craftTier(game.world) === 'field'
+    const field = craftTier(game.world, leader(game)) === 'field'
     if (action.kind === 'fuse') {
       const refusal = fuse(game, action.key)
       this.message = refusal ?? doneMessage(action)
@@ -579,7 +579,7 @@ export class CraftingScene extends Phaser.Scene {
 
   /** Works the item; in the field the day passes, and the map takes over to report it. */
   private onWork(place: ItemPlace, option: CraftOption): void {
-    const field = craftTier(this.gameState.world) === 'field'
+    const field = craftTier(this.gameState.world, leader(this.gameState)) === 'field'
     const result = craft(this.gameState, place, option.modifier.id, option.grade)
     if (result.refusal !== null) {
       this.message = result.refusal

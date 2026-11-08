@@ -1,20 +1,24 @@
 import { describe, expect, it } from 'vitest'
 import { maxHp, maxMana } from '../character/character.ts'
 import { NATURAL_HEALING_PER_DAY, campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from './camp.ts'
+import { leader, newGame } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
-import { monstersHere, newWorld, travel, type MonsterLocation, type WorldState } from './worldMap.ts'
+import { monstersHere, travel, type MonsterLocation, type WorldState } from './worldMap.ts'
 
-/** The ready-made three, the mage (Heal, 3 mana for 6 hp) last. */
-const party = () => readyMadeParty()
+/** A new game on world 1 with the ready-made three, the mage (Heal, 3 mana for 6 hp) last: the game, its world, its party and the party's members. */
+function solo() {
+  const game = newGame(readyMadeParty(), null, 1)
+  const party = leader(game)
+  return { game, world: game.world, party, members: party.members }
+}
 
 describe('campDay', () => {
   it('passes a turn, heals each member a hit point and fills every caster’s mana', () => {
-    const world = newWorld(1)
-    const members = party()
+    const { game, world, party, members } = solo()
     const [aldric, brenna, delwyn] = members
     aldric.hp = 5
     delwyn.mana = 0
-    expect(campDay(world, members)?.healed).toBe(NATURAL_HEALING_PER_DAY)
+    expect(campDay(game, party)?.healed).toBe(NATURAL_HEALING_PER_DAY)
     expect(world.turn).toBe(2)
     expect(aldric.hp).toBe(5 + NATURAL_HEALING_PER_DAY)
     expect(brenna.hp).toBe(maxHp(brenna))
@@ -23,30 +27,28 @@ describe('campDay', () => {
   })
 
   it('is refused among monsters', () => {
-    const world = newWorld(1)
+    const { game, world, party, members } = solo()
     const raiders = world.locations.find((l) => l.id === 'goblin_raiders')!
     // A sighting on the way stops the party; it goes on.
-    while (!monstersHere(world)) travel(world, raiders.position, party())
-    expect(monstersHere(world)).not.toBeNull()
-    expect(canCamp(world)).toBe(false)
-    const members = party()
+    while (!monstersHere(world, party)) travel(game, party, raiders.position)
+    expect(monstersHere(world, party)).not.toBeNull()
+    expect(canCamp(world, party)).toBe(false)
     members[0].hp = 1
-    expect(campDay(world, members)).toBeNull()
-    expect(campUntilHealed(world, members)).toBeNull()
+    expect(campDay(game, party)).toBeNull()
+    expect(campUntilHealed(game, party)).toBeNull()
     expect(members[0].hp).toBe(1)
   })
 })
 
 describe('campUntilHealed', () => {
   it('casts, camps a day and casts again until no one is wounded', () => {
-    const world = newWorld(1)
-    const members = party()
+    const { game, world, party, members } = solo()
     const [aldric, brenna, delwyn] = members
     aldric.hp = 1
     brenna.hp = 1
     delwyn.mana = 0
     const lost = members.reduce((sum, m) => sum + maxHp(m) - m.hp, 0)
-    const result = campUntilHealed(world, members)!
+    const result = campUntilHealed(game, party)!
     expect(partyWounded(members)).toBe(false)
     expect(result.rested + result.cast).toBe(lost)
     expect(result.cast).toBeGreaterThan(0)
@@ -56,19 +58,17 @@ describe('campUntilHealed', () => {
   })
 
   it('spends the mana in hand before camping, and camps no day for a party it heals', () => {
-    const world = newWorld(1)
-    const members = party()
+    const { game, world, party, members } = solo()
     members[0].hp = maxHp(members[0]) - 6
-    expect(campUntilHealed(world, members)).toMatchObject({ days: 0, rested: 0, cast: 6, interruptedBy: null })
+    expect(campUntilHealed(game, party)).toMatchObject({ days: 0, rested: 0, cast: 6, interruptedBy: null })
     expect(world.turn).toBe(1)
   })
 
   it('heals by rest alone without a caster', () => {
-    const world = newWorld(1)
-    const members = party()
+    const { game, party, members } = solo()
     members.pop()
     members[0].hp = maxHp(members[0]) - 4
-    expect(campUntilHealed(world, members)).toMatchObject({ days: 4, rested: 4, cast: 0, interruptedBy: null })
+    expect(campUntilHealed(game, party)).toMatchObject({ days: 4, rested: 4, cast: 0, interruptedBy: null })
   })
 })
 
@@ -84,12 +84,11 @@ function besiege(world: WorldState, site: string): void {
 
 describe('camping, interrupted', () => {
   it('breaks camp when a held site comes under threat, saying why', () => {
-    const world = newWorld(1)
-    const members = party()
+    const { game, world, party, members } = solo()
     members[0].hp = 1
     members.pop()
     besiege(world, 'gold_seam')
-    const result = campUntilHealed(world, members)!
+    const result = campUntilHealed(game, party)!
     expect(result.interruptedBy).toMatchObject({ type: 'site_threatened', site: 'gold_seam' })
     expect(result.days).toBe(1)
     expect(partyWounded(members)).toBe(true)
@@ -97,9 +96,9 @@ describe('camping, interrupted', () => {
   })
 
   it('does not camp once the game is over', () => {
-    const world = newWorld(1)
+    const { world, party } = solo()
     world.status = 'lost'
-    expect(canCamp(world)).toBe(false)
+    expect(canCamp(world, party)).toBe(false)
   })
 })
 

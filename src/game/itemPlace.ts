@@ -1,7 +1,6 @@
-import { clampHp, maxHp } from '../character/character.ts'
+import { clampHp, maxHp, type Character } from '../character/character.ts'
 import type { EquipmentSlot, Item } from '../inventory/inventory.ts'
 import { leader, type GameState } from './gameState.ts'
-import type { Character } from '../character/character.ts'
 
 /**
  * Where an item the trading post or crafting acts on lies: the baggage, a

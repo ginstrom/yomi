@@ -90,14 +90,15 @@ describe('debug commands', () => {
   it('reveals the map, and moves the party onto a location, confronting its monsters', () => {
     const context = onWorldMap()
     const { world } = context.source!.game
+    const party = leader(context.source!.game)
     runCommand('reveal', context)
     expect(world.seen.includes(UNEXPLORED)).toBe(false)
     expect(world.sighted).toContain(SOURCE_ID)
     runCommand(`goto ${SOURCE_ID}`, context)
-    expect(world.confronting).toBe(SOURCE_ID)
+    expect(party.confronting).toBe(SOURCE_ID)
     runCommand('goto 2 3', context)
-    expect(hexToOffset(world.party)).toEqual({ col: 2, row: 3 })
-    expect(world.confronting).toBeNull()
+    expect(hexToOffset(party.position)).toEqual({ col: 2, row: 3 })
+    expect(party.confronting).toBeNull()
     expect(runCommand('goto 999 0', context).lines[0]).toMatch(/off the map/)
   })
 
@@ -142,11 +143,12 @@ describe('debug commands', () => {
     it('fights at the threat of the party’s hex when none is given', () => {
       const context = withFight()
       const { world } = context.source!.game
+      const party = leader(context.source!.game)
       runCommand('fight kobold_scouts', context)
-      expect(context.fight).toHaveBeenLastCalledWith('kobold_scouts', threatAt(world.party))
+      expect(context.fight).toHaveBeenLastCalledWith('kobold_scouts', threatAt(party.position))
       const far = world.locations.find((location) => location.id === 'bandit_camp')!
-      world.party = far.position
-      expect(threatAt(world.party)).toBe(3)
+      party.position = far.position
+      expect(threatAt(party.position)).toBe(3)
       runCommand('fight kobold_scouts', context)
       expect(context.fight).toHaveBeenLastCalledWith('kobold_scouts', 3)
     })

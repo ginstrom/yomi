@@ -5,7 +5,7 @@ import { canAdvance } from '../character/progression.ts'
 import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex, type WorldEvent } from '../game/blight.ts'
 import { atEncampment, buildOutpost, buildTower, canBuildOutpost, canBuildTower, outpostSiteRefusal, towerSiteRefusal } from '../game/buildings.ts'
 import { campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from '../game/camp.ts'
-import { soloPresences, type PartyPresence } from '../game/expedition.ts'
+import { presences, type Expedition, type PartyPresence } from '../game/expedition.ts'
 import { leader, newGame, type GameState } from '../game/gameState.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
 import { daysToFall } from '../game/territory.ts'
@@ -342,7 +342,7 @@ export class WorldScene extends Phaser.Scene {
     this.music = this.sound.add('music_world_map', { loop: true, volume: soundVolume('music_world_map') })
     this.music.play()
 
-    const here = monstersHere(this.world)
+    const here = monstersHere(this.world, this.expedition())
     this.messageText.setText(
       this.world.status === 'won'
         ? ''
@@ -387,6 +387,8 @@ export class WorldScene extends Phaser.Scene {
     const campUntilHealed = buttonProbe(this.campButtons[1], partyWounded(leader(this.gameState).members))
     return {
       world: this.world,
+      partyAt: this.expedition().position,
+      confronting: this.expedition().confronting,
       walking: this.walking,
       origin: { x: this.mapLayer.x, y: this.mapLayer.y },
       view: this.view,
@@ -746,20 +748,26 @@ export class WorldScene extends Phaser.Scene {
 
   /** The company's parties as the world's rules see them. */
   private presences(): PartyPresence[] {
-    return soloPresences(this.world, leader(this.gameState).members)
+    return presences(this.gameState.parties)
+  }
+
+  /** The party the map acts for: the company's only one (stage 5 step 05 takes it from the scene data). */
+  private expedition(): Expedition {
+    return leader(this.gameState)
   }
 
   /** Redraws everything that follows the world's state: the party, the header and which buttons show. */
   private refresh(): void {
     const world = this.world
-    const here = monstersHere(world)
-    const { x, y } = boardHexCenter(world.party, WORLD_LAYOUT)
+    const expedition = this.expedition()
+    const here = monstersHere(world, expedition)
+    const { x, y } = boardHexCenter(expedition.position, WORLD_LAYOUT)
     this.party.setPosition(x, y + PARTY_FEET_Y)
-    this.partyMark.clear().lineStyle(3, PARTY_OUTLINE, 1).strokePoints(this.hexPolygon(world.party), true)
+    this.partyMark.clear().lineStyle(3, PARTY_OUTLINE, 1).strokePoints(this.hexPolygon(expedition.position), true)
     this.visible = visibleHexes(world, this.presences())
     // Blighted land the party stands on is neutral while it stays.
-    if (blightAt(world, world.party) > 0) {
-      const c = boardHexCenter(world.party, WORLD_LAYOUT)
+    if (blightAt(world, expedition.position) > 0) {
+      const c = boardHexCenter(expedition.position, WORLD_LAYOUT)
       this.partyMark.lineStyle(2, NEUTRAL_RING, 0.9).strokeCircle(c.x, c.y, WORLD_LAYOUT.hexSize * 0.6)
     }
     this.refreshBlight()
@@ -780,17 +788,18 @@ export class WorldScene extends Phaser.Scene {
     this.column.refresh(this.active)
     this.partyList.refresh(deployedParties(this.gameState), this.selectedParty)
     this.hintText.setText(
-      world.confronting !== null
+      expedition.confronting !== null
         ? 'Monsters! Scout them, wait, or attack.'
         : here
           ? 'Scout, wait or attack, or click a hex to move away.'
           : 'Click a hex to travel there, or camp. Each hex, or day of camping, takes a turn.',
     )
     for (const button of this.buttons) button.setVisible(here !== null && !this.walking && world.status !== 'lost')
-    for (const button of this.campButtons) button.setVisible(canCamp(world) && !this.walking)
-    this.towerButton.setVisible(canCamp(world) && !this.walking && towerSiteRefusal(world) === null)
-    this.outpostButton.setVisible(canCamp(world) && !this.walking && outpostSiteRefusal(world) === null)
-    this.encampmentButton.setVisible(atEncampment(world) && !this.walking)
+    const campable = canCamp(world, expedition)
+    for (const button of this.campButtons) button.setVisible(campable && !this.walking)
+    this.towerButton.setVisible(campable && !this.walking && towerSiteRefusal(world, expedition) === null)
+    this.outpostButton.setVisible(campable && !this.walking && outpostSiteRefusal(world, expedition) === null)
+    this.encampmentButton.setVisible(atEncampment(world, expedition) && !this.walking)
     this.layout()
     const over = world.status === 'won' || world.status === 'lost'
     this.outcomeShade.setVisible(over)
@@ -815,7 +824,7 @@ export class WorldScene extends Phaser.Scene {
   private refreshHover(): void {
     this.refreshInfo()
     const g = this.hoverMarks.clear()
-    const route = this.hovered && !this.walking ? routeTo(this.world, this.hovered) : null
+    const route = this.hovered && !this.walking ? routeTo(this.world, this.expedition(), this.hovered) : null
     if (!route) {
       this.input.setDefaultCursor(CURSORS.move)
       return
@@ -825,7 +834,7 @@ export class WorldScene extends Phaser.Scene {
     const toMonsters = there?.kind === 'monsters' && this.world.sighted.includes(there.id)
     this.input.setDefaultCursor(toMonsters ? CURSORS.attack : CURSORS.select)
 
-    const points = [this.world.party, ...route].map((h) => {
+    const points = [this.expedition().position, ...route].map((h) => {
       const c = boardHexCenter(h, WORLD_LAYOUT)
       return new Phaser.Math.Vector2(c.x, c.y)
     })
@@ -863,7 +872,7 @@ export class WorldScene extends Phaser.Scene {
     if (!shown) return
     const { title, lines } = entry
       ? partyListInfo(entry)
-      : hexInfo(this.world, leader(this.gameState).members, this.visible, this.hovered!)
+      : hexInfo(this.gameState, this.expedition(), this.visible, this.hovered!)
     this.infoText.setText([title, '', ...lines].join('\n'))
     this.infoBox.setSize(INFO_W, this.infoText.height + 2 * INFO_PAD)
   }
@@ -875,7 +884,7 @@ export class WorldScene extends Phaser.Scene {
     if (this.walking || this.outcomeShade.visible) return
     const clicked = this.hexAt(at.x, at.y)
     if (!clicked) return
-    const journey = travel(this.world, clicked, leader(this.gameState).members)
+    const journey = travel(this.gameState, this.expedition(), clicked)
     const route = journey.walked
     if (route.length === 0) return
 
@@ -916,7 +925,7 @@ export class WorldScene extends Phaser.Scene {
     // The map has scrolled under the pointer, which is over another hex now.
     const pointer = this.input.activePointer
     this.hovered = this.hexAt(pointer.x, pointer.y)
-    const here = monstersHere(this.world)
+    const here = monstersHere(this.world, this.expedition())
     this.messageText.setText(
       stopped ? `Your journey stops. ${told}` : here ? `You come upon the ${here.name} (threat ${here.threat}).` : told,
     )
@@ -927,8 +936,8 @@ export class WorldScene extends Phaser.Scene {
 
   /** Scouting and waiting each pass a turn among the monsters; nothing comes of either yet. */
   private onLinger(how: Lingering): void {
-    const here = monstersHere(this.world)
-    const events = here ? linger(this.world, how, leader(this.gameState).members) : null
+    const here = monstersHere(this.world, this.expedition())
+    const events = here ? linger(this.gameState, this.expedition(), how) : null
     if (!here || !events) return
     this.messageText.setText(
       describeWorldEvents(events) ||
@@ -944,7 +953,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** A day's rest where the party stands: a hit point each, and every caster's mana back. */
   private onCamp(): void {
-    const day = campDay(this.world, leader(this.gameState).members)
+    const day = campDay(this.gameState, this.expedition())
     if (day === null) return
     const told = describeWorldEvents(day.events)
     this.messageText.setText(
@@ -958,7 +967,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Days of rest, with the casters healing what they can each day, until no one is wounded. */
   private onCampUntilHealed(): void {
-    const result = campUntilHealed(this.world, leader(this.gameState).members)
+    const result = campUntilHealed(this.gameState, this.expedition())
     if (result === null) return
     const told = describeWorldEvents(result.events, result.interruptedBy)
     const days = `${result.days} ${result.days === 1 ? 'day' : 'days'}`
@@ -973,14 +982,14 @@ export class WorldScene extends Phaser.Scene {
 
   /** Builds a watchtower where the party stands, a day's work, or says why it cannot (the stock, most often). */
   private onBuildTower(): void {
-    const refusal = canBuildTower(this.world)
-    this.built(refusal, refusal ? null : buildTower(this.world, leader(this.gameState).members))
+    const refusal = canBuildTower(this.world, this.expedition())
+    this.built(refusal, refusal ? null : buildTower(this.gameState, this.expedition()))
   }
 
   /** Builds an outpost at the held site the party stands on, a day's work, or says why it cannot. */
   private onBuildOutpost(): void {
-    const refusal = canBuildOutpost(this.world)
-    this.built(refusal, refusal ? null : buildOutpost(this.world, leader(this.gameState).members))
+    const refusal = canBuildOutpost(this.world, this.expedition())
+    this.built(refusal, refusal ? null : buildOutpost(this.gameState, this.expedition()))
   }
 
   /** Tells what a building's day brought, or why it was refused. */
@@ -1055,7 +1064,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private onAttack(): void {
-    const here = monstersHere(this.world)
+    const here = monstersHere(this.world, this.expedition())
     if (here) this.scene.start('Battle', { game: this.gameState, location: here.id })
   }
 
@@ -1090,7 +1099,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Field crafting over the map (CraftingScene), wherever the party may camp; it resumes the map with what it made. */
   private openCrafting(): void {
-    if (this.scene.isPaused() || this.walking || !canCamp(this.world)) return
+    if (this.scene.isPaused() || this.walking || !canCamp(this.world, this.expedition())) return
     this.scene.launch('Crafting', { game: this.gameState, resume: 'World' })
     this.scene.bringToTop('Crafting')
     this.scene.pause()
@@ -1107,7 +1116,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** The encampment over the map, while the party stands there; it starts the map again when it closes. */
   private openEncampment(): void {
-    if (this.scene.isPaused() || this.walking || !atEncampment(this.world)) return
+    if (this.scene.isPaused() || this.walking || !atEncampment(this.world, this.expedition())) return
     this.scene.launch('Encampment', { game: this.gameState })
     this.scene.bringToTop('Encampment')
     this.scene.pause()

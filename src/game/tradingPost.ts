@@ -87,7 +87,7 @@ export function tradingPostCost(world: WorldState): Stock | null {
 /** Raises the trading post a level, at once; returns why it cannot, or null when done. */
 export function raiseTradingPost(game: GameState): string | null {
   const { world } = game
-  if (!atEncampment(world)) return notHere(world)
+  if (!atEncampment(world, leader(game))) return notHere(world)
   const cost = tradingPostCost(world)
   if (!cost) return 'The trading post is as great as it gets.'
   if (!canAfford(world.stock, cost)) return `The next level costs ${describeCost(cost)}, more than the stock holds.`
@@ -148,7 +148,7 @@ export function wares(world: WorldState, filter: WaresFilter = {}): Item[] {
 /** Why `itemId` cannot be bought now, or null when it can. */
 export function buyRefusal(game: GameState, itemId: string): string | null {
   const { world } = game
-  if (!atEncampment(world)) return notHere(world)
+  if (!atEncampment(world, leader(game))) return notHere(world)
   const item = itemById(itemId)
   const price = item && !item.mod && !item.runes?.length ? buyPrice(item) : null
   if (!item || price === null) return 'The trading post does not sell that.'
@@ -175,7 +175,7 @@ export function sellables(game: GameState): Array<{ place: ItemPlace; item: Item
 /** Sells the item at `place` for gold. A worn item is refused: take it off first. */
 export function sell(game: GameState, place: ItemPlace): string | null {
   const { world } = game
-  if (!atEncampment(world)) return notHere(world)
+  if (!atEncampment(world, leader(game))) return notHere(world)
   if (place.from === 'worn') return 'Take it off before selling it.'
   const item = itemAt(game, place)
   if (!item) return STALE
@@ -187,7 +187,7 @@ export function sell(game: GameState, place: ItemPlace): string | null {
 /** Sells `amount` of a material from the stock, in pairs, a gold piece a pair. Gold is never sold. */
 export function sellMaterial(game: GameState, material: Material, amount: number): string | null {
   const { world } = game
-  if (!atEncampment(world)) return notHere(world)
+  if (!atEncampment(world, leader(game))) return notHere(world)
   if (material === 'gold') return 'Gold is what the post pays in.'
   if (!Number.isInteger(amount) || amount < MATERIALS_PER_GOLD || amount % MATERIALS_PER_GOLD !== 0) {
     return `The post buys ${material} in lots of ${MATERIALS_PER_GOLD}.`
@@ -229,7 +229,7 @@ export function runeWares(world: WorldState): RuneKey[] {
 /** Why `key` cannot be bought now, or null when it can. */
 export function buyRuneRefusal(game: GameState, key: RuneKey): string | null {
   const { world } = game
-  if (!atEncampment(world)) return notHere(world)
+  if (!atEncampment(world, leader(game))) return notHere(world)
   const parsed = parseRuneKey(key)
   const level = parsed && SHOP_RUNES.includes(parsed.id) ? RUNE_RANK_LEVELS[parsed.rank] : undefined
   if (!parsed || level === undefined) return 'The trading post does not sell that.'
@@ -251,7 +251,7 @@ export function buyRune(game: GameState, key: RuneKey): string | null {
 /** Sells one rune from the pouch. */
 export function sellRune(game: GameState, key: RuneKey): string | null {
   const { world } = game
-  if (!atEncampment(world)) return notHere(world)
+  if (!atEncampment(world, leader(game))) return notHere(world)
   if (pouchCount(game.runes, key) < 1) return `The pouch holds no ${runeName(key)}.`
   takeFromPouch(game.runes, key)
   world.stock.gold = (world.stock.gold ?? 0) + runeSalePrice(key)

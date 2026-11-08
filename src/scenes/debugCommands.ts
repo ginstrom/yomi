@@ -2,7 +2,7 @@ import { maxHp, maxMana, manaOf, type Character } from '../character/character.t
 import { gainXp, xpToNextLevel } from '../character/progression.ts'
 import type { BattleState } from '../engine/battleEngine.ts'
 import { facilities, setFacilityLevel, type FacilityId } from '../game/encampment.ts'
-import { soloPresences } from '../game/expedition.ts'
+import { presences } from '../game/expedition.ts'
 import { ENCOUNTERS, type EncounterId } from '../game/encounters.ts'
 import { leader, type GameState } from '../game/gameState.ts'
 import type { Material } from '../game/territory.ts'
@@ -247,7 +247,8 @@ const COMMANDS: Record<string, Command> = {
     usage: 'locations [all]',
     summary: 'The locations known (or all of them): id, kind, threat and col,row.',
     run([all], context) {
-      const { world } = gameOf(context)
+      const game = gameOf(context)
+      const { world } = game
       const known = (location: WorldLocation) =>
         location.kind !== 'monsters' || world.sighted.includes(location.id)
       const listed = world.locations.filter((location) => all === 'all' || known(location))
@@ -257,7 +258,7 @@ const COMMANDS: Record<string, Command> = {
           const tags = [world.held.includes(location.id) ? 'held' : '', known(location) ? '' : 'unknown'].filter(Boolean)
           return `${location.id.padEnd(16)} ${location.name} (${what}) at ${offset(location)}${tags.length ? ` [${tags.join(', ')}]` : ''}`
         }),
-        `Party at ${offset({ position: world.party })}.`,
+        `Party at ${offset(leader(game))}.`,
       ]
     },
   },
@@ -288,10 +289,11 @@ const COMMANDS: Record<string, Command> = {
         if (!location) throw new DebugError(`No location "${args[0] ?? ''}"; \`locations all\` lists them.`)
         to = location.position
       }
-      world.party = to
-      const here = monstersHere(world)
-      world.confronting = here?.id ?? null
-      updateSight(world, soloPresences(world, leader(game).members))
+      const party = leader(game)
+      party.position = to
+      const here = monstersHere(world, party)
+      party.confronting = here?.id ?? null
+      updateSight(world, presences(game.parties))
       return [`The party stands at ${offset({ position: to })}${here ? `, before the ${here.name}` : ''}.`]
     },
   },
@@ -306,11 +308,11 @@ const COMMANDS: Record<string, Command> = {
       const told: string[] = []
       let passed = 0
       while (passed < n && worldActive(game.world)) {
-        const presences = soloPresences(game.world, leader(game).members)
-        const events = passTurn(game.world, presences)
+        const present = presences(game.parties)
+        const events = passTurn(game.world, present)
         passed += 1
         for (const event of events) {
-          if (isNotable(game.world, event, presences) || event.type === 'spawned') {
+          if (isNotable(game.world, event, present) || event.type === 'spawned') {
             told.push(`  day ${game.world.turn}: ${describeWorldEvent(event) || `${event.type} ${'name' in event ? event.name : ''}`}`)
           }
         }
@@ -323,11 +325,11 @@ const COMMANDS: Record<string, Command> = {
     summary: "Fight an encounter at a threat (default: the party's hex's), clearing no location and taking no loot.",
     changes: true,
     run([id, threat], context) {
-      const { world } = gameOf(context)
+      const game = gameOf(context)
       if (id === undefined || !Object.hasOwn(ENCOUNTERS, id)) {
         throw new DebugError(`No encounter "${id ?? ''}"; there are ${Object.keys(ENCOUNTERS).join(', ')}.`)
       }
-      const at = threat === undefined ? threatAt(world.party) : integer(threat, 'the threat')
+      const at = threat === undefined ? threatAt(leader(game).position) : integer(threat, 'the threat')
       if (at < 1) throw new DebugError('The threat must be at least 1.')
       const fight = context.source?.fight
       if (!fight) throw new DebugError('Battles start only from the world map.')

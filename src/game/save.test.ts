@@ -12,7 +12,7 @@ import { leader, newGame, takeLoot, type GameState } from './gameState.ts'
 import { Ground } from './ground.ts'
 import { PREROLLS, partyFighters, partyFromDrafts } from './party.ts'
 import { SAVE_VERSION, describeSave, parseSave, saveSummary, serializeSave, type SaveFile, type SavedBattle } from './save.ts'
-import type { MonsterLocation } from './worldMap.ts'
+import { encampment, type MonsterLocation } from './worldMap.ts'
 
 const monsters = (game: GameState): MonsterLocation[] =>
   game.world.locations.filter((location): location is MonsterLocation => location.kind === 'monsters')
@@ -118,8 +118,8 @@ describe('a save', () => {
     expect(leader(parsed.game).baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 19, whose game holds a rune pouch and a company', () => {
-    expect(SAVE_VERSION).toBe(19)
+  it('is version 20, whose company holds where each party stands and what it confronts', () => {
+    expect(SAVE_VERSION).toBe(20)
   })
 
   it('keeps the pouch and an item with runes', () => {
@@ -208,19 +208,35 @@ describe('parseSave', () => {
     expect(parseSave(changed((saved) => (saved.game.parties[0].members = [])))).toBeNull()
     expect(parseSave(changed((saved) => (saved.game.parties[0].order = { kind: 'dance' })))).toBeNull()
     expect(parseSave(changed((saved) => delete saved.game.parties[0].order))).toBeNull()
+    expect(parseSave(changed((saved) => delete saved.game.parties[0].position))).toBeNull()
+    expect(parseSave(changed((saved) => (saved.game.parties[0].position = { q: '1', r: 2 })))).toBeNull()
+    expect(parseSave(changed((saved) => (saved.game.parties[0].position = null)))).toBeNull()
+    expect(parseSave(changed((saved) => delete saved.game.parties[0].confronting))).toBeNull()
+    expect(parseSave(changed((saved) => (saved.game.parties[0].confronting = 7)))).toBeNull()
     expect(parseSave(changed((saved) => saved.game.parties.push(structuredClone(saved.game.parties[0]))))).toBeNull()
     expect(parseSave(changed((saved) => (saved.battle = { location: 'goblin_raiders' })))).toBeNull()
   })
 })
 
 describe('a company', () => {
-  it('round-trips with its id, name, order, members and baggage', () => {
+  it('round-trips with its id, name, position, order, confrontation, members and baggage', () => {
     const game = gameUnderWay()
     leader(game).order = { kind: 'travel', to: hex(5, 6), route: [hex(4, 6), hex(5, 6)] }
+    const raiders = game.world.locations.find((l) => l.id === 'goblin_raiders')!
+    leader(game).position = raiders.position
+    leader(game).confronting = raiders.id
     const parsed = parseSave(serializeSave({ game, battle: null, savedAt: 5 }))!
+    expect(parsed.game).toEqual(game)
     expect(parsed.game.parties).toHaveLength(1)
     const [before, after] = [leader(game), leader(parsed.game)]
-    expect([after.id, after.name, after.order]).toEqual([before.id, before.name, before.order])
+    expect(after.position).not.toEqual(encampment(game.world).position)
+    expect([after.id, after.name, after.position, after.order, after.confronting]).toEqual([
+      before.id,
+      before.name,
+      raiders.position,
+      before.order,
+      'goblin_raiders',
+    ])
     expect(after.members).toEqual(before.members)
     expect(after.baggage).toHaveLength(before.baggage.length)
     after.baggage.forEach((item, i) => expect(item).toBe(before.baggage[i]))
@@ -253,8 +269,9 @@ describe('a version-18 save', () => {
     expect(party.baggage[1]).toBe(itemById('iron_sword@3#ember1'))
     expect(party.members[0].backpack[0]).toBe(itemById('iron_sword@3#storm1'))
     expect('party' in game || 'baggage' in game).toBe(false)
-    expect(game.world.party).toEqual(old.game.world.party)
-    expect(game.world.confronting).toBe('goblin_raiders')
+    expect(party.position).toEqual(old.game.world.party)
+    expect(party.confronting).toBe('goblin_raiders')
+    expect('party' in game.world || 'confronting' in game.world).toBe(false)
     expect(game.runes).toEqual({ storm1: 1 })
   })
 
@@ -267,10 +284,24 @@ describe('a version-18 save', () => {
     expect(parseSave(broken((s) => (s.game.party = [])))).toBeNull()
     expect(parseSave(broken((s) => delete s.game.baggage))).toBeNull()
     expect(parseSave(broken((s) => s.game.baggage.push('vorpal_spoon')))).toBeNull()
+    expect(parseSave(broken((s) => delete s.game.world.party))).toBeNull()
+    expect(parseSave(broken((s) => (s.game.world.confronting = 3)))).toBeNull()
   })
 
-  it('leaves versions 17 and 20 unreadable', () => {
-    for (const version of [17, 20]) expect(parseSave(JSON.stringify({ ...old, version }))).toBeNull()
+  it('leaves versions 17, 19 and 21 unreadable', () => {
+    for (const version of [17, 19, 21]) expect(parseSave(JSON.stringify({ ...old, version }))).toBeNull()
+  })
+
+  it('reads a version-19 save, never released, as unreadable', () => {
+    const v19 = JSON.parse(serializeSave({ game: newGame(undefined, 1, 1), battle: null, savedAt: 1 }))
+    v19.version = 19
+    for (const party of v19.game.parties) {
+      delete party.position
+      delete party.confronting
+    }
+    v19.game.world.party = { q: 0, r: 19 }
+    v19.game.world.confronting = null
+    expect(parseSave(JSON.stringify(v19))).toBeNull()
   })
 })
 

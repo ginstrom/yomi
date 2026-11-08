@@ -261,6 +261,7 @@ Tests that put the party somewhere set `leader(game).position` (or an expedition
 - `npx vitest run src/game` while working; then `npm test` passes, the guard test included, its fixture untouched.
 - `npm run test:browser` passes (scenes and probes changed).
 - The 50-campaign check from §2: the summary is identical to step 01's line for line, and the log's SHA-256 equals step 01's.
+- `npm run test:browser` (Node 26): first full run 88 of 89 (the `saves.test.ts` read above); after the fix `saves.test.ts` 6 of 6 and a second full run 9 files, 89 tests passed.
 - `grep -rn "world\.party\|world\.confronting\|soloPresences" src scripts e2e` finds nothing that reads the old fields. A hit on an unrelated name (e.g. the probe's `partyAt`) is fine.
 - `save.test.ts` covers the migration from the v18 fixture, the unreadable version 19 and the round trip (§4.4).
 
@@ -277,3 +278,25 @@ Tests that put the party somewhere set `leader(game).position` (or an expedition
 
 ## 7. Execution record
 
+
+**Done.** `WorldState.party` and `WorldState.confronting` are now `Expedition.position` and `Expedition.confronting`; every C4 function has its C4 signature; `soloPresences` is gone and every `passTurn` gets `presences(game.parties)`.
+
+- **State.** `expedition.ts`: `position`, `confronting`, `newExpedition(members, position)`, `presenceOf`, `presences` (pure; the module still imports types only). `newGame` puts the party at `encampment(world).position`. `newWorld` keeps seeding its sight from a presence at home.
+- **Rules.** As C4. `clearLocation(game, id)` frees every party confronting `id`, and its sight is `presences(game.parties)`. Beyond C4 (needed, not listed there):
+  - `raiseShrine(world, party)`: it calls `atEncampment`. `encampment.ts` passes `leader(game)`.
+  - `hexInfo(game, party, visible, at)`: it read `world.party` and `routeTo`, and now takes its net influence and days to fall from `presences(game.parties)`.
+  - crafting's `placeRefusal` and runecraft's `workshopIsAt`/`workshopHere` take the game (they call `canCamp`/`craftTier`/`atEncampment`).
+  - `scripts/simulate.ts`: `outpostErrand(world, party)` and `nextTarget(world, party, readyLevel)` take the expedition (as §4.3). `nextTarget` passes `[presenceOf(party)]` to `daysToFall`, the same list `soloPresences` gave.
+  - Game-wide functions (`craftables`, `options`, `craft`, `embed`, the guild hall's, the facilities' raises, `improveFacility`'s refusal, `tutorial.ts`'s monsters tip, `CraftingScene`, `runecraftView`) use `leader(game)` inside, as C4 says.
+  - `WorldScene` has a private `expedition()` (`leader(this.gameState)`, for step 05 to replace with the scene data's party).
+- **Save 20.** `migrateFrom18` reads a version-18 save straight to 20 (the world's `party` and `confronting` into the expedition, then deleted from the world); `parseSave` checks each party's `position` (numeric `q`, `r`) and `confronting` (string or null); version 19 reads as unreadable. Tests: the v18 fixture's position and confrontation, no `party`/`confronting` left on the world, broken v18 worlds refused, a v19 string refused, versions 17/19/21 refused, a company with position off home and `confronting` set round-tripping to an equal game, bad positions and confrontations refused.
+- **Probe.** `WorldProbe.partyAt` and `confronting`; every in-browser read of `world.party`/`world.confronting` moved to them (`world.test.ts`, `battle.test.ts`, `encampment.test.ts`, `driver.ts`, `manual.shots.ts`, `saves.test.ts`; `character.test.ts` and `party.test.ts` had none, only the column's `party`). One read `tsc` could not catch: `saves.test.ts`'s `toMatchObject({ turn: 4, party: … })` on the probe's world, found by the first browser run and moved to `partyAt`; its reload test also checks `partyAt` now, as `world` no longer carries the hex. No e2e test planted `world.party` or `world.confronting` in a raw save, so no planted path changed.
+- **Tests.** New `src/game/expedition.test.ts` (`newExpedition`, `presenceOf`, `presences`); `worldMap.test.ts`: clearing frees every party facing the location and only those, and walking in confronts only the party that walked. Tests of a bare world that need a party build a game (`newGame(readyMadeParty(), null, seed)`), and the pinned tests in `blight.test.ts` and `territory.test.ts` changed only `pinned` (it now takes the hex, as the world no longer holds it).
+- **Review follow-ups from step 03.** `blight.test.ts`'s redundant assertion in "makes every party's hex neutral" moved out of the loop. `itemPlace.ts`'s two imports from `character.ts` merged. `isNotable`'s unused `_world` kept: C2, C4 and C6 all fix its signature as `(world, event, presences)`, so dropping it is a contract change for the orchestrator to decide (recommendation: leave it until stage 6, which may want the world for a sighting's party).
+- **CLAUDE.md.** The `camp.ts`, `buildings.ts`, `guildHall.ts`, `expedition.ts`, `worldMap.ts` and `gameState.ts` lines, the world map's rule on `confronting` and the save rule's version figures; no mention of `soloPresences`, `world.party`, `WorldState.party` or `world.confronting` is left.
+
+**Verification.**
+- `npm test` (Node 26): 79 files, 1230 tests passed; the guard test unchanged (`git diff` touches only an unused import and the nextTarget, outpost and field-craft tests of `scripts/simulate.test.ts`, not `describe('the refactor guard')` or its fixture).
+- 50-campaign check: summary identical to step 01's line for line (diffed, npm's header lines aside), "Simulated 50 campaigns, 852 battles in all", "Beat the Source: 23 of 50"; SHA-256 `068016a82040ec5be673084265005a7218f0ce927629880565c1a27a8cf52d76`, equal to step 01's. **Guard identical**, run twice (after the domain change and again after all edits).
+- `npm run test:browser` (Node 26): first full run 88 of 89 (the `saves.test.ts` read above); after the fix `saves.test.ts` 6 of 6 and a second full run 9 files, 89 tests passed.
+- `grep -rn "world\.party\|world\.confronting\|soloPresences" src scripts e2e`: only the migration in `save.ts` and its tests (the old save's fields), the tutorial anchor name `'world.party'`, and the probes' party column (`world.party[0]` on a `WorldProbe`).

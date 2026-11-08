@@ -91,7 +91,7 @@ describe('the Runes tab', () => {
 
   it('previews a field embed as taking a day too', () => {
     const { game, place } = home('iron_sword@3', 0)
-    game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
+    leader(game).position = { q: leader(game).position.q + 1, r: leader(game).position.r }
     game.runes = { ember1: 1 }
     expect(actionPreview(game, place, { kind: 'embed', key: 'ember1' }).at(-1)).toBe('Costs 5 gold and a day.')
   })

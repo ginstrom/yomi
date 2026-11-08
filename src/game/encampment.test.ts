@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SHRINE_COSTS } from './buildings.ts'
 import { facilities, improveFacility, setFacilityLevel } from './encampment.ts'
-import { newGame } from './gameState.ts'
+import { leader, newGame } from './gameState.ts'
 
 /** A new game at home, with gold, iron and silver enough for anything. */
 function rich() {
@@ -99,7 +99,7 @@ describe('the encampment', () => {
 
   it('is refused away from home', () => {
     const game = rich()
-    game.world.party = { q: game.world.party.q + 1, r: game.world.party.r }
+    leader(game).position = { q: leader(game).position.q + 1, r: leader(game).position.r }
     expect(view(game, 'shrine').refusal).toMatch(/not at Hearthold/)
     expect(improveFacility(game, 'shrine')).toMatch(/at Hearthold/)
   })

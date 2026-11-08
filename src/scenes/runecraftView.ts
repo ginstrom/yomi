@@ -162,7 +162,7 @@ export function actionPreview(game: GameState, place: ItemPlace | null, action: 
     return [`Makes the ${after.name}.`, ...compareLines(item, after, ap, strength)]
   }
   if (action.kind === 'embed') {
-    const day = craftTier(game.world) === 'field' ? ' and a day' : ''
+    const day = craftTier(game.world, leader(game)) === 'field' ? ' and a day' : ''
     return [
       `Set ${aRune(action.key)} in the ${item.name}.`,
       ...compare(withRunes(item, [...(item.runes ?? []), action.key])),

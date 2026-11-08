@@ -16,12 +16,14 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  *
  * Raise `SAVE_VERSION` whenever the shape of `GameState`, `Character`,
  * `WorldState` or `BattleSnapshot` changes. A migration is written only when
- * a stage's design asks for one (stage 5's does: `migrateFrom18`); otherwise
- * a save of another version reads as unreadable. Rules and item numbers may change
+ * a stage's design asks for one (stage 5's does: `migrateFrom18`, reading a
+ * version-18 save straight to this version; version 19 was never released
+ * and reads as unreadable); otherwise a save of another version reads as
+ * unreadable. Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 19
+export const SAVE_VERSION = 20
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -115,16 +117,33 @@ function locationOf(saved: WorldLocation): WorldLocation {
 }
 
 /**
- * A version-18 game (one `party`, one `baggage`) as a version-19 one: a company
- * of one. The world is left as it is. Step 04 of stage 5 replaces this with
- * the migration from 18 to 20.
+ * A version-18 game (one `party` and one `baggage`, the world holding where it
+ * stands and what it confronts) as a version-20 one: a company of one, the
+ * party's position and confrontation its expedition's.
  */
 function migrateFrom18(game: Record<string, unknown>): void {
   check(Array.isArray(game.party) && Array.isArray(game.baggage))
-  game.parties = [{ id: FIRST_PARTY_ID, name: FIRST_PARTY_NAME, members: game.party, baggage: game.baggage, order: { kind: 'idle' } }]
+  const world = game.world as Record<string, unknown> | undefined
+  check(world && typeof world === 'object')
+  game.parties = [
+    {
+      id: FIRST_PARTY_ID,
+      name: FIRST_PARTY_NAME,
+      members: game.party,
+      baggage: game.baggage,
+      position: world.party,
+      order: { kind: 'idle' },
+      confronting: world.confronting,
+    },
+  ]
   delete game.party
   delete game.baggage
+  delete world.party
+  delete world.confronting
 }
+
+const isHex = (hex: unknown): boolean =>
+  typeof hex === 'object' && hex !== null && typeof (hex as { q: unknown }).q === 'number' && typeof (hex as { r: unknown }).r === 'number'
 
 /** Null for anything that is not a save of this version (or version 18, migrated), or names an item, perk or skill the game does not have. */
 export function parseSave(raw: string | null): SaveFile | null {
@@ -142,6 +161,7 @@ export function parseSave(raw: string | null): SaveFile | null {
     check(new Set(game.parties.map((party) => party.id)).size === game.parties.length)
     check(game.parties.every((party) => Array.isArray(party.members) && party.members.length > 0 && Array.isArray(party.baggage)))
     check(game.parties.every((party) => party.order && ORDER_KINDS.includes(party.order.kind)))
+    check(game.parties.every((party) => isHex(party.position) && (party.confronting === null || typeof party.confronting === 'string')))
     check(game.world && typeof game.world === 'object' && Array.isArray(game.world.locations))
     const { world } = game
     check(world.board && Array.isArray(world.blight) && Array.isArray(world.shift) && world.blight.length === world.board.cols * world.board.rows)

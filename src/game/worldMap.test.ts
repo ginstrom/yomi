@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { HexBoard, hexDistance, hexEquals, hexKey, hexToOffset, offsetToHex, type Hex } from '../grid/hex.ts'
 import { ENCOUNTERS, ENCOUNTER_BANDS, MAX_THREAT } from './encounters.ts'
-import { soloPresences, type PartyPresence } from './expedition.ts'
+import type { PartyPresence } from './expedition.ts'
+import { leader, newGame, type GameState } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
 import {
   DEFAULT_ENCAMPMENT_NAME,
@@ -10,6 +11,7 @@ import {
   SOURCE_ID,
   THREAT_BAND,
   clearLocation,
+  encampment,
   encampmentName,
   isNotable,
   linger,
@@ -25,14 +27,19 @@ import {
 const monsters = (world: WorldState) => world.locations.filter((l) => l.kind === 'monsters')
 /** The monster locations other than the Source. */
 const lairs = (world: WorldState) => monsters(world).filter((l) => l.kind === 'monsters' && !l.source)
-const party = readyMadeParty()
+/** A new game on world 1: the game, its world and its one party. */
+function fresh() {
+  const game = newGame(readyMadeParty(), null, 1)
+  return { game, world: game.world, party: leader(game) }
+}
 /** Travels on to `to` however often a sighting stops the party, as a player clicks again. */
-function journeyTo(world: WorldState, to: Hex): void {
-  for (let tries = 0; tries < 10 && !hexEquals(world.party, to); tries++) travel(world, to, party)
+function journeyTo(game: GameState, to: Hex): void {
+  const party = leader(game)
+  for (let tries = 0; tries < 10 && !hexEquals(party.position, to); tries++) travel(game, party, to)
 }
 
 describe('newWorld', () => {
-  const world = newWorld(1)
+  const { world, party } = fresh()
 
   it('puts every location on its own hex of the map', () => {
     const board = new HexBoard(world.board)
@@ -120,7 +127,7 @@ describe('newWorld', () => {
   })
 
   it('makes monsters the more dangerous the further from home they lie', () => {
-    const byDistance = [...lairs(world)].sort((a, b) => hexDistance(world.party, a.position) - hexDistance(world.party, b.position))
+    const byDistance = [...lairs(world)].sort((a, b) => hexDistance(party.position, a.position) - hexDistance(party.position, b.position))
     const threats = byDistance.map((l) => l.threat)
     expect(threats).toEqual([...threats].sort((a, b) => a - b))
     expect(threats[0]).toBe(1)
@@ -130,9 +137,9 @@ describe('newWorld', () => {
 
   it('starts the party on turn 1, on the map and clear of monsters', () => {
     expect(world.turn).toBe(1)
-    expect(new HexBoard(world.board).contains(world.party)).toBe(true)
-    expect(monstersHere(world)).toBeNull()
-    expect(world.confronting).toBeNull()
+    expect(new HexBoard(world.board).contains(party.position)).toBe(true)
+    expect(monstersHere(world, party)).toBeNull()
+    expect(party.confronting).toBeNull()
   })
 
   it('puts the Source in the far east, at the top threat', () => {
@@ -146,95 +153,114 @@ describe('newWorld', () => {
 
 describe('travel', () => {
   it('walks a shortest route, a turn a hex', () => {
-    const world = newWorld(1)
+    const { game, world, party } = fresh()
     // Nothing left to sight on the way.
     world.sighted = monsters(world).map((l) => l.id)
-    const from = world.party
+    const from = party.position
     const to = offsetToHex(3, 1)
-    const { walked, interruptedBy } = travel(world, to, party)
+    const { walked, interruptedBy } = travel(game, party, to)
     expect(interruptedBy).toBeNull()
     expect(walked.length).toBe(hexDistance(from, to))
     expect(hexEquals(walked[walked.length - 1], to)).toBe(true)
-    expect(world.party).toEqual(to)
+    expect(party.position).toEqual(to)
     expect(world.turn).toBe(1 + walked.length)
   })
 
   it('goes nowhere off the map or to the hex the party stands on', () => {
-    const world = newWorld(1)
+    const { game, world, party } = fresh()
     const before = structuredClone(world)
-    expect(travel(world, offsetToHex(-1, 0), party).walked).toEqual([])
-    expect(travel(world, world.party, party).walked).toEqual([])
+    expect(travel(game, party, offsetToHex(-1, 0)).walked).toEqual([])
+    expect(travel(game, party, party.position).walked).toEqual([])
     expect(world).toEqual(before)
   })
 
   it('routes around monsters that are not the destination', () => {
-    const world = newWorld(1)
+    const { world, party } = fresh()
     const [goblins] = monsters(world)
     // Straight through the goblins' hex, along their row.
-    world.party = { q: goblins.position.q - 2, r: goblins.position.r }
-    const route = routeTo(world, { q: goblins.position.q + 2, r: goblins.position.r })!
+    party.position = { q: goblins.position.q - 2, r: goblins.position.r }
+    const route = routeTo(world, party, { q: goblins.position.q + 2, r: goblins.position.r })!
     expect(route.some((h) => hexEquals(h, goblins.position))).toBe(false)
     expect(route.length).toBe(5)
   })
 
   it('passes over resources without stopping', () => {
-    const world = newWorld(1)
+    const { game, world, party } = fresh()
     const resource = world.locations.find((l) => l.kind === 'resource')!
-    journeyTo(world, resource.position)
-    expect(world.confronting).toBeNull()
-    expect(routeTo(world, offsetToHex(0, 0))).not.toBeNull()
+    journeyTo(game, resource.position)
+    expect(party.confronting).toBeNull()
+    expect(routeTo(world, party, offsetToHex(0, 0))).not.toBeNull()
   })
 })
 
 describe('a monster location', () => {
-  function arrive(): { world: WorldState; id: string } {
-    const world = newWorld(1)
+  function arrive() {
+    const { game, world, party } = fresh()
     const [goblins] = monsters(world)
-    journeyTo(world, goblins.position)
-    return { world, id: goblins.id }
+    journeyTo(game, goblins.position)
+    return { game, world, party, id: goblins.id }
   }
 
   it('confronts the party when it arrives, holding it there', () => {
-    const { world, id } = arrive()
-    expect(monstersHere(world)?.id).toBe(id)
-    expect(world.confronting).toBe(id)
-    expect(routeTo(world, offsetToHex(0, 0))).toBeNull()
-    expect(travel(world, offsetToHex(0, 0), party).walked).toEqual([])
+    const { game, world, party, id } = arrive()
+    expect(monstersHere(world, party)?.id).toBe(id)
+    expect(party.confronting).toBe(id)
+    expect(routeTo(world, party, offsetToHex(0, 0))).toBeNull()
+    expect(travel(game, party, offsetToHex(0, 0)).walked).toEqual([])
   })
 
   it.each(['scout', 'wait'] as const)('lets the party %s for a turn, then move away or choose again', (how) => {
-    const { world, id } = arrive()
+    const { game, world, party, id } = arrive()
     const turn = world.turn
-    expect(linger(world, how, party)).not.toBeNull()
+    expect(linger(game, party, how)).not.toBeNull()
     expect(world.turn).toBe(turn + 1)
     // Still there to scout, wait at or attack...
-    expect(monstersHere(world)?.id).toBe(id)
-    expect(linger(world, how, party)).not.toBeNull()
+    expect(monstersHere(world, party)?.id).toBe(id)
+    expect(linger(game, party, how)).not.toBeNull()
     // ...and free to leave.
-    expect(travel(world, offsetToHex(0, 0), party).walked.length).toBeGreaterThan(0)
-    expect(monstersHere(world)).toBeNull()
+    expect(travel(game, party, offsetToHex(0, 0)).walked.length).toBeGreaterThan(0)
+    expect(monstersHere(world, party)).toBeNull()
   })
 
   it('is gone from the map once cleared, freeing the party', () => {
-    const { world, id } = arrive()
-    const at = world.party
-    clearLocation(world, id, soloPresences(world, party))
+    const { game, world, party, id } = arrive()
+    const at = party.position
+    clearLocation(game, id)
     expect(locationAt(world, at)).toBeNull()
-    expect(world.confronting).toBeNull()
-    expect(routeTo(world, offsetToHex(0, 0))).not.toBeNull()
+    expect(party.confronting).toBeNull()
+    expect(routeTo(world, party, offsetToHex(0, 0))).not.toBeNull()
+  })
+
+  it('once cleared frees every party that faced it, and only those', () => {
+    const { game, party, id } = arrive()
+    const facing = { ...structuredClone(party), id: 'party_2' }
+    const elsewhere = { ...structuredClone(party), id: 'party_3', confronting: 'kobold_scouts' }
+    game.parties.push(facing, elsewhere)
+    clearLocation(game, id)
+    expect(game.parties.map((p) => p.confronting)).toEqual([null, null, 'kobold_scouts'])
+  })
+
+  it('confronts only the party that walks into it', () => {
+    const { game, world, party } = fresh()
+    const other = { ...structuredClone(party), id: 'party_2' }
+    game.parties.push(other)
+    const [goblins] = monsters(world)
+    journeyTo(game, goblins.position)
+    expect([party.confronting, other.confronting]).toEqual([goblins.id, null])
+    expect(other.position).toEqual(encampment(world).position)
   })
 })
 
 describe('linger', () => {
   it('does nothing away from monsters', () => {
-    const world = newWorld(1)
-    expect(linger(world, 'wait', party)).toBeNull()
+    const { game, world, party } = fresh()
+    expect(linger(game, party, 'wait')).toBeNull()
     expect(world.turn).toBe(1)
   })
 })
 
 describe('threatAt', () => {
-  const home = newWorld(1).party
+  const home = encampment(newWorld(1)).position
 
   it('is 1 at home, a step higher each band out, and never past the top', () => {
     expect(threatAt(home)).toBe(1)
