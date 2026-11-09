@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 6 (multiple parties)
 
 **Slug:** long-campaign-stage-06
-**Phase:** done — idle healing verified; awaiting user (PR)
+**Phase:** done — merged into main
 
 ## Request (user's words)
 
@@ -35,6 +35,7 @@ Large/structural, but the stage design is the approved design (marked ready for 
 
 | Date | Decision | By | Alternatives | Reason |
 |---|---|---|---|---|
+| 2026-11-09 | Commit, merge stage 6 into main, and push both branches directly | user | open a PR first | Explicit follow-up: "please commit, merge, and push" |
 | 2026-11-09 | Idle parties naturally heal each member 1 HP per day; include garrisons, cap at maximum HP, keep mana and infirmary benefits with camping, exclude monsters | user (rate and idle healing); orchestrator (boundaries) | warn instead; full camp benefits | Resolves the simulated player's idle-healing friction without giving an idle party the camp order |
 | 2026-11-08 | Merged PR #6 (merge commit ab37e14) | orchestrator (user delegated) | — | Review verdict ready, mergeable, branch up to date |
 | 2026-11-08 | Skip architecture and design; the stage design is the approved design | orchestrator | new design | Stage design marked ready for planning; precedent stages 2–5 |
