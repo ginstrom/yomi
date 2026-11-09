@@ -1074,12 +1074,15 @@ export class WorldScene extends Phaser.Scene {
   /**
    * A press let go where it was made: on a hex where another party stands,
    * the selected party goes to meet it (the first there in list order); on
-   * any other, it travels there.
+   * any other, it travels there. While any party faces monsters it has not
+   * answered, no order is given: the refusal is Next day's (`refused`).
    */
   private onMapClick(at: Point): void {
     if (this.walking || this.outcomeShade.visible) return
     const clicked = this.hexAt(at.x, at.y)
     if (!clicked) return
+    // No day can pass while a party faces monsters: no order is given, and that party is selected, as Next day does.
+    if (this.refused()) return
     const expedition = this.expedition()
     const other = meetTarget(this.gameState, expedition, clicked)
     if (other) {
@@ -1096,6 +1099,7 @@ export class WorldScene extends Phaser.Scene {
   /** Home: the selected party walks back to the encampment, as a click there would send it but by its own order. */
   private onHome(): void {
     if (this.scene.isPaused() || this.walking || this.outcomeShade.visible) return
+    if (this.refused()) return
     this.follow(followOrder(this.gameState, this.expedition(), { kind: 'home' }), 'Returning home')
   }
 

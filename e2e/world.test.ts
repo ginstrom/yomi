@@ -733,6 +733,24 @@ describe('the world map', () => {
       expect(refused.buttons.nextDay.visible).toBe(false)
     })
 
+    it('refuses a map click while another party stands before monsters, giving no order and selecting that party', async () => {
+      const game = await games.open()
+      const world = await company(game, [{ id: 'party_2', name: 'Second Company', at: RAIDERS.position, confronting: RAIDERS.id }])
+      expect(world.selectedParty).toBe('party_1')
+      await game.click(worldHexOnScreen(world, at(9, 21)))
+      const refused = await game.waitFor('World', (w) => w.selectedParty === 'party_2')
+      expect(refused.message).toBe('Second Company stands before the Goblin Raiders: scout, wait or attack.')
+      expect(refused.world.turn).toBe(world.world.turn)
+      expect(refused.parties.map((p) => p.order)).toEqual(['Idle', 'Before the Goblin Raiders'])
+      expect(refused.figures.map((f) => f.at)).toEqual(world.figures.map((f) => f.at))
+      // Nothing was ordered, so nothing waits in the save either.
+      const menu = await game.reload()
+      await game.click(menu.buttons.continue)
+      await game.waitForScenes(['World'])
+      const reloaded = await game.settled('World', (w) => w.figures.length === 2)
+      expect(reloaded.parties.map((p) => p.order)).toEqual(['Idle', 'Before the Goblin Raiders'])
+    })
+
     it('sends the selected party to meet another on a click on its hex, the two ending on one hex', async () => {
       const game = await games.open()
       const world = await company(game, [{ id: 'party_2', name: 'Second Company', at: at(11, 19) }])
