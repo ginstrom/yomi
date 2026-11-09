@@ -1,4 +1,5 @@
 import type { Character } from '../character/character.ts'
+import { typeInName } from '../character/creation.ts'
 import { exchange, moveHero, type HeroRef } from '../game/company.ts'
 import type { GameState } from '../game/gameState.ts'
 import { homeParties, swap } from '../game/guildHall.ts'
@@ -48,4 +49,24 @@ export function hallAct(game: GameState, pick: HallPick, click: HallClick): stri
   const [partyId, member, reserve] = pick.party === null ? [click.party!, click.index, pick.index] : [pick.party, pick.index, click.index]
   const party = partyById(game, partyId)
   return party ? swap(game, party, member, reserve) : `No party "${partyId}".`
+}
+
+/** A party's name being typed in the hall: `fresh` while it is still the old name, which the first key typed replaces. */
+export interface RenameField {
+  text: string
+  fresh: boolean
+}
+
+/**
+ * The name being typed after a key, as a selected field's text takes it: the
+ * first key that types (or Backspace) replaces the old name, the rest add to
+ * it (`typeInName`), never past `maxLength`; a key held with Ctrl, Cmd or Alt
+ * (`chord`), or one that types nothing, leaves the field as it was.
+ */
+export function typeInRename(field: RenameField, { key, chord }: { key: string; chord: boolean }, maxLength: number): RenameField {
+  if (chord) return field
+  const from = field.fresh ? '' : field.text
+  const text = typeInName(from, key, maxLength)
+  if (text === from && key !== 'Backspace') return field
+  return text === field.text && !field.fresh ? field : { text, fresh: false }
 }

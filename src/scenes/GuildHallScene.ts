@@ -19,8 +19,7 @@ import {
   recruitLevel,
   recruitRefusal,
 } from '../game/guildHall.ts'
-import { typeInName } from '../character/creation.ts'
-import { hallAct, hallColumns, refOf, type HallColumn, type HallPick } from './hallColumns.ts'
+import { hallAct, hallColumns, refOf, typeInRename, type HallColumn, type HallPick, type RenameField } from './hallColumns.ts'
 import type { ButtonProbe, GuildHallProbe } from '../testHook.ts'
 import { soundVolume } from './audioSettings.ts'
 import type { Point } from './boardGeometry.ts'
@@ -41,7 +40,7 @@ interface GuildHallData {
 const FRAME_W = 720
 const FRAME_H = 500
 const CENTRE_X = FRAME_W / 2
-const TITLE_Y = 40
+const TITLE_Y = 34
 const FACE_PITCH = 112
 const PREROLL_Y = 200
 const BUTTON_Y = 426
@@ -92,8 +91,8 @@ export class GuildHallScene extends Phaser.Scene {
   private expedition!: Expedition
   private view: 'roster' | 'recruit' = 'roster'
   private selected: HallPick | null = null
-  /** The party being renamed and the name typed so far: every key goes to it. */
-  private renaming: { party: string; text: string } | null = null
+  /** The party being renamed and the name typed so far (its old name until the first key): every key goes to it. */
+  private renaming: ({ party: string } & RenameField) | null = null
   private message = ''
   private bg!: Phaser.GameObjects.Rectangle
   private frame!: Phaser.GameObjects.Container
@@ -127,6 +126,7 @@ export class GuildHallScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ESC', () => {
       if (this.renaming) {
         this.renaming = null
+        this.message = ''
         this.render()
       } else if (this.view === 'recruit') this.show('roster')
       else this.close()
@@ -198,13 +198,16 @@ export class GuildHallScene extends Phaser.Scene {
       this.add.rectangle(CENTRE_X, FRAME_H / 2, FRAME_W, FRAME_H, 0x241d15, 0.98).setStrokeStyle(3, 0xc9a227),
       this.add.text(CENTRE_X, TITLE_Y, 'Guild Hall', { fontFamily: FONT, fontSize: '28px', color: GOLD, fontStyle: 'bold' }).setOrigin(0.5),
       this.add
-        .text(CENTRE_X, TITLE_Y + 28, `Level ${world.guildHall}: ${maxParties(world)} ${maxParties(world) === 1 ? 'party' : 'parties'} of up to ${partyLimit(world)}, ${company(this.gameState).length} of ${companyLimit(world)} heroes.  Stock: ${stock || 'nothing'}`, {
+        .text(CENTRE_X, TITLE_Y + 26, `Level ${world.guildHall}: ${maxParties(world)} ${maxParties(world) === 1 ? 'party' : 'parties'} of up to ${partyLimit(world)}, ${company(this.gameState).length} of ${companyLimit(world)} heroes.`, {
           fontFamily: FONT,
           fontSize: '13px',
           color: DIM,
         })
         .setOrigin(0.5),
-      this.add.text(CENTRE_X, TITLE_Y + 46, this.actingLine(), { fontFamily: FONT, fontSize: '13px', color: GOLD }).setOrigin(0.5),
+      // Every material held may not fit one line: it wraps onto a second, above the columns' headings.
+      this.add
+        .text(CENTRE_X, TITLE_Y + 35, `Stock: ${stock || 'nothing'}`, { fontFamily: FONT, fontSize: '12px', color: DIM, align: 'center', wordWrap: { width: FRAME_W - 40 } })
+        .setOrigin(0.5, 0),
       this.add.text(CENTRE_X, MESSAGE_Y, this.message || (this.view === 'roster' ? HINT : ''), { fontFamily: FONT, fontSize: '13px', color: TEXT, align: 'center', wordWrap: { width: FRAME_W - 40 } }).setOrigin(0.5),
     ])
     if (this.view === 'roster') this.buildRoster()
@@ -215,11 +218,6 @@ export class GuildHallScene extends Phaser.Scene {
     this.controls[key] = { at, enabled }
     // Next tick: the redraw a click leads to destroys the button whose handler this runs in.
     addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled })
-  }
-
-  /** "For: <name>" once more than one party is at home: the party that recruits and whose baggage the hall's stock follows. */
-  private actingLine(): string {
-    return hallColumns(this.gameState).length > 2 ? `For: ${this.expedition.name}` : ''
   }
 
   private buildRoster(): void {
@@ -277,8 +275,9 @@ export class GuildHallScene extends Phaser.Scene {
     prerolls.forEach(({ draft, role }, index) => {
       const at = faceAt(index, prerolls.length, PREROLL_Y)
       this.addPortrait(draft.portrait, draft.name, role, at, refusal === null, () => {
+        // Back to the roster, where the message tells how the recruiting went.
+        this.view = 'roster'
         this.act(recruit(this.gameState, this.expedition, draft), `${draft.name} joins the reserves at level ${this.gameState.reserves.at(-1)?.level}.`)
-        this.show('roster')
       })
     })
     if (prerolls.length === 0) {
@@ -352,8 +351,10 @@ export class GuildHallScene extends Phaser.Scene {
 
   // ---- actions ---------------------------------------------------------------
 
+  /** Shows `view`, the last action's message gone with the view it was given in. */
   private show(view: 'roster' | 'recruit'): void {
     this.view = view
+    this.message = ''
     this.renaming = null
     this.selected = null
     this.render()
@@ -401,8 +402,8 @@ export class GuildHallScene extends Phaser.Scene {
   private startRename(party: string): void {
     const current = this.gameState.parties.find((p) => p.id === party)
     if (!current) return
-    this.renaming = { party, text: current.name }
-    this.message = 'Type the new name, Enter to keep it, Esc to cancel.'
+    this.renaming = { party, text: current.name, fresh: true }
+    this.message = 'Type the new name (the first key replaces the old), Enter to keep it, Esc to cancel.'
     this.render()
   }
 
@@ -430,10 +431,10 @@ export class GuildHallScene extends Phaser.Scene {
       this.render()
       return
     }
-    const text = typeInName(renaming.text, event.key, MAX_PARTY_NAME)
-    if (text === renaming.text) return
+    const typed = typeInRename(renaming, { key: event.key, chord: event.ctrlKey || event.metaKey || event.altKey }, MAX_PARTY_NAME)
+    if (typed === renaming) return
     event.preventDefault()
-    renaming.text = text
+    this.renaming = { ...renaming, ...typed }
     this.render()
   }
 

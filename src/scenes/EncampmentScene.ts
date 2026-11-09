@@ -142,7 +142,16 @@ export class EncampmentScene extends Phaser.Scene {
     this.frame.add([
       this.add.rectangle(CENTRE_X, FRAME_H / 2, FRAME_W, FRAME_H, 0x241d15, 0.98).setStrokeStyle(3, 0xc9a227),
       this.add.text(CENTRE_X, TITLE_Y, encampmentName(world), { fontFamily: FONT, fontSize: '28px', color: GOLD, fontStyle: 'bold' }).setOrigin(0.5),
-      this.add.text(CENTRE_X, TITLE_Y + 28, `${actingFor(this.gameState, this.expedition) || 'Your encampment.  '}Stock: ${stock || 'nothing'}`, { fontFamily: FONT, fontSize: '13px', color: DIM }).setOrigin(0.5),
+      // Every material held may not fit one line: it wraps onto a second, above the picture.
+      this.add
+        .text(CENTRE_X, TITLE_Y + 18, `${actingFor(this.gameState, this.expedition) || 'Your encampment.  '}Stock: ${stock || 'nothing'}`, {
+          fontFamily: FONT,
+          fontSize: '12px',
+          color: DIM,
+          align: 'center',
+          wordWrap: { width: FRAME_W - 40 },
+        })
+        .setOrigin(0.5, 0),
     ])
     this.drawGrounds()
     const all = facilities(this.gameState, this.expedition)

@@ -146,8 +146,11 @@ describe('the encampment', () => {
     const inSecond = await game.settled('GuildHall', (h) => h.selected?.party === 'party_2')
     await game.click(inSecond.buttons.rename)
     await game.settled('GuildHall', (h) => h.renaming !== null)
-    for (let i = 0; i < 'Second Company'.length; i++) await game.press('Backspace')
+    // A chord types nothing; the first key typed replaces the old name.
+    await game.press('Control+a')
+    expect((await game.waitFor('GuildHall')).renaming).toBe('Second Company')
     for (const key of 'Scouts') await game.press(key)
+    expect((await game.waitFor('GuildHall')).renaming).toBe('Scouts')
     await game.press('Enter')
     const renamed = await game.settled('GuildHall', (h) => h.columns[1].name === 'Scouts')
     expect(renamed.renaming).toBeNull()

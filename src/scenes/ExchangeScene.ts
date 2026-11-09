@@ -25,7 +25,7 @@ interface ExchangeData {
 }
 
 const FRAME_W = 720
-const FRAME_H = 560
+const FRAME_H = 580
 const CENTRE_X = FRAME_W / 2
 const FONT = 'monospace'
 const GOLD = '#e8c766'
@@ -42,8 +42,9 @@ const LINES = 5
 const LIST_W = 330
 const LIST_X = [20, 370] as const
 const PAGE_Y = 478
-const MESSAGE_Y = 508
-const BUTTON_Y = 538
+// The help's two lines sit clear of the page buttons above and the buttons below.
+const MESSAGE_Y = 510
+const BUTTON_Y = 552
 const HINT = 'Click a hero, then one of the other row to swap, or its heading to move it there. Click an item to pass it across.'
 
 const faceAt = (row: 0 | 1, index: number): Point => ({ x: FACE_X + index * FACE_PITCH, y: ROW_FACE_Y[row] })
@@ -143,9 +144,10 @@ export class ExchangeScene extends Phaser.Scene {
       this.buildRow(row)
       this.buildList(row)
     }
+    // Other party only where there is another to trade with: three parties or more on the hex.
     const others = exchangePartners(this.gameState, this.parties[0]).length
-    this.button('other', { x: CENTRE_X - 100, y: BUTTON_Y, width: 170, height: 32 }, 'Other party', () => this.cycleOther(), others > 1)
-    this.button('close', { x: CENTRE_X + 100, y: BUTTON_Y, width: 170, height: 32 }, 'Close', () => this.close())
+    if (others > 1) this.button('other', { x: CENTRE_X - 100, y: BUTTON_Y, width: 170, height: 32 }, 'Other party', () => this.cycleOther())
+    this.button('close', { x: others > 1 ? CENTRE_X + 100 : CENTRE_X, y: BUTTON_Y, width: 170, height: 32 }, 'Close', () => this.close())
   }
 
   private button(key: 'close' | 'other', at: Rect, label: string, onClick: () => void, enabled = true): void {

@@ -497,10 +497,10 @@ In the encampment, click the guild hall and then **Enter the Guild Hall**. It sh
 ![The guild hall at level 4: two parties and the reserves](images/guild-hall-parties.png)
 
 - **Form party** makes a new party at the encampment from the selected hero, if the hall's level allows another. It takes the next default name (Second Company, Third Company).
-- **Rename** types a new name for the selected hero's party (1 to 16 letters, none shared with another party): Enter keeps it, Esc cancels.
+- **Rename** types a new name for the selected hero's party (1 to 16 letters, none shared with another party): the first key replaces the old name, Backspace starts it empty, Enter keeps it, Esc cancels.
 - **Disband** sends the selected hero's party into the reserves and its baggage to another party at the encampment. The last party cannot be disbanded.
 - **Recruit** hires a new hero for **10 gold**, who joins the reserves. The reserves hold at most 4, and the whole company is limited by the hall's level (7 heroes at level 1, up to 18 at level 5).
-- While more than one party stands at the encampment, its screens (the encampment, the guild hall, the trading post and the workshop) say which party they act for ("For: Second Company"): the selected party if it is at home, else the first at home.
+- While more than one party stands at the encampment, its screens (the encampment, the trading post and the workshop) say which party they act for ("For: Second Company"): the selected party if it is at home, else the first at home. The guild hall shows every party at home in a column of its own.
 
 ![Recruiting](images/guild-hall-recruit.png)
 

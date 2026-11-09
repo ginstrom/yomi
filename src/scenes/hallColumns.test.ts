@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { formParty } from '../game/company.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
-import { hallAct, hallColumns } from './hallColumns.ts'
+import { hallAct, hallColumns, typeInRename } from './hallColumns.ts'
 
 function hall(level = 4): GameState {
   const game = newGame(undefined, null, 1, 'Hearthold')
@@ -42,5 +42,31 @@ describe('the hall columns', () => {
   })
   it('does nothing in the same column', () => {
     expect(hallAct(hall(), { party: 'party_1', index: 0 }, { party: 'party_1', index: 1 })).toBeNull()
+  })
+})
+
+describe('typeInRename', () => {
+  const field = { text: 'Second Company', fresh: true }
+  const key = (key: string, chord = false) => ({ key, chord })
+
+  it('replaces the old name with the first key typed, and adds to it after', () => {
+    const first = typeInRename(field, key('I'), 16)
+    expect(first).toEqual({ text: 'I', fresh: false })
+    expect(typeInRename(first, key('r'), 16)).toEqual({ text: 'Ir', fresh: false })
+  })
+
+  it('clears the old name with Backspace first', () => {
+    expect(typeInRename(field, key('Backspace'), 16)).toEqual({ text: '', fresh: false })
+  })
+
+  it('types nothing for a chord or a key that types nothing, leaving the old name to be replaced', () => {
+    expect(typeInRename(field, key('a', true), 16)).toBe(field)
+    expect(typeInRename(field, key('Shift'), 16)).toBe(field)
+    const typing = { text: 'Ir', fresh: false }
+    expect(typeInRename(typing, key('a', true), 16)).toBe(typing)
+  })
+
+  it('stops at the longest name', () => {
+    expect(typeInRename({ text: 'x'.repeat(16), fresh: false }, key('y'), 16).text).toHaveLength(16)
   })
 })

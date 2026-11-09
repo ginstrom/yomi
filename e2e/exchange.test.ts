@@ -45,6 +45,9 @@ describe('exchange', () => {
     expect(open.parties).toEqual(['party_1', 'party_2'])
     expect(open.rows.map((row) => row.length)).toEqual([3, 1])
     expect(open.baggageCounts).toEqual([2, 0])
+    // With no third party on the hex there is no other to cycle to.
+    expect(open.buttons.other.visible).toBe(false)
+    expect(open.buttons.close.visible).toBe(true)
 
     // A click on an item passes it across.
     await game.click(open.baggage[0][0])
