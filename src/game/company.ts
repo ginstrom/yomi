@@ -574,8 +574,20 @@ export function disband(game: GameState, id: string): string | null {
   if (game.reserves.length + party.members.length > MAX_RESERVES) return `The guild hall keeps no more than ${MAX_RESERVES} heroes in reserve.`
   game.reserves.push(...party.members)
   heir.baggage.push(...party.baggage)
-  game.parties.splice(game.parties.indexOf(party), 1)
+  removeParty(game, party)
   return null
+}
+
+/**
+ * Takes `party` out of the company, and turns any other party's meet order on
+ * it to idle, as no order may name a party that is gone (a save holding one is
+ * unreadable, and a later party taking its id would inherit the meet).
+ */
+function removeParty(game: GameState, party: Expedition): void {
+  game.parties.splice(game.parties.indexOf(party), 1)
+  for (const other of game.parties) {
+    if (other.order.kind === 'meet' && other.order.party === party.id) other.order = { kind: 'idle' }
+  }
 }
 
 /** Moves `hero` to the end of party `to.party`, or to the reserves. Both ends must be at home. */
@@ -707,7 +719,7 @@ export function wipeParty(game: GameState, id: string, location: MonsterLocation
   const dead = buryAll(party.members, left)
   party.baggage = []
   location?.loot.push(...left)
-  game.parties.splice(game.parties.indexOf(party), 1)
+  removeParty(game, party)
   let reformed: Expedition | null = null
   if (game.parties.length === 0 && game.reserves.length > 0) {
     const members = game.reserves.splice(0, partyLimit(game.world)).map(rested)

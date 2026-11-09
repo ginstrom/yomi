@@ -10,6 +10,7 @@ import { MAX_RESERVES } from './guildHall.ts'
 import { newGame, type GameState } from './gameState.ts'
 import type { ItemPlace } from './itemPlace.ts'
 import { readyMadeParty } from './party.ts'
+import { parseSave, serializeSave } from './save.ts'
 import { NOTICE_RADIUS, encampment, locationAt, passTurn, routeTo, travel, type MonsterLocation, type WorldState } from './worldMap.ts'
 
 /** A new game on world 1 with the ready-made three: the game, its world and its one party. */
@@ -1265,5 +1266,41 @@ describe('wipeParty (A9)', () => {
     expect(game.parties).toEqual([])
     expect(heroesLeft(game)).toBe(0)
     expect(world.status).toBe('playing')
+  })
+})
+
+describe('a removed party leaves no meet order naming it', () => {
+  /** Whether `game` survives a save and a load. */
+  const roundTrips = (game: GameState) => parseSave(serializeSave({ game, battle: null, savedAt: 1 })) !== null
+
+  it('wipeParty turns another party’s meet on it to idle, and the save still reads', () => {
+    const { game, world, party, second } = withSecond(quiet(), offsetToHex(11, 19))
+    const nest = nestAt(world, 'wiper', second.position)
+    second.confronting = nest.id
+    expect(setOrder(game, party.id, { kind: 'meet', party: second.id })).toBeNull()
+    wipeParty(game, second.id, nest)
+    expect(party.order).toEqual({ kind: 'idle' })
+    expect(roundTrips(game)).toBe(true)
+  })
+
+  it('disband turns another party’s meet on it to idle, and the save still reads', () => {
+    const { game, second } = withSecond(quiet())
+    game.world.guildHall = 5
+    const third = newExpedition(readyMadeParty(), offsetToHex(5, 4), partyId(3), PARTY_NAMES[2])
+    game.parties.push(third)
+    expect(setOrder(game, third.id, { kind: 'meet', party: second.id })).toBeNull()
+    expect(disband(game, second.id)).toBeNull()
+    expect(third.order).toEqual({ kind: 'idle' })
+    expect(roundTrips(game)).toBe(true)
+  })
+
+  it('leaves other orders alone', () => {
+    const { game, party, second } = withSecond(quiet())
+    game.world.guildHall = 5
+    const third = newExpedition(readyMadeParty(), offsetToHex(5, 4), partyId(3), PARTY_NAMES[2])
+    game.parties.push(third)
+    expect(setOrder(game, party.id, { kind: 'meet', party: third.id })).toBeNull()
+    expect(disband(game, second.id)).toBeNull()
+    expect(party.order).toEqual({ kind: 'meet', party: third.id })
   })
 })

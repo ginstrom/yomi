@@ -6,7 +6,7 @@ import { mulberry32 } from '../combat/rng.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
 import { hex } from '../grid/hex.ts'
 import { BASE_ITEMS, IRON_DAGGER, MAGIC_ITEMS, OAK_SHIELD, RING_PROTECTION, IRON_BREASTPLATE, itemById } from '../inventory/inventory.ts'
-import { FIRST_PARTY_ID, FIRST_PARTY_NAME, PARTY_NAMES, newExpedition, partyId, type Expedition, type Order } from './expedition.ts'
+import { FIRST_PARTY_ID, FIRST_PARTY_NAME, MAX_PARTIES, PARTY_NAMES, newExpedition, partyId, type Expedition, type Order } from './expedition.ts'
 import { ENCOUNTERS } from './encounters.ts'
 import { newGame, takeLoot, type GameState } from './gameState.ts'
 import { Ground } from './ground.ts'
@@ -323,6 +323,26 @@ describe('a company', () => {
     expect(parseSave(edit((s) => (s.game.parties[0].order = { kind: 'home', to: { q: 0, r: 0 } })))).toBeNull()
     expect(parseSave(edit((s) => (s.game.parties[0].order = { kind: 'patrol' })))).toBeNull()
     expect(parseSave(edit((s) => (s.game.parties[0].order = { kind: 'garrison' })))).not.toBeNull()
+  })
+
+  it('reads more than MAX_PARTIES parties, a meet naming its own party or a guild hall outside 1 to 5 as unreadable', () => {
+    const game = gameUnderWay()
+    for (let n = 2; n <= MAX_PARTIES + 1; n++) game.parties.push(newExpedition(partyFromDrafts([PREROLLS[3].draft]), hex(4, 6), partyId(n), `Party ${n}`))
+    const tooMany = serializeSave({ game, battle: null, savedAt: 5 })
+    expect(parseSave(tooMany)).toBeNull()
+    game.parties.length = MAX_PARTIES
+    const raw = serializeSave({ game, battle: null, savedAt: 5 })
+    expect(parseSave(raw)).not.toBeNull()
+    const edit = (change: (saved: any) => void) => {
+      const saved = JSON.parse(raw)
+      change(saved)
+      return JSON.stringify(saved)
+    }
+    expect(parseSave(edit((s) => (s.game.parties[0].order = { kind: 'meet', party: 'party_1' })))).toBeNull()
+    expect(parseSave(edit((s) => (s.game.world.guildHall = 0)))).toBeNull()
+    expect(parseSave(edit((s) => (s.game.world.guildHall = 6)))).toBeNull()
+    expect(parseSave(edit((s) => (s.game.world.guildHall = 2.5)))).toBeNull()
+    expect(parseSave(edit((s) => (s.game.world.guildHall = 5)))).not.toBeNull()
   })
 
   it('round-trips with its id, name, position, order, confrontation, members and baggage', () => {
