@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 6 (multiple parties)
 
 **Slug:** long-campaign-stage-06
-**Phase:** implementation (step 11)
+**Phase:** verification
 
 ## Request (user's words)
 
@@ -86,4 +86,6 @@ Large/structural, but the stage design is the approved design (marked ready for 
 - Step 11 escalated to opus (engineer): it carries the guardWanted measurement and judgment the user asked for, plus step 09's BattleScene meta party line.
 - Step 11 (501aba6, opus): BattleScene meta party; figures (500, seed 1): --parties 1 ready-7 230 (guard holds); 3 parties ready-7 239, hall 4 in 16; ready-10: 1 party 389, 3 parties 389, guard battles 4.9, promotions 0.0, vanguard walk-home 91.7 vs 64.7; guardWanted dropped; docs/CLAUDE.md/manual + all screenshots retaken; play script walked headless (threatened site never arose near home in 120 days; only scripted battles, so no auto-resolve feel); npm test 1487; browser 110; build; sprites:check. Bug found: a map click while another party confronts silently gives a travel order (no message, 'Idle', unsaved) — fixing before verification.
 - Step 11 reviewed by the overall review (as in stage 5).
+- Step 11 fix (4b031bb): a map click (travel/meet) or Return home while another party confronts is refused like Next day (reason, blocking party selected and centred, no order); e2e test failed first; npm test 1487; world e2e 47.
+- Verification launched at 4b031bb: overall review (opus), QA (sonnet), simulated user (sonnet, hands-on).
 
