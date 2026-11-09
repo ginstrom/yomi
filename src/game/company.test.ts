@@ -4,7 +4,7 @@ import { hexDistance, hexEquals, offsetToHex, type Hex } from '../grid/hex.ts'
 import { itemById } from '../inventory/inventory.ts'
 import { boardIndex } from './blight.ts'
 import { campUntilHealed, partyWounded } from './camp.ts'
-import { UNTIL_LIMIT, act, defaultPartyName, disband, exchange, formParty, heroesLeft, wipeParty, type ExchangeMove, moveHero, renameParty, advance, advanceRefusal, blockingParty, orderAction, partyNoun, passDay, setOrder, startTravel, worldInterrupt, type DayReport } from './company.ts'
+import { UNTIL_LIMIT, act, actionBlocked, defaultPartyName, disband, exchange, formParty, heroesLeft, wipeParty, type ExchangeMove, moveHero, renameParty, advance, advanceRefusal, blockingParty, orderAction, partyNoun, passDay, setOrder, startTravel, worldInterrupt, type DayReport } from './company.ts'
 import { PARTY_NAMES, newExpedition, type Expedition, partyId, presences, type DayAction } from './expedition.ts'
 import { MAX_RESERVES } from './guildHall.ts'
 import { newGame, type GameState } from './gameState.ts'
@@ -1302,5 +1302,23 @@ describe('a removed party leaves no meet order naming it', () => {
     expect(setOrder(game, party.id, { kind: 'meet', party: third.id })).toBeNull()
     expect(disband(game, second.id)).toBeNull()
     expect(party.order).toEqual({ kind: 'meet', party: third.id })
+  })
+})
+
+describe('actionBlocked', () => {
+  it('names the other party whose monsters stop a day the action would pass, and none where the action answers its own', () => {
+    const { game, world, party, second } = withSecond(quiet(), offsetToHex(11, 19))
+    const nest = nestAt(world, 'blocker', second.position)
+    expect(actionBlocked(game, party.id, { kind: 'camp' })).toBeNull()
+    second.confronting = nest.id
+    expect(actionBlocked(game, party.id, { kind: 'camp' })).toEqual({ refusal: advanceRefusal(game), party: second })
+    expect(actionBlocked(game, second.id, { kind: 'wait' })).toBeNull()
+    party.position = { ...second.position }
+    party.confronting = nest.id
+    const blocked = actionBlocked(game, party.id, { kind: 'scout' })
+    expect(blocked).toEqual({ refusal: orderAction(game, party.id, { kind: 'scout' }), party: second })
+    expect(blocked!.refusal).toMatch(/^Second Company stands before/)
+    world.status = 'lost'
+    expect(actionBlocked(game, party.id, { kind: 'scout' })).toEqual({ refusal: 'The game is over.', party: null })
   })
 })

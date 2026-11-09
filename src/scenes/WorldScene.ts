@@ -1,14 +1,15 @@
 import Phaser from 'phaser'
 import type { Character } from '../character/character.ts'
 import { canAdvance } from '../character/progression.ts'
-import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex, type WorldEvent } from '../game/blight.ts'
-import { atEncampment, buildOutpost, buildTower, canBuildOutpost, canBuildTower, outpostSite, outpostSiteRefusal, towerSiteRefusal } from '../game/buildings.ts'
+import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex } from '../game/blight.ts'
+import { atEncampment, outpostSite, outpostSiteRefusal, towerSiteRefusal } from '../game/buildings.ts'
 import { exchangePartners } from './exchangeView.ts'
-import { UNTIL_LIMIT, advance, advanceRefusal, blockingParty, partyNoun, passDay, setOrder, type DayReport } from '../game/company.ts'
-import { campDay, campUntilHealed, canCamp, describeCamp, partyWounded } from '../game/camp.ts'
-import { FIRST_PARTY_ID, presences, type Expedition, type PartyPresence } from '../game/expedition.ts'
+import { UNTIL_LIMIT, act, actionBlocked, advance, advanceRefusal, blockingParty, partyNoun, passDay, setOrder, type DayReport } from '../game/company.ts'
+import { campUntilHealed, canCamp, describeCamp, partyWounded } from '../game/camp.ts'
+import { FIRST_PARTY_ID, presences, type DayAction, type Expedition, type PartyPresence } from '../game/expedition.ts'
 import { newGame, selectedParty, type GameState } from '../game/gameState.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
+import { craftTier } from '../game/crafting.ts'
 import { daysToFall } from '../game/territory.ts'
 import { UNEXPLORED, knownBlightedShare, visibleHexes } from '../game/vision.ts'
 import {
@@ -16,7 +17,6 @@ import {
   encampmentName,
   followOrder,
   isNotable,
-  linger,
   locationAt,
   monstersHere,
   routeTo,
@@ -40,11 +40,11 @@ import { CURSORS } from './cursors.ts'
 import { clampOrigin, mapOrigin, pannedOrigin, pressMoved, rectContains, type Rect } from './mapScroll.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { PartyListView } from './PartyListView.ts'
-import { BANNER_SPRITES, PARTY_LIST_W, bannerOf, deployedParties, figureOffsets, meetTarget, orderLabel, partyListInfo, standingRoute, travelLabel, type PartyListEntry, type ShownOrder } from './partyList.ts'
+import { BANNER_SPRITES, PARTY_LIST_W, bannerOf, deployedParties, figureOffsets, meetTarget, openingParty, orderLabel, partyListInfo, standingRoute, travelLabel, type PartyListEntry, type ShownOrder } from './partyList.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { FRAME_ACTIVE_COLOR, HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
-import { describeDays, describeWalk, describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
+import { describeDays, describeOthers, describeStanding, describeWalk, describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
 import { hexInfo } from './hexInfo.ts'
 import { tellStory, type StoryAnchors } from './StoryScene.ts'
 import type { StoryMoment } from '../story/story.ts'
@@ -264,7 +264,7 @@ export class WorldScene extends Phaser.Scene {
     this.hovered = null
     this.panOrigin = null
     this.press = null
-    this.selectedParty = selectedParty(this.gameState, data?.party).id
+    this.selectedParty = openingParty(this.gameState, data?.party).id
     this.hoveredParty = null
     // The first member with something to spend, so one click on its portrait opens its panel.
     this.active = Math.max(0, this.selectedMembers().findIndex(canAdvance))
@@ -413,7 +413,7 @@ export class WorldScene extends Phaser.Scene {
       this.world.status === 'won'
         ? ''
         : here
-        ? `You stand before ${theName(here.name)} (threat ${here.threat}).`
+        ? describeStanding(this.gameState, this.expedition(), here)
         : this.expedition().members.some(canAdvance)
           ? 'Your heroes have grown: click the portrait of one marked "+" to spend its skill points and perks.'
           : '',
@@ -1223,10 +1223,8 @@ export class WorldScene extends Phaser.Scene {
    * why, and the party whose monsters block the days is selected and centred,
    * its footer offering Scout, Wait and Attack.
    */
-  private refused(): boolean {
-    const refusal = advanceRefusal(this.gameState)
+  private refused(refusal = advanceRefusal(this.gameState), blocking = blockingParty(this.gameState)): boolean {
     if (refusal === null) return false
-    const blocking = blockingParty(this.gameState)
     if (blocking) this.selectParty(blocking.id)
     this.messageText.setText(refusal)
     return true
@@ -1260,78 +1258,96 @@ export class WorldScene extends Phaser.Scene {
     })
   }
 
-  /** Scouting and waiting each pass a turn among the monsters; nothing comes of either yet. */
-  private onLinger(how: Lingering): void {
-    const here = monstersHere(this.world, this.expedition())
-    const events = here ? linger(this.gameState, this.expedition(), how) : null
-    if (!here || !events) return
-    this.messageText.setText(
-      describeWorldEvents(events) ||
-        (how === 'scout'
-          ? `You scout ${theName(here.name)}, but learn nothing new.`
-          : `You wait a turn. ${theNameCapital(here.name)} do not stir.`),
-    )
+  /**
+   * The selected party's one-day action, run at once (`act`), or null when it
+   * is refused: if another party's monsters stop the day, the message says so
+   * and that party is selected and centred, as Next day does; else the
+   * message gives the action's own refusal.
+   */
+  private actDay(action: DayAction): DayReport | null {
+    const expedition = this.expedition()
+    const blocked = actionBlocked(this.gameState, expedition.id, action)
+    if (blocked) {
+      this.refused(blocked.refusal, blocked.party)
+      return null
+    }
+    const report = act(this.gameState, expedition.id, action)
+    if (typeof report !== 'string') return report
+    this.messageText.setText(report)
+    return null
+  }
+
+  /**
+   * After the selected party's own days (a one-day action, or camping until
+   * healed): the message gives `own`, then what else the days brought, the
+   * other parties' events included (`describeOthers`), and the party that
+   * concerns, if any, is selected and centred as for an interrupt; then saves.
+   */
+  private ownDays(own: string, reports: readonly DayReport[], others = describeOthers(this.gameState, this.expedition(), reports)): void {
+    if (others.party !== null) this.selectParty(others.party)
+    this.messageText.setText(others.text ? `${own} ${others.text}` : own)
     this.refresh()
     this.save()
     this.checkOutcome()
-    this.tell({ kind: 'world_turn', events })
+    this.tell({ kind: 'world_turn', events: reports.flatMap((report) => report.events) })
+  }
+
+  /** Scouting and waiting each pass a turn among the monsters; nothing comes of either yet. */
+  private onLinger(how: Lingering): void {
+    if (this.scene.isPaused() || this.walking || this.outcomeShade.visible) return
+    const here = monstersHere(this.world, this.expedition())
+    if (!here) return
+    const report = this.actDay({ kind: how })
+    if (!report) return
+    this.ownDays(
+      how === 'scout' ? `You scout ${theName(here.name)}, but learn nothing new.` : `You wait a turn. ${theNameCapital(here.name)} do not stir.`,
+      [report],
+    )
   }
 
   /** A day's rest where the party stands: a hit point each, and every caster's mana back. */
   private onCamp(): void {
-    const day = campDay(this.gameState, this.expedition())
-    if (day === null) return
-    const told = describeWorldEvents(day.events)
-    this.messageText.setText(
-      `You camp a day. Mana is restored${day.healed > 0 ? ` and rest heals ${day.healed} hp` : ''}.${told ? ` ${told}` : ''}`,
-    )
-    this.refresh()
-    this.save()
-    this.checkOutcome()
-    this.tell({ kind: 'world_turn', events: day.events })
+    if (this.scene.isPaused() || this.walking || this.outcomeShade.visible) return
+    const expedition = this.expedition()
+    const report = this.actDay({ kind: 'camp' })
+    if (!report) return
+    const healed = report.parties.find((day) => day.party === expedition.id)?.rested ?? 0
+    this.ownDays(`You camp a day. Mana is restored${healed > 0 ? ` and rest heals ${healed} hp` : ''}.`, [report])
   }
 
   /** Days of rest, with the casters healing what they can each day, until no one is wounded. */
   private onCampUntilHealed(): void {
-    const result = campUntilHealed(this.gameState, this.expedition())
+    if (this.scene.isPaused() || this.walking || this.outcomeShade.visible) return
+    // The camp order is no day action, but no day passes for it while another party faces monsters either.
+    if (this.refused()) return
+    const expedition = this.expedition()
+    const result = campUntilHealed(this.gameState, expedition)
     if (result === null) return
-    const told = describeWorldEvents(result.events, result.interruptedBy)
+    const others = describeOthers(this.gameState, expedition, result.reports)
     const days = `${result.days} ${result.days === 1 ? 'day' : 'days'}`
-    this.messageText.setText(
-      result.interruptedBy ? `Camp is broken after ${days}. ${told}` : `${describeCamp(result)}${told ? ` ${told}` : ''}`,
-    )
-    this.refresh()
-    this.save()
-    this.checkOutcome()
-    this.tell({ kind: 'world_turn', events: result.events })
+    // Cut short by a notable event or another party's: the camp order stands.
+    const broken = result.interruptedBy !== null || others.party !== null
+    this.ownDays(broken ? `Camp is broken after ${days}.` : describeCamp(result), result.reports, others)
   }
 
   /** Builds a watchtower where the party stands, a day's work, or says why it cannot (the stock, most often). */
   private onBuildTower(): void {
-    const refusal = canBuildTower(this.world, this.expedition())
-    this.built(refusal, refusal ? null : buildTower(this.gameState, this.expedition()))
+    this.built({ kind: 'tower' })
   }
 
   /** Builds an outpost at the held site the party stands on, a day's work, or says why it cannot. */
   private onBuildOutpost(): void {
-    const refusal = canBuildOutpost(this.world, this.expedition())
-    this.built(refusal, refusal ? null : buildOutpost(this.gameState, this.expedition()))
+    this.built({ kind: 'outpost' })
   }
 
-  /** Tells what a building's day brought, or why it was refused. */
-  private built(refusal: string | null, events: WorldEvent[] | null): void {
-    if (!events) {
-      this.messageText.setText(refusal ?? '')
-      return
-    }
-    // The first event is the tower's own; the rest are the day's.
-    const [built, ...day] = events
-    const told = describeWorldEvents(day, day.find((event) => isNotable(this.world, event, this.presences())) ?? null)
-    this.messageText.setText(`${describeWorldEvent(built)}${told ? ` ${told}` : ''}`)
-    this.refresh()
-    this.save()
-    this.checkOutcome()
-    this.tell({ kind: 'world_turn', events })
+  /** A building's day: what it built and what else the day brought, or why it was refused. */
+  private built(action: DayAction): void {
+    if (this.scene.isPaused() || this.walking || this.outcomeShade.visible) return
+    const report = this.actDay(action)
+    if (!report) return
+    // The first event is the building's own; the rest are the day's.
+    const [built, ...day] = report.events
+    this.ownDays(describeWorldEvent(built), [report], describeOthers(this.gameState, this.expedition(), [{ ...report, events: day }]))
   }
 
   /**
@@ -1437,6 +1453,8 @@ export class WorldScene extends Phaser.Scene {
   /** Field crafting over the map (CraftingScene), wherever the party may camp; it resumes the map with what it made. */
   private openCrafting(): void {
     if (this.scene.isPaused() || this.walking || !canCamp(this.world, this.expedition())) return
+    // Work in the field takes a day, which cannot pass while another party faces monsters.
+    if (craftTier(this.world, this.expedition()) === 'field' && this.refused()) return
     this.scene.launch('Crafting', { game: this.gameState, resume: 'World', party: this.selectedParty })
     this.scene.bringToTop('Crafting')
     this.scene.pause()

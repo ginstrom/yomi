@@ -127,6 +127,21 @@ export function blockingParty(game: GameState): Expedition | null {
   return firstBlocking(game, (party) => party.order)
 }
 
+/**
+ * Why no day could pass were party `id` given the one-day `action`, with the
+ * party whose unanswered monsters stop it (null when the game is over), or
+ * null when a day could: what `orderAction` refuses after the action's own
+ * check, for the map to select and centre that party, as it does
+ * `blockingParty` when Next day is refused.
+ */
+export function actionBlocked(game: GameState, id: string, action: DayAction): { refusal: string; party: Expedition | null } | null {
+  const order: Order = { kind: 'day', action }
+  const orderOf = (party: Expedition): Order => (party.id === id ? order : party.order)
+  const refusal = dayRefusal(game, orderOf)
+  if (refusal === null) return null
+  return { refusal, party: worldActive(game.world) ? firstBlocking(game, orderOf) : null }
+}
+
 /** Why no day can pass now, or null when one can. */
 export function advanceRefusal(game: GameState): string | null {
   return dayRefusal(game, (party) => party.order)

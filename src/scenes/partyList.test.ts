@@ -17,6 +17,7 @@ import {
   FIGURE_SPREAD,
   figureOffsets,
   meetTarget,
+  openingParty,
   SINGLE_PARTY_NAME,
   deployedParties,
   orderLabel,
@@ -347,5 +348,21 @@ describe('the parties on the map', () => {
     expect(meetTarget(game, first, third.position)).toBe(second)
     expect(meetTarget(game, second, second.position)).toBeNull()
     expect(meetTarget(game, first, { q: 0, r: 0 })).toBeNull()
+  })
+})
+
+describe('openingParty', () => {
+  it('opens on the party the scene data names, else the first whose monsters block the days, else the first', () => {
+    const game = newGame(readyMadeParty(), null, 1)
+    const [first] = game.parties
+    const second: Expedition = { ...newExpedition(readyMadeParty(), first.position), id: 'party_2', name: 'Second Company' }
+    game.parties.push(second)
+    expect(openingParty(game)).toBe(first)
+    const raiders = game.world.locations.find((l) => l.kind === 'monsters')!
+    second.position = raiders.position
+    second.confronting = raiders.id
+    expect(openingParty(game)).toBe(second)
+    expect(openingParty(game, first.id)).toBe(first)
+    expect(openingParty(game, 'party_9')).toBe(second)
   })
 })

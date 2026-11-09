@@ -1,6 +1,7 @@
 import { maxHp, type Character } from '../character/character.ts'
 import type { Expedition } from '../game/expedition.ts'
-import type { GameState } from '../game/gameState.ts'
+import { blockingParty } from '../game/company.ts'
+import { partyById, selectedParty, type GameState } from '../game/gameState.ts'
 import { UNEXPLORED, isSighted } from '../game/vision.ts'
 import { boardIndex } from '../game/blight.ts'
 import { locationAt, midSentence, theName, type WorldLocation, type WorldState } from '../game/worldMap.ts'
@@ -240,4 +241,15 @@ export function partyListInfo(entry: PartyListEntry): { title: string; lines: st
   const lines = [`${count} ${count === 1 ? 'member' : 'members'}`, `Hit points: ${entry.hp} / ${entry.maxHp}`, entry.order]
   lines.push('Click to centre the view on it.')
   return { title: entry.name, lines }
+}
+
+/**
+ * The party the world map opens on: the one its scene data names (the party
+ * a battle, the encampment or a panel was for), else, on a load, the first
+ * whose monsters stop the days (`blockingParty`), as Next day would show it,
+ * else the first.
+ */
+export function openingParty(game: GameState, requested?: string): Expedition {
+  const named = requested === undefined ? undefined : partyById(game, requested)
+  return named ?? selectedParty(game, blockingParty(game)?.id)
 }

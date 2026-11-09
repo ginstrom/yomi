@@ -4,7 +4,8 @@ import type { DayReport } from '../game/company.ts'
 import { newExpedition } from '../game/expedition.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { readyMadeParty } from '../game/party.ts'
-import { describeDays, describePartyEvent, describeWalk, describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
+import type { MonsterLocation } from '../game/worldMap.ts'
+import { describeDays, describeOthers, describeStanding, describePartyEvent, describeWalk, describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
 
 const spawned: WorldEvent = { type: 'spawned', location: 'spawn_1', name: 'Kobold Nest', at: { q: 0, r: 0 }, threat: 2 }
 const sighted: WorldEvent = { ...spawned, type: 'sighted' }
@@ -140,5 +141,53 @@ describe('a company’s messages', () => {
     const game = company()
     game.parties[1].position = monsters.position
     expect(describeWalk(game, game.parties[1], [quiet()])).toBe(`Second Company: came upon the ${monsters.name} (threat ${monsters.threat}).`)
+  })
+
+  it('tells what else a party’s own day brought: another party’s event, named, after its own order done', () => {
+    const game = company()
+    const [first, second] = game.parties
+    const monsters = scouts(game)
+    game.world.sighted = [monsters.id]
+    const done = { type: 'order_done', party: first.id } as const
+    const arrived = { type: 'arrived', party: second.id, at: monsters.position } as const
+    const confronting = { type: 'confronting', party: second.id, location: monsters.id } as const
+    const own: DayReport = { ...quiet(), partyEvents: [done], interrupt: { party: first.id, event: done } }
+    expect(describeOthers(game, first, [own])).toEqual({ text: '', party: null })
+    const theirs: DayReport = { ...own, partyEvents: [done, arrived, confronting] }
+    expect(describeOthers(game, first, [theirs])).toEqual({
+      text: `Second Company: came upon the ${monsters.name} (threat ${monsters.threat}).`,
+      party: second.id,
+    })
+    const stopShort = { type: 'order_done', party: second.id } as const
+    expect(describeOthers(game, first, [{ ...own, partyEvents: [done, stopShort] }])).toEqual({
+      text: 'Second Company: has done what it was set to.',
+      party: second.id,
+    })
+    const met = { type: 'met', party: second.id, other: first.id } as const
+    expect(describeOthers(game, first, [{ ...own, partyEvents: [done, met] }]).text).toBe('Second Company: met First Company.')
+  })
+
+  it('tells a notable world event that stopped the day, else the day’s world events', () => {
+    const game = company()
+    const first = game.parties[0]
+    const done = { type: 'order_done', party: first.id } as const
+    const stop: DayReport = { ...quiet(), events: [captured, sighted], partyEvents: [done], interrupt: { party: first.id, event: sighted } }
+    expect(describeOthers(game, first, [stop])).toEqual({ text: `First Company: ${describeWorldEvent(sighted)}`, party: first.id })
+    const site: DayReport = { ...quiet(), events: [threatened], interrupt: { party: null, event: threatened } }
+    expect(describeOthers(game, first, [site])).toEqual({ text: describeWorldEvent(threatened), party: null })
+    expect(describeOthers(game, first, [{ ...quiet(), events: [captured], partyEvents: [done], interrupt: { party: first.id, event: done } }])).toEqual({
+      text: describeWorldEvent(captured),
+      party: null,
+    })
+  })
+})
+
+describe('describeStanding', () => {
+  it('says who stands before the monsters, naming the party where there are several', () => {
+    const game = newGame(undefined, null, 1)
+    const monsters = game.world.locations.find((l): l is MonsterLocation => l.kind === 'monsters')!
+    expect(describeStanding(game, game.parties[0], monsters)).toBe(`You stand before the ${monsters.name} (threat ${monsters.threat}).`)
+    game.parties.push({ ...newExpedition(readyMadeParty(), game.parties[0].position), id: 'party_2', name: 'Second Company' })
+    expect(describeStanding(game, game.parties[1], monsters)).toBe(`Second Company stands before the ${monsters.name} (threat ${monsters.threat}).`)
   })
 })

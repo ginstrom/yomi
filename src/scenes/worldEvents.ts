@@ -140,3 +140,31 @@ export function describeWalk(game: GameState, party: Expedition, reports: readon
   if (interrupt && isPartyEvent(interrupt.event) && interrupt.event.type !== 'arrived') return describePartyEvent(interrupt.event, game)
   return describeWorldEvents(reports.flatMap((report) => report.events))
 }
+
+/**
+ * What else the days the selected party spent on its own one-day action or
+ * camp (Scout, Wait, Camp, a building) brought, to follow that action's own
+ * words: a notable world event that stopped them, else the first event of
+ * another party's (arrived, came upon monsters, met, its order done, a walk
+ * stopped short), each as `describeDays` tells it, led by the party's name
+ * where there are several; else the days' world events that matter. `party`
+ * is the party the map should select and centre, as for an interrupt, or null.
+ */
+export function describeOthers(game: GameState, party: Expedition, reports: readonly DayReport[]): { text: string; party: string | null } {
+  const last = reports.at(-1)
+  const interrupt = last?.interrupt ?? null
+  if (last && interrupt && !isPartyEvent(interrupt.event)) {
+    return { text: spoken(game, interrupt.party, describeInterrupt(interrupt, last.partyEvents, game)), party: interrupt.party }
+  }
+  const theirs = last?.partyEvents.find((event) => event.party !== party.id)
+  if (last && theirs) {
+    return { text: spoken(game, theirs.party, describeInterrupt({ party: theirs.party, event: theirs }, last.partyEvents, game)), party: theirs.party }
+  }
+  return { text: describeWorldEvents(reports.flatMap((report) => report.events)), party: null }
+}
+
+/** The map's opening words for a party standing before monsters: "You stand before …" with one party, else led by the party's name. */
+export function describeStanding(game: GameState, party: Expedition, here: MonsterLocation): string {
+  const met = `${theName(here.name)} (threat ${here.threat})`
+  return speaker(game, party.id) === null ? `You stand before ${met}.` : `${party.name} stands before ${met}.`
+}

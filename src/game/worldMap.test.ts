@@ -533,7 +533,9 @@ describe('a seeded session of walks and camps (characterization)', () => {
         if (party.confronting) results.push(['linger', linger(game, party, 'wait')])
         results.push(['travel', travel(game, party, to)])
         wound()
-        results.push(['camp', campUntilHealed(game, party)])
+        // The reports, added after the day loop, are left out: what they hold is in the rest.
+        const camped = campUntilHealed(game, party)
+        results.push(['camp', camped && (({ reports: _reports, ...rest }) => rest)(camped)])
       }
     }
     // The order is left out: the day loop keeps one past an interrupt, as nothing did before it.
