@@ -329,4 +329,70 @@ describe('the manual’s screenshots', () => {
     await game.hover({ x: 0, y: 0 })
     await shot(game, 'world-blight')
   })
+
+  it('a company of two parties: the guild hall’s columns, the exchange and the party bar', async () => {
+    const game = await games.open()
+    await game.newGame()
+    await game.page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      saved.game.world.stock = { gold: 300, iron: 50 }
+      saved.game.world.guildHall = 4
+      saved.game.parties[0].baggage = ['iron_sword', 'oak_shield']
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    })
+    const menu = await game.reload()
+    await game.click(menu.buttons.continue)
+    await game.waitForScenes(['World'])
+    const home = await game.settled('World')
+    await game.click(home.buttons.enterEncampment)
+    await game.waitForScenes(['Encampment'], ['World'])
+    const camp = await game.settled('Encampment')
+    await game.click(camp.facilities.find((f) => f.id === 'guild_hall')!)
+    await game.click((await game.settled('Encampment', (c) => c.selected === 'guild_hall')).buttons.open)
+    await game.waitForScenes(['GuildHall'], ['World'])
+
+    // A recruit forms the Second Company, and a veteran waits in the reserves.
+    const hall = await game.settled('GuildHall')
+    await game.click(hall.buttons.recruit)
+    const offer = await game.settled('GuildHall', (h) => h.view === 'recruit')
+    await game.click(offer.prerolls[0])
+    const hired = await game.settled('GuildHall', (h) => h.view === 'roster' && h.reserves.length === 1)
+    await game.click(hired.reserves[0])
+    const picked = await game.settled('GuildHall', (h) => h.selected !== null)
+    await game.click(picked.buttons.form)
+    const formed = await game.settled('GuildHall', (h) => h.columns.length === 3)
+    await game.click(formed.columns[0].faces[2])
+    const veteran = await game.settled('GuildHall', (h) => h.selected?.party === 'party_1')
+    await game.click(veteran.columns[2].header)
+    await game.settled('GuildHall', (h) => h.columns[2].faces.length === 1)
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'guild-hall-parties')
+    await game.press('Escape')
+    await game.waitForScenes(['Encampment'], ['World'])
+    const left = await game.settled('Encampment')
+    await game.click(left.buttons.leave)
+    await game.waitForScenes(['World'])
+
+    // The two parties stand together at the encampment: the footer offers Exchange.
+    const together = await game.settled('World', (w) => w.figures.length === 2)
+    await game.click(together.buttons.exchange)
+    await game.waitForScenes(['Exchange'], ['World'])
+    await game.settled('Exchange')
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'exchange')
+    await game.press('Escape')
+    await game.waitForScenes(['World'])
+
+    // The Second Company walks out, and the bar lists both.
+    const back = await game.settled('World')
+    await game.click(back.parties.find((p) => p.id === 'party_2')!)
+    await game.settled('World', (w) => w.selectedParty === 'party_2')
+    try {
+      await game.travelTo(offsetToHex(8, 17))
+    } catch {
+      // Stopped short by a sighting: the view is as good from there.
+    }
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'world-parties')
+  })
 })

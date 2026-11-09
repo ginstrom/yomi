@@ -102,26 +102,53 @@ Any skill points or picks you leave unspent stay with the character, and you can
 
 ![The world map at the start](images/world-start.png)
 
-The world map is a large board of hexes, many screens wide, and the view scrolls to follow your party. Your heroes' portraits run down the left side. Your party is listed down the right side of the map, with its leader's face and its hit points; click it to bring the view back to it (as **Home** does). The header shows the turn number, how much of the explored land is blighted (and, once it has grown, how much stronger the blight has become), and the encampment's **stock** of materials.
+The world map is a large board of hexes, many screens wide, and the view scrolls to follow your party. Your heroes' portraits run down the left side. Your party is listed down the right side of the map, with its leader's face, its banner and its hit points; click it to bring the view back to it (as the **Home** key does). Once the guild hall has raised a second or third party (see [Parties](#parties)), each is listed there by its name, and the left side shows the heroes of the party you have selected. The header shows the turn number, how much of the explored land is blighted (and, once it has grown, how much stronger the blight has become), and the encampment's **stock** of materials.
 
 **Time passes only when you act.** Each hex you walk and each day you camp takes one turn, and each turn the blight takes another day to spread (see [The blight](#8-the-blight)).
 
-Under each party's entry in the list is a line saying what it is doing: **Idle**, **Travelling to** a place you know of, **Camping**, or the day's work it is at (scouting, waiting, building, crafting). While it stands before monsters, the line names them.
+Under each party's entry in the list is a line saying what it is doing: **Idle**, **Travelling to** a place you know of, **Returning home**, **Camping**, **Garrisoning** a site, **Meeting** another party, or the day's work it is at (scouting, waiting, building, crafting). While it stands before monsters, the line names them.
 
 Two buttons in the footer let days pass without a walk or a camp of your own:
 
-- **Next day** passes one day. A party that is travelling or camping carries on with it; an idle one stays where it is.
-- **Until something happens** passes days one after another until something important happens, the party arrives or finishes what it was doing, or thirty quiet days have gone by, in which case the map says so.
+- **Next day** passes one day. Every party carries on with its order: a party that is travelling or camping carries on with it; an idle one stays where it is. Idle and garrisoned parties heal each member **1 HP per day**, up to their maximum, while away from monsters. This natural healing does not refill mana or gain infirmary bonuses; camp for those benefits.
+- **Until something happens** passes days one after another until something important happens, a party arrives or finishes what it was doing, or thirty quiet days have gone by, in which case the map says so.
+- **Return home**, shown while the party is away from the encampment, sends it walking home.
+- **Garrison**, shown on a resource you hold, keeps the party there to guard it until you give it another order. No day passes. The blight never rises on a party's hex, and a party pushes it back around it (the more so the higher its heroes' levels), so a garrison holds a threatened site.
 
-A walk cut short, or a stretch of camping interrupted, keeps its order: the line still says where the party was going, or that it is camping, and a walk's remaining road stays drawn on the map in amber to where it was going (hovering another hex shows that hex's route in its place until the pointer moves off), and **Next day** carries it on, a hex further along the road or another day of rest. Clicking a hex or a button gives the party a new order. Neither time button shows while the party stands at a monsters' lair, even once it has scouted them: there you scout, wait or attack, or walk away.
+A walk cut short, or a stretch of camping interrupted, keeps its order: the line still says where the party was going, or that it is camping, and a walk's remaining road stays drawn on the map in amber to where it was going (hovering another hex shows that hex's route in its place until the pointer moves off), and **Next day** carries it on, a hex further along the road or another day of rest. Clicking a hex or a button gives the party a new order. Neither time button shows while the party stands at a monsters' lair, even once it has scouted them: there you scout, wait or attack, or walk away. While any other party stands before monsters it has not answered, no day can pass: the time buttons, a click on the map and **Return home** say so, give no order, and select that party, so that you can scout, wait or attack with it.
 
 ![A walk cut short, still travelling](images/world-travelling.png)
 
 ### Travel
 
-Click a hex to travel there. Hovering over a hex first shows the route, and a panel at the top right tells what you know of it: what stands there, its blight (as you last saw it, if it is out of sight), whether the blight is gaining or receding there, how many days away it is, and your heroes' levels and hit points on the party's own hex. The party walks one hex per turn and stops early if something important happens on the way, such as monsters coming into view, a site you hold falling under threat, or monsters standing in the road. Routes avoid known monster lairs unless the lair is where you are going.
+Click a hex to travel there. Hovering over a hex first shows the route, and a panel at the top right tells what you know of it: what stands there, its blight (as you last saw it, if it is out of sight), whether the blight is gaining or receding there, how many days away it is, and the heroes' levels and hit points of every party standing on it. The party walks one hex per turn and stops early if something important happens on the way, such as monsters coming into view, a site you hold falling under threat, or monsters standing in the road. Routes avoid known monster lairs unless the lair is where you are going.
 
-The map is larger than the window. It follows the party as it travels, but you can **drag** it with the mouse to look elsewhere; it stops at the map's edges, and a short click still travels. The view stays where you left it until the party next sets out, or you press **Home** or click your party's entry to bring it back to the party.
+The map is larger than the window. It follows the party as it travels, but you can **drag** it with the mouse to look elsewhere; it stops at the map's edges, and a short click still travels. The view stays where you left it until the party next sets out, or you press the **Home** key or click your party's entry to bring it back to the party.
+
+### Parties
+
+![Two parties: the Second Company out on the road, both listed down the right](images/world-parties.png)
+
+Raise the guild hall to level 4 and it can field a second party, at level 5 a third (see [The guild hall](#the-guild-hall)). Each party has its own banner, crimson, azure or green, drawn beside its leader on the map and on its entry in the list, which also shows its name, and its own baggage; the stock and the rune pouch are the company's.
+
+- **Select** a party by clicking its entry down the right. Its heroes fill the left side, a gold ring marks it on the map, and the footer's buttons act for it. Parties sharing a hex stand side by side.
+- **Every party moves at once.** Each carries on with its order whenever days pass, whoever you have selected. Only the selected party's walk is animated; the others step to where they have got to when it ends.
+- **Meet** another party by clicking the hex it stands on (the header says "Meet Second Company" as you hover it). The selected party walks to it, following it if it moves, until the two stand together. A party that walks onto monsters another party already faces stands before them too.
+- **Interruptions name the party.** When something stops the days, the message leads with the party it concerns ("Second Company: arrived at Kobold Scouts."), and the map selects that party and centres on it. A day the selected party spends scouting, waiting, camping or building is told the same way: what it did, then what another party met with that day. A saved game opens on a party standing before monsters, if one is.
+- **One party before monsters holds up the days.** While a party stands before monsters it has not answered, no day passes for anyone: Next day, a click on the map, Return home, Camp, Craft in the field and the buildings are refused, and the map selects that party so you can scout, wait or attack.
+- **Exchange** heroes and baggage when two parties stand on one hex (see [Meeting and exchange](#meeting-and-exchange)).
+- Two parties never fight the same lair at once. A party cannot be sent to a lair another party already stands at (meet it there instead), and of two parties reaching a lair on the same day the first in the list takes it, the other waiting a hex short.
+
+### Meeting and exchange
+
+![The Exchange screen](images/exchange.png)
+
+When another party stands on the selected party's hex, an **Exchange** button appears in the footer, and in the character panel's Inventory tab beside the baggage. It opens a screen with the two parties as two rows of faces and their two baggages below.
+
+- **Click a hero**, then a hero of the other row to swap the two, or the other row's heading to move the hero across.
+- **Click an item** in a baggage to pass it to the other party.
+- With three parties on the hex, **Other party** changes which one the second row trades with.
+- A party keeps at least one hero and at most the hall's party limit; a refusal is told at the bottom. Heroes keep what they wear and carry. Neither party may be standing before monsters the other does not face. **Close** (or Esc) goes back to the map. Reserves are not reached here; the guild hall moves them.
 
 ### Fog of war
 
@@ -163,6 +190,7 @@ When there are no monsters on your hex, the footer offers:
 - **Camp until healed**: your healers cast their heals with the mana they have, then the party camps a day and casts again, repeating until everyone is whole. Anything important that happens breaks camp.
 - **Craft**: rework a piece of gear in the field, a day's work (see [Crafting](#crafting)).
 - **Build Watchtower** or **Build Outpost**, where the land allows (see [Building](#9-building)).
+- **Return home** and **Garrison** sit in the row above, with the time buttons.
 - **Enter** the encampment, when the party stands on it (see [The encampment](#the-encampment)).
 
 ---
@@ -332,7 +360,7 @@ While aiming a spell the pointer is crossed swords over a valid target of an att
 
 You win when every foe has fallen. Every surviving hero earns the full experience reward. The lair disappears from the map, the land around it is cleansed, and its loot goes into the baggage. A lair may also yield a **rune**, which goes into the party's rune pouch: the victory screen names it, as in "Found: Lesser Ember Rune". Lairs of threat 1 to 3 give a Lesser rune half the time; from threat 4 every win gives one, sometimes of the second rank. The Salamander Pool favours Ember runes and the Spider Nest Venom.
 
-**Death is permanent.** A hero who fell in a battle you won is gone for good. Their gear goes to the baggage, and the party fights on smaller until the guild hall fills the place. If **every** hero falls, the game is over and its save is deleted.
+**Death is permanent.** A hero who fell in a battle you won is gone for good. Their gear goes to the baggage, and the party fights on smaller until the guild hall fills the place. If **every** hero in the battle falls, that party is wiped out: its heroes are dead, and everything they wore and carried, with the party's baggage, lies at the lair as its loot, for whoever beats it. The game goes on while you have a hero anywhere, in another party or in the guild hall's reserves; if the last party falls with reserves left, they form a new party at the encampment at once. Only when no hero is left is the game over and its save deleted.
 
 Wounds carry over from battle to battle. Heal before you go looking for the next fight.
 
@@ -465,14 +493,20 @@ When the party stands on the encampment, **Enter** (the button carries the encam
 
 ![The guild hall](images/guild-hall.png)
 
-In the encampment, click the guild hall and then **Enter the Guild Hall**. It shows your party and the reserves waiting at the hall. **Close** goes back to the encampment.
+In the encampment, click the guild hall and then **Enter the Guild Hall**. It shows a column for each party standing at the encampment and one for the reserves waiting at the hall. **Close** goes back to the encampment. Levels 4 and 5 of the hall allow a second and a third party (see [Parties](#parties)).
 
-- **Click a hero** to select them. Then click a hero in the other row to swap the two, or use **To reserves** / **To party**.
-- **Recruit** hires a new hero for **10 gold**, who joins the reserves. The reserves hold at most 4.
+- **Click a hero** to select them. Then click a hero in another column to swap the two, or that column's heading to move the hero there (a party keeps at least one hero and at most the hall's party limit; the reserves hold at most 4).
+![The guild hall at level 4: two parties and the reserves](images/guild-hall-parties.png)
+
+- **Form party** makes a new party at the encampment from the selected hero, if the hall's level allows another. It takes the next default name (Second Company, Third Company).
+- **Rename** types a new name for the selected hero's party (1 to 16 letters, none shared with another party): the first key replaces the old name, Backspace starts it empty, Enter keeps it, Esc cancels.
+- **Disband** sends the selected hero's party into the reserves and its baggage to another party at the encampment. The last party cannot be disbanded.
+- **Recruit** hires a new hero for **10 gold**, who joins the reserves. The reserves hold at most 4, and the whole company is limited by the hall's level (7 heroes at level 1, up to 18 at level 5).
+- While more than one party stands at the encampment, its screens (the encampment, the trading post and the workshop) say which party they act for ("For: Second Company"): the selected party if it is at home, else the first at home. The guild hall shows every party at home in a column of its own.
 
 ![Recruiting](images/guild-hall-recruit.png)
 
-You can recruit one of the pre-rolled heroes not already in your company, or **Create new** to make one with character creation. A recruit joins at the hall's level or your party's lowest level, whichever is lower, with that level's points left for you to spend.
+You can recruit one of the pre-rolled heroes not already in your company, or **Create new** to make one with character creation. A recruit joins at the hall's level, with that level's points left for you to spend.
 
 ### Gear families
 
@@ -602,9 +636,9 @@ It cannot raise the dead.
 ## 10. Winning, losing and saving
 
 - **Victory**: find the heart of the blight and destroy it. It is not on your map when the game begins: explore, and the moment your party or a watchtower sights it, wherever it is, your journey stops and it is marked. What guards it fights at threat 5, so plan to arrive with heroes around level 7. After the victory you can **End** the game or carry on in **endless** mode.
-- **Defeat**: the game ends if your whole party falls in a battle, or if your encampment falls to the blight.
+- **Defeat**: the game ends if a lost battle leaves you no hero in any party or the reserves, or if your encampment falls to the blight.
 
-**Saving is automatic.** Each playthrough lives in one of three slots, and there is no save button. The world map saves after each journey, camp and panel change. A battle saves at the start of each of your turns, so reloading during a battle rewinds to the start of that turn with the same dice. A defeat deletes its slot.
+**Saving is automatic.** Each playthrough lives in one of three slots, and there is no save button. The world map saves after each journey, camp and panel change. A battle saves at the start of each of your turns, so reloading during a battle rewinds to the start of that turn with the same dice. A defeat that leaves no hero deletes its slot.
 
 **Seeds**: add `?seed=42` (or any number) to the game's address to fight every battle in that session with fixed dice.
 

@@ -131,6 +131,12 @@ export interface PartyListProbe extends Point {
   order: string
   /** Whether the pointer is over the entry, as the entry itself heard it (nothing over it, such as the outcome screen, took the hover). */
   hovered: boolean
+  /** What the entry calls the party: "Your party" while the company has one, else the party's name. */
+  name: string
+  /** The name drawn on the entry's portrait, shortened to fit ("Second Co."), or '' while the company has one party. */
+  label: string
+  /** The banner drawn on the entry's portrait, by number (1 crimson, 2 azure, 3 green), from the party's id. */
+  banner: number
 }
 
 export interface WorldProbe {
@@ -147,6 +153,8 @@ export interface WorldProbe {
   /** The part of the screen where the map takes clicks. */
   view: Rect
   message: string
+  /** The header's hint under the turn: what the selected party may do, or "Meet <name>: …" while the pointer is over another party's hex. */
+  hint: string
   /** The words of the victory or defeat screen over the map, or '' while the game goes on. The blight, held sites and status are in `world`. */
   outcome: string
   /** The hexes in sight, by `boardIndex`, in order; what the player remembers of the rest is `world.seen`. */
@@ -165,6 +173,12 @@ export interface WorldProbe {
     nextDay: ButtonProbe
     /** Passes days until something happens, or `UNTIL_LIMIT` of them quietly. Shows with `nextDay`. */
     untilSomething: ButtonProbe
+    /** In the time row: walks the selected party back to the encampment. Shows with `nextDay` while it is away from home. */
+    home: ButtonProbe
+    /** In the time row: the selected party holds the held resource it stands on. Shows with `nextDay` there, unless it garrisons it already. */
+    garrison: ButtonProbe
+    /** In the time row: opens the Exchange overlay. Shows with `nextDay` while another party stands on the selected party's hex. */
+    exchange: ButtonProbe
     camp: ButtonProbe
     campUntilHealed: ButtonProbe
     /** Shows where the party may camp on land a watchtower could stand on; a click without the stock says why in the message. */
@@ -186,8 +200,10 @@ export interface WorldProbe {
   selectedParty: string
   /** The info panel's bounds while it shows (a hex or a party entry hovered), else null. */
   infoRect: Rect | null
-  /** The sprites of the party's figure on the map, bottom first in drawing order (`UnitFigure.lookNames`). */
+  /** The sprites of the selected party's figure on the map, bottom first in drawing order (`UnitFigure.lookNames`). */
   partyLook: string[]
+  /** Every party's figure on the map, in company order: the party's id, the hex it stands on, and where its figure's feet are on screen (spread across a shared hex). During a walk the walking party's `screen` moves and the others' wait for its end. */
+  figures: Array<{ id: string; at: Hex; screen: Point }>
 }
 
 /** A hero's face in the guild hall, by its centre on screen. */
@@ -198,6 +214,8 @@ export interface HallFaceProbe extends ButtonProbe {
 export interface EncampmentProbe {
   /** What the player named the encampment. */
   name: string
+  /** The id of the party the encampment acts for (the selected one if at home, else the first at home). */
+  actingFor: string
   /** The facility whose details show, or null. */
   selected: FacilityId | null
   /** What the last action did, or why it was refused. */
@@ -209,6 +227,8 @@ export interface EncampmentProbe {
 }
 
 export interface TradingPostProbe {
+  /** The id of the party the post acts for. */
+  actingFor: string
   tab: 'buy' | 'sell'
   /** The gold in the stock. */
   gold: number
@@ -243,6 +263,8 @@ export interface TradingPostProbe {
 }
 
 export interface CraftingProbe {
+  /** The id of the party the screen acts for. */
+  actingFor: string
   /** 'field', or the workshop's level. */
   tier: 'field' | number
   /** Modify (modifiers, the screen it opens on) or Runes (sockets and the pouch). */
@@ -288,23 +310,49 @@ export interface GuildHallProbe {
   view: 'roster' | 'recruit'
   level: number
   partyLimit: number
+  /** How many parties the hall's level allows. */
+  maxParties: number
   /** What the last action did, or why it was refused. */
   message: string
-  /** The hero clicked, whom a click on the other row swaps with. */
-  selected: { row: 'party' | 'reserves'; index: number } | null
+  /** The hero clicked (`party` null for a reserve), whom a click on a hero of another column swaps with, or a click on its heading moves. */
+  selected: { party: string | null; index: number } | null
+  /** The name typed so far while a party is being renamed; null otherwise. */
+  renaming: string | null
+  /** A column for each party at home, then the reserves (`party` null): its heading, which takes the picked hero in, and its heroes. */
+  columns: Array<{ party: string | null; name: string; header: ButtonProbe; faces: Array<HallFaceProbe & { level: number }> }>
+  /** The acting party's column and the reserves', as `columns` has them. */
   party: Array<HallFaceProbe & { level: number }>
   reserves: Array<HallFaceProbe & { level: number }>
   /** The pre-rolls not in the company, on the recruit view: a click hires one. */
   prerolls: HallFaceProbe[]
-  /** `toReserves`, `toParty`, `recruit` and `close` (back to the encampment) are the roster's; `create` and `back` the recruit view's. */
+  /** `form`, `rename`, `disband` (each acting on the picked hero's party), `recruit` and `close` (back to the encampment) are the roster's; `create` and `back` the recruit view's. */
   buttons: {
-    toReserves: ButtonProbe
-    toParty: ButtonProbe
+    form: ButtonProbe
+    rename: ButtonProbe
+    disband: ButtonProbe
     recruit: ButtonProbe
     create: ButtonProbe
     back: ButtonProbe
     close: ButtonProbe
   }
+}
+
+export interface ExchangeProbe {
+  /** The two parties trading, by id: the one the exchange opened for, then its partner. */
+  parties: [string, string]
+  /** Each row's heading, which takes the picked hero in from the other row. */
+  headers: [Point, Point]
+  /** Each party's heroes. */
+  rows: Array<Array<HallFaceProbe & { level: number }>>
+  /** The baggage lines showing in each list (a page of five), and how many items each baggage holds. */
+  baggage: Array<Array<Point & { id: string }>>
+  baggageCounts: [number, number]
+  /** The hero clicked, whom a click on a hero of the other row swaps with. */
+  selected: { row: 0 | 1; index: number } | null
+  /** What the last move did, or why it was refused. */
+  message: string
+  /** `other` cycles the second row through the parties on the hex when there are two others; `prev` and `next` page each baggage list (row 0's, then row 1's). */
+  buttons: { close: ButtonProbe; other: ButtonProbe; prev: ButtonProbe[]; next: ButtonProbe[] }
 }
 
 export interface BattleProbe {
@@ -378,6 +426,8 @@ export interface InventoryProbe {
   equipment: Record<EquipmentSlot, Point & { item: string | null }>
   /** The backpack's items, each with its slot's centre on screen. */
   backpack: Array<Point & { item: string }>
+  /** The Inventory tab's Exchange button, shown on the world map while another party shares the party's hex. */
+  exchangeButton: ButtonProbe
   /** The items the ground grid shows now (on the world map, the baggage), each with its slot's centre on screen. */
   ground: Array<Point & { item: string }>
   /** The centres on screen of the backpack's and the ground's grids, either of which takes a dragged item anywhere on it. */
@@ -416,6 +466,7 @@ export interface Probes {
   Inventory: InventoryProbe
   Encampment: EncampmentProbe
   GuildHall: GuildHallProbe
+  Exchange: ExchangeProbe
   TradingPost: TradingPostProbe
   Crafting: CraftingProbe
   Story: StoryProbe

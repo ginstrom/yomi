@@ -92,7 +92,7 @@ describe('saveGame', () => {
 
   it('writes the battle the game is in', () => {
     const game = newGame(undefined, 1)
-    const battle = { location: 'goblin_raiders', enemyRng: 4, ground: [], engine: { board: { cols: 1, rows: 1 }, units: [], round: 1, phase: 'player' as const, winner: null, seq: 0, events: [], rng: 3 } }
+    const battle = { location: 'goblin_raiders', party: game.parties[0].id, enemyRng: 4, ground: [], engine: { board: { cols: 1, rows: 1 }, units: [], round: 1, phase: 'player' as const, winner: null, seq: 0, events: [], rng: 3 } }
     saveGame(game, battle)
     expect((readSlot(1) as SaveFile).battle).toEqual(battle)
     saveGame(game)

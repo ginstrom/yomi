@@ -79,8 +79,8 @@ Infinity Engine CRPGs (Baldur's Gate 1 and 2). No third-party art is included.
 | `icon_gauntlets.png` | `art/icons/icon_gauntlets.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
 | `icon_boots.png` | `art/icons/icon_boots.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
 | `icon_greaves.png` | `art/icons/icon_greaves.sprite.toml` | `InventoryScene`, `TradingPostScene`, `CraftingScene` (a gear family of long campaign stage 3, wired in its step 04) |
-| `atlas.png`: `map_*/*` | `art/map/map_*.sprite.toml` | `WorldScene` |
-| `atlas.png`: `camp_*/*` | `art/encampment/camp_*.sprite.toml` (`camp_trading_post` has frames `level_1` to `level_4`; `level_4`, the market that sells steel, adds a banner and a rack of blades, long campaign stage 3) | `EncampmentScene` |
+| `atlas.png`: `map_*/*` | `art/map/map_*.sprite.toml` (`map_banner`, crimson, and its variants `map_banner_azure` and `map_banner_green`, each with an `idle` flutter: a party's banner, long campaign stage 6; drawn for the project with sprite-tool, the licence of the rest) | `WorldScene` |
+| `atlas.png`: `camp_*/*` | `art/encampment/camp_*.sprite.toml` (`camp_trading_post` has frames `level_1` to `level_4`; `level_4`, the market that sells steel, adds a banner and a rack of blades, long campaign stage 3; `camp_guild_hall` has `level_1` to `level_5`; `level_4`, the Barracks behind the hall, and `level_5`, its pennant and crossed blades, long campaign stage 6) | `EncampmentScene` |
 | `portrait_knight.png` | `art/portraits/portrait_knight.sprite.toml` | `PartyColumn`, `InventoryScene` |
 | `portrait_ranger.png` | `art/portraits/portrait_ranger.sprite.toml` | `PartyColumn`, `InventoryScene` |
 | `portrait_rogue.png` | `art/portraits/portrait_rogue.sprite.toml` | `PartyColumn`, `InventoryScene` |

@@ -292,6 +292,71 @@ describe('a battle', () => {
     expect((await game.waitFor('Menu')).buttons.continue.enabled).toBe(false)
   })
 
+  it('goes on at the world map when a party falls while another lives, its baggage left at the nest (A9)', async () => {
+    const game = await games.open()
+    await game.newGame()
+    // A second party at home beside the first, carrying a sword in its baggage.
+    await game.page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      const first = saved.game.parties[0]
+      const second = JSON.parse(JSON.stringify(first))
+      second.id = 'party_2'
+      second.name = 'Second Company'
+      for (const member of second.members) member.name = `${member.name}2`
+      second.baggage = ['iron_sword']
+      saved.game.parties.push(second)
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    })
+    const menu = await game.reload()
+    await game.click(menu.buttons.continue)
+    await game.waitForScenes(['World'])
+    await game.settled('World')
+    await game.press('Shift+Backquote')
+    for (const line of ['hp 1 all @second', `goto ${RAIDERS.id} @second`]) {
+      await game.page.locator('#yomi-debug input').fill(line)
+      await game.press('Enter')
+    }
+    await game.press('Shift+Backquote')
+    const world = await game.waitFor('World', (w) => w.parties.length === 2 && w.parties[1].confronting)
+    await game.click(world.parties[1])
+    const selected = await game.waitFor('World', (w) => w.selectedParty === 'party_2' && w.buttons.attack.visible)
+    await game.click(selected.buttons.attack)
+    await game.waitForScenes(['Battle'])
+    await game.waitFor('Battle', (b) => b.playerControl)
+
+    const over = await game.loseBattle()
+    expect(over.state.winner).toBe('enemy')
+    expect(over.result).toEqual(['The Second Company has fallen. Its baggage lies at the Goblin Raiders.'])
+    const saved = await game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!))
+    expect(saved.battle).toBeNull()
+    expect(saved.game.parties.map((p: { id: string }) => p.id)).toEqual(['party_1'])
+    // The fallen party's panel has no one left to show: C, I and S do nothing on the result screen.
+    for (const key of ['KeyC', 'KeyI', 'KeyS']) await game.press(key)
+    await game.waitForScenes(['Battle'])
+
+    await game.click(over.buttons.result)
+    await game.waitForScenes(['World'])
+    const after = await game.waitFor('World')
+    expect(after.selectedParty).toBe('party_1')
+    expect(after.parties.map((p) => p.id)).toEqual(['party_1'])
+    // Only the first party is drawn, and the view follows it, its figure mid-view at home.
+    expect(after.figures.map((f) => f.id)).toEqual(['party_1'])
+    const { screen } = after.figures[0]
+    expect(screen.x).toBeGreaterThan(after.view.x)
+    expect(screen.x).toBeLessThan(after.view.x + after.view.width)
+    expect(screen.y).toBeGreaterThan(after.view.y)
+    expect(screen.y).toBeLessThan(after.view.y + after.view.height)
+    expect(after.buttons.enterEncampment.visible).toBe(true)
+    const raiders = after.world.locations.find((l) => l.id === RAIDERS.id)
+    expect(raiders?.kind === 'monsters' && raiders.loot.map((item) => item.id)).toContain('iron_sword')
+    // The slot is still the playthrough's, and loads.
+    const again = await game.reload()
+    expect(again.buttons.continue.enabled).toBe(true)
+    await game.click(again.buttons.continue)
+    await game.waitForScenes(['World'])
+    expect((await game.waitFor('World')).parties.map((p) => p.id)).toEqual(['party_1'])
+  })
+
   it('lays itself out again when the window changes size, under an open inventory too', async () => {
     const game = await games.open()
     await game.enterBattle()

@@ -1,4 +1,7 @@
 import type { FacilityId, FacilityView } from '../game/encampment.ts'
+import type { Expedition } from '../game/expedition.ts'
+import type { GameState } from '../game/gameState.ts'
+import { homeParties } from '../game/guildHall.ts'
 import type { Point } from './boardGeometry.ts'
 import { spriteFrame } from './unitLook.ts'
 
@@ -47,4 +50,9 @@ export function plotAt(index: number): Point {
 /** The line under a facility's building: its name, and its level or that it is not built. */
 export function facilityLabel(facility: Pick<FacilityView, 'name' | 'level' | 'maxLevel'>): string {
   return facility.level > 0 ? `${facility.name} ${facility.level}/${facility.maxLevel}` : `${facility.name}: empty plot`
+}
+
+/** "For: <name>." once more than one party is at home, to say which the encampment acts for; '' otherwise. */
+export function actingFor(game: GameState, party: Expedition): string {
+  return homeParties(game).length > 1 ? `For: ${party.name}.  ` : ''
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { blightAt, boardIndex } from './blight.ts'
-import { presences, type PartyPresence } from './expedition.ts'
+import { passDay, setOrder } from './company.ts'
+import { PARTY_NAMES, newExpedition, partyId, presences, type PartyPresence } from './expedition.ts'
 import { newGame } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
 import { LOSS_LEVEL, YIELD_DAYS, daysToFall, siteYield, sites, updateTerritory } from './territory.ts'
@@ -128,5 +129,35 @@ describe('the days to fall with presences', () => {
     }
     expect([-4, -5, -6, -7, -8].map((dq) => fallsIn(dq, [3, 4, 5]))).toEqual([null, 120, 60, 40, 30])
     expect(fallsIn(0, null)).toBe(30)
+  })
+})
+
+describe('a garrisoned site', () => {
+  /** A game on world 1 with the Gold Seam besieged and a second party, of fresh characters, standing on it. */
+  function besiegedWithGuard() {
+    const { game, world } = solo(1)
+    besiege(world, 'gold_seam')
+    const seam = site(world, 'gold_seam')
+    setLevel(world, seam, 0)
+    world.held = [...new Set([...world.held, 'gold_seam'])]
+    game.parties.push(newExpedition(readyMadeParty(), seam.position, partyId(2), PARTY_NAMES[1]))
+    return { game, world, seam }
+  }
+
+  it('holds for 30 days under a siege that takes it in fewer without a party there', () => {
+    const unguarded = besiegedWithGuard()
+    unguarded.game.parties.pop()
+    for (let day = 0; day < 30; day++) passDay(unguarded.game)
+    expect(unguarded.world.held).not.toContain('gold_seam')
+
+    const { game, world, seam } = besiegedWithGuard()
+    expect(setOrder(game, partyId(2), { kind: 'garrison' })).toBeNull()
+    for (let day = 0; day < 30; day++) {
+      expect(passDay(game)).not.toBeNull()
+      expect(blightAt(world, seam.position)).toBe(0)
+    }
+    expect(world.held).toContain('gold_seam')
+    expect(game.parties[1].order).toEqual({ kind: 'garrison' })
+    expect(game.parties[1].position).toEqual(seam.position)
   })
 })

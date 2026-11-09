@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { WorldState, WorldStatus } from '../src/game/worldMap.ts'
-import { hexDistance, offsetToHex } from '../src/grid/hex.ts'
+import { hexDistance, offsetToHex, type Hex } from '../src/grid/hex.ts'
 import { WORLD_LAYOUT, boardHexCenter, boardPixelSize, type Point } from '../src/scenes/boardGeometry.ts'
 import { clampOrigin, mapOrigin, pannedOrigin } from '../src/scenes/mapScroll.ts'
 import type { WorldProbe } from '../src/testHook.ts'
+import { FIGURE_SPREAD } from '../src/scenes/partyList.ts'
 import { RAIDERS, useGames, worldHexOnScreen, type Game } from './driver.ts'
 
 describe('the world map', () => {
@@ -366,7 +367,7 @@ describe('the world map', () => {
     expect(await game.scenes()).toEqual({ running: ['Battle'], paused: [] })
     expect(battle.state).toMatchObject({ round: 1, phase: 'player' })
     expect(battle.state.units.filter((u) => u.side === 'player')).toHaveLength(3)
-    expect(battle.log[0]).toMatchObject({ type: 'battle_start', seed: 1 })
+    expect(battle.log[0]).toMatchObject({ type: 'battle_start', seed: 1, meta: { source: 'game', party: 'party_1' } })
   })
 
   it('puts a beaten location’s loot in the baggage, from which a hero takes it and wears it', async () => {
@@ -454,6 +455,38 @@ describe('the world map', () => {
       expect(order(next)).toBe('Idle')
       expect(next.partyAt).toEqual(home.partyAt)
       expect(next.message).not.toBe('')
+    })
+
+    it('reports and saves idle healing from both time controls, keeping the party idle', async () => {
+      const game = await games.open()
+      await game.newGame()
+      await game.page.evaluate(() => {
+        const save = JSON.parse(localStorage.getItem('yomi.save.1')!)
+        save.game.parties[0].members[0].hp = 1
+        save.game.parties[0].members[2].mana = 0
+        save.game.world.sighted = save.game.world.locations.filter((l: { kind: string }) => l.kind === 'monsters').map((l: { id: string }) => l.id)
+        localStorage.setItem('yomi.save.1', JSON.stringify(save))
+      })
+      await game.click((await game.reload()).buttons.continue)
+      const hurt = await game.settled('World', (w) => w.buttons.campUntilHealed.enabled)
+      await game.click(hurt.buttons.nextDay)
+      const next = await game.waitFor('World', (w) => w.world.turn === hurt.world.turn + 1)
+      expect(next.message).toContain('Rest heals 1 hp.')
+      const savedMember = () => game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!).game.parties[0].members[0].hp)
+      expect(await savedMember()).toBe(2)
+
+      await game.click(next.buttons.untilSomething)
+      const healed = await game.waitFor('World', (w) => w.world.turn === next.world.turn + 30)
+      expect(healed.message).toBe('30 days passed quietly. Rest heals 30 hp.')
+      expect(order(healed)).toBe('Idle')
+      expect(healed.buttons.campUntilHealed.enabled).toBe(false)
+      expect(await savedMember()).toBe(32)
+      expect(await game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!).game.parties[0].members[2].mana)).toBe(0)
+
+      await game.click((await game.reload()).buttons.continue)
+      const loaded = await game.settled('World')
+      expect(loaded.world.turn).toBe(healed.world.turn)
+      expect(loaded.buttons.campUntilHealed.enabled).toBe(false)
     })
 
     it('carries a walk cut short on, a hex a day, the line saying where', async () => {
@@ -643,6 +676,210 @@ describe('the world map', () => {
     await game.newGame()
     return reloadedWith(game, { status })
   }
+
+  describe('a company of parties', () => {
+    type Planted = { id: string; name: string; at: Hex; members?: number; order?: unknown; confronting?: string | null }
+    /**
+     * A new game whose slot is given more parties, each a copy of the first
+     * (its heroes renamed), standing and ordered as told (with every monster
+     * known, if `sightAll`), then reloaded and continued: a company as the
+     * guild hall would form it.
+     */
+    async function company(game: Game, parties: Planted[], first: Partial<Planted> & { position?: Hex } = {}, sightAll = false): Promise<WorldProbe> {
+      await game.newGame()
+      await game.page.evaluate(
+        ({ parties, first, sightAll }) => {
+          const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+          const lead = saved.game.parties[0]
+          Object.assign(lead, first)
+          for (const planted of parties) {
+            const party = JSON.parse(JSON.stringify(lead))
+            party.members = party.members.slice(0, planted.members ?? party.members.length)
+            for (const member of party.members) member.name = `${member.name}${planted.id.slice(-1)}`
+            Object.assign(party, { id: planted.id, name: planted.name, position: planted.at, order: planted.order ?? { kind: 'idle' }, confronting: planted.confronting ?? null, baggage: [] })
+            saved.game.parties.push(party)
+          }
+          saved.game.world.guildHall = 5
+          // Every monster known, so that no sighting is what a day tells.
+          if (sightAll) saved.game.world.sighted = saved.game.world.locations.filter((l: { kind: string }) => l.kind === 'monsters').map((l: { id: string }) => l.id)
+          localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+        },
+        { parties, first, sightAll },
+      )
+      const menu = await game.reload()
+      await game.click(menu.buttons.continue)
+      await game.waitForScenes(['World'])
+      return game.settled('World', (w) => w.figures.length === parties.length + 1)
+    }
+    const at = (col: number, row: number) => offsetToHex(col, row)
+    const walk = (...hexes: Hex[]) => ({ kind: 'travel', to: hexes.at(-1)!, route: hexes })
+    /** A company whose second party stands before the Goblin Raiders, the first (at `first`'s hex, else at home) selected again after the load opened on the second. */
+    async function blockedCompany(game: Game, first: { position?: Hex } = {}): Promise<WorldProbe> {
+      const opened = await company(game, [{ id: 'party_2', name: 'Second Company', at: RAIDERS.position, confronting: RAIDERS.id }], first)
+      expect(opened.selectedParty).toBe('party_2')
+      await game.click(opened.parties[0])
+      return game.waitFor('World', (w) => w.selectedParty === 'party_1')
+    }
+    const BLOCKED = 'Second Company stands before the Goblin Raiders: scout, wait or attack.'
+
+    it('draws every party with its banner and lists each by its name', async () => {
+      const game = await games.open()
+      const world = await company(game, [
+        { id: 'party_2', name: 'Second Company', at: at(9, 19) },
+        { id: 'party_3', name: 'Third Company', at: at(11, 19), members: 1 },
+      ])
+      expect(world.parties.map((p) => [p.id, p.name, p.label, p.banner, p.members])).toEqual([
+        ['party_1', 'First Company', 'First Co.', 1, 3],
+        ['party_2', 'Second Company', 'Second Co.', 2, 3],
+        ['party_3', 'Third Company', 'Third Co.', 3, 1],
+      ])
+      expect(world.figures.map((f) => f.id)).toEqual(['party_1', 'party_2', 'party_3'])
+      // Two on one hex are drawn side by side.
+      const [first, second, third] = world.figures
+      expect(first.at).toEqual(second.at)
+      expect(first.screen.y).toBe(second.screen.y)
+      expect(second.screen.x - first.screen.x).toBe(FIGURE_SPREAD)
+      expect(third.screen.x).toBe(worldHexOnScreen(world, third.at).x)
+      await game.hover(worldHexOnScreen(world, at(9, 19)))
+      const told = await game.waitFor('World', (w) => w.info.includes('Second Company:'))
+      expect(told.info).toContain('First Company:')
+    })
+
+    it('moves every party on Until something happens, then selects the one whose arrival stopped the days and names it', async () => {
+      const game = await games.open()
+      const world = await company(
+        game,
+        [{ id: 'party_2', name: 'Second Company', at: at(9, 19), order: walk(at(10, 19), at(11, 19)) }],
+        { order: walk(at(8, 19), at(7, 19), at(6, 19), at(5, 19)) },
+      )
+      expect(world.selectedParty).toBe('party_1')
+      await game.click(world.buttons.untilSomething)
+      const stopped = await game.waitFor('World', (w) => !w.walking && w.world.turn > world.world.turn)
+      expect(stopped.selectedParty).toBe('party_2')
+      expect(stopped.parties[1].selected).toBe(true)
+      expect(stopped.message).toMatch(/^Second Company(, after 2 days)?: arrived/)
+      expect(stopped.figures.find((f) => f.id === 'party_2')!.at).toEqual(at(11, 19))
+      expect(stopped.figures.find((f) => f.id === 'party_1')!.at).toEqual(at(7, 19))
+      expect(stopped.partyAt).toEqual(at(11, 19))
+    })
+
+    it('opens a load on the party that stands before monsters, naming it', async () => {
+      const game = await games.open()
+      const opened = await company(game, [{ id: 'party_2', name: 'Second Company', at: RAIDERS.position, confronting: RAIDERS.id }])
+      expect(opened.selectedParty).toBe('party_2')
+      expect(opened.message).toBe(`Second Company stands before the Goblin Raiders (threat 1).`)
+      expect([opened.buttons.scout.visible, opened.buttons.wait.visible, opened.buttons.attack.visible]).toEqual([true, true, true])
+    })
+
+    it('refuses the days while another party stands before monsters, selecting it with Scout, Wait and Attack', async () => {
+      const game = await games.open()
+      const world = await blockedCompany(game)
+      expect(world.parties[1].confronting).toBe(true)
+      await game.click(world.buttons.nextDay)
+      const refused = await game.waitFor('World', (w) => w.selectedParty === 'party_2')
+      expect(refused.world.turn).toBe(world.world.turn)
+      expect(refused.message).toBe('Second Company stands before the Goblin Raiders: scout, wait or attack.')
+      expect([refused.buttons.scout.visible, refused.buttons.wait.visible, refused.buttons.attack.visible]).toEqual([true, true, true])
+      expect(refused.buttons.nextDay.visible).toBe(false)
+    })
+
+    it('refuses a map click while another party stands before monsters, giving no order and selecting that party', async () => {
+      const game = await games.open()
+      const world = await blockedCompany(game)
+      await game.click(worldHexOnScreen(world, at(9, 21)))
+      const refused = await game.waitFor('World', (w) => w.selectedParty === 'party_2')
+      expect(refused.message).toBe('Second Company stands before the Goblin Raiders: scout, wait or attack.')
+      expect(refused.world.turn).toBe(world.world.turn)
+      expect(refused.parties.map((p) => p.order)).toEqual(['Idle', 'Before the Goblin Raiders'])
+      expect(refused.figures.map((f) => f.at)).toEqual(world.figures.map((f) => f.at))
+      // Nothing was ordered, so nothing waits in the save either.
+      const menu = await game.reload()
+      await game.click(menu.buttons.continue)
+      await game.waitForScenes(['World'])
+      const reloaded = await game.settled('World', (w) => w.figures.length === 2)
+      expect(reloaded.parties.map((p) => p.order)).toEqual(['Idle', 'Before the Goblin Raiders'])
+    })
+
+    it('refuses Return home, Camp and Craft while another party stands before monsters, selecting that party each time', async () => {
+      const game = await games.open()
+      const world = await blockedCompany(game, { position: at(9, 21) })
+      for (const button of ['home', 'camp', 'craft'] as const) {
+        const before = button === 'home' ? world : await blockedAgain(game)
+        expect(before.buttons[button].visible).toBe(true)
+        await game.click(before.buttons[button])
+        const refused = await game.waitFor('World', (w) => w.selectedParty === 'party_2')
+        expect(refused.message).toBe(BLOCKED)
+        expect(refused.world.turn).toBe(world.world.turn)
+        expect(refused.walking).toBe(false)
+        expect(refused.parties.map((p) => p.order)).toEqual(['Idle', 'Before the Goblin Raiders'])
+      }
+      // Craft opened nothing over the map.
+      await game.waitForScenes(['World'])
+    })
+
+    /** Selects the first party again, after a refusal selected the second. */
+    async function blockedAgain(game: Game): Promise<WorldProbe> {
+      const now = await game.waitFor('World')
+      await game.click(now.parties[0])
+      return game.waitFor('World', (w) => w.selectedParty === 'party_1')
+    }
+
+    it('tells another party’s arrival on the day a party waits before monsters, and selects it', async () => {
+      const game = await games.open()
+      const world = await company(game, [{ id: 'party_2', name: 'Second Company', at: at(9, 19), order: walk(at(10, 19)) }], {
+        position: RAIDERS.position,
+        confronting: RAIDERS.id,
+      }, true)
+      expect(world.selectedParty).toBe('party_1')
+      await game.click(world.buttons.wait)
+      const waited = await game.waitFor('World', (w) => w.world.turn > world.world.turn)
+      expect(waited.message).toMatch(/^You wait a turn\. The Goblin Raiders do not stir\. Second Company: arrived/)
+      expect(waited.selectedParty).toBe('party_2')
+      expect(waited.figures.find((f) => f.id === 'party_2')!.at).toEqual(at(10, 19))
+    })
+
+    it('sends the selected party to meet another on a click on its hex, the two ending on one hex', async () => {
+      const game = await games.open()
+      const world = await company(game, [{ id: 'party_2', name: 'Second Company', at: at(11, 19) }])
+      const there = worldHexOnScreen(world, at(11, 19))
+      await game.hover(there)
+      const hovering = await game.waitFor('World', (w) => w.hint.startsWith('Meet Second Company'))
+      expect(hovering.info).toContain('Second Company:')
+      await game.click(there)
+      const met = await game.waitFor('World', (w) => !w.walking && w.world.turn > world.world.turn)
+      expect(met.partyAt).toEqual(at(11, 19))
+      expect(met.figures.map((f) => f.at)).toEqual([at(11, 19), at(11, 19)])
+      expect(met.message).toBe('First Company: met Second Company.')
+      expect(met.parties.map((p) => p.order)).toEqual(['Idle', 'Idle'])
+    })
+  })
+
+  it('walks the party home on Home, and garrisons a held site on Garrison, passing no day', async () => {
+    const game = await games.open()
+    const start = await game.newGame()
+    // One party: its entry is unnamed, as before there were several.
+    expect([start.parties[0].name, start.parties[0].label]).toEqual(['Your party', ''])
+    expect(start.buttons.home.visible).toBe(false)
+    expect(start.buttons.garrison.visible).toBe(false)
+    // Iron Vein, held from the start.
+    const vein = await game.travelTo(offsetToHex(11, 21))
+    expect(vein.buttons.home.visible).toBe(true)
+    expect(vein.buttons.garrison.visible).toBe(true)
+    await game.click(vein.buttons.garrison)
+    const holding = await game.waitFor('World', (w) => w.parties[0].order.startsWith('Garrisoning'))
+    expect(holding.parties[0].order).toBe('Garrisoning Iron Vein')
+    expect(holding.world.turn).toBe(vein.world.turn)
+    expect(holding.message).toBe('The party garrisons Iron Vein until given another order.')
+    expect(holding.buttons.garrison.visible).toBe(false)
+
+    await game.click(holding.buttons.home)
+    const walking = await game.waitFor('World', (w) => w.walking)
+    expect(walking.parties[0].order).toBe('Returning home')
+    const home = await game.waitFor('World', (w) => !w.walking && w.partyAt.q === start.partyAt.q && w.partyAt.r === start.partyAt.r)
+    expect(home.parties[0].order).toBe('Idle')
+    expect(home.buttons.home.visible).toBe(false)
+    expect(home.buttons.enterEncampment.visible).toBe(true)
+  })
 
   it('builds a watchtower on clean land with the stock, and says what it costs without', async () => {
     const game = await games.open()

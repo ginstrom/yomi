@@ -13,7 +13,7 @@ import {
   type Item,
 } from '../inventory/inventory.ts'
 import { advanceDay, cleanse, seedBlight, type WorldEvent } from './blight.ts'
-import { act, advance, roadBlocked, setOrder, worldInterrupt } from './company.ts'
+import { act, advance, setOrder, startTravel, worldInterrupt, type DayReport, type OrderRequest } from './company.ts'
 import { MAX_THREAT, type EncounterId } from './encounters.ts'
 import { presences, type Expedition, type PartyPresence } from './expedition.ts'
 import type { GameState } from './gameState.ts'
@@ -334,6 +334,12 @@ export interface Journey {
   interruptedBy: WorldEvent | null
 }
 
+/** A journey and every day's report of it, in order: what the rest of the company did meanwhile, and the interrupt (a party's own event included) that stopped it. */
+export interface Walked {
+  journey: Journey
+  reports: DayReport[]
+}
+
 /**
  * Walks the party toward `to` a hex and a turn at a time, and stops early on
  * a notable event (`isNotable`) or where monsters stand on the road: sighted
@@ -343,21 +349,37 @@ export interface Journey {
  * (company.ts) until something happens; cut short, the order stands.
  */
 export function travel(game: GameState, party: Expedition, to: Hex): Journey {
-  const world = game.world
+  return walkTo(game, party, to).journey
+}
+
+/** `travel`, with the days' reports. */
+export function walkTo(game: GameState, party: Expedition, to: Hex): Walked {
+  // Refused, nothing changes; blocked at the first hex, startTravel has left the party idle, confronting what stands here.
+  if (startTravel(game, party, to) !== 'started') return { journey: { walked: [], events: [], interruptedBy: null }, reports: [] }
+  return walkOn(game, party, Infinity)
+}
+
+/**
+ * Gives the party a walking order (home, or a meet) and runs the day loop
+ * until something happens, or `limit` days pass, as `travel` does a travel
+ * order. Returns the refusal (nothing changed), or the journey and its days.
+ */
+export function followOrder(game: GameState, party: Expedition, request: Extract<OrderRequest, { kind: 'home' | 'meet' }>, limit = Infinity): string | Walked {
+  return setOrder(game, party.id, request) ?? walkOn(game, party, limit)
+}
+
+/** The day loop run for a party's walking order, gathered into a journey; it ends confronting whatever stands where it stopped. */
+function walkOn(game: GameState, party: Expedition, limit: number): Walked {
+  const reports = advance(game, limit)
   const journey: Journey = { walked: [], events: [], interruptedBy: null }
-  if (setOrder(game, party.id, { kind: 'travel', to }) !== null) return journey
-  // A nest on the first hex of the road: the loop checks the road only after a day.
-  if (party.order.kind === 'travel' && roadBlocked(world, party.order)) party.order = { kind: 'idle' }
-  else {
-    for (const report of advance(game, Infinity)) {
-      const walked = report.parties.find((day) => day.party === party.id)?.walked
-      if (walked) journey.walked.push(walked)
-      journey.events.push(...report.events)
-      journey.interruptedBy = worldInterrupt(report)
-    }
+  for (const report of reports) {
+    const walked = report.parties.find((day) => day.party === party.id)?.walked
+    if (walked) journey.walked.push(walked)
+    journey.events.push(...report.events)
+    journey.interruptedBy = worldInterrupt(report)
   }
-  party.confronting = monstersHere(world, party)?.id ?? null
-  return journey
+  party.confronting = monstersHere(game.world, party)?.id ?? null
+  return { journey, reports }
 }
 
 /**

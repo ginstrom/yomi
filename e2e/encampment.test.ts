@@ -78,28 +78,30 @@ describe('the encampment', () => {
     await game.click(raised.buttons.open)
     await game.waitForScenes(['GuildHall'], ['World'])
     const hall = await game.settled('GuildHall')
-    expect([hall.level, hall.partyLimit, hall.buttons.toParty.enabled]).toEqual([2, 4, false])
+    expect([hall.level, hall.partyLimit, hall.maxParties, hall.buttons.form.enabled]).toEqual([2, 4, 1, false])
 
     await game.click(hall.buttons.recruit)
     const offer = await game.settled('GuildHall', (h) => h.view === 'recruit')
     expect(offer.prerolls.map((p) => p.name)).toEqual(['Garrick'])
     await game.click(offer.prerolls[0])
     const hired = await game.settled('GuildHall', (h) => h.view === 'roster' && h.reserves.length === 1)
-    expect(hired.reserves[0]).toMatchObject({ name: 'Garrick', level: 1 })
+    expect(hired.reserves[0]).toMatchObject({ name: 'Garrick', level: 2 })
 
-    // A reserve clicked, then To party, while the party is under its limit.
+    // A reserve clicked, then the party's heading: it joins, while the party is under its limit.
     await game.click(hired.reserves[0])
     const picked = await game.settled('GuildHall', (h) => h.selected !== null)
-    await game.click(picked.buttons.toParty)
+    await game.click(picked.columns[0].header)
     const four = await game.settled('GuildHall', (h) => h.party.length === 4)
     expect(names(four.party)).toEqual(['Aldric', 'Brenna', 'Delwyn', 'Garrick'])
 
-    // A member clicked, then a reserve: the two change places.
+    // A member clicked, then the reserves' heading: it goes to the reserves.
     await game.click(four.party[0])
-    await game.click((await game.settled('GuildHall', (h) => h.selected !== null)).buttons.toReserves)
+    const held = await game.settled('GuildHall', (h) => h.selected !== null)
+    await game.click(held.columns[1].header)
     const three = await game.settled('GuildHall', (h) => h.reserves.length === 1)
+    // A member clicked, then a reserve: the two change places.
     await game.click(three.party[0])
-    await game.settled('GuildHall', (h) => h.selected?.row === 'party')
+    await game.settled('GuildHall', (h) => h.selected?.party === 'party_1')
     await game.click(three.reserves[0])
     const swapped = await game.settled('GuildHall', (h) => h.reserves[0]?.name === 'Brenna')
     expect(names(swapped.party)).toEqual(['Aldric', 'Delwyn', 'Garrick'])
@@ -114,6 +116,97 @@ describe('the encampment', () => {
     const back = await game.settled('World')
     expect(back.party.map((member) => member.name)).toEqual(['Aldric', 'Delwyn', 'Garrick'])
     expect(back.world.stock).toMatchObject({ gold: 60, iron: 35 })
+  })
+
+  it('forms, renames, fills and disbands a second party at hall level 4, and the map lists both', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 500, iron: 100, stone: 50, silver: 50 }, undefined, { 'world.guildHall': 4 })
+    const camp = await enter(game)
+    await game.click(facility(camp, 'guild_hall'))
+    await game.click((await game.settled('Encampment', (c) => c.selected === 'guild_hall')).buttons.open)
+    await game.waitForScenes(['GuildHall'], ['World'])
+    const hall = await game.settled('GuildHall')
+    expect([hall.level, hall.maxParties, hall.columns.map((c) => c.name)]).toEqual([4, 2, ['First Company', 'Reserves']])
+    await game.click(hall.buttons.recruit)
+    const offer = await game.settled('GuildHall', (h) => h.view === 'recruit')
+    await game.click(offer.prerolls[0])
+    const hired = await game.settled('GuildHall', (h) => h.view === 'roster' && h.reserves.length === 1)
+    expect(hired.reserves[0]).toMatchObject({ name: 'Garrick', level: 4 })
+
+    // The reserve forms a second party, standing in its own column.
+    await game.click(hired.reserves[0])
+    const picked = await game.settled('GuildHall', (h) => h.selected !== null)
+    await game.click(picked.buttons.form)
+    const formed = await game.settled('GuildHall', (h) => h.columns.length === 3)
+    expect(formed.columns.map((c) => [c.party, c.name, c.faces.length])).toEqual([['party_1', 'First Company', 3], ['party_2', 'Second Company', 1], [null, 'Reserves', 0]])
+    expect(formed.message).toContain('Second Company is formed')
+
+    // Rename it by typing.
+    await game.click(formed.columns[1].faces[0])
+    const inSecond = await game.settled('GuildHall', (h) => h.selected?.party === 'party_2')
+    await game.click(inSecond.buttons.rename)
+    await game.settled('GuildHall', (h) => h.renaming !== null)
+    // A chord types nothing; the first key typed replaces the old name.
+    await game.press('Control+a')
+    expect((await game.waitFor('GuildHall')).renaming).toBe('Second Company')
+    for (const key of 'Scouts') await game.press(key)
+    expect((await game.waitFor('GuildHall')).renaming).toBe('Scouts')
+    await game.press('Enter')
+    const renamed = await game.settled('GuildHall', (h) => h.columns[1].name === 'Scouts')
+    expect(renamed.renaming).toBeNull()
+
+    // A hero of the first party joins it by its heading.
+    await game.click(renamed.columns[0].faces[0])
+    const held = await game.settled('GuildHall', (h) => h.selected?.party === 'party_1')
+    await game.click(held.columns[1].header)
+    const moved = await game.settled('GuildHall', (h) => h.columns[1].faces.length === 2)
+    expect(moved.columns[0].faces).toHaveLength(2)
+
+    // No third party at level 4; the last party cannot be disbanded.
+    await game.click(moved.columns[0].faces[0])
+    const again = await game.settled('GuildHall', (h) => h.selected !== null)
+    await game.click(again.buttons.form)
+    const refused = await game.settled('GuildHall', (h) => h.message.includes('allows 2 parties'))
+    expect(refused.columns).toHaveLength(3)
+
+    await game.press('Escape')
+    await game.waitForScenes(['Encampment'], ['World'])
+    await game.click((await game.settled('Encampment')).buttons.leave)
+    await game.waitForScenes(['World'])
+    const map = await game.settled('World')
+    expect(map.parties.map((p) => [p.name, p.members])).toEqual([['First Company', 2], ['Scouts', 2]])
+
+    // Back in the hall, Disband sends the second party's heroes to the reserves.
+    const camp2 = await enter(game)
+    await game.click(facility(camp2, 'guild_hall'))
+    await game.click((await game.settled('Encampment', (c) => c.selected === 'guild_hall')).buttons.open)
+    await game.waitForScenes(['GuildHall'], ['World'])
+    const hall2 = await game.settled('GuildHall', (h) => h.columns.length === 3)
+    await game.click(hall2.columns[1].faces[0])
+    const second = await game.settled('GuildHall', (h) => h.selected?.party === 'party_2')
+    await game.click(second.buttons.disband)
+    const disbanded = await game.settled('GuildHall', (h) => h.columns.length === 2)
+    expect(disbanded.reserves).toHaveLength(2)
+    expect(disbanded.message).toContain('Scouts is disbanded')
+  })
+
+  it('refuses a second party at hall level 3 and the last party disbanded', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 100 }, undefined, { 'world.guildHall': 3 })
+    const camp = await enter(game)
+    await game.click(facility(camp, 'guild_hall'))
+    await game.click((await game.settled('Encampment', (c) => c.selected === 'guild_hall')).buttons.open)
+    await game.waitForScenes(['GuildHall'], ['World'])
+    const hall = await game.settled('GuildHall')
+    await game.click(hall.party[0])
+    const picked = await game.settled('GuildHall', (h) => h.selected !== null)
+    await game.click(picked.buttons.form)
+    const refused = await game.settled('GuildHall', (h) => h.message.includes('allows 1 party'))
+    expect(refused.columns).toHaveLength(2)
+    await game.click(refused.party[0])
+    const again = await game.settled('GuildHall', (h) => h.selected !== null)
+    await game.click(again.buttons.disband)
+    await game.settled('GuildHall', (h) => h.message === 'The last party cannot be disbanded.')
   })
 
   it('leads through the guild hall to character creation for a recruit and back again', async () => {

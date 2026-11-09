@@ -9,8 +9,15 @@ import { SOURCE_ID, locationAt, theName, theNameCapital, travel } from '../game/
 import { hexEquals } from '../grid/hex.ts'
 import { HEADER_BOTTOM } from './partyPanel.ts'
 import {
+  BANNER_SPRITES,
   ORDER_COLS,
   PARTY_LIST_W,
+  bannerOf,
+  entryName,
+  FIGURE_SPREAD,
+  figureOffsets,
+  meetTarget,
+  openingParty,
   SINGLE_PARTY_NAME,
   deployedParties,
   orderLabel,
@@ -147,6 +154,26 @@ describe('orderLabel', () => {
     expect(day({ kind: 'embed', place, rune: 'ember1' })).toBe('Crafting')
   })
 
+  it('says Returning home, Garrisoning the site it stands on, and Meeting the party it seeks', () => {
+    const { world, party, resource, order } = setup()
+    expect(order({ kind: 'home', to: far, route: [far] })).toBe('Returning home')
+    party.position = resource.position
+    expect(order({ kind: 'garrison' })).toBe(`Garrisoning ${resource.name}`)
+    party.position = [far, { q: 2, r: 1 }, { q: 3, r: 1 }].find((h) => locationAt(world, h) === null)!
+    expect(order({ kind: 'garrison' })).toBe('Garrisoning')
+    party.order = { kind: 'meet', party: 'party_2' }
+    const second = { ...newExpedition(readyMadeParty(), far), id: 'party_2', name: 'Second Company' }
+    expect(orderLabel(world, party, [party, second])).toBe('Meeting Second Company')
+    expect(orderLabel(world, party, [party])).toBe('Meeting')
+  })
+
+  it('names the party a meet seeks in the list of the company', () => {
+    const game = newGame(undefined, null, 1)
+    game.parties.push({ ...newExpedition(readyMadeParty(), { q: 1, r: 1 }), id: 'party_2', name: 'Second Company' })
+    game.parties[0].order = { kind: 'meet', party: 'party_2' }
+    expect(deployedParties(game)[0].order).toBe('Meeting Second Company')
+  })
+
   it('says which monsters a confronting party stands before, whatever its order', () => {
     const { party, world, monsters } = setup()
     party.confronting = monsters.id
@@ -169,11 +196,14 @@ describe('orderLabel', () => {
     expect(theNameCapital('The Blight Source')).toBe('The Blight Source')
   })
 
-  it('gives a travel order’s remaining route as the standing route, and none for any other order', () => {
+  it('gives a travel or home order’s remaining route as the standing route, and none for any other order', () => {
     const { party } = setup()
     party.order = { kind: 'travel', to: far, route: [{ q: 2, r: 1 }, far] }
     expect(standingRoute(party)).toEqual([{ q: 2, r: 1 }, far])
-    for (const order of [{ kind: 'idle' }, { kind: 'camp' }, { kind: 'day', action: { kind: 'wait' } }] as Order[]) {
+    party.order = { kind: 'home', to: far, route: [{ q: 2, r: 1 }, far] }
+    expect(standingRoute(party)).toEqual([{ q: 2, r: 1 }, far])
+    const others: Order[] = [{ kind: 'idle' }, { kind: 'camp' }, { kind: 'garrison' }, { kind: 'meet', party: 'party_2' }, { kind: 'day', action: { kind: 'wait' } }]
+    for (const order of others) {
       party.order = order
       expect(standingRoute(party)).toEqual([])
     }
@@ -264,5 +294,75 @@ describe('partyListInfo', () => {
   it('says “1 member” for one', () => {
     const entry: PartyListEntry = { ...base, members: base.members.slice(0, 1) }
     expect(partyListInfo(entry).lines[0]).toBe('1 member')
+  })
+})
+
+describe('the parties on the map', () => {
+  const company = () => {
+    const game = newGame(undefined, null, 1)
+    const home = game.parties[0].position
+    game.parties.push({ ...newExpedition(readyMadeParty(), home), id: 'party_2', name: 'Second Company' })
+    game.parties.push({ ...newExpedition(readyMadeParty(), { q: home.q + 2, r: home.r }), id: 'party_3', name: 'Third Company' })
+    return game
+  }
+
+  it('gives each party the banner of its number, whatever its place in the list', () => {
+    expect(bannerOf('party_1')).toBe(1)
+    expect(bannerOf('party_2')).toBe(2)
+    expect(bannerOf('party_3')).toBe(3)
+    expect(bannerOf('elsewhere')).toBe(1)
+    expect([1, 2, 3].map((n) => BANNER_SPRITES[n])).toEqual(['map_banner', 'map_banner_azure', 'map_banner_green'])
+    const game = company()
+    game.parties.splice(0, 1)
+    expect(deployedParties(game).map((entry) => entry.banner)).toEqual([2, 3])
+  })
+
+  it('names each entry on its portrait, shortened to fit, only once the company has two parties or more', () => {
+    expect(entryName('Second Company')).toBe('Second Co.')
+    expect(entryName('Third Company')).toBe('Third Co.')
+    expect(entryName('Wolves')).toBe('Wolves')
+    expect(entryName('The Grey Wardens')).toBe('The Grey…')
+    expect(entryName('The Grey Wardens').length).toBeLessThanOrEqual(10)
+    const game = company()
+    expect(deployedParties(game).map((entry) => entry.label)).toEqual(['First Co.', 'Second Co.', 'Third Co.'])
+    expect(deployedParties(newGame(undefined, null, 1))[0].label).toBe('')
+  })
+
+  it('spreads parties sharing a hex, in list order, and leaves a party alone on its hex where it stands', () => {
+    const game = company()
+    const offsets = figureOffsets(game.parties)
+    expect(offsets.get('party_1')).toBeLessThan(0)
+    expect(offsets.get('party_2')).toBe(-offsets.get('party_1')!)
+    expect(offsets.get('party_3')).toBe(0)
+    game.parties[2].position = game.parties[0].position
+    const three = figureOffsets(game.parties)
+    expect([three.get('party_1'), three.get('party_2'), three.get('party_3')]).toEqual([-FIGURE_SPREAD, 0, FIGURE_SPREAD])
+  })
+
+  it('meets the first other party on a hex, and none on the party’s own or an empty one', () => {
+    const game = company()
+    const [first, second, third] = game.parties
+    expect(meetTarget(game, first, third.position)).toBe(third)
+    third.position = { q: third.position.q + 1, r: third.position.r }
+    second.position = third.position
+    expect(meetTarget(game, first, third.position)).toBe(second)
+    expect(meetTarget(game, second, second.position)).toBeNull()
+    expect(meetTarget(game, first, { q: 0, r: 0 })).toBeNull()
+  })
+})
+
+describe('openingParty', () => {
+  it('opens on the party the scene data names, else the first whose monsters block the days, else the first', () => {
+    const game = newGame(readyMadeParty(), null, 1)
+    const [first] = game.parties
+    const second: Expedition = { ...newExpedition(readyMadeParty(), first.position), id: 'party_2', name: 'Second Company' }
+    game.parties.push(second)
+    expect(openingParty(game)).toBe(first)
+    const raiders = game.world.locations.find((l) => l.kind === 'monsters')!
+    second.position = raiders.position
+    second.confronting = raiders.id
+    expect(openingParty(game)).toBe(second)
+    expect(openingParty(game, first.id)).toBe(first)
+    expect(openingParty(game, 'party_9')).toBe(second)
   })
 })

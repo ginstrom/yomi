@@ -165,6 +165,9 @@ describe('debug commands', () => {
     expect(world.workshop).toBe(2)
     expect(runCommand('facility workshop 4', context).lines[0]).toMatch(/from 0 to 3/)
     expect(runCommand('facility trading_post 0', context).lines[0]).toMatch(/from 1 to 4/)
+    expect(runCommand('facility guild_hall 4', context).changed).toBe(true)
+    expect(world.guildHall).toBe(4)
+    expect(runCommand('facility guild_hall 6', context).lines[0]).toMatch(/from 1 to 5/)
     runCommand('give iron_sword@3+light2', context)
     expect(baggage.at(-1)!.name).toBe('Light Masterwork Iron Longsword (II)')
   })
@@ -245,6 +248,30 @@ describe('debug commands', () => {
       expect(second.baggage.map((item) => item.id)).toEqual(['iron_sword'])
     })
 
+    it('sets hit points with `hp`, for one member or all of a named party, kept within 0 and the maximum', () => {
+      const context = twoParties()
+      const [first, second] = context.source!.game.parties
+      const result = runCommand('hp 1 1', context)
+      expect(result.changed).toBe(true)
+      expect(result.lines).toEqual([`${first.members[0].name} now has 1/${maxHp(first.members[0])} hit points.`])
+      expect(first.members.map((m) => m.hp)).toEqual([1, maxHp(first.members[1]), maxHp(first.members[2])])
+      expect(runCommand('hp 0 all @second', context).lines).toHaveLength(3)
+      expect(second.members.every((m) => m.hp === 0)).toBe(true)
+      runCommand('hp 9999 2', context)
+      expect(first.members[1].hp).toBe(maxHp(first.members[1]))
+    })
+
+    it('refuses `hp` without a whole number of 0 or more, changing nothing', () => {
+      const context = twoParties()
+      const before = structuredClone(context.source!.game)
+      for (const line of ['hp', 'hp -1', 'hp 1.5 1', 'hp x', 'hp 1 9']) {
+        const result = runCommand(line, context)
+        expect(result.changed).toBe(false)
+        expect(result.lines[0]).toMatch(/whole number|0 or more|No party member/)
+      }
+      expect(context.source!.game).toEqual(before)
+    })
+
     it('reads the member and the hex within the named party', () => {
       const context = twoParties()
       const [first, second] = context.source!.game.parties
@@ -286,6 +313,17 @@ describe('debug commands', () => {
       expect(all[0]).toMatch(/^party_1 \(First Company\) at \d+,\d+, order idle$/)
       expect(all[1]).toMatch(/^1\. /)
       expect(all[1 + context.source!.game.parties[0].members.length]).toMatch(/^party_2 \(Second Company\)/)
+      const [first, second] = context.source!.game.parties
+      first.order = { kind: 'meet', party: 'party_2' }
+      second.order = { kind: 'travel', to: offsetToHex(4, 2), route: [offsetToHex(4, 2)] }
+      const orders = runCommand('party', context).lines.filter((line) => /^party_\d /.test(line))
+      expect(orders).toEqual([expect.stringMatching(/, order meet party_2$/), expect.stringMatching(/, order travel to 4,2$/)])
+      first.order = { kind: 'garrison' }
+      second.order = { kind: 'day', action: { kind: 'camp' } }
+      expect(runCommand('party', context).lines.filter((line) => /^party_\d /.test(line))).toEqual([
+        expect.stringMatching(/, order garrison$/),
+        expect.stringMatching(/, order day camp$/),
+      ])
       const one = runCommand('party @second', context).lines
       expect(one).toHaveLength(1 + context.source!.game.parties[1].members.length)
       expect(one[0]).toMatch(/^party_2 /)

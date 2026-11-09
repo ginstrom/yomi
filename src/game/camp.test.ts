@@ -72,6 +72,15 @@ describe('campUntilHealed', () => {
     members[0].hp = maxHp(members[0]) - 4
     expect(campUntilHealed(game, party)).toMatchObject({ days: 4, rested: 4, cast: 0, interruptedBy: null })
   })
+
+  it('keeps the day reports, for the map to tell what the other parties did', () => {
+    const { game, party, members } = solo()
+    members.pop()
+    members[0].hp = maxHp(members[0]) - 2
+    const result = campUntilHealed(game, party)!
+    expect(result.reports).toHaveLength(2)
+    expect(result.reports.at(-1)!.interrupt?.event).toEqual({ type: 'order_done', party: party.id })
+  })
 })
 
 /** A threat-5 nest put down beside a held site, which threatens it from the next day. */
@@ -130,7 +139,8 @@ describe('campUntilHealed, as it is (characterization)', () => {
     brenna.hp = 3
     delwyn.hp = 2
     delwyn.mana = 1
-    const result = campUntilHealed(game, party)!
+    // The reports, added after the day loop, are left out: what they hold is in the rest.
+    const { reports: _reports, ...result } = campUntilHealed(game, party)!
     expect({ ...result, events: result.events.length }).toEqual(RESULT)
     expect(world.turn).toBe(1 + result.days)
     expect(members.map((m) => [m.hp, m.mana])).toEqual(MEMBERS)

@@ -6,7 +6,8 @@ import { GRADES } from '../inventory/grades.ts'
 import { EQUIPMENT_SLOT_LABELS, itemById, type Equipment, type Item } from '../inventory/inventory.ts'
 import { MODIFIER_IDS } from '../inventory/modifiers.ts'
 import { isRuneKey } from '../inventory/runes.ts'
-import { FIRST_PARTY_ID, FIRST_PARTY_NAME, ORDER_KINDS, type Expedition } from './expedition.ts'
+import { FIRST_PARTY_ID, FIRST_PARTY_NAME, MAX_PARTIES, ORDER_KINDS, type Expedition } from './expedition.ts'
+import { MAX_GUILD_HALL_LEVEL } from './guildHall.ts'
 import type { GameState } from './gameState.ts'
 import type { GroundPile } from './ground.ts'
 import type { WorldLocation } from './worldMap.ts'
@@ -19,13 +20,14 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * Raise `SAVE_VERSION` whenever the shape of `GameState`, `Character`,
  * `WorldState` or `BattleSnapshot` changes. A migration is written only when
  * a stage's design asks for one (stage 5's does: `migrateFrom18`, reading a
- * version-18 save straight to this version; version 19 was never released
- * and reads as unreadable); otherwise a save of another version reads as
- * unreadable. Rules and item numbers may change
+ * version-18 save straight to this version; versions 19 and 21 were never
+ * released, and they and stage 5's 20 read as unreadable); otherwise a save
+ * of another version reads as unreadable. Version 22 (stage 6) adds the
+ * home, garrison and meet orders. Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 20
+export const SAVE_VERSION = 22
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -45,6 +47,8 @@ export interface SaveFile {
 export interface SavedBattle {
   /** The monster location's id in `game.world`. */
   location: string
+  /** The id of the expedition fighting, one of `game.parties`. */
+  party: string
   engine: BattleSnapshot
   /** Where the enemy policy's RNG stands. */
   enemyRng: number
@@ -120,7 +124,7 @@ function locationOf(saved: WorldLocation): WorldLocation {
 
 /**
  * A version-18 game (one `party` and one `baggage`, the world holding where it
- * stands and what it confronts) as a version-20 one: a company of one, the
+ * stands and what it confronts) as a version-22 one: a company of one, the
  * party's position and confrontation its expedition's.
  */
 function migrateFrom18(game: Record<string, unknown>): void {
@@ -186,12 +190,13 @@ function isDayAction(action: unknown): boolean {
   }
 }
 
-/** Whether `order` is an `Order`: a known kind, a travel order with its destination and the hexes still to walk, a day order with its action. */
-function isOrder(order: unknown): boolean {
+/** Whether `order` is an `Order`: a known kind, a travel or home order with its destination and the hexes still to walk, a meet order naming one of `partyIds` other than its own party `self`, a day order with its action. */
+function isOrder(order: unknown, self: string, partyIds: readonly string[]): boolean {
   if (typeof order !== 'object' || order === null) return false
   const o = order as Record<string, unknown>
   if (!ORDER_KINDS.includes(o.kind as never)) return false
-  if (o.kind === 'travel') return isHex(o.to) && Array.isArray(o.route) && o.route.every(isHex)
+  if (o.kind === 'travel' || o.kind === 'home') return isHex(o.to) && Array.isArray(o.route) && o.route.every(isHex)
+  if (o.kind === 'meet') return typeof o.party === 'string' && o.party !== self && partyIds.includes(o.party)
   if (o.kind === 'day') return isDayAction(o.action)
   return true
 }
@@ -206,12 +211,16 @@ export function parseSave(raw: string | null): SaveFile | null {
     check(typeof saved.savedAt === 'number')
     const { game, battle } = saved
     check(game && typeof game === 'object')
-    if (saved.version === 18) migrateFrom18(game as unknown as Record<string, unknown>)
-    check(Array.isArray(game.parties) && game.parties.length > 0)
+    if (saved.version === 18) {
+      migrateFrom18(game as unknown as Record<string, unknown>)
+      // The only party a version-18 game has is the one that was fighting.
+      if (battle && typeof battle === 'object') (battle as { party?: string }).party = FIRST_PARTY_ID
+    }
+    check(Array.isArray(game.parties) && game.parties.length > 0 && game.parties.length <= MAX_PARTIES)
     check(game.parties.every((party) => party && typeof party.id === 'string' && typeof party.name === 'string'))
     check(new Set(game.parties.map((party) => party.id)).size === game.parties.length)
     check(game.parties.every((party) => Array.isArray(party.members) && party.members.length > 0 && Array.isArray(party.baggage)))
-    check(game.parties.every((party) => isOrder(party.order)))
+    check(game.parties.every((party) => isOrder(party.order, party.id, game.parties.map((p) => p.id))))
     check(game.parties.every((party) => isHex(party.position) && (party.confronting === null || typeof party.confronting === 'string')))
     check(game.world && typeof game.world === 'object' && Array.isArray(game.world.locations))
     const { world } = game
@@ -224,13 +233,14 @@ export function parseSave(raw: string | null): SaveFile | null {
     check(typeof world.rng === 'number' && typeof world.spawnPressure === 'number' && typeof world.status === 'string')
     check(game.runes && typeof game.runes === 'object' && !Array.isArray(game.runes))
     check(Object.entries(game.runes).every(([key, n]) => isRuneKey(key) && Number.isInteger(n) && (n as number) >= 1))
-    check(Array.isArray(game.reserves) && typeof world.guildHall === 'number')
+    check(Array.isArray(game.reserves) && Number.isInteger(world.guildHall) && world.guildHall >= 1 && world.guildHall <= MAX_GUILD_HALL_LEVEL)
     check(game.slot === null || typeof game.slot === 'number')
     const { story } = game
     check(story && typeof story === 'object' && typeof story.tutorial === 'boolean')
     check(Array.isArray(story.played) && story.played.every((id) => CUTSCENE_IDS.includes(id)))
     check(Array.isArray(story.tipsShown) && story.tipsShown.every((id) => typeof id === 'string'))
     check(battle === null || (typeof battle === 'object' && typeof battle.location === 'string'))
+    check(battle === null || (typeof battle.party === 'string' && game.parties.some((party) => party.id === battle.party)))
     check(battle === null || (typeof battle.enemyRng === 'number' && Array.isArray(battle.ground)))
     check(battle === null || (battle.engine && Array.isArray(battle.engine.units) && Array.isArray(battle.engine.events)))
     return {

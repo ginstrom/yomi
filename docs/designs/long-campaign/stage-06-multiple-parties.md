@@ -10,7 +10,7 @@ Parties can meet to exchange heroes and gear, and can garrison a site. A wiped p
 
 On today's map this already gives the XCOM dynamic: a vanguard pushing to threat 5, and green heroes training on the home rings.
 
-**Status:** ready for planning. Two defaults are worth confirming in play before stage 7: one clock (company §8.1) and no auto-resolve (§8.3).
+**Status:** done (see [Implementation notes](#implementation-notes)). Two defaults are worth confirming in play before stage 7: one clock (company §8.1) and no auto-resolve (§8.3).
 
 ## 2. Scope
 
@@ -20,6 +20,7 @@ On today's map this already gives the XCOM dynamic: a vanguard pushing to threat
   - `recruitLevel` is the hall's level.
   - Forming, renaming, disbanding and moving heroes at the guild hall, between the parties at home and the reserves.
 - **Orders:** home, camp, garrison and meet, besides travel and idle. Each party acts in list order.
+- **Natural healing:** idle and garrisoned parties away from monsters heal each living member 1 HP per day, capped at maximum HP. Mana recovery, infirmary bonuses and automatic healing spells require camping. Natural healing does not interrupt time passing when everyone is whole.
 - **Interrupts** for every party:
   - arriving at monsters;
   - an order done;
@@ -99,3 +100,37 @@ Company R2, R3, R5 to R7, R9, R11 to R14, as specified, on today's map.
 - **The guard's simulator policy is new.** If it plays poorly, the company's value is understated. Check its choices on fixed states in tests.
 
 **Done when:** all tests pass, the guard holds, the company comparison shows its value, and the play script has been walked.
+
+## Implementation notes
+
+Built as eleven steps (`docs/implementation-plans/long-campaign-stage-06/`).
+
+**The figures** (500 campaigns from seed 1 each):
+
+| Run | Source beaten | Days | Battles | Guard battles | Promotions | Vanguard walking home | Hall at 4+ (5) | Heroes dead in won battles |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| The guard, `--parties 1`, ready level 7 | 230 | 270 | 18.2 | 0 | 0 | 56.0 days | 0 (0) | 1.8 |
+| The company of three, ready level 7 | 239 | 274 | 18.6 | 0.2 | 0.0 | 57.6 days | 16 (0) | 1.8 |
+| One party, ready level 10 | 389 | 422 | 34.4 | 0 | 0 | 64.7 days | 0 (0) | 1.7 |
+| The company of three, ready level 10 | 389 | 466 | 39.5 | 4.9 | 0.0 | 91.7 days | 318 (5) | 1.9 |
+
+- *The early-game guard* is 230 of 500, every line of its summary as step 01 measured before the stage (270 days, 18.2 battles, 1.8 heroes dead); only the log's hash moved, with schema 24's meta.
+- *Check 1:* the default company reaches hall level 4 by the ready level of 7 in 16 campaigns of 500, so the figure barely moves (239).
+- *Check 2* is not met: the company shows guard battles (4.9 a campaign) but no promotions and more vanguard walking days than one party, and the same Source share. On today's map, capped at threat 5, **the vanguard is self-sufficient**: it is never short once the hall has filled it, and the guards' recruits stay three levels or more below it, so even the swap promotion (decision 16 as amended) fires about 0.1 times a campaign (100 campaigns at ready level 10: 78 against 78, 0.1 promotions, 93.9 against 64.5 walking days). The extra walking comes with the company's errands at the hall, which it raises to 4 (in 318 campaigns of 500) and where it forms and refills guards. The user kept the guard policy (2026-11-09) and asked for this to be **revisited in stage 9**, when the outer rings make the vanguard's losses and a trained reserve matter.
+- *The walk home to form a guard.* Step 10 had added a rule (`guardWanted` in `hallErrand`) sending the vanguard home to form a guard. Measured off at ready level 10: the same 389 wins, 91.7 walking days against 95.0 and 466 days against 473 (ready level 7: 239 against 240, 57.6 against 57.9 days). It did not help, so it was dropped; a guard now forms whenever the vanguard is home for another errand. The table's company rows are without it.
+
+**Decisions that differ from the design** (the plan index's 1 to 18, in brief): `--parties` defaults to 3 and the guard runs with 1; the simulated company raises the hall only as far as its parties use (`HALL_FOR_PARTIES` 3, 4, 5); the company is capped by `companyLimit` (7, 8, 9, 14, 18) as well as the reserves' 4; ids `party_1` to `party_3`, default names First to Third Company, the map saying "Your party" while there is one; home, garrison (held resources only) and meet orders, a meet re-planned daily; a travel order to a nest another party holds is refused, and of two reaching one on a day the second stops a hex short; a wiped party's gear and baggage lie at the location (lost after a debug fight), and the last party wiped with reserves left is re-formed at the encampment; Exchange is an overlay of its own, from the footer and the character panel; the encampment acts for the selected party at home, else the first; banners crimson, azure and green, only the selected party's walk animated; interrupts and refusals name the party and focus it; `campDays` counts a day once; saves 22 (from 18 migrating; 20 and 21 unreadable); log schema 24 (`battle_start` meta `party` and `role`); the guard policy reinforce, defend, train, garrison, home, with the swap promotion; debug `hp`.
+
+**Hazards deferred** (with the plan's reasons): `placeKey` without the party; the company's single rune pouch; `{leader}` the first party's; other parties' walks not animated; a reload during a walk losing that turn's story moment; the amber route under the party strip at 840 wide; auto-resolve and garrison experience.
+
+**The play script, walked headless** (Playwright through the in-browser driver against the dev server, with the debug console, the screenshots kept out of the repository):
+1. `facility guild_hall 4` and `stock gold 500`; at the guild hall Garrick hired from the pre-rolls and two heroes made through Create new: all three joined the reserves at level 4. Form party made the Second Company from a recruit; the other two and one veteran (Delwyn) were moved in by its heading: First Company Aldric and Brenna, Second Company Garrick, Mira, Tobin and Delwyn.
+2. With the First Company sent east from 20,20 and the Second from home, the interrupts came in turn, each selecting its party: "First Company: Your journey stops. You sight a Bandit Camp (threat 3).", "First Company: You sight a Goblin Brood (threat 3)." (cutting the Second's walk short), "First Company, after 3 days: arrived.", "Second Company, after 6 days: arrived." With the First Company before the Goblin Raiders, Next day with the Second selected was refused ("First Company stands before the Goblin Raiders: scout, wait or attack.") and the map selected the First.
+3. The Second Company garrisoned Gold Seam ("Garrisoning Gold Seam"); after `days 30` it was still held and the order stood. No held site came under threat in 120 days of play near home, so the garrison was not seen holding a *threatened* site; the rule it rests on (a party's hex is neutral) is the blight's and is tested there.
+4. With Aldric at 1 hit point (`hp 1 Aldric @first`) the First Company attacked the Goblin Raiders and won in 3 rounds; Aldric fell ("Aldric fell and will not rise again"). The Second Company, given a meet by a click on the First's hex, met it four days later ("Second Company: met First Company."). In the Exchange screen, moving the First's last hero was refused ("First Company cannot be left empty."), Garrick moved to the First Company, and the Ring of Protection passed to the Second's baggage.
+5. `goto troll_lair @second` and Attack: the Second Company was lost in 12 rounds; the defeat screen said "The Second Company has fallen. Its baggage lies at the Troll Lair.", OK returned to the map with the First Company selected and the game going on, and the lair's `loot` held the Second's gear and baggage (its three heroes' kit and the Ring of Protection) beside its own Hawkeye Bow.
+6. With the Second Company garrisoning Gold Seam and the First before the Kobold Scouts, a reload and Continue put both where they stood, with the garrison order and the confrontation.
+
+Seen on the way: a click on the map for a party while another party confronts monsters gives it a travel order silently (no message, the party list still showing "Idle", and nothing saved until the next save), where Next day says why and focuses the confronting party. Fixed after the step (at the coordinator's request): a map click, and Return home, now refuse as Next day does, giving no order, with `advanceRefusal`'s reason and the blocking party selected and centred.
+
+**Player time** (design §7). The walk asked for only two battles, a 3-round win and a deliberate 12-round loss, and it was walked by a script, so it says nothing about how a second party's battles feel to play. The simulator's company fights about 5 guard battles a campaign beside the vanguard's 35 at ready level 10, so the extra battles are few on today's map. Auto-resolve stays deferred; decide after a human plays with two or three parties out.

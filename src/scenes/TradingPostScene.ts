@@ -2,6 +2,8 @@ import Phaser from 'phaser'
 import { deriveCombatStats } from '../character/character.ts'
 import type { Expedition } from '../game/expedition.ts'
 import { selectedParty, type GameState } from '../game/gameState.ts'
+import { homeParty } from '../game/guildHall.ts'
+import { actingFor } from './encampmentView.ts'
 import { placeKey, type ItemPlace } from '../game/itemPlace.ts'
 import type { Material } from '../game/territory.ts'
 import {
@@ -148,7 +150,7 @@ export class TradingPostScene extends Phaser.Scene {
 
   create(data: TradingPostData): void {
     this.gameState = data.game
-    this.expedition = selectedParty(data.game, data.party)
+    this.expedition = homeParty(data.game, data.party) ?? selectedParty(data.game, data.party)
     this.tab = 'buy'
     this.page = 0
     this.filter = { ...OPENING_FILTER }
@@ -173,6 +175,7 @@ export class TradingPostScene extends Phaser.Scene {
     }
     const row = this.rows().find((r) => r.id === this.selected)
     return {
+      actingFor: this.expedition.id,
       tab: this.tab,
       gold: this.gameState.world.stock.gold ?? 0,
       message: this.message,
@@ -290,7 +293,7 @@ export class TradingPostScene extends Phaser.Scene {
       this.add.rectangle(CENTRE_X, FRAME_H / 2, FRAME_W, FRAME_H, 0x241d15, 0.98).setStrokeStyle(3, 0xc9a227),
       this.add.text(CENTRE_X, TITLE_Y, 'Trading Post', { fontFamily: FONT, fontSize: '28px', color: GOLD, fontStyle: 'bold' }).setOrigin(0.5),
       this.add
-        .text(CENTRE_X, TITLE_Y + 28, `Level ${world.tradingPost}.  Gold in the stock: ${world.stock.gold ?? 0}`, { fontFamily: FONT, fontSize: '13px', color: DIM })
+        .text(CENTRE_X, TITLE_Y + 28, `${actingFor(this.gameState, this.expedition)}Level ${world.tradingPost}.  Gold in the stock: ${world.stock.gold ?? 0}`, { fontFamily: FONT, fontSize: '13px', color: DIM })
         .setOrigin(0.5),
       this.add
         .text(CENTRE_X, MESSAGE_Y, this.message, { fontFamily: FONT, fontSize: '13px', color: TEXT, align: 'center', wordWrap: { width: FRAME_W - 40 } })

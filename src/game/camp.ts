@@ -1,6 +1,6 @@
 import { maxHp, maxMana } from '../character/character.ts'
 import type { WorldEvent } from './blight.ts'
-import { act, advance, setOrder, worldInterrupt } from './company.ts'
+import { act, advance, setOrder, worldInterrupt, type DayReport } from './company.ts'
 import type { Expedition } from './expedition.ts'
 import type { GameState } from './gameState.ts'
 import { restHealing } from './infirmary.ts'
@@ -28,6 +28,8 @@ export interface CampResult {
   cast: number
   events: WorldEvent[]
   interruptedBy: WorldEvent | null
+  /** The days' reports, in order: what the other parties did is told from them. */
+  reports: DayReport[]
 }
 
 /** A day's rest: the hit points it restored, and what happened on the map that day. */
@@ -89,7 +91,7 @@ export function campDay(game: GameState, party: Expedition): CampDay | null {
 export function campUntilHealed(game: GameState, party: Expedition): CampResult | null {
   if (!canCamp(game.world, party)) return null
   const members = party.members
-  const result: CampResult = { days: 0, rested: 0, cast: autoHeal(members), events: [], interruptedBy: null }
+  const result: CampResult = { days: 0, rested: 0, cast: autoHeal(members), events: [], interruptedBy: null, reports: [] }
   if (!partyWounded(members)) {
     // As every convenience gives its own order, this one leaves none standing.
     setOrder(game, party.id, { kind: 'idle' })
@@ -104,6 +106,7 @@ export function campUntilHealed(game: GameState, party: Expedition): CampResult 
     result.cast += day?.cast ?? 0
     result.events.push(...report.events)
     result.interruptedBy = worldInterrupt(report)
+    result.reports.push(report)
   }
   return result
 }

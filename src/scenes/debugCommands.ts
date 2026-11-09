@@ -3,7 +3,7 @@ import { gainXp, xpToNextLevel } from '../character/progression.ts'
 import type { BattleState } from '../engine/battleEngine.ts'
 import { advanceRefusal, passDay, setOrder } from '../game/company.ts'
 import { facilities, setFacilityLevel, type FacilityId } from '../game/encampment.ts'
-import { presences, type Expedition } from '../game/expedition.ts'
+import { presences, type Expedition, type Order } from '../game/expedition.ts'
 import { ENCOUNTERS, type EncounterId } from '../game/encounters.ts'
 import { selectedParty, type GameState } from '../game/gameState.ts'
 import type { Material } from '../game/territory.ts'
@@ -114,6 +114,20 @@ const offset = (location: { position: WorldLocation['position'] }): string => {
   return `${col},${row}`
 }
 
+/** A party's order in a few words, for `party`: its kind, and where a travel goes or whom a meet seeks. */
+function orderDetail(order: Order): string {
+  switch (order.kind) {
+    case 'travel':
+      return `travel to ${offset({ position: order.to })}`
+    case 'meet':
+      return `meet ${order.party}`
+    case 'day':
+      return `day ${order.action.kind}`
+    default:
+      return order.kind
+  }
+}
+
 const COMMANDS: Record<string, Command> = {
   help: {
     usage: 'help [command]',
@@ -167,7 +181,7 @@ const COMMANDS: Record<string, Command> = {
       const listed = context.party !== undefined ? [namedParty(game, context.party)] : game.parties
       return [
         ...listed.flatMap((party) => [
-          `${partyLabel(party)} at ${offset(party)}, order ${party.order.kind}${party.confronting ? `, before ${party.confronting}` : ''}`,
+          `${partyLabel(party)} at ${offset(party)}, order ${orderDetail(party.order)}${party.confronting ? `, before ${party.confronting}` : ''}`,
           ...party.members.map((character, i) => row(character, i)),
         ]),
         ...(game.reserves.length ? ['Reserves:', ...game.reserves.map((character) => row(character, null))] : []),
@@ -186,6 +200,20 @@ const COMMANDS: Record<string, Command> = {
         character.mana = maxMana(character)
       }
       return [`Healed ${healed.map((character) => character.name).join(', ')}.`]
+    },
+  },
+  hp: {
+    usage: 'hp <amount> [member|all] [@party]',
+    acts: true,
+    summary: 'Set hit points, kept within 0 and the maximum.',
+    changes: true,
+    run([amount, who], context) {
+      const hp = integer(amount, 'the hit points')
+      if (hp < 0) throw new DebugError('Hit points must be 0 or more.')
+      return members(partyOf(context), who).map((character) => {
+        character.hp = Math.min(hp, maxHp(character))
+        return `${character.name} now has ${character.hp}/${maxHp(character)} hit points.`
+      })
     },
   },
   xp: {

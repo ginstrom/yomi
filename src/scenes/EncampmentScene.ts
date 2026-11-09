@@ -3,6 +3,8 @@ import { describeCost } from '../game/buildings.ts'
 import { facilities, improveFacility, type FacilityId, type FacilityView } from '../game/encampment.ts'
 import type { Expedition } from '../game/expedition.ts'
 import { selectedParty, type GameState } from '../game/gameState.ts'
+import { homeParty } from '../game/guildHall.ts'
+import { actingFor } from './encampmentView.ts'
 import { encampmentName } from '../game/worldMap.ts'
 import type { ButtonProbe, EncampmentProbe } from '../testHook.ts'
 import { soundVolume } from './audioSettings.ts'
@@ -82,7 +84,7 @@ export class EncampmentScene extends Phaser.Scene {
 
   create(data: EncampmentData): void {
     this.gameState = data.game
-    this.expedition = selectedParty(data.game, data.party)
+    this.expedition = homeParty(data.game, data.party) ?? selectedParty(data.game, data.party)
     this.selected = data.select ?? null
     this.hovered = null
     this.message = ''
@@ -112,6 +114,7 @@ export class EncampmentScene extends Phaser.Scene {
     }
     return {
       name: encampmentName(this.gameState.world),
+      actingFor: this.expedition.id,
       selected: this.selected,
       message: this.message,
       facilities: facilities(this.gameState, this.expedition).map((facility, index) => ({
@@ -139,7 +142,16 @@ export class EncampmentScene extends Phaser.Scene {
     this.frame.add([
       this.add.rectangle(CENTRE_X, FRAME_H / 2, FRAME_W, FRAME_H, 0x241d15, 0.98).setStrokeStyle(3, 0xc9a227),
       this.add.text(CENTRE_X, TITLE_Y, encampmentName(world), { fontFamily: FONT, fontSize: '28px', color: GOLD, fontStyle: 'bold' }).setOrigin(0.5),
-      this.add.text(CENTRE_X, TITLE_Y + 28, `Your encampment.  Stock: ${stock || 'nothing'}`, { fontFamily: FONT, fontSize: '13px', color: DIM }).setOrigin(0.5),
+      // Every material held may not fit one line: it wraps onto a second, above the picture.
+      this.add
+        .text(CENTRE_X, TITLE_Y + 18, `${actingFor(this.gameState, this.expedition) || 'Your encampment.  '}Stock: ${stock || 'nothing'}`, {
+          fontFamily: FONT,
+          fontSize: '12px',
+          color: DIM,
+          align: 'center',
+          wordWrap: { width: FRAME_W - 40 },
+        })
+        .setOrigin(0.5, 0),
     ])
     this.drawGrounds()
     const all = facilities(this.gameState, this.expedition)

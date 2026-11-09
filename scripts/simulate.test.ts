@@ -9,7 +9,8 @@ import { newGame } from '../src/game/gameState.ts'
 import { heroId } from '../src/game/encounters.ts'
 import { readyMadeParty } from '../src/game/party.ts'
 import { OUTPOST_COST, TOWER_COST } from '../src/game/buildings.ts'
-import { advance } from '../src/game/company.ts'
+import { advance, formParty, moveHero, type DayReport } from '../src/game/company.ts'
+import { MAX_PARTIES, type Expedition } from '../src/game/expedition.ts'
 import { craft } from '../src/game/crafting.ts'
 import type { FamilyId } from '../src/inventory/catalog.ts'
 import { itemById, unruned } from '../src/inventory/inventory.ts'
@@ -19,6 +20,8 @@ import { worldHealing } from '../src/character/worldCasting.ts'
 import { lootRng, rollRunes } from '../src/game/loot.ts'
 import { runePrice, salePrice } from '../src/game/tradingPost.ts'
 import { pouchKeys } from '../src/inventory/runes.ts'
+import { boardIndex, monsterStrength } from '../src/game/blight.ts'
+import { LOSS_LEVEL, daysToFall } from '../src/game/territory.ts'
 import { extractRefusal } from '../src/game/runecraft.ts'
 import type { EncounterId } from '../src/game/encounters.ts'
 import { ENCAMPMENT_ID, SOURCE_ID, routeTo, type MonsterLocation } from '../src/game/worldMap.ts'
@@ -27,6 +30,7 @@ import {
   MAX_CAMPAIGN_DAYS,
   OUTPOST_ERRAND_RADIUS,
   SOURCE_READY_LEVEL,
+  HALL_FOR_PARTIES,
   hallErrand,
   nextTarget,
   outpostErrand,
@@ -43,8 +47,23 @@ import {
   visitGuildHall,
   carryOut,
   decide,
+  fieldCraft,
+  takeDays,
   planOf,
+  roleOf,
+  setVanguard,
   startCampaign,
+  finishCampaign,
+  GUARD_MIN_SIZE,
+  IDLE_DAYS,
+  advanceLimit,
+  decideGuard,
+  formGuard,
+  guardChoice,
+  needsDecision,
+  playRound,
+  strongestParty,
+  takenTargets,
   type CampaignRecord,
   type LoggedEvent,
 } from './simulate.ts'
@@ -220,10 +239,21 @@ describe('parseArgs', () => {
     expect(() => parseArgs(['--campaign', '--ready-level', '0'])).toThrow('--ready-level must be a positive integer')
     expect(() => parseArgs(['--campaign', '--ready-level', 'x'])).toThrow('--ready-level must be a positive integer')
   })
+
+  it('takes --parties for a campaign only, 1 to MAX_PARTIES, by default MAX_PARTIES', () => {
+    expect(parseArgs(['--campaign', '--parties', '1']).parties).toBe(1)
+    expect(parseArgs(['--campaign', '--parties', '2']).parties).toBe(2)
+    expect(parseArgs(['--campaign']).parties).toBe(MAX_PARTIES)
+    expect(parseArgs([]).parties).toBe(MAX_PARTIES)
+    for (const raw of ['0', String(MAX_PARTIES + 1), 'x']) {
+      expect(() => parseArgs(['--campaign', '--parties', raw])).toThrow(`--parties must be from 1 to ${MAX_PARTIES}`)
+    }
+    expect(() => parseArgs(['--parties', '2'])).toThrow('--parties applies only to --campaign')
+  })
 })
 
 describe('a campaign', () => {
-  const args = parseArgs(['--campaign'])
+  const args = parseArgs(['--campaign', '--parties', '1'])
   const { battles, record } = runCampaign(3, 1, args, 100)
   const starts = battles.map((events) => events[0]).filter((e) => e.type === 'battle_start')
   const winners = battles.map((events) => events.at(-1)).map((e) => (e?.type === 'battle_end' ? e.winner : undefined))
@@ -320,7 +350,7 @@ describe('a campaign', () => {
 })
 
 describe('summarizeCampaigns, the levels', () => {
-  const base = { ...runCampaign(3, 1, parseArgs(['--campaign']), 0).record }
+  const base = { ...runCampaign(3, 1, parseArgs(['--campaign', '--parties', '1']), 0).record }
   const records = [
     { ...base, finalLevels: [6, 7, 8], deathsAtLevel: [4, 3], battlesToLevel: { 5: 10 } },
     { ...base, finalLevels: [8, 9], deathsAtLevel: [4], battlesToLevel: { 5: 14, 10: 30 } },
@@ -411,6 +441,31 @@ describe('the guild hall in a campaign', () => {
     expect(hallErrand(game, game.parties[0])).toBe(true)
     expect(visitGuildHall(game, game.parties[0])).toBe(1)
     expect(game.parties[0].members.at(-1)!.name).toBe('Aldric 2')
+  })
+})
+
+describe('the guild hall’s cap in the simulator', () => {
+  it('raises the hall no further than one party uses by default, and keeps no stone or silver back for the barracks', () => {
+    const game = newGame(undefined, null, 1)
+    game.world.stock = { gold: 1000, iron: 500, stone: 100, silver: 100 }
+    visitGuildHall(game, game.parties[0])
+    expect(game.world.guildHall).toBe(HALL_FOR_PARTIES[0])
+    expect(game.world.stock).toMatchObject({ stone: 100, silver: 100 })
+    expect(hallErrand(game, game.parties[0])).toBe(false)
+    const needs = materialNeeds(game)
+    game.world.stock = {}
+    const unbought = { ...needs }
+    game.world.guildHall = 5
+    // The hall's own levels add nothing to what is kept once the cap is reached.
+    expect(materialNeeds(game)).toEqual(unbought)
+  })
+
+  it('recruits join at the hall’s level', () => {
+    const game = newGame(undefined, null, 1)
+    game.world.stock = { gold: 100, iron: 50 }
+    game.parties[0].members.length = 2
+    visitGuildHall(game, game.parties[0])
+    expect(game.parties[0].members.at(-1)!.level).toBe(3)
   })
 })
 
@@ -566,7 +621,7 @@ describe('the trading post and crafting in a campaign', () => {
 
 describe('summarizeCampaigns, the runes', () => {
   it('averages the runes found, bought and fused, the sockets filled and the gold on runes', () => {
-    const base = { ...runCampaign(3, 1, parseArgs(['--campaign']), 0).record }
+    const base = { ...runCampaign(3, 1, parseArgs(['--campaign', '--parties', '1']), 0).record }
     const records = [
       { ...base, runesFound: 4, runesBought: 1, runesFused: 0, socketsFilled: 2, goldOnRunes: 30 },
       { ...base, runesFound: 2, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 10 },
@@ -724,20 +779,22 @@ describe('runes in a campaign', () => {
 })
 
 /**
- * The refactor guard for stage 5: the output of `--campaign --battles 5 --seed 1` at commit 4a2b824, before any
- * change. Never edit it. A mismatch means a step changed behaviour.
+ * The refactor guard: the output of `--campaign --battles 5 --seed 1`, first recorded for stage 5 at commit 4a2b824.
+ * Re-recorded in stage 6 step 09, from `--parties 1`, for `LOG_SCHEMA_VERSION` 24 (battle_start meta `party` and
+ * `role`) and the company record's new fields, every old field and every other event unchanged; never edited again
+ * in this stage. A mismatch means a step changed behaviour.
  */
 const GUARD_RECORDS: CampaignRecord[] = [
-  { outcome: 'source', days: 333, battles: 20, spawns: 30, captured: 2, lost: 0, blighted: 0.41, healedHp: 138, campDays: 18, towersBuilt: 3, towersLost: 0, deaths: 4, recruits: 2, hallLevel: 3, shrineLevel: 1, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 5, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 16, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8], deathsAtLevel: [8, 8, 7, 7], battlesToLevel: { 5: 6 } },
-  { outcome: 'fallen', days: 234, battles: 18, spawns: 28, captured: 4, lost: 0, blighted: 0.42875, healedHp: 68, campDays: 6, towersBuilt: 3, towersLost: 0, deaths: 1, recruits: 2, hallLevel: 2, shrineLevel: 1, outpostsBuilt: 3, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 3, fieldCraftDays: 3, runesFound: 11, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [7, 7, 7, 7], deathsAtLevel: [3], battlesToLevel: {5: 10} },
-  { outcome: 'fallen', days: 426, battles: 20, spawns: 30, captured: 4, lost: 1, blighted: 0.4425, healedHp: 148, campDays: 29, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 5, hallLevel: 3, shrineLevel: 3, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 184, tierTwoBought: 0, crafted: 9, fieldCraftDays: 3, runesFound: 12, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7, 7, 7], deathsAtLevel: [3, 4, 2], battlesToLevel: {5: 9} },
-  { outcome: 'fallen', days: 125, battles: 9, spawns: 17, captured: 0, lost: 0, blighted: 0.4066666666666667, healedHp: 57, campDays: 6, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 5, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [5, 5, 5], deathsAtLevel: [], battlesToLevel: { 5: 6 } },
-  { outcome: 'fallen', days: 62, battles: 5, spawns: 6, captured: 0, lost: 0, blighted: 0.41791666666666666, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 2, recruits: 0, hallLevel: 2, shrineLevel: 1, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 102, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 3, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [4], deathsAtLevel: [3, 3], battlesToLevel: {} },
+  { outcome: 'source', days: 333, battles: 20, spawns: 30, captured: 2, lost: 0, blighted: 0.41, healedHp: 138, campDays: 18, towersBuilt: 3, towersLost: 0, deaths: 4, recruits: 2, hallLevel: 3, shrineLevel: 1, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 5, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 16, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8], deathsAtLevel: [8, 8, 7, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 20, wipes: 0, finalLevels: [[8]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 66, guardBattles: 0 },
+  { outcome: 'fallen', days: 234, battles: 18, spawns: 28, captured: 4, lost: 0, blighted: 0.42875, healedHp: 68, campDays: 6, towersBuilt: 3, towersLost: 0, deaths: 1, recruits: 2, hallLevel: 2, shrineLevel: 1, outpostsBuilt: 3, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 3, fieldCraftDays: 3, runesFound: 11, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [7, 7, 7, 7], deathsAtLevel: [3], battlesToLevel: {5: 10}, roles: { vanguard: { battles: 18, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 33, guardBattles: 0 },
+  { outcome: 'fallen', days: 426, battles: 20, spawns: 30, captured: 4, lost: 1, blighted: 0.4425, healedHp: 148, campDays: 29, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 5, hallLevel: 3, shrineLevel: 3, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 184, tierTwoBought: 0, crafted: 9, fieldCraftDays: 3, runesFound: 12, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7, 7, 7], deathsAtLevel: [3, 4, 2], battlesToLevel: {5: 9}, roles: { vanguard: { battles: 20, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 129, guardBattles: 0 },
+  { outcome: 'fallen', days: 125, battles: 9, spawns: 17, captured: 0, lost: 0, blighted: 0.4066666666666667, healedHp: 57, campDays: 6, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 5, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [5, 5, 5], deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 9, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 0, guardBattles: 0 },
+  { outcome: 'fallen', days: 62, battles: 5, spawns: 6, captured: 0, lost: 0, blighted: 0.41791666666666666, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 2, recruits: 0, hallLevel: 2, shrineLevel: 1, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 102, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 3, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [4], deathsAtLevel: [3, 3], battlesToLevel: {}, roles: { vanguard: { battles: 5, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 22, guardBattles: 0 },
 ]
-const GUARD_EVENTS_SHA256 = 'c5c83f8e83d614381e6bd76e5bee1075e5d7b66c6cf9b5873eafce41453b2769'
+const GUARD_EVENTS_SHA256 = '820e5b5d2740ee6549069200270ab5c882e3e95033d37dc1b5eb191c5c472cf1'
 
 describe('the campaign’s policy on the day loop', () => {
-  const args = parseArgs(['--campaign'])
+  const args = parseArgs(['--campaign', '--parties', '1'])
   const campaignOf = (setUp: (game: ReturnType<typeof newGame>) => void = () => {}) => {
     const game = newGame(undefined, null, 1)
     setUp(game)
@@ -831,22 +888,714 @@ describe('the campaign’s policy on the day loop', () => {
     })
     plan.phase = 'tower'
     expect(decide(run, party)).toEqual({ kind: 'act', action: { kind: 'tower' } })
-    carryOut(run, party, { kind: 'act', action: { kind: 'tower' } })
+    // The act is a day order: no day passes until the loop's next advance.
+    expect(carryOut(run, party, { kind: 'act', action: { kind: 'tower' } })).toBe('standing')
+    expect(game.world.turn).toBe(1)
+    expect(party.order).toEqual({ kind: 'day', action: { kind: 'tower' } })
+    expect(plan.running).toBe('day')
+    let reports = advance(game, Infinity)
+    expect(reports).toHaveLength(1)
+    takeDays(run, reports)
     expect(game.world.turn).toBe(2)
     expect(game.world.towers).toHaveLength(1)
     expect(run.record.towersBuilt).toBe(1)
     // No outpost: the stock lacks its timber.
     expect(decide(run, party)).toEqual({ kind: 'craft' })
-    carryOut(run, party, { kind: 'craft' })
+    expect(carryOut(run, party, { kind: 'craft' })).toBe('standing')
+    expect(game.world.turn).toBe(2)
+    expect(party.order).toMatchObject({ kind: 'day', action: { kind: 'craft' } })
+    reports = advance(game, Infinity)
+    expect(reports).toHaveLength(1)
+    takeDays(run, reports)
     expect(game.world.turn).toBe(3)
     expect(run.record).toMatchObject({ crafted: 1, fieldCraftDays: 1 })
     expect(party.order.kind).toBe('idle')
   })
+
+  it('asks again, passing no day, when an act is refused', () => {
+    const { run, game, party } = campaignOf()
+    // At the encampment: no watchtower there.
+    expect(carryOut(run, party, { kind: 'act', action: { kind: 'tower' } })).toBeNull()
+    expect(party.order.kind).toBe('idle')
+    expect(game.world.turn).toBe(1)
+  })
+
+  describe('fieldCraft', () => {
+    const field = (setUp: (game: ReturnType<typeof newGame>) => void = () => {}) => {
+      const game = newGame(undefined, null, 1)
+      game.parties[0].position = { q: game.parties[0].position.q + 1, r: game.parties[0].position.r }
+      game.world.stock = { gold: 50, iron: 50, timber: 50 }
+      setUp(game)
+      return game
+    }
+    /** What craftGear(game, party, 1) makes on a twin, as the place it changed and the item it put there. */
+    const madeByCraftGear = (setUp?: (game: ReturnType<typeof newGame>) => void) => {
+      const game = field(setUp)
+      const before = structuredClone(game.parties[0].members.map((m) => m.equipment))
+      const { crafted } = craftGear(game, game.parties[0], 1)
+      if (crafted === 0) return null
+      for (const [member, hero] of game.parties[0].members.entries()) {
+        for (const slot of ['mainHand', 'offHand', 'armor'] as const) {
+          if (hero.equipment[slot]?.id !== before[member][slot]?.id) return { member, slot, item: hero.equipment[slot]!.id }
+        }
+      }
+      throw new Error('crafted, but nothing changed')
+    }
+    const cases: Array<[string, (game: ReturnType<typeof newGame>) => void]> = [
+      ['the first piece', () => {}],
+      ['past a piece that has it', (game) => (game.parties[0].members[0].equipment.mainHand = itemById('iron_sword+balanced1')!)],
+    ]
+    it.each(cases)('picks the craft craftGear makes: %s', (_, setUp) => {
+      const game = field(setUp)
+      const action = fieldCraft(game, game.parties[0])
+      const made = madeByCraftGear(setUp)
+      expect(made).not.toBeNull()
+      expect(action).not.toBeNull()
+      expect(action!.place).toMatchObject({ from: 'worn', party: 'party_1', member: made!.member, slot: made!.slot })
+      expect(`${action!.place.itemId.split('+')[0]}+${action!.modifier}${action!.grade}`).toBe(made!.item)
+      expect(game.world.turn).toBe(1)
+    })
+
+    it.each<[string, (game: ReturnType<typeof newGame>) => void]>([
+      ['with no stock', (game) => (game.world.stock = {})],
+      ['when every piece it would craft in the field has it', (game) => {
+        game.parties[0].members[0].equipment.mainHand = itemById('iron_sword+balanced1')!
+        game.parties[0].members[1].equipment.mainHand = itemById('yew_bow+recurve1')!
+      }],
+    ])('picks nothing where craftGear makes nothing: %s', (_, setUp) => {
+      expect(madeByCraftGear(setUp)).toBeNull()
+      const game = field(setUp)
+      expect(fieldCraft(game, game.parties[0])).toBeNull()
+    })
+  })
+
+  it.each(['idle', 'garrison'] as const)('counts natural healing while %s without counting camping days', (kind) => {
+    const { run, game, party } = campaignOf()
+    const site = game.world.locations.find((l) => l.id === 'gold_seam')!
+    party.position = site.position
+    game.world.held.push(site.id)
+    party.order = { kind }
+    party.members[0].hp = 1
+    const reports = advance(game, 1)
+    expect(reports).toHaveLength(1)
+    expect(party.members[0].hp).toBe(2)
+    takeDays(run, reports)
+    expect(run.record.healedHp).toBe(1)
+    expect(run.record.campDays).toBe(0)
+  })
+
+  it('counts the days of two camping parties once, and the healing of both', () => {
+    const { run, game, party } = campaignOf((game) => (game.parties[0].position = { q: game.parties[0].position.q + 1, r: game.parties[0].position.r }))
+    const second = { ...structuredClone(party), id: 'party_2', name: 'Second Company', position: { q: party.position.q + 1, r: party.position.r } }
+    game.parties.push(second)
+    for (const p of game.parties) {
+      p.members[0].hp = 1
+      for (const m of p.members) m.mana = 0
+      expect(carryOut(run, p, { kind: 'order', order: { kind: 'camp' } })).toBe('standing')
+    }
+    const reports = advance(game, Infinity)
+    // Both camped every day the reports cover, so counting each camper would double them.
+    expect(reports.every((r) => r.parties.every((day) => day.rested > 0))).toBe(true)
+    takeDays(run, reports)
+    expect(run.record.campDays).toBe(reports.length)
+    const healed = reports.flatMap((r) => r.parties).reduce((n, day) => n + day.rested + day.cast, 0)
+    expect(healed).toBeGreaterThan(0)
+    expect(run.record.healedHp).toBe(healed)
+  })
+})
+
+describe('the company’s record', () => {
+  const args = parseArgs(['--campaign', '--parties', '1'])
+  const campaignOf = (setUp: (game: ReturnType<typeof newGame>) => void = () => {}) => {
+    const game = newGame(undefined, null, 1)
+    setUp(game)
+    const run = startCampaign(0, 1, args, 0, game)
+    return { run, game, party: game.parties[0] }
+  }
+  /** A party of one hero at 1 hit point, standing before the Source, whose battle it is sure to lose. */
+  const doomed = (game: ReturnType<typeof newGame>) => {
+    const party = game.parties[0]
+    const source = game.world.locations.find((l) => l.id === SOURCE_ID) as MonsterLocation
+    party.members.splice(1)
+    party.members[0].hp = 1
+    party.position = { ...source.position }
+    party.confronting = source.id
+    return source
+  }
+  const secondParty = (game: ReturnType<typeof newGame>) => {
+    const first = game.parties[0]
+    const second = { ...structuredClone(first), id: 'party_2', name: 'Second Company', baggage: [], order: { kind: 'idle' as const } }
+    game.parties.push(second)
+    return second
+  }
+
+  it('starts with the new fields at zero, the first party the vanguard', () => {
+    const { run, party } = campaignOf()
+    expect(run.record).toMatchObject({
+      roles: { vanguard: { battles: 0, wipes: 0, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } },
+      wipes: 0, promotions: 0, vanguardWalkHomeDays: 0, guardBattles: 0,
+    })
+    expect(roleOf(run, party)).toBe('vanguard')
+    expect(roleOf(run, { ...party, id: 'party_9' })).toBe('guard')
+    setVanguard(run, 'party_9')
+    expect(roleOf(run, { ...party, id: 'party_9' })).toBe('vanguard')
+    expect(roleOf(run, party)).toBe('guard')
+  })
+
+  it('logs the party and its role on battle_start, under schema version 24, and counts the battle to the role', () => {
+    const { run, game, party } = campaignOf()
+    const target = nextTarget(game.world, party, args.readyLevel)!
+    party.position = { ...target.position }
+    party.confronting = target.id
+    carryOut(run, party, { kind: 'fight', target })
+    const start = run.battles[0][0]
+    expect(start).toMatchObject({ type: 'battle_start', schemaVersion: 24, meta: { party: 'party_1', role: 'vanguard' } })
+    // The new keys come after the old, so the old keys keep their order in the log.
+    if (start.type !== 'battle_start') throw new Error('no battle_start')
+    expect(Object.keys(start.meta).slice(-2)).toEqual(['party', 'role'])
+    expect(run.record.roles.vanguard.battles).toBe(1)
+    expect(run.record.guardBattles).toBe(0)
+  })
+
+  it('counts a guard’s battle to the guards and to guardBattles', () => {
+    const { run, game } = campaignOf()
+    const guard = secondParty(game)
+    const target = nextTarget(game.world, guard, args.readyLevel)!
+    guard.position = { ...target.position }
+    guard.confronting = target.id
+    carryOut(run, guard, { kind: 'fight', target })
+    expect(run.battles[0][0]).toMatchObject({ meta: { party: 'party_2', role: 'guard' } })
+    expect(run.record.roles.guard.battles).toBe(1)
+    expect(run.record.guardBattles).toBe(1)
+    expect(run.record.roles.vanguard.battles).toBe(0)
+  })
+
+  it('wipes a party that loses, and goes on while a hero is left in the reserves', () => {
+    let source!: MonsterLocation
+    const { run, game, party } = campaignOf((game) => {
+      source = doomed(game)
+      game.reserves.push(readyMadeParty()[1])
+    })
+    const gear = Object.values(party.members[0].equipment)
+    expect(carryOut(run, party, { kind: 'fight', target: source })).not.toBe('fallen')
+    expect(run.battles[0].at(-1)).toMatchObject({ type: 'battle_end', winner: 'enemy' })
+    expect(run.record.wipes).toBe(1)
+    expect(run.record.roles.vanguard.wipes).toBe(1)
+    // The wiped party is gone; the reserves stand at the encampment as a new party, the vanguard now.
+    expect(game.parties).toHaveLength(1)
+    expect(game.parties[0]).not.toBe(party)
+    const home = game.world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
+    expect(game.parties[0].position).toEqual(home)
+    expect(run.vanguard).toBe(game.parties[0].id)
+    expect(roleOf(run, game.parties[0])).toBe('vanguard')
+    expect(source.loot).toEqual(expect.arrayContaining(gear))
+  })
+
+  it('ends the campaign fallen when the wipe leaves no hero, its levels the fallen party’s', () => {
+    let source!: MonsterLocation
+    const { run, game, party } = campaignOf((game) => (source = doomed(game)))
+    const levels = party.members.map((m) => m.level)
+    expect(carryOut(run, party, { kind: 'fight', target: source })).toBe('fallen')
+    expect(game.parties).toHaveLength(0)
+    const { record } = finishCampaign(run, 'fallen')
+    expect(record).toMatchObject({ outcome: 'fallen', wipes: 1, finalLevels: levels })
+    expect(record.roles.vanguard.finalLevels).toEqual([])
+  })
+
+  it('reads the vanguard’s levels, not the first party’s, and counts sockets over every party', () => {
+    const { run, game } = campaignOf()
+    const guard = secondParty(game)
+    for (const member of guard.members) member.level = 9
+    guard.members[0].equipment.armor = itemById('steel_breastplate#stone1')!
+    setVanguard(run, guard.id)
+    const first = game.parties[0]
+    first.members[0].equipment.mainHand = itemById('steel_longsword#ember1')!
+    const { record } = finishCampaign(run, 'timeout')
+    expect(record.finalLevels).toEqual(guard.members.map(() => 9))
+    expect(record.socketsFilled).toBe(2)
+    expect(record.roles.vanguard.finalLevels).toEqual([guard.members.map(() => 9)])
+    expect(record.roles.guard.finalLevels).toEqual([first.members.map((m) => m.level)])
+  })
+
+  it('counts the vanguard’s days walking home', () => {
+    const { run, game, party } = campaignOf((game) => {
+      game.world.stock = { gold: 100, iron: 50 }
+      game.parties[0].position = { q: game.parties[0].position.q + 3, r: game.parties[0].position.r }
+    })
+    expect(carryOut(run, party, decide(run, party))).toBe('standing')
+    expect(planOf(run, party).phase).toBe('home')
+    const reports = advance(game, Infinity)
+    takeDays(run, reports)
+    const walked = reports.filter((r) => r.parties.find((d) => d.party === party.id)?.walked).length
+    expect(walked).toBeGreaterThan(0)
+    expect(run.record.vanguardWalkHomeDays).toBe(walked)
+  })
+
+  it('has as many vanguard battles as battles in a one-party campaign, and no guard battles', () => {
+    const { record } = runCampaign(1, 1 + CAMPAIGN_SEED_STEP, args)
+    expect(record.roles.vanguard.battles).toBe(record.battles)
+    expect(record.guardBattles).toBe(0)
+    expect(record.roles.guard).toEqual({ battles: 0, wipes: 0, finalLevels: [] })
+    expect(record.promotions).toBe(0)
+  }, 20_000)
+
+  it('is summed up with the wipes, promotions, walks home, guard battles and each role’s battles, wipes and levels', () => {
+    const { run } = campaignOf()
+    const a = { ...run.record, wipes: 1, vanguardWalkHomeDays: 10, guardBattles: 2, roles: { vanguard: { battles: 4, wipes: 1, finalLevels: [[3, 5]] }, guard: { battles: 2, wipes: 0, finalLevels: [[2], [4]] } } }
+    const b = { ...run.record, wipes: 0, vanguardWalkHomeDays: 20, guardBattles: 0, roles: { vanguard: { battles: 6, wipes: 0, finalLevels: [[7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } } }
+    const summary = summarizeCampaigns([], [a, b])
+    expect(summary).toMatchObject({ avgWipes: 0.5, avgPromotions: 0, avgVanguardWalkHomeDays: 15, avgGuardBattles: 1 })
+    expect(summary.roles.vanguard).toEqual({ avgBattles: 5, avgWipes: 0.5, campaigns: 2, avgLowestFinalLevel: 5, avgHighestFinalLevel: 6 })
+    // A campaign with no party of the role is left out of its levels.
+    expect(summary.roles.guard).toEqual({ avgBattles: 1, avgWipes: 0, campaigns: 1, avgLowestFinalLevel: 2, avgHighestFinalLevel: 4 })
+    expect(summarizeCampaigns([], [{ ...a, hallLevel: 4 }, { ...b, hallLevel: 5 }, { ...b, hallLevel: 3 }])).toMatchObject({ hallFour: 2, hallFive: 1 })
+  })
+})
+
+describe('the company policy', () => {
+  const args = parseArgs(['--campaign'])
+  type Game = ReturnType<typeof newGame>
+  const home = (game: Game) => game.world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
+  const nests = (game: Game) => game.world.locations.filter((l): l is MonsterLocation => l.kind === 'monsters' && !l.source)
+  const away = (game: Game, party: Expedition, dq: number) => (party.position = { q: home(game).q + dq, r: home(game).r })
+  /** A guard formed at the hall from fresh heroes of the given levels. */
+  const guardOf = (game: Game, levels: number[]) => {
+    for (const [i, hero] of [...readyMadeParty(), ...readyMadeParty()].slice(0, levels.length).entries()) {
+      hero.name = `G${game.parties.length}${i}`
+      hero.level = levels[i]
+      game.reserves.push(hero)
+    }
+    const guard = formParty(game, `Guard ${game.parties.length}`, { from: 'reserves', index: 0 }) as Expedition
+    while (game.reserves.length > 0) expect(moveHero(game, { from: 'reserves', index: 0 }, { party: guard.id })).toBeNull()
+    return guard
+  }
+  /** A company at a level 5 hall: the vanguard, full, and guards of the given levels, every party at home. */
+  const companyOf = (guards: number[][], setUp: (game: Game) => void = () => {}) => {
+    const game = newGame(undefined, null, 1)
+    game.world.guildHall = 5
+    for (const [i, hero] of readyMadeParty().slice(0, 2).entries()) game.parties[0].members.push(Object.assign(hero, { name: `V${i}` }))
+    for (const levels of guards) guardOf(game, levels)
+    setUp(game)
+    const run = startCampaign(0, 1, args, 0, game)
+    return { run, game, vanguard: game.parties[0], guards: game.parties.slice(1) }
+  }
+  const threaten = (game: Game, siteId: string) => {
+    game.world.held.push(siteId)
+    game.world.threatened = [siteId]
+    return game.world.locations.find((l) => l.id === siteId)!
+  }
+
+  it('runs a guard by its own policy, and plays three parties by default', () => {
+    expect(args.parties).toBe(3)
+    const { run, vanguard, guards } = companyOf([[3, 3, 3]])
+    expect(roleOf(run, vanguard)).toBe('vanguard')
+    expect(roleOf(run, guards[0])).toBe('guard')
+  })
+
+  describe('choosing', () => {
+    it('reinforces a vanguard short of its limit by meeting it, with a hero within 3 levels of its lowest', () => {
+      const { run, game, vanguard, guards: [guard] } = companyOf([[1, 5]])
+      for (const m of vanguard.members) m.level = 8
+      vanguard.members.splice(2)
+      away(game, vanguard, 4)
+      expect(guardChoice(run, guard)).toEqual({ kind: 'reinforce' })
+      expect(decideGuard(run, guard)).toEqual({ kind: 'order', order: { kind: 'meet', party: vanguard.id } })
+      expect(carryOut(run, guard, decideGuard(run, guard))).toBe('standing')
+      expect(guard.order).toEqual({ kind: 'meet', party: vanguard.id })
+    })
+
+    it('does not reinforce a full vanguard, with heroes all more than 3 levels below, or as a guard of one', () => {
+      const full = companyOf([[5, 5, 5]])
+      for (const m of full.vanguard.members) m.level = 8
+      full.game.world.guildHall = 1 // a party limit of 3: the vanguard is full
+      expect(guardChoice(full.run, full.guards[0]).kind).not.toBe('reinforce')
+      const low = companyOf([[4, 4, 4]])
+      for (const m of low.vanguard.members) m.level = 8
+      expect(guardChoice(low.run, low.guards[0]).kind).not.toBe('reinforce')
+      const lone = companyOf([[8]])
+      for (const m of lone.vanguard.members) m.level = 8
+      expect(guardChoice(lone.run, lone.guards[0]).kind).not.toBe('reinforce')
+    })
+
+    it('defends a threatened held site from the nest pushing on it, if it is up to its threat', () => {
+      const { run, game, guards: [guard] } = companyOf([[1, 1, 1]])
+      const site = threaten(game, 'gold_seam')
+      const besiegers: MonsterLocation = {
+        id: 'besiegers', kind: 'monsters', name: 'Besiegers', position: { q: site.position.q + 1, r: site.position.r },
+        encounter: 'goblin_raid', threat: 1, loot: [],
+      }
+      game.world.locations.push(besiegers)
+      expect(guardChoice(run, guard)).toEqual({ kind: 'defend', target: besiegers })
+      expect(decideGuard(run, guard)).toEqual({ kind: 'order', order: { kind: 'travel', to: besiegers.position } })
+      // Above its level, the pushing nest is not its to fight.
+      besiegers.threat = 2
+      expect(guardChoice(run, guard).kind).toBe('train')
+    })
+
+    it('defends the site nearest to falling first, from the nest pushing hardest on it, whatever the ids', () => {
+      const { run, game, guards: [guard] } = companyOf([[2, 2, 2]])
+      const { world } = game
+      const quarry = world.locations.find((l) => l.id === 'old_quarry')!
+      const cave = world.locations.find((l) => l.id === 'crystal_cave')!
+      world.held.push(quarry.id, cave.id)
+      world.threatened = [cave.id, quarry.id]
+      // The quarry, the later id, falls at once; the cave takes days.
+      world.blight[boardIndex(world.board, quarry.position)] = LOSS_LEVEL
+      world.blight[boardIndex(world.board, cave.position)] = 0
+      const nest = (id: string, at: { q: number; r: number }, dq: number): MonsterLocation => ({
+        id, kind: 'monsters', name: id, position: { q: at.q + dq, r: at.r }, encounter: 'goblin_raid', threat: 2, loot: [],
+      })
+      const hardest = nest('quarry_besiegers', quarry.position, 1)
+      const weaker = nest('a_quarry_skulkers', quarry.position, 2)
+      const caveRaiders = nest('a_cave_raiders', cave.position, 1)
+      world.locations = [...world.locations, hardest, weaker, caveRaiders]
+      const presence = [{ position: guard.position, levels: guard.members.map((m) => m.level) }]
+      expect(daysToFall(world, presence, quarry)).toBe(0)
+      expect(daysToFall(world, presence, cave)).toBeGreaterThan(0)
+      expect(monsterStrength(weaker) - 2).toBeGreaterThan(0)
+      expect(guardChoice(run, guard)).toEqual({ kind: 'defend', target: hardest })
+    })
+
+    it('goes home to refill a guard worn below its smallest size when a recruit is affordable', () => {
+      const { run, game, vanguard, guards: [guard] } = companyOf([[5]])
+      // A vanguard as strong: no swap to be had.
+      for (const m of vanguard.members) m.level = 5
+      away(game, guard, 3)
+      game.world.stock = { gold: 9 }
+      expect(guardChoice(run, guard).kind).toBe('train')
+      game.world.stock = { gold: 10 }
+      expect(guardChoice(run, guard)).toEqual({ kind: 'home' })
+      guard.position = { ...home(game) }
+      expect(decideGuard(run, guard)).toEqual({ kind: 'hall' })
+      carryOut(run, guard, { kind: 'hall' })
+      expect(guard.members).toHaveLength(2)
+    })
+
+    it('trains on the nearest nest it is up to when nothing is threatened, never the Source', () => {
+      const { run, game, guards: [guard] } = companyOf([[1, 1, 1]])
+      const upTo = nests(game).filter((l) => l.threat <= 1)
+      const distance = (l: MonsterLocation) => Math.max(...[l.position.q - guard.position.q, l.position.r - guard.position.r].map(Math.abs))
+      const choice = guardChoice(run, guard)
+      expect(choice.kind).toBe('train')
+      if (choice.kind !== 'train') return
+      expect(upTo).toContain(choice.target)
+      expect(choice.target.source).toBeFalsy()
+      expect(nextTarget(game.world, guard)).toBe(choice.target)
+      expect(distance(choice.target)).toBeGreaterThan(0)
+      for (const m of [...guard.members, ...game.parties[0].members]) m.level = 30
+      game.world.locations = game.world.locations.filter((l) => l.kind !== 'monsters' || l.source)
+      expect(guardChoice(run, guard)).toEqual({ kind: 'home' })
+    })
+
+    it('garrisons a threatened held site when no nest is one it is up to: the walk, then the order', () => {
+      const { run, game, guards: [guard] } = companyOf([[1, 1, 1]])
+      game.world.locations = game.world.locations.filter((l) => l.kind !== 'monsters' || l.source)
+      const site = threaten(game, 'gold_seam')
+      expect(guardChoice(run, guard)).toEqual({ kind: 'garrison', site })
+      expect(decideGuard(run, guard)).toEqual({ kind: 'order', order: { kind: 'travel', to: site.position } })
+      guard.position = { ...site.position }
+      expect(decideGuard(run, guard)).toEqual({ kind: 'order', order: { kind: 'garrison' } })
+      expect(carryOut(run, guard, { kind: 'order', order: { kind: 'garrison' } })).toBe('standing')
+      expect(guard.order.kind).toBe('garrison')
+      // Asked again while the site is still threatened, it stays.
+      expect(decideGuard(run, guard)).toEqual({ kind: 'stand' })
+      expect(carryOut(run, guard, { kind: 'stand' })).toBe('standing')
+      expect(guard.order.kind).toBe('garrison')
+      // A second guard garrisons nothing another holds: it goes home.
+      const other = guardOf(game, [1, 1, 1])
+      expect(guardChoice(run, other)).toEqual({ kind: 'home' })
+    })
+
+    it('goes home with nothing to do, runs the hall there, and then stands idle', () => {
+      const { run, game, guards: [guard] } = companyOf([[1, 1, 1]])
+      game.world.locations = game.world.locations.filter((l) => l.kind !== 'monsters' || l.source)
+      away(game, guard, 3)
+      expect(decideGuard(run, guard)).toEqual({ kind: 'order', order: { kind: 'home' } })
+      expect(carryOut(run, guard, { kind: 'order', order: { kind: 'home' } })).toBe('standing')
+      expect(guard.order.kind).toBe('home')
+      guard.position = { ...home(game) }
+      guard.order = { kind: 'idle' }
+      expect(decideGuard(run, guard)).toEqual({ kind: 'hall' })
+      expect(carryOut(run, guard, { kind: 'hall' })).toBeNull()
+      expect(decideGuard(run, guard)).toEqual({ kind: 'stand' })
+      expect(carryOut(run, guard, { kind: 'stand' })).toBe('standing')
+      expect(guard.order.kind).toBe('idle')
+    })
+  })
+
+  it('promotes the guard’s highest-level hero on meeting the vanguard, and sends the guard home', () => {
+    const { run, game, vanguard, guards: [guard] } = companyOf([[5, 7, 6]])
+    for (const m of vanguard.members) m.level = 8
+    vanguard.members.splice(2)
+    away(game, vanguard, 4)
+    const best = guard.members[1]
+    expect(carryOut(run, guard, decideGuard(run, guard))).toBe('standing')
+    let reports: DayReport[] = []
+    for (let i = 0; i < 10 && !reports.some((r) => r.partyEvents.some((e) => e.type === 'met')); i++) {
+      reports = advance(game, Infinity)
+      takeDays(run, reports)
+    }
+    expect(reports.at(-1)!.partyEvents).toContainEqual({ type: 'met', party: guard.id, other: vanguard.id })
+    expect(needsDecision(run, guard, reports.at(-1))).toBe(true)
+    expect(decideGuard(run, guard)).toEqual({ kind: 'promote' })
+    expect(carryOut(run, guard, { kind: 'promote' })).toBeNull()
+    expect(vanguard.members.at(-1)).toBe(best)
+    expect(guard.members).not.toContain(best)
+    expect(run.record.promotions).toBe(1)
+    expect(decideGuard(run, guard)).toEqual({ kind: 'order', order: { kind: 'home' } })
+  })
+
+  describe('the swap promotion (decision 16 as amended)', () => {
+    /** A full vanguard (5 at a level 5 hall), its weakest at level 5 in the middle, and a guard whose best is `best`. */
+    const fullOf = (best: number) => {
+      const c = companyOf([[3, best, 4]])
+      c.vanguard.members.forEach((m, i) => (m.level = i === 2 ? 5 : 8))
+      away(c.game, c.vanguard, 4)
+      return c
+    }
+
+    it('reinforces a full vanguard when the guard’s best outranks its lowest by 2 levels or more', () => {
+      const { run, vanguard, guards: [guard] } = fullOf(7)
+      expect(vanguard.members).toHaveLength(5)
+      expect(guardChoice(run, guard)).toEqual({ kind: 'reinforce' })
+      expect(decideGuard(run, guard)).toEqual({ kind: 'order', order: { kind: 'meet', party: vanguard.id } })
+    })
+
+    it('does not reinforce a full vanguard when the guard’s best is only 1 level above its lowest', () => {
+      const { run, guards: [guard] } = fullOf(6)
+      expect(guardChoice(run, guard).kind).not.toBe('reinforce')
+    })
+
+    it('swaps the guard’s best for the vanguard’s weakest on meeting, counts a promotion and sends the guard home', () => {
+      const { run, game, vanguard, guards: [guard] } = fullOf(7)
+      const best = guard.members[1]
+      const weakest = vanguard.members[2]
+      expect(carryOut(run, guard, decideGuard(run, guard))).toBe('standing')
+      let reports: DayReport[] = []
+      for (let i = 0; i < 10 && !reports.some((r) => r.partyEvents.some((e) => e.type === 'met')); i++) {
+        reports = advance(game, Infinity)
+        takeDays(run, reports)
+      }
+      expect(reports.at(-1)!.partyEvents).toContainEqual({ type: 'met', party: guard.id, other: vanguard.id })
+      expect(decideGuard(run, guard)).toEqual({ kind: 'promote' })
+      expect(carryOut(run, guard, { kind: 'promote' })).toBeNull()
+      expect(vanguard.members).toHaveLength(5)
+      expect(vanguard.members[2]).toBe(best)
+      expect(guard.members[1]).toBe(weakest)
+      expect(run.record.promotions).toBe(1)
+      expect(decideGuard(run, guard)).toEqual({ kind: 'order', order: { kind: 'home' } })
+    })
+  })
+
+  it('takes its next priority when the exchange is refused', () => {
+    const { run, game, vanguard, guards: [guard] } = companyOf([[5, 7, 6]])
+    for (const m of vanguard.members) m.level = 8
+    vanguard.members.splice(2)
+    away(game, vanguard, 4)
+    guard.position = { ...vanguard.position }
+    vanguard.confronting = nests(game)[0].id
+    expect(decideGuard(run, guard)).toEqual({ kind: 'promote' })
+    expect(carryOut(run, guard, { kind: 'promote' })).toBeNull()
+    expect(run.record.promotions).toBe(0)
+    expect(guardChoice(run, guard).kind).not.toBe('reinforce')
+  })
+
+  describe('succession', () => {
+    const doom = (game: Game, party: Expedition) => {
+      const source = game.world.locations.find((l) => l.id === SOURCE_ID) as MonsterLocation
+      party.members.splice(1)
+      party.members[0].hp = 1
+      party.position = { ...source.position }
+      party.confronting = source.id
+      return source
+    }
+
+    it('makes the strongest party left the vanguard when the vanguard is wiped', () => {
+      const { run, game, vanguard, guards } = companyOf([[2, 6, 6], [3, 3, 4]])
+      const source = doom(game, vanguard)
+      expect(carryOut(run, vanguard, { kind: 'fight', target: source })).toBe('standing')
+      expect(game.parties).not.toContain(vanguard)
+      // The highest lowest level (3 against 2), whatever the mean.
+      expect(run.vanguard).toBe(guards[1].id)
+      expect(roleOf(run, guards[1])).toBe('vanguard')
+      expect(roleOf(run, guards[0])).toBe('guard')
+      expect(planOf(run, guards[1]).phase).toBe('start')
+      // Then the mean, then the lower id.
+      const party = (id: string, levels: number[]) => ({ id, members: levels.map((level) => ({ level })) }) as unknown as Expedition
+      expect(strongestParty([party('party_2', [3, 3, 3]), party('party_3', [3, 3, 4])]).id).toBe('party_3')
+      expect(strongestParty([party('party_3', [3, 4]), party('party_2', [4, 3])]).id).toBe('party_2')
+    })
+
+    it('stops the new vanguard’s guard walk, and has it fight the nest it then stands before', () => {
+      const { run, game, vanguard, guards: [guard] } = companyOf([[3, 3, 3]])
+      const source = doom(game, vanguard)
+      guard.order = { kind: 'travel', to: { q: guard.position.q + 5, r: guard.position.r }, route: [] }
+      expect(carryOut(run, vanguard, { kind: 'fight', target: source })).toBe('standing')
+      expect(guard.order.kind).toBe('idle')
+      const nest = nests(game)[0]
+      guard.position = { ...nest.position }
+      guard.confronting = nest.id
+      expect(decide(run, guard)).toEqual({ kind: 'fight', target: nest })
+    })
+
+    it('ends fallen only when no hero is left anywhere', () => {
+      const { run, game, vanguard, guards: [guard] } = companyOf([[3, 3, 3]])
+      const source = doom(game, vanguard)
+      expect(carryOut(run, vanguard, { kind: 'fight', target: source })).toBe('standing')
+      doom(game, guard)
+      expect(carryOut(run, guard, { kind: 'fight', target: source })).toBe('fallen')
+    })
+
+    it('counts the sockets the company fell with', () => {
+      const { run, game, vanguard } = companyOf([])
+      const source = doom(game, vanguard)
+      vanguard.members[0].equipment.mainHand = itemById('steel_longsword#ember1')!
+      expect(carryOut(run, vanguard, { kind: 'fight', target: source })).toBe('fallen')
+      expect(finishCampaign(run, 'fallen').record.socketsFilled).toBe(1)
+    })
+  })
+
+  it('keeps every party’s target its own, and no guard ever targets the Source', () => {
+    // Level 2 guards: the home band has two nests of threat 1 and four of threat 2.
+    const { run, game, vanguard, guards } = companyOf([[2, 2, 2], [2, 2, 2]])
+    planOf(run, vanguard).phase = 'choose'
+    decide(run, vanguard)
+    for (const guard of guards) decideGuard(run, guard)
+    const targets = game.parties.map((p) => planOf(run, p).target?.id)
+    expect(new Set(targets).size).toBe(3)
+    expect(targets).not.toContain(SOURCE_ID)
+    expect(targets.every((id) => id !== undefined)).toBe(true)
+    // The vanguard leaves a guard's target to it.
+    const vanguardPlan = planOf(run, vanguard)
+    vanguardPlan.phase = 'choose'
+    const guardTarget = planOf(run, guards[0]).target!
+    expect(takenTargets(run, vanguard)).toContain(guardTarget.id)
+    decide(run, vanguard)
+    expect(vanguardPlan.target).not.toBe(guardTarget)
+    // Strong as they come, with only the Source left, a guard goes home.
+    for (const m of [...guards[1].members, ...vanguard.members]) m.level = 30
+    game.world.locations = game.world.locations.filter((l) => l.kind !== 'monsters' || l.source)
+    expect(guardChoice(run, guards[1])).toEqual({ kind: 'home' })
+  })
+
+  describe('the hall cap', () => {
+    const fullCompany = (parties: number) => {
+      const game = newGame(undefined, null, 1)
+      game.world.stock = { gold: 1000, iron: 500, stone: 100, silver: 100 }
+      return { game, party: game.parties[0], parties }
+    }
+    it('stops at level 4 for two parties and never walks home for level 5', () => {
+      const { game, party } = fullCompany(2)
+      visitGuildHall(game, party, 2)
+      expect(game.world.guildHall).toBe(4)
+      guardOf(game, [1, 1, 1])
+      expect(hallErrand(game, party, 2, true)).toBe(false)
+      expect(hallErrand(game, party, 3, true)).toBe(true)
+      expect(materialNeeds(game, 2).silver ?? 0).toBeLessThan(materialNeeds(game, 3).silver ?? 0)
+    })
+    it('stops at level 3 for one', () => {
+      const { game, party } = fullCompany(1)
+      visitGuildHall(game, party, 1)
+      expect(game.world.guildHall).toBe(3)
+      expect(hallErrand(game, party, 1)).toBe(false)
+    })
+    it('never walks home only to form a guard: one forms when the vanguard is home for another errand (step 11 measured the walk as no help)', () => {
+      const { game, party } = fullCompany(2)
+      game.world.guildHall = 4
+      game.world.stock = { gold: 10 * GUARD_MIN_SIZE }
+      party.position = { q: party.position.q + 3, r: party.position.r }
+      expect(party.members).toHaveLength(3)
+      expect(hallErrand(game, party, 2, true)).toBe(false)
+      expect(hallErrand(game, party, 1, true)).toBe(false)
+    })
+    it('drops the recruit errand for the vanguard of a company with a guard', () => {
+      const { game, party } = fullCompany(1)
+      game.world.stock = { gold: 10 }
+      party.members.splice(2)
+      expect(hallErrand(game, party, 1, false)).toBe(true)
+      expect(hallErrand(game, party, 1, true)).toBe(false)
+    })
+  })
+
+  describe('forming a guard', () => {
+    it('forms a Second Company of at least three at the hall’s level when the hall allows it and the stock pays', () => {
+      const game = newGame(undefined, null, 1)
+      game.world.guildHall = 4
+      game.world.stock = { gold: 10 * GUARD_MIN_SIZE }
+      const formed = formGuard(game, 3)!
+      expect(formed.hired).toBe(GUARD_MIN_SIZE)
+      expect(formed.party.name).toBe('Second Company')
+      expect(formed.party.members).toHaveLength(GUARD_MIN_SIZE)
+      expect(formed.party.members.every((m) => m.level === 4 && !canAdvance(m))).toBe(true)
+      expect(game.parties).toContain(formed.party)
+    })
+    it('forms none short of three heroes, under --parties 1, or past the hall’s parties', () => {
+      const game = newGame(undefined, null, 1)
+      game.world.guildHall = 4
+      game.world.stock = { gold: 20 }
+      expect(formGuard(game, 3)).toBeNull()
+      game.world.stock = { gold: 100 }
+      expect(formGuard(game, 1)).toBeNull()
+      game.world.guildHall = 3
+      expect(formGuard(game, 3)).toBeNull()
+      expect(game.parties).toHaveLength(1)
+    })
+    it('fills the vanguard first, then forms the guard on a hall visit, its role a guard’s', () => {
+      const game = newGame(undefined, null, 1)
+      game.world.guildHall = 4
+      game.world.stock = { gold: 50 }
+      const run = startCampaign(0, 1, args, 0, game)
+      expect(carryOut(run, game.parties[0], { kind: 'hall' })).toBeNull()
+      expect(game.parties[0].members).toHaveLength(5)
+      expect(game.parties).toHaveLength(2)
+      expect(game.parties[1].members).toHaveLength(3)
+      expect(roleOf(run, game.parties[1])).toBe('guard')
+      expect(run.record.recruits).toBe(5)
+    })
+  })
+
+  describe('the loop', () => {
+    it('asks a garrisoned guard again after every advance, a walking one only when concerned', () => {
+      const { run, game, vanguard, guards: [guard] } = companyOf([[1, 1, 1]])
+      const elsewhere: DayReport = { events: [], partyEvents: [], parties: [], interrupt: { party: vanguard.id, event: { type: 'order_done', party: vanguard.id } } }
+      guard.order = { kind: 'garrison' }
+      expect(needsDecision(run, guard, elsewhere)).toBe(true)
+      guard.order = { kind: 'travel', to: home(game), route: [] }
+      expect(needsDecision(run, guard, elsewhere)).toBe(false)
+    })
+
+    it('passes at most IDLE_DAYS while every party is garrisoned or idle, and then asks each guard again', () => {
+      const { run, game, vanguard, guards: [guard] } = companyOf([[1, 1, 1]])
+      expect(advanceLimit(game)).toBe(IDLE_DAYS)
+      vanguard.order = { kind: 'travel', to: home(game), route: [] }
+      expect(advanceLimit(game)).toBe(Infinity)
+      vanguard.order = { kind: 'idle' }
+      guard.order = { kind: 'garrison' }
+      const reports = advance(game, advanceLimit(game))
+      expect(reports.length).toBeGreaterThan(0)
+      expect(reports.length).toBeLessThanOrEqual(IDLE_DAYS)
+      expect(needsDecision(run, guard, reports.at(-1))).toBe(true)
+    })
+
+    it('plays rounds of a company with idle guards without spinning', () => {
+      const { run, game } = companyOf([[1, 1, 1], [1, 1, 1]])
+      let last: DayReport | undefined
+      const start = game.world.turn
+      for (let i = 0; i < 30; i++) {
+        const round = playRound(run, last)
+        if (!Array.isArray(round)) break
+        expect(round.length).toBeGreaterThan(0)
+        last = round.at(-1)
+      }
+      expect(game.world.turn).toBeGreaterThan(start)
+      expect(run.record.guardBattles).toBeGreaterThan(0)
+    }, 30_000)
+  })
 })
 
 describe('the refactor guard', () => {
-  it('plays 5 seeded campaigns exactly as it did before stage 5', () => {
-    const args = parseArgs(['--campaign', '--battles', '5', '--seed', '1'])
+  it('plays 5 seeded campaigns exactly as it did before stage 5, with one party', () => {
+    const args = parseArgs(['--campaign', '--battles', '5', '--seed', '1', '--parties', '1'])
     const records: CampaignRecord[] = []
     const lines: string[] = []
     let firstBattleId = 0
