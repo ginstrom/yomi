@@ -1,11 +1,13 @@
 # Feature: long campaign, stage 6 (multiple parties)
 
 **Slug:** long-campaign-stage-06
-**Phase:** done — awaiting user (PR)
+**Phase:** done — idle healing verified; awaiting user (PR)
 
 ## Request (user's words)
 
 > Please merge then move on to step 6: The full review is saved at .git/pr-review/long-campaign-stage-05.md. Merging is up to you. Once it's in, stage 6 can start from the hazards listed in the feature record.
+
+Follow-up (2026-11-09): "For the idle healing, party members should naturally heal 1 HP per day."
 
 ## Links
 
@@ -33,6 +35,7 @@ Large/structural, but the stage design is the approved design (marked ready for 
 
 | Date | Decision | By | Alternatives | Reason |
 |---|---|---|---|---|
+| 2026-11-09 | Idle parties naturally heal each member 1 HP per day; include garrisons, cap at maximum HP, keep mana and infirmary benefits with camping, exclude monsters | user (rate and idle healing); orchestrator (boundaries) | warn instead; full camp benefits | Resolves the simulated player's idle-healing friction without giving an idle party the camp order |
 | 2026-11-08 | Merged PR #6 (merge commit ab37e14) | orchestrator (user delegated) | — | Review verdict ready, mergeable, branch up to date |
 | 2026-11-08 | Skip architecture and design; the stage design is the approved design | orchestrator | new design | Stage design marked ready for planning; precedent stages 2–5 |
 | 2026-11-08 | Decision 7: last party wiped with reserves left → new party auto-formed at home | user | game over; wait for player | Recommended |
@@ -94,11 +97,11 @@ Large/structural, but the stage design is the approved design (marked ready for 
 - Fix round 1 (opus, fresh engineer): all of the above except, judged not worth fixing now: idle parties not healing (standing rule: only camping heals — user to decide), off-screen click needs a drag (pre-existing), Exchange 'take all' (gap), pre-roll pool size (content).
 - Fix round 1 (opus): d9f461c (removeParty; parseSave range checks; comment), a35ddcb (refusal + focus for every day-passing action; other parties' events reported after Scout/Wait/Camp/buildings; loaded game opens on the confronting party, named line; CLAUDE.md), c23d3a8 (rename/recruit messages, wrapped subtitles, Exchange 'Other party' only with 3+, no 'For:' in the hall), bfbe769 (manual + execution notes). --parties already capped at 3 (QA misread). npm test 1501; browser 114/114; build. Orchestrator viewed fix-12/13 shots: fit at 840 and 1280.
 - Re-review (opus) at bfbe769: clean. npm test 1501, build, browser 111/114 under load 21 with the 3 timeouts passing alone (files untouched by the round). Nits left: actionBlocked's comment overstates (a bad tower site while another party blocks shows the blocking message); linger/campDay/buildTower/buildOutpost now used only by tests.
+- Idle-healing follow-up (2026-11-09): idle and garrisoned parties away from monsters heal each living member 1 HP per day, capped at maximum; no mana recovery, infirmary bonuses, automatic spells or interruption on reaching full health. Uses the shared day loop and reports actual healing. Simulator `healedHp` includes natural healing, while `campDays` still counts camping only. Manual, design and CLAUDE.md updated. Direct review and nine new domain/simulator cases cover the rate, caps, every party, thirty quiet days, day actions, travel, monsters and refused days; a browser regression covers both time controls, messages and save/reload. npm test 1510/1510 (including the unchanged five-campaign refactor guard); browser 115/115 with two workers (603 s, no retries); build and sprites:check (124 sprites) pass. Earlier 500-campaign measurements above were not rerun for this follow-up. Branch remains local; push and PR await authorization.
 
 ## Known issues for the PR
 
 - Company value on today's map: 3 parties beat the Source no more often than 1 (389 vs 389 at ready-level 10), promotions ~0, vanguard walks home more (91.7 vs 64.7 days); recorded, revisit in stage 9 (user).
-- Idle parties don't heal during Until something happens (only camping heals); no warning (simulated user's top friction; user to decide).
 - A map click on a hex outside the view needs a drag first (pre-existing).
 - Exchange has no 'take all'; a dead hero's kit fills the baggage pages.
 - Only one pre-roll is left to recruit after the ready-made three; then Create new.

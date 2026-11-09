@@ -20,6 +20,7 @@ On today's map this already gives the XCOM dynamic: a vanguard pushing to threat
   - `recruitLevel` is the hall's level.
   - Forming, renaming, disbanding and moving heroes at the guild hall, between the parties at home and the reserves.
 - **Orders:** home, camp, garrison and meet, besides travel and idle. Each party acts in list order.
+- **Natural healing:** idle and garrisoned parties away from monsters heal each living member 1 HP per day, capped at maximum HP. Mana recovery, infirmary bonuses and automatic healing spells require camping. Natural healing does not interrupt time passing when everyone is whole.
 - **Interrupts** for every party:
   - arriving at monsters;
   - an order done;

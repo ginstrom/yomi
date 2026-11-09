@@ -457,6 +457,38 @@ describe('the world map', () => {
       expect(next.message).not.toBe('')
     })
 
+    it('reports and saves idle healing from both time controls, keeping the party idle', async () => {
+      const game = await games.open()
+      await game.newGame()
+      await game.page.evaluate(() => {
+        const save = JSON.parse(localStorage.getItem('yomi.save.1')!)
+        save.game.parties[0].members[0].hp = 1
+        save.game.parties[0].members[2].mana = 0
+        save.game.world.sighted = save.game.world.locations.filter((l: { kind: string }) => l.kind === 'monsters').map((l: { id: string }) => l.id)
+        localStorage.setItem('yomi.save.1', JSON.stringify(save))
+      })
+      await game.click((await game.reload()).buttons.continue)
+      const hurt = await game.settled('World', (w) => w.buttons.campUntilHealed.enabled)
+      await game.click(hurt.buttons.nextDay)
+      const next = await game.waitFor('World', (w) => w.world.turn === hurt.world.turn + 1)
+      expect(next.message).toContain('Rest heals 1 hp.')
+      const savedMember = () => game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!).game.parties[0].members[0].hp)
+      expect(await savedMember()).toBe(2)
+
+      await game.click(next.buttons.untilSomething)
+      const healed = await game.waitFor('World', (w) => w.world.turn === next.world.turn + 30)
+      expect(healed.message).toBe('30 days passed quietly. Rest heals 30 hp.')
+      expect(order(healed)).toBe('Idle')
+      expect(healed.buttons.campUntilHealed.enabled).toBe(false)
+      expect(await savedMember()).toBe(32)
+      expect(await game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!).game.parties[0].members[2].mana)).toBe(0)
+
+      await game.click((await game.reload()).buttons.continue)
+      const loaded = await game.settled('World')
+      expect(loaded.world.turn).toBe(healed.world.turn)
+      expect(loaded.buttons.campUntilHealed.enabled).toBe(false)
+    })
+
     it('carries a walk cut short on, a hex a day, the line saying where', async () => {
       const game = await games.open()
       const home = await game.newGame()

@@ -611,6 +611,84 @@ function days(game: GameState, n: number): DayReport[] {
   return Array.from({ length: n }, () => passDay(game)!)
 }
 
+describe('natural healing while idle', () => {
+  it.each(['home', 'field', 'garrison'] as const)('heals each wounded member 1 HP per day at %s, capped at maximum, without camp benefits', (where) => {
+    const { game, world, party } = where === 'garrison' ? onGoldSeam() : quiet()
+    if (where === 'field') party.position = NEAR()
+    if (where === 'garrison') expect(setOrder(game, party.id, { kind: 'garrison' })).toBeNull()
+    world.infirmary = 3
+    const [aldric, brenna, delwyn] = party.members
+    aldric.hp = maxHp(aldric) - 3
+    brenna.hp = maxHp(brenna) - 1
+    delwyn.mana = 0
+    const position = { ...party.position }
+    const reports = days(game, 2)
+    expect(party.members.map((m) => m.hp)).toEqual([maxHp(aldric) - 1, maxHp(brenna), maxHp(delwyn)])
+    expect(delwyn.mana).toBe(0)
+    expect(reports.map((r) => r.parties[0])).toEqual([
+      { party: party.id, walked: null, rested: 2, cast: 0, made: null },
+      { party: party.id, walked: null, rested: 1, cast: 0, made: null },
+    ])
+    expect(party.position).toEqual(position)
+    expect(party.order).toEqual({ kind: where === 'garrison' ? 'garrison' : 'idle' })
+    expect(reports.flatMap((r) => r.partyEvents)).toEqual([])
+  })
+
+  it('heals every idle party during thirty quiet days without interrupting on full health', () => {
+    const { game, party, second } = withSecond(quiet())
+    for (const p of game.parties) p.members[0].hp = 1
+    const reports = advance(game)
+    expect(reports).toHaveLength(UNTIL_LIMIT)
+    expect(reports.every((r) => r.interrupt === null)).toBe(true)
+    for (const p of [party, second]) {
+      expect(p.members[0].hp).toBe(Math.min(maxHp(p.members[0]), 1 + UNTIL_LIMIT))
+      expect(reports.reduce((sum, r) => sum + r.parties.find((d) => d.party === p.id)!.rested, 0)).toBe(p.members[0].hp - 1)
+    }
+  })
+
+  it('heals an idle party when another party spends a day camping, without doubling the camper’s healing', () => {
+    const { game, party, second } = withSecond(quiet())
+    party.members[0].hp = second.members[0].hp = 1
+    const report = act(game, party.id, { kind: 'camp' })
+    if (typeof report === 'string') throw new Error(report)
+    expect([party.members[0].hp, second.members[0].hp]).toEqual([2, 2])
+    expect(report.parties.map((d) => d.rested)).toEqual([1, 1])
+  })
+
+  it('starts healing the day after arrival, with no natural healing while travelling', () => {
+    const { game, party } = quiet()
+    party.members[0].hp = 1
+    const to = { q: party.position.q + 1, r: party.position.r }
+    expect(setOrder(game, party.id, { kind: 'travel', to })).toBeNull()
+    expect(passDay(game)!.parties[0]).toMatchObject({ walked: to, rested: 0 })
+    expect(party.members[0].hp).toBe(1)
+    expect(passDay(game)!.parties[0].rested).toBe(1)
+    expect(party.members[0].hp).toBe(2)
+  })
+
+  it('does not heal while building, or among monsters even after scouting', () => {
+    const building = onCleanLand()
+    building.party.members[0].hp = 1
+    const report = act(building.game, building.party.id, { kind: 'tower' })
+    if (typeof report === 'string') throw new Error(report)
+    expect(report.parties[0].rested).toBe(0)
+    expect(building.party.members[0].hp).toBe(1)
+
+    const { game, party, second } = withSecond(quiet())
+    const nest = nestAt(game.world, 'nearby', { q: party.position.q + 1, r: party.position.r })
+    second.position = nest.position
+    second.members[0].hp = 1
+    expect(second.confronting).toBeNull()
+    expect(passDay(game)!.parties[1].rested).toBe(0)
+    expect(second.members[0].hp).toBe(1)
+    party.members[0].hp = 1
+    second.confronting = nest.id
+    const before = structuredClone(game)
+    expect(passDay(game)).toBeNull()
+    expect(game).toEqual(before)
+  })
+})
+
 describe('a company of two on the day loop', () => {
   it('walks both travel orders a hex a day, in list order, the world’s day once a day (A3)', () => {
     const { game, world, party, second } = withSecond(quiet())

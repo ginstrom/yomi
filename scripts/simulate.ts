@@ -1513,7 +1513,8 @@ export function carryOut(run: CampaignRun, party: Expedition, decision: Decision
 /**
  * Takes in the days `advance` ran: the events tallied, and each running
  * order's walk, camp or day's craft recorded on its party. A day any party
- * camped counts once in `campDays`; every camper's healing counts.
+ * camped counts once in `campDays`; healing from every party counts,
+ * including natural healing while idle or garrisoned.
  */
 export function takeDays(run: CampaignRun, reports: readonly DayReport[]): void {
   const { game, record } = run
@@ -1529,9 +1530,7 @@ export function takeDays(run: CampaignRun, reports: readonly DayReport[]): void 
       if (party.id === run.vanguard && plan.phase === 'home') record.vanguardWalkHomeDays += days.filter((day) => day?.walked).length
       party.confronting = monstersHere(game.world, party)?.id ?? null
     }
-    if (plan.running === 'camp') {
-      for (const day of days) record.healedHp += (day?.rested ?? 0) + (day?.cast ?? 0)
-    }
+    for (const day of days) record.healedHp += (day?.rested ?? 0) + (day?.cast ?? 0)
     if (plan.running === 'day') {
       // A field craft made is a day in the field; the simulator embeds only at the workshop.
       const made = days.filter((day) => day?.made).length

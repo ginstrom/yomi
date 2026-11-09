@@ -110,7 +110,7 @@ Under each party's entry in the list is a line saying what it is doing: **Idle**
 
 Two buttons in the footer let days pass without a walk or a camp of your own:
 
-- **Next day** passes one day. Every party carries on with its order: a party that is travelling or camping carries on with it; an idle one stays where it is.
+- **Next day** passes one day. Every party carries on with its order: a party that is travelling or camping carries on with it; an idle one stays where it is. Idle and garrisoned parties heal each member **1 HP per day**, up to their maximum, while away from monsters. This natural healing does not refill mana or gain infirmary bonuses; camp for those benefits.
 - **Until something happens** passes days one after another until something important happens, a party arrives or finishes what it was doing, or thirty quiet days have gone by, in which case the map says so.
 - **Return home**, shown while the party is away from the encampment, sends it walking home.
 - **Garrison**, shown on a resource you hold, keeps the party there to guard it until you give it another order. No day passes. The blight never rises on a party's hex, and a party pushes it back around it (the more so the higher its heroes' levels), so a garrison holds a threatened site.

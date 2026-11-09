@@ -1,9 +1,9 @@
 import { hexDistance, hexEquals, type Hex } from '../grid/hex.ts'
-import type { Character } from '../character/character.ts'
+import { maxHp, type Character } from '../character/character.ts'
 import type { Item } from '../inventory/inventory.ts'
 import type { WorldEvent } from './blight.ts'
 import { canBuildOutpost, canBuildTower, outpostSite, raiseOutpost, raiseTower } from './buildings.ts'
-import { canCamp, partyWounded, rest } from './camp.ts'
+import { NATURAL_HEALING_PER_DAY, canCamp, partyWounded, rest } from './camp.ts'
 import { applyCraft, craftRefusal, craftTier } from './crafting.ts'
 import { MAX_PARTIES, PARTY_NAMES, newExpedition, partyId, presences, type DayAction, type Expedition, type Order, type PartyPresence } from './expedition.ts'
 import { partyById, type GameState } from './gameState.ts'
@@ -305,6 +305,13 @@ function partyDay(game: GameState, party: Expedition): PartyDayDone {
   switch (order.kind) {
     case 'idle':
     case 'garrison':
+      if (!canCamp(world, party)) break
+      for (const member of party.members) {
+        if (member.hp <= 0) continue
+        const healed = Math.min(NATURAL_HEALING_PER_DAY, Math.max(0, maxHp(member) - member.hp))
+        member.hp += healed
+        done.day.rested += healed
+      }
       break
     case 'travel':
     case 'home': {

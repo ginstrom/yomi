@@ -969,6 +969,21 @@ describe('the campaign’s policy on the day loop', () => {
     })
   })
 
+  it.each(['idle', 'garrison'] as const)('counts natural healing while %s without counting camping days', (kind) => {
+    const { run, game, party } = campaignOf()
+    const site = game.world.locations.find((l) => l.id === 'gold_seam')!
+    party.position = site.position
+    game.world.held.push(site.id)
+    party.order = { kind }
+    party.members[0].hp = 1
+    const reports = advance(game, 1)
+    expect(reports).toHaveLength(1)
+    expect(party.members[0].hp).toBe(2)
+    takeDays(run, reports)
+    expect(run.record.healedHp).toBe(1)
+    expect(run.record.campDays).toBe(0)
+  })
+
   it('counts the days of two camping parties once, and the healing of both', () => {
     const { run, game, party } = campaignOf((game) => (game.parties[0].position = { q: game.parties[0].position.q + 1, r: game.parties[0].position.r }))
     const second = { ...structuredClone(party), id: 'party_2', name: 'Second Company', position: { q: party.position.q + 1, r: party.position.r } }
