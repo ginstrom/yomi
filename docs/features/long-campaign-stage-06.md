@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 6 (multiple parties)
 
 **Slug:** long-campaign-stage-06
-**Phase:** verification
+**Phase:** done — awaiting user (PR)
 
 ## Request (user's words)
 
@@ -92,4 +92,18 @@ Large/structural, but the stage design is the approved design (marked ready for 
 - QA (sonnet) at 4b031bb: pass; minor: other parties' events unreported during Wait/Scout; refused Camp doesn't focus the blocker; Continue status line unnamed / selects parties[0]; rename (Ctrl+A, prefill, Esc message); --parties accepts 4? Evidence qa-*.
 - Simulated user (sonnet, hands-on) at 4b031bb: goals 1–3 met, 4–5 partly (no site came under threat; walks resolve instantly). Friction: idle parties don't heal during Until something happens; off-screen click needs a drag; rename appends to prefilled name; stale recruit message; hall/encampment subtitle overflows at 1280; Exchange help overlaps a disabled Other party button; hall 'For:' shows the wrong party. Evidence su-*.
 - Fix round 1 (opus, fresh engineer): all of the above except, judged not worth fixing now: idle parties not healing (standing rule: only camping heals — user to decide), off-screen click needs a drag (pre-existing), Exchange 'take all' (gap), pre-roll pool size (content).
+- Fix round 1 (opus): d9f461c (removeParty; parseSave range checks; comment), a35ddcb (refusal + focus for every day-passing action; other parties' events reported after Scout/Wait/Camp/buildings; loaded game opens on the confronting party, named line; CLAUDE.md), c23d3a8 (rename/recruit messages, wrapped subtitles, Exchange 'Other party' only with 3+, no 'For:' in the hall), bfbe769 (manual + execution notes). --parties already capped at 3 (QA misread). npm test 1501; browser 114/114; build. Orchestrator viewed fix-12/13 shots: fit at 840 and 1280.
+- Re-review (opus) at bfbe769: clean. npm test 1501, build, browser 111/114 under load 21 with the 3 timeouts passing alone (files untouched by the round). Nits left: actionBlocked's comment overstates (a bad tower site while another party blocks shows the blocking message); linger/campDay/buildTower/buildOutpost now used only by tests.
+
+## Known issues for the PR
+
+- Company value on today's map: 3 parties beat the Source no more often than 1 (389 vs 389 at ready-level 10), promotions ~0, vanguard walks home more (91.7 vs 64.7 days); recorded, revisit in stage 9 (user).
+- Idle parties don't heal during Until something happens (only camping heals); no warning (simulated user's top friction; user to decide).
+- A map click on a hex outside the view needs a drag first (pre-existing).
+- Exchange has no 'take all'; a dead hero's kit fills the baggage pages.
+- Only one pre-roll is left to recruit after the ready-made three; then Create new.
+- The day after a field craft reports world events only, not other parties' events.
+- actionBlocked comment nit; a threatened site was never seen held by a garrison in play (only in the domain test).
+- Pre-existing from stage 5: a reload mid-walk loses that turn's story moment; amber route under the strip at 840.
+- Browser tests time out under heavy load (pass alone).
 
