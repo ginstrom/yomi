@@ -260,6 +260,29 @@ guardBattles: number
 
 None blocks a step. Decisions 7, 8, 11 and 16 are defaults taken for the user to confirm. The design asks that the implementation notes say how the battles' player time feels, to settle auto-resolve (step 11).
 
+## Execution notes
+
+### Verification fix round (after step 11)
+
+Findings from the overall review, QA and the simulated user, fixed test-first on the branch (commits d9f461c, a35ddcb, c23d3a8, and this record's):
+
+1. Blocking: a meet order naming a party removed by `wipeParty` or `disband` made the save unreadable. Both now go through `removeParty` (company.ts), which turns any other party's meet on it to idle; domain tests show the save round-trips.
+2. CLAUDE.md: the false claim that the time row overflows the least window with Return home and Garrison is gone; "a walk (a click, Home, …" reads "Return home".
+3. save.ts: `migrateFrom18` documented as giving version 22's shape.
+4. `parseSave` reads as unreadable more than `MAX_PARTIES` parties, a meet naming its own party, and a guild hall level outside 1 to `MAX_GUILD_HALL_LEVEL` or not an integer.
+5. e2e: Return home (with Camp and Craft) is refused while another party confronts, selecting that party.
+6. Scout and Wait (and Camp, Camp until healed and the buildings) tell what else the day brought: another party's event or a notable one (`describeOthers`, worldEvents.ts), selecting that party as for an interrupt. `CampResult` gains `reports`; the two characterization tests leave it out of their hashes, which are unchanged.
+7. Every footer action that passes a day refuses as Next day does: the reason, and the blocking party selected (`actionBlocked` for the party's own Scout/Wait; `refused()` before Camp until healed and a field Craft).
+8. A load opens on the party its scene data names, else the first that confronts (`openingParty`), its line naming it with several parties (`describeStanding`).
+9. Disputed: `--parties` already refuses 0 and 4 ("--parties must be from 1 to 3", `parseArgs`, tested in scripts/simulate.test.ts); run by hand with Node 26, `--parties 4` exits with that error.
+10. Rename: the first key replaces the old name, a Ctrl/Cmd/Alt chord types nothing (`typeInRename`, hallColumns.ts), Esc clears the message.
+11. Showing a Guild Hall view clears the last message; a recruit's message is given on the roster it returns to.
+12. The hall's and the encampment's stock line wraps within the frame (two lines at 12px); the hall's level line is its own.
+13. Exchange: Other party shows only with three parties or more on the hex, Close centred otherwise; the frame is 20px taller so the help sits clear of the page and bottom buttons.
+14. The Guild Hall has no "For:" line (manual updated).
+
+The 5-campaign guard and its fixture are untouched and green.
+
 ## For implementers
 
 When you start or finish a step, update its status and commits in the table above. Record evidence (commands and output, the guard's result), deviations and blockers in your task file's "Execution record". Keep this index short; every implementer reads it.

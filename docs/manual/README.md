@@ -134,7 +134,8 @@ Raise the guild hall to level 4 and it can field a second party, at level 5 a th
 - **Select** a party by clicking its entry down the right. Its heroes fill the left side, a gold ring marks it on the map, and the footer's buttons act for it. Parties sharing a hex stand side by side.
 - **Every party moves at once.** Each carries on with its order whenever days pass, whoever you have selected. Only the selected party's walk is animated; the others step to where they have got to when it ends.
 - **Meet** another party by clicking the hex it stands on (the header says "Meet Second Company" as you hover it). The selected party walks to it, following it if it moves, until the two stand together. A party that walks onto monsters another party already faces stands before them too.
-- **Interruptions name the party.** When something stops the days, the message leads with the party it concerns ("Second Company: arrived at Kobold Scouts."), and the map selects that party and centres on it.
+- **Interruptions name the party.** When something stops the days, the message leads with the party it concerns ("Second Company: arrived at Kobold Scouts."), and the map selects that party and centres on it. A day the selected party spends scouting, waiting, camping or building is told the same way: what it did, then what another party met with that day. A saved game opens on a party standing before monsters, if one is.
+- **One party before monsters holds up the days.** While a party stands before monsters it has not answered, no day passes for anyone: Next day, a click on the map, Return home, Camp, Craft in the field and the buildings are refused, and the map selects that party so you can scout, wait or attack.
 - **Exchange** heroes and baggage when two parties stand on one hex (see [Meeting and exchange](#meeting-and-exchange)).
 - Two parties never fight the same lair at once. A party cannot be sent to a lair another party already stands at (meet it there instead), and of two parties reaching a lair on the same day the first in the list takes it, the other waiting a hex short.
 
@@ -146,6 +147,7 @@ When another party stands on the selected party's hex, an **Exchange** button ap
 
 - **Click a hero**, then a hero of the other row to swap the two, or the other row's heading to move the hero across.
 - **Click an item** in a baggage to pass it to the other party.
+- With three parties on the hex, **Other party** changes which one the second row trades with.
 - A party keeps at least one hero and at most the hall's party limit; a refusal is told at the bottom. Heroes keep what they wear and carry. Neither party may be standing before monsters the other does not face. **Close** (or Esc) goes back to the map. Reserves are not reached here; the guild hall moves them.
 
 ### Fog of war
