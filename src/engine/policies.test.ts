@@ -9,7 +9,7 @@ import { GOBLIN_STATS, KOBOLD_STATS, TROLL_STATS, type CombatantStats } from '..
 import { hex, type Hex } from '../grid/hex.ts'
 import { BattleEngine, abilityTouches, areaTouches, castTouches, type Action } from './battleEngine.ts'
 import { ABILITIES, type AbilityId } from '../combat/abilities.ts'
-import type { ActiveStatus, SpellId } from '../combat/spells.ts'
+import type { ActiveStatus, SpellId, StatusId } from '../combat/spells.ts'
 import { MANA_WEIGHT, POLICIES, STATUS_VALUE, isPolicyName, techniqueScore, type PolicyContext } from './policies.ts'
 
 function engineWith(playerAt: Hex, enemyAt: Hex): BattleEngine {
@@ -285,6 +285,185 @@ describe('policies', () => {
       const engine = field(['protect', 'haste'], [{ id: 'p2', side: 'player', at: hex(1, 1) }, { id: 'e1', side: 'enemy', at: hex(7, 1) }])
       expect(choose(engine).type).toBe('move')
     })
+
+    describe('the stage-3 casts (skill trees step 21)', () => {
+      type Snapshot = ReturnType<BattleEngine['snapshot']>
+      /** `engine` again with its snapshot changed by `edit`, as a save would carry it. */
+      const edited = (engine: BattleEngine, edit: (snapshot: Snapshot) => void) => {
+        const snapshot = engine.snapshot()
+        edit(snapshot)
+        return BattleEngine.restore(snapshot)
+      }
+      const unitOf = (snapshot: Snapshot, id: string) => snapshot.units.find((u) => u.id === id)!
+      /** `engine` with `statuses` laid on unit `id`, each for 2 turns. */
+      const laid = (engine: BattleEngine, id: string, ...statuses: StatusId[]) =>
+        edited(engine, (s) => {
+          unitOf(s, id).statuses = statuses.map((status) => ({ id: status, turnsLeft: 2 }))
+        })
+      const cast = (spell: SpellId, aim: { target: string } | { at: Hex }): Action => ({ type: 'cast', unit: 'p1', spell, ...aim })
+
+      describe('reviveCast (1)', () => {
+        /** p2 fell this battle beside the caster; p3 is at 2 of its 12 hit points. */
+        const scene = (usedOnce: SpellId[] = []) =>
+          edited(
+            field(['heal', 'revive'], [
+              { id: 'p2', side: 'player', at: hex(1, 1), hp: 0 },
+              { id: 'p3', side: 'player', at: hex(1, 0), hp: 2 },
+              { id: 'e1', side: 'enemy', at: hex(7, 1) },
+            ]),
+            (s) => {
+              unitOf(s, 'p2').fallenThisBattle = true
+              if (usedOnce.length > 0) unitOf(s, 'p1').usedOnce = usedOnce
+            },
+          )
+
+        it('revives a fallen ally before it heals a wounded one', () => {
+          expect(choose(scene())).toEqual(cast('revive', { target: 'p2' }))
+        })
+
+        it('not once it has used Revive this battle: it heals instead', () => {
+          expect(choose(scene(['revive']))).toEqual(cast('heal', { target: 'p3' }))
+        })
+
+        it('keeps no heal reserve from Revive: it casts it with only its mana', () => {
+          const poor = edited(scene(), (s) => {
+            unitOf(s, 'p1').mana = 20
+          })
+          expect(choose(poor)).toEqual(cast('revive', { target: 'p2' }))
+        })
+      })
+
+      describe('purifyCast (3)', () => {
+        const scene = (hp?: number) =>
+          field(['magic_arrow', 'purify'], [
+            { id: 'p2', side: 'player', at: hex(1, 1), hp },
+            { id: 'e1', side: 'enemy', at: hex(4, 1) },
+          ])
+
+        it('purifies an ally that is asleep, frozen, poisoned, corroded or pinned', () => {
+          for (const status of ['asleep', 'frozen', 'poisoned', 'corroded', 'pinned'] as const) {
+            expect(choose(laid(scene(), 'p2', status)), status).toEqual(cast('purify', { target: 'p2' }))
+          }
+        })
+
+        it('not an ally only blessed, nor one only wounded: Purify is no heal', () => {
+          expect(choose(laid(scene(), 'p2', 'blessed'))).toEqual(cast('magic_arrow', { target: 'e1' }))
+          expect(choose(scene(2))).toEqual(cast('magic_arrow', { target: 'e1' }))
+        })
+
+        it('keeps no heal reserve for Purify: a caster with 5 mana still strikes for 3', () => {
+          const engine = edited(scene(), (s) => {
+            unitOf(s, 'p1').mana = 5
+          })
+          expect(choose(engine)).toEqual(cast('magic_arrow', { target: 'e1' }))
+        })
+      })
+
+      describe('supportCast (6)', () => {
+        const allies = (at2: Hex, at3: Hex, hp?: number): Placing[] => [
+          { id: 'p2', side: 'player', at: at2, hp },
+          { id: 'p3', side: 'player', at: at3, hp },
+          { id: 'e1', side: 'enemy', at: hex(7, 1) },
+        ]
+        const self = { at: hex(0, 1) }
+
+        it('hastes the side in its first two rounds when two allies or more not hasted are within 2 hexes', () => {
+          const engine = field(['mass_haste'], allies(hex(1, 1), hex(2, 1)))
+          expect(choose(engine)).toEqual(cast('mass_haste', self))
+          expect(choose(edited(engine, (s) => void (s.round = 2)))).toEqual(cast('mass_haste', self))
+        })
+
+        it('not in round 3, nor when it would touch only one ally not hasted', () => {
+          const engine = field(['mass_haste'], allies(hex(1, 1), hex(2, 1)))
+          expect(choose(edited(engine, (s) => void (s.round = 3)))).not.toMatchObject({ type: 'cast' })
+          // p2 and p3 out of its radius: only the caster would be touched.
+          expect(choose(field(['mass_haste'], allies(hex(5, 1), hex(5, 2))))).not.toMatchObject({ type: 'cast' })
+          // p2 and p3 hasted already: only the caster is fresh.
+          const hasted = edited(engine, (s) => {
+            for (const id of ['p2', 'p3']) unitOf(s, id).statuses = [{ id: 'hasted', turnsLeft: 2 }]
+          })
+          expect(choose(hasted)).not.toMatchObject({ type: 'cast' })
+        })
+
+        it('renews when two allies within its radius are at 75% or less and none is renewing', () => {
+          expect(choose(field(['renew'], allies(hex(1, 1), hex(2, 1), 9)))).toEqual(cast('renew', self))
+        })
+
+        it('not when one is renewing, nor with only one ally at 75% or less', () => {
+          expect(choose(laid(field(['renew'], allies(hex(1, 1), hex(2, 1), 9)), 'p3', 'renewing'))).not.toMatchObject({ type: 'cast' })
+          // At 10 of 12 (83%), neither is low enough.
+          expect(choose(field(['renew'], allies(hex(1, 1), hex(2, 1), 10)))).not.toMatchObject({ type: 'cast' })
+          const one = edited(field(['renew'], allies(hex(1, 1), hex(2, 1))), (s) => void (unitOf(s, 'p2').hp = 9))
+          expect(choose(one)).not.toMatchObject({ type: 'cast' })
+        })
+      })
+
+      describe('prisonCast (8)', () => {
+        const foes = (): Placing[] => [
+          { id: 'e1', side: 'enemy', at: hex(4, 1), hp: 5 },
+          { id: 'e2', side: 'enemy', at: hex(4, 2) },
+        ]
+
+        it('freezes the healthiest of two standing foes', () => {
+          expect(choose(field(['glacial_prison'], foes()))).toEqual(cast('glacial_prison', { target: 'e2' }))
+        })
+
+        it('skips a frozen or sleeping foe', () => {
+          expect(choose(laid(field(['glacial_prison'], foes()), 'e2', 'frozen'))).toEqual(cast('glacial_prison', { target: 'e1' }))
+          expect(choose(laid(field(['glacial_prison'], foes()), 'e2', 'asleep'))).toEqual(cast('glacial_prison', { target: 'e1' }))
+        })
+
+        it('not on the last foe standing', () => {
+          expect(choose(field(['glacial_prison'], [{ id: 'e1', side: 'enemy', at: hex(4, 1) }]))).not.toMatchObject({ type: 'cast' })
+        })
+
+        it('puts no frozen foe to sleep', () => {
+          expect(choose(laid(field(['sleep'], foes()), 'e2', 'frozen'))).toEqual(cast('sleep', { target: 'e1' }))
+        })
+      })
+
+      describe('strikeCast (10)', () => {
+        it('lances the chilled foe over an equal one, counting its bonus dice', () => {
+          const engine = field(['ice_lance'], [
+            { id: 'e1', side: 'enemy', at: hex(4, 1) },
+            { id: 'e2', side: 'enemy', at: hex(4, 2) },
+          ])
+          expect(choose(engine)).toEqual(cast('ice_lance', { target: 'e1' }))
+          expect(choose(laid(engine, 'e2', 'chilled'))).toEqual(cast('ice_lance', { target: 'e2' }))
+        })
+
+        it('strikes the regenerating foe with Holy Light over an equal plain one, its dice doubled as bane', () => {
+          const engine = field(['holy_light'], [
+            { id: 'e1', side: 'enemy', at: hex(4, 1) },
+            { id: 'e2', side: 'enemy', at: hex(4, 2), stats: { ...GOBLIN_STATS, regeneration: 1 } },
+          ])
+          expect(choose(engine)).toEqual(cast('holy_light', { target: 'e2' }))
+        })
+
+        it('reckons a foe’s ward with its statuses: of two equal foes, the one not Warded', () => {
+          const engine = field(['flame_arrow'], [
+            { id: 'e1', side: 'enemy', at: hex(4, 1) },
+            { id: 'e2', side: 'enemy', at: hex(4, 2) },
+          ])
+          expect(choose(laid(engine, 'e1', 'warded'))).toEqual(cast('flame_arrow', { target: 'e2' }))
+        })
+      })
+
+      it('aims Glacial Prison and Ice Lance only at its taunter while it stands', () => {
+        const foes = (): Placing[] => [
+          { id: 'e1', side: 'enemy', at: hex(4, 1) },
+          { id: 'e2', side: 'enemy', at: hex(4, 2), hp: 5 },
+        ]
+        const taunted = (spells: SpellId[]) =>
+          edited(field(spells, foes()), (s) => {
+            unitOf(s, 'p1').statuses = [{ id: 'taunted', turnsLeft: 1, source: 'e2' }]
+            unitOf(s, 'e1').statuses = [{ id: 'chilled', turnsLeft: 2 }]
+          })
+        expect(choose(field(['glacial_prison'], foes()))).toEqual(cast('glacial_prison', { target: 'e1' }))
+        expect(choose(taunted(['glacial_prison']))).toEqual(cast('glacial_prison', { target: 'e2' }))
+        expect(choose(taunted(['ice_lance']))).toEqual(cast('ice_lance', { target: 'e2' }))
+      })
+    })
   })
 
   it('aggressive attacks whenever attacking is legal, and otherwise ends the turn', () => {
@@ -464,6 +643,19 @@ describe('policies', () => {
         const score = (engine: BattleEngine) => techniqueScore(engine.getState(), unitAt(engine, 'p1'), 'flame_strike', unitAt(engine, 'e1'))
         expect(score(at(3)) - score(at(0))).toBeCloseTo(3 * 0.55, 10)
       })
+    })
+
+    it('counts Deathblow: a blow that would leave a foe at a quarter or less is worth all it has left (step 21)', () => {
+      // e1: 13 of 40, hard to hit; an average blow (3.5 through its 1 resistance) leaves it at 9.5, within a quarter (10).
+      const foes: Placing[] = [
+        { id: 'e1', at: hex(2, 1), hp: 13, stats: { ...GOBLIN_STATS, maxHp: 40, ac: 30 } },
+        { id: 'e2', at: hex(2, 0) },
+      ]
+      expect(choose(stage(hero([]), hex(1, 1), foes))).toEqual({ type: 'attack', unit: 'p1', target: 'e2' })
+      expect(choose(stage(hero([], { traits: ['deathblow'] }), hex(1, 1), foes))).toEqual(ATTACK_E1)
+      // Not against the blightborn.
+      const blightborn = foes.map((f) => (f.id === 'e1' ? { ...f, stats: { ...f.stats!, blightborn: true as const } } : f))
+      expect(choose(stage(hero([], { traits: ['deathblow'] }), hex(1, 1), blightborn))).toEqual({ type: 'attack', unit: 'p1', target: 'e2' })
     })
 
     it('keeps the mana for its cheapest heal rather than pin (3)', () => {

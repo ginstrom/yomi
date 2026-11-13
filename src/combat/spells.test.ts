@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ELEMENTS, type CombatantStats } from './combat.ts'
-import { ALL_SPELL_IDS, MONSTER_SPELL_IDS, SPELLS, SPELL_IDS, STATUSES, STATUS_IDS, spellApCost, spellRange, type SpellId } from './spells.ts'
+import { ALL_SPELL_IDS, MONSTER_SPELL_IDS, SPELLS, SPELL_IDS, STATUSES, STATUS_IDS, isHealing, spellApCost, spellRange, type SpellId } from './spells.ts'
 import { effectiveStats } from '../engine/battleEngine.ts'
 
 describe('spell ids', () => {
@@ -241,6 +241,10 @@ describe('the special spells (skill trees step 20)', () => {
       status: { id: 'renewing', turns: 3 } })
     expect(row('holy_light')).toEqual({ ...none, school: 'offence', target: 'foe', range: 5, manaCost: 7, apCost: 4, hostile: true,
       damage: d(3, 6), bane: true })
+  })
+
+  it('count Purify, a cleanse, and Revive as no heal (the Purify decision)', () => {
+    expect(SPELL_IDS.filter(isHealing)).toEqual(['heal', 'greater_heal', 'heal_all', 'greater_heal_all', 'lay_on_hands'])
   })
 
   it('give Revive’s reach the friendly range, as a spell on an ally', () => {

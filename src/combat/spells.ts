@@ -631,9 +631,15 @@ export function averageRoll(roll: DamageRoll): number {
   return Math.floor((roll.count * (roll.sides + 1)) / 2 + roll.bonus)
 }
 
-/** Whether `spell` restores hit points. */
+/**
+ * Whether `spell` is a heal: it restores hit points and is no cleanse. Purify
+ * restores 1d6 too, but it is cast for what it ends, so the world map, the
+ * party's camping (`autoHeal`) and the policy's heal choices and reserve
+ * leave it out (the policy has a step of its own for it).
+ */
 export function isHealing(spell: SpellId): boolean {
-  return SPELLS[spell].heal !== undefined
+  const { heal, cleanse } = SPELLS[spell]
+  return heal !== undefined && cleanse !== true
 }
 
 /**

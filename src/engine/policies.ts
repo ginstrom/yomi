@@ -9,6 +9,7 @@ import {
   arcStruck,
   abilityTouches,
   castTouches,
+  deathblows,
   flankersOf,
   hasStatus,
   isHelpless,
@@ -35,6 +36,15 @@ export const STATUS_VALUE: Partial<Record<StatusId, number>> = { chilled: 3, slo
 /** What a point of mana spent on a technique costs its score, in hit points. */
 export const MANA_WEIGHT = 0.5
 
+/** The statuses `purifyCast` lifts from an ally: the ones that keep it from fighting or wear it down. */
+export const PURIFY_STATUSES: readonly StatusId[] = ['asleep', 'frozen', 'poisoned', 'corroded', 'pinned']
+
+/** Mass Haste is cast in its side's first this many rounds only. */
+export const MASS_HASTE_ROUNDS = 2
+
+/** Renew is cast when two allies or more within its radius are at this share of their hit points or less. */
+export const RENEW_SHARE = 0.75
+
 export interface PolicyContext {
   /** The policy chooses for the side whose turn it is (state.phase). */
   state: BattleState
@@ -54,17 +64,23 @@ const END_TURN: Action = { type: 'end_turn' }
 
 /**
  * Takes each unit in roster order and gives it the first useful thing to do;
- * ends the turn when no unit has one. A caster first heals an ally at half
- * its hit points or less; guards itself with Mirror Image or Shield (Dark
+ * ends the turn when no unit has one. A caster first revives a fallen ally
+ * (`reviveCast`), then heals an ally at half its hit points or less, then
+ * purifies an ally asleep, frozen, poisoned, corroded or pinned
+ * (`purifyCast`); guards itself with Mirror Image or Shield (Dark
  * Shield after Shield) when a foe stands beside it; throws a hostile area
  * spell where it touches two foes or more and no ally (the Web spell where
  * it touches one foe or more not yet webbed and no ally); blesses two allies
- * or more; puts the healthiest foe to sleep while two stand; curses the
+ * or more; puts the healthiest foe not asleep or frozen to sleep while two stand; curses the
  * healthiest foe not yet cursed while two stand; strikes the weakest foe
  * with its hardest-hitting spell, reckoning its damage after the foe's ward
- * against the spell's element. A caster that knows a heal keeps the mana for its
+ * against the spell's element, Ice Lance's bonus dice and Holy Light's bane
+ * counted. A caster that knows a heal keeps the mana for its
  * cheapest, spending it only on healing (a mana technique too). Protect and
- * Haste it never casts. A hero Taunts (`tauntUse`, after the guard) and
+ * Haste it never casts. A hero Taunts (`tauntUse`, after the guard), hastes or renews the
+ * side (`supportCast`, after Taunt: Mass Haste in the first two rounds,
+ * Renew for two allies worn to three quarters), freezes the healthiest foe
+ * not helpless while two stand (`prisonCast`, after Bless) and
  * marks with Hunter's Mark (`markUse`, before the strike spell) when they pay.
  * Otherwise a unit makes the strike that would do the most harm, if it can
  * afford one: a plain attack or a routine of strikes (`bestStrike`), each
@@ -92,15 +108,19 @@ const aggressive: Policy = ({ state, legal }) => {
     const source = tauntSource(state, self)
     const casts = castsOf(state, self, own)
     const choice =
+      reviveCast(casts) ??
       healCast(casts) ??
+      purifyCast(casts) ??
       guardCast(state, self, casts) ??
       tauntUse(state, self, own, source) ??
-      areaCast(casts, source) ??
+      supportCast(state, casts) ??
+      areaCast(state, casts, source) ??
       blessCast(casts) ??
+      prisonCast(state, self, casts, source) ??
       sleepCast(state, self, casts, source) ??
       curseCast(state, self, casts, source) ??
       markUse(state, self, own, source) ??
-      strikeCast(casts, source) ??
+      strikeCast(state, casts, source) ??
       bestStrike(state, self, own, source) ??
       statusArea(state, self, own, source) ??
       sprintUse(state, self, own, source) ??
@@ -191,6 +211,40 @@ function best<T>(options: readonly T[], score: (option: T) => number, floor = 0,
   return focused ?? chosen
 }
 
+/** Revive on a fallen ally, whenever it is legal (once a battle); the first in roster order. No heal reserve holds it back: Revive is what the mana is kept for. */
+function reviveCast(casts: readonly CastOption[]): Action | null {
+  return casts.find((c) => c.spell === 'revive' && c.allies.length === 1)?.action ?? null
+}
+
+/**
+ * Purify on an ally under one of `PURIFY_STATUSES`, the one under the most
+ * of them, the first in roster order on a tie. It is a cleanse, not a heal
+ * (`isHealing`): a wounded ally with none of them is not purified.
+ */
+function purifyCast(casts: readonly CastOption[]): Action | null {
+  const purifies = casts.filter((c) => c.spell === 'purify' && c.withinReserve && c.allies.length === 1)
+  const lifted = (c: CastOption) => c.allies[0].statuses.filter((s) => PURIFY_STATUSES.includes(s.id)).length
+  return best(purifies, lifted)?.action ?? null
+}
+
+/**
+ * Mass Haste in its side's first `MASS_HASTE_ROUNDS` rounds where it would
+ * touch two allies or more not hasted (the caster counts); else Renew where
+ * two allies or more it would touch are at `RENEW_SHARE` of their hit points
+ * or less and none of those it would touch is renewing.
+ */
+function supportCast(state: BattleState, casts: readonly CastOption[]): Action | null {
+  const usable = (spell: SpellId) => casts.filter((c) => c.spell === spell && c.withinReserve)
+  if (state.round <= MASS_HASTE_ROUNDS) {
+    const haste = usable('mass_haste').find((c) => c.allies.filter((u) => !hasStatus(u, 'hasted')).length >= 2)
+    if (haste) return haste.action
+  }
+  const renew = usable('renew').find(
+    (c) => c.allies.filter((u) => u.hp <= u.maxHp * RENEW_SHARE).length >= 2 && !c.allies.some((u) => hasStatus(u, 'renewing')),
+  )
+  return renew?.action ?? null
+}
+
 /**
  * When an ally it can heal is down to half its hit points or less, the heal
  * that restores the most, counting for each ally the lesser of the spell's
@@ -218,11 +272,11 @@ function guardCast(state: BattleState, self: UnitSnapshot, casts: readonly CastO
  * average damage gets through the ward of (a foe warded against all of it
  * is no reason to throw it).
  */
-function areaCast(casts: readonly CastOption[], source: UnitId | null): Action | null {
+function areaCast(state: BattleState, casts: readonly CastOption[], source: UnitId | null): Action | null {
   const areas = casts.filter((c) => SPELLS[c.spell].target === 'area' && SPELLS[c.spell].hostile && c.withinReserve && c.allies.length === 0)
   const hurt = (c: CastOption) => {
     const { damage, element } = SPELLS[c.spell]
-    return damage ? c.foes.filter((u) => warded(mean(damage), element, u) > 0) : c.foes
+    return damage ? c.foes.filter((u) => warded(mean(damage), element, statsIn(state.units, u)) > 0) : c.foes
   }
   const foesTouched = (c: CastOption) => {
     if (c.spell === 'web') return c.foes.filter((u) => !hasStatus(u, 'webbed')).length
@@ -238,11 +292,24 @@ function blessCast(casts: readonly CastOption[]): Action | null {
   return bless && bless.allies.filter((u) => !hasStatus(u, 'blessed')).length >= 2 ? bless.action : null
 }
 
-/** Sleep on the foe in range with the most hit points that is not asleep, while two foes or more stand. */
-function sleepCast(state: BattleState, self: UnitSnapshot, casts: readonly CastOption[], source: UnitId | null): Action | null {
+/**
+ * `spell` (Sleep, Glacial Prison) on the foe in range with the most hit points
+ * that is not already helpless (asleep or frozen), while two foes or more stand.
+ */
+function disableCast(state: BattleState, self: UnitSnapshot, casts: readonly CastOption[], source: UnitId | null, spell: SpellId): Action | null {
   if (state.units.filter((u) => u.side !== self.side && u.hp > 0).length < 2) return null
-  const sleeps = casts.filter((c) => c.spell === 'sleep' && c.withinReserve && c.foes.length === 1 && !hasStatus(c.foes[0], 'asleep'))
-  return best(sleeps, (c) => c.foes[0].hp, 0, castOn(source))?.action ?? null
+  const disables = casts.filter((c) => c.spell === spell && c.withinReserve && c.foes.length === 1 && !isHelpless(c.foes[0]))
+  return best(disables, (c) => c.foes[0].hp, 0, castOn(source))?.action ?? null
+}
+
+/** Glacial Prison on the healthiest foe in range not asleep or frozen, while two foes or more stand. */
+function prisonCast(state: BattleState, self: UnitSnapshot, casts: readonly CastOption[], source: UnitId | null): Action | null {
+  return disableCast(state, self, casts, source, 'glacial_prison')
+}
+
+/** Sleep on the healthiest foe in range not asleep or frozen, while two foes or more stand. */
+function sleepCast(state: BattleState, self: UnitSnapshot, casts: readonly CastOption[], source: UnitId | null): Action | null {
+  return disableCast(state, self, casts, source, 'sleep')
 }
 
 /** Curse on the foe in range with the most hit points that is not cursed, while two foes or more stand. */
@@ -254,11 +321,21 @@ function curseCast(state: BattleState, self: UnitSnapshot, casts: readonly CastO
 
 /**
  * The damaging spell of a single foe with the highest average damage after
- * the foe's ward against its element, on the foe with the fewest hit points.
+ * the foe's ward against its element (its statuses and auras counted), on the
+ * foe with the fewest hit points. A `bane` spell's dice (Holy Light) count
+ * double where the bane applies, and a spell's `bonusVs` dice (Ice Lance) are
+ * added against a foe under one of their statuses, as the engine rolls them.
  */
-function strikeCast(casts: readonly CastOption[], source: UnitId | null): Action | null {
+function strikeCast(state: BattleState, casts: readonly CastOption[], source: UnitId | null): Action | null {
   const strikes = casts.filter((c) => SPELLS[c.spell].target === 'foe' && SPELLS[c.spell].damage && c.withinReserve && c.foes.length === 1)
-  const damage = (c: CastOption) => warded(mean(SPELLS[c.spell].damage), SPELLS[c.spell].element, c.foes[0])
+  const damage = (c: CastOption) => {
+    const { damage: dice, element, bane, bonusVs } = SPELLS[c.spell]
+    const foe = c.foes[0]
+    const defender = statsIn(state.units, foe)
+    const base = bane && dice && baneApplies(defender) ? mean({ ...dice, count: dice.count * 2 }) : mean(dice)
+    const bonus = bonusVs && bonusVs.statuses.some((id) => hasStatus(foe, id)) ? mean(bonusVs.damage) : 0
+    return warded(base + bonus, element, defender)
+  }
   // Damage first, then the weaker foe: hit points are below 1000.
   return best(strikes, (c) => damage(c) * 1000 - c.foes[0].hp, -Infinity, castOn(source))?.action ?? null
 }
@@ -309,7 +386,8 @@ function blowChance(state: BattleState, self: UnitSnapshot, target: UnitSnapshot
  * chance, its `damageBonus` to the hit and its own on-hit entries (each with
  * an element raised by the unit's `imbueDamage`) to the weapon's. The unit's
  * traits add what they would to a hit that is no critical (`traitDamage`) and
- * pierce as they would (`resistanceLeft`).
+ * pierce as they would (`resistanceLeft`). A hit that would leave the foe
+ * within the attacker's Deathblow (`deathblows`) is worth all the foe has left.
  */
 function expectedHarm(state: BattleState, self: UnitSnapshot, target: UnitSnapshot, dice?: DamageRoll, strike?: Strike): number {
   const attacker = statsIn(state.units, self)
@@ -320,7 +398,10 @@ function expectedHarm(state: BattleState, self: UnitSnapshot, target: UnitSnapsh
   const averageHit = damageThrough(count * ((sides + 1) / 2) + flat + (strike?.damageBonus ?? 0) + traits, resistanceLeft(attacker, defender.resistance ?? 0))
   const imbue = self.imbueDamage ?? 0
   const added = (strike?.onHit ?? []).map((entry) => (entry.element && imbue !== 0 ? { ...entry, damage: entry.damage + imbue } : entry))
-  return blowChance(state, self, target, strike) * (averageHit + onHitDamage([...(attacker.onHit ?? []), ...added], defender))
+  const hit = averageHit + onHitDamage([...(attacker.onHit ?? []), ...added], defender)
+  // A hit that would leave the foe within Deathblow's reach fells it: it is worth what the foe has left.
+  const dealt = target.hp - hit > 0 && deathblows(attacker, defender, target.hp - hit) ? target.hp : hit
+  return blowChance(state, self, target, strike) * dealt
 }
 
 /** On-hit damage (runes, a technique's) against `defender`: each entry through its ward, a bane only where it applies. */
