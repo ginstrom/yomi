@@ -1,7 +1,7 @@
 # Feature: skill trees and progression
 
 **Slug:** skill-trees
-**Phase:** 2 — design
+**Phase:** 3 — planning
 
 ## Request (user's words)
 
@@ -11,7 +11,7 @@ Intake clarification (2026-11-13), on how classes fit: "I actually like the abil
 
 ## Links
 
-- Design: `docs/designs/skill-trees.md` (to write)
+- Design: `docs/designs/skill-trees.md` (approved 2026-11-13; picks every other level, 95 nodes)
 - Plan: `docs/implementation-plans/skill-trees/` (to write)
 - Branch: `skill-trees`, off main (d18abf4)
 
@@ -27,6 +27,11 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 | 2026-11-13 | Paths: Warrior = Spellsword, Swordmaster, Heavy Knight; Cleric = Healer, Paladin, Saint; Scout = Ranger, Rogue, Assassin; Mage = Evoker (fire/area), Cryomancer (frost/control), Arcanist (buffs/wards) | user | elemental/necro/illusion; designer proposes | Request + recommended |
 | 2026-11-13 | Soft lock: early ranks of every path open; going deep closes other capstones; one capstone ever | user | hard lock at level 3; fully open | Recommended |
 | 2026-11-13 | Mana for every hero (pool by tree investment/intelligence); techniques like Pin cost mana | user | separate stamina | Recommended |
+| 2026-11-13 | Design approved, with one change: picks 1 every OTHER level, with fewer and bigger nodes (revised: 3 + 1 at each even level; tiers L1/L2/L6/capstone L12; 95 nodes) | user | 1 per level | Gate answer |
+| 2026-11-13 | Soft lock = capstone only in the calling path, one ever; tiers 1–4 open to all | user | tier 4 fixes a path | Recommended |
+| 2026-11-13 | Revive and Unbreakable both kept, once per battle | user | one; neither | Recommended |
+| 2026-11-13 | No respec for now | orchestrator (stated in the approval question; the user approved) | paid respec at the shrine | Keeps choices consequential |
+| 2026-11-13 | Guard bands, out of 500 from seed 1: one party 215–250, company 220–260, ready level 10 370–420 | orchestrator (the designer's recommendation) | — | Brackets today's 230/239/389 |
 | 2026-11-13 | Own branch `skill-trees` off main | orchestrator | commit on main | Precedent: one branch per feature |
 
 ## Open questions
