@@ -34,7 +34,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | 07 | [The Skills and Abilities tabs and the hero's title](07-panel-tabs-and-title.md) | Character, Skills, Abilities, Inventory; Skill Trees (P); `heroTitle`; "Next pick at level N" | 04, 06 | sonnet | done (bc787c1) |
 | 08 | [Stage 1: measure and document](08-stage1-measure.md) | Campaigns and cells measured; guard re-recorded; CLAUDE.md, manual text and feature record current | 05, 07 | sonnet | done (f129959) |
 | **Stage 2: hero techniques** | | | | | |
-| 09 | [Hero abilities: strikes and statuses](09-hero-strikes.md) | `Ability`/`Strike` extensions; mana, weapon AP, `needs`; self- and foe-status abilities; technique strikes through `attack()`; Cleave's spread; `slowed`, `marked`; `imbueDamage`; `LOG_SCHEMA_VERSION` 25 | 08 | opus | in progress |
+| 09 | [Hero abilities: strikes and statuses](09-hero-strikes.md) | `Ability`/`Strike` extensions; mana, weapon AP, `needs`; self- and foe-status abilities; technique strikes through `attack()`; Cleave's spread; `slowed`, `marked`; `imbueDamage`; `LOG_SCHEMA_VERSION` 25 | 08 | opus | done (8e8e99b) |
 | 10 | [Area techniques](10-area-techniques.md) | `AreaAttack` extensions: Volley, Consecrate and Taunt's area | 09 | opus | pending |
 | 11 | [Taunt, Rooted and Pin](11-taunt-rooted-pin.md) | `taunted`, `rooted`, `pinned`; `StatusLaidEvent`; `UnitRecord.moved`; `ActiveStatus.source`; trait `rooted`; `SAVE_VERSION` 24 (AC5) | 10 | opus | pending |
 | 12 | [The policy uses techniques](12-policy-techniques.md) | `bestStrike` weighs techniques; `tauntUse`, `markUse`, `sprintUse`; taunted units turn on the source; monsters unchanged | 11 | opus | pending |
