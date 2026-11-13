@@ -32,6 +32,8 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 | 2026-11-13 | Revive and Unbreakable both kept, once per battle | user | one; neither | Recommended |
 | 2026-11-13 | No respec for now | orchestrator (stated in the approval question; the user approved) | paid respec at the shrine | Keeps choices consequential |
 | 2026-11-13 | Guard bands, out of 500 from seed 1: one party 215–250, company 220–260, ready level 10 370–420 | orchestrator (the designer's recommendation) | — | Brackets today's 230/239/389 |
+| 2026-11-13 | Creation's rule line says "every even level", amending the design's quoted "every level" | orchestrator | keep the quote | The quote contradicts the user's pick-rate decision |
+| 2026-11-13 | Accept step 06's tier-aligned rows (one more row than the design) and creation's perks step without the summary column (revisit at polish) | orchestrator | — | Recorded deviations, tested; layout needs it |
 | 2026-11-13 | Own branch `skill-trees` off main | orchestrator | commit on main | Precedent: one branch per feature |
 
 ## Open questions
@@ -52,6 +54,9 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 - To steps 11 and 17 (from step 05): when raising SAVE_VERSION, add the previous version (23, then 24) to parseSave's accepted list `[SAVE_VERSION, 22, 18]`; no game migration needed.
 
 - To the stage-4 polish (orchestrator, from step 06 screenshots): the tree view works and fits at 840×560 but is plain: no lines between a node and what it requires, and the kind stripes are faint. Make it look like a tree before the feature is done.
+
+- To step 07 (from step 06 review): change creation's rule line to "every even level" and amend the design's quote; fix the lock hint with tied paths ("your deepest path is Evoker and Arcanist and Healer" → "your deepest paths are Evoker, Arcanist and Healer").
+- To steps 13 and 21 (from step 06 review): the tree strip's line 1 wraps freely and is near the panel's bottom (y 493 of 500 for Meteor); cap it at two lines or test the longest strip once wordier technique text lands.
 
 ## Verification
 
