@@ -4,7 +4,8 @@ import type { SpellId } from '../src/combat/spells.ts'
 import { BattleEngine, type CastOutcome, type Side } from '../src/engine/battleEngine.ts'
 import { GOBLIN_STATS } from '../src/combat/combat.ts'
 import { hex } from '../src/grid/hex.ts'
-import { canAdvance } from '../src/character/progression.ts'
+import { canAdvance, planFor } from '../src/character/progression.ts'
+import { banditStats } from '../src/game/bandits.ts'
 import { newGame } from '../src/game/gameState.ts'
 import { heroId } from '../src/game/encounters.ts'
 import { readyMadeParty } from '../src/game/party.ts'
@@ -35,6 +36,9 @@ import {
   nextTarget,
   outpostErrand,
   parseArgs,
+  playerPlan,
+  raisedParty,
+  runBattle,
   runCampaign,
   summarize,
   summarizeCampaigns,
@@ -249,6 +253,120 @@ describe('parseArgs', () => {
       expect(() => parseArgs(['--campaign', '--parties', raw])).toThrow(`--parties must be from 1 to ${MAX_PARTIES}`)
     }
     expect(() => parseArgs(['--parties', '2'])).toThrow('--parties applies only to --campaign')
+  })
+})
+
+describe('--plans', () => {
+  it('takes role=plan pairs, none by default, with and without --campaign', () => {
+    expect(parseArgs([]).plans).toEqual({})
+    expect(parseArgs(['--plans', 'melee=swordmaster,magic=cryomancer']).plans).toEqual({ melee: 'swordmaster', magic: 'cryomancer' })
+    expect(parseArgs(['--campaign', '--plans', 'archery=ranger']).plans).toEqual({ archery: 'ranger' })
+  })
+
+  it('refuses a bad role, plan, repeat, missing value or entry without =, naming the part', () => {
+    expect(() => parseArgs(['--plans', 'bard=knight'])).toThrow('bard')
+    expect(() => parseArgs(['--plans', 'bard=knight'])).toThrow('melee, archery, magic')
+    expect(() => parseArgs(['--plans', 'melee=wizard'])).toThrow('wizard')
+    expect(() => parseArgs(['--plans', 'melee=wizard'])).toThrow('knight')
+    expect(() => parseArgs(['--plans', 'melee=knight,melee=swordmaster'])).toThrow('melee given twice')
+    expect(() => parseArgs(['--plans', 'melee'])).toThrow('"melee"')
+    expect(() => parseArgs(['--plans'])).toThrow('Missing value for --plans')
+    expect(() => parseArgs(['--plans', ''])).toThrow('--plans')
+  })
+
+  it('steers the hero tagged in the named skill only, and falls back to planFor', () => {
+    const [soldier, archer, mage] = readyMadeParty()
+    const plans = parseArgs(['--plans', 'melee=swordmaster']).plans
+    expect(playerPlan(plans, soldier)).toBe('swordmaster')
+    expect(playerPlan(plans, archer)).toBe(planFor(archer))
+    expect(playerPlan(plans, mage)).toBe(planFor(mage))
+    expect(playerPlan({}, soldier)).toBe(planFor(soldier))
+  })
+
+  it('raises a party along the plan, the others as without the flag', () => {
+    const base = parseArgs(['--party-level', '6'])
+    const plain = raisedParty(base)
+    const planned = raisedParty(parseArgs(['--party-level', '6', '--plans', 'melee=swordmaster']))
+    expect(plain[0].perks.power_attack).toBeUndefined()
+    expect(planned[0].perks.power_attack).toBe(1)
+    expect(planned[0].perks).not.toEqual(plain[0].perks)
+    expect(planned[1].perks).toEqual(plain[1].perks)
+    expect(planned[2].perks).toEqual(plain[2].perks)
+  })
+
+  it('hires recruits along the plan', () => {
+    const game = newGame(readyMadeParty(), null, 1)
+    game.world.guildHall = 3
+    game.world.stock = { ...game.world.stock, gold: 9999 }
+    game.parties[0].members.pop()
+    visitGuildHall(game, game.parties[0], 1, { melee: 'swordmaster' })
+    const hired = game.parties[0].members.at(-1)!
+    expect(hired.tagged).toContain('melee')
+    expect(hired.perks.power_attack).toBe(1)
+  })
+
+  it('leaves the enemy alone: a bandit camp’s foes are the same with the flag', () => {
+    const foes = (args: string[]) => {
+      const start = runBattle(0, 5, parseArgs(['--encounter', 'bandit_camp', '--threat', '4', '--party-level', '4', ...args]))[0]
+      if (start.type !== 'battle_start') throw new Error('expected a battle_start')
+      return start.units.filter((u) => u.side === 'enemy')
+    }
+    expect(foes(['--plans', 'melee=swordmaster'])).toEqual(foes([]))
+    expect(banditStats('captain', 4, { tier: 1, grade: 1 })).toBe(banditStats('captain', 4, { tier: 1, grade: 1 }))
+  })
+})
+
+describe('summarize, with techniques', () => {
+  const run = (middle: (outcome: (target: string, status?: CastOutcome['status']) => CastOutcome) => LoggedEvent[]): LoggedEvent[] => {
+    const [start, end] = battle(0, 3, 'player')
+    if (start.type !== 'battle_start') throw new Error('expected a battle_start')
+    const unit = (id: string, side: Side) => ({ id, side }) as (typeof start.units)[number]
+    const outcome = (target: string, status: CastOutcome['status'] = null): CastOutcome => ({
+      unit: target, attackRoll: 40, chance: 61, defenderAc: 15, hit: true, critical: false, fumble: false,
+      image: false, damage: 0, warded: 0, half: false, healed: 0, hpBefore: 12, hpAfter: 12, status,
+    })
+    return [{ ...start, units: [unit('hero', 'player'), unit('orc', 'enemy'), unit('imp', 'enemy')] }, ...middle(outcome), end]
+  }
+  const strike = (attacker: string, ability: string, n: number, extra: object = {}): LoggedEvent =>
+    ({
+      type: 'attack', battleId: 0, seq: 1, round: 1, attacker, defender: 'orc', ability, strike: `s${n}`, hit: true,
+      critical: false, damage: 0, bonus: [], opportunity: false, apCost: n === 0 ? 4 : 0, ...extra,
+    }) as unknown as LoggedEvent
+  const area = (unit: string, ability: string, outcomes: CastOutcome[], extra: object = {}): LoggedEvent =>
+    ({ type: 'ability', battleId: 0, seq: 1, round: 1, unit, ability, at: { q: 0, r: 0 }, shape: 'burst', hexes: [], distance: 1, apCost: 4, apAfter: 4, facing: 0, skill: 80, outcomes, ...extra }) as unknown as LoggedEvent
+
+  it('counts a technique once, whatever its strikes, and taunts, pins and mana by side', () => {
+    const summary = summarize(
+      run((outcome) => [
+        strike('hero', 'power_attack', 0, { manaCost: 2, manaAfter: 10 }),
+        strike('hero', 'cleave', 0, {}),
+        strike('hero', 'cleave', 1, {}),
+        area('hero', 'taunt', [outcome('orc', { id: 'taunted', turnsLeft: 2 }), outcome('imp', { id: 'taunted', turnsLeft: 2 })], { manaCost: 3, manaAfter: 7 }),
+        strike('hero', 'pin', 0, { status: { id: 'pinned', turnsLeft: 1 } }),
+        strike('orc', 'troll_claws', 0, {}),
+        area('orc', 'fire_spit', [outcome('hero')]),
+      ]),
+      1,
+    )
+    expect(summary.playerTechniques).toEqual({ power_attack: 1, cleave: 1, taunt: 1, pin: 1 })
+    expect(summary.enemyTechniques).toEqual({})
+    expect(summary).toMatchObject({ avgPlayerTaunts: 2, avgEnemyTaunts: 0, avgPlayerPins: 1, avgEnemyPins: 0, avgPlayerTechniqueMana: 5, avgEnemyTechniqueMana: 0 })
+  })
+
+  it('averages over the battles', () => {
+    const summary = summarize(run((outcome) => [area('hero', 'taunt', [outcome('orc', { id: 'taunted', turnsLeft: 2 })])]), 2)
+    expect(summary.playerTechniques).toEqual({ taunt: 0.5 })
+    expect(summary.avgPlayerTaunts).toBe(0.5)
+  })
+})
+
+describe('techniques in a small run', () => {
+  it('counts what the player’s side used, never negative', () => {
+    const events = [0, 1, 2].flatMap((i) => runBattle(i, 100 + i, parseArgs(['--encounter', 'bandit_camp', '--threat', '4', '--party-level', '4'])))
+    const summary = summarize(events, 3)
+    expect(Object.values(summary.playerTechniques).every((n) => n >= 0)).toBe(true)
+    expect(Object.values(summary.playerTechniques).reduce((a, b) => a + b, 0)).toBeGreaterThan(0)
+    expect(summary.avgPlayerTaunts).toBeGreaterThanOrEqual(0)
   })
 })
 

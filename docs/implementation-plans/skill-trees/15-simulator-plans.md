@@ -146,11 +146,20 @@ The smoke run prints the new lines. No scene changes: `npm run test:browser` is 
 
 ## 6. Completion criteria
 
-- [ ] `CliArgs.plans` and `--plans` parsing with its refusals; every player `autoAdvance` call takes the plan.
-- [ ] Per-side counters and summary lines for techniques by id, taunts, pins and mana on techniques.
-- [ ] Tests of §5 written first and passing; `npm test` green; the guard fixture unchanged.
-- [ ] `CLAUDE.md`'s simulator-flags paragraph updated.
-- [ ] One commit, "Skill trees step 15: simulator --plans and technique counts".
-- [ ] The index's step table shows `done (<commit>)` for step 15.
+- [x] `CliArgs.plans` and `--plans` parsing with its refusals; every player `autoAdvance` call takes the plan.
+- [x] Per-side counters and summary lines for techniques by id, taunts, pins and mana on techniques.
+- [x] Tests of §5 written first and passing; `npm test` green; the guard fixture unchanged.
+- [x] `CLAUDE.md`'s simulator-flags paragraph updated.
+- [x] One commit, "Skill trees step 15: simulator --plans and technique counts".
+- [x] The index's step table shows `done (<commit>)` for step 15.
 
 ## 7. Execution record
+
+Commands (Node 26): `npx vitest run scripts/simulate.test.ts` 116 passed; `npm run simulate -- --battles 20 --seed 1 --encounter bandit_camp --threat 4 --party-level 4 --plans melee=swordmaster --out logs/15-smoke.jsonl` printed the new lines (18 of 20 won; `Techniques (player): aimed_shot 8.20 a battle`, enemy none); `npm test` 1830 passed, `tsc` clean. The refactor guard passed with its fixture unchanged.
+
+Notes for later steps:
+- `strike` on an `AttackEvent` is the strike's name (a string), not an index, so a technique's first strike is told by `ability` set, not `opportunity`, and `apCost > 0` (later strikes of a routine carry 0).
+- Exported for tests: `playerPlan(plans, character)`, `raisedParty(args)`, `runBattle`; `visitGuildHall(game, party, parties, plans = {})` and `formGuard(game, parties, plans = {})` take the plans last.
+- `Summary` gains `playerTechniques`/`enemyTechniques` (Partial record by id, per battle) and `avgPlayer/EnemyTaunts`, `Pins`, `TechniqueMana`. The records print as a line under the table (`Techniques (side): ...`), also at the end of a campaign run (its battle table now omits the two records). `summarizeCampaigns` untouched.
+- A taunt is counted per unit laid on (outcomes with `status.id === 'taunted'`); a pin by an attack's `status.id === 'pinned'`.
+- Smoke note: with `melee=swordmaster` at level 4 the melee hero's technique (power_attack) was not used in 20 battles; only aimed_shot appeared. Step 16 may want to look at why.
