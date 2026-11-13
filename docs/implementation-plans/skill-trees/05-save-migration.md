@@ -143,3 +143,32 @@ PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH npm test
 - [ ] The execution record below lists the tests, the fixture values checked and any deviation.
 
 ## 7. Execution record
+
+### Round 1 (engineer, 2026-11-13)
+
+Code at `c2b1d51`. Node 26. Baseline `npx vitest run src/game/save.test.ts scripts/simulate.test.ts`: 143 passed.
+
+**What was built** (`src/game/save.ts`): `RETIRED_PERKS`, `FOLDED` and `migrateFrom22` as C8. `migrateFrom22` works on the raw game before `characterOf`, over every member of every party and the reserves: a member without an integer `level` ≥ 1, or whose `perks` is not an object of numbers, makes the file unreadable; ids at rank < 1 and retired ids are skipped, folded ids mapped, ids not in `PERK_IDS` dropped, the rest set to 1; `perkPicks = max(0, picksAt(level) − nodes)`; `spellPicks` deleted. The mana clamp runs after `characterOf` (only for a migrated file, `clampMana`), so `characterOf` stays the one place raw data becomes a `Character` and `maxMana` reads the built character (gear included). `parseSave` accepts 23, 22 and 18; 18 runs `migrateFrom18` (and the battle's `party` fix-up) then `migrateFrom22`; 22 runs `migrateFrom22`; every existing check then runs. The battle and its engine snapshot are untouched. Module doc comments updated.
+
+**Tests** (`src/game/save.test.ts`, written first, 15 red for the expected reason, a null load):
+- `describe('a version-22 save')`: the fixture is v22 and holds the old ids; it loads with its parties (`party_1` Aldric, Delwyn; `party_2` "Second Company" Brenna), reserve Garrick (level 4), guild hall 4, turn and positions as written, no battle, `savedAt` 1 700 000 000 000; AC10 for Aldric; Delwyn's 11 nodes with 0 picks, `maxMana` 62 and mana 40; Brenna's and Garrick's folds and picks; no retired id, every rank 1, no `spellPicks`, mana ≤ `maxMana` for every hero; re-saves as version 23 and round-trips; a battle injected into a v22 save is kept, `party` and `engine` equal; synthetic v22 inputs (built from `gameUnderWay`, version set to 22, `spellPicks` added): an unknown id (`second_wind`) dropped, `eagle_eye` with `deadeye` and `gain_luck` (rank 2) with `fortune` each one node, a rank-0 perk dropped, picks clamped at 0 (level 1 holding 5 nodes with 7 saved picks) and recomputed (level 5 holding 1: `picksAt(5) − 1`), mana 999 clamped to `maxMana`, missing or string `level`, null or non-numeric `perks`, non-array reserves unreadable; versions 20 and 21 unreadable; a bad item or order still refused.
+- The v18 tests step 03 had turned to "unreadable" are restored: `migrates a version-18 battle to the first party`, and `migrates into a company of one, its heroes on the skill trees` (the old assertions, plus perks after the migration, picks `[0, 0, 0]`, no `spellPicks`, Delwyn's mana 18, re-saved as `SAVE_VERSION`).
+
+**Fixture values checked, and corrections to step 01's hand-worked table.** Step 01's record took `picksAt(6)` as 9; by C4 it is `3 + ⌊6/2⌋ = 6` (`picksAt(4) = 5` was right). So:
+
+| Name | Nodes | `perkPicks` (step 01 said) | `perkPicks` (actual) | maxMana |
+| --- | --- | --- | --- | --- |
+| Aldric | 3 | 6 | **3** | 0 (mana 0) |
+| Delwyn | 11 | 0 | 0 | **62**, confirmed (below) |
+| Brenna | 6 | 3 | **0** | **22**, not 20: `lasting_magic` (folded from `gain_intelligence`) adds 1 Intelligence, so 2 × 5 + 5 × 2 + 2 × 1 (mana 0 either way) |
+| Garrick | 3 | 2 | 2 | 9 |
+
+Delwyn re-derived against the trees as built: `arcane_study` is an arcanist node (Mage tree) in `PERKS`, so his Mage and Cleric nodes are lingering_cold, destruction, arcane_study, magic_arrow, flame_arrow, fireball, heal, heal_all, shield, bless = 10 (deadeye is ranger, Scout); `lingering_cold` and `arcane_study` add Magic skill, not Intelligence; maxMana = 18 + 5 × 4 + 2 × 10 + 4 (Destruction) = 62, which the test asserts through `maxMana`. The expectation stood.
+
+The v18 fixture after both migrations: Aldric {weapon_training, toughness, heavy_hand}, Brenna {marksmanship, deadly_aim, dodger}, Delwyn {arcane_study, keen_eye, magic_arrow, heal} (spellcasting dropped), all level 1, picks 0, Delwyn's mana 18 (new maximum 24).
+
+**Commands.** `npx vitest run src/game/save.test.ts`: 51 passed. `npm test`: tsc clean, 85 files, 1590 tests passed, the refactor guard green with its fixture unchanged. No scene touched, so no in-browser run.
+
+**Deviations.** None from the task. `git diff` touches only `src/game/save.ts`, `src/game/save.test.ts`, `CLAUDE.md` and this plan's files.
+
+**For later steps.** When steps 11 and 17 raise `SAVE_VERSION`, add the previous current version (23, then 24) to `parseSave`'s accepted list `[SAVE_VERSION, 22, 18]`; such a save loads with no game migration. `migrateFrom22` runs only for versions 22 and 18 (`migrated` names them explicitly), so a 23 is never migrated again.

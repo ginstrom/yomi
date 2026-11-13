@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { equipFromBackpack } from '../character/character.ts'
-import { gainXp, takePerk } from '../character/progression.ts'
+import { equipFromBackpack, maxMana } from '../character/character.ts'
+import { gainXp, picksAt, takePerk } from '../character/progression.ts'
 import { mulberry32 } from '../combat/rng.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
 import { hex } from '../grid/hex.ts'
 import { BASE_ITEMS, IRON_DAGGER, MAGIC_ITEMS, OAK_SHIELD, RING_PROTECTION, IRON_BREASTPLATE, itemById } from '../inventory/inventory.ts'
-import { FIRST_PARTY_ID, MAX_PARTIES, PARTY_NAMES, newExpedition, partyId, type Expedition, type Order } from './expedition.ts'
+import { FIRST_PARTY_ID, FIRST_PARTY_NAME, MAX_PARTIES, PARTY_NAMES, newExpedition, partyId, type Expedition, type Order } from './expedition.ts'
 import { ENCOUNTERS } from './encounters.ts'
 import { newGame, takeLoot, type GameState } from './gameState.ts'
 import { Ground } from './ground.ts'
@@ -122,12 +122,6 @@ describe('a save', () => {
     expect(SAVE_VERSION).toBe(23)
   })
 
-  it('reads a version-22 save as unreadable until migrateFrom22 (skill trees step 05 restores it)', () => {
-    const v22 = readFileSync(new URL('./fixtures/save-v22.json', import.meta.url), 'utf8')
-    expect(JSON.parse(v22).version).toBe(22)
-    expect(parseSave(v22)).toBeNull()
-  })
-
   it('reads a character holding a node at a rank other than 1 as unreadable', () => {
     const saved = JSON.parse(serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 }))
     saved.game.parties[0].members[0].perks = { weapon_training: 2 }
@@ -161,13 +155,12 @@ describe('a save', () => {
     expect(parseSave(edit((s) => (s.version = 20)))).toBeNull()
   })
 
-  // Skill trees step 05 (migrateFrom22) makes the version-18 fixture load again; until then its old perk ids make it unreadable.
-  it('reads a version-18 battle as unreadable until skill trees step 05 chains migrateFrom22', () => {
+  it('migrates a version-18 battle to the first party', () => {
     const game = gameUnderWay()
     const v = JSON.parse(readFileSync(new URL('./fixtures/save-v18.json', import.meta.url), 'utf8'))
     const battle = JSON.parse(serializeSave({ game, battle: battleOf(game), savedAt: 5 })).battle
     delete battle.party
-    expect(parseSave(JSON.stringify({ ...v, battle }))).toBeNull()
+    expect(parseSave(JSON.stringify({ ...v, battle }))!.battle!.party).toBe(FIRST_PARTY_ID)
   })
 
   it('keeps the pouch and an item with runes', () => {
@@ -382,6 +375,148 @@ describe('a company', () => {
   })
 })
 
+describe('a version-22 save', () => {
+  const raw = readFileSync(new URL('./fixtures/save-v22.json', import.meta.url), 'utf8')
+  const old = JSON.parse(raw)
+  const loaded = parseSave(raw)!
+  const heroes = (game: GameState) => [...game.parties.flatMap((party) => party.members), ...game.reserves]
+  const hero = (name: string) => heroes(loaded.game).find((m) => m.name === name)!
+
+  /** A version-22 save made from a current game, its characters edited as the test asks. */
+  const v22With = (change: (saved: any) => void, game = gameUnderWay(), battle: SavedBattle | null = null): string => {
+    const saved = JSON.parse(serializeSave({ game, battle, savedAt: 5 }))
+    saved.version = 22
+    for (const m of [...saved.game.parties.flatMap((p: any) => p.members), ...saved.game.reserves]) m.spellPicks = 0
+    change(saved)
+    return JSON.stringify(saved)
+  }
+
+  it('is the fixture the code before the skill trees wrote', () => {
+    expect(old.version).toBe(22)
+    expect(old.game.parties[0].members[1].perks).toMatchObject({ spellcasting: 1, arcane_study: 2, eagle_eye: 1 })
+  })
+
+  it('loads, with its parties, reserves, world and no battle as step 01 wrote them', () => {
+    expect(loaded).not.toBeNull()
+    const { game } = loaded
+    expect(game.parties.map((p) => [p.id, p.name, p.members.map((m) => m.name)])).toEqual([
+      ['party_1', old.game.parties[0].name, ['Aldric', 'Delwyn']],
+      ['party_2', 'Second Company', ['Brenna']],
+    ])
+    expect(game.reserves.map((m) => [m.name, m.level])).toEqual([['Garrick', 4]])
+    expect(game.world.guildHall).toBe(4)
+    expect(game.world.turn).toBe(old.game.world.turn)
+    expect(game.parties.map((p) => p.position)).toEqual(old.game.parties.map((p: any) => p.position))
+    expect(loaded.battle).toBeNull()
+    expect(loaded.savedAt).toBe(1_700_000_000_000)
+  })
+
+  it('maps a level 6 fighter\'s perks onto the nodes, one rank each, with the picks it is owed (AC10)', () => {
+    const aldric = hero('Aldric')
+    expect(aldric.level).toBe(6)
+    // mighty_blow and sunder are one weapon_mastery; gain_endurance and the toughness held are one toughness.
+    expect(aldric.perks).toEqual({ weapon_training: 1, weapon_mastery: 1, toughness: 1 })
+    // 3 + ⌊6 / 2⌋ picks by level 6, less the 3 nodes held.
+    expect(picksAt(6)).toBe(6)
+    expect(aldric.perkPicks).toBe(3)
+  })
+
+  it('keeps every surviving node of a caster holding more than its picks, with no picks left', () => {
+    const delwyn = hero('Delwyn')
+    expect(delwyn.perks).toEqual({
+      deadeye: 1, lingering_cold: 1, destruction: 1, arcane_study: 1, magic_arrow: 1, flame_arrow: 1,
+      fireball: 1, heal: 1, heal_all: 1, shield: 1, bless: 1,
+    })
+    expect(Object.keys(delwyn.perks).length).toBeGreaterThan(picksAt(6))
+    expect(delwyn.perkPicks).toBe(0)
+    // 2 × 9 + 5 × 4 + 2 × 10 Mage and Cleric nodes (all but deadeye, Arcane Study among them) + Destruction's 4.
+    expect(maxMana(delwyn)).toBe(62)
+    expect(delwyn.mana).toBe(40)
+  })
+
+  it('folds an archer\'s attribute perks and recomputes its picks, and a reserve\'s too', () => {
+    expect(hero('Brenna').perks).toEqual({ marksmanship: 1, far_shot: 1, skirmisher: 1, fortune: 1, evasion: 1, lasting_magic: 1 })
+    // Six nodes by level 6 leave no pick; Garrick's three by level 4 leave picksAt(4) − 3 = 2.
+    expect(hero('Brenna').perkPicks).toBe(0)
+    expect(hero('Garrick').perks).toEqual({ weapon_training: 1, weapon_mastery: 1, toughness: 1 })
+    expect(hero('Garrick').perkPicks).toBe(2)
+  })
+
+  it('leaves no retired perk, no spell picks and no mana above the maximum on any hero', () => {
+    for (const m of heroes(loaded.game)) {
+      expect(m.perks).not.toHaveProperty('spellcasting')
+      expect(m.perks).not.toHaveProperty('quick_study')
+      expect(Object.values(m.perks).every((rank) => rank === 1)).toBe(true)
+      expect('spellPicks' in m).toBe(false)
+      expect(m.mana).toBeLessThanOrEqual(maxMana(m))
+    }
+  })
+
+  it('saves as the current version and loads back the same', () => {
+    expect(JSON.parse(serializeSave(loaded)).version).toBe(SAVE_VERSION)
+    expect(parseSave(serializeSave(loaded))).toEqual(loaded)
+  })
+
+  it('keeps a battle saved with it, its engine snapshot untouched', () => {
+    const game = gameUnderWay()
+    const battle = battleOf(game)
+    const parsed = parseSave(v22With(() => {}, game, battle))!
+    expect(parsed.battle!.party).toBe(game.parties[0].id)
+    expect(parsed.battle!.engine).toEqual(battle.engine)
+  })
+
+  it('drops a perk id the game does not have', () => {
+    const parsed = parseSave(v22With((s) => (s.game.parties[0].members[0].perks = { second_wind: 1, weapon_training: 2 })))!
+    expect(parsed.game.parties[0].members[0].perks).toEqual({ weapon_training: 1 })
+  })
+
+  it('makes one node of a perk held and a perk folded into it', () => {
+    const parsed = parseSave(v22With((s) => (s.game.parties[0].members[1].perks = { eagle_eye: 1, deadeye: 1, gain_luck: 2, fortune: 1 })))!
+    expect(parsed.game.parties[0].members[1].perks).toEqual({ deadeye: 1, fortune: 1 })
+  })
+
+  it('drops a perk held at rank 0', () => {
+    const parsed = parseSave(v22With((s) => (s.game.parties[0].members[0].perks = { weapon_training: 0, toughness: 1 })))!
+    expect(parsed.game.parties[0].members[0].perks).toEqual({ toughness: 1 })
+  })
+
+  it('recomputes picks from the level, never below 0', () => {
+    const parsed = parseSave(
+      v22With((s) => {
+        const [low, mid] = s.game.parties[0].members
+        Object.assign(low, { level: 1, perkPicks: 7, perks: { weapon_training: 1, heavy_hand: 1, toughness: 1, shield_wall: 1, dodger: 1 } })
+        Object.assign(mid, { level: 5, perkPicks: 0, perks: { marksmanship: 1 } })
+      }),
+    )!
+    expect(parsed.game.parties[0].members.slice(0, 2).map((m) => m.perkPicks)).toEqual([0, picksAt(5) - 1])
+  })
+
+  it('clamps mana to the new maximum', () => {
+    const parsed = parseSave(v22With((s) => (s.game.parties[0].members[2].mana = 999)))!
+    const delwyn = parsed.game.parties[0].members[2]
+    expect(delwyn.mana).toBe(maxMana(delwyn))
+    expect(delwyn.mana).toBeLessThan(999)
+  })
+
+  it('reads a member without a numeric level or a perks object as unreadable', () => {
+    expect(parseSave(v22With(() => {}))).not.toBeNull()
+    expect(parseSave(v22With((s) => delete s.game.parties[0].members[0].level))).toBeNull()
+    expect(parseSave(v22With((s) => (s.game.reserves[0].level = '4')))).toBeNull()
+    expect(parseSave(v22With((s) => (s.game.parties[0].members[0].perks = null)))).toBeNull()
+    expect(parseSave(v22With((s) => (s.game.parties[0].members[0].perks = { weapon_training: 'two' })))).toBeNull()
+    expect(parseSave(v22With((s) => (s.game.reserves = 'none')))).toBeNull()
+  })
+
+  it('leaves versions 20 and 21 unreadable', () => {
+    for (const version of [20, 21]) expect(parseSave(JSON.stringify({ ...old, version }))).toBeNull()
+  })
+
+  it('is checked as strictly as a current one', () => {
+    expect(parseSave(v22With((s) => (s.game.parties[0].members[0].equipment.mainHand = 'vorpal_spoon')))).toBeNull()
+    expect(parseSave(v22With((s) => (s.game.parties[0].order = { kind: 'dance' })))).toBeNull()
+  })
+})
+
 describe('a version-18 save', () => {
   const raw = readFileSync(new URL('./fixtures/save-v18.json', import.meta.url), 'utf8')
   const old = JSON.parse(raw)
@@ -393,10 +528,36 @@ describe('a version-18 save', () => {
     expect(old.game.world.party).not.toEqual({ q: 0, r: 19 })
   })
 
-  // Skill trees step 05 restores the migration test: migrateFrom18 yields version 22's shape, whose
-  // retired perk id (Delwyn's Spellcasting) version 23 refuses until migrateFrom22 chains after it.
-  it('reads as unreadable until skill trees step 05 chains migrateFrom22 after migrateFrom18', () => {
-    expect(parseSave(raw)).toBeNull()
+  it('migrates into a company of one, its heroes on the skill trees', () => {
+    const loaded = parseSave(raw)!
+    expect(loaded).not.toBeNull()
+    const { game } = loaded
+    expect(game.parties).toHaveLength(1)
+    const party = game.parties[0]
+    expect([party.id, party.name, party.order]).toEqual([FIRST_PARTY_ID, FIRST_PARTY_NAME, { kind: 'idle' }])
+    expect(party.members.map((m) => [m.name, m.level, m.hp])).toEqual(old.game.party.map((m: any) => [m.name, m.level, m.hp]))
+    party.members.forEach((m, i) =>
+      expect(Object.fromEntries(Object.entries(m.equipment).map(([slot, item]) => [slot, item.id]))).toEqual(old.game.party[i].equipment),
+    )
+    expect(party.baggage).toEqual([itemById('iron_sword'), itemById('iron_sword@3#ember1')])
+    expect(party.baggage[1]).toBe(itemById('iron_sword@3#ember1'))
+    expect(party.members[0].backpack[0]).toBe(itemById('iron_sword@3#storm1'))
+    expect('party' in game || 'baggage' in game).toBe(false)
+    expect(party.position).toEqual(old.game.world.party)
+    expect(party.confronting).toBe('goblin_raiders')
+    expect('party' in game.world || 'confronting' in game.world).toBe(false)
+    expect(game.runes).toEqual({ storm1: 1 })
+    // migrateFrom22 then puts its heroes on the trees: Delwyn's Spellcasting is dropped.
+    expect(party.members.map((m) => m.perks)).toEqual([
+      { weapon_training: 1, toughness: 1, heavy_hand: 1 },
+      { marksmanship: 1, deadly_aim: 1, dodger: 1 },
+      { arcane_study: 1, keen_eye: 1, magic_arrow: 1, heal: 1 },
+    ])
+    expect(party.members.map((m) => m.perkPicks)).toEqual([0, 0, 0])
+    for (const m of party.members) expect('spellPicks' in m).toBe(false)
+    expect(party.members[2].mana).toBe(18)
+    expect(JSON.parse(serializeSave(loaded)).version).toBe(SAVE_VERSION)
+    expect(parseSave(serializeSave(loaded))!.game).toEqual(game)
   })
 
   it('is checked as strictly as a current one', () => {
