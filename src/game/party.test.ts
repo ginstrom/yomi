@@ -83,8 +83,9 @@ describe('readyMadeParty', () => {
     const party = readyMadeParty()
     const mage = party[2]
     expect(party.map((m) => knownSpells(m))).toEqual([[], [], ['magic_arrow', 'heal']])
-    expect(mage.mana).toBe(18)
-    expect([maxHp(mage), maxMana(mage)]).toEqual([17, 18])
+    // 18 for intelligence 9, and 2 for each of its three Mage and Cleric nodes.
+    expect(mage.mana).toBe(24)
+    expect([maxHp(mage), maxMana(mage)]).toEqual([17, 24])
     expect(deriveCombatStats(mage)).toMatchObject({
       actionPoints: 8,
       weapon: 'Wand of Sparks',
@@ -92,7 +93,7 @@ describe('readyMadeParty', () => {
       toHit: 68,
       attackRange: 4,
       // Magic 68, less the iron breastplate's 5.
-      magic: { maxMana: 18, skill: 63, spells: ['magic_arrow', 'heal'] },
+      magic: { maxMana: 24, skill: 63, spells: ['magic_arrow', 'heal'] },
     })
   })
 

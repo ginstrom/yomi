@@ -260,3 +260,28 @@ PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH npm test
 - [ ] Index: step 04's status set to `done (<commit>)`.
 
 ## 7. Execution record
+
+**Status:** done.
+
+**What was built.**
+- `character.ts`: `maxMana` for every hero (2 × INT + (level − 1) × ⌊INT/2⌋ + `MANA_PER_TREE_NODE` × Mage and Cleric nodes + nodes' and gear's `maxMana`); `deriveCombatStats` adds `perkBonus('resistance')`, `shieldAc` while the off hand holds anything (every off-hand item is a shield, `gearClass`) under a one-handed weapon, `wardAll` to each element and `wardBlight` to blight, the nodes' `meleeOnHit` after the runes' on-hit entries with a melee weapon (reach included) or bare hands, and the C7 modifiers on `magic` (`spellModifiers`), each key and sub-object only when non-zero. `magic` is still emitted only for a hero that knows a spell.
+- `combat.ts`: the C7 fields on `CombatantStats.magic`, documented; `sameMagic` compares them (a missing one as 0).
+- `spells.ts`: `spellApCost` and `spellRange` as C7 specifies.
+- `battleEngine.ts`: `canPayFor`, `canCast`, `previewCast` and `cast` read `spellApCost` / `spellRange` with the caster's effective stats; `cast` adds power by element to each damaging hostile outcome (passed to `strikeUnit` as `power`, after a critical's doubling and before the ward; areas of abilities pass none), the heal bonus before the cap, and the extension to the status laid. No draw added, dropped or reordered (each engine test counts draws with and without the modifier). `castTouches` is unchanged: every friendly area spell has range 0 and a burst, so `friendlyRange` never changes an area's shape; the legal-centre listing still uses the spell's own range (0 stays 0).
+- `worldCasting.ts`: `worldHealing(spell, caster?)` adds the caster's `healBonus`; `castOnWorldMap` passes the caster.
+- `CLAUDE.md`: the derived effects, every hero's mana, the caster's modifiers in the rules of casting, `spellApCost`/`spellRange`, Mending on the world map, wards from nodes.
+
+**Tests changed on purpose (behaviour deliberately changed by every hero having mana):** `character.test.ts` (warrior mana 14 with the circlet, a caster's mana +2 for Magic Arrow, Lasting Magic +2 for its node), `creation.test.ts` and `party.test.ts` (Delwyn 24), `progression.test.ts` (Heal brings 2 mana to what a warrior has left), `camp.test.ts` (camping fills Aldric's mana; `MEMBERS` re-recorded `[[35, 6], [18, 8], [17, 24]]`), `worldMap.test.ts` (`SESSION_SHA256` re-recorded; `SESSION_TURN` unchanged at 153).
+
+**Refactor guard re-recorded** (decision 2), in this step's commit, in the file's unquoted object style (step 03's review note): all five campaigns still beat the Source; events SHA-256 `8e01443a…5c94`. The cause: every hero's mana, the mage's 6 more, and the derived passives the ready-made party and recruits now hold.
+
+**Commands and results.**
+- `npx vitest run src/character src/combat src/engine` before the change: 13 files, 489 passed (baseline).
+- Red runs: the new character tests (20 failed for the expected reasons), `sameCombatStats` (1), `spellApCost`/`spellRange` (4, not a function), the engine modifier tests (10 failed on the numbers, 5 passed that assert unchanged behaviour), `worldCasting` Mending (1).
+- `npm test` (tsc + vitest): 85 files, 1574 tests passed.
+- `npm run test:browser`: not run; no scene file changed.
+
+**Deviations and notes for later steps.**
+- `policies.ts`'s `reach` still reads a damaging spell's own `apCost` when judging how close to come; with Quickened Casting a caster may approach a hex less aggressively than it could. Left alone (the step names no policy change); step 12 or 14 may want `spellApCost` there.
+- `autoHeal` (party.ts) chooses heals by `worldHealing(spell)` without the caster, so it does not count Mending when choosing; what is restored does count it.
+- The battle's spell list still shows a spell's own AP (accepted until step 14, §4.7).

@@ -140,6 +140,22 @@ describe('sameCombatStats', () => {
     expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, maxMana: 24 } })).toBe(false)
     expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, skill: 86 } })).toBe(false)
     expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, spells: [] } })).toBe(false)
+    // The spell modifiers, a missing one as none.
+    expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, power: {} } })).toBe(true)
+    for (const modifier of [
+      { power: { all: 2 } },
+      { power: { fire: 3 } },
+      { power: { frost: 3 } },
+      { healBonus: 4 },
+      { extend: { hostile: 1 } },
+      { extend: { friendly: 1 } },
+      { friendlyRange: 2 },
+      { apDiscount: { all: 1 } },
+      { apDiscount: { heal: 1 } },
+    ]) {
+      expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, ...modifier } })).toBe(false)
+      expect(sameCombatStats({ ...WARRIOR_STATS, magic: { ...magic, ...modifier } }, { ...WARRIOR_STATS, magic: { ...magic, ...modifier } })).toBe(true)
+    }
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, weapon: 'Iron Longsword' })).toBe(false)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, armorPierce: 0 })).toBe(true)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, armorPierce: 2 })).toBe(false)

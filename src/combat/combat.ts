@@ -61,6 +61,16 @@ export interface CombatantStats {
     skill: number
     /** In `ALL_SPELL_IDS` order. */
     spells: readonly SpellId[]
+    /** Added to each damaging outcome of its spells, by element (`all` to every one), after a critical's doubling and before wards; none when left out. */
+    power?: { all?: number; fire?: number; frost?: number }
+    /** Added to what each of its heals restores, before the cap at the maximum. */
+    healBonus?: number
+    /** Turns added to the statuses its hostile and its friendly spells lay. */
+    extend?: { hostile?: number; friendly?: number }
+    /** Hexes added to the range of its friendly spells aimed at an ally or at an area of range above 0 (`spellRange`). */
+    friendlyRange?: number
+    /** Action points off its spells (`heal`: only those that heal), never below 2 (`spellApCost`). */
+    apDiscount?: { all?: number; heal?: number }
   }
   /** What the unit can do besides its weapon and spells (abilities.ts), in ABILITY_IDS order; none when left out. */
   abilities?: readonly AbilityId[]
@@ -83,7 +93,16 @@ function sameMagic(a: CombatantStats['magic'], b: CombatantStats['magic']): bool
     a.maxMana === b.maxMana &&
     a.skill === b.skill &&
     a.spells.length === b.spells.length &&
-    a.spells.every((spell, i) => spell === b.spells[i])
+    a.spells.every((spell, i) => spell === b.spells[i]) &&
+    (a.power?.all ?? 0) === (b.power?.all ?? 0) &&
+    (a.power?.fire ?? 0) === (b.power?.fire ?? 0) &&
+    (a.power?.frost ?? 0) === (b.power?.frost ?? 0) &&
+    (a.healBonus ?? 0) === (b.healBonus ?? 0) &&
+    (a.extend?.hostile ?? 0) === (b.extend?.hostile ?? 0) &&
+    (a.extend?.friendly ?? 0) === (b.extend?.friendly ?? 0) &&
+    (a.friendlyRange ?? 0) === (b.friendlyRange ?? 0) &&
+    (a.apDiscount?.all ?? 0) === (b.apDiscount?.all ?? 0) &&
+    (a.apDiscount?.heal ?? 0) === (b.apDiscount?.heal ?? 0)
   )
 }
 

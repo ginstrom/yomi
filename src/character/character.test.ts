@@ -32,8 +32,10 @@ import {
   weaponSkill,
   type Build,
 } from './character.ts'
-import { attributeLevel } from './perks.ts'
+import { draftCharacter } from './creation.ts'
+import { attributeLevel, type PerkId } from './perks.ts'
 import { levelUp, takePerk } from './progression.ts'
+import { PREROLLS } from '../game/party.ts'
 import { skillLevel } from './skills.ts'
 
 describe('createWarrior', () => {
@@ -365,30 +367,32 @@ describe('magic', () => {
   /** The warrior, intelligence 4, taught Magic Arrow. */
   const caster = () => ({ ...createWarrior(), perks: { magic_arrow: 1 } })
 
-  it('gives no mana and no magic to a character that knows no spell, whatever it wears', () => {
+  it('gives mana but no magic in battle to a character that knows no spell', () => {
     const warrior = createWarrior()
     warrior.equipment.head = SAGE_CIRCLET
-    expect(maxMana(warrior)).toBe(0)
+    // Intelligence 4, and the circlet's 6.
+    expect(maxMana(warrior)).toBe(8 + 6)
     expect(deriveCombatStats(warrior).magic).toBeUndefined()
   })
 
-  it('gives a caster mana by its intelligence, its level and its gear', () => {
+  it('gives a caster mana by its intelligence, its level, its Mage and Cleric nodes and its gear', () => {
+    // Magic Arrow is a node of the Mage tree: 2 more.
     const mage = caster()
-    expect(maxMana(mage)).toBe(8)
+    expect(maxMana(mage)).toBe(8 + 2)
     mage.level = 3
-    expect(maxMana(mage)).toBe(8 + 2 * 2)
+    expect(maxMana(mage)).toBe(8 + 2 + 2 * 2)
     mage.equipment.head = SAGE_CIRCLET
-    expect(maxMana(mage)).toBe(8 + 2 * 2 + 6)
+    expect(maxMana(mage)).toBe(8 + 2 + 2 * 2 + 6)
     mage.attributes.intelligence = 9
     mage.level = 1
     mage.equipment = {}
-    expect(maxMana(mage)).toBe(18)
+    expect(maxMana(mage)).toBe(18 + 2)
   })
 
   it('fights with the spells its perks teach, at its Magic and what its gear adds to a spell', () => {
     const mage = caster()
     // Its Magic of 8, less the breastplate's 5.
-    expect(deriveCombatStats(mage).magic).toEqual({ maxMana: 8, skill: 3, spells: ['magic_arrow'] })
+    expect(deriveCombatStats(mage).magic).toEqual({ maxMana: 10, skill: 3, spells: ['magic_arrow'] })
     mage.equipment.neck = AMULET_FOCUS
     mage.trained.magic = 4
     expect(deriveCombatStats(mage).magic).toMatchObject({ skill: 17 })
@@ -456,8 +460,8 @@ describe('a node that raises an attribute', () => {
     const before = { magic: skillLevel(mage, 'magic'), mana: maxMana(mage), points: mage.skillPoints }
     mage.perks.lasting_magic = 1
     expect(skillLevel(mage, 'magic')).toBe(before.magic + 2)
-    // Intelligence 5: 2 more at level 1; half of it is still 2 a level.
-    expect(maxMana(mage)).toBe(before.mana + 2)
+    // Intelligence 5: 2 more at level 1; half of it is still 2 a level; and 2 for a node of the Mage tree.
+    expect(maxMana(mage)).toBe(before.mana + 2 + 2)
     expect(mage.skillPoints).toBe(before.points)
   })
 
@@ -858,5 +862,111 @@ describe('rune stats and hit points', () => {
     swapped.backpack[0] = itemById('iron_breastplate@3')!
     equipFromBackpack(swapped, 0, [])
     expect(swapped.hp).toBe(maxHp(swapped))
+  })
+})
+
+describe('mana for every hero and the derived passives', () => {
+  const aldric = () => draftCharacter(PREROLLS[0].draft)
+  const delwyn = () => draftCharacter(PREROLLS[2].draft)
+  const withNodes = (character: ReturnType<typeof createWarrior>, ...nodes: PerkId[]) => {
+    for (const node of nodes) character.perks[node] = 1
+    return character
+  }
+
+  it('gives Aldric (intelligence 3, no Mage or Cleric node) 6 mana at level 1 and 10 at level 5, 16 with Arcane Blood', () => {
+    const hero = aldric()
+    expect(maxMana(hero)).toBe(6)
+    while (hero.level < 5) levelUp(hero)
+    expect(maxMana(hero)).toBe(10)
+    expect(maxMana(withNodes(aldric(), 'arcane_blood'))).toBe(16)
+  })
+
+  it('gives the ready-made Delwyn 24 mana at level 1: 18, and 2 for each of three Mage and Cleric nodes', () => {
+    expect(maxMana(delwyn())).toBe(24)
+  })
+
+  it('adds Shield Wall’s 8 armour class only with a shield in the off hand', () => {
+    const plain = createWarrior()
+    const walled = withNodes(createWarrior(), 'shield_wall')
+    expect(deriveCombatStats(walled).ac).toBe(deriveCombatStats(plain).ac + 8)
+    delete plain.equipment.offHand
+    delete walled.equipment.offHand
+    expect(deriveCombatStats(walled).ac).toBe(deriveCombatStats(plain).ac)
+    plain.equipment.mainHand = IRON_GREATSWORD
+    walled.equipment.mainHand = IRON_GREATSWORD
+    plain.equipment.offHand = OAK_SHIELD
+    walled.equipment.offHand = OAK_SHIELD
+    expect(deriveCombatStats(walled).ac).toBe(deriveCombatStats(plain).ac)
+  })
+
+  it('adds Iron Skin’s and Blessed Armour’s resistance', () => {
+    const base = deriveCombatStats(createWarrior()).resistance ?? 0
+    expect(deriveCombatStats(withNodes(createWarrior(), 'iron_skin')).resistance).toBe(base + 2)
+    expect(deriveCombatStats(withNodes(createWarrior(), 'iron_skin', 'blessed_armour')).resistance).toBe(base + 3)
+  })
+
+  it('adds Spell Ward’s 3 to every ward and Blessed Armour’s 3 to blight', () => {
+    expect(deriveCombatStats(withNodes(createWarrior(), 'spell_ward')).wards).toEqual({
+      fire: 3, frost: 3, lightning: 3, acid: 3, poison: 3, blight: 3,
+    })
+    expect(deriveCombatStats(withNodes(createWarrior(), 'blessed_armour')).wards).toEqual({ blight: 3 })
+    expect(deriveCombatStats(withNodes(createWarrior(), 'spell_ward', 'blessed_armour')).wards).toMatchObject({ fire: 3, blight: 6 })
+    expect(deriveCombatStats(createWarrior()).wards).toBeUndefined()
+  })
+
+  it('adds Sacred Weapon’s on-hit entries to a melee weapon or bare hands, never a bow', () => {
+    const sacred = withNodes(createWarrior(), 'sacred_weapon')
+    expect(deriveCombatStats(sacred).onHit).toEqual([{ damage: 2 }, { damage: 4, bane: true }])
+    delete sacred.equipment.mainHand
+    expect(deriveCombatStats(sacred).onHit).toEqual([{ damage: 2 }, { damage: 4, bane: true }])
+    sacred.equipment.mainHand = YEW_BOW
+    delete sacred.equipment.offHand
+    expect(deriveCombatStats(sacred).onHit).toBeUndefined()
+    sacred.equipment.mainHand = SPARK_WAND
+    expect(deriveCombatStats(sacred).onHit).toBeUndefined()
+  })
+
+  it('puts the runes’ on-hit entries before Sacred Weapon’s', () => {
+    const sacred = withNodes(createWarrior(), 'sacred_weapon')
+    sacred.equipment.mainHand = itemById('steel_longsword#ember1')
+    const onHit = deriveCombatStats(sacred).onHit!
+    expect(onHit.slice(-2)).toEqual([{ damage: 2 }, { damage: 4, bane: true }])
+    expect(onHit.length).toBeGreaterThan(2)
+  })
+
+  const mage = (...nodes: PerkId[]) => withNodes({ ...createWarrior(), perks: { magic_arrow: 1 } }, ...nodes)
+
+  it.each([
+    ['destruction', { power: { all: 2 } }],
+    ['pyromancy', { power: { fire: 3 } }],
+    ['numbing_cold', { power: { frost: 3 } }],
+    ['mending', { healBonus: 4 }],
+    ['lingering_cold', { extend: { hostile: 1 } }],
+    ['lasting_magic', { extend: { friendly: 1 } }],
+    ['quickened_casting', { apDiscount: { all: 1 } }],
+    ['swift_hands', { apDiscount: { heal: 1 } }],
+    ['serenity', { friendlyRange: 2 }],
+  ] as const)('sets %s’s spell modifier on magic', (node, field) => {
+    const magic = deriveCombatStats(mage(node)).magic!
+    expect(magic).toMatchObject(field)
+    const keys = Object.keys(magic).filter((key) => !['maxMana', 'skill', 'spells'].includes(key))
+    expect(keys).toEqual(Object.keys(field))
+  })
+
+  it('combines modifiers of one kind into one object', () => {
+    const magic = deriveCombatStats(mage('destruction', 'pyromancy', 'quickened_casting', 'swift_hands')).magic!
+    expect(magic.power).toEqual({ all: 2, fire: 3 })
+    expect(magic.apDiscount).toEqual({ all: 1, heal: 1 })
+  })
+
+  it('gives a caster with none of the modifier nodes exactly the magic it had: no new keys', () => {
+    expect(Object.keys(deriveCombatStats(delwyn()).magic!).sort()).toEqual(['maxMana', 'skill', 'spells'])
+  })
+
+  it('derives a hero with none of the new nodes as before, its mana aside', () => {
+    const stats = deriveCombatStats(aldric())
+    expect(stats.magic).toBeUndefined()
+    expect(stats.wards).toBeUndefined()
+    expect(stats.onHit).toBeUndefined()
   })
 })

@@ -22,6 +22,7 @@ import {
   type AttackEvent,
   type BattleEvent,
   type BattleStartEvent,
+  type CastEvent,
   type GearChange,
   type MoveEvent,
   type UnitSetup,
@@ -2663,5 +2664,177 @@ describe('BattleEngine stage-1 spells and Warded', () => {
     expect(statusesOf(engine, 'goblin')).toEqual([{ id: 'chilled', turnsLeft: 1 }])
     const frostWarded = battle([caster(['frostbite']), goblinAt(hex(5, 1), { stats: { ...GOBLIN_STATS, wards: { frost: 3 } } })])
     expect(frostWarded.step(on('frostbite', 'goblin'))[0]).toMatchObject({ outcomes: [{ damage: 2, warded: 3 }] })
+  })
+})
+
+describe('BattleEngine a caster’s spell modifiers', () => {
+  const WIDE = { cols: 9, rows: 3 }
+  type Magic = NonNullable<CombatantStats['magic']>
+  type Modifiers = Omit<Magic, 'maxMana' | 'skill' | 'spells'>
+  const caster = (spells: SpellId[], modifiers: Modifiers = {}, extra: Partial<UnitSetup> = {}): UnitSetup => ({
+    id: 'mage',
+    side: 'player',
+    stats: { ...WARRIOR_STATS, name: 'Mage', maxHp: 40, magic: { maxMana: 60, skill: 76, spells, ...modifiers } },
+    position: hex(1, 1),
+    ...extra,
+  })
+  const BIG_GOBLIN = { ...GOBLIN_STATS, maxHp: 40 }
+  const goblinAt = (position: Hex, extra: Partial<UnitSetup> = {}): UnitSetup => ({ ...GOBLIN, stats: BIG_GOBLIN, position, ...extra })
+  const allyAt = (position: Hex, extra: Partial<UnitSetup> = {}): UnitSetup => ({ ...CLERIC, stats: { ...WARRIOR_STATS, maxHp: 40 }, position, ...extra })
+  /** An engine whose RNG counts its draws; every draw 0.66 unless told otherwise. */
+  const battle = (units: UnitSetup[], rng: number[] = [0.66]) => {
+    const values = sequence(rng)
+    let draws = 0
+    const engine = new BattleEngine(
+      { board: WIDE, units },
+      {
+        rng: () => {
+          draws += 1
+          return values()
+        },
+      },
+    )
+    return { engine, draws: () => draws }
+  }
+  const on = (spell: SpellId, target: string): Action => ({ type: 'cast', unit: 'mage', spell, target })
+  const at = (spell: SpellId, centre: Hex): Action => ({ type: 'cast', unit: 'mage', spell, at: centre })
+  /** Casts `action` with and without `modifiers`, the same draws, and returns both outcomes and draw counts. */
+  const castBoth = (spells: SpellId[], modifiers: Modifiers, others: UnitSetup[], action: Action, rng?: number[]) => {
+    const plain = battle([caster(spells), ...others], rng)
+    const modified = battle([caster(spells, modifiers), ...others], rng)
+    const plainEvent = plain.engine.step(action)[0] as CastEvent
+    const modifiedEvent = modified.engine.step(action)[0] as CastEvent
+    expect(modified.draws()).toBe(plain.draws())
+    return { plain: plainEvent, modified: modifiedEvent, plainEngine: plain.engine, engine: modified.engine }
+  }
+
+  describe('power', () => {
+    it('adds to Magic Arrow’s dice, drawing nothing more', () => {
+      // A roll of 34, then a 7 on the d10.
+      const { plain, modified } = castBoth(['magic_arrow'], { power: { all: 2 } }, [goblinAt(hex(5, 1))], on('magic_arrow', 'goblin'), [0.66, 0.6])
+      expect(plain.outcomes[0]).toMatchObject({ hit: true, damage: 7 })
+      expect(modified.outcomes[0]).toMatchObject({ hit: true, damage: 9, hpAfter: 31 })
+    })
+
+    it('adds a fire bonus to a fire spell before the ward, and a frost bonus not at all', () => {
+      const warded = goblinAt(hex(5, 1), { stats: { ...BIG_GOBLIN, wards: { fire: 2 } } })
+      const fire = castBoth(['flame_arrow'], { power: { fire: 3 } }, [warded], on('flame_arrow', 'goblin'))
+      // 2d8 of 6s, less the ward's 2.
+      expect(fire.plain.outcomes[0]).toMatchObject({ damage: 10, warded: 2 })
+      expect(fire.modified.outcomes[0]).toMatchObject({ damage: 13, warded: 2 })
+      const frost = castBoth(['flame_arrow'], { power: { frost: 3 } }, [warded], on('flame_arrow', 'goblin'))
+      expect(frost.modified.outcomes[0]).toMatchObject({ damage: 10, warded: 2 })
+    })
+
+    it('is not doubled by a critical', () => {
+      // A roll of 5, within the critical chance: 2d10 of 3s.
+      const { plain, modified } = castBoth(['magic_arrow'], { power: { all: 2 } }, [goblinAt(hex(5, 1))], on('magic_arrow', 'goblin'), [0.95, 0.2])
+      expect(plain.outcomes[0]).toMatchObject({ critical: true, damage: 6 })
+      expect(modified.outcomes[0]).toMatchObject({ critical: true, damage: 8 })
+    })
+
+    it('adds nothing to a miss or to a spell that deals no damage', () => {
+      const miss = castBoth(['magic_arrow'], { power: { all: 2 } }, [goblinAt(hex(5, 1))], on('magic_arrow', 'goblin'), [0.3])
+      expect(miss.modified.outcomes[0]).toMatchObject({ hit: false, damage: 0 })
+      const sleep = castBoth(['sleep'], { power: { all: 2 } }, [goblinAt(hex(5, 1))], on('sleep', 'goblin'))
+      expect(sleep.modified.outcomes[0]).toMatchObject({ hit: true, damage: 0, hpAfter: 40 })
+    })
+
+    it('adds nothing to a status’s tick', () => {
+      const tickOf = (modifiers: Modifiers) => {
+        const { engine } = battle([caster(['death_cloud'], modifiers), goblinAt(hex(5, 1))])
+        engine.step(at('death_cloud', hex(5, 1)))
+        return engine.step(END_TURN).find((e) => e.type === 'status_tick')
+      }
+      expect(tickOf({ power: { all: 2 } })).toEqual(tickOf({}))
+    })
+  })
+
+  describe('heal bonus', () => {
+    it('adds to what Heal restores, up to the maximum', () => {
+      const { plain, modified } = castBoth(['heal'], { healBonus: 4 }, [allyAt(hex(3, 1), { hp: 10 }), goblinAt(hex(8, 1))], on('heal', 'cleric'))
+      // A 6 on the d8, and 2.
+      expect(plain.outcomes[0]).toMatchObject({ healed: 8, hpAfter: 18 })
+      expect(modified.outcomes[0]).toMatchObject({ healed: 12, hpAfter: 22 })
+      const nearly = castBoth(['heal'], { healBonus: 4 }, [allyAt(hex(3, 1), { hp: 30 }), goblinAt(hex(8, 1))], on('heal', 'cleric'))
+      expect(nearly.modified.outcomes[0]).toMatchObject({ healed: 10, hpAfter: 40 })
+    })
+  })
+
+  describe('extension', () => {
+    it('makes Sleep last a turn longer with a hostile extension', () => {
+      const { plainEngine, engine } = castBoth(['sleep'], { extend: { hostile: 1 } }, [goblinAt(hex(5, 1))], on('sleep', 'goblin'))
+      expect(unitOf(plainEngine, 'goblin').statuses).toEqual([{ id: 'asleep', turnsLeft: 2 }])
+      expect(unitOf(engine, 'goblin').statuses).toEqual([{ id: 'asleep', turnsLeft: 3 }])
+    })
+
+    it('makes Bless last a turn longer with a friendly extension, and a hostile one leaves it', () => {
+      const friendly = castBoth(['bless'], { extend: { friendly: 1 } }, [allyAt(hex(2, 1)), goblinAt(hex(8, 1))], at('bless', hex(1, 1)))
+      expect(unitOf(friendly.plainEngine, 'cleric').statuses).toEqual([{ id: 'blessed', turnsLeft: 3 }])
+      expect(unitOf(friendly.engine, 'cleric').statuses).toEqual([{ id: 'blessed', turnsLeft: 4 }])
+      const hostile = castBoth(['bless'], { extend: { hostile: 1 } }, [allyAt(hex(2, 1)), goblinAt(hex(8, 1))], at('bless', hex(1, 1)))
+      expect(unitOf(hostile.engine, 'cleric').statuses).toEqual([{ id: 'blessed', turnsLeft: 3 }])
+    })
+
+    it('leaves a status a weapon lays as it is', () => {
+      const chiller = caster([], { extend: { hostile: 1 } }, {
+        stats: { ...WARRIOR_STATS, toHit: 100, onHit: [{ damage: 0, status: { id: 'chilled', turns: 1 } }], magic: { maxMana: 10, skill: 50, spells: [], extend: { hostile: 1 } } },
+        position: hex(4, 1),
+      })
+      const { engine } = battle([chiller, goblinAt(hex(5, 1))], [0.5])
+      engine.step({ type: 'attack', unit: 'mage', target: 'goblin' })
+      expect(unitOf(engine, 'goblin').statuses).toEqual([{ id: 'chilled', turnsLeft: 1 }])
+    })
+  })
+
+  describe('friendly range', () => {
+    it('lets Heal reach 2 hexes further, and no further', () => {
+      const units = [caster(['heal'], { friendlyRange: 2 }), allyAt(hex(7, 1), { hp: 10 }), allyAt(hex(8, 1), { id: 'far', hp: 10 }), goblinAt(hex(8, 0))]
+      const { engine } = battle(units)
+      const casts = engine.legalActions().filter((a) => a.type === 'cast')
+      expect(casts).toContainEqual(on('heal', 'cleric'))
+      expect(casts).not.toContainEqual(on('heal', 'far'))
+      expect(engine.previewCast('mage', 'heal', 'cleric')).not.toBeNull()
+      expect(engine.previewCast('mage', 'heal', 'far')).toBeNull()
+      expect(engine.step(on('heal', 'cleric'))[0]).toMatchObject({ distance: 6, outcomes: [{ unit: 'cleric', healed: 8 }] })
+      const { engine: plain } = battle([caster(['heal']), ...units.slice(1)])
+      expect(plain.legalActions().filter((a) => a.type === 'cast')).not.toContainEqual(on('heal', 'cleric'))
+    })
+
+    it('leaves Heal All centred on the caster', () => {
+      const { engine } = battle([caster(['heal_all'], { friendlyRange: 2 }), allyAt(hex(4, 1), { hp: 10 }), goblinAt(hex(8, 1))])
+      expect(engine.legalActions().filter((a) => a.type === 'cast')).toEqual([at('heal_all', hex(1, 1))])
+    })
+  })
+
+  describe('AP discount', () => {
+    it('takes a point off Magic Arrow, in the cast, its preview and what is left', () => {
+      const { plain, modified, engine } = castBoth(['magic_arrow'], { apDiscount: { all: 1 } }, [goblinAt(hex(5, 1))], on('magic_arrow', 'goblin'))
+      expect(plain).toMatchObject({ apCost: 4, apAfter: 4 })
+      expect(modified).toMatchObject({ apCost: 3, apAfter: 5 })
+      expect(engine.previewCast('mage', 'magic_arrow', 'goblin')).toMatchObject({ apCost: 3 })
+      expect(unitOf(engine, 'mage').ap).toBe(5)
+    })
+
+    it('lists a cast for a unit with only the discounted points left', () => {
+      const { engine } = battle([caster(['magic_arrow'], { apDiscount: { all: 1 } }, { stats: { ...WARRIOR_STATS, actionPoints: 3, magic: { maxMana: 60, skill: 76, spells: ['magic_arrow'], apDiscount: { all: 1 } } } }), goblinAt(hex(5, 1))])
+      expect(engine.legalActions().filter((a) => a.type === 'cast')).toEqual([on('magic_arrow', 'goblin')])
+    })
+
+    it('takes the heal discount off Heal and not off Magic Arrow', () => {
+      const arrow = castBoth(['magic_arrow'], { apDiscount: { heal: 1 } }, [goblinAt(hex(5, 1))], on('magic_arrow', 'goblin'))
+      expect(arrow.modified).toMatchObject({ apCost: 4 })
+      const heal = castBoth(['heal'], { apDiscount: { heal: 1 } }, [allyAt(hex(3, 1), { hp: 10 }), goblinAt(hex(8, 1))], on('heal', 'cleric'))
+      expect(heal.modified).toMatchObject({ apCost: 3, apAfter: 5 })
+    })
+  })
+
+  it('plays a cast by a caster with empty modifiers exactly as one with none', () => {
+    const empty: Modifiers = { power: {}, extend: {}, apDiscount: {} }
+    const run = (modifiers: Modifiers) => {
+      const { engine } = battle([caster(['flame_arrow', 'sleep'], modifiers), goblinAt(hex(5, 1))], [0.66, 0.3, 0.9, 0.1])
+      return [...engine.step(on('flame_arrow', 'goblin')), ...engine.step(on('sleep', 'goblin'))]
+    }
+    expect(run(empty)).toEqual(run({}))
   })
 })

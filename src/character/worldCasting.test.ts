@@ -30,6 +30,23 @@ describe('castOnWorldMap (A12)', () => {
     expect([delwyn.mana, aldric.hp]).toEqual([1, maxHp(aldric)])
   })
 
+  it('adds the caster’s heal bonus (Mending), never above the maximum', () => {
+    const [aldric, , delwyn] = party()
+    delwyn.perks.mending = 1
+    aldric.hp = 3
+    expect(castOnWorldMap(delwyn, 'heal', party(), aldric)).toBe(true)
+    expect(aldric.hp).toBe(3 + 6 + 4)
+    aldric.hp = maxHp(aldric) - 2
+    expect(castOnWorldMap(delwyn, 'heal', party(), aldric)).toBe(true)
+    expect(aldric.hp).toBe(maxHp(aldric))
+  })
+
+  it('lists Lay on Hands like any heal', () => {
+    const [, , delwyn] = party()
+    delwyn.perks.lay_on_hands = 1
+    expect(worldSpells(delwyn).map((known) => known.spell)).toContain('lay_on_hands')
+  })
+
   it('refuses, changing nothing, without the mana, the spell or a target', () => {
     const [aldric, , delwyn] = party()
     aldric.hp = 3

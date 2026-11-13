@@ -19,6 +19,8 @@ import {
   HELPLESS_BONUS,
   SPELLS,
   STATUSES,
+  spellApCost,
+  spellRange,
   type ActiveStatus,
   type SpellId,
   type StatusId,
@@ -926,10 +928,11 @@ export class BattleEngine {
     const actor = this.units.find((u) => u.id === unit)
     const aim: CastAim = typeof target === 'string' ? { target } : { at: target }
     if (this.phase === 'over' || !actor || !this.canAct(actor) || !this.canCast(actor, spell, aim)) return null
-    const { apCost, manaCost, hostile } = SPELLS[spell]
-    const caster = spellcaster(effectiveStats(actor), spell)
+    const { manaCost, hostile } = SPELLS[spell]
+    const stats = effectiveStats(actor)
+    const caster = spellcaster(stats, spell)
     return {
-      apCost,
+      apCost: spellApCost(stats, spell),
       manaCost,
       outcomes: castTouches(this.units, actor, spell, aim).map((u) => ({
         unit: u.id,
@@ -1198,7 +1201,7 @@ export class BattleEngine {
     return (
       known !== undefined &&
       actor.stats.magic?.spells.includes(spell) === true &&
-      actor.ap >= known.apCost &&
+      actor.ap >= spellApCost(effectiveStats(actor), spell) &&
       actor.mana >= known.manaCost
     )
   }
@@ -1211,7 +1214,8 @@ export class BattleEngine {
    */
   private canCast(actor: UnitRecord, spell: SpellId, aim: CastAim): boolean {
     if (!this.canPayFor(actor, spell)) return false
-    const { target: kind, range, hostile, shape = 'burst' } = SPELLS[spell]
+    const { target: kind, hostile, shape = 'burst' } = SPELLS[spell]
+    const range = spellRange(effectiveStats(actor), spell)
     if (kind === 'area') {
       if (!('at' in aim) || !this.board.contains(aim.at)) return false
       const distance = hexDistance(aim.at, actor.position)
@@ -1495,19 +1499,27 @@ export class BattleEngine {
    * wakings, images spent and falls, and at most one end of the battle.
    */
   private cast(actor: UnitRecord, spell: SpellId, aim: CastAim): BattleEvent[] {
-    const { apCost, manaCost, hostile, damage: dice, element, drain, heal, status } = SPELLS[spell]
+    const { manaCost, hostile, damage: dice, element, drain, heal, status: ownStatus } = SPELLS[spell]
     const touched = castTouches(this.units, actor, spell, aim)
     const at = aimHex(this.units, aim)!
+    const stats = effectiveStats(actor)
+    const magic = stats.magic
+    const apCost = spellApCost(stats, spell)
+    // The caster's modifiers: flat, so they draw nothing.
+    const power = (magic?.power?.all ?? 0) + (element === 'fire' ? (magic?.power?.fire ?? 0) : 0) + (element === 'frost' ? (magic?.power?.frost ?? 0) : 0)
+    const extension = (hostile ? magic?.extend?.hostile : magic?.extend?.friendly) ?? 0
+    const status = ownStatus && extension !== 0 ? { ...ownStatus, turns: ownStatus.turns + extension } : ownStatus
+    const healBonus = magic?.healBonus ?? 0
     actor.ap -= apCost
     actor.mana -= manaCost
     actor.gearChangePaid = false
     if (!hexEquals(at, actor.position)) actor.facing = hexDirectionTowards(actor.position, at)!
-    const caster = spellcaster(effectiveStats(actor), spell)
+    const caster = spellcaster(stats, spell)
 
     const outcomes: StruckOutcome[] = touched.map((unit) => {
-      if (hostile) return this.strikeUnit(unit, caster, { dice, element, status, halfOnMiss: false })
+      if (hostile) return this.strikeUnit(unit, caster, { dice, element, status, halfOnMiss: false, power })
       const hpBefore = unit.hp
-      const healed = heal ? Math.min(rollDamage(heal, this.rng), unit.stats.maxHp - unit.hp) : 0
+      const healed = heal ? Math.min(rollDamage(heal, this.rng) + healBonus, unit.stats.maxHp - unit.hp) : 0
       unit.hp += Math.max(0, healed)
       const laid = status ? this.layStatus(unit, status) : null
       return {
@@ -1592,18 +1604,20 @@ export class BattleEngine {
   private strikeUnit(
     unit: UnitRecord,
     attacker: CombatantStats,
-    blow: { dice: DamageRoll | undefined; element: Element | undefined; status: StatusLaid | undefined; halfOnMiss: boolean },
+    blow: { dice: DamageRoll | undefined; element: Element | undefined; status: StatusLaid | undefined; halfOnMiss: boolean; power?: number },
   ): StruckOutcome {
     const hpBefore = unit.hp
     const defenderAc = effectiveStats(unit).ac
     const roll = rollToHit(attacker, defenderAc, this.rng)
     const image = roll.hit && this.strikeImage(unit)
     const half = !roll.hit && blow.halfOnMiss && blow.dice !== undefined
+    // A spell's power is added to what its dice dealt, after a critical's doubling and before the ward.
+    const power = blow.power ?? 0
     const rolled =
       roll.hit && !image && blow.dice
-        ? rollHitDamage(blow.dice, roll.critical, this.rng)
+        ? rollHitDamage(blow.dice, roll.critical, this.rng) + power
         : half
-          ? Math.floor(Math.max(0, rollDamage(blow.dice!, this.rng)) / 2)
+          ? Math.floor(Math.max(0, rollDamage(blow.dice!, this.rng)) / 2) + power
           : 0
     const damage = warded(rolled, blow.element, effectiveStats(unit))
     unit.hp = Math.max(0, unit.hp - damage)

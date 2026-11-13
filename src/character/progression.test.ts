@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SPARK_WAND, YEW_BOW } from '../inventory/inventory.ts'
-import { createWarrior, hpPerLevel, maxHp, maxMana, type Character } from './character.ts'
+import { createWarrior, hpPerLevel, maxHp, type Character } from './character.ts'
 import { draftCharacter } from './creation.ts'
 import { PERKS, PERK_IDS, knownSpells, type Perk, type PerkId } from './perks.ts'
 import {
@@ -145,8 +145,10 @@ describe('takePerk', () => {
     // Toughness's 8, a point of endurance, and endurance 8 is worth 1 more for each of two levels.
     expect(warrior.hp).toBe(15)
     warrior.trained.magic = 32
+    // Every hero has mana; Heal, a Cleric node, brings 2 more to what it has left.
+    warrior.mana = 3
     expect(takePerk(warrior, 'heal')).toBe(true)
-    expect(warrior.mana).toBe(maxMana(warrior))
+    expect(warrior.mana).toBe(3 + 2)
   })
 })
 

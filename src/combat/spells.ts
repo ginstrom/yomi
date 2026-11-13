@@ -1,5 +1,5 @@
 import type { AreaShape } from '../grid/hex.ts'
-import type { DamageRoll, Element } from './combat.ts'
+import type { CombatantStats, DamageRoll, Element } from './combat.ts'
 
 /**
  * Spells, as the engine casts them. A spell says what it costs, what it can
@@ -519,4 +519,27 @@ export function averageRoll(roll: DamageRoll): number {
 /** Whether `spell` restores hit points. */
 export function isHealing(spell: SpellId): boolean {
   return SPELLS[spell].heal !== undefined
+}
+
+/**
+ * The action points `spell` costs a caster of `stats`: its own, less the
+ * caster's discount on every spell and, for a spell that heals, on healing
+ * spells; never below 2, and a spell of 2 or less keeps its cost.
+ */
+export function spellApCost(stats: Pick<CombatantStats, 'magic'>, spell: SpellId): number {
+  const { apCost, heal } = SPELLS[spell]
+  const discount = stats.magic?.apDiscount
+  const off = (discount?.all ?? 0) + (heal ? (discount?.heal ?? 0) : 0)
+  return Math.max(Math.min(apCost, 2), apCost - off)
+}
+
+/**
+ * How far `spell` reaches for a caster of `stats`: its own range, plus the
+ * caster's friendly range for a friendly spell aimed at an ally or at an area
+ * of range above 0. A spell on the caster alone or centred on it keeps 0.
+ */
+export function spellRange(stats: Pick<CombatantStats, 'magic'>, spell: SpellId): number {
+  const { range, hostile, target } = SPELLS[spell]
+  const reaches = !hostile && (target === 'ally' || (target === 'area' && range > 0))
+  return range + (reaches ? (stats.magic?.friendlyRange ?? 0) : 0)
 }

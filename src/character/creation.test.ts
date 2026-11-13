@@ -152,8 +152,9 @@ describe('draftCharacter', () => {
         perks: ['magic_arrow', 'heal', 'arcane_study'],
       }),
     )
-    expect([skillLevel(mage, 'magic'), knownSpells(mage), maxMana(mage)]).toEqual([68, ['magic_arrow', 'heal'], 18])
-    expect([mage.mana, mage.perkPicks]).toEqual([18, 0])
+    // 18 for intelligence 9, and 2 for each of its three Mage and Cleric nodes.
+    expect([skillLevel(mage, 'magic'), knownSpells(mage), maxMana(mage)]).toEqual([68, ['magic_arrow', 'heal'], 24])
+    expect([mage.mana, mage.perkPicks]).toEqual([24, 0])
     expect('spellPicks' in mage).toBe(false)
     // Without the tag the same character is at 18 + 10 + 10.
     const untagged = draftCharacter(soldier({ ...soldier(), attributes: mage.attributes, tagged: 'melee', raises: { melee: 0, archery: 0, magic: 10 }, perks: ['arcane_study'] }))

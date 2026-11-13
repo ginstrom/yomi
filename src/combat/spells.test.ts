@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { ELEMENTS } from './combat.ts'
-import { ALL_SPELL_IDS, MONSTER_SPELL_IDS, SPELLS, SPELL_IDS, STATUSES, STATUS_IDS, type SpellId } from './spells.ts'
+import { ELEMENTS, type CombatantStats } from './combat.ts'
+import { ALL_SPELL_IDS, MONSTER_SPELL_IDS, SPELLS, SPELL_IDS, STATUSES, STATUS_IDS, spellApCost, spellRange, type SpellId } from './spells.ts'
 
 describe('spell ids', () => {
   it('keeps the monsters’ spells apart from the heroes’', () => {
@@ -121,5 +121,44 @@ describe('the stage-1 spells', () => {
 
   it('lay Warded, a ward of 4 against every element', () => {
     expect(STATUSES.warded).toMatchObject({ name: 'Warded', mark: 'G', wardAll: 4 })
+  })
+})
+
+describe('a caster’s modifiers to a spell’s cost and reach', () => {
+  const caster = (magic: Partial<NonNullable<CombatantStats['magic']>>) => ({
+    magic: { maxMana: 20, skill: 60, spells: [], ...magic },
+  })
+
+  it('costs a spell its own action points without a discount, and for a unit with no magic', () => {
+    expect(spellApCost({}, 'magic_arrow')).toBe(SPELLS.magic_arrow.apCost)
+    expect(spellApCost(caster({}), 'heal')).toBe(SPELLS.heal.apCost)
+  })
+
+  it('takes the discount off every spell, and the heal discount off healing spells only', () => {
+    expect(spellApCost(caster({ apDiscount: { all: 1 } }), 'magic_arrow')).toBe(SPELLS.magic_arrow.apCost - 1)
+    expect(spellApCost(caster({ apDiscount: { heal: 1 } }), 'magic_arrow')).toBe(SPELLS.magic_arrow.apCost)
+    expect(spellApCost(caster({ apDiscount: { heal: 1 } }), 'heal')).toBe(SPELLS.heal.apCost - 1)
+    expect(spellApCost(caster({ apDiscount: { all: 1, heal: 1 } }), 'heal')).toBe(SPELLS.heal.apCost - 2)
+  })
+
+  it('never takes a spell below 2 action points, and leaves one of 2 or less as it is', () => {
+    expect(SPELLS.lay_on_hands.apCost).toBe(3)
+    expect(spellApCost(caster({ apDiscount: { all: 1, heal: 1 } }), 'lay_on_hands')).toBe(2)
+    expect(spellApCost(caster({ apDiscount: { all: 5 } }), 'magic_arrow')).toBe(2)
+    expect(SPELLS.shield.apCost).toBe(2)
+    expect(spellApCost(caster({ apDiscount: { all: 1 } }), 'shield')).toBe(2)
+  })
+
+  it('reaches further with a friendly spell aimed at an ally or a point, never a hostile, self or caster-centred one', () => {
+    const serene = caster({ friendlyRange: 2 })
+    expect(spellRange(serene, 'heal')).toBe(SPELLS.heal.range + 2)
+    expect(spellRange(serene, 'lay_on_hands')).toBe(SPELLS.lay_on_hands.range + 2)
+    expect(spellRange(serene, 'heal_all')).toBe(0)
+    expect(spellRange(serene, 'mass_haste')).toBe(0)
+    expect(spellRange(serene, 'bless')).toBe(0)
+    expect(spellRange(serene, 'shield')).toBe(0)
+    expect(spellRange(serene, 'magic_arrow')).toBe(SPELLS.magic_arrow.range)
+    expect(spellRange(serene, 'fireball')).toBe(SPELLS.fireball.range)
+    expect(spellRange({}, 'heal')).toBe(SPELLS.heal.range)
   })
 })
