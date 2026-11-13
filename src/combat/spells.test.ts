@@ -165,8 +165,8 @@ describe('a caster’s modifiers to a spell’s cost and reach', () => {
 })
 
 describe('the technique statuses', () => {
-  it('lists marked, slowed and pinned after warded', () => {
-    expect(STATUS_IDS.slice(STATUS_IDS.indexOf('warded'))).toEqual(['warded', 'marked', 'slowed', 'pinned'])
+  it('lists marked, slowed, pinned and taunted after warded', () => {
+    expect(STATUS_IDS.slice(STATUS_IDS.indexOf('warded'))).toEqual(['warded', 'marked', 'slowed', 'pinned', 'taunted'])
   })
 
   it('makes Marked 10 off armour class and Slowed 3 off action points', () => {
@@ -180,6 +180,13 @@ describe('the technique statuses', () => {
     const { name, adjective, mark, colour, ...rule } = STATUSES.pinned
     expect({ name, adjective, mark }).toEqual({ name: 'Pinned', adjective: 'pinned', mark: 'N' })
     expect(colour).toBeGreaterThan(0)
+    expect(rule).toEqual({})
+  })
+
+  it('gives Taunted a name, the mark T and a red, and no rule yet (step 11 gives it one)', () => {
+    const { name, adjective, mark, colour, ...rule } = STATUSES.taunted
+    expect({ name, adjective, mark }).toEqual({ name: 'Taunted', adjective: 'taunted', mark: 'T' })
+    expect(colour >> 16).toBeGreaterThan(0xc0)
     expect(rule).toEqual({})
   })
 

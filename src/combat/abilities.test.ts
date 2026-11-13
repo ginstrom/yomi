@@ -29,14 +29,19 @@ describe('abilities', () => {
     for (const strike of ability.strikes ?? []) {
       for (const key of ['weapon', 'toHit', 'damageBonus', 'onHit', 'spreads'] as const) expect(strike[key]).toBeUndefined()
     }
+    if (ability.area) {
+      for (const key of ['weaponDamage', 'weaponRange', 'throughResistance', 'foesOnly', 'auto', 'bane', 'centredOnSelf'] as const) {
+        expect(ability.area[key]).toBeUndefined()
+      }
+    }
     expect(abilityApCost(TROLL_STATS, id)).toBe(ability.apCost)
     expect(ability.apCost).toBeGreaterThan(0)
   })
 
   it('lists the heroes’ techniques after the monsters’ abilities, in the plan’s order', () => {
     expect(HERO_ABILITIES).toEqual([
-      'power_attack', 'cleave', 'pin', 'flame_strike', 'frost_strike', 'thunder_strike', 'aimed_shot', 'hunters_mark',
-      'pinning_shot', 'sprint', 'dirty_trick', 'venom_strike', 'hamstring', 'smite',
+      'power_attack', 'cleave', 'taunt', 'pin', 'flame_strike', 'frost_strike', 'thunder_strike', 'aimed_shot', 'hunters_mark',
+      'volley', 'pinning_shot', 'sprint', 'dirty_trick', 'venom_strike', 'hamstring', 'smite', 'consecrate',
     ])
   })
 
@@ -75,6 +80,59 @@ describe('abilities', () => {
       strikes: [{ name: 'Smite', verb: 'smites', weapon: true, onHit: [{ damage: 4 }, { damage: 6, bane: true }] }],
     },
   }
+
+  /** The area techniques (step 10), their areas in full. */
+  const AREA_TECHNIQUES: Record<string, Partial<Ability>> = {
+    taunt: {
+      name: 'Taunt', apCost: 3, recharge: 2,
+      area: { shape: 'burst', range: 0, radius: 2, status: { id: 'taunted', turns: 1 }, halfOnMiss: false, foesOnly: true, auto: true, centredOnSelf: true },
+    },
+    volley: {
+      name: 'Volley', weaponAp: 2, recharge: 2, needs: 'ranged',
+      area: { shape: 'burst', range: 0, radius: 1, halfOnMiss: false, weaponDamage: true, weaponRange: true, throughResistance: true },
+    },
+    consecrate: {
+      name: 'Consecrate', apCost: 5, manaCost: 5, recharge: 2,
+      area: {
+        shape: 'burst', range: 0, radius: 1, damage: { count: 2, sides: 6, bonus: 0 }, halfOnMiss: true, foesOnly: true, bane: true, centredOnSelf: true,
+      },
+    },
+  }
+
+  it.each(Object.keys(AREA_TECHNIQUES))('gives the area technique %s its numbers', (id) => {
+    const { area, ...rest } = AREA_TECHNIQUES[id]
+    expect(ABILITIES[id as AbilityId]).toMatchObject(rest)
+    expect(ABILITIES[id as AbilityId].area).toEqual(area)
+  })
+
+  it('leaves Taunt and Consecrate without needs, Taunt and Volley without mana, and Volley’s AP to its weapon', () => {
+    expect(ABILITIES.taunt.needs).toBeUndefined()
+    expect(ABILITIES.consecrate.needs).toBeUndefined()
+    expect(ABILITIES.taunt.manaCost).toBeUndefined()
+    expect(ABILITIES.volley.manaCost).toBeUndefined()
+    expect(ABILITIES.taunt.weaponAp).toBeUndefined()
+    expect(ABILITIES.consecrate.weaponAp).toBeUndefined()
+    expect(abilityApCost({ ...GOBLIN_STATS, attackApCost: 4 }, 'volley')).toBe(6)
+  })
+
+  it.each(ABILITY_IDS.filter((id) => ABILITIES[id].area !== undefined))('keeps the area of %s consistent', (id) => {
+    const area = ABILITIES[id].area!
+    // Centred on the user: a burst of range 0.
+    if (area.centredOnSelf) expect([area.shape, area.range]).toEqual(['burst', 0])
+    // No roll: a status and no dice of any kind, nothing on a miss.
+    if (area.auto) {
+      expect(area.status).toBeDefined()
+      expect(area.damage).toBeUndefined()
+      expect(area.weaponDamage).toBeUndefined()
+      expect(area.halfOnMiss).toBe(false)
+    }
+    // The weapon's dice in place of its own; its range the weapon's.
+    if (area.weaponDamage) expect(area.damage).toBeUndefined()
+    if (area.weaponRange) expect(area.range).toBe(0)
+    // Bane doubles dice, so it asks for some.
+    if (area.bane) expect(area.damage !== undefined || area.weaponDamage === true).toBe(true)
+    if (area.throughResistance) expect(area.damage !== undefined || area.weaponDamage === true).toBe(true)
+  })
 
   it.each(Object.keys(TECHNIQUES))('gives %s its numbers', (id) => {
     expect(ABILITIES[id as AbilityId]).toMatchObject(TECHNIQUES[id])

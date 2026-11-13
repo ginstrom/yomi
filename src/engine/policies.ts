@@ -7,7 +7,7 @@ import {
   FLANK_BONUS_PER_ALLY,
   MOVE_AP_COST_PER_HEX,
   arcStruck,
-  areaTouches,
+  abilityTouches,
   castTouches,
   effectiveStats,
   flankersOf,
@@ -258,14 +258,22 @@ function onHitDamage(attacker: CombatantStats, defender: CombatantStats): number
 
 type AbilityAction = Extract<Action, { type: 'ability' }>
 
-/** A hero's technique, which the policy does not use yet: one priced by the weapon, a status with no roll, or a weapon strike. */
+/**
+ * A hero's technique, which the policy does not use yet: one priced by the
+ * weapon or paid in mana, a status with no roll, a weapon strike, or an area
+ * with any of the heroes' fields (Taunt, Volley, Consecrate).
+ */
 function isTechnique(id: AbilityId): boolean {
   const ability = ABILITIES[id]
+  const area = ability.area
   return (
     ability.weaponAp !== undefined ||
+    ability.manaCost !== undefined ||
     ability.selfStatus !== undefined ||
     ability.foeStatus !== undefined ||
-    (ability.strikes ?? []).some((strike) => strike.weapon)
+    (ability.strikes ?? []).some((strike) => strike.weapon) ||
+    (area !== undefined &&
+      (area.weaponDamage || area.weaponRange || area.throughResistance || area.foesOnly || area.auto || area.bane || area.centredOnSelf) === true)
   )
 }
 type AreaAction = Extract<AbilityAction, { at: Hex }>
@@ -311,7 +319,7 @@ function areaHarm(state: BattleState, self: UnitSnapshot, action: AreaAction): n
   const area = ABILITIES[action.ability].area!
   const attacker = effectiveStats({ stats: self, statuses: self.statuses })
   const average = mean(area.damage) + (self.abilityDamageBonus ?? 0)
-  return areaTouches(state.units, self, area, action.at, true).reduce((sum, unit) => {
+  return abilityTouches(state.units, self, action.ability, action.at, self.attackRange).reduce((sum, unit) => {
     const chance = hitChance(attacker, effectiveStats({ stats: unit, statuses: unit.statuses }).ac)
     const missed = area.halfOnMiss ? (1 - chance) * warded(Math.floor(average / 2), area.element, unit) : 0
     const harm = chance * warded(average, area.element, unit) + missed
@@ -331,7 +339,7 @@ function statusArea(state: BattleState, self: UnitSnapshot, own: readonly Action
   })
   const fresh = (action: AreaAction) => {
     const area = ABILITIES[action.ability].area!
-    const touched = areaTouches(state.units, self, area, action.at, true)
+    const touched = abilityTouches(state.units, self, action.ability, action.at, self.attackRange)
     if (touched.some((u) => u.side === self.side)) return 0
     return touched.filter((u) => !hasStatus(u, area.status!.id)).length
   }

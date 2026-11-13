@@ -165,11 +165,38 @@ No scene changes in this step, so `npm run test:browser` is not required (run it
 
 ## 6. Completion criteria
 
-- [ ] `AreaAttack`'s seven fields and the `taunt`, `volley`, `consecrate` entries exist with design §4.3's numbers.
-- [ ] `taunted` is a status id with a no-effect rule; the record says step 11 adds its rule.
-- [ ] Engine tests for Volley, Consecrate and Taunt's area, the RNG order, replay and restore pass.
-- [ ] `npm test` passes; the guard fixture is unedited and green.
-- [ ] `CLAUDE.md` updated (the `abilities.ts` and engine `ability` lines: hero areas, `foesOnly`, `auto`, `centredOnSelf`, `weaponDamage`/`weaponRange`/`throughResistance`, `bane`).
-- [ ] Committed as "Skill trees step 10: area techniques"; the index's step table shows `done (<commit>)`.
+- [x] `AreaAttack`'s seven fields and the `taunt`, `volley`, `consecrate` entries exist with design §4.3's numbers.
+- [x] `taunted` is a status id with a no-effect rule; the record says step 11 adds its rule.
+- [x] Engine tests for Volley, Consecrate and Taunt's area, the RNG order, replay and restore pass.
+- [x] `npm test` passes; the guard fixture is unedited and green.
+- [x] `CLAUDE.md` updated (the `abilities.ts` and engine `ability` lines: hero areas, `foesOnly`, `auto`, `centredOnSelf`, `weaponDamage`/`weaponRange`/`throughResistance`, `bane`).
+- [x] Committed as "Skill trees step 10: area techniques"; the index's step table shows `done (<commit>)`.
 
 ## 7. Execution record
+
+**Engineer, 2026-11-14.**
+
+What was built:
+
+- `abilities.ts`: the seven `AreaAttack` fields, each documented; `taunt`, `volley`, `consecrate` in their C11 places in `ABILITY_IDS` with design §4.3's numbers (Volley's `range` 0, ignored for `weaponRange`).
+- `spells.ts`: `taunted` appended to `STATUS_IDS` (after `pinned`), its rule name, adjective, mark `T` and a red (0xe04848) only. **Step 11 adds its rule** (−25 to hit at any unit but its `source`, `source_fell`).
+- `battleEngine.ts`: exported `abilityArea(ability, attackRange)` (shape, range resolved for `weaponRange`, radius) and `abilityTouches(units, user, ability, at, attackRange)` (`areaTouches`, then only foes for `foesOnly`); `canAim` takes only the user's hex for `centredOnSelf` and the weapon's range for `weaponRange`; `legalActions` lists a `centredOnSelf` area at the user's hex alone; `areaAttack` resolves over `abilityTouches`: an `auto` area lays its status on each unit touched with no draw (outcome shaped as a friendly spell's: `attackRoll`/`chance`/`defenderAc` null, `hit` true, no damage), else `weaponDamage` takes `effectiveStats(actor).damage` (no `abilityDamageBonus`), `bane` doubles the dice count against `baneApplies(effectiveStats(unit))`, and `strikeUnit` gained `throughResistance` (`damageThrough(rolled, effectiveResistance(attacker, resistance))` before the ward). `CastOutcome.resisted?` (new, under schema 25) records the points resistance stopped, only on a `throughResistance` area's outcomes; `warded` stays the ward's alone. `formatEvent`'s area line adds "(armour stops N)".
+- Criticals: the area path already rolled them (`strikeUnit` → `rollHitDamage` doubles the dice on a critical), so Volley and Consecrate double their dice on a critical; no new critical roll was added.
+- `policies.ts`: `areaHarm` and the status-area step read `abilityTouches` (identical for the monsters' areas); `isTechnique` now also skips an ability paid in mana or an area with any hero field, so the policy never uses Taunt, Volley or Consecrate until step 12 (Taunt would otherwise have been picked by the status-area step and Consecrate by `areaHarm`).
+
+Commands and results:
+
+- Baseline `npm test`: 86 files, 1708 tests passed.
+- Red: the new abilities and engine tests failed for the expected reasons (missing entries, "cannot use volley at 4,1", empty centre lists); the status-order test in `spells.test.ts` failed after `taunted` was added (deliberate; its expectation now includes `taunted`, and a Taunted rule test was added).
+- `npx vitest run src/engine/battleEngine.test.ts src/combat/abilities.test.ts src/engine/policies.test.ts`: 399 passed.
+- `npm test`: 86 files, 1737 tests passed; the refactor guard green with its fixture unedited.
+- `npm run test:browser` not run: no scene file changed.
+
+Deviations: none from the contracts. Added `CastOutcome.resisted` (optional) and the exported `abilityArea`/`abilityTouches`, both within the task's latitude ("decide and document"; a shape change under schema 25).
+
+For later steps:
+
+- Step 11: `taunted` is laid by `layStatus` with no `source`; add `ActiveStatus.source` there (the `auto` branch of `areaAttack` is where Taunt lays it).
+- Step 12: `isTechnique` is the filter to replace; `areaHarm` does not yet know `weaponDamage` (it reads `area.damage`, so it would skip Volley), `bane` or `throughResistance`.
+- Step 14: the battle screen should draw a hero area with `abilityArea`/`abilityTouches` (a `weaponRange` area's range is the weapon's, a `foesOnly` area spares allies).
+

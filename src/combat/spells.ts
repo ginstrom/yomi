@@ -84,6 +84,7 @@ export const STATUS_IDS = [
   'marked',
   'slowed',
   'pinned',
+  'taunted',
 ] as const
 
 export type StatusId = (typeof STATUS_IDS)[number]
@@ -504,6 +505,8 @@ export const STATUSES: Record<StatusId, StatusRule> = {
   slowed: { name: 'Slowed', adjective: 'slowed', mark: 'L', colour: 0x7a9ab0, actionPoints: -3 },
   // Its rule (no move) arrives in step 11; until then it changes nothing.
   pinned: { name: 'Pinned', adjective: 'pinned', mark: 'N', colour: 0xb08050 },
+  // Its rule (−25 to hit at any unit but the one who laid it) arrives in step 11; until then it changes nothing.
+  taunted: { name: 'Taunted', adjective: 'taunted', mark: 'T', colour: 0xe04848 },
 }
 
 /** What an attack on a sleeping unit adds to its chance to hit, in percent. */

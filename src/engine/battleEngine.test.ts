@@ -3153,3 +3153,215 @@ describe('BattleEngine hero techniques', () => {
     expect(play(restored)).toEqual(play(straight))
   })
 })
+
+describe('BattleEngine area techniques', () => {
+  const WIDE = { cols: 9, rows: 3 }
+  const MANA = { maxMana: 5, skill: 50, spells: [] }
+  const hero = (abilities: AbilityId[], stats: Partial<CombatantStats> = {}, extra: Partial<UnitSetup> = {}): UnitSetup => ({
+    ...WARRIOR,
+    stats: { ...WARRIOR_STATS, abilities, magic: MANA, ...stats },
+    ...extra,
+  })
+  /** A bow: 4 AP a shot, reaching 5 hexes, piercing 1 point of resistance (a shot's, as the crossbow's would be). */
+  const archer = (abilities: AbilityId[], stats: Partial<CombatantStats> = {}) =>
+    hero(abilities, { attackApCost: 4, attackRange: 5, weapon: 'Bow', armorPierce: 1, ...stats })
+  const goblinAt = (id: string, position: Hex, stats: Partial<CombatantStats> = {}): UnitSetup => ({
+    ...GOBLIN, id, position, stats: { ...GOBLIN_STATS, maxHp: 30, ...stats },
+  })
+  const allyAt = (id: string, position: Hex): UnitSetup => ({ ...CLERIC, id, position })
+  const battle = (units: UnitSetup[], rng: () => number) => new BattleEngine({ board: WIDE, units }, { rng })
+  const aim = (ability: AbilityId, at: Hex, unit = 'warrior'): Action => ({ type: 'ability', unit, ability, at })
+  const centres = (engine: BattleEngine, ability: AbilityId, unit = 'warrior') =>
+    engine.legalActions(unit).flatMap((a) => (a.type === 'ability' && a.ability === ability && 'at' in a ? [hexKey(a.at)] : []))
+  /** An RNG that fails the test if anything draws from it. */
+  const noDraws = () => {
+    throw new Error('drew from the RNG')
+  }
+  /** Draws: 0.9 is a roll of 10 (a hit, not a critical), 0.2 a roll of 80 (a miss); on a die 0 is a 1 and 0.99 its top face. */
+  const HIT = 0.9
+  const MISS = 0.2
+  const NAMED = { ...NAMES, troll: 'Troll', far: 'Far Goblin' }
+  const boardHexes = () => {
+    const hexes: Hex[] = []
+    for (let r = 0; r < WIDE.rows; r++) for (let col = 0; col < WIDE.cols; col++) hexes.push(hex(col - (r - (r & 1)) / 2, r))
+    return hexes
+  }
+
+  describe('Volley', () => {
+    it('may be aimed at any hex within the weapon’s range whose burst of 1 touches a standing foe, in board order', () => {
+      const foes = [hex(4, 1), hex(7, 1)]
+      const engine = battle([archer(['volley']), goblinAt('goblin', foes[0]), goblinAt('far', foes[1])], noDraws)
+      const expected = boardHexes()
+        .filter((h) => hexDistance(h, hex(1, 1)) <= 5 && foes.some((f) => hexDistance(h, f) <= 1))
+        .map(hexKey)
+      expect(centres(engine, 'volley')).toEqual(expected)
+      expect(expected).toContain(hexKey(hex(6, 1)))
+      expect(expected).not.toContain(hexKey(hex(7, 1)))
+      // A longer weapon reaches further.
+      const long = battle([archer(['volley'], { attackRange: 6 }), goblinAt('goblin', foes[0]), goblinAt('far', foes[1])], noDraws)
+      expect(centres(long, 'volley')).toContain(hexKey(hex(7, 1)))
+      expect(() => engine.step(aim('volley', hex(7, 1)))).toThrow('cannot use volley')
+    })
+
+    it('rolls each unit touched in roster order, allies too, with the weapon’s dice through resistance as a shot’s', () => {
+      const engine = battle(
+        [archer(['volley']), goblinAt('goblin', hex(4, 1)), allyAt('cleric', hex(3, 1)), goblinAt('goblin2', hex(5, 0), { resistance: 4 })],
+        // goblin: hit, a 1 on the d8; cleric: missed, no dice; goblin2: hit, an 8.
+        sequence([HIT, 0, MISS, HIT, 0.99]),
+      )
+      const [event] = engine.step(aim('volley', hex(4, 1))) as AbilityEvent[]
+      expect(event).toMatchObject({ type: 'ability', ability: 'volley', shape: 'burst', at: hex(4, 1), distance: 3, apCost: 6, apAfter: 2, skill: 75 })
+      expect(event).not.toHaveProperty('manaCost')
+      expect(event.outcomes.map((o) => [o.unit, o.attackRoll, o.hit, o.half, o.damage, o.resisted])).toEqual([
+        // 1 + 2 = 3; the goblin's 1 point pierced.
+        ['goblin', 10, true, false, 3, 0],
+        ['cleric', 80, false, false, 0, 0],
+        // 8 + 2 = 10, less 4 − 1 pierced.
+        ['goblin2', 10, true, false, 7, 3],
+      ])
+      expect(unitOf(engine, 'warrior')).toMatchObject({ ap: 2, recharging: { volley: 2 } })
+      expect(formatEvent(event, NAMED)).toBe('Warrior volleys: HITS Goblin for 3 dmg; MISSES Cleric; HITS Goblin Archer for 7 dmg (armour stops 3).')
+    })
+
+    it('does at least 1 through any armour, and pierces with a shot’s piercing only', () => {
+      const engine = battle([archer(['volley'], { armorPierce: undefined }), goblinAt('goblin', hex(4, 1), { resistance: 20 })], sequence([HIT, 0]))
+      const [event] = engine.step(aim('volley', hex(4, 1))) as AbilityEvent[]
+      expect(event.outcomes[0]).toMatchObject({ hit: true, damage: 1, resisted: 2 })
+    })
+
+    it('asks for a ranged weapon', () => {
+      const engine = battle([hero(['volley']), goblinAt('goblin', hex(2, 1))], noDraws)
+      expect(centres(engine, 'volley')).toEqual([])
+    })
+  })
+
+  describe('Consecrate', () => {
+    it('is aimed only at the user’s hex, and only while a foe stands beside it', () => {
+      const engine = battle([hero(['consecrate']), goblinAt('goblin', hex(2, 1)), goblinAt('goblin2', hex(4, 1))], noDraws)
+      expect(centres(engine, 'consecrate')).toEqual([hexKey(hex(1, 1))])
+      expect(() => engine.step(aim('consecrate', hex(2, 1)))).toThrow('cannot use consecrate')
+      const alone = battle([hero(['consecrate']), goblinAt('goblin', hex(3, 1)), allyAt('cleric', hex(0, 1))], noDraws)
+      expect(centres(alone, 'consecrate')).toEqual([])
+      expect(() => alone.step(aim('consecrate', hex(1, 1)))).toThrow('cannot use consecrate')
+    })
+
+    it('strikes only the foes beside the user: 2d6 through no resistance, half on a miss, double dice as bane; 5 mana and 5 AP', () => {
+      const engine = battle(
+        [
+          hero(['consecrate']),
+          goblinAt('goblin', hex(2, 1), { resistance: 5 }),
+          allyAt('cleric', hex(0, 1)),
+          { id: 'troll', side: 'enemy', stats: TROLL_STATS, position: hex(2, 0) },
+          goblinAt('goblin2', hex(3, 1)),
+        ],
+        // goblin: hit, 4 and 4; troll: missed, then four dice (bane) 1, 1, 1, 6, halved.
+        sequence([HIT, 0.5, 0.5, MISS, 0, 0, 0, 0.99]),
+      )
+      const [event] = engine.step(aim('consecrate', hex(1, 1))) as AbilityEvent[]
+      expect(event).toMatchObject({ ability: 'consecrate', at: hex(1, 1), distance: 0, apCost: 5, apAfter: 3, manaCost: 5, manaAfter: 0, facing: EAST })
+      expect(event.outcomes.map((o) => [o.unit, o.hit, o.half, o.damage, o.hpAfter])).toEqual([
+        ['goblin', true, false, 8, 22],
+        ['troll', false, true, 4, 12],
+      ])
+      expect(event.outcomes[0]).not.toHaveProperty('resisted')
+      expect(unitOf(engine, 'warrior')).toMatchObject({ ap: 3, mana: 0, recharging: { consecrate: 2 } })
+      expect(unitOf(engine, 'cleric').hp).toBe(WARRIOR_STATS.maxHp)
+      expect(formatEvent(event, NAMED)).toBe('Warrior consecrates the ground: HITS Goblin for 8 dmg; MISSES Troll, 4 dmg (half).')
+    })
+
+    it('rolls 4d6 against the regenerating on a hit and 2d6 against the rest', () => {
+      const engine = battle(
+        [hero(['consecrate']), { id: 'troll', side: 'enemy', stats: { ...TROLL_STATS, maxHp: 40 }, position: hex(2, 0) }, goblinAt('goblin', hex(2, 1))],
+        sequence([HIT, 0.99, 0.99, 0.99, 0.99, HIT, 0.99, 0.99]),
+      )
+      const [event] = engine.step(aim('consecrate', hex(1, 1))) as AbilityEvent[]
+      // Roster order: the troll first (24 on four dice), then the goblin (12 on two).
+      expect(event.outcomes.map((o) => [o.unit, o.damage])).toEqual([['troll', 24], ['goblin', 12]])
+    })
+
+    it('asks for its mana', () => {
+      const engine = battle([hero(['consecrate'], { magic: { ...MANA, maxMana: 4 } }), goblinAt('goblin', hex(2, 1))], noDraws)
+      expect(centres(engine, 'consecrate')).toEqual([])
+    })
+  })
+
+  describe('Taunt', () => {
+    it('lays Taunted for a turn on every foe within 2 hexes and no one else, drawing nothing, for 3 AP', () => {
+      const engine = battle(
+        [hero(['taunt']), goblinAt('goblin', hex(2, 1)), allyAt('cleric', hex(0, 1)), goblinAt('goblin2', hex(3, 1)), goblinAt('far', hex(4, 1))],
+        noDraws,
+      )
+      expect(centres(engine, 'taunt')).toEqual([hexKey(hex(1, 1))])
+      const [event] = engine.step(aim('taunt', hex(1, 1))) as AbilityEvent[]
+      expect(event).toMatchObject({ ability: 'taunt', at: hex(1, 1), apCost: 3, apAfter: 5 })
+      expect(event.outcomes).toEqual(
+        ['goblin', 'goblin2'].map((unit) => ({
+          unit, attackRoll: null, chance: null, defenderAc: null, hit: true, critical: false, fumble: false, image: false,
+          damage: 0, warded: 0, half: false, healed: 0, hpBefore: 30, hpAfter: 30, status: { id: 'taunted', turnsLeft: 1 },
+        })),
+      )
+      expect(unitOf(engine, 'far').statuses).toEqual([])
+      expect(unitOf(engine, 'cleric').statuses).toEqual([])
+      expect(unitOf(engine, 'warrior')).toMatchObject({ ap: 5, recharging: { taunt: 2 }, statuses: [] })
+      expect(formatEvent(event, NAMED)).toBe('Warrior taunts: Goblin is taunted; Goblin Archer is taunted.')
+    })
+
+    it('is not legal with no foe within 2 hexes', () => {
+      const engine = battle([hero(['taunt']), goblinAt('goblin', hex(4, 1)), allyAt('cleric', hex(0, 1))], noDraws)
+      expect(centres(engine, 'taunt')).toEqual([])
+      expect(() => engine.step(aim('taunt', hex(1, 1)))).toThrow('cannot use taunt')
+    })
+
+    it('lays Taunted on a mirrored foe without spending an image', () => {
+      const plain = new BattleEngine({ board: WIDE, units: [hero(['taunt']), goblinAt('goblin', hex(2, 1))] }, { seed: 1 })
+      const saved = JSON.parse(JSON.stringify(plain.snapshot()))
+      const goblin = saved.units.find((u: { id: string }) => u.id === 'goblin')
+      goblin.statuses = [{ id: 'mirrored', turnsLeft: 2, images: 2 }]
+      const engine = BattleEngine.restore(saved)
+      const [event] = engine.step(aim('taunt', hex(1, 1))) as AbilityEvent[]
+      expect(event.outcomes[0]).toMatchObject({ image: false, status: { id: 'taunted', turnsLeft: 1 } })
+      expect(unitOf(engine, 'goblin').statuses).toContainEqual({ id: 'mirrored', turnsLeft: 2, images: 2 })
+    })
+  })
+
+  it('replays Volley, Consecrate and Taunt from the seed, and plays on identically from a snapshot', () => {
+    const field = {
+      board: WIDE,
+      units: [
+        archer(['volley']),
+        { ...hero(['consecrate', 'taunt'], { actionPoints: 12 }), id: 'paladin', position: hex(4, 0) },
+        goblinAt('goblin', hex(4, 1)),
+        goblinAt('goblin2', hex(5, 0)),
+        { id: 'troll', side: 'enemy' as const, stats: TROLL_STATS, position: hex(5, 1) },
+      ],
+    }
+    const opening: Action[] = [aim('taunt', hex(4, 0), 'paladin'), aim('consecrate', hex(4, 0), 'paladin'), aim('volley', hex(5, 1))]
+    const run = () => {
+      const engine = new BattleEngine(field, { seed: 11 })
+      for (const action of opening) engine.step(action)
+      return engine
+    }
+    const first = run()
+    expect(run().getLog()).toEqual(first.getLog())
+    const restored = BattleEngine.restore(JSON.parse(JSON.stringify(first.snapshot())))
+    expect(restored.legalActions()).toEqual(first.legalActions())
+    const play = (engine: BattleEngine) => {
+      for (let state = engine.getState(); state.phase !== 'over'; state = engine.getState()) {
+        engine.step(POLICIES.aggressive({ state, legal: engine.legalActions(), rng: () => 0 }))
+      }
+      return engine.getLog()
+    }
+    expect(play(restored)).toEqual(play(first))
+  })
+
+  it('leaves the aggressive policy choosing a legal action for a unit that holds the area techniques', () => {
+    const engine = new BattleEngine(
+      { board: WIDE, units: [archer(['volley', 'taunt', 'consecrate']), goblinAt('goblin', hex(2, 1)), goblinAt('goblin2', hex(4, 1))] },
+      { seed: 3 },
+    )
+    const legal = engine.legalActions()
+    expect(legal.some((a) => a.type === 'ability' && a.ability === 'volley')).toBe(true)
+    const chosen = POLICIES.aggressive({ state: engine.getState(), legal, rng: () => 0 })
+    expect(legal).toContainEqual(chosen)
+  })
+})

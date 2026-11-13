@@ -354,6 +354,12 @@ export interface CastOutcome {
   warded: number
   /** The damage is half the dice for a miss (an area ability's `halfOnMiss`); false on every cast outcome. */
   half: boolean
+  /**
+   * For an area that goes through resistance (`throughResistance`, Volley):
+   * the points of the rolled damage the unit's resistance stopped, before its
+   * ward; absent for every other cast and area.
+   */
+  resisted?: number
   /** Hit points restored, no more than the unit had lost. */
   healed: number
   hpBefore: number
@@ -670,6 +676,26 @@ export function areaTouches<U extends Placed>(
   return units.filter((u) => u.hp > 0 && covered.has(hexKey(u.position)) && (hostile || u.side === caster.side))
 }
 
+/** The area of an ability as a unit of `attackRange` aims it: its shape, its range (the weapon's for `weaponRange`) and radius. */
+export function abilityArea(ability: AbilityId, attackRange: number): AreaSpec | null {
+  const area = ABILITIES[ability].area
+  if (!area) return null
+  return { shape: area.shape, range: area.weaponRange ? attackRange : area.range, radius: area.radius }
+}
+
+/**
+ * The standing units an area ability of `user` (whose weapon reaches
+ * `attackRange`) aimed at `at` touches, in roster order: everyone in its
+ * shape, both sides, or only the user's foes for a `foesOnly` area. The
+ * engine resolves the ability over these, and the policies judge it by them.
+ */
+export function abilityTouches<U extends Placed>(units: readonly U[], user: Placed, ability: AbilityId, at: Hex, attackRange: number): U[] {
+  const spec = abilityArea(ability, attackRange)
+  if (!spec) return []
+  const touched = areaTouches(units, user, spec, at, true)
+  return ABILITIES[ability].area!.foesOnly ? touched.filter((u) => u.side !== user.side) : touched
+}
+
 /**
  * The units a cast of `spell` by `caster` aimed at `aim` would touch, in
  * roster order, whether or not it is legal: the standing target of a spell
@@ -883,8 +909,9 @@ export class BattleEngine {
       }
       for (const ability of actor.stats.abilities ?? []) {
         if (!this.canUse(actor, ability)) continue
-        if (ABILITIES[ability].area) {
-          for (const at of this.board.hexes) {
+        const area = ABILITIES[ability].area
+        if (area) {
+          for (const at of area.centredOnSelf ? [actor.position] : this.board.hexes) {
             if (this.canAim(actor, ability, at)) actions.push({ type: 'ability', unit: actor.id, ability, at })
           }
           continue
@@ -1215,15 +1242,19 @@ export class BattleEngine {
 
   /**
    * Whether `actor` can use the area `ability` aimed at `at`: it can use it,
-   * `at` is on the board, within range for a burst or 1 to range away for a
-   * cone or line, and the area touches a standing foe.
+   * `at` is on the board, its own hex for an area centred on it, else within
+   * range (the weapon's for `weaponRange`) for a burst or 1 to range away for
+   * a cone or line, and the area touches a standing foe (`abilityTouches`).
    */
   private canAim(actor: UnitRecord, ability: AbilityId, at: Hex): boolean {
     const area = ABILITIES[ability]?.area
     if (!area || !this.canUse(actor, ability) || !this.board.contains(at)) return false
+    if (area.centredOnSelf && !hexEquals(at, actor.position)) return false
+    const { attackRange } = effectiveStats(actor)
+    const { range } = abilityArea(ability, attackRange)!
     const distance = hexDistance(at, actor.position)
-    if (distance > area.range || (area.shape !== 'burst' && distance < 1)) return false
-    return areaTouches(this.units, actor, area, at, true).some((u) => u.side !== actor.side)
+    if (distance > range || (area.shape !== 'burst' && distance < 1)) return false
+    return abilityTouches(this.units, actor, ability, at, attackRange).some((u) => u.side !== actor.side)
   }
 
   /** Whether `actor` knows `spell` and has the action points and mana for it. */
@@ -1650,24 +1681,40 @@ export class BattleEngine {
 
   /**
    * Pays for a legal area ability and resolves it over every unit it
-   * touches, both sides, in roster order: each rolled as a hostile spell
-   * rolls, with the unit's own chance to hit, resistance ignored, its
-   * element cut by each ward, and half the dice on a miss where the area has
+   * touches (`abilityTouches`: both sides, or only foes for `foesOnly`), in
+   * roster order. An `auto` area rolls nothing and lays its status on each.
+   * Any other rolls each as a hostile spell rolls, with the unit's own chance
+   * to hit (a critical doubling the dice): its dice, or the weapon's for
+   * `weaponDamage`, their count doubled against the bane-struck for `bane`;
+   * resistance ignored, or gone through as a shot's for `throughResistance`;
+   * its element cut by each ward; half the dice on a miss where the area has
    * `halfOnMiss`. Then the wakings, images spent and falls, as a cast's.
    */
   private areaAttack(actor: UnitRecord, abilityId: AbilityId, at: Hex): BattleEvent[] {
     const ability = ABILITIES[abilityId]
     const area = ability.area!
-    const touched = areaTouches(this.units, actor, area, at, true)
+    const attacker = effectiveStats(actor)
+    const touched = abilityTouches(this.units, actor, abilityId, at, attacker.attackRange)
     const { apCost, manaCost } = this.payFor(actor, abilityId)
     if (!hexEquals(at, actor.position)) actor.facing = hexDirectionTowards(actor.position, at)!
-    const attacker = effectiveStats(actor)
     const bonus = actor.stats.abilityDamageBonus ?? 0
-    const dice = area.damage && { ...area.damage, bonus: area.damage.bonus + bonus }
+    // A weapon's dice carry its own bonus; the monsters' level step is theirs alone.
+    const dice = area.weaponDamage ? attacker.damage : area.damage && { ...area.damage, bonus: area.damage.bonus + bonus }
 
-    const outcomes = touched.map((unit) =>
-      this.strikeUnit(unit, attacker, { dice, element: area.element, status: area.status, halfOnMiss: area.halfOnMiss }),
-    )
+    const outcomes: StruckOutcome[] = touched.map((unit) => {
+      if (area.auto) {
+        const hpBefore = unit.hp
+        const status = area.status ? this.layStatus(unit, area.status) : null
+        return {
+          unit: unit.id, attackRoll: null, chance: null, defenderAc: null, hit: true, critical: false, fumble: false, image: false,
+          damage: 0, warded: 0, half: false, healed: 0, hpBefore, hpAfter: unit.hp, status,
+        }
+      }
+      const doubled = dice && area.bane && baneApplies(effectiveStats(unit)) ? { ...dice, count: dice.count * 2 } : dice
+      return this.strikeUnit(unit, attacker, {
+        dice: doubled, element: area.element, status: area.status, halfOnMiss: area.halfOnMiss, throughResistance: area.throughResistance,
+      })
+    })
     const event = this.record<AbilityEvent>({
       type: 'ability',
       round: this.round,
@@ -1675,7 +1722,9 @@ export class BattleEngine {
       ability: abilityId,
       at,
       shape: area.shape,
-      hexes: areaOf(area.shape, actor.position, at, area.range, area.radius ?? 0).filter((h) => this.board.contains(h)),
+      hexes: areaOf(area.shape, actor.position, at, abilityArea(abilityId, attacker.attackRange)!.range, area.radius ?? 0).filter((h) =>
+        this.board.contains(h),
+      ),
       distance: hexDistance(actor.position, at),
       apCost,
       apAfter: actor.ap,
@@ -1692,13 +1741,22 @@ export class BattleEngine {
    * `attacker`'s chance against its armour class; on a hit, a mirror image
    * takes it if there is one, drawing nothing more, and otherwise the dice
    * (doubled on a critical) less its ward; on a miss with `halfOnMiss`, half
-   * the dice, rounded down, less its ward. A blow that wakes a sleeper wakes
-   * it before the status is laid, on a hit that left it standing.
+   * the dice, rounded down, less its ward. With `throughResistance` the
+   * damage first goes through its resistance as a shot's does, before the
+   * ward. A blow that wakes a sleeper wakes it before the status is laid, on
+   * a hit that left it standing.
    */
   private strikeUnit(
     unit: UnitRecord,
     attacker: CombatantStats,
-    blow: { dice: DamageRoll | undefined; element: Element | undefined; status: StatusLaid | undefined; halfOnMiss: boolean; power?: number },
+    blow: {
+      dice: DamageRoll | undefined
+      element: Element | undefined
+      status: StatusLaid | undefined
+      halfOnMiss: boolean
+      power?: number
+      throughResistance?: true
+    },
   ): StruckOutcome {
     const hpBefore = unit.hp
     const defenderAc = effectiveStats(unit).ac
@@ -1713,14 +1771,17 @@ export class BattleEngine {
         : half
           ? Math.floor(Math.max(0, rollDamage(blow.dice!, this.rng)) / 2) + power
           : 0
-    const damage = warded(rolled, blow.element, effectiveStats(unit))
+    const through = blow.throughResistance ? damageThrough(rolled, effectiveResistance(attacker, effectiveStats(unit).resistance ?? 0)) : rolled
+    const damage = warded(through, blow.element, effectiveStats(unit))
     unit.hp = Math.max(0, unit.hp - damage)
     // A blow that wakes a sleeper wakes it before anything it lays; Sleep itself deals none.
     const woke = damage > 0 && unit.hp > 0 && hasStatus(unit, 'asleep')
     if (woke) unit.statuses = unit.statuses.filter((s) => s.id !== 'asleep')
     const laid = roll.hit && !image && blow.status && unit.hp > 0 ? this.layStatus(unit, blow.status) : null
     return {
-      unit: unit.id, ...roll, defenderAc, image, damage, warded: rolled - damage, half, healed: 0, hpBefore, hpAfter: unit.hp, status: laid, woke,
+      unit: unit.id, ...roll, defenderAc, image, damage, warded: through - damage, half,
+      ...(blow.throughResistance ? { resisted: rolled - through } : {}),
+      healed: 0, hpBefore, hpAfter: unit.hp, status: laid, woke,
     }
   }
 
@@ -1864,7 +1925,11 @@ function hostileOutcome(outcome: CastOutcome, name: string): string {
     return outcome.half ? `${missed}, ${outcome.damage} dmg${wardedNote(outcome.warded)} (half)` : missed
   }
   if (outcome.image) return `strikes an image of ${name}`
-  const notes = [...(outcome.critical ? ['CRITICAL'] : []), ...(outcome.warded > 0 ? [`warded ${outcome.warded}`] : [])]
+  const notes = [
+    ...(outcome.critical ? ['CRITICAL'] : []),
+    ...((outcome.resisted ?? 0) > 0 ? [`armour stops ${outcome.resisted}`] : []),
+    ...(outcome.warded > 0 ? [`warded ${outcome.warded}`] : []),
+  ]
   const struck = outcome.damage > 0 || outcome.warded > 0
   const parts = struck ? [`HITS ${name} for ${outcome.damage} dmg${notes.length > 0 ? ` (${notes.join(', ')})` : ''}`] : []
   if (outcome.status) parts.push(struck ? laidPhrase(outcome.status.id).replace(/^is /, '') : `${name} ${laidPhrase(outcome.status.id)}`)

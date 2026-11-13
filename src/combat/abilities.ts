@@ -39,13 +39,24 @@ export interface AreaAttack {
   status?: StatusLaid
   /** A miss still deals half the dice, rounded down; no status is laid on a miss. */
   halfOnMiss: boolean
-  /** Step 10's: the weapon's dice, the weapon's range, resistance, foes only, no roll, bane, centred on the user. */
+  /** The unit's weapon dice and damage bonus in place of `damage` (Volley); not the monsters' `abilityDamageBonus`. */
   weaponDamage?: true
+  /** Its range is the unit's `attackRange`; `range` is then ignored (set to 0). */
   weaponRange?: true
+  /**
+   * Each hit's damage goes through the target's resistance as a shot's does
+   * (`damageThrough`, pierced by the unit's `armorPierce`, which a ranged
+   * weapon has only as its own `rangedPierce`), at least 1 when anything was
+   * rolled. No on-hit runes are added: an area is not a weapon blow.
+   */
   throughResistance?: true
+  /** Touches only the user's foes, never its own side or itself (Taunt, Consecrate). */
   foesOnly?: true
+  /** No roll and no draw: lays `status` on every unit touched (Taunt). */
   auto?: true
+  /** Doubles the dice's count, not the bonus, against a unit `baneApplies` to (Consecrate). */
   bane?: true
+  /** Aimed only at the user's own hex: a burst of `range` 0 (Taunt, Consecrate). */
   centredOnSelf?: true
 }
 
@@ -91,18 +102,21 @@ export const ABILITY_IDS = [
   'fire_spit',
   'power_attack',
   'cleave',
+  'taunt',
   'pin',
   'flame_strike',
   'frost_strike',
   'thunder_strike',
   'aimed_shot',
   'hunters_mark',
+  'volley',
   'pinning_shot',
   'sprint',
   'dirty_trick',
   'venom_strike',
   'hamstring',
   'smite',
+  'consecrate',
 ] as const
 
 export type AbilityId = (typeof ABILITY_IDS)[number]
@@ -183,6 +197,14 @@ export const ABILITIES: Record<AbilityId, Ability> = {
       { name: 'Cleave', verb: 'cleaves', weapon: true, toHit: -5, spreads: true },
     ],
   },
+  taunt: {
+    name: 'Taunt',
+    verb: 'taunts',
+    description: 'Lays Taunted on every foe within 2 hexes for a turn: they strike others at −25.',
+    apCost: 3,
+    recharge: 2,
+    area: { shape: 'burst', range: 0, radius: 2, status: { id: 'taunted', turns: 1 }, halfOnMiss: false, foesOnly: true, auto: true, centredOnSelf: true },
+  },
   pin: {
     name: 'Pin',
     verb: 'pins',
@@ -245,6 +267,17 @@ export const ABILITIES: Record<AbilityId, Ability> = {
     recharge: 3,
     foeStatus: { status: { id: 'marked', turns: 2 }, range: 'weapon' },
   },
+  volley: {
+    name: 'Volley',
+    verb: 'volleys',
+    description: 'A rain of shots on a hex within weapon range: everyone within 1 hex of it, allies too, takes a shot, through armour.',
+    apCost: 0,
+    weaponAp: 2,
+    recharge: 2,
+    needs: 'ranged',
+    // `range` 0: `weaponRange` makes it the weapon's.
+    area: { shape: 'burst', range: 0, radius: 1, halfOnMiss: false, weaponDamage: true, weaponRange: true, throughResistance: true },
+  },
   pinning_shot: {
     name: 'Pinning Shot',
     verb: 'pins',
@@ -303,5 +336,23 @@ export const ABILITIES: Record<AbilityId, Ability> = {
     recharge: 0,
     needs: 'melee',
     strikes: [{ name: 'Smite', verb: 'smites', weapon: true, onHit: [{ damage: 4 }, { damage: 6, bane: true }] }],
+  },
+  consecrate: {
+    name: 'Consecrate',
+    verb: 'consecrates the ground',
+    description: 'Every foe beside the user takes 2d6, half on a miss, double the dice against the regenerating and the blightborn.',
+    apCost: 5,
+    manaCost: 5,
+    recharge: 2,
+    area: {
+      shape: 'burst',
+      range: 0,
+      radius: 1,
+      damage: { count: 2, sides: 6, bonus: 0 },
+      halfOnMiss: true,
+      foesOnly: true,
+      bane: true,
+      centredOnSelf: true,
+    },
   },
 }
