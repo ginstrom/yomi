@@ -210,12 +210,41 @@ After the measurements, re-record `GUARD_RECORDS` and `GUARD_EVENTS_SHA256` in `
 
 ## 6. Completion criteria
 
-- [ ] Three campaigns and all cells measured, one at a time; the index's Measurements column **08 stage 1** filled; compared with step 01 and the moves explained.
-- [ ] Collapse (any campaign under 150) reported, or "none".
-- [ ] Guard fixture re-recorded last (or confirmed current) and green.
-- [ ] `CLAUDE.md`, the manual's text and the feature record's Verification current for stage 1.
-- [ ] `npm test`, `npm run test:browser`, `npm run build` pass; play check recorded.
-- [ ] One commit; the index's step 08 row set to `done (<commit>)`.
+- [x] Three campaigns and all cells measured, one at a time; the index's Measurements column **08 stage 1** filled; compared with step 01 and the moves explained.
+- [x] Collapse (any campaign under 150) reported, or "none".
+- [x] Guard fixture re-recorded last (or confirmed current) and green.
+- [x] `CLAUDE.md`, the manual's text and the feature record's Verification current for stage 1.
+- [x] `npm test`, `npm run test:browser`, `npm run build` pass; play check recorded.
+- [x] One commit; the index's step 08 row set to `done (<commit>)`.
 
 ## 7. Execution record
+
+### Done (2026-11-13)
+
+**Measured** on the committed code (clean tree, `npm test` 86 files / 1609 tests green first), seed 1, 500 each, one run at a time, `logs/08-*.jsonl` and `.txt`:
+
+| Figure | 01 baseline | 08 stage 1 |
+| --- | --- | --- |
+| one party | 230 | 425 (85.0%), 333 days, 21.7 battles |
+| company | 239 | 425, 335 days, 21.8 battles |
+| `--ready-level 10` | 389 | 470, 573 days, 48.0 battles, 2 out of days |
+| deaths a campaign (one party) | 1.8 | 1.0 |
+| days a campaign (one party) | 270 | 333 (+23%) |
+| GR3 / BC3 / BC4 / BC5 | 500 / 429 / 473 / 469 | 500 / 473 / 485 / 482 |
+| SN5 / SP5 / TL5 | 441 / 445 / 0 | 498 / 492 / 0 |
+| SG7 / SG10 | 0 / 2 | 4 / 199 |
+| F1 / F2 / F3 | 500 / 499 / 441 | 500 / 500 / 493 |
+| run time | 270 / 258 / 517 s | 329 / 352 / 663 s (machine loaded; the in-browser tests did not run during the timed runs) |
+
+**Collapse rule:** none; no campaign under 150. The opposite: all three campaign figures are far above their bands (215-250, 220-260, 370-420), and of the cells BC3 (473, band 400-470), SN5 (498) and SP5 (492) (band 410-480) are above theirs, BC4 (485) and BC5 (482) inside, SG10 (199) far above step 01's 2 and SG7 (4) within +4 of 0. Reported, not tuned (decision 6).
+
+**Explanation (supported by the summaries, not isolated by ablation):** the party wins every battle at threats 1 to 4 (99.8% to 100%) and 97.6% at threat 5 (step 01: about 9 in 10 at threat 5); heroes dead a campaign fell from 1.8 to 1.0; battle rounds fell in every cell (BC3 10.3 to 8.2, SN5 7.2 to 5.8, SP5 7.8 to 5.5, F3 10.5 to 8.2), so the fighters gain from the new nodes (Weapon Training +10%, Heavy Hand +2) more than the casters lose by losing picks; the Hedge-Mage no longer heals (`avgEnemyHealing` 0 in the bandit and nest cells), which helps BC3 to BC5; the Source's shaman still heals (17.6 and 26.7 a battle in SG7 and SG10). The one-party run is 23% longer in days because more campaigns reach and win the Source. Levels at the end: lowest 6.9, highest 8.2 (ready level 7). No run printed a warning or error.
+
+**Guard:** `npx vitest run scripts/simulate.test.ts` passes unchanged (107 tests); steps 03 and 04 had re-recorded it and nothing since moved play, so no re-record.
+
+**Docs:** CLAUDE.md read against the code and searched for every name in section 4.3: no stale name remained (steps 03 to 07 had updated it); added the dated stage-1 line in the rules of scaling. Manual: section 6 (mana for every hero, spells as nodes, Web and Curse), 7 (a pick every even level, tiers, depth, calling, one capstone, no respec), 11 (the spell table gained Frostbite, Meteor, Web, Curse, Lay on Hands, Mass Haste, Ward; the Perks table replaced by a node table per tree, generated from `PERKS`) and the Warded status; sections 2 and 4 were already current; every image it references exists. Feature record: Verification filled.
+
+**Gates:** `npm test` 86 files, 1609 tests pass; `npm run test:browser` 10 files, 115 tests pass (274 s); `npm run build` succeeds (chunk-size warning only).
+
+**Play check** (a scripted browser run, a scratch test since removed; creation across two trees is held by `e2e/party.test.ts`): ready-made party on the world map; debug `xp 100 @party_1` made all three level 2 with a pick waiting; the Skills tab listed Weapon Training, Heavy Hand and Toughness; Skill Trees showed Armour Breaker and Shield Wall open; taking Armour Breaker left 0 picks and four taken nodes; the Character tab title read "Level 2 · Swordmaster". Nothing looked wrong. I did not click through the dev server by hand.
 

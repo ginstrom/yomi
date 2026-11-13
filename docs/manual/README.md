@@ -370,7 +370,7 @@ Wounds carry over from battle to battle. Heal before you go looking for the next
 
 ## 6. Magic
 
-A hero who knows a spell has **mana**: twice their Intelligence, plus half their Intelligence for each level after the first, plus whatever their gear and perks add. Every battle starts with full mana. Mana spent in battle does not come back until the battle ends. Whatever a winner has left is carried onto the world map, where it can be spent on heals. A day of camping or a new level refills it.
+Every hero has **mana**: twice their Intelligence, plus half their Intelligence for each level after the first, plus 2 for each node they hold in the Mage and Cleric trees, plus whatever their gear and nodes add. A hero who knows no spell has mana but nothing to spend it on. Spells are nodes of the skill trees (chapter 7), bought with a pick like any other and gated by the **Magic** skill, and they need no other skill: a warrior who trains Magic can learn them too. Every battle starts with full mana. Mana spent in battle does not come back until the battle ends. Whatever a winner has left is carried onto the world map, where it can be spent on heals. A day of camping or a new level refills it.
 
 ![The spell list](images/battle-spell-menu.png)
 
@@ -390,7 +390,7 @@ Some spells and effects carry an **element**. Flame Arrow and Fireball are fire,
 
 Heroes can have wards too, from **runes** in their armour and shields (see "Runes" in chapter 9): a breastplate with a Rime rune gives "Frost ward 2", and a Venom rune makes a Giant Spider's poison tick 2 less. Wards from every item worn add up.
 
-Monsters have spells of their own that heroes cannot learn, among them Web and Curse.
+Web and Curse, once only monsters cast them, are nodes in the Cryomancer and Saint paths, and heroes can learn them too. Monsters have spells of their own that heroes cannot learn, among them Lightning Bolt, Drain Life and Dark Shield.
 
 ### Lasting effects
 
@@ -409,8 +409,9 @@ The letters beside a unit's health bar show its current effects. An effect lasts
 | Hasted | +3 AP |
 | Mirrored | Images take the next hits, and a hit on an image deals no damage |
 | Seared | No regeneration for a turn |
-| Cursed | −15 to hit and −5 armour class (laid by monsters) |
-| Webbed | −4 AP (laid by a Giant Spider's web) |
+| Cursed | −15 to hit and −5 armour class |
+| Webbed | −4 AP |
+| Warded | +4 ward against every element |
 
 Damage over time strikes at the start of the affected unit's side's turn. Section 11 lists every spell.
 
@@ -428,8 +429,7 @@ Each new level:
 
 - raises maximum hit points (by 2 plus half the hero's Endurance) and **heals the hero fully**, refilling their mana as well
 - gives **skill points**: 2 plus a third of the hero's Intelligence
-- gives a **perk pick** every 3rd level (3, 6, 9 and so on)
-- gives a **spell pick**, for a hero who has Spellcasting
+- gives a **pick** at every even level (2, 4, 6 and so on), which buys one node of the skill trees, a spell included; the panel's Skills tab says "Next pick at level N"
 
 A **+** on a portrait means that hero has something to spend. Spend it from the character panel on the world map, since nothing can be spent in battle.
 
@@ -437,13 +437,14 @@ A **+** on a portrait means that hero has something to spend. Spend it from the 
 
 ### Building a hero
 
-There are no classes. A hero is defined by their attributes, the skill they tagged and the perks they chose. Each attribute's branch of the perk tree has:
+There are no classes. A hero is defined by their attributes, the skill they tagged and the nodes they chose from four **skill trees**, Warrior, Scout, Mage and Cleric, each of three **paths**. Any hero may take nodes from any path of any tree, and mix them.
 
-- a **trunk** perk that raises the attribute by 1, for two ranks, from level 3 onward
-- perks that open at level 1
-- **masteries** at level 6 that need 8 in the attribute
+- Every node has **one rank**: a pick buys it once, and nothing is spent again on it.
+- A node sits at a **tier**, and a tier asks a level and a **depth**, the nodes already held in the same path: tier 1 asks level 1 and none, tier 2 level 2 and 1, tier 3 level 6 and 3, and the **capstone** level 12 and 5. A node may also ask an attribute, a skill (or one of two skills, as Bless asks Melee 30% or Magic 40%) or a node of its own path before it.
+- A hero's **calling** is the path they hold the most nodes in, shown under their name as "Level 9 · Heavy Knight" (two paths level for deepest are both named). Only the calling's capstone may be taken, and a hero may hold only one capstone: taking it closes every other for good.
+- A node asks only to be taken; it is never lost afterwards. There is no respec.
 
-A hero born with an attribute of 7 can reach that attribute's masteries by taking its trunk perk.
+A hero born with an attribute of 7 or 8 reaches the nodes that ask it from the start, and the trees' attribute nodes (Gain Strength, Toughness and others) raise one further.
 
 ---
 
@@ -655,51 +656,110 @@ It cannot raise the dead.
 | Magic Arrow | Offence | 3 | 4 | 1d10 to a foe within 5 hexes |
 | Flame Arrow | Offence | 5 | 4 | 2d8 to a foe within 5 hexes |
 | Sleep | Offence | 5 | 4 | A foe within 5 hexes sleeps for 2 turns, helpless until hurt |
+| Frostbite | Offence | 3 | 4 | 1d6+1 frost to a foe within 5 hexes, chilled for 1 turn |
 | Frost Blast | Offence | 6 | 5 | 1d8 and −3 AP for a turn to everyone within 1 hex of a point within 4 |
 | Fireball | Offence | 10 | 6 | 3d6 to everyone within 1 hex of a point within 6 |
 | Acid Arrow | Offence | 7 | 4 | 1d8 to a foe within 5 hexes, then −5 AC and 1d4 a turn for 3 turns |
 | Death Cloud | Offence | 10 | 6 | Poisons everyone within 1 hex of a point within 5: 1d6 a turn for 3 turns |
+| Meteor | Offence | 16 | 7 | 4d8 to everyone within 2 hexes of a point within 6, and no regeneration next turn |
+| Web | Offence | 5 | 4 | −4 AP for 2 turns to everyone within 1 hex of a point within 4 |
+| Curse | Offence | 5 | 4 | −15 to hit and −5 AC to a foe within 5 hexes, for 3 turns |
 | Heal | Healing | 3 | 4 | Restores 1d8+2 to an ally within 4 hexes |
 | Greater Heal | Healing | 6 | 4 | Restores 2d8+4 to an ally within 4 hexes |
 | Heal All | Healing | 8 | 5 | Restores 1d8 to each ally within 2 hexes of the caster |
 | Greater Heal All | Healing | 14 | 6 | Restores 2d8+2 to each ally within 2 hexes of the caster |
+| Lay on Hands | Healing | 4 | 3 | Restores 2d6+2 to an ally within 1 hex |
 | Shield | Support | 3 | 2 | +15 AC to the caster for 3 turns |
 | Protect | Support | 3 | 3 | +10 AC to an ally within 4 hexes for 3 turns |
 | Bless | Support | 4 | 4 | +10 to hit for each ally within 2 hexes of the caster, for 3 turns |
 | Mirror Image | Support | 6 | 3 | 3 images of the caster take the next 3 hits, for 3 turns |
 | Haste | Support | 7 | 4 | +3 AP to an ally within 4 hexes for 2 turns |
+| Mass Haste | Support | 12 | 5 | +3 AP for 2 turns to each ally within 2 hexes of the caster |
+| Ward | Support | 4 | 3 | +4 ward against every element to an ally within 4 hexes for 3 turns |
 | Bane | Support | 5 | 4 | −15 to hit for everyone within 1 hex of a point within 5, for 3 turns |
 
-Spells further out in a school need the spell before them, and their tier asks more: level 1 and 40% Magic, then level 3 and 55%, then level 5 and 70%.
+Each spell is a node of a path in the Mage or Cleric tree (or Bless, in the Paladin's path); the tables below say where, and what it asks. Some nodes lower a spell's cost or lengthen its reach (Quickened Casting, Swift Hands, Serenity), so the costs above are the base.
 
-### Perks
+### Skill tree nodes
 
-| Branch | Perk | Effect |
-| --- | --- | --- |
-| Strength | Heavy Hand | +1 melee damage |
-| | Weapon Training | +5% Melee Weapons |
-| | Armour Breaker | Melee blows pierce 1 point of resistance |
-| | Mighty Blow | +2 melee damage |
-| | Weapon Mastery | +10% Melee Weapons |
-| | Sunder | Melee blows pierce 2 more points of resistance |
-| Perception | Deadly Aim | +1 ranged damage |
-| | Marksmanship | +5% Archery |
-| | Far Shot | Ranged weapons reach 2 hexes further |
-| | Eagle Eye | +10% Archery |
-| Endurance | Toughness | +6 hit points |
-| | Tireless | +1 AP every turn |
-| Intelligence | Quick Study | +10% experience |
-| | Spellcasting | Opens the spell tree: 2 spells now and 1 every level |
-| | Arcane Study | +5% Magic |
-| | Scholar | +2 skill points every level |
-| | Deep Well | +6 mana |
-| | Arcane Mastery | +10% Magic |
-| Agility | Dodger | +5 armour class |
-| | Evasion | +10 armour class |
-| Luck | Keen Eye | +5% critical chance |
-| | Fortune | +10% critical chance |
+This lists the nodes the game has now, by tree and path. **Asks** is what a node needs beyond its tier's level and depth (chapter 7). A **spell** node teaches a spell (see above); a **passive** is always in effect.
 
-Each branch also has its trunk perk, which gives +1 to the attribute per rank. The perks in the right-hand column of the tree are the level 6 masteries, which need 8 in their attribute. Most of the other perks have two ranks.
+#### Warrior
+
+| Path | Node | Tier | Kind | Asks | Effect |
+| --- | --- | --- | --- | --- | --- |
+| Swordmaster | Weapon Training | T1 | Passive | Strength 5 | +10% Melee Weapons |
+|  | Heavy Hand | T1 | Passive | Strength 6 | +2 damage with melee weapons and bare hands |
+|  | Armour Breaker | T2 | Passive | Strength 6 | Melee blows pierce 2 points of a foe's resistance |
+|  | Gain Strength | T2 | Passive | — | +2 Strength; not for one whose Strength is above 8 |
+|  | Weapon Mastery | T3 | Passive | Strength 8 | +10% Melee Weapons, +2 melee damage, and melee blows pierce 1 more point of a foe's resistance |
+| Heavy Knight | Toughness | T1 | Passive | Endurance 5 | +8 hit points and +1 Endurance |
+|  | Shield Wall | T1 | Passive | — | +8 armour class while a shield is in the off hand |
+|  | Iron Skin | T3 | Passive | Endurance 7 | +2 resistance |
+| Spellsword | Arcane Blood | T1 | Passive | Intelligence 4 | +10 mana |
+|  | Spell Ward | T2 | Passive | — | +3 ward against every element |
+|  | Battle Mage | T3 | Passive | Intelligence 5 | +6 mana |
+
+#### Scout
+
+| Path | Node | Tier | Kind | Asks | Effect |
+| --- | --- | --- | --- | --- | --- |
+| Ranger | Marksmanship | T1 | Passive | Perception 5 | +10% Archery |
+|  | Deadly Aim | T1 | Passive | Perception 6 | +2 damage with ranged weapons |
+|  | Far Shot | T2 | Passive | Perception 6 | Ranged weapons reach 2 hexes further; +1 Perception |
+|  | Deadeye | Capstone | Passive | Archery 70% | +10% Archery |
+| Rogue | Dodger | T1 | Passive | Agility 6 | +10 armour class |
+|  | Skirmisher | T2 | Passive | Agility 6 | +1 Agility |
+|  | Evasion | T3 | Passive | Agility 8 | +10 armour class and +1 action point every turn |
+| Assassin | Keen Eye | T1 | Passive | Luck 6 | +10% chance of a critical hit |
+|  | Fortune | T3 | Passive | Luck 7 | +10% chance of a critical hit and +1 Luck |
+
+#### Mage
+
+| Path | Node | Tier | Kind | Asks | Effect |
+| --- | --- | --- | --- | --- | --- |
+| Evoker | Magic Arrow | T1 | Spell | Magic 40% | 1d10 to a foe within 5 hexes; 3 mana, 4 AP |
+|  | Destruction | T1 | Passive | Intelligence 5 | +2 damage to each instance of its damaging spells; +4 mana |
+|  | Flame Arrow | T2 | Spell | Magic 55%, Magic Arrow | 2d8 to a foe within 5 hexes, and no regeneration next turn; 5 mana, 4 AP |
+|  | Pyromancy | T2 | Passive | Intelligence 6 | +3 damage to its fire spells |
+|  | Fireball | T3 | Spell | Magic 65%, Flame Arrow | 3d6 to everyone within 1 hex of a point within 6 hexes, and no regeneration next turn; 10 mana, 6 AP |
+|  | Acid Arrow | T3 | Spell | Magic 65%, Flame Arrow | 1d8 to a foe within 5 hexes, and -5 AC, -2 resistance, 1d4 a turn and no regeneration for 3 turns; 7 mana, 4 AP |
+|  | Death Cloud | T3 | Spell | Magic 70% | Poisons everyone within 1 hex of a point within 5 hexes: 1d6 a turn for 3 turns; 10 mana, 6 AP |
+|  | Meteor | Capstone | Spell | Magic 80% | 4d8 to everyone within 2 hexes of a point within 6 hexes, and no regeneration next turn; 16 mana, 7 AP |
+| Cryomancer | Frostbite | T1 | Spell | Magic 40% | 1d6+1 frost to a foe within 5 hexes, chilled for 1 turn; 3 mana, 4 AP |
+|  | Numbing Cold | T1 | Passive | Intelligence 5 | +3 damage to its frost spells |
+|  | Sleep | T2 | Spell | Magic 55% | A foe within 5 hexes sleeps for 2 turns, helpless, until it is hurt; 5 mana, 4 AP |
+|  | Frost Blast | T2 | Spell | Magic 55%, Frostbite | 1d8 and -3 AP for a turn to everyone within 1 hex of a point within 4 hexes; 6 mana, 5 AP |
+|  | Web | T3 | Spell | Magic 65% | -4 AP for 2 turns to everyone within 1 hex of a point within 4 hexes; 5 mana, 4 AP |
+|  | Lingering Cold | T3 | Passive | Intelligence 7 | Statuses its hostile spells lay last 1 turn longer; +10% Magic |
+| Arcanist | Shield | T1 | Spell | Magic 40% | +15 AC to the caster for 3 turns; 3 mana, 2 AP |
+|  | Arcane Study | T1 | Passive | Intelligence 5 | +10% Magic |
+|  | Mirror Image | T2 | Spell | Magic 55% | 3 images of the caster take the next 3 hits on it, for 3 turns; 6 mana, 3 AP |
+|  | Ward | T2 | Spell | Magic 55% | +4 ward against every element to an ally within 4 hexes for 3 turns; 4 mana, 3 AP |
+|  | Haste | T3 | Spell | Magic 65% | +3 AP to an ally within 4 hexes for 2 turns; 7 mana, 4 AP |
+|  | Lasting Magic | T3 | Passive | Intelligence 7 | Statuses its friendly spells lay last 1 turn longer; +1 Intelligence |
+|  | Quickened Casting | T3 | Passive | Magic 70% | Its spells cost 1 AP less (never below 2); +8 mana |
+|  | Mass Haste | Capstone | Spell | Magic 80% | +3 AP for 2 turns to each ally within 2 hexes of the caster; 12 mana, 5 AP |
+
+#### Cleric
+
+| Path | Node | Tier | Kind | Asks | Effect |
+| --- | --- | --- | --- | --- | --- |
+| Healer | Heal | T1 | Spell | Magic 40% | Restores 1d8+2 hit points to an ally within 4 hexes; 3 mana, 4 AP |
+|  | Mending | T1 | Passive | Magic 30% | Its heals restore 4 more |
+|  | Greater Heal | T2 | Spell | Magic 55%, Heal | Restores 2d8+4 hit points to an ally within 4 hexes; 6 mana, 4 AP |
+|  | Heal All | T2 | Spell | Magic 55%, Heal | Restores 1d8 hit points to each ally within 2 hexes of the caster; 8 mana, 5 AP |
+|  | Greater Heal All | T3 | Spell | Magic 65%, Heal All | Restores 2d8+2 hit points to each ally within 2 hexes of the caster; 14 mana, 6 AP |
+|  | Swift Hands | T3 | Passive | Magic 60% | Its healing spells cost 1 AP less (never below 2); +8 mana |
+| Paladin | Bless | T1 | Spell | Melee 30% or Magic 40% | +10 to hit for each ally within 2 hexes of the caster, for 3 turns; 4 mana, 4 AP |
+|  | Lay on Hands | T2 | Spell | Melee 40% or Magic 40% | Restores 2d6+2 hit points to an ally within 1 hex; 4 mana, 3 AP |
+|  | Blessed Armour | T2 | Passive | Endurance 5 | +1 resistance, +3 ward against blight, +6 mana |
+|  | Sacred Weapon | T3 | Passive | Melee 60% | +10% Melee Weapons; every melee hit adds 2 damage, and 4 more as bane |
+| Saint | Serenity | T1 | Passive | Intelligence 5 | Its friendly spells aimed at an ally or a point reach 2 hexes further |
+|  | Bane | T1 | Spell | Magic 40% | -15 to hit for everyone within 1 hex of a point within 5 hexes, for 3 turns; 5 mana, 4 AP |
+|  | Protect | T2 | Spell | Magic 55% | +10 AC to an ally within 4 hexes for 3 turns; 3 mana, 3 AP |
+|  | Scholar | T2 | Passive | Intelligence 6 | +2 skill points every level |
+|  | Curse | T3 | Spell | Magic 65% | -15 to hit and -5 AC to a foe within 5 hexes, for 3 turns; 5 mana, 4 AP |
 
 ### Magic items
 

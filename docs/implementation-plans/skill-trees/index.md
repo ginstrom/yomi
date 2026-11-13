@@ -32,7 +32,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | 05 | [Save v23: the migration from v22](05-save-migration.md) | `migrateFrom22` chained after `migrateFrom18`; v18 and v22 fixtures load (AC10) | 03, 04 | opus | done (5141cb9) |
 | 06 | [The tree view in the panel and in creation](06-tree-view.md) | Four tree tabs, three path columns, tier bands, kind stripes, capstone frame, three-line strip; creation's perks step; e2e restored (AC9) | 03 | opus | done (f1bcf7a) |
 | 07 | [The Skills and Abilities tabs and the hero's title](07-panel-tabs-and-title.md) | Character, Skills, Abilities, Inventory; Skill Trees (P); `heroTitle`; "Next pick at level N" | 04, 06 | sonnet | done (bc787c1) |
-| 08 | [Stage 1: measure and document](08-stage1-measure.md) | Campaigns and cells measured; guard re-recorded; CLAUDE.md, manual text and feature record current | 05, 07 | sonnet | pending |
+| 08 | [Stage 1: measure and document](08-stage1-measure.md) | Campaigns and cells measured; guard re-recorded; CLAUDE.md, manual text and feature record current | 05, 07 | sonnet | done (HASH) |
 | **Stage 2: hero techniques** | | | | | |
 | 09 | [Hero abilities: strikes and statuses](09-hero-strikes.md) | `Ability`/`Strike` extensions; mana, weapon AP, `needs`; self- and foe-status abilities; technique strikes through `attack()`; Cleave's spread; `slowed`, `marked`; `imbueDamage`; `LOG_SCHEMA_VERSION` 25 | 08 | opus | pending |
 | 10 | [Area techniques](10-area-techniques.md) | `AreaAttack` extensions: Volley, Consecrate and Taunt's area | 09 | opus | pending |
@@ -493,16 +493,16 @@ export const MANA_WEIGHT = 0.5
 
 | Figure | 01 baseline | 08 stage 1 | 16 stage 2 | 23 stage 3 | 25 final |
 | --- | --- | --- | --- | --- | --- |
-| one party (`--parties 1`) | 230 of 500 | | | | |
-| default company | 239 of 500 | | | | |
-| `--ready-level 10` | 389 of 500 | | | | |
-| deaths a campaign (one party) | 1.8 | | | | |
-| days a campaign (one party) | 270 | | | | |
-| GR3 / BC3 / BC4 / BC5 | 500 / 429 / 473 / 469 | | | | |
-| SN5 / SP5 / TL5 | 441 / 445 / 0 | | | | |
-| SG7 / SG10 | 0 / 2 | | | | |
-| F1 / F2 / F3 | 500 / 499 / 441 | | | | |
-| 500-campaign run time | 270 s (one party; company 258 s, `--ready-level 10` 517 s) | | | | |
+| one party (`--parties 1`) | 230 of 500 | 425 of 500 | | | |
+| default company | 239 of 500 | 425 of 500 | | | |
+| `--ready-level 10` | 389 of 500 | 470 of 500 | | | |
+| deaths a campaign (one party) | 1.8 | 1.0 | | | |
+| days a campaign (one party) | 270 | 333 | | | |
+| GR3 / BC3 / BC4 / BC5 | 500 / 429 / 473 / 469 | 500 / 473 / 485 / 482 | | | |
+| SN5 / SP5 / TL5 | 441 / 445 / 0 | 498 / 492 / 0 | | | |
+| SG7 / SG10 | 0 / 2 | 4 / 199 | | | |
+| F1 / F2 / F3 | 500 / 499 / 441 | 500 / 500 / 493 | | | |
+| 500-campaign run time | 270 s (one party; company 258 s, `--ready-level 10` 517 s) | 329 s (company 352 s, `--ready-level 10` 663 s) | | | |
 
 ## Completion criteria
 

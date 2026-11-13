@@ -60,4 +60,20 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 ## Verification
 
-(none yet)
+### Stage 1 (step 08, 2026-11-13; seed 1, 500 each, recorded and not tuned)
+
+| Figure | Step 01 baseline | Stage 1 |
+| --- | --- | --- |
+| one party (`--parties 1`) | 230 | 425 |
+| default company | 239 | 425 |
+| `--ready-level 10` | 389 | 470 |
+| deaths a campaign (one party) | 1.8 | 1.0 |
+| days a campaign (one party) | 270 | 333 |
+| GR3 / BC3 / BC4 / BC5 | 500 / 429 / 473 / 469 | 500 / 473 / 485 / 482 |
+| SN5 / SP5 / TL5 | 441 / 445 / 0 | 498 / 492 / 0 |
+| SG7 / SG10 | 0 / 2 | 4 / 199 |
+| F1 / F2 / F3 | 500 / 499 / 441 | 500 / 500 / 493 |
+| 500-campaign run time (one party) | 270 s | 329 s (company 352 s, `--ready-level 10` 663 s) |
+
+No campaign fell under 150 of 500. Every campaign figure is well above its band (215–250, 220–260, 370–420), the cells BC3, SN5 and SP5 above theirs (BC4 and BC5 inside), and SG10 far above step 01's; stage 4 (steps 24, 25) tunes. The guard fixture needed no re-recording (it passed unchanged after steps 03 and 04's).
+
