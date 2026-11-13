@@ -3,10 +3,10 @@
 **Request (user's words):** "separately from the ongoing skill tree work, I'd like you to improve the quality of the sound effects, to create indie game-quality SFX. If possible I'd also like a framework for narration of cutscenes and the like, maybe using a local version of a voice model, especially one that supports emotions and other effects."
 
 - **Slug:** `audio-pass`
-- **Phase:** 2, design
+- **Phase:** 3, planning
 - **Branch / worktree:** `audio-pass`, from `main` at `d18abf4`, in `.claude/worktrees/audio-pass` (kept apart from `skill-trees`)
 - **Architecture brief:** `docs/architecture/audio-pass.md` (`a82ae8f`)
-- **Design:** `docs/designs/audio-pass.md` (pending)
+- **Design:** `docs/designs/audio-pass.md` (`84f5f35`, approved by the user)
 - **Plan:** `docs/implementation-plans/audio-pass/index.md` (pending)
 
 ## Path
@@ -26,16 +26,21 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 | D3: Chatterbox primary (voices from reference clips made by Qwen3-TTS voice design), Qwen3-TTS fallback, behind an adapter; a listening test first | user | Qwen3-TTS alone | emotion control, MIT/Apache licences, no real voice cloned |
 | D4: the leader's lines stay unvoiced; narrator and fixed characters only | user | one generic voice; one voice per portrait | the leader is player-chosen |
 | D5: keep the MP3 fallback beside Opus | orchestrator | Opus only | older Safari; matches the music |
+| Design approved as written | user | changes first | |
+| Sources: Kenney, OpenGameArt and synthesis first; any Freesound file the plan still needs is listed for the user to download by hand | user | API token; skip Freesound | Freesound downloads need a login |
+| Tutorial tips unvoiced in v1 | user | voice them now | same mechanism can add them later |
+| Stings from Kenney Music Jingles for now; narrator's gender chosen in the bake-off | orchestrator | | design defaults |
 | D6: add a `voice` volume slider; UI sounds stay under Sound FX with their own internal group | orchestrator | separate UI slider | brief's recommendation, splittable later |
 
 ## Open questions
 
-- Whether tutorial tips are narrated too (design).
+(none)
 
 ## Tiers
 
 - Architect: opus.
 - Designer: opus.
+- Planner: opus.
 
 ## Verification
 
