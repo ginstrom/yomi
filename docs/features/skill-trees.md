@@ -83,6 +83,8 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 - To step 21 (from step 19): the policy's spell/area scoring calls `warded(…, unit)` on the raw snapshot, so the Warded status and Aegis don't count in expected damage — use `statsIn`.
 - To step 22 (from step 19): `restore` events have no look yet; the battle's first turn start now logs after `battle_start` (`readySide`/`turnBegins` split).
 
+- To step 20 (from step 19 review): `turnBegins`'s docstring says the recharge count-down runs "whether or not the battle has just ended"; the code returns first when a tick ends the battle — fix the comment.
+
 ## Verification
 
 ### Stage 1 (step 08, 2026-11-13; seed 1, 500 each, recorded and not tuned)

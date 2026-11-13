@@ -24,7 +24,7 @@ No rule changes. The refactor guard stays green.
 - **Design §5.4, `formatEvent`'s short lines** (the engine's `formatEvent`, added in steps 17–20; this step checks they read so and fixes the wording if not):
   - "Brenna strikes back." (a counter)
   - "Mira endures the blow." (an Unbreakable save)
-  - "Sera's sanctuary restores 3 to Aldric." (a `restore` with cause `sanctuary`; renewing and serenity read alike: "Aldric is renewed for 3.", "Sera regains 2 mana.")
+  - "Sera's sanctuary restores 3 to Aldric." (a `restore` with cause `sanctuary`; renewing and serenity read alike: "Aldric is renewed (+3).", "Sera regains 2 mana.")
   - "Aldric holds his ground (rooted)." and "Goblin is pinned." are stage 2's and stay.
 - **Design §5.6, `battleEffects.ts`:**
   - `changesStatusMarks` covers `status_laid` and `restore`.
