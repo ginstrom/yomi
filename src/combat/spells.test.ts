@@ -165,8 +165,8 @@ describe('a caster’s modifiers to a spell’s cost and reach', () => {
 })
 
 describe('the technique statuses', () => {
-  it('lists marked, slowed, pinned, taunted and rooted after warded', () => {
-    expect(STATUS_IDS.slice(STATUS_IDS.indexOf('warded'))).toEqual(['warded', 'marked', 'slowed', 'pinned', 'taunted', 'rooted'])
+  it('lists marked, slowed, pinned, taunted, rooted and renewing after warded', () => {
+    expect(STATUS_IDS.slice(STATUS_IDS.indexOf('warded'))).toEqual(['warded', 'marked', 'slowed', 'pinned', 'taunted', 'rooted', 'renewing'])
   })
 
   it('makes Marked 10 off armour class and Slowed 3 off action points', () => {
@@ -195,6 +195,14 @@ describe('the technique statuses', () => {
     expect({ name, adjective, mark }).toEqual({ name: 'Rooted', adjective: 'rooted', mark: 'R' })
     expect(rule).toEqual({ armorClass: 10, resistance: 2 })
     expect(STATUS_IDS.filter((id) => id !== 'rooted').map((id) => STATUSES[id].colour)).not.toContain(colour)
+  })
+
+  it('makes Renewing a regen of 3, marked U in a colour of its own, listed after rooted', () => {
+    expect(STATUS_IDS.at(-1)).toBe('renewing')
+    const { name, adjective, mark, colour, ...rule } = STATUSES.renewing
+    expect({ name, adjective, mark }).toEqual({ name: 'Renewing', adjective: 'renewing', mark: 'U' })
+    expect(rule).toEqual({ regen: 3 })
+    expect(STATUS_IDS.filter((id) => id !== 'renewing').map((id) => STATUSES[id].colour)).not.toContain(colour)
   })
 
   it('gives every status its own mark', () => {

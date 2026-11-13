@@ -13,6 +13,7 @@ import {
   type DamageRoll,
   type Element,
   type RNG,
+  type TraitId,
 } from '../combat/combat.ts'
 import { mulberry32, randomSeed, type SeededRng } from '../combat/rng.ts'
 import {
@@ -534,7 +535,28 @@ export interface StatusEndEvent extends EventBase {
   reason: 'expired' | 'woke' | 'spent' | 'source_fell' | 'moved'
 }
 
-/** A status laid by a rule rather than an action: Rooted, as a unit with the trait ends its side's turn unmoved. */
+/**
+ * Hit points or mana a unit regained as its side's turn began, by a rule
+ * rather than an action: its Renewing status, a Sanctuary's aura (`source`
+ * names the Sanctuary unit) or its own Serenity (`manaRegen`).
+ */
+export interface RestoreEvent extends EventBase {
+  type: 'restore'
+  unit: UnitId
+  /** Hit points regained, no more than it had lost; absent for mana. */
+  hp?: number
+  /** Mana regained, no more than its maximum allowed; absent for hit points. */
+  mana?: number
+  cause: 'renewing' | 'sanctuary' | 'serenity'
+  /** For a Sanctuary's: the unit whose aura healed. */
+  source?: UnitId
+}
+
+/**
+ * A status laid by a rule rather than an action: Rooted, as a unit with the
+ * trait ends its side's turn unmoved; Mirrored (one image), as a
+ * Shadowdancer's side's turn begins with no image left on it.
+ */
 export interface StatusLaidEvent extends EventBase {
   type: 'status_laid'
   unit: UnitId
@@ -594,6 +616,7 @@ export type BattleEvent =
   | AbilityEvent
   | StatusTickEvent
   | RegenerateEvent
+  | RestoreEvent
   | StatusEndEvent
   | StatusLaidEvent
   | EquipEvent
@@ -756,6 +779,13 @@ export function deathblows(attacker: Pick<CombatantStats, 'traits'>, defender: P
   return attacker.traits?.includes('deathblow') === true && !defender.blightborn && hp <= Math.floor(defender.maxHp / 4)
 }
 
+/** What a Sanctuary heals each unit of its side within `SANCTUARY_RADIUS` (itself included) as their turn begins. */
+export const SANCTUARY_HEAL = 3
+export const SANCTUARY_RADIUS = 2
+
+/** What Shadowdancer lays as its side's turn begins on a unit with no mirror image left. */
+export const SHADOWDANCER_IMAGE = { turns: 2, images: 1 } as const
+
 /** What Unbreakable lays on the unit it keeps standing. */
 export const UNBREAKABLE_SHIELD: StatusLaid = { id: 'shielded', turns: 2 }
 
@@ -839,6 +869,91 @@ export function effectiveStats(unit: { stats: CombatantStats; statuses: readonly
     toHit: stats.toHit + toHit,
     ...(stats.magic ? { magic: { ...stats.magic, skill: stats.magic.skill + toHit } } : {}),
   }
+}
+
+/** What the auras of a unit's standing allies add to its stats. */
+export interface AuraBonus {
+  ac: number
+  toHit: number
+  resistance: number
+  wardAll: number
+}
+
+const NO_AURA: AuraBonus = { ac: 0, toHit: 0, resistance: 0, wardAll: 0 }
+
+/**
+ * The auras, by the trait that holds one: how far it reaches, whether it
+ * covers its holder, and what it adds. Two of a kind do not stack.
+ */
+export const AURAS: Readonly<Record<'guardian' | 'courage' | 'aegis', { radius: number; self: boolean; bonus: Partial<AuraBonus> }>> = {
+  guardian: { radius: 1, self: false, bonus: { ac: 5 } },
+  courage: { radius: 2, self: false, bonus: { toHit: 5 } },
+  aegis: { radius: 2, self: true, bonus: { resistance: 2, wardAll: 2 } },
+}
+const AURA_KINDS = Object.keys(AURAS) as Array<keyof typeof AURAS>
+
+/** `auraBonus` over any kind of unit, its traits read by `traitsOf`. */
+function auraOver<U extends Placed>(units: readonly U[], unit: U, traitsOf: (u: U) => readonly TraitId[] | undefined): AuraBonus {
+  let bonus = NO_AURA
+  for (const kind of AURA_KINDS) {
+    const { radius, self, bonus: adds } = AURAS[kind]
+    const held = units.some(
+      (u) =>
+        u.hp > 0 &&
+        u.side === unit.side &&
+        (self || u.id !== unit.id) &&
+        traitsOf(u)?.includes(kind) === true &&
+        hexDistance(u.position, unit.position) <= radius,
+    )
+    if (!held) continue
+    bonus = {
+      ac: bonus.ac + (adds.ac ?? 0),
+      toHit: bonus.toHit + (adds.toHit ?? 0),
+      resistance: bonus.resistance + (adds.resistance ?? 0),
+      wardAll: bonus.wardAll + (adds.wardAll ?? 0),
+    }
+  }
+  return bonus
+}
+
+/**
+ * What the auras of `unit`'s standing allies within reach add to it: for
+ * each kind (Guardian +5 armour class within 1, not itself; Aura of Courage
+ * +5 to hit within 2, not itself; Aegis +2 resistance and +2 ward against
+ * every element within 2, itself included), the kind's bonus if any holder
+ * reaches it, however many do.
+ */
+export function auraBonus(units: readonly UnitSnapshot[], unit: UnitSnapshot): AuraBonus {
+  return auraOver(units, unit, (u) => u.traits)
+}
+
+/** `stats` with an aura bonus added: armour class, the chance to hit (spells' too), resistance and every ward. */
+function withAura(stats: CombatantStats, bonus: AuraBonus): CombatantStats {
+  if (bonus === NO_AURA) return stats
+  let { wards } = stats
+  if (bonus.wardAll !== 0) {
+    const all: Partial<Record<Element, number>> = { ...stats.wards }
+    for (const e of ELEMENTS) all[e] = (all[e] ?? 0) + bonus.wardAll
+    wards = all
+  }
+  return {
+    ...stats,
+    ...(wards === stats.wards ? {} : { wards }),
+    ac: stats.ac + bonus.ac,
+    ...(bonus.resistance === 0 ? {} : { resistance: (stats.resistance ?? 0) + bonus.resistance }),
+    toHit: stats.toHit + bonus.toHit,
+    ...(stats.magic && bonus.toHit !== 0 ? { magic: { ...stats.magic, skill: stats.magic.skill + bonus.toHit } } : {}),
+  }
+}
+
+/**
+ * The stats every roll reads of a unit where it stands among `units`:
+ * `effectiveStats` (its statuses) plus `auraBonus` (its allies' auras). The
+ * engine reads the same through its records; previews and the policies
+ * read it through this.
+ */
+export function statsIn(units: readonly UnitSnapshot[], unit: UnitSnapshot): CombatantStats {
+  return withAura(effectiveStats({ stats: unit, statuses: unit.statuses }), auraBonus(units, unit))
 }
 
 /** The hex a cast is aimed at: its target's, or the area's centre. Null for a target not on the roster. */
@@ -1017,7 +1132,7 @@ export class BattleEngine {
       this.rng = this.seeded
     }
 
-    this.startTurn('player')
+    this.readySide('player')
     this.record<BattleStartEvent>({
       type: 'battle_start',
       round: this.round,
@@ -1028,7 +1143,12 @@ export class BattleEngine {
       units: this.units.map(snapshot),
     })
     // A side may enter battle already fallen (e.g. every member at 0 hp).
-    this.checkWinner()
+    if (this.checkWinner() === null) this.turnBegins('player')
+  }
+
+  /** The stats every roll reads of `unit`: its statuses' (`effectiveStats`) and its allies' auras (`statsIn`). */
+  private statsOf(unit: UnitRecord): CombatantStats {
+    return withAura(effectiveStats(unit), auraOver(this.units, unit, (u) => u.stats.traits))
   }
 
   /**
@@ -1161,8 +1281,8 @@ export class BattleEngine {
     const arc = arcStruck(foe, actor.position, isMelee(actor.stats))
     const arcBonus = ARC_BONUS[arc]
     const helpless = hasStatus(foe, 'asleep') ? HELPLESS_BONUS : 0
-    const attacker = effectiveStats(actor)
-    const defender = effectiveStats(foe)
+    const attacker = this.statsOf(actor)
+    const defender = this.statsOf(foe)
     const traits = traitToHit(attacker, { arc, free: false, moved: actor.moved, attackedYet: actor.attackedYet })
     const chance = hitChance(attacker, defender.ac, flankBonus + arcBonus + helpless + toHit + traits - tauntPenalty(actor, foe))
     return { flankers, flankBonus, arc, arcBonus, hitChance: chance, resistance: resistanceLeft(attacker, defender.resistance ?? 0) }
@@ -1180,13 +1300,13 @@ export class BattleEngine {
     const cost = { apCost: abilityApCost(actor.stats, ability), manaCost: known.manaCost ?? 0 }
     if (typeof target !== 'string') {
       if (!this.canAim(actor, ability, target)) return null
-      const attacker = effectiveStats(actor)
+      const attacker = this.statsOf(actor)
       const touched = abilityTouches(this.units, actor, ability, target, attacker.attackRange)
       return {
         ...cost,
         outcomes: touched.map((u) => ({
           unit: u.id,
-          hitChance: known.area!.auto ? null : hitChance(attacker, effectiveStats(u).ac, -tauntPenalty(actor, u)),
+          hitChance: known.area!.auto ? null : hitChance(attacker, this.statsOf(u).ac, -tauntPenalty(actor, u)),
         })),
       }
     }
@@ -1206,14 +1326,14 @@ export class BattleEngine {
     const aim: CastAim = typeof target === 'string' ? { target } : { at: target }
     if (this.phase === 'over' || !actor || !this.canAct(actor) || !this.canCast(actor, spell, aim)) return null
     const { manaCost, hostile } = SPELLS[spell]
-    const stats = effectiveStats(actor)
+    const stats = this.statsOf(actor)
     const caster = spellcaster(stats, spell)
     return {
       apCost: spellApCost(stats, spell),
       manaCost,
       outcomes: castTouches(this.units, actor, spell, aim).map((u) => ({
         unit: u.id,
-        hitChance: hostile ? hitChance(caster, effectiveStats(u).ac, -tauntPenalty(actor, u)) : null,
+        hitChance: hostile ? hitChance(caster, this.statsOf(u).ac, -tauntPenalty(actor, u)) : null,
       })),
     }
   }
@@ -1299,16 +1419,20 @@ export class BattleEngine {
   }
 
   /**
-   * Refills the side's action points, less or more by their statuses, and
-   * readies the other side's free attacks and turns to meet a blow (not a
-   * sleeper's); then deals the
-   * side's statuses' damage, unit by unit in roster order, which may fell
-   * units and end the battle before the side acts; then the side's units that
-   * still stand regenerate, in roster order, those whose statuses allow it;
-   * then a round comes off what the side's standing units have recharging, a
-   * sleeper's included (done whether or not the battle has just ended).
+   * The start of `side`'s turn: `readySide`, then `turnBegins`.
    */
   private startTurn(side: Side): BattleEvent[] {
+    this.readySide(side)
+    return this.turnBegins(side)
+  }
+
+  /**
+   * Refills the side's action points, less or more by their statuses, and
+   * readies the other side's free attacks and turns to meet a blow (not a
+   * sleeper's). It logs nothing; the battle's first turn does it before
+   * `battle_start` is logged, so that the units it shows are ready.
+   */
+  private readySide(side: Side): void {
     this.phase = side
     for (const u of this.units) {
       if (u.side === side) {
@@ -1322,6 +1446,20 @@ export class BattleEngine {
       }
       u.gearChangePaid = false
     }
+  }
+
+  /**
+   * What happens to the side's units as its turn begins, logged after
+   * `battle_start` on the battle's first turn: its statuses' damage, unit by
+   * unit in roster order, which may fell units and end the battle before the
+   * side acts (and then nothing more is done but the count-down); then, each
+   * a pass over the side's standing units in roster order, regeneration
+   * (unless a status stops it), Renewing (likewise), Sanctuary, Serenity and
+   * Shadowdancer (`restores`); then a round comes off what the side's
+   * standing units have recharging, a sleeper's included (done whether or
+   * not the battle has just ended). Nothing after the ticks draws.
+   */
+  private turnBegins(side: Side): BattleEvent[] {
     const events: BattleEvent[] = []
     for (const u of this.units) {
       if (u.side !== side || u.hp <= 0) continue
@@ -1329,7 +1467,7 @@ export class BattleEngine {
         const { tick, element } = STATUSES[status.id]
         if (!tick || u.hp <= 0 || this.winner !== null) continue
         const rolled = rollDamage(tick, this.rng)
-        const damage = warded(rolled, element, effectiveStats(u))
+        const damage = warded(rolled, element, this.statsOf(u))
         const hpBefore = u.hp
         const endured = this.applyDamage(u, damage)
         events.push(
@@ -1358,12 +1496,59 @@ export class BattleEngine {
       u.hp += healed
       events.push(this.record<RegenerateEvent>({ type: 'regenerate', round: this.round, unit: u.id, healed, hpBefore, hpAfter: u.hp }))
     }
+    events.push(...this.restores(side))
     for (const u of this.units) {
       if (u.side !== side || u.hp <= 0) continue
       for (const [ability, rounds] of Object.entries(u.recharging) as Array<[AbilityId, number]>) {
         if (rounds <= 1) delete u.recharging[ability]
         else u.recharging[ability] = rounds - 1
       }
+    }
+    return events
+  }
+
+  /**
+   * The turn-start passes after regeneration, each over the side's standing
+   * units in roster order: Renewing (each status's `regen`, unless a status
+   * stops regeneration), Sanctuary (`SANCTUARY_HEAL` from the first standing
+   * Sanctuary unit of the side within `SANCTUARY_RADIUS`, itself included;
+   * one heal a unit), Serenity (`manaRegen`, up to the maximum mana), then
+   * Shadowdancer (Mirrored with one image for 2 turns, on a unit with no
+   * image left). A heal or restore of 0 logs nothing. None draws.
+   */
+  private restores(side: Side): BattleEvent[] {
+    const events: BattleEvent[] = []
+    const standing = () => this.units.filter((u) => u.side === side && u.hp > 0)
+    const heal = (u: UnitRecord, amount: number, cause: RestoreEvent['cause'], source?: UnitId) => {
+      const hp = Math.min(amount, u.stats.maxHp - u.hp)
+      if (hp <= 0) return
+      u.hp += hp
+      events.push(this.record<RestoreEvent>({ type: 'restore', round: this.round, unit: u.id, hp, cause, ...(source ? { source } : {}) }))
+    }
+    for (const u of standing()) {
+      if (u.statuses.some(({ id }) => STATUSES[id].stopsRegeneration)) continue
+      const regen = u.statuses.reduce((sum, { id }) => sum + (STATUSES[id].regen ?? 0), 0)
+      if (regen > 0) heal(u, regen, 'renewing')
+    }
+    const sanctuaries = standing().filter((u) => u.stats.traits?.includes('sanctuary'))
+    if (sanctuaries.length > 0) {
+      for (const u of standing()) {
+        const source = sanctuaries.find((s) => hexDistance(s.position, u.position) <= SANCTUARY_RADIUS)
+        if (source) heal(u, SANCTUARY_HEAL, 'sanctuary', source.id)
+      }
+    }
+    for (const u of standing()) {
+      const mana = Math.min(u.stats.manaRegen ?? 0, (u.stats.magic?.maxMana ?? 0) - u.mana)
+      if (mana <= 0) continue
+      u.mana += mana
+      events.push(this.record<RestoreEvent>({ type: 'restore', round: this.round, unit: u.id, mana, cause: 'serenity' }))
+    }
+    for (const u of standing()) {
+      if (!u.stats.traits?.includes('shadowdancer')) continue
+      if ((u.statuses.find((st) => st.id === 'mirrored')?.images ?? 0) >= 1) continue
+      const { turns, images } = SHADOWDANCER_IMAGE
+      this.layStatus(u, { id: 'mirrored', turns, images })
+      events.push(this.record<StatusLaidEvent>({ type: 'status_laid', round: this.round, unit: u.id, status: 'mirrored', turns, cause: 'shadowdancer' }))
     }
     return events
   }
@@ -1518,7 +1703,7 @@ export class BattleEngine {
     const area = ABILITIES[ability]?.area
     if (!area || !this.canUse(actor, ability) || !this.board.contains(at)) return false
     if (area.centredOnSelf && !hexEquals(at, actor.position)) return false
-    const { attackRange } = effectiveStats(actor)
+    const { attackRange } = this.statsOf(actor)
     const { range } = abilityArea(ability, attackRange)!
     const distance = hexDistance(at, actor.position)
     if (distance > range || (area.shape !== 'burst' && distance < 1)) return false
@@ -1531,7 +1716,7 @@ export class BattleEngine {
     return (
       known !== undefined &&
       actor.stats.magic?.spells.includes(spell) === true &&
-      actor.ap >= spellApCost(effectiveStats(actor), spell) &&
+      actor.ap >= spellApCost(this.statsOf(actor), spell) &&
       actor.mana >= known.manaCost
     )
   }
@@ -1545,7 +1730,7 @@ export class BattleEngine {
   private canCast(actor: UnitRecord, spell: SpellId, aim: CastAim): boolean {
     if (!this.canPayFor(actor, spell)) return false
     const { target: kind, hostile, shape = 'burst' } = SPELLS[spell]
-    const range = spellRange(effectiveStats(actor), spell)
+    const range = spellRange(this.statsOf(actor), spell)
     if (kind === 'area') {
       if (!('at' in aim) || !this.board.contains(aim.at)) return false
       const distance = hexDistance(aim.at, actor.position)
@@ -1753,7 +1938,7 @@ export class BattleEngine {
         apCost,
         apAfter: actor.ap,
         facing: actor.facing,
-        skill: effectiveStats(actor).toHit,
+        skill: this.statsOf(actor).toHit,
         outcomes: [outcome],
         ...(manaCost !== undefined ? { manaCost, manaAfter: actor.mana } : {}),
       }),
@@ -1818,8 +2003,8 @@ export class BattleEngine {
     const arc = attackArc(target, actor.position)
     const arcBonus = ARC_BONUS[arc]
     const helpless = hasStatus(target, 'asleep')
-    const attacker = effectiveStats(actor)
-    const defender = effectiveStats(target)
+    const attacker = this.statsOf(actor)
+    const defender = this.statsOf(target)
     const defenderAc = defender.ac
     const defenderResistance = defender.resistance ?? 0
     const technique = strike?.strike
@@ -1969,7 +2154,7 @@ export class BattleEngine {
       defender.stats.traits?.includes('counter') === true &&
       defender.reactionReady &&
       isMelee(defender.stats) &&
-      hexDistance(defender.position, attacker.position) <= effectiveStats(defender).attackRange
+      hexDistance(defender.position, attacker.position) <= this.statsOf(defender).attackRange
     )
   }
 
@@ -1985,7 +2170,7 @@ export class BattleEngine {
     const { manaCost, hostile, damage: dice, element, drain, heal, status: ownStatus } = SPELLS[spell]
     const touched = castTouches(this.units, actor, spell, aim)
     const at = aimHex(this.units, aim)!
-    const stats = effectiveStats(actor)
+    const stats = this.statsOf(actor)
     const magic = stats.magic
     const apCost = spellApCost(stats, spell)
     // The caster's modifiers: flat, so they draw nothing.
@@ -2050,7 +2235,7 @@ export class BattleEngine {
   private areaAttack(actor: UnitRecord, abilityId: AbilityId, at: Hex): BattleEvent[] {
     const ability = ABILITIES[abilityId]
     const area = ability.area!
-    const attacker = effectiveStats(actor)
+    const attacker = this.statsOf(actor)
     const touched = abilityTouches(this.units, actor, abilityId, at, attacker.attackRange)
     const { apCost, manaCost } = this.payFor(actor, abilityId)
     if (!hexEquals(at, actor.position)) actor.facing = hexDirectionTowards(actor.position, at)!
@@ -2067,7 +2252,7 @@ export class BattleEngine {
           damage: 0, warded: 0, half: false, healed: 0, hpBefore, hpAfter: unit.hp, status,
         }
       }
-      const doubled = dice && area.bane && baneApplies(effectiveStats(unit)) ? { ...dice, count: dice.count * 2 } : dice
+      const doubled = dice && area.bane && baneApplies(this.statsOf(unit)) ? { ...dice, count: dice.count * 2 } : dice
       return this.strikeUnit(unit, attacker, {
         dice: doubled,
         element: area.element,
@@ -2123,7 +2308,7 @@ export class BattleEngine {
     },
   ): StruckOutcome {
     const hpBefore = unit.hp
-    const defenderAc = effectiveStats(unit).ac
+    const defenderAc = this.statsOf(unit).ac
     const roll = rollToHit(attacker, defenderAc, this.rng, -blow.taunt)
     const image = roll.hit && this.strikeImage(unit)
     const half = !roll.hit && blow.halfOnMiss && blow.dice !== undefined
@@ -2135,8 +2320,8 @@ export class BattleEngine {
         : half
           ? Math.floor(Math.max(0, rollDamage(blow.dice!, this.rng)) / 2) + power
           : 0
-    const through = blow.throughResistance ? damageThrough(rolled, effectiveResistance(attacker, effectiveStats(unit).resistance ?? 0)) : rolled
-    const damage = warded(through, blow.element, effectiveStats(unit))
+    const through = blow.throughResistance ? damageThrough(rolled, effectiveResistance(attacker, this.statsOf(unit).resistance ?? 0)) : rolled
+    const damage = warded(through, blow.element, this.statsOf(unit))
     const endured = this.applyDamage(unit, damage)
     // A blow that wakes a sleeper wakes it before anything it lays; Sleep itself deals none.
     const woke = damage > 0 && unit.hp > 0 && hasStatus(unit, 'asleep')
@@ -2452,10 +2637,14 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
     }
     case 'regenerate':
       return `${names[event.unit]} regenerates ${event.healed}.`
+    case 'restore':
+      if (event.cause === 'serenity') return `${names[event.unit]} regains ${event.mana} mana.`
+      if (event.cause === 'renewing') return `${names[event.unit]} is renewed (+${event.hp}).`
+      return `${names[event.source!]}'s sanctuary restores ${event.hp} to ${names[event.unit]}.`
     case 'status_laid':
       return event.cause === 'rooted'
         ? `${names[event.unit]} holds their ground (rooted).`
-        : `${names[event.unit]} is ${STATUSES[event.status].adjective}.`
+        : `A mirror image appears beside ${names[event.unit]}.`
     case 'status_end':
       if (event.reason === 'woke') return `${names[event.unit]} wakes.`
       if (event.reason === 'spent') return `The last image of ${names[event.unit]} is gone.`

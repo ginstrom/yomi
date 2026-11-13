@@ -86,6 +86,7 @@ export const STATUS_IDS = [
   'pinned',
   'taunted',
   'rooted',
+  'renewing',
 ] as const
 
 export type StatusId = (typeof STATUS_IDS)[number]
@@ -487,6 +488,8 @@ export interface StatusRule {
   wardAll?: number
   /** It cannot move (Pinned); it still attacks, casts, uses abilities and makes free attacks. */
   immobile?: true
+  /** Hit points it regains as its side's turn begins, after regeneration, unless a status that `stopsRegeneration` is on it (a `restore` event). */
+  regen?: number
 }
 
 export const STATUSES: Record<StatusId, StatusRule> = {
@@ -511,6 +514,8 @@ export const STATUSES: Record<StatusId, StatusRule> = {
   taunted: { name: 'Taunted', adjective: 'taunted', mark: 'T', colour: 0xe04848 },
   // Laid by the engine on a unit with the trait `rooted` that ends its side's turn unmoved; its first step ends it.
   rooted: { name: 'Rooted', adjective: 'rooted', mark: 'R', colour: 0x4fb09a, armorClass: 10, resistance: 2 },
+  // Laid by Renew (skill trees step 20); healed by the engine as its side's turn begins.
+  renewing: { name: 'Renewing', adjective: 'renewing', mark: 'U', colour: 0x5ad06a, regen: 3 },
 }
 
 /** What an attack on a sleeping unit adds to its chance to hit, in percent. */

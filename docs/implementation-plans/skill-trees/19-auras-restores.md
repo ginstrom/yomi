@@ -176,13 +176,34 @@ PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH npm test
 
 ## 6. Completion criteria
 
-- [ ] `auraBonus` and `statsIn` exported as C13 gives them, used at every roll and damage resolution, in `previewAttack`, `previewCast` and the policy's stat reads; each former `effectiveStats(` call site accounted for in the record.
-- [ ] `renewing` and `StatusRule.regen` added; the index's C6 lines for them say step 19.
-- [ ] Renewing, Sanctuary, Serenity and Shadowdancer act in the stated order after ticks and regeneration, logged by `RestoreEvent` (with `source` for Sanctuary, C13 updated) and `StatusLaidEvent`.
-- [ ] `formatEvent` lines added; tests 1 to 9 written first and passing.
-- [ ] `npm test` passes; the refactor guard is green unchanged.
-- [ ] `CLAUDE.md` updated (engine line, battle rules).
-- [ ] Index: step 19's status `done (<commit>)`; this file's execution record filled.
-- [ ] One commit, "Skill trees step 19: auras and turn-start restores".
+- [x] `auraBonus` and `statsIn` exported as C13 gives them, used at every roll and damage resolution, in `previewAttack`, `previewCast` and the policy's stat reads; each former `effectiveStats(` call site accounted for in the record.
+- [x] `renewing` and `StatusRule.regen` added; the index's C6 lines for them say step 19.
+- [x] Renewing, Sanctuary, Serenity and Shadowdancer act in the stated order after ticks and regeneration, logged by `RestoreEvent` (with `source` for Sanctuary, C13 updated) and `StatusLaidEvent`.
+- [x] `formatEvent` lines added; tests 1 to 9 written first and passing.
+- [x] `npm test` passes; the refactor guard is green unchanged.
+- [x] `CLAUDE.md` updated (engine line, battle rules).
+- [x] Index: step 19's status `done (<commit>)`; this file's execution record filled.
+- [x] One commit, "Skill trees step 19: auras and turn-start restores".
 
 ## 7. Execution record
+
+**Engineer, 2026-11-14.**
+
+What now works: `auraBonus` and `statsIn` (exported, `battleEngine.ts`, with `AURAS`); the engine reads every unit through `statsOf` (`effectiveStats` plus the record-based aura bonus); `renewing` (mark U, `regen` 3) and `StatusRule.regen`; the turn-start passes Renewing, Sanctuary, Serenity and Shadowdancer after regeneration, logged by the new `RestoreEvent` (`source` for Sanctuary) and `StatusLaidEvent` cause `shadowdancer`; `formatEvent`'s four lines as §2 gives them. Constants `SANCTUARY_HEAL` (3), `SANCTUARY_RADIUS` (2), `SHADOWDANCER_IMAGE` ({ turns 2, images 1 }).
+
+Former `effectiveStats(` call sites in the engine class (20), each now `this.statsOf(`: `blowOdds` (attacker, defender: `previewAttack` and technique previews), `previewAbility` (user, each touched unit's AC), `previewCast` (caster, each touched unit's AC), the tick's ward in the turn start, `canAim` (attack range), `canPayFor` (spell AP), `canCast` (spell range), `statusAbility` (the event's skill), `attack` (attacker, defender), `counters` (attack range), `cast` (caster), `areaAttack` (user; bane check on each unit), `strikeUnit` (AC, resistance, ward of each unit struck). The aura changes none of the range or AP reads; they go through the one helper so none is missed. The policy's four reads (`blowChance` 2, `expectedHarm` 2, `areaHarm` attacker and each unit) now use `statsIn(state.units, …)`. `effectiveStats` is still called directly only inside `statsOf` and `statsIn`.
+
+Deviation: **the battle's first turn start is split around `battle_start`.** `startTurn` became `readySide` (AP, readiness; logs nothing) then `turnBegins` (ticks, regeneration, the new passes, recharge). The constructor used to run all of `startTurn` before recording `battle_start`, so a Sanctuary heal or a Shadowdancer image at the first turn (wounded heroes do enter battle) would have been logged before `battle_start`, which the simulator and the scene read first. The constructor now runs `readySide`, records `battle_start` (the same units as before: AP refilled), then `turnBegins` unless a side entered fallen. For every battle the simulator fights this changes nothing (no unit enters with a status, a recharge or a wound and regeneration), as the guard shows; a wounded regenerator entering battle now logs its `regenerate` after `battle_start` rather than before.
+
+Not changed, noted for later: the policy's `warded(…, unit)` reads in cast scoring (`policies.ts` around lines 224, 260, and `areaHarm`'s ward) take the raw snapshot, so neither statuses' `wardAll` (Warded) nor Aegis enters a spell's or area's expected damage. Swapping them would move the guard (Warded is a stage-1 hero spell), so it is left to step 21's policy work.
+
+Commands and results:
+
+- `npx vitest run src/engine/battleEngine.test.ts src/combat/spells.test.ts` before the code: 21 new tests failed for the expected reasons (missing exports, unchanged chances, no restores); after: all pass.
+- The policy test was checked to fail with `policies.ts` at HEAD and pass with the swap.
+- `npx vitest run src/engine src/combat scripts/simulate.test.ts`: 694 passed; the refactor guard green **unchanged**.
+- `npm test`: 86 files, 1910 tests passed (tsc clean).
+- `npm run test:browser`: not run; no scene file changed and tsc found no exhaustive switch over events in the scenes. Step 22 gives `restore` its look (BattleScene currently only logs its line).
+
+For later steps: step 20's Renew only needs to lay `renewing`; step 21 adds the nodes giving `guardian`, `courage`, `aegis`, `sanctuary`, `shadowdancer` and `manaRegen` (Serenity) and may want the policy to count wards through `statsIn`; step 22 floats `restore` (hp or mana) and draws Shadowdancer's image.
+

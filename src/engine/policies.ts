@@ -9,11 +9,11 @@ import {
   arcStruck,
   abilityTouches,
   castTouches,
-  effectiveStats,
   flankersOf,
   hasStatus,
   isMelee,
   resistanceLeft,
+  statsIn,
   tauntPenalty,
   traitDamage,
   traitToHit,
@@ -295,8 +295,8 @@ function blowBonus(state: BattleState, self: UnitSnapshot, target: UnitSnapshot)
 
 /** The chance of `self`'s blow at `target` landing, with a technique strike's `toHit`. */
 function blowChance(state: BattleState, self: UnitSnapshot, target: UnitSnapshot, strike?: Strike): number {
-  const attacker = effectiveStats({ stats: self, statuses: self.statuses })
-  const defender = effectiveStats({ stats: target, statuses: target.statuses })
+  const attacker = statsIn(state.units, self)
+  const defender = statsIn(state.units, target)
   return hitChance(attacker, defender.ac, blowBonus(state, self, target) + (strike?.toHit ?? 0))
 }
 
@@ -311,8 +311,8 @@ function blowChance(state: BattleState, self: UnitSnapshot, target: UnitSnapshot
  * pierce as they would (`resistanceLeft`).
  */
 function expectedHarm(state: BattleState, self: UnitSnapshot, target: UnitSnapshot, dice?: DamageRoll, strike?: Strike): number {
-  const attacker = effectiveStats({ stats: self, statuses: self.statuses })
-  const defender = effectiveStats({ stats: target, statuses: target.statuses })
+  const attacker = statsIn(state.units, self)
+  const defender = statsIn(state.units, target)
   const { count, sides, bonus: flat } = dice ?? attacker.damage
   const arc = arcStruck(target, self.position, isMelee(self))
   const traits = traitDamage(attacker, { arc, free: false }, false, { hp: target.hp, maxHp: defender.maxHp })
@@ -539,12 +539,12 @@ function pickStrike(strikes: readonly StrikeOption[], areas: readonly { action: 
  */
 function areaHarm(state: BattleState, self: UnitSnapshot, action: AreaAction): number {
   const area = ABILITIES[action.ability].area!
-  const attacker = effectiveStats({ stats: self, statuses: self.statuses })
+  const attacker = statsIn(state.units, self)
   const dice = area.weaponDamage ? attacker.damage : area.damage
   const extra = area.weaponDamage ? 0 : (self.abilityDamageBonus ?? 0)
   const plain = mean(dice) + extra
   return abilityTouches(state.units, self, action.ability, action.at, self.attackRange).reduce((sum, unit) => {
-    const defender = effectiveStats({ stats: unit, statuses: unit.statuses })
+    const defender = statsIn(state.units, unit)
     const chance = hitChance(attacker, defender.ac, -tauntPenalty(self, unit))
     const average = area.bane && dice && baneApplies(defender) ? mean({ ...dice, count: dice.count * 2 }) + extra : plain
     const through = (x: number) => (area.throughResistance ? damageThrough(x, effectiveResistance(attacker, defender.resistance ?? 0)) : x)

@@ -30,6 +30,10 @@ import {
   type StatusTickEvent,
   type StatusLaidEvent,
   TAUNT_PENALTY,
+  auraBonus,
+  statsIn,
+  type RestoreEvent,
+  type UnitRecord,
   type UnitSetup,
 } from './battleEngine.ts'
 import { POLICIES } from './policies.ts'
@@ -4325,6 +4329,328 @@ describe('BattleEngine kill and survival traits', () => {
       const original = play(engine)
       expect(original.some((e) => e.type === 'battle_end')).toBe(true)
       expect(play(restored)).toEqual(original)
+    })
+  })
+})
+
+describe('BattleEngine auras and turn-start restores', () => {
+  const WIDE = { cols: 9, rows: 3 }
+  /** A unit of `side` at `position`, the warrior's stats with `stats` over them. */
+  const at = (id: string, side: 'player' | 'enemy', position: Hex, stats: Partial<CombatantStats> = {}, extra: Partial<UnitSetup> = {}): UnitSetup => ({
+    id, side, position, stats: { ...WARRIOR_STATS, ...stats }, ...extra,
+  })
+  /** A goblin of 30 hit points and no resistance. */
+  const goblinAt = (id: string, position: Hex, stats: Partial<CombatantStats> = {}, extra: Partial<UnitSetup> = {}): UnitSetup => ({
+    id, side: 'enemy', position, stats: { ...GOBLIN_STATS, maxHp: 30, resistance: 0, ...stats }, ...extra,
+  })
+  const counting = (values: number[]) => {
+    let i = 0
+    const rng = () => values[Math.min(i++, values.length - 1)]
+    return { rng, draws: () => i }
+  }
+  const battle = (units: UnitSetup[], rng: () => number = sequence([0.5])) => new BattleEngine({ board: WIDE, units }, { rng })
+  const seeded = (units: UnitSetup[]) => new BattleEngine({ board: WIDE, units }, { seed: 1 })
+  /** The engine taken up again with `id`'s record changed by `patch`: how a test lays a status nothing lays yet. */
+  const patched = (engine: BattleEngine, id: string, patch: Partial<UnitRecord>) => {
+    const snap = engine.snapshot()
+    Object.assign(snap.units.find((u) => u.id === id)!, patch)
+    return BattleEngine.restore(snap)
+  }
+  const bonusOf = (engine: BattleEngine, id: string) => {
+    const { units } = engine.getState()
+    return auraBonus(units, units.find((u) => u.id === id)!)
+  }
+  const restores = (events: readonly BattleEvent[]) => events.filter((e): e is RestoreEvent => e.type === 'restore')
+  const attacks = (events: readonly BattleEvent[]) => events.filter((e): e is AttackEvent => e.type === 'attack')
+  const ZERO = { ac: 0, toHit: 0, resistance: 0, wardAll: 0 }
+  const GUARDIAN = { traits: ['guardian'] as const }
+  const COURAGE = { traits: ['courage'] as const }
+  const AEGIS = { traits: ['aegis'] as const }
+  const SANCTUARY = { traits: ['sanctuary'] as const }
+  const SHADOW = { traits: ['shadowdancer'] as const }
+  const FAR = goblinAt('far', hex(8, 1))
+  const TEN = { count: 1, sides: 1, bonus: 9 }
+  /** Both sides' turns ended: the events of the player's next turn start come last. */
+  const nextPlayerTurn = (engine: BattleEngine) => [...engine.step(END_TURN), ...engine.step(END_TURN)]
+
+  describe('auraBonus', () => {
+    it('Guardian: +5 armour class to an ally within 1, not at 2, not to itself, not to a foe; two do not stack', () => {
+      const engine = battle([
+        at('guard', 'player', hex(0, 1), GUARDIAN), at('near', 'player', hex(1, 1)), at('off', 'player', hex(2, 1)),
+        goblinAt('foe', hex(0, 0)), FAR,
+      ])
+      expect(hexDistance(hex(0, 0), hex(0, 1))).toBe(1)
+      expect(bonusOf(engine, 'near')).toEqual({ ...ZERO, ac: 5 })
+      expect(bonusOf(engine, 'off')).toEqual(ZERO)
+      expect(bonusOf(engine, 'guard')).toEqual(ZERO)
+      expect(bonusOf(engine, 'foe')).toEqual(ZERO)
+      const two = battle([at('guard', 'player', hex(0, 1), GUARDIAN), at('near', 'player', hex(1, 1)), at('guard2', 'player', hex(2, 1), GUARDIAN), FAR])
+      expect(bonusOf(two, 'near')).toEqual({ ...ZERO, ac: 5 })
+    })
+
+    it('Aura of Courage: +5 to hit to an ally within 2, not at 3, not to itself', () => {
+      const engine = battle([at('brave', 'player', hex(0, 1), COURAGE), at('two', 'player', hex(2, 1)), at('three', 'player', hex(3, 1)), FAR])
+      expect(bonusOf(engine, 'two')).toEqual({ ...ZERO, toHit: 5 })
+      expect(bonusOf(engine, 'three')).toEqual(ZERO)
+      expect(bonusOf(engine, 'brave')).toEqual(ZERO)
+    })
+
+    it('Aegis: +2 resistance and +2 to every ward within 2, itself included', () => {
+      const engine = battle([at('aegis', 'player', hex(0, 1), AEGIS), at('two', 'player', hex(2, 1)), at('three', 'player', hex(3, 1)), FAR])
+      const aegis = { ...ZERO, resistance: 2, wardAll: 2 }
+      expect(bonusOf(engine, 'aegis')).toEqual(aegis)
+      expect(bonusOf(engine, 'two')).toEqual(aegis)
+      expect(bonusOf(engine, 'three')).toEqual(ZERO)
+    })
+
+    it('gives nothing from a fallen holder', () => {
+      const engine = battle([at('guard', 'player', hex(0, 1), { traits: ['guardian', 'courage', 'aegis'] }, { hp: 0 }), at('near', 'player', hex(1, 1)), FAR])
+      expect(bonusOf(engine, 'near')).toEqual(ZERO)
+    })
+
+    it('statsIn adds the bonus to what the statuses make of the unit, spells’ chance included', () => {
+      const engine = battle([
+        at('aegis', 'player', hex(0, 1), { traits: ['aegis', 'courage'] }),
+        at('mage', 'player', hex(1, 1), { resistance: 1, wards: { fire: 3 }, magic: { maxMana: 10, skill: 60, spells: ['magic_arrow'] } }),
+        FAR,
+      ])
+      const { units } = engine.getState()
+      const stats = statsIn(units, units.find((u) => u.id === 'mage')!)
+      expect(stats).toMatchObject({ ac: WARRIOR_STATS.ac, toHit: WARRIOR_STATS.toHit + 5, resistance: 3, magic: { skill: 65 } })
+      expect(stats.wards).toMatchObject({ fire: 5, frost: 2, poison: 2 })
+      const plain = statsIn(units, units.find((u) => u.id === 'far')!)
+      expect(plain).toEqual(effectiveStats({ stats: plain, statuses: [] }))
+    })
+  })
+
+  describe('in rolls and previews', () => {
+    it('a foe beside a Guardian is struck against 5 more armour class, and previewAttack agrees', () => {
+      const strike = (guard: Partial<CombatantStats>) => {
+        const engine = battle([at('warrior', 'player', hex(1, 1)), goblinAt('goblin', hex(2, 1)), goblinAt('guard', hex(3, 1), guard)])
+        const preview = engine.previewAttack('warrior', 'goblin')!
+        const [blow] = attacks(engine.step(ATTACK_GOBLIN))
+        expect(preview.hitChance * 100).toBeCloseTo(blow.chance)
+        return blow
+      }
+      const plain = strike({})
+      const guarded = strike(GUARDIAN)
+      expect(guarded.defenderAc).toBe(plain.defenderAc + 5)
+      expect(guarded.chance).toBe(plain.chance - 5)
+    })
+
+    it('an ally with Courage raises an attack’s chance and a cast’s by 5, and the previews agree', () => {
+      const MAGE = { magic: { maxMana: 20, skill: 60, spells: ['magic_arrow' as SpellId] } }
+      const field = (ally: Partial<CombatantStats>) =>
+        battle([at('warrior', 'player', hex(1, 1), MAGE), at('ally', 'player', hex(0, 1), ally), goblinAt('goblin', hex(2, 1))])
+      const blow = (ally: Partial<CombatantStats>) => attacks(field(ally).step(ATTACK_GOBLIN))[0].chance
+      expect(blow(COURAGE)).toBe(blow({}) + 5)
+      const cast = (ally: Partial<CombatantStats>) => {
+        const engine = field(ally)
+        const preview = engine.previewCast('warrior', 'magic_arrow', 'goblin')!
+        const event = engine.step({ type: 'cast', unit: 'warrior', spell: 'magic_arrow', target: 'goblin' })[0] as CastEvent
+        expect(preview.outcomes[0].hitChance! * 100).toBeCloseTo(event.outcomes[0].chance!)
+        return event
+      }
+      expect(cast(COURAGE).outcomes[0].chance).toBe(cast({}).outcomes[0].chance! + 5)
+      expect(cast(COURAGE).skill).toBe(65)
+      expect(field(COURAGE).previewAttack('warrior', 'goblin')!.hitChance).toBeCloseTo(field({}).previewAttack('warrior', 'goblin')!.hitChance + 0.05)
+    })
+
+    it('Aegis cuts a weapon hit by 2 more resistance and a fire spell by 2 more ward', () => {
+      const FIRE = { damage: TEN, magic: { maxMana: 20, skill: 95, spells: ['flame_arrow' as SpellId] } }
+      const field = (goblin: Partial<CombatantStats>) => battle([at('warrior', 'player', hex(1, 1), FIRE), goblinAt('goblin', hex(2, 1), goblin)])
+      expect(attacks(field({}).step(ATTACK_GOBLIN))[0]).toMatchObject({ hit: true, damage: 10, defenderResistance: 0 })
+      expect(attacks(field(AEGIS).step(ATTACK_GOBLIN))[0]).toMatchObject({ hit: true, damage: 8, defenderResistance: 2 })
+      const burn = (goblin: Partial<CombatantStats>) =>
+        (field(goblin).step({ type: 'cast', unit: 'warrior', spell: 'flame_arrow', target: 'goblin' })[0] as CastEvent).outcomes[0]
+      const [plain, warded] = [burn({}), burn(AEGIS)]
+      expect(plain).toMatchObject({ hit: true, warded: 0 })
+      expect(warded).toMatchObject({ hit: true, warded: 2, damage: plain.damage - 2 })
+    })
+
+    it('the policy reads the auras: it strikes the foe no Guardian stands beside', () => {
+      // Two goblins alike beside the warrior; a Guardian stands beside the first only.
+      const field = (guard: Partial<CombatantStats>) =>
+        battle([at('warrior', 'player', hex(1, 1)), goblinAt('open', hex(2, 1)), goblinAt('kept', hex(1, 0)), goblinAt('guard', hex(3, 1), guard)])
+      expect(hexDistance(hex(2, 1), hex(3, 1))).toBe(1)
+      expect(hexDistance(hex(1, 0), hex(3, 1))).toBeGreaterThan(1)
+      const pick = (e: BattleEngine) => POLICIES.aggressive({ state: e.getState(), legal: e.legalActions('warrior'), rng: () => 0 })
+      expect(pick(field({}))).toMatchObject({ type: 'attack', target: 'open' })
+      expect(pick(field(GUARDIAN))).toMatchObject({ type: 'attack', target: 'kept' })
+    })
+  })
+
+  describe('Renewing', () => {
+    it('heals its 3 as the side’s turn begins, after a poison tick, logged as a restore', () => {
+      const start = seeded([at('warrior', 'player', hex(1, 1), {}, { hp: 10 }), FAR])
+      const engine = patched(start, 'warrior', { statuses: [{ id: 'poisoned', turnsLeft: 5 }, { id: 'renewing', turnsLeft: 5 }] })
+      const events = nextPlayerTurn(engine)
+      const tick = events.find((e): e is StatusTickEvent => e.type === 'status_tick')!
+      const [restore] = restores(events)
+      expect(restore).toMatchObject({ type: 'restore', unit: 'warrior', hp: 3, cause: 'renewing' })
+      expect(restore).not.toHaveProperty('source')
+      expect(events.indexOf(restore)).toBeGreaterThan(events.indexOf(tick))
+      expect(unitOf(engine, 'warrior').hp).toBe(tick.hpAfter + 3)
+    })
+
+    it('heals no more than the unit lost, logs nothing at full and nothing while Seared', () => {
+      const start = seeded([at('warrior', 'player', hex(1, 1), {}, { hp: 19 }), FAR])
+      expect(restores(nextPlayerTurn(patched(start, 'warrior', { statuses: [{ id: 'renewing', turnsLeft: 5 }] })))).toMatchObject([{ hp: 1 }])
+      const full = seeded([at('warrior', 'player', hex(1, 1)), FAR])
+      expect(restores(nextPlayerTurn(patched(full, 'warrior', { statuses: [{ id: 'renewing', turnsLeft: 5 }] })))).toEqual([])
+      const seared = patched(start, 'warrior', { statuses: [{ id: 'renewing', turnsLeft: 5 }, { id: 'seared', turnsLeft: 5 }] })
+      expect(restores(nextPlayerTurn(seared))).toEqual([])
+      expect(unitOf(seared, 'warrior').hp).toBe(19)
+    })
+  })
+
+  describe('Sanctuary', () => {
+    it('heals the holder and its side within 2 by 3, not at 3, not a foe, naming the source', () => {
+      const engine = seeded([
+        at('sera', 'player', hex(0, 1), SANCTUARY, { hp: 10 }),
+        at('one', 'player', hex(1, 1), {}, { hp: 10 }),
+        at('two', 'player', hex(2, 1), {}, { hp: 10 }),
+        at('three', 'player', hex(3, 1), {}, { hp: 10 }),
+        goblinAt('foe', hex(0, 0), {}, { hp: 10 }),
+        FAR,
+      ])
+      // The battle's first turn start heals, after battle_start.
+      const log = engine.getLog()
+      expect(log[0].type).toBe('battle_start')
+      expect(restores(log)).toEqual([
+        expect.objectContaining({ unit: 'sera', hp: 3, cause: 'sanctuary', source: 'sera' }),
+        expect.objectContaining({ unit: 'one', hp: 3, cause: 'sanctuary', source: 'sera' }),
+        expect.objectContaining({ unit: 'two', hp: 3, cause: 'sanctuary', source: 'sera' }),
+      ])
+      expect(unitOf(engine, 'three').hp).toBe(10)
+      // The enemy's turn heals none of the player's, nor the foe.
+      expect(restores(engine.step(END_TURN))).toEqual([])
+      expect(unitOf(engine, 'foe').hp).toBe(10)
+    })
+
+    it('heals a unit once between two Sanctuaries, naming the first in roster order', () => {
+      const engine = seeded([
+        at('sera', 'player', hex(0, 1), SANCTUARY),
+        at('mid', 'player', hex(1, 1), {}, { hp: 10 }),
+        at('lia', 'player', hex(2, 1), SANCTUARY),
+        FAR,
+      ])
+      expect(restores(engine.getLog())).toEqual([expect.objectContaining({ unit: 'mid', hp: 3, source: 'sera' })])
+    })
+  })
+
+  describe('Serenity', () => {
+    const CALM = { manaRegen: 2, magic: { maxMana: 10, skill: 50, spells: [] as SpellId[] } }
+    it('restores its manaRegen, never above the maximum, and logs nothing at full', () => {
+      const start = seeded([at('sera', 'player', hex(1, 1), CALM), FAR])
+      expect(restores(start.getLog())).toEqual([])
+      const low = patched(start, 'sera', { mana: 5 })
+      expect(restores(nextPlayerTurn(low))).toEqual([expect.objectContaining({ unit: 'sera', mana: 2, cause: 'serenity' })])
+      expect(unitOf(low, 'sera').mana).toBe(7)
+      const nearly = patched(start, 'sera', { mana: 9 })
+      expect(restores(nextPlayerTurn(nearly))).toEqual([expect.objectContaining({ mana: 1 })])
+      expect(unitOf(nearly, 'sera').mana).toBe(10)
+      const [restore] = restores(nextPlayerTurn(patched(start, 'sera', { mana: 5 })))
+      expect(restore).not.toHaveProperty('hp')
+    })
+  })
+
+  describe('Shadowdancer', () => {
+    it('lays one image for 2 turns as its side’s turn begins, not while an image remains, and again once spent', () => {
+      // Rolls of 1 hit; the goblin's blow strikes the image.
+      const field = () => battle([at('brenna', 'player', hex(1, 1), SHADOW), goblinAt('goblin', hex(2, 1))], sequence([0.99]))
+      const laidNow = (events: readonly BattleEvent[]) => events.filter((e): e is StatusLaidEvent => e.type === 'status_laid')
+      const engine = field()
+      const log = engine.getLog()
+      expect(log[0].type).toBe('battle_start')
+      expect(laidNow(log)).toEqual([expect.objectContaining({ unit: 'brenna', status: 'mirrored', turns: 2, cause: 'shadowdancer' })])
+      expect(unitOf(engine, 'brenna').statuses).toEqual([{ id: 'mirrored', turnsLeft: 2, images: 1 }])
+      // Its next turn: the image is still there, and nothing more is laid.
+      expect(laidNow(nextPlayerTurn(engine))).toEqual([])
+      expect(unitOf(engine, 'brenna').statuses).toEqual([{ id: 'mirrored', turnsLeft: 1, images: 1 }])
+      // The goblin strikes the image, the last; the next turn lays another.
+      const struck = field()
+      struck.step(END_TURN)
+      expect(attacks(struck.step({ type: 'attack', unit: 'goblin', target: 'brenna' }))[0]).toMatchObject({ image: true })
+      expect(unitOf(struck, 'brenna').statuses).toEqual([])
+      expect(laidNow(struck.step(END_TURN))).toEqual([expect.objectContaining({ unit: 'brenna', cause: 'shadowdancer' })])
+      expect(unitOf(struck, 'brenna').statuses).toEqual([{ id: 'mirrored', turnsLeft: 2, images: 1 }])
+    })
+  })
+
+  describe('the turn start', () => {
+    it('runs ticks, regeneration, Renewing, Sanctuary, Serenity and Shadowdancer in that order', () => {
+      const ALL = {
+        traits: ['sanctuary', 'shadowdancer'] as const, regeneration: 1, manaRegen: 2,
+        magic: { maxMana: 10, skill: 50, spells: [] as SpellId[] },
+      }
+      const start = seeded([at('sera', 'player', hex(1, 1), ALL), FAR])
+      const engine = patched(start, 'sera', { hp: 10, mana: 2, statuses: [{ id: 'poisoned', turnsLeft: 5 }, { id: 'renewing', turnsLeft: 5 }] })
+      const events = nextPlayerTurn(engine)
+      const mine = events.filter((e) => 'unit' in e && e.unit === 'sera' && e.type !== 'status_end')
+      expect(mine.map((e) => (e.type === 'restore' ? `restore:${e.cause}` : e.type))).toEqual([
+        'status_tick', 'regenerate', 'restore:renewing', 'restore:sanctuary', 'restore:serenity', 'status_laid',
+      ])
+    })
+
+    it('returns before the restores when a tick ends the battle', () => {
+      const start = seeded([at('warrior', 'player', hex(1, 1)), goblinAt('far', hex(8, 1), { traits: ['sanctuary', 'shadowdancer'] })])
+      const engine = patched(start, 'far', { hp: 1, statuses: [{ id: 'poisoned', turnsLeft: 5 }] })
+      const events = engine.step(END_TURN)
+      expect(events.map((e) => e.type)).toEqual(['end_turn', 'status_tick', 'unit_down', 'battle_end'])
+    })
+
+    it('draws nothing from the RNG for restores and auras', () => {
+      const { rng, draws } = counting([0.5])
+      const engine = battle(
+        [
+          at('sera', 'player', hex(1, 1), { traits: ['sanctuary', 'shadowdancer', 'guardian', 'courage', 'aegis'], manaRegen: 2, magic: { maxMana: 10, skill: 50, spells: [] } }, { hp: 5 }),
+          goblinAt('far', hex(8, 1), { traits: ['sanctuary', 'aegis'] }, { hp: 5 }),
+        ],
+        rng,
+      )
+      nextPlayerTurn(engine)
+      engine.step(END_TURN)
+      expect(draws()).toBe(0)
+      expect(restores(engine.getLog()).length).toBeGreaterThan(0)
+      const blow = (traits: Partial<CombatantStats>) => {
+        const c = counting([0.5])
+        battle([at('warrior', 'player', hex(1, 1)), goblinAt('goblin', hex(2, 1)), goblinAt('guard', hex(3, 1), traits)], c.rng).step(ATTACK_GOBLIN)
+        return c.draws()
+      }
+      expect(blow({ traits: ['guardian', 'aegis'] })).toBe(blow({}))
+    })
+  })
+
+  describe('snapshots', () => {
+    it('carry renewing through a restore, playing on as the original', () => {
+      const start = seeded([at('warrior', 'player', hex(1, 1), SANCTUARY, { hp: 8 }), goblinAt('goblin', hex(4, 1), AEGIS)])
+      const engine = patched(start, 'warrior', { statuses: [{ id: 'renewing', turnsLeft: 4 }] })
+      const restored = BattleEngine.restore(JSON.parse(JSON.stringify(engine.snapshot())))
+      expect(restored.snapshot()).toEqual(engine.snapshot())
+      const play = (e: BattleEngine) => {
+        for (let state = e.getState(); state.phase !== 'over'; state = e.getState()) {
+          e.step(POLICIES.aggressive({ state, legal: e.legalActions(), rng: () => 0 }))
+        }
+        return e.getLog()
+      }
+      const original = play(engine)
+      expect(restores(original).some((e) => e.cause === 'renewing')).toBe(true)
+      expect(play(restored)).toEqual(original)
+    })
+  })
+
+  describe('formatEvent', () => {
+    const names = { sera: 'Sera', aldric: 'Aldric', brenna: 'Brenna' }
+    const base = { seq: 1, round: 1 }
+    it('words each restore and the Shadowdancer’s image', () => {
+      expect(formatEvent({ ...base, type: 'restore', unit: 'aldric', hp: 3, cause: 'sanctuary', source: 'sera' }, names)).toBe("Sera's sanctuary restores 3 to Aldric.")
+      expect(formatEvent({ ...base, type: 'restore', unit: 'sera', hp: 3, cause: 'sanctuary', source: 'sera' }, names)).toBe("Sera's sanctuary restores 3 to Sera.")
+      expect(formatEvent({ ...base, type: 'restore', unit: 'aldric', hp: 3, cause: 'renewing' }, names)).toBe('Aldric is renewed (+3).')
+      expect(formatEvent({ ...base, type: 'restore', unit: 'sera', mana: 2, cause: 'serenity' }, names)).toBe('Sera regains 2 mana.')
+      expect(formatEvent({ ...base, type: 'status_laid', unit: 'brenna', status: 'mirrored', turns: 2, cause: 'shadowdancer' }, names)).toBe(
+        'A mirror image appears beside Brenna.',
+      )
     })
   })
 })
