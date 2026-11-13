@@ -190,6 +190,7 @@ Commands and results:
 - Red: the new abilities and engine tests failed for the expected reasons (missing entries, "cannot use volley at 4,1", empty centre lists); the status-order test in `spells.test.ts` failed after `taunted` was added (deliberate; its expectation now includes `taunted`, and a Taunted rule test was added).
 - `npx vitest run src/engine/battleEngine.test.ts src/combat/abilities.test.ts src/engine/policies.test.ts`: 399 passed.
 - `npm test`: 86 files, 1737 tests passed; the refactor guard green with its fixture unedited.
+- Commit: `18595ee` Skill trees step 10: area techniques.
 - `npm run test:browser` not run: no scene file changed.
 
 Deviations: none from the contracts. Added `CastOutcome.resisted` (optional) and the exported `abilityArea`/`abilityTouches`, both within the task's latitude ("decide and document"; a shape change under schema 25).
