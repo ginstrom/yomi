@@ -103,6 +103,13 @@ describe('scheduleEvents', () => {
     expect(totalMs).toBe(600)
   })
 
+  it('gives each restore at a turn’s start a pause of its own, as a status’s damage has', () => {
+    const restore = (seq: number): BattleEvent => ({ type: 'restore', seq, round: 1, unit: 'g', hp: 2, cause: 'renewing' })
+    const { beats, totalMs } = scheduleEvents([restore(0), restore(1)], { moveStepMs: 100, opportunityPauseMs: 400, tickPauseMs: 300 })
+    expect(beats.map((beat) => beat.at)).toEqual([0, 300])
+    expect(totalMs).toBe(600)
+  })
+
   it('holds what follows a blow until it has landed', () => {
     const strike = attack(false)
     const end = endTurn()

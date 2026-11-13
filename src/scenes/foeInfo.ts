@@ -41,13 +41,15 @@ export function foeInfoLines(unit: UnitSnapshot): string[] {
  */
 export function describeAbility(id: AbilityId, bonus = 0, stats: Pick<CombatantStats, 'attackApCost'> = { attackApCost: 0 }): string[] {
   const ability = ABILITIES[id]
-  const cost = isTechnique(ability) ? [costLine(id, stats)] : []
+  const cost = isTechnique(id) ? [costLine(id, stats)] : []
   return [...cost, ...effectLines(ability, bonus)]
 }
 
-/** A hero's technique: an ability with any of the heroes' fields, which a monster's never sets. */
-function isTechnique(ability: Ability): boolean {
-  return ability.manaCost !== undefined || ability.weaponAp !== undefined || ability.needs !== undefined
+/** The abilities only monsters have; every other ability is a hero's technique, which shows what it costs. */
+const MONSTER_ABILITIES: readonly AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit']
+
+function isTechnique(id: AbilityId): boolean {
+  return !MONSTER_ABILITIES.includes(id)
 }
 
 function costLine(id: AbilityId, stats: Pick<CombatantStats, 'attackApCost'>): string {
@@ -91,7 +93,7 @@ function weaponStrike(strike: Strike, ability: Ability): string {
     blow,
     ...(strike.toHit ? [`${signed(strike.toHit)} to hit`] : []),
     ...(strike.damageBonus ? [`+${strike.damageBonus} dmg`] : []),
-    ...(strike.onHit ?? []).map((o) => `+${o.damage}${o.element ? ` ${o.element}` : ''}${o.bane ? ' vs the regenerating and blightborn' : ''}`),
+    ...(strike.onHit ?? []).map((o) => `+${o.damage} ${o.element ?? 'on hit'}${o.bane ? ' vs the regenerating and blightborn' : ''}`),
     ...(strike.spreads ? ['at another foe in reach'] : []),
   ]
   return `${strike.name.toLowerCase()}: ${parts.join(', ')}`

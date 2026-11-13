@@ -212,9 +212,11 @@ export function pathHeading(character: Pick<Character, 'perks'>, path: PathId): 
 }
 
 /** What an ability costs, in the strip's words: "3 mana, 6 AP (weapon + 1)", the weapon-relative AP (`abilityApCost`) for the weapon held. */
-export function costWords(ability: AbilityId, stats: Pick<CombatantStats, 'attackApCost'>): string {
+export function costWords(ability: AbilityId, stats: Pick<CombatantStats, 'attackApCost' | 'traits'>): string {
   const { manaCost, weaponAp } = ABILITIES[ability]
-  const ap = `${abilityApCost(stats, ability)} AP${weaponAp === undefined ? '' : ` (weapon + ${weaponAp})`}`
+  // The offset is the hero's own: an Arcane Knight's Spellsword Strikes cost the weapon's AP and no more.
+  const cost = abilityApCost(stats, ability)
+  const ap = `${cost} AP${weaponAp === undefined ? '' : ` (weapon + ${cost - stats.attackApCost})`}`
   return manaCost ? `${manaCost} mana, ${ap}` : ap
 }
 

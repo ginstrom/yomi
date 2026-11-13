@@ -4855,8 +4855,8 @@ describe('BattleEngine the special spells (skill trees step 20)', () => {
         { type: 'status_end', unit: 'cleric', status: 'webbed', reason: 'cleansed' },
       ])
       expect(statusesOf(b.engine, 'cleric')).toEqual([{ id: 'blessed', turnsLeft: 3 }])
-      expect(formatEvent(events[0], { ...NAMES, mage: 'Mage' })).toBe('Mage casts Purify: Cleric is cleansed (+6, 26 hp).')
-      expect(formatEvent(events[1], NAMES)).toBe('Cleric is no longer poisoned.')
+      expect(formatEvent(events[0], { ...NAMES, mage: 'Mage' })).toBe('Mage casts Purify on Cleric: +6 (26 hp).')
+      expect(formatEvent(events[1], NAMES)).toBe('Cleric is cleansed, no longer poisoned.')
     })
 
     it('is legal on an ally with no hostile status, and only heals it', () => {
@@ -4990,7 +4990,7 @@ describe('BattleEngine the special spells (skill trees step 20)', () => {
           damage: 0, warded: 0, half: false, healed: 5, hpBefore: 0, hpAfter: 5, status: null, revived: true }],
       }
       expect(formatEvent(revive, NAMES)).toBe('Cleric revives Warrior.')
-      expect(formatEvent({ ...base, type: 'status_end', unit: 'warrior', status: 'asleep', reason: 'cleansed' }, NAMES)).toBe('Warrior is no longer asleep.')
+      expect(formatEvent({ ...base, type: 'status_end', unit: 'warrior', status: 'asleep', reason: 'cleansed' }, NAMES)).toBe('Warrior is cleansed, no longer asleep.')
     })
   })
 })

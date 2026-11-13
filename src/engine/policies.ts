@@ -109,7 +109,7 @@ const aggressive: Policy = ({ state, legal }) => {
     const casts = castsOf(state, self, own)
     const choice =
       reviveCast(casts) ??
-      healCast(casts) ??
+      healCast(casts, self.magic?.healBonus ?? 0) ??
       purifyCast(casts) ??
       guardCast(state, self, casts) ??
       tauntUse(state, self, own, source) ??
@@ -250,9 +250,11 @@ function supportCast(state: BattleState, casts: readonly CastOption[]): Action |
  * that restores the most, counting for each ally the lesser of the spell's
  * average and what it has lost; the cheaper on a tie.
  */
-function healCast(casts: readonly CastOption[]): Action | null {
+function healCast(casts: readonly CastOption[], healBonus: number): Action | null {
   const heals = casts.filter((c) => isHealing(c.spell) && c.allies.some((u) => u.hp * 2 <= u.maxHp))
-  const restored = (c: CastOption) => c.allies.reduce((sum, u) => sum + Math.min(mean(SPELLS[c.spell].heal), u.maxHp - u.hp), 0)
+  // The healer's bonus (Mending) is added before the cap, as the engine does.
+  const restored = (c: CastOption) =>
+    c.allies.reduce((sum, u) => sum + Math.min(mean(SPELLS[c.spell].heal) + healBonus, u.maxHp - u.hp), 0)
   // The mana cost a hair off the score, so that the cheaper wins a tie.
   return best(heals, (c) => restored(c) - SPELLS[c.spell].manaCost / 1000)?.action ?? null
 }

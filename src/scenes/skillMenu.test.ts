@@ -84,6 +84,31 @@ describe('skillMenuRows', () => {
   })
 })
 
+describe('Revive in the Skills list', () => {
+  const reviver = { magic: { ...MAGIC, maxMana: 30, spells: ['revive'] as const } }
+  const revive = { type: 'cast', unit: 'hero', spell: 'revive', target: 'ally' } as const
+
+  it('is enabled only when the engine lists a cast of it', () => {
+    const { unit } = battle(reviver)
+    expect(skillMenuRows(unit, [])[0]).toMatchObject({ id: 'revive', enabled: false })
+    expect(skillMenuRows(unit, [revive])[0]).toMatchObject({ id: 'revive', enabled: true })
+  })
+
+  it('is greyed with "Once a battle" for a caster that has used it', () => {
+    const { unit } = battle(reviver)
+    expect(skillMenuRows({ ...unit, usedOnce: ['revive'] }, [])[0]).toMatchObject({ enabled: false, why: 'Once a battle' })
+    expect(skillMenuRows({ ...unit, usedOnce: [] }, [])[0].why).toBeUndefined()
+    // A spell that may be cast again and again never says so.
+    expect(skillMenuRows({ ...unit, magic: { ...MAGIC, spells: ['heal'] }, usedOnce: ['revive'] }, [])[0].why).toBeUndefined()
+  })
+
+  it('asks for a fallen ally', () => {
+    expect(targetingHint({ kind: 'spell', id: 'revive' }, { name: 'Sera', attackApCost: 5, magic: { ...MAGIC } })).toMatch(
+      /^Revive: choose a fallen ally \(\d+ mana, \d+ AP\)\. Esc or Cancel to go back\.$/,
+    )
+  })
+})
+
 describe('targetingHint', () => {
   const caster = { name: 'Aldric', attackApCost: 5, magic: { ...MAGIC } }
 

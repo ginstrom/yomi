@@ -52,6 +52,7 @@ import {
   MISSILE_SPRITES,
   OUTLINE_CRITICAL,
   OUTLINE_HURT,
+  OUTLINE_HEALED,
   OUTLINE_IMAGE,
   RELEASE_MS,
   SPELL_LOOKS,
@@ -69,6 +70,10 @@ import {
   bonusElement,
   bonusText,
   changesStatusMarks,
+  attackerNotes,
+  defenderNotes,
+  restoreFloats,
+  type FloatNote,
 } from './battleEffects.ts'
 import { DESCRIPTION_INDENT, foeInfoLines } from './foeInfo.ts'
 import { scheduleEvents, type Cue } from './eventSchedule.ts'
@@ -169,6 +174,8 @@ const HURT_TINT = 0xff8a80
 const HELPED_TINT = 0xa5f5a5
 /** The floating on-hit text's colour: the element's, else a plain warm one. */
 const FLOAT_COLOUR = '#ffd27a'
+/** The colours of the floating notes: a restore's hit points green, its mana blue, any other note the warm one. */
+const FLOAT_NOTE_COLOURS: Record<FloatNote['kind'], string> = { heal: '#7ee07e', mana: '#6fa8ff', note: FLOAT_COLOUR }
 const ELEMENT_FLOAT_COLOURS: Record<DamageElement, string> = {
   fire: cssColour(RUNE_COLOURS.ember),
   frost: cssColour(RUNE_COLOURS.rime),
@@ -568,6 +575,7 @@ export class BattleScene extends Phaser.Scene {
           return { ...row, x: bounds.centerX, y: bounds.centerY }
         }) ?? null,
       marks: Object.fromEntries([...this.units].map(([id, unit]) => [id, unit.marks])),
+      figureAlpha: Object.fromEntries([...this.units].map(([id, unit]) => [id, unit.figure.figureAlpha()])),
       result: this.resultText.visible ? this.resultText.text.split('\n') : [],
       foeInfo: this.foeInfo,
       party: this.column.probe(),
@@ -1101,6 +1109,16 @@ export class BattleScene extends Phaser.Scene {
     if (!same) this.refreshHover()
   }
 
+  /**
+   * Whether a skill aimed at `target` is aimed at the hex `at`: its standing unit, or for Revive the fallen
+   * ally lying there (which is offered only where the engine lists the cast, so never under a standing unit).
+   */
+  private aimedAt(target: UnitId, at: Hex, standing: { id: UnitId } | undefined): boolean {
+    if (standing) return standing.id === target
+    const fallen = this.engine.getState().units.find((u) => u.id === target)
+    return fallen !== undefined && fallen.hp <= 0 && hexEquals(fallen.position, at)
+  }
+
   /** What a click on `at` would do for the selected unit. */
   private boardIntent(at: Hex): BoardIntent {
     if (!this.playerControl || this.selected === null) return { kind: 'none' }
@@ -1111,7 +1129,7 @@ export class BattleScene extends Phaser.Scene {
       // Only a unit or a centre the skill can be aimed at is a target; any other click backs out of aiming.
       const skill = this.targeting
       const use = this.selectedSkillUses().find(
-        (a) => usesSkill(a, self.id, skill) && ('at' in a ? hexEquals(a.at, at) : unitAt !== undefined && a.target === unitAt.id),
+        (a) => usesSkill(a, self.id, skill) && ('at' in a ? hexEquals(a.at, at) : this.aimedAt(a.target, at, unitAt)),
       )
       return use ? { kind: 'skill', action: use } : { kind: 'none' }
     }
@@ -1425,6 +1443,8 @@ export class BattleScene extends Phaser.Scene {
       this.flash(unit, HELPED_TINT)
       this.refreshHpDisplay(unit, event.hpAfter, this.engine.getState().units.find((u) => u.id === event.unit)!.maxHp)
     }
+    if (event.type === 'restore') this.showRestore(event)
+    if (event.type === 'status_tick' && event.endured) this.floatText(event.unit, 'Endures', FLOAT_COLOUR, 1)
     if (changesStatusMarks(event)) this.refreshAllStatusMarks()
     if (event.type === 'unit_down') this.showFallen(event.unit)
   }
@@ -1451,6 +1471,8 @@ export class BattleScene extends Phaser.Scene {
       const flash = strikeFlash(event)
       if (flash) this.burst(this.chest(event.defender), flash.colour, flash.glow, 1.2)
       this.floatBonus(event)
+      this.floatNotes(event.defender, [...defenderNotes(event), ...(event.endured ? [{ text: 'Endures', kind: 'note' as const }] : [])], bonusText(event) ? 1 : 0)
+      this.floatNotes(event.attacker, attackerNotes(event))
       // A Life rune heals the attacker as it strikes.
       if ((event.healed ?? 0) > 0) {
         const attackerMax = this.engine.getState().units.find((u) => u.id === event.attacker)!.maxHp
@@ -1485,11 +1507,15 @@ export class BattleScene extends Phaser.Scene {
     const message = bonusText(event)
     if (message === null) return
     const element = bonusElement(event)
-    const at = this.chest(event.defender)
-    const colour = element ? ELEMENT_FLOAT_COLOURS[element] : FLOAT_COLOUR
+    this.floatText(event.defender, message, element ? ELEMENT_FLOAT_COLOURS[element] : FLOAT_COLOUR, 0)
+  }
+
+  /** Words rising from a unit's chest, `row` rows above the first: an on-hit's damage, a restore's "+3", "Deathblow". */
+  private floatText(unit: UnitId, message: string, colour: string, row: number): void {
+    const at = this.chest(unit)
     const unscale = 1 / (this.floatLayer.scaleX || 1)
     const text = this.add
-      .text(at.x, at.y - 20, message, { fontFamily: 'monospace', fontSize: '14px', fontStyle: 'bold', color: colour, stroke: '#000000', strokeThickness: 3 })
+      .text(at.x, at.y - (20 + 14 * row) * unscale, message, { fontFamily: 'monospace', fontSize: '14px', fontStyle: 'bold', color: colour, stroke: '#000000', strokeThickness: 3 })
       .setOrigin(0.5)
       .setScale(unscale)
     this.floatLayer.add(text)
@@ -1502,6 +1528,28 @@ export class BattleScene extends Phaser.Scene {
       ease: 'Quad.easeOut',
       onComplete: () => text.destroy(),
     })
+  }
+
+  /** Floats a list of notes over `unit`, one row each. */
+  private floatNotes(unit: UnitId, notes: readonly FloatNote[], firstRow = 0): void {
+    notes.forEach((note, i) => this.floatText(unit, note.text, FLOAT_NOTE_COLOURS[note.kind], firstRow + i))
+  }
+
+  /** A turn-start restore: "+3" in green over the unit, its hit points refilling, and "+2 mana" in blue. */
+  private showRestore(event: Extract<BattleEvent, { type: 'restore' }>): void {
+    const unit = this.units.get(event.unit)!
+    const snapshot = this.engine.getState().units.find((u) => u.id === event.unit)!
+    this.flash(unit, HELPED_TINT)
+    unit.figure.pulseOutline(OUTLINE_HEALED, OUTLINE_MS)
+    this.floatNotes(event.unit, restoreFloats(event))
+    if ((event.hp ?? 0) > 0) this.refreshHpDisplay(unit, Math.min(snapshot.maxHp, unit.shownHp + event.hp!), snapshot.maxHp)
+  }
+
+  /** A fallen unit brought back: its figure stands up again, bright and idling, and its plate returns. */
+  private standUp(id: UnitId): void {
+    const unit = this.units.get(id)!
+    unit.figure.setFigureAlpha(1).play('idle')
+    unit.plate.setVisible(true)
   }
 
   /**
@@ -1533,6 +1581,8 @@ export class BattleScene extends Phaser.Scene {
         } else if (outcome.hit) this.react(outcome.unit, event.caster, outline!, HURT_TINT, outcome.critical)
         else if (outcome.unit !== event.caster) this.dodge(outcome.unit, event.caster)
         this.refreshHpDisplay(unit, outcome.hpAfter, units.find((u) => u.id === outcome.unit)!.maxHp)
+        if (outcome.revived) this.standUp(outcome.unit)
+        if (outcome.endured) this.floatText(outcome.unit, 'Endures', FLOAT_COLOUR, 0)
       }
       if (event.drained > 0) {
         const drinker = this.units.get(event.caster)!
@@ -1567,6 +1617,7 @@ export class BattleScene extends Phaser.Scene {
         else if (outline !== null) this.react(outcome.unit, event.unit, outline, HURT_TINT, outcome.critical)
         else if (outcome.unit !== event.unit) this.dodge(outcome.unit, event.unit)
         this.refreshHpDisplay(this.units.get(outcome.unit)!, outcome.hpAfter, units.find((u) => u.id === outcome.unit)!.maxHp)
+        if (outcome.endured) this.floatText(outcome.unit, 'Endures', FLOAT_COLOUR, 0)
       }
     }
     this.time.delayedCall(RELEASE_MS, () => {
@@ -2033,7 +2084,11 @@ export class BattleScene extends Phaser.Scene {
         if (enabled) bg.setFillStyle(0x3182ce)
         this.hintText.setText(this.skillRowHint(row)).setColor(enabled ? '#9e9e9e' : '#ffb74d')
       })
-      bg.on('pointerout', () => bg.setFillStyle(enabled ? 0x2b6cb0 : 0x424242))
+      bg.on('pointerout', () => {
+        bg.setFillStyle(enabled ? 0x2b6cb0 : 0x424242)
+        // The row's hint gives way to the one the turn had.
+        this.showHint()
+      })
       bg.on('pointerdown', () => this.pickSkill(i))
       container.add([bg, text])
       menu.rows.push({ row, bg })

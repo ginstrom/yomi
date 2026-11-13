@@ -80,13 +80,14 @@ export const SPELL_LOOKS: Record<SpellId, SpellLook> = {
   drain_life: { colour: 0x8e1b1b, glow: 0xe57373, missile: 'dart', impact: 'burst' },
   curse: { colour: 0x6a1b9a, glow: 0xb39ddb, missile: 'orb', impact: 'cloud' },
   web: { colour: 0xbdbdbd, glow: 0xeeeeee, missile: 'orb', impact: 'ring' },
-  // Stage 3's special spells: first looks from their kin; step 22 gives them their own.
-  ice_lance: { colour: 0x81d4fa, glow: 0xe1f5fe, missile: 'dart', impact: 'burst' },
-  glacial_prison: { colour: 0x9ee8ff, glow: 0xffffff, missile: 'orb', impact: 'ring' },
-  purify: HEALING,
-  revive: HEALING,
-  renew: HEALING,
-  holy_light: { colour: 0xfff8e1, glow: 0xffffff, missile: 'dart', impact: 'burst' },
+  // Stage 3's special spells, each in its own colours: a pale ice dart, a cold cloud that closes round the foe,
+  // a white-gold sparkle that cleans, gold that raises the fallen, a green ring that lasts, and a gold bolt.
+  ice_lance: { colour: 0xb3e5fc, glow: 0xffffff, missile: 'dart', impact: 'burst' },
+  glacial_prison: { colour: 0x4fc3f7, glow: 0xe1f5fe, missile: 'orb', impact: 'cloud' },
+  purify: { colour: 0xfff9c4, glow: 0xffffff, missile: 'orb', impact: 'sparkle' },
+  revive: { colour: 0xffe082, glow: 0xfffde7, missile: 'orb', impact: 'sparkle' },
+  renew: { ...HEALING, colour: 0xa5d6a7, impact: 'ring' },
+  holy_light: { colour: 0xffd54f, glow: 0xffffff, missile: 'dart', impact: 'burst' },
   dark_shield: { ...SUPPORT, colour: 0x283593, glow: 0x7986cb },
 }
 
@@ -199,6 +200,33 @@ export function bonusElement(event: AttackEvent): Element | undefined {
   return event.bonus.find((b) => b.damage > 0)?.element
 }
 
+/** What a floating word says and how it is coloured: a restore's hit points, a restore's mana, a note on a blow. */
+export interface FloatNote {
+  text: string
+  kind: 'heal' | 'mana' | 'note'
+}
+
+/** The floats of a turn-start restore: "+3" for hit points, "+2 mana" for mana, one each when it gave both. */
+export function restoreFloats(event: Extract<BattleEvent, { type: 'restore' }>): FloatNote[] {
+  return [
+    ...((event.hp ?? 0) > 0 ? [{ text: `+${event.hp}`, kind: 'heal' as const }] : []),
+    ...((event.mana ?? 0) > 0 ? [{ text: `+${event.mana} mana`, kind: 'mana' as const }] : []),
+  ]
+}
+
+/** The notes a blow earns over its attacker: an Ambush, and the action points Blademaster gave back. */
+export function attackerNotes(event: AttackEvent): FloatNote[] {
+  return [
+    ...(event.ambush ? [{ text: 'Ambush', kind: 'note' as const }] : []),
+    ...((event.apRefunded ?? 0) > 0 ? [{ text: `+${event.apRefunded} AP`, kind: 'note' as const }] : []),
+  ]
+}
+
+/** The note a blow earns over its defender: a Deathblow felling it. */
+export function defenderNotes(event: AttackEvent): FloatNote[] {
+  return event.deathblow ? [{ text: 'Deathblow', kind: 'note' }] : []
+}
+
 /** Whether an event may have laid or ended a status, so that the nameplates' status letters need drawing again. */
 export function changesStatusMarks(event: BattleEvent): boolean {
   switch (event.type) {
@@ -207,6 +235,7 @@ export function changesStatusMarks(event: BattleEvent): boolean {
     case 'cast':
     case 'ability':
     case 'status_laid':
+    case 'restore':
     case 'status_end':
     case 'status_tick':
     case 'unit_down':

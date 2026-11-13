@@ -317,7 +317,7 @@ export interface AttackEvent extends EventBase {
   arcBonus: number
   /** The attacker's facing after turning to strike. */
   attackerFacing: number
-  /** The defender was asleep, which added `HELPLESS_BONUS` to `chance`. */
+  /** The defender was helpless (Asleep, Frozen), which added `HELPLESS_BONUS` to `chance`. */
   helpless: boolean
   /** The roll, 1 to 100: a hit when no higher than `chance`. */
   attackRoll: number
@@ -2602,10 +2602,10 @@ function describeCast(event: CastEvent, names: Readonly<Record<UnitId, string>>)
   if (outcomes.length === 0) return `${opening}: it touches no one.`
   // "Sera revives Aldric."
   if (outcomes[0].revived) return `${names[event.caster]} revives ${names[outcomes[0].unit]}.`
-  // "Sera casts Purify: Aldric is cleansed (+3, 12 hp)."
+  // "Sera casts Purify on Aldric: +3 (12 hp)." The statuses it took off are told by the `status_end` lines that follow.
   if (spell.cleanse && outcomes.length === 1) {
     const [o] = outcomes
-    return `${names[event.caster]} casts ${spell.name}: ${names[o.unit]} is cleansed (+${o.healed}, ${o.hpAfter} hp).`
+    return `${opening}: +${o.healed} (${o.hpAfter} hp).`
   }
   if (!spell.hostile) {
     const healed = outcomes.filter((o) => o.healed > 0 || spell.heal)
@@ -2719,7 +2719,7 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
     case 'status_end':
       if (event.reason === 'woke') return `${names[event.unit]} wakes.`
       if (event.reason === 'spent') return `The last image of ${names[event.unit]} is gone.`
-      if (event.reason === 'cleansed') return `${names[event.unit]} is no longer ${STATUSES[event.status].adjective}.`
+      if (event.reason === 'cleansed') return `${names[event.unit]} is cleansed, no longer ${STATUSES[event.status].adjective}.`
       return event.status === 'asleep' ? `${names[event.unit]} wakes.` : `${names[event.unit]} is no longer ${STATUSES[event.status].adjective}.`
     case 'move': {
       const steps = event.path.length

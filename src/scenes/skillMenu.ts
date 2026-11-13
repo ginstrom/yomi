@@ -18,11 +18,11 @@ export type SkillMenuRow = Skill & {
   enabled: boolean
   /** Turns until a recharging ability is ready again; left out when it is ready. */
   readyIn?: number
-  /** Why an ability cannot be used with the weapon held: "Needs a melee weapon"; left out otherwise. */
+  /** Why a skill cannot be used: "Needs a melee weapon" for the weapon held, "Once a battle" for a spell already cast; left out otherwise. */
   why?: string
 }
 
-type MenuUnit = Pick<UnitSnapshot, 'id' | 'magic' | 'abilities' | 'recharging' | 'attackApCost' | 'attackRange' | 'reach'>
+type MenuUnit = Pick<UnitSnapshot, 'id' | 'magic' | 'abilities' | 'recharging' | 'attackApCost' | 'attackRange' | 'reach'> & Partial<Pick<UnitSnapshot, 'usedOnce'>>
 
 /** Whether `action` is a use of `skill` by the unit `unit`. */
 export function usesSkill(action: Action, unit: string, skill: Skill): boolean {
@@ -35,12 +35,13 @@ export function usesSkill(action: Action, unit: string, skill: Skill): boolean {
 export function skillMenuRows(unit: MenuUnit, legal: readonly Action[]): SkillMenuRow[] {
   const known = unit.magic?.spells ?? []
   const spells = ALL_SPELL_IDS.filter((id) => known.includes(id)).map((id): SkillMenuRow => {
-    const { name, manaCost } = SPELLS[id]
+    const { name, manaCost, oncePerBattle } = SPELLS[id]
     return {
       kind: 'spell',
       id,
       label: `${name}  ${manaCost} mana  ${spellApCost(unit, id)} AP`,
       enabled: legal.some((action) => usesSkill(action, unit.id, { kind: 'spell', id })),
+      ...(oncePerBattle && unit.usedOnce?.includes(id) ? { why: 'Once a battle' } : {}),
     }
   })
   const has = unit.abilities ?? []
@@ -86,7 +87,9 @@ export function targetingHint(skill: Skill, stats: Pick<CombatantStats, 'name' |
         ? 'choose a foe'
         : target === 'ally'
           ? 'choose an ally'
-          : target === 'self' || range === 0
+          : target === 'fallen'
+            ? 'choose a fallen ally'
+            : target === 'self' || range === 0
             ? 'click the caster'
             : 'choose where'
     return `${name}: ${what} (${manaCost} mana, ${spellApCost(stats, skill.id)} AP). ${back}`

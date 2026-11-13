@@ -18,7 +18,10 @@ import {
   abilityLook,
   areaOutline,
   attackLook,
+  attackerNotes,
   castOutline,
+  defenderNotes,
+  restoreFloats,
   flightMs,
   holdMs,
   impactMs,
@@ -181,9 +184,40 @@ describe('the nameplates\' status letters', () => {
   })
 
   it('are drawn again after every cast, ability, status laid (Rooted), status\'s end or tick and fall, and not for a move', () => {
-    for (const type of ['cast', 'ability', 'status_laid', 'status_end', 'status_tick', 'unit_down'] as const) {
+    for (const type of ['cast', 'ability', 'status_laid', 'restore', 'status_end', 'status_tick', 'unit_down'] as const) {
       expect(changesStatusMarks({ type } as BattleEvent)).toBe(true)
     }
     expect(changesStatusMarks({ type: 'move' } as BattleEvent)).toBe(false)
+  })
+})
+
+describe('the stage-3 events', () => {
+  const restore = (extra: object) => ({ type: 'restore', seq: 0, round: 1, unit: 'hero', cause: 'renewing', ...extra }) as Extract<BattleEvent, { type: 'restore' }>
+
+  it('floats a restore\'s hit points as "+N" and its mana as "+N mana", one each', () => {
+    expect(restoreFloats(restore({ hp: 3 }))).toEqual([{ text: '+3', kind: 'heal' }])
+    expect(restoreFloats(restore({ mana: 2, cause: 'serenity' }))).toEqual([{ text: '+2 mana', kind: 'mana' }])
+    expect(restoreFloats(restore({ hp: 3, mana: 2 }))).toHaveLength(2)
+    expect(restoreFloats(restore({ hp: 0 }))).toEqual([])
+  })
+
+  it('notes an ambush and refunded AP over the attacker and a deathblow over the defender', () => {
+    const base = attack(1)
+    expect(attackerNotes(base)).toEqual([])
+    expect(attackerNotes({ ...base, ambush: true, apRefunded: 4 })).toEqual([
+      { text: 'Ambush', kind: 'note' },
+      { text: '+4 AP', kind: 'note' },
+    ])
+    expect(defenderNotes(base)).toEqual([])
+    expect(defenderNotes({ ...base, deathblow: true })).toEqual([{ text: 'Deathblow', kind: 'note' }])
+  })
+
+  it('gives each of the six special spells a look of its own, not its kin\'s', () => {
+    const six = ['ice_lance', 'glacial_prison', 'purify', 'revive', 'renew', 'holy_light'] as const
+    expect(new Set(six.map((id) => SPELL_LOOKS[id].colour)).size).toBe(6)
+    for (const id of six) {
+      expect(SPELL_LOOKS[id]).not.toBe(SPELL_LOOKS.heal)
+      expect(SPELL_LOOKS[id]).not.toBe(SPELL_LOOKS.frost_blast)
+    }
   })
 })

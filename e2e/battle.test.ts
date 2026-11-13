@@ -357,6 +357,63 @@ describe('a battle', () => {
     expect(after.marks[foe.id]).toContain('N')
   })
 
+  it('revives a fallen ally from the Skills list: aimed at its hex, it stands up again at a quarter of its hit points (step 22)', async () => {
+    const game = await games.open()
+    await game.newGame()
+    // Delwyn (hero_3) learns Revive, which no pick of a new game reaches, in a planted save; at level 6 his mana holds its 20.
+    await game.page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      const delwyn = saved.game.parties[0].members[2]
+      delwyn.level = 6
+      delwyn.perks = { ...delwyn.perks, heal: 1, purify: 1, revive: 1 }
+      delwyn.mana = 99
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    })
+    const menu = await game.reload()
+    await game.click(menu.buttons.continue)
+    await game.waitForScenes(['World'])
+    await game.settled('World')
+    await game.press('Shift+Backquote')
+    for (const line of ['hp 1 Aldric', 'fight goblin_raid 1']) {
+      await game.page.locator('#yomi-debug input').fill(line)
+      await game.press('Enter')
+    }
+    await game.waitForScenes(['Battle'])
+    await game.press('Escape')
+    // Ends turns until the wounded Aldric has fallen and Delwyn can cast Revive.
+    let open: BattleProbe | null = null
+    for (let round = 0; round < 6 && open === null; round++) {
+      const battle = await game.awaitTurn()
+      expect(battle.buttons.result.visible).toBe(false)
+      const fallen = battle.state.units.find((u) => u.side === 'player' && u.hp <= 0)
+      if (fallen) {
+        await game.click(battle.party[2])
+        await game.waitFor('Battle', (b) => b.selected === 'hero_3')
+        await game.press('m')
+        const list = await game.waitFor('Battle', (b) => b.skillMenu !== null)
+        if (list.skillMenu!.find((row) => row.id === 'revive')?.enabled) {
+          open = list
+          break
+        }
+        await game.press('Escape')
+        await game.waitFor('Battle', (b) => b.skillMenu === null)
+      }
+      await game.click(battle.buttons.endTurn)
+      await game.waitFor('Battle', (b) => !b.playerControl || b.state.round > battle.state.round)
+    }
+    expect(open).not.toBeNull()
+    const down = open!.state.units.find((u) => u.side === 'player' && u.hp <= 0)!
+    expect(open!.figureAlpha[down.id]).toBeLessThan(1)
+    await game.click(open!.skillMenu!.find((row) => row.id === 'revive')!)
+    const aiming = await game.waitFor('Battle', (b) => b.aiming?.id === 'revive')
+    expect(aiming.hint).toBe('Revive: choose a fallen ally (20 mana, 6 AP). Esc or Cancel to go back.')
+    await game.click(battleHexOnScreen(aiming, down.position))
+    const after = await game.waitFor('Battle', (b) => b.playerControl && b.log.some((e) => e.type === 'cast' && e.spell === 'revive'))
+    const standing = after.state.units.find((u) => u.id === down.id)!
+    expect(standing.hp).toBe(Math.floor(standing.maxHp / 4))
+    expect(after.figureAlpha[down.id]).toBe(1)
+  })
+
   it('pauses under the menu on Esc, resumes on Continue, and is dropped for a new game', async () => {
     const game = await games.open()
     const before = await game.enterBattle()

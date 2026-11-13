@@ -431,7 +431,7 @@ export const PERKS = {
   },
   deathblow: {
     name: 'Deathblow',
-    description: 'A weapon hit that leaves a foe at a quarter of its hit points or less fells it, unless the foe is blightborn',
+    description: 'A weapon hit that leaves a foe at a quarter of its maximum hit points or less fells it, unless the foe is blightborn',
     path: 'assassin',
     tier: 'capstone',
     anySkill: { melee: 70, archery: 70 },

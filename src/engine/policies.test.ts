@@ -149,6 +149,21 @@ describe('policies', () => {
       expect(choose(hale)).toEqual({ type: 'cast', unit: 'p1', spell: 'magic_arrow', target: 'e1' })
     })
 
+    it("counts the healer's bonus (Mending) before the cap when it picks a heal", () => {
+      // An ally down 8 of 12: Greater Heal (mean 13) restores all 8, Heal (mean 6.5) only 6.5, unless the bonus lifts Heal to 8.
+      const healer = (healBonus: number) =>
+        new BattleEngine({
+          board: { cols: 9, rows: 4 },
+          units: [
+            { id: 'p1', side: 'player', stats: { ...caster(['heal', 'greater_heal']), magic: { maxMana: 40, skill: 70, spells: ['heal', 'greater_heal'], healBonus } }, position: hex(0, 1) },
+            { id: 'p2', side: 'player', stats: GOBLIN_STATS, position: hex(1, 1), hp: 4 },
+            { id: 'e1', side: 'enemy', stats: GOBLIN_STATS, position: hex(8, 1) },
+          ],
+        })
+      expect(choose(healer(0))).toEqual({ type: 'cast', unit: 'p1', spell: 'greater_heal', target: 'p2' })
+      expect(choose(healer(4))).toEqual({ type: 'cast', unit: 'p1', spell: 'heal', target: 'p2' })
+    })
+
     it('throws a hostile area spell only where it touches two foes or more and no ally', () => {
       const foes: Placing[] = [
         { id: 'e1', side: 'enemy', at: hex(4, 1) },

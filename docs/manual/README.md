@@ -355,11 +355,14 @@ Once picked, a skill asks for its target, even when there is only one:
 - A **strike** or a technique that marks a foe (Hunter's Mark) asks for a foe. Hovering over one shows your chance to hit, the technique's bonus or penalty included.
 - A technique the hero uses on themselves (Sprint) asks you to click the hero.
 - An area **around the hero** (Taunt, Consecrate) also asks you to click the hero. Hovering over them outlines the area and marks every foe it would touch.
+- **Revive** asks for a fallen ally: click the hex where the ally lies (fallen allies stay on the board, faded, and are outlined while Revive is aimed). A hex a standing unit has taken offers nothing.
 - Any other area (Volley) asks for a hex within reach. Hovering over one outlines the area and shows the odds for every unit inside, your own heroes included: a volley hits everyone under it.
 
 Press **Cancel** or **Esc** to back out. Spells are aimed the same way (see chapter 6).
 
 **Taunt** lays Taunted (**T** on the nameplate) on every foe within 2 hexes for a turn: they strike anyone but the taunter at −25, and it ends at once if the taunter falls. A hero with **Rooted** who ends a turn without moving stands rooted (**R**: +10 armour class, +2 resistance) through the enemy's turn, until they take a step or their next turn ends; standing still again renews it. **Pinned** foes (**N**), struck by Pin or Pinning Shot, cannot move, though they still attack and cast. Hunter's Mark leaves a foe **Marked** (**Y**, −10 armour class, easier for everyone to hit), and Hamstring leaves one **Slowed** (**L**, 3 AP fewer next turn). The table of lasting effects in chapter 6 lists them all. Foes that know techniques use them too: bandits grow into them as they level, the Captain taunting and pinning, the Brute power-attacking and cleaving, archers taking aimed shots.
+
+Other things you will see in a battle: green **+3** floating over a unit is a restore at the start of its turn (Renewing, a Sanctuary's aura), and a blue **+2 mana** a Serenity's; **Endures** shows a hero kept standing at 1 hit point by Unbreakable; **Deathblow** a foe felled outright by a hit that left it a quarter of its hit points; **Ambush** and **+4 AP** an Ambush's first blow and the action points Blademaster gave back. A hero brought back by Revive stands up again at once. Hovering over a foe lists its abilities with their costs, and the on-hit damage of a technique such as Smite reads "+4 on hit".
 
 ### Zones of control and free attacks
 
@@ -411,6 +414,8 @@ The spell then asks for a target. Valid targets are outlined, and hovering over 
 
 A technique that costs mana is not a spell: it is a blow or a shot of the hero's weapon, rolled with the weapon's skill, flanking and facing included, and it uses mana only as its price. Flame Strike, Frost Strike and Thunder Strike add their element's damage to the blow on a hit, and the foe's ward against that element takes its points off as it would from a spell.
 
+Six of the later spells are special. **Ice Lance** (frost, 2d8) does 2d8 more to a foe already chilled, slowed, webbed, asleep or frozen. **Glacial Prison** freezes a foe within 5 hexes for 2 turns: **Frozen** (**I**) is helpless like sleep, but damage does not wake it. **Purify** ends every hostile effect on an ally and heals 1d6; the log names each effect it removed. **Revive** raises an ally that fell in this battle, on a free hex within 2, at a quarter of its hit points, once a battle. **Renew** gives each ally near the caster 3 hit points as its turn begins, for 3 turns (**U**). **Holy Light** is a bolt of light that deals double dice against the regenerating and the blightborn.
+
 ### Elements and wards
 
 Some spells and effects carry an **element**. Flame Arrow and Fireball are fire, Frost Blast is frost, Acid Arrow and its corrosion are acid, and Death Cloud and its poison are poison. Magic Arrow has no element. A monster may have a **ward** against an element: the ward takes that many points off each hit and each tick of that element, and the log notes it, for example "HITS Salamander for 0 dmg (warded 9)". A ward never stops an effect from landing, only its damage. Choose spells with no element, or a different one, against a warded foe.
@@ -443,6 +448,8 @@ The letters beside a unit's health bar show its current effects. An effect lasts
 | Slowed (L) | −3 AP |
 | Taunted (T) | −25 to hit at anyone but the taunter |
 | Pinned (N) | Cannot move, though it still attacks and casts |
+| Frozen (I) | No AP, helpless like sleep, but damage does not wake it |
+| Renewing (U) | Regains 3 hit points as its turn begins |
 | Rooted (R) | +10 armour class, +2 resistance, until the unit moves or its next turn ends |
 
 Damage over time strikes at the start of the affected unit's side's turn. Section 11 lists every spell.

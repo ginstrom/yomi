@@ -167,6 +167,11 @@ describe('costWords', () => {
     expect(costWords('pin', { attackApCost: 3 })).toBe('3 mana, 4 AP (weapon + 1)')
     expect(costWords('power_attack', { attackApCost: 4 })).toBe('6 AP (weapon + 2)')
   })
+
+  it("words an Arcane Knight's Spellsword Strike at the weapon's own cost", () => {
+    expect(costWords('flame_strike', { attackApCost: 4 })).toBe('3 mana, 5 AP (weapon + 1)')
+    expect(costWords('flame_strike', { attackApCost: 4, traits: ['arcane_knight'] })).toBe('3 mana, 4 AP (weapon + 0)')
+  })
 })
 
 describe('draftNodeClickable', () => {

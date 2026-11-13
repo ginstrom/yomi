@@ -55,7 +55,7 @@ import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook } from './unitLook.ts'
 import { PARTY_PANEL_W, portraitKey } from './partyPanel.ts'
-import { NODE_H, NODE_W, nodeHint, openingTree, perkTitle, treeForKey } from './perkTree.ts'
+import { NODE_H, NODE_W, clampLines, nodeHint, openingTree, perkTitle, treeForKey } from './perkTree.ts'
 import { PerkTreeView } from './PerkTreeView.ts'
 import { heroTitle, type TreeId } from '../character/trees.ts'
 import { abilityRows } from './abilityList.ts'
@@ -185,7 +185,10 @@ const TREE_RULE =
 const SPELLS_X = 24
 const SPELL_COLUMN_W = (PANEL_W - 2 * SPELLS_X - 24) / 2
 const SPELL_ROW_Y = 108
-const SPELL_ROW_H = 36
+const SPELL_ROW_H = 37
+/** A description is cut to two lines, as the 10px type fits no more between one row and the next; the Skills list's hint gives it in full. */
+const SPELL_DESCRIPTION_LINES = 2
+const SPELL_DESCRIPTION_CHAR_W = 7
 const SPELL_ROWS = 9
 const CAST_BUTTON = { width: 54, height: 22 }
 
@@ -908,7 +911,8 @@ export class InventoryScene extends Phaser.Scene {
     const known = rows.map((row) => row.spell)
     rows.forEach(({ spell, name, kind, ap, mana: manaCost, recharge }, i) => {
       const { x, y } = this.spellRowAt(i)
-      const { description } = SPELLS[spell]
+      const textWidth = SPELL_COLUMN_W - (this.canAdvance ? CAST_BUTTON.width + 6 : 0)
+      const description = clampLines(SPELLS[spell].description, SPELL_DESCRIPTION_LINES, Math.floor(textWidth / SPELL_DESCRIPTION_CHAR_W) - 1)
       const cost = [manaCost === null ? null : `${manaCost} mana`, `${ap} AP`, recharge === null ? null : `recharge ${recharge}`]
       content.add([
         this.add.text(x, y, `${name}  ${kind}, ${cost.filter(Boolean).join(', ')}`, { fontFamily: FONT, fontSize: '13px', color: GOLD }),
@@ -916,7 +920,7 @@ export class InventoryScene extends Phaser.Scene {
           fontFamily: FONT,
           fontSize: '10px',
           color: DIM,
-          wordWrap: { width: SPELL_COLUMN_W - (this.canAdvance ? CAST_BUTTON.width + 6 : 0) },
+          wordWrap: { width: textWidth },
         }),
       ])
       if (this.canAdvance && worldSpells(this.character).some((heal) => heal.spell === spell)) this.buildCastButton(spell, i)
@@ -931,7 +935,7 @@ export class InventoryScene extends Phaser.Scene {
           : 'Spells are cast in battle with the Cast button (M).'
     content.add(
       this.add
-        .text(PANEL_W / 2, 444, footer, { fontFamily: FONT, fontSize: '12px', color: this.worldCast ? GOLD : DIM, align: 'center', wordWrap: { width: PANEL_W - 48 } })
+        .text(PANEL_W / 2, 466, footer, { fontFamily: FONT, fontSize: '12px', color: this.worldCast ? GOLD : DIM, align: 'center', wordWrap: { width: PANEL_W - 48 } })
         .setOrigin(0.5),
     )
   }

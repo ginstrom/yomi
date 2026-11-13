@@ -373,6 +373,8 @@ export interface BattleProbe {
   skillMenu: Array<Point & SkillMenuRow> | null
   /** The status letters each unit's nameplate shows now, in order: "T", "RT", or "" for none. */
   marks: Record<UnitId, string>
+  /** Each unit's figure opacity: 1 standing, dimmed once it has fallen, 1 again once revived. */
+  figureAlpha: Record<UnitId, number>
   /** The lines of the victory or defeat screen; empty until the battle is over. */
   result: string[]
   /** The lines of the foe info panel shown beside the hovered foe now (`foeInfoLines`: its name, then its abilities and wards); empty when none shows. */

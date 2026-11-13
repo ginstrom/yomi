@@ -164,10 +164,18 @@ PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH npm run test:browser
 
 ## 6. Completion criteria
 
-- [ ] `battleEffects.ts`, `eventSchedule.ts`, `sounds.ts`, `skillMenu.ts`, `BattleScene`, `InventoryScene` changed as section 4 says, with the helper tests.
-- [ ] The new in-browser Revive test passes, and the whole `npm run test:browser` run passes.
-- [ ] `npm test` passes; the guard fixture is unchanged.
-- [ ] Manual sections 5 and 6 and `CLAUDE.md` updated.
-- [ ] Committed as "Skill trees step 22: stage-3 scenes"; the index's step table shows `done (<commit>)`.
+- [x] `battleEffects.ts`, `eventSchedule.ts`, `sounds.ts`, `skillMenu.ts`, `BattleScene`, `InventoryScene` changed as section 4 says, with the helper tests.
+- [x] The new in-browser Revive test passes, and the whole `npm run test:browser` run passes.
+- [x] `npm test` passes; the guard fixture is unchanged.
+- [x] Manual sections 5 and 6 and `CLAUDE.md` updated.
+- [x] Committed as "Skill trees step 22: stage-3 scenes"; the index's step table shows `done (<commit>)`.
 
 ## 7. Execution record
+
+Engineer: step 22, one commit "Skill trees step 22: stage-3 scenes" (hash in the index).
+
+**Done.** `battleEffects.ts`: `restoreFloats`, `attackerNotes`, `defenderNotes` (`FloatNote`), `changesStatusMarks` includes `restore`, six own `SPELL_LOOKS`. `sounds.ts` and `eventSchedule.ts`: `restore` plays the heal sound and takes the tick pause. `skillMenu.ts`: `targetingHint` for 'fallen', "Once a battle" `why` from `usedOnce`. `BattleScene`: restore floats and bar, "Endures", "Deathblow", "Ambush", "+N AP" floats (`floatText`), `standUp` on a `revived` outcome, a fallen ally picked by its hex (`aimedAt`), a skill-row hover restores the header hint on leaving. Probe gains `figureAlpha`. Carried-forward notes: foe panel shows AP for every hero technique (all but the four monster abilities) and "+4 on hit"; Purify's log line is now "Sera casts Purify on Aldric: +3 (12 hp)." and a `status_end` of reason `cleansed` reads "X is cleansed, no longer poisoned." (so "cleansed" is said only when a status was removed, with no event-shape change); `AttackEvent.helpless` comment; `costWords` uses the hero's actual offset (Arcane Knight "weapon + 0"); `healCast` adds `healBonus` before the cap (staged test, guard unchanged); Deathblow says "maximum hit points".
+
+**Deviations.** (1) Skirmisher's +10 in walk-then-attack previews: no such preview exists (`planAttack` shows no odds; the hit-chance label is `previewAttack` from the unit's hex, which reads its current `moved`), so nothing to add; recorded in a comment in `attackPlan.ts`. The policy side of that note is not this step's. (2) The Abilities tab overlapped at 840x560 for a hero with eight spells (three-line descriptions); descriptions are cut to two lines (`SPELL_DESCRIPTION_LINES`), rows 37 high, the footer moved to y 466. (3) The Revive e2e plants Revive in the save (no pick of a new game reaches a capstone) and lets Aldric, set to 1 hp, fall. (4) The capstone strip: the Revive hint wraps to two lines at 840 wide but fits above the "Not yet" line; no change.
+
+**Verification.** `npm test`: 86 files, 2000 tests pass, refactor guard unchanged. `npm run test:browser`: 10 files, 118 tests pass (none timed out). Screenshots (840x560) in the scratchpad `shots/`: `s3-revive-aim.png`, `s3-revive-stood.png`, `s3-purify.png`, `s3-prison-frozen.png`, `s3-renew-restore.png`, `s3-strip-revive.png`, `s3-strip-renew.png`, `s3-abilities-tab.png`.

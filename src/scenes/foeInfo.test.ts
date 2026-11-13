@@ -77,7 +77,7 @@ describe('foeInfoLines', () => {
     expect(describe1({ ...sword, abilities: ['cleave'] })).toEqual([
       'Cleave: ready', '  7 AP (weapon + 2), melee weapon', '  cleave: weapon blow, −5 to hit', '  cleave: weapon blow, −5 to hit, at another foe in reach',
     ])
-    expect(describe1({ ...sword, abilities: ['smite'] })[2]).toBe('  smite: weapon blow, +4, +6 vs the regenerating and blightborn')
+    expect(describe1({ ...sword, abilities: ['smite'] })[2]).toBe('  smite: weapon blow, +4 on hit, +6 on hit vs the regenerating and blightborn')
     expect(describe1({ attackApCost: 3, abilities: ['dirty_trick'] })).toEqual([
       'Dirty Trick: ready', '  4 AP (weapon + 1), melee weapon', '  dirty trick: weapon blow', '  dirty trick: baned 2 turns (−15 to hit)',
     ])
@@ -89,10 +89,10 @@ describe('foeInfoLines', () => {
   })
 
   it('describes a status laid with no roll on itself or a foe, and an area round the user', () => {
-    expect(describe1({ abilities: ['sprint'] })).toEqual(['Sprint: ready', '  itself: hasted 1 turn (+3 AP)'])
-    expect(describe1({ abilities: ['hunters_mark'] })).toEqual(['Hunter\'s Mark: ready', '  a foe within weapon range: marked 2 turns (−10 AC)'])
+    expect(describe1({ abilities: ['sprint'] })).toEqual(['Sprint: ready', '  0 AP', '  itself: hasted 1 turn (+3 AP)'])
+    expect(describe1({ abilities: ['hunters_mark'] })).toEqual(['Hunter\'s Mark: ready', '  2 AP', '  a foe within weapon range: marked 2 turns (−10 AC)'])
     expect(describe1({ abilities: ['taunt'] })).toEqual([
-      'Taunt: ready', '  burst 2, around itself, foes only: taunted 1 turn (−25 to hit but at the taunter)',
+      'Taunt: ready', '  3 AP', '  burst 2, around itself, foes only: taunted 1 turn (−25 to hit but at the taunter)',
     ])
     expect(describe1({ abilities: ['consecrate'] })).toEqual([
       'Consecrate: ready', '  5 mana, 5 AP',
@@ -109,9 +109,9 @@ describe('a bandit that learned techniques', () => {
 
   it('describes the level-8 Captain\'s Taunt and Pin with their costs for his sword', () => {
     const lines = hover('captain')
-    const at = (name: string) => lines.slice(lines.indexOf(name) + 1, lines.indexOf(name) + 2)
-    expect(at('Taunt: ready')).toEqual(['  burst 2, around itself, foes only: taunted 1 turn (−25 to hit but at the taunter)'])
-    expect(at('Pin: ready')).toEqual(['  3 mana, 6 AP (weapon + 1), melee weapon'])
+    const at = (name: string) => lines.slice(lines.indexOf(name) + 1, lines.indexOf(name) + 3)
+    expect(at('Taunt: ready')).toEqual(['  3 AP', '  burst 2, around itself, foes only: taunted 1 turn (−25 to hit but at the taunter)'])
+    expect(at('Pin: ready').slice(0, 1)).toEqual(['  3 mana, 6 AP (weapon + 1), melee weapon'])
   })
 
   it('describes the level-8 Brute\'s Power Attack and Cleave with the AP of his axe', () => {
