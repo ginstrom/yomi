@@ -35,6 +35,7 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 | 2026-11-13 | Creation's rule line says "every even level", amending the design's quoted "every level" | orchestrator | keep the quote | The quote contradicts the user's pick-rate decision |
 | 2026-11-13 | Accept step 06's tier-aligned rows (one more row than the design) and creation's perks step without the summary column (revisit at polish) | orchestrator | — | Recorded deviations, tested; layout needs it |
 | 2026-11-14 | Accept `UnitSnapshot.moved` optional (present only when true) instead of C12's boolean | orchestrator | always present, re-hash the guard | Keeps the guard's hash a regression check; readers use `moved === true` |
+| 2026-11-14 | Bandit Captain gets Pin: move `heavy_hand` after `pin` in the `knight` plan (or give the Captain's draft Heavy Hand), in step 16 since it moves play | orchestrator | leave the Captain without Pin | The design's Captain is a Taunt-and-Pin knight; Aldric holds Heavy Hand already, so only bandits move |
 | 2026-11-13 | Own branch `skill-trees` off main | orchestrator | commit on main | Precedent: one branch per feature |
 
 ## Open questions
@@ -70,6 +71,9 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 - To stage 4 tuning (from step 12): area techniques aren't AP-normalised (Volley at 6 AP weighed against one 4 AP shot; Consecrate likewise) — normalise if the simulator over-uses them; Hunter's Mark has no value check beyond affording mark-then-attack; `tauntUse` judges threat by a foe's current attack range.
 - To step 21 (from step 11 review): only Taunt's no-roll area passes a `source` to `layStatus`; any other path that ever lays `taunted` would leave no source.
+
+- To step 16: apply the Captain-Pin decision (knight plan order) and note it in step 13's task file; restore Rooted's description clause "or the end of its next turn".
+- To step 14 (from step 09 review): `perkTree.ts` `costWords` should call `abilityApCost`.
 
 ## Verification
 
