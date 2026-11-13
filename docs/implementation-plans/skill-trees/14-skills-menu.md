@@ -270,12 +270,46 @@ PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH npm run test:browser
 
 ## 6. Completion criteria
 
-- [ ] `skillMenu.ts` replaces `spellMenu.ts`, per C14, with tests.
-- [ ] The Skills button (M) shows for any unit with an active; every active kind can be aimed; greyed rows explain why.
-- [ ] Looks, `changesStatusMarks` and `foeInfo` cover the stage-2 actives and statuses.
-- [ ] AC7 and the Pin test pass in `npm run test:browser`; the Cast test updated; no other e2e test fails.
-- [ ] `npm test` passes; the guard fixture unchanged and green.
-- [ ] CLAUDE.md and the manual's sections 5 and 6 updated; no stale `spellMenu` mentions.
-- [ ] Committed as "Skill trees step 14: the Skills menu and the techniques' looks"; the index's step table shows `done (<commit>)`.
+- [x] `skillMenu.ts` replaces `spellMenu.ts`, per C14, with tests.
+- [x] The Skills button (M) shows for any unit with an active; every active kind can be aimed; greyed rows explain why.
+- [x] Looks, `changesStatusMarks` and `foeInfo` cover the stage-2 actives and statuses.
+- [x] AC7 and the Pin test pass in `npm run test:browser`; the Cast test updated; no other e2e test fails.
+- [x] `npm test` passes; the guard fixture unchanged and green.
+- [x] CLAUDE.md and the manual's sections 5 and 6 updated; no stale `spellMenu` mentions.
+- [x] Committed as "Skill trees step 14: the Skills menu and the techniques' looks"; the index's step table shows `done (<commit>)`.
 
 ## 7. Execution record
+
+**Commit:** a956def. Engineer: session model. 2026-11-14.
+
+**What was built**
+
+- `src/scenes/skillMenu.ts` (git-renamed from `spellMenu.ts`, test too): `Skill` (`{ kind: 'spell', id } | { kind: 'ability', id }`), `SkillMenuRow` per C14 (a `Skill` plus `label`, `enabled`, `readyIn?`, `why?`), `skillMenuRows` (spells in `ALL_SPELL_IDS` order with `spellApCost`, then abilities in `ABILITY_IDS` order with `abilityApCost` for the weapon held), `usesSkill`, `skillName`, `skillDescription`, `targetingHint(skill, stats)` (foe / "click <name>" / "choose where"), `describeStatuses` unchanged. The step-04 carry (the spell list showed base AP) is closed: spell rows and hints use `spellApCost`.
+- `BattleEngine.previewAbility(unit, ability, target)` (new, additive, draws nothing): `{ apCost, manaCost, outcomes: [{ unit, hitChance | null }] }`; a strike's first blow's odds through a shared private `blowOdds` (which `previewAttack` now also uses: same numbers), an area's on each unit `abilityTouches` gives, null for `auto` areas and no-roll statuses; null when not legal. So the scene shows a technique's real chance (Power Attack's −10 included); no odds are computed in the scene. Tested in `battleEngine.test.ts` (strike, no-roll status, Volley, Taunt).
+- `BattleScene`: the Skills button (M; label "Skills (mana)" for a unit with magic, "Skills" otherwise), shown for a unit with `magic` or abilities, **enabled whenever the player has control** (it was enabled only with a legal cast), so greyed rows and their reasons can be read; the list widens to its longest label and is kept on screen; a greyed row's hover (and a click or its number) puts "Name: <why | Ready in N | Not now>. <description>" in the hint in the warning colour. `targeting` holds `'attack' | Skill`; aiming covers foe strikes / foe statuses (crossed swords, odds from `previewAbility` on the nameplate and the hover), self statuses and centred areas (click the user; Sprint's cursor is the green cross), other areas (outline from the engine's `abilityArea`, odds on each touched unit; a no-roll area shows its status letter instead). Playback: a technique strike plays its weapon's look and on a hit `strikeFlash` (Flame Strike fire, Frost Strike frost, Thunder Strike lightning, Smite Bless's gold) bursts on the defender; Volley looses an arrow at each hex (`SpellLook.arrows`), Taunt rings the user (`SpellLook.onUser`).
+- `battleEffects.ts`: `ABILITY_LOOKS` gains volley, consecrate (Bless's gold burst), taunt (red ring on the user), hunters_mark (a gold dart and ring), sprint (Haste's look); `strikeFlash`; `changesStatusMarks` true for `status_laid`.
+- `foeInfo.ts`: `describeAbility(id, bonus, stats)` (signature changed from an `Ability`; only foeInfo used it): a technique gets a cost line ("3 mana, 6 AP (weapon + 1), melee weapon") from `costWords`; weapon strikes are "pin: weapon blow" / "weapon shot" / "weapon blow or shot" with to-hit, damage bonus, on-hit and spread; foe and self statuses and centred areas worded; status phrases learn `wardAll`, `immobile` ("cannot move") and Taunted's penalty. Monsters' lines unchanged.
+- `perkTree.ts` `costWords(ability, stats)` now calls `abilityApCost` (step-09 carry); the intersection types are gone.
+- `autoHeal` (`src/game/party.ts`) counts the healer's heal bonus (`worldHealing(spell, caster)`) in its thresholds (step-04 carry), test-first in `worldCasting.test.ts`. **The refactor guard did not move** (fixture unchanged and green), so no re-record commit.
+- Probe (`testHook.ts`): `buttons.cast` kept (the Skills button); `casting` became `aiming: Skill | null`, `spellMenu` became `skillMenu: (Point & SkillMenuRow)[] | null`; new `marks: Record<UnitId, string>` (each nameplate's status letters, recorded as `refreshStatusMarks` draws them). `e2e/manual.shots.ts` updated to the new names (shots not retaken: step 26).
+- e2e (`battle.test.ts`): the Cast test renamed and moved to `skillMenu`/`aiming` with `kind`; **AC7** "taunts from the Skills list: a level 4 Aldric with Rooted and Taunt marks the foes T, and stands rooted" (debug `xp`, nodes taken in the tree view, debug `fight goblin_raid 1`; the Taunt row "Taunt  3 AP" greyed at first, enabled once a foe is within 2 hexes, hint "Taunt: click Aldric (3 AP)…", foes' `marks` contain T, Aldric's R after waiting unmoved); **Pin** "pins a foe with Pin from the Skills list: its nameplate shows N" (level 6, Rooted, Taunt, Pin; picked by its number; the default seed's pin hits).
+- Docs: CLAUDE.md (engine callers' `previewAbility`; the BattleScene paragraph on Skills, aiming, marks and technique playback; `battleEffects.ts`, `skillMenu.ts`, `foeInfo.ts` lines); manual chapter 5 gains "Skills: spells and techniques" and the keys table, chapter 6 says spells are one kind of skill, and the effects table gains Marked, Slowed, Taunted, Pinned, Rooted.
+
+**Log lines.** "Aldric taunts 2 foes.", "Aldric holds their ground (rooted)." and a pin's "…HITS Goblin for N dmg, pinned." already existed and are tested in `battleEngine.test.ts` (steps 10 and 11); nothing added.
+
+**Verification**
+
+- `npx vitest run src/scenes/skillMenu.test.ts src/scenes/battleEffects.test.ts src/scenes/foeInfo.test.ts`: pass (11, 16, 13).
+- `npm test`: 86 files, 1821 tests pass; the refactor guard green with its fixture unchanged (`git status` shows no change under `scripts/`).
+- `npm run build`: passes (the usual chunk-size warning).
+- `npm run test:browser` (full run): every test passed but one, `character.test.ts` "takes a node from the tree with the pick that the second level brings" (three battles), which hit the 60 s test timeout; run alone it passes, so it is load, not this step. The new AC7 and Pin tests and the renamed Skills test pass in the full run and alone (`-t "Skills|taunts|pins"`: 3 passed).
+- Screenshots at 840×560 (scratch, not committed), `/private/tmp/claude-501/-Users-ryan-personal-yomi/d27ee47a-1631-4550-8a30-1ea2385e2b8a/scratchpad/shots/`: `01-skills-menu-greyed.png` (Aldric's list, both rows greyed, the hint giving Pin's "Not now"), `02-skills-menu-archer.png` (Brenna: Aimed Shot, Volley), `03-aiming-volley.png`, `04-skills-menu-ready.png`, `05-aiming-pin.png` (odds on the goblin), `06-pinned-marks.png` (log "Aldric pins Goblin: rolls 100 — fumbles the attack!"), `07-aiming-taunt.png` (the burst 2 outlined round Aldric), `08-taunted-marks.png` (log "Aldric taunts 2 foes.", red T on the Kobold's and the Goblin's plates, the hint "Rooted 1."), `08-zoom.png` (the plates enlarged), `09-hover-foe.png`.
+
+**Deviations and notes for later steps**
+
+- `previewAbility` is a new engine method (the task allowed showing the plain attack's chance if none existed; a preview was cleaner and is pure). No event changed; `LOG_SCHEMA_VERSION` unchanged.
+- The probe's `casting`/`spellMenu` were renamed (`aiming`/`skillMenu`) rather than kept; the contract named only `castButton` and rows' `kind`.
+- The Skills button is enabled whenever it shows on the player's turn (not only with a legal use), so a player can read why a row is greyed.
+- At 840×560 the board is drawn small and the nameplate letters are about 7 px; readable in the zoom but small. A larger mark is a polish item for stage 4, not this step.
+- No debug command to take a node was added; the e2e tests take nodes through the tree view (decision in 4.5).
+- Step 22 extends `skillMenu.ts` (Revive's aim at the fallen) and `changesStatusMarks` (`restore`).
