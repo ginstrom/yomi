@@ -41,7 +41,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | 13 | [Stage-2 nodes and plans](13-stage2-nodes.md) | The 18 stage-2 nodes in `PERKS`; plans and bandit plans take them; Battle Mage's imbue | 12 | sonnet | done (3ef4ea0, guard in the next commit) |
 | 14 | [The Skills menu and the techniques' looks](14-skills-menu.md) | `skillMenu.ts`; the Skills button (M); targeting; effects and log lines; nameplate marks; `foeInfo`; AC7 in the browser | 13 | opus | done (294507c; rename a956def) |
 | 15 | [Simulator: `--plans` and technique counts](15-simulator-plans.md) | `--plans role=plan,...`; per-side techniques used, taunts, pins, mana on techniques | 13 | sonnet | done (df74ce6) |
-| 16 | [Stage 2: measure and document](16-stage2-measure.md) | Campaigns, cells and a first parity look measured; guard re-recorded; docs current | 14, 15 | sonnet | pending |
+| 16 | [Stage 2: measure and document](16-stage2-measure.md) | Campaigns, cells and a first parity look measured; guard re-recorded; docs current | 14, 15 | sonnet | in progress (opus engineer, orchestrator's decision; policy, plan and doc fixes first) |
 | **Stage 3: traits, auras, capstones and the special spells** | | | | | |
 | 17 | [Attack and movement traits](17-attack-traits.md) | Iron Skin's free attacks, Counter, Tumble, Skirmisher, Backstab, Ambush, Executioner, Fortune's critical damage, Deadeye, Battle Mage's mana on hit, Arcane Knight; `LOG_SCHEMA_VERSION` 26, `SAVE_VERSION` 25 | 16 | opus | pending |
 | 18 | [Kill and survival traits](18-kill-survival-traits.md) | Deathblow, Blademaster, Unbreakable through `applyDamage` | 17 | opus | pending |
@@ -493,16 +493,16 @@ export const MANA_WEIGHT = 0.5
 
 | Figure | 01 baseline | 08 stage 1 | 16 stage 2 | 23 stage 3 | 25 final |
 | --- | --- | --- | --- | --- | --- |
-| one party (`--parties 1`) | 230 of 500 | 425 of 500 | | | |
-| default company | 239 of 500 | 425 of 500 | | | |
-| `--ready-level 10` | 389 of 500 | 470 of 500 | | | |
-| deaths a campaign (one party) | 1.8 | 1.0 | | | |
-| days a campaign (one party) | 270 | 333 | | | |
-| GR3 / BC3 / BC4 / BC5 | 500 / 429 / 473 / 469 | 500 / 473 / 485 / 482 | | | |
-| SN5 / SP5 / TL5 | 441 / 445 / 0 | 498 / 492 / 0 | | | |
-| SG7 / SG10 | 0 / 2 | 4 / 199 | | | |
-| F1 / F2 / F3 | 500 / 499 / 441 | 500 / 500 / 493 | | | |
-| 500-campaign run time | 270 s (one party; company 258 s, `--ready-level 10` 517 s) | 329 s (company 352 s, `--ready-level 10` 663 s) | | | |
+| one party (`--parties 1`) | 230 of 500 | 425 of 500 | 449 of 500 | | |
+| default company | 239 of 500 | 425 of 500 | 449 of 500 | | |
+| `--ready-level 10` | 389 of 500 | 470 of 500 | 488 of 500 | | |
+| deaths a campaign (one party) | 1.8 | 1.0 | 0.5 | | |
+| days a campaign (one party) | 270 | 333 | 339 | | |
+| GR3 / BC3 / BC4 / BC5 | 500 / 429 / 473 / 469 | 500 / 473 / 485 / 482 | 500 / 494 / 495 / 488 | | |
+| SN5 / SP5 / TL5 | 441 / 445 / 0 | 498 / 492 / 0 | 500 / 495 / 8 | | |
+| SG7 / SG10 | 0 / 2 | 4 / 199 | 0 / 422 | | |
+| F1 / F2 / F3 | 500 / 499 / 441 | 500 / 500 / 493 | 500 / 500 / 493 | | |
+| 500-campaign run time | 270 s (one party; company 258 s, `--ready-level 10` 517 s) | 329 s (company 352 s, `--ready-level 10` 663 s) | 341 s (company 282 s, `--ready-level 10` 592 s) | | |
 
 ## Completion criteria
 

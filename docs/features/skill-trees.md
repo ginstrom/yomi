@@ -74,6 +74,8 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 - To step 22 (from step 14 review): foe hover panel shows no AP cost for Taunt, Sprint and Hunter's Mark (only for abilities with mana, weaponAp or needs) — show it for every hero technique; an un-elemental on-hit reads as a bare "+4" (Smite) — say "+4 holy" or "+4 on hit"; a skill-row hover overwrites the header hint and doesn't restore it.
 
+- To stage 4 (from step 16): the `assassin` plan is unreachable for the ready-made heroes (Keen Eye asks Luck 6; they have 4 or less), so parity runs of it measure the fallback; Bandit Camp threat 4 at level 8 is won 500 of 500 by every plan, so parity needs a harder cell at level 8; at 8 AP with a 4 AP bow, Aimed Shot (6 AP) now gives way to two plain shots, as the blows-that-fit rule intends.
+
 ## Verification
 
 ### Stage 1 (step 08, 2026-11-13; seed 1, 500 each, recorded and not tuned)
@@ -92,4 +94,27 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 | 500-campaign run time (one party) | 270 s | 329 s (company 352 s, `--ready-level 10` 663 s) |
 
 No campaign fell under 150 of 500. Every campaign figure is well above its band (215–250, 220–260, 370–420), the cells BC3, SN5 and SP5 above theirs (BC4 and BC5 inside), and SG10 far above step 01's; stage 4 (steps 24, 25) tunes. The guard fixture needed no re-recording (it passed unchanged after steps 03 and 04's).
+
+### Stage 2 (step 16, 2026-11-14; seed 1, 500 each, recorded and not tuned)
+
+Measured after step 16's two play changes: `techniqueScore` weighs a technique by the blows that fit in the AP left this turn, and the `knight` plan takes Heavy Hand after Pin (the bandit Captain pins at level 6).
+
+| Figure | Step 01 | Stage 1 | Stage 2 |
+| --- | --- | --- | --- |
+| one party (`--parties 1`) | 230 | 425 | 449 |
+| default company | 239 | 425 | 449 |
+| `--ready-level 10` | 389 | 470 | 488 |
+| deaths a campaign (one party) | 1.8 | 1.0 | 0.5 |
+| days a campaign (one party) | 270 | 333 | 339 |
+| GR3 / BC3 / BC4 / BC5 | 500 / 429 / 473 / 469 | 500 / 473 / 485 / 482 | 500 / 494 / 495 / 488 |
+| SN5 / SP5 / TL5 | 441 / 445 / 0 | 498 / 492 / 0 | 500 / 495 / 8 |
+| SG7 / SG10 | 0 / 2 | 4 / 199 | 0 / 422 |
+| F1 / F2 / F3 | 500 / 499 / 441 | 500 / 500 / 493 | 500 / 500 / 493 |
+| run time (one party) | 270 s | 329 s | 341 s (company 282 s, `--ready-level 10` 592 s) |
+
+No campaign fell under 150 of 500. All three campaigns sit far above their bands (215–250, 220–260, 370–420); BC3, BC4, SN5 and SP5 are above theirs, BC5 inside, SG10 far above step 01's. Stage 4 tunes.
+
+Techniques a battle, one-party campaign: heroes Taunt 2.18, Aimed Shot 1.66, Pin 1.34, Volley 1.02, Hunter's Mark 0.35 (5.11 taunts and 0.75 pins laid, 4.0 mana on techniques); foes Taunt 0.17, Aimed Shot 0.08 (0.43 taunts laid, no pin, no mana). BC4: heroes Aimed Shot 3.21, Taunt 1.70 (3.25 taunts laid); foes Taunt 0.06. Bandits reach level 6, where the Captain pins and the Brute cleaves, only at threats 6 and 7, off today's map.
+
+Path parity, first look (Bandit Camp threat 4, 500 battles, each plan in its role's slot; the other two heroes on their default plans). At level 4: melee knight 495, paladin 494, spellsword 490, swordmaster 489, assassin 489; archery ranger 495, assassin 444 (−51), rogue_archer 428 (−67); magic healer 497, evoker 495, arcanist 482, cryomancer 478, saint 479. At level 8 all 13 plans win 500 of 500, so that cell no longer tells plans apart. Flagged (more than 50 below the role's best): archery `assassin` and `rogue_archer` at level 4. Why: the assassin path opens with Keen Eye (Luck 6) and the ready-made heroes have Luck 4 or less, so the `assassin` plan takes no assassin node and falls back to `PERKS` order (Aldric then follows the swordmaster's nodes, so melee `assassin` equals `swordmaster`; Brenna takes Toughness and Shield Wall); `rogue_archer` gives Brenna Sprint and Skirmisher, never Aimed Shot. Healer, saint, assassin and rogue run without their stage-3 nodes. Details in step 16's execution record.
 

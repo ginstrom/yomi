@@ -359,7 +359,7 @@ Once picked, a skill asks for its target, even when there is only one:
 
 Press **Cancel** or **Esc** to back out. Spells are aimed the same way (see chapter 6).
 
-**Taunt** lays Taunted on every foe within 2 hexes for a turn: they strike anyone but the taunter at −25. A hero with **Rooted** who ends a turn without moving stands rooted (+10 armour class, +2 resistance) through the enemy's turn, until they take a step or their next turn ends; standing still again renews it. **Pinned** foes cannot move, though they still attack.
+**Taunt** lays Taunted (**T** on the nameplate) on every foe within 2 hexes for a turn: they strike anyone but the taunter at −25, and it ends at once if the taunter falls. A hero with **Rooted** who ends a turn without moving stands rooted (**R**: +10 armour class, +2 resistance) through the enemy's turn, until they take a step or their next turn ends; standing still again renews it. **Pinned** foes (**N**), struck by Pin or Pinning Shot, cannot move, though they still attack and cast. Hunter's Mark leaves a foe **Marked** (**Y**, −10 armour class, easier for everyone to hit), and Hamstring leaves one **Slowed** (**L**, 3 AP fewer next turn). The table of lasting effects in chapter 6 lists them all. Foes that know techniques use them too: bandits grow into them as they level, the Captain taunting and pinning, the Brute power-attacking and cleaving, archers taking aimed shots.
 
 ### Zones of control and free attacks
 
@@ -408,6 +408,8 @@ The spell then asks for a target. Valid targets are outlined, and hovering over 
 - **Hostile spells** roll to hit like an attack, using the caster's Magic skill. Flanking and facing add nothing, so spells are the reliable strike while blades reward good positioning.
 - **Area spells** touch **everyone** in the area, including your own heroes and the caster. Hovering over the centre of an area outlines it and shows the odds for every unit inside.
 - **Friendly spells** never miss.
+
+A technique that costs mana is not a spell: it is a blow or a shot of the hero's weapon, rolled with the weapon's skill, flanking and facing included, and it uses mana only as its price. Flame Strike, Frost Strike and Thunder Strike add their element's damage to the blow on a hit, and the foe's ward against that element takes its points off as it would from a spell.
 
 ### Elements and wards
 

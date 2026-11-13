@@ -184,13 +184,72 @@ PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH npm run build
 
 ## 6. Completion criteria
 
-- [ ] Three campaigns and all 12 cells measured, one run at a time; the index's **16 stage 2** column filled.
-- [ ] Parity table (26 runs) and per-side technique use in the execution record; plans more than 50 below their role's best flagged, not tuned.
-- [ ] Any campaign under 150 reported at the top of the report with the cells that explain it.
-- [ ] `CLAUDE.md`, manual text (§5, §6) and the feature record's Verification true for stage 2.
-- [ ] Guard re-recorded last; `npm test`, `npm run test:browser`, `npm run build` pass.
-- [ ] Play check done and noted.
-- [ ] One commit "Skill trees step 16: stage 2: measure and document"; the index's step table shows `done (<commit>)`.
+- [x] Three campaigns and all 12 cells measured, one run at a time; the index's **16 stage 2** column filled.
+- [x] Parity table (26 runs) and per-side technique use in the execution record; plans more than 50 below their role's best flagged, not tuned.
+- [x] Any campaign under 150 reported at the top of the report with the cells that explain it.
+- [x] `CLAUDE.md`, manual text (§5, §6) and the feature record's Verification true for stage 2.
+- [x] Guard re-recorded last; `npm test`, `npm run test:browser`, `npm run build` pass.
+- [x] Play check done and noted.
+- [x] One commit "Skill trees step 16: stage 2: measure and document"; the index's step table shows `done (<commit>)`.
 
 ## 7. Execution record
+
+### Done (2026-11-14, opus engineer by the orchestrator's decision)
+
+**Changes made before measuring** (orchestrator's decisions, feature record 2026-11-14), each its own commit, test-first:
+
+1. `e45b36d` Policy: `techniqueScore` weighs a technique's uses that fit in the AP left this turn (once with a recharge, no more than its mana pays for) against the plain blows that fit (at least one), in a plain blow's units, replacing `attackApCost / abilityApCost`. New tests: the step-15 review's case (Aldric at level 4 on the `swordmaster` plan, iron sword AP 5, 8 AP, a foe of resistance 0: Power Attack chosen), 10 AP (one Power Attack against two blows), and a recharging Cleave counted once at 14 AP; four existing expectations rewritten to the new rule. The policy-choices snapshot moved 4646 → 4637 lines: in every battle that changed, the first differing choice is a hero's (or a bandit Archer's, at threats 6 and 7) Aimed Shot giving way to two plain shots; no monster's choice differs before a hero's or bandit's does (checked by diffing the two runs battle by battle). Guard re-recorded.
+2. `ffba662` Plans: `heavy_hand` after `pin` in `knight`; the bandit Captain takes Rooted, Taunt and Pin at 2, 4 and 6 (tests in `bandits.test.ts` and `progression.test.ts` changed to that). Aldric holds Heavy Hand and is unchanged; Garrick (a pre-roll recruit on `knight`) now takes it after Pin. Rooted's description again ends "or the end of its next turn" (a test holds it). Deviation note added to step 13's record. Snapshot 4637 → 4655 lines, only Bandit Camp battles moved (the Captain pins). Guard re-recorded.
+3. `e62ea8c` CLAUDE.md: the stage-1 sentence of the rules of scaling moved after the run-of-237 narrative it split.
+
+The index's C5 `knight` list still shows the old order (heavy_hand second); the brief limits index edits to this step's row, so it is left for the orchestrator.
+
+**Runs** (Node 26, seed 1, 500 each, one at a time by one sequential script; summaries `logs/16-*.txt`, times `logs/16-times.txt`):
+
+| Figure | Step 08 | Step 16 |
+| --- | --- | --- |
+| one party (`--parties 1`) | 425 | 449 (339 days, 22.5 battles, 0.5 dead) |
+| default company | 425 | 449 (340 days, 22.6 battles) |
+| `--ready-level 10` | 470 | 488 (567 days, 48.1 battles) |
+| deaths / days (one party) | 1.0 / 333 | 0.5 / 339 |
+| GR3 / BC3 / BC4 / BC5 | 500 / 473 / 485 / 482 | 500 / 494 / 495 / 488 |
+| SN5 / SP5 / TL5 | 498 / 492 / 0 | 500 / 495 / 8 |
+| SG7 / SG10 | 4 / 199 | 0 / 422 |
+| F1 / F2 / F3 | 500 / 500 / 493 | 500 / 500 / 493 |
+| run time | 329 s (company 352, rl10 663) | 341 s (company 282, rl10 592) |
+
+No campaign is under 150. Above their bands: all three campaigns, BC3 (400–470), BC4 (430–490, by 5), SN5 and SP5 (410–480), SG10 far above step 01's 2. In band: GR3, BC5, SG7 (±40 of 0), F1–F3. Cells that moved most against stage 1: SG10 +223 (heroes use Pin 4.9, Volley 4.9, Hunter's Mark 4.8, Aimed Shot 4.4 and Taunt 2.9 a battle there), BC3 +21, TL5 +8, SG7 −4.
+
+**Techniques** (per battle, from the summaries):
+
+| | Heroes | Foes |
+| --- | --- | --- |
+| one-party campaign | taunt 2.18, aimed_shot 1.66, pin 1.34, volley 1.02, hunters_mark 0.35; taunts laid 5.11, pins laid 0.75, mana on techniques 4.03 | taunt 0.17, aimed_shot 0.08; taunts laid 0.43, pins 0, mana 0 |
+| BC4 | aimed_shot 3.21, taunt 1.70; taunts laid 3.25, pins 0, mana 0 | taunt 0.06; taunts laid 0.11, pins 0, mana 0 |
+
+In the `--ready-level 10` campaigns `power_attack` and `pinning_shot` show as 0.00 (used, but rarely). Bandits pin only at level 6 (threats 6 and 7, off today's map).
+
+**Path parity, first look** (Bandit Camp threat 4; `logs/16-par-<role>-<plan>-<level>.txt`; wins of 500; gap to the role's best):
+
+| Role | Plan | Level 4 | Gap | Level 8 | Gap |
+| --- | --- | --- | --- | --- | --- |
+| melee | knight | 495 | 0 | 500 | 0 |
+| melee | paladin | 494 | −1 | 500 | 0 |
+| melee | spellsword | 490 | −5 | 500 | 0 |
+| melee | swordmaster | 489 | −6 | 500 | 0 |
+| melee | assassin | 489 | −6 | 500 | 0 |
+| archery | ranger | 495 | 0 | 500 | 0 |
+| archery | assassin | 444 | **−51** | 500 | 0 |
+| archery | rogue_archer | 428 | **−67** | 500 | 0 |
+| magic | healer | 497 | 0 | 500 | 0 |
+| magic | evoker | 495 | −2 | 500 | 0 |
+| magic | arcanist | 482 | −15 | 500 | 0 |
+| magic | saint | 479 | −18 | 500 | 0 |
+| magic | cryomancer | 478 | −19 | 500 | 0 |
+
+Flagged, not tuned: archery `assassin` and `rogue_archer` at level 4. The assassin path's first node, Keen Eye, asks Luck 6 and the ready-made heroes have Luck 4 or less, so the `assassin` plan takes no assassin node and falls back to `PERKS` order: Aldric then takes exactly the swordmaster's nodes (hence the identical 489), Brenna Toughness and Shield Wall at level 4 and Taunt and Rooted at 8, and never Aimed Shot. `rogue_archer` gives Brenna Sprint and Skirmisher at 2 and 4, so she too loses Aimed Shot. The level-8 cell is won 500 of 500 by every plan and tells nothing apart; stage 4 needs a harder one. Healer, saint, assassin and rogue run without their stage-3 nodes. Melee `swordmaster` now uses Power Attack 4.68 a battle at level 4 (0 at step 15's smoke run, before the policy fix).
+
+**Play check** (a scripted browser run through the real game, a scratch test since removed, like step 08's): new game, debug `xp` raised Aldric to level 6, Rooted, Taunt and Pin taken from the Warrior tree in the panel, debug `fight goblin_raid 3`. Taunt from the Skills list laid Taunted on the goblin and the kobold, whose nameplates showed **T**. Pin hit the goblin: its statuses held `pinned` and its nameplate **N**; on the enemy's turn it made no move, stayed on its hex and attacked, and `pinned` then ended. At threat 1 the Pin killed its goblin and at threat 5 it missed three times, so threat 3 was used. I did not click through the dev server by hand.
+
+**Docs:** CLAUDE.md (the policy line's scoring rule, the Captain's plan, `LOG_SCHEMA_VERSION` 25 with what it added, two stale "until step 11/13" notes removed, the stage-1 sentence moved, stage 2's scaling line); manual §5 (Taunt, Rooted, Pin, Marked and Slowed with their marks; foes' techniques) and §6 (mana techniques are weapon blows, their elements warded); the feature record's Stage 2 verification and a note to stage 4.
 
