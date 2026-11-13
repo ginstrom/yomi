@@ -71,6 +71,8 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 - To step 16: apply the Captain-Pin decision (knight plan order) and note it in step 13's task file; restore Rooted's description clause "or the end of its next turn".
 
+- To step 22 (from step 14 review): foe hover panel shows no AP cost for Taunt, Sprint and Hunter's Mark (only for abilities with mana, weaponAp or needs) — show it for every hero technique; an un-elemental on-hit reads as a bare "+4" (Smite) — say "+4 holy" or "+4 on hit"; a skill-row hover overwrites the header hint and doesn't restore it.
+
 ## Verification
 
 ### Stage 1 (step 08, 2026-11-13; seed 1, 500 each, recorded and not tuned)
