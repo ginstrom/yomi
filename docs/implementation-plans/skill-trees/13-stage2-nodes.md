@@ -260,12 +260,24 @@ PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH npm run test:browser
 
 ## 6. Completion criteria
 
-- [ ] The 18 stage-2 nodes in `PERKS` at their C3 positions, with section 2's asks and links; Battle Mage's imbue and description.
-- [ ] `AUTO_PLANS` as in "The plans after this step"; the path plans hold their new nodes.
-- [ ] The tests of section 5 written and passing; `npm test` green with the guard fixture re-recorded.
-- [ ] `npm run test:browser` passes.
-- [ ] `CLAUDE.md` updated (4.7).
-- [ ] One commit, "Skill trees step 13: stage-2 nodes and plans", whose message says the guard was re-recorded because the stage-2 nodes and plans move play.
-- [ ] The index's step table shows step 13 `done (<commit>)`; the execution record below filled in.
+- [x] The 18 stage-2 nodes in `PERKS` at their C3 positions, with section 2's asks and links; Battle Mage's imbue and description.
+- [x] `AUTO_PLANS` as in "The plans after this step"; the path plans hold their new nodes.
+- [x] The tests of section 5 written and passing; `npm test` green with the guard fixture re-recorded.
+- [x] `npm run test:browser` passes.
+- [x] `CLAUDE.md` updated (4.7).
+- [x] One commit, "Skill trees step 13: stage-2 nodes and plans", whose message says the guard was re-recorded because the stage-2 nodes and plans move play.
+- [x] The index's step table shows step 13 `done (<commit>)`; the execution record below filled in.
 
 ## 7. Execution record
+
+Commits: nodes and plans (see the index), then the guard re-record in its own commit, as decision 2 asks.
+
+- Added the 18 nodes to `PERKS` through `techniqueNode` (description = cost words + `ABILITIES` description) and an inline Rooted; Battle Mage `imbueDamage: 2`. `AUTO_PLANS` knight, swordmaster, ranger and rogue take the new nodes; the path plans derive from `PERKS`.
+- Carried-forward items done: `InventoryScene.takenPerks()` now keeps `nodeKind === 'passive'`; the tree strip's first line is cut to two lines by `clampLines` (perkTree.ts, 90 characters a line for the 12 px monospace strip), with a test over all 75 nodes that summary + asks + hint stay inside the 500 px panel by that estimate.
+- `deriveCombatStats` already emitted `traits` and `imbueDamage`; no change.
+- Re-recorded: `GUARD_RECORDS` and `GUARD_EVENTS_SHA256` (`15ec0921...c7571a`) in scripts/simulate.test.ts, and also the "choices of today's encounters" snapshot in src/engine/policies.test.ts (4790 lines, hash `176ecb43...` to 4646 lines, `5754c569...`): the ready-made party and the bandits now hold techniques, so both moved with the plans.
+- Tests moved: perks.test (the "no ability/trait yet" tests became the node table; the level-1 offer list gained Flame Strike, Sprint and Smite), progression.test (plan sequences per draft), trees.test (75 nodes), perkTree.test (layout rows, counts 19/17/22/17 against the plan's 20/16/21/18, which assumed other splits), character.test (Battle Mage's imbue is real), bandits.test and foeInfo.test (new cases). No e2e count needed changing.
+- **Deviation / finding:** the Captain (`knight` plan, draft Weapon Training + Toughness + Dodger) takes Heavy Hand at 2 (the plan lists it before Rooted and he lacks it), Rooted at 4, Taunt at 6 and no Pin by level 7. The task's "level-6 Captain has taunt and pin" does not hold; tests state the actual. Recommended fix (step 16 or 24, a plan-order change that moves play): move `heavy_hand` after `pin` in `knight`, or give the Captain's draft Heavy Hand. Aldric already holds it, so he is unaffected either way.
+- Per-draft picks (levels 2/4/6): Aldric rooted, taunt, pin; Brenna and the Archer aimed_shot, far_shot, volley; Brute power_attack, armor_breaker, cleave; Cutthroat dirty_trick, sprint, evasion.
+- Verification: `npm test` 1804 passed. `npm run test:browser` 115 passed on the second run; the first run (machine load average 18 to 34) had 17 timeouts and one race, none in the second. Smoke: `--battles 20 --encounter bandit_camp --threat 5 --party-level 6` logged aimed_shot 157, volley 31, taunt 13.
+

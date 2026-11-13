@@ -774,7 +774,7 @@ describe('policies', () => {
     expect(isPolicyName('toString')).toBe(false)
   })
 
-  describe('the choices of today’s encounters (a snapshot taken before step 12)', () => {
+  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques)', () => {
     /** Every action `aggressive` chooses, both sides, over each encounter at each threat of its band against the ready-made party of that level, a few seeds, 8 rounds at most. */
     function choices(): string[] {
       const lines: string[] = []
@@ -805,8 +805,8 @@ describe('policies', () => {
 
     it('are what they were', () => {
       const lines = choices()
-      expect(lines.length).toBe(4790)
-      expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe('176ecb430cbe7c57a6338e3c061db4bdbd240f21149d9aaa9ae0edcb1c083e6b')
+      expect(lines.length).toBe(4646)
+      expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe('5754c569f1e7c87b5c156d472f3c055fe310225794891c800246d86f63724bef')
     }, 60_000)
   })
 })
