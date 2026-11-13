@@ -157,12 +157,24 @@ No scene changes: `npm run test:browser` is not required (run it if `formatEvent
 
 ## 6. Completion criteria
 
-- [ ] Every damage application goes through `applyDamage`; the suite and the guard pass with no rule added (recorded as a checkpoint in the execution record).
-- [ ] Unbreakable, Deathblow and Blademaster work as in §4, with the tests of §5.
-- [ ] `LOG_SCHEMA_VERSION` stays 26 and `SAVE_VERSION` 25; no fixture edited.
-- [ ] `CLAUDE.md` states the three rules and `applyDamage`.
-- [ ] `npm test` passes; one commit "Skill trees step 18: kill and survival traits".
-- [ ] The index's step table shows step 18 `done (<commit>)`.
+- [x] Every damage application goes through `applyDamage`; the suite and the guard pass with no rule added (recorded as a checkpoint in the execution record).
+- [x] Unbreakable, Deathblow and Blademaster work as in §4, with the tests of §5.
+- [x] `LOG_SCHEMA_VERSION` stays 26 and `SAVE_VERSION` 25; no fixture edited.
+- [x] `CLAUDE.md` states the three rules and `applyDamage`.
+- [x] `npm test` passes; one commit "Skill trees step 18: kill and survival traits".
+- [x] The index's step table shows step 18 `done (<commit>)`.
 
 ## 7. Execution record
 
+**Engineer, 2026-11-14.**
+
+- **Refactor checkpoint (no rule).** Added `applyDamage(unit, n)` (returns whether Unbreakable fired) and routed the three places that lowered hit points through it: the weapon hit in `attack()` (dice plus on-hit bonus as one total; routine and technique strikes go through `attack()`), `strikeUnit` (every cast and area outcome, Volley and Consecrate included) and the status ticks in `startTurn`. No other line lowers `hp` (the equip clamp at the maximum is not damage). Then `npx vitest run src/engine scripts/simulate.test.ts`: 507 passed, the refactor guard green with its fixture unchanged.
+- **Rules.** Unbreakable in `applyDamage` (`UNBREAKABLE_SHIELD`, shielded 2 turns through `layStatus`, the longer duration kept); `endured` declared on `CastOutcome` and `StatusTickEvent` (step 17 had declared only the `AttackEvent` fields). Deathblow through the exported `deathblows(attacker, defender, hp)` after the on-hit damage and heal, before the strike's and on-hit statuses (a felled unit gets none). Blademaster refunds after the event is recorded (`apAfter` as paid); `refunded` reset in `startTurn` for the side whose turn begins. `formatEvent`: "<Name> endures the blow." on an attack, a tick, and after a cast's or an area's line for each endured outcome; " A deathblow!" on a deathblow's line.
+- **Tests** (`src/engine/battleEngine.test.ts`, `describe('BattleEngine kill and survival traits')`, 18 tests): every case of §5, plus Shielded kept longer when already shielded, a venom strike that deathblows lays no poison, a routine whose second strike fells refunds the routine's AP, and draw counts for each trait. Carried forward from step 17's review: draw-count asserts added for Skirmisher, Executioner and Fortune.
+- **Commands.** `npx vitest run src/engine/battleEngine.test.ts -t "kill and survival"`: 11 failed before the rules (the other 7 hold by construction: no trait, no deathblow by a spell, equal draws), 18 passed after. `npm test`: 86 files, 1887 tests passed. `npx vitest run scripts/simulate.test.ts -t "refactor guard"`: passed, fixture unchanged. `npm run test:browser` not run: no scene changed, and `formatEvent` only adds text when the new fields are set, which no simulated or scene unit sets yet.
+- **Versions.** `LOG_SCHEMA_VERSION` 26 and `SAVE_VERSION` 25 unchanged; no fixture edited.
+- **Deviations and decisions.**
+  - Blademaster refunds only for an action that makes `AttackEvent`s (an attack, a strike technique or routine), as §4.4 says the felling `AttackEvent` records it; an area technique (Volley, Consecrate) that fells refunds nothing. If the design meant areas too, a field on `AbilityEvent` would be needed (a schema change under 26).
+  - A routine's later strike that fells refunds the whole routine's AP (the action's cost), not 0: `attack()` takes `actionApCost` with a routine's strikes.
+  - "A unit at 0 is not raised" is guarded in `applyDamage` (`hp > 0`); no engine path damages a fallen unit, so its test only checks a fallen Unbreakable unit stays at 0 through a round.
+- **For later steps.** Step 21: give the nodes `trait: 'unbreakable' | 'deathblow' | 'blademaster'`; the policy does not yet weigh Deathblow in expected harm (a hit leaving a foe at a quarter fells it). Step 22: the looks of `endured`, `deathblow` and `apRefunded` (the log lines exist). Step 23: the summary lines read `AttackEvent.deathblow` and `endured` on the three event kinds.

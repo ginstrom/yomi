@@ -27,6 +27,7 @@ import {
   type GearChange,
   type MoveEvent,
   type StatusEndEvent,
+  type StatusTickEvent,
   type StatusLaidEvent,
   TAUNT_PENALTY,
   type UnitSetup,
@@ -3809,6 +3810,17 @@ describe('BattleEngine attack and movement traits', () => {
       }
       expect(free(SKIRMISHER)).toMatchObject({ opportunity: true, chance: free({}).chance })
     })
+
+    it('draws as a plain attack after a step does', () => {
+      const stepIn = (stats: Partial<CombatantStats>) => {
+        const { rng, draws } = counting([HIT])
+        const engine = battle([fighter(stats), goblinAt(hex(3, 1))], rng)
+        engine.step(move('warrior', hex(2, 1)))
+        engine.step(ATTACK_GOBLIN)
+        return draws()
+      }
+      expect(stepIn(SKIRMISHER)).toBe(stepIn({}))
+    })
   })
 
   describe('Backstab', () => {
@@ -3887,6 +3899,15 @@ describe('BattleEngine attack and movement traits', () => {
       expect(blow({ execute: 5 }, 15).rolled).toBe(blow({}, 15).rolled + 5)
       expect(blow({ execute: 5 }, 16).rolled).toBe(blow({}, 16).rolled)
     })
+
+    it('draws as a plain blow does', () => {
+      const draws = (stats: Partial<CombatantStats>) => {
+        const counted = counting([HIT])
+        battle([fighter(stats), goblinAt(hex(2, 1), {}, { hp: 15 })], counted.rng).step(ATTACK_GOBLIN)
+        return counted.draws()
+      }
+      expect(draws({ execute: 5 })).toBe(draws({}))
+    })
   })
 
   describe('Fortune', () => {
@@ -3897,6 +3918,15 @@ describe('BattleEngine attack and movement traits', () => {
       expect(crit.critical).toBe(true)
       expect(blow({ critDamage: 4 }, CRIT).rolled).toBe(crit.rolled + 4)
       expect(blow({ critDamage: 4 }, HIT).rolled).toBe(blow({}, HIT).rolled)
+    })
+
+    it('draws as a plain critical does', () => {
+      const draws = (stats: Partial<CombatantStats>) => {
+        const counted = counting([CRIT, HIT])
+        battle([fighter(stats), goblinAt(hex(2, 1))], counted.rng).step(ATTACK_GOBLIN)
+        return counted.draws()
+      }
+      expect(draws({ critDamage: 4 })).toBe(draws({}))
     })
   })
 
@@ -4006,6 +4036,269 @@ describe('BattleEngine attack and movement traits', () => {
       expect(unitOf(engine, 'warrior')).not.toHaveProperty('attackedYet')
       engine.step(ATTACK_GOBLIN)
       expect(unitOf(engine, 'warrior').attackedYet).toBe(true)
+    })
+  })
+})
+
+describe('BattleEngine kill and survival traits', () => {
+  const WIDE = { cols: 9, rows: 3 }
+  /** A blow of exactly 10 damage, whatever the dice draw. */
+  const TEN = { count: 1, sides: 1, bonus: 9 }
+  const fighter = (stats: Partial<CombatantStats> = {}, extra: Partial<UnitSetup> = {}): UnitSetup => ({
+    ...WARRIOR,
+    stats: { ...WARRIOR_STATS, damage: TEN, attackApCost: 4, ...stats },
+    ...extra,
+  })
+  /** A goblin of 30 hit points and no resistance, at `position`. */
+  const goblinAt = (id: string, position: Hex, stats: Partial<CombatantStats> = {}, extra: Partial<UnitSetup> = {}): UnitSetup => ({
+    ...GOBLIN, id, position, stats: { ...GOBLIN_STATS, maxHp: 30, resistance: 0, ...stats }, ...extra,
+  })
+  /** An rng that plays `values` (the last repeated) and counts its draws. */
+  const counting = (values: number[]) => {
+    let i = 0
+    const rng = () => values[Math.min(i++, values.length - 1)]
+    return { rng, draws: () => i }
+  }
+  const battle = (units: UnitSetup[], rng: () => number) => new BattleEngine({ board: WIDE, units }, { rng })
+  const attacks = (events: readonly BattleEvent[]) => events.filter((e): e is AttackEvent => e.type === 'attack')
+  /** A roll of 50: a hit within the warrior's chance, no critical. */
+  const HIT = 0.5
+  /** A roll of 1: a critical hit, whatever the armour. */
+  const CRIT = 0.99
+  const UNBREAKABLE = { traits: ['unbreakable' as const] }
+  const DEATHBLOW = { traits: ['deathblow' as const] }
+  const BLADEMASTER = { traits: ['blademaster' as const] }
+  /** A goblin far off, so that felling the others does not end the battle. */
+  const FAR = goblinAt('far', hex(7, 1))
+  const MAGE = { magic: { maxMana: 20, skill: 95, spells: ['magic_arrow' as SpellId] } }
+  const ARROW: Action = { type: 'cast', unit: 'warrior', spell: 'magic_arrow', target: 'goblin' }
+
+  describe('Unbreakable', () => {
+    it('leaves a lethal blow’s target at 1, Shielded for 2 turns, once a battle', () => {
+      const engine = battle([fighter(), goblinAt('goblin', hex(2, 1), UNBREAKABLE, { hp: 5 })], sequence([HIT, HIT, CRIT, HIT]))
+      const events = engine.step(ATTACK_GOBLIN)
+      expect(events.map((e) => e.type)).toEqual(['attack'])
+      const [blow] = attacks(events)
+      expect(blow).toMatchObject({ hit: true, damage: 10, defenderHpBefore: 5, defenderHpAfter: 1, endured: true })
+      expect(formatEvent(blow, NAMES)).toMatch(/ Goblin endures the blow\.$/)
+      const goblin = unitOf(engine, 'goblin')
+      expect(goblin).toMatchObject({ hp: 1, endured: true })
+      expect(goblin.statuses).toEqual([{ id: 'shielded', turnsLeft: 2 }])
+      const second = engine.step(ATTACK_GOBLIN)
+      expect(second.map((e) => e.type)).toEqual(['attack', 'unit_down', 'battle_end'])
+      expect(attacks(second)[0]).not.toHaveProperty('endured')
+    })
+
+    it('keeps the longer Shielded when already shielded', () => {
+      const engine = battle(
+        [fighter(), goblinAt('goblin', hex(2, 1), { ...UNBREAKABLE, magic: { maxMana: 10, skill: 50, spells: ['shield'] } }, { hp: 5 })],
+        sequence([CRIT, HIT]),
+      )
+      engine.step(END_TURN)
+      engine.step({ type: 'cast', unit: 'goblin', spell: 'shield', target: 'goblin' })
+      const before = unitOf(engine, 'goblin').statuses.find((s) => s.id === 'shielded')!.turnsLeft
+      expect(before).toBeGreaterThan(2)
+      // It steps away; the warrior's free attack would fell it.
+      const [free] = attacks(engine.step(move('goblin', hex(3, 1))))
+      expect(free).toMatchObject({ opportunity: true, endured: true })
+      expect(unitOf(engine, 'goblin').statuses.find((s) => s.id === 'shielded')!.turnsLeft).toBe(before)
+    })
+
+    it('saves from a lethal spell, recorded on the cast outcome', () => {
+      const engine = battle([fighter(MAGE), goblinAt('goblin', hex(4, 1), UNBREAKABLE, { hp: 1 })], sequence([HIT]))
+      const events = engine.step(ARROW)
+      expect(events.map((e) => e.type)).toEqual(['cast'])
+      const cast = events[0] as CastEvent
+      expect(cast.outcomes[0]).toMatchObject({ hit: true, hpBefore: 1, hpAfter: 1, endured: true })
+      expect(formatEvent(cast, NAMES)).toMatch(/Goblin endures the blow\.$/)
+    })
+
+    it('saves from a lethal status tick, which leaves the unit standing', () => {
+      const venom = { magic: { maxMana: 10, skill: 50, spells: [] }, abilities: ['venom_strike' as AbilityId] }
+      const engine = battle([fighter(venom), goblinAt('goblin', hex(2, 1), UNBREAKABLE, { hp: 11 })], sequence([HIT]))
+      engine.step({ type: 'ability', unit: 'warrior', ability: 'venom_strike', target: 'goblin' })
+      expect(unitOf(engine, 'goblin').hp).toBe(1)
+      const events = engine.step(END_TURN)
+      const tick = events.find((e): e is StatusTickEvent => e.type === 'status_tick')!
+      expect(tick).toMatchObject({ unit: 'goblin', status: 'poisoned', hpBefore: 1, hpAfter: 1, endured: true })
+      expect(formatEvent(tick, NAMES)).toMatch(/\. Goblin endures the blow\.$/)
+      expect(events.some((e) => e.type === 'unit_down')).toBe(false)
+      expect(unitOf(engine, 'goblin').statuses.map((s) => s.id)).toContain('shielded')
+    })
+
+    it('does nothing for a blow that is not lethal, nor for a unit without the trait, nor raises the fallen', () => {
+      const light = battle([fighter(), goblinAt('goblin', hex(2, 1), UNBREAKABLE, { hp: 11 })], sequence([HIT]))
+      expect(attacks(light.step(ATTACK_GOBLIN))[0]).not.toHaveProperty('endured')
+      expect(unitOf(light, 'goblin')).toMatchObject({ hp: 1, statuses: [] })
+      expect(unitOf(light, 'goblin')).not.toHaveProperty('endured')
+      const plain = battle([fighter(), goblinAt('goblin', hex(2, 1), {}, { hp: 5 })], sequence([HIT]))
+      expect(plain.step(ATTACK_GOBLIN).map((e) => e.type)).toEqual(['attack', 'unit_down', 'battle_end'])
+      const fallen = battle([fighter(), goblinAt('goblin', hex(2, 1), UNBREAKABLE, { hp: 0 }), FAR], sequence([HIT]))
+      fallen.step(END_TURN)
+      fallen.step(END_TURN)
+      expect(unitOf(fallen, 'goblin')).toMatchObject({ hp: 0 })
+    })
+
+    it('draws as an unbroken blow does', () => {
+      const run = (stats: Partial<CombatantStats>) => {
+        const { rng, draws } = counting([HIT])
+        battle([fighter(), goblinAt('goblin', hex(2, 1), stats, { hp: 5 }), FAR], rng).step(ATTACK_GOBLIN)
+        return draws()
+      }
+      expect(run(UNBREAKABLE)).toBe(run({}))
+    })
+  })
+
+  describe('Deathblow', () => {
+    const blow = (attacker: Partial<CombatantStats>, hp: number, goblin: Partial<CombatantStats> = {}) => {
+      const { rng, draws } = counting([HIT])
+      const engine = battle([fighter(attacker), goblinAt('goblin', hex(2, 1), goblin, { hp }), FAR], rng)
+      return { events: engine.step(ATTACK_GOBLIN), engine, draws: draws() }
+    }
+
+    it('fells a foe a hit leaves at a quarter of its maximum or less', () => {
+      // 30 hit points: a quarter is 7; a blow of 10 leaves 17 at 7.
+      const { events } = blow(DEATHBLOW, 17)
+      expect(events.map((e) => e.type)).toEqual(['attack', 'unit_down'])
+      expect(attacks(events)[0]).toMatchObject({ damage: 10, defenderHpAfter: 0, deathblow: true })
+      expect(formatEvent(attacks(events)[0], NAMES)).toMatch(/A deathblow!$/)
+      const standing = blow(DEATHBLOW, 18)
+      expect(standing.events.map((e) => e.type)).toEqual(['attack'])
+      expect(attacks(standing.events)[0]).toMatchObject({ defenderHpAfter: 8 })
+      expect(attacks(standing.events)[0]).not.toHaveProperty('deathblow')
+    })
+
+    it('does nothing without the trait, against the blightborn, or by a spell', () => {
+      expect(blow({}, 17).events.map((e) => e.type)).toEqual(['attack'])
+      expect(blow(DEATHBLOW, 17, { blightborn: true }).events.map((e) => e.type)).toEqual(['attack'])
+      const engine = battle([fighter({ ...DEATHBLOW, ...MAGE }), goblinAt('goblin', hex(4, 1), {}, { hp: 8 }), FAR], sequence([HIT]))
+      const [cast] = engine.step(ARROW) as CastEvent[]
+      expect(cast.outcomes[0].hpAfter).toBeGreaterThan(0)
+      expect(cast.outcomes[0].hpAfter).toBeLessThanOrEqual(7)
+      expect(unitOf(engine, 'goblin').hp).toBe(cast.outcomes[0].hpAfter)
+    })
+
+    it('fells an Unbreakable foe its blow left at 1, which Unbreakable does not stop', () => {
+      const { events } = blow(DEATHBLOW, 10, UNBREAKABLE)
+      expect(events.map((e) => e.type)).toEqual(['attack', 'unit_down'])
+      expect(attacks(events)[0]).toMatchObject({ endured: true, deathblow: true, defenderHpAfter: 0 })
+    })
+
+    it('lays no status on a foe it fells', () => {
+      const venom = { ...DEATHBLOW, magic: { maxMana: 10, skill: 50, spells: [] }, abilities: ['venom_strike' as AbilityId] }
+      const engine = battle([fighter(venom), goblinAt('goblin', hex(2, 1), {}, { hp: 17 }), FAR], sequence([HIT]))
+      const [strike] = attacks(engine.step({ type: 'ability', unit: 'warrior', ability: 'venom_strike', target: 'goblin' }))
+      expect(strike).toMatchObject({ deathblow: true })
+      expect(strike).not.toHaveProperty('status')
+    })
+
+    it('draws as a plain blow does', () => {
+      expect(blow(DEATHBLOW, 17).draws).toBe(blow({}, 17).draws)
+    })
+  })
+
+  describe('Blademaster', () => {
+    /** The warrior beside two goblins of 1 hit point, a third far off. */
+    const field = (stats: Partial<CombatantStats> = BLADEMASTER, rolls: number[] = [HIT]) =>
+      battle(
+        [fighter(stats), goblinAt('goblin', hex(2, 1), {}, { hp: 1 }), goblinAt('goblin2', hex(2, 0), {}, { hp: 1 }), FAR],
+        sequence(rolls),
+      )
+
+    it('gives back a felling attack’s AP once a turn, and is ready again as its side’s next turn begins', () => {
+      const engine = field()
+      const [first] = attacks(engine.step(ATTACK_GOBLIN))
+      expect(first).toMatchObject({ apCost: 4, apAfter: 4, apRefunded: 4 })
+      expect(unitOf(engine, 'warrior')).toMatchObject({ ap: 8, refunded: true })
+      const [second] = attacks(engine.step({ type: 'attack', unit: 'warrior', target: 'goblin2' }))
+      expect(second).not.toHaveProperty('apRefunded')
+      expect(unitOf(engine, 'warrior').ap).toBe(4)
+      engine.step(END_TURN)
+      engine.step(END_TURN)
+      expect(unitOf(engine, 'warrior')).not.toHaveProperty('refunded')
+    })
+
+    it('refunds nothing for a blow that does not fell, nor without the trait', () => {
+      const tough = battle([fighter(BLADEMASTER), goblinAt('goblin', hex(2, 1)), FAR], sequence([HIT]))
+      expect(attacks(tough.step(ATTACK_GOBLIN))[0]).not.toHaveProperty('apRefunded')
+      expect(attacks(field({}).step(ATTACK_GOBLIN))[0]).not.toHaveProperty('apRefunded')
+    })
+
+    it('refunds again on a new turn', () => {
+      const engine = battle(
+        [fighter(BLADEMASTER), goblinAt('goblin', hex(2, 1), {}, { hp: 1 }), goblinAt('goblin2', hex(2, 0), {}, { hp: 11 }), FAR],
+        sequence([HIT]),
+      )
+      expect(attacks(engine.step(ATTACK_GOBLIN))[0].apRefunded).toBe(4)
+      engine.step({ type: 'attack', unit: 'warrior', target: 'goblin2' })
+      engine.step(END_TURN)
+      engine.step(END_TURN)
+      expect(attacks(engine.step({ type: 'attack', unit: 'warrior', target: 'goblin2' }))[0]).toMatchObject({ apRefunded: 4 })
+    })
+
+    it('refunds nothing for a free attack or a counter that fells', () => {
+      const free = field()
+      free.step(END_TURN)
+      const [opportunity] = attacks(free.step(move('goblin', hex(3, 1))))
+      expect(opportunity).toMatchObject({ attacker: 'warrior', opportunity: true, defenderHpAfter: 0 })
+      expect(opportunity).not.toHaveProperty('apRefunded')
+      expect(unitOf(free, 'warrior')).not.toHaveProperty('refunded')
+      const counter = field({ traits: ['counter', 'blademaster'] }, [FUMBLE, CRIT, HIT])
+      counter.step(END_TURN)
+      const [, back] = attacks(counter.step({ type: 'attack', unit: 'goblin', target: 'warrior' }))
+      expect(back).toMatchObject({ counter: true, defenderHpAfter: 0 })
+      expect(back).not.toHaveProperty('apRefunded')
+    })
+
+    it('refunds a felling technique its AP, and a routine once, whichever strike fells', () => {
+      const power = field({ ...BLADEMASTER, abilities: ['power_attack'] }, [CRIT, HIT])
+      const [blow] = attacks(power.step({ type: 'ability', unit: 'warrior', ability: 'power_attack', target: 'goblin' }))
+      expect(blow).toMatchObject({ apCost: 6, apAfter: 2, apRefunded: 6 })
+      expect(unitOf(power, 'warrior').ap).toBe(8)
+      // The routine's first strike misses; its second fells and refunds the routine's AP.
+      const claws = battle(
+        [fighter({ ...BLADEMASTER, abilities: ['troll_claws'] }), goblinAt('goblin', hex(2, 1), {}, { hp: 1 }), FAR],
+        sequence([FUMBLE, CRIT, HIT]),
+      )
+      const strikes = attacks(claws.step({ type: 'ability', unit: 'warrior', ability: 'troll_claws', target: 'goblin' }))
+      expect(strikes.map((s) => s.apRefunded)).toEqual([undefined, ABILITIES.troll_claws.apCost])
+      expect(unitOf(claws, 'warrior').ap).toBe(ABILITIES.troll_claws.apCost)
+    })
+
+    it('draws as a plain attack does', () => {
+      const run = (stats: Partial<CombatantStats>) => {
+        const { rng, draws } = counting([HIT])
+        battle([fighter(stats), goblinAt('goblin', hex(2, 1), {}, { hp: 1 }), FAR], rng).step(ATTACK_GOBLIN)
+        return draws()
+      }
+      expect(run(BLADEMASTER)).toBe(run({}))
+    })
+  })
+
+  describe('snapshots', () => {
+    it('carry endured and refunded through a restore, playing on identically', () => {
+      const engine = new BattleEngine(
+        {
+          board: WIDE,
+          units: [fighter(BLADEMASTER), goblinAt('goblin', hex(2, 1), {}, { hp: 1 }), goblinAt('goblin2', hex(2, 0), UNBREAKABLE, { hp: 5 }), FAR],
+        },
+        { seed: 3 },
+      )
+      engine.step(ATTACK_GOBLIN)
+      engine.step({ type: 'attack', unit: 'warrior', target: 'goblin2' })
+      const saved = JSON.parse(JSON.stringify(engine.snapshot()))
+      saved.units.find((u: { id: string }) => u.id === 'warrior').refunded = true
+      saved.units.find((u: { id: string }) => u.id === 'goblin2').endured = true
+      const play = (e: BattleEngine) => {
+        for (let state = e.getState(); state.phase !== 'over'; state = e.getState()) {
+          e.step(POLICIES.aggressive({ state, legal: e.legalActions(), rng: () => 0 }))
+        }
+        return e.getLog()
+      }
+      const restored = BattleEngine.restore(saved)
+      expect(restored.snapshot().units.find((u) => u.id === 'warrior')!.refunded).toBe(true)
+      expect(restored.snapshot().units.find((u) => u.id === 'goblin2')!.endured).toBe(true)
+      expect(play(BattleEngine.restore(JSON.parse(JSON.stringify(saved))))).toEqual(play(restored))
     })
   })
 })

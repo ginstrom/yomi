@@ -374,11 +374,14 @@ export interface AttackEvent extends EventBase {
   counter?: true
   /** The attacker's first own-turn attack of the battle with Ambush: `AMBUSH_BONUS` in `traitBonus`, and a hit is critical. */
   ambush?: true
-  /** Set by Deathblow (skill trees step 18). */
+  /** The hit left the defender at a quarter of its maximum or less and the attacker's Deathblow felled it. */
   deathblow?: true
-  /** Action points refunded by Blademaster (skill trees step 18). */
+  /**
+   * Action points Blademaster gave back to the attacker, its action having
+   * felled the defender: the whole action's cost; `apAfter` is still as paid.
+   */
   apRefunded?: number
-  /** The defender was kept standing by Unbreakable (skill trees step 18). */
+  /** The defender was kept standing at 1 by Unbreakable. */
   endured?: true
   /** Mana a melee hit that struck no image restored to the attacker (`manaOnHit`, capped at its maximum); absent when none. */
   manaRestored?: number
@@ -426,6 +429,8 @@ export interface CastOutcome {
   status: ActiveStatus | null
   /** `TAUNT_PENALTY`, already taken off `chance`, when a taunted user rolled at a unit other than its taunter; absent otherwise. */
   tauntPenalty?: number
+  /** The unit was kept standing at 1 by Unbreakable. */
+  endured?: true
 }
 
 /**
@@ -503,6 +508,8 @@ export interface StatusTickEvent extends EventBase {
   warded: number
   hpBefore: number
   hpAfter: number
+  /** The unit was kept standing at 1 by Unbreakable. */
+  endured?: true
 }
 
 /** A unit regained hit points by its own regeneration as its side's turn began. */
@@ -739,6 +746,18 @@ export function traitDamage(
     (defender.hp <= Math.floor(defender.maxHp / 2) ? (attacker.execute ?? 0) : 0)
   )
 }
+
+/**
+ * Whether a weapon hit that left the defender standing at `hp` is a
+ * Deathblow: the attacker has the trait, the defender is not `blightborn`
+ * and is at a quarter of its maximum or less.
+ */
+export function deathblows(attacker: Pick<CombatantStats, 'traits'>, defender: Pick<CombatantStats, 'maxHp' | 'blightborn'>, hp: number): boolean {
+  return attacker.traits?.includes('deathblow') === true && !defender.blightborn && hp <= Math.floor(defender.maxHp / 4)
+}
+
+/** What Unbreakable lays on the unit it keeps standing. */
+export const UNBREAKABLE_SHIELD: StatusLaid = { id: 'shielded', turns: 2 }
 
 /** Whether the attacker's weapon attack is a Deadeye's shot: a ranged weapon in the hands of a unit with the trait. */
 export function deadeyeShot(attacker: CombatantStats): boolean {
@@ -1296,6 +1315,7 @@ export class BattleEngine {
         u.ap = u.hp > 0 ? apAfterStatuses(u, u.stats.actionPoints) : 0
         u.turnReady = false
         u.moved = false
+        u.refunded = false
       } else {
         u.reactionReady = u.hp > 0 && !hasStatus(u, 'asleep')
         u.turnReady = u.reactionReady
@@ -1311,7 +1331,7 @@ export class BattleEngine {
         const rolled = rollDamage(tick, this.rng)
         const damage = warded(rolled, element, effectiveStats(u))
         const hpBefore = u.hp
-        u.hp = Math.max(0, u.hp - damage)
+        const endured = this.applyDamage(u, damage)
         events.push(
           this.record<StatusTickEvent>({
             type: 'status_tick',
@@ -1322,6 +1342,7 @@ export class BattleEngine {
             warded: rolled - damage,
             hpBefore,
             hpAfter: u.hp,
+            ...(endured ? { endured: true as const } : {}),
           }),
         )
         events.push(...this.wake(u, damage), ...this.fell(u))
@@ -1696,7 +1717,7 @@ export class BattleEngine {
       const dice = strike.damage ? { ...strike.damage, bonus: strike.damage.bonus + bonus } : actor.stats.damage
       const first = i === 0
       const mana = first && manaCost !== undefined ? manaCost : undefined
-      events.push(...this.attack(actor, foe, first ? apCost : 0, { ability: abilityId, strike, dice, manaCost: mana }))
+      events.push(...this.attack(actor, foe, first ? apCost : 0, { ability: abilityId, strike, dice, manaCost: mana, actionApCost: apCost }))
       // A counter may fell the user between strikes.
       if (actor.hp <= 0) break
     }
@@ -1769,7 +1790,10 @@ export class BattleEngine {
    * plain attack does. The attacker's traits add to the chance and the
    * damage (`traitToHit`, `traitDamage`), pierce (`blowPierce`), triple a
    * Deadeye's ranged critical, make an Ambush's hit critical and restore mana
-   * on a melee hit, none of it drawing anything. A melee blow of the side in
+   * on a melee hit, none of it drawing anything. The damage goes through
+   * `applyDamage` (Unbreakable); then a Deathblow fells, and Blademaster gives
+   * back the AP of an own action that felled (`actionApCost`, for a routine's
+   * later strikes), after the event is recorded. A melee blow of the side in
    * turn that misses a defender with Counter is answered at once by a free
    * attack (`counter`), before anything else the action does.
    */
@@ -1777,7 +1801,7 @@ export class BattleEngine {
     actor: UnitRecord,
     target: UnitRecord,
     apCost: number | null,
-    strike?: { ability: AbilityId; strike: Strike; dice: DamageRoll; manaCost?: number },
+    strike?: { ability: AbilityId; strike: Strike; dice: DamageRoll; manaCost?: number; actionApCost?: number },
     counter = false,
   ): BattleEvent[] {
     actor.facing = hexDirectionTowards(actor.position, target.position)!
@@ -1837,11 +1861,19 @@ export class BattleEngine {
       }))
     const total = damage + bonus.reduce((sum, b) => sum + b.damage, 0)
     const defenderHpBefore = target.hp
-    target.hp = Math.max(0, target.hp - total)
+    const endured = this.applyDamage(target, total)
     const heals = onHit.some((entry) => entry.heal !== undefined)
     const healing = onHit.reduce((sum, entry) => sum + (entry.heal ?? 0), 0)
     const healed = heals ? Math.min(healing, Math.max(0, actor.stats.maxHp - actor.hp)) : 0
     actor.hp += healed
+    // Deathblow fells outright; it is not damage, so Unbreakable does not stop it.
+    const deathblow = landed && target.hp > 0 && deathblows(attacker, defender, target.hp)
+    if (deathblow) target.hp = 0
+    // Blademaster: an own action that fells gives back what it paid, once a turn.
+    const refund =
+      apCost !== null && target.hp <= 0 && !actor.refunded && actor.stats.traits?.includes('blademaster') === true
+        ? (strike?.actionApCost ?? apCost)
+        : 0
     const laid = strike?.strike.status && landed && target.hp > 0 ? this.layStatus(target, strike.strike.status) : null
     const onHitStatuses = onHit
       .filter((entry) => entry.status && (!entry.onCrit || critical))
@@ -1900,8 +1932,15 @@ export class BattleEngine {
         ...(counter ? { counter: true as const } : {}),
         ...(ambush ? { ambush: true as const } : {}),
         ...(manaRestored > 0 ? { manaRestored } : {}),
+        ...(deathblow ? { deathblow: true as const } : {}),
+        ...(refund > 0 ? { apRefunded: refund } : {}),
+        ...(endured ? { endured: true as const } : {}),
       }),
     ]
+    if (refund > 0) {
+      actor.ap += refund
+      actor.refunded = true
+    }
 
     events.push(...this.imagesSpent(target), ...this.wake(target, total), ...this.fell(target))
     if (!roll.hit && this.counters(target, actor)) {
@@ -2094,7 +2133,7 @@ export class BattleEngine {
           : 0
     const through = blow.throughResistance ? damageThrough(rolled, effectiveResistance(attacker, effectiveStats(unit).resistance ?? 0)) : rolled
     const damage = warded(through, blow.element, effectiveStats(unit))
-    unit.hp = Math.max(0, unit.hp - damage)
+    const endured = this.applyDamage(unit, damage)
     // A blow that wakes a sleeper wakes it before anything it lays; Sleep itself deals none.
     const woke = damage > 0 && unit.hp > 0 && hasStatus(unit, 'asleep')
     if (woke) unit.statuses = unit.statuses.filter((s) => s.id !== 'asleep')
@@ -2104,8 +2143,27 @@ export class BattleEngine {
       ...(blow.throughResistance ? { resisted: rolled - through } : {}),
       healed: 0, hpBefore, hpAfter: unit.hp, status: laid,
       ...(blow.taunt > 0 ? { tauntPenalty: blow.taunt } : {}),
+      ...(endured ? { endured: true as const } : {}),
       woke,
     }
+  }
+
+  /**
+   * The one way damage reaches a unit: `n` hit points off, never below 0.
+   * Unbreakable: the first damage of the battle that would bring a standing
+   * unit with the trait to 0 leaves it at 1 instead, Shielded for 2 turns
+   * (`UNBREAKABLE_SHIELD`, as a spell lays it). Returns whether it did. It
+   * draws nothing.
+   */
+  private applyDamage(unit: UnitRecord, n: number): boolean {
+    if (unit.hp > 0 && unit.hp - n <= 0 && !unit.endured && unit.stats.traits?.includes('unbreakable')) {
+      unit.hp = 1
+      unit.endured = true
+      this.layStatus(unit, UNBREAKABLE_SHIELD)
+      return true
+    }
+    unit.hp = Math.max(0, unit.hp - n)
+    return false
   }
 
   /** What follows a cast or an area: each sleeper woken and image spent, in roster order, then the falls and at most one end of the battle. */
@@ -2317,6 +2375,19 @@ function describeAbility(event: AbilityEvent, names: Readonly<Record<UnitId, str
   return `${opening}: ${event.outcomes.map((o) => hostileOutcome(o, names[o.unit])).join('; ')}.`
 }
 
+/** Unbreakable's words: "Mira endures the blow." */
+function endures(name: string): string {
+  return `${name} endures the blow.`
+}
+
+/** The Unbreakable notes a cast's or an area's line ends with, one for each unit it kept standing. */
+function enduredNotes(outcomes: readonly CastOutcome[], names: Readonly<Record<UnitId, string>>): string {
+  return outcomes
+    .filter((o) => o.endured)
+    .map((o) => ` ${endures(names[o.unit])}`)
+    .join('')
+}
+
 /**
  * Renders an event as the human-readable line BattleScene pushes to its log.
  * It is a summary: the event itself carries more than the line says.
@@ -2356,16 +2427,20 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
         const statuses = new Set([...(event.status ? [event.status] : []), ...(event.onHitStatuses ?? [])].map((s) => s.id))
         const laid = [...statuses].map((id) => `, ${laidPhrase(id).replace(/^is /, '')}`).join('')
         const heals = (event.healed ?? 0) > 0 ? ` ${attackerName} heals ${event.healed}.` : ''
-        return `${roll} — HITS ${defenderName} for ${event.damage} dmg${armour}${bonus}${laid}.${crit}${heals}`
+        const endured = event.endured ? ` ${endures(defenderName)}` : ''
+        const deathblow = event.deathblow ? ' A deathblow!' : ''
+        return `${roll} — HITS ${defenderName} for ${event.damage} dmg${armour}${bonus}${laid}.${crit}${endured}${deathblow}${heals}`
       }
       return `${roll} — MISSES ${defenderName}.`
     }
     case 'cast':
-      return describeCast(event, names)
+      return `${describeCast(event, names)}${enduredNotes(event.outcomes, names)}`
     case 'ability':
-      return describeAbility(event, names)
-    case 'status_tick':
-      return `${names[event.unit]} takes ${event.damage} from ${STATUSES[event.status].tickName ?? STATUSES[event.status].adjective}${wardedNote(event.warded)}.`
+      return `${describeAbility(event, names)}${enduredNotes(event.outcomes, names)}`
+    case 'status_tick': {
+      const endured = event.endured ? ` ${endures(names[event.unit])}` : ''
+      return `${names[event.unit]} takes ${event.damage} from ${STATUSES[event.status].tickName ?? STATUSES[event.status].adjective}${wardedNote(event.warded)}.${endured}`
+    }
     case 'regenerate':
       return `${names[event.unit]} regenerates ${event.healed}.`
     case 'status_laid':
