@@ -415,7 +415,8 @@ function nextFoe(state: BattleState, self: UnitSnapshot, besides: UnitSnapshot):
  * the expected harm, plus each status it lays on a hit worth `statusWorth`
  * times the strike's chance, where the foe lacks it, less `MANA_WEIGHT` a
  * point of mana; all times the uses that fit in the AP the unit has left
- * this turn (once with a recharge, and no more than its mana pays for),
+ * this turn (once with a recharge, and no more than its mana pays for
+ * above the heal reserve),
  * over the plain blows that fit (at least one). So a 7 AP Power Attack and
  * a 5 AP blow at 8 AP are weighed one against one.
  */
@@ -432,12 +433,12 @@ export function techniqueScore(state: BattleState, self: UnitSnapshot, ability: 
   return ((total - MANA_WEIGHT * (known.manaCost ?? 0)) * usesThisTurn(self, ability)) / Math.max(1, Math.floor(self.ap / self.attackApCost))
 }
 
-/** How many times `ability` could be used with the AP the unit has left this turn: once with a recharge, and no more than its mana pays for. */
+/** How many times `ability` could be used with the AP the unit has left this turn: once with a recharge, and no more than its mana pays for above the heal reserve (`affordable`); at least once. */
 function usesThisTurn(self: UnitSnapshot, ability: AbilityId): number {
   const known = ABILITIES[ability]
   let uses = Math.floor(self.ap / abilityApCost(self, ability))
   if (known.recharge > 0) uses = Math.min(uses, 1)
-  if (known.manaCost) uses = Math.min(uses, Math.floor(self.mana / known.manaCost))
+  if (known.manaCost) uses = Math.min(uses, Math.floor((self.mana - manaReserve(self)) / known.manaCost))
   return Math.max(1, uses)
 }
 

@@ -424,6 +424,21 @@ describe('policies', () => {
         expect(score(14)).toBeCloseTo(score(7) / 2, 10)
       })
 
+      it('counts a mana technique no more times than its mana pays for, the heal reserve kept', () => {
+        const foe = { ...GOBLIN_STATS, maxHp: 60, resistance: 0 }
+        // At 12 AP two Frost Strikes (6 AP, 3 mana) fit by AP, and two plain blows.
+        const score = (mana: number, spells: SpellId[] = []) => {
+          const engine = stage(hero(['frost_strike'], { actionPoints: 12, magic: { maxMana: mana, skill: 50, spells } }), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: foe }])
+          return techniqueScore(engine.getState(), unitAt(engine, 'p1'), 'frost_strike', unitAt(engine, 'e1'))
+        }
+        const twice = score(6)
+        // Mana for one: one Frost Strike against two blows.
+        expect(score(3)).toBeCloseTo(twice / 2, 10)
+        // Mana for two, but Heal's 3 kept back: one use, as the next choice would allow.
+        expect(score(6, ['heal'])).toBeCloseTo(twice / 2, 10)
+        expect(score(9, ['heal'])).toBeCloseTo(twice, 10)
+      })
+
       it('scores Cleave’s second blow on the other foe in reach', () => {
         const big = { ...GOBLIN_STATS, maxHp: 60 }
         const pair = stage(hero(['cleave'], { actionPoints: 12 }), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: big }, { id: 'e2', at: hex(2, 0), stats: { ...big, ac: 90 } }])

@@ -253,3 +253,10 @@ Flagged, not tuned: archery `assassin` and `rogue_archer` at level 4. The assass
 
 **Docs:** CLAUDE.md (the policy line's scoring rule, the Captain's plan, `LOG_SCHEMA_VERSION` 25 with what it added, two stale "until step 11/13" notes removed, the stage-1 sentence moved, stage 2's scaling line); manual §5 (Taunt, Rooted, Pin, Marked and Slowed with their marks; foes' techniques) and §6 (mana techniques are weapon blows, their elements warded); the feature record's Stage 2 verification and a note to stage 4.
 
+
+### Review round 1 (2026-11-14)
+
+- **Found:** `usesThisTurn` capped mana uses at `⌊mana / manaCost⌋`, while `affordable` keeps the heal reserve, so a caster holding a heal was credited with a use the next choice would refuse. **Fixed:** the cap is `⌊(mana − manaReserve) / manaCost⌋`, at least 1; CLAUDE.md's policy line says so.
+- **Found:** no test of the mana cap. **Fixed:** at 12 AP (two Frost Strikes fit by AP), mana 3 scores half of mana 6; mana 6 with Heal known scores as mana 3; mana 9 with Heal as mana 6. Seen red (the reserve case scored 4.825 against 2.4125) before the fix.
+- **Found:** the index's C5 `knight` list showed the old order. **Fixed:** `heavy_hand` now follows `pin` there. The task files of steps 21 and 24 still copy the old order (and 03 and 13, done, as history); left for the orchestrator.
+- The refactor guard and the policy-choices snapshot did not move (`npm test` 1835 passed), so the campaigns were not re-measured.
