@@ -341,14 +341,78 @@ No scene changes, so `npm run test:browser` is not required; run it if a scene s
 
 ## 6. Completion criteria
 
-- [ ] `PERKS` holds the 95 nodes in C3's order; the six partial nodes are complete with rewritten descriptions.
-- [ ] `AUTO_PLANS` matches C5 in full.
-- [ ] `reviveCast`, `purifyCast`, `supportCast`, `prisonCast` and the extended `strikeCast` are in `aggressive` in §2's order, each with its staged test; monsters' choices unchanged.
-- [ ] AC1, AC2 tests pass; AC6 table recorded.
-- [ ] The guard re-recorded, with the reason in the commit message; `npm test` passes.
-- [ ] `CLAUDE.md` updated (perks, trees, plans, policy).
-- [ ] One commit, "Skill trees step 21: stage-3 nodes, plans and the policy's last steps", on `skill-trees`, not pushed, no attribution lines.
-- [ ] This step's row in [index.md](index.md) set to `done (<commit>)`.
+- [x] `PERKS` holds the 95 nodes in C3's order; the six partial nodes are complete with rewritten descriptions.
+- [x] `AUTO_PLANS` matches C5 in full.
+- [x] `reviveCast`, `purifyCast`, `supportCast`, `prisonCast` and the extended `strikeCast` are in `aggressive` in §2's order, each with its staged test; monsters' choices unchanged.
+- [x] AC1, AC2 tests pass; AC6 table recorded.
+- [x] The guard re-recorded, with the reason in the commit message; `npm test` passes.
+- [x] `CLAUDE.md` updated (perks, trees, plans, policy).
+- [x] One commit, "Skill trees step 21: stage-3 nodes, plans and the policy's last steps", on `skill-trees`, not pushed, no attribution lines.
+- [x] This step's row in [index.md](index.md) set to `done (<commit>)`.
 
 ## 7. Execution record
+
+**Engineer, 2026-11-14.** Four commits on `skill-trees`, not pushed:
+
+- `edcc04b` Skill trees step 21: the policy's last steps (`reviveCast`, `purifyCast`, `supportCast`, `prisonCast`, `strikeCast`'s Ice Lance and Holy Light; `isHealing` leaves out cleanses; Sleep and Prison skip a helpless foe; spell wards through `statsIn`; Deathblow in a blow's expected harm). Guard and policy snapshot green unchanged.
+- `77f858f` Skill trees step 21: stage-3 nodes and plans (the 20 nodes, the six partial nodes completed, C5's plans in full; AC1, AC2 tests; the tree strip's hint cut to one line; CLAUDE.md). The guard alone failed here, as decision 2 expects.
+- `27f6d66` Skill trees step 21: re-record the refactor guard (the events' hash only: the five records are unchanged).
+- the record commit (this file, the index row).
+
+The step was split into those commits, not one, to follow step 13's precedent for the guard and the brief's "re-record in its own commit"; the first commit proves the policy steps change no current choice (monsters' included) before any data moved.
+
+**Commands and results** (Node 26):
+
+- Baseline `npm test`: 86 files, 1946 tests passed.
+- New policy tests red first (16 failing, for the expected reasons once a board-placement slip in the test was fixed), then green; `supportCast` and Deathblow re-checked red by switching the code off.
+- `npx vitest run src/character/perks.test.ts src/character/trees.test.ts src/character/progression.test.ts`: green (36, 34, 30 tests).
+- `npx vitest run src/engine/policies.test.ts src/engine/battleEngine.test.ts`: green (policies 90).
+- `npx vitest run scripts/simulate.test.ts`: failed on the guard after `77f858f` (records equal, hash moved), green after `27f6d66`.
+- `npm test` after the last code commit: 86 files, 1989 tests passed.
+- Smoke run `npm run simulate -- --campaign --battles 5 --seed 1 --parties 1 --out logs/21-smoke.jsonl`: finished, 115 battles, 115 won (summary in `logs/21-smoke.txt`).
+- `npm run test:browser` (run since `PerkTreeView.ts` changed): 10 files, 117 tests passed.
+
+**AC6: design 5.4's rows and the `battleEngine.test.ts` tests that cover them** (no gaps; none added):
+
+| Row | Test (describe › it) |
+| --- | --- |
+| Hero ability use | BattleEngine hero techniques › "asks for the weapon a technique needs…", "asks for the mana a technique costs", "asks for the weapon's attack AP plus the technique's" |
+| Technique strike | a technique strike › "is a weapon blow with its own chance: Power Attack at −10, +6 on a hit…" |
+| Taunt | BattleEngine area techniques › Taunt › "lays Taunted for a turn on every foe within 2 hexes and no one else…"; Taunted › "takes TAUNT_PENALTY off a taunted unit's attack…" |
+| Rooted | Rooted › "is laid for 2 turns, before the count-down, on a unit with the trait that ends its turn unmoved" |
+| Pin | Pinned › "leaves a foe hit by Pin no legal move on its next turn, though it still attacks…" |
+| Iron Skin | Iron Skin (free attacks) › "adds its to-hit and damage to a free attack, and nothing to its own-turn attack" |
+| Counter | Counter › "strikes back once, free, at a melee attacker of the side in turn that misses it" |
+| Tumble | Tumble › "provokes no free attack, and previewMove lists none" |
+| Skirmisher | Skirmisher › "adds its bonus to an attack after a step this turn, and not without one" |
+| Backstab | Backstab › "adds its to-hit and damage to a blow from the rear" |
+| Ambush | Ambush › "adds AMBUSH_BONUS to the first own-turn attack and makes its hit critical, once" |
+| Executioner / Fortune | Executioner › "adds its damage against a foe at half its hit points or less before the blow"; Fortune › "adds its damage to a critical after the dice are doubled…" |
+| Deathblow | Deathblow › "fells a foe a hit leaves at a quarter of its maximum or less" |
+| Blademaster | Blademaster › "gives back a felling attack's AP once a turn…" |
+| Deadeye | Deadeye › "rolls triple dice on a ranged critical, double on a melee one"; "pierces 3 more points of resistance with its shots…" |
+| Unbreakable | Unbreakable › "leaves a lethal blow's target at 1, Shielded for 2 turns, once a battle" |
+| Auras | auraBonus › Guardian, Aura of Courage, Aegis tests; "a foe beside a Guardian is struck against 5 more armour class…" |
+| Sanctuary / Renewing / Serenity | Renewing; Sanctuary › "heals the holder and its side within 2 by 3…"; Serenity › "restores its manaRegen, never above the maximum…"; "runs ticks, regeneration, Renewing, Sanctuary, Serenity and Shadowdancer in that order" |
+| Shadowdancer | Shadowdancer › "lays one image for 2 turns as its side's turn begins…" |
+| Battle Mage | Battle Mage (mana on hit) › "restores its mana on a melee hit, up to the maximum, recorded as manaRestored" |
+| Spell modifiers | BattleEngine a caster's spell modifiers › "adds to Magic Arrow's dice, drawing nothing more", heal bonus, extension tests |
+| Revive | Revive › "targets an ally that fell this battle, within 2 on a free hex, and stands it up at a quarter of its maximum" |
+| Frozen | Frozen and Glacial Prison › "lays Frozen for 2 turns on a hit…", "gives a frozen unit no AP…", "holds no zone of control while frozen" |
+| Purify | Purify › "ends every hostile status on the ally in the order laid, keeps the friendly ones, then heals…" |
+| Ice Lance / Holy Light | Ice Lance › "draws its own 2d8 alone against an unaffected foe"…; Holy Light › "draws 6d6 against a regenerating or blightborn foe and 3d6 against any other" |
+
+The replay and snapshot round-trip tests pass in the full run.
+
+**Deviations and decisions**
+
+1. **Delwyn takes Meteor at level 14, not 12.** C5's `evoker_healer` puts Mending before Meteor, so level 12's pick goes to Mending (Evoker depth is 5 at 10). The test asserts what C5 makes: Aldric Unbreakable and Brenna Deadeye at 12, Delwyn Meteor at 14 (not at 12). Moving Meteor before Mending in the plan would give 12; that is a play change for stage 4 to weigh, not made here.
+2. **AC1 at level 6.** Swordmaster and Ranger have three T2s, and a pick follows `PERKS` order, so level 6's pick takes the third T2 and the first T3 comes at 8. The test asserts that a T3 is open at 6 and not at 5 for every path ("can take"), and that the first T3 is taken at 6 in every path but those two (8 there).
+3. **The tree strip's hint is cut to one line** (`STRIP_HINT_LINES`, `perkTree.ts`; `PerkTreeView.describe`). The long capstone asks ("Heavy Knight must be your deepest path", "Melee 70% or Archery 70%") made Unbreakable, Blademaster and Deathblow six lines, past the 500 px panel (the existing strip test failed at 504). The Asks line above still says everything; a closed capstone's hint ends in "…". Step 22 should look at it in the browser.
+4. **The policy-choices snapshot did not move** (4655 lines, same hash): its heroes stop at level 7, short of every stage-3 node, and the bandits it fields take none (the Cutthroat, whose plan now opens with Backstab, never takes the field at threats 3 to 7). So no re-record; "monsters unchanged" holds by the unchanged hash.
+5. **The guard's records did not move**; only the events' hash did (`4aed0810...` to `b840633a...`).
+6. **Purify and the heal reserve.** As the decision has it, `isHealing` now leaves out a spell with `cleanse`, so Purify is not in `worldSpells`, `castOnWorldMap`, `autoHeal`, `healCast` or `manaReserve`; `purifyCast` keeps the heal reserve like any non-heal cast. `spellApCost` still discounts Purify for Swift Hands (it reads `heal`, not `isHealing`): a healing-school spell, left as it is.
+7. **Carried-forward notes addressed:** `UNTAUGHT` removed; `sleepCast` and `prisonCast` share `disableCast`, skipping a foe `isHelpless` (asleep or frozen); spell and area ward scoring read `statsIn`; Deathblow counted in `expectedHarm` (a hit that would leave the foe within it is worth all the foe has left). Skirmisher: `bestStrike` scores only attacks from the current hex, with the unit's current `moved`, which is right there; the walk-then-attack preview is a scene matter (step 22's note). Nothing new lays `taunted`.
+
+**For later steps:** step 22 has the strip hint (3) to check visually; step 23 measures with the stage-3 plans in (the guard's five campaigns are unchanged, so expect small moves); stage 4 may move Meteor before Mending in `evoker_healer` (1).
 
