@@ -213,7 +213,7 @@ export const PERKS = {
   taunt: techniqueNode('taunt', 'heavy_knight', 2, { attributes: { endurance: 5 } }),
   rooted: {
     name: 'Rooted',
-    description: 'At the end of its side\'s turn, if it has not moved, it is rooted: +10 armour class and +2 resistance until it moves',
+    description: 'At the end of its side\'s turn, if it has not moved, it is rooted: +10 armour class and +2 resistance until it moves or the end of its next turn',
     path: 'heavy_knight',
     tier: 2,
     attributes: { endurance: 6 },

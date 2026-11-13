@@ -172,9 +172,9 @@ describe('what the bandits learn from their plans', () => {
   const gear = banditGear(5)
   const abilities = (role: BanditRole, level: number) => banditStats(role, level, gear).abilities ?? []
 
-  it('gives the level-6 Captain Taunt and Rooted (the plan takes Heavy Hand first, so Pin waits)', () => {
+  it('gives the level-6 Captain Taunt, Pin and Rooted (the knight plan takes Heavy Hand after Pin)', () => {
     const stats = banditStats('captain', 6, gear)
-    expect(stats.abilities).toEqual(['taunt'])
+    expect(stats.abilities).toEqual(['taunt', 'pin'])
     expect(stats.traits).toEqual(['rooted'])
   })
 

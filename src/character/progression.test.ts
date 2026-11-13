@@ -266,9 +266,9 @@ describe('autoAdvance', () => {
     expect(taken(banditDraft('cutthroat'), 'rogue')).toEqual({ 2: ['dirty_trick'], 3: [], 4: ['sprint'], 5: [], 6: ['evasion'], 7: [] })
   })
 
-  it('follows the knight plan from the Captain: the plan\'s Heavy Hand first, so Pin comes after level 7', () => {
-    // The Captain's draft holds Weapon Training and Toughness, so the plan's first open node is Heavy Hand.
-    expect(taken(banditDraft('captain'), 'knight')).toEqual({ 2: ['heavy_hand'], 3: [], 4: ['rooted'], 5: [], 6: ['taunt'], 7: [] })
+  it('follows the knight plan from the Captain: Rooted, Taunt and Pin at levels 2, 4 and 6, Heavy Hand after', () => {
+    // The Captain's draft holds Weapon Training and Toughness; the plan takes Heavy Hand only after Pin.
+    expect(taken(banditDraft('captain'), 'knight')).toEqual({ 2: ['rooted'], 3: [], 4: ['taunt'], 5: [], 6: ['pin'], 7: [] })
   })
 
   it('follows the evoker-healer plan, which holds no stage-2 node', () => {
@@ -276,7 +276,7 @@ describe('autoAdvance', () => {
   })
 
   it('gives the plans the stage-2 nodes', () => {
-    expect(AUTO_PLANS.knight).toEqual(['weapon_training', 'heavy_hand', 'toughness', 'rooted', 'taunt', 'pin', 'iron_skin', 'shield_wall', 'power_attack', 'armor_breaker', 'weapon_mastery'])
+    expect(AUTO_PLANS.knight).toEqual(['weapon_training', 'toughness', 'rooted', 'taunt', 'pin', 'heavy_hand', 'iron_skin', 'shield_wall', 'power_attack', 'armor_breaker', 'weapon_mastery'])
     expect(AUTO_PLANS.swordmaster).toEqual(['weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'cleave', 'gain_strength', 'weapon_mastery', 'toughness'])
     expect(AUTO_PLANS.ranger).toEqual(['marksmanship', 'deadly_aim', 'aimed_shot', 'far_shot', 'volley', 'hunters_mark', 'pinning_shot', 'deadeye', 'dodger', 'sprint', 'skirmisher', 'evasion'])
     expect(AUTO_PLANS.rogue).toEqual(['dirty_trick', 'sprint', 'evasion', 'skirmisher'])

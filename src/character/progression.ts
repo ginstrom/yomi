@@ -167,11 +167,11 @@ const pathPlan = (path: PathId): PerkId[] => PERK_IDS.filter((id) => (PERKS[id] 
 export const AUTO_PLANS: Record<PlanId, readonly PerkId[]> = {
   knight: [
     'weapon_training',
-    'heavy_hand',
     'toughness',
     'rooted',
     'taunt',
     'pin',
+    'heavy_hand',
     'iron_skin',
     'shield_wall',
     'power_attack',

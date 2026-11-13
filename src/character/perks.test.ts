@@ -173,6 +173,10 @@ describe('traitsOf', () => {
     expect(traitsOf({ ...createWarrior(), perks: { rooted: 1 } })).toEqual(['rooted'])
   })
 
+  it('says Rooted lasts until the unit moves or the end of its next turn, as the engine lays it', () => {
+    expect(PERKS.rooted.description).toMatch(/until it moves or the end of its next turn$/)
+  })
+
   it('gives the traits of the nodes held, in TRAIT_IDS order, once each', () => {
     giving({ dodger: 'tumble', toughness: 'rooted', shield_wall: 'rooted', keen_eye: 'counter' }, () => {
       expect(traitsOf({ ...createWarrior(), perks: { dodger: 1, toughness: 1, shield_wall: 1 } })).toEqual(['rooted', 'tumble'])
