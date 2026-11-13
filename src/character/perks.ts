@@ -130,6 +130,27 @@ function spellNode(
   return { name, description: `${description}; ${manaCost} mana, ${apCost} AP`, path, tier, ...asks, effects: {}, spell }
 }
 
+/** The cost of a technique as its node words it: "3 mana, weapon AP + 1, recharge 1". */
+function techniqueCost(ability: AbilityId): string {
+  const { apCost, weaponAp, manaCost, recharge } = ABILITIES[ability]
+  const parts: string[] = []
+  if (manaCost !== undefined) parts.push(`${manaCost} mana`)
+  parts.push(weaponAp !== undefined ? `weapon AP + ${weaponAp}` : `${apCost} AP`)
+  if (recharge > 0) parts.push(`recharge ${recharge}`)
+  return parts.join(', ')
+}
+
+/** A node that teaches `ability`, its description the ability's with its cost. */
+function techniqueNode(
+  ability: AbilityId,
+  path: PathId,
+  tier: Tier,
+  asks: Pick<Perk, 'attributes' | 'skills' | 'anySkill'>,
+): Perk {
+  const { name, description } = ABILITIES[ability]
+  return { name, description: `${techniqueCost(ability)}. ${description}`, path, tier, ...asks, effects: {}, ability }
+}
+
 export const PERKS = {
   // ---- Warrior: Swordmaster
   weapon_training: {
@@ -148,6 +169,7 @@ export const PERKS = {
     attributes: { strength: 6 },
     effects: { meleeDamage: 2 },
   },
+  power_attack: techniqueNode('power_attack', 'swordmaster', 2, { skills: { melee: 40 } }),
   armor_breaker: {
     name: 'Armour Breaker',
     description: "Melee blows pierce 2 points of a foe's resistance",
@@ -163,6 +185,7 @@ export const PERKS = {
     tier: 2,
     effects: { strength: 2 },
   },
+  cleave: techniqueNode('cleave', 'swordmaster', 3, { skills: { melee: 55 } }),
   weapon_mastery: {
     name: 'Weapon Mastery',
     description: "+10% Melee Weapons, +2 melee damage, and melee blows pierce 1 more point of a foe's resistance",
@@ -187,6 +210,17 @@ export const PERKS = {
     tier: 1,
     effects: { shieldAc: 8 },
   },
+  taunt: techniqueNode('taunt', 'heavy_knight', 2, { attributes: { endurance: 5 } }),
+  rooted: {
+    name: 'Rooted',
+    description: 'At the end of its side\'s turn, if it has not moved, it is rooted: +10 armour class and +2 resistance until it moves',
+    path: 'heavy_knight',
+    tier: 2,
+    attributes: { endurance: 6 },
+    effects: {},
+    trait: 'rooted',
+  },
+  pin: techniqueNode('pin', 'heavy_knight', 3, { skills: { melee: 55 } }),
   iron_skin: {
     name: 'Iron Skin',
     description: '+2 resistance',
@@ -204,6 +238,8 @@ export const PERKS = {
     attributes: { intelligence: 4 },
     effects: { maxMana: 10 },
   },
+  flame_strike: techniqueNode('flame_strike', 'spellsword', 1, { skills: { melee: 30 } }),
+  frost_strike: techniqueNode('frost_strike', 'spellsword', 2, { skills: { melee: 40 } }),
   spell_ward: {
     name: 'Spell Ward',
     description: '+3 ward against every element',
@@ -211,13 +247,14 @@ export const PERKS = {
     tier: 2,
     effects: { wardAll: 3 },
   },
+  thunder_strike: techniqueNode('thunder_strike', 'spellsword', 3, { skills: { melee: 55 } }),
   battle_mage: {
     name: 'Battle Mage',
-    description: '+6 mana',
+    description: "+6 mana; its Strikes' elemental damage +2",
     path: 'spellsword',
     tier: 3,
     attributes: { intelligence: 5 },
-    effects: { maxMana: 6 },
+    effects: { maxMana: 6, imbueDamage: 2 },
   },
   // ---- Scout: Ranger
   marksmanship: {
@@ -236,6 +273,7 @@ export const PERKS = {
     attributes: { perception: 6 },
     effects: { rangedDamage: 2 },
   },
+  aimed_shot: techniqueNode('aimed_shot', 'ranger', 2, { skills: { archery: 40 } }),
   far_shot: {
     name: 'Far Shot',
     description: 'Ranged weapons reach 2 hexes further; +1 Perception',
@@ -244,6 +282,9 @@ export const PERKS = {
     attributes: { perception: 6 },
     effects: { range: 2, perception: 1 },
   },
+  hunters_mark: techniqueNode('hunters_mark', 'ranger', 2, { skills: { archery: 40 } }),
+  volley: techniqueNode('volley', 'ranger', 3, { skills: { archery: 55 } }),
+  pinning_shot: techniqueNode('pinning_shot', 'ranger', 3, { skills: { archery: 55 } }),
   deadeye: {
     name: 'Deadeye',
     description: '+10% Archery',
@@ -261,6 +302,7 @@ export const PERKS = {
     attributes: { agility: 6 },
     effects: { armorClass: 10 },
   },
+  sprint: techniqueNode('sprint', 'rogue', 1, { attributes: { agility: 5 } }),
   skirmisher: {
     name: 'Skirmisher',
     description: '+1 Agility',
@@ -269,6 +311,7 @@ export const PERKS = {
     attributes: { agility: 6 },
     effects: { agility: 1 },
   },
+  dirty_trick: techniqueNode('dirty_trick', 'rogue', 2, { skills: { melee: 40 } }),
   evasion: {
     name: 'Evasion',
     description: '+10 armour class and +1 action point every turn',
@@ -286,6 +329,8 @@ export const PERKS = {
     attributes: { luck: 6 },
     effects: { critChance: 10 },
   },
+  venom_strike: techniqueNode('venom_strike', 'assassin', 2, { anySkill: { melee: 40, archery: 40 } }),
+  hamstring: techniqueNode('hamstring', 'assassin', 2, { anySkill: { melee: 40, archery: 40 } }),
   fortune: {
     name: 'Fortune',
     description: '+10% chance of a critical hit and +1 Luck',
@@ -391,6 +436,7 @@ export const PERKS = {
   },
   // ---- Cleric: Paladin
   bless: spellNode('bless', 'paladin', 1, { anySkill: { melee: 30, magic: 40 } }),
+  smite: techniqueNode('smite', 'paladin', 1, { skills: { melee: 30 } }),
   lay_on_hands: spellNode('lay_on_hands', 'paladin', 2, { anySkill: { melee: 40, magic: 40 } }),
   blessed_armour: {
     name: 'Blessed Armour',
@@ -400,6 +446,7 @@ export const PERKS = {
     attributes: { endurance: 5 },
     effects: { resistance: 1, wardBlight: 3, maxMana: 6 },
   },
+  consecrate: techniqueNode('consecrate', 'paladin', 3, { skills: { melee: 55 } }),
   sacred_weapon: {
     name: 'Sacred Weapon',
     description: '+10% Melee Weapons; every melee hit adds 2 damage, and 4 more as bane',

@@ -23,7 +23,7 @@ import {
   type Perk,
   type PerkId,
 } from './perks.ts'
-import type { AbilityId } from '../combat/abilities.ts'
+import { ABILITIES, type AbilityId } from '../combat/abilities.ts'
 import type { TraitId } from '../combat/combat.ts'
 import { takePerk } from './progression.ts'
 import { SKILL_IDS, skillLevel } from './skills.ts'
@@ -96,9 +96,55 @@ describe('nodeKind', () => {
 })
 
 describe('knownAbilities', () => {
-  it('teaches no node an ability yet', () => {
-    expect(PERK_IDS.filter((id) => (PERKS[id] as Perk).ability !== undefined)).toEqual([])
+  it('teaches the 17 techniques, each from its place in its path, with the tier and asks of the plan', () => {
+    const table: Array<[PerkId, string, Perk['tier'], Partial<Pick<Perk, 'attributes' | 'skills' | 'anySkill'>>]> = [
+      ['power_attack', 'swordmaster', 2, { skills: { melee: 40 } }],
+      ['cleave', 'swordmaster', 3, { skills: { melee: 55 } }],
+      ['taunt', 'heavy_knight', 2, { attributes: { endurance: 5 } }],
+      ['pin', 'heavy_knight', 3, { skills: { melee: 55 } }],
+      ['flame_strike', 'spellsword', 1, { skills: { melee: 30 } }],
+      ['frost_strike', 'spellsword', 2, { skills: { melee: 40 } }],
+      ['thunder_strike', 'spellsword', 3, { skills: { melee: 55 } }],
+      ['aimed_shot', 'ranger', 2, { skills: { archery: 40 } }],
+      ['hunters_mark', 'ranger', 2, { skills: { archery: 40 } }],
+      ['volley', 'ranger', 3, { skills: { archery: 55 } }],
+      ['pinning_shot', 'ranger', 3, { skills: { archery: 55 } }],
+      ['sprint', 'rogue', 1, { attributes: { agility: 5 } }],
+      ['dirty_trick', 'rogue', 2, { skills: { melee: 40 } }],
+      ['venom_strike', 'assassin', 2, { anySkill: { melee: 40, archery: 40 } }],
+      ['hamstring', 'assassin', 2, { anySkill: { melee: 40, archery: 40 } }],
+      ['smite', 'paladin', 1, { skills: { melee: 30 } }],
+      ['consecrate', 'paladin', 3, { skills: { melee: 55 } }],
+    ]
+    expect(PERK_IDS).toHaveLength(75)
+    for (const [id, path, tier, asks] of table) {
+      const node = PERKS[id] as Perk
+      expect(node).toMatchObject({ path, tier, ability: id, effects: {}, ...asks })
+      expect(node.description.length).toBeGreaterThan(0)
+    }
+    expect(PERK_IDS.filter((id) => (PERKS[id] as Perk).ability !== undefined)).toHaveLength(17)
     expect(knownAbilities({ ...createWarrior(), perks: { dodger: 1, toughness: 1 } })).toEqual([])
+  })
+
+  it('sets the nodes in their paths in the plan\'s order', () => {
+    const path = (p: string) => PERK_IDS.filter((id) => (PERKS[id] as Perk).path === p)
+    expect(path('swordmaster')).toEqual(['weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'gain_strength', 'cleave', 'weapon_mastery'])
+    expect(path('heavy_knight')).toEqual(['toughness', 'shield_wall', 'taunt', 'rooted', 'pin', 'iron_skin'])
+    expect(path('spellsword')).toEqual(['arcane_blood', 'flame_strike', 'frost_strike', 'spell_ward', 'thunder_strike', 'battle_mage'])
+    expect(path('ranger')).toEqual(['marksmanship', 'deadly_aim', 'aimed_shot', 'far_shot', 'hunters_mark', 'volley', 'pinning_shot', 'deadeye'])
+    expect(path('rogue')).toEqual(['dodger', 'sprint', 'skirmisher', 'dirty_trick', 'evasion'])
+    expect(path('assassin')).toEqual(['keen_eye', 'venom_strike', 'hamstring', 'fortune'])
+    expect(path('paladin')).toEqual(['bless', 'smite', 'lay_on_hands', 'blessed_armour', 'consecrate', 'sacred_weapon'])
+  })
+
+  it('words a technique with its cost', () => {
+    expect(PERKS.pin.description).toBe(`3 mana, weapon AP + 1, recharge 1. ${ABILITIES.pin.description}`)
+    expect(PERKS.taunt.description).toMatch(/^3 AP, recharge 2\. /)
+  })
+
+  it('lists a hero\'s techniques in ABILITY_IDS order', () => {
+    const hero = { ...createWarrior(), perks: { sprint: 1, power_attack: 1, smite: 1 } }
+    expect(knownAbilities(hero)).toEqual(['power_attack', 'sprint', 'smite'])
   })
 
   it('gives the abilities of the nodes held, in ABILITY_IDS order, once each', () => {
@@ -121,9 +167,10 @@ describe('traitsOf', () => {
     }
   }
 
-  it('gives no node a trait yet', () => {
-    expect(PERK_IDS.filter((id) => (PERKS[id] as Perk).trait !== undefined)).toEqual([])
+  it('gives Rooted its trait, and no other node one', () => {
+    expect(PERK_IDS.filter((id) => (PERKS[id] as Perk).trait !== undefined)).toEqual(['rooted'])
     expect(traitsOf({ ...createWarrior(), perks: { toughness: 1 } })).toEqual([])
+    expect(traitsOf({ ...createWarrior(), perks: { rooted: 1 } })).toEqual(['rooted'])
   })
 
   it('gives the traits of the nodes held, in TRAIT_IDS order, once each', () => {
@@ -144,7 +191,7 @@ describe('qualifiesFor', () => {
     const offered = availablePerks(warriorAt(1))
     expect(offered.every((id) => (PERKS[id] as Perk).tier === 1)).toBe(true)
     // Strength 7, endurance 7, intelligence 4, agility 6, luck 7 and Melee Weapons 33.
-    expect(offered).toEqual(['weapon_training', 'heavy_hand', 'toughness', 'shield_wall', 'arcane_blood', 'dodger', 'keen_eye', 'bless'])
+    expect(offered).toEqual(['weapon_training', 'heavy_hand', 'toughness', 'shield_wall', 'arcane_blood', 'flame_strike', 'dodger', 'sprint', 'keen_eye', 'bless', 'smite'])
     const swordsman = { ...warriorAt(1), perks: { weapon_training: 1 } }
     expect(missingRequirements(swordsman, 'armor_breaker')).toEqual(['Level 2'])
     expect(qualifiesFor({ ...swordsman, level: 2 }, 'armor_breaker')).toBe(true)

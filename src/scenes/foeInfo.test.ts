@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { UnitSnapshot } from '../engine/battleEngine.ts'
+import { banditGear, banditStats } from '../game/bandits.ts'
 import { foeInfoLines } from './foeInfo.ts'
 
 const unit = (extra: Partial<UnitSnapshot>) => ({ name: 'Giant Spider', recharging: {}, ...extra }) as UnitSnapshot
@@ -72,5 +73,20 @@ describe('foeInfoLines', () => {
     ])
     expect(describe1({ abilities: ['sprint'] })).toEqual(['Sprint: ready', '  hasted 1 turn (+3 AP)'])
     expect(describe1({ abilities: ['hunters_mark'] })).toEqual(['Hunter\'s Mark: ready', '  a foe: marked 2 turns (−10 AC)'])
+  })
+})
+
+describe('a bandit that learned techniques', () => {
+  const hover = (role: 'captain' | 'brute') => {
+    const { abilities, abilityDamageBonus } = banditStats(role, 6, banditGear(5))
+    return foeInfoLines(unit({ name: role, abilities, abilityDamageBonus, recharging: {} }))
+  }
+
+  it('names its techniques without throwing: the level-6 Captain taunts', () => {
+    expect(hover('captain').filter((line) => !line.startsWith('  '))).toEqual(expect.arrayContaining(['Taunt: ready']))
+  })
+
+  it('names the level-6 Brute\'s Power Attack and Cleave', () => {
+    expect(hover('brute').filter((line) => !line.startsWith('  '))).toEqual(expect.arrayContaining(['Power Attack: ready', 'Cleave: ready']))
   })
 })

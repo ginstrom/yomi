@@ -167,3 +167,31 @@ describe('banditStats freezing', () => {
     expect(banditStats('mage', 5, G1).magic).toBeDefined()
   })
 })
+
+describe('what the bandits learn from their plans', () => {
+  const gear = banditGear(5)
+  const abilities = (role: BanditRole, level: number) => banditStats(role, level, gear).abilities ?? []
+
+  it('gives the level-6 Captain Taunt and Rooted (the plan takes Heavy Hand first, so Pin waits)', () => {
+    const stats = banditStats('captain', 6, gear)
+    expect(stats.abilities).toEqual(['taunt'])
+    expect(stats.traits).toEqual(['rooted'])
+  })
+
+  it('gives the Brute Power Attack at 2 and Cleave at 6', () => {
+    expect(abilities('brute', 2)).toEqual(['power_attack'])
+    expect(abilities('brute', 6)).toEqual(['power_attack', 'cleave'])
+  })
+
+  it('gives the Cutthroat Dirty Trick at 2 and Sprint at 4', () => {
+    expect(abilities('cutthroat', 2)).toEqual(['dirty_trick'])
+    expect(abilities('cutthroat', 4)).toEqual(['sprint', 'dirty_trick'])
+  })
+
+  it('gives the Archer and the Crossbowman Aimed Shot at 2 and Volley at 6', () => {
+    for (const role of ['archer', 'crossbowman'] as const) {
+      expect(abilities(role, 2)).toEqual(['aimed_shot'])
+      expect(abilities(role, 6)).toEqual(['aimed_shot', 'volley'])
+    }
+  })
+})

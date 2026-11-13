@@ -42,6 +42,38 @@ export const TREE_STRIP_Y = TREE_Y + TREE_ROWS * TREE_ROW_H + 4
 /** How far the tree reaches across. */
 export const TREE_W = TREE_X + 2 * TREE_COLUMN_W + NODE_W
 
+/** The strip's lines hold this many characters: its width over the monospace 12px glyph's 7.2 px, less a little for safety. */
+export const STRIP_CHARS = 90
+/** The strip's first line, the node's summary, runs to at most this many lines, so that the strip stays inside the panel. */
+export const STRIP_SUMMARY_LINES = 2
+
+/** The lines `text` wraps onto at `width` characters, breaking at spaces (a longer word has a line of its own). */
+export function wrapLines(text: string, width: number = STRIP_CHARS): string[] {
+  const lines: string[] = []
+  let line = ''
+  for (const word of text.split(' ')) {
+    if (line !== '' && line.length + 1 + word.length > width) {
+      lines.push(line)
+      line = word
+    } else {
+      line = line === '' ? word : `${line} ${word}`
+    }
+  }
+  lines.push(line)
+  return lines
+}
+
+/** `text` cut to `maxLines` lines of `width` characters, with an ellipsis where it was cut. */
+export function clampLines(text: string, maxLines: number = STRIP_SUMMARY_LINES, width: number = STRIP_CHARS): string {
+  const lines = wrapLines(text, width)
+  if (lines.length <= maxLines) return text
+  const kept = lines.slice(0, maxLines)
+  let last = kept[maxLines - 1]
+  while (last.length + 1 > width) last = last.slice(0, last.lastIndexOf(' '))
+  kept[maxLines - 1] = `${last}…`
+  return kept.join(' ')
+}
+
 /** A node's top left corner and size, in the container's own pixels. */
 export function nodeRect({ column, row }: Pick<TreeNode, 'column' | 'row'>): { x: number; y: number; width: number; height: number } {
   return { x: TREE_X + column * TREE_COLUMN_W, y: TREE_Y + row * TREE_ROW_H, width: NODE_W, height: NODE_H }

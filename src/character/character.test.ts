@@ -1011,11 +1011,16 @@ describe('techniques in a hero’s stats', () => {
   })
 
   it('carries its imbued damage only when it is not 0', () => {
-    expect(deriveCombatStats(hero('battle_mage')).imbueDamage).toBeUndefined()
-    lending('battle_mage', { effects: { maxMana: 6, imbueDamage: 2 } }, () => {
-      expect(deriveCombatStats(hero('battle_mage')).imbueDamage).toBe(2)
-      expect(deriveCombatStats(hero()).imbueDamage).toBeUndefined()
-    })
+    expect(deriveCombatStats(hero()).imbueDamage).toBeUndefined()
+    expect(deriveCombatStats(hero('battle_mage')).imbueDamage).toBe(2)
+  })
+
+  it('gives a hero with Pin magic with no spell, and a hero with Rooted its trait', () => {
+    const pinned = deriveCombatStats(hero('pin'))
+    expect(pinned.abilities).toEqual(['pin'])
+    expect(pinned.magic).toMatchObject({ maxMana: expect.any(Number), spells: [] })
+    expect(pinned.magic!.maxMana).toBeGreaterThan(0)
+    expect(deriveCombatStats(hero('rooted')).traits).toEqual(['rooted'])
   })
 
   it('carries the traits its nodes give, in TRAIT_IDS order, and none for a hero without', () => {

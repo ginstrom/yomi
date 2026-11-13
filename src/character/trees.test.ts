@@ -19,19 +19,19 @@ import {
   type Tier,
 } from './trees.ts'
 
-/** The 57 stage-1 nodes, by path, in `PERKS` order (the plan's C3, stage-1 rows). */
+/** The 75 stage-1 and stage-2 nodes, by path, in `PERKS` order (the plan's C3). */
 const STAGE_1: Record<PathId, PerkId[]> = {
-  swordmaster: ['weapon_training', 'heavy_hand', 'armor_breaker', 'gain_strength', 'weapon_mastery'],
-  heavy_knight: ['toughness', 'shield_wall', 'iron_skin'],
-  spellsword: ['arcane_blood', 'spell_ward', 'battle_mage'],
-  ranger: ['marksmanship', 'deadly_aim', 'far_shot', 'deadeye'],
-  rogue: ['dodger', 'skirmisher', 'evasion'],
-  assassin: ['keen_eye', 'fortune'],
+  swordmaster: ['weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'gain_strength', 'cleave', 'weapon_mastery'],
+  heavy_knight: ['toughness', 'shield_wall', 'taunt', 'rooted', 'pin', 'iron_skin'],
+  spellsword: ['arcane_blood', 'flame_strike', 'frost_strike', 'spell_ward', 'thunder_strike', 'battle_mage'],
+  ranger: ['marksmanship', 'deadly_aim', 'aimed_shot', 'far_shot', 'hunters_mark', 'volley', 'pinning_shot', 'deadeye'],
+  rogue: ['dodger', 'sprint', 'skirmisher', 'dirty_trick', 'evasion'],
+  assassin: ['keen_eye', 'venom_strike', 'hamstring', 'fortune'],
   evoker: ['magic_arrow', 'destruction', 'flame_arrow', 'pyromancy', 'fireball', 'acid_arrow', 'death_cloud', 'meteor'],
   cryomancer: ['frostbite', 'numbing_cold', 'sleep', 'frost_blast', 'web', 'lingering_cold'],
   arcanist: ['shield', 'arcane_study', 'mirror_image', 'ward', 'haste', 'lasting_magic', 'quickened_casting', 'mass_haste'],
   healer: ['heal', 'mending', 'greater_heal', 'heal_all', 'greater_heal_all', 'swift_hands'],
-  paladin: ['bless', 'lay_on_hands', 'blessed_armour', 'sacred_weapon'],
+  paladin: ['bless', 'smite', 'lay_on_hands', 'blessed_armour', 'consecrate', 'sacred_weapon'],
   saint: ['serenity', 'bane', 'protect', 'scholar', 'curse'],
 }
 
@@ -50,8 +50,8 @@ describe('the trees', () => {
     expect(MANA_PER_TREE_NODE).toBe(2)
   })
 
-  it('hold the 57 stage-1 nodes in PERKS order, by tree, path, then tier', () => {
-    expect(PERK_IDS).toHaveLength(57)
+  it('hold the 75 stage-1 and stage-2 nodes in PERKS order, by tree, path, then tier', () => {
+    expect(PERK_IDS).toHaveLength(75)
     expect(PERK_IDS).toEqual(PATH_IDS.flatMap((path) => STAGE_1[path]))
     for (const path of PATH_IDS) {
       const nodes = PERK_IDS.filter((id) => (PERKS[id] as Perk).path === path)
@@ -207,5 +207,41 @@ describe('heroTitle', () => {
     expect(heroTitle(hero(5, 'bless', 'lay_on_hands', 'blessed_armour', 'toughness', 'shield_wall', 'iron_skin'))).toBe(
       'Level 5 \u00b7 Heavy Knight / Paladin',
     )
+  })
+})
+
+describe('a committed hero in the Warrior and Scout trees (AC1, stage 2)', () => {
+  /** A hero with `t1s`, attributes and skills for every ask, taking `path` in order at levels 2, 4 and 6. */
+  const committedWarrior = (t1s: PerkId[], path: PerkId[]): Map<PerkId, number> => {
+    const hero = createWarrior()
+    Object.assign(hero.attributes, { strength: 9, endurance: 8, perception: 9, agility: 8 })
+    hero.trained.melee = 100
+    hero.trained.archery = 100
+    hero.perks = Object.fromEntries(t1s.map((id) => [id, 1]))
+    const came = new Map<PerkId, number>()
+    while (hero.level < 6) {
+      gainXp(hero, xpToNextLevel(hero.level))
+      while (hero.perkPicks > 0) {
+        const next = path.find((id) => qualifiesFor(hero, id))
+        if (!next || !takePerk(hero, next)) break
+        came.set(next, hero.level)
+      }
+    }
+    return came
+  }
+
+  it('takes Cleave at level 6 after Power Attack and Armour Breaker', () => {
+    const came = committedWarrior(['weapon_training', 'heavy_hand'], ['power_attack', 'armor_breaker', 'cleave'])
+    expect([came.get('power_attack'), came.get('armor_breaker'), came.get('cleave')]).toEqual([2, 4, 6])
+  })
+
+  it('takes Pin at level 6 after Taunt and Rooted', () => {
+    const came = committedWarrior(['toughness', 'shield_wall'], ['taunt', 'rooted', 'pin'])
+    expect([came.get('taunt'), came.get('rooted'), came.get('pin')]).toEqual([2, 4, 6])
+  })
+
+  it('takes Volley at level 6 after Aimed Shot and Far Shot', () => {
+    const came = committedWarrior(['marksmanship', 'deadly_aim'], ['aimed_shot', 'far_shot', 'volley'])
+    expect([came.get('aimed_shot'), came.get('far_shot'), came.get('volley')]).toEqual([2, 4, 6])
   })
 })

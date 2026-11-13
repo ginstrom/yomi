@@ -760,7 +760,7 @@ export class InventoryScene extends Phaser.Scene {
 
   /** The passives the character holds, in the order of `PERKS`; its spells are the Abilities tab's. */
   private takenPerks(): PerkId[] {
-    return PERK_IDS.filter((id) => nodeKind(id) !== 'spell' && perkRanks(this.character, id) > 0)
+    return PERK_IDS.filter((id) => nodeKind(id) === 'passive' && perkRanks(this.character, id) > 0)
   }
 
   /** Whether the character has a perk to choose and can choose it here. */

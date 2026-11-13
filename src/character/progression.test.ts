@@ -20,6 +20,7 @@ import {
   xpToNextLevel,
 } from './progression.ts'
 import { SKILL_IDS, skillLevel } from './skills.ts'
+import { banditDraft } from '../game/bandits.ts'
 import { READY_MADE } from '../game/party.ts'
 
 describe('xpToNextLevel', () => {
@@ -233,27 +234,52 @@ describe('autoAdvance', () => {
   }
   const held = (hero: Character) => PERK_IDS.filter((id) => hero.perks[id])
 
-  it('follows each written plan in order, as far as the hero qualifies (the knight, the ranger, the evoker-healer)', () => {
-    // Aldric, his three picks of levels 2, 4 and 6 spent at once: Shield Wall, Armour Breaker, then Weapon
-    // Mastery (strength 9, three Swordmaster nodes), as Iron Skin asks three Heavy Knight nodes. Listed in PERKS order.
-    expect(held(grown(0, 6))).toEqual(['weapon_training', 'heavy_hand', 'armor_breaker', 'weapon_mastery', 'toughness', 'shield_wall'])
-    // Spent a level at a time, the same.
-    const aldric = draftCharacter(READY_MADE[0])
-    const order: PerkId[] = []
-    while (aldric.level < 6) {
-      levelUp(aldric)
-      const before = held(aldric)
-      autoAdvance(aldric)
-      order.push(...held(aldric).filter((id) => !before.includes(id)))
+  /** The node `autoAdvance` takes at each level from 2 to 7, from `draft`'s level 1, by `plan`. */
+  const taken = (draft: Parameters<typeof draftCharacter>[0], plan?: Parameters<typeof autoAdvance>[1]): Record<number, PerkId[]> => {
+    const hero = draftCharacter(draft)
+    const picks: Record<number, PerkId[]> = {}
+    while (hero.level < 7) {
+      levelUp(hero)
+      const before = held(hero)
+      autoAdvance(hero, plan)
+      expect(hero.perkPicks).toBe(0)
+      picks[hero.level] = held(hero).filter((id) => !before.includes(id))
     }
-    expect(order).toEqual(['shield_wall', 'armor_breaker', 'weapon_mastery'])
-    // Brenna: Far Shot, then Skirmisher (Deadeye is a capstone far off); Evasion asks three Rogue nodes, so the
-    // fallback's first node on offer in PERKS order, Toughness.
-    const brenna = grown(1, 6)
-    expect(brenna.perkPicks).toBe(0)
-    expect(held(brenna)).toEqual(['toughness', 'marksmanship', 'deadly_aim', 'far_shot', 'dodger', 'skirmisher'])
-    // Delwyn: Destruction, Flame Arrow at 2 and 4, then Heal All at 6.
+    return picks
+  }
+
+  it('follows the knight plan from Aldric: Rooted, Taunt and Pin at levels 2, 4 and 6', () => {
+    expect(taken(READY_MADE[0])).toEqual({ 2: ['rooted'], 3: [], 4: ['taunt'], 5: [], 6: ['pin'], 7: [] })
+    // Spent all at once at level 6, the same nodes (Pin asks Melee 55 and three Heavy Knight nodes).
+    expect(held(grown(0, 6))).toEqual(['weapon_training', 'heavy_hand', 'toughness', 'taunt', 'rooted', 'pin'])
+  })
+
+  it('follows the ranger plan from Brenna: Aimed Shot, Far Shot and Volley', () => {
+    expect(taken(READY_MADE[1])).toEqual({ 2: ['aimed_shot'], 3: [], 4: ['far_shot'], 5: [], 6: ['volley'], 7: [] })
+  })
+
+  it('follows the swordmaster plan from the Brute: Power Attack, Armour Breaker and Cleave', () => {
+    expect(taken(banditDraft('brute'), 'swordmaster')).toEqual({ 2: ['power_attack'], 3: [], 4: ['armor_breaker'], 5: [], 6: ['cleave'], 7: [] })
+  })
+
+  it('follows the rogue plan from the Cutthroat: Dirty Trick, Sprint, then Evasion (Agility 9)', () => {
+    expect(taken(banditDraft('cutthroat'), 'rogue')).toEqual({ 2: ['dirty_trick'], 3: [], 4: ['sprint'], 5: [], 6: ['evasion'], 7: [] })
+  })
+
+  it('follows the knight plan from the Captain: the plan\'s Heavy Hand first, so Pin comes after level 7', () => {
+    // The Captain's draft holds Weapon Training and Toughness, so the plan's first open node is Heavy Hand.
+    expect(taken(banditDraft('captain'), 'knight')).toEqual({ 2: ['heavy_hand'], 3: [], 4: ['rooted'], 5: [], 6: ['taunt'], 7: [] })
+  })
+
+  it('follows the evoker-healer plan, which holds no stage-2 node', () => {
     expect(knownSpells(grown(2, 6))).toEqual(expect.arrayContaining(['magic_arrow', 'flame_arrow', 'heal', 'heal_all']))
+  })
+
+  it('gives the plans the stage-2 nodes', () => {
+    expect(AUTO_PLANS.knight).toEqual(['weapon_training', 'heavy_hand', 'toughness', 'rooted', 'taunt', 'pin', 'iron_skin', 'shield_wall', 'power_attack', 'armor_breaker', 'weapon_mastery'])
+    expect(AUTO_PLANS.swordmaster).toEqual(['weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'cleave', 'gain_strength', 'weapon_mastery', 'toughness'])
+    expect(AUTO_PLANS.ranger).toEqual(['marksmanship', 'deadly_aim', 'aimed_shot', 'far_shot', 'volley', 'hunters_mark', 'pinning_shot', 'deadeye', 'dodger', 'sprint', 'skirmisher', 'evasion'])
+    expect(AUTO_PLANS.rogue).toEqual(['dirty_trick', 'sprint', 'evasion', 'skirmisher'])
   })
 
   it('spends every pick it can and never takes a capstone by the fallback', () => {

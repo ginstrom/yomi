@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { createWarrior, deriveCombatStats } from '../character/character.ts'
 import { SPELLS, spellApCost } from '../combat/spells.ts'
-import { PERKS, PERK_IDS, perkParent, type Perk } from '../character/perks.ts'
+import { PERKS, PERK_IDS, describePerkRequirements, perkParent, type Perk } from '../character/perks.ts'
 import { newDraft, type CharacterDraft } from '../character/creation.ts'
 import { TREE_IDS, pathsOf } from '../character/trees.ts'
 import {
+  STRIP_CHARS,
   TREE_ROWS,
   TREE_STRIP_Y,
   TREE_X,
+  clampLines,
   costWords,
   draftNodeClickable,
   draftNodeHint,
@@ -24,6 +26,7 @@ import {
   treeLayout,
   treeTabLabel,
   treeTabRect,
+  wrapLines,
 } from './perkTree.ts'
 
 /** The warrior: strength 7, perception 4, endurance 7, intelligence 4, agility 6, luck 7. */
@@ -76,12 +79,14 @@ describe('treeLayout', () => {
   it('leaves a row empty in a column short of a tier: the Scout tree', () => {
     const scout = treeLayout('scout')
     const at = (perk: string) => scout.find((node) => node.perk === perk)
-    // Ranger and Rogue have a tier-2 node, Assassin none; Fortune, tier 3, sits on the tier-3 row.
-    expect(at('far_shot')).toMatchObject({ column: 0, row: 3 })
+    // Ranger has three tier-2 nodes, Rogue two and Assassin two; the tier-3 row is the band's sixth.
+    expect(at('aimed_shot')).toMatchObject({ column: 0, row: 3 })
+    expect(at('hunters_mark')).toMatchObject({ column: 0, row: 5 })
     expect(at('skirmisher')).toMatchObject({ column: 1, row: 3 })
-    expect(at('evasion')).toMatchObject({ column: 1, row: 4 })
-    expect(at('fortune')).toMatchObject({ column: 2, row: 4 })
-    expect(at('deadeye')).toMatchObject({ column: 0, row: 5 })
+    expect(at('dirty_trick')).toMatchObject({ column: 1, row: 4 })
+    expect(at('evasion')).toMatchObject({ column: 1, row: 6 })
+    expect(at('fortune')).toMatchObject({ column: 2, row: 6 })
+    expect(at('deadeye')).toMatchObject({ column: 0, row: 8 })
   })
 
   it('fits every node within the 720 px panel, in rows above the strip', () => {
@@ -106,11 +111,11 @@ describe('tierBands', () => {
       { tier: 3, label: 'L6', firstRow: 5 },
       { tier: 'capstone', label: 'L12', firstRow: 8 },
     ])
-    // The Warrior tree has no capstone yet; Swordmaster's two tier-2 nodes make the band two rows.
+    // The Warrior tree has no capstone yet; Swordmaster's three tier-2 nodes make the band three rows.
     expect(tierBands('warrior')).toEqual([
       { tier: 1, label: 'L1', firstRow: 1 },
       { tier: 2, label: 'L2', firstRow: 3 },
-      { tier: 3, label: 'L6', firstRow: 5 },
+      { tier: 3, label: 'L6', firstRow: 6 },
     ])
     for (const tree of TREE_IDS) {
       const labels = tierBands(tree).map(({ label }) => label)
@@ -275,5 +280,39 @@ describe('the tree tabs', () => {
     expect(openingTree(warriorAt(1))).toBe('warrior')
     expect(openingTree({ perks: { heal: 1, bless: 1, mending: 1, dodger: 1 } })).toBe('cleric')
     expect(openingTree({ perks: { dodger: 1, heal: 1 } })).toBe('scout')
+  })
+})
+
+describe('the 75 nodes of stage 2', () => {
+  it('place one to a cell, per tree as the plan counts them', () => {
+    const counts = Object.fromEntries(TREE_IDS.map((tree) => [tree, treeLayout(tree).length]))
+    expect(counts).toEqual({ warrior: 19, scout: 17, mage: 22, cleric: 17 })
+    expect(Object.values(counts).reduce((a, b) => a + b, 0)).toBe(PERK_IDS.length)
+  })
+})
+
+describe('the strip', () => {
+  it('cuts a long summary to two lines with an ellipsis, and leaves a short one alone', () => {
+    expect(clampLines('Short words')).toBe('Short words')
+    const long = 'word '.repeat(80).trim()
+    const clamped = clampLines(long)
+    expect(clamped.endsWith('…')).toBe(true)
+    expect(wrapLines(clamped)).toHaveLength(2)
+  })
+
+  it('stays inside the 500 px panel for the longest node: summary, asks and hint', () => {
+    const hero = { ...warriorAt(1), perkPicks: 1 }
+    let longest = 0
+    for (const id of PERK_IDS) {
+      const summary = clampLines(nodeSummary(hero, id))
+      const lines =
+        wrapLines(summary).length +
+        wrapLines(`Asks: ${describePerkRequirements(id)}`).length +
+        wrapLines(nodeHint(hero, id, true)).length
+      longest = Math.max(longest, lines)
+    }
+    expect(STRIP_CHARS).toBeLessThanOrEqual(92)
+    // A 12 px monospace line is about 15 px.
+    expect(TREE_STRIP_Y + longest * 15).toBeLessThanOrEqual(500)
   })
 })

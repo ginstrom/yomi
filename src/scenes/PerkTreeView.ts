@@ -5,6 +5,7 @@ import { PATHS, TREE_IDS, pathsOf, type TreeId } from '../character/trees.ts'
 import type { Point } from './boardGeometry.ts'
 import { addPanelButton } from './panelButton.ts'
 import {
+  clampLines,
   NODE_H,
   NODE_W,
   TREE_STRIP_Y,
@@ -214,7 +215,7 @@ export class PerkTreeView {
       hint.setText('')
       return
     }
-    what.setText(nodeSummary(this.options.character, perk)).setColor(TEXT)
+    what.setText(clampLines(nodeSummary(this.options.character, perk))).setColor(TEXT)
     asks.setText(`Asks: ${describePerkRequirements(perk)}`).setY(what.y + what.height + 2)
     hint.setText(this.options.hint(perk)).setY(asks.y + asks.height + 2)
   }

@@ -56,8 +56,8 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 - To the stage-4 polish (orchestrator, from step 06 screenshots): the tree view works and fits at 840×560 but is plain: no lines between a node and what it requires, and the kind stripes are faint. Make it look like a tree before the feature is done.
 
-- To step 13 (from step 07 review): `InventoryScene.takenPerks()` filters `nodeKind !== 'spell'`; make it `=== 'passive'` before techniques land, or they show under Passives too.
-- To steps 13 and 21 (from step 06 review): the tree strip's line 1 wraps freely and is near the panel's bottom (y 493 of 500 for Meteor); cap it at two lines or test the longest strip once wordier technique text lands.
+- Done in step 13: `takenPerks()` keeps passives only; the strip's first line is cut to two lines (`clampLines`) and a test holds all nodes inside the panel. Step 21 adds nodes: the test covers them automatically.
+- To step 16 or 24 (from step 13): the Captain takes Heavy Hand first (the `knight` plan lists it before Rooted), so Rooted comes at 4, Taunt at 6 and Pin after level 7; move `heavy_hand` after `pin` in the plan or give his draft Heavy Hand if bandits should pin by 6.
 
 - To step 16 (from step 08 review): CLAUDE.md's scaling paragraph — the stage-1 sentence splits stage 6's "In the run of 237…" narrative; move it after stage 6's text.
 - To final QA: step 08's play check was scripted, not hand-played; do a hand-played browser pass with a hero built across two trees.
