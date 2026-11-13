@@ -81,7 +81,7 @@ describe('the manual’s screenshots', () => {
     await shot(game, 'panel-character')
     for (const [key, tab, name] of [
       ['s', 'skills', 'panel-skills'],
-      ['p', 'perkTree', 'panel-perk-tree'],
+      ['p', 'trees', 'panel-perk-tree'],
       ['i', 'inventory', 'panel-inventory'],
     ] as const) {
       await game.press(key)
@@ -92,7 +92,7 @@ describe('the manual’s screenshots', () => {
     await game.click(panel.party[2])
     await game.settled('Inventory', (p) => p.party[2].active)
     await game.press('b')
-    await game.settled('Inventory', (p) => p.tab === 'spells')
+    await game.settled('Inventory', (p) => p.tab === 'abilities')
     await shot(game, 'panel-spells-mage')
     // The mage, of strength 3, hovering the Iron Greatsword it carries, which asks 6.
     await game.press('i')

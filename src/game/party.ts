@@ -1,6 +1,6 @@
 import { deriveCombatStats, maxHp, type Character } from '../character/character.ts'
 import { draftCharacter, type CharacterDraft } from '../character/creation.ts'
-import { gainXp, type XpGain } from '../character/progression.ts'
+import { gainXp, nextPerkLevel, type XpGain } from '../character/progression.ts'
 import { castOnWorldMap, healsOne, worldHealing, worldSpells } from '../character/worldCasting.ts'
 import type { HeroSpellId } from '../combat/spells.ts'
 import { listNames } from '../engine/battleEngine.ts'
@@ -164,7 +164,8 @@ export function describeRewards({ members, dead }: VictoryReward): string[] {
     if (gain.levelsGained > 0) {
       const points = `, ${gain.skillPointsGained} skill points`
       const perk = gain.perksGained > 0 ? ', a pick' : ''
-      lines.push(`${member.name} reaches level ${member.level}: +${gain.maxHpGained} max HP${points}${perk}, wounds healed`)
+      const next = gain.perksGained > 0 ? '' : `; next pick at level ${nextPerkLevel(member)}`
+      lines.push(`${member.name} reaches level ${member.level}: +${gain.maxHpGained} max HP${points}${perk}, wounds healed${next}`)
     }
   }
   return lines
@@ -180,7 +181,7 @@ const lost = (member: Character) => maxHp(member) - member.hp
  * cheapest heal restores; a heal of the whole party when two members or more
  * have lost what that restores, else its strongest heal of one it can afford,
  * on the member who has lost most. Returns the hit points restored, for the
- * simulator. It is the simulator's; the player heals from the Spells tab.
+ * simulator. It is the simulator's; the player heals from the Abilities tab.
  */
 export function autoHeal(party: Party): number {
   const before = party.reduce((sum, member) => sum + member.hp, 0)

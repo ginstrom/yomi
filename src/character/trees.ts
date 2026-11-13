@@ -107,3 +107,13 @@ export function treeNodes(character: Pick<Character, 'perks'>, tree: TreeId): nu
 function held(character: Pick<Character, 'perks'>, perk: PerkId): boolean {
   return perkRanks(character, perk) > 0
 }
+
+/** "Level 9 \u00b7 Heavy Knight", or "... / Paladin" when the second-deepest path holds 3 nodes or more; "Level 1" with no node. */
+export function heroTitle(character: Character): string {
+  const ranked = PATH_IDS.map((path) => [path, pathDepth(character, path)] as const)
+    .filter(([, depth]) => depth > 0)
+    .sort((a, b) => b[1] - a[1])
+  const [first, second] = ranked
+  const names = [first, second && second[1] >= 3 ? second : undefined].flatMap((entry) => (entry ? [PATHS[entry[0]].name] : []))
+  return [`Level ${character.level}`, ...(names.length > 0 ? [names.join(' / ')] : [])].join(' \u00b7 ')
+}

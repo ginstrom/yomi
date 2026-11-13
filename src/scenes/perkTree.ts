@@ -112,6 +112,13 @@ export function nodeState(character: Character, perk: PerkId): NodeState {
   return lockWords(character, perk) ? 'locked' : 'closed'
 }
 
+/** "path is Evoker", or "paths are Evoker, Arcanist and Healer" for a tie. */
+function deepestWords(deepest: readonly PathId[]): string {
+  const names = deepest.map((id) => PATHS[id].name)
+  if (names.length === 1) return `path is ${names[0]}`
+  return `paths are ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+}
+
 /** Why a capstone is locked, or null when it is not: another capstone held, or its path not the calling. */
 function lockWords(character: Character, perk: PerkId): string | null {
   const { tier, path }: Perk = PERKS[perk]
@@ -119,7 +126,7 @@ function lockWords(character: Character, perk: PerkId): string | null {
   const held = capstoneOf(character)
   if (held) return `Closed: you hold ${PERKS[held].name}`
   const deepest = calling(character)
-  if (deepest.length > 0 && !deepest.includes(path)) return `Closed: your deepest path is ${deepest.map((id) => PATHS[id].name).join(' and ')}`
+  if (deepest.length > 0 && !deepest.includes(path)) return `Closed: your deepest ${deepestWords(deepest)}`
   return null
 }
 

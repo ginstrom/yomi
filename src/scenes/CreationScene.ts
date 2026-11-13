@@ -99,7 +99,7 @@ const SKILL_LEVEL_X = CONTENT_W
  */
 const TREE_SHIFT_Y = -18
 /** The perks step's words with the pointer on no node. */
-const PERKS_RULE = `${CREATION_PERK_PICKS} picks. One more comes with every level. Any path, any tree; only your deepest path may open its capstone.`
+const PERKS_RULE = `${CREATION_PERK_PICKS} picks. One more comes with every even level. Any path, any tree; only your deepest path may open its capstone.`
 
 /** The name step: the faces in two rows, and the name under them. */
 const PORTRAIT_COLS = 4

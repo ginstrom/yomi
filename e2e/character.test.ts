@@ -254,7 +254,7 @@ describe('a hero’s panel', () => {
     }
   })
 
-  it('shows on the Spells tab the spell skill the caster’s gear leaves it', async () => {
+  it('shows on the Abilities tab the spell skill the caster’s gear leaves it', async () => {
     const game = await games.open()
     const world = await game.newGame()
     // The mage's breastplate takes 5 from its spells.
@@ -263,7 +263,7 @@ describe('a hero’s panel', () => {
     await game.click(marked.party[2])
     await game.waitForScenes(['Inventory'], ['World'])
     await game.press('b')
-    const spells = await game.settled('Inventory', (p) => p.tab === 'spells')
+    const spells = await game.settled('Inventory', (p) => p.tab === 'abilities')
     expect(spells.equipment.armor.item).toBe('iron_breastplate')
     expect(spells.spellSkill).toBe(spells.skills.magic.level - 5)
   })
@@ -328,10 +328,11 @@ describe('a hero’s panel', () => {
     await game.press('s')
     const aldric = await game.waitFor('Inventory', (p) => p.tab === 'skills')
     // The three perks a character is created with.
+    expect(aldric.title).toBe('Level 1 \u00b7 Swordmaster')
     expect(aldric.takenPerks.map(({ perk }) => perk)).toEqual(['weapon_training', 'heavy_hand', 'toughness'])
     expect(aldric.mana).toBeNull()
 
-    // The mage's spells are the Spells tab's; its one passive is Arcane Study.
+    // The mage's spells are the Abilities tab's; its one passive is Arcane Study.
     await game.click(aldric.party[2])
     const delwyn = await game.waitFor('Inventory', (p) => p.party[2].active)
     expect(delwyn.takenPerks).toEqual([{ perk: 'arcane_study', ranks: 1 }])
@@ -339,8 +340,8 @@ describe('a hero’s panel', () => {
     expect(delwyn.attributes.intelligence).toBe(9)
 
     // The tree view opens on the tree of the mage's calling: Evoker, Healer and Arcanist tie at one node, and Evoker comes first.
-    await game.click(delwyn.perkTreeButton)
-    const tree = await game.waitFor('Inventory', (p) => p.tab === 'perkTree')
+    await game.click(delwyn.treesButton)
+    const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees')
     expect(tree.tree).toBe('mage')
     const taken = (nodes: typeof tree.perks) => nodes.filter((node) => node.ranks > 0).map((node) => node.perk).sort()
 
@@ -379,19 +380,23 @@ describe('a hero’s panel', () => {
     await game.click(warrior.perks.find((node) => node.perk === 'shield_wall')!)
     await game.click(warrior.party[0])
     const turned = await game.waitFor('Inventory', (p) => p.party[0].active)
-    expect(turned).toMatchObject({ tab: 'perkTree', tree: 'warrior' })
+    expect(turned).toMatchObject({ tab: 'trees', tree: 'warrior' })
     expect(taken(turned.perks)).toEqual(['heavy_hand', 'toughness', 'weapon_training'])
 
     await game.click(turned.back)
     await game.waitFor('Inventory', (p) => p.tab === 'skills')
-    // The mage's spells, and the tree view from the Spells tab, on the Mage tree.
+    // The mage's abilities.
     await game.click(turned.party[2])
     await game.waitFor('Inventory', (p) => p.party[2].active)
     await game.press('b')
-    const spells = await game.waitFor('Inventory', (p) => p.tab === 'spells')
+    const spells = await game.waitFor('Inventory', (p) => p.tab === 'abilities')
     expect(spells.spells.map(({ spell, castable }) => [spell, castable])).toEqual([
       ['magic_arrow', false],
       ['heal', true],
+    ])
+    expect(spells.abilities.map(({ name, kind }) => [name, kind])).toEqual([
+      ['Magic Arrow', 'spell'],
+      ['Heal', 'spell'],
     ])
     // Heal is cast on the world map from here, on a member picked by its portrait, for the mana carried.
     expect(spells.mana).toBe(24)
@@ -400,16 +405,12 @@ describe('a hero’s panel', () => {
     await game.click(choosing.party[0])
     const cast = await game.waitFor('Inventory', (p) => p.worldCast === null && p.mana === 21)
     expect(cast.party[2].active).toBe(true)
+    // K opens nothing: it is no longer bound.
     await game.press('k')
-    const spellTree = await game.waitFor('Inventory', (p) => p.tab === 'spellTree')
-    expect(spellTree.tree).toBe('mage')
-    expect(taken(spellTree.perks)).toEqual(['arcane_study', 'magic_arrow'])
-    await game.press('Escape')
-    await game.waitFor('Inventory', (p) => p.tab === 'spells')
     await game.press('s')
     await game.waitFor('Inventory', (p) => p.tab === 'skills')
     await game.press('p')
-    await game.waitFor('Inventory', (p) => p.tab === 'perkTree')
+    await game.waitFor('Inventory', (p) => p.tab === 'trees')
     // Esc steps back from the tree, and only then closes the panel.
     await game.press('Escape')
     await game.waitFor('Inventory', (p) => p.tab === 'skills')
@@ -430,7 +431,7 @@ describe('a hero’s panel', () => {
     expect(Object.values(shown.skills).some((skill) => skill.canRaise)).toBe(false)
     // The perk tree opens in battle too, where nothing can be taken from it.
     await game.press('p')
-    const tree = await game.waitFor('Inventory', (p) => p.tab === 'perkTree')
+    const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees')
     expect(tree.tree).toBe('warrior')
     expect(tree.perks.length).toBeGreaterThan(0)
     expect(tree.perks.some((node) => node.canTake)).toBe(false)
@@ -500,8 +501,8 @@ describe('a hero’s panel', () => {
     const skills = await game.waitFor('Inventory', (p) => p.tab === 'skills')
     expect(skills.perkPicks).toBe(1)
     expect(skills.takenPerks).toHaveLength(3)
-    await game.click(skills.perkTreeButton)
-    const tree = await game.waitFor('Inventory', (p) => p.tab === 'perkTree')
+    await game.click(skills.treesButton)
+    const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees')
     const node = (perk: string) => tree.perks.find((n) => n.perk === perk)!
     expect(node('armor_breaker').canTake).toBe(true)
     // Iron Skin asks level 6 and three Heavy Knight nodes.

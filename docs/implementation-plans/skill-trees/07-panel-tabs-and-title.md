@@ -221,11 +221,17 @@ PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH npm run test:browser   # this s
 
 ## 6. Completion criteria
 
-- [ ] `heroTitle` in `trees.ts` with tests; the Abilities-row helper with tests; `describeRewards` updated with tests.
-- [ ] `InventoryScene` tabs, keys, buttons and title as §4.3; `PanelTab` without `'spellTree'`, with `'trees'`.
-- [ ] `testHook.ts` and `e2e/character.test.ts` updated; `npm test` and `npm run test:browser` pass.
-- [ ] Guard fixture untouched and green.
-- [ ] `CLAUDE.md` (Inventory paragraph, helper list) and the manual's section 4 updated; no stale `spellTree`, `perkTree`, "Spells tab" or "Spell Tree" left.
-- [ ] One commit "Skill trees step 07: the Skills and Abilities tabs and the hero's title"; step 07's status in [the index](index.md) set to `done (<commit>)`.
+- [x] `heroTitle` in `trees.ts` with tests; the Abilities-row helper with tests; `describeRewards` updated with tests.
+- [x] `InventoryScene` tabs, keys, buttons and title as §4.3; `PanelTab` without `'spellTree'`, with `'trees'`.
+- [x] `testHook.ts` and `e2e/character.test.ts` updated; `npm test` and `npm run test:browser` pass.
+- [x] Guard fixture untouched and green.
+- [x] `CLAUDE.md` (Inventory paragraph, helper list) and the manual's section 4 updated; no stale `spellTree`, `perkTree`, "Spells tab" or "Spell Tree" left.
+- [x] One commit "Skill trees step 07: the Skills and Abilities tabs and the hero's title"; step 07's status in [the index](index.md) set to `done (<commit>)`.
 
 ## 7. Execution record
+
+Done. Domain: `heroTitle` (`trees.ts`), `abilityRows` (`src/scenes/abilityList.ts`, spells only until step 09), `describeRewards` ending "; next pick at level N" when the new level brought no pick. Scene: tabs Character, Skills, Abilities, Inventory (C, S, B, I); `PanelTab` is `character | skills | abilities | inventory | trees`; P toggles the trees, K is unbound; Skills lists "Passives" and "Next pick at level N"; the Character tab shows `heroTitle` under the name with the XP progress kept as a small line below it (an addition: the old class line carried it). Probe: `treesButton` (was `perkTreeButton`), `abilities` rows, `title`; `spellTreeButton` removed. e2e and `manual.shots.ts` follow the renames.
+
+Added by the orchestrator (step 06 review): creation's rule line and the design now say "every even level"; the lock hint with tied paths reads "Closed: your deepest paths are Evoker, Arcanist and Healer" (one path keeps "path is X"), tested in `perkTree.test.ts`.
+
+Verification: `npm test` 86 files, 1609 tests pass (guard unchanged, fixture untouched); `npm run test:browser` 10 files, 115 tests pass in full, no timeouts. Screenshots at 840x560: scratchpad `shots/panel-character.png`, `panel-skills.png`, `panel-abilities.png`. Manual text updated (section 4); its screenshots wait for step 26. For step 09: `abilityRows` is where abilities join the list (`recharge` is already in the row).

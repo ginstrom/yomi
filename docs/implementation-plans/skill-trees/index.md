@@ -31,7 +31,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | 04 | [Mana for every hero and the derived passives](04-mana-and-derived-passives.md) | `maxMana` for all; `deriveCombatStats` reads the new effects; the engine applies spell power, heal bonus, extension, friendly range and AP discounts | 03 | opus | done (24a2400) |
 | 05 | [Save v23: the migration from v22](05-save-migration.md) | `migrateFrom22` chained after `migrateFrom18`; v18 and v22 fixtures load (AC10) | 03, 04 | opus | done (5141cb9) |
 | 06 | [The tree view in the panel and in creation](06-tree-view.md) | Four tree tabs, three path columns, tier bands, kind stripes, capstone frame, three-line strip; creation's perks step; e2e restored (AC9) | 03 | opus | done (f1bcf7a) |
-| 07 | [The Skills and Abilities tabs and the hero's title](07-panel-tabs-and-title.md) | Character, Skills, Abilities, Inventory; Skill Trees (P); `heroTitle`; "Next pick at level N" | 04, 06 | sonnet | pending |
+| 07 | [The Skills and Abilities tabs and the hero's title](07-panel-tabs-and-title.md) | Character, Skills, Abilities, Inventory; Skill Trees (P); `heroTitle`; "Next pick at level N" | 04, 06 | sonnet | in progress |
 | 08 | [Stage 1: measure and document](08-stage1-measure.md) | Campaigns and cells measured; guard re-recorded; CLAUDE.md, manual text and feature record current | 05, 07 | sonnet | pending |
 | **Stage 2: hero techniques** | | | | | |
 | 09 | [Hero abilities: strikes and statuses](09-hero-strikes.md) | `Ability`/`Strike` extensions; mana, weapon AP, `needs`; self- and foe-status abilities; technique strikes through `attack()`; Cleave's spread; `slowed`, `marked`; `imbueDamage`; `LOG_SCHEMA_VERSION` 25 | 08 | opus | pending |

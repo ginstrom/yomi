@@ -380,8 +380,8 @@ export interface BattleProbe {
 }
 
 export interface InventoryProbe {
-  /** `perkTree` and `spellTree` are the tree view as the Skills and Spells tabs' tree buttons open it (on the calling's tree and on the Mage tree); they have no tab buttons of their own. */
-  tab: 'character' | 'skills' | 'spells' | 'inventory' | 'perkTree' | 'spellTree'
+  /** `trees` is the tree view as the Skills tab's Skill Trees button opens it; it has no tab button of its own. */
+  tab: 'character' | 'skills' | 'abilities' | 'inventory' | 'trees'
   /** The portraits beside the panel: a click on one turns the panel to that member, who is then the active one. */
   party: PortraitProbe[]
   /** What the character has waiting to spend. */
@@ -395,7 +395,7 @@ export interface InventoryProbe {
   armorClass: number
   /** The mana shown: what is left in battle, what the character carries on the world map; null for a character without magic. */
   mana: number | null
-  /** The spell skill the Spells tab shows, gear included; null for a character that knows no spell. */
+  /** The spell skill the Abilities tab shows, gear included; null for a character that knows no spell. */
   spellSkill: number | null
   /** The Character tab's warning that the weapon held costs more AP than a turn gives; null when it fits. */
   attackWarning: string | null
@@ -405,8 +405,8 @@ export interface InventoryProbe {
   tooltip: string[]
   /** The perks the Skills tab lists: those the character has a rank of. */
   takenPerks: Array<{ perk: string; ranks: number }>
-  /** The Skills tab's button that opens the tree view, and the view's button back, by their centres on screen. */
-  perkTreeButton: Point
+  /** The Skills tab's Skill Trees button, and the tree view's button back, by their centres on screen. */
+  treesButton: Point
   back: Point
   /** The tree the tree view shows, and its four tabs by their centres on screen (keys 1 to 4 switch them too). */
   tree: 'warrior' | 'scout' | 'mage' | 'cleric'
@@ -415,12 +415,14 @@ export interface InventoryProbe {
   nodeSize: { width: number; height: number }
   /**
    * Every node of the tree shown, by its centre on screen, with the ranks taken and whether a
-   * click would take one. The nodes are on screen only while `tab` is `perkTree` or `spellTree`.
+   * click would take one. The nodes are on screen only while `tab` is `trees`.
    */
   perks: Array<Point & { perk: string; ranks: number; canTake: boolean }>
-  /** The Spells tab's button that opens the tree view on the Mage tree. */
-  spellTreeButton: Point
-  /** The spells the Spells tab lists, each with the centre of its row's Cast button and whether a click there would cast it here. */
+  /** The Abilities tab's rows: name, kind, AP, mana (null for an at-will) and recharge (null for a spell). */
+  abilities: Array<{ name: string; kind: string; ap: number; mana: number | null; recharge: number | null }>
+  /** The Character tab's title under the hero's name (`heroTitle`). */
+  title: string
+  /** The spells the Abilities tab lists, each with the centre of its row's Cast button and whether a click there would cast it here. */
   spells: Array<Point & { spell: SpellId; castable: boolean }>
   /** A heal of one member waiting for a portrait to be clicked, on the world map. */
   worldCast: SpellId | null

@@ -11,6 +11,7 @@ import {
   TREE_IDS,
   calling,
   capstoneOf,
+  heroTitle,
   pathDepth,
   pathsOf,
   treeNodes,
@@ -182,5 +183,29 @@ describe('the capstone (AC2, with stage-1 stand-ins)', () => {
     expect(qualifiesFor(hero, 'mass_haste')).toBe(true)
     expect(takePerk(hero, 'meteor')).toBe(true)
     expect(qualifiesFor(hero, 'mass_haste')).toBe(false)
+  })
+})
+
+describe('heroTitle', () => {
+  const hero = (level: number, ...perks: PerkId[]) => ({ ...createWarrior(), level, perks: Object.fromEntries(perks.map((id) => [id, 1])) })
+
+  it('is the level alone with no node', () => {
+    expect(heroTitle(hero(1))).toBe('Level 1')
+  })
+
+  it('names the deepest path', () => {
+    expect(heroTitle(hero(9, 'toughness', 'shield_wall', 'iron_skin'))).toBe('Level 9 \u00b7 Heavy Knight')
+  })
+
+  it('adds the second-deepest path only at 3 nodes or more', () => {
+    const knight: PerkId[] = ['toughness', 'shield_wall', 'iron_skin', 'weapon_training']
+    expect(heroTitle(hero(9, ...knight, 'bless', 'lay_on_hands', 'blessed_armour'))).toBe('Level 9 \u00b7 Heavy Knight / Paladin')
+    expect(heroTitle(hero(9, ...knight, 'bless', 'lay_on_hands'))).toBe('Level 9 \u00b7 Heavy Knight')
+  })
+
+  it('settles a tie for deepest in PATH_IDS order, the loser being the second', () => {
+    expect(heroTitle(hero(5, 'bless', 'lay_on_hands', 'blessed_armour', 'toughness', 'shield_wall', 'iron_skin'))).toBe(
+      'Level 5 \u00b7 Heavy Knight / Paladin',
+    )
   })
 })

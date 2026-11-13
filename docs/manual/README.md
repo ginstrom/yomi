@@ -205,10 +205,9 @@ Press **C**, or click the portrait of the hero marked in gold, to open the chara
 | --- | --- |
 | C | Character |
 | S | Skills |
-| B | Spells |
+| B | Abilities |
 | I | Inventory |
 | P | Skill trees (press again to go back to Skills) |
-| K | Skill trees on the Mage tree (press again to go back to Spells) |
 | 1 to 4 | In the skill trees: Warrior, Scout, Mage, Cleric |
 | Esc | Close, or step back from the skill trees |
 
@@ -218,23 +217,23 @@ To switch the panel to another hero, click their portrait on the left.
 
 ![The Character tab](images/panel-character.png)
 
-This tab shows the hero's attributes, their level and experience, and what they fight with: hit points, armour class, resistance, chance to hit, damage, attack cost, how much resistance their blows pierce (if any), action points, critical chance and, for a caster, mana. A hero with runes that ward against an element shows a **Wards** line, for example "Wards: fire 2, frost 4", and one whose weapon has runes that add to a hit an **On a hit** line, for example "On a hit: +3 fire, lays Seared" (see "Runes" in chapter 9).
+This tab shows the hero's attributes, their title (their level and their deepest path, with the second-deepest after a slash once it holds three nodes, as in "Level 9 · Heavy Knight / Paladin"), their experience, and what they fight with: hit points, armour class, resistance, chance to hit, damage, attack cost, how much resistance their blows pierce (if any), action points, critical chance and, for a caster, mana. A hero with runes that ward against an element shows a **Wards** line, for example "Wards: fire 2, frost 4", and one whose weapon has runes that add to a hit an **On a hit** line, for example "On a hit: +3 fire, lays Seared" (see "Runes" in chapter 9).
 
 ### Skills and perks
 
 ![The Skills tab](images/panel-skills.png)
 
-When the hero has skill points to spend, a **+** appears beside each skill. The tab lists the nodes the hero has taken, spells aside. Press **Skill Trees** (or P) to choose new ones: the view opens on the tree of the hero's deepest path, and its tabs (or 1 to 4) show the others.
+When the hero has skill points to spend, a **+** appears beside each skill. The tab lists the passives the hero has taken, spells aside, and when the next pick comes ("Next pick at level 4"). Press **Skill Trees** (or P) to choose new ones: the view opens on the tree of the hero's deepest path, and its tabs (or 1 to 4) show the others.
 
 ![The skill trees](images/panel-perk-tree.png)
 
 Nodes you can take now are framed in gold, and a click takes one for a pick. A taken node is gold with a ✓. A dim node is closed: point at it to see what it still asks, a level, an attribute, a skill or nodes in its path. A capstone closed by another path being deeper, or by a capstone already held, is drawn in rust with a ✕. In battle the trees can be read but not changed.
 
-### Spells
+### Abilities
 
-![The Spells tab](images/panel-spells-mage.png)
+![The Abilities tab](images/panel-spells-mage.png)
 
-This tab lists the spells the hero knows, the mana they are carrying and their **spell skill**, the chance a spell strikes before the foe's armour, with what their gear adds or takes shown beside it. On the world map, the **Cast** button beside a heal casts it out of battle. A heal on one hero asks you to click that hero's portrait. A heal cast on the world map always restores the average of its dice. **Spell Tree** (or K) opens the skill trees on the Mage tree.
+This tab lists the actives the hero knows, each with its kind, action points and mana, the mana they are carrying and their **spell skill**, the chance a spell strikes before the foe's armour, with what their gear adds or takes shown beside it. On the world map, the **Cast** button beside a heal casts it out of battle. A heal on one hero asks you to click that hero's portrait. A heal cast on the world map always restores the average of its dice.
 
 ### Inventory
 
@@ -534,7 +533,7 @@ Gear comes in **families**, each a trade-off: the weapons in the table in chapte
 
 **Weight.** Heavy gear asks for strength. For every point of strength a hero lacks for an item, they lose 5% to hit with weapon attacks (spells are not affected), and each item counts on its own: a strength 3 hero with a War Hammer (6) and Iron Gauntlets (4) loses 15% + 5%. An item's tooltip shows it, as "Strength: 6 (you have 3): to hit −15%".
 
-Plate and the tower shield also take **1 AP** off every turn, and metal armour lowers the chance of a hero's **spells** (the breastplate, helm and gauntlets by 5% each, plate by 15%), which is the price a mage pays for armour. The Spells tab shows a caster's spell skill with its gear counted. If the AP a hero's gear leaves is fewer than its weapon's attack costs (plate and a 7 AP halberd on a hero of 7 AP), the Character tab warns in amber, "Attack costs 7 AP, you have 6: cannot attack", as the hero could never strike.
+Plate and the tower shield also take **1 AP** off every turn, and metal armour lowers the chance of a hero's **spells** (the breastplate, helm and gauntlets by 5% each, plate by 15%), which is the price a mage pays for armour. The Abilities tab shows a caster's spell skill with its gear counted. If the AP a hero's gear leaves is fewer than its weapon's attack costs (plate and a 7 AP halberd on a hero of 7 AP), the Character tab warns in amber, "Attack costs 7 AP, you have 6: cannot attack", as the hero could never strike.
 
 ![A mage of strength 3 looking at the Iron Greatsword, which asks 6](images/panel-strength.png)
 

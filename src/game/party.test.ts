@@ -206,7 +206,7 @@ describe('describeRewards', () => {
     const [hero] = warriors('Aldric')
     hero.level = 2
     expect(describeRewards(rewardVictory([hero], xpToNextLevel(2), []))[1]).toBe(
-      `Aldric reaches level 3: +${hpPerLevel(hero)} max HP, ${skillPointsPerLevel(hero)} skill points, wounds healed`,
+      `Aldric reaches level 3: +${hpPerLevel(hero)} max HP, ${skillPointsPerLevel(hero)} skill points, wounds healed; next pick at level 4`,
     )
     expect(describeRewards(rewardVictory([hero], xpToNextLevel(3), []))[1]).toBe(
       `Aldric reaches level 4: +${hpPerLevel(hero)} max HP, ${skillPointsPerLevel(hero)} skill points, a pick, wounds healed`,

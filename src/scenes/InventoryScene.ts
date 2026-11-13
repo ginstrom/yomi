@@ -57,20 +57,21 @@ import { heroLook } from './unitLook.ts'
 import { PARTY_PANEL_W, portraitKey } from './partyPanel.ts'
 import { NODE_H, NODE_W, nodeHint, openingTree, perkTitle, treeForKey } from './perkTree.ts'
 import { PerkTreeView } from './PerkTreeView.ts'
-import type { TreeId } from '../character/trees.ts'
+import { heroTitle, type TreeId } from '../character/trees.ts'
+import { abilityRows } from './abilityList.ts'
 import { SlotScroll } from './slotScroll.ts'
 
-/** What the panel can show: one of its four tabs, or the tree view, opened from the Skills tab (on the calling's tree) or the Spells tab (on the Mage tree). */
+/** What the panel can show: one of its four tabs, or the tree view, opened from the Skills tab (on the calling's tree). */
 type PanelTab = InventoryProbe['tab']
-type MainTab = Exclude<PanelTab, 'perkTree' | 'spellTree'>
+type MainTab = Exclude<PanelTab, 'trees'>
 const TABS: ReadonlyArray<readonly [tab: MainTab, label: string]> = [
   ['character', 'Character'],
   ['skills', 'Skills'],
-  ['spells', 'Spells'],
+  ['abilities', 'Abilities'],
   ['inventory', 'Inventory'],
 ]
 /** The tab each tree is a view of, whose button stays lit for it and which Esc steps back to. */
-const TREE_OF: Partial<Record<PanelTab, MainTab>> = { perkTree: 'skills', spellTree: 'spells' }
+const TREE_OF: Partial<Record<PanelTab, MainTab>> = { trees: 'skills' }
 
 /** A party member the panel can show, and what it may do with its gear there. */
 export interface PanelMember {
@@ -180,14 +181,13 @@ const BACK_BUTTON = { x: PANEL_W - 20 - 40, y: 75, width: 80, height: 24 }
 const TREE_RULE =
   'Four trees of three paths: any path, any tree. A pick comes with every even level; a node of a higher tier asks its level and nodes in its path, and only your deepest path may open its capstone (★). Keys 1 to 4 switch trees.'
 
-/** The spells tab: the spells known in two columns, each row with a Cast button on the world map for a heal. */
+/** The abilities tab: the actives known in two columns, each row with a Cast button on the world map for a heal. */
 const SPELLS_X = 24
 const SPELL_COLUMN_W = (PANEL_W - 2 * SPELLS_X - 24) / 2
 const SPELL_ROW_Y = 108
 const SPELL_ROW_H = 36
 const SPELL_ROWS = 9
 const CAST_BUTTON = { width: 54, height: 22 }
-const SPELL_TREE_BUTTON = { x: PANEL_W / 2, y: 470, width: 160, height: 32 }
 
 const FONT = 'monospace'
 const GOLD = '#e8c766'
@@ -326,7 +326,7 @@ export class InventoryScene extends Phaser.Scene {
     this.press = null
     this.doll = null
     this.setMember(data.index ?? 0)
-    this.tree = data.tab === 'spellTree' ? 'mage' : openingTree(this.character)
+    this.tree = openingTree(this.character)
     // Right-clicking an item drops it.
     this.input.mouse?.disableContextMenu()
 
@@ -363,9 +363,8 @@ export class InventoryScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-I', () => this.onTabKey('inventory'))
     this.input.keyboard?.on('keydown-C', () => this.onTabKey('character'))
     this.input.keyboard?.on('keydown-S', () => this.onTabKey('skills'))
-    this.input.keyboard?.on('keydown-B', () => this.onTabKey('spells'))
-    this.input.keyboard?.on('keydown-P', () => (this.activeTab === 'perkTree' ? this.showTab('skills') : this.openTree('perkTree')))
-    this.input.keyboard?.on('keydown-K', () => (this.activeTab === 'spellTree' ? this.showTab('spells') : this.openTree('spellTree')))
+    this.input.keyboard?.on('keydown-B', () => this.onTabKey('abilities'))
+    this.input.keyboard?.on('keydown-P', () => (this.activeTab === 'trees' ? this.showTab('skills') : this.openTree()))
     // Keys 1 to 4 switch trees while the tree view is open.
     this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
       const tree = treeForKey(event.key)
@@ -429,7 +428,7 @@ export class InventoryScene extends Phaser.Scene {
       statLines: this.statLines(),
       tooltip: this.tooltipLines,
       takenPerks: this.takenPerks().map((id) => ({ perk: id, ranks: perkRanks(this.character, id) })),
-      perkTreeButton: onScreen(TREE_BUTTON),
+      treesButton: onScreen(TREE_BUTTON),
       back: onScreen(BACK_BUTTON),
       tree: this.tree,
       trees: Object.fromEntries(
@@ -442,7 +441,8 @@ export class InventoryScene extends Phaser.Scene {
         ranks: perkRanks(this.character, perk),
         canTake: this.canTake(perk),
       })),
-      spellTreeButton: onScreen(SPELL_TREE_BUTTON),
+      abilities: abilityRows(this.character).map(({ name, kind, ap, mana, recharge }) => ({ name, kind, ap, mana, recharge })),
+      title: heroTitle(this.character),
       spells: knownSpells(this.character).map((spell, i) => ({
         ...onScreen(this.castButtonAt(i)),
         spell,
@@ -552,13 +552,13 @@ export class InventoryScene extends Phaser.Scene {
     this.characterContent.setVisible(tab === 'character')
     this.skillsContent.setVisible(tab === 'skills')
     this.inventoryContent.setVisible(tab === 'inventory')
-    this.treeContent.setVisible(tab === 'perkTree' || tab === 'spellTree')
-    this.spellsContent.setVisible(tab === 'spells')
+    this.treeContent.setVisible(tab === 'trees')
+    this.spellsContent.setVisible(tab === 'abilities')
     if (tab !== 'inventory') {
       this.hideTooltip()
       this.endPress()
     }
-    if (tab !== 'spells' && this.worldCast) this.setWorldCast(null)
+    if (tab !== 'abilities' && this.worldCast) this.setWorldCast(null)
 
     // A tree is a view of its tab, whose button stays lit for it.
     const lit: MainTab = TREE_OF[tab] ?? (tab as MainTab)
@@ -577,9 +577,13 @@ export class InventoryScene extends Phaser.Scene {
       .text(PANEL_W / 2, 70, this.character.name, { fontFamily: FONT, fontSize: '26px', color: GOLD })
       .setOrigin(0.5)
     const subtitle = this.add
-      .text(PANEL_W / 2, 98, this.classLine(), { fontFamily: FONT, fontSize: '14px', color: DIM })
+      .text(PANEL_W / 2, 98, heroTitle(this.character), { fontFamily: FONT, fontSize: '14px', color: DIM })
       .setOrigin(0.5)
-    this.characterContent.add([title, subtitle])
+    const { level, xp } = this.character
+    const experience = this.add
+      .text(PANEL_W / 2, 118, `${xp} / ${xpToNextLevel(level)} XP`, { fontFamily: FONT, fontSize: '11px', color: FAINT })
+      .setOrigin(0.5)
+    this.characterContent.add([title, subtitle, experience])
 
     const portrait = this.add
       .image(PORTRAIT_X, PORTRAIT_Y, portraitKey(this.character.portrait))
@@ -754,7 +758,7 @@ export class InventoryScene extends Phaser.Scene {
     bg.on('pointerdown', () => this.advance(() => raiseSkill(this.character, skill)))
   }
 
-  /** The perks the character has a rank of, in the order of `PERKS`; its spells are the Spells tab's. */
+  /** The passives the character holds, in the order of `PERKS`; its spells are the Abilities tab's. */
   private takenPerks(): PerkId[] {
     return PERK_IDS.filter((id) => nodeKind(id) !== 'spell' && perkRanks(this.character, id) > 0)
   }
@@ -771,7 +775,7 @@ export class InventoryScene extends Phaser.Scene {
       ? `Choose ${perkPicks === 1 ? 'a node' : `${perkPicks} nodes`}`
       : perkPicks > 0
         ? `${perkPicks} to choose`
-        : `Next at level ${nextPerkLevel(this.character)}`
+        : `Next pick at level ${nextPerkLevel(this.character)}`
     content.add(
       this.add.text(right, y, status, { fontFamily: FONT, fontSize: '14px', color: perkPicks > 0 ? GOLD : DIM }).setOrigin(1, 0),
     )
@@ -797,15 +801,15 @@ export class InventoryScene extends Phaser.Scene {
     content.add([bg, text])
   }
 
-  /** The perks the character has taken, and the button to the tree, where one is chosen. */
+  /** The passives the character has taken, and the button to the trees, where a pick is spent. */
   private buildPerks(): void {
-    this.skillsContent.add(this.heading('Perks', PERKS_X, 66))
+    this.skillsContent.add(this.heading('Passives', PERKS_X, 66))
     this.buildPerkStatus(this.skillsContent, PERKS_X + PERKS_W, 66)
 
     const taken = this.takenPerks()
     if (taken.length === 0) {
       this.skillsContent.add(
-        this.add.text(PERKS_X, PERK_ROW_Y - 15, 'No perks yet.', { fontFamily: FONT, fontSize: '13px', color: FAINT }),
+        this.add.text(PERKS_X, PERK_ROW_Y - 15, 'No passives yet.', { fontFamily: FONT, fontSize: '13px', color: FAINT }),
       )
     }
     taken.forEach((id, row) => {
@@ -820,7 +824,7 @@ export class InventoryScene extends Phaser.Scene {
         }),
       ])
     })
-    this.buildPanelButton(this.skillsContent, TREE_BUTTON, 'Skill Trees', this.pickWaits(), () => this.openTree('perkTree'))
+    this.buildPanelButton(this.skillsContent, TREE_BUTTON, 'Skill Trees', this.pickWaits(), () => this.openTree())
   }
 
   // ---- build: perk tree -------------------------------------------------
@@ -841,12 +845,12 @@ export class InventoryScene extends Phaser.Scene {
     })
   }
 
-  /** Opens the tree view from its tab: from Skills on the tree of the hero's calling, from Spells on the Mage tree. */
-  private openTree(tab: 'perkTree' | 'spellTree'): void {
-    this.tree = tab === 'spellTree' ? 'mage' : openingTree(this.character)
+  /** Opens the tree view from the Skills tab, on the tree of the hero's calling. */
+  private openTree(): void {
+    this.tree = openingTree(this.character)
     this.treeContent.removeAll(true)
     this.buildPerkTree()
-    this.showTab(tab)
+    this.showTab('trees')
   }
 
   /** Turns the open tree view to `tree`. */
@@ -883,10 +887,10 @@ export class InventoryScene extends Phaser.Scene {
    */
   private buildSpells(): void {
     const content = this.spellsContent
-    content.add(this.heading('Spells', SPELLS_X, 66))
+    content.add(this.heading('Abilities', SPELLS_X, 66))
     this.buildPerkStatus(content, PANEL_W - SPELLS_X, 66)
     const max = this.stats.magic?.maxMana ?? 0
-    const mana = max > 0 ? `Mana ${this.shownMana()} / ${max}` : 'No mana: knows no spell'
+    const mana = max > 0 ? `Mana ${this.shownMana()} / ${max}` : 'No mana: knows no ability'
     content.add(this.add.text(SPELLS_X, 88, mana, { fontFamily: FONT, fontSize: '14px', color: max > 0 ? GOLD : DIM }))
     // The chance spells strike with, gear included, so that what armour costs a caster shows here and not only on the item.
     const skill = this.shownSpellSkill()
@@ -900,12 +904,14 @@ export class InventoryScene extends Phaser.Scene {
       )
     }
 
-    const known = knownSpells(this.character)
-    known.forEach((spell, i) => {
+    const rows = abilityRows(this.character)
+    const known = rows.map((row) => row.spell)
+    rows.forEach(({ spell, name, kind, ap, mana: manaCost, recharge }, i) => {
       const { x, y } = this.spellRowAt(i)
-      const { name, manaCost, apCost, description } = SPELLS[spell]
+      const { description } = SPELLS[spell]
+      const cost = [manaCost === null ? null : `${manaCost} mana`, `${ap} AP`, recharge === null ? null : `recharge ${recharge}`]
       content.add([
-        this.add.text(x, y, `${name}  ${manaCost} mana, ${apCost} AP`, { fontFamily: FONT, fontSize: '13px', color: GOLD }),
+        this.add.text(x, y, `${name}  ${kind}, ${cost.filter(Boolean).join(', ')}`, { fontFamily: FONT, fontSize: '13px', color: GOLD }),
         this.add.text(x, y + 15, description, {
           fontFamily: FONT,
           fontSize: '10px',
@@ -928,7 +934,6 @@ export class InventoryScene extends Phaser.Scene {
         .text(PANEL_W / 2, 444, footer, { fontFamily: FONT, fontSize: '12px', color: this.worldCast ? GOLD : DIM, align: 'center', wordWrap: { width: PANEL_W - 48 } })
         .setOrigin(0.5),
     )
-    this.buildPanelButton(content, SPELL_TREE_BUTTON, 'Spell Tree', this.pickWaits(), () => this.openTree('spellTree'))
   }
 
   /** A heal's Cast button: a heal of one asks whom, a heal of all heals at once. */
@@ -1048,7 +1053,7 @@ export class InventoryScene extends Phaser.Scene {
       .text(STATS_X, 70, this.character.name, { fontFamily: 'monospace', fontSize: '20px', color: '#e8c766' })
       .setOrigin(0, 0.5)
     const classText = this.add
-      .text(STATS_X, 94, this.classLine(), { fontFamily: 'monospace', fontSize: '13px', color: '#8a7a5a' })
+      .text(STATS_X, 94, heroTitle(this.character), { fontFamily: 'monospace', fontSize: '13px', color: '#8a7a5a' })
       .setOrigin(0, 0.5)
 
     const lines = this.statLines(WARDS_WIDE_ROW_CHARS, false)
@@ -1086,12 +1091,6 @@ export class InventoryScene extends Phaser.Scene {
         wordWrap: { width: PANEL_W - STATS_X - 20 },
       }),
     )
-  }
-
-  /** "Level 2 - 30 / 200 XP", under the character's name. */
-  private classLine(): string {
-    const { level, xp } = this.character
-    return `Level ${level} - ${xp} / ${xpToNextLevel(level)} XP`
   }
 
   /**

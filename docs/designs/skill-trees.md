@@ -405,7 +405,7 @@ Choice points: with no ranged heal, Lay on Hands (range 1) makes the cleric stan
 
 ### 4.6 Choosing and using skills (R9, R11)
 
-**At creation**, the perks step shows the tree view with four tree tabs. Only T1 nodes can be clicked (level 1). A click takes a rank and clicking again gives it back, as today. The rule line reads: "3 picks. One more comes with every level. Any path, any tree; only your deepest path may open its capstone."
+**At creation**, the perks step shows the tree view with four tree tabs. Only T1 nodes can be clicked (level 1). A click takes a rank and clicking again gives it back, as today. The rule line reads: "3 picks. One more comes with every even level. Any path, any tree; only your deepest path may open its capstone."
 
 **On the world map**, the character panel's Skills tab lists skills and the passives taken. Its **Skill Trees** button (P) opens the tree view. The Abilities tab (B, renamed from Spells) lists the actives known, each with its kind, cost and recharge, and the mana carried. Heals keep their Cast button there.
 

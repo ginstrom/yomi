@@ -189,6 +189,10 @@ describe('nodeState', () => {
     mage.perks = { magic_arrow: 1, destruction: 1, shield: 1 }
     expect(nodeState(mage, 'mass_haste')).toBe('locked')
     expect(nodeHint(mage, 'mass_haste', true)).toBe('Closed: your deepest path is Evoker')
+    // A tie for deepest names every path.
+    mage.perks = { magic_arrow: 1, shield: 1, heal: 1 }
+    expect(nodeHint(mage, 'deadeye', true)).toBe('Closed: your deepest paths are Evoker, Arcanist and Healer')
+    mage.perks = { magic_arrow: 1, destruction: 1, shield: 1 }
     // Meteor is closed by its depth, not locked.
     expect(nodeState(mage, 'meteor')).toBe('closed')
     mage.perks = { meteor: 1, shield: 1, arcane_study: 1, mirror_image: 1, ward: 1, haste: 1, lasting_magic: 1 }
