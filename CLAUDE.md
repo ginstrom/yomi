@@ -144,6 +144,10 @@ Sprites in `public/assets/sprites/` are generated from `art/` (see Sprites) and 
 
 Sprites are generated from text sources in `art/` with sprite-tool. `art/CLAUDE.md` has the workflow, and loads by itself when you work on files there; read it before drawing or changing a sprite. Never edit an exported PNG by hand: change the source and run `npm run sprites`.
 
+### Sound
+
+Sound effects are being moved onto recipes and sources in `audio/` (the audio pass), built by the host-only Python tool in `tools/audio/` (`yomi-audio`, a uv project, never part of `npm test` or the podman image). `audio/CLAUDE.md` has the workflow: the recipe format, adding a CC0 or own source with its provenance, impulses, auditioning, and the sourcing rules; it loads by itself when you work on files there.
+
 ## Keeping this file current
 
 This file is the project's code map, and it is only worth loading if it is true. Update it in the same commit as the change that makes it wrong or incomplete; do not leave it for a later pass.

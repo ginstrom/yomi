@@ -1,0 +1,9 @@
+# Open air: sparse, distant reflections off land and trees, highs damped (~0.8 s).
+seed = 103
+length = 800
+rt60 = 0.6
+density = 0.03        # share of samples kept: scattered echoes, not a room's wash
+filter = [
+  { type = "lowpass", hz = 5000, hz_end = 1200 },
+  { type = "highpass", hz = 200 },
+]

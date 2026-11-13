@@ -1,0 +1,18 @@
+# A dry wooden tick: a click through a resonant band and a tiny low thump.
+variants = 4
+seed = 3
+group = "ui"
+max_ms = 90
+
+[[layer]]
+synth = { kind = "impulse", length = 40 }
+filter = [{ type = "bandpass", hz = [1700, 2600], q = 6 }]
+envelope = [[0, 0], [30, -48]]
+
+[[layer]]
+synth = { kind = "sine", hz = [160, 200], hz_end = 110, length = 25 }
+envelope = [[0, -6], [25, -60]]
+gain = -12
+
+[post]
+chain = [{ type = "fade_out", ms = 8 }]

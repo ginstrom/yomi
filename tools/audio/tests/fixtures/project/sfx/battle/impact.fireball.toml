@@ -1,0 +1,37 @@
+# Fireball: sub boom, a noise burst opening up, a fire whoosh, a crackling tail.
+variants = 3
+seed = 23
+group = "impact"
+max_ms = 1800
+
+[[layer]]                          # sub boom
+synth = { kind = "sine", hz = 70, hz_end = 28, curve = "exp", length = 500 }
+envelope = [[0, -3], [10, 0], [500, -60]]
+saturate = 4
+
+[[layer]]                          # the blast
+synth = { kind = "noise", color = "brown", length = 700 }
+filter = [{ type = "lowpass", hz = 300, hz_end = 6000, q = 0.7 }]
+envelope = [[0, -40], [15, 0], [120, -6], [700, -60]]
+gain = [-4, -1]
+
+[[layer]]                          # the flame
+pick = ["fs_fire_whoosh_1", "fs_fire_whoosh_2", "fs_fire_whoosh_4"]
+offset = [20, 60]
+pitch = [-3.0, 0.0]
+gain = -6
+
+[[layer]]                          # embers
+synth = { kind = "crackle", density = [35, 60], click_ms = 2, length = 900 }
+offset = 250
+filter = [{ type = "bandpass", hz = 3000, q = 0.8 }]
+envelope = [[0, -20], [100, -8], [900, -60]]
+gain = -14
+
+[post]
+chain = [
+  { type = "compress", threshold_db = -14, ratio = 4, attack_ms = 2, release_ms = 120 },
+  { type = "reverb", impulse = "open_air", wet_db = -14, predelay_ms = 12 },
+  { type = "limit", ceiling_db = -1.5 },
+  { type = "trim", threshold_db = -60, keep_tail_ms = 80 },
+]

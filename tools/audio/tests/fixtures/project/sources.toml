@@ -1,0 +1,132 @@
+# Every source a sound recipe may name: trimmed CC0 or own excerpts (mono,
+# 48 kHz FLAC under sources/), the reverb impulses the tool renders, and later
+# the narrator's reference clips. Add one with `yomi-audio source add` (see
+# audio/CLAUDE.md), never by hand: it trims, sums to mono, resamples and
+# records both hashes.
+#
+# Fields: id ([a-z0-9_]+, unique), file (relative to audio/), licence, author,
+# url (the page the licence is stated on), original (its name in the pack or
+# site), original_sha256 (of the downloaded file), excerpt (seconds of the
+# original kept), sha256 (of the committed file), retrieved, notes.
+#
+# Licence allow-list: "CC0-1.0" and "own". The build refuses a recipe naming a
+# source that is missing, whose file's SHA-256 differs, or whose licence is
+# not allowed.
+
+[[source]]
+id = "rpg_knife_slice_1"
+file = "sources/stand_in/rpg_knife_slice_1.flac"
+licence = "own"
+author = "yomi-audio tests"
+url = "local"
+original = "rpg_knife_slice_1.wav"
+original_sha256 = "044169cf1f79793f37e27e49ffb7946a039bb1ea8ec98ffa806b9a71782cdadc"
+sha256 = "f67c685c1b0290ba779949ab23f915fcd8558cfe378cab2fe7b723a110de7dd8"
+retrieved = "2026-11-14"
+notes = "synthesised stand-in"
+
+[[source]]
+id = "rpg_knife_slice_2"
+file = "sources/stand_in/rpg_knife_slice_2.flac"
+licence = "own"
+author = "yomi-audio tests"
+url = "local"
+original = "rpg_knife_slice_2.wav"
+original_sha256 = "e21fc4237446281d7f258c83b78a7c675623eee6796f4d16678cc1084c5eeac4"
+sha256 = "c6eaef11e0b23ec6ce8b4eaf4664878906a17bb9c48ee0f123a184f6df0d24c8"
+retrieved = "2026-11-14"
+notes = "synthesised stand-in"
+
+[[source]]
+id = "fs_flesh_hit_3"
+file = "sources/stand_in/fs_flesh_hit_3.flac"
+licence = "own"
+author = "yomi-audio tests"
+url = "local"
+original = "fs_flesh_hit_3.wav"
+original_sha256 = "03f22243543f1a6b5f8da20f70735aa7addbd5c6ddf5c253ea28eda4b2830aab"
+sha256 = "0c9a0f57d7cbb478c14c7afc678b0556627278d626d231991db105f5503219cf"
+retrieved = "2026-11-14"
+notes = "synthesised stand-in"
+
+[[source]]
+id = "oga_hit_flesh_7"
+file = "sources/stand_in/oga_hit_flesh_7.flac"
+licence = "own"
+author = "yomi-audio tests"
+url = "local"
+original = "oga_hit_flesh_7.wav"
+original_sha256 = "c9f646b850f9b605aeb829891e20b9fe4fcb9ac1b87b6b9aa6ab20e061997987"
+sha256 = "d43dbe37d0932e8936ab29bc8b408b244023f1679a2fc78e8487188af5968203"
+retrieved = "2026-11-14"
+notes = "synthesised stand-in"
+
+[[source]]
+id = "kenney_impact_metal_light_2"
+file = "sources/stand_in/kenney_impact_metal_light_2.flac"
+licence = "own"
+author = "yomi-audio tests"
+url = "local"
+original = "kenney_impact_metal_light_2.wav"
+original_sha256 = "e18f3409ed1c528ea598388434f2accddbbc1b71639db90579b22138560aa85c"
+sha256 = "d2d056868aefa66896b81ab3c7e8f36beb65b9594ef6b8f9cd46da350b66b2dd"
+retrieved = "2026-11-14"
+notes = "synthesised stand-in"
+
+[[source]]
+id = "fs_fire_whoosh_1"
+file = "sources/stand_in/fs_fire_whoosh_1.flac"
+licence = "own"
+author = "yomi-audio tests"
+url = "local"
+original = "fs_fire_whoosh_1.wav"
+original_sha256 = "4a93d704e38c97d5dc53fdb10cf889e157040783b9553b824bb2bc3e9bd3fbf0"
+sha256 = "1f8a0560f42609057d3d4acfb0842732c8fa6db94621748bb96715da2c7f3225"
+retrieved = "2026-11-14"
+notes = "synthesised stand-in"
+
+[[source]]
+id = "fs_fire_whoosh_2"
+file = "sources/stand_in/fs_fire_whoosh_2.flac"
+licence = "own"
+author = "yomi-audio tests"
+url = "local"
+original = "fs_fire_whoosh_2.wav"
+original_sha256 = "760f877a767f6b4af728fa63cee43994a63520b82dfffca193e04e46f154b2ba"
+sha256 = "97b274945a0b94e9adc23b3ffaca9ec9c9fa477294b9cd38a117dd4073e2ca12"
+retrieved = "2026-11-14"
+notes = "synthesised stand-in"
+
+[[source]]
+id = "fs_fire_whoosh_4"
+file = "sources/stand_in/fs_fire_whoosh_4.flac"
+licence = "own"
+author = "yomi-audio tests"
+url = "local"
+original = "fs_fire_whoosh_4.wav"
+original_sha256 = "57d32e5c40bef4693808607878e7938483a511724ee839b0c91a2bdafd780a05"
+sha256 = "e6f38719413020335a02bb855da005fd86854a5a36651346ca1153c46410a651"
+retrieved = "2026-11-14"
+notes = "synthesised stand-in"
+
+[[source]]
+id = "impulse_open_air"
+file = "impulses/open_air.flac"
+licence = "own"
+author = "generated: yomi-audio impulse build"
+url = "local"
+original = "impulses/open_air.toml"
+sha256 = "c3c8ec5613477cc116fbeafb4faaf6fb0ecd7992531bf01c253d7b7eb81bde2f"
+retrieved = "2026-11-14"
+notes = "decaying filtered noise, rendered from its recipe"
+
+[[source]]
+id = "impulse_small_room"
+file = "impulses/small_room.flac"
+licence = "own"
+author = "generated: yomi-audio impulse build"
+url = "local"
+original = "impulses/small_room.toml"
+sha256 = "21571679c0a5746df394be6bb70aa6dd262ccb349a1359fa9b525ef50f522c65"
+retrieved = "2026-11-14"
+notes = "decaying filtered noise, rendered from its recipe"

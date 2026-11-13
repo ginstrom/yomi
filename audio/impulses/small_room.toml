@@ -1,0 +1,8 @@
+# A small stone-and-timber room: a short, dense, slightly dark tail (~0.3 s).
+seed = 101
+length = 300          # ms
+rt60 = 0.28           # s to fall 60 dB
+filter = [
+  { type = "lowpass", hz = 9000, hz_end = 3500 },
+  { type = "highpass", hz = 150 },
+]

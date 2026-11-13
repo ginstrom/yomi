@@ -171,3 +171,33 @@ Exclusions: no `sfx build`/`sfx check`, banks, encoding or manifest (step 02); n
 - [ ] The index's step 01 row set to `done` with the commit hash; evidence in the execution record below.
 
 ## Execution record
+
+### Run 1 (2026-11-13/14)
+
+**Environment.** The worktree had no `node_modules` of its own, so the baseline `npm test` failed 11 scene files (Vite refused `/@fs/…/yomi/node_modules/vitest-canvas-mock`, outside the worktree). `npm ci` in the worktree (gitignored, no tracked change) fixed it: baseline 84 files, 1510 tests green.
+
+**Built** (`tools/audio/`, Python 3.11.15 via uv 0.13.6; numpy 2.4.6, scipy 1.17.1, soundfile 0.14.0, pyloudnorm in the lock; dev: pytest, matplotlib; `tts` extra declared empty):
+- `loudness.py`: K-weighting from pyloudnorm's filters; LUFS-M max over 400 ms windows, 100 ms hop, with 400 ms of silence padded on both sides (so a short click is measured whole, wherever it falls); LUFS-I by pyloudnorm, padded to 400 ms; true peak at 4x (`resample_poly`); `normalise` refuses silence naming the cue and variant.
+- `dsp.py`: RBJ biquads (six types), swept filters (geometric, coefficients every 32 samples, state carried), pitch by `resample_poly`, envelopes (linear in dB, ends held), fades, tanh saturation (full scale stays full scale), peak compressor, look-ahead brickwall limiter, tail trim, convolution reverb, feedback delay.
+- `synth.py`: sine/triangle/saw/square (PolyBLEP for saw and square; `curve` lin/exp, default exp), noise white/pink/brown, fm, crackle, impulse.
+- `recipe.py`: validation naming cue, layer, filter/post index and field; resolution in fixed schema order (file key order does not matter); `pick` from per-round shuffles seeded by (seed, layer, round), independent of k's neighbours; noise from its own stream (seed, k, layer); `Recipe.source_ids()` lists the sources and `impulse_<name>` ids a recipe touches (for step 02's input hash).
+- `sources.py`: registry (verifies licence, existence, SHA-256 on use), `source add` (all checks before any write; ffmpeg decode to a temp WAV, trim, mean to mono, resample, FLAC 24-bit, append the C4 entry), `upsert_entry` for the impulses.
+- `impulses.py`: `impulses/<name>.toml` (`seed`, `length` ms, `rt60` s, `density`, `filter`) to FLAC, peak −1 dBFS, registered as `impulse_<name>` (licence `own`); rebuilding leaves files and entries byte-identical.
+- `audition.py`: WAVs `<cue>.v<k>.wav` (float32), optional PNG per variant, the measurement table.
+- `cli.py`: `source add`, `impulse build [names]`, `sfx audition`, each with `--root`; `AudioError` prints one line, exit 1.
+- Fixture project `tests/fixtures/project/`: C3 `audio.toml`, the design's three example recipes verbatim, eight synthesised stand-ins under the example's source ids, two short impulses; `tests/make_fixture.py` regenerates them.
+- Repository: `audio/audio.toml` (C3, valid TOML), `audio/sources.toml` (header plus the three impulse entries), `audio/impulses/{small_room,stone_hall,open_air}.{toml,flac}` (28 KB, 147 KB, 48 KB), `audio/CLAUDE.md`, the root `CLAUDE.md` "Sound" pointer under "Assets and docs", `.gitignore` (the four C1 lines plus `tools/audio/**/__pycache__/`, `tools/audio/.pytest_cache/` and the fixture's `.audition/`).
+
+**Verification.**
+- `uv run --project tools/audio pytest tools/audio/tests`: 117 passed. Each module's tests were written against a stub and seen failing (`NotImplementedError`) first; the render tests went in after the interpreter, so two of them were checked by mutation: unseeding the noise stream fails `test_rendering_is_bit_identical_across_processes`, and removing the licence check fails `test_a_source_with_a_disallowed_licence_fails_to_render`.
+- `yomi-audio impulse build`: wrote the three FLACs; a second run printed `unchanged` for each.
+- `yomi-audio sfx audition battle.impact.fireball battle.hit.slash ui.click --root tools/audio/tests/fixtures/project --spectrogram --out <scratch>`: printed the tables, wrote 13 WAVs and 13 PNGs. In `battle.impact.fireball.v0.png`, a sub boom below 100 Hz holds strongly through ~0.25 s, a broadband burst opens up to ~20 kHz over the first 0.3 s, and the crackle shows as thin vertical streaks from 0.35 to 0.75 s.
+- `yomi-audio source add tone.ogg --id test_tone2 --collection test --licence own --author me --url local --start 0.1 --end 0.6 --root <fixture copy>`: added it with both hashes and the excerpt; `--licence CC-BY-4.0`: `yomi-audio: source test_cc: licence CC-BY-4.0 is not allowed (allowed: CC0-1.0, own)`, exit 1, nothing written. (A first try without `--root` wrote into the real `audio/`; I deleted that file and its entry, so they are not in the commit.)
+- `PATH=/opt/homebrew/opt/node@26/bin:$PATH npm test`: 84 files, 1510 tests passed.
+- `git status --ignored`: `.venv`, `.pytest_cache` and `__pycache__` are ignored, not staged.
+
+**For later steps.**
+- Step 02's checks will fail the design examples as written: `ui.click` (a 40 ms click normalised to −26 LUFS-M max) peaks at about −0.3 dBTP against the `ui` ceiling of −6. A click much shorter than the 400 ms window needs a large gain to reach a momentary target, so the real `ui` recipes need either longer or denser sounds, or a target and ceiling that suit short clicks. Over the stand-ins, `hit.slash` variants 2, 3 and 5 peak at +3.5 to +4.4 dBTP against −1 (the thud stand-ins are low and K-weighting discounts them); real sources will differ. Step 02 and step 09 should expect this; the measurement is right.
+- `Recipe.source_ids()`, `yomi_audio.__version__`, `sources.sha256_file` and `config.load_config` are what step 02's input hash needs. A recipe names an impulse by its name; the registry id is `impulse_<name>`.
+- Audition file names are `<cue>.v<k>.wav` (the safe form of `<cue>#<k>`).
+- Budgets: no paid calls; downloads were only the PyPI dependencies into `tools/audio/.venv/`, plus `npm ci` into the worktree's `node_modules`.

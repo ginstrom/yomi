@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Audio tool (host only; see audio/CLAUDE.md)
+tools/audio/.venv/
+audio/bakeoff/
+audio/.audition/
+audio/narration.jobs.json
+tools/audio/**/__pycache__/
+tools/audio/.pytest_cache/
+tools/audio/tests/fixtures/project/.audition/

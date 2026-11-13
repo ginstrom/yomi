@@ -1,0 +1,47 @@
+# Every source a sound recipe may name: trimmed CC0 or own excerpts (mono,
+# 48 kHz FLAC under sources/), the reverb impulses the tool renders, and later
+# the narrator's reference clips. Add one with `yomi-audio source add` (see
+# audio/CLAUDE.md), never by hand: it trims, sums to mono, resamples and
+# records both hashes.
+#
+# Fields: id ([a-z0-9_]+, unique), file (relative to audio/), licence, author,
+# url (the page the licence is stated on), original (its name in the pack or
+# site), original_sha256 (of the downloaded file), excerpt (seconds of the
+# original kept), sha256 (of the committed file), retrieved, notes.
+#
+# Licence allow-list: "CC0-1.0" and "own". The build refuses a recipe naming a
+# source that is missing, whose file's SHA-256 differs, or whose licence is
+# not allowed.
+
+[[source]]
+id = "impulse_open_air"
+file = "impulses/open_air.flac"
+licence = "own"
+author = "generated: yomi-audio impulse build"
+url = "local"
+original = "impulses/open_air.toml"
+sha256 = "a05d81dbe9ddca0c3e2199da41dd720a113b55756178953316111f121e6d4af4"
+retrieved = "2026-11-14"
+notes = "decaying filtered noise, rendered from its recipe"
+
+[[source]]
+id = "impulse_small_room"
+file = "impulses/small_room.flac"
+licence = "own"
+author = "generated: yomi-audio impulse build"
+url = "local"
+original = "impulses/small_room.toml"
+sha256 = "7a18d8465b4a5b820c618a8f5b1993f39dbf5799be6cd5a449a2a2a8c1d48290"
+retrieved = "2026-11-14"
+notes = "decaying filtered noise, rendered from its recipe"
+
+[[source]]
+id = "impulse_stone_hall"
+file = "impulses/stone_hall.flac"
+licence = "own"
+author = "generated: yomi-audio impulse build"
+url = "local"
+original = "impulses/stone_hall.toml"
+sha256 = "fb3438a1c5ae6fdeb10c3e2dfc9a4302877c51b776172da8c0852cf837df2d7a"
+retrieved = "2026-11-14"
+notes = "decaying filtered noise, rendered from its recipe"

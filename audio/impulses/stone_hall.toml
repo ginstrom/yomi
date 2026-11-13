@@ -1,0 +1,8 @@
+# A stone hall: a long, dense tail whose highs die first (~1.8 s).
+seed = 102
+length = 1800
+rt60 = 1.6
+filter = [
+  { type = "lowpass", hz = 7000, hz_end = 1500 },
+  { type = "highpass", hz = 90 },
+]

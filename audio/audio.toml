@@ -1,0 +1,80 @@
+# The audio build's settings: sample rate, banks, budgets, each group's
+# loudness target and peak ceiling, encoding, and the narration's
+# post-processing. See audio/CLAUDE.md and docs/designs/audio-pass.md §5.5.
+
+sample_rate = 48000
+gap_ms = 50                                   # silence between markers in a bank
+banks = ["ui", "battle", "world", "stings"]
+
+[budgets]
+sfx_bytes_per_format = 3_000_000              # all banks, per format
+sources_bytes = 15_000_000                    # audio/sources + audio/voices together
+voice_bytes_per_format = 4_000_000
+
+# measure: "momentary_max" (LUFS-M max, 400 ms window, padded to 400 ms) or
+# "integrated" (LUFS-I). target and tolerance in LUFS / LU, peak in dBTP
+# (true peak at 4x oversampling).
+
+[groups.ui]
+measure = "momentary_max"
+target = -26
+tolerance = 1.0
+peak = -6.0
+
+[groups.step]
+measure = "momentary_max"
+target = -30
+tolerance = 1.5
+peak = -10.0
+
+[groups.release]
+measure = "momentary_max"
+target = -22
+tolerance = 1.0
+peak = -3.0
+
+[groups.impact]
+measure = "momentary_max"
+target = -19
+tolerance = 1.0
+peak = -1.0
+
+[groups.sweetener]
+measure = "momentary_max"
+target = -24
+tolerance = 1.5
+peak = -3.0
+
+[groups.death]
+measure = "momentary_max"
+target = -20
+tolerance = 1.0
+peak = -1.0
+
+[groups.world]
+measure = "momentary_max"
+target = -22
+tolerance = 1.0
+peak = -2.0
+
+[groups.sting]
+measure = "integrated"
+target = -18
+tolerance = 1.0
+peak = -1.0
+
+[encode.sfx]                                  # mono 48 kHz, Opus VBR, MP3 VBR -q:a
+opus_kbps = 64
+mp3_q = 5
+
+[encode.voice]                                # Opus application "voip"/speech
+opus_kbps = 32
+mp3_q = 7
+
+[voice]                                       # post-processing of every rendered line; part of each line's hash
+highpass_hz = 70
+trim_db = -50
+keep_before_ms = 120
+keep_after_ms = 250
+target_lufs_i = -18
+peak_dbtp = -1.5
