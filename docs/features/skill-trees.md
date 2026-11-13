@@ -1,7 +1,7 @@
 # Feature: skill trees and progression
 
 **Slug:** skill-trees
-**Phase:** 4 — implementation (stage 1 done at fd6a630; stage 2 from step 09)
+**Phase:** 4 — implementation (stage 1 done at fd6a630; step 09 done and reviewed clean at 617bfeb; resume at step 10)
 
 ## Request (user's words)
 
@@ -60,6 +60,9 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 - To step 16 (from step 08 review): CLAUDE.md's scaling paragraph — the stage-1 sentence splits stage 6's "In the run of 237…" narrative; move it after stage 6's text.
 - To final QA: step 08's play check was scripted, not hand-played; do a hand-played browser pass with a hero built across two trees.
+
+- To step 14 or 17 (from step 09 review): `perkTree.ts` `costWords` computes technique AP itself; make it call `abilityApCost` and drop the redundant intersection types, before Arcane Knight's discount lands.
+- Plan decision 2 (guard unchanged) allows a re-hash for a schema-only version bump (step 09 proved the log identical but for schemaVersion).
 
 ## Verification
 
