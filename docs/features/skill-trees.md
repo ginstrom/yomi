@@ -44,6 +44,11 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 - Steps: engineer tier as in the plan index (sonnet: 01, 02, 07, 08, 13, 15, 16, 22, 23, 26; opus: the rest); reviewer at the same tier as the engineer; overall review opus
 - Node 26: `PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH`
 
+## Notes carried forward
+
+- To step 12/14 (from step 04): the policy's `reach` uses a spell's own AP cost, not `spellApCost` (Quickened Casting); `autoHeal` picks heals without counting Mending; the battle spell list shows the base AP cost until step 14.
+- Step 01 baseline is the reference (SN5 441, SP5 445), not CLAUDE.md's older figures.
+
 ## Verification
 
 (none yet)
