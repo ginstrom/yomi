@@ -80,6 +80,9 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 - To step 21 (from step 18): the policy doesn't count Deathblow in a blow's expected harm.
 - To steps 21/22 (from step 17 review): Skirmisher's +10 isn't in walk-then-attack previews or the policy's scoring from the current hex (reads the unit's current `moved`); the tree strip labels a Spellsword Strike "(weapon + 1)" even for an Arcane Knight (weapon + 0).
 
+- To step 21 (from step 19): the policy's spell/area scoring calls `warded(…, unit)` on the raw snapshot, so the Warded status and Aegis don't count in expected damage — use `statsIn`.
+- To step 22 (from step 19): `restore` events have no look yet; the battle's first turn start now logs after `battle_start` (`readySide`/`turnBegins` split).
+
 ## Verification
 
 ### Stage 1 (step 08, 2026-11-13; seed 1, 500 each, recorded and not tuned)
