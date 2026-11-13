@@ -235,5 +235,5 @@ For steps 13, 21 and stage 4 (levers seen on staged states):
 - Hunter's Mark has no value check beyond AP (mark then attack); it is used whenever legal and a foe is unmarked, before the strike spell and the best strike.
 - A taunted unit with its taunter out of reach but another foe in reach strikes that foe (at −25), as the rule says a step with no candidate on the source is judged on its others; only the closing move goes for the taunter.
 - `tauntUse` reads a foe's `attackRange` (where it can strike from now), not how far it could walk and strike.
-- Commit: see the index.
+- Commit: `c920348` Skill trees step 12: the policy uses techniques.
 
