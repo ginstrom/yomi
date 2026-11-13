@@ -55,7 +55,7 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 - To the stage-4 polish (orchestrator, from step 06 screenshots): the tree view works and fits at 840×560 but is plain: no lines between a node and what it requires, and the kind stripes are faint. Make it look like a tree before the feature is done.
 
-- To step 07 (from step 06 review): change creation's rule line to "every even level" and amend the design's quote; fix the lock hint with tied paths ("your deepest path is Evoker and Arcanist and Healer" → "your deepest paths are Evoker, Arcanist and Healer").
+- To step 13 (from step 07 review): `InventoryScene.takenPerks()` filters `nodeKind !== 'spell'`; make it `=== 'passive'` before techniques land, or they show under Passives too.
 - To steps 13 and 21 (from step 06 review): the tree strip's line 1 wraps freely and is near the panel's bottom (y 493 of 500 for Meteor); cap it at two lines or test the longest strip once wordier technique text lands.
 
 ## Verification
