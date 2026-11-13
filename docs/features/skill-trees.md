@@ -37,6 +37,7 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 | 2026-11-14 | Accept `UnitSnapshot.moved` optional (present only when true) instead of C12's boolean | orchestrator | always present, re-hash the guard | Keeps the guard's hash a regression check; readers use `moved === true` |
 | 2026-11-14 | Bandit Captain gets Pin: move `heavy_hand` after `pin` in the `knight` plan (or give the Captain's draft Heavy Hand), in step 16 since it moves play | orchestrator | leave the Captain without Pin | The design's Captain is a Taunt-and-Pin knight; Aldric holds Heavy Hand already, so only bandits move |
 | 2026-11-14 | Accept step 14's engine `previewAbility` (real odds for techniques), the probe renames, and an always-enabled Skills button; leave the rename-only commit a956def unsquashed | orchestrator | plain-attack odds; squash | Odds must be the engine's; history rewrite not worth it |
+| 2026-11-14 | Policy fix in step 16: `techniqueScore` weighs a technique by the blows that fit in the AP left this turn (⌊AP/cost⌋), not the raw AP ratio, so Power Attack wins when only one blow fits either way. Step 16's engineer moves from sonnet to opus for it | orchestrator | keep the raw ratio; leave to stage 4 | Step 15 review: a 7 AP Power Attack lost to a 5 AP blow at 8 AP though only one fits; an AI correctness fix, not tuning |
 | 2026-11-13 | Own branch `skill-trees` off main | orchestrator | commit on main | Precedent: one branch per feature |
 
 ## Open questions
