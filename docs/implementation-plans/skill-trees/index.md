@@ -48,7 +48,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | 19 | [Auras and turn-start restores](19-auras-restores.md) | Guardian, Aura of Courage, Aegis (`auraBonus`, `statsIn`); Sanctuary, the `renewing` status, Serenity's mana, Shadowdancer; `RestoreEvent` | 18 | opus | done (8de0df0) |
 | 20 | [The special spells](20-special-spells.md) | Purify, Revive, Renew, Holy Light, Ice Lance, Glacial Prison; `frozen`; `hostile` and `helpless` on statuses | 19 | opus | done (85fd5c1) |
 | 21 | [Stage-3 nodes, plans and the policy's last steps](21-stage3-nodes-policy.md) | The 20 stage-3 nodes; partial nodes completed; plans; `reviveCast`, `purifyCast`, `supportCast`, `prisonCast`, strikeCast extensions | 20 | opus | done (edcc04b, 77f858f, 27f6d66) |
-| 22 | [Stage-3 scenes](22-stage3-scenes.md) | Looks, log lines and marks for the new events and statuses; Revive's aim; restore floats | 21 | sonnet | in progress |
+| 22 | [Stage-3 scenes](22-stage3-scenes.md) | Looks, log lines and marks for the new events and statuses; Revive's aim; restore floats | 21 | sonnet | done (cef16a1) |
 | 23 | [Stage 3: simulator lines, measure and document](23-stage3-measure.md) | Deathblows, revives, Unbreakable saves, callings and capstones in the summary; AC8's `--ready-level 12` check; measured; docs current | 21, 22 | sonnet | pending |
 | **Stage 4: balance** | | | | | |
 | 24 | [Path parity and the cells](24-parity-and-cells.md) | Every plan within ±50 of its role's best; capstones checked; cells in band | 23 | opus | pending |
