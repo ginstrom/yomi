@@ -87,7 +87,9 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 - To step 22 (from step 20 review): Purify's log line says "is cleansed" even with no hostile status to remove — say it only when one was; `AttackEvent.helpless`'s comment still says "asleep".
 
 - To step 22 (from step 21): the tree strip's hint is cut to one line (`STRIP_HINT_LINES`) so long capstone asks fit — check it in the browser.
-- To stage 4 (from step 21): `evoker_healer` puts Mending before Meteor, so Delwyn's capstone comes at 14, not 12 (the design promises 12 for a committed hero) — reorder; AC1's first tier-3 for Swordmaster and Ranger plans comes at 8; Swift Hands still discounts Purify.
+- To stage 4 (from step 21): Delwyn's capstone comes at 14, not 12: C5 gives him Arcane Study at creation where the design's build B has Destruction, shifting every pick a level — give him the design's build B picks (orchestrator decision); AC1's first tier-3 for Swordmaster and Ranger plans comes at 8; Swift Hands still discounts Purify.
+
+- To step 22 (from step 21 review): `healCast` ignores the healer's `healBonus` (Mending) when judging what a heal restores — add it before the cap, with a staged test; Deathblow's description should say "a quarter of its maximum hit points".
 
 ## Verification
 
