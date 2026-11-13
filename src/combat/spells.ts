@@ -81,6 +81,9 @@ export const STATUS_IDS = [
   'cursed',
   'webbed',
   'warded',
+  'marked',
+  'slowed',
+  'pinned',
 ] as const
 
 export type StatusId = (typeof STATUS_IDS)[number]
@@ -497,6 +500,10 @@ export const STATUSES: Record<StatusId, StatusRule> = {
   cursed: { name: 'Cursed', adjective: 'cursed', mark: 'K', colour: 0x8a3cb8, toHit: -15, armorClass: -5 },
   webbed: { name: 'Webbed', adjective: 'webbed', mark: 'W', colour: 0xc8c8c0, actionPoints: -4 },
   warded: { name: 'Warded', adjective: 'warded', mark: 'G', colour: 0xa890e8, wardAll: 4 },
+  marked: { name: 'Marked', adjective: 'marked', mark: 'Y', colour: 0xe8c040, armorClass: -10 },
+  slowed: { name: 'Slowed', adjective: 'slowed', mark: 'L', colour: 0x7a9ab0, actionPoints: -3 },
+  // Its rule (no move) arrives in step 11; until then it changes nothing.
+  pinned: { name: 'Pinned', adjective: 'pinned', mark: 'N', colour: 0xb08050 },
 }
 
 /** What an attack on a sleeping unit adds to its chance to hit, in percent. */

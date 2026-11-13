@@ -64,7 +64,8 @@ const END_TURN: Action = { type: 'end_turn' }
  */
 const aggressive: Policy = ({ state, legal }) => {
   for (const self of state.units) {
-    const own = legal.filter((a) => a.type !== 'end_turn' && a.unit === self.id)
+    // A hero's techniques are left alone until the policy learns them (skill trees step 12).
+    const own = legal.filter((a) => a.type !== 'end_turn' && a.unit === self.id && !(a.type === 'ability' && isTechnique(a.ability)))
     if (own.length === 0) continue
     const casts = castsOf(state, self, own)
     const choice =
@@ -256,6 +257,17 @@ function onHitDamage(attacker: CombatantStats, defender: CombatantStats): number
 }
 
 type AbilityAction = Extract<Action, { type: 'ability' }>
+
+/** A hero's technique, which the policy does not use yet: one priced by the weapon, a status with no roll, or a weapon strike. */
+function isTechnique(id: AbilityId): boolean {
+  const ability = ABILITIES[id]
+  return (
+    ability.weaponAp !== undefined ||
+    ability.selfStatus !== undefined ||
+    ability.foeStatus !== undefined ||
+    (ability.strikes ?? []).some((strike) => strike.weapon)
+  )
+}
 type AreaAction = Extract<AbilityAction, { at: Hex }>
 
 const isArea = (action: Action): action is AreaAction => action.type === 'ability' && 'at' in action
@@ -330,7 +342,8 @@ function statusArea(state: BattleState, self: UnitSnapshot, own: readonly Action
 function routineHarm(state: BattleState, self: UnitSnapshot, target: UnitSnapshot, ability: AbilityId): number {
   const bonus = self.abilityDamageBonus ?? 0
   return (ABILITIES[ability].strikes ?? []).reduce(
-    (sum, strike) => sum + expectedHarm(state, self, target, { ...strike.damage, bonus: strike.damage.bonus + bonus }),
+    // Only monsters' routines reach here, and their strikes all have their own dice.
+    (sum, strike) => sum + expectedHarm(state, self, target, { ...strike.damage!, bonus: strike.damage!.bonus + bonus }),
     0,
   )
 }

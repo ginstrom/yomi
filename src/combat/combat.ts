@@ -74,10 +74,12 @@ export interface CombatantStats {
   }
   /** What the unit can do besides its weapon and spells (abilities.ts), in ABILITY_IDS order; none when left out. */
   abilities?: readonly AbilityId[]
-  /** Added to the damage bonus of every strike and area of its abilities (foeAtLevel's damage step); 0 when left out. */
+  /** Added to the damage bonus of every strike with its own dice and every area of its abilities (foeAtLevel's damage step), never to a weapon strike; 0 when left out. */
   abilityDamageBonus?: number
   /** What its main hand's weapon does on a hit besides its dice (runes); none when left out. */
   onHit?: readonly OnHit[]
+  /** Added to the damage of each on-hit entry with an element of a technique's strike (Battle Mage), never to the weapon's runes; 0 when left out. */
+  imbueDamage?: number
   /** The blight's own: a Dawn rune's bane applies to it (`baneApplies`). */
   blightborn?: true
 }
@@ -167,6 +169,7 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     sameAbilities(a.abilities, b.abilities) &&
     (a.abilityDamageBonus ?? 0) === (b.abilityDamageBonus ?? 0) &&
     sameOnHit(a.onHit, b.onHit) &&
+    (a.imbueDamage ?? 0) === (b.imbueDamage ?? 0) &&
     (a.blightborn ?? false) === (b.blightborn ?? false)
   )
 }

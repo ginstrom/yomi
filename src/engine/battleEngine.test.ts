@@ -1882,8 +1882,8 @@ describe('BattleEngine strike routines and recharge', () => {
   const bite = (target: string): Action => ({ type: 'ability', unit: 'spider', ability: 'spider_bite', target })
   const NAMED = { ...NAMES, troll: 'Troll', spider: 'Spider', zed: 'Zed' }
 
-  it('raises the log schema to 24 (stage 6 step 09, battle_start meta party and role; 23 was stage 4 step 05, AttackEvent.bonus)', () => {
-    expect(LOG_SCHEMA_VERSION).toBe(24)
+  it('is logged under schema version 25 (skill trees step 09; 24 was stage 6 step 09, battle_start meta party and role; 23 stage 4 step 05, AttackEvent.bonus)', () => {
+    expect(LOG_SCHEMA_VERSION).toBe(25)
   })
 
   it('makes one attack per strike, the first carrying the ability’s AP and the rest none', () => {
@@ -2551,9 +2551,9 @@ describe('BattleEngine on-hit effects', () => {
     expect(formatEvent(attack, NAMED)).toBe('Warrior rolls 50 (needs 60 or less) — HITS Troll for 6 dmg (armour stops 1).')
   })
 
-  it('is logged under schema version 24', () => {
-    expect(LOG_SCHEMA_VERSION).toBe(24)
-    expect(new BattleEngine(DUEL).getLog()[0]).toMatchObject({ schemaVersion: 24 })
+  it('is logged under schema version 25 (24 from stage 6 step 09)', () => {
+    expect(LOG_SCHEMA_VERSION).toBe(25)
+    expect(new BattleEngine(DUEL).getLog()[0]).toMatchObject({ schemaVersion: 25 })
   })
 })
 
@@ -2845,5 +2845,311 @@ describe('BattleEngine a caster’s spell modifiers', () => {
       return [...engine.step(on('flame_arrow', 'goblin')), ...engine.step(on('sleep', 'goblin'))]
     }
     expect(run(empty)).toEqual(run({}))
+  })
+})
+
+describe('BattleEngine hero techniques', () => {
+  const WIDE = { cols: 9, rows: 3 }
+  const MANA = { maxMana: 5, skill: 50, spells: [] }
+  /** A warrior with these techniques (and 5 mana, for those that cost some). */
+  const hero = (abilities: AbilityId[], stats: Partial<CombatantStats> = {}, extra: Partial<UnitSetup> = {}): UnitSetup => ({
+    ...WARRIOR,
+    stats: { ...WARRIOR_STATS, abilities, magic: MANA, ...stats },
+    ...extra,
+  })
+  /** The same with a bow: 4 AP a shot, reaching 5 hexes. */
+  const archer = (abilities: AbilityId[], stats: Partial<CombatantStats> = {}, extra: Partial<UnitSetup> = {}): UnitSetup =>
+    hero(abilities, { attackApCost: 4, attackRange: 5, weapon: 'Bow', ...stats }, extra)
+  /** A goblin of 30 hit points, so a blow leaves it standing. */
+  const goblin = (stats: Partial<CombatantStats> = {}, extra: Partial<UnitSetup> = {}): UnitSetup => ({
+    ...GOBLIN,
+    stats: { ...GOBLIN_STATS, maxHp: 30, ...stats },
+    ...extra,
+  })
+  const battle = (units: UnitSetup[], rng: number[] = [0.5]) => new BattleEngine({ board: WIDE, units }, { rng: sequence(rng) })
+  const use = (ability: AbilityId, target = 'goblin', unit = 'warrior'): Action => ({ type: 'ability', unit, ability, target })
+  const abilitiesListed = (engine: BattleEngine, unit = 'warrior') =>
+    engine.legalActions(unit).flatMap((a) => (a.type === 'ability' && 'target' in a ? [`${a.ability}@${a.target}`] : []))
+  /** A roll of 50 (a hit at 60% against a Goblin), then a 5 on the d8: 7, 6 through its resistance. */
+  const HIT = [0.5, 0.5]
+  /** A roll of 1 (a critical), then two 5s. */
+  const CRIT = [0.99, 0.5, 0.5]
+  /** A roll of 100: a fumble. */
+  const MISS = [0]
+  const NAMED = { ...NAMES, troll: 'Troll' }
+
+  it('raises the log schema to 25 (skill trees step 09: technique mana on attack and ability events)', () => {
+    expect(LOG_SCHEMA_VERSION).toBe(25)
+  })
+
+  describe('who may use one', () => {
+    it('lists a strike at each standing foe within the weapon’s reach, after the casts', () => {
+      const engine = battle([hero(['power_attack']), goblin(), { ...GOBLIN2, position: hex(2, 0) }, { ...GOBLIN2, id: 'far', position: hex(5, 1) }])
+      expect(abilitiesListed(engine)).toEqual(['power_attack@goblin', 'power_attack@goblin2'])
+    })
+
+    it('asks for the weapon a technique needs: a melee one, reach and bare hands included, or one that is not', () => {
+      const engine = battle([hero(['power_attack', 'aimed_shot']), goblin()])
+      expect(abilitiesListed(engine)).toEqual(['power_attack@goblin'])
+      const bow = battle([archer(['power_attack', 'aimed_shot']), goblin()])
+      expect(abilitiesListed(bow)).toEqual(['aimed_shot@goblin'])
+      const spear = battle([hero(['power_attack'], { attackRange: 2, reach: true }), goblin({}, { position: hex(3, 1) })])
+      expect(abilitiesListed(spear)).toEqual(['power_attack@goblin'])
+      expect(() => bow.step(use('power_attack'))).toThrow('cannot use power_attack on goblin')
+    })
+
+    it('asks for the mana a technique costs', () => {
+      expect(abilitiesListed(battle([hero(['pin'], { magic: { ...MANA, maxMana: 2 } }), goblin()]))).toEqual([])
+      expect(abilitiesListed(battle([hero(['pin'], { magic: { ...MANA, maxMana: 3 } }), goblin()]))).toEqual(['pin@goblin'])
+      expect(abilitiesListed(battle([hero(['pin'], { magic: undefined }), goblin()]))).toEqual([])
+    })
+
+    it('asks for the weapon’s attack AP plus the technique’s', () => {
+      expect(abilitiesListed(battle([hero(['power_attack'], { actionPoints: 6 }), goblin()]))).toEqual([])
+      expect(abilitiesListed(battle([hero(['power_attack'], { actionPoints: 7 }), goblin()]))).toEqual(['power_attack@goblin'])
+      expect(abilitiesListed(battle([hero(['power_attack'], { actionPoints: 6, attackApCost: 4 }), goblin()]))).toEqual(['power_attack@goblin'])
+    })
+
+    it('refuses one that is recharging', () => {
+      const engine = battle([hero(['cleave'], { actionPoints: 20 }), goblin()], [0])
+      engine.step(use('cleave'))
+      expect(unitOf(engine, 'warrior').recharging).toEqual({ cleave: 2 })
+      expect(abilitiesListed(engine)).toEqual([])
+      expect(() => engine.step(use('cleave'))).toThrow('cannot use cleave')
+    })
+
+    it('lists Sprint once, at the user itself, and Hunter’s Mark at each standing foe within the weapon’s range', () => {
+      const engine = battle([
+        archer(['hunters_mark', 'sprint']),
+        goblin({}, { position: hex(4, 1) }),
+        { ...GOBLIN2, position: hex(6, 0) },
+        { ...GOBLIN2, id: 'far', position: hex(8, 1) },
+      ])
+      expect(abilitiesListed(engine)).toEqual(['hunters_mark@goblin', 'hunters_mark@goblin2', 'sprint@warrior'])
+      expect(() => engine.step(use('sprint', 'goblin'))).toThrow('cannot use sprint on goblin')
+      expect(() => engine.step(use('hunters_mark', 'far'))).toThrow('cannot use hunters_mark on far')
+    })
+  })
+
+  describe('a technique strike', () => {
+    it('is a weapon blow with its own chance: Power Attack at −10, +6 on a hit, the AP the weapon’s plus 2', () => {
+      const engine = battle([hero(['power_attack']), goblin()], HIT)
+      const [event] = engine.step(use('power_attack')) as AttackEvent[]
+      expect(event).toMatchObject({
+        attacker: 'warrior', defender: 'goblin', ability: 'power_attack', strike: 'Power Attack', melee: true,
+        apCost: 7, apAfter: 1, toHit: 75, chance: 50, hit: true, damageDice: WARRIOR_STATS.damage, rolled: 13, damage: 12,
+      })
+      expect(event).not.toHaveProperty('manaCost')
+      expect(unitOf(engine, 'goblin').hp).toBe(18)
+      expect(formatEvent(event, NAMED)).toBe('Warrior power-attacks Goblin: rolls 50 (needs 50 or less) — HITS Goblin for 12 dmg (armour stops 1).')
+    })
+
+    it('never doubles its damage bonus on a critical: only the dice', () => {
+      const [event] = battle([hero(['power_attack']), goblin()], CRIT).step(use('power_attack')) as AttackEvent[]
+      expect(event).toMatchObject({ critical: true, rolled: 5 + 5 + 2 + 6, damage: 17 })
+    })
+
+    it('makes Aimed Shot a shot at +20 for +3', () => {
+      const [event] = battle([archer(['aimed_shot']), goblin({}, { position: hex(4, 1) })], HIT).step(use('aimed_shot')) as AttackEvent[]
+      expect(event).toMatchObject({ melee: false, apCost: 6, chance: 80, hit: true, rolled: 10, damage: 9 })
+    })
+
+    it('adds no ability damage bonus to a weapon strike', () => {
+      const [event] = battle([hero(['power_attack'], { abilityDamageBonus: 3 }), goblin()], HIT).step(use('power_attack')) as AttackEvent[]
+      expect(event).toMatchObject({ rolled: 13 })
+    })
+
+    it('takes flanking, the arc and the defender’s turn as a plain blow does', () => {
+      // The goblin faces east, its back to the warrior; the cleric flanks it from the south.
+      const units = (abilities: AbilityId[]) => [
+        hero(abilities),
+        { ...CLERIC, position: hex(2, 2) },
+        goblin({}, { facing: EAST }),
+      ]
+      const plain = battle(units([]), HIT).step(ATTACK_GOBLIN)[0] as AttackEvent
+      const power = battle(units(['power_attack']), HIT).step(use('power_attack'))[0] as AttackEvent
+      expect(power.flankBonus).toBeGreaterThan(0)
+      for (const key of ['flankers', 'flankBonus', 'arc', 'arcBonus', 'defenderTurned', 'defenderFacing'] as const) expect(power[key]).toEqual(plain[key])
+      expect(power.defenderTurned).toBe(true)
+      expect(power.chance).toBe(plain.chance - 10)
+    })
+
+    it('makes a shot technique give the defender no turn', () => {
+      const [event] = battle([archer(['aimed_shot']), goblin({}, { position: hex(4, 1), facing: EAST })], HIT).step(use('aimed_shot')) as AttackEvent[]
+      expect(event.defenderTurned).toBe(false)
+    })
+  })
+
+  describe('Cleave', () => {
+    it('makes two blows at −5, in order, the second at another foe in reach', () => {
+      const engine = battle([hero(['cleave']), goblin(), { ...GOBLIN2, stats: { ...GOBLIN_STATS, maxHp: 30 } }], [0.5, 0.5, 0.5, 0.5])
+      const events = engine.step(use('cleave')) as AttackEvent[]
+      expect(events.map((e) => [e.defender, e.strike, e.apCost])).toEqual([['goblin', 'Cleave', 7], ['goblin2', 'Cleave', 0]])
+      expect(events[0].chance).toBe(55)
+      expect(unitOf(engine, 'warrior')).toMatchObject({ ap: 1, recharging: { cleave: 2 } })
+    })
+
+    it('makes the second blow at the same foe when no other stands in reach', () => {
+      const events = battle([hero(['cleave']), goblin(), { ...GOBLIN2, position: hex(5, 1) }], [0.5, 0.5, 0.5, 0.5]).step(use('cleave')) as AttackEvent[]
+      expect(events.map((e) => e.defender)).toEqual(['goblin', 'goblin'])
+    })
+
+    it('turns the second blow on the nearest foe in reach when the first fells its target', () => {
+      const engine = battle([hero(['cleave']), goblin({}, { hp: 1 }), { ...GOBLIN2, stats: { ...GOBLIN_STATS, maxHp: 30 } }], [0.5, 0.5, 0.5, 0.5])
+      const events = engine.step(use('cleave'))
+      expect(events.map((e) => (e.type === 'attack' ? `attack ${e.defender}` : e.type))).toEqual(['attack goblin', 'unit_down', 'attack goblin2'])
+    })
+
+    it('chooses the second blow’s target before its roll, the nearest other foe and the lowest id on a tie', () => {
+      // goblin2 and zed both stand beside the warrior; goblin2 comes first by id.
+      const zed = { ...GOBLIN2, id: 'zed', position: hex(1, 2) }
+      const events = battle([hero(['cleave']), goblin(), zed, GOBLIN2], [0.5, 0.5, 0.5, 0.5]).step(use('cleave')) as AttackEvent[]
+      expect(events.map((e) => e.defender)).toEqual(['goblin', 'goblin2'])
+    })
+  })
+
+  describe('on-hit additions', () => {
+    it('adds Flame Strike’s 5 fire through the ward, sears a foe left standing, and pays 3 mana as it begins', () => {
+      const engine = battle([hero(['flame_strike']), goblin({ wards: { fire: 2 } })], HIT)
+      const [event] = engine.step(use('flame_strike')) as AttackEvent[]
+      expect(event).toMatchObject({
+        apCost: 6, damage: 6, bonus: [{ element: 'fire', rolled: 5, damage: 3 }], status: { id: 'seared', turnsLeft: 1 }, manaCost: 3, manaAfter: 2,
+      })
+      expect(event.defenderHpBefore - event.defenderHpAfter).toBe(9)
+      expect(unitOf(engine, 'warrior').mana).toBe(2)
+      expect(formatEvent(event, NAMED)).toBe('Warrior flame-strikes Goblin: rolls 50 (needs 60 or less) — HITS Goblin for 6 dmg (armour stops 1) +3 fire (warded 2), seared.')
+    })
+
+    it('pays the mana on a miss too, and lays nothing', () => {
+      const engine = battle([hero(['flame_strike']), goblin()], MISS)
+      const [event] = engine.step(use('flame_strike')) as AttackEvent[]
+      expect(event).toMatchObject({ hit: false, bonus: [], manaCost: 3, manaAfter: 2 })
+      expect(event).not.toHaveProperty('status')
+    })
+
+    it('adds Frost Strike’s 4 frost and chills; Thunder Strike’s 7 lightning at +10', () => {
+      const [frost] = battle([hero(['frost_strike']), goblin()], HIT).step(use('frost_strike')) as AttackEvent[]
+      expect(frost).toMatchObject({ bonus: [{ element: 'frost', rolled: 4, damage: 4 }], status: { id: 'chilled', turnsLeft: 1 } })
+      const [thunder] = battle([hero(['thunder_strike']), goblin()], HIT).step(use('thunder_strike')) as AttackEvent[]
+      expect(thunder).toMatchObject({ chance: 70, bonus: [{ element: 'lightning', rolled: 7, damage: 7 }], manaCost: 4, manaAfter: 1 })
+    })
+
+    it('adds Smite’s 4, and its 6 of bane only against a foe the bane applies to', () => {
+      const [plain] = battle([hero(['smite']), goblin()], HIT).step(use('smite')) as AttackEvent[]
+      expect(plain.bonus).toEqual([{ rolled: 4, damage: 4 }])
+      const [troll] = battle([hero(['smite']), goblin({ regeneration: 2 })], HIT).step(use('smite')) as AttackEvent[]
+      expect(troll.bonus).toEqual([{ rolled: 4, damage: 4 }, { bane: true, rolled: 6, damage: 6 }])
+      const [blight] = battle([hero(['smite']), goblin({ blightborn: true })], HIT).step(use('smite')) as AttackEvent[]
+      expect(blight.bonus).toHaveLength(2)
+    })
+
+    it('puts the weapon’s runes first, and raises only the strike’s elemental entries by the imbued damage', () => {
+      const runed = { onHit: [{ damage: 3, element: 'fire' as const }], imbueDamage: 2 }
+      const [flame] = battle([hero(['flame_strike'], runed), goblin()], HIT).step(use('flame_strike')) as AttackEvent[]
+      expect(flame.bonus).toEqual([{ element: 'fire', rolled: 3, damage: 3 }, { element: 'fire', rolled: 7, damage: 7 }])
+      const [smite] = battle([hero(['smite'], { imbueDamage: 2 }), goblin()], HIT).step(use('smite')) as AttackEvent[]
+      expect(smite.bonus).toEqual([{ rolled: 4, damage: 4 }])
+      const [plain] = battle([hero([], runed), goblin()], HIT).step(ATTACK_GOBLIN) as AttackEvent[]
+      expect(plain.bonus).toEqual([{ element: 'fire', rolled: 3, damage: 3 }])
+    })
+  })
+
+  describe('statuses laid by a strike', () => {
+    it.each([
+      ['dirty_trick', { id: 'baned', turnsLeft: 2 }],
+      ['venom_strike', { id: 'poisoned', turnsLeft: 3 }],
+      ['hamstring', { id: 'slowed', turnsLeft: 1 }],
+      ['pin', { id: 'pinned', turnsLeft: 1 }],
+    ] as const)('makes %s lay its status on a hit that leaves the foe standing, none on a miss or a kill', (ability, status) => {
+      const engine = battle([hero([ability]), goblin()], HIT)
+      const [event] = engine.step(use(ability)) as AttackEvent[]
+      expect(event.status).toEqual(status)
+      expect(unitOf(engine, 'goblin').statuses).toEqual([status])
+      const missed = battle([hero([ability]), goblin()], MISS)
+      missed.step(use(ability))
+      expect(unitOf(missed, 'goblin').statuses).toEqual([])
+      const felled = battle([hero([ability]), goblin({}, { hp: 1 }), { ...GOBLIN2, position: hex(5, 1) }], HIT)
+      const events = felled.step(use(ability))
+      expect(events.map((e) => e.type)).toEqual(['attack', 'unit_down'])
+      expect(events[0]).not.toHaveProperty('status')
+    })
+
+    it('makes Pinning Shot a shot that pins, for 3 mana, recharging a turn', () => {
+      const engine = battle([archer(['pinning_shot']), goblin({}, { position: hex(4, 1) })], HIT)
+      const [event] = engine.step(use('pinning_shot')) as AttackEvent[]
+      expect(event).toMatchObject({ melee: false, apCost: 5, status: { id: 'pinned', turnsLeft: 1 }, manaCost: 3, manaAfter: 2 })
+      expect(unitOf(engine, 'warrior').recharging).toEqual({ pinning_shot: 1 })
+    })
+
+    it('makes Venom Strike and Hamstring work with a bow too', () => {
+      expect(abilitiesListed(battle([archer(['venom_strike', 'hamstring']), goblin({}, { position: hex(4, 1) })]))).toEqual([
+        'venom_strike@goblin', 'hamstring@goblin',
+      ])
+    })
+
+    it('makes a slowed foe start its turn 3 AP short', () => {
+      const engine = battle([hero(['hamstring']), goblin()], HIT)
+      engine.step(use('hamstring'))
+      engine.step(END_TURN)
+      expect(unitOf(engine, 'goblin').ap).toBe(GOBLIN_STATS.actionPoints - 3)
+    })
+  })
+
+  describe('a status laid with no roll', () => {
+    /** An RNG that fails the test if anything draws from it. */
+    const noDraws = () => {
+      throw new Error('drew from the RNG')
+    }
+
+    it('makes Sprint haste the user at once, for this turn, drawing nothing', () => {
+      const engine = new BattleEngine({ board: WIDE, units: [hero(['sprint']), goblin({}, { position: hex(5, 1) })] }, { rng: noDraws })
+      const [event] = engine.step(use('sprint', 'warrior')) as AbilityEvent[]
+      expect(event).toMatchObject({
+        type: 'ability', unit: 'warrior', ability: 'sprint', at: hex(1, 1), shape: 'burst', hexes: [hex(1, 1)], distance: 0,
+        apCost: 0, apAfter: 11, facing: EAST, skill: 75,
+        outcomes: [{ unit: 'warrior', attackRoll: null, chance: null, hit: true, damage: 0, healed: 0, status: { id: 'hasted', turnsLeft: 1 } }],
+      })
+      expect(event).not.toHaveProperty('manaCost')
+      expect(unitOf(engine, 'warrior')).toMatchObject({ ap: 11, recharging: { sprint: 3 } })
+      expect(formatEvent(event, NAMED)).toBe('Warrior sprints.')
+      // The 3 AP are there to spend this turn: 11 hexes of walking where 8 were.
+      expect(engine.previewMove('warrior', hex(1, 2))).not.toBeNull()
+      engine.step(END_TURN)
+      expect(unitOf(engine, 'warrior').statuses).toEqual([])
+    })
+
+    it('makes Hunter’s Mark mark a foe for 2 turns, 10 off its armour class, turning to it and drawing nothing', () => {
+      const engine = new BattleEngine(
+        { board: WIDE, units: [archer(['hunters_mark'], {}, { facing: WEST }), goblin({}, { position: hex(4, 1) })] },
+        { rng: noDraws },
+      )
+      const before = engine.previewAttack('warrior', 'goblin')!.hitChance
+      const [event] = engine.step(use('hunters_mark')) as AbilityEvent[]
+      expect(event).toMatchObject({
+        ability: 'hunters_mark', at: hex(4, 1), hexes: [hex(4, 1)], distance: 3, apCost: 2, apAfter: 6, facing: EAST,
+        outcomes: [{ unit: 'goblin', status: { id: 'marked', turnsLeft: 2 } }],
+      })
+      expect(effectiveStats({ stats: unitOf(engine, 'goblin'), statuses: unitOf(engine, 'goblin').statuses }).ac).toBe(5)
+      expect(engine.previewAttack('warrior', 'goblin')!.hitChance).toBeCloseTo(before + 0.1)
+      expect(unitOf(engine, 'warrior').recharging).toEqual({ hunters_mark: 3 })
+      expect(formatEvent(event, NAMED)).toBe('Warrior marks Goblin.')
+    })
+  })
+
+  it('keeps a technique’s recharge and the mana spent through a snapshot, and plays on identically', () => {
+    const field = { board: WIDE, units: [hero(['pin', 'cleave'], { actionPoints: 20 }), goblin(), { ...GOBLIN2, stats: { ...GOBLIN_STATS, maxHp: 30 } }] }
+    const straight = new BattleEngine(field, { seed: 7 })
+    straight.step(use('pin'))
+    straight.step(use('cleave'))
+    const restored = BattleEngine.restore(JSON.parse(JSON.stringify(straight.snapshot())))
+    expect(unitOf(restored, 'warrior')).toMatchObject({ mana: 2, recharging: { pin: 1, cleave: 2 } })
+    expect(restored.legalActions()).toEqual(straight.legalActions())
+    const play = (engine: BattleEngine) => {
+      for (let state = engine.getState(); state.phase !== 'over'; state = engine.getState()) {
+        engine.step(POLICIES.aggressive({ state, legal: engine.legalActions(), rng: () => 0 }))
+      }
+      return engine.getLog()
+    }
+    expect(play(restored)).toEqual(play(straight))
   })
 })

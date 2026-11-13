@@ -254,12 +254,40 @@ npm run test:browser   # once: the battle log's lines and foeInfo are touched, t
 
 ## 6. Completion criteria
 
-- [ ] C11's fields, ids, `abilityApCost`, `imbueDamage` and the 14 entries in place; `marked`, `slowed`, `pinned` (no rule) added.
-- [ ] `knownAbilities` and `deriveCombatStats` emit abilities and `magic` for mana techniques.
-- [ ] The engine lists, prices and resolves techniques as section 4.4; `LOG_SCHEMA_VERSION` 25; `formatEvent` lines.
-- [ ] The policy ignores hero abilities until step 12.
-- [ ] `npm test` passes; the guard fixture unchanged; `npm run test:browser` passes.
-- [ ] `CLAUDE.md` current (the abilities line in `src/combat/`, the engine's `ability` action, the policy's line, the statuses list, `LOG_SCHEMA_VERSION`'s mention).
-- [ ] Committed as "Skill trees step 09: hero abilities: strikes and statuses"; the index's row set to `done (<commit>)`; the execution record filled.
+- [x] C11's fields, ids, `abilityApCost`, `imbueDamage` and the 14 entries in place; `marked`, `slowed`, `pinned` (no rule) added.
+- [x] `knownAbilities` and `deriveCombatStats` emit abilities and `magic` for mana techniques.
+- [x] The engine lists, prices and resolves techniques as section 4.4; `LOG_SCHEMA_VERSION` 25; `formatEvent` lines.
+- [x] The policy ignores hero abilities until step 12.
+- [x] `npm test` passes; the guard fixture unchanged; `npm run test:browser` passes.
+- [x] `CLAUDE.md` current (the abilities line in `src/combat/`, the engine's `ability` action, the policy's line, the statuses list, `LOG_SCHEMA_VERSION`'s mention).
+- [x] Committed as "Skill trees step 09: hero abilities: strikes and statuses"; the index's row set to `done (<commit>)`; the execution record filled.
 
 ## 7. Execution record
+
+**Engineer, 2026-11-13.**
+
+What was built:
+
+- `abilities.ts`: C11's `Ability` fields (`manaCost`, `weaponAp`, `needs`, `selfStatus`, `foeStatus`), `Strike` fields (`damage` optional, `weapon`, `toHit`, `damageBonus`, `onHit`, `spreads`) and `AreaAttack`'s step-10 fields (typed only); the 14 techniques after the monsters' four in `ABILITY_IDS`, in C11's order less `taunt`, `volley`, `consecrate`; `abilityApCost`. Cleave's `spreads` is on its second strike.
+- `spells.ts`: `marked` (Y, armour class −10), `slowed` (L, action points −3), `pinned` (N, no rule field).
+- `combat.ts`: `CombatantStats.imbueDamage`, compared by `sameCombatStats`.
+- `perks.ts`: `Perk.ability`, `knownAbilities` (ABILITY_IDS order), `nodeKind` 'mana' / 'at-will'. No node in `PERKS` has an ability; the tests lend one to an existing node for the while and put it back.
+- `character.ts`: `deriveCombatStats` emits `abilities`, `imbueDamage` (non-zero only), and `magic` (with `spells: []` possible) for a hero with a technique that costs mana.
+- `battleEngine.ts`: `LOG_SCHEMA_VERSION` 25; `canUse` checks `needs`, `abilityApCost` and mana; `canTarget` (replacing `canStrike`) for routines, `selfStatus` (the user's own id) and `foeStatus` (a standing foe within range, `'weapon'` = attack range); `payFor` takes AP and mana as the action begins and sets the recharge, shared by routines, areas and status abilities (a monster's AP is its `apCost`, as before); technique strikes go through `attack()` with the strike's `toHit` in the situational bonus, `damageBonus` after `rollHitDamage` (never doubled), the strike's `onHit` after the weapon's (elemental entries raised by `imbueDamage`); `spreads` picks another foe in reach (nearest, lowest id) before the roll, else the same foe; `statusAbility` lays the status with no draw and logs one `AbilityEvent` (one friendly-shaped outcome); `manaCost`/`manaAfter` on the first `AttackEvent` of a mana technique and on a mana `AbilityEvent`; `formatEvent` lines "Warrior power-attacks Goblin: rolls 50 (needs 50 or less) — HITS Goblin for 12 dmg (armour stops 1).", "Warrior sprints.", "Warrior marks Goblin.".
+- `policies.ts`: `aggressive` filters out every technique (`isTechnique`) before choosing.
+- `foeInfo.ts`: a weapon strike reads "a weapon blow"; a status ability is described by its status (no throw).
+
+Commands and results:
+
+- Baseline `npm test`: 86 files, 1609 tests passed.
+- Red: the new abilities/perks/character/engine tests failed for the expected reasons before the code (e.g. `knownAbilities is not a function`, 30 engine tests failing); the policy test and the snapshot test failed with the filter removed, and pass with it.
+- `npx vitest run src/engine src/combat src/character`: green.
+- `npm test`: 86 files, 1708 tests passed.
+- `npm run test:browser`: 10 files, 115 tests passed.
+
+Deviation (the refactor guard). Raising `LOG_SCHEMA_VERSION` to 25, which this step must do (decision 8), changes every `battle_start`'s `schemaVersion`, and the guard hashes the events, so the hash cannot stay unchanged. The guard's records were unchanged (`toEqual` passed); only the hash failed. A scratch run of the guard's 5 campaigns gave the new hash `3f931596...042875d`, and the same log with each of its 119 `"schemaVersion":25` written back as 24 hashes to the recorded `8e01443a...db5c94`, so nothing else in the log moved. `GUARD_EVENTS_SHA256` was re-recorded with a comment saying so (as stage 6 step 09 did for schema 24). Steps 10 and 11 keep it unchanged.
+
+Other changes to existing tests (deliberate): the abilities test's "exactly one of strikes and an area" and "apCost > 0" now cover the four kinds and the hero entries' `apCost` 0; the monsters' four are checked for none of the new fields; the two "schema version 24" tests and `simulate.test.ts`'s battle_start test expect 25; `encounters.test.ts`'s monster-only `routineTurn` reads `strike.damage!`.
+
+For later steps: `nearestFoeInReach(actor, besides?)` and `payFor` are the shared helpers; a status ability's event is an `AbilityEvent` whose `shape` is 'burst' and `hexes` the target's hex, so the scene's area-effect playback will flash that hex (step 14 gives it a look). `isTechnique` in policies.ts is what step 12 replaces. `Strike.status` is laid as a routine's is, so Flame and Frost Strike lay their status through it rather than through an `OnHit` entry.
+

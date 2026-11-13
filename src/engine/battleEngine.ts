@@ -1,4 +1,4 @@
-import { ABILITIES, type AbilityId, type Strike } from '../combat/abilities.ts'
+import { ABILITIES, abilityApCost, type AbilityId, type Strike } from '../combat/abilities.ts'
 import {
   ELEMENTS,
   baneApplies,
@@ -42,7 +42,7 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 24
+export const LOG_SCHEMA_VERSION = 25
 
 /** What an attacker's chance to hit gains, in percent, for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 10
@@ -304,7 +304,7 @@ export interface AttackEvent extends EventBase {
   damage: number
   defenderHpBefore: number
   defenderHpAfter: number
-  /** On a routine's strikes only: the ability, by id. */
+  /** On a routine's strikes only (a technique's included): the ability, by id. */
   ability?: AbilityId
   /** On a routine's strikes only: the strike's name. */
   strike?: string
@@ -320,6 +320,10 @@ export interface AttackEvent extends EventBase {
   healed?: number
   /** The on-hit statuses laid, as they stand after; absent if none. */
   onHitStatuses?: ActiveStatus[]
+  /** On the first strike of a technique that costs mana: the mana it cost, paid as it began. */
+  manaCost?: number
+  /** With `manaCost`: the unit's mana once it was paid. */
+  manaAfter?: number
 }
 
 /** One on-hit entry's damage on an attack: flat, after resistance, cut by the defender's ward, never doubled by a critical. */
@@ -393,7 +397,9 @@ export interface CastEvent extends EventBase {
  * An area ability used: rolled against each unit it touches, both sides, as
  * a hostile area spell is, with the unit's chance to hit; resistance is
  * ignored, a ward cuts its element, and a miss deals half the dice where
- * the area has `halfOnMiss`.
+ * the area has `halfOnMiss`. Also a technique that lays a status with no
+ * roll on the user or a foe (Sprint, Hunter's Mark): its one hex, and one
+ * outcome shaped as a friendly spell's.
  */
 export interface AbilityEvent extends EventBase {
   type: 'ability'
@@ -414,6 +420,10 @@ export interface AbilityEvent extends EventBase {
   skill: number
   /** One for each unit touched, in roster order. */
   outcomes: CastOutcome[]
+  /** For a technique that costs mana: the mana it cost, paid as it began. */
+  manaCost?: number
+  /** With `manaCost`: the unit's mana once it was paid. */
+  manaAfter?: number
 }
 
 /** A status dealt its damage as its unit's turn began. */
@@ -837,10 +847,11 @@ export class BattleEngine {
    * hex its AP can reach, an attack on each standing foe in range if it can
    * afford one, and for each spell it knows and can pay for, in `SPELL_IDS`
    * order, a cast at each legal aim: units in roster order, or an area's
-   * centres in board order (row, then column); then for each ability it has
-   * the AP for and is not recharging, in its `abilities` order, a routine at
-   * each standing foe in its attack range, in roster order, or an area at
-   * each legal aim in board order; then end_turn. Empty once the battle is over. Equip actions
+   * centres in board order (row, then column); then for each ability it can
+   * use now (`canUse`), in its `abilities` order, a routine at each standing
+   * foe in its attack range, in roster order, an area at each legal aim in
+   * board order, a status on itself once (aimed at its own id), or a status
+   * on each standing foe within the ability's range; then end_turn. Empty once the battle is over. Equip actions
    * are not listed, as the engine cannot know what gear a unit carries: see
    * equipCost().
    */
@@ -878,8 +889,8 @@ export class BattleEngine {
           }
           continue
         }
-        for (const foe of this.units) {
-          if (this.canStrike(actor, ability, foe)) actions.push({ type: 'ability', unit: actor.id, ability, target: foe.id })
+        for (const unit of this.units) {
+          if (this.canTarget(actor, ability, unit)) actions.push({ type: 'ability', unit: actor.id, ability, target: unit.id })
         }
       }
     }
@@ -991,9 +1002,11 @@ export class BattleEngine {
     }
     if (action.type === 'ability') {
       const target = this.units.find((u) => u.id === action.target)
-      if (!target || !this.canStrike(actor, action.ability, target)) {
+      if (!target || !this.canTarget(actor, action.ability, target)) {
         throw new Error(`${actor.id} cannot use ${action.ability} on ${action.target}`)
       }
+      const { selfStatus, foeStatus } = ABILITIES[action.ability]
+      if (selfStatus || foeStatus) return this.statusAbility(actor, action.ability, target)
       return this.routine(actor, action.ability, target)
     }
     const target = this.units.find((u) => u.id === action.target)
@@ -1166,20 +1179,38 @@ export class BattleEngine {
     )
   }
 
-  /** Whether `actor` has `ability`, has the action points for it, and it is not recharging. */
+  /**
+   * Whether `actor` has `ability` and can use it now: it holds the weapon the
+   * ability `needs`, has its action points (`abilityApCost`) and its mana,
+   * and it is not recharging.
+   */
   private canUse(actor: UnitRecord, ability: AbilityId): boolean {
     const known = ABILITIES[ability]
     return (
       known !== undefined &&
       actor.stats.abilities?.includes(ability) === true &&
-      actor.ap >= known.apCost &&
+      (known.needs === undefined || (known.needs === 'melee') === isMelee(actor.stats)) &&
+      actor.ap >= abilityApCost(actor.stats, ability) &&
+      actor.mana >= (known.manaCost ?? 0) &&
       (actor.recharging[ability] ?? 0) <= 0
     )
   }
 
-  /** Whether `actor` can use the routine `ability` on `target`: it can use it, and the target is a standing foe within its attack range. */
-  private canStrike(actor: UnitRecord, ability: AbilityId, target: UnitRecord): boolean {
-    return this.canUse(actor, ability) && ABILITIES[ability].strikes !== undefined && this.canAttack(actor, target)
+  /**
+   * Whether `actor` can use the `ability` aimed at a unit on `target`: it can
+   * use it, and the target suits it: a standing foe within its attack range
+   * for a routine, itself for a status on itself, a standing foe within the
+   * ability's range for a status on a foe.
+   */
+  private canTarget(actor: UnitRecord, ability: AbilityId, target: UnitRecord): boolean {
+    const { strikes, selfStatus, foeStatus } = ABILITIES[ability]
+    if (!this.canUse(actor, ability)) return false
+    if (selfStatus) return target === actor
+    if (foeStatus) {
+      const range = foeStatus.range === 'weapon' ? actor.stats.attackRange : foeStatus.range
+      return target.side !== actor.side && target.hp > 0 && hexDistance(target.position, actor.position) <= range
+    }
+    return strikes !== undefined && this.canAttack(actor, target)
   }
 
   /**
@@ -1346,37 +1377,92 @@ export class BattleEngine {
     ]
   }
 
+  /** Pays an ability's action points and mana as it begins and sets its recharge; a paid-for change of gear ends. */
+  private payFor(actor: UnitRecord, abilityId: AbilityId): { apCost: number; manaCost: number | undefined } {
+    const ability = ABILITIES[abilityId]
+    const apCost = abilityApCost(actor.stats, abilityId)
+    actor.ap -= apCost
+    if (ability.manaCost !== undefined) actor.mana -= ability.manaCost
+    actor.gearChangePaid = false
+    if (ability.recharge >= 1) actor.recharging[abilityId] = ability.recharge
+    return { apCost, manaCost: ability.manaCost }
+  }
+
   /**
    * Pays for a legal routine and makes its strikes in order, each a weapon
-   * attack with the strike's dice and the unit's `abilityDamageBonus`. A
-   * strike whose target has fallen goes to the nearest standing foe in
-   * reach, the lowest id on a tie; with none, it and the rest are not made.
-   * The routine stops when the battle ends.
+   * attack: with the strike's dice and the unit's `abilityDamageBonus`, or
+   * for a technique's strike (`weapon`) the unit's own weapon with the
+   * strike's modifiers. A strike that `spreads` goes to another standing
+   * foe in reach than the strike before it, chosen before its roll (the
+   * nearest, the lowest id on a tie), else to the same foe. A strike whose
+   * target has fallen goes to the nearest standing foe in reach, the lowest
+   * id on a tie; with none, it and the rest are not made. The routine stops
+   * when the battle ends.
    */
   private routine(actor: UnitRecord, abilityId: AbilityId, target: UnitRecord): BattleEvent[] {
     const ability = ABILITIES[abilityId]
-    actor.ap -= ability.apCost
-    actor.gearChangePaid = false
-    if (ability.recharge >= 1) actor.recharging[abilityId] = ability.recharge
+    const { apCost, manaCost } = this.payFor(actor, abilityId)
     const bonus = actor.stats.abilityDamageBonus ?? 0
     const events: BattleEvent[] = []
     let foe: UnitRecord | null = target
     for (const [i, strike] of (ability.strikes ?? []).entries()) {
       if (this.phase === 'over') break
-      if (foe.hp <= 0) foe = this.nearestFoeInReach(actor)
+      if (strike.spreads) foe = this.nearestFoeInReach(actor, foe) ?? (foe.hp > 0 ? foe : null)
+      if (foe && foe.hp <= 0) foe = this.nearestFoeInReach(actor)
       if (!foe) break
-      const dice = { ...strike.damage, bonus: strike.damage.bonus + bonus }
-      events.push(...this.attack(actor, foe, i === 0 ? ability.apCost : 0, { ability: abilityId, strike, dice }))
+      const dice = strike.damage ? { ...strike.damage, bonus: strike.damage.bonus + bonus } : actor.stats.damage
+      const first = i === 0
+      const mana = first && manaCost !== undefined ? manaCost : undefined
+      events.push(...this.attack(actor, foe, first ? apCost : 0, { ability: abilityId, strike, dice, manaCost: mana }))
     }
     return events
   }
 
-  /** The standing foe within `actor`'s attack range nearest it, the lowest id on a tie; null if none. */
-  private nearestFoeInReach(actor: UnitRecord): UnitRecord | null {
+  /**
+   * Pays for a legal ability that lays a status with no roll and lays it, on
+   * the user itself or on the foe it is aimed at, to which the user turns.
+   * It draws nothing from the RNG.
+   */
+  private statusAbility(actor: UnitRecord, abilityId: AbilityId, target: UnitRecord): BattleEvent[] {
+    const ability = ABILITIES[abilityId]
+    const laid = ability.selfStatus ?? ability.foeStatus!.status
+    const { apCost, manaCost } = this.payFor(actor, abilityId)
+    if (target !== actor) actor.facing = hexDirectionTowards(actor.position, target.position)!
+    const hpBefore = target.hp
+    const status = this.layStatus(target, laid)
+    const outcome: CastOutcome = {
+      unit: target.id, attackRoll: null, chance: null, defenderAc: null, hit: true, critical: false, fumble: false, image: false,
+      damage: 0, warded: 0, half: false, healed: 0, hpBefore, hpAfter: target.hp, status,
+    }
+    return [
+      this.record<AbilityEvent>({
+        type: 'ability',
+        round: this.round,
+        unit: actor.id,
+        ability: abilityId,
+        at: target.position,
+        shape: 'burst',
+        hexes: [target.position],
+        distance: hexDistance(actor.position, target.position),
+        apCost,
+        apAfter: actor.ap,
+        facing: actor.facing,
+        skill: effectiveStats(actor).toHit,
+        outcomes: [outcome],
+        ...(manaCost !== undefined ? { manaCost, manaAfter: actor.mana } : {}),
+      }),
+    ]
+  }
+
+  /**
+   * The standing foe within `actor`'s attack range nearest it, the lowest id
+   * on a tie, other than `besides` if given; null if none.
+   */
+  private nearestFoeInReach(actor: UnitRecord, besides?: UnitRecord | null): UnitRecord | null {
     let nearest: UnitRecord | null = null
     let gap = Infinity
     for (const u of this.units) {
-      if (!this.canAttack(actor, u)) continue
+      if (u === besides || !this.canAttack(actor, u)) continue
       const d = hexDistance(actor.position, u.position)
       if (d < gap || (d === gap && nearest !== null && u.id < nearest.id)) {
         nearest = u
@@ -1391,13 +1477,17 @@ export class BattleEngine {
    * attack. A defender struck in its side or rear by a melee weapon turns to
    * face the attacker first if it still can, whether the blow then lands or
    * not; a shot gives it no turn. A routine's strike rolls its own `dice` and
-   * lays its status on a hit that leaves the target standing.
+   * lays its status on a hit that leaves the target standing. A technique's
+   * strike adds its `toHit` to the chance, its `damageBonus` to a hit's
+   * damage after a critical's doubling, and its `onHit` entries (an elemental
+   * one raised by the unit's `imbueDamage`) after the weapon's; it draws as a
+   * plain attack does.
    */
   private attack(
     actor: UnitRecord,
     target: UnitRecord,
     apCost: number | null,
-    strike?: { ability: AbilityId; strike: Strike; dice: DamageRoll },
+    strike?: { ability: AbilityId; strike: Strike; dice: DamageRoll; manaCost?: number },
   ): BattleEvent[] {
     actor.facing = hexDirectionTowards(actor.position, target.position)!
     const defenderTurned =
@@ -1415,14 +1505,18 @@ export class BattleEngine {
     const defender = effectiveStats(target)
     const defenderAc = defender.ac
     const defenderResistance = defender.resistance ?? 0
-    const roll = rollToHit(attacker, defenderAc, this.rng, flankBonus + arcBonus + (helpless ? HELPLESS_BONUS : 0))
+    const technique = strike?.strike
+    const roll = rollToHit(attacker, defenderAc, this.rng, flankBonus + arcBonus + (helpless ? HELPLESS_BONUS : 0) + (technique?.toHit ?? 0))
     const image = roll.hit && this.strikeImage(target)
     const dice = strike?.dice ?? attacker.damage
-    const rolled = roll.hit && !image ? rollHitDamage(dice, roll.critical, this.rng) : 0
+    // A technique's damage bonus comes after a critical's doubling, so it is never doubled.
+    const rolled = roll.hit && !image ? rollHitDamage(dice, roll.critical, this.rng) + (technique?.damageBonus ?? 0) : 0
     const damage = damageThrough(rolled, effectiveResistance(attacker, defenderResistance))
     const result = { ...roll, damage }
     const landed = roll.hit && !image
-    const onHit = landed ? (attacker.onHit ?? []) : []
+    const imbue = actor.stats.imbueDamage ?? 0
+    const added = (technique?.onHit ?? []).map((entry) => (entry.element && imbue !== 0 ? { ...entry, damage: entry.damage + imbue } : entry))
+    const onHit = landed ? [...(attacker.onHit ?? []), ...added] : []
     const bonus: AttackBonus[] = onHit
       .filter((entry) => entry.damage > 0 && (!entry.bane || baneApplies(defender)))
       .map((entry) => ({
@@ -1483,6 +1577,7 @@ export class BattleEngine {
         bonus,
         ...(heals ? { healed } : {}),
         ...(onHitStatuses.length > 0 ? { onHitStatuses } : {}),
+        ...(strike?.manaCost !== undefined ? { manaCost: strike.manaCost, manaAfter: actor.mana } : {}),
       }),
     ]
 
@@ -1564,9 +1659,7 @@ export class BattleEngine {
     const ability = ABILITIES[abilityId]
     const area = ability.area!
     const touched = areaTouches(this.units, actor, area, at, true)
-    actor.ap -= ability.apCost
-    actor.gearChangePaid = false
-    if (ability.recharge >= 1) actor.recharging[abilityId] = ability.recharge
+    const { apCost, manaCost } = this.payFor(actor, abilityId)
     if (!hexEquals(at, actor.position)) actor.facing = hexDirectionTowards(actor.position, at)!
     const attacker = effectiveStats(actor)
     const bonus = actor.stats.abilityDamageBonus ?? 0
@@ -1584,11 +1677,12 @@ export class BattleEngine {
       shape: area.shape,
       hexes: areaOf(area.shape, actor.position, at, area.range, area.radius ?? 0).filter((h) => this.board.contains(h)),
       distance: hexDistance(actor.position, at),
-      apCost: ability.apCost,
+      apCost,
       apAfter: actor.ap,
       facing: actor.facing,
       skill: attacker.toHit,
       outcomes: outcomes.map(({ woke: _, ...outcome }) => outcome),
+      ...(manaCost !== undefined ? { manaCost, manaAfter: actor.mana } : {}),
     })
     return [event, ...this.aftermath(outcomes, touched)]
   }
@@ -1806,7 +1900,11 @@ function describeCast(event: CastEvent, names: Readonly<Record<UnitId, string>>)
 
 /** An area ability's line: "Salamander spits fire: HITS Aldric for 9 dmg; MISSES Bryn, 4 dmg (half)." */
 function describeAbility(event: AbilityEvent, names: Readonly<Record<UnitId, string>>): string {
-  const opening = `${names[event.unit]} ${ABILITIES[event.ability].verb}`
+  const { verb, selfStatus, foeStatus } = ABILITIES[event.ability]
+  const opening = `${names[event.unit]} ${verb}`
+  // A status laid with no roll: "Mira sprints.", "Brenna marks Goblin."
+  if (selfStatus) return `${opening}.`
+  if (foeStatus) return `${opening} ${names[event.outcomes[0].unit]}.`
   if (event.outcomes.length === 0) return `${opening}: it touches no one.`
   return `${opening}: ${event.outcomes.map((o) => hostileOutcome(o, names[o.unit])).join('; ')}.`
 }

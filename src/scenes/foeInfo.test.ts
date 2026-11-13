@@ -64,4 +64,13 @@ describe('foeInfoLines', () => {
     const lines = foeInfoLines(unit({ name: 'Troll', abilities: ['troll_claws'], wards: { poison: 3, fire: 99, frost: 0 } }))
     expect(lines).toEqual(['Troll', 'Claws: ready', '  claw 1d4+2, claw 1d4+2', 'Wards: fire 99, poison 3'])
   })
+
+  it('describes a technique without throwing: a weapon strike as a weapon blow, a status with no roll by its status', () => {
+    expect(describe1({ abilities: ['power_attack'] })).toEqual(['Power Attack: ready', '  power attack a weapon blow'])
+    expect(describe1({ abilities: ['dirty_trick'] })).toEqual([
+      'Dirty Trick: ready', '  dirty trick a weapon blow', '  dirty trick: baned 2 turns (−15 to hit)',
+    ])
+    expect(describe1({ abilities: ['sprint'] })).toEqual(['Sprint: ready', '  hasted 1 turn (+3 AP)'])
+    expect(describe1({ abilities: ['hunters_mark'] })).toEqual(['Hunter\'s Mark: ready', '  a foe: marked 2 turns (−10 AC)'])
+  })
 })

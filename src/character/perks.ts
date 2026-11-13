@@ -1,5 +1,6 @@
 import { ATTRIBUTES, ATTRIBUTE_IDS, MAX_ATTRIBUTE, type AttributeId, type Attributes } from './attributes.ts'
 import type { Character } from './character.ts'
+import { ABILITIES, ABILITY_IDS, type AbilityId } from '../combat/abilities.ts'
 import type { OnHit } from '../combat/combat.ts'
 import { SPELLS, SPELL_IDS, type HeroSpellId } from '../combat/spells.ts'
 import { SKILL_IDS, skillLevel, type SkillId } from './skills.ts'
@@ -109,6 +110,8 @@ export interface Perk {
   meleeOnHit?: readonly OnHit[]
   /** The spell it teaches. */
   spell?: HeroSpellId
+  /** The technique it teaches (abilities.ts); no node has one until step 13. */
+  ability?: AbilityId
 }
 
 /** The skills' names as the asks word them: "Melee 40%". */
@@ -435,13 +438,14 @@ export function perkLevel(perk: PerkId): number {
   return TIERS[(PERKS[perk] as Perk).tier].level
 }
 
-/** What a node gives: a spell, or a passive effect (abilities arrive in step 09: 'at-will' and 'mana'). */
+/** What a node gives: a spell, a technique used at will or for mana, or a passive effect. */
 export type NodeKind = 'passive' | 'at-will' | 'mana' | 'spell'
 
 /** What kind of node `perk` is, derived from its data. */
 export function nodeKind(perk: PerkId): NodeKind {
   const node: Perk = PERKS[perk]
   if (node.spell) return 'spell'
+  if (node.ability) return ABILITIES[node.ability].manaCost ? 'mana' : 'at-will'
   return 'passive'
 }
 
@@ -487,6 +491,12 @@ export function knownSpells(character: Character): HeroSpellId[] {
     const node = perkTeaching(spell)
     return node !== null && perkRanks(character, node) > 0
   })
+}
+
+/** The techniques the character knows, in `ABILITY_IDS` order: those a node it holds teaches. */
+export function knownAbilities(character: Pick<Character, 'perks'>): AbilityId[] {
+  const taught = new Set(PERK_IDS.filter((id) => perkRanks(character, id) > 0).map((id) => (PERKS[id] as Perk).ability))
+  return ABILITY_IDS.filter((ability) => taught.has(ability))
 }
 
 /**

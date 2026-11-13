@@ -784,8 +784,10 @@ describe('runes in a campaign', () => {
  * `role`) and the company record's new fields, every old field and every other event unchanged; never edited again
  * in this stage. Re-recorded in skill trees step 03: the trees' nodes, a pick every even level and the plans
  * changed play. Re-recorded in skill trees step 04: every hero has mana, 2 more a Mage or Cleric node, and the
- * derived passives (resistance, wards, Shield Wall, Sacred Weapon, the spell modifiers) work in battle. A mismatch
- * means a step changed behaviour.
+ * derived passives (resistance, wards, Shield Wall, Sacred Weapon, the spell modifiers) work in battle. Re-hashed in
+ * skill trees step 09 for `LOG_SCHEMA_VERSION` 25 alone: the records unchanged, and the new log with every
+ * `"schemaVersion":25` written back as 24 hashes to the old `8e01443a...db5c94`. A mismatch means a step changed
+ * behaviour.
  */
 const GUARD_RECORDS: CampaignRecord[] = [
   { outcome: 'source', days: 399, battles: 23, spawns: 33, captured: 5, lost: 0, blighted: 0.3358333333333333, healedHp: 144, campDays: 30, towersBuilt: 2, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, outpostsBuilt: 1, tradingPostLevel: 2, workshopLevel: 1, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 4, tierTwoBought: 0, crafted: 4, fieldCraftDays: 3, runesFound: 19, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [9, 9, 9, 8, 7], deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 23, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 82, guardBattles: 0 },
@@ -794,7 +796,7 @@ const GUARD_RECORDS: CampaignRecord[] = [
   { outcome: 'source', days: 393, battles: 22, spawns: 32, captured: 4, lost: 0, blighted: 0.32958333333333334, healedHp: 114, campDays: 12, towersBuilt: 2, towersLost: 0, deaths: 1, recruits: 3, hallLevel: 3, shrineLevel: 2, outpostsBuilt: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 62, tierTwoBought: 0, crafted: 9, fieldCraftDays: 2, runesFound: 18, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 8, 7, 7], deathsAtLevel: [3], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 22, wipes: 0, finalLevels: [[8, 8, 8, 7, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 101, guardBattles: 0 },
   { outcome: 'source', days: 265, battles: 18, spawns: 28, captured: 3, lost: 0, blighted: 0.39125, healedHp: 96, campDays: 20, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 1, hallLevel: 2, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 5, fieldCraftDays: 3, runesFound: 14, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 8, 7], deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 18, wipes: 0, finalLevels: [[8, 8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 36, guardBattles: 0 },
 ]
-const GUARD_EVENTS_SHA256 = '8e01443a4fa9adef9e821061073d8d96710017be9568729d02a046e16ddb5c94'
+const GUARD_EVENTS_SHA256 = '3f931596ed784a7c8f6f51976d0b8a863c20212e97bd7b4f4e588db9f042875d'
 
 describe('the campaign’s policy on the day loop', () => {
   const args = parseArgs(['--campaign', '--parties', '1'])
@@ -1045,14 +1047,14 @@ describe('the company’s record', () => {
     expect(roleOf(run, party)).toBe('guard')
   })
 
-  it('logs the party and its role on battle_start, under schema version 24, and counts the battle to the role', () => {
+  it('logs the party and its role on battle_start, under schema version 25, and counts the battle to the role', () => {
     const { run, game, party } = campaignOf()
     const target = nextTarget(game.world, party, args.readyLevel)!
     party.position = { ...target.position }
     party.confronting = target.id
     carryOut(run, party, { kind: 'fight', target })
     const start = run.battles[0][0]
-    expect(start).toMatchObject({ type: 'battle_start', schemaVersion: 24, meta: { party: 'party_1', role: 'vanguard' } })
+    expect(start).toMatchObject({ type: 'battle_start', schemaVersion: 25, meta: { party: 'party_1', role: 'vanguard' } })
     // The new keys come after the old, so the old keys keep their order in the log.
     if (start.type !== 'battle_start') throw new Error('no battle_start')
     expect(Object.keys(start.meta).slice(-2)).toEqual(['party', 'role'])

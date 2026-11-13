@@ -1,3 +1,4 @@
+import { ABILITIES } from '../combat/abilities.ts'
 import { ELEMENTS, type CombatantStats, type DamageRoll, type Element, type OnHit } from '../combat/combat.ts'
 import type { GearChange } from '../engine/battleEngine.ts'
 import {
@@ -17,7 +18,7 @@ import {
   type ItemStats,
 } from '../inventory/inventory.ts'
 import type { Attributes } from './attributes.ts'
-import { PERKS, PERK_IDS, attributeLevel, attributesOf, knownSpells, perkBonus, perkRanks, type Perk, type PerkId } from './perks.ts'
+import { PERKS, PERK_IDS, attributeLevel, attributesOf, knownAbilities, knownSpells, perkBonus, perkRanks, type Perk, type PerkId } from './perks.ts'
 import type { PortraitId } from './portraits.ts'
 import { SKILL_IDS, skillLevel, type SkillId } from './skills.ts'
 import { MANA_PER_TREE_NODE, treeNodes } from './trees.ts'
@@ -231,6 +232,10 @@ export function deriveCombatStats(character: Character): CombatantStats {
   // bolts pierce by their own weight, but the strength perks' piercing is in a blow.
   const pierce = ranged ? (weapon?.rangedPierce ? armorPierce : 0) : armorPierce + perkBonus(character, 'armorPierce')
   const spells = knownSpells(character)
+  const abilities = knownAbilities(character)
+  // A hero with a technique that costs mana has mana to spend in battle, even with no spell.
+  const usesMana = spells.length > 0 || abilities.some((ability) => ABILITIES[ability].manaCost !== undefined)
+  const imbueDamage = perkBonus(character, 'imbueDamage')
   const wards: Partial<Record<Element, number>> = {}
   for (const element of ELEMENTS) if (wardTotals[element]) wards[element] = wardTotals[element]
   // A node's on-hit entries (Sacred Weapon) go with a blow, never a shot.
@@ -252,7 +257,9 @@ export function deriveCombatStats(character: Character): CombatantStats {
     attackRange: attackRange + (ranged ? perkBonus(character, 'range') : 0),
     ...(weapon?.reach ? { reach: true as const } : {}),
     actionPoints: BASE_ACTION_POINTS + Math.floor(agility / 2) + perkBonus(character, 'actionPoints') - apPenalty,
-    ...(spells.length > 0 ? { magic: { maxMana: maxMana(character), skill: spellSkill, spells, ...spellModifiers(character) } } : {}),
+    ...(usesMana ? { magic: { maxMana: maxMana(character), skill: spellSkill, spells, ...spellModifiers(character) } } : {}),
+    ...(abilities.length > 0 ? { abilities } : {}),
+    ...(imbueDamage !== 0 ? { imbueDamage } : {}),
   }
 }
 

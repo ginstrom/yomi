@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { GOBLIN_STATS, KOBOLD_STATS, TROLL_STATS, type CombatantStats } from '../combat/combat.ts'
 import { hex, type Hex } from '../grid/hex.ts'
 import { BattleEngine, areaTouches, castTouches, type Action } from './battleEngine.ts'
-import { ABILITIES } from '../combat/abilities.ts'
+import { ABILITIES, ABILITY_IDS, type AbilityId } from '../combat/abilities.ts'
 import type { SpellId } from '../combat/spells.ts'
 import { POLICIES, isPolicyName, type PolicyContext } from './policies.ts'
 
@@ -340,6 +340,42 @@ describe('policies', () => {
     expect(choose(engine)).toEqual({ type: 'move', unit: 'p1', to: hex(3, 1) }) // 3 AP, 5 left
     engine.step(choose(engine))
     expect(choose(engine)).toEqual(ATTACK_E1)
+  })
+
+  describe('aggressive with a hero’s techniques (until step 12)', () => {
+    const TECHNIQUES = ABILITY_IDS.slice(4) as AbilityId[]
+    /** A warrior with mana (and a bow, or not) and every technique, or none, before goblins near and far. */
+    const field = (abilities: AbilityId[], bow: boolean) => {
+      const hero: CombatantStats = {
+        ...GOBLIN_STATS, name: 'Hero', actionPoints: 12, abilities, magic: { maxMana: 20, skill: 50, spells: [] },
+        ...(bow ? { attackApCost: 4, attackRange: 5 } : {}),
+      }
+      return new BattleEngine({
+        board: { cols: 8, rows: 3 },
+        units: [
+          { id: 'p1', side: 'player', stats: hero, position: hex(1, 1) },
+          { id: 'e1', side: 'enemy', stats: { ...GOBLIN_STATS, maxHp: 40 }, position: hex(2, 1) },
+          { id: 'e2', side: 'enemy', stats: GOBLIN_STATS, position: hex(6, 1) },
+        ],
+      }, { seed: 3 })
+    }
+    const playTurn = (engine: BattleEngine) => {
+      const chosen: Action[] = []
+      for (let action = choose(engine); action.type !== 'end_turn'; action = choose(engine)) {
+        chosen.push(action)
+        engine.step(action)
+      }
+      return chosen
+    }
+
+    it.each([false, true])('chooses as it would without them (a bow: %s), and never one of them', (bow) => {
+      const withThem = field(TECHNIQUES, bow)
+      expect(withThem.legalActions('p1').some((a) => a.type === 'ability')).toBe(true)
+      const chosen = playTurn(withThem)
+      expect(chosen).toEqual(playTurn(field([], bow)))
+      expect(chosen.length).toBeGreaterThan(0)
+      expect(chosen.some((a) => a.type === 'ability')).toBe(false)
+    })
   })
 
   describe('aggressive with a strike routine', () => {

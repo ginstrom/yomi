@@ -31,17 +31,21 @@ export function foeInfoLines(unit: UnitSnapshot): string[] {
 
 /**
  * What an ability does, in a line or two, from its data alone: a routine's
- * strikes and their dice, then any status a strike lays; an area's shape and
+ * strikes and their dice (or "a weapon blow"), then any status a strike lays;
+ * a status laid on the user or a foe; an area's shape and
  * reach, its dice and element, half on a miss, and the status it lays. The
  * dice carry `bonus`, the user's `abilityDamageBonus`, as the engine adds it.
  */
 export function describeAbility(ability: Ability, bonus = 0): string[] {
   const dice = (roll: DamageRoll) => formatDamage({ ...roll, bonus: roll.bonus + bonus })
   if (ability.strikes) {
-    const strikes = ability.strikes.map((s) => `${s.name.toLowerCase()} ${dice(s.damage)}`).join(', ')
+    // A technique's strike is the unit's own weapon; step 14 words it in full.
+    const strikes = ability.strikes.map((s) => `${s.name.toLowerCase()} ${s.damage ? dice(s.damage) : 'a weapon blow'}`).join(', ')
     const laid = ability.strikes.filter((s) => s.status).map((s) => `${s.name.toLowerCase()}: ${statusPhrase(s.status!)}`)
     return [strikes, ...laid]
   }
+  if (ability.selfStatus) return [statusPhrase(ability.selfStatus)]
+  if (ability.foeStatus) return [`a foe: ${statusPhrase(ability.foeStatus.status)}`]
   const area = ability.area!
   const shape = area.shape === 'burst' ? `burst ${area.radius ?? 0}, range ${area.range}` : `${area.shape} ${area.range}`
   if (!area.damage) return [area.status ? `${shape}: ${statusPhrase(area.status)}` : shape]

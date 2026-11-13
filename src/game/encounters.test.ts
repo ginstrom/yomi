@@ -450,7 +450,7 @@ describe('the foe yardstick', () => {
   const routineTurn = (s: CombatantStats, id: AbilityId) => {
     const { strikes = [], apCost, recharge } = ABILITIES[id]
     const uses = Math.floor(s.actionPoints / apCost)
-    return (recharge >= 1 ? Math.min(1, uses) : uses) * strikes.reduce((sum, strike) => sum + mean(strike.damage, s.abilityDamageBonus), 0)
+    return (recharge >= 1 ? Math.min(1, uses) : uses) * strikes.reduce((sum, strike) => sum + mean(strike.damage!, s.abilityDamageBonus), 0)
   }
   /** The better of the weapon's turn and the best routine's. */
   const meanDamage = (s: CombatantStats) =>

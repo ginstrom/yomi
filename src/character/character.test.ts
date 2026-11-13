@@ -33,7 +33,7 @@ import {
   type Build,
 } from './character.ts'
 import { draftCharacter } from './creation.ts'
-import { attributeLevel, type PerkId } from './perks.ts'
+import { PERKS, attributeLevel, type Perk, type PerkId } from './perks.ts'
 import { levelUp, takePerk } from './progression.ts'
 import { PREROLLS } from '../game/party.ts'
 import { skillLevel } from './skills.ts'
@@ -968,5 +968,53 @@ describe('mana for every hero and the derived passives', () => {
     expect(stats.magic).toBeUndefined()
     expect(stats.wards).toBeUndefined()
     expect(stats.onHit).toBeUndefined()
+    expect(stats.abilities).toBeUndefined()
+    expect(stats.imbueDamage).toBeUndefined()
+  })
+})
+
+describe('techniques in a hero’s stats', () => {
+  /** Lends `node` an ability (or an effect) for the while, as step 13's nodes will have it. */
+  const lending = (node: PerkId, field: Partial<Perk>, fn: () => void) => {
+    const perk = PERKS[node] as Perk
+    const before = { ...perk, effects: { ...perk.effects } }
+    Object.assign(perk, field)
+    try {
+      fn()
+    } finally {
+      for (const key of Object.keys(field) as (keyof Perk)[]) delete perk[key]
+      Object.assign(perk, before)
+    }
+  }
+  const hero = (...nodes: PerkId[]) => {
+    const character = createWarrior()
+    for (const node of nodes) character.perks[node] = 1
+    return character
+  }
+
+  it('lists the abilities its nodes teach, and gives no magic for an at-will one', () => {
+    lending('dodger', { ability: 'sprint' }, () => {
+      const stats = deriveCombatStats(hero('dodger'))
+      expect(stats.abilities).toEqual(['sprint'])
+      expect(stats.magic).toBeUndefined()
+    })
+  })
+
+  it('gives magic with no spells to a hero whose only use of mana is a technique', () => {
+    lending('toughness', { ability: 'flame_strike' }, () => {
+      const character = hero('toughness')
+      const stats = deriveCombatStats(character)
+      expect(stats.abilities).toEqual(['flame_strike'])
+      // The skill is the spell skill, the breastplate's −5 included, as for a caster.
+      expect(stats.magic).toEqual({ maxMana: maxMana(character), skill: skillLevel(character, 'magic') - 5, spells: [] })
+    })
+  })
+
+  it('carries its imbued damage only when it is not 0', () => {
+    expect(deriveCombatStats(hero('battle_mage')).imbueDamage).toBeUndefined()
+    lending('battle_mage', { effects: { maxMana: 6, imbueDamage: 2 } }, () => {
+      expect(deriveCombatStats(hero('battle_mage')).imbueDamage).toBe(2)
+      expect(deriveCombatStats(hero()).imbueDamage).toBeUndefined()
+    })
   })
 })

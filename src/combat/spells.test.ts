@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ELEMENTS, type CombatantStats } from './combat.ts'
 import { ALL_SPELL_IDS, MONSTER_SPELL_IDS, SPELLS, SPELL_IDS, STATUSES, STATUS_IDS, spellApCost, spellRange, type SpellId } from './spells.ts'
+import { effectiveStats } from '../engine/battleEngine.ts'
 
 describe('spell ids', () => {
   it('keeps the monsters’ spells apart from the heroes’', () => {
@@ -160,5 +161,30 @@ describe('a caster’s modifiers to a spell’s cost and reach', () => {
     expect(spellRange(serene, 'magic_arrow')).toBe(SPELLS.magic_arrow.range)
     expect(spellRange(serene, 'fireball')).toBe(SPELLS.fireball.range)
     expect(spellRange({}, 'heal')).toBe(SPELLS.heal.range)
+  })
+})
+
+describe('the technique statuses', () => {
+  it('lists marked, slowed and pinned after warded', () => {
+    expect(STATUS_IDS.slice(STATUS_IDS.indexOf('warded'))).toEqual(['warded', 'marked', 'slowed', 'pinned'])
+  })
+
+  it('makes Marked 10 off armour class and Slowed 3 off action points', () => {
+    expect(STATUSES.marked).toMatchObject({ name: 'Marked', adjective: 'marked', mark: 'Y', armorClass: -10 })
+    expect(STATUSES.slowed).toMatchObject({ name: 'Slowed', adjective: 'slowed', mark: 'L', actionPoints: -3 })
+    const stats: CombatantStats = { name: 'G', maxHp: 10, ac: 25, toHit: 50, critChance: 5, damage: { count: 1, sides: 6, bonus: 0 }, attackApCost: 4, attackRange: 1, actionPoints: 8 }
+    expect(effectiveStats({ stats, statuses: [{ id: 'marked', turnsLeft: 2 }] }).ac).toBe(15)
+  })
+
+  it('gives Pinned a name, a mark and a colour, and no rule yet', () => {
+    const { name, adjective, mark, colour, ...rule } = STATUSES.pinned
+    expect({ name, adjective, mark }).toEqual({ name: 'Pinned', adjective: 'pinned', mark: 'N' })
+    expect(colour).toBeGreaterThan(0)
+    expect(rule).toEqual({})
+  })
+
+  it('gives every status its own mark', () => {
+    const marks = STATUS_IDS.map((id) => STATUSES[id].mark)
+    expect(new Set(marks).size).toBe(marks.length)
   })
 })

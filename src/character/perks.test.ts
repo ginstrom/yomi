@@ -9,6 +9,7 @@ import {
   availablePerks,
   cappedAttribute,
   describePerkRequirements,
+  knownAbilities,
   knownSpells,
   missingRequirements,
   nodeKind,
@@ -19,7 +20,9 @@ import {
   perkTeaching,
   qualifiesFor,
   type Perk,
+  type PerkId,
 } from './perks.ts'
+import type { AbilityId } from '../combat/abilities.ts'
 import { takePerk } from './progression.ts'
 import { SKILL_IDS, skillLevel } from './skills.ts'
 import { PATHS } from './trees.ts'
@@ -58,12 +61,49 @@ describe('PERKS', () => {
   })
 })
 
+/**
+ * Runs `fn` with `taught` standing in for the techniques no node teaches yet
+ * (step 13 adds them): each node of `PERKS` named there teaches that ability
+ * for the while, and is put back after.
+ */
+function teaching(taught: Partial<Record<PerkId, AbilityId>>, fn: () => void): void {
+  const nodes = Object.keys(taught) as PerkId[]
+  for (const node of nodes) (PERKS[node] as Perk).ability = taught[node]
+  try {
+    fn()
+  } finally {
+    for (const node of nodes) delete (PERKS[node] as Perk).ability
+  }
+}
+
 describe('nodeKind', () => {
   it('is a spell for a node that teaches one, else a passive', () => {
     expect(nodeKind('magic_arrow')).toBe('spell')
     expect(nodeKind('curse')).toBe('spell')
     expect(nodeKind('dodger')).toBe('passive')
     expect(nodeKind('deadeye')).toBe('passive')
+  })
+
+  it('is a mana active for a node whose ability costs mana, and an at-will one for any other ability', () => {
+    teaching({ dodger: 'sprint', keen_eye: 'pin' }, () => {
+      expect(nodeKind('dodger')).toBe('at-will')
+      expect(nodeKind('keen_eye')).toBe('mana')
+    })
+    expect(nodeKind('dodger')).toBe('passive')
+  })
+})
+
+describe('knownAbilities', () => {
+  it('teaches no node an ability yet', () => {
+    expect(PERK_IDS.filter((id) => (PERKS[id] as Perk).ability !== undefined)).toEqual([])
+    expect(knownAbilities({ ...createWarrior(), perks: { dodger: 1, toughness: 1 } })).toEqual([])
+  })
+
+  it('gives the abilities of the nodes held, in ABILITY_IDS order, once each', () => {
+    teaching({ dodger: 'sprint', keen_eye: 'power_attack', toughness: 'sprint', heavy_hand: 'smite' }, () => {
+      const hero = { ...createWarrior(), perks: { dodger: 1, keen_eye: 1, toughness: 1 } }
+      expect(knownAbilities(hero)).toEqual(['power_attack', 'sprint'])
+    })
   })
 })
 
