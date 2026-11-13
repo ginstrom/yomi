@@ -73,23 +73,16 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 - To step 16: apply the Captain-Pin decision (knight plan order) and note it in step 13's task file; restore Rooted's description clause "or the end of its next turn".
 
-- To step 22 (from step 14 review): foe hover panel shows no AP cost for Taunt, Sprint and Hunter's Mark (only for abilities with mana, weaponAp or needs) — show it for every hero technique; an un-elemental on-hit reads as a bare "+4" (Smite) — say "+4 holy" or "+4 on hit"; a skill-row hover overwrites the header hint and doesn't restore it.
 
 - To stage 4 (from step 16): the `assassin` plan is unreachable for the ready-made heroes (Keen Eye asks Luck 6; they have 4 or less), so parity runs of it measure the fallback; Bandit Camp threat 4 at level 8 is won 500 of 500 by every plan, so parity needs a harder cell at level 8; at 8 AP with a 4 AP bow, Aimed Shot (6 AP) now gives way to two plain shots, as the blows-that-fit rule intends.
 
-- To steps 21/22 (from step 17 review): Skirmisher's +10 isn't in walk-then-attack previews or the policy's scoring from the current hex (reads the unit's current `moved`); the tree strip labels a Spellsword Strike "(weapon + 1)" even for an Arcane Knight (weapon + 0).
-
-- To step 22 (from step 19): `restore` events have no look yet; the battle's first turn start now logs after `battle_start` (`readySide`/`turnBegins` split).
 
 
-- To step 22 (from step 20): the six spells' looks are placeholders; a revived unit's figure must stand up again on a `revived` outcome.
 
-- To step 22 (from step 20 review): Purify's log line says "is cleansed" even with no hostile status to remove — say it only when one was; `AttackEvent.helpless`'s comment still says "asleep".
 
-- To step 22 (from step 21): the tree strip's hint is cut to one line (`STRIP_HINT_LINES`) so long capstone asks fit — check it in the browser.
+
 - To stage 4 (from step 21): Delwyn's capstone comes at 14, not 12: C5 gives him Arcane Study at creation where the design's build B has Destruction, shifting every pick a level — give him the design's build B picks (orchestrator decision); AC1's first tier-3 for Swordmaster and Ranger plans comes at 8; Swift Hands still discounts Purify.
 
-- To step 22 (from step 21 review): `healCast` ignores the healer's `healBonus` (Mending) when judging what a heal restores — add it before the cap, with a staged test; Deathblow's description should say "a quarter of its maximum hit points".
 
 ## Verification
 
