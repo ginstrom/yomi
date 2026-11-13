@@ -43,7 +43,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | 15 | [Simulator: `--plans` and technique counts](15-simulator-plans.md) | `--plans role=plan,...`; per-side techniques used, taunts, pins, mana on techniques | 13 | sonnet | done (df74ce6) |
 | 16 | [Stage 2: measure and document](16-stage2-measure.md) | Campaigns, cells and a first parity look measured; guard re-recorded; docs current | 14, 15 | sonnet | done (e45b36d, ffba662, e62ea8c, 82032ff; opus engineer by the orchestrator's decision) |
 | **Stage 3: traits, auras, capstones and the special spells** | | | | | |
-| 17 | [Attack and movement traits](17-attack-traits.md) | Iron Skin's free attacks, Counter, Tumble, Skirmisher, Backstab, Ambush, Executioner, Fortune's critical damage, Deadeye, Battle Mage's mana on hit, Arcane Knight; `LOG_SCHEMA_VERSION` 26, `SAVE_VERSION` 25 | 16 | opus | in progress |
+| 17 | [Attack and movement traits](17-attack-traits.md) | Iron Skin's free attacks, Counter, Tumble, Skirmisher, Backstab, Ambush, Executioner, Fortune's critical damage, Deadeye, Battle Mage's mana on hit, Arcane Knight; `LOG_SCHEMA_VERSION` 26, `SAVE_VERSION` 25 | 16 | opus | done (ca4c33a) |
 | 18 | [Kill and survival traits](18-kill-survival-traits.md) | Deathblow, Blademaster, Unbreakable through `applyDamage` | 17 | opus | pending |
 | 19 | [Auras and turn-start restores](19-auras-restores.md) | Guardian, Aura of Courage, Aegis (`auraBonus`, `statsIn`); Sanctuary, the `renewing` status, Serenity's mana, Shadowdancer; `RestoreEvent` | 18 | opus | pending |
 | 20 | [The special spells](20-special-spells.md) | Purify, Revive, Renew, Holy Light, Ice Lance, Glacial Prison; `frozen`; `hostile` and `helpless` on statuses | 19 | opus | pending |
