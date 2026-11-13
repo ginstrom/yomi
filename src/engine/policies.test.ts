@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
+import { deriveCombatStats } from '../character/character.ts'
 import { autoAdvance, levelUp } from '../character/progression.ts'
 import { mulberry32 } from '../combat/rng.ts'
 import { ENCOUNTERS, ENCOUNTER_BANDS, type EncounterId } from '../game/encounters.ts'
@@ -377,20 +378,50 @@ describe('policies', () => {
     describe('a technique against a plain attack (1)', () => {
       const ARMOURED: CombatantStats = { ...GOBLIN_STATS, maxHp: 60, resistance: 4 }
 
-      it('power-attacks an armoured foe, where +6 damage outweighs −10 to hit on equal AP', () => {
+      it('power-attacks an armoured foe, where +6 damage outweighs −10 to hit, though two plain blows fit in 12 AP', () => {
         const engine = stage(hero(['power_attack'], { actionPoints: 12 }), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: ARMOURED }])
         const state = engine.getState()
-        // 45% of (4.5 + 6 − 4), times 5 AP over 7: against a plain blow's 55% of 1.
-        expect(techniqueScore(state, unitAt(engine, 'p1'), 'power_attack', unitAt(engine, 'e1'))).toBeCloseTo((0.45 * 6.5 * 5) / 7, 10)
+        // 45% of (4.5 + 6 − 4), one Power Attack in 12 AP against two plain blows of 55% of 1.
+        expect(techniqueScore(state, unitAt(engine, 'p1'), 'power_attack', unitAt(engine, 'e1'))).toBeCloseTo((0.45 * 6.5) / 2, 10)
         expect(engine.legalActions('p1')).toContainEqual(ATTACK_E1)
         expect(choose(engine)).toEqual(use('power_attack', 'e1'))
       })
 
       it('makes the plain attack where −10 to hit costs more than +6 damage gains', () => {
-        // AC 60: a plain blow at 10% for 4.5 (0.45), the technique at the floor of 5% for 10.5, times 5/7 (0.375).
+        // AC 60: a plain blow at 10% for 4.5 (0.45), the technique at the floor of 5% for 10.5, one against two (0.2625).
         const engine = stage(hero(['power_attack'], { actionPoints: 12 }), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: { ...GOBLIN_STATS, ac: 60, resistance: 0 } }])
         expect(engine.legalActions('p1')).toContainEqual(use('power_attack', 'e1'))
         expect(choose(engine)).toEqual(ATTACK_E1)
+      })
+
+      it('power-attacks with a level-4 swordmaster’s iron sword at 8 AP, where either blow fits once (the step-15 review’s case)', () => {
+        const aldric = readyMadeParty()[0]
+        while (aldric.level < 4) {
+          levelUp(aldric)
+          autoAdvance(aldric, 'swordmaster')
+        }
+        const stats = deriveCombatStats(aldric)
+        expect(stats.abilities).toContain('power_attack')
+        expect([stats.attackApCost, stats.actionPoints]).toEqual([5, 8])
+        const engine = stage(stats, hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: { ...GOBLIN_STATS, maxHp: 60, resistance: 0 } }])
+        // 7 AP and 5 AP each fit once in 8: Power Attack's +6 outweighs its −10 to hit, as one blow against one.
+        expect(choose(engine)).toEqual(use('power_attack', 'e1'))
+      })
+
+      it('weighs blows that fit, not the AP ratio: at 10 AP two plain blows fit and one Power Attack', () => {
+        const engine = stage(hero(['power_attack'], { actionPoints: 10 }), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: { ...GOBLIN_STATS, maxHp: 60, resistance: 4 } }])
+        // One Power Attack (45% of 6.5) against two plain blows (2 × 55% of 1), in a plain blow's units: halved.
+        expect(techniqueScore(engine.getState(), unitAt(engine, 'p1'), 'power_attack', unitAt(engine, 'e1'))).toBeCloseTo((0.45 * 6.5) / 2, 10)
+      })
+
+      it('counts a recharging technique once a turn, however many fit', () => {
+        const big = { ...GOBLIN_STATS, maxHp: 60, resistance: 0 }
+        const score = (ap: number) => {
+          const engine = stage(hero(['cleave'], { actionPoints: ap }), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: big }])
+          return techniqueScore(engine.getState(), unitAt(engine, 'p1'), 'cleave', unitAt(engine, 'e1'))
+        }
+        // 14 AP fits two Cleaves (7 AP) and two plain blows; Cleave recharges, so one Cleave against two blows.
+        expect(score(14)).toBeCloseTo(score(7) / 2, 10)
       })
 
       it('scores Cleave’s second blow on the other foe in reach', () => {
@@ -408,15 +439,15 @@ describe('policies', () => {
         const fresh = stage(hero(['venom_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1) }])
         const poisoned = stage(hero(['venom_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1), statuses: [{ id: 'poisoned', turnsLeft: 2 }] }])
         const score = (engine: BattleEngine) => techniqueScore(engine.getState(), unitAt(engine, 'p1'), 'venom_strike', unitAt(engine, 'e1'))
-        // 55% to hit; 5 AP over 6.
-        expect(score(fresh) - score(poisoned)).toBeCloseTo((STATUS_VALUE.poisoned! * 0.55 * 5) / 6, 10)
-        expect(score(poisoned)).toBeCloseTo(((0.55 * 3.5 - MANA_WEIGHT * 2) * 5) / 6, 10)
+        // 55% to hit; at 8 AP one Venom Strike (6 AP) fits, as one plain blow (5 AP) does.
+        expect(score(fresh) - score(poisoned)).toBeCloseTo(STATUS_VALUE.poisoned! * 0.55, 10)
+        expect(score(poisoned)).toBeCloseTo(0.55 * 3.5 - MANA_WEIGHT * 2, 10)
       })
 
       it('counts Flame Strike’s searing at the target’s regeneration', () => {
         const at = (regeneration: number) => stage(hero(['flame_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: { ...GOBLIN_STATS, regeneration } }])
         const score = (engine: BattleEngine) => techniqueScore(engine.getState(), unitAt(engine, 'p1'), 'flame_strike', unitAt(engine, 'e1'))
-        expect(score(at(3)) - score(at(0))).toBeCloseTo((3 * 0.55 * 5) / 6, 10)
+        expect(score(at(3)) - score(at(0))).toBeCloseTo(3 * 0.55, 10)
       })
     })
 
@@ -774,7 +805,7 @@ describe('policies', () => {
     expect(isPolicyName('toString')).toBe(false)
   })
 
-  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques)', () => {
+  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, and in step 16 when a technique came to be weighed by the blows that fit this turn)', () => {
     /** Every action `aggressive` chooses, both sides, over each encounter at each threat of its band against the ready-made party of that level, a few seeds, 8 rounds at most. */
     function choices(): string[] {
       const lines: string[] = []
@@ -805,8 +836,8 @@ describe('policies', () => {
 
     it('are what they were', () => {
       const lines = choices()
-      expect(lines.length).toBe(4646)
-      expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe('5754c569f1e7c87b5c156d472f3c055fe310225794891c800246d86f63724bef')
+      expect(lines.length).toBe(4637)
+      expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe('c4dcc6b73c3f4c764e8b624cee42585b2d66f8abdf0a1476eba132616cf854c0')
     }, 60_000)
   })
 })

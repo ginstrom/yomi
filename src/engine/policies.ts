@@ -67,7 +67,7 @@ const END_TURN: Action = { type: 'end_turn' }
  * strike the chance to hit (flanking, side and rear included) times the
  * damage of a hit through the foe's resistance, so that it leaves the
  * heavily armoured to weapons that pierce them, or a technique scoring
- * higher on equal AP (`techniqueScore`), or an area ability with
+ * higher by the blows that fit this turn (`techniqueScore`), or an area ability with
  * damage whose net harm (to foes, less to its own side) is above 0 and
  * above that strike's; otherwise an area ability that only lays a status
  * (Web), where it touches a foe without it and none of its own side;
@@ -410,12 +410,14 @@ function nextFoe(state: BattleState, self: UnitSnapshot, besides: UnitSnapshot):
 }
 
 /**
- * A technique's score against `target`, weighed against a plain attack on
- * equal AP: over its strikes (a strike that `spreads` scored on the foe it
- * would go to), the expected harm, plus each status it lays on a hit worth
- * `statusWorth` times the strike's chance, where the foe lacks it, less
- * `MANA_WEIGHT` a point of mana; all times the weapon's attack AP over the
- * technique's.
+ * A technique's score against `target`, in a plain attack's units: over
+ * its strikes (a strike that `spreads` scored on the foe it would go to),
+ * the expected harm, plus each status it lays on a hit worth `statusWorth`
+ * times the strike's chance, where the foe lacks it, less `MANA_WEIGHT` a
+ * point of mana; all times the uses that fit in the AP the unit has left
+ * this turn (once with a recharge, and no more than its mana pays for),
+ * over the plain blows that fit (at least one). So a 7 AP Power Attack and
+ * a 5 AP blow at 8 AP are weighed one against one.
  */
 export function techniqueScore(state: BattleState, self: UnitSnapshot, ability: AbilityId, target: UnitSnapshot): number {
   const known = ABILITIES[ability]
@@ -427,7 +429,16 @@ export function techniqueScore(state: BattleState, self: UnitSnapshot, ability: 
     total += expectedHarm(state, self, foe, dice, strike)
     if (strike.status && !hasStatus(foe, strike.status.id)) total += statusWorth(strike.status.id, foe) * blowChance(state, self, foe, strike)
   }
-  return ((total - MANA_WEIGHT * (known.manaCost ?? 0)) * self.attackApCost) / abilityApCost(self, ability)
+  return ((total - MANA_WEIGHT * (known.manaCost ?? 0)) * usesThisTurn(self, ability)) / Math.max(1, Math.floor(self.ap / self.attackApCost))
+}
+
+/** How many times `ability` could be used with the AP the unit has left this turn: once with a recharge, and no more than its mana pays for. */
+function usesThisTurn(self: UnitSnapshot, ability: AbilityId): number {
+  const known = ABILITIES[ability]
+  let uses = Math.floor(self.ap / abilityApCost(self, ability))
+  if (known.recharge > 0) uses = Math.min(uses, 1)
+  if (known.manaCost) uses = Math.min(uses, Math.floor(self.mana / known.manaCost))
+  return Math.max(1, uses)
 }
 
 /** One way to strike a foe and what it is worth: a plain attack, a routine (a monster's) or a technique. */
