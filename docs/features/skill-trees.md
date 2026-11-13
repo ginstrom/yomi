@@ -54,7 +54,6 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 - Step 01 baseline is the reference (SN5 441, SP5 445), not CLAUDE.md's older figures.
 
-- To step 17 (from step 05): when raising SAVE_VERSION to 25, add 24 to parseSave's accepted list `[SAVE_VERSION, 22, 18]`; no game migration needed.
 
 - To the stage-4 polish: nameplate status letters are ~7 px at 840×560 (step 14). And (from step 06 screenshots): the tree view works and fits at 840×560 but is plain: no lines between a node and what it requires, and the kind stripes are faint. Make it look like a tree before the feature is done.
 
@@ -75,6 +74,9 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 - To step 22 (from step 14 review): foe hover panel shows no AP cost for Taunt, Sprint and Hunter's Mark (only for abilities with mana, weaponAp or needs) — show it for every hero technique; an un-elemental on-hit reads as a bare "+4" (Smite) — say "+4 holy" or "+4 on hit"; a skill-row hover overwrites the header hint and doesn't restore it.
 
 - To stage 4 (from step 16): the `assassin` plan is unreachable for the ready-made heroes (Keen Eye asks Luck 6; they have 4 or less), so parity runs of it measure the fallback; Bandit Camp threat 4 at level 8 is won 500 of 500 by every plan, so parity needs a harder cell at level 8; at 8 AP with a 4 AP bow, Aimed Shot (6 AP) now gives way to two plain shots, as the blows-that-fit rule intends.
+
+- To step 18 (from step 17 review): add draw-count asserts for Skirmisher, Executioner and Fortune (the three traits without one).
+- To steps 21/22 (from step 17 review): Skirmisher's +10 isn't in walk-then-attack previews or the policy's scoring from the current hex (reads the unit's current `moved`); the tree strip labels a Spellsword Strike "(weapon + 1)" even for an Arcane Knight (weapon + 0).
 
 ## Verification
 
