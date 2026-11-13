@@ -39,7 +39,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | 11 | [Taunt, Rooted and Pin](11-taunt-rooted-pin.md) | `taunted`, `rooted`, `pinned`; `StatusLaidEvent`; `UnitRecord.moved`; `ActiveStatus.source`; trait `rooted`; `SAVE_VERSION` 24 (AC5) | 10 | opus | done (9ec03ef) |
 | 12 | [The policy uses techniques](12-policy-techniques.md) | `bestStrike` weighs techniques; `tauntUse`, `markUse`, `sprintUse`; taunted units turn on the source; monsters unchanged | 11 | opus | done (c920348) |
 | 13 | [Stage-2 nodes and plans](13-stage2-nodes.md) | The 18 stage-2 nodes in `PERKS`; plans and bandit plans take them; Battle Mage's imbue | 12 | sonnet | done (3ef4ea0, guard in the next commit) |
-| 14 | [The Skills menu and the techniques' looks](14-skills-menu.md) | `skillMenu.ts`; the Skills button (M); targeting; effects and log lines; nameplate marks; `foeInfo`; AC7 in the browser | 13 | opus | done (a956def) |
+| 14 | [The Skills menu and the techniques' looks](14-skills-menu.md) | `skillMenu.ts`; the Skills button (M); targeting; effects and log lines; nameplate marks; `foeInfo`; AC7 in the browser | 13 | opus | done (294507c; rename a956def) |
 | 15 | [Simulator: `--plans` and technique counts](15-simulator-plans.md) | `--plans role=plan,...`; per-side techniques used, taunts, pins, mana on techniques | 13 | sonnet | pending |
 | 16 | [Stage 2: measure and document](16-stage2-measure.md) | Campaigns, cells and a first parity look measured; guard re-recorded; docs current | 14, 15 | sonnet | pending |
 | **Stage 3: traits, auras, capstones and the special spells** | | | | | |

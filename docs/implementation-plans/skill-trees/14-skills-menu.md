@@ -280,7 +280,7 @@ PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH npm run test:browser
 
 ## 7. Execution record
 
-**Commit:** a956def. Engineer: session model. 2026-11-14.
+**Commit:** 294507c (the change), after a956def (the rename alone, committed by a mis-staged add; not amended). Engineer: session model. 2026-11-14.
 
 **What was built**
 
