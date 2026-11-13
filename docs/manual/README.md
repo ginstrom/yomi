@@ -78,13 +78,15 @@ An untrained skill sits near 10%, and against an armoured foe that becomes the m
 
 ### Perks and spells
 
-![The perk tree in creation](images/creation-perks.png)
+![The Warrior tree in creation](images/creation-perks.png)
 
-You have **3 perk picks**. The perk tree has a branch for each attribute. Click an open perk to take it and click it again to give it back. A line between two perks means the one on the left must be taken first. Section 11 lists every perk.
+You have **3 picks**, and one more comes with every even level. There are four skill trees, **Warrior**, **Scout**, **Mage** and **Cleric**, each with a tab at the top left (or press 1 to 4), and each tree has three paths, one to a column. Any hero may take nodes from any path of any tree. A spell is a node like any other, bought with a pick.
 
-![The spell tree in creation](images/creation-spells.png)
+At creation only the first tier (marked **L1** in the left margin) can be taken: click an open node to take it and click it again to give it back. The tiers below ask a higher level (L2, L6, L12) and nodes already held in the same path; the number beside each path's name is how many of its nodes the hero holds, in gold for the deepest. The bottom of the tree is a **capstone** (★, in a double gold frame): only the hero's deepest path may open its capstone, and a hero may hold only one. A line between two nodes means the upper one must be taken first.
 
-Taking **Spellcasting** (an Intelligence perk that needs 40% Magic) opens the spell tree and gives **2 spell picks**. Use the **Perks / Spells** switch at the top left to move between the trees. Spells come in three schools, each marked by the colour on its node: red for offence, green for healing and blue for support.
+![The Mage tree in creation](images/creation-spells.png)
+
+The coloured stripe on a node's left edge says what it is: dim gold for a passive, blue for a spell. Point at a node to read, under the tree, what it does (with a spell's mana and action points), what it asks, and why it is closed.
 
 If a change you make leaves a perk you already took without its requirements, that perk is dropped and its pick returned, and the screen says so.
 
@@ -205,9 +207,10 @@ Press **C**, or click the portrait of the hero marked in gold, to open the chara
 | S | Skills |
 | B | Spells |
 | I | Inventory |
-| P | Perk tree (press again to go back to Skills) |
-| K | Spell tree (press again to go back to Spells) |
-| Esc | Close, or step back from a tree |
+| P | Skill trees (press again to go back to Skills) |
+| K | Skill trees on the Mage tree (press again to go back to Spells) |
+| 1 to 4 | In the skill trees: Warrior, Scout, Mage, Cleric |
+| Esc | Close, or step back from the skill trees |
 
 To switch the panel to another hero, click their portrait on the left.
 
@@ -221,17 +224,17 @@ This tab shows the hero's attributes, their level and experience, and what they 
 
 ![The Skills tab](images/panel-skills.png)
 
-When the hero has skill points to spend, a **+** appears beside each skill. The tab lists the perks the hero has taken. Press **Perk Tree** (or P) to choose new ones.
+When the hero has skill points to spend, a **+** appears beside each skill. The tab lists the nodes the hero has taken, spells aside. Press **Skill Trees** (or P) to choose new ones: the view opens on the tree of the hero's deepest path, and its tabs (or 1 to 4) show the others.
 
-![The perk tree](images/panel-perk-tree.png)
+![The skill trees](images/panel-perk-tree.png)
 
-Perks you can take now are drawn brightly, and a taken perk shows its ranks (for example 1/2). Most perks also ask a minimum in their attribute, so a dim perk may be waiting for a higher attribute rather than a higher level.
+Nodes you can take now are framed in gold, and a click takes one for a pick. A taken node is gold with a ✓. A dim node is closed: point at it to see what it still asks, a level, an attribute, a skill or nodes in its path. A capstone closed by another path being deeper, or by a capstone already held, is drawn in rust with a ✕. In battle the trees can be read but not changed.
 
 ### Spells
 
 ![The Spells tab](images/panel-spells-mage.png)
 
-This tab lists the spells the hero knows, the mana they are carrying and their **spell skill**, the chance a spell strikes before the foe's armour, with what their gear adds or takes shown beside it. On the world map, the **Cast** button beside a heal casts it out of battle. A heal on one hero asks you to click that hero's portrait. A heal cast on the world map always restores the average of its dice. **Spell Tree** (or K) opens the spell tree.
+This tab lists the spells the hero knows, the mana they are carrying and their **spell skill**, the chance a spell strikes before the foe's armour, with what their gear adds or takes shown beside it. On the world map, the **Cast** button beside a heal casts it out of battle. A heal on one hero asks you to click that hero's portrait. A heal cast on the world map always restores the average of its dice. **Spell Tree** (or K) opens the skill trees on the Mage tree.
 
 ### Inventory
 

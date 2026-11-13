@@ -183,7 +183,7 @@ describe('a battle', () => {
 
     await game.click(start.party[2])
     const selected = await game.waitFor('Battle', (b) => b.selected === 'hero_3')
-    expect(mage(selected)).toMatchObject({ mana: 18, ap: 8 })
+    expect(mage(selected)).toMatchObject({ mana: 24, ap: 8 })
     // Heal can always be cast on the caster itself; no foe is within Magic Arrow's range yet.
     expect(selected.buttons.cast).toMatchObject({ visible: true, enabled: true })
     await game.click(selected.buttons.cast)
@@ -216,15 +216,15 @@ describe('a battle', () => {
     await game.click(battleHexOnScreen(picking, foe.position))
     const after = await game.waitFor('Battle', (b) => b.log.some((e) => e.type === 'cast') && (b.playerControl || b.buttons.result.visible))
     expect(after.log.filter((e) => e.type === 'cast')).toMatchObject([
-      { caster: 'hero_3', spell: 'magic_arrow', target: 'goblin', manaCost: 3, manaAfter: 15, apAfter: 1, outcomes: [{ unit: 'goblin' }] },
+      { caster: 'hero_3', spell: 'magic_arrow', target: 'goblin', manaCost: 3, manaAfter: 21, apAfter: 1, outcomes: [{ unit: 'goblin' }] },
     ])
-    expect(mage(after)).toMatchObject({ mana: 15, ap: 1 })
+    expect(mage(after)).toMatchObject({ mana: 21, ap: 1 })
     expect(after.casting).toBeNull()
 
     // The panel shows what mana is left.
     await game.press('c')
     await game.waitForScenes(['Inventory'], ['Battle'])
-    expect((await game.waitFor('Inventory', (p) => p.party[2].active)).mana).toBe(15)
+    expect((await game.waitFor('Inventory', (p) => p.party[2].active)).mana).toBe(21)
     await game.press('Escape')
     await game.waitForScenes(['Battle'])
 
@@ -242,7 +242,7 @@ describe('a battle', () => {
     await game.click(battleHexOnScreen(healing, mage(healing).position))
     const healed = await game.waitFor('Battle', (b) => b.log.some((e) => e.type === 'cast' && e.spell === 'heal'))
     const heal = healed.log.find((e) => e.type === 'cast' && e.spell === 'heal')!
-    expect(heal).toMatchObject({ caster: 'hero_3', manaCost: 3, manaAfter: 12, outcomes: [{ unit: 'hero_3', attackRoll: null }] })
+    expect(heal).toMatchObject({ caster: 'hero_3', manaCost: 3, manaAfter: 18, outcomes: [{ unit: 'hero_3', attackRoll: null }] })
   })
 
   it('pauses under the menu on Esc, resumes on Continue, and is dropped for a new game', async () => {

@@ -231,13 +231,26 @@ npm run test:browser
 
 ## 6. Completion criteria
 
-- [ ] `PerkTreeView` draws the four-tab view for any node count; the panel and creation use it.
-- [ ] `TREE_SWITCH` gone; creation's rule line and T1-only clicks.
-- [ ] Probes updated in `src/testHook.ts`.
-- [ ] `perkTree.test.ts` covers the layout, strip and hints; `npm test` passes; guard green and unchanged.
-- [ ] `npm run test:browser` passes, step 03's interim failures restored.
-- [ ] `CLAUDE.md` and the manual's §2 and §4 text updated.
-- [ ] Committed as "Skill trees step 06: the tree view in the panel and in creation"; the index's row set to `done (<commit>)`.
+- [x] `PerkTreeView` draws the four-tab view for any node count; the panel and creation use it.
+- [x] `TREE_SWITCH` gone; creation's rule line and T1-only clicks.
+- [x] Probes updated in `src/testHook.ts`.
+- [x] `perkTree.test.ts` covers the layout, strip and hints; `npm test` passes; guard green and unchanged.
+- [x] `npm run test:browser` passes, step 03's interim failures restored.
+- [x] `CLAUDE.md` and the manual's §2 and §4 text updated.
+- [x] Committed as "Skill trees step 06: the tree view in the panel and in creation"; the index's row set to `done (<commit>)`.
 
 ## 7. Execution record
 
+
+**Done.** Commands (Node 26): `npx vitest run src/scenes/perkTree.test.ts` 24 green; `npm test` 85 files, 1602 tests green (the refactor guard green and unchanged); `npm run build` green; `npm run test:browser` full run 113 of 115, the two failures being stale mana figures (below), fixed and then `npm run test:browser -- e2e/battle.test.ts e2e/character.test.ts e2e/party.test.ts` 30 of 30. No simulator run.
+
+**What was built.** `perkTree.ts`: the view's geometry (`TREE_X` 20, columns 226, nodes 214×27, rows 31, `TREE_ROWS` 10, `TREE_STRIP_Y` 414, `nodeRect`), the tree tabs (`treeTabRect`, `treeTabLabel` with the nodes held in the tree, `treeForKey` for 1–4, `openingTree`: the calling's tree, else Warrior), `pathHeading`, `nodeSummary` (strip line 1; a spell's mana and `spellApCost`; an ability's cost through `costWords`, "3 mana, 6 AP (weapon + 1)", read from `Perk.ability` / `Ability.manaCost` / `weaponAp` when present, so step 13 needs no change) and `draftNodeClickable` (tier 1 only). `PerkTreeView` draws the four tabs (`addPanelButton`), headings, tier bands, kind stripes, capstone double frame and ★, a taken node gold with ✓, a locked capstone in rust with ✕, `requires` lines and a three-line strip (each line placed under the one before, line 1 may wrap). `InventoryScene`: `perkTree` and `spellTree` both show the one view (P on the calling's tree, K on Mage), 1–4 switch, Back/Esc return to the tab it came from; the Skills tab's button reads "Skill Trees". `CreationScene`: `TREE_SWITCH` gone; tabs and 1–4; the rule line as quoted; the summary column gives way to the full-width tree on the perks step (picks and notes beside the tabs). Probes: `CreationProbe.tree: TreeId`, `trees`; `InventoryProbe.tree`, `trees`, `nodeSize`; `spellNodes` removed (`perks` is the shown tree's).
+
+**Deviations.**
+- **`treeLayout` aligns tiers across columns** (C9 said only "nodes from row 1 in PERKS order"): each tier starts on the same row in all three columns (a tier's rows = the most any path has of it), still in PERKS order within a column. With unaligned rows a single `tierBands` row per tier could not mark the bands (the Scout tree's L6 fell on Skirmisher's T2 row). Shapes unchanged; rows have gaps. At 95 nodes the Warrior and Scout trees need 9 node rows (T1 2, T2 3, T3 3, ★ 1), so the view keeps 10 rows (heading + 9) and the strip starts at y 414, not 441; one row fewer than the design's "two left free", and names fit one line at 214 px (a longer one wraps at 11 px). Step 03's row test rewritten for this.
+- **Stale e2e mana figures from step 04** (Delwyn now 24 mana, AC4): `e2e/battle.test.ts` (24/21/18) and `e2e/character.test.ts` (24, 21 after a heal) still said 18/15/12 and failed in the full run; updated here.
+- Creation's perks step no longer shows the summary (HP, mana, skills) — the tree takes the whole width.
+
+**Screenshots** (840×560 and 1280×800, scratchpad, not committed): `/private/tmp/claude-501/-Users-ryan-personal-yomi/d27ee47a-1631-4550-8a30-1ea2385e2b8a/scratchpad/shots/` panel-warrior-840.png, panel-warrior-hover-840.png, panel-scout-840.png (locked Deadeye), panel-mage-840.png (requires lines, Fireball strip), panel-cleric-840.png, creation-warrior-840.png, creation-warrior-hover-840.png, creation-scout-840.png, and the same at 1280. Checked: labels fit, no overlap, tabs/headings/bands/states/capstones read.
+
+**For later steps.** Step 07 renames `perkTree`/`spellTree` and drops K; `openTree`/`showTree` in InventoryScene. `manual.shots.ts` points at `trees.mage`; screenshots not retaken (step 26).

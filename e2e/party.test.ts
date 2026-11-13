@@ -165,27 +165,37 @@ describe('the party screen', () => {
 
     const perks = await toStep(game, 'perks')
     const node = (creation: CreationProbe, perk: string) => creation.perks.find((n) => n.perk === perk)!
+    expect(perks.tree).toBe('warrior')
+    expect(Object.values(perks.trees).every((tab) => tab.visible && tab.enabled)).toBe(true)
     expect(node(perks, 'toughness').canClick).toBe(true)
-    // Only the first tier is open at creation: Gain Strength and Armour Breaker ask level 2.
+    // Only the first tier answers a click at creation: Gain Strength and Armour Breaker ask level 2.
     expect(node(perks, 'gain_strength').canClick).toBe(false)
     expect(node(perks, 'armor_breaker').canClick).toBe(false)
-    // Until skill trees step 06 the switch shows the Mage tree, where nothing is open to intelligence 4 and Magic 8%.
-    await game.click(perks.treeSwitch.spells)
-    const spellTree = await game.waitFor('Creation', (c) => c.tree === 'spells')
-    expect(spellTree.perks).toHaveLength(22)
-    expect(spellTree.perks.some((n) => n.canClick)).toBe(false)
-    await game.click(spellTree.treeSwitch.perks)
-    await game.waitFor('Creation', (c) => c.tree === 'perks')
-    await game.click(node(perks, 'toughness'))
-    await game.waitFor('Creation', (c) => c.perkPicks === 2)
     await game.click(node(perks, 'weapon_training'))
-    const picked = await game.waitFor('Creation', (c) => c.perkPicks === 1)
-    expect(picked.draft.perks).toEqual(['toughness', 'weapon_training'])
-    // A node has one rank: a click on one taken gives it back, and another takes it again.
-    await game.click(node(picked, 'weapon_training'))
     await game.waitFor('Creation', (c) => c.perkPicks === 2)
-    await game.click(node(picked, 'weapon_training'))
+
+    // The Scout tree, by its tab: Keen Eye (luck 6) is open, Far Shot of the second tier is not.
+    await game.click(perks.trees.scout)
+    const scout = await game.waitFor('Creation', (c) => c.tree === 'scout')
+    expect(node(scout, 'keen_eye').canClick).toBe(true)
+    expect(node(scout, 'far_shot').canClick).toBe(false)
+    await game.click(node(scout, 'far_shot'))
+    await game.click(node(scout, 'keen_eye'))
+    const picked = await game.waitFor('Creation', (c) => c.perkPicks === 1)
+    expect(picked.draft.perks).toEqual(['weapon_training', 'keen_eye'])
+    // A node has one rank: a click on one taken gives it back, and another takes it again.
+    await game.click(node(picked, 'keen_eye'))
+    await game.waitFor('Creation', (c) => c.perkPicks === 2)
+    await game.click(node(picked, 'keen_eye'))
     await game.waitFor('Creation', (c) => c.perkPicks === 1)
+
+    // Keys 1 to 4 switch trees too: the Mage tree, where nothing is open to intelligence 4 and Magic 8%.
+    await game.press('3')
+    const mage = await game.waitFor('Creation', (c) => c.tree === 'mage')
+    expect(mage.perks.some((n) => n.canClick)).toBe(false)
+    await game.press('1')
+    const warrior = await game.waitFor('Creation', (c) => c.tree === 'warrior')
+    expect(node(warrior, 'weapon_training').ranks).toBe(1)
 
     const naming = await toStep(game, 'name')
     expect(naming.buttons.create).toMatchObject({ visible: true, enabled: false })
@@ -296,6 +306,12 @@ describe('the party screen', () => {
     await game.waitForScenes(['Creation'])
     const creation = await game.settled('Creation')
     for (const { x, y } of [creation.buttons.cancel, creation.buttons.next, creation.steps.attributes, creation.attributes.luck.plus]) {
+      expect(x > 0 && x < 840 && y > 0 && y < 560).toBe(true)
+    }
+    // The perks step's four tree tabs and every node of each tree fit too.
+    await game.click(creation.steps.perks)
+    const perks = await game.settled('Creation', (c) => c.step === 'perks')
+    for (const { x, y } of [...Object.values(perks.trees), ...perks.perks]) {
       expect(x > 0 && x < 840 && y > 0 && y < 560).toBe(true)
     }
   })

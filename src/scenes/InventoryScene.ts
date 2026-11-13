@@ -55,11 +55,12 @@ import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook } from './unitLook.ts'
 import { PARTY_PANEL_W, portraitKey } from './partyPanel.ts'
-import { nodeHint, perkTitle } from './perkTree.ts'
+import { NODE_H, NODE_W, nodeHint, openingTree, perkTitle, treeForKey } from './perkTree.ts'
 import { PerkTreeView } from './PerkTreeView.ts'
+import type { TreeId } from '../character/trees.ts'
 import { SlotScroll } from './slotScroll.ts'
 
-/** What the panel can show: one of its four tabs, or a tree, the perk tree opened from the Skills tab and the spell tree from the Spells tab. */
+/** What the panel can show: one of its four tabs, or the tree view, opened from the Skills tab (on the calling's tree) or the Spells tab (on the Mage tree). */
 type PanelTab = InventoryProbe['tab']
 type MainTab = Exclude<PanelTab, 'perkTree' | 'spellTree'>
 const TABS: ReadonlyArray<readonly [tab: MainTab, label: string]> = [
@@ -173,12 +174,11 @@ const PERK_ROW_Y = 104
 const PERK_ROW_H = 38
 const TREE_BUTTON = { x: PERKS_X + PERKS_W / 2, y: 462, width: 160, height: 32 }
 
-/** The perk tree's heading and its button back; the tree itself is `PerkTreeView`'s. */
-const TREE_X = 20
-const BACK_BUTTON = { x: PANEL_W - 20 - 40, y: 75, width: 80, height: 26 }
+/** The tree view's button back, beside its tabs; the tree itself is `PerkTreeView`'s. */
+const BACK_BUTTON = { x: PANEL_W - 20 - 40, y: 75, width: 80, height: 24 }
 /** What the strip says with the pointer on no node. */
-const TREE_RULE = 'The Warrior tree. A new character has 3 picks, and one more comes at every even level. A line from a node means it must be taken first.'
-const SPELL_TREE_RULE = 'The Mage tree. A pick buys a spell as it buys any node. A line from a spell means it must be learned first.'
+const TREE_RULE =
+  'Four trees of three paths: any path, any tree. A pick comes with every even level; a node of a higher tier asks its level and nodes in its path, and only your deepest path may open its capstone (★). Keys 1 to 4 switch trees.'
 
 /** The spells tab: the spells known in two columns, each row with a Cast button on the world map for a heal. */
 const SPELLS_X = 24
@@ -290,8 +290,9 @@ export class InventoryScene extends Phaser.Scene {
   /** Where the Inventory tab's stat lines end, which the gear hint below keeps clear of. */
   private statsBottom = 0
   private treeContent!: Phaser.GameObjects.Container
+  /** The tree the tree view shows. */
+  private tree: TreeId = 'warrior'
   private spellsContent!: Phaser.GameObjects.Container
-  private spellTreeContent!: Phaser.GameObjects.Container
   /** A one-member heal being cast on the world map, waiting for a portrait to be clicked; null otherwise. */
   private worldCast: HeroSpellId | null = null
   private tabButtons: Record<MainTab, TabButton> = {} as Record<MainTab, TabButton>
@@ -325,6 +326,7 @@ export class InventoryScene extends Phaser.Scene {
     this.press = null
     this.doll = null
     this.setMember(data.index ?? 0)
+    this.tree = data.tab === 'spellTree' ? 'mage' : openingTree(this.character)
     // Right-clicking an item drops it.
     this.input.mouse?.disableContextMenu()
 
@@ -346,15 +348,7 @@ export class InventoryScene extends Phaser.Scene {
     this.inventoryContent = this.add.container(0, 0)
     this.treeContent = this.add.container(0, 0)
     this.spellsContent = this.add.container(0, 0)
-    this.spellTreeContent = this.add.container(0, 0)
-    this.panel.add([
-      this.characterContent,
-      this.skillsContent,
-      this.inventoryContent,
-      this.treeContent,
-      this.spellsContent,
-      this.spellTreeContent,
-    ])
+    this.panel.add([this.characterContent, this.skillsContent, this.inventoryContent, this.treeContent, this.spellsContent])
     this.buildContent()
 
     this.showTab(data?.tab ?? 'inventory')
@@ -370,8 +364,13 @@ export class InventoryScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-C', () => this.onTabKey('character'))
     this.input.keyboard?.on('keydown-S', () => this.onTabKey('skills'))
     this.input.keyboard?.on('keydown-B', () => this.onTabKey('spells'))
-    this.input.keyboard?.on('keydown-P', () => this.showTab(this.activeTab === 'perkTree' ? 'skills' : 'perkTree'))
-    this.input.keyboard?.on('keydown-K', () => this.showTab(this.activeTab === 'spellTree' ? 'spells' : 'spellTree'))
+    this.input.keyboard?.on('keydown-P', () => (this.activeTab === 'perkTree' ? this.showTab('skills') : this.openTree('perkTree')))
+    this.input.keyboard?.on('keydown-K', () => (this.activeTab === 'spellTree' ? this.showTab('spells') : this.openTree('spellTree')))
+    // Keys 1 to 4 switch trees while the tree view is open.
+    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+      const tree = treeForKey(event.key)
+      if (tree && TREE_OF[this.activeTab]) this.showTree(tree)
+    })
     // Esc backs out of choosing whom to heal; from a tree it steps back to the tab it was opened from; from a tab it closes the panel.
     // Esc during a drag lets go of the item where it was, and closes nothing.
     this.input.keyboard?.on('keydown-ESC', () => {
@@ -432,19 +431,18 @@ export class InventoryScene extends Phaser.Scene {
       takenPerks: this.takenPerks().map((id) => ({ perk: id, ranks: perkRanks(this.character, id) })),
       perkTreeButton: onScreen(TREE_BUTTON),
       back: onScreen(BACK_BUTTON),
-      perks: PerkTreeView.nodeCentres().map(({ perk, ...at }) => ({
+      tree: this.tree,
+      trees: Object.fromEntries(
+        Object.entries(PerkTreeView.tabCentres()).map(([tree, at]) => [tree, onScreen(at)]),
+      ) as InventoryProbe['trees'],
+      nodeSize: { width: NODE_W * this.panel.scale, height: NODE_H * this.panel.scale },
+      perks: PerkTreeView.nodeCentres(this.tree).map(({ perk, ...at }) => ({
         ...onScreen(at),
         perk,
         ranks: perkRanks(this.character, perk),
         canTake: this.canTake(perk),
       })),
       spellTreeButton: onScreen(SPELL_TREE_BUTTON),
-      spellNodes: PerkTreeView.nodeCentres('mage').map(({ perk, ...at }) => ({
-        ...onScreen(at),
-        perk,
-        ranks: perkRanks(this.character, perk),
-        canTake: this.canTake(perk),
-      })),
       spells: knownSpells(this.character).map((spell, i) => ({
         ...onScreen(this.castButtonAt(i)),
         spell,
@@ -503,13 +501,11 @@ export class InventoryScene extends Phaser.Scene {
     this.inventoryContent.removeAll(true)
     this.treeContent.removeAll(true)
     this.spellsContent.removeAll(true)
-    this.spellTreeContent.removeAll(true)
     this.buildCharacterTab()
     this.buildSkills()
     this.buildPerks()
     this.buildPerkTree()
     this.buildSpells()
-    this.buildSpellTree()
     this.buildPaperdoll()
     this.buildStats()
     this.buildGearHint()
@@ -556,9 +552,8 @@ export class InventoryScene extends Phaser.Scene {
     this.characterContent.setVisible(tab === 'character')
     this.skillsContent.setVisible(tab === 'skills')
     this.inventoryContent.setVisible(tab === 'inventory')
-    this.treeContent.setVisible(tab === 'perkTree')
+    this.treeContent.setVisible(tab === 'perkTree' || tab === 'spellTree')
     this.spellsContent.setVisible(tab === 'spells')
-    this.spellTreeContent.setVisible(tab === 'spellTree')
     if (tab !== 'inventory') {
       this.hideTooltip()
       this.endPress()
@@ -825,25 +820,41 @@ export class InventoryScene extends Phaser.Scene {
         }),
       ])
     })
-    this.buildPanelButton(this.skillsContent, TREE_BUTTON, 'Perk Tree', this.pickWaits(), () => this.showTab('perkTree'))
+    this.buildPanelButton(this.skillsContent, TREE_BUTTON, 'Skill Trees', this.pickWaits(), () => this.openTree('perkTree'))
   }
 
   // ---- build: perk tree -------------------------------------------------
 
-  /** The tree (`PerkTreeView`) under its heading: a click on an open node takes a rank where a pick can be spent. */
+  /** The tree view (`PerkTreeView`), its tabs, the picks waiting and Back: a click on an open node takes it where a pick can be spent. */
   private buildPerkTree(): void {
-    this.treeContent.add(this.heading('Perk Tree', TREE_X, 66))
-    this.buildPerkStatus(this.treeContent, BACK_BUTTON.x - BACK_BUTTON.width / 2 - 16, 66)
-    this.buildPanelButton(this.treeContent, BACK_BUTTON, 'Back', false, () => this.showTab('skills'))
+    this.buildPerkStatus(this.treeContent, BACK_BUTTON.x - BACK_BUTTON.width / 2 - 16, BACK_BUTTON.y - 9)
+    this.buildPanelButton(this.treeContent, BACK_BUTTON, 'Back', false, () => this.showTab(TREE_OF[this.activeTab] ?? 'skills'))
     new PerkTreeView(this, this.treeContent, {
-      tree: 'warrior',
+      tree: this.tree,
       character: this.character,
       clickable: (perk) => this.canTake(perk),
       onClick: (perk) => this.advance(() => takePerk(this.character, perk)),
+      // Next tick: the redraw destroys the tab whose click handler asked for it.
+      onTree: (tree) => this.time.delayedCall(0, () => this.showTree(tree)),
       hint: (perk) => nodeHint(this.character, perk, this.canAdvance),
       rule: TREE_RULE,
-      stripWidth: PANEL_W - 2 * TREE_X,
     })
+  }
+
+  /** Opens the tree view from its tab: from Skills on the tree of the hero's calling, from Spells on the Mage tree. */
+  private openTree(tab: 'perkTree' | 'spellTree'): void {
+    this.tree = tab === 'spellTree' ? 'mage' : openingTree(this.character)
+    this.treeContent.removeAll(true)
+    this.buildPerkTree()
+    this.showTab(tab)
+  }
+
+  /** Turns the open tree view to `tree`. */
+  private showTree(tree: TreeId): void {
+    if (tree === this.tree) return
+    this.tree = tree
+    this.treeContent.removeAll(true)
+    this.buildPerkTree()
   }
 
   // ---- build: spells tab -------------------------------------------------
@@ -917,7 +928,7 @@ export class InventoryScene extends Phaser.Scene {
         .text(PANEL_W / 2, 444, footer, { fontFamily: FONT, fontSize: '12px', color: this.worldCast ? GOLD : DIM, align: 'center', wordWrap: { width: PANEL_W - 48 } })
         .setOrigin(0.5),
     )
-    this.buildPanelButton(content, SPELL_TREE_BUTTON, 'Spell Tree', this.pickWaits(), () => this.showTab('spellTree'))
+    this.buildPanelButton(content, SPELL_TREE_BUTTON, 'Spell Tree', this.pickWaits(), () => this.openTree('spellTree'))
   }
 
   /** A heal's Cast button: a heal of one asks whom, a heal of all heals at once. */
@@ -962,22 +973,6 @@ export class InventoryScene extends Phaser.Scene {
     const party = this.members.map((member) => member.character)
     if (castOnWorldMap(this.character, spell, party, target)) this.sound.play('sfx_heal', { volume: soundVolume('sfx_heal') })
     this.time.delayedCall(0, () => this.buildContent())
-  }
-
-  /** The spell tree (`PerkTreeView`) under its heading: a click on an open node learns it where a pick can be spent. */
-  private buildSpellTree(): void {
-    this.spellTreeContent.add(this.heading('Spell Tree', TREE_X, 66))
-    this.buildPerkStatus(this.spellTreeContent, BACK_BUTTON.x - BACK_BUTTON.width / 2 - 16, 66)
-    this.buildPanelButton(this.spellTreeContent, BACK_BUTTON, 'Back', false, () => this.showTab('spells'))
-    new PerkTreeView(this, this.spellTreeContent, {
-      tree: 'mage',
-      character: this.character,
-      clickable: (perk) => this.canTake(perk),
-      onClick: (perk) => this.advance(() => takePerk(this.character, perk)),
-      hint: (perk) => nodeHint(this.character, perk, this.canAdvance),
-      rule: SPELL_TREE_RULE,
-      stripWidth: PANEL_W - 2 * TREE_X,
-    })
   }
 
   // ---- build: inventory tab -------------------------------------------------

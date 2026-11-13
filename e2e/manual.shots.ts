@@ -54,8 +54,8 @@ describe('the manual’s screenshots', () => {
       creation = await game.settled('Creation', (c) => c.step === step)
       await shot(game, `creation-${step}`)
       if (step === 'perks') {
-        await game.click(creation.treeSwitch.spells)
-        creation = await game.settled('Creation', (c) => c.tree === 'spells')
+        await game.click(creation.trees.mage)
+        creation = await game.settled('Creation', (c) => c.tree === 'mage')
         await shot(game, 'creation-spells')
       }
     }

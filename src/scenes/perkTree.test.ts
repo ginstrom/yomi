@@ -1,9 +1,30 @@
 import { describe, expect, it } from 'vitest'
-import { createWarrior } from '../character/character.ts'
+import { createWarrior, deriveCombatStats } from '../character/character.ts'
+import { SPELLS, spellApCost } from '../combat/spells.ts'
 import { PERKS, PERK_IDS, perkParent, type Perk } from '../character/perks.ts'
 import { newDraft, type CharacterDraft } from '../character/creation.ts'
 import { TREE_IDS, pathsOf } from '../character/trees.ts'
-import { draftNodeHint, nodeHint, nodeLabel, nodeState, perkTitle, tierBands, treeLayout } from './perkTree.ts'
+import {
+  TREE_ROWS,
+  TREE_STRIP_Y,
+  TREE_X,
+  costWords,
+  draftNodeClickable,
+  draftNodeHint,
+  nodeHint,
+  nodeLabel,
+  nodeRect,
+  nodeState,
+  nodeSummary,
+  openingTree,
+  pathHeading,
+  perkTitle,
+  tierBands,
+  treeForKey,
+  treeLayout,
+  treeTabLabel,
+  treeTabRect,
+} from './perkTree.ts'
 
 /** The warrior: strength 7, perception 4, endurance 7, intelligence 4, agility 6, luck 7. */
 const warriorAt = (level: number, perkPicks = 0) => ({ ...createWarrior(), level, perkPicks })
@@ -21,13 +42,23 @@ describe('treeLayout', () => {
     for (const tree of TREE_IDS) {
       const nodes = treeLayout(tree)
       pathsOf(tree).forEach((path, column) => {
-        const own = nodes.filter((node) => node.column === column)
+        const own = nodes.filter((node) => node.column === column).sort((a, b) => a.row - b.row)
         expect(own.map((node) => node.perk)).toEqual(PERK_IDS.filter((id) => (PERKS[id] as Perk).path === path))
-        expect(own.map((node) => node.row)).toEqual(own.map((_, i) => i + 1))
       })
-      expect(nodes.every((node) => node.column >= 0 && node.column <= 2 && node.row >= 1)).toBe(true)
+      expect(nodes.every((node) => node.column >= 0 && node.column <= 2 && node.row >= 1 && node.row < TREE_ROWS)).toBe(true)
       expect(new Set(nodes.map((node) => `${node.column},${node.row}`)).size).toBe(nodes.length)
       for (const node of nodes) expect(node.from).toBe(perkParent(node.perk))
+    }
+  })
+
+  it('begins each tier on the same row in every column, so the bands run straight across', () => {
+    for (const tree of TREE_IDS) {
+      const bands = tierBands(tree)
+      for (const node of treeLayout(tree)) {
+        const band = bands.findIndex(({ tier }) => tier === (PERKS[node.perk] as Perk).tier)
+        expect(node.row).toBeGreaterThanOrEqual(bands[band].firstRow)
+        if (band + 1 < bands.length) expect(node.row).toBeLessThan(bands[band + 1].firstRow)
+      }
     }
   })
 
@@ -38,24 +69,107 @@ describe('treeLayout', () => {
     expect(at('flame_arrow')).toEqual({ perk: 'flame_arrow', column: 0, row: 3, from: 'magic_arrow' })
     expect(at('meteor')).toMatchObject({ column: 0, row: 8 })
     expect(at('frostbite')).toMatchObject({ column: 1, row: 1 })
+    expect(at('lingering_cold')).toMatchObject({ column: 1, row: 6 })
     expect(at('mass_haste')).toMatchObject({ column: 2, row: 8 })
+  })
+
+  it('leaves a row empty in a column short of a tier: the Scout tree', () => {
+    const scout = treeLayout('scout')
+    const at = (perk: string) => scout.find((node) => node.perk === perk)
+    // Ranger and Rogue have a tier-2 node, Assassin none; Fortune, tier 3, sits on the tier-3 row.
+    expect(at('far_shot')).toMatchObject({ column: 0, row: 3 })
+    expect(at('skirmisher')).toMatchObject({ column: 1, row: 3 })
+    expect(at('evasion')).toMatchObject({ column: 1, row: 4 })
+    expect(at('fortune')).toMatchObject({ column: 2, row: 4 })
+    expect(at('deadeye')).toMatchObject({ column: 0, row: 5 })
+  })
+
+  it('fits every node within the 720 px panel, in rows above the strip', () => {
+    for (const tree of TREE_IDS) {
+      for (const node of treeLayout(tree)) {
+        const { x, y, width, height } = nodeRect(node)
+        expect(x).toBe(TREE_X + node.column * 226)
+        expect(width).toBe(214)
+        expect(x + width).toBeLessThanOrEqual(720)
+        expect(y + height).toBeLessThan(TREE_STRIP_Y)
+      }
+    }
+    expect(TREE_STRIP_Y + 64).toBeLessThanOrEqual(500)
   })
 })
 
 describe('tierBands', () => {
-  it('gives the first row of each tier present in the tree', () => {
+  it('gives the first row of each tier present in the tree, in tier order', () => {
     expect(tierBands('mage')).toEqual([
       { tier: 1, label: 'L1', firstRow: 1 },
       { tier: 2, label: 'L2', firstRow: 3 },
       { tier: 3, label: 'L6', firstRow: 5 },
       { tier: 'capstone', label: 'L12', firstRow: 8 },
     ])
-    // The Warrior tree has no capstone yet; Spellsword's tier 2 is on its second row.
+    // The Warrior tree has no capstone yet; Swordmaster's two tier-2 nodes make the band two rows.
     expect(tierBands('warrior')).toEqual([
       { tier: 1, label: 'L1', firstRow: 1 },
-      { tier: 2, label: 'L2', firstRow: 2 },
-      { tier: 3, label: 'L6', firstRow: 3 },
+      { tier: 2, label: 'L2', firstRow: 3 },
+      { tier: 3, label: 'L6', firstRow: 5 },
     ])
+    for (const tree of TREE_IDS) {
+      const labels = tierBands(tree).map(({ label }) => label)
+      expect(labels).toEqual(['L1', 'L2', 'L6', 'L12'].filter((label) => labels.includes(label as 'L1')))
+    }
+  })
+})
+
+describe('pathHeading', () => {
+  it('names the path with the nodes held in it, the calling marked', () => {
+    const hero = { ...warriorAt(2), perks: { weapon_training: 1, heavy_hand: 1, toughness: 1 } }
+    expect(pathHeading(hero, 'swordmaster')).toEqual({ text: 'Swordmaster  2', calling: true })
+    expect(pathHeading(hero, 'heavy_knight')).toEqual({ text: 'Heavy Knight  1', calling: false })
+    expect(pathHeading(warriorAt(1), 'spellsword')).toEqual({ text: 'Spellsword  0', calling: false })
+  })
+})
+
+describe('nodeSummary', () => {
+  it('gives a passive its path, kind and effect', () => {
+    expect(nodeSummary(warriorAt(1), 'toughness')).toBe(`Toughness (Heavy Knight, passive): ${PERKS.toughness.description}`)
+  })
+
+  it('gives a spell its mana and the AP it costs the character', () => {
+    const { manaCost, apCost, description } = SPELLS.heal
+    expect(nodeSummary(warriorAt(1), 'heal')).toBe(`Heal (Healer, spell): ${manaCost} mana, ${apCost} AP. ${description}`)
+    // Swift Hands takes AP off a heal.
+    const quick = { ...warriorAt(6), perks: { heal: 1, swift_hands: 1 } }
+    expect(nodeSummary(quick, 'heal')).toContain(`${manaCost} mana, ${spellApCost(deriveCombatStats(quick), 'heal')} AP.`)
+    expect(spellApCost(deriveCombatStats(quick), 'heal')).toBeLessThan(apCost)
+  })
+
+  it('marks a capstone', () => {
+    expect(nodeSummary(warriorAt(1), 'meteor')).toMatch(/^Meteor \(Evoker, spell, capstone\): \d+ mana, \d+ AP\. /)
+    expect(nodeSummary(warriorAt(1), 'deadeye')).toBe(`Deadeye (Ranger, passive, capstone): ${PERKS.deadeye.description}`)
+  })
+})
+
+describe('costWords', () => {
+  it('words an active\'s cost, a weapon-relative AP worked out for the weapon held', () => {
+    expect(costWords({ apCost: 3 }, 5)).toBe('3 AP')
+    expect(costWords({ manaCost: 3, apCost: 0, weaponAp: 1 }, 5)).toBe('3 mana, 6 AP (weapon + 1)')
+    expect(costWords({ apCost: 0, weaponAp: 0 }, 4)).toBe('4 AP (weapon + 0)')
+  })
+})
+
+describe('draftNodeClickable', () => {
+  const draft = (perks: CharacterDraft['perks']): CharacterDraft => ({
+    ...newDraft(),
+    attributes: { strength: 4, perception: 7, endurance: 5, intelligence: 7, agility: 7, luck: 5 },
+    tagged: 'archery',
+    perks,
+  })
+
+  it('answers a click on a tier-1 node only, to take it or give it back', () => {
+    expect(draftNodeClickable(draft([]), 'toughness')).toBe(true)
+    expect(draftNodeClickable(draft(['toughness']), 'toughness')).toBe(true)
+    expect(draftNodeClickable(draft([]), 'far_shot')).toBe(false)
+    expect(draftNodeClickable(draft([]), 'heavy_hand')).toBe(false)
+    expect(draftNodeClickable(draft(['toughness', 'dodger', 'deadly_aim']), 'marksmanship')).toBe(false)
   })
 })
 
@@ -136,5 +250,26 @@ describe('draftNodeHint', () => {
   it('says why a click would do nothing', () => {
     expect(draftNodeHint(draft([]), 'heavy_hand')).toBe('Not yet: Strength 6')
     expect(draftNodeHint(draft([]), 'far_shot')).toBe('Not yet: Level 2, 1 node in Ranger')
+  })
+})
+
+describe('the tree tabs', () => {
+  it('sit left to right over the tree, apart, each labelled with the nodes held in its tree', () => {
+    const rects = TREE_IDS.map(treeTabRect)
+    rects.slice(1).forEach((rect, i) => expect(rect.x - rect.width / 2).toBeGreaterThan(rects[i].x + rects[i].width / 2))
+    expect(rects[0].x - rects[0].width / 2).toBe(TREE_X)
+    const hero = { ...warriorAt(2), perks: { weapon_training: 1, toughness: 1, heal: 1 } }
+    expect(TREE_IDS.map((tree) => treeTabLabel(hero, tree))).toEqual(['Warrior 2', 'Scout', 'Mage', 'Cleric 1'])
+  })
+
+  it('answer the keys 1 to 4', () => {
+    expect(['1', '2', '3', '4'].map(treeForKey)).toEqual([...TREE_IDS])
+    expect(['0', '5', 'a', ''].map(treeForKey)).toEqual([null, null, null, null])
+  })
+
+  it('open on the tree of the calling, else the Warrior tree', () => {
+    expect(openingTree(warriorAt(1))).toBe('warrior')
+    expect(openingTree({ perks: { heal: 1, bless: 1, mending: 1, dodger: 1 } })).toBe('cleric')
+    expect(openingTree({ perks: { dodger: 1, heal: 1 } })).toBe('scout')
   })
 })

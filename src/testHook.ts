@@ -96,9 +96,9 @@ export interface CreationProbe {
   attributePoints: number
   skillPoints: number
   perkPicks: number
-  /** Which tree the perks step shows ('perks' the Warrior tree, 'spells' the Mage tree, until skill trees step 06), and the switch between the two. */
-  tree: 'perks' | 'spells'
-  treeSwitch: { perks: ButtonProbe; spells: ButtonProbe }
+  /** Which tree the perks step shows, and its tabs, Warrior to Cleric (keys 1 to 4 switch them too). */
+  tree: 'warrior' | 'scout' | 'mage' | 'cleric'
+  trees: Record<'warrior' | 'scout' | 'mage' | 'cleric', ButtonProbe>
   /** The tabs that open each step directly. */
   steps: Record<CreationStep, ButtonProbe>
   /** Each attribute's value and its two buttons; on screen on the attributes step. */
@@ -380,7 +380,7 @@ export interface BattleProbe {
 }
 
 export interface InventoryProbe {
-  /** `perkTree` and `spellTree` are the views the Skills and Spells tabs' tree buttons open; they have no tab buttons of their own. */
+  /** `perkTree` and `spellTree` are the tree view as the Skills and Spells tabs' tree buttons open it (on the calling's tree and on the Mage tree); they have no tab buttons of their own. */
   tab: 'character' | 'skills' | 'spells' | 'inventory' | 'perkTree' | 'spellTree'
   /** The portraits beside the panel: a click on one turns the panel to that member, who is then the active one. */
   party: PortraitProbe[]
@@ -405,17 +405,21 @@ export interface InventoryProbe {
   tooltip: string[]
   /** The perks the Skills tab lists: those the character has a rank of. */
   takenPerks: Array<{ perk: string; ranks: number }>
-  /** The Skills tab's button that opens the perk tree, and the tree's button back, by their centres on screen. */
+  /** The Skills tab's button that opens the tree view, and the view's button back, by their centres on screen. */
   perkTreeButton: Point
   back: Point
+  /** The tree the tree view shows, and its four tabs by their centres on screen (keys 1 to 4 switch them too). */
+  tree: 'warrior' | 'scout' | 'mage' | 'cleric'
+  trees: Record<'warrior' | 'scout' | 'mage' | 'cleric', Point>
+  /** A node's width and height on screen, the same for every node. */
+  nodeSize: { width: number; height: number }
   /**
-   * Every perk's node in the tree, by its centre on screen, with the ranks taken and whether a
-   * click would take one. The nodes are on screen only while `tab` is `perkTree`.
+   * Every node of the tree shown, by its centre on screen, with the ranks taken and whether a
+   * click would take one. The nodes are on screen only while `tab` is `perkTree` or `spellTree`.
    */
   perks: Array<Point & { perk: string; ranks: number; canTake: boolean }>
-  /** The Spells tab's button that opens the spell tree, and the spell tree's nodes as `perks` gives the perk tree's, on screen while `tab` is `spellTree`. */
+  /** The Spells tab's button that opens the tree view on the Mage tree. */
   spellTreeButton: Point
-  spellNodes: Array<Point & { perk: string; ranks: number; canTake: boolean }>
   /** The spells the Spells tab lists, each with the centre of its row's Cast button and whether a click there would cast it here. */
   spells: Array<Point & { spell: SpellId; castable: boolean }>
   /** A heal of one member waiting for a portrait to be clicked, on the world map. */
