@@ -203,3 +203,11 @@ Exclusions: no `sfx build`/`sfx check`, banks, encoding or manifest (step 02); n
 - `Recipe.source_ids()`, `yomi_audio.__version__`, `sources.sha256_file` and `config.load_config` are what step 02's input hash needs. A recipe names an impulse by its name; the registry id is `impulse_<name>`.
 - Audition file names are `<cue>.v<k>.wav` (the safe form of `<cue>#<k>`).
 - Budgets: no paid calls; downloads were only the PyPI dependencies into `tools/audio/.venv/`, plus `npm ci` into the worktree's `node_modules`.
+
+### Review round 1
+
+Reviewer (opus): clean, nothing blocking, nothing fixed or disputed. Three non-blocking findings are carried to step 02 rather than fixed here:
+
+1. A source named only by a layer that a variant leaves out (by `chance`), or only by a `pick` entry no variant uses, is never checked against the registry, since checks run when a variant renders. Step 02's build should verify every id in `Recipe.source_ids()` up front.
+2. An error other than `AudioError` prints a traceback: for example a corrupt FLAC read by soundfile, or an `--end` past the file in `source add` beyond the cases already caught. Step 02 should wrap these so the CLI prints one line naming the source.
+3. `loudness.py` reads pyloudnorm's private `meter._filters` for the K-weighting coefficients. It is pinned by `uv.lock`, but an upgrade could break it. Step 02 could compute the BS.1770 coefficients itself.
