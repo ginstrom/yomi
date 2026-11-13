@@ -2785,6 +2785,15 @@ describe('BattleEngine a caster’s spell modifiers', () => {
       engine.step({ type: 'attack', unit: 'mage', target: 'goblin' })
       expect(unitOf(engine, 'goblin').statuses).toEqual([{ id: 'chilled', turnsLeft: 1 }])
     })
+
+    it('leaves a status an ability lays (Web) as it is', () => {
+      const spinner = caster([], { extend: { hostile: 1 } }, {
+        stats: { ...WARRIOR_STATS, toHit: 100, abilities: ['spider_web'], magic: { maxMana: 10, skill: 50, spells: [], extend: { hostile: 1 } } },
+      })
+      const { engine } = battle([spinner, goblinAt(hex(4, 1))], [0.5])
+      engine.step({ type: 'ability', unit: 'mage', ability: 'spider_web', at: hex(4, 1) })
+      expect(unitOf(engine, 'goblin').statuses).toEqual([{ id: 'webbed', turnsLeft: 2 }])
+    })
   })
 
   describe('friendly range', () => {

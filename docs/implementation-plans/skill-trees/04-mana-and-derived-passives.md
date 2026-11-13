@@ -285,3 +285,8 @@ PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH npm test
 - `policies.ts`'s `reach` still reads a damaging spell's own `apCost` when judging how close to come; with Quickened Casting a caster may approach a hex less aggressively than it could. Left alone (the step names no policy change); step 12 or 14 may want `spellApCost` there.
 - `autoHeal` (party.ts) chooses heals by `worldHealing(spell)` without the caster, so it does not count Mending when choosing; what is restored does count it.
 - The battle's spell list still shows a spell's own AP (accepted until step 14, §4.7).
+
+**Review round 1.**
+- Found (blocking): the index's `| 03 | opus | pending |` substitution also matched step 06's row, marking it `done (24a2400)`. Fixed: step 06 back to `pending`; step 04 reads `done (24a2400)`.
+- Found (non-blocking): no test that an ability's status ignores `extend.hostile`. Added: a unit with `extend.hostile` 1 spins the Spider's Web and the goblin is webbed for its own 2 turns.
+- `npm test`: 85 files, 1575 tests passed.
