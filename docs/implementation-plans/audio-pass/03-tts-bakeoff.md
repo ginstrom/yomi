@@ -175,4 +175,4 @@ Spectrograms looked at (smoke design clip, five bake-off clips): speech througho
 
 **For later steps:** step 15 reads `voice.py`'s `NARRATORS`, `REFERENCE_TEXT` and `design_voice`, and replaces the automatic pick with the user's; the pins to copy into `voices.toml` are in `tts/models.py` (use the mlx-community repo and revision as `model`/`revision`, the engine fingerprint carries the upstream). Step 16's `voice render` can reuse `postprocess` and the engines as they are. `ADAPTER_VERSION` is 1.
 
-**Status:** awaiting review at gate **G1**.
+**Status:** awaiting review at gate **G1**. Commit `667efdd`.
