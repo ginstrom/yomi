@@ -1,7 +1,7 @@
 # Feature: skill trees and progression
 
 **Slug:** skill-trees
-**Phase:** 3 — planning
+**Phase:** 4 — implementation
 
 ## Request (user's words)
 
@@ -12,7 +12,7 @@ Intake clarification (2026-11-13), on how classes fit: "I actually like the abil
 ## Links
 
 - Design: `docs/designs/skill-trees.md` (approved 2026-11-13; picks every other level, 95 nodes)
-- Plan: `docs/implementation-plans/skill-trees/` (to write)
+- Plan: `docs/implementation-plans/skill-trees/` (26 steps in 4 stages, 19030e8)
 - Branch: `skill-trees`, off main (d18abf4)
 
 ## Path
@@ -36,11 +36,13 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 ## Open questions
 
-(none yet)
+(none)
 
 ## Model tiers
 
-- Designer: opus
+- Designer: opus; planner: opus
+- Steps: engineer tier as in the plan index (sonnet: 01, 02, 07, 08, 13, 15, 16, 22, 23, 26; opus: the rest); reviewer at the same tier as the engineer; overall review opus
+- Node 26: `PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH`
 
 ## Verification
 
