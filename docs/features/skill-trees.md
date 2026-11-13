@@ -1,7 +1,7 @@
 # Feature: skill trees and progression
 
 **Slug:** skill-trees
-**Phase:** 4 — implementation (stage 1 done at fd6a630; step 09 done and reviewed clean at 617bfeb; resume at step 10)
+**Phase:** 4 — implementation (stage 1 done at fd6a630; stage 2 done at 82eb925; stage 3 from step 17)
 
 ## Request (user's words)
 

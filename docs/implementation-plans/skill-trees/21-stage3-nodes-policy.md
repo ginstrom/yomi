@@ -111,7 +111,7 @@ export function autoAdvance(character: Character, plan: PlanId = planFor(charact
 
 The full lists, in order (a stage writes only the ids present in `PERKS`, keeping this order):
 
-- `knight`: weapon_training, heavy_hand, toughness, rooted, taunt, pin, iron_skin, guardian, unbreakable, shield_wall, power_attack, armor_breaker, weapon_mastery
+- `knight`: weapon_training, toughness, rooted, taunt, pin, heavy_hand, iron_skin, guardian, unbreakable, shield_wall, power_attack, armor_breaker, weapon_mastery
 - `swordmaster`: weapon_training, heavy_hand, power_attack, armor_breaker, cleave, gain_strength, weapon_mastery, blademaster, toughness
 - `ranger`: marksmanship, deadly_aim, aimed_shot, far_shot, volley, hunters_mark, pinning_shot, deadeye, dodger, sprint, skirmisher, tumble, evasion
 - `rogue` (the Cutthroat's): backstab, dirty_trick, sprint, tumble, evasion, counter, skirmisher, shadowdancer
