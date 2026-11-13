@@ -45,7 +45,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | **Stage 3: traits, auras, capstones and the special spells** | | | | | |
 | 17 | [Attack and movement traits](17-attack-traits.md) | Iron Skin's free attacks, Counter, Tumble, Skirmisher, Backstab, Ambush, Executioner, Fortune's critical damage, Deadeye, Battle Mage's mana on hit, Arcane Knight; `LOG_SCHEMA_VERSION` 26, `SAVE_VERSION` 25 | 16 | opus | done (ca4c33a) |
 | 18 | [Kill and survival traits](18-kill-survival-traits.md) | Deathblow, Blademaster, Unbreakable through `applyDamage` | 17 | opus | done (cf591da) |
-| 19 | [Auras and turn-start restores](19-auras-restores.md) | Guardian, Aura of Courage, Aegis (`auraBonus`, `statsIn`); Sanctuary, the `renewing` status, Serenity's mana, Shadowdancer; `RestoreEvent` | 18 | opus | done |
+| 19 | [Auras and turn-start restores](19-auras-restores.md) | Guardian, Aura of Courage, Aegis (`auraBonus`, `statsIn`); Sanctuary, the `renewing` status, Serenity's mana, Shadowdancer; `RestoreEvent` | 18 | opus | done (8de0df0) |
 | 20 | [The special spells](20-special-spells.md) | Purify, Revive, Renew, Holy Light, Ice Lance, Glacial Prison; `frozen`; `hostile` and `helpless` on statuses | 19 | opus | pending |
 | 21 | [Stage-3 nodes, plans and the policy's last steps](21-stage3-nodes-policy.md) | The 20 stage-3 nodes; partial nodes completed; plans; `reviveCast`, `purifyCast`, `supportCast`, `prisonCast`, strikeCast extensions | 20 | opus | pending |
 | 22 | [Stage-3 scenes](22-stage3-scenes.md) | Looks, log lines and marks for the new events and statuses; Revive's aim; restore floats | 21 | sonnet | pending |
