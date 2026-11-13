@@ -36,6 +36,7 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 | 2026-11-13 | Accept step 06's tier-aligned rows (one more row than the design) and creation's perks step without the summary column (revisit at polish) | orchestrator | — | Recorded deviations, tested; layout needs it |
 | 2026-11-14 | Accept `UnitSnapshot.moved` optional (present only when true) instead of C12's boolean | orchestrator | always present, re-hash the guard | Keeps the guard's hash a regression check; readers use `moved === true` |
 | 2026-11-14 | Bandit Captain gets Pin: move `heavy_hand` after `pin` in the `knight` plan (or give the Captain's draft Heavy Hand), in step 16 since it moves play | orchestrator | leave the Captain without Pin | The design's Captain is a Taunt-and-Pin knight; Aldric holds Heavy Hand already, so only bandits move |
+| 2026-11-14 | Accept step 14's engine `previewAbility` (real odds for techniques), the probe renames, and an always-enabled Skills button; leave the rename-only commit a956def unsquashed | orchestrator | plain-attack odds; squash | Odds must be the engine's; history rewrite not worth it |
 | 2026-11-13 | Own branch `skill-trees` off main | orchestrator | commit on main | Precedent: one branch per feature |
 
 ## Open questions
@@ -50,30 +51,25 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 ## Notes carried forward
 
-- To step 14 (from step 04): `autoHeal` picks heals without counting Mending; the battle spell list shows the base AP cost until step 14.
 - Step 01 baseline is the reference (SN5 441, SP5 445), not CLAUDE.md's older figures.
 
-- To steps 11 and 17 (from step 05): when raising SAVE_VERSION, add the previous version (23, then 24) to parseSave's accepted list `[SAVE_VERSION, 22, 18]`; no game migration needed.
+- To step 17 (from step 05): when raising SAVE_VERSION to 25, add 24 to parseSave's accepted list `[SAVE_VERSION, 22, 18]`; no game migration needed.
 
-- To the stage-4 polish (orchestrator, from step 06 screenshots): the tree view works and fits at 840×560 but is plain: no lines between a node and what it requires, and the kind stripes are faint. Make it look like a tree before the feature is done.
+- To the stage-4 polish: nameplate status letters are ~7 px at 840×560 (step 14). And (from step 06 screenshots): the tree view works and fits at 840×560 but is plain: no lines between a node and what it requires, and the kind stripes are faint. Make it look like a tree before the feature is done.
 
 - Done in step 13: `takenPerks()` keeps passives only; the strip's first line is cut to two lines (`clampLines`) and a test holds all nodes inside the panel. Step 21 adds nodes: the test covers them automatically.
-- To step 16 or 24 (from step 13): the Captain takes Heavy Hand first (the `knight` plan lists it before Rooted), so Rooted comes at 4, Taunt at 6 and Pin after level 7; move `heavy_hand` after `pin` in the plan or give his draft Heavy Hand if bandits should pin by 6.
 
 - To step 16 (from step 08 review): CLAUDE.md's scaling paragraph — the stage-1 sentence splits stage 6's "In the run of 237…" narrative; move it after stage 6's text.
 - To final QA: step 08's play check was scripted, not hand-played; do a hand-played browser pass with a hero built across two trees.
 
-- To step 14 or 17 (from step 09 review): `perkTree.ts` `costWords` computes technique AP itself; make it call `abilityApCost` and drop the redundant intersection types, before Arcane Knight's discount lands.
 - Plan decision 2 (guard unchanged) allows a re-hash for a schema-only version bump (step 09 proved the log identical but for schemaVersion).
 
-- To step 14 (from step 10): step 14 draws hero areas with `abilityArea`/`abilityTouches`.
 
 
 - To stage 4 tuning (from step 12): area techniques aren't AP-normalised (Volley at 6 AP weighed against one 4 AP shot; Consecrate likewise) — normalise if the simulator over-uses them; Hunter's Mark has no value check beyond affording mark-then-attack; `tauntUse` judges threat by a foe's current attack range.
 - To step 21 (from step 11 review): only Taunt's no-roll area passes a `source` to `layStatus`; any other path that ever lays `taunted` would leave no source.
 
 - To step 16: apply the Captain-Pin decision (knight plan order) and note it in step 13's task file; restore Rooted's description clause "or the end of its next turn".
-- To step 14 (from step 09 review): `perkTree.ts` `costWords` should call `abilityApCost`.
 
 ## Verification
 
