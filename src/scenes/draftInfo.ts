@@ -1,7 +1,7 @@
 import { ATTRIBUTES, ATTRIBUTE_IDS } from '../character/attributes.ts'
 import { STARTING_KIT, deriveCombatStats } from '../character/character.ts'
 import { draftCharacter, type CharacterDraft } from '../character/creation.ts'
-import { PERKS, isSpellPerk } from '../character/perks.ts'
+import { PERKS, nodeKind } from '../character/perks.ts'
 import { SKILLS, SKILL_IDS, skillLevel } from '../character/skills.ts'
 
 /** The skills a draft has chosen, as "Melee Weapons 39%  Archery 34%": its tagged skill first, then any it placed points in. */
@@ -23,12 +23,10 @@ export function draftInfo(draft: CharacterDraft): string[] {
   const character = draftCharacter(draft)
   const stats = deriveCombatStats(character)
   const kit = STARTING_KIT[draft.tagged ?? 'melee']
-  // A perk taken twice is listed once, with its ranks.
-  const perks = [...new Set(draft.perks)].filter((perk) => !isSpellPerk(perk)).map((perk) => {
-    const ranks = draft.perks.filter((taken) => taken === perk).length
-    return ranks > 1 ? `${PERKS[perk].name} x${ranks}` : PERKS[perk].name
-  })
-  const spells = draft.perks.filter(isSpellPerk).map((perk) => PERKS[perk].name)
+  // A node chosen twice (which `pruneDraft` would refuse) is listed once.
+  const chosen = [...new Set(draft.perks)]
+  const perks = chosen.filter((perk) => nodeKind(perk) !== 'spell').map((perk) => PERKS[perk].name)
+  const spells = chosen.filter((perk) => nodeKind(perk) === 'spell').map((perk) => PERKS[perk].name)
   return [
     draftSkills(draft),
     `HP ${stats.maxHp}  AP ${stats.actionPoints}  AC ${stats.ac}  Mana ${stats.magic ? stats.magic.maxMana : '-'}`,

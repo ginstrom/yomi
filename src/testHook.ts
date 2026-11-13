@@ -96,8 +96,7 @@ export interface CreationProbe {
   attributePoints: number
   skillPoints: number
   perkPicks: number
-  spellPicks: number
-  /** Which tree the perks step shows, and the switch between the two. */
+  /** Which tree the perks step shows ('perks' the Warrior tree, 'spells' the Mage tree, until skill trees step 06), and the switch between the two. */
   tree: 'perks' | 'spells'
   treeSwitch: { perks: ButtonProbe; spells: ButtonProbe }
   /** The tabs that open each step directly. */
@@ -388,7 +387,6 @@ export interface InventoryProbe {
   /** What the character has waiting to spend. */
   skillPoints: number
   perkPicks: number
-  spellPicks: number
   /** Each skill's level, with the centre on screen of the button that raises it and whether a click there would. */
   skills: Record<SkillId, Point & { level: number; canRaise: boolean }>
   /** The character's attributes as the Character tab shows them: what it was born with and what its perks add. */

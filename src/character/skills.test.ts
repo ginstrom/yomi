@@ -33,9 +33,9 @@ describe('skillLevel', () => {
 
   it('moves with an attribute a perk has raised', () => {
     const warrior = createWarrior()
-    warrior.perks.gain_intelligence = 2
-    expect(skillLevel(warrior, 'magic')).toBe(2 * 6)
-    warrior.perks.gain_agility = 1
+    warrior.perks.lasting_magic = 1
+    expect(skillLevel(warrior, 'magic')).toBe(2 * 5)
+    warrior.perks.skirmisher = 1
     expect(skillLevel(warrior, 'archery')).toBe(4 + 7)
   })
 

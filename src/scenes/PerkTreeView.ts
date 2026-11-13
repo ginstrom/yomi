@@ -1,12 +1,12 @@
 import type Phaser from 'phaser'
 import type { Character } from '../character/character.ts'
-import { PERKS, describePerkRequirements, perkRanks, type Perk, type PerkId } from '../character/perks.ts'
-import { SCHOOLS } from '../combat/spells.ts'
+import { PERKS, describePerkRequirements, nodeKind, perkRanks, type Perk, type PerkId } from '../character/perks.ts'
+import { PATHS, TREE_IDS, calling, pathDepth, pathsOf, type TreeId } from '../character/trees.ts'
 import type { Point } from './boardGeometry.ts'
-import { nodeLabel, nodeState, perkTitle, perkTreeLayout, type TreeKind, type TreeNode } from './perkTree.ts'
+import { nodeLabel, nodeState, perkTitle, treeLayout, type TreeNode } from './perkTree.ts'
 
-/** Both trees' nodes, laid out once. */
-const TREES: Record<TreeKind, readonly TreeNode[]> = { perks: perkTreeLayout('perks'), spells: perkTreeLayout('spells') }
+/** Every tree's nodes, laid out once. */
+const TREES = Object.fromEntries(TREE_IDS.map((tree) => [tree, treeLayout(tree)])) as unknown as Record<TreeId, readonly TreeNode[]>
 
 /** Where the tree is drawn in its container: a node for each perk, a row for each tip of a branch, and a strip under it. */
 const TREE_X = 20
@@ -15,10 +15,11 @@ const TREE_COLUMN_W = 172
 const TREE_ROW_H = 31
 const NODE_W = 160
 const NODE_H = 27
-/** The rows of the taller tree, so that the strip sits in one place under either. */
-const NODE_ROWS = 1 + Math.max(...Object.values(TREES).flat().map((node) => node.row))
-/** The edge on a spell's node in its school's colour. */
-const SCHOOL_EDGE_W = 4
+/** The rows the panel keeps for a tree, so that the strip sits in one place under any. */
+const NODE_ROWS = 11
+/** The edge on a node in its kind's colour: a passive dim gold, a spell blue. */
+const KIND_EDGE_W = 4
+const KIND_COLOURS = { passive: 0x8a7a5a, 'at-will': 0xd09a3c, mana: 0x5a8ee0, spell: 0x5a8ee0 } as const
 const TREE_STRIP_Y = TREE_Y + NODE_ROWS * TREE_ROW_H
 /** How far the tree and its strip reach across; a panel may put something beside them. */
 export const PERK_TREE_W = TREE_X + 2 * TREE_COLUMN_W + NODE_W
@@ -35,8 +36,8 @@ function nodeAt({ column, row }: Pick<TreeNode, 'column' | 'row'>): Point {
 
 /** What a scene tells the tree it draws. */
 export interface PerkTreeOptions {
-  /** Which tree: the perks, by default, or the spells. */
-  tree?: TreeKind
+  /** Which tree: the Warrior tree by default. */
+  tree?: TreeId
   /** The character whose perks the tree shows. */
   character: Character
   /** Whether a click on the perk's node would do anything now. */
@@ -53,16 +54,16 @@ export interface PerkTreeOptions {
 }
 
 /**
- * A tree's game objects, the perk tree's or the spell tree's: every perk as a
- * node (perkTree.ts), a line from the node it grows from, and a strip under
- * it for the node pointed at; a spell's node is edged in its school's
- * colour. Like `PartyColumn` it imports Phaser and has no logic of its own:
+ * A skill tree's game objects: each path's heading, every node (perkTree.ts)
+ * edged in its kind's colour, a line from the node it requires, and a strip
+ * under it for the node pointed at. (Step 06 of the skill trees redraws it
+ * with tabs for the four trees.) Like `PartyColumn` it imports Phaser and has no logic of its own:
  * the character panel and character creation both draw it, and each decides
  * what a click on a node does.
  */
 export class PerkTreeView {
   /** Every node of a tree, by its centre in the container's own pixels, for a scene's probe. */
-  static nodeCentres(tree: TreeKind = 'perks'): Array<Point & { perk: PerkId }> {
+  static nodeCentres(tree: TreeId = 'warrior'): Array<Point & { perk: PerkId }> {
     return TREES[tree].map((node) => {
       const { x, y } = nodeAt(node)
       return { perk: node.perk, x: x + NODE_W / 2, y: y + NODE_H / 2 }
@@ -76,8 +77,18 @@ export class PerkTreeView {
   /** Draws the tree into `container`, which the scene clears and redraws after each change to the character. */
   constructor(scene: Phaser.Scene, container: Phaser.GameObjects.Container, options: PerkTreeOptions) {
     this.options = options
-    this.nodes = TREES[options.tree ?? 'perks']
+    const tree = options.tree ?? 'warrior'
+    this.nodes = TREES[tree]
     const { character } = options
+
+    // Row 0: each path's name and the nodes held in it, the calling in gold.
+    const deepest = calling(character)
+    pathsOf(tree).forEach((path, column) => {
+      const { x, y } = nodeAt({ column, row: 0 })
+      const heading = `${PATHS[path].name}  ${pathDepth(character, path)}`
+      const colour = deepest.includes(path) ? GOLD : `#${PATHS[path].colour.toString(16).padStart(6, '0')}`
+      container.add(scene.add.text(x, y + 6, heading, { fontFamily: FONT, fontSize: '13px', color: colour }))
+    })
 
     const lines = scene.add.graphics()
     container.add(lines)
@@ -88,14 +99,14 @@ export class PerkTreeView {
       const end = nodeAt(node)
       const y0 = start.y + NODE_H / 2
       const y1 = end.y + NODE_H / 2
-      // A square elbow, halfway across the gap, where the two are on different rows.
-      const elbow = (start.x + NODE_W + end.x) / 2
+      // Down the column's left gutter, from the node required to the one that requires it.
+      const gutter = start.x - 5
       const walked = perkRanks(character, node.perk) > 0
       lines.lineStyle(2, walked ? 0xc9a227 : 0x4a3d28, 1)
       lines.beginPath()
-      lines.moveTo(start.x + NODE_W, y0)
-      lines.lineTo(elbow, y0)
-      lines.lineTo(elbow, y1)
+      lines.moveTo(start.x, y0)
+      lines.lineTo(gutter, y0)
+      lines.lineTo(gutter, y1)
       lines.lineTo(end.x, y1)
       lines.strokePath()
     }
@@ -121,7 +132,7 @@ export class PerkTreeView {
     const marked = this.options.marked?.(id) ?? live
     const started = perkRanks(character, id) > 0
     const bg = scene.add
-      .rectangle(x, y, NODE_W, NODE_H, 0x1b1712, state === 'closed' ? 0.5 : 0.95)
+      .rectangle(x, y, NODE_W, NODE_H, 0x1b1712, state === 'closed' || state === 'locked' ? 0.5 : 0.95)
       .setOrigin(0)
       .setStrokeStyle(marked ? 2 : 1, marked ? 0xc9a227 : state === 'open' ? 0x6b5a3a : 0x4a3d28)
     const label = scene.add
@@ -132,11 +143,9 @@ export class PerkTreeView {
       })
       .setOrigin(0.5)
     container.add([bg, label])
-    const { school } = PERKS[id] as Perk
-    if (school) {
-      const edge = scene.add.rectangle(x, y, SCHOOL_EDGE_W, NODE_H, SCHOOLS[school].colour, state === 'closed' ? 0.5 : 1)
-      container.add(edge.setOrigin(0))
-    }
+    const edge = scene.add.rectangle(x, y, KIND_EDGE_W, NODE_H, KIND_COLOURS[nodeKind(id)], state === 'closed' ? 0.5 : 1)
+    container.add(edge.setOrigin(0))
+    if ((PERKS[id] as Perk).tier === 'capstone') label.setText(`* ${label.text}`)
 
     bg.setInteractive({ useHandCursor: live })
     bg.on('pointerover', () => {
@@ -144,7 +153,7 @@ export class PerkTreeView {
       this.describe(id)
     })
     bg.on('pointerout', () => {
-      if (live) bg.setFillStyle(0x1b1712, state === 'closed' ? 0.5 : 0.95)
+      if (live) bg.setFillStyle(0x1b1712, state === 'closed' || state === 'locked' ? 0.5 : 0.95)
       this.describe(null)
     })
     bg.on('pointerdown', () => {
@@ -161,8 +170,8 @@ export class PerkTreeView {
       hint.setText('')
       return
     }
-    const { school } = PERKS[perk] as Perk
-    const title = `${perkTitle(this.options.character, perk)}${school ? ` (${SCHOOLS[school].name})` : ''}`
+    const { path } = PERKS[perk] as Perk
+    const title = `${perkTitle(this.options.character, perk)} (${PATHS[path].name}, ${nodeKind(perk)})`
     what.setText(`${title}: ${PERKS[perk].description}`).setColor(TEXT)
     asks.setText(`Asks: ${describePerkRequirements(perk)}`)
     hint.setText(this.options.hint(perk))

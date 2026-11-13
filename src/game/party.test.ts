@@ -36,8 +36,8 @@ describe('PREROLLS', () => {
       expect(Object.values(member.attributes).reduce((a, b) => a + b)).toBe(ATTRIBUTE_POINTS)
       expect(new Set(member.tagged).size).toBe(TAGGED_SKILLS)
       expect([member.skillPoints, member.perkPicks]).toEqual([0, 0])
-      expect(member.spellPicks).toBe(0)
-      expect(Object.values(member.perks).reduce((a, b) => a + b)).toBe(member.perks.spellcasting ? 5 : 3)
+      expect('spellPicks' in member).toBe(false)
+      expect(Object.values(member.perks).reduce((a, b) => a + b)).toBe(3)
       expect(member.hp).toBe(maxHp(member))
       expect(canAdvance(member)).toBe(false)
       // Each holds a weapon it has a gift for.
@@ -55,7 +55,7 @@ describe('PREROLLS', () => {
   it('include a balanced warrior, middling in both melee and archery', () => {
     const balanced = PREROLLS.find((preroll) => preroll.role === 'Balanced warrior')!
     const garrick = draftCharacter(balanced.draft)
-    expect([skillLevel(garrick, 'melee'), skillLevel(garrick, 'archery')]).toEqual([39, 34])
+    expect([skillLevel(garrick, 'melee'), skillLevel(garrick, 'archery')]).toEqual([44, 34])
   })
 })
 
@@ -73,10 +73,10 @@ describe('readyMadeParty', () => {
 
   it('makes each the specialist of one skill, near 60% in it and near 10% in the others', () => {
     const [aldric, brenna, delwyn] = readyMadeParty()
-    expect(skillLevel(aldric, 'melee')).toBe(60)
+    expect(skillLevel(aldric, 'melee')).toBe(65)
     expect(skillLevel(aldric, 'archery')).toBe(9)
-    expect(skillLevel(brenna, 'archery')).toBe(61)
-    expect(skillLevel(delwyn, 'magic')).toBe(63)
+    expect(skillLevel(brenna, 'archery')).toBe(66)
+    expect(skillLevel(delwyn, 'magic')).toBe(68)
   })
 
   it('makes the third a mage, who starts knowing Magic Arrow and Heal', () => {
@@ -88,11 +88,11 @@ describe('readyMadeParty', () => {
     expect(deriveCombatStats(mage)).toMatchObject({
       actionPoints: 8,
       weapon: 'Wand of Sparks',
-      // Magic 63; the breastplate asks strength 3, which it has.
-      toHit: 63,
+      // Magic 68; the breastplate asks strength 3, which it has.
+      toHit: 68,
       attackRange: 4,
-      // Magic 63, less the iron breastplate's 5.
-      magic: { maxMana: 18, skill: 58, spells: ['magic_arrow', 'heal'] },
+      // Magic 68, less the iron breastplate's 5.
+      magic: { maxMana: 18, skill: 63, spells: ['magic_arrow', 'heal'] },
     })
   })
 
@@ -196,16 +196,19 @@ describe('describeRewards', () => {
     expect(describeRewards(rewardVictory(party, xpToNextLevel(1), []))).toEqual([
       `+${xpToNextLevel(1)} XP each`,
       'Brenna fell and will not rise again. What they carried is in the baggage.',
-      `Aldric reaches level 2: +${hp} max HP, ${points} skill points, wounds healed`,
-      `Corwin reaches level 2: +${hp} max HP, ${points} skill points, wounds healed`,
+      `Aldric reaches level 2: +${hp} max HP, ${points} skill points, a pick, wounds healed`,
+      `Corwin reaches level 2: +${hp} max HP, ${points} skill points, a pick, wounds healed`,
     ])
   })
 
-  it('announces a perk with the level that brings one', () => {
+  it('announces a pick with the even level that brings one, and none with an odd one', () => {
     const [hero] = warriors('Aldric')
     hero.level = 2
     expect(describeRewards(rewardVictory([hero], xpToNextLevel(2), []))[1]).toBe(
-      `Aldric reaches level 3: +${hpPerLevel(hero)} max HP, ${skillPointsPerLevel(hero)} skill points, a perk, wounds healed`,
+      `Aldric reaches level 3: +${hpPerLevel(hero)} max HP, ${skillPointsPerLevel(hero)} skill points, wounds healed`,
+    )
+    expect(describeRewards(rewardVictory([hero], xpToNextLevel(3), []))[1]).toBe(
+      `Aldric reaches level 4: +${hpPerLevel(hero)} max HP, ${skillPointsPerLevel(hero)} skill points, a pick, wounds healed`,
     )
   })
 })

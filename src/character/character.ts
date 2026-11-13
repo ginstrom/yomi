@@ -46,12 +46,10 @@ export interface Character {
   trained: Record<SkillId, number>
   /** Skill points earned by levelling and not yet spent. */
   skillPoints: number
-  /** Ranks taken of each perk. */
+  /** The skill trees' nodes it holds, each at 1 (every node has one rank). */
   perks: Partial<Record<PerkId, number>>
-  /** Perks earned by levelling and not yet chosen. */
+  /** Picks earned (at creation and every even level) and not yet spent on a node. */
   perkPicks: number
-  /** Spells to learn, from Spellcasting and the levels after it, not yet chosen; a perk pick can buy a spell too. */
-  spellPicks: number
   hp: number
   /** Mana carried out of the last battle, spent on the world map; read it through `manaOf`. Every battle begins at `maxMana`. */
   mana: number
@@ -390,7 +388,6 @@ export function createCharacter(name: string, build: Build): Character {
     skillPoints: 0,
     perks: {},
     perkPicks: 0,
-    spellPicks: 0,
     hp: 0,
     mana: 0,
     equipment: { armor: IRON_BREASTPLATE, mainHand: build.mainHand, ...(build.offHand ? { offHand: build.offHand } : {}) },

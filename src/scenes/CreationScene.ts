@@ -12,14 +12,12 @@ import {
   canAdjustAttribute,
   canAdjustSkill,
   copyDraft,
-  draftCasts,
   draftCharacter,
   draftPerkRanks,
   draftProblems,
   newDraft,
   perkPicksLeft,
   skillPointsLeft,
-  spellPicksLeft,
   tagSkill,
   togglePerk,
   typeInName,
@@ -37,8 +35,8 @@ import type { Rect } from './mapScroll.ts'
 import { addPanelButton, type PanelButtonLook } from './panelButton.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { PORTRAIT_SCALE, PORTRAIT_SIZE, portraitKey } from './partyPanel.ts'
-import { draftNodeHint, type TreeKind } from './perkTree.ts'
-import { SPELLCASTING_SPELL_PICKS } from '../character/progression.ts'
+import { draftNodeHint } from './perkTree.ts'
+import type { TreeId } from '../character/trees.ts'
 import { PERK_TREE_W, PerkTreeView } from './PerkTreeView.ts'
 
 interface CreationData {
@@ -94,7 +92,9 @@ const SKILL_LEVEL_X = PERK_TREE_W
 
 /** The perks step: the tree is drawn for the character panel, which has a row of tabs more above it. */
 const TREE_SHIFT_Y = -28
-/** The perks step's switch between the perk tree and the spell tree, on its heading line. */
+/** The perks step's switch, on its heading line, between the Warrior tree ("Perks") and the Mage tree ("Spells"), until skill trees step 06 draws all four. */
+type TreeKind = CreationProbe['tree']
+const TREE_OF_SWITCH: Record<TreeKind, TreeId> = { perks: 'warrior', spells: 'mage' }
 const TREE_SWITCH: Record<TreeKind, Rect> = {
   perks: { x: LEFT + 36, y: HEADING_Y + 8, width: 72, height: 24 },
   spells: { x: LEFT + 116, y: HEADING_Y + 8, width: 72, height: 24 },
@@ -224,7 +224,6 @@ export class CreationScene extends Phaser.Scene {
       attributePoints: attributePointsLeft(this.draft),
       skillPoints: skillPointsLeft(this.draft),
       perkPicks: perkPicksLeft(this.draft),
-      spellPicks: spellPicksLeft(this.draft),
       tree: this.tree,
       treeSwitch: {
         perks: button(TREE_SWITCH.perks, shows('perks')),
@@ -254,7 +253,7 @@ export class CreationScene extends Phaser.Scene {
           },
         ]),
       ) as CreationProbe['skills'],
-      perks: PerkTreeView.nodeCentres(this.tree).map(({ perk, ...at }) => ({
+      perks: PerkTreeView.nodeCentres(TREE_OF_SWITCH[this.tree]).map(({ perk, ...at }) => ({
         ...onScreen({ x: at.x, y: at.y + TREE_SHIFT_Y }),
         perk,
         ranks: draftPerkRanks(this.draft, perk),
@@ -414,23 +413,19 @@ export class CreationScene extends Phaser.Scene {
   }
 
   /**
-   * The perk tree or, by the switch over it, the spell tree; a click takes a
-   * rank or gives the last back. Spells are bought with the picks
-   * Spellcasting brings, then with perk picks.
+   * The Warrior tree or, by the switch over it, the Mage tree; a click takes a
+   * node or gives it back. A spell is bought with a pick as any node is.
    */
   private buildPerks(character: Character): void {
     for (const tree of ['perks', 'spells'] as const) {
       this.button(TREE_SWITCH[tree], tree === 'perks' ? 'Perks' : 'Spells', () => this.showTree(tree), { marked: this.tree === tree })
     }
     const perks = perkPicksLeft(this.draft)
-    const counters = [`Perks: ${perks} of ${CREATION_PERK_PICKS}`]
-    if (draftCasts(this.draft)) counters.push(`Spells: ${spellPicksLeft(this.draft)} of ${SPELLCASTING_SPELL_PICKS}`)
-    const anyLeft = perks > 0 || spellPicksLeft(this.draft) > 0
-    this.text(PERK_TREE_W, HEADING_Y, counters.join('   '), anyLeft ? GOLD : DIM).setOrigin(1, 0)
+    this.text(PERK_TREE_W, HEADING_Y, `Picks: ${perks} of ${CREATION_PERK_PICKS}`, perks > 0 ? GOLD : DIM).setOrigin(1, 0)
     const tree = this.add.container(0, TREE_SHIFT_Y)
     this.content.add(tree)
     new PerkTreeView(this, tree, {
-      tree: this.tree,
+      tree: TREE_OF_SWITCH[this.tree],
       character,
       clickable: (perk) => this.perkClickable(perk),
       marked: (perk) => togglePerk(this.draft, perk).draft.perks.length > this.draft.perks.length,
@@ -438,8 +433,8 @@ export class CreationScene extends Phaser.Scene {
       hint: (perk) => draftNodeHint(this.draft, perk),
       rule:
         this.tree === 'perks'
-          ? 'Three perks to begin with; click to take, again to give back. A line means the one before must be taken first.'
-          : 'Spellcasting, a perk of Intelligence, brings 2 spells to choose and 1 every level. A line means the spell before must be learned first.',
+          ? 'The Warrior tree. Three picks to begin with, of the first tier; click to take, again to give back. A line means the one before must be taken first.'
+          : 'The Mage tree. A pick buys a spell as it buys any node. A line means the spell before must be learned first.',
     })
   }
 
@@ -482,7 +477,7 @@ export class CreationScene extends Phaser.Scene {
   /** What the draft comes to: its character's numbers, which are the game's own. */
   private buildSummary(character: Character): void {
     const stats = deriveCombatStats(character)
-    const left = [attributePointsLeft(this.draft), skillPointsLeft(this.draft), perkPicksLeft(this.draft), spellPicksLeft(this.draft)]
+    const left = [attributePointsLeft(this.draft), skillPointsLeft(this.draft), perkPicksLeft(this.draft)]
     this.text(SUMMARY_X, HEADING_Y, character.name || (this.index === null ? 'New character' : 'Unnamed'), GOLD, 15)
     const lines = [
       `Hit Points    ${stats.maxHp}`,
@@ -496,8 +491,7 @@ export class CreationScene extends Phaser.Scene {
       `Left to place:`,
       `  attributes  ${left[0]}`,
       `  skills      ${left[1]}`,
-      `  perks       ${left[2]}`,
-      ...(draftCasts(this.draft) ? [`  spells      ${left[3]}`] : []),
+      `  picks       ${left[2]}`,
     ]
     const body = this.text(SUMMARY_X, HEADING_Y + 28, lines.join('\n'), TEXT, 12).setLineSpacing(5)
     this.text(SUMMARY_X, body.y + body.height + 14, this.notes.join('\n'), WARN, 11).setWordWrapWidth(SUMMARY_W)

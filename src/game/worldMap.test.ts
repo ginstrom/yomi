@@ -547,4 +547,5 @@ describe('a seeded session of walks and camps (characterization)', () => {
 })
 
 const SESSION_TURN = 153
-const SESSION_SHA256 = '6cd5821ddc5fc57c6924324bf9709e39cbccd3e2b7c42325214133ad3171604e'
+// Re-recorded in skill trees step 03: the party's characters hold the trees' nodes (and no spell picks), and Aldric's Toughness changed his hit points.
+const SESSION_SHA256 = 'b7f13c54cd5f3591681dd1bba9cfe07985f794ee39e6677cff4470a6f5ca3cbb'

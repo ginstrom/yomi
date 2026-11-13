@@ -375,14 +375,34 @@ This step changes scenes (interim wiring), so run `npm run test:browser`. Failur
 
 ## 6. Completion criteria
 
-- [ ] `trees.ts`, the new `Perk`, the 57 nodes, the economy and the plans as C1 to C5; `perkTree.ts` as C9.
-- [ ] Every removed name is gone from `src/`, `scripts/` and `e2e/` (grep), and from `CLAUDE.md`.
-- [ ] Pre-rolls, ready-made party and bandit drafts rebuilt and legal; bandit-equals-hero test green.
-- [ ] `SAVE_VERSION` 23; the v18 test temporarily expects unreadable, naming step 05.
-- [ ] Guard fixture re-recorded; `npm test` passes.
-- [ ] `npm run test:browser` run; interim failures listed in the record.
-- [ ] `CLAUDE.md` updated: the `src/character/` lines on perks, `progression.ts` and `creation.ts`, the rules of creation, of perks and spells, and of progression (picks every even level, the trees, the calling and capstone, no spell picks or Spellcasting, plans), the save version in the rules of saving.
-- [ ] Committed as "Skill trees step 03: trees, nodes and picks"; this step's status and commit set in the [index](index.md).
+- [x] `trees.ts`, the new `Perk`, the 57 nodes, the economy and the plans as C1 to C5; `perkTree.ts` as C9.
+- [x] Every removed name is gone from `src/`, `scripts/` and `e2e/` (grep), and from `CLAUDE.md`.
+- [x] Pre-rolls, ready-made party and bandit drafts rebuilt and legal; bandit-equals-hero test green.
+- [x] `SAVE_VERSION` 23; the v18 test temporarily expects unreadable, naming step 05.
+- [x] Guard fixture re-recorded; `npm test` passes.
+- [x] `npm run test:browser` run; interim failures listed in the record.
+- [x] `CLAUDE.md` updated: the `src/character/` lines on perks, `progression.ts` and `creation.ts`, the rules of creation, of perks and spells, and of progression (picks every even level, the trees, the calling and capstone, no spell picks or Spellcasting, plans), the save version in the rules of saving.
+- [x] Committed as "Skill trees step 03: trees, nodes and picks"; this step's status and commit set in the [index](index.md).
 
 ## 7. Execution record
+
+**Done.** Commands (Node 26): `npx vitest run src/character src/scenes/perkTree.test.ts` green (173 + 12); `npm test` 85 files, 1534 tests green; `npm run build` green; `npm run test:browser`: after the interim updates below, a full run gave 113 of 115, the two failures 60 s timeouts ("drags gear between the equipment, the backpack and the baggage", "forms, renames, fills and disbands a second party at hall level 4") with the machine at a load average of 25 to 31; both pass when run alone (`-t`), and neither touches perks. Every other test passed in the full run. No simulator measurement (step 08's).
+
+**What was built.** `src/character/trees.ts` (C1, path colours chosen for the dark panel); `perks.ts` rewritten to C2 with the 57 stage-1 nodes in C3's order (a `spellNode` helper, no call into trees.ts at load); `progression.ts` to C4/C5 (`PICK_LEVEL_STEP`, `picksAt`, `PLAN_IDS`, `AUTO_PLANS`, `planFor`, `autoAdvance(character, plan)`); `creation.ts` (`perkPicksLeft` counts nodes; `spellPicksLeft`, `draftCasts` gone); `Character.spellPicks` gone; pre-rolls and bandit drafts as C5 (`BANDIT_PLAN` exported from bandits.ts so the hero-equals-bandit test builds the same way); `perkTree.ts` to C9; `SAVE_VERSION` 23 (characters' perks must be known ids at rank 1).
+
+**Decisions and deviations.**
+- `nodeHint` keeps its existing third argument `canAdvance` (C9: "existing exports keep their callers' shapes").
+- Attributes: `attributeLevel` now stops at 10. `cappedAttribute` refuses only a node whose every effect is an attribute (Gain Strength, refused above Strength 8, as its description says); Toughness, Far Shot, Skirmisher, Fortune and Lasting Magic are never refused for their +1, the attribute just stops at 10 (tested). Refusing Toughness to an END 10 hero would have been absurd.
+- Skill asks are worded with short names ("Melee 40%", "Archery", "Magic") per C2, in both `missingRequirements` and `describePerkRequirements`; depth "1 node in X" / "N nodes in X".
+- `nodeState` 'locked' only when a capstone is closed by a held capstone or by a calling that exists and excludes its path; a hero with no node at all sees a capstone 'closed'.
+- `XpGain.xp` keeps `Math.round(xp)` (no `xpPercent`).
+- Pre-rolls: picks as C5; attributes, tags and skill points unchanged (Aldric's order now weapon_training, heavy_hand, toughness; Delwyn magic_arrow, heal, arcane_study; Garrick weapon_training, marksmanship, dodger). Bandits: Brute's armor_breaker → toughness, Hedge-Mage magic_arrow, shield, arcane_study; others unchanged.
+- Characterization fixtures that hash or read the ready-made party moved with Aldric's Toughness (+8 HP, +1 END) and the character shape: `src/game/camp.test.ts` RESULT/MEMBERS and `src/game/worldMap.test.ts` SESSION_SHA256 re-recorded, each with a comment.
+- The refactor guard re-recorded (commit message says why). All five guard campaigns now reach the Source (one did before): the trees' single-rank nodes are worth two old ranks and picks come at even levels. Step 08 measures; flagging that play moved notably.
+- Interim view (decision 3): `PerkTreeView` draws `treeLayout('warrior')` for the perk tree and `treeLayout('mage')` for the spell tree, row 0 a path heading (name, depth, calling in gold), a kind-coloured edge, "* " before a capstone, `requires` lines down the column's left gutter; the strip stays at 11 rows. Creation keeps the Perks/Spells switch mapped to those two trees. The Scout and Cleric trees cannot be clicked in the UI until step 06 (Brenna's and Delwyn's Ranger/Rogue/Healer nodes still show in the Skills tab list and Spells tab).
+- `docs/manual/README.md` still describes Spellcasting and the old perks; the plan gives manual text to step 08.
+
+**In-browser tests changed to the interim view** (none left failing for step 06 to restore): `e2e/party.test.ts` (creation's perks step: tier-2 nodes closed, Mage tree of 22 nodes with none open, a node of one rank given back and retaken; Mira's Melee 55/57; Aldric's pick order); `e2e/character.test.ts` (taken perks in PERKS order, Delwyn's one passive, Warrior tree 11 nodes, Mage tree 22 with arcane_study and magic_arrow, battle tree 11; the level-2 pick still waiting after the skill points are spent; the node-taking test now takes Armour Breaker with the level-2 pick); `e2e/world.test.ts` (two time-control tests plant Aldric at 4 hp, as he now has 35). Step 06 will need to rewrite these again for the four tabs.
+
+**For later steps.** `BANDIT_PLAN` in bandits.ts; `TreeSwitch` in CreationScene is the interim 'perks' | 'spells' switch; `KIND_COLOURS` in PerkTreeView already has at-will and mana entries. v22 and v18 saves read as unreadable until step 05 (save.test.ts tests say so and name step 05).
 

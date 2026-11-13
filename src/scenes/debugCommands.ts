@@ -173,8 +173,7 @@ const COMMANDS: Record<string, Command> = {
         const mana = maxMana(character) > 0 ? ` mana ${manaOf(character)}/${maxMana(character)}` : ''
         const spend = [
           character.skillPoints > 0 ? `${character.skillPoints} skill pts` : '',
-          character.perkPicks > 0 ? `${character.perkPicks} perks` : '',
-          character.spellPicks > 0 ? `${character.spellPicks} spells` : '',
+          character.perkPicks > 0 ? `${character.perkPicks} picks` : '',
         ].filter(Boolean)
         return `${i === null ? ' -' : `${i + 1}.`} ${character.name.padEnd(12)} L${character.level} xp ${character.xp}/${xpToNextLevel(character.level)} hp ${character.hp}/${maxHp(character)}${mana}${spend.length ? `  (${spend.join(', ')})` : ''}`
       }

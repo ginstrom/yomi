@@ -35,7 +35,7 @@ export const PREROLLS: readonly Preroll[] = [
       attributes: { strength: 9, perception: 3, endurance: 7, intelligence: 3, agility: 6, luck: 4 },
       tagged: 'melee',
       raises: { melee: 10, archery: 0, magic: 0 },
-      perks: ['weapon_training', 'toughness', 'heavy_hand'],
+      perks: ['weapon_training', 'heavy_hand', 'toughness'],
     },
   },
   {
@@ -57,8 +57,7 @@ export const PREROLLS: readonly Preroll[] = [
       attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
       tagged: 'magic',
       raises: { melee: 0, archery: 0, magic: 10 },
-      // Spellcasting's two spell picks buy the last two.
-      perks: ['spellcasting', 'arcane_study', 'keen_eye', 'magic_arrow', 'heal'],
+      perks: ['magic_arrow', 'heal', 'arcane_study'],
     },
   },
   {
@@ -70,7 +69,7 @@ export const PREROLLS: readonly Preroll[] = [
       attributes: { strength: 6, perception: 6, endurance: 5, intelligence: 3, agility: 8, luck: 4 },
       tagged: 'melee',
       raises: { melee: 0, archery: 10, magic: 0 },
-      perks: ['weapon_training', 'marksmanship', 'marksmanship'],
+      perks: ['weapon_training', 'marksmanship', 'dodger'],
     },
   },
 ]
@@ -164,9 +163,8 @@ export function describeRewards({ members, dead }: VictoryReward): string[] {
   for (const { member, gain } of members) {
     if (gain.levelsGained > 0) {
       const points = `, ${gain.skillPointsGained} skill points`
-      const perk = gain.perksGained > 0 ? ', a perk' : ''
-      const spell = gain.spellsGained > 0 ? `, ${gain.spellsGained === 1 ? 'a spell' : `${gain.spellsGained} spells`}` : ''
-      lines.push(`${member.name} reaches level ${member.level}: +${gain.maxHpGained} max HP${points}${perk}${spell}, wounds healed`)
+      const perk = gain.perksGained > 0 ? ', a pick' : ''
+      lines.push(`${member.name} reaches level ${member.level}: +${gain.maxHpGained} max HP${points}${perk}, wounds healed`)
     }
   }
   return lines

@@ -23,11 +23,14 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * version-18 save straight to this version; versions 19 and 21 were never
  * released, and they and stage 5's 20 read as unreadable); otherwise a save
  * of another version reads as unreadable. Version 22 (stage 6) adds the
- * home, garrison and meet orders. Rules and item numbers may change
+ * home, garrison and meet orders. Version 23 (the skill trees) drops a
+ * character's `spellPicks` and holds every node at one rank under the trees'
+ * ids; until `migrateFrom22` arrives (skill trees step 05) versions 22 and
+ * 18 read as unreadable. Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 22
+export const SAVE_VERSION = 23
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -106,7 +109,7 @@ const characterIds = (member: Character) =>
 
 function characterOf(saved: Character): Character {
   check(saved && typeof saved === 'object' && typeof saved.name === 'string')
-  check(Object.keys(saved.perks).every((id) => (PERK_IDS as string[]).includes(id)))
+  check(Object.entries(saved.perks).every(([id, ranks]) => (PERK_IDS as string[]).includes(id) && ranks === 1))
   check(Array.isArray(saved.tagged) && saved.tagged.every((id) => SKILL_IDS.includes(id)))
   check(SKILL_IDS.every((id) => typeof saved.trained[id] === 'number'))
   check(Array.isArray(saved.backpack))

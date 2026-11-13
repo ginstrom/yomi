@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { MONSTER_SPELL_IDS, SPELLS, SPELL_IDS } from '../combat/spells.ts'
-import { ATTRIBUTE_IDS } from './attributes.ts'
 import { createWarrior } from './character.ts'
 import {
   PERKS,
   PERK_IDS,
-  TRUNK_PERKS,
   attributeLevel,
   attributesOf,
   availablePerks,
@@ -13,304 +11,217 @@ import {
   describePerkRequirements,
   knownSpells,
   missingRequirements,
+  nodeKind,
   perkBonus,
+  perkLevel,
   perkParent,
+  perkRanks,
+  perkTeaching,
   qualifiesFor,
-  SPELL_PERK_IDS,
-  SPELL_TIERS,
-  isSpellPerk,
-  spellPerkOf,
   type Perk,
 } from './perks.ts'
 import { takePerk } from './progression.ts'
 import { SKILL_IDS, skillLevel } from './skills.ts'
-
-/** Spells step 02 added that no perk teaches yet (step 03 gives them nodes). */
-const UNTAUGHT = ['frostbite', 'meteor', 'mass_haste', 'lay_on_hands', 'ward', 'web', 'curse']
-const TAUGHT_SPELLS = SPELL_IDS.filter((spell) => !UNTAUGHT.includes(spell))
+import { PATHS } from './trees.ts'
 
 /** The warrior: strength 7, perception 4, endurance 7, intelligence 4, agility 6, luck 7. */
 const warriorAt = (level: number) => ({ ...createWarrior(), level })
 
 describe('PERKS', () => {
-  it('gives every perk a name, a description, a rank to take and something it does', () => {
-    expect(PERK_IDS).toHaveLength(28 + TAUGHT_SPELLS.length)
-    for (const id of PERK_IDS) {
-      const perk: Perk = PERKS[id]
-      expect(perk.name.length * perk.description.length).toBeGreaterThan(0)
-      expect(perk.ranks).toBeGreaterThanOrEqual(1)
-      const opens = id === 'spellcasting'
-      expect(opens || perk.spell !== undefined || Object.values(perk.effects).some((amount) => amount !== 0)).toBe(true)
+  it('teaches every hero spell from exactly one node, and no monster spell', () => {
+    for (const spell of SPELL_IDS) {
+      const node = perkTeaching(spell)
+      expect(node, spell).not.toBeNull()
+      expect(PERK_IDS.filter((id) => (PERKS[id] as Perk).spell === spell)).toEqual([node])
+    }
+    for (const spell of MONSTER_SPELL_IDS) expect(PERK_IDS.some((id) => (PERKS[id] as Perk).spell === (spell as string))).toBe(false)
+  })
+
+  it('names each spell node by its spell, with its mana and AP', () => {
+    for (const spell of SPELL_IDS) {
+      const node: Perk = PERKS[perkTeaching(spell)!]
+      expect(node.name).toBe(SPELLS[spell].name)
+      expect(node.description).toBe(`${SPELLS[spell].description}; ${SPELLS[spell].manaCost} mana, ${SPELLS[spell].apCost} AP`)
+      expect(node.effects).toEqual({})
     }
   })
 
-  it('asks only for attributes and skills a character can have, and teaches only spells there are', () => {
+  it('asks a node it requires only of its own path', () => {
     for (const id of PERK_IDS) {
-      const perk: Perk = PERKS[id]
-      for (const key of Object.keys(perk.attributes ?? {})) expect(ATTRIBUTE_IDS).toContain(key)
-      for (const key of Object.keys(perk.skills ?? {})) expect(SKILL_IDS).toContain(key)
-      if (perk.spell) expect(SPELL_IDS).toContain(perk.spell)
+      const parent = perkParent(id)
+      if (parent) expect((PERKS[parent] as Perk).path).toBe((PERKS[id] as Perk).path)
     }
-    expect(JSON.stringify(PERKS)).not.toMatch(/first aid|firstAid|healer/i)
   })
 
-  it('teaches every hero spell that has a perk and no monster spell, whatever a character takes', () => {
-    const taught = PERK_IDS.map((id) => (PERKS[id] as Perk).spell).filter((spell) => spell !== undefined)
-    expect([...taught].sort()).toEqual([...TAUGHT_SPELLS].sort())
-    for (const spell of MONSTER_SPELL_IDS) expect(taught as string[]).not.toContain(spell)
+  it('gives each node its tier’s level', () => {
+    expect([perkLevel('dodger'), perkLevel('far_shot'), perkLevel('evasion'), perkLevel('deadeye')]).toEqual([1, 2, 6, 12])
   })
 })
 
-describe('the perk tree', () => {
-  it('has a branch for each attribute, with the perk that raises it as its trunk', () => {
-    for (const id of ATTRIBUTE_IDS) {
-      const trunk: Perk = PERKS[TRUNK_PERKS[id]]
-      expect(trunk).toMatchObject({ branch: id, ranks: 2, level: 3, effects: { [id]: 1 } })
-      expect(trunk.requires).toBeUndefined()
-    }
-    expect(new Set(Object.values(TRUNK_PERKS)).size).toBe(ATTRIBUTE_IDS.length)
+describe('nodeKind', () => {
+  it('is a spell for a node that teaches one, else a passive', () => {
+    expect(nodeKind('magic_arrow')).toBe('spell')
+    expect(nodeKind('curse')).toBe('spell')
+    expect(nodeKind('dodger')).toBe('passive')
+    expect(nodeKind('deadeye')).toBe('passive')
   })
+})
 
-  it('grows a perk only from a perk of its own branch', () => {
-    for (const id of PERK_IDS) {
-      const parent = perkParent(id)
-      if (parent === null) continue
-      expect(PERK_IDS).toContain(parent)
-      expect(PERKS[parent].branch).toBe(PERKS[id].branch)
-    }
-    expect(PERK_IDS.filter((id) => !isSpellPerk(id)).map((id) => [id, perkParent(id)]).filter(([, parent]) => parent)).toEqual([
-      ['far_shot', 'deadly_aim'],
-      ['scholar', 'quick_study'],
-      ['tireless', 'toughness'],
-      ['mighty_blow', 'heavy_hand'],
-      ['weapon_mastery', 'weapon_training'],
-      ['sunder', 'armor_breaker'],
-      ['eagle_eye', 'marksmanship'],
-      ['deep_well', 'spellcasting'],
-      ['arcane_mastery', 'arcane_study'],
-      ['evasion', 'dodger'],
-      ['fortune', 'keen_eye'],
-    ])
-  })
-
-  it('has every perk but the trunks ask for its branch’s attribute or skill, or for a perk of its branch', () => {
-    const trunks = Object.values(TRUNK_PERKS)
-    for (const id of PERK_IDS.filter((perk) => !trunks.includes(perk))) {
-      const perk: Perk = PERKS[id]
-      // Magic is the one skill that starts from intelligence alone.
-      const asksSkill = perk.branch === 'intelligence' && perk.skills?.magic !== undefined
-      expect(perk.attributes?.[perk.branch] !== undefined || asksSkill || perkParent(id) !== null).toBe(true)
-    }
+describe('perkTeaching', () => {
+  it('names the node of a spell', () => {
+    expect([perkTeaching('heal'), perkTeaching('web'), perkTeaching('meteor')]).toEqual(['heal', 'web', 'meteor'])
   })
 })
 
 describe('qualifiesFor', () => {
-  it('asks for the perk’s level', () => {
-    // A new character may take the perks of level 1; the ones that raise an attribute wait for level 3.
-    expect(availablePerks(warriorAt(1))).toEqual([
-      'toughness',
-      'dodger',
-      'heavy_hand',
-      'keen_eye',
-      'weapon_training',
-      'armor_breaker',
-    ])
-    expect(qualifiesFor(warriorAt(2), 'gain_strength')).toBe(false)
-    expect(qualifiesFor(warriorAt(3), 'gain_strength')).toBe(true)
-    const hardy = { ...warriorAt(5), perks: { toughness: 1 } }
-    hardy.attributes.endurance = 8
-    expect(qualifiesFor(hardy, 'tireless')).toBe(false)
-    expect(qualifiesFor({ ...hardy, level: 6 }, 'tireless')).toBe(true)
+  it('asks the tier’s level: a new character may take only the first tier’s nodes', () => {
+    const offered = availablePerks(warriorAt(1))
+    expect(offered.every((id) => (PERKS[id] as Perk).tier === 1)).toBe(true)
+    // Strength 7, endurance 7, intelligence 4, agility 6, luck 7 and Melee Weapons 33.
+    expect(offered).toEqual(['weapon_training', 'heavy_hand', 'toughness', 'shield_wall', 'arcane_blood', 'dodger', 'keen_eye', 'bless'])
+    const swordsman = { ...warriorAt(1), perks: { weapon_training: 1 } }
+    expect(missingRequirements(swordsman, 'armor_breaker')).toEqual(['Level 2'])
+    expect(qualifiesFor({ ...swordsman, level: 2 }, 'armor_breaker')).toBe(true)
   })
 
-  it('asks for the perk’s attributes', () => {
-    const warrior = warriorAt(3)
-    expect(availablePerks(warrior)).toEqual([
-      'toughness',
-      'dodger',
-      'heavy_hand',
-      'keen_eye',
-      'weapon_training',
-      'armor_breaker',
-      ...Object.values(TRUNK_PERKS),
-    ])
-    expect(qualifiesFor(warrior, 'deadly_aim')).toBe(false)
-    warrior.attributes.perception = 6
+  it('asks the tier’s depth: nodes already held in the node’s own path', () => {
+    const warrior = warriorAt(2)
+    expect(missingRequirements(warrior, 'armor_breaker')).toEqual(['1 node in Swordmaster'])
+    // A node of another path does not count.
+    warrior.perks = { toughness: 1 }
+    expect(qualifiesFor(warrior, 'armor_breaker')).toBe(false)
+    warrior.perks = { heavy_hand: 1 }
+    expect(qualifiesFor(warrior, 'armor_breaker')).toBe(true)
+    const knight = { ...warriorAt(6), perks: { toughness: 1, shield_wall: 1 } }
+    expect(missingRequirements(knight, 'iron_skin')).toEqual(['3 nodes in Heavy Knight'])
+  })
+
+  it('asks the node’s attributes, counting what a node has raised', () => {
+    const warrior = warriorAt(2)
+    expect(missingRequirements(warrior, 'deadly_aim')).toEqual(['Perception 6'])
+    warrior.attributes.perception = 5
+    warrior.perks = { marksmanship: 1, far_shot: 1 }
     expect(qualifiesFor(warrior, 'deadly_aim')).toBe(true)
   })
 
-  it('asks for the perk’s skills: Spellcasting at Magic 40% and not at 39%', () => {
-    const warrior = warriorAt(3)
+  it('asks the node’s skills: Magic Arrow at Magic 40% and not at 39%', () => {
+    const warrior = warriorAt(1)
     warrior.perkPicks = 1
     warrior.trained.magic = 31
     expect(skillLevel(warrior, 'magic')).toBe(39)
-    expect(qualifiesFor(warrior, 'spellcasting')).toBe(false)
-    expect(takePerk(warrior, 'spellcasting')).toBe(false)
+    expect(missingRequirements(warrior, 'magic_arrow')).toEqual(['Magic 40%'])
+    expect(takePerk(warrior, 'magic_arrow')).toBe(false)
     warrior.trained.magic = 32
-    expect(takePerk(warrior, 'spellcasting')).toBe(true)
-    // It teaches no spell; it opens the spell tree.
-    expect(knownSpells(warrior)).toEqual([])
-    expect(qualifiesFor(warrior, 'magic_arrow')).toBe(true)
+    expect(takePerk(warrior, 'magic_arrow')).toBe(true)
+    expect(knownSpells(warrior)).toEqual(['magic_arrow'])
   })
 
-  it('counts what a skill perk adds: Arcane Study can carry a mage to a tier 2 spell', () => {
-    const mage = warriorAt(3)
-    mage.attributes.intelligence = 5
-    mage.perkPicks = 3
-    mage.perks = { spellcasting: 1, magic_arrow: 1 }
-    mage.trained.magic = 35
-    expect(skillLevel(mage, 'magic')).toBe(45)
-    expect(qualifiesFor(mage, 'flame_arrow')).toBe(false)
-    expect(takePerk(mage, 'arcane_study')).toBe(true)
-    expect(takePerk(mage, 'arcane_study')).toBe(true)
-    expect(skillLevel(mage, 'magic')).toBe(55)
-    expect(takePerk(mage, 'flame_arrow')).toBe(true)
+  it('asks any one of several skills, worded "Melee 40% or Magic 40%"', () => {
+    const archer = warriorAt(2)
+    archer.tagged = ['archery']
+    archer.perks = { bless: 1 }
+    expect(skillLevel(archer, 'melee')).toBeLessThan(40)
+    expect(missingRequirements(archer, 'lay_on_hands')).toEqual(['Melee 40% or Magic 40%'])
+    expect(describePerkRequirements('lay_on_hands')).toBe('Level 2, Melee 40% or Magic 40%, 1 node in Paladin')
+    archer.trained.magic = 32
+    expect(qualifiesFor(archer, 'lay_on_hands')).toBe(true)
   })
 
-  it('asks for a rank of the perk it grows from', () => {
-    const hero = warriorAt(6)
-    hero.attributes = { ...hero.attributes, endurance: 8, agility: 6 }
-    hero.perkPicks = 2
-    expect(qualifiesFor(hero, 'tireless')).toBe(false)
-    expect(takePerk(hero, 'tireless')).toBe(false)
-    expect(takePerk(hero, 'toughness')).toBe(true)
-    expect(takePerk(hero, 'tireless')).toBe(true)
-    // The trunk is not asked for: strength 7 takes Heavy Hand without Gain Strength.
-    expect(qualifiesFor(hero, 'heavy_hand')).toBe(true)
+  it('asks the node it requires, named, before the depth', () => {
+    const mage = warriorAt(2)
+    mage.trained.magic = 47
+    mage.perks = { destruction: 1 }
+    expect(missingRequirements(mage, 'flame_arrow')).toEqual(['Magic Arrow'])
+    mage.perks = { magic_arrow: 1 }
+    expect(qualifiesFor(mage, 'flame_arrow')).toBe(true)
+    expect(describePerkRequirements('fireball')).toBe('Level 6, Magic 65%, Flame Arrow, 3 nodes in Evoker')
   })
 
-  it('asks level 6 and an attribute of 8 at the far end of a branch, which the trunk can reach', () => {
-    const warrior = warriorAt(6)
-    warrior.perks = { weapon_training: 1 }
-    expect(missingRequirements(warrior, 'weapon_mastery')).toEqual(['Strength 8'])
-    warrior.perks.gain_strength = 1
-    expect(qualifiesFor(warrior, 'weapon_mastery')).toBe(true)
-    const trunks = Object.values(TRUNK_PERKS)
-    const tips = PERK_IDS.filter((id) => !trunks.includes(id) && PERKS[id].level === 6)
-    expect(tips).toHaveLength(9)
-    for (const id of tips) {
-      const perk: Perk = PERKS[id]
-      expect(perkParent(id)).not.toBeNull()
-      expect(perk.attributes?.[perk.branch]).toBe(8)
-    }
+  it('words the asks in order: level, attributes, skills, the node required, depth', () => {
+    expect(missingRequirements(warriorAt(1), 'weapon_mastery')).toEqual(['Level 6', 'Strength 8', '3 nodes in Swordmaster'])
+    expect(missingRequirements(warriorAt(1), 'fireball')).toEqual(['Level 6', 'Magic 65%', 'Flame Arrow', '3 nodes in Evoker'])
   })
 
-  it('counts an attribute a perk has raised', () => {
-    const warrior = warriorAt(3)
-    warrior.attributes.perception = 5
-    expect(qualifiesFor(warrior, 'deadly_aim')).toBe(false)
-    warrior.perks.gain_perception = 1
-    expect(qualifiesFor(warrior, 'deadly_aim')).toBe(true)
+  it('opens a capstone only in the calling and only while no capstone is held', () => {
+    const archer = warriorAt(12)
+    archer.trained.archery = 60
+    archer.perks = { marksmanship: 1, deadly_aim: 1, dodger: 1, skirmisher: 1, evasion: 1, keen_eye: 1 }
+    expect(missingRequirements(archer, 'deadeye')).toEqual(['5 nodes in Ranger', 'Ranger must be your deepest path'])
+    expect(describePerkRequirements('deadeye')).toBe(
+      'Level 12, Archery 70%, 5 nodes in Ranger, Ranger must be your deepest path, Only one capstone',
+    )
+    archer.perks = { meteor: 1 }
+    expect(missingRequirements(archer, 'deadeye')).toContain('Only one capstone')
   })
 
-  it('refuses a rank that would raise an attribute past the highest there is', () => {
-    const warrior = warriorAt(3)
-    warrior.attributes.intelligence = 9
-    expect(qualifiesFor(warrior, 'gain_intelligence')).toBe(true)
-    warrior.perks.gain_intelligence = 1
-    expect(cappedAttribute(warrior, 'gain_intelligence')).toBe('intelligence')
-    expect(qualifiesFor(warrior, 'gain_intelligence')).toBe(false)
-    warrior.attributes.luck = 10
-    warrior.perks = {}
-    expect(qualifiesFor(warrior, 'gain_luck')).toBe(false)
-    expect(cappedAttribute(warrior, 'keen_eye')).toBeNull()
-  })
-
-  it('offers a perk until every rank of it is taken', () => {
-    const warrior = warriorAt(3)
-    warrior.perks.toughness = PERKS.toughness.ranks - 1
+  it('never offers a node held: every node has one rank', () => {
+    const warrior = warriorAt(1)
     expect(qualifiesFor(warrior, 'toughness')).toBe(true)
-    warrior.perks.toughness = PERKS.toughness.ranks
+    warrior.perks.toughness = 1
     expect(qualifiesFor(warrior, 'toughness')).toBe(false)
+    expect(perkRanks(warrior, 'toughness')).toBe(1)
+  })
+
+  it('refuses Gain Strength to one whose Strength is above 8, as it would pass 10', () => {
+    const warrior = { ...warriorAt(2), perks: { weapon_training: 1 } }
+    warrior.attributes.strength = 8
+    expect(cappedAttribute(warrior, 'gain_strength')).toBeNull()
+    expect(qualifiesFor(warrior, 'gain_strength')).toBe(true)
+    warrior.attributes.strength = 9
+    expect(cappedAttribute(warrior, 'gain_strength')).toBe('strength')
+    expect(qualifiesFor(warrior, 'gain_strength')).toBe(false)
+    // A node that raises an attribute beside its own effect is never refused for it.
+    warrior.attributes.endurance = 10
+    expect(cappedAttribute(warrior, 'toughness')).toBeNull()
+  })
+
+  it('gates taking a node, never keeping it', () => {
+    const warrior = warriorAt(1)
+    warrior.perks = { deadly_aim: 1 }
+    expect(qualifiesFor({ ...warrior, perks: {} }, 'deadly_aim')).toBe(false)
+    // Held without its asks met, it still counts.
+    expect(perkBonus(warrior, 'rangedDamage')).toBe(2)
   })
 })
 
 describe('perkBonus', () => {
-  it('adds up an effect over the ranks taken', () => {
+  it('adds up an effect over the nodes held', () => {
     const warrior = createWarrior()
     expect(perkBonus(warrior, 'maxHp')).toBe(0)
-    warrior.perks = { toughness: 2, dodger: 1 }
-    expect(perkBonus(warrior, 'maxHp')).toBe(2 * PERKS.toughness.effects.maxHp)
-    expect(perkBonus(warrior, 'armorClass')).toBe(PERKS.dodger.effects.armorClass)
+    warrior.perks = { toughness: 1, dodger: 1, evasion: 1 }
+    expect(perkBonus(warrior, 'maxHp')).toBe(8)
+    expect(perkBonus(warrior, 'armorClass')).toBe(20)
     expect(perkBonus(warrior, 'critChance')).toBe(0)
   })
 })
 
-describe('a skill perk', () => {
-  it('adds 5% a rank to its skill and to no other, for two ranks', () => {
+describe('a skill node', () => {
+  it('adds 10% to its skill and to no other', () => {
     const warrior = createWarrior()
     const before = SKILL_IDS.map((id) => skillLevel(warrior, id))
-    warrior.perks = { weapon_training: 2, marksmanship: 1 }
-    expect(SKILL_IDS.map((id) => skillLevel(warrior, id))).toEqual([before[0] + 10, before[1] + 5, before[2]])
+    warrior.perks = { weapon_training: 1, marksmanship: 1 }
+    expect(SKILL_IDS.map((id) => skillLevel(warrior, id))).toEqual([before[0] + 10, before[1] + 10, before[2]])
     for (const id of ['weapon_training', 'marksmanship', 'arcane_study'] as const) {
-      expect(PERKS[id]).toMatchObject({ ranks: 2, level: 1 })
+      expect(PERKS[id]).toMatchObject({ tier: 1, effects: { [SKILL_IDS[['weapon_training', 'marksmanship', 'arcane_study'].indexOf(id)]]: 10 } })
     }
   })
 })
 
 describe('attributeLevel', () => {
-  it('is what the character was born with and what its perks add', () => {
+  it('is what the character was born with and what its nodes add, never past 10', () => {
     const warrior = createWarrior()
     expect(attributesOf(warrior)).toEqual(warrior.attributes)
-    warrior.perks = { gain_endurance: 2, gain_luck: 1 }
-    expect(attributeLevel(warrior, 'endurance')).toBe(9)
-    expect(attributesOf(warrior)).toEqual({ ...warrior.attributes, endurance: 9, luck: 8 })
+    warrior.perks = { toughness: 1, fortune: 1 }
+    expect(attributeLevel(warrior, 'endurance')).toBe(8)
+    expect(attributesOf(warrior)).toEqual({ ...warrior.attributes, endurance: 8, luck: 8 })
     expect(warrior.attributes.endurance).toBe(7)
+    warrior.attributes.endurance = 10
+    expect(attributeLevel(warrior, 'endurance')).toBe(10)
   })
 })
 
-describe('knownSpells', () => {
-  it('is the spells a character’s perks teach', () => {
-    const warrior = createWarrior()
-    expect(knownSpells(warrior)).toEqual([])
-    warrior.perks = { toughness: 1, magic_arrow: 1 }
-    expect(knownSpells(warrior)).toEqual(['magic_arrow'])
-  })
-})
-
-describe('the spell perks', () => {
-  it('teach each spell once, from its school, at its tier, from Spellcasting or a spell of its school', () => {
-    expect(SPELL_PERK_IDS).toHaveLength(TAUGHT_SPELLS.length)
-    for (const spell of TAUGHT_SPELLS) {
-      const id = spellPerkOf(spell)
-      const perk: Perk = PERKS[id]
-      expect(id).toBe(spell)
-      expect(perk.school).toBe(SPELLS[spell].school)
-      const parent = perkParent(id)!
-      if (parent === 'spellcasting') expect(perk).toMatchObject({ level: 1, skills: { magic: 40 } })
-      else {
-        expect((PERKS[parent] as Perk).school).toBe(perk.school)
-        const tier = Object.values(SPELL_TIERS).findIndex((t) => t.level === perk.level)
-        expect(PERKS[parent].level).toBe(Object.values(SPELL_TIERS)[tier - 1].level)
-      }
-    }
-    expect(isSpellPerk('spellcasting')).toBe(false)
-  })
-})
-
-describe('describePerkRequirements', () => {
-  it('lists the level, then attributes and skills, then the perk before it', () => {
-    expect(describePerkRequirements('toughness')).toBe('Level 1, Endurance 5')
-    expect(describePerkRequirements('tireless')).toBe('Level 6, Endurance 8, Agility 6, Toughness')
-    expect(describePerkRequirements('spellcasting')).toBe('Level 1, Magic 40%')
-    expect(describePerkRequirements('fireball')).toBe('Level 5, Magic 70%, Flame Arrow')
-    expect(describePerkRequirements('gain_luck')).toBe('Level 3')
-  })
-})
-
-describe('missingRequirements', () => {
-  it('names exactly what the character lacks', () => {
-    const hero = warriorAt(5)
-    hero.attributes.agility = 5
-    expect(missingRequirements(hero, 'tireless')).toEqual(['Level 6', 'Endurance 8', 'Agility 6', 'Toughness'])
-    hero.level = 6
-    hero.perks.toughness = 1
-    hero.attributes.endurance = 8
-    expect(missingRequirements(hero, 'tireless')).toEqual(['Agility 6'])
-    expect(missingRequirements(hero, 'magic_arrow')).toEqual(['Magic 40%', 'Spellcasting'])
-    expect(missingRequirements(hero, 'heavy_hand')).toEqual([])
-    // Ranks left are not its business.
-    hero.perks.toughness = 2
-    expect(missingRequirements(hero, 'toughness')).toEqual([])
+describe('the paths', () => {
+  it('give every node a path there is', () => {
+    for (const id of PERK_IDS) expect(PATHS[(PERKS[id] as Perk).path]).toBeDefined()
   })
 })

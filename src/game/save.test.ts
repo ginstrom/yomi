@@ -6,7 +6,7 @@ import { mulberry32 } from '../combat/rng.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
 import { hex } from '../grid/hex.ts'
 import { BASE_ITEMS, IRON_DAGGER, MAGIC_ITEMS, OAK_SHIELD, RING_PROTECTION, IRON_BREASTPLATE, itemById } from '../inventory/inventory.ts'
-import { FIRST_PARTY_ID, FIRST_PARTY_NAME, MAX_PARTIES, PARTY_NAMES, newExpedition, partyId, type Expedition, type Order } from './expedition.ts'
+import { FIRST_PARTY_ID, MAX_PARTIES, PARTY_NAMES, newExpedition, partyId, type Expedition, type Order } from './expedition.ts'
 import { ENCOUNTERS } from './encounters.ts'
 import { newGame, takeLoot, type GameState } from './gameState.ts'
 import { Ground } from './ground.ts'
@@ -26,7 +26,7 @@ function gameUnderWay(): GameState {
   aldric.backpack[aldric.backpack.indexOf(null)] = RING_PROTECTION
   equipFromBackpack(aldric, aldric.backpack.indexOf(RING_PROTECTION), [])
   gainXp(brenna, 500)
-  takePerk(brenna, 'gain_perception')
+  takePerk(brenna, 'far_shot')
   brenna.hp -= 3
   game.world.turn = 14
   // A reserve at the guild hall, kit and all.
@@ -118,8 +118,20 @@ describe('a save', () => {
     expect(parsed.game.parties[0].baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 22, whose battle names the party fighting and whose orders include home, garrison and meet', () => {
-    expect(SAVE_VERSION).toBe(22)
+  it('is version 23, whose characters hold the skill trees\' nodes and no spell picks', () => {
+    expect(SAVE_VERSION).toBe(23)
+  })
+
+  it('reads a version-22 save as unreadable until migrateFrom22 (skill trees step 05 restores it)', () => {
+    const v22 = readFileSync(new URL('./fixtures/save-v22.json', import.meta.url), 'utf8')
+    expect(JSON.parse(v22).version).toBe(22)
+    expect(parseSave(v22)).toBeNull()
+  })
+
+  it('reads a character holding a node at a rank other than 1 as unreadable', () => {
+    const saved = JSON.parse(serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 }))
+    saved.game.parties[0].members[0].perks = { weapon_training: 2 }
+    expect(parseSave(JSON.stringify(saved))).toBeNull()
   })
 
   it('reads a current save marked version 20 or 21, never released past stage 5, as unreadable', () => {
@@ -149,12 +161,13 @@ describe('a save', () => {
     expect(parseSave(edit((s) => (s.version = 20)))).toBeNull()
   })
 
-  it('migrates a version-18 battle to the first party', () => {
+  // Skill trees step 05 (migrateFrom22) makes the version-18 fixture load again; until then its old perk ids make it unreadable.
+  it('reads a version-18 battle as unreadable until skill trees step 05 chains migrateFrom22', () => {
     const game = gameUnderWay()
     const v = JSON.parse(readFileSync(new URL('./fixtures/save-v18.json', import.meta.url), 'utf8'))
     const battle = JSON.parse(serializeSave({ game, battle: battleOf(game), savedAt: 5 })).battle
     delete battle.party
-    expect(parseSave(JSON.stringify({ ...v, battle }))!.battle!.party).toBe(FIRST_PARTY_ID)
+    expect(parseSave(JSON.stringify({ ...v, battle }))).toBeNull()
   })
 
   it('keeps the pouch and an item with runes', () => {
@@ -380,27 +393,10 @@ describe('a version-18 save', () => {
     expect(old.game.world.party).not.toEqual({ q: 0, r: 19 })
   })
 
-  it('migrates into a company of one', () => {
-    const loaded = parseSave(raw)!
-    expect(loaded).not.toBeNull()
-    const { game } = loaded
-    expect(game.parties).toHaveLength(1)
-    const party = game.parties[0]
-    expect([party.id, party.name, party.order]).toEqual([FIRST_PARTY_ID, FIRST_PARTY_NAME, { kind: 'idle' }])
-    expect(party.members.map((m) => [m.name, m.level, m.hp])).toEqual(old.game.party.map((m: any) => [m.name, m.level, m.hp]))
-    party.members.forEach((m, i) =>
-      expect(Object.fromEntries(Object.entries(m.equipment).map(([slot, item]) => [slot, item.id]))).toEqual(old.game.party[i].equipment),
-    )
-    expect(party.baggage).toEqual([itemById('iron_sword'), itemById('iron_sword@3#ember1')])
-    expect(party.baggage[1]).toBe(itemById('iron_sword@3#ember1'))
-    expect(party.members[0].backpack[0]).toBe(itemById('iron_sword@3#storm1'))
-    expect('party' in game || 'baggage' in game).toBe(false)
-    expect(party.position).toEqual(old.game.world.party)
-    expect(party.confronting).toBe('goblin_raiders')
-    expect('party' in game.world || 'confronting' in game.world).toBe(false)
-    expect(game.runes).toEqual({ storm1: 1 })
-    expect(JSON.parse(serializeSave(loaded)).version).toBe(22)
-    expect(parseSave(serializeSave(loaded))!.game).toEqual(game)
+  // Skill trees step 05 restores the migration test: migrateFrom18 yields version 22's shape, whose
+  // retired perk id (Delwyn's Spellcasting) version 23 refuses until migrateFrom22 chains after it.
+  it('reads as unreadable until skill trees step 05 chains migrateFrom22 after migrateFrom18', () => {
+    expect(parseSave(raw)).toBeNull()
   })
 
   it('is checked as strictly as a current one', () => {

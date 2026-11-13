@@ -5,7 +5,7 @@ import { autoAdvance, levelUp } from '../character/progression.ts'
 import { gradedItem, type Grade } from '../inventory/grades.ts'
 import { IRON_BATTLE_AXE, IRON_BREASTPLATE, IRON_DAGGER, IRON_SWORD, SPARK_WAND, itemById, type Item } from '../inventory/inventory.ts'
 import type { Tier } from '../inventory/catalog.ts'
-import { BANDIT_ROLE, banditDraft, banditGear, banditStats, type BanditRole } from './bandits.ts'
+import { BANDIT_PLAN, BANDIT_ROLE, banditDraft, banditGear, banditStats, type BanditRole } from './bandits.ts'
 
 const G1 = { tier: 1, grade: 1 } as const
 const G2 = { tier: 1, grade: 2 } as const
@@ -42,7 +42,7 @@ function heroLike(role: BanditRole, level: number, tier: Tier, grade: Grade): Ch
     ...(armor ? { armor: graded(armor) } : {}),
   }
   while (hero.level < level) levelUp(hero)
-  autoAdvance(hero)
+  autoAdvance(hero, BANDIT_PLAN[role])
   return hero
 }
 
@@ -116,7 +116,8 @@ describe('banditStats', () => {
   it('arms the crossbowman with a crossbow that pierces at range', () => {
     const stats = banditStats('crossbowman', 6, T2)
     expect(stats.weapon).toBe('Fine Ironwood Crossbow')
-    expect(stats.attackRange).toBe(5)
+    // The crossbow's 5, and Far Shot's 2, which the ranger's plan takes at level 2.
+    expect(stats.attackRange).toBe(7)
     expect(stats.attackApCost).toBe(6)
   })
 

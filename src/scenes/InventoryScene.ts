@@ -17,13 +17,13 @@ import {
   PERK_IDS,
   attributeLevel,
   attributesOf,
-  isSpellPerk,
   knownSpells,
+  nodeKind,
   perkRanks,
   qualifiesFor,
   type PerkId,
 } from '../character/perks.ts'
-import { hasPickFor, hasSpellcasting, nextPerkLevel, nextSpellLevel, takePerk, xpToNextLevel } from '../character/progression.ts'
+import { hasPickFor, nextPerkLevel, takePerk, xpToNextLevel } from '../character/progression.ts'
 import { castOnWorldMap, healsOne, worldHealing, worldSpells } from '../character/worldCasting.ts'
 import { SPELLS, type HeroSpellId, type SpellId } from '../combat/spells.ts'
 import {
@@ -177,8 +177,8 @@ const TREE_BUTTON = { x: PERKS_X + PERKS_W / 2, y: 462, width: 160, height: 32 }
 const TREE_X = 20
 const BACK_BUTTON = { x: PANEL_W - 20 - 40, y: 75, width: 80, height: 26 }
 /** What the strip says with the pointer on no node. */
-const TREE_RULE = 'A new character has 3 perks to choose, and one more comes every 3rd level. A line from a perk means it must be taken first.'
-const SPELL_TREE_RULE = 'A caster learns a spell with every level. A line from a spell means it must be learned first.'
+const TREE_RULE = 'The Warrior tree. A new character has 3 picks, and one more comes at every even level. A line from a node means it must be taken first.'
+const SPELL_TREE_RULE = 'The Mage tree. A pick buys a spell as it buys any node. A line from a spell means it must be learned first.'
 
 /** The spells tab: the spells known in two columns, each row with a Cast button on the world map for a heal. */
 const SPELLS_X = 24
@@ -416,7 +416,6 @@ export class InventoryScene extends Phaser.Scene {
       party: this.column.probe(),
       skillPoints: this.character.skillPoints,
       perkPicks: this.character.perkPicks,
-      spellPicks: this.character.spellPicks,
       skills: Object.fromEntries(
         SKILL_IDS.map((id, row) => [
           id,
@@ -440,7 +439,7 @@ export class InventoryScene extends Phaser.Scene {
         canTake: this.canTake(perk),
       })),
       spellTreeButton: onScreen(SPELL_TREE_BUTTON),
-      spellNodes: PerkTreeView.nodeCentres('spells').map(({ perk, ...at }) => ({
+      spellNodes: PerkTreeView.nodeCentres('mage').map(({ perk, ...at }) => ({
         ...onScreen(at),
         perk,
         ranks: perkRanks(this.character, perk),
@@ -762,7 +761,7 @@ export class InventoryScene extends Phaser.Scene {
 
   /** The perks the character has a rank of, in the order of `PERKS`; its spells are the Spells tab's. */
   private takenPerks(): PerkId[] {
-    return PERK_IDS.filter((id) => !isSpellPerk(id) && perkRanks(this.character, id) > 0)
+    return PERK_IDS.filter((id) => nodeKind(id) !== 'spell' && perkRanks(this.character, id) > 0)
   }
 
   /** Whether the character has a perk to choose and can choose it here. */
@@ -774,7 +773,7 @@ export class InventoryScene extends Phaser.Scene {
   private buildPerkStatus(content: Phaser.GameObjects.Container, right: number, y: number): void {
     const { perkPicks } = this.character
     const status = this.pickWaits()
-      ? `Choose ${perkPicks === 1 ? 'a perk' : `${perkPicks} perks`}`
+      ? `Choose ${perkPicks === 1 ? 'a node' : `${perkPicks} nodes`}`
       : perkPicks > 0
         ? `${perkPicks} to choose`
         : `Next at level ${nextPerkLevel(this.character)}`
@@ -837,6 +836,7 @@ export class InventoryScene extends Phaser.Scene {
     this.buildPerkStatus(this.treeContent, BACK_BUTTON.x - BACK_BUTTON.width / 2 - 16, 66)
     this.buildPanelButton(this.treeContent, BACK_BUTTON, 'Back', false, () => this.showTab('skills'))
     new PerkTreeView(this, this.treeContent, {
+      tree: 'warrior',
       character: this.character,
       clickable: (perk) => this.canTake(perk),
       onClick: (perk) => this.advance(() => takePerk(this.character, perk)),
@@ -847,26 +847,6 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   // ---- build: spells tab -------------------------------------------------
-
-  /** Whether the character has a spell to learn and can learn it here. */
-  private spellPickWaits(): boolean {
-    return this.canAdvance && this.character.spellPicks > 0
-  }
-
-  /** "Choose 2 spells" when spell picks wait and can be spent here, "2 to choose" in battle, else when the next comes. */
-  private buildSpellStatus(content: Phaser.GameObjects.Container, right: number, y: number): void {
-    const { spellPicks } = this.character
-    const status = !hasSpellcasting(this.character)
-      ? 'Spells come with Spellcasting'
-      : this.spellPickWaits()
-        ? `Choose ${spellPicks === 1 ? 'a spell' : `${spellPicks} spells`}`
-        : spellPicks > 0
-          ? `${spellPicks} to choose`
-          : `Next spell at level ${nextSpellLevel(this.character)}`
-    content.add(
-      this.add.text(right, y, status, { fontFamily: FONT, fontSize: '14px', color: spellPicks > 0 ? GOLD : DIM }).setOrigin(1, 0),
-    )
-  }
 
   /** The top left of the `index`th spell's row. */
   private spellRowAt(index: number): Point {
@@ -893,7 +873,7 @@ export class InventoryScene extends Phaser.Scene {
   private buildSpells(): void {
     const content = this.spellsContent
     content.add(this.heading('Spells', SPELLS_X, 66))
-    this.buildSpellStatus(content, PANEL_W - SPELLS_X, 66)
+    this.buildPerkStatus(content, PANEL_W - SPELLS_X, 66)
     const max = this.stats.magic?.maxMana ?? 0
     const mana = max > 0 ? `Mana ${this.shownMana()} / ${max}` : 'No mana: knows no spell'
     content.add(this.add.text(SPELLS_X, 88, mana, { fontFamily: FONT, fontSize: '14px', color: max > 0 ? GOLD : DIM }))
@@ -937,7 +917,7 @@ export class InventoryScene extends Phaser.Scene {
         .text(PANEL_W / 2, 444, footer, { fontFamily: FONT, fontSize: '12px', color: this.worldCast ? GOLD : DIM, align: 'center', wordWrap: { width: PANEL_W - 48 } })
         .setOrigin(0.5),
     )
-    this.buildPanelButton(content, SPELL_TREE_BUTTON, 'Spell Tree', this.spellPickWaits(), () => this.showTab('spellTree'))
+    this.buildPanelButton(content, SPELL_TREE_BUTTON, 'Spell Tree', this.pickWaits(), () => this.showTab('spellTree'))
   }
 
   /** A heal's Cast button: a heal of one asks whom, a heal of all heals at once. */
@@ -987,10 +967,10 @@ export class InventoryScene extends Phaser.Scene {
   /** The spell tree (`PerkTreeView`) under its heading: a click on an open node learns it where a pick can be spent. */
   private buildSpellTree(): void {
     this.spellTreeContent.add(this.heading('Spell Tree', TREE_X, 66))
-    this.buildSpellStatus(this.spellTreeContent, BACK_BUTTON.x - BACK_BUTTON.width / 2 - 16, 66)
+    this.buildPerkStatus(this.spellTreeContent, BACK_BUTTON.x - BACK_BUTTON.width / 2 - 16, 66)
     this.buildPanelButton(this.spellTreeContent, BACK_BUTTON, 'Back', false, () => this.showTab('spells'))
     new PerkTreeView(this, this.spellTreeContent, {
-      tree: 'spells',
+      tree: 'mage',
       character: this.character,
       clickable: (perk) => this.canTake(perk),
       onClick: (perk) => this.advance(() => takePerk(this.character, perk)),

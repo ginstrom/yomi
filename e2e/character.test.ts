@@ -326,31 +326,28 @@ describe('a hero’s panel', () => {
     await game.press('s')
     const aldric = await game.waitFor('Inventory', (p) => p.tab === 'skills')
     // The three perks a character is created with.
-    expect(aldric.takenPerks.map(({ perk }) => perk)).toEqual(['toughness', 'heavy_hand', 'weapon_training'])
+    expect(aldric.takenPerks.map(({ perk }) => perk)).toEqual(['weapon_training', 'heavy_hand', 'toughness'])
     expect(aldric.mana).toBeNull()
 
-    // The mage's include Spellcasting, which opened its spells; the spells are the Spells tab's.
+    // The mage's spells are the Spells tab's; its one passive is Arcane Study.
     await game.click(aldric.party[2])
     const delwyn = await game.waitFor('Inventory', (p) => p.party[2].active)
-    expect(delwyn.takenPerks).toEqual([
-      { perk: 'keen_eye', ranks: 1 },
-      { perk: 'spellcasting', ranks: 1 },
-      { perk: 'arcane_study', ranks: 1 },
-    ])
+    expect(delwyn.takenPerks).toEqual([{ perk: 'arcane_study', ranks: 1 }])
     expect(delwyn.mana).toBe(18)
     expect(delwyn.attributes.intelligence).toBe(9)
 
     await game.click(delwyn.perkTreeButton)
+    // Until skill trees step 06 the perk tree is the Warrior tree, of whose eleven nodes the mage holds none.
     const tree = await game.waitFor('Inventory', (p) => p.tab === 'perkTree')
-    expect(tree.perks).toHaveLength(28)
-    expect(new Set(tree.perks.map((node) => `${node.x},${node.y}`)).size).toBe(28)
-    // The picks of creation are spent, and the next comes at level 3.
+    expect(tree.perks).toHaveLength(11)
+    expect(new Set(tree.perks.map((node) => `${node.x},${node.y}`)).size).toBe(11)
+    // The picks of creation are spent, and the next comes at level 2.
     expect(tree.perks.some((node) => node.canTake)).toBe(false)
     const taken = (nodes: typeof tree.perks) => nodes.filter((node) => node.ranks > 0).map((node) => node.perk).sort()
-    expect(taken(tree.perks)).toEqual(['arcane_study', 'keen_eye', 'spellcasting'])
+    expect(taken(tree.perks)).toEqual([])
 
     // A click on a node takes nothing without a pick, and a portrait turns the tree to its hero.
-    await game.click(tree.perks.find((node) => node.perk === 'gain_luck')!)
+    await game.click(tree.perks.find((node) => node.perk === 'shield_wall')!)
     await game.click(tree.party[0])
     const turned = await game.waitFor('Inventory', (p) => p.party[0].active)
     expect(turned.tab).toBe('perkTree')
@@ -358,7 +355,7 @@ describe('a hero’s panel', () => {
 
     await game.click(turned.back)
     await game.waitFor('Inventory', (p) => p.tab === 'skills')
-    // The mage's spells, and the spell tree, all seventeen of it, with Magic Arrow and Heal learned.
+    // The mage's spells, and the spell tree, until skill trees step 06 the Mage tree, with Magic Arrow and Arcane Study taken.
     await game.click(turned.party[2])
     await game.waitFor('Inventory', (p) => p.party[2].active)
     await game.press('b')
@@ -376,8 +373,8 @@ describe('a hero’s panel', () => {
     expect(cast.party[2].active).toBe(true)
     await game.press('k')
     const spellTree = await game.waitFor('Inventory', (p) => p.tab === 'spellTree')
-    expect(spellTree.spellNodes).toHaveLength(17)
-    expect(taken(spellTree.spellNodes)).toEqual(['heal', 'magic_arrow'])
+    expect(spellTree.spellNodes).toHaveLength(22)
+    expect(taken(spellTree.spellNodes)).toEqual(['arcane_study', 'magic_arrow'])
     await game.press('Escape')
     await game.waitFor('Inventory', (p) => p.tab === 'spells')
     await game.press('s')
@@ -405,7 +402,7 @@ describe('a hero’s panel', () => {
     // The perk tree opens in battle too, where nothing can be taken from it.
     await game.press('p')
     const tree = await game.waitFor('Inventory', (p) => p.tab === 'perkTree')
-    expect(tree.perks).toHaveLength(28)
+    expect(tree.perks).toHaveLength(11)
     expect(tree.perks.some((node) => node.canTake)).toBe(false)
     await game.press('Escape')
     await game.waitFor('Inventory', (p) => p.tab === 'skills')
@@ -438,12 +435,14 @@ describe('a hero’s panel', () => {
     const spent = (await game.probe('Inventory'))!
     expect(spent.skills.archery).toMatchObject({ level: before.skills.archery.level + before.skillPoints, canRaise: false })
 
+    // The second level's pick still waits.
+    expect(spent.perkPicks).toBe(1)
     await game.press('Escape')
     await game.waitForScenes(['World'])
-    expect((await game.waitFor('World')).party[0].canAdvance).toBe(false)
+    expect((await game.waitFor('World')).party[0].canAdvance).toBe(true)
   })
 
-  it('takes a perk from the tree with the pick that the third level brings', async () => {
+  it('takes a node from the tree with the pick that the second level brings', async () => {
     // A seed with which the simple player of `fightBattle` wins all three battles, unlevelled as it goes.
     const game = await games.open({ seed: 2 })
     await game.enterBattle()
@@ -474,17 +473,16 @@ describe('a hero’s panel', () => {
     await game.click(skills.perkTreeButton)
     const tree = await game.waitFor('Inventory', (p) => p.tab === 'perkTree')
     const node = (perk: string) => tree.perks.find((n) => n.perk === perk)!
-    expect(node('gain_endurance').canTake).toBe(true)
-    // Tireless grows from Toughness, and asks for level 6 besides.
-    expect(node('tireless').canTake).toBe(false)
+    expect(node('armor_breaker').canTake).toBe(true)
+    // Iron Skin asks level 6 and three Heavy Knight nodes.
+    expect(node('iron_skin').canTake).toBe(false)
 
-    await game.click(node('gain_endurance'))
+    await game.click(node('armor_breaker'))
     const taken = await game.waitFor('Inventory', (p) => p.perkPicks === 0)
-    expect(taken.attributes.endurance).toBe(tree.attributes.endurance + 1)
     expect(taken.perks.some((n) => n.canTake)).toBe(false)
     await game.click(taken.back)
     const back = await game.waitFor('Inventory', (p) => p.tab === 'skills')
-    expect(back.takenPerks).toContainEqual({ perk: 'gain_endurance', ranks: 1 })
+    expect(back.takenPerks).toContainEqual({ perk: 'armor_breaker', ranks: 1 })
     expect(back.takenPerks).toHaveLength(4)
   })
 })

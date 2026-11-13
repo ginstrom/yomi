@@ -166,13 +166,13 @@ describe('the party screen', () => {
     const perks = await toStep(game, 'perks')
     const node = (creation: CreationProbe, perk: string) => creation.perks.find((n) => n.perk === perk)!
     expect(node(perks, 'toughness').canClick).toBe(true)
-    // The perks that raise an attribute ask level 3, and Spellcasting a Magic this character lacks.
+    // Only the first tier is open at creation: Gain Strength and Armour Breaker ask level 2.
     expect(node(perks, 'gain_strength').canClick).toBe(false)
-    expect(node(perks, 'spellcasting').canClick).toBe(false)
-    // The switch shows the spell tree, of which nothing is open without Spellcasting.
+    expect(node(perks, 'armor_breaker').canClick).toBe(false)
+    // Until skill trees step 06 the switch shows the Mage tree, where nothing is open to intelligence 4 and Magic 8%.
     await game.click(perks.treeSwitch.spells)
     const spellTree = await game.waitFor('Creation', (c) => c.tree === 'spells')
-    expect(spellTree.perks).toHaveLength(17)
+    expect(spellTree.perks).toHaveLength(22)
     expect(spellTree.perks.some((n) => n.canClick)).toBe(false)
     await game.click(spellTree.treeSwitch.perks)
     await game.waitFor('Creation', (c) => c.tree === 'perks')
@@ -181,9 +181,9 @@ describe('the party screen', () => {
     await game.click(node(perks, 'weapon_training'))
     const picked = await game.waitFor('Creation', (c) => c.perkPicks === 1)
     expect(picked.draft.perks).toEqual(['toughness', 'weapon_training'])
-    // A second rank, and with every rank taken a click gives the last back.
+    // A node has one rank: a click on one taken gives it back, and another takes it again.
     await game.click(node(picked, 'weapon_training'))
-    await game.waitFor('Creation', (c) => c.perkPicks === 0)
+    await game.waitFor('Creation', (c) => c.perkPicks === 2)
     await game.click(node(picked, 'weapon_training'))
     await game.waitFor('Creation', (c) => c.perkPicks === 1)
 
@@ -219,10 +219,10 @@ describe('the party screen', () => {
     await game.waitForScenes(['Inventory'], ['World'])
     const panel = await game.waitFor('Inventory', (p) => p.party[2].active)
     expect(panel).toMatchObject({ tab: 'skills', skillPoints: 4, perkPicks: 1 })
-    // 45 from creation's points and tag, and a rank of Weapon Training.
-    expect(panel.skills.melee).toMatchObject({ level: 50, canRaise: true })
+    // 45 from creation's points and tag, and Weapon Training's 10.
+    expect(panel.skills.melee).toMatchObject({ level: 55, canRaise: true })
     await game.click(panel.skills.melee)
-    expect((await game.waitFor('Inventory', (p) => p.skillPoints === 3)).skills.melee.level).toBe(52)
+    expect((await game.waitFor('Inventory', (p) => p.skillPoints === 3)).skills.melee.level).toBe(57)
   })
 
   it('edits a ready-made member in place, and a created one the same way', async () => {
@@ -241,7 +241,7 @@ describe('the party screen', () => {
       tagged: 'melee',
       attributes: { strength: 9, luck: 4 },
       raises: { melee: 10 },
-      perks: ['weapon_training', 'toughness', 'heavy_hand'],
+      perks: ['weapon_training', 'heavy_hand', 'toughness'],
     })
 
     await clickTimes(game, (c) => c.attributes.strength.minus, 3)
