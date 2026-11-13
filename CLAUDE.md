@@ -146,7 +146,7 @@ Sprites are generated from text sources in `art/` with sprite-tool. `art/CLAUDE.
 
 ### Sound
 
-Sound effects are being moved onto recipes and sources in `audio/` (the audio pass), built by the host-only Python tool in `tools/audio/` (`yomi-audio`, a uv project, never part of `npm test` or the podman image). `audio/CLAUDE.md` has the workflow: the recipe format, adding a CC0 or own source with its provenance, impulses, auditioning, and the sourcing rules; it loads by itself when you work on files there.
+Sound effects are being moved onto recipes and sources in `audio/` (the audio pass), built by the host-only Python tool in `tools/audio/` (`yomi-audio`, a uv project, never part of `npm test` or the podman image). `audio/CLAUDE.md` has the workflow: the recipe format, adding a CC0 or own source with its provenance, impulses, auditioning, the sourcing rules, and the narration engines (the tool's `tts` extra, mlx-audio) with the `voice bakeoff` listening test; it loads by itself when you work on files there.
 
 ## Keeping this file current
 

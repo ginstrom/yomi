@@ -3,6 +3,10 @@
     yomi-audio source add <file> --id ID --collection C --licence L --author A --url U ...
     yomi-audio impulse build [NAME ...]
     yomi-audio sfx audition <cue> ... [--out DIR] [--spectrogram]
+    yomi-audio voice design <narrator> [--emotions E,...] [--candidates N]
+    yomi-audio voice bakeoff [--redesign]
+
+The voice commands need the `tts` extra (uv run --project tools/audio --extra tts ...).
 
 Every command takes `--root` (default: the repository's `audio/`). A user's
 mistake prints one line naming what is at fault and exits 1.
@@ -53,6 +57,16 @@ def _parser() -> argparse.ArgumentParser:
     audition.add_argument("--out", type=Path, help="output folder (default: <root>/.audition/<cue>/)")
     audition.add_argument("--spectrogram", action="store_true", help="also write a spectrogram PNG per variant")
     audition.set_defaults(run=_sfx_audition)
+
+    voice = groups.add_parser("voice", help="narration (needs the tts extra)").add_subparsers(dest="command", required=True)
+    design = voice.add_parser("design", parents=[root], help="design a narrator's reference clips into bakeoff/")
+    design.add_argument("voice", help="the narrator (A or B)")
+    design.add_argument("--emotions", help="comma-separated (default: those the bake-off's lines need)")
+    design.add_argument("--candidates", type=int, default=4, help="candidates per emotion (default 4)")
+    design.set_defaults(run=_voice_design)
+    bakeoff = voice.add_parser("bakeoff", parents=[root], help="render the narration listening test into bakeoff/")
+    bakeoff.add_argument("--redesign", action="store_true", help="design the narrators again even if bakeoff/designed/ holds them")
+    bakeoff.set_defaults(run=_voice_bakeoff)
     return parser
 
 
@@ -80,6 +94,30 @@ def _sfx_audition(args) -> int:
     from .audition import audition
 
     audition(args.root, args.cues, out=args.out, spectrogram=args.spectrogram)
+    return 0
+
+
+def _voice_design(args) -> int:
+    from .config import load_config
+    from .voice import CANDIDATES, design_voice, real_encoder, real_engines
+
+    if args.candidates < 1:
+        raise AudioError("--candidates must be at least 1")
+    emotions = [e.strip() for e in args.emotions.split(",") if e.strip()] if args.emotions else None
+    config = load_config(args.root)
+    engine = real_engines()["qwen3_design"]
+    design_voice(
+        config, args.voice, engine, real_encoder(), args.root / "bakeoff", emotions, args.candidates or CANDIDATES
+    )
+    return 0
+
+
+def _voice_bakeoff(args) -> int:
+    from .config import load_config
+    from .voice import bakeoff, real_encoder, real_engines
+
+    out = bakeoff(load_config(args.root), real_engines(), real_encoder(), redesign=args.redesign)
+    print(f"wrote {out}: c01.wav ... c32.wav, key.json, score.md, neutral_candidates/, designed/")
     return 0
 
 

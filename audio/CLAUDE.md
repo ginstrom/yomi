@@ -80,3 +80,49 @@ variant's loudness, true peak and length against its group and writes a PNG
 per variant (the waveform over a log-frequency spectrogram), which an agent
 can look at. The user listens at the plan's gates, from the WAVs in
 `.audition/`.
+
+## Narration tooling
+
+The TTS engines are only in the tool's optional `tts` extra, so the sound
+commands (and `sounds:check`) never install them:
+`uv run --project tools/audio --extra tts yomi-audio voice ...`.
+
+- `tools/audio/yomi_audio/tts/`: one adapter (`base.py`: `RenderJob`,
+  `Engine`, `EMOTION_MAP`, `exaggeration`, `qwen_instruction`,
+  `ADAPTER_VERSION`) and an engine module each: `chatterbox` (clones the
+  emotion's clip, `exaggeration` by intensity, `cfg_weight`),
+  `chatterbox_turbo` (clones one clip, renders `[sigh]` and the other tags,
+  ignores exaggeration), `qwen3_custom` (a preset speaker with an
+  instruction) and `qwen3_design` (a voice from a description; used only to
+  design clips). All four run on **mlx-audio 0.6.5** (MLX, Apple Silicon);
+  none needs PyTorch. An engine imports mlx only when it first renders.
+- Pins (`tts/models.py`; step 15 copies the chosen ones into
+  `voices.toml`). Each MLX conversion is pinned to a commit, and so is the
+  upstream model whose card governs the licence. Checked on the cards on
+  2026-11-14:
+
+  | Engine | Loaded (mlx-community, commit) | Upstream card (commit) | Licence | Output in a commercial game |
+  | --- | --- | --- | --- | --- |
+  | chatterbox | `chatterbox-fp16` `4923fcc` | [ResembleAI/chatterbox](https://huggingface.co/ResembleAI/chatterbox) `5bb1f6e` | MIT | allowed (MIT, no output terms) |
+  | chatterbox_turbo | `chatterbox-turbo-fp16` `b2d0a13` | [ResembleAI/chatterbox-turbo](https://huggingface.co/ResembleAI/chatterbox-turbo) `749d1c1` | MIT | allowed |
+  | qwen3_custom | `Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16` `52f4770` | [Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice) `0c0e305` | Apache-2.0 | allowed (no output terms) |
+  | qwen3_design | `Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16` `7d3824a` | [Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign) `5ecdb67` | Apache-2.0 | allowed |
+
+  The mlx-community conversions are tagged Apache-2.0; the upstream
+  licence is the one relied on.
+- **Watermark:** Resemble's own Chatterbox package embeds an inaudible PerTh
+  watermark in every output. The mlx-audio port does not (it has no PerTh
+  code), so clips rendered here carry none. Say so in
+  `public/assets/voice/README.md` when lines ship.
+- Weights download on first use into the Hugging Face cache
+  (`~/.cache/huggingface/`, about 13 GB for the four), never into the
+  repository.
+- `voice bakeoff` (step 03's listening test, gate G1) writes into the
+  gitignored `audio/bakeoff/`: `c01.wav` … `c32.wav` (eight lines by four
+  configurations, blind), `key.json` (do not show it to the listener before
+  scoring), `score.md`, `neutral_candidates/` and `designed/` (the clips
+  cloned from, with each narrator's `design.json` of similarities). It reuses
+  `designed/` unless given `--redesign`. `voice design <A|B>` designs one
+  narrator alone. The narrators, the reference text, the lines and the
+  configurations are constants in `yomi_audio/voice.py`.
+- Every clip goes through `audio.toml`'s `[voice]` chain (`voice.postprocess`).

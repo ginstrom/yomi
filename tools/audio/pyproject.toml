@@ -13,7 +13,9 @@ dependencies = [
 [project.optional-dependencies]
 # Text-to-speech engines, added by step 03. Kept out of the base set so that
 # `sfx check` never installs torch or mlx.
-tts = []
+tts = [
+    "mlx-audio==0.6.5",
+]
 
 [project.scripts]
 yomi-audio = "yomi_audio.cli:main"

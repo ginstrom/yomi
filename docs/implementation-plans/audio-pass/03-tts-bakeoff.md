@@ -120,3 +120,59 @@ Proposed paths (none exist yet):
 - [ ] After G1: the outcome copied into the execution record (with the gate's computed means per configuration from `score.md` and `key.json`), and the index status set to `done`.
 
 ## Execution record
+
+### Run 1 (2026-11-14): built, rendered, handed to G1
+
+Run before step 02 by the orchestrator's order (it depends only on 01).
+
+**Licences, rechecked on each card on 2026-11-14** (the cards' YAML `license` and text; nothing restricts generated audio):
+
+| Model (upstream card) | Commit | Licence | Output in a commercial game |
+| --- | --- | --- | --- |
+| [ResembleAI/chatterbox](https://huggingface.co/ResembleAI/chatterbox) | `5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18` | MIT | allowed; card only asks "don't use this model to do bad things" |
+| [ResembleAI/chatterbox-turbo](https://huggingface.co/ResembleAI/chatterbox-turbo) | `749d1c1a46eb10492095d68fbcf55691ccf137cd` | MIT | allowed |
+| [Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice) | `0c0e3051f131929182e2c023b9537f8b1c68adfe` | Apache-2.0 | allowed |
+| [Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign) | `5ecdb67327fd37bb2e042aab12ff7391903235d3` | Apache-2.0 | allowed |
+
+Loaded (all through **mlx-audio 0.6.5**, MLX on Apple Silicon; no PyTorch needed, as mlx-audio has Chatterbox Turbo too): `mlx-community/chatterbox-fp16` `4923fcca…`, `mlx-community/chatterbox-turbo-fp16` `b2d0a13a…`, `mlx-community/Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16` `52f4770f…`, `mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16` `7d3824ab…` (full hashes in `tools/audio/yomi_audio/tts/models.py`; the conversions' cards say Apache-2.0, the upstream licence is the one relied on). The PyTorch `chatterbox-tts` package was not usable anyway: it pins `numpy<2` on Python 3.11 against the tool's `numpy>=2`.
+
+**Watermark:** the cards say every Chatterbox output carries Resemble's PerTh watermark. That is done by Resemble's own package; the mlx-audio port has no PerTh code, so these clips carry **no** watermark. Recorded in `audio/CLAUDE.md`; step 16 says so in `public/assets/voice/README.md`.
+
+**Built** (test-first, fake engines only): `tools/audio/yomi_audio/tts/` (`base.py` with C10 as written, `ADAPTER_VERSION = 1`, `EMOTION_MAP`, `exaggeration`, `qwen_instruction`; `chatterbox.py`, `chatterbox_turbo.py`, `qwen3_custom.py`, `qwen3_design.py` with `design(...)`; `models.py` pins; `similarity.py`, cosine over Chatterbox's voice-encoder embedding, 256-d; `_mlx.py`, the shared lazy loader), `tools/audio/yomi_audio/voice.py` (`postprocess`, `select_candidate`, `design_voice`, `bakeoff`), CLI `voice design <A|B> [--emotions] [--candidates]` and `voice bakeoff [--redesign]`, extra `tts = ["mlx-audio==0.6.5"]` in the lock. Tests: `tests/test_tts_base.py` (16), `tests/test_voice.py` (15).
+
+**Choices** (routine, recorded):
+
+- `reference_text`: "The old road winds north past the quiet village and over the bridge. Judge for yourself whether the thick smoke rising there means a hearth, or a warning." Read slowly by the storyteller voices it runs 9.0 to 12.2 s after trimming (Chatterbox Turbo needs more than 5 s of reference; Chatterbox uses the first 10 s).
+- Narrator design seed 7 (candidates 7 to 10). Neutral is candidate 0 of the description alone (design §5.8.3), so the neutral emotion is not designed separately; the six other emotions append their instruction to the description. Bake-off render seeds: first 32 bits of SHA-256 of `bakeoff:<configuration>:<narrator>:<line>`. Label shuffle seed 20261114.
+- Configuration (c)'s preset: **Ryan**, the English-native male speaker ("dynamic male voice with strong rhythmic drive"); Uncle_Fu ("seasoned, low, mellow") is nearer A's timbre but Chinese-native, Aiden is "sunny American".
+- `[sigh]` opens lines 3, 6 and 7 of configuration (b).
+- Qwen3 intensity wording: "Slightly so. " or "Very much so. " before the instruction (below 0.34, above 0.67). The bake-off uses intensity 0.5, so no wording.
+- Post-processing (`[voice]`): resample to 48 kHz, 70 Hz high-pass (4th order), normalise, trim below −50 dBFS (5 ms hold) keeping 120 ms before and 250 ms after (padding with silence where the source had less), normalise to −18 LUFS-I, then limit at the ceiling less 0.5 dB and renormalise (up to six times), lowering the clip as a last resort. Clips written as 48 kHz 24-bit WAV.
+- `key.json` is flat, label → `{line, configuration, narrator, emotion, text, seed, engine fingerprint, adapter_version}`; (d) is `configuration "a", narrator "B"` as the task notes.
+- `score.md`: "Same voice as line 1" cannot be judged blind (the listener does not know the sets), so the sheet asks for it in a second pass after opening `key.json`; naturalness, emotion fit and artifacts are scored blind first. The real run's `score.md` was regenerated with this wording by the same function (`_score_sheet`) after the run, without re-rendering the clips.
+
+**The real run:** `uv run --project tools/audio --extra tts yomi-audio voice bakeoff`: exit 0, **24.6 min wall** (1476 s; 646 s user), peak RSS **8.0 GB**. Weights downloaded first into `~/.cache/huggingface/` (`du -sh`: **13 G**). Loading a model still contacts the Hub (an "unauthenticated requests" warning), so a render wants the network on its first load.
+
+Speaker similarity of each emotion candidate to the neutral clip (kept one starred; threshold 0.75; none flagged):
+
+| Narrator | warm | grave | tense | triumphant | sad | whisper |
+| --- | --- | --- | --- | --- | --- | --- |
+| A | **0.885**, 0.799, 0.802, 0.794 | 0.807, **0.867**, 0.828, 0.825 | **0.832**, 0.792, 0.811, 0.795 | 0.799, **0.872**, 0.842, 0.872 | 0.863, **0.870**, 0.847, 0.826 | 0.814, 0.848, **0.919**, 0.851 |
+| B | 0.840, **0.905**, 0.864, 0.849 | **0.899**, 0.885, 0.872, 0.890 | **0.901**, 0.869, 0.886, 0.862 | 0.880, **0.898**, 0.860, 0.867 | 0.852, 0.864, **0.894**, 0.880 | 0.832, 0.863, **0.905**, 0.879 |
+
+(A smoke test before the run measured a Chatterbox clone of a designed clip at 0.95 against it, and a Qwen3 preset voice at 0.70: the encoder separates voices.)
+
+Measurements (`loudness.integrated`, `true_peak_db` at 4x), every file in `audio/bakeoff/`: all 32 clips **−18.00 LUFS-I**, true peak **−4.21 to −1.56 dBTP**, 3.3 to 9.7 s; the 8 neutral candidates −18.00 LUFS-I, −2.36 to −1.50 dBTP, 9.96 to 12.20 s; the 14 designed clips −18.00 LUFS-I, −3.15 to −1.57 dBTP, 8.9 to 12.2 s. All within the `[voice]` targets. Per-label figures are kept out of this record so that it does not unblind the test.
+
+Spectrograms looked at (smoke design clip, five bake-off clips): speech throughout, a low fundamental near 100 Hz for A, no clipping, nothing truncated. Noted, unattributed here so as not to unblind: one clip reads a short line in 9.7 s with long pauses between phrases (speech, not junk); one has a narrow broadband tick just before its end; the whisper-clip clone of one set comes out voiced rather than whispered. The listener judges them.
+
+**Verification:**
+
+- `uv run --project tools/audio pytest tools/audio/tests`: 148 passed (117 before the step).
+- Base install without the extra, in a fresh environment (`UV_PROJECT_ENVIRONMENT=<scratch>`): 22 packages, `mlx` and `torch` not installed, `yomi-audio sfx audition --help` works, pytest 148 passed. `test_engines_import_without_the_tts_extra` holds that the engines and CLI import without loading mlx.
+- `PATH=/opt/homebrew/opt/node@26/bin:$PATH npm test`: 84 files, 1510 tests passed. No `src/` change, so no browser run.
+- `git status`: nothing under `audio/bakeoff/` (ignored by `.gitignore:28`); `git ls-files` holds no weights and no WAV but the eight existing placeholders.
+
+**For later steps:** step 15 reads `voice.py`'s `NARRATORS`, `REFERENCE_TEXT` and `design_voice`, and replaces the automatic pick with the user's; the pins to copy into `voices.toml` are in `tts/models.py` (use the mlx-community repo and revision as `model`/`revision`, the engine fingerprint carries the upstream). Step 16's `voice render` can reuse `postprocess` and the engines as they are. `ADAPTER_VERSION` is 1.
+
+**Status:** awaiting review at gate **G1**.
