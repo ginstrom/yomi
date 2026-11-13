@@ -83,7 +83,9 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 - To step 21 (from step 19): the policy's spell/area scoring calls `warded(…, unit)` on the raw snapshot, so the Warded status and Aegis don't count in expected damage — use `statsIn`.
 - To step 22 (from step 19): `restore` events have no look yet; the battle's first turn start now logs after `battle_start` (`readySide`/`turnBegins` split).
 
-- To step 20 (from step 19 review): `turnBegins`'s docstring says the recharge count-down runs "whether or not the battle has just ended"; the code returns first when a tick ends the battle — fix the comment.
+
+- To step 21 (from step 20): remove the `UNTAUGHT` exemption in `perks.test.ts`; Purify counts as a healing spell (`isHealing`), so world-map healing and the policy's heal choices would use it as a 1d6 heal — decide (orchestrator leans: exclude it from world-map healing and heal-choice; it's a cleanse); `sleepCast` checks only Asleep, not Frozen.
+- To step 22 (from step 20): the six spells' looks are placeholders; a revived unit's figure must stand up again on a `revived` outcome.
 
 ## Verification
 
