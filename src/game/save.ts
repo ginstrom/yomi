@@ -28,11 +28,14 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * trees) drops a character's `spellPicks` and holds every node at one rank
  * under the trees' ids; the skill trees' design asked for `migrateFrom22`,
  * which puts a version-22 game's heroes on the trees, and a version-18 save
- * goes through `migrateFrom18` and then it. Rules and item numbers may change
+ * goes through `migrateFrom18` and then it. Version 24 (skill trees step 11)
+ * keeps whether each unit of a saved battle has moved this turn; a version-23
+ * save loads as it is, `BattleEngine.restore` taking `moved` up as false.
+ * Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 23
+export const SAVE_VERSION = 24
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -253,13 +256,13 @@ function isOrder(order: unknown, self: string, partyIds: readonly string[]): boo
   return true
 }
 
-/** Null for anything that is not a save of this version (or version 22 or 18, migrated), or names an item, perk or skill the game does not have. */
+/** Null for anything that is not a save of this version (or version 23 as it is, or version 22 or 18, migrated), or names an item, perk or skill the game does not have. */
 export function parseSave(raw: string | null): SaveFile | null {
   if (raw === null) return null
   try {
     // What `serializeSave` wrote has the file's shape but for its items, which are ids until put back below.
     const saved = JSON.parse(raw) as SaveFile & { version: unknown }
-    check(saved && typeof saved === 'object' && [SAVE_VERSION, 22, 18].includes(saved.version as number))
+    check(saved && typeof saved === 'object' && [SAVE_VERSION, 23, 22, 18].includes(saved.version as number))
     check(typeof saved.savedAt === 'number')
     const { game, battle } = saved
     check(game && typeof game === 'object')

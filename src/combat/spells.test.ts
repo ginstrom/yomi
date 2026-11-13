@@ -165,8 +165,8 @@ describe('a caster’s modifiers to a spell’s cost and reach', () => {
 })
 
 describe('the technique statuses', () => {
-  it('lists marked, slowed, pinned and taunted after warded', () => {
-    expect(STATUS_IDS.slice(STATUS_IDS.indexOf('warded'))).toEqual(['warded', 'marked', 'slowed', 'pinned', 'taunted'])
+  it('lists marked, slowed, pinned, taunted and rooted after warded', () => {
+    expect(STATUS_IDS.slice(STATUS_IDS.indexOf('warded'))).toEqual(['warded', 'marked', 'slowed', 'pinned', 'taunted', 'rooted'])
   })
 
   it('makes Marked 10 off armour class and Slowed 3 off action points', () => {
@@ -176,18 +176,25 @@ describe('the technique statuses', () => {
     expect(effectiveStats({ stats, statuses: [{ id: 'marked', turnsLeft: 2 }] }).ac).toBe(15)
   })
 
-  it('gives Pinned a name, a mark and a colour, and no rule yet', () => {
+  it('makes Pinned immobile, and nothing else', () => {
     const { name, adjective, mark, colour, ...rule } = STATUSES.pinned
     expect({ name, adjective, mark }).toEqual({ name: 'Pinned', adjective: 'pinned', mark: 'N' })
     expect(colour).toBeGreaterThan(0)
-    expect(rule).toEqual({})
+    expect(rule).toEqual({ immobile: true })
   })
 
-  it('gives Taunted a name, the mark T and a red, and no rule yet (step 11 gives it one)', () => {
+  it('gives Taunted a name, the mark T and a red, and no stat change: the engine applies its penalty by target', () => {
     const { name, adjective, mark, colour, ...rule } = STATUSES.taunted
     expect({ name, adjective, mark }).toEqual({ name: 'Taunted', adjective: 'taunted', mark: 'T' })
     expect(colour >> 16).toBeGreaterThan(0xc0)
     expect(rule).toEqual({})
+  })
+
+  it('makes Rooted 10 armour class and 2 resistance, marked R in a colour of its own', () => {
+    const { name, adjective, mark, colour, ...rule } = STATUSES.rooted
+    expect({ name, adjective, mark }).toEqual({ name: 'Rooted', adjective: 'rooted', mark: 'R' })
+    expect(rule).toEqual({ armorClass: 10, resistance: 2 })
+    expect(STATUS_IDS.filter((id) => id !== 'rooted').map((id) => STATUSES[id].colour)).not.toContain(colour)
   })
 
   it('gives every status its own mark', () => {

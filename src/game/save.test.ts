@@ -118,8 +118,21 @@ describe('a save', () => {
     expect(parsed.game.parties[0].baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 23, whose characters hold the skill trees\' nodes and no spell picks', () => {
-    expect(SAVE_VERSION).toBe(23)
+  it('is version 24, whose saved battles keep whether each unit has moved this turn', () => {
+    expect(SAVE_VERSION).toBe(24)
+  })
+
+  it('loads a version-23 save, its battle\'s units taking up `moved` as false', () => {
+    const game = gameUnderWay()
+    const saved = JSON.parse(serializeSave({ game, battle: battleOf(game), savedAt: 5 }))
+    saved.version = 23
+    for (const unit of saved.battle.engine.units) delete unit.moved
+    const parsed = parseSave(JSON.stringify(saved))!
+    expect(parsed).not.toBeNull()
+    expect(parsed.game.parties[0].members.map((m) => m.name)).toEqual(game.parties[0].members.map((m) => m.name))
+    const restored = BattleEngine.restore(parsed.battle!.engine)
+    expect(restored.snapshot().units.every((u) => u.moved === false)).toBe(true)
+    expect(JSON.parse(serializeSave(parsed)).version).toBe(SAVE_VERSION)
   })
 
   it('reads a character holding a node at a rank other than 1 as unreadable', () => {

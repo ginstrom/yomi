@@ -1017,4 +1017,15 @@ describe('techniques in a hero’s stats', () => {
       expect(deriveCombatStats(hero()).imbueDamage).toBeUndefined()
     })
   })
+
+  it('carries the traits its nodes give, in TRAIT_IDS order, and none for a hero without', () => {
+    expect(deriveCombatStats(hero('toughness', 'dodger'))).not.toHaveProperty('traits')
+    lending('toughness', { trait: 'rooted' }, () =>
+      lending('dodger', { trait: 'tumble' }, () => {
+        expect(deriveCombatStats(hero('dodger', 'toughness')).traits).toEqual(['rooted', 'tumble'])
+        expect(deriveCombatStats(hero('dodger')).traits).toEqual(['tumble'])
+        expect(deriveCombatStats(hero())).not.toHaveProperty('traits')
+      }),
+    )
+  })
 })

@@ -18,11 +18,13 @@ import {
   perkParent,
   perkRanks,
   perkTeaching,
+  traitsOf,
   qualifiesFor,
   type Perk,
   type PerkId,
 } from './perks.ts'
 import type { AbilityId } from '../combat/abilities.ts'
+import type { TraitId } from '../combat/combat.ts'
 import { takePerk } from './progression.ts'
 import { SKILL_IDS, skillLevel } from './skills.ts'
 import { PATHS } from './trees.ts'
@@ -103,6 +105,30 @@ describe('knownAbilities', () => {
     teaching({ dodger: 'sprint', keen_eye: 'power_attack', toughness: 'sprint', heavy_hand: 'smite' }, () => {
       const hero = { ...createWarrior(), perks: { dodger: 1, keen_eye: 1, toughness: 1 } }
       expect(knownAbilities(hero)).toEqual(['power_attack', 'sprint'])
+    })
+  })
+})
+
+describe('traitsOf', () => {
+  /** Lends nodes a trait for the while, as step 13's nodes will have it. */
+  const giving = (given: Partial<Record<PerkId, TraitId>>, fn: () => void): void => {
+    const nodes = Object.keys(given) as PerkId[]
+    for (const node of nodes) (PERKS[node] as Perk).trait = given[node]
+    try {
+      fn()
+    } finally {
+      for (const node of nodes) delete (PERKS[node] as Perk).trait
+    }
+  }
+
+  it('gives no node a trait yet', () => {
+    expect(PERK_IDS.filter((id) => (PERKS[id] as Perk).trait !== undefined)).toEqual([])
+    expect(traitsOf({ ...createWarrior(), perks: { toughness: 1 } })).toEqual([])
+  })
+
+  it('gives the traits of the nodes held, in TRAIT_IDS order, once each', () => {
+    giving({ dodger: 'tumble', toughness: 'rooted', shield_wall: 'rooted', keen_eye: 'counter' }, () => {
+      expect(traitsOf({ ...createWarrior(), perks: { dodger: 1, toughness: 1, shield_wall: 1 } })).toEqual(['rooted', 'tumble'])
     })
   })
 })

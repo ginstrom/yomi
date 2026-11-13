@@ -1,7 +1,7 @@
 import { ATTRIBUTES, ATTRIBUTE_IDS, MAX_ATTRIBUTE, type AttributeId, type Attributes } from './attributes.ts'
 import type { Character } from './character.ts'
 import { ABILITIES, ABILITY_IDS, type AbilityId } from '../combat/abilities.ts'
-import type { OnHit } from '../combat/combat.ts'
+import { TRAIT_IDS, type OnHit, type TraitId } from '../combat/combat.ts'
 import { SPELLS, SPELL_IDS, type HeroSpellId } from '../combat/spells.ts'
 import { SKILL_IDS, skillLevel, type SkillId } from './skills.ts'
 import { PATHS, TIERS, calling, capstoneOf, pathDepth, type PathId, type Tier } from './trees.ts'
@@ -112,6 +112,8 @@ export interface Perk {
   spell?: HeroSpellId
   /** The technique it teaches (abilities.ts); no node has one until step 13. */
   ability?: AbilityId
+  /** The rule it gives that the engine reads by name (`TRAIT_IDS`); no node has one until step 13. */
+  trait?: TraitId
 }
 
 /** The skills' names as the asks word them: "Melee 40%". */
@@ -497,6 +499,12 @@ export function knownSpells(character: Character): HeroSpellId[] {
 export function knownAbilities(character: Pick<Character, 'perks'>): AbilityId[] {
   const taught = new Set(PERK_IDS.filter((id) => perkRanks(character, id) > 0).map((id) => (PERKS[id] as Perk).ability))
   return ABILITY_IDS.filter((ability) => taught.has(ability))
+}
+
+/** The traits the character's nodes give it, in `TRAIT_IDS` order, once each. */
+export function traitsOf(character: Pick<Character, 'perks'>): TraitId[] {
+  const given = new Set(PERK_IDS.filter((id) => perkRanks(character, id) > 0).map((id) => (PERKS[id] as Perk).trait))
+  return TRAIT_IDS.filter((trait) => given.has(trait))
 }
 
 /**

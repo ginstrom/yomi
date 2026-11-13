@@ -18,7 +18,7 @@ import {
   type ItemStats,
 } from '../inventory/inventory.ts'
 import type { Attributes } from './attributes.ts'
-import { PERKS, PERK_IDS, attributeLevel, attributesOf, knownAbilities, knownSpells, perkBonus, perkRanks, type Perk, type PerkId } from './perks.ts'
+import { PERKS, PERK_IDS, attributeLevel, attributesOf, knownAbilities, knownSpells, perkBonus, perkRanks, traitsOf, type Perk, type PerkId } from './perks.ts'
 import type { PortraitId } from './portraits.ts'
 import { SKILL_IDS, skillLevel, type SkillId } from './skills.ts'
 import { MANA_PER_TREE_NODE, treeNodes } from './trees.ts'
@@ -236,6 +236,7 @@ export function deriveCombatStats(character: Character): CombatantStats {
   // A hero with a technique that costs mana has mana to spend in battle, even with no spell.
   const usesMana = spells.length > 0 || abilities.some((ability) => ABILITIES[ability].manaCost !== undefined)
   const imbueDamage = perkBonus(character, 'imbueDamage')
+  const traits = traitsOf(character)
   const wards: Partial<Record<Element, number>> = {}
   for (const element of ELEMENTS) if (wardTotals[element]) wards[element] = wardTotals[element]
   // A node's on-hit entries (Sacred Weapon) go with a blow, never a shot.
@@ -260,6 +261,7 @@ export function deriveCombatStats(character: Character): CombatantStats {
     ...(usesMana ? { magic: { maxMana: maxMana(character), skill: spellSkill, spells, ...spellModifiers(character) } } : {}),
     ...(abilities.length > 0 ? { abilities } : {}),
     ...(imbueDamage !== 0 ? { imbueDamage } : {}),
+    ...(traits.length > 0 ? { traits } : {}),
   }
 }
 

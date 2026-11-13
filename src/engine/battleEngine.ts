@@ -63,6 +63,12 @@ export const ARC_BONUS: Readonly<Record<Arc, number>> = { front: 0, side: 5, rea
 /** Where units face before they first move or attack: towards the other side's starting edge. */
 export const DEFAULT_FACING: Readonly<Record<Side, number>> = { player: 0, enemy: 3 } // east, west
 
+/**
+ * What a taunted unit's chance to hit loses, in percent, on every hostile
+ * roll at a unit other than its taunter (the status's `source`).
+ */
+export const TAUNT_PENALTY = 25
+
 /** Action points each hex of a move costs. */
 export const MOVE_AP_COST_PER_HEX = 1
 
@@ -168,6 +174,8 @@ export interface UnitSnapshot extends CombatantStats {
   statuses: ActiveStatus[]
   /** Rounds until each ability that is recharging can be used again; an ability absent here is ready. */
   recharging: Partial<Record<AbilityId, number>>
+  /** Present, and true, once the unit has taken a step since its side's turn began (`UnitRecord.moved`). */
+  moved?: true
 }
 
 export interface BattleState {
@@ -324,6 +332,8 @@ export interface AttackEvent extends EventBase {
   manaCost?: number
   /** With `manaCost`: the unit's mana once it was paid. */
   manaAfter?: number
+  /** `TAUNT_PENALTY`, already taken off `chance`, when a taunted attacker struck a unit other than its taunter; absent otherwise. */
+  tauntPenalty?: number
 }
 
 /** One on-hit entry's damage on an attack: flat, after resistance, cut by the defender's ward, never doubled by a critical. */
@@ -366,6 +376,8 @@ export interface CastOutcome {
   hpAfter: number
   /** The status laid on it, as it stands after; null if none. */
   status: ActiveStatus | null
+  /** `TAUNT_PENALTY`, already taken off `chance`, when a taunted user rolled at a unit other than its taunter; absent otherwise. */
+  tauntPenalty?: number
 }
 
 /**
@@ -455,12 +467,25 @@ export interface RegenerateEvent extends EventBase {
   hpAfter: number
 }
 
-/** A status ended: its turns ran out, a sleeper was hurt awake, or the last mirror image was struck. */
+/**
+ * A status ended: its turns ran out, a sleeper was hurt awake, the last
+ * mirror image was struck, the taunter it named fell (`source_fell`), or the
+ * unit stepped off the hex it was rooted to (`moved`).
+ */
 export interface StatusEndEvent extends EventBase {
   type: 'status_end'
   unit: UnitId
   status: StatusId
-  reason: 'expired' | 'woke' | 'spent'
+  reason: 'expired' | 'woke' | 'spent' | 'source_fell' | 'moved'
+}
+
+/** A status laid by a rule rather than an action: Rooted, as a unit with the trait ends its side's turn unmoved. */
+export interface StatusLaidEvent extends EventBase {
+  type: 'status_laid'
+  unit: UnitId
+  status: StatusId
+  turns: number
+  cause: 'rooted' | 'shadowdancer'
 }
 
 /** A unit changed its gear mid-battle: what it wears, and so its stats, or what it carries. */
@@ -515,6 +540,7 @@ export type BattleEvent =
   | StatusTickEvent
   | RegenerateEvent
   | StatusEndEvent
+  | StatusLaidEvent
   | EquipEvent
   | UnitDownEvent
   | EndTurnEvent
@@ -545,6 +571,8 @@ export interface UnitRecord {
   statuses: ActiveStatus[]
   /** Rounds until each ability that is recharging can be used again; an ability absent here is ready. */
   recharging: Partial<Record<AbilityId, number>>
+  /** It has taken a step since its side's turn began: false as the turn begins, true from its first step. */
+  moved: boolean
 }
 
 /**
@@ -616,6 +644,21 @@ export function arcStruck(
 /** Whether the unit has `status` in force. */
 export function hasStatus(unit: { statuses: readonly ActiveStatus[] }, status: StatusId): boolean {
   return unit.statuses.some((s) => s.id === status)
+}
+
+/**
+ * What a hostile roll by `attacker` at `target` loses for Taunted:
+ * `TAUNT_PENALTY` when the attacker is taunted by a unit other than the
+ * target, else 0.
+ */
+export function tauntPenalty(attacker: { statuses: readonly ActiveStatus[] }, target: { id: UnitId }): number {
+  const taunted = attacker.statuses.find((s) => s.id === 'taunted')
+  return taunted && taunted.source !== target.id ? TAUNT_PENALTY : 0
+}
+
+/** Whether the unit cannot move: a status whose rule is `immobile` (Pinned) is on it. */
+export function isImmobile(unit: { statuses: readonly ActiveStatus[] }): boolean {
+  return unit.statuses.some(({ id }) => STATUSES[id].immobile === true)
 }
 
 /**
@@ -762,7 +805,8 @@ export class BattleEngine {
     this.board = new HexBoard(setup.board)
     if (restored) {
       const { units, events, rng, ...rest } = structuredClone(restored)
-      this.units = units
+      // A battle saved before units kept `moved` (save version 23 and older) takes it up as false.
+      this.units = units.map((u) => ({ ...u, moved: u.moved ?? false }))
       this.events.push(...events)
       this.seeded = mulberry32(rng)
       this.rng = this.seeded
@@ -801,6 +845,7 @@ export class BattleEngine {
       gearChangePaid: false,
       statuses: [],
       recharging: {},
+      moved: false,
     }))
 
     let seed: number | null = null
@@ -953,7 +998,7 @@ export class BattleEngine {
     const helpless = hasStatus(foe, 'asleep') ? HELPLESS_BONUS : 0
     const attacker = effectiveStats(actor)
     const defender = effectiveStats(foe)
-    const chance = hitChance(attacker, defender.ac, flankBonus + arcBonus + helpless)
+    const chance = hitChance(attacker, defender.ac, flankBonus + arcBonus + helpless - tauntPenalty(actor, foe))
     return { flankers, flankBonus, arc, arcBonus, hitChance: chance, resistance: effectiveResistance(attacker, defender.resistance ?? 0) }
   }
 
@@ -974,7 +1019,7 @@ export class BattleEngine {
       manaCost,
       outcomes: castTouches(this.units, actor, spell, aim).map((u) => ({
         unit: u.id,
-        hitChance: hostile ? hitChance(caster, effectiveStats(u).ac) : null,
+        hitChance: hostile ? hitChance(caster, effectiveStats(u).ac, -tauntPenalty(actor, u)) : null,
       })),
     }
   }
@@ -997,7 +1042,7 @@ export class BattleEngine {
 
     if (action.type === 'end_turn') {
       const side = this.phase
-      const events = this.countDownStatuses(side)
+      const events = [...this.root(side), ...this.countDownStatuses(side)]
       const unspentAp = Object.fromEntries(
         this.units.filter((u) => u.side === side && u.hp > 0).map((u) => [u.id, u.ap]),
       )
@@ -1075,6 +1120,7 @@ export class BattleEngine {
       if (u.side === side) {
         u.ap = u.hp > 0 ? apAfterStatuses(u, u.stats.actionPoints) : 0
         u.turnReady = false
+        u.moved = false
       } else {
         u.reactionReady = u.hp > 0 && !hasStatus(u, 'asleep')
         u.turnReady = u.reactionReady
@@ -1127,6 +1173,23 @@ export class BattleEngine {
   }
 
   /**
+   * As `side`'s turn ends, before its statuses count down: Rooted laid for 2
+   * turns on each of its standing units with the trait `rooted` that has not
+   * moved this turn, in roster order, so that 1 is left through the other
+   * side's turn. It draws nothing.
+   */
+  private root(side: Side): BattleEvent[] {
+    const events: BattleEvent[] = []
+    for (const u of this.units) {
+      if (u.side !== side || u.hp <= 0 || u.moved || !u.stats.traits?.includes('rooted')) continue
+      const turns = 2
+      this.layStatus(u, { id: 'rooted', turns })
+      events.push(this.record<StatusLaidEvent>({ type: 'status_laid', round: this.round, unit: u.id, status: 'rooted', turns, cause: 'rooted' }))
+    }
+    return events
+  }
+
+  /**
    * At the end of `side`'s turn, a turn off each of its units' statuses, and
    * the end of those that have run out.
    */
@@ -1154,16 +1217,25 @@ export class BattleEngine {
   /**
    * Lays a status on `unit`. The same status again takes the longer of the
    * two durations, and its images anew; a new one laid on the unit's own
-   * side's turn changes its action points at once.
+   * side's turn changes its action points at once. Taunted names the unit
+   * that laid it (`source`), the newer taunter replacing the old; no other
+   * status keeps one.
    */
-  private layStatus(unit: UnitRecord, laid: StatusLaid): ActiveStatus {
+  private layStatus(unit: UnitRecord, laid: StatusLaid, by?: UnitRecord): ActiveStatus {
+    const source = laid.id === 'taunted' ? by?.id : undefined
     const existing = unit.statuses.find((s) => s.id === laid.id)
     if (existing) {
       existing.turnsLeft = Math.max(existing.turnsLeft, laid.turns)
       if (laid.images !== undefined) existing.images = laid.images
+      if (source !== undefined) existing.source = source
       return { ...existing }
     }
-    const status: ActiveStatus = { id: laid.id, turnsLeft: laid.turns, ...(laid.images !== undefined ? { images: laid.images } : {}) }
+    const status: ActiveStatus = {
+      id: laid.id,
+      turnsLeft: laid.turns,
+      ...(laid.images !== undefined ? { images: laid.images } : {}),
+      ...(source !== undefined ? { source } : {}),
+    }
     unit.statuses.push(status)
     const rule = STATUSES[laid.id]
     if (unit.side === this.phase) {
@@ -1346,6 +1418,9 @@ export class BattleEngine {
       segmentFrom = actor.position
     }
 
+    // The first step ends Rooted, before any free attack it provokes is rolled.
+    actor.moved = true
+    if (hasStatus(actor, 'rooted')) events.push(...this.endStatus(actor, 'rooted', 'moved'))
     for (const step of path) {
       actor.facing = hexDirection(actor.position, step)!
       const reactors = this.reactorsAt(actor, actor.position, step)
@@ -1365,9 +1440,10 @@ export class BattleEngine {
   /**
    * Hexes the unit can move to with its remaining AP: on the board, around
    * standing units, preferring routes that provoke fewer distinct foes, since
-   * each foe strikes at most once.
+   * each foe strikes at most once. None for an immobile unit (Pinned).
    */
   private reachable(actor: UnitRecord): Map<string, Hex[]> {
+    if (isImmobile(actor)) return new Map()
     const blocked = (h: Hex) => this.units.some((u) => u !== actor && u.hp > 0 && hexEquals(u.position, h))
     return reachableHexes(
       actor.position,
@@ -1537,7 +1613,13 @@ export class BattleEngine {
     const defenderAc = defender.ac
     const defenderResistance = defender.resistance ?? 0
     const technique = strike?.strike
-    const roll = rollToHit(attacker, defenderAc, this.rng, flankBonus + arcBonus + (helpless ? HELPLESS_BONUS : 0) + (technique?.toHit ?? 0))
+    const taunt = tauntPenalty(actor, target)
+    const roll = rollToHit(
+      attacker,
+      defenderAc,
+      this.rng,
+      flankBonus + arcBonus + (helpless ? HELPLESS_BONUS : 0) + (technique?.toHit ?? 0) - taunt,
+    )
     const image = roll.hit && this.strikeImage(target)
     const dice = strike?.dice ?? attacker.damage
     // A technique's damage bonus comes after a critical's doubling, so it is never doubled.
@@ -1609,6 +1691,7 @@ export class BattleEngine {
         ...(heals ? { healed } : {}),
         ...(onHitStatuses.length > 0 ? { onHitStatuses } : {}),
         ...(strike?.manaCost !== undefined ? { manaCost: strike.manaCost, manaAfter: actor.mana } : {}),
+        ...(taunt > 0 ? { tauntPenalty: taunt } : {}),
       }),
     ]
 
@@ -1643,7 +1726,7 @@ export class BattleEngine {
     const caster = spellcaster(stats, spell)
 
     const outcomes: StruckOutcome[] = touched.map((unit) => {
-      if (hostile) return this.strikeUnit(unit, caster, { dice, element, status, halfOnMiss: false, power })
+      if (hostile) return this.strikeUnit(unit, caster, { dice, element, status, halfOnMiss: false, power, taunt: tauntPenalty(actor, unit) })
       const hpBefore = unit.hp
       const healed = heal ? Math.min(rollDamage(heal, this.rng) + healBonus, unit.stats.maxHp - unit.hp) : 0
       unit.hp += Math.max(0, healed)
@@ -1704,7 +1787,7 @@ export class BattleEngine {
     const outcomes: StruckOutcome[] = touched.map((unit) => {
       if (area.auto) {
         const hpBefore = unit.hp
-        const status = area.status ? this.layStatus(unit, area.status) : null
+        const status = area.status ? this.layStatus(unit, area.status, actor) : null
         return {
           unit: unit.id, attackRoll: null, chance: null, defenderAc: null, hit: true, critical: false, fumble: false, image: false,
           damage: 0, warded: 0, half: false, healed: 0, hpBefore, hpAfter: unit.hp, status,
@@ -1712,7 +1795,12 @@ export class BattleEngine {
       }
       const doubled = dice && area.bane && baneApplies(effectiveStats(unit)) ? { ...dice, count: dice.count * 2 } : dice
       return this.strikeUnit(unit, attacker, {
-        dice: doubled, element: area.element, status: area.status, halfOnMiss: area.halfOnMiss, throughResistance: area.throughResistance,
+        dice: doubled,
+        element: area.element,
+        status: area.status,
+        halfOnMiss: area.halfOnMiss,
+        throughResistance: area.throughResistance,
+        taunt: tauntPenalty(actor, unit),
       })
     })
     const event = this.record<AbilityEvent>({
@@ -1756,11 +1844,13 @@ export class BattleEngine {
       halfOnMiss: boolean
       power?: number
       throughResistance?: true
+      /** Taken off the chance: `tauntPenalty` of the user at this unit. */
+      taunt: number
     },
   ): StruckOutcome {
     const hpBefore = unit.hp
     const defenderAc = effectiveStats(unit).ac
-    const roll = rollToHit(attacker, defenderAc, this.rng)
+    const roll = rollToHit(attacker, defenderAc, this.rng, -blow.taunt)
     const image = roll.hit && this.strikeImage(unit)
     const half = !roll.hit && blow.halfOnMiss && blow.dice !== undefined
     // A spell's power is added to what its dice dealt, after a critical's doubling and before the ward.
@@ -1781,7 +1871,9 @@ export class BattleEngine {
     return {
       unit: unit.id, ...roll, defenderAc, image, damage, warded: through - damage, half,
       ...(blow.throughResistance ? { resisted: rolled - through } : {}),
-      healed: 0, hpBefore, hpAfter: unit.hp, status: laid, woke,
+      healed: 0, hpBefore, hpAfter: unit.hp, status: laid,
+      ...(blow.taunt > 0 ? { tauntPenalty: blow.taunt } : {}),
+      woke,
     }
   }
 
@@ -1812,13 +1904,22 @@ export class BattleEngine {
    */
   private fellAll(targets: readonly UnitRecord[]): BattleEvent[] {
     const events: BattleEvent[] = []
+    const fallen: UnitRecord[] = []
     for (const target of targets) {
       if (target.hp > 0) continue
       target.ap = 0
       target.statuses = []
+      fallen.push(target)
       events.push(this.record<UnitDownEvent>({ type: 'unit_down', round: this.round, unit: target.id }))
     }
     if (events.length === 0) return events
+    // A taunt ends with its taunter: on every standing unit it taunted, in roster order.
+    for (const target of fallen) {
+      for (const u of this.units) {
+        const taunted = u.statuses.find((s) => s.id === 'taunted')
+        if (u.hp > 0 && taunted?.source === target.id) events.push(...this.endStatus(u, 'taunted', 'source_fell'))
+      }
+    }
     const end = this.checkWinner()
     if (end) events.push(end)
     return events
@@ -1869,6 +1970,7 @@ function snapshot(unit: UnitRecord): UnitSnapshot {
     turnReady: unit.turnReady,
     statuses: unit.statuses.map((status) => ({ ...status })),
     recharging: { ...unit.recharging },
+    ...(unit.moved ? { moved: true as const } : {}),
   }
 }
 
@@ -1970,6 +2072,11 @@ function describeAbility(event: AbilityEvent, names: Readonly<Record<UnitId, str
   // A status laid with no roll: "Mira sprints.", "Brenna marks Goblin."
   if (selfStatus) return `${opening}.`
   if (foeStatus) return `${opening} ${names[event.outcomes[0].unit]}.`
+  // An area that rolls nothing: "Aldric taunts 2 foes."
+  if (ABILITIES[event.ability].area?.auto) {
+    const laid = event.outcomes.filter((o) => o.status !== null).length
+    return `${opening} ${laid} ${laid === 1 ? 'foe' : 'foes'}.`
+  }
   if (event.outcomes.length === 0) return `${opening}: it touches no one.`
   return `${opening}: ${event.outcomes.map((o) => hostileOutcome(o, names[o.unit])).join('; ')}.`
 }
@@ -2021,6 +2128,10 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
       return `${names[event.unit]} takes ${event.damage} from ${STATUSES[event.status].tickName ?? STATUSES[event.status].adjective}${wardedNote(event.warded)}.`
     case 'regenerate':
       return `${names[event.unit]} regenerates ${event.healed}.`
+    case 'status_laid':
+      return event.cause === 'rooted'
+        ? `${names[event.unit]} holds their ground (rooted).`
+        : `${names[event.unit]} is ${STATUSES[event.status].adjective}.`
     case 'status_end':
       if (event.reason === 'woke') return `${names[event.unit]} wakes.`
       if (event.reason === 'spent') return `The last image of ${names[event.unit]} is gone.`

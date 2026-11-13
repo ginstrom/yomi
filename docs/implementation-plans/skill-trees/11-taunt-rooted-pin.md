@@ -248,14 +248,37 @@ PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH npm test
 
 ## 6. Completion criteria
 
-- [ ] `taunted`, `pinned`, `rooted` in `STATUSES`; `StatusRule.immobile`; `ActiveStatus.source`.
-- [ ] `TRAIT_IDS`, `TraitId`, `CombatantStats.traits`, `traitsOf`, `deriveCombatStats` emitting traits.
-- [ ] `TAUNT_PENALTY` applied to every hostile roll at a non-source, recorded as `tauntPenalty`; `source_fell`.
-- [ ] `UnitRecord.moved`; Rooted laid before the count-down with `StatusLaidEvent`; ended by the first step before its free attacks.
-- [ ] Pinned units have no legal move; reactions untouched.
-- [ ] `SAVE_VERSION` 24; version 23 loads; `restore` defaults `moved`.
-- [ ] `formatEvent` lines; tests 1–11 pass; guard green unchanged; `npm test` passes.
-- [ ] `CLAUDE.md` updated (the battle-system rules: Taunt, Rooted, Pin; the status list; `UnitRecord` fields; the save version in the rules of saving; `StatusLaidEvent` among the events).
-- [ ] Committed as "Skill trees step 11: Taunt, Rooted and Pin"; the index's step table shows `done (<commit>)`.
+- [x] `taunted`, `pinned`, `rooted` in `STATUSES`; `StatusRule.immobile`; `ActiveStatus.source`.
+- [x] `TRAIT_IDS`, `TraitId`, `CombatantStats.traits`, `traitsOf`, `deriveCombatStats` emitting traits.
+- [x] `TAUNT_PENALTY` applied to every hostile roll at a non-source, recorded as `tauntPenalty`; `source_fell`.
+- [x] `UnitRecord.moved`; Rooted laid before the count-down with `StatusLaidEvent`; ended by the first step before its free attacks.
+- [x] Pinned units have no legal move; reactions untouched.
+- [x] `SAVE_VERSION` 24; version 23 loads; `restore` defaults `moved`.
+- [x] `formatEvent` lines; tests 1–11 pass; guard green unchanged; `npm test` passes.
+- [x] `CLAUDE.md` updated (the battle-system rules: Taunt, Rooted, Pin; the status list; `UnitRecord` fields; the save version in the rules of saving; `StatusLaidEvent` among the events).
+- [x] Committed as "Skill trees step 11: Taunt, Rooted and Pin"; the index's step table shows `done (<commit>)`.
 
 ## 7. Execution record
+
+**2026-11-14, engineer (opus).**
+
+What now works: Taunted (`tauntPenalty`, `TAUNT_PENALTY` 25 on every hostile roll at a non-source: attacks, free attacks, strikes, hostile spells, rolled areas; `previewAttack`/`previewCast` show it; `tauntPenalty` on `AttackEvent`/`CastOutcome` only when applied; `source` laid by Taunt's `auto` branch, a newer taunter replacing it, longer duration kept; `source_fell` on the taunter's fall). Pinned (`StatusRule.immobile`, `isImmobile`; `reachable` empty, so no legal move and a `move` refused; free attacks, attacks, casts, abilities untouched). Rooted (`rooted` status +10 AC +2 resistance; `UnitRecord.moved`; laid for 2 turns by `root(side)` before `countDownStatuses`, `StatusLaidEvent` cause `rooted`; ended by a move's first step, reason `moved`, before its free attacks). Traits (`TRAIT_IDS`, `TraitId`, `CombatantStats.traits`, `sameCombatStats` compares it, `Perk.trait`, `traitsOf`, `deriveCombatStats` emits it only when non-empty). `SAVE_VERSION` 24, `parseSave` accepts `[SAVE_VERSION, 23, 22, 18]`; `restore` defaults `moved` to false. `formatEvent`: "Aldric taunts 2 foes." / "1 foe.", "Aldric holds their ground (rooted).", status ends "… is no longer taunted/rooted.", Pin's hit "…, pinned." as other strike statuses.
+
+Commands and results:
+
+- `npx vitest run src/engine/battleEngine.test.ts` — 291 passed (16 new in `BattleEngine Taunt, Rooted and Pin`, the Taunt area test updated for `source` and the new line).
+- Mutation check: each of nine rule lines disabled in turn (the penalty, immobile, the unmoved check, restore's default, the source overwrite, Rooted's end on a step, `source_fell`, `previewCast`'s penalty, the area's penalty) fails 1–5 of the new tests; file restored after.
+- `npx vitest run scripts/simulate.test.ts -t "refactor guard"` — passed, fixture unchanged (`git diff scripts/` empty).
+- `npm test` — tsc clean; 86 files, 1758 tests passed.
+- `npm run test:browser` not run: no scene file changed (step 14 does the scenes).
+
+Deviations:
+
+- `UnitSnapshot.moved` is optional, present (true) only once the unit has stepped this turn, not `moved: boolean` as C12 writes. With it always present, every `battle_start` would carry `"moved":false` on each unit and the guard's hash would move; the brief requires the hash unchanged. `UnitRecord.moved` is `boolean` as C12, so snapshots and saves carry it always. A reader checks `u.moved === true`.
+- The Rooted line says "holds their ground" (the design's "his" would misgender heroes such as Brenna).
+- Pin's line keeps the existing strike-status phrasing ("— HITS Goblin for 6 dmg (armour stops 1), pinned."), which §4.7 allows ("follow how other strike-laid statuses are told"), rather than a separate "Goblin is pinned." sentence.
+- `source_fell` ends come after the `unit_down` events of a fall and before any `battle_end`, in roster order per fallen taunter.
+- `tauntPenalty(attacker, target)` and `isImmobile(unit)` are exported from `battleEngine.ts`, for step 12's policy to read the same rule.
+- `ActiveStatus.source` is typed `string` (a `UnitId`), as `spells.ts` does not import the engine.
+
+For step 12: the AC5 clause "the policy attacks the taunter" is yours; read `tauntPenalty(unit, target)` from the snapshots (a `UnitSnapshot`'s `statuses` carry `source`). No node yet carries `trait: 'rooted'` or the Taunt/Pin abilities (step 13).

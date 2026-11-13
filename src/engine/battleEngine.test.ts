@@ -25,6 +25,9 @@ import {
   type CastEvent,
   type GearChange,
   type MoveEvent,
+  type StatusEndEvent,
+  type StatusLaidEvent,
+  TAUNT_PENALTY,
   type UnitSetup,
 } from './battleEngine.ts'
 import { POLICIES } from './policies.ts'
@@ -3297,13 +3300,14 @@ describe('BattleEngine area techniques', () => {
       expect(event.outcomes).toEqual(
         ['goblin', 'goblin2'].map((unit) => ({
           unit, attackRoll: null, chance: null, defenderAc: null, hit: true, critical: false, fumble: false, image: false,
-          damage: 0, warded: 0, half: false, healed: 0, hpBefore: 30, hpAfter: 30, status: { id: 'taunted', turnsLeft: 1 },
+          damage: 0, warded: 0, half: false, healed: 0, hpBefore: 30, hpAfter: 30, status: { id: 'taunted', turnsLeft: 1, source: 'warrior' },
         })),
       )
       expect(unitOf(engine, 'far').statuses).toEqual([])
       expect(unitOf(engine, 'cleric').statuses).toEqual([])
       expect(unitOf(engine, 'warrior')).toMatchObject({ ap: 5, recharging: { taunt: 2 }, statuses: [] })
-      expect(formatEvent(event, NAMED)).toBe('Warrior taunts: Goblin is taunted; Goblin Archer is taunted.')
+      expect(formatEvent(event, NAMED)).toBe('Warrior taunts 2 foes.')
+      expect(formatEvent({ ...event, outcomes: event.outcomes.slice(0, 1) }, NAMED)).toBe('Warrior taunts 1 foe.')
     })
 
     it('is not legal with no foe within 2 hexes', () => {
@@ -3363,5 +3367,255 @@ describe('BattleEngine area techniques', () => {
     expect(legal.some((a) => a.type === 'ability' && a.ability === 'volley')).toBe(true)
     const chosen = POLICIES.aggressive({ state: engine.getState(), legal, rng: () => 0 })
     expect(legal).toContainEqual(chosen)
+  })
+})
+
+describe('BattleEngine Taunt, Rooted and Pin', () => {
+  const WIDE = { cols: 9, rows: 3 }
+  const MANA = { maxMana: 5, skill: 50, spells: [] }
+  const hero = (abilities: AbilityId[], stats: Partial<CombatantStats> = {}, extra: Partial<UnitSetup> = {}): UnitSetup => ({
+    ...WARRIOR,
+    stats: { ...WARRIOR_STATS, abilities, magic: MANA, ...stats },
+    ...extra,
+  })
+  /** A goblin of 30 hit points, so a blow leaves it standing. */
+  const goblinAt = (id: string, position: Hex, stats: Partial<CombatantStats> = {}): UnitSetup => ({
+    ...GOBLIN, id, position, stats: { ...GOBLIN_STATS, maxHp: 30, ...stats },
+  })
+  /** The cleric beside both the warrior at (1,1) and the goblin at (2,1). */
+  const cleric = (extra: Partial<UnitSetup> = {}): UnitSetup => ({ ...CLERIC, position: hex(1, 2), ...extra })
+  const battle = (units: UnitSetup[], rng: number[] = [0.5]) => new BattleEngine({ board: WIDE, units }, { rng: sequence(rng) })
+  /** The warrior's Taunt, from its hex. */
+  const TAUNT: Action = { type: 'ability', unit: 'warrior', ability: 'taunt', at: hex(1, 1) }
+  /** A goblin taunted by the warrior, or not, on its own turn: the warrior beside it and the cleric too. */
+  const tauntedTurn = (taunted: boolean, goblin: Partial<CombatantStats> = {}, rng: number[] = [0.5]) => {
+    const engine = battle([hero(['taunt']), goblinAt('goblin', hex(2, 1), goblin), cleric()], rng)
+    if (taunted) engine.step(TAUNT)
+    engine.step(END_TURN)
+    return engine
+  }
+
+  describe('Taunted', () => {
+    it('takes TAUNT_PENALTY off a taunted unit’s attack on anyone but its taunter, recorded on the event', () => {
+      expect(TAUNT_PENALTY).toBe(25)
+      const atCleric: Action = { type: 'attack', unit: 'goblin', target: 'cleric' }
+      const [plain] = tauntedTurn(false).step(atCleric) as AttackEvent[]
+      const [taunted] = tauntedTurn(true).step(atCleric) as AttackEvent[]
+      expect(taunted.chance).toBe(plain.chance - 25)
+      expect(taunted.tauntPenalty).toBe(25)
+      expect(plain).not.toHaveProperty('tauntPenalty')
+      const [atTaunter] = tauntedTurn(true).step(ATTACK_WARRIOR) as AttackEvent[]
+      const [atWarrior] = tauntedTurn(false).step(ATTACK_WARRIOR) as AttackEvent[]
+      expect(atTaunter.chance).toBe(atWarrior.chance)
+      expect(atTaunter).not.toHaveProperty('tauntPenalty')
+    })
+
+    it('shows the penalty in previewAttack', () => {
+      const plain = tauntedTurn(false).previewAttack('goblin', 'cleric')!
+      const taunted = tauntedTurn(true).previewAttack('goblin', 'cleric')!
+      expect(taunted.hitChance).toBeCloseTo(plain.hitChance - 0.25)
+      expect(tauntedTurn(true).previewAttack('goblin', 'warrior')!.hitChance).toBe(tauntedTurn(false).previewAttack('goblin', 'warrior')!.hitChance)
+    })
+
+    it('takes it off a free attack at a mover other than the taunter', () => {
+      const run = (taunted: boolean, mover: string, to: Hex) => {
+        const engine = battle([hero(['taunt']), goblinAt('goblin', hex(2, 1)), cleric()], [FUMBLE])
+        if (taunted) engine.step(TAUNT)
+        return engine.step({ type: 'move', unit: mover, to }).find((e): e is AttackEvent => e.type === 'attack')!
+      }
+      const away = hex(0, 2)
+      expect(run(true, 'cleric', away)).toMatchObject({ opportunity: true, tauntPenalty: 25, chance: run(false, 'cleric', away).chance - 25 })
+      const back = hex(0, 1)
+      expect(run(true, 'warrior', back)).not.toHaveProperty('tauntPenalty')
+      expect(run(true, 'warrior', back).chance).toBe(run(false, 'warrior', back).chance)
+    })
+
+    it('takes it off each roll of a hostile spell, and previewCast shows it', () => {
+      const caster = { magic: { maxMana: 10, skill: 60, spells: ['magic_arrow' as SpellId] } }
+      const cast = (target: string): Action => ({ type: 'cast', unit: 'goblin', spell: 'magic_arrow', target })
+      const [plain] = tauntedTurn(false, caster).step(cast('cleric')) as CastEvent[]
+      const [taunted] = tauntedTurn(true, caster).step(cast('cleric')) as CastEvent[]
+      expect(taunted.outcomes[0]).toMatchObject({ tauntPenalty: 25, chance: plain.outcomes[0].chance! - 25 })
+      expect(plain.outcomes[0]).not.toHaveProperty('tauntPenalty')
+      const [atTaunter] = tauntedTurn(true, caster).step(cast('warrior')) as CastEvent[]
+      expect(atTaunter.outcomes[0]).not.toHaveProperty('tauntPenalty')
+      const preview = (engine: BattleEngine) => engine.previewCast('goblin', 'magic_arrow', 'cleric')!.outcomes[0].hitChance!
+      expect(preview(tauntedTurn(true, caster))).toBeCloseTo(preview(tauntedTurn(false, caster)) - 0.25)
+    })
+
+    it('takes it off each roll of an area ability at a unit other than the taunter', () => {
+      const web: Action = { type: 'ability', unit: 'goblin', ability: 'spider_web', at: hex(1, 2) }
+      const [plain] = tauntedTurn(false, { abilities: ['spider_web'] }).step(web) as AbilityEvent[]
+      const [taunted] = tauntedTurn(true, { abilities: ['spider_web'] }).step(web) as AbilityEvent[]
+      const outcome = (event: AbilityEvent, unit: string) => event.outcomes.find((o) => o.unit === unit)!
+      expect(outcome(taunted, 'cleric')).toMatchObject({ tauntPenalty: 25, chance: outcome(plain, 'cleric').chance! - 25 })
+      expect(outcome(taunted, 'warrior')).not.toHaveProperty('tauntPenalty')
+      expect(outcome(taunted, 'warrior').chance).toBe(outcome(plain, 'warrior').chance)
+    })
+
+    it('names the newer taunter, keeping the longer duration', () => {
+      const field = new BattleEngine(
+        { board: WIDE, units: [hero(['taunt']), { ...hero(['taunt']), id: 'paladin', position: hex(1, 0) }, goblinAt('goblin', hex(2, 1))] },
+        { seed: 1 },
+      )
+      const saved = JSON.parse(JSON.stringify(field.snapshot()))
+      saved.units.find((u: { id: string }) => u.id === 'goblin').statuses = [{ id: 'taunted', turnsLeft: 2, source: 'warrior' }]
+      const engine = BattleEngine.restore(saved)
+      engine.step({ type: 'ability', unit: 'paladin', ability: 'taunt', at: hex(1, 0) })
+      expect(unitOf(engine, 'goblin').statuses).toEqual([{ id: 'taunted', turnsLeft: 2, source: 'paladin' }])
+    })
+
+    it('ends on every unit its taunter taunted when the taunter falls, and on no other', () => {
+      const engine = battle(
+        [
+          hero(['taunt'], {}, { hp: 1 }),
+          { ...hero(['taunt']), id: 'paladin', position: hex(6, 1) },
+          goblinAt('goblin', hex(2, 1)),
+          goblinAt('goblin2', hex(2, 0)),
+          goblinAt('goblin3', hex(7, 1)),
+        ],
+        [0.99, 0.99],
+      )
+      engine.step(TAUNT)
+      engine.step({ type: 'ability', unit: 'paladin', ability: 'taunt', at: hex(6, 1) })
+      engine.step(END_TURN)
+      const events = engine.step(ATTACK_WARRIOR)
+      expect(events.map((e) => e.type)).toEqual(['attack', 'unit_down', 'status_end', 'status_end'])
+      expect(events.slice(2)).toMatchObject([
+        { unit: 'goblin', status: 'taunted', reason: 'source_fell' },
+        { unit: 'goblin2', status: 'taunted', reason: 'source_fell' },
+      ])
+      expect(formatEvent(events[2], NAMES)).toBe('Goblin is no longer taunted.')
+      expect(unitOf(engine, 'goblin3').statuses).toEqual([{ id: 'taunted', turnsLeft: 1, source: 'paladin' }])
+    })
+  })
+
+  describe('Rooted', () => {
+    const ROOTED = { traits: ['rooted' as const] }
+    /** The rooted warrior beside a goblin, and the cleric behind it. */
+    const field = (warrior: Partial<CombatantStats> = ROOTED, rng: number[] = [FUMBLE]) =>
+      battle([hero([], warrior), goblinAt('goblin', hex(2, 1)), CLERIC], rng)
+
+    it('is laid for 2 turns, before the count-down, on a unit with the trait that ends its turn unmoved', () => {
+      const engine = field()
+      const events = engine.step(END_TURN)
+      expect(events[0]).toEqual<StatusLaidEvent>({ type: 'status_laid', seq: events[0].seq, round: 1, unit: 'warrior', status: 'rooted', turns: 2, cause: 'rooted' })
+      expect(events.map((e) => e.type)).toEqual(['status_laid', 'end_turn'])
+      expect(formatEvent(events[0], NAMES)).toBe('Warrior holds their ground (rooted).')
+      const warrior = engine.getState().units.find((u) => u.id === 'warrior')!
+      expect(warrior.statuses).toEqual([{ id: 'rooted', turnsLeft: 1 }])
+      expect(effectiveStats({ stats: warrior, statuses: warrior.statuses })).toMatchObject({ ac: WARRIOR_STATS.ac + 10, resistance: 2 })
+      const [blow] = engine.step(ATTACK_WARRIOR) as AttackEvent[]
+      expect(blow).toMatchObject({ defenderAc: WARRIOR_STATS.ac + 10, defenderResistance: 2 })
+    })
+
+    it('is laid on no unit without the trait, nor on one that moved', () => {
+      expect(field({}).step(END_TURN).map((e) => e.type)).toEqual(['end_turn'])
+      const moved = field()
+      moved.step({ type: 'move', unit: 'warrior', to: hex(1, 0) })
+      expect(moved.step(END_TURN).map((e) => e.type)).toEqual(['end_turn'])
+      expect(unitOf(moved, 'warrior').statuses).toEqual([])
+    })
+
+    it('ends on the first step, before the free attack that step provokes is rolled', () => {
+      const engine = field()
+      engine.step(END_TURN)
+      engine.step(END_TURN)
+      expect(unitOf(engine, 'warrior').statuses).toEqual([{ id: 'rooted', turnsLeft: 1 }])
+      const events = engine.step({ type: 'move', unit: 'warrior', to: hex(1, 0) })
+      expect(events.map((e) => e.type)).toEqual(['status_end', 'move', 'attack', 'move'])
+      expect(events[0]).toMatchObject<Partial<StatusEndEvent>>({ unit: 'warrior', status: 'rooted', reason: 'moved' })
+      expect(formatEvent(events[0], NAMES)).toBe('Warrior is no longer rooted.')
+      expect(events[2]).toMatchObject({ opportunity: true, defenderAc: WARRIOR_STATS.ac })
+      expect(engine.step(END_TURN).map((e) => e.type)).toEqual(['end_turn'])
+    })
+
+    it('lapses after the unit’s next turn without the trait, and is laid again while it stays unmoved', () => {
+      const again = field()
+      again.step(END_TURN)
+      again.step(END_TURN)
+      expect(again.step(END_TURN).map((e) => e.type)).toEqual(['status_laid', 'end_turn'])
+      expect(unitOf(again, 'warrior').statuses).toEqual([{ id: 'rooted', turnsLeft: 1 }])
+      const lapsed = field()
+      lapsed.step(END_TURN)
+      lapsed.step(END_TURN)
+      lapsed.step({ type: 'equip', unit: 'warrior', stats: { ...WARRIOR_STATS, abilities: [], magic: MANA } })
+      const events = lapsed.step(END_TURN)
+      expect(events.map((e) => e.type)).toEqual(['status_end', 'end_turn'])
+      expect(events[0]).toMatchObject({ unit: 'warrior', status: 'rooted', reason: 'expired' })
+    })
+  })
+
+  describe('Pinned', () => {
+    it('leaves a foe hit by Pin no legal move on its next turn, though it still attacks, and ends after that turn', () => {
+      const engine = battle([hero(['pin']), goblinAt('goblin', hex(2, 1)), CLERIC], [0.5, 0.5, FUMBLE])
+      const [pin] = engine.step({ type: 'ability', unit: 'warrior', ability: 'pin', target: 'goblin' }) as AttackEvent[]
+      expect(pin).toMatchObject({ hit: true, status: { id: 'pinned', turnsLeft: 1 }, apCost: WARRIOR_STATS.attackApCost + 1, manaCost: 3, manaAfter: 2 })
+      expect(formatEvent(pin, NAMES)).toMatch(/HITS Goblin for 6 dmg \(armour stops 1\), pinned\.$/)
+      expect(unitOf(engine, 'warrior')).toMatchObject({ ap: 8 - (WARRIOR_STATS.attackApCost + 1), mana: 2 })
+      engine.step(END_TURN)
+      const legal = engine.legalActions('goblin')
+      expect(legal.filter((a) => a.type === 'move')).toEqual([])
+      expect(legal).toContainEqual(ATTACK_WARRIOR)
+      expect(engine.previewMove('goblin', hex(3, 1))).toBeNull()
+      expect(() => engine.step({ type: 'move', unit: 'goblin', to: hex(3, 1) })).toThrow('cannot move')
+      engine.step(ATTACK_WARRIOR)
+      const events = engine.step(END_TURN)
+      expect(events[0]).toMatchObject({ type: 'status_end', unit: 'goblin', status: 'pinned', reason: 'expired' })
+    })
+
+    it('leaves a pinned unit its free attacks', () => {
+      const engine = battle([hero(['pin']), goblinAt('goblin', hex(2, 1)), cleric()], [0.5, 0.5, FUMBLE])
+      engine.step({ type: 'ability', unit: 'warrior', ability: 'pin', target: 'goblin' })
+      expect(unitOf(engine, 'goblin').statuses).toEqual([{ id: 'pinned', turnsLeft: 1 }])
+      const events = engine.step({ type: 'move', unit: 'cleric', to: hex(0, 2) })
+      expect(events.find((e) => e.type === 'attack')).toMatchObject({ attacker: 'goblin', defender: 'cleric', opportunity: true })
+    })
+
+    it('pins with Pinning Shot from range likewise', () => {
+      const archer = hero(['pinning_shot'], { attackApCost: 4, attackRange: 5, weapon: 'Bow' })
+      const engine = battle([archer, goblinAt('goblin', hex(4, 1))], [0.5, 0.5])
+      const [shot] = engine.step({ type: 'ability', unit: 'warrior', ability: 'pinning_shot', target: 'goblin' }) as AttackEvent[]
+      expect(shot).toMatchObject({ melee: false, apCost: 5, manaCost: 3, status: { id: 'pinned', turnsLeft: 1 } })
+      engine.step(END_TURN)
+      expect(engine.legalActions('goblin').filter((a) => a.type === 'move')).toEqual([])
+    })
+  })
+
+  describe('snapshots', () => {
+    it('carry moved and a taunt’s source, and play on to the same events', () => {
+      const units = [hero(['taunt']), goblinAt('goblin', hex(2, 1)), goblinAt('goblin2', hex(5, 1)), cleric({ position: hex(0, 1) })]
+      const run = () => {
+        const engine = new BattleEngine({ board: WIDE, units }, { seed: 7 })
+        engine.step({ type: 'move', unit: 'cleric', to: hex(0, 0) })
+        engine.step(TAUNT)
+        return engine
+      }
+      const first = run()
+      expect(unitOf(first, 'cleric').moved).toBe(true)
+      expect(unitOf(first, 'warrior')).not.toHaveProperty('moved')
+      const saved = first.snapshot()
+      expect(saved.units.find((u) => u.id === 'cleric')!.moved).toBe(true)
+      expect(saved.units.find((u) => u.id === 'goblin')!.statuses).toEqual([{ id: 'taunted', turnsLeft: 1, source: 'warrior' }])
+      const restored = BattleEngine.restore(JSON.parse(JSON.stringify(saved)))
+      const play = (engine: BattleEngine) => {
+        for (let state = engine.getState(); state.phase !== 'over'; state = engine.getState()) {
+          engine.step(POLICIES.aggressive({ state, legal: engine.legalActions(), rng: () => 0 }))
+        }
+        return engine.getLog()
+      }
+      expect(play(restored)).toEqual(play(first))
+    })
+
+    it('restore a snapshot without moved (save version 23) as not moved', () => {
+      const engine = battle([hero([], { traits: ['rooted'] }), goblinAt('goblin', hex(2, 1))])
+      const plain = new BattleEngine({ board: WIDE, units: [hero([], { traits: ['rooted'] }), goblinAt('goblin', hex(2, 1))] }, { seed: 1 })
+      expect(engine.getState().units.every((u) => u.moved === undefined)).toBe(true)
+      const saved = JSON.parse(JSON.stringify(plain.snapshot()))
+      for (const unit of saved.units) delete unit.moved
+      const restored = BattleEngine.restore(saved)
+      expect(restored.snapshot().units.map((u) => u.moved)).toEqual([false, false])
+      expect(restored.step(END_TURN)[0]).toMatchObject({ type: 'status_laid', unit: 'warrior' })
+    })
   })
 })

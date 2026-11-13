@@ -82,7 +82,33 @@ export interface CombatantStats {
   imbueDamage?: number
   /** The blight's own: a Dawn rune's bane applies to it (`baneApplies`). */
   blightborn?: true
+  /** The rules its nodes give it that the engine reads by name (`TRAIT_IDS` order); left out when none. */
+  traits?: readonly TraitId[]
 }
+
+/**
+ * The rules a node may give a hero that are neither a number nor an action,
+ * read by the engine by name: `rooted` from skill trees step 11, the rest
+ * named for the steps that add them.
+ */
+export const TRAIT_IDS = [
+  'rooted',
+  'tumble',
+  'counter',
+  'ambush',
+  'deathblow',
+  'blademaster',
+  'deadeye',
+  'unbreakable',
+  'shadowdancer',
+  'guardian',
+  'courage',
+  'aegis',
+  'sanctuary',
+  'arcane_knight',
+] as const
+
+export type TraitId = (typeof TRAIT_IDS)[number]
 
 /** Whether a bane (the Dawn rune's on-hit damage) applies to a unit of `stats`: one that regenerates or is the blight's own. */
 export function baneApplies(stats: CombatantStats): boolean {
@@ -108,10 +134,10 @@ function sameMagic(a: CombatantStats['magic'], b: CombatantStats['magic']): bool
   )
 }
 
-function sameAbilities(a: CombatantStats['abilities'], b: CombatantStats['abilities']): boolean {
+function sameList<T>(a: readonly T[] | undefined, b: readonly T[] | undefined): boolean {
   const left = a ?? []
   const right = b ?? []
-  return left.length === right.length && left.every((ability, i) => ability === right[i])
+  return left.length === right.length && left.every((item, i) => item === right[i])
 }
 
 function sameOnHit(a: CombatantStats['onHit'], b: CombatantStats['onHit']): boolean {
@@ -166,11 +192,12 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     (a.reach ?? false) === (b.reach ?? false) &&
     a.actionPoints === b.actionPoints &&
     sameMagic(a.magic, b.magic) &&
-    sameAbilities(a.abilities, b.abilities) &&
+    sameList(a.abilities, b.abilities) &&
     (a.abilityDamageBonus ?? 0) === (b.abilityDamageBonus ?? 0) &&
     sameOnHit(a.onHit, b.onHit) &&
     (a.imbueDamage ?? 0) === (b.imbueDamage ?? 0) &&
-    (a.blightborn ?? false) === (b.blightborn ?? false)
+    (a.blightborn ?? false) === (b.blightborn ?? false) &&
+    sameList(a.traits, b.traits)
   )
 }
 

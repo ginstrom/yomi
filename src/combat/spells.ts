@@ -85,6 +85,7 @@ export const STATUS_IDS = [
   'slowed',
   'pinned',
   'taunted',
+  'rooted',
 ] as const
 
 export type StatusId = (typeof STATUS_IDS)[number]
@@ -484,6 +485,8 @@ export interface StatusRule {
   images?: true
   /** Added to its ward against every element. */
   wardAll?: number
+  /** It cannot move (Pinned); it still attacks, casts, uses abilities and makes free attacks. */
+  immobile?: true
 }
 
 export const STATUSES: Record<StatusId, StatusRule> = {
@@ -503,10 +506,11 @@ export const STATUSES: Record<StatusId, StatusRule> = {
   warded: { name: 'Warded', adjective: 'warded', mark: 'G', colour: 0xa890e8, wardAll: 4 },
   marked: { name: 'Marked', adjective: 'marked', mark: 'Y', colour: 0xe8c040, armorClass: -10 },
   slowed: { name: 'Slowed', adjective: 'slowed', mark: 'L', colour: 0x7a9ab0, actionPoints: -3 },
-  // Its rule (no move) arrives in step 11; until then it changes nothing.
-  pinned: { name: 'Pinned', adjective: 'pinned', mark: 'N', colour: 0xb08050 },
-  // Its rule (−25 to hit at any unit but the one who laid it) arrives in step 11; until then it changes nothing.
+  pinned: { name: 'Pinned', adjective: 'pinned', mark: 'N', colour: 0xb08050, immobile: true },
+  // −`TAUNT_PENALTY` to hit at any unit but its `source`: the engine applies it, as it depends on the target.
   taunted: { name: 'Taunted', adjective: 'taunted', mark: 'T', colour: 0xe04848 },
+  // Laid by the engine on a unit with the trait `rooted` that ends its side's turn unmoved; its first step ends it.
+  rooted: { name: 'Rooted', adjective: 'rooted', mark: 'R', colour: 0x4fb09a, armorClass: 10, resistance: 2 },
 }
 
 /** What an attack on a sleeping unit adds to its chance to hit, in percent. */
@@ -519,6 +523,8 @@ export interface ActiveStatus {
   turnsLeft: number
   /** For Mirrored: images left. */
   images?: number
+  /** For Taunted: the unit that laid it (a `UnitId`), the one it may strike at no penalty. No other status carries one. */
+  source?: string
 }
 
 /** The average of a roll, rounded down: what a heal restores out of battle. */
