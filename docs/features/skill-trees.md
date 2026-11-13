@@ -34,6 +34,7 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 | 2026-11-13 | Guard bands, out of 500 from seed 1: one party 215–250, company 220–260, ready level 10 370–420 | orchestrator (the designer's recommendation) | — | Brackets today's 230/239/389 |
 | 2026-11-13 | Creation's rule line says "every even level", amending the design's quoted "every level" | orchestrator | keep the quote | The quote contradicts the user's pick-rate decision |
 | 2026-11-13 | Accept step 06's tier-aligned rows (one more row than the design) and creation's perks step without the summary column (revisit at polish) | orchestrator | — | Recorded deviations, tested; layout needs it |
+| 2026-11-14 | Accept `UnitSnapshot.moved` optional (present only when true) instead of C12's boolean | orchestrator | always present, re-hash the guard | Keeps the guard's hash a regression check; readers use `moved === true` |
 | 2026-11-13 | Own branch `skill-trees` off main | orchestrator | commit on main | Precedent: one branch per feature |
 
 ## Open questions
@@ -64,7 +65,9 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 - To step 14 or 17 (from step 09 review): `perkTree.ts` `costWords` computes technique AP itself; make it call `abilityApCost` and drop the redundant intersection types, before Arcane Knight's discount lands.
 - Plan decision 2 (guard unchanged) allows a re-hash for a schema-only version bump (step 09 proved the log identical but for schemaVersion).
 
-- To steps 11, 12, 14 (from step 10): Taunt lays `taunted` without a `source` (set it in `areaAttack`'s no-roll branch, step 11); the policy's `isTechnique` filter is what step 12 replaces, and its area scoring doesn't yet value weapon dice, doubled bane dice or resistance (it would skip Volley); step 14 draws hero areas with `abilityArea`/`abilityTouches`.
+- To steps 12, 14 (from step 10): the policy's `isTechnique` filter is what step 12 replaces, and its area scoring doesn't yet value weapon dice, doubled bane dice or resistance (it would skip Volley); step 14 draws hero areas with `abilityArea`/`abilityTouches`.
+
+- To step 12 (from step 11): the policy attacking the taunter is AC5's other half; reuse the engine's exported `tauntPenalty` and `isImmobile`. Read `moved` as `u.moved === true`.
 
 ## Verification
 
