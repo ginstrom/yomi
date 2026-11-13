@@ -261,7 +261,7 @@ PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH npm test
 
 ## 7. Execution record
 
-**Status:** done.
+**Status:** done (24a2400).
 
 **What was built.**
 - `character.ts`: `maxMana` for every hero (2 × INT + (level − 1) × ⌊INT/2⌋ + `MANA_PER_TREE_NODE` × Mage and Cleric nodes + nodes' and gear's `maxMana`); `deriveCombatStats` adds `perkBonus('resistance')`, `shieldAc` while the off hand holds anything (every off-hand item is a shield, `gearClass`) under a one-handed weapon, `wardAll` to each element and `wardBlight` to blight, the nodes' `meleeOnHit` after the runes' on-hit entries with a melee weapon (reach included) or bare hands, and the C7 modifiers on `magic` (`spellModifiers`), each key and sub-object only when non-zero. `magic` is still emitted only for a hero that knows a spell.
