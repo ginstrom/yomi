@@ -39,6 +39,7 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 | 2026-11-14 | Accept step 14's engine `previewAbility` (real odds for techniques), the probe renames, and an always-enabled Skills button; leave the rename-only commit a956def unsquashed | orchestrator | plain-attack odds; squash | Odds must be the engine's; history rewrite not worth it |
 | 2026-11-14 | Policy fix in step 16: `techniqueScore` weighs a technique by the blows that fit in the AP left this turn (⌊AP/cost⌋), not the raw AP ratio, so Power Attack wins when only one blow fits either way. Step 16's engineer moves from sonnet to opus for it | orchestrator | keep the raw ratio; leave to stage 4 | Step 15 review: a 7 AP Power Attack lost to a 5 AP blow at 8 AP though only one fits; an AI correctness fix, not tuning |
 | 2026-11-14 | Blademaster refunds only attacks and strike techniques, not area techniques (Volley, Consecrate); a routine felling on any strike refunds its whole cost | orchestrator | refund areas too (needs an AbilityEvent field) | Blademaster is the melee duellist's capstone; an area refund would be a balance outlier and a schema change |
+| 2026-11-14 | A hit that deathblows a unit doesn't spend its Unbreakable save (judged on the hp the hit would leave) | orchestrator | spend the save anyway | Avoids "endures the blow. A deathblow!" and a wasted save that Revive would later expose |
 | 2026-11-13 | Own branch `skill-trees` off main | orchestrator | commit on main | Precedent: one branch per feature |
 
 ## Open questions
