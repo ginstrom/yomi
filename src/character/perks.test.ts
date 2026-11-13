@@ -25,12 +25,16 @@ import {
 import { takePerk } from './progression.ts'
 import { SKILL_IDS, skillLevel } from './skills.ts'
 
+/** Spells step 02 added that no perk teaches yet (step 03 gives them nodes). */
+const UNTAUGHT = ['frostbite', 'meteor', 'mass_haste', 'lay_on_hands', 'ward', 'web', 'curse']
+const TAUGHT_SPELLS = SPELL_IDS.filter((spell) => !UNTAUGHT.includes(spell))
+
 /** The warrior: strength 7, perception 4, endurance 7, intelligence 4, agility 6, luck 7. */
 const warriorAt = (level: number) => ({ ...createWarrior(), level })
 
 describe('PERKS', () => {
   it('gives every perk a name, a description, a rank to take and something it does', () => {
-    expect(PERK_IDS).toHaveLength(28 + SPELL_IDS.length)
+    expect(PERK_IDS).toHaveLength(28 + TAUGHT_SPELLS.length)
     for (const id of PERK_IDS) {
       const perk: Perk = PERKS[id]
       expect(perk.name.length * perk.description.length).toBeGreaterThan(0)
@@ -50,9 +54,9 @@ describe('PERKS', () => {
     expect(JSON.stringify(PERKS)).not.toMatch(/first aid|firstAid|healer/i)
   })
 
-  it('teaches every hero spell and no monster spell, whatever a character takes', () => {
+  it('teaches every hero spell that has a perk and no monster spell, whatever a character takes', () => {
     const taught = PERK_IDS.map((id) => (PERKS[id] as Perk).spell).filter((spell) => spell !== undefined)
-    expect([...taught].sort()).toEqual([...SPELL_IDS].sort())
+    expect([...taught].sort()).toEqual([...TAUGHT_SPELLS].sort())
     for (const spell of MONSTER_SPELL_IDS) expect(taught as string[]).not.toContain(spell)
   })
 })
@@ -266,8 +270,8 @@ describe('knownSpells', () => {
 
 describe('the spell perks', () => {
   it('teach each spell once, from its school, at its tier, from Spellcasting or a spell of its school', () => {
-    expect(SPELL_PERK_IDS).toHaveLength(SPELL_IDS.length)
-    for (const spell of SPELL_IDS) {
+    expect(SPELL_PERK_IDS).toHaveLength(TAUGHT_SPELLS.length)
+    for (const spell of TAUGHT_SPELLS) {
       const id = spellPerkOf(spell)
       const perk: Perk = PERKS[id]
       expect(id).toBe(spell)

@@ -6,6 +6,10 @@ import { PERKS, PERK_IDS, type Perk, SPELL_PERK_IDS, TRUNK_PERKS, isSpellPerk, p
 import { newDraft, type CharacterDraft } from '../character/creation.ts'
 import { draftNodeHint, nodeHint, nodeLabel, nodeState, perkTitle, perkTreeLayout } from './perkTree.ts'
 
+/** Spells step 02 added that no perk teaches yet (step 03 gives them nodes). */
+const UNTAUGHT = ['frostbite', 'meteor', 'mass_haste', 'lay_on_hands', 'ward', 'web', 'curse']
+const TAUGHT_SPELLS = SPELL_IDS.filter((spell) => !UNTAUGHT.includes(spell))
+
 /** The warrior: strength 7, perception 4, endurance 7, intelligence 4, agility 6, luck 7. */
 const warriorAt = (level: number, perkPicks = 0) => ({ ...createWarrior(), level, perkPicks })
 
@@ -15,7 +19,7 @@ describe('perkTreeLayout', () => {
 
   it('draws the heroes’ spells in the spell tree, and no monster spell', () => {
     const spells = perkTreeLayout('spells').map((node) => (PERKS[node.perk] as Perk).spell as string)
-    expect([...spells].sort()).toEqual([...SPELL_IDS].sort())
+    expect([...spells].sort()).toEqual([...TAUGHT_SPELLS].sort())
     for (const spell of MONSTER_SPELL_IDS) expect(spells).not.toContain(spell)
   })
 

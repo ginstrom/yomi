@@ -1,5 +1,6 @@
 import { ABILITIES, type AbilityId, type Strike } from '../combat/abilities.ts'
 import {
+  ELEMENTS,
   baneApplies,
   damageThrough,
   effectiveResistance,
@@ -609,14 +610,23 @@ export function effectiveStats(unit: { stats: CombatantStats; statuses: readonly
   let ac = 0
   let toHit = 0
   let resistance = 0
+  let wardAll = 0
   for (const { id } of unit.statuses) {
+    wardAll += STATUSES[id].wardAll ?? 0
     ac += STATUSES[id].armorClass ?? 0
     toHit += STATUSES[id].toHit ?? 0
     resistance += STATUSES[id].resistance ?? 0
   }
   const { stats } = unit
+  let wards = stats.wards
+  if (wardAll !== 0) {
+    const all: Partial<Record<Element, number>> = { ...stats.wards }
+    for (const e of ELEMENTS) all[e] = (all[e] ?? 0) + wardAll
+    wards = all
+  }
   return {
     ...stats,
+    ...(wards === stats.wards ? {} : { wards }),
     ac: ac === 0 ? stats.ac : Math.max(0, stats.ac + ac),
     ...(resistance === 0 ? {} : { resistance: Math.max(0, (stats.resistance ?? 0) + resistance) }),
     toHit: stats.toHit + toHit,

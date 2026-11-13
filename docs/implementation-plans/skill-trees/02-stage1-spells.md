@@ -162,3 +162,12 @@ PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH npm test
 - [ ] Index: step 02's status set to `done (<commit>)`.
 
 ## 7. Execution record
+
+**Engineer: step 02 (2026-11-13).**
+
+- Added `frostbite`, `meteor`, `mass_haste`, `lay_on_hands`, `ward` to `SPELLS`; `SPELL_IDS` now has 24 spells ending `..., 'ward', 'web', 'curse'`; `MONSTER_SPELL_IDS` is `lightning_bolt, drain_life, dark_shield`. `web` and `curse` entries unchanged (a test pins them). `STATUS_IDS`/`STATUSES` gain `warded` (mark G, `wardAll: 4`); `StatusRule.wardAll` added. `effectiveStats` adds `wardAll` to every element's ward and leaves `wards` untouched when no status has it.
+- `SPELL_LOOKS` (`src/scenes/battleEffects.ts`) got entries for the five new spells (reusing existing looks) so the `Record<SpellId, ...>` type holds.
+- Existing tests that insisted every `HeroSpellId` has a perk (`perks.test.ts`, `perkTree.test.ts`) now compare against `SPELL_IDS` less the seven untaught spells (a local `TAUGHT_SPELLS`); step 03 rewrites them. `spells.test.ts` lists updated. No production perk code changed.
+- Stat-block order: no stat block names `web` or `curse` in `magic.spells` (the Giant Spider uses the `spider_web` ability; the shaman and Source casters list other spells), so no order changed. The policy's `web`/`curse` branches (`policies.ts`) are unaffected.
+- Refactor guard: green, identical, no re-record (a hero cannot learn any new spell, and no monster block lists the moved ids).
+- Verification: `npm test` 84 files, 1522 tests pass (tsc clean); `npx vitest run scripts/simulate.test.ts -t "refactor guard"` passes. New tests: spells table (24/3/27 ids, five numbers, Web/Curse pinned, Warded), engine tests (Ward, wards add, poison tick, on-hit entry, Lay on Hands range, Mass Haste, Meteor, Frostbite). `npm run test:browser`: 10 files, 115 tests pass.

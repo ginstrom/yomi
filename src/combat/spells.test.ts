@@ -6,7 +6,7 @@ describe('spell ids', () => {
   it('keeps the monsters’ spells apart from the heroes’', () => {
     const heroes = new Set<string>(SPELL_IDS)
     expect(MONSTER_SPELL_IDS.filter((id) => heroes.has(id))).toEqual([])
-    expect(MONSTER_SPELL_IDS).toEqual(['lightning_bolt', 'drain_life', 'curse', 'web', 'dark_shield'])
+    expect(MONSTER_SPELL_IDS).toEqual(['lightning_bolt', 'drain_life', 'dark_shield'])
   })
 
   it('lists every spell, the heroes’ first', () => {
@@ -34,7 +34,9 @@ describe('elements', () => {
     expect(elements).toEqual({
       flame_arrow: 'fire',
       fireball: 'fire',
+      meteor: 'fire',
       frost_blast: 'frost',
+      frostbite: 'frost',
       acid_arrow: 'acid',
       death_cloud: 'poison',
       lightning_bolt: 'lightning',
@@ -79,5 +81,45 @@ describe('the monster spells', () => {
   it('lay Cursed (-15 to hit, -5 AC) and Webbed (-4 AP)', () => {
     expect(STATUSES.cursed).toMatchObject({ name: 'Cursed', mark: 'K', toHit: -15, armorClass: -5 })
     expect(STATUSES.webbed).toMatchObject({ name: 'Webbed', mark: 'W', actionPoints: -4 })
+  })
+})
+
+describe('the stage-1 spells', () => {
+  const row = (id: SpellId) => {
+    const { school, target, shape, range, radius, manaCost, apCost, damage, heal, status, element, hostile } = SPELLS[id]
+    return { school, target, shape, range, radius, manaCost, apCost, damage, heal, status, element, hostile }
+  }
+  const none = { shape: undefined, damage: undefined, heal: undefined, status: undefined, element: undefined, radius: undefined }
+
+  it('hold the heroes’ 24 spells, Web and Curse among them, and leave the monsters three', () => {
+    expect(SPELL_IDS).toHaveLength(24)
+    expect(SPELL_IDS.slice(-7)).toEqual(['frostbite', 'meteor', 'mass_haste', 'lay_on_hands', 'ward', 'web', 'curse'])
+    expect(MONSTER_SPELL_IDS).toEqual(['lightning_bolt', 'drain_life', 'dark_shield'])
+    expect(new Set(ALL_SPELL_IDS).size).toBe(ALL_SPELL_IDS.length)
+    expect(ALL_SPELL_IDS).toHaveLength(27)
+  })
+
+  it('are as design 4.3 has them', () => {
+    expect(row('frostbite')).toEqual({ ...none, school: 'offence', target: 'foe', range: 5, manaCost: 3, apCost: 4, hostile: true,
+      damage: { count: 1, sides: 6, bonus: 1 }, element: 'frost', status: { id: 'chilled', turns: 1 } })
+    expect(row('meteor')).toEqual({ ...none, school: 'offence', target: 'area', range: 6, radius: 2, manaCost: 16, apCost: 7, hostile: true,
+      damage: { count: 4, sides: 8, bonus: 0 }, element: 'fire', status: { id: 'seared', turns: 1 } })
+    expect(row('mass_haste')).toEqual({ ...none, school: 'support', target: 'area', range: 0, radius: 2, manaCost: 12, apCost: 5, hostile: false,
+      status: { id: 'hasted', turns: 2 } })
+    expect(row('lay_on_hands')).toEqual({ ...none, school: 'healing', target: 'ally', range: 1, manaCost: 4, apCost: 3, hostile: false,
+      heal: { count: 2, sides: 6, bonus: 2 } })
+    expect(row('ward')).toEqual({ ...none, school: 'support', target: 'ally', range: 4, manaCost: 4, apCost: 3, hostile: false,
+      status: { id: 'warded', turns: 3 } })
+  })
+
+  it('leave Web and Curse as the monsters had them', () => {
+    expect(SPELLS.curse).toEqual({ name: 'Curse', school: 'offence', description: '-15 to hit and -5 AC to a foe within 5 hexes, for 3 turns',
+      manaCost: 5, apCost: 4, range: 5, target: 'foe', hostile: true, status: { id: 'cursed', turns: 3 } })
+    expect(SPELLS.web).toEqual({ name: 'Web', school: 'offence', description: '-4 AP for 2 turns to everyone within 1 hex of a point within 4 hexes',
+      manaCost: 5, apCost: 4, range: 4, target: 'area', radius: 1, shape: 'burst', hostile: true, status: { id: 'webbed', turns: 2 } })
+  })
+
+  it('lay Warded, a ward of 4 against every element', () => {
+    expect(STATUSES.warded).toMatchObject({ name: 'Warded', mark: 'G', wardAll: 4 })
   })
 })

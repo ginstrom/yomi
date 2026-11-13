@@ -37,13 +37,20 @@ export const SPELL_IDS = [
   'mirror_image',
   'haste',
   'bane',
+  'frostbite',
+  'meteor',
+  'mass_haste',
+  'lay_on_hands',
+  'ward',
+  'web',
+  'curse',
 ] as const
 
-/** The heroes' spells: the spell tree, the perks and casting on the world map read these, and only these. */
+/** The heroes' spells: the skill trees' nodes and casting on the world map read these (Web and Curse, monsters' too, are among them). */
 export type HeroSpellId = (typeof SPELL_IDS)[number]
 
 /** Spells only monsters cast: no perk teaches them, so no hero can learn one. */
-export const MONSTER_SPELL_IDS = ['lightning_bolt', 'drain_life', 'curse', 'web', 'dark_shield'] as const
+export const MONSTER_SPELL_IDS = ['lightning_bolt', 'drain_life', 'dark_shield'] as const
 
 export type MonsterSpellId = (typeof MONSTER_SPELL_IDS)[number]
 
@@ -73,6 +80,7 @@ export const STATUS_IDS = [
   'seared',
   'cursed',
   'webbed',
+  'warded',
 ] as const
 
 export type StatusId = (typeof STATUS_IDS)[number]
@@ -320,6 +328,67 @@ export const SPELLS: Record<SpellId, Spell> = {
     hostile: true,
     status: { id: 'baned', turns: 3 },
   },
+  frostbite: {
+    name: 'Frostbite',
+    school: 'offence',
+    description: '1d6+1 frost to a foe within 5 hexes, chilled for 1 turn',
+    manaCost: 3,
+    apCost: 4,
+    range: 5,
+    target: 'foe',
+    hostile: true,
+    damage: dice(1, 6, 1),
+    element: 'frost',
+    status: { id: 'chilled', turns: 1 },
+  },
+  meteor: {
+    name: 'Meteor',
+    school: 'offence',
+    description: '4d8 to everyone within 2 hexes of a point within 6 hexes, and no regeneration next turn',
+    manaCost: 16,
+    apCost: 7,
+    range: 6,
+    target: 'area',
+    radius: 2,
+    hostile: true,
+    damage: dice(4, 8),
+    element: 'fire',
+    status: { id: 'seared', turns: 1 },
+  },
+  mass_haste: {
+    name: 'Mass Haste',
+    school: 'support',
+    description: '+3 AP for 2 turns to each ally within 2 hexes of the caster',
+    manaCost: 12,
+    apCost: 5,
+    range: 0,
+    target: 'area',
+    radius: 2,
+    hostile: false,
+    status: { id: 'hasted', turns: 2 },
+  },
+  lay_on_hands: {
+    name: 'Lay on Hands',
+    school: 'healing',
+    description: 'Restores 2d6+2 hit points to an ally within 1 hex',
+    manaCost: 4,
+    apCost: 3,
+    range: 1,
+    target: 'ally',
+    hostile: false,
+    heal: dice(2, 6, 2),
+  },
+  ward: {
+    name: 'Ward',
+    school: 'support',
+    description: '+4 ward against every element to an ally within 4 hexes for 3 turns',
+    manaCost: 4,
+    apCost: 3,
+    range: 4,
+    target: 'ally',
+    hostile: false,
+    status: { id: 'warded', turns: 3 },
+  },
   lightning_bolt: {
     name: 'Lightning Bolt',
     school: 'offence',
@@ -409,6 +478,8 @@ export interface StatusRule {
   sleep?: true
   /** Each hit on it strikes an image instead, while images are left. */
   images?: true
+  /** Added to its ward against every element. */
+  wardAll?: number
 }
 
 export const STATUSES: Record<StatusId, StatusRule> = {
@@ -425,6 +496,7 @@ export const STATUSES: Record<StatusId, StatusRule> = {
   seared: { name: 'Seared', adjective: 'seared', mark: 'F', colour: 0xff7030, stopsRegeneration: true },
   cursed: { name: 'Cursed', adjective: 'cursed', mark: 'K', colour: 0x8a3cb8, toHit: -15, armorClass: -5 },
   webbed: { name: 'Webbed', adjective: 'webbed', mark: 'W', colour: 0xc8c8c0, actionPoints: -4 },
+  warded: { name: 'Warded', adjective: 'warded', mark: 'G', colour: 0xa890e8, wardAll: 4 },
 }
 
 /** What an attack on a sleeping unit adds to its chance to hit, in percent. */

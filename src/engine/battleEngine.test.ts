@@ -2555,3 +2555,113 @@ describe('BattleEngine on-hit effects', () => {
     expect(new BattleEngine(DUEL).getLog()[0]).toMatchObject({ schemaVersion: 24 })
   })
 })
+
+describe('BattleEngine stage-1 spells and Warded', () => {
+  const WIDE = { cols: 9, rows: 3 }
+  const caster = (spells: SpellId[], extra: Partial<UnitSetup> = {}): UnitSetup => ({
+    id: 'mage',
+    side: 'player',
+    stats: { ...WARRIOR_STATS, name: 'Mage', maxHp: 40, actionPoints: 20, magic: { maxMana: 60, skill: 76, spells } },
+    position: hex(1, 1),
+    ...extra,
+  })
+  const goblinAt = (position: Hex, extra: Partial<UnitSetup> = {}): UnitSetup => ({ ...GOBLIN, position, ...extra })
+  const allyAt = (position: Hex, extra: Partial<UnitSetup> = {}): UnitSetup => ({ ...CLERIC, stats: { ...WARRIOR_STATS, maxHp: 40 }, position, ...extra })
+  /** Every draw 0.66 unless told otherwise: a roll of 34, a 4 on a d6, a 6 on a d8. */
+  const battle = (units: UnitSetup[], rng: number[] = [0.66]) => new BattleEngine({ board: WIDE, units }, { rng: sequence(rng) })
+  const at = (spell: SpellId, centre: Hex): Action => ({ type: 'cast', unit: 'mage', spell, at: centre })
+  const on = (spell: SpellId, target: string): Action => ({ type: 'cast', unit: 'mage', spell, target })
+  const statusesOf = (engine: BattleEngine, id: string) => unitOf(engine, id).statuses
+
+  it('Ward lays Warded for 3 turns on an ally within 4, and not on one beyond', () => {
+    const engine = battle([caster(['ward']), allyAt(hex(5, 1)), allyAt(hex(7, 1), { id: 'far' }), goblinAt(hex(8, 0))])
+    const casts = engine.legalActions().filter((a) => a.type === 'cast')
+    expect(casts).toContainEqual(on('ward', 'cleric'))
+    expect(casts).not.toContainEqual(on('ward', 'far'))
+    engine.step(on('ward', 'cleric'))
+    expect(statusesOf(engine, 'cleric')).toEqual([{ id: 'warded', turnsLeft: 3 }])
+  })
+
+  it('a Warded unit takes 4 less from a fire spell, and wards add to a ward it has', () => {
+    const plain = battle([caster(['ward', 'fireball']), allyAt(hex(5, 1)), goblinAt(hex(5, 0))])
+    plain.step(at('fireball', hex(5, 1)))
+    const unwarded = unitOf(plain, 'cleric').hp
+    const engine = battle([caster(['ward', 'fireball']), allyAt(hex(5, 1)), goblinAt(hex(5, 0))])
+    engine.step(on('ward', 'cleric'))
+    const [event] = engine.step(at('fireball', hex(5, 1)))
+    expect(event).toMatchObject({ outcomes: expect.arrayContaining([expect.objectContaining({ unit: 'cleric', warded: 4 })]) })
+    expect(unitOf(engine, 'cleric').hp).toBe(unwarded + 4)
+    const doubled = battle([caster(['ward', 'fireball']), allyAt(hex(5, 1), { stats: { ...WARRIOR_STATS, maxHp: 40, wards: { fire: 99 } } }), goblinAt(hex(5, 0))])
+    doubled.step(on('ward', 'cleric'))
+    const [stopped] = doubled.step(at('fireball', hex(5, 1)))
+    expect(stopped).toMatchObject({ outcomes: expect.arrayContaining([expect.objectContaining({ unit: 'cleric', warded: 12, damage: 0 })]) })
+  })
+
+  it('a Warded unit takes 4 less from a poison tick', () => {
+    const engine = battle([caster(['ward', 'death_cloud']), allyAt(hex(5, 1)), goblinAt(hex(5, 0))])
+    engine.step(on('ward', 'cleric'))
+    engine.step(at('death_cloud', hex(5, 1)))
+    const events = [...engine.step(END_TURN), ...engine.step(END_TURN)]
+    const tick = events.find((e) => e.type === 'status_tick' && e.unit === 'cleric')
+    expect(tick).toMatchObject({ status: 'poisoned', damage: 0, warded: 4 })
+  })
+
+  it('a Warded unit takes 4 less from an elemental on-hit entry', () => {
+    const burner: UnitSetup = goblinAt(hex(2, 1), { stats: { ...GOBLIN_STATS, toHit: 100, onHit: [{ damage: 6, element: 'fire' }] } })
+    const hitOn = (warded: boolean) => {
+      const engine = battle([caster(['ward'], { position: hex(1, 1) }), burner], [0.5])
+      if (warded) engine.step(on('ward', 'mage'))
+      engine.step(END_TURN)
+      const [attack] = engine.step({ type: 'attack', unit: 'goblin', target: 'mage' })
+      return attack as AttackEvent
+    }
+    const bare = hitOn(false)
+    const warded = hitOn(true)
+    expect(bare.hit && warded.hit).toBe(true)
+    expect(bare.bonus?.[0].damage).toBe(6)
+    expect(warded.bonus?.[0].damage).toBe(2)
+  })
+
+  it('Lay on Hands heals 2d6+2 up to the maximum on an adjacent ally, and is not legal at range 2', () => {
+    const engine = battle([caster(['lay_on_hands']), allyAt(hex(2, 1), { hp: 10 }), allyAt(hex(3, 1), { id: 'two', hp: 10 }), goblinAt(hex(8, 1))])
+    const casts = engine.legalActions().filter((a) => a.type === 'cast')
+    expect(casts).toContainEqual(on('lay_on_hands', 'cleric'))
+    expect(casts).toContainEqual(on('lay_on_hands', 'mage'))
+    expect(casts).not.toContainEqual(on('lay_on_hands', 'two'))
+    // Every draw 0.66: two 4s on the d6, and 2 more.
+    expect(engine.step(on('lay_on_hands', 'cleric'))[0]).toMatchObject({ outcomes: [{ unit: 'cleric', healed: 10, hpBefore: 10, hpAfter: 20 }] })
+    const nearly = battle([caster(['lay_on_hands']), allyAt(hex(2, 1), { hp: 35 }), goblinAt(hex(8, 1))])
+    expect(nearly.step(on('lay_on_hands', 'cleric'))[0]).toMatchObject({ outcomes: [{ healed: 5, hpAfter: 40 }] })
+  })
+
+  it('Mass Haste lays Hasted on every ally within 2 of the caster, itself included, and on no foe', () => {
+    const engine = battle([caster(['mass_haste']), allyAt(hex(3, 1)), allyAt(hex(6, 1), { id: 'far' }), goblinAt(hex(2, 0))])
+    engine.step(at('mass_haste', hex(1, 1)))
+    expect(statusesOf(engine, 'mage')).toEqual([{ id: 'hasted', turnsLeft: 2 }])
+    expect(statusesOf(engine, 'cleric')).toEqual([{ id: 'hasted', turnsLeft: 2 }])
+    expect(statusesOf(engine, 'far')).toEqual([])
+    expect(statusesOf(engine, 'goblin')).toEqual([])
+  })
+
+  it('Meteor touches both sides within radius 2 of its centre and lays Seared on a hit', () => {
+    const engine = battle([caster(['meteor']), allyAt(hex(4, 1)), goblinAt(hex(6, 1)), goblinAt(hex(8, 1), { id: 'out' })])
+    const [event] = engine.step(at('meteor', hex(5, 1)))
+    const touched = (event as { outcomes: { unit: string }[] }).outcomes.map((o) => o.unit)
+    expect(touched).toEqual(['cleric', 'goblin'])
+    expect(statusesOf(engine, 'goblin').map((s) => s.id).includes('seared') || unitOf(engine, 'goblin').hp === 0).toBe(true)
+    expect(statusesOf(engine, 'cleric')).toEqual([{ id: 'seared', turnsLeft: 1 }])
+    expect(unitOf(engine, 'out').hp).toBe(12)
+    // 4d8 of 6s.
+    expect(event).toMatchObject({ outcomes: [{ unit: 'cleric', damage: 24, hpAfter: 16 }, { unit: 'goblin' }] })
+  })
+
+  it('Frostbite deals 1d6+1 frost and lays Chilled for a turn on a hit', () => {
+    const engine = battle([caster(['frostbite']), goblinAt(hex(5, 1))])
+    const [event] = engine.step(on('frostbite', 'goblin'))
+    // A roll of 34, a 4 on the d6.
+    expect(event).toMatchObject({ outcomes: [{ unit: 'goblin', hit: true, damage: 5, hpAfter: 7, status: { id: 'chilled' } }] })
+    expect(statusesOf(engine, 'goblin')).toEqual([{ id: 'chilled', turnsLeft: 1 }])
+    const frostWarded = battle([caster(['frostbite']), goblinAt(hex(5, 1), { stats: { ...GOBLIN_STATS, wards: { frost: 3 } } })])
+    expect(frostWarded.step(on('frostbite', 'goblin'))[0]).toMatchObject({ outcomes: [{ damage: 2, warded: 3 }] })
+  })
+})
