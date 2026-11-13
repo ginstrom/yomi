@@ -47,10 +47,11 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 
 ## Verification
 
-(none yet)
+- 01: opus engineer, opus reviewer, clean in 1 round.
 
 ## Notes carried forward
 
+- Step 02: also fix review-01 findings: check every source id a recipe names (not only those drawn), catch non-AudioError failures without tracebacks, stop reading pyloudnorm's private `_filters` (or comment/pin it).
 - Step 02 (and 09): apply the short-cue normalisation rule above; `hit.slash` over stand-in sources peaked +4.4 dBTP, the same rule catches it.
 - The worktree needed `npm ci` (done in step 01).
 
