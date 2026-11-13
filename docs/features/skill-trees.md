@@ -49,7 +49,7 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 ## Notes carried forward
 
-- To step 12/14 (from step 04): the policy's `reach` uses a spell's own AP cost, not `spellApCost` (Quickened Casting); `autoHeal` picks heals without counting Mending; the battle spell list shows the base AP cost until step 14.
+- To step 14 (from step 04): `autoHeal` picks heals without counting Mending; the battle spell list shows the base AP cost until step 14.
 - Step 01 baseline is the reference (SN5 441, SP5 445), not CLAUDE.md's older figures.
 
 - To steps 11 and 17 (from step 05): when raising SAVE_VERSION, add the previous version (23, then 24) to parseSave's accepted list `[SAVE_VERSION, 22, 18]`; no game migration needed.
@@ -65,9 +65,11 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 - To step 14 or 17 (from step 09 review): `perkTree.ts` `costWords` computes technique AP itself; make it call `abilityApCost` and drop the redundant intersection types, before Arcane Knight's discount lands.
 - Plan decision 2 (guard unchanged) allows a re-hash for a schema-only version bump (step 09 proved the log identical but for schemaVersion).
 
-- To steps 12, 14 (from step 10): the policy's `isTechnique` filter is what step 12 replaces, and its area scoring doesn't yet value weapon dice, doubled bane dice or resistance (it would skip Volley); step 14 draws hero areas with `abilityArea`/`abilityTouches`.
+- To step 14 (from step 10): step 14 draws hero areas with `abilityArea`/`abilityTouches`.
 
-- To step 12 (from step 11): the policy attacking the taunter is AC5's other half; reuse the engine's exported `tauntPenalty` and `isImmobile`. Read `moved` as `u.moved === true`.
+
+- To stage 4 tuning (from step 12): area techniques aren't AP-normalised (Volley at 6 AP weighed against one 4 AP shot; Consecrate likewise) — normalise if the simulator over-uses them; Hunter's Mark has no value check beyond affording mark-then-attack; `tauntUse` judges threat by a foe's current attack range.
+- To step 21 (from step 11 review): only Taunt's no-roll area passes a `source` to `layStatus`; any other path that ever lays `taunted` would leave no source.
 
 ## Verification
 
