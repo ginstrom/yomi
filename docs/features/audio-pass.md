@@ -30,6 +30,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 | Sources: Kenney, OpenGameArt and synthesis first; any Freesound file the plan still needs is listed for the user to download by hand | user | API token; skip Freesound | Freesound downloads need a login |
 | Tutorial tips unvoiced in v1 | user | voice them now | same mechanism can add them later |
 | Stings from Kenney Music Jingles for now; narrator's gender chosen in the bake-off | orchestrator | | design defaults |
+| Short cues (shorter than the 400 ms LUFS-M window, e.g. `ui.click`): normalisation gain is the lesser of the loudness-target gain and the gain that meets the group's true-peak ceiling, so the ceiling always holds; recipes may also lengthen or densify UI sounds | orchestrator | raise the `ui` ceiling; change the `ui` target | step 01 found `ui.click` as designed needs ~−0.3 dBTP to hit −26 LUFS-M; the ceiling is the safety rule, loudness the aim |
 | D6: add a `voice` volume slider; UI sounds stay under Sound FX with their own internal group | orchestrator | separate UI slider | brief's recommendation, splittable later |
 
 ## Open questions
@@ -49,5 +50,8 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 (none yet)
 
 ## Notes carried forward
+
+- Step 02 (and 09): apply the short-cue normalisation rule above; `hit.slash` over stand-in sources peaked +4.4 dBTP, the same rule catches it.
+- The worktree needed `npm ci` (done in step 01).
 
 - Machine: Apple M5, 32 GB, ffmpeg and uv installed, no sox; 80 GB free disk.
