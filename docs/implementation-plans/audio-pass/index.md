@@ -326,7 +326,7 @@ export const DUCK_RELEASE_MS = 600
 
 | Step | Task | Outcome | Depends on | Scenes | Gate | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| 01 | [Audio tool core](01-audio-tool-core.md) | uv project; DSP, recipe interpreter, loudness, sources registry and `source add`, impulses, `sfx audition`; pytest; `audio/CLAUDE.md` | — | no | — | done (step 01 commit) |
+| 01 | [Audio tool core](01-audio-tool-core.md) | uv project; DSP, recipe interpreter, loudness, sources registry and `source add`, impulses, `sfx audition`; pytest; `audio/CLAUDE.md` | — | no | — | done (`dfa31ee`) |
 | 02 | [Banks, check and placeholder catalogue](02-banks-check-placeholders.md) | `sfx build`/`sfx check`, budgets, `npm run sounds(:check)`; all 85 W1 cues as recipes over today's placeholders; banks and manifest committed | 01 | no | — | pending |
 | 03 | [TTS adapters and bake-off](03-tts-bakeoff.md) | Engine adapters (C10); narrators A and B designed; 32 blind clips, key, score sheet, neutral candidates | 01 | no | **G1** | pending |
 | 04 | [Sourcing survey and Freesound list](04-sourcing-survey.md) | Kenney and OpenGameArt CC0 packs downloaded; `sourcing.md` (candidates per cue) and `freesound-wanted.md` committed in this folder | 01 | no | **G2** | pending |

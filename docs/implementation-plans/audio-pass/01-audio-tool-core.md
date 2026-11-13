@@ -174,6 +174,8 @@ Exclusions: no `sfx build`/`sfx check`, banks, encoding or manifest (step 02); n
 
 ### Run 1 (2026-11-13/14)
 
+**Commit:** `dfa31ee` (Audio pass step 01: audio tool core).
+
 **Environment.** The worktree had no `node_modules` of its own, so the baseline `npm test` failed 11 scene files (Vite refused `/@fs/…/yomi/node_modules/vitest-canvas-mock`, outside the worktree). `npm ci` in the worktree (gitignored, no tracked change) fixed it: baseline 84 files, 1510 tests green.
 
 **Built** (`tools/audio/`, Python 3.11.15 via uv 0.13.6; numpy 2.4.6, scipy 1.17.1, soundfile 0.14.0, pyloudnorm in the lock; dev: pytest, matplotlib; `tts` extra declared empty):
