@@ -1,10 +1,15 @@
+import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
+import { autoAdvance, levelUp } from '../character/progression.ts'
+import { mulberry32 } from '../combat/rng.ts'
+import { ENCOUNTERS, ENCOUNTER_BANDS, type EncounterId } from '../game/encounters.ts'
+import { partyFighters, readyMadeParty } from '../game/party.ts'
 import { GOBLIN_STATS, KOBOLD_STATS, TROLL_STATS, type CombatantStats } from '../combat/combat.ts'
 import { hex, type Hex } from '../grid/hex.ts'
-import { BattleEngine, areaTouches, castTouches, type Action } from './battleEngine.ts'
-import { ABILITIES, ABILITY_IDS, type AbilityId } from '../combat/abilities.ts'
-import type { SpellId } from '../combat/spells.ts'
-import { POLICIES, isPolicyName, type PolicyContext } from './policies.ts'
+import { BattleEngine, abilityTouches, areaTouches, castTouches, type Action } from './battleEngine.ts'
+import { ABILITIES, type AbilityId } from '../combat/abilities.ts'
+import type { ActiveStatus, SpellId } from '../combat/spells.ts'
+import { MANA_WEIGHT, POLICIES, STATUS_VALUE, isPolicyName, techniqueScore, type PolicyContext } from './policies.ts'
 
 function engineWith(playerAt: Hex, enemyAt: Hex): BattleEngine {
   return new BattleEngine({
@@ -342,39 +347,257 @@ describe('policies', () => {
     expect(choose(engine)).toEqual(ATTACK_E1)
   })
 
-  describe('aggressive with a hero’s techniques (until step 12)', () => {
-    const TECHNIQUES = ABILITY_IDS.slice(4) as AbilityId[]
-    /** A warrior with mana (and a bow, or not) and every technique, or none, before goblins near and far. */
-    const field = (abilities: AbilityId[], bow: boolean) => {
-      const hero: CombatantStats = {
-        ...GOBLIN_STATS, name: 'Hero', actionPoints: 12, abilities, magic: { maxMana: 20, skill: 50, spells: [] },
-        ...(bow ? { attackApCost: 4, attackRange: 5 } : {}),
-      }
-      return new BattleEngine({
-        board: { cols: 8, rows: 3 },
+  describe('aggressive with a hero’s techniques (step 12)', () => {
+    type Placing = { id: string; side?: 'player' | 'enemy'; at: Hex; stats?: CombatantStats; hp?: number; statuses?: ActiveStatus[] }
+    /** A hero (`p1`) of `stats` at `at`, and the others; statuses laid through a snapshot, as a save would carry them. */
+    const stage = (stats: CombatantStats, at: Hex, others: Placing[], hp?: number, cols = 8) => {
+      const engine = new BattleEngine({
+        board: { cols, rows: 3 },
         units: [
-          { id: 'p1', side: 'player', stats: hero, position: hex(1, 1) },
-          { id: 'e1', side: 'enemy', stats: { ...GOBLIN_STATS, maxHp: 40 }, position: hex(2, 1) },
-          { id: 'e2', side: 'enemy', stats: GOBLIN_STATS, position: hex(6, 1) },
+          { id: 'p1', side: 'player', stats, position: at, hp },
+          ...others.map(({ id, side = 'enemy', at, stats = GOBLIN_STATS, hp }) => ({ id, side, stats, position: at, hp })),
         ],
-      }, { seed: 3 })
+      })
+      if (others.every((o) => !o.statuses)) return engine
+      const snapshot = engine.snapshot()
+      for (const o of others) if (o.statuses) snapshot.units.find((u) => u.id === o.id)!.statuses = o.statuses
+      return BattleEngine.restore(snapshot)
     }
-    const playTurn = (engine: BattleEngine) => {
-      const chosen: Action[] = []
-      for (let action = choose(engine); action.type !== 'end_turn'; action = choose(engine)) {
-        chosen.push(action)
-        engine.step(action)
-      }
-      return chosen
-    }
+    const hero = (abilities: AbilityId[], extra: Partial<CombatantStats> = {}): CombatantStats => ({
+      ...GOBLIN_STATS, name: 'Hero', abilities, magic: { maxMana: 20, skill: 50, spells: [] }, ...extra,
+    })
+    const use = (ability: AbilityId, target: string): Action => ({ type: 'ability', unit: 'p1', ability, target })
+    const isUse = (ability: AbilityId) => (action: Action) => action.type === 'ability' && action.ability === ability
 
-    it.each([false, true])('chooses as it would without them (a bow: %s), and never one of them', (bow) => {
-      const withThem = field(TECHNIQUES, bow)
-      expect(withThem.legalActions('p1').some((a) => a.type === 'ability')).toBe(true)
-      const chosen = playTurn(withThem)
-      expect(chosen).toEqual(playTurn(field([], bow)))
-      expect(chosen.length).toBeGreaterThan(0)
-      expect(chosen.some((a) => a.type === 'ability')).toBe(false)
+    it('exports the status values and the mana weight', () => {
+      expect(STATUS_VALUE).toEqual({ chilled: 3, slowed: 3, pinned: 3, poisoned: 7, baned: 4 })
+      expect(MANA_WEIGHT).toBe(0.5)
+    })
+
+    describe('a technique against a plain attack (1)', () => {
+      const ARMOURED: CombatantStats = { ...GOBLIN_STATS, maxHp: 60, resistance: 4 }
+
+      it('power-attacks an armoured foe, where +6 damage outweighs −10 to hit on equal AP', () => {
+        const engine = stage(hero(['power_attack'], { actionPoints: 12 }), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: ARMOURED }])
+        const state = engine.getState()
+        // 45% of (4.5 + 6 − 4), times 5 AP over 7: against a plain blow's 55% of 1.
+        expect(techniqueScore(state, unitAt(engine, 'p1'), 'power_attack', unitAt(engine, 'e1'))).toBeCloseTo((0.45 * 6.5 * 5) / 7, 10)
+        expect(engine.legalActions('p1')).toContainEqual(ATTACK_E1)
+        expect(choose(engine)).toEqual(use('power_attack', 'e1'))
+      })
+
+      it('makes the plain attack where −10 to hit costs more than +6 damage gains', () => {
+        // AC 60: a plain blow at 10% for 4.5 (0.45), the technique at the floor of 5% for 10.5, times 5/7 (0.375).
+        const engine = stage(hero(['power_attack'], { actionPoints: 12 }), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: { ...GOBLIN_STATS, ac: 60, resistance: 0 } }])
+        expect(engine.legalActions('p1')).toContainEqual(use('power_attack', 'e1'))
+        expect(choose(engine)).toEqual(ATTACK_E1)
+      })
+
+      it('scores Cleave’s second blow on the other foe in reach', () => {
+        const big = { ...GOBLIN_STATS, maxHp: 60 }
+        const pair = stage(hero(['cleave'], { actionPoints: 12 }), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: big }, { id: 'e2', at: hex(2, 0), stats: { ...big, ac: 90 } }])
+        const alone = stage(hero(['cleave'], { actionPoints: 12 }), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: big }])
+        const score = (engine: BattleEngine) => techniqueScore(engine.getState(), unitAt(engine, 'p1'), 'cleave', unitAt(engine, 'e1'))
+        // The second blow goes to e2, whom it hits at 5% only.
+        expect(score(pair)).toBeLessThan(score(alone))
+      })
+    })
+
+    describe('status value (2)', () => {
+      it('counts Venom Strike’s poison at 7 times the chance, only against a foe not already poisoned', () => {
+        const fresh = stage(hero(['venom_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1) }])
+        const poisoned = stage(hero(['venom_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1), statuses: [{ id: 'poisoned', turnsLeft: 2 }] }])
+        const score = (engine: BattleEngine) => techniqueScore(engine.getState(), unitAt(engine, 'p1'), 'venom_strike', unitAt(engine, 'e1'))
+        // 55% to hit; 5 AP over 6.
+        expect(score(fresh) - score(poisoned)).toBeCloseTo((STATUS_VALUE.poisoned! * 0.55 * 5) / 6, 10)
+        expect(score(poisoned)).toBeCloseTo(((0.55 * 3.5 - MANA_WEIGHT * 2) * 5) / 6, 10)
+      })
+
+      it('counts Flame Strike’s searing at the target’s regeneration', () => {
+        const at = (regeneration: number) => stage(hero(['flame_strike']), hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: { ...GOBLIN_STATS, regeneration } }])
+        const score = (engine: BattleEngine) => techniqueScore(engine.getState(), unitAt(engine, 'p1'), 'flame_strike', unitAt(engine, 'e1'))
+        expect(score(at(3)) - score(at(0))).toBeCloseTo((3 * 0.55 * 5) / 6, 10)
+      })
+    })
+
+    it('keeps the mana for its cheapest heal rather than pin (3)', () => {
+      // Pin is worth it here: 95% to hit a foe a 1d2 barely hurts, for 3 pinned. Heal costs 3.
+      const pinner = (maxMana: number) =>
+        stage(
+          hero(['pin'], { toHit: 110, damage: { count: 1, sides: 2, bonus: 0 }, magic: { maxMana, skill: 50, spells: ['heal'] } }),
+          hex(1, 1),
+          [{ id: 'e1', at: hex(2, 1), stats: { ...GOBLIN_STATS, resistance: 0, maxHp: 60 } }],
+        )
+      expect(pinner(5).legalActions('p1')).toContainEqual(use('pin', 'e1'))
+      expect(choose(pinner(5))).toEqual(ATTACK_E1)
+      expect(choose(pinner(6))).toEqual(use('pin', 'e1'))
+    })
+
+    describe('area techniques (4)', () => {
+      const ARCHER = hero(['volley'], { attackApCost: 4, attackRange: 5 })
+
+      it('volleys two foes together, its weapon’s dice counted', () => {
+        const engine = stage(ARCHER, hex(0, 1), [{ id: 'e1', at: hex(4, 1) }, { id: 'e2', at: hex(5, 1) }])
+        const chosen = choose(engine)
+        expect(isUse('volley')(chosen)).toBe(true)
+        expect(castTouchesArea(engine, chosen).sort()).toEqual(['e1', 'e2'])
+      })
+
+      it('counts the foes’ resistance: two armoured foes are worth less than one bare one', () => {
+        // Through resistance 4, each shot of 1d6+1 does 1: 2 × 55%, against a plain shot's 4.5 × 55% at the bare goblin.
+        const armoured = { ...GOBLIN_STATS, resistance: 4 }
+        const bare = { ...GOBLIN_STATS, resistance: 0 }
+        const engine = stage(ARCHER, hex(1, 1), [
+          { id: 'e1', at: hex(5, 1), stats: armoured },
+          { id: 'e2', at: hex(6, 1), stats: armoured },
+          { id: 'e3', at: hex(0, 0), stats: bare },
+        ])
+        expect(engine.legalActions('p1').some(isUse('volley'))).toBe(true)
+        expect(choose(engine)).toEqual({ type: 'attack', unit: 'p1', target: 'e3' })
+      })
+
+      it('volleys not where an ally would take as much as the foe', () => {
+        const engine = stage(ARCHER, hex(0, 1), [{ id: 'e1', at: hex(4, 1) }, { id: 'p2', side: 'player', at: hex(3, 1) }])
+        expect(engine.legalActions('p1').some(isUse('volley'))).toBe(true)
+        expect(choose(engine)).toEqual(ATTACK_E1)
+      })
+
+      it('consecrates foes about it and never counts an ally', () => {
+        const engine = stage(hero(['consecrate']), hex(1, 1), [
+          { id: 'e1', at: hex(2, 1) },
+          { id: 'e2', at: hex(1, 0) },
+          { id: 'p2', side: 'player', at: hex(0, 1) },
+        ])
+        const chosen = choose(engine)
+        expect(chosen).toEqual({ type: 'ability', unit: 'p1', ability: 'consecrate', at: hex(1, 1) })
+        const touched = abilityTouches(engine.getState().units, unitAt(engine, 'p1'), 'consecrate', hex(1, 1), 1)
+        expect(touched.map((u) => u.id)).toEqual(['e1', 'e2'])
+      })
+
+      it('doubles Consecrate’s dice against the regenerating', () => {
+        // A 2d6+1 blow (some 3.85 through the goblin's hide) beats 2d6 on one plain foe less 2.5 for the mana, not 4d6.
+        const strong = hero(['consecrate'], { damage: { count: 2, sides: 6, bonus: 1 } })
+        expect(choose(stage(strong, hex(1, 1), [{ id: 'e1', at: hex(2, 1) }]))).toEqual(ATTACK_E1)
+        const troll = stage(strong, hex(1, 1), [{ id: 'e1', at: hex(2, 1), stats: { ...GOBLIN_STATS, regeneration: 1 } }])
+        expect(isUse('consecrate')(choose(troll))).toBe(true)
+      })
+    })
+
+    describe('tauntUse (5)', () => {
+      const TAUNTER = hero(['taunt'], { maxHp: 20 })
+      const taunt: Action = { type: 'ability', unit: 'p1', ability: 'taunt', at: hex(2, 1) }
+
+      it('taunts two foes or more within its radius at half its hit points or more', () => {
+        expect(choose(stage(TAUNTER, hex(2, 1), [{ id: 'e1', at: hex(3, 1) }, { id: 'e2', at: hex(4, 1) }], 10))).toEqual(taunt)
+      })
+
+      it('not below half its hit points', () => {
+        expect(choose(stage(TAUNTER, hex(2, 1), [{ id: 'e1', at: hex(3, 1) }, { id: 'e2', at: hex(4, 1) }], 9))).not.toEqual(taunt)
+      })
+
+      it('not when every foe in its radius is already taunted', () => {
+        const taunted: ActiveStatus[] = [{ id: 'taunted', turnsLeft: 1, source: 'p1' }]
+        const engine = stage(TAUNTER, hex(2, 1), [{ id: 'e1', at: hex(3, 1), statuses: taunted }, { id: 'e2', at: hex(4, 1), statuses: taunted }])
+        expect(engine.legalActions('p1')).toContainEqual(taunt)
+        expect(choose(engine)).not.toEqual(taunt)
+      })
+
+      it('taunts one foe that threatens a worse-hurt ally, but not one that threatens only the user', () => {
+        // e1 at (4,1) is beside p2 at (5,1) and 2 hexes from the user.
+        const hurt = stage(TAUNTER, hex(2, 1), [{ id: 'e1', at: hex(4, 1) }, { id: 'p2', side: 'player', at: hex(5, 1), hp: 6 }])
+        expect(choose(hurt)).toEqual(taunt)
+        const hale = stage(TAUNTER, hex(2, 1), [{ id: 'e1', at: hex(4, 1) }, { id: 'p2', side: 'player', at: hex(5, 1) }])
+        expect(choose(hale)).not.toEqual(taunt)
+        const far = stage(TAUNTER, hex(2, 1), [{ id: 'e1', at: hex(4, 1) }, { id: 'p2', side: 'player', at: hex(7, 1), hp: 6 }])
+        expect(choose(far)).not.toEqual(taunt)
+      })
+    })
+
+    describe('markUse (6)', () => {
+      const HUNTER = (ap: number) => hero(['hunters_mark'], { attackApCost: 4, attackRange: 5, actionPoints: ap })
+      const foes = (marked: string[] = []): Placing[] =>
+        (
+          [
+            ['e1', hex(3, 1), 10],
+            ['e2', hex(4, 1), 12],
+            ['e3', hex(4, 0), 12],
+          ] as const
+        ).map(([id, at, hp]) => ({ id, at, hp, ...(marked.includes(id) ? { statuses: [{ id: 'marked' as const, turnsLeft: 2 }] } : {}) }))
+
+      it('marks the unmarked foe with the most hit points, the first on a tie, when it can then attack', () => {
+        expect(choose(stage(HUNTER(8), hex(0, 1), foes()))).toEqual(use('hunters_mark', 'e2'))
+      })
+
+      it('never marks a foe again', () => {
+        expect(choose(stage(HUNTER(8), hex(0, 1), foes(['e2'])))).toEqual(use('hunters_mark', 'e3'))
+        expect(isUse('hunters_mark')(choose(stage(HUNTER(8), hex(0, 1), foes(['e1', 'e2', 'e3']))))).toBe(false)
+      })
+
+      it('not without the AP to attack after', () => {
+        const engine = stage(HUNTER(5), hex(0, 1), foes())
+        expect(engine.legalActions('p1')).toContainEqual(use('hunters_mark', 'e2'))
+        expect(choose(engine)).toMatchObject({ type: 'attack' })
+      })
+    })
+
+    describe('sprintUse (7)', () => {
+      // 8 AP and a 5 AP blow: four hexes walked leave too few to strike, but enough with Sprint's 3.
+      const SPRINTER = hero(['sprint'])
+      const at = (q: number) => stage(SPRINTER, hex(0, 1), [{ id: 'e1', at: hex(q, 1) }], undefined, 12)
+
+      it('sprints when only 3 more AP let it close and strike, then closes and strikes', () => {
+        const engine = at(5)
+        expect(choose(engine)).toEqual(use('sprint', 'p1'))
+        engine.step(choose(engine))
+        expect(choose(engine)).toEqual({ type: 'move', unit: 'p1', to: hex(4, 1) })
+        engine.step(choose(engine))
+        expect(choose(engine)).toEqual(ATTACK_E1)
+      })
+
+      it('not when it can close and strike without it, nor when 3 AP would not do, nor with a foe in reach', () => {
+        expect(choose(at(3)).type).toBe('move')
+        expect(choose(at(10)).type).toBe('move')
+        expect(choose(at(1))).toEqual(ATTACK_E1)
+      })
+    })
+
+    describe('taunted units (8)', () => {
+      const byE2: ActiveStatus[] = [{ id: 'taunted', turnsLeft: 1, source: 'e2' }]
+      /** p1 taunted by e2, with e1 first in the roster. */
+      const taunted = (stats: CombatantStats, at: Hex, e1: Hex, e2: Hex, e2Hp?: number, e2Stats?: CombatantStats) => {
+        const engine = stage(stats, at, [{ id: 'e1', at: e1, hp: 5, stats: { ...GOBLIN_STATS, resistance: 0 } }, { id: 'e2', at: e2, hp: e2Hp, stats: e2Stats }])
+        const snapshot = engine.snapshot()
+        snapshot.units[0].statuses = byE2
+        return BattleEngine.restore(snapshot)
+      }
+
+      it('attacks its taunter, not the foe it would otherwise', () => {
+        // Even at −25, a blow at the bare e1 (30% of 4.5) outscores one at the armoured e2 (55% of 1.5): only the rule turns it.
+        const armoured = { ...GOBLIN_STATS, resistance: 3 }
+        expect(choose(stage(GOBLIN_STATS, hex(1, 1), [{ id: 'e1', at: hex(2, 1) }, { id: 'e2', at: hex(2, 0), stats: armoured }]))).toEqual(ATTACK_E1)
+        expect(choose(taunted(GOBLIN_STATS, hex(1, 1), hex(2, 1), hex(2, 0), undefined, armoured))).toEqual({ type: 'attack', unit: 'p1', target: 'e2' })
+      })
+
+      it('aims its hostile spell at its taunter', () => {
+        const mage = { ...GOBLIN_STATS, magic: { maxMana: 20, skill: 70, spells: ['magic_arrow' as const] } }
+        expect(choose(taunted(mage, hex(0, 1), hex(3, 1), hex(4, 1)))).toEqual({ type: 'cast', unit: 'p1', spell: 'magic_arrow', target: 'e2' })
+      })
+
+      it('closes on its taunter rather than the nearest foe, and as before once the taunter has fallen', () => {
+        const toward = (engine: BattleEngine) => (choose(engine) as { to: Hex }).to
+        const closing = taunted(GOBLIN_STATS, hex(3, 1), hex(0, 1), hex(7, 1))
+        expect(toward(closing).q).toBeGreaterThan(3)
+        const fallen = taunted(GOBLIN_STATS, hex(3, 1), hex(0, 1), hex(7, 1), 0)
+        expect(toward(fallen).q).toBeLessThan(3)
+      })
+    })
+
+    it('judges a caster’s reach at its spell’s cost to it (Quickened Casting)', () => {
+      // Magic Arrow: 4 AP, range 5. Ten hexes off with 8 AP, a step of 5 leaves 3: enough only at a discount of 1.
+      const caster = (apDiscount?: { all: number }) =>
+        stage({ ...GOBLIN_STATS, magic: { maxMana: 20, skill: 70, spells: ['magic_arrow'], ...(apDiscount ? { apDiscount } : {}) } }, hex(0, 1), [{ id: 'e1', at: hex(10, 1) }], undefined, 12)
+      expect(choose(caster({ all: 1 }))).toEqual({ type: 'move', unit: 'p1', to: hex(5, 1) })
+      expect(choose(caster())).toEqual({ type: 'move', unit: 'p1', to: hex(8, 1) })
     })
   })
 
@@ -549,5 +772,41 @@ describe('policies', () => {
   it('recognises only registered policy names', () => {
     expect(isPolicyName('aggressive')).toBe(true)
     expect(isPolicyName('toString')).toBe(false)
+  })
+
+  describe('the choices of today’s encounters (a snapshot taken before step 12)', () => {
+    /** Every action `aggressive` chooses, both sides, over each encounter at each threat of its band against the ready-made party of that level, a few seeds, 8 rounds at most. */
+    function choices(): string[] {
+      const lines: string[] = []
+      for (const id of Object.keys(ENCOUNTERS) as EncounterId[]) {
+        const { min, max } = ENCOUNTER_BANDS[id]
+        for (let threat = min; threat <= max; threat++) {
+          const party = readyMadeParty()
+          for (const member of party) {
+            while (member.level < threat) {
+              levelUp(member)
+              autoAdvance(member)
+            }
+          }
+          for (const seed of [1, 2, 3]) {
+            const { setup } = ENCOUNTERS[id](partyFighters(party), threat)
+            const engine = new BattleEngine(setup, { seed })
+            const rng = mulberry32(seed ^ 0x9e3779b9)
+            for (let state = engine.getState(); state.phase !== 'over' && state.round <= 8; state = engine.getState()) {
+              const action = POLICIES.aggressive({ state, legal: engine.legalActions(), rng })
+              lines.push(`${id} ${threat} ${seed}: ${JSON.stringify(action)}`)
+              engine.step(action)
+            }
+          }
+        }
+      }
+      return lines
+    }
+
+    it('are what they were', () => {
+      const lines = choices()
+      expect(lines.length).toBe(4790)
+      expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe('176ecb430cbe7c57a6338e3c061db4bdbd240f21149d9aaa9ae0edcb1c083e6b')
+    }, 60_000)
   })
 })

@@ -199,12 +199,41 @@ PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH npm test          # includes th
 
 ## 6. Completion criteria
 
-- [ ] `STATUS_VALUE`, `MANA_WEIGHT`, `tauntUse`, `markUse`, `sprintUse`, technique scoring and the taunted rule in `policies.ts`, in design §5.5's positions.
-- [ ] Tests 1–9 pass; `npm test` passes with the guard fixture unchanged.
-- [ ] `CLAUDE.md`'s `policies.ts` paragraph updated.
-- [ ] One commit "Skill trees step 12: the policy uses techniques".
-- [ ] `index.md`: step 12's status `done (<commit>)`.
-- [ ] Execution record filled: evidence (commands and results), deviations, anything step 13 or 21 should know (e.g. scoring weights that look off on staged states, for stage 4's levers).
+- [x] `STATUS_VALUE`, `MANA_WEIGHT`, `tauntUse`, `markUse`, `sprintUse`, technique scoring and the taunted rule in `policies.ts`, in design §5.5's positions.
+- [x] Tests 1–9 pass; `npm test` passes with the guard fixture unchanged.
+- [x] `CLAUDE.md`'s `policies.ts` paragraph updated.
+- [x] One commit "Skill trees step 12: the policy uses techniques".
+- [x] `index.md`: step 12's status `done (<commit>)`.
+- [x] Execution record filled: evidence (commands and results), deviations, anything step 13 or 21 should know (e.g. scoring weights that look off on staged states, for stage 4's levers).
 
 ## 7. Execution record
+
+**2026-11-14, engineer (opus).**
+
+What now works: `aggressive` runs heal, guard, **tauntUse**, area, bless, sleep, curse, **markUse**, strike spell, **bestStrike with techniques**, status area, **sprintUse**, closing move (design §5.5, step 21's steps left out). `STATUS_VALUE` and `MANA_WEIGHT` exported, and `techniqueScore(state, self, ability, target)` (exported for the hand-computed test). Taunt, Mark and Sprint are recognised by their data (`isTaunt`, `isMark`, `isSprint`), never by id; every ability's AP through `abilityApCost`. `bestStrike` scores plain attacks and routines exactly as before, then lets a technique in only on a strictly higher score (the first of the highest), then areas (monster areas, Volley, Consecrate) above `max(0, best)`; a mana technique or area under the heal reserve is not weighed. `areaHarm` takes the weapon's dice (`weaponDamage`, without `abilityDamageBonus`), resistance (`throughResistance`), doubled dice where `bane` applies, and Taunted's penalty. The taunted rule: `tauntSource` (the standing source of `taunted`); `best` gained an optional `onSource` predicate that prefers the first highest candidate on the source; `bestStrike` narrows strikes and positive areas to the source when any is on it; `closingMove` and `sprintUse` close on the source (`goals`). `expectedHarm` and `areaHarm` take `tauntPenalty` off the chance. `statusArea` now skips `auto` areas (Taunt has its own step) and weapon-dice areas. The isTechnique filter is gone.
+
+Carried note from step 04 done here: `reach` prices a caster's damaging spell by `spellApCost` (Quickened Casting), with a test that tells the two apart; the guard did not move.
+
+Commands and results:
+
+- Before any policy change, a snapshot of choices was recorded: `aggressive` both sides over every encounter at every threat of its band, the ready-made party raised to the threat's level, seeds 1–3, up to 8 rounds: 4790 actions, SHA-256 `176ecb43…3e6b`, kept as the test "the choices of today's encounters" (test 9). It passed unchanged after the change.
+- `npx vitest run src/engine/policies.test.ts` — 67 passed (the interim "until step 12" pair replaced by 23 new tests, plus the snapshot).
+- Mutation check (each disabled in turn, file restored after): the taunted filter (3 tests fail, after strengthening the attack test so that Taunted's penalty alone cannot decide it), the old `reach` (1), resistance in `areaHarm` (2), bane (1), the heal reserve (1), Taunt recognition (2), Taunt back in `statusArea` (1).
+- `npx vitest run scripts/simulate.test.ts -t "refactor guard"` — passed; `git diff --stat scripts/` empty.
+- `npm test` — tsc clean; 86 files, 1782 tests passed. (The snapshot test takes ~5 s alone; it has a 60 s timeout, as the full parallel run timed it out at the default 5 s.)
+- `npm run test:browser` not run: no scene changed.
+
+Deviations:
+
+- Test 3 (heal reserve): Heal costs 3 mana in `SPELLS`, not 4, so the test uses mana 5 (5 − 3 < 3: no Pin) and 6 (may Pin), rather than 6 and 7.
+- Test 1's "not chosen when equal" is tested as "lower" only: an exact tie in floating point (e.g. 0.4 × 14 × 5/7 against 0.5 × 8) is not exact, so a tie test would hang on rounding. The code's tie rule is `score > bestHarm` (strict).
+- `techniqueScore` exported besides C16's two constants, for the hand-computed score.
+
+For steps 13, 21 and stage 4 (levers seen on staged states):
+
+- Area techniques are not AP-normalised (as specified): Volley (bow 4 + 2 = 6 AP) is weighed by raw harm against one 4 AP shot, though a bow at 8 AP shoots twice; on two clustered foes it wins at about twice a shot's harm. Consecrate likewise (5 AP fixed). If the simulator over-volleys, normalise areas too.
+- Hunter's Mark has no value check beyond AP (mark then attack); it is used whenever legal and a foe is unmarked, before the strike spell and the best strike.
+- A taunted unit with its taunter out of reach but another foe in reach strikes that foe (at −25), as the rule says a step with no candidate on the source is judged on its others; only the closing move goes for the taunter.
+- `tauntUse` reads a foe's `attackRange` (where it can strike from now), not how far it could walk and strike.
+- Commit: see the index.
 
