@@ -4178,10 +4178,35 @@ describe('BattleEngine kill and survival traits', () => {
       expect(unitOf(engine, 'goblin').hp).toBe(cast.outcomes[0].hpAfter)
     })
 
-    it('fells an Unbreakable foe its blow left at 1, which Unbreakable does not stop', () => {
-      const { events } = blow(DEATHBLOW, 10, UNBREAKABLE)
+    it('fells an Unbreakable foe, which does not endure: its save is not spent and it is not shielded', () => {
+      // A blow of 10 leaves 17 at 7, a quarter of 30: Unbreakable has nothing to do with it.
+      const low = blow(DEATHBLOW, 17, UNBREAKABLE)
+      expect(low.events.map((e) => e.type)).toEqual(['attack', 'unit_down'])
+      expect(attacks(low.events)[0]).toMatchObject({ deathblow: true, defenderHpAfter: 0 })
+      expect(attacks(low.events)[0]).not.toHaveProperty('endured')
+      expect(unitOf(low.engine, 'goblin')).not.toHaveProperty('endured')
+      // A blow lethal on its own: Unbreakable would keep it at 1, so Deathblow fells it instead.
+      const lethal = blow(DEATHBLOW, 10, UNBREAKABLE)
+      expect(lethal.events.map((e) => e.type)).toEqual(['attack', 'unit_down'])
+      const [hit] = attacks(lethal.events)
+      expect(hit).toMatchObject({ deathblow: true, defenderHpBefore: 10, defenderHpAfter: 0 })
+      expect(hit).not.toHaveProperty('endured')
+      expect(formatEvent(hit, NAMES)).not.toMatch(/endures/)
+      expect(unitOf(lethal.engine, 'goblin')).toMatchObject({ hp: 0, statuses: [] })
+      expect(unitOf(lethal.engine, 'goblin')).not.toHaveProperty('endured')
+    })
+
+    it('marks no deathblow on a hit that fells a foe without Unbreakable by itself', () => {
+      const { events } = blow(DEATHBLOW, 10)
       expect(events.map((e) => e.type)).toEqual(['attack', 'unit_down'])
-      expect(attacks(events)[0]).toMatchObject({ endured: true, deathblow: true, defenderHpAfter: 0 })
+      expect(attacks(events)[0]).not.toHaveProperty('deathblow')
+    })
+
+    it('lets a blightborn Unbreakable foe endure a lethal blow', () => {
+      const { events } = blow(DEATHBLOW, 10, { ...UNBREAKABLE, blightborn: true })
+      expect(events.map((e) => e.type)).toEqual(['attack'])
+      expect(attacks(events)[0]).toMatchObject({ endured: true, defenderHpAfter: 1 })
+      expect(attacks(events)[0]).not.toHaveProperty('deathblow')
     })
 
     it('lays no status on a foe it fells', () => {
@@ -4276,29 +4301,30 @@ describe('BattleEngine kill and survival traits', () => {
   })
 
   describe('snapshots', () => {
-    it('carry endured and refunded through a restore, playing on identically', () => {
+    it('carry endured and refunded, reached in play, through a restore, playing on as the original', () => {
+      // Seed 1: both blows hit; the first fells and refunds, the second is endured.
       const engine = new BattleEngine(
         {
           board: WIDE,
           units: [fighter(BLADEMASTER), goblinAt('goblin', hex(2, 1), {}, { hp: 1 }), goblinAt('goblin2', hex(2, 0), UNBREAKABLE, { hp: 5 }), FAR],
         },
-        { seed: 3 },
+        { seed: 1 },
       )
-      engine.step(ATTACK_GOBLIN)
-      engine.step({ type: 'attack', unit: 'warrior', target: 'goblin2' })
-      const saved = JSON.parse(JSON.stringify(engine.snapshot()))
-      saved.units.find((u: { id: string }) => u.id === 'warrior').refunded = true
-      saved.units.find((u: { id: string }) => u.id === 'goblin2').endured = true
+      expect(attacks(engine.step(ATTACK_GOBLIN))[0]).toMatchObject({ apRefunded: 4 })
+      expect(attacks(engine.step({ type: 'attack', unit: 'warrior', target: 'goblin2' }))[0]).toMatchObject({ endured: true })
+      const restored = BattleEngine.restore(JSON.parse(JSON.stringify(engine.snapshot())))
+      expect(restored.snapshot()).toEqual(engine.snapshot())
+      expect(unitOf(restored, 'warrior')).toMatchObject({ refunded: true })
+      expect(unitOf(restored, 'goblin2')).toMatchObject({ endured: true, hp: 1 })
       const play = (e: BattleEngine) => {
         for (let state = e.getState(); state.phase !== 'over'; state = e.getState()) {
           e.step(POLICIES.aggressive({ state, legal: e.legalActions(), rng: () => 0 }))
         }
         return e.getLog()
       }
-      const restored = BattleEngine.restore(saved)
-      expect(restored.snapshot().units.find((u) => u.id === 'warrior')!.refunded).toBe(true)
-      expect(restored.snapshot().units.find((u) => u.id === 'goblin2')!.endured).toBe(true)
-      expect(play(BattleEngine.restore(JSON.parse(JSON.stringify(saved))))).toEqual(play(restored))
+      const original = play(engine)
+      expect(original.some((e) => e.type === 'battle_end')).toBe(true)
+      expect(play(restored)).toEqual(original)
     })
   })
 })

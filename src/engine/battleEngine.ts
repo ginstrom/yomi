@@ -748,9 +748,9 @@ export function traitDamage(
 }
 
 /**
- * Whether a weapon hit that left the defender standing at `hp` is a
+ * Whether a weapon hit that would leave the defender at `hp` is a
  * Deathblow: the attacker has the trait, the defender is not `blightborn`
- * and is at a quarter of its maximum or less.
+ * and `hp` is a quarter of its maximum or less.
  */
 export function deathblows(attacker: Pick<CombatantStats, 'traits'>, defender: Pick<CombatantStats, 'maxHp' | 'blightborn'>, hp: number): boolean {
   return attacker.traits?.includes('deathblow') === true && !defender.blightborn && hp <= Math.floor(defender.maxHp / 4)
@@ -1790,8 +1790,10 @@ export class BattleEngine {
    * plain attack does. The attacker's traits add to the chance and the
    * damage (`traitToHit`, `traitDamage`), pierce (`blowPierce`), triple a
    * Deadeye's ranged critical, make an Ambush's hit critical and restore mana
-   * on a melee hit, none of it drawing anything. The damage goes through
-   * `applyDamage` (Unbreakable); then a Deathblow fells, and Blademaster gives
+   * on a melee hit, none of it drawing anything. A Deathblow, judged on the
+   * hit points the hit leaves without Unbreakable, fells the defender (which
+   * then does not endure); else the damage goes through `applyDamage`
+   * (Unbreakable). Blademaster gives
    * back the AP of an own action that felled (`actionApCost`, for a routine's
    * later strikes), after the event is recorded. A melee blow of the side in
    * turn that misses a defender with Counter is answered at once by a free
@@ -1861,14 +1863,16 @@ export class BattleEngine {
       }))
     const total = damage + bonus.reduce((sum, b) => sum + b.damage, 0)
     const defenderHpBefore = target.hp
-    const endured = this.applyDamage(target, total)
+    // Deathblow is judged on what the hit leaves without Unbreakable: a hit it fells is not endured,
+    // and one lethal by itself is a deathblow only where Unbreakable would have kept the unit standing.
+    const left = Math.max(0, target.hp - total)
+    const deathblow = landed && (left > 0 || this.wouldEndure(target, total)) && deathblows(attacker, defender, left)
+    const endured = deathblow ? false : this.applyDamage(target, total)
+    if (deathblow) target.hp = 0
     const heals = onHit.some((entry) => entry.heal !== undefined)
     const healing = onHit.reduce((sum, entry) => sum + (entry.heal ?? 0), 0)
     const healed = heals ? Math.min(healing, Math.max(0, actor.stats.maxHp - actor.hp)) : 0
     actor.hp += healed
-    // Deathblow fells outright; it is not damage, so Unbreakable does not stop it.
-    const deathblow = landed && target.hp > 0 && deathblows(attacker, defender, target.hp)
-    if (deathblow) target.hp = 0
     // Blademaster: an own action that fells gives back what it paid, once a turn.
     const refund =
       apCost !== null && target.hp <= 0 && !actor.refunded && actor.stats.traits?.includes('blademaster') === true
@@ -2156,7 +2160,7 @@ export class BattleEngine {
    * draws nothing.
    */
   private applyDamage(unit: UnitRecord, n: number): boolean {
-    if (unit.hp > 0 && unit.hp - n <= 0 && !unit.endured && unit.stats.traits?.includes('unbreakable')) {
+    if (this.wouldEndure(unit, n)) {
       unit.hp = 1
       unit.endured = true
       this.layStatus(unit, UNBREAKABLE_SHIELD)
@@ -2164,6 +2168,11 @@ export class BattleEngine {
     }
     unit.hp = Math.max(0, unit.hp - n)
     return false
+  }
+
+  /** Whether `n` damage would bring `unit` to 0 and its Unbreakable, not yet spent, keep it standing. */
+  private wouldEndure(unit: UnitRecord, n: number): boolean {
+    return unit.hp > 0 && unit.hp - n <= 0 && !unit.endured && unit.stats.traits?.includes('unbreakable') === true
   }
 
   /** What follows a cast or an area: each sleeper woken and image spent, in roster order, then the falls and at most one end of the battle. */
