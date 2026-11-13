@@ -1,12 +1,75 @@
 import { describe, expect, it } from 'vitest'
+import { xpToNextLevel } from '../src/character/progression.ts'
 import { hexDistance, offsetToHex } from '../src/grid/hex.ts'
 import { itemById } from '../src/inventory/inventory.ts'
 import { GEAR_SPRITES } from '../src/scenes/unitLook.ts'
 import type { BattleProbe } from '../src/testHook.ts'
-import { RAIDERS, battleHexOnScreen, useGames } from './driver.ts'
+import { RAIDERS, battleHexOnScreen, useGames, type Game } from './driver.ts'
 
 /** The first party member's unit, which is the one selected as a battle opens. */
 const hero = (battle: BattleProbe) => battle.state.units.find((u) => u.id === 'hero_1')!
+
+/** Types a line at the debug console, opening it first, and closes it again. */
+async function debugCommand(game: Game, line: string): Promise<void> {
+  await game.press('Shift+Backquote')
+  await game.page.locator('#yomi-debug input').fill(line)
+  await game.press('Enter')
+  await game.press('Escape')
+}
+
+/**
+ * From a new game: Aldric raised to `level` by the debug console and given
+ * `nodes` from the Warrior tree's Heavy Knight path in the character panel,
+ * then a debug fight with the goblins of Goblin Raid, up to the player's first turn.
+ */
+async function aldricFights(game: Game, level: number, nodes: string[]): Promise<BattleProbe> {
+  await game.newGame()
+  let xp = 0
+  for (let l = 1; l < level; l++) xp += xpToNextLevel(l)
+  await debugCommand(game, `xp ${xp} Aldric`)
+  const world = await game.waitFor('World', (w) => w.party[0].level === level)
+  await game.click(world.party[0])
+  await game.waitForScenes(['Inventory'], ['World'])
+  const skills = await game.waitFor('Inventory', (p) => p.tab === 'skills')
+  await game.click(skills.treesButton)
+  for (const [i, perk] of nodes.entries()) {
+    const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees' && p.tree === 'warrior' && p.perkPicks === skills.perkPicks - i)
+    await game.click(tree.perks.find((n) => n.perk === perk)!)
+  }
+  await game.waitFor('Inventory', (p) => p.perkPicks === skills.perkPicks - nodes.length)
+  await game.press('Escape')
+  await game.press('Escape')
+  await game.waitForScenes(['World'])
+  await game.press('Shift+Backquote')
+  await game.page.locator('#yomi-debug input').fill('fight goblin_raid 1')
+  await game.press('Enter')
+  await game.waitForScenes(['Battle'])
+  await game.press('Escape')
+  return game.waitFor('Battle', (b) => b.playerControl)
+}
+
+/**
+ * Ends turns, Aldric standing his ground, until his Skills list offers `ability`,
+ * and returns the battle with the list open; null if Aldric fell or the battle ended first.
+ */
+async function waitToUse(game: Game, ability: string): Promise<BattleProbe | null> {
+  for (let round = 0; round < 6; round++) {
+    let battle = await game.awaitTurn()
+    if (battle.buttons.result.visible || hero(battle).hp <= 0) return null
+    if (battle.selected !== 'hero_1') {
+      await game.click(battle.party[0])
+      battle = await game.waitFor('Battle', (b) => b.selected === 'hero_1')
+    }
+    await game.press('m')
+    const open = await game.waitFor('Battle', (b) => b.skillMenu !== null)
+    if (open.skillMenu!.find((row) => row.id === ability)?.enabled) return open
+    await game.press('Escape')
+    await game.waitFor('Battle', (b) => b.skillMenu === null)
+    await game.click(open.buttons.endTurn)
+    await game.waitFor('Battle', (b) => !b.playerControl || b.state.round > open.state.round)
+  }
+  return null
+}
 
 describe('a battle', () => {
   const games = useGames()
@@ -174,11 +237,11 @@ describe('a battle', () => {
     expect(equips.map((e) => [e.unit, e.apCost])).toEqual([['hero_1', 1], ['hero_3', 1]])
   })
 
-  it('casts a spell picked from the Cast button’s list, on a foe and then on the caster, and backs out on Esc (A10)', async () => {
+  it('casts a spell picked from the Skills button’s list, on a foe and then on the caster, and backs out on Esc (A10)', async () => {
     const game = await games.open()
     const start = await game.enterBattle()
     const mage = (battle: BattleProbe) => battle.state.units.find((u) => u.id === 'hero_3')!
-    // Only a unit with magic has the button.
+    // Only a unit with a spell or an ability has the button.
     expect(start.buttons.cast.visible).toBe(false)
 
     await game.click(start.party[2])
@@ -187,31 +250,31 @@ describe('a battle', () => {
     // Heal can always be cast on the caster itself; no foe is within Magic Arrow's range yet.
     expect(selected.buttons.cast).toMatchObject({ visible: true, enabled: true })
     await game.click(selected.buttons.cast)
-    const list = await game.waitFor('Battle', (b) => b.spellMenu !== null)
-    expect(list.spellMenu!.map(({ spell, enabled }) => [spell, enabled])).toEqual([
-      ['magic_arrow', false],
-      ['heal', true],
+    const list = await game.waitFor('Battle', (b) => b.skillMenu !== null)
+    expect(list.skillMenu!.map(({ kind, id, enabled }) => [kind, id, enabled])).toEqual([
+      ['spell', 'magic_arrow', false],
+      ['spell', 'heal', true],
     ])
     await game.press('Escape')
-    await game.waitFor('Battle', (b) => b.spellMenu === null)
+    await game.waitFor('Battle', (b) => b.skillMenu === null)
     expect(await game.scenes()).toEqual({ running: ['Battle'], paused: [] })
 
     await game.click(battleHexOnScreen(selected, offsetToHex(5, 5)))
     const near = await game.waitFor('Battle', (b) => b.playerControl && mage(b).ap === 5)
 
     await game.press('m')
-    const opened = await game.waitFor('Battle', (b) => b.spellMenu !== null)
-    expect(opened.spellMenu![0]).toMatchObject({ spell: 'magic_arrow', enabled: true })
-    await game.click(opened.spellMenu![0])
-    expect((await game.waitFor('Battle', (b) => b.casting !== null)).casting).toBe('magic_arrow')
+    const opened = await game.waitFor('Battle', (b) => b.skillMenu !== null)
+    expect(opened.skillMenu![0]).toMatchObject({ kind: 'spell', id: 'magic_arrow', enabled: true })
+    await game.click(opened.skillMenu![0])
+    expect((await game.waitFor('Battle', (b) => b.aiming !== null)).aiming).toEqual({ kind: 'spell', id: 'magic_arrow' })
     await game.press('Escape')
-    await game.waitFor('Battle', (b) => b.casting === null)
-    expect(near.casting).toBeNull()
+    await game.waitFor('Battle', (b) => b.aiming === null)
+    expect(near.aiming).toBeNull()
 
     await game.press('m')
-    await game.waitFor('Battle', (b) => b.spellMenu !== null)
+    await game.waitFor('Battle', (b) => b.skillMenu !== null)
     await game.press('1')
-    const picking = await game.waitFor('Battle', (b) => b.casting === 'magic_arrow')
+    const picking = await game.waitFor('Battle', (b) => b.aiming?.id === 'magic_arrow')
     const foe = picking.state.units.find((u) => u.id === 'goblin')!
     await game.click(battleHexOnScreen(picking, foe.position))
     const after = await game.waitFor('Battle', (b) => b.log.some((e) => e.type === 'cast') && (b.playerControl || b.buttons.result.visible))
@@ -219,7 +282,7 @@ describe('a battle', () => {
       { caster: 'hero_3', spell: 'magic_arrow', target: 'goblin', manaCost: 3, manaAfter: 21, apAfter: 1, outcomes: [{ unit: 'goblin' }] },
     ])
     expect(mage(after)).toMatchObject({ mana: 21, ap: 1 })
-    expect(after.casting).toBeNull()
+    expect(after.aiming).toBeNull()
 
     // The panel shows what mana is left.
     await game.press('c')
@@ -236,13 +299,62 @@ describe('a battle', () => {
     if (next.selected !== 'hero_3') await game.click(next.party[2])
     await game.waitFor('Battle', (b) => b.selected === 'hero_3')
     await game.press('m')
-    await game.waitFor('Battle', (b) => b.spellMenu !== null)
+    await game.waitFor('Battle', (b) => b.skillMenu !== null)
     await game.press('2')
-    const healing = await game.waitFor('Battle', (b) => b.casting === 'heal')
+    const healing = await game.waitFor('Battle', (b) => b.aiming?.id === 'heal')
     await game.click(battleHexOnScreen(healing, mage(healing).position))
     const healed = await game.waitFor('Battle', (b) => b.log.some((e) => e.type === 'cast' && e.spell === 'heal'))
     const heal = healed.log.find((e) => e.type === 'cast' && e.spell === 'heal')!
     expect(heal).toMatchObject({ caster: 'hero_3', manaCost: 3, manaAfter: 18, outcomes: [{ unit: 'hero_3', attackRoll: null }] })
+  })
+
+  it('taunts from the Skills list: a level 4 Aldric with Rooted and Taunt marks the foes T, and stands rooted (AC7)', async () => {
+    const game = await games.open()
+    const start = await aldricFights(game, 4, ['rooted', 'taunt'])
+    expect(start.selected).toBe('hero_1')
+    // Aldric has an ability, so the button shows; it opens on a list whose Taunt waits for a foe within 2 hexes.
+    expect(start.buttons.cast).toMatchObject({ visible: true, enabled: true })
+    await game.press('m')
+    const list = await game.waitFor('Battle', (b) => b.skillMenu !== null)
+    expect(list.skillMenu!.map(({ kind, id, label, enabled }) => ({ kind, id, label, enabled }))).toEqual([
+      { kind: 'ability', id: 'taunt', label: 'Taunt  3 AP', enabled: false },
+    ])
+    await game.press('Escape')
+    await game.waitFor('Battle', (b) => b.skillMenu === null)
+
+    const open = await waitToUse(game, 'taunt')
+    expect(open).not.toBeNull()
+    // Unmoved through the turns it waited, Aldric stands rooted.
+    expect(open!.marks.hero_1).toContain('R')
+    await game.click(open!.skillMenu!.find((row) => row.id === 'taunt')!)
+    const aiming = await game.waitFor('Battle', (b) => b.aiming !== null)
+    expect(aiming.aiming).toEqual({ kind: 'ability', id: 'taunt' })
+    expect(aiming.hint).toBe('Taunt: click Aldric (3 AP). Esc or Cancel to go back.')
+    await game.click(battleHexOnScreen(aiming, hero(aiming).position))
+    const taunted = await game.waitFor('Battle', (b) => b.playerControl && b.log.some((e) => e.type === 'ability' && e.ability === 'taunt'))
+    const foes = taunted.state.units.filter((u) => u.side === 'enemy' && u.statuses.some((st) => st.id === 'taunted'))
+    expect(foes.length).toBeGreaterThan(0)
+    for (const foe of foes) expect(taunted.marks[foe.id]).toContain('T')
+    expect(taunted.aiming).toBeNull()
+  })
+
+  it('pins a foe with Pin from the Skills list: its nameplate shows N', async () => {
+    const game = await games.open()
+    await aldricFights(game, 6, ['rooted', 'taunt', 'pin'])
+    const open = await waitToUse(game, 'pin')
+    expect(open).not.toBeNull()
+    expect(open!.skillMenu!.find((row) => row.id === 'pin')).toMatchObject({ kind: 'ability', label: 'Pin  3 mana  6 AP' })
+    await game.press(String(open!.skillMenu!.findIndex((row) => row.id === 'pin') + 1))
+    const aiming = await game.waitFor('Battle', (b) => b.aiming?.id === 'pin')
+    expect(aiming.hint).toBe('Pin: choose a foe (3 mana, 6 AP). Esc or Cancel to go back.')
+    const self = hero(aiming)
+    const foe = aiming.state.units.find((u) => u.side === 'enemy' && u.hp > 0 && hexDistance(u.position, self.position) <= self.attackRange)!
+    await game.click(battleHexOnScreen(aiming, foe.position))
+    const after = await game.waitFor('Battle', (b) => b.playerControl && b.log.some((e) => e.type === 'attack' && e.ability === 'pin'))
+    const pin = after.log.find((e) => e.type === 'attack' && e.ability === 'pin')!
+    expect(pin).toMatchObject({ attacker: 'hero_1', defender: foe.id, hit: true, manaCost: 3 })
+    expect(after.state.units.find((u) => u.id === foe.id)!.statuses.map((st) => st.id)).toContain('pinned')
+    expect(after.marks[foe.id]).toContain('N')
   })
 
   it('pauses under the menu on Esc, resumes on Continue, and is dropped for a new game', async () => {

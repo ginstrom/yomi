@@ -155,9 +155,10 @@ describe('nodeSummary', () => {
 
 describe('costWords', () => {
   it('words an active\'s cost, a weapon-relative AP worked out for the weapon held', () => {
-    expect(costWords({ apCost: 3 }, 5)).toBe('3 AP')
-    expect(costWords({ manaCost: 3, apCost: 0, weaponAp: 1 }, 5)).toBe('3 mana, 6 AP (weapon + 1)')
-    expect(costWords({ apCost: 0, weaponAp: 0 }, 4)).toBe('4 AP (weapon + 0)')
+    expect(costWords('taunt', { attackApCost: 5 })).toBe('3 AP')
+    expect(costWords('pin', { attackApCost: 5 })).toBe('3 mana, 6 AP (weapon + 1)')
+    expect(costWords('pin', { attackApCost: 3 })).toBe('3 mana, 4 AP (weapon + 1)')
+    expect(costWords('power_attack', { attackApCost: 4 })).toBe('6 AP (weapon + 2)')
   })
 })
 

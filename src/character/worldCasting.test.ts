@@ -92,6 +92,20 @@ describe('autoHeal', () => {
     expect(delwyn.mana).toBe(1)
   })
 
+  it('counts the healer’s heal bonus (Mending), wasting none of it on a wound smaller than the heal', () => {
+    const members = party()
+    const [aldric, brenna, delwyn] = members
+    delwyn.perks = { ...delwyn.perks, mending: 1 }
+    expect(worldHealing('heal', delwyn)).toBe(10)
+    delwyn.mana = 10
+    // 8 lost is more than a bare Heal's 6 but less than Delwyn's 10.
+    aldric.hp = maxHp(aldric) - 8
+    expect(autoHeal(members)).toBe(0)
+    brenna.hp = maxHp(brenna) - 10
+    expect(autoHeal(members)).toBe(10)
+    expect(brenna.hp).toBe(maxHp(brenna))
+  })
+
   it('heals nothing without a healer, a wound or the mana', () => {
     const members = party()
     expect(autoHeal(members)).toBe(0)

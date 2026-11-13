@@ -1,7 +1,8 @@
-import { ABILITIES, type Ability } from '../combat/abilities.ts'
-import { ELEMENTS, formatDamage, type DamageRoll } from '../combat/combat.ts'
+import { ABILITIES, type Ability, type AbilityId, type Strike } from '../combat/abilities.ts'
+import { ELEMENTS, formatDamage, type CombatantStats, type DamageRoll } from '../combat/combat.ts'
 import { STATUSES, type StatusLaid } from '../combat/spells.ts'
-import type { UnitSnapshot } from '../engine/battleEngine.ts'
+import { TAUNT_PENALTY, type UnitSnapshot } from '../engine/battleEngine.ts'
+import { costWords } from './perkTree.ts'
 
 /** Lines that describe an ability, under its name: indented by this, so the panel can tell them apart. */
 export const DESCRIPTION_INDENT = '  '
@@ -21,7 +22,7 @@ export function foeInfoLines(unit: UnitSnapshot): string[] {
   const lines = (unit.abilities ?? []).flatMap((id) => {
     const turns = unit.recharging[id] ?? 0
     const state = turns <= 0 ? 'ready' : turns === 1 ? 'ready next turn' : `ready in ${turns} turns`
-    const described = describeAbility(ABILITIES[id], unit.abilityDamageBonus ?? 0).map((line) => DESCRIPTION_INDENT + line)
+    const described = describeAbility(id, unit.abilityDamageBonus ?? 0, unit).map((line) => DESCRIPTION_INDENT + line)
     return [`${ABILITIES[id].name}: ${state}`, ...described]
   })
   const wards = ELEMENTS.filter((e) => (unit.wards?.[e] ?? 0) > 0).map((e) => `${e} ${unit.wards![e]}`)
@@ -30,28 +31,70 @@ export function foeInfoLines(unit: UnitSnapshot): string[] {
 }
 
 /**
- * What an ability does, in a line or two, from its data alone: a routine's
- * strikes and their dice (or "a weapon blow"), then any status a strike lays;
- * a status laid on the user or a foe; an area's shape and
+ * What an ability does, in a line or two, from its data alone: for a hero's
+ * technique first what it costs the user (`stats`) and the weapon it needs
+ * ("3 mana, 6 AP (weapon + 1), melee weapon"); then a routine's strikes and
+ * their dice, or a weapon strike's blow and what it adds, then any status a
+ * strike lays; a status laid on the user or a foe; an area's shape and
  * reach, its dice and element, half on a miss, and the status it lays. The
  * dice carry `bonus`, the user's `abilityDamageBonus`, as the engine adds it.
  */
-export function describeAbility(ability: Ability, bonus = 0): string[] {
+export function describeAbility(id: AbilityId, bonus = 0, stats: Pick<CombatantStats, 'attackApCost'> = { attackApCost: 0 }): string[] {
+  const ability = ABILITIES[id]
+  const cost = isTechnique(ability) ? [costLine(id, stats)] : []
+  return [...cost, ...effectLines(ability, bonus)]
+}
+
+/** A hero's technique: an ability with any of the heroes' fields, which a monster's never sets. */
+function isTechnique(ability: Ability): boolean {
+  return ability.manaCost !== undefined || ability.weaponAp !== undefined || ability.needs !== undefined
+}
+
+function costLine(id: AbilityId, stats: Pick<CombatantStats, 'attackApCost'>): string {
+  const needs = ABILITIES[id].needs
+  return `${costWords(id, stats)}${needs ? `, ${needs} weapon` : ''}`
+}
+
+function effectLines(ability: Ability, bonus: number): string[] {
   const dice = (roll: DamageRoll) => formatDamage({ ...roll, bonus: roll.bonus + bonus })
   if (ability.strikes) {
-    // A technique's strike is the unit's own weapon; step 14 words it in full.
-    const strikes = ability.strikes.map((s) => `${s.name.toLowerCase()} ${s.damage ? dice(s.damage) : 'a weapon blow'}`).join(', ')
     const laid = ability.strikes.filter((s) => s.status).map((s) => `${s.name.toLowerCase()}: ${statusPhrase(s.status!)}`)
+    if (ability.strikes.some((s) => s.weapon)) return [...ability.strikes.map((s) => weaponStrike(s, ability)), ...laid]
+    const strikes = ability.strikes.map((s) => `${s.name.toLowerCase()} ${dice(s.damage!)}`).join(', ')
     return [strikes, ...laid]
   }
-  if (ability.selfStatus) return [statusPhrase(ability.selfStatus)]
-  if (ability.foeStatus) return [`a foe: ${statusPhrase(ability.foeStatus.status)}`]
+  if (ability.selfStatus) return [`itself: ${statusPhrase(ability.selfStatus)}`]
+  if (ability.foeStatus) {
+    const { range, status } = ability.foeStatus
+    return [`a foe within ${range === 'weapon' ? 'weapon range' : `${range} hexes`}: ${statusPhrase(status)}`]
+  }
   const area = ability.area!
-  const shape = area.shape === 'burst' ? `burst ${area.radius ?? 0}, range ${area.range}` : `${area.shape} ${area.range}`
-  if (!area.damage) return [area.status ? `${shape}: ${statusPhrase(area.status)}` : shape]
-  const element = area.element ? ` ${area.element}` : ''
-  const half = area.halfOnMiss ? ', half on a miss' : ''
-  return [`${shape}: ${dice(area.damage)}${element}${half}`, ...(area.status ? [statusPhrase(area.status)] : [])]
+  const reach = area.centredOnSelf ? 'around itself' : area.weaponRange ? 'weapon range' : `range ${area.range}`
+  const burst = area.shape === 'burst' ? `burst ${area.radius ?? 0}, ${reach}` : `${area.shape} ${area.range}`
+  const shape = `${burst}${area.foesOnly ? ', foes only' : ''}`
+  const harm = area.weaponDamage ? 'weapon damage' : area.damage ? dice(area.damage) : null
+  if (harm === null) return [area.status ? `${shape}: ${statusPhrase(area.status)}` : shape]
+  const notes = [
+    ...(area.element ? [` ${area.element}`] : []),
+    ...(area.throughResistance ? [', through armour'] : []),
+    ...(area.halfOnMiss ? [', half on a miss'] : []),
+    ...(area.bane ? [', double dice vs the regenerating and blightborn'] : []),
+  ]
+  return [`${shape}: ${harm}${notes.join('')}`, ...(area.status ? [statusPhrase(area.status)] : [])]
+}
+
+/** "power attack: weapon blow, −10 to hit, +6 dmg": a technique's strike with its own weapon, and what it adds. */
+function weaponStrike(strike: Strike, ability: Ability): string {
+  const blow = ability.needs === 'melee' ? 'weapon blow' : ability.needs === 'ranged' ? 'weapon shot' : 'weapon blow or shot'
+  const signed = (n: number) => (n < 0 ? `−${-n}` : `+${n}`)
+  const parts = [
+    blow,
+    ...(strike.toHit ? [`${signed(strike.toHit)} to hit`] : []),
+    ...(strike.damageBonus ? [`+${strike.damageBonus} dmg`] : []),
+    ...(strike.onHit ?? []).map((o) => `+${o.damage}${o.element ? ` ${o.element}` : ''}${o.bane ? ' vs the regenerating and blightborn' : ''}`),
+    ...(strike.spreads ? ['at another foe in reach'] : []),
+  ]
+  return `${strike.name.toLowerCase()}: ${parts.join(', ')}`
 }
 
 /** "webbed 2 turns (−4 AP)": a status, how long, and what it does, from `STATUSES`. */
@@ -62,8 +105,12 @@ function statusPhrase(laid: StatusLaid): string {
     ...(rule.sleep ? ['no AP, helpless'] : []),
     ...(rule.actionPoints ? [`${signed(rule.actionPoints)} AP`] : []),
     ...(rule.toHit ? [`${signed(rule.toHit)} to hit`] : []),
+    // Taunted's penalty is the engine's, as it depends on whom the taunted strikes.
+    ...(laid.id === 'taunted' ? [`−${TAUNT_PENALTY} to hit but at the taunter`] : []),
     ...(rule.armorClass ? [`${signed(rule.armorClass)} AC`] : []),
     ...(rule.resistance ? [`${signed(rule.resistance)} resistance`] : []),
+    ...(rule.wardAll ? [`+${rule.wardAll} to every ward`] : []),
+    ...(rule.immobile ? ['cannot move'] : []),
     ...(rule.tick ? [`${formatDamage(rule.tick)} ${rule.tickName ?? rule.adjective} a turn`] : []),
     ...(rule.stopsRegeneration ? ['no regeneration'] : []),
     ...(rule.images ? ['images take hits'] : []),

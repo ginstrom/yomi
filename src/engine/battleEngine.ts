@@ -207,6 +207,17 @@ export interface AttackPreview {
   resistance: number
 }
 
+/**
+ * What an ability would cost and whom it would touch, with the odds on each
+ * (a strike's first blow's, as `attack` rolls it; an area's on each unit it
+ * touches; null where nothing is rolled), before the dice are rolled.
+ */
+export interface AbilityPreview {
+  apCost: number
+  manaCost: number
+  outcomes: { unit: UnitId; hitChance: number | null }[]
+}
+
 /** What a cast would cost and whom it would touch, with the odds on each, before the dice are rolled. */
 export interface CastPreview {
   apCost: number
@@ -991,6 +1002,11 @@ export class BattleEngine {
     const foe = this.units.find((u) => u.id === target)
     if (this.phase === 'over' || !actor || !foe || !this.canAct(actor)) return null
     if (actor.ap < actor.stats.attackApCost || !this.canAttack(actor, foe)) return null
+    return this.blowOdds(actor, foe, 0)
+  }
+
+  /** The odds of a blow of `actor` at `foe` now, as `attack` rolls them, with `toHit` added (a technique's). */
+  private blowOdds(actor: UnitRecord, foe: UnitRecord, toHit: number): AttackPreview {
     const flankers = flankersOf(this.units, actor, foe)
     const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
     const arc = arcStruck(foe, actor.position, isMelee(actor.stats))
@@ -998,8 +1014,36 @@ export class BattleEngine {
     const helpless = hasStatus(foe, 'asleep') ? HELPLESS_BONUS : 0
     const attacker = effectiveStats(actor)
     const defender = effectiveStats(foe)
-    const chance = hitChance(attacker, defender.ac, flankBonus + arcBonus + helpless - tauntPenalty(actor, foe))
+    const chance = hitChance(attacker, defender.ac, flankBonus + arcBonus + helpless + toHit - tauntPenalty(actor, foe))
     return { flankers, flankBonus, arc, arcBonus, hitChance: chance, resistance: effectiveResistance(attacker, defender.resistance ?? 0) }
+  }
+
+  /**
+   * The costs of a legal use of an ability, whom it would touch and the odds
+   * on each, or null if the use isn't legal now. `target` is a unit's id, or
+   * for an area the hex it is aimed at. It draws nothing.
+   */
+  previewAbility(unit: UnitId, ability: AbilityId, target: UnitId | Hex): AbilityPreview | null {
+    const actor = this.units.find((u) => u.id === unit)
+    if (this.phase === 'over' || !actor || !this.canAct(actor)) return null
+    const known = ABILITIES[ability]
+    const cost = { apCost: abilityApCost(actor.stats, ability), manaCost: known.manaCost ?? 0 }
+    if (typeof target !== 'string') {
+      if (!this.canAim(actor, ability, target)) return null
+      const attacker = effectiveStats(actor)
+      const touched = abilityTouches(this.units, actor, ability, target, attacker.attackRange)
+      return {
+        ...cost,
+        outcomes: touched.map((u) => ({
+          unit: u.id,
+          hitChance: known.area!.auto ? null : hitChance(attacker, effectiveStats(u).ac, -tauntPenalty(actor, u)),
+        })),
+      }
+    }
+    const foe = this.units.find((u) => u.id === target)
+    if (!foe || !this.canTarget(actor, ability, foe)) return null
+    const first = known.strikes?.[0]
+    return { ...cost, outcomes: [{ unit: foe.id, hitChance: first ? this.blowOdds(actor, foe, first.toHit ?? 0).hitChance : null }] }
   }
 
   /**

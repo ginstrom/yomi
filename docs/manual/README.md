@@ -336,6 +336,31 @@ Some monsters can do more than swing a weapon:
 
 **Hover over a monster** to see what it can do: a small panel beside it, headed with its name, lists each special attack as "ready", "ready next turn" or "ready in 2 turns" (counting the monster's own turns), with what it does underneath (for example "cone 2: 4d6+2 fire, half on a miss" and "seared 1 turn (no regeneration)"), and any wards it has ("Wards: fire 99").
 
+### Skills: spells and techniques
+
+A hero who knows a spell or a **technique** has a **Skills** button (or M). It shows the mana the hero has left, if they have any magic, and reads **Cancel** while you aim. It opens one list of everything the hero can use besides a plain attack: their spells first, then their techniques, each with its mana cost and its AP. Pick one by clicking it or pressing its number.
+
+```
+1. Taunt  3 AP  (ready in 1)
+2. Pin  3 mana  6 AP
+3. Power Attack  7 AP
+```
+
+Techniques are nodes of the skill trees (chapter 7), most of them in the Warrior and Scout trees. Most are a blow or a shot of the hero's own weapon with something added: Power Attack strikes at −10 to hit for +6 damage, Pin pins the foe in place on a hit, Flame Strike adds fire. Their AP is the weapon's attack cost plus the technique's own (Pin is "weapon + 1": 6 AP with a longsword, 4 with a dagger), so the list always shows the cost for the weapon the hero holds now. Some cost mana as well; some, once used, have to wait a turn or more, and the list says "(ready in 1)".
+
+A row you cannot use right now is greyed out. Hover over it to see why: a technique for a melee weapon says "Needs a melee weapon" while the hero holds a bow, and one for a ranged weapon "Needs a ranged weapon". Otherwise no target is in reach, or the hero lacks the AP or mana.
+
+Once picked, a skill asks for its target, even when there is only one:
+
+- A **strike** or a technique that marks a foe (Hunter's Mark) asks for a foe. Hovering over one shows your chance to hit, the technique's bonus or penalty included.
+- A technique the hero uses on themselves (Sprint) asks you to click the hero.
+- An area **around the hero** (Taunt, Consecrate) also asks you to click the hero. Hovering over them outlines the area and marks every foe it would touch.
+- Any other area (Volley) asks for a hex within reach. Hovering over one outlines the area and shows the odds for every unit inside, your own heroes included: a volley hits everyone under it.
+
+Press **Cancel** or **Esc** to back out. Spells are aimed the same way (see chapter 6).
+
+**Taunt** lays Taunted on every foe within 2 hexes for a turn: they strike anyone but the taunter at −25. A hero with **Rooted** who ends a turn without moving stands rooted (+10 armour class, +2 resistance) through the enemy's turn, until they take a step or their next turn ends; standing still again renews it. **Pinned** foes cannot move, though they still attack.
+
 ### Zones of control and free attacks
 
 A foe holding a **melee** weapon controls the hexes next to it. **Leaving** those hexes gives that foe one free attack on you; stepping to another hex next to the same foe does not. Each foe gets at most one free attack per enemy turn. A spear or halberd controls only the hexes next to it too, though it strikes from two. Ranged units (bows, crossbows, wands) and sleepers have no zone of control. Pathfinding prefers routes that provoke the fewest foes, and the orange edges show where the danger is. Your heroes threaten the enemy in exactly the same way.
@@ -349,12 +374,12 @@ Press **I** to open the inventory for the selected hero. Equipping, stowing, dro
 | Key | Does |
 | --- | --- |
 | Click | Select a hero, move, or attack |
-| M | Open the Cast list (heroes with magic) |
-| 1–9 | Pick a spell from the open list |
+| M | Open the Skills list (heroes with spells or techniques) |
+| 1–9 | Pick a spell or technique from the open list |
 | I / C / S | Inventory / Character / Skills panel |
-| Esc | Close the spell list, cancel aiming, or open the menu |
+| Esc | Close the Skills list, cancel aiming, or open the menu |
 
-While aiming a spell the pointer is crossed swords over a valid target of an attacking spell, and a green cross over a valid target of a healing or protective one.
+While aiming, the pointer is crossed swords over a valid target of an attacking spell or a technique, and a green cross over a valid target of a healing or protective spell, or over the hero for a technique they use on themselves.
 
 ### Victory and defeat
 
@@ -374,7 +399,7 @@ Every hero has **mana**: twice their Intelligence, plus half their Intelligence 
 
 ![The spell list](images/battle-spell-menu.png)
 
-To cast, select the hero and press **Cast** (or M); the button shows the mana the hero has left, and reads **Cancel** while you aim. Pick a spell by clicking it or pressing its number. A spell you cannot cast right now is greyed out, for example because no target is in range or the hero lacks the AP or mana.
+Spells are one kind of skill. To cast, select the hero and press **Skills** (or M); the button shows the mana the hero has left, and reads **Cancel** while you aim. The list holds the hero's spells first, then their techniques (see "Skills" in chapter 5), each spell with its mana and the AP it costs this hero. Pick a spell by clicking it or pressing its number. A spell you cannot cast right now is greyed out, for example because no target is in range or the hero lacks the AP or mana.
 
 ![Choosing a spell's target](images/battle-targeting.png)
 
@@ -412,6 +437,11 @@ The letters beside a unit's health bar show its current effects. An effect lasts
 | Cursed | −15 to hit and −5 armour class |
 | Webbed | −4 AP |
 | Warded | +4 ward against every element |
+| Marked (Y) | −10 armour class |
+| Slowed (L) | −3 AP |
+| Taunted (T) | −25 to hit at anyone but the taunter |
+| Pinned (N) | Cannot move, though it still attacks and casts |
+| Rooted (R) | +10 armour class, +2 resistance, until the unit moves or its next turn ends |
 
 Damage over time strikes at the start of the affected unit's side's turn. Section 11 lists every spell.
 

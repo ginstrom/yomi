@@ -2977,6 +2977,27 @@ describe('BattleEngine hero techniques', () => {
       expect(power.chance).toBe(plain.chance - 10)
     })
 
+    it('previews a strike’s chance as the first blow would roll it, its toHit included, and its costs', () => {
+      const units = (abilities: AbilityId[]) => [hero(abilities), { ...CLERIC, position: hex(2, 2) }, goblin({}, { facing: EAST })]
+      const plain = battle(units([])).previewAttack('warrior', 'goblin')!
+      const engine = battle(units(['power_attack', 'pin']))
+      expect(engine.previewAbility('warrior', 'power_attack', 'goblin')).toEqual({
+        apCost: 7, manaCost: 0, outcomes: [{ unit: 'goblin', hitChance: plain.hitChance - 0.1 }],
+      })
+      expect(engine.previewAbility('warrior', 'pin', 'goblin')).toEqual({ apCost: 6, manaCost: 3, outcomes: [{ unit: 'goblin', hitChance: plain.hitChance }] })
+      // It is the chance the blow rolls against.
+      const [event] = battle(units(['power_attack']), HIT).step(use('power_attack')) as AttackEvent[]
+      expect(event.chance).toBe(Math.round(plain.hitChance * 100) - 10)
+    })
+
+    it('previews a status laid with no roll as certain, and nothing that is not legal', () => {
+      const engine = battle([archer(['hunters_mark', 'sprint', 'power_attack']), goblin({}, { position: hex(4, 1) })])
+      expect(engine.previewAbility('warrior', 'hunters_mark', 'goblin')).toEqual({ apCost: 2, manaCost: 0, outcomes: [{ unit: 'goblin', hitChance: null }] })
+      expect(engine.previewAbility('warrior', 'sprint', 'warrior')).toEqual({ apCost: 0, manaCost: 0, outcomes: [{ unit: 'warrior', hitChance: null }] })
+      expect(engine.previewAbility('warrior', 'sprint', 'goblin')).toBeNull()
+      expect(engine.previewAbility('warrior', 'power_attack', 'goblin')).toBeNull()
+    })
+
     it('makes a shot technique give the defender no turn', () => {
       const [event] = battle([archer(['aimed_shot']), goblin({}, { position: hex(4, 1), facing: EAST })], HIT).step(use('aimed_shot')) as AttackEvent[]
       expect(event.defenderTurned).toBe(false)
@@ -3236,6 +3257,14 @@ describe('BattleEngine area techniques', () => {
       const engine = battle([hero(['volley']), goblinAt('goblin', hex(2, 1))], noDraws)
       expect(centres(engine, 'volley')).toEqual([])
     })
+    it('previews the odds on everyone the volley would touch, allies included, at its centre', () => {
+      const engine = battle([archer(['volley']), goblinAt('goblin', hex(4, 1)), allyAt('cleric', hex(5, 1))], noDraws)
+      const preview = engine.previewAbility('warrior', 'volley', hex(4, 1))!
+      expect(preview).toMatchObject({ apCost: 6, manaCost: 0 })
+      expect(preview.outcomes.map((o) => o.unit)).toEqual(['goblin', 'cleric'])
+      for (const o of preview.outcomes) expect(o.hitChance).toBeGreaterThan(0)
+      expect(engine.previewAbility('warrior', 'volley', hex(8, 0))).toBeNull()
+    })
   })
 
   describe('Consecrate', () => {
@@ -3295,6 +3324,10 @@ describe('BattleEngine area techniques', () => {
         noDraws,
       )
       expect(centres(engine, 'taunt')).toEqual([hexKey(hex(1, 1))])
+      expect(engine.previewAbility('warrior', 'taunt', hex(1, 1))).toEqual({
+        apCost: 3, manaCost: 0, outcomes: [{ unit: 'goblin', hitChance: null }, { unit: 'goblin2', hitChance: null }],
+      })
+      expect(engine.previewAbility('warrior', 'taunt', hex(2, 1))).toBeNull()
       const [event] = engine.step(aim('taunt', hex(1, 1))) as AbilityEvent[]
       expect(event).toMatchObject({ ability: 'taunt', at: hex(1, 1), apCost: 3, apAfter: 5 })
       expect(event.outcomes).toEqual(

@@ -43,6 +43,10 @@ export interface SpellLook {
   glow: number
   missile: Missile
   impact: Impact
+  /** An arrow flies to each hex of the area in place of one missile (Volley). */
+  arrows?: true
+  /** The impact is drawn on the user, not on those touched (Taunt's ring). */
+  onUser?: true
 }
 
 const FIRE: SpellLook = { colour: 0xff7a1a, glow: 0xffd54f, missile: 'orb', impact: 'burst' }
@@ -79,10 +83,33 @@ export const SPELL_LOOKS: Record<SpellId, SpellLook> = {
   dark_shield: { ...SUPPORT, colour: 0x283593, glow: 0x7986cb },
 }
 
-/** The area abilities' looks; a routine has none, as its strikes are blows. */
+/**
+ * The looks of the abilities that are not blows: the areas, and the statuses
+ * laid with no roll. A routine has none, as its strikes are blows; a hero's
+ * technique strike may flash on a hit (`strikeFlash`).
+ */
 export const ABILITY_LOOKS: Partial<Record<AbilityId, SpellLook>> = {
   spider_web: { colour: 0xbdbdbd, glow: 0xeeeeee, missile: 'orb', impact: 'ring' },
   fire_spit: { ...FIRE, impact: 'burst' },
+  volley: { colour: 0xd7ccc8, glow: 0xffffff, missile: 'dart', impact: 'burst', arrows: true },
+  consecrate: { ...SPELL_LOOKS.bless, impact: 'burst' },
+  taunt: { colour: 0xe53935, glow: 0xffcdd2, missile: 'orb', impact: 'ring', onUser: true },
+  hunters_mark: { colour: 0xe8c040, glow: 0xfff8e1, missile: 'dart', impact: 'ring' },
+  sprint: SPELL_LOOKS.haste,
+}
+
+/** The flash a technique strike's hit shows on the defender, by its element: the look of a spell of it. */
+const STRIKE_FLASHES: Partial<Record<AbilityId, SpellLook>> = {
+  flame_strike: SPELL_LOOKS.fireball,
+  frost_strike: SPELL_LOOKS.frost_blast,
+  thunder_strike: SPELL_LOOKS.lightning_bolt,
+  smite: SPELL_LOOKS.bless,
+}
+
+/** The flash a technique strike shows where it lands: its look on a hit that struck no image, else null. */
+export function strikeFlash(event: AttackEvent): SpellLook | null {
+  if (!event.ability || !event.hit || event.image) return null
+  return STRIKE_FLASHES[event.ability] ?? null
 }
 
 const ABILITY_FALLBACK: SpellLook = { colour: 0xe0e0e0, glow: 0xffffff, missile: 'orb', impact: 'ring' }
@@ -172,6 +199,7 @@ export function changesStatusMarks(event: BattleEvent): boolean {
       return event.status !== undefined || (event.onHitStatuses?.length ?? 0) > 0
     case 'cast':
     case 'ability':
+    case 'status_laid':
     case 'status_end':
     case 'status_tick':
     case 'unit_down':

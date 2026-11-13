@@ -1,6 +1,7 @@
 import { ATTRIBUTES, MAX_ATTRIBUTE } from '../character/attributes.ts'
 import { deriveCombatStats, type Character } from '../character/character.ts'
-import { ABILITIES, type Ability, type AbilityId } from '../combat/abilities.ts'
+import { ABILITIES, abilityApCost, type AbilityId } from '../combat/abilities.ts'
+import type { CombatantStats } from '../combat/combat.ts'
 import { SPELLS, spellApCost } from '../combat/spells.ts'
 import { draftCharacter, togglePerk, type CharacterDraft } from '../character/creation.ts'
 import {
@@ -208,10 +209,11 @@ export function pathHeading(character: Pick<Character, 'perks'>, path: PathId): 
   return { text: `${PATHS[path].name}  ${pathDepth(character, path)}`, calling: calling(character).includes(path) }
 }
 
-/** What an active costs, in the strip's words: "3 mana, 6 AP (weapon + 1)", the weapon-relative AP worked out for the weapon held. */
-export function costWords(cost: { manaCost?: number; apCost: number; weaponAp?: number }, attackApCost: number): string {
-  const ap = cost.weaponAp === undefined ? `${cost.apCost} AP` : `${attackApCost + cost.weaponAp} AP (weapon + ${cost.weaponAp})`
-  return cost.manaCost ? `${cost.manaCost} mana, ${ap}` : ap
+/** What an ability costs, in the strip's words: "3 mana, 6 AP (weapon + 1)", the weapon-relative AP (`abilityApCost`) for the weapon held. */
+export function costWords(ability: AbilityId, stats: Pick<CombatantStats, 'attackApCost'>): string {
+  const { manaCost, weaponAp } = ABILITIES[ability]
+  const ap = `${abilityApCost(stats, ability)} AP${weaponAp === undefined ? '' : ` (weapon + ${weaponAp})`}`
+  return manaCost ? `${manaCost} mana, ${ap}` : ap
 }
 
 /**
@@ -220,7 +222,7 @@ export function costWords(cost: { manaCost?: number; apCost: number; weaponAp?: 
  * (`spellApCost`), and an ability's is its weapon's where the ability counts from it.
  */
 export function nodeSummary(character: Character, perk: PerkId): string {
-  const node: Perk & { ability?: AbilityId } = PERKS[perk]
+  const node: Perk = PERKS[perk]
   const kind = `${nodeKind(perk)}${node.tier === 'capstone' ? ', capstone' : ''}`
   const title = `${node.name} (${PATHS[node.path].name}, ${kind})`
   const stats = deriveCombatStats(character)
@@ -229,8 +231,7 @@ export function nodeSummary(character: Character, perk: PerkId): string {
     return `${title}: ${manaCost} mana, ${spellApCost(stats, node.spell)} AP. ${description}`
   }
   if (node.ability) {
-    const ability: Ability & { manaCost?: number; weaponAp?: number } = ABILITIES[node.ability]
-    return `${title}: ${costWords(ability, stats.attackApCost)}. ${ability.description}`
+    return `${title}: ${costWords(node.ability, stats)}. ${ABILITIES[node.ability].description}`
   }
   return `${title}: ${node.description}`
 }

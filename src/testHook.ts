@@ -13,6 +13,7 @@ import type { EquipmentSlot } from './inventory/inventory.ts'
 import type { RuneKey } from './inventory/runes.ts'
 import type { Point } from './scenes/boardGeometry.ts'
 import type { Rect } from './scenes/mapScroll.ts'
+import type { Skill, SkillMenuRow } from './scenes/skillMenu.ts'
 
 /**
  * What the in-browser tests (e2e/) see of the running game. The page is one
@@ -364,12 +365,14 @@ export interface BattleProbe {
   /** Where the board's top-left corner is on screen and how far it is scaled; with BATTLE_LAYOUT, that places every hex. */
   origin: Point
   scale: number
-  /** `cast` is shown only for a unit with magic; `result` is the one button of the victory or defeat screen. */
+  /** `cast` is the Skills button, shown only for a unit with a spell or an ability; `result` is the one button of the victory or defeat screen. */
   buttons: { attack: ButtonProbe; cast: ButtonProbe; endTurn: ButtonProbe; result: ButtonProbe }
-  /** The spell the next board click picks a target for, after the Cast button. */
-  casting: SpellId | null
-  /** The Cast button's spell list, a row a spell with its centre, while it is open; null when shut. Each unit's statuses are in `state`. */
-  spellMenu: Array<Point & { spell: SpellId; enabled: boolean }> | null
+  /** The skill (a spell or an ability) the next board click picks a target for, after the Skills button. */
+  aiming: Skill | null
+  /** The Skills button's list, a row a spell or ability (`skillMenuRows`) with its centre, while it is open; null when shut. Each unit's statuses are in `state`. */
+  skillMenu: Array<Point & SkillMenuRow> | null
+  /** The status letters each unit's nameplate shows now, in order: "T", "RT", or "" for none. */
+  marks: Record<UnitId, string>
   /** The lines of the victory or defeat screen; empty until the battle is over. */
   result: string[]
   /** The lines of the foe info panel shown beside the hovered foe now (`foeInfoLines`: its name, then its abilities and wards); empty when none shows. */

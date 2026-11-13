@@ -189,16 +189,16 @@ export function autoHeal(party: Party): number {
     for (;;) {
       const known = worldSpells(caster)
       if (known.length === 0) break
-      const cheapest = Math.min(...known.map(({ spell }) => worldHealing(spell)))
+      const cheapest = Math.min(...known.map(({ spell }) => worldHealing(spell, caster)))
       if (!party.some((member) => lost(member) >= cheapest)) break
       const affordable = known.filter((k) => k.affordable).map((k) => k.spell)
       const strongest = (spells: HeroSpellId[]) =>
-        spells.reduce<HeroSpellId | null>((a, b) => (a === null || worldHealing(b) > worldHealing(a) ? b : a), null)
+        spells.reduce<HeroSpellId | null>((a, b) => (a === null || worldHealing(b, caster) > worldHealing(a, caster) ? b : a), null)
       const group = strongest(affordable.filter((spell) => !healsOne(spell)))
       const one = strongest(affordable.filter(healsOne))
       const target = party.reduce((a, b) => (lost(b) > lost(a) ? b : a))
       const cast =
-        group !== null && party.filter((member) => lost(member) >= worldHealing(group)).length >= 2
+        group !== null && party.filter((member) => lost(member) >= worldHealing(group, caster)).length >= 2
           ? castOnWorldMap(caster, group, party)
           : one !== null && castOnWorldMap(caster, one, party, target)
       if (!cast) break
