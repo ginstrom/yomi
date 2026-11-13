@@ -25,7 +25,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | Step | File | Outcome | Depends on | Engineer tier | Status |
 | --- | --- | --- | --- | --- | --- |
 | **Stage 1: trees, picks and passives** | | | | | |
-| 01 | [Baseline and the v22 fixture](01-baseline-and-v22-fixture.md) | Today's figures re-measured on the unchanged code; `src/game/fixtures/save-v22.json` captured | — | sonnet | pending |
+| 01 | [Baseline and the v22 fixture](01-baseline-and-v22-fixture.md) | Today's figures re-measured on the unchanged code; `src/game/fixtures/save-v22.json` captured | — | sonnet | in progress |
 | 02 | [Stage-1 spells and the Warded status](02-stage1-spells.md) | Frostbite, Meteor, Mass Haste, Lay on Hands, Ward; Web and Curse become hero spells; `warded` and `StatusRule.wardAll` | 01 | sonnet | pending |
 | 03 | [Trees, nodes and picks](03-trees-nodes-picks.md) | `trees.ts`; the new `Perk`; the 57 stage-1 nodes; tier, depth, calling, capstone lock; a pick every even level; plans; pre-rolls and bandits rebuilt; `perkTree.ts` reworked; `SAVE_VERSION` 23 | 02 | opus | pending |
 | 04 | [Mana for every hero and the derived passives](04-mana-and-derived-passives.md) | `maxMana` for all; `deriveCombatStats` reads the new effects; the engine applies spell power, heal bonus, extension, friendly range and AP discounts | 03 | opus | pending |
@@ -493,16 +493,16 @@ export const MANA_WEIGHT = 0.5
 
 | Figure | 01 baseline | 08 stage 1 | 16 stage 2 | 23 stage 3 | 25 final |
 | --- | --- | --- | --- | --- | --- |
-| one party (`--parties 1`) | | | | | |
-| default company | | | | | |
-| `--ready-level 10` | | | | | |
-| deaths a campaign (one party) | | | | | |
-| days a campaign (one party) | | | | | |
-| GR3 / BC3 / BC4 / BC5 | | | | | |
-| SN5 / SP5 / TL5 | | | | | |
-| SG7 / SG10 | | | | | |
-| F1 / F2 / F3 | | | | | |
-| 500-campaign run time | | | | | |
+| one party (`--parties 1`) | 230 of 500 | | | | |
+| default company | 239 of 500 | | | | |
+| `--ready-level 10` | 389 of 500 | | | | |
+| deaths a campaign (one party) | 1.8 | | | | |
+| days a campaign (one party) | 270 | | | | |
+| GR3 / BC3 / BC4 / BC5 | 500 / 429 / 473 / 469 | | | | |
+| SN5 / SP5 / TL5 | 441 / 445 / 0 | | | | |
+| SG7 / SG10 | 0 / 2 | | | | |
+| F1 / F2 / F3 | 500 / 499 / 441 | | | | |
+| 500-campaign run time | 270 s (one party; company 258 s, `--ready-level 10` 517 s) | | | | |
 
 ## Completion criteria
 

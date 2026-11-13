@@ -185,3 +185,55 @@ git status   # only the fixture, the index and this file changed
 - [ ] One commit, "Skill trees step 01: baseline and the v22 fixture", holding only the fixture, the index and this file; the index's status for step 01 set to `done (<commit>)`.
 
 ## 7. Execution record
+
+### Round 1 (engineer, 2026-11-13)
+
+Code at `49f415e` (only docs differ from `50fb4cf`; `src/` untouched). Node 26. Every run `--seed 1`, 500 battles or campaigns, one at a time, logs under `logs/01-*.jsonl` and `.txt` (gitignored).
+
+**Measurements** (the index's 01 column):
+
+| Run | Result | Wall clock |
+| --- | --- | --- |
+| `--campaign --parties 1` | Source beaten 230 of 500; 270 days, 18.2 battles, 1.8 heroes dead a campaign (9121 battles) | 270 s |
+| `--campaign` (default company) | 239 of 500; 274 days, 18.6 battles, 1.8 dead; hall at level 4+ in 16 campaigns | 258 s |
+| `--campaign --ready-level 10` | 389 of 500; 466 days, 39.5 battles, 1.9 dead; 4.9 guard battles | 517 s |
+| GR3 `goblin_raid` 3, level 3 | 500 | 8 s |
+| BC3 `bandit_camp` 3, level 3 | 429 | 9 s |
+| BC4 `bandit_camp` 4, level 4 | 473 | 13 s |
+| BC5 `bandit_camp` 5, level 5 | 469 | 9 s |
+| SN5 `spider_nest` 5, level 5 | 441 | 9 s |
+| SP5 `salamander_pool` 5, level 5 | 445 | 9 s |
+| TL5 `troll_lair` 5, level 5 | 0 | 12 s |
+| SG7 `source_guardians` 5, level 7 | 0 | 16 s |
+| SG10 `source_guardians` 5, level 10 | 2 | 32 s |
+| F1 `goblin_raid` 1, level 1 | 500 | 3 s |
+| F2 `goblin_raid` 2, level 1 | 499 | 6 s |
+| F3 `goblin_raid` 3, level 1 | 441 | 8 s |
+
+Key summary lines (one party): "Beat the Source: 230 of 500 (46.0%); party fell: 270 (54.0%); encampment lost: 0". "A campaign: 270 days, 18.2 battles, 26.0 spawns, 3.1 sites captured and 0.1 lost, 38% of the land blighted". Wins by threat: 1007/1007, 1732/1756, 1932/1995, 2847/2870, 1333/1493. Default company: "Beat the Source: 239 of 500 (47.8%)", "274 days, 18.6 battles". Ready level 10: "Beat the Source: 389 of 500 (77.8%)", "466 days, 39.5 battles".
+
+**Against `CLAUDE.md`** (more than 5 points apart: reported, not investigated): SN5 441 against 451 (-10) and SP5 445 against 456 (-11). Everything else matches: 230, 239, 389, 429, 473, 469, TL5 0. F3 is 441 of 500 (88%), not "7 in 10" (the Claude.md sentence predates later changes; F1 and F2 match "every" and "nearly all"). SG7 is 0 and SG10 is 2: the source cells are all but unwinnable for a party of three at those levels, so the "within +-40" and "above step 01's" bands for SG7 and SG10 are narrow (a later figure of 40 or more at SG7 fails "within 40" only above 40; SG10 must exceed 2). The baseline TL5 and SG7 at 0 leave no room to detect a regression downward.
+
+**Fixture** `src/game/fixtures/save-v22.json` (22 744 bytes, one JSON object like `save-v18.json`), written by today's `serializeSave` through the scratchpad script `capture-v22.ts` (not committed). World seed 1234, encampment "Oakvale", `world.guildHall = 4`, no battle, `savedAt` 1700000000000. Characters are the pre-roll drafts levelled to 6 with `levelUp` and then their `perks`, `perkPicks`, `spellPicks` and `mana` set directly; `hp` is full. `parseSave` loads it now (non-null, perks as written). Two parties and one reserve.
+
+Migration results by hand (C8; `picksAt(level) = 3 + floor(level/2)`; level 6 gives 9, level 4 gives 5). Mage and Cleric trees are the evoker, cryomancer, arcanist, healer, paladin and saint paths (C3). maxMana = 2 x INT + (level-1) x floor(INT/2) + 2 x (Mage and Cleric nodes) + node maxMana (destruction 4) + gear maxMana (0).
+
+| Where | Name | Level | Tagged | INT | `perks` as written | `perkPicks` | `spellPicks` | `mana` |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| party_1 | Aldric | 6 | melee | 3 | weapon_training 2, mighty_blow 1, sunder 1, gain_endurance 1, toughness 1 | 1 | 0 | 0 |
+| party_1 | Delwyn | 6 | magic | 9 | spellcasting 1, quick_study 1, eagle_eye 1, arcane_mastery 1, deep_well 1, arcane_study 2, magic_arrow 1, flame_arrow 1, fireball 1, heal 1, heal_all 1, shield 1, bless 1 | 2 | 2 | 40 |
+| party_2 ("Second Company") | Brenna | 6 | archery | 4 | marksmanship 2, gain_perception 1, gain_agility 1, gain_luck 1, tireless 1, gain_intelligence 1 | 3 | 0 | 0 |
+| reserves | Garrick | 4 | melee | 3 | weapon_training 1, sunder 1, gain_endurance 1, spellcasting 1 | 2 | 1 | 0 |
+
+Expected after `migrateFrom22`:
+
+| Name | Nodes held after | Perks after | `perkPicks` after | `spellPicks` | `mana` after |
+| --- | --- | --- | --- | --- | --- |
+| Aldric | 3 | weapon_training, weapon_mastery (from mighty_blow and sunder), toughness (from gain_endurance and the held toughness, one node) | max(0, 9-3) = 6 | deleted | 0 |
+| Delwyn | 11 | deadeye (eagle_eye), lingering_cold (arcane_mastery), destruction (deep_well), arcane_study, magic_arrow, flame_arrow, fireball, heal, heal_all, shield, bless; spellcasting and quick_study dropped | max(0, 9-11) = 0 | deleted | maxMana = 18 + 20 + 2 x 10 + 4 = 62 (10 Mage and Cleric nodes: all but deadeye); saved 40 stays 40 (the clamp is `min(mana, 62)`) |
+| Brenna | 6 | marksmanship, far_shot, skirmisher, fortune, evasion, lasting_magic | 9-6 = 3 | deleted | 0 (clamped to maxMana: 8 + 5 x 2 + 2 x 1 = 20, still 0) |
+| Garrick | 3 | weapon_training, weapon_mastery, toughness; spellcasting dropped | max(0, 5-3) = 2 | deleted | 0 (maxMana 6 + 3 x 1 = 9) |
+
+Notes for step 05: (a) the mana clamp cannot bite on this data, because the new formula is at least the old one for every held character (Delwyn: old maxMana 44, new 62), so a clamp test needs a character made in the test (mana above the new maximum); (b) Aldric's `toughness` plus folded `gain_endurance` is the duplicate-collapse case; Delwyn's `arcane_study` rank 2 is the rank-collapse case, and his 11 nodes against 9 picks the clamp-to-0 case; (c) Delwyn's deadeye is a grandfathered capstone; (d) no unknown perk id is in the fixture (`parseSave` today refuses one), so the "unknown ids dropped" rule needs a test-made input.
+
+Deviations: none. No code, test or doc other than this plan folder changed. `npm test`: 84 files, 1510 tests passed, `tsc` clean (guard green).
