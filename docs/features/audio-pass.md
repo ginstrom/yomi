@@ -3,11 +3,11 @@
 **Request (user's words):** "separately from the ongoing skill tree work, I'd like you to improve the quality of the sound effects, to create indie game-quality SFX. If possible I'd also like a framework for narration of cutscenes and the like, maybe using a local version of a voice model, especially one that supports emotions and other effects."
 
 - **Slug:** `audio-pass`
-- **Phase:** 3, planning
+- **Phase:** 4, implementation
 - **Branch / worktree:** `audio-pass`, from `main` at `d18abf4`, in `.claude/worktrees/audio-pass` (kept apart from `skill-trees`)
 - **Architecture brief:** `docs/architecture/audio-pass.md` (`a82ae8f`)
 - **Design:** `docs/designs/audio-pass.md` (`84f5f35`, approved by the user)
-- **Plan:** `docs/implementation-plans/audio-pass/index.md` (pending)
+- **Plan:** `docs/implementation-plans/audio-pass/index.md` (`d842b3f`, 18 steps, gates G1–G11)
 
 ## Path
 
@@ -41,6 +41,8 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - Architect: opus.
 - Designer: opus.
 - Planner: opus.
+- Engineer and reviewer per step (reviewer matches): opus for 01, 02, 03, 05, 08–13, 15; sonnet for 04, 06, 07, 14, 16, 17, 18. Overall review opus.
+- Run order: 01, 03, 04 (so gates G1 and G2 run on the user's time), then 02, 05, 06, 07, 08…; steps one at a time in this worktree.
 
 ## Verification
 
