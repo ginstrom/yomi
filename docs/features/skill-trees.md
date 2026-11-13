@@ -40,6 +40,7 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 | 2026-11-14 | Policy fix in step 16: `techniqueScore` weighs a technique by the blows that fit in the AP left this turn (⌊AP/cost⌋), not the raw AP ratio, so Power Attack wins when only one blow fits either way. Step 16's engineer moves from sonnet to opus for it | orchestrator | keep the raw ratio; leave to stage 4 | Step 15 review: a 7 AP Power Attack lost to a 5 AP blow at 8 AP though only one fits; an AI correctness fix, not tuning |
 | 2026-11-14 | Blademaster refunds only attacks and strike techniques, not area techniques (Volley, Consecrate); a routine felling on any strike refunds its whole cost | orchestrator | refund areas too (needs an AbilityEvent field) | Blademaster is the melee duellist's capstone; an area refund would be a balance outlier and a schema change |
 | 2026-11-14 | A hit that deathblows a unit doesn't spend its Unbreakable save (judged on the hp the hit would leave) | orchestrator | spend the save anyway | Avoids "endures the blow. A deathblow!" and a wasted save that Revive would later expose |
+| 2026-11-14 | Purify is a cleanse, not a heal: excluded from world-map healing, `autoHeal` and the policy's heal choices (its own `purifyCast` step uses it); a purified ally gets no AP back this turn | orchestrator | count it as a 1d6 heal; refund AP | A 1d6 heal at 4 mana would crowd out real heals; AP refund adds a rule for little play |
 | 2026-11-13 | Own branch `skill-trees` off main | orchestrator | commit on main | Precedent: one branch per feature |
 
 ## Open questions
@@ -84,8 +85,10 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 - To step 22 (from step 19): `restore` events have no look yet; the battle's first turn start now logs after `battle_start` (`readySide`/`turnBegins` split).
 
 
-- To step 21 (from step 20): remove the `UNTAUGHT` exemption in `perks.test.ts`; Purify counts as a healing spell (`isHealing`), so world-map healing and the policy's heal choices would use it as a 1d6 heal — decide (orchestrator leans: exclude it from world-map healing and heal-choice; it's a cleanse); `sleepCast` checks only Asleep, not Frozen.
+- To step 21 (from step 20): remove the `UNTAUGHT` exemption in `perks.test.ts`; apply the Purify decision (not a heal anywhere but `purifyCast`); `sleepCast` checks only Asleep, not Frozen.
 - To step 22 (from step 20): the six spells' looks are placeholders; a revived unit's figure must stand up again on a `revived` outcome.
+
+- To step 22 (from step 20 review): Purify's log line says "is cleansed" even with no hostile status to remove — say it only when one was; `AttackEvent.helpless`'s comment still says "asleep".
 
 ## Verification
 
