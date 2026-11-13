@@ -62,7 +62,6 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 - Done in step 13: `takenPerks()` keeps passives only; the strip's first line is cut to two lines (`clampLines`) and a test holds all nodes inside the panel. Step 21 adds nodes: the test covers them automatically.
 
-- To step 16 (from step 08 review): CLAUDE.md's scaling paragraph — the stage-1 sentence splits stage 6's "In the run of 237…" narrative; move it after stage 6's text.
 - To final QA: step 08's play check was scripted, not hand-played; do a hand-played browser pass with a hero built across two trees.
 
 - Plan decision 2 (guard unchanged) allows a re-hash for a schema-only version bump (step 09 proved the log identical but for schemaVersion).
@@ -71,7 +70,6 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 - To stage 4 tuning (from step 12): area techniques aren't AP-normalised (Volley at 6 AP weighed against one 4 AP shot; Consecrate likewise) — normalise if the simulator over-uses them; Hunter's Mark has no value check beyond affording mark-then-attack; `tauntUse` judges threat by a foe's current attack range.
 
-- To step 16: apply the Captain-Pin decision (knight plan order) and note it in step 13's task file; restore Rooted's description clause "or the end of its next turn".
 
 
 - To stage 4 (from step 16): the `assassin` plan is unreachable for the ready-made heroes (Keen Eye asks Luck 6; they have 4 or less), so parity runs of it measure the fallback; Bandit Camp threat 4 at level 8 is won 500 of 500 by every plan, so parity needs a harder cell at level 8; at 8 AP with a 4 AP bow, Aimed Shot (6 AP) now gives way to two plain shots, as the blows-that-fit rule intends.
