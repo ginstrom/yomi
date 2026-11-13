@@ -241,12 +241,37 @@ PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH npm test
 
 ## 6. Completion criteria
 
-- [ ] The six spells, the new `Spell` fields, `frozen`, `hostile` and the `helpless` / `wakesOnDamage` split are in `spells.ts`; no reader of `sleep` remains.
-- [ ] The engine casts all six as §4.2 says; `fallenThisBattle` and `usedOnce` are set and read; `status_end` has `'cleansed'`.
-- [ ] Tests 1–12 pass; existing tests pass unchanged; the refactor guard is green and its fixture untouched.
-- [ ] `npm test` passes.
-- [ ] `CLAUDE.md` updated: the rules of casting (the statuses list gains frozen, the hostile flag, Frozen's helplessness, the `fallen` target and Revive's rule, Purify's cleanse, `bonusVs` and spell `bane`), `spells.ts`'s line (`SPELL_IDS`), and any mention of `sleep` as a status rule.
-- [ ] One commit, "Skill trees step 20: the special spells", on `skill-trees`, no push.
-- [ ] The index's step table shows this step `done (<commit>)`.
+- [x] The six spells, the new `Spell` fields, `frozen`, `hostile` and the `helpless` / `wakesOnDamage` split are in `spells.ts`; no reader of `sleep` remains.
+- [x] The engine casts all six as §4.2 says; `fallenThisBattle` and `usedOnce` are set and read; `status_end` has `'cleansed'`.
+- [x] Tests 1–12 pass; existing tests pass unchanged; the refactor guard is green and its fixture untouched.
+- [x] `npm test` passes.
+- [x] `CLAUDE.md` updated: the rules of casting (the statuses list gains frozen, the hostile flag, Frozen's helplessness, the `fallen` target and Revive's rule, Purify's cleanse, `bonusVs` and spell `bane`), `spells.ts`'s line (`SPELL_IDS`), and any mention of `sleep` as a status rule.
+- [x] One commit, "Skill trees step 20: the special spells", on `skill-trees`, no push.
+- [x] The index's step table shows this step `done (<commit>)`.
 
 ## 7. Execution record
+
+**2026-11-14, engineer (opus).**
+
+What was built:
+- `spells.ts`: the six spells (`SPELL_IDS` now 30, the six last, in C6's order; `ALL_SPELL_IDS` 33); `Spell.bane`, `bonusVs`, `cleanse`, `oncePerBattle`; `SpellTarget` `'fallen'`; `StatusRule.sleep` replaced by `helpless` and `wakesOnDamage`, plus `hostile` on the thirteen statuses; `frozen` (mark I). `spellRange` adds friendly range to a `fallen` spell (**reading recorded:** a fallen ally counts as "aimed at an ally").
+- `battleEngine.ts`: `isHelpless` (exported) replaces every `asleep` check of AP, zone of control, reactions and `HELPLESS_BONUS`; waking is generic over `wakesOnDamage` (`wakings`; `StruckOutcome.woke` is now the list of statuses woken); `fellAll` sets `fallenThisBattle`; `canPayFor` refuses a `oncePerBattle` spell in `usedOnce`; `canCast` and `castTouches` handle `fallen`; `cast` does Revive (no draw; hp max(1, ⌊maxHp/4⌋), statuses cleared without events, ap 0, `reactionReady` and `turnReady` false, `endured` and `fallenThisBattle` kept, outcome `revived: true` with `healed` = hp it stands at), Purify's cleanse (statuses ended in order laid; their `status_end` events, reason `cleansed`, are recorded right after the cast event, before the aftermath), `bane` (dice count doubled against `baneApplies`) and `bonusVs` (judged before the roll; on a hit drawn after the spell's own, doubled with them on a critical). `StatusEndEvent.reason` gains `'cleansed'`, `CastOutcome` gains `revived`. `formatEvent`: "Sera revives Aldric.", "Sera casts Purify: Aldric is cleansed (+3, 12 hp).", and a cleansed status "<name> is no longer <adjective>." (so a cleansed Asleep reads "is no longer asleep", not "wakes"). Carried-forward fix: `turnBegins`'s docstring now says it returns after the ticks when one ends the battle.
+- `policies.ts`: `blowBonus` reads `isHelpless` (same result for every unit today). `foeInfo.ts` reads `helpless`. `battleEffects.ts`: `SPELL_LOOKS` is a full `Record<SpellId, …>`, so the six got first looks borrowed from their kin (frost dart, healing sparkle, …); step 22 gives them their own.
+- `previewCast` needed no change: it has no damage field, and its odds and touched units (the fallen target included, `hitChance` null) come from `castTouches` and `spellApCost`/`spellRange` already.
+
+Tests: `spells.test.ts` (tests 1–2: the six spells' numbers, the hostile thirteen, helpless/wakesOnDamage, no `sleep` key; plus Revive's friendly range); `battleEngine.test.ts` new describe "the special spells (skill trees step 20)", 29 tests covering 3–12 (Asleep's existing tests untouched and passing; Frozen; Revive and its refusals, `usedOnce` through snapshot/restore, the winner; Purify; Ice Lance against each of the five statuses, miss, critical, power and ward; Holy Light draw counts; Renew and its restore; a seeded six-spell battle replayed and restored mid-way; the two log lines).
+
+Deviation from test-first: the engine and data changes were written before the engine tests. To show the tests bite, the engine file was swapped back to `HEAD`'s and the new describe run: 19 of 29 failed; the 10 that passed exercise paths that already existed (Glacial Prison laying a status, Renew, an unaffected Ice Lance, misses, the winner rule, Purify's plain heal).
+
+Tests changed deliberately: `spells.test.ts` (Ice Lance in the element map; 30 hero spells, 33 in all; `frozen` after `renewing` in `STATUS_IDS`; Pinned's and Taunted's rules now carry `hostile`); `perks.test.ts` exempts the six from "every hero spell has one node" and asserts they have none yet — **step 21 must drop that `UNTAUGHT` list** once their nodes are in `PERKS`.
+
+Commands and results:
+- `npx vitest run src/combat/spells.test.ts src/engine/battleEngine.test.ts`: pass.
+- `npx vitest run scripts/simulate.test.ts -t "refactor guard"`: 1 passed; no change under `scripts/` or any fixture (`git status`).
+- `npm test`: 86 files, 1946 tests passed; `tsc` clean.
+- `npm run test:browser` (run because `foeInfo.ts` and `battleEffects.ts` moved): 10 files, 117 tests passed.
+
+For later steps:
+- Step 21: Purify has `heal`, so `isHealing('purify')` is true: once a hero knows it, the world map's `worldSpells`/`autoHeal` and the policy's heal reserve and `healCast` treat it as a heal (1d6). Decide whether that is wanted when adding `purifyCast`. `sleepCast` still checks only `asleep` (not Frozen); `prisonCast` will want "not Frozen or Asleep".
+- Step 22: the six spells' looks are placeholders; `restore` events and Revive's aim still have no look; a revived unit's figure must stand again on a `cast` outcome with `revived`.
+

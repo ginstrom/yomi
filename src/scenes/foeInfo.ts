@@ -102,7 +102,7 @@ function statusPhrase(laid: StatusLaid): string {
   const rule = STATUSES[laid.id]
   const signed = (n: number) => (n < 0 ? `−${-n}` : `+${n}`)
   const effects = [
-    ...(rule.sleep ? ['no AP, helpless'] : []),
+    ...(rule.helpless ? ['no AP, helpless'] : []),
     ...(rule.actionPoints ? [`${signed(rule.actionPoints)} AP`] : []),
     ...(rule.toHit ? [`${signed(rule.toHit)} to hit`] : []),
     // Taunted's penalty is the engine's, as it depends on whom the taunted strikes.

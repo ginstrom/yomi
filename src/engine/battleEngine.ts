@@ -432,6 +432,8 @@ export interface CastOutcome {
   tauntPenalty?: number
   /** The unit was kept standing at 1 by Unbreakable. */
   endured?: true
+  /** The unit, fallen this battle, was brought back to stand at `hpAfter` (Revive). */
+  revived?: true
 }
 
 /**
@@ -525,14 +527,15 @@ export interface RegenerateEvent extends EventBase {
 
 /**
  * A status ended: its turns ran out, a sleeper was hurt awake, the last
- * mirror image was struck, the taunter it named fell (`source_fell`), or the
- * unit stepped off the hex it was rooted to (`moved`).
+ * mirror image was struck, the taunter it named fell (`source_fell`), the
+ * unit stepped off the hex it was rooted to (`moved`), or Purify ended a
+ * hostile status (`cleansed`).
  */
 export interface StatusEndEvent extends EventBase {
   type: 'status_end'
   unit: UnitId
   status: StatusId
-  reason: 'expired' | 'woke' | 'spent' | 'source_fell' | 'moved'
+  reason: 'expired' | 'woke' | 'spent' | 'source_fell' | 'moved' | 'cleansed'
 }
 
 /**
@@ -832,6 +835,11 @@ export function tauntPenalty(attacker: { statuses: readonly ActiveStatus[] }, ta
   return taunted && taunted.source !== target.id ? TAUNT_PENALTY : 0
 }
 
+/** Whether the unit is helpless: a status whose rule is `helpless` (Asleep, Frozen) is on it. No AP, no zone of control, `HELPLESS_BONUS` against it. */
+export function isHelpless(unit: { statuses: readonly ActiveStatus[] }): boolean {
+  return unit.statuses.some(({ id }) => STATUSES[id].helpless === true)
+}
+
 /** Whether the unit cannot move: a status whose rule is `immobile` (Pinned) is on it. */
 export function isImmobile(unit: { statuses: readonly ActiveStatus[] }): boolean {
   return unit.statuses.some(({ id }) => STATUSES[id].immobile === true)
@@ -1003,7 +1011,7 @@ export function abilityTouches<U extends Placed>(units: readonly U[], user: Plac
 /**
  * The units a cast of `spell` by `caster` aimed at `aim` would touch, in
  * roster order, whether or not it is legal: the standing target of a spell
- * aimed at a unit; for an area, every standing unit in its shape (`areaTouches`),
+ * aimed at a unit, or the fallen one of a spell aimed at the fallen; for an area, every standing unit in its shape (`areaTouches`),
  * everyone for a hostile spell, the caster's own side for a friendly
  * one. The engine resolves a cast over these, and the policies and the
  * battle screen judge one by them, so that the three agree.
@@ -1012,7 +1020,8 @@ export function castTouches<U extends Placed>(units: readonly U[], caster: Place
   const { target, range, radius, shape = 'burst', hostile } = SPELLS[spell]
   if (target !== 'area') {
     if (!('target' in aim)) return []
-    return units.filter((u) => u.id === aim.target && u.hp > 0)
+    // A spell aimed at the fallen touches its target at 0 hit points.
+    return units.filter((u) => u.id === aim.target && (target === 'fallen' ? u.hp <= 0 : u.hp > 0))
   }
   const center = aimHex(units, aim)
   if (!center) return []
@@ -1280,7 +1289,7 @@ export class BattleEngine {
     const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
     const arc = arcStruck(foe, actor.position, isMelee(actor.stats))
     const arcBonus = ARC_BONUS[arc]
-    const helpless = hasStatus(foe, 'asleep') ? HELPLESS_BONUS : 0
+    const helpless = isHelpless(foe) ? HELPLESS_BONUS : 0
     const attacker = this.statsOf(actor)
     const defender = this.statsOf(foe)
     const traits = traitToHit(attacker, { arc, free: false, moved: actor.moved, attackedYet: actor.attackedYet })
@@ -1429,7 +1438,7 @@ export class BattleEngine {
   /**
    * Refills the side's action points, less or more by their statuses, and
    * readies the other side's free attacks and turns to meet a blow (not a
-   * sleeper's). It logs nothing; the battle's first turn does it before
+   * helpless unit's). It logs nothing; the battle's first turn does it before
    * `battle_start` is logged, so that the units it shows are ready.
    */
   private readySide(side: Side): void {
@@ -1441,7 +1450,7 @@ export class BattleEngine {
         u.moved = false
         u.refunded = false
       } else {
-        u.reactionReady = u.hp > 0 && !hasStatus(u, 'asleep')
+        u.reactionReady = u.hp > 0 && !isHelpless(u)
         u.turnReady = u.reactionReady
       }
       u.gearChangePaid = false
@@ -1456,8 +1465,9 @@ export class BattleEngine {
    * a pass over the side's standing units in roster order, regeneration
    * (unless a status stops it), Renewing (likewise), Sanctuary, Serenity and
    * Shadowdancer (`restores`); then a round comes off what the side's
-   * standing units have recharging, a sleeper's included (done whether or
-   * not the battle has just ended). Nothing after the ticks draws.
+   * standing units have recharging, a helpless unit's included. If a tick
+   * ends the battle, it returns there and none of the rest is done. Nothing
+   * after the ticks draws.
    */
   private turnBegins(side: Side): BattleEvent[] {
     const events: BattleEvent[] = []
@@ -1590,9 +1600,9 @@ export class BattleEngine {
     return [this.record<StatusEndEvent>({ type: 'status_end', round: this.round, unit: unit.id, status, reason })]
   }
 
-  /** Damage wakes a sleeper that still stands. */
+  /** Damage ends each status that `wakesOnDamage` (Asleep) on a unit that still stands. */
   private wake(unit: UnitRecord, damage: number): BattleEvent[] {
-    return damage > 0 && unit.hp > 0 && hasStatus(unit, 'asleep') ? this.endStatus(unit, 'asleep', 'woke') : []
+    return wakings(unit, damage).flatMap((status) => this.endStatus(unit, status, 'woke'))
   }
 
   /**
@@ -1620,10 +1630,10 @@ export class BattleEngine {
     unit.statuses.push(status)
     const rule = STATUSES[laid.id]
     if (unit.side === this.phase) {
-      if (rule.sleep) unit.ap = 0
+      if (rule.helpless) unit.ap = 0
       else if (rule.actionPoints) unit.ap = Math.max(0, unit.ap + rule.actionPoints)
     }
-    if (rule.sleep) {
+    if (rule.helpless) {
       unit.reactionReady = false
       unit.turnReady = false
     }
@@ -1710,22 +1720,25 @@ export class BattleEngine {
     return abilityTouches(this.units, actor, ability, at, attackRange).some((u) => u.side !== actor.side)
   }
 
-  /** Whether `actor` knows `spell` and has the action points and mana for it. */
+  /** Whether `actor` knows `spell`, has the action points and mana for it and, for a spell once a battle, has not cast it yet. */
   private canPayFor(actor: UnitRecord, spell: SpellId): boolean {
     const known = SPELLS[spell]
     return (
       known !== undefined &&
       actor.stats.magic?.spells.includes(spell) === true &&
       actor.ap >= spellApCost(this.statsOf(actor), spell) &&
-      actor.mana >= known.manaCost
+      actor.mana >= known.manaCost &&
+      !(known.oncePerBattle && actor.usedOnce.includes(spell))
     )
   }
 
   /**
    * Whether `actor` can cast `spell` at `aim`: it can pay for it, and the aim
    * suits the spell: a standing foe within range, a standing ally (itself
-   * included) within range, itself, or a hex of the board within range, its
-   * own for a spell centred on it; a hostile area must hold a standing foe.
+   * included) within range, itself, a hex of the board within range, its
+   * own for a spell centred on it, or an ally within range that fell this
+   * battle, at 0 hit points, on a hex no standing unit holds; a hostile area
+   * must hold a standing foe.
    */
   private canCast(actor: UnitRecord, spell: SpellId, aim: CastAim): boolean {
     if (!this.canPayFor(actor, spell)) return false
@@ -1739,7 +1752,17 @@ export class BattleEngine {
     }
     if (!('target' in aim)) return false
     const target = this.units.find((u) => u.id === aim.target)
-    if (!target || target.hp <= 0) return false
+    if (!target) return false
+    if (kind === 'fallen') {
+      return (
+        target.side === actor.side &&
+        target.hp <= 0 &&
+        target.fallenThisBattle &&
+        hexDistance(target.position, actor.position) <= range &&
+        !this.units.some((u) => u.hp > 0 && hexEquals(u.position, target.position))
+      )
+    }
+    if (target.hp <= 0) return false
     if (kind === 'self') return target === actor
     const side = kind === 'foe' ? target.side !== actor.side : target.side === actor.side
     return side && hexDistance(target.position, actor.position) <= range
@@ -1754,7 +1777,7 @@ export class BattleEngine {
         u.side !== mover.side &&
         u.hp > 0 &&
         u.reactionReady &&
-        !hasStatus(u, 'asleep') &&
+        !isHelpless(u) &&
         isMelee(u.stats) &&
         hexDistance(u.position, hex) === 1 &&
         hexDistance(u.position, to) > 1,
@@ -2002,7 +2025,7 @@ export class BattleEngine {
     const flankBonus = flankers.length * FLANK_BONUS_PER_ALLY
     const arc = attackArc(target, actor.position)
     const arcBonus = ARC_BONUS[arc]
-    const helpless = hasStatus(target, 'asleep')
+    const helpless = isHelpless(target)
     const attacker = this.statsOf(actor)
     const defender = this.statsOf(target)
     const defenderAc = defender.ac
@@ -2162,12 +2185,19 @@ export class BattleEngine {
    * Pays for a legal cast and resolves it over every unit it touches, in
    * roster order. A hostile spell rolls to hit each: on a hit a mirror image
    * takes it if there is one, drawing nothing more, and otherwise the
-   * spell's dice are drawn and its status laid on a unit left standing. A
-   * friendly one draws its heal, if any, and lays its status. Then the
-   * wakings, images spent and falls, and at most one end of the battle.
+   * spell's dice are drawn (their count doubled against the bane-struck for
+   * a `bane` spell, and its `bonusVs` dice after them against a unit with one
+   * of its statuses before the roll) and its status laid on a unit left
+   * standing. A friendly one ends its target's hostile statuses for a
+   * `cleanse` spell (drawing nothing), draws its heal, if any, and lays its
+   * status; one aimed at the fallen (Revive) stands its target up again at a
+   * quarter of its maximum hit points, at least 1, its statuses gone, with no
+   * AP and no reaction, drawing nothing. A spell once a battle is marked
+   * used. Then the cleansed statuses' ends, the wakings, images spent and
+   * falls, and at most one end of the battle.
    */
   private cast(actor: UnitRecord, spell: SpellId, aim: CastAim): BattleEvent[] {
-    const { manaCost, hostile, damage: dice, element, drain, heal, status: ownStatus } = SPELLS[spell]
+    const { manaCost, hostile, damage: dice, element, drain, heal, status: ownStatus, bane, bonusVs, cleanse, oncePerBattle, target: aimedAt } = SPELLS[spell]
     const touched = castTouches(this.units, actor, spell, aim)
     const at = aimHex(this.units, aim)!
     const stats = this.statsOf(actor)
@@ -2181,12 +2211,34 @@ export class BattleEngine {
     actor.ap -= apCost
     actor.mana -= manaCost
     actor.gearChangePaid = false
+    if (oncePerBattle) actor.usedOnce.push(spell)
     if (!hexEquals(at, actor.position)) actor.facing = hexDirectionTowards(actor.position, at)!
     const caster = spellcaster(stats, spell)
+    const cleansed: Array<{ unit: UnitRecord; status: StatusId }> = []
 
     const outcomes: StruckOutcome[] = touched.map((unit) => {
-      if (hostile) return this.strikeUnit(unit, caster, { dice, element, status, halfOnMiss: false, power, taunt: tauntPenalty(actor, unit) })
+      if (hostile) {
+        const doubled = dice && bane && baneApplies(this.statsOf(unit)) ? { ...dice, count: dice.count * 2 } : dice
+        // Whether the bonus applies is judged before the roll.
+        const bonusDice = bonusVs && bonusVs.statuses.some((id) => hasStatus(unit, id)) ? bonusVs.damage : undefined
+        return this.strikeUnit(unit, caster, { dice: doubled, bonusDice, element, status, halfOnMiss: false, power, taunt: tauntPenalty(actor, unit) })
+      }
       const hpBefore = unit.hp
+      if (aimedAt === 'fallen') {
+        unit.hp = Math.max(1, Math.floor(unit.stats.maxHp / 4))
+        unit.statuses = []
+        unit.ap = 0
+        unit.reactionReady = false
+        unit.turnReady = false
+        return {
+          unit: unit.id, attackRoll: null, chance: null, defenderAc: null, hit: true, critical: false, fumble: false, image: false,
+          damage: 0, warded: 0, half: false, healed: unit.hp, hpBefore, hpAfter: unit.hp, status: null, revived: true,
+        }
+      }
+      if (cleanse) {
+        for (const { id } of unit.statuses.filter(({ id }) => STATUSES[id].hostile)) cleansed.push({ unit, status: id })
+        unit.statuses = unit.statuses.filter(({ id }) => !STATUSES[id].hostile)
+      }
       const healed = heal ? Math.min(rollDamage(heal, this.rng) + healBonus, unit.stats.maxHp - unit.hp) : 0
       unit.hp += Math.max(0, healed)
       const laid = status ? this.layStatus(unit, status) : null
@@ -2218,7 +2270,10 @@ export class BattleEngine {
       outcomes: outcomes.map(({ woke: _, ...outcome }) => outcome),
       drained,
     })
-    return [event, ...this.aftermath(outcomes, touched)]
+    const ends = cleansed.map(({ unit, status }) =>
+      this.record<StatusEndEvent>({ type: 'status_end', round: this.round, unit: unit.id, status, reason: 'cleansed' }),
+    )
+    return [event, ...ends, ...this.aftermath(outcomes, touched)]
   }
 
   /**
@@ -2290,14 +2345,16 @@ export class BattleEngine {
    * (doubled on a critical) less its ward; on a miss with `halfOnMiss`, half
    * the dice, rounded down, less its ward. With `throughResistance` the
    * damage first goes through its resistance as a shot's does, before the
-   * ward. A blow that wakes a sleeper wakes it before the status is laid, on
-   * a hit that left it standing.
+   * ward. `bonusDice` (a spell's `bonusVs`) are drawn on a hit after the
+   * dice, doubled with them on a critical. A blow that wakes a sleeper wakes
+   * it before the status is laid, on a hit that left it standing.
    */
   private strikeUnit(
     unit: UnitRecord,
     attacker: CombatantStats,
     blow: {
       dice: DamageRoll | undefined
+      bonusDice?: DamageRoll
       element: Element | undefined
       status: StatusLaid | undefined
       halfOnMiss: boolean
@@ -2316,7 +2373,7 @@ export class BattleEngine {
     const power = blow.power ?? 0
     const rolled =
       roll.hit && !image && blow.dice
-        ? rollHitDamage(blow.dice, roll.critical, this.rng) + power
+        ? rollHitDamage(blow.dice, roll.critical, this.rng) + (blow.bonusDice ? rollHitDamage(blow.bonusDice, roll.critical, this.rng) : 0) + power
         : half
           ? Math.floor(Math.max(0, rollDamage(blow.dice!, this.rng)) / 2) + power
           : 0
@@ -2324,8 +2381,8 @@ export class BattleEngine {
     const damage = warded(through, blow.element, this.statsOf(unit))
     const endured = this.applyDamage(unit, damage)
     // A blow that wakes a sleeper wakes it before anything it lays; Sleep itself deals none.
-    const woke = damage > 0 && unit.hp > 0 && hasStatus(unit, 'asleep')
-    if (woke) unit.statuses = unit.statuses.filter((s) => s.id !== 'asleep')
+    const woke = wakings(unit, damage)
+    if (woke.length > 0) unit.statuses = unit.statuses.filter((s) => !woke.includes(s.id))
     const laid = roll.hit && !image && blow.status && unit.hp > 0 ? this.layStatus(unit, blow.status) : null
     return {
       unit: unit.id, ...roll, defenderAc, image, damage, warded: through - damage, half,
@@ -2365,8 +2422,8 @@ export class BattleEngine {
     const events: BattleEvent[] = []
     for (const outcome of outcomes) {
       const unit = this.units.find((u) => u.id === outcome.unit)!
-      if (outcome.woke) {
-        events.push(this.record<StatusEndEvent>({ type: 'status_end', round: this.round, unit: unit.id, status: 'asleep', reason: 'woke' }))
+      for (const status of outcome.woke ?? []) {
+        events.push(this.record<StatusEndEvent>({ type: 'status_end', round: this.round, unit: unit.id, status, reason: 'woke' }))
       }
       if (outcome.image) events.push(...this.imagesSpent(unit))
     }
@@ -2392,6 +2449,7 @@ export class BattleEngine {
       if (target.hp > 0) continue
       target.ap = 0
       target.statuses = []
+      target.fallenThisBattle = true
       fallen.push(target)
       events.push(this.record<UnitDownEvent>({ type: 'unit_down', round: this.round, unit: target.id }))
     }
@@ -2436,8 +2494,14 @@ export class BattleEngine {
   }
 }
 
-/** A cast or area outcome, with whether it woke its unit, which the event does not keep. */
-type StruckOutcome = CastOutcome & { woke?: boolean }
+/** A cast or area outcome, with the statuses its damage woke its unit from, which the event does not keep. */
+type StruckOutcome = CastOutcome & { woke?: StatusId[] }
+
+/** The statuses `damage` ends on `unit`: each that `wakesOnDamage` (Asleep), if it hurt and the unit still stands. */
+function wakings(unit: UnitRecord, damage: number): StatusId[] {
+  if (damage <= 0 || unit.hp <= 0) return []
+  return unit.statuses.filter(({ id }) => STATUSES[id].wakesOnDamage).map(({ id }) => id)
+}
 
 function snapshot(unit: UnitRecord): UnitSnapshot {
   return {
@@ -2462,9 +2526,9 @@ function snapshot(unit: UnitRecord): UnitSnapshot {
   }
 }
 
-/** A unit's action points at the start of its turn, `base` changed by its statuses: none while asleep, never below 0. */
+/** A unit's action points at the start of its turn, `base` changed by its statuses: none while helpless, never below 0. */
 function apAfterStatuses(unit: UnitRecord, base: number): number {
-  if (hasStatus(unit, 'asleep')) return 0
+  if (isHelpless(unit)) return 0
   const change = unit.statuses.reduce((total, { id }) => total + (STATUSES[id].actionPoints ?? 0), 0)
   return Math.max(0, base + change)
 }
@@ -2536,6 +2600,13 @@ function describeCast(event: CastEvent, names: Readonly<Record<UnitId, string>>)
   const opening = `${names[event.caster]} casts ${spell.name}${on}`
   const { outcomes } = event
   if (outcomes.length === 0) return `${opening}: it touches no one.`
+  // "Sera revives Aldric."
+  if (outcomes[0].revived) return `${names[event.caster]} revives ${names[outcomes[0].unit]}.`
+  // "Sera casts Purify: Aldric is cleansed (+3, 12 hp)."
+  if (spell.cleanse && outcomes.length === 1) {
+    const [o] = outcomes
+    return `${names[event.caster]} casts ${spell.name}: ${names[o.unit]} is cleansed (+${o.healed}, ${o.hpAfter} hp).`
+  }
   if (!spell.hostile) {
     const healed = outcomes.filter((o) => o.healed > 0 || spell.heal)
     if (spell.heal && outcomes.length === 1) return `${opening}: +${outcomes[0].healed} (${outcomes[0].hpAfter} hp).`
@@ -2648,6 +2719,7 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
     case 'status_end':
       if (event.reason === 'woke') return `${names[event.unit]} wakes.`
       if (event.reason === 'spent') return `The last image of ${names[event.unit]} is gone.`
+      if (event.reason === 'cleansed') return `${names[event.unit]} is no longer ${STATUSES[event.status].adjective}.`
       return event.status === 'asleep' ? `${names[event.unit]} wakes.` : `${names[event.unit]} is no longer ${STATUSES[event.status].adjective}.`
     case 'move': {
       const steps = event.path.length

@@ -11,6 +11,7 @@ import {
   castTouches,
   flankersOf,
   hasStatus,
+  isHelpless,
   isMelee,
   resistanceLeft,
   statsIn,
@@ -279,7 +280,7 @@ function reach(self: UnitSnapshot): { range: number; apCost: number } {
 
 /**
  * The situational bonus to `self`'s blow at `target`, less a technique
- * strike's own `toHit`: flanking, the arc, a sleeper and `self`'s traits
+ * strike's own `toHit`: flanking, the arc, a helpless target and `self`'s traits
  * (`traitToHit`, as `previewAttack` has them), less Taunted's penalty.
  */
 function blowBonus(state: BattleState, self: UnitSnapshot, target: UnitSnapshot): number {
@@ -287,7 +288,7 @@ function blowBonus(state: BattleState, self: UnitSnapshot, target: UnitSnapshot)
   return (
     flankersOf(state.units, self, target).length * FLANK_BONUS_PER_ALLY +
     ARC_BONUS[arc] +
-    (hasStatus(target, 'asleep') ? HELPLESS_BONUS : 0) +
+    (isHelpless(target) ? HELPLESS_BONUS : 0) +
     traitToHit(self, { arc, free: false, moved: self.moved === true, attackedYet: self.attackedYet === true }) -
     tauntPenalty(self, target)
   )

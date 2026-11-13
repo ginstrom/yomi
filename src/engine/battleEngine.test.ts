@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { ABILITIES, type Ability, type AbilityId } from '../combat/abilities.ts'
 import { GOBLIN_STATS, TROLL_STATS, type CombatantStats, type OnHit } from '../combat/combat.ts'
 import { mulberry32 } from '../combat/rng.ts'
-import { SPELL_IDS, type SpellId } from '../combat/spells.ts'
+import { HELPLESS_BONUS, SPELL_IDS, type SpellId } from '../combat/spells.ts'
 import { HEX_DIRECTIONS, areaOf, hex, hexAdd, hexDistance, hexKey, type Hex } from '../grid/hex.ts'
 import {
   AMBUSH_BONUS,
@@ -4651,6 +4651,346 @@ describe('BattleEngine auras and turn-start restores', () => {
       expect(formatEvent({ ...base, type: 'status_laid', unit: 'brenna', status: 'mirrored', turns: 2, cause: 'shadowdancer' }, names)).toBe(
         'A mirror image appears beside Brenna.',
       )
+    })
+  })
+})
+
+describe('BattleEngine the special spells (skill trees step 20)', () => {
+  const WIDE = { cols: 9, rows: 3 }
+  type Magic = NonNullable<CombatantStats['magic']>
+  const SPECIAL: SpellId[] = ['ice_lance', 'glacial_prison', 'purify', 'revive', 'renew', 'holy_light']
+  const mage = (spells: SpellId[], extra: Partial<UnitSetup> = {}, magic: Partial<Magic> = {}): UnitSetup => ({
+    id: 'mage',
+    side: 'player',
+    stats: { ...WARRIOR_STATS, name: 'Mage', maxHp: 40, actionPoints: 30, magic: { maxMana: 100, skill: 76, spells, ...magic } },
+    position: hex(1, 1),
+    ...extra,
+  })
+  const BIG_GOBLIN = { ...GOBLIN_STATS, maxHp: 40 }
+  const goblinAt = (position: Hex, extra: Partial<UnitSetup> = {}): UnitSetup => ({ ...GOBLIN, stats: BIG_GOBLIN, position, ...extra })
+  const allyAt = (position: Hex, extra: Partial<UnitSetup> = {}): UnitSetup => ({ ...CLERIC, stats: { ...WARRIOR_STATS, maxHp: 40 }, position, ...extra })
+  /** An engine whose draws come from `queue` while it holds any, else 0.66 (a roll of 34, a 6 on a d8, a 4 on a d6), counted. */
+  const battle = (units: UnitSetup[]) => {
+    const queue: number[] = []
+    let draws = 0
+    const engine = new BattleEngine({ board: WIDE, units }, { rng: () => ((draws += 1), queue.length > 0 ? queue.shift()! : 0.66) })
+    return { engine, queue, draws: () => draws }
+  }
+  const on = (spell: SpellId, target: string, unit = 'mage'): Action => ({ type: 'cast', unit, spell, target })
+  const at = (spell: SpellId, centre: Hex, unit = 'mage'): Action => ({ type: 'cast', unit, spell, at: centre })
+  const statusesOf = (engine: BattleEngine, id: string) => unitOf(engine, id).statuses
+  const casts = (engine: BattleEngine, unit = 'mage') => engine.legalActions(unit).filter((a) => a.type === 'cast')
+  /** The draws one step takes. */
+  const drawsOf = (b: ReturnType<typeof battle>, action: Action) => {
+    const before = b.draws()
+    const events = b.engine.step(action)
+    return { events, draws: b.draws() - before }
+  }
+  /** A roll of 1: a critical hit. */
+  const CRIT = 0.99
+  /** A roll of 100: a fumble. */
+  const MISS = 0
+
+  describe('Frozen and Glacial Prison', () => {
+    it('lays Frozen for 2 turns on a hit, and nothing on a miss', () => {
+      const b = battle([mage(['glacial_prison']), goblinAt(hex(4, 1))])
+      expect(b.engine.step(on('glacial_prison', 'goblin'))[0]).toMatchObject({ outcomes: [{ hit: true, damage: 0, status: { id: 'frozen', turnsLeft: 2 } }] })
+      expect(statusesOf(b.engine, 'goblin')).toEqual([{ id: 'frozen', turnsLeft: 2 }])
+      const missed = battle([mage(['glacial_prison']), goblinAt(hex(4, 1))])
+      missed.queue.push(MISS)
+      missed.engine.step(on('glacial_prison', 'goblin'))
+      expect(statusesOf(missed.engine, 'goblin')).toEqual([])
+    })
+
+    it('lasts longer by the caster’s hostile extension', () => {
+      const b = battle([mage(['glacial_prison'], {}, { extend: { hostile: 1 } }), goblinAt(hex(4, 1))])
+      b.engine.step(on('glacial_prison', 'goblin'))
+      expect(statusesOf(b.engine, 'goblin')).toEqual([{ id: 'frozen', turnsLeft: 3 }])
+    })
+
+    it('gives a frozen unit no AP, and ends after 2 of its turns', () => {
+      const b = battle([mage(['glacial_prison']), goblinAt(hex(4, 1))])
+      b.engine.step(on('glacial_prison', 'goblin'))
+      b.engine.step(END_TURN)
+      expect(unitOf(b.engine, 'goblin').ap).toBe(0)
+      expect(b.engine.legalActions()).toEqual([END_TURN])
+      expect(b.engine.step(END_TURN).filter((e) => e.type === 'status_end')).toEqual([])
+      b.engine.step(END_TURN)
+      expect(unitOf(b.engine, 'goblin').ap).toBe(0)
+      const ends = b.engine.step(END_TURN).filter((e) => e.type === 'status_end')
+      expect(ends).toMatchObject([{ unit: 'goblin', status: 'frozen', reason: 'expired' }])
+      b.engine.step(END_TURN)
+      expect(unitOf(b.engine, 'goblin').ap).toBe(GOBLIN_STATS.actionPoints)
+    })
+
+    it('holds no zone of control while frozen', () => {
+      const units = [mage(['glacial_prison']), allyAt(hex(3, 1), { id: 'warrior' }), goblinAt(hex(4, 1))]
+      const free = battle(units)
+      expect(free.engine.previewMove('warrior', hex(2, 1))?.provokes).toEqual(['goblin'])
+      const b = battle(units)
+      b.engine.step(on('glacial_prison', 'goblin'))
+      expect(b.engine.previewMove('warrior', hex(2, 1))?.provokes).toEqual([])
+    })
+
+    it('is struck with HELPLESS_BONUS, and damage does not end it', () => {
+      const units = [mage(['glacial_prison']), allyAt(hex(3, 1), { id: 'warrior' }), goblinAt(hex(4, 1))]
+      const free = battle(units)
+      const before = free.engine.previewAttack('warrior', 'goblin')!.hitChance
+      const b = battle(units)
+      b.engine.step(on('glacial_prison', 'goblin'))
+      expect(b.engine.previewAttack('warrior', 'goblin')!.hitChance).toBeCloseTo(before + HELPLESS_BONUS / 100)
+      const events = b.engine.step({ type: 'attack', unit: 'warrior', target: 'goblin' })
+      expect(events[0]).toMatchObject({ type: 'attack', hit: true })
+      expect((events[0] as AttackEvent).damage).toBeGreaterThan(0)
+      expect(events.filter((e) => e.type === 'status_end')).toEqual([])
+      expect(statusesOf(b.engine, 'goblin')).toEqual([{ id: 'frozen', turnsLeft: 2 }])
+    })
+
+    it('is not woken by a spell’s damage either, where a sleeper is', () => {
+      const frozen = battle([mage(['glacial_prison', 'magic_arrow']), goblinAt(hex(4, 1))])
+      frozen.engine.step(on('glacial_prison', 'goblin'))
+      expect(frozen.engine.step(on('magic_arrow', 'goblin')).filter((e) => e.type === 'status_end')).toEqual([])
+      const asleep = battle([mage(['sleep', 'magic_arrow']), goblinAt(hex(4, 1))])
+      asleep.engine.step(on('sleep', 'goblin'))
+      expect(asleep.engine.step(on('magic_arrow', 'goblin')).filter((e) => e.type === 'status_end')).toMatchObject([{ status: 'asleep', reason: 'woke' }])
+    })
+  })
+
+  describe('Revive', () => {
+    /** The mage at (1,1), Cleric at (3,1) on 1 hit point with no armour, a Goblin beside it: a Fireball there fells Cleric. */
+    const felled = (extra: UnitSetup[] = [], cleric: Partial<UnitSetup> = {}) => {
+      const b = battle([mage(['fireball', 'revive']), allyAt(hex(3, 1), { hp: 1, stats: { ...WARRIOR_STATS, maxHp: 40, ac: 0 }, ...cleric }), goblinAt(hex(4, 1)), ...extra])
+      const events = b.engine.step(at('fireball', hex(4, 1)))
+      expect(events).toContainEqual(expect.objectContaining({ type: 'unit_down', unit: 'cleric' }))
+      return b
+    }
+
+    it('targets an ally that fell this battle, within 2 on a free hex, and stands it up at a quarter of its maximum', () => {
+      const b = felled()
+      expect(unitOf(b.engine, 'cleric')).toMatchObject({ hp: 0, fallenThisBattle: true })
+      expect(casts(b.engine)).toContainEqual(on('revive', 'cleric'))
+      const { events, draws } = drawsOf(b, on('revive', 'cleric'))
+      expect(draws).toBe(0)
+      expect(events).toHaveLength(1)
+      expect(events[0]).toMatchObject({
+        type: 'cast', spell: 'revive', target: 'cleric', manaCost: 20, apCost: 6,
+        outcomes: [{ unit: 'cleric', revived: true, hit: true, healed: 10, hpBefore: 0, hpAfter: 10, status: null }],
+      })
+      expect(unitOf(b.engine, 'cleric')).toMatchObject({ hp: 10, statuses: [], ap: 0, reactionReady: false, fallenThisBattle: true })
+      expect(b.engine.getState().phase).toBe('player')
+    })
+
+    it('stands a unit of 3 maximum hit points up at 1', () => {
+      const b = felled([], { stats: { ...WARRIOR_STATS, maxHp: 3, ac: 0 } })
+      b.engine.step(on('revive', 'cleric'))
+      expect(unitOf(b.engine, 'cleric').hp).toBe(1)
+    })
+
+    it('is not legal on a fallen ally whose hex a standing unit holds', () => {
+      const b = felled([allyAt(hex(2, 1), { id: 'warrior' })])
+      b.engine.step(move('warrior', hex(3, 1)))
+      expect(casts(b.engine)).not.toContainEqual(on('revive', 'cleric'))
+      expect(() => b.engine.step(on('revive', 'cleric'))).toThrow()
+    })
+
+    it('is not legal beyond its range', () => {
+      const b = felled()
+      b.engine.step(move('mage', hex(0, 1)))
+      expect(casts(b.engine)).not.toContainEqual(on('revive', 'cleric'))
+    })
+
+    it('is not legal on a standing ally, on one that entered the battle fallen, or on a fallen foe', () => {
+      const b = battle([mage(['revive']), allyAt(hex(2, 1)), allyAt(hex(1, 0), { id: 'warrior', hp: 0 }), goblinAt(hex(5, 1)), goblinAt(hex(2, 0), { id: 'goblin2', hp: 0 })])
+      expect(casts(b.engine)).toEqual([])
+    })
+
+    it('is once a battle for each caster; another caster may revive the same unit again', () => {
+      const second = mage(['revive'], { id: 'priest', position: hex(2, 0) })
+      const b = felled([second])
+      b.engine.step(on('revive', 'cleric'))
+      expect(unitOf(b.engine, 'mage').usedOnce).toEqual(['revive'])
+      b.engine.step(at('fireball', hex(4, 1)))
+      expect(unitOf(b.engine, 'cleric').hp).toBe(0)
+      expect(casts(b.engine)).not.toContainEqual(on('revive', 'cleric'))
+      expect(casts(b.engine, 'priest')).toContainEqual(on('revive', 'cleric', 'priest'))
+      b.engine.step(on('revive', 'cleric', 'priest'))
+      expect(unitOf(b.engine, 'cleric').hp).toBe(10)
+    })
+
+    it('keeps the caster’s use through a snapshot and restore', () => {
+      const engine = new BattleEngine({ board: WIDE, units: [mage(['revive']), allyAt(hex(2, 1), { hp: 0 }), goblinAt(hex(5, 1))] }, { seed: 7 })
+      const saved = engine.snapshot()
+      Object.assign(saved.units.find((u) => u.id === 'cleric')!, { fallenThisBattle: true })
+      const fallen = BattleEngine.restore(saved)
+      fallen.step(on('revive', 'cleric'))
+      const restored = BattleEngine.restore(JSON.parse(JSON.stringify(fallen.snapshot())))
+      expect(restored.snapshot().units.find((u) => u.id === 'mage')!.usedOnce).toEqual(['revive'])
+      expect(restored.legalActions('mage').filter((a) => a.type === 'cast')).toEqual([])
+    })
+
+    it('keeps the battle going while another ally stands, and cannot come when the last one falls', () => {
+      const b = battle([
+        mage(['fireball', 'revive'], { hp: 1, stats: { ...WARRIOR_STATS, maxHp: 40, ac: 0, actionPoints: 30, magic: { maxMana: 100, skill: 76, spells: ['fireball', 'revive'] } } }),
+        allyAt(hex(2, 1), { hp: 1, stats: { ...WARRIOR_STATS, maxHp: 40, ac: 0 } }),
+        goblinAt(hex(3, 1)),
+      ])
+      const events = b.engine.step(at('fireball', hex(2, 1)))
+      expect(events.at(-1)).toMatchObject({ type: 'battle_end', winner: 'enemy' })
+      expect(b.engine.legalActions()).toEqual([])
+    })
+  })
+
+  describe('Purify', () => {
+    it('ends every hostile status on the ally in the order laid, keeps the friendly ones, then heals its dice and the heal bonus', () => {
+      const b = battle([mage(['bless', 'death_cloud', 'web', 'purify'], {}, { healBonus: 2 }), allyAt(hex(3, 1), { hp: 20 }), goblinAt(hex(4, 1))])
+      b.engine.step(at('bless', hex(1, 1)))
+      b.engine.step(at('death_cloud', hex(4, 1)))
+      b.engine.step(at('web', hex(4, 1)))
+      expect(statusesOf(b.engine, 'cleric').map((s) => s.id)).toEqual(['blessed', 'poisoned', 'webbed'])
+      const { events, draws } = drawsOf(b, on('purify', 'cleric'))
+      expect(draws).toBe(1)
+      expect(events).toMatchObject([
+        { type: 'cast', spell: 'purify', outcomes: [{ unit: 'cleric', healed: 6, hpBefore: 20, hpAfter: 26 }] },
+        { type: 'status_end', unit: 'cleric', status: 'poisoned', reason: 'cleansed' },
+        { type: 'status_end', unit: 'cleric', status: 'webbed', reason: 'cleansed' },
+      ])
+      expect(statusesOf(b.engine, 'cleric')).toEqual([{ id: 'blessed', turnsLeft: 3 }])
+      expect(formatEvent(events[0], { ...NAMES, mage: 'Mage' })).toBe('Mage casts Purify: Cleric is cleansed (+6, 26 hp).')
+      expect(formatEvent(events[1], NAMES)).toBe('Cleric is no longer poisoned.')
+    })
+
+    it('is legal on an ally with no hostile status, and only heals it', () => {
+      const b = battle([mage(['purify']), allyAt(hex(3, 1), { hp: 20 }), goblinAt(hex(6, 1))])
+      expect(casts(b.engine)).toContainEqual(on('purify', 'cleric'))
+      expect(b.engine.step(on('purify', 'cleric'))).toMatchObject([{ type: 'cast', outcomes: [{ healed: 4 }] }])
+    })
+  })
+
+  describe('Ice Lance', () => {
+    const setups: Record<'chilled' | 'slowed' | 'webbed' | 'asleep' | 'frozen', (b: ReturnType<typeof battle>) => void> = {
+      chilled: (b) => b.engine.step(on('frostbite', 'goblin')),
+      slowed: (b) => b.engine.step({ type: 'ability', unit: 'mage', ability: 'hamstring', target: 'goblin' }),
+      webbed: (b) => b.engine.step(at('web', hex(2, 1))),
+      asleep: (b) => b.engine.step(on('sleep', 'goblin')),
+      frozen: (b) => b.engine.step(on('glacial_prison', 'goblin')),
+    }
+    const lancer = (magic: Partial<Magic> = {}, goblin: Partial<UnitSetup> = {}) =>
+      battle([
+        mage(['frostbite', 'web', 'sleep', 'glacial_prison', 'ice_lance'], { stats: { ...WARRIOR_STATS, name: 'Mage', maxHp: 40, actionPoints: 30, abilities: ['hamstring'], magic: { maxMana: 100, skill: 76, spells: ['frostbite', 'web', 'sleep', 'glacial_prison', 'ice_lance'], ...magic } } }),
+        goblinAt(hex(2, 1), { stats: { ...BIG_GOBLIN, maxHp: 80 }, ...goblin }),
+      ])
+
+    it('draws its own 2d8 alone against an unaffected foe', () => {
+      const b = lancer()
+      const { events, draws } = drawsOf(b, on('ice_lance', 'goblin'))
+      expect(draws).toBe(3)
+      expect(events[0]).toMatchObject({ outcomes: [{ hit: true, damage: 12 }] })
+    })
+
+    for (const [status, lay] of Object.entries(setups)) {
+      it(`draws 2d8 more after its own against a ${status} foe`, () => {
+        const b = lancer()
+        lay(b)
+        expect(statusesOf(b.engine, 'goblin').map((s) => s.id)).toContain(status)
+        const { events, draws } = drawsOf(b, on('ice_lance', 'goblin'))
+        expect(draws).toBe(5)
+        expect(events[0]).toMatchObject({ outcomes: [{ hit: true, damage: 24 }] })
+      })
+    }
+
+    it('draws no damage dice on a miss', () => {
+      const b = lancer()
+      setups.chilled(b)
+      b.queue.push(MISS)
+      const { events, draws } = drawsOf(b, on('ice_lance', 'goblin'))
+      expect(draws).toBe(1)
+      expect(events[0]).toMatchObject({ outcomes: [{ hit: false, damage: 0 }] })
+    })
+
+    it('doubles both its dice and the bonus on a critical', () => {
+      const b = lancer()
+      setups.chilled(b)
+      b.queue.push(CRIT)
+      const { events, draws } = drawsOf(b, on('ice_lance', 'goblin'))
+      expect(draws).toBe(9)
+      expect(events[0]).toMatchObject({ outcomes: [{ hit: true, critical: true, damage: 48 }] })
+    })
+
+    it('adds frost power once and loses a frost ward once', () => {
+      const b = lancer({ power: { frost: 3 } }, { stats: { ...BIG_GOBLIN, maxHp: 80, wards: { frost: 2 } } })
+      setups.chilled(b)
+      expect(b.engine.step(on('ice_lance', 'goblin'))[0]).toMatchObject({ outcomes: [{ damage: 25, warded: 2 }] })
+    })
+  })
+
+  describe('Holy Light', () => {
+    it('draws 6d6 against a regenerating or blightborn foe and 3d6 against any other', () => {
+      const against = (stats: CombatantStats) => {
+        const b = battle([mage(['holy_light']), goblinAt(hex(4, 1), { stats: { ...stats, maxHp: 80 } })])
+        return drawsOf(b, on('holy_light', 'goblin'))
+      }
+      expect(against(GOBLIN_STATS)).toMatchObject({ draws: 4, events: [{ outcomes: [{ damage: 12 }] }] })
+      expect(against(TROLL_STATS)).toMatchObject({ draws: 7, events: [{ outcomes: [{ damage: 24 }] }] })
+      expect(against({ ...GOBLIN_STATS, blightborn: true })).toMatchObject({ draws: 7, events: [{ outcomes: [{ damage: 24 }] }] })
+    })
+  })
+
+  describe('Renew', () => {
+    it('lays Renewing for 3 turns on each ally within 2 of the caster, itself included, and no foe; it heals 3 as their turn begins', () => {
+      const b = battle([mage(['renew'], { hp: 30 }), allyAt(hex(3, 1), { hp: 20 }), allyAt(hex(4, 1), { id: 'warrior' }), goblinAt(hex(2, 1))])
+      b.engine.step(at('renew', hex(1, 1)))
+      expect(statusesOf(b.engine, 'mage')).toEqual([{ id: 'renewing', turnsLeft: 3 }])
+      expect(statusesOf(b.engine, 'cleric')).toEqual([{ id: 'renewing', turnsLeft: 3 }])
+      expect(statusesOf(b.engine, 'warrior')).toEqual([])
+      expect(statusesOf(b.engine, 'goblin')).toEqual([])
+      b.engine.step(END_TURN)
+      const events = b.engine.step(END_TURN)
+      expect(events.filter((e) => e.type === 'restore')).toMatchObject([
+        { unit: 'mage', hp: 3, cause: 'renewing' },
+        { unit: 'cleric', hp: 3, cause: 'renewing' },
+      ])
+    })
+  })
+
+  describe('a battle of all six', () => {
+    const units = (): UnitSetup[] => [
+      mage(SPECIAL.concat('fireball'), { stats: { ...WARRIOR_STATS, name: 'Mage', maxHp: 40, actionPoints: 40, magic: { maxMana: 100, skill: 200, spells: [...SPECIAL, 'fireball'] } } }),
+      allyAt(hex(2, 1), { hp: 1, stats: { ...WARRIOR_STATS, maxHp: 40, ac: 0 } }),
+      goblinAt(hex(3, 1), { stats: { ...BIG_GOBLIN, maxHp: 200 } }),
+      goblinAt(hex(6, 1), { id: 'troll', stats: { ...TROLL_STATS, maxHp: 200 } }),
+    ]
+    const first: Action[] = [at('fireball', hex(3, 1)), on('revive', 'cleric'), at('renew', hex(1, 1)), on('glacial_prison', 'goblin'), on('ice_lance', 'goblin')]
+    const rest: Action[] = [END_TURN, END_TURN, on('holy_light', 'troll'), on('purify', 'cleric'), END_TURN]
+    const SEED = 1
+
+    it('replays to the same events from its seed, and through a snapshot and restore', () => {
+      const play = (engine: BattleEngine, actions: Action[]) => {
+        for (const action of actions) engine.step(action)
+        return engine
+      }
+      const original = play(play(new BattleEngine({ board: WIDE, units: units() }, { seed: SEED }), first), rest)
+      const log = original.getLog()
+      expect(log.filter((e): e is CastEvent => e.type === 'cast').map((e) => e.spell)).toEqual(['fireball', 'revive', 'renew', 'glacial_prison', 'ice_lance', 'holy_light', 'purify'])
+      expect(log).toContainEqual(expect.objectContaining({ type: 'unit_down', unit: 'cleric' }))
+      expect(log.find((e): e is CastEvent => e.type === 'cast' && e.spell === 'revive')!.outcomes[0].revived).toBe(true)
+      expect(play(play(new BattleEngine({ board: WIDE, units: units() }, { seed: SEED }), first), rest).getLog()).toEqual(log)
+      const midway = play(new BattleEngine({ board: WIDE, units: units() }, { seed: SEED }), first)
+      const restored = BattleEngine.restore(JSON.parse(JSON.stringify(midway.snapshot())))
+      expect(play(restored, rest).getLog()).toEqual(log)
+    })
+  })
+
+  describe('formatEvent', () => {
+    it('words a revive, and a status cleansed', () => {
+      const base = { seq: 1, round: 1 }
+      const revive: CastEvent = {
+        ...base, type: 'cast', caster: 'cleric', spell: 'revive', target: 'warrior', at: hex(1, 1), distance: 1, apCost: 6, apAfter: 2,
+        manaCost: 20, manaAfter: 0, casterFacing: 0, skill: 70, drained: 0,
+        outcomes: [{ unit: 'warrior', attackRoll: null, chance: null, defenderAc: null, hit: true, critical: false, fumble: false, image: false,
+          damage: 0, warded: 0, half: false, healed: 5, hpBefore: 0, hpAfter: 5, status: null, revived: true }],
+      }
+      expect(formatEvent(revive, NAMES)).toBe('Cleric revives Warrior.')
+      expect(formatEvent({ ...base, type: 'status_end', unit: 'warrior', status: 'asleep', reason: 'cleansed' }, NAMES)).toBe('Warrior is no longer asleep.')
     })
   })
 })

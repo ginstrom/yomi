@@ -80,6 +80,13 @@ export const SPELL_LOOKS: Record<SpellId, SpellLook> = {
   drain_life: { colour: 0x8e1b1b, glow: 0xe57373, missile: 'dart', impact: 'burst' },
   curse: { colour: 0x6a1b9a, glow: 0xb39ddb, missile: 'orb', impact: 'cloud' },
   web: { colour: 0xbdbdbd, glow: 0xeeeeee, missile: 'orb', impact: 'ring' },
+  // Stage 3's special spells: first looks from their kin; step 22 gives them their own.
+  ice_lance: { colour: 0x81d4fa, glow: 0xe1f5fe, missile: 'dart', impact: 'burst' },
+  glacial_prison: { colour: 0x9ee8ff, glow: 0xffffff, missile: 'orb', impact: 'ring' },
+  purify: HEALING,
+  revive: HEALING,
+  renew: HEALING,
+  holy_light: { colour: 0xfff8e1, glow: 0xffffff, missile: 'dart', impact: 'burst' },
   dark_shield: { ...SUPPORT, colour: 0x283593, glow: 0x7986cb },
 }
 

@@ -38,6 +38,7 @@ describe('elements', () => {
       meteor: 'fire',
       frost_blast: 'frost',
       frostbite: 'frost',
+      ice_lance: 'frost',
       acid_arrow: 'acid',
       death_cloud: 'poison',
       lightning_bolt: 'lightning',
@@ -92,12 +93,12 @@ describe('the stage-1 spells', () => {
   }
   const none = { shape: undefined, damage: undefined, heal: undefined, status: undefined, element: undefined, radius: undefined }
 
-  it('hold the heroes’ 24 spells, Web and Curse among them, and leave the monsters three', () => {
-    expect(SPELL_IDS).toHaveLength(24)
-    expect(SPELL_IDS.slice(-7)).toEqual(['frostbite', 'meteor', 'mass_haste', 'lay_on_hands', 'ward', 'web', 'curse'])
+  it('hold the heroes’ 30 spells, Web and Curse among them, and leave the monsters three', () => {
+    expect(SPELL_IDS).toHaveLength(30)
+    expect(SPELL_IDS.slice(-13, -6)).toEqual(['frostbite', 'meteor', 'mass_haste', 'lay_on_hands', 'ward', 'web', 'curse'])
     expect(MONSTER_SPELL_IDS).toEqual(['lightning_bolt', 'drain_life', 'dark_shield'])
     expect(new Set(ALL_SPELL_IDS).size).toBe(ALL_SPELL_IDS.length)
-    expect(ALL_SPELL_IDS).toHaveLength(27)
+    expect(ALL_SPELL_IDS).toHaveLength(33)
   })
 
   it('are as design 4.3 has them', () => {
@@ -165,8 +166,8 @@ describe('a caster’s modifiers to a spell’s cost and reach', () => {
 })
 
 describe('the technique statuses', () => {
-  it('lists marked, slowed, pinned, taunted, rooted and renewing after warded', () => {
-    expect(STATUS_IDS.slice(STATUS_IDS.indexOf('warded'))).toEqual(['warded', 'marked', 'slowed', 'pinned', 'taunted', 'rooted', 'renewing'])
+  it('lists marked, slowed, pinned, taunted, rooted, renewing and frozen after warded', () => {
+    expect(STATUS_IDS.slice(STATUS_IDS.indexOf('warded'))).toEqual(['warded', 'marked', 'slowed', 'pinned', 'taunted', 'rooted', 'renewing', 'frozen'])
   })
 
   it('makes Marked 10 off armour class and Slowed 3 off action points', () => {
@@ -176,18 +177,18 @@ describe('the technique statuses', () => {
     expect(effectiveStats({ stats, statuses: [{ id: 'marked', turnsLeft: 2 }] }).ac).toBe(15)
   })
 
-  it('makes Pinned immobile, and nothing else', () => {
+  it('makes Pinned immobile, and nothing else (hostile, for Purify)', () => {
     const { name, adjective, mark, colour, ...rule } = STATUSES.pinned
     expect({ name, adjective, mark }).toEqual({ name: 'Pinned', adjective: 'pinned', mark: 'N' })
     expect(colour).toBeGreaterThan(0)
-    expect(rule).toEqual({ immobile: true })
+    expect(rule).toEqual({ immobile: true, hostile: true })
   })
 
   it('gives Taunted a name, the mark T and a red, and no stat change: the engine applies its penalty by target', () => {
     const { name, adjective, mark, colour, ...rule } = STATUSES.taunted
     expect({ name, adjective, mark }).toEqual({ name: 'Taunted', adjective: 'taunted', mark: 'T' })
     expect(colour >> 16).toBeGreaterThan(0xc0)
-    expect(rule).toEqual({})
+    expect(rule).toEqual({ hostile: true })
   })
 
   it('makes Rooted 10 armour class and 2 resistance, marked R in a colour of its own', () => {
@@ -198,7 +199,7 @@ describe('the technique statuses', () => {
   })
 
   it('makes Renewing a regen of 3, marked U in a colour of its own, listed after rooted', () => {
-    expect(STATUS_IDS.at(-1)).toBe('renewing')
+    expect(STATUS_IDS.indexOf('renewing')).toBe(STATUS_IDS.indexOf('rooted') + 1)
     const { name, adjective, mark, colour, ...rule } = STATUSES.renewing
     expect({ name, adjective, mark }).toEqual({ name: 'Renewing', adjective: 'renewing', mark: 'U' })
     expect(rule).toEqual({ regen: 3 })
@@ -208,5 +209,61 @@ describe('the technique statuses', () => {
   it('gives every status its own mark', () => {
     const marks = STATUS_IDS.map((id) => STATUSES[id].mark)
     expect(new Set(marks).size).toBe(marks.length)
+  })
+})
+
+describe('the special spells (skill trees step 20)', () => {
+  const row = (id: SpellId) => {
+    const { school, target, range, radius, manaCost, apCost, damage, heal, status, element, hostile, bane, bonusVs, cleanse, oncePerBattle } = SPELLS[id]
+    return { school, target, range, radius, manaCost, apCost, damage, heal, status, element, hostile, bane, bonusVs, cleanse, oncePerBattle }
+  }
+  const none = {
+    radius: undefined, damage: undefined, heal: undefined, status: undefined, element: undefined,
+    bane: undefined, bonusVs: undefined, cleanse: undefined, oncePerBattle: undefined,
+  }
+  const d = (count: number, sides: number, bonus = 0) => ({ count, sides, bonus })
+
+  it('are heroes’ spells, the last six, and leave the monsters’ alone', () => {
+    expect(SPELL_IDS.slice(-6)).toEqual(['ice_lance', 'glacial_prison', 'purify', 'revive', 'renew', 'holy_light'])
+    expect(MONSTER_SPELL_IDS).toEqual(['lightning_bolt', 'drain_life', 'dark_shield'])
+  })
+
+  it('are as design 4.3 has them', () => {
+    expect(row('ice_lance')).toEqual({ ...none, school: 'offence', target: 'foe', range: 6, manaCost: 7, apCost: 4, hostile: true,
+      damage: d(2, 8), element: 'frost', bonusVs: { statuses: ['chilled', 'slowed', 'webbed', 'asleep', 'frozen'], damage: d(2, 8) } })
+    expect(row('glacial_prison')).toEqual({ ...none, school: 'offence', target: 'foe', range: 5, manaCost: 12, apCost: 5, hostile: true,
+      status: { id: 'frozen', turns: 2 } })
+    expect(row('purify')).toEqual({ ...none, school: 'healing', target: 'ally', range: 4, manaCost: 4, apCost: 3, hostile: false,
+      heal: d(1, 6), cleanse: true })
+    expect(row('revive')).toEqual({ ...none, school: 'healing', target: 'fallen', range: 2, manaCost: 20, apCost: 6, hostile: false,
+      oncePerBattle: true })
+    expect(row('renew')).toEqual({ ...none, school: 'support', target: 'area', range: 0, radius: 2, manaCost: 10, apCost: 5, hostile: false,
+      status: { id: 'renewing', turns: 3 } })
+    expect(row('holy_light')).toEqual({ ...none, school: 'offence', target: 'foe', range: 5, manaCost: 7, apCost: 4, hostile: true,
+      damage: d(3, 6), bane: true })
+  })
+
+  it('give Revive’s reach the friendly range, as a spell on an ally', () => {
+    expect(spellRange({ magic: { maxMana: 20, skill: 60, spells: [], friendlyRange: 2 } }, 'revive')).toBe(4)
+  })
+})
+
+describe('hostile and helpless statuses (skill trees step 20)', () => {
+  it('marks exactly the thirteen statuses a foe lays to harm as hostile', () => {
+    expect(STATUS_IDS.filter((id) => STATUSES[id].hostile)).toEqual([
+      'asleep', 'chilled', 'corroded', 'poisoned', 'baned', 'seared', 'cursed', 'webbed', 'marked', 'slowed', 'pinned', 'taunted', 'frozen',
+    ])
+  })
+
+  it('makes Asleep helpless and woken by damage, and Frozen helpless and not', () => {
+    expect(STATUSES.asleep).toMatchObject({ helpless: true, wakesOnDamage: true })
+    expect(STATUSES.frozen).toMatchObject({ name: 'Frozen', adjective: 'frozen', mark: 'I', helpless: true, hostile: true })
+    expect(STATUSES.frozen.wakesOnDamage).toBeUndefined()
+    expect(STATUS_IDS.filter((id) => STATUSES[id].helpless)).toEqual(['asleep', 'frozen'])
+    expect(STATUS_IDS.filter((id) => STATUSES[id].wakesOnDamage)).toEqual(['asleep'])
+  })
+
+  it('keeps no rule called sleep', () => {
+    for (const id of STATUS_IDS) expect(Object.keys(STATUSES[id])).not.toContain('sleep')
   })
 })

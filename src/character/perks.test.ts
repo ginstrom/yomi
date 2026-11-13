@@ -33,8 +33,16 @@ import { PATHS } from './trees.ts'
 const warriorAt = (level: number) => ({ ...createWarrior(), level })
 
 describe('PERKS', () => {
+  // Stage 3's special spells (skill trees step 20) have no node until step 21 puts theirs in PERKS.
+  const UNTAUGHT: readonly string[] = ['ice_lance', 'glacial_prison', 'purify', 'revive', 'renew', 'holy_light']
+  const TAUGHT = SPELL_IDS.filter((spell) => !UNTAUGHT.includes(spell))
+
+  it('teaches no node the special spells yet', () => {
+    for (const spell of SPELL_IDS.filter((id) => UNTAUGHT.includes(id))) expect(perkTeaching(spell), spell).toBeNull()
+  })
+
   it('teaches every hero spell from exactly one node, and no monster spell', () => {
-    for (const spell of SPELL_IDS) {
+    for (const spell of TAUGHT) {
       const node = perkTeaching(spell)
       expect(node, spell).not.toBeNull()
       expect(PERK_IDS.filter((id) => (PERKS[id] as Perk).spell === spell)).toEqual([node])
@@ -43,7 +51,7 @@ describe('PERKS', () => {
   })
 
   it('names each spell node by its spell, with its mana and AP', () => {
-    for (const spell of SPELL_IDS) {
+    for (const spell of TAUGHT) {
       const node: Perk = PERKS[perkTeaching(spell)!]
       expect(node.name).toBe(SPELLS[spell].name)
       expect(node.description).toBe(`${SPELLS[spell].description}; ${SPELLS[spell].manaCost} mana, ${SPELLS[spell].apCost} AP`)
