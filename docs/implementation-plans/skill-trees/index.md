@@ -25,7 +25,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | Step | File | Outcome | Depends on | Engineer tier | Status |
 | --- | --- | --- | --- | --- | --- |
 | **Stage 1: trees, picks and passives** | | | | | |
-| 01 | [Baseline and the v22 fixture](01-baseline-and-v22-fixture.md) | Today's figures re-measured on the unchanged code; `src/game/fixtures/save-v22.json` captured | — | sonnet | in progress |
+| 01 | [Baseline and the v22 fixture](01-baseline-and-v22-fixture.md) | Today's figures re-measured on the unchanged code; `src/game/fixtures/save-v22.json` captured | — | sonnet | done (930f3ea) |
 | 02 | [Stage-1 spells and the Warded status](02-stage1-spells.md) | Frostbite, Meteor, Mass Haste, Lay on Hands, Ward; Web and Curse become hero spells; `warded` and `StatusRule.wardAll` | 01 | sonnet | pending |
 | 03 | [Trees, nodes and picks](03-trees-nodes-picks.md) | `trees.ts`; the new `Perk`; the 57 stage-1 nodes; tier, depth, calling, capstone lock; a pick every even level; plans; pre-rolls and bandits rebuilt; `perkTree.ts` reworked; `SAVE_VERSION` 23 | 02 | opus | pending |
 | 04 | [Mana for every hero and the derived passives](04-mana-and-derived-passives.md) | `maxMana` for all; `deriveCombatStats` reads the new effects; the engine applies spell power, heal bonus, extension, friendly range and AP discounts | 03 | opus | pending |
