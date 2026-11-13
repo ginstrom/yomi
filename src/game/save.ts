@@ -31,11 +31,14 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * goes through `migrateFrom18` and then it. Version 24 (skill trees step 11)
  * keeps whether each unit of a saved battle has moved this turn; a version-23
  * save loads as it is, `BattleEngine.restore` taking `moved` up as false.
+ * Version 25 (skill trees step 17) keeps each unit's stage-3 fields
+ * (`attackedYet`, `endured`, `refunded`, `fallenThisBattle`, `usedOnce`); a
+ * version-24 save loads as it is, `restore` taking them up at their defaults.
  * Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 24
+export const SAVE_VERSION = 25
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -262,7 +265,7 @@ export function parseSave(raw: string | null): SaveFile | null {
   try {
     // What `serializeSave` wrote has the file's shape but for its items, which are ids until put back below.
     const saved = JSON.parse(raw) as SaveFile & { version: unknown }
-    check(saved && typeof saved === 'object' && [SAVE_VERSION, 23, 22, 18].includes(saved.version as number))
+    check(saved && typeof saved === 'object' && [SAVE_VERSION, 24, 23, 22, 18].includes(saved.version as number))
     check(typeof saved.savedAt === 'number')
     const { game, battle } = saved
     check(game && typeof game === 'object')

@@ -1023,6 +1023,35 @@ describe('techniques in a hero’s stats', () => {
     expect(deriveCombatStats(hero('rooted')).traits).toEqual(['rooted'])
   })
 
+  it('carries the stage-3 numbers its nodes add, each only when not 0', () => {
+    const plain = deriveCombatStats(hero('toughness', 'dodger', 'keen_eye'))
+    for (const key of ['opportunity', 'rear', 'movedToHit', 'execute', 'critDamage', 'manaOnHit', 'manaRegen'] as const) {
+      expect(plain).not.toHaveProperty(key)
+    }
+    lending('toughness', { effects: { ...PERKS.toughness.effects, opportunityToHit: 15, opportunityDamage: 3, manaOnHit: 1 } }, () =>
+      lending('dodger', { effects: { ...PERKS.dodger.effects, rearToHit: 15, rearDamage: 4, movedToHit: 10 } }, () =>
+        lending('keen_eye', { effects: { ...PERKS.keen_eye.effects, executeDamage: 5, critDamage: 4, manaRegen: 2 } }, () => {
+          const stats = deriveCombatStats(hero('toughness', 'dodger', 'keen_eye'))
+          expect(stats).toMatchObject({
+            opportunity: { toHit: 15, damage: 3 },
+            rear: { toHit: 15, damage: 4 },
+            movedToHit: 10,
+            execute: 5,
+            critDamage: 4,
+            manaOnHit: 1,
+            manaRegen: 2,
+          })
+          // One half of a pair alone still gives the pair.
+          expect(deriveCombatStats(hero('toughness')).opportunity).toEqual({ toHit: 15, damage: 3 })
+          expect(deriveCombatStats(hero('toughness'))).not.toHaveProperty('rear')
+        }),
+      ),
+    )
+    lending('toughness', { effects: { ...PERKS.toughness.effects, rearDamage: 4 } }, () => {
+      expect(deriveCombatStats(hero('toughness')).rear).toEqual({ toHit: 0, damage: 4 })
+    })
+  })
+
   it('carries the traits its nodes give, in TRAIT_IDS order, and none for a hero without', () => {
     expect(deriveCombatStats(hero('toughness', 'dodger'))).not.toHaveProperty('traits')
     lending('toughness', { trait: 'rooted' }, () =>

@@ -237,6 +237,7 @@ export function deriveCombatStats(character: Character): CombatantStats {
   const usesMana = spells.length > 0 || abilities.some((ability) => ABILITIES[ability].manaCost !== undefined)
   const imbueDamage = perkBonus(character, 'imbueDamage')
   const traits = traitsOf(character)
+  const traitNumbers = stageThreeNumbers(character)
   const wards: Partial<Record<Element, number>> = {}
   for (const element of ELEMENTS) if (wardTotals[element]) wards[element] = wardTotals[element]
   // A node's on-hit entries (Sacred Weapon) go with a blow, never a shot.
@@ -262,7 +263,23 @@ export function deriveCombatStats(character: Character): CombatantStats {
     ...(abilities.length > 0 ? { abilities } : {}),
     ...(imbueDamage !== 0 ? { imbueDamage } : {}),
     ...(traits.length > 0 ? { traits } : {}),
+    ...traitNumbers,
   }
+}
+
+/** The attack traits' numbers a character's nodes add (`CombatantStats.opportunity` to `manaRegen`), each only when not 0. */
+function stageThreeNumbers(character: Character): Partial<CombatantStats> {
+  const pair = (toHit: number, damage: number) => (toHit !== 0 || damage !== 0 ? { toHit, damage } : undefined)
+  const numbers: Partial<CombatantStats> = {
+    opportunity: pair(perkBonus(character, 'opportunityToHit'), perkBonus(character, 'opportunityDamage')),
+    rear: pair(perkBonus(character, 'rearToHit'), perkBonus(character, 'rearDamage')),
+    movedToHit: perkBonus(character, 'movedToHit'),
+    execute: perkBonus(character, 'executeDamage'),
+    critDamage: perkBonus(character, 'critDamage'),
+    manaOnHit: perkBonus(character, 'manaOnHit'),
+    manaRegen: perkBonus(character, 'manaRegen'),
+  }
+  return Object.fromEntries(Object.entries(numbers).filter(([, value]) => value !== undefined && value !== 0))
 }
 
 const RING_SLOTS: readonly EquipmentSlot[] = ['ring1', 'ring2']

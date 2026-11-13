@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BLIGHT_HORROR_STATS, GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, baneApplies, damageThrough, effectiveResistance, foeAtLevel, foeYardstick, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, warded, type CombatantStats } from './combat.ts'
+import { BLIGHT_HORROR_STATS, GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, baneApplies, damageThrough, effectiveResistance, foeAtLevel, foeYardstick, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, rollHitDamage, sameCombatStats, warded, type CombatantStats } from './combat.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -126,7 +126,39 @@ describe('formatDamage', () => {
   })
 })
 
+describe('rollHitDamage', () => {
+  it('doubles the dice on a critical, or multiplies them by the multiplier given, drawing a die each', () => {
+    const draws = (critical: boolean, multiplier?: number) => {
+      let n = 0
+      const rng = () => (n++, 0.5)
+      return { damage: rollHitDamage({ count: 1, sides: 8, bonus: 1 }, critical, rng, multiplier), n }
+    }
+    expect(draws(false)).toEqual({ damage: 6, n: 1 })
+    expect(draws(false, 3)).toEqual({ damage: 6, n: 1 })
+    expect(draws(true)).toEqual({ damage: 11, n: 2 })
+    expect(draws(true, 3)).toEqual({ damage: 16, n: 3 })
+  })
+})
+
 describe('sameCombatStats', () => {
+  it('tells apart the attack traits’ numbers, a field at 0 being the same as none', () => {
+    const fields: Partial<CombatantStats>[] = [
+      { opportunity: { toHit: 15, damage: 3 } },
+      { rear: { toHit: 15, damage: 4 } },
+      { rear: { toHit: 0, damage: 4 } },
+      { movedToHit: 10 },
+      { execute: 5 },
+      { critDamage: 4 },
+      { manaOnHit: 1 },
+      { manaRegen: 2 },
+    ]
+    for (const field of fields) {
+      expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, ...field })).toBe(false)
+      expect(sameCombatStats({ ...WARRIOR_STATS, ...field }, { ...WARRIOR_STATS, ...structuredClone(field) })).toBe(true)
+    }
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, movedToHit: 0, opportunity: { toHit: 0, damage: 0 } })).toBe(true)
+  })
+
   it('compares every stat, damage dice included', () => {
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, damage: { ...WARRIOR_STATS.damage } })).toBe(true)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, attackRange: 5 })).toBe(false)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ABILITIES, ABILITY_IDS, abilityApCost, type Ability, type AbilityId } from './abilities.ts'
+import { ABILITIES, ABILITY_IDS, SPELLSWORD_STRIKES, abilityApCost, type Ability, type AbilityId } from './abilities.ts'
 import { GOBLIN_STATS, TROLL_STATS, foeAtLevel, sameCombatStats, type CombatantStats } from './combat.ts'
 
 const MONSTER_ABILITIES: AbilityId[] = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit']
@@ -155,6 +155,19 @@ describe('abilities', () => {
     expect(abilityApCost(bow, 'sprint')).toBe(0)
     expect(abilityApCost(longsword, 'troll_claws')).toBe(8)
     expect(abilityApCost(bow, 'fire_spit')).toBe(4)
+  })
+
+  it('prices the Spellsword Strikes at the weapon’s AP + 0 for an Arcane Knight, and nothing else differently', () => {
+    const longsword: CombatantStats = { ...GOBLIN_STATS, attackApCost: 5 }
+    const knight: CombatantStats = { ...longsword, traits: ['arcane_knight'] }
+    expect(SPELLSWORD_STRIKES).toEqual(['flame_strike', 'frost_strike', 'thunder_strike'])
+    for (const id of SPELLSWORD_STRIKES) {
+      expect(abilityApCost(longsword, id)).toBe(5 + ABILITIES[id].weaponAp!)
+      expect(abilityApCost(knight, id)).toBe(5)
+    }
+    expect(abilityApCost(longsword, 'flame_strike')).toBe(6)
+    expect(abilityApCost(knight, 'power_attack')).toBe(abilityApCost(longsword, 'power_attack'))
+    expect(abilityApCost(knight, 'pin')).toBe(6)
   })
 
   it('makes the Troll’s claws two claws of its weapon’s dice for its whole turn, with no recharge', () => {

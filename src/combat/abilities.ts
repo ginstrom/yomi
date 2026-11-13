@@ -121,10 +121,19 @@ export const ABILITY_IDS = [
 
 export type AbilityId = (typeof ABILITY_IDS)[number]
 
-/** The action points `ability` costs a unit of `stats`: the weapon's attack AP plus its `weaponAp` for a technique, else its own. */
-export function abilityApCost(stats: Pick<CombatantStats, 'attackApCost'>, ability: AbilityId): number {
+/** The Spellsword's Strikes, which Arcane Knight makes at the weapon's own AP. */
+export const SPELLSWORD_STRIKES: readonly AbilityId[] = ['flame_strike', 'frost_strike', 'thunder_strike']
+
+/**
+ * The action points `ability` costs a unit of `stats`: the weapon's attack AP
+ * plus its `weaponAp` for a technique (plus nothing for a Spellsword Strike
+ * by a unit with the trait `arcane_knight`), else its own.
+ */
+export function abilityApCost(stats: Pick<CombatantStats, 'attackApCost' | 'traits'>, ability: AbilityId): number {
   const { weaponAp, apCost } = ABILITIES[ability]
-  return weaponAp !== undefined ? stats.attackApCost + weaponAp : apCost
+  if (weaponAp === undefined) return apCost
+  const knight = stats.traits?.includes('arcane_knight') === true && SPELLSWORD_STRIKES.includes(ability)
+  return stats.attackApCost + (knight ? 0 : weaponAp)
 }
 
 const CLAW: Strike = { name: 'Claw', verb: 'claws', damage: { count: 1, sides: 4, bonus: 2 } }

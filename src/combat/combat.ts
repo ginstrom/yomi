@@ -84,6 +84,20 @@ export interface CombatantStats {
   blightborn?: true
   /** The rules its nodes give it that the engine reads by name (`TRAIT_IDS` order); left out when none. */
   traits?: readonly TraitId[]
+  /** Added to the chance and to a hit's damage (after the dice, never doubled) of its free attacks, counters included (Iron Skin); none when left out. */
+  opportunity?: { toHit: number; damage: number }
+  /** Added to the chance and to a hit's damage (after the dice, never doubled) of its weapon attacks that strike a foe's rear arc (Backstab); none when left out. */
+  rear?: { toHit: number; damage: number }
+  /** Added to the chance of its attacks in its own turn once it has taken a step that turn (Skirmisher); 0 when left out. */
+  movedToHit?: number
+  /** Added to a hit's damage against a foe at half its hit points or less before the blow (Executioner); 0 when left out. */
+  execute?: number
+  /** Added to a critical hit's damage after the dice are multiplied (Fortune); 0 when left out. */
+  critDamage?: number
+  /** Mana a melee hit that strikes no image restores, up to its maximum (Battle Mage); 0 when left out. */
+  manaOnHit?: number
+  /** Mana regained as its side's turn begins (Serenity, read from skill trees step 19); 0 when left out. */
+  manaRegen?: number
 }
 
 /**
@@ -161,6 +175,10 @@ function sameOnHit(a: CombatantStats['onHit'], b: CombatantStats['onHit']): bool
   )
 }
 
+function samePair(a: { toHit: number; damage: number } | undefined, b: { toHit: number; damage: number } | undefined): boolean {
+  return (a?.toHit ?? 0) === (b?.toHit ?? 0) && (a?.damage ?? 0) === (b?.damage ?? 0)
+}
+
 function sameWards(a: CombatantStats['wards'], b: CombatantStats['wards']): boolean {
   return ELEMENTS.every((element) => (a?.[element] ?? 0) === (b?.[element] ?? 0))
 }
@@ -197,7 +215,14 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     sameOnHit(a.onHit, b.onHit) &&
     (a.imbueDamage ?? 0) === (b.imbueDamage ?? 0) &&
     (a.blightborn ?? false) === (b.blightborn ?? false) &&
-    sameList(a.traits, b.traits)
+    sameList(a.traits, b.traits) &&
+    samePair(a.opportunity, b.opportunity) &&
+    samePair(a.rear, b.rear) &&
+    (a.movedToHit ?? 0) === (b.movedToHit ?? 0) &&
+    (a.execute ?? 0) === (b.execute ?? 0) &&
+    (a.critDamage ?? 0) === (b.critDamage ?? 0) &&
+    (a.manaOnHit ?? 0) === (b.manaOnHit ?? 0) &&
+    (a.manaRegen ?? 0) === (b.manaRegen ?? 0)
   )
 }
 
@@ -303,9 +328,13 @@ export function rollToHit(
   return { attackRoll, chance, hit, critical, fumble }
 }
 
-/** The second half of `resolveAttack`: the damage of a hit, a critical doubling the dice; never below 0, as a modifier may lower a weapon's bonus. */
-export function rollHitDamage(dice: DamageRoll, critical: boolean, rng: RNG = Math.random): number {
-  return Math.max(0, rollDamage(critical ? { ...dice, count: dice.count * 2 } : dice, rng))
+/**
+ * The second half of `resolveAttack`: the damage of a hit, a critical
+ * multiplying the dice's count by `critMultiplier` (2, or 3 for Deadeye's
+ * shots); never below 0, as a modifier may lower a weapon's bonus.
+ */
+export function rollHitDamage(dice: DamageRoll, critical: boolean, rng: RNG = Math.random, critMultiplier = 2): number {
+  return Math.max(0, rollDamage(critical ? { ...dice, count: dice.count * critMultiplier } : dice, rng))
 }
 
 /** Probability that resolveAttack hits, from 0.05 to 0.95. */

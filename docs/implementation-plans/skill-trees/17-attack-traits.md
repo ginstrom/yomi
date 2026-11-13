@@ -243,12 +243,32 @@ No scene changes in this step, so `npm run test:browser` is not required; run it
 
 ## 6. Completion criteria
 
-- [ ] The eleven rules resolve as §2 states, each off when its field is absent.
-- [ ] All five stage-3 `UnitRecord`/`UnitSnapshot` fields exist, snapshot and restore with defaults.
-- [ ] `previewAttack` reflects the pre-roll bonuses.
-- [ ] Tests 1–14 and the character and save tests pass; `npm test` passes; the guard fixture is unedited and green.
-- [ ] `CLAUDE.md` updated (§4.6).
-- [ ] Committed as "Skill trees step 17: attack and movement traits".
-- [ ] The index's step table shows step 17 `done (<commit>)`.
+- [x] The eleven rules resolve as §2 states, each off when its field is absent.
+- [x] All five stage-3 `UnitRecord`/`UnitSnapshot` fields exist, snapshot and restore with defaults.
+- [x] `previewAttack` reflects the pre-roll bonuses.
+- [x] Tests 1–14 and the character and save tests pass; `npm test` passes; the guard fixture is unedited and green.
+- [x] `CLAUDE.md` updated (§4.6).
+- [x] Committed as "Skill trees step 17: attack and movement traits".
+- [x] The index's step table shows step 17 `done (<commit>)`.
 
 ## 7. Execution record
+
+### Step 17 (2026-11-14)
+
+**What was built.** `CombatantStats` gains `opportunity`, `rear`, `movedToHit`, `execute`, `critDamage`, `manaOnHit`, `manaRegen` (compared by `sameCombatStats`); `rollHitDamage` takes a `critMultiplier` (default 2). `deriveCombatStats` emits them from the C2 effect keys, each only when not 0 (a pair when either half is). `abilityApCost` charges the Spellsword Strikes (`SPELLSWORD_STRIKES`) at `attackApCost + 0` for a unit with `arcane_knight`. In the engine: `AMBUSH_BONUS` (25), `DEADEYE_PIERCE` (3), `DEADEYE_CRIT_MULTIPLIER` (3), and exported pure helpers `BlowContext`, `ambushes`, `traitToHit`, `traitDamage`, `deadeyeShot`, `blowPierce`, `resistanceLeft`, which `attack()`, `blowOdds` (so `previewAttack` and `previewAbility`) and the policy's `blowBonus`/`expectedHarm` all read, so the preview and the policy never disagree. `reactorsAt` returns none for a `tumble` mover. A Counter is resolved inside `attack()` after the missed blow's event and its falls (`counters()`), and `routine` stops when its user falls. `UnitRecord` gains the five stage-3 fields; `restore` fills missing ones; `LOG_SCHEMA_VERSION` 26; `SAVE_VERSION` 25 with 24 accepted as is. `formatEvent`: a counter reads "Goblin strikes back. Goblin rolls …".
+
+**Commands and results.**
+- `npx vitest run src/engine/battleEngine.test.ts src/combat src/character/character.test.ts src/game/save.test.ts`: 615 passed (new: 29 engine tests in "BattleEngine attack and movement traits", rows 1–13 of §5; Arcane Knight in `abilities.test.ts`; `rollHitDamage` and `sameCombatStats` in `combat.test.ts`; derivation in `character.test.ts`; version 24 in `save.test.ts`). Red first: 19 of the new engine tests failed before the engine change.
+- `npx vitest run scripts/simulate.test.ts -t "refactor guard"`: green (records unchanged; hash re-recorded, below).
+- `npm test`: 86 files, 1866 tests passed. `npm run build`: passes.
+- In-browser tests not run: no scene changed; `formatEvent`'s new counter line is read by no e2e test and no simulated unit can counter yet.
+
+**Deviations.**
+- *The refactor guard's hash (allowed by the decision log for a schema-only bump).* `GUARD_EVENTS_SHA256` moved to `4aed0810...eba05b` because `battle_start` carries `schemaVersion` 26. A scratch script (outside the repository) ran the guard's 5 campaigns: the log has 115 `"schemaVersion":26`, and with each written back as 25 it hashes to the recorded `aa9ffae5...ff5119`, so nothing else in the log moved. `GUARD_RECORDS` unchanged; the fixture's comment says so.
+- *`UnitSnapshot`'s new fields are optional*, each present only when set (`attackedYet?: true`, ..., `usedOnce?` while non-empty), as `moved` is, so that `battle_start`'s unit snapshots (and the guard's log) are unchanged. `UnitRecord` (the save) always has all five. Readers: `u.attackedYet === true`.
+- *`AttackEvent.traitBonus`* (optional, absent when 0) records what the traits added to `chance` (the task left the choice open). `armorPierce` on the event now records `blowPierce` (Deadeye's 3 included).
+- *Policy.* `blowBonus` and `expectedHarm` read `traitToHit`, `traitDamage` (no critical) and `resistanceLeft`, per §4.4's "Previews"; no new policy branch (step 21). With no unit carrying the fields this changes nothing the guard sees.
+- *Counter's reach* is `effectiveStats(defender).attackRange`; a spear holder counters at 2, a sword holder not at a spear's 2.
+
+**For later steps.** Step 18: `deathblow`, `apRefunded`, `endured` are declared on `AttackEvent`; `endured`, `refunded`, `fallenThisBattle`, `usedOnce` exist on `UnitRecord` and are touched by no rule. Step 19: `manaRegen` is derived but unread. Step 21: the nodes need only the effect keys/traits; the policy already scores the traits' to-hit and damage. Step 22: the counter's log line exists; looks and floats for `counter`, `ambush`, `manaRestored` are yours.
+

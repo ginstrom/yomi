@@ -42,7 +42,7 @@ import {
 } from '../grid/hex.ts'
 
 /** Bump when event shapes change so log consumers can tell formats apart. */
-export const LOG_SCHEMA_VERSION = 25
+export const LOG_SCHEMA_VERSION = 26
 
 /** What an attacker's chance to hit gains, in percent, for each other standing ally adjacent to the defender. */
 export const FLANK_BONUS_PER_ALLY = 10
@@ -68,6 +68,15 @@ export const DEFAULT_FACING: Readonly<Record<Side, number>> = { player: 0, enemy
  * roll at a unit other than its taunter (the status's `source`).
  */
 export const TAUNT_PENALTY = 25
+
+/** What Ambush adds to the chance of a unit's first own-turn weapon attack or technique strike of the battle, whose hit is then critical. */
+export const AMBUSH_BONUS = 25
+
+/** Points of resistance a Deadeye's shot pierces beyond its weapon's own. */
+export const DEADEYE_PIERCE = 3
+
+/** What a Deadeye's ranged critical multiplies its dice's count by, where any other critical doubles it. */
+export const DEADEYE_CRIT_MULTIPLIER = 3
 
 /** Action points each hex of a move costs. */
 export const MOVE_AP_COST_PER_HEX = 1
@@ -176,6 +185,16 @@ export interface UnitSnapshot extends CombatantStats {
   recharging: Partial<Record<AbilityId, number>>
   /** Present, and true, once the unit has taken a step since its side's turn began (`UnitRecord.moved`). */
   moved?: true
+  /** Present, and true, once the unit has made a weapon attack or technique strike in its own turn this battle (`UnitRecord.attackedYet`). */
+  attackedYet?: true
+  /** Present, and true, as `UnitRecord.endured` is. */
+  endured?: true
+  /** Present, and true, as `UnitRecord.refunded` is. */
+  refunded?: true
+  /** Present, and true, as `UnitRecord.fallenThisBattle` is. */
+  fallenThisBattle?: true
+  /** Present while `UnitRecord.usedOnce` holds a spell. */
+  usedOnce?: SpellId[]
 }
 
 export interface BattleState {
@@ -345,6 +364,24 @@ export interface AttackEvent extends EventBase {
   manaAfter?: number
   /** `TAUNT_PENALTY`, already taken off `chance`, when a taunted attacker struck a unit other than its taunter; absent otherwise. */
   tauntPenalty?: number
+  /**
+   * The bonus to the chance from the attacker's traits (Backstab's rear, Iron
+   * Skin's free attack, Skirmisher's step, Ambush), already included in
+   * `chance`; absent when 0.
+   */
+  traitBonus?: number
+  /** A free attack made by a Counter after the defender of the side in turn missed it with a melee blow; with `opportunity`. */
+  counter?: true
+  /** The attacker's first own-turn attack of the battle with Ambush: `AMBUSH_BONUS` in `traitBonus`, and a hit is critical. */
+  ambush?: true
+  /** Set by Deathblow (skill trees step 18). */
+  deathblow?: true
+  /** Action points refunded by Blademaster (skill trees step 18). */
+  apRefunded?: number
+  /** The defender was kept standing by Unbreakable (skill trees step 18). */
+  endured?: true
+  /** Mana a melee hit that struck no image restored to the attacker (`manaOnHit`, capped at its maximum); absent when none. */
+  manaRestored?: number
 }
 
 /** One on-hit entry's damage on an attack: flat, after resistance, cut by the defender's ward, never doubled by a critical. */
@@ -584,6 +621,16 @@ export interface UnitRecord {
   recharging: Partial<Record<AbilityId, number>>
   /** It has taken a step since its side's turn began: false as the turn begins, true from its first step. */
   moved: boolean
+  /** It has made a weapon attack or technique strike in its own turn this battle (Ambush reads it); a free attack or a counter does not count. */
+  attackedYet: boolean
+  /** It has been kept standing at 1 hit point by Unbreakable this battle (skill trees step 18). */
+  endured: boolean
+  /** It has had action points refunded by Blademaster this turn (skill trees step 18). */
+  refunded: boolean
+  /** It has fallen this battle, whether or not it stands again (skill trees step 20). */
+  fallenThisBattle: boolean
+  /** The once-a-battle spells it has cast (skill trees step 20). */
+  usedOnce: SpellId[]
 }
 
 /**
@@ -637,6 +684,75 @@ export function attackArc(defender: Pick<UnitSnapshot, 'position' | 'facing'>, f
 /** A weapon that strikes as melee: range 1, or reach (a spear, from two hexes). */
 export function isMelee(stats: Pick<CombatantStats, 'attackRange' | 'reach'>): boolean {
   return stats.attackRange === 1 || stats.reach === true
+}
+
+/**
+ * What a blow's chance and damage owe to the attacker's traits, besides its
+ * stats: the arc it strikes, whether it is a free attack (a counter's
+ * included), and whether the attacker has stepped this turn and made an
+ * own-turn attack yet this battle.
+ */
+export interface BlowContext {
+  arc: Arc
+  free: boolean
+  moved: boolean
+  attackedYet: boolean
+}
+
+/** Whether the blow is an Ambush: the first own-turn attack of the battle by a unit with the trait. */
+export function ambushes(attacker: Pick<CombatantStats, 'traits'>, blow: Pick<BlowContext, 'free' | 'attackedYet'>): boolean {
+  return !blow.free && !blow.attackedYet && attacker.traits?.includes('ambush') === true
+}
+
+/**
+ * What the attacker's traits add to a blow's chance to hit: its `rear` to-hit
+ * from the rear arc, its `opportunity` to-hit on a free attack, its
+ * `movedToHit` on an own-turn attack after a step, `AMBUSH_BONUS` for an
+ * Ambush. 0 for a unit with none of them.
+ */
+export function traitToHit(attacker: CombatantStats, blow: BlowContext): number {
+  return (
+    (blow.arc === 'rear' ? (attacker.rear?.toHit ?? 0) : 0) +
+    (blow.free ? (attacker.opportunity?.toHit ?? 0) : 0) +
+    (!blow.free && blow.moved ? (attacker.movedToHit ?? 0) : 0) +
+    (ambushes(attacker, blow) ? AMBUSH_BONUS : 0)
+  )
+}
+
+/**
+ * What the attacker's traits add to a hit's damage after its dice (never
+ * multiplied by a critical): its `rear` damage from the rear arc, its
+ * `opportunity` damage on a free attack, its `critDamage` on a critical, and
+ * its `execute` against a defender at half its hit points or less before the
+ * blow.
+ */
+export function traitDamage(
+  attacker: CombatantStats,
+  blow: Pick<BlowContext, 'arc' | 'free'>,
+  critical: boolean,
+  defender: { hp: number; maxHp: number },
+): number {
+  return (
+    (blow.arc === 'rear' ? (attacker.rear?.damage ?? 0) : 0) +
+    (blow.free ? (attacker.opportunity?.damage ?? 0) : 0) +
+    (critical ? (attacker.critDamage ?? 0) : 0) +
+    (defender.hp <= Math.floor(defender.maxHp / 2) ? (attacker.execute ?? 0) : 0)
+  )
+}
+
+/** Whether the attacker's weapon attack is a Deadeye's shot: a ranged weapon in the hands of a unit with the trait. */
+export function deadeyeShot(attacker: CombatantStats): boolean {
+  return !isMelee(attacker) && attacker.traits?.includes('deadeye') === true
+}
+
+/** The points of resistance the attacker's weapon attack pierces: its `armorPierce`, and `DEADEYE_PIERCE` more for a Deadeye's shot. */
+export function blowPierce(attacker: CombatantStats): number {
+  return (attacker.armorPierce ?? 0) + (deadeyeShot(attacker) ? DEADEYE_PIERCE : 0)
+}
+
+/** The defender's resistance left against the attacker's weapon attack once `blowPierce` has pierced it (`effectiveResistance`). */
+export function resistanceLeft(attacker: CombatantStats, defenderResistance: number): number {
+  return effectiveResistance({ ...attacker, armorPierce: blowPierce(attacker) }, defenderResistance)
 }
 
 /**
@@ -816,8 +932,17 @@ export class BattleEngine {
     this.board = new HexBoard(setup.board)
     if (restored) {
       const { units, events, rng, ...rest } = structuredClone(restored)
-      // A battle saved before units kept `moved` (save version 23 and older) takes it up as false.
-      this.units = units.map((u) => ({ ...u, moved: u.moved ?? false }))
+      // A battle saved before units kept `moved` (save version 23 and older) takes it up as false,
+      // and one saved before the stage-3 fields (version 24 and older) takes them up at their defaults.
+      this.units = units.map((u) => ({
+        ...u,
+        moved: u.moved ?? false,
+        attackedYet: u.attackedYet ?? false,
+        endured: u.endured ?? false,
+        refunded: u.refunded ?? false,
+        fallenThisBattle: u.fallenThisBattle ?? false,
+        usedOnce: u.usedOnce ?? [],
+      }))
       this.events.push(...events)
       this.seeded = mulberry32(rng)
       this.rng = this.seeded
@@ -857,6 +982,11 @@ export class BattleEngine {
       statuses: [],
       recharging: {},
       moved: false,
+      attackedYet: false,
+      endured: false,
+      refunded: false,
+      fallenThisBattle: false,
+      usedOnce: [],
     }))
 
     let seed: number | null = null
@@ -1014,8 +1144,9 @@ export class BattleEngine {
     const helpless = hasStatus(foe, 'asleep') ? HELPLESS_BONUS : 0
     const attacker = effectiveStats(actor)
     const defender = effectiveStats(foe)
-    const chance = hitChance(attacker, defender.ac, flankBonus + arcBonus + helpless + toHit - tauntPenalty(actor, foe))
-    return { flankers, flankBonus, arc, arcBonus, hitChance: chance, resistance: effectiveResistance(attacker, defender.resistance ?? 0) }
+    const traits = traitToHit(attacker, { arc, free: false, moved: actor.moved, attackedYet: actor.attackedYet })
+    const chance = hitChance(attacker, defender.ac, flankBonus + arcBonus + helpless + toHit + traits - tauntPenalty(actor, foe))
+    return { flankers, flankBonus, arc, arcBonus, hitChance: chance, resistance: resistanceLeft(attacker, defender.resistance ?? 0) }
   }
 
   /**
@@ -1410,7 +1541,8 @@ export class BattleEngine {
 
   /** Foes that would strike `mover` for stepping from `hex` to `to`: those it leaves the side of. */
   private reactorsAt(mover: UnitRecord, hex: Hex, to: Hex): UnitRecord[] {
-    // Crit-focused builds may later slip through zones of control; that check belongs here.
+    // Tumble slips through every zone of control.
+    if (mover.stats.traits?.includes('tumble')) return []
     return this.units.filter(
       (u) =>
         u.side !== mover.side &&
@@ -1565,6 +1697,8 @@ export class BattleEngine {
       const first = i === 0
       const mana = first && manaCost !== undefined ? manaCost : undefined
       events.push(...this.attack(actor, foe, first ? apCost : 0, { ability: abilityId, strike, dice, manaCost: mana }))
+      // A counter may fell the user between strikes.
+      if (actor.hp <= 0) break
     }
     return events
   }
@@ -1632,13 +1766,19 @@ export class BattleEngine {
    * strike adds its `toHit` to the chance, its `damageBonus` to a hit's
    * damage after a critical's doubling, and its `onHit` entries (an elemental
    * one raised by the unit's `imbueDamage`) after the weapon's; it draws as a
-   * plain attack does.
+   * plain attack does. The attacker's traits add to the chance and the
+   * damage (`traitToHit`, `traitDamage`), pierce (`blowPierce`), triple a
+   * Deadeye's ranged critical, make an Ambush's hit critical and restore mana
+   * on a melee hit, none of it drawing anything. A melee blow of the side in
+   * turn that misses a defender with Counter is answered at once by a free
+   * attack (`counter`), before anything else the action does.
    */
   private attack(
     actor: UnitRecord,
     target: UnitRecord,
     apCost: number | null,
     strike?: { ability: AbilityId; strike: Strike; dice: DamageRoll; manaCost?: number },
+    counter = false,
   ): BattleEvent[] {
     actor.facing = hexDirectionTowards(actor.position, target.position)!
     const defenderTurned =
@@ -1658,18 +1798,31 @@ export class BattleEngine {
     const defenderResistance = defender.resistance ?? 0
     const technique = strike?.strike
     const taunt = tauntPenalty(actor, target)
+    const blow: BlowContext = { arc, free: apCost === null, moved: actor.moved, attackedYet: actor.attackedYet }
+    const ambush = ambushes(attacker, blow)
+    const traitBonus = traitToHit(attacker, blow)
+    // Only an own-turn attack counts towards Ambush; a free attack or a counter does not.
+    if (!blow.free) actor.attackedYet = true
     const roll = rollToHit(
       attacker,
       defenderAc,
       this.rng,
-      flankBonus + arcBonus + (helpless ? HELPLESS_BONUS : 0) + (technique?.toHit ?? 0) - taunt,
+      flankBonus + arcBonus + (helpless ? HELPLESS_BONUS : 0) + (technique?.toHit ?? 0) + traitBonus - taunt,
     )
+    // An Ambush's hit is critical with no second draw.
+    const critical = roll.critical || (ambush && roll.hit)
     const image = roll.hit && this.strikeImage(target)
     const dice = strike?.dice ?? attacker.damage
-    // A technique's damage bonus comes after a critical's doubling, so it is never doubled.
-    const rolled = roll.hit && !image ? rollHitDamage(dice, roll.critical, this.rng) + (technique?.damageBonus ?? 0) : 0
-    const damage = damageThrough(rolled, effectiveResistance(attacker, defenderResistance))
-    const result = { ...roll, damage }
+    const multiplier = deadeyeShot(attacker) ? DEADEYE_CRIT_MULTIPLIER : 2
+    // A technique's damage bonus and the traits' come after a critical's multiplying, so they are never multiplied.
+    const rolled =
+      roll.hit && !image
+        ? rollHitDamage(dice, critical, this.rng, multiplier) +
+          (technique?.damageBonus ?? 0) +
+          traitDamage(attacker, blow, critical, { hp: target.hp, maxHp: defender.maxHp })
+        : 0
+    const damage = damageThrough(rolled, resistanceLeft(attacker, defenderResistance))
+    const result = { ...roll, critical, damage }
     const landed = roll.hit && !image
     const imbue = actor.stats.imbueDamage ?? 0
     const added = (technique?.onHit ?? []).map((entry) => (entry.element && imbue !== 0 ? { ...entry, damage: entry.damage + imbue } : entry))
@@ -1691,8 +1844,15 @@ export class BattleEngine {
     actor.hp += healed
     const laid = strike?.strike.status && landed && target.hp > 0 ? this.layStatus(target, strike.strike.status) : null
     const onHitStatuses = onHit
-      .filter((entry) => entry.status && (!entry.onCrit || roll.critical))
+      .filter((entry) => entry.status && (!entry.onCrit || critical))
       .flatMap((entry) => (target.hp > 0 ? [this.layStatus(target, entry.status!)] : []))
+    // A technique's mana was paid as it began; what a hit restores comes after.
+    const manaPaid = actor.mana
+    const manaRestored =
+      landed && isMelee(actor.stats) && actor.stats.magic
+        ? Math.min(actor.stats.manaOnHit ?? 0, Math.max(0, actor.stats.magic.maxMana - actor.mana))
+        : 0
+    actor.mana += manaRestored
 
     const events: BattleEvent[] = [
       this.record<AttackEvent>({
@@ -1719,7 +1879,7 @@ export class BattleEngine {
         chance: result.chance,
         defenderAc,
         defenderResistance,
-        armorPierce: actor.stats.armorPierce ?? 0,
+        armorPierce: blowPierce(attacker),
         hit: result.hit,
         critical: result.critical,
         fumble: result.fumble,
@@ -1734,13 +1894,40 @@ export class BattleEngine {
         bonus,
         ...(heals ? { healed } : {}),
         ...(onHitStatuses.length > 0 ? { onHitStatuses } : {}),
-        ...(strike?.manaCost !== undefined ? { manaCost: strike.manaCost, manaAfter: actor.mana } : {}),
+        ...(strike?.manaCost !== undefined ? { manaCost: strike.manaCost, manaAfter: manaPaid } : {}),
         ...(taunt > 0 ? { tauntPenalty: taunt } : {}),
+        ...(traitBonus !== 0 ? { traitBonus } : {}),
+        ...(counter ? { counter: true as const } : {}),
+        ...(ambush ? { ambush: true as const } : {}),
+        ...(manaRestored > 0 ? { manaRestored } : {}),
       }),
     ]
 
     events.push(...this.imagesSpent(target), ...this.wake(target, total), ...this.fell(target))
+    if (!roll.hit && this.counters(target, actor)) {
+      target.reactionReady = false
+      events.push(...this.attack(target, actor, null, undefined, true))
+    }
     return events
+  }
+
+  /**
+   * Whether `defender` strikes back at `attacker`, whose blow just missed it:
+   * the battle goes on, the attacker is of the side in turn and struck with a
+   * melee weapon, and the defender has Counter, its free attack ready, a melee
+   * weapon and the attacker within its reach.
+   */
+  private counters(defender: UnitRecord, attacker: UnitRecord): boolean {
+    return (
+      this.phase === attacker.side &&
+      attacker.hp > 0 &&
+      defender.hp > 0 &&
+      isMelee(attacker.stats) &&
+      defender.stats.traits?.includes('counter') === true &&
+      defender.reactionReady &&
+      isMelee(defender.stats) &&
+      hexDistance(defender.position, attacker.position) <= effectiveStats(defender).attackRange
+    )
   }
 
   /**
@@ -2015,6 +2202,11 @@ function snapshot(unit: UnitRecord): UnitSnapshot {
     statuses: unit.statuses.map((status) => ({ ...status })),
     recharging: { ...unit.recharging },
     ...(unit.moved ? { moved: true as const } : {}),
+    ...(unit.attackedYet ? { attackedYet: true as const } : {}),
+    ...(unit.endured ? { endured: true as const } : {}),
+    ...(unit.refunded ? { refunded: true as const } : {}),
+    ...(unit.fallenThisBattle ? { fallenThisBattle: true as const } : {}),
+    ...(unit.usedOnce.length > 0 ? { usedOnce: [...unit.usedOnce] } : {}),
   }
 }
 
@@ -2139,7 +2331,11 @@ export function formatEvent(event: BattleEvent, names: Readonly<Record<UnitId, s
     case 'attack': {
       const attackerName = names[event.attacker]
       const defenderName = names[event.defender]
-      const breaking = event.opportunity ? `${defenderName} breaks away — free attack! ` : ''
+      const breaking = event.counter
+        ? `${attackerName} strikes back. `
+        : event.opportunity
+          ? `${defenderName} breaks away — free attack! `
+          : ''
       const opening = `${breaking}${event.defenderTurned ? `${defenderName} turns to face ${attackerName}. ` : ''}`
       // A routine's strike names its verb: "Troll claws Aldric: rolls 23".
       const striker = event.ability ? `${attackerName} ${strikeVerb(event)} ${defenderName}:` : attackerName

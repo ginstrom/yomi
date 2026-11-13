@@ -13,7 +13,10 @@ import {
   flankersOf,
   hasStatus,
   isMelee,
+  resistanceLeft,
   tauntPenalty,
+  traitDamage,
+  traitToHit,
   type Action,
   type BattleState,
   type CastAim,
@@ -274,12 +277,18 @@ function reach(self: UnitSnapshot): { range: number; apCost: number } {
   return spell ? { range: SPELLS[spell].range, apCost: spellApCost(self, spell) } : { range: self.attackRange, apCost: self.attackApCost }
 }
 
-/** The situational bonus to `self`'s blow at `target`, less a technique strike's own `toHit`: flanking, the arc, a sleeper, less Taunted's penalty. */
+/**
+ * The situational bonus to `self`'s blow at `target`, less a technique
+ * strike's own `toHit`: flanking, the arc, a sleeper and `self`'s traits
+ * (`traitToHit`, as `previewAttack` has them), less Taunted's penalty.
+ */
 function blowBonus(state: BattleState, self: UnitSnapshot, target: UnitSnapshot): number {
+  const arc = arcStruck(target, self.position, isMelee(self))
   return (
     flankersOf(state.units, self, target).length * FLANK_BONUS_PER_ALLY +
-    ARC_BONUS[arcStruck(target, self.position, isMelee(self))] +
-    (hasStatus(target, 'asleep') ? HELPLESS_BONUS : 0) -
+    ARC_BONUS[arc] +
+    (hasStatus(target, 'asleep') ? HELPLESS_BONUS : 0) +
+    traitToHit(self, { arc, free: false, moved: self.moved === true, attackedYet: self.attackedYet === true }) -
     tauntPenalty(self, target)
   )
 }
@@ -297,13 +306,17 @@ function blowChance(state: BattleState, self: UnitSnapshot, target: UnitSnapshot
  * target's resistance, near enough, and its weapon's on-hit damage through
  * the target's wards. A technique's weapon `strike` adds its `toHit` to the
  * chance, its `damageBonus` to the hit and its own on-hit entries (each with
- * an element raised by the unit's `imbueDamage`) to the weapon's.
+ * an element raised by the unit's `imbueDamage`) to the weapon's. The unit's
+ * traits add what they would to a hit that is no critical (`traitDamage`) and
+ * pierce as they would (`resistanceLeft`).
  */
 function expectedHarm(state: BattleState, self: UnitSnapshot, target: UnitSnapshot, dice?: DamageRoll, strike?: Strike): number {
   const attacker = effectiveStats({ stats: self, statuses: self.statuses })
   const defender = effectiveStats({ stats: target, statuses: target.statuses })
   const { count, sides, bonus: flat } = dice ?? attacker.damage
-  const averageHit = damageThrough(count * ((sides + 1) / 2) + flat + (strike?.damageBonus ?? 0), effectiveResistance(attacker, defender.resistance ?? 0))
+  const arc = arcStruck(target, self.position, isMelee(self))
+  const traits = traitDamage(attacker, { arc, free: false }, false, { hp: target.hp, maxHp: defender.maxHp })
+  const averageHit = damageThrough(count * ((sides + 1) / 2) + flat + (strike?.damageBonus ?? 0) + traits, resistanceLeft(attacker, defender.resistance ?? 0))
   const imbue = self.imbueDamage ?? 0
   const added = (strike?.onHit ?? []).map((entry) => (entry.element && imbue !== 0 ? { ...entry, damage: entry.damage + imbue } : entry))
   return blowChance(state, self, target, strike) * (averageHit + onHitDamage([...(attacker.onHit ?? []), ...added], defender))

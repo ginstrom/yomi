@@ -907,7 +907,9 @@ describe('runes in a campaign', () => {
  * `"schemaVersion":25` written back as 24 hashes to the old `8e01443a...db5c94`. Re-recorded in skill trees step 13:
  * the stage-2 nodes and plans move play (heroes and bandits learn techniques as they level). Re-recorded in skill trees
  * step 16: `techniqueScore` weighing a technique by the blows that fit this turn, then the knight plan taking Pin before
- * Heavy Hand (the bandit Captain and recruited knights). A mismatch means a step
+ * Heavy Hand (the bandit Captain and recruited knights). Re-hashed in skill trees step 17 for `LOG_SCHEMA_VERSION` 26
+ * alone: the records unchanged, and the new log with each of its 115 `"schemaVersion":26` written back as 25 hashes
+ * to the old `aa9ffae5...ff5119`. A mismatch means a step
  * changed behaviour.
  */
 const GUARD_RECORDS: CampaignRecord[] = [
@@ -917,7 +919,7 @@ const GUARD_RECORDS: CampaignRecord[] = [
   { outcome: "source", days: 270, battles: 20, spawns: 30, captured: 3, lost: 0, blighted: 0.39375, healedHp: 124, campDays: 17, towersBuilt: 3, towersLost: 0, deaths: 1, recruits: 1, hallLevel: 2, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 5, fieldCraftDays: 3, runesFound: 16, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 8], deathsAtLevel: [7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 20, wipes: 0, finalLevels: [[8, 8, 8]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 36, guardBattles: 0 },
   { outcome: "source", days: 415, battles: 25, spawns: 35, captured: 5, lost: 0, blighted: 0.3275, healedHp: 183, campDays: 32, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 1, outpostsBuilt: 2, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 9, tierTwoBought: 0, crafted: 7, fieldCraftDays: 3, runesFound: 21, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [9, 9, 9, 8, 7], deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 25, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 76, guardBattles: 0 },
 ]
-const GUARD_EVENTS_SHA256 = 'aa9ffae5dc0b17ba6222580b3eaec1ea93a6549c41427909a261d2d4d1ff5119'
+const GUARD_EVENTS_SHA256 = '4aed08107a7c307b722303f12a9573634702f96d72e6dd1ccfc95e6929eba05b'
 
 describe('the campaign’s policy on the day loop', () => {
   const args = parseArgs(['--campaign', '--parties', '1'])
@@ -1168,14 +1170,14 @@ describe('the company’s record', () => {
     expect(roleOf(run, party)).toBe('guard')
   })
 
-  it('logs the party and its role on battle_start, under schema version 25, and counts the battle to the role', () => {
+  it('logs the party and its role on battle_start, under schema version 26, and counts the battle to the role', () => {
     const { run, game, party } = campaignOf()
     const target = nextTarget(game.world, party, args.readyLevel)!
     party.position = { ...target.position }
     party.confronting = target.id
     carryOut(run, party, { kind: 'fight', target })
     const start = run.battles[0][0]
-    expect(start).toMatchObject({ type: 'battle_start', schemaVersion: 25, meta: { party: 'party_1', role: 'vanguard' } })
+    expect(start).toMatchObject({ type: 'battle_start', schemaVersion: 26, meta: { party: 'party_1', role: 'vanguard' } })
     // The new keys come after the old, so the old keys keep their order in the log.
     if (start.type !== 'battle_start') throw new Error('no battle_start')
     expect(Object.keys(start.meta).slice(-2)).toEqual(['party', 'role'])

@@ -118,8 +118,22 @@ describe('a save', () => {
     expect(parsed.game.parties[0].baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 24, whose saved battles keep whether each unit has moved this turn', () => {
-    expect(SAVE_VERSION).toBe(24)
+  it('is version 25, whose saved battles keep each unit\'s stage-3 fields', () => {
+    expect(SAVE_VERSION).toBe(25)
+  })
+
+  it('loads a version-24 save, its battle\'s units taking up the stage-3 fields at their defaults', () => {
+    const game = gameUnderWay()
+    const saved = JSON.parse(serializeSave({ game, battle: battleOf(game), savedAt: 5 }))
+    saved.version = 24
+    const fields = ['attackedYet', 'endured', 'refunded', 'fallenThisBattle', 'usedOnce']
+    for (const unit of saved.battle.engine.units) for (const field of fields) delete unit[field]
+    const parsed = parseSave(JSON.stringify(saved))!
+    expect(parsed).not.toBeNull()
+    const restored = BattleEngine.restore(parsed.battle!.engine)
+    expect(restored.snapshot().units.every((u) => !u.attackedYet && !u.endured && !u.refunded && !u.fallenThisBattle && u.usedOnce.length === 0)).toBe(true)
+    expect(restored.getState()).toEqual(BattleEngine.restore(battleOf(game).engine).getState())
+    expect(JSON.parse(serializeSave(parsed)).version).toBe(SAVE_VERSION)
   })
 
   it('loads a version-23 save, its battle\'s units taking up `moved` as false', () => {

@@ -5,6 +5,7 @@ import { mulberry32 } from '../combat/rng.ts'
 import { SPELL_IDS, type SpellId } from '../combat/spells.ts'
 import { HEX_DIRECTIONS, areaOf, hex, hexAdd, hexDistance, hexKey, type Hex } from '../grid/hex.ts'
 import {
+  AMBUSH_BONUS,
   ARC_BONUS,
   BattleEngine,
   EQUIP_AP_COST,
@@ -1885,8 +1886,8 @@ describe('BattleEngine strike routines and recharge', () => {
   const bite = (target: string): Action => ({ type: 'ability', unit: 'spider', ability: 'spider_bite', target })
   const NAMED = { ...NAMES, troll: 'Troll', spider: 'Spider', zed: 'Zed' }
 
-  it('is logged under schema version 25 (skill trees step 09; 24 was stage 6 step 09, battle_start meta party and role; 23 stage 4 step 05, AttackEvent.bonus)', () => {
-    expect(LOG_SCHEMA_VERSION).toBe(25)
+  it('is logged under schema version 26 (skill trees step 17, the traits on attack events; 25 was skill trees step 09; 24 stage 6 step 09, battle_start meta party and role; 23 stage 4 step 05, AttackEvent.bonus)', () => {
+    expect(LOG_SCHEMA_VERSION).toBe(26)
   })
 
   it('makes one attack per strike, the first carrying the ability’s AP and the rest none', () => {
@@ -2554,9 +2555,9 @@ describe('BattleEngine on-hit effects', () => {
     expect(formatEvent(attack, NAMED)).toBe('Warrior rolls 50 (needs 60 or less) — HITS Troll for 6 dmg (armour stops 1).')
   })
 
-  it('is logged under schema version 25 (24 from stage 6 step 09)', () => {
-    expect(LOG_SCHEMA_VERSION).toBe(25)
-    expect(new BattleEngine(DUEL).getLog()[0]).toMatchObject({ schemaVersion: 25 })
+  it('is logged under schema version 26 (25 from skill trees step 09, 24 from stage 6 step 09)', () => {
+    expect(LOG_SCHEMA_VERSION).toBe(26)
+    expect(new BattleEngine(DUEL).getLog()[0]).toMatchObject({ schemaVersion: 26 })
   })
 })
 
@@ -2881,8 +2882,8 @@ describe('BattleEngine hero techniques', () => {
   const MISS = [0]
   const NAMED = { ...NAMES, troll: 'Troll' }
 
-  it('raises the log schema to 25 (skill trees step 09: technique mana on attack and ability events)', () => {
-    expect(LOG_SCHEMA_VERSION).toBe(25)
+  it('has raised the log schema past 25 (skill trees step 09: technique mana on attack and ability events; 26 from step 17)', () => {
+    expect(LOG_SCHEMA_VERSION).toBe(26)
   })
 
   describe('who may use one', () => {
@@ -3649,6 +3650,362 @@ describe('BattleEngine Taunt, Rooted and Pin', () => {
       const restored = BattleEngine.restore(saved)
       expect(restored.snapshot().units.map((u) => u.moved)).toEqual([false, false])
       expect(restored.step(END_TURN)[0]).toMatchObject({ type: 'status_laid', unit: 'warrior' })
+    })
+  })
+})
+
+describe('BattleEngine attack and movement traits', () => {
+  const WIDE = { cols: 9, rows: 3 }
+  /** The warrior with `stats` added, at (1,1) unless moved. */
+  const fighter = (stats: Partial<CombatantStats> = {}, extra: Partial<UnitSetup> = {}): UnitSetup => ({
+    ...WARRIOR,
+    stats: { ...WARRIOR_STATS, ...stats },
+    ...extra,
+  })
+  /** A goblin of 30 hit points, so a blow leaves it standing. */
+  const goblinAt = (position: Hex, stats: Partial<CombatantStats> = {}, extra: Partial<UnitSetup> = {}): UnitSetup => ({
+    ...GOBLIN, position, stats: { ...GOBLIN_STATS, maxHp: 30, ...stats }, ...extra,
+  })
+  const ARCHER: Partial<CombatantStats> = { attackApCost: 4, attackRange: 5, weapon: 'Bow' }
+  /** An rng that plays `values` (the last repeated) and counts its draws. */
+  const counting = (values: number[]) => {
+    let i = 0
+    const rng = () => values[Math.min(i++, values.length - 1)]
+    return { rng, draws: () => i }
+  }
+  const battle = (units: UnitSetup[], rng: () => number) => new BattleEngine({ board: WIDE, units }, { rng })
+  const attacks = (events: readonly BattleEvent[]) => events.filter((e): e is AttackEvent => e.type === 'attack')
+  /** A roll of 50: a hit within most chances here, and no critical. */
+  const HIT = 0.5
+  /** A roll of 1: a critical hit. */
+  const CRIT = 0.99
+  /** A roll of 60. */
+  const ROLL_60 = 0.4
+
+  describe('Iron Skin (free attacks)', () => {
+    const IRON = { opportunity: { toHit: 15, damage: 3 } }
+    /** The warrior steps away from the goblin, which strikes it as it goes. */
+    const breakAway = (goblin: Partial<CombatantStats>, rolls: number[]) => {
+      const { rng, draws } = counting(rolls)
+      const engine = battle([fighter(), goblinAt(hex(2, 1), goblin)], rng)
+      const [free] = attacks(engine.step(move('warrior', hex(0, 1))))
+      return { free, draws: draws() }
+    }
+
+    it('adds its to-hit and damage to a free attack, and nothing to its own-turn attack', () => {
+      const plain = breakAway({}, [ROLL_60, HIT])
+      const iron = breakAway(IRON, [ROLL_60, HIT])
+      expect(plain.free).toMatchObject({ opportunity: true, hit: false })
+      expect(iron.free).toMatchObject({ opportunity: true, hit: true, chance: plain.free.chance + 15 })
+      const [plainHit, ironHit] = [breakAway({}, [HIT, HIT]).free, breakAway(IRON, [HIT, HIT]).free]
+      expect(ironHit.rolled).toBe(plainHit.rolled + 3)
+      const own = (goblin: Partial<CombatantStats>) => {
+        const engine = battle([fighter(), goblinAt(hex(2, 1), goblin)], sequence([HIT]))
+        engine.step(END_TURN)
+        return attacks(engine.step(ATTACK_WARRIOR))[0]
+      }
+      expect(own(IRON)).toMatchObject({ chance: own({}).chance, rolled: own({}).rolled })
+    })
+
+    it('draws as a plain free attack does', () => {
+      expect(breakAway(IRON, [HIT, HIT]).draws).toBe(breakAway({}, [HIT, HIT]).draws)
+    })
+  })
+
+  describe('Counter', () => {
+    const COUNTER = { traits: ['counter' as const] }
+    /** The warrior and the cleric beside the goblin, the warrior striking first. */
+    const field = (goblin: Partial<CombatantStats> = COUNTER, rolls: number[] = [FUMBLE], warrior: Partial<CombatantStats> = {}) =>
+      battle([fighter(warrior), goblinAt(hex(2, 1), goblin), { ...CLERIC, position: hex(1, 2) }], sequence(rolls))
+
+    it('strikes back once, free, at a melee attacker of the side in turn that misses it', () => {
+      const engine = field()
+      const events = engine.step(ATTACK_GOBLIN)
+      expect(events.map((e) => e.type)).toEqual(['attack', 'attack'])
+      const [miss, back] = attacks(events)
+      expect(miss).toMatchObject({ attacker: 'warrior', hit: false })
+      expect(miss).not.toHaveProperty('counter')
+      expect(back).toMatchObject({ attacker: 'goblin', defender: 'warrior', counter: true, opportunity: true, apCost: 0 })
+      expect(formatEvent(back, NAMES)).toMatch(/^Goblin strikes back\. Goblin rolls 100/)
+      expect(unitOf(engine, 'goblin').reactionReady).toBe(false)
+      // Its reaction is spent: the cleric's miss brings none.
+      expect(engine.step({ type: 'attack', unit: 'cleric', target: 'goblin' }).map((e) => e.type)).toEqual(['attack'])
+    })
+
+    it('does not strike back at a hit, a shot, or with a bow, nor without the trait', () => {
+      expect(field(COUNTER, [HIT, HIT]).step(ATTACK_GOBLIN).map((e) => e.type)).toEqual(['attack'])
+      expect(field({}).step(ATTACK_GOBLIN).map((e) => e.type)).toEqual(['attack'])
+      expect(field({ ...COUNTER, ...ARCHER }).step(ATTACK_GOBLIN).map((e) => e.type)).toEqual(['attack'])
+      const shot = battle([fighter(ARCHER), goblinAt(hex(2, 1), COUNTER)], sequence([FUMBLE]))
+      expect(shot.step(ATTACK_GOBLIN).map((e) => e.type)).toEqual(['attack'])
+    })
+
+    it('does not strike back at an attacker out of its reach', () => {
+      const spear = battle([fighter({ attackRange: 2, reach: true }, { position: hex(0, 1) }), goblinAt(hex(2, 1), COUNTER)], sequence([FUMBLE]))
+      expect(spear.step(ATTACK_GOBLIN).map((e) => e.type)).toEqual(['attack'])
+    })
+
+    it('never comes in its own side’s turn, nor off a free attack or a counter', () => {
+      // The countering warrior is missed by a free attack as it steps away in its own turn.
+      const engine = battle([fighter(COUNTER), goblinAt(hex(2, 1), COUNTER)], sequence([FUMBLE]))
+      expect(attacks(engine.step(move('warrior', hex(0, 1))))).toHaveLength(1)
+      // A counter that misses brings no counter back.
+      const both = field(COUNTER, [FUMBLE], COUNTER)
+      expect(attacks(both.step(ATTACK_GOBLIN))).toHaveLength(2)
+    })
+
+    it('comes straight after the missed strike of a routine, and a counter that fells the attacker ends it', () => {
+      const claws = { abilities: ['troll_claws' as AbilityId] }
+      const routine: Action = { type: 'ability', unit: 'warrior', ability: 'troll_claws', target: 'goblin' }
+      const events = field(COUNTER, [FUMBLE], claws).step(routine)
+      expect(attacks(events).map((e) => [e.attacker, e.counter ?? false])).toEqual([['warrior', false], ['goblin', true], ['warrior', false]])
+      const felled = battle(
+        [fighter(claws, { hp: 1 }), goblinAt(hex(2, 1), COUNTER), { ...CLERIC, position: hex(0, 0) }],
+        sequence([FUMBLE, CRIT, CRIT]),
+      ).step(routine)
+      expect(felled.map((e) => e.type)).toEqual(['attack', 'attack', 'unit_down'])
+    })
+  })
+
+  describe('Tumble', () => {
+    it('provokes no free attack, and previewMove lists none', () => {
+      const run = (stats: Partial<CombatantStats>) => battle([fighter(stats), goblinAt(hex(2, 1))], sequence([HIT]))
+      expect(run({}).previewMove('warrior', hex(0, 1))!.provokes).toEqual(['goblin'])
+      const tumbler = run({ traits: ['tumble'] })
+      expect(tumbler.previewMove('warrior', hex(0, 1))!.provokes).toEqual([])
+      expect(tumbler.step(move('warrior', hex(0, 1))).map((e) => e.type)).toEqual(['move'])
+    })
+  })
+
+  describe('Skirmisher', () => {
+    const SKIRMISHER = { movedToHit: 10 }
+    it('adds its bonus to an attack after a step this turn, and not without one', () => {
+      const stepIn = (stats: Partial<CombatantStats>) => {
+        const engine = battle([fighter(stats), goblinAt(hex(3, 1))], sequence([HIT]))
+        engine.step(move('warrior', hex(2, 1)))
+        return attacks(engine.step(ATTACK_GOBLIN))[0]
+      }
+      expect(stepIn(SKIRMISHER).chance).toBe(stepIn({}).chance + 10)
+      const standing = (stats: Partial<CombatantStats>) => attacks(battle([fighter(stats), goblinAt(hex(2, 1))], sequence([HIT])).step(ATTACK_GOBLIN))[0]
+      expect(standing(SKIRMISHER).chance).toBe(standing({}).chance)
+      expect(battle([fighter(SKIRMISHER), goblinAt(hex(3, 1))], sequence([HIT])).previewAttack('warrior', 'goblin')).toBeNull()
+    })
+
+    it('shows it in previewAttack after a step', () => {
+      const preview = (stats: Partial<CombatantStats>) => {
+        const engine = battle([fighter(stats), goblinAt(hex(3, 1))], sequence([HIT]))
+        engine.step(move('warrior', hex(2, 1)))
+        return engine.previewAttack('warrior', 'goblin')!.hitChance
+      }
+      expect(preview(SKIRMISHER)).toBeCloseTo(preview({}) + 0.1)
+    })
+
+    it('adds nothing to a free attack, though the unit moved in its own turn', () => {
+      const free = (stats: Partial<CombatantStats>) => {
+        const engine = battle([fighter(stats), goblinAt(hex(3, 1))], sequence([HIT]))
+        engine.step(move('warrior', hex(2, 1)))
+        engine.step(END_TURN)
+        return attacks(engine.step(move('goblin', hex(4, 1))))[0]
+      }
+      expect(free(SKIRMISHER)).toMatchObject({ opportunity: true, chance: free({}).chance })
+    })
+  })
+
+  describe('Backstab', () => {
+    const BACKSTAB = { rear: { toHit: 15, damage: 4 } }
+    /** The cleric draws the goblin round to face east; the warrior then strikes its rear from the west. */
+    const fromRear = (stats: Partial<CombatantStats>, rolls: number[] = [FUMBLE, HIT, HIT]) => {
+      const { rng, draws } = counting(rolls)
+      const engine = battle([fighter(stats), goblinAt(hex(2, 1)), { ...CLERIC, position: hex(3, 1) }], rng)
+      engine.step({ type: 'attack', unit: 'cleric', target: 'goblin' })
+      const blow = attacks(engine.step(ATTACK_GOBLIN))[0]
+      return { blow, draws: draws() }
+    }
+
+    it('adds its to-hit and damage to a blow from the rear', () => {
+      const plain = fromRear({}).blow
+      const stab = fromRear(BACKSTAB).blow
+      expect(plain).toMatchObject({ arc: 'rear', hit: true })
+      expect(stab).toMatchObject({ arc: 'rear', chance: plain.chance + 15, rolled: plain.rolled + 4 })
+      expect(fromRear(BACKSTAB).draws).toBe(fromRear({}).draws)
+    })
+
+    it('adds nothing from the front, and previewAttack shows it from the rear', () => {
+      const front = (stats: Partial<CombatantStats>) => attacks(battle([fighter(stats), goblinAt(hex(2, 1))], sequence([HIT])).step(ATTACK_GOBLIN))[0]
+      expect(front(BACKSTAB)).toMatchObject({ arc: 'front', chance: front({}).chance, rolled: front({}).rolled })
+      const preview = (stats: Partial<CombatantStats>) => {
+        const engine = battle([fighter(stats), goblinAt(hex(2, 1)), { ...CLERIC, position: hex(3, 1) }], sequence([FUMBLE]))
+        engine.step({ type: 'attack', unit: 'cleric', target: 'goblin' })
+        return engine.previewAttack('warrior', 'goblin')!
+      }
+      expect(preview(BACKSTAB).hitChance).toBeCloseTo(preview({}).hitChance + 0.15)
+    })
+  })
+
+  describe('Ambush', () => {
+    const AMBUSH = { traits: ['ambush' as const], attackApCost: 4 }
+
+    it('adds AMBUSH_BONUS to the first own-turn attack and makes its hit critical, once', () => {
+      expect(AMBUSH_BONUS).toBe(25)
+      const engine = battle([fighter(AMBUSH), goblinAt(hex(2, 1))], sequence([HIT]))
+      expect(engine.previewAttack('warrior', 'goblin')!.hitChance).toBeCloseTo(
+        battle([fighter({ attackApCost: 4 }), goblinAt(hex(2, 1))], sequence([HIT])).previewAttack('warrior', 'goblin')!.hitChance + 0.25,
+      )
+      const [first] = attacks(engine.step(ATTACK_GOBLIN))
+      const [second] = attacks(engine.step(ATTACK_GOBLIN))
+      const plain = attacks(battle([fighter({ attackApCost: 4 }), goblinAt(hex(2, 1))], sequence([HIT])).step(ATTACK_GOBLIN))[0]
+      expect(first).toMatchObject({ ambush: true, hit: true, critical: true, chance: plain.chance + 25 })
+      expect(plain.critical).toBe(false)
+      expect(second).toMatchObject({ critical: false, chance: plain.chance })
+      expect(second).not.toHaveProperty('ambush')
+    })
+
+    it('draws for its critical as a natural critical does, and no more', () => {
+      const ambush = counting([HIT])
+      battle([fighter(AMBUSH), goblinAt(hex(2, 1))], ambush.rng).step(ATTACK_GOBLIN)
+      const natural = counting([CRIT, HIT])
+      battle([fighter({ attackApCost: 4 }), goblinAt(hex(2, 1))], natural.rng).step(ATTACK_GOBLIN)
+      expect(ambush.draws()).toBe(natural.draws())
+    })
+
+    it('is not spent by a free attack before it', () => {
+      const engine = battle([fighter(AMBUSH), goblinAt(hex(2, 1))], sequence([HIT]))
+      engine.step(END_TURN)
+      const [free] = attacks(engine.step(move('goblin', hex(3, 1))))
+      expect(free).toMatchObject({ attacker: 'warrior', opportunity: true })
+      expect(free).not.toHaveProperty('ambush')
+      engine.step(END_TURN)
+      engine.step(move('warrior', hex(2, 1)))
+      expect(attacks(engine.step(ATTACK_GOBLIN))[0]).toMatchObject({ ambush: true, critical: true })
+    })
+  })
+
+  describe('Executioner', () => {
+    it('adds its damage against a foe at half its hit points or less before the blow', () => {
+      const blow = (stats: Partial<CombatantStats>, hp: number) =>
+        attacks(battle([fighter(stats), goblinAt(hex(2, 1), {}, { hp })], sequence([HIT])).step(ATTACK_GOBLIN))[0]
+      expect(blow({ execute: 5 }, 15).rolled).toBe(blow({}, 15).rolled + 5)
+      expect(blow({ execute: 5 }, 16).rolled).toBe(blow({}, 16).rolled)
+    })
+  })
+
+  describe('Fortune', () => {
+    it('adds its damage to a critical after the dice are doubled, and nothing to a plain hit', () => {
+      const blow = (stats: Partial<CombatantStats>, roll: number) =>
+        attacks(battle([fighter(stats), goblinAt(hex(2, 1))], sequence([roll, HIT])).step(ATTACK_GOBLIN))[0]
+      const crit = blow({}, CRIT)
+      expect(crit.critical).toBe(true)
+      expect(blow({ critDamage: 4 }, CRIT).rolled).toBe(crit.rolled + 4)
+      expect(blow({ critDamage: 4 }, HIT).rolled).toBe(blow({}, HIT).rolled)
+    })
+  })
+
+  describe('Deadeye', () => {
+    const DEADEYE = { traits: ['deadeye' as const] }
+    const shoot = (stats: Partial<CombatantStats>, roll: number) => {
+      const { rng, draws } = counting([roll, 0.5])
+      const engine = battle([fighter({ ...ARCHER, damage: { count: 1, sides: 8, bonus: 0 }, ...stats }), goblinAt(hex(4, 1), { resistance: 4 })], rng)
+      return { blow: attacks(engine.step(ATTACK_GOBLIN))[0], draws: draws() }
+    }
+
+    it('rolls triple dice on a ranged critical, double on a melee one', () => {
+      expect(shoot({}, CRIT)).toMatchObject({ blow: { critical: true, rolled: 10 }, draws: 3 })
+      expect(shoot(DEADEYE, CRIT)).toMatchObject({ blow: { critical: true, rolled: 15 }, draws: 4 })
+      const melee = attacks(battle([fighter({ ...DEADEYE, damage: { count: 1, sides: 8, bonus: 0 } }), goblinAt(hex(2, 1))], sequence([CRIT, 0.5])).step(ATTACK_GOBLIN))[0]
+      expect(melee).toMatchObject({ critical: true, rolled: 10 })
+    })
+
+    it('pierces 3 more points of resistance with its shots, and previewAttack shows it', () => {
+      expect(shoot({}, HIT).blow).toMatchObject({ rolled: 5, damage: 1, armorPierce: 0 })
+      expect(shoot(DEADEYE, HIT).blow).toMatchObject({ rolled: 5, damage: 4, armorPierce: 3 })
+      expect(shoot(DEADEYE, HIT).draws).toBe(shoot({}, HIT).draws)
+      const preview = (stats: Partial<CombatantStats>) =>
+        battle([fighter({ ...ARCHER, ...stats }), goblinAt(hex(4, 1), { resistance: 4 })], sequence([HIT])).previewAttack('warrior', 'goblin')!
+      expect(preview({}).resistance).toBe(4)
+      expect(preview(DEADEYE).resistance).toBe(1)
+      const melee = battle([fighter(DEADEYE), goblinAt(hex(2, 1), { resistance: 4 })], sequence([HIT])).previewAttack('warrior', 'goblin')!
+      expect(melee.resistance).toBe(4)
+    })
+  })
+
+  describe('Battle Mage (mana on hit)', () => {
+    const MAGE = { magic: { maxMana: 5, skill: 50, spells: [] }, abilities: ['pin' as AbilityId], manaOnHit: 2 }
+    const PIN: Action = { type: 'ability', unit: 'warrior', ability: 'pin', target: 'goblin' }
+
+    it('restores its mana on a melee hit, up to the maximum, recorded as manaRestored', () => {
+      const { rng, draws } = counting([HIT, HIT])
+      const engine = battle([fighter(MAGE), goblinAt(hex(2, 1))], rng)
+      const [pin] = attacks(engine.step(PIN))
+      expect(pin).toMatchObject({ hit: true, manaCost: 3, manaAfter: 2, manaRestored: 2 })
+      expect(unitOf(engine, 'warrior').mana).toBe(4)
+      const plain = counting([HIT, HIT])
+      battle([fighter({ ...MAGE, manaOnHit: undefined }), goblinAt(hex(2, 1))], plain.rng).step(PIN)
+      expect(draws()).toBe(plain.draws())
+      const capped = battle([fighter({ ...MAGE, manaOnHit: 5 }), goblinAt(hex(2, 1))], sequence([HIT]))
+      expect(attacks(capped.step(PIN))[0].manaRestored).toBe(3)
+      expect(unitOf(capped, 'warrior').mana).toBe(5)
+    })
+
+    it('restores none on a miss, at full mana, without magic, or on a shot', () => {
+      expect(attacks(battle([fighter(MAGE), goblinAt(hex(2, 1))], sequence([FUMBLE])).step(PIN))[0]).not.toHaveProperty('manaRestored')
+      expect(attacks(battle([fighter(MAGE), goblinAt(hex(2, 1))], sequence([HIT])).step(ATTACK_GOBLIN))[0]).not.toHaveProperty('manaRestored')
+      expect(attacks(battle([fighter({ manaOnHit: 2 }), goblinAt(hex(2, 1))], sequence([HIT])).step(ATTACK_GOBLIN))[0]).not.toHaveProperty('manaRestored')
+      const archer = battle([fighter({ ...MAGE, ...ARCHER, abilities: ['pinning_shot'] }), goblinAt(hex(4, 1))], sequence([HIT]))
+      const [shot] = attacks(archer.step({ type: 'ability', unit: 'warrior', ability: 'pinning_shot', target: 'goblin' }))
+      expect(shot).toMatchObject({ hit: true, manaCost: 3 })
+      expect(shot).not.toHaveProperty('manaRestored')
+    })
+
+    it('restores none on a hit that strikes an image', () => {
+      const engine = battle(
+        [fighter(MAGE), goblinAt(hex(2, 1), { magic: { maxMana: 10, skill: 50, spells: ['mirror_image'] } })],
+        sequence([HIT]),
+      )
+      engine.step(END_TURN)
+      engine.step({ type: 'cast', unit: 'goblin', spell: 'mirror_image', target: 'goblin' })
+      engine.step(END_TURN)
+      const [pin] = attacks(engine.step(PIN))
+      expect(pin).toMatchObject({ hit: true, image: true })
+      expect(pin).not.toHaveProperty('manaRestored')
+    })
+  })
+
+  describe('snapshots', () => {
+    const units = [fighter({ traits: ['ambush'], attackApCost: 4 }), goblinAt(hex(2, 1)), { ...CLERIC, position: hex(0, 0) }]
+    const play = (engine: BattleEngine) => {
+      for (let state = engine.getState(); state.phase !== 'over'; state = engine.getState()) {
+        engine.step(POLICIES.aggressive({ state, legal: engine.legalActions(), rng: () => 0 }))
+      }
+      return engine.getLog()
+    }
+
+    it('start every unit with the stage-3 fields at their defaults, and carry them through a restore', () => {
+      const engine = new BattleEngine({ board: WIDE, units }, { seed: 4 })
+      expect(engine.snapshot().units.map(({ attackedYet, endured, refunded, fallenThisBattle, usedOnce }) => ({ attackedYet, endured, refunded, fallenThisBattle, usedOnce })))
+        .toEqual(units.map(() => ({ attackedYet: false, endured: false, refunded: false, fallenThisBattle: false, usedOnce: [] })))
+      const saved = JSON.parse(JSON.stringify(engine.snapshot()))
+      for (const unit of saved.units) Object.assign(unit, { attackedYet: true, endured: true, refunded: true, fallenThisBattle: true, usedOnce: ['heal'] })
+      const restored = BattleEngine.restore(saved)
+      expect(restored.snapshot().units.every((u) => u.attackedYet && u.endured && u.refunded && u.fallenThisBattle && u.usedOnce[0] === 'heal')).toBe(true)
+      // With attackedYet set, the ambusher's first attack is no ambush.
+      expect(attacks(play(BattleEngine.restore(saved))).some((e) => e.ambush)).toBe(false)
+      expect(play(BattleEngine.restore(JSON.parse(JSON.stringify(saved))))).toEqual(play(restored))
+    })
+
+    it('restore a snapshot without them (save version 24) with the defaults, playing on as the original', () => {
+      const original = new BattleEngine({ board: WIDE, units }, { seed: 4 })
+      const saved = JSON.parse(JSON.stringify(original.snapshot()))
+      for (const unit of saved.units) for (const field of ['attackedYet', 'endured', 'refunded', 'fallenThisBattle', 'usedOnce']) delete unit[field]
+      const restored = BattleEngine.restore(saved)
+      expect(restored.snapshot()).toEqual(original.snapshot())
+      expect(play(restored)).toEqual(play(original))
+    })
+
+    it('show attackedYet in a unit’s state only once it is true', () => {
+      const engine = battle(units, sequence([FUMBLE]))
+      expect(unitOf(engine, 'warrior')).not.toHaveProperty('attackedYet')
+      engine.step(ATTACK_GOBLIN)
+      expect(unitOf(engine, 'warrior').attackedYet).toBe(true)
     })
   })
 })
