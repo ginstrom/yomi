@@ -282,3 +282,4 @@ Deviations:
 - `ActiveStatus.source` is typed `string` (a `UnitId`), as `spells.ts` does not import the engine.
 
 For step 12: the AC5 clause "the policy attacks the taunter" is yours; read `tauntPenalty(unit, target)` from the snapshots (a `UnitSnapshot`'s `statuses` carry `source`). No node yet carries `trait: 'rooted'` or the Taunt/Pin abilities (step 13).
+- Commit: `9ec03ef` Skill trees step 11: Taunt, Rooted and Pin.

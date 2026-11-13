@@ -36,7 +36,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | **Stage 2: hero techniques** | | | | | |
 | 09 | [Hero abilities: strikes and statuses](09-hero-strikes.md) | `Ability`/`Strike` extensions; mana, weapon AP, `needs`; self- and foe-status abilities; technique strikes through `attack()`; Cleave's spread; `slowed`, `marked`; `imbueDamage`; `LOG_SCHEMA_VERSION` 25 | 08 | opus | done (8e8e99b) |
 | 10 | [Area techniques](10-area-techniques.md) | `AreaAttack` extensions: Volley, Consecrate and Taunt's area | 09 | opus | done (18595ee) |
-| 11 | [Taunt, Rooted and Pin](11-taunt-rooted-pin.md) | `taunted`, `rooted`, `pinned`; `StatusLaidEvent`; `UnitRecord.moved`; `ActiveStatus.source`; trait `rooted`; `SAVE_VERSION` 24 (AC5) | 10 | opus | in progress |
+| 11 | [Taunt, Rooted and Pin](11-taunt-rooted-pin.md) | `taunted`, `rooted`, `pinned`; `StatusLaidEvent`; `UnitRecord.moved`; `ActiveStatus.source`; trait `rooted`; `SAVE_VERSION` 24 (AC5) | 10 | opus | done (9ec03ef) |
 | 12 | [The policy uses techniques](12-policy-techniques.md) | `bestStrike` weighs techniques; `tauntUse`, `markUse`, `sprintUse`; taunted units turn on the source; monsters unchanged | 11 | opus | pending |
 | 13 | [Stage-2 nodes and plans](13-stage2-nodes.md) | The 18 stage-2 nodes in `PERKS`; plans and bandit plans take them; Battle Mage's imbue | 12 | sonnet | pending |
 | 14 | [The Skills menu and the techniques' looks](14-skills-menu.md) | `skillMenu.ts`; the Skills button (M); targeting; effects and log lines; nameplate marks; `foeInfo`; AC7 in the browser | 13 | opus | pending |
