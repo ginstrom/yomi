@@ -16,7 +16,7 @@ import { craft } from '../src/game/crafting.ts'
 import type { FamilyId } from '../src/inventory/catalog.ts'
 import { itemById, unruned } from '../src/inventory/inventory.ts'
 import { modifiersFor } from '../src/inventory/modifiers.ts'
-import { maxHp } from '../src/character/character.ts'
+import { maxHp, type Character } from '../src/character/character.ts'
 import { worldHealing } from '../src/character/worldCasting.ts'
 import { lootRng, rollRunes } from '../src/game/loot.ts'
 import { runePrice, salePrice } from '../src/game/tradingPost.ts'
@@ -42,6 +42,7 @@ import {
   runCampaign,
   summarize,
   summarizeCampaigns,
+  vanguardTallies,
   craftGear,
   materialNeeds,
   visitFacilities,
@@ -357,6 +358,65 @@ describe('summarize, with techniques', () => {
     const summary = summarize(run((outcome) => [area('hero', 'taunt', [outcome('orc', { id: 'taunted', turnsLeft: 2 })])]), 2)
     expect(summary.playerTechniques).toEqual({ taunt: 0.5 })
     expect(summary.avgPlayerTaunts).toBe(0.5)
+  })
+})
+
+describe('summarize, with the stage-3 traits', () => {
+  const run = (middle: LoggedEvent[]): LoggedEvent[] => {
+    const [start, end] = battle(0, 3, 'player')
+    if (start.type !== 'battle_start') throw new Error('expected a battle_start')
+    const unit = (id: string, side: Side) => ({ id, side }) as (typeof start.units)[number]
+    return [{ ...start, units: [unit('hero', 'player'), unit('ally', 'player'), unit('orc', 'enemy')] }, ...middle, end]
+  }
+  const attack = (attacker: string, defender: string, extra: object = {}): LoggedEvent =>
+    ({ type: 'attack', battleId: 0, seq: 1, round: 1, attacker, defender, hit: true, critical: false, damage: 0, bonus: [], opportunity: false, apCost: 4, ...extra }) as unknown as LoggedEvent
+  const outcome = (unit: string, extra: object = {}) =>
+    ({ unit, attackRoll: 40, chance: 61, defenderAc: 15, hit: true, critical: false, fumble: false, image: false, damage: 0, warded: 0, half: false, healed: 0, hpBefore: 1, hpAfter: 1, status: null, ...extra })
+  const cast = (caster: string, outcomes: object[]): LoggedEvent =>
+    ({ type: 'cast', battleId: 0, seq: 1, round: 1, caster, spell: 'revive', drained: 0, outcomes }) as unknown as LoggedEvent
+  const tick = (unit: string, extra: object = {}): LoggedEvent =>
+    ({ type: 'status_tick', battleId: 0, seq: 1, round: 1, unit, status: 'poisoned', damage: 1, warded: 0, hpBefore: 2, hpAfter: 1, ...extra }) as unknown as LoggedEvent
+
+  it('counts counters, deathblows, revives and Unbreakable saves by side', () => {
+    const summary = summarize(
+      run([
+        attack('hero', 'orc', { counter: true }),
+        attack('hero', 'orc', { deathblow: true }),
+        attack('orc', 'hero', { counter: true, endured: true }),
+        attack('orc', 'ally', { endured: true }),
+        cast('hero', [outcome('ally', { revived: true }), outcome('hero', { endured: true })]),
+        tick('orc', { endured: true }),
+        tick('hero'),
+        attack('hero', 'orc'),
+      ]),
+      1,
+    )
+    expect(summary).toMatchObject({
+      avgPlayerCounters: 1, avgEnemyCounters: 1,
+      avgPlayerDeathblows: 1, avgEnemyDeathblows: 0,
+      avgPlayerRevives: 1, avgEnemyRevives: 0,
+      avgPlayerUnbreakableSaves: 3, avgEnemyUnbreakableSaves: 1,
+    })
+  })
+
+  it('counts nothing when no event carries the fields, and averages over the battles', () => {
+    expect(summarize(run([attack('hero', 'orc')]), 1)).toMatchObject({ avgPlayerCounters: 0, avgPlayerDeathblows: 0, avgPlayerRevives: 0, avgPlayerUnbreakableSaves: 0, avgEnemyUnbreakableSaves: 0 })
+    expect(summarize(run([attack('hero', 'orc', { deathblow: true })]), 4).avgPlayerDeathblows).toBe(0.25)
+  })
+})
+
+describe('callings and capstones of a vanguard', () => {
+  const hero = (...perks: string[]) => ({ perks: Object.fromEntries(perks.map((id) => [id, 1])) }) as unknown as Character
+  it('counts the deepest paths of each hero, a tie counting every tied path, and the capstones held', () => {
+    expect(vanguardTallies([hero('power_attack'), hero('power_attack', 'meteor'), hero()])).toEqual({
+      callings: { swordmaster: 2, evoker: 1 },
+      capstones: { meteor: 1 },
+    })
+  })
+  it('counts a tie for every path and nothing for a hero with no nodes', () => {
+    const tied = vanguardTallies([hero('power_attack', 'fireball')])
+    expect(Object.keys(tied.callings).sort()).toEqual(['evoker', 'swordmaster'])
+    expect(vanguardTallies([hero()])).toEqual({ callings: {}, capstones: {} })
   })
 })
 
@@ -912,15 +972,16 @@ describe('runes in a campaign', () => {
  * to the old `aa9ffae5...ff5119`. Re-hashed in skill trees step 21, the records unchanged: the stage-3 nodes enter
  * the plans and the six partial nodes are completed (Iron Skin's free attacks, Battle Mage's mana on hit, Skirmisher,
  * Fortune, Deadeye, Serenity), which changes the heroes' events (the guard's heroes reach level 9, past Iron Skin
- * at 8) but no campaign's figures. A mismatch means a step
+ * at 8) but no campaign's figures. Re-recorded in skill trees step 23: `CampaignRecord`
+ * gains `callings` and `capstones` (the events unchanged, the hash the same as before). A mismatch means a step
  * changed behaviour.
  */
 const GUARD_RECORDS: CampaignRecord[] = [
-  { outcome: "source", days: 402, battles: 25, spawns: 35, captured: 5, lost: 0, blighted: 0.34833333333333333, healedHp: 182, campDays: 27, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 1, outpostsBuilt: 2, tradingPostLevel: 2, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 17, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 20, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [9, 9, 9, 8, 7], deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 25, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 77, guardBattles: 0 },
-  { outcome: "source", days: 384, battles: 25, spawns: 35, captured: 5, lost: 0, blighted: 0.34041666666666665, healedHp: 178, campDays: 26, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, outpostsBuilt: 2, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 8, tierTwoBought: 0, crafted: 6, fieldCraftDays: 4, runesFound: 19, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [9, 9, 9, 8, 7], deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 25, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 65, guardBattles: 0 },
-  { outcome: "source", days: 325, battles: 20, spawns: 30, captured: 4, lost: 0, blighted: 0.34875, healedHp: 139, campDays: 16, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 3, hallLevel: 3, shrineLevel: 2, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 5, fieldCraftDays: 5, runesFound: 14, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7], deathsAtLevel: [6, 7, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 20, wipes: 0, finalLevels: [[8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 65, guardBattles: 0 },
-  { outcome: "source", days: 270, battles: 20, spawns: 30, captured: 3, lost: 0, blighted: 0.39375, healedHp: 124, campDays: 17, towersBuilt: 3, towersLost: 0, deaths: 1, recruits: 1, hallLevel: 2, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 5, fieldCraftDays: 3, runesFound: 16, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 8], deathsAtLevel: [7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 20, wipes: 0, finalLevels: [[8, 8, 8]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 36, guardBattles: 0 },
-  { outcome: "source", days: 415, battles: 25, spawns: 35, captured: 5, lost: 0, blighted: 0.3275, healedHp: 183, campDays: 32, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 1, outpostsBuilt: 2, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 9, tierTwoBought: 0, crafted: 7, fieldCraftDays: 3, runesFound: 21, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [9, 9, 9, 8, 7], deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 25, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 76, guardBattles: 0 },
+  { outcome: "source", days: 402, battles: 25, spawns: 35, captured: 5, lost: 0, blighted: 0.34833333333333333, healedHp: 182, campDays: 27, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 1, outpostsBuilt: 2, tradingPostLevel: 2, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 17, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 20, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [9, 9, 9, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 25, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 77, guardBattles: 0 },
+  { outcome: "source", days: 384, battles: 25, spawns: 35, captured: 5, lost: 0, blighted: 0.34041666666666665, healedHp: 178, campDays: 26, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, outpostsBuilt: 2, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 8, tierTwoBought: 0, crafted: 6, fieldCraftDays: 4, runesFound: 19, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [9, 9, 9, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 25, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 65, guardBattles: 0 },
+  { outcome: "source", days: 325, battles: 20, spawns: 30, captured: 4, lost: 0, blighted: 0.34875, healedHp: 139, campDays: 16, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 3, hallLevel: 3, shrineLevel: 2, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 5, fieldCraftDays: 5, runesFound: 14, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 1 }, capstones: {}, deathsAtLevel: [6, 7, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 20, wipes: 0, finalLevels: [[8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 65, guardBattles: 0 },
+  { outcome: "source", days: 270, battles: 20, spawns: 30, captured: 3, lost: 0, blighted: 0.39375, healedHp: 124, campDays: 17, towersBuilt: 3, towersLost: 0, deaths: 1, recruits: 1, hallLevel: 2, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 5, fieldCraftDays: 3, runesFound: 16, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 8], callings: { heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 20, wipes: 0, finalLevels: [[8, 8, 8]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 36, guardBattles: 0 },
+  { outcome: "source", days: 415, battles: 25, spawns: 35, captured: 5, lost: 0, blighted: 0.3275, healedHp: 183, campDays: 32, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 1, outpostsBuilt: 2, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 9, tierTwoBought: 0, crafted: 7, fieldCraftDays: 3, runesFound: 21, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [9, 9, 9, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 25, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 76, guardBattles: 0 },
 ]
 const GUARD_EVENTS_SHA256 = 'b840633af460e155bc30b0ad601f396744948d344e586351d9819d84ab25e0a2'
 

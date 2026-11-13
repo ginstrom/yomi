@@ -176,13 +176,41 @@ Expected: all pass. The simulator runs of §4.2, one at a time.
 
 ## 6. Completion criteria
 
-- [ ] Summary lines for counters, deathblows, revives and Unbreakable saves per side; `CampaignRecord.callings` and `capstones`; the capstone share printed; tests written first and passing.
-- [ ] The guard fixture re-recorded last, and the commit message says so.
-- [ ] Three campaigns and every cell measured; the index's 23 column filled, run time included; any campaign under 150 reported with its cells.
-- [ ] AC8 shown by the `--ready-level 12` run (Unbreakable, Deadeye, Meteor reached), or the failure reported with evidence.
-- [ ] `CLAUDE.md`, the manual's text and the feature record true for stage 3.
-- [ ] The play check recorded.
-- [ ] `npm test`, `npm run test:browser`, `npm run build` pass, outputs recorded.
-- [ ] One commit; the index's step 23 row set to `done (<commit>)`.
+- [x] Summary lines for counters, deathblows, revives and Unbreakable saves per side; `CampaignRecord.callings` and `capstones`; the capstone share printed; tests written first and passing.
+- [x] The guard fixture re-recorded last, and the commit message says so.
+- [x] Three campaigns and every cell measured; the index's 23 column filled, run time included; any campaign under 150 reported with its cells.
+- [x] AC8 shown by the `--ready-level 12` run (Unbreakable, Deadeye, Meteor reached), or the failure reported with evidence.
+- [x] `CLAUDE.md`, the manual's text and the feature record true for stage 3.
+- [x] The play check recorded.
+- [x] `npm test`, `npm run test:browser`, `npm run build` pass, outputs recorded.
+- [x] One commit; the index's step 23 row set to `done (<commit>)`.
 
 ## 7. Execution record
+
+### Engineer record (2026-11-14)
+
+**Code** (`scripts/simulate.ts`, tests first in `scripts/simulate.test.ts`): `Tally` counts per side `counters` and `deathblows` (the attacker's side), `revives` (the caster's) and Unbreakable saves (`endured` on an attack, a cast or area outcome or a status tick, by the side of the unit kept standing); `Summary` gains `avg{Player,Enemy}{Counters,Deathblows,Revives,UnbreakableSaves}`, printed as the "Traits" lines. `CampaignRecord` gains `callings` and `capstones` (`vanguardTallies`: each hero's `calling` paths, a tie counting all, and its `capstoneOf`; read where `finalLevels` is, so a wiped vanguard counts as it fell); `summarizeCampaigns` totals them with `withCapstone`, and the summary prints a "Capstones" and a "Callings" line. Guard: the events are unchanged (hash `b840633a...e0a2`, as before), the records gain `callings` and `capstones`; re-recorded.
+
+**Runs** (Node 26, seed 1, 500 each, one at a time; `logs/23-*.txt`, times in `logs/23-times.txt`):
+
+| Figure | Step 16 | Step 23 |
+| --- | --- | --- |
+| one party | 449 (339 days, 22.5 battles, 0.5 dead) | 449 (339 days, 22.5 battles, 0.5 dead), 272 s |
+| default company | 449 | 449 (339 days, 22.6 battles), 270 s |
+| `--ready-level 10` | 488 | 488 (567 days, 48.3 battles), 580 s |
+| GR3 / BC3 / BC4 / BC5 | 500 / 494 / 495 / 488 | 500 / 494 / 495 / 488 |
+| SN5 / SP5 / TL5 | 500 / 495 / 8 | 500 / 495 / 8 |
+| SG7 / SG10 | 0 / 422 | 0 / 386 |
+| F1 / F2 / F3 | 500 / 500 / 493 | 500 / 500 / 493 |
+
+The three campaigns are exactly step 16's: no hero in them holds a stage-3 trait or capstone but Iron Skin and Guardian (capstones: 0 of 500 campaigns at ready level 7, 3 at 10: Deadeye 3, Unbreakable 2), and the trait lines read 0.000 on both sides. Only SG10 moved (422 to 386). No campaign under 150. Out of band as at stage 2: all three campaigns, BC3, BC4, SN5, SP5 (high), SG10; SG7 in band, TL5 report-only.
+
+**AC8** (`--ready-level 12`, 500 campaigns, 883 s, under the 15 minute limit): 473 Source (94.6%), 12 fell, 15 out of days; 736 days, 73.6 battles; vanguards end at 11.5 to 12.1. Capstones: 449 of 500 campaigns (89.8%): unbreakable 627, deadeye 452, **meteor 0**. Callings: heavy_knight 1443, evoker 519, ranger 504, swordmaster 6. Why Meteor is 0: checked with `raisedParty` at levels 12 and 14. At 12 Delwyn holds magic_arrow, heal, arcane_study, destruction, flame_arrow, heal_all, fireball, pyromancy, mending (nine picks) and no capstone; at 14 he takes meteor. Arcane Study is his creation pick and is not in `evoker_healer`, so the plan's ninth entry becomes his tenth pick. AC8 is met for Unbreakable and Deadeye and not for Meteor at level 12; no rule changed. Stage-4 lever: put Meteor ahead of Mending (or Pyromancy) in `evoker_healer`, or accept level 14.
+
+**Traits unseen in the simulator:** in the `--ready-level 12` log 0 `endured`, 0 `deathblow`, 0 `counter`, 0 `revived`; units with `unbreakable` at `battle_start`: 2851 (its heroes win 15 783 of 15 784 threat-5 battles, so no one reaches 0). Stage 4's parity cells at higher levels or a deliberately harder cell are where counts will first show. These figures bear on the stage-4 notes in the feature record: capstones are reached only in the longest campaigns, so capstone parity cannot be judged from campaign wins.
+
+**Play check:** see the feature record's Stage 3 section (Aldric at level 12 with Unbreakable, at 1 hit point, struck by the Bandit Captain: `endured: true`, hit points stay 1). Meteor not cast by hand. A scratch test, removed.
+
+**Docs:** CLAUDE.md (the flags paragraph's trait lines and `callings`/`capstones`; the stage-3 scaling sentence); manual (six node-table rows brought to their current descriptions: Iron Skin, Battle Mage, Deadeye, Skirmisher, Fortune, Serenity; a paragraph on auras and traits in chapter 5); the feature record's Stage 3 verification. The engine, casting, policy and version paragraphs of CLAUDE.md were already true from steps 17 to 22 (checked: `LOG_SCHEMA_VERSION` 26, `SAVE_VERSION` 25, no `sleep` on a status rule).
+
+**Verification:** `npm test` 86 files, 2004 tests pass; `npm run build` ok; `npm run test:browser` 10 files, 118 tests pass (253 s).

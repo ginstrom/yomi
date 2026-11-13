@@ -364,6 +364,8 @@ Press **Cancel** or **Esc** to back out. Spells are aimed the same way (see chap
 
 Other things you will see in a battle: green **+3** floating over a unit is a restore at the start of its turn (Renewing, a Sanctuary's aura), and a blue **+2 mana** a Serenity's; **Endures** shows a hero kept standing at 1 hit point by Unbreakable; **Deathblow** a foe felled outright by a hit that left it a quarter of its hit points; **Ambush** and **+4 AP** an Ambush's first blow and the action points Blademaster gave back. A hero brought back by Revive stands up again at once. Hovering over a foe lists its abilities with their costs, and the on-hit damage of a technique such as Smite reads "+4 on hit".
 
+Some nodes work by themselves, with nothing to click. **Auras** (Guardian, Aura of Courage, Aegis) help the allies near the hero for as long as the hero stands, and two of the same aura do not add up. **Traits** act when their moment comes: Counter strikes back at a melee blow, Backstab, Ambush and Executioner add to a blow in the right moment, Deathblow fells a weakened foe, Blademaster refunds the action points of a blow that felled one, and Unbreakable keeps a hero at 1 hit point the first time each battle that damage would fell them. Sanctuary, Serenity and Shadowdancer work as a turn begins. The tables in chapter 7 say what each asks and does.
+
 ### Zones of control and free attacks
 
 A foe holding a **melee** weapon controls the hexes next to it. **Leaving** those hexes gives that foe one free attack on you; stepping to another hex next to the same foe does not. Each foe gets at most one free attack per enemy turn. A spear or halberd controls only the hexes next to it too, though it strikes from two. Ranged units (bows, crossbows, wands) and sleepers have no zone of control. Pathfinding prefers routes that provoke the fewest foes, and the orange edges show where the danger is. Your heroes threaten the enemy in exactly the same way.
@@ -734,10 +736,10 @@ This lists the nodes the game has now, by tree and path. **Asks** is what a node
 |  | Weapon Mastery | T3 | Passive | Strength 8 | +10% Melee Weapons, +2 melee damage, and melee blows pierce 1 more point of a foe's resistance |
 | Heavy Knight | Toughness | T1 | Passive | Endurance 5 | +8 hit points and +1 Endurance |
 |  | Shield Wall | T1 | Passive | — | +8 armour class while a shield is in the off hand |
-|  | Iron Skin | T3 | Passive | Endurance 7 | +2 resistance |
+|  | Iron Skin | T3 | Passive | Endurance 7 | +2 resistance; its free attacks get +15 to hit and +3 damage |
 | Spellsword | Arcane Blood | T1 | Passive | Intelligence 4 | +10 mana |
 |  | Spell Ward | T2 | Passive | — | +3 ward against every element |
-|  | Battle Mage | T3 | Passive | Intelligence 5 | +6 mana |
+|  | Battle Mage | T3 | Passive | Intelligence 5 | +6 mana; each melee hit that strikes no image restores 1 mana; its Strikes' elemental damage +2 |
 
 #### Scout
 
@@ -746,12 +748,12 @@ This lists the nodes the game has now, by tree and path. **Asks** is what a node
 | Ranger | Marksmanship | T1 | Passive | Perception 5 | +10% Archery |
 |  | Deadly Aim | T1 | Passive | Perception 6 | +2 damage with ranged weapons |
 |  | Far Shot | T2 | Passive | Perception 6 | Ranged weapons reach 2 hexes further; +1 Perception |
-|  | Deadeye | Capstone | Passive | Archery 70% | +10% Archery |
+|  | Deadeye | Capstone | Passive | Archery 70% | +10% Archery; its shots pierce 3 points of resistance, and a critical shot rolls triple dice instead of double |
 | Rogue | Dodger | T1 | Passive | Agility 6 | +10 armour class |
-|  | Skirmisher | T2 | Passive | Agility 6 | +1 Agility |
+|  | Skirmisher | T2 | Passive | Agility 6 | +1 Agility; after it has moved this turn, its attacks get +10 to hit |
 |  | Evasion | T3 | Passive | Agility 8 | +10 armour class and +1 action point every turn |
 | Assassin | Keen Eye | T1 | Passive | Luck 6 | +10% chance of a critical hit |
-|  | Fortune | T3 | Passive | Luck 7 | +10% chance of a critical hit and +1 Luck |
+|  | Fortune | T3 | Passive | Luck 7 | +10% chance of a critical hit and +1 Luck; its critical hits deal 4 more damage, after the dice are doubled |
 
 #### Mage
 
@@ -794,7 +796,7 @@ This lists the nodes the game has now, by tree and path. **Asks** is what a node
 |  | Lay on Hands | T2 | Spell | Melee 40% or Magic 40% | Restores 2d6+2 hit points to an ally within 1 hex; 4 mana, 3 AP |
 |  | Blessed Armour | T2 | Passive | Endurance 5 | +1 resistance, +3 ward against blight, +6 mana |
 |  | Sacred Weapon | T3 | Passive | Melee 60% | +10% Melee Weapons; every melee hit adds 2 damage, and 4 more as bane |
-| Saint | Serenity | T1 | Passive | Intelligence 5 | Its friendly spells aimed at an ally or a point reach 2 hexes further |
+| Saint | Serenity | T1 | Passive | Intelligence 5 | Regains 2 mana as its side's turn begins (never above its maximum); its friendly spells aimed at an ally or a point reach 2 hexes further |
 |  | Bane | T1 | Spell | Magic 40% | -15 to hit for everyone within 1 hex of a point within 5 hexes, for 3 turns; 5 mana, 4 AP |
 |  | Protect | T2 | Spell | Magic 55% | +10 AC to an ally within 4 hexes for 3 turns; 3 mana, 3 AP |
 |  | Scholar | T2 | Passive | Intelligence 6 | +2 skill points every level |

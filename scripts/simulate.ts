@@ -24,6 +24,8 @@ import { BattleEngine, type BattleEvent, type BattleSetup, type Side, type UnitI
 import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.ts'
 import { autoAdvance, levelUp, planFor, PLAN_IDS, type PlanId } from '../src/character/progression.ts'
 import type { Character } from '../src/character/character.ts'
+import { calling, capstoneOf, type PathId } from '../src/character/trees.ts'
+import type { PerkId } from '../src/character/perks.ts'
 import { SKILL_IDS, type SkillId } from '../src/character/skills.ts'
 import { ABILITY_IDS, type AbilityId } from '../src/combat/abilities.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/encounters.ts'
@@ -386,6 +388,9 @@ export interface CampaignRecord {
   goldOnRunes: number
   /** Each member's level when the campaign ended. */
   finalLevels: number[]
+  /** The vanguard's heroes at the end: how many have each path as a calling (the deepest, a tie counting every tied path), and how many hold each capstone. */
+  callings: Partial<Record<PathId, number>>
+  capstones: Partial<Record<PerkId, number>>
   /** The level of each hero who died in a won battle, in the order they fell. */
   deathsAtLevel: number[]
   /** For 5, 10, 15 and 20: how many battles had been fought when the party's lowest level first reached it; absent if never. */
@@ -951,7 +956,7 @@ export function startCampaign(campaign: number, seed: number, args: CliArgs, fir
     towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0,
     tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 0, fieldCraftDays: 0,
     runesFound: 0, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0,
-    finalLevels: [], deathsAtLevel: [], battlesToLevel: {},
+    finalLevels: [], callings: {}, capstones: {}, deathsAtLevel: [], battlesToLevel: {},
     roles: { vanguard: { battles: 0, wipes: 0, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } },
     wipes: 0, promotions: 0, vanguardWalkHomeDays: 0, guardBattles: 0,
   }
@@ -1398,7 +1403,10 @@ function wipe(run: CampaignRun, party: Expedition, target: MonsterLocation): 'wi
   const role = roleOf(run, party)
   record.wipes++
   record.roles[role].wipes++
-  if (role === 'vanguard') record.finalLevels = party.members.map((member) => member.level)
+  if (role === 'vanguard') {
+    record.finalLevels = party.members.map((member) => member.level)
+    Object.assign(record, vanguardTallies(party.members))
+  }
   // Counted before the wipe takes the party's gear, so a fallen company's sockets are those it fell with.
   const sockets = socketsFilled(game.parties)
   const { lost, reformed } = wipeParty(game, party.id, target)
@@ -1607,6 +1615,18 @@ export function advanceLimit(game: GameState): number {
   return game.parties.some((party) => party.order.kind !== 'idle' && party.order.kind !== 'garrison') ? Infinity : IDLE_DAYS
 }
 
+/** The callings and capstones of a vanguard's heroes (`CampaignRecord.callings`, `capstones`). */
+export function vanguardTallies(members: readonly Pick<Character, 'perks'>[]): Pick<CampaignRecord, 'callings' | 'capstones'> {
+  const callings: CampaignRecord['callings'] = {}
+  const capstones: CampaignRecord['capstones'] = {}
+  for (const member of members) {
+    for (const path of calling(member)) callings[path] = (callings[path] ?? 0) + 1
+    const capstone = capstoneOf(member)
+    if (capstone) capstones[capstone] = (capstones[capstone] ?? 0) + 1
+  }
+  return { callings, capstones }
+}
+
 /** The campaign's record filled in at its end: the vanguard's levels (as it fell, if it was wiped), each role's, and the sockets of every party. */
 export function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Campaign {
   const { game, record, battles } = run
@@ -1621,7 +1641,10 @@ export function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Camp
   record.tradingPostLevel = world.tradingPost
   record.workshopLevel = world.workshop
   record.infirmaryLevel = world.infirmary
-  if (vanguard) record.finalLevels = vanguard.members.map((member) => member.level)
+  if (vanguard) {
+    record.finalLevels = vanguard.members.map((member) => member.level)
+    Object.assign(record, vanguardTallies(vanguard.members))
+  }
   for (const role of ['vanguard', 'guard'] as const) {
     record.roles[role].finalLevels = game.parties.filter((party) => roleOf(run, party) === role).map((party) => party.members.map((member) => member.level))
   }
@@ -1723,6 +1746,15 @@ export interface Summary {
   /** Mana spent on techniques, per battle, by side. */
   avgPlayerTechniqueMana: number
   avgEnemyTechniqueMana: number
+  /** Stage-3 traits, per battle, by side: counter-attacks and deathblows by the striker's side, revives by the caster's, and Unbreakable saves by the side of the unit kept standing. */
+  avgPlayerCounters: number
+  avgEnemyCounters: number
+  avgPlayerDeathblows: number
+  avgEnemyDeathblows: number
+  avgPlayerRevives: number
+  avgEnemyRevives: number
+  avgPlayerUnbreakableSaves: number
+  avgEnemyUnbreakableSaves: number
 }
 
 /** The monsters' abilities, counted with the area attacks and not among the techniques. */
@@ -1747,6 +1779,10 @@ class Tally {
   private taunts = sides()
   private pins = sides()
   private techniqueMana = sides()
+  private counters = sides()
+  private deathblows = sides()
+  private revives = sides()
+  private saves = sides()
   private opportunityAttacks = 0
   private sideAttacks = 0
   private rearAttacks = 0
@@ -1774,6 +1810,9 @@ class Tally {
       if (event.hit) this.hits[side]++
       if (event.critical) this.crits[side]++
       if (event.status?.id === 'pinned') this.pins[side]++
+      if (event.counter) this.counters[side]++
+      if (event.deathblow) this.deathblows[side]++
+      if (event.endured) this.saves[this.sideOf.get(event.defender) === 'player' ? 'player' : 'enemy']++
       // A technique's first strike is the one that paid its action points; the rest of a routine are free.
       if (event.ability && isTechnique(event.ability) && !event.opportunity && event.apCost > 0) {
         this.useTechnique(side, event.ability, event.manaCost)
@@ -1787,6 +1826,8 @@ class Tally {
         this.damage[side] += outcome.damage
         this.healing[side] += outcome.healed
         if (outcome.status) this.statuses[side]++
+        if (outcome.revived) this.revives[side]++
+        if (outcome.endured) this.saves[this.sideOf.get(outcome.unit) === 'player' ? 'player' : 'enemy']++
       }
     }
     if (event.type === 'ability') {
@@ -1797,9 +1838,11 @@ class Tally {
         this.damage[side] += outcome.damage
         if (outcome.status) this.statuses[side]++
         if (outcome.status?.id === 'taunted') this.taunts[side]++
+        if (outcome.endured) this.saves[this.sideOf.get(outcome.unit) === 'player' ? 'player' : 'enemy']++
       }
     }
     if (event.type === 'status_tick') {
+      if (event.endured) this.saves[this.sideOf.get(event.unit) === 'player' ? 'player' : 'enemy']++
       this.damage[this.sideOf.get(event.unit) === 'player' ? 'enemy' : 'player'] += event.damage
     }
   }
@@ -1845,6 +1888,14 @@ class Tally {
       avgEnemyPins: this.pins.enemy / battles,
       avgPlayerTechniqueMana: this.techniqueMana.player / battles,
       avgEnemyTechniqueMana: this.techniqueMana.enemy / battles,
+      avgPlayerCounters: this.counters.player / battles,
+      avgEnemyCounters: this.counters.enemy / battles,
+      avgPlayerDeathblows: this.deathblows.player / battles,
+      avgEnemyDeathblows: this.deathblows.enemy / battles,
+      avgPlayerRevives: this.revives.player / battles,
+      avgEnemyRevives: this.revives.enemy / battles,
+      avgPlayerUnbreakableSaves: this.saves.player / battles,
+      avgEnemyUnbreakableSaves: this.saves.enemy / battles,
     }
   }
 }
@@ -1915,6 +1966,10 @@ export interface CampaignSummary {
   /** How many campaigns ended with the guild hall at level 4 or more (a second party allowed), and at 5 (a third). */
   hallFour: number
   hallFive: number
+  /** Heroes with each path as a calling and holding each capstone at the end, totalled over the campaigns, and the campaigns whose vanguard ends holding a capstone. */
+  callings: Partial<Record<PathId, number>>
+  capstones: Partial<Record<PerkId, number>>
+  withCapstone: number
   /** By role: battles and wipes a campaign, and the lowest and highest level of its parties at the end, over the campaigns that ended with one. */
   roles: Record<Role, RoleSummary>
 }
@@ -1948,6 +2003,12 @@ class ThreatTally {
       .sort(([a], [b]) => a - b)
       .map(([threat, row]) => ({ threat, ...row, winRate: row.won / row.battles }))
   }
+}
+
+function total<K extends string>(counts: readonly Partial<Record<K, number>>[]): Partial<Record<K, number>> {
+  const sum: Partial<Record<K, number>> = {}
+  for (const count of counts) for (const [key, n] of Object.entries(count) as [K, number][]) sum[key] = (sum[key] ?? 0) + n
+  return sum
 }
 
 export function summarizeCampaigns(events: readonly LoggedEvent[], records: readonly CampaignRecord[]): CampaignSummary {
@@ -2008,6 +2069,9 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     avgGuardBattles: avg((r) => r.guardBattles),
     hallFour: records.filter((r) => r.hallLevel >= 4).length,
     hallFive: records.filter((r) => r.hallLevel >= 5).length,
+    callings: total(records.map((r) => r.callings)),
+    capstones: total(records.map((r) => r.capstones)),
+    withCapstone: records.filter((r) => Object.keys(r.capstones).length > 0).length,
     roles: { vanguard: roleSummary('vanguard'), guard: roleSummary('guard') },
   }
 
@@ -2021,6 +2085,18 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
       avgHighestFinalLevel: mean(levels.map((l) => Math.max(...l))),
     }
   }
+}
+
+function printTraits(summary: Summary): void {
+  for (const side of ['Player', 'Enemy'] as const) {
+    const n = (key: 'Counters' | 'Deathblows' | 'Revives' | 'UnbreakableSaves') => summary[`avg${side}${key}`].toFixed(3)
+    console.log(`Traits (${side.toLowerCase()}): counters ${n('Counters')}, deathblows ${n('Deathblows')}, revives ${n('Revives')}, Unbreakable saves ${n('UnbreakableSaves')} a battle`)
+  }
+}
+
+function listCounts(counts: Partial<Record<string, number>>): string {
+  const list = Object.entries(counts).sort(([, a], [, b]) => b! - a!).map(([id, n]) => `${id} ${n}`)
+  return list.length ? list.join(', ') : 'none'
 }
 
 function printTechniques(player: Summary['playerTechniques'], enemy: Summary['enemyTechniques']): void {
@@ -2066,6 +2142,7 @@ function main(): void {
     const { playerTechniques, enemyTechniques, ...scalars } = tally.summary(battles)
     console.table(scalars)
     printTechniques(playerTechniques, enemyTechniques)
+    printTraits(tally.summary(battles))
     return
   }
   // The battles were tallied as they were written; the records hold the rest.
@@ -2110,10 +2187,13 @@ function main(): void {
       `${role === 'vanguard' ? 'Vanguard' : 'Guards'}: ${r.avgBattles.toFixed(1)} battles and ${r.avgWipes.toFixed(1)} wipes a campaign; levels at the end, over the ${r.campaigns} campaigns ending with ${role === 'vanguard' ? 'a vanguard' : 'a guard'}, lowest ${r.avgLowestFinalLevel.toFixed(1)}, highest ${r.avgHighestFinalLevel.toFixed(1)}`,
     )
   }
+  console.log(`Capstones: ${summary.withCapstone} of ${summary.campaigns} campaigns (${pct(summary.withCapstone)}) end with a capstone in the vanguard; ${listCounts(summary.capstones)}`)
+  console.log(`Callings (the vanguard's heroes at the end, a tie counting every tied path): ${listCounts(summary.callings)}`)
   console.table(summary.byThreat.map((row) => ({ ...row, winRate: Number(row.winRate.toFixed(3)) })))
   const { playerTechniques, enemyTechniques, ...scalars } = tally.summary(battles)
   console.table(scalars)
   printTechniques(playerTechniques, enemyTechniques)
+  printTraits(tally.summary(battles))
 }
 
 if (import.meta.main) main()

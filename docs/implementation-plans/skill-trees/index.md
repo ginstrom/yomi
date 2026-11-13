@@ -49,7 +49,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | 20 | [The special spells](20-special-spells.md) | Purify, Revive, Renew, Holy Light, Ice Lance, Glacial Prison; `frozen`; `hostile` and `helpless` on statuses | 19 | opus | done (85fd5c1) |
 | 21 | [Stage-3 nodes, plans and the policy's last steps](21-stage3-nodes-policy.md) | The 20 stage-3 nodes; partial nodes completed; plans; `reviveCast`, `purifyCast`, `supportCast`, `prisonCast`, strikeCast extensions | 20 | opus | done (edcc04b, 77f858f, 27f6d66) |
 | 22 | [Stage-3 scenes](22-stage3-scenes.md) | Looks, log lines and marks for the new events and statuses; Revive's aim; restore floats | 21 | sonnet | done (cef16a1) |
-| 23 | [Stage 3: simulator lines, measure and document](23-stage3-measure.md) | Deathblows, revives, Unbreakable saves, callings and capstones in the summary; AC8's `--ready-level 12` check; measured; docs current | 21, 22 | sonnet | pending |
+| 23 | [Stage 3: simulator lines, measure and document](23-stage3-measure.md) | Deathblows, revives, Unbreakable saves, callings and capstones in the summary; AC8's `--ready-level 12` check; measured; docs current | 21, 22 | sonnet | done (see git log) |
 | **Stage 4: balance** | | | | | |
 | 24 | [Path parity and the cells](24-parity-and-cells.md) | Every plan within ±50 of its role's best; capstones checked; cells in band | 23 | opus | pending |
 | 25 | [Campaign bands](25-campaign-bands.md) | The three campaigns, deaths and days in band, or the user has accepted the figure (AC11) | 24 | opus | pending |
@@ -493,16 +493,16 @@ export const MANA_WEIGHT = 0.5
 
 | Figure | 01 baseline | 08 stage 1 | 16 stage 2 | 23 stage 3 | 25 final |
 | --- | --- | --- | --- | --- | --- |
-| one party (`--parties 1`) | 230 of 500 | 425 of 500 | 449 of 500 | | |
-| default company | 239 of 500 | 425 of 500 | 449 of 500 | | |
-| `--ready-level 10` | 389 of 500 | 470 of 500 | 488 of 500 | | |
-| deaths a campaign (one party) | 1.8 | 1.0 | 0.5 | | |
-| days a campaign (one party) | 270 | 333 | 339 | | |
-| GR3 / BC3 / BC4 / BC5 | 500 / 429 / 473 / 469 | 500 / 473 / 485 / 482 | 500 / 494 / 495 / 488 | | |
-| SN5 / SP5 / TL5 | 441 / 445 / 0 | 498 / 492 / 0 | 500 / 495 / 8 | | |
-| SG7 / SG10 | 0 / 2 | 4 / 199 | 0 / 422 | | |
-| F1 / F2 / F3 | 500 / 499 / 441 | 500 / 500 / 493 | 500 / 500 / 493 | | |
-| 500-campaign run time | 270 s (one party; company 258 s, `--ready-level 10` 517 s) | 329 s (company 352 s, `--ready-level 10` 663 s) | 341 s (company 282 s, `--ready-level 10` 592 s) | | |
+| one party (`--parties 1`) | 230 of 500 | 425 of 500 | 449 of 500 | 449 of 500 | |
+| default company | 239 of 500 | 425 of 500 | 449 of 500 | 449 of 500 | |
+| `--ready-level 10` | 389 of 500 | 470 of 500 | 488 of 500 | 488 of 500 | |
+| deaths a campaign (one party) | 1.8 | 1.0 | 0.5 | 0.5 | |
+| days a campaign (one party) | 270 | 333 | 339 | 339 | |
+| GR3 / BC3 / BC4 / BC5 | 500 / 429 / 473 / 469 | 500 / 473 / 485 / 482 | 500 / 494 / 495 / 488 | 500 / 494 / 495 / 488 | |
+| SN5 / SP5 / TL5 | 441 / 445 / 0 | 498 / 492 / 0 | 500 / 495 / 8 | 500 / 495 / 8 | |
+| SG7 / SG10 | 0 / 2 | 4 / 199 | 0 / 422 | 0 / 386 | |
+| F1 / F2 / F3 | 500 / 499 / 441 | 500 / 500 / 493 | 500 / 500 / 493 | 500 / 500 / 493 | |
+| 500-campaign run time | 270 s (one party; company 258 s, `--ready-level 10` 517 s) | 329 s (company 352 s, `--ready-level 10` 663 s) | 341 s (company 282 s, `--ready-level 10` 592 s) | 272 s (company 270 s, `--ready-level 10` 580 s, `--ready-level 12` 883 s) | |
 
 ## Completion criteria
 

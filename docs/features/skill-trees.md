@@ -124,3 +124,26 @@ Techniques a battle, one-party campaign: heroes Taunt 2.18, Aimed Shot 1.66, Pin
 
 Path parity, first look (Bandit Camp threat 4, 500 battles, each plan in its role's slot; the other two heroes on their default plans). At level 4: melee knight 495, paladin 494, spellsword 490, swordmaster 489, assassin 489; archery ranger 495, assassin 444 (−51), rogue_archer 428 (−67); magic healer 497, evoker 495, arcanist 482, cryomancer 478, saint 479. At level 8 all 13 plans win 500 of 500, so that cell no longer tells plans apart. Flagged (more than 50 below the role's best): archery `assassin` and `rogue_archer` at level 4. Why: the assassin path opens with Keen Eye (Luck 6) and the ready-made heroes have Luck 4 or less, so the `assassin` plan takes no assassin node and falls back to `PERKS` order (Aldric then follows the swordmaster's nodes, so melee `assassin` equals `swordmaster`; Brenna takes Toughness and Shield Wall); `rogue_archer` gives Brenna Sprint and Skirmisher, never Aimed Shot. Healer, saint, assassin and rogue run without their stage-3 nodes. Details in step 16's execution record.
 
+### Stage 3 (step 23, 2026-11-14; seed 1, 500 each, recorded and not tuned)
+
+| Figure | Step 01 | Stage 1 | Stage 2 | Stage 3 |
+| --- | --- | --- | --- | --- |
+| one party (`--parties 1`) | 230 | 425 | 449 | 449 |
+| default company | 239 | 425 | 449 | 449 |
+| `--ready-level 10` | 389 | 470 | 488 | 488 |
+| deaths a campaign (one party) | 1.8 | 1.0 | 0.5 | 0.5 |
+| days a campaign (one party) | 270 | 333 | 339 | 339 |
+| GR3 / BC3 / BC4 / BC5 | 500 / 429 / 473 / 469 | 500 / 473 / 485 / 482 | 500 / 494 / 495 / 488 | 500 / 494 / 495 / 488 |
+| SN5 / SP5 / TL5 | 441 / 445 / 0 | 498 / 492 / 0 | 500 / 495 / 8 | 500 / 495 / 8 |
+| SG7 / SG10 | 0 / 2 | 4 / 199 | 0 / 422 | 0 / 386 |
+| F1 / F2 / F3 | 500 / 499 / 441 | 500 / 500 / 493 | 500 / 500 / 493 | 500 / 500 / 493 |
+| run time (one party) | 270 s | 329 s | 341 s | 272 s (company 270 s, `--ready-level 10` 580 s, `--ready-level 12` 883 s) |
+
+No campaign fell under 150 of 500. The three campaigns, BC3, BC4, SN5 and SP5 stay above their bands (BC5 inside), as at stage 2, and SG10 is far above step 01's (386, from 422). The stage-3 nodes change almost nothing here, because the plans reach them late: a hero has 3 picks at creation and one every even level, so level 8 holds 7 nodes, and the tier-3 traits (Deathblow, Counter, Blademaster and the rest) and the capstones sit past the nodes a level-7 to level-10 hero has bought. The summary's trait lines (counters, deathblows, revives, Unbreakable saves) read 0.000 on every run but the cells below.  The ready-made heroes' traits at level 12 are Rooted, Guardian, Unbreakable and Deadeye.
+
+AC8, `--ready-level 12`, 500 campaigns (883 s): 473 beat the Source (94.6%), 12 fell, 15 ran out of days, in 736 days and 73.6 battles a campaign; the vanguard ends at levels 11.5 to 12.1. 449 of 500 campaigns (89.8%) end with a capstone in the vanguard: **Unbreakable 627** (Aldric and recruited knights), **Deadeye 452** (Brenna), **Meteor 0**. Delwyn does not reach Meteor by level 12: the `evoker_healer` plan lists it ninth, but his creation pick Arcane Study is not in the plan, so by level 12 (nine picks: three at creation, six at levels 2 to 12) he holds eight plan nodes and Arcane Study, and Meteor is his tenth pick, taken at level 14 (checked on a hero raised to 12 and to 14 with `raisedParty`). So Unbreakable and Deadeye are met and Meteor is not at level 12; stage 4 decides whether to move the plan (Meteor ahead of Mending or Pyromancy) or the level. Callings at the end: Heavy Knight 1443, Evoker 519, Ranger 504, Swordmaster 6.
+
+The traits have not yet been in play in the simulator: Unbreakable is held in 2851 unit-starts of the `--ready-level 12` log and never saves a hero (0 `endured` events), because heroes holding it win 15 783 of 15 784 threat-5 battles; no hero in these logs holds Deathblow, Counter or Revive (the `traits` of every unit at `battle_start` are Rooted, Guardian, Unbreakable and Deadeye only). Stage 4's parity cells (a level above 8) are where the traits will first show.
+
+Play check (a scripted browser run through the real game, a scratch test since removed): a saved game edited so Aldric holds the knight plan's nine nodes at level 12, debug `hp 1 Aldric`, `fight bandit_camp 5` and the driver's play. The Bandit Captain's hit on Aldric logged `defenderHpBefore: 1`, `defenderHpAfter: 1`, `endured: true`. Meteor was not cast by hand; the engine and the policy are covered by steps 20 and 21's tests.
+
