@@ -909,7 +909,10 @@ describe('runes in a campaign', () => {
  * step 16: `techniqueScore` weighing a technique by the blows that fit this turn, then the knight plan taking Pin before
  * Heavy Hand (the bandit Captain and recruited knights). Re-hashed in skill trees step 17 for `LOG_SCHEMA_VERSION` 26
  * alone: the records unchanged, and the new log with each of its 115 `"schemaVersion":26` written back as 25 hashes
- * to the old `aa9ffae5...ff5119`. A mismatch means a step
+ * to the old `aa9ffae5...ff5119`. Re-hashed in skill trees step 21, the records unchanged: the stage-3 nodes enter
+ * the plans and the six partial nodes are completed (Iron Skin's free attacks, Battle Mage's mana on hit, Skirmisher,
+ * Fortune, Deadeye, Serenity), which changes the heroes' events (the guard's heroes reach level 9, past Iron Skin
+ * at 8) but no campaign's figures. A mismatch means a step
  * changed behaviour.
  */
 const GUARD_RECORDS: CampaignRecord[] = [
@@ -919,7 +922,7 @@ const GUARD_RECORDS: CampaignRecord[] = [
   { outcome: "source", days: 270, battles: 20, spawns: 30, captured: 3, lost: 0, blighted: 0.39375, healedHp: 124, campDays: 17, towersBuilt: 3, towersLost: 0, deaths: 1, recruits: 1, hallLevel: 2, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 5, fieldCraftDays: 3, runesFound: 16, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 8], deathsAtLevel: [7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 20, wipes: 0, finalLevels: [[8, 8, 8]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 36, guardBattles: 0 },
   { outcome: "source", days: 415, battles: 25, spawns: 35, captured: 5, lost: 0, blighted: 0.3275, healedHp: 183, campDays: 32, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 1, outpostsBuilt: 2, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 9, tierTwoBought: 0, crafted: 7, fieldCraftDays: 3, runesFound: 21, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [9, 9, 9, 8, 7], deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 25, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 76, guardBattles: 0 },
 ]
-const GUARD_EVENTS_SHA256 = '4aed08107a7c307b722303f12a9573634702f96d72e6dd1ccfc95e6929eba05b'
+const GUARD_EVENTS_SHA256 = 'b840633af460e155bc30b0ad601f396744948d344e586351d9819d84ab25e0a2'
 
 describe('the campaign’s policy on the day loop', () => {
   const args = parseArgs(['--campaign', '--parties', '1'])
