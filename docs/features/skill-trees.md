@@ -1,7 +1,7 @@
 # Feature: skill trees and progression
 
 **Slug:** skill-trees
-**Phase:** 4 — implementation
+**Phase:** 4 — implementation (stage 1 done at fd6a630; stage 2 from step 09)
 
 ## Request (user's words)
 
@@ -57,6 +57,9 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 - To step 13 (from step 07 review): `InventoryScene.takenPerks()` filters `nodeKind !== 'spell'`; make it `=== 'passive'` before techniques land, or they show under Passives too.
 - To steps 13 and 21 (from step 06 review): the tree strip's line 1 wraps freely and is near the panel's bottom (y 493 of 500 for Meteor); cap it at two lines or test the longest strip once wordier technique text lands.
+
+- To step 16 (from step 08 review): CLAUDE.md's scaling paragraph — the stage-1 sentence splits stage 6's "In the run of 237…" narrative; move it after stage 6's text.
+- To final QA: step 08's play check was scripted, not hand-played; do a hand-played browser pass with a hero built across two trees.
 
 ## Verification
 
