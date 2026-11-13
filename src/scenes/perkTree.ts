@@ -47,6 +47,8 @@ export const TREE_W = TREE_X + 2 * TREE_COLUMN_W + NODE_W
 export const STRIP_CHARS = 90
 /** The strip's first line, the node's summary, runs to at most this many lines, so that the strip stays inside the panel. */
 export const STRIP_SUMMARY_LINES = 2
+/** The strip's last line, what a click would do or what is missing, runs to one line: the asks above it say them all in full. */
+export const STRIP_HINT_LINES = 1
 
 /** The lines `text` wraps onto at `width` characters, breaking at spaces (a longer word has a line of its own). */
 export function wrapLines(text: string, width: number = STRIP_CHARS): string[] {

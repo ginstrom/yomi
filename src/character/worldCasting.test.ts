@@ -41,6 +41,15 @@ describe('castOnWorldMap (A12)', () => {
     expect(aldric.hp).toBe(maxHp(aldric))
   })
 
+  it('leaves Purify out, a cleanse and no heal, and never casts it (the Purify decision)', () => {
+    const [aldric, , delwyn] = party()
+    delwyn.perks.purify = 1
+    expect(worldSpells(delwyn).map((known) => known.spell)).toEqual(['heal'])
+    aldric.hp = 3
+    expect(castOnWorldMap(delwyn, 'purify', party(), aldric)).toBe(false)
+    expect(aldric.hp).toBe(3)
+  })
+
   it('lists Lay on Hands like any heal', () => {
     const [, , delwyn] = party()
     delwyn.perks.lay_on_hands = 1

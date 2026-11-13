@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createWarrior, type Character } from './character.ts'
-import { PERKS, PERK_IDS, qualifiesFor, type Perk, type PerkId } from './perks.ts'
+import { PERKS, PERK_IDS, missingRequirements, qualifiesFor, type Perk, type PerkId } from './perks.ts'
 import { gainXp, takePerk, xpToNextLevel } from './progression.ts'
 import {
   MANA_PER_TREE_NODE,
@@ -19,20 +19,20 @@ import {
   type Tier,
 } from './trees.ts'
 
-/** The 75 stage-1 and stage-2 nodes, by path, in `PERKS` order (the plan's C3). */
-const STAGE_1: Record<PathId, PerkId[]> = {
-  swordmaster: ['weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'gain_strength', 'cleave', 'weapon_mastery'],
-  heavy_knight: ['toughness', 'shield_wall', 'taunt', 'rooted', 'pin', 'iron_skin'],
-  spellsword: ['arcane_blood', 'flame_strike', 'frost_strike', 'spell_ward', 'thunder_strike', 'battle_mage'],
+/** The 95 nodes, by path, in `PERKS` order (the plan's C3, design 4.3). */
+const NODES: Record<PathId, PerkId[]> = {
+  swordmaster: ['weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'gain_strength', 'cleave', 'weapon_mastery', 'blademaster'],
+  heavy_knight: ['toughness', 'shield_wall', 'taunt', 'rooted', 'pin', 'iron_skin', 'guardian', 'unbreakable'],
+  spellsword: ['arcane_blood', 'flame_strike', 'frost_strike', 'spell_ward', 'thunder_strike', 'battle_mage', 'arcane_knight'],
   ranger: ['marksmanship', 'deadly_aim', 'aimed_shot', 'far_shot', 'hunters_mark', 'volley', 'pinning_shot', 'deadeye'],
-  rogue: ['dodger', 'sprint', 'skirmisher', 'dirty_trick', 'evasion'],
-  assassin: ['keen_eye', 'venom_strike', 'hamstring', 'fortune'],
+  rogue: ['dodger', 'sprint', 'skirmisher', 'dirty_trick', 'tumble', 'evasion', 'counter', 'shadowdancer'],
+  assassin: ['keen_eye', 'backstab', 'venom_strike', 'hamstring', 'fortune', 'ambush', 'executioner', 'deathblow'],
   evoker: ['magic_arrow', 'destruction', 'flame_arrow', 'pyromancy', 'fireball', 'acid_arrow', 'death_cloud', 'meteor'],
-  cryomancer: ['frostbite', 'numbing_cold', 'sleep', 'frost_blast', 'web', 'lingering_cold'],
+  cryomancer: ['frostbite', 'numbing_cold', 'sleep', 'frost_blast', 'web', 'ice_lance', 'lingering_cold', 'glacial_prison'],
   arcanist: ['shield', 'arcane_study', 'mirror_image', 'ward', 'haste', 'lasting_magic', 'quickened_casting', 'mass_haste'],
-  healer: ['heal', 'mending', 'greater_heal', 'heal_all', 'greater_heal_all', 'swift_hands'],
-  paladin: ['bless', 'smite', 'lay_on_hands', 'blessed_armour', 'consecrate', 'sacred_weapon'],
-  saint: ['serenity', 'bane', 'protect', 'scholar', 'curse'],
+  healer: ['heal', 'mending', 'greater_heal', 'heal_all', 'greater_heal_all', 'purify', 'swift_hands', 'revive'],
+  paladin: ['bless', 'smite', 'lay_on_hands', 'blessed_armour', 'aura_of_courage', 'consecrate', 'sacred_weapon', 'aegis'],
+  saint: ['serenity', 'bane', 'protect', 'scholar', 'curse', 'renew', 'holy_light', 'sanctuary'],
 }
 
 const TIER_ORDER: readonly Tier[] = [1, 2, 3, 'capstone']
@@ -50,18 +50,26 @@ describe('the trees', () => {
     expect(MANA_PER_TREE_NODE).toBe(2)
   })
 
-  it('hold the 75 stage-1 and stage-2 nodes in PERKS order, by tree, path, then tier', () => {
-    expect(PERK_IDS).toHaveLength(75)
-    expect(PERK_IDS).toEqual(PATH_IDS.flatMap((path) => STAGE_1[path]))
+  it('hold the 95 nodes in PERKS order, by tree, path, then tier (AC1)', () => {
+    expect(PERK_IDS).toHaveLength(95)
+    expect(PERK_IDS).toEqual(PATH_IDS.flatMap((path) => NODES[path]))
     for (const path of PATH_IDS) {
       const nodes = PERK_IDS.filter((id) => (PERKS[id] as Perk).path === path)
-      expect(nodes).toEqual(STAGE_1[path])
+      expect(nodes).toEqual(NODES[path])
+      expect(nodes).toHaveLength(path === 'spellsword' ? 7 : 8)
       const tiers = nodes.map((id) => TIER_ORDER.indexOf((PERKS[id] as Perk).tier))
       expect(tiers).toEqual([...tiers].sort((a, b) => a - b))
-      expect(nodes.filter((id) => (PERKS[id] as Perk).tier === 'capstone').length).toBeLessThanOrEqual(1)
-      // Every path opens with a node of the first tier (the second T1 of a few paths is a later stage's technique).
-      expect((PERKS[nodes[0]] as Perk).tier).toBe(1)
+      expect(nodes.filter((id) => (PERKS[id] as Perk).tier === 1), path).toHaveLength(2)
+      expect(nodes.filter((id) => (PERKS[id] as Perk).tier === 'capstone'), path).toHaveLength(1)
     }
+  })
+
+  it('give every node one rank: a node held is never taken again', () => {
+    const hero = createWarrior()
+    hero.perkPicks = 2
+    expect(takePerk(hero, 'toughness')).toBe(true)
+    expect(takePerk(hero, 'toughness')).toBe(false)
+    expect([hero.perks.toughness, hero.perkPicks]).toEqual([1, 1])
   })
 })
 
@@ -131,7 +139,100 @@ describe('a committed hero (AC1, stage 1)', () => {
   })
 })
 
-describe('the capstone (AC2, with stage-1 stand-ins)', () => {
+describe('a committed hero in every path (AC1)', () => {
+  /**
+   * A level 1 hero holding `path`'s two T1s, with every attribute at 9 and
+   * every skill trained to the top, raised to level 14, each pick spent on
+   * the first node of the path (in PERKS order) it qualifies for: the level
+   * each node came at, and the nodes of the path open at each level.
+   */
+  const committedIn = (path: PathId) => {
+    const hero = createWarrior()
+    hero.attributes = { strength: 8, perception: 9, endurance: 9, intelligence: 9, agility: 9, luck: 9 }
+    hero.trained = { melee: 100, archery: 100, magic: 100 }
+    const nodes = NODES[path]
+    hero.perks = Object.fromEntries(nodes.slice(0, 2).map((id) => [id, 1]))
+    const came = new Map<PerkId, number>()
+    const open = new Map<number, PerkId[]>()
+    while (hero.level < 14) {
+      gainXp(hero, xpToNextLevel(hero.level))
+      open.set(hero.level, nodes.filter((id) => !hero.perks[id] && qualifiesFor({ ...hero, perkPicks: 1 }, id)))
+      while (hero.perkPicks > 0) {
+        const next = nodes.find((id) => qualifiesFor(hero, id))
+        if (!next || !takePerk(hero, next)) break
+        came.set(next, hero.level)
+      }
+    }
+    return { came, open }
+  }
+  const tierOf = (id: PerkId) => (PERKS[id] as Perk).tier
+
+  it.each(PATH_IDS)('%s: a T3 at level 6 and not at 5, the capstone at level 12 and not at 10', (path) => {
+    const { came, open } = committedIn(path)
+    const t3s = NODES[path].filter((id) => tierOf(id) === 3)
+    const capstone = NODES[path].find((id) => tierOf(id) === 'capstone')!
+    expect(open.get(5)!.filter((id) => tierOf(id) === 3)).toEqual([])
+    expect(open.get(6)!.filter((id) => tierOf(id) === 3)).not.toEqual([])
+    // Where the path has a third T2 (Swordmaster, Ranger), level 6's pick takes it, PERKS order first; the T3 follows at 8.
+    expect(Math.min(...t3s.map((id) => came.get(id) ?? Infinity))).toBe(['swordmaster', 'ranger'].includes(path) ? 8 : 6)
+    expect(open.get(10)).not.toContain(capstone)
+    expect(open.get(11)).not.toContain(capstone)
+    expect(came.get(capstone)).toBe(12)
+  })
+})
+
+describe('the capstone (AC2)', () => {
+  /** A level 14 hero with Melee 70% and more, 5 Swordmaster nodes and 6 Assassin nodes, and picks to spend. */
+  const duellist = (): Character => {
+    const hero = createWarrior()
+    hero.level = 14
+    hero.attributes.strength = 8
+    hero.trained.melee = 100
+    hero.perkPicks = 3
+    hero.perks = {
+      weapon_training: 1,
+      heavy_hand: 1,
+      power_attack: 1,
+      armor_breaker: 1,
+      gain_strength: 1,
+      keen_eye: 1,
+      backstab: 1,
+      venom_strike: 1,
+      hamstring: 1,
+      fortune: 1,
+      executioner: 1,
+    }
+    return hero
+  }
+  const CAPSTONES = PERK_IDS.filter((id) => (PERKS[id] as Perk).tier === 'capstone')
+
+  it('opens Deathblow, in the calling, and not Blademaster', () => {
+    const hero = duellist()
+    expect(calling(hero)).toEqual(['assassin'])
+    expect(qualifiesFor(hero, 'deathblow')).toBe(true)
+    expect(qualifiesFor(hero, 'blademaster')).toBe(false)
+    expect(missingRequirements(hero, 'blademaster')).toContain('Swordmaster must be your deepest path')
+  })
+
+  it('closes every other capstone for good once Deathblow is taken, whatever the depths later', () => {
+    const hero = duellist()
+    expect(takePerk(hero, 'deathblow')).toBe(true)
+    expect(takePerk(hero, 'cleave')).toBe(true)
+    expect(takePerk(hero, 'weapon_mastery')).toBe(true)
+    // Swordmaster 7, Assassin 6 once one node is set aside: Swordmaster is the deeper.
+    delete hero.perks.executioner
+    hero.perkPicks = 1
+    expect(calling(hero)).toEqual(['swordmaster'])
+    expect(CAPSTONES).toHaveLength(12)
+    for (const capstone of CAPSTONES.filter((id) => id !== 'deathblow')) {
+      expect(qualifiesFor(hero, capstone), capstone).toBe(false)
+      expect(missingRequirements(hero, capstone), capstone).toContain('Only one capstone')
+    }
+    expect(capstoneOf(hero)).toBe('deathblow')
+  })
+})
+
+describe('the capstone (AC2, in the Mage tree)', () => {
   /** A level 14 hero with Magic for anything, 5 Evoker and 6 Arcanist nodes. */
   const hybrid = (): Character => {
     const hero = createWarrior()

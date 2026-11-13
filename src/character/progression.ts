@@ -138,8 +138,7 @@ export function takePerk(character: Character, perk: PerkId): boolean {
  * The builds `autoAdvance` grows a hero by: a plan is the nodes it takes, most
  * wanted first. The design's six are written out (`knight`, `swordmaster`,
  * `ranger`, `rogue`, `evoker_healer`, `bandit_mage`); the others are a path's
- * nodes in `PERKS` order. A plan names only nodes in `PERKS`; the later
- * stages' nodes take their places as they arrive.
+ * nodes in `PERKS` order. A plan names only nodes in `PERKS`.
  */
 export const PLAN_IDS = [
   'knight',
@@ -173,12 +172,14 @@ export const AUTO_PLANS: Record<PlanId, readonly PerkId[]> = {
     'pin',
     'heavy_hand',
     'iron_skin',
+    'guardian',
+    'unbreakable',
     'shield_wall',
     'power_attack',
     'armor_breaker',
     'weapon_mastery',
   ],
-  swordmaster: ['weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'cleave', 'gain_strength', 'weapon_mastery', 'toughness'],
+  swordmaster: ['weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'cleave', 'gain_strength', 'weapon_mastery', 'blademaster', 'toughness'],
   spellsword: pathPlan('spellsword'),
   ranger: [
     'marksmanship',
@@ -192,9 +193,10 @@ export const AUTO_PLANS: Record<PlanId, readonly PerkId[]> = {
     'dodger',
     'sprint',
     'skirmisher',
+    'tumble',
     'evasion',
   ],
-  rogue: ['dirty_trick', 'sprint', 'evasion', 'skirmisher'],
+  rogue: ['backstab', 'dirty_trick', 'sprint', 'tumble', 'evasion', 'counter', 'skirmisher', 'shadowdancer'],
   rogue_archer: pathPlan('rogue'),
   assassin: pathPlan('assassin'),
   evoker: pathPlan('evoker'),
@@ -211,6 +213,7 @@ export const AUTO_PLANS: Record<PlanId, readonly PerkId[]> = {
     'greater_heal',
     'death_cloud',
     'greater_heal_all',
+    'purify',
   ],
   cryomancer: pathPlan('cryomancer'),
   arcanist: pathPlan('arcanist'),

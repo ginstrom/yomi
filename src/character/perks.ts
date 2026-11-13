@@ -110,9 +110,9 @@ export interface Perk {
   meleeOnHit?: readonly OnHit[]
   /** The spell it teaches. */
   spell?: HeroSpellId
-  /** The technique it teaches (abilities.ts); no node has one until step 13. */
+  /** The technique it teaches (abilities.ts). */
   ability?: AbilityId
-  /** The rule it gives that the engine reads by name (`TRAIT_IDS`); no node has one until step 13. */
+  /** The rule it gives that the engine reads by name (`TRAIT_IDS`). */
   trait?: TraitId
 }
 
@@ -194,6 +194,15 @@ export const PERKS = {
     attributes: { strength: 8 },
     effects: { melee: 10, meleeDamage: 2, armorPierce: 1 },
   },
+  blademaster: {
+    name: 'Blademaster',
+    description: 'Once a turn, a weapon blow or strike technique of its own that fells a foe gives back the action points it cost',
+    path: 'swordmaster',
+    tier: 'capstone',
+    skills: { melee: 70 },
+    effects: {},
+    trait: 'blademaster',
+  },
   // ---- Warrior: Heavy Knight
   toughness: {
     name: 'Toughness',
@@ -223,11 +232,29 @@ export const PERKS = {
   pin: techniqueNode('pin', 'heavy_knight', 3, { skills: { melee: 55 } }),
   iron_skin: {
     name: 'Iron Skin',
-    description: '+2 resistance',
+    description: '+2 resistance; its free attacks get +15 to hit and +3 damage',
     path: 'heavy_knight',
     tier: 3,
     attributes: { endurance: 7 },
-    effects: { resistance: 2 },
+    effects: { resistance: 2, opportunityToHit: 15, opportunityDamage: 3 },
+  },
+  guardian: {
+    name: 'Guardian',
+    description: 'Allies beside it (not itself) get +5 armour class; two Guardians do not add up',
+    path: 'heavy_knight',
+    tier: 3,
+    attributes: { endurance: 7 },
+    effects: {},
+    trait: 'guardian',
+  },
+  unbreakable: {
+    name: 'Unbreakable',
+    description: 'The first time each battle that damage would bring it to 0, it is left at 1 hit point and Shielded for 2 turns',
+    path: 'heavy_knight',
+    tier: 'capstone',
+    attributes: { endurance: 8 },
+    effects: {},
+    trait: 'unbreakable',
   },
   // ---- Warrior: Spellsword
   arcane_blood: {
@@ -250,11 +277,21 @@ export const PERKS = {
   thunder_strike: techniqueNode('thunder_strike', 'spellsword', 3, { skills: { melee: 55 } }),
   battle_mage: {
     name: 'Battle Mage',
-    description: "+6 mana; its Strikes' elemental damage +2",
+    description: "+6 mana; each melee hit that strikes no image restores 1 mana; its Strikes' elemental damage +2",
     path: 'spellsword',
     tier: 3,
     attributes: { intelligence: 5 },
-    effects: { maxMana: 6, imbueDamage: 2 },
+    effects: { maxMana: 6, imbueDamage: 2, manaOnHit: 1 },
+  },
+  arcane_knight: {
+    name: 'Arcane Knight',
+    description: 'Every melee hit adds 4 fire damage, as a rune does, and its Strikes cost only the weapon\'s AP',
+    path: 'spellsword',
+    tier: 'capstone',
+    skills: { melee: 70 },
+    effects: {},
+    meleeOnHit: [{ damage: 4, element: 'fire' }],
+    trait: 'arcane_knight',
   },
   // ---- Scout: Ranger
   marksmanship: {
@@ -287,11 +324,12 @@ export const PERKS = {
   pinning_shot: techniqueNode('pinning_shot', 'ranger', 3, { skills: { archery: 55 } }),
   deadeye: {
     name: 'Deadeye',
-    description: '+10% Archery',
+    description: '+10% Archery; its shots pierce 3 points of resistance, and a critical shot rolls triple dice instead of double',
     path: 'ranger',
     tier: 'capstone',
     skills: { archery: 70 },
     effects: { archery: 10 },
+    trait: 'deadeye',
   },
   // ---- Scout: Rogue
   dodger: {
@@ -305,13 +343,22 @@ export const PERKS = {
   sprint: techniqueNode('sprint', 'rogue', 1, { attributes: { agility: 5 } }),
   skirmisher: {
     name: 'Skirmisher',
-    description: '+1 Agility',
+    description: '+1 Agility; after it has moved this turn, its attacks get +10 to hit',
     path: 'rogue',
     tier: 2,
     attributes: { agility: 6 },
-    effects: { agility: 1 },
+    effects: { agility: 1, movedToHit: 10 },
   },
   dirty_trick: techniqueNode('dirty_trick', 'rogue', 2, { skills: { melee: 40 } }),
+  tumble: {
+    name: 'Tumble',
+    description: 'Its moves provoke no free attacks',
+    path: 'rogue',
+    tier: 3,
+    attributes: { agility: 7 },
+    effects: {},
+    trait: 'tumble',
+  },
   evasion: {
     name: 'Evasion',
     description: '+10 armour class and +1 action point every turn',
@@ -319,6 +366,24 @@ export const PERKS = {
     tier: 3,
     attributes: { agility: 8 },
     effects: { armorClass: 10, actionPoints: 1 },
+  },
+  counter: {
+    name: 'Counter',
+    description: "Once per enemy turn, when a foe's melee blow misses it, it strikes back with a free attack, if it holds a melee weapon and the foe is in reach",
+    path: 'rogue',
+    tier: 3,
+    skills: { melee: 55 },
+    effects: {},
+    trait: 'counter',
+  },
+  shadowdancer: {
+    name: 'Shadowdancer',
+    description: 'As its side\'s turn begins, it gains a mirror image for 2 turns, unless it has one already',
+    path: 'rogue',
+    tier: 'capstone',
+    attributes: { agility: 8 },
+    effects: {},
+    trait: 'shadowdancer',
   },
   // ---- Scout: Assassin
   keen_eye: {
@@ -329,15 +394,49 @@ export const PERKS = {
     attributes: { luck: 6 },
     effects: { critChance: 10 },
   },
+  backstab: {
+    name: 'Backstab',
+    description: "+15 to hit and +4 damage on a weapon attack from a foe's rear arc",
+    path: 'assassin',
+    tier: 1,
+    anySkill: { melee: 30, archery: 30 },
+    effects: { rearToHit: 15, rearDamage: 4 },
+  },
   venom_strike: techniqueNode('venom_strike', 'assassin', 2, { anySkill: { melee: 40, archery: 40 } }),
   hamstring: techniqueNode('hamstring', 'assassin', 2, { anySkill: { melee: 40, archery: 40 } }),
   fortune: {
     name: 'Fortune',
-    description: '+10% chance of a critical hit and +1 Luck',
+    description: '+10% chance of a critical hit and +1 Luck; its critical hits deal 4 more damage, after the dice are doubled',
     path: 'assassin',
     tier: 3,
     attributes: { luck: 7 },
-    effects: { critChance: 10, luck: 1 },
+    effects: { critChance: 10, luck: 1, critDamage: 4 },
+  },
+  ambush: {
+    name: 'Ambush',
+    description: 'Its first weapon attack of a battle (not a free one) gets +25 to hit, and a hit is critical',
+    path: 'assassin',
+    tier: 3,
+    attributes: { agility: 6 },
+    effects: {},
+    trait: 'ambush',
+  },
+  executioner: {
+    name: 'Executioner',
+    description: '+5 damage against a foe at half its hit points or less',
+    path: 'assassin',
+    tier: 3,
+    anySkill: { melee: 55, archery: 55 },
+    effects: { executeDamage: 5 },
+  },
+  deathblow: {
+    name: 'Deathblow',
+    description: 'A weapon hit that leaves a foe at a quarter of its hit points or less fells it, unless the foe is blightborn',
+    path: 'assassin',
+    tier: 'capstone',
+    anySkill: { melee: 70, archery: 70 },
+    effects: {},
+    trait: 'deathblow',
   },
   // ---- Mage: Evoker
   magic_arrow: spellNode('magic_arrow', 'evoker', 1, { skills: { magic: 40 } }),
@@ -375,6 +474,7 @@ export const PERKS = {
   sleep: spellNode('sleep', 'cryomancer', 2, { skills: { magic: 55 } }),
   frost_blast: spellNode('frost_blast', 'cryomancer', 2, { skills: { magic: 55 }, requires: 'frostbite' }),
   web: spellNode('web', 'cryomancer', 3, { skills: { magic: 65 } }),
+  ice_lance: spellNode('ice_lance', 'cryomancer', 3, { skills: { magic: 70 } }),
   lingering_cold: {
     name: 'Lingering Cold',
     description: 'Statuses its hostile spells lay last 1 turn longer; +10% Magic',
@@ -383,6 +483,7 @@ export const PERKS = {
     attributes: { intelligence: 7 },
     effects: { hostileExtend: 1, magic: 10 },
   },
+  glacial_prison: spellNode('glacial_prison', 'cryomancer', 'capstone', { skills: { magic: 80 } }),
   // ---- Mage: Arcanist
   shield: spellNode('shield', 'arcanist', 1, { skills: { magic: 40 } }),
   arcane_study: {
@@ -426,6 +527,7 @@ export const PERKS = {
   greater_heal: spellNode('greater_heal', 'healer', 2, { skills: { magic: 55 }, requires: 'heal' }),
   heal_all: spellNode('heal_all', 'healer', 2, { skills: { magic: 55 }, requires: 'heal' }),
   greater_heal_all: spellNode('greater_heal_all', 'healer', 3, { skills: { magic: 65 }, requires: 'heal_all' }),
+  purify: spellNode('purify', 'healer', 3, { skills: { magic: 55 } }),
   swift_hands: {
     name: 'Swift Hands',
     description: 'Its healing spells cost 1 AP less (never below 2); +8 mana',
@@ -434,6 +536,7 @@ export const PERKS = {
     skills: { magic: 60 },
     effects: { healApDiscount: 1, maxMana: 8 },
   },
+  revive: spellNode('revive', 'healer', 'capstone', { skills: { magic: 75 } }),
   // ---- Cleric: Paladin
   bless: spellNode('bless', 'paladin', 1, { anySkill: { melee: 30, magic: 40 } }),
   smite: techniqueNode('smite', 'paladin', 1, { skills: { melee: 30 } }),
@@ -446,6 +549,15 @@ export const PERKS = {
     attributes: { endurance: 5 },
     effects: { resistance: 1, wardBlight: 3, maxMana: 6 },
   },
+  aura_of_courage: {
+    name: 'Aura of Courage',
+    description: 'Allies within 2 hexes (not itself) get +5 to hit; two such auras do not add up',
+    path: 'paladin',
+    tier: 3,
+    skills: { melee: 55 },
+    effects: {},
+    trait: 'courage',
+  },
   consecrate: techniqueNode('consecrate', 'paladin', 3, { skills: { melee: 55 } }),
   sacred_weapon: {
     name: 'Sacred Weapon',
@@ -456,14 +568,23 @@ export const PERKS = {
     effects: { melee: 10 },
     meleeOnHit: [{ damage: 2 }, { damage: 4, bane: true }],
   },
+  aegis: {
+    name: 'Aegis',
+    description: 'Allies within 2 hexes, itself included, get +2 resistance and +2 ward against every element; two such auras do not add up',
+    path: 'paladin',
+    tier: 'capstone',
+    skills: { melee: 70 },
+    effects: {},
+    trait: 'aegis',
+  },
   // ---- Cleric: Saint
   serenity: {
     name: 'Serenity',
-    description: 'Its friendly spells aimed at an ally or a point reach 2 hexes further',
+    description: 'Regains 2 mana as its side\'s turn begins (never above its maximum); its friendly spells aimed at an ally or a point reach 2 hexes further',
     path: 'saint',
     tier: 1,
     attributes: { intelligence: 5 },
-    effects: { friendlyRange: 2 },
+    effects: { friendlyRange: 2, manaRegen: 2 },
   },
   bane: spellNode('bane', 'saint', 1, { skills: { magic: 40 } }),
   protect: spellNode('protect', 'saint', 2, { skills: { magic: 55 } }),
@@ -476,6 +597,17 @@ export const PERKS = {
     effects: { skillPoints: 2 },
   },
   curse: spellNode('curse', 'saint', 3, { skills: { magic: 65 } }),
+  renew: spellNode('renew', 'saint', 3, { skills: { magic: 65 } }),
+  holy_light: spellNode('holy_light', 'saint', 3, { skills: { magic: 70 } }),
+  sanctuary: {
+    name: 'Sanctuary',
+    description: 'As its side\'s turn begins, every ally within 2 hexes, itself included, regains 3 hit points',
+    path: 'saint',
+    tier: 'capstone',
+    skills: { magic: 80 },
+    effects: {},
+    trait: 'sanctuary',
+  },
 } satisfies Record<string, Perk>
 
 export type PerkId = keyof typeof PERKS

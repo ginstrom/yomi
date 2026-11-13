@@ -6,6 +6,7 @@ import { newDraft, type CharacterDraft } from '../character/creation.ts'
 import { TREE_IDS, pathsOf } from '../character/trees.ts'
 import {
   STRIP_CHARS,
+  STRIP_HINT_LINES,
   TREE_ROWS,
   TREE_STRIP_Y,
   TREE_X,
@@ -72,21 +73,26 @@ describe('treeLayout', () => {
     expect(at('flame_arrow')).toEqual({ perk: 'flame_arrow', column: 0, row: 3, from: 'magic_arrow' })
     expect(at('meteor')).toMatchObject({ column: 0, row: 8 })
     expect(at('frostbite')).toMatchObject({ column: 1, row: 1 })
-    expect(at('lingering_cold')).toMatchObject({ column: 1, row: 6 })
+    expect(at('ice_lance')).toMatchObject({ column: 1, row: 6 })
+    expect(at('lingering_cold')).toMatchObject({ column: 1, row: 7 })
+    expect(at('glacial_prison')).toMatchObject({ column: 1, row: 8 })
     expect(at('mass_haste')).toMatchObject({ column: 2, row: 8 })
   })
 
   it('leaves a row empty in a column short of a tier: the Scout tree', () => {
     const scout = treeLayout('scout')
     const at = (perk: string) => scout.find((node) => node.perk === perk)
-    // Ranger has three tier-2 nodes, Rogue two and Assassin two; the tier-3 row is the band's sixth.
+    // Ranger has three tier-2 nodes, Rogue two and Assassin two; the tier-3 band starts at the sixth row, the capstones' at the ninth.
     expect(at('aimed_shot')).toMatchObject({ column: 0, row: 3 })
     expect(at('hunters_mark')).toMatchObject({ column: 0, row: 5 })
     expect(at('skirmisher')).toMatchObject({ column: 1, row: 3 })
     expect(at('dirty_trick')).toMatchObject({ column: 1, row: 4 })
-    expect(at('evasion')).toMatchObject({ column: 1, row: 6 })
+    expect(at('tumble')).toMatchObject({ column: 1, row: 6 })
+    expect(at('evasion')).toMatchObject({ column: 1, row: 7 })
     expect(at('fortune')).toMatchObject({ column: 2, row: 6 })
-    expect(at('deadeye')).toMatchObject({ column: 0, row: 8 })
+    expect(at('executioner')).toMatchObject({ column: 2, row: 8 })
+    expect(at('deadeye')).toMatchObject({ column: 0, row: 9 })
+    expect(at('deathblow')).toMatchObject({ column: 2, row: 9 })
   })
 
   it('fits every node within the 720 px panel, in rows above the strip', () => {
@@ -111,11 +117,12 @@ describe('tierBands', () => {
       { tier: 3, label: 'L6', firstRow: 5 },
       { tier: 'capstone', label: 'L12', firstRow: 8 },
     ])
-    // The Warrior tree has no capstone yet; Swordmaster's three tier-2 nodes make the band three rows.
+    // Swordmaster's three tier-2 nodes make the band three rows, and Heavy Knight's three tier-3 nodes that band three.
     expect(tierBands('warrior')).toEqual([
       { tier: 1, label: 'L1', firstRow: 1 },
       { tier: 2, label: 'L2', firstRow: 3 },
       { tier: 3, label: 'L6', firstRow: 6 },
+      { tier: 'capstone', label: 'L12', firstRow: 9 },
     ])
     for (const tree of TREE_IDS) {
       const labels = tierBands(tree).map(({ label }) => label)
@@ -284,10 +291,10 @@ describe('the tree tabs', () => {
   })
 })
 
-describe('the 75 nodes of stage 2', () => {
+describe('the 95 nodes', () => {
   it('place one to a cell, per tree as the plan counts them', () => {
     const counts = Object.fromEntries(TREE_IDS.map((tree) => [tree, treeLayout(tree).length]))
-    expect(counts).toEqual({ warrior: 19, scout: 17, mage: 22, cleric: 17 })
+    expect(counts).toEqual({ warrior: 23, scout: 24, mage: 24, cleric: 24 })
     expect(Object.values(counts).reduce((a, b) => a + b, 0)).toBe(PERK_IDS.length)
   })
 })
@@ -309,7 +316,7 @@ describe('the strip', () => {
       const lines =
         wrapLines(summary).length +
         wrapLines(`Asks: ${describePerkRequirements(id)}`).length +
-        wrapLines(nodeHint(hero, id, true)).length
+        wrapLines(clampLines(nodeHint(hero, id, true), STRIP_HINT_LINES)).length
       longest = Math.max(longest, lines)
     }
     expect(STRIP_CHARS).toBeLessThanOrEqual(92)

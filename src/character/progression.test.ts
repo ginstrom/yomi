@@ -262,8 +262,8 @@ describe('autoAdvance', () => {
     expect(taken(banditDraft('brute'), 'swordmaster')).toEqual({ 2: ['power_attack'], 3: [], 4: ['armor_breaker'], 5: [], 6: ['cleave'], 7: [] })
   })
 
-  it('follows the rogue plan from the Cutthroat: Dirty Trick, Sprint, then Evasion (Agility 9)', () => {
-    expect(taken(banditDraft('cutthroat'), 'rogue')).toEqual({ 2: ['dirty_trick'], 3: [], 4: ['sprint'], 5: [], 6: ['evasion'], 7: [] })
+  it('follows the rogue plan from the Cutthroat: Backstab, Dirty Trick, then Sprint, which opens Tumble', () => {
+    expect(taken(banditDraft('cutthroat'), 'rogue')).toEqual({ 2: ['backstab'], 3: [], 4: ['dirty_trick'], 5: [], 6: ['sprint'], 7: [] })
   })
 
   it('follows the knight plan from the Captain: Rooted, Taunt and Pin at levels 2, 4 and 6, Heavy Hand after', () => {
@@ -275,11 +275,49 @@ describe('autoAdvance', () => {
     expect(knownSpells(grown(2, 6))).toEqual(expect.arrayContaining(['magic_arrow', 'flame_arrow', 'heal', 'heal_all']))
   })
 
-  it('gives the plans the stage-2 nodes', () => {
-    expect(AUTO_PLANS.knight).toEqual(['weapon_training', 'toughness', 'rooted', 'taunt', 'pin', 'heavy_hand', 'iron_skin', 'shield_wall', 'power_attack', 'armor_breaker', 'weapon_mastery'])
-    expect(AUTO_PLANS.swordmaster).toEqual(['weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'cleave', 'gain_strength', 'weapon_mastery', 'toughness'])
-    expect(AUTO_PLANS.ranger).toEqual(['marksmanship', 'deadly_aim', 'aimed_shot', 'far_shot', 'volley', 'hunters_mark', 'pinning_shot', 'deadeye', 'dodger', 'sprint', 'skirmisher', 'evasion'])
-    expect(AUTO_PLANS.rogue).toEqual(['dirty_trick', 'sprint', 'evasion', 'skirmisher'])
+  it('writes the six plans of C5 in full', () => {
+    expect(AUTO_PLANS.knight).toEqual([
+      'weapon_training', 'toughness', 'rooted', 'taunt', 'pin', 'heavy_hand', 'iron_skin', 'guardian', 'unbreakable',
+      'shield_wall', 'power_attack', 'armor_breaker', 'weapon_mastery',
+    ])
+    expect(AUTO_PLANS.swordmaster).toEqual([
+      'weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'cleave', 'gain_strength', 'weapon_mastery', 'blademaster', 'toughness',
+    ])
+    expect(AUTO_PLANS.ranger).toEqual([
+      'marksmanship', 'deadly_aim', 'aimed_shot', 'far_shot', 'volley', 'hunters_mark', 'pinning_shot', 'deadeye',
+      'dodger', 'sprint', 'skirmisher', 'tumble', 'evasion',
+    ])
+    expect(AUTO_PLANS.rogue).toEqual(['backstab', 'dirty_trick', 'sprint', 'tumble', 'evasion', 'counter', 'skirmisher', 'shadowdancer'])
+    expect(AUTO_PLANS.evoker_healer).toEqual([
+      'magic_arrow', 'heal', 'destruction', 'flame_arrow', 'heal_all', 'fireball', 'pyromancy', 'mending', 'meteor',
+      'greater_heal', 'death_cloud', 'greater_heal_all', 'purify',
+    ])
+    expect(AUTO_PLANS.bandit_mage).toEqual(['flame_arrow', 'destruction', 'fireball', 'heal', 'heal_all'])
+    // The parity plans are their path in PERKS order, stage-3 nodes included.
+    expect(AUTO_PLANS.assassin).toContain('deathblow')
+    expect(AUTO_PLANS.healer).toEqual(['heal', 'mending', 'greater_heal', 'heal_all', 'greater_heal_all', 'purify', 'swift_hands', 'revive'])
+  })
+
+  it('takes the ready-made heroes to their capstones: Aldric Unbreakable and Brenna Deadeye at 12, Delwyn Meteor at 14', () => {
+    expect(grown(0, 11).perks.unbreakable).toBeUndefined()
+    expect(grown(0, 12).perks.unbreakable).toBe(1)
+    expect(grown(1, 11).perks.deadeye).toBeUndefined()
+    expect(grown(1, 12).perks.deadeye).toBe(1)
+    // The evoker-healer plan puts Mending before Meteor, so level 12's pick goes to Mending and Meteor waits for 14.
+    expect(grown(2, 12).perks).toMatchObject({ mending: 1 })
+    expect(grown(2, 12).perks.meteor).toBeUndefined()
+    expect(grown(2, 14).perks.meteor).toBe(1)
+  })
+
+  it('spends every pick of the ready-made heroes to level 20, levelled one at a time', () => {
+    for (const index of [0, 1, 2]) {
+      const hero = draftCharacter(READY_MADE[index])
+      while (hero.level < 20) {
+        levelUp(hero)
+        autoAdvance(hero)
+      }
+      expect([hero.level, hero.perkPicks], READY_MADE[index].name).toEqual([20, 0])
+    }
   })
 
   it('spends every pick it can and never takes a capstone by the fallback', () => {

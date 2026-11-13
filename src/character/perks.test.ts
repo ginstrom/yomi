@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { MONSTER_SPELL_IDS, SPELLS, SPELL_IDS } from '../combat/spells.ts'
-import { createWarrior } from './character.ts'
+import { createWarrior, deriveCombatStats } from './character.ts'
+import { SPARK_WAND, YEW_BOW } from '../inventory/inventory.ts'
 import {
   PERKS,
   PERK_IDS,
@@ -33,16 +34,8 @@ import { PATHS } from './trees.ts'
 const warriorAt = (level: number) => ({ ...createWarrior(), level })
 
 describe('PERKS', () => {
-  // Stage 3's special spells (skill trees step 20) have no node until step 21 puts theirs in PERKS.
-  const UNTAUGHT: readonly string[] = ['ice_lance', 'glacial_prison', 'purify', 'revive', 'renew', 'holy_light']
-  const TAUGHT = SPELL_IDS.filter((spell) => !UNTAUGHT.includes(spell))
-
-  it('teaches no node the special spells yet', () => {
-    for (const spell of SPELL_IDS.filter((id) => UNTAUGHT.includes(id))) expect(perkTeaching(spell), spell).toBeNull()
-  })
-
   it('teaches every hero spell from exactly one node, and no monster spell', () => {
-    for (const spell of TAUGHT) {
+    for (const spell of SPELL_IDS) {
       const node = perkTeaching(spell)
       expect(node, spell).not.toBeNull()
       expect(PERK_IDS.filter((id) => (PERKS[id] as Perk).spell === spell)).toEqual([node])
@@ -51,7 +44,7 @@ describe('PERKS', () => {
   })
 
   it('names each spell node by its spell, with its mana and AP', () => {
-    for (const spell of TAUGHT) {
+    for (const spell of SPELL_IDS) {
       const node: Perk = PERKS[perkTeaching(spell)!]
       expect(node.name).toBe(SPELLS[spell].name)
       expect(node.description).toBe(`${SPELLS[spell].description}; ${SPELLS[spell].manaCost} mana, ${SPELLS[spell].apCost} AP`)
@@ -124,7 +117,7 @@ describe('knownAbilities', () => {
       ['smite', 'paladin', 1, { skills: { melee: 30 } }],
       ['consecrate', 'paladin', 3, { skills: { melee: 55 } }],
     ]
-    expect(PERK_IDS).toHaveLength(75)
+    expect(PERK_IDS).toHaveLength(95)
     for (const [id, path, tier, asks] of table) {
       const node = PERKS[id] as Perk
       expect(node).toMatchObject({ path, tier, ability: id, effects: {}, ...asks })
@@ -136,13 +129,13 @@ describe('knownAbilities', () => {
 
   it('sets the nodes in their paths in the plan\'s order', () => {
     const path = (p: string) => PERK_IDS.filter((id) => (PERKS[id] as Perk).path === p)
-    expect(path('swordmaster')).toEqual(['weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'gain_strength', 'cleave', 'weapon_mastery'])
-    expect(path('heavy_knight')).toEqual(['toughness', 'shield_wall', 'taunt', 'rooted', 'pin', 'iron_skin'])
-    expect(path('spellsword')).toEqual(['arcane_blood', 'flame_strike', 'frost_strike', 'spell_ward', 'thunder_strike', 'battle_mage'])
+    expect(path('swordmaster')).toEqual(['weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'gain_strength', 'cleave', 'weapon_mastery', 'blademaster'])
+    expect(path('heavy_knight')).toEqual(['toughness', 'shield_wall', 'taunt', 'rooted', 'pin', 'iron_skin', 'guardian', 'unbreakable'])
+    expect(path('spellsword')).toEqual(['arcane_blood', 'flame_strike', 'frost_strike', 'spell_ward', 'thunder_strike', 'battle_mage', 'arcane_knight'])
     expect(path('ranger')).toEqual(['marksmanship', 'deadly_aim', 'aimed_shot', 'far_shot', 'hunters_mark', 'volley', 'pinning_shot', 'deadeye'])
-    expect(path('rogue')).toEqual(['dodger', 'sprint', 'skirmisher', 'dirty_trick', 'evasion'])
-    expect(path('assassin')).toEqual(['keen_eye', 'venom_strike', 'hamstring', 'fortune'])
-    expect(path('paladin')).toEqual(['bless', 'smite', 'lay_on_hands', 'blessed_armour', 'consecrate', 'sacred_weapon'])
+    expect(path('rogue')).toEqual(['dodger', 'sprint', 'skirmisher', 'dirty_trick', 'tumble', 'evasion', 'counter', 'shadowdancer'])
+    expect(path('assassin')).toEqual(['keen_eye', 'backstab', 'venom_strike', 'hamstring', 'fortune', 'ambush', 'executioner', 'deathblow'])
+    expect(path('paladin')).toEqual(['bless', 'smite', 'lay_on_hands', 'blessed_armour', 'aura_of_courage', 'consecrate', 'sacred_weapon', 'aegis'])
   })
 
   it('words a technique with its cost', () => {
@@ -175,8 +168,24 @@ describe('traitsOf', () => {
     }
   }
 
-  it('gives Rooted its trait, and no other node one', () => {
-    expect(PERK_IDS.filter((id) => (PERKS[id] as Perk).trait !== undefined)).toEqual(['rooted'])
+  it('gives each trait to the one node of design 4.3 that teaches it', () => {
+    const traits = Object.fromEntries(PERK_IDS.flatMap((id) => ((PERKS[id] as Perk).trait ? [[id, (PERKS[id] as Perk).trait]] : [])))
+    expect(traits).toEqual({
+      blademaster: 'blademaster',
+      rooted: 'rooted',
+      guardian: 'guardian',
+      unbreakable: 'unbreakable',
+      arcane_knight: 'arcane_knight',
+      deadeye: 'deadeye',
+      tumble: 'tumble',
+      counter: 'counter',
+      shadowdancer: 'shadowdancer',
+      ambush: 'ambush',
+      deathblow: 'deathblow',
+      aura_of_courage: 'courage',
+      aegis: 'aegis',
+      sanctuary: 'sanctuary',
+    })
     expect(traitsOf({ ...createWarrior(), perks: { toughness: 1 } })).toEqual([])
     expect(traitsOf({ ...createWarrior(), perks: { rooted: 1 } })).toEqual(['rooted'])
   })
@@ -203,7 +212,7 @@ describe('qualifiesFor', () => {
     const offered = availablePerks(warriorAt(1))
     expect(offered.every((id) => (PERKS[id] as Perk).tier === 1)).toBe(true)
     // Strength 7, endurance 7, intelligence 4, agility 6, luck 7 and Melee Weapons 33.
-    expect(offered).toEqual(['weapon_training', 'heavy_hand', 'toughness', 'shield_wall', 'arcane_blood', 'flame_strike', 'dodger', 'sprint', 'keen_eye', 'bless', 'smite'])
+    expect(offered).toEqual(['weapon_training', 'heavy_hand', 'toughness', 'shield_wall', 'arcane_blood', 'flame_strike', 'dodger', 'sprint', 'keen_eye', 'backstab', 'bless', 'smite'])
     const swordsman = { ...warriorAt(1), perks: { weapon_training: 1 } }
     expect(missingRequirements(swordsman, 'armor_breaker')).toEqual(['Level 2'])
     expect(qualifiesFor({ ...swordsman, level: 2 }, 'armor_breaker')).toBe(true)
@@ -342,6 +351,90 @@ describe('attributeLevel', () => {
     expect(warrior.attributes.endurance).toBe(7)
     warrior.attributes.endurance = 10
     expect(attributeLevel(warrior, 'endurance')).toBe(10)
+  })
+})
+
+describe('the stage-3 nodes (skill trees step 21)', () => {
+  const table: Array<[PerkId, Perk['path'], Perk['tier'], Partial<Perk>]> = [
+    ['blademaster', 'swordmaster', 'capstone', { skills: { melee: 70 }, trait: 'blademaster' }],
+    ['guardian', 'heavy_knight', 3, { attributes: { endurance: 7 }, trait: 'guardian' }],
+    ['unbreakable', 'heavy_knight', 'capstone', { attributes: { endurance: 8 }, trait: 'unbreakable' }],
+    ['arcane_knight', 'spellsword', 'capstone', { skills: { melee: 70 }, trait: 'arcane_knight', meleeOnHit: [{ damage: 4, element: 'fire' }] }],
+    ['tumble', 'rogue', 3, { attributes: { agility: 7 }, trait: 'tumble' }],
+    ['counter', 'rogue', 3, { skills: { melee: 55 }, trait: 'counter' }],
+    ['shadowdancer', 'rogue', 'capstone', { attributes: { agility: 8 }, trait: 'shadowdancer' }],
+    ['backstab', 'assassin', 1, { anySkill: { melee: 30, archery: 30 }, effects: { rearToHit: 15, rearDamage: 4 } }],
+    ['ambush', 'assassin', 3, { attributes: { agility: 6 }, trait: 'ambush' }],
+    ['executioner', 'assassin', 3, { anySkill: { melee: 55, archery: 55 }, effects: { executeDamage: 5 } }],
+    ['deathblow', 'assassin', 'capstone', { anySkill: { melee: 70, archery: 70 }, trait: 'deathblow' }],
+    ['ice_lance', 'cryomancer', 3, { skills: { magic: 70 }, spell: 'ice_lance' }],
+    ['glacial_prison', 'cryomancer', 'capstone', { skills: { magic: 80 }, spell: 'glacial_prison' }],
+    ['purify', 'healer', 3, { skills: { magic: 55 }, spell: 'purify' }],
+    ['revive', 'healer', 'capstone', { skills: { magic: 75 }, spell: 'revive' }],
+    ['aura_of_courage', 'paladin', 3, { skills: { melee: 55 }, trait: 'courage' }],
+    ['aegis', 'paladin', 'capstone', { skills: { melee: 70 }, trait: 'aegis' }],
+    ['renew', 'saint', 3, { skills: { magic: 65 }, spell: 'renew' }],
+    ['holy_light', 'saint', 3, { skills: { magic: 70 }, spell: 'holy_light' }],
+    ['sanctuary', 'saint', 'capstone', { skills: { magic: 80 }, trait: 'sanctuary' }],
+  ]
+
+  it('are the twenty of design 4.3, with their tiers, asks and what they switch on', () => {
+    expect(table).toHaveLength(20)
+    for (const [id, path, tier, fields] of table) {
+      const node = PERKS[id] as Perk
+      expect(node, id).toMatchObject({ path, tier, ...fields })
+      expect(node.requires, id).toBeUndefined()
+      expect(node.description.length, id).toBeGreaterThan(0)
+    }
+  })
+
+  it('are passives but for the six spells', () => {
+    for (const [id, , , fields] of table) expect(nodeKind(id), id).toBe(fields.spell ? 'spell' : 'passive')
+    expect(table.filter(([id]) => nodeKind(id) === 'spell')).toHaveLength(6)
+  })
+})
+
+describe('the partial nodes, completed (step 21)', () => {
+  const holding = (...nodes: PerkId[]) => ({ ...createWarrior(), perks: Object.fromEntries(nodes.map((id) => [id, 1])) })
+
+  it('give their full numbers in combat', () => {
+    expect(deriveCombatStats(holding('iron_skin')).opportunity).toEqual({ toHit: 15, damage: 3 })
+    expect(deriveCombatStats(holding('battle_mage')).manaOnHit).toBe(1)
+    expect(deriveCombatStats(holding('skirmisher')).movedToHit).toBe(10)
+    expect(deriveCombatStats(holding('fortune')).critDamage).toBe(4)
+    expect(deriveCombatStats(holding('deadeye')).traits).toContain('deadeye')
+    expect(deriveCombatStats(holding('serenity')).manaRegen).toBe(2)
+  })
+
+  it('keep their stage-1 effects', () => {
+    expect(PERKS.iron_skin.effects).toMatchObject({ resistance: 2 })
+    expect(PERKS.battle_mage.effects).toMatchObject({ maxMana: 6, imbueDamage: 2 })
+    expect(PERKS.skirmisher.effects).toMatchObject({ agility: 1 })
+    expect(PERKS.fortune.effects).toMatchObject({ critChance: 10, luck: 1 })
+    expect(PERKS.deadeye.effects).toEqual({ archery: 10 })
+    expect(PERKS.serenity.effects).toMatchObject({ friendlyRange: 2 })
+  })
+
+  it('say everything they now do', () => {
+    expect(PERKS.iron_skin.description).toMatch(/free attacks get \+15 to hit and \+3 damage/)
+    expect(PERKS.battle_mage.description).toMatch(/restores 1 mana/)
+    expect(PERKS.skirmisher.description).toMatch(/\+10 to hit/)
+    expect(PERKS.fortune.description).toMatch(/critical hits deal 4 more damage/)
+    expect(PERKS.deadeye.description).toMatch(/pierce 3 points of resistance.*triple dice/)
+    expect(PERKS.serenity.description).toMatch(/Regains 2 mana/)
+  })
+
+  it('give Arcane Knight its 4 fire on a hit only while the main hand is melee or bare', () => {
+    const knight = holding('arcane_knight')
+    expect(deriveCombatStats(knight).onHit).toEqual([{ damage: 4, element: 'fire' }])
+    expect(deriveCombatStats(knight).traits).toEqual(['arcane_knight'])
+    delete knight.equipment.mainHand
+    expect(deriveCombatStats(knight).onHit).toEqual([{ damage: 4, element: 'fire' }])
+    delete knight.equipment.offHand
+    knight.equipment.mainHand = YEW_BOW
+    expect(deriveCombatStats(knight).onHit).toBeUndefined()
+    knight.equipment.mainHand = SPARK_WAND
+    expect(deriveCombatStats(knight).onHit).toBeUndefined()
   })
 })
 

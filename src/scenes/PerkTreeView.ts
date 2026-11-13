@@ -7,6 +7,7 @@ import { addPanelButton } from './panelButton.ts'
 import {
   clampLines,
   NODE_H,
+  STRIP_HINT_LINES,
   NODE_W,
   TREE_STRIP_Y,
   TREE_W,
@@ -217,6 +218,6 @@ export class PerkTreeView {
     }
     what.setText(clampLines(nodeSummary(this.options.character, perk))).setColor(TEXT)
     asks.setText(`Asks: ${describePerkRequirements(perk)}`).setY(what.y + what.height + 2)
-    hint.setText(this.options.hint(perk)).setY(asks.y + asks.height + 2)
+    hint.setText(clampLines(this.options.hint(perk), STRIP_HINT_LINES)).setY(asks.y + asks.height + 2)
   }
 }

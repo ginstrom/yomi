@@ -183,9 +183,10 @@ describe('what the bandits learn from their plans', () => {
     expect(abilities('brute', 6)).toEqual(['power_attack', 'cleave'])
   })
 
-  it('gives the Cutthroat Dirty Trick at 2 and Sprint at 4', () => {
-    expect(abilities('cutthroat', 2)).toEqual(['dirty_trick'])
-    expect(abilities('cutthroat', 4)).toEqual(['sprint', 'dirty_trick'])
+  it('gives the Cutthroat Backstab at 2 (a passive), Dirty Trick at 4 and Sprint at 6', () => {
+    expect(abilities('cutthroat', 2)).toEqual([])
+    expect(abilities('cutthroat', 4)).toEqual(['dirty_trick'])
+    expect(abilities('cutthroat', 6)).toEqual(['sprint', 'dirty_trick'])
   })
 
   it('gives the Archer and the Crossbowman Aimed Shot at 2 and Volley at 6', () => {
