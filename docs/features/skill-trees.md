@@ -64,6 +64,8 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 - To step 14 or 17 (from step 09 review): `perkTree.ts` `costWords` computes technique AP itself; make it call `abilityApCost` and drop the redundant intersection types, before Arcane Knight's discount lands.
 - Plan decision 2 (guard unchanged) allows a re-hash for a schema-only version bump (step 09 proved the log identical but for schemaVersion).
 
+- To steps 11, 12, 14 (from step 10): Taunt lays `taunted` without a `source` (set it in `areaAttack`'s no-roll branch, step 11); the policy's `isTechnique` filter is what step 12 replaces, and its area scoring doesn't yet value weapon dice, doubled bane dice or resistance (it would skip Volley); step 14 draws hero areas with `abilityArea`/`abilityTouches`.
+
 ## Verification
 
 ### Stage 1 (step 08, 2026-11-13; seed 1, 500 each, recorded and not tuned)
