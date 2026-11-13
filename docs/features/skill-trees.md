@@ -70,7 +70,6 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 
 - To stage 4 tuning (from step 12): area techniques aren't AP-normalised (Volley at 6 AP weighed against one 4 AP shot; Consecrate likewise) — normalise if the simulator over-uses them; Hunter's Mark has no value check beyond affording mark-then-attack; `tauntUse` judges threat by a foe's current attack range.
-- To step 21 (from step 11 review): only Taunt's no-roll area passes a `source` to `layStatus`; any other path that ever lays `taunted` would leave no source.
 
 - To step 16: apply the Captain-Pin decision (knight plan order) and note it in step 13's task file; restore Rooted's description clause "or the end of its next turn".
 
@@ -78,17 +77,17 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 - To stage 4 (from step 16): the `assassin` plan is unreachable for the ready-made heroes (Keen Eye asks Luck 6; they have 4 or less), so parity runs of it measure the fallback; Bandit Camp threat 4 at level 8 is won 500 of 500 by every plan, so parity needs a harder cell at level 8; at 8 AP with a 4 AP bow, Aimed Shot (6 AP) now gives way to two plain shots, as the blows-that-fit rule intends.
 
-- To step 21 (from step 18): the policy doesn't count Deathblow in a blow's expected harm.
 - To steps 21/22 (from step 17 review): Skirmisher's +10 isn't in walk-then-attack previews or the policy's scoring from the current hex (reads the unit's current `moved`); the tree strip labels a Spellsword Strike "(weapon + 1)" even for an Arcane Knight (weapon + 0).
 
-- To step 21 (from step 19): the policy's spell/area scoring calls `warded(…, unit)` on the raw snapshot, so the Warded status and Aegis don't count in expected damage — use `statsIn`.
 - To step 22 (from step 19): `restore` events have no look yet; the battle's first turn start now logs after `battle_start` (`readySide`/`turnBegins` split).
 
 
-- To step 21 (from step 20): remove the `UNTAUGHT` exemption in `perks.test.ts`; apply the Purify decision (not a heal anywhere but `purifyCast`); `sleepCast` checks only Asleep, not Frozen.
 - To step 22 (from step 20): the six spells' looks are placeholders; a revived unit's figure must stand up again on a `revived` outcome.
 
 - To step 22 (from step 20 review): Purify's log line says "is cleansed" even with no hostile status to remove — say it only when one was; `AttackEvent.helpless`'s comment still says "asleep".
+
+- To step 22 (from step 21): the tree strip's hint is cut to one line (`STRIP_HINT_LINES`) so long capstone asks fit — check it in the browser.
+- To stage 4 (from step 21): `evoker_healer` puts Mending before Meteor, so Delwyn's capstone comes at 14, not 12 (the design promises 12 for a committed hero) — reorder; AC1's first tier-3 for Swordmaster and Ranger plans comes at 8; Swift Hands still discounts Purify.
 
 ## Verification
 
