@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { perkCost, type PerkId } from '../src/character/perks.ts'
 import { xpToNextLevel } from '../src/character/progression.ts'
 import { hexDistance, offsetToHex } from '../src/grid/hex.ts'
 import { itemById } from '../src/inventory/inventory.ts'
@@ -22,7 +23,7 @@ async function debugCommand(game: Game, line: string): Promise<void> {
  * `nodes` from the Warrior tree's Heavy Knight path in the character panel,
  * then a debug fight with the goblins of Goblin Raid, up to the player's first turn.
  */
-async function aldricFights(game: Game, level: number, nodes: string[]): Promise<BattleProbe> {
+async function aldricFights(game: Game, level: number, nodes: PerkId[]): Promise<BattleProbe> {
   await game.newGame()
   let xp = 0
   for (let l = 1; l < level; l++) xp += xpToNextLevel(l)
@@ -32,11 +33,13 @@ async function aldricFights(game: Game, level: number, nodes: string[]): Promise
   await game.waitForScenes(['Inventory'], ['World'])
   const skills = await game.waitFor('Inventory', (p) => p.tab === 'skills')
   await game.click(skills.treesButton)
+  // Each node spends its tier's perk points.
+  const spentBefore = (i: number) => nodes.slice(0, i).reduce((sum, perk) => sum + perkCost(perk), 0)
   for (const [i, perk] of nodes.entries()) {
-    const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees' && p.tree === 'warrior' && p.perkPicks === skills.perkPicks - i)
+    const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees' && p.tree === 'warrior' && p.perkPicks === skills.perkPicks - spentBefore(i))
     await game.click(tree.perks.find((n) => n.perk === perk)!)
   }
-  await game.waitFor('Inventory', (p) => p.perkPicks === skills.perkPicks - nodes.length)
+  await game.waitFor('Inventory', (p) => p.perkPicks === skills.perkPicks - spentBefore(nodes.length))
   await game.press('Escape')
   await game.press('Escape')
   await game.waitForScenes(['World'])
@@ -308,9 +311,10 @@ describe('a battle', () => {
     expect(heal).toMatchObject({ caster: 'hero_3', manaCost: 3, manaAfter: 22, outcomes: [{ unit: 'hero_3', attackRoll: null }] })
   })
 
-  it('taunts from the Skills list: a level 4 Aldric with Rooted and Taunt marks the foes T, and stands rooted (AC7)', async () => {
+  it('taunts from the Skills list: a level 5 Aldric with Rooted and Taunt marks the foes T, and stands rooted (AC7)', async () => {
     const game = await games.open()
-    const start = await aldricFights(game, 4, ['rooted', 'taunt'])
+    // Rooted and Taunt cost 2 perk points each: level 5's 4 beyond creation's.
+    const start = await aldricFights(game, 5, ['rooted', 'taunt'])
     expect(start.selected).toBe('hero_1')
     // Aldric has an ability, so the button shows; it opens on a list whose Taunt waits for a foe within 2 hexes.
     expect(start.buttons.cast).toMatchObject({ visible: true, enabled: true })
@@ -340,7 +344,8 @@ describe('a battle', () => {
 
   it('pins a foe with Pin from the Skills list: its nameplate shows N', async () => {
     const game = await games.open()
-    await aldricFights(game, 6, ['rooted', 'taunt', 'pin'])
+    // Rooted, Taunt and Pin cost 2, 2 and 3 perk points: level 8's 7 beyond creation's.
+    await aldricFights(game, 8, ['rooted', 'taunt', 'pin'])
     const open = await waitToUse(game, 'pin')
     expect(open).not.toBeNull()
     expect(open!.skillMenu!.find((row) => row.id === 'pin')).toMatchObject({ kind: 'ability', label: 'Pin  3 mana  6 AP' })

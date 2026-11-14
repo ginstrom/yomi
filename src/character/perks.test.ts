@@ -249,7 +249,7 @@ describe('qualifiesFor', () => {
 
   it('asks the node’s skills: Magic Arrow at Magic 40% and not at 39%', () => {
     const warrior = warriorAt(1)
-    warrior.perkPicks = 1
+    warrior.perkPoints = 1
     warrior.trained.magic = 31
     expect(skillLevel(warrior, 'magic')).toBe(39)
     expect(missingRequirements(warrior, 'magic_arrow')).toEqual(['Magic 40%'])

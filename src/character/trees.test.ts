@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createWarrior, type Character } from './character.ts'
 import { PERKS, PERK_IDS, missingRequirements, qualifiesFor, type Perk, type PerkId } from './perks.ts'
-import { gainXp, takePerk, xpToNextLevel } from './progression.ts'
+import { gainXp, pointsAt, takePerk, xpToNextLevel } from './progression.ts'
 import {
   MANA_PER_TREE_NODE,
   PATHS,
@@ -45,8 +45,13 @@ describe('the trees', () => {
     expect(PATHS.heavy_knight.name).toBe('Heavy Knight')
   })
 
-  it('ask a level and a depth by tier', () => {
-    expect(TIERS).toEqual({ 1: { level: 1, depth: 0 }, 2: { level: 2, depth: 1 }, 3: { level: 6, depth: 3 }, capstone: { level: 12, depth: 5 } })
+  it('ask a level and a depth by tier, and cost 1, 2, 3 and 4 perk points', () => {
+    expect(TIERS).toEqual({
+      1: { level: 1, depth: 0, cost: 1 },
+      2: { level: 2, depth: 1, cost: 2 },
+      3: { level: 6, depth: 3, cost: 3 },
+      capstone: { level: 12, depth: 5, cost: 4 },
+    })
     expect(MANA_PER_TREE_NODE).toBe(2)
   })
 
@@ -66,10 +71,10 @@ describe('the trees', () => {
 
   it('give every node one rank: a node held is never taken again', () => {
     const hero = createWarrior()
-    hero.perkPicks = 2
+    hero.perkPoints = 2
     expect(takePerk(hero, 'toughness')).toBe(true)
     expect(takePerk(hero, 'toughness')).toBe(false)
-    expect([hero.perks.toughness, hero.perkPicks]).toEqual([1, 1])
+    expect([hero.perks.toughness, hero.perkPoints]).toEqual([1, 1])
   })
 })
 
@@ -92,103 +97,73 @@ describe('depth and the calling', () => {
   })
 })
 
-/**
- * A level 1 mage (intelligence 9, Magic trained high enough for every spell of
- * the path) holding `t1s`, raised level by level, each even level's pick spent
- * on the first of `path` it qualifies for; returns the level each node came at.
- */
-function committed(t1s: PerkId[], path: PerkId[]): Map<PerkId, number> {
-  const mage = createWarrior()
-  mage.attributes.intelligence = 9
-  mage.trained.magic = 100
-  mage.perks = Object.fromEntries(t1s.map((id) => [id, 1]))
-  const came = new Map<PerkId, number>()
-  while (mage.level < 14) {
-    gainXp(mage, xpToNextLevel(mage.level))
-    while (mage.perkPicks > 0) {
-      const next = path.find((id) => qualifiesFor(mage, id))
-      if (!next || !takePerk(mage, next)) break
-      came.set(next, mage.level)
-    }
-  }
-  return came
-}
-
-describe('a committed hero (AC1, stage 1)', () => {
-  it('takes an Evoker T3 at level 6 and Meteor at level 12, and not before', () => {
-    const came = committed(['magic_arrow', 'destruction'], ['flame_arrow', 'pyromancy', 'fireball', 'acid_arrow', 'death_cloud', 'meteor'])
-    expect([came.get('flame_arrow'), came.get('pyromancy')]).toEqual([2, 4])
-    expect(came.get('fireball')).toBe(6)
-    expect(came.get('meteor')).toBe(12)
-  })
-
-  it('takes an Arcanist T3 at level 6 and Mass Haste at level 12, and not before', () => {
-    const came = committed(['shield', 'arcane_study'], ['mirror_image', 'ward', 'haste', 'lasting_magic', 'quickened_casting', 'mass_haste'])
-    expect(came.get('haste')).toBe(6)
-    expect(came.get('mass_haste')).toBe(12)
-  })
-
-  it('cannot take its capstone before level 12 however deep', () => {
+describe('the capstone before level 12', () => {
+  it('cannot be taken however deep', () => {
     const deep = createWarrior()
     deep.attributes.intelligence = 9
     deep.trained.magic = 100
     deep.level = 11
+    deep.perkPoints = 4
     deep.perks = { magic_arrow: 1, destruction: 1, flame_arrow: 1, pyromancy: 1, fireball: 1, acid_arrow: 1, death_cloud: 1 }
     expect(qualifiesFor(deep, 'meteor')).toBe(false)
     expect(qualifiesFor({ ...deep, level: 12 }, 'meteor')).toBe(true)
   })
 })
 
-describe('a committed hero in every path (AC1)', () => {
+describe('a committed hero in every path, under the tiers\' costs (NC3)', () => {
+  const tierOf = (id: PerkId) => (PERKS[id] as Perk).tier
+
   /**
-   * A level 1 hero holding `path`'s two T1s, with every attribute at 9 and
-   * every skill trained to the top, raised to level 14, each pick spent on
-   * the first node of the path (in PERKS order) it qualifies for: the level
-   * each node came at, and the nodes of the path open at each level.
+   * A level 1 hero holding `path`'s two T1s and one T1 of another path (its 3
+   * creation points), every attribute high and every skill trained to the
+   * top, raised to level 14 a level at a time, every point put into the path:
+   * its first T2, then a T3 it may take, then a second T2, then the capstone,
+   * each bought when its asks and its cost are met, the points saved till
+   * then. The level each node came at, and the points held at each level.
    */
   const committedIn = (path: PathId) => {
     const hero = createWarrior()
     hero.attributes = { strength: 8, perception: 9, endurance: 9, intelligence: 9, agility: 9, luck: 9 }
     hero.trained = { melee: 100, archery: 100, magic: 100 }
     const nodes = NODES[path]
-    hero.perks = Object.fromEntries(nodes.slice(0, 2).map((id) => [id, 1]))
+    const other: PerkId = path === 'heavy_knight' ? 'dodger' : 'toughness'
+    hero.perks = Object.fromEntries([...nodes.slice(0, 2), other].map((id) => [id, 1]))
+    hero.perkPoints = 0
+    const [t2] = nodes.filter((id) => tierOf(id) === 2)
+    const t3 = nodes.find((id) => tierOf(id) === 3 && [undefined, t2].includes((PERKS[id] as Perk).requires as PerkId | undefined))!
+    const secondT2 = nodes.find((id) => tierOf(id) === 2 && id !== t2 && (PERKS[id] as Perk).requires !== t3)!
+    const capstone = nodes.find((id) => tierOf(id) === 'capstone')!
+    const sequence = [t2, t3, secondT2, capstone]
     const came = new Map<PerkId, number>()
-    const open = new Map<number, PerkId[]>()
+    const points = new Map<number, number>()
     while (hero.level < 14) {
       gainXp(hero, xpToNextLevel(hero.level))
-      open.set(hero.level, nodes.filter((id) => !hero.perks[id] && qualifiesFor({ ...hero, perkPicks: 1 }, id)))
-      while (hero.perkPicks > 0) {
-        const next = nodes.find((id) => qualifiesFor(hero, id))
-        if (!next || !takePerk(hero, next)) break
+      for (const next of sequence.filter((id) => !hero.perks[id])) {
+        if (!takePerk(hero, next)) break
         came.set(next, hero.level)
       }
+      points.set(hero.level, hero.perkPoints)
     }
-    return { came, open }
+    return { came, points, t2, t3, secondT2, capstone, hero }
   }
-  const tierOf = (id: PerkId) => (PERKS[id] as Perk).tier
 
-  it.each(PATH_IDS)('%s: a T3 at level 6 and not at 5, the capstone at level 12 and not at 10', (path) => {
-    const { came, open } = committedIn(path)
-    const t3s = NODES[path].filter((id) => tierOf(id) === 3)
-    const capstone = NODES[path].find((id) => tierOf(id) === 'capstone')!
-    expect(open.get(5)!.filter((id) => tierOf(id) === 3)).toEqual([])
-    expect(open.get(6)!.filter((id) => tierOf(id) === 3)).not.toEqual([])
-    // Where the path has a third T2 (Swordmaster, Ranger), level 6's pick takes it, PERKS order first; the T3 follows at 8.
-    expect(Math.min(...t3s.map((id) => came.get(id) ?? Infinity))).toBe(['swordmaster', 'ranger'].includes(path) ? 8 : 6)
-    expect(open.get(10)).not.toContain(capstone)
-    expect(open.get(11)).not.toContain(capstone)
-    expect(came.get(capstone)).toBe(12)
+  it.each(PATH_IDS)('%s: a T2 at 3, the T3 at 6, a second T2 at 8 and the capstone at 12, not earlier', (path) => {
+    const { came, points, t2, t3, secondT2, capstone, hero } = committedIn(path)
+    expect([came.get(t2), came.get(t3), came.get(secondT2), came.get(capstone)]).toEqual([3, 6, 8, 12])
+    // A point banked at level 4, and nothing to spare at 12: the capstone's 4 points are exactly level 12's.
+    expect([points.get(4), points.get(12)]).toEqual([1, 0])
+    expect(hero.perkPoints + Object.keys(hero.perks).reduce((sum, id) => sum + TIERS[tierOf(id as PerkId)].cost, 0)).toBe(pointsAt(14))
   })
 })
 
 describe('the capstone (AC2)', () => {
-  /** A level 14 hero with Melee 70% and more, 5 Swordmaster nodes and 6 Assassin nodes, and picks to spend. */
+  /** A level 14 hero with Melee 70% and more, 5 Swordmaster nodes and 6 Assassin nodes, and a capstone's 4 perk points. */
   const duellist = (): Character => {
     const hero = createWarrior()
     hero.level = 14
     hero.attributes.strength = 8
     hero.trained.melee = 100
-    hero.perkPicks = 3
+    hero.perkPoints = 4
     hero.perks = {
       weapon_training: 1,
       heavy_hand: 1,
@@ -206,22 +181,27 @@ describe('the capstone (AC2)', () => {
   }
   const CAPSTONES = PERK_IDS.filter((id) => (PERKS[id] as Perk).tier === 'capstone')
 
-  it('opens Deathblow, in the calling, and not Blademaster', () => {
+  it('opens Deathblow, in the calling, and not Blademaster; given 4 perk points, Deathblow is taken (NC3)', () => {
     const hero = duellist()
     expect(calling(hero)).toEqual(['assassin'])
     expect(qualifiesFor(hero, 'deathblow')).toBe(true)
     expect(qualifiesFor(hero, 'blademaster')).toBe(false)
     expect(missingRequirements(hero, 'blademaster')).toContain('Swordmaster must be your deepest path')
+    expect(takePerk({ ...duellist(), perks: { ...duellist().perks } }, 'blademaster')).toBe(false)
+    expect(takePerk({ ...duellist(), perkPoints: 3, perks: { ...duellist().perks } }, 'deathblow')).toBe(false)
+    expect(takePerk(hero, 'deathblow')).toBe(true)
+    expect(hero.perkPoints).toBe(0)
   })
 
   it('closes every other capstone for good once Deathblow is taken, whatever the depths later', () => {
     const hero = duellist()
+    hero.perkPoints = 4 + 3 + 3
     expect(takePerk(hero, 'deathblow')).toBe(true)
     expect(takePerk(hero, 'cleave')).toBe(true)
     expect(takePerk(hero, 'weapon_mastery')).toBe(true)
     // Swordmaster 7, Assassin 6 once one node is set aside: Swordmaster is the deeper.
     delete hero.perks.executioner
-    hero.perkPicks = 1
+    hero.perkPoints = 4
     expect(calling(hero)).toEqual(['swordmaster'])
     expect(CAPSTONES).toHaveLength(12)
     for (const capstone of CAPSTONES.filter((id) => id !== 'deathblow')) {
@@ -239,7 +219,7 @@ describe('the capstone (AC2, in the Mage tree)', () => {
     hero.level = 14
     hero.attributes.intelligence = 9
     hero.trained.magic = 100
-    hero.perkPicks = 3
+    hero.perkPoints = 4 + 3 + 3
     hero.perks = {
       magic_arrow: 1,
       destruction: 1,
@@ -271,7 +251,7 @@ describe('the capstone (AC2, in the Mage tree)', () => {
     expect(takePerk(hero, 'death_cloud')).toBe(true)
     delete hero.perks.lasting_magic
     expect(calling(hero)).toEqual(['evoker'])
-    hero.perkPicks = 1
+    hero.perkPoints = 4
     expect(qualifiesFor(hero, 'meteor')).toBe(false)
     expect(capstoneOf(hero)).toBe('mass_haste')
   })
@@ -308,41 +288,5 @@ describe('heroTitle', () => {
     expect(heroTitle(hero(5, 'bless', 'lay_on_hands', 'blessed_armour', 'toughness', 'shield_wall', 'iron_skin'))).toBe(
       'Level 5 \u00b7 Heavy Knight / Paladin',
     )
-  })
-})
-
-describe('a committed hero in the Warrior and Scout trees (AC1, stage 2)', () => {
-  /** A hero with `t1s`, attributes and skills for every ask, taking `path` in order at levels 2, 4 and 6. */
-  const committedWarrior = (t1s: PerkId[], path: PerkId[]): Map<PerkId, number> => {
-    const hero = createWarrior()
-    Object.assign(hero.attributes, { strength: 9, endurance: 8, perception: 9, agility: 8 })
-    hero.trained.melee = 100
-    hero.trained.archery = 100
-    hero.perks = Object.fromEntries(t1s.map((id) => [id, 1]))
-    const came = new Map<PerkId, number>()
-    while (hero.level < 6) {
-      gainXp(hero, xpToNextLevel(hero.level))
-      while (hero.perkPicks > 0) {
-        const next = path.find((id) => qualifiesFor(hero, id))
-        if (!next || !takePerk(hero, next)) break
-        came.set(next, hero.level)
-      }
-    }
-    return came
-  }
-
-  it('takes Cleave at level 6 after Power Attack and Armour Breaker', () => {
-    const came = committedWarrior(['weapon_training', 'heavy_hand'], ['power_attack', 'armor_breaker', 'cleave'])
-    expect([came.get('power_attack'), came.get('armor_breaker'), came.get('cleave')]).toEqual([2, 4, 6])
-  })
-
-  it('takes Pin at level 6 after Taunt and Rooted', () => {
-    const came = committedWarrior(['toughness', 'shield_wall'], ['taunt', 'rooted', 'pin'])
-    expect([came.get('taunt'), came.get('rooted'), came.get('pin')]).toEqual([2, 4, 6])
-  })
-
-  it('takes Volley at level 6 after Aimed Shot and Far Shot', () => {
-    const came = committedWarrior(['marksmanship', 'deadly_aim'], ['aimed_shot', 'far_shot', 'volley'])
-    expect([came.get('aimed_shot'), came.get('far_shot'), came.get('volley')]).toEqual([2, 4, 6])
   })
 })

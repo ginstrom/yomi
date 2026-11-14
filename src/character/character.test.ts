@@ -41,7 +41,7 @@ import { skillLevel } from './skills.ts'
 describe('createWarrior', () => {
   it('starts at full HP with armor, sword and shield equipped and the other weapons in the backpack', () => {
     const warrior = createWarrior()
-    expect([warrior.level, warrior.xp, warrior.skillPoints, warrior.perkPicks]).toEqual([1, 0, 0, 0])
+    expect([warrior.level, warrior.xp, warrior.skillPoints, warrior.perkPoints]).toEqual([1, 0, 0, 0])
     expect(warrior.hp).toBe(maxHp(warrior))
     expect(warrior.equipment).toEqual({ armor: IRON_BREASTPLATE, mainHand: IRON_SWORD, offHand: OAK_SHIELD })
     expect(warrior.backpack).toHaveLength(BACKPACK_SIZE)
@@ -160,7 +160,7 @@ describe('createCharacter', () => {
 
   it('starts with no perks and nothing to spend', () => {
     const archer = createCharacter('Archer', ARCHER)
-    expect([archer.perks, archer.perkPicks, archer.skillPoints]).toEqual([{}, 0, 0])
+    expect([archer.perks, archer.perkPoints, archer.skillPoints]).toEqual([{}, 0, 0])
   })
 })
 
@@ -413,7 +413,8 @@ describe('a node that raises an attribute', () => {
   const at = (level: number) => {
     const warrior = createWarrior()
     while (warrior.level < level) levelUp(warrior)
-    warrior.perkPicks = 1
+    // Enough perk points for a tier-2 node.
+    warrior.perkPoints = 2
     return warrior
   }
 

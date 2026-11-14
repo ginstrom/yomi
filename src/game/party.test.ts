@@ -5,7 +5,7 @@ import {
   attributePointsLeft,
   draftCharacter,
   draftProblems,
-  perkPicksLeft,
+  perkPointsLeft,
   skillPointsLeft,
 } from '../character/creation.ts'
 import { knownSpells } from '../character/perks.ts'
@@ -27,15 +27,15 @@ import {
 } from './party.ts'
 
 describe('PREROLLS', () => {
-  it('are drafts with no problems: 32 attribute points, a tag, 10 skill points and 3 picks spent', () => {
+  it('are drafts with no problems: 32 attribute points, a tag, 10 skill points and 3 perk points spent', () => {
     for (const { draft } of PREROLLS) {
       const others = PREROLLS.filter((other) => other.draft !== draft).map((other) => other.draft.name)
       expect(draftProblems(draft, others)).toEqual([])
-      expect([attributePointsLeft(draft), skillPointsLeft(draft), perkPicksLeft(draft)]).toEqual([0, 0, 0])
+      expect([attributePointsLeft(draft), skillPointsLeft(draft), perkPointsLeft(draft)]).toEqual([0, 0, 0])
       const member = draftCharacter(draft)
       expect(Object.values(member.attributes).reduce((a, b) => a + b)).toBe(ATTRIBUTE_POINTS)
       expect(new Set(member.tagged).size).toBe(TAGGED_SKILLS)
-      expect([member.skillPoints, member.perkPicks]).toEqual([0, 0])
+      expect([member.skillPoints, member.perkPoints]).toEqual([0, 0])
       expect('spellPicks' in member).toBe(false)
       expect(Object.values(member.perks).reduce((a, b) => a + b)).toBe(3)
       expect(member.hp).toBe(maxHp(member))
@@ -197,19 +197,19 @@ describe('describeRewards', () => {
     expect(describeRewards(rewardVictory(party, xpToNextLevel(1), []))).toEqual([
       `+${xpToNextLevel(1)} XP each`,
       'Brenna fell and will not rise again. What they carried is in the baggage.',
-      `Aldric reaches level 2: +${hp} max HP, ${points} skill points, a pick, wounds healed`,
-      `Corwin reaches level 2: +${hp} max HP, ${points} skill points, a pick, wounds healed`,
+      `Aldric reaches level 2: +${hp} max HP, ${points} skill points, 1 perk point, wounds healed`,
+      `Corwin reaches level 2: +${hp} max HP, ${points} skill points, 1 perk point, wounds healed`,
     ])
   })
 
-  it('announces a pick with the even level that brings one, and none with an odd one', () => {
+  it('announces a perk point with every level, and as many as the levels climbed at once', () => {
     const [hero] = warriors('Aldric')
-    hero.level = 2
-    expect(describeRewards(rewardVictory([hero], xpToNextLevel(2), []))[1]).toBe(
-      `Aldric reaches level 3: +${hpPerLevel(hero)} max HP, ${skillPointsPerLevel(hero)} skill points, wounds healed; next pick at level 4`,
+    hero.level = 4
+    expect(describeRewards(rewardVictory([hero], xpToNextLevel(4), []))[1]).toBe(
+      `Aldric reaches level 5: +${hpPerLevel(hero)} max HP, ${skillPointsPerLevel(hero)} skill points, 1 perk point, wounds healed`,
     )
-    expect(describeRewards(rewardVictory([hero], xpToNextLevel(3), []))[1]).toBe(
-      `Aldric reaches level 4: +${hpPerLevel(hero)} max HP, ${skillPointsPerLevel(hero)} skill points, a pick, wounds healed`,
+    expect(describeRewards(rewardVictory([hero], xpToNextLevel(5) + xpToNextLevel(6), []))[1]).toBe(
+      `Aldric reaches level 7: +${2 * hpPerLevel(hero)} max HP, ${2 * skillPointsPerLevel(hero)} skill points, 2 perk points, wounds healed`,
     )
   })
 })

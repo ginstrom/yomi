@@ -50,8 +50,8 @@ export interface Character {
   skillPoints: number
   /** The skill trees' nodes it holds, each at 1 (every node has one rank). */
   perks: Partial<Record<PerkId, number>>
-  /** Picks earned (at creation and every even level) and not yet spent on a node. */
-  perkPicks: number
+  /** Perk points earned (at creation and every level) and not yet spent on a node; a node costs its tier's (`perkCost`). */
+  perkPoints: number
   hp: number
   /** Mana carried out of the last battle, spent on the world map; read it through `manaOf`. Every battle begins at `maxMana`. */
   mana: number
@@ -451,7 +451,7 @@ export function createCharacter(name: string, build: Build): Character {
     trained: Object.fromEntries(SKILL_IDS.map((id) => [id, 0])) as Record<SkillId, number>,
     skillPoints: 0,
     perks: {},
-    perkPicks: 0,
+    perkPoints: 0,
     hp: 0,
     mana: 0,
     equipment: { armor: IRON_BREASTPLATE, mainHand: build.mainHand, ...(build.offHand ? { offHand: build.offHand } : {}) },

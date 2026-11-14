@@ -1,8 +1,8 @@
 import { ATTRIBUTES, ATTRIBUTE_IDS, ATTRIBUTE_POINTS, MAX_ATTRIBUTE, MIN_ATTRIBUTE, type AttributeId, type Attributes } from './attributes.ts'
 import { STARTING_KIT, createCharacter, maxHp, maxMana, type Character } from './character.ts'
-import { PERKS, missingRequirements, type PerkId } from './perks.ts'
+import { PERKS, missingRequirements, perkCost, type PerkId } from './perks.ts'
 import { PORTRAIT_IDS, type PortraitId } from './portraits.ts'
-import { takePerk } from './progression.ts'
+import { canAffordPerk, takePerk } from './progression.ts'
 import { SKILL_IDS, raiseSkill, type SkillId } from './skills.ts'
 
 /**
@@ -16,7 +16,8 @@ import { SKILL_IDS, raiseSkill, type SkillId } from './skills.ts'
 /** The points to place on attributes that all start at `MIN_ATTRIBUTE`. */
 export const CREATION_ATTRIBUTE_POINTS = ATTRIBUTE_POINTS - ATTRIBUTE_IDS.length * MIN_ATTRIBUTE
 export const CREATION_SKILL_POINTS = 10
-export const CREATION_PERK_PICKS = 3
+/** The perk points a new character has to spend; only tier-1 nodes, of 1 point each, are open at level 1. */
+export const CREATION_PERK_POINTS = 3
 export const MAX_NAME_LENGTH = 12
 
 /** What the player has chosen so far. Plain data; the scene holds one and replaces it on every change. */
@@ -56,12 +57,12 @@ export function skillPointsLeft(draft: CharacterDraft): number {
   return CREATION_SKILL_POINTS - SKILL_IDS.reduce((sum, id) => sum + draft.raises[id], 0)
 }
 
-/** The picks the draft has left: below 0, a node too many. */
-export function perkPicksLeft(draft: CharacterDraft): number {
-  return CREATION_PERK_PICKS - draft.perks.length
+/** The perk points the draft has left, its nodes' costs taken off: below 0, a node too many. */
+export function perkPointsLeft(draft: CharacterDraft): number {
+  return draft.perks.reduce((left, perk) => left - perkCost(perk), CREATION_PERK_POINTS)
 }
 
-/** The draft's character before its perks, and with its perk picks to spend. */
+/** The draft's character before its perks, and with its perk points to spend. */
 function unperked(draft: CharacterDraft): Character {
   const character = createCharacter(draft.name.trim(), {
     portrait: draft.portrait,
@@ -73,7 +74,7 @@ function unperked(draft: CharacterDraft): Character {
   for (const skill of SKILL_IDS) {
     for (let point = 0; point < draft.raises[skill]; point++) raiseSkill(character, skill)
   }
-  character.perkPicks = CREATION_PERK_PICKS
+  character.perkPoints = CREATION_PERK_POINTS
   return character
 }
 
@@ -86,7 +87,7 @@ function takePerks(character: Character, perks: readonly PerkId[]): Array<{ perk
   for (const perk of perks) {
     const missing = missingRequirements(character, perk)
     if (takePerk(character, perk)) continue
-    const why = missing.length > 0 ? `it asks ${missing.join(', ')}` : character.perkPicks < 1 ? 'no pick is left' : 'it cannot be taken'
+    const why = missing.length > 0 ? `it asks ${missing.join(', ')}` : !canAffordPerk(character, perk) ? 'no perk point is left' : 'it cannot be taken'
     refused.push({ perk, note: `${PERKS[perk].name} dropped: ${why}` })
   }
   return refused
@@ -94,7 +95,7 @@ function takePerks(character: Character, perks: readonly PerkId[]): Array<{ perk
 
 /**
  * The character the draft makes. Total: an unfinished draft makes an
- * unfinished character, for the summary. Skill points and perk picks the
+ * unfinished character, for the summary. Skill points and perk points the
  * draft has not spent stay on the character, to spend on the world map.
  */
 export function draftCharacter(draft: CharacterDraft): Character {
@@ -136,7 +137,7 @@ export function draftProblems(draft: CharacterDraft, takenNames: readonly string
   }
   if (!draft.tagged) problems.push('Tag a skill')
   if (skillPointsLeft(draft) < 0 || SKILL_IDS.some((id) => draft.raises[id] < 0)) problems.push('Too many skill points placed')
-  if (perkPicksLeft(draft) < 0) problems.push('Too many perks chosen')
+  if (perkPointsLeft(draft) < 0) problems.push('Too many perks chosen')
   problems.push(...pruneDraft(draft).notes.map((note) => note.replace(' dropped: ', ' cannot be taken: ')))
   const name = draft.name.trim()
   if (name === '') problems.push('Give the character a name')
@@ -198,7 +199,7 @@ export function draftPerkRanks(draft: CharacterDraft, perk: PerkId): number {
  */
 export function togglePerk(draft: CharacterDraft, perk: PerkId): DraftChange {
   const taken = { ...draft, perks: [...draft.perks, perk] }
-  if (perkPicksLeft(taken) >= 0 && pruneDraft(taken).dropped.length === 0) return unchanged(taken)
+  if (perkPointsLeft(taken) >= 0 && pruneDraft(taken).dropped.length === 0) return unchanged(taken)
   const last = draft.perks.lastIndexOf(perk)
   if (last === -1) return unchanged(draft)
   const without = { ...draft, perks: draft.perks.filter((_, index) => index !== last) }

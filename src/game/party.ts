@@ -1,6 +1,6 @@
 import { deriveCombatStats, maxHp, type Character } from '../character/character.ts'
 import { draftCharacter, type CharacterDraft } from '../character/creation.ts'
-import { gainXp, nextPerkLevel, type XpGain } from '../character/progression.ts'
+import { gainXp, type XpGain } from '../character/progression.ts'
 import { castOnWorldMap, healsOne, worldHealing, worldSpells } from '../character/worldCasting.ts'
 import type { HeroSpellId } from '../combat/spells.ts'
 import { listNames } from '../engine/battleEngine.ts'
@@ -163,9 +163,8 @@ export function describeRewards({ members, dead }: VictoryReward): string[] {
   for (const { member, gain } of members) {
     if (gain.levelsGained > 0) {
       const points = `, ${gain.skillPointsGained} skill points`
-      const perk = gain.perksGained > 0 ? ', a pick' : ''
-      const next = gain.perksGained > 0 ? '' : `; next pick at level ${nextPerkLevel(member)}`
-      lines.push(`${member.name} reaches level ${member.level}: +${gain.maxHpGained} max HP${points}${perk}, wounds healed${next}`)
+      const perk = `, ${gain.perkPointsGained} ${gain.perkPointsGained === 1 ? 'perk point' : 'perk points'}`
+      lines.push(`${member.name} reaches level ${member.level}: +${gain.maxHpGained} max HP${points}${perk}, wounds healed`)
     }
   }
   return lines

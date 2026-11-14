@@ -7,9 +7,10 @@ import { SKILL_IDS, skillLevel, type SkillId } from './skills.ts'
 import { PATHS, TIERS, calling, capstoneOf, pathDepth, type PathId, type Tier } from './trees.ts'
 
 /**
- * Perks: the nodes of the skill trees (trees.ts). A character picks
- * `CREATION_PERK_PICKS` as it is created (creation.ts) and one at every even
- * level (progression.ts), each buying one node it qualifies for. A node is
+ * Perks: the nodes of the skill trees (trees.ts). A character has
+ * `CREATION_PERK_POINTS` perk points as it is created (creation.ts) and one
+ * more at every level (progression.ts), and a node it qualifies for costs its
+ * tier's points (`perkCost`: 1, 2, 3, a capstone 4). A node is
  * data: its path and tier, what it asks beyond its tier's level and depth
  * (attributes, skills, any one of several skills, a node of its own path it
  * `requires`), what it adds (summed by `perkBonus` wherever the number it
@@ -623,6 +624,16 @@ export function perkLevel(perk: PerkId): number {
 /** What a node gives: a spell, a technique used at will or for mana, or a passive effect. */
 export type NodeKind = 'passive' | 'at-will' | 'mana' | 'spell'
 
+/** What `perk` costs in perk points: its tier's, with no node of its own price. */
+export function perkCost(perk: PerkId): number {
+  return TIERS[(PERKS[perk] as Perk).tier].cost
+}
+
+/** The perk points the nodes the character holds cost together. */
+export function nodesCost(character: Pick<Character, 'perks'>): number {
+  return PERK_IDS.reduce((sum, id) => sum + perkRanks(character, id) * perkCost(id), 0)
+}
+
 /** What kind of node `perk` is, derived from its data. */
 export function nodeKind(perk: PerkId): NodeKind {
   const node: Perk = PERKS[perk]
@@ -737,7 +748,7 @@ export function missingRequirements(character: Character, perk: PerkId): string[
   ]
 }
 
-/** Whether the character could take `perk` now: it does not hold it, may raise what it raises, and meets every ask. Having a pick is another matter. */
+/** Whether the character could take `perk` now: it does not hold it, may raise what it raises, and meets every ask. Having the perk points is another matter (`canAffordPerk`). */
 export function qualifiesFor(character: Character, perk: PerkId): boolean {
   return (
     perkRanks(character, perk) < 1 &&

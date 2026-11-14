@@ -67,7 +67,7 @@ const DRAFTS: Record<BanditRole, CharacterDraft> = {
     attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
     tagged: 'magic',
     raises: { melee: 0, archery: 0, magic: 10 },
-    // Its plan (`bandit_mage`) adds Flame Arrow at level 2, Destruction at 4, Fireball at 6, Heal at 8 and Heal All at 10.
+    // Its plan (`bandit_mage`) adds Flame Arrow at level 3, Destruction at 4, Fireball at 7, Heal at 8 and Heal All at 10.
     perks: ['magic_arrow', 'shield', 'arcane_study'],
   },
   // The archer with a crossbow: the same draft, so that the two cannot drift apart.

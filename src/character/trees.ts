@@ -66,12 +66,16 @@ export const TREES: Record<TreeId, { name: string }> = {
 
 export type Tier = 1 | 2 | 3 | 'capstone'
 
-/** What each tier asks: the level, and the nodes already held in the node's own path. */
-export const TIERS: Record<Tier, { level: number; depth: number }> = {
-  1: { level: 1, depth: 0 },
-  2: { level: 2, depth: 1 },
-  3: { level: 6, depth: 3 },
-  capstone: { level: 12, depth: 5 },
+/**
+ * What each tier asks, the level and the nodes already held in the node's own
+ * path, and what a node of it costs in perk points (`perkCost`): the deeper,
+ * the dearer, so that a hero still chooses between levels 12 and 20.
+ */
+export const TIERS: Record<Tier, { level: number; depth: number; cost: number }> = {
+  1: { level: 1, depth: 0, cost: 1 },
+  2: { level: 2, depth: 1, cost: 2 },
+  3: { level: 6, depth: 3, cost: 3 },
+  capstone: { level: 12, depth: 5, cost: 4 },
 }
 
 /** Mana a node of the Mage or Cleric tree adds (step 04 derives it). */

@@ -10,6 +10,7 @@ import {
   cappedAttribute,
   missingRequirements,
   nodeKind,
+  perkCost,
   perkParent,
   type NodeKind,
   perkRanks,
@@ -17,7 +18,7 @@ import {
   type Perk,
   type PerkId,
 } from '../character/perks.ts'
-import { hasPickFor, nextPerkLevel } from '../character/progression.ts'
+import { affordableAt, canAffordPerk } from '../character/progression.ts'
 import type { Point } from './boardGeometry.ts'
 import { PATHS, TIERS, TREES, TREE_IDS, calling, capstoneOf, pathDepth, pathsOf, treeNodes, type PathId, type Tier, type TreeId } from '../character/trees.ts'
 
@@ -322,10 +323,13 @@ export function nodeLabel(character: Character, perk: PerkId): string {
   return perkTitle(character, perk)
 }
 
+/** "1 perk point", "3 perk points". */
+const perkPointWords = (n: number) => `${n} ${n === 1 ? 'perk point' : 'perk points'}`
+
 /**
  * The right-hand words of the strip under the tree for a node: what a click
- * on it would do, or why it would do nothing. `canAdvance` says whether picks
- * can be spent here, which is on the world map and not in battle.
+ * on it would do, or why it would do nothing. `canAdvance` says whether perk
+ * points can be spent here, which is on the world map and not in battle.
  */
 export function nodeHint(character: Character, perk: PerkId, canAdvance: boolean): string {
   const state = nodeState(character, perk)
@@ -336,9 +340,10 @@ export function nodeHint(character: Character, perk: PerkId, canAdvance: boolean
     const lacking = [...missingRequirements(character, perk), ...(capped ? [`${ATTRIBUTES[capped].name} would pass ${MAX_ATTRIBUTE}`] : [])]
     return `Not yet: ${lacking.join(', ')}`
   }
-  if (!canAdvance) return 'Picks are spent on the world map'
-  if (hasPickFor(character, perk)) return 'Click to take'
-  return `No pick until level ${nextPerkLevel(character)}`
+  if (!canAdvance) return 'Perk points are spent on the world map'
+  const cost = perkCost(perk)
+  if (canAffordPerk(character, perk)) return `Click to take (${cost} of your ${perkPointWords(character.perkPoints)})`
+  return `Needs ${perkPointWords(cost)}; you have ${character.perkPoints} (level ${affordableAt(character, perk)})`
 }
 
 /**
@@ -350,7 +355,7 @@ export function draftNodeHint(draft: CharacterDraft, perk: PerkId): string {
   if (change.draft !== draft) return change.draft.perks.length > draft.perks.length ? 'Click to take' : 'Click to give back'
   if (change.notes.length > 0) return change.notes[0]
   const character = draftCharacter(draft)
-  return nodeState(character, perk) === 'open' ? 'No picks left' : nodeHint(character, perk, true)
+  return nodeState(character, perk) === 'open' ? 'No perk points left' : nodeHint(character, perk, true)
 }
 
 /** A path's heading over its column: its name and the nodes the character holds in it, and whether it is (one of) its calling. */

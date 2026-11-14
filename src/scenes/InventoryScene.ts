@@ -24,7 +24,7 @@ import {
   qualifiesFor,
   type PerkId,
 } from '../character/perks.ts'
-import { hasPickFor, nextPerkLevel, takePerk, xpToNextLevel } from '../character/progression.ts'
+import { canAffordPerk, takePerk, xpToNextLevel } from '../character/progression.ts'
 import { castOnWorldMap, healsOne, worldHealing, worldSpells } from '../character/worldCasting.ts'
 import { SPELLS, type HeroSpellId, type SpellId } from '../combat/spells.ts'
 import {
@@ -422,7 +422,7 @@ export class InventoryScene extends Phaser.Scene {
       tab: this.activeTab,
       party: this.column.probe(),
       skillPoints: this.character.skillPoints,
-      perkPicks: this.character.perkPicks,
+      perkPicks: this.character.perkPoints,
       skills: Object.fromEntries(
         SKILL_IDS.map((id, row) => [
           id,
@@ -703,9 +703,9 @@ export class InventoryScene extends Phaser.Scene {
     return this.canAdvance && cost !== null && cost <= this.character.skillPoints
   }
 
-  /** Whether a click on `perk` in the tree view would take it now: with a pick to spend, on the world map, its asks met. */
+  /** Whether a click on `perk` in the tree view would take it now: with its perk points, on the world map, its asks met. */
   private canTake(perk: PerkId): boolean {
-    return this.canAdvance && hasPickFor(this.character, perk) && qualifiesFor(this.character, perk)
+    return this.canAdvance && canAffordPerk(this.character, perk) && qualifiesFor(this.character, perk)
   }
 
   /** The centre of the button that raises the skill in the `row`th row. */
@@ -789,21 +789,18 @@ export class InventoryScene extends Phaser.Scene {
     return PERK_IDS.filter((id) => nodeKind(id) === 'passive' && perkRanks(this.character, id) > 0)
   }
 
-  /** Whether the character has a perk to choose and can choose it here. */
+  /** Whether the character has perk points waiting and can spend them here. */
   private pickWaits(): boolean {
-    return this.canAdvance && this.character.perkPicks > 0
+    return this.canAdvance && this.character.perkPoints > 0
   }
 
-  /** "Choose a perk" when picks wait and can be spent here, "2 to choose" in battle, else when the next comes. */
+  /** "Perk points: N", gold while any wait. */
   private buildPerkStatus(content: Phaser.GameObjects.Container, right: number, y: number): void {
-    const { perkPicks } = this.character
-    const status = this.pickWaits()
-      ? `Choose ${perkPicks === 1 ? 'a node' : `${perkPicks} nodes`}`
-      : perkPicks > 0
-        ? `${perkPicks} to choose`
-        : `Next pick at level ${nextPerkLevel(this.character)}`
+    const { perkPoints } = this.character
     content.add(
-      this.add.text(right, y, status, { fontFamily: FONT, fontSize: '14px', color: perkPicks > 0 ? GOLD : DIM }).setOrigin(1, 0),
+      this.add
+        .text(right, y, `Perk points: ${perkPoints}`, { fontFamily: FONT, fontSize: '14px', color: perkPoints > 0 ? GOLD : DIM })
+        .setOrigin(1, 0),
     )
   }
 
@@ -827,7 +824,7 @@ export class InventoryScene extends Phaser.Scene {
     content.add([bg, text])
   }
 
-  /** The passives the character has taken, and the button to the trees, where a pick is spent. */
+  /** The passives the character has taken, and the button to the trees, where perk points are spent. */
   private buildPerks(): void {
     this.skillsContent.add(this.heading('Passives', PERKS_X, 66))
     this.buildPerkStatus(this.skillsContent, PERKS_X + PERKS_W, 66)
@@ -855,7 +852,7 @@ export class InventoryScene extends Phaser.Scene {
 
   // ---- build: perk tree -------------------------------------------------
 
-  /** The tree view (`PerkTreeView`), its tabs, the picks waiting and Back: a click on an open node takes it where a pick can be spent. */
+  /** The tree view (`PerkTreeView`), its tabs, the perk points waiting and Back: a click on an open node takes it where perk points can be spent. */
   private buildPerkTree(): void {
     this.buildPerkStatus(this.treeContent, BACK_BUTTON.x - BACK_BUTTON.width / 2 - 16, BACK_BUTTON.y - 9)
     this.buildPanelButton(this.treeContent, BACK_BUTTON, 'Back', false, () => this.showTab(TREE_OF[this.activeTab] ?? 'skills'))
@@ -1466,7 +1463,7 @@ export class InventoryScene extends Phaser.Scene {
     this.time.delayedCall(0, () => this.buildContent())
   }
 
-  /** Spends a skill point or a perk pick, as `spend` does and reports, and redraws the panel to match. */
+  /** Spends skill points or perk points, as `spend` does and reports, and redraws the panel to match. */
   private advance(spend: () => boolean): void {
     if (!this.canAdvance || !spend()) return
     this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })

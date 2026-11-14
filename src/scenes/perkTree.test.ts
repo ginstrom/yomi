@@ -45,7 +45,7 @@ import {
 } from './perkTree.ts'
 
 /** The warrior: strength 7, perception 4, endurance 7, intelligence 4, agility 6, luck 7. */
-const warriorAt = (level: number, perkPicks = 0) => ({ ...createWarrior(), level, perkPicks })
+const warriorAt = (level: number, perkPoints = 0) => ({ ...createWarrior(), level, perkPoints })
 
 describe('treeLayout', () => {
   it('lays every node out once, in the tree of its path', () => {
@@ -417,11 +417,20 @@ describe('nodeLabel', () => {
 })
 
 describe('nodeHint', () => {
-  it('offers an open node for a click where a pick can be spent', () => {
-    expect(nodeHint(warriorAt(3, 1), 'toughness', true)).toBe('Click to take')
-    expect(nodeHint(warriorAt(3, 1), 'toughness', false)).toBe('Picks are spent on the world map')
-    expect(nodeHint(warriorAt(3), 'toughness', true)).toBe('No pick until level 4')
+  it('offers an open node it can afford for a click where perk points can be spent', () => {
+    expect(nodeHint(warriorAt(3, 1), 'toughness', true)).toBe('Click to take (1 of your 1 perk point)')
+    expect(nodeHint(warriorAt(3, 4), 'toughness', true)).toBe('Click to take (1 of your 4 perk points)')
+    expect(nodeHint({ ...warriorAt(3, 4), perks: { toughness: 1 } }, 'taunt', true)).toBe('Click to take (2 of your 4 perk points)')
+    expect(nodeHint(warriorAt(3, 1), 'toughness', false)).toBe('Perk points are spent on the world map')
     expect(nodeHint(warriorAt(3), 'magic_arrow', true)).toBe('Not yet: Magic 40%')
+  })
+
+  it('says how many perk points an open node needs and the level saving alone reaches it', () => {
+    expect(nodeHint(warriorAt(3), 'toughness', true)).toBe('Needs 1 perk point; you have 0 (level 4)')
+    const knight = { ...warriorAt(9, 1), perks: { toughness: 1, rooted: 1, taunt: 1 } }
+    knight.trained.melee = 40
+    expect(nodeHint(knight, 'pin', true)).toBe('Needs 3 perk points; you have 1 (level 11)')
+    expect(nodeHint(knight, 'pin', false)).toBe('Perk points are spent on the world map')
   })
 
   it('names only what a closed node still lacks', () => {
@@ -449,11 +458,11 @@ describe('draftNodeHint', () => {
     perks,
   })
 
-  it('offers a node to take while a pick is left, and a node held back on a click', () => {
+  it('offers a node to take while a perk point is left, and a node held back on a click', () => {
     expect(draftNodeHint(draft([]), 'toughness')).toBe('Click to take')
     expect(draftNodeHint(draft(['toughness']), 'toughness')).toBe('Click to give back')
     expect(draftNodeHint(draft(['toughness', 'dodger', 'deadly_aim']), 'dodger')).toBe('Click to give back')
-    expect(draftNodeHint(draft(['toughness', 'dodger', 'deadly_aim']), 'marksmanship')).toBe('No picks left')
+    expect(draftNodeHint(draft(['toughness', 'dodger', 'deadly_aim']), 'marksmanship')).toBe('No perk points left')
   })
 
   it('says why a click would do nothing', () => {
@@ -509,13 +518,13 @@ describe('the strip', () => {
 
   it('wraps a long "Not yet:" onto a second line rather than cutting it', () => {
     expect(STRIP_HINT_LINES).toBe(2)
-    const hint = nodeHint({ ...warriorAt(1), perkPicks: 1 }, 'blademaster', true)
+    const hint = nodeHint({ ...warriorAt(1), perkPoints: 1 }, 'blademaster', true)
     expect(wrapLines(hint).length).toBe(2)
     expect(clampLines(hint, STRIP_HINT_LINES)).toBe(hint)
   })
 
   it('stays inside the 500 px panel for the longest node: summary, asks and hint', () => {
-    const hero = { ...warriorAt(1), perkPicks: 1 }
+    const hero = { ...warriorAt(1), perkPoints: 1 }
     let longest = 0
     for (const id of PERK_IDS) {
       const summary = clampLines(nodeSummary(hero, id))

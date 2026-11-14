@@ -3,7 +3,7 @@ import { ATTRIBUTES, ATTRIBUTE_IDS } from '../character/attributes.ts'
 import { STARTING_KIT, deriveCombatStats, type Character } from '../character/character.ts'
 import {
   CREATION_ATTRIBUTE_POINTS,
-  CREATION_PERK_PICKS,
+  CREATION_PERK_POINTS,
   CREATION_SKILL_POINTS,
   MAX_NAME_LENGTH,
   adjustAttribute,
@@ -16,7 +16,7 @@ import {
   draftPerkRanks,
   draftProblems,
   newDraft,
-  perkPicksLeft,
+  perkPointsLeft,
   skillPointsLeft,
   tagSkill,
   togglePerk,
@@ -99,7 +99,7 @@ const SKILL_LEVEL_X = CONTENT_W
  */
 const TREE_SHIFT_Y = -18
 /** The perks step's words with the pointer on no node. */
-const PERKS_RULE = `${CREATION_PERK_PICKS} picks. One more comes with every even level. Any path, any tree; only your deepest path may open its capstone.`
+const PERKS_RULE = `${CREATION_PERK_POINTS} picks. One more comes with every even level. Any path, any tree; only your deepest path may open its capstone.`
 
 /** The name step: the faces in two rows, and the name under them. */
 const PORTRAIT_COLS = 4
@@ -230,7 +230,7 @@ export class CreationScene extends Phaser.Scene {
       draft: this.draft,
       attributePoints: attributePointsLeft(this.draft),
       skillPoints: skillPointsLeft(this.draft),
-      perkPicks: perkPicksLeft(this.draft),
+      perkPicks: perkPointsLeft(this.draft),
       tree: this.tree,
       trees: Object.fromEntries(TREE_IDS.map((tree) => [tree, button(this.treeTab(tree), shows('perks'))])) as CreationProbe['trees'],
       steps: Object.fromEntries(STEPS.map(([step], i) => [step, button(tabAt(i), true)])) as CreationProbe['steps'],
@@ -422,10 +422,10 @@ export class CreationScene extends Phaser.Scene {
    * refused sit beside the tabs, where the summary would be.
    */
   private buildPerks(character: Character): void {
-    const picks = perkPicksLeft(this.draft)
+    const picks = perkPointsLeft(this.draft)
     const right = TREE_W
     const tabsY = TREE_TAB_Y + TREE_SHIFT_Y
-    this.text(right, tabsY, `Picks: ${picks} of ${CREATION_PERK_PICKS}`, picks > 0 ? GOLD : DIM).setOrigin(1, 0.5)
+    this.text(right, tabsY, `Picks: ${picks} of ${CREATION_PERK_POINTS}`, picks > 0 ? GOLD : DIM).setOrigin(1, 0.5)
     // A note is cut short before it could reach the legend at the left of its row.
     if (this.notes.length > 0) fitText(this.text(right, tabsY + 20, this.notes[0], WARN, 11).setOrigin(1, 0.5), right - legendLayout().at(-1)!.right - 12)
     const tree = this.add.container(0, TREE_SHIFT_Y)
@@ -481,7 +481,7 @@ export class CreationScene extends Phaser.Scene {
   /** What the draft comes to: its character's numbers, which are the game's own. */
   private buildSummary(character: Character): void {
     const stats = deriveCombatStats(character)
-    const left = [attributePointsLeft(this.draft), skillPointsLeft(this.draft), perkPicksLeft(this.draft)]
+    const left = [attributePointsLeft(this.draft), skillPointsLeft(this.draft), perkPointsLeft(this.draft)]
     this.text(SUMMARY_X, HEADING_Y, character.name || (this.index === null ? 'New character' : 'Unnamed'), GOLD, 15)
     const lines = [
       `Hit Points    ${stats.maxHp}`,

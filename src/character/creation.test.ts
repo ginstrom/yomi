@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { maxHp, maxMana } from './character.ts'
 import {
   CREATION_ATTRIBUTE_POINTS,
-  CREATION_PERK_PICKS,
+  CREATION_PERK_POINTS,
   CREATION_SKILL_POINTS,
   MAX_NAME_LENGTH,
   adjustAttribute,
@@ -14,7 +14,7 @@ import {
   draftPerkRanks,
   draftProblems,
   newDraft,
-  perkPicksLeft,
+  perkPointsLeft,
   pruneDraft,
   skillPointsLeft,
   tagSkill,
@@ -39,12 +39,12 @@ const soldier = (changes: Partial<CharacterDraft> = {}): CharacterDraft => ({
 })
 
 describe('the budgets', () => {
-  it('are 26 attribute points over six attributes at 1, 10 skill points and 3 picks', () => {
-    expect([CREATION_ATTRIBUTE_POINTS, CREATION_SKILL_POINTS, CREATION_PERK_PICKS]).toEqual([26, 10, 3])
+  it('are 26 attribute points over six attributes at 1, 10 skill points and 3 perk points', () => {
+    expect([CREATION_ATTRIBUTE_POINTS, CREATION_SKILL_POINTS, CREATION_PERK_POINTS]).toEqual([26, 10, 3])
     const draft = newDraft()
     expect(Object.values(draft.attributes)).toEqual([1, 1, 1, 1, 1, 1])
-    expect([attributePointsLeft(draft), skillPointsLeft(draft), perkPicksLeft(draft)]).toEqual([26, 10, 3])
-    expect([attributePointsLeft(soldier()), skillPointsLeft(soldier()), perkPicksLeft(soldier())]).toEqual([0, 0, 0])
+    expect([attributePointsLeft(draft), skillPointsLeft(draft), perkPointsLeft(draft)]).toEqual([26, 10, 3])
+    expect([attributePointsLeft(soldier()), skillPointsLeft(soldier()), perkPointsLeft(soldier())]).toEqual([0, 0, 0])
   })
 
   it('makes a new draft that shares nothing with another', () => {
@@ -76,7 +76,7 @@ describe('draftProblems', () => {
     expect(draftProblems(soldier({ raises: { melee: 10, archery: 1, magic: 0 } }), [])).toEqual(['Too many skill points placed'])
     expect(draftProblems(soldier({ perks: [...soldier().perks, 'dodger'] }), [])).toEqual([
       'Too many perks chosen',
-      'Dodger cannot be taken: no pick is left',
+      'Dodger cannot be taken: no perk point is left',
     ])
   })
 
@@ -92,7 +92,7 @@ describe('draftProblems', () => {
     expect(draftProblems(soldier(), ['Aldric'])).toEqual([])
   })
 
-  it('does not mind skill points and picks left unspent', () => {
+  it('does not mind skill points and perk points left unspent', () => {
     expect(draftProblems(soldier({ raises: { melee: 6, archery: 0, magic: 0 }, perks: ['toughness', 'dodger'] }), [])).toEqual([])
   })
 
@@ -128,17 +128,17 @@ describe('draftCharacter', () => {
     expect(draftCharacter(soldier({ raises, perks: [], tagged: 'archery' })).trained).toEqual({ melee: 5, archery: 10, magic: 0 })
   })
 
-  it('leaves unspent skill points and picks on the character, to spend like those of a level', () => {
+  it('leaves unspent skill points and perk points on the character, to spend like those of a level', () => {
     const character = draftCharacter(soldier({ raises: { melee: 6, archery: 0, magic: 0 }, perks: ['toughness', 'dodger'] }))
-    expect([character.skillPoints, character.perkPicks]).toEqual([4, 1])
+    expect([character.skillPoints, character.perkPoints]).toEqual([4, 1])
     expect(raiseSkill(character, 'melee')).toBe(true)
     expect(takePerk(character, 'heavy_hand')).toBe(true)
-    expect([character.skillPoints, character.perkPicks]).toEqual([3, 0])
+    expect([character.skillPoints, character.perkPoints]).toEqual([3, 0])
   })
 
   it('is total: an unfinished draft makes an unfinished character', () => {
     const character = draftCharacter(newDraft())
-    expect(character).toMatchObject({ name: '', tagged: [], skillPoints: 10, perkPicks: 3, perks: {} })
+    expect(character).toMatchObject({ name: '', tagged: [], skillPoints: 10, perkPoints: 3, perks: {} })
     expect(character.hp).toBe(12)
     expect(skillLevel(character, 'magic')).toBe(2)
   })
@@ -154,7 +154,7 @@ describe('draftCharacter', () => {
     )
     // 18 for intelligence 9, and 2 for each of its three Mage and Cleric nodes.
     expect([skillLevel(mage, 'magic'), knownSpells(mage), maxMana(mage)]).toEqual([68, ['magic_arrow', 'heal'], 24])
-    expect([mage.mana, mage.perkPicks]).toEqual([24, 0])
+    expect([mage.mana, mage.perkPoints]).toEqual([24, 0])
     expect('spellPicks' in mage).toBe(false)
     // Without the tag the same character is at 18 + 10 + 10.
     const untagged = draftCharacter(soldier({ ...soldier(), attributes: mage.attributes, tagged: 'melee', raises: { melee: 0, archery: 0, magic: 10 }, perks: ['arcane_study'] }))
@@ -174,7 +174,7 @@ describe('perks at creation', () => {
     expect(draftProblems({ ...hardy, perks: ['gain_strength'] }, [])).toEqual(['Gain Strength cannot be taken: it asks Level 2, 1 node in Swordmaster'])
   })
 
-  it('lets a spell be taken once Magic is 40% and not before, with a pick like any node (AC3)', () => {
+  it('lets a spell be taken once Magic is 40% and not before, with a perk point like any node (AC3)', () => {
     // Intelligence 9: 18, and the tag 20.
     const mage = soldier({
       attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
@@ -189,24 +189,27 @@ describe('perks at creation', () => {
     let draft = togglePerk(studied, 'magic_arrow').draft
     expect(draft.perks).toEqual(['arcane_study', 'magic_arrow'])
     draft = togglePerk(draft, 'heal').draft
-    expect([perkPicksLeft(draft), draftProblems(draft, [])]).toEqual([0, []])
-    // A level 1 draft spends exactly its three picks.
+    expect([perkPointsLeft(draft), draftProblems(draft, [])]).toEqual([0, []])
+    // A level 1 draft spends exactly its three perk points.
     expect(togglePerk(draft, 'shield').draft).toBe(draft)
-    expect(draftCharacter(draft).perkPicks).toBe(0)
+    expect(draftCharacter(draft).perkPoints).toBe(0)
     // Moving the tag takes Magic under 40%: the spells go, Arcane Study stays.
     const untagged = tagSkill(draft, 'archery')
     expect(untagged.draft.perks).toEqual(['arcane_study'])
     expect(untagged.notes[0]).toBe('Magic Arrow dropped: it asks Magic 40%')
   })
 
-  it('takes a node once, stops at three picks, and gives a node back on a click', () => {
+  it('takes a node once, stops at three perk points, and gives a node back on a click', () => {
     let draft = togglePerk(hardy, 'toughness').draft
     expect(draftPerkRanks(draft, 'toughness')).toBe(1)
     // Its one rank is taken: a click gives it back.
     expect(togglePerk(draft, 'toughness').draft.perks).toEqual([])
     draft = togglePerk(togglePerk(draft, 'dodger').draft, 'heavy_hand').draft
-    expect(perkPicksLeft(draft)).toBe(0)
+    expect(perkPointsLeft(draft)).toBe(0)
     expect(togglePerk(draft, 'keen_eye').draft).toBe(draft)
+    // Below 0, a node too many: each node costs its tier's points.
+    expect(perkPointsLeft({ ...draft, perks: [...draft.perks, 'keen_eye'] })).toBe(-1)
+    expect(perkPointsLeft({ ...draft, perks: ['gain_strength'] })).toBe(CREATION_PERK_POINTS - 2)
     expect(togglePerk(draft, 'dodger').draft.perks).toEqual(['toughness', 'heavy_hand'])
   })
 
@@ -223,12 +226,12 @@ describe('pruneDraft', () => {
     expect(pruneDraft(draft)).toEqual({ draft, dropped: [], notes: [] })
   })
 
-  it('drops a perk an attribute no longer carries, returns its pick and says which', () => {
+  it('drops a perk an attribute no longer carries, returns its perk point and says which', () => {
     const draft = soldier({ attributes: { ...soldier().attributes, endurance: 5, luck: 6 } })
     const lowered = adjustAttribute(draft, 'endurance', -1)
     expect(lowered.draft.perks).toEqual(['weapon_training', 'heavy_hand'])
     expect(lowered.notes).toEqual(['Toughness dropped: it asks Endurance 5'])
-    expect(perkPicksLeft(lowered.draft)).toBe(1)
+    expect(perkPointsLeft(lowered.draft)).toBe(1)
     expect(pruneDraft({ ...draft, attributes: lowered.draft.attributes }).dropped).toEqual(['toughness'])
   })
 

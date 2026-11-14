@@ -372,10 +372,10 @@ describe('a hero’s panel', () => {
     expect(new Set(all)).toEqual(new Set(PERK_IDS))
     expect(taken(seen.mage)).toEqual(['destruction', 'magic_arrow'])
     expect(taken(seen.cleric)).toEqual(['heal'])
-    // The picks of creation are spent, and the next comes at level 2.
+    // The perk points of creation are spent, and the next comes at level 2.
     expect(Object.values(seen).flat().some((node) => node.canTake)).toBe(false)
 
-    // A click on a node takes nothing without a pick, and a portrait turns the tree to its hero.
+    // A click on a node takes nothing without a perk point, and a portrait turns the tree to its hero.
     await game.press('1')
     const warrior = await game.waitFor('Inventory', (p) => p.tree === 'warrior')
     await game.click(warrior.perks.find((node) => node.perk === 'shield_wall')!)
@@ -467,14 +467,14 @@ describe('a hero’s panel', () => {
     const spent = (await game.probe('Inventory'))!
     expect(spent.skills.archery).toMatchObject({ level: before.skills.archery.level + before.skillPoints, canRaise: false })
 
-    // The second level's pick still waits.
+    // The second level's perk point still waits.
     expect(spent.perkPicks).toBe(1)
     await game.press('Escape')
     await game.waitForScenes(['World'])
     expect((await game.waitFor('World')).party[0].canAdvance).toBe(true)
   })
 
-  it('takes a node from the tree with the pick that the second level brings', async () => {
+  it('takes a tier-2 node from the tree with the perk points that the second and third levels bring', async () => {
     // A seed with which the simple player of `fightBattle` wins all three battles, unlevelled as it goes.
     const game = await games.open({ seed: 2 })
     await game.enterBattle()
@@ -500,7 +500,7 @@ describe('a hero’s panel', () => {
     await game.click(world.party[0])
     await game.waitForScenes(['Inventory'], ['World'])
     const skills = await game.waitFor('Inventory', (p) => p.tab === 'skills')
-    expect(skills.perkPicks).toBe(1)
+    expect(skills.perkPicks).toBe(2)
     expect(skills.takenPerks).toHaveLength(3)
     await game.click(skills.treesButton)
     const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees')
@@ -521,9 +521,10 @@ describe('a hero’s panel', () => {
     const game = await games.open()
     await game.newGame()
     const xpTo = (level: number) => Array.from({ length: level - 1 }, (_, i) => xpToNextLevel(i + 1)).reduce((a, b) => a + b, 0)
-    await debugCommand(game, `xp ${xpTo(2)} Aldric`)
-    await debugCommand(game, `xp ${xpTo(4)} Delwyn`)
-    const world = await game.waitFor('World', (w) => w.party[0].level === 2 && w.party[2].level === 4)
+    // Power Attack costs 2 perk points (level 3's), Flame Arrow and Heal All 2 each (level 5's 4).
+    await debugCommand(game, `xp ${xpTo(3)} Aldric`)
+    await debugCommand(game, `xp ${xpTo(5)} Delwyn`)
+    const world = await game.waitFor('World', (w) => w.party[0].level === 3 && w.party[2].level === 5)
 
     // Aldric knows no active yet, but has mana all the same.
     await game.click(world.party[0])
@@ -553,11 +554,11 @@ describe('a hero’s panel', () => {
     await game.click(mage.treesButton)
     const evoker = await game.waitFor('Inventory', (p) => p.tab === 'trees' && p.tree === 'mage')
     await game.click(evoker.perks.find((node) => node.perk === 'flame_arrow')!)
-    await game.waitFor('Inventory', (p) => p.perkPicks === mage.perkPicks - 1)
+    await game.waitFor('Inventory', (p) => p.perkPicks === mage.perkPicks - 2)
     await game.press('4')
     const cleric = await game.waitFor('Inventory', (p) => p.tree === 'cleric')
     await game.click(cleric.perks.find((node) => node.perk === 'heal_all')!)
-    await game.waitFor('Inventory', (p) => p.perkPicks === mage.perkPicks - 2)
+    await game.waitFor('Inventory', (p) => p.perkPicks === mage.perkPicks - 4)
     await game.press('b')
     const spells = await game.settled('Inventory', (p) => p.tab === 'abilities' && p.abilities.length === 4)
     expect(spells.abilities.map(({ name }) => name)).toEqual(['Magic Arrow', 'Flame Arrow', 'Heal', 'Heal All'])

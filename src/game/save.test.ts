@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { equipFromBackpack, maxMana } from '../character/character.ts'
-import { gainXp, picksAt, takePerk } from '../character/progression.ts'
+import { nodesCost } from '../character/perks.ts'
+import { gainXp, pointsAt, takePerk } from '../character/progression.ts'
 import { mulberry32 } from '../combat/rng.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
 import { hex } from '../grid/hex.ts'
@@ -118,8 +119,39 @@ describe('a save', () => {
     expect(parsed.game.parties[0].baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 25, whose saved battles keep each unit\'s stage-3 fields', () => {
-    expect(SAVE_VERSION).toBe(25)
+  it('is version 26, whose characters hold perk points', () => {
+    expect(SAVE_VERSION).toBe(26)
+  })
+
+  it('round-trips a hero\'s perk points', () => {
+    const game = gameUnderWay()
+    game.parties[0].members[1].perkPoints = 5
+    const parsed = parseSave(serializeSave({ game, battle: null, savedAt: 5 }))!
+    expect(parsed.game.parties[0].members.map((m) => m.perkPoints)).toEqual(game.parties[0].members.map((m) => m.perkPoints))
+    expect(parsed.game.parties[0].members[1].perkPoints).toBe(5)
+    expect('perkPicks' in parsed.game.parties[0].members[1]).toBe(false)
+  })
+
+  it('reads a current save whose hero has no perk points, or a negative or fractional number, as unreadable', () => {
+    const saved = JSON.parse(serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 }))
+    const broken = (change: (hero: any) => void) => {
+      const copy = structuredClone(saved)
+      change(copy.game.parties[0].members[0])
+      return JSON.stringify(copy)
+    }
+    expect(parseSave(broken(() => {}))).not.toBeNull()
+    expect(parseSave(broken((hero) => delete hero.perkPoints))).toBeNull()
+    expect(parseSave(broken((hero) => (hero.perkPoints = -1)))).toBeNull()
+    expect(parseSave(broken((hero) => (hero.perkPoints = 1.5)))).toBeNull()
+    expect(parseSave(broken((hero) => (hero.perkPoints = '2')))).toBeNull()
+    // A current save holding the old field instead is unreadable too.
+    expect(parseSave(broken((hero) => ((hero.perkPicks = hero.perkPoints), delete hero.perkPoints)))).toBeNull()
+  })
+
+  it('reads a save of a version other than 26, 25, 24, 23, 22 or 18 as unreadable', () => {
+    const saved = JSON.parse(serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 }))
+    for (const version of [17, 19, 20, 21, 27]) expect(parseSave(JSON.stringify({ ...saved, version })), `${version}`).toBeNull()
+    for (const version of [26, 25, 24, 23]) expect(parseSave(JSON.stringify({ ...saved, version })), `${version}`).not.toBeNull()
   })
 
   it('loads a version-24 save, its battle\'s units taking up the stage-3 fields at their defaults', () => {
@@ -402,6 +434,43 @@ describe('a company', () => {
   })
 })
 
+describe('a version-25 save', () => {
+  const raw = readFileSync(new URL('./fixtures/save-v25.json', import.meta.url), 'utf8')
+  const old = JSON.parse(raw)
+  const loaded = parseSave(raw)!
+  const heroes = (game: { parties: { members: any[] }[]; reserves: any[] }) => [...game.parties.flatMap((party) => party.members), ...game.reserves]
+  const hero = (save: SaveFile, name: string) => heroes(save.game).find((m) => m.name === name)!
+
+  it('is the fixture skill trees step 27 captured, holding picks', () => {
+    expect(old.version).toBe(25)
+    expect(heroes(old.game).map((m: any) => [m.name, m.perkPicks])).toEqual([
+      ['Aldric', 0], ['Brenna', 0], ['Delwyn', 0], ['Garrick', 0], ['Wren', 3],
+    ])
+  })
+
+  it('loads with every node kept and the perk points step 27 recorded, over budget at 0 and under budget the rest (NC6)', () => {
+    expect(loaded).not.toBeNull()
+    const migrated = heroes(loaded.game)
+    expect(migrated.map((m) => m.perks)).toEqual(heroes(old.game).map((m: any) => m.perks))
+    expect(migrated.map((m) => [m.name, m.level, nodesCost(m), m.perkPoints])).toEqual([
+      ['Aldric', 12, 20, 0],
+      ['Brenna', 12, 19, 0],
+      ['Delwyn', 12, 17, 0],
+      ['Garrick', 8, 11, 0],
+      ['Wren', 6, 3, pointsAt(6) - 3],
+    ])
+    expect(hero(loaded, 'Wren').perkPoints).toBe(5)
+    for (const m of migrated) expect('perkPicks' in m).toBe(false)
+  })
+
+  it('keeps everything else as it was, and saves back as the current version', () => {
+    expect(heroes(loaded.game).map((m) => [m.hp, m.mana, m.level])).toEqual(heroes(old.game).map((m: any) => [m.hp, m.mana, m.level]))
+    expect(loaded.game.parties.map((p) => p.id)).toEqual(['party_1', 'party_2'])
+    expect(JSON.parse(serializeSave(loaded)).version).toBe(SAVE_VERSION)
+    expect(parseSave(serializeSave(loaded))).toEqual(loaded)
+  })
+})
+
 describe('a version-22 save', () => {
   const raw = readFileSync(new URL('./fixtures/save-v22.json', import.meta.url), 'utf8')
   const old = JSON.parse(raw)
@@ -438,35 +507,35 @@ describe('a version-22 save', () => {
     expect(loaded.savedAt).toBe(1_700_000_000_000)
   })
 
-  it('maps a level 6 fighter\'s perks onto the nodes, one rank each, with the picks it is owed (AC10)', () => {
+  it('maps a level 6 fighter\'s perks onto the nodes, one rank each, with the perk points it is owed (AC10, NC6)', () => {
     const aldric = hero('Aldric')
     expect(aldric.level).toBe(6)
     // mighty_blow and sunder are one weapon_mastery; gain_endurance and the toughness held are one toughness.
     expect(aldric.perks).toEqual({ weapon_training: 1, weapon_mastery: 1, toughness: 1 })
-    // 3 + ⌊6 / 2⌋ picks by level 6, less the 3 nodes held.
-    expect(picksAt(6)).toBe(6)
-    expect(aldric.perkPicks).toBe(3)
+    // 8 perk points by level 6, less the 1 + 3 + 1 the nodes held cost.
+    expect([pointsAt(6), nodesCost(aldric)]).toEqual([8, 5])
+    expect(aldric.perkPoints).toBe(3)
   })
 
-  it('keeps every surviving node of a caster holding more than its picks, with no picks left', () => {
+  it('keeps every surviving node of a caster whose nodes cost more than its level gives, with no perk points left', () => {
     const delwyn = hero('Delwyn')
     expect(delwyn.perks).toEqual({
       deadeye: 1, lingering_cold: 1, destruction: 1, arcane_study: 1, magic_arrow: 1, flame_arrow: 1,
       fireball: 1, heal: 1, heal_all: 1, shield: 1, bless: 1,
     })
-    expect(Object.keys(delwyn.perks).length).toBeGreaterThan(picksAt(6))
-    expect(delwyn.perkPicks).toBe(0)
+    expect(nodesCost(delwyn)).toBeGreaterThan(pointsAt(6))
+    expect(delwyn.perkPoints).toBe(0)
     // 2 × 9 + 5 × 4 + 2 × 10 Mage and Cleric nodes (all but deadeye, Arcane Study among them) + Destruction's 4.
     expect(maxMana(delwyn)).toBe(62)
     expect(delwyn.mana).toBe(40)
   })
 
-  it('folds an archer\'s attribute perks and recomputes its picks, and a reserve\'s too', () => {
+  it('folds an archer\'s attribute perks and recomputes its perk points, and a reserve\'s too', () => {
     expect(hero('Brenna').perks).toEqual({ marksmanship: 1, far_shot: 1, skirmisher: 1, fortune: 1, evasion: 1, lasting_magic: 1 })
-    // Six nodes by level 6 leave no pick; Garrick's three by level 4 leave picksAt(4) − 3 = 2.
-    expect(hero('Brenna').perkPicks).toBe(0)
+    // Brenna's six nodes cost 14 against level 6's 8: none left; Garrick's three cost 5 against level 4's 6: one.
+    expect(hero('Brenna').perkPoints).toBe(0)
     expect(hero('Garrick').perks).toEqual({ weapon_training: 1, weapon_mastery: 1, toughness: 1 })
-    expect(hero('Garrick').perkPicks).toBe(2)
+    expect(hero('Garrick').perkPoints).toBe(1)
   })
 
   it('leaves no retired perk, no spell picks and no mana above the maximum on any hero', () => {
@@ -475,6 +544,7 @@ describe('a version-22 save', () => {
       expect(m.perks).not.toHaveProperty('quick_study')
       expect(Object.values(m.perks).every((rank) => rank === 1)).toBe(true)
       expect('spellPicks' in m).toBe(false)
+      expect('perkPicks' in m).toBe(false)
       expect(m.mana).toBeLessThanOrEqual(maxMana(m))
     }
   })
@@ -507,15 +577,17 @@ describe('a version-22 save', () => {
     expect(parsed.game.parties[0].members[0].perks).toEqual({ toughness: 1 })
   })
 
-  it('recomputes picks from the level, never below 0', () => {
+  it('recomputes perk points from the level and the nodes\' cost, never below 0', () => {
     const parsed = parseSave(
       v22With((s) => {
         const [low, mid] = s.game.parties[0].members
         Object.assign(low, { level: 1, perkPicks: 7, perks: { weapon_training: 1, heavy_hand: 1, toughness: 1, shield_wall: 1, dodger: 1 } })
-        Object.assign(mid, { level: 5, perkPicks: 0, perks: { marksmanship: 1 } })
+        Object.assign(mid, { level: 5, perkPicks: 0, perks: { marksmanship: 1, aimed_shot: 1 } })
+        delete low.perkPoints
+        delete mid.perkPoints
       }),
     )!
-    expect(parsed.game.parties[0].members.slice(0, 2).map((m) => m.perkPicks)).toEqual([0, picksAt(5) - 1])
+    expect(parsed.game.parties[0].members.slice(0, 2).map((m) => m.perkPoints)).toEqual([0, pointsAt(5) - 3])
   })
 
   it('clamps mana to the new maximum', () => {
@@ -580,7 +652,9 @@ describe('a version-18 save', () => {
       { marksmanship: 1, deadly_aim: 1, dodger: 1 },
       { arcane_study: 1, keen_eye: 1, magic_arrow: 1, heal: 1 },
     ])
-    expect(party.members.map((m) => m.perkPicks)).toEqual([0, 0, 0])
+    // Three or four tier-1 nodes at level 1 cost the 3 points of creation or more.
+    expect(party.members.map((m) => m.perkPoints)).toEqual([0, 0, 0])
+    for (const m of party.members) expect('perkPicks' in m).toBe(false)
     for (const m of party.members) expect('spellPicks' in m).toBe(false)
     expect(party.members[2].mana).toBe(18)
     expect(JSON.parse(serializeSave(loaded)).version).toBe(SAVE_VERSION)

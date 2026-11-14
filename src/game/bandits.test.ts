@@ -116,8 +116,9 @@ describe('banditStats', () => {
   it('arms the crossbowman with a crossbow that pierces at range', () => {
     const stats = banditStats('crossbowman', 6, T2)
     expect(stats.weapon).toBe('Fine Ironwood Crossbow')
-    // The crossbow's 5, and Far Shot's 2, which the ranger's plan takes at level 2.
-    expect(stats.attackRange).toBe(7)
+    // The crossbow's 5; Far Shot's 2 come with the ranger's plan at level 8, after Volley.
+    expect(stats.attackRange).toBe(5)
+    expect(banditStats('crossbowman', 8, T2).attackRange).toBe(7)
     expect(stats.attackApCost).toBe(6)
   })
 
@@ -172,27 +173,30 @@ describe('what the bandits learn from their plans', () => {
   const gear = banditGear(5)
   const abilities = (role: BanditRole, level: number) => banditStats(role, level, gear).abilities ?? []
 
-  it('gives the level-6 Captain Taunt, Pin and Rooted (the knight plan takes Heavy Hand after Pin)', () => {
-    const stats = banditStats('captain', 6, gear)
-    expect(stats.abilities).toEqual(['taunt', 'pin'])
-    expect(stats.traits).toEqual(['rooted'])
+  it('gives the Captain Rooted at 3, Taunt at 5 and Pin at 8 (the knight plan takes Heavy Hand after Pin)', () => {
+    expect(banditStats('captain', 2, gear).traits ?? []).toEqual([])
+    expect(banditStats('captain', 3, gear).traits).toEqual(['rooted'])
+    expect([4, 5, 7, 8].map((level) => abilities('captain', level))).toEqual([[], ['taunt'], ['taunt'], ['taunt', 'pin']])
   })
 
-  it('gives the Brute Power Attack at 2 and Cleave at 6', () => {
-    expect(abilities('brute', 2)).toEqual(['power_attack'])
-    expect(abilities('brute', 6)).toEqual(['power_attack', 'cleave'])
+  it('gives the Brute Power Attack at 3 and Cleave at 8', () => {
+    expect([2, 3, 7, 8].map((level) => abilities('brute', level))).toEqual([[], ['power_attack'], ['power_attack'], ['power_attack', 'cleave']])
   })
 
-  it('gives the Cutthroat Backstab at 2 (a passive), Dirty Trick at 4 and Sprint at 6', () => {
+  it('gives the Cutthroat Backstab at 2 (a passive), Dirty Trick at 4 and Sprint at 5', () => {
     expect(abilities('cutthroat', 2)).toEqual([])
     expect(abilities('cutthroat', 4)).toEqual(['dirty_trick'])
-    expect(abilities('cutthroat', 6)).toEqual(['sprint', 'dirty_trick'])
+    expect(abilities('cutthroat', 5)).toEqual(['sprint', 'dirty_trick'])
   })
 
-  it('gives the Archer and the Crossbowman Aimed Shot at 2 and Volley at 6', () => {
+  it('gives the Archer and the Crossbowman Aimed Shot at 3 and Volley at 6', () => {
     for (const role of ['archer', 'crossbowman'] as const) {
-      expect(abilities(role, 2)).toEqual(['aimed_shot'])
-      expect(abilities(role, 6)).toEqual(['aimed_shot', 'volley'])
+      expect([2, 3, 5, 6].map((level) => abilities(role, level))).toEqual([[], ['aimed_shot'], ['aimed_shot'], ['aimed_shot', 'volley']])
     }
+  })
+
+  it('gives the Hedge-Mage Flame Arrow at 3 and Fireball at 7', () => {
+    const learnt = (level: number) => banditStats('mage', level, gear).magic!.spells.filter((id) => id === 'flame_arrow' || id === 'fireball')
+    expect([2, 3, 6, 7].map(learnt)).toEqual([[], ['flame_arrow'], ['flame_arrow'], ['flame_arrow', 'fireball']])
   })
 })

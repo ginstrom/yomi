@@ -4,7 +4,7 @@ import type { SpellId } from '../src/combat/spells.ts'
 import { BattleEngine, type CastOutcome, type Side } from '../src/engine/battleEngine.ts'
 import { GOBLIN_STATS } from '../src/combat/combat.ts'
 import { hex } from '../src/grid/hex.ts'
-import { canAdvance, planFor } from '../src/character/progression.ts'
+import { autoAdvance, planFor } from '../src/character/progression.ts'
 import { banditStats } from '../src/game/bandits.ts'
 import { newGame } from '../src/game/gameState.ts'
 import { heroId } from '../src/game/encounters.ts'
@@ -96,6 +96,14 @@ function battle(battleId: number, rounds: number, winner: Side | null): LoggedEv
       survivors: {},
     },
   ]
+}
+
+
+/** Whether `autoAdvance` has spent all `hero` would spend: no skill point left, and its perk points saved for a node it cannot take yet. */
+const spentByPlan = (hero: Character): boolean => {
+  const copy = { ...hero, perks: { ...hero.perks }, trained: { ...hero.trained } }
+  autoAdvance(copy)
+  return hero.skillPoints === 0 && JSON.stringify(copy.perks) === JSON.stringify(hero.perks)
 }
 
 describe('summarize', () => {
@@ -611,7 +619,7 @@ describe('the guild hall in a campaign', () => {
     expect(visitGuildHall(game, game.parties[0])).toBe(1)
     expect(game.world.guildHall).toBe(3)
     expect(game.parties[0].members.map((member) => member.name)).toEqual(['Aldric', 'Brenna', 'Delwyn', 'Garrick'])
-    expect(canAdvance(game.parties[0].members[3])).toBe(false)
+    expect(spentByPlan(game.parties[0].members[3])).toBe(true)
     expect(game.world.stock).toEqual({ gold: 0, iron: 5 })
     // A fifth place, and no gold to fill it.
     expect(hallErrand(game, game.parties[0])).toBe(false)
@@ -1718,7 +1726,7 @@ describe('the company policy', () => {
       expect(formed.hired).toBe(GUARD_MIN_SIZE)
       expect(formed.party.name).toBe('Second Company')
       expect(formed.party.members).toHaveLength(GUARD_MIN_SIZE)
-      expect(formed.party.members.every((m) => m.level === 4 && !canAdvance(m))).toBe(true)
+      expect(formed.party.members.every((m) => m.level === 4 && spentByPlan(m))).toBe(true)
       expect(game.parties).toContain(formed.party)
     })
     it('forms none short of three heroes, under --parties 1, or past the hall’s parties', () => {
