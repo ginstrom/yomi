@@ -39,6 +39,9 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 | Order after 08: 09, then narration 14–17, then 10–13, giving the user time for the Freesound downloads (G2) | orchestrator | 09–13 first | 10–13 need G2 or its fallbacks |
 | D6: add a `voice` volume slider; UI sounds stay under Sound FX with their own internal group | orchestrator | separate UI slider | brief's recommendation, splittable later |
 
+| G9: `A_0` kept as the narrator's only clip; the user ranked `neutral` (A_0) best, then `whisper_1` | user | emotion reference clips | |
+| G2: all 28 Freesound files downloaded by the orchestrator through Claude in Chrome on the user's login, each page checked "Creative Commons 0", in `~/.cache/yomi-audio/freesound/` under the target names; durations match the list | user | user downloads by hand; skip all | user asked |
+
 ## Open questions
 
 (none)
