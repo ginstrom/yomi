@@ -161,3 +161,5 @@ None of the 13 is reported peak-limited by the final build (the placeholders' im
 **Deviations.** `sfx audition` names its files `<cue>.v<k>.wav`; they were renamed to `<cue>/<k>.wav` as the plan asks. No tool, runtime, `CUES` or `audio.toml` change. `public/assets/audio/README.md` gained a "Real content so far" table by collection and kept the placeholder section for the other cues; `audio/CLAUDE.md` gained the lessons above and says which cues are real.
 
 **For later steps.** G3's verdicts set the style. Free for reuse by steps 10–13: `oga_medicinestorm` swings (a whoosh-by for `miss.shot` too), `kenney_metal_light_*`, `rd_bang_*`, `rd_slime_*`, `rd_mud_*`, `bart_steam_hiss`, the grunts.
+
+Commit: `6ff2d6f` ("Audio pass step 08: Content: melee").
