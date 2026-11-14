@@ -72,6 +72,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - 10: opus engineer, opus reviewer, clean in 1 round (provenance tidy-ups, `42c18c2`). Unsure by ear: `shot.wand`/`miss.magic` may read sci-fi, `hit.magic` gunshot-like, poison vs acid alike, `regen` late squelch. Audition `audio/.audition/10-ranged-sweeteners/`.
 - 11: opus engineer, opus reviewer, clean in 1 round. Unsure by ear: `cast.storm` buzz, synth bells in `impact.heal`/`buff`, fireball roar blurring punch, one-voice `cast.holy`, clinky `impact.hex`. Audition `audio/.audition/11-spells/`.
 - 12: opus engineer, opus reviewer, clean in 1 round. Unsure by ear: raccoon goblin squeal, armoured-step mail jingle too much, zombie-ish brute groan, Horror roar stop, salamander hiss. Audition `audio/.audition/12-falls-steps/`.
+- 13: opus engineer done; review pending. Unsure by ear: `confront` two-note horn, `captured` horn may read as threat, bright `craft` anvil, synthetic rune hums, `arrive` bell too frequent, `threatened` swinging bell. Audition `audio/.audition/13-world/`. Sources at 14.45 of 15 MB: step 18 should remove the ten unused `placeholder_*` sources (324 KB).
 - 03: opus engineer, opus reviewer, clean in 1 round; G1 passed 2026-11-14 (b/A, `A_0`); records updated by the step 07 engineer.
 
 ## Notes carried forward
