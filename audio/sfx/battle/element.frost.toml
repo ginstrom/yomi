@@ -1,21 +1,33 @@
-# Placeholder over placeholder_hit_impact; replaced by step 10
+# Rime on-hit: a crisp ice crackle, high-passed so it rides over the weapon's hit.
 variants = 2
-seed = 4400
+seed = 1102
 group = "sweetener"
 max_ms = 450
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 300
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # ice cracking
+pick = ["ig_ice_2", "ig_ice_1", "ig_ice_4", "ig_ice_5"]
+length = 280
+pitch = [0.0, 3.0]
+filter = [{ type = "highpass", hz = 900 }]
+fade_out = 110
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # a glassy glint
+pick = ["kenney_glass_light_1", "kenney_glass_light_3"]
+pitch = [5.0, 8.0]
+filter = [{ type = "highpass", hz = 3000 }]
+fade_out = 60
+gain = [-10, -7]
+
+[[layer]]                          # crystals snapping
+synth = { kind = "crackle", density = [250, 400], click_ms = 0.4, length = 220 }
+filter = [{ type = "highpass", hz = 3500 }]
+envelope = [[0, 0], [220, -40]]
+gain = [-12, -9]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 3, attack_ms = 1, release_ms = 60 },
+  { type = "limit", ceiling_db = -10, release_ms = 30 },
+  { type = "trim", threshold_db = -48, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 40 },
+]

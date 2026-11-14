@@ -135,20 +135,21 @@ check) and `checks.py` (the per-variant checks).
 - **Content so far.** The 13 melee cues (step 08: `battle.swing.*`,
   `hit.slash`, `hit.crush`, `hit.pierce`, `hit.claw`, `armor.metal`,
   `hit.crit`, `miss.swing`), the `ui` bank and the `stings` bank (step 09)
-  are real content; see "Sound design without ears" below for what they
-  taught.
+  and the 15 cues of shots, magic hits and sweeteners (step 10:
+  `battle.shot.*`, `hit.magic`, `miss.shot`, `miss.magic`, `hit.image`,
+  `element.*`, `heal.small`, `regen`) are real content; see "Sound design
+  without ears" below for what they taught.
 - **The rest are placeholders.** Every other W1 cue has a recipe over
   one of the ten old placeholder WAVs (sources `placeholder_*`, collection
   `placeholder`, licence `own`), pitched, filtered and dusted with noise so
   its variants differ; each says in its first line which content step
-  replaces it (10 shots, magic hits and sweeteners, 11 spells and
-  abilities, 12 falls and steps, 13 world). Many
+  replaces it (11 spells and abilities, 12 falls and steps, 13 world). Many
   `impact` placeholders are peak-limited (square waves of 100 ms).
 
 ## Sound design without ears
 
-What the melee batch (step 08) and the interface and stings (step 09)
-found, for the content steps after them:
+What the melee batch (step 08), the interface and stings (step 09) and
+the shots and sweeteners (step 10) found, for the content steps after them:
 
 - **Layer shape.** A hit is a picked body (`pick` over several excerpts), a
   transient layer where the brief asks for an edge or tick, a short
@@ -195,6 +196,26 @@ found, for the content steps after them:
   `length` cuts it: end the envelope lower or add a `fade_out`.
 - `source add` refuses an `--end` past the end of a short file; leave
   `--start`/`--end` off to keep the whole of it.
+- **`limit` is absolute** (step 10): its `ceiling_db` is dBFS of the mix
+  *before* normalisation, so a ceiling above the mix's own peak does
+  nothing. A layered mix of near-full-scale excerpts peaks around −6 to
+  −10 dBFS after `compress`; the shots needed −17 to −21 and the magic hit
+  −24 to reach their targets. Lower it until the build stops calling the
+  cue peak-limited.
+- **Element sweeteners** (step 10) play 30 ms after a weapon hit, so they
+  keep out of its low end: high-pass every layer at 450 to 900 Hz, and
+  cascade two high-passes (each is 12 dB/octave) where a source has a
+  strong 150 to 300 Hz body (the flame). Under 300 Hz they hold 0 to 1% of
+  their energy (poison, meant low, 5%). A chime's synthesized partials
+  vanish under any noisy layer at a similar gain: keep a dark swell 10 dB
+  or more under the chime, low-passed.
+- **Excerpts with lead silence.** Check an excerpt's onset before adding it
+  (some originals open with 50 to 80 ms of silence, which delays the cue
+  against the hit); re-add it with `--start` at the onset.
+- **A miss is not a hit.** medicinestorm's passbys carry the same sub wind
+  thump as its swings, and a soft impact pitched down is a body thump:
+  cascade high-passes (400 to 500 Hz on the passby, 260 Hz on the thud)
+  and keep the thud 20 dB under the whizz.
 
 ## Sources and licences
 

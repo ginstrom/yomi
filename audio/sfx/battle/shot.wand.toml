@@ -1,21 +1,42 @@
-# Placeholder over placeholder_melee_swing; replaced by step 10
+# A wand's bolt: a crackling electric zap that throws a sparkly whoosh; bright, not a sci-fi laser (the zaps sit under crackle and a rising band of noise).
 variants = 5
-seed = 900
+seed = 1003
 group = "release"
 max_ms = 600
 
-[[layer]]
-source = "placeholder_melee_swing"
-length = 400
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the zap, a real one, its tone dulled
+pick = ["up_electro_zap", "up_energy_zap", "up_electric_short_03", "up_electric_short_17", "up_heavy_zap"]
+length = 260
+pitch = [-3.0, 2.0]
+filter = [{ type = "highpass", hz = 400 }, { type = "lowpass", hz = [6000, 9000] }]
+fade_out = 90
+gain = [-9, -6]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the crackle of the charge
+synth = { kind = "crackle", density = [350, 600], click_ms = [0.6, 1.2], length = 260 }
+filter = [{ type = "highpass", hz = 1500 }]
+envelope = [[0, 0], [40, -2], [260, -40]]
+gain = [-6, -3]
+
+[[layer]]                          # the sparkly whoosh thrown away from it
+synth = { kind = "noise", color = "white", length = 330 }
+filter = [{ type = "bandpass", hz = [1800, 2500], hz_end = [7000, 9500], q = 2.0 }]
+envelope = [[0, -30], [80, 0], [330, -45]]
+offset = 20
+gain = [-12, -8]
+
+[[layer]]                          # glitter riding the whoosh
+synth = { kind = "crackle", density = [120, 200], click_ms = 0.4, length = 300 }
+filter = [{ type = "highpass", hz = 5000 }]
+envelope = [[0, -20], [90, 0], [300, -40]]
+offset = 40
+gain = [-14, -10]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 3, attack_ms = 1, release_ms = 60 },
+  { type = "reverb", impulse = "small_room", wet_db = -20, predelay_ms = 4 },
+  { type = "limit", ceiling_db = -17, release_ms = 30 },
+  { type = "trim", threshold_db = -50, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 40 },
+]

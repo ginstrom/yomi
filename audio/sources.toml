@@ -1582,3 +1582,835 @@ sha256 = "ecef4f9964deb4b22d79f29ba0306d08a1463dbd80126c528d2fd89abe4bd081"
 retrieved = "2026-11-14"
 notes = "the narrator's only reference clip (G1, G9): Chatterbox Turbo clones it for every emotion; no real person's voice"
 design = { model = "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16", revision = "7d3824abff87e49756bb0f83fb5411de75d160c4", seed = 7, description_ref = "voices.toml#narrator", text = "The old road winds north past the quiet village and over the bridge. Judge for yourself whether the thick smoke rising there means a hearth, or a warning." }
+
+[[source]]
+id = "med_longbow_shoot_1"
+file = "sources/oga_medicinestorm/med_longbow_shoot_1.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/English Longbow Shoot.wav"
+original_sha256 = "c25684ccdab3eb13f17a0ffa637fbd175659d092665f16c0bce8510d46c4fbee"
+excerpt = { start = 0.09, end = 0.48 }
+sha256 = "7f55b18272dbc904e7b8d6874cfe46889cdbd657f4d190fd646a97fb59e5fda9"
+retrieved = "2026-11-14"
+notes = "one release, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_longbow_shoot_2"
+file = "sources/oga_medicinestorm/med_longbow_shoot_2.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/English Longbow Shoot.wav"
+original_sha256 = "c25684ccdab3eb13f17a0ffa637fbd175659d092665f16c0bce8510d46c4fbee"
+excerpt = { start = 0.765, end = 1.2 }
+sha256 = "39e6908dd0d788639f39056b76d4fbfce2832734a2c9f9dacbf559f3c90f90d0"
+retrieved = "2026-11-14"
+notes = "one release, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_longbow_shoot_3"
+file = "sources/oga_medicinestorm/med_longbow_shoot_3.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/English Longbow Shoot.wav"
+original_sha256 = "c25684ccdab3eb13f17a0ffa637fbd175659d092665f16c0bce8510d46c4fbee"
+excerpt = { start = 1.245, end = 1.7 }
+sha256 = "3a34440a88bc556cf81802dda2f10ab7c5d5c73a08942b5092b648a46ad35efe"
+retrieved = "2026-11-14"
+notes = "one release, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_longbow_shoot_4"
+file = "sources/oga_medicinestorm/med_longbow_shoot_4.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/English Longbow Shoot.wav"
+original_sha256 = "c25684ccdab3eb13f17a0ffa637fbd175659d092665f16c0bce8510d46c4fbee"
+excerpt = { start = 3.19, end = 3.64 }
+sha256 = "62aae6e95cd1f0220840162ec0b902c1e49c575aa105356cf9dd2ca3f3fd3b50"
+retrieved = "2026-11-14"
+notes = "one release, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_recurve_shoot_1"
+file = "sources/oga_medicinestorm/med_recurve_shoot_1.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Scythian Recurve Shoot.wav"
+original_sha256 = "8d95d06f0c7539f14b5a69fb2818ab42dc985b6966db9856a30a7767f11c259b"
+excerpt = { start = 0.2, end = 0.62 }
+sha256 = "57a6a3f843f3b58f9c13e5af402ff84eeba3223692547f1526e0fd220564bdf7"
+retrieved = "2026-11-14"
+notes = "one release, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_recurve_shoot_2"
+file = "sources/oga_medicinestorm/med_recurve_shoot_2.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Scythian Recurve Shoot.wav"
+original_sha256 = "8d95d06f0c7539f14b5a69fb2818ab42dc985b6966db9856a30a7767f11c259b"
+excerpt = { start = 2.945, end = 3.39 }
+sha256 = "9b8da874f6a34fa6fbaa3db5c8426b8faf9af968580df9074db4da6820ba049e"
+retrieved = "2026-11-14"
+notes = "one release, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_recurve_shoot_3"
+file = "sources/oga_medicinestorm/med_recurve_shoot_3.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Scythian Recurve Shoot.wav"
+original_sha256 = "8d95d06f0c7539f14b5a69fb2818ab42dc985b6966db9856a30a7767f11c259b"
+excerpt = { start = 3.39, end = 3.82 }
+sha256 = "5812390c5e84a910421da74c1b53ed191d698eaa20be20bd7d70d51df9a691ff"
+retrieved = "2026-11-14"
+notes = "one release, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_crossbow_shoot_1"
+file = "sources/oga_medicinestorm/med_crossbow_shoot_1.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Crossbow Shoot.wav"
+original_sha256 = "d8c68f970540d73ab6fe2db5309166e6dd911876501a16bb4df43498247e19b2"
+excerpt = { start = 0.315, end = 0.76 }
+sha256 = "718b8df3c3d75314eb45a8fbc479714710a897c98c040f574ab4ae8548525faa"
+retrieved = "2026-11-14"
+notes = "one shot, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_crossbow_shoot_2"
+file = "sources/oga_medicinestorm/med_crossbow_shoot_2.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Crossbow Shoot.wav"
+original_sha256 = "d8c68f970540d73ab6fe2db5309166e6dd911876501a16bb4df43498247e19b2"
+excerpt = { start = 0.83, end = 1.3 }
+sha256 = "80b2b6ecd2cfb5b66fe717cf11e297dc4af3ff47d023958b5570fa2be025e640"
+retrieved = "2026-11-14"
+notes = "one shot, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_crossbow_shoot_3"
+file = "sources/oga_medicinestorm/med_crossbow_shoot_3.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Crossbow Shoot.wav"
+original_sha256 = "d8c68f970540d73ab6fe2db5309166e6dd911876501a16bb4df43498247e19b2"
+excerpt = { start = 1.405, end = 1.85 }
+sha256 = "72344d6903e313f035f0fbc4fa48f8efbeade5fdc24c552ae29ad85e9bee4190"
+retrieved = "2026-11-14"
+notes = "one shot, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_crossbow_shoot_4"
+file = "sources/oga_medicinestorm/med_crossbow_shoot_4.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Crossbow Shoot.wav"
+original_sha256 = "d8c68f970540d73ab6fe2db5309166e6dd911876501a16bb4df43498247e19b2"
+excerpt = { start = 2.48, end = 2.93 }
+sha256 = "e1518e5e5335085d4b759d8a1d31b3919344e928c457f3b4be3d0bf0d7cdaff5"
+retrieved = "2026-11-14"
+notes = "one shot, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_arrow_passby_1"
+file = "sources/oga_medicinestorm/med_arrow_passby_1.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Scythian Recurve Arrow Passby.wav"
+original_sha256 = "4cc5906589eb9faf13113c47693731574bc42740fc210754523f4e8c1be0433d"
+excerpt = { start = 0.72, end = 1.14 }
+sha256 = "5c25ca5c86af288befdc0b0ef6103593fca6c5ee2f87f50f4c18f269997c93d5"
+retrieved = "2026-11-14"
+notes = "one passby, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_arrow_passby_2"
+file = "sources/oga_medicinestorm/med_arrow_passby_2.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Scythian Recurve Arrow Passby.wav"
+original_sha256 = "4cc5906589eb9faf13113c47693731574bc42740fc210754523f4e8c1be0433d"
+excerpt = { start = 2.32, end = 2.72 }
+sha256 = "fcbc35b4154af999bb2f9781ad672bfd06e0024a8e850baf3336cee6bd7ea502"
+retrieved = "2026-11-14"
+notes = "one passby, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_arrow_passby_3"
+file = "sources/oga_medicinestorm/med_arrow_passby_3.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Scythian Recurve Arrow Passby.wav"
+original_sha256 = "4cc5906589eb9faf13113c47693731574bc42740fc210754523f4e8c1be0433d"
+excerpt = { start = 2.835, end = 3.25 }
+sha256 = "147a47f05d7e3a0df52c4361b8ad188877c25bbf74c78bbd13eed3733291683f"
+retrieved = "2026-11-14"
+notes = "one passby, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_arrow_passby_4"
+file = "sources/oga_medicinestorm/med_arrow_passby_4.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Scythian Recurve Arrow Passby.wav"
+original_sha256 = "4cc5906589eb9faf13113c47693731574bc42740fc210754523f4e8c1be0433d"
+excerpt = { start = 3.33, end = 3.75 }
+sha256 = "22b4b9281102b035f92d8a8fd5fdead4971c200983231853bf83d890a7e8f0c1"
+retrieved = "2026-11-14"
+notes = "one passby, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_bolt_passby_1"
+file = "sources/oga_medicinestorm/med_bolt_passby_1.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Crossbow Bolt Passby.wav"
+original_sha256 = "6cd8078bc3b003e0a2180f68268a178a5b114586c17fe30c309f9012bfc36381"
+excerpt = { start = 0.26, end = 0.6 }
+sha256 = "cb8a7e38cab50d2ebdf947114f24a519b9c325425bcdaa6d91f86411e4616fc9"
+retrieved = "2026-11-14"
+notes = "one passby, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_bolt_passby_2"
+file = "sources/oga_medicinestorm/med_bolt_passby_2.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Crossbow Bolt Passby.wav"
+original_sha256 = "6cd8078bc3b003e0a2180f68268a178a5b114586c17fe30c309f9012bfc36381"
+excerpt = { start = 0.91, end = 1.3 }
+sha256 = "b80c9e219702fa5f01ca0b23622c4bb0828cba455db6d58a0a8a17a1c2d8489d"
+retrieved = "2026-11-14"
+notes = "one passby, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_arrow_pass_1"
+file = "sources/oga_medicinestorm/med_arrow_pass_1.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Scythian Recurve Arrow Pass.wav"
+original_sha256 = "386ef860049508743bbae3d85674733564a1a3c055a84530c55d3f529819bef3"
+excerpt = { start = 0.49, end = 0.93 }
+sha256 = "281d80267ac025d553391e31bb5ca2ff50c851c685c954a4f3a7d4429139c2f7"
+retrieved = "2026-11-14"
+notes = "one pass, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_arrow_pass_2"
+file = "sources/oga_medicinestorm/med_arrow_pass_2.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Scythian Recurve Arrow Pass.wav"
+original_sha256 = "386ef860049508743bbae3d85674733564a1a3c055a84530c55d3f529819bef3"
+excerpt = { start = 1.11, end = 1.47 }
+sha256 = "22ac8feadd4390d2aaea22b2fa6413ddac17750b08276512adb21eeb53509445"
+retrieved = "2026-11-14"
+notes = "one pass, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_arrow_pass_3"
+file = "sources/oga_medicinestorm/med_arrow_pass_3.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Scythian Recurve Arrow Pass.wav"
+original_sha256 = "386ef860049508743bbae3d85674733564a1a3c055a84530c55d3f529819bef3"
+excerpt = { start = 2.17, end = 2.52 }
+sha256 = "caec630b5cb70920a1a1882ae275a6a8080d2a347d96587bdb7c236c5f6a391f"
+retrieved = "2026-11-14"
+notes = "one pass, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "med_bolt_pass_1"
+file = "sources/oga_medicinestorm/med_bolt_pass_1.flac"
+licence = "CC0-1.0"
+author = "medicinestorm (OpenGameArt)"
+url = "https://opengameart.org/content/medieval-sound-effects-weapon-textures"
+original = "medieval_sfx_textures_1_of_2/Crossbow Bolt Pass.wav"
+original_sha256 = "ac98202fddf710e0a503e8a86aca358845d4d51eb20d832bff3144655ffc8bb9"
+excerpt = { start = 0.545, end = 0.85 }
+sha256 = "91dce369135e0f479a5ad4586936d2112328212933bdb998107b8bef5fe345ea"
+retrieved = "2026-11-14"
+notes = "one pass, mono sum, 192 to 48 kHz"
+
+[[source]]
+id = "up_electro_zap"
+file = "sources/oga_untamedpixels/up_electro_zap.flac"
+licence = "CC0-1.0"
+author = "untamedpixels (OpenGameArt; files CC0 per its LICENSES.txt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/ElectroZap_s01.wav"
+original_sha256 = "5ca202c9505ee49ef0d4b2e6705c913acc85691f1aa26e2fe637df12ff9df885"
+sha256 = "eaaf48561ca9194b5d6c0ba077fc1c445aaa44f58a8166bbfeac9f9bda2f0ff3"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "up_energy_zap"
+file = "sources/oga_untamedpixels/up_energy_zap.flac"
+licence = "CC0-1.0"
+author = "untamedpixels (OpenGameArt; files CC0 per its LICENSES.txt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/EnergyZap_s01.wav"
+original_sha256 = "901d31663322a403ce5e73e168fa3458f07de684dcfcc07dcc897e52d54cf215"
+sha256 = "849eb8370388a3891198035e90d6dca9736e55786110570280cd1b499dd851f5"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "up_heavy_zap"
+file = "sources/oga_untamedpixels/up_heavy_zap.flac"
+licence = "CC0-1.0"
+author = "untamedpixels (OpenGameArt; files CC0 per its LICENSES.txt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/HeavyZap_s01.wav"
+original_sha256 = "fb80bae6ab76e5a2109da3611f66f06dded433d415e84ed402c18e03c856a756"
+excerpt = { start = 0.0, end = 0.5 }
+sha256 = "206d2c393f04749f36bd66ec66f2a751956cc139be68bfdbac99891c1d15fff8"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "up_electric_short_03"
+file = "sources/oga_untamedpixels/up_electric_short_03.flac"
+licence = "CC0-1.0"
+author = "untamedpixels (OpenGameArt; files CC0 per its LICENSES.txt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Retro Electric Short 03_s05.wav"
+original_sha256 = "6fa0c8c1195d08cc55ca60a2b144ee27be01eb459aa9f11c4e886206971b5a36"
+sha256 = "4d29c21e5bb2dd47dafb3c62f6321081c260afb753d34c835f91a510b47db340"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "up_electric_short_17"
+file = "sources/oga_untamedpixels/up_electric_short_17.flac"
+licence = "CC0-1.0"
+author = "untamedpixels (OpenGameArt; files CC0 per its LICENSES.txt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Retro Electric Short 17_s05.wav"
+original_sha256 = "ddbcfbeb7cfee84ef60e4169515ff2c6d28e72e46ed75bb86701957b3b968f92"
+excerpt = { start = 0.0, end = 0.5 }
+sha256 = "9e0f519110574dc9062d79aafcca51501e53c43c8bdef326265bb328cffb30ee"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "up_electric_sparks"
+file = "sources/oga_untamedpixels/up_electric_sparks.flac"
+licence = "CC0-1.0"
+author = "untamedpixels (OpenGameArt; files CC0 per its LICENSES.txt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Retro Electric Sparks 01_s05.wav"
+original_sha256 = "de879897cb991736d2f8533738eeed2843c3866098889f57c71f2ab00f6c0432"
+excerpt = { start = 0.04, end = 0.5 }
+sha256 = "9af92fd3f5f8abe94aec050758b337cb25562c5c44f1ab661164120661cd3fe0"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "up_electric_off"
+file = "sources/oga_untamedpixels/up_electric_off.flac"
+licence = "CC0-1.0"
+author = "untamedpixels (OpenGameArt; files CC0 per its LICENSES.txt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Retro Charge Electric Off 07_s05.wav"
+original_sha256 = "bc084052cf33ad54d06b1508fd8cf4c76b0bb62d5bd5a4ad1761252a090fe3b0"
+excerpt = { start = 0.0, end = 0.9 }
+sha256 = "4a459f2616ca2129af8dd3c0d6a74e1b7766baad4175229f2786cd95c341a474"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_shot_3"
+file = "sources/oga_rubberduck/rd_shot_3.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/25-cc0-bang-firework-sfx"
+original = "shot_03.ogg"
+original_sha256 = "f3cfbf0af36a717ff9c8f58640f181db7b73266e8263591014d453c4e77c6418"
+sha256 = "b29c3021871dbf14954e9dbc0bc611a9bf45fe424515d264938539540c512bf5"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_shot_2"
+file = "sources/oga_rubberduck/rd_shot_2.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/25-cc0-bang-firework-sfx"
+original = "shot_02.ogg"
+original_sha256 = "4b9b62ff7f430d9d257a07efc54be8192c2e01668fe5e2461f217b2f8fe33a77"
+sha256 = "acc32e3736b254bb98668b79f530342ec86595c000cbbda7ca6ef38dac962a93"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_glass_falling_1"
+file = "sources/oga_rubberduck/rd_glass_falling_1.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx"
+original = "bfh1_glass_falling_01.ogg"
+original_sha256 = "444d1d351eada5c0b8849420dd09fcd95024e28fc7423b3f41effd0df1729337"
+sha256 = "11e8c0c9fd04f3feae7dd88a6a08b7a9a2c2624e789deffda37c96edbe756ba9"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_glass_falling_2"
+file = "sources/oga_rubberduck/rd_glass_falling_2.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx"
+original = "bfh1_glass_falling_02.ogg"
+original_sha256 = "27d1c4f6ded6aab19ce3c573139c65ed756719d6e200ca08bd387d499e27e6e0"
+sha256 = "6db770006e80487dac7077095eaf1c9d3882f57c5626cb03cec4c2afb99f92a6"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_glass_falling_3"
+file = "sources/oga_rubberduck/rd_glass_falling_3.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx"
+original = "bfh1_glass_falling_03.ogg"
+original_sha256 = "60311be4cc96c38de5d79377a5506977528f6c5830557ea5454003e558fc53f1"
+sha256 = "c35dde0e0963e794c1a1b84b55830f8acfc5dd8af4583354eb8480f1d085d191"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_glass_falling_4"
+file = "sources/oga_rubberduck/rd_glass_falling_4.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx"
+original = "bfh1_glass_falling_04.ogg"
+original_sha256 = "09c9e3e4b6b3ca5641a820a8709916f7d8ccc66611ac8c2b12f706409a1c2e29"
+sha256 = "98d6a8e83a937f75d0e8016681393f0a451e75ee738b1ce279211cf0e4455201"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_glass_breaking_2"
+file = "sources/oga_rubberduck/rd_glass_breaking_2.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx"
+original = "bfh1_glass_breaking_02.ogg"
+original_sha256 = "35dcb1dc69338bad745e1cd56c676d04e4afb6687b9aa6d05ba83a255252747b"
+sha256 = "ef6cee78ba8822d80ff68ec03d27dbbc32c854df9b431bbf57b5113f54c597df"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_glass_breaking_5"
+file = "sources/oga_rubberduck/rd_glass_breaking_5.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx"
+original = "bfh1_glass_breaking_05.ogg"
+original_sha256 = "9e788240282b05f4fd70414b133ab43f9f0c82e36f4879f7eefc9ed062850574"
+sha256 = "ebe3f6b1172f0c463aba8454ae243c4a75d985c42e93a05f3cbbef8369910f0b"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_bubble_1"
+file = "sources/oga_rubberduck/rd_bubble_1.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/40-cc0-water-splash-slime-sfx"
+original = "bubble_01.ogg"
+original_sha256 = "1d03d72347019be889280efc6de5ca5ea439d0b24b235e6db87e5bf7583ecb2b"
+sha256 = "3b1ac92b42fac22d1237e60f095b60539c0a7ef93adaa8cd89269dfa95f04841"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_bubble_2"
+file = "sources/oga_rubberduck/rd_bubble_2.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/40-cc0-water-splash-slime-sfx"
+original = "bubble_02.ogg"
+original_sha256 = "7992a1a4637ea727b177b3edbc086ec280167d67a8fad010bb8fb58893b2e2f2"
+sha256 = "713e29b1a930cff20fcf61ace910c5b1f48364bae278ea011b4349e47a40cff2"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_bubble_3"
+file = "sources/oga_rubberduck/rd_bubble_3.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/40-cc0-water-splash-slime-sfx"
+original = "bubble_03.ogg"
+original_sha256 = "6189106305ab917f1a260b66a74380ed7d6e5be0fb4f5eba3ac93aeb89d9b7ca"
+sha256 = "3455f8af2e4b4c684f8cae2977b65c8ccf038d876437931a5210c12c70739dd8"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "kenney_glass_light_0"
+file = "sources/kenney_impact/kenney_glass_light_0.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/impactGlass_light_000.ogg"
+original_sha256 = "d750cf88097d0c3e69920e6e14496e1444e1a9da01aa4cca8f5ec8cb44c57b4f"
+sha256 = "c07faa62a06d6d126b7fe354579f366cf1e7b1a62d50394880b0bb48b400c596"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "kenney_glass_light_1"
+file = "sources/kenney_impact/kenney_glass_light_1.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/impactGlass_light_001.ogg"
+original_sha256 = "05e513fbd42829060eb37855f8c3866722ec5c39a8937c9bfde518cc609effa2"
+sha256 = "7c88209a0aae8c37066decd39f4e4121af624c8e28e1eafc92018863ad6ba8b2"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "kenney_glass_light_2"
+file = "sources/kenney_impact/kenney_glass_light_2.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/impactGlass_light_002.ogg"
+original_sha256 = "710db7451bb7857b9140dfe6afe4621ea2188ad65eda3919c569d1bb285b933d"
+sha256 = "6b2219ab4583a858ab9326b0f43e2d88dd5ccbb288a5b46bc30846240f35a17c"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "kenney_glass_light_3"
+file = "sources/kenney_impact/kenney_glass_light_3.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/impactGlass_light_003.ogg"
+original_sha256 = "765290ce32fa108c939a0dbd6fbacbcd05abde622b57b708eb8a64058ef4225a"
+sha256 = "8240812013265a482dc6b096008c86d7ead1d1b099177c3c1fa72049973014f7"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "kenney_glass_light_4"
+file = "sources/kenney_impact/kenney_glass_light_4.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/impactGlass_light_004.ogg"
+original_sha256 = "f535b7cb7835400d8d28bcf9e1cf047ce3c0eb7a6456bdb1a4a27acbec1ed2cb"
+sha256 = "c9d5edd2153ca7ec697127c78e0525f48584d89ab7680858cfbe18db66e20ee9"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "kenney_glass_medium_1"
+file = "sources/kenney_impact/kenney_glass_medium_1.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/impactGlass_medium_001.ogg"
+original_sha256 = "d3d806cb3012c9ddd87010b30295ccb74d6d8b690077d19e67afd09a9d8feb03"
+sha256 = "9c1eb4d2245c916697ae7616ac942151a75facc67fb63b51a2af14745c92aa20"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "kenney_glass_medium_3"
+file = "sources/kenney_impact/kenney_glass_medium_3.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/impactGlass_medium_003.ogg"
+original_sha256 = "dccea1ecc3d942ee5fd217c684632638f6c039c97cd3ae59c75ab15d0c3f0b59"
+sha256 = "4910668c949a6195ddc1cefb92ddc7fc966049b3a5c80956303816aa3db6f2a0"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "kenney_bell_heavy_4"
+file = "sources/kenney_impact/kenney_bell_heavy_4.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/impactBell_heavy_004.ogg"
+original_sha256 = "49fe4fafa2001bd0d312976796824571ca8429851f285997e1327d17bb34fd00"
+sha256 = "ad730eee3280be87f39d2e9cc5fe8e00e9cb2734a9671fc703ab73df3661ddf0"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "kenney_metal_click"
+file = "sources/kenney_rpg/kenney_metal_click.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/rpg-audio"
+original = "Audio/metalClick.ogg"
+original_sha256 = "9851a69d0c613e13bceef08060ecc4148f098ef487927cbebe270d642398a3b3"
+sha256 = "2acf8e308d117383eaebf949ba2b624b883a7458a9fdc9bb68bab63bb8fcf877"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "kenney_pluck_1"
+file = "sources/kenney_interface/kenney_pluck_1.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/interface-sounds"
+original = "Audio/pluck_001.ogg"
+original_sha256 = "be97ec4893a02d6eccfb678daa76c83e34cb2583b834ec2593d2641def739fa4"
+sha256 = "40885345270d59486917644c7b7aa36182c583f3d52b6a971210a4268bdba3d6"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "kenney_pluck_2"
+file = "sources/kenney_interface/kenney_pluck_2.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/interface-sounds"
+original = "Audio/pluck_002.ogg"
+original_sha256 = "c977fe249ff42d1c93a552b33abc13a8399df3879fa510475426e5c4bbac1da9"
+sha256 = "447fe4ddda898d8dfa608f9452ec1f65d488a20b536b09d9929a1b113ae3c8b3"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "tmg_flame"
+file = "sources/oga_themightyglider/tmg_flame.flac"
+licence = "CC0-1.0"
+author = "themightyglider (OpenGameArt)"
+url = "https://opengameart.org/content/catching-fire"
+original = "flame.ogg"
+original_sha256 = "c1eaafba3746374c68c30dc8b7ec895dac0e1e66064522f03340dc9b2da4a2cd"
+sha256 = "eb1d55239047c3395a3a278a89d4507641fc4be8f33f1ed6e0fcc5f89b3243cb"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "ad_fire_crackle_1"
+file = "sources/oga_antumdeluge/ad_fire_crackle_1.flac"
+licence = "CC0-1.0"
+author = "antumdeluge (OpenGameArt)"
+url = "https://opengameart.org/content/fire-crackling"
+original = "fire-1.wav"
+original_sha256 = "26702de8a195bcbafeae72034861d875a1b7917168a25106f4e1957ecdddf7e5"
+excerpt = { start = 0.2, end = 0.6 }
+sha256 = "9657e9252adfd6fb6107b385ba01b8324e9a1fd4a5e52243a57ef8fd16246f14"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "ad_fire_crackle_2"
+file = "sources/oga_antumdeluge/ad_fire_crackle_2.flac"
+licence = "CC0-1.0"
+author = "antumdeluge (OpenGameArt)"
+url = "https://opengameart.org/content/fire-crackling"
+original = "fire-1.wav"
+original_sha256 = "26702de8a195bcbafeae72034861d875a1b7917168a25106f4e1957ecdddf7e5"
+excerpt = { start = 1.6, end = 2.0 }
+sha256 = "7bc3a07a9b1b2c2f5e8d7abce7403010000aa502cd69c5dbbde3190d9e24f1e8"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "ig_ice_1"
+file = "sources/oga_ignasd/ig_ice_1.flac"
+licence = "CC0-1.0"
+author = "ignasd (OpenGameArt)"
+url = "https://opengameart.org/content/ice-breakingshattering"
+original = "IceShatters_0/IceShatters/LedasLuzta.ogg"
+original_sha256 = "4c7304ac47f84e41b62edb71082d00fe01823a2a54ec4e4268a040c973e3510f"
+excerpt = { start = 0.0, end = 0.45 }
+sha256 = "1f0fc546be6ef93d9262172fdaab25d33da7477b40ef69a422d018eb72994a53"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "ig_ice_4"
+file = "sources/oga_ignasd/ig_ice_4.flac"
+licence = "CC0-1.0"
+author = "ignasd (OpenGameArt)"
+url = "https://opengameart.org/content/ice-breakingshattering"
+original = "IceShatters_0/IceShatters/LedasLuzta4.ogg"
+original_sha256 = "81558c035953d4e595640be7ba1a645c47c6f4b72f38de43a44d36fa70d52b8c"
+excerpt = { start = 0.0, end = 0.45 }
+sha256 = "f9203901b7012ba6ba463e9e5b1b4fbb7345f7a558080a3214d7f77d009c6600"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "ig_ice_5"
+file = "sources/oga_ignasd/ig_ice_5.flac"
+licence = "CC0-1.0"
+author = "ignasd (OpenGameArt)"
+url = "https://opengameart.org/content/ice-breakingshattering"
+original = "IceShatters_0/IceShatters/LedasLuzta5.ogg"
+original_sha256 = "34adbcb652d578b870d5317ec974e9773266ddfd6b4bfc8499ec775e1712b603"
+excerpt = { start = 0.0, end = 0.45 }
+sha256 = "76b7ef7f0925b4966e70b5479299b95a97e8a2f31f2f9700bcb31822eb68da21"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "qb_dark_fout_2"
+file = "sources/oga_qubodup/qb_dark_fout_2.flac"
+licence = "CC0-1.0"
+author = "qubodup (OpenGameArt)"
+url = "https://opengameart.org/content/3-dark-magic-spells"
+original = "dark_magic/dark_magic/fout-02.flac"
+original_sha256 = "dbf01a5c9ccf10175038fb3a2ac5092f7d7745b1ab03a31edac221a0188459d1"
+excerpt = { start = 0.0, end = 0.75 }
+sha256 = "c07ad276a36346c8000113d625826abdc6195431a8bdc2267bc21504fb462a59"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "som_cure_2"
+file = "sources/oga_someoneman/som_cure_2.flac"
+licence = "CC0-1.0"
+author = "someoneman (OpenGameArt)"
+url = "https://opengameart.org/content/cure-magic"
+original = "curemagic/Cure2.wav"
+original_sha256 = "d3b2f85990def3ade8958f415a4b0e0dc74026a6de894f469838379be6586e2a"
+excerpt = { start = 0.02, end = 0.6 }
+sha256 = "72806d006720c28bbe40d13e9bd9593278d748b2ef3f789285f7854c7ec577aa"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "som_cure_4"
+file = "sources/oga_someoneman/som_cure_4.flac"
+licence = "CC0-1.0"
+author = "someoneman (OpenGameArt)"
+url = "https://opengameart.org/content/cure-magic"
+original = "curemagic/Cure4.wav"
+original_sha256 = "5d322662f6bcd8ae30867b8f88ead17471c47d7622d31d6e87e81f5bcf54dddb"
+excerpt = { start = 0.0, end = 0.6 }
+sha256 = "e663c6248e5a1b42d6a104dc77d1093dc700b7b50d8d392353487498f0e1a5dd"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_wet_slap_1"
+file = "sources/freesound/fs_wet_slap_1.flac"
+licence = "CC0-1.0"
+author = "MaddieCooper (Freesound)"
+url = "https://freesound.org/people/MaddieCooper/sounds/811615/"
+original = "811615 WET SLAP NOISE (fs_811615_wet-slap-noise.wav)"
+original_sha256 = "cd8ba8bac4ab3a9540620420bb5ecc24f0a96dbfa8899df4d08673dc61063297"
+excerpt = { start = 0.08, end = 0.4 }
+sha256 = "8ff6036a69ebc7774fb109849caf437dd2f6ad217a7e8e0d3f25347257b37644"
+retrieved = "2026-11-14"
+notes = "one slap, mono sum, trimmed"
+
+[[source]]
+id = "fs_wet_slap_2"
+file = "sources/freesound/fs_wet_slap_2.flac"
+licence = "CC0-1.0"
+author = "MaddieCooper (Freesound)"
+url = "https://freesound.org/people/MaddieCooper/sounds/811615/"
+original = "811615 WET SLAP NOISE (fs_811615_wet-slap-noise.wav)"
+original_sha256 = "cd8ba8bac4ab3a9540620420bb5ecc24f0a96dbfa8899df4d08673dc61063297"
+excerpt = { start = 1.1, end = 1.5 }
+sha256 = "e6c4f5de7389511fec798aef4cd61f41313ed4c0a79c6965581109f0f4150c93"
+retrieved = "2026-11-14"
+notes = "one slap, mono sum, trimmed"
+
+[[source]]
+id = "fs_wet_slap_3"
+file = "sources/freesound/fs_wet_slap_3.flac"
+licence = "CC0-1.0"
+author = "MaddieCooper (Freesound)"
+url = "https://freesound.org/people/MaddieCooper/sounds/811615/"
+original = "811615 WET SLAP NOISE (fs_811615_wet-slap-noise.wav)"
+original_sha256 = "cd8ba8bac4ab3a9540620420bb5ecc24f0a96dbfa8899df4d08673dc61063297"
+excerpt = { start = 4.51, end = 4.86 }
+sha256 = "764f38c3ffb70b0facf1efa6d332b595ba050623f349b636e9c855c24c62adb0"
+retrieved = "2026-11-14"
+notes = "one slap, mono sum, trimmed"
+
+[[source]]
+id = "fs_wet_slap_4"
+file = "sources/freesound/fs_wet_slap_4.flac"
+licence = "CC0-1.0"
+author = "MaddieCooper (Freesound)"
+url = "https://freesound.org/people/MaddieCooper/sounds/811615/"
+original = "811615 WET SLAP NOISE (fs_811615_wet-slap-noise.wav)"
+original_sha256 = "cd8ba8bac4ab3a9540620420bb5ecc24f0a96dbfa8899df4d08673dc61063297"
+excerpt = { start = 7.31, end = 7.7 }
+sha256 = "ceee68b7d97b79a1ca98caf1d76d60e74320ceff19db60d354c2e3e0263f0ddc"
+retrieved = "2026-11-14"
+notes = "one slap, mono sum, trimmed"
+
+[[source]]
+id = "fs_wet_slap_5"
+file = "sources/freesound/fs_wet_slap_5.flac"
+licence = "CC0-1.0"
+author = "MaddieCooper (Freesound)"
+url = "https://freesound.org/people/MaddieCooper/sounds/811615/"
+original = "811615 WET SLAP NOISE (fs_811615_wet-slap-noise.wav)"
+original_sha256 = "cd8ba8bac4ab3a9540620420bb5ecc24f0a96dbfa8899df4d08673dc61063297"
+excerpt = { start = 43.1, end = 43.7 }
+sha256 = "670d2fe796c3c34a772e0fce361a52517dd12481d93a80599b73e71faf17ee1a"
+retrieved = "2026-11-14"
+notes = "squelch, mono sum, trimmed"
+
+[[source]]
+id = "pwl_bell_ding_2"
+file = "sources/oga_pwl/pwl_bell_ding_2.flac"
+licence = "CC0-1.0"
+author = "pwl (OpenGameArt)"
+url = "https://opengameart.org/content/bell-dingschimes"
+original = "bell_ding2.wav"
+original_sha256 = "e4a764a1e0a6284f5a5ec80caf3d44c76d3ff8db17ddab8b42abb6b143e83529"
+excerpt = { start = 0.07, end = 0.57 }
+sha256 = "3aa65b2703824cc5c9c18614d73bfda49713cef76f28a401112cbb69cf521ddf"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "ig_ice_2"
+file = "sources/oga_ignasd/ig_ice_2.flac"
+licence = "CC0-1.0"
+author = "ignasd (OpenGameArt)"
+url = "https://opengameart.org/content/ice-breakingshattering"
+original = "IceShatters_0/IceShatters/LedasLuzta2.ogg"
+original_sha256 = "92a20369f866c852f841ffaef31676cb70f542592504b040327c60f5101f9c47"
+excerpt = { start = 0.07, end = 0.4 }
+sha256 = "a193e2e2d44463346f7bfb188b0d880ceba834d4821a09827f4719eb52b7393c"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"

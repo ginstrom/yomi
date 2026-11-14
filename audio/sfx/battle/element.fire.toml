@@ -1,21 +1,40 @@
-# Placeholder over placeholder_hit_impact; replaced by step 10
+# Ember on-hit: a short flare and sizzle, high-passed to sit over the weapon's hit.
 variants = 2
-seed = 4300
+seed = 1101
 group = "sweetener"
 max_ms = 450
 
-[[layer]]
-source = "placeholder_hit_impact"
+[[layer]]                          # the flare
+source = "tmg_flame"
 length = 300
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+pitch = [-1.0, 1.5]
+filter = [{ type = "highpass", hz = 550 }, { type = "highpass", hz = 550 }]
+fade_out = 120
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # fire's crackle
+pick = ["ad_fire_crackle_1", "ad_fire_crackle_2"]
+length = 280
+filter = [{ type = "highpass", hz = 700 }, { type = "highpass", hz = 700 }]
+fade_in = 5
+fade_out = 120
+gain = [-6, -3]
+
+[[layer]]                          # the sizzle
+synth = { kind = "noise", color = "white", length = 260 }
+filter = [{ type = "bandpass", hz = [5000, 6500], q = 1.0 }]
+envelope = [[0, -20], [40, 0], [260, -45]]
+offset = 30
+gain = [-16, -12]
+
+[[layer]]                          # pops
+synth = { kind = "crackle", density = [60, 100], click_ms = 1.5, length = 260 }
+filter = [{ type = "highpass", hz = 900 }]
+envelope = [[0, 0], [260, -30]]
+gain = [-12, -9]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 3, attack_ms = 1, release_ms = 60 },
+  { type = "trim", threshold_db = -48, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 40 },
+]

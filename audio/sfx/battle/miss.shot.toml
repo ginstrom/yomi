@@ -1,21 +1,30 @@
-# Placeholder over placeholder_miss; replaced by step 10
+# A ranged miss: an arrow or bolt whizzing past, and a soft thud into earth well under it (no body thump).
 variants = 4
-seed = 2600
+seed = 1005
 group = "impact"
 max_ms = 450
 
-[[layer]]
-source = "placeholder_miss"
-length = 300
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the whizz past
+pick = ["med_arrow_passby_1", "med_arrow_passby_2", "med_arrow_passby_3", "med_arrow_passby_4", "med_bolt_passby_1", "med_bolt_passby_2"]
+length = 210
+pitch = [-1.0, 2.0]
+filter = [{ type = "highpass", hz = 500 }, { type = "highpass", hz = 400 }]
+fade_out = 90
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the thud into earth, dulled
+pick = ["kenney_soft_medium_0", "kenney_soft_medium_1", "kenney_soft_medium_3"]
+length = 140
+pitch = [-4.0, -1.0]
+filter = [{ type = "highpass", hz = 260 }, { type = "highpass", hz = 260 }, { type = "lowpass", hz = 1800 }]
+fade_out = 60
+offset = [120, 150]
+gain = [-22, -19]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -22, ratio = 3, attack_ms = 2, release_ms = 60 },
+  { type = "reverb", impulse = "open_air", wet_db = -20, predelay_ms = 6 },
+  { type = "limit", ceiling_db = -21, release_ms = 30 },
+  { type = "trim", threshold_db = -40, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 30 },
+]

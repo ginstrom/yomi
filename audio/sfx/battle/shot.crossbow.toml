@@ -1,21 +1,40 @@
-# Placeholder over placeholder_melee_swing; replaced by step 10
+# A crossbow loosing: the trigger's metal clack, the heavy string thunk, a short bolt whoosh.
 variants = 4
-seed = 800
+seed = 1002
 group = "release"
 max_ms = 600
 
-[[layer]]
-source = "placeholder_melee_swing"
-length = 400
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the trigger
+source = "kenney_metal_click"
+length = 120
+pitch = [-2.0, 2.0]
+filter = [{ type = "highpass", hz = 900 }]
+fade_out = 40
+gain = [-6, -2]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the shot: a real crossbow's thunk and string
+pick = ["med_crossbow_shoot_1", "med_crossbow_shoot_2", "med_crossbow_shoot_3", "med_crossbow_shoot_4"]
+length = 360
+pitch = [-1.5, 1.0]
+filter = [{ type = "highpass", hz = 110 }]
+fade_out = 100
+offset = [12, 22]
+
+[[layer]]                          # the bolt away
+pick = ["med_bolt_pass_1", "med_arrow_pass_2"]
+length = 220
+pitch = [-1.0, 2.0]
+filter = [{ type = "highpass", hz = 600 }]
+fade_in = 20
+fade_out = 120
+offset = [45, 70]
+gain = [-10, -6]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 3, attack_ms = 1, release_ms = 60 },
+  { type = "reverb", impulse = "open_air", wet_db = -20, predelay_ms = 6 },
+  { type = "limit", ceiling_db = -21, release_ms = 30 },
+  { type = "trim", threshold_db = -44, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 40 },
+]

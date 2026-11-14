@@ -336,7 +336,7 @@ export const DUCK_RELEASE_MS = 600
 | 07 | [World and interface sounds](07-world-interface-sounds.md) | `worldSounds`; world-map hooks; back, tab, confirm, error, learn, gear and success sounds in every screen | 06 | **yes** | — | done |
 | 08 | [Content: melee](08-content-melee.md) | 13 melee cues from real sources | 02, 04 | no | **G3** | done (G3 passed, all acceptable; `6ff2d6f`) |
 | 09 | [Content: interface and stings](09-content-ui-stings.md) | `ui` and `stings` banks | 08 (G3) | no | **G4** | done (`f135fc0`; G4 non-blocking, audition in `audio/.audition/09-ui-stings/` for the user's playtest) |
-| 10 | [Content: shots, magic hits and sweeteners](10-content-ranged-sweeteners.md) | 15 battle cues | 08 (G3), G2 | no | **G5** | pending |
+| 10 | [Content: shots, magic hits and sweeteners](10-content-ranged-sweeteners.md) | 15 battle cues | 08 (G3), G2 | no | **G5** | done (`Audio pass step 10: Content: shots, magic hits and sweeteners`; G5 non-blocking, audition in `audio/.audition/10-ranged-sweeteners/` for the user's playtest) |
 | 11 | [Content: spells and abilities](11-content-spells.md) | 22 battle cues | 10 | no | **G6** | pending |
 | 12 | [Content: falls and footsteps](12-content-falls-steps.md) | 11 battle cues | 11 | no | **G7** | pending |
 | 13 | [Content: world](13-content-world.md) | `world` bank (14 cues) | 08 (G3), G2 | no | **G8** | pending |

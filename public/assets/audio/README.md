@@ -56,6 +56,20 @@ tool's own reverb impulses. Third-party content in the banks so far:
 | | `oga_vehicle` | vehicle | Fantasy Sound Effects (Tinysized SFX), https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx |
 | | `oga_artisticdude` | artisticdude | RPG Sound Pack, https://opengameart.org/content/rpg-sound-pack |
 | | `oga_bart` | bart | Steam release sounds, https://opengameart.org/content/steam-release-sounds |
+| `battle`: 15 cues for shots, magic hits and sweeteners (`shot.bow`, `shot.crossbow`, `shot.wand`, `hit.magic`, `miss.shot`, `miss.magic`, `hit.image`, `element.*`, `heal.small`, `regen`; step 10) | `oga_medicinestorm` | medicinestorm | Medieval Sound Effects: Weapon Textures (bow and crossbow shots, arrow and bolt passes), https://opengameart.org/content/medieval-sound-effects-weapon-textures |
+| | `oga_untamedpixels` | untamedpixels (files CC0 per the pack's `LICENSES.txt`) | 150 Combat Sound Effects (electric zaps and sparks), https://opengameart.org/content/150-combat-sound-effects |
+| | `oga_rubberduck` | rubberduck | 25 CC0 bang/firework sfx, 75 CC0 breaking/falling/hit sfx (glass), 40 CC0 water/splash/slime sfx (bubbles, slime), 25 CC0 mud sfx |
+| | `kenney_impact` | Kenney (kenney.nl) | Impact Sounds (glass, bell, soft), https://kenney.nl/assets/impact-sounds |
+| | `kenney_rpg` | Kenney (kenney.nl) | RPG Audio (metalClick, creak), https://kenney.nl/assets/rpg-audio |
+| | `kenney_interface` | Kenney (kenney.nl) | Interface Sounds (pluck), https://kenney.nl/assets/interface-sounds |
+| | `oga_themightyglider` | themightyglider | Catching Fire, https://opengameart.org/content/catching-fire |
+| | `oga_antumdeluge` | antumdeluge | Fire Crackling, https://opengameart.org/content/fire-crackling |
+| | `oga_ignasd` | ignasd | Ice Breaking/Shattering, https://opengameart.org/content/ice-breakingshattering |
+| | `oga_pwl` | pwl | Bell Dings/Chimes, https://opengameart.org/content/bell-dingschimes |
+| | `oga_qubodup` | qubodup | 3 Dark Magic Spells, https://opengameart.org/content/3-dark-magic-spells |
+| | `oga_someoneman` | someoneman | Cure Magic, https://opengameart.org/content/cure-magic |
+| | `oga_bart` | bart | Steam release sounds, https://opengameart.org/content/steam-release-sounds |
+| | `freesound` | MaddieCooper | Freesound 811615 "WET SLAP NOISE", https://freesound.org/people/MaddieCooper/sounds/811615/ (Creative Commons 0, checked on the page; original downloaded by hand, five excerpts kept) |
 | `ui`: all 7 cues (`click`, `back`, `confirm`, `tab`, `error`, `learn`, `gear`; step 09) | `kenney_ui` | Kenney (kenney.nl) | UI Audio, https://kenney.nl/assets/ui-audio |
 | | `kenney_interface` | Kenney (kenney.nl) | Interface Sounds, https://kenney.nl/assets/interface-sounds |
 | | `kenney_rpg` | Kenney (kenney.nl) | RPG Audio, https://kenney.nl/assets/rpg-audio |
@@ -66,12 +80,18 @@ tool's own reverb impulses. Third-party content in the banks so far:
 | `stings`: `victory`, `defeat`, `level_up` (step 09) | `kenney_jingles` | Kenney (kenney.nl) | Music Jingles, https://kenney.nl/assets/music-jingles (a sax and a pizzicato jingle, extended with synthesized brass, strings, timpani and bells) |
 
 The clicks' bodies, the mallet and bell notes and the stings' chords and
-drums are synthesis (own).
+drums are synthesis (own), as are the wand's and the magic hit's crackle and
+fizz, the element sweeteners' snaps and sizzles, the blight chime's partials
+and the small heal's rising tones (step 10).
+
+Freesound files used so far: 811615 (`battle.regen`, step 10). Of the 28
+downloaded at gate G2, step 10 needed only that one; the others serve steps
+11 to 13.
 
 ### Still placeholder
 
 Every other cue is still derived entirely from the old placeholder tones
 (synthesized in-house with Python's stdlib `wave` module, licence own), kept
 as the `placeholder_*` sources under `audio/sources/placeholder/`, until its
-content step (10 to 13). The placeholder WAVs that were played directly
+content step (11 to 13). The placeholder WAVs that were played directly
 before the banks are gone from this folder.

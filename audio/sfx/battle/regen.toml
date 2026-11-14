@@ -1,21 +1,48 @@
-# Placeholder over placeholder_heal; replaced by step 10
+# A troll regenerating: wet flesh knitting, a slow squelch and creak, organic and faintly disgusting.
 variants = 3
-seed = 5000
+seed = 1108
 group = "sweetener"
 max_ms = 900
 
-[[layer]]
-source = "placeholder_heal"
-length = 600
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the wet slap of flesh closing
+pick = ["fs_wet_slap_1", "fs_wet_slap_2", "fs_wet_slap_3", "fs_wet_slap_4"]
+length = 320
+pitch = [-4.0, -1.0]
+filter = [{ type = "highpass", hz = 180 }]
+fade_out = 120
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the slow squelch after
+pick = ["fs_wet_slap_5", "rd_mud_05", "rd_mud_06", "rd_mud_08"]
+length = 420
+pitch = [-5.0, -2.0]
+filter = [{ type = "highpass", hz = 160 }]
+fade_in = 20
+fade_out = 160
+offset = [140, 200]
+gain = [-5, -2]
+
+[[layer]]                          # sinew creaking as it pulls tight
+pick = ["kenney_creak_1", "kenney_creak_2"]
+length = 360
+pitch = [-7.0, -4.0]
+filter = [{ type = "highpass", hz = 300 }, { type = "lowpass", hz = 3000 }]
+fade_in = 40
+fade_out = 140
+offset = [80, 140]
+gain = [-11, -8]
+
+[[layer]]                          # slime in the cracks
+pick = ["rd_slime_02", "rd_slime_04", "rd_slime_07"]
+pitch = [-3.0, 0.0]
+filter = [{ type = "highpass", hz = 250 }]
+fade_out = 80
+offset = [300, 380]
+gain = [-10, -7]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -22, ratio = 3, attack_ms = 3, release_ms = 80 },
+  { type = "reverb", impulse = "small_room", wet_db = -20, predelay_ms = 4 },
+  { type = "trim", threshold_db = -50, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 60 },
+]

@@ -1,21 +1,42 @@
-# Placeholder over placeholder_miss; replaced by step 10
+# A blow striking a mirror image: a glassy shimmer shattering into high tinkles; no body sound, nothing under 900 Hz.
 variants = 3
-seed = 2800
+seed = 1007
 group = "impact"
 max_ms = 750
 
-[[layer]]
-source = "placeholder_miss"
-length = 500
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the shatter
+pick = ["kenney_glass_medium_1", "kenney_glass_medium_3", "rd_glass_breaking_2", "rd_glass_breaking_5"]
+length = 380
+pitch = [1.0, 4.0]
+filter = [{ type = "highpass", hz = 1200 }]
+fade_out = 150
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # a bright glass tick on top
+pick = ["kenney_glass_light_0", "kenney_glass_light_2", "kenney_glass_light_4"]
+pitch = [3.0, 7.0]
+filter = [{ type = "highpass", hz = 2500 }]
+fade_out = 60
+gain = [-6, -3]
+
+[[layer]]                          # tinkles falling after
+pick = ["rd_glass_falling_1", "rd_glass_falling_2", "rd_glass_falling_3", "rd_glass_falling_4"]
+length = 420
+pitch = [3.0, 6.0]
+filter = [{ type = "highpass", hz = 2500 }]
+fade_out = 180
+offset = [70, 110]
+gain = [-8, -5]
+
+[[layer]]                          # the shimmer: the image's glassy ring
+synth = { kind = "fm", carrier_hz = [2600, 3400], ratio = 1.41, index = 2.0, index_end = 0.2, length = 450 }
+envelope = [[0, -6], [15, 0], [450, -48]]
+gain = [-20, -16]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 4, attack_ms = 0.5, release_ms = 50 },
+  { type = "reverb", impulse = "small_room", wet_db = -17, predelay_ms = 4 },
+  { type = "limit", ceiling_db = -12, release_ms = 30 },
+  { type = "trim", threshold_db = -52, keep_tail_ms = 50 },
+  { type = "fade_out", ms = 50 },
+]

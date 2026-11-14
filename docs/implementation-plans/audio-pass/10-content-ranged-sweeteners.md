@@ -85,3 +85,54 @@ Sound-design notes (guidance, not contract): the sweeteners are layered on a wea
 
 ## Execution record
 
+### Round 0: build (2026-11-14)
+
+**Outcome.** The 15 recipes are rewritten from CC0 recordings and synthesis; no recipe names a `placeholder_*` source (`grep -l placeholder_` over the 15 recipes prints nothing). Variant counts are C7's, unchanged. Gate G5 is non-blocking (the orchestrator's decision after G3): the audition folder and review sheet are left for the user's playtest, and fixes come back as follow-up commits.
+
+**Sources.** 66 excerpts added with `yomi-audio source add`, every one `CC0-1.0` with author, licence-page `url`, original path, excerpt and both hashes: `oga_medicinestorm` (7 bow releases from English Longbow Shoot and Scythian Recurve Shoot, 4 crossbow shots, 6 arrow and bolt passbys, 4 passes; 192 kHz takes cut at their onsets), `oga_untamedpixels` (150 Combat Sound Effects: ElectroZap, EnergyZap, HeavyZap, Retro Electric Short 03 and 17, Retro Electric Sparks 01, Retro Charge Electric Off 07; the pack's `LICENSES.txt` makes every file CC0), `oga_rubberduck` (bang shot_02 and shot_03, glass breaking and falling, bubbles), `kenney_impact` (glass light and medium, bell heavy 004), `kenney_rpg` (metalClick), `kenney_interface` (pluck 001 and 002), `oga_themightyglider` (flame), `oga_antumdeluge` (two fire-crackle excerpts), `oga_ignasd` (four ice shatters), `oga_pwl` (bell_ding2), `oga_qubodup` (dark magic fout-02), `oga_someoneman` (Cure2, Cure4), `freesound` (five excerpts of 811615 "WET SLAP NOISE" by MaddieCooper). Reused from step 08: `kenney_soft_medium_*`, `bart_steam_hiss`, `rd_slime_*`, `rd_mud_*`, `kenney_creak_*`. One excerpt added and then left unused (`kenney_bell_heavy_3`) was removed with `source remove` before the commit; `pwl_bell_ding_2` and `ig_ice_2` were removed and re-added starting at their onsets (their originals open with 70 to 80 ms of silence). Bytes: `audio/sources` + `audio/voices` total **6,439,281** of 15,000,000. Banks: all `.opus` 1,191,849 and `.mp3` 941,888 of 3,000,000 each; `battle` 786,449 / 696,764 (was 722,038 / 588,068).
+
+**Freesound (G2).** Used: 811615 (`battle.regen`). The cue lists name 32805 (spooky dark pad) for `element.blight`'s swell as one option; qubodup's fout-02 reversed was used instead, so 32805 stays for steps 11 and 13. No other of the 28 files is mapped to these 15 cues; none was skipped.
+
+**Measurements** (`sfx audition --spectrogram`, every variant; per-variant tables in `audio/.audition/10-ranged-sweeteners/review.md`). None is peak-limited; every DC, length and correlation check passes in the build.
+
+| Cue | Group | Var | LUFS-M max | True peak (dBTP) | Length (ms) |
+| --- | --- | --- | --- | --- | --- |
+| `shot.bow` | release −22 | 5 | −22.0 all | −5.4 to −3.5 | 405–447 |
+| `shot.crossbow` | release | 4 | −22.0 all | −5.8 to −4.3 | 440–503 |
+| `shot.wand` | release | 5 | −22.0 all | −7.6 to −3.6 | 389–460 |
+| `hit.magic` | impact −19 | 4 | −19.0 all | −3.6 to −1.4 | 334–338 |
+| `miss.shot` | impact | 4 | −19.0 all | −3.3 to −1.7 | 377–412 |
+| `miss.magic` | impact | 3 | −19.0 all | −2.9 to −2.2 | 486–554 |
+| `hit.image` | impact | 3 | −19.0 all | −5.4 to −2.1 | 498–500 |
+| `element.fire` | sweetener −24 | 2 | −24.0 | −8.1 to −6.0 | 290 |
+| `element.frost` | sweetener | 2 | −24.7 to −24.0 | −4.0 to −3.1 | 254–255 |
+| `element.lightning` | sweetener | 2 | −24.9 to −24.0 | −6.0 to −3.1 | 180 |
+| `element.acid` | sweetener | 2 | −24.7 to −24.0 | −7.8 to −3.1 | 250–264 |
+| `element.poison` | sweetener | 2 | −24.0 | −9.9 to −4.7 | 345–379 |
+| `element.blight` | sweetener | 2 | −24.0 | −8.7 to −5.6 | 354–362 |
+| `heal.small` | sweetener | 3 | −24.0 | −10.9 to −10.0 | 397–471 |
+| `regen` | sweetener | 3 | −24.0 | −6.8 to −3.7 | 588–691 |
+
+Energy below 300 Hz (Welch power share): `hit.image` 0.0%; frost, lightning, acid, blight 0.0–0.5%; fire 0.9–1.1%; heal 0.0%; poison 5% (meant low). Spectrograms were looked at for every variant: the bow keeps a 120–200 Hz limb thrum in its first 40 ms (the "low-mid pluck"), the wand is broadband crackle with a rising band, `miss.magic` shows the falling whistle and the source's faint tonal buzz lines (kept 13–17 dB down), `hit.image` has nothing under 1 kHz, blight shows its partials at about 2.7, 4 and 5.5 kHz over a low-passed swell.
+
+**Iteration notes.** The first drafts of the shots, `hit.magic` and `miss.shot` were peak-limited (−29 to −23): `limit`'s ceiling is absolute dBFS of the pre-normalisation mix, and the shots needed −17 to −21, the magic hit −24. `miss.shot`'s thud and the passbys' sub wind made a body thump the brief forbids: cascaded high-passes and the thud 20 dB under. The fire flame's 150–300 Hz body needed two cascaded high-passes. The blight's swell first drowned its chime; it now sits low-passed at −21 to −18 dB. Lessons added to `audio/CLAUDE.md` ("Sound design without ears").
+
+**Review package** (gitignored): `audio/.audition/10-ranged-sweeteners/` with `battle.<cue>_<k>.wav` and `.png` for every variant, `layered/` (eleven files: each element and the small heal over a step-08 hit at +30 / +60 ms, and the shots followed by their hit or miss 320 ms later, scaled −6 dB), and `review.md` (brief, where it plays, sources, measurements, an empty verdict line per cue and per layered file, and how to hear it in game with the debug console).
+
+**Unsure by ear** (for the playtest): whether `shot.wand` and `miss.magic` still read as retro/sci-fi (the untamedpixels zaps are low-passed and under synthesis, but tonal lines remain in `miss.magic`); whether `hit.magic`'s pop (a firework shot) is too much like a gunshot; `element.poison` against `element.acid` (poison is darker and gurglier, but both are bubbles and steam); `regen`'s main squelch lands 150–200 ms in.
+
+**Verification.**
+
+- `uv run --project tools/audio yomi-audio sfx audition` (15 cues, `--spectrogram`): 46 variants, all "ok", none peak-limited (table above).
+- `npm run sounds` (`sfx build`): the `battle` bank rebuilt; a second run "nothing changed (85 cues up to date)".
+- `npm run sounds:check`: "85 cues and 4 banks up to date, within budget".
+- `PATH=/opt/homebrew/opt/node@26/bin:$PATH npm test`: 87 files, 1682 tests passed.
+- `uv run --project tools/audio pytest tools/audio/tests`: 246 passed.
+- `grep -l placeholder_` over the 15 recipes: nothing. The 66 new `sources.toml` entries each have `licence = "CC0-1.0"`, `url`, `author` and `sha256` (counted in the diff: 66 of each).
+- `npm run test:browser` not run: nothing outside `audio/`, `public/assets/audio/` and the docs changed.
+- No paid calls.
+
+**Deviations.** `sfx audition` names its files `<cue>.v<k>.wav` in a folder per cue; they were moved to `battle.<cue>_<k>.wav` as the task asks. `max_ms` for `hit.image` is 750 (brief ~500) and for `miss.magic` 600 (brief ~400); both are about 1.5 times the brief's length. No tool, runtime, `CUES` or `audio.toml` change.
+
+**For later steps.** Free for steps 11–13: the untamedpixels zaps and sparks (`up_*`, for `cast.storm`, `impact.lightning`), `ig_ice_*` and `kenney_glass_*` (frost spells), `tmg_flame` and `ad_fire_crackle_*` (fire), `som_cure_*` and `kenney_pluck_*` (heals), `qb_dark_fout_2` (shadow), `rd_bubble_*` (venom), `fs_wet_slap_*` (deaths, `hit.claw`).
+

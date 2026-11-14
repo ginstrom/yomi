@@ -1,21 +1,50 @@
-# Placeholder over placeholder_hit_impact; replaced by step 10
+# A wand's bolt landing: a crackling pop with a short electric fizz tail (the wand's family: crackle and zap, no body thump).
 variants = 4
-seed = 2500
+seed = 1004
 group = "impact"
 max_ms = 525
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 350
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the pop
+pick = ["rd_shot_3", "rd_shot_2"]
+length = 120
+pitch = [1.0, 5.0]
+filter = [{ type = "highpass", hz = 350 }]
+fade_out = 60
+gain = [-3, 0]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # a zap's edge
+pick = ["up_electro_zap", "up_electric_short_03", "up_energy_zap", "up_electric_short_17"]
+length = 160
+pitch = [0.0, 4.0]
+filter = [{ type = "highpass", hz = 800 }]
+fade_out = 70
+gain = [-8, -5]
+
+[[layer]]                          # dense crackle: the bolt bursting
+synth = { kind = "crackle", density = [900, 1400], click_ms = [0.5, 1.0], length = 140 }
+filter = [{ type = "highpass", hz = 1200 }]
+envelope = [[0, 0], [140, -36]]
+gain = [-4, -1]
+
+[[layer]]                          # the fizz tail
+synth = { kind = "noise", color = "white", length = 260 }
+filter = [{ type = "bandpass", hz = [3500, 5000], hz_end = [1800, 2600], q = 1.8 }]
+envelope = [[0, -12], [20, 0], [260, -45]]
+offset = 30
+gain = [-10, -7]
+
+[[layer]]                          # sparks in the fizz
+synth = { kind = "crackle", density = [200, 320], click_ms = 0.5, length = 260 }
+filter = [{ type = "highpass", hz = 3000 }]
+envelope = [[0, -6], [260, -40]]
+offset = 40
+gain = [-10, -7]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 4, attack_ms = 0.5, release_ms = 50 },
+  { type = "reverb", impulse = "small_room", wet_db = -20, predelay_ms = 4 },
+  { type = "limit", ceiling_db = -24, release_ms = 30 },
+  { type = "trim", threshold_db = -50, keep_tail_ms = 35 },
+  { type = "fade_out", ms = 30 },
+]

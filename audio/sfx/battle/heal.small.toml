@@ -1,21 +1,45 @@
-# Placeholder over placeholder_heal; replaced by step 10
+# A Life rune's heal and Drain Life's drain: a quick warm upward shimmer, softer and shorter than a spell's heal.
 variants = 3
-seed = 4900
+seed = 1107
 group = "sweetener"
 max_ms = 600
 
-[[layer]]
-source = "placeholder_heal"
-length = 400
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # a cure's sparkle, its start only
+pick = ["som_cure_2", "som_cure_4"]
+length = 360
+pitch = [-1.0, 2.0]
+filter = [{ type = "highpass", hz = 500 }]
+fade_in = 10
+fade_out = 150
+gain = [-6, -3]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the warm rise: two sines climbing a fifth apart
+synth = { kind = "sine", hz = [520, 600], hz_end = [880, 1000], length = 340 }
+envelope = [[0, -24], [120, 0], [340, -45]]
+gain = [-10, -7]
+
+[[layer]]
+synth = { kind = "sine", hz = [780, 900], hz_end = [1320, 1500], length = 320 }
+envelope = [[0, -24], [140, 0], [320, -45]]
+offset = 20
+gain = [-15, -12]
+
+[[layer]]                          # a soft pluck to start it
+pick = ["kenney_pluck_1", "kenney_pluck_2"]
+pitch = [2.0, 7.0]
+filter = [{ type = "highpass", hz = 400 }]
+fade_out = 50
+gain = [-10, -7]
+
+[[layer]]                          # shimmer
+synth = { kind = "crackle", density = [100, 160], click_ms = 0.4, length = 300 }
+filter = [{ type = "highpass", hz = 5000 }]
+envelope = [[0, -20], [150, 0], [300, -40]]
+gain = [-16, -12]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "reverb", impulse = "small_room", wet_db = -18, predelay_ms = 4 },
+  { type = "trim", threshold_db = -48, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 60 },
+]

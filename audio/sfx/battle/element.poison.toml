@@ -1,21 +1,37 @@
-# Placeholder over placeholder_hit_impact; replaced by step 10
+# Poison on-hit and the Poisoned tick: a low, gurgling hiss (lower and duller than acid, still clear of the hit's sub).
 variants = 2
-seed = 4700
+seed = 1105
 group = "sweetener"
 max_ms = 450
 
-[[layer]]
-source = "placeholder_hit_impact"
+[[layer]]                          # the gurgle
+pick = ["rd_bubble_2", "rd_bubble_1"]
 length = 300
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+pitch = [-6.0, -3.0]
+filter = [{ type = "highpass", hz = 250 }, { type = "lowpass", hz = 2500 }]
+fade_out = 110
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # a slime's wet churn
+pick = ["rd_slime_04", "rd_slime_07"]
+length = 260
+pitch = [-4.0, -2.0]
+filter = [{ type = "highpass", hz = 300 }, { type = "lowpass", hz = 3000 }]
+fade_out = 100
+gain = [-7, -4]
+
+[[layer]]                          # the hiss, dark
+source = "bart_steam_hiss"
+start = [500, 800]
+length = 280
+pitch = [-5.0, -3.0]
+filter = [{ type = "highpass", hz = 600 }, { type = "lowpass", hz = 3500 }]
+fade_in = 25
+fade_out = 120
+gain = [-8, -5]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 3, attack_ms = 1, release_ms = 60 },
+  { type = "trim", threshold_db = -48, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 40 },
+]

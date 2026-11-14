@@ -1,21 +1,35 @@
-# Placeholder over placeholder_hit_impact; replaced by step 10
+# Acid on-hit and the Corroded tick: a wet hiss and bubble, high-passed off the hit's low end.
 variants = 2
-seed = 4600
+seed = 1104
 group = "sweetener"
 max_ms = 450
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 300
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the hiss of it eating in
+source = "bart_steam_hiss"
+start = [100, 400]
+length = 280
+pitch = [1.0, 3.0]
+filter = [{ type = "highpass", hz = 1500 }]
+fade_in = 15
+fade_out = 120
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # bubbles
+pick = ["rd_bubble_1", "rd_bubble_3", "rd_bubble_2"]
+length = 280
+pitch = [2.0, 5.0]
+filter = [{ type = "highpass", hz = 450 }]
+fade_out = 100
+gain = [-4, -1]
+
+[[layer]]                          # wet fizz
+synth = { kind = "crackle", density = [500, 700], click_ms = 0.8, length = 260 }
+filter = [{ type = "bandpass", hz = [2500, 3500], q = 1.0 }]
+envelope = [[0, -6], [40, 0], [260, -40]]
+gain = [-12, -9]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 3, attack_ms = 1, release_ms = 60 },
+  { type = "trim", threshold_db = -48, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 40 },
+]

@@ -1,21 +1,50 @@
-# Placeholder over placeholder_hit_impact; replaced by step 10
+# A bane on-hit (Dawn) and blight on-hit: a bright holy chime with a dark reversed swell under it.
 variants = 2
-seed = 4800
+seed = 1106
 group = "sweetener"
 max_ms = 450
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 300
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the dark swell, reversed into the hit
+source = "qb_dark_fout_2"
+length = 260
+reverse = true
+pitch = [-3.0, -1.0]
+filter = [{ type = "highpass", hz = 300 }, { type = "lowpass", hz = 1600 }]
+fade_in = 40
+fade_out = 15
+gain = [-21, -18]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the chime
+pick = ["pwl_bell_ding_2", "kenney_bell_heavy_4"]
+length = 260
+pitch = [5.0, 8.0]
+filter = [{ type = "highpass", hz = 1200 }]
+fade_out = 140
+offset = 0
+gain = [0, 2]
+
+[[layer]]                          # its shine: two high partials
+synth = { kind = "sine", hz = [2600, 2800], length = 300 }
+envelope = [[0, -4], [5, 0], [300, -30]]
+fade_out = 40
+gain = [-11, -9]
+
+[[layer]]
+synth = { kind = "sine", hz = [3900, 4200], length = 260 }
+envelope = [[0, -4], [5, 0], [260, -32]]
+fade_out = 40
+gain = [-15, -13]
+
+[[layer]]
+synth = { kind = "sine", hz = [5300, 5700], length = 200 }
+envelope = [[0, -4], [5, 0], [200, -34]]
+fade_out = 40
+gain = [-19, -17]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 3, attack_ms = 1, release_ms = 60 },
+  { type = "reverb", impulse = "small_room", wet_db = -22, predelay_ms = 3 },
+  { type = "trim", threshold_db = -48, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 40 },
+]

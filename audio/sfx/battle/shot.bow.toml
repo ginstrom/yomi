@@ -1,21 +1,44 @@
-# Placeholder over placeholder_melee_swing; replaced by step 10
+# A bowstring's twang (a real longbow or recurve release, with a short plucked low-mid tone under it) and the arrow's first whoosh away.
 variants = 5
-seed = 700
+seed = 1001
 group = "release"
 max_ms = 600
 
-[[layer]]
-source = "placeholder_melee_swing"
-length = 400
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the release: string slap and limb thrum
+pick = ["med_longbow_shoot_1", "med_longbow_shoot_2", "med_longbow_shoot_3", "med_longbow_shoot_4", "med_recurve_shoot_1", "med_recurve_shoot_2", "med_recurve_shoot_3"]
+length = 330
+pitch = [-1.5, 1.5]
+filter = [{ type = "highpass", hz = [140, 220] }]
+fade_out = 90
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the plucked string: a short low-mid tone
+synth = { kind = "triangle", hz = [150, 200], hz_end = [120, 160], length = 160 }
+filter = [{ type = "highpass", hz = 90 }, { type = "lowpass", hz = 1200 }]
+envelope = [[0, -3], [4, 0], [160, -50]]
+gain = [-21, -17]
+
+[[layer]]                          # the arrow leaving: a real pass, its front only
+pick = ["med_arrow_pass_1", "med_arrow_pass_2", "med_arrow_pass_3"]
+length = 260
+pitch = [1.0, 4.0]
+filter = [{ type = "highpass", hz = 700 }]
+fade_in = 20
+fade_out = 140
+offset = [30, 55]
+gain = [-9, -5]
+
+[[layer]]                          # air spread
+synth = { kind = "noise", color = "pink", length = 220 }
+filter = [{ type = "bandpass", hz = [1800, 2600], hz_end = [4000, 6000], q = 1.4 }]
+envelope = [[0, -30], [60, 0], [220, -45]]
+offset = 25
+gain = [-24, -19]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 3, attack_ms = 1, release_ms = 60 },
+  { type = "reverb", impulse = "open_air", wet_db = -20, predelay_ms = 6 },
+  { type = "limit", ceiling_db = -18, release_ms = 30 },
+  { type = "trim", threshold_db = -44, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 40 },
+]

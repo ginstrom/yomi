@@ -1,21 +1,33 @@
-# Placeholder over placeholder_hit_impact; replaced by step 10
+# Storm on-hit: a sharp electric snap, the wand's family in a single short crack.
 variants = 2
-seed = 4500
+seed = 1103
 group = "sweetener"
 max_ms = 450
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 300
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the snap: a white burst
+synth = { kind = "noise", color = "white", length = 25 }
+filter = [{ type = "highpass", hz = 2000 }]
+envelope = [[0, 0], [25, -40]]
+gain = [-2, 0]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the zap behind it
+pick = ["up_electro_zap", "up_electric_sparks"]
+length = 200
+pitch = [2.0, 5.0]
+filter = [{ type = "highpass", hz = 900 }]
+fade_out = 80
+gain = [-8, -5]
+
+[[layer]]                          # arcing crackle
+synth = { kind = "crackle", density = [1200, 1600], click_ms = 0.5, length = 180 }
+filter = [{ type = "highpass", hz = 2200 }]
+envelope = [[0, 0], [180, -40]]
+gain = [-6, -3]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 3, attack_ms = 1, release_ms = 60 },
+  { type = "limit", ceiling_db = -14, release_ms = 30 },
+  { type = "trim", threshold_db = -48, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 40 },
+]

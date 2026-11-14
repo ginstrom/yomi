@@ -1,14 +1,14 @@
 {
   "banks": {
     "battle": {
-      "durationMs": 81459,
+      "durationMs": 85783,
       "mp3": {
-        "bytes": 588068,
-        "sha256": "77f491ae14d4a126d31af9a8c18de73035fe1697561ff398b223a4302917d010"
+        "bytes": 696764,
+        "sha256": "2bfe4c7474fb4ed6fa552339fb2b35720e9431bcbacb817d897c7fcd26b04a79"
       },
       "opus": {
-        "bytes": 722038,
-        "sha256": "bd93fc02c894e62758a04cfc96dee39b5b5bbae81369b34a8d40f0447ef33e12"
+        "bytes": 786449,
+        "sha256": "1f045741323cf3f3fcf745b6f8e3460e77fa662e1705f00254b0f11ba4d9e85d"
       }
     },
     "stings": {
@@ -299,10 +299,10 @@
     "battle.element.acid": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300
+        264,
+        251
       ],
-      "inputs": "70460b2ba716bd22a0fa94aef0919e6ba9751fee4a19d08ab4fa0e1427d46f55",
+      "inputs": "cd84903b10137fb8706e1c93d5e1daf73d3fd5ee2ff8199e6d309d5a73d5908c",
       "markers": [
         "battle.element.acid#0",
         "battle.element.acid#1"
@@ -311,10 +311,10 @@
     "battle.element.blight": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300
+        355,
+        362
       ],
-      "inputs": "139040da1a20b7c95eea7bf04bb53ab64e8c810b04496e3771fcccc576135f8a",
+      "inputs": "4f5538707798acaef934136cf059e0fd08cde02a5341764620fd5bcca32d045c",
       "markers": [
         "battle.element.blight#0",
         "battle.element.blight#1"
@@ -323,10 +323,10 @@
     "battle.element.fire": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300
+        290,
+        290
       ],
-      "inputs": "f255ae4009f447b50d1891f05a8e5ba9a6365b1e1eaa0bf28a0aa578f0f9a6d3",
+      "inputs": "fd0755e93f95f0ba412ee5d2368ff8d6ed3ad42410b91aa6e3491a85527eb097",
       "markers": [
         "battle.element.fire#0",
         "battle.element.fire#1"
@@ -335,10 +335,10 @@
     "battle.element.frost": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300
+        255,
+        254
       ],
-      "inputs": "dd73ac73472fc80c06b8bf7cd799eadbe26d5b9ddad9278b467d2843c97d57de",
+      "inputs": "7ed47650db7ed351d3a0eec0c79f98406c0abd755a1acd77a2740dfced76fc98",
       "markers": [
         "battle.element.frost#0",
         "battle.element.frost#1"
@@ -347,10 +347,10 @@
     "battle.element.lightning": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300
+        180,
+        180
       ],
-      "inputs": "7709a288e7fa66b65f2d7bcdc3a378912f327b45efa6d13a32ff4b04b991acd4",
+      "inputs": "ea298a867836a3d10b3fccdd411086be29d5ad89e913ed7f47db4e432bbaca73",
       "markers": [
         "battle.element.lightning#0",
         "battle.element.lightning#1"
@@ -359,10 +359,10 @@
     "battle.element.poison": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300
+        379,
+        345
       ],
-      "inputs": "9d39f58ad3713dda411a30d83fd599a17263478f35b187a22638299d51539210",
+      "inputs": "a9ea76b9ac66a52f879c95a84cdbc9b064640c72b6830ec7f9626551980046f4",
       "markers": [
         "battle.element.poison#0",
         "battle.element.poison#1"
@@ -371,11 +371,11 @@
     "battle.heal.small": {
       "bank": "battle",
       "durationsMs": [
-        400,
-        300,
-        447
+        398,
+        472,
+        424
       ],
-      "inputs": "4ce768f4f070ba9386606f127f01f39e6c81e6eae85ed6151f7ac7490073c2c1",
+      "inputs": "abedd75a62bdb8a86e9e0c54a628bfb990269a927f5baf7c41411d1817bbf95e",
       "markers": [
         "battle.heal.small#0",
         "battle.heal.small#1",
@@ -439,11 +439,11 @@
     "battle.hit.image": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300
+        499,
+        500,
+        500
       ],
-      "inputs": "c7d265d9293928892d4572f710925915d3c028e6ee7f87ef5bf296d0765c2e70",
+      "inputs": "185c2d9aba6e96569bed03adceb8b7231887d859ab6b0d288f3c439af679780d",
       "markers": [
         "battle.hit.image#0",
         "battle.hit.image#1",
@@ -453,12 +453,12 @@
     "battle.hit.magic": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300
+        338,
+        335,
+        337,
+        335
       ],
-      "inputs": "9ae067d18482443929f0e1795b78b65282dde5f5885bbd64de67b6d3db645917",
+      "inputs": "cf68e1a3b96e102c0f5f51be255cd338b92038095c01467e03dd8155381a56fc",
       "markers": [
         "battle.hit.magic#0",
         "battle.hit.magic#1",
@@ -687,11 +687,11 @@
     "battle.miss.magic": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300
+        486,
+        555,
+        524
       ],
-      "inputs": "23ed8b248b8a2f685fee589f498b5155193417ea0bdda52598503e05715b3715",
+      "inputs": "2dbd8f6717ddfcbec84d649d19d2325bdb517421e9810c11d5aa89f49a817cb7",
       "markers": [
         "battle.miss.magic#0",
         "battle.miss.magic#1",
@@ -701,12 +701,12 @@
     "battle.miss.shot": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300
+        396,
+        378,
+        398,
+        412
       ],
-      "inputs": "092b317b62a2c0edd0f50363832049e9099ab585d327460be0432704eb9d1559",
+      "inputs": "aea599ce30e5d783440831ca7597e6e1b251cf4bcdd01f316cdc8ebe43bd59cb",
       "markers": [
         "battle.miss.shot#0",
         "battle.miss.shot#1",
@@ -733,11 +733,11 @@
     "battle.regen": {
       "bank": "battle",
       "durationsMs": [
-        453,
-        300,
-        422
+        588,
+        692,
+        645
       ],
-      "inputs": "da14f7249e727c9968a19c0d3867cdedfc7dc6cf1cc578a2cf2bd1df45952e46",
+      "inputs": "d7f762de41d35c0de2226016d3bc38270468a1387dde1c9731818aa03bcac097",
       "markers": [
         "battle.regen#0",
         "battle.regen#1",
@@ -747,13 +747,13 @@
     "battle.shot.bow": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300,
-        300
+        414,
+        405,
+        421,
+        447,
+        411
       ],
-      "inputs": "10179b4e503e64a8b04320c605f424f5741a3a3ee8098d35da95b04d004fab8f",
+      "inputs": "02959497a009dcc8c5a45b3d8f15f1b412603a34a7bef112a2dd0552adfc84f0",
       "markers": [
         "battle.shot.bow#0",
         "battle.shot.bow#1",
@@ -765,12 +765,12 @@
     "battle.shot.crossbow": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300
+        463,
+        504,
+        440,
+        503
       ],
-      "inputs": "640b05166068c91abc7d544f5bb59e6ec027a119b2362f8a6225bcff442a7962",
+      "inputs": "ac426c27af96b1777e9e9bbd0878120347829fda716085e1077b4e792dcfbf4e",
       "markers": [
         "battle.shot.crossbow#0",
         "battle.shot.crossbow#1",
@@ -781,13 +781,13 @@
     "battle.shot.wand": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300,
-        300
+        390,
+        461,
+        390,
+        390,
+        390
       ],
-      "inputs": "8948cdce232baeeb9da2c6afaa1de2ec44bb9c2660df192964360d307fc99bd5",
+      "inputs": "dce5e70174e7c995016efa3011fd021269ce18cc5359b9a9cff9031fce470ba9",
       "markers": [
         "battle.shot.wand#0",
         "battle.shot.wand#1",
