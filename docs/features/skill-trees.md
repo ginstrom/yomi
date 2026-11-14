@@ -23,6 +23,9 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 | Date | Decision | By | Alternatives | Reason |
 |---|---|---|---|---|
+| 2026-11-14 | Point-cost economy for nodes: "How about a cost system for skills that grows with power. So you get 1 skill point per level up, and at first you are buying a skill per level. Then they go to 2 points, and 3, with progressivley more powerful but costly skills?" | user | capstone confirmation only; capstone depth 6; slower pick rate; leave as is | the simulated player found picks after level 6 too cheap (a Ranger held all 8 Ranger nodes at 12). Design amendment, plan and re-tune follow. |
+| 2026-11-14 | No respec | user | paid respec at the guild hall | permanence keeps choices hard |
+| 2026-11-14 | A tab's key on its own tab does nothing; only Esc closes the panel (no more "press I again to close") | orchestrator | keep the toggle and fix Esc another way | the toggle let S close the panel and Esc then open the menu; one rule for all tabs |
 | 2026-11-13 | No class lock: four Skyrim-style trees (Warrior, Scout, Mage, Cleric), each of three paths, open to every hero and mixable | user | class picked at creation; class as starting kit; full replacement | Intake answer above |
 | 2026-11-13 | Paths: Warrior = Spellsword, Swordmaster, Heavy Knight; Cleric = Healer, Paladin, Saint; Scout = Ranger, Rogue, Assassin; Mage = Evoker (fire/area), Cryomancer (frost/control), Arcanist (buffs/wards) | user | elemental/necro/illusion; designer proposes | Request + recommended |
 | 2026-11-13 | Soft lock: early ranks of every path open; going deep closes other capstones; one capstone ever | user | hard lock at level 3; fully open | Recommended |
@@ -50,6 +53,8 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 | 2026-11-14 | "Back to 63 HP": the Blight Horror keeps 63 hit points and its claws at 2d6+2 (one party 243, company 243); `--ready-level 10` stays at 445, over its band, revisited in stage 9 when threats 6 and 7 come onto the map. Supersedes "Much harder Source" | user | the claws at 2d6+11 (`--ready-level 10` 419); the Horror at 130 hit points (407) | The harder Source's measured cost was one party 36 and company 34 of 500, not the estimated 100 |
 
 ## Open questions
+
+- The point-cost economy (decision above): costs by tier, points at creation, whether points come every level, how the capstone and depth rules read with costs. A design amendment is in progress, and it blocks verification sign-off.
 
 (none)
 
