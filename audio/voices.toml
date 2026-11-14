@@ -1,0 +1,20 @@
+# The voice registry (design §5.8.2). Provisional: gate G1 chose narrator A on
+# Chatterbox Turbo with `A_0` as its only reference clip; step 15 pins the
+# revisions and writes `[narrator.clips]`. Turbo takes one reference clip and
+# ignores exaggeration, so emotion comes from a line's wording and nonverbal
+# tags such as [sigh]; the emotion vocabulary stays so lines keep their intent.
+adapter_version = 1
+
+[narrator]
+engine = "chatterbox_turbo"
+model = "ResembleAI/chatterbox-turbo"   # provisional; pinned at adoption (step 15)
+revision = "unpinned"
+emotions = ["neutral", "warm", "grave", "tense", "sad", "triumphant", "whisper"]
+params = { temperature = 0.8 }
+
+[narrator.design]
+model = "Qwen/Qwen3-TTS-VoiceDesign"    # provisional; exact id pinned in step 15
+revision = "unpinned"
+description = "A weathered storyteller in his fifties: low, warm, slightly gravelled, unhurried; neutral British accent; close and dry, no room."
+reference_text = "The old road winds north past the quiet village and over the bridge. Judge for yourself whether the thick smoke rising there means a hearth, or a warning."
+seed = 7

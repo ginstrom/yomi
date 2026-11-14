@@ -1,5 +1,6 @@
 import type { PortraitId } from '../character/portraits.ts'
 import type { GameState } from '../game/gameState.ts'
+import type { Emotion, VoiceId } from './narration.ts'
 import type { StoryMoment } from './story.ts'
 
 /**
@@ -28,6 +29,18 @@ export interface CutsceneBeat {
    * when the cutscene plays. Without one, the game under the scene shows dimmed.
    */
   backdrop?: string
+  /** A stable id for the spoken line, unique in the game ([a-z0-9_.]+), e.g. 'intro.opening'. Voiced only when set. */
+  line?: string
+  /** The voice that speaks it, from audio/voices.toml; required with `line`. Never for a `{leader}` speaker. */
+  voice?: VoiceId
+  /** One of the voice's emotions; 'neutral' when left out. */
+  emotion?: Emotion
+  /** 0 to 1, how strongly; 0.5 when left out. */
+  intensity?: number
+  /** What is spoken when the shown text cannot be: no `{…}` templates; may carry nonverbal tags. Defaults to `text`. */
+  spoken?: string
+  /** Bumped to render the line again with a new seed when a take has a flaw; 0 when left out. */
+  take?: number
 }
 
 export interface Cutscene {

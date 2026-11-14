@@ -207,3 +207,9 @@ Write `src/story/narration.test.ts` first (domain project; it runs under Node, s
 
 ## Execution record
 
+Engineer, 2026-11-14.
+
+- Built `narration.ts` (C11 as named, plus `canonicalJson`, `hashClips`, `buildJobs(cutscenes, registry, voiceSettings, clipHashesOf)` and `NarrationJob(s)` types, `VOICE_DIR`), the six beat fields, `scripts/narration.ts`, `audio/voice.manifest.json`, `narration:export`, `smol-toml` 1.9.1 (lockfile edited by hand to add only it; npm's own rewrite also dropped `libc` fields).
+- Deviation (G1): `audio/voices.toml` is narrator A on `chatterbox_turbo` (model `ResembleAI/chatterbox-turbo`, revision unpinned, `params = { temperature = 0.8 }`, no `cfg_weight`), with no clips yet; the seven-emotion list is kept. Step 15 pins revisions and adds `[narrator.clips]` (`A_0`, plus `neutral` at most). `reference_text` is `REFERENCE_TEXT` of `voice.py`.
+- `staleLines` asks `fileExists` for repo-relative `public/assets/voice/<line>.opus` and `.mp3`.
+- Checks: `npm test` 1665 passed; `npm run narration:export` wrote 0 jobs, exit 0; pytest 210 passed; `sounds:check` clean; `git grep narration.ts src/scenes` empty. No browser test (no scene changed). Tests were written before the code but not run red first.

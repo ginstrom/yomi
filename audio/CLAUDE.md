@@ -266,6 +266,12 @@ commands (and `sounds:check`) never install them:
   configurations are constants in `yomi_audio/voice.py`.
 - Every clip goes through `audio.toml`'s `[voice]` chain (`voice.postprocess`).
 
+## Narration data
+
+A line is voiced by fields on a cutscene beat in `src/story/cutscenes.ts`: `line` (id, `[a-z0-9_.]+`, unique), `voice`, and optionally `emotion`, `intensity` (0 to 1), `spoken` (what is said when the shown text cannot be; never displayed, so nonverbal tags like `[sigh]` go only here) and `take` (bump to re-render with a new seed). The rules (`narrationProblems` in `src/story/narration.ts`, enforced by vitest): no duplicate ids, a voice for every line, no leader (speaker or portrait) and no `{…}` template in what is spoken, only known tags and only for a tag engine (`chatterbox_turbo`), an emotion the voice lists, intensity and take in range, nothing empty. Tutorial tips are not voiced.
+
+`audio/voices.toml` is the voice registry (`readVoices`); it is provisional until step 15 pins revisions and writes `[narrator.clips]` (narrator A on Chatterbox Turbo, `A_0` its only reference clip, gate G1). `npm run narration:export` (`scripts/narration.ts`) refuses a broken beat and writes the gitignored `audio/narration.jobs.json` (a job per voiced line with its seed and input hash, `lineHash`) for `voice render` (step 16), which writes the committed `audio/voice.manifest.json`. `npm test` fails when a voiced line's hash differs from the manifest's or its `.opus`/`.mp3` is missing in `public/assets/voice/`, so a new voiced line is fields on a beat plus a render.
+
 ## Sourcing
 
 The raw material for each W1 cue was surveyed in step 04: the CC0 packs are
