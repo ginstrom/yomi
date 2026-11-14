@@ -77,3 +77,5 @@ Run on 2026-11-14 by the engineer subagent (Sonnet 5.5). Gate G2 is pending the 
 - **Counts.** `sourcing.md` has an entry for each of the 85 C7 ids (checked by script against the C7 list): covered 53, partial 23, synth 9, none empty-handed. 28 Freesound rows, ordered by number of cues served.
 - **Deviations.** (1) The plan asked for under about 40 Freesound files; 28 listed. (2) `med-impacts` was downloaded (CC0) but no cue uses it. (3) `sourcing.md` judgements are from names, durations and pack descriptions only; no spectrograms were made. (4) `docs/features/audio-pass.md` had an uncommitted change by another session; left out of this commit.
 - **For later steps.** `sourcing.md` section 1 has pack aliases and the on-disk layout; section 5 gives each partial cue's fallback if G2 is "skip all". The short stings (every Kenney jingle is at most 1.74 s) are the main risk for step 09. Kenney downloads need the Referer trick above if re-fetched.
+
+- Commit: 2de63b8.
