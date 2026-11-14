@@ -126,3 +126,14 @@ commands (and `sounds:check`) never install them:
   narrator alone. The narrators, the reference text, the lines and the
   configurations are constants in `yomi_audio/voice.py`.
 - Every clip goes through `audio.toml`'s `[voice]` chain (`voice.postprocess`).
+
+## Sourcing
+
+The raw material for each W1 cue was surveyed in step 04: the CC0 packs are
+unpacked, untouched, under `~/.cache/yomi-audio/downloads/<collection>/<pack>/`
+(Kenney, OpenGameArt) and the Freesound originals the user downloads by hand go
+in `~/.cache/yomi-audio/freesound/`. Only CC0 (and `own`) material is a source.
+`docs/implementation-plans/audio-pass/sourcing.md` (candidates per cue, pack
+licences, fallbacks) and `freesound-wanted.md` (the download list) are the
+catalogue; read them before choosing files, then add only the excerpts a recipe
+uses with `source add`.
