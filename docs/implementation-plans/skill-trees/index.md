@@ -55,7 +55,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | 25 | [Campaign bands](25-campaign-bands.md) | The three campaigns, deaths and days in band, or the user has accepted the figure (AC11) | 24 | opus | done (6f9eee8, 6093912) |
 | 26 | [Manual, screenshots and the scaling rules](26-manual-and-scaling.md) | Manual's tree tables; screenshots retaken; CLAUDE.md's rules of scaling restated; final verification | 25 | sonnet | done (0573dcb) |
 | **Stage 5: nodes cost perk points (amendment, [design](../../designs/skill-trees-node-costs.md); see [Stage 5](#stage-5-the-node-cost-amendment))** | | | | | |
-| 27 | [Baseline and the v25 fixture](27-baseline-and-v25-fixture.md) | Today's figures re-measured (cells, campaigns, parity at levels 4, 8, 14); `src/game/fixtures/save-v25.json` captured by v25 code | 26 | sonnet | pending |
+| 27 | [Baseline and the v25 fixture](27-baseline-and-v25-fixture.md) | Today's figures re-measured (cells, campaigns, parity at levels 4, 8, 14); `src/game/fixtures/save-v25.json` captured by v25 code | 26 | sonnet | done (COMMIT) |
 | 28 | [Perk points: the economy, plans and save v26](28-perk-points-economy.md) | Tier costs 1/2/3/4; a perk point every level; `autoAdvance` saves up; plan reorders; `migrateFrom25`, `SAVE_VERSION` 26; guard re-recorded | 27 | opus | pending |
 | 29 | [Perk points in the UI](29-perk-points-ui.md) | Cost digit on every node; "Perk points" in the panel, strip, creation and probes; e2e; two carried-forward notes | 28 | sonnet | pending |
 | 30 | [Re-tune under costs](30-retune-under-costs.md) | First measurement, then cells, level-4 parity, the level-14 capstone cell and campaigns back in band, or the user accepts the figure; Amendment table in the feature record | 29 | opus | pending |
@@ -645,17 +645,17 @@ Plans: melee `knight`, `swordmaster`, `spellsword`, `assassin`, `paladin`; arche
 
 | Figure | Band | 25 final | 27 baseline | 30 first (untuned) | 30 final |
 | --- | --- | --- | --- | --- | --- |
-| one party (`--parties 1`) | 215–250 | 243 | | | |
-| default company | 220–260 | 243 | | | |
-| `--ready-level 10` | 370–420 | 445 (accepted over) | | | |
-| deaths a campaign (one party) | ≤ 2.0 | 1.0 | | | |
-| days a campaign (one party) | 243–297 | 287 | | | |
-| GR3 / BC3 / BC4 / BC5 | ≥ 470 / 400–470 / 430–490 / 420–490 | 500 / 455 / 462 / 484 | | | |
-| SN5 / SP5 / TL5 | 410–480 / 410–480 / report | 448 / 454 / 0 | | | |
-| SG7 / SG10 | 0 ± 40 / above 2 | 0 / 5 | | | |
-| F1 / F2 / F3 | nearly all / most / 7 in 10 | 500 / 500 / 453 | | | |
+| one party (`--parties 1`) | 215–250 | 243 | 243 | | |
+| default company | 220–260 | 243 | 243 | | |
+| `--ready-level 10` | 370–420 | 445 (accepted over) | 445 | | |
+| deaths a campaign (one party) | ≤ 2.0 | 1.0 | 1.0 | | |
+| days a campaign (one party) | 243–297 | 287 | 287 | | |
+| GR3 / BC3 / BC4 / BC5 | ≥ 470 / 400–470 / 430–490 / 420–490 | 500 / 455 / 462 / 484 | 500 / 455 / 462 / 484 | | |
+| SN5 / SP5 / TL5 | 410–480 / 410–480 / report | 448 / 454 / 0 | 448 / 454 / 0 | | |
+| SG7 / SG10 | 0 ± 40 / above 2 | 0 / 5 | 0 / 5 | | |
+| F1 / F2 / F3 | nearly all / most / 7 in 10 | 500 / 500 / 453 | 500 / 500 / 453 | | |
 
-Parity tables go in steps 27 and 30's records.
+Parity tables go in steps 27 and 30's records. Step 27's baseline equals step 25's finals exactly (unchanged code, deterministic).
 
 ### Requirement map (stage 5)
 
