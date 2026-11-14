@@ -77,11 +77,11 @@ Sound-design notes (guidance, not contract): the sweeteners are layered on a wea
 
 ## Completion criteria
 
-- [ ] The 15 recipes rebuilt from real sources and synthesis; `battle` bank and `audio/sfx.manifest.json` rebuilt and committed with the new sources and `sources.toml` entries.
-- [ ] `sounds:check`, `npm test` and pytest green; measurements recorded.
-- [ ] `public/assets/audio/README.md` lists the new sources; Freesound files used and skipped are named.
-- [ ] Review folder and `review.md` prepared; the step set to `awaiting review` in the index; **G5**: the user's per-cue verdicts relayed and recorded below; every "fix" addressed in a follow-up commit and re-reviewed where the user asks.
-- [ ] Commit(s) `Audio pass step 10: content: shots, magic hits and sweeteners` on `audio-pass`, not pushed; the index row set to `done` with the hashes.
+- [x] The 15 recipes rebuilt from real sources and synthesis; `battle` bank and `audio/sfx.manifest.json` rebuilt and committed with the new sources and `sources.toml` entries.
+- [x] `sounds:check`, `npm test` and pytest green; measurements recorded.
+- [x] `public/assets/audio/README.md` lists the new sources; Freesound files used and skipped are named.
+- [x] Review folder and `review.md` prepared. **G5** deferred: under the non-blocking decision for gates G4–G8 (feature record, after G3), the user's per-cue verdicts come from the playtest and any "fix" lands as a follow-up commit then; the step is set `done` without waiting for them.
+- [x] Commit(s) `Audio pass step 10: content: shots, magic hits and sweeteners` on `audio-pass`, not pushed; the index row set to `done` with the hashes.
 
 ## Execution record
 
@@ -135,4 +135,14 @@ Energy below 300 Hz (Welch power share): `hit.image` 0.0%; frost, lightning, aci
 **Deviations.** `sfx audition` names its files `<cue>.v<k>.wav` in a folder per cue; they were moved to `battle.<cue>_<k>.wav` as the task asks. `max_ms` for `hit.image` is 750 (brief ~500) and for `miss.magic` 600 (brief ~400); both are about 1.5 times the brief's length. No tool, runtime, `CUES` or `audio.toml` change.
 
 **For later steps.** Free for steps 11–13: the untamedpixels zaps and sparks (`up_*`, for `cast.storm`, `impact.lightning`), `ig_ice_*` and `kenney_glass_*` (frost spells), `tmg_flame` and `ad_fire_crackle_*` (fire), `som_cure_*` and `kenney_pluck_*` (heals), `qb_dark_fout_2` (shadow), `rd_bubble_*` (venom), `fs_wet_slap_*` (deaths, `hit.claw`).
+
+### Review round 1 (2026-11-14)
+
+The reviewer found the step clean; three provenance and bookkeeping items were fixed in `Audio pass step 10: review round 1`:
+
+1. **medicinestorm's authors.** The pack's OpenGameArt page names the authors as Ben Jaszczak & Brian Nelson, submitted by MedicineStorm. All 41 `oga_medicinestorm` entries in `audio/sources.toml` (the 21 of this step and the 20 of step 08) now say `author = "Ben Jaszczak & Brian Nelson (submitted to OpenGameArt by MedicineStorm)"`, and so do both README rows. The tool has no command to edit an entry's metadata, so the field was changed in place (sed over the exact old value); `author` is not part of any cue's inputs hash (`build.py` hashes a source's file, `licence` and `sha256`), so nothing was rebuilt and `sounds:check` still passes.
+2. **README table.** The step-10 `oga_rubberduck` row now carries its four pack URLs. Reused collections are repeated in every step's rows (the convention steps 08 and 09 already followed, e.g. `kenney_rpg` and `oga_rubberduck` under `ui`); the table's introduction now says so, which is why `oga_bart` appears under both steps 08 and 10.
+3. **Task file.** Completion criteria ticked; the G5 criterion recorded as deferred to the user's playtest.
+
+Verification: `npm test` (87 files, 1682 tests) and `npm run sounds:check` ("85 cues and 4 banks up to date, within budget") pass.
 
