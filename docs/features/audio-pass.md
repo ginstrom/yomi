@@ -69,6 +69,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 
 - Step 02: also fix review-01 findings: check every source id a recipe names (not only those drawn), catch non-AudioError failures without tracebacks, stop reading pyloudnorm's private `_filters` (or comment/pin it).
 - Step 02 (and 09): apply the short-cue normalisation rule above; `hit.slash` over stand-in sources peaked +4.4 dBTP, the same rule catches it.
+- Step 16: the user heard "winds" (the road winds) read as wind-that-blows in every G9 clip but `grave_0` (a heteronym in the design's audition sentence only). Check every shipped line for heteronyms by ear-proxy (list them in the record) and respell them in the beat's `spoken` (e.g. "wynds") or reword; don't rely on the engine.
 - Step 16: update design §5.8.3 item 3 and §5.8.4 (still say per-emotion `audio_prompt` / `chatterbox` with no tags; G1 overtook them). Only grave, whisper and triumphant were ever designed.
 - Step 16: the mlx Chatterbox port adds no PerTh watermark; say so in the voice README. A render needs network on first model load.
 - c22 (b) has a click near its end: re-take if that line ships.
