@@ -6,8 +6,10 @@ import { newDraft, type CharacterDraft } from '../character/creation.ts'
 import { TREE_IDS, pathsOf } from '../character/trees.ts'
 import {
   KIND_LEGEND,
+  KIND_TAB_W,
   LEGEND_Y,
   NODE_H,
+  NODE_COST_W,
   NODE_W,
   STRIP_CHARS,
   STRIP_HINT_LINES,
@@ -25,7 +27,10 @@ import {
   linkTone,
   linkToneOf,
   treeLinks,
+  costTone,
   costWords,
+  draftCostTone,
+  nodeAsks,
   draftNodeClickable,
   draftNodeHint,
   nodeHint,
@@ -537,5 +542,53 @@ describe('the strip', () => {
     expect(STRIP_CHARS).toBeLessThanOrEqual(92)
     // A 12 px monospace line is about 15 px.
     expect(TREE_STRIP_Y + longest * 15).toBeLessThanOrEqual(500)
+  })
+})
+
+describe('the cost digit', () => {
+  it('reserves 14 px at the node\'s right edge, and every label and the digit fit what is left', () => {
+    expect(NODE_COST_W).toBe(14)
+    // Phaser lays a 13 px name on one line if it fits, else a 11 px one on two: its longest word must fit the area either way.
+    const area = NODE_W - KIND_TAB_W - NODE_COST_W - 8
+    for (const id of PERK_IDS) {
+      const name = PERKS[id].name
+      const words = (PERKS[id].tier === 'capstone' ? `★ ${name} ★` : name).split(' ')
+      const widest = Math.max(...words.map((word) => word.length))
+      expect(widest * 6.8, `${name} at 11 px`).toBeLessThanOrEqual(area)
+    }
+    expect(KIND_TAB_W + 8 + NODE_COST_W).toBeLessThan(NODE_W)
+  })
+
+  it('is gold for an open node it can afford where perk points can be spent, dim otherwise, null for a mark', () => {
+    expect(costTone(warriorAt(3, 1), 'toughness', true)).toBe('gold')
+    expect(costTone(warriorAt(3, 1), 'toughness', false)).toBe('dim')
+    expect(costTone(warriorAt(3, 0), 'toughness', true)).toBe('dim')
+    expect(costTone(warriorAt(3, 1), 'iron_skin', true)).toBe('dim')
+    expect(costTone({ ...warriorAt(3, 1), perks: { toughness: 1 } }, 'toughness', true)).toBeNull()
+    expect(costTone({ ...warriorAt(12, 9), perks: { heal: 1 } }, 'deadeye', true)).toBeNull()
+  })
+
+  it('is gold in creation while the draft has the points, dim after, null for a node taken', () => {
+    const draft = (perks: CharacterDraft['perks']): CharacterDraft => ({
+      ...newDraft(),
+      attributes: { strength: 4, perception: 7, endurance: 5, intelligence: 7, agility: 7, luck: 5 },
+      tagged: 'archery',
+      perks,
+    })
+    expect(draftCostTone(draft([]), 'toughness')).toBe('gold')
+    expect(draftCostTone(draft(['toughness']), 'toughness')).toBeNull()
+    expect(draftCostTone(draft(['toughness']), 'dodger')).toBe('gold')
+    expect(draftCostTone(draft(['toughness', 'dodger', 'deadly_aim']), 'marksmanship')).toBe('dim')
+    // A node of a higher tier is closed to a level 1 hero: dim.
+    expect(draftCostTone(draft([]), 'far_shot')).toBe('dim')
+  })
+})
+
+describe('nodeAsks', () => {
+  it('words the cost, singular and plural, before what the node asks', () => {
+    expect(nodeAsks('toughness')).toBe(`Costs 1 perk point. Asks: ${describePerkRequirements('toughness')}`)
+    expect(nodeAsks('pin')).toBe(`Costs 3 perk points. Asks: ${describePerkRequirements('pin')}`)
+    expect(nodeAsks('deadeye')).toMatch(/^Costs 4 perk points\. Asks: Level 12, /)
+    expect(nodeAsks('taunt')).toMatch(/^Costs 2 perk points\. Asks: Level 2, /)
   })
 })

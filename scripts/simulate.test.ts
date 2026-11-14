@@ -98,7 +98,6 @@ function battle(battleId: number, rounds: number, winner: Side | null): LoggedEv
   ]
 }
 
-
 /** Whether `autoAdvance` has spent all `hero` would spend: no skill point left, and its perk points saved for a node it cannot take yet. */
 const spentByPlan = (hero: Character): boolean => {
   const copy = { ...hero, perks: { ...hero.perks }, trained: { ...hero.trained } }

@@ -18,8 +18,10 @@ import {
   PERK_IDS,
   attributeLevel,
   attributesOf,
+  availablePerks,
   knownSpells,
   nodeKind,
+  perkCost,
   perkRanks,
   qualifiesFor,
   type PerkId,
@@ -56,7 +58,7 @@ import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook } from './unitLook.ts'
 import { PARTY_PANEL_W, portraitKey } from './partyPanel.ts'
-import { NODE_H, NODE_W, clampLines, nodeHint, openingTree, perkTitle, treeForKey } from './perkTree.ts'
+import { NODE_H, NODE_W, clampLines, costTone, nodeHint, openingTree, perkTitle, treeForKey } from './perkTree.ts'
 import { PerkTreeView } from './PerkTreeView.ts'
 import { heroTitle, type TreeId } from '../character/trees.ts'
 import { ABILITY_DESCRIPTION_LINES, ABILITY_LIST, abilityCostLine, abilityPages, abilityRowPlace, abilityRowRect, abilityRows } from './abilityList.ts'
@@ -180,7 +182,7 @@ const TREE_BUTTON = { x: PERKS_X + PERKS_W / 2, y: 462, width: 160, height: 32 }
 const BACK_BUTTON = { x: PANEL_W - 20 - 40, y: 75, width: 80, height: 24 }
 /** What the strip says with the pointer on no node. */
 const TREE_RULE =
-  'Four trees of three paths: any path, any tree. A pick comes with every even level; a node of a higher tier asks its level and nodes in its path, and only your deepest path may open its capstone (★). Keys 1 to 4 switch trees.'
+  'Four trees of three paths: any path, any tree. A perk point comes with every level and a node costs 1 to 4 by its tier; a higher tier also asks its level and nodes in its path, and only your deepest path may open its capstone (★). Keys 1 to 4 switch trees.'
 
 /**
  * The abilities tab: the actives known in two columns a page (`ABILITY_LIST`,
@@ -422,7 +424,7 @@ export class InventoryScene extends Phaser.Scene {
       tab: this.activeTab,
       party: this.column.probe(),
       skillPoints: this.character.skillPoints,
-      perkPicks: this.character.perkPoints,
+      perkPoints: this.character.perkPoints,
       skills: Object.fromEntries(
         SKILL_IDS.map((id, row) => [
           id,
@@ -449,6 +451,7 @@ export class InventoryScene extends Phaser.Scene {
         perk,
         ranks: perkRanks(this.character, perk),
         canTake: this.canTake(perk),
+        cost: perkCost(perk),
       })),
       abilities: abilityRows(this.character).map(({ name, kind, ap, mana, recharge, description }) => ({ name, kind, ap, mana, recharge, description })),
       abilityManaLine: this.abilityManaLine,
@@ -789,17 +792,17 @@ export class InventoryScene extends Phaser.Scene {
     return PERK_IDS.filter((id) => nodeKind(id) === 'passive' && perkRanks(this.character, id) > 0)
   }
 
-  /** Whether the character has perk points waiting and can spend them here. */
+  /** Whether some open node is affordable and perk points can be spent here. */
   private pickWaits(): boolean {
-    return this.canAdvance && this.character.perkPoints > 0
+    return this.canAdvance && availablePerks(this.character).some((perk) => canAffordPerk(this.character, perk))
   }
 
-  /** "Perk points: N", gold while any wait. */
+  /** "Perk points: N", gold while some open node is affordable on the world map. */
   private buildPerkStatus(content: Phaser.GameObjects.Container, right: number, y: number): void {
     const { perkPoints } = this.character
     content.add(
       this.add
-        .text(right, y, `Perk points: ${perkPoints}`, { fontFamily: FONT, fontSize: '14px', color: perkPoints > 0 ? GOLD : DIM })
+        .text(right, y, `Perk points: ${perkPoints}`, { fontFamily: FONT, fontSize: '14px', color: this.pickWaits() ? GOLD : DIM })
         .setOrigin(1, 0),
     )
   }
@@ -863,6 +866,7 @@ export class InventoryScene extends Phaser.Scene {
       onClick: (perk) => this.advance(() => takePerk(this.character, perk)),
       // Next tick: the redraw destroys the tab whose click handler asked for it.
       onTree: (tree) => this.time.delayedCall(0, () => this.showTree(tree)),
+      costTone: (perk) => costTone(this.character, perk, this.canAdvance),
       hint: (perk) => nodeHint(this.character, perk, this.canAdvance),
       rule: TREE_RULE,
     })

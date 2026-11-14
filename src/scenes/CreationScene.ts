@@ -24,7 +24,7 @@ import {
   type CharacterDraft,
   type DraftChange,
 } from '../character/creation.ts'
-import type { PerkId } from '../character/perks.ts'
+import { perkCost, type PerkId } from '../character/perks.ts'
 import type { GameState } from '../game/gameState.ts'
 import { company } from '../game/guildHall.ts'
 import { PORTRAIT_IDS } from '../character/portraits.ts'
@@ -35,7 +35,7 @@ import type { Rect } from './mapScroll.ts'
 import { addPanelButton, fitText, type PanelButtonLook } from './panelButton.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { PORTRAIT_SCALE, PORTRAIT_SIZE, portraitKey } from './partyPanel.ts'
-import { TREE_TAB_Y, TREE_W, draftNodeClickable, draftNodeHint, legendLayout, treeForKey, treeTabRect } from './perkTree.ts'
+import { TREE_TAB_Y, TREE_W, draftCostTone, draftNodeClickable, draftNodeHint, legendLayout, treeForKey, treeTabRect } from './perkTree.ts'
 import { TREE_IDS, type TreeId } from '../character/trees.ts'
 import { PerkTreeView } from './PerkTreeView.ts'
 
@@ -99,7 +99,7 @@ const SKILL_LEVEL_X = CONTENT_W
  */
 const TREE_SHIFT_Y = -18
 /** The perks step's words with the pointer on no node. */
-const PERKS_RULE = `${CREATION_PERK_POINTS} picks. One more comes with every even level. Any path, any tree; only your deepest path may open its capstone.`
+const PERKS_RULE = `${CREATION_PERK_POINTS} perk points. One more comes with every level. A node costs 1 to 4 by its tier. Any path, any tree; only your deepest path may open its capstone.`
 
 /** The name step: the faces in two rows, and the name under them. */
 const PORTRAIT_COLS = 4
@@ -230,7 +230,7 @@ export class CreationScene extends Phaser.Scene {
       draft: this.draft,
       attributePoints: attributePointsLeft(this.draft),
       skillPoints: skillPointsLeft(this.draft),
-      perkPicks: perkPointsLeft(this.draft),
+      perkPoints: perkPointsLeft(this.draft),
       tree: this.tree,
       trees: Object.fromEntries(TREE_IDS.map((tree) => [tree, button(this.treeTab(tree), shows('perks'))])) as CreationProbe['trees'],
       steps: Object.fromEntries(STEPS.map(([step], i) => [step, button(tabAt(i), true)])) as CreationProbe['steps'],
@@ -262,6 +262,7 @@ export class CreationScene extends Phaser.Scene {
         perk,
         ranks: draftPerkRanks(this.draft, perk),
         canClick: shows('perks') && this.perkClickable(perk),
+        cost: perkCost(perk),
       })),
       portraits: PORTRAIT_IDS.map((portrait, i) => ({
         ...onScreen(portraitAt(i)),
@@ -418,14 +419,14 @@ export class CreationScene extends Phaser.Scene {
 
   /**
    * The four trees, a tab each (or keys 1 to 4); a click on a tier-1 node takes
-   * it or gives it back. The picks left and what the last click dropped or
+   * it or gives it back. The perk points left and what the last click dropped or
    * refused sit beside the tabs, where the summary would be.
    */
   private buildPerks(character: Character): void {
     const picks = perkPointsLeft(this.draft)
     const right = TREE_W
     const tabsY = TREE_TAB_Y + TREE_SHIFT_Y
-    this.text(right, tabsY, `Picks: ${picks} of ${CREATION_PERK_POINTS}`, picks > 0 ? GOLD : DIM).setOrigin(1, 0.5)
+    this.text(right, tabsY, `Perk points: ${picks} of ${CREATION_PERK_POINTS}`, picks > 0 ? GOLD : DIM).setOrigin(1, 0.5)
     // A note is cut short before it could reach the legend at the left of its row.
     if (this.notes.length > 0) fitText(this.text(right, tabsY + 20, this.notes[0], WARN, 11).setOrigin(1, 0.5), right - legendLayout().at(-1)!.right - 12)
     const tree = this.add.container(0, TREE_SHIFT_Y)
@@ -437,6 +438,7 @@ export class CreationScene extends Phaser.Scene {
       marked: (perk) => togglePerk(this.draft, perk).draft.perks.length > this.draft.perks.length,
       onClick: (perk) => this.time.delayedCall(0, () => this.apply(togglePerk(this.draft, perk))),
       onTree: (id) => this.time.delayedCall(0, () => this.showTree(id)),
+      costTone: (perk) => draftCostTone(this.draft, perk),
       hint: (perk) => draftNodeHint(this.draft, perk),
       rule: PERKS_RULE,
     })
@@ -495,7 +497,7 @@ export class CreationScene extends Phaser.Scene {
       `Left to place:`,
       `  attributes  ${left[0]}`,
       `  skills      ${left[1]}`,
-      `  picks       ${left[2]}`,
+      `  perk points ${left[2]}`,
     ]
     const body = this.text(SUMMARY_X, HEADING_Y + 28, lines.join('\n'), TEXT, 12).setLineSpacing(5)
     this.text(SUMMARY_X, body.y + body.height + 14, this.notes.join('\n'), WARN, 11).setWordWrapWidth(SUMMARY_W)

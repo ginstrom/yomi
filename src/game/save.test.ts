@@ -146,6 +146,8 @@ describe('a save', () => {
     expect(parseSave(broken((hero) => (hero.perkPoints = '2')))).toBeNull()
     // A current save holding the old field instead is unreadable too.
     expect(parseSave(broken((hero) => ((hero.perkPicks = hero.perkPoints), delete hero.perkPoints)))).toBeNull()
+    // And one holding a stray `perkPicks` beside its perk points.
+    expect(parseSave(broken((hero) => (hero.perkPicks = 2)))).toBeNull()
   })
 
   it('reads a save of a version other than 26, 25, 24, 23, 22 or 18 as unreadable', () => {

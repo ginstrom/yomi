@@ -3,11 +3,12 @@ import { deriveCombatStats, type Character } from '../character/character.ts'
 import { ABILITIES, abilityApCost, type AbilityId } from '../combat/abilities.ts'
 import type { CombatantStats } from '../combat/combat.ts'
 import { SPELLS, spellApCost } from '../combat/spells.ts'
-import { draftCharacter, togglePerk, type CharacterDraft } from '../character/creation.ts'
+import { draftCharacter, perkPointsLeft, togglePerk, type CharacterDraft } from '../character/creation.ts'
 import {
   PERKS,
   PERK_IDS,
   cappedAttribute,
+  describePerkRequirements,
   missingRequirements,
   nodeKind,
   perkCost,
@@ -47,6 +48,8 @@ export const NODE_INSET = 12
 export const TREE_ROW_H = 30
 export const NODE_W = 196
 export const NODE_H = 26
+/** The px of a node's label area reserved at its right inner edge for the cost digit (or the mark); the label is centred in what is left. */
+export const NODE_COST_W = 14
 /** The coloured tab at a node's left edge, with its kind's glyph. */
 export const KIND_TAB_W = 18
 /** The rows the view keeps for a tree, the headings' included, so that the strip sits in one place under any. */
@@ -390,6 +393,33 @@ export function nodeSummary(character: Character, perk: PerkId): string {
     return `${title}: ${costWords(node.ability, stats)}. ${ABILITIES[node.ability].description}`
   }
   return `${title}: ${node.description}`
+}
+
+export type CostTone = 'gold' | 'dim'
+
+/**
+ * The tone of the cost digit in a node's slot: null for a node taken (the
+ * view draws a check) or a capstone locked (a cross); gold while it is open,
+ * affordable and perk points can be spent here; dim otherwise.
+ */
+export function costTone(character: Character, perk: PerkId, canAdvance: boolean): CostTone | null {
+  const state = nodeState(character, perk)
+  if (state === 'taken' || state === 'locked') return null
+  return state === 'open' && canAdvance && canAffordPerk(character, perk) ? 'gold' : 'dim'
+}
+
+/** The same for a node of the tree in creation, where the points left are the draft's. */
+export function draftCostTone(draft: CharacterDraft, perk: PerkId): CostTone | null {
+  const character = draftCharacter(draft)
+  const state = nodeState(character, perk)
+  if (state === 'taken' || state === 'locked') return null
+  return state === 'open' && perkPointsLeft(draft) >= perkCost(perk) ? 'gold' : 'dim'
+}
+
+/** The strip's asks line: "Costs 3 perk points. Asks: Level 6, Melee 55%, 3 nodes in Heavy Knight". */
+export function nodeAsks(perk: PerkId): string {
+  const asks = describePerkRequirements(perk)
+  return `Costs ${perkPointWords(perkCost(perk))}.${asks ? ` Asks: ${asks}` : ''}`
 }
 
 /** Whether a click on `perk` in creation does anything: only a tier-1 node, taken or given back (`togglePerk`). */

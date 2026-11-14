@@ -96,7 +96,7 @@ export interface CreationProbe {
   /** What is left to place of each kind. */
   attributePoints: number
   skillPoints: number
-  perkPicks: number
+  perkPoints: number
   /** Which tree the perks step shows, and its tabs, Warrior to Cleric (keys 1 to 4 switch them too). */
   tree: 'warrior' | 'scout' | 'mage' | 'cleric'
   trees: Record<'warrior' | 'scout' | 'mage' | 'cleric', ButtonProbe>
@@ -107,7 +107,7 @@ export interface CreationProbe {
   /** Each skill's level as the draft's character has it, its points placed and its buttons; on screen on the skills step. */
   skills: Record<SkillId, { level: number; placed: number; tagged: boolean; tag: ButtonProbe; minus: ButtonProbe; plus: ButtonProbe }>
   /** Every node of the tree shown, by its centre on screen, with the ranks chosen and whether a click would take or give back one; on screen on the perks step. */
-  perks: Array<Point & { perk: string; ranks: number; canClick: boolean }>
+  perks: Array<Point & { perk: string; ranks: number; canClick: boolean; cost: number }>
   /** The preset faces, by their centres on screen; on screen on the name step. */
   portraits: Array<Point & { portrait: PortraitId; picked: boolean }>
   /** `create` reads Save when editing; it is on the name step, enabled when the draft has no problems. */
@@ -391,7 +391,7 @@ export interface InventoryProbe {
   party: PortraitProbe[]
   /** What the character has waiting to spend. */
   skillPoints: number
-  perkPicks: number
+  perkPoints: number
   /** Each skill's level, with the centre on screen of the button that raises it and whether a click there would. */
   skills: Record<SkillId, Point & { level: number; canRaise: boolean }>
   /** The character's attributes as the Character tab shows them: what it was born with and what its perks add. */
@@ -422,7 +422,7 @@ export interface InventoryProbe {
    * Every node of the tree shown, by its centre on screen, with the ranks taken and whether a
    * click would take one. The nodes are on screen only while `tab` is `trees`.
    */
-  perks: Array<Point & { perk: string; ranks: number; canTake: boolean }>
+  perks: Array<Point & { perk: string; ranks: number; canTake: boolean; cost: number }>
   /** The Abilities tab's rows, every page's, spells then techniques: name, kind, AP, mana (null for an at-will) and recharge (null for none). */
   abilities: Array<{ name: string; kind: string; ap: number; mana: number | null; recharge: number | null; description: string }>
   /** The Abilities tab's mana line: "Mana 18 / 18", with ": knows no ability" for a hero that knows none. */

@@ -1,12 +1,13 @@
 import type Phaser from 'phaser'
 import type { Character } from '../character/character.ts'
-import { PERKS, describePerkRequirements, nodeKind, type NodeKind, type Perk, type PerkId } from '../character/perks.ts'
+import { PERKS, nodeKind, perkCost, type NodeKind, type Perk, type PerkId } from '../character/perks.ts'
 import { PATHS, TREE_IDS, pathsOf, type TreeId } from '../character/trees.ts'
 import type { Point } from './boardGeometry.ts'
 import { addPanelButton } from './panelButton.ts'
 import {
   KIND_TAB_W,
   LEGEND_Y,
+  NODE_COST_W,
   NODE_H,
   NODE_W,
   STRIP_HINT_LINES,
@@ -18,6 +19,7 @@ import {
   columnX,
   legendLayout,
   linkToneOf,
+  nodeAsks,
   nodeLabel,
   nodeRect,
   nodeState,
@@ -27,6 +29,7 @@ import {
   treeLinks,
   treeTabLabel,
   treeTabRect,
+  type CostTone,
   type LinkTone,
   type TreeNode,
 } from './perkTree.ts'
@@ -80,6 +83,8 @@ export interface PerkTreeOptions {
   onClick(perk: PerkId): void
   /** A click on a tree's tab; the scene redraws the view on that tree. */
   onTree(tree: TreeId): void
+  /** The tone of the cost digit in the node's slot, null where the slot shows a mark (a node taken or a capstone locked); decided by the caller. */
+  costTone(perk: PerkId): CostTone | null
   /** The strip's last line for the node pointed at: what a click would do, or why nothing. */
   hint(perk: PerkId): string
   /** What the strip says with the pointer on no node. */
@@ -222,11 +227,11 @@ export class PerkTreeView {
     const tab = scene.add.graphics()
     drawKindTab(tab, nodeKind(id), x, y, KIND_TAB_W, NODE_H, faint ? 0.6 : 1)
     container.add(tab)
-    const mark = state === 'taken' ? '  ✓' : state === 'locked' ? '  ✕' : ''
-    const words = capstone ? `★ ${nodeLabel(character, id)} ★${mark}` : `${nodeLabel(character, id)}${mark}`
+    const words = capstone ? `★ ${nodeLabel(character, id)} ★` : nodeLabel(character, id)
     const colour = state === 'taken' ? GOLD : state === 'open' ? TEXT : state === 'locked' ? LOCKED : capstone ? '#a89060' : DIM
+    const area = NODE_W - KIND_TAB_W - NODE_COST_W
     const label = scene.add
-      .text(x + KIND_TAB_W + (NODE_W - KIND_TAB_W) / 2, y + NODE_H / 2, words, {
+      .text(x + KIND_TAB_W + area / 2, y + NODE_H / 2, words, {
         fontFamily: FONT,
         fontSize: '13px',
         fontStyle: state === 'taken' || capstone ? 'bold' : '',
@@ -235,7 +240,20 @@ export class PerkTreeView {
       })
       .setOrigin(0.5)
     // A name too long for one line takes two, smaller.
-    if (label.width > NODE_W - KIND_TAB_W - 8) label.setFontSize(11).setWordWrapWidth(NODE_W - KIND_TAB_W - 8)
+    if (label.width > area - 8) label.setFontSize(11).setWordWrapWidth(area - 8)
+    // The slot at the right inner edge: the cost, or a check for a node taken and a cross for a capstone locked.
+    const tone = this.options.costTone(id)
+    const slot = state === 'taken' ? '✓' : state === 'locked' ? '✕' : String(perkCost(id))
+    container.add(
+      scene.add
+        .text(x + NODE_W - NODE_COST_W / 2 - 2, y + NODE_H / 2, slot, {
+          fontFamily: FONT,
+          fontSize: '13px',
+          fontStyle: 'bold',
+          color: state === 'taken' ? GOLD : state === 'locked' ? LOCKED : tone === 'gold' ? GOLD : DIM,
+        })
+        .setOrigin(0.5),
+    )
     container.add(label)
 
     bg.setInteractive({ useHandCursor: live })
@@ -262,7 +280,7 @@ export class PerkTreeView {
       return
     }
     what.setText(clampLines(nodeSummary(this.options.character, perk))).setColor(TEXT)
-    asks.setText(`Asks: ${describePerkRequirements(perk)}`).setY(what.y + what.height + 2)
+    asks.setText(nodeAsks(perk)).setY(what.y + what.height + 2)
     hint.setText(clampLines(this.options.hint(perk), STRIP_HINT_LINES)).setY(asks.y + asks.height + 2)
   }
 }

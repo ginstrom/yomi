@@ -36,10 +36,10 @@ async function aldricFights(game: Game, level: number, nodes: PerkId[]): Promise
   // Each node spends its tier's perk points.
   const spentBefore = (i: number) => nodes.slice(0, i).reduce((sum, perk) => sum + perkCost(perk), 0)
   for (const [i, perk] of nodes.entries()) {
-    const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees' && p.tree === 'warrior' && p.perkPicks === skills.perkPicks - spentBefore(i))
+    const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees' && p.tree === 'warrior' && p.perkPoints === skills.perkPoints - spentBefore(i))
     await game.click(tree.perks.find((n) => n.perk === perk)!)
   }
-  await game.waitFor('Inventory', (p) => p.perkPicks === skills.perkPicks - spentBefore(nodes.length))
+  await game.waitFor('Inventory', (p) => p.perkPoints === skills.perkPoints - spentBefore(nodes.length))
   await game.press('Escape')
   await game.press('Escape')
   await game.waitForScenes(['World'])

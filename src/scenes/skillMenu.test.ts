@@ -101,9 +101,24 @@ describe('why a skill is greyed', () => {
   })
 
   it('checks the weapon first, then once a battle, the recharge, mana, AP and range, in that order', () => {
-    const { unit, units } = battle({ ...abilities('aimed_shot', 'taunt') }, 4)
-    const rows = skillMenuRows({ ...unit, ap: 0, recharging: { taunt: 1 } }, [], units)
-    expect(rows.map((row) => row.why)).toEqual(['Recharging (ready in 1)', 'Needs a ranged weapon'])
+    const why = (stats: Partial<CombatantStats>, gap: number, change: { ap?: number; mana?: number; recharging?: Record<string, number>; usedOnce?: string[] }) => {
+      const { unit, units } = battle(stats, gap)
+      return skillMenuRows({ ...unit, ...change } as typeof unit, [], units)[0].why
+    }
+    // Each pair is staged with a unit that fails both of the two reasons; the earlier one is told.
+    // The weapon before the recharge (a sword cannot shoot an Aimed Shot).
+    expect(why(abilities('aimed_shot'), 1, { recharging: { aimed_shot: 1 } })).toBe('Needs a ranged weapon')
+    // The recharge before the mana (Pin costs 3 mana).
+    expect(why({ ...abilities('pin'), magic: MAGIC }, 1, { mana: 0, recharging: { pin: 1 } })).toBe('Recharging (ready in 1)')
+    // Once a battle before the mana, for a spell.
+    expect(why({ magic: { ...MAGIC, spells: ['revive'] } }, 1, { mana: 0, usedOnce: ['revive'] })).toBe('Once a battle')
+    // The mana before the AP.
+    expect(why({ ...abilities('pin'), magic: MAGIC }, 1, { mana: 0, ap: 0 })).toBe('Needs 3 mana')
+    // The AP before the range.
+    expect(why(abilities('taunt'), 4, { ap: 0 })).toBe('Needs 3 AP')
+    expect(why({ magic: { ...MAGIC, spells: ['magic_arrow'] } }, 9, { ap: 0 })).toBe('Needs 4 AP')
+    // And the range when nothing else is wrong.
+    expect(why(abilities('taunt'), 4, {})).toBe('No foe in range')
   })
 
   it('says a hostile area has no foe within its reach, its radius included', () => {

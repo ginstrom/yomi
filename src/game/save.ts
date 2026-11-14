@@ -126,6 +126,7 @@ function characterOf(saved: Character): Character {
   check(SKILL_IDS.every((id) => typeof saved.trained[id] === 'number'))
   check(Array.isArray(saved.backpack))
   check(Number.isInteger(saved.perkPoints) && saved.perkPoints >= 0)
+  check(!('perkPicks' in saved))
   return {
     ...saved,
     equipment: Object.fromEntries(Object.entries(saved.equipment).map(([slot, id]) => [slot, itemOf(id)])) as Equipment,

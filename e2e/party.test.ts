@@ -142,7 +142,7 @@ describe('the party screen', () => {
     await game.click(two.rows[2].create)
     await game.waitForScenes(['Creation'])
     const start = await game.settled('Creation')
-    expect(start).toMatchObject({ step: 'attributes', editing: false, attributePoints: 26, skillPoints: 10, perkPicks: 3 })
+    expect(start).toMatchObject({ step: 'attributes', editing: false, attributePoints: 26, skillPoints: 10, perkPoints: 3 })
     expect(Object.values(start.attributes).map((a) => a.value)).toEqual([1, 1, 1, 1, 1, 1])
     expect(start.attributes.strength.minus.enabled).toBe(false)
 
@@ -168,11 +168,13 @@ describe('the party screen', () => {
     expect(perks.tree).toBe('warrior')
     expect(Object.values(perks.trees).every((tab) => tab.visible && tab.enabled)).toBe(true)
     expect(node(perks, 'toughness').canClick).toBe(true)
+    expect(node(perks, 'toughness').cost).toBe(1)
+    expect(node(perks, 'armor_breaker').cost).toBe(2)
     // Only the first tier answers a click at creation: Gain Strength and Armour Breaker ask level 2.
     expect(node(perks, 'gain_strength').canClick).toBe(false)
     expect(node(perks, 'armor_breaker').canClick).toBe(false)
     await game.click(node(perks, 'weapon_training'))
-    await game.waitFor('Creation', (c) => c.perkPicks === 2)
+    await game.waitFor('Creation', (c) => c.perkPoints === 2)
 
     // The Scout tree, by its tab: Keen Eye (luck 6) is open, Far Shot of the second tier is not.
     await game.click(perks.trees.scout)
@@ -181,13 +183,13 @@ describe('the party screen', () => {
     expect(node(scout, 'far_shot').canClick).toBe(false)
     await game.click(node(scout, 'far_shot'))
     await game.click(node(scout, 'keen_eye'))
-    const picked = await game.waitFor('Creation', (c) => c.perkPicks === 1)
+    const picked = await game.waitFor('Creation', (c) => c.perkPoints === 1)
     expect(picked.draft.perks).toEqual(['weapon_training', 'keen_eye'])
     // A node has one rank: a click on one taken gives it back, and another takes it again.
     await game.click(node(picked, 'keen_eye'))
-    await game.waitFor('Creation', (c) => c.perkPicks === 2)
+    await game.waitFor('Creation', (c) => c.perkPoints === 2)
     await game.click(node(picked, 'keen_eye'))
-    await game.waitFor('Creation', (c) => c.perkPicks === 1)
+    await game.waitFor('Creation', (c) => c.perkPoints === 1)
 
     // Keys 1 to 4 switch trees too: the Mage tree, where nothing is open to intelligence 4 and Magic 8%.
     await game.press('3')
@@ -228,7 +230,7 @@ describe('the party screen', () => {
     await game.click(world.party[2])
     await game.waitForScenes(['Inventory'], ['World'])
     const panel = await game.waitFor('Inventory', (p) => p.party[2].active)
-    expect(panel).toMatchObject({ tab: 'skills', skillPoints: 4, perkPicks: 1 })
+    expect(panel).toMatchObject({ tab: 'skills', skillPoints: 4, perkPoints: 1 })
     // 45 from creation's points and tag, and Weapon Training's 10.
     expect(panel.skills.melee).toMatchObject({ level: 55, canRaise: true })
     await game.click(panel.skills.melee)
@@ -244,7 +246,7 @@ describe('the party screen', () => {
     await game.waitForScenes(['Creation'])
     const aldric = await game.settled('Creation')
     // Everything as it was chosen.
-    expect(aldric).toMatchObject({ step: 'attributes', editing: true, attributePoints: 0, skillPoints: 0, perkPicks: 0 })
+    expect(aldric).toMatchObject({ step: 'attributes', editing: true, attributePoints: 0, skillPoints: 0, perkPoints: 0 })
     expect(aldric.draft).toMatchObject({
       name: 'Aldric',
       portrait: 'knight',
@@ -263,7 +265,7 @@ describe('the party screen', () => {
 
     // One more point off Strength and Heavy Hand, which asks 6, is dropped, and the screen says so.
     await game.click(changed.attributes.strength.minus)
-    const dropped = await game.waitFor('Creation', (c) => c.perkPicks === 1)
+    const dropped = await game.waitFor('Creation', (c) => c.perkPoints === 1)
     expect(dropped.notes).toEqual(['Heavy Hand dropped: it asks Strength 6'])
     await game.click(dropped.attributes.strength.plus)
     await game.waitFor('Creation', (c) => c.attributePoints === 0)
@@ -282,7 +284,7 @@ describe('the party screen', () => {
     await game.waitForScenes(['Creation'])
     const again = await game.settled('Creation')
     expect(again.draft).toMatchObject({ attributes: { strength: 6, luck: 7 }, perks: ['weapon_training', 'toughness'] })
-    expect(again.perkPicks).toBe(1)
+    expect(again.perkPoints).toBe(1)
     // Cancel leaves the member as it was.
     await game.click(again.attributes.endurance.minus)
     await game.waitFor('Creation', (c) => c.attributePoints === 1)
