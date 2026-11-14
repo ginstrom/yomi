@@ -66,6 +66,12 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 ## Notes carried forward
 
+- Verification-fix review (clean, dae81d1) left these for the next step that touches them:
+  - CLAUDE.md:118 says the panel opens over Battle with "(C, S, B, I)"; it is "C, S, I; B within the panel".
+  - skillMenu.test.ts:103 doesn't check the full order of reasons (weapon against recharge, mana against AP).
+  - The InventoryScene probe gives cast buttons for spells on pages that aren't shown.
+  - abilityList `footerTop` is used only by tests.
+
 - Step 01 baseline is the reference (SN5 441, SP5 445), not CLAUDE.md's older figures.
 
 
