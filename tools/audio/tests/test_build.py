@@ -415,3 +415,56 @@ def test_check_names_each_budget_exceeded(built):
     found = " ".join(problems(built))
     for name in ("sfx_bytes_per_format", "sources_bytes", "voice_bytes_per_format"):
         assert name in found
+
+
+# Review round 1 ----------------------------------------------------------------------
+
+
+def set_entry(project, id, field, value):
+    path = project / "sources.toml"
+    text = path.read_text()
+    at = text.index(f'id = "{id}"')
+    rest = re.sub(rf'(?m)^{field} = ".*"$', f'{field} = "{value}"', text[at:], count=1)
+    path.write_text(text[:at] + rest)
+
+
+def test_an_incremental_build_still_refuses_a_licence_changed_since(built):
+    set_entry(built, "oga_hit_flesh_7", "licence", "CC-BY-4.0")
+    with pytest.raises(AudioError, match="battle.hit.slash.*oga_hit_flesh_7.*CC-BY-4.0"):
+        quiet(built)
+
+
+def test_a_cue_build_still_checks_every_other_cues_sources(built):
+    set_entry(built, "oga_hit_flesh_7", "licence", "CC-BY-4.0")
+    with pytest.raises(AudioError, match="battle.hit.slash.*oga_hit_flesh_7"):
+        quiet(built, cue="ui.click")
+
+
+def test_an_incremental_build_still_refuses_an_edited_sha256_field(built):
+    set_entry(built, "oga_hit_flesh_7", "sha256", "0" * 64)
+    with pytest.raises(AudioError, match="oga_hit_flesh_7.*SHA-256"):
+        quiet(built)
+
+
+def test_check_reports_a_cue_stale_when_its_sources_entry_changes(built):
+    set_entry(built, "oga_hit_flesh_7", "licence", "CC0-1.0")  # still allowed, but not what was built
+    found = problems(built)
+    assert any("battle.hit.slash" in p and "changed since the last build" in p for p in found)
+
+
+def test_check_compares_the_whole_bank_json(built):
+    path = bank_dir(built) / "ui.json"
+    sprite = json.loads(path.read_text())
+    first = next(iter(sprite["spritemap"]))
+    sprite["spritemap"][first]["start"] += 0.010  # same order, but moved
+    sprite["spritemap"][first]["end"] += 0.010
+    path.write_text(json.dumps(sprite))
+    assert any("ui.json" in p for p in problems(built))
+
+
+def test_check_names_a_bank_json_with_wrong_resources_or_loop(built):
+    path = bank_dir(built) / "ui.json"
+    sprite = json.loads(path.read_text())
+    sprite["resources"] = ["ui.ogg"]
+    path.write_text(json.dumps(sprite))
+    assert any("ui.json" in p for p in problems(built))

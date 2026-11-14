@@ -53,7 +53,7 @@
         300,
         300
       ],
-      "inputs": "21afa28a37a6a312d0d10b2b50ac620f8e27690001daba4c4c546e53f0fc8c2c",
+      "inputs": "8fb33a57fd9dd6ff5cb88ec381ae5cda9a623367d791c484d054ab5539cb1fd2",
       "markers": [
         "battle.ability.spit#0",
         "battle.ability.spit#1",
@@ -67,7 +67,7 @@
         300,
         300
       ],
-      "inputs": "2eb3ecece3ae1089eb31e61b6c2a49a9596bbc0f3c310b81729ce8d58da3ad4c",
+      "inputs": "59c7cdb3400c3a7af83cf5d695f6b830498f4e028bb78ee7ec2f6754edec7993",
       "markers": [
         "battle.ability.web#0",
         "battle.ability.web#1",
@@ -83,7 +83,7 @@
         300,
         300
       ],
-      "inputs": "8e4b6fdd9d1b2f6de34663bb1a88dca9c0dd8a5f4d37d5ce94a2e38162af3d7e",
+      "inputs": "3855c93417e2e7a874e3ec949924e49ad45c062dcf8e9e3f5d2ee316313803c9",
       "markers": [
         "battle.armor.metal#0",
         "battle.armor.metal#1",
@@ -99,7 +99,7 @@
         300,
         300
       ],
-      "inputs": "1a8d59b1a0694e07821fad1dbf6531856af469a6e974288152d3a265fb83f67b",
+      "inputs": "e2cf4722c66549523e588fd8c0c4339bef585ab426582225347bf02ae676407e",
       "markers": [
         "battle.cast.arcane#0",
         "battle.cast.arcane#1",
@@ -113,7 +113,7 @@
         300,
         300
       ],
-      "inputs": "2cc52457120297915014223c44e4d9fdde804d0e4b5c0a559eb1556994bfccf8",
+      "inputs": "4910ef0438280cdc5e1e3ff3825544bda36f5e5903d8928d7917ce0e69d5cb0d",
       "markers": [
         "battle.cast.fire#0",
         "battle.cast.fire#1",
@@ -127,7 +127,7 @@
         300,
         300
       ],
-      "inputs": "313620754b17a738cc92da5bd9cb1c204963bba9a5f71812cd420e8793864e9c",
+      "inputs": "8aaf387efc83203ff5b503877032aeca14d3f37161645e0b4580df46693db40f",
       "markers": [
         "battle.cast.frost#0",
         "battle.cast.frost#1",
@@ -141,7 +141,7 @@
         300,
         300
       ],
-      "inputs": "afab82b0990f23b8f17922a6957d839ee9ceed19032694c9ef6b602f3859916d",
+      "inputs": "eba6af1d0ad556d0a22d92da9a096c48d7d50249e26c0052b5d4f5dfe238bde8",
       "markers": [
         "battle.cast.holy#0",
         "battle.cast.holy#1",
@@ -155,7 +155,7 @@
         300,
         317
       ],
-      "inputs": "8225b994acb9bcaf2d9b3eb387f482d56c357781c3db3a5f326417873a9794c3",
+      "inputs": "6d3dd8395f363eee9affaed999c9cd4b836f510355999468d2c37e83d44340ba",
       "markers": [
         "battle.cast.shadow#0",
         "battle.cast.shadow#1",
@@ -169,7 +169,7 @@
         300,
         300
       ],
-      "inputs": "840f502971d754b2d24dc9e7672c591007cb16b5f56deb85bfcb55ab62ec033c",
+      "inputs": "3a13defd673f9701e15088428bdab6529ef55d86cc424b6f3782b8ff10f7f5e5",
       "markers": [
         "battle.cast.storm#0",
         "battle.cast.storm#1",
@@ -183,7 +183,7 @@
         300,
         300
       ],
-      "inputs": "47a3605fd9109522a3eb9ac53ad2acc526b65c46efc11bf6541f9e88a2c65565",
+      "inputs": "b8600810a0064ace7ccbef7ca7a990c062cd9e6be5efb3347764ff0c193d8ef4",
       "markers": [
         "battle.cast.venom#0",
         "battle.cast.venom#1",
@@ -197,7 +197,7 @@
         300,
         300
       ],
-      "inputs": "e086e92bfe7d7f0825d9c30f1c6f655f24c8084d4cfcf66e730c0bf72daf4ff1",
+      "inputs": "8f616310fc034d3fdba590e315551062445492af1fb17e0a521058f3c84aa98d",
       "markers": [
         "battle.cast.ward#0",
         "battle.cast.ward#1",
@@ -211,7 +211,7 @@
         748,
         719
       ],
-      "inputs": "7fb907450c7238856f1317045fbecb92da2b3ad42a1c8e97c4d0248694856073",
+      "inputs": "369fd4a31a77517b5bc6b7f20987b00d58075d7f9a7295a5084ca6655846bce7",
       "markers": [
         "battle.death.brute#0",
         "battle.death.brute#1",
@@ -226,7 +226,7 @@
         398,
         387
       ],
-      "inputs": "669c26fd7f4fd352e952a02e854680d842226f8c2b33cdfc69528064075643b2",
+      "inputs": "893d9f77ea68542552c4906c798be3dd871875f009f7130aaad68354d06abdef",
       "markers": [
         "battle.death.goblinoid#0",
         "battle.death.goblinoid#1",
@@ -240,7 +240,7 @@
         515,
         587
       ],
-      "inputs": "6f9e1ccdf705a883618513894e4f44f12b8b60ad73e8014b23ac6d2ab629106e",
+      "inputs": "6a52b25af7262e4d3b08949a758c2d9cb7d9884ccea62b39110f17787c5d2193",
       "markers": [
         "battle.death.hero#0",
         "battle.death.hero#1"
@@ -251,7 +251,7 @@
       "durationsMs": [
         673
       ],
-      "inputs": "374c9cc29041b967c287d8f4fa16de73b911a3e8841b37d78e0689499452d4ee",
+      "inputs": "da30c26473c31025e18c9d1ebca143b585df9c0568f3ae74b404809b1bfc0cf5",
       "markers": [
         "battle.death.horror#0"
       ]
@@ -264,7 +264,7 @@
         379,
         347
       ],
-      "inputs": "799cbaac3b53126d31e16d807faafa4a7c2bd8416781ffcc9c9d8f0d7c2e6e54",
+      "inputs": "5d28ae33ee03f1ba7c182f02bde343787e53110c49af8be5216835f460e8f70f",
       "markers": [
         "battle.death.human#0",
         "battle.death.human#1",
@@ -278,7 +278,7 @@
         364,
         301
       ],
-      "inputs": "96fe8f8c48382f3299c43f349d1dc0f4947edd4e184b8a2fd7f9897c88d6a89f",
+      "inputs": "a7c23d9ed06d1d22f94b3ff7439242e297458f9c501aa3eefac38e2aecb2115a",
       "markers": [
         "battle.death.salamander#0",
         "battle.death.salamander#1"
@@ -290,7 +290,7 @@
         300,
         300
       ],
-      "inputs": "db500435c8285160b64539cda3bcda1435b3dcc84e1e29a0641c3899791e86bd",
+      "inputs": "5ad05ca183ff33067d081159d04baa67e2d7d56d06393bfaf6e7eec290955367",
       "markers": [
         "battle.death.spider#0",
         "battle.death.spider#1"
@@ -302,7 +302,7 @@
         300,
         300
       ],
-      "inputs": "734e74c5fa5231cf84202c8d8a73f505d52b29f4873321b84660e9a10724d951",
+      "inputs": "70460b2ba716bd22a0fa94aef0919e6ba9751fee4a19d08ab4fa0e1427d46f55",
       "markers": [
         "battle.element.acid#0",
         "battle.element.acid#1"
@@ -314,7 +314,7 @@
         300,
         300
       ],
-      "inputs": "48fe8a684fb6bf99fcab4a3d7951dcf606949725f31affbd051f93a5e76cf3d6",
+      "inputs": "139040da1a20b7c95eea7bf04bb53ab64e8c810b04496e3771fcccc576135f8a",
       "markers": [
         "battle.element.blight#0",
         "battle.element.blight#1"
@@ -326,7 +326,7 @@
         300,
         300
       ],
-      "inputs": "b937c7aa133a5ae7fa57c7b71cca76edf3ad2409841d9ff9d5c3c460579412c9",
+      "inputs": "f255ae4009f447b50d1891f05a8e5ba9a6365b1e1eaa0bf28a0aa578f0f9a6d3",
       "markers": [
         "battle.element.fire#0",
         "battle.element.fire#1"
@@ -338,7 +338,7 @@
         300,
         300
       ],
-      "inputs": "58485f91f74d90f4c991f2dbdf93d78be1acbff86c1bff13c0c780d6cd46e594",
+      "inputs": "dd73ac73472fc80c06b8bf7cd799eadbe26d5b9ddad9278b467d2843c97d57de",
       "markers": [
         "battle.element.frost#0",
         "battle.element.frost#1"
@@ -350,7 +350,7 @@
         300,
         300
       ],
-      "inputs": "dd717ded0d3eb7fdfb5b6d325331dc15ce9657fdccf0b774daae2cae0f3884ff",
+      "inputs": "7709a288e7fa66b65f2d7bcdc3a378912f327b45efa6d13a32ff4b04b991acd4",
       "markers": [
         "battle.element.lightning#0",
         "battle.element.lightning#1"
@@ -362,7 +362,7 @@
         300,
         300
       ],
-      "inputs": "153144124408a9c8824ba0d4f65c9211ae5fedacf7122fb0f537457efc38704b",
+      "inputs": "9d39f58ad3713dda411a30d83fd599a17263478f35b187a22638299d51539210",
       "markers": [
         "battle.element.poison#0",
         "battle.element.poison#1"
@@ -375,7 +375,7 @@
         300,
         447
       ],
-      "inputs": "c1ba1860c8686f2fc47a3009e0050d8a1ce3cff3fe1b275fbbae18c71e942776",
+      "inputs": "4ce768f4f070ba9386606f127f01f39e6c81e6eae85ed6151f7ac7490073c2c1",
       "markers": [
         "battle.heal.small#0",
         "battle.heal.small#1",
@@ -391,7 +391,7 @@
         300,
         300
       ],
-      "inputs": "00b0200cc9ba15983c470656b6f06bdc27309c994b168aba9e84a7dbf379176d",
+      "inputs": "635ec34ba565bf5394cf6cfc19a23fed34a996c96abdbe9bde10a50db7b8f813",
       "markers": [
         "battle.hit.claw#0",
         "battle.hit.claw#1",
@@ -408,7 +408,7 @@
         300,
         300
       ],
-      "inputs": "01d8506ec2a305a0cde04fd96c19b8dc2335220d49fa2f4e2d9924d7b7c6c05b",
+      "inputs": "0cd2a464de67870b3357fcd71d9146aa7df90ec71e60f4f394e31827e4c596bc",
       "markers": [
         "battle.hit.crit#0",
         "battle.hit.crit#1",
@@ -426,7 +426,7 @@
         300,
         300
       ],
-      "inputs": "0b95b530be03c3efa66986e99750d84c773c07d62385166525a77ee183f23dd1",
+      "inputs": "e0db40d48f5a280480b4d347c2b5c90ba793956e44653bee5d8956c6862346fd",
       "markers": [
         "battle.hit.crush#0",
         "battle.hit.crush#1",
@@ -443,7 +443,7 @@
         300,
         300
       ],
-      "inputs": "90cd5ef4d0310a68e21bf643851d1780370e1b00d4f081a0496e964a3b4a7437",
+      "inputs": "c7d265d9293928892d4572f710925915d3c028e6ee7f87ef5bf296d0765c2e70",
       "markers": [
         "battle.hit.image#0",
         "battle.hit.image#1",
@@ -458,7 +458,7 @@
         300,
         300
       ],
-      "inputs": "c329687648d067f56f214cf223bb1de8509dbac2c065cdbb293fdc4aa730ff1b",
+      "inputs": "9ae067d18482443929f0e1795b78b65282dde5f5885bbd64de67b6d3db645917",
       "markers": [
         "battle.hit.magic#0",
         "battle.hit.magic#1",
@@ -476,7 +476,7 @@
         300,
         300
       ],
-      "inputs": "386bf2c74965eed016b7ea5fc5d711b01cc5178c8359fbf794d05409b0820d42",
+      "inputs": "08ab2fdf9a0bfb8049894b0fa2422b62ebde11eeb07709db103220724373ee41",
       "markers": [
         "battle.hit.pierce#0",
         "battle.hit.pierce#1",
@@ -496,7 +496,7 @@
         300,
         300
       ],
-      "inputs": "bb3992bc7c92c5346634d361171142665d27fbeb110a14e65011a6959effdb48",
+      "inputs": "bd63e639479a3e2e198d99eca91532eed8438d8dd4520765c62d89b64a8b67f6",
       "markers": [
         "battle.hit.slash#0",
         "battle.hit.slash#1",
@@ -514,7 +514,7 @@
         300,
         300
       ],
-      "inputs": "6653082d32d241e90919f97a814c6b3aa3debe253e7e5a9e0493045dcba2b079",
+      "inputs": "6fbee57fb5f77cf89897b5837754c669026c270ffae13d18e1075a9978722dee",
       "markers": [
         "battle.impact.acid#0",
         "battle.impact.acid#1",
@@ -530,7 +530,7 @@
         300,
         300
       ],
-      "inputs": "3dacb990f88eb24aaa76395708ea53fb7a7f652abfc0edab85a02806e30c617c",
+      "inputs": "a5eaf96b7e18b8f0eaedf024b8cf125d2db29ab95a06d948ae05534de5135472",
       "markers": [
         "battle.impact.arcane#0",
         "battle.impact.arcane#1",
@@ -545,7 +545,7 @@
         330,
         316
       ],
-      "inputs": "44df7ea05bcb782c3b77fd2f3db1fb24038cf9a983edab42c928251fbd7f0bb5",
+      "inputs": "c97b8571542044b3d6d744e3584dbc255e4f10bb9e7ea72c08dd44489eb2fda2",
       "markers": [
         "battle.impact.buff#0",
         "battle.impact.buff#1",
@@ -560,7 +560,7 @@
         300,
         300
       ],
-      "inputs": "a9f5cb9916493fba277fb80cb70df0b7eb4e51376a83b6e14ff9bf99988631c9",
+      "inputs": "8b36852517d31563b1670d64067c44823c2a9e2aeb89ad82e2d74aba31c38dd7",
       "markers": [
         "battle.impact.fire#0",
         "battle.impact.fire#1",
@@ -575,7 +575,7 @@
         300,
         300
       ],
-      "inputs": "0376d0172fbe96199260ede2ed8f7166d185ec5007ef471b9486a3aa5ce6659f",
+      "inputs": "767b5975eec916a8405fba21cdb6af2a8826ef07fcd5ce66b6327c8684da7f1e",
       "markers": [
         "battle.impact.fireball#0",
         "battle.impact.fireball#1",
@@ -590,7 +590,7 @@
         300,
         300
       ],
-      "inputs": "513adc7623d0ee33cb87906fc21dd9095ece32bcf1cb59353dfbadc009f8f717",
+      "inputs": "c3707dff5ffb562f06d7a7d5659ea6a87e12184fea12e691dd2a499c73bfb5be",
       "markers": [
         "battle.impact.frost#0",
         "battle.impact.frost#1",
@@ -605,7 +605,7 @@
         375,
         364
       ],
-      "inputs": "328174301b5cfcd8988b6695efa59f8eb287bd0f72ae42e3740d6c21c759c242",
+      "inputs": "5e45ba515a2f231c30a56b82a073178f91cd655a28eb5f5b31e7a5f46c416fd1",
       "markers": [
         "battle.impact.heal#0",
         "battle.impact.heal#1",
@@ -619,7 +619,7 @@
         300,
         300
       ],
-      "inputs": "02857005fca13588e70794144e8ea527cce1565b32c6a56257f7ebcc36a14940",
+      "inputs": "fd47050fa2852c1b6f530bc6cf146cc62648b32db3eff168dd03bc6c5c1714ab",
       "markers": [
         "battle.impact.hex#0",
         "battle.impact.hex#1",
@@ -633,7 +633,7 @@
         300,
         300
       ],
-      "inputs": "a644883657dd955ea0fc4d31256651b133e9daa372ede0f0bfe217a5f916d559",
+      "inputs": "26436a7f672a97f7cf88846c2fff64bea7b4ff7c9b029510573947f394f44734",
       "markers": [
         "battle.impact.lightning#0",
         "battle.impact.lightning#1",
@@ -647,7 +647,7 @@
         300,
         300
       ],
-      "inputs": "d91718e83967f857a9637e2103d86076fa909e2547b6064c0dc20333d1c73195",
+      "inputs": "b37b8bfb87df8b852431a707161ea8ebb139dbd1a9aa6de042529ff9f1395321",
       "markers": [
         "battle.impact.poison#0",
         "battle.impact.poison#1",
@@ -662,7 +662,7 @@
         300,
         300
       ],
-      "inputs": "139da5d0fcc4db557a5e14dd14497c3bf00915ad1a1b32087e711e4ad5c3a1d4",
+      "inputs": "2d7909580cdc4fb16f7b99fb5b25206b170dc44b3d3c6b78812c056e5b187cc1",
       "markers": [
         "battle.impact.shadow#0",
         "battle.impact.shadow#1",
@@ -677,7 +677,7 @@
         300,
         300
       ],
-      "inputs": "5beed4f4b6120f0c36f45131dc681cbe9ebbb9b3329d1bd4c642811d7b1f70a8",
+      "inputs": "6ef42f92956322d6c32126c372493fc552a9fdb306bd44bec1bd58c2d96d5a74",
       "markers": [
         "battle.impact.web#0",
         "battle.impact.web#1",
@@ -691,7 +691,7 @@
         300,
         300
       ],
-      "inputs": "a795486eaff351b42bbde3cdb8e90da66518b4a2704ba59a9e88eabdc403f614",
+      "inputs": "23ed8b248b8a2f685fee589f498b5155193417ea0bdda52598503e05715b3715",
       "markers": [
         "battle.miss.magic#0",
         "battle.miss.magic#1",
@@ -706,7 +706,7 @@
         300,
         300
       ],
-      "inputs": "3318f60a1aaf84471abc718e47c10d41106a106f25883d081e2b01999ec4b129",
+      "inputs": "092b317b62a2c0edd0f50363832049e9099ab585d327460be0432704eb9d1559",
       "markers": [
         "battle.miss.shot#0",
         "battle.miss.shot#1",
@@ -722,7 +722,7 @@
         250,
         250
       ],
-      "inputs": "3df9a74f885fb0e90aea5581fc9ec8e7ff81fcec7e8617e380c7bf8ee8469396",
+      "inputs": "09769dc93fd3968eb402e4b454eaebdc17db613d5991d9e46c94b69fe2b56e54",
       "markers": [
         "battle.miss.swing#0",
         "battle.miss.swing#1",
@@ -737,7 +737,7 @@
         300,
         422
       ],
-      "inputs": "b5747a70ab3f9044a407b7546b2050745c24d5f02067094e07ed82821958f47e",
+      "inputs": "da14f7249e727c9968a19c0d3867cdedfc7dc6cf1cc578a2cf2bd1df45952e46",
       "markers": [
         "battle.regen#0",
         "battle.regen#1",
@@ -753,7 +753,7 @@
         300,
         300
       ],
-      "inputs": "841ac80c1f8510b62d56cfa1bea4a27ee1ecba8ebcc1859f9d333ffb9d6ea7ca",
+      "inputs": "10179b4e503e64a8b04320c605f424f5741a3a3ee8098d35da95b04d004fab8f",
       "markers": [
         "battle.shot.bow#0",
         "battle.shot.bow#1",
@@ -770,7 +770,7 @@
         300,
         300
       ],
-      "inputs": "0aca6d35fc6f4ec8297664ed0f356da88c2227be1f228698194648a1d7f38bcd",
+      "inputs": "640b05166068c91abc7d544f5bb59e6ec027a119b2362f8a6225bcff442a7962",
       "markers": [
         "battle.shot.crossbow#0",
         "battle.shot.crossbow#1",
@@ -787,7 +787,7 @@
         300,
         300
       ],
-      "inputs": "09794e7257652ec1b0ee305b0cde9f2bd9216326de34c5c27523d5e1f3df54dd",
+      "inputs": "8948cdce232baeeb9da2c6afaa1de2ec44bb9c2660df192964360d307fc99bd5",
       "markers": [
         "battle.shot.wand#0",
         "battle.shot.wand#1",
@@ -808,7 +808,7 @@
         250,
         250
       ],
-      "inputs": "c7214ad5179995964291b9011a20d685007e2b9658fee34dec0ead550c18c129",
+      "inputs": "50e26ef22b771919290e433391f713ba8084dd205f0261b642d44f2ace9a9742",
       "markers": [
         "battle.step.armored#0",
         "battle.step.armored#1",
@@ -830,7 +830,7 @@
         300,
         300
       ],
-      "inputs": "5d36bc5666a128590486a1f686b9dc745db8ed9ccc0d8d9e70fd6bcf9b1ec94b",
+      "inputs": "857daf820c9b37c7f0e87e9279a1dbab6ebf80984c008b64e55fac728068e2c3",
       "markers": [
         "battle.step.heavy#0",
         "battle.step.heavy#1",
@@ -852,7 +852,7 @@
         200,
         200
       ],
-      "inputs": "99e1db2f11bd8b496ea0ed3e97618bbbee7d849065faf7c6310b6217f8084db3",
+      "inputs": "dde86d57800d464b885486cc4f27c1c22338ecd60b714aef62cda92f17b71fb7",
       "markers": [
         "battle.step.light#0",
         "battle.step.light#1",
@@ -872,7 +872,7 @@
         300,
         300
       ],
-      "inputs": "6f9c8706d29c8e1b5e58544480818267d38e69aae5facc5d2c1a343fc47a673f",
+      "inputs": "703b4be0b5ddd434da20afe6ce697a29c763f337378780edd70641fc8388e736",
       "markers": [
         "battle.step.skitter#0",
         "battle.step.skitter#1",
@@ -887,7 +887,7 @@
         250,
         250
       ],
-      "inputs": "b56ed8c29d41a59320a576e9cfa361f62c1d04ecaa6dd1b0349108c0618b3fef",
+      "inputs": "940a92bc0ccc857eb97641e1b5ec26fd2f82fbcffb9d647391b952bea3eb4571",
       "markers": [
         "battle.swing.bite#0",
         "battle.swing.bite#1",
@@ -903,7 +903,7 @@
         300,
         300
       ],
-      "inputs": "ad3a7c7663e93dff2dbb621e9d2c32c8997a8d98265f8aebbc8743e48ee67873",
+      "inputs": "b672336e45ac42ee4502ea7f0e2bffb680410c6b464101abd978066817c9cf6e",
       "markers": [
         "battle.swing.blade#0",
         "battle.swing.blade#1",
@@ -920,7 +920,7 @@
         300,
         300
       ],
-      "inputs": "b3b53c26adda04aefdc9e570d49abb9bc487c3e002033d64197ca754ef90b6de",
+      "inputs": "7da25d5928e2f0de7add73562b9dcc84d46883347ba62df6ca1185363c104738",
       "markers": [
         "battle.swing.claw#0",
         "battle.swing.claw#1",
@@ -937,7 +937,7 @@
         300,
         300
       ],
-      "inputs": "c80cc9740546abbbb1d8d5424efb0ecac086836a2d85a33e80746f5d84689869",
+      "inputs": "9707727eece45bede99173106f9e94464ffd861f09afe815dee0e01fe3cb4750",
       "markers": [
         "battle.swing.heavy#0",
         "battle.swing.heavy#1",
@@ -955,7 +955,7 @@
         200,
         200
       ],
-      "inputs": "ee9d00274285e52aa4b7487d6b67e490acd0a22a51ea7270e35ea6fefd4d6846",
+      "inputs": "71abe22a8d3e4e794dff5181f3d8856ae07f0ff34cf2f5d738828d5c90ee170d",
       "markers": [
         "battle.swing.light#0",
         "battle.swing.light#1",
@@ -972,7 +972,7 @@
         250,
         250
       ],
-      "inputs": "248d5e7d15fdd513e82acb8973e99fbe92c57893a71c3700fca78a20fa33e40b",
+      "inputs": "532f6dd9efdf384aa28c9214dda88bf6d0b67ccba9593ff1c2d7498ae405ac81",
       "markers": [
         "battle.swing.thrust#0",
         "battle.swing.thrust#1",
@@ -985,7 +985,7 @@
       "durationsMs": [
         2000
       ],
-      "inputs": "d0f621ca1673ac46c2deb339eb9940a3cda1c1373e16a58003f3411a31f79b7c",
+      "inputs": "b74798d4632e49532ae52ea6ed3dc517baf412c7976e0df940769a8e9fe203a0",
       "markers": [
         "stings.defeat#0"
       ]
@@ -995,7 +995,7 @@
       "durationsMs": [
         735
       ],
-      "inputs": "b9c42fb0353e6c9c5721d0b42eec0145db1f625622395d028406989f94d98560",
+      "inputs": "ab98333828576f21caa173fb606bff82afd5f54219fc94d49d56cdf0deb9895b",
       "markers": [
         "stings.level_up#0"
       ]
@@ -1005,7 +1005,7 @@
       "durationsMs": [
         1100
       ],
-      "inputs": "04cc31331679870e28ef04e83fbb9c824ce722f790f923866f253a9fcf7bb465",
+      "inputs": "12da1973435931110dfd6575c7970d51e17c6e4d63e207e423f49ed4ba109904",
       "markers": [
         "stings.victory#0"
       ]
@@ -1017,7 +1017,7 @@
         120,
         120
       ],
-      "inputs": "a30039f2a297c9a3419268cd988ba52bc645475649f6621b7061eaa78f524e76",
+      "inputs": "8ae4a91335bbdbcb38ed9aa463f9f53260ddbe301d9429ca31896d5dd5585872",
       "markers": [
         "ui.back#0",
         "ui.back#1",
@@ -1032,7 +1032,7 @@
         60,
         60
       ],
-      "inputs": "e0ebd31cf44072642ae8c39fce9ba28769dfbc28cccd8f8a1ea51d9feba70e13",
+      "inputs": "9f1c95e56e26ac3df041c1aadbed3dcb4e341c1bc7ae3f3fc55bc1971ef9207f",
       "markers": [
         "ui.click#0",
         "ui.click#1",
@@ -1047,7 +1047,7 @@
         250,
         250
       ],
-      "inputs": "7ae4e2fe332dd073f59b666599ec966c10264238043c2376b6171280ed679324",
+      "inputs": "0700fe606f64d4f1223583c03ed4ce27fe6d4fdb7566e60f2410481eedb61810",
       "markers": [
         "ui.confirm#0",
         "ui.confirm#1",
@@ -1061,7 +1061,7 @@
         200,
         200
       ],
-      "inputs": "9fa83eacbb81471fa52a84ba2f40db613d9fad65335aa1b73bb8c7fe5c42d1ee",
+      "inputs": "b32faa6af98a52f6949638a3d9818855ee3c8b2309a3f7e59eef257459f449f7",
       "markers": [
         "ui.error#0",
         "ui.error#1",
@@ -1078,7 +1078,7 @@
         300,
         300
       ],
-      "inputs": "f4a393a4d511062d744e1e051a37080359403e0308de433ab8619c633798589b",
+      "inputs": "e4a65bc2800adc14d84632bbceb02f0236ecec5685242fa1435fc7e23cf15e2d",
       "markers": [
         "ui.gear#0",
         "ui.gear#1",
@@ -1094,7 +1094,7 @@
         354,
         308
       ],
-      "inputs": "38605b62d6a2d0a340018144f1086629d5077c92cafa2602ed2409d4c8215c43",
+      "inputs": "28dd0df5eb67e0d89439cbe1c452deb50215cbf50ab5090410ec24db7357eef5",
       "markers": [
         "ui.learn#0",
         "ui.learn#1"
@@ -1108,7 +1108,7 @@
         150,
         150
       ],
-      "inputs": "ec3e99fb9f99b1568db2d8e73ebf881e76dd174d847f30f93ffe49d0fbbf96ef",
+      "inputs": "dbbe17e7c20ef7b49f5f6602df912a0069e06397043bfef0ded6edfcf1bac6b5",
       "markers": [
         "ui.tab#0",
         "ui.tab#1",
@@ -1123,7 +1123,7 @@
         300,
         455
       ],
-      "inputs": "4841d3e9080dc09970144b6c0d844cbb305fb03f9be52a6285c2660b800e0d25",
+      "inputs": "8867180ca4baf4cd5bf2b85170f469f4506a350d57a8cffb5a8d9c7adec95e26",
       "markers": [
         "world.arrive#0",
         "world.arrive#1",
@@ -1137,7 +1137,7 @@
         300,
         300
       ],
-      "inputs": "d1dc742150822d85bad9fd2b5a5c5d303ee0a7297359dc9249e527465440fe5b",
+      "inputs": "201054a9d5841d101178ca4149d53625436dd4037490d9f277a0c108fdebdbe6",
       "markers": [
         "world.build#0",
         "world.build#1",
@@ -1150,7 +1150,7 @@
         1425,
         1363
       ],
-      "inputs": "d18ccec832bb29b8b23f4597940501c42bf21a44b9578ffde2725d9cd52ad6f0",
+      "inputs": "ade43e48f30fd78d3f59c334960001718676162a261d02cce04d96adaf9ff90f",
       "markers": [
         "world.captured#0",
         "world.captured#1"
@@ -1164,7 +1164,7 @@
         300,
         300
       ],
-      "inputs": "4a3b0742b577fa18d02cc50bcf7d48357b97c79c0c7652e96ec9ad717c8aab67",
+      "inputs": "54e6279255561a30097840df8ed9b68283bf1dfc59fdfedf53b11ee22ebf3974",
       "markers": [
         "world.coins#0",
         "world.coins#1",
@@ -1178,7 +1178,7 @@
         1782,
         1404
       ],
-      "inputs": "42a76a0b04381bf6b7a782c506a4695b2d7a532e49f1d005a87ca937d1cf64fe",
+      "inputs": "27593d1519dd03262ab7d4514591c91c7b19a7f929e13efcaa3334649aa04a9e",
       "markers": [
         "world.confront#0",
         "world.confront#1"
@@ -1191,7 +1191,7 @@
         300,
         300
       ],
-      "inputs": "22f8566aab5bd4da2c0afd177c2a0f8376d726099b13b37018fb3fff43b2c10f",
+      "inputs": "6cdb588f1bcef50bb636d839aebfbd60ff59265c983ef509de0467c9286dc732",
       "markers": [
         "world.craft#0",
         "world.craft#1",
@@ -1204,7 +1204,7 @@
         537,
         442
       ],
-      "inputs": "77f8b11c01edd9441e3fc974ef25e0fa9c6a438ad5e73fb9934848ff1c207356",
+      "inputs": "6498584613053a45224f05323f982e44180c2fe3e99e2d0fa07cc5f3f778d462",
       "markers": [
         "world.lost#0",
         "world.lost#1"
@@ -1217,7 +1217,7 @@
         463,
         349
       ],
-      "inputs": "1e12a18fe1be068a581abe2f7e136ba881aeb118cd5709dce79fdbe6a0d4e72a",
+      "inputs": "829348a80a6976f58a0cbda1882e956a038363462379c93c57c317fc61db3702",
       "markers": [
         "world.rune.embed#0",
         "world.rune.embed#1",
@@ -1230,7 +1230,7 @@
         391,
         300
       ],
-      "inputs": "b36e7df1bee8f51d884a70b33140deef16e6260da36838cfd2ee608ccd1f84de",
+      "inputs": "afa9813f0f2d4ea50194aa5c66aefe18644d3595439fb49c470fa15929da00ad",
       "markers": [
         "world.rune.extract#0",
         "world.rune.extract#1"
@@ -1242,7 +1242,7 @@
         444,
         318
       ],
-      "inputs": "d4729b4d79fdee223b1049741a6de4d71476e979d01f71b78caab08865629b71",
+      "inputs": "e04c736c56b25d0ab39d3df092dcb469afa159a86050044a476b954be05d7588",
       "markers": [
         "world.rune.fuse#0",
         "world.rune.fuse#1"
@@ -1254,7 +1254,7 @@
         1258,
         921
       ],
-      "inputs": "3b00e1a7f221be4d5f35441c8649af322f56e9fe6d3f3a8f76466aafa8e07217",
+      "inputs": "55bec1e0d6d8e9f10636cec0e60b17ae2396e5c78fef8ce8fbabb9e4761b337e",
       "markers": [
         "world.sighted#0",
         "world.sighted#1"
@@ -1265,7 +1265,7 @@
       "durationsMs": [
         2997
       ],
-      "inputs": "c86889e47877433f3add08cca9c3c35bba910a1af26d1ef47c9b09a4e1748c36",
+      "inputs": "e219bd30a4a464f5a60380bc85238e0873798cd0f296f94f2cb723a7ec5ac887",
       "markers": [
         "world.source#0"
       ]
@@ -1276,7 +1276,7 @@
         352,
         457
       ],
-      "inputs": "1886dda4a5655188461c6aedb1ab561b341e23f62bc193486eb7937a30779cd2",
+      "inputs": "2ddd8effebb7994d5881ccbf304c45387f63ef038467d3ff902cab4872e89412",
       "markers": [
         "world.threatened#0",
         "world.threatened#1"
@@ -1288,7 +1288,7 @@
         356,
         369
       ],
-      "inputs": "f39ff821f5b039ab2922d7e53c4056b728a7bc6f1316bbabcb65aea36c8c9fe1",
+      "inputs": "b56bb35bd2aa2226e8054d4729d9b1edf10c7bdc675bc45cbe6324e22a638f8e",
       "markers": [
         "world.upgrade#0",
         "world.upgrade#1"

@@ -8,8 +8,10 @@ Paths, for a project root `<repo>/audio`:
 - voice files (budget only) `<repo>/public/assets/voice/*.{opus,mp3}`.
 
 **Build.** Each cue's `inputs` hash covers its recipe's text, the SHA-256 of
-every source and impulse file it names, `audio.toml`, the tool's version and
-`uv.lock`. A cue is *changed* when its hash differs from the manifest's (or it
+every source and impulse file it names (and each one's recorded licence and
+SHA-256), `audio.toml`, the tool's version and `uv.lock`. Every source of
+every recipe is verified on every build, before anything is decided, so an
+incremental build refuses a licence or hash that went bad since the last. A cue is *changed* when its hash differs from the manifest's (or it
 is new); a bank is *touched* when one of its cues changed, was removed or was
 named by `--cue`/`--bank`, or when one of its files is missing or no longer
 matches the manifest. Every cue of a touched bank is rendered (rendering is
@@ -124,7 +126,15 @@ class Hasher:
         sources = {}
         for id in recipe.source_ids():
             entry = self.registry.entries.get(id)
-            sources[id] = self._file(self.config.root / entry["file"]) if entry else None
+            sources[id] = (
+                {
+                    "file": self._file(self.config.root / entry["file"]),
+                    "licence": entry["licence"],
+                    "sha256": entry["sha256"],
+                }
+                if entry
+                else None
+            )
         payload = {"recipe": recipe.text, "sources": sources, **self.common}
         return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
@@ -203,24 +213,34 @@ def _encode(wav: Path, out: Path, fmt: str, settings: dict) -> None:
         raise AudioError(f"ffmpeg could not encode {out.name}: {' '.join(result.stderr.split())}")
 
 
+def expected_sprite(bank: str, durations: list[tuple[str, int]], gap_ms: int) -> tuple[dict, int]:
+    """The bank's Phaser audio-sprite JSON for its markers and their
+    durations (ms) in order, and the bank's length in ms: `gap_ms` before
+    each marker and after the last."""
+    spritemap, at_ms = {}, 0
+    for marker, duration in durations:
+        at_ms += gap_ms
+        spritemap[marker] = {"start": at_ms / 1000, "end": (at_ms + duration) / 1000, "loop": False}
+        at_ms += duration
+    return {"resources": [f"{bank}.{fmt}" for fmt in FORMATS], "spritemap": spritemap}, at_ms + gap_ms
+
+
 def _layout(cues: list[str], pcm: dict[str, list[np.ndarray]], sr: int, gap_ms: int):
-    """The bank's samples, its spritemap and each cue's durations in ms."""
+    """The bank's samples (`gap_ms` of silence before each variant and after
+    the last, each variant padded to a whole ms) and each cue's durations in ms."""
     per_ms = sr / 1000
-    pieces, spritemap, durations = [], {}, {}
-    at_ms = 0
+    gap = np.zeros(int(round(gap_ms * per_ms)))
+    pieces, durations = [], {}
     for cue in cues:
         durations[cue] = []
-        for k, x in enumerate(pcm[cue]):
-            at_ms += gap_ms
+        for x in pcm[cue]:
             duration = int(np.ceil(len(x) / per_ms))
             slot = np.zeros(int(round(duration * per_ms)))
             slot[: len(x)] = x
-            pieces += [np.zeros(int(round(gap_ms * per_ms))), slot]
-            spritemap[f"{cue}#{k}"] = {"start": at_ms / 1000, "end": (at_ms + duration) / 1000, "loop": False}
+            pieces += [gap, slot]
             durations[cue].append(duration)
-            at_ms += duration
-    pieces.append(np.zeros(int(round(gap_ms * per_ms))))
-    return np.concatenate(pieces), spritemap, durations, at_ms + gap_ms
+    pieces.append(gap)
+    return np.concatenate(pieces), durations
 
 
 def build(root: Path, bank: str | None = None, cue: str | None = None, echo=print) -> Report:
@@ -235,6 +255,11 @@ def build(root: Path, bank: str | None = None, cue: str | None = None, echo=prin
     if cue is not None and cue not in files:
         raise AudioError(f"--cue {cue}: no recipe at sfx/{cue.replace('.', '/', 1)}.toml")
     recipes, errors = _load_recipes(config, files)
+    for c, recipe in recipes.items():
+        try:
+            verify_sources(recipe, registry)
+        except AudioError as error:
+            errors.append(str(error))
     if errors:
         raise BuildFailed("sfx build", errors)
 
@@ -265,7 +290,6 @@ def build(root: Path, bank: str | None = None, cue: str | None = None, echo=prin
         if _bank_of(c) not in touched:
             continue
         try:
-            verify_sources(recipe, registry)
             variants = [render_variant(recipe, k, registry, sr) for k in range(recipe.variants)]
         except AudioError as error:
             failures.append(str(error))
@@ -292,7 +316,10 @@ def build(root: Path, bank: str | None = None, cue: str | None = None, echo=prin
         scratch = Path(scratch)
         for name in sorted(touched & banks_now):
             cues = [c for c in recipes if _bank_of(c) == name]
-            samples, spritemap, durations, total_ms = _layout(cues, pcm, sr, gap_ms)
+            samples, durations = _layout(cues, pcm, sr, gap_ms)
+            sprite, total_ms = expected_sprite(
+                name, [(f"{c}#{k}", d) for c in cues for k, d in enumerate(durations[c])], gap_ms
+            )
             wav = scratch / f"{name}.wav"
             sf.write(wav, samples.astype(np.float32), sr, subtype="FLOAT")
             record = {"durationMs": total_ms}
@@ -301,7 +328,6 @@ def build(root: Path, bank: str | None = None, cue: str | None = None, echo=prin
                 path = scratch / f"{name}.{fmt}"
                 record[fmt] = {"bytes": path.stat().st_size, "sha256": sha256_file(path)}
             wav.unlink()
-            sprite = {"resources": [f"{name}.{fmt}" for fmt in FORMATS], "spritemap": spritemap}
             (scratch / f"{name}.json").write_text(json.dumps(sprite, indent=2) + "\n", encoding="utf-8")
             manifest["banks"][name] = record
             for c in cues:
@@ -416,18 +442,16 @@ def check(root: Path, echo=print) -> list[str]:
         if any(p.endswith(f"{name}.json is missing") for p in problems):
             continue
         cues = sorted(c for c, e in manifest["cues"].items() if e.get("bank") == name)
-        expected = [m for c in cues for m in manifest["cues"][c]["markers"]]
-        durations = [d for c in cues for d in manifest["cues"][c]["durationsMs"]]
         try:
+            pairs = [(m, d) for c in cues for m, d in zip(manifest["cues"][c]["markers"], manifest["cues"][c]["durationsMs"], strict=True)]
+            expected, total_ms = expected_sprite(name, pairs, int(config.gap_ms))
             sprite = json.loads((out_dir / f"{name}.json").read_text(encoding="utf-8"))
-            spritemap = sprite["spritemap"]
-            agrees = list(spritemap) == expected and all(
-                abs(1000 * (spritemap[m]["end"] - spritemap[m]["start"]) - d) < 0.5 for m, d in zip(expected, durations)
-            )
-        except (json.JSONDecodeError, KeyError, TypeError):
-            agrees = False
-        if not agrees:
-            found.append(f"bank {name}: {name}.json does not match the manifest's markers")
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            expected, sprite, total_ms = None, {}, None
+        if expected is None or sprite != expected:
+            found.append(f"bank {name}: {name}.json does not match the manifest's markers and durations")
+        elif total_ms != record.get("durationMs"):
+            found.append(f"bank {name}: the manifest's durationMs disagrees with its markers")
     for c, entry in manifest["cues"].items():
         if entry.get("bank") not in manifest["banks"]:
             found.append(f"{c}: its bank {entry.get('bank')!r} is not in the manifest")

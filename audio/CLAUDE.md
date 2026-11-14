@@ -82,8 +82,11 @@ the repository root. The code is `tools/audio/yomi_audio/build.py` (build,
 check) and `checks.py` (the per-variant checks).
 
 - **Incremental.** Each cue's `inputs` hash covers its recipe's text, the
-  SHA-256 of every source and impulse file it names, `audio.toml`, the tool's
-  version and `tools/audio/uv.lock`. A cue whose hash differs from the
+  SHA-256 of every source and impulse file it names with each one's recorded
+  licence and `sha256`, `audio.toml`, the tool's version and
+  `tools/audio/uv.lock`. Every source of every recipe is verified on every
+  build before anything else, so a licence or hash gone bad fails even a
+  build that would render nothing. A cue whose hash differs from the
   manifest's (or which is new) is changed; a bank is touched when one of its
   cues changed or was removed, when `--cue`/`--bank` names it, or when one of
   its files is missing or differs from the manifest's record. Every cue of a
@@ -119,8 +122,9 @@ check) and `checks.py` (the per-variant checks).
 - **`sfx check`** writes nothing. It recomputes every cue's inputs hash,
   compares the recipe set with the manifest's cues, checks every bank's
   three files exist, that the `.opus` and `.mp3` match the manifest's size
-  and SHA-256 and that the `.json` holds the manifest's markers and
-  durations, re-verifies every source, and checks the budgets. It never
+  and SHA-256 and that the `.json` is exactly the sprite the manifest's
+  markers and durations lay out (resources, starts and ends with `gap_ms`,
+  `loop`), re-verifies every source, and checks the budgets. It never
   re-encodes: encoded bytes vary with the ffmpeg build, so the manifest's own
   record of them is the reference.
 - Generated files (`sfx.manifest.json`, `public/assets/audio/sfx/*`) are never
