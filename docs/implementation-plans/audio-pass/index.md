@@ -340,7 +340,7 @@ export const DUCK_RELEASE_MS = 600
 | 11 | [Content: spells and abilities](11-content-spells.md) | 22 battle cues | 10 | no | **G6** | pending |
 | 12 | [Content: falls and footsteps](12-content-falls-steps.md) | 11 battle cues | 11 | no | **G7** | pending |
 | 13 | [Content: world](13-content-world.md) | `world` bank (14 cues) | 08 (G3), G2 | no | **G8** | pending |
-| 14 | [Narration data model and exporter](14-narration-data.md) | Beat fields, `narration.ts`, rules and staleness tests, provisional `voices.toml`, `smol-toml`, `scripts/narration.ts` | 01 | no | — | done |
+| 14 | [Narration data model and exporter](14-narration-data.md) | Beat fields, `narration.ts`, rules and staleness tests, provisional `voices.toml`, `smol-toml`, `scripts/narration.ts` | 01 | no | — | done (`a58449b`) |
 | 15 | [Narrator voice design](15-voice-design.md) | `voice design` in full for the chosen narrator; emotion candidates for the user | 03 (G1), 14 | no | **G9** | pending |
 | 16 | [Render the shipped lines](16-voice-render.md) | Clips committed; `voices.toml` final; `voice render`; `intro.opening` and `source.sighted` voiced; voice README | 15 (G9) | no | **G10** | pending |
 | 17 | [Story playback](17-story-playback.md) | `storyAudio.ts`; `StoryScene` plays, cuts, skips, ducks; probe; AC14 | 05, 16 | **yes** | — | pending |
