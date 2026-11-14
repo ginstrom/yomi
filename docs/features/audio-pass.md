@@ -3,7 +3,7 @@
 **Request (user's words):** "separately from the ongoing skill tree work, I'd like you to improve the quality of the sound effects, to create indie game-quality SFX. If possible I'd also like a framework for narration of cutscenes and the like, maybe using a local version of a voice model, especially one that supports emotions and other effects."
 
 - **Slug:** `audio-pass`
-- **Phase:** 4, implementation. Resume point: step 15 awaits G9 (the user's listening to `audio/.audition/15-voice/neutral.wav`; recommendation "A_0 kept"); then 16, 17, 10–13, 18, verification. Done: 01–09, 14, 15 (`70a21c2`, pending G9). G2: the user asked the orchestrator to do the Freesound downloads via Claude in Chrome; waiting for the user to log into freesound.org in Chrome.
+- **Phase:** 5, verification. Resume point: verification running against `5249f50` (overall review opus, QA sonnet, simulated user sonnet); all 18 steps built and reviewed (18 via the overall review). G2, G9 passed 2026-11-14. User gates pending: G10 (`audio/.audition/16-render/`), G11 and the G4–G8 playtest; the listening package is at the end of `18-final-review.md`.
 - **Branch / worktree:** `audio-pass`, from `main` at `d18abf4`, in `.claude/worktrees/audio-pass` (kept apart from `skill-trees`)
 - **Architecture brief:** `docs/architecture/audio-pass.md` (`a82ae8f`)
 - **Design:** `docs/designs/audio-pass.md` (`84f5f35`, approved by the user)
@@ -66,13 +66,14 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - 08: opus engineer, opus reviewer, clean in 1 round; G3 passed 2026-11-14 (all acceptable); record and index to be set `done` by the step 09 engineer. Non-blocking: `hit.crit` ~270 ms vs brief ~500 (likely deliberate, unrecorded), `swing.heavy` 548–621 ms vs ~450; let G3 decide.
 - 09: opus engineer, opus reviewer, clean in round 3 (unused source; then `source remove` deleted used impulses; fixed `20df707`, `1f53d01`). Audition `audio/.audition/09-ui-stings/`; user to judge whether `ui.back` is softer than `ui.click`.
 - 14: sonnet engineer, sonnet reviewer, clean in 1 round (tidy-ups: `lineSeed` literal test, lockfile order, smol-toml licence).
-- 15: opus engineer, opus reviewer, clean in 1 round (three tidy-ups, `70a21c2`); G9 pending. Emotion clips tested: they lower speaker similarity (0.81–0.84 vs 0.92–0.96) and carry only pace.
+- 15: opus engineer, opus reviewer, clean in 1 round (three tidy-ups, `70a21c2`); G9 passed (A_0 kept). Emotion clips tested: they lower speaker similarity (0.81–0.84 vs 0.92–0.96) and carry only pace.
 - 16: sonnet engineer, sonnet reviewer, clean in 1 round (wording tidy-ups, `a467c74`); G10 pending. No heteronyms in the two shipped lines; no PerTh in the mlx port (grep only).
 - 17: sonnet engineer, sonnet reviewer, clean in round 2 (round 1: duck hooks, last-beat fade, load-error handler; `b97a568`). Full browser suite last run green before round 1.
 - 10: opus engineer, opus reviewer, clean in 1 round (provenance tidy-ups, `42c18c2`). Unsure by ear: `shot.wand`/`miss.magic` may read sci-fi, `hit.magic` gunshot-like, poison vs acid alike, `regen` late squelch. Audition `audio/.audition/10-ranged-sweeteners/`.
 - 11: opus engineer, opus reviewer, clean in 1 round. Unsure by ear: `cast.storm` buzz, synth bells in `impact.heal`/`buff`, fireball roar blurring punch, one-voice `cast.holy`, clinky `impact.hex`. Audition `audio/.audition/11-spells/`.
 - 12: opus engineer, opus reviewer, clean in 1 round. Unsure by ear: raccoon goblin squeal, armoured-step mail jingle too much, zombie-ish brute groan, Horror roar stop, salamander hiss. Audition `audio/.audition/12-falls-steps/`.
-- 13: opus engineer, opus reviewer, clean in 1 round. Unsure by ear: `confront` two-note horn, `captured` horn may read as threat, bright `craft` anvil, synthetic rune hums, `arrive` bell too frequent, `threatened` swinging bell. Audition `audio/.audition/13-world/`. Sources at 14.45 of 15 MB: step 18 should remove the ten unused `placeholder_*` sources (324 KB).
+- 13: opus engineer, opus reviewer, clean in 1 round. Unsure by ear: `confront` two-note horn, `captured` horn may read as threat, bright `craft` anvil, synthetic rune hums, `arrive` bell too frequent, `threatened` swinging bell. Audition `audio/.audition/13-world/`.
+- 18: sonnet engineer (`e104acd`, `5249f50`): placeholders removed, full browser suite green (132), G11 package assembled; reviewed by the overall review.
 - 03: opus engineer, opus reviewer, clean in 1 round; G1 passed 2026-11-14 (b/A, `A_0`); records updated by the step 07 engineer.
 
 ## Notes carried forward
