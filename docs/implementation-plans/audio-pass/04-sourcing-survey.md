@@ -79,3 +79,5 @@ Run on 2026-11-14 by the engineer subagent (Sonnet 5.5). Gate G2 is pending the 
 - **For later steps.** `sourcing.md` section 1 has pack aliases and the on-disk layout; section 5 gives each partial cue's fallback if G2 is "skip all". The short stings (every Kenney jingle is at most 1.74 s) are the main risk for step 09. Kenney downloads need the Referer trick above if re-fetched.
 
 - Commit: 2de63b8.
+
+**Gate G2 passed 2026-11-14.** All 28 files of `freesound-wanted.md` are in `~/.cache/yomi-audio/freesound/` under their target names. The orchestrator downloaded them through Chrome on the user's login and checked that each sound page said "Creative Commons 0"; the durations match the list. Step `done`.
