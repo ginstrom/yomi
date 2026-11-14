@@ -55,7 +55,8 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - 04: sonnet engineer; awaiting gate G2 (28 Freesound files, list in `freesound-wanted.md`, given to the user 2026-11-14); sonnet reviewer clean in 1 round.
 - 05: opus engineer, opus reviewer, clean in 1 round (two tidy-ups).
 - 06: sonnet engineer, sonnet reviewer, clean in 1 round (two tidy-ups, `e846bd3`).
-- 03: opus engineer, opus reviewer, clean in 1 round; G1 passed 2026-11-14 (b/A, `A_0`); execution record and index still to be updated.
+- 07: sonnet engineer, sonnet reviewer, clean in 1 round; accepted deviation: a world message sounds all its reports' events (two-cue cap), not only the told ones. Full browser suite only green file-by-file under load.
+- 03: opus engineer, opus reviewer, clean in 1 round; G1 passed 2026-11-14 (b/A, `A_0`); records updated by the step 07 engineer.
 
 ## Notes carried forward
 
@@ -63,7 +64,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - Step 02 (and 09): apply the short-cue normalisation rule above; `hit.slash` over stand-in sources peaked +4.4 dBTP, the same rule catches it.
 - Step 15: `voice design` with a subset of emotions rewrites `design.json` but `bakeoff` reuses stale clips (review-03 #3); also tidy `cli.py` `--candidates` default (#2) and the WAV count in 03's record (#1: ten placeholders).
 - Step 16: the mlx Chatterbox port adds no PerTh watermark; say so in the voice README. A render needs network on first model load.
-- Step 03 record: G1 outcome is the user's informal pick (b/A, neutral `A_0`; favourites c02, c05, c07, c08), no score sheet; record that and set 03 `done` (fold into the next engineer's commit). c22 (b) has a click near its end: re-take if that line ships.
+- c22 (b) has a click near its end: re-take if that line ships.
 - Steps 08–13: `sourcing.md` names some Kenney files loosely (`creak_001` is `creak1`; `knifeSlice`, `drawKnife`, `handleCoins` plain numbers; "Retro Electric Off" is `Retro Charge Electric Off 07_s05`), and a few Freesound cue lists differ between `sourcing.md` and `freesound-wanted.md` (review-04). Check names on disk.
 - After G2: record the outcome in step 04's execution record and set it `done`.
 - Step 17: `stopVoice`'s fade tweens on the starting scene; if it shuts down mid-fade the sound is never destroyed (review-05 #3) — destroy on shutdown or tween elsewhere.
