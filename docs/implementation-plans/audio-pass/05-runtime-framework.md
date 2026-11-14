@@ -201,7 +201,7 @@ Write tests first and see them fail.
 ## Execution record
 
 
-**Status:** done. Commit `Audio pass step 05: Runtime framework` (hash in the index).
+**Status:** done. Commit `edab9c4` Audio pass step 05: Runtime framework.
 
 **What landed.** `tsconfig.json` `resolveJsonModule`; `sounds.ts` rewritten as the cue table over `audio/sfx.manifest.json` (`CueId` a literal union of the 85 cues: a scratch `const bad: CueId = 'battle.nope'` was rejected by `tsc`, then removed), `CUES` built from the manifest with the C8 defaults and an `IMPACT_CUES` set from C7, `pickVariant` (shuffle bag, a new bag never starting with the last marker), `admitPlay`, interim `eventSounds` on the new ids; `audioSettings.ts` with `voice`, `BUS_BASE`, `busVolume`, `MUSIC_BASE`, `MUSIC_GAIN`; new `soundPlayer.ts` (Phaser types only); `BootScene` loads the four banks as audio sprites and both themes and calls `installLimiter`; every call site moved (no `sound.play(`, `sound.add(` outside the player, or `sfx_` in `src/`); `MenuScene` Voice slider (row gap 48 to 44 so four rows, the tutorial switch and Back fit 840×560) and slider probe; `__yomi.audioLog()`, `playCue()`, `limiter()` on the dev hook; the ten placeholder WAVs deleted; new `e2e/audio.test.ts`.
 
