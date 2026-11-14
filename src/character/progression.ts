@@ -222,7 +222,9 @@ export const AUTO_PLANS: Record<PlanId, readonly PerkId[]> = {
     'greater_heal_all',
     'purify',
   ],
-  cryomancer: pathPlan('cryomancer'),
+  // Ice Lance ahead of Web: with the capstone first, Web would take the level-10 pick and Glacial Prison level 12's,
+  // leaving the cryomancer no Ice Lance at 12 (skill trees step 24: 292 of 500 at Bandit Camp threat 7 with it, 31 without).
+  cryomancer: ['glacial_prison', 'frostbite', 'numbing_cold', 'sleep', 'frost_blast', 'ice_lance', 'web', 'lingering_cold'],
   arcanist: pathPlan('arcanist'),
   healer: pathPlan('healer'),
   paladin: pathPlan('paladin'),

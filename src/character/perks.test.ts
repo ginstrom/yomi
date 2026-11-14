@@ -208,6 +208,15 @@ describe('perkTeaching', () => {
 })
 
 describe('qualifiesFor', () => {
+  it('opens Arcane Blood at Intelligence 3, not 2 (skill trees step 24: a warrior of 3 can walk the Spellsword path)', () => {
+    const withInt = (intelligence: number) => {
+      const hero = createWarrior()
+      return { ...hero, attributes: { ...hero.attributes, intelligence }, perks: {} }
+    }
+    expect(qualifiesFor(withInt(3), 'arcane_blood')).toBe(true)
+    expect(qualifiesFor(withInt(2), 'arcane_blood')).toBe(false)
+  })
+
   it('asks the tier’s level: a new character may take only the first tier’s nodes', () => {
     const offered = availablePerks(warriorAt(1))
     expect(offered.every((id) => (PERKS[id] as Perk).tier === 1)).toBe(true)

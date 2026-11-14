@@ -43,6 +43,9 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 | 2026-11-14 | Purify is a cleanse, not a heal: excluded from world-map healing, `autoHeal` and the policy's heal choices (its own `purifyCast` step uses it); a purified ally gets no AP back this turn | orchestrator | count it as a 1d6 heal; refund AP | A 1d6 heal at 4 mana would crowd out real heals; AP refund adds a rule for little play |
 | 2026-11-14 | Stage 4 closes the gap (449 → 215–250) mostly with tougher foes: foe counts, hit points per level, bandit plans and gear; trim only outlier skills. Reverses design §7.2's lever order | user | weaker skills first; accept easier | Keep skills punchy so choices feel powerful |
 | 2026-11-14 | Capstones checked at level 12 against Bandit Camp threat 7, each path's capstone within ±10% of the best | user | judgement only | Threat-5 cells are won ~100% at level 12 |
+| 2026-11-14 | Parity at levels 8 and 12 accepted as limited by the three-hero simulated party and the AI; level-4 parity is the test | user | a four-hero parity party; a focus-fire policy step; raise the weak paths' numbers | Step 24: foes shoot the softest hero and the mage carries the party's damage |
+| 2026-11-14 | Rogue for an archer accepted (a melee and skirmish path an archer mixes in on purpose); `rogue_archer` stays in the parity set as a reported figure only | user | buff Skirmisher for shots; drop the plan | Step 24: −109 at level 4 |
+| 2026-11-14 | The policy's Bane fix (no recast where fewer than two units are not yet baned) kept for monsters too: the Goblin Shaman and the Blight Horror | orchestrator | heroes only | An AI fix that makes foes slightly better, in the direction of tougher foes |
 | 2026-11-13 | Own branch `skill-trees` off main | orchestrator | commit on main | Precedent: one branch per feature |
 
 ## Open questions
@@ -84,7 +87,7 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 - To stage 4 (from step 21): Delwyn's capstone comes at 14, not 12: C5 gives him Arcane Study at creation where the design's build B has Destruction, shifting every pick a level — give him the design's build B picks (orchestrator decision); AC1's first tier-3 for Swordmaster and Ranger plans comes at 8; Swift Hands still discounts Purify.
 
 
-- From step 24: cells in band with tougher foes (`FOE_HP_PER_LEVEL` 1.3, bandits Fine from threat 3, the Nest Spider); one party 268 of 500. Parity at levels 8 and 12 is far apart for reasons of the AI and the party's shape; three decisions for the orchestrator are in step 24's record. Step 25 inherits the campaign bands (268, 18 above).
+- From step 24: cells in band with tougher foes (`FOE_HP_PER_LEVEL` 1.3, bandits Fine from threat 3, the Nest Spider); one party 268 of 500. Parity at levels 8 and 12 is far apart for reasons of the AI and the party's shape (the user accepted that; level 4 is the test). The Bane fix reaches the Goblin Shaman and the Blight Horror. The cryomancer plan puts Ice Lance before Web (level-12 cell 36 → 324). Step 25 inherits the campaign bands (268, 18 above).
 
 ## Verification
 

@@ -71,7 +71,7 @@ Decisions already taken, which this design keeps (from [`docs/features/skill-tre
 | AC1 (R1, R3) | `PERKS` holds the 95 nodes of section 4, each of one rank. A hero that takes both T1s of a path at creation and every later pick there reaches its T3 at level 6 and its capstone at level 12. |
 | AC2 (R3) | A level 14 hero with 5 nodes in Swordmaster and 6 in Assassin can take Deathblow and cannot take Blademaster. Once it has Deathblow, no other capstone is open, whatever its depths later. |
 | AC3 (R4) | A level 1 draft spends exactly 3 picks. A character gains a pick on reaching each even level, and none on odd levels (`gainXp`). There is no `spellPicks` field. |
-| AC4 (R5) | Aldric (intelligence 3, no Mage or Cleric nodes) has 6 mana at level 1 and 10 at level 5. The ready-made Delwyn (intelligence 9; Magic Arrow, Heal, Arcane Study) has 24 at level 1. |
+| AC4 (R5) | Aldric (intelligence 3, no Mage or Cleric nodes) has 6 mana at level 1 and 10 at level 5. The ready-made Delwyn (intelligence 9; Magic Arrow, Heal, Arcane Study) has 24 at level 1. *Amended in skill trees step 24 (build B): Delwyn takes Magic Arrow, Heal and Destruction and has 28 (Destruction's +4).* |
 | AC5 (R7) | Engine tests show four things. Taunted foes take −25 to hit against anyone but the taunter, and the policy attacks the taunter. A Rooted unit gains +10 AC and +2 resistance until it moves. A pinned foe has no legal move on its next turn. Pin spends 3 mana and the weapon's AP + 1. |
 | AC6 (R8) | Each mechanic of section 5.4 has an engine test, and the replay tests still pass. |
 | AC7 (R9) | In the browser, a level 4 Aldric who took Rooted and Taunt opens Skills (M), sees Taunt with its AP, uses Taunt, and the foes' nameplates show **T**. |
@@ -701,7 +701,7 @@ The **pre-rolls** (`party.ts`) are rebuilt on the trees:
 | --- | --- | --- |
 | Aldric | Weapon Training, Heavy Hand, Toughness | `knight` (build A) |
 | Brenna | Marksmanship, Deadly Aim, Dodger | `ranger`: Aimed Shot (L2), Far Shot (L4), Volley (L6), Hunter's Mark (L8), Pinning Shot (L10), Deadeye (L12), then Rogue T1–T3 |
-| Delwyn | Magic Arrow, Heal, Arcane Study | `evoker_healer` (build B) |
+| Delwyn | Magic Arrow, Heal, Arcane Study (amended in step 24 to build B: Magic Arrow, Heal, Destruction) | `evoker_healer` (build B) |
 | Garrick | Weapon Training, Marksmanship, Dodger (Marksmanship has one rank now) | `knight` (his tag is Melee) |
 
 **The bandits' drafts** (`bandits.ts`):

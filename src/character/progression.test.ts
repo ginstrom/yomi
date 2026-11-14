@@ -193,6 +193,9 @@ describe('AUTO_PLANS', () => {
     }
     expect(AUTO_PLANS.evoker).toEqual(path('evoker'))
     expect(AUTO_PLANS.saint).toEqual(path('saint'))
+    // The cryomancer's alone puts Ice Lance ahead of Web, so that Ice Lance comes before the capstone (skill trees step 24).
+    expect([...AUTO_PLANS.cryomancer].sort()).toEqual(path('cryomancer').sort())
+    expect(AUTO_PLANS.cryomancer.indexOf('ice_lance')).toBeLessThan(AUTO_PLANS.cryomancer.indexOf('web'))
     expect(AUTO_PLANS.rogue_archer).toEqual(path('rogue'))
   })
 })
@@ -338,6 +341,14 @@ describe('autoAdvance', () => {
         }
       }
     }
+  })
+
+  it('takes Aldric down the Spellsword path to Arcane Knight at 12, Arcane Blood asking Intelligence 3', () => {
+    expect(grown(0, 12, 'spellsword').perks).toMatchObject({ arcane_blood: 1, arcane_knight: 1 })
+  })
+
+  it('gives the cryomancer Ice Lance before Glacial Prison: both at 12', () => {
+    expect(grown(2, 12, 'cryomancer').perks).toMatchObject({ ice_lance: 1, glacial_prison: 1 })
   })
 
   it('takes the plan\'s capstone as soon as it opens, the path its calling (the evoker and Meteor)', () => {
