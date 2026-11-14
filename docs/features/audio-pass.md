@@ -32,6 +32,8 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 | Stings from Kenney Music Jingles for now; narrator's gender chosen in the bake-off | orchestrator | | design defaults |
 | Short cues (shorter than the 400 ms LUFS-M window, e.g. `ui.click`): normalisation gain is the lesser of the loudness-target gain and the gain that meets the group's true-peak ceiling, so the ceiling always holds; recipes may also lengthen or densify UI sounds | orchestrator | raise the `ui` ceiling; change the `ui` target | step 01 found `ui.click` as designed needs ~−0.3 dBTP to hit −26 LUFS-M; the ceiling is the safety rule, loudness the aim |
 | Peak-limited cues have no loudness floor; content steps make UI and impact sounds denser instead of leaning on the cap. Banks start with 50 ms of silence before the first marker | orchestrator | a floor below target | step 02's recommendation; ceiling is the rule |
+| G1: narration uses configuration (b), Chatterbox Turbo from narrator A's neutral clip `A_0`, with sound tags; the user liked c05, c07, c08 (b/A) and c02 (a/B), and did not fill the score sheet | user | (a) with narrator B; (b) with B | 3 of 4 favourites were b/A |
+| Steps 15–16 adapt to G1: Turbo takes one reference clip and ignores exaggeration, so the narrator's voice is `A_0` alone and emotion comes from the line's wording and tags; per-emotion clip design (G9) is reduced to confirming `A_0`, unless the step finds emotion reference clips audibly help Turbo | orchestrator | design all seven emotion clips anyway | follows the user's pick; the plan was written before it |
 | D6: add a `voice` volume slider; UI sounds stay under Sound FX with their own internal group | orchestrator | separate UI slider | brief's recommendation, splittable later |
 
 ## Open questions
@@ -53,7 +55,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - 04: sonnet engineer; awaiting gate G2 (28 Freesound files, list in `freesound-wanted.md`, given to the user 2026-11-14); sonnet reviewer clean in 1 round.
 - 05: opus engineer, opus reviewer, clean in 1 round (two tidy-ups).
 - 06: sonnet engineer, sonnet reviewer, clean in 1 round (two tidy-ups, `e846bd3`).
-- 03: opus engineer, opus reviewer, clean in 1 round; awaiting gate G1 (bake-off clips in `audio/bakeoff/`, given to the user 2026-11-14).
+- 03: opus engineer, opus reviewer, clean in 1 round; G1 passed 2026-11-14 (b/A, `A_0`); execution record and index still to be updated.
 
 ## Notes carried forward
 
@@ -61,7 +63,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - Step 02 (and 09): apply the short-cue normalisation rule above; `hit.slash` over stand-in sources peaked +4.4 dBTP, the same rule catches it.
 - Step 15: `voice design` with a subset of emotions rewrites `design.json` but `bakeoff` reuses stale clips (review-03 #3); also tidy `cli.py` `--candidates` default (#2) and the WAV count in 03's record (#1: ten placeholders).
 - Step 16: the mlx Chatterbox port adds no PerTh watermark; say so in the voice README. A render needs network on first model load.
-- After G1: copy the outcome and per-configuration means into step 03's execution record and set it `done`.
+- Step 03 record: G1 outcome is the user's informal pick (b/A, neutral `A_0`; favourites c02, c05, c07, c08), no score sheet; record that and set 03 `done` (fold into the next engineer's commit). c22 (b) has a click near its end: re-take if that line ships.
 - Steps 08–13: `sourcing.md` names some Kenney files loosely (`creak_001` is `creak1`; `knifeSlice`, `drawKnife`, `handleCoins` plain numbers; "Retro Electric Off" is `Retro Charge Electric Off 07_s05`), and a few Freesound cue lists differ between `sourcing.md` and `freesound-wanted.md` (review-04). Check names on disk.
 - After G2: record the outcome in step 04's execution record and set it `done`.
 - Step 17: `stopVoice`'s fade tweens on the starting scene; if it shuts down mid-fade the sound is never destroyed (review-05 #3) — destroy on shutdown or tween elsewhere.
