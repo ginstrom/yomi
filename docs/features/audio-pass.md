@@ -3,7 +3,7 @@
 **Request (user's words):** "separately from the ongoing skill tree work, I'd like you to improve the quality of the sound effects, to create indie game-quality SFX. If possible I'd also like a framework for narration of cutscenes and the like, maybe using a local version of a voice model, especially one that supports emotions and other effects."
 
 - **Slug:** `audio-pass`
-- **Phase:** 5, verification. Resume point: verification fixes running (sonnet engineer); overall review clean, QA pass, simulated user 5/5 goals, all against `5249f50`; all 18 steps built and reviewed (18 via the overall review). G2, G9 passed 2026-11-14. User gates pending: G10 (`audio/.audition/16-render/`), G11 and the G4–G8 playtest; the listening package is at the end of `18-final-review.md`.
+- **Phase:** 6, report. Verified and clean at `3e6b59c` (overall review clean in round 2, QA pass, simulated user 5/5). Waiting on the user: G10 (`audio/.audition/16-render/`), G11 and the G4–G8 playtest (package at the end of `18-final-review.md`), the fireball loudness question, and any push or PR.
 - **Branch / worktree:** `audio-pass`, from `main` at `d18abf4`, in `.claude/worktrees/audio-pass` (kept apart from `skill-trees`)
 - **Architecture brief:** `docs/architecture/audio-pass.md` (`a82ae8f`)
 - **Design:** `docs/designs/audio-pass.md` (`84f5f35`, approved by the user)
@@ -73,6 +73,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - 11: opus engineer, opus reviewer, clean in 1 round. Unsure by ear: `cast.storm` buzz, synth bells in `impact.heal`/`buff`, fireball roar blurring punch, one-voice `cast.holy`, clinky `impact.hex`. Audition `audio/.audition/11-spells/`.
 - 12: opus engineer, opus reviewer, clean in 1 round. Unsure by ear: raccoon goblin squeal, armoured-step mail jingle too much, zombie-ish brute groan, Horror roar stop, salamander hiss. Audition `audio/.audition/12-falls-steps/`.
 - 13: opus engineer, opus reviewer, clean in 1 round. Unsure by ear: `confront` two-note horn, `captured` horn may read as threat, bright `craft` anvil, synthetic rune hums, `arrive` bell too frequent, `threatened` swinging bell. Audition `audio/.audition/13-world/`.
+- Verification fixes (sonnet engineer, `22e79c0`, `abfd8cb`, `3e6b59c`): overall reviewer re-review clean.
 - Verification at `5249f50`: overall review (opus) clean, 5 non-blocking (duck release lost on resume, variant spent on a dropped play, docs, merge note); QA (sonnet) pass, no defects; simulated user (sonnet) 5/5 goals, friction: no cue lookup table, `narration.test.ts` hardcodes the voiced line list.
 - 18: sonnet engineer (`e104acd`, `5249f50`): placeholders removed, full browser suite green (132), G11 package assembled; reviewed by the overall review.
 - 03: opus engineer, opus reviewer, clean in 1 round; G1 passed 2026-11-14 (b/A, `A_0`); records updated by the step 07 engineer.
