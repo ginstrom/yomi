@@ -521,7 +521,7 @@ export const SALAMANDER_STATS: CombatantStats = {
 }
 
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
-export const FOE_HP_PER_LEVEL = 0.7
+export const FOE_HP_PER_LEVEL = 1.3
 /** ...this many points to its chance to hit and to its armour class... */
 export const FOE_TO_HIT_PER_LEVEL = 5
 export const FOE_AC_PER_LEVEL = 5

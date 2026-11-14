@@ -129,10 +129,10 @@ describe('banditStats', () => {
 })
 
 describe('banditGear', () => {
-  it('is tier 1 plain below threat 5, tier 1 Fine at threat 5 and tier 2 Fine from threat 6', () => {
+  it('is tier 1 Fine below threat 6 and tier 2 Fine from threat 6', () => {
     expect([3, 4, 5, 6, 7].map(banditGear)).toEqual([
-      { tier: 1, grade: 1 },
-      { tier: 1, grade: 1 },
+      { tier: 1, grade: 2 },
+      { tier: 1, grade: 2 },
       { tier: 1, grade: 2 },
       { tier: 2, grade: 2 },
       { tier: 2, grade: 2 },
