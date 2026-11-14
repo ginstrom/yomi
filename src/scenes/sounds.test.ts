@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { ABILITIES, ABILITY_IDS } from '../combat/abilities.ts'
+import { ABILITIES, ABILITY_IDS, type AbilityId } from '../combat/abilities.ts'
 import { mulberry32 } from '../combat/rng.ts'
 import { ALL_SPELL_IDS, type SpellId } from '../combat/spells.ts'
 import { BattleEngine, type AbilityEvent, type AttackEvent, type BattleEndEvent, type BattleEvent, type CastEvent, type Side, type StatusTickEvent } from '../engine/battleEngine.ts'
@@ -528,9 +528,48 @@ describe('AC3: every weapon, foe, spell and ability has a sound', () => {
       expect(CUES[ability.release]).toBeDefined()
       expect(CUES[ability.impact]).toBeDefined()
     }
-    for (const id of ABILITY_IDS.filter((a) => ABILITIES[a].area)) expect(ABILITY_SOUNDS[id], `ability ${id}`).toBeDefined()
     for (const sound of [...Object.values(WEAPON_SOUNDS), ...Object.values(FOE_SOUNDS)]) {
       for (const cue of [sound.release, sound.hit, sound.miss]) expect(CUES[cue]).toBeDefined()
+    }
+  })
+
+  /** Every kind of battle event, and whether `eventSounds` has a case for it or is silent on purpose. */
+  const EVENT_SOUNDS: Record<BattleEvent['type'], 'sounds' | 'silent'> = {
+    battle_start: 'silent',
+    move: 'sounds',
+    attack: 'sounds',
+    cast: 'sounds',
+    ability: 'sounds',
+    status_tick: 'sounds',
+    regenerate: 'sounds',
+    status_end: 'silent',
+    equip: 'silent',
+    unit_down: 'sounds',
+    end_turn: 'silent',
+    battle_end: 'sounds',
+  }
+
+  /** Abilities that are only strikes, which sound as the attacks they are. Any other needs an `ABILITY_SOUNDS` entry. */
+  const SOUNDS_AS_ATTACKS: readonly AbilityId[] = ['troll_claws', 'spider_bite']
+
+  it('knows, for every kind of battle event, whether it sounds (a new kind fails the typecheck here until listed)', () => {
+    const source = readFileSync(join(ROOT, 'src/scenes/sounds.ts'), 'utf8')
+    const body = source.slice(source.indexOf('export function eventSounds'), source.indexOf('export function levelUpDelayMs'))
+    for (const [type, kind] of Object.entries(EVENT_SOUNDS)) {
+      expect(body.includes(`case '${type}'`), `eventSounds' case for ${type}`).toBe(kind === 'sounds')
+    }
+  })
+
+  it('gives every ability, status-only ones included, a sound or an entry saying it sounds as attacks', () => {
+    for (const id of ABILITY_IDS) {
+      const ability = ABILITIES[id]
+      if (SOUNDS_AS_ATTACKS.includes(id)) {
+        expect(ability.strikes, `${id} is only strikes`).toBeDefined()
+        expect(ability.area, `${id} is only strikes`).toBeUndefined()
+        expect(ABILITY_SOUNDS[id], `${id} sounds as attacks, so has no entry of its own`).toBeUndefined()
+      } else {
+        expect(ABILITY_SOUNDS[id], `ability ${id} would sound nothing: give it an ABILITY_SOUNDS entry or list it in SOUNDS_AS_ATTACKS`).toBeDefined()
+      }
     }
   })
 })

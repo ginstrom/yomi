@@ -272,13 +272,16 @@ describe('staleLines (AC12)', () => {
     const onDisk = (p: string) => existsSync(resolve(root, p))
 
     it('are voiced and fresh against the committed manifest and files', () => {
-      expect(real.map((l) => l.beat.line)).toEqual(['intro.opening', 'source.sighted'])
-      expect(staleLines(real, manifestFile, realHash, onDisk)).toEqual([])
+      expect(real.length).toBeGreaterThan(0)
+      // Every voiced beat of the cutscenes is rendered and current; nothing else is in the manifest.
+      const stale = staleLines(real, manifestFile, realHash, onDisk)
+      expect(stale, `stale or unrendered lines: ${stale.join(', ')}. Run \`npm run narration\` to render them, and commit the files and audio/voice.manifest.json`).toEqual([])
+      expect(Object.keys(manifestFile.lines).sort(), 'the manifest holds a line no beat voices: run `npm run narration`').toEqual(real.map((l) => l.beat.line!).sort())
     })
 
     it('go stale when a beat is edited without rendering', () => {
       const edited = voicedLines({ intro: scene({ ...real[0]!.beat, spoken: `${spokenText(real[0]!.beat)} More.` }) })
-      expect(staleLines(edited, manifestFile, realHash, onDisk)).toEqual(['intro.opening'])
+      expect(staleLines(edited, manifestFile, realHash, onDisk)).toEqual([real[0]!.beat.line])
     })
 
     it('keep the voice files within the budget per format', () => {
