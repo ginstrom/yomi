@@ -23,14 +23,14 @@
       }
     },
     "ui": {
-      "durationMs": 7291,
+      "durationMs": 7225,
       "mp3": {
-        "bytes": 62444,
-        "sha256": "8ee27afa699d00f10326e8c62f952f22b0689bf483e6653bfe54909fdac40c6c"
+        "bytes": 62324,
+        "sha256": "0b660fc9bf043d77560dca849b49a87355e452b750e071b9079439d20fb78a62"
       },
       "opus": {
-        "bytes": 85862,
-        "sha256": "d6f3f0fba87d2b5d045b365c8767b4018d46f12a6cd160b66413c12a438f8e91"
+        "bytes": 84849,
+        "sha256": "c57f2c6030b0b10c02d56b9bed581255305dbff79d613cd592b16cdccf050331"
       }
     },
     "world": {
@@ -985,7 +985,7 @@
       "durationsMs": [
         3986
       ],
-      "inputs": "3f95ab656dc1286c10b5c930b2ced5f42ab05c2298ad98263171645018d3da5b",
+      "inputs": "24ce3ef3f42d18138205fd6f5ccbd3ff2ac3547a8637eae2a573df524e23a2ae",
       "markers": [
         "stings.defeat#0"
       ]
@@ -1005,7 +1005,7 @@
       "durationsMs": [
         3407
       ],
-      "inputs": "7b25b2bcdcd627a251cd9eb8c8f106a4aeaa90c4dc074163faabd2861c35863c",
+      "inputs": "a4a73f6d91512847ab7061f7c541d3aa5b7d969583c8f427c087577f264ce962",
       "markers": [
         "stings.victory#0"
       ]
@@ -1057,11 +1057,11 @@
     "ui.error": {
       "bank": "ui",
       "durationsMs": [
-        220,
-        234,
-        220
+        198,
+        211,
+        199
       ],
-      "inputs": "c2f6a7917a794c0d6dc3d424f72957ec92dbadbf50e039afa34088aa9ae075d9",
+      "inputs": "7a4e53851c8c88b7fb3a5982e4c7f0bbf6ef1f96343a69e5364fb63e2bca0645",
       "markers": [
         "ui.error#0",
         "ui.error#1",
@@ -1108,7 +1108,7 @@
         133,
         136
       ],
-      "inputs": "ef3fb52da8e43e69ee4cefc679f11718a72e0cd3ec96d59260a3dde00caf0dac",
+      "inputs": "25bb7bc8ba379bcbc7243657b20001295a4d15f8d1d39fda3764cb25a60e5d28",
       "markers": [
         "ui.tab#0",
         "ui.tab#1",

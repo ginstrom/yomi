@@ -1,6 +1,7 @@
 """`yomi-audio`: the command line.
 
     yomi-audio source add <file> --id ID --collection C --licence L --author A --url U ...
+    yomi-audio source remove <id>
     yomi-audio impulse build [NAME ...]
     yomi-audio sfx audition <cue> ... [--out DIR] [--spectrogram]
     yomi-audio sfx build [--bank B] [--cue C]
@@ -48,6 +49,9 @@ def _parser() -> argparse.ArgumentParser:
     add.add_argument("--end", type=float, help="seconds of the original to end at")
     add.add_argument("--notes")
     add.set_defaults(run=_source_add)
+    remove = source.add_parser("remove", parents=[root], help="delete a source no recipe names, file and entry")
+    remove.add_argument("id")
+    remove.set_defaults(run=_source_remove)
 
     impulse = groups.add_parser("impulse", help="reverb impulses").add_subparsers(dest="command", required=True)
     build = impulse.add_parser("build", parents=[root], help="render impulses/<name>.toml to <name>.flac")
@@ -88,6 +92,14 @@ def _source_add(args) -> int:
         notes=args.notes,
     )
     print(f"added {entry['id']}: {entry['file']} ({entry['sha256'][:12]})")
+    return 0
+
+
+def _source_remove(args) -> int:
+    from .sources import remove_source
+
+    entry = remove_source(args.root, args.id)
+    print(f"removed {entry['id']}: {entry['file']}")
     return 0
 
 

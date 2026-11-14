@@ -68,6 +68,7 @@ src/story/narration.ts            (C11)
 | Command | Step | Does |
 | --- | --- | --- |
 | `yomi-audio source add <file> --id ID --collection C --licence L --author A --url U [--original NAME] [--start S --end E] [--notes N]` | 01 | trims, sums to mono, resamples to 48 kHz, writes `audio/sources/<C>/<ID>.flac`, appends a C4 entry with both hashes; refuses a licence outside the allow-list |
+| `yomi-audio source remove <id>` | 09 | deletes a source's file and entry; refuses an unknown id or one a recipe names |
 | `yomi-audio impulse build` | 01 | renders `audio/impulses/<name>.toml` to `<name>.flac` (`small_room`, `stone_hall`, `open_air`) |
 | `yomi-audio sfx audition <cue>… [--out DIR] [--spectrogram]` | 01 | renders variants as 48 kHz WAV (default `audio/.audition/<cue>/`), prints each variant's loudness, peak and length |
 | `yomi-audio sfx build [--bank B] [--cue C]` | 02 | renders changed cues, checks them (C6), reassembles touched banks, encodes, writes C6 files |

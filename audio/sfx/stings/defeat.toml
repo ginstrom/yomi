@@ -10,7 +10,7 @@ filter = [{ type = "highpass", hz = 120 }, { type = "lowpass", hz = 4000 }]
 fade_out = 300
 gain = -1
 
-# Low strings: D minor (D2 A2 D3 F3) swelling in under the held D, each a pair of detuned saws, dark.
+# Low strings: D minor (D2 A2 D3 F3) swelling in under the held D, dark saws, D3 doubled by a detuned twin.
 [[layer]]
 synth = { kind = "saw", hz = 73.4, length = 2200 }
 filter = [{ type = "lowpass", hz = 500, hz_end = 350 }, { type = "highpass", hz = 40 }]

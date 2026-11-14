@@ -11,10 +11,10 @@ pitch = [-3, -1]
 filter = [{ type = "lowpass", hz = [1300, 1700] }, { type = "highpass", hz = 180 }]
 fade_out = 50
 
-[[layer]]                          # knock two, a little lower and softer
-pick = ["kenney_wood_medium_4", "kenney_wood_medium_0", "kenney_wood_medium_2"]
+[[layer]]                          # knock two, from other wood than knock one, so each variant pairs two different sources
+pick = ["kenney_wood_heavy_3", "kenney_wood_heavy_4", "rd_wood_hit_3"]
 length = 110
-pitch = [-5, -3]
+pitch = [-2, 0]
 filter = [{ type = "lowpass", hz = [1100, 1400] }, { type = "highpass", hz = 160 }]
 fade_out = 60
 gain = [-3, -1]

@@ -6,7 +6,7 @@ import pytest
 import soundfile as sf
 
 from yomi_audio.errors import AudioError
-from yomi_audio.sources import Registry, add_source
+from yomi_audio.sources import Registry, add_source, remove_source
 from conftest import SR, run_cli, write_wav
 
 
@@ -18,7 +18,7 @@ def tone(seconds=0.5, hz=440.0, sr=SR, channels=1):
 
 def entries(root):
     path = root / "sources.toml"
-    return tomllib.loads(path.read_text())["source"] if path.exists() else []
+    return tomllib.loads(path.read_text()).get("source", []) if path.exists() else []
 
 
 def add(root, file, **overrides):
@@ -107,6 +107,56 @@ def test_cli_adds(empty_project, tmp_path):
     )
     assert result.returncode == 0, result.stderr
     assert [e["id"] for e in entries(empty_project)] == ["test_tone"]
+
+
+# source remove ---------------------------------------------------------------------------
+
+
+def test_remove_deletes_the_file_and_only_its_entry(empty_project, tmp_path):
+    original = write_wav(tmp_path / "a.wav", tone())
+    add(empty_project, original, id="one")
+    add(empty_project, original, id="two")
+    text_before = (empty_project / "sources.toml").read_text()
+    remove_source(empty_project, "one")
+    assert [e["id"] for e in entries(empty_project)] == ["two"]
+    assert not (empty_project / "sources" / "test" / "one.flac").exists()
+    assert (empty_project / "sources" / "test" / "two.flac").exists()
+    assert (empty_project / "sources.toml").read_text().startswith("#")
+    add(empty_project, original, id="one")
+    remove_source(empty_project, "one")
+    assert [e["id"] for e in entries(empty_project)] == ["two"]
+    assert len((empty_project / "sources.toml").read_text()) <= len(text_before)
+
+
+def test_remove_drops_an_emptied_collection_folder(empty_project, tmp_path):
+    add(empty_project, write_wav(tmp_path / "a.wav", tone()), id="lone", collection="solo")
+    remove_source(empty_project, "lone")
+    assert not (empty_project / "sources" / "solo").exists()
+
+
+def test_remove_refuses_an_unknown_id(empty_project, tmp_path):
+    with pytest.raises(AudioError, match="nope.*not in sources.toml"):
+        remove_source(empty_project, "nope")
+
+
+def test_remove_refuses_a_source_a_recipe_names(empty_project, tmp_path):
+    add(empty_project, write_wav(tmp_path / "a.wav", tone()), id="used")
+    recipe = empty_project / "sfx" / "ui" / "click.toml"
+    recipe.parent.mkdir(parents=True, exist_ok=True)
+    recipe.write_text('variants = 1\nseed = 1\ngroup = "ui"\n[[layer]]\nsource = "used"\n')
+    with pytest.raises(AudioError, match="used.*ui.click"):
+        remove_source(empty_project, "used")
+    assert [e["id"] for e in entries(empty_project)] == ["used"]
+    assert (empty_project / "sources" / "test" / "used.flac").exists()
+
+
+def test_cli_removes(empty_project, tmp_path):
+    add(empty_project, write_wav(tmp_path / "a.wav", tone()))
+    result = run_cli("source", "remove", "test_tone", "--root", str(empty_project))
+    assert result.returncode == 0, result.stderr
+    assert "removed test_tone" in result.stdout and entries(empty_project) == []
+    again = run_cli("source", "remove", "test_tone", "--root", str(empty_project))
+    assert again.returncode == 1 and "test_tone" in again.stderr and "Traceback" not in again.stderr
 
 
 # The registry, as a recipe uses it -----------------------------------------------------

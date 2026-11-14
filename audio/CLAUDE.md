@@ -37,6 +37,7 @@ Run from the repository root (`--root` points elsewhere, as the tests do):
 | Task | Command |
 | --- | --- |
 | Add a source | `uv run --project tools/audio yomi-audio source add <file> --id ID --collection C --licence L --author A --url U [--original NAME] [--start S --end E] [--notes N]` |
+| Remove a source no recipe names (file and entry) | `uv run --project tools/audio yomi-audio source remove <id>` |
 | Render the impulses | `uv run --project tools/audio yomi-audio impulse build [name ...]` |
 | Listen to a cue | `uv run --project tools/audio yomi-audio sfx audition <cue>... [--out DIR] [--spectrogram]` |
 | Build the banks (`npm run sounds`) | `uv run --project tools/audio yomi-audio sfx build [--bank B] [--cue C]` |
@@ -184,8 +185,8 @@ found, for the content steps after them:
   window favours the longer one.
 - **Stings** (step 09). Kenney's jingles are 0.3 to 1.8 s melodies in
   whole-tone and chromatic runs; a sting uses one as its phrase and
-  extends it with synthesized chords (pairs of detuned saws with a closing
-  low-pass) and timpani (a falling sine plus a pink-noise slap). Find a
+  extends it with synthesized chords (saws with a closing low-pass, some
+  doubled by a detuned twin) and timpani (a falling sine plus a pink-noise slap). Find a
   jingle's notes with a harmonic-product-spectrum tracker and write the
   chord in its key; keep each sting's key in its recipe's first line
   (victory and level-up in G, defeat in D minor).

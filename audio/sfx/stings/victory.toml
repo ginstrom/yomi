@@ -10,7 +10,7 @@ filter = [{ type = "highpass", hz = 120 }]
 fade_out = 80
 gain = 3
 
-# The brass chord on G (G2 G3 B3 D4 G4), each voice a pair of detuned saws whose filter opens and closes like a brass swell.
+# The brass chord on G (G2 G3 B3 D4 G4): saws whose filter opens and closes like a brass swell, G3 and D4 doubled by a detuned twin.
 [[layer]]
 synth = { kind = "saw", hz = 98.0, length = 2300 }
 filter = [{ type = "lowpass", hz = 900, hz_end = 300 }, { type = "highpass", hz = 50 }]

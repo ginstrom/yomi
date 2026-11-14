@@ -5,7 +5,7 @@ group = "ui"
 max_ms = 225
 
 [[layer]]                          # a real page or paper flick
-pick = ["kenney_book_flip_2", "kenney_book_flip_3", "rd_paper_01", "rd_paper_02", "rd_paper_04"]
+pick = ["kenney_book_flip_2", "kenney_book_flip_3", "rd_paper_01", "rd_paper_04"]
 start = 15
 length = 140
 pitch = [-1, 2]

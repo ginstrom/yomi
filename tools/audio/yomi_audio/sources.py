@@ -1,4 +1,5 @@
-"""`sources.toml`: every committed source's provenance, and `source add`.
+"""`sources.toml`: every committed source's provenance, `source add` and
+`source remove`.
 
 A recipe names sources by id. The registry hands one out only when its licence
 is in the allow-list, its file exists and the file's SHA-256 is the one
@@ -261,4 +262,56 @@ def add_source(
         "notes": notes,
     }
     upsert_entry(root, entry)
+    return entry
+
+
+# source remove ---------------------------------------------------------------------
+
+
+def _recipes_naming(root: Path, id: str) -> list[str]:
+    """The cues whose recipes (sfx/<bank>/<name>.toml) name source `id` in a
+    layer's `source` or `pick`. Read as plain TOML, so a recipe that would not
+    validate still counts."""
+    import tomllib
+
+    cues = []
+    for path in sorted((root / "sfx").glob("*/*.toml")):
+        try:
+            data = tomllib.loads(path.read_text(encoding="utf-8"))
+        except tomllib.TOMLDecodeError as error:
+            raise AudioError(f"source {id}: {path.relative_to(root)} is not valid TOML: {error}") from error
+        layers = data.get("layer", [])
+        named = any(layer.get("source") == id or id in (layer.get("pick") or []) for layer in layers if isinstance(layer, dict))
+        if named:
+            cues.append(f"{path.parent.name}.{path.stem}")
+    return cues
+
+
+def remove_source(root: Path, id: str) -> dict:
+    """Deletes source `id`'s committed file and its entry in sources.toml (and
+    its collection folder if that leaves it empty). Refuses an unknown id or
+    one a recipe still names, changing nothing. Returns the removed entry."""
+    root = Path(root)
+    registry = Registry.load(root)
+    if id not in registry.entries:
+        raise AudioError(f"source {id}: is not in {SOURCES_FILE}")
+    users = _recipes_naming(root, id)
+    if users:
+        raise AudioError(f"source {id}: still named by {', '.join(users)}")
+    entry = registry.entries[id]
+    path = root / SOURCES_FILE
+    header, blocks = _blocks(path.read_text(encoding="utf-8"))
+    line = re.compile(rf"(?m)^id = {re.escape(_toml_value(id))}$")
+    kept = [block for block in blocks if not line.search(block)]
+    if kept:
+        kept[-1] = kept[-1].rstrip("\n") + "\n"
+    else:
+        header = header.rstrip("\n") + "\n"
+    path.write_text(header + "".join(kept), encoding="utf-8")
+    file = root / entry["file"]
+    if file.exists():
+        file.unlink()
+    folder = file.parent
+    if folder.is_dir() and folder != root / "sources" and not any(folder.iterdir()):
+        folder.rmdir()
     return entry
