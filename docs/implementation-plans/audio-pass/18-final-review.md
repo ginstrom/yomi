@@ -101,7 +101,7 @@ Run 2026-11-14 on branch `audio-pass`.
 **Acceptance evidence.**
 - AC1: `grep -rn "sound\.play(\|sound\.add(\|sfx_" src/` finds only `soundPlayer.ts` (theme and voice `sound.add`) and the guard test `sounds.test.ts`.
 - AC2 to AC7, AC10 to AC12, AC14, AC16: the tests named in steps 05 to 07, 14, 16 and 17 (`sounds.test.ts`, `soundPlayer.test.ts`, `audioSettings.test.ts`, `narration.test.ts`, `storyAudio.test.ts`, `e2e/audio.test.ts`, `e2e/story.test.ts`), all in the green runs above.
-- AC8, AC9: `sfx check` clean; sizes: SFX opus 1,777,... bytes in total (battle 1,187,332, world 405,708, stings 96,343, ui 84,849; limit 3 MB), mp3 1,583,600 (limit 3 MB); `audio/sources` 13,214,350 + `audio/voices` 927,070 = 14,141,420 (limit 15 MB, 0.86 MB spare after the removal); voice opus 21,470, mp3 37,480 (limit 4 MB). Loudness, peak and correlation are checked by `sfx check`.
+- AC8, AC9: `sfx check` clean; sizes: SFX opus 1,774,232 bytes in total (battle 1,187,332, world 405,708, stings 96,343, ui 84,849; limit 3 MB), mp3 1,583,600 (limit 3 MB); `audio/sources` 13,214,350 + `audio/voices` 927,070 = 14,141,420 (limit 15 MB, 0.86 MB spare after the removal); voice opus 21,470, mp3 37,480 (limit 4 MB). Loudness, peak and correlation are checked by `sfx check`.
 - AC13: the bake-off clips and score sheet existed; G1 (feature record) predates the first file under `public/assets/voice/` (step 16, 2026-11-14, later commit). The one reference clip, `voice_narrator_neutral`, has licence `own`, `design.model` (Qwen3-TTS VoiceDesign), `design.revision`, `description_ref = "voices.toml#narrator"` and `seed = 7`. Per G1 there are no emotion clips, so the 0.75 similarity check does not apply.
 - AC15: both READMEs and the CLAUDE.md files audited above.
 
@@ -112,6 +112,6 @@ Run 2026-11-14 on branch `audio-pass`.
 2. One short battle (a nearby threat-1 location, or `~` then `fight goblin_raid 1`) to victory: a melee blow, a bow shot, a spell, a move.
 3. World map: walk until monsters are sighted, confront them, return home, enter the encampment, buy and sell at the trading post, try a refused buy, craft, embed a rune, take a skill-tree node; watch the intro and, if reached, the Source cutscene with narration.
 4. Judge by design 7.2: nothing harsh or piercing; nothing much louder or quieter than its neighbours; no audible repetition in footsteps or repeated attacks; impacts in time with the visuals; music audible but under the effects. Reply "pass" or the cues to fix (ids from `__yomi.audioLog()` or the moment).
-5. Fold in the pending listening: G10 (`audio/.audition/16-render/`), G4 to G8 from the playtest, and whether Fireball (`battle.cast.fire` family) is quiet.
+5. Fold in the pending listening: G10 (`audio/.audition/16-render/`), G4 to G8 from the playtest, and whether Fireball (`battle.impact.fireball`) is quiet.
 
 Verdict: pending. Step `awaiting review`.
