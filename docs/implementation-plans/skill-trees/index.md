@@ -54,8 +54,14 @@ The plan follows the design; where the design leaves a choice open, these settle
 | 24 | [Path parity and the cells](24-parity-and-cells.md) | Every plan within ±50 of its role's best; capstones checked; cells in band | 23 | opus | done (9016146, 3af5c59, 53cdeb0 and the record commit; cells in band, parity gaps at levels 8 and 12 reported) |
 | 25 | [Campaign bands](25-campaign-bands.md) | The three campaigns, deaths and days in band, or the user has accepted the figure (AC11) | 24 | opus | done (6f9eee8, 6093912) |
 | 26 | [Manual, screenshots and the scaling rules](26-manual-and-scaling.md) | Manual's tree tables; screenshots retaken; CLAUDE.md's rules of scaling restated; final verification | 25 | sonnet | done (0573dcb) |
+| **Stage 5: nodes cost perk points (amendment, [design](../../designs/skill-trees-node-costs.md); see [Stage 5](#stage-5-the-node-cost-amendment))** | | | | | |
+| 27 | [Baseline and the v25 fixture](27-baseline-and-v25-fixture.md) | Today's figures re-measured (cells, campaigns, parity at levels 4, 8, 14); `src/game/fixtures/save-v25.json` captured by v25 code | 26 | sonnet | pending |
+| 28 | [Perk points: the economy, plans and save v26](28-perk-points-economy.md) | Tier costs 1/2/3/4; a perk point every level; `autoAdvance` saves up; plan reorders; `migrateFrom25`, `SAVE_VERSION` 26; guard re-recorded | 27 | opus | pending |
+| 29 | [Perk points in the UI](29-perk-points-ui.md) | Cost digit on every node; "Perk points" in the panel, strip, creation and probes; e2e; two carried-forward notes | 28 | sonnet | pending |
+| 30 | [Re-tune under costs](30-retune-under-costs.md) | First measurement, then cells, level-4 parity, the level-14 capstone cell and campaigns back in band, or the user accepts the figure; Amendment table in the feature record | 29 | opus | pending |
+| 31 | [Manual, screenshots and CLAUDE.md](31-manual-and-docs.md) | Manual's perk points and cost table; screenshots retaken; CLAUDE.md's rules restated from step 30; final gates | 30 | sonnet | pending |
 
-**Tiers.** "opus" means leave the engineer's model unset (the session's); "sonnet" means `model: "sonnet"`. Opus steps change the engine's rules, the AI policy, the save migration, the economy or the balance, or carry layout judgement (06, 14). Sonnet steps follow fixed contracts and existing patterns, or measure and document. Reviewers: leave the model unset for every step.
+**Tiers.** For steps 27 to 31 the reviewer runs at the engineer's tier (feature record, Model tiers); for steps 01 to 26 the line below held. "opus" means leave the engineer's model unset (the session's); "sonnet" means `model: "sonnet"`. Opus steps change the engine's rules, the AI policy, the save migration, the economy or the balance, or carry layout judgement (06, 14). Sonnet steps follow fixed contracts and existing patterns, or measure and document. Reviewers: leave the model unset for every step.
 
 ## Execution order
 
@@ -67,6 +73,7 @@ Strictly in table order; no two steps run in parallel. Within a stage some steps
 - After **16**: stage 2 complete, likewise; AC5, AC7 met.
 - After **23**: stage 3 complete, likewise; AC6, AC8 met.
 - After **26**: the feature complete; AC1 to AC11 met.
+- After **31**: the node-cost amendment complete; NC1 to NC9 met; `npm test`, `npm run test:browser`, `npm run build` pass.
 
 ## Requirement map
 
@@ -504,6 +511,176 @@ export const MANA_WEIGHT = 0.5
 | SG7 / SG10 | 0 / 2 | 4 / 199 | 0 / 422 | 0 / 386 | 0 / 5 |
 | F1 / F2 / F3 | 500 / 499 / 441 | 500 / 500 / 493 | 500 / 500 / 493 | 500 / 500 / 493 | 500 / 500 / 453 |
 | 500-campaign run time | 270 s (one party; company 258 s, `--ready-level 10` 517 s) | 329 s (company 352 s, `--ready-level 10` 663 s) | 341 s (company 282 s, `--ready-level 10` 592 s) | 272 s (company 270 s, `--ready-level 10` 580 s, `--ready-level 12` 883 s) | 438 s (company 470 s, `--ready-level 10` 1255 s; other work on the machine) |
+
+## Stage 5: the node-cost amendment
+
+**Source design:** [`docs/designs/skill-trees-node-costs.md`](../../designs/skill-trees-node-costs.md) (approved 2026-11-14 with every recommendation: a capstone costs 4, the currency is "perk points", the capstone parity cell is judged at level 14; committed by `6050923`). It amends `skill-trees.md` §4.1, §4.2, §4.4, §5.8, §5.9 and §7.2; where the two disagree the amendment wins. Written against `6050923`, whose code is that of `b488b1c` (the commits after it touch only docs). Steps 01 to 26 are done and are not rewritten: where this section and C4, C5, C8 or C9 disagree, this section wins.
+
+### Decisions taken for the orchestrator (stage 5)
+
+10. **The steps' shape: the baseline split out, the migration folded in.** The baseline and the v25 fixture are their own step (27), as step 01 was, because the fixture must be written by v25 code and the baseline must run on it, before step 28 touches anything. The save migration is folded into the economy step (28): renaming `Character.perkPicks` and removing `picksAt` breaks `migrateFrom22` and every old save at once, and splitting would leave an interim state where no old save loads (decision 7's churn) for a migration of some thirty lines.
+11. **`canAffordPerk`, not the design's `canAfford`.** `buildings.ts` already exports `canAfford` (the stock's arithmetic), which `CLAUDE.md` names; a second `canAfford` would make grep and the code map ambiguous.
+12. **`migrateFrom22` stops computing picks.** The design says to leave it as it is, but it imports `picksAt`, which step 28 removes. Its `perkPicks` line goes; `migrateFrom25`, run after it, sets `perkPoints` and deletes any `perkPicks`. The v22 and v18 fixtures end where the design says.
+13. **Words in step 28, rendering in step 29.** Step 28 changes a scene file only where `tsc` forces it (an import or field it renames or removes), and on a line it must touch it writes the final words of design §4.6 (`nodeHint`, `draftNodeHint`, the Skills tab's perk status text, the debug line, the victory line). Everything else the player sees (the digit, `costTone`, the asks line, creation's header and rule line, the tree help text, the probes' rename, e2e) is step 29's.
+14. **The capstone cell at level 14 is reported, not a gate.** The user's approval says "each within ±10%" as the target; the feature record also accepts parity at levels 8 and 12 as limited by the three-hero party and the AI, and design §7.2 (steps 5 and 8) stops on the cells, level-4 parity and the campaigns. Step 30 aims at ±10% (±50) at level 14, records every gap, and stops on the design's gates; a gap it cannot close by its levers is reported, not forced.
+15. **The guard.** Step 28 changes play (plans, the economy), so it re-records the refactor guard (and the policy snapshot in `policies.test.ts` if it moves) in its own commit, saying why. Step 29 changes no play and must keep both green unchanged. Step 30 re-records last.
+16. **Costs and the rate are not levers** (design §6, §7.2 step 7): `TIERS[*].cost`, `CREATION_PERK_POINTS` and `PERK_POINTS_PER_LEVEL` move only by the user's decision.
+
+### Contracts (stage 5)
+
+Task files copy these unchanged. "Existing" means at `6050923`.
+
+#### C17. Perk points (step 28; consumed by 29, 30, 31; supersedes C4)
+
+```ts
+// src/character/trees.ts
+export const TIERS: Record<Tier, { level: number; depth: number; cost: number }>
+  // 1: { level: 1, depth: 0, cost: 1 }, 2: { level: 2, depth: 1, cost: 2 },
+  // 3: { level: 6, depth: 3, cost: 3 }, capstone: { level: 12, depth: 5, cost: 4 }
+// src/character/perks.ts
+export function perkCost(perk: PerkId): number                          // TIERS[PERKS[perk].tier].cost; no per-node override
+export function nodesCost(character: Pick<Character, 'perks'>): number  // the sum of perkCost over the nodes held
+// src/character/character.ts
+// Character.perkPicks is renamed Character.perkPoints: number   (perk points earned and not yet spent)
+// src/character/creation.ts
+export const CREATION_PERK_POINTS = 3                 // replaces CREATION_PERK_PICKS
+export function perkPointsLeft(draft: CharacterDraft): number   // replaces perkPicksLeft: CREATION_PERK_POINTS less the cost of draft.perks
+// draftCharacter sets perkPoints; a refusal for want of points reads "no perk point is left"
+// src/character/progression.ts
+export const PERK_POINTS_PER_LEVEL = 1
+export function pointsAt(level: number): number       // CREATION_PERK_POINTS + (level − 1) × PERK_POINTS_PER_LEVEL: 3, 4, 6, 10, 14, 22 at 1, 2, 4, 8, 12, 20
+export function canAffordPerk(character: Pick<Character, 'perkPoints'>, perk: PerkId): boolean        // perkPoints ≥ perkCost(perk)
+export function affordableAt(character: Pick<Character, 'level' | 'perkPoints'>, perk: PerkId): number  // level + max(0, perkCost(perk) − perkPoints)
+// levelUp: perkPoints += PERK_POINTS_PER_LEVEL at every level
+// takePerk(character, perk): false unless canAffordPerk and qualifiesFor; else spends perkCost(perk)
+// canAdvance: skillPoints > 0, or some node of availablePerks(character) that canAffordPerk
+// XpGain.perksGained is renamed perkPointsGained
+// removed: PICK_LEVEL_STEP, CREATION_PICKS, picksAt, nextPerkLevel, hasPickFor
+// qualifiesFor, availablePerks, missingRequirements, describePerkRequirements: unchanged (asks only, never points)
+```
+
+Invariant (tested): for a hero never migrated, `perkPoints + nodesCost(hero) === pointsAt(level)`.
+
+Strip hints (`src/scenes/perkTree.ts`, written in step 28; lock and "Not yet" words unchanged):
+
+- `nodeHint`, open and `canAdvance` false: `Perk points are spent on the world map`
+- open and affordable: `Click to take (3 of your 4 perk points)`
+- open and short: `Needs 3 perk points; you have 1 (level 9)`, the level being `affordableAt`
+- singular where the number is 1: `1 perk point`
+- `draftNodeHint`, open with none left: `No perk points left`
+
+#### C18. `autoAdvance` and the plans (step 28; tuned by 30; supersedes C5's rule and three of its lists)
+
+```ts
+// src/character/progression.ts
+export function autoAdvance(character: Character, plan: PlanId = planFor(character)): void
+  // skill points as today; then repeat:
+  //  1. target = the first node of the plan, not held, that the hero qualifies for, or would qualify for
+  //     if only its level were higher (lacking nothing but the level; no attribute cap);
+  //     with none, the first non-capstone node in PERKS order it qualifies for now; with none, stop
+  //  2. if the target is short of the level or of points: stop (save; never fall through to a cheaper node)
+  //  3. else take it and repeat
+```
+
+A node short of a depth, a skill, an attribute or a node it `requires` is skipped, as today. Plans reordered (in full; bold marks what moved):
+
+- `knight`: weapon_training, toughness, rooted, taunt, pin, heavy_hand, iron_skin, **unbreakable, guardian**, shield_wall, power_attack, armor_breaker, weapon_mastery
+- `ranger`: marksmanship, deadly_aim, aimed_shot, **volley, far_shot, deadeye**, hunters_mark, pinning_shot, dodger, sprint, skirmisher, tumble, evasion
+- `evoker_healer`: magic_arrow, heal, destruction, flame_arrow, **fireball, heal_all, pyromancy, meteor, greater_heal, mending**, death_cloud, greater_heal_all, purify
+- `swordmaster`, `rogue`, `cryomancer`, `bandit_mage` and the capstone-first path plans: unchanged
+
+Node levels the tests fix (design §4.4):
+
+| Hero or role | Levels |
+| --- | --- |
+| Aldric (`knight`) | Rooted 3, Taunt 5, Pin 8, Iron Skin 11, Unbreakable 15 |
+| Brenna (`ranger`) | Aimed Shot 3, Volley 6, Far Shot 8, Deadeye 12 |
+| Delwyn (`evoker_healer`) | Flame Arrow 3, Fireball 6, Heal All 8, Pyromancy 10, Meteor 14 |
+| Captain | Rooted 3, Taunt 5, Pin 8 |
+| Brute | Power Attack 3, Armour Breaker 5, Cleave 8 |
+| Archer, Crossbowman | Aimed Shot 3, Volley 6 |
+| Hedge-Mage | Flame Arrow 3, Destruction 4, Fireball 7 |
+
+#### C19. Save v26 (step 28; fixture from 27)
+
+```ts
+// src/game/save.ts
+export const SAVE_VERSION = 26
+function migrateFrom25(game: Record<string, unknown>): void
+  // versions 25, 24, 23; and 22 and 18 after migrateFrom22. Every hero of every party and the reserves:
+  // every node kept (no refund); perkPoints = max(0, pointsAt(level) − nodesCost(hero)); perkPicks deleted
+// parseSave accepts [26, 25, 24, 23, 22, 18]; characterOf also checks perkPoints is an integer ≥ 0
+// migrateFrom22 no longer writes perkPicks (decision 12); a saved battle needs nothing (UnitRecord unchanged)
+// fixture: src/game/fixtures/save-v25.json (step 27), its heroes and expected points in step 27's record
+```
+
+#### C20. The tree view's cost (step 29)
+
+```ts
+// src/scenes/perkTree.ts
+export const NODE_COST_W = 14     // px of the node's label area reserved at its right inner edge; the label centred in what is left
+export type CostTone = 'gold' | 'dim'
+export function costTone(character: Character, perk: PerkId, canAdvance: boolean): CostTone | null
+  // null for a taken node (✓ in the slot) or a locked capstone (✕); gold when open, affordable and canAdvance; else dim
+export function draftCostTone(draft: CharacterDraft, perk: PerkId): CostTone | null   // the same for creation
+export function nodeAsks(perk: PerkId): string
+  // "Costs 3 perk points. Asks: Level 6, Melee 55%, 3 nodes in Heavy Knight"; "Costs 1 perk point." with no asks
+// src/testHook.ts: CreationProbe.perkPicks and InventoryProbe.perkPicks are renamed perkPoints;
+//   each entry of both probes' `perks` gains cost: number
+```
+
+Words: the Skills tab and tree header `Perk points: N` (gold when some open node is affordable on the world map, dim otherwise or in battle); creation's header `Perk points: N of 3`; creation's rule line "3 perk points. One more with every level. A node costs 1 to 4 by its tier. Any path, any tree; only your deepest path may open its capstone." (drop "Any path, any tree; " if it does not fit at 840×560); the victory line `Aldric reaches level 5: +6 max HP, 3 skill points, 1 perk point, wounds healed`; the debug console `N perk points`. No screen shows "pick" for a perk or a bare "points".
+
+### Measurement (stage 5)
+
+The measurement procedure above, with `NN` the step number and a suffix per attempt. Parity runs use `--plans`, only the role under test overridden:
+
+| Parity cell | Encounter, threat, level | Judged |
+| --- | --- | --- |
+| L4 | `bandit_camp` 4, level 4 | each plan within ±50 of its role's best (the gate; `rogue_archer` reported only) |
+| L8 | `hobgoblin_warband` 5, level 8 | reported (the user accepts level-8 gaps as the AI's) |
+| L14 (capstone) | `bandit_camp` 7, level 14 | target ±50 of the role's best; reported (decision 14) |
+
+Plans: melee `knight`, `swordmaster`, `spellsword`, `assassin`, `paladin`; archery `ranger`, `rogue_archer`, `assassin`; magic `evoker`, `cryomancer`, `arcanist`, `healer`, `saint` (and `evoker_healer` for reference).
+
+| Figure | Band | 25 final | 27 baseline | 30 first (untuned) | 30 final |
+| --- | --- | --- | --- | --- | --- |
+| one party (`--parties 1`) | 215–250 | 243 | | | |
+| default company | 220–260 | 243 | | | |
+| `--ready-level 10` | 370–420 | 445 (accepted over) | | | |
+| deaths a campaign (one party) | ≤ 2.0 | 1.0 | | | |
+| days a campaign (one party) | 243–297 | 287 | | | |
+| GR3 / BC3 / BC4 / BC5 | ≥ 470 / 400–470 / 430–490 / 420–490 | 500 / 455 / 462 / 484 | | | |
+| SN5 / SP5 / TL5 | 410–480 / 410–480 / report | 448 / 454 / 0 | | | |
+| SG7 / SG10 | 0 ± 40 / above 2 | 0 / 5 | | | |
+| F1 / F2 / F3 | nearly all / most / 7 in 10 | 500 / 500 / 453 | | | |
+
+Parity tables go in steps 27 and 30's records.
+
+### Requirement map (stage 5)
+
+| Design item | Steps |
+| --- | --- |
+| N1 perk points, 3 + 1 a level, `perkPoints` | 28 |
+| N2 costs by tier | 28 (rules), 29 (shown) |
+| N3 tiers, depth, calling unchanged | 28 (tests) |
+| N4 creation | 28 (rules), 29 (words) |
+| N5 `autoAdvance` saves; plan reorders; bandits | 28; 30 (plan order as a lever) |
+| N6 `SAVE_VERSION` 26 and `migrateFrom25` | 27 (fixture), 28 |
+| N7 costs and "Perk points" in the UI | 28 (hints, status, victory, debug), 29 |
+| N8 manual, CLAUDE.md, e2e, screenshots | 28, 29 (CLAUDE.md lines they make wrong; e2e), 31 |
+| N9 re-measurement | 27 (baseline), 30 |
+| NC1, NC2, NC3, NC5, NC6 | 28 |
+| NC4 | 28, 29 |
+| NC7 | 29 |
+| NC8 | 31 |
+| NC9 | 30 (bands), 31 (final gates) |
+
+Carried-forward notes folded in (feature record): `CLAUDE.md`'s "(C, S, B, I)" → "(C, S, I; B within the panel)" and `skillMenu.test.ts`'s full order of reasons, both in step 29.
+
+### Open questions (stage 5)
+
+None blocks a step. Step 30 may need the user to accept a figure outside its band, or to decide on a lever outside its list (costs, the rate, creation points; design §8.3).
 
 ## Completion criteria
 
