@@ -1,7 +1,7 @@
 # Feature: skill trees and progression
 
 **Slug:** skill-trees
-**Phase:** 4 — implementation (stages 1–3 done; steps 24 and 25 done; step 26 next)
+**Phase:** 4 — implemented (all 26 steps done; manual, screenshots and CLAUDE.md current)
 
 ## Request (user's words)
 
@@ -12,7 +12,7 @@ Intake clarification (2026-11-13), on how classes fit: "I actually like the abil
 ## Links
 
 - Design: `docs/designs/skill-trees.md` (approved 2026-11-13; picks every other level, 95 nodes)
-- Plan: `docs/implementation-plans/skill-trees/` (26 steps in 4 stages, 19030e8)
+- Plan: `docs/implementation-plans/skill-trees/` (26 steps in 4 stages, 19030e8; all done)
 - Branch: `skill-trees`, off main (d18abf4)
 
 ## Path
@@ -173,3 +173,5 @@ Play check (a scripted browser run through the real game, a scratch test since r
 Path parity (step 24, unchanged by step 25, which touched only the Source): at Bandit Camp threat 4, level 4, every plan within ±50 of its role's best but the Scout's `rogue_archer` (−109) and `assassin` (−62); spread melee 443–475, archery 353–462, magic 472–489. Levels 8 and 12 are far apart (the user accepted that as the three-hero party and the AI's doing; details in step 24's record).
 
 How it got there: step 24 made foes tougher (`FOE_HP_PER_LEVEL` 1.3, bandits in Fine iron from threat 3, a fourth foe at the Spider Nest) and fixed the policy, taking one party from 449 to 268. Step 25 raised the Blight Horror's hit points from 55 to 63, which put one party and the company at 243. `--ready-level 10` stayed at 445: parties of five at levels 10 and 11 never lose to the Source, and no foe on today's map, capped at threat 5, is a danger to them. A harder Source (the Horror's claws at 2d6+11) was tried at the user's first word and brought `--ready-level 10` to 419, but one party and the company fell to 36 and 34; the user then chose to keep the 63-hit-point Horror and revisit `--ready-level 10` in stage 9. Details in step 25's record.
+
+Final gates (step 26): `npm test`, `npm run test:browser` and `npm run build` pass; the manual's section 11 holds all 95 nodes and 30 spells from the code; every screenshot retaken; the play walk (creation across two trees, a level-up pick, Sprint in battle, a capstone and the lock on the others) done in the browser. The figures above are the final ones; `--ready-level 10` (445) stays over its band by the user's decision.
