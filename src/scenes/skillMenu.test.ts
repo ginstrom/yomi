@@ -17,18 +17,19 @@ function battle(stats: Partial<CombatantStats>, gap = 1) {
       { id: 'goblin', side: 'enemy', stats: GOBLIN_STATS, position: hex(gap, 1) },
     ],
   })
-  return { engine, unit: engine.getState().units[0], legal: engine.legalActions('hero') }
+  const state = engine.getState()
+  return { engine, unit: state.units[0], units: state.units, legal: engine.legalActions('hero') }
 }
 
 const abilities = (...ids: AbilityId[]) => ({ abilities: ids })
 
 describe('skillMenuRows', () => {
   it('lists every spell the unit knows, enabled when a cast of it is legal now', () => {
-    const { unit, legal } = battle({ magic: { ...MAGIC, spells: ['heal', 'fireball', 'magic_arrow'] } }, 4)
-    expect(skillMenuRows(unit, legal)).toEqual([
+    const { unit, units, legal } = battle({ magic: { ...MAGIC, spells: ['heal', 'fireball', 'magic_arrow'] } }, 4)
+    expect(skillMenuRows(unit, legal, units)).toEqual([
       { kind: 'spell', id: 'magic_arrow', label: 'Magic Arrow  3 mana  4 AP', enabled: true },
       // Too dear for 5 mana.
-      { kind: 'spell', id: 'fireball', label: 'Fireball  10 mana  6 AP', enabled: false },
+      { kind: 'spell', id: 'fireball', label: 'Fireball  10 mana  6 AP', enabled: false, why: 'Needs 10 mana' },
       { kind: 'spell', id: 'heal', label: 'Heal  3 mana  4 AP', enabled: true },
     ])
   })
@@ -55,14 +56,17 @@ describe('skillMenuRows', () => {
     expect(skillMenuRows(near.unit, near.legal).map((row) => row.enabled)).toEqual([true, true])
     // Too far for Pin's blow, and for Taunt's 2 hexes.
     const far = battle({ ...abilities('taunt', 'pin'), magic: MAGIC }, 4)
-    expect(skillMenuRows(far.unit, far.legal).map((row) => row.enabled)).toEqual([false, false])
+    expect(skillMenuRows(far.unit, far.legal, far.units).map(({ enabled, why }) => [enabled, why])).toEqual([
+      [false, 'No foe in range'],
+      [false, 'No foe in range'],
+    ])
   })
 
   it('says how long a recharging ability has left', () => {
     const { engine } = battle({ ...abilities('taunt'), actionPoints: 20 })
     engine.step({ type: 'ability', unit: 'hero', ability: 'taunt', at: hex(0, 1) })
-    const [row] = skillMenuRows(engine.getState().units[0], engine.legalActions('hero'))
-    expect(row).toEqual({ kind: 'ability', id: 'taunt', label: 'Taunt  3 AP', enabled: false, readyIn: 2 })
+    const [row] = skillMenuRows(engine.getState().units[0], engine.legalActions('hero'), engine.getState().units)
+    expect(row).toEqual({ kind: 'ability', id: 'taunt', label: 'Taunt  3 AP', enabled: false, readyIn: 2, why: 'Recharging (ready in 2)' })
   })
 
   it('says a technique needs a melee or a ranged weapon when the one held is not', () => {
@@ -84,6 +88,40 @@ describe('skillMenuRows', () => {
   })
 })
 
+describe('why a skill is greyed', () => {
+  it('says how much AP it needs when the unit has too few left', () => {
+    const { unit, units } = battle({ ...abilities('taunt'), magic: { ...MAGIC, spells: ['heal'] } })
+    const spent = { ...unit, ap: 2 }
+    expect(skillMenuRows(spent, [], units).map((row) => row.why)).toEqual(['Needs 4 AP', 'Needs 3 AP'])
+  })
+
+  it('says how much mana it needs when the unit has too little left', () => {
+    const { unit, units } = battle({ ...abilities('pin'), magic: { ...MAGIC, spells: ['heal'] } })
+    expect(skillMenuRows({ ...unit, mana: 2 }, [], units).map((row) => row.why)).toEqual(['Needs 3 mana', 'Needs 3 mana'])
+  })
+
+  it('checks the weapon first, then once a battle, the recharge, mana, AP and range, in that order', () => {
+    const { unit, units } = battle({ ...abilities('aimed_shot', 'taunt') }, 4)
+    const rows = skillMenuRows({ ...unit, ap: 0, recharging: { taunt: 1 } }, [], units)
+    expect(rows.map((row) => row.why)).toEqual(['Recharging (ready in 1)', 'Needs a ranged weapon'])
+  })
+
+  it('says a hostile area has no foe within its reach, its radius included', () => {
+    const near = battle({ magic: { ...MAGIC, maxMana: 30, spells: ['fireball'] } }, 7)
+    // Fireball reaches 6 hexes and bursts 1 more.
+    expect(skillMenuRows(near.unit, [], near.units)[0].why).toBe('Not now')
+    const far = battle({ magic: { ...MAGIC, maxMana: 30, spells: ['fireball'] } }, 8)
+    expect(skillMenuRows(far.unit, [], far.units)[0].why).toBe('No foe in range')
+  })
+
+  it('falls back on "Not now" only when nothing else tells', () => {
+    const { unit, units } = battle({ ...abilities('taunt') })
+    expect(skillMenuRows(unit, [], units)[0].why).toBe('Not now')
+    // An enabled row gives no reason.
+    expect(skillMenuRows(unit, battle({ ...abilities('taunt') }).legal, units)[0].why).toBeUndefined()
+  })
+})
+
 describe('Revive in the Skills list', () => {
   const reviver = { magic: { ...MAGIC, maxMana: 30, spells: ['revive'] as const } }
   const revive = { type: 'cast', unit: 'hero', spell: 'revive', target: 'ally' } as const
@@ -97,9 +135,14 @@ describe('Revive in the Skills list', () => {
   it('is greyed with "Once a battle" for a caster that has used it', () => {
     const { unit } = battle(reviver)
     expect(skillMenuRows({ ...unit, usedOnce: ['revive'] }, [])[0]).toMatchObject({ enabled: false, why: 'Once a battle' })
-    expect(skillMenuRows({ ...unit, usedOnce: [] }, [])[0].why).toBeUndefined()
+    expect(skillMenuRows({ ...unit, usedOnce: [] }, [])[0].why).not.toBe('Once a battle')
     // A spell that may be cast again and again never says so.
-    expect(skillMenuRows({ ...unit, magic: { ...MAGIC, spells: ['heal'] }, usedOnce: ['revive'] }, [])[0].why).toBeUndefined()
+    expect(skillMenuRows({ ...unit, magic: { ...MAGIC, spells: ['heal'] }, usedOnce: ['revive'] }, [])[0].why).not.toBe('Once a battle')
+  })
+
+  it('says there is no target in range with no fallen ally near', () => {
+    const { unit, units } = battle(reviver)
+    expect(skillMenuRows(unit, [], units)[0].why).toBe('No target in range')
   })
 
   it('asks for a fallen ally', () => {

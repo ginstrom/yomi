@@ -2084,7 +2084,7 @@ export class BattleScene extends Phaser.Scene {
    */
   private openSkillMenu(self: UnitSnapshot): void {
     if (this.targeting === 'attack') this.setTargeting(null)
-    const rows = skillMenuRows(self, this.engine.legalActions(self.id))
+    const rows = skillMenuRows(self, this.engine.legalActions(self.id), this.engine.getState().units)
     const texts = rows.map(({ label, readyIn }, i) => `${i + 1}. ${label}${readyIn ? `  (ready in ${readyIn})` : ''}`)
     const width = Math.max(SKILL_ROW_W, ...texts.map((t) => t.length * SKILL_CHAR_W + 16))
     // Over the button, kept on screen and clear of the party's column.
@@ -2123,7 +2123,7 @@ export class BattleScene extends Phaser.Scene {
   private skillRowHint(row: SkillMenuRow): string {
     const what = `${skillName(row)}: ${skillDescription(row)}`
     if (row.enabled) return what
-    const why = row.why ?? (row.readyIn ? `Ready in ${row.readyIn}` : 'Not now')
+    const why = row.why ?? 'Not now'
     return `${skillName(row)}: ${why}. ${skillDescription(row)}`
   }
 
