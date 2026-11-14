@@ -68,6 +68,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - 15: opus engineer, opus reviewer, clean in 1 round (three tidy-ups, `70a21c2`); G9 pending. Emotion clips tested: they lower speaker similarity (0.81–0.84 vs 0.92–0.96) and carry only pace.
 - 16: sonnet engineer, sonnet reviewer, clean in 1 round (wording tidy-ups, `a467c74`); G10 pending. No heteronyms in the two shipped lines; no PerTh in the mlx port (grep only).
 - 17: sonnet engineer, sonnet reviewer, clean in round 2 (round 1: duck hooks, last-beat fade, load-error handler; `b97a568`). Full browser suite last run green before round 1.
+- 10: opus engineer, opus reviewer, clean in 1 round (provenance tidy-ups, `42c18c2`). Unsure by ear: `shot.wand`/`miss.magic` may read sci-fi, `hit.magic` gunshot-like, poison vs acid alike, `regen` late squelch. Audition `audio/.audition/10-ranged-sweeteners/`.
 - 03: opus engineer, opus reviewer, clean in 1 round; G1 passed 2026-11-14 (b/A, `A_0`); records updated by the step 07 engineer.
 
 ## Notes carried forward
