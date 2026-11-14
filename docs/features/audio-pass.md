@@ -66,18 +66,15 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - 09: opus engineer, opus reviewer, clean in round 3 (unused source; then `source remove` deleted used impulses; fixed `20df707`, `1f53d01`). Audition `audio/.audition/09-ui-stings/`; user to judge whether `ui.back` is softer than `ui.click`.
 - 14: sonnet engineer, sonnet reviewer, clean in 1 round (tidy-ups: `lineSeed` literal test, lockfile order, smol-toml licence).
 - 15: opus engineer, opus reviewer, clean in 1 round (three tidy-ups, `70a21c2`); G9 pending. Emotion clips tested: they lower speaker similarity (0.81–0.84 vs 0.92–0.96) and carry only pace.
+- 16: sonnet engineer, sonnet reviewer, clean in 1 round (wording tidy-ups, `a467c74`); G10 pending. No heteronyms in the two shipped lines; no PerTh in the mlx port (grep only).
 - 03: opus engineer, opus reviewer, clean in 1 round; G1 passed 2026-11-14 (b/A, `A_0`); records updated by the step 07 engineer.
 
 ## Notes carried forward
 
 - Step 02: also fix review-01 findings: check every source id a recipe names (not only those drawn), catch non-AudioError failures without tracebacks, stop reading pyloudnorm's private `_filters` (or comment/pin it).
 - Step 02 (and 09): apply the short-cue normalisation rule above; `hit.slash` over stand-in sources peaked +4.4 dBTP, the same rule catches it.
-- Step 16: the user heard "winds" (the road winds) read as wind-that-blows in every G9 clip but `grave_0` (a heteronym in the design's audition sentence only). Check every shipped line for heteronyms by ear-proxy (list them in the record) and respell them in the beat's `spoken` (e.g. "wynds") or reword; don't rely on the engine.
-- Step 16: update design §5.8.3 item 3 and §5.8.4 (still say per-emotion `audio_prompt` / `chatterbox` with no tags; G1 overtook them). Only grave, whisper and triumphant were ever designed.
-- Step 16: the mlx Chatterbox port adds no PerTh watermark; say so in the voice README. A render needs network on first model load.
-- c22 (b) has a click near its end: re-take if that line ships.
+- Any later voiced line: check heteronyms (the user heard "winds" misread) and respell in `spoken`; rule is in `audio/CLAUDE.md`.
 - Steps 08–13: `sourcing.md` names some Kenney files loosely (`creak_001` is `creak1`; `knifeSlice`, `drawKnife`, `handleCoins` plain numbers; "Retro Electric Off" is `Retro Charge Electric Off 07_s05`), and a few Freesound cue lists differ between `sourcing.md` and `freesound-wanted.md` (review-04). Check names on disk.
-- After G2: record the outcome in step 04's execution record and set it `done`.
 - Step 17: `stopVoice`'s fade tweens on the starting scene; if it shuts down mid-fade the sound is never destroyed (review-05 #3) — destroy on shutdown or tween elsewhere.
 - Step 17: reuse step 05's duck constants in `soundPlayer.ts`, don't define new ones.
 - G11: music now plays at −24 LUFS (battle 4.0 dB, world 1.7 dB louder than before); judge by ear.
