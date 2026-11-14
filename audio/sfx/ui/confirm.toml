@@ -1,21 +1,47 @@
-# Placeholder over placeholder_ui_click; replaced by step 09
+# A click, then a soft rising wooden-mallet pair (a fifth up), consonant and short.
 variants = 3
-seed = 7700
+seed = 9301
 group = "ui"
 max_ms = 375
 
-[[layer]]
-source = "placeholder_ui_click"
-length = 250
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the click: a short wooden mode
+synth = { kind = "sine", hz = [1800, 2400], length = 35 }
+envelope = [[0, -30], [1, 0], [35, -50]]
+gain = -4
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 250 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [250, -40]]
-gain = [-26, -16]
+[[layer]]
+pick = ["kenney_tick_001", "kenney_tick_002", "kenney_ui_click_4"]
+length = 40
+filter = [{ type = "highpass", hz = 900 }]
+fade_out = 15
+gain = [-10, -6]
+
+[[layer]]                          # mallet note 1 (C5): a soft FM strike, decaying fast
+synth = { kind = "fm", carrier_hz = [521, 526], ratio = 4.0, index = [1.6, 2.4], index_end = 0, length = 200 }
+filter = [{ type = "highpass", hz = 200 }]
+envelope = [[0, -40], [3, 0], [200, -55]]
+fade_out = 40
+gain = -4
+offset = 20
+
+[[layer]]                          # mallet note 2 (G5), a fifth above
+synth = { kind = "fm", carrier_hz = [782, 789], ratio = 4.0, index = [1.4, 2.2], index_end = 0, length = 230 }
+filter = [{ type = "highpass", hz = 200 }]
+envelope = [[0, -40], [3, 0], [230, -55]]
+fade_out = 40
+gain = -3
+offset = [85, 105]
+
+[[layer]]                          # the mallet's wooden knock under each note
+synth = { kind = "noise", color = "pink", length = 25 }
+filter = [{ type = "bandpass", hz = [700, 1300], q = 2 }]
+envelope = [[0, 0], [25, -45]]
+gain = [-16, -10]
+offset = [85, 105]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "reverb", impulse = "small_room", wet_db = -22 },
+  { type = "trim", threshold_db = -55, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 40 },
+]

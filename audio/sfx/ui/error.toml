@@ -1,21 +1,35 @@
-# Placeholder over placeholder_ui_click; replaced by step 09
+# Two dull, muted wooden knocks about 80 ms apart, low; not a tone or a buzzer.
 variants = 3
-seed = 8000
+seed = 9501
 group = "ui"
 max_ms = 300
 
-[[layer]]
-source = "placeholder_ui_click"
-length = 200
-pitch = [-14, -4]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # knock one
+pick = ["kenney_wood_medium_0", "kenney_wood_medium_2", "kenney_wood_medium_4"]
+length = 100
+pitch = [-3, -1]
+filter = [{ type = "lowpass", hz = [1300, 1700] }, { type = "highpass", hz = 180 }]
+fade_out = 50
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 200 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [200, -40]]
-gain = [-26, -16]
+[[layer]]                          # knock two, a little lower and softer
+pick = ["kenney_wood_medium_4", "kenney_wood_medium_0", "kenney_wood_medium_2"]
+length = 110
+pitch = [-5, -3]
+filter = [{ type = "lowpass", hz = [1100, 1400] }, { type = "highpass", hz = 160 }]
+fade_out = 60
+gain = [-3, -1]
+offset = [78, 88]
+
+[[layer]]                          # a muted body under both
+synth = { kind = "noise", color = "pink", length = 170 }
+filter = [{ type = "bandpass", hz = [300, 450], q = 2 }]
+envelope = [[0, 0], [40, -30], [80, 0], [130, -40]]
+gain = [-20, -14]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -22, ratio = 3, attack_ms = 1, release_ms = 40 },
+  { type = "limit", ceiling_db = -10, release_ms = 30 },
+  { type = "trim", threshold_db = -55, keep_tail_ms = 25 },
+  { type = "fade_out", ms = 30 },
+]

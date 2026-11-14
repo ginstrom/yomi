@@ -1,21 +1,41 @@
-# Placeholder over placeholder_ui_click; replaced by step 09
+# A short dry tick: a wooden knock (two decaying modes in 1.5 to 3 kHz), a recorded click's edge and a tiny low thump; no tail.
 variants = 4
-seed = 7600
+seed = 9102
 group = "ui"
 max_ms = 90
 
-[[layer]]
-source = "placeholder_ui_click"
-length = 60
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the wooden body: the main mode
+synth = { kind = "sine", hz = [1700, 2500], hz_end = [1600, 2300], length = 45 }
+envelope = [[0, -30], [1, 0], [8, -10], [45, -50]]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 60 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [60, -40]]
-gain = [-26, -16]
+[[layer]]                          # a second, inharmonic mode above it
+synth = { kind = "sine", hz = [3900, 5200], length = 25 }
+envelope = [[0, -30], [1, 0], [25, -50]]
+gain = [-14, -9]
+
+[[layer]]                          # a recorded click for the edge
+pick = ["kenney_ui_click_4", "kenney_ui_click_5", "kenney_tick_001", "kenney_tick_002"]
+length = 40
+pitch = [-3, 1]
+filter = [{ type = "highpass", hz = 800 }, { type = "lowpass", hz = 6000 }]
+fade_out = 15
+gain = [-12, -8]
+
+[[layer]]                          # a breath of air on the attack
+synth = { kind = "noise", length = 15 }
+filter = [{ type = "bandpass", hz = [1800, 3200], q = 1.5 }]
+envelope = [[0, 0], [15, -40]]
+gain = [-10, -6]
+
+[[layer]]                          # the tiny low thump
+synth = { kind = "sine", hz = [150, 220], hz_end = 110, length = 25 }
+filter = [{ type = "highpass", hz = 90 }]
+envelope = [[0, -6], [25, -60]]
+gain = -16
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -16, ratio = 4, attack_ms = 0.3, release_ms = 30 },
+  { type = "limit", ceiling_db = -8, release_ms = 20 },
+  { type = "fade_out", ms = 10 },
+]

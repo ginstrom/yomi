@@ -1,15 +1,106 @@
-# Placeholder over placeholder_victory; replaced by step 09
+# A sax pickup (D E F# G, Kenney Music Jingles) landing on a held G major brass chord with timpani; resolves major. Key: G.
 variants = 1
-seed = 8300
+seed = 9801
 group = "sting"
 max_ms = 4500
 
+[[layer]]                          # the pickup: Kenney's rising sax jingle, its G lands at ~420 ms
+source = "kenney_jingle_sax_10"
+filter = [{ type = "highpass", hz = 120 }]
+fade_out = 80
+gain = 3
+
+# The brass chord on G (G2 G3 B3 D4 G4), each voice a pair of detuned saws whose filter opens and closes like a brass swell.
 [[layer]]
-source = "placeholder_victory"
-length = 3000
-pitch = 0
-filter = [{ type = "highpass", hz = 30 }]
-fade_out = 10
+synth = { kind = "saw", hz = 98.0, length = 2300 }
+filter = [{ type = "lowpass", hz = 900, hz_end = 300 }, { type = "highpass", hz = 50 }]
+envelope = [[0, -30], [30, -3], [300, -6], [1700, -10], [2300, -60]]
+gain = -9
+offset = 420
+
+[[layer]]
+synth = { kind = "saw", hz = 196.0, length = 2300 }
+filter = [{ type = "lowpass", hz = 2600, hz_end = 700 }, { type = "highpass", hz = 80 }]
+envelope = [[0, -30], [40, 0], [300, -5], [1700, -9], [2300, -60]]
+gain = -12
+offset = 420
+
+[[layer]]
+synth = { kind = "saw", hz = 196.9, length = 2300 }
+filter = [{ type = "lowpass", hz = 2600, hz_end = 700 }, { type = "highpass", hz = 80 }]
+envelope = [[0, -30], [40, 0], [300, -5], [1700, -9], [2300, -60]]
+gain = -12
+offset = 425
+
+[[layer]]
+synth = { kind = "saw", hz = 246.9, length = 2300 }
+filter = [{ type = "lowpass", hz = 2800, hz_end = 800 }, { type = "highpass", hz = 80 }]
+envelope = [[0, -30], [40, 0], [300, -5], [1700, -9], [2300, -60]]
+gain = -13
+offset = 430
+
+[[layer]]
+synth = { kind = "saw", hz = 293.7, length = 2300 }
+filter = [{ type = "lowpass", hz = 3000, hz_end = 900 }, { type = "highpass", hz = 80 }]
+envelope = [[0, -30], [40, 0], [300, -5], [1700, -9], [2300, -60]]
+gain = -13
+offset = 420
+
+[[layer]]
+synth = { kind = "saw", hz = 294.9, length = 2300 }
+filter = [{ type = "lowpass", hz = 3000, hz_end = 900 }, { type = "highpass", hz = 80 }]
+envelope = [[0, -30], [40, 0], [300, -5], [1700, -9], [2300, -60]]
+gain = -15
+offset = 428
+
+[[layer]]
+synth = { kind = "saw", hz = 392.0, length = 2300 }
+filter = [{ type = "lowpass", hz = 3400, hz_end = 1000 }, { type = "highpass", hz = 100 }]
+envelope = [[0, -30], [40, 0], [300, -5], [1700, -9], [2300, -60]]
+gain = -15
+offset = 422
+
+# Timpani: a soft stroke on the pickup's D, then the big G under the chord and a smaller one after.
+[[layer]]
+synth = { kind = "sine", hz = 80, hz_end = 72, length = 500 }
+filter = [{ type = "highpass", hz = 40 }]
+envelope = [[0, -20], [3, 0], [500, -45]]
+gain = -14
+offset = 40
+
+[[layer]]
+synth = { kind = "sine", hz = 104, hz_end = 96, length = 1100 }
+filter = [{ type = "highpass", hz = 40 }]
+envelope = [[0, -20], [3, 0], [1100, -45]]
+gain = -4
+offset = 420
+
+[[layer]]                          # the skin's slap on the big stroke
+synth = { kind = "noise", color = "pink", length = 120 }
+filter = [{ type = "lowpass", hz = 1200 }, { type = "highpass", hz = 90 }]
+envelope = [[0, 0], [120, -40]]
+gain = -10
+offset = 420
+
+[[layer]]
+synth = { kind = "sine", hz = 104, hz_end = 98, length = 700 }
+filter = [{ type = "highpass", hz = 40 }]
+envelope = [[0, -20], [3, 0], [700, -45]]
+gain = -12
+offset = 760
+
+[[layer]]
+synth = { kind = "noise", color = "pink", length = 90 }
+filter = [{ type = "lowpass", hz = 1000 }, { type = "highpass", hz = 90 }]
+envelope = [[0, 0], [90, -40]]
+gain = -18
+offset = 760
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -16, ratio = 2.5, attack_ms = 10, release_ms = 150 },
+  { type = "reverb", impulse = "stone_hall", wet_db = -16, predelay_ms = 15 },
+  { type = "limit", ceiling_db = -3, release_ms = 80 },
+  { type = "trim", threshold_db = -60, keep_tail_ms = 150 },
+  { type = "fade_out", ms = 400 },
+]

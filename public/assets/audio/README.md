@@ -56,11 +56,22 @@ tool's own reverb impulses. Third-party content in the banks so far:
 | | `oga_vehicle` | vehicle | Fantasy Sound Effects (Tinysized SFX), https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx |
 | | `oga_artisticdude` | artisticdude | RPG Sound Pack, https://opengameart.org/content/rpg-sound-pack |
 | | `oga_bart` | bart | Steam release sounds, https://opengameart.org/content/steam-release-sounds |
+| `ui`: all 7 cues (`click`, `back`, `confirm`, `tab`, `error`, `learn`, `gear`; step 09) | `kenney_ui` | Kenney (kenney.nl) | UI Audio, https://kenney.nl/assets/ui-audio |
+| | `kenney_interface` | Kenney (kenney.nl) | Interface Sounds, https://kenney.nl/assets/interface-sounds |
+| | `kenney_rpg` | Kenney (kenney.nl) | RPG Audio, https://kenney.nl/assets/rpg-audio |
+| | `kenney_impact` | Kenney (kenney.nl) | Impact Sounds, https://kenney.nl/assets/impact-sounds |
+| | `oga_rubberduck` | rubberduck | 100 CC0 SFX, https://opengameart.org/content/100-cc0-sfx |
+| | `oga_vehicle` | vehicle | Fantasy Weapons and Apparel SFX Library, https://opengameart.org/content/fantasy-weapons-and-apparel-sfx-library |
+| | `oga_artisticdude` | artisticdude | RPG Sound Pack, https://opengameart.org/content/rpg-sound-pack |
+| `stings`: `victory`, `defeat`, `level_up` (step 09) | `kenney_jingles` | Kenney (kenney.nl) | Music Jingles, https://kenney.nl/assets/music-jingles (a sax and a pizzicato jingle, extended with synthesized brass, strings, timpani and bells) |
+
+The clicks' bodies, the mallet and bell notes and the stings' chords and
+drums are synthesis (own).
 
 ### Still placeholder
 
 Every other cue is still derived entirely from the old placeholder tones
 (synthesized in-house with Python's stdlib `wave` module, licence own), kept
 as the `placeholder_*` sources under `audio/sources/placeholder/`, until its
-content step (09 to 13). The placeholder WAVs that were played directly
+content step (10 to 13). The placeholder WAVs that were played directly
 before the banks are gone from this folder.

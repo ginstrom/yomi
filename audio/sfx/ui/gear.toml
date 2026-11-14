@@ -1,21 +1,29 @@
-# Placeholder over placeholder_ui_click; replaced by step 09
+# A leather and cloth rustle with a buckle or small metal clink; six pairings.
 variants = 6
-seed = 8201
+seed = 9701
 group = "ui"
 max_ms = 450
 
-[[layer]]
-source = "placeholder_ui_click"
-length = 300
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # leather or cloth
+pick = ["kenney_cloth_1", "kenney_cloth_2", "ad_cloth", "vh_leather_squeeze_5", "kenney_small_leather", "kenney_cloth_belt"]
+length = 260
+pitch = [-1, 1]
+filter = [{ type = "highpass", hz = 150 }]
+fade_out = 80
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the clink
+pick = ["kenney_metal_latch", "kenney_belt_handle_1", "vh_belt_buckle_01", "vh_belt_buckle_04", "ad_metal_small_2"]
+length = 200
+pitch = [-1, 2]
+filter = [{ type = "highpass", hz = 1500 }]
+fade_out = 80
+gain = [-7, -3]
+offset = [20, 110]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -24, ratio = 3, attack_ms = 2, release_ms = 60 },
+  { type = "limit", ceiling_db = -20, release_ms = 30 },
+  { type = "trim", threshold_db = -55, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 50 },
+]

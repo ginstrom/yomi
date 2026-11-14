@@ -163,3 +163,7 @@ None of the 13 is reported peak-limited by the final build (the placeholders' im
 **For later steps.** G3's verdicts set the style. Free for reuse by steps 10–13: `oga_medicinestorm` swings (a whoosh-by for `miss.shot` too), `kenney_metal_light_*`, `rd_bang_*`, `rd_slime_*`, `rd_mud_*`, `bart_steam_hiss`, the grunts.
 
 Commit: `6ff2d6f` ("Audio pass step 08: Content: melee").
+
+### Gate G3 (2026-11-14)
+
+**Passed.** The user found all the melee audition audio acceptable and left the choice of versions to the orchestrator; more feedback may follow playtesting and would come back as follow-up fixes. The review's two non-blocking notes are accepted as they stand: `hit.crit` runs about 270 ms against the brief's ~500 ms (a short crack sits better round a hit), and `swing.heavy` 548–621 ms against ~450 ms. Recorded by the step 09 engineer; the step is `done`.

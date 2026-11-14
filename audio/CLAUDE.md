@@ -132,19 +132,21 @@ check) and `checks.py` (the per-variant checks).
   and rerunning `npm run sounds`.
 - **Content so far.** The 13 melee cues (step 08: `battle.swing.*`,
   `hit.slash`, `hit.crush`, `hit.pierce`, `hit.claw`, `armor.metal`,
-  `hit.crit`, `miss.swing`) are real content; see "Sound design without
-  ears" below for what they taught.
+  `hit.crit`, `miss.swing`), the `ui` bank and the `stings` bank (step 09)
+  are real content; see "Sound design without ears" below for what they
+  taught.
 - **The rest are placeholders.** Every other W1 cue has a recipe over
   one of the ten old placeholder WAVs (sources `placeholder_*`, collection
   `placeholder`, licence `own`), pitched, filtered and dusted with noise so
   its variants differ; each says in its first line which content step
-  replaces it (08 melee, 09 interface and stings, 10 shots, magic hits and
-  sweeteners, 11 spells and abilities, 12 falls and steps, 13 world). Many
+  replaces it (10 shots, magic hits and sweeteners, 11 spells and
+  abilities, 12 falls and steps, 13 world). Many
   `impact` placeholders are peak-limited (square waves of 100 ms).
 
 ## Sound design without ears
 
-What the melee batch (step 08) found, for the content steps after it:
+What the melee batch (step 08) and the interface and stings (step 09)
+found, for the content steps after them:
 
 - **Layer shape.** A hit is a picked body (`pick` over several excerpts), a
   transient layer where the brief asks for an edge or tick, a short
@@ -171,6 +173,24 @@ What the melee batch (step 08) found, for the content steps after it:
 - **medicinestorm's weapon textures** (192 kHz, long takes of several
   swings) are the best whooshes found, but each swing carries a large
   sub-bass wind thump on the microphone: high-pass at 200 to 700 Hz.
+- **Clicks** (step 09). An impulse through a resonant band has almost no
+  energy against its peak, so the click is all spike and lands far under
+  its target: build a click's body from short decaying sines (the wood's
+  modes) instead. A UI click of 45 ms stays peak-limited (about −31 LUFS-M)
+  whatever is done, which suits a sound heard this often; keep its
+  variants within a dB or two of each other with a `limit` well under the
+  peak. To judge two short cues against each other (back softer than
+  click), compare their loudest 50 ms A-weighted, not LUFS-M: the 400 ms
+  window favours the longer one.
+- **Stings** (step 09). Kenney's jingles are 0.3 to 1.8 s melodies in
+  whole-tone and chromatic runs; a sting uses one as its phrase and
+  extends it with synthesized chords (pairs of detuned saws with a closing
+  low-pass) and timpani (a falling sine plus a pink-noise slap). Find a
+  jingle's notes with a harmonic-product-spectrum tracker and write the
+  chord in its key; keep each sting's key in its recipe's first line
+  (victory and level-up in G, defeat in D minor).
+- A synth note whose envelope ends above about −50 dB clicks where its
+  `length` cuts it: end the envelope lower or add a `fade_out`.
 - `source add` refuses an `--end` past the end of a short file; leave
   `--start`/`--end` off to keep the whole of it.
 

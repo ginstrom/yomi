@@ -1,21 +1,34 @@
-# Placeholder over placeholder_ui_click; replaced by step 09
+# The click's family, lower and softer, with a slight downward pitch: a duller wooden tock.
 variants = 3
-seed = 7800
+seed = 9202
 group = "ui"
-max_ms = 180
+max_ms = 170
 
-[[layer]]
-source = "placeholder_ui_click"
-length = 120
-pitch = [-9, 1]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the body: a lower mode sliding down
+synth = { kind = "sine", hz = [900, 1150], hz_end = [600, 720], length = 80 }
+envelope = [[0, -30], [2, 0], [6, -16], [60, -50]]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 120 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [120, -40]]
-gain = [-26, -16]
+[[layer]]                          # a second mode, sliding with it
+synth = { kind = "sine", hz = [2100, 2600], hz_end = [1500, 1800], length = 35 }
+envelope = [[0, -30], [1, 0], [35, -50]]
+gain = [-20, -15]
+
+[[layer]]                          # a recorded back click, pitched down and dulled
+pick = ["kenney_back_002", "kenney_back_004", "kenney_ui_click_1"]
+length = 80
+pitch = [-6, -3]
+filter = [{ type = "lowpass", hz = 2400 }, { type = "highpass", hz = 150 }]
+fade_out = 30
+gain = [-12, -8]
+
+[[layer]]                          # a soft low thump falling away
+synth = { kind = "sine", hz = [150, 190], hz_end = [85, 100], length = 60 }
+filter = [{ type = "highpass", hz = 70 }]
+envelope = [[0, -4], [60, -60]]
+gain = -14
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "trim", threshold_db = -55, keep_tail_ms = 20 },
+  { type = "fade_out", ms = 20 },
+]

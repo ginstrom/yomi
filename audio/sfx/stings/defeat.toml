@@ -1,15 +1,92 @@
-# Placeholder over placeholder_defeat; replaced by step 09
+# Kenney's falling sax phrase (F E D# D) over slow low strings in D minor, sinking to A with a final low drum. Key: D minor.
 variants = 1
-seed = 8400
+seed = 9901
 group = "sting"
 max_ms = 5250
 
+[[layer]]                          # the falling phrase (Kenney Music Jingles); its D holds from ~0.68 s to 1.66 s
+source = "kenney_jingle_sax_07"
+filter = [{ type = "highpass", hz = 120 }, { type = "lowpass", hz = 4000 }]
+fade_out = 300
+gain = -1
+
+# Low strings: D minor (D2 A2 D3 F3) swelling in under the held D, each a pair of detuned saws, dark.
 [[layer]]
-source = "placeholder_defeat"
-length = 3500
-pitch = 0
-filter = [{ type = "highpass", hz = 30 }]
-fade_out = 10
+synth = { kind = "saw", hz = 73.4, length = 2200 }
+filter = [{ type = "lowpass", hz = 500, hz_end = 350 }, { type = "highpass", hz = 40 }]
+fade_in = 350
+envelope = [[0, 0], [1500, -2], [2200, -40]]
+gain = -14
+offset = 550
+
+[[layer]]
+synth = { kind = "saw", hz = 110.0, length = 2200 }
+filter = [{ type = "lowpass", hz = 700, hz_end = 450 }, { type = "highpass", hz = 60 }]
+fade_in = 400
+envelope = [[0, 0], [1500, -2], [2200, -40]]
+gain = -14
+offset = 560
+
+[[layer]]
+synth = { kind = "saw", hz = 146.8, length = 2200 }
+filter = [{ type = "lowpass", hz = 900, hz_end = 500 }, { type = "highpass", hz = 80 }]
+fade_in = 450
+envelope = [[0, 0], [1500, -2], [2200, -40]]
+gain = -15
+offset = 570
+
+[[layer]]
+synth = { kind = "saw", hz = 147.6, length = 2200 }
+filter = [{ type = "lowpass", hz = 900, hz_end = 500 }, { type = "highpass", hz = 80 }]
+fade_in = 450
+envelope = [[0, 0], [1500, -2], [2200, -40]]
+gain = -17
+offset = 580
+
+[[layer]]
+synth = { kind = "saw", hz = 174.6, length = 2200 }
+filter = [{ type = "lowpass", hz = 1000, hz_end = 550 }, { type = "highpass", hz = 80 }]
+fade_in = 500
+envelope = [[0, 0], [1500, -2], [2200, -40]]
+gain = -16
+offset = 560
+
+# The bass falls: B-flat (1.8 s) then A (2.5 s), where the drum lands.
+[[layer]]
+synth = { kind = "saw", hz = 58.3, length = 800 }
+filter = [{ type = "lowpass", hz = 400 }, { type = "highpass", hz = 35 }]
+fade_in = 120
+envelope = [[0, 0], [650, -2], [800, -40]]
+gain = -12
+offset = 1750
+
+[[layer]]
+synth = { kind = "saw", hz = 55.0, length = 1100 }
+filter = [{ type = "lowpass", hz = 380, hz_end = 200 }, { type = "highpass", hz = 35 }]
+fade_in = 60
+envelope = [[0, 0], [300, -3], [1100, -45]]
+gain = -12
+offset = 2450
+
+[[layer]]                          # the final low drum
+synth = { kind = "sine", hz = 70, hz_end = 50, length = 900 }
+filter = [{ type = "highpass", hz = 35 }]
+envelope = [[0, -20], [4, 0], [900, -45]]
+gain = -3
+offset = 2470
+
+[[layer]]
+synth = { kind = "noise", color = "brown", length = 200 }
+filter = [{ type = "lowpass", hz = 600 }, { type = "highpass", hz = 60 }]
+envelope = [[0, 0], [200, -40]]
+gain = -8
+offset = 2470
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 2, attack_ms = 15, release_ms = 200 },
+  { type = "reverb", impulse = "stone_hall", wet_db = -14, predelay_ms = 20 },
+  { type = "limit", ceiling_db = -3, release_ms = 100 },
+  { type = "trim", threshold_db = -60, keep_tail_ms = 200 },
+  { type = "fade_out", ms = 500 },
+]

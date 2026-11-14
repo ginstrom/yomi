@@ -1,21 +1,27 @@
-# Placeholder over placeholder_ui_click; replaced by step 09
+# A parchment flick: the snap of a page turned, high-passed and very short.
 variants = 4
-seed = 7900
+seed = 9401
 group = "ui"
 max_ms = 225
 
-[[layer]]
-source = "placeholder_ui_click"
-length = 150
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # a real page or paper flick
+pick = ["kenney_book_flip_2", "kenney_book_flip_3", "rd_paper_01", "rd_paper_02", "rd_paper_04"]
+start = 15
+length = 140
+pitch = [-1, 2]
+filter = [{ type = "highpass", hz = [900, 1400] }]
+fade_out = 50
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 150 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [150, -40]]
-gain = [-26, -16]
+[[layer]]                          # a swept band of air for the flick
+synth = { kind = "noise", length = 90 }
+filter = [{ type = "bandpass", hz = [2500, 3500], hz_end = [5500, 7500], q = 1.2 }]
+envelope = [[0, -20], [15, 0], [90, -40]]
+gain = [-16, -10]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -24, ratio = 4, attack_ms = 1, release_ms = 50 },
+  { type = "limit", ceiling_db = -20, release_ms = 30 },
+  { type = "trim", threshold_db = -55, keep_tail_ms = 20 },
+  { type = "fade_out", ms = 30 },
+]

@@ -12,25 +12,25 @@
       }
     },
     "stings": {
-      "durationMs": 4035,
+      "durationMs": 9923,
       "mp3": {
-        "bytes": 17156,
-        "sha256": "6b391c67d2bce65a225e9923270948fe8d4dfe0b1af3cdea7324c9d37c4864fd"
+        "bytes": 64916,
+        "sha256": "d27d118a8eed4bd554fca256f19e4451f7da2291f4e2eedc4d8b165c481b7e23"
       },
       "opus": {
-        "bytes": 43715,
-        "sha256": "df4d60abd315d6a8a8556e030d08c2002b9faad32b81135fac2af8dc47d829d0"
+        "bytes": 96343,
+        "sha256": "bb98be3578ec9594ba4e933b7d97acfebabbfc68c36a9cca5ec32f8b3341aa87"
       }
     },
     "ui": {
-      "durationMs": 6312,
+      "durationMs": 7291,
       "mp3": {
-        "bytes": 40892,
-        "sha256": "d41bc84bc7345b6680aa42e72eb6841c006ea2b7e1f513cccdda96ba705ad4eb"
+        "bytes": 62444,
+        "sha256": "8ee27afa699d00f10326e8c62f952f22b0689bf483e6653bfe54909fdac40c6c"
       },
       "opus": {
-        "bytes": 55223,
-        "sha256": "7df2aa1a8cf35dca3ea3ddd477188ca29ac6bcf79bff1ab2da2cbd2f03925918"
+        "bytes": 85862,
+        "sha256": "d6f3f0fba87d2b5d045b365c8767b4018d46f12a6cd160b66413c12a438f8e91"
       }
     },
     "world": {
@@ -983,9 +983,9 @@
     "stings.defeat": {
       "bank": "stings",
       "durationsMs": [
-        2000
+        3986
       ],
-      "inputs": "b74798d4632e49532ae52ea6ed3dc517baf412c7976e0df940769a8e9fe203a0",
+      "inputs": "3f95ab656dc1286c10b5c930b2ced5f42ab05c2298ad98263171645018d3da5b",
       "markers": [
         "stings.defeat#0"
       ]
@@ -993,9 +993,9 @@
     "stings.level_up": {
       "bank": "stings",
       "durationsMs": [
-        735
+        2330
       ],
-      "inputs": "ab98333828576f21caa173fb606bff82afd5f54219fc94d49d56cdf0deb9895b",
+      "inputs": "d4c0d46c8462fb77a63f8312c8a40b689e4d93f2b08c6506a9cd5b6451288687",
       "markers": [
         "stings.level_up#0"
       ]
@@ -1003,9 +1003,9 @@
     "stings.victory": {
       "bank": "stings",
       "durationsMs": [
-        1100
+        3407
       ],
-      "inputs": "12da1973435931110dfd6575c7970d51e17c6e4d63e207e423f49ed4ba109904",
+      "inputs": "7b25b2bcdcd627a251cd9eb8c8f106a4aeaa90c4dc074163faabd2861c35863c",
       "markers": [
         "stings.victory#0"
       ]
@@ -1013,11 +1013,11 @@
     "ui.back": {
       "bank": "ui",
       "durationsMs": [
-        120,
-        120,
-        120
+        100,
+        100,
+        99
       ],
-      "inputs": "8ae4a91335bbdbcb38ed9aa463f9f53260ddbe301d9429ca31896d5dd5585872",
+      "inputs": "e1036c329110050e434db8964a2cf5972fc60110c73d9913e3b4b9ec63becc17",
       "markers": [
         "ui.back#0",
         "ui.back#1",
@@ -1027,12 +1027,12 @@
     "ui.click": {
       "bank": "ui",
       "durationsMs": [
-        60,
-        60,
-        60,
-        60
+        45,
+        45,
+        46,
+        45
       ],
-      "inputs": "9f1c95e56e26ac3df041c1aadbed3dcb4e341c1bc7ae3f3fc55bc1971ef9207f",
+      "inputs": "355a144eb5a9fc3d93bab440fbaa19cb2001ba0a1671c7dfdce13c043e2cf7b2",
       "markers": [
         "ui.click#0",
         "ui.click#1",
@@ -1043,11 +1043,11 @@
     "ui.confirm": {
       "bank": "ui",
       "durationsMs": [
-        250,
-        250,
-        250
+        353,
+        326,
+        339
       ],
-      "inputs": "0700fe606f64d4f1223583c03ed4ce27fe6d4fdb7566e60f2410481eedb61810",
+      "inputs": "c5900267fff4ddc4eee94559ecf85594564802ce8ff60d9631e23346f565c469",
       "markers": [
         "ui.confirm#0",
         "ui.confirm#1",
@@ -1057,11 +1057,11 @@
     "ui.error": {
       "bank": "ui",
       "durationsMs": [
-        200,
-        200,
-        200
+        220,
+        234,
+        220
       ],
-      "inputs": "b32faa6af98a52f6949638a3d9818855ee3c8b2309a3f7e59eef257459f449f7",
+      "inputs": "c2f6a7917a794c0d6dc3d424f72957ec92dbadbf50e039afa34088aa9ae075d9",
       "markers": [
         "ui.error#0",
         "ui.error#1",
@@ -1071,14 +1071,14 @@
     "ui.gear": {
       "bank": "ui",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300,
-        300,
-        300
+        250,
+        258,
+        297,
+        281,
+        262,
+        303
       ],
-      "inputs": "e4a65bc2800adc14d84632bbceb02f0236ecec5685242fa1435fc7e23cf15e2d",
+      "inputs": "4d934b6371bba09f6dbb011da14cb819ffa5005c66ae439e34b567b65847baff",
       "markers": [
         "ui.gear#0",
         "ui.gear#1",
@@ -1091,10 +1091,10 @@
     "ui.learn": {
       "bank": "ui",
       "durationsMs": [
-        354,
-        308
+        819,
+        824
       ],
-      "inputs": "28dd0df5eb67e0d89439cbe1c452deb50215cbf50ab5090410ec24db7357eef5",
+      "inputs": "f243b55a4bf7a543f162e5bf900a5c14644bffceee9214c8e5a61ffa9e1a7d91",
       "markers": [
         "ui.learn#0",
         "ui.learn#1"
@@ -1103,12 +1103,12 @@
     "ui.tab": {
       "bank": "ui",
       "durationsMs": [
-        150,
-        150,
-        150,
-        150
+        126,
+        130,
+        133,
+        136
       ],
-      "inputs": "dbbe17e7c20ef7b49f5f6602df912a0069e06397043bfef0ded6edfcf1bac6b5",
+      "inputs": "ef3fb52da8e43e69ee4cefc679f11718a72e0cd3ec96d59260a3dde00caf0dac",
       "markers": [
         "ui.tab#0",
         "ui.tab#1",

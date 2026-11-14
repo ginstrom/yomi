@@ -96,12 +96,55 @@ Exclusions: no change to cue ids, buses, jitter, limits or call sites; no W2 cue
 
 ## Completion criteria
 
-- [ ] Ten recipes rewritten from real sources and/or synthesis; sources added with C4 entries and allowed licences.
-- [ ] `npm run sounds`, `npm run sounds:check`, `npm test` and the tool's pytest pass; measurements recorded.
-- [ ] `audio/.audition/09-ui-stings/` holds every variant as WAV and a filled-in `review.md`.
-- [ ] `public/assets/audio/README.md` lists the new sources.
+- [x] Ten recipes rewritten from real sources and/or synthesis; sources added with C4 entries and allowed licences.
+- [x] `npm run sounds`, `npm run sounds:check`, `npm test` and the tool's pytest pass; measurements recorded.
+- [x] `audio/.audition/09-ui-stings/` holds every variant as WAV and a filled-in `review.md`.
+- [x] `public/assets/audio/README.md` lists the new sources.
 - [ ] Committed as `Audio pass step 09: interface and stings` on `audio-pass` (not pushed); index status `awaiting review` with the hash.
 - [ ] Gate G4 passed (the user's per-cue verdicts recorded below and in the feature record by the orchestrator); review fixes committed; index status `done` with all hashes.
 
 ## Execution record
 
+
+### Round 0: build (2026-11-14)
+
+**Outcome.** The seven `ui` recipes and the three `stings` recipes are rewritten from CC0 recordings and synthesis; none names a `placeholder_*` source (`grep -l placeholder_ audio/sfx/ui/*.toml audio/sfx/stings/*.toml` prints nothing). Variant counts are unchanged from C7. Gate G4 no longer blocks (feature record): the batch was judged on its measurements and spectrograms, and the audition folder is left for the user's later playtest. Also in this step's commit: step 08's G3 outcome recorded in its execution record and its index row set `done`.
+
+**Sources.** 31 excerpts added with `yomi-audio source add` (all `CC0-1.0`, original path and both hashes recorded; every one used by a recipe, so no `source remove` was needed): `kenney_ui` (`click1`, `click4`, `click5`), `kenney_interface` (`tick_001`, `tick_002`, `back_002`, `back_004`), `kenney_rpg` (`bookFlip2`, `bookFlip3`, `bookClose`, `bookPlace1`, `beltHandle1`, `metalLatch`, `clothBelt` 0–0.45 s, `handleSmallLeather`), `kenney_impact` (`impactWood_medium_000`, `_002`, `_004`), `kenney_jingles` (`SAX10`, `SAX07`, `PIZZI10`), `oga_rubberduck` (100 CC0 SFX `paper_01`, `_02`, `_04`, 0–0.4 s), `oga_vehicle` (`belt-buckle-01`, `-04`, `quiver-leather-squeeze-05`), `oga_artisticdude` (`inventory/metal-small2`, `inventory/cloth`); step 08's `kenney_cloth_1`/`_2` reused. Bytes: the batch adds **833,817** to `audio/sources` (now 3,214,361 with no `audio/voices` yet, of 15,000,000). Shipped banks after the build: `ui` 85,862 `.opus` / 62,444 `.mp3`, `stings` 96,343 / 64,916; all banks 1,128,451 `.opus` and 833,312 `.mp3`, each under 3,000,000.
+
+**Measurements** (`sfx audition --spectrogram`; per variant in `audio/.audition/09-ui-stings/review.md`; A50 = loudest 50 ms, A-weighted, from a scratch script outside the repository):
+
+| Cue | Var | Level | True peak (dBTP) | Length (ms) | A50 (dB) |
+| --- | --- | --- | --- | --- | --- |
+| `ui.click` | 4 | −31.7 to −30.5 LUFS-M, peak-limited | −6.0 | 45 | −24.2 to −22.7 |
+| `ui.back` | 3 | −32.5 to −31.8, peak-limited | −6.1 to −6.0 | 98–100 | −24.3 to −23.0 |
+| `ui.confirm` | 3 | −26.0 | −13.8 to −13.3 | 325–352 | −22.0 to −21.8 |
+| `ui.tab` | 4 | −28.1 (lim) to −26.0 | −8.9 to −6.1 | 126–136 | −24.0 to −21.3 |
+| `ui.error` | 3 | −26.0 | −7.6 to −6.5 | 219–234 | −27.9 to −27.5 |
+| `ui.learn` | 2 | −26.0 | −9.8 to −9.3 | 819–824 | −25.3 to −25.2 |
+| `ui.gear` | 6 | −28.5 (lim, #3) to −26.0 | −12.4 to −6.1 | 249–302 | −24.2 to −22.6 |
+| `stings.victory` | 1 | −18.0 LUFS-I | −2.9 | 3406 | −16.9 |
+| `stings.defeat` | 1 | −18.0 LUFS-I | −3.4 | 3986 | −18.4 |
+| `stings.level_up` | 1 | −18.0 LUFS-I | −8.7 | 2330 | −14.9 |
+
+The build reports `ui.click`, `ui.back`, `ui.tab#0` and `ui.gear#3` peak-limited; that is the short-cue rule (feature record) and suits the click, heard most. Every per-variant check passed (loudness, peak, length, DC, correlation, sources).
+
+**Judging without ears.** Click: 79–94% of its A-weighted energy in 1–4 kHz (two variants centred in 1–2 kHz, two in 2–4 kHz), nothing under 500 Hz but the quiet thump; back: 57–88% in 0.5–2 kHz, lower than the click and at about the same or 1 dB softer A50 though twice as long; error: 250–500 Hz with the second knock visible at ~80 ms, no tone; tab: 75–90% above 2 kHz; confirm and learn show their two notes a fifth apart (C5–G5, G5–D6). Keys by pitch tracking: the victory sting's pickup is D E F# G landing on the G major chord (chroma G, D, B), level-up is in G (chroma G, D, B) and follows it, the defeat is F E D# D over D minor (chroma D, A, F).
+
+**Iteration notes.** The design's impulse-through-a-band click (fixed in `test_build.py`) gave all spike and no body: −35 to −29 LUFS-M across variants and its energy at 150 Hz, the thump's; its body is now two decaying sines. `ui.back` was 3 dB louder than the click by A50 until its compressor came out and its decay shortened. `ui.error`'s first draft was 53–75% under 250 Hz (inaudible on small speakers); its knocks were raised and band-limited to 160 Hz–1.7 kHz. Tab and gear varied by 5–6 dB between picked sources until a `limit` at −20 dB. FM notes ended with an audible cut where the envelope stopped at −40 dB; they now fade. The defeat's string and bass layers came down 3–4 dB to keep the sub under the phrase. Lessons are in `audio/CLAUDE.md` ("Sound design without ears").
+
+**Audition folder for the user's playtest** (gitignored): `audio/.audition/09-ui-stings/` with `<cue>/<k>.wav` and `.png` for every variant, `sequence/victory_then_level_up.wav` (victory, 150 ms, level-up, as the game plays them), and `review.md` (brief, sources, per-variant measurements, a verdict line per cue, how to hear them in game).
+
+**Verification.**
+
+- `uv run --project tools/audio pytest tools/audio/tests`: 203 passed.
+- `PATH=/opt/homebrew/opt/node@26/bin:$PATH npm run sounds`: wrote the `ui` and `stings` banks only; every check passed.
+- `npm run sounds:check`: "85 cues and 4 banks up to date, within budget".
+- `PATH=/opt/homebrew/opt/node@26/bin:$PATH npm test`: 85 files, 1623 tests passed.
+- `git diff --stat`: only the step's paths (recipes, sources and their entries, manifest, `ui`/`stings` bank files, the audio README, `audio/CLAUDE.md`) and the plan docs.
+- `npm run test:browser` not run: no scene changed.
+- No paid calls; no Freesound material.
+
+**Deviations.** `sfx audition` names its files `<cue>.v<k>.wav`; renamed to `<cue>/<k>.wav` as in step 08. No tool, runtime, `CUES` or `audio.toml` change. The stings are longer than their briefs' typical lengths (victory 3.4 s against ~3, defeat 4.0 against ~3.5, level-up 2.3 against ~1.8) because of their reverb tails, within each `max_ms`; level-up stays shorter than victory. The placeholder sources the old `ui` and `stings` recipes used stay: other banks' placeholder recipes (steps, world) still use them, and step 18 decides their removal.
+
+**For later steps.** The click family (sine modes) and the bell/mallet FM notes can serve `world.upgrade`'s chime and `world.rune.*` (step 13). The stings' keys: G major (victory, level-up), D minor (defeat).
