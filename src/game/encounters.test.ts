@@ -430,7 +430,7 @@ describe('the foe yardstick', () => {
     { kind: 'kobold', field: 'toHit', reason: 'the Kobold is a weak foe, and level 1 foes hit less often than the band' },
     { kind: 'shaman', field: 'maxHp', reason: 'the Goblin Shaman is frail, a caster to be hunted down' },
     { kind: 'shaman', field: 'toHit', reason: 'the Goblin Shaman\'s weapon is a staff it seldom uses; its spells strike by their own skill' },
-    { kind: 'horror', field: 'meanDamage', reason: 'the Blight Horror is a boss: two claws of 2d6+11 a turn and a death cloud, meant to be fought at the top threat only (the claws raised from 2d6+2 in skill trees step 25, by the user\'s choice of a much harder Source)' },
+    { kind: 'horror', field: 'meanDamage', reason: 'the Blight Horror is a boss: two claws of 2d6+2 a turn and a death cloud, meant to be fought at the top threat only' },
     { kind: 'horror', field: 'toHit', reason: 'a boss\'s level 1 block is a sketch for foeAtLevel to raise; it hits as other level 1 foes do' },
     { kind: 'hobgoblin', field: 'maxHp', reason: 'the Hobgoblin Chief\'s mail (resistance 4) stands for hit points, so its pool is small' },
     { kind: 'hobgoblin', field: 'meanDamage', reason: 'a morning star that pierces armour; a level 1 foe\'s damage is high against a 32 hit point fighter' },

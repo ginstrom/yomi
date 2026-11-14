@@ -21,7 +21,7 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 ## Decision log
 
-- Step 25, `--ready-level 10` at 445 (user): "Much harder Source". The alternatives were to accept and revisit in stage 9, or a Source that scales to the party.
+- Step 25, `--ready-level 10` at 445 (user, 2026-11-14): "Back to 63 HP (Rec.)": the Horror stays at 63 hit points with its claws at 2d6+2 (one party 243, company 243), and `--ready-level 10` stays at 445, over its band, to be revisited in stage 9 when threats 6 and 7 come onto the map. It supersedes the user's earlier "Much harder Source", because that measured cost was 36 and 34 of 500 (one party, company), not about 100.
 
 | Date | Decision | By | Alternatives | Reason |
 |---|---|---|---|---|
@@ -160,19 +160,17 @@ Play check (a scripted browser run through the real game, a scratch test since r
 
 | Figure | Band | Step 01 | Stage 3 | Final (step 25) | |
 | --- | --- | --- | --- | --- | --- |
-| one party (`--parties 1`) | 215–250 | 230 | 449 | **36** | out: accepted by the user, 2026-11-14 ("Much harder Source") |
-| default company | 220–260 | 239 | 449 | **34** | out: accepted likewise |
-| `--ready-level 10` | 370–420 | 389 | 488 | 419 | in |
-| deaths a campaign (one party) | ≤ 2.0 | 1.8 | 0.5 | 0.8 (company 0.8, rl10 1.6) | in |
-| days a campaign (one party) | 243–297 | 270 | 339 | 287 (company 288, rl10 560) | in |
+| one party (`--parties 1`) | 215–250 | 230 | 449 | 243 | in |
+| default company | 220–260 | 239 | 449 | 243 | in |
+| `--ready-level 10` | 370–420 | 389 | 488 | **445** | over: accepted by the user, 2026-11-14 ("Back to 63 HP (Rec.)"), to be revisited in stage 9 |
+| deaths a campaign (one party) | ≤ 2.0 | 1.8 | 0.5 | 1.0 (company 1.1, rl10 1.0) | in |
+| days a campaign (one party) | 243–297 | 270 | 339 | 287 (company 288, rl10 539) | in |
 | GR3 / BC3 / BC4 / BC5 | ≥ 470 / 400–470 / 430–490 / 420–490 | 500 / 429 / 473 / 469 | 500 / 494 / 495 / 488 | 500 / 455 / 462 / 484 | in |
 | SN5 / SP5 / TL5 | 410–480 / 410–480 / report | 441 / 445 / 0 | 500 / 495 / 8 | 448 / 454 / 0 | in |
-| SG7 / SG10 | 0 ± 40 / above 2 | 0 / 2 | 0 / 386 | 0 / **0** | SG7 in; SG10 out, part of the accepted cost |
+| SG7 / SG10 | 0 ± 40 / above 2 | 0 / 2 | 0 / 386 | 0 / 5 | in |
 | F1 / F2 / F3 | nearly all / most / 7 in 10 | 500 / 499 / 441 | 500 / 500 / 493 | 500 / 500 / 453 | in |
-| run time | near 5 min | 270 s | 272 s | 361 s (company 370 s, `--ready-level 10` 863 s) | |
+| run time | near 5 min | 270 s | 272 s | 438 s one party, 470 s company, with other work on the machine (4 min 42 s alone); `--ready-level 10` 1255 s | |
 
 Path parity (step 24, unchanged by step 25, which touched only the Source): at Bandit Camp threat 4, level 4, every plan within ±50 of its role's best but the Scout's `rogue_archer` (−109) and `assassin` (−62); spread melee 443–475, archery 353–462, magic 472–489. Levels 8 and 12 are far apart (the user accepted that as the three-hero party and the AI's doing; details in step 24's record).
 
-How it got there: step 24 made foes tougher (`FOE_HP_PER_LEVEL` 1.3, bandits in Fine iron from threat 3, a fourth foe at the Spider Nest) and fixed the policy, taking one party from 449 to 268. Step 25 raised the Blight Horror's hit points from 55 to 63 (one party 243, company 243, both in band), but `--ready-level 10` stayed at 445: parties of five at levels 10–11 never lost to the Source. On the user's "Much harder Source", the Horror's claws went from 2d6+2 to 2d6+11, the Source lever that cost the one-party run least of those compared (hit points, damage, piercing, mana, another guardian, guardians' levels); `--ready-level 10` came to 419, and the one-party and company campaigns fell to 36 and 34, lost at the Source (the one party loses 409 of its 445 Source battles). The estimate the user saw was "roughly 100 of 500"; the measured figures, 36 and 34, are well below it, so the cost is higher than the user was told. Details in step 25's record.
-
-
+How it got there: step 24 made foes tougher (`FOE_HP_PER_LEVEL` 1.3, bandits in Fine iron from threat 3, a fourth foe at the Spider Nest) and fixed the policy, taking one party from 449 to 268. Step 25 raised the Blight Horror's hit points from 55 to 63, which put one party and the company at 243. `--ready-level 10` stayed at 445: parties of five at levels 10 and 11 never lose to the Source, and no foe on today's map, capped at threat 5, is a danger to them. A harder Source (the Horror's claws at 2d6+11) was tried at the user's first word and brought `--ready-level 10` to 419, but one party and the company fell to 36 and 34; the user then chose to keep the 63-hit-point Horror and revisit `--ready-level 10` in stage 9. Details in step 25's record.

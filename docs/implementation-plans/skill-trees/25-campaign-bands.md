@@ -162,7 +162,7 @@ Keep this table in the execution record, one row per run (campaign or cell):
 
 ### Status: done
 
-First pass (rows 0–4): one lever kept (the Blight Horror's hit points, 55 → 63) put the one-party and company campaigns in band, but `--ready-level 10` stayed at 445, 25 above its band, and no foe-side lever moved it without wrecking the other two. I stopped and reported it. **The user's decision (2026-11-14), word for word: "Much harder Source"**, chosen knowing the option said the one-party and company campaigns would drop to roughly 100 of 500. Second pass (rows 5–9): the Source hardened as little as gets `--ready-level 10` near the top of its band, by the lever that costs the one-party run least; the one-party and company figures are recorded as the accepted cost, out of their bands by the user's decision.
+First pass (rows 0–4): one lever kept (the Blight Horror's hit points, 55 → 63) put the one-party and company campaigns in band, but `--ready-level 10` stayed at 445, 25 above its band, and no foe-side lever moved it without wrecking the other two. I stopped and reported it. The user first chose "Much harder Source" (told it would cost the one-party and company runs about 100 of 500); the second pass (rows 5–9) hardened the Source (the claws 2d6+2 → 2d6+11, fabb6b8) and brought `--ready-level 10` to 419, but the measured cost was one party 36 and company 34. Shown that, **the user chose, word for word, "Back to 63 HP (Rec.)"** (2026-11-14), which supersedes "Much harder Source": the claws go back to 2d6+2 and the Horror stays at 63 hit points (row 10), `--ready-level 10` stays at 445, recorded as over its band and revisited in stage 9 when threats 6 and 7 come onto the map.
 
 ### Run log
 
@@ -177,14 +177,15 @@ First pass (rows 0–4): one lever kept (the Blight Horror's hit points, 55 → 
 | 5 | Scratch, the Source's candidate levers for parties of five at levels 8, 10 and 11 (Horror at 63 hit points), 200 battles each | see note | `scratch25/src5.ts`, `grid.sh` | base 185 / 200 / 200; Horror 100 hp 69 / 185 / 197; 130 hp 15 / 136 / 178; claws +8 66 / 178 / 195; +9 51 / 166 / 192; +10 42 / 154 / 183; +12 23 / 124 / 164; another Troll 56 / 177 / 195; two more Goblins 50 / 174 / 189; the Horror at level 7 19 / 148 / 183; the other guardians at level 7 114 / 198 / 198; the Horror's piercing 6 or 10 118 / 195 / 199; its mana 32 or 48 no change | — | Weighing the loss at levels 10 and 11 (rl10's Source parties: 40% at a mean level of 10, 60% at 11) against the level-8 party's wins (the one-party run's), the claws' damage cost level 8 least for the same effect: at a 6% loss at 10–11, the claws leave level 8 33%, hit points ~31%, a Troll 28%, two Goblins (8.5%) 25%; and at larger effects the gap widens (claws +11 about 16% at level 8 against hit points 130's 7.5% for about the same loss at 10–11). Mana and piercing do nothing useful. |
 | 6 | The Horror's claws (`BLIGHT_HORROR_STATS.damage.bonus`) | 2 → 8 | `25-rl10-d` | rl10 440, 546 days, 1.4 dead; the Source lost 18 of 458 | superseded | The campaign's parties are stronger than the scratch's (crafted gear, recruits), and a wiped vanguard's reserves try again, so only about a quarter of the Source's losses end a campaign. |
 | 7 | Claws, 250-campaign probes in parallel (the first 250 of seed 1's 500; the same subset gives 219 at +8 and 221 at +2) | +10, +11, +12, +13 | `25-rl10-p10` … `p13` | 216, 212, 202, 189 of 250 | — | Doubled: 432, 424, 404, 378. |
-| 8 | Claws, full runs | +11, +12 | `25-rl10-f11`, `25-one-f11`, `25-rl10-f12`, `25-one-f12` | +11: rl10 **419**, 560 days, 1.6 dead; one party **36**, 287 days, 0.8 dead. +12: rl10 405, 567 days, 1.6 dead; one party 27, 0.7 dead | **+11 kept** (fabb6b8) | +11 is the least that brings rl10 into its band, near its top (420). |
+| 8 | Claws, full runs | +11, +12 | `25-rl10-f11`, `25-one-f11`, `25-rl10-f12`, `25-one-f12` | +11: rl10 **419**, 560 days, 1.6 dead; one party **36**, 287 days, 0.8 dead. +12: rl10 405, 567 days, 1.6 dead; one party 27, 0.7 dead | +11 kept in fabb6b8, then **reverted** (row 10) | +11 is the least that brings rl10 into its band, near its top (420). |
 | 9 | Comparison: the Horror's hit points instead | 63 → 130, claws +2 | `25-one-h130`, `25-rl10-h130` | rl10 407, 568 days, 1.9 dead; one party **14** | not kept | For a like effect on rl10 (407 against +11's 419, +12's 405), hit points cost the one-party run far more (14 against 36 and 27). |
+| 10 | The claws back, by the user's "Back to 63 HP (Rec.)" | 2d6+11 → 2d6+2 (the Horror at 63 hit points) | `25-revert-sg7`, `25-revert-sg10`; the campaigns are `25-one-c`, `25-company-c`, `25-rl10-c` | one party **243**, company **243**, rl10 **445**; SG7 0, SG10 5 | kept (the revert commit) | `src/` and `scripts/` are identical to 6f9eee8 (`git diff 6f9eee8 -- src scripts` empty), and the re-recorded guard (`1da4a18b…44ef7`) and policy snapshot match 6f9eee8's, so the play is identical to the runs of row 2 and they were not run again. |
 
 Levers 2 and 3 of the brief (a half-step of bandit gear at threat 5; `FOE_HP_PER_LEVEL` 1.3 → 1.4) were not run as campaigns: the one-party and company figures are already in band, and neither can reach rl10's falls. rl10's parties fight Bandit Camp 5 2229 times and lose 2, Goblin Raid 5 2208 and lose 5; step 24 measured every threat-5 cell at level 8 at 500 of 500 but the Hobgoblin Warband's 465, so a few points of foe hit points or a Masterwork weapon on a threat-5 bandit cannot wipe a level-8-to-11 party of five 50 more times in 500. The only things on record that beat such parties are off today's map (BC6 74 and BC7 22 at level 8, step 24).
 
 Run time: one party 7 min 18 s and company 7 min 51 s with other work on the machine (the first company run, alone, 4 min 42 s); `--ready-level 10` 17 min 39 s and 20 min 55 s (step 23: 580 s), as its campaigns are now 539 days and 46 battles long.
 
-### The decision on `--ready-level 10` at 445 (band 370–420), as it was put; settled by the user: "Much harder Source" (option 2)
+### The decision on `--ready-level 10` at 445 (band 370–420), as it was put; settled by the user: first "Much harder Source" (option 2), then, shown its real cost, "Back to 63 HP (Rec.)" (option 1)
 
 What it is: every rl10 campaign that reaches the Source beats it; its 55 falls all come before level 8. No foe on today's map, which tops out at threat 5, is a danger to a party of five at levels 10–11 built with the skill trees.
 
@@ -198,32 +199,32 @@ Changed numbers for step 26 (so far): the Blight Horror's level 1 hit points 55 
 
 Also folded in: contract C5 in `index.md` (and its decision 4) and `CLAUDE.md` now say the parity plans name their capstone first and the cryomancer takes Ice Lance before Web (step 24's review leftover), in 6f9eee8.
 
-### Final figures (seed 1, 500 each, at fabb6b8)
+### Final figures (seed 1, 500 each; the play of 6f9eee8, restored by the revert commit)
 
 | Figure | Band | Final | In band |
 | --- | --- | --- | --- |
-| one party (`--parties 1`) | 215–250 | **36** (`25-one-final`) | no: the user's accepted cost ("Much harder Source") |
-| default company | 220–260 | **34** (`25-company-final`) | no: the user's accepted cost |
-| `--ready-level 10` | 370–420 | **419** (`25-rl10-final`) | yes |
-| deaths a campaign (one party) | ≤ 2.0 | 0.8 (rl10 1.6, company 0.8) | yes |
-| days a campaign (one party) | 270 ± 10% (243–297) | 287 (company 288, rl10 560) | yes |
+| one party (`--parties 1`) | 215–250 | **243** (`25-one-c`) | yes |
+| default company | 220–260 | **243** (`25-company-c`) | yes |
+| `--ready-level 10` | 370–420 | **445** (`25-rl10-c`) | no: over its band, accepted by the user ("Back to 63 HP (Rec.)"), revisit in stage 9 |
+| deaths a campaign (one party) | ≤ 2.0 | 1.0 (company 1.1, rl10 1.0) | yes |
+| days a campaign (one party) | 270 ± 10% (243–297) | 287 (company 288, rl10 539) | yes |
 | GR3 / BC3 / BC4 / BC5 | ≥ 470 / 400–470 / 430–490 / 420–490 | 500 / 455 / 462 / 484 | yes |
 | SN5 / SP5 / TL5 | 410–480 / 410–480 / report | 448 / 454 / 0 | yes |
-| SG7 / SG10 | 0 ± 40 / above step 01's 2 | 0 / **0** | SG7 yes; SG10 no: the user's accepted cost (three heroes at level 10 never beat the harder Source; five do, 9 in 10) |
+| SG7 / SG10 | 0 ± 40 / above step 01's 2 | 0 / 5 (`25-revert-sg7`, `25-revert-sg10`) | yes |
 | F1 / F2 / F3 | nearly all / most / 7 in 10 | 500 / 500 / 453 | yes |
-| run time | near five minutes | one party 361 s, company 370 s, `--ready-level 10` 863 s | one party and company yes; rl10's campaigns are 560 days long |
+| run time | near five minutes | one party 438 s, company 470 s with other work on the machine (the company alone, `25-company-a`, 282 s); `--ready-level 10` 1255 s (1059 s for `25-rl10-a`) | one party and company near it; rl10's campaigns are 539 days long |
 
-The one-party campaign is lost at the Source: 409 of its 445 Source battles (parties of four at level 7 lose 147 of 147, parties of five at levels 7–8 262 of 298). The cells (`logs/25-final-*`) were run on fabb6b8: only SG7 and SG10 field the Horror, and the rest match step 24's figures exactly. Parity is untouched (no node, plan or cell of the parity grid fields the Horror). The yardstick test is green: the Horror's mean damage was already a named exception (a boss), and its reason now says 2d6+11 and why.
+The cells other than SG7 and SG10 (`logs/25-final-*`) were run with the claws at +11, which only the Source fields; they match step 24's figures exactly, so they stand for the restored play. The one-party campaign is lost mostly at the Source (202 of its 445 Source battles), then the Bandit Camp at threat 3 (44). `--ready-level 10`'s 55 falls all come before the Source. Parity is untouched (no parity cell fields the Horror). The yardstick test is green with the Horror's exceptions as they were.
 
 ### Changed numbers, for step 26
 
-- Step 25: the Blight Horror's level 1 block, hit points 55 → 63 (391 at level 5) and claws 2d6+2 → 2d6+11 (2d6+13 at level 5).
+- Step 25: the Blight Horror's level 1 hit points 55 → 63 (391 at level 5). Its claws are 2d6+2, as before the step (2d6+11 for a while, reverted).
 - Step 24 (from its record): `FOE_HP_PER_LEVEL` 0.7 → 1.3; `banditGear` Fine iron from threat 3 (was plain below 5); the Spider Nest's fourth foe (the Nest Spider); Arcane Blood asks Intelligence 3 (was 4); Delwyn's creation picks build B (Destruction for Arcane Study); the parity plans name their capstone first, the cryomancer's Ice Lance before Web; the policy's Haste, Protect, Bane, Sleep and spell-power fixes.
 
 ### Execution record
 
-Commits: 6f9eee8 (the Horror's hit points 55 → 63, guard and policy snapshot re-recorded; C5 and CLAUDE.md wording for the parity plans), ed7d86c and 49a395a (run log and the decision), fabb6b8 (the claws 2d6+2 → 2d6+11, guard and policy snapshot re-recorded), and this record's commit.
+Commits: 6f9eee8 (the Horror's hit points 55 → 63, guard and policy snapshot re-recorded; C5 and CLAUDE.md wording for the parity plans), ed7d86c and 49a395a (run log and the first decision), fabb6b8 (the claws 2d6+2 → 2d6+11, by "Much harder Source"), 91ed574 (that pass's figures and docs), and the revert commit (the claws back to 2d6+2 by "Back to 63 HP (Rec.)", guard and snapshot back to 6f9eee8's, these figures). No history rewritten.
 
-Commands: `npm test` (2014 passed, before each code commit and at the end); the campaigns and cells as logged above. The scratch harness (`scratch25/`, untracked, not committed) fought the Source for a party of N pre-rolls raised to a level, with the Horror's numbers and the Source's guardians overridden by environment variables (a temporary hook in `encounters.ts` and `combat.ts`, removed before any commit). Exploratory campaign runs ran in parallel; the final ones (`25-*-final`) ran one at a time. A first attempt at the final runs passed its flags wrongly (zsh does not split a variable), ran two default-company campaigns under the wrong names, and was discarded. `npm run build` passes; `npm run test:browser` was not run (only monster data changed; no scene, layout or event shape).
+Commands: `npm test` (2014 passed, before each code commit and at the end); `npm run build` passed (at 91ed574; the revert restores 6f9eee8's code); the campaigns and cells as logged above. The scratch harness (untracked, deleted) fought the Source for a party of N pre-rolls raised to a level, with the Horror's numbers and the guardians overridden by environment variables through a temporary hook, removed before any commit. Exploratory campaign runs ran in parallel; the final ones one at a time. A first attempt at the claw pass's final runs passed its flags wrongly (zsh does not split a variable) and was discarded. `npm run test:browser` was not run (only monster data changed, and it is back as it was at 6f9eee8).
 
-Deviations: the second pass pulled a foe lever on the Source alone by the user's decision, against §2's lever order, as stage 4's tougher-foes decision already allowed. SG10 (0) is below its band's floor (step 01's 2), part of the accepted cost. The option the user chose said the one-party and company campaigns would fall to roughly 100 of 500 (my estimate from the Horror at 100 hit points); the measured cost is larger, 36 and 34, because rl10's campaign parties, in crafted gear and with reserves to try again, proved stronger than the scratch parties, so the Source had to be harder than estimated.
+Deviations: `--ready-level 10` (445) is over its band, accepted by the user. The "Much harder Source" estimate the user was given (about 100 of 500) was mine, from the Horror at 100 hit points in scratch fights; the real campaign parties, in crafted gear and with reserves to try again, proved stronger, so the Source had to be harder and the cost was 36 and 34.
