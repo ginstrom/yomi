@@ -62,8 +62,8 @@ const LANE_PITCH = 5
 export const STRIP_CHARS = 90
 /** The strip's first line, the node's summary, runs to at most this many lines, so that the strip stays inside the panel. */
 export const STRIP_SUMMARY_LINES = 2
-/** The strip's last line, what a click would do or what is missing, runs to one line: the asks above it say them all in full. */
-export const STRIP_HINT_LINES = 1
+/** The strip's last line, what a click would do or what is missing ("Not yet: …"), runs to at most two lines, which the strip has room for under the longest node's summary and asks. */
+export const STRIP_HINT_LINES = 2
 
 /** The lines `text` wraps onto at `width` characters, breaking at spaces (a longer word has a line of its own). */
 export function wrapLines(text: string, width: number = STRIP_CHARS): string[] {
@@ -412,8 +412,13 @@ export function treeForKey(key: string): TreeId | null {
   return Number.isInteger(index) && index >= 0 && index < TREE_IDS.length ? TREE_IDS[index] : null
 }
 
-/** The tree the panel's tree view opens on: that of the character's calling (the first, on a tie), else the Warrior tree. */
+/**
+ * The tree the panel's tree view opens on: that of the character's calling,
+ * its deepest path; on a tie, the tied path whose tree holds the most of its
+ * nodes, then the first; with no node, the Warrior tree.
+ */
 export function openingTree(character: Pick<Character, 'perks'>): TreeId {
-  const [path] = calling(character)
-  return path ? PATHS[path].tree : 'warrior'
+  const trees = calling(character).map((path) => PATHS[path].tree)
+  if (trees.length === 0) return 'warrior'
+  return trees.reduce((best, tree) => (treeNodes(character, tree) > treeNodes(character, best) ? tree : best))
 }

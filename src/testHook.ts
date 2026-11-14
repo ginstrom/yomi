@@ -423,8 +423,16 @@ export interface InventoryProbe {
    * click would take one. The nodes are on screen only while `tab` is `trees`.
    */
   perks: Array<Point & { perk: string; ranks: number; canTake: boolean }>
-  /** The Abilities tab's rows: name, kind, AP, mana (null for an at-will) and recharge (null for a spell). */
-  abilities: Array<{ name: string; kind: string; ap: number; mana: number | null; recharge: number | null }>
+  /** The Abilities tab's rows, every page's, spells then techniques: name, kind, AP, mana (null for an at-will) and recharge (null for none). */
+  abilities: Array<{ name: string; kind: string; ap: number; mana: number | null; recharge: number | null; description: string }>
+  /** The Abilities tab's mana line: "Mana 18 / 18", with ": knows no ability" for a hero that knows none. */
+  abilityManaLine: string
+  /** The Abilities tab's page shown (from 0), its pages, and its pager's buttons while there are two pages or more. */
+  abilityPage: number
+  abilityPages: number
+  abilityPager: { prev: Point; next: Point } | null
+  /** The rows the Abilities tab draws now, each its texts' bounds on screen together. */
+  abilityRowBounds: Rect[]
   /** The Character tab's title under the hero's name (`heroTitle`). */
   title: string
   /** The spells the Abilities tab lists, each with the centre of its row's Cast button and whether a click there would cast it here. */

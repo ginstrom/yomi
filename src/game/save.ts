@@ -259,7 +259,7 @@ function isOrder(order: unknown, self: string, partyIds: readonly string[]): boo
   return true
 }
 
-/** Null for anything that is not a save of this version (or version 23 as it is, or version 22 or 18, migrated), or names an item, perk or skill the game does not have. */
+/** Null for anything that is not a save of this version (or version 24 or 23 as it is, or version 22 or 18, migrated), or names an item, perk or skill the game does not have. */
 export function parseSave(raw: string | null): SaveFile | null {
   if (raw === null) return null
   try {

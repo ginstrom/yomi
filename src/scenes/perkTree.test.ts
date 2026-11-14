@@ -217,6 +217,30 @@ describe('treeLinks', () => {
     expect(clericLane('greater_heal_all')).toBeLessThan(clericLane('heal_all'))
   })
 
+  it("lets no two brackets cross: no bracket's arm runs through another's upright", () => {
+    type Segment = { a: { x: number; y: number }; b: { x: number; y: number } }
+    const segments = (points: readonly { x: number; y: number }[]): Segment[] => points.slice(1).map((b, i) => ({ a: points[i], b }))
+    const between = (v: number, p: number, q: number) => Math.min(p, q) < v && v < Math.max(p, q)
+    let pairs = 0
+    for (const tree of TREE_IDS) {
+      const links = treeLinks(tree).filter((link) => link.kind === 'requires')
+      for (const one of links) {
+        for (const other of links) {
+          if (one.from === other.from) continue
+          pairs++
+          for (const arm of segments(one.points).filter((s) => s.a.y === s.b.y)) {
+            for (const upright of segments(other.points).filter((s) => s.a.x === s.b.x)) {
+              const crosses = between(upright.a.x, arm.a.x, arm.b.x) && between(arm.a.y, upright.a.y, upright.b.y)
+              expect(crosses, `${tree}: ${one.from}→${one.to} crosses ${other.from}→${other.to}`).toBe(false)
+            }
+          }
+        }
+      }
+    }
+    // Brackets of different parents there are, so the check checked something.
+    expect(pairs).toBeGreaterThan(0)
+  })
+
   it('gives brackets of different parents whose rows meet lanes of their own', () => {
     // Heal's bracket reaches down to Heal All, from which Greater Heal All hangs.
     const links = treeLinks('cleric').filter((link) => link.kind === 'requires')
@@ -457,6 +481,13 @@ describe('the tree tabs', () => {
     expect(openingTree({ perks: { heal: 1, bless: 1, mending: 1, dodger: 1 } })).toBe('cleric')
     expect(openingTree({ perks: { dodger: 1, heal: 1 } })).toBe('scout')
   })
+
+  it('on a tie between deepest paths, open on the tree that holds the most nodes', () => {
+    // Swordmaster, Ranger and Rogue one node each: the Scout tree holds two.
+    expect(openingTree({ perks: { weapon_training: 1, marksmanship: 1, dodger: 1 } })).toBe('scout')
+    // Swordmaster 2 and Ranger 2, with a Rogue node: Scout again, though Swordmaster comes first.
+    expect(openingTree({ perks: { weapon_training: 1, power_attack: 1, marksmanship: 1, deadly_aim: 1, dodger: 1 } })).toBe('scout')
+  })
 })
 
 describe('the 95 nodes', () => {
@@ -474,6 +505,13 @@ describe('the strip', () => {
     const clamped = clampLines(long)
     expect(clamped.endsWith('…')).toBe(true)
     expect(wrapLines(clamped)).toHaveLength(2)
+  })
+
+  it('wraps a long "Not yet:" onto a second line rather than cutting it', () => {
+    expect(STRIP_HINT_LINES).toBe(2)
+    const hint = nodeHint({ ...warriorAt(1), perkPicks: 1 }, 'blademaster', true)
+    expect(wrapLines(hint).length).toBe(2)
+    expect(clampLines(hint, STRIP_HINT_LINES)).toBe(hint)
   })
 
   it('stays inside the 500 px panel for the longest node: summary, asks and hint', () => {

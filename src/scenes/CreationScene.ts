@@ -472,7 +472,7 @@ export class CreationScene extends Phaser.Scene {
     this.text(
       LEFT,
       NAME_BOX.y + 56,
-      `Starts with the weapon of its tagged skill (${held}), a steel breastplate, and the other plain weapons in its backpack.`,
+      `Starts with the weapon of its tagged skill (${held}), an iron breastplate, and the other plain weapons in its backpack.`,
       DIM,
       11,
     ).setWordWrapWidth(CONTENT_W - LEFT)

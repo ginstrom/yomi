@@ -60,7 +60,7 @@ Every attribute starts at 1, and you have **26 points** to place. You must place
 | Agility | Action points, armour class, the weapon skills |
 | Luck | Chance of a critical hit |
 
-The budget is tight. Raising one attribute to 10 leaves room for two at about 7 and the rest low. Nodes of the skill trees can raise attributes later, from level 2 onward (Gain Strength adds 2 to Strength).
+The budget is tight. Raising one attribute to 10 leaves room for two at about 7 and the rest low. Nodes of the skill trees can raise attributes later: Toughness, open at level 1, adds 1 to Endurance, and Gain Strength, from level 2, adds 2 to Strength.
 
 ### Skills
 
@@ -82,7 +82,7 @@ An untrained skill sits near 10%, and against an armoured foe that becomes the m
 
 The screen's rule line reads "3 picks. One more comes with every even level. Any path, any tree; only your deepest path may open its capstone." You have **3 picks**, and one more comes with every even level; there are no separate spell picks and no Spellcasting perk. There are four skill trees, **Warrior**, **Scout**, **Mage** and **Cleric**, each with a tab at the top left (or press 1 to 4), and each tree has three paths, one to a column. Any hero may take nodes from any path of any tree. A spell is a node like any other, bought with a pick.
 
-At creation only the first tier (marked **L1** in the left margin) can be taken: click an open node to take it and click it again to give it back. The tiers below ask a higher level (L2, L6, L12) and nodes already held in the same path; the number beside each path's name is how many of its nodes the hero holds, in gold for the deepest. The bottom of the tree is a **capstone** (★, haloed in a double gold frame): only the hero's deepest path may open its capstone, and a hero may hold only one. A line runs down each path's left side through its nodes, top to bottom, and a bracket on a node's right side, ending in an arrowhead, means the node at the bracket's other end, which may be several rows up, must be taken first. Lines are gold into nodes taken, pale into nodes you can take now and dark into nodes still closed.
+At creation only the first tier (marked **L1** in the left margin) can be taken: click an open node to take it and click it again to give it back. The tiers below ask a higher level (L2, L6, L12) and nodes already held in the same path; the number beside each path's name is how many of its nodes the hero holds, in gold for the deepest. The bottom of the tree is a **capstone** (★, haloed in a double gold frame): only the hero's deepest path may open its capstone, and a hero may hold only one. A line runs down each path's left side through its nodes, top to bottom, and a bracket on a node's right side, ending in an arrowhead, means the node at the bracket's other end, which may be several rows up, must be taken first. Lines are gold into nodes taken, pale into nodes you can take now and dark into nodes still closed; a stretch of a path's left-hand line is gold only when the nodes at both its ends are taken.
 
 ![The Mage tree in creation](images/creation-spells.png)
 
@@ -320,7 +320,7 @@ Defence works in two ways. **Armour class** (from agility, shields and some magi
 
 Because resistance comes off every hit, it hurts weapons that hit often for a little, such as the dagger, the shortsword and the bow, much more than weapons that hit hard. Those quick weapons are best against lightly armoured foes. Against heavily armoured ones, reach for a heavy weapon.
 
-**Armour piercing**: melee blows ignore some points of the foe's resistance (see the table above, and the Bearded modifier and the Armour Breaker and Sunder perks). Bow and wand shots pierce nothing; a crossbow bolt pierces its own 2 points, but not the perks'. Spells ignore resistance altogether, which makes a mage the other answer to armour.
+**Armour piercing**: melee blows ignore some points of the foe's resistance (see the table above, and the Bearded modifier and the Armour Breaker and Weapon Mastery nodes). Bow and wand shots pierce nothing and a crossbow bolt its own 2 points, never the melee nodes' piercing; a Deadeye's shots pierce 3 points more. Spells ignore resistance altogether, which makes a mage the other answer to armour.
 
 When a hero is selected, every foe they can attack from where they stand shows on its nameplate your chance to hit, any bonus from flanking and the arc, and, after piercing, how much damage its armour will stop: "60% −3 dmg", or "70% +10 −3 dmg" from its flank.
 
@@ -348,7 +348,7 @@ A hero who knows a spell or a **technique** has a **Skills** button (or M). It s
 
 Techniques are nodes of the skill trees (chapter 7), most of them in the Warrior and Scout trees. Most are a blow or a shot of the hero's own weapon with something added: Power Attack strikes at −10 to hit for +6 damage, Pin pins the foe in place on a hit, Flame Strike adds fire. Their AP is the weapon's attack cost plus the technique's own (Pin is "weapon + 1": 6 AP with a longsword, 4 with a dagger), so the list always shows the cost for the weapon the hero holds now. Some cost mana as well; some, once used, have to wait a turn or more, and the list says "(ready in 1)".
 
-A row you cannot use right now is greyed out. Hover over it to see why: a technique for a melee weapon says "Needs a melee weapon" while the hero holds a bow, and one for a ranged weapon "Needs a ranged weapon". Otherwise no target is in reach, or the hero lacks the AP or mana.
+A row you cannot use right now is greyed out. Hover over it to see why: "Needs a melee weapon" (a technique for a melee weapon while the hero holds a bow) or "Needs a ranged weapon", "Once a battle", "Recharging (ready in 2)", "Needs 3 mana", "Needs 6 AP", or "No foe in range" ("No target in range" for Revive with no fallen ally near). "Not now" means none of these, such as an area that would catch no foe where it can be aimed.
 
 Once picked, a skill asks for its target, even when there is only one:
 
@@ -406,7 +406,7 @@ Several nodes sharpen a caster: some add flat **spell power** to each damaging s
 
 ![The spell list](images/battle-spell-menu.png)
 
-Spells are one kind of skill. To cast, select the hero and press **Skills** (or M); the button shows the mana the hero has left, and reads **Cancel** while you aim. The list holds the hero's spells first, then their techniques (see "Skills" in chapter 5), each spell with its mana and the AP it costs this hero. Pick a spell by clicking it or pressing its number. A spell you cannot cast right now is greyed out, for example because no target is in range or the hero lacks the AP or mana.
+Spells are one kind of skill. To cast, select the hero and press **Skills** (or M); the button shows the mana the hero has left, and reads **Cancel** while you aim. The list holds the hero's spells first, then their techniques (see "Skills" in chapter 5), each spell with its mana and the AP it costs this hero. Pick a spell by clicking it or pressing its number. A spell you cannot cast right now is greyed out, and hovering it says why, for example "No foe in range" or "Needs 10 mana".
 
 ![Choosing a spell's target](images/battle-targeting.png)
 

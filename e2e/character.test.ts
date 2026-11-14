@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PERK_IDS } from '../src/character/perks.ts'
+import { xpToNextLevel } from '../src/character/progression.ts'
 import { offsetToHex } from '../src/grid/hex.ts'
 import { useGames, type Game } from './driver.ts'
 
@@ -515,5 +516,96 @@ describe('a hero’s panel', () => {
     const back = await game.waitFor('Inventory', (p) => p.tab === 'skills')
     expect(back.takenPerks).toContainEqual({ perk: 'armor_breaker', ranks: 1 })
     expect(back.takenPerks).toHaveLength(4)
+  })
+  it('lists the spells and then the techniques on the Abilities tab, in rows that never overlap', async () => {
+    const game = await games.open()
+    await game.newGame()
+    const xpTo = (level: number) => Array.from({ length: level - 1 }, (_, i) => xpToNextLevel(i + 1)).reduce((a, b) => a + b, 0)
+    await debugCommand(game, `xp ${xpTo(2)} Aldric`)
+    await debugCommand(game, `xp ${xpTo(4)} Delwyn`)
+    const world = await game.waitFor('World', (w) => w.party[0].level === 2 && w.party[2].level === 4)
+
+    // Aldric knows no active yet, but has mana all the same.
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('b')
+    const none = await game.waitFor('Inventory', (p) => p.tab === 'abilities')
+    expect(none.abilities).toEqual([])
+    expect(none.abilityManaLine).toMatch(/^Mana \d+ \/ [1-9]\d*: knows no ability$/)
+
+    // Power Attack, a technique, joins the tab once taken.
+    await game.press('s')
+    const skills = await game.waitFor('Inventory', (p) => p.tab === 'skills')
+    await game.click(skills.treesButton)
+    const warrior = await game.waitFor('Inventory', (p) => p.tab === 'trees' && p.tree === 'warrior')
+    await game.click(warrior.perks.find((node) => node.perk === 'power_attack')!)
+    await game.waitFor('Inventory', (p) => p.perkPicks === 0)
+    await game.press('b')
+    const aldric = await game.waitFor('Inventory', (p) => p.tab === 'abilities' && p.abilities.length === 1)
+    expect(aldric.abilities[0]).toMatchObject({ name: 'Power Attack', kind: 'at-will', mana: null })
+    expect(aldric.abilityManaLine).toMatch(/^Mana \d+ \/ \d+$/)
+
+    // Delwyn, an Evoker and Healer, with Flame Arrow and Heal All besides.
+    await game.click(aldric.party[2])
+    await game.waitFor('Inventory', (p) => p.party[2].active)
+    await game.press('s')
+    const mage = await game.waitFor('Inventory', (p) => p.tab === 'skills' && p.party[2].active)
+    await game.click(mage.treesButton)
+    const evoker = await game.waitFor('Inventory', (p) => p.tab === 'trees' && p.tree === 'mage')
+    await game.click(evoker.perks.find((node) => node.perk === 'flame_arrow')!)
+    await game.waitFor('Inventory', (p) => p.perkPicks === mage.perkPicks - 1)
+    await game.press('4')
+    const cleric = await game.waitFor('Inventory', (p) => p.tree === 'cleric')
+    await game.click(cleric.perks.find((node) => node.perk === 'heal_all')!)
+    await game.waitFor('Inventory', (p) => p.perkPicks === mage.perkPicks - 2)
+    await game.press('b')
+    const spells = await game.settled('Inventory', (p) => p.tab === 'abilities' && p.abilities.length === 4)
+    expect(spells.abilities.map(({ name }) => name)).toEqual(['Magic Arrow', 'Flame Arrow', 'Heal', 'Heal All'])
+    // Destruction's +2 is in the dice shown.
+    expect(spells.abilities[0].description).toBe('1d10+2 to a foe within 5 hexes')
+    expect(spells.abilityPager).toBeNull()
+    const rows = spells.abilityRowBounds
+    expect(rows).toHaveLength(4)
+    const { panel } = spells.characterSheet
+    for (const [i, a] of rows.entries()) {
+      expect(a.x).toBeGreaterThanOrEqual(panel.x)
+      expect(a.x + a.width).toBeLessThanOrEqual(panel.x + panel.width)
+      for (const b of rows.slice(i + 1)) {
+        const apart = a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y
+        expect(apart).toBe(true)
+      }
+    }
+  })
+
+  it('opens the tree view on the calling of each hero it is turned to', async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('p')
+    const aldric = await game.waitFor('Inventory', (p) => p.tab === 'trees')
+    expect(aldric.tree).toBe('warrior')
+    // Brenna, a Ranger, from the Warrior tree.
+    await game.click(aldric.party[1])
+    const brenna = await game.waitFor('Inventory', (p) => p.party[1].active)
+    expect(brenna).toMatchObject({ tab: 'trees', tree: 'scout' })
+  })
+
+  it("closes on Esc from every tab, a tab's key on its own tab leaving it open, and opens no menu", async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    // The panel opens on the Character tab here, so C is pressed on the tab already shown.
+    for (const key of ['s', 'c', 'b', 'i']) {
+      await game.click(world.party[0])
+      await game.waitForScenes(['Inventory'], ['World'])
+      await game.press(key)
+      await game.press(key)
+      await game.settled('Inventory', (p) => p.tab === { s: 'skills', c: 'character', b: 'abilities', i: 'inventory' }[key])
+      await game.press('Escape')
+      await game.waitForScenes(['World'])
+      // Long enough for a stray Esc to have opened the menu.
+      await game.page.waitForTimeout(300)
+      expect(await game.scenes()).toEqual({ running: ['World'], paused: [] })
+    }
   })
 })

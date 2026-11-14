@@ -7,6 +7,7 @@ import {
   equipFromBackpack,
   isTwoHanded,
   manaOf,
+  maxMana,
   pickUp,
   unequipToBackpack,
   type Character,
@@ -43,7 +44,7 @@ import { socketLines } from '../inventory/runes.ts'
 import type { InventoryProbe } from '../testHook.ts'
 import type { Point } from './boardGeometry.ts'
 import { pressMoved, rectContains, type Rect } from './mapScroll.ts'
-import { addPanelButton } from './panelButton.ts'
+import { addPanelButton, fitText } from './panelButton.ts'
 import type { GameState } from '../game/gameState.ts'
 import { applyMove, planDrag, validTargets, type DragSource, type DropTarget } from './gearDrag.ts'
 import { WARDS_WIDE_ROW_CHARS, attackCostWarning, onHitLines, wardsLines } from './gearCompare.ts'
@@ -58,7 +59,7 @@ import { PARTY_PANEL_W, portraitKey } from './partyPanel.ts'
 import { NODE_H, NODE_W, clampLines, nodeHint, openingTree, perkTitle, treeForKey } from './perkTree.ts'
 import { PerkTreeView } from './PerkTreeView.ts'
 import { heroTitle, type TreeId } from '../character/trees.ts'
-import { abilityRows } from './abilityList.ts'
+import { ABILITY_DESCRIPTION_LINES, ABILITY_LIST, abilityCostLine, abilityPages, abilityRowPlace, abilityRowRect, abilityRows } from './abilityList.ts'
 import { SlotScroll } from './slotScroll.ts'
 
 /** What the panel can show: one of its four tabs, or the tree view, opened from the Skills tab (on the calling's tree). */
@@ -163,7 +164,7 @@ const BADGE_CLEARANCE = 6
 const STAT_BLOCK_BOTTOM_MAX = BADGES_Y - BADGE_H / 2 - BADGE_CLEARANCE
 const SHEET_Y = 140
 
-/** The skills tab: skills down the left, each with a button to raise it, and down the right the perks taken and the button to the perk tree. */
+/** The skills tab: skills down the left, each with a button to raise it, and down the right the passives taken and the button to the skill trees. */
 const SKILLS_X = 24
 const SKILLS_W = 320
 const SKILL_ROW_Y = 104
@@ -181,15 +182,17 @@ const BACK_BUTTON = { x: PANEL_W - 20 - 40, y: 75, width: 80, height: 24 }
 const TREE_RULE =
   'Four trees of three paths: any path, any tree. A pick comes with every even level; a node of a higher tier asks its level and nodes in its path, and only your deepest path may open its capstone (★). Keys 1 to 4 switch trees.'
 
-/** The abilities tab: the actives known in two columns, each row with a Cast button on the world map for a heal. */
-const SPELLS_X = 24
-const SPELL_COLUMN_W = (PANEL_W - 2 * SPELLS_X - 24) / 2
-const SPELL_ROW_Y = 108
-const SPELL_ROW_H = 37
-/** A description is cut to two lines, as the 10px type fits no more between one row and the next; the Skills list's hint gives it in full. */
-const SPELL_DESCRIPTION_LINES = 2
+/**
+ * The abilities tab: the actives known in two columns a page (`ABILITY_LIST`,
+ * abilityList.ts), each row with a Cast button on the world map for a heal.
+ * A description is cut to two lines of about this many pixels a character,
+ * the most a row has room for; the Skills list's hint gives it in full.
+ */
 const SPELL_DESCRIPTION_CHAR_W = 7
-const SPELL_ROWS = 9
+const SPELLS_X = ABILITY_LIST.x
+/** The pager's two buttons, between the mana and the spell skill, shown only when the actives take more than a page. */
+const PAGE_PREV = { x: PANEL_W / 2 - 50, y: 96, width: 28, height: 20 }
+const PAGE_NEXT = { x: PANEL_W / 2 + 50, y: 96, width: 28, height: 20 }
 const CAST_BUTTON = { width: 54, height: 22 }
 
 const FONT = 'monospace'
@@ -273,6 +276,10 @@ export class InventoryScene extends Phaser.Scene {
   /** The mana the member has left in battle; null where the most it has is shown instead. */
   private mana: number | null = null
   private canAdvance = false
+  /** The page of the Abilities tab shown, and what it drew: its mana line and each row's texts, for the probe. */
+  private abilityPage = 0
+  private abilityManaLine = ''
+  private abilityRowTexts: Phaser.GameObjects.Text[][] = []
   private exchangeFor: InventoryData['exchange'] | null = null
   private exchangeAt: Rect | null = null
   private resumeKey: NonNullable<InventoryData['resume']> = 'Battle'
@@ -329,7 +336,6 @@ export class InventoryScene extends Phaser.Scene {
     this.press = null
     this.doll = null
     this.setMember(data.index ?? 0)
-    this.tree = openingTree(this.character)
     // Right-clicking an item drops it.
     this.input.mouse?.disableContextMenu()
 
@@ -444,7 +450,21 @@ export class InventoryScene extends Phaser.Scene {
         ranks: perkRanks(this.character, perk),
         canTake: this.canTake(perk),
       })),
-      abilities: abilityRows(this.character).map(({ name, kind, ap, mana, recharge }) => ({ name, kind, ap, mana, recharge })),
+      abilities: abilityRows(this.character).map(({ name, kind, ap, mana, recharge, description }) => ({ name, kind, ap, mana, recharge, description })),
+      abilityManaLine: this.abilityManaLine,
+      abilityPage: this.abilityPage,
+      abilityPages: abilityPages(abilityRows(this.character).length),
+      abilityPager:
+        abilityPages(abilityRows(this.character).length) > 1 ? { prev: onScreen(PAGE_PREV), next: onScreen(PAGE_NEXT) } : null,
+      abilityRowBounds: this.abilityRowTexts.map((texts) => {
+        const boxes = texts.map((text) => text.getBounds())
+        const left = Math.min(...boxes.map((b) => b.x))
+        const top = Math.min(...boxes.map((b) => b.y))
+        const right = Math.max(...boxes.map((b) => b.x + b.width))
+        const bottom = Math.max(...boxes.map((b) => b.y + b.height))
+        // getBounds is in world space, the panel's scale and place included.
+        return { x: left, y: top, width: right - left, height: bottom - top }
+      }),
       title: heroTitle(this.character),
       spells: knownSpells(this.character).map((spell, i) => ({
         ...onScreen(this.castButtonAt(i)),
@@ -481,6 +501,9 @@ export class InventoryScene extends Phaser.Scene {
     const member = this.members[index]
     this.index = index
     this.character = member.character
+    this.abilityPage = 0
+    // The tree view always shows a hero first on the tree of its calling, turned to it from another or not.
+    this.tree = openingTree(this.character)
     this.gearApCost = member.gearApCost ?? null
     this.hpRule = member.hpRule ?? 'share'
     this.ground = member.ground ?? []
@@ -680,7 +703,7 @@ export class InventoryScene extends Phaser.Scene {
     return this.canAdvance && cost !== null && cost <= this.character.skillPoints
   }
 
-  /** Whether a click would take a rank of `perk` now: a spell with a spell pick or a perk pick, anything else with a perk pick. */
+  /** Whether a click on `perk` in the tree view would take it now: with a pick to spend, on the world map, its asks met. */
   private canTake(perk: PerkId): boolean {
     return this.canAdvance && hasPickFor(this.character, perk) && qualifiesFor(this.character, perk)
   }
@@ -864,18 +887,20 @@ export class InventoryScene extends Phaser.Scene {
     this.buildPerkTree()
   }
 
-  // ---- build: spells tab -------------------------------------------------
+  // ---- build: abilities tab -------------------------------------------------
 
-  /** The top left of the `index`th spell's row. */
-  private spellRowAt(index: number): Point {
-    const column = Math.floor(index / SPELL_ROWS)
-    return { x: SPELLS_X + column * (SPELL_COLUMN_W + 24), y: SPELL_ROW_Y + (index % SPELL_ROWS) * SPELL_ROW_H }
+  /** The centre of the `index`th active's Cast button, beside its name. */
+  private castButtonAt(index: number): Point {
+    const { x, y, width } = abilityRowRect(index, PANEL_W)
+    return { x: x + width - CAST_BUTTON.width / 2, y: y + 7 }
   }
 
-  /** The centre of the `index`th spell's Cast button. */
-  private castButtonAt(index: number): Point {
-    const { x, y } = this.spellRowAt(index)
-    return { x: x + SPELL_COLUMN_W - CAST_BUTTON.width / 2, y: y + 6 }
+  /** Turns the Abilities tab a page on or back, round from the last to the first. */
+  private turnAbilityPage(step: number): void {
+    const pages = abilityPages(abilityRows(this.character).length)
+    this.abilityPage = (this.abilityPage + step + pages) % pages
+    // Next tick: the redraw destroys the button whose click handler this runs in.
+    this.time.delayedCall(0, () => this.buildContent())
   }
 
   /** Whether a click on `spell`'s Cast button would cast it now: a heal, on the world map, with the mana for it. */
@@ -884,17 +909,20 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   /**
-   * The spells the character knows, with its mana and the button to the spell
-   * tree; on the world map a heal can be cast from here, on one member or the
-   * whole party.
+   * The actives the character knows, spells then techniques, a page at a
+   * time, with its mana and spell skill; on the world map a heal can be cast
+   * from here, on one member or the whole party.
    */
   private buildSpells(): void {
     const content = this.spellsContent
     content.add(this.heading('Abilities', SPELLS_X, 66))
     this.buildPerkStatus(content, PANEL_W - SPELLS_X, 66)
-    const max = this.stats.magic?.maxMana ?? 0
-    const mana = max > 0 ? `Mana ${this.shownMana()} / ${max}` : 'No mana: knows no ability'
-    content.add(this.add.text(SPELLS_X, 88, mana, { fontFamily: FONT, fontSize: '14px', color: max > 0 ? GOLD : DIM }))
+    const rows = abilityRows(this.character)
+    // Every hero has mana, whether or not it knows anything to spend it on.
+    const max = this.stats.magic?.maxMana ?? maxMana(this.character)
+    const left = this.shownMana() ?? manaOf(this.character)
+    this.abilityManaLine = `Mana ${left} / ${max}${rows.length === 0 ? ': knows no ability' : ''}`
+    content.add(this.add.text(SPELLS_X, 88, this.abilityManaLine, { fontFamily: FONT, fontSize: '14px', color: rows.length > 0 ? GOLD : DIM }))
     // The chance spells strike with, gear included, so that what armour costs a caster shows here and not only on the item.
     const skill = this.shownSpellSkill()
     if (skill !== null) {
@@ -907,32 +935,51 @@ export class InventoryScene extends Phaser.Scene {
       )
     }
 
-    const rows = abilityRows(this.character)
-    const known = rows.map((row) => row.spell)
-    rows.forEach(({ spell, name, kind, ap, mana: manaCost, recharge }, i) => {
-      const { x, y } = this.spellRowAt(i)
-      const textWidth = SPELL_COLUMN_W - (this.canAdvance ? CAST_BUTTON.width + 6 : 0)
-      const description = clampLines(SPELLS[spell].description, SPELL_DESCRIPTION_LINES, Math.floor(textWidth / SPELL_DESCRIPTION_CHAR_W) - 1)
-      const cost = [manaCost === null ? null : `${manaCost} mana`, `${ap} AP`, recharge === null ? null : `recharge ${recharge}`]
-      content.add([
-        this.add.text(x, y, `${name}  ${kind}, ${cost.filter(Boolean).join(', ')}`, { fontFamily: FONT, fontSize: '13px', color: GOLD }),
-        this.add.text(x, y + 15, description, {
-          fontFamily: FONT,
-          fontSize: '10px',
-          color: DIM,
-          wordWrap: { width: textWidth },
-        }),
-      ])
-      if (this.canAdvance && worldSpells(this.character).some((heal) => heal.spell === spell)) this.buildCastButton(spell, i)
+    const pages = abilityPages(rows.length)
+    this.abilityPage = Math.min(this.abilityPage, pages - 1)
+    if (pages > 1) {
+      this.buildPanelButton(content, PAGE_PREV, '<', false, () => this.turnAbilityPage(-1))
+      this.buildPanelButton(content, PAGE_NEXT, '>', false, () => this.turnAbilityPage(1))
+      content.add(
+        this.add.text(PANEL_W / 2, PAGE_PREV.y, `${this.abilityPage + 1} / ${pages}`, { fontFamily: FONT, fontSize: '12px', color: DIM }).setOrigin(0.5),
+      )
+    }
+
+    const known = rows.flatMap((row) => (row.spell ? [row.spell] : []))
+    this.abilityRowTexts = []
+    rows.forEach((row, i) => {
+      if (abilityRowPlace(i).page !== this.abilityPage) return
+      const { x, y, width } = abilityRowRect(i, PANEL_W)
+      const castable = this.canAdvance && row.spell !== null && worldSpells(this.character).some((heal) => heal.spell === row.spell)
+      const nameWidth = width - (castable ? CAST_BUTTON.width + 6 : 0)
+      const description = clampLines(row.description, ABILITY_DESCRIPTION_LINES, Math.floor(width / SPELL_DESCRIPTION_CHAR_W) - 1)
+      const name = this.add.text(x, y, row.name, { fontFamily: FONT, fontSize: '13px', color: GOLD })
+      fitText(name, nameWidth)
+      const texts = [
+        name,
+        this.add.text(x, y + ABILITY_LIST.costY, abilityCostLine(row), { fontFamily: FONT, fontSize: '11px', color: TEXT }),
+        this.add
+          .text(x, y + ABILITY_LIST.descriptionY, description, {
+            fontFamily: FONT,
+            fontSize: '10px',
+            color: DIM,
+            wordWrap: { width },
+            maxLines: ABILITY_DESCRIPTION_LINES,
+            fixedHeight: ABILITY_DESCRIPTION_LINES * ABILITY_LIST.descriptionLineH,
+          }),
+      ]
+      content.add(texts)
+      this.abilityRowTexts.push(texts)
+      if (castable && row.spell) this.buildCastButton(row.spell, i)
     })
 
     const footer = this.worldCast
       ? `${SPELLS[this.worldCast].name}: choose who (${SPELLS[this.worldCast].manaCost} mana). Esc to go back.`
-      : known.length === 0
+      : rows.length === 0
         ? ''
-        : this.canAdvance
+        : this.canAdvance && known.length > 0
           ? `Out of battle a heal restores ${worldSpells(this.character).map(({ spell }) => `${worldHealing(spell)} (${SPELLS[spell].name})`).join(', ') || 'its average'}. A day of camping or a new level refills mana.`
-          : 'Spells are cast in battle with the Cast button (M).'
+          : 'In battle they are used from the Skills button (M).'
     content.add(
       this.add
         .text(PANEL_W / 2, 466, footer, { fontFamily: FONT, fontSize: '12px', color: this.worldCast ? GOLD : DIM, align: 'center', wordWrap: { width: PANEL_W - 48 } })
@@ -1439,10 +1486,10 @@ export class InventoryScene extends Phaser.Scene {
     this.time.delayedCall(0, () => this.buildContent())
   }
 
-  /** A tab's key shows the tab, or closes the panel when it is the one showing. */
+  /** A tab's key shows the tab. */
   private onTabKey(tab: MainTab): void {
-    if (this.activeTab === tab) this.close()
-    else this.showTab(tab)
+    // Only Esc closes the panel: a tab's key on its own tab, which the panel may have opened on unasked, does nothing.
+    if (this.activeTab !== tab) this.showTab(tab)
   }
 
   /** Closes the panel, telling the scene under it which member it last showed. */
