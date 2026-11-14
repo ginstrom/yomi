@@ -142,10 +142,8 @@ check) and `checks.py` (the per-variant checks).
   `ability.web`) and the 11 falls and footsteps (step 12: `battle.death.*`,
   `battle.step.*`) and the 14 cues of the `world` bank (step 13) are real
   content; see "Sound design without ears" below for what they taught.
-- **No placeholder is named.** The ten old placeholder WAVs are still
-  registered (sources `placeholder_*`, collection `placeholder`, licence
-  `own`), but no recipe names one; the audio pass's last step (18) removes
-  them or says why they stay.
+- **No placeholder remains.** The ten old placeholder tones were removed in
+  step 18; no recipe or source names one.
 
 ## Sound design without ears
 

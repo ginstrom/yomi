@@ -26,8 +26,8 @@ the "Integrated loudness I:" value:
 
 They are 2.5 LU apart, more than the 1 LU one shared value allows, so each
 has its own gain (`MUSIC_GAIN` in `src/scenes/audioSettings.ts`) and the music
-bus's base `MUSIC_BASE` is 1. The placeholders' fixed `MUSIC_VOLUME` was 0.2
-for both, which played the battle theme at about −28.2 LUFS and the world
+bus's base `MUSIC_BASE` is 1. The old fixed volume of 0.2
+for both played the battle theme at about −28.2 LUFS and the world
 map's at −25.7; both now sit at −24, 4 and 1.7 dB louder.
 
 ## `sfx/`: the sound-effect banks
@@ -128,8 +128,8 @@ again 706977 (`death.salamander`), 867251 and 200990 (`death.horror`) and
 32805 (`death.hero`) (step 12); 235453, 347126 (the drums of `confront`,
 `sighted`, `lost`), 512490 (`sighted`, `confront`), 539956 (`captured`),
 454855 (`threatened`, `lost`), 57280 (`captured`), 434339, 270589, 449843
-(`craft`), and again 867251 (`confront`, `source`), 32805, 685680 and 200990
-(`source`) and 685680 (`rune.fuse`) (step 13). Of the 28 downloaded at gate
+(`craft`), and again 867251 (`confront`, `source`), 32805, 200990 and 685680
+(`source`; 685680 also `rune.fuse`) (step 13). Of the 28 downloaded at gate
 G2, 23 are used: 171844 and 846337 were auditioned for step 12 and left out
 (a low hum under the scream; a steady tone under a very quiet hiss), and
 693428 (the brass and organ fanfare once meant for `stings.victory`, which
@@ -138,10 +138,7 @@ the melee hits, which step 08 made from Kenney and rubberduck) are not used.
 
 ### No placeholder left
 
-Every W1 cue is now built from real content: no recipe names a
-`placeholder_*` source. The old placeholder tones (synthesized in-house with
-Python's stdlib `wave` module, licence own) are still registered as the
-`placeholder_*` sources under `audio/sources/placeholder/`, named by no
-recipe, until step 18 removes them or documents why they stay. The
-placeholder WAVs that were played directly before the banks are gone from
-this folder.
+Every W1 cue is built from real content, and the ten old placeholder tones
+(synthesized in-house, licence own) were removed from `audio/sources/` in step
+18 with `yomi-audio source remove`. The placeholder WAVs that were played
+directly before the banks are gone from this folder too.

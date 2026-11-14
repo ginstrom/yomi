@@ -87,3 +87,31 @@ Prove the feature complete: every completion check passes on a clean tree, every
 
 ## Execution record
 
+
+Run 2026-11-14 on branch `audio-pass`.
+
+**Clean-tree checks** (after the placeholder removal): `npm test` 87 files, 1682 tests passed; `npm run test:browser` 12 files, 132 tests passed (one run, 225 s, nothing else running); `npm run build` ok (chunk-size warning only); `npm run sounds:check` "85 cues and 4 banks up to date, within budget"; `uv run --project tools/audio pytest tools/audio/tests` 246 passed.
+
+**Placeholders.** No recipe named one. Removed all ten `placeholder_*` sources with `yomi-audio source remove` (file, entry and the `audio/sources/placeholder/` directory); no input hash moved, so no rebuild. `public/assets/audio/` holds only the two themes, `README.md` and `sfx/`. Updated `audio/CLAUDE.md`, root `CLAUDE.md` and `public/assets/audio/README.md` (also fixed its repeated Freesound id: "685680 (`source`; also `rune.fuse`)").
+
+**Unused Freesound downloads** (of the 28 at G2): 171844, 846337 (auditioned for step 12), 693428, 411122 and 259542 were never used; nothing in the repository, they live only in the download cache.
+
+**Docs audit.** The removed-names grep finds only `sounds.test.ts`'s own guard (which asserts their absence) and the `sfx_bytes_per_format` budget key. The Commands table, scene helper list, `src/story/` line and Story paragraph, `e2e/CLAUDE.md` (`audioLog()`, `voice` probe) and the manual (Options line names the four sliders; no screenshot shows Options) are current. The heteronym rule in `audio/CLAUDE.md` is accurate; no shipped `spoken` text contains a listed heteronym except as the narrator's bake-off text.
+
+**Acceptance evidence.**
+- AC1: `grep -rn "sound\.play(\|sound\.add(\|sfx_" src/` finds only `soundPlayer.ts` (theme and voice `sound.add`) and the guard test `sounds.test.ts`.
+- AC2 to AC7, AC10 to AC12, AC14, AC16: the tests named in steps 05 to 07, 14, 16 and 17 (`sounds.test.ts`, `soundPlayer.test.ts`, `audioSettings.test.ts`, `narration.test.ts`, `storyAudio.test.ts`, `e2e/audio.test.ts`, `e2e/story.test.ts`), all in the green runs above.
+- AC8, AC9: `sfx check` clean; sizes: SFX opus 1,777,... bytes in total (battle 1,187,332, world 405,708, stings 96,343, ui 84,849; limit 3 MB), mp3 1,583,600 (limit 3 MB); `audio/sources` 13,214,350 + `audio/voices` 927,070 = 14,141,420 (limit 15 MB, 0.86 MB spare after the removal); voice opus 21,470, mp3 37,480 (limit 4 MB). Loudness, peak and correlation are checked by `sfx check`.
+- AC13: the bake-off clips and score sheet existed; G1 (feature record) predates the first file under `public/assets/voice/` (step 16, 2026-11-14, later commit). The one reference clip, `voice_narrator_neutral`, has licence `own`, `design.model` (Qwen3-TTS VoiceDesign), `design.revision`, `description_ref = "voices.toml#narrator"` and `seed = 7`. Per G1 there are no emotion clips, so the 0.75 similarity check does not apply.
+- AC15: both READMEs and the CLAUDE.md files audited above.
+
+**Not done here.** Fireball cannot reach its brief's about -18 LUFS-M, because the tool normalises to the group's target; `gainDb` is unchanged; an open question for after the playtest. G4 to G8 are non-blocking and come back from the user's playtest; G10 (`audio/.audition/16-render/`) awaits the user's listening.
+
+### G11 listening package (the user's)
+1. `PATH=/opt/homebrew/opt/node@26/bin:$PATH npm run dev`, open http://localhost:5173, begin a new game with the ready-made party, every slider at its default.
+2. One short battle (a nearby threat-1 location, or `~` then `fight goblin_raid 1`) to victory: a melee blow, a bow shot, a spell, a move.
+3. World map: walk until monsters are sighted, confront them, return home, enter the encampment, buy and sell at the trading post, try a refused buy, craft, embed a rune, take a skill-tree node; watch the intro and, if reached, the Source cutscene with narration.
+4. Judge by design 7.2: nothing harsh or piercing; nothing much louder or quieter than its neighbours; no audible repetition in footsteps or repeated attacks; impacts in time with the visuals; music audible but under the effects. Reply "pass" or the cues to fix (ids from `__yomi.audioLog()` or the moment).
+5. Fold in the pending listening: G10 (`audio/.audition/16-render/`), G4 to G8 from the playtest, and whether Fireball (`battle.cast.fire` family) is quiet.
+
+Verdict: pending. Step `awaiting review`.
