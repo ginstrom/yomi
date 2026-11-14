@@ -71,6 +71,19 @@ rows list every collection it draws on, those an earlier step used included):
 | | `oga_someoneman` | someoneman | Cure Magic, https://opengameart.org/content/cure-magic |
 | | `oga_bart` | bart | Steam release sounds, https://opengameart.org/content/steam-release-sounds |
 | | `freesound` | MaddieCooper | Freesound 811615 "WET SLAP NOISE", https://freesound.org/people/MaddieCooper/sounds/811615/ (Creative Commons 0, checked on the page; original downloaded by hand, five excerpts kept) |
+| `battle`: 22 spell and area-ability cues (`cast.*`, `impact.*`, `ability.spit`, `ability.web`; step 11) | `freesound` | hnhnh; AslakHostaker; Julien_Matthey; julianmateo_; rayjensen; TRP; JesterWhoo; JOHNWALLY; xkeril; bassimat | Freesound 244926 "fire-whoosh.wav", 395038 "Flamethrower_Weapon_Short_Medium_Bursts.wav", 346917 "JM_FX_Fireball 02.wav", 522705 "Fireball, Woosh, Pass, fast", 200990 "thunder-crack", 616992 "Thunder, crack, pretty close", 706977 "Angry snake hissing", 32805 "spooky dark pad.wav", 685680 "Humming in F# Minor", 867251 "Deep Rumbling Drone": https://freesound.org/people/hnhnh/sounds/244926/, …/AslakHostaker/sounds/395038/, …/Julien_Matthey/sounds/346917/, …/julianmateo_/sounds/522705/, …/rayjensen/sounds/200990/, …/TRP/sounds/616992/, …/JesterWhoo/sounds/706977/, …/JOHNWALLY/sounds/32805/, …/xkeril/sounds/685680/, …/bassimat/sounds/867251/ (each Creative Commons 0, checked on its page; originals downloaded by hand at gate G2) |
+| | `oga_untamedpixels` | lentikula (Basic Spell Impacts and Healing Spell Impacts, itch.io; compiled as CC0 in untamedpixels' pack) | 150 Combat Sound Effects (fire, ice, lightning and healing spell impacts), https://opengameart.org/content/150-combat-sound-effects |
+| | `oga_legitaudio` | LEGIT Audio | Fire Staff Sound Effects, https://opengameart.org/content/fire-staff-sound-effects |
+| | `oga_artisticdude` | artisticdude | Freeze Spell, https://opengameart.org/content/freeze-spell-0; Swishes Sound Pack, https://opengameart.org/content/swishes-sound-pack |
+| | `oga_bart` | bart (from a public-domain recording by Stephan at pdsounds) | Ice Spells, https://opengameart.org/content/ice-spells; Steam release sounds, https://opengameart.org/content/steam-release-sounds |
+| | `oga_vehicle` | vehicle | Fantasy Sound Effects (Tinysized SFX: match strike, air spray, tube whooshes, paper tear), https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx |
+| | `oga_rubberduck` | rubberduck | 100 CC0 SFX 2 (air, thunder), 40 CC0 water/splash/slime sfx (splashes, slime, bubbles), 80 CC0 creature sfx (spit, breath), 75 CC0 breaking/falling/hit sfx (glass), 25 CC0 mud sfx, 25 CC0 bang/firework sfx: https://opengameart.org/content/100-cc0-sfx-2, …/40-cc0-water-splash-slime-sfx, …/80-cc0-creature-sfx, …/75-cc0-breaking-falling-hit-sfx, …/25-cc0-mud-sfx, …/25-cc0-bang-firework-sfx |
+| | `oga_qubodup` | qubodup | 3 Dark Magic Spells, https://opengameart.org/content/3-dark-magic-spells |
+| | `oga_pwl` | pwl | Bell Dings/Chimes, https://opengameart.org/content/bell-dingschimes |
+| | `oga_themightyglider` | themightyglider | Catching Fire, https://opengameart.org/content/catching-fire |
+| | `oga_antumdeluge` | antumdeluge | Fire Crackling, https://opengameart.org/content/fire-crackling |
+| | `oga_ignasd` | ignasd | Ice Breaking/Shattering, https://opengameart.org/content/ice-breakingshattering |
+| | `kenney_impact` | Kenney (kenney.nl) | Impact Sounds (glass, punch, soft), https://kenney.nl/assets/impact-sounds |
 | `ui`: all 7 cues (`click`, `back`, `confirm`, `tab`, `error`, `learn`, `gear`; step 09) | `kenney_ui` | Kenney (kenney.nl) | UI Audio, https://kenney.nl/assets/ui-audio |
 | | `kenney_interface` | Kenney (kenney.nl) | Interface Sounds, https://kenney.nl/assets/interface-sounds |
 | | `kenney_rpg` | Kenney (kenney.nl) | RPG Audio, https://kenney.nl/assets/rpg-audio |
@@ -83,16 +96,22 @@ rows list every collection it draws on, those an earlier step used included):
 The clicks' bodies, the mallet and bell notes and the stings' chords and
 drums are synthesis (own), as are the wand's and the magic hit's crackle and
 fizz, the element sweeteners' snaps and sizzles, the blight chime's partials
-and the small heal's rising tones (step 10).
+and the small heal's rising tones (step 10), and in the spells (step 11) the
+sub booms and noise bursts, the storm cast's rising buzz and static, the
+arcane hum and pop, the hex's falling tones and shimmer, and the heal's and
+buff's FM bells.
 
-Freesound files used so far: 811615 (`battle.regen`, step 10). Of the 28
-downloaded at gate G2, step 10 needed only that one; the others serve steps
-11 to 13.
+Freesound files used so far: 811615 (`battle.regen`, step 10); 244926,
+395038, 346917, 522705 (fire: `cast.fire`, `impact.fire`, `impact.fireball`,
+`ability.spit`), 200990, 616992 (`impact.lightning`), 706977
+(`ability.spit`, `cast.venom`), 32805 (`cast.shadow`, `impact.shadow`),
+685680 (`cast.holy`) and 867251 (`impact.poison`) (step 11). The others of
+the 28 downloaded at gate G2 serve steps 12 and 13.
 
 ### Still placeholder
 
 Every other cue is still derived entirely from the old placeholder tones
 (synthesized in-house with Python's stdlib `wave` module, licence own), kept
 as the `placeholder_*` sources under `audio/sources/placeholder/`, until its
-content step (11 to 13). The placeholder WAVs that were played directly
+content step (12 or 13). The placeholder WAVs that were played directly
 before the banks are gone from this folder.

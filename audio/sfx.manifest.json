@@ -1,14 +1,14 @@
 {
   "banks": {
     "battle": {
-      "durationMs": 85783,
+      "durationMs": 119529,
       "mp3": {
-        "bytes": 696764,
-        "sha256": "2bfe4c7474fb4ed6fa552339fb2b35720e9431bcbacb817d897c7fcd26b04a79"
+        "bytes": 1020884,
+        "sha256": "8e3cee295ffd599c79bd747622266d8615810045aa82359fd306cdc1f7a1a679"
       },
       "opus": {
-        "bytes": 786449,
-        "sha256": "1f045741323cf3f3fcf745b6f8e3460e77fa662e1705f00254b0f11ba4d9e85d"
+        "bytes": 1067996,
+        "sha256": "39a4196713908e0269e5afbd8601d6fe305cf12639462d405bca5df92cf0d879"
       }
     },
     "stings": {
@@ -49,11 +49,11 @@
     "battle.ability.spit": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300
+        645,
+        661,
+        661
       ],
-      "inputs": "8fb33a57fd9dd6ff5cb88ec381ae5cda9a623367d791c484d054ab5539cb1fd2",
+      "inputs": "58349a59cc11cf99d951687292c20e4dbbec42e5b7cb3c7691800238ebc3c0ec",
       "markers": [
         "battle.ability.spit#0",
         "battle.ability.spit#1",
@@ -63,11 +63,11 @@
     "battle.ability.web": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300
+        314,
+        339,
+        298
       ],
-      "inputs": "59c7cdb3400c3a7af83cf5d695f6b830498f4e028bb78ee7ec2f6754edec7993",
+      "inputs": "c76b56fec7af9edea7b286c1f0896839425843c9243670cf6ccc4717551652ca",
       "markers": [
         "battle.ability.web#0",
         "battle.ability.web#1",
@@ -95,11 +95,11 @@
     "battle.cast.arcane": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300
+        649,
+        644,
+        655
       ],
-      "inputs": "e2cf4722c66549523e588fd8c0c4339bef585ab426582225347bf02ae676407e",
+      "inputs": "5b592223c339a4c8a8eb1e27cdfa8472c8dd7b96d6588fdc175bdfb678efa494",
       "markers": [
         "battle.cast.arcane#0",
         "battle.cast.arcane#1",
@@ -109,11 +109,11 @@
     "battle.cast.fire": {
       "bank": "battle",
       "durationsMs": [
-        335,
-        300,
-        300
+        649,
+        733,
+        648
       ],
-      "inputs": "4910ef0438280cdc5e1e3ff3825544bda36f5e5903d8928d7917ce0e69d5cb0d",
+      "inputs": "201d03e4662174517b97bcf29946396ee21adbb5fa627f12fd99f325899ffafd",
       "markers": [
         "battle.cast.fire#0",
         "battle.cast.fire#1",
@@ -123,11 +123,11 @@
     "battle.cast.frost": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300
+        691,
+        702,
+        734
       ],
-      "inputs": "8aaf387efc83203ff5b503877032aeca14d3f37161645e0b4580df46693db40f",
+      "inputs": "8c4538655bc8939d979bb326d6fca4386edf8eaa843558c00556b077646294a8",
       "markers": [
         "battle.cast.frost#0",
         "battle.cast.frost#1",
@@ -137,11 +137,11 @@
     "battle.cast.holy": {
       "bank": "battle",
       "durationsMs": [
-        309,
-        300,
-        300
+        964,
+        963,
+        916
       ],
-      "inputs": "eba6af1d0ad556d0a22d92da9a096c48d7d50249e26c0052b5d4f5dfe238bde8",
+      "inputs": "76e61943709282b737d518dcba2137d549bdcd96dc4882d187066c7a7a3fbde0",
       "markers": [
         "battle.cast.holy#0",
         "battle.cast.holy#1",
@@ -151,11 +151,11 @@
     "battle.cast.shadow": {
       "bank": "battle",
       "durationsMs": [
-        362,
-        300,
-        317
+        960,
+        919,
+        970
       ],
-      "inputs": "6d3dd8395f363eee9affaed999c9cd4b836f510355999468d2c37e83d44340ba",
+      "inputs": "84dc85bffaafbd37f8ba762c1b4f4306e0c1967f0db477cc7c8040dd37c6cc65",
       "markers": [
         "battle.cast.shadow#0",
         "battle.cast.shadow#1",
@@ -165,11 +165,11 @@
     "battle.cast.storm": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300
+        624,
+        619,
+        607
       ],
-      "inputs": "3a13defd673f9701e15088428bdab6529ef55d86cc424b6f3782b8ff10f7f5e5",
+      "inputs": "6868136e47bb869c2b40b2a663f85e59b7fd70bf8b5c420a91d77088a1be9bc8",
       "markers": [
         "battle.cast.storm#0",
         "battle.cast.storm#1",
@@ -179,11 +179,11 @@
     "battle.cast.venom": {
       "bank": "battle",
       "durationsMs": [
-        304,
-        300,
-        300
+        695,
+        581,
+        668
       ],
-      "inputs": "b8600810a0064ace7ccbef7ca7a990c062cd9e6be5efb3347764ff0c193d8ef4",
+      "inputs": "4e3eb35a9763280eb2819d9c5160610c46b5994ad218ba36fbfe779b9995a373",
       "markers": [
         "battle.cast.venom#0",
         "battle.cast.venom#1",
@@ -193,11 +193,11 @@
     "battle.cast.ward": {
       "bank": "battle",
       "durationsMs": [
-        356,
-        300,
-        300
+        641,
+        633,
+        657
       ],
-      "inputs": "8f616310fc034d3fdba590e315551062445492af1fb17e0a521058f3c84aa98d",
+      "inputs": "2555bedf0d7fd83ae1098742ef086187117750ded3778a8ff8d0d143ebecb27a",
       "markers": [
         "battle.cast.ward#0",
         "battle.cast.ward#1",
@@ -509,12 +509,12 @@
     "battle.impact.acid": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300
+        700,
+        696,
+        700,
+        697
       ],
-      "inputs": "6fbee57fb5f77cf89897b5837754c669026c270ffae13d18e1075a9978722dee",
+      "inputs": "9068449df45c9ef5b24c07fc751ca648615e13246cb55fc1172cc8c2e237405e",
       "markers": [
         "battle.impact.acid#0",
         "battle.impact.acid#1",
@@ -525,12 +525,12 @@
     "battle.impact.arcane": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300
+        430,
+        427,
+        425,
+        453
       ],
-      "inputs": "a5eaf96b7e18b8f0eaedf024b8cf125d2db29ab95a06d948ae05534de5135472",
+      "inputs": "26b7c1eaf79ae2c6a32b0933958ca9e2089a2a2bcf3ff875600f9f94a1d5d606",
       "markers": [
         "battle.impact.arcane#0",
         "battle.impact.arcane#1",
@@ -541,11 +541,11 @@
     "battle.impact.buff": {
       "bank": "battle",
       "durationsMs": [
-        360,
-        330,
-        316
+        695,
+        692,
+        710
       ],
-      "inputs": "c97b8571542044b3d6d744e3584dbc255e4f10bb9e7ea72c08dd44489eb2fda2",
+      "inputs": "333c694f04210d8d80212f4f1fe373d2bac75d18df33d33f415cd7735995f70c",
       "markers": [
         "battle.impact.buff#0",
         "battle.impact.buff#1",
@@ -555,12 +555,12 @@
     "battle.impact.fire": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300
+        792,
+        834,
+        776,
+        815
       ],
-      "inputs": "8b36852517d31563b1670d64067c44823c2a9e2aeb89ad82e2d74aba31c38dd7",
+      "inputs": "7964033ef90798f39f5216bb9595b247ff115a4fb98155dbb616448e7d2a4c31",
       "markers": [
         "battle.impact.fire#0",
         "battle.impact.fire#1",
@@ -571,11 +571,11 @@
     "battle.impact.fireball": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300
+        1601,
+        1554,
+        1636
       ],
-      "inputs": "767b5975eec916a8405fba21cdb6af2a8826ef07fcd5ce66b6327c8684da7f1e",
+      "inputs": "809ca407b48b5d6638c072f946302d0edfe7c7165ae5268570694f6cce2826df",
       "markers": [
         "battle.impact.fireball#0",
         "battle.impact.fireball#1",
@@ -585,12 +585,12 @@
     "battle.impact.frost": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300
+        672,
+        646,
+        622,
+        641
       ],
-      "inputs": "c3707dff5ffb562f06d7a7d5659ea6a87e12184fea12e691dd2a499c73bfb5be",
+      "inputs": "7a71e90ddc61be6a31ff2149bcb76e13431753674a4c7d7f051ab4b585d06473",
       "markers": [
         "battle.impact.frost#0",
         "battle.impact.frost#1",
@@ -601,11 +601,11 @@
     "battle.impact.heal": {
       "bank": "battle",
       "durationsMs": [
-        319,
-        375,
-        364
+        1065,
+        1080,
+        1070
       ],
-      "inputs": "5e45ba515a2f231c30a56b82a073178f91cd655a28eb5f5b31e7a5f46c416fd1",
+      "inputs": "5103235fa40f8db14c69549ff364438eee0c01e32aa0b539fc5230c96ee4e274",
       "markers": [
         "battle.impact.heal#0",
         "battle.impact.heal#1",
@@ -615,11 +615,11 @@
     "battle.impact.hex": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300
+        799,
+        769,
+        810
       ],
-      "inputs": "fd47050fa2852c1b6f530bc6cf146cc62648b32db3eff168dd03bc6c5c1714ab",
+      "inputs": "bf96213603b76236808a3fbb89a7fa80a31ff5199bce6d3b924871b45a65cae7",
       "markers": [
         "battle.impact.hex#0",
         "battle.impact.hex#1",
@@ -629,11 +629,11 @@
     "battle.impact.lightning": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300
+        1097,
+        1094,
+        1158
       ],
-      "inputs": "26436a7f672a97f7cf88846c2fff64bea7b4ff7c9b029510573947f394f44734",
+      "inputs": "f586824f92aa1030f53aa1781885e19f98a8d7ce26e9473685b63293728f59d2",
       "markers": [
         "battle.impact.lightning#0",
         "battle.impact.lightning#1",
@@ -643,11 +643,11 @@
     "battle.impact.poison": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300
+        1478,
+        1109,
+        1342
       ],
-      "inputs": "b37b8bfb87df8b852431a707161ea8ebb139dbd1a9aa6de042529ff9f1395321",
+      "inputs": "7fc2e1df95b82e697503457ff0b1e297f738f3fd151fee32ca488cd840638c29",
       "markers": [
         "battle.impact.poison#0",
         "battle.impact.poison#1",
@@ -657,12 +657,12 @@
     "battle.impact.shadow": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300
+        951,
+        931,
+        888,
+        836
       ],
-      "inputs": "2d7909580cdc4fb16f7b99fb5b25206b170dc44b3d3c6b78812c056e5b187cc1",
+      "inputs": "fe158e9108a0f0562db1ba074aeaa0e83846d276589bbb0d4629643af1005241",
       "markers": [
         "battle.impact.shadow#0",
         "battle.impact.shadow#1",
@@ -673,11 +673,11 @@
     "battle.impact.web": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300
+        469,
+        462,
+        431
       ],
-      "inputs": "6ef42f92956322d6c32126c372493fc552a9fdb306bd44bec1bd58c2d96d5a74",
+      "inputs": "030b922c3b682f8df2061a85a5e23963bccbed6bd032eb6eff24b7bc4324a617",
       "markers": [
         "battle.impact.web#0",
         "battle.impact.web#1",

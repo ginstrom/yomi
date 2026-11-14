@@ -1,21 +1,52 @@
-# Placeholder over placeholder_hit_impact; replaced by step 11
+# Fire impact: a flame whoomph with weight under it, a flare of fire, a sizzle and a short crackle.
 variants = 4
 seed = 3000
 group = "impact"
 max_ms = 1050
 
-[[layer]]
-source = "placeholder_hit_impact"
+[[layer]]                          # the whoomph
+pick = ["lk_fire_1", "lk_fire_4", "la_fire_staff_1", "la_fire_staff_3"]
 length = 700
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+pitch = [-2.0, 1.0]
+filter = [{ type = "highpass", hz = 60 }]
+fade_out = 250
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # weight
+synth = { kind = "sine", hz = [85, 100], hz_end = [42, 50], length = 200 }
+filter = [{ type = "highpass", hz = 40 }]
+envelope = [[0, 0], [200, -40]]
+gain = [-14, -11]
+
+[[layer]]                          # the flare
+pick = ["fs_flamethrower_1", "fs_flamethrower_2", "fs_flamethrower_3"]
+length = 480
+filter = [{ type = "highpass", hz = 300 }]
+envelope = [[0, 0], [150, -3], [480, -24]]
+fade_out = 120
+offset = [10, 40]
+gain = [-9, -6]
+
+[[layer]]                          # sizzle
+synth = { kind = "noise", color = "white", length = 400 }
+filter = [{ type = "bandpass", hz = [5000, 6500], q = 1.0 }]
+envelope = [[0, -20], [60, 0], [400, -40]]
+offset = 120
+gain = [-22, -18]
+
+[[layer]]                          # crackle
+pick = ["ad_fire_crackle_1", "ad_fire_crackle_2"]
+length = 400
+filter = [{ type = "highpass", hz = 700 }]
+fade_in = 10
+fade_out = 150
+offset = [180, 280]
+gain = [-10, -7]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -16, ratio = 4, attack_ms = 2, release_ms = 100 },
+  { type = "reverb", impulse = "small_room", wet_db = -20, predelay_ms = 5 },
+  { type = "limit", ceiling_db = -7, release_ms = 40 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 50 },
+  { type = "fade_out", ms = 60 },
+]

@@ -1,21 +1,36 @@
-# Placeholder over placeholder_spell_cast; replaced by step 11
+# Storm cast: a crackling static charge gathering, a buzz rising in pitch under it.
 variants = 3
 seed = 1300
 group = "release"
 max_ms = 750
 
-[[layer]]
-source = "placeholder_spell_cast"
+[[layer]]                          # the charge: a lightning spell's lead-in
+source = "lk_lightning_lead"
+start = [0, 250]
 length = 500
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+filter = [{ type = "highpass", hz = 300 }, { type = "highpass", hz = 300 }]
+envelope = [[0, -24], [400, 0], [500, -6]]
+fade_out = 60
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the rising buzz
+synth = { kind = "saw", hz = [70, 90], hz_end = [190, 250], length = 500 }
+filter = [{ type = "bandpass", hz = [800, 1000], hz_end = [2000, 2600], q = 1.0 }]
+saturate = 6
+envelope = [[0, -36], [420, -3], [500, -20]]
+fade_out = 30
+gain = [-16, -12]
+
+[[layer]]                          # static sparks
+synth = { kind = "crackle", density = [160, 260], click_ms = 0.5, length = 500 }
+filter = [{ type = "highpass", hz = 2500 }]
+envelope = [[0, -30], [420, 0], [500, -10]]
+gain = [-10, -7]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 3, attack_ms = 3, release_ms = 80 },
+  { type = "reverb", impulse = "small_room", wet_db = -20, predelay_ms = 5 },
+  { type = "limit", ceiling_db = -20, release_ms = 40 },
+  { type = "trim", threshold_db = -42, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 40 },
+]

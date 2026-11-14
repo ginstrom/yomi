@@ -1,21 +1,51 @@
-# Placeholder over placeholder_hit_impact; replaced by step 11
+# Frost impact: ice shattering, a crunchy transient with weight, then glassy debris tinkling down.
 variants = 4
 seed = 3200
 group = "impact"
 max_ms = 1050
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 700
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the shatter
+pick = ["ig_ice_1", "ig_ice_2", "ig_ice_4", "ig_ice_5"]
+length = 650
+pitch = [-1.5, 1.0]
+filter = [{ type = "highpass", hz = 150 }]
+fade_out = 200
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the spell's burst of ice
+pick = ["lk_ice_2", "lk_ice_3", "lk_ice_4"]
+length = 600
+filter = [{ type = "highpass", hz = 200 }]
+fade_out = 220
+gain = [-7, -4]
+
+[[layer]]                          # the crunch
+pick = ["rd_glass_breaking_2", "rd_glass_breaking_5"]
+length = 200
+pitch = [-3.0, 0.0]
+filter = [{ type = "highpass", hz = 400 }]
+fade_out = 80
+gain = [-8, -5]
+
+[[layer]]                          # debris tinkling down
+pick = ["rd_glass_falling_1", "rd_glass_falling_2", "rd_glass_falling_3", "rd_glass_falling_4"]
+length = 550
+pitch = [1.0, 4.0]
+filter = [{ type = "highpass", hz = 2000 }]
+fade_out = 200
+offset = [110, 200]
+gain = [-12, -9]
+
+[[layer]]                          # weight
+synth = { kind = "sine", hz = [110, 130], hz_end = [55, 65], length = 90 }
+filter = [{ type = "highpass", hz = 50 }]
+envelope = [[0, 0], [90, -40]]
+gain = [-15, -12]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -16, ratio = 4, attack_ms = 1, release_ms = 80 },
+  { type = "reverb", impulse = "small_room", wet_db = -18, predelay_ms = 4 },
+  { type = "limit", ceiling_db = -10, release_ms = 40 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 50 },
+  { type = "fade_out", ms = 60 },
+]

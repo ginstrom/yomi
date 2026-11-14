@@ -1,21 +1,71 @@
-# Placeholder over placeholder_hit_impact; replaced by step 11
+# Hex impact: a cascade of glass struck lower and lower, each with a detuned twin, under a falling shimmer: eerie, not violent.
 variants = 3
 seed = 3700
 group = "impact"
 max_ms = 1200
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 800
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # first glass, high
+pick = ["kenney_glass_medium_1", "kenney_glass_medium_3", "kenney_glass_light_2"]
+pitch = [4.5, 5.5]
+filter = [{ type = "highpass", hz = 800 }, { type = "highpass", hz = 800 }]
+fade_out = 150
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # its detuned twin
+pick = ["kenney_glass_medium_3", "kenney_glass_light_2", "kenney_glass_medium_1"]
+pitch = [5.9, 6.3]
+filter = [{ type = "highpass", hz = 800 }, { type = "highpass", hz = 800 }]
+fade_out = 150
+offset = [10, 25]
+gain = [-6, -4]
+
+[[layer]]                          # second glass, lower
+pick = ["kenney_glass_light_2", "kenney_glass_medium_1", "kenney_glass_medium_3"]
+pitch = [0.5, 1.5]
+filter = [{ type = "highpass", hz = 600 }, { type = "highpass", hz = 600 }]
+fade_out = 150
+offset = [140, 180]
+gain = [-3, -1]
+
+[[layer]]                          # its twin
+pick = ["kenney_glass_medium_1", "kenney_glass_medium_3", "kenney_glass_light_2"]
+pitch = [1.9, 2.3]
+filter = [{ type = "highpass", hz = 600 }, { type = "highpass", hz = 600 }]
+fade_out = 150
+offset = [150, 200]
+gain = [-7, -5]
+
+[[layer]]                          # third glass, lowest
+pick = ["kenney_glass_medium_3", "kenney_glass_light_2", "kenney_glass_medium_1"]
+pitch = [-4.0, -3.0]
+filter = [{ type = "highpass", hz = 400 }, { type = "highpass", hz = 400 }]
+fade_out = 200
+offset = [290, 340]
+gain = [-4, -2]
+
+[[layer]]                          # the falling shimmer
+synth = { kind = "noise", color = "white", length = 800 }
+filter = [{ type = "bandpass", hz = [5500, 6500], hz_end = [2000, 2600], q = 4.0 }]
+envelope = [[0, -12], [80, 0], [800, -36]]
+fade_out = 100
+gain = [-16, -13]
+
+[[layer]]                          # two faint tones sliding down a tritone apart
+synth = { kind = "sine", hz = [1700, 1800], hz_end = [850, 900], length = 750 }
+envelope = [[0, -30], [60, 0], [750, -36]]
+fade_out = 80
+gain = [-26, -23]
+
+[[layer]]
+synth = { kind = "sine", hz = [2400, 2550], hz_end = [1200, 1270], length = 750 }
+envelope = [[0, -30], [80, 0], [750, -36]]
+fade_out = 80
+gain = [-29, -26]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 3, attack_ms = 2, release_ms = 100 },
+  { type = "reverb", impulse = "small_room", wet_db = -12, predelay_ms = 10 },
+  { type = "limit", ceiling_db = -10, release_ms = 50 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 60 },
+  { type = "fade_out", ms = 120 },
+]

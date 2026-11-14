@@ -1,21 +1,45 @@
-# Placeholder over placeholder_hit_impact; replaced by step 11
+# Acid impact: a bright splash, then a strong frying sizzle with fine fizzing bubbles (no low gas: that is poison's).
 variants = 4
 seed = 3400
 group = "impact"
 max_ms = 1050
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 700
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the splash
+pick = ["rd_splash_2", "rd_splash_6", "rd_splash_8", "rd_slime_13"]
+length = 400
+pitch = [-1.0, 2.0]
+filter = [{ type = "highpass", hz = 250 }, { type = "highpass", hz = 250 }]
+fade_out = 150
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the sizzle
+pick = ["bart_steam_hiss", "vh_air_spray"]
+length = 600
+filter = [{ type = "highpass", hz = 2500 }, { type = "highpass", hz = 2500 }]
+envelope = [[0, -20], [60, 0], [250, -3], [600, -30]]
+fade_out = 150
+offset = [30, 60]
+gain = [-4, -1]
+
+[[layer]]                          # frying: dense fine crackle
+synth = { kind = "crackle", density = [350, 500], click_ms = 0.5, length = 600 }
+filter = [{ type = "highpass", hz = 3000 }]
+envelope = [[0, -12], [80, 0], [600, -36]]
+offset = 50
+gain = [-10, -7]
+
+[[layer]]                          # fizzing bubbles
+source = "rd_bubble_3"
+pitch = [4.0, 7.0]
+filter = [{ type = "highpass", hz = 1500 }]
+fade_out = 100
+offset = [120, 200]
+gain = [-14, -11]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -16, ratio = 4, attack_ms = 1, release_ms = 80 },
+  { type = "reverb", impulse = "small_room", wet_db = -20, predelay_ms = 4 },
+  { type = "limit", ceiling_db = -10, release_ms = 40 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 50 },
+  { type = "fade_out", ms = 60 },
+]

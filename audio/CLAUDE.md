@@ -137,19 +137,21 @@ check) and `checks.py` (the per-variant checks).
   `hit.crit`, `miss.swing`), the `ui` bank and the `stings` bank (step 09)
   and the 15 cues of shots, magic hits and sweeteners (step 10:
   `battle.shot.*`, `hit.magic`, `miss.shot`, `miss.magic`, `hit.image`,
-  `element.*`, `heal.small`, `regen`) are real content; see "Sound design
-  without ears" below for what they taught.
+  `element.*`, `heal.small`, `regen`) and the 22 spell and area-ability
+  cues (step 11: `battle.cast.*`, `impact.*` of the spells, `ability.spit`,
+  `ability.web`) are real content; see "Sound design without ears" below
+  for what they taught.
 - **The rest are placeholders.** Every other W1 cue has a recipe over
   one of the ten old placeholder WAVs (sources `placeholder_*`, collection
   `placeholder`, licence `own`), pitched, filtered and dusted with noise so
   its variants differ; each says in its first line which content step
-  replaces it (11 spells and abilities, 12 falls and steps, 13 world). Many
-  `impact` placeholders are peak-limited (square waves of 100 ms).
+  replaces it (12 falls and steps, 13 world).
 
 ## Sound design without ears
 
-What the melee batch (step 08), the interface and stings (step 09) and
-the shots and sweeteners (step 10) found, for the content steps after them:
+What the melee batch (step 08), the interface and stings (step 09),
+the shots and sweeteners (step 10) and the spells (step 11) found, for the
+content steps after them:
 
 - **Layer shape.** A hit is a picked body (`pick` over several excerpts), a
   transient layer where the brief asks for an edge or tick, a short
@@ -216,6 +218,39 @@ the shots and sweeteners (step 10) found, for the content steps after them:
   thump as its swings, and a soft impact pitched down is a body thump:
   cascade high-passes (400 to 500 Hz on the passby, 260 Hz on the thud)
   and keep the thud 20 dB under the whizz.
+
+- **Spells** (step 11). Normalisation always lands a cue on its group's
+  target, so no recipe can make one cue louder in LUFS-M max than its
+  group (the fireball's "loudest" brief): make it louder for longer
+  instead. A sustained roar bed under the fireball's tail put its loudness
+  over 3 s 1.3 dB or more above every other impact; `gainDb` in `CUES`
+  (`src/scenes/sounds.ts`) is the runtime lever if more is wanted.
+- **Setting `limit`.** After a first audition, raise (or lower) the
+  ceiling by the variant's true peak plus about 2.5 dB: that lands the
+  peak near −3 to −6 dBTP, keeping the transient, where a ceiling far down
+  leaves a peak of −9 to −12 and a squashed attack.
+- **Synth tones read as synth.** A sustained sine or low-index FM partial
+  is a pure line on the spectrogram and sounds electronic. For bells use
+  FM with a high index (2 to 3) falling to near 0 and an envelope down
+  9 to 12 dB within 120 to 160 ms; real voices (a hummed chord pitched to
+  a major triad) make a choir pad that a saw pad cannot. Keep friendly
+  bells' 2–5 kHz share down with a low-pass at 2.6 to 3 kHz and a −6 dB
+  peak at 3.5 kHz (FM at ratio 3 puts a partial at 4× the carrier).
+- **Casts lighter than impacts.** A hum or pad under 300 Hz makes a cast
+  as heavy as its impact; put the hum an octave up (390 to 470 Hz) and
+  cascade high-passes at 240 Hz on a hummed root. Measured: casts hold
+  0–34% of their raw power under 300 Hz, their impacts 47–94%.
+- **Acid and poison** are told apart by band, not texture: acid has no
+  energy under 300 Hz (a splash, a high-passed sizzle at 2.5 kHz twice,
+  frying crackle), poison two thirds of it there (a pitched-down soft
+  puff, an air hiss low-passed and closing from 2 kHz to 700 Hz, a deep
+  drone, bubbles pitched down an octave).
+- **Spell-impact packs.** lentikula's spell impacts (in untamedpixels'
+  150 Combat Sound Effects) open with a charge of 0.1 to 0.9 s before the
+  burst: cut impacts at the burst and use the lead-ins as cast material
+  (the storm cast is Lightning Spell Impact 2's charge).
+- `sfx audition` with a single cue writes its files straight into `--out`;
+  with several, a folder per cue.
 
 ## Sources and licences
 

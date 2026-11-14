@@ -1,21 +1,82 @@
-# Placeholder over placeholder_hit_impact; replaced by step 11
+# Fireball: a sub boom, a blast opening up, a fire whoosh rolling out and a long crackling tail (the loudest spell).
 variants = 3
 seed = 3100
 group = "impact"
 max_ms = 2100
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 1400
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # sub boom
+synth = { kind = "sine", hz = [66, 74], hz_end = [28, 32], curve = "exp", length = 550 }
+filter = [{ type = "highpass", hz = 25 }]
+envelope = [[0, -3], [10, 0], [550, -60]]
+saturate = 4
+gain = [-6, -4]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the blast
+pick = ["rd_bang_2", "rd_bang_4"]
+length = 600
+pitch = [-4.0, -2.0]
+filter = [{ type = "highpass", hz = 50 }]
+fade_out = 250
+gain = [-4, -2]
+
+[[layer]]                          # the blast opening up
+synth = { kind = "noise", color = "brown", length = 700 }
+filter = [{ type = "lowpass", hz = 300, hz_end = 6000, q = 0.7 }, { type = "highpass", hz = 40 }]
+envelope = [[0, -40], [15, 0], [120, -6], [700, -60]]
+gain = [-5, -2]
+
+[[layer]]                          # the burst of flame
+pick = ["lk_fire_1", "lk_fire_5", "la_fire_staff_3"]
+length = 900
+pitch = [-3.0, -1.0]
+filter = [{ type = "highpass", hz = 60 }]
+fade_out = 350
+offset = [10, 40]
+gain = [-5, -3]
+
+[[layer]]                          # the whoosh rolling out
+pick = ["fs_fire_whoosh", "fs_flamethrower_2", "fs_fireball_pass"]
+length = 900
+pitch = [-4.0, -2.0]
+filter = [{ type = "highpass", hz = 120 }]
+envelope = [[0, -10], [200, 0], [900, -24]]
+fade_out = 300
+offset = [60, 110]
+gain = [-5, -3]
+
+[[layer]]                          # the fire roaring on after the blast
+source = "fs_fire_whoosh"
+start = [0, 150]
+length = 1000
+pitch = [-5.0, -3.0]
+filter = [{ type = "highpass", hz = 90 }, { type = "lowpass", hz = 3500 }]
+envelope = [[0, -12], [250, 0], [700, -2], [1000, -18]]
+fade_out = 300
+offset = [220, 280]
+gain = [0, 2]
+
+[[layer]]                          # embers: the crackling tail
+pick = ["ad_fire_crackle_1", "ad_fire_crackle_2"]
+length = 1100
+filter = [{ type = "highpass", hz = 600 }]
+envelope = [[0, -6], [200, 0], [1100, -24]]
+fade_in = 20
+fade_out = 300
+offset = [250, 330]
+gain = [-3, -1]
+
+[[layer]]                          # sparks in the tail
+synth = { kind = "crackle", density = [35, 60], click_ms = 2, length = 900 }
+filter = [{ type = "bandpass", hz = 3000, q = 0.8 }]
+envelope = [[0, -20], [100, -8], [900, -60]]
+offset = 250
+gain = [-16, -13]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 4, attack_ms = 2, release_ms = 200 },
+  { type = "reverb", impulse = "open_air", wet_db = -14, predelay_ms = 12 },
+  { type = "limit", ceiling_db = -6, release_ms = 60 },
+  { type = "trim", threshold_db = -50, keep_tail_ms = 80 },
+  { type = "fade_out", ms = 120 },
+]

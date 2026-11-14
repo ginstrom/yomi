@@ -1,21 +1,46 @@
-# Placeholder over placeholder_hit_impact; replaced by step 11
+# Web impact: a sticky splat, then fibres stretching and tearing as they cling.
 variants = 3
 seed = 3800
 group = "impact"
 max_ms = 750
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 500
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the splat
+pick = ["rd_slime_09", "rd_slime_13", "rd_slime_15"]
+length = 380
+pitch = [-2.0, 1.0]
+filter = [{ type = "highpass", hz = 150 }, { type = "highpass", hz = 150 }]
+fade_out = 120
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # wet body
+pick = ["rd_mud_05", "rd_mud_06", "rd_mud_08"]
+length = 220
+filter = [{ type = "highpass", hz = 200 }]
+fade_out = 80
+gain = [-10, -7]
+
+[[layer]]                          # fibres tearing
+source = "vh_paper_tear"
+start = [80, 300]
+length = 320
+pitch = [1.0, 4.0]
+filter = [{ type = "highpass", hz = 1500 }]
+fade_in = 20
+fade_out = 100
+offset = [70, 120]
+gain = [-9, -6]
+
+[[layer]]                          # a strand stretching
+synth = { kind = "noise", color = "white", length = 280 }
+filter = [{ type = "bandpass", hz = [1800, 2200], hz_end = [3800, 4500], q = 4.0 }]
+envelope = [[0, -30], [200, 0], [280, -30]]
+offset = [90, 140]
+gain = [-18, -15]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -16, ratio = 4, attack_ms = 1, release_ms = 80 },
+  { type = "reverb", impulse = "small_room", wet_db = -22, predelay_ms = 4 },
+  { type = "limit", ceiling_db = -14, release_ms = 40 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 50 },
+]

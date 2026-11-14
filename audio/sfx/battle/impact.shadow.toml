@@ -1,21 +1,47 @@
-# Placeholder over placeholder_hit_impact; replaced by step 11
+# Shadow impact: a dark muffled thud, then a sucking reversed swell drawn into it.
 variants = 4
 seed = 3600
 group = "impact"
 max_ms = 1200
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 800
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the thud
+pick = ["kenney_punch_heavy_0", "kenney_punch_heavy_1", "kenney_punch_heavy_2", "kenney_punch_heavy_3"]
+length = 250
+pitch = [-8.0, -5.0]
+filter = [{ type = "highpass", hz = 60 }, { type = "lowpass", hz = 1800 }]
+fade_out = 100
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # its weight
+synth = { kind = "sine", hz = [75, 85], hz_end = [38, 44], length = 220 }
+filter = [{ type = "highpass", hz = 35 }]
+envelope = [[0, 0], [220, -40]]
+gain = [-12, -9]
+
+[[layer]]                          # the reversed swell, sucked in
+pick = ["qb_dark_fout_1", "qb_dark_fout_2", "qb_dark_fout_3", "fs_dark_pad"]
+length = 560
+reverse = true
+pitch = [-6.0, -4.0]
+filter = [{ type = "highpass", hz = 120 }, { type = "lowpass", hz = 2400 }, { type = "lowpass", hz = 2400 }]
+envelope = [[0, -30], [480, 0], [540, -6], [560, -40]]
+offset = [120, 180]
+gain = [-4, -1]
+
+[[layer]]                          # a breath drawn backwards with it
+source = "rd_breath"
+length = 450
+reverse = true
+pitch = [-7.0, -5.0]
+filter = [{ type = "highpass", hz = 180 }]
+fade_out = 60
+offset = [230, 280]
+gain = [-12, -9]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -16, ratio = 3, attack_ms = 2, release_ms = 120 },
+  { type = "reverb", impulse = "small_room", wet_db = -16, predelay_ms = 8 },
+  { type = "limit", ceiling_db = -9, release_ms = 50 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 60 },
+  { type = "fade_out", ms = 80 },
+]

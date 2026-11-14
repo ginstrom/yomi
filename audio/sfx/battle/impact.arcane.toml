@@ -1,21 +1,51 @@
-# Placeholder over placeholder_hit_impact; replaced by step 11
+# Arcane impact: a clean soft pop (a puff of air round a short glass tick) with a sparkle tail.
 variants = 4
 seed = 2900
 group = "impact"
 max_ms = 600
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 400
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the pop: a short band of noise
+synth = { kind = "noise", color = "pink", length = 70 }
+filter = [{ type = "bandpass", hz = [900, 1300], q = 1.2 }]
+envelope = [[0, 0], [8, 0], [70, -40]]
+gain = [-2, 0]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # its round body
+synth = { kind = "sine", hz = [420, 520], hz_end = [200, 240], length = 70 }
+filter = [{ type = "highpass", hz = 120 }]
+envelope = [[0, 0], [70, -40]]
+gain = [-8, -5]
+
+[[layer]]                          # a glass tick on the pop
+pick = ["kenney_glass_light_1", "kenney_glass_light_3", "kenney_glass_light_0", "kenney_glass_light_4"]
+length = 120
+pitch = [3.0, 7.0]
+filter = [{ type = "highpass", hz = 2000 }]
+fade_out = 60
+gain = [-10, -7]
+
+[[layer]]                          # the sparkle tail
+pick = ["lk_heal_1", "lk_heal_3"]
+start = [150, 350]
+length = 360
+filter = [{ type = "highpass", hz = 3000 }, { type = "highpass", hz = 3000 }]
+envelope = [[0, -6], [40, 0], [360, -30]]
+fade_in = 10
+offset = [15, 35]
+gain = [-6, -3]
+
+[[layer]]                          # glints in it
+synth = { kind = "crackle", density = [40, 70], click_ms = 0.4, length = 360 }
+filter = [{ type = "highpass", hz = 5000 }]
+envelope = [[0, 0], [360, -30]]
+offset = 30
+gain = [-14, -11]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 3, attack_ms = 1, release_ms = 60 },
+  { type = "reverb", impulse = "small_room", wet_db = -18, predelay_ms = 4 },
+  { type = "limit", ceiling_db = -16, release_ms = 40 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 40 },
+]

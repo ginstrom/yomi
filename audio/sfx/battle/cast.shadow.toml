@@ -1,21 +1,41 @@
-# Placeholder over placeholder_spell_cast; replaced by step 11
+# Shadow cast: a low dark whoosh drawn in backwards, a reversed breath and a dark pad under it.
 variants = 3
 seed = 1500
 group = "release"
 max_ms = 1050
 
-[[layer]]
-source = "placeholder_spell_cast"
-length = 700
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the reversed whoosh
+pick = ["qb_dark_fout_1", "qb_dark_fout_2", "qb_dark_fout_3"]
+length = 620
+reverse = true
+pitch = [-7.0, -4.0]
+filter = [{ type = "highpass", hz = 120 }, { type = "lowpass", hz = 2200 }, { type = "lowpass", hz = 2200 }]
+envelope = [[0, -30], [500, 0], [620, -14]]
+fade_out = 100
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # a breath taken backwards
+source = "rd_breath"
+length = 450
+reverse = true
+pitch = [-5.0, -3.0]
+filter = [{ type = "highpass", hz = 200 }]
+fade_out = 80
+offset = [80, 150]
+gain = [-9, -6]
+
+[[layer]]                          # the dark pad
+source = "fs_dark_pad"
+start = [0, 1200]
+length = 620
+filter = [{ type = "highpass", hz = 100 }, { type = "lowpass", hz = 1400 }]
+envelope = [[0, -30], [460, -4], [620, -20]]
+fade_out = 100
+gain = [-11, -8]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 2.5, attack_ms = 10, release_ms = 120 },
+  { type = "reverb", impulse = "small_room", wet_db = -16, predelay_ms = 10 },
+  { type = "trim", threshold_db = -42, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 50 },
+]

@@ -1,21 +1,58 @@
-# Placeholder over placeholder_spell_cast; replaced by step 11
+# Holy cast: a warm swell of hummed voices in a major chord, a soft bell struck at its height.
 variants = 3
 seed = 1600
 group = "release"
 max_ms = 1050
 
-[[layer]]
-source = "placeholder_spell_cast"
+[[layer]]                          # the hum: root
+source = "fs_hum"
+start = [0, 600]
 length = 700
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+pitch = [1.0, 1.4]
+filter = [{ type = "highpass", hz = 240 }, { type = "highpass", hz = 240 }, { type = "lowpass", hz = 3000 }]
+envelope = [[0, -30], [420, 0], [700, -8]]
+fade_out = 120
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # a major third above
+source = "fs_hum"
+start = [100, 700]
+length = 700
+pitch = [5.0, 5.4]
+filter = [{ type = "highpass", hz = 260 }, { type = "highpass", hz = 260 }, { type = "lowpass", hz = 3000 }]
+envelope = [[0, -30], [450, 0], [700, -8]]
+fade_out = 120
+gain = [-8, -6]
+
+[[layer]]                          # the fifth, high and faint
+source = "fs_hum"
+start = [200, 800]
+length = 700
+pitch = [8.0, 8.4]
+filter = [{ type = "highpass", hz = 250 }, { type = "lowpass", hz = 3200 }]
+envelope = [[0, -30], [480, 0], [700, -8]]
+fade_out = 120
+gain = [-11, -9]
+
+[[layer]]                          # a soft pad under the voices
+synth = { kind = "saw", hz = [278, 282], length = 700 }
+filter = [{ type = "lowpass", hz = 900 }, { type = "highpass", hz = 240 }]
+envelope = [[0, -40], [450, -6], [700, -14]]
+fade_out = 120
+gain = [-24, -20]
+
+[[layer]]                          # the bell
+pick = ["pwl_bell_ding_1", "pwl_bell_ding_3", "pwl_bell_ding_2"]
+length = 300
+filter = [{ type = "highpass", hz = 400 }, { type = "highpass", hz = 400 }, { type = "peak", hz = 3500, q = 1.0, gain_db = -5 }]
+fade_out = 120
+offset = [380, 460]
+gain = [-9, -6]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 2, attack_ms = 15, release_ms = 150 },
+  { type = "reverb", impulse = "open_air", wet_db = -14, predelay_ms = 12 },
+  { type = "limit", ceiling_db = -14, release_ms = 40 },
+  { type = "trim", threshold_db = -42, keep_tail_ms = 50 },
+  { type = "fade_out", ms = 60 },
+]

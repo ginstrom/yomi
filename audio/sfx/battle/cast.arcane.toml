@@ -1,21 +1,51 @@
-# Placeholder over placeholder_spell_cast; replaced by step 11
+# Arcane cast: a breathy intake rising in pitch over a soft two-note hum, a reversed glass shimmer drawn in on top.
 variants = 3
 seed = 1000
 group = "release"
 max_ms = 750
 
-[[layer]]
-source = "placeholder_spell_cast"
-length = 500
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the intake: air through a rising band
+source = "rd_air_1"
+start = [0, 600]
+length = 520
+filter = [{ type = "bandpass", hz = [650, 900], hz_end = [3200, 4500], q = 1.2 }]
+envelope = [[0, -30], [360, 0], [520, -10]]
+fade_out = 60
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # breath's body
+synth = { kind = "noise", color = "pink", length = 500 }
+filter = [{ type = "bandpass", hz = [450, 600], hz_end = [2000, 2800], q = 0.8 }]
+envelope = [[0, -40], [380, -4], [500, -24]]
+fade_out = 40
+gain = [-12, -9]
+
+[[layer]]                          # the hum's root
+synth = { kind = "sine", hz = [392, 444], hz_end = [415, 472], length = 520 }
+filter = [{ type = "highpass", hz = 250 }]
+envelope = [[0, -40], [250, -6], [460, 0], [520, -40]]
+gain = [-17, -14]
+
+[[layer]]                          # its fifth, softer
+synth = { kind = "triangle", hz = [588, 666], hz_end = [623, 708], length = 520 }
+filter = [{ type = "lowpass", hz = 2000 }]
+envelope = [[0, -40], [300, -6], [470, 0], [520, -40]]
+gain = [-28, -24]
+
+[[layer]]                          # reversed glass: a shimmer drawn in
+pick = ["kenney_glass_light_1", "kenney_glass_light_3", "kenney_glass_medium_1"]
+reverse = true
+pitch = [3.0, 7.0]
+filter = [{ type = "highpass", hz = 1800 }, { type = "highpass", hz = 1800 }]
+length = 300
+fade_in = 30
+fade_out = 40
+offset = [170, 220]
+gain = [-12, -8]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 2.5, attack_ms = 10, release_ms = 120 },
+  { type = "reverb", impulse = "small_room", wet_db = -16, predelay_ms = 8 },
+  { type = "trim", threshold_db = -42, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 40 },
+]

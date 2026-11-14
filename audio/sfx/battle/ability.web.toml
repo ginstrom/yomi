@@ -1,21 +1,36 @@
-# Placeholder over placeholder_melee_swing; replaced by step 11
+# Spider Web: a fast silk "thwip" (a short whoosh pitched up, a hiss of silk) with a faint sticky tip.
 variants = 3
 seed = 1900
 group = "release"
 max_ms = 600
 
-[[layer]]
-source = "placeholder_melee_swing"
-length = 400
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the thwip
+pick = ["vh_tube_whoosh_1", "vh_tube_whoosh_2", "ad_swish_11"]
+length = 260
+pitch = [4.0, 8.0]
+filter = [{ type = "highpass", hz = 600 }, { type = "highpass", hz = 600 }]
+fade_out = 80
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # silk
+synth = { kind = "noise", color = "white", length = 160 }
+filter = [{ type = "bandpass", hz = [2800, 3400], hz_end = [6000, 7000], q = 2.0 }]
+envelope = [[0, -20], [40, 0], [160, -36]]
+gain = [-12, -9]
+
+[[layer]]                          # the sticky tip
+pick = ["rd_slime_04", "rd_slime_02"]
+length = 150
+pitch = [2.0, 5.0]
+filter = [{ type = "highpass", hz = 800 }]
+fade_out = 60
+offset = [120, 170]
+gain = [-17, -14]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 3, attack_ms = 1, release_ms = 60 },
+  { type = "reverb", impulse = "small_room", wet_db = -24, predelay_ms = 3 },
+  { type = "limit", ceiling_db = -21, release_ms = 30 },
+  { type = "trim", threshold_db = -42, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 40 },
+]

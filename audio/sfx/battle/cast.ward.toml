@@ -1,21 +1,43 @@
-# Placeholder over placeholder_spell_cast; replaced by step 11
+# Ward cast: a bright glassy shimmer rising, reversed healing sparkle and a band of air climbing.
 variants = 3
 seed = 1700
 group = "release"
 max_ms = 900
 
-[[layer]]
-source = "placeholder_spell_cast"
-length = 600
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the shimmer drawn in backwards
+pick = ["lk_heal_2", "lk_heal_1", "lk_heal_3"]
+length = 560
+reverse = true
+filter = [{ type = "highpass", hz = 1500 }, { type = "highpass", hz = 1500 }, { type = "peak", hz = 3500, q = 1.0, gain_db = -4 }]
+envelope = [[0, -24], [480, 0], [560, -10]]
+fade_out = 60
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # air climbing
+synth = { kind = "noise", color = "white", length = 560 }
+filter = [{ type = "bandpass", hz = [2500, 3200], hz_end = [6500, 8000], q = 3.0 }]
+envelope = [[0, -30], [470, 0], [560, -12]]
+fade_out = 40
+gain = [-14, -11]
+
+[[layer]]                          # glass at the top, reversed
+pick = ["kenney_glass_light_0", "kenney_glass_light_2", "kenney_glass_light_4"]
+reverse = true
+pitch = [6.0, 10.0]
+filter = [{ type = "highpass", hz = 2500 }]
+fade_in = 20
+offset = [260, 320]
+gain = [-12, -9]
+
+[[layer]]                          # a faint pure tone under it
+synth = { kind = "sine", hz = [1046, 1062], length = 560 }
+envelope = [[0, -40], [460, -6], [560, -30]]
+fade_out = 40
+gain = [-26, -22]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 2.5, attack_ms = 8, release_ms = 100 },
+  { type = "reverb", impulse = "small_room", wet_db = -16, predelay_ms = 8 },
+  { type = "trim", threshold_db = -42, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 40 },
+]

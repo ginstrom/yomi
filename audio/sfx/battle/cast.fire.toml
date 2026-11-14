@@ -1,21 +1,47 @@
-# Placeholder over placeholder_spell_cast; replaced by step 11
+# Fire cast: a match-strike scrape blooming into a rising flame whoosh, a few early crackles.
 variants = 3
 seed = 1100
 group = "release"
 max_ms = 900
 
-[[layer]]
-source = "placeholder_spell_cast"
-length = 600
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the strike
+source = "vh_match_strike"
+length = 170
+pitch = [-2.0, 2.0]
+filter = [{ type = "highpass", hz = 900 }, { type = "highpass", hz = 900 }]
+fade_out = 70
+gain = [-3, 0]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the bloom: a flame whoosh swelling
+pick = ["fs_fireball_sweep", "fs_fire_whoosh", "fs_fireball_pass"]
+length = 560
+pitch = [-2.0, 1.0]
+filter = [{ type = "highpass", hz = 180 }, { type = "highpass", hz = 180 }]
+envelope = [[0, -26], [320, 0], [560, -10]]
+fade_out = 140
+offset = [50, 90]
+
+[[layer]]                          # the flame catching
+source = "tmg_flame"
+length = 400
+pitch = [-1.0, 1.0]
+filter = [{ type = "highpass", hz = 400 }]
+fade_out = 150
+offset = [60, 100]
+gain = [-10, -7]
+
+[[layer]]                          # crackles
+synth = { kind = "crackle", density = [30, 50], click_ms = 1.5, length = 450 }
+filter = [{ type = "bandpass", hz = 3000, q = 0.8 }]
+envelope = [[0, -20], [200, 0], [450, -30]]
+offset = 150
+gain = [-20, -16]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 3, attack_ms = 5, release_ms = 100 },
+  { type = "reverb", impulse = "small_room", wet_db = -20, predelay_ms = 6 },
+  { type = "limit", ceiling_db = -14, release_ms = 40 },
+  { type = "trim", threshold_db = -42, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 50 },
+]

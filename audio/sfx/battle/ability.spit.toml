@@ -1,21 +1,42 @@
-# Placeholder over placeholder_melee_swing; replaced by step 11
+# Fire Spit: a throaty reptile hiss, a wet spit, then a whoosh of fire leaving the mouth.
 variants = 3
 seed = 1800
 group = "release"
 max_ms = 900
 
-[[layer]]
-source = "placeholder_melee_swing"
-length = 600
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the hiss
+pick = ["fs_snake_hiss_1", "fs_snake_hiss_2"]
+length = 320
+pitch = [-3.0, -1.0]
+filter = [{ type = "highpass", hz = 1200 }]
+envelope = [[0, -20], [60, 0], [320, -6]]
+fade_out = 80
+gain = [10, 13]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the throat
+pick = ["rd_spit_1", "rd_spit_2"]
+length = 260
+pitch = [-5.0, -3.0]
+filter = [{ type = "highpass", hz = 300 }]
+fade_out = 80
+offset = [120, 160]
+gain = [-6, -3]
+
+[[layer]]                          # the fire whoosh
+pick = ["fs_flamethrower_1", "fs_flamethrower_2", "fs_flamethrower_3"]
+length = 420
+pitch = [-1.0, 1.0]
+filter = [{ type = "highpass", hz = 200 }, { type = "highpass", hz = 200 }]
+fade_in = 30
+fade_out = 160
+offset = [190, 240]
+gain = [-4, -1]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 3, attack_ms = 3, release_ms = 100 },
+  { type = "reverb", impulse = "small_room", wet_db = -20, predelay_ms = 5 },
+  { type = "limit", ceiling_db = -8, release_ms = 40 },
+  { type = "trim", threshold_db = -42, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 50 },
+]

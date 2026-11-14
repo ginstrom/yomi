@@ -1,21 +1,40 @@
-# Placeholder over placeholder_heal; replaced by step 11
+# Buff impact: a bright shimmer ring settling round the target (soft FM bells on E6 and B5, a healing shimmer and a glass touch).
 variants = 3
 seed = 4000
 group = "impact"
 max_ms = 1050
 
-[[layer]]
-source = "placeholder_heal"
-length = 700
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the ring (E6)
+synth = { kind = "fm", carrier_hz = 1319, ratio = 3.0, index = [2.0, 2.8], index_end = 0.1, length = 650 }
+envelope = [[0, -40], [6, 0], [120, -12], [650, -48]]
+gain = [-10, -8]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # a soft bell a fourth below
+synth = { kind = "fm", carrier_hz = 988, ratio = 2.0, index = [1.6, 2.2], index_end = 0.1, length = 600 }
+envelope = [[0, -40], [6, 0], [120, -12], [600, -48]]
+offset = [15, 40]
+gain = [-11, -9]
+
+[[layer]]                          # the shimmer
+pick = ["lk_heal_2", "lk_heal_3", "lk_heal_1"]
+length = 600
+filter = [{ type = "highpass", hz = 2500 }, { type = "highpass", hz = 2500 }, { type = "peak", hz = 3500, q = 1.0, gain_db = -4 }]
+envelope = [[0, -12], [80, 0], [600, -30]]
+fade_out = 150
+gain = [-4, -1]
+
+[[layer]]                          # a touch of glass
+pick = ["kenney_glass_light_0", "kenney_glass_light_3", "kenney_glass_light_4"]
+pitch = [4.0, 8.0]
+filter = [{ type = "highpass", hz = 2500 }]
+fade_out = 80
+gain = [-14, -11]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 2, attack_ms = 3, release_ms = 120 },
+  { type = "reverb", impulse = "small_room", wet_db = -14, predelay_ms = 8 },
+  { type = "limit", ceiling_db = -5, release_ms = 50 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 60 },
+  { type = "fade_out", ms = 120 },
+]

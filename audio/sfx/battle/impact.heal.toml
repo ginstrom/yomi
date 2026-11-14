@@ -1,21 +1,55 @@
-# Placeholder over placeholder_heal; replaced by step 11
+# Heal impact: a warm rising chime (soft FM bells on G5, B5 and D6, harmonic), a healing sparkle and a low warm tone under it.
 variants = 3
 seed = 3900
 group = "impact"
 max_ms = 1350
 
-[[layer]]
-source = "placeholder_heal"
-length = 900
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # G5
+synth = { kind = "fm", carrier_hz = 784, ratio = 3.0, index = [2.2, 3.0], index_end = 0.2, length = 800 }
+filter = [{ type = "lowpass", hz = 2600 }, { type = "peak", hz = 3600, q = 1.0, gain_db = -6 }]
+envelope = [[0, -40], [6, 0], [160, -9], [800, -40]]
+gain = [-8, -6]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # B5
+synth = { kind = "fm", carrier_hz = 988, ratio = 3.0, index = [2.2, 3.0], index_end = 0.2, length = 750 }
+filter = [{ type = "lowpass", hz = 2600 }, { type = "peak", hz = 3600, q = 1.0, gain_db = -6 }]
+envelope = [[0, -40], [6, 0], [160, -9], [750, -40]]
+offset = [100, 140]
+gain = [-9, -7]
+
+[[layer]]                          # D6
+synth = { kind = "fm", carrier_hz = 1175, ratio = 3.0, index = [1.8, 2.6], index_end = 0.2, length = 700 }
+filter = [{ type = "lowpass", hz = 3000 }, { type = "peak", hz = 3600, q = 1.0, gain_db = -6 }]
+envelope = [[0, -40], [6, 0], [160, -9], [700, -40]]
+offset = [200, 280]
+gain = [-10, -8]
+
+[[layer]]                          # warm tone under it (G4)
+synth = { kind = "sine", hz = 392, length = 800 }
+envelope = [[0, -40], [200, -6], [800, -40]]
+gain = [-20, -17]
+
+[[layer]]                          # the healing sparkle
+pick = ["lk_heal_1", "lk_heal_3", "lk_heal_2"]
+length = 750
+filter = [{ type = "highpass", hz = 400 }, { type = "lowpass", hz = 9000 }, { type = "peak", hz = 3500, q = 1.0, gain_db = -5 }]
+envelope = [[0, -20], [150, 0], [750, -30]]
+fade_out = 200
+offset = [20, 60]
+gain = [-9, -6]
+
+[[layer]]                          # motes
+synth = { kind = "crackle", density = [30, 50], click_ms = 0.4, length = 700 }
+filter = [{ type = "highpass", hz = 6000 }]
+envelope = [[0, -10], [200, 0], [700, -30]]
+offset = 80
+gain = [-15, -12]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 2, attack_ms = 5, release_ms = 150 },
+  { type = "reverb", impulse = "open_air", wet_db = -14, predelay_ms = 10 },
+  { type = "limit", ceiling_db = -5, release_ms = 60 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 80 },
+  { type = "fade_out", ms = 150 },
+]

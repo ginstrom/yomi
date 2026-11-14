@@ -2414,3 +2414,642 @@ excerpt = { start = 0.07, end = 0.4 }
 sha256 = "a193e2e2d44463346f7bfb188b0d880ceba834d4821a09827f4719eb52b7393c"
 retrieved = "2026-11-14"
 notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_fire_whoosh"
+file = "sources/freesound/fs_fire_whoosh.flac"
+licence = "CC0-1.0"
+author = "hnhnh (Freesound)"
+url = "https://freesound.org/people/hnhnh/sounds/244926/"
+original = "244926 fire-whoosh.wav (fs_244926_fire-whoosh.wav)"
+original_sha256 = "790ebc8021a0dc079a653c0d396ec587dcdf8cca9c49be315826a566203a1758"
+excerpt = { start = 0.25, end = 1.35 }
+sha256 = "bf8445b9eeaae564c8bd159024f016c78966941ba344d6927a3162f86446b002"
+retrieved = "2026-11-14"
+notes = "one whoosh, mono sum, trimmed"
+
+[[source]]
+id = "fs_flamethrower_1"
+file = "sources/freesound/fs_flamethrower_1.flac"
+licence = "CC0-1.0"
+author = "AslakHostaker (Freesound)"
+url = "https://freesound.org/people/AslakHostaker/sounds/395038/"
+original = "395038 Flamethrower_Weapon_Short_Medium_Bursts.wav (fs_395038_flamethrower-weapon-short-me.wav)"
+original_sha256 = "b823d93eb6e8dffe5954a3936e216c0a67d3bb5396b48955c68886eb35c91de2"
+excerpt = { start = 2.08, end = 2.85 }
+sha256 = "81d08eae118b3ae95ff2bbdfa92c117a5eab6203a52e007dbe271c7bdb891308"
+retrieved = "2026-11-14"
+notes = "first burst's onset, mono sum, trimmed"
+
+[[source]]
+id = "fs_flamethrower_2"
+file = "sources/freesound/fs_flamethrower_2.flac"
+licence = "CC0-1.0"
+author = "AslakHostaker (Freesound)"
+url = "https://freesound.org/people/AslakHostaker/sounds/395038/"
+original = "395038 Flamethrower_Weapon_Short_Medium_Bursts.wav (fs_395038_flamethrower-weapon-short-me.wav)"
+original_sha256 = "b823d93eb6e8dffe5954a3936e216c0a67d3bb5396b48955c68886eb35c91de2"
+excerpt = { start = 5.72, end = 6.45 }
+sha256 = "cf8078ad765af3fe0f7aedd9cb85a877aefff5c118521b9615d70dd054a745c2"
+retrieved = "2026-11-14"
+notes = "second burst's onset, mono sum, trimmed"
+
+[[source]]
+id = "fs_flamethrower_3"
+file = "sources/freesound/fs_flamethrower_3.flac"
+licence = "CC0-1.0"
+author = "AslakHostaker (Freesound)"
+url = "https://freesound.org/people/AslakHostaker/sounds/395038/"
+original = "395038 Flamethrower_Weapon_Short_Medium_Bursts.wav (fs_395038_flamethrower-weapon-short-me.wav)"
+original_sha256 = "b823d93eb6e8dffe5954a3936e216c0a67d3bb5396b48955c68886eb35c91de2"
+excerpt = { start = 9.85, end = 10.6 }
+sha256 = "81910d230bd78561e5d35bb2ff58d3e1c1b8adacd77215b99617cd32e38d0dca"
+retrieved = "2026-11-14"
+notes = "third burst's onset, mono sum, trimmed"
+
+[[source]]
+id = "fs_fireball_sweep"
+file = "sources/freesound/fs_fireball_sweep.flac"
+licence = "CC0-1.0"
+author = "Julien_Matthey (Freesound)"
+url = "https://freesound.org/people/Julien_Matthey/sounds/346917/"
+original = "346917 JM_FX_Fireball 02.wav (fs_346917_jm-fx-fireball-02.wav)"
+original_sha256 = "cad22d616e8168df32a128b1a335fe33c1f4fbcddd24deb2d28462c2f2e7c0fc"
+excerpt = { start = 0.3, end = 1.55 }
+sha256 = "5e09a02b043950a79fc39d552c572c349ca8f8de07a33d39c71cc8e91af07e94"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_fireball_pass"
+file = "sources/freesound/fs_fireball_pass.flac"
+licence = "CC0-1.0"
+author = "julianmateo_ (Freesound)"
+url = "https://freesound.org/people/julianmateo_/sounds/522705/"
+original = "522705 Fireball, Woosh, Pass, fast (fs_522705_fireball-woosh-pass-fast.wav)"
+original_sha256 = "c02fa14dd5402b9bf3fb509c40ad3145ed4aa9b304fd35dee65ac47cf2a22853"
+excerpt = { start = 1.1, end = 2.4 }
+sha256 = "a41952eb5f0031f429fe609029bbfbae9812c1d75a0b02d36cd273c77a3babd7"
+retrieved = "2026-11-14"
+notes = "the pass's swell, mono sum, trimmed"
+
+[[source]]
+id = "fs_thunder_1"
+file = "sources/freesound/fs_thunder_1.flac"
+licence = "CC0-1.0"
+author = "rayjensen (Freesound)"
+url = "https://freesound.org/people/rayjensen/sounds/200990/"
+original = "200990 rayjensen - thunder-crack 41k 16bit mono.wav (fs_200990_rayjensen-thunder-crack-41k.wav)"
+original_sha256 = "cdd245f833dc8d247db20c52ca8d008695dc9ba4c792071a48374e2a7abfc41b"
+excerpt = { start = 0.53, end = 2.1 }
+sha256 = "9b4a15a8abf70dda53a7da474e79730455f5504fb5f5d138a6cb51adac371f8c"
+retrieved = "2026-11-14"
+notes = "the crack and first rumble, trimmed, 44.1 to 48 kHz"
+
+[[source]]
+id = "fs_thunder_2"
+file = "sources/freesound/fs_thunder_2.flac"
+licence = "CC0-1.0"
+author = "TRP (Freesound)"
+url = "https://freesound.org/people/TRP/sounds/616992/"
+original = "616992 210914 Thunder, crack, pretty close, bit of distortion, urban, TORONTO 1am.wav (fs_616992_210914-thunder-crack-pretty.wav)"
+original_sha256 = "6a9f0613b11c61d2bb40efc5009357269f4baf4f3038aec07d08b0a83dec8d11"
+excerpt = { start = 0.97, end = 2.5 }
+sha256 = "45297dfc10dbc6b0670937ba88fb21c5f62d9917d1334509cc159a4a50ce07d3"
+retrieved = "2026-11-14"
+notes = "the crack and first rumble, mono sum, trimmed"
+
+[[source]]
+id = "fs_snake_hiss_1"
+file = "sources/freesound/fs_snake_hiss_1.flac"
+licence = "CC0-1.0"
+author = "JesterWhoo (Freesound)"
+url = "https://freesound.org/people/JesterWhoo/sounds/706977/"
+original = "706977 Angry snake hissing. OWI.wav (fs_706977_angry-snake-hissing-owi.wav)"
+original_sha256 = "47f40e2ece55c466f32eacc49167a981fa1c4a0cc0b3b984ede8770d835ea16b"
+excerpt = { start = 2.2, end = 3.0 }
+sha256 = "7330a5852846698350e4b73e3fbca1eb289f92928b1636cb00e2e70264658efa"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 44.1 to 48 kHz"
+
+[[source]]
+id = "fs_snake_hiss_2"
+file = "sources/freesound/fs_snake_hiss_2.flac"
+licence = "CC0-1.0"
+author = "JesterWhoo (Freesound)"
+url = "https://freesound.org/people/JesterWhoo/sounds/706977/"
+original = "706977 Angry snake hissing. OWI.wav (fs_706977_angry-snake-hissing-owi.wav)"
+original_sha256 = "47f40e2ece55c466f32eacc49167a981fa1c4a0cc0b3b984ede8770d835ea16b"
+excerpt = { start = 4.2, end = 5.0 }
+sha256 = "fb0b8727d8f63f663ae76e56781d5fd05ad88fab7c11b9842c30c5ec18740429"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 44.1 to 48 kHz"
+
+[[source]]
+id = "fs_dark_pad"
+file = "sources/freesound/fs_dark_pad.flac"
+licence = "CC0-1.0"
+author = "JOHNWALLY (Freesound)"
+url = "https://freesound.org/people/JOHNWALLY/sounds/32805/"
+original = "32805 spooky dark pad.wav (fs_32805_spooky-dark-pad.wav)"
+original_sha256 = "3feccd323441d9e32b3479db92268cc8328cf19fa21f15e7ba611005e1c350d2"
+excerpt = { start = 9.0, end = 11.0 }
+sha256 = "03afce65cb61731fec0bfac482a64e00862651d28fe9d7eea6531e499eff9a17"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_hum"
+file = "sources/freesound/fs_hum.flac"
+licence = "CC0-1.0"
+author = "xkeril (Freesound)"
+url = "https://freesound.org/people/xkeril/sounds/685680/"
+original = "685680 Humming in F# Minor (fs_685680_humming-in-f-minor.wav)"
+original_sha256 = "a79d48255c74951ebf1a5ced6db66a5b5d2c4ca4defd04fe9060b2dba6056aad"
+excerpt = { start = 2.0, end = 3.6 }
+sha256 = "653d28c7b72253f7e22e34a1ab79dab125301503538efa6e483b244af9354c87"
+retrieved = "2026-11-14"
+notes = "a sustained hum, mono sum, trimmed"
+
+[[source]]
+id = "fs_drone"
+file = "sources/freesound/fs_drone.flac"
+licence = "CC0-1.0"
+author = "bassimat (Freesound)"
+url = "https://freesound.org/people/bassimat/sounds/867251/"
+original = "867251 Deep Rumbling Drone with Expansive Reverberating Echoes (fs_867251_deep-rumbling-drone-with-exp.wav)"
+original_sha256 = "edf0fbc25654a1f1089b054ee8de85f8375a66ce283891f3aec8200b25f8dce2"
+excerpt = { start = 1.0, end = 2.6 }
+sha256 = "a0a7b061fbb9e98198a28237a2df1e01522c606e0042c4d2f89b872ee9160714"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 44.1 to 48 kHz"
+
+[[source]]
+id = "lk_fire_1"
+file = "sources/oga_untamedpixels/lk_fire_1.flac"
+licence = "CC0-1.0"
+author = "lentikula (itch.io packs Basic Spell Impacts and Healing Spell Impacts, compiled as CC0 in untamedpixels' 150 Combat Sound Effects on OpenGameArt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Fire Spell Impact 1_s06.wav"
+original_sha256 = "39f98c3cd805332b523b42d47e29915157f1d73ac49fe7898eabff216a153a70"
+excerpt = { start = 0.46, end = 1.5 }
+sha256 = "9ed8c1ca9d4ec8cc4471e6acde32a932e947d470119f1f92a6c047d50ef0c1c8"
+retrieved = "2026-11-14"
+notes = "the burst, mono sum, trimmed"
+
+[[source]]
+id = "lk_fire_4"
+file = "sources/oga_untamedpixels/lk_fire_4.flac"
+licence = "CC0-1.0"
+author = "lentikula (itch.io packs Basic Spell Impacts and Healing Spell Impacts, compiled as CC0 in untamedpixels' 150 Combat Sound Effects on OpenGameArt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Fire Spell Impact 4_s06.wav"
+original_sha256 = "0fb3bf0f420578bc650fecb341a61f866c8483b8275bf4884d93ffdf9f691dad"
+excerpt = { start = 0.14, end = 1.0 }
+sha256 = "29f0cba383b6ea0ca3b8084147fc00523830f2d56a474c2c884c24651af528d9"
+retrieved = "2026-11-14"
+notes = "the burst, mono sum, trimmed"
+
+[[source]]
+id = "lk_fire_5"
+file = "sources/oga_untamedpixels/lk_fire_5.flac"
+licence = "CC0-1.0"
+author = "lentikula (itch.io packs Basic Spell Impacts and Healing Spell Impacts, compiled as CC0 in untamedpixels' 150 Combat Sound Effects on OpenGameArt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Fire Spell Impact 5_s06.wav"
+original_sha256 = "f744960a424a942af15d39a68798cb6b3dbc1b21601f686e2bb72685277ffc47"
+excerpt = { start = 0.28, end = 1.2 }
+sha256 = "35d6d1b22fe00c24a6491a58e36d6787c3a35b134ed9a9d4de891c72fad17044"
+retrieved = "2026-11-14"
+notes = "the burst, mono sum, trimmed"
+
+[[source]]
+id = "lk_ice_lead"
+file = "sources/oga_untamedpixels/lk_ice_lead.flac"
+licence = "CC0-1.0"
+author = "lentikula (itch.io packs Basic Spell Impacts and Healing Spell Impacts, compiled as CC0 in untamedpixels' 150 Combat Sound Effects on OpenGameArt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Ice Spell Impact 1_s06.wav"
+original_sha256 = "4e25d6084cb59bf3f16c1b8916657f8195fda5d0f7350f4c3db580a47df23e80"
+excerpt = { start = 0.05, end = 0.47 }
+sha256 = "d984b3f043d2e26198ebebb0302c04b6af9c314533fd7620cad1553f8be267f3"
+retrieved = "2026-11-14"
+notes = "the forming crackle before the burst, mono sum, trimmed"
+
+[[source]]
+id = "lk_ice_2"
+file = "sources/oga_untamedpixels/lk_ice_2.flac"
+licence = "CC0-1.0"
+author = "lentikula (itch.io packs Basic Spell Impacts and Healing Spell Impacts, compiled as CC0 in untamedpixels' 150 Combat Sound Effects on OpenGameArt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Ice Spell Impact 2_s06.wav"
+original_sha256 = "95cdb781cf42ef5a5631348839f227d676970cb9198d93a47169eac6fede3111"
+excerpt = { start = 0.5, end = 1.3 }
+sha256 = "408e32b3f829a7b0fd34a3069fbe63bcf6ac546022f2906e2602ee1aaf764b73"
+retrieved = "2026-11-14"
+notes = "the burst, mono sum, trimmed"
+
+[[source]]
+id = "lk_ice_3"
+file = "sources/oga_untamedpixels/lk_ice_3.flac"
+licence = "CC0-1.0"
+author = "lentikula (itch.io packs Basic Spell Impacts and Healing Spell Impacts, compiled as CC0 in untamedpixels' 150 Combat Sound Effects on OpenGameArt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Ice Spell Impact 3_s06.wav"
+original_sha256 = "2d980f6d91ef3460a8ade383a9f7497aa4d4f1abcc132e61697ca03c9d9b434a"
+excerpt = { start = 0.45, end = 1.25 }
+sha256 = "4c9e32d0a96ad8a25a091d12582cefa3a1c691a158d313dededa78ce443b6e14"
+retrieved = "2026-11-14"
+notes = "the burst, mono sum, trimmed"
+
+[[source]]
+id = "lk_ice_4"
+file = "sources/oga_untamedpixels/lk_ice_4.flac"
+licence = "CC0-1.0"
+author = "lentikula (itch.io packs Basic Spell Impacts and Healing Spell Impacts, compiled as CC0 in untamedpixels' 150 Combat Sound Effects on OpenGameArt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Ice Spell Impact 4_s06.wav"
+original_sha256 = "9bf4c80097f7ee077adf58afb42f9dc873b6dbf50cc65eb23b5467ddb25f7a5b"
+excerpt = { start = 0.42, end = 1.1 }
+sha256 = "0fd5c86c9442406a1e5cf9bf40830656f33eea534ebd2c39e88292d95e60e450"
+retrieved = "2026-11-14"
+notes = "the burst, mono sum, trimmed"
+
+[[source]]
+id = "lk_lightning_lead"
+file = "sources/oga_untamedpixels/lk_lightning_lead.flac"
+licence = "CC0-1.0"
+author = "lentikula (itch.io packs Basic Spell Impacts and Healing Spell Impacts, compiled as CC0 in untamedpixels' 150 Combat Sound Effects on OpenGameArt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Lightning Spell Impact 2_s06.wav"
+original_sha256 = "4abe70491a415166772d7ca8dfdbfb0b102096054dcb634dbc3724f65cafb646"
+excerpt = { start = 0.1, end = 0.94 }
+sha256 = "4de8823cc7876d40966634cb13b9549aeb030927071220c17598bbbe7e72aa7b"
+retrieved = "2026-11-14"
+notes = "the charge before the strike, mono sum, trimmed"
+
+[[source]]
+id = "lk_lightning_1"
+file = "sources/oga_untamedpixels/lk_lightning_1.flac"
+licence = "CC0-1.0"
+author = "lentikula (itch.io packs Basic Spell Impacts and Healing Spell Impacts, compiled as CC0 in untamedpixels' 150 Combat Sound Effects on OpenGameArt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Lightning Spell Impact 1_s06.wav"
+original_sha256 = "d1d1f3a9cc3751220ee70fa60ab52ef45bd0077d8e80ad5bc83700c6ef72cc42"
+excerpt = { start = 0.43, end = 1.4 }
+sha256 = "3965547b3db7a9a3176140bc1a15b3867d574044f8bc9250ec3a580b5a919b28"
+retrieved = "2026-11-14"
+notes = "the strike, mono sum, trimmed"
+
+[[source]]
+id = "lk_lightning_2"
+file = "sources/oga_untamedpixels/lk_lightning_2.flac"
+licence = "CC0-1.0"
+author = "lentikula (itch.io packs Basic Spell Impacts and Healing Spell Impacts, compiled as CC0 in untamedpixels' 150 Combat Sound Effects on OpenGameArt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Lightning Spell Impact 2_s06.wav"
+original_sha256 = "4abe70491a415166772d7ca8dfdbfb0b102096054dcb634dbc3724f65cafb646"
+excerpt = { start = 0.94, end = 1.9 }
+sha256 = "890c908e717d3cfe4d54b2bd19497cb264f4588fa1e8aba62ba257157f911a49"
+retrieved = "2026-11-14"
+notes = "the strike, mono sum, trimmed"
+
+[[source]]
+id = "lk_heal_1"
+file = "sources/oga_untamedpixels/lk_heal_1.flac"
+licence = "CC0-1.0"
+author = "lentikula (itch.io packs Basic Spell Impacts and Healing Spell Impacts, compiled as CC0 in untamedpixels' 150 Combat Sound Effects on OpenGameArt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Healing Spell Impact 1_s08.wav"
+original_sha256 = "a642ddcce2a3ad16c5118df1aa5310519c540711044a3773ace7c1cc0bf4b40b"
+excerpt = { start = 0.4, end = 1.6 }
+sha256 = "5657ccc90450f12afc32f88e35775656764bbaf0b640dec47ac0b7d82116245a"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "lk_heal_2"
+file = "sources/oga_untamedpixels/lk_heal_2.flac"
+licence = "CC0-1.0"
+author = "lentikula (itch.io packs Basic Spell Impacts and Healing Spell Impacts, compiled as CC0 in untamedpixels' 150 Combat Sound Effects on OpenGameArt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Healing Spell Impact 2_s08.wav"
+original_sha256 = "831a754bef8fd595c3a2b75609a41394c41fff1b82bda23c01f3e731d4104530"
+excerpt = { start = 0.05, end = 1.1 }
+sha256 = "6c5217fe33016fe7f020f29d75ae46d294b5e119f726ea756d9c4ca1514f1e23"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "lk_heal_3"
+file = "sources/oga_untamedpixels/lk_heal_3.flac"
+licence = "CC0-1.0"
+author = "lentikula (itch.io packs Basic Spell Impacts and Healing Spell Impacts, compiled as CC0 in untamedpixels' 150 Combat Sound Effects on OpenGameArt)"
+url = "https://opengameart.org/content/150-combat-sound-effects"
+original = "150gameeffectsounds/04_magic_spells/Healing Spell Impact 3_s08.wav"
+original_sha256 = "0712ffa693771064b00214bb642cc50248a8a49ed2466ca892c6bb7c75d5d38a"
+excerpt = { start = 0.45, end = 1.6 }
+sha256 = "5f521f4e10df473342473a5aedb139e2246dc2104716cbe861478f2f48cb6aef"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "vh_match_strike"
+file = "sources/oga_vehicle/vh_match_strike.flac"
+licence = "CC0-1.0"
+author = "vehicle (OpenGameArt)"
+url = "https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx"
+original = "tinysized/sfx-cc0/match-light-01.wav"
+original_sha256 = "328c652eec7f5cbe6d63a3bc29d973e7391dca9d10da323a0cc37b994c02c536"
+excerpt = { start = 0.03, end = 0.55 }
+sha256 = "6794c972dea24ab0b146beccfe0969dde86bc99abebdfb37952bec323cde6f21"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "vh_air_spray"
+file = "sources/oga_vehicle/vh_air_spray.flac"
+licence = "CC0-1.0"
+author = "vehicle (OpenGameArt)"
+url = "https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx"
+original = "tinysized/sfx-cc0/compressed-air-spray-02.wav"
+original_sha256 = "d5264863576370a549a5b2f321838f9f53680055d7ef9917b4acfde6bf1d7b9b"
+excerpt = { start = 0.08, end = 1.6 }
+sha256 = "25bfb1b127aa8cc2ff9aaf0c088bac853151c81798f2e95af20a540f4a9f1e34"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "vh_tube_whoosh_1"
+file = "sources/oga_vehicle/vh_tube_whoosh_1.flac"
+licence = "CC0-1.0"
+author = "vehicle (OpenGameArt)"
+url = "https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx"
+original = "tinysized/sfx-cc0/tube-plastic-whoosh-01.wav"
+original_sha256 = "6bf539745db12b4b546bb8bb1ab2f75ccf403db80c07fc8f473fa288d0d428b9"
+sha256 = "10975efe6add26412c82784a4526651edd15e0a2792fa7ae887f1c501c11911c"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "vh_tube_whoosh_2"
+file = "sources/oga_vehicle/vh_tube_whoosh_2.flac"
+licence = "CC0-1.0"
+author = "vehicle (OpenGameArt)"
+url = "https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx"
+original = "tinysized/sfx-cc0/tube-plastic-whoosh-02.wav"
+original_sha256 = "2ba001b889f1465d949b5531e7c9f61425a0f81d2a40febe3bdb4e449e99c190"
+sha256 = "10618217615dc78d37ef900b93e953d634641eecc4c6a06f45af8c616d5fb99e"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "ad_freeze"
+file = "sources/oga_artisticdude/ad_freeze.flac"
+licence = "CC0-1.0"
+author = "artisticdude (OpenGameArt)"
+url = "https://opengameart.org/content/freeze-spell-0"
+original = "freeze.wav"
+original_sha256 = "dc16da845f18f88885db4584205a4ad9b84a8da6e377b79d4511b366cc8631f1"
+excerpt = { start = 0.15, end = 1.45 }
+sha256 = "bcce73e48fc0df244104b13b13856d04e6844c559e99fc2829778a1d01ca0530"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "ad_swish_11"
+file = "sources/oga_artisticdude/ad_swish_11.flac"
+licence = "CC0-1.0"
+author = "artisticdude (OpenGameArt)"
+url = "https://opengameart.org/content/swishes-sound-pack"
+original = "swishes/swishes/swish-11.wav"
+original_sha256 = "9e81d548d8215fbb36f7a41b5771d4b52c2fd02fbb9b5ff9a4c65118fd88ee4d"
+sha256 = "c3173136c5d94b9cfc712478d34361f42919086be063aa43c65932f839ebd002"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "bart_coldsnap"
+file = "sources/oga_bart/bart_coldsnap.flac"
+licence = "CC0-1.0"
+author = "bart (OpenGameArt; made from a public-domain recording by Stephan at pdsounds)"
+url = "https://opengameart.org/content/ice-spells"
+original = "icespells/coldsnap.wav"
+original_sha256 = "090977264d65d90a50b04e9f0c1c4e02fb194e5b50d9fe244f0079a4da54158c"
+excerpt = { start = 0.0, end = 1.0 }
+sha256 = "66624e17e27c96ab8b5c376a610fc6eac10d5ce2dab0606679970bc27233c29e"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_air_1"
+file = "sources/oga_rubberduck/rd_air_1.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/100-cc0-sfx-2"
+original = "sfx100v2_air_01.ogg"
+original_sha256 = "bb292a9fc082557e65199d01abe124459d910519b39c913ecb6c6f2207576d6f"
+excerpt = { start = 0.0, end = 1.6 }
+sha256 = "25030dbab79a3aea38673895e5468ea81a87a08902c38a6325b80a550f118488"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_thunder"
+file = "sources/oga_rubberduck/rd_thunder.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/100-cc0-sfx-2"
+original = "sfx100v2_thunder_01.ogg"
+original_sha256 = "8a4f1dee999546b363f989eff92174375eeae7c241dc9beaa0892fb131ef12a9"
+excerpt = { start = 0.65, end = 2.6 }
+sha256 = "07e5eb6f86e48d736536aa29902cad48fbb0165d8ebcb0426e5536a8aacf4461"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_splash_2"
+file = "sources/oga_rubberduck/rd_splash_2.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/40-cc0-water-splash-slime-sfx"
+original = "splash_02.ogg"
+original_sha256 = "eab0bb4bc01386528ba1e6244c6fd8940ee8d3c91ddb9e9cfea186e8560e04de"
+sha256 = "87aa099087bcb189e0df50c2bd965ae751997b0214e67ed2991ca36acf44f76b"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_splash_6"
+file = "sources/oga_rubberduck/rd_splash_6.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/40-cc0-water-splash-slime-sfx"
+original = "splash_06.ogg"
+original_sha256 = "3581e5bee7307cbe6be17715714029259685ba283cb3423938378506b386afb4"
+sha256 = "8764b5c76f82cac3e431c326d0fb750ccb5be57841484078163c23bd2b394279"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_splash_8"
+file = "sources/oga_rubberduck/rd_splash_8.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/40-cc0-water-splash-slime-sfx"
+original = "splash_08.ogg"
+original_sha256 = "fd4c9c8fbfe4ac7348644918a73b1d004b037bac3ef24a1303549b705624828a"
+sha256 = "5732bcf270c95262ab602e7c37ed1b8b2dc3b4be4b85db9c04ba661a4e574fc6"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_slime_09"
+file = "sources/oga_rubberduck/rd_slime_09.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/40-cc0-water-splash-slime-sfx"
+original = "slime_09.ogg"
+original_sha256 = "a3e04bf955878cc5316e9c480739504ee6fb2f7a3a94aba8ca4efa1c4b74fb3c"
+sha256 = "cbc6a0b4a1d18cacfaee8548b205b2c8e38150d9a16331c0f05b7ddccf064eca"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_slime_13"
+file = "sources/oga_rubberduck/rd_slime_13.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/40-cc0-water-splash-slime-sfx"
+original = "slime_13.ogg"
+original_sha256 = "d6e64612d1b539971ef9ea0ba8c803841b71a144d5e04491d7019be10087a931"
+sha256 = "7168f6abe2e62396d05376ea932fa72aa70b73ee7f80d9dcb0433b82eb507f76"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_slime_15"
+file = "sources/oga_rubberduck/rd_slime_15.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/40-cc0-water-splash-slime-sfx"
+original = "slime_15.ogg"
+original_sha256 = "5e1581251516ed8e0e86f013cac317cfd574ffd5740e82798f5c4561915e8294"
+sha256 = "2ebce4a714b85be0bc8b2c9eb9803a16ffc14c61906763af72692deb578e80e4"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_loop_bubbles"
+file = "sources/oga_rubberduck/rd_loop_bubbles.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/40-cc0-water-splash-slime-sfx"
+original = "loop_bubbles_02.ogg"
+original_sha256 = "e1b572a7a0ed264313b1ed3e66c3ee9839bcc04fd0bea913ff68158208623166"
+excerpt = { start = 1.0, end = 2.6 }
+sha256 = "93cc2034520af3c4c63187a586eb3b8cebbf4fa616534745533a697547fa966c"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_spit_1"
+file = "sources/oga_rubberduck/rd_spit_1.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-creature-sfx"
+original = "spit_01.ogg"
+original_sha256 = "11185484afda924711008f5e565d0baa5ebb271457c028b7e19b9ed487f8c6bd"
+sha256 = "7f7db1771832fe18a2c516b35b17b79c147a39034148dbaf9ccd6da7fb8fc6f9"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "rd_spit_2"
+file = "sources/oga_rubberduck/rd_spit_2.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-creature-sfx"
+original = "spit_02.ogg"
+original_sha256 = "aa65f01311e914d2861f1992a4e59f431c03edcf020e09961e422728562a2657"
+sha256 = "cee835c3f7fc2b3415130c6a0ff684d3360980b546061889772381532ce1fa1b"
+retrieved = "2026-11-14"
+notes = "mono sum"
+
+[[source]]
+id = "qb_dark_fout_1"
+file = "sources/oga_qubodup/qb_dark_fout_1.flac"
+licence = "CC0-1.0"
+author = "qubodup (OpenGameArt)"
+url = "https://opengameart.org/content/3-dark-magic-spells"
+original = "dark_magic/dark_magic/fout-01.flac"
+original_sha256 = "47a79f97cb3ac35219d02c0c0b7a2aeb09b260ce9eed3d316728be867e6ac0a9"
+excerpt = { start = 0.0, end = 1.4 }
+sha256 = "385e208944a6902e859c89940328cf959f5b9d3789c9740a3dd2487733247998"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "qb_dark_fout_3"
+file = "sources/oga_qubodup/qb_dark_fout_3.flac"
+licence = "CC0-1.0"
+author = "qubodup (OpenGameArt)"
+url = "https://opengameart.org/content/3-dark-magic-spells"
+original = "dark_magic/dark_magic/fout-03.flac"
+original_sha256 = "ec55b77eb3096dcc083d219254d0a37a0ecf071477d7c47bc363092c2ca02d0d"
+excerpt = { start = 0.1, end = 1.35 }
+sha256 = "11dff6b056f0796860046878772893d4504c3915cf144be19c08b6ea64226a99"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "pwl_bell_ding_1"
+file = "sources/oga_pwl/pwl_bell_ding_1.flac"
+licence = "CC0-1.0"
+author = "pwl (OpenGameArt)"
+url = "https://opengameart.org/content/bell-dingschimes"
+original = "bell_ding1.wav"
+original_sha256 = "8ce40f49cd211125303df59db0da4fe911e8b2f34d3847011b15137c6b5850de"
+excerpt = { start = 0.03, end = 1.5 }
+sha256 = "e10532dbf387bfde8b988f1c78fc4d1e582825182ce1378dc4751871fed1167a"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "pwl_bell_ding_3"
+file = "sources/oga_pwl/pwl_bell_ding_3.flac"
+licence = "CC0-1.0"
+author = "pwl (OpenGameArt)"
+url = "https://opengameart.org/content/bell-dingschimes"
+original = "bell_ding3.wav"
+original_sha256 = "99b9cdb7b9536c97c6738f1e0762cc40a3e7ef81bc774b0b6e0322aa70c96434"
+excerpt = { start = 0.05, end = 1.6 }
+sha256 = "42896c2d9686d64db86333413251f804c3b25b65526649b916f93165d1b42ca2"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "la_fire_staff_1"
+file = "sources/oga_legitaudio/la_fire_staff_1.flac"
+licence = "CC0-1.0"
+author = "LEGIT Audio (OpenGameArt)"
+url = "https://opengameart.org/content/fire-staff-sound-effects"
+original = "LEGIT Audio_FIRE STAFF - FREE/Wavs/LEGIT_FIR_Fire_Staff 1-Audio.wav"
+original_sha256 = "bff2d501b06b6559df64a57228f39df3feabda41c32c9f9dda72600a3e3d0490"
+excerpt = { start = 0.0, end = 1.2 }
+sha256 = "c65546016dc027ea8f371d1e047f075bc4548fd3bc7fb0cc6f1e2ba725497319"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "la_fire_staff_3"
+file = "sources/oga_legitaudio/la_fire_staff_3.flac"
+licence = "CC0-1.0"
+author = "LEGIT Audio (OpenGameArt)"
+url = "https://opengameart.org/content/fire-staff-sound-effects"
+original = "LEGIT Audio_FIRE STAFF - FREE/Wavs/LEGIT_FIR_Fire_Staff 3-Audio.wav"
+original_sha256 = "6c6d875244fbec12540307f1c83c5e5a6b71a2b2c9f4742f2b09b4689275a4af"
+excerpt = { start = 0.03, end = 1.6 }
+sha256 = "8b627dcc40127b4491d41b446653130afe330275a5731817e9836dd0b45f4184"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"

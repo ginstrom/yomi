@@ -1,21 +1,41 @@
-# Placeholder over placeholder_hit_impact; replaced by step 11
+# Lightning impact: a sharp electric snap and crack, then thunder rumbling away.
 variants = 3
 seed = 3300
 group = "impact"
 max_ms = 1350
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 900
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the strike's snap
+pick = ["lk_lightning_1", "lk_lightning_2"]
+length = 260
+filter = [{ type = "highpass", hz = 500 }]
+fade_out = 120
+gain = [-4, -1]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the crack
+synth = { kind = "noise", color = "white", length = 30 }
+filter = [{ type = "highpass", hz = 1800 }]
+envelope = [[0, 0], [30, -40]]
+gain = [-6, -3]
+
+[[layer]]                          # static in the crack
+synth = { kind = "crackle", density = [1500, 2500], click_ms = 0.4, length = 80 }
+filter = [{ type = "highpass", hz = 2500 }]
+envelope = [[0, 0], [80, -30]]
+gain = [-6, -3]
+
+[[layer]]                          # thunder
+pick = ["fs_thunder_1", "fs_thunder_2", "rd_thunder"]
+length = 950
+filter = [{ type = "highpass", hz = 40 }, { type = "lowpass", hz = 4000 }]
+fade_out = 350
+offset = [10, 30]
+gain = [-3, 0]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -16, ratio = 4, attack_ms = 1, release_ms = 120 },
+  { type = "reverb", impulse = "open_air", wet_db = -16, predelay_ms = 10 },
+  { type = "limit", ceiling_db = -8, release_ms = 60 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 60 },
+  { type = "fade_out", ms = 100 },
+]

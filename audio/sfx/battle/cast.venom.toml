@@ -1,21 +1,39 @@
-# Placeholder over placeholder_spell_cast; replaced by step 11
+# Venom cast: wet bubbling gathering under a rising hiss, a slurp at its height.
 variants = 3
 seed = 1400
 group = "release"
 max_ms = 900
 
-[[layer]]
-source = "placeholder_spell_cast"
+[[layer]]                          # bubbling
+pick = ["rd_loop_bubbles", "rd_bubble_1", "rd_bubble_2"]
 length = 600
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+pitch = [-1.0, 3.0]
+filter = [{ type = "highpass", hz = 250 }, { type = "highpass", hz = 250 }]
+envelope = [[0, -24], [450, 0], [600, -6]]
+fade_out = 80
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the hiss gathering
+pick = ["bart_steam_hiss", "fs_snake_hiss_1", "vh_air_spray"]
+length = 580
+filter = [{ type = "highpass", hz = 1800 }, { type = "lowpass", hz = 9000 }]
+envelope = [[0, -30], [480, 0], [580, -8]]
+fade_out = 80
+gain = [-8, -5]
+
+[[layer]]                          # a slurp
+pick = ["rd_slime_02", "rd_slime_07"]
+length = 300
+pitch = [-2.0, 1.0]
+filter = [{ type = "highpass", hz = 400 }]
+fade_out = 100
+offset = [260, 340]
+gain = [-12, -9]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 3, attack_ms = 5, release_ms = 100 },
+  { type = "reverb", impulse = "small_room", wet_db = -20, predelay_ms = 6 },
+  { type = "limit", ceiling_db = -20, release_ms = 40 },
+  { type = "trim", threshold_db = -42, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 50 },
+]

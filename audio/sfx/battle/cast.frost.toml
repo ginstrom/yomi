@@ -1,21 +1,44 @@
-# Placeholder over placeholder_spell_cast; replaced by step 11
+# Frost cast: a cold wind rising, ice crackling as it forms, a last glassy tinkle.
 variants = 3
 seed = 1200
 group = "release"
 max_ms = 900
 
-[[layer]]
-source = "placeholder_spell_cast"
-length = 600
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the wind
+source = "rd_air_1"
+start = [0, 700]
+length = 620
+filter = [{ type = "bandpass", hz = [1300, 1800], hz_end = [2800, 3600], q = 0.7 }]
+envelope = [[0, -22], [320, 0], [620, -14]]
+fade_out = 100
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # ice forming
+pick = ["lk_ice_lead", "ad_freeze", "bart_coldsnap"]
+length = 560
+pitch = [-1.0, 1.5]
+filter = [{ type = "highpass", hz = 1200 }, { type = "highpass", hz = 1200 }]
+fade_out = 100
+offset = 40
+gain = [-5, -2]
+
+[[layer]]                          # crystals: fine crackle building
+synth = { kind = "crackle", density = [90, 150], click_ms = 0.6, length = 600 }
+filter = [{ type = "highpass", hz = 5000 }]
+envelope = [[0, -30], [450, 0], [600, -12]]
+gain = [-13, -10]
+
+[[layer]]                          # a tinkle as it sets
+pick = ["kenney_glass_light_0", "kenney_glass_light_2", "kenney_glass_light_4"]
+pitch = [5.0, 9.0]
+filter = [{ type = "highpass", hz = 2500 }]
+offset = [360, 450]
+gain = [-15, -11]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 2.5, attack_ms = 5, release_ms = 100 },
+  { type = "reverb", impulse = "small_room", wet_db = -16, predelay_ms = 8 },
+  { type = "limit", ceiling_db = -14, release_ms = 40 },
+  { type = "trim", threshold_db = -42, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 50 },
+]

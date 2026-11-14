@@ -1,21 +1,56 @@
-# Placeholder over placeholder_hit_impact; replaced by step 11
+# Poison impact: a soft burst of gas, then a long low hiss darkening as it spreads, a deep drone and slow gurgles under it (acid is the bright one).
 variants = 3
 seed = 3500
 group = "impact"
 max_ms = 1800
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 1200
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the soft burst
+pick = ["kenney_soft_medium_0", "kenney_soft_medium_1", "kenney_soft_medium_3"]
+pitch = [-5.0, -3.0]
+filter = [{ type = "highpass", hz = 90 }, { type = "lowpass", hz = 2500 }]
+fade_out = 100
+gain = [-4, -2]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
+[[layer]]                          # the puff of gas
 synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+filter = [{ type = "lowpass", hz = 1400 }, { type = "highpass", hz = 120 }]
+envelope = [[0, -20], [15, 0], [300, -30]]
+gain = [-4, -2]
+
+[[layer]]                          # the low hiss spreading
+pick = ["vh_air_spray", "rd_air_1"]
+length = 1150
+filter = [{ type = "lowpass", hz = [1600, 2000], hz_end = [600, 800] }, { type = "lowpass", hz = 2000 }, { type = "highpass", hz = 150 }]
+envelope = [[0, -12], [120, 0], [1150, -30]]
+fade_out = 300
+offset = 20
+gain = [-2, 0]
+
+[[layer]]                          # deep drone
+source = "fs_drone"
+start = [0, 400]
+length = 1100
+filter = [{ type = "lowpass", hz = 450 }, { type = "highpass", hz = 50 }]
+envelope = [[0, -20], [150, 0], [1100, -24]]
+fade_out = 300
+gain = [-10, -7]
+
+[[layer]]                          # slow gurgles
+source = "rd_loop_bubbles"
+start = [0, 500]
+length = 900
+pitch = [-8.0, -6.0]
+filter = [{ type = "lowpass", hz = 900 }, { type = "highpass", hz = 100 }]
+envelope = [[0, -20], [200, 0], [900, -30]]
+fade_out = 200
+offset = [150, 250]
+gain = [-14, -11]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -16, ratio = 3, attack_ms = 3, release_ms = 150 },
+  { type = "reverb", impulse = "small_room", wet_db = -18, predelay_ms = 6 },
+  { type = "limit", ceiling_db = -14, release_ms = 60 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 80 },
+  { type = "fade_out", ms = 150 },
+]
