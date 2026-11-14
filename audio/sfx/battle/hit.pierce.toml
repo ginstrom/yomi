@@ -1,21 +1,49 @@
-# Placeholder over placeholder_hit_impact; replaced by step 08
+# A tight thunk: an arrow or point burying in leather and flesh, a quick high tick at the start.
 variants = 6
-seed = 2200
+seed = 813
 group = "impact"
 max_ms = 450
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 300
-pitch = [-2, 8]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the tick of the point arriving
+pick = ["kenney_generic_light_0", "kenney_generic_light_2", "kenney_generic_light_3"]
+pitch = [2.0, 6.0]
+filter = [{ type = "highpass", hz = 1800 }]
+fade_out = 30
+gain = [-5, -2]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the thunk of it burying
+pick = ["kenney_soft_medium_0", "kenney_soft_medium_1", "kenney_soft_medium_3"]
+pitch = [0.0, 4.0]
+filter = [{ type = "highpass", hz = 95 }]
+offset = [2, 6]
+
+[[layer]]                          # leather and flesh closing round it
+pick = ["vh_apple_cut_1", "vh_apple_cut_2", "vh_apple_cut_3"]
+length = 180
+pitch = [0.0, 3.0]
+filter = [{ type = "highpass", hz = 220 }]
+fade_out = 60
+offset = [3, 8]
+gain = [-5, -2]
+
+[[layer]]                          # weight
+synth = { kind = "sine", hz = [130, 160], hz_end = 60, length = 70 }
+filter = [{ type = "highpass", hz = 80 }]
+envelope = [[0, 0], [5, 0], [70, -48]]
+gain = -13
+
+[[layer]]                          # flesh closing on the blow: a short dense body
+synth = { kind = "noise", color = "pink", length = 170 }
+filter = [{ type = "bandpass", hz = [380, 520], hz_end = [220, 300], q = 1.2 }]
+envelope = [[0, -6], [15, 0], [170, -36]]
+offset = [3, 8]
+gain = [-11, -8]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 4, attack_ms = 0.5, release_ms = 50 },
+  { type = "reverb", impulse = "small_room", wet_db = -20, predelay_ms = 4 },
+  { type = "limit", ceiling_db = -17, release_ms = 30 },
+  { type = "trim", threshold_db = -50, keep_tail_ms = 35 },
+  { type = "fade_out", ms = 20 },
+]

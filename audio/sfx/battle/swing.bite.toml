@@ -1,21 +1,39 @@
-# Placeholder over placeholder_melee_swing; replaced by step 08
+# A fast hiss into a wet snap of mandibles.
 variants = 3
-seed = 600
+seed = 806
 group = "release"
-max_ms = 375
+max_ms = 380
 
-[[layer]]
-source = "placeholder_melee_swing"
-length = 250
-pitch = [-3, 7]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the hiss as it lunges
+source = "bart_steam_hiss"
+length = 160
+pitch = [0.0, 3.0]
+filter = [{ type = "highpass", hz = 1800 }, { type = "lowpass", hz = 11000 }]
+envelope = [[0, -30], [120, 0], [160, -18]]
+fade_out = 20
+gain = [-8, -5]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 250 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [250, -40]]
-gain = [-26, -16]
+[[layer]]                          # the snap of mandibles
+pick = ["ad_bite_2", "rd_snap_2", "ad_bite_1"]
+length = 160
+pitch = [-1.0, 2.0]
+filter = [{ type = "highpass", hz = 300 }]
+fade_out = 50
+offset = [125, 145]
+
+[[layer]]                          # wet on the snap
+pick = ["rd_slime_07", "rd_slime_02"]
+length = 120
+pitch = [-2.0, 1.0]
+filter = [{ type = "highpass", hz = 500 }]
+fade_out = 50
+offset = [130, 150]
+gain = [-10, -6]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 3, attack_ms = 1, release_ms = 40 },
+  { type = "limit", ceiling_db = -12, release_ms = 30 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 25 },
+  { type = "fade_out", ms = 20 },
+]

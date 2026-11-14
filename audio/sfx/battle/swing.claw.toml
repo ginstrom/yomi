@@ -1,21 +1,37 @@
-# Placeholder over placeholder_melee_swing; replaced by step 08
+# A swipe: fleshy air, a low breathy grunt under it (pitched-down, filtered).
 variants = 4
-seed = 500
+seed = 805
 group = "release"
 max_ms = 450
 
-[[layer]]
-source = "placeholder_melee_swing"
+[[layer]]                          # fleshy air: a swing with its top rolled off
+pick = ["med_katana_swing_1", "med_katana_swing_3", "med_katana_swing_5", "med_axe_swing_2", "med_axe_swing_4"]
 length = 300
-pitch = [-8, 2]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+pitch = [-3.0, 0.0]
+filter = [{ type = "highpass", hz = 220, q = 0.9 }, { type = "lowpass", hz = 4500 }]
+fade_out = 60
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the grunt, low and dark
+pick = ["rd_grunt_1", "rd_grunt_3", "rd_grunt_5"]
+length = 210
+pitch = [-8.0, -5.0]
+filter = [{ type = "lowpass", hz = 1400 }, { type = "highpass", hz = 110 }]
+fade_in = 15
+fade_out = 100
+offset = [0, 25]
+gain = [-12, -9]
+
+[[layer]]                          # a breath on some
+source = "rd_breath"
+length = 200
+chance = 0.5
+pitch = [-6.0, -3.0]
+filter = [{ type = "lowpass", hz = 2500 }]
+fade_out = 80
+gain = [-16, -12]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "trim", threshold_db = -46, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 30 },
+]

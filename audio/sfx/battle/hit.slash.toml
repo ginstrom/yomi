@@ -1,21 +1,51 @@
-# Placeholder over placeholder_hit_impact; replaced by step 08
+# A wet flesh/leather cut with a bright metal edge transient and a low thump; small room.
 variants = 6
-seed = 2000
+seed = 811
 group = "impact"
-max_ms = 525
+max_ms = 520
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 350
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the body: leather and flesh taking the blow
+pick = ["kenney_punch_medium_0", "kenney_punch_medium_2", "kenney_punch_medium_3", "rd_hit_6"]
+length = 240
+pitch = [-2.0, 1.0]
+filter = [{ type = "highpass", hz = 80 }]
+fade_out = 60
+gain = -3
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the cut: wet, opening
+pick = ["vh_apple_cut_2", "vh_apple_cut_3", "vh_apple_cut_1"]
+length = 200
+pitch = [-1.0, 2.0]
+filter = [{ type = "highpass", hz = 250 }]
+fade_out = 70
+offset = [0, 6]
+gain = [-4, -1]
+
+[[layer]]                          # the edge: a bright metal bite at the front
+pick = ["kenney_chop", "kenney_knife_slice_2"]
+length = 140
+pitch = [0.0, 3.0]
+filter = [{ type = "highpass", hz = 2800 }]
+fade_out = 80
+gain = [-3, 0]
+
+[[layer]]                          # weight
+synth = { kind = "sine", hz = [100, 120], hz_end = 48, length = 110 }
+envelope = [[0, 0], [8, 0], [110, -48]]
+gain = -6
+
+[[layer]]                          # flesh closing on the blow: a short dense body
+synth = { kind = "noise", color = "pink", length = 200 }
+filter = [{ type = "bandpass", hz = [380, 520], hz_end = [220, 300], q = 1.2 }]
+envelope = [[0, -6], [15, 0], [200, -36]]
+offset = [3, 8]
+gain = [-11, -8]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 4, attack_ms = 0.5, release_ms = 60 },
+  { type = "reverb", impulse = "small_room", wet_db = -18, predelay_ms = 5 },
+  { type = "limit", ceiling_db = -17, release_ms = 30 },
+  { type = "trim", threshold_db = -50, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 25 },
+]

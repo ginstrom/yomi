@@ -1,14 +1,14 @@
 {
   "banks": {
     "battle": {
-      "durationMs": 79433,
+      "durationMs": 81459,
       "mp3": {
-        "bytes": 542324,
-        "sha256": "839d6fd5b16f5fb66874363d45b311545a8d47315567333d4f044f274ce91b80"
+        "bytes": 588068,
+        "sha256": "77f491ae14d4a126d31af9a8c18de73035fe1697561ff398b223a4302917d010"
       },
       "opus": {
-        "bytes": 691009,
-        "sha256": "34f3ed0ab478d8f864b7d91617df298d74f69d04401874793ddf02efa060393a"
+        "bytes": 722038,
+        "sha256": "bd93fc02c894e62758a04cfc96dee39b5b5bbae81369b34a8d40f0447ef33e12"
       }
     },
     "stings": {
@@ -77,13 +77,13 @@
     "battle.armor.metal": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300,
-        300
+        285,
+        309,
+        347,
+        299,
+        289
       ],
-      "inputs": "3855c93417e2e7a874e3ec949924e49ad45c062dcf8e9e3f5d2ee316313803c9",
+      "inputs": "b02729fe9d3f4b78504f7240d153ed2105965b8951c8f460535ccc754431c18d",
       "markers": [
         "battle.armor.metal#0",
         "battle.armor.metal#1",
@@ -385,13 +385,13 @@
     "battle.hit.claw": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300,
-        300
+        341,
+        390,
+        376,
+        339,
+        378
       ],
-      "inputs": "635ec34ba565bf5394cf6cfc19a23fed34a996c96abdbe9bde10a50db7b8f813",
+      "inputs": "cc718011a774b21b6f054d69660c854b55ccf34ed250792088f20c9090456971",
       "markers": [
         "battle.hit.claw#0",
         "battle.hit.claw#1",
@@ -403,12 +403,12 @@
     "battle.hit.crit": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300
+        270,
+        282,
+        260,
+        275
       ],
-      "inputs": "0cd2a464de67870b3357fcd71d9146aa7df90ec71e60f4f394e31827e4c596bc",
+      "inputs": "b231d757a82d98ffa396fbb1efbb401a432043621ee744bddd6f664364201a7e",
       "markers": [
         "battle.hit.crit#0",
         "battle.hit.crit#1",
@@ -419,14 +419,14 @@
     "battle.hit.crush": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300,
-        300,
-        300
+        310,
+        333,
+        304,
+        317,
+        324,
+        309
       ],
-      "inputs": "e0db40d48f5a280480b4d347c2b5c90ba793956e44653bee5d8956c6862346fd",
+      "inputs": "0106dd2183eb1486a75ce3b1cc296efb63c603580b0f8e85d3b7519a56d89167",
       "markers": [
         "battle.hit.crush#0",
         "battle.hit.crush#1",
@@ -469,14 +469,14 @@
     "battle.hit.pierce": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300,
-        300,
-        300
+        242,
+        247,
+        241,
+        246,
+        254,
+        239
       ],
-      "inputs": "08ab2fdf9a0bfb8049894b0fa2422b62ebde11eeb07709db103220724373ee41",
+      "inputs": "0d5d1c69336b6a4a30a314df5e60077fbbedc80f73694529121f8b81a6bfbcca",
       "markers": [
         "battle.hit.pierce#0",
         "battle.hit.pierce#1",
@@ -489,14 +489,14 @@
     "battle.hit.slash": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300,
-        300,
-        300
+        301,
+        350,
+        327,
+        335,
+        298,
+        334
       ],
-      "inputs": "bd63e639479a3e2e198d99eca91532eed8438d8dd4520765c62d89b64a8b67f6",
+      "inputs": "93e7a17de5469ce80f6e4210b6ac62ba01cd8945186999dd53afbe31db7da458",
       "markers": [
         "battle.hit.slash#0",
         "battle.hit.slash#1",
@@ -717,12 +717,12 @@
     "battle.miss.swing": {
       "bank": "battle",
       "durationsMs": [
-        250,
-        250,
-        250,
-        250
+        273,
+        263,
+        281,
+        283
       ],
-      "inputs": "09769dc93fd3968eb402e4b454eaebdc17db613d5991d9e46c94b69fe2b56e54",
+      "inputs": "8aca1d4a2211e96eb8997e4445c72673d1a5ce68070d8fe18e964ef919249c70",
       "markers": [
         "battle.miss.swing#0",
         "battle.miss.swing#1",
@@ -883,11 +883,11 @@
     "battle.swing.bite": {
       "bank": "battle",
       "durationsMs": [
-        250,
-        250,
-        250
+        288,
+        275,
+        273
       ],
-      "inputs": "940a92bc0ccc857eb97641e1b5ec26fd2f82fbcffb9d647391b952bea3eb4571",
+      "inputs": "ab7ba76df0998c90650ec615d7f0161e8104d5a5a59e3337eb9fd8a62353a859",
       "markers": [
         "battle.swing.bite#0",
         "battle.swing.bite#1",
@@ -897,13 +897,13 @@
     "battle.swing.blade": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300,
-        300
+        337,
+        290,
+        321,
+        331,
+        322
       ],
-      "inputs": "b672336e45ac42ee4502ea7f0e2bffb680410c6b464101abd978066817c9cf6e",
+      "inputs": "7494ba6d069b1668d854382f7edf2603127d8ed292ef94f487a04bafee42e8d1",
       "markers": [
         "battle.swing.blade#0",
         "battle.swing.blade#1",
@@ -915,12 +915,12 @@
     "battle.swing.claw": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300
+        356,
+        320,
+        349,
+        352
       ],
-      "inputs": "7da25d5928e2f0de7add73562b9dcc84d46883347ba62df6ca1185363c104738",
+      "inputs": "08aa2c09d65b3320c72707dcf3f271afe5e4fffc8b487a762b75e08c8fbca634",
       "markers": [
         "battle.swing.claw#0",
         "battle.swing.claw#1",
@@ -931,13 +931,13 @@
     "battle.swing.heavy": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300,
-        300
+        584,
+        576,
+        599,
+        549,
+        622
       ],
-      "inputs": "9707727eece45bede99173106f9e94464ffd861f09afe815dee0e01fe3cb4750",
+      "inputs": "e82235b351ea2adaf125f4258cc70035dfff5ee2aaf778787d763aed1d0098d6",
       "markers": [
         "battle.swing.heavy#0",
         "battle.swing.heavy#1",
@@ -949,13 +949,13 @@
     "battle.swing.light": {
       "bank": "battle",
       "durationsMs": [
-        200,
-        200,
-        200,
-        200,
-        200
+        205,
+        192,
+        189,
+        191,
+        182
       ],
-      "inputs": "71abe22a8d3e4e794dff5181f3d8856ae07f0ff34cf2f5d738828d5c90ee170d",
+      "inputs": "13d255b52f311e1e9e4fb42e57c35fa74beb289329a51efa8122ab6daa5dd4c8",
       "markers": [
         "battle.swing.light#0",
         "battle.swing.light#1",
@@ -967,12 +967,12 @@
     "battle.swing.thrust": {
       "bank": "battle",
       "durationsMs": [
-        250,
-        250,
-        250,
-        250
+        257,
+        232,
+        259,
+        274
       ],
-      "inputs": "532f6dd9efdf384aa28c9214dda88bf6d0b67ccba9593ff1c2d7498ae405ac81",
+      "inputs": "e17dd1dfaedac390f7a34c1f610d25f3278d40a46577b5d70fef480b2d1c5a5c",
       "markers": [
         "battle.swing.thrust#0",
         "battle.swing.thrust#1",

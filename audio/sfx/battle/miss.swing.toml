@@ -1,21 +1,26 @@
-# Placeholder over placeholder_miss; replaced by step 08
+# The blade passing through air close by: a doppler-like whoosh-by, no impact.
 variants = 4
-seed = 2400
+seed = 817
 group = "impact"
-max_ms = 375
+max_ms = 380
 
-[[layer]]
-source = "placeholder_miss"
-length = 250
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # a real swing, its brightness falling away as it passes
+pick = ["med_katana_swing_2", "med_katana_swing_4", "med_katana_swing_6", "med_dagger_swing_2", "med_dagger_swing_5"]
+length = 300
+pitch = [-1.0, 2.0]
+filter = [{ type = "highpass", hz = 380 }, { type = "lowpass", hz = 11000, hz_end = 1800 }]
+fade_out = 70
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 250 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [250, -40]]
-gain = [-26, -16]
+[[layer]]                          # the pass-by: a band of air that swells and falls in pitch
+synth = { kind = "noise", color = "pink", length = 260 }
+filter = [{ type = "bandpass", hz = [3200, 4200], hz_end = [700, 1000], q = 1.6 }]
+envelope = [[0, -40], [110, 0], [260, -40]]
+gain = [-6, -3]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -22, ratio = 3, attack_ms = 5, release_ms = 80 },
+  { type = "limit", ceiling_db = -12, release_ms = 30 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 25 },
+  { type = "fade_out", ms = 25 },
+]

@@ -333,7 +333,7 @@ export const DUCK_RELEASE_MS = 600
 | 05 | [Runtime framework](05-runtime-framework.md) | Cue table, `pickVariant`, limits, buses, Voice slider, `soundPlayer`, limiter, audio log, banks at boot, every call site moved, placeholders deleted, music level measured | 02 | **yes** | — | done (`edab9c4`) |
 | 06 | [Battle sound mapping](06-battle-sound-mapping.md) | `eventSounds` with `SoundContext` and the tables of §5.3; level-up sting; coverage tests; replay unchanged | 05 | **yes** | — | done |
 | 07 | [World and interface sounds](07-world-interface-sounds.md) | `worldSounds`; world-map hooks; back, tab, confirm, error, learn, gear and success sounds in every screen | 06 | **yes** | — | done |
-| 08 | [Content: melee](08-content-melee.md) | 13 melee cues from real sources | 02, 04 | no | **G3** | pending |
+| 08 | [Content: melee](08-content-melee.md) | 13 melee cues from real sources | 02, 04 | no | **G3** | awaiting review (G3) |
 | 09 | [Content: interface and stings](09-content-ui-stings.md) | `ui` and `stings` banks | 08 (G3) | no | **G4** | pending |
 | 10 | [Content: shots, magic hits and sweeteners](10-content-ranged-sweeteners.md) | 15 battle cues | 08 (G3), G2 | no | **G5** | pending |
 | 11 | [Content: spells and abilities](11-content-spells.md) | 22 battle cues | 10 | no | **G6** | pending |

@@ -1,21 +1,33 @@
-# Placeholder over placeholder_crit_impact; replaced by step 08
+# A heavier sub-thump and a bright crack transient, with a short low tail; the hit lands twice as hard.
 variants = 4
-seed = 4200
+seed = 816
 group = "sweetener"
-max_ms = 750
+max_ms = 550
 
-[[layer]]
-source = "placeholder_crit_impact"
-length = 500
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the sub thump
+synth = { kind = "sine", hz = [62, 90], hz_end = [28, 40], length = [220, 290] }
+filter = [{ type = "highpass", hz = 25 }]
+envelope = [[0, -2], [6, 0], [220, -50]]
+saturate = 4
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the crack: a real bang's front edge
+pick = ["rd_bang_2", "rd_bang_4"]
+length = 110
+pitch = [-2.0, 4.0]
+filter = [{ type = "highpass", hz = 1400 }]
+fade_out = 60
+gain = [4, 7]
+
+[[layer]]                          # a bright snap on top
+synth = { kind = "noise", color = "white", length = 35 }
+filter = [{ type = "highpass", hz = [3000, 4500] }]
+envelope = [[0, 0], [35, -40]]
+gain = [-2, 1]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 3, attack_ms = 1, release_ms = 80 },
+  { type = "limit", ceiling_db = -12, release_ms = 40 },
+  { type = "trim", threshold_db = -50, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 40 },
+]

@@ -1,21 +1,29 @@
-# Placeholder over placeholder_melee_swing; replaced by step 08
+# A quick, thin, high whoosh: cloth and air, little low end; a fast flick.
 variants = 5
-seed = 100
+seed = 801
 group = "release"
 max_ms = 300
 
-[[layer]]
-source = "placeholder_melee_swing"
-length = 200
-pitch = [-1, 9]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # a real dagger swing, its wind thump cut away
+pick = ["med_dagger_swing_1", "med_dagger_swing_2", "med_dagger_swing_4", "med_dagger_swing_5", "med_katana_swing_6"]
+start = 15
+length = 220
+pitch = [1.0, 4.0]
+filter = [{ type = "highpass", hz = 700, q = 0.9 }, { type = "lowpass", hz = 14000 }]
+fade_in = 3
+fade_out = 40
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 200 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [200, -40]]
-gain = [-26, -16]
+[[layer]]                          # air: a high band of noise flicking upward
+synth = { kind = "noise", color = "white", length = 170 }
+filter = [{ type = "bandpass", hz = [2200, 3200], hz_end = [5000, 7000], q = 1.2 }]
+envelope = [[0, -36], [70, 0], [170, -42]]
+offset = [5, 25]
+gain = [-12, -7]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -22, ratio = 3, attack_ms = 1, release_ms = 40 },
+  { type = "limit", ceiling_db = -14, release_ms = 30 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 20 },
+  { type = "fade_out", ms = 15 },
+]

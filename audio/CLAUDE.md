@@ -130,13 +130,49 @@ check) and `checks.py` (the per-variant checks).
 - Generated files (`sfx.manifest.json`, `public/assets/audio/sfx/*`) are never
   edited by hand. A merge conflict in them is resolved by taking either side
   and rerunning `npm run sounds`.
-- **Today's recipes are placeholders.** Every W1 cue (85) has a recipe over
+- **Content so far.** The 13 melee cues (step 08: `battle.swing.*`,
+  `hit.slash`, `hit.crush`, `hit.pierce`, `hit.claw`, `armor.metal`,
+  `hit.crit`, `miss.swing`) are real content; see "Sound design without
+  ears" below for what they taught.
+- **The rest are placeholders.** Every other W1 cue has a recipe over
   one of the ten old placeholder WAVs (sources `placeholder_*`, collection
   `placeholder`, licence `own`), pitched, filtered and dusted with noise so
   its variants differ; each says in its first line which content step
   replaces it (08 melee, 09 interface and stings, 10 shots, magic hits and
   sweeteners, 11 spells and abilities, 12 falls and steps, 13 world). Many
   `impact` placeholders are peak-limited (square waves of 100 ms).
+
+## Sound design without ears
+
+What the melee batch (step 08) found, for the content steps after it:
+
+- **Layer shape.** A hit is a picked body (`pick` over several excerpts), a
+  transient layer where the brief asks for an edge or tick, a short
+  synthesized sine drop for weight, a short dense noise body, then
+  `compress` → `reverb small_room` (wet −17 to −20) → `limit` → `trim` →
+  `fade_out`. A swing is a picked real whoosh, high-passed, plus a swept
+  band of noise for spread. Sweeteners are high-passed (metal) or short (the
+  crit), so they sit round a hit, not on it.
+- **Reaching an impact's level.** A short hit lands under −19 when its
+  crest (true peak against the 400 ms window) is above about 18 dB, and the
+  build then calls it peak-limited. A `limit` in `[post]` with a ceiling well
+  under the mix's peak (−11 to −17 dB) flattens the transient enough; adding
+  a quiet sustained layer helps less than expected.
+- **DC.** A short sine drop or a low source cut mid-cycle fails the 0.5% DC
+  check: high-pass the sine layer (30 to 80 Hz) and the low sources.
+- **Judge spectra A-weighted.** Raw power shares say every hit is "all
+  sub"; weighted by the ear (A-weighting), they show whether the edge, the
+  crack or the ring is really there. The momentary loudness is K-weighted,
+  so a big sub layer is nearly free in loudness and swamps a mix on large
+  speakers: keep sub layers several dB under the body.
+- **Look for clicks.** Some recordings carry a spike far above their sound
+  (an excerpt's crest over 25 dB after high-passing): it pins the true peak
+  and the variant stays quiet. Drop such excerpts rather than limit them.
+- **medicinestorm's weapon textures** (192 kHz, long takes of several
+  swings) are the best whooshes found, but each swing carries a large
+  sub-bass wind thump on the microphone: high-pass at 200 to 700 Hz.
+- `source add` refuses an `--end` past the end of a short file; leave
+  `--start`/`--end` off to keep the whole of it.
 
 ## Sources and licences
 

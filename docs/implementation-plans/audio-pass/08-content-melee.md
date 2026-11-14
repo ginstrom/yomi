@@ -116,3 +116,48 @@ Exclusions: no other cue's recipe, no runtime code, no change to `CUES`, `audio.
 - [ ] G3 recorded as passed (relayed by the orchestrator), fixes committed; index status `done` with every commit hash. Later content steps (09 to 13) may start only now.
 
 ## Execution record
+
+### Round 0: build (2026-11-14)
+
+**Outcome.** The 13 melee recipes are rewritten from CC0 recordings and synthesis; no recipe names a `placeholder_*` source (`grep -l placeholder_ audio/sfx/battle/{swing.*,hit.slash,hit.crush,hit.pierce,hit.claw,armor.metal,hit.crit,miss.swing}.toml` prints nothing). The step waits at gate **G3**.
+
+**Sources.** 82 excerpts added with `yomi-audio source add` (all `CC0-1.0`, each with its original's path, excerpt and both hashes): `kenney_impact` (punch heavy and medium, soft medium, generic light, wood heavy, metal light), `kenney_rpg` (knife slice, chop, creak, cloth), `oga_medicinestorm` (single swings cut from the Dagger, Katana, Axe and Spear swing takes of *Medieval Sound Effects: Weapon Textures*, 192 kHz), `oga_rubberduck` (hits, wood cracks and rattles, grunts, breath, a snap, slime, mud, bangs), `oga_starninjas` (three sword attacks, for the blade's ring), `oga_vehicle` (apple cuts, a paper tear), `oga_artisticdude` (chainmail, light armour, metal ringing, two beetle bites), `oga_bart` (a steam hiss). Twelve excerpts added during the work and then left unused by the final recipes were removed again before the commit (their entries and files; never committed). Bytes: the batch adds **2,067,993** to `audio/sources`; `audio/sources` + `audio/voices` total **2,380,544** of 15,000,000. Shipped banks: `.opus` 1,045,184 and `.mp3` 764,000, under 3,000,000 each (`sfx check`: "within budget"); the `battle` bank is 722,038 / 588,068 bytes.
+
+**Measurements** (`sfx audition --spectrogram`, every variant; the table per variant is in `audio/.audition/08-melee/review.md`):
+
+| Cue | Group | Variants | LUFS-M max | True peak (dBTP) | Length (ms) |
+| --- | --- | --- | --- | --- | --- |
+| `swing.light` | release −22 | 5 | −22.0 all | −6.0 to −3.3 | 181–205 |
+| `swing.blade` | release | 5 | −22.0 all | −8.9 to −4.9 | 290–336 |
+| `swing.heavy` | release | 5 | −22.0 all | −8.6 to −7.2 | 548–621 |
+| `swing.thrust` | release | 4 | −22.5 to −22.0 | −6.9 to −3.1 | 232–273 |
+| `swing.claw` | release | 4 | −22.0 all | −7.8 to −4.9 | 320–356 |
+| `swing.bite` | release | 3 | −22.1 to −22.0 | −5.7 to −3.1 | 272–288 |
+| `hit.slash` | impact −19 | 6 | −19.0 all | −3.8 to −2.1 | 297–349 |
+| `hit.crush` | impact | 6 | −19.0 all | −2.0 to −1.3 | 303–333 |
+| `hit.pierce` | impact | 6 | −19.5 to −19.0 | −2.1 to −1.1 | 239–254 |
+| `hit.claw` | impact | 5 | −19.7 to −19.0 | −4.9 to −1.0 | 338–390 |
+| `armor.metal` | sweetener −24 | 5 | −24.0 all | −8.8 to −7.6 | 284–347 |
+| `hit.crit` | sweetener | 4 | −24.0 all | −4.5 to −3.9 | 260–282 |
+| `miss.swing` | impact | 4 | −19.0 all | −1.8 to −1.5 | 262–283 |
+
+None of the 13 is reported peak-limited by the final build (the placeholders' impacts were −20.6 to −22.6). Variant counts are unchanged from C7.
+
+**Judging without ears.** Spectrograms of every variant were looked at, and each variant's energy split by band with A-weighting (a scratch script outside the repository): the light swing sits 64–77% in 2–6 kHz with nothing under 500 Hz; the heavy swing 35–81% in 500 Hz–2 kHz with its low push and a 1 kHz creak at the front; the blade's whoosh is mid-band with the ring as faint lines at about 4, 7 and 10 kHz from 70 ms on; the crush has no energy above 3 kHz but a dulled crack; slash and pierce show a broadband edge or tick in their first 30 ms; the metal sweetener has nothing under 500 Hz; the crit is a 62–90 Hz sine drop with the crack above 1.4 kHz in its first 100 ms. Layered sums (slash + metal, crush + crit, pierce + metal + crit, claw + crit, a whole sword blow) keep each hit's transient visible at the front; their sums peak up to +3.3 dBTP before the runtime limiter.
+
+**Iteration notes** (what changed from the first draft, in short): the blade's ring was 30 dB too loud (it outweighed the whoosh above 6 kHz); the heavy swing and the crit were nearly all sub until their sine and brown-noise layers came down; the crush's crack was cut to below 2.8 kHz (it gave an edge the brief forbids) and its 80 Hz tail shortened; `kenney_knife_slice_1` made two slash variants and one claw variant sound like other cues and was dropped; two dagger excerpts (3 and 6) carry a click 30 dB over the swing and were dropped (they pinned the true peak); short hits reached −19 only with a `limit` far under their peak (−11 to −17 dB); DC (0.5 to 0.9%) from short sine drops and low sources was fixed with high-passes; `hit.crit` variants 0 and 3 correlated at 0.951 until the sine's range widened. These lessons are in `audio/CLAUDE.md` ("Sound design without ears").
+
+**Review package for G3** (gitignored): `audio/.audition/08-melee/` with `<cue>/<k>.wav` and `<k>.png` for every variant, `layered/` (eight combinations, scaled −6 dB so a WAV player does not clip), and `review.md` (brief, sources, per-variant loudness, peak and length, a verdict line per cue and per layered file, and how to hear the batch in game with the debug console's `fight`).
+
+**Verification.**
+
+- `PATH=/opt/homebrew/opt/node@26/bin:$PATH npm test`: 85 files, 1623 tests passed.
+- `uv run --project tools/audio pytest tools/audio/tests`: 203 passed.
+- `npm run sounds`: built the `battle` bank (the melee cues changed); a second run "nothing changed (85 cues up to date)".
+- `npm run sounds:check`: "85 cues and 4 banks up to date, within budget".
+- `npm run test:browser` not run: no scene changed.
+- No paid calls; no Freesound material (G2 not needed).
+
+**Deviations.** `sfx audition` names its files `<cue>.v<k>.wav`; they were renamed to `<cue>/<k>.wav` as the plan asks. No tool, runtime, `CUES` or `audio.toml` change. `public/assets/audio/README.md` gained a "Real content so far" table by collection and kept the placeholder section for the other cues; `audio/CLAUDE.md` gained the lessons above and says which cues are real.
+
+**For later steps.** G3's verdicts set the style. Free for reuse by steps 10–13: `oga_medicinestorm` swings (a whoosh-by for `miss.shot` too), `kenney_metal_light_*`, `rd_bang_*`, `rd_slime_*`, `rd_mud_*`, `bart_steam_hiss`, the grunts.

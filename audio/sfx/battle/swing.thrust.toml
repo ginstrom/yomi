@@ -1,21 +1,35 @@
-# Placeholder over placeholder_melee_swing; replaced by step 08
+# A short, rising air stab, tighter than a swing, a wooden shaft rattle.
 variants = 4
-seed = 400
+seed = 804
 group = "release"
-max_ms = 375
+max_ms = 380
 
-[[layer]]
-source = "placeholder_melee_swing"
-length = 250
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # a real spear thrust, its tail cut short
+pick = ["med_spear_swing_1", "med_spear_swing_2", "med_spear_swing_3", "med_spear_swing_4"]
+length = 300
+pitch = [1.0, 3.0]
+filter = [{ type = "highpass", hz = 450, q = 0.9 }, { type = "lowpass", hz = 2500, hz_end = 10000 }]
+envelope = [[0, -10], [180, 0], [300, -30]]
+fade_out = 40
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 250 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [250, -40]]
-gain = [-26, -16]
+[[layer]]                          # the stab: a narrow band of air rising fast
+synth = { kind = "noise", color = "white", length = 170 }
+filter = [{ type = "bandpass", hz = [700, 1000], hz_end = [3500, 5000], q = 2.0 }]
+envelope = [[0, -40], [140, 0], [170, -36]]
+offset = [20, 50]
+gain = [-10, -6]
+
+[[layer]]                          # the shaft rattling in the hands
+pick = ["rd_wood_rattle_1", "rd_wood_rattle_2", "rd_wood_rattle_3"]
+length = 170
+pitch = [-2.0, 2.0]
+filter = [{ type = "highpass", hz = 300 }]
+fade_out = 60
+offset = [0, 30]
+gain = [-16, -11]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "trim", threshold_db = -45, keep_tail_ms = 25 },
+  { type = "fade_out", ms = 20 },
+]

@@ -1,21 +1,46 @@
-# Placeholder over placeholder_hit_impact; replaced by step 08
+# Tearing: a flesh rip and a slap, rougher and wetter than a slash.
 variants = 5
-seed = 2300
+seed = 814
 group = "impact"
-max_ms = 525
+max_ms = 520
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 350
-pitch = [-7, 3]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the slap
+pick = ["kenney_punch_medium_0", "kenney_punch_medium_2", "kenney_punch_medium_3"]
+length = 220
+pitch = [-2.0, 1.0]
+filter = [{ type = "highpass", hz = 70 }]
+fade_out = 60
+gain = -2
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # wet flesh
+pick = ["rd_slime_02", "rd_slime_04", "rd_mud_05", "rd_mud_06", "rd_mud_08"]
+length = 220
+pitch = [-3.0, 0.0]
+filter = [{ type = "highpass", hz = 180 }]
+fade_out = 70
+offset = [0, 10]
+gain = [-4, -1]
+
+[[layer]]                          # the rip, dragged after the slap
+pick = ["vh_paper_tear", "kenney_cloth_1", "kenney_cloth_2"]
+length = 230
+pitch = [-4.0, -1.0]
+filter = [{ type = "highpass", hz = 700 }, { type = "lowpass", hz = 9000 }]
+fade_in = 10
+fade_out = 80
+offset = [15, 40]
+gain = [-9, -5]
+
+[[layer]]                          # weight
+synth = { kind = "sine", hz = [95, 115], hz_end = 45, length = 120 }
+envelope = [[0, 0], [8, 0], [120, -48]]
+gain = -7
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 4, attack_ms = 1, release_ms = 70 },
+  { type = "reverb", impulse = "small_room", wet_db = -17, predelay_ms = 5 },
+  { type = "limit", ceiling_db = -11, release_ms = 50 },
+  { type = "trim", threshold_db = -50, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 30 },
+]

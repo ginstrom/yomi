@@ -1,21 +1,35 @@
-# Placeholder over placeholder_melee_swing; replaced by step 08
+# A deep, slow whoosh with weight: a low air push, a creak of leather at the start.
 variants = 5
-seed = 300
+seed = 803
 group = "release"
-max_ms = 675
+max_ms = 680
 
-[[layer]]
-source = "placeholder_melee_swing"
-length = 450
-pitch = [-10, 0]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # a real axe swing, pitched down and slowed
+pick = ["med_axe_swing_1", "med_axe_swing_2", "med_axe_swing_3", "med_axe_swing_4", "med_axe_swing_5", "med_axe_swing_6"]
+pitch = [-5.0, -2.5]
+filter = [{ type = "highpass", hz = 170, q = 0.9 }, { type = "lowpass", hz = 7000 }]
+offset = [50, 80]
+fade_in = 5
+fade_out = 90
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # leather creak as the arm winds up
+pick = ["kenney_creak_1", "kenney_creak_2"]
+length = 200
+pitch = [-3.0, 0.0]
+filter = [{ type = "highpass", hz = 350 }]
+fade_out = 70
+gain = [-15, -10]
+
+[[layer]]                          # the low air push
+synth = { kind = "noise", color = "brown", length = 420 }
+filter = [{ type = "lowpass", hz = [380, 520], hz_end = 140 }, { type = "highpass", hz = 45 }]
+envelope = [[0, -36], [170, 0], [420, -40]]
+offset = [60, 90]
+gain = [-17, -13]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 2.5, attack_ms = 10, release_ms = 120 },
+  { type = "trim", threshold_db = -48, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 50 },
+]

@@ -1,21 +1,44 @@
-# Placeholder over placeholder_hit_impact; replaced by step 08
+# A dull heavy body blow: low thud, cracking wood or bone texture, no edge.
 variants = 6
-seed = 2100
+seed = 812
 group = "impact"
 max_ms = 600
 
-[[layer]]
-source = "placeholder_hit_impact"
-length = 400
-pitch = [-10, 0]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the thud of a heavy body blow
+pick = ["kenney_punch_heavy_0", "kenney_punch_heavy_1", "kenney_punch_heavy_2", "kenney_punch_heavy_3", "kenney_punch_heavy_4"]
+pitch = [-3.0, 0.0]
+length = 260
+filter = [{ type = "lowpass", hz = 4500 }, { type = "highpass", hz = 35 }]
+fade_out = 140
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # wood or bone giving under it
+pick = ["kenney_wood_heavy_3", "kenney_wood_heavy_4", "rd_wood_hit_3", "rd_hit_8"]
+pitch = [-4.0, -1.0]
+filter = [{ type = "lowpass", hz = 3500 }, { type = "highpass", hz = 90 }]
+fade_out = 50
+gain = [-1, 2]
+
+[[layer]]                          # the crack, dulled
+pick = ["rd_wood_crack_1", "rd_wood_crack_2", "rd_wood_crack_3", "rd_wood_crack_4"]
+chance = 0.75
+pitch = [-5.0, -2.0]
+filter = [{ type = "lowpass", hz = 2800 }, { type = "highpass", hz = 300 }]
+fade_out = 60
+offset = [4, 18]
+gain = [-10, -6]
+
+[[layer]]                          # weight
+synth = { kind = "sine", hz = [78, 92], hz_end = 36, length = 130 }
+envelope = [[0, 0], [12, 0], [130, -48]]
+filter = [{ type = "highpass", hz = 30 }]
+saturate = 3
+gain = -10
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 4, attack_ms = 1, release_ms = 80 },
+  { type = "reverb", impulse = "small_room", wet_db = -20, predelay_ms = 5 },
+  { type = "limit", ceiling_db = -11, release_ms = 40 },
+  { type = "trim", threshold_db = -50, keep_tail_ms = 40 },
+  { type = "fade_out", ms = 30 },
+]

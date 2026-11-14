@@ -1,21 +1,36 @@
-# Placeholder over placeholder_melee_swing; replaced by step 08
+# A medium whoosh with a faint metallic ring riding its tail.
 variants = 5
-seed = 200
+seed = 802
 group = "release"
 max_ms = 450
 
-[[layer]]
-source = "placeholder_melee_swing"
+[[layer]]                          # a real katana swing, its wind thump cut away
+pick = ["med_katana_swing_1", "med_katana_swing_2", "med_katana_swing_3", "med_katana_swing_4", "med_katana_swing_5", "med_katana_swing_6"]
 length = 300
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+pitch = [-1.0, 2.0]
+filter = [{ type = "highpass", hz = 320, q = 0.9 }, { type = "lowpass", hz = 13000 }]
+fade_in = 3
+fade_out = 60
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the blade's ring, low, on the tail
+pick = ["sn_sword_3", "sn_sword_4", "sn_sword_7"]
+start = 120
+length = 260
+pitch = [-2.0, 1.0]
+filter = [{ type = "highpass", hz = 2500 }]
+fade_in = 40
+fade_out = 140
+offset = [70, 110]
+gain = [-31, -26]
+
+[[layer]]                          # body of air under it
+synth = { kind = "noise", color = "pink", length = 260 }
+filter = [{ type = "bandpass", hz = [700, 1000], hz_end = [1800, 2600], q = 1.0 }]
+envelope = [[0, -36], [110, 0], [260, -42]]
+gain = [-14, -10]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "trim", threshold_db = -48, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 30 },
+]
