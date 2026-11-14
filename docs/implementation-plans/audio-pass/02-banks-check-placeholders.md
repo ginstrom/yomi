@@ -160,6 +160,8 @@ Record in the execution record: the pytest summary, the build's per-group loudne
 
 ### Run 1 (2026-11-14)
 
+**Commit:** `dc54377` (Audio pass step 02: banks, check and placeholder catalogue).
+
 **Built.**
 - `tools/audio/yomi_audio/build.py`: `sfx build [--bank B] [--cue C]` and `sfx check` (C6). Recipes discovered under `audio/sfx/<bank>/`; a folder that is not a bank is refused. Inputs hash per cue (recipe text, SHA-256 of every source and impulse file it names, `audio.toml`, tool version, `uv.lock`). A touched bank (a cue changed, added or removed, named by `--cue`/`--bank`, or a bank file missing or differing from the manifest) is re-rendered whole (deterministic; a full build of 85 cues takes about 3 s, so no PCM cache), checked, laid out, encoded (ffmpeg: Opus VBR 64k, MP3 `-q:a 5`, mono 48 kHz, metadata stripped, bitexact) and its JSON written; untouched banks are left byte for byte. Budgets (`sources_bytes` before rendering, `sfx_bytes_per_format` over the would-be banks) are checked before anything is written. All failures of a run are reported together (`BuildFailed`, one line each) and nothing is written. The manifest is `json.dumps(sort_keys=True, indent=2)` plus a newline; rewritten only when its text changes.
 - `checks.py`: the per-variant checks shared by build and audition (loudness, true peak, `max_ms`, DC offset |mean| ≤ 0.5% of full scale, pairwise peak normalised cross-correlation ≤ 0.95 by FFT over every lag).
