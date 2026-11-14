@@ -34,6 +34,9 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 | Peak-limited cues have no loudness floor; content steps make UI and impact sounds denser instead of leaning on the cap. Banks start with 50 ms of silence before the first marker | orchestrator | a floor below target | step 02's recommendation; ceiling is the rule |
 | G1: narration uses configuration (b), Chatterbox Turbo from narrator A's neutral clip `A_0`, with sound tags; the user liked c05, c07, c08 (b/A) and c02 (a/B), and did not fill the score sheet | user | (a) with narrator B; (b) with B | 3 of 4 favourites were b/A |
 | Steps 15–16 adapt to G1: Turbo takes one reference clip and ignores exaggeration, so the narrator's voice is `A_0` alone and emotion comes from the line's wording and tags; per-emotion clip design (G9) is reduced to confirming `A_0`, unless the step finds emotion reference clips audibly help Turbo | orchestrator | design all seven emotion clips anyway | follows the user's pick; the plan was written before it |
+| G3 passed: the user found all the melee audition audio acceptable and left the choice of versions to the orchestrator, with more feedback possible after playtesting | user | | |
+| Batch gates G4–G8 no longer block: each content step still leaves an audition folder and review sheet, the orchestrator accepts on the measurements and review, and the user's playtest feedback comes back as follow-up fixes (G11 stays the final listening) | orchestrator | hold each batch for the user | follows the user's G3 answer |
+| Order after 08: 09, then narration 14–17, then 10–13, giving the user time for the Freesound downloads (G2) | orchestrator | 09–13 first | 10–13 need G2 or its fallbacks |
 | D6: add a `voice` volume slider; UI sounds stay under Sound FX with their own internal group | orchestrator | separate UI slider | brief's recommendation, splittable later |
 
 ## Open questions
@@ -56,7 +59,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - 05: opus engineer, opus reviewer, clean in 1 round (two tidy-ups).
 - 06: sonnet engineer, sonnet reviewer, clean in 1 round (two tidy-ups, `e846bd3`).
 - 07: sonnet engineer, sonnet reviewer, clean in 1 round; accepted deviation: a world message sounds all its reports' events (two-cue cap), not only the told ones. Full browser suite only green file-by-file under load.
-- 08: opus engineer, opus reviewer, clean in 1 round; awaiting gate G3 (audition in `audio/.audition/08-melee/`, given to the user). Non-blocking: `hit.crit` ~270 ms vs brief ~500 (likely deliberate, unrecorded), `swing.heavy` 548–621 ms vs ~450; let G3 decide.
+- 08: opus engineer, opus reviewer, clean in 1 round; G3 passed 2026-11-14 (all acceptable); record and index to be set `done` by the step 09 engineer. Non-blocking: `hit.crit` ~270 ms vs brief ~500 (likely deliberate, unrecorded), `swing.heavy` 548–621 ms vs ~450; let G3 decide.
 - 03: opus engineer, opus reviewer, clean in 1 round; G1 passed 2026-11-14 (b/A, `A_0`); records updated by the step 07 engineer.
 
 ## Notes carried forward
