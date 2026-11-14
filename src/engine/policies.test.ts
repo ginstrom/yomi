@@ -476,9 +476,30 @@ describe('policies', () => {
         it('puts no frozen foe to sleep', () => {
           expect(choose(laid(field(['sleep'], foes()), 'e2', 'frozen'))).toEqual(cast('sleep', { target: 'e1' }))
         })
+
+        it('puts no foe to sleep with one of its own side beside it, whose blows would wake it (skill trees step 24)', () => {
+          const engaged = field(['sleep'], [...foes(), { id: 'p2', side: 'player', at: hex(5, 2) }])
+          expect(choose(engaged)).toEqual(cast('sleep', { target: 'e1' }))
+          const both = field(['sleep'], [...foes(), { id: 'p2', side: 'player', at: hex(5, 2) }, { id: 'p3', side: 'player', at: hex(3, 1) }])
+          expect(choose(both)).not.toMatchObject({ spell: 'sleep' })
+        })
       })
 
       describe('strikeCast (10)', () => {
+        it("counts the caster's spell power by element: Frostbite with Numbing Cold over Magic Arrow (skill trees step 24)", () => {
+          const frosty = (frost: number) =>
+            new BattleEngine({
+              board: { cols: 9, rows: 4 },
+              units: [
+                { id: 'p1', side: 'player', stats: { ...caster(['magic_arrow', 'frostbite']), magic: { maxMana: 40, skill: 70, spells: ['magic_arrow', 'frostbite'], power: { all: 2, frost } } }, position: hex(0, 1) },
+                { id: 'e1', side: 'enemy', stats: GOBLIN_STATS, position: hex(4, 1) },
+              ],
+            })
+          // Magic Arrow 5.5 + 2 against Frostbite 4.5 + 2 + frost.
+          expect(choose(frosty(0))).toEqual(cast('magic_arrow', { target: 'e1' }))
+          expect(choose(frosty(3))).toEqual(cast('frostbite', { target: 'e1' }))
+        })
+
         it('lances the chilled foe over an equal one, counting its bonus dice', () => {
           const engine = field(['ice_lance'], [
             { id: 'e1', side: 'enemy', at: hex(4, 1) },

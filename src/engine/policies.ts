@@ -120,7 +120,7 @@ const aggressive: Policy = ({ state, legal }) => {
       sleepCast(state, self, casts, source) ??
       curseCast(state, self, casts, source) ??
       markUse(state, self, own, source) ??
-      strikeCast(state, casts, source) ??
+      strikeCast(state, self, casts, source) ??
       bestStrike(state, self, own, source) ??
       statusArea(state, self, own, source) ??
       sprintUse(state, self, own, source) ??
@@ -320,9 +320,14 @@ function prisonCast(state: BattleState, self: UnitSnapshot, casts: readonly Cast
   return disableCast(state, self, casts, source, 'glacial_prison')
 }
 
-/** Sleep on the healthiest foe in range not asleep or frozen, while two foes or more stand. */
+/**
+ * Sleep on the healthiest foe in range not asleep or frozen, while two foes or more stand, and not
+ * on a foe with a unit of its own side beside it, whose blows would wake it at once (a sleeper
+ * draws `HELPLESS_BONUS`, so its side's strikes go to it first).
+ */
 function sleepCast(state: BattleState, self: UnitSnapshot, casts: readonly CastOption[], source: UnitId | null): Action | null {
-  return disableCast(state, self, casts, source, 'sleep')
+  const engaged = (foe: UnitSnapshot) => state.units.some((u) => u.side === self.side && u.hp > 0 && hexDistance(u.position, foe.position) === 1)
+  return disableCast(state, self, casts.filter((c) => c.spell !== 'sleep' || !engaged(c.foes[0] ?? self)), source, 'sleep')
 }
 
 /** Curse on the foe in range with the most hit points that is not cursed, while two foes or more stand. */
@@ -335,11 +340,11 @@ function curseCast(state: BattleState, self: UnitSnapshot, casts: readonly CastO
 /**
  * The damaging spell of a single foe with the highest average damage after
  * the foe's ward against its element (its statuses and auras counted), on the
- * foe with the fewest hit points. A `bane` spell's dice (Holy Light) count
+ * foe with the fewest hit points, the caster's spell power by element added. A `bane` spell's dice (Holy Light) count
  * double where the bane applies, and a spell's `bonusVs` dice (Ice Lance) are
  * added against a foe under one of their statuses, as the engine rolls them.
  */
-function strikeCast(state: BattleState, casts: readonly CastOption[], source: UnitId | null): Action | null {
+function strikeCast(state: BattleState, self: UnitSnapshot, casts: readonly CastOption[], source: UnitId | null): Action | null {
   const strikes = casts.filter((c) => SPELLS[c.spell].target === 'foe' && SPELLS[c.spell].damage && c.withinReserve && c.foes.length === 1)
   const damage = (c: CastOption) => {
     const { damage: dice, element, bane, bonusVs } = SPELLS[c.spell]
@@ -347,7 +352,10 @@ function strikeCast(state: BattleState, casts: readonly CastOption[], source: Un
     const defender = statsIn(state.units, foe)
     const base = bane && dice && baneApplies(defender) ? mean({ ...dice, count: dice.count * 2 }) : mean(dice)
     const bonus = bonusVs && bonusVs.statuses.some((id) => hasStatus(foe, id)) ? mean(bonusVs.damage) : 0
-    return warded(base + bonus, element, defender)
+    // The caster's spell power (Destruction, Pyromancy, Numbing Cold), added before the ward as the engine adds it.
+    const power = self.magic?.power
+    const added = (power?.all ?? 0) + (element === 'fire' ? (power?.fire ?? 0) : element === 'frost' ? (power?.frost ?? 0) : 0)
+    return warded(base + bonus + added, element, defender)
   }
   // Damage first, then the weaker foe: hit points are below 1000.
   return best(strikes, (c) => damage(c) * 1000 - c.foes[0].hp, -Infinity, castOn(source))?.action ?? null
