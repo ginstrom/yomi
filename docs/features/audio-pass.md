@@ -3,7 +3,7 @@
 **Request (user's words):** "separately from the ongoing skill tree work, I'd like you to improve the quality of the sound effects, to create indie game-quality SFX. If possible I'd also like a framework for narration of cutscenes and the like, maybe using a local version of a voice model, especially one that supports emotions and other effects."
 
 - **Slug:** `audio-pass`
-- **Phase:** 6, report. Verified and clean at `3e6b59c` (overall review clean in round 2, QA pass, simulated user 5/5). Waiting on the user: G10 (`audio/.audition/16-render/`), G11 and the G4–G8 playtest (package at the end of `18-final-review.md`), the fireball loudness question, and any push or PR.
+- **Phase:** done, awaiting merge. Verified at `3e6b59c`; G10 and G11 (with G4–G8) passed 2026-11-14. Next: merge with `skill-trees` once that branch is finalized (user's call), following the merge note below; then push or PR on the user's go-ahead.
 - **Branch / worktree:** `audio-pass`, from `main` at `d18abf4`, in `.claude/worktrees/audio-pass` (kept apart from `skill-trees`)
 - **Architecture brief:** `docs/architecture/audio-pass.md` (`a82ae8f`)
 - **Design:** `docs/designs/audio-pass.md` (`84f5f35`, approved by the user)
@@ -38,6 +38,9 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 | Batch gates G4–G8 no longer block: each content step still leaves an audition folder and review sheet, the orchestrator accepts on the measurements and review, and the user's playtest feedback comes back as follow-up fixes (G11 stays the final listening) | orchestrator | hold each batch for the user | follows the user's G3 answer |
 | Order after 08: 09, then narration 14–17, then 10–13, giving the user time for the Freesound downloads (G2) | orchestrator | 09–13 first | 10–13 need G2 or its fallbacks |
 | Step 18 removes every `placeholder_*` source (no recipe names one since step 13; frees 324 KB of the 15 MB source budget) | orchestrator | keep them registered | budget headroom, nothing uses them |
+| G10 passed ("fantastic sounding"); G11 and the G4–G8 playtest passed ("plays fine") | user | | |
+| Fireball stays at the group loudness; `gainDb` unchanged | user | raise its `gainDb` | the user likes it as is |
+| Merge with `skill-trees` only after that branch is finalized | user | merge now | |
 | D6: add a `voice` volume slider; UI sounds stay under Sound FX with their own internal group | orchestrator | separate UI slider | brief's recommendation, splittable later |
 
 | G9: `A_0` kept as the narrator's only clip; the user ranked `neutral` (A_0) best, then `whisper_1` | user | emotion reference clips | |
@@ -45,7 +48,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 
 ## Open questions
 
-- Fireball can't reach the brief's ~−18 LUFS-M (the tool normalises to the group target); decide after the playtest whether to raise its `gainDb` in `CUES`. Blocks nothing.
+(none)
 
 ## Tiers
 
