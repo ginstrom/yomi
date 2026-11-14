@@ -1,7 +1,7 @@
 # Feature: skill trees and progression
 
 **Slug:** skill-trees
-**Phase:** 4b — node-cost amendment: planning (verification of the base feature done, fixes at dae81d1). Earlier: 4 — implemented (all 26 steps done; manual, screenshots and CLAUDE.md current)
+**Phase:** 4b — node-cost amendment: implementing steps 27–31 (tiers: 27 sonnet, 28 opus, 29 sonnet, 30 opus, 31 sonnet; reviewers at the same tier) (verification of the base feature done, fixes at dae81d1). Earlier: 4 — implemented (all 26 steps done; manual, screenshots and CLAUDE.md current)
 
 ## Request (user's words)
 
@@ -23,6 +23,7 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 | Date | Decision | By | Alternatives | Reason |
 |---|---|---|---|---|
+| 2026-11-14 | Node-cost plan (steps 27–31, 9a0ef2f) accepted. The level-14 capstone check aims for ±50 of 500 and reports each gap rather than gating. Save migration is folded into step 28. | orchestrator | ±10% as a hard gate | the user already accepted parity at higher levels as limited by the party and the AI (step 24) |
 | 2026-11-14 | Node-cost amendment approved (docs/designs/skill-trees-node-costs.md): capstone costs 4, the currency is "perk points", the capstone check is at level 14 | user | capstone 3; talent points; keep level 12 | the designer's recommendations, all taken |
 | 2026-11-14 | Point-cost economy for nodes: "How about a cost system for skills that grows with power. So you get 1 skill point per level up, and at first you are buying a skill per level. Then they go to 2 points, and 3, with progressivley more powerful but costly skills?" | user | capstone confirmation only; capstone depth 6; slower pick rate; leave as is | the simulated player found picks after level 6 too cheap (a Ranger held all 8 Ranger nodes at 12). Design amendment, plan and re-tune follow. |
 | 2026-11-14 | No respec | user | paid respec at the guild hall | permanence keeps choices hard |
