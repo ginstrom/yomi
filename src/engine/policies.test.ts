@@ -296,9 +296,10 @@ describe('policies', () => {
       })
     })
 
-    it('never casts Protect or Haste', () => {
+    it('casts Haste on an ally, and Protect only on an ally with a foe beside it (skill trees step 24; before, neither)', () => {
       const engine = field(['protect', 'haste'], [{ id: 'p2', side: 'player', at: hex(1, 1) }, { id: 'e1', side: 'enemy', at: hex(7, 1) }])
-      expect(choose(engine).type).toBe('move')
+      expect(choose(engine)).toEqual({ type: 'cast', unit: 'p1', spell: 'haste', target: 'p2' })
+      expect(choose(field(['protect'], [{ id: 'p2', side: 'player', at: hex(1, 1) }, { id: 'e1', side: 'enemy', at: hex(7, 1) }])).type).toBe('move')
     })
 
     describe('the stage-3 casts (skill trees step 21)', () => {
@@ -410,6 +411,46 @@ describe('policies', () => {
           expect(choose(field(['renew'], allies(hex(1, 1), hex(2, 1), 10)))).not.toMatchObject({ type: 'cast' })
           const one = edited(field(['renew'], allies(hex(1, 1), hex(2, 1))), (s) => void (unitOf(s, 'p2').hp = 9))
           expect(choose(one)).not.toMatchObject({ type: 'cast' })
+        })
+
+        it('hastes the first ally in roster order other than itself that is not hasted (skill trees step 24)', () => {
+          const engine = field(['haste'], allies(hex(1, 1), hex(2, 1)))
+          expect(choose(engine)).toEqual(cast('haste', { target: 'p2' }))
+          expect(choose(laid(engine, 'p2', 'hasted'))).toEqual(cast('haste', { target: 'p3' }))
+        })
+
+        it('hastes no one when every ally is hasted, nor itself', () => {
+          const engine = edited(field(['haste'], allies(hex(1, 1), hex(2, 1))), (s) => {
+            for (const id of ['p2', 'p3']) unitOf(s, id).statuses = [{ id: 'hasted', turnsLeft: 2 }]
+          })
+          expect(choose(engine)).not.toMatchObject({ type: 'cast' })
+        })
+
+        it('protects an ally with a foe beside it that is not protected, the most hurt first (skill trees step 24)', () => {
+          const scene = field(['protect'], [
+            { id: 'p2', side: 'player', at: hex(3, 1) },
+            { id: 'p3', side: 'player', at: hex(3, 2), hp: 5 },
+            { id: 'e1', side: 'enemy', at: hex(4, 1) },
+          ])
+          expect(choose(scene)).toEqual(cast('protect', { target: 'p3' }))
+          expect(choose(laid(scene, 'p3', 'protected'))).toEqual(cast('protect', { target: 'p2' }))
+          // With no foe beside an ally, it protects no one.
+          expect(choose(field(['protect'], allies(hex(1, 1), hex(2, 1))))).not.toMatchObject({ type: 'cast' })
+        })
+      })
+
+      describe('a status-only hostile area spell (Bane, skill trees step 24)', () => {
+        const foes: Placing[] = [
+          { id: 'e1', side: 'enemy', at: hex(4, 1) },
+          { id: 'e2', side: 'enemy', at: hex(5, 1) },
+        ]
+
+        it('banes two foes or more not yet baned', () => {
+          expect(choose(field(['bane'], foes))).toMatchObject({ type: 'cast', spell: 'bane' })
+        })
+
+        it('not where only one foe it would touch is not yet baned', () => {
+          expect(choose(laid(field(['bane'], foes), 'e1', 'baned'))).not.toMatchObject({ type: 'cast' })
         })
       })
 
@@ -1058,8 +1099,8 @@ describe('policies', () => {
 
     it('are what they were', () => {
       const lines = choices()
-      expect(lines.length).toBe(4655)
-      expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe('38f6b1d6d1457288cd75ebd4ab753f5eb1e950816c8b610503b21f3434cfca15')
+      expect(lines.length).toBe(4795)
+      expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe('49a987c13ddaf7250ba253244efab05a6e35b94d6dbf2492b4e3692195cecebf')
     }, 60_000)
   })
 })

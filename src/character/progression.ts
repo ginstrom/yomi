@@ -160,8 +160,15 @@ export const PLAN_IDS = [
 
 export type PlanId = (typeof PLAN_IDS)[number]
 
-/** A path's nodes in `PERKS` order. */
-const pathPlan = (path: PathId): PerkId[] => PERK_IDS.filter((id) => (PERKS[id] as Perk).path === path)
+/**
+ * A path's capstone, then its other nodes in `PERKS` order: the capstone is
+ * taken as soon as it opens (level 12, depth 5), as a player of the path would,
+ * rather than after every other node of the path.
+ */
+const pathPlan = (path: PathId): PerkId[] => {
+  const nodes = PERK_IDS.filter((id) => (PERKS[id] as Perk).path === path)
+  return [...nodes.filter((id) => (PERKS[id] as Perk).tier === 'capstone'), ...nodes.filter((id) => (PERKS[id] as Perk).tier !== 'capstone')]
+}
 
 export const AUTO_PLANS: Record<PlanId, readonly PerkId[]> = {
   knight: [

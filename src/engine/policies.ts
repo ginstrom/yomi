@@ -231,7 +231,9 @@ function purifyCast(casts: readonly CastOption[]): Action | null {
  * Mass Haste in its side's first `MASS_HASTE_ROUNDS` rounds where it would
  * touch two allies or more not hasted (the caster counts); else Renew where
  * two allies or more it would touch are at `RENEW_SHARE` of their hit points
- * or less and none of those it would touch is renewing.
+ * or less and none of those it would touch is renewing; else Haste on the
+ * first ally in roster order, not itself, that is not hasted; else Protect
+ * on the ally with a foe beside it, not protected, the most hurt by share.
  */
 function supportCast(state: BattleState, casts: readonly CastOption[]): Action | null {
   const usable = (spell: SpellId) => casts.filter((c) => c.spell === spell && c.withinReserve)
@@ -242,7 +244,13 @@ function supportCast(state: BattleState, casts: readonly CastOption[]): Action |
   const renew = usable('renew').find(
     (c) => c.allies.filter((u) => u.hp <= u.maxHp * RENEW_SHARE).length >= 2 && !c.allies.some((u) => hasStatus(u, 'renewing')),
   )
-  return renew?.action ?? null
+  if (renew) return renew.action
+  const caster = casts[0]?.action.unit
+  const haste = usable('haste').find((c) => c.allies.length === 1 && c.allies[0].id !== caster && !hasStatus(c.allies[0], 'hasted'))
+  if (haste) return haste.action
+  const pressed = (u: UnitSnapshot) => state.units.some((f) => f.side !== u.side && f.hp > 0 && hexDistance(f.position, u.position) === 1)
+  const protects = usable('protect').filter((c) => c.allies.length === 1 && pressed(c.allies[0]) && !hasStatus(c.allies[0], 'protected'))
+  return best(protects, (c) => 1 - c.allies[0].hp / c.allies[0].maxHp, -Infinity)?.action ?? null
 }
 
 /**
@@ -270,7 +278,8 @@ function guardCast(state: BattleState, self: UnitSnapshot, casts: readonly CastO
 /**
  * The hostile area cast that touches no ally, the caster included, and the
  * most foes: two at least, or for the Web spell one at least not already
- * webbed, counting only those. A spell with damage counts only the foes its
+ * webbed, counting only those; a status-only spell (Bane) counts only the
+ * foes not already under its status. A spell with damage counts only the foes its
  * average damage gets through the ward of (a foe warded against all of it
  * is no reason to throw it).
  */
@@ -282,7 +291,9 @@ function areaCast(state: BattleState, casts: readonly CastOption[], source: Unit
   }
   const foesTouched = (c: CastOption) => {
     if (c.spell === 'web') return c.foes.filter((u) => !hasStatus(u, 'webbed')).length
-    const counted = hurt(c).length
+    // A spell that only lays a status (Bane) counts the foes not under it yet.
+    const { damage, status } = SPELLS[c.spell]
+    const counted = !damage && status ? c.foes.filter((u) => !hasStatus(u, status.id)).length : hurt(c).length
     return counted >= 2 ? counted : 0
   }
   return best(areas, foesTouched, 0, castOn(source))?.action ?? null

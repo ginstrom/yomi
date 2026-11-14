@@ -51,7 +51,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | 22 | [Stage-3 scenes](22-stage3-scenes.md) | Looks, log lines and marks for the new events and statuses; Revive's aim; restore floats | 21 | sonnet | done (cef16a1) |
 | 23 | [Stage 3: simulator lines, measure and document](23-stage3-measure.md) | Deathblows, revives, Unbreakable saves, callings and capstones in the summary; AC8's `--ready-level 12` check; measured; docs current | 21, 22 | sonnet | done (cf53531) |
 | **Stage 4: balance** | | | | | |
-| 24 | [Path parity and the cells](24-parity-and-cells.md) | Every plan within ±50 of its role's best; capstones checked; cells in band | 23 | opus | pending |
+| 24 | [Path parity and the cells](24-parity-and-cells.md) | Every plan within ±50 of its role's best; capstones checked; cells in band | 23 | opus | in progress |
 | 25 | [Campaign bands](25-campaign-bands.md) | The three campaigns, deaths and days in band, or the user has accepted the figure (AC11) | 24 | opus | pending |
 | 26 | [Manual, screenshots and the scaling rules](26-manual-and-scaling.md) | Manual's tree tables; screenshots retaken; CLAUDE.md's rules of scaling restated; final verification | 25 | sonnet | pending |
 

@@ -262,7 +262,8 @@ export const PERKS = {
     description: '+10 mana',
     path: 'spellsword',
     tier: 1,
-    attributes: { intelligence: 4 },
+    // Intelligence 3, so a warrior of the usual 3 (Aldric, the Captain) can open the path and reach Arcane Knight.
+    attributes: { intelligence: 3 },
     effects: { maxMana: 10 },
   },
   flame_strike: techniqueNode('flame_strike', 'spellsword', 1, { skills: { melee: 30 } }),

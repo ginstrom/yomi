@@ -246,7 +246,7 @@ describe('a battle', () => {
 
     await game.click(start.party[2])
     const selected = await game.waitFor('Battle', (b) => b.selected === 'hero_3')
-    expect(mage(selected)).toMatchObject({ mana: 24, ap: 8 })
+    expect(mage(selected)).toMatchObject({ mana: 28, ap: 8 })
     // Heal can always be cast on the caster itself; no foe is within Magic Arrow's range yet.
     expect(selected.buttons.cast).toMatchObject({ visible: true, enabled: true })
     await game.click(selected.buttons.cast)

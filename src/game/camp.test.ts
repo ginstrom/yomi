@@ -167,7 +167,7 @@ describe('campUntilHealed, as it is (characterization)', () => {
 // Re-recorded in skill trees step 03: Aldric's Toughness (+8 HP and +1 Endurance) changed the ready-made party's numbers.
 // Re-recorded in skill trees step 04: every hero has mana, and the mage 2 more for each Mage and Cleric node.
 const RESULT = { days: 4, rested: 10, cast: 54, events: 3, interruptedBy: null }
-const MEMBERS = [[35, 6], [18, 8], [17, 24]]
+const MEMBERS = [[35, 6], [18, 8], [17, 28]]
 
 /** Two games built alike by `setup`, each moved on to the first day that brings an event. */
 function eventfulTwins<T extends ReturnType<typeof solo>>(setup: () => T): [T, T] {

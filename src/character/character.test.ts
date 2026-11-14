@@ -881,8 +881,8 @@ describe('mana for every hero and the derived passives', () => {
     expect(maxMana(withNodes(aldric(), 'arcane_blood'))).toBe(16)
   })
 
-  it('gives the ready-made Delwyn 24 mana at level 1: 18, and 2 for each of three Mage and Cleric nodes', () => {
-    expect(maxMana(delwyn())).toBe(24)
+  it('gives the ready-made Delwyn 28 mana at level 1: 18, 2 for each of three Mage and Cleric nodes and Destruction’s 4', () => {
+    expect(maxMana(delwyn())).toBe(28)
   })
 
   it('adds Shield Wall’s 8 armour class only with a shield in the off hand', () => {
@@ -960,7 +960,10 @@ describe('mana for every hero and the derived passives', () => {
   })
 
   it('gives a caster with none of the modifier nodes exactly the magic it had: no new keys', () => {
-    expect(Object.keys(deriveCombatStats(delwyn()).magic!).sort()).toEqual(['maxMana', 'skill', 'spells'])
+    // Delwyn without Destruction, his one modifier node (skill trees step 24 gave him Destruction for Arcane Study).
+    const plain = withNodes(delwyn(), 'arcane_study')
+    delete plain.perks.destruction
+    expect(Object.keys(deriveCombatStats(plain).magic!).sort()).toEqual(['maxMana', 'skill', 'spells'])
   })
 
   it('derives a hero with none of the new nodes as before, its mana aside', () => {

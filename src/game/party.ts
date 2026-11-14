@@ -57,7 +57,7 @@ export const PREROLLS: readonly Preroll[] = [
       attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
       tagged: 'magic',
       raises: { melee: 0, archery: 0, magic: 10 },
-      perks: ['magic_arrow', 'heal', 'arcane_study'],
+      perks: ['magic_arrow', 'heal', 'destruction'],
     },
   },
   {

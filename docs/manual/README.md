@@ -737,7 +737,7 @@ This lists the nodes the game has now, by tree and path. **Asks** is what a node
 | Heavy Knight | Toughness | T1 | Passive | Endurance 5 | +8 hit points and +1 Endurance |
 |  | Shield Wall | T1 | Passive | — | +8 armour class while a shield is in the off hand |
 |  | Iron Skin | T3 | Passive | Endurance 7 | +2 resistance; its free attacks get +15 to hit and +3 damage |
-| Spellsword | Arcane Blood | T1 | Passive | Intelligence 4 | +10 mana |
+| Spellsword | Arcane Blood | T1 | Passive | Intelligence 3 | +10 mana |
 |  | Spell Ward | T2 | Passive | — | +3 ward against every element |
 |  | Battle Mage | T3 | Passive | Intelligence 5 | +6 mana; each melee hit that strikes no image restores 1 mana; its Strikes' elemental damage +2 |
 

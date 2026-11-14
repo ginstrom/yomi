@@ -332,14 +332,14 @@ describe('a hero’s panel', () => {
     expect(aldric.takenPerks.map(({ perk }) => perk)).toEqual(['weapon_training', 'heavy_hand', 'toughness'])
     expect(aldric.mana).toBeNull()
 
-    // The mage's spells are the Abilities tab's; its one passive is Arcane Study.
+    // The mage's spells are the Abilities tab's; its one passive is Destruction.
     await game.click(aldric.party[2])
     const delwyn = await game.waitFor('Inventory', (p) => p.party[2].active)
-    expect(delwyn.takenPerks).toEqual([{ perk: 'arcane_study', ranks: 1 }])
-    expect(delwyn.mana).toBe(24)
+    expect(delwyn.takenPerks).toEqual([{ perk: 'destruction', ranks: 1 }])
+    expect(delwyn.mana).toBe(28)
     expect(delwyn.attributes.intelligence).toBe(9)
 
-    // The tree view opens on the tree of the mage's calling: Evoker, Healer and Arcanist tie at one node, and Evoker comes first.
+    // The tree view opens on the tree of the mage's calling, Evoker (Magic Arrow and Destruction).
     await game.click(delwyn.treesButton)
     const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees')
     expect(tree.tree).toBe('mage')
@@ -369,7 +369,7 @@ describe('a hero’s panel', () => {
     const all = Object.values(seen).flat().map((node) => node.perk)
     expect(all).toHaveLength(PERK_IDS.length)
     expect(new Set(all)).toEqual(new Set(PERK_IDS))
-    expect(taken(seen.mage)).toEqual(['arcane_study', 'magic_arrow'])
+    expect(taken(seen.mage)).toEqual(['destruction', 'magic_arrow'])
     expect(taken(seen.cleric)).toEqual(['heal'])
     // The picks of creation are spent, and the next comes at level 2.
     expect(Object.values(seen).flat().some((node) => node.canTake)).toBe(false)
@@ -399,11 +399,11 @@ describe('a hero’s panel', () => {
       ['Heal', 'spell'],
     ])
     // Heal is cast on the world map from here, on a member picked by its portrait, for the mana carried.
-    expect(spells.mana).toBe(24)
+    expect(spells.mana).toBe(28)
     await game.click(spells.spells[1])
     const choosing = await game.waitFor('Inventory', (p) => p.worldCast === 'heal')
     await game.click(choosing.party[0])
-    const cast = await game.waitFor('Inventory', (p) => p.worldCast === null && p.mana === 21)
+    const cast = await game.waitFor('Inventory', (p) => p.worldCast === null && p.mana === 25)
     expect(cast.party[2].active).toBe(true)
     // K opens nothing: it is no longer bound.
     await game.press('k')

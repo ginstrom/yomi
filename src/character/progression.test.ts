@@ -185,8 +185,12 @@ describe('AUTO_PLANS', () => {
     }
   })
 
-  it('writes the parity plans as their path in PERKS order, the rogue archer the rogue path', () => {
-    const path = (p: Perk['path']) => PERK_IDS.filter((id) => (PERKS[id] as Perk).path === p)
+  it('writes the parity plans as their path, its capstone first and the rest in PERKS order, the rogue archer the rogue path', () => {
+    const path = (p: Perk['path']) => {
+      const nodes = PERK_IDS.filter((id) => (PERKS[id] as Perk).path === p)
+      const capstone = (id: PerkId) => (PERKS[id] as Perk).tier === 'capstone'
+      return [...nodes.filter(capstone), ...nodes.filter((id) => !capstone(id))]
+    }
     expect(AUTO_PLANS.evoker).toEqual(path('evoker'))
     expect(AUTO_PLANS.saint).toEqual(path('saint'))
     expect(AUTO_PLANS.rogue_archer).toEqual(path('rogue'))
@@ -293,20 +297,20 @@ describe('autoAdvance', () => {
       'greater_heal', 'death_cloud', 'greater_heal_all', 'purify',
     ])
     expect(AUTO_PLANS.bandit_mage).toEqual(['flame_arrow', 'destruction', 'fireball', 'heal', 'heal_all'])
-    // The parity plans are their path in PERKS order, stage-3 nodes included.
+    // The parity plans are their path, the capstone first (taken as soon as it opens), stage-3 nodes included.
     expect(AUTO_PLANS.assassin).toContain('deathblow')
-    expect(AUTO_PLANS.healer).toEqual(['heal', 'mending', 'greater_heal', 'heal_all', 'greater_heal_all', 'purify', 'swift_hands', 'revive'])
+    expect(AUTO_PLANS.healer).toEqual(['revive', 'heal', 'mending', 'greater_heal', 'heal_all', 'greater_heal_all', 'purify', 'swift_hands'])
   })
 
-  it('takes the ready-made heroes to their capstones: Aldric Unbreakable and Brenna Deadeye at 12, Delwyn Meteor at 14', () => {
+  it('takes the ready-made heroes to their capstones at 12: Aldric Unbreakable, Brenna Deadeye and Delwyn Meteor', () => {
     expect(grown(0, 11).perks.unbreakable).toBeUndefined()
     expect(grown(0, 12).perks.unbreakable).toBe(1)
     expect(grown(1, 11).perks.deadeye).toBeUndefined()
     expect(grown(1, 12).perks.deadeye).toBe(1)
-    // The evoker-healer plan puts Mending before Meteor, so level 12's pick goes to Mending and Meteor waits for 14.
-    expect(grown(2, 12).perks).toMatchObject({ mending: 1 })
-    expect(grown(2, 12).perks.meteor).toBeUndefined()
-    expect(grown(2, 14).perks.meteor).toBe(1)
+    // Delwyn's creation picks are the design's build B (Destruction, not Arcane Study), so his six picks to level 12
+    // are the plan's Flame Arrow, Heal All, Fireball, Pyromancy, Mending and Meteor (skill trees step 24).
+    expect(grown(2, 11).perks.meteor).toBeUndefined()
+    expect(grown(2, 12).perks).toMatchObject({ mending: 1, meteor: 1 })
   })
 
   it('spends every pick of the ready-made heroes to level 20, levelled one at a time', () => {
@@ -336,9 +340,9 @@ describe('autoAdvance', () => {
     }
   })
 
-  it('takes the plan\'s capstone when it reaches it in the plan and the path is its calling (the evoker and Meteor)', () => {
-    // Delwyn's six Evoker nodes before Meteor fill his picks to level 12; Meteor is the next, at 14.
-    expect(grown(2, 12, 'evoker').perks.meteor).toBeUndefined()
-    expect(grown(2, 14, 'evoker').perks.meteor).toBe(1)
+  it('takes the plan\'s capstone as soon as it opens, the path its calling (the evoker and Meteor)', () => {
+    // The evoker plan names Meteor first: Delwyn takes it with level 12's pick, at Evoker depth 6.
+    expect(grown(2, 11, 'evoker').perks.meteor).toBeUndefined()
+    expect(grown(2, 12, 'evoker').perks.meteor).toBe(1)
   })
 })

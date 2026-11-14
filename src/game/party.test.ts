@@ -76,24 +76,24 @@ describe('readyMadeParty', () => {
     expect(skillLevel(aldric, 'melee')).toBe(65)
     expect(skillLevel(aldric, 'archery')).toBe(9)
     expect(skillLevel(brenna, 'archery')).toBe(66)
-    expect(skillLevel(delwyn, 'magic')).toBe(68)
+    expect(skillLevel(delwyn, 'magic')).toBe(58)
   })
 
   it('makes the third a mage, who starts knowing Magic Arrow and Heal', () => {
     const party = readyMadeParty()
     const mage = party[2]
     expect(party.map((m) => knownSpells(m))).toEqual([[], [], ['magic_arrow', 'heal']])
-    // 18 for intelligence 9, and 2 for each of its three Mage and Cleric nodes.
-    expect(mage.mana).toBe(24)
-    expect([maxHp(mage), maxMana(mage)]).toEqual([17, 24])
+    // 18 for intelligence 9, 2 for each of its three Mage and Cleric nodes, and Destruction's 4.
+    expect(mage.mana).toBe(28)
+    expect([maxHp(mage), maxMana(mage)]).toEqual([17, 28])
     expect(deriveCombatStats(mage)).toMatchObject({
       actionPoints: 8,
       weapon: 'Wand of Sparks',
-      // Magic 68; the breastplate asks strength 3, which it has.
-      toHit: 68,
+      // Magic 58 (Destruction, not Arcane Study, since skill trees step 24); the breastplate asks strength 3, which it has.
+      toHit: 58,
       attackRange: 4,
-      // Magic 68, less the iron breastplate's 5.
-      magic: { maxMana: 24, skill: 63, spells: ['magic_arrow', 'heal'] },
+      // Magic 58, less the iron breastplate's 5; Destruction's +2 to its spells' damage.
+      magic: { maxMana: 28, skill: 53, spells: ['magic_arrow', 'heal'], power: { all: 2 } },
     })
   })
 
