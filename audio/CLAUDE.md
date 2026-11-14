@@ -315,6 +315,10 @@ steps (step 12) and the world bank (step 13) found, for later sound work:
   sums to mono, resamples to 48 kHz and records both hashes and the excerpt.
 - Model weights (narration) live in the Hugging Face cache, never here.
 
+## Which sound plays when
+
+The tables that map a game event to a cue live in `src/scenes/sounds.ts`: `eventSounds` (battle events) over `WEAPON_SOUNDS`, `FOE_SOUNDS`, `SPELL_SOUND_OVERRIDES` and `spellSound`, `ABILITY_SOUNDS`, `DEATH`; `worldSounds` over `WORLD_SOUND_KINDS`; and `CUES`, every cue with its bus, gain and voice limits. `buttonCue` picks the interface cues. Not copied here, so it cannot go stale. A cue's variants are the markers of its bank in `audio/sfx.manifest.json` (`<cue>#0`, `<cue>#1`, ...). `src/scenes/sounds.test.ts` fails when an event kind or an ability would sound nothing without an entry saying so.
+
 ## Listening
 
 Agents cannot hear. Measure instead: `sfx audition --spectrogram` prints each
@@ -411,7 +415,7 @@ of `voices.toml`, for the author to pick **by ear**:
 
 ## Narration data
 
-A line is voiced by fields on a cutscene beat in `src/story/cutscenes.ts`: `line` (id, `[a-z0-9_.]+`, unique), `voice`, and optionally `emotion`, `intensity` (0 to 1), `spoken` (what is said when the shown text cannot be; never displayed, so nonverbal tags like `[sigh]` go only here) and `take` (bump to re-render with a new seed). The rules (`narrationProblems` in `src/story/narration.ts`, enforced by vitest): no duplicate ids, a voice for every line, no leader (speaker or portrait) and no `{…}` template in what is spoken, only known tags and only for a tag engine (`chatterbox_turbo`), an emotion the voice lists, intensity and take in range, nothing empty. Tutorial tips are not voiced.
+A line is voiced by fields on a cutscene beat in `src/story/cutscenes.ts`: `line` (id, `[a-z0-9_.]+`, unique), `voice`, and optionally `emotion`, `intensity` (0 to 1), `spoken` (what is said when the shown text cannot be; a voiced beat keeps its shown `text` as it is and puts the spoken wording here; never displayed, so nonverbal tags like `[sigh]` go only here) and `take` (bump to re-render with a new seed). The rules (`narrationProblems` in `src/story/narration.ts`, enforced by vitest): no duplicate ids, a voice for every line, no leader (speaker or portrait) and no `{…}` template in what is spoken, only known tags and only for a tag engine (`chatterbox_turbo`), an emotion the voice lists, intensity and take in range, nothing empty. Tutorial tips are not voiced.
 
 `audio/voices.toml` is the voice registry (`readVoices`, and `design.read_voice` in the tool): narrator A on Chatterbox Turbo (gate G1), each model pinned to the commit `tts/models.py` loads (a pytest holds them equal), `[narrator.clips]` naming only the neutral clip (`A_0`, committed by step 16). `npm run narration:export` (`scripts/narration.ts`) refuses a broken beat and writes the gitignored `audio/narration.jobs.json` (a job per voiced line with its seed and input hash, `lineHash`) for `voice render` (step 16), which writes the committed `audio/voice.manifest.json`. `npm test` fails when a voiced line's hash differs from the manifest's or its `.opus`/`.mp3` is missing in `public/assets/voice/`, so a new voiced line is fields on a beat plus a render.
 
@@ -419,7 +423,7 @@ A line is voiced by fields on a cutscene beat in `src/story/cutscenes.ts`: `line
 
 To voice a beat, give it `line`, `voice`, `emotion` and, where the shown text is not what should be said (a `[Placeholder]` marker, a `{leader}` template, a nonverbal tag), `spoken` in `src/story/cutscenes.ts`, then run `npm run narration` from the repository root (`PATH=/opt/homebrew/opt/node@26/bin:$PATH` for node). `scripts/narration.ts` writes `audio/narration.jobs.json`; `yomi-audio voice render` (`render.py`) renders only the jobs whose hash differs from `audio/voice.manifest.json`, has no entry there or whose files are missing: the engine the voice table names clones the voice's clip for the emotion (else its neutral clip), the `[voice]` chain post-processes it (high-pass, trim, -18 LUFS-I, true-peak ceiling), ffmpeg encodes `public/assets/voice/<line>.opus` (mono 32 kbps, `voip`) and `.mp3` (VBR `-q:a 7`), and the manifest records the hash, duration and `engine@revision`. Files and entries of lines no longer in the jobs are deleted; `README.md` stays. It refuses a job file whose `adapter_version` differs from `voices.toml`'s or the adapter's (run the export again). A flawed line is re-taken by bumping its beat's `take` (a new seed; at most three takes), then `npm run narration`. `npm test` fails while any voiced beat's hash differs from the manifest's, so edit, render, commit both. Model weights are in `~/.cache/huggingface/`, fetched on the first load (needs network), never in the repository; the mlx Chatterbox port adds no PerTh watermark.
 
-**Words spelled alike and said differently** ("the road winds" read as the wind that blows) are not left to the engine: check each shipped line's `spoken` for heteronyms (winds, wound, read, lead, live, close, tear, bow, row, bass) and respell ("wynds") or reword it there.
+**Words spelled alike and said differently** ("the road winds" read as the wind that blows) are not left to the engine: check each shipped line's `spoken` for heteronyms (winds, wound, read, lead, live, close, tear, bow, row, bass) and reword it there. Rewording is the safe choice: a respelling ("wynds") is a guess until heard, so if you respell, render the line and audition it before shipping.
 
 ## Sourcing
 

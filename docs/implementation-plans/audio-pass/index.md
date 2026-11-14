@@ -414,3 +414,13 @@ None blocks a step. Defaults taken (from the design's §8 and from planning):
 ## For implementers
 
 Set your step to `in progress` here when you start, `awaiting review` when it waits at its gate, and `done` with the commit hashes when finished. Record evidence (commands and their output, measurements, the gate's outcome as relayed to you), deviations and blockers in your task file's "Execution record". Keep this index short; every implementer reads it.
+
+## Overall review and verification
+
+Fixes after the verification phase:
+
+1. The duck's release survives a scene resume: `applyVolumes` leaves a running ramp alone when it already heads for the level the theme should have (`Theme.rampTarget`); a moved slider changes that level and still ends the ramp at the new one. Tests in `soundPlayer.test.ts`.
+2. A play the marker check, the voice limits or the sound manager refuses gives its variant back, so the shuffle bag and `last` move only for sounds heard. Test: six admitted plays of one cue, with 40 refused between, are one full bag.
+3. AC3 coverage widened in `sounds.test.ts`: every `BattleEvent` type must be listed as sounding or silent (a `Record`, so a new kind fails `tsc`, and the listing is checked against `eventSounds`' cases), and every ability needs an `ABILITY_SOUNDS` entry or a place in `SOUNDS_AS_ATTACKS` (pure strike routines).
+4. `narration.test.ts` derives the voiced lines from the cutscenes and the manifest, and a stale or unrendered line fails with a message naming `npm run narration`.
+5. Docs: root `CLAUDE.md` (recipes finished, `BACK_LABELS`), `e2e/CLAUDE.md` (`sounds.test.ts`), `audio/CLAUDE.md` (which sound plays when, heteronyms, `spoken`).
