@@ -37,6 +37,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 | G3 passed: the user found all the melee audition audio acceptable and left the choice of versions to the orchestrator, with more feedback possible after playtesting | user | | |
 | Batch gates G4–G8 no longer block: each content step still leaves an audition folder and review sheet, the orchestrator accepts on the measurements and review, and the user's playtest feedback comes back as follow-up fixes (G11 stays the final listening) | orchestrator | hold each batch for the user | follows the user's G3 answer |
 | Order after 08: 09, then narration 14–17, then 10–13, giving the user time for the Freesound downloads (G2) | orchestrator | 09–13 first | 10–13 need G2 or its fallbacks |
+| Step 18 removes every `placeholder_*` source (no recipe names one since step 13; frees 324 KB of the 15 MB source budget) | orchestrator | keep them registered | budget headroom, nothing uses them |
 | D6: add a `voice` volume slider; UI sounds stay under Sound FX with their own internal group | orchestrator | separate UI slider | brief's recommendation, splittable later |
 
 | G9: `A_0` kept as the narrator's only clip; the user ranked `neutral` (A_0) best, then `whisper_1` | user | emotion reference clips | |
@@ -45,7 +46,6 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 ## Open questions
 
 - Fireball can't reach the brief's ~−18 LUFS-M (the tool normalises to the group target); decide after the playtest whether to raise its `gainDb` in `CUES`. Blocks nothing.
-- Step 18: five placeholder sources no recipe uses since step 11; remove or keep.
 
 ## Tiers
 
@@ -72,7 +72,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - 10: opus engineer, opus reviewer, clean in 1 round (provenance tidy-ups, `42c18c2`). Unsure by ear: `shot.wand`/`miss.magic` may read sci-fi, `hit.magic` gunshot-like, poison vs acid alike, `regen` late squelch. Audition `audio/.audition/10-ranged-sweeteners/`.
 - 11: opus engineer, opus reviewer, clean in 1 round. Unsure by ear: `cast.storm` buzz, synth bells in `impact.heal`/`buff`, fireball roar blurring punch, one-voice `cast.holy`, clinky `impact.hex`. Audition `audio/.audition/11-spells/`.
 - 12: opus engineer, opus reviewer, clean in 1 round. Unsure by ear: raccoon goblin squeal, armoured-step mail jingle too much, zombie-ish brute groan, Horror roar stop, salamander hiss. Audition `audio/.audition/12-falls-steps/`.
-- 13: opus engineer done; review pending. Unsure by ear: `confront` two-note horn, `captured` horn may read as threat, bright `craft` anvil, synthetic rune hums, `arrive` bell too frequent, `threatened` swinging bell. Audition `audio/.audition/13-world/`. Sources at 14.45 of 15 MB: step 18 should remove the ten unused `placeholder_*` sources (324 KB).
+- 13: opus engineer, opus reviewer, clean in 1 round. Unsure by ear: `confront` two-note horn, `captured` horn may read as threat, bright `craft` anvil, synthetic rune hums, `arrive` bell too frequent, `threatened` swinging bell. Audition `audio/.audition/13-world/`. Sources at 14.45 of 15 MB: step 18 should remove the ten unused `placeholder_*` sources (324 KB).
 - 03: opus engineer, opus reviewer, clean in 1 round; G1 passed 2026-11-14 (b/A, `A_0`); records updated by the step 07 engineer.
 
 ## Notes carried forward
