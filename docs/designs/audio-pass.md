@@ -524,7 +524,7 @@ v1 content: `intro`'s first beat (`line: 'intro.opening'`, narrator, `grave`) an
 
 #### 5.8.2 The voice registry and the cast
 
-`audio/voices.toml` (the Node side reads it with `smol-toml`, a small MIT devDependency; the Python side with `tomllib`):
+`audio/voices.toml` (the Node side reads it with `smol-toml`, a small BSD-3-Clause devDependency; the Python side with `tomllib`):
 
 ```toml
 adapter_version = 1

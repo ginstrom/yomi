@@ -6,7 +6,7 @@
     yomi-audio sfx audition <cue> ... [--out DIR] [--spectrogram]
     yomi-audio sfx build [--bank B] [--cue C]
     yomi-audio sfx check
-    yomi-audio voice design <narrator> [--emotions E,...] [--candidates N]
+    yomi-audio voice design <voice> [--emotions E,...] [--candidates N] [--neutral WAV] [--out DIR]
     yomi-audio voice bakeoff [--redesign]
 
 The voice commands need the `tts` extra (uv run --project tools/audio --extra tts ...).
@@ -72,10 +72,12 @@ def _parser() -> argparse.ArgumentParser:
     sfx_check.set_defaults(run=_sfx_check)
 
     voice = groups.add_parser("voice", help="narration (needs the tts extra)").add_subparsers(dest="command", required=True)
-    design = voice.add_parser("design", parents=[root], help="design a narrator's reference clips into bakeoff/")
-    design.add_argument("voice", help="the narrator (A or B)")
-    design.add_argument("--emotions", help="comma-separated (default: those the bake-off's lines need)")
-    design.add_argument("--candidates", type=int, default=4, help="candidates per emotion (default 4)")
+    design = voice.add_parser("design", parents=[root], help="emotion reference-clip candidates for a voice of voices.toml")
+    design.add_argument("voice", help="the voice's table in voices.toml (e.g. narrator)")
+    design.add_argument("--emotions", help="comma-separated (default: every one the voice declares but neutral)")
+    design.add_argument("--candidates", type=int, default=None, help="candidates per emotion (default 4)")
+    design.add_argument("--neutral", type=Path, help="the neutral reference (default: the voice's clips.neutral)")
+    design.add_argument("--out", type=Path, help="output folder (default: <root>/.audition/voice-<voice>/)")
     design.set_defaults(run=_voice_design)
     bakeoff = voice.add_parser("bakeoff", parents=[root], help="render the narration listening test into bakeoff/")
     bakeoff.add_argument("--redesign", action="store_true", help="design the narrators again even if bakeoff/designed/ holds them")
@@ -136,17 +138,30 @@ def _sfx_check(args) -> int:
 
 def _voice_design(args) -> int:
     from .config import load_config
-    from .voice import CANDIDATES, design_voice, real_encoder, real_engines
+    from .design import design_emotions
+    from .voice import CANDIDATES, real_encoder, real_engines
 
-    if args.candidates < 1:
-        raise AudioError("--candidates must be at least 1")
+    candidates = CANDIDATES if args.candidates is None else args.candidates
     emotions = [e.strip() for e in args.emotions.split(",") if e.strip()] if args.emotions else None
     config = load_config(args.root)
-    engine = real_engines()["qwen3_design"]
-    design_voice(
-        config, args.voice, engine, real_encoder(), args.root / "bakeoff", emotions, args.candidates or CANDIDATES
+    # Refuse a bad voice, emotion or reference before loading any model.
+    design_emotions(
+        config, args.voice, _Lazy(lambda: real_engines()["qwen3_design"]), _Lazy(real_encoder),
+        out=args.out, neutral=args.neutral, emotions=emotions, candidates=candidates,
     )
     return 0
+
+
+class _Lazy:
+    """Builds the real engine or encoder on first use, so a refusal loads nothing."""
+
+    def __init__(self, make):
+        self._make, self._made = make, None
+
+    def __getattr__(self, name):
+        if self._made is None:
+            self._made = self._make()
+        return getattr(self._made, name)
 
 
 def _voice_bakeoff(args) -> int:

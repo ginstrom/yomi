@@ -154,3 +154,47 @@ Exclusions: no clip under `audio/voices/` is committed and no `sources.toml` ent
 - [ ] **Gate G9:** the user's pick per emotion (or a redo instruction) relayed and recorded here; then `done`. Step 16 needs: the picked file per emotion, its seed and similarity, and the pinned revisions and licences recorded above.
 
 ## Execution record
+
+**G1's outcome** (feature record, decision log): configuration (b), Chatterbox Turbo, narrator A, neutral clip `A_0` (`audio/bakeoff/neutral_candidates/A_0.wav`, VoiceDesign seed 7, i.e. `seed + 0`), with sound tags. The orchestrator adapted this step: Turbo takes one reference clip and ignores exaggeration, so G9 is reduced to confirming `A_0`, unless emotion clips measurably help Turbo; the seven emotions are not designed by default.
+
+**Built** (test-first; the new tests seen failing first: `test_voice_design.py` on the missing module, the registry pin test on the provisional `voices.toml`, the two bake-off staleness tests on reused stale designs):
+
+- `tools/audio/yomi_audio/design.py`: `voice design <voice>` in full for a voice of `voices.toml` (`read_voice`, `design_emotions`, `review_sheet`): neutral reference from `--neutral` or `[<voice>.clips].neutral` (refuses naming the file), emotions default to the declared ones but neutral (refuses neutral and undeclared ones), `--candidates` (default 4), seeds `seed…seed+N-1`, the emotion's `EMOTION_MAP` instruction appended, `[voice]` post-processing, similarity to the processed reference, below 0.75 discarded and never written, `<emotion>_<k>.wav`, `neutral.wav`, `design.json`, `review.md` (and "try `--candidates 8`" when none passes). A later run for some emotions replaces only theirs; a new reference drops every earlier candidate. Default out `<root>/.audition/voice-<voice>/`; `--out` for the gate folder. The CLI builds the real engine and encoder lazily, so a refusal loads no model.
+- `cli.py`: `voice design <voice> [--emotions] [--candidates] [--neutral] [--out]`; `--candidates` default `None` → `CANDIDATES` (review-03 #2). The old `voice design <A|B>` CLI is gone; `voice.design_voice` stays for the bake-off.
+- `voice.py` `_designed`: the bake-off reuses a narrator's `designed/` only when its `design.json` has every needed emotion at the requested candidate count (review-03 #3).
+- `audio/voices.toml` final: engine `chatterbox_turbo`, model/revision the MLX pins `tts/models.py` loads (with `upstream` and licence comments), `[narrator.design]` pinned (seed 7), `[narrator.clips]` `neutral = "voices/narrator/neutral.flac"` only, `[narrator.fallback]` qwen3_custom pinned, preset `Ryan`. A pytest holds the pins equal to `PINS`. The clip file does not exist yet; `npm test` passes (no beat voiced, so nothing hashes it).
+- `audio/CLAUDE.md`: "Designing a voice" section; bake-off reuse rule; registry paragraph. Design §5.8.2: smol-toml is BSD-3-Clause, not MIT.
+- Review-03 #1 (ten placeholder WAVs in step 03's record) was already corrected in `77a573a`; nothing to change.
+
+**Pins and licences rechecked 2026-11-14** (HF API `cardData.license`, and the repo head equal to the pin in every case):
+
+| Role | Loaded | Revision | Upstream (revision) | Licence |
+| --- | --- | --- | --- | --- |
+| engine | `mlx-community/chatterbox-turbo-fp16` | `b2d0a13aa7cfff0a06d9acb247ae91c8f19a6d75` | `ResembleAI/chatterbox-turbo` (`749d1c1a46eb10492095d68fbcf55691ccf137cd`) | MIT |
+| design | `mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16` | `7d3824abff87e49756bb0f83fb5411de75d160c4` | `Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign` (`5ecdb67327fd37bb2e042aab12ff7391903235d3`) | Apache-2.0 |
+| fallback | `mlx-community/Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16` | `52f4770fd9726457eae3d3b6aa92047a25a10776` | `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` (`0c0e3051f131929182e2c023b9537f8b1c68adfe`) | Apache-2.0 |
+
+(The mlx-community conversions are tagged Apache-2.0; the upstream licence is relied on.) All allow generated audio in a commercial game.
+
+**Real runs:**
+
+- `uv run --project tools/audio --extra tts yomi-audio voice design narrator --neutral audio/bakeoff/neutral_candidates/A_0.wav --out audio/.audition/15-voice --emotions grave,whisper,triumphant --candidates 2`: exit 0, 74.5 s wall. Cut down from the plan's six emotions × 4 at the orchestrator's direction (Turbo uses no emotion clip). Printed:
+
+  ```
+  grave      0  seed 7  similarity 0.794  -18.0 LUFS-I   9.89 s
+  grave      1  seed 8  similarity 0.865  -18.0 LUFS-I  10.46 s
+  whisper    0  seed 7  similarity 0.818  -18.0 LUFS-I   9.76 s
+  whisper    1  seed 8  similarity 0.833  -18.0 LUFS-I  10.54 s
+  triumphant 0  seed 7  similarity 0.807  -18.0 LUFS-I   9.90 s
+  triumphant 1  seed 8  similarity 0.871  -18.0 LUFS-I  10.20 s
+  ```
+
+  Determinism: `grave_1` and `triumphant_1` (seed 8) match step 03's kept clips of the same seed sample for sample in length, max difference 0.0049 (float noise). The similarities differ from step 03's by up to 0.013 because the reference is now `A_0` processed again (28 samples shorter after the second trim), not the in-memory clip.
+- Does an emotion clip help Turbo? Scratch script (not committed) rendering the bake-off's grave, whisper and triumphant lines with Turbo, seeds 101 and 202, cloning `A_0` or step 03's designed emotion clip of narrator A; 12 renders in 83 s, into `audio/.audition/15-voice/turbo-reference/`. Similarity to `A_0`: from `A_0` 0.917–0.962, from the emotion clip 0.813–0.842 (every pair lower by 0.08–0.14). Length: grave from the grave clip 7.06/7.28 s against 5.58/5.62 s (slower, the only prosodic transfer measured); whisper and triumphant within ±0.5 s. Spectral flatness (breathiness) unchanged for whisper (0.011 against 0.013–0.014), and the designed "whisper" clip itself is voiced (as step 03 noted). A crude autocorrelation pitch tracker gave octave errors, so pitch is not reported. Conclusion: emotion clips cost voice consistency and bring little Turbo can use; recommend keeping `A_0` alone.
+- Every audition file: −18.0 LUFS-I, true peak −1.99 to −1.50 dBTP, 3.3–10.5 s; none silent or clipped.
+
+**Verification:** `uv run --project tools/audio pytest tools/audio/tests`: 229 passed (210 before). `PATH=/opt/homebrew/opt/node@26/bin:$PATH npm test`: 86 files, 1666 tests passed. `npm run sounds:check`: 85 cues and 4 banks up to date, within budget. `npm run narration:export`: 0 jobs. `git status`: nothing under `audio/.audition/`, `audio/bakeoff/` staged.
+
+**Gate G9 (awaiting the user):** listen to `audio/.audition/15-voice/neutral.wav` (`A_0`) and, optionally, the pairs in `turbo-reference/`; `LISTEN.md` there says what to answer. Recommended: keep `A_0` alone.
+
+**For step 16:** commit `A_0` (`audio/bakeoff/neutral_candidates/A_0.wav`, VoiceDesign seed 7, description and reference text as in `voices.toml`, the design pin above) as `audio/voices/narrator/neutral.flac` with its `sources.toml` entry; the pins and licences are in the table above; Turbo's render takes `[narrator.clips].neutral` for every emotion.

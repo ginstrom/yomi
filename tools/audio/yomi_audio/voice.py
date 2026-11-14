@@ -1,13 +1,14 @@
 """Narration: designing voices and the listening test (design §5.8.3, §5.8.6).
 
-`voice design <narrator>` (minimal, step 03): Qwen3-TTS VoiceDesign reads the
-narrator's `reference_text` from its description with seeds `seed` to
-`seed + N - 1`, which are the neutral candidates; candidate 0 is the neutral
-clip. For each other emotion it reads the same text, from the same
+`design_voice` designs one of the bake-off's narrators: Qwen3-TTS VoiceDesign
+reads the narrator's `reference_text` from its description with seeds `seed`
+to `seed + N - 1`, which are the neutral candidates; candidate 0 is the
+neutral clip. For each other emotion it reads the same text, from the same
 description and seeds, with the emotion's instruction appended; each
 candidate's speaker similarity to the neutral clip is measured, those below
 0.75 are discarded and the most similar is kept (or, with none above, the
-best, flagged). Step 15 replaces the automatic pick with the user's.
+best, flagged). `voice design <voice>` (design.py) designs candidates for a
+voice of `voices.toml` for the author to pick instead.
 
 `voice bakeoff` designs narrators A and B (unless `bakeoff/designed/` holds
 them), renders the eight lines in four configurations (32 clips), shuffles
@@ -285,7 +286,12 @@ def _designed(out: Path, narrator: str, emotions: list[str], candidates: int) ->
     ]
     if not record.exists() or not all(f.exists() for f in files):
         return None
-    return DesignResult.from_json(json.loads(record.read_text(encoding="utf-8")))
+    result = DesignResult.from_json(json.loads(record.read_text(encoding="utf-8")))
+    # A design of fewer emotions or other candidates since leaves clips its record does not vouch for.
+    for emotion in emotions:
+        if emotion != "neutral" and len(result.similarities.get(emotion, [])) != candidates:
+            return None
+    return result
 
 
 def _render_job(job: BakeoffJob, out: Path) -> RenderJob:

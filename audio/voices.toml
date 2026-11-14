@@ -1,20 +1,35 @@
-# The voice registry (design §5.8.2). Provisional: gate G1 chose narrator A on
-# Chatterbox Turbo with `A_0` as its only reference clip; step 15 pins the
-# revisions and writes `[narrator.clips]`. Turbo takes one reference clip and
-# ignores exaggeration, so emotion comes from a line's wording and nonverbal
-# tags such as [sigh]; the emotion vocabulary stays so lines keep their intent.
+# The voice registry (design §5.8.2). Gate G1 chose narrator A on Chatterbox
+# Turbo, configuration (b), with the neutral clip `A_0` (Qwen3-TTS
+# VoiceDesign, seed 7) as its only reference clip. Turbo takes one reference
+# clip and ignores exaggeration, so emotion comes from a line's wording and
+# nonverbal tags such as [sigh]; the emotion vocabulary stays so lines keep
+# their intent (and so the fallback engine can word it). Models are the MLX
+# conversions the engines load (tools/audio/yomi_audio/tts/models.py), each
+# pinned to a commit; `upstream` is the model whose card states the licence.
 adapter_version = 1
 
 [narrator]
 engine = "chatterbox_turbo"
-model = "ResembleAI/chatterbox-turbo"   # provisional; pinned at adoption (step 15)
-revision = "unpinned"
+model = "mlx-community/chatterbox-turbo-fp16"
+revision = "b2d0a13aa7cfff0a06d9acb247ae91c8f19a6d75"
+upstream = "ResembleAI/chatterbox-turbo@749d1c1a46eb10492095d68fbcf55691ccf137cd"   # MIT
 emotions = ["neutral", "warm", "grave", "tense", "sad", "triumphant", "whisper"]
 params = { temperature = 0.8 }
 
-[narrator.design]
-model = "Qwen/Qwen3-TTS-VoiceDesign"    # provisional; exact id pinned in step 15
-revision = "unpinned"
+[narrator.design]                    # how the reference clip was made
+model = "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16"
+revision = "7d3824abff87e49756bb0f83fb5411de75d160c4"
+upstream = "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign@5ecdb67327fd37bb2e042aab12ff7391903235d3"   # Apache-2.0
 description = "A weathered storyteller in his fifties: low, warm, slightly gravelled, unhurried; neutral British accent; close and dry, no room."
 reference_text = "The old road winds north past the quiet village and over the bridge. Judge for yourself whether the thick smoke rising there means a hearth, or a warning."
-seed = 7
+seed = 7                             # A_0: the neutral clip is the design's first seed
+
+[narrator.clips]                     # Turbo clones the neutral clip for every emotion
+neutral = "voices/narrator/neutral.flac"   # committed in step 16 (from A_0)
+
+[narrator.fallback]
+engine = "qwen3_custom"
+model = "mlx-community/Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16"
+revision = "52f4770fd9726457eae3d3b6aa92047a25a10776"
+upstream = "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice@0c0e3051f131929182e2c023b9537f8b1c68adfe"   # Apache-2.0
+preset = "Ryan"                      # the bake-off's (c): the English-native male speaker nearest A

@@ -253,10 +253,25 @@ def test_bakeoff_flags_a_weak_design_in_the_score_sheet(project):
     assert "A warm" in header
 
 
-def test_cli_names_an_unknown_narrator(project):
-    from conftest import run_cli
+def test_bakeoff_designs_a_narrator_again_when_its_record_lacks_an_emotion(project):
+    config = load_config(project)
+    out = bakeoff(config, fake_engines(), FakeEncoder(), echo=lambda *_: None)
+    # A later design of one emotion leaves design.json without the others, though their clips remain.
+    design_voice(config, "A", FakeDesign(), FakeEncoder(), out, emotions=["neutral", "warm"], echo=lambda *_: None)
+    engines = fake_engines()
+    bakeoff(config, engines, FakeEncoder(), echo=lambda *_: None)
+    designs = engines["qwen3_design"].designs
+    assert len(designs) == 4 * 7  # A designed again in full, B reused
+    assert {d[0] for d in designs} == {NARRATORS["A"].description}
+    record = json.loads((out / "designed" / "A" / "design.json").read_text())
+    assert sorted(record["similarities"]) == sorted(["warm", "grave", "tense", "triumphant", "sad", "whisper"])
 
-    result = run_cli("voice", "design", "C", "--root", str(project))
-    assert result.returncode == 1
-    assert "unknown narrator 'C'" in result.stderr
-    assert "Traceback" not in result.stderr
+
+def test_bakeoff_designs_a_narrator_again_when_its_record_has_other_candidates(project):
+    config = load_config(project)
+    out = bakeoff(config, fake_engines(), FakeEncoder(), echo=lambda *_: None)
+    emotions = ["neutral", "warm", "grave", "tense", "triumphant", "sad", "whisper"]
+    design_voice(config, "B", FakeDesign(), FakeEncoder(), out, emotions=emotions, candidates=2, echo=lambda *_: None)
+    engines = fake_engines()
+    bakeoff(config, engines, FakeEncoder(), echo=lambda *_: None)
+    assert {d[0] for d in engines["qwen3_design"].designs} == {NARRATORS["B"].description}

@@ -261,16 +261,55 @@ commands (and `sounds:check`) never install them:
   configurations, blind), `key.json` (do not show it to the listener before
   scoring), `score.md`, `neutral_candidates/` and `designed/` (the clips
   cloned from, with each narrator's `design.json` of similarities). It reuses
-  `designed/` unless given `--redesign`. `voice design <A|B>` designs one
-  narrator alone. The narrators, the reference text, the lines and the
-  configurations are constants in `yomi_audio/voice.py`.
+  a narrator's `designed/` only while its `design.json` covers every emotion
+  at the same candidate count, and with `--redesign` never. The bake-off's
+  narrators, reference text, lines and configurations are constants in
+  `yomi_audio/voice.py`.
 - Every clip goes through `audio.toml`'s `[voice]` chain (`voice.postprocess`).
+
+## Designing a voice
+
+`uv run --project tools/audio --extra tts yomi-audio voice design <voice>
+[--emotions E,...] [--candidates N] [--neutral WAV] [--out DIR]`
+(`yomi_audio/design.py`) makes emotion reference-clip candidates for a voice
+of `voices.toml`, for the author to pick **by ear**:
+
+- The reference is the voice's neutral clip: `--neutral`, else the file its
+  `[<voice>.clips].neutral` names (`voices/<voice>/neutral.flac`); without one
+  it refuses, naming the file.
+- For each emotion (default every one the voice declares but neutral),
+  Qwen3-TTS VoiceDesign reads `[<voice>.design].reference_text` from its
+  `description` with the emotion's instruction (`EMOTION_MAP`) appended,
+  seeds `seed` to `seed + N - 1` (N default 4), each through the `[voice]`
+  chain.
+- Each candidate's speaker similarity to the reference (cosine of
+  Chatterbox's voice-encoder embeddings) is printed; one below **0.75** is
+  another voice and is discarded, never written. The rest go to
+  `<out>/<emotion>_<k>.wav` (default `<out>` `.audition/voice-<voice>/`, which
+  is gitignored) beside `neutral.wav`, `design.json` and `review.md` (a
+  table per emotion: candidate, seed, similarity, loudness, length; and how
+  to answer). An emotion with no candidate left says to try
+  `--candidates 8`. A later run for some emotions replaces only theirs; a new
+  reference drops them all.
+- Renders are reproducible for a seed and the pinned revision to within
+  float noise (step 15 measured at most 0.005 sample difference against
+  step 03's renders of the same seeds).
+- The picks are committed by hand as `voices/<voice>/<emotion>.flac`, each
+  with a `sources.toml` entry (licence `own`, `design = {...}` provenance),
+  and listed in `[<voice>.clips]`. Chatterbox (`chatterbox`) clones the
+  line's emotion clip; **Chatterbox Turbo**, the narrator's engine, clones
+  only the neutral clip, so the narrator lists `neutral` alone (step 15
+  measured Turbo cloning an emotion clip: the voice drifted, similarity to
+  `A_0` 0.81 to 0.84 against 0.92 to 0.96, and only the pace followed).
+- A new fixed character is a new table in `voices.toml` (engine, pinned
+  model, emotions, `design`, `clips`, `fallback`), its clips, and beats
+  naming it; `VoiceId` in `src/story/narration.ts` grows with it.
 
 ## Narration data
 
 A line is voiced by fields on a cutscene beat in `src/story/cutscenes.ts`: `line` (id, `[a-z0-9_.]+`, unique), `voice`, and optionally `emotion`, `intensity` (0 to 1), `spoken` (what is said when the shown text cannot be; never displayed, so nonverbal tags like `[sigh]` go only here) and `take` (bump to re-render with a new seed). The rules (`narrationProblems` in `src/story/narration.ts`, enforced by vitest): no duplicate ids, a voice for every line, no leader (speaker or portrait) and no `{…}` template in what is spoken, only known tags and only for a tag engine (`chatterbox_turbo`), an emotion the voice lists, intensity and take in range, nothing empty. Tutorial tips are not voiced.
 
-`audio/voices.toml` is the voice registry (`readVoices`); it is provisional until step 15 pins revisions and writes `[narrator.clips]` (narrator A on Chatterbox Turbo, `A_0` its only reference clip, gate G1). `npm run narration:export` (`scripts/narration.ts`) refuses a broken beat and writes the gitignored `audio/narration.jobs.json` (a job per voiced line with its seed and input hash, `lineHash`) for `voice render` (step 16), which writes the committed `audio/voice.manifest.json`. `npm test` fails when a voiced line's hash differs from the manifest's or its `.opus`/`.mp3` is missing in `public/assets/voice/`, so a new voiced line is fields on a beat plus a render.
+`audio/voices.toml` is the voice registry (`readVoices`, and `design.read_voice` in the tool): narrator A on Chatterbox Turbo (gate G1), each model pinned to the commit `tts/models.py` loads (a pytest holds them equal), `[narrator.clips]` naming only the neutral clip (`A_0`, committed by step 16). `npm run narration:export` (`scripts/narration.ts`) refuses a broken beat and writes the gitignored `audio/narration.jobs.json` (a job per voiced line with its seed and input hash, `lineHash`) for `voice render` (step 16), which writes the committed `audio/voice.manifest.json`. `npm test` fails when a voiced line's hash differs from the manifest's or its `.opus`/`.mp3` is missing in `public/assets/voice/`, so a new voiced line is fields on a beat plus a render.
 
 ## Sourcing
 
