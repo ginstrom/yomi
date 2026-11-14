@@ -31,6 +31,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 | Tutorial tips unvoiced in v1 | user | voice them now | same mechanism can add them later |
 | Stings from Kenney Music Jingles for now; narrator's gender chosen in the bake-off | orchestrator | | design defaults |
 | Short cues (shorter than the 400 ms LUFS-M window, e.g. `ui.click`): normalisation gain is the lesser of the loudness-target gain and the gain that meets the group's true-peak ceiling, so the ceiling always holds; recipes may also lengthen or densify UI sounds | orchestrator | raise the `ui` ceiling; change the `ui` target | step 01 found `ui.click` as designed needs ~−0.3 dBTP to hit −26 LUFS-M; the ceiling is the safety rule, loudness the aim |
+| Peak-limited cues have no loudness floor; content steps make UI and impact sounds denser instead of leaning on the cap. Banks start with 50 ms of silence before the first marker | orchestrator | a floor below target | step 02's recommendation; ceiling is the rule |
 | D6: add a `voice` volume slider; UI sounds stay under Sound FX with their own internal group | orchestrator | separate UI slider | brief's recommendation, splittable later |
 
 ## Open questions
@@ -48,7 +49,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 ## Verification
 
 - 01: opus engineer, opus reviewer, clean in 1 round.
-- 04: sonnet engineer; awaiting gate G2 (28 Freesound files, list in `freesound-wanted.md`, given to the user 2026-11-14); review pending.
+- 04: sonnet engineer; awaiting gate G2 (28 Freesound files, list in `freesound-wanted.md`, given to the user 2026-11-14); sonnet reviewer clean in 1 round.
 - 03: opus engineer, opus reviewer, clean in 1 round; awaiting gate G1 (bake-off clips in `audio/bakeoff/`, given to the user 2026-11-14).
 
 ## Notes carried forward
@@ -58,6 +59,9 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - Step 15: `voice design` with a subset of emotions rewrites `design.json` but `bakeoff` reuses stale clips (review-03 #3); also tidy `cli.py` `--candidates` default (#2) and the WAV count in 03's record (#1: ten placeholders).
 - Step 16: the mlx Chatterbox port adds no PerTh watermark; say so in the voice README. A render needs network on first model load.
 - After G1: copy the outcome and per-configuration means into step 03's execution record and set it `done`.
+- Steps 08–13: `sourcing.md` names some Kenney files loosely (`creak_001` is `creak1`; `knifeSlice`, `drawKnife`, `handleCoins` plain numbers; "Retro Electric Off" is `Retro Charge Electric Off 07_s05`), and a few Freesound cue lists differ between `sourcing.md` and `freesound-wanted.md` (review-04). Check names on disk.
+- After G2: record the outcome in step 04's execution record and set it `done`.
+- Step 09: start `ui.click` from the fixed version in `tools/audio/tests/test_build.py` (the design's example fails the correlation and DC checks). 43 impact variants over 15 cues are peak-limited at −20.6 to −22.6 LUFS against −19 (steps 08, 10).
 - Step 09: every Kenney jingle is ≤1.74 s; `stings.victory` (~3 s) and `stings.defeat` (~3.5 s) need chaining or synthesis.
 - The worktree needed `npm ci` (done in step 01).
 
