@@ -144,3 +144,12 @@ Built by the engineer subagent on 2026-11-14. Path taken: **real lines** (G1 pas
 - **Browser tests** (`e2e/story.test.ts`, 5 new): AC14 (voiced first beat plays, Next cuts it and the leader's beat is silent; Esc; a 404 on the voice files), AC10 (ducked/restored ratio -10 dB within 1 dB; Voice at 0 plays and ducks nothing). The 404 test removes the expected 404 entries from `game.problems`.
 - **Verification**: `npm test` 87 files, 1678 tests passed; `npm run sounds:check` up to date; `npm run test:browser -- e2e/story.test.ts` 9 passed; full browser suite: 12 files, 132 tests passed (528 s, nothing else running).
 - Manual listening check not done (no audio output here).
+
+**Review round 1** (four findings, all fixed; commit "Audio pass step 17: review round 1"):
+
+1. `duck()` hooks: the theme now holds its ramp's tween and its shutdown hook together (`endRamp`), so a new duck, `applyVolumes`, `stopMusic` and the ramp's end each remove the old hook (one hook at most per theme); the hook does nothing unless the theme is still the one it was made for. Tests: one hook after repeated ducks, hook gone when the ramp ends, a stale hook leaves a replaced theme alone.
+2. Last beat's Continue: `stopVoice(fadeMs, on?)` takes an optional scene to run the fade on; `advance` resumes the scene under the story and then fades the line and releases the duck on it, so the 80 ms fade completes. This replaces the earlier "cut at once" deviation. Test: a fade on a second scene's tweens.
+3. `FILE_LOAD_ERROR` handler removed rather than narrowed: Phaser's loader carries on after a failed file and the handler did nothing, so there is nothing to limit; a failed voice file simply leaves its key out of the cache. The e2e 404 test passes.
+4. `create` resets `glow`, `lineTimer` and `ducked`.
+
+Verification: `npm test` 87 files, 1682 tests passed; `npm run test:browser -- e2e/story.test.ts` 9 passed.

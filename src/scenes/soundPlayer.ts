@@ -46,11 +46,28 @@ const LOG_LENGTH = 50
 const variants = newVariantState()
 const limits = newLimitState()
 const log: AudioLogEntry[] = []
-let theme: { key: MusicKey; sound: Sound; ducked: boolean; tween: Phaser.Tweens.Tween | null } | null = null
+interface Theme {
+  key: MusicKey
+  sound: Sound
+  ducked: boolean
+  tween: Phaser.Tweens.Tween | null
+  /** Takes the shutdown hook off the scene the running ramp belongs to. */
+  unhook: (() => void) | null
+}
+
+let theme: Theme | null = null
 let voice: { sound: Sound; scene: Phaser.Scene } | null = null
 let compressor: DynamicsCompressorNode | null = null
 
 const dB = (db: number) => 10 ** (db / 20)
+
+/** Stops the theme's ramp, if any, and the hook that would finish it on a scene's shutdown. */
+function endRamp(held: Theme): void {
+  held.tween?.stop()
+  held.tween = null
+  held.unhook?.()
+  held.unhook = null
+}
 
 function record(entry: AudioLogEntry): void {
   log.push(entry)
@@ -99,7 +116,7 @@ export function startMusic(scene: Phaser.Scene, key: MusicKey): void {
   try {
     const music = scene.sound.add(key, { loop: true, volume: themeVolume(key, false) })
     music.play()
-    theme = { key, sound: music, ducked: false, tween: null }
+    theme = { key, sound: music, ducked: false, tween: null, unhook: null }
   } catch {
     theme = null
   }
@@ -120,7 +137,7 @@ export function resumeMusic(): void {
 /** Stops the theme; given a key, only if that theme is the one playing, so a scene shutting down stops its own and not the next scene's. */
 export function stopMusic(key?: MusicKey): void {
   if (!theme || (key !== undefined && theme.key !== key)) return
-  theme.tween?.stop()
+  endRamp(theme)
   theme.sound.destroy()
   theme = null
 }
@@ -133,8 +150,7 @@ export function musicVolume(): number | null {
 /** After a slider moves, the playing theme and voice line take the new level. */
 export function applyVolumes(): void {
   if (theme) {
-    theme.tween?.stop()
-    theme.tween = null
+    endRamp(theme)
     theme.sound.setVolume(themeVolume(theme.key, theme.ducked))
   }
   if (voice) voice.sound.setVolume(busVolume('voice'))
@@ -143,18 +159,28 @@ export function applyVolumes(): void {
 /** Lowers the theme under a voice line (`DUCK_DB` over `DUCK_ATTACK_MS`), or brings it back (over `DUCK_RELEASE_MS`). */
 export function duck(scene: Phaser.Scene, on: boolean): void {
   if (!theme) return
-  theme.tween?.stop()
-  theme.ducked = on
   const held = theme
+  endRamp(held)
+  held.ducked = on
   const target = themeVolume(held.key, on)
-  const tween = scene.tweens.add({ targets: held.sound, volume: target, duration: on ? DUCK_ATTACK_MS : DUCK_RELEASE_MS })
-  held.tween = tween
   // A scene shut down mid-ramp takes its tweens with it: the theme goes to where the ramp was heading.
-  scene.events.once('shutdown', () => {
-    if (held.tween !== tween) return
-    held.tween = null
+  const onShutdown = () => {
+    if (theme !== held) return
+    endRamp(held)
     held.sound.setVolume(target)
+  }
+  held.tween = scene.tweens.add({
+    targets: held.sound,
+    volume: target,
+    duration: on ? DUCK_ATTACK_MS : DUCK_RELEASE_MS,
+    onComplete: () => {
+      held.tween = null
+      held.unhook?.()
+      held.unhook = null
+    },
   })
+  scene.events.once('shutdown', onShutdown)
+  held.unhook = () => scene.events.off('shutdown', onShutdown)
 }
 
 // ---- voice ----------------------------------------------------------------
@@ -181,10 +207,11 @@ export function playVoice(scene: Phaser.Scene, key: string): boolean {
   return true
 }
 
-/** Stops the line, fading it out over `fadeMs` (at once for 0). */
-export function stopVoice(fadeMs: number): void {
+/** Stops the line, fading it out over `fadeMs` (at once for 0), on `on`'s clock where given, else on the scene that played it. */
+export function stopVoice(fadeMs: number, on?: Phaser.Scene): void {
   if (!voice) return
-  const { sound, scene } = voice
+  const { sound } = voice
+  const scene = on ?? voice.scene
   voice = null
   if (fadeMs <= 0) {
     sound.destroy()

@@ -261,6 +261,47 @@ describe('voice edge cases', () => {
   })
 })
 
+describe('review round 1', () => {
+  it('keeps one shutdown hook for the theme’s ramp however often it ducks', () => {
+    const { scene, shutdown } = fakeScene()
+    player.startMusic(scene, 'music_battle')
+    player.duck(scene, true)
+    player.duck(scene, false)
+    player.duck(scene, true)
+    expect(shutdown).toHaveLength(1)
+  })
+
+  it('drops the ramp’s hook when the ramp ends', () => {
+    const { scene, tweens, shutdown } = fakeScene()
+    player.startMusic(scene, 'music_battle')
+    player.duck(scene, true)
+    tweens[0].onComplete?.()
+    expect(shutdown).toHaveLength(0)
+  })
+
+  it('leaves a replaced theme alone when the old ramp’s scene shuts down', () => {
+    const { scene, added, shutdown } = fakeScene()
+    player.startMusic(scene, 'music_battle')
+    player.duck(scene, true)
+    const stale = [...shutdown]
+    player.stopMusic()
+    player.startMusic(scene, 'music_world_map')
+    const level = added[1].volume
+    stale.forEach((fn) => fn())
+    expect(added[1].volume).toBe(level)
+    expect(shutdown).toHaveLength(0)
+  })
+
+  it('fades a line on the scene it is given, which can outlive the one that played it', () => {
+    const first = fakeScene()
+    const second = fakeScene()
+    player.playVoice(first.scene, 'voice_intro.opening')
+    player.stopVoice(80, second.scene)
+    expect(first.tweens).toHaveLength(0)
+    expect(second.tweens[0]).toMatchObject({ targets: first.added[0], volume: 0, duration: 80 })
+  })
+})
+
 describe('installLimiter', () => {
   it('puts a compressor between the master gain and the destination', () => {
     const param = () => ({ value: 0 })

@@ -107,14 +107,13 @@ export class StoryScene extends Phaser.Scene {
 
   preload(): void {
     PartyColumn.preload(this)
-    this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, () => {})
     const data = this.sys.settings.data as StoryData | undefined
     for (const item of data?.items ?? []) {
       if (item.kind !== 'cutscene') continue
       for (const { backdrop } of CUTSCENES[item.id].beats as CutsceneBeat[]) {
         if (backdrop) this.load.image(backdropKey(backdrop), `assets/cutscenes/${backdrop}.png`)
       }
-      // A line that fails to load is silence: the loader's error is ignored and the beat plays without it.
+      // A line that fails to load is silence: the cache lacks its key and the beat plays without it.
       for (const line of linesOf(CUTSCENES[item.id])) {
         if (!this.cache.audio.exists(voiceKey(line))) this.load.audio(voiceKey(line), voiceFiles(line))
       }
@@ -129,6 +128,9 @@ export class StoryScene extends Phaser.Scene {
     this.anchors = data.anchors ?? {}
     this.index = 0
     this.beat = 0
+    this.glow = null
+    this.lineTimer = null
+    this.ducked = false
     // Interactive, so nothing under the story takes a click; in a cutscene a click anywhere goes on.
     this.shade = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.7).setOrigin(0).setInteractive()
     this.shade.on('pointerdown', () => {
@@ -204,11 +206,11 @@ export class StoryScene extends Phaser.Scene {
     })
   }
 
-  /** Cuts any line, with a fade, and cancels one waiting to start; the duck is released on `scene`'s clock. */
+  /** Cuts any line, with a fade, and cancels one waiting to start; the fade and the duck's release run on `scene`'s clock. */
   private stopLine(fadeMs: number, scene: Phaser.Scene = this): void {
     this.lineTimer?.remove(false)
     this.lineTimer = null
-    stopVoice(fadeMs)
+    stopVoice(fadeMs, scene)
     if (this.ducked) {
       this.ducked = false
       duck(scene, false)
@@ -356,7 +358,8 @@ export class StoryScene extends Phaser.Scene {
   }
 
   private advance(): void {
-    this.stopLine(CUT_FADE_MS)
+    const last = this.index + 1 >= this.items.length
+    if (!last) this.stopLine(CUT_FADE_MS)
     this.index++
     this.beat = 0
     if (this.index < this.items.length) {
@@ -366,6 +369,8 @@ export class StoryScene extends Phaser.Scene {
     }
     this.scene.stop()
     this.scene.resume(this.resumeKey)
+    // The fade and the duck's release run on the scene resumed, which outlives this one.
+    this.stopLine(CUT_FADE_MS, this.scene.get(this.resumeKey))
   }
 
   /** Turns the tutorial off for this game, and drops the tips still waiting; the menu's options turn it back on. */
