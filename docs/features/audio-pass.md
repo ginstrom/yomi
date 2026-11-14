@@ -67,6 +67,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - 14: sonnet engineer, sonnet reviewer, clean in 1 round (tidy-ups: `lineSeed` literal test, lockfile order, smol-toml licence).
 - 15: opus engineer, opus reviewer, clean in 1 round (three tidy-ups, `70a21c2`); G9 pending. Emotion clips tested: they lower speaker similarity (0.81–0.84 vs 0.92–0.96) and carry only pace.
 - 16: sonnet engineer, sonnet reviewer, clean in 1 round (wording tidy-ups, `a467c74`); G10 pending. No heteronyms in the two shipped lines; no PerTh in the mlx port (grep only).
+- 17: sonnet engineer, sonnet reviewer, clean in round 2 (round 1: duck hooks, last-beat fade, load-error handler; `b97a568`). Full browser suite last run green before round 1.
 - 03: opus engineer, opus reviewer, clean in 1 round; G1 passed 2026-11-14 (b/A, `A_0`); records updated by the step 07 engineer.
 
 ## Notes carried forward
@@ -75,8 +76,6 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - Step 02 (and 09): apply the short-cue normalisation rule above; `hit.slash` over stand-in sources peaked +4.4 dBTP, the same rule catches it.
 - Any later voiced line: check heteronyms (the user heard "winds" misread) and respell in `spoken`; rule is in `audio/CLAUDE.md`.
 - Steps 08–13: `sourcing.md` names some Kenney files loosely (`creak_001` is `creak1`; `knifeSlice`, `drawKnife`, `handleCoins` plain numbers; "Retro Electric Off" is `Retro Charge Electric Off 07_s05`), and a few Freesound cue lists differ between `sourcing.md` and `freesound-wanted.md` (review-04). Check names on disk.
-- Step 17: `stopVoice`'s fade tweens on the starting scene; if it shuts down mid-fade the sound is never destroyed (review-05 #3) — destroy on shutdown or tween elsewhere.
-- Step 17: reuse step 05's duck constants in `soundPlayer.ts`, don't define new ones.
 - G11: music now plays at −24 LUFS (battle 4.0 dB, world 1.7 dB louder than before); judge by ear.
 - Merging with `skill-trees`: a new main-hand weapon icon fails step 06's coverage test until it gets a `WEAPON_SOUNDS` entry (intended); new spells sound by element/school automatically.
 - `yomi-audio source remove` exists since step 09.
