@@ -163,3 +163,5 @@ Built by the engineer subagent on 2026-11-14, adapted to G1 and G9 (Chatterbox T
 2. Deviation from plan item 9: the README says the mlx port adds no PerTh watermark, where the plan said Chatterbox output carries one. Evidence: a grep (case-insensitive, perth or watermark) of mlx-audio 0.6.5's `tts/models/chatterbox*` finds nothing, and the original `chatterbox` package does watermark. This is the absence of code, not a detector test; the README says so.
 3. Design §5.8.5's manifest example now reads `chatterbox_turbo@<rev>`.
 4. Step left `awaiting review` (G10).
+
+- **G10 passed 2026-11-14** (user: "fantastic sounding"): the two rendered narration lines, `intro.opening` and `source.sighted`, are accepted as shipped.

@@ -115,3 +115,5 @@ Run 2026-11-14 on branch `audio-pass`.
 5. Fold in the pending listening: G10 (`audio/.audition/16-render/`), G4 to G8 from the playtest, and whether Fireball (`battle.impact.fireball`) is quiet.
 
 Verdict: pending. Step `awaiting review`.
+
+**G11 passed 2026-11-14** (user: "plays fine"). The same playtest closes G4 to G8 (the batch reviews of steps 09 to 13), and the fireball (`battle.impact.fireball`) is accepted as it is: `gainDb` unchanged.
