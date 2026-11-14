@@ -5,12 +5,25 @@ import { PERKS, PERK_IDS, describePerkRequirements, perkParent, type Perk } from
 import { newDraft, type CharacterDraft } from '../character/creation.ts'
 import { TREE_IDS, pathsOf } from '../character/trees.ts'
 import {
+  KIND_LEGEND,
+  LEGEND_Y,
+  NODE_H,
+  NODE_W,
   STRIP_CHARS,
   STRIP_HINT_LINES,
+  TREE_COLUMN_W,
   TREE_ROWS,
   TREE_STRIP_Y,
+  TREE_TAB_Y,
+  TREE_W,
   TREE_X,
+  TREE_Y,
+  bandRects,
   clampLines,
+  columnX,
+  legendLayout,
+  linkTone,
+  treeLinks,
   costWords,
   draftNodeClickable,
   draftNodeHint,
@@ -99,13 +112,112 @@ describe('treeLayout', () => {
     for (const tree of TREE_IDS) {
       for (const node of treeLayout(tree)) {
         const { x, y, width, height } = nodeRect(node)
-        expect(x).toBe(TREE_X + node.column * 226)
-        expect(width).toBe(214)
-        expect(x + width).toBeLessThanOrEqual(720)
+        expect(x).toBe(TREE_X + node.column * TREE_COLUMN_W + 12)
+        expect(width).toBe(196)
+        expect(x).toBeGreaterThanOrEqual(columnX(node.column) + 10)
+        expect(x + width).toBeLessThanOrEqual(TREE_W)
         expect(y + height).toBeLessThan(TREE_STRIP_Y)
       }
     }
     expect(TREE_STRIP_Y + 64).toBeLessThanOrEqual(500)
+    // The lanes right of the last column stay inside the panel too.
+    expect(TREE_W + 4 + 2 * 5).toBeLessThan(720 - 8)
+  })
+})
+
+describe('bandRects', () => {
+  it('runs each tier band from over its first row to over the next, the last to under the last row, without gaps', () => {
+    for (const tree of TREE_IDS) {
+      const bands = bandRects(tree)
+      expect(bands.map(({ label }) => label)).toEqual(tierBands(tree).map(({ label }) => label))
+      bands.slice(1).forEach((band, i) => expect(band.y).toBe(bands[i].y + bands[i].height))
+      for (const node of treeLayout(tree)) {
+        const { y } = nodeRect(node)
+        const band = bands.find((b) => b.tier === (PERKS[node.perk] as Perk).tier)!
+        expect(y).toBeGreaterThanOrEqual(band.y)
+        expect(y + NODE_H).toBeLessThanOrEqual(band.y + band.height)
+      }
+      const last = bands[bands.length - 1]
+      expect(last.y + last.height).toBeLessThan(TREE_STRIP_Y)
+    }
+  })
+})
+
+describe('treeLinks', () => {
+  const inside = (p: { x: number; y: number }, r: ReturnType<typeof nodeRect>) => p.x > r.x && p.x < r.x + r.width && p.y > r.y && p.y < r.y + r.height
+
+  it('runs a trunk down each column, under the heading and into every node of the path in turn', () => {
+    for (const tree of TREE_IDS) {
+      const nodes = treeLayout(tree)
+      const trunks = treeLinks(tree).filter((link) => link.kind === 'trunk')
+      expect(trunks.map((link) => link.to).sort()).toEqual(nodes.map((node) => node.perk).sort())
+      for (const link of trunks) {
+        const node = nodes.find((n) => n.perk === link.to)!
+        const rect = nodeRect(node)
+        const [start, bend, end] = link.points
+        // Down the gutter, then right into the node's left edge at its middle.
+        expect(start.x).toBe(bend.x)
+        expect(bend.x).toBeGreaterThan(columnX(node.column))
+        expect(bend.x).toBeLessThan(rect.x)
+        expect(end).toEqual({ x: rect.x, y: rect.y + NODE_H / 2 })
+        expect(start.y).toBeGreaterThanOrEqual(TREE_Y + 20)
+      }
+      // Each stretch begins where the one before it in the column ended.
+      for (let column = 0; column < 3; column++) {
+        const stretch = trunks.filter((link) => nodes.find((n) => n.perk === link.to)!.column === column)
+        stretch.slice(1).forEach((link, i) => expect(link.points[0].y).toBe(stretch[i].points[1].y))
+      }
+    }
+  })
+
+  it('hangs a node from the node it requires by a bracket on the right, crossing no node', () => {
+    const links = treeLinks('mage').filter((link) => link.kind === 'requires')
+    expect(links.map((link) => link.to).sort()).toEqual(['acid_arrow', 'fireball', 'flame_arrow', 'frost_blast'])
+    for (const tree of TREE_IDS) {
+      const nodes = treeLayout(tree)
+      for (const link of treeLinks(tree).filter((l) => l.kind === 'requires')) {
+        const node = nodes.find((n) => n.perk === link.to)!
+        const parent = nodes.find((n) => n.perk === perkParent(link.to))!
+        const [start, , , end] = link.points
+        expect(start).toEqual({ x: nodeRect(parent).x + NODE_W, y: nodeRect(parent).y + NODE_H / 2 })
+        expect(end).toEqual({ x: nodeRect(node).x + NODE_W, y: nodeRect(node).y + NODE_H / 2 })
+        // The lane lies between this column's nodes and the next column's trunk.
+        const lane = link.points[1].x
+        expect(lane).toBeGreaterThan(nodeRect(node).x + NODE_W)
+        expect(lane).toBeLessThan(columnX(node.column + 1) + 5 - 4)
+        for (const other of nodes) for (const point of link.points) expect(inside(point, nodeRect(other))).toBe(false)
+      }
+    }
+  })
+
+  it('gives brackets of different parents whose rows meet lanes of their own', () => {
+    // Heal's bracket reaches down to Heal All, from which Greater Heal All hangs.
+    const links = treeLinks('cleric').filter((link) => link.kind === 'requires')
+    const lane = (perk: string) => links.find((link) => link.to === perk)!.points[1].x
+    expect(lane('greater_heal')).toBe(lane('heal_all'))
+    expect(lane('greater_heal_all')).not.toBe(lane('heal_all'))
+  })
+})
+
+describe('linkTone', () => {
+  it('lights a line into a node taken, brightens one into a node open, and dims the rest', () => {
+    expect(linkTone('taken')).toBe('lit')
+    expect(linkTone('open')).toBe('open')
+    expect(linkTone('closed')).toBe('dim')
+    expect(linkTone('locked')).toBe('dim')
+  })
+})
+
+describe('legendLayout', () => {
+  it('names the four kinds in a row between the tabs and the headings, inside the tree', () => {
+    const entries = legendLayout()
+    expect(entries.map(({ kind }) => kind)).toEqual(KIND_LEGEND.map(({ kind }) => kind))
+    expect(new Set(entries.map(({ kind }) => kind)).size).toBe(4)
+    entries.slice(1).forEach((entry, i) => expect(entry.x).toBeGreaterThan(entries[i].right))
+    expect(entries[0].x).toBe(TREE_X)
+    expect(entries[entries.length - 1].right).toBeLessThan(TREE_W / 2)
+    expect(LEGEND_Y - 5).toBeGreaterThanOrEqual(TREE_TAB_Y + 11 + 3)
+    expect(LEGEND_Y + 5).toBeLessThanOrEqual(TREE_Y + 6)
   })
 })
 

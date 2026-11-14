@@ -82,11 +82,11 @@ An untrained skill sits near 10%, and against an armoured foe that becomes the m
 
 You have **3 picks**, and one more comes with every even level. There are four skill trees, **Warrior**, **Scout**, **Mage** and **Cleric**, each with a tab at the top left (or press 1 to 4), and each tree has three paths, one to a column. Any hero may take nodes from any path of any tree. A spell is a node like any other, bought with a pick.
 
-At creation only the first tier (marked **L1** in the left margin) can be taken: click an open node to take it and click it again to give it back. The tiers below ask a higher level (L2, L6, L12) and nodes already held in the same path; the number beside each path's name is how many of its nodes the hero holds, in gold for the deepest. The bottom of the tree is a **capstone** (★, in a double gold frame): only the hero's deepest path may open its capstone, and a hero may hold only one. A line between two nodes means the upper one must be taken first.
+At creation only the first tier (marked **L1** in the left margin) can be taken: click an open node to take it and click it again to give it back. The tiers below ask a higher level (L2, L6, L12) and nodes already held in the same path; the number beside each path's name is how many of its nodes the hero holds, in gold for the deepest. The bottom of the tree is a **capstone** (★, haloed in a double gold frame): only the hero's deepest path may open its capstone, and a hero may hold only one. A line runs down each path's left side through its nodes, top to bottom, and a bracket on a node's right side, ending in an arrowhead, means the node above it must be taken first. Lines are gold into nodes taken, pale into nodes you can take now and dark into nodes still closed.
 
 ![The Mage tree in creation](images/creation-spells.png)
 
-The coloured stripe on a node's left edge says what it is: dim gold for a passive, blue for a spell. Point at a node to read, under the tree, what it does (with a spell's mana and action points), what it asks, and why it is closed.
+The coloured tab on a node's left edge says what it is, as the legend under the tree tabs shows: a dim gold disc for a passive, an amber blade for an ability used at will, a violet diamond for an ability that costs mana, and a blue star for a spell. Point at a node to read, under the tree, what it does (with a spell's mana and action points), what it asks, and why it is closed.
 
 If a change you make leaves a perk you already took without its requirements, that perk is dropped and its pick returned, and the screen says so.
 
@@ -428,7 +428,7 @@ Web and Curse, once only monsters cast them, are nodes in the Cryomancer and Sai
 
 ### Lasting effects
 
-The letters beside a unit's health bar show its current effects. An effect lasts for that unit's own turns. Casting the same effect again keeps whichever duration is longer, and different effects stack.
+The coloured letters over a unit's name show its current effects. An effect lasts for that unit's own turns. Casting the same effect again keeps whichever duration is longer, and different effects stack.
 
 | Effect | What it does |
 | --- | --- |

@@ -91,6 +91,7 @@ import { storyFor, type StoryItem } from '../story/story.ts'
 import { eventSounds, type SoundKey } from './sounds.ts'
 import { describeStatuses, skillDescription, skillMenuRows, skillName, targetingHint, usesSkill, type Skill, type SkillMenuRow } from './skillMenu.ts'
 import type { DebugSource } from './debugCommands.ts'
+import { STATUS_MARK_FONT_PX, STATUS_MARK_LIFT, STATUS_MARK_STROKE_PX, statusMarkLayout } from './statusMarks.ts'
 
 interface BattleData {
   game?: GameState
@@ -301,6 +302,8 @@ export class BattleScene extends Phaser.Scene {
   private unitLayer!: Phaser.GameObjects.Container
   /** Units' nameplates, drawn above every unit so none is hidden behind a sprite. */
   private plateLayer!: Phaser.GameObjects.Container
+  /** Units' status letters, over every nameplate so that a neighbour's plate never hides them. */
+  private markLayer!: Phaser.GameObjects.Container
   /** Hit-chance labels on attackable foes, drawn above the nameplates. */
   private labelLayer!: Phaser.GameObjects.Container
   /** The floating text of on-hit damage, apart from the labels so that redrawing the highlights leaves it be. */
@@ -396,6 +399,7 @@ export class BattleScene extends Phaser.Scene {
     this.floorLayer.add(this.groundMarks)
     this.unitLayer = this.add.container(0, 0)
     this.plateLayer = this.add.container(0, 0)
+    this.markLayer = this.add.container(0, 0)
     this.units = new Map(fielded.map((u, i) => [u.id, this.createUnit(u.name, kinds[u.id], i * IDLE_STAGGER_MS)]))
     this.refreshGear()
     this.labelLayer = this.add.container(0, 0)
@@ -544,6 +548,7 @@ export class BattleScene extends Phaser.Scene {
     const unit = this.units.get(id)!
     unit.figure.stop().clearOutline().setFigureAlpha(0.4)
     unit.plate.setVisible(false)
+    unit.statusMarks.setVisible(false)
   }
 
   /** What the in-browser tests see of the battle; see testHook.ts. */
@@ -786,9 +791,11 @@ export class BattleScene extends Phaser.Scene {
       .fillTriangle(6, 0, -4, -5, -4, 5)
       .strokeTriangle(6, 0, -4, -5, -4, 5)
     const apPips = this.add.graphics()
-    const statusMarks = this.add.container(PLATE_BAR_W / 2 + 4, PLATE_BAR_Y + PLATE_BAR_H / 2)
-    const plate = this.add.container(0, 0, [nameText, hpBarBg, hpBarFill, hpText, facingArrow, apPips, statusMarks])
+    const plate = this.add.container(0, 0, [nameText, hpBarBg, hpBarFill, hpText, facingArrow, apPips])
     this.plateLayer.add(plate)
+    // The status letters, over the name (statusMarks.ts), in a layer of their own over every plate; placed and moved with the plate.
+    const statusMarks = this.add.container(0, 0)
+    this.markLayer.add(statusMarks)
 
     return { container, figure, plate, hpBarBg, hpBarFill, hpText, facingArrow, apPips, statusMarks, marks: '', shownHp: 0 }
   }
@@ -895,10 +902,11 @@ export class BattleScene extends Phaser.Scene {
     const floorX = freeLeft + (freeW - board.width * scale) / 2
     const floorY = freeTop + (freeH - (bottom - top) * scale) / 2 - top * scale
 
-    for (const layer of [this.floorLayer, this.unitLayer, this.plateLayer, this.labelLayer, this.hoverLabels, this.floatLayer, this.foePanel]) {
+    for (const layer of [this.floorLayer, this.unitLayer, this.plateLayer, this.markLayer, this.labelLayer, this.hoverLabels, this.floatLayer, this.foePanel]) {
       layer.setPosition(floorX, floorY).setScale(scale)
     }
     for (const snapshot of this.engine.getState().units) this.placeUnit(snapshot.id, snapshot.position)
+    this.rescaleStatusMarks()
 
     this.renderLog()
   }
@@ -908,6 +916,7 @@ export class BattleScene extends Phaser.Scene {
     const unit = this.units.get(id)!
     unit.container.setPosition(x, y)
     unit.plate.setPosition(x, y)
+    unit.statusMarks.setPosition(x, y)
     this.sortUnits()
   }
 
@@ -934,24 +943,36 @@ export class BattleScene extends Phaser.Scene {
     unit.shownHp = hp
   }
 
-  /** A letter for each of the unit's statuses, each in its status's colour. */
+  /** A letter for each of the unit's statuses, each in its status's colour, centred over its name at their own size on screen. */
   private refreshStatusMarks(unit: Unit, statuses: readonly ActiveStatus[]): void {
     unit.statusMarks.removeAll(true)
     unit.marks = statuses.map(({ id }) => STATUSES[id].mark).join('')
+    const { scale, xs } = statusMarkLayout(statuses.length, this.plateLayer.scaleX)
     statuses.forEach(({ id }, i) => {
       const { mark, colour } = STATUSES[id]
       const letter = this.add
-        .text(i * 9, 0, mark, {
+        .text(xs[i], PLATE_NAME_Y - STATUS_MARK_LIFT, mark, {
           fontFamily: 'monospace',
-          fontSize: '11px',
+          fontSize: `${STATUS_MARK_FONT_PX}px`,
           fontStyle: 'bold',
           color: cssColour(colour),
           stroke: '#000000',
-          strokeThickness: 3,
+          strokeThickness: STATUS_MARK_STROKE_PX,
         })
-        .setOrigin(0, 0.5)
+        .setOrigin(0.5, 1)
+        .setScale(scale)
       unit.statusMarks.add(letter)
     })
+  }
+
+  /** Keeps every unit's status letters at their own size after the board is scaled anew. */
+  private rescaleStatusMarks(): void {
+    for (const unit of this.units.values()) {
+      const { scale, xs } = statusMarkLayout(unit.statusMarks.length, this.plateLayer.scaleX)
+      unit.statusMarks.each((letter: Phaser.GameObjects.Text) => {
+        letter.setScale(scale).setX(xs[unit.statusMarks.getIndex(letter)])
+      })
+    }
   }
 
   private refreshApPips(unit: Unit, snapshot: UnitSnapshot, phase: Phase): void {
@@ -1550,6 +1571,7 @@ export class BattleScene extends Phaser.Scene {
     const unit = this.units.get(id)!
     unit.figure.setFigureAlpha(1).play('idle')
     unit.plate.setVisible(true)
+    unit.statusMarks.setVisible(true)
   }
 
   /**
@@ -1890,7 +1912,7 @@ export class BattleScene extends Phaser.Scene {
   /** Walks a unit along its path, turning it towards each step as it takes it. */
   private animateMove(id: UnitId, from: Hex, path: readonly Hex[]): void {
     if (path.length === 0) return
-    const { container, plate, figure } = this.units.get(id)!
+    const { container, plate, statusMarks, figure } = this.units.get(id)!
     figure.play('walk')
     // Each step lifts the unit a little and sets it down.
     this.tweens.add({
@@ -1903,7 +1925,7 @@ export class BattleScene extends Phaser.Scene {
       onComplete: () => figure.setY(0),
     })
     this.tweens.chain({
-      targets: [container, plate],
+      targets: [container, plate, statusMarks],
       // A unit cut down on its way stays down.
       onComplete: () => this.standing(id) && figure.play('idle'),
       tweens: path.map((h, i) => ({
