@@ -1,9 +1,7 @@
 # Feature: skill trees and progression
 
 **Slug:** skill-trees
-**Phase:** 4 — implementation (stages 1–3 done; step 24 done and clean at fa49575; step 25 in progress at 49a395a)
-
-**Resume point (usage limit, 2026-11-14):** step 25 has the Horror at 63 hit points (6f9eee8): one party 243, company 243, `--ready-level 10` 445 (band 370–420). User decision: "Much harder Source", chosen knowing the option said one-party and company would drop to about 100 of 500. Next: harden the Source as little as gets `--ready-level 10` into 370–420, aiming near 420. Pick the lever that costs one-party and company least: Horror HP, another guardian, guardian levels or kinds, or Horror damage. Compare at the Source cells for levels 8, 10 and 11 first. Then run the three campaigns. Record one-party and company as the accepted cost and don't win them back. Then do the final cells (SG7, SG10), the guard, the "25 final" column, Verification and the CLAUDE.md figures. After that: step 26, the polish pass, then phase 5.
+**Phase:** 4 — implementation (stages 1–3 done; steps 24 and 25 done; step 26 next)
 
 ## Request (user's words)
 
@@ -157,4 +155,24 @@ AC8, `--ready-level 12`, 500 campaigns (883 s): 473 beat the Source (94.6%), 12 
 The traits have not yet been in play in the simulator: Unbreakable is held in 2851 unit-starts of the `--ready-level 12` log and never saves a hero (0 `endured` events), because heroes holding it win 15 783 of 15 784 threat-5 battles; no hero in these logs holds Deathblow, Counter or Revive (the `traits` of every unit at `battle_start` are Rooted, Guardian, Unbreakable and Deadeye only). Stage 4's parity cells (a level above 8) are where the traits will first show.
 
 Play check (a scripted browser run through the real game, a scratch test since removed): a saved game edited so Aldric holds the knight plan's nine nodes at level 12, debug `hp 1 Aldric`, `fight bandit_camp 5` and the driver's play. The Bandit Captain's hit on Aldric logged `defenderHpBefore: 1`, `defenderHpAfter: 1`, `endured: true`. Meteor was not cast by hand; the engine and the policy are covered by steps 20 and 21's tests.
+
+### Stage 4 (steps 24 and 25, 2026-11-14; seed 1, 500 each; final)
+
+| Figure | Band | Step 01 | Stage 3 | Final (step 25) | |
+| --- | --- | --- | --- | --- | --- |
+| one party (`--parties 1`) | 215–250 | 230 | 449 | **36** | out: accepted by the user, 2026-11-14 ("Much harder Source") |
+| default company | 220–260 | 239 | 449 | **34** | out: accepted likewise |
+| `--ready-level 10` | 370–420 | 389 | 488 | 419 | in |
+| deaths a campaign (one party) | ≤ 2.0 | 1.8 | 0.5 | 0.8 (company 0.8, rl10 1.6) | in |
+| days a campaign (one party) | 243–297 | 270 | 339 | 287 (company 288, rl10 560) | in |
+| GR3 / BC3 / BC4 / BC5 | ≥ 470 / 400–470 / 430–490 / 420–490 | 500 / 429 / 473 / 469 | 500 / 494 / 495 / 488 | 500 / 455 / 462 / 484 | in |
+| SN5 / SP5 / TL5 | 410–480 / 410–480 / report | 441 / 445 / 0 | 500 / 495 / 8 | 448 / 454 / 0 | in |
+| SG7 / SG10 | 0 ± 40 / above 2 | 0 / 2 | 0 / 386 | 0 / **0** | SG7 in; SG10 out, part of the accepted cost |
+| F1 / F2 / F3 | nearly all / most / 7 in 10 | 500 / 499 / 441 | 500 / 500 / 493 | 500 / 500 / 453 | in |
+| run time | near 5 min | 270 s | 272 s | 361 s (company 370 s, `--ready-level 10` 863 s) | |
+
+Path parity (step 24, unchanged by step 25, which touched only the Source): at Bandit Camp threat 4, level 4, every plan within ±50 of its role's best but the Scout's `rogue_archer` (−109) and `assassin` (−62); spread melee 443–475, archery 353–462, magic 472–489. Levels 8 and 12 are far apart (the user accepted that as the three-hero party and the AI's doing; details in step 24's record).
+
+How it got there: step 24 made foes tougher (`FOE_HP_PER_LEVEL` 1.3, bandits in Fine iron from threat 3, a fourth foe at the Spider Nest) and fixed the policy, taking one party from 449 to 268. Step 25 raised the Blight Horror's hit points from 55 to 63 (one party 243, company 243, both in band), but `--ready-level 10` stayed at 445: parties of five at levels 10–11 never lost to the Source. On the user's "Much harder Source", the Horror's claws went from 2d6+2 to 2d6+11, the Source lever that cost the one-party run least of those compared (hit points, damage, piercing, mana, another guardian, guardians' levels); `--ready-level 10` came to 419, and the one-party and company campaigns fell to 36 and 34, lost at the Source (the one party loses 409 of its 445 Source battles). The estimate the user saw was "roughly 100 of 500"; the measured figures, 36 and 34, are well below it, so the cost is higher than the user was told. Details in step 25's record.
+
 

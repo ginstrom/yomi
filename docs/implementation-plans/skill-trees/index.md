@@ -52,7 +52,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | 23 | [Stage 3: simulator lines, measure and document](23-stage3-measure.md) | Deathblows, revives, Unbreakable saves, callings and capstones in the summary; AC8's `--ready-level 12` check; measured; docs current | 21, 22 | sonnet | done (cf53531) |
 | **Stage 4: balance** | | | | | |
 | 24 | [Path parity and the cells](24-parity-and-cells.md) | Every plan within ±50 of its role's best; capstones checked; cells in band | 23 | opus | done (9016146, 3af5c59, 53cdeb0 and the record commit; cells in band, parity gaps at levels 8 and 12 reported) |
-| 25 | [Campaign bands](25-campaign-bands.md) | The three campaigns, deaths and days in band, or the user has accepted the figure (AC11) | 24 | opus | in progress |
+| 25 | [Campaign bands](25-campaign-bands.md) | The three campaigns, deaths and days in band, or the user has accepted the figure (AC11) | 24 | opus | done (6f9eee8, fabb6b8; the user accepted one party 36 and company 34 for a much harder Source) |
 | 26 | [Manual, screenshots and the scaling rules](26-manual-and-scaling.md) | Manual's tree tables; screenshots retaken; CLAUDE.md's rules of scaling restated; final verification | 25 | sonnet | pending |
 
 **Tiers.** "opus" means leave the engineer's model unset (the session's); "sonnet" means `model: "sonnet"`. Opus steps change the engine's rules, the AI policy, the save migration, the economy or the balance, or carry layout judgement (06, 14). Sonnet steps follow fixed contracts and existing patterns, or measure and document. Reviewers: leave the model unset for every step.
@@ -494,16 +494,16 @@ export const MANA_WEIGHT = 0.5
 
 | Figure | 01 baseline | 08 stage 1 | 16 stage 2 | 23 stage 3 | 25 final |
 | --- | --- | --- | --- | --- | --- |
-| one party (`--parties 1`) | 230 of 500 | 425 of 500 | 449 of 500 | 449 of 500 | |
-| default company | 239 of 500 | 425 of 500 | 449 of 500 | 449 of 500 | |
-| `--ready-level 10` | 389 of 500 | 470 of 500 | 488 of 500 | 488 of 500 | |
-| deaths a campaign (one party) | 1.8 | 1.0 | 0.5 | 0.5 | |
-| days a campaign (one party) | 270 | 333 | 339 | 339 | |
-| GR3 / BC3 / BC4 / BC5 | 500 / 429 / 473 / 469 | 500 / 473 / 485 / 482 | 500 / 494 / 495 / 488 | 500 / 494 / 495 / 488 | |
-| SN5 / SP5 / TL5 | 441 / 445 / 0 | 498 / 492 / 0 | 500 / 495 / 8 | 500 / 495 / 8 | |
-| SG7 / SG10 | 0 / 2 | 4 / 199 | 0 / 422 | 0 / 386 | |
-| F1 / F2 / F3 | 500 / 499 / 441 | 500 / 500 / 493 | 500 / 500 / 493 | 500 / 500 / 493 | |
-| 500-campaign run time | 270 s (one party; company 258 s, `--ready-level 10` 517 s) | 329 s (company 352 s, `--ready-level 10` 663 s) | 341 s (company 282 s, `--ready-level 10` 592 s) | 272 s (company 270 s, `--ready-level 10` 580 s, `--ready-level 12` 883 s) | |
+| one party (`--parties 1`) | 230 of 500 | 425 of 500 | 449 of 500 | 449 of 500 | 36 of 500 (user's accepted cost: "Much harder Source") |
+| default company | 239 of 500 | 425 of 500 | 449 of 500 | 449 of 500 | 34 of 500 (likewise) |
+| `--ready-level 10` | 389 of 500 | 470 of 500 | 488 of 500 | 488 of 500 | 419 of 500 |
+| deaths a campaign (one party) | 1.8 | 1.0 | 0.5 | 0.5 | 0.8 |
+| days a campaign (one party) | 270 | 333 | 339 | 339 | 287 |
+| GR3 / BC3 / BC4 / BC5 | 500 / 429 / 473 / 469 | 500 / 473 / 485 / 482 | 500 / 494 / 495 / 488 | 500 / 494 / 495 / 488 | 500 / 455 / 462 / 484 |
+| SN5 / SP5 / TL5 | 441 / 445 / 0 | 498 / 492 / 0 | 500 / 495 / 8 | 500 / 495 / 8 | 448 / 454 / 0 |
+| SG7 / SG10 | 0 / 2 | 4 / 199 | 0 / 422 | 0 / 386 | 0 / 0 |
+| F1 / F2 / F3 | 500 / 499 / 441 | 500 / 500 / 493 | 500 / 500 / 493 | 500 / 500 / 493 | 500 / 500 / 453 |
+| 500-campaign run time | 270 s (one party; company 258 s, `--ready-level 10` 517 s) | 329 s (company 352 s, `--ready-level 10` 663 s) | 341 s (company 282 s, `--ready-level 10` 592 s) | 272 s (company 270 s, `--ready-level 10` 580 s, `--ready-level 12` 883 s) | 361 s (company 370 s, `--ready-level 10` 863 s) |
 
 ## Completion criteria
 
