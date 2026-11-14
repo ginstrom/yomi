@@ -233,3 +233,45 @@ def test_the_narrator_is_pinned_to_the_models_the_engines_load():
     assert fallback["preset"]
     assert narrator["clips"]["neutral"] == "voices/narrator/neutral.flac"
     assert set(narrator["clips"]) <= set(narrator["emotions"])
+
+
+# Review round 1 ----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        ('description = "A weathered storyteller."', 'description = "A younger storyteller."'),
+        ('reference_text = "The old road winds north."', 'reference_text = "The new road winds south."'),
+        ("seed = 7", "seed = 11"),
+        ('revision = "design-rev"', 'revision = "design-rev-2"'),
+    ],
+)
+def test_a_changed_design_drops_every_earlier_candidate(voiced, tmp_path, old, new):
+    neutral = neutral_wav(tmp_path)
+    run(voiced, tmp_path, neutral=neutral, emotions=["grave", "whisper"], candidates=2)
+    path = voiced / "voices.toml"
+    path.write_text(path.read_text().replace(old, new), encoding="utf-8")
+    run(voiced, tmp_path, neutral=neutral, emotions=["grave"], candidates=2)
+    out = tmp_path / "out"
+    assert not list(out.glob("whisper_*.wav"))
+    assert sorted(json.loads((out / "design.json").read_text())["emotions"]) == ["grave"]
+
+
+def test_another_engine_fingerprint_drops_every_earlier_candidate(voiced, tmp_path):
+    class OtherDesign(FakeDesign):
+        def fingerprint(self):
+            return {"engine": "qwen3_design", "revision": "other"}
+
+    neutral = neutral_wav(tmp_path)
+    run(voiced, tmp_path, neutral=neutral, emotions=["grave", "whisper"], candidates=2)
+    run(voiced, tmp_path, neutral=neutral, engine=OtherDesign(), emotions=["grave"], candidates=2)
+    assert not list((tmp_path / "out").glob("whisper_*.wav"))
+
+
+@pytest.mark.parametrize("emotions", ["", ",", " , "])
+def test_cli_refuses_an_empty_emotions_list(voiced, emotions):
+    result = run_cli("voice", "design", "narrator", "--emotions", emotions, "--root", str(voiced))
+    assert result.returncode == 1
+    assert "--emotions" in result.stderr
+    assert "Traceback" not in result.stderr

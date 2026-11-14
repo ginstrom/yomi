@@ -290,7 +290,8 @@ of `voices.toml`, for the author to pick **by ear**:
   table per emotion: candidate, seed, similarity, loudness, length; and how
   to answer). An emotion with no candidate left says to try
   `--candidates 8`. A later run for some emotions replaces only theirs; a new
-  reference drops them all.
+  reference, `design` table or design-engine fingerprint drops them all.
+  An empty `--emotions` is refused.
 - Renders are reproducible for a seed and the pinned revision to within
   float noise (step 15 measured at most 0.005 sample difference against
   step 03's renders of the same seeds).

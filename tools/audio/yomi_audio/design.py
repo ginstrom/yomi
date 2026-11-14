@@ -14,7 +14,8 @@ voice and are discarded (logged, never written). The rest are written as
 `review.md` (the same as tables, and how to answer).
 
 A run for some emotions replaces those emotions' candidates and keeps the
-others, unless the reference changed, which drops them all.
+others, unless the reference, the voice's `design` table or the design
+engine's fingerprint changed, which drops them all.
 """
 import hashlib
 import json
@@ -105,13 +106,15 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def _earlier(out: Path, voice: str, neutral_sha: str) -> dict:
-    """The emotions an earlier run designed against the same reference; with
-    another reference, none (and their candidates are deleted)."""
+def _earlier(out: Path, voice: str, neutral_sha: str, design: dict, fingerprint: dict) -> dict:
+    """The emotions an earlier run designed for the same voice, reference,
+    `design` table and engine; with anything of those changed, none (and
+    their candidates are deleted)."""
     record = out / RECORD
     if record.exists():
         data = json.loads(record.read_text(encoding="utf-8"))
-        if data.get("voice") == voice and data.get("neutral_sha256") == neutral_sha:
+        same = (data.get("voice"), data.get("neutral_sha256"), data.get("design"), data.get("engine"))
+        if same == (voice, neutral_sha, design, fingerprint):
             return data.get("emotions", {})
     for emotion in EMOTION_MAP:
         _clear(out, emotion)
@@ -188,7 +191,8 @@ def design_emotions(
     neutral_sha = _sha256(reference_path)
     pcm, neutral_sr = sf.read(reference_path, dtype="float32", always_2d=True)
     reference = postprocess(pcm.mean(axis=1), neutral_sr, config, f"voice {voice} neutral reference")
-    recorded = _earlier(out, voice, neutral_sha)
+    fingerprint = engine.fingerprint() if hasattr(engine, "fingerprint") else {}
+    recorded = _earlier(out, voice, neutral_sha, design, fingerprint)
     write_wav(out / "neutral.wav", reference, sr)
     embedding = encoder.embed(reference, sr)
     echo(f"voice {voice}: neutral reference {reference_path} ({len(reference) / sr:.1f} s)")
@@ -220,13 +224,13 @@ def design_emotions(
         result.emotions[emotion] = found
         recorded[emotion] = [asdict(c) for c in found]
 
-    fingerprint = engine.fingerprint() if hasattr(engine, "fingerprint") else {}
     record = {
         "voice": voice,
         "neutral": str(reference_path),
         "neutral_sha256": neutral_sha,
         "description": design["description"],
         "reference_text": design["reference_text"],
+        "design": design,
         "threshold": THRESHOLD,
         "engine": fingerprint,
         "emotions": recorded,

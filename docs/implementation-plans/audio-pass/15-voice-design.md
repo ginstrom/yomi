@@ -139,7 +139,7 @@ Exclusions: no clip under `audio/voices/` is committed and no `sources.toml` ent
 ## Verification
 
 - `uv run --project tools/audio pytest tools/audio/tests`: the new tests pass (seen failing first).
-- `uv run --project tools/audio --extra tts yomi-audio voice design narrator --neutral audio/.audition/15-voice/neutral.wav` runs on this machine and writes `audio/.audition/15-voice/<emotion>_<k>.wav` for six emotions with similarity ≥ 0.75, and `review.md`. Record the printed table in the execution record. Look at spectrograms or levels to catch empty or clipped renders before the gate.
+- `uv run --project tools/audio --extra tts yomi-audio voice design narrator --neutral audio/.audition/15-voice/neutral.wav --out audio/.audition/15-voice` runs on this machine and writes `audio/.audition/15-voice/<emotion>_<k>.wav` for six emotions with similarity ≥ 0.75, and `review.md`. Record the printed table in the execution record. Look at spectrograms or levels to catch empty or clipped renders before the gate.
 - `PATH=/opt/homebrew/opt/node@26/bin:$PATH npm test` passes (step 14's voices tests read the final `voices.toml`).
 - `npm run sounds:check` passes (unchanged SFX).
 - `git status` shows no file under `audio/.audition/`, `audio/bakeoff/` or the HF cache staged.
@@ -195,8 +195,16 @@ Exclusions: no clip under `audio/voices/` is committed and no `sources.toml` ent
 
 **Verification:** `uv run --project tools/audio pytest tools/audio/tests`: 229 passed (210 before). `PATH=/opt/homebrew/opt/node@26/bin:$PATH npm test`: 86 files, 1666 tests passed. `npm run sounds:check`: 85 cues and 4 banks up to date, within budget. `npm run narration:export`: 0 jobs. `git status`: nothing under `audio/.audition/`, `audio/bakeoff/` staged.
 
-**Gate G9 (awaiting the user):** listen to `audio/.audition/15-voice/neutral.wav` (`A_0`) and, optionally, the pairs in `turbo-reference/`; `LISTEN.md` there says what to answer. Recommended: keep `A_0` alone.
+**Gate G9 (awaiting the user):** only grave, whisper and triumphant were designed (two candidates each); warm, tense and sad were not, as Turbo clones only the neutral clip. Listen to `audio/.audition/15-voice/neutral.wav` (`A_0`) and, optionally, the pairs in `turbo-reference/`; `LISTEN.md` there says what to answer. Recommended: keep `A_0` alone.
 
 **For step 16:** commit `A_0` (`audio/bakeoff/neutral_candidates/A_0.wav`, VoiceDesign seed 7, description and reference text as in `voices.toml`, the design pin above) as `audio/voices/narrator/neutral.flac` with its `sources.toml` entry; the pins and licences are in the table above; Turbo's render takes `[narrator.clips].neutral` for every emotion.
 
 **Status:** awaiting review (G9). Commit `df250f3`.
+
+**Review round 1** (clean; three non-blocking findings, all fixed in the follow-up commit "Audio pass step 15: review round 1"):
+
+1. `design._earlier` kept earlier candidates whenever the neutral hash matched, even after the voice's `design` table or the design engine changed. Now `design.json` records the whole `design` table, and reuse needs the voice, neutral hash, `design` table and engine fingerprint all unchanged. Tests: `test_a_changed_design_drops_every_earlier_candidate` (description, reference text, seed, design revision) and `test_another_engine_fingerprint_drops_every_earlier_candidate`, both seen failing first.
+2. The Verification command above gains `--out audio/.audition/15-voice` (the default output is `.audition/voice-<voice>/`).
+3. `--emotions ""` (or `","`) ran every emotion; it is now refused. Test: `test_cli_refuses_an_empty_emotions_list`, seen failing first.
+
+The note that only grave, whisper and triumphant were designed was added to the G9 paragraph. Design §5.8.3 and §5.8.4 are left for step 16. `audio/CLAUDE.md` updated for 1 and 3. Verification: tool pytest 237 passed; `npm test` 86 files, 1666 tests passed.

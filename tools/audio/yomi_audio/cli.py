@@ -142,7 +142,11 @@ def _voice_design(args) -> int:
     from .voice import CANDIDATES, real_encoder, real_engines
 
     candidates = CANDIDATES if args.candidates is None else args.candidates
-    emotions = [e.strip() for e in args.emotions.split(",") if e.strip()] if args.emotions else None
+    emotions = None
+    if args.emotions is not None:
+        emotions = [e.strip() for e in args.emotions.split(",") if e.strip()]
+        if not emotions:
+            raise AudioError("--emotions names no emotion (leave it out for every declared one)")
     config = load_config(args.root)
     # Refuse a bad voice, emotion or reference before loading any model.
     design_emotions(
