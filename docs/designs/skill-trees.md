@@ -17,6 +17,8 @@ Every hero may take from every tree and mix them: a few levels of Warrior, then 
 
 It also gives heroes their first **techniques**: weapon actives such as Power Attack, Aimed Shot and Pin. They run on the engine's monster abilities, extended. Heavy Knight's **Taunt**, **Rooted** and **Pin** bring new battle rules, and so do the other passives and capstones (section 5.4).
 
+**Amended (2026-11-14):** picks are replaced by perk points, one a level, with nodes costing 1 to 4 by tier. See [`skill-trees-node-costs.md`](skill-trees-node-costs.md), which overrides §4.1, §4.2, §4.4, §5.8, §5.9 and §7.2 where they disagree.
+
 **Status: ready for planning.** The user approved the design and settled the five product questions (section 8.1). Picks come every other level, with fewer, bigger nodes; everything else is as recommended. The numbers are first values for the retune (R14) to move. The feature is large, so section 7.3 proposes four stages, each playable and tested on its own.
 
 Decisions already taken, which this design keeps (from [`docs/features/skill-trees.md`](../features/skill-trees.md)):
@@ -124,6 +126,8 @@ T1 to T3 nodes of every path stay open to every hero.
 - A hero that never commits gets no capstone, and spends 13 picks by level 20 across the T1 to T3 nodes of two or three paths.
 
 ### 4.2 The economy (R4, R5)
+
+*Amended: picks are replaced by perk points and node costs ([`skill-trees-node-costs.md`](skill-trees-node-costs.md)).*
 
 | | Today | New |
 | --- | --- | --- |
