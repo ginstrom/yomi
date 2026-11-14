@@ -227,11 +227,11 @@ npm run simulate -- --campaign --battles 500 --seed 1 --parties 1 --out logs/24-
 
 ## 6. Completion criteria
 
-- [ ] The parity grid and the cells recorded before and after, in the execution record.
-- [ ] The run log complete: every lever tried, its value, its figures, kept or reverted.
-- [ ] Each kept change committed with its tests, the guard re-recorded and `CLAUDE.md` numbers fixed; `npm test` passes.
-- [ ] Cells in band and parity holding, or the remaining gaps reported with a recommendation (and any pick-rate or foe-count question raised as a decision for the user).
-- [ ] The index's step table shows step 24 `done (<commits>)`; the Measurements table's cell rows are left for step 25's final column (record this step's in the execution record).
+- [x] The parity grid and the cells recorded before and after, in the execution record.
+- [x] The run log complete: every lever tried, its value, its figures, kept or reverted.
+- [x] Each kept change committed with its tests, the guard re-recorded and `CLAUDE.md` numbers fixed; `npm test` passes.
+- [x] Cells in band and parity holding, or the remaining gaps reported with a recommendation (and any pick-rate or foe-count question raised as a decision for the user).
+- [x] The index's step table shows step 24 `done (<commits>)`; the Measurements table's cell rows are left for step 25's final column (record this step's in the execution record).
 
 ## 7. Execution record
 
@@ -240,3 +240,94 @@ npm run simulate -- --campaign --battles 500 --seed 1 --parties 1 --out logs/24-
 | # | Lever | Value (from → to) | Cells / parity figures | One-party campaign | Kept or reverted |
 | --- | --- | --- | --- | --- | --- |
 
+| 0 | Baseline (step 23's code, re-measured) | — | GR3 500, BC3 494, BC4 495, BC5 488, SN5 500, SP5 495, TL5 8, SG7 0, SG10 386, F1/F2/F3 500/500/493; parity BC4 L4 and BC7 L12 below | 449 (step 23) | — |
+| 1 | Parity plans name the capstone first (`pathPlan`); Delwyn's creation picks build B (Destruction for Arcane Study); Arcane Blood asks INT 3 | INT 4 → 3 | every plan's hero holds its capstone at 12 (was: knight, swordmaster, ranger, rogue_archer, assassin only); BC7 L12 spellsword 464 → 490, paladin 231 → 273, knight 436 → 472, evoker 400 → 448, cryomancer 292 → 31 (Glacial Prison takes Ice Lance's pick) | — | kept (9016146) |
+| 2 | Policy: Haste on the first ally not hasted, Protect on a pressed ally, Bane not recast on baned foes | none → cast | BC7 L12 arcanist 18 → 36, saint 30 → 79 (with 1); cells: BC3 495, BC4 490, BC5 484, SP5 493, SG10 424, F3 495 | — | kept (9016146) |
+| 3 | `FOE_HP_PER_LEVEL` | 0.7 → 1.0 | GR3 500, SN5 500, SP5 479, F2 500, F3 479 | — | superseded by 5 |
+| 4 | `FOE_HP_PER_LEVEL` | 0.7 → 1.5 | GR3 500, SN5 500, SP5 429, F2 500, F3 425 | — | reverted (F3, SP5 low end) |
+| 5 | `FOE_HP_PER_LEVEL` | 0.7 → 1.3 | GR3 500, SN5 500, SP5 454, F2 500, F3 453; TL5 0, SG7 0, SG10 15 | 268 (with 7, 9) | kept (3af5c59) |
+| 6 | Bandit Camp counts at threats 3 to 5 | 2, 2, 2 → 3, 3, 3 | BC3 322, BC4 253, BC5 269 | — | reverted (far below every band) |
+| 7 | `banditGear`: Fine iron from threat 3, Fine steel from 5 | plain → Fine at 3, 4; Fine iron → Fine steel at 5 | BC3 455, BC4 462, BC5 372 | — | 3 and 4 kept; 5 reverted |
+| 8 | `banditGear` at threat 5: Masterwork iron | Fine → Masterwork | BC5 404 | — | reverted (below 420); threat 5 stays Fine iron, 484 |
+| 9 | Spider Nest count | 3 → 4: a Kobold Lurker | SN5 485 | — | replaced by 10 |
+| 10 | Spider Nest count | 3 → 4: a third Giant Spider, the Nest Spider | SN5 448 | 268 (with 5, 7) | kept (3af5c59) |
+| 11 | Level-8 parity cell (default plans) | BC4 → ? | BC4 L8 500, BC5 L8 500, SN5 L8 500, GR5 L8 500, SP5 L8 500, BC6 L8 74, BC7 L8 22, TL5 L8 39, Hobgoblin Warband 5 L8 465 | — | Hobgoblin Warband threat 5 chosen |
+| 12 | Policy: no Sleep on a foe beside one of the caster's side | — | HW5 L8 cryomancer 160 → 231 (Sleep 9.6 → 2.6 a battle) | — | kept (53cdeb0) |
+| 13 | Policy: `strikeCast` counts the caster's spell power by element | — | HW5 L8 cryomancer 231 → 306 (Frostbite 13.7 a battle where Magic Arrow was 13.9); BC7 L12 cryomancer 36 | guard unchanged | kept (53cdeb0) |
+
+### Cells, before and after (seed 1, 500 battles, a party of the threat's level; `logs/24-base-*.txt`, `logs/24-final-*.txt`)
+
+| Cell | Band | Before (step 23's code) | After | In band |
+| --- | --- | --- | --- | --- |
+| GR3 | ≥ 470 | 500 | 500 | yes |
+| BC3 | 400–470 | 494 | 455 | yes |
+| BC4 | 430–490 | 495 | 462 | yes |
+| BC5 | 420–490 | 488 | 484 | yes (Masterwork iron gave 404, steel 372) |
+| SN5 | 410–480 | 500 | 448 | yes |
+| SP5 | 410–480 | 495 | 454 | yes |
+| TL5 | report only | 8 | 0 | — |
+| SG7 | step 01's 0 ± 40 | 0 | 0 | yes |
+| SG10 | above step 01's 2 | 386 | 15 | yes, but a cliff: see below |
+| F1 / F2 / F3 | nearly all / most / 7 in 10 (step 01: 500 / 499 / 441) | 500 / 500 / 493 | 500 / 500 / 453 | yes |
+
+### Path parity, after (wins of 500; gap to the role's best; **bold** more than 50 below)
+
+Level 4 is Bandit Camp threat 4 (the plan's cell). Level 8 is **Hobgoblin Warband threat 5**: Bandit Camp threat 4 at level 8 is won 500 of 500 by every plan, and so are BC5, SN5, SP5 and Goblin Raid 5 at level 8, while BC6 (four bandits in Fine steel) is a cliff at 74 and BC7 22 and Troll Lair 5 39; the Warband (an armoured Chief, a shaman, goblins and a sneak, 465 on the default plans) is the one cell at level 8 that is neither. Level 12 is Bandit Camp threat 7 (the user's capstone cell). `evoker_healer` (the default, not a parity plan) is shown for reference; the magic role's best is taken over the five parity plans.
+
+| Role | Plan | L4 | gap | L8 | gap | L12 (capstone) | gap |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| melee | knight | 462 | −13 | 465 | 0 | 472 (Unbreakable) | −20 |
+| melee | swordmaster | 444 | −31 | 240 | **−225** | 276 (Blademaster) | **−216** |
+| melee | spellsword | 451 | −24 | 114 | **−351** | 490 (Arcane Knight) | −2 |
+| melee | assassin | 443 | −32 | 200 | **−265** | 492 (Deathblow) | 0 |
+| melee | paladin | 475 | 0 | 401 | **−64** | 273 (Aegis) | **−219** |
+| archery | ranger | 462 | 0 | 465 | 0 | 472 (Deadeye) | 0 |
+| archery | rogue_archer | 353 | **−109** | 444 | −21 | 380 (Shadowdancer) | **−92** |
+| archery | assassin | 400 | **−62** | 465 | 0 | 434 (Deathblow) | −38 |
+| magic | evoker | 475 | −14 | 465 | −35 | 448 (Meteor) | 0 |
+| magic | cryomancer | 472 | −17 | 306 | **−194** | 36 (Glacial Prison) | **−412** |
+| magic | arcanist | 475 | −14 | 295 | **−205** | 36 (Mass Haste) | **−412** |
+| magic | healer | 487 | −2 | 248 | **−252** | 241 (Revive) | **−207** |
+| magic | saint | 489 | 0 | 500 | 0 | 79 (Sanctuary) | **−369** |
+| (magic) | evoker_healer | 462 | | 465 | | 472 (Meteor) | |
+
+Before (step 23's code, logs `24-base-*`): level 4 knight 495, swordmaster 489, spellsword 490, assassin 490, paladin 494; ranger 495, rogue_archer 430, assassin 457; evoker 495, cryomancer 478, arcanist 482, healer 497, saint 494 (only rogue_archer outside, at −65). Level 12: knight 436, swordmaster 276, spellsword 464, assassin 469, paladin 231; ranger 436, rogue_archer 232, assassin 368; evoker 400, cryomancer 292, arcanist 18, healer 278, saint 30, with only five plans holding their capstone.
+
+### Why the gaps are where they are (diagnosis from the logs; `scratchpad/hero.ts` counts each hero's damage, falls and uses)
+
+- **Melee at levels 8 and 12: the policy's foes shoot the softest hero.** The `aggressive` policy strikes whoever it expects to hurt most. With a Knight, Taunt (3.1 a battle at level 8) draws the foes onto him and the mage lives (falls in 14% of Warband battles). A Swordmaster, Spellsword or Assassin has no Taunt: at level 8 the melee hero falls in 78–97% of battles and the mage in 59–84%. At level 12 against four bandits the effect turns on the hero's armour instead: the Swordmaster's fallback pick Shield Wall (+8 AC; Gain Strength is refused at Strength 9) and the Paladin's resistance make Aldric the worse target, so the four ranged bandits shoot Delwyn (who falls in 78–81% of battles and casts Meteor 0.1 times a battle instead of 0.9), while the Assassin and Spellsword Aldric draws the fire and Delwyn kills them. So raising those paths' numbers would not close the gap, and defensive numbers widen it. This is the AI's targeting and a party with one front-liner, not the paths.
+- **Magic at levels 8 and 12: the party's damage is the mage's.** In the capstone cell Delwyn deals 120–130 of the party's ~210 damage a battle as an Evoker. A Cryomancer, Arcanist or Saint deals 0–5 (Web, Glacial Prison, Mass Haste, Haste, Curse, Bane, Protect), the bandits are not killed, and the mage falls in every battle. The control spells are cast (after the policy fixes) but four ranged bandits in steel are a damage race. At level 8, where the foes close in, the Saint's Curse, Bane and Protect win 500 and the Cryomancer and Arcanist sit near 300. The Cryomancer's capstone Glacial Prison also takes the pick that was Ice Lance's at level 12 (292 before the capstone came first, 31–36 after): its prison rolls to hit (it missed the Captain in the battle traced) and freezes one of four foes.
+- **Archery at levels 4 and 12: the Rogue path has no offence for an archer.** `rogue_archer` takes Sprint and Skirmisher at levels 2 and 4 instead of Aimed Shot and Far Shot; Skirmisher's +10 needs a move before the shot, and the policy's archer stands and shoots. Dodger, Tumble, Evasion and Shadowdancer are defensive, and Counter is melee only.
+
+### Stage-4 notes, settled
+
+- **Delwyn** takes the design's build B (Magic Arrow, Heal, Destruction): he holds Meteor at level 12 (test in `progression.test.ts`), so AC8 at `--ready-level 12` can now be met; step 25's or 26's `--ready-level 12` run will show it.
+- **The `assassin` plan** is reachable now: since stage 3 the path holds Backstab (Melee 30 or Archery 30), so the plan skips Keen Eye (Luck 6) and both Aldric and Brenna take Backstab, Venom Strike, Hamstring, Ambush, Executioner and Deathblow at 12. No other parity hero is needed.
+- **A harder level-8 cell:** Hobgoblin Warband threat 5 (above).
+- **Area techniques (Volley, Consecrate) not AP-normalised:** left as they are. Volley is used 1.2 a battle in the one-party campaign and 3.5–4.8 at level 12 with a recharge of 2, that is whenever it is ready, but a 6 AP Volley with Hunter's Mark's 2 AP is a full turn and touches two or three foes, against two 4 AP shots at one; the Ranger is not above its role in any cell, so there is nothing to trim.
+- **Swift Hands discounting Purify:** left. The Healer is not above its role in any cell (it is far below at 8 and 12), so the 1 AP off Purify does not matter to parity.
+
+### Campaign check (no collapse)
+
+One party, `--campaign --battles 500 --seed 1 --parties 1` (`logs/24-final-one.txt`): **268 of 500** beat the Source (from 449), 232 fell, 0 encampments lost, in **287 days** (step 01's 270 ± 10%: in) and 19.8 battles, **0.9 heroes dead** a campaign (≤ 2.0: in). Won by threat: 1 100%, 2 99.5%, 3 98.0%, 4 99.9%, 5 89.5%. Heroes died most at level 3 (202, the Fine-geared Bandit Camp) and 7 (97). The same figure was measured after rows 5, 7 and 10 (`logs/24-foes1-one.txt`); the last two policy fixes do not touch the default party (the guard did not move). No vanguard holds a capstone at the ready level of 7.
+
+### For step 25
+
+- The one-party campaign is 268, 18 above the band's top (215–250). The levers I left for it, nearest first: the Blight Horror's hit points (the lever for the Source's battle alone; with `FOE_HP_PER_LEVEL` 1.3 the Horror at level 5 already has 1.3× the hit points it had, SG10 fell from 424 to 15, so the Source is now hard and the next move may be to lower its base again if the company or `--ready-level 10` drop out of band); `banditGear` at threat 5 (Masterwork iron took BC5 to 404, below its band, so only a half step is left there: a Masterwork weapon alone, say); `FOE_HP_PER_LEVEL` 1.3 → 1.4 (F3 and SP5 have about 10 to spare above their bands' floors); a monster count at threat 5 (`TODAY`'s 4). The default company and `--ready-level 10` were not run here.
+- SG10 (15) is above step 01's 2, as the band asks, but far under stage 3's 386: the Source's guardians, three heroes against four foes at level 5, are now as hard as they were before the trees.
+
+### Decisions needed (for the orchestrator; I recommend the first option of each)
+
+1. **Parity at levels 8 and 12.** Eleven plan-cells are more than 50 below their role's best (table above). The cause is the AI and the party's shape, not the paths' numbers: foes shoot the softest hero, the ready-made party has one front-liner, and the mage is its damage. Raising the weak paths' numbers would turn control and support casters into damage casters, which is a skill losing what makes it distinct, so I stopped. Options: (a) accept parity at level 4 (all but the two Scout plans inside) and record 8 and 12 as cell-bound, judging the support paths in a party built to carry them later; (b) judge parity in a four-hero party (a second fighter or Garrick) so that one plan does not carry a whole role; (c) a policy step for focus fire (foes weighing a taunter, a Guardian or a healer, heroes guarding the mage) before any numbers move; (d) raise the outliers' numbers anyway (Glacial Prison without a roll, Ice Lance before the capstone, Haste and Curse larger), knowing the cells reward damage.
+2. **Rogue for an archer** (`rogue_archer` 353 at level 4, −109): the path has no offence for a bow. Options: (a) accept, as the Rogue is a melee path whose T1 nodes an archer can still take; (b) give Skirmisher's +10 to a shot without the move, or let the policy shoot after a step; (c) drop `rogue_archer` from the parity set.
+3. **The cliff at threat 6.** BC6 at level 8 is 74 and BC7 22 (four bandits in Fine steel). Off today's map, so not this step's; stage 9 will need counts there.
+
+### Execution record
+
+Commits: 9016146 (plans, Delwyn's build B, Arcane Blood, Haste, Protect, Bane), 3af5c59 (`FOE_HP_PER_LEVEL` 1.3, bandits Fine from threat 3, the Nest Spider), 53cdeb0 (Sleep and spell power in the policy), and this record's commit. The guard was re-recorded in 9016146 and 3af5c59 and the policy snapshot in both (4655 → 4795 lines, then its hash), each saying why; in 53cdeb0 both stayed green.
+
+In-browser: `e2e/character.test.ts` passed; `e2e/battle.test.ts`'s A10 cast test needed Delwyn's mana moved (28, 25, 22) and then passed; the full suite then passed, 118 of 118 in 10 files.
+
+Commands: `npm test` (2011 passed at the end; one run under heavy load timed out two slow tests, which passed alone and on the rerun); the cells, the three parity grids and the one-party campaign as above (each run alone; a scratch runner, `cells.sh`, ran them in sequence); `npm run test:browser -- e2e/character.test.ts e2e/battle.test.ts` for the Delwyn changes (result below). Not run: the default company and `--ready-level 10` campaigns (step 25's), `npm run build`.
+
+Deviations: foe counts, `FOE_HP_PER_LEVEL` and bandit gear moved here, against the task file's §2 decision, by the user's stage-4 decision (tougher foes first). Capstones checked at Bandit Camp threat 7, not Spider Nest threat 5 (user's decision). The level-8 parity cell is the Hobgoblin Warband threat 5. Arcane Blood's ask lowered to Intelligence 3 (so Aldric can reach Arcane Knight; otherwise the Spellsword path was capped at depth 4 for him). The policy's Bane change also applies to the Blight Horror (a monster): it no longer recasts Bane on heroes already baned.

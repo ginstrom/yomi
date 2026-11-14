@@ -84,6 +84,8 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 - To stage 4 (from step 21): Delwyn's capstone comes at 14, not 12: C5 gives him Arcane Study at creation where the design's build B has Destruction, shifting every pick a level — give him the design's build B picks (orchestrator decision); AC1's first tier-3 for Swordmaster and Ranger plans comes at 8; Swift Hands still discounts Purify.
 
 
+- From step 24: cells in band with tougher foes (`FOE_HP_PER_LEVEL` 1.3, bandits Fine from threat 3, the Nest Spider); one party 268 of 500. Parity at levels 8 and 12 is far apart for reasons of the AI and the party's shape; three decisions for the orchestrator are in step 24's record. Step 25 inherits the campaign bands (268, 18 above).
+
 ## Verification
 
 ### Stage 1 (step 08, 2026-11-13; seed 1, 500 each, recorded and not tuned)

@@ -279,15 +279,15 @@ describe('a battle', () => {
     await game.click(battleHexOnScreen(picking, foe.position))
     const after = await game.waitFor('Battle', (b) => b.log.some((e) => e.type === 'cast') && (b.playerControl || b.buttons.result.visible))
     expect(after.log.filter((e) => e.type === 'cast')).toMatchObject([
-      { caster: 'hero_3', spell: 'magic_arrow', target: 'goblin', manaCost: 3, manaAfter: 21, apAfter: 1, outcomes: [{ unit: 'goblin' }] },
+      { caster: 'hero_3', spell: 'magic_arrow', target: 'goblin', manaCost: 3, manaAfter: 25, apAfter: 1, outcomes: [{ unit: 'goblin' }] },
     ])
-    expect(mage(after)).toMatchObject({ mana: 21, ap: 1 })
+    expect(mage(after)).toMatchObject({ mana: 25, ap: 1 })
     expect(after.aiming).toBeNull()
 
     // The panel shows what mana is left.
     await game.press('c')
     await game.waitForScenes(['Inventory'], ['Battle'])
-    expect((await game.waitFor('Inventory', (p) => p.party[2].active)).mana).toBe(21)
+    expect((await game.waitFor('Inventory', (p) => p.party[2].active)).mana).toBe(25)
     await game.press('Escape')
     await game.waitForScenes(['Battle'])
 
@@ -305,7 +305,7 @@ describe('a battle', () => {
     await game.click(battleHexOnScreen(healing, mage(healing).position))
     const healed = await game.waitFor('Battle', (b) => b.log.some((e) => e.type === 'cast' && e.spell === 'heal'))
     const heal = healed.log.find((e) => e.type === 'cast' && e.spell === 'heal')!
-    expect(heal).toMatchObject({ caster: 'hero_3', manaCost: 3, manaAfter: 18, outcomes: [{ unit: 'hero_3', attackRoll: null }] })
+    expect(heal).toMatchObject({ caster: 'hero_3', manaCost: 3, manaAfter: 22, outcomes: [{ unit: 'hero_3', attackRoll: null }] })
   })
 
   it('taunts from the Skills list: a level 4 Aldric with Rooted and Taunt marks the foes T, and stands rooted (AC7)', async () => {
