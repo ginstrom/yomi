@@ -35,6 +35,10 @@ import {
   pickVariant,
   spellSound,
   stepCue,
+  refusalCue,
+  runeCue,
+  worldSounds,
+  WORLD_SOUND_GAP_MS,
   type CueId,
   type SoundContext,
   type SoundCue,
@@ -570,5 +574,89 @@ describe('AC1: one player', () => {
       expect(text, file).not.toContain('sfx_')
       if (!file.endsWith('soundPlayer.ts')) expect(text, file).not.toContain('sound.add(')
     }
+  })
+})
+
+describe('worldSounds (step 07)', () => {
+  const at = { q: 1, r: 1 }
+  const ev = {
+    lost: { type: 'encampment_lost', name: 'Oakvale' },
+    confront: { type: 'confronting', party: 'party_1', location: 'x' },
+    sighted: { type: 'sighted', location: 'a', name: 'A', at, threat: 1 },
+    source: { type: 'sighted', location: 'src', name: 'S', at, threat: 5, source: true },
+    siteLost: { type: 'site_lost', site: 's', name: 'S' },
+    towerLost: { type: 'tower_lost', tower: 't', at },
+    threatened: { type: 'site_threatened', site: 's', name: 'S', days: 3 },
+    captured: { type: 'site_captured', site: 's', name: 'S' },
+    tower: { type: 'tower_built', tower: 't', at },
+    outpost: { type: 'outpost_built', site: 's', name: 'S' },
+    arrived: { type: 'arrived', party: 'party_1', at },
+    met: { type: 'met', party: 'party_1', other: 'party_2' },
+  } as const
+
+  it('is empty when nothing sounds', () => {
+    expect(worldSounds([])).toEqual([])
+    expect(
+      worldSounds([
+        { type: 'level_changed', at, from: 0, to: 1 },
+        { type: 'spawned', location: 'a', name: 'A', at, threat: 1 },
+        { type: 'order_done', party: 'party_1' },
+        { type: 'yield', site: 's', name: 'S', material: 'wood' as never, amount: 1 },
+      ]),
+    ).toEqual([])
+  })
+
+  it('maps each kind of event to its cue', () => {
+    const cue = (e: Parameters<typeof worldSounds>[0][number]) => worldSounds([e])[0]?.cue
+    expect(cue(ev.lost)).toBe('stings.defeat')
+    expect(cue(ev.confront)).toBe('world.confront')
+    expect(cue(ev.sighted)).toBe('world.sighted')
+    expect(cue(ev.source)).toBe('world.source')
+    expect(cue(ev.siteLost)).toBe('world.lost')
+    expect(cue(ev.towerLost)).toBe('world.lost')
+    expect(cue(ev.threatened)).toBe('world.threatened')
+    expect(cue(ev.captured)).toBe('world.captured')
+    expect(cue(ev.tower)).toBe('world.build')
+    expect(cue(ev.outpost)).toBe('world.build')
+    expect(cue(ev.arrived)).toBe('world.arrive')
+    expect(cue(ev.met)).toBe('world.arrive')
+  })
+
+  it('plays the two highest kinds, the second a gap after the first', () => {
+    const all = [ev.arrived, ev.captured, ev.sighted, ev.confront, ev.threatened]
+    expect(worldSounds(all)).toEqual([
+      { cue: 'world.confront', delayMs: 0 },
+      { cue: 'world.sighted', delayMs: WORLD_SOUND_GAP_MS },
+    ])
+    expect(WORLD_SOUND_GAP_MS).toBe(250)
+  })
+
+  it('puts the encampment lost first and the Source above a plain sighting', () => {
+    expect(worldSounds([ev.confront, ev.lost])[0].cue).toBe('stings.defeat')
+    expect(worldSounds([ev.source]).map((c) => c.cue)).toEqual(['world.source'])
+    expect(worldSounds([ev.sighted, ev.source]).map((c) => c.cue)).toEqual(['world.source', 'world.sighted'])
+    expect(worldSounds([ev.sighted, ev.source, ev.arrived]).map((c) => c.cue)).toEqual(['world.source', 'world.sighted'])
+    expect(worldSounds([ev.threatened, ev.siteLost, ev.sighted]).map((c) => c.cue)).toEqual(['world.lost', 'world.sighted'])
+  })
+
+  it('collapses duplicates of a kind', () => {
+    expect(worldSounds([ev.sighted, ev.sighted, ev.sighted])).toEqual([{ cue: 'world.sighted', delayMs: 0 }])
+    expect(worldSounds([ev.siteLost, ev.towerLost, ev.arrived]).map((c) => c.cue)).toEqual(['world.lost', 'world.arrive'])
+    expect(worldSounds([ev.tower, ev.outpost])).toEqual([{ cue: 'world.build', delayMs: 0 }])
+    expect(worldSounds([ev.arrived, ev.met])).toEqual([{ cue: 'world.arrive', delayMs: 0 }])
+  })
+})
+
+describe('refusalCue and runeCue (step 07)', () => {
+  it('plays the error for a refusal and the success sound otherwise', () => {
+    expect(refusalCue('Not enough gold.', 'world.coins')).toBe('ui.error')
+    expect(refusalCue(null, 'world.coins')).toBe('world.coins')
+    expect(refusalCue('', 'world.coins')).toBe('ui.error')
+  })
+
+  it('maps runecraft actions to their cues', () => {
+    expect(runeCue('embed')).toBe('world.rune.embed')
+    expect(runeCue('fuse')).toBe('world.rune.fuse')
+    expect(runeCue('extract')).toBe('world.rune.extract')
   })
 })

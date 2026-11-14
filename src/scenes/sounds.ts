@@ -2,6 +2,8 @@ import type { AbilityId } from '../combat/abilities.ts'
 import type { Element } from '../combat/combat.ts'
 import { SPELLS, STATUSES, type SpellId } from '../combat/spells.ts'
 import type { AttackEvent, BattleEvent, UnitId } from '../engine/battleEngine.ts'
+import type { WorldEvent } from '../game/blight.ts'
+import type { PartyEvent } from '../game/company.ts'
 import type { FoeKind, UnitKind } from '../game/encounters.ts'
 import type { ItemIcon } from '../inventory/inventory.ts'
 import manifest from '../../audio/sfx.manifest.json'
@@ -443,4 +445,43 @@ export function eventSounds(event: BattleEvent, context?: SoundContext): SoundCu
 /** The level-up sting starts this long after the battle ends: the victory sting's start, its length, and a breath. */
 export function levelUpDelayMs(): number {
   return STING_DELAY_MS + cueDurationMs('stings.victory') + 150
+}
+
+// ---- world and interface ----------------------------------------------------
+
+/** The gap between the two cues a world message plays. */
+export const WORLD_SOUND_GAP_MS = 250
+
+/** The kinds of world event that sound, highest priority first, with the cue each plays and what makes an event of it. */
+const WORLD_SOUND_KINDS: readonly { cue: CueId; is: (event: WorldEvent | PartyEvent) => boolean }[] = [
+  { cue: 'stings.defeat', is: (e) => e.type === 'encampment_lost' },
+  { cue: 'world.confront', is: (e) => e.type === 'confronting' },
+  { cue: 'world.source', is: (e) => e.type === 'sighted' && e.source === true },
+  { cue: 'world.lost', is: (e) => e.type === 'site_lost' || e.type === 'tower_lost' },
+  { cue: 'world.sighted', is: (e) => e.type === 'sighted' && e.source !== true },
+  { cue: 'world.threatened', is: (e) => e.type === 'site_threatened' },
+  { cue: 'world.captured', is: (e) => e.type === 'site_captured' },
+  { cue: 'world.build', is: (e) => e.type === 'tower_built' || e.type === 'outpost_built' },
+  { cue: 'world.arrive', is: (e) => e.type === 'arrived' || e.type === 'met' },
+]
+
+/**
+ * What a world message sounds: one cue per kind of event, the two highest in
+ * priority, the second `WORLD_SOUND_GAP_MS` after the first.
+ * Pure, and drawing no RNG.
+ */
+export function worldSounds(events: readonly (WorldEvent | PartyEvent)[]): SoundCue[] {
+  return WORLD_SOUND_KINDS.filter((kind) => events.some(kind.is))
+    .slice(0, 2)
+    .map((kind, i) => ({ cue: kind.cue, delayMs: i * WORLD_SOUND_GAP_MS }))
+}
+
+/** The sound of an action that returns a refusal (`string | null`): the error when refused, else its success cue. */
+export function refusalCue(refusal: string | null, success: CueId): CueId {
+  return refusal !== null ? 'ui.error' : success
+}
+
+/** The cue of a runecraft action. */
+export function runeCue(kind: 'embed' | 'fuse' | 'extract'): CueId {
+  return `world.rune.${kind}`
 }
