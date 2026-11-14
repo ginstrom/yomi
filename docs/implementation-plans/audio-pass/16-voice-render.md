@@ -156,3 +156,10 @@ Built by the engineer subagent on 2026-11-14, adapted to G1 and G9 (Chatterbox T
 - **Docs.** Design §5.8.3 item 3 and §5.8.4 and the adapter bullet of §5.8.5 now say what G1 and G9 built; `public/assets/voice/README.md` (models, revisions, licences rechecked 2026-11-14, PerTh note: the mlx port adds none, network on first load, the lines table); root `CLAUDE.md` (Commands row, assets paragraph) and `audio/CLAUDE.md` (a render section and the heteronym rule).
 - **Verification.** `uv run --project tools/audio pytest tools/audio/tests`: 246 passed. `npm test`: 86 files, 1668 tests passed. `npm run sounds:check`: 85 cues and 4 banks up to date, within budget.
 - **G10 (awaiting the user).** Listen to `audio/.audition/16-render/intro.opening.opus` and `source.sighted.opus` (the MP3s beside them). Judge pronunciation and whether the grave line's `[sigh]` and the tense line carry their emotion; a flaw is fixed by bumping `take` (at most three) and running `npm run narration`.
+
+**Review round 1** (clean; four record fixes, commit "Audio pass step 16: review round 1"):
+
+1. The README's licences sentence was garbled; it now reads "Rechecked on 2026-11-14 (by step 15, on the Hugging Face cards, not again in step 16); recheck on any revision change." The date stands because step 15 did recheck; step 16 did not.
+2. Deviation from plan item 9: the README says the mlx port adds no PerTh watermark, where the plan said Chatterbox output carries one. Evidence: a grep (case-insensitive, perth or watermark) of mlx-audio 0.6.5's `tts/models/chatterbox*` finds nothing, and the original `chatterbox` package does watermark. This is the absence of code, not a detector test; the README says so.
+3. Design §5.8.5's manifest example now reads `chatterbox_turbo@<rev>`.
+4. Step left `awaiting review` (G10).

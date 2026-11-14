@@ -10,7 +10,7 @@
 
 ## Models, revisions and licences
 
-Licences rechecked on the Hugging Face cards on 2026-11-14 (they were last checked then; recheck on any revision change).
+Rechecked on 2026-11-14 (by step 15, on the Hugging Face cards, not again in step 16); recheck on any revision change.
 
 | Role | Loaded (mlx-audio 0.6.5) | Revision | Upstream | Licence |
 | --- | --- | --- | --- | --- |
@@ -18,7 +18,7 @@ Licences rechecked on the Hugging Face cards on 2026-11-14 (they were last check
 | Clip design | `mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16` | `7d3824abff87e49756bb0f83fb5411de75d160c4` | `Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign` | Apache-2.0 |
 | Fallback engine (not used for shipped lines) | `mlx-community/Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16` | `52f4770fd9726457eae3d3b6aa92047a25a10776` | `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` | Apache-2.0 |
 
-The mlx-community conversions are tagged Apache-2.0 on their cards; the upstream model's licence is the one relied on. All allow generated audio in a commercial game. The original `chatterbox` package marks its output with Resemble AI's inaudible PerTh watermark; **the mlx port used here adds no watermark**. A render needs network the first time a model loads (weights go to `~/.cache/huggingface/`, never into the repository).
+The mlx-community conversions are tagged Apache-2.0 on their cards; the upstream model's licence is the one relied on. All allow generated audio in a commercial game. The original `chatterbox` package marks its output with Resemble AI's inaudible PerTh watermark; **the mlx port used here adds none**: a grep of mlx-audio 0.6.5's chatterbox modules finds no perth or watermark code (the absence of code, not a listening or detector test). A render needs network the first time a model loads (weights go to `~/.cache/huggingface/`, never into the repository).
 
 ## Lines
 
