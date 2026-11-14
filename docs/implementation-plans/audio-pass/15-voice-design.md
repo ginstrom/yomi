@@ -198,3 +198,5 @@ Exclusions: no clip under `audio/voices/` is committed and no `sources.toml` ent
 **Gate G9 (awaiting the user):** listen to `audio/.audition/15-voice/neutral.wav` (`A_0`) and, optionally, the pairs in `turbo-reference/`; `LISTEN.md` there says what to answer. Recommended: keep `A_0` alone.
 
 **For step 16:** commit `A_0` (`audio/bakeoff/neutral_candidates/A_0.wav`, VoiceDesign seed 7, description and reference text as in `voices.toml`, the design pin above) as `audio/voices/narrator/neutral.flac` with its `sources.toml` entry; the pins and licences are in the table above; Turbo's render takes `[narrator.clips].neutral` for every emotion.
+
+**Status:** awaiting review (G9). Commit `df250f3`.
