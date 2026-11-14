@@ -401,7 +401,7 @@ export const GOBLIN_SHAMAN_STATS: CombatantStats = {
  */
 export const BLIGHT_HORROR_STATS: CombatantStats = {
   name: 'Blight Horror',
-  maxHp: 55,
+  maxHp: 63,
   ac: 15,
   toHit: 70,
   critChance: 5,

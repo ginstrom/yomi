@@ -1120,8 +1120,8 @@ describe('policies', () => {
 
     it('are what they were', () => {
       const lines = choices()
-      expect(lines.length).toBe(5430)
-      expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe('fcab8d35f9516192f24a66642175629744cedc4113087199a7b6762774bb3a6f')
+      expect(lines.length).toBe(5433)
+      expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe('db283ac0948ab7c055684837d0786f1830e4293ce13388265921e89f389a990b')
     }, 60_000)
   })
 })
