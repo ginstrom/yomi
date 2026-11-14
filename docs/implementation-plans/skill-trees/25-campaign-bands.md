@@ -159,3 +159,35 @@ Keep this table in the execution record, one row per run (campaign or cell):
 - [ ] `CLAUDE.md` states no number this step made false.
 
 ## 7. Execution record
+
+### Status: in progress, waiting on a decision (`--ready-level 10`)
+
+One lever kept (the Blight Horror's hit points); the one-party and company campaigns are in band, deaths and days too. `--ready-level 10` is 445 of 500, 25 above its band, and no foe-side lever on today's map moves it without wrecking the other two (below). Stopped by the stop rule; the final runs, the guard's last re-record, the Measurements column and the feature record wait on the decision.
+
+### Run log
+
+| # | Lever | Value (from → to) | Run(s) | Figures | Kept / reverted | Note |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0 | Start (step 24's final code, fa49575) | — | `24-final-one` (the guard has not moved since, so step 24's run stands for `25-one-a`), `25-company-a`, `25-rl10-a` | one party 268, 287 days, 0.9 dead; company 269, 287 days; rl10 445, 539 days, 0.9 dead | — | Where the campaigns are lost (one party): the Source 177 of 232 falls (445 Source battles, 268 won); Bandit Camp threat 3 44; Goblin Raid threat 2 9 (lone survivors). At the Source a party of four at level 7 loses 144 of 147, a party of five 33 of 298. rl10: 55 falls, none at the Source (445 of 445 won, parties of five at levels 10–11); the falls are the early Bandit Camp 3 (44), Goblin Raid 2 (9) and stray threat-4/5 nests. |
+| 1 | `BLIGHT_HORROR_STATS.maxHp` | 55 → 65 | `25-one-b`, `25-b-sg7`, `25-b-sg10` | one party 236, 287 days, 1.1 dead; SG7 0, SG10 2 | superseded by 2 | 65 is above the yardstick's top for a level 1 block (63), and SG10 fell to step 01's 2, the band's floor. |
+| 2 | `BLIGHT_HORROR_STATS.maxHp` | 55 → 63 | `25-one-c`, `25-company-c`, `25-rl10-c`, `25-c-sg7`, `25-c-sg10` | one party **243**, 287 days, **1.0** dead; company **243**, 288 days, 1.1 dead; rl10 **445**, 539 days, 1.0 dead; SG7 0, SG10 5 | kept (6f9eee8) | 391 hit points at level 5 (341 before). Inside the yardstick, no exception. The Source lost 202 of 445 (one party). SG10 15 → 5: still above step 01's 2, as the band asks, but lower, as the brief asked to be told. The other cells are untouched by it (the Horror fights only at the Source). |
+| 3 | Scratch: the Source for five pre-rolls (Aldric, Brenna, Delwyn, Garrick, Aldric 2) raised to a level, 200 seeds | Horror 55, 60, 65, 80, 100 | `scratchpad/scratch25/src5.ts`, `sweep1.txt` | level 8: 194/290 of 300 at 55, 190, 177, 122, 69 of 200; level 10: 300 of 300 at 55, 200, 199, 197, 185 of 200; level 11: 200, 200, 200, 197 of 200 | not a code change | Why rl10 does not move: by level 10 a party of five outclasses the Source. To take ~50 Source wins from rl10 (to 395) the Horror would need well over 100 hit points a level 1 block, which at level 8 is a win in three (69 of 200 at 100), the one-party campaign far below 150. |
+| 4 | Scratch: a fifth guardian at the Source (the Goblin Cutter, count 4 → 5 at threat 5), Horror 55 | 4 → 5 | scratch, reverted | level 8 176 of 200; level 10 200; level 11 200 | reverted (not committed) | The same shape: it hits level 8 and leaves 10–11 untouched. |
+
+Levers 2 and 3 of the brief (a half-step of bandit gear at threat 5; `FOE_HP_PER_LEVEL` 1.3 → 1.4) were not run as campaigns: the one-party and company figures are already in band, and neither can reach rl10's falls. rl10's parties fight Bandit Camp 5 2229 times and lose 2, Goblin Raid 5 2208 and lose 5; step 24 measured every threat-5 cell at level 8 at 500 of 500 but the Hobgoblin Warband's 465, so a few points of foe hit points or a Masterwork weapon on a threat-5 bandit cannot wipe a level-8-to-11 party of five 50 more times in 500. The only things on record that beat such parties are off today's map (BC6 74 and BC7 22 at level 8, step 24).
+
+Run time: one party 7 min 18 s and company 7 min 51 s with other work on the machine (the first company run, alone, 4 min 42 s); `--ready-level 10` 17 min 39 s and 20 min 55 s (step 23: 580 s), as its campaigns are now 539 days and 46 battles long.
+
+### Decision needed: `--ready-level 10` at 445 (band 370–420)
+
+What it is: every rl10 campaign that reaches the Source beats it; its 55 falls all come before level 8. No foe on today's map, which tops out at threat 5, is a danger to a party of five at levels 10–11 built with the skill trees.
+
+Options:
+
+1. **Accept 445** as the stand-in for a longer campaign that today's map cannot test, and revisit when stage 9 opens threats 6 and 7 (BC6 and BC7 are already a danger at level 8). Recommended: it changes nothing the player sees, and the two figures that are the game as played (one party, company) are in band.
+2. Make the Source much harder (Horror ≥ 100 hit points a level 1 block, or more guardians): takes rl10 into band but the one-party and company campaigns to roughly 100 of 500, against the user's bands.
+3. A Source that scales with the party that comes to it (a new mechanic, excluded by §4.5; would need a design).
+
+Changed numbers for step 26 (so far): the Blight Horror's level 1 hit points 55 → 63 (step 25). Step 24's are in its own record (`FOE_HP_PER_LEVEL` 0.7 → 1.3, `banditGear` Fine iron from threat 3, the Spider Nest's fourth foe, Arcane Blood's Intelligence 4 → 3, Delwyn's build B, the parity plans' order).
+
+Also folded in: contract C5 in `index.md` (and its decision 4) and `CLAUDE.md` now say the parity plans name their capstone first and the cryomancer takes Ice Lance before Web (step 24's review leftover), in 6f9eee8.
