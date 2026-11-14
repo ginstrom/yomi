@@ -1,21 +1,56 @@
-# Placeholder over placeholder_unit_death; replaced by step 12
+# Goblinoid fall (goblin, kobold, shaman, hobgoblin): a high yelp and squeal, then a light body and its gear in the dirt.
 variants = 4
-seed = 5300
+seed = 6600
 group = "death"
 max_ms = 1350
 
-[[layer]]
-source = "placeholder_unit_death"
-length = 900
-pitch = [0, 10]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the yelp
+pick = ["rd_hurt_1", "rd_hurt_2", "rd_die_1", "rd_die_2"]
+length = 400
+pitch = [3.0, 6.0]
+filter = [{ type = "highpass", hz = 250 }, { type = "lowpass", hz = 9000 }]
+fade_out = 120
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the squeal over it
+chance = 0.8
+pick = ["fs_raccoon_1", "fs_raccoon_2", "fs_raccoon_3", "fs_raccoon_4", "fs_raccoon_5", "fs_raccoon_6"]
+pitch = [-2.0, 2.0]
+filter = [{ type = "highpass", hz = 700 }, { type = "lowpass", hz = 8000 }]
+fade_in = 5
+fade_out = 60
+offset = [0, 40]
+gain = [-8, -4]
+
+[[layer]]                          # the body in the dirt
+pick = ["kenney_soft_medium_0", "kenney_soft_medium_1", "kenney_soft_medium_3"]
+pitch = [0.0, 3.0]
+filter = [{ type = "highpass", hz = 70 }, { type = "lowpass", hz = 4000 }]
+fade_out = 60
+offset = [300, 400]
+gain = [-5, -3]
+
+[[layer]]                          # leathers and pack
+pick = ["kenney_drop_leather", "kenney_cloth_1", "kenney_cloth_2"]
+pitch = [0.0, 3.0]
+filter = [{ type = "highpass", hz = 150 }]
+fade_out = 60
+offset = [320, 420]
+gain = [-10, -7]
+
+[[layer]]                          # a dropped blade
+chance = 0.5
+pick = ["kenney_metal_light_0", "kenney_metal_light_1", "kenney_metal_light_3"]
+pitch = [0.0, 3.0]
+filter = [{ type = "highpass", hz = 800 }]
+fade_out = 100
+offset = [360, 470]
+gain = [-16, -12]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -16, ratio = 3, attack_ms = 3, release_ms = 100 },
+  { type = "reverb", impulse = "open_air", wet_db = -22, predelay_ms = 8 },
+  { type = "limit", ceiling_db = -10, release_ms = 60 },
+  { type = "trim", threshold_db = -48, keep_tail_ms = 100 },
+  { type = "fade_out", ms = 120 },
+]

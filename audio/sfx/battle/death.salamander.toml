@@ -1,21 +1,64 @@
-# Placeholder over placeholder_unit_death; replaced by step 12
+# Salamander fall: a long hiss dying away, a wet flop into the shallows, embers fizzing out.
 variants = 2
-seed = 5600
+seed = 6900
 group = "death"
 max_ms = 1500
 
-[[layer]]
-source = "placeholder_unit_death"
-length = 1000
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the hiss, dying
+pick = ["fs_snake_hiss_1", "fs_snake_hiss_2"]
+length = 780
+pitch = [-3.0, -1.0]
+filter = [{ type = "highpass", hz = 300 }, { type = "lowpass", hz = 9000, hz_end = 1400 }]
+envelope = [[0, -4], [60, 0], [500, -6], [780, -30]]
+fade_out = 150
+gain = [3, 4]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # steam under it
+source = "bart_steam_hiss"
+length = 700
+pitch = [-4.0, -2.0]
+filter = [{ type = "highpass", hz = 400 }, { type = "lowpass", hz = 6000, hz_end = 1200 }]
+envelope = [[0, -10], [80, 0], [700, -30]]
+fade_out = 150
+gain = [-12, -9]
+
+[[layer]]                          # the flop into the shallows
+pick = ["rd_splash_2", "rd_splash_6", "rd_splash_8"]
+pitch = [-5.0, -3.0]
+filter = [{ type = "highpass", hz = 80 }, { type = "lowpass", hz = 5000 }]
+fade_out = 120
+offset = [380, 470]
+gain = [-7, -5]
+
+[[layer]]                          # its body, soft and wet
+pick = ["rd_slime_09", "rd_slime_13", "rd_slime_15"]
+pitch = [-6.0, -4.0]
+filter = [{ type = "highpass", hz = 70 }, { type = "lowpass", hz = 3000 }]
+fade_out = 100
+offset = [385, 475]
+gain = [-10, -7]
+
+[[layer]]                          # embers going out
+pick = ["ad_fire_crackle_1", "ad_fire_crackle_2"]
+length = 500
+filter = [{ type = "highpass", hz = 1500 }]
+envelope = [[0, 0], [500, -30]]
+fade_out = 150
+offset = [480, 560]
+gain = [-14, -10]
+
+[[layer]]                          # sparks fizzing
+synth = { kind = "crackle", density = [25, 40], length = 450 }
+filter = [{ type = "highpass", hz = 2500 }]
+envelope = [[0, -3], [450, -36]]
+offset = [500, 580]
+gain = [-20, -16]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -16, ratio = 3, attack_ms = 3, release_ms = 120 },
+  { type = "reverb", impulse = "open_air", wet_db = -22, predelay_ms = 8 },
+  { type = "limit", ceiling_db = -10, release_ms = 60 },
+  { type = "trim", threshold_db = -48, keep_tail_ms = 120 },
+  { type = "fade_out", ms = 150 },
+]

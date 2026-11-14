@@ -73,10 +73,71 @@ Points that shape the content:
 
 ## Completion criteria
 
-- [ ] 11 recipes rewritten from real sources and synthesis; sources added with CC0 or own licences and provenance.
-- [ ] Bank and manifest rebuilt; `sounds:check`, `npm test` and pytest pass; budgets reported.
-- [ ] Audition folder with spectrograms, run-of-8 WAVs and `review.md` prepared.
-- [ ] `public/assets/audio/README.md` lists the new sources.
-- [ ] Step status `awaiting review` in the index with the commit hash; after G7 passes, `done` with every commit hash, and the user's verdicts recorded below.
+- [x] 11 recipes rewritten from real sources and synthesis; sources added with CC0 or own licences and provenance.
+- [x] Bank and manifest rebuilt; `sounds:check`, `npm test` and pytest pass; budgets reported.
+- [x] Audition folder with spectrograms, run-of-8 WAVs and `review.md` prepared.
+- [x] `public/assets/audio/README.md` lists the new sources.
+- [x] Step status `done` in the index with the commit hash. G7 is non-blocking (the orchestrator's brief): accepted on measurements and review, the user's listening deferred to the playtest, so no verdicts are recorded yet.
 
 ## Execution record
+
+### Round 0: build (2026-11-14)
+
+**Outcome.** The 11 recipes are rewritten from CC0 recordings and synthesis; no recipe of the 11 names a `placeholder_*` source (`grep -l placeholder_` over `audio/sfx/battle/{death,step}.*.toml` prints nothing). Variant counts and `max_ms` are C7's and step 02's, unchanged. Gate G7 is non-blocking (the orchestrator's brief): the audition folder and review sheet are left for the user's playtest, and the step is set `done` with G7 deferred.
+
+**Direction.** Organic fantasy, not retro or sci-fi: every vocal is a real recording (rubberduck's creature vocals, Darsycho's troll roars and monster snarls, a raccoon's squeals, a groan), every fall real impacts, gear and earth; synthesis only under them (sub sweeps, brown-noise rumble, sparks, a scrape, the toll's string drone). Deaths stay in the game's tone: no scream on a human (a breath 13 dB down, then the body and kit), nothing gory (the salamander's "wet flop" is a splash and slime into shallows, not a flesh slap), each kind told apart by what speaks (below). Steps are quiet (−30 LUFS-M max), short (139–206 ms; heavy 249–291) and varied: two picked layers (10 footfalls, 5 grass steps) with pitch, filter, envelope and chance layers, so the eight variants differ in heel/toe timing, texture and level.
+
+**Sources.** 52 excerpts added with `yomi-audio source add`, every one `CC0-1.0` with author, licence-page `url`, original, excerpt and both hashes (counted in the diff: 52 `id`, 52 `licence = "CC0-1.0"`, 52 `url`, 52 `sha256`):
+
+- `kenney_rpg` (footstep00–09, dropLeather) and `kenney_impact` (footstep_grass_000–004, impactSoft_heavy_000–003): the packs' `License.txt` say CC0. The names on disk are `Audio/footstep0N.ogg` in RPG Audio and `Audio/footstep_grass_00N.ogg` in Impact Sounds (`sourcing.md` writes them loosely).
+- `oga_rubberduck` (16): 80 CC0 creature sfx hurt_01, hurt_02; …sfx-2 die_01, die_02, breath_02, bug_08, _10, _12, monster_19, _20; creature sfx bug_02, _04; 75 CC0 breaking/falling/hit sfx rock_falling_01, _03, metal_falling_01, _02.
+- `oga_darsycho` (new): Big Scary Troll Sounds (two troll-roars excerpts) and Monster Snarls (monster-snarl-5), author Darsycho as both pages state, licence CC0 (read with `curl` and a browser user agent, as in step 11).
+- `oga_artisticdude` (RPG Sound Pack giant2), `oga_vehicle` (Tinysized wood-twigs-break-01, -02).
+- `freesound`: 616622 by TRP (six raccoon squeals), 555423 by tonsil5 (the groan), 824588 by TicAshfield (three single strikes of the bell: the first, which no earlier strike rings under, and two with a free decay). Authors as the Freesound pages (and `freesound-wanted.md`) state; each checked "Creative Commons 0" (the orchestrator's brief).
+- Reused: `rd_breath`, `kenney_soft_medium_*`, `kenney_punch_heavy_*`, `kenney_metal_light_*`, `kenney_cloth_*`, `ad_chainmail_*`, `ad_armor_light`, `rd_wood_crack_*`, `rd_splash_*`, `rd_slime_09/13/15`, `ad_fire_crackle_*`, `bart_steam_hiss`, `fs_snake_hiss_*` (706977), `qb_dark_fout_1`, `fs_drone` (867251), `fs_thunder_1` (200990), `fs_dark_pad` (32805).
+
+Excerpts were cut to what a recipe reads: a layer pitched down by p semitones reads only length × 2^(p/12) of its source, which trimmed the bells, roars and groans and took the step's sources from 2,408,622 to 2,064,686 bytes. Candidates were auditioned by registering them in a scratch copy of `audio/` (`source add --root`), never by reading the downloads directly. Left out after auditioning: Freesound 171844 (a low hum under the scream) and 846337 (very quiet, with a steady tone under the hiss); the leather/cloth/metal footsteps (OGA-BY and CC0, noisy takes) in favour of Kenney's; `bfh1_falling_*` (bright debris, not bodies).
+
+**Budgets.** `audio/sources` + `audio/voices` **12,846,981** of 15,000,000 (was 10,782,295), leaving about 2.15 MB for step 13. Banks: all `.opus` 1,592,732 and `.mp3` 1,393,784 of 3,000,000 each; `battle` 1,187,332 / 1,148,660 (was 1,067,996 / 1,020,884).
+
+**Measurements** (`sfx audition --spectrogram`, every variant; per-variant tables in `audio/.audition/12-falls-steps/review.md`). None is peak-limited; every DC, length and correlation check passes in the build.
+
+| Cue | Group | Var | LUFS-M max | True peak (dBTP) | Length (ms) |
+| --- | --- | --- | --- | --- | --- |
+| `death.human` | death −20 | 4 | −20.0 all | −5.4 to −5.2 | 896–1171 |
+| `death.goblinoid` | death | 4 | −20.0 all | −9.8 to −7.9 | 748–774 |
+| `death.brute` | death | 3 | −20.0 all | −9.1 to −4.8 | 1441–1496 |
+| `death.spider` | death | 2 | −20.0 all | −9.1 to −5.1 | 894–914 |
+| `death.salamander` | death | 2 | −20.0 all | −3.8 to −1.4 | 1128–1436 |
+| `death.horror` | death | 1 | −20.0 | −9.0 | 2757 |
+| `death.hero` | sweetener −24 | 2 | −24.0 all | −14.7 to −14.5 | 1864–1874 |
+| `step.armored` | step −30 | 8 | −30.0 all | −12.3 to −10.4 | 151–177 |
+| `step.light` | step | 8 | −30.9 to −30.0 | −12.0 to −10.1 | 139–166 |
+| `step.heavy` | step | 6 | −30.0 all | −12.8 to −10.9 | 249–291 |
+| `step.skitter` | step | 4 | −31.5 to −30.0 | −11.2 to −10.1 | 173–206 |
+
+- **Steps within the cadence** (energy in the first 140 ms, and what is left after it): armoured 99–100% (tail −18 to −56 dB), light 100% (−38 dB or less), heavy 88–99% (−9 to −22 dB), skitter 81–100% (meant to chatter on).
+- **Falls told apart** (raw power under 300 Hz; A-weighted 2–5 kHz share): human 76–91%, 14–51% (the kit's rattle); goblinoid 22–35%, 26–86% (yelp and squeal); brute 59–92%, 1–9%; spider 11–15%, 79–92% (clicks, no voiced harmonics); salamander 7–12%, 24–55% (hiss and splash); horror 42%, 26%, 2.76 s long; the toll 13%, 18%. No fall has more than 4% of its A-weighted energy above 8 kHz.
+- Spectrograms were looked at for every variant: the human's breath, knees and the body at 330–450 ms with the kit's rattle over it; the goblin's yelp harmonics under the squeal's band at 1.5–4 kHz; the brute's groan darkening into the thud at 620–800 ms; the spider's broadband screech and the snaps after; the salamander's hiss closing down before the splash; the Horror's roar wall to 1.43 s, then the low rumble; the toll's partials (hum near 208 Hz, strike tone near G4) decaying over the drone.
+
+**Iteration notes.** The first steps were peak-limited (−32 to −37): a `limit` at −14 (armoured), −16 (skitter) and −21 (light) brought them to target. A Kenney footfall's toe tap at 70–110 ms made the walk tick twice per hex: damped by an envelope. The heavy step's soft-heavy impact rang as a 90 Hz sine: envelope cut and 3–5 dB under the slap. The human's breath was as loud as the fall: 4 dB down. The brute's thud was weaker than its groan: the groan 3–4 dB down, the thud up 3–4. The Horror's reversed swell (1.4 s, pitched down) outlasted the fall: cut to 850 ms before reversing, the fall moved to 1.43 s, total 3.6 to 2.76 s. The toll ran past `max_ms` on its stone-hall tail: layers shortened to 1.3 s, trim at −42 dB. Lessons added to `audio/CLAUDE.md`.
+
+**Review package** (gitignored): `audio/.audition/12-falls-steps/` with `battle.<cue>_<k>.wav` and `.png` for every variant (40), `run_armored.wav`, `run_light.wav`, `run_heavy.wav`, `run_skitter.wav` (8 plays 140 ms apart, the shuffle bag without an immediate repeat, ±100 cents, ±1.5 dB), `layered/` (`hero_fall_<h>_<k>.wav`: `death.human` k with `death.hero` h at 0 ms; `all_falls_in_order.wav`, variant 0 of each fall 0.6 s apart; −6 dB), `audition.txt`, and `review.md` (brief, where it plays, what it is, measurements, an empty verdict line per cue and per run and layered file, and how to hear it in game with the debug console).
+
+**Unsure by ear** (for the playtest): the goblinoid squeal, a raccoon's, which may read as an animal rather than a goblin; the toll's string drone (detuned saws, the one synthetic tone; it sits under a real bell and a dark pad); whether the armoured step's mail jingle, heard on every hero's every hex, is too much; whether the Horror's roar "collapses" or merely stops at 1.43 s; whether the brute's groan (a zombie-pain take among them) is too human; the salamander's hiss against its splash (the splash peaks higher, the hiss is broadband and long).
+
+**For step 13.** `death.hero` uses Freesound 824588's strikes pitched down about 4 semitones with a drone: `world.threatened` and `world.lost` should keep their toll distinct (higher, unpitched or 454855's bell, no drone). Free for step 13: 454855, 434339, 449843, 235453, 347126, 512490, 539956, 270589, 57280, 693428, and the placeholder sources `placeholder_unit_death` and `placeholder_ui_click`, still named by world recipes.
+
+**Verification.**
+
+- `uv run --project tools/audio yomi-audio sfx audition` (11 cues, `--spectrogram`): 40 variants, all "ok", none peak-limited (table above).
+- `npm run sounds` (`sfx build`): the `battle` bank rebuilt (11 changed), every C6 check passing (death −20.0 all, peak ≤ −1.4; step −31.5 to −30.0, peak ≤ −10.1; sweetener ≤ −3.1); a second run "nothing changed (85 cues up to date)".
+- `npm run sounds:check`: "85 cues and 4 banks up to date, within budget".
+- `PATH=/opt/homebrew/opt/node@26/bin:$PATH npm test`: 87 files, 1682 tests passed.
+- `uv run --project tools/audio pytest tools/audio/tests`: 246 passed.
+- `grep -l placeholder_` over the 11 recipes: nothing.
+- `npm run test:browser` not run: nothing outside `audio/`, `public/assets/audio/` and the docs changed.
+- No paid calls.
+
+**Deviations.** Root `CLAUDE.md`'s audio paragraph said the falls and steps were placeholders (the task says nothing there should change, but the file's own rule requires it to stay true): now says only the world cues are. `public/assets/audio/README.md` gained step 12's rows, reused collections repeated, its synthesis and Freesound paragraphs extended and the placeholder paragraph narrowed to step 13. Index row 11 now names its commit by hash (`953a9b8`), the orchestrator's bookkeeping fix. No tool, runtime, `CUES` or `audio.toml` change.
+

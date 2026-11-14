@@ -1,21 +1,44 @@
-# Placeholder over placeholder_ui_click; replaced by step 12
+# Heavy step: a troll's or the Horror's foot, a thud with low end and a little debris, its boom cut short so a walk does not build up.
 variants = 6
-seed = 6000
+seed = 6300
 group = "step"
 max_ms = 600
 
-[[layer]]
-source = "placeholder_ui_click"
-length = 400
-pitch = [-13, -3]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the weight landing
+pick = ["kenney_soft_heavy_0", "kenney_soft_heavy_1", "kenney_soft_heavy_2", "kenney_soft_heavy_3"]
+pitch = [-4.0, -1.0]
+filter = [{ type = "highpass", hz = 35 }]
+envelope = [[0, 0], [90, -10], [240, -40]]
+fade_out = 40
+gain = [-5, -3]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the foot's slap on earth
+pick = ["kenney_footstep_0", "kenney_footstep_2", "kenney_footstep_4", "kenney_footstep_5", "kenney_footstep_6", "kenney_footstep_9"]
+length = 160
+pitch = [-9.0, -6.0]
+filter = [{ type = "highpass", hz = 60 }, { type = "lowpass", hz = 2500 }]
+fade_out = 50
+gain = [-1, 0]
+
+[[layer]]                          # sub thump
+synth = { kind = "sine", hz = [62, 75], hz_end = [36, 42], length = 200 }
+filter = [{ type = "highpass", hz = 30 }]
+envelope = [[0, 0], [200, -40]]
+gain = [-12, -8]
+
+[[layer]]                          # grit kicked loose
+pick = ["rd_rock_fall_1", "rd_rock_fall_3"]
+start = [0, 300]
+length = 200
+filter = [{ type = "highpass", hz = 900 }, { type = "lowpass", hz = 6000 }]
+fade_in = 5
+fade_out = 80
+offset = [20, 60]
+gain = [-16, -11]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -16, ratio = 3, attack_ms = 3, release_ms = 80 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 60 },
+]

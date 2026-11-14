@@ -1,15 +1,85 @@
-# Placeholder over placeholder_unit_death; replaced by step 12
+# Blight Horror's fall (one take): layered inhuman roars collapsing as they darken, a reversed swell drawing in, then a deep rumble as it goes down.
 variants = 1
-seed = 5700
+seed = 7000
 group = "death"
 max_ms = 3750
 
-[[layer]]
-source = "placeholder_unit_death"
-length = 2500
-pitch = -9
-filter = [{ type = "highpass", hz = 30 }]
-fade_out = 10
+[[layer]]                          # the roar
+source = "dc_snarl_5"
+pitch = -6.0
+filter = [{ type = "highpass", hz = 50 }, { type = "lowpass", hz = 5000, hz_end = 500 }]
+envelope = [[0, -3], [250, 0], [800, -4], [1150, -30]]
+fade_out = 150
+
+[[layer]]                          # the throat under it
+source = "dc_troll_roar_2"
+length = 1300
+pitch = -9.0
+filter = [{ type = "highpass", hz = 40 }, { type = "lowpass", hz = 3000, hz_end = 300 }]
+envelope = [[0, -8], [150, 0], [900, -6], [1300, -36]]
+fade_out = 200
+gain = -3
+
+[[layer]]                          # an inhuman edge
+source = "rd_monster_19"
+pitch = -4.0
+filter = [{ type = "highpass", hz = 900 }, { type = "lowpass", hz = 7000 }]
+envelope = [[0, 0], [600, -12], [900, -36]]
+fade_out = 100
+offset = 60
+gain = -11
+
+[[layer]]                          # the reversed swell, drawing in
+source = "qb_dark_fout_1"
+length = 850
+reverse = true
+pitch = -5.0
+filter = [{ type = "highpass", hz = 60 }, { type = "lowpass", hz = 3000 }]
+fade_in = 200
+fade_out = 30
+offset = 300
+gain = -6
+
+[[layer]]                          # the fall: deep drone
+source = "fs_drone"
+length = 1100
+pitch = -3.0
+filter = [{ type = "lowpass", hz = 500 }, { type = "highpass", hz = 30 }]
+envelope = [[0, 0], [300, -3], [1100, -30]]
+fade_out = 300
+offset = 1420
+gain = -2
+
+[[layer]]                          # the fall: the ground rumbling
+source = "fs_thunder_1"
+length = 1100
+pitch = -7.0
+filter = [{ type = "lowpass", hz = 900 }, { type = "highpass", hz = 35 }]
+envelope = [[0, 0], [1100, -30]]
+fade_out = 300
+offset = 1430
+gain = -4
+
+[[layer]]                          # the body landing
+source = "kenney_soft_heavy_2"
+pitch = -8.0
+filter = [{ type = "highpass", hz = 28 }]
+fade_out = 120
+offset = 1430
+gain = -3
+
+[[layer]]                          # sub under the landing
+synth = { kind = "sine", hz = 48, hz_end = 26, length = 800 }
+filter = [{ type = "highpass", hz = 22 }]
+envelope = [[0, 0], [800, -40]]
+offset = 1430
+gain = -10
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 4, attack_ms = 8, release_ms = 200 },
+  { type = "reverb", impulse = "stone_hall", wet_db = -18, predelay_ms = 15 },
+  { type = "limit", ceiling_db = -8, release_ms = 100 },
+  { type = "trim", threshold_db = -44, keep_tail_ms = 120 },
+  { type = "fade_out", ms = 300 },
+]

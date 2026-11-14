@@ -3053,3 +3053,679 @@ excerpt = { start = 0.03, end = 1.6 }
 sha256 = "8b627dcc40127b4491d41b446653130afe330275a5731817e9836dd0b45f4184"
 retrieved = "2026-11-14"
 notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_footstep_0"
+file = "sources/kenney_rpg/kenney_footstep_0.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/rpg-audio"
+original = "Audio/footstep00.ogg"
+original_sha256 = "6fe61ef1fc3bcf0e253bf2eb64759db6cb69e2fe452f4d88cc597ecf78a3d601"
+excerpt = { start = 0.01, end = 0.24 }
+sha256 = "09ec6c16c5e47f1a99cf41609aaeafd8b1a94389146bf7c7d5fce430cd9b9714"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_footstep_1"
+file = "sources/kenney_rpg/kenney_footstep_1.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/rpg-audio"
+original = "Audio/footstep01.ogg"
+original_sha256 = "313472dba31fd0c855376069fa368bb5a198c27251cc8398ef464578b7047a4c"
+excerpt = { start = 0.02, end = 0.27 }
+sha256 = "2068f907c8a4f77e3973bfa22f5678596d2df1d0bc9e9064d44aca81241cffa3"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_footstep_2"
+file = "sources/kenney_rpg/kenney_footstep_2.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/rpg-audio"
+original = "Audio/footstep02.ogg"
+original_sha256 = "2d9575b7dead6e1217ca113991fc5229e9b6d998ea0726ebbb277e7398ab888f"
+excerpt = { start = 0.0, end = 0.23 }
+sha256 = "b33229aa87d02a5ccbe088708c891cc2572cab7ed185f1bdecc48037850def21"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_footstep_3"
+file = "sources/kenney_rpg/kenney_footstep_3.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/rpg-audio"
+original = "Audio/footstep03.ogg"
+original_sha256 = "a86756b9af9f370455ab47844239bb07fd1bee7a113068c91f0fcd9b72703fae"
+excerpt = { start = 0.0, end = 0.25 }
+sha256 = "8470cc63a89a10a4cbc1f7c283d0627b27889d2b8c88d465c85516a9c3258d4c"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_footstep_4"
+file = "sources/kenney_rpg/kenney_footstep_4.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/rpg-audio"
+original = "Audio/footstep04.ogg"
+original_sha256 = "fd264d72a7cd622b82abde202f4ed09fa7de95d34c36473ee938ce66cdf39830"
+excerpt = { start = 0.02, end = 0.26 }
+sha256 = "eecb1d17f2907646df1dd9caa337acaf025397c304814da7d5e66e2847aeb254"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_footstep_5"
+file = "sources/kenney_rpg/kenney_footstep_5.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/rpg-audio"
+original = "Audio/footstep05.ogg"
+original_sha256 = "817957e1f95d97fd36870064c41673895575cde17bccb245f50364c86ed10198"
+excerpt = { start = 0.0, end = 0.22 }
+sha256 = "b895e8ac0bdd815929b1f553c1ea7bea17fe18ebfbcc79d9fb20535d32dfd510"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_footstep_6"
+file = "sources/kenney_rpg/kenney_footstep_6.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/rpg-audio"
+original = "Audio/footstep06.ogg"
+original_sha256 = "6cabfe7ae95d227a84066c6e17014ac31cc7c89b14ef51d7877e98352d4a64fb"
+excerpt = { start = 0.0, end = 0.22 }
+sha256 = "fcd9659a41a18fc666ec61955830a63919147b6000c9e3a6aaeca030180c307d"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_footstep_7"
+file = "sources/kenney_rpg/kenney_footstep_7.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/rpg-audio"
+original = "Audio/footstep07.ogg"
+original_sha256 = "42924cdbf998d5b3db180a339fd74afc94c570d594a536687e337ef1bdfdb346"
+excerpt = { start = 0.01, end = 0.22 }
+sha256 = "535ac60cc8afbdb3693c6880510ce1e565552f44665c1481b2070b6495702a2a"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_footstep_8"
+file = "sources/kenney_rpg/kenney_footstep_8.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/rpg-audio"
+original = "Audio/footstep08.ogg"
+original_sha256 = "668f14dc1254d0d0f33025e9c7dbcdf2c2f00462ed0e07fb8f099c1d711c1337"
+excerpt = { start = 0.0, end = 0.2 }
+sha256 = "6c9d1b2ad8d52b9763c6c15031812277e65abb9bc0d2b48a6c075fe9b3af44d6"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_footstep_9"
+file = "sources/kenney_rpg/kenney_footstep_9.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/rpg-audio"
+original = "Audio/footstep09.ogg"
+original_sha256 = "9324ebb9b2c5bcd078dcb523c6518d38a9f34081069d511602c2efb14ce06ce2"
+excerpt = { start = 0.0, end = 0.2 }
+sha256 = "1650b4c0f9ddfcaa92a22eee19e135b1b2bea8df57911334d04cef19dc4f5c65"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_grass_0"
+file = "sources/kenney_impact/kenney_grass_0.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/footstep_grass_000.ogg"
+original_sha256 = "9d49497777405d78d7cf7f2888e28277f3a23192300cfd1d79d54876b20f479f"
+excerpt = { start = 0.0, end = 0.2 }
+sha256 = "150af52f9a25fb09f376b18fb3977527c0531d3a2afa23fe0d3341cc7a3b60e1"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_grass_1"
+file = "sources/kenney_impact/kenney_grass_1.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/footstep_grass_001.ogg"
+original_sha256 = "fb28781bd22b2eefdc14077f1adf5c94d7fe9c3a130194633b55f3e0d39d9f04"
+excerpt = { start = 0.0, end = 0.2 }
+sha256 = "afa6555743a886d7d6d3ee8db346dadd70bb62f4c852ac23fbdbfe73b88d3bb1"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_grass_2"
+file = "sources/kenney_impact/kenney_grass_2.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/footstep_grass_002.ogg"
+original_sha256 = "73a520139f5be716a403bfe9c80e0e94d1e61d8e9de04a354b336392164b53dc"
+excerpt = { start = 0.0, end = 0.2 }
+sha256 = "a66698a2b95485c13612a95a89686c4c959f8fa58e8ec6c92b144cf985714453"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_grass_3"
+file = "sources/kenney_impact/kenney_grass_3.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/footstep_grass_003.ogg"
+original_sha256 = "0546e1d8ab2def714425701a18bd34c5ee2794b12e858e5b595aabcf38a34137"
+excerpt = { start = 0.0, end = 0.2 }
+sha256 = "426e42115aed79c243aae15a9e32588918454a9a1ee4c23d0c3f412f3c7d7722"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_grass_4"
+file = "sources/kenney_impact/kenney_grass_4.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/footstep_grass_004.ogg"
+original_sha256 = "086fd4ab3546a507ea5f5c759a9a10e535c95ade13705c238bc0eeffd7d4e8ba"
+excerpt = { start = 0.0, end = 0.2 }
+sha256 = "4af02b3f2be4a5ee841873b59ebb0e73a02b58959f765e9100a97c294375c498"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_soft_heavy_0"
+file = "sources/kenney_impact/kenney_soft_heavy_0.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/impactSoft_heavy_000.ogg"
+original_sha256 = "49e7ca88743fca974bb8676ea138b751cfd8f9033b5e7af8736c2a215d6edbc1"
+excerpt = { start = 0.0, end = 0.36 }
+sha256 = "6a207841f0df9d4af1c68411f6b5d3b58ad49dad81bb01bfbfcbd9a85022924c"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_soft_heavy_1"
+file = "sources/kenney_impact/kenney_soft_heavy_1.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/impactSoft_heavy_001.ogg"
+original_sha256 = "4d0096364ba9e46119d2ff6df493fdc101bd2e1efae061da5e5f77a53b3fdcb6"
+excerpt = { start = 0.0, end = 0.36 }
+sha256 = "011195193772829e0f034ecc65766fad4e604e136f656f1af1ec7b548c414c66"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_soft_heavy_2"
+file = "sources/kenney_impact/kenney_soft_heavy_2.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/impactSoft_heavy_002.ogg"
+original_sha256 = "d130ae541951243d3f6ed963d0057450a445ffe117fbf9a084d34eb1635cb563"
+excerpt = { start = 0.0, end = 0.36 }
+sha256 = "28c422e49c3eee1159e9191e4365dc19ca047634076017943a4b8dbfe1221ef5"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_soft_heavy_3"
+file = "sources/kenney_impact/kenney_soft_heavy_3.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/impact-sounds"
+original = "Audio/impactSoft_heavy_003.ogg"
+original_sha256 = "d00286a2dc62ee5cb4d42bf56120e7050a855f69e655fc1294410aadd337eba3"
+excerpt = { start = 0.0, end = 0.36 }
+sha256 = "6b6973f31e80563542c05ba2978e69693ecf7c8a3e7c17df12bcb1eeb3bbe67a"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "kenney_drop_leather"
+file = "sources/kenney_rpg/kenney_drop_leather.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/rpg-audio"
+original = "Audio/dropLeather.ogg"
+original_sha256 = "097e1d3b74949b0145fda0519d40b7e0773ab82ec4858727f95be830927e1a45"
+excerpt = { start = 0.0, end = 0.36 }
+sha256 = "dab4fd1f2c3ac023de30fe94ac07761c0c229b43f79d8e2203e6c0926548b198"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_rock_fall_1"
+file = "sources/oga_rubberduck/rd_rock_fall_1.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx"
+original = "bfh1_rock_falling_01.ogg"
+original_sha256 = "9e58d2d3302c1bad27267cef6a2b3b47bb636f49f77d8e4b986ac81a26e80d7b"
+excerpt = { start = 0.0, end = 0.8 }
+sha256 = "145845d45815a6757ab42da36e1ad7e6c9664170796b49d35b918d51cb073188"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_rock_fall_3"
+file = "sources/oga_rubberduck/rd_rock_fall_3.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx"
+original = "bfh1_rock_falling_03.ogg"
+original_sha256 = "16080f9bc90924b0e4ede52922529e30e34e72af32a505b39bdfc5ebcbb9248c"
+excerpt = { start = 0.05, end = 0.75 }
+sha256 = "f7463935704824f301ada653ed9b09589011a44b15ce0fef0702e0a84848fc36"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_metal_fall_1"
+file = "sources/oga_rubberduck/rd_metal_fall_1.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx"
+original = "bfh1_metal_falling_01.ogg"
+original_sha256 = "7071a56807c7ccf3aa4becba09abd08df0f3e1c844b1ce47d6975dcdfe49562d"
+excerpt = { start = 0.14, end = 0.72 }
+sha256 = "a7088f1a62b5554b047f761f52f2bdc1e1af1047ae84a34a7f1e18a6a5de991f"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_metal_fall_2"
+file = "sources/oga_rubberduck/rd_metal_fall_2.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx"
+original = "bfh1_metal_falling_02.ogg"
+original_sha256 = "e40e73a05a9b1ae7d45e24aa898bf610b32334dae80a5c00abe3e2ce0f7d207a"
+excerpt = { start = 0.01, end = 0.58 }
+sha256 = "14e087c410b184f72ec477faf05a4bc23c29075beacbe2d9ac2fce2dca6808dd"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_breath_2"
+file = "sources/oga_rubberduck/rd_breath_2.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-creture-sfx-2"
+original = "breath_02.ogg"
+original_sha256 = "5b32729394cc36667bb8052508115941f21d85804f84ecda4c492d19883cd15e"
+excerpt = { start = 0.01, end = 0.32 }
+sha256 = "25844bce484ba427aec42c08e659b4f92d9a0a037ff306be3fad03c3e86621a8"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_hurt_1"
+file = "sources/oga_rubberduck/rd_hurt_1.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-creature-sfx"
+original = "hurt_01.ogg"
+original_sha256 = "619f9f2b4bc6cb013b4a62d0ef515a11e4be3a73c9d78c7c12ec5669b166d2cd"
+excerpt = { start = 0.01, end = 0.42 }
+sha256 = "cb827dab8f1596a75ba3f7e6f9ebab6f6d8dbb6a704ba649ae765c4644753128"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_hurt_2"
+file = "sources/oga_rubberduck/rd_hurt_2.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-creature-sfx"
+original = "hurt_02.ogg"
+original_sha256 = "b90ca3a0f5f48e1141ec6326f08ebf9f597efb6b2ca4ceeccc285b203c1ccbe1"
+excerpt = { start = 0.02, end = 0.42 }
+sha256 = "19bb24143e30496b539210726567d9a5935322fa3343096a4570958cba079323"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_die_1"
+file = "sources/oga_rubberduck/rd_die_1.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-creture-sfx-2"
+original = "die_01.ogg"
+original_sha256 = "d592dfbbe36a5e3e4b7dcaaa13498e50c59319d6df443c309858affb69336523"
+excerpt = { start = 0.0, end = 0.42 }
+sha256 = "337effbabf3efeb53eb31247cae2a551669c8a422369c47c32adabe4d09a706e"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_die_2"
+file = "sources/oga_rubberduck/rd_die_2.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-creture-sfx-2"
+original = "die_02.ogg"
+original_sha256 = "03e0fefd50fe350d0ca16c6ebf121c005290aa26a04a8e8573925bf33d4501d3"
+excerpt = { start = 0.01, end = 0.56 }
+sha256 = "7ef9f74080f42367e421acb1e329a695ff5b0551fb555f300b91eb60a1f70864"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_bug_2"
+file = "sources/oga_rubberduck/rd_bug_2.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-creature-sfx"
+original = "bug_02.ogg"
+original_sha256 = "7993707dcb082c4f9f297bec44f8aa276988d848f4cf10ea6046c1c45daee518"
+excerpt = { start = 0.02, end = 0.4 }
+sha256 = "fa06a5b3e806bbe9f0015ac4f849ff0b48ee4c0d4150c912288021e8ff698cbd"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_bug_4"
+file = "sources/oga_rubberduck/rd_bug_4.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-creature-sfx"
+original = "bug_04.ogg"
+original_sha256 = "478418f0d70667109145ca10d82e918c5eeb95c594be40186681179a883d64be"
+excerpt = { start = 0.02, end = 0.36 }
+sha256 = "90c33e648d4af18918a74e7e3e03343823af8059c23724c17c2cb39ff69b3512"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_bug_8"
+file = "sources/oga_rubberduck/rd_bug_8.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-creture-sfx-2"
+original = "bug_08.ogg"
+original_sha256 = "7a84cfb370842e5533eefba63a307e7163dc016d47b6869c5b8e2b3b3efe37d7"
+excerpt = { start = 0.0, end = 0.3 }
+sha256 = "3564dc9e4e822293faa18e99e06828bf8be1b82001cfb9b321f04ec6e4a2e741"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_bug_10"
+file = "sources/oga_rubberduck/rd_bug_10.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-creture-sfx-2"
+original = "bug_10.ogg"
+original_sha256 = "21b3e3f0959e172d2f68497c7bff3c0cb72f25ba33c99363d9b424a8c0a1e16e"
+excerpt = { start = 0.0, end = 0.33 }
+sha256 = "71cd4be2987e9373f18a9986ebeedaabc4dfc60706427196170db72ae8453259"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_bug_12"
+file = "sources/oga_rubberduck/rd_bug_12.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-creture-sfx-2"
+original = "bug_12.ogg"
+original_sha256 = "c9adb1dd8d47dfc8bf163f0128e68fdb1e0b974549aec4de8320984a2e9ceab1"
+excerpt = { start = 0.0, end = 0.27 }
+sha256 = "e5e3ac95e6cd168ec75552c1bc7a1b1ba94dda35d539c9ad89286681af44249c"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_monster_19"
+file = "sources/oga_rubberduck/rd_monster_19.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-creture-sfx-2"
+original = "monster_19.ogg"
+original_sha256 = "97305b59150e8690b7c61a1b2ce57d93ce9f4b9db8090cd3fb1139d5fd9c2e22"
+excerpt = { start = 0.02, end = 0.8 }
+sha256 = "6254a81802bb8158b8aa673eee4d9de956440f7f1ddb52c4caa9188d6551ac84"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_monster_20"
+file = "sources/oga_rubberduck/rd_monster_20.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-creture-sfx-2"
+original = "monster_20.ogg"
+original_sha256 = "4533ca9b6b1458ebfb23bbcc34af8bd4df414b76325421c7235cd958dc65773c"
+excerpt = { start = 0.05, end = 0.85 }
+sha256 = "29730ab1997cf7ca3fb003e878d8bc0e8f6c06bf6ac270fba472e775d0f7f9ef"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "vh_twigs_1"
+file = "sources/oga_vehicle/vh_twigs_1.flac"
+licence = "CC0-1.0"
+author = "vehicle (OpenGameArt)"
+url = "https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx"
+original = "tinysized/sfx-cc0/wood-twigs-break-01.wav"
+original_sha256 = "383c87c96cf30a207a9922f16768b1bd5138d7fd66bb7f4c2ff4e15e058b1803"
+excerpt = { start = 0.07, end = 0.36 }
+sha256 = "9533fc1acfa1e8daa4a267cf0961cbca83969a309caffc538ac3d8f03dc97b89"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 44.1 to 48 kHz"
+
+[[source]]
+id = "vh_twigs_2"
+file = "sources/oga_vehicle/vh_twigs_2.flac"
+licence = "CC0-1.0"
+author = "vehicle (OpenGameArt)"
+url = "https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx"
+original = "tinysized/sfx-cc0/wood-twigs-break-02.wav"
+original_sha256 = "444587434b25e876f34a585154f5bc339f120aee5edcc9c6605aca415995b354"
+excerpt = { start = 0.18, end = 0.6 }
+sha256 = "19b46d93fc94ebb7ee91a8ec38ea5049b706e2c050f4fee5edf02197bd0ec17f"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 44.1 to 48 kHz"
+
+[[source]]
+id = "ad_giant_2"
+file = "sources/oga_artisticdude/ad_giant_2.flac"
+licence = "CC0-1.0"
+author = "artisticdude (OpenGameArt)"
+url = "https://opengameart.org/content/rpg-sound-pack"
+original = "RPG Sound Pack/NPC/giant/giant2.wav"
+original_sha256 = "3e5b30a8fa8f6eb8f94bb50a43fb410669f78da13f4108f60f8a851ddde2f2a8"
+excerpt = { start = 0.01, end = 0.65 }
+sha256 = "ce851d1bd39f4efa20e6ae42145b249ab985934b186bb75dcb127bd3593ad8ed"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "dc_troll_roar_1"
+file = "sources/oga_darsycho/dc_troll_roar_1.flac"
+licence = "CC0-1.0"
+author = "Darsycho (OpenGameArt)"
+url = "https://opengameart.org/content/big-scary-troll-sounds"
+original = "troll-roars.ogg"
+original_sha256 = "7dc09cc3c3e424b66ac564ac83ac89ee91885c964780694d13f2c4957ac813c7"
+excerpt = { start = 1.83, end = 2.6 }
+sha256 = "93473870bdd0def6d458d6087b6293d12657b300937cf226f061d77d128a01a2"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "dc_troll_roar_2"
+file = "sources/oga_darsycho/dc_troll_roar_2.flac"
+licence = "CC0-1.0"
+author = "Darsycho (OpenGameArt)"
+url = "https://opengameart.org/content/big-scary-troll-sounds"
+original = "troll-roars.ogg"
+original_sha256 = "7dc09cc3c3e424b66ac564ac83ac89ee91885c964780694d13f2c4957ac813c7"
+excerpt = { start = 7.02, end = 7.95 }
+sha256 = "7704c65c39934203bb8edeeff80102a382dde23d6b7766c27ba680c03ac432ee"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "dc_snarl_5"
+file = "sources/oga_darsycho/dc_snarl_5.flac"
+licence = "CC0-1.0"
+author = "Darsycho (OpenGameArt)"
+url = "https://opengameart.org/content/monster-snarls"
+original = "monster-snarl-5.ogg"
+original_sha256 = "aeaf9ab0f25cb8b035a3257913206afd8ba33d47876106291d38dfac7e5c07aa"
+excerpt = { start = 0.3, end = 1.2 }
+sha256 = "ce3bc51f7d232ce8888b660783758fb38114055351b05a4acec7874ee0289fdf"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_raccoon_1"
+file = "sources/freesound/fs_raccoon_1.flac"
+licence = "CC0-1.0"
+author = "TRP (Freesound)"
+url = "https://freesound.org/people/TRP/sounds/616622/"
+original = "616622 120827 Raccoon, bark, screech, yelp, squeal, backyard, Toronto.wav (fs_616622_120827-raccoon-bark-screech.wav)"
+original_sha256 = "b97a50d8e45d971177ed5ff05d5d11be58ca79584b39159454dad3b8f042a23d"
+excerpt = { start = 0.76, end = 1.02 }
+sha256 = "e2c58d8b07d5c15fad4dd168241bef24918c238ed9455c1d7b772a7378c2e3ba"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_raccoon_2"
+file = "sources/freesound/fs_raccoon_2.flac"
+licence = "CC0-1.0"
+author = "TRP (Freesound)"
+url = "https://freesound.org/people/TRP/sounds/616622/"
+original = "616622 120827 Raccoon, bark, screech, yelp, squeal, backyard, Toronto.wav (fs_616622_120827-raccoon-bark-screech.wav)"
+original_sha256 = "b97a50d8e45d971177ed5ff05d5d11be58ca79584b39159454dad3b8f042a23d"
+excerpt = { start = 15.47, end = 15.75 }
+sha256 = "aff5d7ba0a16df5768cc5ae998fc01273a7883d363ced2c2ada2adea09fee33b"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_raccoon_3"
+file = "sources/freesound/fs_raccoon_3.flac"
+licence = "CC0-1.0"
+author = "TRP (Freesound)"
+url = "https://freesound.org/people/TRP/sounds/616622/"
+original = "616622 120827 Raccoon, bark, screech, yelp, squeal, backyard, Toronto.wav (fs_616622_120827-raccoon-bark-screech.wav)"
+original_sha256 = "b97a50d8e45d971177ed5ff05d5d11be58ca79584b39159454dad3b8f042a23d"
+excerpt = { start = 27.01, end = 27.4 }
+sha256 = "3512acca37f26dfee80dc89afa746decffa9ea78f1a2a519bae85f603bc5648b"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_raccoon_4"
+file = "sources/freesound/fs_raccoon_4.flac"
+licence = "CC0-1.0"
+author = "TRP (Freesound)"
+url = "https://freesound.org/people/TRP/sounds/616622/"
+original = "616622 120827 Raccoon, bark, screech, yelp, squeal, backyard, Toronto.wav (fs_616622_120827-raccoon-bark-screech.wav)"
+original_sha256 = "b97a50d8e45d971177ed5ff05d5d11be58ca79584b39159454dad3b8f042a23d"
+excerpt = { start = 35.59, end = 35.9 }
+sha256 = "7736f60ac344263e17c95358747a87abe3f867e6513e2ae8db31001aad3b6b9a"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_raccoon_5"
+file = "sources/freesound/fs_raccoon_5.flac"
+licence = "CC0-1.0"
+author = "TRP (Freesound)"
+url = "https://freesound.org/people/TRP/sounds/616622/"
+original = "616622 120827 Raccoon, bark, screech, yelp, squeal, backyard, Toronto.wav (fs_616622_120827-raccoon-bark-screech.wav)"
+original_sha256 = "b97a50d8e45d971177ed5ff05d5d11be58ca79584b39159454dad3b8f042a23d"
+excerpt = { start = 43.09, end = 43.36 }
+sha256 = "85cb1baeaae9974bc14fa83b402294d972bba9f223ff2054a28573a0c81356b7"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_raccoon_6"
+file = "sources/freesound/fs_raccoon_6.flac"
+licence = "CC0-1.0"
+author = "TRP (Freesound)"
+url = "https://freesound.org/people/TRP/sounds/616622/"
+original = "616622 120827 Raccoon, bark, screech, yelp, squeal, backyard, Toronto.wav (fs_616622_120827-raccoon-bark-screech.wav)"
+original_sha256 = "b97a50d8e45d971177ed5ff05d5d11be58ca79584b39159454dad3b8f042a23d"
+excerpt = { start = 48.28, end = 48.6 }
+sha256 = "4175fbf028a8dbcf75c72863bb5a91bdca5406c379278155ccbf8b0adc5d749c"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_zombie_pain"
+file = "sources/freesound/fs_zombie_pain.flac"
+licence = "CC0-1.0"
+author = "tonsil5 (Freesound)"
+url = "https://freesound.org/people/tonsil5/sounds/555423/"
+original = "555423 Zombie Pain 2.wav (fs_555423_zombie-pain-2.wav)"
+original_sha256 = "de34e9da9828f0d1d08e0c19f8458122230fff316e66e81e4a904c996b5bea24"
+excerpt = { start = 0.04, end = 0.8 }
+sha256 = "0b2f4b96e1f9557b328c6a05b4c06637b47e0267625424e23c75e19637e3d683"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 44.1 to 48 kHz"
+
+[[source]]
+id = "fs_toll_1"
+file = "sources/freesound/fs_toll_1.flac"
+licence = "CC0-1.0"
+author = "TicAshfield (Freesound)"
+url = "https://freesound.org/people/TicAshfield/sounds/824588/"
+original = "824588 St Peters Church, Kinver - Distant Tolling Bell (fs_824588_st-peters-church-kinver-dist.wav)"
+original_sha256 = "e9f1c788d2f6eea0fe12f40188431ffaf474f028ae22f3ca6a57ccb7bf507164"
+excerpt = { start = 24.55, end = 25.75 }
+sha256 = "4a74a98127b98011ae790bb29b878ddf18f920384266df55e203b77a3dfc657e"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_toll_2"
+file = "sources/freesound/fs_toll_2.flac"
+licence = "CC0-1.0"
+author = "TicAshfield (Freesound)"
+url = "https://freesound.org/people/TicAshfield/sounds/824588/"
+original = "824588 St Peters Church, Kinver - Distant Tolling Bell (fs_824588_st-peters-church-kinver-dist.wav)"
+original_sha256 = "e9f1c788d2f6eea0fe12f40188431ffaf474f028ae22f3ca6a57ccb7bf507164"
+excerpt = { start = 27.64, end = 28.84 }
+sha256 = "45644a26de00db48e2869d127cef23a022bf4ce179aa191468de4f4786731370"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_toll_3"
+file = "sources/freesound/fs_toll_3.flac"
+licence = "CC0-1.0"
+author = "TicAshfield (Freesound)"
+url = "https://freesound.org/people/TicAshfield/sounds/824588/"
+original = "824588 St Peters Church, Kinver - Distant Tolling Bell (fs_824588_st-peters-church-kinver-dist.wav)"
+original_sha256 = "e9f1c788d2f6eea0fe12f40188431ffaf474f028ae22f3ca6a57ccb7bf507164"
+excerpt = { start = 0.1, end = 1.3 }
+sha256 = "4418c1ec6786c012f4e2e39804f4f15763ebee783380ed3e6964cd87f52aab52"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"

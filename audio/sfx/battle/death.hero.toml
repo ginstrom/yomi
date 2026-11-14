@@ -1,21 +1,48 @@
-# Placeholder over placeholder_unit_death; replaced by step 12
+# A hero's death (under death.human): one low, distant bell toll in G with a soft string drone on G and D; mournful and quiet.
 variants = 2
-seed = 5100
+seed = 7100
 group = "sweetener"
 max_ms = 2250
 
-[[layer]]
-source = "placeholder_unit_death"
-length = 1500
-pitch = [-12, -2]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the toll
+pick = ["fs_toll_1", "fs_toll_2", "fs_toll_3"]
+length = 1300
+pitch = [-4.5, -3.5]
+filter = [{ type = "highpass", hz = 120 }, { type = "lowpass", hz = 2800 }]
+fade_in = 5
+fade_out = 450
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # a dark air under it
+source = "fs_dark_pad"
+start = [0, 400]
+length = 1250
+filter = [{ type = "lowpass", hz = 700 }, { type = "highpass", hz = 60 }]
+fade_in = 250
+fade_out = 500
+gain = [-14, -11]
+
+[[layer]]                          # strings: G
+synth = { kind = "saw", hz = 98.0, length = 1300 }
+filter = [{ type = "lowpass", hz = [700, 900] }, { type = "highpass", hz = 70 }]
+envelope = [[0, -30], [350, 0], [900, -3], [1300, -40]]
+gain = [-24, -21]
+
+[[layer]]                          # strings: G, a little sharp
+synth = { kind = "saw", hz = [98.4, 98.8], length = 1300 }
+filter = [{ type = "lowpass", hz = [700, 900] }, { type = "highpass", hz = 70 }]
+envelope = [[0, -30], [380, 0], [900, -3], [1300, -40]]
+gain = [-25, -22]
+
+[[layer]]                          # strings: D above
+synth = { kind = "saw", hz = [146.6, 147.2], length = 1300 }
+filter = [{ type = "lowpass", hz = [800, 1000] }, { type = "highpass", hz = 90 }]
+envelope = [[0, -30], [420, 0], [900, -4], [1300, -40]]
+gain = [-27, -24]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "reverb", impulse = "stone_hall", wet_db = -16, predelay_ms = 20 },
+  { type = "limit", ceiling_db = -8, release_ms = 100 },
+  { type = "trim", threshold_db = -42, keep_tail_ms = 100 },
+  { type = "fade_out", ms = 300 },
+]

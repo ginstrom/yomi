@@ -1,21 +1,52 @@
-# Placeholder over placeholder_ui_click; replaced by step 12
+# Armoured step: a booted footfall on grass and earth with the jingle of mail; quiet and short for a 140 ms cadence.
 variants = 8
-seed = 5803
+seed = 6200
 group = "step"
 max_ms = 375
 
-[[layer]]
-source = "placeholder_ui_click"
-length = 250
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the boot
+pick = ["kenney_footstep_0", "kenney_footstep_1", "kenney_footstep_2", "kenney_footstep_3", "kenney_footstep_4", "kenney_footstep_5", "kenney_footstep_6", "kenney_footstep_7", "kenney_footstep_8", "kenney_footstep_9"]
+length = [100, 150]
+pitch = [-3.0, -1.0]
+filter = [{ type = "highpass", hz = 70 }, { type = "lowpass", hz = [4000, 6000] }]
+envelope = [[0, 0], [50, -2], [[75, 100], [-12, -7]], [150, -30]]
+fade_out = 30
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 250 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [250, -40]]
-gain = [-26, -16]
+[[layer]]                          # grass and earth
+pick = ["kenney_grass_0", "kenney_grass_1", "kenney_grass_2", "kenney_grass_3", "kenney_grass_4"]
+length = 140
+pitch = [-3.0, 0.0]
+filter = [{ type = "highpass", hz = [250, 450] }]
+fade_out = 50
+offset = [0, 12]
+gain = [-11, -6]
+
+[[layer]]                          # mail jingling with the stride
+chance = 0.85
+pick = ["ad_chainmail_1", "ad_chainmail_2", "ad_armor_light"]
+start = [0, 80]
+length = [110, 160]
+pitch = [-1.0, 2.0]
+filter = [{ type = "highpass", hz = 3000 }, { type = "highpass", hz = 3000 }]
+fade_in = 5
+fade_out = 50
+offset = [10, 40]
+gain = [-10, -6]
+
+[[layer]]                          # now and then a plate's clink
+chance = 0.3
+pick = ["kenney_metal_light_0", "kenney_metal_light_1", "kenney_metal_light_3"]
+length = 100
+pitch = [2.0, 5.0]
+filter = [{ type = "highpass", hz = 2500 }]
+fade_out = 50
+offset = [20, 50]
+gain = [-20, -16]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 3, attack_ms = 2, release_ms = 50 },
+  { type = "limit", ceiling_db = -14, release_ms = 30 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 20 },
+  { type = "fade_out", ms = 30 },
+]

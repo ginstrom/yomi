@@ -1,21 +1,61 @@
-# Placeholder over placeholder_unit_death; replaced by step 12
+# Spider fall (giant spider): a chittering screech, then its legs crumpling with dry clicks and cracks.
 variants = 2
-seed = 5500
+seed = 6800
 group = "death"
 max_ms = 1500
 
-[[layer]]
-source = "placeholder_unit_death"
-length = 1000
-pitch = [2, 12]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the screech
+pick = ["rd_bug_4", "rd_bug_10", "rd_bug_8"]
+pitch = [-3.0, -1.0]
+filter = [{ type = "highpass", hz = 400 }, { type = "lowpass", hz = 9000 }]
+fade_out = 80
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # chittering
+pick = ["rd_bug_12", "rd_bug_2"]
+pitch = [-2.0, 1.0]
+filter = [{ type = "highpass", hz = 600 }]
+fade_out = 80
+offset = [120, 200]
+gain = [-6, -3]
+
+[[layer]]                          # legs folding: dry snaps
+pick = ["vh_twigs_1", "vh_twigs_2"]
+filter = [{ type = "highpass", hz = 700 }, { type = "lowpass", hz = 8000 }]
+fade_out = 80
+offset = [300, 380]
+gain = [-6, -3]
+
+[[layer]]                          # more legs
+pick = ["rd_wood_crack_1", "rd_wood_crack_2", "rd_wood_crack_3", "rd_wood_crack_4"]
+pitch = [1.0, 4.0]
+filter = [{ type = "highpass", hz = 500 }]
+fade_out = 60
+offset = [400, 480]
+gain = [-7, -4]
+
+[[layer]]                          # clicking still
+pick = ["rd_rock_fall_3", "rd_rock_fall_1"]
+start = [0, 100]
+length = 350
+pitch = [3.0, 6.0]
+filter = [{ type = "highpass", hz = 1500 }]
+fade_out = 150
+offset = [450, 560]
+gain = [-14, -10]
+
+[[layer]]                          # the body settling
+pick = ["kenney_soft_medium_0", "kenney_soft_medium_1", "kenney_soft_medium_3"]
+pitch = [-3.0, -1.0]
+filter = [{ type = "highpass", hz = 70 }, { type = "lowpass", hz = 3000 }]
+fade_out = 60
+offset = [420, 520]
+gain = [-9, -6]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -16, ratio = 3, attack_ms = 2, release_ms = 100 },
+  { type = "reverb", impulse = "open_air", wet_db = -22, predelay_ms = 8 },
+  { type = "limit", ceiling_db = -10, release_ms = 50 },
+  { type = "trim", threshold_db = -48, keep_tail_ms = 100 },
+  { type = "fade_out", ms = 120 },
+]

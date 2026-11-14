@@ -1,21 +1,61 @@
-# Placeholder over placeholder_unit_death; replaced by step 12
+# Brute fall (troll, armoured troll): a low dying groan sinking as it fades, then a heavy, ground-shaking thud.
 variants = 3
-seed = 5400
+seed = 6700
 group = "death"
 max_ms = 2100
 
-[[layer]]
-source = "placeholder_unit_death"
-length = 1400
-pitch = [-11, -1]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the groan
+pick = ["fs_zombie_pain", "dc_troll_roar_1", "ad_giant_2", "rd_monster_20"]
+length = 900
+pitch = [-5.0, -3.0]
+filter = [{ type = "highpass", hz = 60 }, { type = "lowpass", hz = 4000, hz_end = 700 }]
+envelope = [[0, -6], [80, 0], [600, -4], [900, -24]]
+fade_out = 200
+gain = [-4, -3]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the weight hitting the ground
+pick = ["kenney_soft_heavy_0", "kenney_soft_heavy_1", "kenney_soft_heavy_2", "kenney_soft_heavy_3"]
+pitch = [-6.0, -4.0]
+filter = [{ type = "highpass", hz = 30 }]
+fade_out = 100
+offset = [620, 760]
+gain = [0, 1]
+
+[[layer]]                          # its body, in the mids
+pick = ["kenney_punch_heavy_0", "kenney_punch_heavy_1", "kenney_punch_heavy_2", "kenney_punch_heavy_3", "kenney_punch_heavy_4"]
+pitch = [-8.0, -6.0]
+filter = [{ type = "highpass", hz = 70 }, { type = "lowpass", hz = 2200 }]
+fade_out = 100
+offset = [625, 765]
+gain = [0, 1]
+
+[[layer]]                          # the ground shaking
+synth = { kind = "sine", hz = [52, 58], hz_end = [28, 32], length = 500 }
+filter = [{ type = "highpass", hz = 25 }]
+envelope = [[0, 0], [500, -40]]
+offset = [620, 760]
+gain = [-9, -7]
+
+[[layer]]                          # rumble
+synth = { kind = "noise", color = "brown", length = 700 }
+filter = [{ type = "lowpass", hz = 220 }, { type = "highpass", hz = 30 }]
+envelope = [[0, -6], [40, 0], [700, -36]]
+offset = [620, 760]
+gain = [-14, -11]
+
+[[layer]]                          # stones and grit
+pick = ["rd_rock_fall_1", "rd_rock_fall_3"]
+length = 500
+filter = [{ type = "highpass", hz = 500 }, { type = "lowpass", hz = 5000 }]
+fade_out = 200
+offset = [650, 800]
+gain = [-15, -11]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -16, ratio = 3, attack_ms = 5, release_ms = 150 },
+  { type = "reverb", impulse = "open_air", wet_db = -20, predelay_ms = 10 },
+  { type = "limit", ceiling_db = -7, release_ms = 80 },
+  { type = "trim", threshold_db = -48, keep_tail_ms = 150 },
+  { type = "fade_out", ms = 200 },
+]

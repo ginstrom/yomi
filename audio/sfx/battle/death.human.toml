@@ -1,21 +1,70 @@
-# Placeholder over placeholder_unit_death; replaced by step 12
+# Human fall (heroes, bandits): a short last breath, the knees giving, then the body and its gear on the earth; no scream.
 variants = 4
-seed = 5200
+seed = 6500
 group = "death"
 max_ms = 1500
 
-[[layer]]
-source = "placeholder_unit_death"
-length = 1000
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the last breath
+pick = ["rd_breath", "rd_breath_2"]
+pitch = [-3.0, 0.0]
+filter = [{ type = "highpass", hz = 200 }, { type = "lowpass", hz = 5000 }]
+fade_out = 80
+gain = [-13, -10]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the knees
+pick = ["kenney_soft_medium_0", "kenney_soft_medium_1", "kenney_soft_medium_3", "kenney_drop_leather"]
+pitch = [-3.0, 0.0]
+filter = [{ type = "highpass", hz = 60 }, { type = "lowpass", hz = 3500 }]
+fade_out = 60
+offset = [60, 130]
+gain = [-8, -5]
+
+[[layer]]                          # the body on the earth
+pick = ["kenney_soft_heavy_0", "kenney_soft_heavy_1", "kenney_soft_heavy_2", "kenney_soft_heavy_3"]
+pitch = [-2.0, 1.0]
+filter = [{ type = "highpass", hz = 45 }]
+fade_out = 80
+offset = [330, 430]
+gain = [-4, -2]
+
+[[layer]]                          # its weight, in the mids
+pick = ["kenney_punch_heavy_0", "kenney_punch_heavy_1", "kenney_punch_heavy_2", "kenney_punch_heavy_3", "kenney_punch_heavy_4"]
+pitch = [-6.0, -4.0]
+filter = [{ type = "highpass", hz = 90 }, { type = "lowpass", hz = 2500 }]
+fade_out = 80
+offset = [335, 435]
+gain = [-5, -3]
+
+[[layer]]                          # armour and kit
+pick = ["rd_metal_fall_1", "rd_metal_fall_2", "ad_chainmail_1", "ad_chainmail_2"]
+length = 550
+pitch = [-2.0, 0.0]
+filter = [{ type = "highpass", hz = 300 }, { type = "lowpass", hz = [3500, 5500] }]
+fade_out = 200
+offset = [350, 450]
+gain = [-11, -8]
+
+[[layer]]                          # cloth
+pick = ["kenney_cloth_1", "kenney_cloth_2"]
+filter = [{ type = "highpass", hz = 200 }]
+fade_out = 60
+offset = [280, 380]
+gain = [-14, -11]
+
+[[layer]]                          # grit
+chance = 0.5
+pick = ["rd_rock_fall_1", "rd_rock_fall_3"]
+length = 300
+filter = [{ type = "highpass", hz = 600 }, { type = "lowpass", hz = 4000 }]
+fade_out = 120
+offset = [380, 480]
+gain = [-20, -16]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -16, ratio = 3, attack_ms = 5, release_ms = 120 },
+  { type = "reverb", impulse = "open_air", wet_db = -22, predelay_ms = 8 },
+  { type = "limit", ceiling_db = -10, release_ms = 60 },
+  { type = "trim", threshold_db = -48, keep_tail_ms = 120 },
+  { type = "fade_out", ms = 150 },
+]

@@ -1,21 +1,39 @@
-# Placeholder over placeholder_ui_click; replaced by step 12
+# Light step: a soft footfall on grass, heel and sometimes toe, with a brush of blades; quiet and short for a 140 ms cadence.
 variants = 8
-seed = 5903
+seed = 6100
 group = "step"
 max_ms = 300
 
-[[layer]]
-source = "placeholder_ui_click"
-length = 200
-pitch = [-2, 8]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the footfall (heel, toe in the longer cuts)
+pick = ["kenney_footstep_0", "kenney_footstep_1", "kenney_footstep_2", "kenney_footstep_3", "kenney_footstep_4", "kenney_footstep_5", "kenney_footstep_6", "kenney_footstep_7", "kenney_footstep_8", "kenney_footstep_9"]
+length = [90, 140]
+pitch = [-1.5, 1.5]
+filter = [{ type = "highpass", hz = 80 }, { type = "lowpass", hz = [4500, 7000] }]
+envelope = [[0, 0], [45, -2], [[70, 95], [-14, -8]], [140, -30]]
+fade_out = 30
+gain = [-2, 0]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 200 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [200, -40]]
-gain = [-26, -16]
+[[layer]]                          # grass under the foot
+pick = ["kenney_grass_0", "kenney_grass_1", "kenney_grass_2", "kenney_grass_3", "kenney_grass_4"]
+length = 140
+pitch = [-2.0, 2.0]
+filter = [{ type = "highpass", hz = [300, 600] }]
+fade_out = 50
+offset = [0, 15]
+gain = [-9, -4]
+
+[[layer]]                          # a brush of blades
+chance = 0.6
+synth = { kind = "noise", color = "pink", length = 90 }
+filter = [{ type = "bandpass", hz = [2500, 4500], q = 1.0 }]
+envelope = [[0, -12], [15, 0], [90, -36]]
+gain = [-24, -18]
+offset = [5, 25]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 3, attack_ms = 2, release_ms = 50 },
+  { type = "limit", ceiling_db = -21, release_ms = 30 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 20 },
+  { type = "fade_out", ms = 30 },
+]

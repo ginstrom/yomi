@@ -1,21 +1,37 @@
-# Placeholder over placeholder_ui_click; replaced by step 12
+# Skitter: the spider's and the salamander's many feet, several quick dry clicks and a scrape.
 variants = 4
-seed = 6100
+seed = 6400
 group = "step"
 max_ms = 450
 
-[[layer]]
-source = "placeholder_ui_click"
-length = 300
-pitch = [2, 12]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # a run of clicks
+pick = ["rd_rock_fall_3", "rd_bug_2", "rd_rock_fall_1"]
+start = [0, 120]
+length = 220
+pitch = [2.0, 6.0]
+filter = [{ type = "highpass", hz = 1200 }, { type = "lowpass", hz = 9000 }]
+fade_out = 60
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # a second set of legs
+pick = ["rd_wood_crack_1", "rd_wood_crack_2", "rd_wood_crack_3", "rd_wood_crack_4"]
+length = 140
+pitch = [5.0, 9.0]
+filter = [{ type = "highpass", hz = 1500 }]
+fade_out = 40
+offset = [50, 120]
+gain = [-8, -4]
+
+[[layer]]                          # a scrape
+synth = { kind = "noise", color = "white", length = 160 }
+filter = [{ type = "bandpass", hz = [2500, 3500], q = 2.0 }]
+envelope = [[0, -20], [30, 0], [160, -36]]
+gain = [-22, -16]
+offset = [0, 40]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 3, attack_ms = 1, release_ms = 40 },
+  { type = "limit", ceiling_db = -16, release_ms = 30 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 20 },
+  { type = "fade_out", ms = 40 },
+]

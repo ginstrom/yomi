@@ -84,6 +84,16 @@ rows list every collection it draws on, those an earlier step used included):
 | | `oga_antumdeluge` | antumdeluge | Fire Crackling, https://opengameart.org/content/fire-crackling |
 | | `oga_ignasd` | ignasd | Ice Breaking/Shattering, https://opengameart.org/content/ice-breakingshattering |
 | | `kenney_impact` | Kenney (kenney.nl) | Impact Sounds (glass, punch, soft), https://kenney.nl/assets/impact-sounds |
+| `battle`: 11 cues for falls and footsteps (`death.*`, `step.*`; step 12) | `freesound` | TRP; tonsil5; TicAshfield; JesterWhoo; bassimat; rayjensen; JOHNWALLY | Freesound 616622 "Raccoon, bark, screech, yelp, squeal", 555423 "Zombie Pain 2.wav", 824588 "St Peters Church, Kinver - Distant Tolling Bell", and again 706977 "Angry snake hissing", 867251 "Deep Rumbling Drone", 200990 "thunder-crack", 32805 "spooky dark pad.wav": https://freesound.org/people/TRP/sounds/616622/, …/tonsil5/sounds/555423/, …/TicAshfield/sounds/824588/, …/JesterWhoo/sounds/706977/, …/bassimat/sounds/867251/, …/rayjensen/sounds/200990/, …/JOHNWALLY/sounds/32805/ (each Creative Commons 0, checked on its page; originals downloaded by hand at gate G2) |
+| | `oga_darsycho` | Darsycho | Big Scary Troll Sounds, https://opengameart.org/content/big-scary-troll-sounds; Monster Snarls, https://opengameart.org/content/monster-snarls |
+| | `oga_rubberduck` | rubberduck | 80 CC0 creature sfx (1 and 2: hurt, die, breath, bug, monster), 75 CC0 breaking/falling/hit sfx (falling rock and metal), 100 CC0 metal and wood sfx (wood cracking), 40 CC0 water/splash/slime sfx (splashes, slime): https://opengameart.org/content/80-cc0-creature-sfx, …/80-cc0-creture-sfx-2, …/75-cc0-breaking-falling-hit-sfx, …/100-cc0-metal-and-wood-sfx, …/40-cc0-water-splash-slime-sfx |
+| | `oga_artisticdude` | artisticdude | RPG Sound Pack (chainmail, light armour, giant), https://opengameart.org/content/rpg-sound-pack |
+| | `oga_vehicle` | vehicle | Fantasy Sound Effects (Tinysized SFX: twigs breaking), https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx |
+| | `oga_qubodup` | qubodup | 3 Dark Magic Spells, https://opengameart.org/content/3-dark-magic-spells |
+| | `oga_antumdeluge` | antumdeluge | Fire Crackling, https://opengameart.org/content/fire-crackling |
+| | `oga_bart` | bart | Steam release sounds, https://opengameart.org/content/steam-release-sounds |
+| | `kenney_rpg` | Kenney (kenney.nl) | RPG Audio (footsteps, dropLeather, cloth), https://kenney.nl/assets/rpg-audio |
+| | `kenney_impact` | Kenney (kenney.nl) | Impact Sounds (grass footsteps, soft, punch and light metal impacts), https://kenney.nl/assets/impact-sounds |
 | `ui`: all 7 cues (`click`, `back`, `confirm`, `tab`, `error`, `learn`, `gear`; step 09) | `kenney_ui` | Kenney (kenney.nl) | UI Audio, https://kenney.nl/assets/ui-audio |
 | | `kenney_interface` | Kenney (kenney.nl) | Interface Sounds, https://kenney.nl/assets/interface-sounds |
 | | `kenney_rpg` | Kenney (kenney.nl) | RPG Audio, https://kenney.nl/assets/rpg-audio |
@@ -99,19 +109,23 @@ fizz, the element sweeteners' snaps and sizzles, the blight chime's partials
 and the small heal's rising tones (step 10), and in the spells (step 11) the
 sub booms and noise bursts, the storm cast's rising buzz and static, the
 arcane hum and pop, the hex's falling tones and shimmer, and the heal's and
-buff's FM bells.
+buff's FM bells; in the falls and steps (step 12) the brute's and the Horror's sub sweeps and brown-noise rumble, the salamander's sparks, the light step's brush of noise, the skitter's scrape and the toll's string drone (detuned saws).
 
 Freesound files used so far: 811615 (`battle.regen`, step 10); 244926,
 395038, 346917, 522705 (fire: `cast.fire`, `impact.fire`, `impact.fireball`,
 `ability.spit`), 200990, 616992 (`impact.lightning`), 706977
 (`ability.spit`, `cast.venom`), 32805 (`cast.shadow`, `impact.shadow`),
-685680 (`cast.holy`) and 867251 (`impact.poison`) (step 11). The others of
-the 28 downloaded at gate G2 serve steps 12 and 13.
+685680 (`cast.holy`) and 867251 (`impact.poison`) (step 11); 616622
+(`death.goblinoid`), 555423 (`death.brute`), 824588 (`death.hero`), and
+again 706977 (`death.salamander`), 867251 and 200990 (`death.horror`) and
+32805 (`death.hero`) (step 12). The others of the 28 downloaded at gate G2
+serve step 13 (171844 and 846337 were auditioned for step 12 and left out:
+a low hum under the scream; a steady tone under a very quiet hiss).
 
 ### Still placeholder
 
 Every other cue is still derived entirely from the old placeholder tones
 (synthesized in-house with Python's stdlib `wave` module, licence own), kept
 as the `placeholder_*` sources under `audio/sources/placeholder/`, until its
-content step (12 or 13). The placeholder WAVs that were played directly
+content step (13: the `world` bank). The placeholder WAVs that were played directly
 before the banks are gone from this folder.

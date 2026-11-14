@@ -181,942 +181,942 @@
     },
     "battle.death.brute#0": {
       "start": 23.769,
-      "end": 24.263,
+      "end": 25.211,
       "loop": false
     },
     "battle.death.brute#1": {
-      "start": 24.313,
-      "end": 25.061,
+      "start": 25.261,
+      "end": 26.757,
       "loop": false
     },
     "battle.death.brute#2": {
-      "start": 25.111,
-      "end": 25.83,
+      "start": 26.807,
+      "end": 28.273,
       "loop": false
     },
     "battle.death.goblinoid#0": {
-      "start": 25.88,
-      "end": 26.18,
+      "start": 28.323,
+      "end": 29.093,
       "loop": false
     },
     "battle.death.goblinoid#1": {
-      "start": 26.23,
-      "end": 26.562,
+      "start": 29.143,
+      "end": 29.917,
       "loop": false
     },
     "battle.death.goblinoid#2": {
-      "start": 26.612,
-      "end": 27.01,
+      "start": 29.967,
+      "end": 30.74,
       "loop": false
     },
     "battle.death.goblinoid#3": {
-      "start": 27.06,
-      "end": 27.447,
+      "start": 30.79,
+      "end": 31.539,
       "loop": false
     },
     "battle.death.hero#0": {
-      "start": 27.497,
-      "end": 28.012,
+      "start": 31.589,
+      "end": 33.454,
       "loop": false
     },
     "battle.death.hero#1": {
-      "start": 28.062,
-      "end": 28.649,
+      "start": 33.504,
+      "end": 35.378,
       "loop": false
     },
     "battle.death.horror#0": {
-      "start": 28.699,
-      "end": 29.372,
+      "start": 35.428,
+      "end": 38.186,
       "loop": false
     },
     "battle.death.human#0": {
-      "start": 29.422,
-      "end": 29.876,
+      "start": 38.236,
+      "end": 39.408,
       "loop": false
     },
     "battle.death.human#1": {
-      "start": 29.926,
-      "end": 30.342,
+      "start": 39.458,
+      "end": 40.354,
       "loop": false
     },
     "battle.death.human#2": {
-      "start": 30.392,
-      "end": 30.771,
+      "start": 40.404,
+      "end": 41.505,
       "loop": false
     },
     "battle.death.human#3": {
-      "start": 30.821,
-      "end": 31.168,
+      "start": 41.555,
+      "end": 42.538,
       "loop": false
     },
     "battle.death.salamander#0": {
-      "start": 31.218,
-      "end": 31.582,
+      "start": 42.588,
+      "end": 44.024,
       "loop": false
     },
     "battle.death.salamander#1": {
-      "start": 31.632,
-      "end": 31.933,
+      "start": 44.074,
+      "end": 45.202,
       "loop": false
     },
     "battle.death.spider#0": {
-      "start": 31.983,
-      "end": 32.283,
+      "start": 45.252,
+      "end": 46.167,
       "loop": false
     },
     "battle.death.spider#1": {
-      "start": 32.333,
-      "end": 32.633,
+      "start": 46.217,
+      "end": 47.111,
       "loop": false
     },
     "battle.element.acid#0": {
-      "start": 32.683,
-      "end": 32.947,
+      "start": 47.161,
+      "end": 47.425,
       "loop": false
     },
     "battle.element.acid#1": {
-      "start": 32.997,
-      "end": 33.248,
+      "start": 47.475,
+      "end": 47.726,
       "loop": false
     },
     "battle.element.blight#0": {
-      "start": 33.298,
-      "end": 33.653,
+      "start": 47.776,
+      "end": 48.131,
       "loop": false
     },
     "battle.element.blight#1": {
-      "start": 33.703,
-      "end": 34.065,
+      "start": 48.181,
+      "end": 48.543,
       "loop": false
     },
     "battle.element.fire#0": {
-      "start": 34.115,
-      "end": 34.405,
+      "start": 48.593,
+      "end": 48.883,
       "loop": false
     },
     "battle.element.fire#1": {
-      "start": 34.455,
-      "end": 34.745,
+      "start": 48.933,
+      "end": 49.223,
       "loop": false
     },
     "battle.element.frost#0": {
-      "start": 34.795,
-      "end": 35.05,
+      "start": 49.273,
+      "end": 49.528,
       "loop": false
     },
     "battle.element.frost#1": {
-      "start": 35.1,
-      "end": 35.354,
+      "start": 49.578,
+      "end": 49.832,
       "loop": false
     },
     "battle.element.lightning#0": {
-      "start": 35.404,
-      "end": 35.584,
+      "start": 49.882,
+      "end": 50.062,
       "loop": false
     },
     "battle.element.lightning#1": {
-      "start": 35.634,
-      "end": 35.814,
+      "start": 50.112,
+      "end": 50.292,
       "loop": false
     },
     "battle.element.poison#0": {
-      "start": 35.864,
-      "end": 36.243,
+      "start": 50.342,
+      "end": 50.721,
       "loop": false
     },
     "battle.element.poison#1": {
-      "start": 36.293,
-      "end": 36.638,
+      "start": 50.771,
+      "end": 51.116,
       "loop": false
     },
     "battle.heal.small#0": {
-      "start": 36.688,
-      "end": 37.086,
+      "start": 51.166,
+      "end": 51.564,
       "loop": false
     },
     "battle.heal.small#1": {
-      "start": 37.136,
-      "end": 37.608,
+      "start": 51.614,
+      "end": 52.086,
       "loop": false
     },
     "battle.heal.small#2": {
-      "start": 37.658,
-      "end": 38.082,
+      "start": 52.136,
+      "end": 52.56,
       "loop": false
     },
     "battle.hit.claw#0": {
-      "start": 38.132,
-      "end": 38.473,
+      "start": 52.61,
+      "end": 52.951,
       "loop": false
     },
     "battle.hit.claw#1": {
-      "start": 38.523,
-      "end": 38.913,
+      "start": 53.001,
+      "end": 53.391,
       "loop": false
     },
     "battle.hit.claw#2": {
-      "start": 38.963,
-      "end": 39.339,
+      "start": 53.441,
+      "end": 53.817,
       "loop": false
     },
     "battle.hit.claw#3": {
-      "start": 39.389,
-      "end": 39.728,
+      "start": 53.867,
+      "end": 54.206,
       "loop": false
     },
     "battle.hit.claw#4": {
-      "start": 39.778,
-      "end": 40.156,
+      "start": 54.256,
+      "end": 54.634,
       "loop": false
     },
     "battle.hit.crit#0": {
-      "start": 40.206,
-      "end": 40.476,
+      "start": 54.684,
+      "end": 54.954,
       "loop": false
     },
     "battle.hit.crit#1": {
-      "start": 40.526,
-      "end": 40.808,
+      "start": 55.004,
+      "end": 55.286,
       "loop": false
     },
     "battle.hit.crit#2": {
-      "start": 40.858,
-      "end": 41.118,
+      "start": 55.336,
+      "end": 55.596,
       "loop": false
     },
     "battle.hit.crit#3": {
-      "start": 41.168,
-      "end": 41.443,
+      "start": 55.646,
+      "end": 55.921,
       "loop": false
     },
     "battle.hit.crush#0": {
-      "start": 41.493,
-      "end": 41.803,
+      "start": 55.971,
+      "end": 56.281,
       "loop": false
     },
     "battle.hit.crush#1": {
-      "start": 41.853,
-      "end": 42.186,
+      "start": 56.331,
+      "end": 56.664,
       "loop": false
     },
     "battle.hit.crush#2": {
-      "start": 42.236,
-      "end": 42.54,
+      "start": 56.714,
+      "end": 57.018,
       "loop": false
     },
     "battle.hit.crush#3": {
-      "start": 42.59,
-      "end": 42.907,
+      "start": 57.068,
+      "end": 57.385,
       "loop": false
     },
     "battle.hit.crush#4": {
-      "start": 42.957,
-      "end": 43.281,
+      "start": 57.435,
+      "end": 57.759,
       "loop": false
     },
     "battle.hit.crush#5": {
-      "start": 43.331,
-      "end": 43.64,
+      "start": 57.809,
+      "end": 58.118,
       "loop": false
     },
     "battle.hit.image#0": {
-      "start": 43.69,
-      "end": 44.189,
+      "start": 58.168,
+      "end": 58.667,
       "loop": false
     },
     "battle.hit.image#1": {
-      "start": 44.239,
-      "end": 44.739,
+      "start": 58.717,
+      "end": 59.217,
       "loop": false
     },
     "battle.hit.image#2": {
-      "start": 44.789,
-      "end": 45.289,
+      "start": 59.267,
+      "end": 59.767,
       "loop": false
     },
     "battle.hit.magic#0": {
-      "start": 45.339,
-      "end": 45.677,
+      "start": 59.817,
+      "end": 60.155,
       "loop": false
     },
     "battle.hit.magic#1": {
-      "start": 45.727,
-      "end": 46.062,
+      "start": 60.205,
+      "end": 60.54,
       "loop": false
     },
     "battle.hit.magic#2": {
-      "start": 46.112,
-      "end": 46.449,
+      "start": 60.59,
+      "end": 60.927,
       "loop": false
     },
     "battle.hit.magic#3": {
-      "start": 46.499,
-      "end": 46.834,
+      "start": 60.977,
+      "end": 61.312,
       "loop": false
     },
     "battle.hit.pierce#0": {
-      "start": 46.884,
-      "end": 47.126,
+      "start": 61.362,
+      "end": 61.604,
       "loop": false
     },
     "battle.hit.pierce#1": {
-      "start": 47.176,
-      "end": 47.423,
+      "start": 61.654,
+      "end": 61.901,
       "loop": false
     },
     "battle.hit.pierce#2": {
-      "start": 47.473,
-      "end": 47.714,
+      "start": 61.951,
+      "end": 62.192,
       "loop": false
     },
     "battle.hit.pierce#3": {
-      "start": 47.764,
-      "end": 48.01,
+      "start": 62.242,
+      "end": 62.488,
       "loop": false
     },
     "battle.hit.pierce#4": {
-      "start": 48.06,
-      "end": 48.314,
+      "start": 62.538,
+      "end": 62.792,
       "loop": false
     },
     "battle.hit.pierce#5": {
-      "start": 48.364,
-      "end": 48.603,
+      "start": 62.842,
+      "end": 63.081,
       "loop": false
     },
     "battle.hit.slash#0": {
-      "start": 48.653,
-      "end": 48.954,
+      "start": 63.131,
+      "end": 63.432,
       "loop": false
     },
     "battle.hit.slash#1": {
-      "start": 49.004,
-      "end": 49.354,
+      "start": 63.482,
+      "end": 63.832,
       "loop": false
     },
     "battle.hit.slash#2": {
-      "start": 49.404,
-      "end": 49.731,
+      "start": 63.882,
+      "end": 64.209,
       "loop": false
     },
     "battle.hit.slash#3": {
-      "start": 49.781,
-      "end": 50.116,
+      "start": 64.259,
+      "end": 64.594,
       "loop": false
     },
     "battle.hit.slash#4": {
-      "start": 50.166,
-      "end": 50.464,
+      "start": 64.644,
+      "end": 64.942,
       "loop": false
     },
     "battle.hit.slash#5": {
-      "start": 50.514,
-      "end": 50.848,
+      "start": 64.992,
+      "end": 65.326,
       "loop": false
     },
     "battle.impact.acid#0": {
-      "start": 50.898,
-      "end": 51.598,
+      "start": 65.376,
+      "end": 66.076,
       "loop": false
     },
     "battle.impact.acid#1": {
-      "start": 51.648,
-      "end": 52.344,
+      "start": 66.126,
+      "end": 66.822,
       "loop": false
     },
     "battle.impact.acid#2": {
-      "start": 52.394,
-      "end": 53.094,
+      "start": 66.872,
+      "end": 67.572,
       "loop": false
     },
     "battle.impact.acid#3": {
-      "start": 53.144,
-      "end": 53.841,
+      "start": 67.622,
+      "end": 68.319,
       "loop": false
     },
     "battle.impact.arcane#0": {
-      "start": 53.891,
-      "end": 54.321,
+      "start": 68.369,
+      "end": 68.799,
       "loop": false
     },
     "battle.impact.arcane#1": {
-      "start": 54.371,
-      "end": 54.798,
+      "start": 68.849,
+      "end": 69.276,
       "loop": false
     },
     "battle.impact.arcane#2": {
-      "start": 54.848,
-      "end": 55.273,
+      "start": 69.326,
+      "end": 69.751,
       "loop": false
     },
     "battle.impact.arcane#3": {
-      "start": 55.323,
-      "end": 55.776,
+      "start": 69.801,
+      "end": 70.254,
       "loop": false
     },
     "battle.impact.buff#0": {
-      "start": 55.826,
-      "end": 56.521,
+      "start": 70.304,
+      "end": 70.999,
       "loop": false
     },
     "battle.impact.buff#1": {
-      "start": 56.571,
-      "end": 57.263,
+      "start": 71.049,
+      "end": 71.741,
       "loop": false
     },
     "battle.impact.buff#2": {
-      "start": 57.313,
-      "end": 58.023,
+      "start": 71.791,
+      "end": 72.501,
       "loop": false
     },
     "battle.impact.fire#0": {
-      "start": 58.073,
-      "end": 58.865,
+      "start": 72.551,
+      "end": 73.343,
       "loop": false
     },
     "battle.impact.fire#1": {
-      "start": 58.915,
-      "end": 59.749,
+      "start": 73.393,
+      "end": 74.227,
       "loop": false
     },
     "battle.impact.fire#2": {
-      "start": 59.799,
-      "end": 60.575,
+      "start": 74.277,
+      "end": 75.053,
       "loop": false
     },
     "battle.impact.fire#3": {
-      "start": 60.625,
-      "end": 61.44,
+      "start": 75.103,
+      "end": 75.918,
       "loop": false
     },
     "battle.impact.fireball#0": {
-      "start": 61.49,
-      "end": 63.091,
+      "start": 75.968,
+      "end": 77.569,
       "loop": false
     },
     "battle.impact.fireball#1": {
-      "start": 63.141,
-      "end": 64.695,
+      "start": 77.619,
+      "end": 79.173,
       "loop": false
     },
     "battle.impact.fireball#2": {
-      "start": 64.745,
-      "end": 66.381,
+      "start": 79.223,
+      "end": 80.859,
       "loop": false
     },
     "battle.impact.frost#0": {
-      "start": 66.431,
-      "end": 67.103,
+      "start": 80.909,
+      "end": 81.581,
       "loop": false
     },
     "battle.impact.frost#1": {
-      "start": 67.153,
-      "end": 67.799,
+      "start": 81.631,
+      "end": 82.277,
       "loop": false
     },
     "battle.impact.frost#2": {
-      "start": 67.849,
-      "end": 68.471,
+      "start": 82.327,
+      "end": 82.949,
       "loop": false
     },
     "battle.impact.frost#3": {
-      "start": 68.521,
-      "end": 69.162,
+      "start": 82.999,
+      "end": 83.64,
       "loop": false
     },
     "battle.impact.heal#0": {
-      "start": 69.212,
-      "end": 70.277,
+      "start": 83.69,
+      "end": 84.755,
       "loop": false
     },
     "battle.impact.heal#1": {
-      "start": 70.327,
-      "end": 71.407,
+      "start": 84.805,
+      "end": 85.885,
       "loop": false
     },
     "battle.impact.heal#2": {
-      "start": 71.457,
-      "end": 72.527,
+      "start": 85.935,
+      "end": 87.005,
       "loop": false
     },
     "battle.impact.hex#0": {
-      "start": 72.577,
-      "end": 73.376,
+      "start": 87.055,
+      "end": 87.854,
       "loop": false
     },
     "battle.impact.hex#1": {
-      "start": 73.426,
-      "end": 74.195,
+      "start": 87.904,
+      "end": 88.673,
       "loop": false
     },
     "battle.impact.hex#2": {
-      "start": 74.245,
-      "end": 75.055,
+      "start": 88.723,
+      "end": 89.533,
       "loop": false
     },
     "battle.impact.lightning#0": {
-      "start": 75.105,
-      "end": 76.202,
+      "start": 89.583,
+      "end": 90.68,
       "loop": false
     },
     "battle.impact.lightning#1": {
-      "start": 76.252,
-      "end": 77.346,
+      "start": 90.73,
+      "end": 91.824,
       "loop": false
     },
     "battle.impact.lightning#2": {
-      "start": 77.396,
-      "end": 78.554,
+      "start": 91.874,
+      "end": 93.032,
       "loop": false
     },
     "battle.impact.poison#0": {
-      "start": 78.604,
-      "end": 80.082,
+      "start": 93.082,
+      "end": 94.56,
       "loop": false
     },
     "battle.impact.poison#1": {
-      "start": 80.132,
-      "end": 81.241,
+      "start": 94.61,
+      "end": 95.719,
       "loop": false
     },
     "battle.impact.poison#2": {
-      "start": 81.291,
-      "end": 82.633,
+      "start": 95.769,
+      "end": 97.111,
       "loop": false
     },
     "battle.impact.shadow#0": {
-      "start": 82.683,
-      "end": 83.634,
+      "start": 97.161,
+      "end": 98.112,
       "loop": false
     },
     "battle.impact.shadow#1": {
-      "start": 83.684,
-      "end": 84.615,
+      "start": 98.162,
+      "end": 99.093,
       "loop": false
     },
     "battle.impact.shadow#2": {
-      "start": 84.665,
-      "end": 85.553,
+      "start": 99.143,
+      "end": 100.031,
       "loop": false
     },
     "battle.impact.shadow#3": {
-      "start": 85.603,
-      "end": 86.439,
+      "start": 100.081,
+      "end": 100.917,
       "loop": false
     },
     "battle.impact.web#0": {
-      "start": 86.489,
-      "end": 86.958,
+      "start": 100.967,
+      "end": 101.436,
       "loop": false
     },
     "battle.impact.web#1": {
-      "start": 87.008,
-      "end": 87.47,
+      "start": 101.486,
+      "end": 101.948,
       "loop": false
     },
     "battle.impact.web#2": {
-      "start": 87.52,
-      "end": 87.951,
+      "start": 101.998,
+      "end": 102.429,
       "loop": false
     },
     "battle.miss.magic#0": {
-      "start": 88.001,
-      "end": 88.487,
+      "start": 102.479,
+      "end": 102.965,
       "loop": false
     },
     "battle.miss.magic#1": {
-      "start": 88.537,
-      "end": 89.092,
+      "start": 103.015,
+      "end": 103.57,
       "loop": false
     },
     "battle.miss.magic#2": {
-      "start": 89.142,
-      "end": 89.666,
+      "start": 103.62,
+      "end": 104.144,
       "loop": false
     },
     "battle.miss.shot#0": {
-      "start": 89.716,
-      "end": 90.112,
+      "start": 104.194,
+      "end": 104.59,
       "loop": false
     },
     "battle.miss.shot#1": {
-      "start": 90.162,
-      "end": 90.54,
+      "start": 104.64,
+      "end": 105.018,
       "loop": false
     },
     "battle.miss.shot#2": {
-      "start": 90.59,
-      "end": 90.988,
+      "start": 105.068,
+      "end": 105.466,
       "loop": false
     },
     "battle.miss.shot#3": {
-      "start": 91.038,
-      "end": 91.45,
+      "start": 105.516,
+      "end": 105.928,
       "loop": false
     },
     "battle.miss.swing#0": {
-      "start": 91.5,
-      "end": 91.773,
+      "start": 105.978,
+      "end": 106.251,
       "loop": false
     },
     "battle.miss.swing#1": {
-      "start": 91.823,
-      "end": 92.086,
+      "start": 106.301,
+      "end": 106.564,
       "loop": false
     },
     "battle.miss.swing#2": {
-      "start": 92.136,
-      "end": 92.417,
+      "start": 106.614,
+      "end": 106.895,
       "loop": false
     },
     "battle.miss.swing#3": {
-      "start": 92.467,
-      "end": 92.75,
+      "start": 106.945,
+      "end": 107.228,
       "loop": false
     },
     "battle.regen#0": {
-      "start": 92.8,
-      "end": 93.388,
+      "start": 107.278,
+      "end": 107.866,
       "loop": false
     },
     "battle.regen#1": {
-      "start": 93.438,
-      "end": 94.13,
+      "start": 107.916,
+      "end": 108.608,
       "loop": false
     },
     "battle.regen#2": {
-      "start": 94.18,
-      "end": 94.825,
+      "start": 108.658,
+      "end": 109.303,
       "loop": false
     },
     "battle.shot.bow#0": {
-      "start": 94.875,
-      "end": 95.289,
+      "start": 109.353,
+      "end": 109.767,
       "loop": false
     },
     "battle.shot.bow#1": {
-      "start": 95.339,
-      "end": 95.744,
+      "start": 109.817,
+      "end": 110.222,
       "loop": false
     },
     "battle.shot.bow#2": {
-      "start": 95.794,
-      "end": 96.215,
+      "start": 110.272,
+      "end": 110.693,
       "loop": false
     },
     "battle.shot.bow#3": {
-      "start": 96.265,
-      "end": 96.712,
+      "start": 110.743,
+      "end": 111.19,
       "loop": false
     },
     "battle.shot.bow#4": {
-      "start": 96.762,
-      "end": 97.173,
+      "start": 111.24,
+      "end": 111.651,
       "loop": false
     },
     "battle.shot.crossbow#0": {
-      "start": 97.223,
-      "end": 97.686,
+      "start": 111.701,
+      "end": 112.164,
       "loop": false
     },
     "battle.shot.crossbow#1": {
-      "start": 97.736,
-      "end": 98.24,
+      "start": 112.214,
+      "end": 112.718,
       "loop": false
     },
     "battle.shot.crossbow#2": {
-      "start": 98.29,
-      "end": 98.73,
+      "start": 112.768,
+      "end": 113.208,
       "loop": false
     },
     "battle.shot.crossbow#3": {
-      "start": 98.78,
-      "end": 99.283,
+      "start": 113.258,
+      "end": 113.761,
       "loop": false
     },
     "battle.shot.wand#0": {
-      "start": 99.333,
-      "end": 99.723,
+      "start": 113.811,
+      "end": 114.201,
       "loop": false
     },
     "battle.shot.wand#1": {
-      "start": 99.773,
-      "end": 100.234,
+      "start": 114.251,
+      "end": 114.712,
       "loop": false
     },
     "battle.shot.wand#2": {
-      "start": 100.284,
-      "end": 100.674,
+      "start": 114.762,
+      "end": 115.152,
       "loop": false
     },
     "battle.shot.wand#3": {
-      "start": 100.724,
-      "end": 101.114,
+      "start": 115.202,
+      "end": 115.592,
       "loop": false
     },
     "battle.shot.wand#4": {
-      "start": 101.164,
-      "end": 101.554,
+      "start": 115.642,
+      "end": 116.032,
       "loop": false
     },
     "battle.step.armored#0": {
-      "start": 101.604,
-      "end": 101.854,
+      "start": 116.082,
+      "end": 116.234,
       "loop": false
     },
     "battle.step.armored#1": {
-      "start": 101.904,
-      "end": 102.154,
+      "start": 116.284,
+      "end": 116.448,
       "loop": false
     },
     "battle.step.armored#2": {
-      "start": 102.204,
-      "end": 102.454,
+      "start": 116.498,
+      "end": 116.661,
       "loop": false
     },
     "battle.step.armored#3": {
-      "start": 102.504,
-      "end": 102.754,
+      "start": 116.711,
+      "end": 116.878,
       "loop": false
     },
     "battle.step.armored#4": {
-      "start": 102.804,
-      "end": 103.054,
+      "start": 116.928,
+      "end": 117.084,
       "loop": false
     },
     "battle.step.armored#5": {
-      "start": 103.104,
-      "end": 103.354,
+      "start": 117.134,
+      "end": 117.311,
       "loop": false
     },
     "battle.step.armored#6": {
-      "start": 103.404,
-      "end": 103.654,
+      "start": 117.361,
+      "end": 117.527,
       "loop": false
     },
     "battle.step.armored#7": {
-      "start": 103.704,
-      "end": 103.954,
+      "start": 117.577,
+      "end": 117.734,
       "loop": false
     },
     "battle.step.heavy#0": {
-      "start": 104.004,
-      "end": 104.304,
+      "start": 117.784,
+      "end": 118.043,
       "loop": false
     },
     "battle.step.heavy#1": {
-      "start": 104.354,
-      "end": 104.654,
+      "start": 118.093,
+      "end": 118.366,
       "loop": false
     },
     "battle.step.heavy#2": {
-      "start": 104.704,
-      "end": 105.004,
+      "start": 118.416,
+      "end": 118.67,
       "loop": false
     },
     "battle.step.heavy#3": {
-      "start": 105.054,
-      "end": 105.354,
+      "start": 118.72,
+      "end": 119.012,
       "loop": false
     },
     "battle.step.heavy#4": {
-      "start": 105.404,
-      "end": 105.704,
+      "start": 119.062,
+      "end": 119.312,
       "loop": false
     },
     "battle.step.heavy#5": {
-      "start": 105.754,
-      "end": 106.054,
+      "start": 119.362,
+      "end": 119.634,
       "loop": false
     },
     "battle.step.light#0": {
-      "start": 106.104,
-      "end": 106.304,
+      "start": 119.684,
+      "end": 119.85,
       "loop": false
     },
     "battle.step.light#1": {
-      "start": 106.354,
-      "end": 106.554,
+      "start": 119.9,
+      "end": 120.043,
       "loop": false
     },
     "battle.step.light#2": {
-      "start": 106.604,
-      "end": 106.804,
+      "start": 120.093,
+      "end": 120.258,
       "loop": false
     },
     "battle.step.light#3": {
-      "start": 106.854,
-      "end": 107.054,
+      "start": 120.308,
+      "end": 120.454,
       "loop": false
     },
     "battle.step.light#4": {
-      "start": 107.104,
-      "end": 107.304,
+      "start": 120.504,
+      "end": 120.65,
       "loop": false
     },
     "battle.step.light#5": {
-      "start": 107.354,
-      "end": 107.554,
+      "start": 120.7,
+      "end": 120.843,
       "loop": false
     },
     "battle.step.light#6": {
-      "start": 107.604,
-      "end": 107.804,
+      "start": 120.893,
+      "end": 121.032,
       "loop": false
     },
     "battle.step.light#7": {
-      "start": 107.854,
-      "end": 108.054,
+      "start": 121.082,
+      "end": 121.238,
       "loop": false
     },
     "battle.step.skitter#0": {
-      "start": 108.104,
-      "end": 108.404,
+      "start": 121.288,
+      "end": 121.465,
       "loop": false
     },
     "battle.step.skitter#1": {
-      "start": 108.454,
-      "end": 108.754,
+      "start": 121.515,
+      "end": 121.712,
       "loop": false
     },
     "battle.step.skitter#2": {
-      "start": 108.804,
-      "end": 109.104,
+      "start": 121.762,
+      "end": 121.935,
       "loop": false
     },
     "battle.step.skitter#3": {
-      "start": 109.154,
-      "end": 109.454,
+      "start": 121.985,
+      "end": 122.191,
       "loop": false
     },
     "battle.swing.bite#0": {
-      "start": 109.504,
-      "end": 109.792,
+      "start": 122.241,
+      "end": 122.529,
       "loop": false
     },
     "battle.swing.bite#1": {
-      "start": 109.842,
-      "end": 110.117,
+      "start": 122.579,
+      "end": 122.854,
       "loop": false
     },
     "battle.swing.bite#2": {
-      "start": 110.167,
-      "end": 110.44,
+      "start": 122.904,
+      "end": 123.177,
       "loop": false
     },
     "battle.swing.blade#0": {
-      "start": 110.49,
-      "end": 110.827,
+      "start": 123.227,
+      "end": 123.564,
       "loop": false
     },
     "battle.swing.blade#1": {
-      "start": 110.877,
-      "end": 111.167,
+      "start": 123.614,
+      "end": 123.904,
       "loop": false
     },
     "battle.swing.blade#2": {
-      "start": 111.217,
-      "end": 111.538,
+      "start": 123.954,
+      "end": 124.275,
       "loop": false
     },
     "battle.swing.blade#3": {
-      "start": 111.588,
-      "end": 111.919,
+      "start": 124.325,
+      "end": 124.656,
       "loop": false
     },
     "battle.swing.blade#4": {
-      "start": 111.969,
-      "end": 112.291,
+      "start": 124.706,
+      "end": 125.028,
       "loop": false
     },
     "battle.swing.claw#0": {
-      "start": 112.341,
-      "end": 112.697,
+      "start": 125.078,
+      "end": 125.434,
       "loop": false
     },
     "battle.swing.claw#1": {
-      "start": 112.747,
-      "end": 113.067,
+      "start": 125.484,
+      "end": 125.804,
       "loop": false
     },
     "battle.swing.claw#2": {
-      "start": 113.117,
-      "end": 113.466,
+      "start": 125.854,
+      "end": 126.203,
       "loop": false
     },
     "battle.swing.claw#3": {
-      "start": 113.516,
-      "end": 113.868,
+      "start": 126.253,
+      "end": 126.605,
       "loop": false
     },
     "battle.swing.heavy#0": {
-      "start": 113.918,
-      "end": 114.502,
+      "start": 126.655,
+      "end": 127.239,
       "loop": false
     },
     "battle.swing.heavy#1": {
-      "start": 114.552,
-      "end": 115.128,
+      "start": 127.289,
+      "end": 127.865,
       "loop": false
     },
     "battle.swing.heavy#2": {
-      "start": 115.178,
-      "end": 115.777,
+      "start": 127.915,
+      "end": 128.514,
       "loop": false
     },
     "battle.swing.heavy#3": {
-      "start": 115.827,
-      "end": 116.376,
+      "start": 128.564,
+      "end": 129.113,
       "loop": false
     },
     "battle.swing.heavy#4": {
-      "start": 116.426,
-      "end": 117.048,
+      "start": 129.163,
+      "end": 129.785,
       "loop": false
     },
     "battle.swing.light#0": {
-      "start": 117.098,
-      "end": 117.303,
+      "start": 129.835,
+      "end": 130.04,
       "loop": false
     },
     "battle.swing.light#1": {
-      "start": 117.353,
-      "end": 117.545,
+      "start": 130.09,
+      "end": 130.282,
       "loop": false
     },
     "battle.swing.light#2": {
-      "start": 117.595,
-      "end": 117.784,
+      "start": 130.332,
+      "end": 130.521,
       "loop": false
     },
     "battle.swing.light#3": {
-      "start": 117.834,
-      "end": 118.025,
+      "start": 130.571,
+      "end": 130.762,
       "loop": false
     },
     "battle.swing.light#4": {
-      "start": 118.075,
-      "end": 118.257,
+      "start": 130.812,
+      "end": 130.994,
       "loop": false
     },
     "battle.swing.thrust#0": {
-      "start": 118.307,
-      "end": 118.564,
+      "start": 131.044,
+      "end": 131.301,
       "loop": false
     },
     "battle.swing.thrust#1": {
-      "start": 118.614,
-      "end": 118.846,
+      "start": 131.351,
+      "end": 131.583,
       "loop": false
     },
     "battle.swing.thrust#2": {
-      "start": 118.896,
-      "end": 119.155,
+      "start": 131.633,
+      "end": 131.892,
       "loop": false
     },
     "battle.swing.thrust#3": {
-      "start": 119.205,
-      "end": 119.479,
+      "start": 131.942,
+      "end": 132.216,
       "loop": false
     }
   }

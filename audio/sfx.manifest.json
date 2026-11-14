@@ -1,14 +1,14 @@
 {
   "banks": {
     "battle": {
-      "durationMs": 119529,
+      "durationMs": 132266,
       "mp3": {
-        "bytes": 1020884,
-        "sha256": "8e3cee295ffd599c79bd747622266d8615810045aa82359fd306cdc1f7a1a679"
+        "bytes": 1148660,
+        "sha256": "5646626a33009d4dbd9aae9b03bf74f887e9056f9d0ca920e6242ba008ab9141"
       },
       "opus": {
-        "bytes": 1067996,
-        "sha256": "39a4196713908e0269e5afbd8601d6fe305cf12639462d405bca5df92cf0d879"
+        "bytes": 1187332,
+        "sha256": "ba5e3aa13a967e1df2bcde9f52325bc50d7053bd54872772541fdb2ec576a759"
       }
     },
     "stings": {
@@ -207,11 +207,11 @@
     "battle.death.brute": {
       "bank": "battle",
       "durationsMs": [
-        494,
-        748,
-        719
+        1442,
+        1496,
+        1466
       ],
-      "inputs": "369fd4a31a77517b5bc6b7f20987b00d58075d7f9a7295a5084ca6655846bce7",
+      "inputs": "11f3ee54dde9871b4fa065f312fadbbbda682d82d88a7b030630d29d314146d2",
       "markers": [
         "battle.death.brute#0",
         "battle.death.brute#1",
@@ -221,12 +221,12 @@
     "battle.death.goblinoid": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        332,
-        398,
-        387
+        770,
+        774,
+        773,
+        749
       ],
-      "inputs": "893d9f77ea68542552c4906c798be3dd871875f009f7130aaad68354d06abdef",
+      "inputs": "07e204dc24edc08520da3d16a69a0a44614c40efe464ef7d85afc7a8e1bb6602",
       "markers": [
         "battle.death.goblinoid#0",
         "battle.death.goblinoid#1",
@@ -237,10 +237,10 @@
     "battle.death.hero": {
       "bank": "battle",
       "durationsMs": [
-        515,
-        587
+        1865,
+        1874
       ],
-      "inputs": "6a52b25af7262e4d3b08949a758c2d9cb7d9884ccea62b39110f17787c5d2193",
+      "inputs": "1e702defd106712cc509faec28aaad853429d9948bffc1d4a25ba05f95eaabf8",
       "markers": [
         "battle.death.hero#0",
         "battle.death.hero#1"
@@ -249,9 +249,9 @@
     "battle.death.horror": {
       "bank": "battle",
       "durationsMs": [
-        673
+        2758
       ],
-      "inputs": "da30c26473c31025e18c9d1ebca143b585df9c0568f3ae74b404809b1bfc0cf5",
+      "inputs": "c66ad7869cc0079ed063287b84fa6f0c3406ee9133fd6bb50719857b380298e9",
       "markers": [
         "battle.death.horror#0"
       ]
@@ -259,12 +259,12 @@
     "battle.death.human": {
       "bank": "battle",
       "durationsMs": [
-        454,
-        416,
-        379,
-        347
+        1172,
+        896,
+        1101,
+        983
       ],
-      "inputs": "5d28ae33ee03f1ba7c182f02bde343787e53110c49af8be5216835f460e8f70f",
+      "inputs": "f8879640f155c68465f841f2658bd324524cc73f6ad9199abbd1bc2201d28555",
       "markers": [
         "battle.death.human#0",
         "battle.death.human#1",
@@ -275,10 +275,10 @@
     "battle.death.salamander": {
       "bank": "battle",
       "durationsMs": [
-        364,
-        301
+        1436,
+        1128
       ],
-      "inputs": "a7c23d9ed06d1d22f94b3ff7439242e297458f9c501aa3eefac38e2aecb2115a",
+      "inputs": "d3076c607080925c856f5a00fafe077d52c9e163b2ddb6ad0f4b27451d27dc99",
       "markers": [
         "battle.death.salamander#0",
         "battle.death.salamander#1"
@@ -287,10 +287,10 @@
     "battle.death.spider": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300
+        915,
+        894
       ],
-      "inputs": "5ad05ca183ff33067d081159d04baa67e2d7d56d06393bfaf6e7eec290955367",
+      "inputs": "5d53b44126e2628973a6f185280623d5fadf2a76089c30beac2c91fe2e186faf",
       "markers": [
         "battle.death.spider#0",
         "battle.death.spider#1"
@@ -799,16 +799,16 @@
     "battle.step.armored": {
       "bank": "battle",
       "durationsMs": [
-        250,
-        250,
-        250,
-        250,
-        250,
-        250,
-        250,
-        250
+        152,
+        164,
+        163,
+        167,
+        156,
+        177,
+        166,
+        157
       ],
-      "inputs": "50e26ef22b771919290e433391f713ba8084dd205f0261b642d44f2ace9a9742",
+      "inputs": "af36bac1cb059836158fe41fe0666ee833716cfa17ce07f039464ef983ba202c",
       "markers": [
         "battle.step.armored#0",
         "battle.step.armored#1",
@@ -823,14 +823,14 @@
     "battle.step.heavy": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300,
-        300,
-        300
+        259,
+        273,
+        254,
+        292,
+        250,
+        272
       ],
-      "inputs": "857daf820c9b37c7f0e87e9279a1dbab6ebf80984c008b64e55fac728068e2c3",
+      "inputs": "2d25ba23a988e9ea69c4fa9dea1ba8f015e42e5f74ad0a7421a4421a4209303e",
       "markers": [
         "battle.step.heavy#0",
         "battle.step.heavy#1",
@@ -843,16 +843,16 @@
     "battle.step.light": {
       "bank": "battle",
       "durationsMs": [
-        200,
-        200,
-        200,
-        200,
-        200,
-        200,
-        200,
-        200
+        166,
+        143,
+        165,
+        146,
+        146,
+        143,
+        139,
+        156
       ],
-      "inputs": "dde86d57800d464b885486cc4f27c1c22338ecd60b714aef62cda92f17b71fb7",
+      "inputs": "2da31cb366976e5abc7f83307ba0b40461637d121420b300ddb2e65fafb33381",
       "markers": [
         "battle.step.light#0",
         "battle.step.light#1",
@@ -867,12 +867,12 @@
     "battle.step.skitter": {
       "bank": "battle",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300
+        177,
+        197,
+        173,
+        206
       ],
-      "inputs": "703b4be0b5ddd434da20afe6ce697a29c763f337378780edd70641fc8388e736",
+      "inputs": "0d20071940736fa623250b4553b2ce4bc50e05092c362a973e3d2fa69c41113f",
       "markers": [
         "battle.step.skitter#0",
         "battle.step.skitter#1",

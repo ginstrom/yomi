@@ -139,13 +139,14 @@ check) and `checks.py` (the per-variant checks).
   `battle.shot.*`, `hit.magic`, `miss.shot`, `miss.magic`, `hit.image`,
   `element.*`, `heal.small`, `regen`) and the 22 spell and area-ability
   cues (step 11: `battle.cast.*`, `impact.*` of the spells, `ability.spit`,
-  `ability.web`) are real content; see "Sound design without ears" below
+  `ability.web`) and the 11 falls and footsteps (step 12: `battle.death.*`,
+  `battle.step.*`) are real content; see "Sound design without ears" below
   for what they taught.
 - **The rest are placeholders.** Every other W1 cue has a recipe over
   one of the ten old placeholder WAVs (sources `placeholder_*`, collection
   `placeholder`, licence `own`), pitched, filtered and dusted with noise so
   its variants differ; each says in its first line which content step
-  replaces it (12 falls and steps, 13 world).
+  replaces it (13, the `world` bank).
 
 ## Sound design without ears
 
@@ -251,6 +252,27 @@ content steps after them:
   (the storm cast is Lightning Spell Impact 2's charge).
 - `sfx audition` with a single cue writes its files straight into `--out`;
   with several, a folder per cue.
+
+- **Footsteps** (step 12) play every 140 ms (`MOVE_STEP_MS`), so a walk
+  is one cue after another: keep each step's energy in its first 140 ms
+  (measured 88 to 100%). Kenney's RPG Audio footsteps are a heel and a toe
+  70 to 110 ms apart; damp the toe 8 to 14 dB with an envelope, or the
+  walk ticks twice as fast. A soft heavy impact under a troll's step rings
+  as a 90 Hz sine: cut its envelope to −40 dB by 240 ms and keep it 3 to
+  5 dB under the foot's slap, so a run of steps does not boom. Steps are
+  short, so they come in peak-limited until a `limit` sits 14 to 21 dB
+  down.
+- **Falls are told apart by what speaks**: the human by no voice (a breath
+  13 dB down, then gear), goblinoids by a pitched-up yelp with a squeal
+  over it (2–5 kHz, A-weighted 26–86%), the brute by a groan whose
+  low-pass closes as it dies and a thud with a sub sweep (59–92% of raw
+  power under 300 Hz), the spider by clicks and snaps with no voiced
+  harmonics, the salamander by a hiss and a splash. A pitched-down layer
+  plays slower, so it uses less of its source: trim an excerpt to
+  length × 2^(pitch/12) and keep the budget.
+- **One-take cues** (`death.horror`): the reversed swell must end where the
+  fall lands; `reverse` applies after `start`/`length`, so cut the source
+  first, then reverse.
 
 ## Sources and licences
 
