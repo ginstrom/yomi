@@ -3,7 +3,7 @@ import type { Element } from '../combat/combat.ts'
 import { SPELLS, STATUSES, type SpellId } from '../combat/spells.ts'
 import type { AttackEvent, BattleEvent, UnitId } from '../engine/battleEngine.ts'
 import type { WorldEvent } from '../game/blight.ts'
-import type { PartyEvent } from '../game/company.ts'
+import type { DayReport, PartyEvent } from '../game/company.ts'
 import type { FoeKind, UnitKind } from '../game/encounters.ts'
 import type { ItemIcon } from '../inventory/inventory.ts'
 import manifest from '../../audio/sfx.manifest.json'
@@ -476,6 +476,11 @@ export function worldSounds(events: readonly (WorldEvent | PartyEvent)[]): Sound
     .map((kind, i) => ({ cue: kind.cue, delayMs: i * WORLD_SOUND_GAP_MS }))
 }
 
+/** The events of days that passed, world's and parties', for `worldSounds`; with `own`, that party's own events are left out (its action's words tell what it did). */
+export function reportEvents(reports: readonly DayReport[], own?: string): (WorldEvent | PartyEvent)[] {
+  return reports.flatMap((report) => [...report.events, ...report.partyEvents.filter((event) => event.party !== own)])
+}
+
 /** The sound of an action that returns a refusal (`string | null`): the error when refused, else its success cue. */
 export function refusalCue(refusal: string | null, success: CueId): CueId {
   return refusal !== null ? 'ui.error' : success
@@ -484,4 +489,12 @@ export function refusalCue(refusal: string | null, success: CueId): CueId {
 /** The cue of a runecraft action. */
 export function runeCue(kind: 'embed' | 'fuse' | 'extract'): CueId {
   return `world.rune.${kind}`
+}
+
+/** The labels of buttons that leave a screen or step back from one. */
+const BACK_LABELS: ReadonlySet<string> = new Set(['Close', 'Back', 'Leave', 'Cancel', 'Back to game', 'Main Menu', 'End'])
+
+/** What pressing a button of this label sounds: `ui.back` for one that closes or steps back, else a click. */
+export function buttonCue(label: string): CueId {
+  return BACK_LABELS.has(label) ? 'ui.back' : 'ui.click'
 }

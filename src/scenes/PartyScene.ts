@@ -7,6 +7,7 @@ import { SLOT_IDS, describeSlot, firstEmptySlot, type SlotId } from '../game/sav
 import { DEFAULT_ENCAMPMENT_NAME, MAX_ENCAMPMENT_NAME_LENGTH } from '../game/worldMap.ts'
 import type { ButtonProbe, PartyProbe } from '../testHook.ts'
 import { playCue } from './soundPlayer.ts'
+import { buttonCue } from './sounds.ts'
 import type { Point } from './boardGeometry.ts'
 import { draftInfo, draftSkills } from './draftInfo.ts'
 import type { Rect } from './mapScroll.ts'
@@ -228,7 +229,7 @@ export class PartyScene extends Phaser.Scene {
 
   private button(at: Rect, label: string, onClick: () => void, look?: PanelButtonLook): void {
     // Next tick: the redraw a click leads to destroys the button whose handler this runs in.
-    addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), look)
+    addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { cue: look?.dimmed ? 'ui.error' : label === 'Begin' ? 'ui.confirm' : buttonCue(label), ...look })
   }
 
   private buildChoice(): void {

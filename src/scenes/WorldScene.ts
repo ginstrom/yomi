@@ -34,7 +34,8 @@ import {
 import { HexBoard, hexCorners, hexEquals, hexNeighbors, type Hex } from '../grid/hex.ts'
 import { buttonProbe, type WorldProbe } from '../testHook.ts'
 import type { CraftedData } from './CraftingScene.ts'
-import { pauseMusic, playCue, resumeMusic, startMusic, stopMusic } from './soundPlayer.ts'
+import { pauseMusic, playCue, playCues, resumeMusic, startMusic, stopMusic } from './soundPlayer.ts'
+import { WORLD_SOUND_GAP_MS, buttonCue, reportEvents, worldSounds } from './sounds.ts'
 import { WORLD_LAYOUT, boardHexAt, boardHexCenter, boardPixelSize, type Point } from './boardGeometry.ts'
 import { CURSORS } from './cursors.ts'
 import { clampOrigin, mapOrigin, pannedOrigin, pressMoved, rectContains, type Rect } from './mapScroll.ts'
@@ -740,7 +741,7 @@ export class WorldScene extends Phaser.Scene {
     bg.on('pointerover', () => bg.setFillStyle(0x3182ce))
     bg.on('pointerout', () => bg.setFillStyle(0x2b6cb0))
     bg.on('pointerdown', () => {
-      playCue(this, 'ui.click')
+      playCue(this, buttonCue(label))
       onClick()
     })
     return this.add.container(0, 0, [bg, text]).setSize(width, BUTTON_H)
@@ -1088,7 +1089,10 @@ export class WorldScene extends Phaser.Scene {
     const order = travelLabel(this.world, clicked)
     const walk = walkTo(this.gameState, expedition, clicked)
     // Refused, nothing changed; blocked at its first hex, the party now stands before what is there.
-    if (walk.reports.length === 0 && expedition.confronting === null) return
+    if (walk.reports.length === 0 && expedition.confronting === null) {
+      playCue(this, 'ui.error')
+      return
+    }
     this.follow(walk, order)
   }
 
@@ -1108,7 +1112,10 @@ export class WorldScene extends Phaser.Scene {
     this.messageText.setText(
       refusal ?? `${partyNoun(this.gameState, expedition)} garrisons ${midSentence(site?.name ?? 'the site')} until given another order.`,
     )
-    if (refusal !== null) return
+    if (refusal !== null) {
+      playCue(this, 'ui.error')
+      return
+    }
     this.refresh()
     this.save()
   }
@@ -1116,6 +1123,7 @@ export class WorldScene extends Phaser.Scene {
   /** A walking order's outcome: its refusal in the message, or its walk, saved and then played. */
   private follow(walk: string | Walked, order: string): void {
     if (typeof walk === 'string') {
+      playCue(this, 'ui.error')
       this.messageText.setText(walk)
       return
     }
@@ -1134,6 +1142,11 @@ export class WorldScene extends Phaser.Scene {
   /** The walk has been shown (or there was none): tells how it went and focuses the party an interrupt concerns. */
   private walked({ journey, reports }: Walked): void {
     const told = describeWalk(this.gameState, this.expedition(), reports)
+    // A walk blocked at its first hex has no day to report, but the party now stands before what blocked it.
+    const events = reportEvents(reports)
+    const here = monstersHere(this.world, this.expedition())
+    if (here && !events.some((event) => event.type === 'confronting')) events.push({ type: 'confronting', party: this.selectedParty, location: here.id })
+    playCues(this, worldSounds(events))
     this.focusInterrupt(reports)
     this.messageText.setText(told)
     this.refresh()
@@ -1221,6 +1234,7 @@ export class WorldScene extends Phaser.Scene {
    */
   private refused(refusal = advanceRefusal(this.gameState), blocking = blockingParty(this.gameState)): boolean {
     if (refusal === null) return false
+    playCue(this, 'ui.error')
     if (blocking) this.selectParty(blocking.id)
     this.messageText.setText(refusal)
     return true
@@ -1238,6 +1252,7 @@ export class WorldScene extends Phaser.Scene {
     const events = reports.flatMap((report) => report.events)
     const told = describeDays(reports, this.gameState, limit)
     const finish = () => {
+      playCues(this, worldSounds(reportEvents(reports)))
       this.focusInterrupt(reports)
       this.messageText.setText(told)
       this.refresh()
@@ -1269,6 +1284,7 @@ export class WorldScene extends Phaser.Scene {
     }
     const report = act(this.gameState, expedition.id, action)
     if (typeof report !== 'string') return report
+    playCue(this, 'ui.error')
     this.messageText.setText(report)
     return null
   }
@@ -1280,6 +1296,7 @@ export class WorldScene extends Phaser.Scene {
    * concerns, if any, is selected and centred as for an interrupt; then saves.
    */
   private ownDays(own: string, reports: readonly DayReport[], others = describeOthers(this.gameState, this.expedition(), reports)): void {
+    playCues(this, worldSounds(reportEvents(reports, this.selectedParty)))
     if (others.party !== null) this.selectParty(others.party)
     this.messageText.setText(others.text ? `${own} ${others.text}` : own)
     this.refresh()
@@ -1457,7 +1474,10 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** Tells what a field craft made and what its day brought, as after camping. */
-  private crafted({ item, events }: CraftedData['crafted']): void {
+  private crafted({ item, events, kind }: CraftedData['crafted']): void {
+    // The craft or the rune set in, then what its day brought.
+    playCue(this, kind === 'embed' ? 'world.rune.embed' : 'world.craft')
+    playCues(this, worldSounds(events).map((sound) => ({ ...sound, delayMs: sound.delayMs + WORLD_SOUND_GAP_MS })))
     const told = describeWorldEvents(events, events.find((event) => isNotable(this.world, event, this.presences())) ?? null)
     this.messageText.setText(`A day's work makes the ${item}.${told ? ` ${told}` : ''}`)
     this.checkOutcome()

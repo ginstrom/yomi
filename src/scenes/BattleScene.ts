@@ -1906,7 +1906,9 @@ export class BattleScene extends Phaser.Scene {
     const unit = this.selected!
     const strike: Action = { type: 'attack', unit, target }
     if (!move) {
+      // A click on a foe that does nothing (`noStrikeHint` says why) is refused.
       if (attack) this.playerAct(strike)
+      else playCue(this, 'ui.error')
       return
     }
     if (!attack) {

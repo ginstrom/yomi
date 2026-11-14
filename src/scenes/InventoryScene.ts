@@ -50,6 +50,7 @@ import { WARDS_WIDE_ROW_CHARS, attackCostWarning, onHitLines, wardsLines } from 
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
 import { createPips } from './socketPips.ts'
 import { playCue } from './soundPlayer.ts'
+import { buttonCue, type CueId } from './sounds.ts'
 import { isSecondaryClick } from './clicks.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
@@ -370,16 +371,20 @@ export class InventoryScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-C', () => this.onTabKey('character'))
     this.input.keyboard?.on('keydown-S', () => this.onTabKey('skills'))
     this.input.keyboard?.on('keydown-B', () => this.onTabKey('spells'))
-    this.input.keyboard?.on('keydown-P', () => this.showTab(this.activeTab === 'perkTree' ? 'skills' : 'perkTree'))
-    this.input.keyboard?.on('keydown-K', () => this.showTab(this.activeTab === 'spellTree' ? 'spells' : 'spellTree'))
+    this.input.keyboard?.on('keydown-P', () => this.toggleTree('perkTree', 'skills'))
+    this.input.keyboard?.on('keydown-K', () => this.toggleTree('spellTree', 'spells'))
     // Esc backs out of choosing whom to heal; from a tree it steps back to the tab it was opened from; from a tab it closes the panel.
     // Esc during a drag lets go of the item where it was, and closes nothing.
     this.input.keyboard?.on('keydown-ESC', () => {
       const back = TREE_OF[this.activeTab]
       if (this.press?.drag) this.endPress()
-      else if (this.worldCast) this.setWorldCast(null)
-      else if (back) this.showTab(back)
-      else this.close()
+      else if (this.worldCast) {
+        playCue(this, 'ui.back')
+        this.setWorldCast(null)
+      } else if (back) {
+        playCue(this, 'ui.back')
+        this.showTab(back)
+      } else this.close()
     })
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => this.onPointerMove(pointer))
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => this.onPointerUp(pointer))
@@ -542,7 +547,7 @@ export class InventoryScene extends Phaser.Scene {
     const bg = this.add.rectangle(x, y, TAB_W, TAB_H, 0x1b1712, 0.95).setStrokeStyle(2, 0x6b5a3a)
     bg.setInteractive({ useHandCursor: true })
     bg.on('pointerdown', () => {
-      playCue(this, 'ui.click')
+      playCue(this, 'ui.tab')
       this.showTab(tab)
     })
     const text = this.add
@@ -797,7 +802,7 @@ export class InventoryScene extends Phaser.Scene {
     bg.on('pointerover', () => bg.setFillStyle(0x3a2f1c, 0.95))
     bg.on('pointerout', () => bg.setFillStyle(0x1b1712, 0.95))
     bg.on('pointerdown', () => {
-      playCue(this, 'ui.click')
+      playCue(this, buttonCue(label))
       onClick()
     })
     content.add([bg, text])
@@ -839,7 +844,7 @@ export class InventoryScene extends Phaser.Scene {
     new PerkTreeView(this, this.treeContent, {
       character: this.character,
       clickable: (perk) => this.canTake(perk),
-      onClick: (perk) => this.advance(() => takePerk(this.character, perk)),
+      onClick: (perk) => this.advance(() => takePerk(this.character, perk), 'ui.learn'),
       hint: (perk) => nodeHint(this.character, perk, this.canAdvance),
       rule: TREE_RULE,
       stripWidth: PANEL_W - 2 * TREE_X,
@@ -955,7 +960,7 @@ export class InventoryScene extends Phaser.Scene {
     if (!enabled) return
     bg.setInteractive({ useHandCursor: true })
     bg.on('pointerdown', () => {
-      playCue(this, 'ui.click')
+      playCue(this, choosing ? 'ui.back' : 'ui.click')
       if (choosing) this.setWorldCast(null)
       else if (healsOne(spell)) this.setWorldCast(spell)
       else this.heal(spell)
@@ -980,7 +985,7 @@ export class InventoryScene extends Phaser.Scene {
   /** Casts a heal out of battle, on `target` or on the whole party, and redraws. */
   private heal(spell: HeroSpellId, target?: Character): void {
     const party = this.members.map((member) => member.character)
-    if (castOnWorldMap(this.character, spell, party, target)) playCue(this, 'battle.impact.heal')
+    playCue(this, castOnWorldMap(this.character, spell, party, target) ? 'battle.impact.heal' : 'ui.error')
     this.time.delayedCall(0, () => this.buildContent())
   }
 
@@ -993,7 +998,7 @@ export class InventoryScene extends Phaser.Scene {
       tree: 'spells',
       character: this.character,
       clickable: (perk) => this.canTake(perk),
-      onClick: (perk) => this.advance(() => takePerk(this.character, perk)),
+      onClick: (perk) => this.advance(() => takePerk(this.character, perk), 'ui.learn'),
       hint: (perk) => nodeHint(this.character, perk, this.canAdvance),
       rule: SPELL_TREE_RULE,
       stripWidth: PANEL_W - 2 * TREE_X,
@@ -1430,21 +1435,27 @@ export class InventoryScene extends Phaser.Scene {
   /** Applies a change of gear, if the battle allows one now, and redraws the panel to match. */
   private changeGear(change: () => boolean): void {
     const onGround = this.ground.length
-    if (this.gearApCost === null || !change()) return
+    if (this.gearApCost === null || !change()) {
+      playCue(this, 'ui.error')
+      return
+    }
     // A dropped item lands at the end of the pile: bring it into view.
     if (this.ground.length > onGround) {
       this.groundScroll.setCount(this.ground.length)
       this.groundScroll.scrollToEnd()
     }
-    playCue(this, 'ui.click')
+    playCue(this, 'ui.gear')
     // Next tick: the redraw destroys the slot whose click handler this runs in.
     this.time.delayedCall(0, () => this.buildContent())
   }
 
   /** Spends a skill point or a perk pick, as `spend` does and reports, and redraws the panel to match. */
-  private advance(spend: () => boolean): void {
-    if (!this.canAdvance || !spend()) return
-    playCue(this, 'ui.click')
+  private advance(spend: () => boolean, success: CueId = 'ui.click'): void {
+    if (!this.canAdvance || !spend()) {
+      playCue(this, 'ui.error')
+      return
+    }
+    playCue(this, success)
     // Next tick: the redraw destroys the button whose click handler this runs in.
     this.time.delayedCall(0, () => this.buildContent())
   }
@@ -1461,14 +1472,24 @@ export class InventoryScene extends Phaser.Scene {
     this.time.delayedCall(0, () => this.buildContent())
   }
 
+  /** A tree's key shows the tree, or the tab it is a view of when it is the one showing. */
+  private toggleTree(tree: PanelTab, tab: PanelTab): void {
+    playCue(this, 'ui.tab')
+    this.showTab(this.activeTab === tree ? tab : tree)
+  }
+
   /** A tab's key shows the tab, or closes the panel when it is the one showing. */
   private onTabKey(tab: MainTab): void {
     if (this.activeTab === tab) this.close()
-    else this.showTab(tab)
+    else {
+      playCue(this, 'ui.tab')
+      this.showTab(tab)
+    }
   }
 
   /** Closes the panel, telling the scene under it which member it last showed. */
   private close(): void {
+    playCue(this, 'ui.back')
     this.scene.stop()
     this.scene.resume(this.resumeKey, { member: this.index })
   }

@@ -21,6 +21,7 @@ import { TYPICAL_AP, compareLines, fieldCraftSummary } from './gearCompare.ts'
 import { ITEM_ICON_KEYS, RUNE_COLOURS, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, cssColour, iconTint } from './itemIcons.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton, fitText } from './panelButton.ts'
+import { buttonCue, refusalCue, runeCue } from './sounds.ts'
 import {
   actionId,
   actionPreview,
@@ -46,7 +47,7 @@ interface CraftingData {
 
 /** What a field craft hands back to the world map as it resumes it: the item made and the day's events, to report. */
 export interface CraftedData {
-  crafted: { item: string; events: WorldEvent[] }
+  crafted: { item: string; events: WorldEvent[]; /** What was done, which sounds on the map as the scene closes: a craft, or a rune set in. */ kind: 'craft' | 'embed' }
 }
 
 /** Drawn in a frame of this size, centred over the map and scaled down (never up) to fit the window. */
@@ -146,7 +147,11 @@ export class CraftingScene extends Phaser.Scene {
     this.layout()
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this))
-    this.input.keyboard?.on('keydown-ESC', () => (this.selected || this.chosen ? this.select(null) : this.close()))
+    this.input.keyboard?.on('keydown-ESC', () => {
+      playCue(this, 'ui.back')
+      if (this.selected || this.chosen) this.select(null)
+      else this.close()
+    })
   }
 
   /** What the in-browser tests see of the crafting screen; see testHook.ts. */
@@ -509,8 +514,10 @@ export class CraftingScene extends Phaser.Scene {
 
   private button(key: keyof CraftingProbe['buttons'], at: Rect, label: string, onClick: () => void, enabled = true, marked = false): void {
     this.controls[key] = { at, enabled }
+    // A confirm sounds its own outcome (`onRune`, `onWork`); the tabs a tab; the rest a click or a back.
+    const cue = key === 'confirm' || key === 'work' ? null : key === 'modifyTab' || key === 'runesTab' ? 'ui.tab' : buttonCue(label)
     // Next tick: the redraw a click leads to destroys the button whose handler this runs in.
-    addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled, marked, fontSize: 13 })
+    addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled: enabled || cue === null, dimmed: cue === null && !enabled, marked, fontSize: 13, cue })
   }
 
   private layout(): void {
@@ -561,6 +568,7 @@ export class CraftingScene extends Phaser.Scene {
     const field = craftTier(game.world, this.expedition) === 'field'
     if (action.kind === 'fuse') {
       const refusal = fuse(game, this.expedition, action.key)
+      playCue(this, refusalCue(refusal, runeCue('fuse')))
       this.message = refusal ?? doneMessage(action)
       if (!refusal) this.chosen = null
       this.render()
@@ -569,13 +577,15 @@ export class CraftingScene extends Phaser.Scene {
     if (!place) return
     const rune = action.kind === 'extract' ? itemAt(game, place)?.runes?.[action.index] : action.key
     const result = action.kind === 'embed' ? embed(game, place, action.key) : extract(game, place, action.index)
+    // On the map a field embed plays its sound as the map resumes (`WorldScene.crafted`).
+    if (result.refusal !== null || !(field && action.kind === 'embed' && this.resumeTo)) playCue(this, refusalCue(result.refusal, runeCue(action.kind)))
     if (result.refusal !== null) {
       this.message = result.refusal
       this.render()
       return
     }
     if (field && action.kind === 'embed' && this.resumeTo) {
-      this.close({ crafted: { item: result.item.name, events: result.events } })
+      this.close({ crafted: { item: result.item.name, events: result.events, kind: 'embed' } })
       return
     }
     this.message = doneMessage(action, result.item, rune)
@@ -589,13 +599,15 @@ export class CraftingScene extends Phaser.Scene {
   private onWork(place: ItemPlace, option: CraftOption): void {
     const field = craftTier(this.gameState.world, this.expedition) === 'field'
     const result = craft(this.gameState, place, option.modifier.id, option.grade)
+    // On the map the field craft plays its sound as the map resumes (`WorldScene.crafted`).
+    if (result.refusal !== null || !(field && this.resumeTo)) playCue(this, refusalCue(result.refusal, 'world.craft'))
     if (result.refusal !== null) {
       this.message = result.refusal
       this.render()
       return
     }
     if (field && this.resumeTo) {
-      this.close({ crafted: { item: result.item.name, events: result.events } })
+      this.close({ crafted: { item: result.item.name, events: result.events, kind: 'craft' } })
       return
     }
     this.message = `Made the ${result.item.name}.`

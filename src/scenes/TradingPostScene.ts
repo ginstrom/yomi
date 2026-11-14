@@ -28,6 +28,7 @@ import type { EquipmentSlot, Item } from '../inventory/inventory.ts'
 import { parseRuneKey, pouchCount, pouchKeys, runeName, type RuneKey } from '../inventory/runes.ts'
 import type { ButtonProbe, TradingPostProbe } from '../testHook.ts'
 import { playCue } from './soundPlayer.ts'
+import { buttonCue, refusalCue, type CueId } from './sounds.ts'
 import type { Point } from './boardGeometry.ts'
 import { TYPICAL_AP, statLines, statSummary } from './gearCompare.ts'
 import { ITEM_ICON_KEYS, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
@@ -162,7 +163,11 @@ export class TradingPostScene extends Phaser.Scene {
     this.layout()
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this))
-    this.input.keyboard?.on('keydown-ESC', () => (this.selected ? this.select(null) : this.close()))
+    this.input.keyboard?.on('keydown-ESC', () => {
+      playCue(this, 'ui.back')
+      if (this.selected) this.select(null)
+      else this.close()
+    })
   }
 
   /** What the in-browser tests see of the trading post; see testHook.ts. */
@@ -332,7 +337,7 @@ export class TradingPostScene extends Phaser.Scene {
     })
     const runesAt = { x: LIST_X + slotW * (SLOT_BUTTONS.length + 0.5), y: SLOT_Y, width: slotW - 6, height: 24 }
     this.runesAt = runesAt
-    this.filterButton(runesAt, 'Runes', () => this.setFilter({ slot: 'runes', family: null }), this.filter.slot === 'runes')
+    this.filterButton(runesAt, 'Runes', () => this.setFilter({ slot: 'runes', family: null }), this.filter.slot === 'runes', 'ui.tab')
     if (this.filter.slot === 'runes') return
     const familyW = FILTER_W / FAMILIES_PER_ROW
     const families: Array<[FamilyId | null, string]> = [[null, 'All'], ...FAMILIES.filter((f) => f.slot === this.filter.slot).map((f): [FamilyId, string] => [f.id, f.name])]
@@ -343,9 +348,9 @@ export class TradingPostScene extends Phaser.Scene {
     })
   }
 
-  private filterButton(at: Rect, label: string, onClick: () => void, marked: boolean): void {
+  private filterButton(at: Rect, label: string, onClick: () => void, marked: boolean, cue: CueId = 'ui.click'): void {
     // Next tick, as every button here: the redraw destroys the button whose handler this runs in.
-    addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled: true, marked, fontSize: 10 })
+    addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled: true, marked, fontSize: 10, cue })
   }
 
   /** A line of the list: the item's icon, name and stats, and its price; a click shows its details. */
@@ -411,8 +416,11 @@ export class TradingPostScene extends Phaser.Scene {
 
   private button(key: keyof TradingPostProbe['buttons'], at: Rect, label: string, onClick: () => void, enabled = true, marked = false): void {
     this.controls[key] = { at, enabled }
+    // The tabs sound a tab; a confirm sounds its own outcome (a refused one is faint but still clickable, and sounds the refusal); the rest a click or a back.
+    const confirms = key === 'confirm' || key === 'confirmAll'
+    const cue = confirms ? null : key === 'buyTab' || key === 'sellTab' ? 'ui.tab' : buttonCue(label)
     // Next tick: the redraw a click leads to destroys the button whose handler this runs in.
-    addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled, marked, fontSize: 13 })
+    addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled: enabled || confirms, dimmed: confirms && !enabled, marked, fontSize: 13, cue })
   }
 
   private layout(): void {
@@ -453,6 +461,7 @@ export class TradingPostScene extends Phaser.Scene {
 
   /** Says why an action was refused, or `done`, and draws the post as it now stands. */
   private act(refusal: string | null, done: string, keepSelection = false): void {
+    playCue(this, refusalCue(refusal, 'world.coins'))
     this.message = refusal ?? done
     if (!refusal && !keepSelection) this.selected = null
     this.render()

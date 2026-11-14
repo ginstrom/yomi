@@ -36,6 +36,8 @@ import {
   spellSound,
   stepCue,
   refusalCue,
+  buttonCue,
+  reportEvents,
   runeCue,
   worldSounds,
   WORLD_SOUND_GAP_MS,
@@ -658,5 +660,24 @@ describe('refusalCue and runeCue (step 07)', () => {
     expect(runeCue('embed')).toBe('world.rune.embed')
     expect(runeCue('fuse')).toBe('world.rune.fuse')
     expect(runeCue('extract')).toBe('world.rune.extract')
+  })
+})
+
+describe('buttonCue (step 07)', () => {
+  it('sounds a back for buttons that close or step back, a click for the rest', () => {
+    for (const label of ['Close', 'Back', 'Leave', 'Cancel']) expect(buttonCue(label)).toBe('ui.back')
+    for (const label of ['Buy', 'Next', 'Enter the guild hall']) expect(buttonCue(label)).toBe('ui.click')
+  })
+})
+
+describe('reportEvents (step 07)', () => {
+  it('flattens the days world and party events, leaving out one party\'s own on request', () => {
+    const at = { q: 0, r: 0 }
+    const day = (events: never[], partyEvents: never[]) => ({ events, partyEvents, parties: [], interrupt: null })
+    const reports = [
+      day([{ type: 'tower_built', tower: 't', at }] as never, [{ type: 'arrived', party: 'party_1', at }, { type: 'arrived', party: 'party_2', at }] as never),
+    ]
+    expect(reportEvents(reports).map((e) => e.type)).toEqual(['tower_built', 'arrived', 'arrived'])
+    expect(reportEvents(reports, 'party_1')).toHaveLength(2)
   })
 })

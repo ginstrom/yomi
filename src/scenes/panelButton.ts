@@ -1,5 +1,6 @@
 import type Phaser from 'phaser'
 import { playCue } from './soundPlayer.ts'
+import type { CueId } from './sounds.ts'
 import type { Rect } from './mapScroll.ts'
 
 const FONT = 'monospace'
@@ -13,6 +14,8 @@ export interface PanelButtonLook {
   /** Drawn faint as a disabled one is, but still taking clicks: an action refused now, whose refusal a click shows. */
   dimmed?: boolean
   fontSize?: number
+  /** What a press sounds: `ui.click`, or `ui.error` for a dimmed one (its click shows a refusal), unless the scene says otherwise (`ui.back`, `ui.tab`, `ui.confirm`); null for one whose action sounds its own outcome (a buy, a craft). */
+  cue?: CueId | null
 }
 
 /**
@@ -26,7 +29,7 @@ export function addPanelButton(
   at: Rect,
   label: string,
   onClick: () => void,
-  { enabled = true, marked = false, dimmed = false, fontSize = 14 }: PanelButtonLook = {},
+  { enabled = true, marked = false, dimmed = false, fontSize = 14, cue = dimmed ? 'ui.error' : 'ui.click' }: PanelButtonLook = {},
 ): void {
   const faint = !enabled || dimmed
   const edge = !enabled ? 0x3a3024 : marked ? 0xc9a227 : faint ? 0x3a3024 : 0x6b5a3a
@@ -41,7 +44,7 @@ export function addPanelButton(
   bg.on('pointerover', () => bg.setFillStyle(0x3a2f1c, 0.95))
   bg.on('pointerout', () => bg.setFillStyle(0x1b1712, 0.95))
   bg.on('pointerdown', () => {
-    playCue(scene, 'ui.click')
+    if (cue) playCue(scene, cue)
     onClick()
   })
 }

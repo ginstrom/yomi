@@ -5,6 +5,7 @@ import { buttonProbe, type MenuProbe } from '../testHook.ts'
 import { setTutorial } from '../story/story.ts'
 import { getAudioSettings, setAudioLevel, type AudioChannel } from './audioSettings.ts'
 import { applyVolumes, playCue } from './soundPlayer.ts'
+import { buttonCue } from './sounds.ts'
 
 interface MenuData {
   /** The paused scene the menu was opened over, which Continue goes back to. */
@@ -179,7 +180,7 @@ export class MenuScene extends Phaser.Scene {
       bg.on('pointerout', () => bg.setFillStyle(0x2b6cb0))
       bg.on('pointerdown', () => {
         if (this.manualOpen) return
-        playCue(this, 'ui.click')
+        playCue(this, buttonCue(label))
         onClick()
       })
     }
@@ -350,7 +351,12 @@ export class MenuScene extends Phaser.Scene {
 
   private onEscape(): void {
     if (this.manualOpen) return
-    if (this.view !== 'main') this.show('main')
-    else if (this.resumeKey) this.onContinue()
+    if (this.view !== 'main') {
+      playCue(this, 'ui.back')
+      this.show('main')
+    } else if (this.resumeKey) {
+      playCue(this, 'ui.back')
+      this.onContinue()
+    }
   }
 }

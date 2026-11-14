@@ -8,6 +8,7 @@ import { actingFor } from './encampmentView.ts'
 import { encampmentName } from '../game/worldMap.ts'
 import type { ButtonProbe, EncampmentProbe } from '../testHook.ts'
 import { playCue } from './soundPlayer.ts'
+import { buttonCue, refusalCue } from './sounds.ts'
 import type { Point } from './boardGeometry.ts'
 import { facilityFrame, facilityLabel, plotAt } from './encampmentView.ts'
 import type { Rect } from './mapScroll.ts'
@@ -94,7 +95,11 @@ export class EncampmentScene extends Phaser.Scene {
     this.layout()
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this))
-    this.input.keyboard?.on('keydown-ESC', () => (this.selected ? this.select(null) : this.leave()))
+    this.input.keyboard?.on('keydown-ESC', () => {
+      playCue(this, 'ui.back')
+      if (this.selected) this.select(null)
+      else this.leave()
+    })
     const leave = this.controls.leave?.at
     tellStory(this, this.gameState, { kind: 'encampment_opened' }, leave ? { 'encampment.leave': this.onScreen(leave) } : {}, this.expedition.id)
   }
@@ -265,7 +270,7 @@ export class EncampmentScene extends Phaser.Scene {
   private button(key: keyof EncampmentProbe['buttons'], at: Rect, label: string, onClick: () => void, enabled = true): void {
     this.controls[key] = { at, enabled }
     // Next tick: the redraw a click leads to destroys the button whose handler this runs in.
-    addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled })
+    addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled, cue: key === 'improve' ? null : buttonCue(label) })
   }
 
   /** Where a facility's building is centred, in the frame. */
@@ -292,6 +297,7 @@ export class EncampmentScene extends Phaser.Scene {
   /** Builds or raises the facility, and says what came of it. */
   private improve(facility: FacilityView): void {
     const refusal = improveFacility(this.gameState, this.expedition, facility.id)
+    playCue(this, refusalCue(refusal, 'world.upgrade'))
     this.message = refusal ?? (facility.level === 0 ? `The ${facility.name} is built.` : `The ${facility.name} is raised to level ${facility.level + 1}.`)
     this.render()
   }

@@ -5,6 +5,7 @@ import type { Expedition } from '../game/expedition.ts'
 import { partyById, selectedParty, type GameState } from '../game/gameState.ts'
 import type { ButtonProbe, ExchangeProbe } from '../testHook.ts'
 import { playCue } from './soundPlayer.ts'
+import { buttonCue } from './sounds.ts'
 import type { Point } from './boardGeometry.ts'
 import { exchangeMove, exchangePartners, heroNote, itemMove, baggageLines, tryExchange, type ExchangePick } from './exchangeView.ts'
 import { ITEM_ICON_KEYS, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
@@ -98,7 +99,10 @@ export class ExchangeScene extends Phaser.Scene {
     this.layout()
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this))
-    this.input.keyboard?.on('keydown-ESC', () => this.close())
+    this.input.keyboard?.on('keydown-ESC', () => {
+      playCue(this, 'ui.back')
+      this.close()
+    })
   }
 
   /** What the in-browser tests see of the exchange; see testHook.ts. */
@@ -153,7 +157,7 @@ export class ExchangeScene extends Phaser.Scene {
   private button(key: 'close' | 'other', at: Rect, label: string, onClick: () => void, enabled = true): void {
     this.controls[key] = { at, enabled }
     // Next tick: the redraw a click leads to destroys the button whose handler this runs in.
-    addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled })
+    addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled, cue: buttonCue(label) })
   }
 
   private buildRow(row: 0 | 1): void {
@@ -260,6 +264,7 @@ export class ExchangeScene extends Phaser.Scene {
 
   /** Says why an exchange was refused, or `done`, and draws the rows as they now stand. */
   private act(refusal: string | null, done: string): void {
+    if (refusal !== null) playCue(this, 'ui.error')
     this.message = refusal ?? done
     this.selected = null
     for (const row of [0, 1] as const) this.pages[row] = Math.min(this.pages[row], this.pageCount(row) - 1)

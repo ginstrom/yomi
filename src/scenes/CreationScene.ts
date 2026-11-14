@@ -35,6 +35,8 @@ import type { ButtonProbe, CreationProbe, CreationStep } from '../testHook.ts'
 import type { Point } from './boardGeometry.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton, type PanelButtonLook } from './panelButton.ts'
+import { playCue } from './soundPlayer.ts'
+import { buttonCue } from './sounds.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { PORTRAIT_SCALE, PORTRAIT_SIZE, portraitKey } from './partyPanel.ts'
 import { draftNodeHint, type TreeKind } from './perkTree.ts'
@@ -329,7 +331,7 @@ export class CreationScene extends Phaser.Scene {
 
   private button(at: Rect, label: string, onClick: () => void, look?: PanelButtonLook): void {
     // Next tick: the redraw a click leads to destroys the button whose handler this runs in.
-    addPanelButton(this, this.content, at, label, () => this.time.delayedCall(0, onClick), look)
+    addPanelButton(this, this.content, at, label, () => this.time.delayedCall(0, onClick), { cue: look?.dimmed ? 'ui.error' : buttonCue(label), ...look })
   }
 
   private heading(words: string, left: number, of: number, what: string): void {
@@ -434,7 +436,10 @@ export class CreationScene extends Phaser.Scene {
       character,
       clickable: (perk) => this.perkClickable(perk),
       marked: (perk) => togglePerk(this.draft, perk).draft.perks.length > this.draft.perks.length,
-      onClick: (perk) => this.time.delayedCall(0, () => this.apply(togglePerk(this.draft, perk))),
+      onClick: (perk) => {
+        playCue(this, 'ui.click')
+        this.time.delayedCall(0, () => this.apply(togglePerk(this.draft, perk)))
+      },
       hint: (perk) => draftNodeHint(this.draft, perk),
       rule:
         this.tree === 'perks'

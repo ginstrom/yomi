@@ -22,6 +22,7 @@ import {
 import { hallAct, hallColumns, refOf, typeInRename, type HallColumn, type HallPick, type RenameField } from './hallColumns.ts'
 import type { ButtonProbe, GuildHallProbe } from '../testHook.ts'
 import { playCue } from './soundPlayer.ts'
+import { buttonCue, refusalCue, type CueId } from './sounds.ts'
 import type { Point } from './boardGeometry.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton, fitText } from './panelButton.ts'
@@ -115,6 +116,7 @@ export class GuildHallScene extends Phaser.Scene {
     this.message = ''
     if (data.recruit) {
       const refusal = recruit(this.gameState, this.expedition, data.recruit)
+      playCue(this, refusalCue(refusal, 'ui.confirm'))
       this.message = refusal ?? `${data.recruit.name} joins the reserves at level ${this.gameState.reserves.at(-1)!.level}.`
     }
     this.bg = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.7).setOrigin(0).setInteractive()
@@ -124,6 +126,7 @@ export class GuildHallScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this))
     this.input.keyboard?.on('keydown-ESC', () => {
+      playCue(this, 'ui.back')
       if (this.renaming) {
         this.renaming = null
         this.message = ''
@@ -217,7 +220,7 @@ export class GuildHallScene extends Phaser.Scene {
   private button(key: keyof GuildHallProbe['buttons'], at: Rect, label: string, onClick: () => void, enabled = true): void {
     this.controls[key] = { at, enabled }
     // Next tick: the redraw a click leads to destroys the button whose handler this runs in.
-    addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled })
+    addPanelButton(this, this.frame, at, label, () => this.time.delayedCall(0, onClick), { enabled, cue: buttonCue(label) })
   }
 
   private buildRoster(): void {
@@ -277,7 +280,7 @@ export class GuildHallScene extends Phaser.Scene {
       this.addPortrait(draft.portrait, draft.name, role, at, refusal === null, () => {
         // Back to the roster, where the message tells how the recruiting went.
         this.view = 'roster'
-        this.act(recruit(this.gameState, this.expedition, draft), `${draft.name} joins the reserves at level ${this.gameState.reserves.at(-1)?.level}.`)
+        this.act(recruit(this.gameState, this.expedition, draft), `${draft.name} joins the reserves at level ${this.gameState.reserves.at(-1)?.level}.`, 'ui.confirm')
       })
     })
     if (prerolls.length === 0) {
@@ -361,7 +364,9 @@ export class GuildHallScene extends Phaser.Scene {
   }
 
   /** Says why an action was refused, or `done`, and draws the hall as it now stands. */
-  private act(refusal: string | null, done: string): void {
+  private act(refusal: string | null, done: string, success: CueId | null = null): void {
+    if (refusal !== null) playCue(this, 'ui.error')
+    else if (success) playCue(this, success)
     this.message = refusal ?? done
     this.selected = null
     this.renaming = null
@@ -396,7 +401,7 @@ export class GuildHallScene extends Phaser.Scene {
   private formFrom(picked: HallPick): void {
     const formed = formParty(this.gameState, defaultPartyName(this.gameState), refOf(picked))
     if (typeof formed === 'string') return this.act(formed, '')
-    this.act(null, `${formed.name} is formed. Pick one of its heroes and press Rename to name it.`)
+    this.act(null, `${formed.name} is formed. Pick one of its heroes and press Rename to name it.`, 'ui.confirm')
   }
 
   private startRename(party: string): void {
@@ -421,6 +426,7 @@ export class GuildHallScene extends Phaser.Scene {
     if (event.key === 'Enter') {
       event.preventDefault()
       const refusal = renameParty(this.gameState, renaming.party, renaming.text)
+      playCue(this, refusalCue(refusal, 'ui.confirm'))
       if (refusal) {
         this.message = refusal
       } else {
