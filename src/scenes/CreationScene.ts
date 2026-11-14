@@ -32,10 +32,10 @@ import { SKILLS, SKILL_IDS, TAGGED_SKILL_STEP, TAG_BONUS, skillLevel } from '../
 import type { ButtonProbe, CreationProbe, CreationStep } from '../testHook.ts'
 import type { Point } from './boardGeometry.ts'
 import type { Rect } from './mapScroll.ts'
-import { addPanelButton, type PanelButtonLook } from './panelButton.ts'
+import { addPanelButton, fitText, type PanelButtonLook } from './panelButton.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { PORTRAIT_SCALE, PORTRAIT_SIZE, portraitKey } from './partyPanel.ts'
-import { TREE_TAB_Y, TREE_W, draftNodeClickable, draftNodeHint, treeForKey, treeTabRect } from './perkTree.ts'
+import { TREE_TAB_Y, TREE_W, draftNodeClickable, draftNodeHint, legendLayout, treeForKey, treeTabRect } from './perkTree.ts'
 import { TREE_IDS, type TreeId } from '../character/trees.ts'
 import { PerkTreeView } from './PerkTreeView.ts'
 
@@ -426,7 +426,8 @@ export class CreationScene extends Phaser.Scene {
     const right = TREE_W
     const tabsY = TREE_TAB_Y + TREE_SHIFT_Y
     this.text(right, tabsY, `Picks: ${picks} of ${CREATION_PERK_PICKS}`, picks > 0 ? GOLD : DIM).setOrigin(1, 0.5)
-    if (this.notes.length > 0) this.text(right, tabsY + 20, this.notes[0], WARN, 11).setOrigin(1, 0.5)
+    // A note is cut short before it could reach the legend at the left of its row.
+    if (this.notes.length > 0) fitText(this.text(right, tabsY + 20, this.notes[0], WARN, 11).setOrigin(1, 0.5), right - legendLayout().at(-1)!.right - 12)
     const tree = this.add.container(0, TREE_SHIFT_Y)
     this.content.add(tree)
     new PerkTreeView(this, tree, {

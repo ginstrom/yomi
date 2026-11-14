@@ -17,7 +17,7 @@ import {
   clampLines,
   columnX,
   legendLayout,
-  linkTone,
+  linkToneOf,
   nodeLabel,
   nodeRect,
   nodeState,
@@ -161,7 +161,7 @@ export class PerkTreeView {
     // The trunks and brackets, dim lines first so that the bright ones run over them where they meet.
     const lines = scene.add.graphics()
     container.add(lines)
-    const links = treeLinks(tree).map((link) => ({ ...link, tone: linkTone(nodeState(character, link.to)) }))
+    const links = treeLinks(tree).map((link) => ({ ...link, tone: linkToneOf(link, (perk) => nodeState(character, perk)) }))
     const order: LinkTone[] = ['dim', 'open', 'lit']
     for (const tone of order) {
       for (const { points, kind } of links.filter((link) => link.tone === tone)) {

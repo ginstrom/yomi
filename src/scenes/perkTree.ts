@@ -173,7 +173,9 @@ export function bandRects(tree: TreeId): { tier: Tier; label: string; y: number;
 /** A line of the tree: one of a path's trunk, into a node's left edge, or from the node it requires into its right edge. */
 export interface TreeLink {
   kind: 'trunk' | 'requires'
-  /** The node the line leads into, whose standing sets its tone. */
+  /** The node the line leads from: the one above on the trunk (null for the stretch from the heading), or the one required. */
+  from: PerkId | null
+  /** The node the line leads into, whose standing sets its tone (`linkToneOf`). */
   to: PerkId
   points: Point[]
 }
@@ -183,8 +185,9 @@ export interface TreeLink {
  * under its heading through every node in turn, a short branch into each, so
  * that progression reads top to bottom; the stretch leading into a node is
  * that node's. A node that requires another (`perkParent`) hangs from it by a
- * bracket on the right, in a lane of its own wherever its rows would meet
- * another bracket's of a different parent.
+ * bracket on the right. The brackets from one parent share a lane, and each
+ * parent's brackets take the innermost lane free of every other parent's whose
+ * rows they meet, the shortest span first, so that brackets nest and never cross.
  */
 export function treeLinks(tree: TreeId): TreeLink[] {
   const nodes = treeLayout(tree)
@@ -193,30 +196,42 @@ export function treeLinks(tree: TreeId): TreeLink[] {
   for (let column = 0; column < pathsOf(tree).length; column++) {
     const trunk = columnX(column) + TRUNK_INSET
     let from = TREE_Y + NODE_H
+    let above: PerkId | null = null
     for (const node of nodes.filter((n) => n.column === column).sort((a, b) => a.row - b.row)) {
       const y = middle(node)
-      links.push({ kind: 'trunk', to: node.perk, points: [{ x: trunk, y: from }, { x: trunk, y }, { x: nodeRect(node).x, y }] })
+      links.push({ kind: 'trunk', from: above, to: node.perk, points: [{ x: trunk, y: from }, { x: trunk, y }, { x: nodeRect(node).x, y }] })
       from = y
+      above = node.perk
     }
   }
-  const brackets: { column: number; parent: PerkId; top: number; bottom: number; lane: number }[] = []
+  // Each parent's brackets as a group, with the rows they span together.
+  const groups = new Map<PerkId, { column: number; children: TreeNode[]; top: number; bottom: number; lane: number }>()
   for (const node of nodes) {
     const parent = nodes.find((other) => other.perk === node.from)
     if (!parent) continue
-    const top = Math.min(parent.row, node.row)
-    const bottom = Math.max(parent.row, node.row)
-    const taken = brackets.filter((b) => b.column === node.column && b.parent !== parent.perk && b.top <= bottom && top <= b.bottom)
-    const shared = brackets.find((b) => b.column === node.column && b.parent === parent.perk)
-    let lane = shared?.lane ?? 0
-    while (taken.some((b) => b.lane === lane)) lane++
-    brackets.push({ column: node.column, parent: parent.perk, top, bottom, lane })
-    const right = nodeRect(node).x + NODE_W
-    const x = right + LANE_GAP + lane * LANE_PITCH
-    links.push({
-      kind: 'requires',
-      to: node.perk,
-      points: [{ x: right, y: middle(parent) }, { x, y: middle(parent) }, { x, y: middle(node) }, { x: right, y: middle(node) }],
-    })
+    const group = groups.get(parent.perk) ?? { column: parent.column, children: [], top: parent.row, bottom: parent.row, lane: 0 }
+    group.children.push(node)
+    group.top = Math.min(group.top, node.row)
+    group.bottom = Math.max(group.bottom, node.row)
+    groups.set(parent.perk, group)
+  }
+  const placed: { column: number; top: number; bottom: number; lane: number }[] = []
+  const bySpan = [...groups].sort(([, a], [, b]) => a.bottom - a.top - (b.bottom - b.top))
+  for (const [parentId, group] of bySpan) {
+    const met = placed.filter((other) => other.column === group.column && other.top <= group.bottom && group.top <= other.bottom)
+    while (met.some((other) => other.lane === group.lane)) group.lane++
+    placed.push(group)
+    const parent = nodes.find((other) => other.perk === parentId)!
+    for (const node of group.children) {
+      const right = nodeRect(node).x + NODE_W
+      const x = right + LANE_GAP + group.lane * LANE_PITCH
+      links.push({
+        kind: 'requires',
+        from: parentId,
+        to: node.perk,
+        points: [{ x: right, y: middle(parent) }, { x, y: middle(parent) }, { x, y: middle(node) }, { x: right, y: middle(node) }],
+      })
+    }
   }
   return links
 }
@@ -225,6 +240,18 @@ export function treeLinks(tree: TreeId): TreeLink[] {
 export type LinkTone = 'lit' | 'open' | 'dim'
 export function linkTone(state: NodeState): LinkTone {
   return state === 'taken' ? 'lit' : state === 'open' ? 'open' : 'dim'
+}
+
+/**
+ * A line's tone for a character, `stateOf` giving each node's standing: that
+ * of the node it leads into, but a trunk stretch is lit only when the node
+ * above it is lit too (else it is drawn as open), so that a node taken under
+ * one not taken does not look hung from it.
+ */
+export function linkToneOf(link: Pick<TreeLink, 'kind' | 'from' | 'to'>, stateOf: (perk: PerkId) => NodeState): LinkTone {
+  const tone = linkTone(stateOf(link.to))
+  if (tone === 'lit' && link.kind === 'trunk' && link.from !== null && linkTone(stateOf(link.from)) !== 'lit') return 'open'
+  return tone
 }
 
 /** The node kinds in the order the legend names them, with its words for each. */

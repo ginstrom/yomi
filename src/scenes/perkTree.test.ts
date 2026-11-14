@@ -23,6 +23,7 @@ import {
   columnX,
   legendLayout,
   linkTone,
+  linkToneOf,
   treeLinks,
   costWords,
   draftNodeClickable,
@@ -120,8 +121,9 @@ describe('treeLayout', () => {
       }
     }
     expect(TREE_STRIP_Y + 64).toBeLessThanOrEqual(500)
-    // The lanes right of the last column stay inside the panel too.
-    expect(TREE_W + 4 + 2 * 5).toBeLessThan(720 - 8)
+    // Every line, the brackets' lanes right of the last column among them, stays inside the panel too.
+    const xs = TREE_IDS.flatMap((tree) => treeLinks(tree).flatMap((link) => link.points.map((point) => point.x)))
+    expect(Math.max(...xs)).toBeLessThan(720 - 8)
   })
 })
 
@@ -190,6 +192,31 @@ describe('treeLinks', () => {
     }
   })
 
+  it('nests brackets whose rows meet, the shorter span inside, so that none crosses another', () => {
+    for (const tree of TREE_IDS) {
+      const links = treeLinks(tree).filter((link) => link.kind === 'requires')
+      const span = (link: (typeof links)[number]) => [Math.min(link.points[0].y, link.points[3].y), Math.max(link.points[0].y, link.points[3].y)]
+      for (const a of links) {
+        for (const b of links) {
+          // Only two parents' brackets in one column.
+          if (a.from === b.from || a.points[0].x !== b.points[0].x) continue
+          const [aTop, aBottom] = span(a)
+          const [bTop, bBottom] = span(b)
+          if (aTop > bBottom || bTop > aBottom) continue
+          expect(a.points[1].x).not.toBe(b.points[1].x)
+        }
+      }
+    }
+    // Magic Arrow's bracket (rows 1 to 3) lies inside Flame Arrow's (rows 3 to 6).
+    const mage = treeLinks('mage').filter((link) => link.kind === 'requires')
+    const lane = (perk: string) => mage.find((link) => link.to === perk)!.points[1].x
+    expect(lane('flame_arrow')).toBeLessThan(lane('fireball'))
+    // Heal All's short bracket to Greater Heal All lies inside Heal's, which reaches down to Heal All.
+    const cleric = treeLinks('cleric').filter((link) => link.kind === 'requires')
+    const clericLane = (perk: string) => cleric.find((link) => link.to === perk)!.points[1].x
+    expect(clericLane('greater_heal_all')).toBeLessThan(clericLane('heal_all'))
+  })
+
   it('gives brackets of different parents whose rows meet lanes of their own', () => {
     // Heal's bracket reaches down to Heal All, from which Greater Heal All hangs.
     const links = treeLinks('cleric').filter((link) => link.kind === 'requires')
@@ -205,6 +232,30 @@ describe('linkTone', () => {
     expect(linkTone('open')).toBe('open')
     expect(linkTone('closed')).toBe('dim')
     expect(linkTone('locked')).toBe('dim')
+  })
+})
+
+describe('linkToneOf', () => {
+  const states = (taken: string[], open: string[] = []) => (perk: string) => (taken.includes(perk) ? 'taken' : open.includes(perk) ? 'open' : 'closed') as 'taken' | 'open' | 'closed'
+  const trunkInto = (perk: string) => treeLinks('warrior').find((link) => link.kind === 'trunk' && link.to === perk)!
+
+  it('lights a trunk stretch only when the nodes at both ends are taken', () => {
+    // Shield Wall under Toughness: taken under one not taken, the stretch between is no lit line.
+    expect(trunkInto('shield_wall').from).toBe('toughness')
+    expect(linkToneOf(trunkInto('shield_wall'), states(['shield_wall'], ['toughness']))).toBe('open')
+    expect(linkToneOf(trunkInto('shield_wall'), states(['shield_wall']))).toBe('open')
+    expect(linkToneOf(trunkInto('shield_wall'), states(['shield_wall', 'toughness']))).toBe('lit')
+    // The stretch from the heading into the first node is lit by that node alone.
+    expect(trunkInto('toughness').from).toBeNull()
+    expect(linkToneOf(trunkInto('toughness'), states(['toughness']))).toBe('lit')
+  })
+
+  it('tones every other line by the node it leads into', () => {
+    expect(linkToneOf(trunkInto('shield_wall'), states([], ['shield_wall']))).toBe('open')
+    expect(linkToneOf(trunkInto('shield_wall'), states(['toughness']))).toBe('dim')
+    const bracket = treeLinks('mage').find((link) => link.kind === 'requires' && link.to === 'flame_arrow')!
+    expect(bracket.from).toBe('magic_arrow')
+    expect(linkToneOf(bracket, states(['flame_arrow']))).toBe('lit')
   })
 })
 
