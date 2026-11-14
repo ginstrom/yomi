@@ -338,7 +338,7 @@ export const DUCK_RELEASE_MS = 600
 | 09 | [Content: interface and stings](09-content-ui-stings.md) | `ui` and `stings` banks | 08 (G3) | no | **G4** | done (`f135fc0`; G4 non-blocking, audition in `audio/.audition/09-ui-stings/` for the user's playtest) |
 | 10 | [Content: shots, magic hits and sweeteners](10-content-ranged-sweeteners.md) | 15 battle cues | 08 (G3), G2 | no | **G5** | done (`525eef1`, review fixes `Audio pass step 10: review round 1`; G5 non-blocking, audition in `audio/.audition/10-ranged-sweeteners/` for the user's playtest) |
 | 11 | [Content: spells and abilities](11-content-spells.md) | 22 battle cues | 10 | no | **G6** | done (`953a9b8`; G6 non-blocking, audition in `audio/.audition/11-spells/` for the user's playtest) |
-| 12 | [Content: falls and footsteps](12-content-falls-steps.md) | 11 battle cues | 11 | no | **G7** | done (`Audio pass step 12: Content: falls and footsteps`; G7 non-blocking, audition in `audio/.audition/12-falls-steps/` for the user's playtest) |
+| 12 | [Content: falls and footsteps](12-content-falls-steps.md) | 11 battle cues | 11 | no | **G7** | done (`f09845b`; G7 non-blocking, audition in `audio/.audition/12-falls-steps/` for the user's playtest) |
 | 13 | [Content: world](13-content-world.md) | `world` bank (14 cues) | 08 (G3), G2 | no | **G8** | pending |
 | 14 | [Narration data model and exporter](14-narration-data.md) | Beat fields, `narration.ts`, rules and staleness tests, provisional `voices.toml`, `smol-toml`, `scripts/narration.ts` | 01 | no | — | done (`a58449b`) |
 | 15 | [Narrator voice design](15-voice-design.md) | `voice design` in full for the chosen narrator; emotion candidates for the user | 03 (G1), 14 | no | **G9** | done (G9 passed 2026-11-14, `A_0` kept; `df250f3`, `70a21c2`) |
