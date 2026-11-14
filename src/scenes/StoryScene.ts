@@ -10,6 +10,8 @@ import type { Rect } from './mapScroll.ts'
 import { addPanelButton } from './panelButton.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { PORTRAIT_SCALE, PORTRAIT_SIZE, portraitKey } from './partyPanel.ts'
+import { duck, playVoice, stopVoice, voicePlaying } from './soundPlayer.ts'
+import { CUT_FADE_MS, LINE_DELAY_MS, beatLine, linesOf, voiceFiles, voiceKey } from './storyAudio.ts'
 
 /** The scenes a story is told over, which it pauses and resumes. */
 export type StoryResume = 'World' | 'Battle' | 'Encampment'
@@ -93,6 +95,11 @@ export class StoryScene extends Phaser.Scene {
   private content!: Phaser.GameObjects.Container
   /** The controls drawn for the item showing, for the probe. */
   private controls: Partial<Record<keyof StoryProbe['buttons'], Rect>> = {}
+  /** The tip ring's pulse, the one tween a redraw replaces (a voice line's fade and the duck are tweens too). */
+  private glow: Phaser.Tweens.Tween | null = null
+  /** The wait before a beat's line starts, and whether the music is ducked under a line. */
+  private lineTimer: Phaser.Time.TimerEvent | null = null
+  private ducked = false
 
   constructor() {
     super('Story')
@@ -100,11 +107,16 @@ export class StoryScene extends Phaser.Scene {
 
   preload(): void {
     PartyColumn.preload(this)
+    this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, () => {})
     const data = this.sys.settings.data as StoryData | undefined
     for (const item of data?.items ?? []) {
       if (item.kind !== 'cutscene') continue
       for (const { backdrop } of CUTSCENES[item.id].beats as CutsceneBeat[]) {
         if (backdrop) this.load.image(backdropKey(backdrop), `assets/cutscenes/${backdrop}.png`)
+      }
+      // A line that fails to load is silence: the loader's error is ignored and the beat plays without it.
+      for (const line of linesOf(CUTSCENES[item.id])) {
+        if (!this.cache.audio.exists(voiceKey(line))) this.load.audio(voiceKey(line), voiceFiles(line))
       }
     }
   }
@@ -125,8 +137,12 @@ export class StoryScene extends Phaser.Scene {
     this.backdrop = this.add.image(0, 0, '__DEFAULT').setVisible(false)
     this.content = this.add.container(0, 0)
     this.render()
+    this.startLine()
     this.scale.on(Phaser.Scale.Events.RESIZE, this.render, this)
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.render, this))
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.render, this)
+      this.stopLine(0, this.scene.get(this.resumeKey) ?? this)
+    })
     this.input.keyboard?.on('keydown-SPACE', () => this.next())
     this.input.keyboard?.on('keydown-ENTER', () => this.next())
     this.input.keyboard?.on('keydown-ESC', () => this.skip())
@@ -148,14 +164,55 @@ export class StoryScene extends Phaser.Scene {
       beats: beats.length,
       speaker: beats[this.beat]?.speaker ? fillText(beats[this.beat].speaker!, this.gameState, this.expedition) : null,
       text: item?.kind === 'cutscene' ? fillText(beats[this.beat]?.text ?? '', this.gameState, this.expedition) : tip ? fillText(tip.text, this.gameState, this.expedition) : '',
+      voice: { line: this.currentLine(), playing: voicePlaying() },
       anchor: (tip?.anchor && this.anchors[tip.anchor]) || null,
       tutorial: this.gameState.story.tutorial,
       buttons: { next: control('next'), skip: control('skip'), tutorialOff: control('tutorialOff') },
     }
   }
 
+  /** The music comes back up when a line ends of itself. */
+  update(): void {
+    if (this.ducked && !voicePlaying() && !this.lineTimer) {
+      this.ducked = false
+      duck(this, false)
+    }
+  }
+
   private current(): StoryItem | undefined {
     return this.items[this.index]
+  }
+
+  // ---- the voice ---------------------------------------------------------------
+
+  /** The line the beat showing speaks, if it is voiced and rendered. */
+  private currentLine(): string | null {
+    const item = this.current()
+    return item?.kind === 'cutscene' ? beatLine((CUTSCENES[item.id].beats as CutsceneBeat[])[this.beat]) : null
+  }
+
+  /** Starts the showing beat's line shortly from now, if it has one and its file loaded; the music ducks under it. */
+  private startLine(): void {
+    const line = this.currentLine()
+    if (line === null || !this.cache.audio.exists(voiceKey(line))) return
+    this.lineTimer = this.time.delayedCall(LINE_DELAY_MS, () => {
+      this.lineTimer = null
+      if (playVoice(this, voiceKey(line))) {
+        this.ducked = true
+        duck(this, true)
+      }
+    })
+  }
+
+  /** Cuts any line, with a fade, and cancels one waiting to start; the duck is released on `scene`'s clock. */
+  private stopLine(fadeMs: number, scene: Phaser.Scene = this): void {
+    this.lineTimer?.remove(false)
+    this.lineTimer = null
+    stopVoice(fadeMs)
+    if (this.ducked) {
+      this.ducked = false
+      duck(scene, false)
+    }
   }
 
   // ---- drawing ---------------------------------------------------------------
@@ -164,7 +221,8 @@ export class StoryScene extends Phaser.Scene {
   private render(): void {
     const { width, height } = this.scale
     this.shade.setSize(width, height)
-    this.tweens.killAll()
+    this.glow?.stop()
+    this.glow = null
     this.content.removeAll(true)
     this.controls = {}
     const item = this.current()
@@ -258,7 +316,7 @@ export class StoryScene extends Phaser.Scene {
       g.lineStyle(3, ANCHOR_COLOR, 0.9).lineBetween(from.x, from.y, anchor.x, anchor.y)
       g.lineStyle(4, ANCHOR_COLOR, 1).strokeCircle(anchor.x, anchor.y, 40)
       this.content.add(g)
-      this.tweens.add({ targets: g, alpha: 0.4, duration: 600, yoyo: true, repeat: -1 })
+      this.glow = this.tweens.add({ targets: g, alpha: 0.4, duration: 600, yoyo: true, repeat: -1 })
     }
     this.content.add(this.add.rectangle(left, top, TIP_W, panelH, PANEL_FILL, 0.97).setOrigin(0).setStrokeStyle(2, PANEL_EDGE))
     this.content.add([
@@ -283,8 +341,10 @@ export class StoryScene extends Phaser.Scene {
   private next(): void {
     const item = this.current()
     if (item?.kind === 'cutscene' && this.beat < CUTSCENES[item.id].beats.length - 1) {
+      this.stopLine(CUT_FADE_MS)
       this.beat++
       this.render()
+      this.startLine()
       return
     }
     this.advance()
@@ -296,10 +356,12 @@ export class StoryScene extends Phaser.Scene {
   }
 
   private advance(): void {
+    this.stopLine(CUT_FADE_MS)
     this.index++
     this.beat = 0
     if (this.index < this.items.length) {
       this.render()
+      this.startLine()
       return
     }
     this.scene.stop()

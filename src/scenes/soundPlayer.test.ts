@@ -50,7 +50,12 @@ function fakeScene(json: Record<string, unknown> = { battle: bankJson('battle'),
   const added: FakeSound[] = []
   const delayed: { ms: number; fn: () => void }[] = []
   const tweens: { targets: unknown; volume: number; duration: number; onComplete?: () => void }[] = []
+  const shutdown: (() => void)[] = []
   const scene = {
+    events: {
+      once: (_event: string, fn: () => void) => shutdown.push(fn),
+      off: (_event: string, fn: () => void) => shutdown.splice(shutdown.indexOf(fn) >>> 0, 1),
+    },
     sound: {
       playAudioSprite: (key: string, marker: string, config: { volume: number; detune: number }) => {
         sprites.push({ key, marker, config })
@@ -74,7 +79,7 @@ function fakeScene(json: Record<string, unknown> = { battle: bankJson('battle'),
       },
     },
   }
-  return { scene: scene as unknown as Phaser.Scene, sprites, added, delayed, tweens }
+  return { scene: scene as unknown as Phaser.Scene, sprites, added, delayed, tweens, shutdown }
 }
 
 let player: Player
@@ -220,6 +225,39 @@ describe('voice', () => {
     player.playVoice(scene, 'voice_intro.opening')
     added[1].complete?.()
     expect(player.voicePlaying()).toBe(false)
+  })
+})
+
+describe('voice edge cases', () => {
+  it('plays nothing at voice level 0, so nothing ducks under it', async () => {
+    const settings = await import('./audioSettings.ts')
+    settings.setAudioLevel('voice', 0)
+    const { scene, added } = fakeScene()
+    expect(player.playVoice(scene, 'voice_intro.opening')).toBe(false)
+    expect(added).toEqual([])
+    expect(player.voicePlaying()).toBe(false)
+  })
+
+  it('stops with nothing playing without throwing', () => {
+    expect(() => player.stopVoice(80)).not.toThrow()
+    expect(() => player.stopVoice(0)).not.toThrow()
+  })
+
+  it('destroys a fading line when its scene shuts down mid-fade', () => {
+    const { scene, added, shutdown } = fakeScene()
+    player.playVoice(scene, 'voice_intro.opening')
+    player.stopVoice(80)
+    expect(added[0].destroyed).toBe(false)
+    shutdown.forEach((fn) => fn())
+    expect(added[0].destroyed).toBe(true)
+  })
+
+  it('takes the theme to its ducked level when its scene shuts down mid-duck', () => {
+    const { scene, added, shutdown } = fakeScene()
+    player.startMusic(scene, 'music_battle')
+    player.duck(scene, true)
+    shutdown.forEach((fn) => fn())
+    expect(added[0].volume).toBeCloseTo(busVolume('music') * MUSIC_GAIN.music_battle * 10 ** (-10 / 20))
   })
 })
 

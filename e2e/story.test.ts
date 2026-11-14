@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { RAIDERS, useGames } from './driver.ts'
+import { RAIDERS, useGames, type Game } from './driver.ts'
 
 describe('cutscenes and the tutorial', () => {
   const games = useGames()
@@ -94,5 +94,84 @@ describe('cutscenes and the tutorial', () => {
     const options = await game.settled('Menu', (m) => m.showingOptions)
     expect(options.tutorial).toBeNull()
     expect(options.buttons.tutorial.visible).toBe(false)
+  })
+
+  describe('the voice', () => {
+    const musicVolume = (game: Game) => game.page.evaluate(() => window.__yomi!.musicVolume())
+
+    /** The music's volume once it has stopped moving (a duck's ramp done). */
+    async function settledMusic(game: Game): Promise<number> {
+      let last = -1
+      for (let tries = 0; tries < 200; tries++) {
+        const now = await musicVolume(game)
+        if (now !== null && Math.abs(now - last) < 1e-4) return now
+        last = now ?? -1
+        await game.frames(3)
+      }
+      throw new Error('the music never settled')
+    }
+
+    const db = (ratio: number) => 20 * Math.log10(ratio)
+
+    it('speaks the intro\'s first beat, which Next cuts, and leaves the leader\'s beat silent', async () => {
+      const game = await games.open()
+      const intro = await beginWithTutorial(game)
+      expect(intro.voice.line).toBe('intro.opening')
+      await game.waitFor('Story', (s) => s.voice.playing)
+      await game.click(intro.buttons.next)
+      const second = await game.waitFor('Story', (s) => s.beat === 1)
+      expect(second.voice.line).toBeNull()
+      expect(second.voice.playing).toBe(false)
+      await game.frames(20)
+      expect((await game.waitFor('Story')).voice.playing).toBe(false)
+      const log = await game.page.evaluate(() => window.__yomi!.audioLog())
+      expect(log.filter((entry) => entry.bus === 'voice').map((entry) => entry.cue)).toEqual(['voice_intro.opening'])
+    })
+
+    it('stops the line on Esc and skips as before', async () => {
+      const game = await games.open()
+      await beginWithTutorial(game)
+      await game.waitFor('Story', (s) => s.voice.playing)
+      await game.press('Escape')
+      const tip = await game.settled('Story', (s) => s.kind === 'tip')
+      expect(tip.voice).toEqual({ line: null, playing: false })
+    })
+
+    it('shows and advances a cutscene whose voice files fail to load, silently', async () => {
+      const game = await games.open()
+      await game.page.route('**/assets/voice/**', (route) => route.fulfill({ status: 404 }))
+      const intro = await beginWithTutorial(game)
+      expect(intro.voice.line).toBe('intro.opening')
+      await game.frames(30)
+      expect((await game.waitFor('Story')).voice.playing).toBe(false)
+      await game.click(intro.buttons.next)
+      expect(await game.settled('Story', (s) => s.beat === 1)).toMatchObject({ speaker: 'Aldric' })
+      // The failed loads are the point of the test, not a problem with the game.
+      game.problems.splice(0, game.problems.length, ...game.problems.filter((p) => !p.includes('/assets/voice/') && !p.includes('status of 404')))
+    })
+
+    it('AC10: ducks the music 10 dB under a line and brings it back when the line is cut', async () => {
+      const game = await games.open()
+      const intro = await beginWithTutorial(game)
+      await game.waitFor('Story', (s) => s.voice.playing)
+      const ducked = await settledMusic(game)
+      await game.click(intro.buttons.next)
+      await game.waitFor('Story', (s) => s.beat === 1)
+      const restored = await settledMusic(game)
+      expect(Math.abs(db(ducked / restored) - -10)).toBeLessThan(1)
+    })
+
+    it('AC10: with the Voice slider at 0 the line does not play and the music is not ducked', async () => {
+      const game = await games.open()
+      await game.page.evaluate(() => localStorage.setItem('yomi.audio', JSON.stringify({ voice: 0 })))
+      await game.reload()
+      const intro = await beginWithTutorial(game)
+      expect(intro.voice.line).toBe('intro.opening')
+      const before = await settledMusic(game)
+      await game.frames(30)
+      expect((await game.waitFor('Story')).voice.playing).toBe(false)
+      expect(await settledMusic(game)).toBeCloseTo(before, 4)
+      expect((await game.page.evaluate(() => window.__yomi!.audioLog())).filter((entry) => entry.bus === 'voice')).toEqual([])
+    })
   })
 })

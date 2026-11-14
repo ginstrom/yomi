@@ -13,7 +13,7 @@ import type { EquipmentSlot } from './inventory/inventory.ts'
 import type { RuneKey } from './inventory/runes.ts'
 import type { Point } from './scenes/boardGeometry.ts'
 import type { Rect } from './scenes/mapScroll.ts'
-import { audioLog, limiter, playCue, type AudioLogEntry } from './scenes/soundPlayer.ts'
+import { audioLog, limiter, musicVolume, playCue, type AudioLogEntry } from './scenes/soundPlayer.ts'
 import { CUES, type CueId } from './scenes/sounds.ts'
 
 /**
@@ -453,6 +453,8 @@ export interface StoryProbe {
   speaker: string | null
   /** The words showing, with the game's names put in. */
   text: string
+  /** The line the beat speaks (null when unvoiced or not rendered) and whether a line is sounding. */
+  voice: { line: string | null; playing: boolean }
   /** Where the tip's ring is, round the control it is about; null with none. */
   anchor: Point | null
   /** Whether the game's tutorial is on. */
@@ -491,6 +493,8 @@ export interface TestHook {
   audioLog(): AudioLogEntry[]
   /** Plays a cue through the player on the topmost running scene, as the game would; an unknown cue plays nothing. */
   playCue(cue: string): void
+  /** The playing theme's volume now (a duck's ramp included), or null with no theme. */
+  musicVolume(): number | null
   /** The output limiter's settings (dB, ratio, seconds) and its gain reduction now (dB, 0 or below), or null without Web Audio. */
   limiter(): { threshold: number; knee: number; ratio: number; attack: number; release: number; reduction: number } | null
 }
@@ -521,6 +525,7 @@ export function installTestHook(game: Phaser.Game): void {
     frame: () => game.loop.frame,
     speed: 1,
     audioLog: () => [...audioLog()],
+    musicVolume: () => musicVolume(),
     playCue: (cue) => {
       const scene = game.scene.getScenes(true).at(-1)
       if (scene && cue in CUES) playCue(scene, cue as CueId)

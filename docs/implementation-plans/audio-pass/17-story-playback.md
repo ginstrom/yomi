@@ -134,3 +134,13 @@ If G1 was "none passes", these tests run on the fixture described above.
 - [ ] One commit; index row 17 set to `done` with its hash.
 
 ## Execution record
+
+Built by the engineer subagent on 2026-11-14. Path taken: **real lines** (G1 passed; `intro.opening` and `source.sighted` are shipped), no fixture.
+
+- **`storyAudio.ts`** to C12; the duck constants are re-exported from `soundPlayer.ts` (one copy). `linesOf` takes an optional manifest as `beatLine` does. Tests `storyAudio.test.ts` (6) written with the module, not seen failing first (the module and its test were made together).
+- **`soundPlayer.ts`** (step 05 had the voice functions): `playVoice` returns false at voice level 0 (it used to play at volume 0 and would have ducked); `stopVoice`'s fade now destroys the sound when its scene shuts down mid-fade (carried review-05 #3); `duck`'s ramp, on a scene shutdown, sets the theme to the ramp's target; new `musicVolume()` for the dev hook. Tests added for each.
+- **`StoryScene`**: lines load in `preload` (loader errors ignored); `startLine`/`stopLine` called from `create`, `next` and `advance`, not from `drawBeat`, so a resize redraw does not restart a line (deviation from the task's wording). `render` no longer calls `tweens.killAll()` (it would kill a fade or the duck); it stops only the tip ring's pulse. A line that ends of itself releases the duck from `update()`. On leaving, the final Continue stops the line with a fade on the story's own tween, which the scene's shutdown cuts short (the line is destroyed at once); the duck's release runs on the resumed scene. Probe gains `voice`.
+- **Dev hook**: `__yomi.musicVolume()`.
+- **Browser tests** (`e2e/story.test.ts`, 5 new): AC14 (voiced first beat plays, Next cuts it and the leader's beat is silent; Esc; a 404 on the voice files), AC10 (ducked/restored ratio -10 dB within 1 dB; Voice at 0 plays and ducks nothing). The 404 test removes the expected 404 entries from `game.problems`.
+- **Verification**: `npm test` 87 files, 1678 tests passed; `npm run sounds:check` up to date; `npm run test:browser -- e2e/story.test.ts` 9 passed; full browser suite: 12 files, 132 tests passed (528 s, nothing else running).
+- Manual listening check not done (no audio output here).

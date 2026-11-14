@@ -125,6 +125,11 @@ export function stopMusic(key?: MusicKey): void {
   theme = null
 }
 
+/** The playing theme's volume now (for the dev hook only; game code never reads it). */
+export function musicVolume(): number | null {
+  return theme ? theme.sound.volume : null
+}
+
 /** After a slider moves, the playing theme and voice line take the new level. */
 export function applyVolumes(): void {
   if (theme) {
@@ -140,10 +145,15 @@ export function duck(scene: Phaser.Scene, on: boolean): void {
   if (!theme) return
   theme.tween?.stop()
   theme.ducked = on
-  theme.tween = scene.tweens.add({
-    targets: theme.sound,
-    volume: themeVolume(theme.key, on),
-    duration: on ? DUCK_ATTACK_MS : DUCK_RELEASE_MS,
+  const held = theme
+  const target = themeVolume(held.key, on)
+  const tween = scene.tweens.add({ targets: held.sound, volume: target, duration: on ? DUCK_ATTACK_MS : DUCK_RELEASE_MS })
+  held.tween = tween
+  // A scene shut down mid-ramp takes its tweens with it: the theme goes to where the ramp was heading.
+  scene.events.once('shutdown', () => {
+    if (held.tween !== tween) return
+    held.tween = null
+    held.sound.setVolume(target)
   })
 }
 
@@ -152,6 +162,8 @@ export function duck(scene: Phaser.Scene, on: boolean): void {
 /** Plays a loaded voice line on the voice bus, in place of any other; false when the key is not loaded. */
 export function playVoice(scene: Phaser.Scene, key: string): boolean {
   if (!scene.cache.audio.exists(key)) return false
+  // At level 0 nothing plays, so nothing ducks under it.
+  if (busVolume('voice') <= 0) return false
   stopVoice(0)
   try {
     const clip = scene.sound.add(key, { volume: busVolume('voice') })
@@ -178,7 +190,16 @@ export function stopVoice(fadeMs: number): void {
     sound.destroy()
     return
   }
-  scene.tweens.add({ targets: sound, volume: 0, duration: fadeMs, onComplete: () => sound.destroy() })
+  // The fade is the scene's tween; a scene shut down mid-fade destroys the sound at once.
+  let done = false
+  const finish = () => {
+    if (done) return
+    done = true
+    scene.events.off('shutdown', finish)
+    sound.destroy()
+  }
+  scene.events.once('shutdown', finish)
+  scene.tweens.add({ targets: sound, volume: 0, duration: fadeMs, onComplete: finish })
 }
 
 export function voicePlaying(): boolean {
