@@ -213,7 +213,6 @@ export class WorldScene extends Phaser.Scene {
   private encampmentButton!: Phaser.GameObjects.Container
   /** What the player knows of the hovered hex (`hexInfo`), hidden while no hex is hovered. */
   private infoBox!: Phaser.GameObjects.Rectangle
-  /** The world map's theme, looping while the map is open and paused under the menu. */
   private infoText!: Phaser.GameObjects.Text
 
   /**

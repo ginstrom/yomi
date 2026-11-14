@@ -211,7 +211,7 @@ Write tests first and see them fail.
 
 **Verification.**
 - Domain tests written first and seen failing (module missing / old exports), then green: `sounds.test.ts` (cue set = manifest's 85, every marker in its bank's spritemap, files on disk, buses, jitter and voice defaults, AC6 picker over 10 000 plays of a 2- and a 6-variant cue: no repeat, counts within ±1 of n/v and exact at every bag boundary, ranges, stings 0, one-variant cue, no seeded RNG reachable (source-text check), `admitPlay` maxVoices/minGap/global cap/music not counted, interim `eventSounds`, AC1 source scan), `audioSettings.test.ts` (AC10: saved settings without voice load voice 1, clamping, `busVolume`, theme gains), `soundPlayer.test.ts` over a fake manager (AC16: missing bank JSON, audio or marker silent and unlogged; unloaded voice false; delays through `delayedCall`; limits; duck −10 dB/150 ms and back/600 ms; log of 50; limiter wiring and no-Web-Audio no-op).
-- `npm test`: 87 files, 1543 tests passed. `npm run build`: ok (only the existing chunk-size warning). `npm run sounds:check`: 85 cues and 4 banks up to date, within budget.
+- `npm test`: 85 files, 1543 tests passed. `npm run build`: ok (only the existing chunk-size warning). `npm run sounds:check`: 85 cues and 4 banks up to date, within budget.
 - `npm run test:browser -- e2e/audio.test.ts`: 5 passed (banks and themes load without request errors, menu click logs `ui.click`; four sliders, Voice set to 0.3 persists across a reload and its release plays nothing; options fit at 840×560 over a game; a won battle logs `battle.swing.blade`, an outcome cue and `stings.victory`; AC7: 20 `battle.hit.slash` plays at once log 3, limiter present with reduction engaged). Full `npm run test:browser`: 11 files, 120 tests passed. (A first full run, alongside `npm run build`, timed out two unrelated tests at 60 s, `character.test.ts` gear drag and `debug.test.ts` fight; both passed rerun alone, and a second full run with nothing else running passed everything.)
 
 **Deviations and decisions.**
@@ -222,3 +222,9 @@ Write tests first and see them fail.
 - `BattleScene` imports the player's `playCues` as `playSoundCues` (it has its own private `playCues` for display cues).
 
 **For later steps.** Step 06 replaces `eventSounds` (keep the `SoundCue { cue, delayMs }` shape, played by `playSoundCues` in `BattleScene.showEvent`). Step 07 adds UI cues at the existing `playCue(this, 'ui.click')` sites. `MenuProbe.sliders` gives each slider's row (`y`, `left`, `right`, `level`).
+
+**Review round 1** (opus): clean, with two tidy-ups and one finding carried.
+- Fixed: the doc comment of the removed `music` field in `WorldScene.ts` was left over `infoText`; deleted (`BattleScene.ts` had no such comment).
+- Fixed: this record said 87 test files; the run is 85 files, 1543 tests.
+- Carried to step 17: `stopVoice(fadeMs)` tweens the fade on the scene that started the line, so if that scene shuts down mid-fade the tween never completes and the sound is never destroyed. Step 17, which drives voice playback from `StoryScene`, should make the fade finish or destroy the line when its scene shuts down.
+- `npm test` after the fixes: 85 files, 1543 tests passed.

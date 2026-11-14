@@ -51,6 +51,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - 01: opus engineer, opus reviewer, clean in 1 round.
 - 02: opus engineer, opus reviewer, clean in round 2 (round 1: incremental build skipped licence/SHA checks; fixed `87e09cb`).
 - 04: sonnet engineer; awaiting gate G2 (28 Freesound files, list in `freesound-wanted.md`, given to the user 2026-11-14); sonnet reviewer clean in 1 round.
+- 05: opus engineer, opus reviewer, clean in 1 round (two tidy-ups).
 - 03: opus engineer, opus reviewer, clean in 1 round; awaiting gate G1 (bake-off clips in `audio/bakeoff/`, given to the user 2026-11-14).
 
 ## Notes carried forward
@@ -62,6 +63,10 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - After G1: copy the outcome and per-configuration means into step 03's execution record and set it `done`.
 - Steps 08–13: `sourcing.md` names some Kenney files loosely (`creak_001` is `creak1`; `knifeSlice`, `drawKnife`, `handleCoins` plain numbers; "Retro Electric Off" is `Retro Charge Electric Off 07_s05`), and a few Freesound cue lists differ between `sourcing.md` and `freesound-wanted.md` (review-04). Check names on disk.
 - After G2: record the outcome in step 04's execution record and set it `done`.
+- Step 17: `stopVoice`'s fade tweens on the starting scene; if it shuts down mid-fade the sound is never destroyed (review-05 #3) — destroy on shutdown or tween elsewhere.
+- Step 17: reuse step 05's duck constants in `soundPlayer.ts`, don't define new ones.
+- G11: music now plays at −24 LUFS (battle 4.0 dB, world 1.7 dB louder than before); judge by ear.
+- Browser tests' 60 s timeout is tight under load; run the full suite with nothing else running.
 - Step 09: start `ui.click` from the fixed version in `tools/audio/tests/test_build.py` (the design's example fails the correlation and DC checks). 43 impact variants over 15 cues are peak-limited at −20.6 to −22.6 LUFS against −19 (steps 08, 10).
 - Step 09: every Kenney jingle is ≤1.74 s; `stings.victory` (~3 s) and `stings.defeat` (~3.5 s) need chaining or synthesis.
 - The worktree needed `npm ci` (done in step 01).
