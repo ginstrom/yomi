@@ -150,6 +150,22 @@ def test_remove_refuses_a_source_a_recipe_names(empty_project, tmp_path):
     assert (empty_project / "sources" / "test" / "used.flac").exists()
 
 
+def test_remove_refuses_an_impulse_a_reverb_step_uses(project):
+    flac = project / "impulses" / "small_room.flac"
+    assert flac.exists()
+    with pytest.raises(AudioError, match="impulse_small_room.*still named by .*battle.hit.slash"):
+        remove_source(project, "impulse_small_room")
+    assert flac.exists() and "impulse_small_room" in Registry.load(project).entries
+
+
+def test_remove_refuses_every_impulse_outright(project):
+    for path in (project / "sfx").glob("*/*.toml"):
+        path.unlink()
+    with pytest.raises(AudioError, match="impulse_open_air.*impulse build"):
+        remove_source(project, "impulse_open_air")
+    assert (project / "impulses" / "open_air.flac").exists()
+
+
 def test_cli_removes(empty_project, tmp_path):
     add(empty_project, write_wav(tmp_path / "a.wav", tone()))
     result = run_cli("source", "remove", "test_tone", "--root", str(empty_project))

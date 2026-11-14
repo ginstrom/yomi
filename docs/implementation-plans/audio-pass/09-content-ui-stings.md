@@ -164,3 +164,11 @@ Commit: `f135fc0` ("Audio pass step 09: interface and stings"). G4 no longer blo
 Re-auditioned `ui.tab` (−28.1 lim to −26.0 LUFS-M, −8.7 to −6.1 dBTP, 126–136 ms) and `ui.error` into `audio/.audition/09-ui-stings/`, and updated `review.md`. `audio/CLAUDE.md`'s command table gains `source remove`; so does the index's C2 table.
 
 Verification: `uv run --project tools/audio pytest tools/audio/tests` (208 passed), `npm run sounds` (rebuilt `ui`, and `stings` for its comments, rendering the same audio; `ui` now 84,849 `.opus` / 62,324 `.mp3`; all banks 1,127,438 / 833,192), `npm run sounds:check` ("85 cues and 4 banks up to date, within budget"), `npm test` (85 files, 1623 tests passed).
+
+### Round 2: review fixes (2026-11-14)
+
+| # | Finding | Outcome |
+| --- | --- | --- |
+| 1 (blocking) | `source remove` looked only at layers' `source` and `pick`, so `source remove impulse_small_room` deleted the impulse that `[post]` reverb steps use | Fixed. `_recipes_naming` now loads each recipe and asks `Recipe.source_ids()`, which lists reverb impulses (`impulse_<name>`) beside sources and picks; and every `impulse_` id is refused outright, as `impulse build` owns them (`IMPULSE_PREFIX` now lives in `sources.py` and `recipe.py` imports it). Two tests, red first: removing a used impulse is refused naming the recipe, and an impulse no recipe uses is refused as an impulse; both leave the FLAC and its entry. Live: `source remove impulse_small_room` refuses, naming `battle.hit.*` and `ui.confirm`, `ui.learn`. |
+
+Verification: `uv run --project tools/audio pytest tools/audio/tests` 210 passed; `npm run sounds:check` "85 cues and 4 banks up to date, within budget" (no recipe, source or bank changed).

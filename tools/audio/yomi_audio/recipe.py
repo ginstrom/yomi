@@ -34,7 +34,7 @@ from . import dsp, synth
 from .config import Config, Group
 from .errors import AudioError
 from .loudness import normalise
-from .sources import Registry
+from .sources import IMPULSE_PREFIX, Registry
 
 NUM, BOOL, STR = "num", "bool", "str"
 
@@ -102,7 +102,6 @@ POST_TYPES = {
 POSITIVE = {"length", "hz", "hz_end", "carrier_hz", "q", "density", "click_ms", "ms", "ratio"}
 
 CUE_PATTERN = re.compile(r"^([a-z0-9_]+)\.([a-z0-9_]+(?:\.[a-z0-9_]+)*)$")
-IMPULSE_PREFIX = "impulse_"
 PICK_STREAM = 0x5049434B  # streams apart from the variant's own (seed, k)
 SIGNAL_STREAM = 0x5349474E
 

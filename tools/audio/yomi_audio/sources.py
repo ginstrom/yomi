@@ -24,6 +24,7 @@ from .config import read_toml
 from .errors import AudioError
 
 ALLOWED_LICENCES = ("CC0-1.0", "own")
+IMPULSE_PREFIX = "impulse_"  # the ids `impulse build` registers, `impulse_<name>`
 SOURCES_FILE = "sources.toml"
 ID_PATTERN = re.compile(r"^[a-z0-9_]+$")
 SAMPLE_RATE = 48000
@@ -269,28 +270,26 @@ def add_source(
 
 
 def _recipes_naming(root: Path, id: str) -> list[str]:
-    """The cues whose recipes (sfx/<bank>/<name>.toml) name source `id` in a
-    layer's `source` or `pick`. Read as plain TOML, so a recipe that would not
-    validate still counts."""
-    import tomllib
+    """The cues whose recipes (sfx/<bank>/<name>.toml) can touch source `id`:
+    a layer's `source` or `pick`, or a reverb step's impulse, as
+    `Recipe.source_ids` lists them."""
+    from .config import load_config
+    from .recipe import load_recipe
 
+    config = load_config(root)
     cues = []
     for path in sorted((root / "sfx").glob("*/*.toml")):
-        try:
-            data = tomllib.loads(path.read_text(encoding="utf-8"))
-        except tomllib.TOMLDecodeError as error:
-            raise AudioError(f"source {id}: {path.relative_to(root)} is not valid TOML: {error}") from error
-        layers = data.get("layer", [])
-        named = any(layer.get("source") == id or id in (layer.get("pick") or []) for layer in layers if isinstance(layer, dict))
-        if named:
-            cues.append(f"{path.parent.name}.{path.stem}")
+        cue = f"{path.parent.name}.{path.stem}"
+        if id in load_recipe(config, cue).source_ids():
+            cues.append(cue)
     return cues
 
 
 def remove_source(root: Path, id: str) -> dict:
     """Deletes source `id`'s committed file and its entry in sources.toml (and
-    its collection folder if that leaves it empty). Refuses an unknown id or
-    one a recipe still names, changing nothing. Returns the removed entry."""
+    its collection folder if that leaves it empty). Refuses an unknown id, one
+    a recipe can still touch (a layer's source or pick, a reverb's impulse)
+    and every impulse (those are `impulse build`'s), changing nothing. Returns the removed entry."""
     root = Path(root)
     registry = Registry.load(root)
     if id not in registry.entries:
@@ -298,6 +297,8 @@ def remove_source(root: Path, id: str) -> dict:
     users = _recipes_naming(root, id)
     if users:
         raise AudioError(f"source {id}: still named by {', '.join(users)}")
+    if id.startswith(IMPULSE_PREFIX):
+        raise AudioError(f"source {id}: is a reverb impulse, which `impulse build` writes; not removed")
     entry = registry.entries[id]
     path = root / SOURCES_FILE
     header, blocks = _blocks(path.read_text(encoding="utf-8"))
