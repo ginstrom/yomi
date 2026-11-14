@@ -3,7 +3,7 @@
 **Request (user's words):** "separately from the ongoing skill tree work, I'd like you to improve the quality of the sound effects, to create indie game-quality SFX. If possible I'd also like a framework for narration of cutscenes and the like, maybe using a local version of a voice model, especially one that supports emotions and other effects."
 
 - **Slug:** `audio-pass`
-- **Phase:** 4, implementation
+- **Phase:** 4, implementation. Resume point: start step 15 (opus); done: 01–09, 14 (`7a496b4`); then 16, 17, 10–13, 18, verification. G2 (Freesound downloads) still with the user; design §5.8.2 still says smol-toml is MIT (it is BSD-3-Clause).
 - **Branch / worktree:** `audio-pass`, from `main` at `d18abf4`, in `.claude/worktrees/audio-pass` (kept apart from `skill-trees`)
 - **Architecture brief:** `docs/architecture/audio-pass.md` (`a82ae8f`)
 - **Design:** `docs/designs/audio-pass.md` (`84f5f35`, approved by the user)
@@ -61,6 +61,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - 07: sonnet engineer, sonnet reviewer, clean in 1 round; accepted deviation: a world message sounds all its reports' events (two-cue cap), not only the told ones. Full browser suite only green file-by-file under load.
 - 08: opus engineer, opus reviewer, clean in 1 round; G3 passed 2026-11-14 (all acceptable); record and index to be set `done` by the step 09 engineer. Non-blocking: `hit.crit` ~270 ms vs brief ~500 (likely deliberate, unrecorded), `swing.heavy` 548–621 ms vs ~450; let G3 decide.
 - 09: opus engineer, opus reviewer, clean in round 3 (unused source; then `source remove` deleted used impulses; fixed `20df707`, `1f53d01`). Audition `audio/.audition/09-ui-stings/`; user to judge whether `ui.back` is softer than `ui.click`.
+- 14: sonnet engineer, sonnet reviewer, clean in 1 round (tidy-ups: `lineSeed` literal test, lockfile order, smol-toml licence).
 - 03: opus engineer, opus reviewer, clean in 1 round; G1 passed 2026-11-14 (b/A, `A_0`); records updated by the step 07 engineer.
 
 ## Notes carried forward
@@ -68,6 +69,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - Step 02: also fix review-01 findings: check every source id a recipe names (not only those drawn), catch non-AudioError failures without tracebacks, stop reading pyloudnorm's private `_filters` (or comment/pin it).
 - Step 02 (and 09): apply the short-cue normalisation rule above; `hit.slash` over stand-in sources peaked +4.4 dBTP, the same rule catches it.
 - Step 15: `voice design` with a subset of emotions rewrites `design.json` but `bakeoff` reuses stale clips (review-03 #3); also tidy `cli.py` `--candidates` default (#2) and the WAV count in 03's record (#1: ten placeholders).
+- Step 15: pin the Turbo revision and add `[narrator.clips]` (`A_0`) in `audio/voices.toml`.
 - Step 16: the mlx Chatterbox port adds no PerTh watermark; say so in the voice README. A render needs network on first model load.
 - c22 (b) has a click near its end: re-take if that line ships.
 - Steps 08–13: `sourcing.md` names some Kenney files loosely (`creak_001` is `creak1`; `knifeSlice`, `drawKnife`, `handleCoins` plain numbers; "Retro Electric Off" is `Retro Charge Electric Off 07_s05`), and a few Freesound cue lists differ between `sourcing.md` and `freesound-wanted.md` (review-04). Check names on disk.
