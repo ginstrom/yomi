@@ -1,27 +1,43 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import type { AbilityEvent, AttackEvent, BattleEndEvent, CastEvent, Side } from '../engine/battleEngine.ts'
-import type { SpellId } from '../combat/spells.ts'
+import { ABILITIES, ABILITY_IDS } from '../combat/abilities.ts'
+import { mulberry32 } from '../combat/rng.ts'
+import { ALL_SPELL_IDS, type SpellId } from '../combat/spells.ts'
+import { BattleEngine, type AbilityEvent, type AttackEvent, type BattleEndEvent, type BattleEvent, type CastEvent, type Side, type StatusTickEvent } from '../engine/battleEngine.ts'
+import { POLICIES } from '../engine/policies.ts'
+import { ENCOUNTERS, FOE_XP, type UnitKind } from '../game/encounters.ts'
+import { partyFighters, readyMadeParty } from '../game/party.ts'
+import { FAMILIES } from '../inventory/catalog.ts'
+import { MAGIC_ITEMS, type ItemIcon } from '../inventory/inventory.ts'
 import manifest from '../../audio/sfx.manifest.json'
-import { impactMs } from './battleEffects.ts'
+import { MOVE_STEP_MS, impactMs } from './battleEffects.ts'
 import {
   BANKS,
   CUES,
+  ABILITY_SOUNDS,
+  DEATH,
+  FOE_SOUNDS,
   GLOBAL_VOICE_CAP,
   MUSIC_KEYS,
   STING_DELAY_MS,
+  WEAPON_SOUNDS,
   admitPlay,
   bankFiles,
   cueBank,
   cueDurationMs,
   cueMarkers,
   eventSounds,
+  levelUpDelayMs,
   musicFiles,
   newLimitState,
   newVariantState,
   pickVariant,
+  spellSound,
+  stepCue,
   type CueId,
+  type SoundContext,
+  type SoundCue,
 } from './sounds.ts'
 
 const ROOT = join(import.meta.dirname, '../..')
@@ -210,63 +226,329 @@ describe('admitPlay', () => {
   })
 })
 
-describe('eventSounds (today’s mapping on the new cues)', () => {
-  it('swings, then lands a hit, a critical or a miss', () => {
-    const swing = { cue: 'battle.swing.blade', delayMs: 0 }
-    expect(eventSounds(attack(true))).toEqual([swing, { cue: 'battle.hit.slash', delayMs: impactMs(attack(true)) }])
-    expect(eventSounds(attack(true, true))).toEqual([swing, { cue: 'battle.hit.crit', delayMs: impactMs(attack(true, true)) }])
-    expect(eventSounds(attack(false))).toEqual([swing, { cue: 'battle.miss.swing', delayMs: impactMs(attack(false)) }])
-  })
+// ---- battle mapping ----------------------------------------------------------
 
-  it('sounds a spell, then how it lands; a friendly one chimes', () => {
-    const spell = { cue: 'battle.cast.arcane', delayMs: 0 }
-    expect(eventSounds(cast(true))).toEqual([spell, { cue: 'battle.hit.slash', delayMs: impactMs(cast(true)) }])
-    expect(eventSounds(cast(true, true))).toEqual([spell, { cue: 'battle.hit.crit', delayMs: impactMs(cast(true, true)) }])
-    expect(eventSounds(cast(false))).toEqual([spell, { cue: 'battle.miss.swing', delayMs: impactMs(cast(false)) }])
-    expect(eventSounds(cast(true, false, 'heal'))).toEqual([spell, { cue: 'battle.impact.heal', delayMs: impactMs(cast(true, false, 'heal')) }])
-  })
+type Stub = { kinds?: Record<string, UnitKind>; held?: Record<string, ItemIcon | null>; body?: Record<string, ItemIcon | null> }
+const ctx = ({ kinds = {}, held = {}, body = {} }: Stub): SoundContext => ({
+  kind: (u) => kinds[u] ?? null,
+  held: (u) => held[u] ?? null,
+  body: (u) => body[u] ?? null,
+})
+const hero = (icon: ItemIcon | null, body: ItemIcon | null = null): Stub => ({ kinds: { hero: 'warrior' }, held: { hero: icon }, body: { hero: body } })
+const cues = (events: SoundCue[]) => events.map((e) => e.cue)
 
-  it('ticks, regenerates and marks a fallen unit', () => {
-    expect(eventSounds({ type: 'status_tick', seq: 0, round: 1, unit: 'goblin', status: 'poisoned', damage: 2, warded: 0, hpBefore: 5, hpAfter: 3 })).toEqual([
-      { cue: 'battle.hit.slash', delayMs: 0 },
+function strike(patch: Partial<AttackEvent> = {}, attacker = 'hero', defender = 'goblin'): AttackEvent {
+  return { ...attack(true), attacker, defender, ...patch }
+}
+
+describe('eventSounds: attacks by class', () => {
+  const impact = impactMs(attack(true))
+  it.each([
+    ['dagger', 'battle.swing.light', 'battle.hit.pierce', 'battle.miss.swing'],
+    ['shortsword', 'battle.swing.light', 'battle.hit.slash', 'battle.miss.swing'],
+    ['sword', 'battle.swing.blade', 'battle.hit.slash', 'battle.miss.swing'],
+    ['greatsword', 'battle.swing.heavy', 'battle.hit.slash', 'battle.miss.swing'],
+    ['mace', 'battle.swing.heavy', 'battle.hit.crush', 'battle.miss.swing'],
+    ['spear', 'battle.swing.thrust', 'battle.hit.pierce', 'battle.miss.swing'],
+    ['bow', 'battle.shot.bow', 'battle.hit.pierce', 'battle.miss.shot'],
+    ['crossbow', 'battle.shot.crossbow', 'battle.hit.pierce', 'battle.miss.shot'],
+    ['wand', 'battle.shot.wand', 'battle.hit.magic', 'battle.miss.magic'],
+  ] as const)('a hero with a %s releases %s, then %s or %s', (icon, release, hit, miss) => {
+    const c = ctx(hero(icon))
+    const shot = release.startsWith('battle.shot')
+    const e = (h: boolean) => strike({ hit: h, melee: !shot, distance: shot ? 3 : 1 })
+    expect(eventSounds(e(true), c)).toEqual([
+      { cue: release, delayMs: 0 },
+      { cue: hit, delayMs: impactMs(e(true)) },
     ])
-    expect(eventSounds({ type: 'regenerate', seq: 0, round: 1, unit: 'troll', healed: 2, hpBefore: 7, hpAfter: 9 })).toEqual([
-      { cue: 'battle.regen', delayMs: 0 },
+    expect(eventSounds(e(false), c)).toEqual([
+      { cue: release, delayMs: 0 },
+      { cue: miss, delayMs: impactMs(e(false)) },
     ])
-    expect(eventSounds({ type: 'unit_down', seq: 0, round: 1, unit: 'goblin' })).toEqual([{ cue: 'battle.death.human', delayMs: 0 }])
   })
 
-  it('plays a sting for victory or defeat, and nothing for an abandoned battle', () => {
+  it('treats bare hands as the light class, landing as a crush', () => {
+    expect(eventSounds(strike(), ctx(hero(null)))).toEqual([
+      { cue: 'battle.swing.light', delayMs: 0 },
+      { cue: 'battle.hit.crush', delayMs: impact },
+    ])
+  })
+
+  it.each([
+    ['goblin', 'battle.swing.light', 'battle.hit.slash'],
+    ['kobold', 'battle.swing.light', 'battle.hit.pierce'],
+    ['bandit_captain', 'battle.swing.blade', 'battle.hit.slash'],
+    ['hobgoblin', 'battle.swing.heavy', 'battle.hit.crush'],
+    ['troll', 'battle.swing.claw', 'battle.hit.claw'],
+    ['giant_spider', 'battle.swing.bite', 'battle.hit.claw'],
+    ['bandit_archer', 'battle.shot.bow', 'battle.hit.pierce'],
+    ['bandit_crossbowman', 'battle.shot.crossbow', 'battle.hit.pierce'],
+    ['bandit_mage', 'battle.shot.wand', 'battle.hit.magic'],
+  ] as const)('a %s releases %s and hits with %s', (kind, release, hit) => {
+    const got = cues(eventSounds(strike({ attacker: 'foe', defender: 'hero' }), ctx({ kinds: { foe: kind, hero: 'warrior' } })))
+    expect(got.slice(0, 2)).toEqual([release, hit])
+  })
+
+  it('hears a routine’s strikes as the attacker’s class', () => {
+    const e = strike({ attacker: 'foe', defender: 'hero', ability: 'troll_claws', strike: 'claw' })
+    expect(cues(eventSounds(e, ctx({ kinds: { foe: 'troll', hero: 'warrior' } })))).toEqual(['battle.swing.claw', 'battle.hit.claw'])
+  })
+
+  it('adds the metal sweetener for a breastplate, plate, a hobgoblin and not for leather or a goblin', () => {
+    const armoured = (defender: string, s: Stub) => cues(eventSounds(strike({ attacker: 'foe', defender }), ctx({ ...s, kinds: { foe: 'goblin', ...s.kinds } })))
+    expect(armoured('h', { kinds: { h: 'warrior' }, body: { h: 'armor' } })).toContain('battle.armor.metal')
+    expect(armoured('h', { kinds: { h: 'warrior' }, body: { h: 'plate' } })).toContain('battle.armor.metal')
+    expect(armoured('h', { kinds: { h: 'hobgoblin' } })).toContain('battle.armor.metal')
+    expect(armoured('h', { kinds: { h: 'bandit_brute' } })).toContain('battle.armor.metal')
+    expect(armoured('h', { kinds: { h: 'goblin' } })).not.toContain('battle.armor.metal')
+    expect(armoured('h', { kinds: { h: 'warrior' }, body: { h: 'leather' } })).not.toContain('battle.armor.metal')
+    expect(armoured('h', { kinds: { h: 'warrior' }, body: { h: 'robe' } })).not.toContain('battle.armor.metal')
+    expect(armoured('h', { kinds: { h: 'warrior' } })).not.toContain('battle.armor.metal')
+    // Never on a miss.
+    const miss = cues(eventSounds(strike({ hit: false, defender: 'h' }), ctx({ kinds: { h: 'hobgoblin' } })))
+    expect(miss).not.toContain('battle.armor.metal')
+  })
+
+  it('adds the crit sweetener', () => {
+    const got = eventSounds(strike({ critical: true }), ctx(hero('sword')))
+    expect(got).toContainEqual({ cue: 'battle.hit.crit', delayMs: impact })
+  })
+
+  it('adds an element sweetener at +30 ms for each of the first two on-hit entries, a bane as blight', () => {
+    const one = eventSounds(strike({ bonus: [{ element: 'fire', rolled: 3, damage: 3 }] }), ctx(hero('sword')))
+    expect(one).toContainEqual({ cue: 'battle.element.fire', delayMs: impact + 30 })
+    const bonus = [
+      { element: 'frost', rolled: 2, damage: 2 },
+      { bane: true, rolled: 2, damage: 2 },
+      { element: 'lightning', rolled: 2, damage: 2 },
+    ] as AttackEvent['bonus']
+    const three = eventSounds(strike({ bonus }), ctx(hero('sword')))
+    expect(cues(three).filter((c) => c.startsWith('battle.element.'))).toEqual(['battle.element.frost', 'battle.element.blight'])
+    // Warded to nothing: silent.
+    expect(cues(eventSounds(strike({ bonus: [{ element: 'fire', rolled: 3, damage: 0 }] }), ctx(hero('sword'))))).not.toContain('battle.element.fire')
+  })
+
+  it('adds a small heal at +60 ms when the hit healed the attacker', () => {
+    expect(eventSounds(strike({ healed: 2 }), ctx(hero('sword')))).toContainEqual({ cue: 'battle.heal.small', delayMs: impact + 60 })
+  })
+
+  it('hears a blow that struck a mirror image as that and nothing else after the release', () => {
+    expect(eventSounds(strike({ image: true }), ctx(hero('sword')))).toEqual([
+      { cue: 'battle.swing.blade', delayMs: 0 },
+      { cue: 'battle.hit.image', delayMs: impact },
+    ])
+  })
+
+  it('falls back to a blade for a melee blow and a bow for a shot when it knows nothing of the attacker', () => {
+    expect(cues(eventSounds(strike()))).toEqual(['battle.swing.blade', 'battle.hit.slash'])
+    expect(cues(eventSounds(strike({ melee: false, distance: 3, hit: false })))).toEqual(['battle.shot.bow', 'battle.miss.shot'])
+    expect(cues(eventSounds(strike(), ctx({})))).toEqual(['battle.swing.blade', 'battle.hit.slash'])
+  })
+})
+
+describe('eventSounds: spells and abilities', () => {
+  const at = (e: CastEvent) => impactMs(e)
+  it.each([
+    ['magic_arrow', 'battle.cast.arcane', 'battle.impact.arcane'],
+    ['flame_arrow', 'battle.cast.fire', 'battle.impact.fire'],
+    ['frost_blast', 'battle.cast.frost', 'battle.impact.frost'],
+    ['lightning_bolt', 'battle.cast.storm', 'battle.impact.lightning'],
+    ['acid_arrow', 'battle.cast.venom', 'battle.impact.acid'],
+    ['death_cloud', 'battle.cast.venom', 'battle.impact.poison'],
+    ['heal', 'battle.cast.holy', 'battle.impact.heal'],
+    ['protect', 'battle.cast.ward', 'battle.impact.buff'],
+    ['fireball', 'battle.cast.fire', 'battle.impact.fireball'],
+    ['sleep', 'battle.cast.arcane', 'battle.impact.hex'],
+    ['curse', 'battle.cast.shadow', 'battle.impact.hex'],
+    ['drain_life', 'battle.cast.shadow', 'battle.impact.shadow'],
+    ['bless', 'battle.cast.holy', 'battle.impact.buff'],
+    ['dark_shield', 'battle.cast.shadow', 'battle.impact.buff'],
+    ['web', 'battle.cast.arcane', 'battle.impact.web'],
+  ] as const)('%s casts %s and lands as %s', (spell, release, impactCue) => {
+    expect(spellSound(spell)).toEqual({ cast: release, impact: impactCue })
+  })
+
+  it('casts, then lands a hostile spell as its impact, with a crit sweetener', () => {
+    const e = cast(true, true, 'flame_arrow')
+    expect(eventSounds(e)).toEqual([
+      { cue: 'battle.cast.fire', delayMs: 0 },
+      { cue: 'battle.impact.fire', delayMs: at(e) },
+      { cue: 'battle.hit.crit', delayMs: at(e) },
+    ])
+  })
+
+  it('chimes a friendly spell, and hears an image-only cast and a miss', () => {
+    const heal = cast(true, false, 'heal')
+    expect(eventSounds(heal)).toEqual([
+      { cue: 'battle.cast.holy', delayMs: 0 },
+      { cue: 'battle.impact.heal', delayMs: at(heal) },
+    ])
+    const image = cast(true)
+    image.outcomes[0].image = true
+    expect(cues(eventSounds(image))).toEqual(['battle.cast.arcane', 'battle.hit.image'])
+    expect(cues(eventSounds(cast(false)))).toEqual(['battle.cast.arcane', 'battle.miss.magic'])
+  })
+
+  it('adds a small heal 150 ms after the landing of a drain', () => {
+    const e = { ...cast(true, false, 'drain_life'), drained: 3 }
+    expect(eventSounds(e)).toContainEqual({ cue: 'battle.heal.small', delayMs: at(e) + 150 })
+  })
+
+  describe('an area ability', () => {
+    const ability = (id: 'fire_spit' | 'spider_web', hit: boolean, half: boolean): AbilityEvent => ({
+      type: 'ability', seq: 0, round: 1, unit: 'foe', ability: id, at: { q: 2, r: 0 }, shape: 'cone',
+      hexes: [], distance: 2, apCost: 4, apAfter: 4, facing: 0, skill: 70,
+      outcomes: [
+        {
+          unit: 'hero', attackRoll: 40, chance: 61, defenderAc: 15, hit, critical: false, fumble: false, image: false,
+          damage: hit ? 9 : half ? 4 : 0, warded: 0, half, healed: 0, hpBefore: 12, hpAfter: 5, status: null,
+        },
+      ],
+    })
+    it.each([
+      ['fire_spit', 'battle.ability.spit', 'battle.impact.fire'],
+      ['spider_web', 'battle.ability.web', 'battle.impact.web'],
+    ] as const)('%s releases %s and lands as %s, also on half damage, and misses as magic', (id, release, impactCue) => {
+      const struck = ability(id, true, false)
+      expect(eventSounds(struck)).toEqual([
+        { cue: release, delayMs: 0 },
+        { cue: impactCue, delayMs: impactMs(struck) },
+      ])
+      expect(cues(eventSounds(ability(id, false, true)))).toEqual([release, impactCue])
+      expect(cues(eventSounds(ability(id, false, false)))).toEqual([release, 'battle.miss.magic'])
+    })
+  })
+})
+
+describe('eventSounds: ticks, regeneration, falls, steps and the end', () => {
+  const tick = (status: StatusTickEvent['status']): StatusTickEvent => ({ type: 'status_tick', seq: 0, round: 1, unit: 'goblin', status, damage: 2, warded: 0, hpBefore: 5, hpAfter: 3 })
+  it('ticks by the status’s element, and not at all without one', () => {
+    expect(eventSounds(tick('poisoned'))).toEqual([{ cue: 'battle.element.poison', delayMs: 0 }])
+    expect(eventSounds(tick('corroded'))).toEqual([{ cue: 'battle.element.acid', delayMs: 0 }])
+    expect(eventSounds(tick('asleep'))).toEqual([])
+  })
+
+  it('regenerates', () => {
+    expect(eventSounds({ type: 'regenerate', seq: 0, round: 1, unit: 'troll', healed: 2, hpBefore: 7, hpAfter: 9 })).toEqual([{ cue: 'battle.regen', delayMs: 0 }])
+  })
+
+  it.each([
+    ['goblin', 'battle.death.goblinoid'],
+    ['kobold', 'battle.death.goblinoid'],
+    ['shaman', 'battle.death.goblinoid'],
+    ['hobgoblin', 'battle.death.goblinoid'],
+    ['troll', 'battle.death.brute'],
+    ['armored_troll', 'battle.death.brute'],
+    ['giant_spider', 'battle.death.spider'],
+    ['salamander', 'battle.death.salamander'],
+    ['horror', 'battle.death.horror'],
+    ['bandit_archer', 'battle.death.human'],
+  ] as const)('a fallen %s is %s', (kind, cue) => {
+    expect(eventSounds({ type: 'unit_down', seq: 0, round: 1, unit: 'u' }, ctx({ kinds: { u: kind } }))).toEqual([{ cue, delayMs: 0 }])
+  })
+
+  it('tolls for a fallen hero as well as a human fall, and a unit of no known kind falls as a human', () => {
+    const down = { type: 'unit_down', seq: 0, round: 1, unit: 'u' } as const
+    expect(cues(eventSounds(down, ctx({ kinds: { u: 'warrior' } })))).toEqual(['battle.death.human', 'battle.death.hero'])
+    expect(cues(eventSounds(down))).toEqual(['battle.death.human'])
+  })
+
+  const walk = (n: number): BattleEvent => ({
+    type: 'move', seq: 0, round: 1, unit: 'u', from: { q: 0, r: 0 }, to: { q: n, r: 0 },
+    path: Array.from({ length: n }, (_, i) => ({ q: i + 1, r: 0 })), destination: { q: n, r: 0 }, apCost: n, apAfter: 4, facing: 0,
+  })
+  it.each([
+    ['an armoured hero', { kinds: { u: 'warrior' }, body: { u: 'armor' } }, 'battle.step.armored'],
+    ['a plate hero', { kinds: { u: 'warrior' }, body: { u: 'plate' } }, 'battle.step.armored'],
+    ['a light hero', { kinds: { u: 'warrior' }, body: { u: 'leather' } }, 'battle.step.light'],
+    ['a brute', { kinds: { u: 'bandit_brute' } }, 'battle.step.armored'],
+    ['a hobgoblin', { kinds: { u: 'hobgoblin' } }, 'battle.step.armored'],
+    ['a troll', { kinds: { u: 'troll' } }, 'battle.step.heavy'],
+    ['a horror', { kinds: { u: 'horror' } }, 'battle.step.heavy'],
+    ['a spider', { kinds: { u: 'giant_spider' } }, 'battle.step.skitter'],
+    ['a salamander', { kinds: { u: 'salamander' } }, 'battle.step.skitter'],
+    ['a goblin', { kinds: { u: 'goblin' } }, 'battle.step.light'],
+    ['a unit of no kind', {}, 'battle.step.light'],
+  ] as const)('%s takes a step mid-way through each hex', (_name, stub, cue) => {
+    expect(eventSounds(walk(3), ctx(stub))).toEqual([
+      { cue, delayMs: MOVE_STEP_MS / 2 },
+      { cue, delayMs: MOVE_STEP_MS * 1.5 },
+      { cue, delayMs: MOVE_STEP_MS * 2.5 },
+    ])
+    expect(MOVE_STEP_MS / 2).toBe(70)
+  })
+
+  it('plays the sting for the winner after the last blow, and nothing for neither', () => {
     expect(eventSounds(battleEnd('player'))).toEqual([{ cue: 'stings.victory', delayMs: STING_DELAY_MS }])
     expect(eventSounds(battleEnd('enemy'))).toEqual([{ cue: 'stings.defeat', delayMs: STING_DELAY_MS }])
     expect(eventSounds(battleEnd(null))).toEqual([])
   })
 
-  it('stays quiet for moves and turn changes', () => {
+  it('stays quiet for turn changes', () => {
     expect(eventSounds({ type: 'end_turn', seq: 0, round: 1, side: 'player', unspentAp: {} })).toEqual([])
   })
 
-  describe('for an area ability', () => {
-    const ability = (hit: boolean, half: boolean, critical = false): AbilityEvent => ({
-      type: 'ability', seq: 0, round: 1, unit: 'salamander', ability: 'fire_spit', at: { q: 2, r: 0 }, shape: 'cone',
-      hexes: [], distance: 2, apCost: 4, apAfter: 4, facing: 0, skill: 70,
-      outcomes: [
-        {
-          unit: 'hero', attackRoll: 40, chance: 61, defenderAc: 15, hit, critical, fumble: false, image: false,
-          damage: hit ? 9 : half ? 4 : 0, warded: 0, half, healed: 0, hpBefore: 12, hpAfter: 5, status: null,
-        },
-      ],
-    })
-
-    it('casts, then lands as the best outcome does; a half-damage miss is still heard to strike', () => {
-      const cue = { cue: 'battle.cast.arcane', delayMs: 0 }
-      expect(eventSounds(ability(true, false))).toEqual([cue, { cue: 'battle.hit.slash', delayMs: impactMs(ability(true, false)) }])
-      expect(eventSounds(ability(true, false, true))[1].cue).toBe('battle.hit.crit')
-      expect(eventSounds(ability(false, true))[1].cue).toBe('battle.hit.slash')
-      expect(eventSounds(ability(false, false))[1].cue).toBe('battle.miss.swing')
-    })
+  it('starts the level-up sting 150 ms after the victory sting ends', () => {
+    expect(levelUpDelayMs()).toBe(STING_DELAY_MS + cueDurationMs('stings.victory') + 150)
   })
 })
+
+describe('AC3: every weapon, foe, spell and ability has a sound', () => {
+  it('has a class for every main-hand weapon icon', () => {
+    const icons = new Set([...FAMILIES, ...MAGIC_ITEMS].filter((i) => i.slot === 'mainHand').map((i) => i.icon))
+    expect(icons.size).toBeGreaterThan(10)
+    for (const icon of icons) expect(WEAPON_SOUNDS[icon], `weapon icon ${icon}`).toBeDefined()
+  })
+
+  it('has a class, a fall and a step for every kind', () => {
+    const kinds = Object.keys(FOE_XP) as UnitKind[]
+    expect(kinds).toContain('warrior')
+    for (const kind of kinds) {
+      expect(DEATH[kind], `death of ${kind}`).toBeDefined()
+      expect(stepCue(kind, null), `step of ${kind}`).toBeDefined()
+      if (kind !== 'warrior') expect(FOE_SOUNDS[kind], `attack of ${kind}`).toBeDefined()
+    }
+  })
+
+  it('resolves every spell and ability to cues the manifest has', () => {
+    for (const id of ALL_SPELL_IDS) {
+      const { cast: release, impact } = spellSound(id)
+      expect(CUES[release], `${id} cast`).toBeDefined()
+      expect(CUES[impact], `${id} impact`).toBeDefined()
+    }
+    for (const ability of Object.values(ABILITY_SOUNDS)) {
+      expect(CUES[ability.release]).toBeDefined()
+      expect(CUES[ability.impact]).toBeDefined()
+    }
+    for (const id of ABILITY_IDS.filter((a) => ABILITIES[a].area)) expect(ABILITY_SOUNDS[id], `ability ${id}`).toBeDefined()
+    for (const sound of [...Object.values(WEAPON_SOUNDS), ...Object.values(FOE_SOUNDS)]) {
+      for (const cue of [sound.release, sound.hit, sound.miss]) expect(CUES[cue]).toBeDefined()
+    }
+  })
+})
+
+describe('AC6: choosing sounds leaves the battle’s log and dice alone', () => {
+  it('plays a seeded battle out the same with eventSounds called on every event', () => {
+    const play = (listen: boolean) => {
+      const fight = ENCOUNTERS.goblin_raid(partyFighters(readyMadeParty()), 2)
+      const engine = new BattleEngine(fight.setup, { seed: 7 })
+      const policyRng = mulberry32(99)
+      const context = ctx({ kinds: fight.kinds })
+      let heard = 0
+      for (let state = engine.getState(); state.phase !== 'over'; state = engine.getState()) {
+        const events = engine.step(POLICIES.aggressive({ state, legal: engine.legalActions(), rng: policyRng }))
+        if (listen) for (const event of events) heard += eventSounds(event, context).length
+      }
+      return { log: JSON.stringify(engine.getLog()), rng: engine.snapshot().rng, heard }
+    }
+    const plain = play(false)
+    const listened = play(true)
+    expect(listened.heard).toBeGreaterThan(20)
+    expect(listened.log).toBe(plain.log)
+    expect(listened.rng).toBe(plain.rng)
+  })
+})
+
 
 describe('AC1: one player', () => {
   function sources(dir: string): string[] {

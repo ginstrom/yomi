@@ -89,6 +89,9 @@ export function abilityLook(ability: AbilityId): SpellLook {
 
 /** From the start of a swing to the blow landing: the wind-up, then the cut. */
 export const SWING_IMPACT_MS = 130
+
+/** How long a unit takes to walk one hex; a footstep sounds mid-way through each. */
+export const MOVE_STEP_MS = 140
 /** A shot's draw or a cast's gesture before the missile leaves. */
 export const RELEASE_MS = 60
 /** A missile's flight: a moment to leave, then so long a hex. */

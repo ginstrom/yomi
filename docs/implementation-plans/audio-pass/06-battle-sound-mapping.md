@@ -294,3 +294,12 @@ Prefix every command with `PATH=/opt/homebrew/opt/node@26/bin:$PATH`:
 
 ## Execution record
 
+
+### Engineer's record (step 06)
+
+- Tests first: `sounds.test.ts`'s old interim block was replaced by the §5.3 cases (red on missing exports), then `sounds.ts` was implemented. Added: attack classes, metal, crit, element and heal sweeteners, images, spells and overrides, area abilities, ticks, regeneration, falls, steps, the sting, `levelUpDelayMs`, AC3 coverage (weapon icons of `FAMILIES` and `MAGIC_ITEMS`, every `FoeKind`/`warrior`, every `ALL_SPELL_IDS`, every area ability) and the AC6 replay (a seeded `goblin_raid` at threat 2 played with and without `eventSounds`: identical log JSON and `snapshot().rng`).
+- Exports beyond the contract: `STEP` (kind to step class), `stepCue(kind, body)`, `BARE_HANDS`, `cueDurationMs` (already from step 05), `levelUpDelayMs()`.
+- `MOVE_STEP_MS` moved to `battleEffects.ts`. `BattleScene` keeps `kinds` and a live `soundContext`, notes when `battle_end` was shown and plays `stings.level_up` after `max(0, levelUpDelayMs() - elapsed)` from the victory screen when any `gain.levelsGained > 0`.
+- Deviations: an ability event whose id has no `ABILITY_SOUNDS` entry returns no cues (routines are attacks and never reach this branch). A light-walking unit (hero, bandit) whose body icon is `armor` or `plate` steps armoured; kind overrides otherwise.
+- E2E (`e2e/battle.test.ts`, describe "a battle's sounds"): steps per hex (armoured), sword swing then outcome, mage's `battle.cast.arcane` and outcome, a fall's `battle.death.*` and the victory sting (and the level-up sting after it when the result lists a level).
+- Verification: `npm test` 85 files, 1614 tests pass; `npm run test:browser` 11 files, 124 tests pass; `npm run sounds:check` up to date. No `LOG_SCHEMA_VERSION` or `SAVE_VERSION` change.

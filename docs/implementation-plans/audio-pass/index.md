@@ -331,7 +331,7 @@ export const DUCK_RELEASE_MS = 600
 | 03 | [TTS adapters and bake-off](03-tts-bakeoff.md) | Engine adapters (C10); narrators A and B designed; 32 blind clips, key, score sheet, neutral candidates | 01 | no | **G1** | awaiting review (G1; `667efdd`) |
 | 04 | [Sourcing survey and Freesound list](04-sourcing-survey.md) | Kenney and OpenGameArt CC0 packs downloaded; `sourcing.md` (candidates per cue) and `freesound-wanted.md` committed in this folder | 01 | no | **G2** | awaiting review (G2; commit 2de63b8) |
 | 05 | [Runtime framework](05-runtime-framework.md) | Cue table, `pickVariant`, limits, buses, Voice slider, `soundPlayer`, limiter, audio log, banks at boot, every call site moved, placeholders deleted, music level measured | 02 | **yes** | — | done (`edab9c4`) |
-| 06 | [Battle sound mapping](06-battle-sound-mapping.md) | `eventSounds` with `SoundContext` and the tables of §5.3; level-up sting; coverage tests; replay unchanged | 05 | **yes** | — | pending |
+| 06 | [Battle sound mapping](06-battle-sound-mapping.md) | `eventSounds` with `SoundContext` and the tables of §5.3; level-up sting; coverage tests; replay unchanged | 05 | **yes** | — | done |
 | 07 | [World and interface sounds](07-world-interface-sounds.md) | `worldSounds`; world-map hooks; back, tab, confirm, error, learn, gear and success sounds in every screen | 06 | **yes** | — | pending |
 | 08 | [Content: melee](08-content-melee.md) | 13 melee cues from real sources | 02, 04 | no | **G3** | pending |
 | 09 | [Content: interface and stings](09-content-ui-stings.md) | `ui` and `stings` banks | 08 (G3) | no | **G4** | pending |

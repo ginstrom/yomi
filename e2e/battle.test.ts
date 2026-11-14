@@ -3,7 +3,7 @@ import { hexDistance, offsetToHex } from '../src/grid/hex.ts'
 import { itemById } from '../src/inventory/inventory.ts'
 import { GEAR_SPRITES } from '../src/scenes/unitLook.ts'
 import type { BattleProbe } from '../src/testHook.ts'
-import { RAIDERS, battleHexOnScreen, useGames } from './driver.ts'
+import { RAIDERS, battleHexOnScreen, useGames, type Game } from './driver.ts'
 
 /** The first party member's unit, which is the one selected as a battle opens. */
 const hero = (battle: BattleProbe) => battle.state.units.find((u) => u.id === 'hero_1')!
@@ -393,5 +393,78 @@ describe('a battle', () => {
     const to = offsetToHex(5, 4)
     await game.click(battleHexOnScreen(battle, to))
     expect(hero(await game.awaitTurn())).toMatchObject({ position: to })
+  })
+})
+
+describe('a battle’s sounds', () => {
+  const games = useGames()
+  const cues = (game: Game) => game.page.evaluate(() => window.__yomi!.audioLog().map((entry) => entry.cue))
+  /** Waits until the sound log holds a cue that satisfies `want`, then returns the log. */
+  async function heard(game: Game, want: string): Promise<string[]> {
+    await game.page.waitForFunction((pattern) => window.__yomi!.audioLog().some((entry) => new RegExp(pattern).test(entry.cue)), want)
+    return cues(game)
+  }
+
+  it('steps once for each hex walked, in the mover’s class', async () => {
+    const game = await games.open()
+    const start = await game.enterBattle()
+    await game.click(battleHexOnScreen(start, offsetToHex(5, 4)))
+    const moved = await game.awaitTurn()
+    const walk = moved.log.find((e) => e.type === 'move' && e.unit === 'hero_1')
+    expect(walk?.type === 'move' && walk.path.length).toBeGreaterThan(1)
+    const steps = walk?.type === 'move' ? walk.path.length : 0
+    await game.page.waitForFunction((n) => window.__yomi!.audioLog().filter((e) => e.cue.startsWith('battle.step.')).length >= n, steps)
+    // The ready-made soldier wears a breastplate.
+    expect((await cues(game)).filter((cue) => cue.startsWith('battle.step.'))).toEqual(Array(steps).fill('battle.step.armored'))
+  })
+
+  it('swings with the sword and lands, then casts a spell and lands that', async () => {
+    const game = await games.open()
+    let turn = await game.enterBattle()
+    const near = (b: BattleProbe) => {
+      const me = hero(b)
+      return b.state.units
+        .filter((u) => u.side === 'enemy' && u.hp > 0)
+        .find((u) => hexDistance(me.position, u.position) - me.attackRange <= me.ap - me.attackApCost)
+    }
+    while (!near(turn)) {
+      const round = turn.state.round
+      await game.click(turn.buttons.endTurn)
+      turn = await game.waitFor('Battle', (b) => b.playerControl && b.state.round === round + 1)
+    }
+    await game.click(battleHexOnScreen(turn, near(turn)!.position))
+    const outcome = /^battle\.(hit\.(slash|pierce|crush|crit)|miss\.swing)$/
+    const log = await heard(game, outcome.source)
+    expect(log).toContain('battle.swing.blade')
+    expect(log.indexOf('battle.swing.blade')).toBeLessThan(log.findIndex((cue) => outcome.test(cue)))
+  })
+
+  it('casts with the mage’s spell cue and its outcome', async () => {
+    const game = await games.open()
+    const start = await game.enterBattle()
+    await game.click(start.party[2])
+    const selected = await game.waitFor('Battle', (b) => b.selected === 'hero_3')
+    await game.click(battleHexOnScreen(selected, offsetToHex(5, 5)))
+    await game.waitFor('Battle', (b) => b.playerControl && b.state.units.find((u) => u.id === 'hero_3')!.ap === 5)
+    await game.press('m')
+    await game.waitFor('Battle', (b) => b.spellMenu !== null)
+    await game.press('1')
+    const picking = await game.waitFor('Battle', (b) => b.casting === 'magic_arrow')
+    await game.click(battleHexOnScreen(picking, picking.state.units.find((u) => u.id === 'goblin')!.position))
+    const log = await heard(game, '^battle\\.(impact\\.arcane|miss\\.magic|hit\\.image)$')
+    expect(log).toContain('battle.cast.arcane')
+  })
+
+  it('tolls a fall and sounds the victory sting, and the level-up after it when a hero levelled', async () => {
+    const game = await games.open()
+    await game.enterBattle()
+    const over = await game.fightBattle()
+    expect(over.state.winner).toBe('player')
+    const log = await heard(game, '^stings\\.victory$')
+    expect(log.some((cue) => cue.startsWith('battle.death.'))).toBe(true)
+    if (over.result.some((line) => line.includes('reaches level'))) {
+      const after = await heard(game, '^stings\\.level_up$')
+      expect(after.indexOf('stings.level_up')).toBeGreaterThan(after.indexOf('stings.victory'))
+    }
   })
 })

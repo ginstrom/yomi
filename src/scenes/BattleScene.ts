@@ -62,6 +62,7 @@ import {
   flightMs,
   holdMs,
   impactMs,
+  MOVE_STEP_MS,
   type SpellLook,
   bonusElement,
   bonusText,
@@ -80,7 +81,7 @@ import { DEFAULT_ENCOUNTER, battleSeed, chooseBattle, foundNames } from './battl
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
 import { showStory, type StoryAnchors } from './StoryScene.ts'
 import { storyFor, type StoryItem } from '../story/story.ts'
-import { eventSounds } from './sounds.ts'
+import { eventSounds, levelUpDelayMs, type SoundContext } from './sounds.ts'
 import { describeStatuses, spellMenuRows, targetingHint } from './spellMenu.ts'
 import type { DebugSource } from './debugCommands.ts'
 
@@ -188,7 +189,6 @@ const AP_PIP_SPENT = 0x424242
 /** Move highlights are fainter where the move leaves too few AP to attack. */
 const MOVE_ALPHA_CAN_ATTACK = 0.6
 const MOVE_ALPHA_MOVE_ONLY = 0.25
-const MOVE_STEP_MS = 140
 /** Pause after a free attack lands, before the mover walks on. */
 const OPPORTUNITY_PAUSE_MS = 450
 /** Pause after a unit walks up to a foe, before it strikes. */
@@ -242,6 +242,10 @@ export class BattleScene extends Phaser.Scene {
   private xpReward = 0
   /** The party member behind each player unit. */
   private heroes = new Map<UnitId, Character>()
+  /** What each unit is, for the sounds it makes. */
+  private kinds: Record<UnitId, UnitKind> = {}
+  /** When the battle's end was shown, which the level-up sting counts from. */
+  private endShownAt: number | null = null
   /** Each member's equipment as the engine's log last had it, to tell the next gear change against. */
   private loggedEquipment = new Map<UnitId, Equipment>()
   /** What lies on the battlefield. The inventory drops onto and picks up from the pile on its unit's hex. */
@@ -339,6 +343,8 @@ export class BattleScene extends Phaser.Scene {
     const { setup, kinds } = fight
     this.xpReward = xpReward(fight)
     this.heroes = new Map(party.map((member, i) => [heroId(i), member]))
+    this.kinds = kinds
+    this.endShownAt = null
     this.loggedEquipment = new Map(party.map((member, i) => [heroId(i), { ...member.equipment }]))
     this.openPiles = null
     this.savedRound = null
@@ -1364,11 +1370,19 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  /** What the sounds need of a unit, read live so that gear changed mid-battle is heard. */
+  private readonly soundContext: SoundContext = {
+    kind: (id) => this.kinds[id] ?? null,
+    held: (id) => this.heroes.get(id)?.equipment.mainHand?.icon ?? null,
+    body: (id) => this.heroes.get(id)?.equipment.armor?.icon ?? null,
+  }
+
   private showEvent(event: BattleEvent): void {
     this.pushLog(formatEvent(event, this.names))
     // The theme gives way to the victory or defeat sting.
     if (event.type === 'battle_end') stopMusic('music_battle')
-    playSoundCues(this, eventSounds(event))
+    if (event.type === 'battle_end') this.endShownAt = this.time.now
+    playSoundCues(this, eventSounds(event, this.soundContext))
     if (event.type === 'move') {
       this.animateMove(event.unit, event.from, event.path)
     }
@@ -2103,7 +2117,13 @@ export class BattleScene extends Phaser.Scene {
       }
     }
     // The fallen are dead: out of the party, their gear in the baggage.
-    const xpLines = playerWon ? describeRewards(rewardVictory(this.expedition.members, this.xpReward, this.expedition.baggage)) : []
+    const reward = playerWon ? rewardVictory(this.expedition.members, this.xpReward, this.expedition.baggage) : null
+    const xpLines = reward ? describeRewards(reward) : []
+    // A level gained is heard after the victory sting has played out.
+    if (reward?.members.some(({ gain }) => gain.levelsGained > 0)) {
+      const elapsed = this.endShownAt === null ? 0 : this.time.now - this.endShownAt
+      playCue(this, 'stings.level_up', Math.max(0, levelUpDelayMs() - elapsed))
+    }
     this.xpReward = 0
     // A lost battle wipes the party out: its heroes dead, what they had left lying here.
     const wipe = playerWon ? null : wipeParty(this.gameState, this.expedition.id, this.location)

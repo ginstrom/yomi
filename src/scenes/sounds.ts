@@ -1,7 +1,11 @@
-import { SPELLS } from '../combat/spells.ts'
-import type { BattleEvent } from '../engine/battleEngine.ts'
+import type { AbilityId } from '../combat/abilities.ts'
+import type { Element } from '../combat/combat.ts'
+import { SPELLS, STATUSES, type SpellId } from '../combat/spells.ts'
+import type { AttackEvent, BattleEvent, UnitId } from '../engine/battleEngine.ts'
+import type { FoeKind, UnitKind } from '../game/encounters.ts'
+import type { ItemIcon } from '../inventory/inventory.ts'
 import manifest from '../../audio/sfx.manifest.json'
-import { impactMs } from './battleEffects.ts'
+import { MOVE_STEP_MS, impactMs } from './battleEffects.ts'
 
 /**
  * The cue table: every sound effect the game plays is a cue `<bank>.<name>`,
@@ -180,50 +184,252 @@ export function admitPlay(state: LimitState, cue: CueId, nowMs: number, endsAtMs
 
 // ---- battle ---------------------------------------------------------------
 
+/** What the scene knows of a unit that the events do not say: its kind and what it holds and wears. */
+export interface SoundContext {
+  kind(unit: UnitId): UnitKind | null
+  held(unit: UnitId): ItemIcon | null
+  body(unit: UnitId): ItemIcon | null
+}
+
+/** How a kind of attack sounds: let go, landing, and missing. */
+export interface AttackSound {
+  release: CueId
+  hit: CueId
+  miss: CueId
+}
+
+const attackSound = (release: CueId, hit: CueId, miss: CueId = 'battle.miss.swing'): AttackSound => ({ release, hit, miss })
+const light = (hit: CueId) => attackSound('battle.swing.light', hit)
+const blade = attackSound('battle.swing.blade', 'battle.hit.slash')
+const heavy = (hit: CueId) => attackSound('battle.swing.heavy', hit)
+const thrust = attackSound('battle.swing.thrust', 'battle.hit.pierce')
+const claw = attackSound('battle.swing.claw', 'battle.hit.claw')
+const bow = attackSound('battle.shot.bow', 'battle.hit.pierce', 'battle.miss.shot')
+const crossbow = attackSound('battle.shot.crossbow', 'battle.hit.pierce', 'battle.miss.shot')
+const wand = attackSound('battle.shot.wand', 'battle.hit.magic', 'battle.miss.magic')
+
+/** A hero's attack by its main hand's icon, as `GEAR_SPRITES` is keyed; a new weapon icon needs an entry (a test says so). */
+export const WEAPON_SOUNDS: Partial<Record<ItemIcon, AttackSound>> = {
+  dagger: light('battle.hit.pierce'),
+  shortsword: light('battle.hit.slash'),
+  rapier: light('battle.hit.pierce'),
+  sword: blade,
+  sword_ember: blade,
+  greatsword: heavy('battle.hit.slash'),
+  axe: heavy('battle.hit.slash'),
+  halberd: heavy('battle.hit.slash'),
+  mace: heavy('battle.hit.crush'),
+  war_hammer: heavy('battle.hit.crush'),
+  staff: heavy('battle.hit.crush'),
+  spear: thrust,
+  bow,
+  longbow: bow,
+  bow_hawk: bow,
+  crossbow,
+  wand,
+  wand_storm: wand,
+}
+
+/** A hero with nothing in its main hand. `null` is not an `ItemIcon`, so it is not in the table. */
+export const BARE_HANDS: AttackSound = light('battle.hit.crush')
+
+export const FOE_SOUNDS: Record<FoeKind, AttackSound> = {
+  goblin: light('battle.hit.slash'),
+  kobold: light('battle.hit.pierce'),
+  shaman: heavy('battle.hit.crush'),
+  hobgoblin: heavy('battle.hit.crush'),
+  troll: claw,
+  armored_troll: claw,
+  horror: claw,
+  salamander: claw,
+  giant_spider: attackSound('battle.swing.bite', 'battle.hit.claw'),
+  bandit_cutthroat: light('battle.hit.pierce'),
+  bandit_captain: blade,
+  bandit_brute: heavy('battle.hit.slash'),
+  bandit_archer: bow,
+  bandit_crossbowman: crossbow,
+  bandit_mage: wand,
+}
+
+/** What a unit of unknown make strikes with: a blade for a blow, a bow for a shot. */
+function attackClass(event: AttackEvent, context: SoundContext | undefined): AttackSound {
+  const kind = context?.kind(event.attacker) ?? null
+  if (kind === 'warrior') {
+    const held = context!.held(event.attacker)
+    if (held === null) return BARE_HANDS
+    const sound = WEAPON_SOUNDS[held]
+    if (sound) return sound
+  } else if (kind) {
+    return FOE_SOUNDS[kind]
+  }
+  return event.melee ? blade : bow
+}
+
+/** Kinds that wear metal whatever the scene says of their body (bandits and monsters have no `Character`). */
+const METAL_KINDS: ReadonlySet<UnitKind> = new Set(['hobgoblin', 'armored_troll', 'bandit_brute', 'bandit_captain'])
+const METAL_BODIES: ReadonlySet<ItemIcon> = new Set(['armor', 'plate'])
+
+function inMetal(unit: UnitId, context: SoundContext | undefined): boolean {
+  const kind = context?.kind(unit) ?? null
+  if (kind && METAL_KINDS.has(kind)) return true
+  const body = context?.body(unit) ?? null
+  return body !== null && METAL_BODIES.has(body)
+}
+
+const elementCue = (element: Element): CueId => `battle.element.${element}`
+
+/** A spell's cast and its landing; the overrides win, else the element of a hostile spell, else its school. */
+const SPELL_SOUND_OVERRIDES: Partial<Record<SpellId, { cast: CueId; impact: CueId }>> = {
+  fireball: { cast: 'battle.cast.fire', impact: 'battle.impact.fireball' },
+  sleep: { cast: 'battle.cast.arcane', impact: 'battle.impact.hex' },
+  curse: { cast: 'battle.cast.shadow', impact: 'battle.impact.hex' },
+  bane: { cast: 'battle.cast.shadow', impact: 'battle.impact.hex' },
+  drain_life: { cast: 'battle.cast.shadow', impact: 'battle.impact.shadow' },
+  bless: { cast: 'battle.cast.holy', impact: 'battle.impact.buff' },
+  dark_shield: { cast: 'battle.cast.shadow', impact: 'battle.impact.buff' },
+  web: { cast: 'battle.cast.arcane', impact: 'battle.impact.web' },
+}
+
+const ELEMENT_SPELL_SOUNDS: Partial<Record<Element, { cast: CueId; impact: CueId }>> = {
+  fire: { cast: 'battle.cast.fire', impact: 'battle.impact.fire' },
+  frost: { cast: 'battle.cast.frost', impact: 'battle.impact.frost' },
+  lightning: { cast: 'battle.cast.storm', impact: 'battle.impact.lightning' },
+  acid: { cast: 'battle.cast.venom', impact: 'battle.impact.acid' },
+  poison: { cast: 'battle.cast.venom', impact: 'battle.impact.poison' },
+}
+
+export function spellSound(id: SpellId): { cast: CueId; impact: CueId } {
+  const override = SPELL_SOUND_OVERRIDES[id]
+  if (override) return override
+  const spell = SPELLS[id]
+  if (spell.hostile) {
+    const element = spell.element ? ELEMENT_SPELL_SOUNDS[spell.element] : undefined
+    return element ?? { cast: 'battle.cast.arcane', impact: 'battle.impact.arcane' }
+  }
+  return spell.school === 'healing' ? { cast: 'battle.cast.holy', impact: 'battle.impact.heal' } : { cast: 'battle.cast.ward', impact: 'battle.impact.buff' }
+}
+
+/** The area abilities' sounds; a routine's strikes are attacks and need none. */
+export const ABILITY_SOUNDS: Partial<Record<AbilityId, { release: CueId; impact: CueId }>> = {
+  fire_spit: { release: 'battle.ability.spit', impact: 'battle.impact.fire' },
+  spider_web: { release: 'battle.ability.web', impact: 'battle.impact.web' },
+}
+
+export const DEATH: Record<UnitKind, CueId> = {
+  warrior: 'battle.death.human',
+  bandit_cutthroat: 'battle.death.human',
+  bandit_archer: 'battle.death.human',
+  bandit_brute: 'battle.death.human',
+  bandit_mage: 'battle.death.human',
+  bandit_captain: 'battle.death.human',
+  bandit_crossbowman: 'battle.death.human',
+  goblin: 'battle.death.goblinoid',
+  kobold: 'battle.death.goblinoid',
+  shaman: 'battle.death.goblinoid',
+  hobgoblin: 'battle.death.goblinoid',
+  troll: 'battle.death.brute',
+  armored_troll: 'battle.death.brute',
+  giant_spider: 'battle.death.spider',
+  salamander: 'battle.death.salamander',
+  horror: 'battle.death.horror',
+}
+
+type StepClass = 'light' | 'armored' | 'heavy' | 'skitter'
+
+/** How a kind walks; a two-legged unit in metal (by kind or body icon) clanks. */
+export const STEP: Record<UnitKind, StepClass> = {
+  warrior: 'light',
+  bandit_cutthroat: 'light',
+  bandit_archer: 'light',
+  bandit_mage: 'light',
+  bandit_crossbowman: 'light',
+  bandit_brute: 'armored',
+  bandit_captain: 'armored',
+  hobgoblin: 'armored',
+  goblin: 'light',
+  kobold: 'light',
+  shaman: 'light',
+  troll: 'heavy',
+  armored_troll: 'heavy',
+  horror: 'heavy',
+  giant_spider: 'skitter',
+  salamander: 'skitter',
+}
+
+/** A footstep's cue for a unit of `kind` wearing `body`; a kind of none known steps lightly. */
+export function stepCue(kind: UnitKind | null, body: ItemIcon | null): CueId {
+  const walk = kind ? STEP[kind] : 'light'
+  if (walk === 'light' && body !== null && METAL_BODIES.has(body)) return 'battle.step.armored'
+  return `battle.step.${walk}`
+}
+
 /**
- * The cues that go with a battle event. An outcome is heard as the blow or the
- * missile lands (`impactMs`).
+ * The cues that go with a battle event, by what made it: the attacker's class,
+ * the outcome, the defender's armour, the spell or ability, a rune's element
+ * and what walks or falls. An outcome is heard as the blow or the missile lands
+ * (`impactMs`). Pure: it draws from no RNG, so listening never moves a battle.
  */
-export function eventSounds(event: BattleEvent): SoundCue[] {
+export function eventSounds(event: BattleEvent, context?: SoundContext): SoundCue[] {
   switch (event.type) {
     case 'attack': {
-      const outcome: CueId = !event.hit ? 'battle.miss.swing' : event.critical ? 'battle.hit.crit' : 'battle.hit.slash'
-      return [
-        { cue: 'battle.swing.blade', delayMs: 0 },
-        { cue: outcome, delayMs: impactMs(event) },
-      ]
+      const sound = attackClass(event, context)
+      const at = impactMs(event)
+      const cues: SoundCue[] = [{ cue: sound.release, delayMs: 0 }]
+      if (!event.hit) return [...cues, { cue: sound.miss, delayMs: at }]
+      if (event.image) return [...cues, { cue: 'battle.hit.image', delayMs: at }]
+      cues.push({ cue: sound.hit, delayMs: at })
+      if (inMetal(event.defender, context)) cues.push({ cue: 'battle.armor.metal', delayMs: at })
+      if (event.critical) cues.push({ cue: 'battle.hit.crit', delayMs: at })
+      for (const bonus of event.bonus.filter((b) => b.damage > 0).slice(0, 2)) {
+        cues.push({ cue: bonus.bane ? 'battle.element.blight' : bonus.element ? elementCue(bonus.element) : 'battle.element.blight', delayMs: at + 30 })
+      }
+      if ((event.healed ?? 0) > 0) cues.push({ cue: 'battle.heal.small', delayMs: at + 60 })
+      return cues
     }
     case 'cast': {
-      // A friendly spell chimes; a hostile one lands as its best outcome does, an image struck being a miss.
-      const struck = event.outcomes.filter((o) => o.hit && !o.image)
-      const outcome: CueId = !SPELLS[event.spell].hostile
-        ? 'battle.impact.heal'
-        : struck.length === 0
-          ? 'battle.miss.swing'
-          : struck.some((o) => o.critical)
-            ? 'battle.hit.crit'
-            : 'battle.hit.slash'
-      return [
-        { cue: 'battle.cast.arcane', delayMs: 0 },
-        { cue: outcome, delayMs: impactMs(event) },
-      ]
+      const sound = spellSound(event.spell)
+      const at = impactMs(event)
+      const cues: SoundCue[] = [{ cue: sound.cast, delayMs: 0 }]
+      if (!SPELLS[event.spell].hostile) {
+        cues.push({ cue: sound.impact, delayMs: at })
+      } else {
+        const struck = event.outcomes.filter((o) => o.hit && !o.image)
+        if (struck.length > 0) {
+          cues.push({ cue: sound.impact, delayMs: at })
+          if (struck.some((o) => o.critical)) cues.push({ cue: 'battle.hit.crit', delayMs: at })
+        } else {
+          cues.push({ cue: event.outcomes.some((o) => o.hit && o.image) ? 'battle.hit.image' : 'battle.miss.magic', delayMs: at })
+        }
+      }
+      if (event.drained > 0) cues.push({ cue: 'battle.heal.small', delayMs: at + 150 })
+      return cues
     }
     case 'ability': {
+      const sound = ABILITY_SOUNDS[event.ability]
+      if (!sound) return []
       // A miss that still burns for half is heard to strike.
-      const struck = event.outcomes.filter((o) => (o.hit || (o.half && o.damage > 0)) && !o.image)
-      const outcome: CueId =
-        struck.length === 0 ? 'battle.miss.swing' : struck.some((o) => o.critical) ? 'battle.hit.crit' : 'battle.hit.slash'
+      const struck = event.outcomes.some((o) => (o.hit || (o.half && o.damage > 0)) && !o.image)
       return [
-        { cue: 'battle.cast.arcane', delayMs: 0 },
-        { cue: outcome, delayMs: impactMs(event) },
+        { cue: sound.release, delayMs: 0 },
+        { cue: struck ? sound.impact : 'battle.miss.magic', delayMs: impactMs(event) },
       ]
     }
-    case 'status_tick':
-      return [{ cue: 'battle.hit.slash', delayMs: 0 }]
+    case 'status_tick': {
+      const element = STATUSES[event.status].element
+      return element ? [{ cue: elementCue(element), delayMs: 0 }] : []
+    }
     case 'regenerate':
       return [{ cue: 'battle.regen', delayMs: 0 }]
-    case 'unit_down':
-      return [{ cue: 'battle.death.human', delayMs: 0 }]
+    case 'unit_down': {
+      const kind = context?.kind(event.unit) ?? null
+      const cues: SoundCue[] = [{ cue: kind ? DEATH[kind] : 'battle.death.human', delayMs: 0 }]
+      if (kind === 'warrior') cues.push({ cue: 'battle.death.hero', delayMs: 0 })
+      return cues
+    }
+    case 'move': {
+      const cue = stepCue(context?.kind(event.unit) ?? null, context?.body(event.unit) ?? null)
+      return event.path.map((_, i) => ({ cue, delayMs: i * MOVE_STEP_MS + MOVE_STEP_MS / 2 }))
+    }
     case 'battle_end':
       if (event.winner === 'player') return [{ cue: 'stings.victory', delayMs: STING_DELAY_MS }]
       if (event.winner === 'enemy') return [{ cue: 'stings.defeat', delayMs: STING_DELAY_MS }]
@@ -231,4 +437,9 @@ export function eventSounds(event: BattleEvent): SoundCue[] {
     default:
       return []
   }
+}
+
+/** The level-up sting starts this long after the battle ends: the victory sting's start, its length, and a breath. */
+export function levelUpDelayMs(): number {
+  return STING_DELAY_MS + cueDurationMs('stings.victory') + 150
 }
