@@ -17,6 +17,7 @@
     "sprites": "sprite build --project art",
     "sprites:check": "sprite build --check --project art",
     "narration:export": "node scripts/narration.ts",
+    "narration": "node scripts/narration.ts && uv run --project tools/audio --extra tts yomi-audio voice render",
     "sounds": "uv run --project tools/audio yomi-audio sfx build",
     "sounds:check": "uv run --project tools/audio yomi-audio sfx check",
     "manual:screenshots": "vitest run --config vitest.manual.config.ts"

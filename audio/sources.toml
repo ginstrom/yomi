@@ -1569,3 +1569,16 @@ original_sha256 = "d829b5ed7a47086771c639495713498e44ce28814f4ea6ddf30cb1f18c085
 sha256 = "cc739597050777559a88ace560c51e4af0a123330e0d4dd59628fcc61b552e18"
 retrieved = "2026-11-14"
 notes = "mono sum, trimmed"
+
+[[source]]
+id = "voice_narrator_neutral"
+file = "voices/narrator/neutral.flac"
+licence = "own"
+author = "generated: Qwen3-TTS VoiceDesign (Apache-2.0)"
+url = "local"
+original = "audio/.audition/15-voice/neutral.wav (bake-off clip A_0)"
+original_sha256 = "1d96903426df7af73edc8413202aae20673ffa04c9039b23fbc7f0cb2425c304"
+sha256 = "ecef4f9964deb4b22d79f29ba0306d08a1463dbd80126c528d2fd89abe4bd081"
+retrieved = "2026-11-14"
+notes = "the narrator's only reference clip (G1, G9): Chatterbox Turbo clones it for every emotion; no real person's voice"
+design = { model = "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16", revision = "7d3824abff87e49756bb0f83fb5411de75d160c4", seed = 7, description_ref = "voices.toml#narrator", text = "The old road winds north past the quiet village and over the bridge. Judge for yourself whether the thick smoke rising there means a hearth, or a warning." }

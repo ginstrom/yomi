@@ -25,7 +25,7 @@ reference_text = "The old road winds north past the quiet village and over the b
 seed = 7                             # A_0: the neutral clip is the design's first seed
 
 [narrator.clips]                     # Turbo clones the neutral clip for every emotion
-neutral = "voices/narrator/neutral.flac"   # committed in step 16 (from A_0)
+neutral = "voices/narrator/neutral.flac"   # A_0, committed in step 16 (sources.toml: voice_narrator_neutral)
 
 [narrator.fallback]
 engine = "qwen3_custom"

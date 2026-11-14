@@ -1,13 +1,16 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { parse } from 'smol-toml'
 import { describe, expect, it } from 'vitest'
 import { CUTSCENES, type Cutscene, type CutsceneBeat } from './cutscenes.ts'
 import {
   EMOTIONS,
   NONVERBAL_TAGS,
   TAG_ENGINES,
+  VOICE_DIR,
   buildJobs,
   canonicalJson,
+  hashClips,
   lineHash,
   lineSeed,
   narrationProblems,
@@ -257,12 +260,35 @@ describe('staleLines (AC12)', () => {
     expect(staleLines(edited, m, hashOf, files)).toEqual(['a.one'])
   })
 
-  it('finds the real content fresh against the committed manifest', () => {
+  describe('the shipped lines', () => {
     const registry = readVoices()
     const manifestFile = JSON.parse(readFileSync(resolve(root, 'audio/voice.manifest.json'), 'utf8')) as VoiceManifest
+    const settings = parse(readFileSync(resolve(root, 'audio/audio.toml'), 'utf8')).voice as Record<string, unknown>
     const real = voicedLines(CUTSCENES)
-    const realHash = (line: (typeof real)[number]) => lineHash(line.beat, registry.voices[line.beat.voice!]!, {}, registry.adapter_version, {})
-    expect(staleLines(real, manifestFile, realHash, (p) => existsSync(resolve(root, p)))).toEqual([])
+    const realHash = (line: (typeof real)[number]) => {
+      const voice = registry.voices[line.beat.voice!]!
+      return lineHash(line.beat, voice, hashClips(voice, resolve(root, 'audio')), registry.adapter_version, settings)
+    }
+    const onDisk = (p: string) => existsSync(resolve(root, p))
+
+    it('are voiced and fresh against the committed manifest and files', () => {
+      expect(real.map((l) => l.beat.line)).toEqual(['intro.opening', 'source.sighted'])
+      expect(staleLines(real, manifestFile, realHash, onDisk)).toEqual([])
+    })
+
+    it('go stale when a beat is edited without rendering', () => {
+      const edited = voicedLines({ intro: scene({ ...real[0]!.beat, spoken: `${spokenText(real[0]!.beat)} More.` }) })
+      expect(staleLines(edited, manifestFile, realHash, onDisk)).toEqual(['intro.opening'])
+    })
+
+    it('keep the voice files within the budget per format', () => {
+      const budget = (parse(readFileSync(resolve(root, 'audio/audio.toml'), 'utf8')).budgets as Record<string, number>).voice_bytes_per_format
+      const dir = resolve(root, VOICE_DIR)
+      for (const ext of ['.opus', '.mp3']) {
+        const bytes = readdirSync(dir).filter((f) => f.endsWith(ext)).reduce((sum, f) => sum + statSync(resolve(dir, f)).size, 0)
+        expect(bytes).toBeLessThanOrEqual(budget)
+      }
+    })
   })
 })
 

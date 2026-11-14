@@ -59,14 +59,28 @@ export const CUTSCENES = {
   intro: {
     when: (moment) => moment.kind === 'world_opened',
     beats: [
-      { text: '[Placeholder] The opening of the story goes here.' },
+      {
+        text: '[Placeholder] The opening of the story goes here.',
+        line: 'intro.opening',
+        voice: 'narrator',
+        emotion: 'grave',
+        spoken: '[sigh] The opening of the story goes here.',
+      },
       { speaker: '{leader}', portrait: 'leader', text: '[Placeholder] {encampment} is ours to defend. A line spoken by the party\'s leader.' },
     ],
   },
   /** The Source is found. */
   source_sighted: {
     when: (moment) => moment.kind === 'world_turn' && moment.events.some((event) => event.type === 'sighted' && event.source),
-    beats: [{ text: '[Placeholder] The Source of the blight comes into sight.' }],
+    beats: [
+      {
+        text: '[Placeholder] The Source of the blight comes into sight.',
+        line: 'source.sighted',
+        voice: 'narrator',
+        emotion: 'tense',
+        spoken: 'The Source of the blight comes into sight.',
+      },
+    ],
   },
 } satisfies Record<string, Cutscene>
 

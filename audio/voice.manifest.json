@@ -1,1 +1,17 @@
-{ "version": 1, "lines": {} }
+{
+  "lines": {
+    "intro.opening": {
+      "durationMs": 2713,
+      "engine": "chatterbox_turbo@b2d0a13aa7cfff0a06d9acb247ae91c8f19a6d75",
+      "hash": "7779ff5cde691b88449559834311ee327fb3a62981b4cb62d5204d003dcc7df3",
+      "voice": "narrator"
+    },
+    "source.sighted": {
+      "durationMs": 2761,
+      "engine": "chatterbox_turbo@b2d0a13aa7cfff0a06d9acb247ae91c8f19a6d75",
+      "hash": "3647345d58c3dcc4afa7a4a8980671611ea31a1246e16928f3224a9ff79d2ab1",
+      "voice": "narrator"
+    }
+  },
+  "version": 1
+}

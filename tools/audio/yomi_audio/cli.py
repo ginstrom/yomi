@@ -8,6 +8,7 @@
     yomi-audio sfx check
     yomi-audio voice design <voice> [--emotions E,...] [--candidates N] [--neutral WAV] [--out DIR]
     yomi-audio voice bakeoff [--redesign]
+    yomi-audio voice render
 
 The voice commands need the `tts` extra (uv run --project tools/audio --extra tts ...).
 
@@ -82,6 +83,8 @@ def _parser() -> argparse.ArgumentParser:
     bakeoff = voice.add_parser("bakeoff", parents=[root], help="render the narration listening test into bakeoff/")
     bakeoff.add_argument("--redesign", action="store_true", help="design the narrators again even if bakeoff/designed/ holds them")
     bakeoff.set_defaults(run=_voice_bakeoff)
+    render = voice.add_parser("render", parents=[root], help="render the narration lines whose inputs changed")
+    render.set_defaults(run=_voice_render)
     return parser
 
 
@@ -166,6 +169,33 @@ class _Lazy:
         if self._made is None:
             self._made = self._make()
         return getattr(self._made, name)
+
+
+def _voice_render(args) -> int:
+    from .config import load_config
+    from .render import render_lines
+    from .voice import real_engines
+
+    render_lines(load_config(args.root), _LazyEngines(real_engines))
+    return 0
+
+
+class _LazyEngines:
+    """The real engines, built on first lookup, so a refusal or a run with nothing to render loads no model."""
+
+    def __init__(self, make):
+        self._make, self._made = make, None
+
+    def _engines(self):
+        if self._made is None:
+            self._made = self._make()
+        return self._made
+
+    def __contains__(self, name):
+        return name in self._engines()
+
+    def __getitem__(self, name):
+        return self._engines()[name]
 
 
 def _voice_bakeoff(args) -> int:
