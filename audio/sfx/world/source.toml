@@ -1,15 +1,71 @@
-# Placeholder over placeholder_defeat; replaced by step 13
+# The Source sighted: an ominous swell: a deep rumbling drone, a dark pad, hummed voices pitched an octave down for a choir, a distant thunder rumble and a sub swell, in a stone hall.
 variants = 1
-seed = 6400
+seed = 13300
 group = "world"
 max_ms = 4500
 
-[[layer]]
-source = "placeholder_defeat"
-length = 3000
-pitch = -7
+[[layer]]                          # the drone, first breath
+source = "fs_drone"
+length = 1600
+filter = [{ type = "lowpass", hz = 900 }, { type = "highpass", hz = 35 }]
+fade_in = 500
+fade_out = 500
+gain = -4
+
+[[layer]]                          # the drone again, a tone down, carrying the swell on
+source = "fs_drone"
+length = 1600
+pitch = -2.0
+filter = [{ type = "lowpass", hz = 800 }, { type = "highpass", hz = 35 }]
+fade_in = 500
+fade_out = 700
+offset = 1150
+gain = -4
+
+[[layer]]                          # dark pad
+source = "fs_dark_pad"
+length = 2400
+pitch = -3.0
+filter = [{ type = "lowpass", hz = 1400 }, { type = "highpass", hz = 60 }]
+envelope = [[0, -30], [900, 0], [1800, -2], [2400, -30]]
+offset = 200
+gain = -6
+
+[[layer]]                          # the choir: hummed voices an octave down
+source = "fs_hum"
+length = 2600
+pitch = -12.0
+filter = [{ type = "highpass", hz = 80 }, { type = "lowpass", hz = 1200 }]
+envelope = [[0, -30], [1100, 0], [2000, -3], [2600, -30]]
+offset = 350
+gain = -7
+
+[[layer]]                          # a distant rumble
+source = "fs_thunder_1"
+length = 2200
+pitch = -10.0
+filter = [{ type = "lowpass", hz = 280 }, { type = "highpass", hz = 30 }]
+envelope = [[0, -20], [500, 0], [2200, -30]]
+offset = 600
+gain = -9
+
+[[layer]]                          # sub swell
+synth = { kind = "sine", hz = 46.2, hz_end = 41.2, length = 3000 }
 filter = [{ type = "highpass", hz = 30 }]
-fade_out = 10
+envelope = [[0, -40], [1300, 0], [2300, -4], [3000, -50]]
+gain = -16
+
+[[layer]]                          # brown-noise air under it
+synth = { kind = "noise", color = "brown", length = 3000 }
+filter = [{ type = "lowpass", hz = 180 }, { type = "highpass", hz = 30 }]
+envelope = [[0, -40], [1200, 0], [3000, -40]]
+gain = -18
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -20, ratio = 2, attack_ms = 20, release_ms = 300 },
+  { type = "reverb", impulse = "stone_hall", wet_db = -10, predelay_ms = 30 },
+  { type = "limit", ceiling_db = -8, release_ms = 200 },
+  { type = "trim", threshold_db = -48, keep_tail_ms = 150 },
+  { type = "fade_out", ms = 500 },
+]

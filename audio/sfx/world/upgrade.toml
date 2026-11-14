@@ -1,21 +1,70 @@
-# Placeholder over placeholder_heal; replaced by step 13
+# A facility built or raised: hammering on timber, a saw's stroke, a last knock, then a rising chime (G5, B5, D6).
 variants = 2
-seed = 7000
+seed = 13900
 group = "world"
 max_ms = 2250
 
-[[layer]]
-source = "placeholder_heal"
-length = 1500
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # hammer
+pick = ["rd_wood_hammer_1", "rd_wood_hammer_2"]
+pitch = [-1.5, 0.5]
+filter = [{ type = "highpass", hz = 90 }, { type = "lowpass", hz = 6000 }]
+fade_out = 60
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # hammer again
+pick = ["rd_wood_hammer_2", "rd_wood_hammer_1"]
+pitch = [-1.5, 0.5]
+filter = [{ type = "highpass", hz = 90 }, { type = "lowpass", hz = 6000 }]
+fade_out = 60
+offset = [170, 220]
+gain = [-2, 0]
+
+[[layer]]                          # the saw's stroke
+source = "vh_handsaw"
+length = 620
+pitch = [-1.0, 1.0]
+filter = [{ type = "highpass", hz = 150 }, { type = "lowpass", hz = 7000 }]
+fade_in = 30
+fade_out = 120
+offset = [360, 420]
+gain = [-4, -2]
+
+[[layer]]                          # a last knock
+pick = ["rd_wood_hammer_1", "rd_wood_hammer_2"]
+pitch = [-3.0, -1.5]
+filter = [{ type = "highpass", hz = 90 }, { type = "lowpass", hz = 6000 }]
+fade_out = 60
+offset = [1000, 1060]
+gain = [-2, 0]
+
+[[layer]]                          # chime: G5
+synth = { kind = "fm", carrier_hz = 784, ratio = 3.0, index = [2.0, 2.6], index_end = 0.2, length = 650 }
+filter = [{ type = "lowpass", hz = 2600 }, { type = "peak", hz = 3600, q = 1.0, gain_db = -6 }]
+envelope = [[0, -40], [6, 0], [150, -10], [650, -45]]
+fade_out = 60
+offset = [1060, 1110]
+gain = [-12, -10]
+
+[[layer]]                          # chime: B5
+synth = { kind = "fm", carrier_hz = 988, ratio = 3.0, index = [2.0, 2.6], index_end = 0.2, length = 600 }
+filter = [{ type = "lowpass", hz = 2600 }, { type = "peak", hz = 3600, q = 1.0, gain_db = -6 }]
+envelope = [[0, -40], [6, 0], [150, -10], [600, -45]]
+fade_out = 60
+offset = [1150, 1200]
+gain = [-13, -11]
+
+[[layer]]                          # chime: D6
+synth = { kind = "fm", carrier_hz = 1175, ratio = 3.0, index = [1.8, 2.4], index_end = 0.2, length = 650 }
+filter = [{ type = "lowpass", hz = 2800 }, { type = "peak", hz = 3600, q = 1.0, gain_db = -6 }]
+envelope = [[0, -40], [6, 0], [150, -10], [650, -45]]
+fade_out = 60
+offset = [1240, 1300]
+gain = [-13, -11]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 2.5, attack_ms = 3, release_ms = 100 },
+  { type = "reverb", impulse = "small_room", wet_db = -16, predelay_ms = 8 },
+  { type = "limit", ceiling_db = -11, release_ms = 60 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 80 },
+  { type = "fade_out", ms = 200 },
+]

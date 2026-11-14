@@ -6,167 +6,167 @@
   "spritemap": {
     "world.arrive#0": {
       "start": 0.05,
-      "end": 0.35,
+      "end": 0.793,
       "loop": false
     },
     "world.arrive#1": {
-      "start": 0.4,
-      "end": 0.7,
+      "start": 0.843,
+      "end": 1.523,
       "loop": false
     },
     "world.arrive#2": {
-      "start": 0.75,
-      "end": 1.205,
+      "start": 1.573,
+      "end": 2.22,
       "loop": false
     },
     "world.build#0": {
-      "start": 1.255,
-      "end": 1.555,
+      "start": 2.27,
+      "end": 3.56,
       "loop": false
     },
     "world.build#1": {
-      "start": 1.605,
-      "end": 1.905,
+      "start": 3.61,
+      "end": 5.048,
       "loop": false
     },
     "world.build#2": {
-      "start": 1.955,
-      "end": 2.255,
+      "start": 5.098,
+      "end": 6.37,
       "loop": false
     },
     "world.captured#0": {
-      "start": 2.305,
-      "end": 3.73,
+      "start": 6.42,
+      "end": 8.093,
       "loop": false
     },
     "world.captured#1": {
-      "start": 3.78,
-      "end": 5.143,
+      "start": 8.143,
+      "end": 9.813,
       "loop": false
     },
     "world.coins#0": {
-      "start": 5.193,
-      "end": 5.493,
+      "start": 9.863,
+      "end": 10.43,
       "loop": false
     },
     "world.coins#1": {
-      "start": 5.543,
-      "end": 5.843,
+      "start": 10.48,
+      "end": 10.908,
       "loop": false
     },
     "world.coins#2": {
-      "start": 5.893,
-      "end": 6.193,
+      "start": 10.958,
+      "end": 11.533,
       "loop": false
     },
     "world.coins#3": {
-      "start": 6.243,
-      "end": 6.543,
+      "start": 11.583,
+      "end": 12.151,
       "loop": false
     },
     "world.confront#0": {
-      "start": 6.593,
-      "end": 8.375,
+      "start": 12.201,
+      "end": 14.272,
       "loop": false
     },
     "world.confront#1": {
-      "start": 8.425,
-      "end": 9.829,
+      "start": 14.322,
+      "end": 16.263,
       "loop": false
     },
     "world.craft#0": {
-      "start": 9.879,
-      "end": 10.179,
+      "start": 16.313,
+      "end": 17.363,
       "loop": false
     },
     "world.craft#1": {
-      "start": 10.229,
-      "end": 10.529,
+      "start": 17.413,
+      "end": 18.525,
       "loop": false
     },
     "world.craft#2": {
-      "start": 10.579,
-      "end": 10.879,
+      "start": 18.575,
+      "end": 19.563,
       "loop": false
     },
     "world.lost#0": {
-      "start": 10.929,
-      "end": 11.466,
+      "start": 19.613,
+      "end": 21.671,
       "loop": false
     },
     "world.lost#1": {
-      "start": 11.516,
-      "end": 11.958,
+      "start": 21.721,
+      "end": 23.736,
       "loop": false
     },
     "world.rune.embed#0": {
-      "start": 12.008,
-      "end": 12.43,
+      "start": 23.786,
+      "end": 24.483,
       "loop": false
     },
     "world.rune.embed#1": {
-      "start": 12.48,
-      "end": 12.943,
+      "start": 24.533,
+      "end": 25.273,
       "loop": false
     },
     "world.rune.embed#2": {
-      "start": 12.993,
-      "end": 13.342,
+      "start": 25.323,
+      "end": 26.044,
       "loop": false
     },
     "world.rune.extract#0": {
-      "start": 13.392,
-      "end": 13.783,
+      "start": 26.094,
+      "end": 26.794,
       "loop": false
     },
     "world.rune.extract#1": {
-      "start": 13.833,
-      "end": 14.133,
+      "start": 26.844,
+      "end": 27.548,
       "loop": false
     },
     "world.rune.fuse#0": {
-      "start": 14.183,
-      "end": 14.627,
+      "start": 27.598,
+      "end": 29.217,
       "loop": false
     },
     "world.rune.fuse#1": {
-      "start": 14.677,
-      "end": 14.995,
+      "start": 29.267,
+      "end": 30.903,
       "loop": false
     },
     "world.sighted#0": {
-      "start": 15.045,
-      "end": 16.303,
+      "start": 30.953,
+      "end": 32.369,
       "loop": false
     },
     "world.sighted#1": {
-      "start": 16.353,
-      "end": 17.274,
+      "start": 32.419,
+      "end": 34.138,
       "loop": false
     },
     "world.source#0": {
-      "start": 17.324,
-      "end": 20.321,
+      "start": 34.188,
+      "end": 38.002,
       "loop": false
     },
     "world.threatened#0": {
-      "start": 20.371,
-      "end": 20.723,
+      "start": 38.052,
+      "end": 39.751,
       "loop": false
     },
     "world.threatened#1": {
-      "start": 20.773,
-      "end": 21.23,
+      "start": 39.801,
+      "end": 41.473,
       "loop": false
     },
     "world.upgrade#0": {
-      "start": 21.28,
-      "end": 21.636,
+      "start": 41.523,
+      "end": 43.479,
       "loop": false
     },
     "world.upgrade#1": {
-      "start": 21.686,
-      "end": 22.055,
+      "start": 43.529,
+      "end": 45.489,
       "loop": false
     }
   }

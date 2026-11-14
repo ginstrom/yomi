@@ -1,21 +1,54 @@
-# Placeholder over placeholder_ui_click; replaced by step 13
+# Built (a watchtower or an outpost): three hammer knocks on timber, a creak as it takes the weight, and a heavy settle; outdoors.
 variants = 3
-seed = 6800
+seed = 13700
 group = "world"
 max_ms = 1800
 
-[[layer]]
-source = "placeholder_ui_click"
-length = 1200
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # first knock
+pick = ["rd_wood_hammer_1", "rd_wood_hammer_2"]
+pitch = [-2.0, 0.5]
+filter = [{ type = "highpass", hz = 90 }, { type = "lowpass", hz = 6000 }]
+fade_out = 60
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # second knock
+pick = ["rd_wood_hammer_2", "rd_wood_hammer_1"]
+pitch = [-2.0, 0.5]
+filter = [{ type = "highpass", hz = 90 }, { type = "lowpass", hz = 6000 }]
+fade_out = 60
+offset = [200, 260]
+gain = [-2, 0]
+
+[[layer]]                          # third knock, now and then
+chance = 0.75
+pick = ["rd_wood_hammer_1", "rd_wood_hammer_2"]
+pitch = [-1.5, 1.0]
+filter = [{ type = "highpass", hz = 90 }, { type = "lowpass", hz = 6000 }]
+fade_out = 60
+offset = [400, 470]
+gain = [-3, -1]
+
+[[layer]]                          # the creak
+pick = ["kenney_creak_1", "kenney_creak_2"]
+pitch = [-4.0, -1.0]
+filter = [{ type = "highpass", hz = 200 }, { type = "lowpass", hz = 5000 }]
+fade_in = 20
+fade_out = 80
+offset = [580, 660]
+gain = [-9, -6]
+
+[[layer]]                          # the settle
+pick = ["rd_wood_slam_4", "kenney_wood_heavy_3", "kenney_wood_heavy_4"]
+pitch = [-5.0, -3.0]
+filter = [{ type = "highpass", hz = 50 }, { type = "lowpass", hz = 3000 }]
+fade_out = 120
+offset = [800, 880]
+gain = [-3, -1]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 3, attack_ms = 3, release_ms = 80 },
+  { type = "reverb", impulse = "open_air", wet_db = -15, predelay_ms = 20 },
+  { type = "limit", ceiling_db = -12, release_ms = 60 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 80 },
+  { type = "fade_out", ms = 150 },
+]

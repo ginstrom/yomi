@@ -140,19 +140,18 @@ check) and `checks.py` (the per-variant checks).
   `element.*`, `heal.small`, `regen`) and the 22 spell and area-ability
   cues (step 11: `battle.cast.*`, `impact.*` of the spells, `ability.spit`,
   `ability.web`) and the 11 falls and footsteps (step 12: `battle.death.*`,
-  `battle.step.*`) are real content; see "Sound design without ears" below
-  for what they taught.
-- **The rest are placeholders.** Every other W1 cue has a recipe over
-  one of the ten old placeholder WAVs (sources `placeholder_*`, collection
-  `placeholder`, licence `own`), pitched, filtered and dusted with noise so
-  its variants differ; each says in its first line which content step
-  replaces it (13, the `world` bank).
+  `battle.step.*`) and the 14 cues of the `world` bank (step 13) are real
+  content; see "Sound design without ears" below for what they taught.
+- **No placeholder is named.** The ten old placeholder WAVs are still
+  registered (sources `placeholder_*`, collection `placeholder`, licence
+  `own`), but no recipe names one; the audio pass's last step (18) removes
+  them or says why they stay.
 
 ## Sound design without ears
 
 What the melee batch (step 08), the interface and stings (step 09),
-the shots and sweeteners (step 10) and the spells (step 11) found, for the
-content steps after them:
+the shots and sweeteners (step 10), the spells (step 11), the falls and
+steps (step 12) and the world bank (step 13) found, for later sound work:
 
 - **Layer shape.** A hit is a picked body (`pick` over several excerpts), a
   transient layer where the brief asks for an edge or tick, a short
@@ -273,6 +272,33 @@ content steps after them:
 - **One-take cues** (`death.horror`): the reversed swell must end where the
   fall lands; `reverse` applies after `start`/`length`, so cut the source
   first, then reverse.
+- **World cues** (step 13) play between turns over the world theme, so the
+  stingers share their material to sound like one family (the war drum
+  and taiko of Freesound 235453 and 347126 in `confront`, `sighted` and
+  `lost`; the tolling bell 454855 in `threatened` and `lost`) and the
+  encampment's handiwork stays dry (`small_room`). A brass stab can be a
+  real horn pitched to two notes a semitone apart, with a quiet saw
+  cluster under it, rather than synthesized brass. Keep the warning toll
+  apart from the hero's (another bell, about 6 semitones higher, no
+  drone, open air rather than a stone hall).
+- **An anvil is all ring** (434339: 89% of its power above 3 kHz): pitch
+  it down 2.5 to 4.5 semitones, cut its ring with a peak (3.4 kHz, −8 dB)
+  and put a punch, cascade-high-passed at 160 Hz, under it for the
+  hammer's weight; the craft still holds 41–61% of its A-weighted energy
+  at 2–5 kHz.
+- **Pitch shortens a layer.** `length` is cut before `pitch` resamples, so
+  a layer pitched up p semitones lasts length × 2^(−p/12): a reversed
+  swell meant to end on a pop must be placed by its pitched length (the
+  rune extract's bell, 570 ms at +3 to +4, lasts 452–479 ms, against the
+  pop at 445–460).
+- **FM notes need a fade.** An FM bell whose envelope ends at −45 dB
+  leaves a step where `length` cuts it, visible as a vertical line in the
+  spectrogram after the reverb: add `fade_out = 60` (or end the envelope
+  at −55).
+- **Sighted against its horn.** A sustained horn sets the momentary
+  loudness, so drum hits low-passed at 700 Hz under it sat 16–22 dB down
+  A-weighted; low-passed at 1.4 kHz and 9 to 12 dB over the horn they sit
+  1–4 dB under it.
 
 ## Sources and licences
 

@@ -1,21 +1,48 @@
-# Placeholder over placeholder_heal; replaced by step 13
+# Arrived (or met): two booted steps coming to a stop, a pack set down, and a soft bell; short and gentle, heard often.
 variants = 3
-seed = 6900
+seed = 13800
 group = "world"
 max_ms = 750
 
-[[layer]]
-source = "placeholder_heal"
-length = 500
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the last stride
+pick = ["kenney_footstep_0", "kenney_footstep_3", "kenney_footstep_5", "kenney_footstep_7", "kenney_footstep_9"]
+length = 120
+pitch = [-3.0, -1.0]
+filter = [{ type = "highpass", hz = 80 }, { type = "lowpass", hz = 5000 }]
+fade_out = 40
+gain = [-6, -4]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the stop
+pick = ["kenney_footstep_2", "kenney_footstep_4", "kenney_footstep_6", "kenney_footstep_8"]
+length = 130
+pitch = [-3.5, -1.5]
+filter = [{ type = "highpass", hz = 80 }, { type = "lowpass", hz = 5000 }]
+fade_out = 40
+offset = [120, 160]
+gain = [-4, -2]
+
+[[layer]]                          # the pack set down
+pick = ["kenney_drop_leather", "kenney_small_leather"]
+length = 300
+pitch = [-2.0, 0.0]
+filter = [{ type = "highpass", hz = 90 }]
+fade_out = 80
+offset = [210, 260]
+gain = [-2, 0]
+
+[[layer]]                          # a soft bell (C6)
+synth = { kind = "fm", carrier_hz = 1046.5, ratio = 2.0, index = [1.2, 1.8], index_end = 0.1, length = 340 }
+filter = [{ type = "lowpass", hz = 2600 }]
+envelope = [[0, -40], [6, 0], [110, -12], [340, -55]]
+fade_out = 60
+offset = [220, 270]
+gain = [-19, -16]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 3, attack_ms = 2, release_ms = 60 },
+  { type = "reverb", impulse = "open_air", wet_db = -18, predelay_ms = 15 },
+  { type = "limit", ceiling_db = -14, release_ms = 40 },
+  { type = "trim", threshold_db = -40, keep_tail_ms = 30 },
+  { type = "fade_out", ms = 80 },
+]

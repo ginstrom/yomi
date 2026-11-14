@@ -34,14 +34,14 @@
       }
     },
     "world": {
-      "durationMs": 22105,
+      "durationMs": 45539,
       "mp3": {
-        "bytes": 117884,
-        "sha256": "fdb6089b5f85ac1d1310ebd172193c966ac15f6360e4d7131dad508fdd6c818f"
+        "bytes": 307700,
+        "sha256": "85f9f1e50bd0670306ab7a61fd936672a5f5a251197026f6b43fbd03275297a0"
       },
       "opus": {
-        "bytes": 224208,
-        "sha256": "8b5d89d37fbbaa34469dd4078a91e9a8b3ada0f50e2b14b6fc9f6ed6e03ccff7"
+        "bytes": 405708,
+        "sha256": "f67bae5bff24370128b48e34a703aa66dd74bcfe931c432ae6e9139f7789837f"
       }
     }
   },
@@ -808,7 +808,7 @@
         166,
         157
       ],
-      "inputs": "af36bac1cb059836158fe41fe0666ee833716cfa17ce07f039464ef983ba202c",
+      "inputs": "8986a5a2da75d623e6c5a4791bb05cfc0cfe4c3041b52c5f00f8134fac454705",
       "markers": [
         "battle.step.armored#0",
         "battle.step.armored#1",
@@ -1119,11 +1119,11 @@
     "world.arrive": {
       "bank": "world",
       "durationsMs": [
-        300,
-        300,
-        455
+        743,
+        680,
+        647
       ],
-      "inputs": "8867180ca4baf4cd5bf2b85170f469f4506a350d57a8cffb5a8d9c7adec95e26",
+      "inputs": "295cbee4b904d21961c975cb436a8edc6f86f59496153da8b65ff44917bd84a8",
       "markers": [
         "world.arrive#0",
         "world.arrive#1",
@@ -1133,11 +1133,11 @@
     "world.build": {
       "bank": "world",
       "durationsMs": [
-        300,
-        300,
-        300
+        1290,
+        1438,
+        1272
       ],
-      "inputs": "201054a9d5841d101178ca4149d53625436dd4037490d9f277a0c108fdebdbe6",
+      "inputs": "0af1397426226f21c7bde6a9b1a89bf812f198d1f4fe05ec2848760361f0dc6e",
       "markers": [
         "world.build#0",
         "world.build#1",
@@ -1147,10 +1147,10 @@
     "world.captured": {
       "bank": "world",
       "durationsMs": [
-        1425,
-        1363
+        1673,
+        1670
       ],
-      "inputs": "ade43e48f30fd78d3f59c334960001718676162a261d02cce04d96adaf9ff90f",
+      "inputs": "29fed4899fc1d4df4f9089c8fa0a816d4fc88ef4830fffde1f73b22ccaf3fe7a",
       "markers": [
         "world.captured#0",
         "world.captured#1"
@@ -1159,12 +1159,12 @@
     "world.coins": {
       "bank": "world",
       "durationsMs": [
-        300,
-        300,
-        300,
-        300
+        567,
+        428,
+        575,
+        568
       ],
-      "inputs": "54e6279255561a30097840df8ed9b68283bf1dfc59fdfedf53b11ee22ebf3974",
+      "inputs": "694412b394f8e7922229c1a1bc19e69428d3e66f6880dcec631a9cdd2ae591bd",
       "markers": [
         "world.coins#0",
         "world.coins#1",
@@ -1175,10 +1175,10 @@
     "world.confront": {
       "bank": "world",
       "durationsMs": [
-        1782,
-        1404
+        2071,
+        1941
       ],
-      "inputs": "27593d1519dd03262ab7d4514591c91c7b19a7f929e13efcaa3334649aa04a9e",
+      "inputs": "4f6b66bec36f68cd0dd4fd258669cbfea4207efeb838defa7d83ba2001d3e741",
       "markers": [
         "world.confront#0",
         "world.confront#1"
@@ -1187,11 +1187,11 @@
     "world.craft": {
       "bank": "world",
       "durationsMs": [
-        300,
-        300,
-        300
+        1050,
+        1112,
+        988
       ],
-      "inputs": "6cdb588f1bcef50bb636d839aebfbd60ff59265c983ef509de0467c9286dc732",
+      "inputs": "45ba6cfddcce565965e9ee5323287b86326dad7f48c5889e805e5571468f284a",
       "markers": [
         "world.craft#0",
         "world.craft#1",
@@ -1201,10 +1201,10 @@
     "world.lost": {
       "bank": "world",
       "durationsMs": [
-        537,
-        442
+        2058,
+        2015
       ],
-      "inputs": "6498584613053a45224f05323f982e44180c2fe3e99e2d0fa07cc5f3f778d462",
+      "inputs": "f2bbe6c92069c3aa3b811b77ee4e5b3b2b25794d6c496e7cafd69b547023955f",
       "markers": [
         "world.lost#0",
         "world.lost#1"
@@ -1213,11 +1213,11 @@
     "world.rune.embed": {
       "bank": "world",
       "durationsMs": [
-        422,
-        463,
-        349
+        697,
+        740,
+        721
       ],
-      "inputs": "829348a80a6976f58a0cbda1882e956a038363462379c93c57c317fc61db3702",
+      "inputs": "9e81efeb8f1ec51ddee0f9b77d830f737906e21c5665ad5f24f29586a6032e32",
       "markers": [
         "world.rune.embed#0",
         "world.rune.embed#1",
@@ -1227,10 +1227,10 @@
     "world.rune.extract": {
       "bank": "world",
       "durationsMs": [
-        391,
-        300
+        700,
+        704
       ],
-      "inputs": "afa9813f0f2d4ea50194aa5c66aefe18644d3595439fb49c470fa15929da00ad",
+      "inputs": "af78ff3b13f02c87cc5deef5c7af3f5da05ef5e4624320583fde3474a40f9afa",
       "markers": [
         "world.rune.extract#0",
         "world.rune.extract#1"
@@ -1239,10 +1239,10 @@
     "world.rune.fuse": {
       "bank": "world",
       "durationsMs": [
-        444,
-        318
+        1619,
+        1636
       ],
-      "inputs": "e04c736c56b25d0ab39d3df092dcb469afa159a86050044a476b954be05d7588",
+      "inputs": "9b62b803c0dc3a3da3ddfcb92d28369c5392497e91682914a77595dd1ac44433",
       "markers": [
         "world.rune.fuse#0",
         "world.rune.fuse#1"
@@ -1251,10 +1251,10 @@
     "world.sighted": {
       "bank": "world",
       "durationsMs": [
-        1258,
-        921
+        1416,
+        1719
       ],
-      "inputs": "55bec1e0d6d8e9f10636cec0e60b17ae2396e5c78fef8ce8fbabb9e4761b337e",
+      "inputs": "e0c61bdbc6c301f0c18d386fb01467154880211698295b34ef254ab9cd6de1ff",
       "markers": [
         "world.sighted#0",
         "world.sighted#1"
@@ -1263,9 +1263,9 @@
     "world.source": {
       "bank": "world",
       "durationsMs": [
-        2997
+        3814
       ],
-      "inputs": "e219bd30a4a464f5a60380bc85238e0873798cd0f296f94f2cb723a7ec5ac887",
+      "inputs": "bd94d33205102c6cd0f9f8bf5eb5fc70d35fec944522f132cb4af20156e39db7",
       "markers": [
         "world.source#0"
       ]
@@ -1273,10 +1273,10 @@
     "world.threatened": {
       "bank": "world",
       "durationsMs": [
-        352,
-        457
+        1699,
+        1672
       ],
-      "inputs": "2ddd8effebb7994d5881ccbf304c45387f63ef038467d3ff902cab4872e89412",
+      "inputs": "9d189d43989624adb897f98cf42edf8e420d4383fb6629ac5cec21b1e226fc74",
       "markers": [
         "world.threatened#0",
         "world.threatened#1"
@@ -1285,10 +1285,10 @@
     "world.upgrade": {
       "bank": "world",
       "durationsMs": [
-        356,
-        369
+        1956,
+        1960
       ],
-      "inputs": "b56bb35bd2aa2226e8054d4729d9b1edf10c7bdc675bc45cbe6324e22a638f8e",
+      "inputs": "003a51e05aecec251f41882b7c0caa1c37af79f5f6d97c4e16cadd2500d8d723",
       "markers": [
         "world.upgrade#0",
         "world.upgrade#1"

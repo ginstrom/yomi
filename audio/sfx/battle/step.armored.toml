@@ -27,7 +27,7 @@ pick = ["ad_chainmail_1", "ad_chainmail_2", "ad_armor_light"]
 start = [0, 80]
 length = [110, 160]
 pitch = [-1.0, 2.0]
-filter = [{ type = "highpass", hz = 3000 }, { type = "highpass", hz = 3000 }]
+filter = [{ type = "highpass", hz = 3000 }, { type = "highpass", hz = 3000 }]   # twice on purpose: a steeper slope (24 dB/octave), keeping the mail off the boot
 fade_in = 5
 fade_out = 50
 offset = [10, 40]

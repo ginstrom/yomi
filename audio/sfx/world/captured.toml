@@ -1,21 +1,50 @@
-# Placeholder over placeholder_victory; replaced by step 13
+# Site captured: a banner snapping in the wind and a bright two-note war horn call (a rising fourth, D-sharp to G-sharp), with a soft G-sharp bell on the second note.
 variants = 2
-seed = 6600
+seed = 13600
 group = "world"
 max_ms = 2250
 
-[[layer]]
-source = "placeholder_victory"
-length = 1500
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the banner
+source = "fs_flap"
+start = [0, 850]
+length = 700
+filter = [{ type = "highpass", hz = 140 }, { type = "lowpass", hz = 7000 }]
+fade_in = 10
+fade_out = 200
+gain = [-5, -3]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # horn, first note
+source = "fs_war_horn_1"
+length = 520
+filter = [{ type = "highpass", hz = 200 }, { type = "highshelf", hz = 1800, gain_db = 3 }, { type = "lowpass", hz = 6000 }]
+fade_in = 20
+fade_out = 120
+offset = [140, 200]
+gain = [-2, -1]
+
+[[layer]]                          # horn, second note, held
+source = "fs_war_horn_2"
+start = [60, 120]
+length = 760
+filter = [{ type = "highpass", hz = 200 }, { type = "highshelf", hz = 1800, gain_db = 3 }, { type = "lowpass", hz = 6000 }]
+fade_in = 25
+fade_out = 350
+offset = [600, 680]
+gain = [-2, 0]
+
+[[layer]]                          # a bell on the second note (G#5)
+synth = { kind = "fm", carrier_hz = 830.6, ratio = 3.0, index = [1.8, 2.4], index_end = 0.1, length = 700 }
+filter = [{ type = "lowpass", hz = 2800 }, { type = "peak", hz = 3600, q = 1.0, gain_db = -6 }]
+envelope = [[0, -40], [6, 0], [150, -10], [700, -45]]
+fade_out = 60
+offset = [610, 690]
+gain = [-16, -13]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 2, attack_ms = 5, release_ms = 120 },
+  { type = "reverb", impulse = "open_air", wet_db = -13, predelay_ms = 30 },
+  { type = "limit", ceiling_db = -7, release_ms = 80 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 80 },
+  { type = "fade_out", ms = 200 },
+]

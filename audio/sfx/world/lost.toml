@@ -1,21 +1,56 @@
-# Placeholder over placeholder_unit_death; replaced by step 13
+# Site lost: the warning bell lower, a low toll, and wood splitting and stone crumbling as the place falls, with the war drum's thud under the collapse.
 variants = 2
-seed = 6700
+seed = 13500
 group = "world"
 max_ms = 2700
 
-[[layer]]
-source = "placeholder_unit_death"
-length = 1800
-pitch = [-9, 1]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the low toll
+pick = ["fs_bell_toll_2", "fs_bell_toll_1"]
+length = 1750
+pitch = [-3.2, -2.6]
+filter = [{ type = "highpass", hz = 120 }, { type = "lowpass", hz = 2600 }]
+fade_in = 8
+fade_out = 700
+gain = -1
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # timber splitting
+pick = ["rd_wood_break_3", "rd_wood_crack_1", "rd_wood_crack_3"]
+pitch = [-4.0, -2.0]
+filter = [{ type = "highpass", hz = 150 }, { type = "lowpass", hz = 5000 }]
+fade_out = 80
+offset = [280, 380]
+gain = [-9, -7]
+
+[[layer]]                          # stone breaking
+pick = ["rd_rock_break_2", "rd_rock_break_1"]
+pitch = [-4.0, -2.5]
+filter = [{ type = "highpass", hz = 100 }, { type = "lowpass", hz = 3500 }]
+fade_out = 150
+offset = [420, 520]
+gain = [-11, -9]
+
+[[layer]]                          # rubble settling
+pick = ["rd_rock_fall_1", "rd_rock_fall_3"]
+pitch = [-3.0, -1.0]
+filter = [{ type = "highpass", hz = 120 }, { type = "lowpass", hz = 3500 }]
+fade_out = 200
+offset = [650, 820]
+gain = [-18, -15]
+
+[[layer]]                          # the thud of the fall
+source = "fs_war_drum"
+length = 900
+pitch = [-6.0, -5.0]
+filter = [{ type = "highpass", hz = 40 }, { type = "lowpass", hz = 600 }]
+fade_out = 400
+offset = [420, 520]
+gain = [-7, -5]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 2, attack_ms = 5, release_ms = 150 },
+  { type = "reverb", impulse = "open_air", wet_db = -11, predelay_ms = 40 },
+  { type = "limit", ceiling_db = -10, release_ms = 100 },
+  { type = "trim", threshold_db = -42, keep_tail_ms = 100 },
+  { type = "fade_out", ms = 300 },
+]

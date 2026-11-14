@@ -1,21 +1,48 @@
-# Placeholder over placeholder_ui_click; replaced by step 13
+# Coins: coins counted onto a wooden counter and a pouch shaken; close and dry.
 variants = 4
-seed = 7100
+seed = 14000
 group = "world"
 max_ms = 750
 
-[[layer]]
-source = "placeholder_ui_click"
-length = 500
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the coins
+pick = ["rd_coins_2", "rd_coins_3", "kenney_coins", "kenney_coins_2"]
+length = 450
+pitch = [-1.5, 1.0]
+filter = [{ type = "highpass", hz = 300 }, { type = "lowpass", hz = 9000 }]
+fade_out = 100
+offset = [30, 70]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # a few more, now and then
+chance = 0.6
+pick = ["rd_coins_3", "kenney_coins_2", "rd_coins_2", "kenney_coins"]
+start = [50, 150]
+length = 300
+pitch = [-2.0, 1.5]
+filter = [{ type = "highpass", hz = 400 }, { type = "lowpass", hz = 9000 }]
+fade_out = 100
+offset = [140, 220]
+gain = [-9, -6]
+
+[[layer]]                          # the pouch
+pick = ["vh_pouch_1", "vh_pouch_2"]
+pitch = [-2.0, 1.0]
+filter = [{ type = "highpass", hz = 120 }, { type = "lowpass", hz = 6000 }]
+fade_out = 80
+gain = [-8, -5]
+
+[[layer]]                          # the counter under the coins
+pick = ["kenney_wood_medium_0", "kenney_wood_medium_2", "kenney_wood_medium_4"]
+pitch = [-2.0, 0.0]
+filter = [{ type = "highpass", hz = 120 }, { type = "lowpass", hz = 2500 }]
+fade_out = 60
+offset = [30, 70]
+gain = [-16, -12]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 3, attack_ms = 2, release_ms = 60 },
+  { type = "reverb", impulse = "small_room", wet_db = -20, predelay_ms = 5 },
+  { type = "limit", ceiling_db = -14, release_ms = 40 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 50 },
+  { type = "fade_out", ms = 80 },
+]

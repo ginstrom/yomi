@@ -1,21 +1,66 @@
-# Placeholder over placeholder_ui_click; replaced by step 13
+# Craft (workshop or field): two or three hammer strikes on an anvil, then a file's scrape; close and dry.
 variants = 3
-seed = 7200
+seed = 14100
 group = "world"
 max_ms = 1350
 
-[[layer]]
-source = "placeholder_ui_click"
-length = 900
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # first strike
+pick = ["fs_anvil_1", "fs_anvil_2", "fs_anvil_3", "fs_anvil_hit"]
+length = 380
+pitch = [-4.0, -2.5]
+filter = [{ type = "highpass", hz = 150 }, { type = "peak", hz = 3400, q = 1.5, gain_db = -8 }, { type = "lowpass", hz = 6500 }]
+fade_out = 150
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # second strike
+pick = ["fs_anvil_3", "fs_anvil_hit", "fs_anvil_1", "fs_anvil_2"]
+length = 380
+pitch = [-4.0, -2.5]
+filter = [{ type = "highpass", hz = 150 }, { type = "peak", hz = 3400, q = 1.5, gain_db = -8 }, { type = "lowpass", hz = 6500 }]
+fade_out = 150
+offset = [220, 280]
+gain = [-3, -1]
+
+[[layer]]                          # a third, now and then
+chance = 0.6
+pick = ["fs_anvil_2", "fs_anvil_1", "fs_anvil_hit", "fs_anvil_3"]
+length = 360
+pitch = [-4.5, -3.0]
+filter = [{ type = "highpass", hz = 150 }, { type = "peak", hz = 3400, q = 1.5, gain_db = -8 }, { type = "lowpass", hz = 6500 }]
+fade_out = 150
+offset = [440, 500]
+gain = [-5, -3]
+
+[[layer]]                          # the hammer's weight on the first strike
+pick = ["kenney_punch_heavy_0", "kenney_punch_heavy_2", "kenney_punch_heavy_4"]
+pitch = [-3.0, -1.0]
+filter = [{ type = "highpass", hz = 160 }, { type = "highpass", hz = 160 }, { type = "lowpass", hz = 1500 }]
+fade_out = 60
+gain = [-11, -8]
+
+[[layer]]                          # and on the second
+pick = ["kenney_punch_heavy_1", "kenney_punch_heavy_3", "kenney_punch_heavy_0"]
+pitch = [-3.0, -1.0]
+filter = [{ type = "highpass", hz = 160 }, { type = "highpass", hz = 160 }, { type = "lowpass", hz = 1500 }]
+fade_out = 60
+offset = [220, 280]
+gain = [-13, -10]
+
+[[layer]]                          # the file
+source = "fs_file"
+start = [0, 120]
+length = [320, 400]
+pitch = [-1.0, 1.0]
+filter = [{ type = "highpass", hz = 1200 }, { type = "lowpass", hz = 9000 }]
+fade_in = 30
+fade_out = 100
+offset = [560, 640]
+gain = [-9, -7]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 3, attack_ms = 2, release_ms = 80 },
+  { type = "reverb", impulse = "small_room", wet_db = -17, predelay_ms = 6 },
+  { type = "limit", ceiling_db = -14, release_ms = 50 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 60 },
+  { type = "fade_out", ms = 100 },
+]

@@ -94,6 +94,13 @@ rows list every collection it draws on, those an earlier step used included):
 | | `oga_bart` | bart | Steam release sounds, https://opengameart.org/content/steam-release-sounds |
 | | `kenney_rpg` | Kenney (kenney.nl) | RPG Audio (footsteps, dropLeather, cloth), https://kenney.nl/assets/rpg-audio |
 | | `kenney_impact` | Kenney (kenney.nl) | Impact Sounds (grass footsteps, soft, punch and light metal impacts), https://kenney.nl/assets/impact-sounds |
+| `world`: all 14 cues (`confront`, `sighted`, `source`, `threatened`, `lost`, `captured`, `build`, `arrive`, `upgrade`, `coins`, `craft`, `rune.embed`, `rune.fuse`, `rune.extract`; step 13) | `freesound` | jcdecha; NovaSoundTechnology; DeVern; adharca; SamuelGremaud; _earthbound_; draftcraft; michorvath; NearTheAtmoshphere; bassimat; JOHNWALLY; xkeril; rayjensen | Freesound 235453 "Bass_Drum_Hit_single.wav", 347126 "Mystic Power Taiko Tiko Bass Kick Drum - Nova Sound", 512490 "Distant War Horn.wav", 539956 "war horn.wav", 454855 "TOLLING BELL", 57280 "RAH_Flapping_Fabric_3.flac", 434339 "Hammer hitting an anvil", 270589 "Anvil Hit 1", 449843 "Hacksaw and File", and again 867251 "Deep Rumbling Drone", 32805 "spooky dark pad.wav", 685680 "Humming in F# Minor", 200990 "thunder-crack": https://freesound.org/people/jcdecha/sounds/235453/, …/NovaSoundTechnology/sounds/347126/, …/DeVern/sounds/512490/, …/adharca/sounds/539956/, …/SamuelGremaud/sounds/454855/, …/_earthbound_/sounds/57280/, …/draftcraft/sounds/434339/, …/michorvath/sounds/270589/, …/NearTheAtmoshphere/sounds/449843/, …/bassimat/sounds/867251/, …/JOHNWALLY/sounds/32805/, …/xkeril/sounds/685680/, …/rayjensen/sounds/200990/ (each Creative Commons 0, checked on its page; originals downloaded by hand at gate G2) |
+| | `oga_rubberduck` | rubberduck | 80 CC0 RPG SFX (coins, gems), 100 CC0 metal and wood sfx (wood hammer, wood slam, wood cracking), 75 CC0 breaking/falling/hit sfx (rock and wood breaking, falling rock): https://opengameart.org/content/80-cc0-rpg-sfx, …/100-cc0-metal-and-wood-sfx, …/75-cc0-breaking-falling-hit-sfx |
+| | `oga_vehicle` | vehicle | Fantasy Sound Effects (Tinysized SFX: cloth pouch shakes, hand saw), https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx |
+| | `oga_pwl` | pwl | Bell Dings/Chimes, https://opengameart.org/content/bell-dingschimes |
+| | `kenney_rpg` | Kenney (kenney.nl) | RPG Audio (handleCoins, footsteps, dropLeather, handleSmallLeather, creak, metalClick), https://kenney.nl/assets/rpg-audio |
+| | `kenney_impact` | Kenney (kenney.nl) | Impact Sounds (glass, wood, punch), https://kenney.nl/assets/impact-sounds |
+| | `kenney_interface` | Kenney (kenney.nl) | Interface Sounds (pluck), https://kenney.nl/assets/interface-sounds |
 | `ui`: all 7 cues (`click`, `back`, `confirm`, `tab`, `error`, `learn`, `gear`; step 09) | `kenney_ui` | Kenney (kenney.nl) | UI Audio, https://kenney.nl/assets/ui-audio |
 | | `kenney_interface` | Kenney (kenney.nl) | Interface Sounds, https://kenney.nl/assets/interface-sounds |
 | | `kenney_rpg` | Kenney (kenney.nl) | RPG Audio, https://kenney.nl/assets/rpg-audio |
@@ -109,7 +116,7 @@ fizz, the element sweeteners' snaps and sizzles, the blight chime's partials
 and the small heal's rising tones (step 10), and in the spells (step 11) the
 sub booms and noise bursts, the storm cast's rising buzz and static, the
 arcane hum and pop, the hex's falling tones and shimmer, and the heal's and
-buff's FM bells; in the falls and steps (step 12) the brute's and the Horror's sub sweeps and brown-noise rumble, the salamander's sparks, the light step's brush of noise, the skitter's scrape and the toll's string drone (detuned saws).
+buff's FM bells; in the falls and steps (step 12) the brute's and the Horror's sub sweeps and brown-noise rumble, the salamander's sparks, the light step's brush of noise, the skitter's scrape and the toll's string drone (detuned saws). In the world bank (step 13) the confront's low saw cluster, the Source's sub swell and brown-noise air, the bells of the arrival, the capture, the upgrade's rising chime and the runes' chimes and pings (FM), the runes' soft FM hums and noise shimmer, the extract's sine drop and the threatened toll's breath of noise are synthesis; no world cue is synthesis alone.
 
 Freesound files used so far: 811615 (`battle.regen`, step 10); 244926,
 395038, 346917, 522705 (fire: `cast.fire`, `impact.fire`, `impact.fireball`,
@@ -118,14 +125,23 @@ Freesound files used so far: 811615 (`battle.regen`, step 10); 244926,
 685680 (`cast.holy`) and 867251 (`impact.poison`) (step 11); 616622
 (`death.goblinoid`), 555423 (`death.brute`), 824588 (`death.hero`), and
 again 706977 (`death.salamander`), 867251 and 200990 (`death.horror`) and
-32805 (`death.hero`) (step 12). The others of the 28 downloaded at gate G2
-serve step 13 (171844 and 846337 were auditioned for step 12 and left out:
-a low hum under the scream; a steady tone under a very quiet hiss).
+32805 (`death.hero`) (step 12); 235453, 347126 (the drums of `confront`,
+`sighted`, `lost`), 512490 (`sighted`, `confront`), 539956 (`captured`),
+454855 (`threatened`, `lost`), 57280 (`captured`), 434339, 270589, 449843
+(`craft`), and again 867251 (`confront`, `source`), 32805, 685680 and 200990
+(`source`) and 685680 (`rune.fuse`) (step 13). Of the 28 downloaded at gate
+G2, 23 are used: 171844 and 846337 were auditioned for step 12 and left out
+(a low hum under the scream; a steady tone under a very quiet hiss), and
+693428 (the brass and organ fanfare once meant for `stings.victory`, which
+step 09 made from a Kenney jingle) and 411122, 259542 (the stabs meant for
+the melee hits, which step 08 made from Kenney and rubberduck) are not used.
 
-### Still placeholder
+### No placeholder left
 
-Every other cue is still derived entirely from the old placeholder tones
-(synthesized in-house with Python's stdlib `wave` module, licence own), kept
-as the `placeholder_*` sources under `audio/sources/placeholder/`, until its
-content step (13: the `world` bank). The placeholder WAVs that were played directly
-before the banks are gone from this folder.
+Every W1 cue is now built from real content: no recipe names a
+`placeholder_*` source. The old placeholder tones (synthesized in-house with
+Python's stdlib `wave` module, licence own) are still registered as the
+`placeholder_*` sources under `audio/sources/placeholder/`, named by no
+recipe, until step 18 removes them or documents why they stay. The
+placeholder WAVs that were played directly before the banks are gone from
+this folder.

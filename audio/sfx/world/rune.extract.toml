@@ -1,21 +1,50 @@
-# Placeholder over placeholder_heal; replaced by step 13
+# Rune extracted: a reversed shimmer drawn out of the socket (a bell and glass played backwards) ending in a pop as the rune comes free; pitch shortens a layer (by 2^(-p/12)), so the offsets are set for the reversed layers to end on the pop.
 variants = 2
-seed = 7500
+seed = 14400
 group = "world"
 max_ms = 1050
 
-[[layer]]
-source = "placeholder_heal"
-length = 700
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the reversed bell
+pick = ["pwl_bell_ding_1", "pwl_bell_ding_3"]
+length = 570
+reverse = true
+pitch = [3.0, 4.0]
+filter = [{ type = "highpass", hz = 500 }, { type = "lowpass", hz = 5000 }]
+fade_in = 40
+fade_out = 15
+gain = [-3, -1]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # reversed glass on it
+pick = ["kenney_glass_light_4", "kenney_glass_light_2"]
+length = 200
+reverse = true
+pitch = [5.0, 6.0]
+filter = [{ type = "highpass", hz = 1500 }]
+fade_in = 20
+fade_out = 10
+offset = [300, 310]
+gain = [-12, -9]
+
+[[layer]]                          # the pop
+pick = ["kenney_pluck_1", "kenney_pluck_2"]
+pitch = [-2.0, 1.0]
+filter = [{ type = "highpass", hz = 250 }]
+fade_out = 60
+offset = [445, 460]
+gain = [-3, -1]
+
+[[layer]]                          # the pop's body, a short sine drop
+synth = { kind = "sine", hz = 900, hz_end = 300, length = 50 }
+filter = [{ type = "highpass", hz = 150 }]
+envelope = [[0, 0], [50, -40]]
+offset = [448, 463]
+gain = [-12, -9]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 2.5, attack_ms = 2, release_ms = 80 },
+  { type = "reverb", impulse = "small_room", wet_db = -15, predelay_ms = 5 },
+  { type = "limit", ceiling_db = -12, release_ms = 40 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 60 },
+  { type = "fade_out", ms = 80 },
+]

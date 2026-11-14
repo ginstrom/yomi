@@ -1,21 +1,50 @@
-# Placeholder over placeholder_heal; replaced by step 13
+# Rune embedded: a crystalline click as the rune meets the socket, a short hum swelling up and locking in with a second, smaller click and a soft ping.
 variants = 3
-seed = 7300
+seed = 14200
 group = "world"
 max_ms = 1050
 
-[[layer]]
-source = "placeholder_heal"
-length = 700
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the click
+pick = ["rd_gem_1", "rd_gem_3", "kenney_glass_light_0", "kenney_glass_light_2"]
+pitch = [2.0, 5.0]
+filter = [{ type = "highpass", hz = 600 }]
+fade_out = 60
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the hum swelling (A4)
+synth = { kind = "fm", carrier_hz = 440, ratio = 2.0, index = [0.6, 1.0], index_end = 0.2, length = 420 }
+filter = [{ type = "highpass", hz = 250 }, { type = "lowpass", hz = 2200 }]
+envelope = [[0, -40], [260, -2], [330, 0], [420, -40]]
+fade_out = 60
+offset = [10, 30]
+gain = [-14, -12]
+
+[[layer]]                          # the hum's octave, for air
+synth = { kind = "sine", hz = 880, hz_end = 988, length = 360 }
+envelope = [[0, -40], [280, -6], [360, -45]]
+offset = [10, 40]
+gain = [-22, -19]
+
+[[layer]]                          # it locks in: a smaller click
+pick = ["kenney_metal_click", "kenney_glass_light_3", "rd_gem_1"]
+pitch = [4.0, 7.0]
+filter = [{ type = "highpass", hz = 1500 }]
+fade_out = 40
+offset = [330, 380]
+gain = [-8, -5]
+
+[[layer]]                          # and a soft ping (E6)
+synth = { kind = "fm", carrier_hz = 1319, ratio = 3.0, index = [1.6, 2.2], index_end = 0.1, length = 330 }
+filter = [{ type = "lowpass", hz = 3000 }, { type = "peak", hz = 3600, q = 1.0, gain_db = -6 }]
+envelope = [[0, -40], [5, 0], [100, -12], [330, -48]]
+fade_out = 60
+offset = [335, 385]
+gain = [-16, -13]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 2.5, attack_ms = 2, release_ms = 80 },
+  { type = "reverb", impulse = "small_room", wet_db = -15, predelay_ms = 5 },
+  { type = "limit", ceiling_db = -14, release_ms = 40 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 60 },
+  { type = "fade_out", ms = 100 },
+]

@@ -1,21 +1,59 @@
-# Placeholder over placeholder_heal; replaced by step 13
+# Runes fused: three runes' hum swelling together (hummed voices pitched to A over a shimmer of noise and soft FM) and resolving in a chime and a crystalline pop.
 variants = 2
-seed = 7400
+seed = 14300
 group = "world"
 max_ms = 1950
 
-[[layer]]
-source = "placeholder_heal"
-length = 1300
-pitch = [-5, 5]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the hum, real voices raised to A
+source = "fs_hum"
+length = 1000
+pitch = 3.0
+filter = [{ type = "highpass", hz = 240 }, { type = "highpass", hz = 240 }, { type = "lowpass", hz = 2400 }]
+envelope = [[0, -36], [800, 0], [960, -4], [1000, -40]]
+gain = [-6, -4]
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # soft FM under it, its index rising
+synth = { kind = "fm", carrier_hz = 440, ratio = 2.0, index = [0.5, 0.9], index_end = 1.4, length = 1000 }
+filter = [{ type = "highpass", hz = 250 }, { type = "lowpass", hz = 2000 }]
+envelope = [[0, -45], [850, 0], [1000, -40]]
+fade_out = 60
+gain = [-18, -15]
+
+[[layer]]                          # a shimmer swelling up
+synth = { kind = "noise", color = "pink", length = 1000 }
+filter = [{ type = "bandpass", hz = 1500, hz_end = 5000, q = 2.0 }]
+envelope = [[0, -45], [900, 0], [1000, -40]]
+gain = [-24, -20]
+
+[[layer]]                          # the pop
+pick = ["rd_gem_3", "kenney_glass_light_1"]
+pitch = [3.0, 6.0]
+filter = [{ type = "highpass", hz = 700 }]
+fade_out = 60
+offset = [960, 1000]
+gain = [-3, -1]
+
+[[layer]]                          # chime: A5
+synth = { kind = "fm", carrier_hz = 880, ratio = 3.0, index = [2.2, 2.8], index_end = 0.2, length = 600 }
+filter = [{ type = "lowpass", hz = 2800 }, { type = "peak", hz = 3600, q = 1.0, gain_db = -6 }]
+envelope = [[0, -40], [6, 0], [150, -10], [600, -45]]
+fade_out = 60
+offset = [965, 1005]
+gain = [-10, -8]
+
+[[layer]]                          # chime: E6
+synth = { kind = "fm", carrier_hz = 1319, ratio = 2.0, index = [1.6, 2.2], index_end = 0.1, length = 550 }
+filter = [{ type = "lowpass", hz = 3000 }, { type = "peak", hz = 3600, q = 1.0, gain_db = -6 }]
+envelope = [[0, -40], [6, 0], [150, -10], [550, -45]]
+fade_out = 60
+offset = [975, 1030]
+gain = [-13, -11]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 2, attack_ms = 5, release_ms = 120 },
+  { type = "reverb", impulse = "small_room", wet_db = -14, predelay_ms = 8 },
+  { type = "limit", ceiling_db = -10, release_ms = 60 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 80 },
+  { type = "fade_out", ms = 150 },
+]

@@ -1,21 +1,27 @@
-# Placeholder over placeholder_unit_death; replaced by step 13
+# Site threatened: a single distant warning toll of a bell in D (SamuelGremaud's tolling bell, not the hero's bell), unpitched and with no drone, in open air.
 variants = 2
-seed = 6500
+seed = 13400
 group = "world"
 max_ms = 2250
 
-[[layer]]
-source = "placeholder_unit_death"
-length = 1500
-pitch = [-7, 3]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the toll
+pick = ["fs_bell_toll_1", "fs_bell_toll_2"]
+length = 1550
+pitch = [0.0, 0.4]
+filter = [{ type = "highpass", hz = 160 }, { type = "lowpass", hz = [3000, 3600] }]
+fade_in = 8
+fade_out = 550
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the strike's edge, a breath of air
+synth = { kind = "noise", color = "pink", length = 160 }
+filter = [{ type = "bandpass", hz = [1800, 2600], q = 1.2 }]
+envelope = [[0, 0], [160, -40]]
+gain = [-28, -24]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "reverb", impulse = "open_air", wet_db = -10, predelay_ms = 45 },
+  { type = "limit", ceiling_db = -10, release_ms = 100 },
+  { type = "trim", threshold_db = -42, keep_tail_ms = 100 },
+  { type = "fade_out", ms = 300 },
+]

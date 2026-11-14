@@ -1,21 +1,70 @@
-# Placeholder over placeholder_defeat; replaced by step 13
+# Confront: a tense stinger as the party walks into monsters: a low war drum with a taiko's slap, a dissonant low brass stab (the distant war horn pitched to D and E-flat at once) over a low saw cluster and a rumbling drone.
 variants = 2
-seed = 6200
+seed = 13100
 group = "world"
 max_ms = 2250
 
-[[layer]]
-source = "placeholder_defeat"
-length = 1500
-pitch = [-8, 2]
-filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
-fade_out = 10
+[[layer]]                          # the war drum
+source = "fs_war_drum"
+length = 1450
+pitch = [-3.0, -1.5]
+filter = [{ type = "highpass", hz = 35 }, { type = "lowpass", hz = 2500 }]
+fade_out = 450
 
-[[layer]]                          # a breath of noise, so no two variants are one sound
-synth = { kind = "noise", color = "pink", length = 300 }
-filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
-envelope = [[0, 0], [300, -40]]
-gain = [-26, -16]
+[[layer]]                          # the taiko's slap on it
+source = "fs_taiko"
+length = 450
+pitch = [-4.0, -2.0]
+filter = [{ type = "highpass", hz = 70 }]
+fade_out = 150
+gain = [-8, -5]
+
+[[layer]]                          # brass stab: the horn on D
+source = "fs_distant_horn"
+start = [300, 700]
+length = 900
+pitch = -7.0
+filter = [{ type = "highpass", hz = 90 }, { type = "lowpass", hz = [1600, 2200] }]
+envelope = [[0, -30], [30, 0], [260, -5], [900, -40]]
+offset = [10, 30]
+gain = [-1, 1]
+
+[[layer]]                          # brass stab: the horn a semitone up, the clash
+source = "fs_distant_horn"
+start = [900, 1300]
+length = 850
+pitch = -6.0
+filter = [{ type = "highpass", hz = 90 }, { type = "lowpass", hz = [1400, 2000] }]
+envelope = [[0, -30], [40, 0], [260, -6], [850, -40]]
+offset = [20, 45]
+gain = [-4, -2]
+
+[[layer]]                          # a low saw cluster under the stab (D2 and E-flat 2)
+synth = { kind = "saw", hz = 73.4, length = 1000 }
+filter = [{ type = "lowpass", hz = 500 }, { type = "highpass", hz = 45 }]
+envelope = [[0, -30], [30, 0], [300, -8], [1000, -45]]
+gain = [-20, -18]
+
+[[layer]]
+synth = { kind = "saw", hz = [77.6, 78.2], length = 1000 }
+filter = [{ type = "lowpass", hz = 500 }, { type = "highpass", hz = 45 }]
+envelope = [[0, -30], [30, 0], [300, -8], [1000, -45]]
+gain = [-22, -20]
+
+[[layer]]                          # the drone under it all
+source = "fs_drone"
+start = [0, 200]
+length = 1400
+filter = [{ type = "lowpass", hz = 500 }, { type = "highpass", hz = 40 }]
+fade_in = 30
+fade_out = 600
+gain = [-15, -13]
 
 [post]
-chain = [{ type = "fade_out", ms = 8 }]
+chain = [
+  { type = "compress", threshold_db = -18, ratio = 2.5, attack_ms = 5, release_ms = 150 },
+  { type = "reverb", impulse = "stone_hall", wet_db = -15, predelay_ms = 20 },
+  { type = "limit", ceiling_db = -8, release_ms = 100 },
+  { type = "trim", threshold_db = -45, keep_tail_ms = 100 },
+  { type = "fade_out", ms = 250 },
+]

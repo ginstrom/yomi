@@ -3729,3 +3729,367 @@ excerpt = { start = 0.1, end = 1.3 }
 sha256 = "4418c1ec6786c012f4e2e39804f4f15763ebee783380ed3e6964cd87f52aab52"
 retrieved = "2026-11-14"
 notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_war_drum"
+file = "sources/freesound/fs_war_drum.flac"
+licence = "CC0-1.0"
+author = "jcdecha (Freesound)"
+url = "https://freesound.org/people/jcdecha/sounds/235453/"
+original = "235453 Bass_Drum_Hit_single.wav (fs_235453_bass-drum-hit-single.wav)"
+original_sha256 = "8c10d58c09a2a0fd0d10fb373b038e6fafcc000c06b74139ebc0cf25264b4ad7"
+excerpt = { start = 0.375, end = 2.0 }
+sha256 = "67176a3b7459356e0c1572630de7a4c52a2a9212aac06061c223a54ae5b57632"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_taiko"
+file = "sources/freesound/fs_taiko.flac"
+licence = "CC0-1.0"
+author = "NovaSoundTechnology (Freesound)"
+url = "https://freesound.org/people/NovaSoundTechnology/sounds/347126/"
+original = "347126 Mystic Power Taiko Tiko Bass Kick Drum - Nova Sound (fs_347126_mystic-power-taiko-tiko-bass.wav)"
+original_sha256 = "345b81e728d425792b5126b2cef86857d3601bc6209e48433d6669df23de4024"
+excerpt = { start = 0.0, end = 0.9 }
+sha256 = "2e3221667d3c3d64ea9618a96de9b493d331926fcddef454193ca7a1e75506be"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_distant_horn"
+file = "sources/freesound/fs_distant_horn.flac"
+licence = "CC0-1.0"
+author = "DeVern (Freesound)"
+url = "https://freesound.org/people/DeVern/sounds/512490/"
+original = "512490 Distant War Horn.wav (fs_512490_distant-war-horn.wav)"
+original_sha256 = "934d58008dc06484fe3820e8177a602c13f93a0a2125d8b6f0f57d0a1b2b8887"
+excerpt = { start = 3.7, end = 5.75 }
+sha256 = "39e5c53329624ae81d1b40bdb508fd0b4e4318608a843a9140dbdcbfe542e296"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "fs_war_horn_1"
+file = "sources/freesound/fs_war_horn_1.flac"
+licence = "CC0-1.0"
+author = "adharca (Freesound)"
+url = "https://freesound.org/people/adharca/sounds/539956/"
+original = "539956 war horn.wav (fs_539956_war-horn.wav)"
+original_sha256 = "3a3b626f318668e1921a48a48a6ca51f6e41bfa9e6d6e3d41d050e50f9a4309d"
+excerpt = { start = 0.03, end = 0.85 }
+sha256 = "a8ace7f0480e25e3921e3cabcfad839dc6a569cdba6c0900f23d5222f1b8cf96"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 44.1 to 48 kHz; the call's first note (D#4)"
+
+[[source]]
+id = "fs_war_horn_2"
+file = "sources/freesound/fs_war_horn_2.flac"
+licence = "CC0-1.0"
+author = "adharca (Freesound)"
+url = "https://freesound.org/people/adharca/sounds/539956/"
+original = "539956 war horn.wav (fs_539956_war-horn.wav)"
+original_sha256 = "3a3b626f318668e1921a48a48a6ca51f6e41bfa9e6d6e3d41d050e50f9a4309d"
+excerpt = { start = 1.45, end = 2.35 }
+sha256 = "1fa908a765af25ad8c7d8be2a475806a0ec2c66111b6744ce007ac3998e3e491"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 44.1 to 48 kHz; the call's second note (G#4)"
+
+[[source]]
+id = "fs_bell_toll_1"
+file = "sources/freesound/fs_bell_toll_1.flac"
+licence = "CC0-1.0"
+author = "SamuelGremaud (Freesound)"
+url = "https://freesound.org/people/SamuelGremaud/sounds/454855/"
+original = "454855 TOLLING BELL (fs_454855_tolling-bell.wav)"
+original_sha256 = "fa3f4f753aa07451b31ec7b8ecd7c6ff3bfde0897389ef77a21c195d1ef57358"
+excerpt = { start = 48.62, end = 50.3 }
+sha256 = "a5a281b72a9c7fe8d3eb7128a22806053c725ec3cbe1f47e0434dc51a4e0c334"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed; one strike"
+
+[[source]]
+id = "fs_bell_toll_2"
+file = "sources/freesound/fs_bell_toll_2.flac"
+licence = "CC0-1.0"
+author = "SamuelGremaud (Freesound)"
+url = "https://freesound.org/people/SamuelGremaud/sounds/454855/"
+original = "454855 TOLLING BELL (fs_454855_tolling-bell.wav)"
+original_sha256 = "fa3f4f753aa07451b31ec7b8ecd7c6ff3bfde0897389ef77a21c195d1ef57358"
+excerpt = { start = 50.45, end = 52.2 }
+sha256 = "a5aa260fa3ba9c7b2d46e95f96f953c8c590504861bc6463173c3711a5d7cd5d"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed; the last strike"
+
+[[source]]
+id = "fs_flap"
+file = "sources/freesound/fs_flap.flac"
+licence = "CC0-1.0"
+author = "_earthbound_ (Freesound)"
+url = "https://freesound.org/people/_earthbound_/sounds/57280/"
+original = "57280 RAH_Flapping_Fabric_3.flac (fs_57280_rah-flapping-fabric-3.flac)"
+original_sha256 = "cc60ae34fed9005a0f0506d3a7247f1ff24903f2529e5161012136309d15c455"
+excerpt = { start = 2.3, end = 3.9 }
+sha256 = "c020925050a9dfdcb9b35f43bb8142456097006cca7f90c2ef46e76ecabb7bab"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 44.1 to 48 kHz"
+
+[[source]]
+id = "fs_anvil_1"
+file = "sources/freesound/fs_anvil_1.flac"
+licence = "CC0-1.0"
+author = "draftcraft (Freesound)"
+url = "https://freesound.org/people/draftcraft/sounds/434339/"
+original = "434339 Hammer hitting an anvil (fs_434339_hammer-hitting-an-anvil.wav)"
+original_sha256 = "0e005bd42d7553423e9f48b45026a53ffc452342d8ad881a73c9556d3355ea8e"
+excerpt = { start = 0.225, end = 0.65 }
+sha256 = "7a961bcdfc1d24e8b137abee059ed56fdb08024f116c225d63f866cdb3230124"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 96 to 48 kHz; one strike"
+
+[[source]]
+id = "fs_anvil_2"
+file = "sources/freesound/fs_anvil_2.flac"
+licence = "CC0-1.0"
+author = "draftcraft (Freesound)"
+url = "https://freesound.org/people/draftcraft/sounds/434339/"
+original = "434339 Hammer hitting an anvil (fs_434339_hammer-hitting-an-anvil.wav)"
+original_sha256 = "0e005bd42d7553423e9f48b45026a53ffc452342d8ad881a73c9556d3355ea8e"
+excerpt = { start = 2.385, end = 2.75 }
+sha256 = "45ae596f7b89a4645bb6b96865ec9522f7755b7ac06f25343e9fcacc8509df92"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 96 to 48 kHz; one strike"
+
+[[source]]
+id = "fs_anvil_3"
+file = "sources/freesound/fs_anvil_3.flac"
+licence = "CC0-1.0"
+author = "draftcraft (Freesound)"
+url = "https://freesound.org/people/draftcraft/sounds/434339/"
+original = "434339 Hammer hitting an anvil (fs_434339_hammer-hitting-an-anvil.wav)"
+original_sha256 = "0e005bd42d7553423e9f48b45026a53ffc452342d8ad881a73c9556d3355ea8e"
+excerpt = { start = 4.165, end = 4.6 }
+sha256 = "e810faac3f10aca9c1ead197100fe2545f07bbdeed8f727bd2f752a0882fb609"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 96 to 48 kHz; one strike"
+
+[[source]]
+id = "fs_anvil_hit"
+file = "sources/freesound/fs_anvil_hit.flac"
+licence = "CC0-1.0"
+author = "michorvath (Freesound)"
+url = "https://freesound.org/people/michorvath/sounds/270589/"
+original = "270589 Anvil Hit 1 (fs_270589_anvil-hit-1.wav)"
+original_sha256 = "8acb5b86269c1c5c1ce6352f60c17f065fc92ff43af8d0216bc6284fc1f6ddd1"
+excerpt = { start = 0.26, end = 0.75 }
+sha256 = "e574337b562db9e8337a185ee9817e76b4641997f71e242b920dd2d53dd9ecec"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 44.1 to 48 kHz"
+
+[[source]]
+id = "fs_file"
+file = "sources/freesound/fs_file.flac"
+licence = "CC0-1.0"
+author = "NearTheAtmoshphere (Freesound)"
+url = "https://freesound.org/people/NearTheAtmoshphere/sounds/449843/"
+original = "449843 Hacksaw and File (fs_449843_hacksaw-and-file.flac)"
+original_sha256 = "d9f8dd547a03997359add4ce9aa968545f0b7885282c94643d91883b1f923a96"
+excerpt = { start = 15.0, end = 15.55 }
+sha256 = "31cf26933b5c5d673002e1ebb24ec2e5ba8bcbc6ed95a705830a637223120d09"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 44.1 to 48 kHz; one stroke"
+
+[[source]]
+id = "kenney_coins"
+file = "sources/kenney_rpg/kenney_coins.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/rpg-audio"
+original = "Audio/handleCoins.ogg"
+original_sha256 = "8a91f969e932df709df80ee124d86a51389eed9b67f22e5e716bc2bbf60d8dab"
+excerpt = { start = 0.1, end = 0.65 }
+sha256 = "2185ac23fb848474291b45b20d5be72b7ceac59fbd9d004fde7922c04cdd6749"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_coins_2"
+file = "sources/oga_rubberduck/rd_coins_2.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-rpg-sfx"
+original = "item_coins_02.ogg"
+original_sha256 = "c1124868c928ef06e9b95fd9bd314eb3aa9a2869cbfde7f5aadcc341fe3edca0"
+excerpt = { start = 0.0, end = 0.55 }
+sha256 = "facde7f028afe6468a652bfb3c334222fb4c4024fc145070523e7f9abb948aba"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_coins_3"
+file = "sources/oga_rubberduck/rd_coins_3.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-rpg-sfx"
+original = "item_coins_03.ogg"
+original_sha256 = "cd89cae2221ab5e911f93c208e8b905290f695eea3b1830bc9012cc46f6c047b"
+excerpt = { start = 0.0, end = 0.45 }
+sha256 = "502823bfdfcbac7d50890c8be72f47ae929c54ca80f9fa19b5efda67d7607e2a"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_gem_1"
+file = "sources/oga_rubberduck/rd_gem_1.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-rpg-sfx"
+original = "item_gem_01.ogg"
+original_sha256 = "8a5d2964febb0c69cc4df2ee5257d173f2cae6960d9534df0001dbf356f27028"
+excerpt = { start = 0.0, end = 0.24 }
+sha256 = "0182dadc0c8143fe7b078a49bc512d2e6dc8161b16db55f0a7d92a4ae30561b3"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_gem_3"
+file = "sources/oga_rubberduck/rd_gem_3.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/80-cc0-rpg-sfx"
+original = "item_gem_03.ogg"
+original_sha256 = "7b29674b7c8fb0069814623d86fa56a3f370eedcde73d5ce1ecc7339be3a3cba"
+excerpt = { start = 0.0, end = 0.26 }
+sha256 = "1bca42792f55e69b6280bbd1b51aca5edddb855130809e2e82c65cafab7a202d"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_wood_hammer_1"
+file = "sources/oga_rubberduck/rd_wood_hammer_1.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/100-cc0-metal-and-wood-sfx"
+original = "wood_hammer_01.ogg"
+original_sha256 = "7af2b82ed659153da6c3dd69024e15bdb3c3c5b101c4086ee2181c1f846fe28a"
+excerpt = { start = 0.0, end = 0.3 }
+sha256 = "761d2108158bff8eec27972b091fb412fbd8832016c0dd5f435e0b22ded6f183"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_rock_break_1"
+file = "sources/oga_rubberduck/rd_rock_break_1.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx"
+original = "bfh1_rock_breaking_01.ogg"
+original_sha256 = "970cac3139e1530009ca87f8ee0dd800dc4da61917a5e62bdc83d475a9bf4da7"
+excerpt = { start = 0.0, end = 0.5 }
+sha256 = "8b0793aac39cf35123b3a7de66eca2a077bf12cd0d9ccec545855cd167b20d5a"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_rock_break_2"
+file = "sources/oga_rubberduck/rd_rock_break_2.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx"
+original = "bfh1_rock_breaking_02.ogg"
+original_sha256 = "3e06b794511f693b6aaca5eee1d47491bab74d814746a68de6c8bf4eec744ccc"
+excerpt = { start = 0.0, end = 0.75 }
+sha256 = "741f26132af00953db77e29464ff3f9d063266804f835e587269392ff21b9b3d"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_wood_break_3"
+file = "sources/oga_rubberduck/rd_wood_break_3.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx"
+original = "bfh1_wood_breaking_03.ogg"
+original_sha256 = "0d230f703fe558b61e93cbd4d7cc6ebb5b73e752bcdd13f5c4347c013b405ca7"
+excerpt = { start = 0.0, end = 0.45 }
+sha256 = "7360b126077ec2927c0d01c29ff685604275795163e225d9d569bdfbc7f4145f"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "vh_pouch_1"
+file = "sources/oga_vehicle/vh_pouch_1.flac"
+licence = "CC0-1.0"
+author = "vehicle (OpenGameArt)"
+url = "https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx"
+original = "tinysized/sfx-cc0/cloth-pouch-shake-01.wav"
+original_sha256 = "96e0cb2529817e56bb4c967fa0bdd42192e71fca76164c706263d5a0e7c302b6"
+excerpt = { start = 0.02, end = 0.36 }
+sha256 = "21d7575b4d81c3983b8a0782987d599aca9826883279d8fb42b399a96ed9d80c"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 44.1 to 48 kHz"
+
+[[source]]
+id = "vh_pouch_2"
+file = "sources/oga_vehicle/vh_pouch_2.flac"
+licence = "CC0-1.0"
+author = "vehicle (OpenGameArt)"
+url = "https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx"
+original = "tinysized/sfx-cc0/cloth-pouch-shake-02.wav"
+original_sha256 = "1441af6eb1907eb85788bbab993524dda0070144a91c74ad9221d6c056476f92"
+excerpt = { start = 0.0, end = 0.3 }
+sha256 = "6547465c7ebd3b99b8ab024894b2e87b51d11f967a32ded349a02b83949b866b"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 44.1 to 48 kHz"
+
+[[source]]
+id = "vh_handsaw"
+file = "sources/oga_vehicle/vh_handsaw.flac"
+licence = "CC0-1.0"
+author = "vehicle (OpenGameArt)"
+url = "https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx"
+original = "tinysized/sfx-cc0/handsaw-sawing-wood-01.wav"
+original_sha256 = "240ef0f9e186379cd8ad07e8299026d585bd6e90ec0ed7d145169bbb00436728"
+excerpt = { start = 0.6, end = 1.35 }
+sha256 = "7f585a2bd09ff215451234ccaf5c50ccacb3d1ac702fbc03e70b9575f3ca2887"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed, 44.1 to 48 kHz; one stroke"
+
+[[source]]
+id = "kenney_coins_2"
+file = "sources/kenney_rpg/kenney_coins_2.flac"
+licence = "CC0-1.0"
+author = "Kenney (kenney.nl)"
+url = "https://kenney.nl/assets/rpg-audio"
+original = "Audio/handleCoins2.ogg"
+original_sha256 = "4b857968d64f9ac9336a10ffac6694d7547e1f01566ad6857b30bc8db3ee6c32"
+excerpt = { start = 0.0, end = 0.33 }
+sha256 = "e3be3b302ea72f1e1969c3257292ee1b61383a41a5b710c4c014257b4f45e459"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_wood_hammer_2"
+file = "sources/oga_rubberduck/rd_wood_hammer_2.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/100-cc0-metal-and-wood-sfx"
+original = "wood_hammer_02.ogg"
+original_sha256 = "f3e8812f053d35d5ebbaec39c7d7136ccfcf4ad7b420beded1401c9aaca13625"
+excerpt = { start = 0.0, end = 0.23 }
+sha256 = "ed8a28274cc47e76dd8e3e2b8461afbf734fc987158cdf2c22839899c75e085b"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
+
+[[source]]
+id = "rd_wood_slam_4"
+file = "sources/oga_rubberduck/rd_wood_slam_4.flac"
+licence = "CC0-1.0"
+author = "rubberduck (OpenGameArt)"
+url = "https://opengameart.org/content/100-cc0-metal-and-wood-sfx"
+original = "wood_slam_04.ogg"
+original_sha256 = "a1b97f2f3821eb52ab42852fb4538b7bd0a6f080e1608fba0a813105ba85cace"
+excerpt = { start = 0.04, end = 0.385 }
+sha256 = "1995e174eb6c19760a2a6c1fa89e1ccdc6e075b4acba56014b4f762f6f18879f"
+retrieved = "2026-11-14"
+notes = "mono sum, trimmed"
