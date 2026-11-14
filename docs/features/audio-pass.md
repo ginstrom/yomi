@@ -48,11 +48,17 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 ## Verification
 
 - 01: opus engineer, opus reviewer, clean in 1 round.
+- 04: sonnet engineer; awaiting gate G2 (28 Freesound files, list in `freesound-wanted.md`, given to the user 2026-11-14); review pending.
+- 03: opus engineer, opus reviewer, clean in 1 round; awaiting gate G1 (bake-off clips in `audio/bakeoff/`, given to the user 2026-11-14).
 
 ## Notes carried forward
 
 - Step 02: also fix review-01 findings: check every source id a recipe names (not only those drawn), catch non-AudioError failures without tracebacks, stop reading pyloudnorm's private `_filters` (or comment/pin it).
 - Step 02 (and 09): apply the short-cue normalisation rule above; `hit.slash` over stand-in sources peaked +4.4 dBTP, the same rule catches it.
+- Step 15: `voice design` with a subset of emotions rewrites `design.json` but `bakeoff` reuses stale clips (review-03 #3); also tidy `cli.py` `--candidates` default (#2) and the WAV count in 03's record (#1: ten placeholders).
+- Step 16: the mlx Chatterbox port adds no PerTh watermark; say so in the voice README. A render needs network on first model load.
+- After G1: copy the outcome and per-configuration means into step 03's execution record and set it `done`.
+- Step 09: every Kenney jingle is ≤1.74 s; `stings.victory` (~3 s) and `stings.defeat` (~3.5 s) need chaining or synthesis.
 - The worktree needed `npm ci` (done in step 01).
 
 - Machine: Apple M5, 32 GB, ffmpeg and uv installed, no sox; 80 GB free disk.
