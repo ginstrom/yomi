@@ -208,3 +208,5 @@ Exclusions: no clip under `audio/voices/` is committed and no `sources.toml` ent
 3. `--emotions ""` (or `","`) ran every emotion; it is now refused. Test: `test_cli_refuses_an_empty_emotions_list`, seen failing first.
 
 The note that only grave, whisper and triumphant were designed was added to the G9 paragraph. Design §5.8.3 and §5.8.4 are left for step 16. `audio/CLAUDE.md` updated for 1 and 3. Verification: tool pytest 237 passed; `npm test` 86 files, 1666 tests passed.
+
+**Gate G9 passed 2026-11-14.** The user kept `A_0` as the narrator's only clip, ranking `neutral` (`A_0`) best and then `whisper_1`. Step `done` (commits `df250f3`, `70a21c2`). The user also heard "winds" ("the road winds") read as the wind that blows in every audition clip but one; step 16 checks every shipped line for such words.
