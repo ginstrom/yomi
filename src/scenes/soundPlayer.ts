@@ -50,6 +50,8 @@ interface Theme {
   key: MusicKey
   sound: Sound
   ducked: boolean
+  /** The level the running ramp is heading for. */
+  rampTarget: number | null
   tween: Phaser.Tweens.Tween | null
   /** Takes the shutdown hook off the scene the running ramp belongs to. */
   unhook: (() => void) | null
@@ -67,6 +69,7 @@ function endRamp(held: Theme): void {
   held.tween = null
   held.unhook?.()
   held.unhook = null
+  held.rampTarget = null
 }
 
 function record(entry: AudioLogEntry): void {
@@ -78,17 +81,24 @@ function playNow(scene: Phaser.Scene, cue: CueId): void {
   const bank = cueBank(cue)
   const spritemap = (scene.cache.json.get(bank) as { spritemap?: Record<string, unknown> } | undefined)?.spritemap
   if (!spritemap || !scene.cache.audio.exists(bank)) return
+  // A play that is dropped gives its variant back, so the bag and `last` move only for sounds heard.
+  const held = variants.bags.get(cue)
+  const before = held && { bag: [...held.bag], last: held.last }
+  const giveBack = () => {
+    if (before) variants.bags.set(cue, before)
+    else variants.bags.delete(cue)
+  }
   const { marker, detune, volumeDb } = pickVariant(variants, cue, Math.random)
-  if (!spritemap[marker]) return
+  if (!spritemap[marker]) return giveBack()
   const now = performance.now()
   const k = cueMarkers(cue).indexOf(marker)
-  if (!admitPlay(limits, cue, now, now + cueDurationMs(cue, k))) return
+  if (!admitPlay(limits, cue, now, now + cueDurationMs(cue, k))) return giveBack()
   const spec = CUES[cue]
   const volume = busVolume(spec.bus) * dB((spec.gainDb ?? 0) + volumeDb)
   try {
     scene.sound.playAudioSprite(bank, marker, { volume, detune })
   } catch {
-    return
+    return giveBack()
   }
   record({ cue, marker, bus: spec.bus, at: now })
 }
@@ -116,7 +126,7 @@ export function startMusic(scene: Phaser.Scene, key: MusicKey): void {
   try {
     const music = scene.sound.add(key, { loop: true, volume: themeVolume(key, false) })
     music.play()
-    theme = { key, sound: music, ducked: false, tween: null, unhook: null }
+    theme = { key, sound: music, ducked: false, rampTarget: null, tween: null, unhook: null }
   } catch {
     theme = null
   }
@@ -150,8 +160,14 @@ export function musicVolume(): number | null {
 /** After a slider moves, the playing theme and voice line take the new level. */
 export function applyVolumes(): void {
   if (theme) {
-    endRamp(theme)
-    theme.sound.setVolume(themeVolume(theme.key, theme.ducked))
+    const target = themeVolume(theme.key, theme.ducked)
+    // A ramp already heading for this level (a duck's release, when a scene resumes) runs on; a moved slider ends it.
+    if (theme.tween && theme.rampTarget === target) {
+      // leave it
+    } else {
+      endRamp(theme)
+      theme.sound.setVolume(target)
+    }
   }
   if (voice) voice.sound.setVolume(busVolume('voice'))
 }
@@ -163,6 +179,7 @@ export function duck(scene: Phaser.Scene, on: boolean): void {
   endRamp(held)
   held.ducked = on
   const target = themeVolume(held.key, on)
+  held.rampTarget = target
   // A scene shut down mid-ramp takes its tweens with it: the theme goes to where the ramp was heading.
   const onShutdown = () => {
     if (theme !== held) return
@@ -175,6 +192,7 @@ export function duck(scene: Phaser.Scene, on: boolean): void {
     duration: on ? DUCK_ATTACK_MS : DUCK_RELEASE_MS,
     onComplete: () => {
       held.tween = null
+      held.rampTarget = null
       held.unhook?.()
       held.unhook = null
     },

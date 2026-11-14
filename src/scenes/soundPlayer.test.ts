@@ -51,6 +51,7 @@ function fakeScene(json: Record<string, unknown> = { battle: bankJson('battle'),
   const delayed: { ms: number; fn: () => void }[] = []
   const tweens: { targets: unknown; volume: number; duration: number; onComplete?: () => void }[] = []
   const shutdown: (() => void)[] = []
+  const ramps: { stopped: boolean }[] = []
   const scene = {
     events: {
       once: (_event: string, fn: () => void) => shutdown.push(fn),
@@ -75,11 +76,13 @@ function fakeScene(json: Record<string, unknown> = { battle: bankJson('battle'),
     tweens: {
       add: (config: { targets: unknown; volume: number; duration: number; onComplete?: () => void }) => {
         tweens.push(config)
-        return { stop: () => {} }
+        const tween = { stopped: false, stop: () => { tween.stopped = true } }
+        ramps.push(tween)
+        return tween
       },
     },
   }
-  return { scene: scene as unknown as Phaser.Scene, sprites, added, delayed, tweens, shutdown }
+  return { scene: scene as unknown as Phaser.Scene, sprites, added, delayed, tweens, shutdown, ramps }
 }
 
 let player: Player
@@ -324,5 +327,38 @@ describe('installLimiter', () => {
   it('does nothing without Web Audio', () => {
     expect(() => player.installLimiter({ sound: {} } as unknown as Phaser.Game)).not.toThrow()
     expect(player.limiter()).toBeNull()
+  })
+})
+
+describe('overall review fixes', () => {
+  it('lets the duck’s release run on when the scene resumes the music', () => {
+    const { scene, ramps } = fakeScene()
+    player.startMusic(scene, 'music_battle')
+    player.duck(scene, true)
+    player.duck(scene, false)
+    player.resumeMusic()
+    expect(ramps[1].stopped).toBe(false)
+  })
+
+  it('still ends a ramp, at the new level, when a slider moves the level it heads for', async () => {
+    const { scene, ramps, added } = fakeScene()
+    const settings = await import('./audioSettings.ts')
+    player.startMusic(scene, 'music_battle')
+    player.duck(scene, true)
+    settings.setAudioLevel('music', 0.5)
+    player.applyVolumes()
+    expect(ramps[0].stopped).toBe(true)
+    expect(added[0].volume).toBeCloseTo(settings.busVolume('music') * settings.MUSIC_GAIN.music_battle * 10 ** (-10 / 20))
+  })
+
+  it('does not spend a variant on a play the voice limits refuse', () => {
+    const { scene, sprites } = fakeScene()
+    const cue = 'battle.hit.slash'
+    for (let i = 0; i < 40; i++) player.playCue(scene, cue)
+    now += 100000
+    for (let i = 0; i < 40; i++) player.playCue(scene, cue)
+    // three voices at most each time: the six that sounded are one bag, every variant once
+    expect(sprites).toHaveLength(6)
+    expect(new Set(sprites.map((s) => s.marker)).size).toBe(6)
   })
 })
