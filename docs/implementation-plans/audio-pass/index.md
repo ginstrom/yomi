@@ -343,7 +343,7 @@ export const DUCK_RELEASE_MS = 600
 | 14 | [Narration data model and exporter](14-narration-data.md) | Beat fields, `narration.ts`, rules and staleness tests, provisional `voices.toml`, `smol-toml`, `scripts/narration.ts` | 01 | no | — | done (`a58449b`) |
 | 15 | [Narrator voice design](15-voice-design.md) | `voice design` in full for the chosen narrator; emotion candidates for the user | 03 (G1), 14 | no | **G9** | done (G9 passed 2026-11-14, `A_0` kept; `df250f3`, `70a21c2`) |
 | 16 | [Render the shipped lines](16-voice-render.md) | Clips committed; `voices.toml` final; `voice render`; `intro.opening` and `source.sighted` voiced; voice README | 15 (G9) | no | **G10** | awaiting review (G10; `Audio pass step 16: Render the shipped lines`) |
-| 17 | [Story playback](17-story-playback.md) | `storyAudio.ts`; `StoryScene` plays, cuts, skips, ducks; probe; AC14 | 05, 16 | **yes** | — | done |
+| 17 | [Story playback](17-story-playback.md) | `storyAudio.ts`; `StoryScene` plays, cuts, skips, ducks; probe; AC14 | 05, 16 | **yes** | — | done (`3467f57`) |
 | 18 | [Final review and docs](18-final-review.md) | Full verification (AC1–AC16), README and CLAUDE.md audit, manual, the in-game listening review | all | **yes** | **G11** | pending |
 
 ## Execution order and parallel work
