@@ -303,3 +303,9 @@ Prefix every command with `PATH=/opt/homebrew/opt/node@26/bin:$PATH`:
 - Deviations: an ability event whose id has no `ABILITY_SOUNDS` entry returns no cues (routines are attacks and never reach this branch). A light-walking unit (hero, bandit) whose body icon is `armor` or `plate` steps armoured; kind overrides otherwise.
 - E2E (`e2e/battle.test.ts`, describe "a battle's sounds"): steps per hex (armoured), sword swing then outcome, mage's `battle.cast.arcane` and outcome, a fall's `battle.death.*` and the victory sting (and the level-up sting after it when the result lists a level).
 - Verification: `npm test` 85 files, 1614 tests pass; `npm run test:browser` 11 files, 124 tests pass; `npm run sounds:check` up to date. No `LOG_SCHEMA_VERSION` or `SAVE_VERSION` change.
+
+#### Review round 1 (found 0 defects, 2 tidy-ups, both fixed)
+
+- An attack bonus with neither an element nor a bane no longer falls back to `battle.element.blight`; it is silent (test added to the element-sweetener case).
+- The e2e level-up assertion is unconditional: the seeded fight levels three heroes.
+- `npm test`: 85 files, 1614 tests pass. `npm run test:browser -- e2e/battle.test.ts`: 17 tests pass.

@@ -381,7 +381,8 @@ export function eventSounds(event: BattleEvent, context?: SoundContext): SoundCu
       if (inMetal(event.defender, context)) cues.push({ cue: 'battle.armor.metal', delayMs: at })
       if (event.critical) cues.push({ cue: 'battle.hit.crit', delayMs: at })
       for (const bonus of event.bonus.filter((b) => b.damage > 0).slice(0, 2)) {
-        cues.push({ cue: bonus.bane ? 'battle.element.blight' : bonus.element ? elementCue(bonus.element) : 'battle.element.blight', delayMs: at + 30 })
+        const element = bonus.bane ? 'blight' : bonus.element
+        if (element) cues.push({ cue: elementCue(element), delayMs: at + 30 })
       }
       if ((event.healed ?? 0) > 0) cues.push({ cue: 'battle.heal.small', delayMs: at + 60 })
       return cues

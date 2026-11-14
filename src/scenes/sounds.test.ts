@@ -324,6 +324,8 @@ describe('eventSounds: attacks by class', () => {
     ] as AttackEvent['bonus']
     const three = eventSounds(strike({ bonus }), ctx(hero('sword')))
     expect(cues(three).filter((c) => c.startsWith('battle.element.'))).toEqual(['battle.element.frost', 'battle.element.blight'])
+    // An entry with neither an element nor a bane is silent.
+    expect(cues(eventSounds(strike({ bonus: [{ rolled: 2, damage: 2 }] }), ctx(hero('sword'))))).toEqual(['battle.swing.blade', 'battle.hit.slash'])
     // Warded to nothing: silent.
     expect(cues(eventSounds(strike({ bonus: [{ element: 'fire', rolled: 3, damage: 0 }] }), ctx(hero('sword'))))).not.toContain('battle.element.fire')
   })

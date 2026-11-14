@@ -462,9 +462,8 @@ describe('a battle’s sounds', () => {
     expect(over.state.winner).toBe('player')
     const log = await heard(game, '^stings\\.victory$')
     expect(log.some((cue) => cue.startsWith('battle.death.'))).toBe(true)
-    if (over.result.some((line) => line.includes('reaches level'))) {
-      const after = await heard(game, '^stings\\.level_up$')
-      expect(after.indexOf('stings.level_up')).toBeGreaterThan(after.indexOf('stings.victory'))
-    }
+    expect(over.result.some((line) => line.includes('reaches level'))).toBe(true)
+    const after = await heard(game, '^stings\\.level_up$')
+    expect(after.indexOf('stings.level_up')).toBeGreaterThan(after.indexOf('stings.victory'))
   })
 })
