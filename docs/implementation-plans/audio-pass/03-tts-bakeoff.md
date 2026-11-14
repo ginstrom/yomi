@@ -171,8 +171,10 @@ Spectrograms looked at (smoke design clip, five bake-off clips): speech througho
 - `uv run --project tools/audio pytest tools/audio/tests`: 148 passed (117 before the step).
 - Base install without the extra, in a fresh environment (`UV_PROJECT_ENVIRONMENT=<scratch>`): 22 packages, `mlx` and `torch` not installed, `yomi-audio sfx audition --help` works, pytest 148 passed. `test_engines_import_without_the_tts_extra` holds that the engines and CLI import without loading mlx.
 - `PATH=/opt/homebrew/opt/node@26/bin:$PATH npm test`: 84 files, 1510 tests passed. No `src/` change, so no browser run.
-- `git status`: nothing under `audio/bakeoff/` (ignored by `.gitignore:28`); `git ls-files` holds no weights and no WAV but the eight existing placeholders.
+- `git status`: nothing under `audio/bakeoff/` (ignored by `.gitignore:28`); `git ls-files` holds no weights and no WAV but the ten existing placeholders (eight effects, two stings; deleted since by step 05).
 
 **For later steps:** step 15 reads `voice.py`'s `NARRATORS`, `REFERENCE_TEXT` and `design_voice`, and replaces the automatic pick with the user's; the pins to copy into `voices.toml` are in `tts/models.py` (use the mlx-community repo and revision as `model`/`revision`, the engine fingerprint carries the upstream). Step 16's `voice render` can reuse `postprocess` and the engines as they are. `ADAPTER_VERSION` is 1.
 
-**Status:** awaiting review at gate **G1**. Commit `667efdd`.
+**Gate G1 passed.** Outcome: configuration (b), Chatterbox Turbo, with narrator A and the neutral clip `A_0`. The user chose informally by ear (favourites c05, c07 and c08, which are b/A, and c02, which is a/B) and did not fill in the score sheet, so there are no per-configuration means. c22 (b) has a click near its end: re-take it if its line ships.
+
+**Status:** done. Commit `667efdd`.
