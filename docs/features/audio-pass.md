@@ -49,6 +49,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 ## Verification
 
 - 01: opus engineer, opus reviewer, clean in 1 round.
+- 02: opus engineer, opus reviewer, clean in round 2 (round 1: incremental build skipped licence/SHA checks; fixed `87e09cb`).
 - 04: sonnet engineer; awaiting gate G2 (28 Freesound files, list in `freesound-wanted.md`, given to the user 2026-11-14); sonnet reviewer clean in 1 round.
 - 03: opus engineer, opus reviewer, clean in 1 round; awaiting gate G1 (bake-off clips in `audio/bakeoff/`, given to the user 2026-11-14).
 
