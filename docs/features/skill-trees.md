@@ -1,7 +1,7 @@
 # Feature: skill trees and progression
 
 **Slug:** skill-trees
-**Phase:** 4 — implementation (stage 1 done at fd6a630; stage 2 done at 82eb925; stage 3 from step 17)
+**Phase:** 4 — implementation (stages 1–3 done, stage 3 at 83a67b4; stage 4 from step 24)
 
 ## Request (user's words)
 
@@ -41,6 +41,8 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 | 2026-11-14 | Blademaster refunds only attacks and strike techniques, not area techniques (Volley, Consecrate); a routine felling on any strike refunds its whole cost | orchestrator | refund areas too (needs an AbilityEvent field) | Blademaster is the melee duellist's capstone; an area refund would be a balance outlier and a schema change |
 | 2026-11-14 | A hit that deathblows a unit doesn't spend its Unbreakable save (judged on the hp the hit would leave) | orchestrator | spend the save anyway | Avoids "endures the blow. A deathblow!" and a wasted save that Revive would later expose |
 | 2026-11-14 | Purify is a cleanse, not a heal: excluded from world-map healing, `autoHeal` and the policy's heal choices (its own `purifyCast` step uses it); a purified ally gets no AP back this turn | orchestrator | count it as a 1d6 heal; refund AP | A 1d6 heal at 4 mana would crowd out real heals; AP refund adds a rule for little play |
+| 2026-11-14 | Stage 4 closes the gap (449 → 215–250) mostly with tougher foes: foe counts, hit points per level, bandit plans and gear; trim only outlier skills. Reverses design §7.2's lever order | user | weaker skills first; accept easier | Keep skills punchy so choices feel powerful |
+| 2026-11-14 | Capstones checked at level 12 against Bandit Camp threat 7, each path's capstone within ±10% of the best | user | judgement only | Threat-5 cells are won ~100% at level 12 |
 | 2026-11-13 | Own branch `skill-trees` off main | orchestrator | commit on main | Precedent: one branch per feature |
 
 ## Open questions
@@ -139,7 +141,7 @@ Path parity, first look (Bandit Camp threat 4, 500 battles, each plan in its rol
 | F1 / F2 / F3 | 500 / 499 / 441 | 500 / 500 / 493 | 500 / 500 / 493 | 500 / 500 / 493 |
 | run time (one party) | 270 s | 329 s | 341 s | 272 s (company 270 s, `--ready-level 10` 580 s, `--ready-level 12` 883 s) |
 
-No campaign fell under 150 of 500. The three campaigns, BC3, BC4, SN5 and SP5 stay above their bands (BC5 inside), as at stage 2, and SG10 is far above step 01's (386, from 422). The stage-3 nodes change almost nothing here, because the plans reach them late: a hero has 3 picks at creation and one every even level, so level 8 holds 7 nodes, and the tier-3 traits (Deathblow, Counter, Blademaster and the rest) and the capstones sit past the nodes a level-7 to level-10 hero has bought. The summary's trait lines (counters, deathblows, revives, Unbreakable saves) read 0.000 on every run but the cells below.  The ready-made heroes' traits at level 12 are Rooted, Guardian, Unbreakable and Deadeye.
+No campaign fell under 150 of 500. The three campaigns, BC3, BC4, SN5 and SP5 stay above their bands (BC5 inside), as at stage 2, and SG10 is far above step 01's (386, from 422). The stage-3 nodes change almost nothing here, because the plans reach them late: a hero has 3 picks at creation and one every even level, so level 8 holds 7 nodes, and the tier-3 traits (Deathblow, Counter, Blademaster and the rest) and the capstones sit past the nodes a level-7 to level-10 hero has bought. The summary's trait lines (counters, deathblows, revives, Unbreakable saves) read 0.000 on every run.  The ready-made heroes' traits at level 12 are Rooted, Guardian, Unbreakable and Deadeye.
 
 AC8, `--ready-level 12`, 500 campaigns (883 s): 473 beat the Source (94.6%), 12 fell, 15 ran out of days, in 736 days and 73.6 battles a campaign; the vanguard ends at levels 11.5 to 12.1. 449 of 500 campaigns (89.8%) end with a capstone in the vanguard: **Unbreakable 627** (Aldric and recruited knights), **Deadeye 452** (Brenna), **Meteor 0**. Delwyn does not reach Meteor by level 12: the `evoker_healer` plan lists it ninth, but his creation pick Arcane Study is not in the plan, so by level 12 (nine picks: three at creation, six at levels 2 to 12) he holds eight plan nodes and Arcane Study, and Meteor is his tenth pick, taken at level 14 (checked on a hero raised to 12 and to 14 with `raisedParty`). So Unbreakable and Deadeye are met and Meteor is not at level 12; stage 4 decides whether to move the plan (Meteor ahead of Mending or Pyromancy) or the level. Callings at the end: Heavy Knight 1443, Evoker 519, Ranger 504, Swordmaster 6.
 
