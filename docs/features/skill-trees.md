@@ -1,7 +1,9 @@
 # Feature: skill trees and progression
 
 **Slug:** skill-trees
-**Phase:** 4 — implementation (stages 1–3 done, stage 3 at 83a67b4; stage 4 from step 24)
+**Phase:** 4 — implementation (stages 1–3 done; step 24 done and clean at fa49575; step 25 in progress at 49a395a)
+
+**Resume point (usage limit, 2026-11-14):** step 25 has the Horror at 63 hit points (6f9eee8): one party 243, company 243, `--ready-level 10` 445 (band 370–420). User decision: "Much harder Source", chosen knowing the option said one-party and company would drop to about 100 of 500. Next: harden the Source as little as gets `--ready-level 10` into 370–420, aiming near 420. Pick the lever that costs one-party and company least: Horror HP, another guardian, guardian levels or kinds, or Horror damage. Compare at the Source cells for levels 8, 10 and 11 first. Then run the three campaigns. Record one-party and company as the accepted cost and don't win them back. Then do the final cells (SG7, SG10), the guard, the "25 final" column, Verification and the CLAUDE.md figures. After that: step 26, the polish pass, then phase 5.
 
 ## Request (user's words)
 
@@ -20,6 +22,8 @@ Intake clarification (2026-11-13), on how classes fit: "I actually like the abil
 Large/structural (hero abilities in the engine, new perk tree data, save format, AI policy, simulator retune, UI). No separate architecture brief: the engine already has monster abilities, statuses and a data-driven perk/spell system to extend, so the designer grounds the integration in its design (orchestrator's call).
 
 ## Decision log
+
+- Step 25, `--ready-level 10` at 445 (user): "Much harder Source". The alternatives were to accept and revisit in stage 9, or a Source that scales to the party.
 
 | Date | Decision | By | Alternatives | Reason |
 |---|---|---|---|---|
