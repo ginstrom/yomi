@@ -4,7 +4,7 @@ import type { Character } from '../character/character.ts'
 import type { Expedition } from '../game/expedition.ts'
 import { partyById, selectedParty, type GameState } from '../game/gameState.ts'
 import type { ButtonProbe, ExchangeProbe } from '../testHook.ts'
-import { soundVolume } from './audioSettings.ts'
+import { playCue } from './soundPlayer.ts'
 import type { Point } from './boardGeometry.ts'
 import { exchangeMove, exchangePartners, heroNote, itemMove, baggageLines, tryExchange, type ExchangePick } from './exchangeView.ts'
 import { ITEM_ICON_KEYS, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
@@ -166,7 +166,7 @@ export class ExchangeScene extends Phaser.Scene {
     if (picked && picked.row !== row) {
       box.setInteractive({ useHandCursor: true })
       box.on('pointerdown', () => {
-        this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+        playCue(this, 'ui.click')
         this.time.delayedCall(0, () => this.onHeader(row))
       })
     }
@@ -183,7 +183,7 @@ export class ExchangeScene extends Phaser.Scene {
     edge.on('pointerover', () => edge.setStrokeStyle(selected ? 3 : 2, 0xe8c766))
     edge.on('pointerout', () => edge.setStrokeStyle(selected ? 3 : 2, rest))
     edge.on('pointerdown', () => {
-      this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+      playCue(this, 'ui.click')
       this.time.delayedCall(0, () => this.onFace(row, index))
     })
     const name = this.add.text(at.x, at.y + PORTRAIT_SIZE / 2 + 4, hero.name, { fontFamily: FONT, fontSize: '13px', color: selected ? GOLD : TEXT }).setOrigin(0.5, 0)
@@ -220,7 +220,7 @@ export class ExchangeScene extends Phaser.Scene {
       back.on('pointerover', () => back.setFillStyle(0x2c2418, 0.95))
       back.on('pointerout', () => back.setFillStyle(0x1b1712, 0.95))
       back.on('pointerdown', () => {
-        this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+        playCue(this, 'ui.click')
         this.time.delayedCall(0, () => this.onItem(row, line.index, line.name))
       })
       const icon = this.add.image(left + 14, at.y, ITEM_ICON_KEYS[item.icon]).setDisplaySize(18, 18)

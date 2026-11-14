@@ -16,6 +16,10 @@ The page is one canvas, so there is nothing to select (but for the player's manu
 
 Games open with `?seed=` (`WINNING_SEED` unless told otherwise), so dice and enemy choices repeat from run to run, and at ten times life speed (`SPEED`), which the hook applies to every scene's timers and tweens. If a change to the rules makes `fightBattle` lose with that seed, pick another seed that wins; the test is about the hand-over after a victory, not about balance. The three-battle journey in `character.test.ts` opens with a seed of its own for that reason.
 
+## Sound
+
+`window.__yomi.audioLog()` lists the last 50 sounds the player (`src/scenes/soundPlayer.ts`) played, oldest first, each `{ cue, marker, bus, at }`: assert on the cues a click or a battle event logs, not on what is heard. `__yomi.playCue(cue)` plays a cue through the player on the topmost running scene, and `__yomi.limiter()` gives the output limiter's settings and its gain reduction now (null without Web Audio). Headless Chromium starts Web Audio only after a first gesture, so click something before asserting on the limiter. `audio.test.ts` covers the banks loading, the menu's four sliders, a battle's cues and the voice limits.
+
 ## What belongs here
 
 A test here is for what only the running game shows: scenes handing over, overlays pausing and resuming what is under them, input reaching the engine, assets loading, layout after a resize. A rule of play is tested in the domain layer, where it runs in milliseconds.

@@ -49,7 +49,7 @@ import { applyMove, planDrag, validTargets, type DragSource, type DropTarget } f
 import { WARDS_WIDE_ROW_CHARS, attackCostWarning, onHitLines, wardsLines } from './gearCompare.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
 import { createPips } from './socketPips.ts'
-import { soundVolume } from './audioSettings.ts'
+import { playCue } from './soundPlayer.ts'
 import { isSecondaryClick } from './clicks.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
@@ -542,7 +542,7 @@ export class InventoryScene extends Phaser.Scene {
     const bg = this.add.rectangle(x, y, TAB_W, TAB_H, 0x1b1712, 0.95).setStrokeStyle(2, 0x6b5a3a)
     bg.setInteractive({ useHandCursor: true })
     bg.on('pointerdown', () => {
-      this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+      playCue(this, 'ui.click')
       this.showTab(tab)
     })
     const text = this.add
@@ -797,7 +797,7 @@ export class InventoryScene extends Phaser.Scene {
     bg.on('pointerover', () => bg.setFillStyle(0x3a2f1c, 0.95))
     bg.on('pointerout', () => bg.setFillStyle(0x1b1712, 0.95))
     bg.on('pointerdown', () => {
-      this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+      playCue(this, 'ui.click')
       onClick()
     })
     content.add([bg, text])
@@ -955,7 +955,7 @@ export class InventoryScene extends Phaser.Scene {
     if (!enabled) return
     bg.setInteractive({ useHandCursor: true })
     bg.on('pointerdown', () => {
-      this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+      playCue(this, 'ui.click')
       if (choosing) this.setWorldCast(null)
       else if (healsOne(spell)) this.setWorldCast(spell)
       else this.heal(spell)
@@ -980,7 +980,7 @@ export class InventoryScene extends Phaser.Scene {
   /** Casts a heal out of battle, on `target` or on the whole party, and redraws. */
   private heal(spell: HeroSpellId, target?: Character): void {
     const party = this.members.map((member) => member.character)
-    if (castOnWorldMap(this.character, spell, party, target)) this.sound.play('sfx_heal', { volume: soundVolume('sfx_heal') })
+    if (castOnWorldMap(this.character, spell, party, target)) playCue(this, 'battle.impact.heal')
     this.time.delayedCall(0, () => this.buildContent())
   }
 
@@ -1436,7 +1436,7 @@ export class InventoryScene extends Phaser.Scene {
       this.groundScroll.setCount(this.ground.length)
       this.groundScroll.scrollToEnd()
     }
-    this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+    playCue(this, 'ui.click')
     // Next tick: the redraw destroys the slot whose click handler this runs in.
     this.time.delayedCall(0, () => this.buildContent())
   }
@@ -1444,7 +1444,7 @@ export class InventoryScene extends Phaser.Scene {
   /** Spends a skill point or a perk pick, as `spend` does and reports, and redraws the panel to match. */
   private advance(spend: () => boolean): void {
     if (!this.canAdvance || !spend()) return
-    this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+    playCue(this, 'ui.click')
     // Next tick: the redraw destroys the button whose click handler this runs in.
     this.time.delayedCall(0, () => this.buildContent())
   }

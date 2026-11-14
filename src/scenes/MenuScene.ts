@@ -3,7 +3,8 @@ import type { GameState } from '../game/gameState.ts'
 import { SLOT_IDS, describeSlot, latestSlot, readSlot, type SlotId } from '../game/saveSlots.ts'
 import { buttonProbe, type MenuProbe } from '../testHook.ts'
 import { setTutorial } from '../story/story.ts'
-import { getAudioSettings, setAudioLevel, soundVolume, type AudioChannel } from './audioSettings.ts'
+import { getAudioSettings, setAudioLevel, type AudioChannel } from './audioSettings.ts'
+import { applyVolumes, playCue } from './soundPlayer.ts'
 
 interface MenuData {
   /** The paused scene the menu was opened over, which Continue goes back to. */
@@ -25,7 +26,7 @@ const SLOT_GAP = 14
 
 const SLIDER_W = 200
 const SLIDER_H = 10
-const SLIDER_ROW_GAP = 48
+const SLIDER_ROW_GAP = 44
 const SLIDER_LABEL_W = 130
 const SLIDER_VALUE_W = 56
 
@@ -33,6 +34,7 @@ const SLIDERS: { channel: AudioChannel; label: string }[] = [
   { channel: 'master', label: 'Master' },
   { channel: 'effects', label: 'Sound FX' },
   { channel: 'music', label: 'Music' },
+  { channel: 'voice', label: 'Voice' },
 ]
 
 /** A volume control: a track to click or drag along, its filled part and a readout. */
@@ -137,6 +139,15 @@ export class MenuScene extends Phaser.Scene {
         tutorial: buttonProbe(this.tutorialButton),
       },
       slots: this.slots.map(({ button, line, loadable }) => ({ ...buttonProbe(button, loadable), line })),
+      sliders: this.sliders.map(({ channel, label, track }) => ({
+        channel,
+        label: label.text,
+        level: getAudioSettings()[channel],
+        visible: track.visible,
+        y: track.y,
+        left: track.x,
+        right: track.x + SLIDER_W,
+      })),
     }
   }
 
@@ -168,7 +179,7 @@ export class MenuScene extends Phaser.Scene {
       bg.on('pointerout', () => bg.setFillStyle(0x2b6cb0))
       bg.on('pointerdown', () => {
         if (this.manualOpen) return
-        this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+        playCue(this, 'ui.click')
         onClick()
       })
     }
@@ -326,16 +337,15 @@ export class MenuScene extends Phaser.Scene {
     const level = Math.round(Phaser.Math.Clamp((pointer.x - slider.track.x) / SLIDER_W, 0, 1) * 100) / 100
     const settings = setAudioLevel(slider.channel, level)
     if (slider.channel === 'master') this.sound.volume = settings.master
+    applyVolumes()
     this.drawSlider(slider)
   }
 
-  /** Letting go of the effects or master slider plays a click at the new level. */
+  /** Letting go of the effects or master slider plays a click at the new level; the music and voice sliders play nothing. */
   private endDrag(): void {
     const released = this.dragging
     this.dragging = null
-    if (released && released.channel !== 'music') {
-      this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
-    }
+    if (released && (released.channel === 'master' || released.channel === 'effects')) playCue(this, 'ui.click')
   }
 
   private onEscape(): void {

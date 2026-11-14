@@ -7,7 +7,7 @@ import { homeParty } from '../game/guildHall.ts'
 import { actingFor } from './encampmentView.ts'
 import { encampmentName } from '../game/worldMap.ts'
 import type { ButtonProbe, EncampmentProbe } from '../testHook.ts'
-import { soundVolume } from './audioSettings.ts'
+import { playCue } from './soundPlayer.ts'
 import type { Point } from './boardGeometry.ts'
 import { facilityFrame, facilityLabel, plotAt } from './encampmentView.ts'
 import type { Rect } from './mapScroll.ts'
@@ -210,7 +210,7 @@ export class EncampmentScene extends Phaser.Scene {
       edge.setVisible(marked)
     })
     building.on('pointerdown', () => {
-      this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+      playCue(this, 'ui.click')
       // Next tick: the redraw destroys the sprite whose handler this runs in.
       this.time.delayedCall(0, () => this.select(facility.id))
     })

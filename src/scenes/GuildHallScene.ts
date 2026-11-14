@@ -21,7 +21,7 @@ import {
 } from '../game/guildHall.ts'
 import { hallAct, hallColumns, refOf, typeInRename, type HallColumn, type HallPick, type RenameField } from './hallColumns.ts'
 import type { ButtonProbe, GuildHallProbe } from '../testHook.ts'
-import { soundVolume } from './audioSettings.ts'
+import { playCue } from './soundPlayer.ts'
 import type { Point } from './boardGeometry.ts'
 import type { Rect } from './mapScroll.ts'
 import { addPanelButton, fitText } from './panelButton.ts'
@@ -239,7 +239,7 @@ export class GuildHallScene extends Phaser.Scene {
       if (picked && picked.party !== column.party) {
         box.setInteractive({ useHandCursor: true })
         box.on('pointerdown', () => {
-          this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+          playCue(this, 'ui.click')
           this.time.delayedCall(0, () => this.onHeader(column.party))
         })
       }
@@ -299,7 +299,7 @@ export class GuildHallScene extends Phaser.Scene {
     edge.on('pointerover', () => edge.setStrokeStyle(selected ? 3 : 2, 0xe8c766))
     edge.on('pointerout', () => edge.setStrokeStyle(selected ? 3 : 2, rest))
     edge.on('pointerdown', () => {
-      this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+      playCue(this, 'ui.click')
       this.time.delayedCall(0, () => this.onFace(party, index))
     })
     const name = this.add.text(at.x + FACE_SIZE / 2 + 8, at.y - 14, hero.name, { fontFamily: FONT, fontSize: '13px', color: selected ? GOLD : TEXT })
@@ -330,7 +330,7 @@ export class GuildHallScene extends Phaser.Scene {
       edge.on('pointerover', () => edge.setStrokeStyle(marked ? 3 : 2, 0xe8c766))
       edge.on('pointerout', () => edge.setStrokeStyle(marked ? 3 : 2, rest))
       edge.on('pointerdown', () => {
-        this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+        playCue(this, 'ui.click')
         this.time.delayedCall(0, onClick)
       })
     }

@@ -13,6 +13,8 @@ import type { EquipmentSlot } from './inventory/inventory.ts'
 import type { RuneKey } from './inventory/runes.ts'
 import type { Point } from './scenes/boardGeometry.ts'
 import type { Rect } from './scenes/mapScroll.ts'
+import { audioLog, limiter, playCue, type AudioLogEntry } from './scenes/soundPlayer.ts'
+import { CUES, type CueId } from './scenes/sounds.ts'
 
 /**
  * What the in-browser tests (e2e/) see of the running game. The page is one
@@ -60,6 +62,8 @@ export interface MenuProbe {
   }
   /** The three save slots' rows, each with the line it reads; enabled when it holds a game that can be loaded. */
   slots: Array<ButtonProbe & { line: string }>
+  /** The options' volume sliders, top first: a click at x between `left` (0) and `right` (1) on row `y` sets the level. */
+  sliders: Array<{ channel: string; label: string; level: number; visible: boolean; y: number; left: number; right: number }>
 }
 
 export interface PartyProbe {
@@ -483,6 +487,12 @@ export interface TestHook {
   frame(): number
   /** How many times faster than life every scene's timers and tweens run. */
   speed: number
+  /** The last 50 sounds played through the player (soundPlayer.ts), oldest first. */
+  audioLog(): AudioLogEntry[]
+  /** Plays a cue through the player on the topmost running scene, as the game would; an unknown cue plays nothing. */
+  playCue(cue: string): void
+  /** The output limiter's settings (dB, ratio, seconds) and its gain reduction now (dB, 0 or below), or null without Web Audio. */
+  limiter(): { threshold: number; knee: number; ratio: number; attack: number; release: number; reduction: number } | null
 }
 
 declare global {
@@ -510,6 +520,17 @@ export function installTestHook(game: Phaser.Game): void {
     },
     frame: () => game.loop.frame,
     speed: 1,
+    audioLog: () => [...audioLog()],
+    playCue: (cue) => {
+      const scene = game.scene.getScenes(true).at(-1)
+      if (scene && cue in CUES) playCue(scene, cue as CueId)
+    },
+    limiter: () => {
+      const node = limiter()
+      if (!node) return null
+      const { threshold, knee, ratio, attack, release, reduction } = node
+      return { threshold: threshold.value, knee: knee.value, ratio: ratio.value, attack: attack.value, release: release.value, reduction }
+    },
   }
   // Every frame, as a scene's clock and tweens start over when the scene does.
   game.events.on('prestep', () => {

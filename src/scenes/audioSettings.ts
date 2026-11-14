@@ -1,16 +1,17 @@
 import { storage } from '../storage.ts'
-import { MUSIC_VOLUME, SOUND_VOLUME, type SoundKey } from './sounds.ts'
+import type { Bus, MusicKey } from './sounds.ts'
 
 /** The player's volume levels, each from 0 (silent) to 1 (full). */
 export interface AudioSettings {
   master: number
   effects: number
   music: number
+  voice: number
 }
 
 export type AudioChannel = keyof AudioSettings
 
-export const DEFAULT_AUDIO_SETTINGS: Readonly<AudioSettings> = { master: 1, effects: 1, music: 1 }
+export const DEFAULT_AUDIO_SETTINGS: Readonly<AudioSettings> = { master: 1, effects: 1, music: 1, voice: 1 }
 
 const STORAGE_KEY = 'yomi.audio'
 
@@ -34,6 +35,7 @@ export function parseAudioSettings(raw: string | null): AudioSettings {
     master: clampLevel(saved.master, DEFAULT_AUDIO_SETTINGS.master),
     effects: clampLevel(saved.effects, DEFAULT_AUDIO_SETTINGS.effects),
     music: clampLevel(saved.music, DEFAULT_AUDIO_SETTINGS.music),
+    voice: clampLevel(saved.voice, DEFAULT_AUDIO_SETTINGS.voice),
   }
 }
 
@@ -65,11 +67,32 @@ export function setAudioLevel(channel: AudioChannel, level: number): AudioSettin
 }
 
 /**
- * The volume to play a sound at: the music channel covers the battle and world
- * map themes and the victory and defeat stings, the effects channel everything
- * else. The master level is applied separately, as the sound manager's global volume.
+ * The music bus's base. The two themes are not re-encoded, and they measure
+ * 2.5 LU apart (public/assets/audio/README.md), so each has its own gain in
+ * `MUSIC_GAIN` instead and the bus itself sits at unity, which also leaves the
+ * stings (on this bus, normalised to −18 LUFS-I by the build) as built.
  */
-export function soundVolume(key: SoundKey, settings: AudioSettings = current): number {
-  const base = key === 'music_battle' || key === 'music_world_map' ? MUSIC_VOLUME : SOUND_VOLUME
-  return base * (key.startsWith('music_') ? settings.music : settings.effects)
+export const MUSIC_BASE = 1
+
+/**
+ * Each theme's gain, bringing it to −24 LUFS-I as played: 10^((−24 − measured)/20),
+ * measured −14.2 LUFS-I for the battle theme and −11.7 for the world map's.
+ * The player applies it on top of `busVolume('music')`.
+ */
+export const MUSIC_GAIN: Record<MusicKey, number> = {
+  music_battle: 10 ** ((-24 + 14.2) / 20),
+  music_world_map: 10 ** ((-24 + 11.7) / 20),
+}
+
+/** Each bus's level at full volume: the sound effects' banks are normalised by the build, so they play as built. */
+export const BUS_BASE: Record<Bus, number> = { effects: 1, ui: 1, voice: 1, music: MUSIC_BASE }
+
+/**
+ * A bus's volume: Sound FX's level covers the effects and ui buses, the music
+ * level the themes and the stings, the voice level narration. The master level
+ * is applied separately, as the sound manager's global volume.
+ */
+export function busVolume(bus: Bus, settings: AudioSettings = current): number {
+  const level = bus === 'effects' || bus === 'ui' ? settings.effects : bus === 'music' ? settings.music : settings.voice
+  return level * BUS_BASE[bus]
 }

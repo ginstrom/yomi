@@ -15,7 +15,7 @@ The main menu offers:
 - **New**: start a new game.
 - **Continue**: return to the game paused under the menu or, if none is paused, load the game saved most recently.
 - **Load**: choose one of the three save slots.
-- **Options**: set the volume of the master channel, sound effects and music. Opened during a game, it also turns that game's tutorial on or off.
+- **Options**: set the volume of the master channel, sound effects, music and voice. Opened during a game, it also turns that game's tutorial on or off.
 - **Manual**: read this manual. **Back to game** at its top, or **Esc**, returns to the menu, and the game paused under it is just as you left it.
 
 Press **Esc** on the world map or in battle to open this menu over the game. Press it again to return.

@@ -71,7 +71,7 @@ import { DESCRIPTION_INDENT, foeInfoLines } from './foeInfo.ts'
 import { scheduleEvents, type Cue } from './eventSchedule.ts'
 import { ScrollingLog } from './scrollingLog.ts'
 import { SEED_KEY } from './seed.ts'
-import { soundVolume } from './audioSettings.ts'
+import { pauseMusic, playCue, playCues as playSoundCues, resumeMusic, startMusic, stopMusic } from './soundPlayer.ts'
 import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, RUNE_COLOURS, cssColour, iconTint } from './itemIcons.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
@@ -80,7 +80,7 @@ import { DEFAULT_ENCOUNTER, battleSeed, chooseBattle, foundNames } from './battl
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
 import { showStory, type StoryAnchors } from './StoryScene.ts'
 import { storyFor, type StoryItem } from '../story/story.ts'
-import { eventSounds, type SoundKey } from './sounds.ts'
+import { eventSounds } from './sounds.ts'
 import { describeStatuses, spellMenuRows, targetingHint } from './spellMenu.ts'
 import type { DebugSource } from './debugCommands.ts'
 
@@ -261,7 +261,6 @@ export class BattleScene extends Phaser.Scene {
   private board!: HexBoard
   private names!: Record<UnitId, string>
   private logDumped = false
-  private music: Phaser.Sound.WebAudioSound | Phaser.Sound.HTML5AudioSound | Phaser.Sound.NoAudioSound | null = null
   /** True while the player may act; off during animations and the enemy's turn. */
   private playerControl = false
   /** The player unit that board clicks and the Attack button act for. */
@@ -447,7 +446,7 @@ export class BattleScene extends Phaser.Scene {
     // A paused battle (inventory or menu open) mustn't leave its board cursor on the overlay.
     this.events.on(Phaser.Scenes.Events.PAUSE, () => this.setHovered(null))
     // The menu pauses the theme; the options there may have changed its volume.
-    this.events.on(Phaser.Scenes.Events.RESUME, () => this.resumeMusic())
+    this.events.on(Phaser.Scenes.Events.RESUME, () => resumeMusic())
     // The character panel tells the member it last showed; the menu tells nothing.
     this.events.on(Phaser.Scenes.Events.RESUME, (_sys: Phaser.Scenes.Systems, data?: { member?: number }) => {
       if (data?.member !== undefined) this.selectHero(data.member)
@@ -477,7 +476,7 @@ export class BattleScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
       this.input.setDefaultCursor('default')
-      this.stopMusic()
+      stopMusic('music_battle')
       // Leaving mid-battle (e.g. "New" from the pause menu) still yields a complete log.
       this.engine.abandon()
       this.dumpLog()
@@ -500,8 +499,7 @@ export class BattleScene extends Phaser.Scene {
       if (this.spellMenu && Number.isInteger(row) && row >= 1) this.pickSpell(row - 1)
     })
 
-    this.music = this.sound.add('music_battle', { loop: true, volume: soundVolume('music_battle') })
-    this.music.play()
+    startMusic(this, 'music_battle')
 
     if (saved) this.showRestored()
     else this.applyEvents(this.engine.getLog())
@@ -694,7 +692,7 @@ export class BattleScene extends Phaser.Scene {
       if (this.menuButton.visible) this.leaveBattle()
       return
     }
-    this.music?.pause()
+    pauseMusic()
     this.scene.launch('Menu', { resume: 'Battle', game: this.gameState })
     this.scene.bringToTop('Menu')
     this.scene.pause()
@@ -799,7 +797,7 @@ export class BattleScene extends Phaser.Scene {
     })
     bg.on('pointerdown', () => {
       if (!isEnabled()) return
-      this.playSound('sfx_ui_click')
+      playCue(this, 'ui.click')
       onClick()
     })
 
@@ -1369,11 +1367,8 @@ export class BattleScene extends Phaser.Scene {
   private showEvent(event: BattleEvent): void {
     this.pushLog(formatEvent(event, this.names))
     // The theme gives way to the victory or defeat sting.
-    if (event.type === 'battle_end') this.stopMusic()
-    for (const { key, delayMs } of eventSounds(event)) {
-      if (delayMs === 0) this.playSound(key)
-      else this.time.delayedCall(delayMs, () => this.playSound(key))
-    }
+    if (event.type === 'battle_end') stopMusic('music_battle')
+    playSoundCues(this, eventSounds(event))
     if (event.type === 'move') {
       this.animateMove(event.unit, event.from, event.path)
     }
@@ -1987,7 +1982,7 @@ export class BattleScene extends Phaser.Scene {
   private pickSpell(index: number): void {
     const row = this.spellMenu?.rows[index]
     if (!row?.enabled) return
-    this.playSound('sfx_ui_click')
+    playCue(this, 'ui.click')
     this.closeSpellMenu()
     this.setTargeting(row.spell)
   }
@@ -2077,21 +2072,6 @@ export class BattleScene extends Phaser.Scene {
       const animationMs = this.applyEvents(this.engine.step(action))
       this.time.delayedCall(animationMs + 200, () => this.continueBattle())
     })
-  }
-
-  private playSound(key: SoundKey): void {
-    this.sound.play(key, { volume: soundVolume(key) })
-  }
-
-  private resumeMusic(): void {
-    if (!this.music) return
-    this.music.setVolume(soundVolume('music_battle'))
-    if (this.music.isPaused) this.music.resume()
-  }
-
-  private stopMusic(): void {
-    this.music?.destroy()
-    this.music = null
   }
 
   private flash(unit: Unit, tint: number): void {

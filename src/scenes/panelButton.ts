@@ -1,5 +1,5 @@
 import type Phaser from 'phaser'
-import { soundVolume } from './audioSettings.ts'
+import { playCue } from './soundPlayer.ts'
 import type { Rect } from './mapScroll.ts'
 
 const FONT = 'monospace'
@@ -41,7 +41,7 @@ export function addPanelButton(
   bg.on('pointerover', () => bg.setFillStyle(0x3a2f1c, 0.95))
   bg.on('pointerout', () => bg.setFillStyle(0x1b1712, 0.95))
   bg.on('pointerdown', () => {
-    scene.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+    playCue(scene, 'ui.click')
     onClick()
   })
 }

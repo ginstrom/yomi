@@ -34,7 +34,7 @@ import {
 import { HexBoard, hexCorners, hexEquals, hexNeighbors, type Hex } from '../grid/hex.ts'
 import { buttonProbe, type WorldProbe } from '../testHook.ts'
 import type { CraftedData } from './CraftingScene.ts'
-import { soundVolume } from './audioSettings.ts'
+import { pauseMusic, playCue, resumeMusic, startMusic, stopMusic } from './soundPlayer.ts'
 import { WORLD_LAYOUT, boardHexAt, boardHexCenter, boardPixelSize, type Point } from './boardGeometry.ts'
 import { CURSORS } from './cursors.ts'
 import { clampOrigin, mapOrigin, pannedOrigin, pressMoved, rectContains, type Rect } from './mapScroll.ts'
@@ -214,7 +214,6 @@ export class WorldScene extends Phaser.Scene {
   /** What the player knows of the hovered hex (`hexInfo`), hidden while no hex is hovered. */
   private infoBox!: Phaser.GameObjects.Rectangle
   /** The world map's theme, looping while the map is open and paused under the menu. */
-  private music: Phaser.Sound.WebAudioSound | Phaser.Sound.HTML5AudioSound | Phaser.Sound.NoAudioSound | null = null
   private infoText!: Phaser.GameObjects.Text
 
   /**
@@ -387,7 +386,7 @@ export class WorldScene extends Phaser.Scene {
     // Back from field crafting, which hands back what it made and the day that passed (`CraftedData`).
     this.events.on(Phaser.Scenes.Events.RESUME, (_sys: Phaser.Scenes.Systems, data?: { member?: number; exchanged?: boolean } & Partial<CraftedData>) => {
       // The menu pauses the theme; the options there may have changed its volume.
-      this.resumeMusic()
+      resumeMusic()
       this.active = data?.member ?? this.active
       // An exchange changed who is in the parties: the column is built again for the selected party's members.
       if (data?.exchanged) this.rebuildColumn()
@@ -401,12 +400,10 @@ export class WorldScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
       this.input.setDefaultCursor('default')
       this.input.keyboard?.removeCapture('HOME')
-      this.music?.destroy()
-      this.music = null
+      stopMusic('music_world_map')
     })
 
-    this.music = this.sound.add('music_world_map', { loop: true, volume: soundVolume('music_world_map') })
-    this.music.play()
+    startMusic(this, 'music_world_map')
 
     const here = monstersHere(this.world, this.expedition())
     this.messageText.setText(
@@ -744,7 +741,7 @@ export class WorldScene extends Phaser.Scene {
     bg.on('pointerover', () => bg.setFillStyle(0x3182ce))
     bg.on('pointerout', () => bg.setFillStyle(0x2b6cb0))
     bg.on('pointerdown', () => {
-      this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+      playCue(this, 'ui.click')
       onClick()
     })
     return this.add.container(0, 0, [bg, text]).setSize(width, BUTTON_H)
@@ -1477,15 +1474,9 @@ export class WorldScene extends Phaser.Scene {
     this.scene.pause()
   }
 
-  private resumeMusic(): void {
-    if (!this.music) return
-    this.music.setVolume(soundVolume('music_world_map'))
-    if (this.music.isPaused) this.music.resume()
-  }
-
   private openMenu(): void {
     if (this.scene.isPaused()) return
-    this.music?.pause()
+    pauseMusic()
     this.scene.launch('Menu', { resume: 'World', game: this.gameState })
     this.scene.bringToTop('Menu')
     this.scene.pause()

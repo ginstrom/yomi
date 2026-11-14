@@ -3,7 +3,7 @@ import { maxHp, type Character } from '../character/character.ts'
 import { PORTRAIT_IDS } from '../character/portraits.ts'
 import { canAdvance } from '../character/progression.ts'
 import type { PortraitProbe } from '../testHook.ts'
-import { soundVolume } from './audioSettings.ts'
+import { playCue } from './soundPlayer.ts'
 import {
   COLUMN_COLOR,
   COLUMN_EDGE,
@@ -69,7 +69,7 @@ export class PartyColumn {
       frame.on('pointerover', () => this.setHovered(index))
       frame.on('pointerout', () => this.setHovered(null))
       frame.on('pointerdown', () => {
-        scene.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+        playCue(scene, 'ui.click')
         onClick(index)
       })
       const outlined = { fontFamily: 'monospace', fontSize: '11px', stroke: '#000000', strokeThickness: 3 }

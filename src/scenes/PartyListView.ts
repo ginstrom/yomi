@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import type { PartyListProbe } from '../testHook.ts'
-import { soundVolume } from './audioSettings.ts'
+import { playCue } from './soundPlayer.ts'
 import {
   COLUMN_COLOR,
   COLUMN_EDGE,
@@ -161,7 +161,7 @@ export class PartyListView {
       frame.on('pointerover', () => this.setHovered(tile.id))
       frame.on('pointerout', () => this.setHovered(null))
       frame.on('pointerdown', () => {
-        scene.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+        playCue(scene, 'ui.click')
         this.onClick(tile.id)
       })
       return tile

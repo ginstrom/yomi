@@ -1,44 +1,45 @@
 # Audio provenance
 
-Copied byte-for-byte from `~/play/fantasy-tactics/assets/audio/` (`sfx/` and
-`music/`), whose README documents them: synthesized placeholder tones
-generated in-house with Python's stdlib `wave` module. No third-party
-content, no licence or attribution needed. Mono 16-bit PCM WAV, 22050 Hz.
-`sfx_spell_cast.wav` was made here the same way and to the same format: a
-rising square-wave sweep from Python's stdlib `wave` module. `sfx_heal.wav`
-was made here too, in the same format: a soft two-note sine chime, C5 then G5,
-fading out.
-The other exceptions are the two themes, recorded tracks supplied separately as
-Opus in an `.m4a` container (the world map's as "Map Motif") and converted with
-ffmpeg: each `.opus` is the same Opus stream remuxed into Ogg (no re-encode),
-and each `.mp3` (LAME VBR `-q:a 2`) is the fallback for browsers without Opus
-support.
+## The themes
+
+Two recorded tracks, supplied separately as Opus in an `.m4a` container (the
+world map's as "Map Motif") and converted with ffmpeg: each `.opus` is the
+same Opus stream remuxed into Ogg (no re-encode), and each `.mp3` (LAME VBR
+`-q:a 2`) is the fallback for browsers without Opus support.
 
 | File | Played on |
 | --- | --- |
-| `sfx_melee_swing.wav` | Every attack |
-| `sfx_hit_impact.wav` | An attack or a spell that hits, and a status's damage at a turn's start |
-| `sfx_crit_impact.wav` | A critical hit |
-| `sfx_miss.wav` | An attack or a spell that misses |
-| `sfx_spell_cast.wav` | Every spell cast |
-| `sfx_heal.wav` | A spell that heals or helps its own side |
-| `sfx_unit_death.wav` | A unit falls |
-| `sfx_ui_click.wav` | Button and tab presses |
-| `music_victory.wav` | Victory sting |
-| `music_defeat.wav` | Defeat sting |
 | `music_battle.opus`, `music_battle.mp3` | Looping battle theme, stopped when the battle ends |
 | `music_world_map.opus`, `music_world_map.mp3` | Looping world map theme, paused under the menu |
 
-The WAVs are placeholders only, meant to be replaced by a real sound pass.
+### Their level
+
+The themes are not re-encoded; the player brings each to −24 LUFS-I as
+played. Measured once (2026-11-14) with
+`ffmpeg -nostats -i <file>.opus -filter_complex ebur128=peak=true -f null -`,
+the "Integrated loudness I:" value:
+
+| Theme | LUFS-I | LRA | Gain `10^((−24 − I)/20)` |
+| --- | --- | --- | --- |
+| `music_battle` | −14.2 | 7.9 LU | 0.324 (−9.8 dB) |
+| `music_world_map` | −11.7 | 7.3 LU | 0.243 (−12.3 dB) |
+
+They are 2.5 LU apart, more than the 1 LU one shared value allows, so each
+has its own gain (`MUSIC_GAIN` in `src/scenes/audioSettings.ts`) and the music
+bus's base `MUSIC_BASE` is 1. The placeholders' fixed `MUSIC_VOLUME` was 0.2
+for both, which played the battle theme at about −28.2 LUFS and the world
+map's at −25.7; both now sit at −24, 4 and 1.7 dB louder.
 
 ## `sfx/`: the sound-effect banks
 
 `sfx/` holds generated audio sprites, one per bank (`ui`, `battle`, `world`,
 `stings`): `<bank>.opus`, `<bank>.mp3` and `<bank>.json` (Phaser's
-audio-sprite map of markers `<cue>#<k>`). They are built from `audio/` by
+audio-sprite map of markers `<cue>#<k>`), which `BootScene` loads and
+`src/scenes/soundPlayer.ts` plays by cue. They are built from `audio/` by
 `npm run sounds` (recipes in `audio/sfx/`, provenance of every source in
 `audio/sources.toml`) and never edited by hand; see `audio/CLAUDE.md`. For now
-every cue is derived entirely from the placeholder WAVs listed above
-(licence own: the ten files, the two stings included, are registered as the
-`placeholder_*` sources), so the banks contain no third-party content. The
-WAVs stay until the runtime moves onto the banks.
+every cue is derived entirely from the old placeholder tones (synthesized
+in-house with Python's stdlib `wave` module, licence own), kept as the
+`placeholder_*` sources under `audio/sources/placeholder/`, so the banks
+contain no third-party content. The placeholder WAVs that were played
+directly before the banks are gone from this folder.

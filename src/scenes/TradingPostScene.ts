@@ -27,7 +27,7 @@ import { FAMILIES, type FamilyId } from '../inventory/catalog.ts'
 import type { EquipmentSlot, Item } from '../inventory/inventory.ts'
 import { parseRuneKey, pouchCount, pouchKeys, runeName, type RuneKey } from '../inventory/runes.ts'
 import type { ButtonProbe, TradingPostProbe } from '../testHook.ts'
-import { soundVolume } from './audioSettings.ts'
+import { playCue } from './soundPlayer.ts'
 import type { Point } from './boardGeometry.ts'
 import { TYPICAL_AP, statLines, statSummary } from './gearCompare.ts'
 import { ITEM_ICON_KEYS, RUNE_ICON_KEYS, SOCKET_PIP_KEYS, iconTint } from './itemIcons.ts'
@@ -360,7 +360,7 @@ export class TradingPostScene extends Phaser.Scene {
     back.on('pointerover', () => !marked && back.setFillStyle(0x2c2418, 0.95))
     back.on('pointerout', () => !marked && back.setFillStyle(0x1b1712, 0.95))
     back.on('pointerdown', () => {
-      this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+      playCue(this, 'ui.click')
       this.time.delayedCall(0, () => this.select(row.id))
     })
     this.frame.add(back)

@@ -6,7 +6,7 @@ import { PREROLLS, READY_MADE, STARTING_PARTY_LIMIT, partyFromDrafts } from '../
 import { SLOT_IDS, describeSlot, firstEmptySlot, type SlotId } from '../game/saveSlots.ts'
 import { DEFAULT_ENCAMPMENT_NAME, MAX_ENCAMPMENT_NAME_LENGTH } from '../game/worldMap.ts'
 import type { ButtonProbe, PartyProbe } from '../testHook.ts'
-import { soundVolume } from './audioSettings.ts'
+import { playCue } from './soundPlayer.ts'
 import type { Point } from './boardGeometry.ts'
 import { draftInfo, draftSkills } from './draftInfo.ts'
 import type { Rect } from './mapScroll.ts'
@@ -256,7 +256,7 @@ export class PartyScene extends Phaser.Scene {
     })
     if (onClick && enabled) {
       edge.on('pointerdown', () => {
-        this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
+        playCue(this, 'ui.click')
         // Next tick: the redraw a click leads to destroys the face whose handler this runs in.
         this.time.delayedCall(0, onClick)
       })
