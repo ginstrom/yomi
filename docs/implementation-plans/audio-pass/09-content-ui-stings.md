@@ -100,7 +100,7 @@ Exclusions: no change to cue ids, buses, jitter, limits or call sites; no W2 cue
 - [x] `npm run sounds`, `npm run sounds:check`, `npm test` and the tool's pytest pass; measurements recorded.
 - [x] `audio/.audition/09-ui-stings/` holds every variant as WAV and a filled-in `review.md`.
 - [x] `public/assets/audio/README.md` lists the new sources.
-- [ ] Committed as `Audio pass step 09: interface and stings` on `audio-pass` (not pushed); index status `awaiting review` with the hash.
+- [x] Committed as `Audio pass step 09: interface and stings` on `audio-pass` (not pushed); index status `awaiting review` with the hash.
 - [ ] Gate G4 passed (the user's per-cue verdicts recorded below and in the feature record by the orchestrator); review fixes committed; index status `done` with all hashes.
 
 ## Execution record
@@ -148,3 +148,5 @@ The build reports `ui.click`, `ui.back`, `ui.tab#0` and `ui.gear#3` peak-limited
 **Deviations.** `sfx audition` names its files `<cue>.v<k>.wav`; renamed to `<cue>/<k>.wav` as in step 08. No tool, runtime, `CUES` or `audio.toml` change. The stings are longer than their briefs' typical lengths (victory 3.4 s against ~3, defeat 4.0 against ~3.5, level-up 2.3 against ~1.8) because of their reverb tails, within each `max_ms`; level-up stays shorter than victory. The placeholder sources the old `ui` and `stings` recipes used stay: other banks' placeholder recipes (steps, world) still use them, and step 18 decides their removal.
 
 **For later steps.** The click family (sine modes) and the bell/mallet FM notes can serve `world.upgrade`'s chime and `world.rune.*` (step 13). The stings' keys: G major (victory, level-up), D minor (defeat).
+
+Commit: `f135fc0` ("Audio pass step 09: interface and stings"). G4 no longer blocks (feature record), so the step is `done`; the last criterion's user verdicts, if any, come back from playtesting as follow-up fixes.
