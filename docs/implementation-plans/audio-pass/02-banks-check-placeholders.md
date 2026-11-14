@@ -196,7 +196,7 @@ Record in the execution record: the pytest summary, the build's per-group loudne
 
 ### Review round 1
 
-Found (opus reviewer), fixed in the follow-up commit "Audio pass step 02: review round 1":
+Found (opus reviewer), fixed in `87e09cb` (Audio pass step 02: review round 1):
 
 1. **Blocking, fixed.** An incremental build skipped the licence and SHA-256 checks of cues it did not render: a licence changed to `CC-BY-4.0` built as "nothing changed", and `--cue ui.click` named only the ui cues. Now `build` runs `verify_sources` over every recipe before deciding anything and reports every failure; the `inputs` payload also holds each named source's recorded `licence` and `sha256`, so `sfx check` reports such cues stale. Tests: `test_an_incremental_build_still_refuses_a_licence_changed_since`, `test_a_cue_build_still_checks_every_other_cues_sources`, `test_an_incremental_build_still_refuses_an_edited_sha256_field`, `test_check_reports_a_cue_stale_when_its_sources_entry_changes` (all four seen failing first).
 2. **Non-blocking, fixed.** `sfx check` compared only the bank JSON's marker order and lengths; it now rebuilds the whole expected sprite from the manifest (`expected_sprite`, shared with the build: resources, cumulative `gap_ms` and durations, `loop`) and compares it whole, and checks the bank's `durationMs` against it. Tests: `test_check_compares_the_whole_bank_json`, `test_check_names_a_bank_json_with_wrong_resources_or_loop` (seen failing first).
@@ -204,3 +204,7 @@ Found (opus reviewer), fixed in the follow-up commit "Audio pass step 02: review
 Disputed: none.
 
 Verification: `uv run --project tools/audio pytest tools/audio/tests` 203 passed. The inputs hash changed shape, so `npm run sounds` rebuilt all 85 cues; only `audio/sfx.manifest.json`'s `inputs` changed (the encoded banks came out byte-identical, same sizes: 1 014 155 Opus, 718 256 MP3). `npm run sounds:check` passes; a second build renders nothing. Repro by hand on the built tree: `placeholder_ui_click` licence set to `CC-BY-4.0` → `sfx build: 13 problems`, naming every cue over it (`battle.step.*`, `ui.*`, `world.build`, `world.coins`, `world.craft`), exit 1; its `sha256` field zeroed → build 13 problems, check 26 (13 hash, 13 stale); reverted, check passes. `npm test`: 84 files, 1510 tests passed.
+
+### Review round 2
+
+Re-review (opus) of `87e09cb`: clean, no findings. Step 02 is done (`dc54377`, record `53ad6ed`, review fixes `87e09cb`).
