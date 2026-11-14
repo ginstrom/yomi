@@ -21,6 +21,7 @@ import {
   SPELLS,
   STATUSES,
   spellApCost,
+  spellPower,
   spellRange,
   type ActiveStatus,
   type SpellId,
@@ -2204,7 +2205,7 @@ export class BattleEngine {
     const magic = stats.magic
     const apCost = spellApCost(stats, spell)
     // The caster's modifiers: flat, so they draw nothing.
-    const power = (magic?.power?.all ?? 0) + (element === 'fire' ? (magic?.power?.fire ?? 0) : 0) + (element === 'frost' ? (magic?.power?.frost ?? 0) : 0)
+    const power = spellPower(stats, spell)
     const extension = (hostile ? magic?.extend?.hostile : magic?.extend?.friendly) ?? 0
     const status = ownStatus && extension !== 0 ? { ...ownStatus, turns: ownStatus.turns + extension } : ownStatus
     const healBonus = magic?.healBonus ?? 0

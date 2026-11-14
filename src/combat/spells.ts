@@ -8,16 +8,10 @@ import type { CombatantStats, DamageRoll, Element } from './combat.ts'
  * characters.
  */
 
-/** The three schools of magic, in the order the spell tree draws them. */
+/** The three schools of magic, a spell's family. */
 export const SCHOOL_IDS = ['offence', 'healing', 'support'] as const
 
 export type SchoolId = (typeof SCHOOL_IDS)[number]
-
-export const SCHOOLS: Record<SchoolId, { name: string; colour: number }> = {
-  offence: { name: 'Offensive', colour: 0xd0503c },
-  healing: { name: 'Healing', colour: 0x58b858 },
-  support: { name: 'Support', colour: 0x5a8ee0 },
-}
 
 export const SPELL_IDS = [
   'magic_arrow',
@@ -111,7 +105,7 @@ export interface StatusLaid {
 export interface Spell {
   name: string
   school: SchoolId
-  /** What it does, for the spell list and the spell tree. */
+  /** What it does, for the Abilities tab, the Skills list and the skill trees' strip. */
   description: string
   manaCost: number
   apCost: number
@@ -652,6 +646,16 @@ export function spellApCost(stats: Pick<CombatantStats, 'magic'>, spell: SpellId
   const discount = stats.magic?.apDiscount
   const off = (discount?.all ?? 0) + (heal ? (discount?.heal ?? 0) : 0)
   return Math.max(Math.min(apCost, 2), apCost - off)
+}
+
+/**
+ * The power a caster of `stats` adds to each damaging outcome of `spell`:
+ * its `all`, and its `fire` or `frost` for a spell of that element.
+ */
+export function spellPower(stats: Pick<CombatantStats, 'magic'>, spell: SpellId): number {
+  const power = stats.magic?.power
+  const { element } = SPELLS[spell]
+  return (power?.all ?? 0) + (element === 'fire' ? (power?.fire ?? 0) : element === 'frost' ? (power?.frost ?? 0) : 0)
 }
 
 /**

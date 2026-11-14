@@ -1,6 +1,6 @@
 import { ABILITIES, abilityApCost, type Ability, type AbilityId, type Strike } from '../combat/abilities.ts'
 import { baneApplies, damageThrough, effectiveResistance, hitChance, warded, type CombatantStats, type DamageRoll, type RNG } from '../combat/combat.ts'
-import { HELPLESS_BONUS, SPELLS, STATUSES, isHealing, spellApCost, type SpellId, type StatusId } from '../combat/spells.ts'
+import { HELPLESS_BONUS, SPELLS, STATUSES, isHealing, spellApCost, spellPower, type SpellId, type StatusId } from '../combat/spells.ts'
 import { hexDistance, type Hex } from '../grid/hex.ts'
 import {
   ARC_BONUS,
@@ -353,8 +353,7 @@ function strikeCast(state: BattleState, self: UnitSnapshot, casts: readonly Cast
     const base = bane && dice && baneApplies(defender) ? mean({ ...dice, count: dice.count * 2 }) : mean(dice)
     const bonus = bonusVs && bonusVs.statuses.some((id) => hasStatus(foe, id)) ? mean(bonusVs.damage) : 0
     // The caster's spell power (Destruction, Pyromancy, Numbing Cold), added before the ward as the engine adds it.
-    const power = self.magic?.power
-    const added = (power?.all ?? 0) + (element === 'fire' ? (power?.fire ?? 0) : element === 'frost' ? (power?.frost ?? 0) : 0)
+    const added = spellPower(self, c.spell)
     return warded(base + bonus + added, element, defender)
   }
   // Damage first, then the weaker foe: hit points are below 1000.
