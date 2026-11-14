@@ -176,6 +176,11 @@ describe('helpers', () => {
     expect(spokenText({ text: 'shown' })).toBe('shown')
   })
 
+  it('lineSeed is the first 32 bits of SHA-256 of "line#take" (a contract with the Python render)', () => {
+    expect(lineSeed('a.b', 0)).toBe(783809183)
+    expect(lineSeed('a.b', 3)).toBe(3110204851)
+  })
+
   it('lineSeed is deterministic, 32 bits and differs between takes', () => {
     expect(lineSeed('a.b', 0)).toBe(lineSeed('a.b', 0))
     expect(lineSeed('a.b', 0)).not.toBe(lineSeed('a.b', 1))

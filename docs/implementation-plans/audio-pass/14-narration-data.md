@@ -166,7 +166,7 @@ Exactly `{ "version": 1, "lines": {} }` (formatted with a trailing newline).
 - Refuses (exit non-zero, printing every message) when `narrationProblems` is not empty, or a voice's clip file listed in `clips` is missing.
 - Prints how many jobs it wrote. With today's content it writes `"jobs": []`.
 - Keep the file small; put logic in `narration.ts` so tests reach it. Export a pure `buildJobs(...)` from `narration.ts` or the script if useful (not part of C11; keep it out of the script's top level so a test can import it without running the export, or guard the run with `import.meta.main`-style check appropriate to Node 26).
-- `package.json`: add devDependency `smol-toml` (MIT; `npm install -D smol-toml` under Node 26, committing the lockfile change) and the script `"narration:export": "node scripts/narration.ts"`.
+- `package.json`: add devDependency `smol-toml` (BSD-3-Clause; `npm install -D smol-toml` under Node 26, committing the lockfile change) and the script `"narration:export": "node scripts/narration.ts"`.
 
 ### Exclusions
 
@@ -213,3 +213,5 @@ Engineer, 2026-11-14.
 - Deviation (G1): `audio/voices.toml` is narrator A on `chatterbox_turbo` (model `ResembleAI/chatterbox-turbo`, revision unpinned, `params = { temperature = 0.8 }`, no `cfg_weight`), with no clips yet; the seven-emotion list is kept. Step 15 pins revisions and adds `[narrator.clips]` (`A_0`, plus `neutral` at most). `reference_text` is `REFERENCE_TEXT` of `voice.py`.
 - `staleLines` asks `fileExists` for repo-relative `public/assets/voice/<line>.opus` and `.mp3`.
 - Checks: `npm test` 1665 passed; `npm run narration:export` wrote 0 jobs, exit 0; pytest 210 passed; `sounds:check` clean; `git grep narration.ts src/scenes` empty. No browser test (no scene changed). Tests were written before the code but not run red first.
+
+Review round 1 (sonnet, clean; three tidy-ups, all fixed): `lineSeed` pinned by literal values (`a.b#0` is 783809183, `a.b#3` is 3110204851); `smol-toml` sorted into the lockfile's root `devDependencies`; licence corrected to BSD-3-Clause here (the design's "MIT" in §5.8.2 and the C-contract text elsewhere is inaccurate for the same reason). `npm test` passes.
