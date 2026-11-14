@@ -406,7 +406,7 @@ export const BLIGHT_HORROR_STATS: CombatantStats = {
   toHit: 70,
   critChance: 5,
   armorPierce: 2,
-  damage: { count: 2, sides: 6, bonus: 2 },
+  damage: { count: 2, sides: 6, bonus: 11 },
   weapon: 'Claws',
   attackApCost: 4,
   attackRange: 1,
