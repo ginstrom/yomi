@@ -65,3 +65,46 @@ def test_true_peak_exceeds_sample_peak_on_intersample_peak():
     x = np.sin(2 * np.pi * n / 4 + np.pi / 4)
     assert loudness.sample_peak_db(x) == pytest.approx(-3.01, abs=0.05)
     assert loudness.true_peak_db(x) > loudness.sample_peak_db(x) + 2.0
+
+
+# K-weighting written out (BS.1770-4, Table 1 and 2), not read from pyloudnorm's internals.
+ITU_48K_SHELF = ([1.53512485958697, -2.69169618940638, 1.19839281085285], [1.0, -1.69065929318241, 0.73248077421585])
+ITU_48K_HIGHPASS = ([1.0, -2.0, 1.0], [1.0, -1.99004745483398, 0.99007225036621])
+
+
+def test_k_weighting_coefficients_at_48k_are_the_itu_tables():
+    (shelf_b, shelf_a), (hp_b, hp_a) = loudness.k_weighting_coefficients(48000)
+    assert shelf_b == pytest.approx(ITU_48K_SHELF[0], abs=1e-9)
+    assert shelf_a == pytest.approx(ITU_48K_SHELF[1], abs=1e-9)
+    assert hp_b == pytest.approx(ITU_48K_HIGHPASS[0], abs=1e-9)
+    assert hp_a == pytest.approx(ITU_48K_HIGHPASS[1], abs=1e-9)
+
+
+def test_loudness_does_not_read_pyloudnorm_internals():
+    from pathlib import Path
+
+    assert "_filters" not in Path(loudness.__file__).read_text()
+
+
+@pytest.mark.parametrize("sr", [44100, 48000])
+def test_integrated_agrees_with_pyloudnorm(sr):
+    import pyloudnorm
+
+    rng = np.random.default_rng(1)
+    x = 0.2 * rng.standard_normal(3 * sr) * np.linspace(0.2, 1.0, 3 * sr)
+    assert loudness.integrated(x, sr) == pytest.approx(pyloudnorm.Meter(sr).integrated_loudness(x), abs=0.05)
+
+
+def test_normalise_with_a_ceiling_stops_at_the_ceiling():
+    click = np.zeros(4800)
+    click[100:110] = 0.5
+    y = loudness.normalise(click, SR, "momentary_max", -26.0, peak_ceiling=-6.0)
+    assert loudness.true_peak_db(y) <= -6.0
+    assert loudness.true_peak_db(y) == pytest.approx(-6.0, abs=0.1)
+    assert loudness.momentary_max(y, SR) < -27.0
+
+
+def test_normalise_with_a_ceiling_that_does_not_bind_lands_on_target():
+    x = sine(440, 0.6, amp=0.3)
+    y = loudness.normalise(x, SR, "momentary_max", -19.0, peak_ceiling=-1.0)
+    assert loudness.momentary_max(y, SR) == pytest.approx(-19.0, abs=0.05)

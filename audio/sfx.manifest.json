@@ -1,0 +1,1300 @@
+{
+  "banks": {
+    "battle": {
+      "durationMs": 79433,
+      "mp3": {
+        "bytes": 542324,
+        "sha256": "839d6fd5b16f5fb66874363d45b311545a8d47315567333d4f044f274ce91b80"
+      },
+      "opus": {
+        "bytes": 691009,
+        "sha256": "34f3ed0ab478d8f864b7d91617df298d74f69d04401874793ddf02efa060393a"
+      }
+    },
+    "stings": {
+      "durationMs": 4035,
+      "mp3": {
+        "bytes": 17156,
+        "sha256": "6b391c67d2bce65a225e9923270948fe8d4dfe0b1af3cdea7324c9d37c4864fd"
+      },
+      "opus": {
+        "bytes": 43715,
+        "sha256": "df4d60abd315d6a8a8556e030d08c2002b9faad32b81135fac2af8dc47d829d0"
+      }
+    },
+    "ui": {
+      "durationMs": 6312,
+      "mp3": {
+        "bytes": 40892,
+        "sha256": "d41bc84bc7345b6680aa42e72eb6841c006ea2b7e1f513cccdda96ba705ad4eb"
+      },
+      "opus": {
+        "bytes": 55223,
+        "sha256": "7df2aa1a8cf35dca3ea3ddd477188ca29ac6bcf79bff1ab2da2cbd2f03925918"
+      }
+    },
+    "world": {
+      "durationMs": 22105,
+      "mp3": {
+        "bytes": 117884,
+        "sha256": "fdb6089b5f85ac1d1310ebd172193c966ac15f6360e4d7131dad508fdd6c818f"
+      },
+      "opus": {
+        "bytes": 224208,
+        "sha256": "8b5d89d37fbbaa34469dd4078a91e9a8b3ada0f50e2b14b6fc9f6ed6e03ccff7"
+      }
+    }
+  },
+  "cues": {
+    "battle.ability.spit": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300
+      ],
+      "inputs": "21afa28a37a6a312d0d10b2b50ac620f8e27690001daba4c4c546e53f0fc8c2c",
+      "markers": [
+        "battle.ability.spit#0",
+        "battle.ability.spit#1",
+        "battle.ability.spit#2"
+      ]
+    },
+    "battle.ability.web": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300
+      ],
+      "inputs": "2eb3ecece3ae1089eb31e61b6c2a49a9596bbc0f3c310b81729ce8d58da3ad4c",
+      "markers": [
+        "battle.ability.web#0",
+        "battle.ability.web#1",
+        "battle.ability.web#2"
+      ]
+    },
+    "battle.armor.metal": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "8e4b6fdd9d1b2f6de34663bb1a88dca9c0dd8a5f4d37d5ce94a2e38162af3d7e",
+      "markers": [
+        "battle.armor.metal#0",
+        "battle.armor.metal#1",
+        "battle.armor.metal#2",
+        "battle.armor.metal#3",
+        "battle.armor.metal#4"
+      ]
+    },
+    "battle.cast.arcane": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300
+      ],
+      "inputs": "1a8d59b1a0694e07821fad1dbf6531856af469a6e974288152d3a265fb83f67b",
+      "markers": [
+        "battle.cast.arcane#0",
+        "battle.cast.arcane#1",
+        "battle.cast.arcane#2"
+      ]
+    },
+    "battle.cast.fire": {
+      "bank": "battle",
+      "durationsMs": [
+        335,
+        300,
+        300
+      ],
+      "inputs": "2cc52457120297915014223c44e4d9fdde804d0e4b5c0a559eb1556994bfccf8",
+      "markers": [
+        "battle.cast.fire#0",
+        "battle.cast.fire#1",
+        "battle.cast.fire#2"
+      ]
+    },
+    "battle.cast.frost": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300
+      ],
+      "inputs": "313620754b17a738cc92da5bd9cb1c204963bba9a5f71812cd420e8793864e9c",
+      "markers": [
+        "battle.cast.frost#0",
+        "battle.cast.frost#1",
+        "battle.cast.frost#2"
+      ]
+    },
+    "battle.cast.holy": {
+      "bank": "battle",
+      "durationsMs": [
+        309,
+        300,
+        300
+      ],
+      "inputs": "afab82b0990f23b8f17922a6957d839ee9ceed19032694c9ef6b602f3859916d",
+      "markers": [
+        "battle.cast.holy#0",
+        "battle.cast.holy#1",
+        "battle.cast.holy#2"
+      ]
+    },
+    "battle.cast.shadow": {
+      "bank": "battle",
+      "durationsMs": [
+        362,
+        300,
+        317
+      ],
+      "inputs": "8225b994acb9bcaf2d9b3eb387f482d56c357781c3db3a5f326417873a9794c3",
+      "markers": [
+        "battle.cast.shadow#0",
+        "battle.cast.shadow#1",
+        "battle.cast.shadow#2"
+      ]
+    },
+    "battle.cast.storm": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300
+      ],
+      "inputs": "840f502971d754b2d24dc9e7672c591007cb16b5f56deb85bfcb55ab62ec033c",
+      "markers": [
+        "battle.cast.storm#0",
+        "battle.cast.storm#1",
+        "battle.cast.storm#2"
+      ]
+    },
+    "battle.cast.venom": {
+      "bank": "battle",
+      "durationsMs": [
+        304,
+        300,
+        300
+      ],
+      "inputs": "47a3605fd9109522a3eb9ac53ad2acc526b65c46efc11bf6541f9e88a2c65565",
+      "markers": [
+        "battle.cast.venom#0",
+        "battle.cast.venom#1",
+        "battle.cast.venom#2"
+      ]
+    },
+    "battle.cast.ward": {
+      "bank": "battle",
+      "durationsMs": [
+        356,
+        300,
+        300
+      ],
+      "inputs": "e086e92bfe7d7f0825d9c30f1c6f655f24c8084d4cfcf66e730c0bf72daf4ff1",
+      "markers": [
+        "battle.cast.ward#0",
+        "battle.cast.ward#1",
+        "battle.cast.ward#2"
+      ]
+    },
+    "battle.death.brute": {
+      "bank": "battle",
+      "durationsMs": [
+        494,
+        748,
+        719
+      ],
+      "inputs": "7fb907450c7238856f1317045fbecb92da2b3ad42a1c8e97c4d0248694856073",
+      "markers": [
+        "battle.death.brute#0",
+        "battle.death.brute#1",
+        "battle.death.brute#2"
+      ]
+    },
+    "battle.death.goblinoid": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        332,
+        398,
+        387
+      ],
+      "inputs": "669c26fd7f4fd352e952a02e854680d842226f8c2b33cdfc69528064075643b2",
+      "markers": [
+        "battle.death.goblinoid#0",
+        "battle.death.goblinoid#1",
+        "battle.death.goblinoid#2",
+        "battle.death.goblinoid#3"
+      ]
+    },
+    "battle.death.hero": {
+      "bank": "battle",
+      "durationsMs": [
+        515,
+        587
+      ],
+      "inputs": "6f9e1ccdf705a883618513894e4f44f12b8b60ad73e8014b23ac6d2ab629106e",
+      "markers": [
+        "battle.death.hero#0",
+        "battle.death.hero#1"
+      ]
+    },
+    "battle.death.horror": {
+      "bank": "battle",
+      "durationsMs": [
+        673
+      ],
+      "inputs": "374c9cc29041b967c287d8f4fa16de73b911a3e8841b37d78e0689499452d4ee",
+      "markers": [
+        "battle.death.horror#0"
+      ]
+    },
+    "battle.death.human": {
+      "bank": "battle",
+      "durationsMs": [
+        454,
+        416,
+        379,
+        347
+      ],
+      "inputs": "799cbaac3b53126d31e16d807faafa4a7c2bd8416781ffcc9c9d8f0d7c2e6e54",
+      "markers": [
+        "battle.death.human#0",
+        "battle.death.human#1",
+        "battle.death.human#2",
+        "battle.death.human#3"
+      ]
+    },
+    "battle.death.salamander": {
+      "bank": "battle",
+      "durationsMs": [
+        364,
+        301
+      ],
+      "inputs": "96fe8f8c48382f3299c43f349d1dc0f4947edd4e184b8a2fd7f9897c88d6a89f",
+      "markers": [
+        "battle.death.salamander#0",
+        "battle.death.salamander#1"
+      ]
+    },
+    "battle.death.spider": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300
+      ],
+      "inputs": "db500435c8285160b64539cda3bcda1435b3dcc84e1e29a0641c3899791e86bd",
+      "markers": [
+        "battle.death.spider#0",
+        "battle.death.spider#1"
+      ]
+    },
+    "battle.element.acid": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300
+      ],
+      "inputs": "734e74c5fa5231cf84202c8d8a73f505d52b29f4873321b84660e9a10724d951",
+      "markers": [
+        "battle.element.acid#0",
+        "battle.element.acid#1"
+      ]
+    },
+    "battle.element.blight": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300
+      ],
+      "inputs": "48fe8a684fb6bf99fcab4a3d7951dcf606949725f31affbd051f93a5e76cf3d6",
+      "markers": [
+        "battle.element.blight#0",
+        "battle.element.blight#1"
+      ]
+    },
+    "battle.element.fire": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300
+      ],
+      "inputs": "b937c7aa133a5ae7fa57c7b71cca76edf3ad2409841d9ff9d5c3c460579412c9",
+      "markers": [
+        "battle.element.fire#0",
+        "battle.element.fire#1"
+      ]
+    },
+    "battle.element.frost": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300
+      ],
+      "inputs": "58485f91f74d90f4c991f2dbdf93d78be1acbff86c1bff13c0c780d6cd46e594",
+      "markers": [
+        "battle.element.frost#0",
+        "battle.element.frost#1"
+      ]
+    },
+    "battle.element.lightning": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300
+      ],
+      "inputs": "dd717ded0d3eb7fdfb5b6d325331dc15ce9657fdccf0b774daae2cae0f3884ff",
+      "markers": [
+        "battle.element.lightning#0",
+        "battle.element.lightning#1"
+      ]
+    },
+    "battle.element.poison": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300
+      ],
+      "inputs": "153144124408a9c8824ba0d4f65c9211ae5fedacf7122fb0f537457efc38704b",
+      "markers": [
+        "battle.element.poison#0",
+        "battle.element.poison#1"
+      ]
+    },
+    "battle.heal.small": {
+      "bank": "battle",
+      "durationsMs": [
+        400,
+        300,
+        447
+      ],
+      "inputs": "c1ba1860c8686f2fc47a3009e0050d8a1ce3cff3fe1b275fbbae18c71e942776",
+      "markers": [
+        "battle.heal.small#0",
+        "battle.heal.small#1",
+        "battle.heal.small#2"
+      ]
+    },
+    "battle.hit.claw": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "00b0200cc9ba15983c470656b6f06bdc27309c994b168aba9e84a7dbf379176d",
+      "markers": [
+        "battle.hit.claw#0",
+        "battle.hit.claw#1",
+        "battle.hit.claw#2",
+        "battle.hit.claw#3",
+        "battle.hit.claw#4"
+      ]
+    },
+    "battle.hit.crit": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "01d8506ec2a305a0cde04fd96c19b8dc2335220d49fa2f4e2d9924d7b7c6c05b",
+      "markers": [
+        "battle.hit.crit#0",
+        "battle.hit.crit#1",
+        "battle.hit.crit#2",
+        "battle.hit.crit#3"
+      ]
+    },
+    "battle.hit.crush": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "0b95b530be03c3efa66986e99750d84c773c07d62385166525a77ee183f23dd1",
+      "markers": [
+        "battle.hit.crush#0",
+        "battle.hit.crush#1",
+        "battle.hit.crush#2",
+        "battle.hit.crush#3",
+        "battle.hit.crush#4",
+        "battle.hit.crush#5"
+      ]
+    },
+    "battle.hit.image": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300
+      ],
+      "inputs": "90cd5ef4d0310a68e21bf643851d1780370e1b00d4f081a0496e964a3b4a7437",
+      "markers": [
+        "battle.hit.image#0",
+        "battle.hit.image#1",
+        "battle.hit.image#2"
+      ]
+    },
+    "battle.hit.magic": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "c329687648d067f56f214cf223bb1de8509dbac2c065cdbb293fdc4aa730ff1b",
+      "markers": [
+        "battle.hit.magic#0",
+        "battle.hit.magic#1",
+        "battle.hit.magic#2",
+        "battle.hit.magic#3"
+      ]
+    },
+    "battle.hit.pierce": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "386bf2c74965eed016b7ea5fc5d711b01cc5178c8359fbf794d05409b0820d42",
+      "markers": [
+        "battle.hit.pierce#0",
+        "battle.hit.pierce#1",
+        "battle.hit.pierce#2",
+        "battle.hit.pierce#3",
+        "battle.hit.pierce#4",
+        "battle.hit.pierce#5"
+      ]
+    },
+    "battle.hit.slash": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "bb3992bc7c92c5346634d361171142665d27fbeb110a14e65011a6959effdb48",
+      "markers": [
+        "battle.hit.slash#0",
+        "battle.hit.slash#1",
+        "battle.hit.slash#2",
+        "battle.hit.slash#3",
+        "battle.hit.slash#4",
+        "battle.hit.slash#5"
+      ]
+    },
+    "battle.impact.acid": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "6653082d32d241e90919f97a814c6b3aa3debe253e7e5a9e0493045dcba2b079",
+      "markers": [
+        "battle.impact.acid#0",
+        "battle.impact.acid#1",
+        "battle.impact.acid#2",
+        "battle.impact.acid#3"
+      ]
+    },
+    "battle.impact.arcane": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "3dacb990f88eb24aaa76395708ea53fb7a7f652abfc0edab85a02806e30c617c",
+      "markers": [
+        "battle.impact.arcane#0",
+        "battle.impact.arcane#1",
+        "battle.impact.arcane#2",
+        "battle.impact.arcane#3"
+      ]
+    },
+    "battle.impact.buff": {
+      "bank": "battle",
+      "durationsMs": [
+        360,
+        330,
+        316
+      ],
+      "inputs": "44df7ea05bcb782c3b77fd2f3db1fb24038cf9a983edab42c928251fbd7f0bb5",
+      "markers": [
+        "battle.impact.buff#0",
+        "battle.impact.buff#1",
+        "battle.impact.buff#2"
+      ]
+    },
+    "battle.impact.fire": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "a9f5cb9916493fba277fb80cb70df0b7eb4e51376a83b6e14ff9bf99988631c9",
+      "markers": [
+        "battle.impact.fire#0",
+        "battle.impact.fire#1",
+        "battle.impact.fire#2",
+        "battle.impact.fire#3"
+      ]
+    },
+    "battle.impact.fireball": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300
+      ],
+      "inputs": "0376d0172fbe96199260ede2ed8f7166d185ec5007ef471b9486a3aa5ce6659f",
+      "markers": [
+        "battle.impact.fireball#0",
+        "battle.impact.fireball#1",
+        "battle.impact.fireball#2"
+      ]
+    },
+    "battle.impact.frost": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "513adc7623d0ee33cb87906fc21dd9095ece32bcf1cb59353dfbadc009f8f717",
+      "markers": [
+        "battle.impact.frost#0",
+        "battle.impact.frost#1",
+        "battle.impact.frost#2",
+        "battle.impact.frost#3"
+      ]
+    },
+    "battle.impact.heal": {
+      "bank": "battle",
+      "durationsMs": [
+        319,
+        375,
+        364
+      ],
+      "inputs": "328174301b5cfcd8988b6695efa59f8eb287bd0f72ae42e3740d6c21c759c242",
+      "markers": [
+        "battle.impact.heal#0",
+        "battle.impact.heal#1",
+        "battle.impact.heal#2"
+      ]
+    },
+    "battle.impact.hex": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300
+      ],
+      "inputs": "02857005fca13588e70794144e8ea527cce1565b32c6a56257f7ebcc36a14940",
+      "markers": [
+        "battle.impact.hex#0",
+        "battle.impact.hex#1",
+        "battle.impact.hex#2"
+      ]
+    },
+    "battle.impact.lightning": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300
+      ],
+      "inputs": "a644883657dd955ea0fc4d31256651b133e9daa372ede0f0bfe217a5f916d559",
+      "markers": [
+        "battle.impact.lightning#0",
+        "battle.impact.lightning#1",
+        "battle.impact.lightning#2"
+      ]
+    },
+    "battle.impact.poison": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300
+      ],
+      "inputs": "d91718e83967f857a9637e2103d86076fa909e2547b6064c0dc20333d1c73195",
+      "markers": [
+        "battle.impact.poison#0",
+        "battle.impact.poison#1",
+        "battle.impact.poison#2"
+      ]
+    },
+    "battle.impact.shadow": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "139da5d0fcc4db557a5e14dd14497c3bf00915ad1a1b32087e711e4ad5c3a1d4",
+      "markers": [
+        "battle.impact.shadow#0",
+        "battle.impact.shadow#1",
+        "battle.impact.shadow#2",
+        "battle.impact.shadow#3"
+      ]
+    },
+    "battle.impact.web": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300
+      ],
+      "inputs": "5beed4f4b6120f0c36f45131dc681cbe9ebbb9b3329d1bd4c642811d7b1f70a8",
+      "markers": [
+        "battle.impact.web#0",
+        "battle.impact.web#1",
+        "battle.impact.web#2"
+      ]
+    },
+    "battle.miss.magic": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300
+      ],
+      "inputs": "a795486eaff351b42bbde3cdb8e90da66518b4a2704ba59a9e88eabdc403f614",
+      "markers": [
+        "battle.miss.magic#0",
+        "battle.miss.magic#1",
+        "battle.miss.magic#2"
+      ]
+    },
+    "battle.miss.shot": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "3318f60a1aaf84471abc718e47c10d41106a106f25883d081e2b01999ec4b129",
+      "markers": [
+        "battle.miss.shot#0",
+        "battle.miss.shot#1",
+        "battle.miss.shot#2",
+        "battle.miss.shot#3"
+      ]
+    },
+    "battle.miss.swing": {
+      "bank": "battle",
+      "durationsMs": [
+        250,
+        250,
+        250,
+        250
+      ],
+      "inputs": "3df9a74f885fb0e90aea5581fc9ec8e7ff81fcec7e8617e380c7bf8ee8469396",
+      "markers": [
+        "battle.miss.swing#0",
+        "battle.miss.swing#1",
+        "battle.miss.swing#2",
+        "battle.miss.swing#3"
+      ]
+    },
+    "battle.regen": {
+      "bank": "battle",
+      "durationsMs": [
+        453,
+        300,
+        422
+      ],
+      "inputs": "b5747a70ab3f9044a407b7546b2050745c24d5f02067094e07ed82821958f47e",
+      "markers": [
+        "battle.regen#0",
+        "battle.regen#1",
+        "battle.regen#2"
+      ]
+    },
+    "battle.shot.bow": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "841ac80c1f8510b62d56cfa1bea4a27ee1ecba8ebcc1859f9d333ffb9d6ea7ca",
+      "markers": [
+        "battle.shot.bow#0",
+        "battle.shot.bow#1",
+        "battle.shot.bow#2",
+        "battle.shot.bow#3",
+        "battle.shot.bow#4"
+      ]
+    },
+    "battle.shot.crossbow": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "0aca6d35fc6f4ec8297664ed0f356da88c2227be1f228698194648a1d7f38bcd",
+      "markers": [
+        "battle.shot.crossbow#0",
+        "battle.shot.crossbow#1",
+        "battle.shot.crossbow#2",
+        "battle.shot.crossbow#3"
+      ]
+    },
+    "battle.shot.wand": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "09794e7257652ec1b0ee305b0cde9f2bd9216326de34c5c27523d5e1f3df54dd",
+      "markers": [
+        "battle.shot.wand#0",
+        "battle.shot.wand#1",
+        "battle.shot.wand#2",
+        "battle.shot.wand#3",
+        "battle.shot.wand#4"
+      ]
+    },
+    "battle.step.armored": {
+      "bank": "battle",
+      "durationsMs": [
+        250,
+        250,
+        250,
+        250,
+        250,
+        250,
+        250,
+        250
+      ],
+      "inputs": "c7214ad5179995964291b9011a20d685007e2b9658fee34dec0ead550c18c129",
+      "markers": [
+        "battle.step.armored#0",
+        "battle.step.armored#1",
+        "battle.step.armored#2",
+        "battle.step.armored#3",
+        "battle.step.armored#4",
+        "battle.step.armored#5",
+        "battle.step.armored#6",
+        "battle.step.armored#7"
+      ]
+    },
+    "battle.step.heavy": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "5d36bc5666a128590486a1f686b9dc745db8ed9ccc0d8d9e70fd6bcf9b1ec94b",
+      "markers": [
+        "battle.step.heavy#0",
+        "battle.step.heavy#1",
+        "battle.step.heavy#2",
+        "battle.step.heavy#3",
+        "battle.step.heavy#4",
+        "battle.step.heavy#5"
+      ]
+    },
+    "battle.step.light": {
+      "bank": "battle",
+      "durationsMs": [
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "inputs": "99e1db2f11bd8b496ea0ed3e97618bbbee7d849065faf7c6310b6217f8084db3",
+      "markers": [
+        "battle.step.light#0",
+        "battle.step.light#1",
+        "battle.step.light#2",
+        "battle.step.light#3",
+        "battle.step.light#4",
+        "battle.step.light#5",
+        "battle.step.light#6",
+        "battle.step.light#7"
+      ]
+    },
+    "battle.step.skitter": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "6f9c8706d29c8e1b5e58544480818267d38e69aae5facc5d2c1a343fc47a673f",
+      "markers": [
+        "battle.step.skitter#0",
+        "battle.step.skitter#1",
+        "battle.step.skitter#2",
+        "battle.step.skitter#3"
+      ]
+    },
+    "battle.swing.bite": {
+      "bank": "battle",
+      "durationsMs": [
+        250,
+        250,
+        250
+      ],
+      "inputs": "b56ed8c29d41a59320a576e9cfa361f62c1d04ecaa6dd1b0349108c0618b3fef",
+      "markers": [
+        "battle.swing.bite#0",
+        "battle.swing.bite#1",
+        "battle.swing.bite#2"
+      ]
+    },
+    "battle.swing.blade": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "ad3a7c7663e93dff2dbb621e9d2c32c8997a8d98265f8aebbc8743e48ee67873",
+      "markers": [
+        "battle.swing.blade#0",
+        "battle.swing.blade#1",
+        "battle.swing.blade#2",
+        "battle.swing.blade#3",
+        "battle.swing.blade#4"
+      ]
+    },
+    "battle.swing.claw": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "b3b53c26adda04aefdc9e570d49abb9bc487c3e002033d64197ca754ef90b6de",
+      "markers": [
+        "battle.swing.claw#0",
+        "battle.swing.claw#1",
+        "battle.swing.claw#2",
+        "battle.swing.claw#3"
+      ]
+    },
+    "battle.swing.heavy": {
+      "bank": "battle",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "c80cc9740546abbbb1d8d5424efb0ecac086836a2d85a33e80746f5d84689869",
+      "markers": [
+        "battle.swing.heavy#0",
+        "battle.swing.heavy#1",
+        "battle.swing.heavy#2",
+        "battle.swing.heavy#3",
+        "battle.swing.heavy#4"
+      ]
+    },
+    "battle.swing.light": {
+      "bank": "battle",
+      "durationsMs": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "inputs": "ee9d00274285e52aa4b7487d6b67e490acd0a22a51ea7270e35ea6fefd4d6846",
+      "markers": [
+        "battle.swing.light#0",
+        "battle.swing.light#1",
+        "battle.swing.light#2",
+        "battle.swing.light#3",
+        "battle.swing.light#4"
+      ]
+    },
+    "battle.swing.thrust": {
+      "bank": "battle",
+      "durationsMs": [
+        250,
+        250,
+        250,
+        250
+      ],
+      "inputs": "248d5e7d15fdd513e82acb8973e99fbe92c57893a71c3700fca78a20fa33e40b",
+      "markers": [
+        "battle.swing.thrust#0",
+        "battle.swing.thrust#1",
+        "battle.swing.thrust#2",
+        "battle.swing.thrust#3"
+      ]
+    },
+    "stings.defeat": {
+      "bank": "stings",
+      "durationsMs": [
+        2000
+      ],
+      "inputs": "d0f621ca1673ac46c2deb339eb9940a3cda1c1373e16a58003f3411a31f79b7c",
+      "markers": [
+        "stings.defeat#0"
+      ]
+    },
+    "stings.level_up": {
+      "bank": "stings",
+      "durationsMs": [
+        735
+      ],
+      "inputs": "b9c42fb0353e6c9c5721d0b42eec0145db1f625622395d028406989f94d98560",
+      "markers": [
+        "stings.level_up#0"
+      ]
+    },
+    "stings.victory": {
+      "bank": "stings",
+      "durationsMs": [
+        1100
+      ],
+      "inputs": "04cc31331679870e28ef04e83fbb9c824ce722f790f923866f253a9fcf7bb465",
+      "markers": [
+        "stings.victory#0"
+      ]
+    },
+    "ui.back": {
+      "bank": "ui",
+      "durationsMs": [
+        120,
+        120,
+        120
+      ],
+      "inputs": "a30039f2a297c9a3419268cd988ba52bc645475649f6621b7061eaa78f524e76",
+      "markers": [
+        "ui.back#0",
+        "ui.back#1",
+        "ui.back#2"
+      ]
+    },
+    "ui.click": {
+      "bank": "ui",
+      "durationsMs": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "inputs": "e0ebd31cf44072642ae8c39fce9ba28769dfbc28cccd8f8a1ea51d9feba70e13",
+      "markers": [
+        "ui.click#0",
+        "ui.click#1",
+        "ui.click#2",
+        "ui.click#3"
+      ]
+    },
+    "ui.confirm": {
+      "bank": "ui",
+      "durationsMs": [
+        250,
+        250,
+        250
+      ],
+      "inputs": "7ae4e2fe332dd073f59b666599ec966c10264238043c2376b6171280ed679324",
+      "markers": [
+        "ui.confirm#0",
+        "ui.confirm#1",
+        "ui.confirm#2"
+      ]
+    },
+    "ui.error": {
+      "bank": "ui",
+      "durationsMs": [
+        200,
+        200,
+        200
+      ],
+      "inputs": "9fa83eacbb81471fa52a84ba2f40db613d9fad65335aa1b73bb8c7fe5c42d1ee",
+      "markers": [
+        "ui.error#0",
+        "ui.error#1",
+        "ui.error#2"
+      ]
+    },
+    "ui.gear": {
+      "bank": "ui",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "f4a393a4d511062d744e1e051a37080359403e0308de433ab8619c633798589b",
+      "markers": [
+        "ui.gear#0",
+        "ui.gear#1",
+        "ui.gear#2",
+        "ui.gear#3",
+        "ui.gear#4",
+        "ui.gear#5"
+      ]
+    },
+    "ui.learn": {
+      "bank": "ui",
+      "durationsMs": [
+        354,
+        308
+      ],
+      "inputs": "38605b62d6a2d0a340018144f1086629d5077c92cafa2602ed2409d4c8215c43",
+      "markers": [
+        "ui.learn#0",
+        "ui.learn#1"
+      ]
+    },
+    "ui.tab": {
+      "bank": "ui",
+      "durationsMs": [
+        150,
+        150,
+        150,
+        150
+      ],
+      "inputs": "ec3e99fb9f99b1568db2d8e73ebf881e76dd174d847f30f93ffe49d0fbbf96ef",
+      "markers": [
+        "ui.tab#0",
+        "ui.tab#1",
+        "ui.tab#2",
+        "ui.tab#3"
+      ]
+    },
+    "world.arrive": {
+      "bank": "world",
+      "durationsMs": [
+        300,
+        300,
+        455
+      ],
+      "inputs": "4841d3e9080dc09970144b6c0d844cbb305fb03f9be52a6285c2660b800e0d25",
+      "markers": [
+        "world.arrive#0",
+        "world.arrive#1",
+        "world.arrive#2"
+      ]
+    },
+    "world.build": {
+      "bank": "world",
+      "durationsMs": [
+        300,
+        300,
+        300
+      ],
+      "inputs": "d1dc742150822d85bad9fd2b5a5c5d303ee0a7297359dc9249e527465440fe5b",
+      "markers": [
+        "world.build#0",
+        "world.build#1",
+        "world.build#2"
+      ]
+    },
+    "world.captured": {
+      "bank": "world",
+      "durationsMs": [
+        1425,
+        1363
+      ],
+      "inputs": "d18ccec832bb29b8b23f4597940501c42bf21a44b9578ffde2725d9cd52ad6f0",
+      "markers": [
+        "world.captured#0",
+        "world.captured#1"
+      ]
+    },
+    "world.coins": {
+      "bank": "world",
+      "durationsMs": [
+        300,
+        300,
+        300,
+        300
+      ],
+      "inputs": "4a3b0742b577fa18d02cc50bcf7d48357b97c79c0c7652e96ec9ad717c8aab67",
+      "markers": [
+        "world.coins#0",
+        "world.coins#1",
+        "world.coins#2",
+        "world.coins#3"
+      ]
+    },
+    "world.confront": {
+      "bank": "world",
+      "durationsMs": [
+        1782,
+        1404
+      ],
+      "inputs": "42a76a0b04381bf6b7a782c506a4695b2d7a532e49f1d005a87ca937d1cf64fe",
+      "markers": [
+        "world.confront#0",
+        "world.confront#1"
+      ]
+    },
+    "world.craft": {
+      "bank": "world",
+      "durationsMs": [
+        300,
+        300,
+        300
+      ],
+      "inputs": "22f8566aab5bd4da2c0afd177c2a0f8376d726099b13b37018fb3fff43b2c10f",
+      "markers": [
+        "world.craft#0",
+        "world.craft#1",
+        "world.craft#2"
+      ]
+    },
+    "world.lost": {
+      "bank": "world",
+      "durationsMs": [
+        537,
+        442
+      ],
+      "inputs": "77f8b11c01edd9441e3fc974ef25e0fa9c6a438ad5e73fb9934848ff1c207356",
+      "markers": [
+        "world.lost#0",
+        "world.lost#1"
+      ]
+    },
+    "world.rune.embed": {
+      "bank": "world",
+      "durationsMs": [
+        422,
+        463,
+        349
+      ],
+      "inputs": "1e12a18fe1be068a581abe2f7e136ba881aeb118cd5709dce79fdbe6a0d4e72a",
+      "markers": [
+        "world.rune.embed#0",
+        "world.rune.embed#1",
+        "world.rune.embed#2"
+      ]
+    },
+    "world.rune.extract": {
+      "bank": "world",
+      "durationsMs": [
+        391,
+        300
+      ],
+      "inputs": "b36e7df1bee8f51d884a70b33140deef16e6260da36838cfd2ee608ccd1f84de",
+      "markers": [
+        "world.rune.extract#0",
+        "world.rune.extract#1"
+      ]
+    },
+    "world.rune.fuse": {
+      "bank": "world",
+      "durationsMs": [
+        444,
+        318
+      ],
+      "inputs": "d4729b4d79fdee223b1049741a6de4d71476e979d01f71b78caab08865629b71",
+      "markers": [
+        "world.rune.fuse#0",
+        "world.rune.fuse#1"
+      ]
+    },
+    "world.sighted": {
+      "bank": "world",
+      "durationsMs": [
+        1258,
+        921
+      ],
+      "inputs": "3b00e1a7f221be4d5f35441c8649af322f56e9fe6d3f3a8f76466aafa8e07217",
+      "markers": [
+        "world.sighted#0",
+        "world.sighted#1"
+      ]
+    },
+    "world.source": {
+      "bank": "world",
+      "durationsMs": [
+        2997
+      ],
+      "inputs": "c86889e47877433f3add08cca9c3c35bba910a1af26d1ef47c9b09a4e1748c36",
+      "markers": [
+        "world.source#0"
+      ]
+    },
+    "world.threatened": {
+      "bank": "world",
+      "durationsMs": [
+        352,
+        457
+      ],
+      "inputs": "1886dda4a5655188461c6aedb1ab561b341e23f62bc193486eb7937a30779cd2",
+      "markers": [
+        "world.threatened#0",
+        "world.threatened#1"
+      ]
+    },
+    "world.upgrade": {
+      "bank": "world",
+      "durationsMs": [
+        356,
+        369
+      ],
+      "inputs": "f39ff821f5b039ab2922d7e53c4056b728a7bc6f1316bbabcb65aea36c8c9fe1",
+      "markers": [
+        "world.upgrade#0",
+        "world.upgrade#1"
+      ]
+    }
+  },
+  "tool": "yomi-audio 0.1.0",
+  "version": 1
+}

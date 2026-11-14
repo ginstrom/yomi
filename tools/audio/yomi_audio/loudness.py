@@ -8,10 +8,13 @@ Two measures, as `audio.toml`'s groups name them:
 - ``integrated``: gated integrated loudness (LUFS-I), the sound padded with
   silence to at least 400 ms.
 
+The K-weighting coefficients are written out here (`k_weighting_coefficients`)
+rather than read from pyloudnorm, whose filters are private; pyloudnorm stays
+a dependency as the tests' independent cross-check of LUFS-I.
+
 True peak is the largest absolute sample after 4x oversampling, in dBTP.
 """
 import numpy as np
-import pyloudnorm
 from scipy.signal import lfilter, resample_poly
 
 from .errors import AudioError
@@ -19,23 +22,47 @@ from .errors import AudioError
 MEASURES = ("momentary_max", "integrated")
 WINDOW_S = 0.4
 HOP_S = 0.1
-_meters: dict[int, pyloudnorm.Meter] = {}
+ABSOLUTE_GATE = -70.0
+RELATIVE_GATE = -10.0
+PEAK_MARGIN_DB = 0.05  # how far under a ceiling a peak-limited gain stops
 
 
-def _meter(sr: int) -> pyloudnorm.Meter:
-    if sr not in _meters:
-        _meters[sr] = pyloudnorm.Meter(sr)
-    return _meters[sr]
+def k_weighting_coefficients(sr: int):
+    """The BS.1770 K-weighting at any rate: ((b, a) of the high shelf, (b, a)
+    of the high pass). The analogue prototypes are libebur128's, which give
+    the ITU's published 48 kHz coefficients (BS.1770-4, Tables 1 and 2)."""
+    f0, gain_db, q = 1681.974450955533, 3.999843853973347, 0.7071752369554196
+    k = np.tan(np.pi * f0 / sr)
+    vh = 10 ** (gain_db / 20)
+    vb = vh**0.4996667741545416
+    a0 = 1 + k / q + k * k
+    shelf_b = [(vh + vb * k / q + k * k) / a0, 2 * (k * k - vh) / a0, (vh - vb * k / q + k * k) / a0]
+    shelf_a = [1.0, 2 * (k * k - 1) / a0, (1 - k / q + k * k) / a0]
+    f0, q = 38.13547087602444, 0.5003270373238773
+    k = np.tan(np.pi * f0 / sr)
+    a0 = 1 + k / q + k * k
+    highpass_b = [1.0, -2.0, 1.0]
+    highpass_a = [1.0, 2 * (k * k - 1) / a0, (1 - k / q + k * k) / a0]
+    return (shelf_b, shelf_a), (highpass_b, highpass_a)
 
 
 def k_weight(x: np.ndarray, sr: int) -> np.ndarray:
     """The BS.1770 K-weighting (a high shelf, then a high pass)."""
-    meter = _meter(sr)
     y = np.asarray(x, dtype=np.float64)
-    for name in ("high_shelf", "high_pass"):
-        f = meter._filters[name]
-        y = lfilter(f.b, f.a, y) * f.passband_gain
+    for b, a in k_weighting_coefficients(sr):
+        y = lfilter(b, a, y)
     return y
+
+
+def _block_powers(z: np.ndarray, window: int, hop: int) -> np.ndarray:
+    """Mean square of each `window`-long block of `z`, `hop` apart."""
+    cumulative = np.concatenate([[0.0], np.cumsum(z)])
+    starts = np.arange(0, len(z) - window + 1, hop)
+    return (cumulative[starts + window] - cumulative[starts]) / window
+
+
+def _lufs(power: float) -> float:
+    return -0.691 + 10 * np.log10(power) if power > 0 else -np.inf
 
 
 def momentary_max(x: np.ndarray, sr: int) -> float:
@@ -45,25 +72,29 @@ def momentary_max(x: np.ndarray, sr: int) -> float:
     window = int(round(WINDOW_S * sr))
     hop = int(round(HOP_S * sr))
     padded = np.concatenate([np.zeros(window), x, np.zeros(window)])
-    z = k_weight(padded, sr) ** 2
-    cumulative = np.concatenate([[0.0], np.cumsum(z)])
-    starts = np.arange(0, len(z) - window + 1, hop)
-    means = (cumulative[starts + window] - cumulative[starts]) / window
-    loudest = float(np.max(means))
-    if loudest <= 0:
-        return -np.inf
-    return -0.691 + 10 * np.log10(loudest)
+    return _lufs(float(np.max(_block_powers(k_weight(padded, sr) ** 2, window, hop))))
 
 
 def integrated(x: np.ndarray, sr: int) -> float:
+    """Gated integrated loudness (BS.1770-4): 400 ms blocks overlapping by
+    75%, an absolute gate at -70 LUFS, then a relative gate 10 LU under the
+    blocks that passed it."""
     x = np.asarray(x, dtype=np.float64)
     if not np.any(x):
         return -np.inf
-    minimum = int(round(WINDOW_S * sr)) + 1
-    if len(x) < minimum:
-        x = np.concatenate([x, np.zeros(minimum - len(x))])
+    window = int(round(WINDOW_S * sr))
+    if len(x) < window:
+        x = np.concatenate([x, np.zeros(window - len(x))])
+    powers = _block_powers(k_weight(x, sr) ** 2, window, int(round(window / 4)))
     with np.errstate(divide="ignore"):
-        return float(_meter(sr).integrated_loudness(x))
+        levels = -0.691 + 10 * np.log10(powers)
+    kept = powers[levels > ABSOLUTE_GATE]
+    if not len(kept):
+        return -np.inf
+    relative = _lufs(float(np.mean(kept))) + RELATIVE_GATE
+    with np.errstate(divide="ignore"):
+        kept = kept[-0.691 + 10 * np.log10(kept) > relative]
+    return _lufs(float(np.mean(kept))) if len(kept) else -np.inf
 
 
 def sample_peak_db(x: np.ndarray) -> float:
@@ -88,9 +119,28 @@ def measure(x: np.ndarray, sr: int, how: str) -> float:
     raise AudioError(f"unknown loudness measure '{how}' (expected one of {', '.join(MEASURES)})")
 
 
-def normalise(x: np.ndarray, sr: int, how: str, target: float, what: str = "sound") -> np.ndarray:
-    """Scales `x` so that its loudness by `how` is `target` LUFS."""
+def normalise_gain_db(
+    x: np.ndarray, sr: int, how: str, target: float, peak_ceiling: float | None = None, what: str = "sound"
+) -> tuple[float, bool]:
+    """The gain that takes `x` to `target` LUFS by `how`, or, when that would
+    put its true peak over `peak_ceiling`, the gain that leaves the peak just
+    under the ceiling (the lesser of the two). Returns (gain dB, whether the
+    ceiling bound it)."""
     level = measure(x, sr, how)
     if not np.isfinite(level):
         raise AudioError(f"{what}: is silent, so it cannot be normalised")
-    return np.asarray(x, dtype=np.float64) * 10 ** ((target - level) / 20)
+    gain = target - level
+    if peak_ceiling is not None:
+        room = peak_ceiling - PEAK_MARGIN_DB - true_peak_db(x)
+        if room < gain:
+            return room, True
+    return gain, False
+
+
+def normalise(
+    x: np.ndarray, sr: int, how: str, target: float, what: str = "sound", peak_ceiling: float | None = None
+) -> np.ndarray:
+    """Scales `x` to `target` LUFS by `how`, or less if `peak_ceiling` (dBTP)
+    would otherwise be passed (see `normalise_gain_db`)."""
+    gain, _ = normalise_gain_db(x, sr, how, target, peak_ceiling, what)
+    return np.asarray(x, dtype=np.float64) * 10 ** (gain / 20)

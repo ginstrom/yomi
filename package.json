@@ -16,6 +16,8 @@
     "simulate": "node scripts/simulate.ts",
     "sprites": "sprite build --project art",
     "sprites:check": "sprite build --check --project art",
+    "sounds": "uv run --project tools/audio yomi-audio sfx build",
+    "sounds:check": "uv run --project tools/audio yomi-audio sfx check",
     "manual:screenshots": "vitest run --config vitest.manual.config.ts"
   },
   "devDependencies": {

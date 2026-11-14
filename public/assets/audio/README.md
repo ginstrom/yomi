@@ -30,3 +30,15 @@ support.
 | `music_world_map.opus`, `music_world_map.mp3` | Looping world map theme, paused under the menu |
 
 The WAVs are placeholders only, meant to be replaced by a real sound pass.
+
+## `sfx/`: the sound-effect banks
+
+`sfx/` holds generated audio sprites, one per bank (`ui`, `battle`, `world`,
+`stings`): `<bank>.opus`, `<bank>.mp3` and `<bank>.json` (Phaser's
+audio-sprite map of markers `<cue>#<k>`). They are built from `audio/` by
+`npm run sounds` (recipes in `audio/sfx/`, provenance of every source in
+`audio/sources.toml`) and never edited by hand; see `audio/CLAUDE.md`. For now
+every cue is derived entirely from the placeholder WAVs listed above
+(licence own: the ten files, the two stings included, are registered as the
+`placeholder_*` sources), so the banks contain no third-party content. The
+WAVs stay until the runtime moves onto the banks.

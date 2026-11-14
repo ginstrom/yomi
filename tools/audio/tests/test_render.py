@@ -1,4 +1,5 @@
 import hashlib
+import re
 import subprocess
 import sys
 
@@ -28,9 +29,15 @@ def test_the_design_examples_render_on_target(cue):
     recipe = load_recipe(config, cue)
     variants = render(recipe, Registry.load(FIXTURE), config.sample_rate)
     assert len(variants) == recipe.variants
+    group = recipe.group
     for x in variants:
         assert x.dtype == np.float64 and x.ndim == 1 and len(x) > 0
-        assert loudness.measure(x, 48000, recipe.group.measure) == pytest.approx(recipe.group.target, abs=0.1)
+        # On target, unless the true-peak ceiling bound the gain first: then
+        # just under the ceiling and quieter than the target.
+        level, peak = loudness.measure(x, 48000, group.measure), loudness.true_peak_db(x)
+        assert peak <= group.peak
+        if level != pytest.approx(group.target, abs=0.1):
+            assert level < group.target and peak == pytest.approx(group.peak, abs=0.1)
     # No two variants are the same sound.
     assert len({pcm_hash([x]) for x in variants}) == len(variants)
 
@@ -119,3 +126,47 @@ def test_a_recipe_whose_layers_all_drop_out_is_named(project):
     config = load_config(project)
     with pytest.raises(AudioError, match=r"ui\.gone#0.*chance"):
         render(load_recipe(config, "ui.gone"), Registry.load(project), 48000)
+
+
+def test_a_short_click_stops_at_its_groups_ceiling():
+    # ui.click as designed would need about -0.3 dBTP to reach -26 LUFS-M
+    # (step 01); the ceiling (-6) wins.
+    config = load_config(FIXTURE)
+    recipe = load_recipe(config, "ui.click")
+    for x in render(recipe, Registry.load(FIXTURE), 48000):
+        assert loudness.true_peak_db(x) <= recipe.group.peak
+
+
+def test_a_source_only_a_left_out_layer_names_is_still_checked(project):
+    (project / "sfx" / "ui" / "rare.toml").write_text(
+        'variants = 1\nseed = 1\ngroup = "ui"\n'
+        '[[layer]]\nsynth = { kind = "sine", hz = 800, length = 80 }\n'
+        '[[layer]]\nsource = "oga_nowhere"\nchance = 0\n'
+    )
+    config = load_config(project)
+    with pytest.raises(AudioError, match=r"ui\.rare.*oga_nowhere"):
+        render(load_recipe(config, "ui.rare"), Registry.load(project), 48000)
+
+
+def test_a_pick_entry_no_variant_draws_is_still_checked(project):
+    (project / "sfx" / "ui" / "few.toml").write_text(
+        'variants = 1\nseed = 1\ngroup = "ui"\n'
+        '[[layer]]\npick = ["rpg_knife_slice_1", "rpg_knife_slice_2", "oga_nowhere"]\n'
+    )
+    config = load_config(project)
+    with pytest.raises(AudioError, match=r"ui\.few.*oga_nowhere"):
+        render_variant(load_recipe(config, "ui.few"), 0, Registry.load(project), 48000)
+
+
+def test_an_unreadable_source_is_named_not_a_traceback(project):
+    flac = project / "sources" / "stand_in" / "rpg_knife_slice_1.flac"
+    flac.write_bytes(b"not a flac at all" * 10)
+    path = project / "sources.toml"
+    text = path.read_text()
+    at = text.index('id = "rpg_knife_slice_1"')
+    from yomi_audio.sources import sha256_file
+
+    rest = re.sub(r'(?m)^sha256 = ".*"$', f'sha256 = "{sha256_file(flac)}"', text[at:], count=1)
+    path.write_text(text[:at] + rest)
+    with pytest.raises(AudioError, match="rpg_knife_slice_1.*could not be read"):
+        Registry.load(project).audio("rpg_knife_slice_1", "battle.hit.slash")

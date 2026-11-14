@@ -148,12 +148,46 @@ Record in the execution record: the pytest summary, the build's per-group loudne
 
 ## Completion criteria
 
-- [ ] `sfx build` and `sfx check` implement C6 (all checks, budgets, incremental build, stable manifest); tests seen failing first, then green.
-- [ ] AC8 cases covered by pytest (stale recipe named; CC-BY-4.0 refused; wrong SHA refused) and the manual check recorded.
-- [ ] Ten placeholder sources (collection `placeholder`, licence `own`) and exactly the 85 C7 recipes committed; banks and `audio/sfx.manifest.json` built and committed; `npm run sounds:check` passes on a clean tree.
-- [ ] `package.json` has `sounds` and `sounds:check` as in C2.
-- [ ] Root `CLAUDE.md` (Commands table, Assets and docs), `audio/CLAUDE.md` (Building and checking) and `public/assets/audio/README.md` updated.
-- [ ] `npm test` green; one commit; index row 02 set to `done` with the hash.
+- [x] `sfx build` and `sfx check` implement C6 (all checks, budgets, incremental build, stable manifest); tests seen failing first, then green.
+- [x] AC8 cases covered by pytest (stale recipe named; CC-BY-4.0 refused; wrong SHA refused) and the manual check recorded.
+- [x] Ten placeholder sources (collection `placeholder`, licence `own`) and exactly the 85 C7 recipes committed; banks and `audio/sfx.manifest.json` built and committed; `npm run sounds:check` passes on a clean tree.
+- [x] `package.json` has `sounds` and `sounds:check` as in C2.
+- [x] Root `CLAUDE.md` (Commands table, Assets and docs), `audio/CLAUDE.md` (Building and checking) and `public/assets/audio/README.md` updated.
+- [x] `npm test` green; one commit; index row 02 set to `done` with the hash.
 
 ## Execution record
 
+
+### Run 1 (2026-11-14)
+
+**Built.**
+- `tools/audio/yomi_audio/build.py`: `sfx build [--bank B] [--cue C]` and `sfx check` (C6). Recipes discovered under `audio/sfx/<bank>/`; a folder that is not a bank is refused. Inputs hash per cue (recipe text, SHA-256 of every source and impulse file it names, `audio.toml`, tool version, `uv.lock`). A touched bank (a cue changed, added or removed, named by `--cue`/`--bank`, or a bank file missing or differing from the manifest) is re-rendered whole (deterministic; a full build of 85 cues takes about 3 s, so no PCM cache), checked, laid out, encoded (ffmpeg: Opus VBR 64k, MP3 `-q:a 5`, mono 48 kHz, metadata stripped, bitexact) and its JSON written; untouched banks are left byte for byte. Budgets (`sources_bytes` before rendering, `sfx_bytes_per_format` over the would-be banks) are checked before anything is written. All failures of a run are reported together (`BuildFailed`, one line each) and nothing is written. The manifest is `json.dumps(sort_keys=True, indent=2)` plus a newline; rewritten only when its text changes.
+- `checks.py`: the per-variant checks shared by build and audition (loudness, true peak, `max_ms`, DC offset |mean| ≤ 0.5% of full scale, pairwise peak normalised cross-correlation ≤ 0.95 by FFT over every lag).
+- `sfx check` writes nothing and never encodes: input hashes, recipe/manifest set equality, bank files' existence, size and SHA-256 against the manifest, the JSON's markers and durations against the manifest, every source re-verified (licence, file, SHA-256), and the three budgets.
+- CLI: `sfx build`, `sfx check`; `npm run sounds` and `npm run sounds:check` exactly as C2.
+
+**Carried findings fixed.**
+- **Short-cue rule** (feature record decision): `loudness.normalise_gain_db` takes the lesser of the target gain and the gain leaving the true peak 0.05 dB under the group's ceiling; `render_variant` always passes the group's ceiling. A variant so held under its target passes the loudness check and is reported as *peak-limited* (build summary; `lim` in audition). Recorded in `audio/CLAUDE.md` (Recipes; Building and checking).
+- **Review-01 #1:** `recipe.verify_sources` checks every id of `Recipe.source_ids()` (left-out layers and unpicked `pick` entries included) before a variant renders; the build calls it per cue too. The registry now hashes a file once per load.
+- **Review-01 #2:** `Registry.audio` turns a soundfile failure into an `AudioError` naming the source; `source add` refuses an `--end` at or before the start (0 or negative); `cli.main` prints any other exception as one line (`yomi-audio: <group> <command>: unexpected <Type>: <message>`), exit 1, no traceback.
+- **Review-01 #3:** `loudness.py` no longer touches pyloudnorm: the K-weighting coefficients are computed from libebur128's analogue prototypes (match the ITU 48 kHz tables to 1e-9), and LUFS-I is our own gated measure (BS.1770-4: 400 ms blocks, 75% overlap, -70 absolute and -10 relative gates). pyloudnorm stays a dependency as the tests' cross-check of LUFS-I (agrees within 0.05 LU at 44.1 and 48 kHz).
+
+**Placeholder catalogue.** Ten sources added with `yomi-audio source add` (collection `placeholder`, licence `own`, author "Yomi (synthesized placeholder)", url the repository, notes pointing at the README): `placeholder_{melee_swing,hit_impact,crit_impact,miss,spell_cast,heal,unit_death,ui_click,victory,defeat}`, 324 KB in all. The 85 C7 recipes were written by a throwaway generator in the session scratchpad (not committed): each takes the nearest placeholder per the task's mapping, `length` = the design's typical ms, `max_ms` = 1.5 × it, a pitch range of ±5 semitones about a per-cue centre, a ranged low-pass and high-pass, a pink-noise layer at -26 to -16 dB (so variants never correlate), an 8 ms fade, and a seed of its own (100 × its index) so no two cues render the same sound; one-variant cues (stings, `world.source`, `battle.death.horror`) get a fixed pitch and a 30 Hz high-pass. Each starts `# Placeholder over placeholder_<x>; replaced by step NN`. Every cue passed its checks at its first seed. Variant counts are C7's.
+
+**Verification.**
+- `uv run --project tools/audio pytest tools/audio/tests`: 197 passed (148 before the step). New: `test_build.py` (36: shapes, Phaser JSON and gaps, decode length and mono, stable manifest, build-then-check, incremental no-op leaving files byte-identical, changed recipe rebuilding only its bank, `--cue`/`--bank`, removed recipe and emptied bank, foreign folder; AC8 check cases: edited recipe named, changed source, recipe without entry, entry without recipe, missing and tampered bank files, JSON mismatch, check writes nothing, no manifest, CLI one-line failure; CC-BY-4.0 and wrong SHA refused by the build; correlation, one-variant exemption, `max_ms`, ceiling, loudness, DC, every failing cue in one report, peak-limited accepted; each budget in build and check), plus loudness (ITU coefficients, no private access, LUFS-I against pyloudnorm, capped normalise), render (ceiling, unused source ids checked, unreadable FLAC named) and sources (bad `--end`, unexpected error in one line). Seen red first (missing functions/module, then the fixture's `ui.click` failing the new checks); mutation checks: raising `MAX_CORRELATION` to 1.01 fails 2 build tests, dropping the JSON comparison fails 1.
+- `npm run sounds`: `rendered 85 cues (85 changed, 0 removed); wrote battle, stings, ui, world`; per group (LUFS-M max unless noted): death 16 variants -20.0 (peak ≤ -7.8 dBTP); impact 82 variants -22.6 to -19.0 (≤ -1.0); release 70 at -22.0 (≤ -4.2); step 26 at -30.0 (≤ -10.5); sting 3 at -18.0 LUFS-I (≤ -14.1); sweetener 29 at -25.0 to -24.0 (≤ -3.0); ui 25 at -26.0 (≤ -6.3); world 33 at -22.0 (≤ -2.3). Peak-limited: 43 `impact` variants over 15 cues (hits and spell impacts over the 100 ms square-wave hit, -20.6 to -22.6 against -19).
+- Banks (bytes, opus / mp3; duration): battle 691 009 / 542 324 (79.4 s); world 224 208 / 117 884 (22.1 s); ui 55 223 / 40 892 (6.3 s); stings 43 715 / 17 156 (4.0 s). Totals 1 014 155 Opus and 718 256 MP3, against 3 000 000 each.
+- `npm run sounds:check`: `sfx check: 85 cues and 4 banks up to date, within budget`, exit 0.
+- Second `npm run sounds`: `sfx build: nothing changed (85 cues up to date)`; `git status` shows no generated file changed.
+- AC8 by hand: `echo "# x" >> audio/sfx/ui/click.toml; npm run sounds:check` → `yomi-audio: sfx check: 1 problem` / `ui.click: its recipe, sources or settings changed since the last build (run npm run sounds)`, exit 1; reverted, check passes again.
+- Cue count in the manifest: 85.
+- `PATH=/opt/homebrew/opt/node@26/bin:$PATH npm test`: 84 files, 1510 tests passed.
+
+**Deviations and notes for later steps.**
+- **A gap before the first marker too** (the task says between markers and after the last): every marker is preceded by `gap_ms`, so `start` of the first is 0.05 s. It keeps each variant clear of an encoder's start-up (Opus pre-skip, MP3 delay) at no cost.
+- **Peak-limited cues are accepted however far under their target.** The decision says the ceiling always holds and loudness is the aim; the build reports each such cue but sets no floor. Content steps (09 especially) should bring `ui` and `impact` cues up by making them denser, not rely on it.
+- **The design's own `ui.click` example fails two checks**: its variants correlate at up to 0.999 (only a band-pass centre moves) and it has a 1.4% DC offset (half a cycle of a 160 Hz sine in 25 ms). The fixture keeps it verbatim for the render tests; the build tests use a buildable variant (wider band, a noise layer, a high-passed thump). Step 09 should start from the latter, not the design's text.
+- The K-weighting now follows the ITU coefficients exactly instead of pyloudnorm's approximation; measured values move by hundredths of a LU. Step 03's bake-off clips were rendered before this (gitignored; nothing committed changes).
+- `inputs` includes `tools/audio/uv.lock`: adding or upgrading any dependency (the `tts` extra included) makes every cue stale until `npm run sounds` is rerun; the rebuilt banks are identical if the DSP did not change.
+- Budgets spent: none (no downloads, no paid calls).

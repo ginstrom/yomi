@@ -1,0 +1,15 @@
+# Placeholder over placeholder_defeat; replaced by step 13
+variants = 1
+seed = 6400
+group = "world"
+max_ms = 4500
+
+[[layer]]
+source = "placeholder_defeat"
+length = 3000
+pitch = -7
+filter = [{ type = "highpass", hz = 30 }]
+fade_out = 10
+
+[post]
+chain = [{ type = "fade_out", ms = 8 }]

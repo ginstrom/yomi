@@ -1,0 +1,21 @@
+# Placeholder over placeholder_ui_click; replaced by step 12
+variants = 8
+seed = 5903
+group = "step"
+max_ms = 300
+
+[[layer]]
+source = "placeholder_ui_click"
+length = 200
+pitch = [-2, 8]
+filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
+fade_out = 10
+
+[[layer]]                          # a breath of noise, so no two variants are one sound
+synth = { kind = "noise", color = "pink", length = 200 }
+filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
+envelope = [[0, 0], [200, -40]]
+gain = [-26, -16]
+
+[post]
+chain = [{ type = "fade_out", ms = 8 }]

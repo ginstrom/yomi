@@ -1,0 +1,21 @@
+# Placeholder over placeholder_unit_death; replaced by step 12
+variants = 2
+seed = 5500
+group = "death"
+max_ms = 1500
+
+[[layer]]
+source = "placeholder_unit_death"
+length = 1000
+pitch = [2, 12]
+filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
+fade_out = 10
+
+[[layer]]                          # a breath of noise, so no two variants are one sound
+synth = { kind = "noise", color = "pink", length = 300 }
+filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
+envelope = [[0, 0], [300, -40]]
+gain = [-26, -16]
+
+[post]
+chain = [{ type = "fade_out", ms = 8 }]

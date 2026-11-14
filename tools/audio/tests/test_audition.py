@@ -14,12 +14,15 @@ def test_audition_writes_each_variant_and_measures_it(project, tmp_path):
         data, sr = sf.read(row.wav)
         assert sr == 48000 and data.ndim == 1
         assert row.wav.parent == tmp_path / "out"
-        assert row.loudness == pytest.approx(-26, abs=0.1) and row.loudness_ok
+        # The design's click is too short to reach -26 LUFS-M under -6 dBTP:
+        # the ceiling sets its gain, and that passes.
+        assert row.loudness < -26 and row.peak_limited and row.loudness_ok
+        assert row.true_peak == pytest.approx(-6.0, abs=0.1)
         assert row.length_ms == pytest.approx(1000 * len(data) / 48000, abs=0.1)
         assert row.peak_ok == (row.true_peak <= -6.0)
         assert row.length_ok == (row.length_ms <= 90)
     text = "\n".join(lines)
-    assert "ui.click" in text and "LUFS-M max" in text and "dBTP" in text
+    assert "ui.click" in text and "LUFS-M max" in text and "dBTP" in text and "lim" in text
 
 
 def test_default_folder_is_under_the_root(project):

@@ -74,6 +74,7 @@ class Registry:
                 raise AudioError(f"{SOURCES_FILE}: source {entry['id']}: listed twice")
             self.entries[entry["id"]] = entry
         self._audio: dict[str, np.ndarray] = {}
+        self._verified: dict[str, Source] = {}
 
     @classmethod
     def load(cls, root: Path) -> "Registry":
@@ -83,7 +84,10 @@ class Registry:
         return cls(root, read_toml(path).get("source", []))
 
     def source(self, id: str, context: str) -> Source:
-        """The verified source `id`; `context` (the cue) prefixes any error."""
+        """The verified source `id`; `context` (the cue) prefixes any error.
+        A file is hashed once per registry."""
+        if id in self._verified:
+            return self._verified[id]
         entry = self.entries.get(id)
         if entry is None:
             raise AudioError(f"{context}: source '{id}' is not in {SOURCES_FILE}")
@@ -97,13 +101,17 @@ class Registry:
             raise AudioError(f"{context}: source {id}: file {entry['file']} is missing")
         if sha256_file(path) != entry["sha256"]:
             raise AudioError(f"{context}: source {id}: {entry['file']} does not match its recorded SHA-256")
-        return Source(id=id, path=path, licence=entry["licence"], sha256=entry["sha256"])
+        self._verified[id] = Source(id=id, path=path, licence=entry["licence"], sha256=entry["sha256"])
+        return self._verified[id]
 
     def audio(self, id: str, context: str, sample_rate: int = SAMPLE_RATE) -> np.ndarray:
         """The source's samples as mono float64, verified first."""
         source = self.source(id, context)
         if id not in self._audio:
-            data, sr = sf.read(source.path, dtype="float64", always_2d=True)
+            try:
+                data, sr = sf.read(source.path, dtype="float64", always_2d=True)
+            except (sf.LibsndfileError, RuntimeError, ValueError) as error:
+                raise AudioError(f"{context}: source {id}: {source.path.name} could not be read ({error})") from None
             if data.shape[1] != 1:
                 raise AudioError(f"{context}: source {id}: must be mono, has {data.shape[1]} channels")
             if sr != sample_rate:
@@ -214,8 +222,8 @@ def add_source(
         raise AudioError(f"source {id}: is already in {SOURCES_FILE}")
     if start is not None and start < 0:
         raise AudioError(f"source {id}: start must be 0 or more")
-    if start is not None and end is not None and end <= start:
-        raise AudioError(f"source {id}: end ({end}) must be after start ({start})")
+    if end is not None and end <= (start or 0.0):
+        raise AudioError(f"source {id}: end ({end}) must be after start ({start or 0.0})")
     if not file.is_file():
         raise AudioError(f"source {id}: {file} does not exist")
     target = root / "sources" / collection / f"{id}.flac"
@@ -225,7 +233,7 @@ def add_source(
     data, sr = _decode(file)
     first = int(round((start or 0.0) * sr))
     last = len(data) if end is None else int(round(end * sr))
-    if first >= len(data) or last > len(data) + 1:
+    if first >= len(data) or last > len(data) + 1 or last <= first:
         raise AudioError(f"source {id}: the excerpt lies outside the file ({len(data) / sr:.3f} s long)")
     mono = data[first:last].mean(axis=1)
     if sr != sample_rate:

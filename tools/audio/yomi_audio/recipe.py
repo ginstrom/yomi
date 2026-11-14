@@ -16,7 +16,12 @@ is design §5.6). Rendering variant `k`:
    `start`/`length`, reversed, pitched, filtered, saturated, enveloped,
    faded in and out, gained, then placed at `offset`.
 3. The mix runs through `[post] chain`, then is normalised to the group's
-   loudness target, always last.
+   loudness target, always last; where that gain would put the true peak
+   over the group's ceiling, the gain that meets the ceiling is used instead
+   (the lesser of the two), so the ceiling always holds.
+
+Every source the recipe names is verified before anything renders, even one
+only a left-out layer or an unpicked `pick` entry names.
 """
 import re
 import tomllib
@@ -399,7 +404,9 @@ def _post(recipe: Recipe, step: dict, x: np.ndarray, registry: Registry, sr: int
 
 
 def render_variant(recipe: Recipe, k: int, registry: Registry, sr: int) -> np.ndarray:
-    """Variant k as mono float64 PCM at `sr`, normalised to its group."""
+    """Variant k as mono float64 PCM at `sr`, normalised to its group: to its
+    loudness target, or less where the true-peak ceiling binds first."""
+    verify_sources(recipe, registry)
     variant = resolve(recipe, k)
     placed = []
     for index, layer in enumerate(variant.layers):
@@ -413,7 +420,15 @@ def render_variant(recipe: Recipe, k: int, registry: Registry, sr: int) -> np.nd
         mix[offset : offset + len(x)] += x
     for step in variant.post:
         mix = _post(recipe, step, mix, registry, sr)
-    return normalise(mix, sr, recipe.group.measure, recipe.group.target, what=f"{recipe.cue}#{k}")
+    group = recipe.group
+    return normalise(mix, sr, group.measure, group.target, what=f"{recipe.cue}#{k}", peak_ceiling=group.peak)
+
+
+def verify_sources(recipe: Recipe, registry: Registry) -> None:
+    """Every source and impulse the recipe names, drawn into a variant or
+    not, is registered, allowed and unchanged."""
+    for id in recipe.source_ids():
+        registry.source(id, recipe.cue)
 
 
 def render(recipe: Recipe, registry: Registry, sr: int) -> list[np.ndarray]:

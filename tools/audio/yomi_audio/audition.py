@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-from . import loudness
+from . import checks
 from .config import load_config
 from .errors import AudioError
 from .recipe import load_recipe, render_variant
@@ -24,7 +24,7 @@ def mark(ok: bool) -> str:
     return "ok" if ok else "!!"
 
 
-MEASURE_LABEL = {"momentary_max": "LUFS-M max", "integrated": "LUFS-I"}
+MEASURE_LABEL = checks.LABEL
 
 
 @dataclass(frozen=True)
@@ -35,6 +35,7 @@ class Row:
     png: Path | None
     loudness: float
     loudness_ok: bool
+    peak_limited: bool
     true_peak: float
     peak_ok: bool
     length_ms: float
@@ -96,20 +97,20 @@ def audition(root: Path, cues: list[str], out: Path | None = None, spectrogram: 
             x = render_variant(recipe, k, registry, sr)
             wav = folder / f"{recipe.cue}.v{k}.wav"
             sf.write(wav, x.astype(np.float32), sr, subtype="FLOAT")
-            level = loudness.measure(x, sr, group.measure)
-            peak = loudness.true_peak_db(x)
-            length = 1000 * len(x) / sr
+            m = checks.measure_variant(recipe.cue, k, x, sr, group, recipe.max_ms)
+            level, peak, length = m.loudness, m.true_peak, m.length_ms
             row = Row(
                 cue=recipe.cue,
                 k=k,
                 wav=wav,
                 png=None,
                 loudness=level,
-                loudness_ok=abs(level - group.target) <= group.tolerance,
+                loudness_ok=m.loudness_ok,
+                peak_limited=m.peak_limited,
                 true_peak=peak,
-                peak_ok=peak <= group.peak,
+                peak_ok=m.peak_ok,
                 length_ms=length,
-                length_ok=recipe.max_ms is None or length <= recipe.max_ms,
+                length_ok=m.length_ok,
             )
             if spectrogram:
                 png = wav.with_suffix(".png")
@@ -119,7 +120,8 @@ def audition(root: Path, cues: list[str], out: Path | None = None, spectrogram: 
                 )
                 row = replace(row, png=png)
             echo(
-                f"  {k:>3}  {level:>7.1f} {mark(row.loudness_ok)}  {peak:>5.1f} {mark(row.peak_ok)}  "
+                f"  {k:>3}  {level:>7.1f} {'lim' if row.peak_limited else mark(row.loudness_ok)}  "
+                f"{peak:>5.1f} {mark(row.peak_ok)}  "
                 f"{length:>5.0f} {mark(row.length_ok)}"
             )
             rows.append(row)

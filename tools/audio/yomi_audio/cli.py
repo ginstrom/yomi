@@ -3,13 +3,16 @@
     yomi-audio source add <file> --id ID --collection C --licence L --author A --url U ...
     yomi-audio impulse build [NAME ...]
     yomi-audio sfx audition <cue> ... [--out DIR] [--spectrogram]
+    yomi-audio sfx build [--bank B] [--cue C]
+    yomi-audio sfx check
     yomi-audio voice design <narrator> [--emotions E,...] [--candidates N]
     yomi-audio voice bakeoff [--redesign]
 
 The voice commands need the `tts` extra (uv run --project tools/audio --extra tts ...).
 
 Every command takes `--root` (default: the repository's `audio/`). A user's
-mistake prints one line naming what is at fault and exits 1.
+mistake prints one line naming what is at fault and exits 1; so does any
+other failure (its type and message, never a traceback).
 """
 import argparse
 import sys
@@ -57,6 +60,12 @@ def _parser() -> argparse.ArgumentParser:
     audition.add_argument("--out", type=Path, help="output folder (default: <root>/.audition/<cue>/)")
     audition.add_argument("--spectrogram", action="store_true", help="also write a spectrogram PNG per variant")
     audition.set_defaults(run=_sfx_audition)
+    sfx_build = sfx.add_parser("build", parents=[root], help="render changed cues, check them, write the banks and manifest")
+    sfx_build.add_argument("--bank", help="also rebuild this bank")
+    sfx_build.add_argument("--cue", help="also rebuild this cue's bank")
+    sfx_build.set_defaults(run=_sfx_build)
+    sfx_check = sfx.add_parser("check", parents=[root], help="fail if a built file is stale, altered or over budget")
+    sfx_check.set_defaults(run=_sfx_check)
 
     voice = groups.add_parser("voice", help="narration (needs the tts extra)").add_subparsers(dest="command", required=True)
     design = voice.add_parser("design", parents=[root], help="design a narrator's reference clips into bakeoff/")
@@ -97,6 +106,22 @@ def _sfx_audition(args) -> int:
     return 0
 
 
+def _sfx_build(args) -> int:
+    from .build import build
+
+    build(args.root, bank=args.bank, cue=args.cue)
+    return 0
+
+
+def _sfx_check(args) -> int:
+    from .build import BuildFailed, check
+
+    problems = check(args.root)
+    if problems:
+        raise BuildFailed("sfx check", problems)
+    return 0
+
+
 def _voice_design(args) -> int:
     from .config import load_config
     from .voice import CANDIDATES, design_voice, real_encoder, real_engines
@@ -128,4 +153,8 @@ def main(argv: list[str] | None = None) -> int:
         return args.run(args)
     except AudioError as error:
         print(f"yomi-audio: {error}", file=sys.stderr)
+        return 1
+    except Exception as error:  # a fault the tool did not foresee: still one line, no traceback
+        detail = " ".join(str(error).split())
+        print(f"yomi-audio: {args.group} {args.command}: unexpected {type(error).__name__}: {detail}", file=sys.stderr)
         return 1

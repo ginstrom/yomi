@@ -157,3 +157,28 @@ def test_registry_refuses_duplicate_ids(empty_project, tmp_path):
     path.write_text(text + text[text.index("[[source]]") :])
     with pytest.raises(AudioError, match="test_tone.*twice"):
         Registry.load(empty_project)
+
+
+@pytest.mark.parametrize("end", ["-0.2", "0"])
+def test_cli_refuses_an_end_that_is_not_after_the_start_of_the_file(empty_project, tmp_path, end):
+    original = write_wav(tmp_path / "in.wav", tone())
+    result = run_cli(
+        "source", "add", str(original), "--id", "x", "--collection", "test", "--licence", "own",
+        "--author", "me", "--url", "local", "--end", end, "--root", str(empty_project),
+    )
+    assert result.returncode == 1
+    assert "Traceback" not in result.stderr
+    assert result.stderr.count("\n") == 1 and "source x" in result.stderr
+
+
+def test_cli_reports_an_unexpected_failure_in_one_line(monkeypatch, capsys):
+    from yomi_audio import cli
+
+    def broken(args):
+        raise ValueError("something deep went wrong")
+
+    monkeypatch.setattr(cli, "_impulse_build", broken)
+    assert cli.main(["impulse", "build", "--root", "."]) == 1
+    err = capsys.readouterr().err
+    assert err.count("\n") == 1
+    assert "something deep went wrong" in err and "ValueError" in err

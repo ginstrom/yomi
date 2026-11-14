@@ -1,0 +1,133 @@
+{
+  "resources": [
+    "ui.opus",
+    "ui.mp3"
+  ],
+  "spritemap": {
+    "ui.back#0": {
+      "start": 0.05,
+      "end": 0.17,
+      "loop": false
+    },
+    "ui.back#1": {
+      "start": 0.22,
+      "end": 0.34,
+      "loop": false
+    },
+    "ui.back#2": {
+      "start": 0.39,
+      "end": 0.51,
+      "loop": false
+    },
+    "ui.click#0": {
+      "start": 0.56,
+      "end": 0.62,
+      "loop": false
+    },
+    "ui.click#1": {
+      "start": 0.67,
+      "end": 0.73,
+      "loop": false
+    },
+    "ui.click#2": {
+      "start": 0.78,
+      "end": 0.84,
+      "loop": false
+    },
+    "ui.click#3": {
+      "start": 0.89,
+      "end": 0.95,
+      "loop": false
+    },
+    "ui.confirm#0": {
+      "start": 1.0,
+      "end": 1.25,
+      "loop": false
+    },
+    "ui.confirm#1": {
+      "start": 1.3,
+      "end": 1.55,
+      "loop": false
+    },
+    "ui.confirm#2": {
+      "start": 1.6,
+      "end": 1.85,
+      "loop": false
+    },
+    "ui.error#0": {
+      "start": 1.9,
+      "end": 2.1,
+      "loop": false
+    },
+    "ui.error#1": {
+      "start": 2.15,
+      "end": 2.35,
+      "loop": false
+    },
+    "ui.error#2": {
+      "start": 2.4,
+      "end": 2.6,
+      "loop": false
+    },
+    "ui.gear#0": {
+      "start": 2.65,
+      "end": 2.95,
+      "loop": false
+    },
+    "ui.gear#1": {
+      "start": 3.0,
+      "end": 3.3,
+      "loop": false
+    },
+    "ui.gear#2": {
+      "start": 3.35,
+      "end": 3.65,
+      "loop": false
+    },
+    "ui.gear#3": {
+      "start": 3.7,
+      "end": 4.0,
+      "loop": false
+    },
+    "ui.gear#4": {
+      "start": 4.05,
+      "end": 4.35,
+      "loop": false
+    },
+    "ui.gear#5": {
+      "start": 4.4,
+      "end": 4.7,
+      "loop": false
+    },
+    "ui.learn#0": {
+      "start": 4.75,
+      "end": 5.104,
+      "loop": false
+    },
+    "ui.learn#1": {
+      "start": 5.154,
+      "end": 5.462,
+      "loop": false
+    },
+    "ui.tab#0": {
+      "start": 5.512,
+      "end": 5.662,
+      "loop": false
+    },
+    "ui.tab#1": {
+      "start": 5.712,
+      "end": 5.862,
+      "loop": false
+    },
+    "ui.tab#2": {
+      "start": 5.912,
+      "end": 6.062,
+      "loop": false
+    },
+    "ui.tab#3": {
+      "start": 6.112,
+      "end": 6.262,
+      "loop": false
+    }
+  }
+}

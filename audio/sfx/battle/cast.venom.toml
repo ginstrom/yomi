@@ -1,0 +1,21 @@
+# Placeholder over placeholder_spell_cast; replaced by step 11
+variants = 3
+seed = 1400
+group = "release"
+max_ms = 900
+
+[[layer]]
+source = "placeholder_spell_cast"
+length = 600
+pitch = [-5, 5]
+filter = [{ type = "lowpass", hz = [2500, 12000] }, { type = "highpass", hz = [40, 400] }]
+fade_out = 10
+
+[[layer]]                          # a breath of noise, so no two variants are one sound
+synth = { kind = "noise", color = "pink", length = 300 }
+filter = [{ type = "bandpass", hz = [600, 6000], q = 1.5 }]
+envelope = [[0, 0], [300, -40]]
+gain = [-26, -16]
+
+[post]
+chain = [{ type = "fade_out", ms = 8 }]

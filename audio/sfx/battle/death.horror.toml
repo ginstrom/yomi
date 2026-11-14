@@ -1,0 +1,15 @@
+# Placeholder over placeholder_unit_death; replaced by step 12
+variants = 1
+seed = 5700
+group = "death"
+max_ms = 3750
+
+[[layer]]
+source = "placeholder_unit_death"
+length = 2500
+pitch = -9
+filter = [{ type = "highpass", hz = 30 }]
+fade_out = 10
+
+[post]
+chain = [{ type = "fade_out", ms = 8 }]

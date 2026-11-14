@@ -25,6 +25,8 @@ Node 26+ is required: `scripts/*.ts` run on Node's native TypeScript support (no
 | Headless battle simulator | `npm run simulate -- --battles 2000 --seed 1` |
 | Build sprites from `art/` | `npm run sprites` |
 | Check exported sprites are up to date | `npm run sprites:check` |
+| Build sound banks from `audio/` (host only: needs uv and ffmpeg; not part of `npm test`) | `npm run sounds` |
+| Check built sounds are up to date (host only, as above) | `npm run sounds:check` |
 
 There is no linter; `tsc` is the lint step (`noUnusedLocals`, `noUnusedParameters`, `erasableSyntaxOnly`, `verbatimModuleSyntax`). `erasableSyntaxOnly` means no enums, namespaces or constructor parameter properties; use `import type` for type-only imports.
 
@@ -146,7 +148,7 @@ Sprites are generated from text sources in `art/` with sprite-tool. `art/CLAUDE.
 
 ### Sound
 
-Sound effects are being moved onto recipes and sources in `audio/` (the audio pass), built by the host-only Python tool in `tools/audio/` (`yomi-audio`, a uv project, never part of `npm test` or the podman image). `audio/CLAUDE.md` has the workflow: the recipe format, adding a CC0 or own source with its provenance, impulses, auditioning, the sourcing rules, and the narration engines (the tool's `tts` extra, mlx-audio) with the `voice bakeoff` listening test; it loads by itself when you work on files there.
+Sound effects are being moved onto recipes and sources in `audio/` (the audio pass), built by the host-only Python tool in `tools/audio/` (`yomi-audio`, a uv project, never part of `npm test` or the podman image). `audio/CLAUDE.md` has the workflow: the recipe format, adding a CC0 or own source with its provenance, impulses, auditioning, the sourcing rules, and the narration engines (the tool's `tts` extra, mlx-audio) with the `voice bakeoff` listening test, and building and checking the banks; it loads by itself when you work on files there. The sound-effect banks in `public/assets/audio/sfx/` (`<bank>.opus`, `.mp3` and the Phaser audio-sprite `.json`, for the banks `ui`, `battle`, `world` and `stings`) and `audio/sfx.manifest.json` are generated from `audio/` by `npm run sounds` and never edited by hand; `npm run sounds:check` fails when they are stale or over budget. Every cue's recipe is still a placeholder over the old WAVs, which the game plays until the runtime moves onto the banks.
 
 ## Keeping this file current
 

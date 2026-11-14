@@ -1,0 +1,15 @@
+# Placeholder over placeholder_victory; replaced by step 09
+variants = 1
+seed = 8500
+group = "sting"
+max_ms = 2700
+
+[[layer]]
+source = "placeholder_victory"
+length = 1800
+pitch = 7
+filter = [{ type = "highpass", hz = 30 }]
+fade_out = 10
+
+[post]
+chain = [{ type = "fade_out", ms = 8 }]
