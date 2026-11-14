@@ -193,3 +193,56 @@ After the tests pass, re-record the refactor guard (and the policy snapshot if i
 - [ ] Index step 28 status `done (<commits>)`.
 
 ## Execution record
+
+**Step 28, 2026-11-14.** From `19b7dcc` (green: 2042 tests). Node 26.13.0.
+
+### What changed
+
+- C17: `TIERS.cost` (1/2/3/4); `perkCost`, `nodesCost` (perks.ts); `Character.perkPoints`; `CREATION_PERK_POINTS`, `perkPointsLeft`, refusal "no perk point is left" (creation.ts); `PERK_POINTS_PER_LEVEL`, `pointsAt`, `canAffordPerk`, `affordableAt`, `XpGain.perkPointsGained`, `levelUp` +1 every level, `takePerk` spends the cost, `canAdvance` asks an affordable available node (progression.ts). progression.ts keeps a private `CREATION_POINTS` (creation.ts imports progression.ts); a test holds `pointsAt(1) === CREATION_PERK_POINTS`. Removed: `PICK_LEVEL_STEP`, `CREATION_PICKS`, `picksAt`, `nextPerkLevel`, `hasPickFor`.
+- C18: `autoAdvance` targets the first plan node it qualifies for at a raised level (`qualifiesFor({ ...character, level: max(level, perkLevel) })`, sound as no other ask reads the level, and `qualifiesFor` already checks `cappedAttribute`), else the first non-capstone node it qualifies for now, and stops while `takePerk` refuses it. Plans reordered as C18. Every node level of C18's table holds (`progression.test.ts`, stepwise as `raisedParty`; and `bandits.test.ts` through `banditStats`, which levels at once and then spends once: same nodes). Cutthroat: Backstab 2, Dirty Trick 4, Sprint 5.
+- C19: `SAVE_VERSION` 26; `migrateFrom25` (every hero of every party and the reserves) after `migrateFrom22` for 22 and 18 and alone for 23–25; `migrateFrom22` writes no points; `characterOf` asks `perkPoints` to be an integer ≥ 0; `parseSave` accepts 26, 25, 24, 23, 22, 18.
+- party.ts: `Aldric reaches level 5: +N max HP, N skill points, 1 perk point, wounds healed` ("2 perk points" for two levels at once).
+- Scenes (decision 13): `nodeHint` / `draftNodeHint` with C17's words; `InventoryScene` `canTake` by `canAffordPerk`, `buildPerkStatus` `Perk points: N` (gold while > 0), probes' `perkPicks` read `perkPoints`; `CreationScene` renamed imports only (its header "Picks: N of 3" and `PERKS_RULE` "One more comes with every even level" are now untrue until step 29 rewrites them, as decision 13 says; the tree help text in `InventoryScene` likewise); `debugCommands` `N perk points`.
+- CLAUDE.md: the rules of progression, perks, creation and saving, the bandits' node levels, the Skills tab's status, the progression module line.
+
+### Capstone at level 14 by parity plan (`raisedParty`'s loop: `levelUp` then `autoAdvance` a level at a time, the role's hero Aldric/Brenna/Delwyn)
+
+| Role | Plan | Capstone level | Held at 14 |
+| --- | --- | --- | --- |
+| melee | knight | 15 (Unbreakable) | no |
+| melee | swordmaster | 15 (Blademaster) | no |
+| melee | spellsword | 14 (Arcane Knight) | yes |
+| melee | assassin | 16 (Deathblow) | no |
+| melee | paladin | 14 (Aegis) | yes |
+| archery | ranger | 12 (Deadeye) | yes |
+| archery | rogue_archer | 14 (Shadowdancer) | yes |
+| archery | assassin | 16 (Deathblow) | no |
+| magic | evoker | 12 (Meteor) | yes |
+| magic | cryomancer | 14 (Glacial Prison) | yes |
+| magic | arcanist | 14 (Mass Haste) | yes |
+| magic | healer | 13 (Revive) | yes |
+| magic | saint | 14 (Sanctuary) | yes |
+| magic | evoker_healer (reference) | 14 (Meteor) | yes |
+
+Not by 14: knight and swordmaster (15), both assassins (16): step 30's to fix by plan order. (The `rogue` plan, not a parity plan, takes Shadowdancer at 15 from Brenna.)
+
+### Tests
+
+- New or rewritten: `progression.test.ts` (NC1 `pointsAt`, a point a level, NC2 costs and refusals, `canAffordPerk`/`affordableAt`, the invariant for the ready-made heroes and every bandit role to 20, saving (Delwyn keeps Heal All for after Fireball), C18's node levels, bandit nodes at 3/4/5, NC5's stop rule over every plan, plans in full, capstone-first plans); `trees.test.ts` (NC3 for all 12 paths: T2 3, T3 6, second T2 8, capstone 12, 1 banked at 4 and 0 at 12; the level-14 duellist with 4 points takes Deathblow, not Blademaster, and not with 3); `creation.test.ts`, `party.test.ts`, `character.test.ts`, `perks.test.ts`, `perkTree.test.ts` (hints), `bandits.test.ts` (new levels; the crossbow's range 5 at 6 and 7 at 8, Far Shot now at 8); `save.test.ts` (v25 fixture: every node kept, Aldric/Brenna/Delwyn/Garrick 0 and Wren 5, as step 27 recorded; v22: Aldric 3, Delwyn 0, Brenna 0, Garrick 1; v18: 0, 0, 0; v26 round trip; missing, negative, fractional, string or old-named points unreadable; versions 17, 19, 20, 21, 27 unreadable).
+- `scripts/simulate.test.ts`: two tests that asserted `!canAdvance` of a hero `autoAdvance` had spent now assert `spentByPlan` (no skill point left and `autoAdvance` would take nothing more), since a saving hero may still afford a tier-1 node elsewhere (design §4.2 accepts the "+" then).
+- `worldMap.test.ts`'s characterization hash re-recorded for the field rename alone (the old hash holds with `perkPoints` written back as `perkPicks`).
+- Guard (`924a808`): records and hash re-recorded; the five campaigns now end source, fallen, source, source, fallen (3 of 5 beat the Source, as before). Policy snapshot: 5433 → 5648 choices, new hash.
+- `npm test`: 2043 passed. `npm run build`: passes. `npm run test:browser`: 10 files, 121 passed.
+
+### e2e assertions changed (economy, not words)
+
+- `e2e/battle.test.ts` `aldricFights`: waits on the points spent by cost (`perkCost`); Taunt test at level 5 (was 4), Pin test at level 8 (was 6).
+- `e2e/character.test.ts`: the three-battle journey's level-3 hero has 2 perk points (was 1 pick), Armour Breaker spends both; the Abilities test raises Aldric to 3 (Power Attack's 2) and Delwyn to 5 (Flame Arrow and Heal All, 4), its waits by 2 and 4.
+
+### Grep
+
+`grep -rn -E "perkPicks|picksAt|PICK_LEVEL_STEP|nextPerkLevel|hasPickFor|perksGained|CREATION_PERK_PICKS|perkPicksLeft" src scripts CLAUDE.md` finds the probe field (`testHook.ts`, `InventoryScene.ts`, `CreationScene.ts`), `save.ts`'s migration of the old field and its comments, CLAUDE.md's description of that migration, test assertions that the old field is gone (`save.test.ts`, `progression.test.ts`) or planted in old saves, and the characterization comment in `worldMap.test.ts`; `e2e/` keeps the probe name.
+
+### Deviations
+
+- None from the contracts. Words decision 13 leaves for step 29 (creation's header and rule line, the tree help text) are untrue for now.
