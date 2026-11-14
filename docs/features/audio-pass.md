@@ -56,6 +56,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - 05: opus engineer, opus reviewer, clean in 1 round (two tidy-ups).
 - 06: sonnet engineer, sonnet reviewer, clean in 1 round (two tidy-ups, `e846bd3`).
 - 07: sonnet engineer, sonnet reviewer, clean in 1 round; accepted deviation: a world message sounds all its reports' events (two-cue cap), not only the told ones. Full browser suite only green file-by-file under load.
+- 08: opus engineer, opus reviewer, clean in 1 round; awaiting gate G3 (audition in `audio/.audition/08-melee/`, given to the user). Non-blocking: `hit.crit` ~270 ms vs brief ~500 (likely deliberate, unrecorded), `swing.heavy` 548–621 ms vs ~450; let G3 decide.
 - 03: opus engineer, opus reviewer, clean in 1 round; G1 passed 2026-11-14 (b/A, `A_0`); records updated by the step 07 engineer.
 
 ## Notes carried forward
@@ -71,6 +72,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - Step 17: reuse step 05's duck constants in `soundPlayer.ts`, don't define new ones.
 - G11: music now plays at −24 LUFS (battle 4.0 dB, world 1.7 dB louder than before); judge by ear.
 - Merging with `skill-trees`: a new main-hand weapon icon fails step 06's coverage test until it gets a `WEAPON_SOUNDS` entry (intended); new spells sound by element/school automatically.
+- Tool gaps from step 08: `source add` errors were swallowed by a batch script; no `source remove` command (unused sources removed by hand). Consider adding `source remove` in a later content step.
 - Browser tests' 60 s timeout is tight under load; run the full suite with nothing else running.
 - Step 09: start `ui.click` from the fixed version in `tools/audio/tests/test_build.py` (the design's example fails the correlation and DC checks). 43 impact variants over 15 cues are peak-limited at −20.6 to −22.6 LUFS against −19 (steps 08, 10).
 - Step 09: every Kenney jingle is ≤1.74 s; `stings.victory` (~3 s) and `stings.defeat` (~3.5 s) need chaining or synthesis.
