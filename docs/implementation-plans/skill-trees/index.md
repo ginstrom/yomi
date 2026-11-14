@@ -52,7 +52,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | 23 | [Stage 3: simulator lines, measure and document](23-stage3-measure.md) | Deathblows, revives, Unbreakable saves, callings and capstones in the summary; AC8's `--ready-level 12` check; measured; docs current | 21, 22 | sonnet | done (cf53531) |
 | **Stage 4: balance** | | | | | |
 | 24 | [Path parity and the cells](24-parity-and-cells.md) | Every plan within ±50 of its role's best; capstones checked; cells in band | 23 | opus | done (9016146, 3af5c59, 53cdeb0 and the record commit; cells in band, parity gaps at levels 8 and 12 reported) |
-| 25 | [Campaign bands](25-campaign-bands.md) | The three campaigns, deaths and days in band, or the user has accepted the figure (AC11) | 24 | opus | done (6f9eee8; fabb6b8 reverted in the revert commit; the user accepted `--ready-level 10` at 445) |
+| 25 | [Campaign bands](25-campaign-bands.md) | The three campaigns, deaths and days in band, or the user has accepted the figure (AC11) | 24 | opus | done (6f9eee8, 6093912) |
 | 26 | [Manual, screenshots and the scaling rules](26-manual-and-scaling.md) | Manual's tree tables; screenshots retaken; CLAUDE.md's rules of scaling restated; final verification | 25 | sonnet | pending |
 
 **Tiers.** "opus" means leave the engineer's model unset (the session's); "sonnet" means `model: "sonnet"`. Opus steps change the engine's rules, the AI policy, the save migration, the economy or the balance, or carry layout judgement (06, 14). Sonnet steps follow fixed contracts and existing patterns, or measure and document. Reviewers: leave the model unset for every step.

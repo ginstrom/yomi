@@ -149,14 +149,14 @@ Keep this table in the execution record, one row per run (campaign or cell):
 
 ## 6. Completion criteria
 
-- [ ] Final campaign runs and cells recorded; each figure in band, or the user's acceptance recorded (orchestrator's reply quoted with date).
-- [ ] Parity re-checked for every kept lever; no plan beyond ±50 of its role's best.
-- [ ] Yardstick test green; `fighterGrowth` re-measured only if it failed for the fighter's growth alone, and said so.
-- [ ] Guard fixture re-recorded with the final figures in the commit message; `npm test` and `npm run build` pass.
-- [ ] `index.md`: Measurements "25 final" column filled; step 25 status `done (<commit>)`.
-- [ ] `docs/features/skill-trees.md` Verification filled; decision-log rows for any acceptance.
-- [ ] Execution record: run log, changed-numbers list for step 26, run time.
-- [ ] `CLAUDE.md` states no number this step made false.
+- [x] Final campaign runs and cells recorded; each figure in band, or the user's acceptance recorded (orchestrator's reply quoted with date).
+- [x] Parity re-checked for every kept lever; no plan beyond ±50 of its role's best.
+- [x] Yardstick test green; `fighterGrowth` re-measured only if it failed for the fighter's growth alone, and said so.
+- [x] Guard fixture re-recorded with the final figures in the commit message; `npm test` and `npm run build` pass.
+- [x] `index.md`: Measurements "25 final" column filled; step 25 status `done (<commit>)`.
+- [x] `docs/features/skill-trees.md` Verification filled; decision-log rows for any acceptance.
+- [x] Execution record: run log, changed-numbers list for step 26, run time.
+- [x] `CLAUDE.md` states no number this step made false.
 
 ## 7. Execution record
 
@@ -173,13 +173,12 @@ First pass (rows 0–4): one lever kept (the Blight Horror's hit points, 55 → 
 | 2 | `BLIGHT_HORROR_STATS.maxHp` | 55 → 63 | `25-one-c`, `25-company-c`, `25-rl10-c`, `25-c-sg7`, `25-c-sg10` | one party **243**, 287 days, **1.0** dead; company **243**, 288 days, 1.1 dead; rl10 **445**, 539 days, 1.0 dead; SG7 0, SG10 5 | kept (6f9eee8) | 391 hit points at level 5 (341 before). Inside the yardstick, no exception. The Source lost 202 of 445 (one party). SG10 15 → 5: still above step 01's 2, as the band asks, but lower, as the brief asked to be told. The other cells are untouched by it (the Horror fights only at the Source). |
 | 3 | Scratch: the Source for five pre-rolls (Aldric, Brenna, Delwyn, Garrick, Aldric 2) raised to a level, 200 seeds | Horror 55, 60, 65, 80, 100 | `scratchpad/scratch25/src5.ts`, `sweep1.txt` | level 8: 290 of 300 at 55, then 190, 177, 122, 69 of 200; level 10: 300 of 300 at 55, 200, 199, 197, 185 of 200; level 11: 200, 200, 200, 197 of 200 | not a code change | Why rl10 does not move: by level 10 a party of five outclasses the Source. To take ~50 Source wins from rl10 (to 395) the Horror would need well over 100 hit points a level 1 block, which at level 8 is a win in three (69 of 200 at 100), the one-party campaign far below 150. |
 | 4 | Scratch: a fifth guardian at the Source (the Goblin Cutter, count 4 → 5 at threat 5), Horror 55 | 4 → 5 | scratch, reverted | level 8 176 of 200; level 10 200; level 11 200 | reverted (not committed) | The same shape: it hits level 8 and leaves 10–11 untouched. |
-
 | 5 | Scratch, the Source's candidate levers for parties of five at levels 8, 10 and 11 (Horror at 63 hit points), 200 battles each | see note | `scratch25/src5.ts`, `grid.sh` | base 185 / 200 / 200; Horror 100 hp 69 / 185 / 197; 130 hp 15 / 136 / 178; claws +8 66 / 178 / 195; +9 51 / 166 / 192; +10 42 / 154 / 183; +12 23 / 124 / 164; another Troll 56 / 177 / 195; two more Goblins 50 / 174 / 189; the Horror at level 7 19 / 148 / 183; the other guardians at level 7 114 / 198 / 198; the Horror's piercing 6 or 10 118 / 195 / 199; its mana 32 or 48 no change | — | Weighing the loss at levels 10 and 11 (rl10's Source parties: 40% at a mean level of 10, 60% at 11) against the level-8 party's wins (the one-party run's), the claws' damage cost level 8 least for the same effect: at a 6% loss at 10–11, the claws leave level 8 33%, hit points ~31%, a Troll 28%, two Goblins (8.5%) 25%; and at larger effects the gap widens (claws +11 about 16% at level 8 against hit points 130's 7.5% for about the same loss at 10–11). Mana and piercing do nothing useful. |
 | 6 | The Horror's claws (`BLIGHT_HORROR_STATS.damage.bonus`) | 2 → 8 | `25-rl10-d` | rl10 440, 546 days, 1.4 dead; the Source lost 18 of 458 | superseded | The campaign's parties are stronger than the scratch's (crafted gear, recruits), and a wiped vanguard's reserves try again, so only about a quarter of the Source's losses end a campaign. |
 | 7 | Claws, 250-campaign probes in parallel (the first 250 of seed 1's 500; the same subset gives 219 at +8 and 221 at +2) | +10, +11, +12, +13 | `25-rl10-p10` … `p13` | 216, 212, 202, 189 of 250 | — | Doubled: 432, 424, 404, 378. |
 | 8 | Claws, full runs | +11, +12 | `25-rl10-f11`, `25-one-f11`, `25-rl10-f12`, `25-one-f12` | +11: rl10 **419**, 560 days, 1.6 dead; one party **36**, 287 days, 0.8 dead. +12: rl10 405, 567 days, 1.6 dead; one party 27, 0.7 dead | +11 kept in fabb6b8, then **reverted** (row 10) | +11 is the least that brings rl10 into its band, near its top (420). |
 | 9 | Comparison: the Horror's hit points instead | 63 → 130, claws +2 | `25-one-h130`, `25-rl10-h130` | rl10 407, 568 days, 1.9 dead; one party **14** | not kept | For a like effect on rl10 (407 against +11's 419, +12's 405), hit points cost the one-party run far more (14 against 36 and 27). |
-| 10 | The claws back, by the user's "Back to 63 HP (Rec.)" | 2d6+11 → 2d6+2 (the Horror at 63 hit points) | `25-revert-sg7`, `25-revert-sg10`; the campaigns are `25-one-c`, `25-company-c`, `25-rl10-c` | one party **243**, company **243**, rl10 **445**; SG7 0, SG10 5 | kept (the revert commit) | `src/` and `scripts/` are identical to 6f9eee8 (`git diff 6f9eee8 -- src scripts` empty), and the re-recorded guard (`1da4a18b…44ef7`) and policy snapshot match 6f9eee8's, so the play is identical to the runs of row 2 and they were not run again. |
+| 10 | The claws back, by the user's "Back to 63 HP (Rec.)" | 2d6+11 → 2d6+2 (the Horror at 63 hit points) | `25-revert-sg7`, `25-revert-sg10`; the campaigns are `25-one-c`, `25-company-c`, `25-rl10-c` | one party **243**, company **243**, rl10 **445**; SG7 0, SG10 5 | kept (6093912) | `src/` and `scripts/` are identical to 6f9eee8 (`git diff 6f9eee8 -- src scripts` empty), and the re-recorded guard (`1da4a18b…44ef7`) and policy snapshot match 6f9eee8's, so the play is identical to the runs of row 2 and they were not run again. |
 
 Levers 2 and 3 of the brief (a half-step of bandit gear at threat 5; `FOE_HP_PER_LEVEL` 1.3 → 1.4) were not run as campaigns: the one-party and company figures are already in band, and neither can reach rl10's falls. rl10's parties fight Bandit Camp 5 2229 times and lose 2, Goblin Raid 5 2208 and lose 5; step 24 measured every threat-5 cell at level 8 at 500 of 500 but the Hobgoblin Warband's 465, so a few points of foe hit points or a Masterwork weapon on a threat-5 bandit cannot wipe a level-8-to-11 party of five 50 more times in 500. The only things on record that beat such parties are off today's map (BC6 74 and BC7 22 at level 8, step 24).
 
@@ -199,7 +198,7 @@ Changed numbers for step 26 (so far): the Blight Horror's level 1 hit points 55 
 
 Also folded in: contract C5 in `index.md` (and its decision 4) and `CLAUDE.md` now say the parity plans name their capstone first and the cryomancer takes Ice Lance before Web (step 24's review leftover), in 6f9eee8.
 
-### Final figures (seed 1, 500 each; the play of 6f9eee8, restored by the revert commit)
+### Final figures (seed 1, 500 each; the play of 6f9eee8, restored by 6093912)
 
 | Figure | Band | Final | In band |
 | --- | --- | --- | --- |
@@ -223,7 +222,7 @@ The cells other than SG7 and SG10 (`logs/25-final-*`) were run with the claws at
 
 ### Execution record
 
-Commits: 6f9eee8 (the Horror's hit points 55 → 63, guard and policy snapshot re-recorded; C5 and CLAUDE.md wording for the parity plans), ed7d86c and 49a395a (run log and the first decision), fabb6b8 (the claws 2d6+2 → 2d6+11, by "Much harder Source"), 91ed574 (that pass's figures and docs), and the revert commit (the claws back to 2d6+2 by "Back to 63 HP (Rec.)", guard and snapshot back to 6f9eee8's, these figures). No history rewritten.
+Commits: 6f9eee8 (the Horror's hit points 55 → 63, guard and policy snapshot re-recorded; C5 and CLAUDE.md wording for the parity plans), ed7d86c and 49a395a (run log and the first decision), fabb6b8 (the claws 2d6+2 → 2d6+11, by "Much harder Source"), 91ed574 (that pass's figures and docs), and 6093912 (the claws back to 2d6+2 by "Back to 63 HP (Rec.)", guard and snapshot back to 6f9eee8's, these figures). No history rewritten.
 
 Commands: `npm test` (2014 passed, before each code commit and at the end); `npm run build` passed (at 91ed574; the revert restores 6f9eee8's code); the campaigns and cells as logged above. The scratch harness (untracked, deleted) fought the Source for a party of N pre-rolls raised to a level, with the Horror's numbers and the guardians overridden by environment variables through a temporary hook, removed before any commit. Exploratory campaign runs ran in parallel; the final ones one at a time. A first attempt at the claw pass's final runs passed its flags wrongly (zsh does not split a variable) and was discarded. `npm run test:browser` was not run (only monster data changed, and it is back as it was at 6f9eee8).
 

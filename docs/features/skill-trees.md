@@ -21,8 +21,6 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 ## Decision log
 
-- Step 25, `--ready-level 10` at 445 (user, 2026-11-14): "Back to 63 HP (Rec.)": the Horror stays at 63 hit points with its claws at 2d6+2 (one party 243, company 243), and `--ready-level 10` stays at 445, over its band, to be revisited in stage 9 when threats 6 and 7 come onto the map. It supersedes the user's earlier "Much harder Source", because that measured cost was 36 and 34 of 500 (one party, company), not about 100.
-
 | Date | Decision | By | Alternatives | Reason |
 |---|---|---|---|---|
 | 2026-11-13 | No class lock: four Skyrim-style trees (Warrior, Scout, Mage, Cleric), each of three paths, open to every hero and mixable | user | class picked at creation; class as starting kit; full replacement | Intake answer above |
@@ -49,6 +47,7 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 | 2026-11-14 | Rogue for an archer accepted (a melee and skirmish path an archer mixes in on purpose); `rogue_archer` stays in the parity set as a reported figure only | user | buff Skirmisher for shots; drop the plan | Step 24: −109 at level 4 |
 | 2026-11-14 | The policy's Bane fix (no recast where fewer than two units are not yet baned) kept for monsters too: the Goblin Shaman and the Blight Horror | orchestrator | heroes only | An AI fix that makes foes slightly better, in the direction of tougher foes |
 | 2026-11-13 | Own branch `skill-trees` off main | orchestrator | commit on main | Precedent: one branch per feature |
+| 2026-11-14 | "Back to 63 HP": the Blight Horror keeps 63 hit points and its claws at 2d6+2 (one party 243, company 243); `--ready-level 10` stays at 445, over its band, revisited in stage 9 when threats 6 and 7 come onto the map. Supersedes "Much harder Source" | user | the claws at 2d6+11 (`--ready-level 10` 419); the Horror at 130 hit points (407) | The harder Source's measured cost was one party 36 and company 34 of 500, not the estimated 100 |
 
 ## Open questions
 
