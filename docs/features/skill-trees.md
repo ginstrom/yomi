@@ -1,7 +1,7 @@
 # Feature: skill trees and progression
 
 **Slug:** skill-trees
-**Phase:** 4b — node-cost amendment: implementing steps 27–31 (tiers: 27 sonnet, 28 opus, 29 sonnet, 30 opus, 31 sonnet; reviewers at the same tier) (verification of the base feature done, fixes at dae81d1). Earlier: 4 — implemented (all 26 steps done; manual, screenshots and CLAUDE.md current)
+**Phase:** 4b — node-cost amendment: steps 27–31 done; verification passed (review clean, QA pass); fixing the verification findings. Earlier stage (tiers: 27 sonnet, 28 opus, 29 sonnet, 30 opus, 31 sonnet; reviewers at the same tier) (verification of the base feature done, fixes at dae81d1). Earlier: 4 — implemented (all 26 steps done; manual, screenshots and CLAUDE.md current)
 
 ## Request (user's words)
 
@@ -23,6 +23,9 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 
 | Date | Decision | By | Alternatives | Reason |
 |---|---|---|---|---|
+| 2026-11-15 | Perk pace kept at 1 point a level. The tree says when each node can next be afforded. | user | bonus points at 6 and 12; cheaper tiers 1/1/2/3 | saving is the hard decision asked for; the simulated player found levels 11–13 empty |
+| 2026-11-15 | XP pace and capstone reach left for stage 9 (threats 6–7) | user | faster levels now; capstone at L10 | a normal campaign ends at about level 7–10, so capstones are a long-game goal |
+| 2026-11-15 | Skills capped at 100%, with a prompt when skill points sit unspent | user | a separate redesign later; both | small fix now; the skill-point economy stays as it is |
 | 2026-11-15 | Step 30: SG10 at 1 accepted, against its floor of 2 ("Accept (Rec.)"); the Horror stays at 63 hit points | user | `FOE_HP_PER_LEVEL` 1.0 (SG10 3, but one party 278, over its band) | A near-zero cell either way; the Horror's hit points are the user's |
 | 2026-11-15 | Step 30: the evoker's level-4 parity at −54 accepted ("Accept (Rec.)"), a cost of the path's shape at level 4 (both tier 1s held from creation, tier 2s cost 2, so the plan saves) | user | an off-path Arcane Blood at 4 in the evoker plan | The parity plan should measure the path alone |
 | 2026-11-15 | Step 30's plan-order changes accepted as deliberate: Aldric's Unbreakable at 13 (design §4.4: 15) and Delwyn's Meteor at 15 (NC5: 14), with Arcane Blood 4, Heal All 6, Fireball 9; step 31 restates them, and CLAUDE.md's stale bandit node levels | orchestrator | keep the design's levels | Lever 1 of the step's levers; they bring the parity capstones to 14 and BC4 and the days into band |
