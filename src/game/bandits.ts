@@ -1,6 +1,6 @@
 import { deriveCombatStats } from '../character/character.ts'
 import { draftCharacter, type CharacterDraft } from '../character/creation.ts'
-import { autoAdvance, levelUp } from '../character/progression.ts'
+import { autoAdvance, levelUp, type PlanId } from '../character/progression.ts'
 import type { CombatantStats } from '../combat/combat.ts'
 import type { Tier } from '../inventory/catalog.ts'
 import { gradedItem, type Grade } from '../inventory/grades.ts'
@@ -59,7 +59,7 @@ const DRAFTS: Record<BanditRole, CharacterDraft> = {
     attributes: { strength: 10, perception: 3, endurance: 8, intelligence: 2, agility: 5, luck: 4 },
     tagged: 'melee',
     raises: { melee: 10, archery: 0, magic: 0 },
-    perks: ['weapon_training', 'heavy_hand', 'armor_breaker'],
+    perks: ['weapon_training', 'heavy_hand', 'toughness'],
   },
   mage: {
     name: 'Hedge-Mage',
@@ -67,8 +67,8 @@ const DRAFTS: Record<BanditRole, CharacterDraft> = {
     attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
     tagged: 'magic',
     raises: { melee: 0, archery: 0, magic: 10 },
-    // Spellcasting's two spell picks buy the last two; autoAdvance adds a heal and Flame Arrow by level 3.
-    perks: ['spellcasting', 'arcane_study', 'keen_eye', 'magic_arrow', 'shield'],
+    // Its plan (`bandit_mage`) adds Flame Arrow at level 3, Destruction at 4, Fireball at 7, Heal at 8 and Heal All at 10.
+    perks: ['magic_arrow', 'shield', 'arcane_study'],
   },
   // The archer with a crossbow: the same draft, so that the two cannot drift apart.
   crossbowman: { ...ARCHER_DRAFT, name: 'Bandit Crossbowman' },
@@ -80,6 +80,16 @@ const DRAFTS: Record<BanditRole, CharacterDraft> = {
     raises: { melee: 10, archery: 0, magic: 0 },
     perks: ['weapon_training', 'toughness', 'dodger'],
   },
+}
+
+/** The plan each role grows by (`autoAdvance`), which a hero built the same way must follow. */
+export const BANDIT_PLAN: Record<BanditRole, PlanId> = {
+  cutthroat: 'rogue',
+  archer: 'ranger',
+  brute: 'swordmaster',
+  mage: 'bandit_mage',
+  captain: 'knight',
+  crossbowman: 'ranger',
 }
 
 /** A copy of `role`'s draft, for building a hero the same way. */
@@ -137,7 +147,8 @@ function deepFreeze<T>(value: T): T {
  * Built in this order, which a hero built to match must follow: the draft
  * made a character (`draftCharacter`), its gear put on in place of the
  * starting kit (before levelling, so that `autoAdvance` raises the skill of
- * the weapon it holds), `levelUp` to `level`, one `autoAdvance`, then
+ * the weapon it holds), `levelUp` to `level`, one `autoAdvance` by its role's
+ * plan (`BANDIT_PLAN`), then
  * `deriveCombatStats`. Cached per (role, level, tier, grade) and deeply frozen:
  * callers spread it and never change it.
  */
@@ -149,18 +160,21 @@ export function banditStats(role: BanditRole, level: number, gear: BanditGear): 
   const bandit = draftCharacter(DRAFTS[role])
   bandit.equipment = equipmentFor(role, gear)
   while (bandit.level < target) levelUp(bandit)
-  autoAdvance(bandit)
+  autoAdvance(bandit, BANDIT_PLAN[role])
   const stats = deepFreeze(deriveCombatStats(bandit))
   cache.set(key, stats)
   return stats
 }
 
 /**
- * The gear bandits wear at a threat: plain iron and oak below threat 5, Fine
- * iron and oak at threat 5 (today's map's last ring), and Fine steel and
- * ironwood (tier 2, grade 2) from threat 6, which the outer rings bring.
+ * The gear bandits wear at a threat: Fine iron and oak at threats 3 and 5
+ * (today's map's last ring; plain below 5 until skill trees step 24, when a
+ * party of the threat's level won the camp 495 times in 500 at threats 3 and
+ * 4), plain iron and oak at threat 4 (skill trees step 30: under perk points a
+ * level-4 party holds a node fewer and won it 364 times in 500 in Fine), and
+ * Fine steel and ironwood (tier 2, grade 2) from threat 6, which the outer
+ * rings bring.
  */
 export function banditGear(threat: number): BanditGear {
-  if (threat >= 6) return { tier: 2, grade: 2 }
-  return threat >= 5 ? { tier: 1, grade: 2 } : { tier: 1, grade: 1 }
+  return threat >= 6 ? { tier: 2, grade: 2 } : threat === 4 ? { tier: 1, grade: 1 } : { tier: 1, grade: 2 }
 }

@@ -13,6 +13,7 @@ import type { EquipmentSlot } from './inventory/inventory.ts'
 import type { RuneKey } from './inventory/runes.ts'
 import type { Point } from './scenes/boardGeometry.ts'
 import type { Rect } from './scenes/mapScroll.ts'
+import type { Skill, SkillMenuRow } from './scenes/skillMenu.ts'
 
 /**
  * What the in-browser tests (e2e/) see of the running game. The page is one
@@ -95,11 +96,10 @@ export interface CreationProbe {
   /** What is left to place of each kind. */
   attributePoints: number
   skillPoints: number
-  perkPicks: number
-  spellPicks: number
-  /** Which tree the perks step shows, and the switch between the two. */
-  tree: 'perks' | 'spells'
-  treeSwitch: { perks: ButtonProbe; spells: ButtonProbe }
+  perkPoints: number
+  /** Which tree the perks step shows, and its tabs, Warrior to Cleric (keys 1 to 4 switch them too). */
+  tree: 'warrior' | 'scout' | 'mage' | 'cleric'
+  trees: Record<'warrior' | 'scout' | 'mage' | 'cleric', ButtonProbe>
   /** The tabs that open each step directly. */
   steps: Record<CreationStep, ButtonProbe>
   /** Each attribute's value and its two buttons; on screen on the attributes step. */
@@ -107,7 +107,7 @@ export interface CreationProbe {
   /** Each skill's level as the draft's character has it, its points placed and its buttons; on screen on the skills step. */
   skills: Record<SkillId, { level: number; placed: number; tagged: boolean; tag: ButtonProbe; minus: ButtonProbe; plus: ButtonProbe }>
   /** Every node of the tree shown, by its centre on screen, with the ranks chosen and whether a click would take or give back one; on screen on the perks step. */
-  perks: Array<Point & { perk: string; ranks: number; canClick: boolean }>
+  perks: Array<Point & { perk: string; ranks: number; canClick: boolean; cost: number }>
   /** The preset faces, by their centres on screen; on screen on the name step. */
   portraits: Array<Point & { portrait: PortraitId; picked: boolean }>
   /** `create` reads Save when editing; it is on the name step, enabled when the draft has no problems. */
@@ -365,12 +365,16 @@ export interface BattleProbe {
   /** Where the board's top-left corner is on screen and how far it is scaled; with BATTLE_LAYOUT, that places every hex. */
   origin: Point
   scale: number
-  /** `cast` is shown only for a unit with magic; `result` is the one button of the victory or defeat screen. */
+  /** `cast` is the Skills button, shown only for a unit with a spell or an ability; `result` is the one button of the victory or defeat screen. */
   buttons: { attack: ButtonProbe; cast: ButtonProbe; endTurn: ButtonProbe; result: ButtonProbe }
-  /** The spell the next board click picks a target for, after the Cast button. */
-  casting: SpellId | null
-  /** The Cast button's spell list, a row a spell with its centre, while it is open; null when shut. Each unit's statuses are in `state`. */
-  spellMenu: Array<Point & { spell: SpellId; enabled: boolean }> | null
+  /** The skill (a spell or an ability) the next board click picks a target for, after the Skills button. */
+  aiming: Skill | null
+  /** The Skills button's list, a row a spell or ability (`skillMenuRows`) with its centre, while it is open; null when shut. Each unit's statuses are in `state`. */
+  skillMenu: Array<Point & SkillMenuRow> | null
+  /** The status letters each unit's nameplate shows now, in order: "T", "RT", or "" for none. */
+  marks: Record<UnitId, string>
+  /** Each unit's figure opacity: 1 standing, dimmed once it has fallen, 1 again once revived. */
+  figureAlpha: Record<UnitId, number>
   /** The lines of the victory or defeat screen; empty until the battle is over. */
   result: string[]
   /** The lines of the foe info panel shown beside the hovered foe now (`foeInfoLines`: its name, then its abilities and wards); empty when none shows. */
@@ -381,14 +385,13 @@ export interface BattleProbe {
 }
 
 export interface InventoryProbe {
-  /** `perkTree` and `spellTree` are the views the Skills and Spells tabs' tree buttons open; they have no tab buttons of their own. */
-  tab: 'character' | 'skills' | 'spells' | 'inventory' | 'perkTree' | 'spellTree'
+  /** `trees` is the tree view as the Skills tab's Skill Trees button opens it; it has no tab button of its own. */
+  tab: 'character' | 'skills' | 'abilities' | 'inventory' | 'trees'
   /** The portraits beside the panel: a click on one turns the panel to that member, who is then the active one. */
   party: PortraitProbe[]
   /** What the character has waiting to spend. */
   skillPoints: number
-  perkPicks: number
-  spellPicks: number
+  perkPoints: number
   /** Each skill's level, with the centre on screen of the button that raises it and whether a click there would. */
   skills: Record<SkillId, Point & { level: number; canRaise: boolean }>
   /** The character's attributes as the Character tab shows them: what it was born with and what its perks add. */
@@ -397,7 +400,7 @@ export interface InventoryProbe {
   armorClass: number
   /** The mana shown: what is left in battle, what the character carries on the world map; null for a character without magic. */
   mana: number | null
-  /** The spell skill the Spells tab shows, gear included; null for a character that knows no spell. */
+  /** The spell skill the Abilities tab shows, gear included; null for a character that knows no spell. */
   spellSkill: number | null
   /** The Character tab's warning that the weapon held costs more AP than a turn gives; null when it fits. */
   attackWarning: string | null
@@ -407,18 +410,40 @@ export interface InventoryProbe {
   tooltip: string[]
   /** The perks the Skills tab lists: those the character has a rank of. */
   takenPerks: Array<{ perk: string; ranks: number }>
-  /** The Skills tab's button that opens the perk tree, and the tree's button back, by their centres on screen. */
-  perkTreeButton: Point
+  /** The Skills tab's line over the skills: "3 skill points to spend" while a raise can be made here, else "Skill points: N". */
+  skillPointsLine: string
+  /** Why the greyed "+" pointed at refuses a raise (`skillRaiseRefusal`), shown under the skills; empty when none is pointed at. */
+  raiseHint: string
+  /** The Skills tab's passives as drawn, each its name and description lines' bounds on screen together. */
+  passiveBounds: Rect[]
+  /** The tree view's strip as it reads now (the rule and the saving line with the pointer on no node); empty before the view is first built. */
+  treeStrip: string[]
+  /** The Skills tab's Skill Trees button, and the tree view's button back, by their centres on screen. */
+  treesButton: Point
   back: Point
+  /** The tree the tree view shows, and its four tabs by their centres on screen (keys 1 to 4 switch them too). */
+  tree: 'warrior' | 'scout' | 'mage' | 'cleric'
+  trees: Record<'warrior' | 'scout' | 'mage' | 'cleric', Point>
+  /** A node's width and height on screen, the same for every node. */
+  nodeSize: { width: number; height: number }
   /**
-   * Every perk's node in the tree, by its centre on screen, with the ranks taken and whether a
-   * click would take one. The nodes are on screen only while `tab` is `perkTree`.
+   * Every node of the tree shown, by its centre on screen, with the ranks taken and whether a
+   * click would take one. The nodes are on screen only while `tab` is `trees`.
    */
-  perks: Array<Point & { perk: string; ranks: number; canTake: boolean }>
-  /** The Spells tab's button that opens the spell tree, and the spell tree's nodes as `perks` gives the perk tree's, on screen while `tab` is `spellTree`. */
-  spellTreeButton: Point
-  spellNodes: Array<Point & { perk: string; ranks: number; canTake: boolean }>
-  /** The spells the Spells tab lists, each with the centre of its row's Cast button and whether a click there would cast it here. */
+  perks: Array<Point & { perk: string; ranks: number; canTake: boolean; cost: number }>
+  /** The Abilities tab's rows, every page's, spells then techniques: name, kind, AP, mana (null for an at-will) and recharge (null for none). */
+  abilities: Array<{ name: string; kind: string; ap: number; mana: number | null; recharge: number | null; description: string }>
+  /** The Abilities tab's mana line: "Mana 18 / 18", with ": knows no ability" for a hero that knows none. */
+  abilityManaLine: string
+  /** The Abilities tab's page shown (from 0), its pages, and its pager's buttons while there are two pages or more. */
+  abilityPage: number
+  abilityPages: number
+  abilityPager: { prev: Point; next: Point } | null
+  /** The rows the Abilities tab draws now, each its texts' bounds on screen together. */
+  abilityRowBounds: Rect[]
+  /** The Character tab's title under the hero's name (`heroTitle`). */
+  title: string
+  /** The spells the Abilities tab lists, each with the centre of its row's Cast button and whether a click there would cast it here. */
   spells: Array<Point & { spell: SpellId; castable: boolean }>
   /** A heal of one member waiting for a portrait to be clicked, on the world map. */
   worldCast: SpellId | null

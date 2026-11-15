@@ -27,6 +27,7 @@ import type { Rect } from './mapScroll.ts'
 import { addPanelButton, fitText } from './panelButton.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { PORTRAIT_SCALE, PORTRAIT_SIZE, portraitKey } from './partyPanel.ts'
+import { onceEachEvent } from './keyEvents.ts'
 
 interface GuildHallData {
   /** The id of the party at the hall; the first if left out or unknown. */
@@ -131,7 +132,7 @@ export class GuildHallScene extends Phaser.Scene {
       } else if (this.view === 'recruit') this.show('roster')
       else this.close()
     })
-    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => this.onKey(event))
+    this.input.keyboard?.on('keydown', onceEachEvent((event: KeyboardEvent) => this.onKey(event)))
   }
 
   /** What the in-browser tests see of the guild hall; see testHook.ts. */

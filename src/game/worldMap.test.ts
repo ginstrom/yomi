@@ -547,4 +547,7 @@ describe('a seeded session of walks and camps (characterization)', () => {
 })
 
 const SESSION_TURN = 153
-const SESSION_SHA256 = '6cd5821ddc5fc57c6924324bf9709e39cbccd3e2b7c42325214133ad3171604e'
+// Re-recorded in skill trees step 03: the party's characters hold the trees' nodes (and no spell picks), and Aldric's Toughness changed his hit points.
+// Re-recorded in skill trees step 04: every hero has mana (camping fills it), and the mage 2 more for each Mage and Cleric node.
+// Re-recorded in skill trees step 28: the characters' `perkPicks` renamed `perkPoints`, nothing else (the old hash held with the name put back).
+const SESSION_SHA256 = '250b73821d053343d30cc4209b6f36ec15f526bdcb5c0e109894535e7dbedaa0'

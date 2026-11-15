@@ -99,6 +99,11 @@ export class UnitFigure extends Phaser.GameObjects.Container {
     return this
   }
 
+  /** How opaque the figure's body is: 1 standing, less once fallen. */
+  figureAlpha(): number {
+    return this.base.alpha
+  }
+
   setFigureAlpha(alpha: number): this {
     for (const sprite of this.layers()) sprite.setAlpha(alpha)
     return this

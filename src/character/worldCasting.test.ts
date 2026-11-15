@@ -30,6 +30,32 @@ describe('castOnWorldMap (A12)', () => {
     expect([delwyn.mana, aldric.hp]).toEqual([1, maxHp(aldric)])
   })
 
+  it('adds the caster’s heal bonus (Mending), never above the maximum', () => {
+    const [aldric, , delwyn] = party()
+    delwyn.perks.mending = 1
+    aldric.hp = 3
+    expect(castOnWorldMap(delwyn, 'heal', party(), aldric)).toBe(true)
+    expect(aldric.hp).toBe(3 + 6 + 4)
+    aldric.hp = maxHp(aldric) - 2
+    expect(castOnWorldMap(delwyn, 'heal', party(), aldric)).toBe(true)
+    expect(aldric.hp).toBe(maxHp(aldric))
+  })
+
+  it('leaves Purify out, a cleanse and no heal, and never casts it (the Purify decision)', () => {
+    const [aldric, , delwyn] = party()
+    delwyn.perks.purify = 1
+    expect(worldSpells(delwyn).map((known) => known.spell)).toEqual(['heal'])
+    aldric.hp = 3
+    expect(castOnWorldMap(delwyn, 'purify', party(), aldric)).toBe(false)
+    expect(aldric.hp).toBe(3)
+  })
+
+  it('lists Lay on Hands like any heal', () => {
+    const [, , delwyn] = party()
+    delwyn.perks.lay_on_hands = 1
+    expect(worldSpells(delwyn).map((known) => known.spell)).toContain('lay_on_hands')
+  })
+
   it('refuses, changing nothing, without the mana, the spell or a target', () => {
     const [aldric, , delwyn] = party()
     aldric.hp = 3
@@ -73,6 +99,20 @@ describe('autoHeal', () => {
     expect(aldric.hp).toBe(20)
     // Three Heals cost 9; Brenna's 3 lost is less than a Heal restores.
     expect(delwyn.mana).toBe(1)
+  })
+
+  it('counts the healer’s heal bonus (Mending), wasting none of it on a wound smaller than the heal', () => {
+    const members = party()
+    const [aldric, brenna, delwyn] = members
+    delwyn.perks = { ...delwyn.perks, mending: 1 }
+    expect(worldHealing('heal', delwyn)).toBe(10)
+    delwyn.mana = 10
+    // 8 lost is more than a bare Heal's 6 but less than Delwyn's 10.
+    aldric.hp = maxHp(aldric) - 8
+    expect(autoHeal(members)).toBe(0)
+    brenna.hp = maxHp(brenna) - 10
+    expect(autoHeal(members)).toBe(10)
+    expect(brenna.hp).toBe(maxHp(brenna))
   })
 
   it('heals nothing without a healer, a wound or the mana', () => {

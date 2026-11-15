@@ -31,6 +31,20 @@ function battleEnd(winner: Side | null): BattleEndEvent {
   return { type: 'battle_end', seq: 0, round: 3, winner, reason: winner ? 'defeat' : 'abandoned', survivors: {} }
 }
 
+describe('eventSounds for the stage-3 events', () => {
+  it('chimes a restore, and a Revive as any friendly spell', () => {
+    const restore = { type: 'restore', seq: 0, round: 1, unit: 'hero', hp: 3, cause: 'renewing' } as const
+    expect(eventSounds(restore)).toEqual([{ key: 'sfx_heal', delayMs: 0 }])
+    const revive = cast(true, false, 'revive')
+    expect(eventSounds({ ...revive, outcomes: [{ ...revive.outcomes[0], revived: true }] })[1].key).toBe('sfx_heal')
+  })
+
+  it('lands a counter and a deathblow as any hit', () => {
+    expect(eventSounds({ ...attack(true), counter: true })[1].key).toBe('sfx_hit_impact')
+    expect(eventSounds({ ...attack(true), deathblow: true })[1].key).toBe('sfx_hit_impact')
+  })
+})
+
 describe('eventSounds', () => {
   it('swings, then lands a hit, a critical or a miss', () => {
     const swing = { key: 'sfx_melee_swing', delayMs: 0 }

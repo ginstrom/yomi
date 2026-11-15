@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { PERK_IDS } from '../src/character/perks.ts'
+import { xpToNextLevel } from '../src/character/progression.ts'
 import { offsetToHex } from '../src/grid/hex.ts'
 import { useGames, type Game } from './driver.ts'
 
@@ -27,7 +29,7 @@ describe('a hero’s panel', () => {
     await game.waitForScenes(['Inventory'], ['World'])
     // Nothing to spend yet, so it opens on the hero and not on the skills.
     const panel = await game.waitFor('Inventory')
-    expect(panel).toMatchObject({ tab: 'character', skillPoints: 0, perkPicks: 0 })
+    expect(panel).toMatchObject({ tab: 'character', skillPoints: 0, perkPoints: 0 })
     expect(panel.party.map((member) => member.active)).toEqual([false, true, false])
 
     await game.press('s')
@@ -253,7 +255,7 @@ describe('a hero’s panel', () => {
     }
   })
 
-  it('shows on the Spells tab the spell skill the caster’s gear leaves it', async () => {
+  it('shows on the Abilities tab the spell skill the caster’s gear leaves it', async () => {
     const game = await games.open()
     const world = await game.newGame()
     // The mage's breastplate takes 5 from its spells.
@@ -262,7 +264,7 @@ describe('a hero’s panel', () => {
     await game.click(marked.party[2])
     await game.waitForScenes(['Inventory'], ['World'])
     await game.press('b')
-    const spells = await game.settled('Inventory', (p) => p.tab === 'spells')
+    const spells = await game.settled('Inventory', (p) => p.tab === 'abilities')
     expect(spells.equipment.armor.item).toBe('iron_breastplate')
     expect(spells.spellSkill).toBe(spells.skills.magic.level - 5)
   })
@@ -318,72 +320,98 @@ describe('a hero’s panel', () => {
     }
   })
 
-  it('lists only the perks a hero has taken, and shows them all in the perk tree', async () => {
+  it('lists only the perks a hero has taken, and shows them all in the four trees', async () => {
     const game = await games.open()
+    await game.resize(840, 560)
     const world = await game.newGame()
     await game.click(world.party[0])
     await game.waitForScenes(['Inventory'], ['World'])
     await game.press('s')
     const aldric = await game.waitFor('Inventory', (p) => p.tab === 'skills')
     // The three perks a character is created with.
-    expect(aldric.takenPerks.map(({ perk }) => perk)).toEqual(['toughness', 'heavy_hand', 'weapon_training'])
+    expect(aldric.title).toBe('Level 1 \u00b7 Swordmaster')
+    expect(aldric.takenPerks.map(({ perk }) => perk)).toEqual(['weapon_training', 'heavy_hand', 'toughness'])
     expect(aldric.mana).toBeNull()
 
-    // The mage's include Spellcasting, which opened its spells; the spells are the Spells tab's.
+    // The mage's spells are the Abilities tab's; its one passive is Destruction.
     await game.click(aldric.party[2])
     const delwyn = await game.waitFor('Inventory', (p) => p.party[2].active)
-    expect(delwyn.takenPerks).toEqual([
-      { perk: 'keen_eye', ranks: 1 },
-      { perk: 'spellcasting', ranks: 1 },
-      { perk: 'arcane_study', ranks: 1 },
-    ])
-    expect(delwyn.mana).toBe(18)
+    expect(delwyn.takenPerks).toEqual([{ perk: 'destruction', ranks: 1 }])
+    expect(delwyn.mana).toBe(28)
     expect(delwyn.attributes.intelligence).toBe(9)
 
-    await game.click(delwyn.perkTreeButton)
-    const tree = await game.waitFor('Inventory', (p) => p.tab === 'perkTree')
-    expect(tree.perks).toHaveLength(28)
-    expect(new Set(tree.perks.map((node) => `${node.x},${node.y}`)).size).toBe(28)
-    // The picks of creation are spent, and the next comes at level 3.
-    expect(tree.perks.some((node) => node.canTake)).toBe(false)
+    // The tree view opens on the tree of the mage's calling, Evoker (Magic Arrow and Destruction).
+    await game.click(delwyn.treesButton)
+    const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees')
+    expect(tree.tree).toBe('mage')
     const taken = (nodes: typeof tree.perks) => nodes.filter((node) => node.ranks > 0).map((node) => node.perk).sort()
-    expect(taken(tree.perks)).toEqual(['arcane_study', 'keen_eye', 'spellcasting'])
 
-    // A click on a node takes nothing without a pick, and a portrait turns the tree to its hero.
-    await game.click(tree.perks.find((node) => node.perk === 'gain_luck')!)
-    await game.click(tree.party[0])
+    // Through the four trees, by tab and by key: every node once, none over another, all within the panel at 840×560.
+    const seen: Record<string, typeof tree.perks> = {}
+    for (const [i, id] of (['warrior', 'scout', 'mage', 'cleric'] as const).entries()) {
+      if (i % 2 === 0) await game.click(tree.trees[id])
+      else await game.press(String(i + 1))
+      const shown = await game.waitFor('Inventory', (p) => p.tree === id)
+      seen[id] = shown.perks
+      const { panel } = shown.characterSheet
+      const { width, height } = shown.nodeSize
+      for (const node of shown.perks) {
+        expect(node.x - width / 2).toBeGreaterThanOrEqual(panel.x)
+        expect(node.x + width / 2).toBeLessThanOrEqual(panel.x + panel.width)
+        expect(node.y - height / 2).toBeGreaterThanOrEqual(panel.y)
+        expect(node.y + height / 2).toBeLessThanOrEqual(panel.y + panel.height)
+      }
+      for (const [j, one] of shown.perks.entries()) {
+        for (const other of shown.perks.slice(j + 1)) {
+          expect(Math.abs(one.x - other.x) >= width || Math.abs(one.y - other.y) >= height).toBe(true)
+        }
+      }
+    }
+    const all = Object.values(seen).flat().map((node) => node.perk)
+    expect(all).toHaveLength(PERK_IDS.length)
+    expect(new Set(all)).toEqual(new Set(PERK_IDS))
+    expect(taken(seen.mage)).toEqual(['destruction', 'magic_arrow'])
+    expect(taken(seen.cleric)).toEqual(['heal'])
+    // The perk points of creation are spent, and the next comes at level 2.
+    expect(Object.values(seen).flat().some((node) => node.canTake)).toBe(false)
+
+    // A click on a node takes nothing without a perk point, and a portrait turns the tree to its hero.
+    await game.press('1')
+    const warrior = await game.waitFor('Inventory', (p) => p.tree === 'warrior')
+    await game.click(warrior.perks.find((node) => node.perk === 'shield_wall')!)
+    await game.click(warrior.party[0])
     const turned = await game.waitFor('Inventory', (p) => p.party[0].active)
-    expect(turned.tab).toBe('perkTree')
+    expect(turned).toMatchObject({ tab: 'trees', tree: 'warrior' })
     expect(taken(turned.perks)).toEqual(['heavy_hand', 'toughness', 'weapon_training'])
 
     await game.click(turned.back)
     await game.waitFor('Inventory', (p) => p.tab === 'skills')
-    // The mage's spells, and the spell tree, all seventeen of it, with Magic Arrow and Heal learned.
+    // The mage's abilities.
     await game.click(turned.party[2])
     await game.waitFor('Inventory', (p) => p.party[2].active)
     await game.press('b')
-    const spells = await game.waitFor('Inventory', (p) => p.tab === 'spells')
+    const spells = await game.waitFor('Inventory', (p) => p.tab === 'abilities')
     expect(spells.spells.map(({ spell, castable }) => [spell, castable])).toEqual([
       ['magic_arrow', false],
       ['heal', true],
     ])
+    expect(spells.abilities.map(({ name, kind }) => [name, kind])).toEqual([
+      ['Magic Arrow', 'spell'],
+      ['Heal', 'spell'],
+    ])
     // Heal is cast on the world map from here, on a member picked by its portrait, for the mana carried.
-    expect(spells.mana).toBe(18)
+    expect(spells.mana).toBe(28)
     await game.click(spells.spells[1])
     const choosing = await game.waitFor('Inventory', (p) => p.worldCast === 'heal')
     await game.click(choosing.party[0])
-    const cast = await game.waitFor('Inventory', (p) => p.worldCast === null && p.mana === 15)
+    const cast = await game.waitFor('Inventory', (p) => p.worldCast === null && p.mana === 25)
     expect(cast.party[2].active).toBe(true)
+    // K opens nothing: it is no longer bound.
     await game.press('k')
-    const spellTree = await game.waitFor('Inventory', (p) => p.tab === 'spellTree')
-    expect(spellTree.spellNodes).toHaveLength(17)
-    expect(taken(spellTree.spellNodes)).toEqual(['heal', 'magic_arrow'])
-    await game.press('Escape')
-    await game.waitFor('Inventory', (p) => p.tab === 'spells')
     await game.press('s')
     await game.waitFor('Inventory', (p) => p.tab === 'skills')
     await game.press('p')
-    await game.waitFor('Inventory', (p) => p.tab === 'perkTree')
+    await game.waitFor('Inventory', (p) => p.tab === 'trees')
     // Esc steps back from the tree, and only then closes the panel.
     await game.press('Escape')
     await game.waitFor('Inventory', (p) => p.tab === 'skills')
@@ -404,8 +432,9 @@ describe('a hero’s panel', () => {
     expect(Object.values(shown.skills).some((skill) => skill.canRaise)).toBe(false)
     // The perk tree opens in battle too, where nothing can be taken from it.
     await game.press('p')
-    const tree = await game.waitFor('Inventory', (p) => p.tab === 'perkTree')
-    expect(tree.perks).toHaveLength(28)
+    const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees')
+    expect(tree.tree).toBe('warrior')
+    expect(tree.perks.length).toBeGreaterThan(0)
     expect(tree.perks.some((node) => node.canTake)).toBe(false)
     await game.press('Escape')
     await game.waitFor('Inventory', (p) => p.tab === 'skills')
@@ -438,12 +467,70 @@ describe('a hero’s panel', () => {
     const spent = (await game.probe('Inventory'))!
     expect(spent.skills.archery).toMatchObject({ level: before.skills.archery.level + before.skillPoints, canRaise: false })
 
+    // The second level's perk point still waits.
+    expect(spent.perkPoints).toBe(1)
     await game.press('Escape')
     await game.waitForScenes(['World'])
-    expect((await game.waitFor('World')).party[0].canAdvance).toBe(false)
+    expect((await game.waitFor('World')).party[0].canAdvance).toBe(true)
   })
 
-  it('takes a perk from the tree with the pick that the third level brings', async () => {
+  it('prompts for points to spend, says when saving pays, and lists many passives without overlap', async () => {
+    const game = await games.open()
+    await game.resize(840, 560)
+    await game.newGame()
+    const xpTo = (level: number) => Array.from({ length: level - 1 }, (_, i) => xpToNextLevel(i + 1)).reduce((a, b) => a + b, 0)
+    await debugCommand(game, `xp ${xpTo(10)} Aldric`)
+    const world = await game.waitFor('World', (w) => w.party[0].level === 10)
+    expect(world.message).toBe('Aldric has points to spend: click the portrait marked "+".')
+
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    const skills = await game.waitFor('Inventory', (p) => p.tab === 'skills')
+    expect(skills.skillPointsLine).toBe(`${skills.skillPoints} skill points to spend`)
+    expect(skills.perkPoints).toBe(9)
+
+    // Shield Wall, Rooted and Iron Skin (Heavy Knight), and Armour Breaker: seven passives with the three of creation.
+    await game.click(skills.treesButton)
+    const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees' && p.tree === 'warrior')
+    // With the pointer on no node, the strip says what saving is for: here the calling's capstone, a goal while it asks Melee and depth too.
+    expect(tree.treeStrip.at(-1)).toBe("Goal: Blademaster, your calling's capstone: 4 perk points, Melee 70%, 5 nodes in Swordmaster, level 12")
+    for (const [perk, left] of [['shield_wall', 8], ['rooted', 6], ['iron_skin', 3], ['armor_breaker', 1]] as const) {
+      await game.click((await game.probe('Inventory'))!.perks.find((n) => n.perk === perk)!)
+      await game.waitFor('Inventory', (p) => p.perkPoints === left)
+    }
+    await game.click(tree.back)
+    const listed = await game.waitFor('Inventory', (p) => p.tab === 'skills')
+    expect(listed.takenPerks).toHaveLength(7)
+    const rows = listed.passiveBounds
+    expect(rows).toHaveLength(7)
+    for (const [i, row] of rows.entries()) {
+      const next = rows[i + 1]
+      if (next) expect(row.y + row.height).toBeLessThanOrEqual(next.y)
+      expect(row.y + row.height).toBeLessThan(listed.treesButton.y - 16)
+    }
+
+    // Melee raised past 80%, where a raise costs 2, and the points spent on Archery down to the last: Melee's "+" greys and says why.
+    const spend = async (skill: 'melee' | 'archery') => {
+      const before = (await game.probe('Inventory'))!
+      await game.click(before.skills[skill])
+      return game.waitFor('Inventory', (p) => p.skillPoints < before.skillPoints)
+    }
+    let now = listed
+    while (now.skills.melee.level < 80) now = await spend('melee')
+    while (now.skillPoints > 1) now = await spend('archery')
+    expect(now.skills.melee.canRaise).toBe(false)
+    await game.hover(now.skills.melee)
+    expect((await game.waitFor('Inventory', (p) => p.raiseHint !== '')).raiseHint).toBe('Needs 2 skill points; you have 1')
+    // Every skill point spent, the prompt on the map is gone; the perk point left is too few for any open node.
+    await spend('archery')
+    expect((await game.probe('Inventory'))!.skillPointsLine).toBe('Skill points: 0')
+    await game.press('Escape')
+    await game.waitForScenes(['World'])
+    const after = await game.waitFor('World')
+    expect(after.message).toBe(after.party[0].canAdvance ? 'Aldric has points to spend: click the portrait marked "+".' : '')
+  })
+
+  it('takes a tier-2 node from the tree with the perk points that the second and third levels bring', async () => {
     // A seed with which the simple player of `fightBattle` wins all three battles, unlevelled as it goes.
     const game = await games.open({ seed: 2 })
     await game.enterBattle()
@@ -469,22 +556,154 @@ describe('a hero’s panel', () => {
     await game.click(world.party[0])
     await game.waitForScenes(['Inventory'], ['World'])
     const skills = await game.waitFor('Inventory', (p) => p.tab === 'skills')
-    expect(skills.perkPicks).toBe(1)
+    expect(skills.perkPoints).toBe(2)
     expect(skills.takenPerks).toHaveLength(3)
-    await game.click(skills.perkTreeButton)
-    const tree = await game.waitFor('Inventory', (p) => p.tab === 'perkTree')
+    await game.click(skills.treesButton)
+    const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees')
     const node = (perk: string) => tree.perks.find((n) => n.perk === perk)!
-    expect(node('gain_endurance').canTake).toBe(true)
-    // Tireless grows from Toughness, and asks for level 6 besides.
-    expect(node('tireless').canTake).toBe(false)
+    expect(node('armor_breaker').canTake).toBe(true)
+    // Iron Skin asks level 6 and three Heavy Knight nodes.
+    expect(node('iron_skin').canTake).toBe(false)
 
-    await game.click(node('gain_endurance'))
-    const taken = await game.waitFor('Inventory', (p) => p.perkPicks === 0)
-    expect(taken.attributes.endurance).toBe(tree.attributes.endurance + 1)
+    await game.click(node('armor_breaker'))
+    const taken = await game.waitFor('Inventory', (p) => p.perkPoints === 0)
     expect(taken.perks.some((n) => n.canTake)).toBe(false)
     await game.click(taken.back)
     const back = await game.waitFor('Inventory', (p) => p.tab === 'skills')
-    expect(back.takenPerks).toContainEqual({ perk: 'gain_endurance', ranks: 1 })
+    expect(back.takenPerks).toContainEqual({ perk: 'armor_breaker', ranks: 1 })
     expect(back.takenPerks).toHaveLength(4)
+  })
+  it('holds a tier-2 node back at level 2 with one perk point, showing its cost, and takes it a level later', async () => {
+    const game = await games.open()
+    await game.newGame()
+    const xpTo = (level: number) => Array.from({ length: level - 1 }, (_, i) => xpToNextLevel(i + 1)).reduce((a, b) => a + b, 0)
+    await debugCommand(game, `xp ${xpTo(2)} Aldric`)
+    await game.waitFor('World', (w) => w.party[0].level === 2)
+    await game.click((await game.probe('World'))!.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    const skills = await game.waitFor('Inventory', (p) => p.tab === 'skills')
+    expect(skills.perkPoints).toBe(1)
+    await game.click(skills.treesButton)
+    const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees' && p.tree === 'warrior')
+    const node = (probe: typeof tree, perk: string) => probe.perks.find((n) => n.perk === perk)!
+    // The costs are on the nodes: a first tier 1, a second 2, a capstone 4.
+    expect(node(tree, 'toughness').cost).toBe(1)
+    expect(node(tree, 'armor_breaker').cost).toBe(2)
+    expect(tree.perks.filter((n) => n.cost === 4).length).toBeGreaterThan(0)
+    expect(node(tree, 'armor_breaker').canTake).toBe(false)
+    await game.click(node(tree, 'armor_breaker'))
+    await game.settled('Inventory', (p) => p.tab === 'trees' && p.perkPoints === 1)
+    expect((await game.probe('Inventory'))!.perks.find((n) => n.perk === 'armor_breaker')!.ranks).toBe(0)
+
+    // The next level brings the second point. Esc steps back to the Skills tab, and again closes the panel.
+    await game.press('Escape')
+    await game.waitFor('Inventory', (p) => p.tab === 'skills')
+    await game.press('Escape')
+    await game.waitForScenes(['World'])
+    await debugCommand(game, `xp ${xpTo(3) - xpTo(2)} Aldric`)
+    await game.waitFor('World', (w) => w.party[0].level === 3)
+    await game.click((await game.probe('World'))!.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    const again = await game.waitFor('Inventory', (p) => p.tab === 'skills')
+    expect(again.perkPoints).toBe(2)
+    await game.click(again.treesButton)
+    const open = await game.waitFor('Inventory', (p) => p.tab === 'trees' && p.tree === 'warrior')
+    expect(node(open, 'armor_breaker').canTake).toBe(true)
+    await game.click(node(open, 'armor_breaker'))
+    const taken = await game.waitFor('Inventory', (p) => p.perkPoints === 0)
+    expect(node(taken, 'armor_breaker').ranks).toBe(1)
+  })
+
+  it('lists the spells and then the techniques on the Abilities tab, in rows that never overlap', async () => {
+    const game = await games.open()
+    await game.newGame()
+    const xpTo = (level: number) => Array.from({ length: level - 1 }, (_, i) => xpToNextLevel(i + 1)).reduce((a, b) => a + b, 0)
+    // Power Attack costs 2 perk points (level 3's), Flame Arrow and Heal All 2 each (level 5's 4).
+    await debugCommand(game, `xp ${xpTo(3)} Aldric`)
+    await debugCommand(game, `xp ${xpTo(5)} Delwyn`)
+    const world = await game.waitFor('World', (w) => w.party[0].level === 3 && w.party[2].level === 5)
+
+    // Aldric knows no active yet, but has mana all the same.
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('b')
+    const none = await game.waitFor('Inventory', (p) => p.tab === 'abilities')
+    expect(none.abilities).toEqual([])
+    expect(none.abilityManaLine).toMatch(/^Mana \d+ \/ [1-9]\d*: knows no ability$/)
+
+    // Power Attack, a technique, joins the tab once taken.
+    await game.press('s')
+    const skills = await game.waitFor('Inventory', (p) => p.tab === 'skills')
+    await game.click(skills.treesButton)
+    const warrior = await game.waitFor('Inventory', (p) => p.tab === 'trees' && p.tree === 'warrior')
+    await game.click(warrior.perks.find((node) => node.perk === 'power_attack')!)
+    await game.waitFor('Inventory', (p) => p.perkPoints === 0)
+    await game.press('b')
+    const aldric = await game.waitFor('Inventory', (p) => p.tab === 'abilities' && p.abilities.length === 1)
+    expect(aldric.abilities[0]).toMatchObject({ name: 'Power Attack', kind: 'at-will', mana: null })
+    expect(aldric.abilityManaLine).toMatch(/^Mana \d+ \/ \d+$/)
+
+    // Delwyn, an Evoker and Healer, with Flame Arrow and Heal All besides.
+    await game.click(aldric.party[2])
+    await game.waitFor('Inventory', (p) => p.party[2].active)
+    await game.press('s')
+    const mage = await game.waitFor('Inventory', (p) => p.tab === 'skills' && p.party[2].active)
+    await game.click(mage.treesButton)
+    const evoker = await game.waitFor('Inventory', (p) => p.tab === 'trees' && p.tree === 'mage')
+    await game.click(evoker.perks.find((node) => node.perk === 'flame_arrow')!)
+    await game.waitFor('Inventory', (p) => p.perkPoints === mage.perkPoints - 2)
+    await game.press('4')
+    const cleric = await game.waitFor('Inventory', (p) => p.tree === 'cleric')
+    await game.click(cleric.perks.find((node) => node.perk === 'heal_all')!)
+    await game.waitFor('Inventory', (p) => p.perkPoints === mage.perkPoints - 4)
+    await game.press('b')
+    const spells = await game.settled('Inventory', (p) => p.tab === 'abilities' && p.abilities.length === 4)
+    expect(spells.abilities.map(({ name }) => name)).toEqual(['Magic Arrow', 'Flame Arrow', 'Heal', 'Heal All'])
+    // Destruction's +2 is in the dice shown.
+    expect(spells.abilities[0].description).toBe('1d10+2 to a foe within 5 hexes')
+    expect(spells.abilityPager).toBeNull()
+    const rows = spells.abilityRowBounds
+    expect(rows).toHaveLength(4)
+    const { panel } = spells.characterSheet
+    for (const [i, a] of rows.entries()) {
+      expect(a.x).toBeGreaterThanOrEqual(panel.x)
+      expect(a.x + a.width).toBeLessThanOrEqual(panel.x + panel.width)
+      for (const b of rows.slice(i + 1)) {
+        const apart = a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y
+        expect(apart).toBe(true)
+      }
+    }
+  })
+
+  it('opens the tree view on the calling of each hero it is turned to', async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    await game.press('p')
+    const aldric = await game.waitFor('Inventory', (p) => p.tab === 'trees')
+    expect(aldric.tree).toBe('warrior')
+    // Brenna, a Ranger, from the Warrior tree.
+    await game.click(aldric.party[1])
+    const brenna = await game.waitFor('Inventory', (p) => p.party[1].active)
+    expect(brenna).toMatchObject({ tab: 'trees', tree: 'scout' })
+  })
+
+  it("closes on Esc from every tab, a tab's key on its own tab leaving it open, and opens no menu", async () => {
+    const game = await games.open()
+    const world = await game.newGame()
+    // The panel opens on the Character tab here, so C is pressed on the tab already shown.
+    for (const key of ['s', 'c', 'b', 'i']) {
+      await game.click(world.party[0])
+      await game.waitForScenes(['Inventory'], ['World'])
+      await game.press(key)
+      await game.press(key)
+      await game.settled('Inventory', (p) => p.tab === { s: 'skills', c: 'character', b: 'abilities', i: 'inventory' }[key])
+      await game.press('Escape')
+      await game.waitForScenes(['World'])
+      // Long enough for a stray Esc to have opened the menu.
+      await game.page.waitForTimeout(300)
+      expect(await game.scenes()).toEqual({ running: ['World'], paused: [] })
+    }
   })
 })

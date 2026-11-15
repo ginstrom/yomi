@@ -35,7 +35,7 @@ export const PREROLLS: readonly Preroll[] = [
       attributes: { strength: 9, perception: 3, endurance: 7, intelligence: 3, agility: 6, luck: 4 },
       tagged: 'melee',
       raises: { melee: 10, archery: 0, magic: 0 },
-      perks: ['weapon_training', 'toughness', 'heavy_hand'],
+      perks: ['weapon_training', 'heavy_hand', 'toughness'],
     },
   },
   {
@@ -57,8 +57,7 @@ export const PREROLLS: readonly Preroll[] = [
       attributes: { strength: 3, perception: 4, endurance: 4, intelligence: 9, agility: 6, luck: 6 },
       tagged: 'magic',
       raises: { melee: 0, archery: 0, magic: 10 },
-      // Spellcasting's two spell picks buy the last two.
-      perks: ['spellcasting', 'arcane_study', 'keen_eye', 'magic_arrow', 'heal'],
+      perks: ['magic_arrow', 'heal', 'destruction'],
     },
   },
   {
@@ -70,7 +69,7 @@ export const PREROLLS: readonly Preroll[] = [
       attributes: { strength: 6, perception: 6, endurance: 5, intelligence: 3, agility: 8, luck: 4 },
       tagged: 'melee',
       raises: { melee: 0, archery: 10, magic: 0 },
-      perks: ['weapon_training', 'marksmanship', 'marksmanship'],
+      perks: ['weapon_training', 'marksmanship', 'dodger'],
     },
   },
 ]
@@ -164,9 +163,8 @@ export function describeRewards({ members, dead }: VictoryReward): string[] {
   for (const { member, gain } of members) {
     if (gain.levelsGained > 0) {
       const points = `, ${gain.skillPointsGained} skill points`
-      const perk = gain.perksGained > 0 ? ', a perk' : ''
-      const spell = gain.spellsGained > 0 ? `, ${gain.spellsGained === 1 ? 'a spell' : `${gain.spellsGained} spells`}` : ''
-      lines.push(`${member.name} reaches level ${member.level}: +${gain.maxHpGained} max HP${points}${perk}${spell}, wounds healed`)
+      const perk = `, ${gain.perkPointsGained} ${gain.perkPointsGained === 1 ? 'perk point' : 'perk points'}`
+      lines.push(`${member.name} reaches level ${member.level}: +${gain.maxHpGained} max HP${points}${perk}, wounds healed`)
     }
   }
   return lines
@@ -182,7 +180,7 @@ const lost = (member: Character) => maxHp(member) - member.hp
  * cheapest heal restores; a heal of the whole party when two members or more
  * have lost what that restores, else its strongest heal of one it can afford,
  * on the member who has lost most. Returns the hit points restored, for the
- * simulator. It is the simulator's; the player heals from the Spells tab.
+ * simulator. It is the simulator's; the player heals from the Abilities tab.
  */
 export function autoHeal(party: Party): number {
   const before = party.reduce((sum, member) => sum + member.hp, 0)
@@ -190,16 +188,16 @@ export function autoHeal(party: Party): number {
     for (;;) {
       const known = worldSpells(caster)
       if (known.length === 0) break
-      const cheapest = Math.min(...known.map(({ spell }) => worldHealing(spell)))
+      const cheapest = Math.min(...known.map(({ spell }) => worldHealing(spell, caster)))
       if (!party.some((member) => lost(member) >= cheapest)) break
       const affordable = known.filter((k) => k.affordable).map((k) => k.spell)
       const strongest = (spells: HeroSpellId[]) =>
-        spells.reduce<HeroSpellId | null>((a, b) => (a === null || worldHealing(b) > worldHealing(a) ? b : a), null)
+        spells.reduce<HeroSpellId | null>((a, b) => (a === null || worldHealing(b, caster) > worldHealing(a, caster) ? b : a), null)
       const group = strongest(affordable.filter((spell) => !healsOne(spell)))
       const one = strongest(affordable.filter(healsOne))
       const target = party.reduce((a, b) => (lost(b) > lost(a) ? b : a))
       const cast =
-        group !== null && party.filter((member) => lost(member) >= worldHealing(group)).length >= 2
+        group !== null && party.filter((member) => lost(member) >= worldHealing(group, caster)).length >= 2
           ? castOnWorldMap(caster, group, party)
           : one !== null && castOnWorldMap(caster, one, party, target)
       if (!cast) break

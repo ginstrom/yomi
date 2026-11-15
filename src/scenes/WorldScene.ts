@@ -44,7 +44,7 @@ import { BANNER_SPRITES, PARTY_LIST_W, bannerOf, deployedParties, figureOffsets,
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { FRAME_ACTIVE_COLOR, HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
-import { describeDays, describeOthers, describeStanding, describeWalk, describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
+import { advanceMessage, describeDays, describeOthers, describeStanding, describeWalk, describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
 import { hexInfo } from './hexInfo.ts'
 import { tellStory, type StoryAnchors } from './StoryScene.ts'
 import type { StoryMoment } from '../story/story.ts'
@@ -195,6 +195,8 @@ export class WorldScene extends Phaser.Scene {
   private hoveredParty: string | null = null
   /** What last happened, above the buttons. */
   private messageText!: Phaser.GameObjects.Text
+  /** The prompt to spend points the message line last showed (`advanceMessage`), so that an overlay closing may bring it up to date. */
+  private advancePrompt = ''
   /** Scout, Wait and Attack, shown while the party stands among monsters. */
   private buttons: Phaser.GameObjects.Container[] = []
   /** Camp, Camp until healed and Craft, shown wherever else the party stands still, and Build Watchtower where one may stand. */
@@ -392,6 +394,7 @@ export class WorldScene extends Phaser.Scene {
       // An exchange changed who is in the parties: the column is built again for the selected party's members.
       if (data?.exchanged) this.rebuildColumn()
       if (data?.crafted) this.crafted(data.crafted)
+      this.promptAdvance()
       this.refresh()
       this.save()
     })
@@ -409,15 +412,9 @@ export class WorldScene extends Phaser.Scene {
     this.music.play()
 
     const here = monstersHere(this.world, this.expedition())
-    this.messageText.setText(
-      this.world.status === 'won'
-        ? ''
-        : here
-        ? describeStanding(this.gameState, this.expedition(), here)
-        : this.expedition().members.some(canAdvance)
-          ? 'Your heroes have grown: click the portrait of one marked "+" to spend its skill points and perks.'
-          : '',
-    )
+    // Only the prompt to spend points is the advance prompt; a threat line is kept as it is when an overlay closes.
+    this.advancePrompt = this.world.status === 'won' || here ? '' : advanceMessage(this.expedition().members)
+    this.messageText.setText(this.world.status !== 'won' && here ? describeStanding(this.gameState, this.expedition(), here) : this.advancePrompt)
     this.refresh()
     // After the first refresh: the view centres on where the party stands.
     this.layout()
@@ -438,6 +435,7 @@ export class WorldScene extends Phaser.Scene {
       game: this.gameState,
       party: this.selectedParty,
       changed: () => {
+        this.promptAdvance()
         this.refresh()
         this.save()
         this.checkOutcome()
@@ -1418,6 +1416,18 @@ export class WorldScene extends Phaser.Scene {
     }
     this.active = index
     this.refresh()
+  }
+
+  /**
+   * Brings the prompt to spend points up to date as an overlay closes (the
+   * character panel, the debug console), while the message line shows that
+   * prompt or nothing, never over another message.
+   */
+  private promptAdvance(): void {
+    const shown = this.messageText.text
+    if (shown !== '' && shown !== this.advancePrompt) return
+    this.advancePrompt = this.world.status === 'won' ? '' : advanceMessage(this.expedition().members)
+    this.messageText.setText(this.advancePrompt)
   }
 
   /**

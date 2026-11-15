@@ -172,9 +172,8 @@ const COMMANDS: Record<string, Command> = {
       const row = (character: Character, i: number | null): string => {
         const mana = maxMana(character) > 0 ? ` mana ${manaOf(character)}/${maxMana(character)}` : ''
         const spend = [
-          character.skillPoints > 0 ? `${character.skillPoints} skill pts` : '',
-          character.perkPicks > 0 ? `${character.perkPicks} perks` : '',
-          character.spellPicks > 0 ? `${character.spellPicks} spells` : '',
+          character.skillPoints > 0 ? counted(character.skillPoints, 'skill point') : '',
+          character.perkPoints > 0 ? counted(character.perkPoints, 'perk point') : '',
         ].filter(Boolean)
         return `${i === null ? ' -' : `${i + 1}.`} ${character.name.padEnd(12)} L${character.level} xp ${character.xp}/${xpToNextLevel(character.level)} hp ${character.hp}/${maxHp(character)}${mana}${spend.length ? `  (${spend.join(', ')})` : ''}`
       }
@@ -453,4 +452,9 @@ export function runCommand(line: string, context: DebugContext): DebugResult {
 export function completions(start: string): string[] {
   const prefix = start.trim().toLowerCase()
   return COMMAND_NAMES.filter((name) => name.startsWith(prefix))
+}
+
+/** "1 perk point", "3 perk points". */
+function counted(n: number, noun: string): string {
+  return `${n} ${noun}${n === 1 ? '' : 's'}`
 }

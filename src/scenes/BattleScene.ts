@@ -2,9 +2,11 @@ import Phaser from 'phaser'
 import { deriveCombatStats, gearChanges, type Character } from '../character/character.ts'
 import { sameCombatStats, type Element as DamageElement } from '../combat/combat.ts'
 import { mulberry32, randomSeed, type SeededRng } from '../combat/rng.ts'
-import { SPELLS, STATUSES, type ActiveStatus, type SpellId } from '../combat/spells.ts'
+import { ABILITIES } from '../combat/abilities.ts'
+import { SPELLS, STATUSES, type ActiveStatus } from '../combat/spells.ts'
 import {
   BattleEngine,
+  abilityArea,
   formatEvent,
   listNames,
   type Action,
@@ -50,6 +52,7 @@ import {
   MISSILE_SPRITES,
   OUTLINE_CRITICAL,
   OUTLINE_HURT,
+  OUTLINE_HEALED,
   OUTLINE_IMAGE,
   RELEASE_MS,
   SPELL_LOOKS,
@@ -62,10 +65,15 @@ import {
   flightMs,
   holdMs,
   impactMs,
+  strikeFlash,
   type SpellLook,
   bonusElement,
   bonusText,
   changesStatusMarks,
+  attackerNotes,
+  defenderNotes,
+  restoreFloats,
+  type FloatNote,
 } from './battleEffects.ts'
 import { DESCRIPTION_INDENT, foeInfoLines } from './foeInfo.ts'
 import { scheduleEvents, type Cue } from './eventSchedule.ts'
@@ -81,8 +89,9 @@ import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './par
 import { showStory, type StoryAnchors } from './StoryScene.ts'
 import { storyFor, type StoryItem } from '../story/story.ts'
 import { eventSounds, type SoundKey } from './sounds.ts'
-import { describeStatuses, spellMenuRows, targetingHint } from './spellMenu.ts'
+import { describeStatuses, skillDescription, skillMenuRows, skillName, targetingHint, usesSkill, type Skill, type SkillMenuRow } from './skillMenu.ts'
 import type { DebugSource } from './debugCommands.ts'
+import { STATUS_MARK_FONT_PX, STATUS_MARK_LIFT, STATUS_MARK_STROKE_PX, statusMarkLayout } from './statusMarks.ts'
 
 interface BattleData {
   game?: GameState
@@ -98,7 +107,8 @@ interface BattleData {
 }
 
 type MoveAction = Extract<Action, { type: 'move' }>
-type CastAction = Extract<Action, { type: 'cast' }>
+/** A use of a skill: a cast of a spell or a use of an ability. */
+type SkillAction = Extract<Action, { type: 'cast' | 'ability' }>
 
 /** What a click on a board hex would do, as shown while the pointer hovers over it. */
 type BoardIntent =
@@ -107,8 +117,8 @@ type BoardIntent =
   | { kind: 'move'; action: MoveAction }
   /** Go for a foe: the plan may move first, and strikes only if `plan.attack`. */
   | { kind: 'attack'; target: UnitId; plan: AttackPlan }
-  /** Cast the spell being targeted at the unit or the area's centre clicked. */
-  | { kind: 'cast'; action: CastAction }
+  /** Use the skill being aimed at the unit or the area's centre clicked. */
+  | { kind: 'skill'; action: SkillAction }
 
 interface Unit {
   /** The unit's body and shadow, positioned at its feet and depth-sorted with the other units. */
@@ -128,6 +138,8 @@ interface Unit {
   apPips: Phaser.GameObjects.Graphics
   /** A letter for each status on the unit, in its colour, right of the hit point bar. */
   statusMarks: Phaser.GameObjects.Container
+  /** The letters `statusMarks` shows, in order. */
+  marks: string
   /** The hit points the nameplate shows now, which an event's playback moves ahead of the engine's. */
   shownHp: number
 }
@@ -163,6 +175,8 @@ const HURT_TINT = 0xff8a80
 const HELPED_TINT = 0xa5f5a5
 /** The floating on-hit text's colour: the element's, else a plain warm one. */
 const FLOAT_COLOUR = '#ffd27a'
+/** The colours of the floating notes: a restore's hit points green, its mana blue, any other note the warm one. */
+const FLOAT_NOTE_COLOURS: Record<FloatNote['kind'], string> = { heal: '#7ee07e', mana: '#6fa8ff', note: FLOAT_COLOUR }
 const ELEMENT_FLOAT_COLOURS: Record<DamageElement, string> = {
   fire: cssColour(RUNE_COLOURS.ember),
   frost: cssColour(RUNE_COLOURS.rime),
@@ -173,9 +187,11 @@ const ELEMENT_FLOAT_COLOURS: Record<DamageElement, string> = {
 }
 
 const IMAGE_TINT = 0xffffff
-/** The spell list's rows, stacked upwards from over the Cast button. */
-const SPELL_ROW_W = 240
-const SPELL_ROW_H = 26
+/** The Skills list's rows, stacked upwards from over the Skills button: at least this wide, wider for a long label. */
+const SKILL_ROW_W = 240
+const SKILL_ROW_H = 26
+/** The width a character of the list's 13px monospace takes, to fit a row to its label. */
+const SKILL_CHAR_W = 8
 /** From one button's centre to the next; three fit the least window (MIN_GAME_SIZE in main.ts) beside the party's column. */
 const BUTTON_SPACING = 160
 const PROVOKE_OUTLINE = 0xffa726
@@ -268,11 +284,11 @@ export class BattleScene extends Phaser.Scene {
   private selected: UnitId | null = null
   /**
    * What the next board click picks a target for: an attack, after the Attack button was pressed
-   * with several foes in reach, or the spell the Cast button chose. Null outside both.
+   * with several foes in reach, or the skill (a spell or an ability) the Skills button chose. Null outside both.
    */
-  private targeting: 'attack' | SpellId | null = null
-  /** The Cast button's list of the selected unit's spells while it is open, with each row's spell and whether it can be cast. */
-  private spellMenu: { container: Phaser.GameObjects.Container; rows: Array<{ spell: SpellId; enabled: boolean; bg: Phaser.GameObjects.Rectangle }> } | null = null
+  private targeting: 'attack' | Skill | null = null
+  /** The Skills button's list of the selected unit's spells and abilities while it is open, a row each with whether it can be used now. */
+  private skillMenu: { container: Phaser.GameObjects.Container; rows: Array<{ row: SkillMenuRow; bg: Phaser.GameObjects.Rectangle }> } | null = null
   private units!: Map<UnitId, Unit>
 
   private floorLayer!: Phaser.GameObjects.Container
@@ -286,6 +302,8 @@ export class BattleScene extends Phaser.Scene {
   private unitLayer!: Phaser.GameObjects.Container
   /** Units' nameplates, drawn above every unit so none is hidden behind a sprite. */
   private plateLayer!: Phaser.GameObjects.Container
+  /** Units' status letters, over every nameplate so that a neighbour's plate never hides them. */
+  private markLayer!: Phaser.GameObjects.Container
   /** Hit-chance labels on attackable foes, drawn above the nameplates. */
   private labelLayer!: Phaser.GameObjects.Container
   /** The floating text of on-hit damage, apart from the labels so that redrawing the highlights leaves it be. */
@@ -368,7 +386,7 @@ export class BattleScene extends Phaser.Scene {
     this.playerControl = false
     this.selected = null
     this.targeting = null
-    this.spellMenu = null
+    this.skillMenu = null
     this.hovered = null
 
     this.floorLayer = this.add.container(0, 0)
@@ -381,6 +399,7 @@ export class BattleScene extends Phaser.Scene {
     this.floorLayer.add(this.groundMarks)
     this.unitLayer = this.add.container(0, 0)
     this.plateLayer = this.add.container(0, 0)
+    this.markLayer = this.add.container(0, 0)
     this.units = new Map(fielded.map((u, i) => [u.id, this.createUnit(u.name, kinds[u.id], i * IDLE_STAGGER_MS)]))
     this.refreshGear()
     this.labelLayer = this.add.container(0, 0)
@@ -455,7 +474,7 @@ export class BattleScene extends Phaser.Scene {
     })
 
     this.attackButton = this.createButton('Attack', () => this.onAttack())
-    this.castButton = this.createButton('Cast', () => this.onCast())
+    this.castButton = this.createButton('Skills', () => this.onSkills())
     this.endTurnButton = this.createButton('End Turn', () => this.onEndTurn())
     // Under the result screen, whose shade keeps clicks off the portraits once the battle is over.
     // A copy: the dead leave the party as the battle ends, and stay in the column, faded, under the result screen.
@@ -487,17 +506,17 @@ export class BattleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-C', () => this.openPanel('character'))
     this.input.keyboard?.on('keydown-S', () => this.openPanel('skills'))
     this.input.keyboard?.on('keydown-M', () => {
-      if (!this.scene.isPaused() && this.castButton.visible && this.castButton.getData('enabled')) this.onCast()
+      if (!this.scene.isPaused() && this.castButton.visible && this.castButton.getData('enabled')) this.onSkills()
     })
     this.input.keyboard?.on('keydown-ESC', () => {
-      if (this.spellMenu) this.closeSpellMenu()
+      if (this.skillMenu) this.closeSkillMenu()
       else if (this.targeting) this.setTargeting(null)
       else this.openMenu()
     })
-    // A spell is picked from the open list by its row's number.
+    // A skill is picked from the open list by its row's number.
     this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
       const row = Number(event.key)
-      if (this.spellMenu && Number.isInteger(row) && row >= 1) this.pickSpell(row - 1)
+      if (this.skillMenu && Number.isInteger(row) && row >= 1) this.pickSkill(row - 1)
     })
 
     this.music = this.sound.add('music_battle', { loop: true, volume: soundVolume('music_battle') })
@@ -529,6 +548,7 @@ export class BattleScene extends Phaser.Scene {
     const unit = this.units.get(id)!
     unit.figure.stop().clearOutline().setFigureAlpha(0.4)
     unit.plate.setVisible(false)
+    unit.statusMarks.setVisible(false)
   }
 
   /** What the in-browser tests see of the battle; see testHook.ts. */
@@ -553,12 +573,14 @@ export class BattleScene extends Phaser.Scene {
         endTurn: buttonProbe(this.endTurnButton, enabled(this.endTurnButton)),
         result: buttonProbe(this.menuButton),
       },
-      casting: this.targeting === 'attack' ? null : this.targeting,
-      spellMenu:
-        this.spellMenu?.rows.map(({ spell, enabled, bg }) => {
+      aiming: this.targeting === 'attack' ? null : this.targeting,
+      skillMenu:
+        this.skillMenu?.rows.map(({ row, bg }) => {
           const bounds = bg.getBounds()
-          return { spell, enabled, x: bounds.centerX, y: bounds.centerY }
+          return { ...row, x: bounds.centerX, y: bounds.centerY }
         }) ?? null,
+      marks: Object.fromEntries([...this.units].map(([id, unit]) => [id, unit.marks])),
+      figureAlpha: Object.fromEntries([...this.units].map(([id, unit]) => [id, unit.figure.figureAlpha()])),
       result: this.resultText.visible ? this.resultText.text.split('\n') : [],
       foeInfo: this.foeInfo,
       party: this.column.probe(),
@@ -769,11 +791,13 @@ export class BattleScene extends Phaser.Scene {
       .fillTriangle(6, 0, -4, -5, -4, 5)
       .strokeTriangle(6, 0, -4, -5, -4, 5)
     const apPips = this.add.graphics()
-    const statusMarks = this.add.container(PLATE_BAR_W / 2 + 4, PLATE_BAR_Y + PLATE_BAR_H / 2)
-    const plate = this.add.container(0, 0, [nameText, hpBarBg, hpBarFill, hpText, facingArrow, apPips, statusMarks])
+    const plate = this.add.container(0, 0, [nameText, hpBarBg, hpBarFill, hpText, facingArrow, apPips])
     this.plateLayer.add(plate)
+    // The status letters, over the name (statusMarks.ts), in a layer of their own over every plate; placed and moved with the plate.
+    const statusMarks = this.add.container(0, 0)
+    this.markLayer.add(statusMarks)
 
-    return { container, figure, plate, hpBarBg, hpBarFill, hpText, facingArrow, apPips, statusMarks, shownHp: 0 }
+    return { container, figure, plate, hpBarBg, hpBarFill, hpText, facingArrow, apPips, statusMarks, marks: '', shownHp: 0 }
   }
 
   private createButton(label: string, onClick: () => void): Phaser.GameObjects.Container {
@@ -878,10 +902,11 @@ export class BattleScene extends Phaser.Scene {
     const floorX = freeLeft + (freeW - board.width * scale) / 2
     const floorY = freeTop + (freeH - (bottom - top) * scale) / 2 - top * scale
 
-    for (const layer of [this.floorLayer, this.unitLayer, this.plateLayer, this.labelLayer, this.hoverLabels, this.floatLayer, this.foePanel]) {
+    for (const layer of [this.floorLayer, this.unitLayer, this.plateLayer, this.markLayer, this.labelLayer, this.hoverLabels, this.floatLayer, this.foePanel]) {
       layer.setPosition(floorX, floorY).setScale(scale)
     }
     for (const snapshot of this.engine.getState().units) this.placeUnit(snapshot.id, snapshot.position)
+    this.rescaleStatusMarks()
 
     this.renderLog()
   }
@@ -891,6 +916,7 @@ export class BattleScene extends Phaser.Scene {
     const unit = this.units.get(id)!
     unit.container.setPosition(x, y)
     unit.plate.setPosition(x, y)
+    unit.statusMarks.setPosition(x, y)
     this.sortUnits()
   }
 
@@ -917,23 +943,36 @@ export class BattleScene extends Phaser.Scene {
     unit.shownHp = hp
   }
 
-  /** A letter for each of the unit's statuses, each in its status's colour. */
+  /** A letter for each of the unit's statuses, each in its status's colour, centred over its name at their own size on screen. */
   private refreshStatusMarks(unit: Unit, statuses: readonly ActiveStatus[]): void {
     unit.statusMarks.removeAll(true)
+    unit.marks = statuses.map(({ id }) => STATUSES[id].mark).join('')
+    const { scale, xs } = statusMarkLayout(statuses.length, this.plateLayer.scaleX)
     statuses.forEach(({ id }, i) => {
       const { mark, colour } = STATUSES[id]
       const letter = this.add
-        .text(i * 9, 0, mark, {
+        .text(xs[i], PLATE_NAME_Y - STATUS_MARK_LIFT, mark, {
           fontFamily: 'monospace',
-          fontSize: '11px',
+          fontSize: `${STATUS_MARK_FONT_PX}px`,
           fontStyle: 'bold',
           color: cssColour(colour),
           stroke: '#000000',
-          strokeThickness: 3,
+          strokeThickness: STATUS_MARK_STROKE_PX,
         })
-        .setOrigin(0, 0.5)
+        .setOrigin(0.5, 1)
+        .setScale(scale)
       unit.statusMarks.add(letter)
     })
+  }
+
+  /** Keeps every unit's status letters at their own size after the board is scaled anew. */
+  private rescaleStatusMarks(): void {
+    for (const unit of this.units.values()) {
+      const { scale, xs } = statusMarkLayout(unit.statusMarks.length, this.plateLayer.scaleX)
+      unit.statusMarks.each((letter: Phaser.GameObjects.Text) => {
+        letter.setScale(scale).setX(xs[unit.statusMarks.getIndex(letter)])
+      })
+    }
   }
 
   private refreshApPips(unit: Unit, snapshot: UnitSnapshot, phase: Phase): void {
@@ -972,10 +1011,18 @@ export class BattleScene extends Phaser.Scene {
     if (this.selected === null || !actable.includes(this.selected)) this.selected = actable[0] ?? null
   }
 
-  /** The selected unit's legal casts, spell by spell in the order it knows them, in roster order of their targets. */
-  private selectedCasts(): CastAction[] {
+  /** The selected unit's legal casts and uses of abilities, as the engine lists them. */
+  private selectedSkillUses(): SkillAction[] {
     if (this.selected === null) return []
-    return this.engine.legalActions(this.selected).filter((a) => a.type === 'cast')
+    return this.engine.legalActions(this.selected).filter((a): a is SkillAction => a.type === 'cast' || a.type === 'ability')
+  }
+
+  /** The odds a use of a skill gives on each unit it would touch (null where nothing is rolled), as the engine previews it. */
+  private skillOdds(action: SkillAction): { unit: UnitId; hitChance: number | null }[] {
+    const aim = 'at' in action ? action.at : action.target
+    const preview =
+      action.type === 'cast' ? this.engine.previewCast(action.unit, action.spell, aim) : this.engine.previewAbility(action.unit, action.ability, aim)
+    return preview?.outcomes ?? []
   }
 
   /** The selected unit's legal attacks, in roster order of their targets. */
@@ -1001,11 +1048,11 @@ export class BattleScene extends Phaser.Scene {
     const positionOf = (id: UnitId) => state.units.find((u) => u.id === id)!.position
     const actable = this.actableUnits()
     const self = state.units.find((u) => u.id === this.selected)
-    const spell = this.targeting !== null && this.targeting !== 'attack' ? this.targeting : null
+    const skill = this.targeting !== null && this.targeting !== 'attack' ? this.targeting : null
     const statuses = self && self.statuses.length > 0 ? `${describeStatuses(self.statuses)}. ` : ''
     this.baseHint = (
-      spell
-        ? targetingHint(spell)
+      skill && self
+        ? targetingHint(skill, self)
         : this.targeting && self
           ? `Choose a foe to attack (${self.attackApCost} AP). Esc or Cancel to go back.`
           : actable.length === 0
@@ -1032,7 +1079,7 @@ export class BattleScene extends Phaser.Scene {
         if (preview.provokes.length > 0) this.highlights.lineStyle(2, PROVOKE_OUTLINE, 1)
         else this.highlights.lineStyle(1, MOVE_OUTLINE, 0.9)
         this.highlights.strokePoints(polygon, true)
-      } else if (action.type === 'attack' && spell === null) {
+      } else if (action.type === 'attack' && skill === null) {
         const polygon = this.hexPolygon(positionOf(action.target))
         this.highlights.fillStyle(ATTACK_HIGHLIGHT, this.targeting ? 0.7 : 0.5)
         this.highlights.fillPoints(polygon, true)
@@ -1041,8 +1088,8 @@ export class BattleScene extends Phaser.Scene {
           this.highlights.strokePoints(polygon, true)
         }
         this.addHitChanceLabel(action.unit, action.target, positionOf(action.target))
-      } else if (action.type === 'cast' && action.spell === spell) {
-        // A unit to cast on is marked strongly, with the odds of a hostile spell; an area's centres faintly.
+      } else if ((action.type === 'cast' || action.type === 'ability') && skill && usesSkill(action, self.id, skill)) {
+        // A unit to aim at is marked strongly, with the odds of what rolls; an area's centres faintly.
         const at = 'at' in action ? action.at : positionOf(action.target)
         const polygon = this.hexPolygon(at)
         this.highlights.fillStyle(SPELL_HIGHLIGHT, 'at' in action ? 0.3 : 0.7)
@@ -1050,7 +1097,7 @@ export class BattleScene extends Phaser.Scene {
         if ('at' in action) continue
         this.highlights.lineStyle(2, 0xffffff, 0.9)
         this.highlights.strokePoints(polygon, true)
-        const chance = this.engine.previewCast(action.unit, action.spell, action.target)?.outcomes[0]?.hitChance
+        const chance = this.skillOdds(action)[0]?.hitChance
         if (chance !== null && chance !== undefined) this.addChanceLabel(`${Math.round(chance * 100)}%`, at)
       }
     }
@@ -1083,6 +1130,16 @@ export class BattleScene extends Phaser.Scene {
     if (!same) this.refreshHover()
   }
 
+  /**
+   * Whether a skill aimed at `target` is aimed at the hex `at`: its standing unit, or for Revive the fallen
+   * ally lying there (which is offered only where the engine lists the cast, so never under a standing unit).
+   */
+  private aimedAt(target: UnitId, at: Hex, standing: { id: UnitId } | undefined): boolean {
+    if (standing) return standing.id === target
+    const fallen = this.engine.getState().units.find((u) => u.id === target)
+    return fallen !== undefined && fallen.hp <= 0 && hexEquals(fallen.position, at)
+  }
+
   /** What a click on `at` would do for the selected unit. */
   private boardIntent(at: Hex): BoardIntent {
     if (!this.playerControl || this.selected === null) return { kind: 'none' }
@@ -1090,12 +1147,12 @@ export class BattleScene extends Phaser.Scene {
     const self = state.units.find((u) => u.id === this.selected)!
     const unitAt = state.units.find((u) => u.hp > 0 && hexEquals(u.position, at))
     if (this.targeting !== null && this.targeting !== 'attack') {
-      // Only a unit or a centre the spell can be cast at is a target; any other click backs out of casting.
-      const spell = this.targeting
-      const cast = this.selectedCasts().find(
-        (a) => a.spell === spell && ('at' in a ? hexEquals(a.at, at) : unitAt !== undefined && a.target === unitAt.id),
+      // Only a unit or a centre the skill can be aimed at is a target; any other click backs out of aiming.
+      const skill = this.targeting
+      const use = this.selectedSkillUses().find(
+        (a) => usesSkill(a, self.id, skill) && ('at' in a ? hexEquals(a.at, at) : this.aimedAt(a.target, at, unitAt)),
       )
-      return cast ? { kind: 'cast', action: cast } : { kind: 'none' }
+      return use ? { kind: 'skill', action: use } : { kind: 'none' }
     }
     if (this.targeting) {
       // Only a foe already in reach is a target; any other click backs out of picking one.
@@ -1159,10 +1216,14 @@ export class BattleScene extends Phaser.Scene {
         }
         break
       }
-      case 'cast':
-        this.input.setDefaultCursor(CURSORS[spellCursor(intent.action.spell)])
-        this.markCast(intent.action, selectedAt())
+      case 'skill': {
+        const { action } = intent
+        // A spell's cursor is its own; an ability is hostile but for a status the user lays on itself.
+        const cursor = action.type === 'cast' ? spellCursor(action.spell) : ABILITIES[action.ability].selfStatus ? 'heal' : 'attack'
+        this.input.setDefaultCursor(CURSORS[cursor])
+        this.markSkill(action, selectedAt())
         break
+      }
     }
     this.showHint()
   }
@@ -1212,27 +1273,36 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * Outlines the caster and what a cast would be aimed at; for an area, every
-   * hex of it, and on each unit it would touch, allies and the caster
-   * included, the odds of a hostile spell striking it, so friendly fire is
-   * seen before it is paid for.
+   * Outlines the user and what a use of a skill would be aimed at; for an
+   * area, every hex of it, and on each unit it would touch, allies and the
+   * user included, the odds of it striking, so friendly fire is seen before
+   * it is paid for: a status laid with no roll shows its letter, a friendly
+   * spell a "+".
    */
-  private markCast(action: CastAction, from: Hex): void {
+  private markSkill(action: SkillAction, from: Hex): void {
     const state = this.engine.getState()
+    const user = state.units.find((u) => u.id === action.unit)!
     const aim = 'at' in action ? action.at : state.units.find((u) => u.id === action.target)!.position
-    const { radius = 0, hostile, target, shape = 'burst', range } = SPELLS[action.spell]
-    const caster = state.units.find((u) => u.id === action.unit)!
-    const hexes =
-      target === 'area' ? areaOf(shape, caster.position, aim, range, radius).filter((h) => this.board.contains(h)) : [aim]
+    let hexes: Hex[] = [aim]
+    let noRoll = '+'
+    if (action.type === 'cast') {
+      const { radius = 0, target, shape = 'burst', range } = SPELLS[action.spell]
+      if (target === 'area') hexes = areaOf(shape, user.position, aim, range, radius)
+    } else {
+      const area = abilityArea(action.ability, user.attackRange)
+      if (area) hexes = areaOf(area.shape, user.position, aim, area.range, area.radius ?? 0)
+      const laid = ABILITIES[action.ability].area?.status
+      if (laid) noRoll = STATUSES[laid.id].mark
+    }
+    hexes = hexes.filter((h) => this.board.contains(h))
     this.hoverMarks.lineStyle(3, SPELL_HIGHLIGHT, 1)
     for (const h of [from, ...hexes]) this.hoverMarks.strokePoints(this.hexPolygon(h), true)
-    if (target !== 'area') return
+    if (!('at' in action)) return
     this.hoverMarks.fillStyle(SPELL_HIGHLIGHT, 0.35)
     for (const h of hexes) this.hoverMarks.fillPoints(this.hexPolygon(h), true)
-    const preview = this.engine.previewCast(action.unit, action.spell, 'at' in action ? action.at : action.target)
-    for (const { unit, hitChance } of preview?.outcomes ?? []) {
+    for (const { unit, hitChance } of this.skillOdds(action)) {
       const at = state.units.find((u) => u.id === unit)!.position
-      this.addChanceLabel(hostile && hitChance !== null ? `${Math.round(hitChance * 100)}%` : '+', at, this.hoverLabels)
+      this.addChanceLabel(hitChance !== null ? `${Math.round(hitChance * 100)}%` : noRoll, at, this.hoverLabels)
     }
   }
 
@@ -1394,6 +1464,8 @@ export class BattleScene extends Phaser.Scene {
       this.flash(unit, HELPED_TINT)
       this.refreshHpDisplay(unit, event.hpAfter, this.engine.getState().units.find((u) => u.id === event.unit)!.maxHp)
     }
+    if (event.type === 'restore') this.showRestore(event)
+    if (event.type === 'status_tick' && event.endured) this.floatText(event.unit, 'Endures', FLOAT_COLOUR, 1)
     if (changesStatusMarks(event)) this.refreshAllStatusMarks()
     if (event.type === 'unit_down') this.showFallen(event.unit)
   }
@@ -1416,7 +1488,12 @@ export class BattleScene extends Phaser.Scene {
       else this.dodge(event.defender, event.attacker)
       const maxHp = this.engine.getState().units.find((u) => u.id === event.defender)!.maxHp
       this.refreshHpDisplay(defender, event.defenderHpAfter, maxHp)
+      // A technique's elemental or holy strike flashes where it lands.
+      const flash = strikeFlash(event)
+      if (flash) this.burst(this.chest(event.defender), flash.colour, flash.glow, 1.2)
       this.floatBonus(event)
+      this.floatNotes(event.defender, [...defenderNotes(event), ...(event.endured ? [{ text: 'Endures', kind: 'note' as const }] : [])], bonusText(event) ? 1 : 0)
+      this.floatNotes(event.attacker, attackerNotes(event))
       // A Life rune heals the attacker as it strikes.
       if ((event.healed ?? 0) > 0) {
         const attackerMax = this.engine.getState().units.find((u) => u.id === event.attacker)!.maxHp
@@ -1451,11 +1528,15 @@ export class BattleScene extends Phaser.Scene {
     const message = bonusText(event)
     if (message === null) return
     const element = bonusElement(event)
-    const at = this.chest(event.defender)
-    const colour = element ? ELEMENT_FLOAT_COLOURS[element] : FLOAT_COLOUR
+    this.floatText(event.defender, message, element ? ELEMENT_FLOAT_COLOURS[element] : FLOAT_COLOUR, 0)
+  }
+
+  /** Words rising from a unit's chest, `row` rows above the first: an on-hit's damage, a restore's "+3", "Deathblow". */
+  private floatText(unit: UnitId, message: string, colour: string, row: number): void {
+    const at = this.chest(unit)
     const unscale = 1 / (this.floatLayer.scaleX || 1)
     const text = this.add
-      .text(at.x, at.y - 20, message, { fontFamily: 'monospace', fontSize: '14px', fontStyle: 'bold', color: colour, stroke: '#000000', strokeThickness: 3 })
+      .text(at.x, at.y - (20 + 14 * row) * unscale, message, { fontFamily: 'monospace', fontSize: '14px', fontStyle: 'bold', color: colour, stroke: '#000000', strokeThickness: 3 })
       .setOrigin(0.5)
       .setScale(unscale)
     this.floatLayer.add(text)
@@ -1468,6 +1549,29 @@ export class BattleScene extends Phaser.Scene {
       ease: 'Quad.easeOut',
       onComplete: () => text.destroy(),
     })
+  }
+
+  /** Floats a list of notes over `unit`, one row each. */
+  private floatNotes(unit: UnitId, notes: readonly FloatNote[], firstRow = 0): void {
+    notes.forEach((note, i) => this.floatText(unit, note.text, FLOAT_NOTE_COLOURS[note.kind], firstRow + i))
+  }
+
+  /** A turn-start restore: "+3" in green over the unit, its hit points refilling, and "+2 mana" in blue. */
+  private showRestore(event: Extract<BattleEvent, { type: 'restore' }>): void {
+    const unit = this.units.get(event.unit)!
+    const snapshot = this.engine.getState().units.find((u) => u.id === event.unit)!
+    this.flash(unit, HELPED_TINT)
+    unit.figure.pulseOutline(OUTLINE_HEALED, OUTLINE_MS)
+    this.floatNotes(event.unit, restoreFloats(event))
+    if ((event.hp ?? 0) > 0) this.refreshHpDisplay(unit, Math.min(snapshot.maxHp, unit.shownHp + event.hp!), snapshot.maxHp)
+  }
+
+  /** A fallen unit brought back: its figure stands up again, bright and idling, and its plate returns. */
+  private standUp(id: UnitId): void {
+    const unit = this.units.get(id)!
+    unit.figure.setFigureAlpha(1).play('idle')
+    unit.plate.setVisible(true)
+    unit.statusMarks.setVisible(true)
   }
 
   /**
@@ -1499,6 +1603,8 @@ export class BattleScene extends Phaser.Scene {
         } else if (outcome.hit) this.react(outcome.unit, event.caster, outline!, HURT_TINT, outcome.critical)
         else if (outcome.unit !== event.caster) this.dodge(outcome.unit, event.caster)
         this.refreshHpDisplay(unit, outcome.hpAfter, units.find((u) => u.id === outcome.unit)!.maxHp)
+        if (outcome.revived) this.standUp(outcome.unit)
+        if (outcome.endured) this.floatText(outcome.unit, 'Endures', FLOAT_COLOUR, 0)
       }
       if (event.drained > 0) {
         const drinker = this.units.get(event.caster)!
@@ -1533,9 +1639,20 @@ export class BattleScene extends Phaser.Scene {
         else if (outline !== null) this.react(outcome.unit, event.unit, outline, HURT_TINT, outcome.critical)
         else if (outcome.unit !== event.unit) this.dodge(outcome.unit, event.unit)
         this.refreshHpDisplay(this.units.get(outcome.unit)!, outcome.hpAfter, units.find((u) => u.id === outcome.unit)!.maxHp)
+        if (outcome.endured) this.floatText(outcome.unit, 'Endures', FLOAT_COLOUR, 0)
       }
     }
     this.time.delayedCall(RELEASE_MS, () => {
+      // A volley looses an arrow at each hex, landing with them.
+      if (look.arrows && event.distance > 0) {
+        const from = this.chest(event.unit)
+        area.forEach((h, i) => {
+          const centre = boardHexCenter(h)
+          const to = { x: centre.x, y: centre.y - UNIT_HEIGHT / 3 }
+          this.flyArrow(from, to, event.distance, flightMs(event.distance), i === 0 ? land : () => {})
+        })
+        return
+      }
       // A cone or line has no missile: it sweeps out from the unit, then lands.
       if (event.shape !== 'burst') this.time.delayedCall(AREA_SWEEP_MS, land)
       else if (event.distance === 0) land()
@@ -1558,7 +1675,7 @@ export class BattleScene extends Phaser.Scene {
         for (const id of touched) this.sparkle(id, look.colour, look.glow)
         break
       case 'ring':
-        for (const id of touched) this.ring(id, look.colour)
+        for (const id of look.onUser ? [event.unit] : touched) this.ring(id, look.colour)
         break
     }
   }
@@ -1795,7 +1912,7 @@ export class BattleScene extends Phaser.Scene {
   /** Walks a unit along its path, turning it towards each step as it takes it. */
   private animateMove(id: UnitId, from: Hex, path: readonly Hex[]): void {
     if (path.length === 0) return
-    const { container, plate, figure } = this.units.get(id)!
+    const { container, plate, statusMarks, figure } = this.units.get(id)!
     figure.play('walk')
     // Each step lifts the unit a little and sets it down.
     this.tweens.add({
@@ -1808,7 +1925,7 @@ export class BattleScene extends Phaser.Scene {
       onComplete: () => figure.setY(0),
     })
     this.tweens.chain({
-      targets: [container, plate],
+      targets: [container, plate, statusMarks],
       // A unit cut down on its way stays down.
       onComplete: () => this.standing(id) && figure.play('idle'),
       tweens: path.map((h, i) => ({
@@ -1840,39 +1957,52 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private setPlayerControl(enabled: boolean): void {
-    this.closeSpellMenu()
+    this.closeSkillMenu()
     this.playerControl = enabled
     if (enabled) this.ensureSelection()
     const attacks = enabled ? this.selectedAttacks().length : 0
-    const casts = enabled ? this.selectedCasts() : []
+    const uses = enabled ? this.selectedSkillUses() : []
     // Picking a target ends when control is lost or the action it was for is no longer legal.
-    if (this.targeting === 'attack' ? attacks < 2 : !casts.some((cast) => cast.spell === this.targeting)) {
+    const aimed = this.targeting
+    if (aimed === 'attack' ? attacks < 2 : aimed !== null && !uses.some((use) => usesSkill(use, this.selected!, aimed))) {
       this.targeting = null
     }
-    const casting = this.targeting !== null && this.targeting !== 'attack'
+    const aiming = this.targeting !== null && this.targeting !== 'attack'
     this.setButtonEnabled(this.attackButton, attacks > 0)
     this.setButtonLabel(this.attackButton, this.targeting === 'attack' ? 'Cancel' : 'Attack')
-    // The Cast button is the selected unit's: it shows the mana it has left, and only for a unit with magic.
-    const caster = this.engine.getState().units.find((u) => u.id === this.selected && u.magic)
-    this.castButton.setVisible(caster !== undefined && this.engine.getState().phase !== 'over')
-    this.setButtonEnabled(this.castButton, casts.length > 0)
-    this.setButtonLabel(this.castButton, casting ? 'Cancel' : `Cast (${caster?.mana ?? 0})`)
+    // The Skills button is the selected unit's, for one with a spell or an ability: it opens the list, greyed rows
+    // and all, whenever the player has control, and shows the mana a unit with magic has left.
+    const user = this.skillUser()
+    this.castButton.setVisible(user !== undefined && this.engine.getState().phase !== 'over')
+    this.setButtonEnabled(this.castButton, enabled && user !== undefined)
+    this.setButtonLabel(this.castButton, aiming ? 'Cancel' : this.skillsLabel())
     this.setButtonEnabled(this.endTurnButton, enabled)
     this.refreshHighlights()
     this.updateRoundText()
     this.column.refresh(this.activeIndex())
   }
 
-  private setTargeting(what: 'attack' | SpellId | null): void {
+  /** The selected unit, if it has a spell or an ability to list. */
+  private skillUser(): UnitSnapshot | undefined {
+    return this.engine.getState().units.find((u) => u.id === this.selected && (u.magic || (u.abilities?.length ?? 0) > 0))
+  }
+
+  /** "Skills (21)" for a unit with magic, the mana it has left; "Skills" for one without. */
+  private skillsLabel(): string {
+    const user = this.skillUser()
+    return user?.magic ? `Skills (${user.mana})` : 'Skills'
+  }
+
+  private setTargeting(what: 'attack' | Skill | null): void {
     this.targeting = what
     this.setPlayerControl(this.playerControl)
   }
 
   private onBoardClick(pointer: Phaser.Input.Pointer): void {
     if (!this.playerControl) return
-    // A click away from the open spell list closes it, and does nothing else.
-    if (this.spellMenu) {
-      this.closeSpellMenu()
+    // A click away from the open Skills list closes it, and does nothing else.
+    if (this.skillMenu) {
+      this.closeSkillMenu()
       return
     }
     const clicked = this.hexAt(pointer.x, pointer.y)
@@ -1885,7 +2015,7 @@ export class BattleScene extends Phaser.Scene {
       this.playerAct(intent.action)
     } else if (intent.kind === 'attack') {
       this.goFor(intent.target, intent.plan)
-    } else if (intent.kind === 'cast') {
+    } else if (intent.kind === 'skill') {
       this.playerAct(intent.action)
     } else if (this.targeting) {
       this.setTargeting(null)
@@ -1927,15 +2057,15 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * Opens the list of the selected unit's spells, from which one is picked to
-   * aim; pressed again, or while a spell is being aimed, it cancels. A spell
-   * always asks for its target, even with one in reach: mana is too dear to
-   * spend on a slip.
+   * Opens the list of the selected unit's spells and abilities, from which one
+   * is picked to aim; pressed again, or while a skill is being aimed, it
+   * cancels. A skill always asks for its target, even with one in reach: mana
+   * and recharges are too dear to spend on a slip.
    */
-  private onCast(): void {
+  private onSkills(): void {
     if (!this.playerControl) return
-    if (this.spellMenu) {
-      this.closeSpellMenu()
+    if (this.skillMenu) {
+      this.closeSkillMenu()
       return
     }
     if (this.targeting !== null && this.targeting !== 'attack') {
@@ -1943,53 +2073,80 @@ export class BattleScene extends Phaser.Scene {
       return
     }
     const self = this.engine.getState().units.find((u) => u.id === this.selected)
-    if (self) this.openSpellMenu(self)
+    if (self) this.openSkillMenu(self)
   }
 
-  /** The spell list over the Cast button: a row a spell, numbered, greyed where it cannot be cast now. */
-  private openSpellMenu(self: UnitSnapshot): void {
+  /**
+   * The Skills list over the Skills button: a row a spell, then a row an
+   * ability, numbered, each with its cost and any recharge, greyed where the
+   * engine lists no use of it now. Hovering a row says what it does, and for
+   * a greyed one why it cannot be used.
+   */
+  private openSkillMenu(self: UnitSnapshot): void {
     if (this.targeting === 'attack') this.setTargeting(null)
-    const rows = spellMenuRows(self, this.engine.legalActions(self.id))
-    const container = this.add.container(this.castButton.x, this.castButton.y - 22 - 6)
-    const menu = { container, rows: [] as Array<{ spell: SpellId; enabled: boolean; bg: Phaser.GameObjects.Rectangle }> }
-    rows.forEach(({ spell, label, enabled }, i) => {
-      const y = -(rows.length - i - 0.5) * SPELL_ROW_H
+    const rows = skillMenuRows(self, this.engine.legalActions(self.id), this.engine.getState().units)
+    const texts = rows.map(({ label, readyIn }, i) => `${i + 1}. ${label}${readyIn ? `  (ready in ${readyIn})` : ''}`)
+    const width = Math.max(SKILL_ROW_W, ...texts.map((t) => t.length * SKILL_CHAR_W + 16))
+    // Over the button, kept on screen and clear of the party's column.
+    const x = Phaser.Math.Clamp(this.castButton.x, PARTY_PANEL_W + width / 2 + 4, Math.max(PARTY_PANEL_W + width / 2 + 4, this.scale.width - width / 2 - 4))
+    const container = this.add.container(x, this.castButton.y - 22 - 6)
+    const menu = { container, rows: [] as Array<{ row: SkillMenuRow; bg: Phaser.GameObjects.Rectangle }> }
+    rows.forEach((row, i) => {
+      const { enabled } = row
+      const y = -(rows.length - i - 0.5) * SKILL_ROW_H
       const bg = this.add
-        .rectangle(0, y, SPELL_ROW_W, SPELL_ROW_H - 2, enabled ? 0x2b6cb0 : 0x424242)
+        .rectangle(0, y, width, SKILL_ROW_H - 2, enabled ? 0x2b6cb0 : 0x424242)
         .setStrokeStyle(1, 0x90cdf4)
         .setInteractive({ useHandCursor: enabled })
       const text = this.add
-        .text(-SPELL_ROW_W / 2 + 8, y, `${i + 1}. ${label}`, { fontFamily: 'monospace', fontSize: '13px', color: '#ffffff' })
+        .text(-width / 2 + 8, y, texts[i], { fontFamily: 'monospace', fontSize: '13px', color: '#ffffff' })
         .setOrigin(0, 0.5)
         .setAlpha(enabled ? 1 : 0.5)
       bg.on('pointerover', () => {
         if (enabled) bg.setFillStyle(0x3182ce)
-        this.hintText.setText(`${SPELLS[spell].name}: ${SPELLS[spell].description}.`)
+        this.hintText.setText(this.skillRowHint(row)).setColor(enabled ? '#9e9e9e' : '#ffb74d')
       })
-      bg.on('pointerout', () => bg.setFillStyle(enabled ? 0x2b6cb0 : 0x424242))
-      bg.on('pointerdown', () => this.pickSpell(i))
+      bg.on('pointerout', () => {
+        bg.setFillStyle(enabled ? 0x2b6cb0 : 0x424242)
+        // The row's hint gives way to the one the turn had.
+        this.showHint()
+      })
+      bg.on('pointerdown', () => this.pickSkill(i))
       container.add([bg, text])
-      menu.rows.push({ spell, enabled, bg })
+      menu.rows.push({ row, bg })
     })
-    this.spellMenu = menu
+    this.skillMenu = menu
     this.setButtonLabel(this.castButton, 'Cancel')
   }
 
-  private closeSpellMenu(): void {
-    if (!this.spellMenu) return
-    this.spellMenu.container.destroy()
-    this.spellMenu = null
-    const caster = this.engine.getState().units.find((u) => u.id === this.selected && u.magic)
-    this.setButtonLabel(this.castButton, `Cast (${caster?.mana ?? 0})`)
+  /** "Pin: A weapon blow; …", and before it for a greyed row why it cannot be used now. */
+  private skillRowHint(row: SkillMenuRow): string {
+    const what = `${skillName(row)}: ${skillDescription(row)}`
+    if (row.enabled) return what
+    const why = row.why ?? 'Not now'
+    return `${skillName(row)}: ${why}. ${skillDescription(row)}`
   }
 
-  /** Picks the `index`th row of the open spell list, if it can be cast, to aim it. */
-  private pickSpell(index: number): void {
-    const row = this.spellMenu?.rows[index]
-    if (!row?.enabled) return
+  private closeSkillMenu(): void {
+    if (!this.skillMenu) return
+    this.skillMenu.container.destroy()
+    this.skillMenu = null
+    this.setButtonLabel(this.castButton, this.skillsLabel())
+    this.showHint()
+  }
+
+  /** Picks the `index`th row of the open Skills list, if it can be used, to aim it; a greyed row says why not. */
+  private pickSkill(index: number): void {
+    const entry = this.skillMenu?.rows[index]
+    if (!entry) return
+    if (!entry.row.enabled) {
+      this.hintText.setText(this.skillRowHint(entry.row)).setColor('#ffb74d')
+      return
+    }
     this.playSound('sfx_ui_click')
-    this.closeSpellMenu()
-    this.setTargeting(row.spell)
+    this.closeSkillMenu()
+    const { row } = entry
+    this.setTargeting(row.kind === 'spell' ? { kind: 'spell', id: row.id } : { kind: 'ability', id: row.id })
   }
 
   private onEndTurn(): void {

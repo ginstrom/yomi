@@ -5,7 +5,7 @@ import { autoAdvance, levelUp } from '../character/progression.ts'
 import { gradedItem, type Grade } from '../inventory/grades.ts'
 import { IRON_BATTLE_AXE, IRON_BREASTPLATE, IRON_DAGGER, IRON_SWORD, SPARK_WAND, itemById, type Item } from '../inventory/inventory.ts'
 import type { Tier } from '../inventory/catalog.ts'
-import { BANDIT_ROLE, banditDraft, banditGear, banditStats, type BanditRole } from './bandits.ts'
+import { BANDIT_PLAN, BANDIT_ROLE, banditDraft, banditGear, banditStats, type BanditRole } from './bandits.ts'
 
 const G1 = { tier: 1, grade: 1 } as const
 const G2 = { tier: 1, grade: 2 } as const
@@ -42,7 +42,7 @@ function heroLike(role: BanditRole, level: number, tier: Tier, grade: Grade): Ch
     ...(armor ? { armor: graded(armor) } : {}),
   }
   while (hero.level < level) levelUp(hero)
-  autoAdvance(hero)
+  autoAdvance(hero, BANDIT_PLAN[role])
   return hero
 }
 
@@ -116,7 +116,9 @@ describe('banditStats', () => {
   it('arms the crossbowman with a crossbow that pierces at range', () => {
     const stats = banditStats('crossbowman', 6, T2)
     expect(stats.weapon).toBe('Fine Ironwood Crossbow')
+    // The crossbow's 5; Far Shot's 2 come with the ranger's plan at level 8, after Volley.
     expect(stats.attackRange).toBe(5)
+    expect(banditStats('crossbowman', 8, T2).attackRange).toBe(7)
     expect(stats.attackApCost).toBe(6)
   })
 
@@ -128,9 +130,9 @@ describe('banditStats', () => {
 })
 
 describe('banditGear', () => {
-  it('is tier 1 plain below threat 5, tier 1 Fine at threat 5 and tier 2 Fine from threat 6', () => {
+  it('is tier 1 Fine at threats 3 and 5, plain at 4, and tier 2 Fine from threat 6', () => {
     expect([3, 4, 5, 6, 7].map(banditGear)).toEqual([
-      { tier: 1, grade: 1 },
+      { tier: 1, grade: 2 },
       { tier: 1, grade: 1 },
       { tier: 1, grade: 2 },
       { tier: 2, grade: 2 },
@@ -164,5 +166,37 @@ describe('banditStats freezing', () => {
       expect(banditStats(role, 5, G2)).toBe(stats)
     }
     expect(banditStats('mage', 5, G1).magic).toBeDefined()
+  })
+})
+
+describe('what the bandits learn from their plans', () => {
+  const gear = banditGear(5)
+  const abilities = (role: BanditRole, level: number) => banditStats(role, level, gear).abilities ?? []
+
+  it('gives the Captain Rooted at 3, Taunt at 5 and Pin at 8 (the knight plan takes Heavy Hand after Pin)', () => {
+    expect(banditStats('captain', 2, gear).traits ?? []).toEqual([])
+    expect(banditStats('captain', 3, gear).traits).toEqual(['rooted'])
+    expect([4, 5, 7, 8].map((level) => abilities('captain', level))).toEqual([[], ['taunt'], ['taunt'], ['taunt', 'pin']])
+  })
+
+  it('gives the Brute Power Attack at 3 and Cleave at 8', () => {
+    expect([2, 3, 7, 8].map((level) => abilities('brute', level))).toEqual([[], ['power_attack'], ['power_attack'], ['power_attack', 'cleave']])
+  })
+
+  it('gives the Cutthroat Backstab at 2 (a passive), Dirty Trick at 4 and Sprint at 5', () => {
+    expect(abilities('cutthroat', 2)).toEqual([])
+    expect(abilities('cutthroat', 4)).toEqual(['dirty_trick'])
+    expect(abilities('cutthroat', 5)).toEqual(['sprint', 'dirty_trick'])
+  })
+
+  it('gives the Archer and the Crossbowman Aimed Shot at 3 and Volley at 6', () => {
+    for (const role of ['archer', 'crossbowman'] as const) {
+      expect([2, 3, 5, 6].map((level) => abilities(role, level))).toEqual([[], ['aimed_shot'], ['aimed_shot'], ['aimed_shot', 'volley']])
+    }
+  })
+
+  it('gives the Hedge-Mage Flame Arrow at 3 and Fireball at 7', () => {
+    const learnt = (level: number) => banditStats('mage', level, gear).magic!.spells.filter((id) => id === 'flame_arrow' || id === 'fireball')
+    expect([2, 3, 6, 7].map(learnt)).toEqual([[], ['flame_arrow'], ['flame_arrow'], ['flame_arrow', 'fireball']])
   })
 })

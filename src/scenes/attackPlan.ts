@@ -30,6 +30,11 @@ export interface AttackPlan {
  * costs every AP its bearer has, and a bow would walk up to the foe) would
  * spend the turn on something the player did not ask for. Closing in is a
  * plain move, a click on a hex.
+ *
+ * No odds are shown for a walk-then-strike (the hit chance label is the engine's
+ * preview from where the unit stands, and `previewAttack` reads its current `moved`),
+ * so Skirmisher's +10 after a step has no preview here to be missing from; it is in
+ * the preview once the unit has moved.
  */
 export function planAttack(engine: BattleEngine, unit: UnitId, target: UnitId): AttackPlan {
   const state = engine.getState()

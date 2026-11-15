@@ -1,5 +1,6 @@
-import type { Character } from '../character/character.ts'
-import { PERK_IDS } from '../character/perks.ts'
+import { maxMana, type Character } from '../character/character.ts'
+import { PERK_IDS, nodesCost, type PerkId } from '../character/perks.ts'
+import { pointsAt } from '../character/progression.ts'
 import { SKILL_IDS } from '../character/skills.ts'
 import type { BattleSnapshot } from '../engine/battleEngine.ts'
 import { GRADES } from '../inventory/grades.ts'
@@ -19,15 +20,29 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  *
  * Raise `SAVE_VERSION` whenever the shape of `GameState`, `Character`,
  * `WorldState` or `BattleSnapshot` changes. A migration is written only when
- * a stage's design asks for one (stage 5's does: `migrateFrom18`, reading a
- * version-18 save straight to this version; versions 19 and 21 were never
- * released, and they and stage 5's 20 read as unreadable); otherwise a save
- * of another version reads as unreadable. Version 22 (stage 6) adds the
- * home, garrison and meet orders. Rules and item numbers may change
+ * a design asks for one; otherwise a save of another version reads as
+ * unreadable. Stage 5's asked for `migrateFrom18`, reading a version-18 save
+ * as a company of one in version 22's shape (versions 19 and 21 were never
+ * released, and they and stage 5's 20 read as unreadable). Version 22
+ * (stage 6) adds the home, garrison and meet orders. Version 23 (the skill
+ * trees) drops a character's `spellPicks` and holds every node at one rank
+ * under the trees' ids; the skill trees' design asked for `migrateFrom22`,
+ * which puts a version-22 game's heroes on the trees, and a version-18 save
+ * goes through `migrateFrom18` and then it. Version 24 (skill trees step 11)
+ * keeps whether each unit of a saved battle has moved this turn; a version-23
+ * save loads as it is, `BattleEngine.restore` taking `moved` up as false.
+ * Version 25 (skill trees step 17) keeps each unit's stage-3 fields
+ * (`attackedYet`, `endured`, `refunded`, `fallenThisBattle`, `usedOnce`); a
+ * version-24 save loads as it is, `restore` taking them up at their defaults.
+ * Version 26 (skill trees step 28) gives a character `perkPoints` in place of
+ * `perkPicks`; the node-cost design asked for `migrateFrom25`, which every
+ * older save readable (25, 24, 23, and 22 and 18 after `migrateFrom22`) goes
+ * through: every node kept and the points recomputed from the level.
+ * Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 22
+export const SAVE_VERSION = 26
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -106,10 +121,12 @@ const characterIds = (member: Character) =>
 
 function characterOf(saved: Character): Character {
   check(saved && typeof saved === 'object' && typeof saved.name === 'string')
-  check(Object.keys(saved.perks).every((id) => (PERK_IDS as string[]).includes(id)))
+  check(Object.entries(saved.perks).every(([id, ranks]) => (PERK_IDS as string[]).includes(id) && ranks === 1))
   check(Array.isArray(saved.tagged) && saved.tagged.every((id) => SKILL_IDS.includes(id)))
   check(SKILL_IDS.every((id) => typeof saved.trained[id] === 'number'))
   check(Array.isArray(saved.backpack))
+  check(Number.isInteger(saved.perkPoints) && saved.perkPoints >= 0)
+  check(!('perkPicks' in saved))
   return {
     ...saved,
     equipment: Object.fromEntries(Object.entries(saved.equipment).map(([slot, id]) => [slot, itemOf(id)])) as Equipment,
@@ -125,7 +142,8 @@ function locationOf(saved: WorldLocation): WorldLocation {
 /**
  * A version-18 game (one `party` and one `baggage`, the world holding where it
  * stands and what it confronts) as a version-22 one: a company of one, the
- * party's position and confrontation its expedition's.
+ * party's position and confrontation its expedition's. `migrateFrom22` then
+ * takes it on to this version.
  */
 function migrateFrom18(game: Record<string, unknown>): void {
   check(Array.isArray(game.party) && Array.isArray(game.baggage))
@@ -147,6 +165,72 @@ function migrateFrom18(game: Record<string, unknown>): void {
   delete world.party
   delete world.confronting
 }
+
+/** Perks of version 22 that went into no node: dropped. */
+const RETIRED_PERKS = ['spellcasting', 'quick_study']
+
+/** Perks of version 22 folded into a node of the trees (design §5.9). */
+const FOLDED: Record<string, PerkId> = {
+  mighty_blow: 'weapon_mastery', sunder: 'weapon_mastery', gain_endurance: 'toughness', gain_perception: 'far_shot',
+  eagle_eye: 'deadeye', gain_agility: 'skirmisher', tireless: 'evasion', gain_luck: 'fortune',
+  deep_well: 'destruction', arcane_mastery: 'lingering_cold', gain_intelligence: 'lasting_magic',
+}
+
+/**
+ * A version-22 game's heroes, in every party and the reserves, on the skill
+ * trees: retired and unknown perks dropped, folded ones mapped onto their
+ * node, every node held at one rank (kept even where its asks would now
+ * refuse it) and `spellPicks` gone; `migrateFrom25` then sets the perk
+ * points. Mana is clamped to the
+ * new maximum once the characters are built (`clampMana`). A saved battle is
+ * left as it was, its units fighting on with the stats they began with.
+ */
+function migrateFrom22(game: Record<string, unknown>): void {
+  for (const hero of heroesOf(game)) {
+    const { level, perks } = hero
+    check(typeof level === 'number' && Number.isInteger(level) && level >= 1)
+    check(perks && typeof perks === 'object' && !Array.isArray(perks))
+    const nodes: Partial<Record<PerkId, number>> = {}
+    for (const [id, ranks] of Object.entries(perks)) {
+      check(typeof ranks === 'number')
+      if (ranks < 1 || RETIRED_PERKS.includes(id)) continue
+      const node = FOLDED[id] ?? id
+      if ((PERK_IDS as string[]).includes(node)) nodes[node as PerkId] = 1
+    }
+    hero.perks = nodes
+    delete hero.spellPicks
+  }
+}
+
+/** Every hero of a game's parties and reserves, checked to be an object. */
+function heroesOf(game: Record<string, unknown>): Record<string, unknown>[] {
+  check(Array.isArray(game.parties) && Array.isArray(game.reserves))
+  const parties = game.parties as Record<string, unknown>[]
+  check(parties.every((party) => party && typeof party === 'object' && Array.isArray(party.members)))
+  const members = [...parties.flatMap((party) => party.members as unknown[]), ...(game.reserves as unknown[])]
+  check(members.every((member) => member && typeof member === 'object'))
+  return members as Record<string, unknown>[]
+}
+
+/**
+ * A game of version 25 or older (22 and 18 after `migrateFrom22`) with perk
+ * points: every hero of every party and the reserves keeps every node it
+ * holds, with no refund, and has `pointsAt(level)` less what its nodes cost,
+ * never below 0, so a hero whose nodes cost more than its level gives has
+ * none until its level catches up; `perkPicks` is gone.
+ */
+function migrateFrom25(game: Record<string, unknown>): void {
+  for (const hero of heroesOf(game)) {
+    const { level, perks } = hero
+    check(typeof level === 'number' && Number.isInteger(level) && level >= 1)
+    check(perks && typeof perks === 'object' && !Array.isArray(perks))
+    hero.perkPoints = Math.max(0, pointsAt(level) - nodesCost({ perks: perks as Character['perks'] }))
+    delete hero.perkPicks
+  }
+}
+
+/** A migrated character's mana within its maximum under the new rules. */
+const clampMana = (character: Character): Character => ({ ...character, mana: Math.min(character.mana, maxMana(character)) })
 
 const isHex = (hex: unknown): boolean =>
   typeof hex === 'object' && hex !== null && typeof (hex as { q: unknown }).q === 'number' && typeof (hex as { r: unknown }).r === 'number'
@@ -201,13 +285,13 @@ function isOrder(order: unknown, self: string, partyIds: readonly string[]): boo
   return true
 }
 
-/** Null for anything that is not a save of this version (or version 18, migrated), or names an item, perk or skill the game does not have. */
+/** Null for anything that is not a save of this version (or version 25, 24 or 23, or version 22 or 18, migrated), or names an item, perk or skill the game does not have. */
 export function parseSave(raw: string | null): SaveFile | null {
   if (raw === null) return null
   try {
     // What `serializeSave` wrote has the file's shape but for its items, which are ids until put back below.
     const saved = JSON.parse(raw) as SaveFile & { version: unknown }
-    check(saved && typeof saved === 'object' && (saved.version === SAVE_VERSION || saved.version === 18))
+    check(saved && typeof saved === 'object' && [SAVE_VERSION, 25, 24, 23, 22, 18].includes(saved.version as number))
     check(typeof saved.savedAt === 'number')
     const { game, battle } = saved
     check(game && typeof game === 'object')
@@ -216,6 +300,10 @@ export function parseSave(raw: string | null): SaveFile | null {
       // The only party a version-18 game has is the one that was fighting.
       if (battle && typeof battle === 'object') (battle as { party?: string }).party = FIRST_PARTY_ID
     }
+    const migrated = saved.version === 22 || saved.version === 18
+    if (migrated) migrateFrom22(game as unknown as Record<string, unknown>)
+    if (saved.version !== SAVE_VERSION) migrateFrom25(game as unknown as Record<string, unknown>)
+    const heroOf = (member: Character): Character => (migrated ? clampMana(characterOf(member)) : characterOf(member))
     check(Array.isArray(game.parties) && game.parties.length > 0 && game.parties.length <= MAX_PARTIES)
     check(game.parties.every((party) => party && typeof party.id === 'string' && typeof party.name === 'string'))
     check(new Set(game.parties.map((party) => party.id)).size === game.parties.length)
@@ -246,8 +334,8 @@ export function parseSave(raw: string | null): SaveFile | null {
     return {
       game: {
         ...game,
-        parties: game.parties.map((party): Expedition => ({ ...party, members: party.members.map(characterOf), baggage: itemsOf(party.baggage) })),
-        reserves: game.reserves.map(characterOf),
+        parties: game.parties.map((party): Expedition => ({ ...party, members: party.members.map(heroOf), baggage: itemsOf(party.baggage) })),
+        reserves: game.reserves.map(heroOf),
         world: { ...game.world, locations: game.world.locations.map(locationOf) },
       },
       battle: battle && { ...battle, ground: battle.ground.map(({ hex, items }) => ({ hex, items: itemsOf(items) })) },

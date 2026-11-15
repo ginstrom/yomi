@@ -61,16 +61,68 @@ export interface CombatantStats {
     skill: number
     /** In `ALL_SPELL_IDS` order. */
     spells: readonly SpellId[]
+    /** Added to each damaging outcome of its spells, by element (`all` to every one), after a critical's doubling and before wards; none when left out. */
+    power?: { all?: number; fire?: number; frost?: number }
+    /** Added to what each of its heals restores, before the cap at the maximum. */
+    healBonus?: number
+    /** Turns added to the statuses its hostile and its friendly spells lay. */
+    extend?: { hostile?: number; friendly?: number }
+    /** Hexes added to the range of its friendly spells aimed at an ally or at an area of range above 0 (`spellRange`). */
+    friendlyRange?: number
+    /** Action points off its spells (`heal`: only those that heal), never below 2 (`spellApCost`). */
+    apDiscount?: { all?: number; heal?: number }
   }
   /** What the unit can do besides its weapon and spells (abilities.ts), in ABILITY_IDS order; none when left out. */
   abilities?: readonly AbilityId[]
-  /** Added to the damage bonus of every strike and area of its abilities (foeAtLevel's damage step); 0 when left out. */
+  /** Added to the damage bonus of every strike with its own dice and every area of its abilities (foeAtLevel's damage step), never to a weapon strike; 0 when left out. */
   abilityDamageBonus?: number
   /** What its main hand's weapon does on a hit besides its dice (runes); none when left out. */
   onHit?: readonly OnHit[]
+  /** Added to the damage of each on-hit entry with an element of a technique's strike (Battle Mage), never to the weapon's runes; 0 when left out. */
+  imbueDamage?: number
   /** The blight's own: a Dawn rune's bane applies to it (`baneApplies`). */
   blightborn?: true
+  /** The rules its nodes give it that the engine reads by name (`TRAIT_IDS` order); left out when none. */
+  traits?: readonly TraitId[]
+  /** Added to the chance and to a hit's damage (after the dice, never doubled) of its free attacks, counters included (Iron Skin); none when left out. */
+  opportunity?: { toHit: number; damage: number }
+  /** Added to the chance and to a hit's damage (after the dice, never doubled) of its weapon attacks that strike a foe's rear arc (Backstab); none when left out. */
+  rear?: { toHit: number; damage: number }
+  /** Added to the chance of its attacks in its own turn once it has taken a step that turn (Skirmisher); 0 when left out. */
+  movedToHit?: number
+  /** Added to a hit's damage against a foe at half its hit points or less before the blow (Executioner); 0 when left out. */
+  execute?: number
+  /** Added to a critical hit's damage after the dice are multiplied (Fortune); 0 when left out. */
+  critDamage?: number
+  /** Mana a melee hit that strikes no image restores, up to its maximum (Battle Mage); 0 when left out. */
+  manaOnHit?: number
+  /** Mana regained as its side's turn begins (Serenity, read from skill trees step 19); 0 when left out. */
+  manaRegen?: number
 }
+
+/**
+ * The rules a node may give a hero that are neither a number nor an action,
+ * read by the engine by name: `rooted` from skill trees step 11, the rest
+ * named for the steps that add them.
+ */
+export const TRAIT_IDS = [
+  'rooted',
+  'tumble',
+  'counter',
+  'ambush',
+  'deathblow',
+  'blademaster',
+  'deadeye',
+  'unbreakable',
+  'shadowdancer',
+  'guardian',
+  'courage',
+  'aegis',
+  'sanctuary',
+  'arcane_knight',
+] as const
+
+export type TraitId = (typeof TRAIT_IDS)[number]
 
 /** Whether a bane (the Dawn rune's on-hit damage) applies to a unit of `stats`: one that regenerates or is the blight's own. */
 export function baneApplies(stats: CombatantStats): boolean {
@@ -83,14 +135,23 @@ function sameMagic(a: CombatantStats['magic'], b: CombatantStats['magic']): bool
     a.maxMana === b.maxMana &&
     a.skill === b.skill &&
     a.spells.length === b.spells.length &&
-    a.spells.every((spell, i) => spell === b.spells[i])
+    a.spells.every((spell, i) => spell === b.spells[i]) &&
+    (a.power?.all ?? 0) === (b.power?.all ?? 0) &&
+    (a.power?.fire ?? 0) === (b.power?.fire ?? 0) &&
+    (a.power?.frost ?? 0) === (b.power?.frost ?? 0) &&
+    (a.healBonus ?? 0) === (b.healBonus ?? 0) &&
+    (a.extend?.hostile ?? 0) === (b.extend?.hostile ?? 0) &&
+    (a.extend?.friendly ?? 0) === (b.extend?.friendly ?? 0) &&
+    (a.friendlyRange ?? 0) === (b.friendlyRange ?? 0) &&
+    (a.apDiscount?.all ?? 0) === (b.apDiscount?.all ?? 0) &&
+    (a.apDiscount?.heal ?? 0) === (b.apDiscount?.heal ?? 0)
   )
 }
 
-function sameAbilities(a: CombatantStats['abilities'], b: CombatantStats['abilities']): boolean {
+function sameList<T>(a: readonly T[] | undefined, b: readonly T[] | undefined): boolean {
   const left = a ?? []
   const right = b ?? []
-  return left.length === right.length && left.every((ability, i) => ability === right[i])
+  return left.length === right.length && left.every((item, i) => item === right[i])
 }
 
 function sameOnHit(a: CombatantStats['onHit'], b: CombatantStats['onHit']): boolean {
@@ -112,6 +173,10 @@ function sameOnHit(a: CombatantStats['onHit'], b: CombatantStats['onHit']): bool
       )
     })
   )
+}
+
+function samePair(a: { toHit: number; damage: number } | undefined, b: { toHit: number; damage: number } | undefined): boolean {
+  return (a?.toHit ?? 0) === (b?.toHit ?? 0) && (a?.damage ?? 0) === (b?.damage ?? 0)
 }
 
 function sameWards(a: CombatantStats['wards'], b: CombatantStats['wards']): boolean {
@@ -145,10 +210,19 @@ export function sameCombatStats(a: CombatantStats, b: CombatantStats): boolean {
     (a.reach ?? false) === (b.reach ?? false) &&
     a.actionPoints === b.actionPoints &&
     sameMagic(a.magic, b.magic) &&
-    sameAbilities(a.abilities, b.abilities) &&
+    sameList(a.abilities, b.abilities) &&
     (a.abilityDamageBonus ?? 0) === (b.abilityDamageBonus ?? 0) &&
     sameOnHit(a.onHit, b.onHit) &&
-    (a.blightborn ?? false) === (b.blightborn ?? false)
+    (a.imbueDamage ?? 0) === (b.imbueDamage ?? 0) &&
+    (a.blightborn ?? false) === (b.blightborn ?? false) &&
+    sameList(a.traits, b.traits) &&
+    samePair(a.opportunity, b.opportunity) &&
+    samePair(a.rear, b.rear) &&
+    (a.movedToHit ?? 0) === (b.movedToHit ?? 0) &&
+    (a.execute ?? 0) === (b.execute ?? 0) &&
+    (a.critDamage ?? 0) === (b.critDamage ?? 0) &&
+    (a.manaOnHit ?? 0) === (b.manaOnHit ?? 0) &&
+    (a.manaRegen ?? 0) === (b.manaRegen ?? 0)
   )
 }
 
@@ -254,9 +328,13 @@ export function rollToHit(
   return { attackRoll, chance, hit, critical, fumble }
 }
 
-/** The second half of `resolveAttack`: the damage of a hit, a critical doubling the dice; never below 0, as a modifier may lower a weapon's bonus. */
-export function rollHitDamage(dice: DamageRoll, critical: boolean, rng: RNG = Math.random): number {
-  return Math.max(0, rollDamage(critical ? { ...dice, count: dice.count * 2 } : dice, rng))
+/**
+ * The second half of `resolveAttack`: the damage of a hit, a critical
+ * multiplying the dice's count by `critMultiplier` (2, or 3 for Deadeye's
+ * shots); never below 0, as a modifier may lower a weapon's bonus.
+ */
+export function rollHitDamage(dice: DamageRoll, critical: boolean, rng: RNG = Math.random, critMultiplier = 2): number {
+  return Math.max(0, rollDamage(critical ? { ...dice, count: dice.count * critMultiplier } : dice, rng))
 }
 
 /** Probability that resolveAttack hits, from 0.05 to 0.95. */
@@ -323,7 +401,7 @@ export const GOBLIN_SHAMAN_STATS: CombatantStats = {
  */
 export const BLIGHT_HORROR_STATS: CombatantStats = {
   name: 'Blight Horror',
-  maxHp: 55,
+  maxHp: 63,
   ac: 15,
   toHit: 70,
   critChance: 5,
@@ -443,7 +521,7 @@ export const SALAMANDER_STATS: CombatantStats = {
 }
 
 /** What each level above the first adds to a monster: this share of its level 1 hit points... */
-export const FOE_HP_PER_LEVEL = 0.7
+export const FOE_HP_PER_LEVEL = 1.15
 /** ...this many points to its chance to hit and to its armour class... */
 export const FOE_TO_HIT_PER_LEVEL = 5
 export const FOE_AC_PER_LEVEL = 5

@@ -116,8 +116,8 @@ export function recruitRefusal(game: GameState, party: Expedition, name?: string
 
 /**
  * Hires the hero `draft` makes into the reserves, for `RECRUIT_COST`, at
- * `recruitLevel`: levelled up as experience would, with the skill points,
- * perks and spell picks of those levels left for the player to spend.
+ * `recruitLevel`: levelled up as experience would, with the skill points
+ * and perk points of those levels left for the player to spend.
  */
 export function recruit(game: GameState, party: Expedition, draft: CharacterDraft): string | null {
   const refusal = recruitRefusal(game, party, draft.name)

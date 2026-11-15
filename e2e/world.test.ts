@@ -462,7 +462,8 @@ describe('the world map', () => {
       await game.newGame()
       await game.page.evaluate(() => {
         const save = JSON.parse(localStorage.getItem('yomi.save.1')!)
-        save.game.parties[0].members[0].hp = 1
+        // Aldric's 35 hit points (Toughness's 8 and a point of endurance), 31 short: a day, then thirty.
+        save.game.parties[0].members[0].hp = 4
         save.game.parties[0].members[2].mana = 0
         save.game.world.sighted = save.game.world.locations.filter((l: { kind: string }) => l.kind === 'monsters').map((l: { id: string }) => l.id)
         localStorage.setItem('yomi.save.1', JSON.stringify(save))
@@ -473,14 +474,14 @@ describe('the world map', () => {
       const next = await game.waitFor('World', (w) => w.world.turn === hurt.world.turn + 1)
       expect(next.message).toContain('Rest heals 1 hp.')
       const savedMember = () => game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!).game.parties[0].members[0].hp)
-      expect(await savedMember()).toBe(2)
+      expect(await savedMember()).toBe(5)
 
       await game.click(next.buttons.untilSomething)
       const healed = await game.waitFor('World', (w) => w.world.turn === next.world.turn + 30)
       expect(healed.message).toBe('30 days passed quietly. Rest heals 30 hp.')
       expect(order(healed)).toBe('Idle')
       expect(healed.buttons.campUntilHealed.enabled).toBe(false)
-      expect(await savedMember()).toBe(32)
+      expect(await savedMember()).toBe(35)
       expect(await game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!).game.parties[0].members[2].mana)).toBe(0)
 
       await game.click((await game.reload()).buttons.continue)
@@ -525,7 +526,8 @@ describe('the world map', () => {
       // A camp order planted in the save, with a wounded member, and loaded.
       await game.page.evaluate(() => {
         const save = JSON.parse(localStorage.getItem('yomi.save.1')!)
-        save.game.parties[0].members[0].hp = 1
+        // Short of what a day's rest and the mage's heals restore together (Aldric has 35).
+        save.game.parties[0].members[0].hp = 4
         save.game.parties[0].order = { kind: 'camp' }
         localStorage.setItem('yomi.save.1', JSON.stringify(save))
       })

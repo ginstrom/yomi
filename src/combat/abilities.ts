@@ -1,17 +1,31 @@
 import type { AreaShape } from '../grid/hex.ts'
-import type { DamageRoll, Element } from './combat.ts'
+import type { CombatantStats, DamageRoll, Element, OnHit } from './combat.ts'
 import type { StatusLaid } from './spells.ts'
 
 export type { AreaShape } from '../grid/hex.ts'
 
-/** One blow of a routine: a weapon attack with its own dice. */
+/**
+ * One blow of a routine: a weapon attack with its own dice (a monster's), or
+ * with the unit's weapon (`weapon`, a hero's technique), never both.
+ */
 export interface Strike {
   name: string
-  /** As the log says it: "bites", "claws". */
+  /** As the log says it: "bites", "claws", "power-attacks". */
   verb: string
-  damage: DamageRoll
+  /** Its own dice; left out for a weapon strike. */
+  damage?: DamageRoll
   /** Laid on a hit that leaves the target standing, as a spell's status is. */
   status?: StatusLaid
+  /** A blow or shot of the unit's own weapon: its dice, damage bonus, piercing and on-hit runes. */
+  weapon?: true
+  /** Added to the chance to hit, in percent. */
+  toHit?: number
+  /** Added to a hit's damage after a critical's doubling, so never doubled. */
+  damageBonus?: number
+  /** Flat on-hit damage added to the weapon's for this blow; each one with an element is raised by the unit's `imbueDamage`. */
+  onHit?: readonly OnHit[]
+  /** Goes to another standing foe in reach than the strike before it if there is one (Cleave's second blow). */
+  spreads?: true
 }
 
 /** An area an ability strikes, rolled like a hostile area spell. */
@@ -25,12 +39,33 @@ export interface AreaAttack {
   status?: StatusLaid
   /** A miss still deals half the dice, rounded down; no status is laid on a miss. */
   halfOnMiss: boolean
+  /** The unit's weapon dice and damage bonus in place of `damage` (Volley); not the monsters' `abilityDamageBonus`. */
+  weaponDamage?: true
+  /** Its range is the unit's `attackRange`; `range` is then ignored (set to 0). */
+  weaponRange?: true
+  /**
+   * Each hit's damage goes through the target's resistance as a shot's does
+   * (`damageThrough`, pierced by the unit's `armorPierce`, which a ranged
+   * weapon has only as its own `rangedPierce`), at least 1 when anything was
+   * rolled. No on-hit runes are added: an area is not a weapon blow.
+   */
+  throughResistance?: true
+  /** Touches only the user's foes, never its own side or itself (Taunt, Consecrate). */
+  foesOnly?: true
+  /** No roll and no draw: lays `status` on every unit touched (Taunt). */
+  auto?: true
+  /** Doubles the dice's count, not the bonus, against a unit `baneApplies` to (Consecrate). */
+  bane?: true
+  /** Aimed only at the user's own hex: a burst of `range` 0 (Taunt, Consecrate). */
+  centredOnSelf?: true
 }
 
 /**
- * What a monster can do besides its weapon and its spells: a routine of
- * strikes at one foe, or an area. It costs action points and no mana, and
- * one with a `recharge` is used at most every that many turns of its side.
+ * What a unit can do besides its weapon and its spells: a routine of strikes
+ * at one foe, an area, or (a hero's technique) a status laid with no roll on
+ * itself or on a foe. It costs action points, and a hero's may cost mana; one
+ * with a `recharge` is used at most every that many turns of its side.
+ * Monsters' abilities set none of the heroes' fields.
  */
 export interface Ability {
   name: string
@@ -46,13 +81,60 @@ export interface Ability {
   recharge: number
   /** A routine of weapon strikes at one foe within the unit's attackRange... (exactly one of strikes and area) */
   strikes?: readonly Strike[]
-  /** ...or an area, rolled like a hostile spell with the unit's toHit, ignoring resistance. */
+  /** ...or an area, rolled like a hostile spell with the unit's toHit, ignoring resistance... */
   area?: AreaAttack
+  /** ...or a status laid on the user itself, with no roll (Sprint)... */
+  selfStatus?: StatusLaid
+  /** ...or a status laid with no roll on a standing foe within `range` hexes, 'weapon' its attack range (Hunter's Mark). */
+  foeStatus?: { status: StatusLaid; range: number | 'weapon' }
+  /** Mana paid as the action begins; the unit must have it. */
+  manaCost?: number
+  /** When set, the AP is the weapon's `attackApCost` plus this, and `apCost` is ignored. */
+  weaponAp?: number
+  /** The weapon it asks for: `isMelee` (bare hands and reach included) or not. */
+  needs?: 'melee' | 'ranged'
 }
 
-export const ABILITY_IDS = ['troll_claws', 'spider_bite', 'spider_web', 'fire_spit'] as const
+export const ABILITY_IDS = [
+  'troll_claws',
+  'spider_bite',
+  'spider_web',
+  'fire_spit',
+  'power_attack',
+  'cleave',
+  'taunt',
+  'pin',
+  'flame_strike',
+  'frost_strike',
+  'thunder_strike',
+  'aimed_shot',
+  'hunters_mark',
+  'volley',
+  'pinning_shot',
+  'sprint',
+  'dirty_trick',
+  'venom_strike',
+  'hamstring',
+  'smite',
+  'consecrate',
+] as const
 
 export type AbilityId = (typeof ABILITY_IDS)[number]
+
+/** The Spellsword's Strikes, which Arcane Knight makes at the weapon's own AP. */
+export const SPELLSWORD_STRIKES: readonly AbilityId[] = ['flame_strike', 'frost_strike', 'thunder_strike']
+
+/**
+ * The action points `ability` costs a unit of `stats`: the weapon's attack AP
+ * plus its `weaponAp` for a technique (plus nothing for a Spellsword Strike
+ * by a unit with the trait `arcane_knight`), else its own.
+ */
+export function abilityApCost(stats: Pick<CombatantStats, 'attackApCost' | 'traits'>, ability: AbilityId): number {
+  const { weaponAp, apCost } = ABILITIES[ability]
+  if (weaponAp === undefined) return apCost
+  const knight = stats.traits?.includes('arcane_knight') === true && SPELLSWORD_STRIKES.includes(ability)
+  return stats.attackApCost + (knight ? 0 : weaponAp)
+}
 
 const CLAW: Strike = { name: 'Claw', verb: 'claws', damage: { count: 1, sides: 4, bonus: 2 } }
 const FANG: DamageRoll = { count: 1, sides: 6, bonus: 2 }
@@ -98,6 +180,188 @@ export const ABILITIES: Record<AbilityId, Ability> = {
       element: 'fire',
       status: { id: 'seared', turns: 1 },
       halfOnMiss: true,
+    },
+  },
+  // ---- The heroes' techniques (design §4.3). `apCost` is ignored where `weaponAp` is set.
+  power_attack: {
+    name: 'Power Attack',
+    verb: 'power-attacks',
+    description: 'A weapon blow at −10 to hit for +6 damage.',
+    apCost: 0,
+    weaponAp: 2,
+    recharge: 0,
+    needs: 'melee',
+    strikes: [{ name: 'Power Attack', verb: 'power-attacks', weapon: true, toHit: -10, damageBonus: 6 }],
+  },
+  cleave: {
+    name: 'Cleave',
+    verb: 'cleaves',
+    description: 'Two weapon blows at −5 each, the second at another foe in reach if there is one.',
+    apCost: 0,
+    weaponAp: 2,
+    recharge: 2,
+    needs: 'melee',
+    strikes: [
+      { name: 'Cleave', verb: 'cleaves', weapon: true, toHit: -5 },
+      { name: 'Cleave', verb: 'cleaves', weapon: true, toHit: -5, spreads: true },
+    ],
+  },
+  taunt: {
+    name: 'Taunt',
+    verb: 'taunts',
+    description: 'Lays Taunted on every foe within 2 hexes for a turn: they strike others at −25.',
+    apCost: 3,
+    recharge: 2,
+    area: { shape: 'burst', range: 0, radius: 2, status: { id: 'taunted', turns: 1 }, halfOnMiss: false, foesOnly: true, auto: true, centredOnSelf: true },
+  },
+  pin: {
+    name: 'Pin',
+    verb: 'pins',
+    description: 'A weapon blow; a hit pins the foe for a turn.',
+    apCost: 0,
+    weaponAp: 1,
+    manaCost: 3,
+    recharge: 1,
+    needs: 'melee',
+    strikes: [{ name: 'Pin', verb: 'pins', weapon: true, status: { id: 'pinned', turns: 1 } }],
+  },
+  flame_strike: {
+    name: 'Flame Strike',
+    verb: 'flame-strikes',
+    description: 'A weapon blow; a hit adds 5 fire and sears the foe for a turn.',
+    apCost: 0,
+    weaponAp: 1,
+    manaCost: 3,
+    recharge: 0,
+    needs: 'melee',
+    strikes: [{ name: 'Flame Strike', verb: 'flame-strikes', weapon: true, onHit: [{ damage: 5, element: 'fire' }], status: { id: 'seared', turns: 1 } }],
+  },
+  frost_strike: {
+    name: 'Frost Strike',
+    verb: 'frost-strikes',
+    description: 'A weapon blow; a hit adds 4 frost and chills the foe for a turn.',
+    apCost: 0,
+    weaponAp: 1,
+    manaCost: 3,
+    recharge: 0,
+    needs: 'melee',
+    strikes: [{ name: 'Frost Strike', verb: 'frost-strikes', weapon: true, onHit: [{ damage: 4, element: 'frost' }], status: { id: 'chilled', turns: 1 } }],
+  },
+  thunder_strike: {
+    name: 'Thunder Strike',
+    verb: 'thunder-strikes',
+    description: 'A weapon blow at +10 to hit; a hit adds 7 lightning.',
+    apCost: 0,
+    weaponAp: 1,
+    manaCost: 4,
+    recharge: 0,
+    needs: 'melee',
+    strikes: [{ name: 'Thunder Strike', verb: 'thunder-strikes', weapon: true, toHit: 10, onHit: [{ damage: 7, element: 'lightning' }] }],
+  },
+  aimed_shot: {
+    name: 'Aimed Shot',
+    verb: 'takes aim at',
+    description: 'A weapon shot at +20 to hit for +3 damage.',
+    apCost: 0,
+    weaponAp: 2,
+    recharge: 0,
+    needs: 'ranged',
+    strikes: [{ name: 'Aimed Shot', verb: 'takes aim at', weapon: true, toHit: 20, damageBonus: 3 }],
+  },
+  hunters_mark: {
+    name: "Hunter's Mark",
+    verb: 'marks',
+    description: 'Marks a foe within weapon range for 2 turns: 10 off its armour class.',
+    apCost: 2,
+    recharge: 3,
+    foeStatus: { status: { id: 'marked', turns: 2 }, range: 'weapon' },
+  },
+  volley: {
+    name: 'Volley',
+    verb: 'volleys',
+    description: 'A rain of shots on a hex within weapon range: everyone within 1 hex of it, allies too, takes a shot, through armour.',
+    apCost: 0,
+    weaponAp: 2,
+    recharge: 2,
+    needs: 'ranged',
+    // `range` 0: `weaponRange` makes it the weapon's.
+    area: { shape: 'burst', range: 0, radius: 1, halfOnMiss: false, weaponDamage: true, weaponRange: true, throughResistance: true },
+  },
+  pinning_shot: {
+    name: 'Pinning Shot',
+    verb: 'pins',
+    description: 'A weapon shot; a hit pins the foe for a turn.',
+    apCost: 0,
+    weaponAp: 1,
+    manaCost: 3,
+    recharge: 1,
+    needs: 'ranged',
+    strikes: [{ name: 'Pinning Shot', verb: 'pins', weapon: true, status: { id: 'pinned', turns: 1 } }],
+  },
+  sprint: {
+    name: 'Sprint',
+    verb: 'sprints',
+    description: '3 more action points this turn.',
+    apCost: 0,
+    recharge: 3,
+    selfStatus: { id: 'hasted', turns: 1 },
+  },
+  dirty_trick: {
+    name: 'Dirty Trick',
+    verb: 'plays a dirty trick on',
+    description: 'A weapon blow; a hit banes the foe for 2 turns: −15 to hit.',
+    apCost: 0,
+    weaponAp: 1,
+    recharge: 2,
+    needs: 'melee',
+    strikes: [{ name: 'Dirty Trick', verb: 'plays a dirty trick on', weapon: true, status: { id: 'baned', turns: 2 } }],
+  },
+  venom_strike: {
+    name: 'Venom Strike',
+    verb: 'envenoms',
+    description: 'A weapon blow or shot; a hit poisons the foe for 3 turns.',
+    apCost: 0,
+    weaponAp: 1,
+    manaCost: 2,
+    recharge: 0,
+    strikes: [{ name: 'Venom Strike', verb: 'envenoms', weapon: true, status: { id: 'poisoned', turns: 3 } }],
+  },
+  hamstring: {
+    name: 'Hamstring',
+    verb: 'hamstrings',
+    description: 'A weapon blow or shot; a hit slows the foe for a turn: 3 fewer action points.',
+    apCost: 0,
+    weaponAp: 1,
+    recharge: 2,
+    strikes: [{ name: 'Hamstring', verb: 'hamstrings', weapon: true, status: { id: 'slowed', turns: 1 } }],
+  },
+  smite: {
+    name: 'Smite',
+    verb: 'smites',
+    description: 'A weapon blow; a hit adds 4 damage, and 6 more against the regenerating and the blightborn.',
+    apCost: 0,
+    weaponAp: 1,
+    manaCost: 3,
+    recharge: 0,
+    needs: 'melee',
+    strikes: [{ name: 'Smite', verb: 'smites', weapon: true, onHit: [{ damage: 4 }, { damage: 6, bane: true }] }],
+  },
+  consecrate: {
+    name: 'Consecrate',
+    verb: 'consecrates the ground',
+    description: 'Every foe beside the user takes 2d6, half on a miss, double the dice against the regenerating and the blightborn.',
+    apCost: 5,
+    manaCost: 5,
+    recharge: 2,
+    area: {
+      shape: 'burst',
+      range: 0,
+      radius: 1,
+      damage: { count: 2, sides: 6, bonus: 0 },
+      halfOnMiss: true,
+      foesOnly: true,
+      bane: true,
+      centredOnSelf: true,
     },
   },
 }

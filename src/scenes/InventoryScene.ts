@@ -7,6 +7,7 @@ import {
   equipFromBackpack,
   isTwoHanded,
   manaOf,
+  maxMana,
   pickUp,
   unequipToBackpack,
   type Character,
@@ -17,16 +18,19 @@ import {
   PERK_IDS,
   attributeLevel,
   attributesOf,
-  isSpellPerk,
+  availablePerks,
   knownSpells,
+  nodeKind,
+  perkCost,
   perkRanks,
   qualifiesFor,
   type PerkId,
 } from '../character/perks.ts'
-import { hasPickFor, hasSpellcasting, nextPerkLevel, nextSpellLevel, takePerk, xpToNextLevel } from '../character/progression.ts'
+import { canAffordPerk, takePerk, xpToNextLevel } from '../character/progression.ts'
 import { castOnWorldMap, healsOne, worldHealing, worldSpells } from '../character/worldCasting.ts'
 import { SPELLS, type HeroSpellId, type SpellId } from '../combat/spells.ts'
 import {
+  MAX_SKILL,
   SKILL_COST_TIERS,
   SKILLS,
   SKILL_IDS,
@@ -34,7 +38,7 @@ import {
   isTagged,
   raiseSkill,
   skillLevel,
-  skillRaiseCost,
+  skillRaiseRefusal,
   type SkillId,
 } from '../character/skills.ts'
 import { formatDamage, type CombatantStats } from '../combat/combat.ts'
@@ -43,7 +47,7 @@ import { socketLines } from '../inventory/runes.ts'
 import type { InventoryProbe } from '../testHook.ts'
 import type { Point } from './boardGeometry.ts'
 import { pressMoved, rectContains, type Rect } from './mapScroll.ts'
-import { addPanelButton } from './panelButton.ts'
+import { addPanelButton, fitText } from './panelButton.ts'
 import type { GameState } from '../game/gameState.ts'
 import { applyMove, planDrag, validTargets, type DragSource, type DropTarget } from './gearDrag.ts'
 import { WARDS_WIDE_ROW_CHARS, attackCostWarning, onHitLines, wardsLines } from './gearCompare.ts'
@@ -54,22 +58,25 @@ import { isSecondaryClick } from './clicks.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook } from './unitLook.ts'
-import { PARTY_PANEL_W, portraitKey } from './partyPanel.ts'
-import { nodeHint, perkTitle } from './perkTree.ts'
+import { ADVANCE_COLOR, PARTY_PANEL_W, portraitKey } from './partyPanel.ts'
+import { PASSIVE_LINE_H, PASSIVE_TITLE_H, passiveRows, skillPointsLine } from './skillsTab.ts'
+import { NODE_H, NODE_W, clampLines, costTone, nodeHint, openingTree, perkTitle, savingLine, treeForKey } from './perkTree.ts'
 import { PerkTreeView } from './PerkTreeView.ts'
+import { heroTitle, type TreeId } from '../character/trees.ts'
+import { ABILITY_DESCRIPTION_LINES, ABILITY_LIST, abilityCostLine, abilityPages, abilityRowPlace, abilityRowRect, abilityRows } from './abilityList.ts'
 import { SlotScroll } from './slotScroll.ts'
 
-/** What the panel can show: one of its four tabs, or a tree, the perk tree opened from the Skills tab and the spell tree from the Spells tab. */
+/** What the panel can show: one of its four tabs, or the tree view, opened from the Skills tab (on the calling's tree). */
 type PanelTab = InventoryProbe['tab']
-type MainTab = Exclude<PanelTab, 'perkTree' | 'spellTree'>
+type MainTab = Exclude<PanelTab, 'trees'>
 const TABS: ReadonlyArray<readonly [tab: MainTab, label: string]> = [
   ['character', 'Character'],
   ['skills', 'Skills'],
-  ['spells', 'Spells'],
+  ['abilities', 'Abilities'],
   ['inventory', 'Inventory'],
 ]
 /** The tab each tree is a view of, whose button stays lit for it and which Esc steps back to. */
-const TREE_OF: Partial<Record<PanelTab, MainTab>> = { perkTree: 'skills', spellTree: 'spells' }
+const TREE_OF: Partial<Record<PanelTab, MainTab>> = { trees: 'skills' }
 
 /** A party member the panel can show, and what it may do with its gear there. */
 export interface PanelMember {
@@ -161,33 +168,40 @@ const BADGE_CLEARANCE = 6
 const STAT_BLOCK_BOTTOM_MAX = BADGES_Y - BADGE_H / 2 - BADGE_CLEARANCE
 const SHEET_Y = 140
 
-/** The skills tab: skills down the left, each with a button to raise it, and down the right the perks taken and the button to the perk tree. */
+/** The skills tab: skills down the left, each with a button to raise it, and down the right the passives taken and the button to the skill trees. */
 const SKILLS_X = 24
 const SKILLS_W = 320
 const SKILL_ROW_Y = 104
 const SKILL_ROW_H = 52
+/** Where a greyed "+" says why it refuses, under the skills' rules and clear of the panel's foot. */
+const RAISE_HINT_Y = 440
 const RAISE_SIZE = 22
 const PERKS_X = 368
 const PERKS_W = PANEL_W - PERKS_X - 20
 const PERK_ROW_Y = 104
-const PERK_ROW_H = 38
 const TREE_BUTTON = { x: PERKS_X + PERKS_W / 2, y: 462, width: 160, height: 32 }
+/** The passives' list (`passiveRows`), from under the heading to above the Skill Trees button. */
+const PASSIVES_TOP = PERK_ROW_Y - 15
+const PASSIVES_BOTTOM = TREE_BUTTON.y - TREE_BUTTON.height / 2 - 8
 
-/** The perk tree's heading and its button back; the tree itself is `PerkTreeView`'s. */
-const TREE_X = 20
-const BACK_BUTTON = { x: PANEL_W - 20 - 40, y: 75, width: 80, height: 26 }
+/** The tree view's button back, beside its tabs; the tree itself is `PerkTreeView`'s. */
+const BACK_BUTTON = { x: PANEL_W - 20 - 40, y: 75, width: 80, height: 24 }
 /** What the strip says with the pointer on no node. */
-const TREE_RULE = 'A new character has 3 perks to choose, and one more comes every 3rd level. A line from a perk means it must be taken first.'
-const SPELL_TREE_RULE = 'A caster learns a spell with every level. A line from a spell means it must be learned first.'
+const TREE_RULE =
+  'Four trees of three paths: any path, any tree. A perk point comes with every level and a node costs 1 to 4 by its tier; a higher tier also asks its level and nodes in its path, and only your deepest path may open its capstone (★). Keys 1 to 4 switch trees.'
 
-/** The spells tab: the spells known in two columns, each row with a Cast button on the world map for a heal. */
-const SPELLS_X = 24
-const SPELL_COLUMN_W = (PANEL_W - 2 * SPELLS_X - 24) / 2
-const SPELL_ROW_Y = 108
-const SPELL_ROW_H = 36
-const SPELL_ROWS = 9
+/**
+ * The abilities tab: the actives known in two columns a page (`ABILITY_LIST`,
+ * abilityList.ts), each row with a Cast button on the world map for a heal.
+ * A description is cut to two lines of about this many pixels a character,
+ * the most a row has room for; the Skills list's hint gives it in full.
+ */
+const SPELL_DESCRIPTION_CHAR_W = 7
+const SPELLS_X = ABILITY_LIST.x
+/** The pager's two buttons, between the mana and the spell skill, shown only when the actives take more than a page. */
+const PAGE_PREV = { x: PANEL_W / 2 - 50, y: 96, width: 28, height: 20 }
+const PAGE_NEXT = { x: PANEL_W / 2 + 50, y: 96, width: 28, height: 20 }
 const CAST_BUTTON = { width: 54, height: 22 }
-const SPELL_TREE_BUTTON = { x: PANEL_W / 2, y: 470, width: 160, height: 32 }
 
 const FONT = 'monospace'
 const GOLD = '#e8c766'
@@ -270,6 +284,16 @@ export class InventoryScene extends Phaser.Scene {
   /** The mana the member has left in battle; null where the most it has is shown instead. */
   private mana: number | null = null
   private canAdvance = false
+  /** The page of the Abilities tab shown, and what it drew: its mana line and each row's texts, for the probe. */
+  private abilityPage = 0
+  private abilityManaLine = ''
+  private abilityRowTexts: Phaser.GameObjects.Text[][] = []
+  /** The Skills tab's passives as drawn, each its title and description lines, for the probe. */
+  private passiveTexts: Phaser.GameObjects.Text[][] = []
+  /** Why the greyed "+" pointed at refuses a raise, under the skills' rules; empty otherwise. */
+  private raiseHint: Phaser.GameObjects.Text | null = null
+  /** The tree view while it is built, for the probe's strip. */
+  private treeView: PerkTreeView | null = null
   private exchangeFor: InventoryData['exchange'] | null = null
   private exchangeAt: Rect | null = null
   private resumeKey: NonNullable<InventoryData['resume']> = 'Battle'
@@ -290,8 +314,9 @@ export class InventoryScene extends Phaser.Scene {
   /** Where the Inventory tab's stat lines end, which the gear hint below keeps clear of. */
   private statsBottom = 0
   private treeContent!: Phaser.GameObjects.Container
+  /** The tree the tree view shows. */
+  private tree: TreeId = 'warrior'
   private spellsContent!: Phaser.GameObjects.Container
-  private spellTreeContent!: Phaser.GameObjects.Container
   /** A one-member heal being cast on the world map, waiting for a portrait to be clicked; null otherwise. */
   private worldCast: HeroSpellId | null = null
   private tabButtons: Record<MainTab, TabButton> = {} as Record<MainTab, TabButton>
@@ -346,15 +371,7 @@ export class InventoryScene extends Phaser.Scene {
     this.inventoryContent = this.add.container(0, 0)
     this.treeContent = this.add.container(0, 0)
     this.spellsContent = this.add.container(0, 0)
-    this.spellTreeContent = this.add.container(0, 0)
-    this.panel.add([
-      this.characterContent,
-      this.skillsContent,
-      this.inventoryContent,
-      this.treeContent,
-      this.spellsContent,
-      this.spellTreeContent,
-    ])
+    this.panel.add([this.characterContent, this.skillsContent, this.inventoryContent, this.treeContent, this.spellsContent])
     this.buildContent()
 
     this.showTab(data?.tab ?? 'inventory')
@@ -369,9 +386,13 @@ export class InventoryScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-I', () => this.onTabKey('inventory'))
     this.input.keyboard?.on('keydown-C', () => this.onTabKey('character'))
     this.input.keyboard?.on('keydown-S', () => this.onTabKey('skills'))
-    this.input.keyboard?.on('keydown-B', () => this.onTabKey('spells'))
-    this.input.keyboard?.on('keydown-P', () => this.showTab(this.activeTab === 'perkTree' ? 'skills' : 'perkTree'))
-    this.input.keyboard?.on('keydown-K', () => this.showTab(this.activeTab === 'spellTree' ? 'spells' : 'spellTree'))
+    this.input.keyboard?.on('keydown-B', () => this.onTabKey('abilities'))
+    this.input.keyboard?.on('keydown-P', () => (this.activeTab === 'trees' ? this.showTab('skills') : this.openTree()))
+    // Keys 1 to 4 switch trees while the tree view is open.
+    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+      const tree = treeForKey(event.key)
+      if (tree && TREE_OF[this.activeTab]) this.showTree(tree)
+    })
     // Esc backs out of choosing whom to heal; from a tree it steps back to the tab it was opened from; from a tab it closes the panel.
     // Esc during a drag lets go of the item where it was, and closes nothing.
     this.input.keyboard?.on('keydown-ESC', () => {
@@ -415,8 +436,7 @@ export class InventoryScene extends Phaser.Scene {
       tab: this.activeTab,
       party: this.column.probe(),
       skillPoints: this.character.skillPoints,
-      perkPicks: this.character.perkPicks,
-      spellPicks: this.character.spellPicks,
+      perkPoints: this.character.perkPoints,
       skills: Object.fromEntries(
         SKILL_IDS.map((id, row) => [
           id,
@@ -431,21 +451,32 @@ export class InventoryScene extends Phaser.Scene {
       statLines: this.statLines(),
       tooltip: this.tooltipLines,
       takenPerks: this.takenPerks().map((id) => ({ perk: id, ranks: perkRanks(this.character, id) })),
-      perkTreeButton: onScreen(TREE_BUTTON),
+      skillPointsLine: skillPointsLine(this.character, this.canAdvance).text,
+      raiseHint: this.raiseHint?.active ? this.raiseHint.text : '',
+      passiveBounds: this.passiveTexts.map((texts) => boundsOf(texts)),
+      treeStrip: this.treeView?.stripLines() ?? [],
+      treesButton: onScreen(TREE_BUTTON),
       back: onScreen(BACK_BUTTON),
-      perks: PerkTreeView.nodeCentres().map(({ perk, ...at }) => ({
+      tree: this.tree,
+      trees: Object.fromEntries(
+        Object.entries(PerkTreeView.tabCentres()).map(([tree, at]) => [tree, onScreen(at)]),
+      ) as InventoryProbe['trees'],
+      nodeSize: { width: NODE_W * this.panel.scale, height: NODE_H * this.panel.scale },
+      perks: PerkTreeView.nodeCentres(this.tree).map(({ perk, ...at }) => ({
         ...onScreen(at),
         perk,
         ranks: perkRanks(this.character, perk),
         canTake: this.canTake(perk),
+        cost: perkCost(perk),
       })),
-      spellTreeButton: onScreen(SPELL_TREE_BUTTON),
-      spellNodes: PerkTreeView.nodeCentres('spells').map(({ perk, ...at }) => ({
-        ...onScreen(at),
-        perk,
-        ranks: perkRanks(this.character, perk),
-        canTake: this.canTake(perk),
-      })),
+      abilities: abilityRows(this.character).map(({ name, kind, ap, mana, recharge, description }) => ({ name, kind, ap, mana, recharge, description })),
+      abilityManaLine: this.abilityManaLine,
+      abilityPage: this.abilityPage,
+      abilityPages: abilityPages(abilityRows(this.character).length),
+      abilityPager:
+        abilityPages(abilityRows(this.character).length) > 1 ? { prev: onScreen(PAGE_PREV), next: onScreen(PAGE_NEXT) } : null,
+      abilityRowBounds: this.abilityRowTexts.map((texts) => boundsOf(texts)),
+      title: heroTitle(this.character),
       spells: knownSpells(this.character).map((spell, i) => ({
         ...onScreen(this.castButtonAt(i)),
         spell,
@@ -481,6 +512,9 @@ export class InventoryScene extends Phaser.Scene {
     const member = this.members[index]
     this.index = index
     this.character = member.character
+    this.abilityPage = 0
+    // The tree view always shows a hero first on the tree of its calling, turned to it from another or not.
+    this.tree = openingTree(this.character)
     this.gearApCost = member.gearApCost ?? null
     this.hpRule = member.hpRule ?? 'share'
     this.ground = member.ground ?? []
@@ -504,13 +538,11 @@ export class InventoryScene extends Phaser.Scene {
     this.inventoryContent.removeAll(true)
     this.treeContent.removeAll(true)
     this.spellsContent.removeAll(true)
-    this.spellTreeContent.removeAll(true)
     this.buildCharacterTab()
     this.buildSkills()
     this.buildPerks()
     this.buildPerkTree()
     this.buildSpells()
-    this.buildSpellTree()
     this.buildPaperdoll()
     this.buildStats()
     this.buildGearHint()
@@ -557,14 +589,13 @@ export class InventoryScene extends Phaser.Scene {
     this.characterContent.setVisible(tab === 'character')
     this.skillsContent.setVisible(tab === 'skills')
     this.inventoryContent.setVisible(tab === 'inventory')
-    this.treeContent.setVisible(tab === 'perkTree')
-    this.spellsContent.setVisible(tab === 'spells')
-    this.spellTreeContent.setVisible(tab === 'spellTree')
+    this.treeContent.setVisible(tab === 'trees')
+    this.spellsContent.setVisible(tab === 'abilities')
     if (tab !== 'inventory') {
       this.hideTooltip()
       this.endPress()
     }
-    if (tab !== 'spells' && this.worldCast) this.setWorldCast(null)
+    if (tab !== 'abilities' && this.worldCast) this.setWorldCast(null)
 
     // A tree is a view of its tab, whose button stays lit for it.
     const lit: MainTab = TREE_OF[tab] ?? (tab as MainTab)
@@ -583,9 +614,13 @@ export class InventoryScene extends Phaser.Scene {
       .text(PANEL_W / 2, 70, this.character.name, { fontFamily: FONT, fontSize: '26px', color: GOLD })
       .setOrigin(0.5)
     const subtitle = this.add
-      .text(PANEL_W / 2, 98, this.classLine(), { fontFamily: FONT, fontSize: '14px', color: DIM })
+      .text(PANEL_W / 2, 98, heroTitle(this.character), { fontFamily: FONT, fontSize: '14px', color: DIM })
       .setOrigin(0.5)
-    this.characterContent.add([title, subtitle])
+    const { level, xp } = this.character
+    const experience = this.add
+      .text(PANEL_W / 2, 118, `${xp} / ${xpToNextLevel(level)} XP`, { fontFamily: FONT, fontSize: '11px', color: FAINT })
+      .setOrigin(0.5)
+    this.characterContent.add([title, subtitle, experience])
 
     const portrait = this.add
       .image(PORTRAIT_X, PORTRAIT_Y, portraitKey(this.character.portrait))
@@ -675,13 +710,12 @@ export class InventoryScene extends Phaser.Scene {
 
   /** Whether a click would raise `skill` now. */
   private canRaise(skill: SkillId): boolean {
-    const cost = skillRaiseCost(this.character, skill)
-    return this.canAdvance && cost !== null && cost <= this.character.skillPoints
+    return this.canAdvance && skillRaiseRefusal(this.character, skill) === null
   }
 
-  /** Whether a click would take a rank of `perk` now: a spell with a spell pick or a perk pick, anything else with a perk pick. */
+  /** Whether a click on `perk` in the tree view would take it now: with its perk points, on the world map, its asks met. */
   private canTake(perk: PerkId): boolean {
-    return this.canAdvance && hasPickFor(this.character, perk) && qualifiesFor(this.character, perk)
+    return this.canAdvance && canAffordPerk(this.character, perk) && qualifiesFor(this.character, perk)
   }
 
   /** The centre of the button that raises the skill in the `row`th row. */
@@ -691,11 +725,12 @@ export class InventoryScene extends Phaser.Scene {
 
   private buildSkills(): void {
     const { skillPoints } = this.character
+    const line = skillPointsLine(this.character, this.canAdvance)
     const points = this.add
-      .text(SKILLS_X + SKILLS_W, 66, `Skill points: ${skillPoints}`, {
+      .text(SKILLS_X + SKILLS_W, 66, line.text, {
         fontFamily: FONT,
         fontSize: '14px',
-        color: skillPoints > 0 ? GOLD : DIM,
+        color: line.attention ? ADVANCE_COLOR : skillPoints > 0 ? GOLD : DIM,
       })
       .setOrigin(1, 0)
     this.skillsContent.add([this.heading('Skills', SKILLS_X, 66), points])
@@ -728,12 +763,19 @@ export class InventoryScene extends Phaser.Scene {
       ])
       if (this.canAdvance && skillPoints > 0) this.buildRaiseButton(id, button)
     })
+    this.raiseHint = this.add.text(SKILLS_X, RAISE_HINT_Y, '', {
+      fontFamily: FONT,
+      fontSize: '12px',
+      color: WARN,
+      wordWrap: { width: SKILLS_W },
+    })
+    this.skillsContent.add(this.raiseHint)
 
     const rules = [
-      `A skill point raises a skill by 1%, or a tagged one by ${TAGGED_SKILL_STEP}%. ${SKILL_COST_TIERS.map(({ level, cost }) => `From ${level}%, a raise costs ${cost} points.`).join(' ')}`,
+      `A skill point raises a skill by 1%, or a tagged one by ${TAGGED_SKILL_STEP}%. ${SKILL_COST_TIERS.map(({ level, cost }) => `From ${level}%, a raise costs ${cost} skill points.`).join(' ')} Points raise no skill past ${MAX_SKILL}%.`,
       this.canAdvance
         ? 'Every level brings skill points.'
-        : 'Skill points and perks are spent on the world map, in this panel.',
+        : 'Skill points and perk points are spent on the world map, in this panel.',
     ]
     this.skillsContent.add(
       this.add.text(SKILLS_X, SKILL_ROW_Y + SKILL_IDS.length * SKILL_ROW_H, rules.join('\n\n'), {
@@ -755,31 +797,34 @@ export class InventoryScene extends Phaser.Scene {
       .text(x, y, '+', { fontFamily: FONT, fontSize: '16px', color: enabled ? GOLD : FAINT })
       .setOrigin(0.5)
     this.skillsContent.add([bg, plus])
-    if (!enabled) return
+    if (!enabled) {
+      // A greyed "+" says why when pointed at: the skill at 100%, or too few points for the raise.
+      bg.setInteractive()
+      bg.on('pointerover', () => this.raiseHint?.setText(skillRaiseRefusal(this.character, skill) ?? ''))
+      bg.on('pointerout', () => this.raiseHint?.setText(''))
+      return
+    }
     bg.setInteractive({ useHandCursor: true })
     bg.on('pointerdown', () => this.advance(() => raiseSkill(this.character, skill)))
   }
 
-  /** The perks the character has a rank of, in the order of `PERKS`; its spells are the Spells tab's. */
+  /** The passives the character holds, in the order of `PERKS`; its spells are the Abilities tab's. */
   private takenPerks(): PerkId[] {
-    return PERK_IDS.filter((id) => !isSpellPerk(id) && perkRanks(this.character, id) > 0)
+    return PERK_IDS.filter((id) => nodeKind(id) === 'passive' && perkRanks(this.character, id) > 0)
   }
 
-  /** Whether the character has a perk to choose and can choose it here. */
-  private pickWaits(): boolean {
-    return this.canAdvance && this.character.perkPicks > 0
+  /** Whether some open node is affordable and perk points can be spent here. */
+  private pointsToSpend(): boolean {
+    return this.canAdvance && availablePerks(this.character).some((perk) => canAffordPerk(this.character, perk))
   }
 
-  /** "Choose a perk" when picks wait and can be spent here, "2 to choose" in battle, else when the next comes. */
+  /** "Perk points: N", gold while some open node is affordable on the world map. */
   private buildPerkStatus(content: Phaser.GameObjects.Container, right: number, y: number): void {
-    const { perkPicks } = this.character
-    const status = this.pickWaits()
-      ? `Choose ${perkPicks === 1 ? 'a perk' : `${perkPicks} perks`}`
-      : perkPicks > 0
-        ? `${perkPicks} to choose`
-        : `Next at level ${nextPerkLevel(this.character)}`
+    const { perkPoints } = this.character
     content.add(
-      this.add.text(right, y, status, { fontFamily: FONT, fontSize: '14px', color: perkPicks > 0 ? GOLD : DIM }).setOrigin(1, 0),
+      this.add
+        .text(right, y, `Perk points: ${perkPoints}`, { fontFamily: FONT, fontSize: '14px', color: this.pointsToSpend() ? GOLD : DIM })
+        .setOrigin(1, 0),
     )
   }
 
@@ -803,81 +848,89 @@ export class InventoryScene extends Phaser.Scene {
     content.add([bg, text])
   }
 
-  /** The perks the character has taken, and the button to the tree, where one is chosen. */
+  /** The passives the character has taken, and the button to the trees, where perk points are spent. */
   private buildPerks(): void {
-    this.skillsContent.add(this.heading('Perks', PERKS_X, 66))
+    this.skillsContent.add(this.heading('Passives', PERKS_X, 66))
     this.buildPerkStatus(this.skillsContent, PERKS_X + PERKS_W, 66)
 
     const taken = this.takenPerks()
     if (taken.length === 0) {
       this.skillsContent.add(
-        this.add.text(PERKS_X, PERK_ROW_Y - 15, 'No perks yet.', { fontFamily: FONT, fontSize: '13px', color: FAINT }),
+        this.add.text(PERKS_X, PASSIVES_TOP, 'No passives yet.', { fontFamily: FONT, fontSize: '13px', color: FAINT }),
       )
     }
-    taken.forEach((id, row) => {
-      const y = PERK_ROW_Y + row * PERK_ROW_H
-      this.skillsContent.add([
-        this.add.text(PERKS_X, y - 15, perkTitle(this.character, id), { fontFamily: FONT, fontSize: '13px', color: GOLD }),
-        this.add.text(PERKS_X, y + 1, PERKS[id].description, {
-          fontFamily: FONT,
-          fontSize: '11px',
-          color: DIM,
-          wordWrap: { width: PERKS_W },
-        }),
-      ])
+    const { rows, more, moreTop } = passiveRows(
+      taken.map((id) => PERKS[id].description),
+      PASSIVES_BOTTOM - PASSIVES_TOP,
+    )
+    this.passiveTexts = rows.map(({ top, lines }, row) => {
+      const y = PASSIVES_TOP + top
+      return [
+        this.add.text(PERKS_X, y, perkTitle(this.character, taken[row]), { fontFamily: FONT, fontSize: '13px', color: GOLD }),
+        ...lines.map((line, i) =>
+          this.add.text(PERKS_X, y + PASSIVE_TITLE_H + i * PASSIVE_LINE_H, line, { fontFamily: FONT, fontSize: '11px', color: DIM }),
+        ),
+      ]
     })
-    this.buildPanelButton(this.skillsContent, TREE_BUTTON, 'Perk Tree', this.pickWaits(), () => this.showTab('perkTree'))
+    this.skillsContent.add(this.passiveTexts.flat())
+    if (more > 0) {
+      this.skillsContent.add(
+        this.add.text(PERKS_X, PASSIVES_TOP + moreTop, `+${more} more: see the Skill Trees`, { fontFamily: FONT, fontSize: '11px', color: FAINT }),
+      )
+    }
+    this.buildPanelButton(this.skillsContent, TREE_BUTTON, 'Skill Trees', this.pointsToSpend(), () => this.openTree())
   }
 
   // ---- build: perk tree -------------------------------------------------
 
-  /** The tree (`PerkTreeView`) under its heading: a click on an open node takes a rank where a pick can be spent. */
+  /** The tree view (`PerkTreeView`), its tabs, the perk points waiting and Back: a click on an open node takes it where perk points can be spent. */
   private buildPerkTree(): void {
-    this.treeContent.add(this.heading('Perk Tree', TREE_X, 66))
-    this.buildPerkStatus(this.treeContent, BACK_BUTTON.x - BACK_BUTTON.width / 2 - 16, 66)
-    this.buildPanelButton(this.treeContent, BACK_BUTTON, 'Back', false, () => this.showTab('skills'))
-    new PerkTreeView(this, this.treeContent, {
+    this.buildPerkStatus(this.treeContent, BACK_BUTTON.x - BACK_BUTTON.width / 2 - 16, BACK_BUTTON.y - 9)
+    this.buildPanelButton(this.treeContent, BACK_BUTTON, 'Back', false, () => this.showTab(TREE_OF[this.activeTab] ?? 'skills'))
+    this.treeView = new PerkTreeView(this, this.treeContent, {
+      tree: this.tree,
       character: this.character,
       clickable: (perk) => this.canTake(perk),
       onClick: (perk) => this.advance(() => takePerk(this.character, perk)),
+      // Next tick: the redraw destroys the tab whose click handler asked for it.
+      onTree: (tree) => this.time.delayedCall(0, () => this.showTree(tree)),
+      costTone: (perk) => costTone(this.character, perk, this.canAdvance),
       hint: (perk) => nodeHint(this.character, perk, this.canAdvance),
       rule: TREE_RULE,
-      stripWidth: PANEL_W - 2 * TREE_X,
+      ruleNote: savingLine(this.character),
     })
   }
 
-  // ---- build: spells tab -------------------------------------------------
-
-  /** Whether the character has a spell to learn and can learn it here. */
-  private spellPickWaits(): boolean {
-    return this.canAdvance && this.character.spellPicks > 0
+  /** Opens the tree view from the Skills tab, on the tree of the hero's calling. */
+  private openTree(): void {
+    this.tree = openingTree(this.character)
+    this.treeContent.removeAll(true)
+    this.buildPerkTree()
+    this.showTab('trees')
   }
 
-  /** "Choose 2 spells" when spell picks wait and can be spent here, "2 to choose" in battle, else when the next comes. */
-  private buildSpellStatus(content: Phaser.GameObjects.Container, right: number, y: number): void {
-    const { spellPicks } = this.character
-    const status = !hasSpellcasting(this.character)
-      ? 'Spells come with Spellcasting'
-      : this.spellPickWaits()
-        ? `Choose ${spellPicks === 1 ? 'a spell' : `${spellPicks} spells`}`
-        : spellPicks > 0
-          ? `${spellPicks} to choose`
-          : `Next spell at level ${nextSpellLevel(this.character)}`
-    content.add(
-      this.add.text(right, y, status, { fontFamily: FONT, fontSize: '14px', color: spellPicks > 0 ? GOLD : DIM }).setOrigin(1, 0),
-    )
+  /** Turns the open tree view to `tree`. */
+  private showTree(tree: TreeId): void {
+    if (tree === this.tree) return
+    this.tree = tree
+    this.treeContent.removeAll(true)
+    this.buildPerkTree()
   }
 
-  /** The top left of the `index`th spell's row. */
-  private spellRowAt(index: number): Point {
-    const column = Math.floor(index / SPELL_ROWS)
-    return { x: SPELLS_X + column * (SPELL_COLUMN_W + 24), y: SPELL_ROW_Y + (index % SPELL_ROWS) * SPELL_ROW_H }
-  }
+  // ---- build: abilities tab -------------------------------------------------
 
-  /** The centre of the `index`th spell's Cast button. */
+  /** The centre of the `index`th active's Cast button, beside its name. */
   private castButtonAt(index: number): Point {
-    const { x, y } = this.spellRowAt(index)
-    return { x: x + SPELL_COLUMN_W - CAST_BUTTON.width / 2, y: y + 6 }
+    const { x, y, width } = abilityRowRect(index, PANEL_W)
+    return { x: x + width - CAST_BUTTON.width / 2, y: y + 7 }
+  }
+
+  /** Turns the Abilities tab a page on or back, round from the last to the first. */
+  private turnAbilityPage(step: number): void {
+    const pages = abilityPages(abilityRows(this.character).length)
+    this.abilityPage = (this.abilityPage + step + pages) % pages
+    // Next tick: the redraw destroys the button whose click handler this runs in.
+    this.time.delayedCall(0, () => this.buildContent())
   }
 
   /** Whether a click on `spell`'s Cast button would cast it now: a heal, on the world map, with the mana for it. */
@@ -886,17 +939,20 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   /**
-   * The spells the character knows, with its mana and the button to the spell
-   * tree; on the world map a heal can be cast from here, on one member or the
-   * whole party.
+   * The actives the character knows, spells then techniques, a page at a
+   * time, with its mana and spell skill; on the world map a heal can be cast
+   * from here, on one member or the whole party.
    */
   private buildSpells(): void {
     const content = this.spellsContent
-    content.add(this.heading('Spells', SPELLS_X, 66))
-    this.buildSpellStatus(content, PANEL_W - SPELLS_X, 66)
-    const max = this.stats.magic?.maxMana ?? 0
-    const mana = max > 0 ? `Mana ${this.shownMana()} / ${max}` : 'No mana: knows no spell'
-    content.add(this.add.text(SPELLS_X, 88, mana, { fontFamily: FONT, fontSize: '14px', color: max > 0 ? GOLD : DIM }))
+    content.add(this.heading('Abilities', SPELLS_X, 66))
+    this.buildPerkStatus(content, PANEL_W - SPELLS_X, 66)
+    const rows = abilityRows(this.character)
+    // Every hero has mana, whether or not it knows anything to spend it on.
+    const max = this.stats.magic?.maxMana ?? maxMana(this.character)
+    const left = this.shownMana() ?? manaOf(this.character)
+    this.abilityManaLine = `Mana ${left} / ${max}${rows.length === 0 ? ': knows no ability' : ''}`
+    content.add(this.add.text(SPELLS_X, 88, this.abilityManaLine, { fontFamily: FONT, fontSize: '14px', color: rows.length > 0 ? GOLD : DIM }))
     // The chance spells strike with, gear included, so that what armour costs a caster shows here and not only on the item.
     const skill = this.shownSpellSkill()
     if (skill !== null) {
@@ -909,35 +965,56 @@ export class InventoryScene extends Phaser.Scene {
       )
     }
 
-    const known = knownSpells(this.character)
-    known.forEach((spell, i) => {
-      const { x, y } = this.spellRowAt(i)
-      const { name, manaCost, apCost, description } = SPELLS[spell]
-      content.add([
-        this.add.text(x, y, `${name}  ${manaCost} mana, ${apCost} AP`, { fontFamily: FONT, fontSize: '13px', color: GOLD }),
-        this.add.text(x, y + 15, description, {
-          fontFamily: FONT,
-          fontSize: '10px',
-          color: DIM,
-          wordWrap: { width: SPELL_COLUMN_W - (this.canAdvance ? CAST_BUTTON.width + 6 : 0) },
-        }),
-      ])
-      if (this.canAdvance && worldSpells(this.character).some((heal) => heal.spell === spell)) this.buildCastButton(spell, i)
+    const pages = abilityPages(rows.length)
+    this.abilityPage = Math.min(this.abilityPage, pages - 1)
+    if (pages > 1) {
+      this.buildPanelButton(content, PAGE_PREV, '<', false, () => this.turnAbilityPage(-1))
+      this.buildPanelButton(content, PAGE_NEXT, '>', false, () => this.turnAbilityPage(1))
+      content.add(
+        this.add.text(PANEL_W / 2, PAGE_PREV.y, `${this.abilityPage + 1} / ${pages}`, { fontFamily: FONT, fontSize: '12px', color: DIM }).setOrigin(0.5),
+      )
+    }
+
+    const known = rows.flatMap((row) => (row.spell ? [row.spell] : []))
+    this.abilityRowTexts = []
+    rows.forEach((row, i) => {
+      if (abilityRowPlace(i).page !== this.abilityPage) return
+      const { x, y, width } = abilityRowRect(i, PANEL_W)
+      const castable = this.canAdvance && row.spell !== null && worldSpells(this.character).some((heal) => heal.spell === row.spell)
+      const nameWidth = width - (castable ? CAST_BUTTON.width + 6 : 0)
+      const description = clampLines(row.description, ABILITY_DESCRIPTION_LINES, Math.floor(width / SPELL_DESCRIPTION_CHAR_W) - 1)
+      const name = this.add.text(x, y, row.name, { fontFamily: FONT, fontSize: '13px', color: GOLD })
+      fitText(name, nameWidth)
+      const texts = [
+        name,
+        this.add.text(x, y + ABILITY_LIST.costY, abilityCostLine(row), { fontFamily: FONT, fontSize: '11px', color: TEXT }),
+        this.add
+          .text(x, y + ABILITY_LIST.descriptionY, description, {
+            fontFamily: FONT,
+            fontSize: '10px',
+            color: DIM,
+            wordWrap: { width },
+            maxLines: ABILITY_DESCRIPTION_LINES,
+            fixedHeight: ABILITY_DESCRIPTION_LINES * ABILITY_LIST.descriptionLineH,
+          }),
+      ]
+      content.add(texts)
+      this.abilityRowTexts.push(texts)
+      if (castable && row.spell) this.buildCastButton(row.spell, i)
     })
 
     const footer = this.worldCast
       ? `${SPELLS[this.worldCast].name}: choose who (${SPELLS[this.worldCast].manaCost} mana). Esc to go back.`
-      : known.length === 0
+      : rows.length === 0
         ? ''
-        : this.canAdvance
+        : this.canAdvance && known.length > 0
           ? `Out of battle a heal restores ${worldSpells(this.character).map(({ spell }) => `${worldHealing(spell)} (${SPELLS[spell].name})`).join(', ') || 'its average'}. A day of camping or a new level refills mana.`
-          : 'Spells are cast in battle with the Cast button (M).'
+          : 'In battle they are used from the Skills button (M).'
     content.add(
       this.add
-        .text(PANEL_W / 2, 444, footer, { fontFamily: FONT, fontSize: '12px', color: this.worldCast ? GOLD : DIM, align: 'center', wordWrap: { width: PANEL_W - 48 } })
+        .text(PANEL_W / 2, 466, footer, { fontFamily: FONT, fontSize: '12px', color: this.worldCast ? GOLD : DIM, align: 'center', wordWrap: { width: PANEL_W - 48 } })
         .setOrigin(0.5),
     )
-    this.buildPanelButton(content, SPELL_TREE_BUTTON, 'Spell Tree', this.spellPickWaits(), () => this.showTab('spellTree'))
   }
 
   /** A heal's Cast button: a heal of one asks whom, a heal of all heals at once. */
@@ -982,22 +1059,6 @@ export class InventoryScene extends Phaser.Scene {
     const party = this.members.map((member) => member.character)
     if (castOnWorldMap(this.character, spell, party, target)) this.sound.play('sfx_heal', { volume: soundVolume('sfx_heal') })
     this.time.delayedCall(0, () => this.buildContent())
-  }
-
-  /** The spell tree (`PerkTreeView`) under its heading: a click on an open node learns it where a pick can be spent. */
-  private buildSpellTree(): void {
-    this.spellTreeContent.add(this.heading('Spell Tree', TREE_X, 66))
-    this.buildSpellStatus(this.spellTreeContent, BACK_BUTTON.x - BACK_BUTTON.width / 2 - 16, 66)
-    this.buildPanelButton(this.spellTreeContent, BACK_BUTTON, 'Back', false, () => this.showTab('spells'))
-    new PerkTreeView(this, this.spellTreeContent, {
-      tree: 'spells',
-      character: this.character,
-      clickable: (perk) => this.canTake(perk),
-      onClick: (perk) => this.advance(() => takePerk(this.character, perk)),
-      hint: (perk) => nodeHint(this.character, perk, this.canAdvance),
-      rule: SPELL_TREE_RULE,
-      stripWidth: PANEL_W - 2 * TREE_X,
-    })
   }
 
   // ---- build: inventory tab -------------------------------------------------
@@ -1073,7 +1134,7 @@ export class InventoryScene extends Phaser.Scene {
       .text(STATS_X, 70, this.character.name, { fontFamily: 'monospace', fontSize: '20px', color: '#e8c766' })
       .setOrigin(0, 0.5)
     const classText = this.add
-      .text(STATS_X, 94, this.classLine(), { fontFamily: 'monospace', fontSize: '13px', color: '#8a7a5a' })
+      .text(STATS_X, 94, heroTitle(this.character), { fontFamily: 'monospace', fontSize: '13px', color: '#8a7a5a' })
       .setOrigin(0, 0.5)
 
     const lines = this.statLines(WARDS_WIDE_ROW_CHARS, false)
@@ -1111,12 +1172,6 @@ export class InventoryScene extends Phaser.Scene {
         wordWrap: { width: PANEL_W - STATS_X - 20 },
       }),
     )
-  }
-
-  /** "Level 2 - 30 / 200 XP", under the character's name. */
-  private classLine(): string {
-    const { level, xp } = this.character
-    return `Level ${level} - ${xp} / ${xpToNextLevel(level)} XP`
   }
 
   /**
@@ -1441,7 +1496,7 @@ export class InventoryScene extends Phaser.Scene {
     this.time.delayedCall(0, () => this.buildContent())
   }
 
-  /** Spends a skill point or a perk pick, as `spend` does and reports, and redraws the panel to match. */
+  /** Spends skill points or perk points, as `spend` does and reports, and redraws the panel to match. */
   private advance(spend: () => boolean): void {
     if (!this.canAdvance || !spend()) return
     this.sound.play('sfx_ui_click', { volume: soundVolume('sfx_ui_click') })
@@ -1461,10 +1516,10 @@ export class InventoryScene extends Phaser.Scene {
     this.time.delayedCall(0, () => this.buildContent())
   }
 
-  /** A tab's key shows the tab, or closes the panel when it is the one showing. */
+  /** A tab's key shows the tab. */
   private onTabKey(tab: MainTab): void {
-    if (this.activeTab === tab) this.close()
-    else this.showTab(tab)
+    // Only Esc closes the panel: a tab's key on its own tab, which the panel may have opened on unasked, does nothing.
+    if (this.activeTab !== tab) this.showTab(tab)
   }
 
   /** Closes the panel, telling the scene under it which member it last showed. */
@@ -1472,4 +1527,14 @@ export class InventoryScene extends Phaser.Scene {
     this.scene.stop()
     this.scene.resume(this.resumeKey, { member: this.index })
   }
+}
+
+/** The bounds on screen of `texts` together; getBounds is in world space, the panel's scale and place included. */
+function boundsOf(texts: readonly Phaser.GameObjects.Text[]): { x: number; y: number; width: number; height: number } {
+  const boxes = texts.map((text) => text.getBounds())
+  const left = Math.min(...boxes.map((b) => b.x))
+  const top = Math.min(...boxes.map((b) => b.y))
+  const right = Math.max(...boxes.map((b) => b.x + b.width))
+  const bottom = Math.max(...boxes.map((b) => b.y + b.height))
+  return { x: left, y: top, width: right - left, height: bottom - top }
 }

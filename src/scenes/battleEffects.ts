@@ -43,6 +43,10 @@ export interface SpellLook {
   glow: number
   missile: Missile
   impact: Impact
+  /** An arrow flies to each hex of the area in place of one missile (Volley). */
+  arrows?: true
+  /** The impact is drawn on the user, not on those touched (Taunt's ring). */
+  onUser?: true
 }
 
 const FIRE: SpellLook = { colour: 0xff7a1a, glow: 0xffd54f, missile: 'orb', impact: 'burst' }
@@ -66,18 +70,54 @@ export const SPELL_LOOKS: Record<SpellId, SpellLook> = {
   bless: { ...SUPPORT, colour: 0xffe082, glow: 0xfff8e1 },
   mirror_image: { ...SUPPORT, colour: 0xe0e0e0, glow: 0xffffff },
   haste: { ...SUPPORT, colour: 0xfff176, glow: 0xffffff },
+  frostbite: { colour: 0x81d4fa, glow: 0xe1f5fe, missile: 'dart', impact: 'burst' },
+  meteor: FIRE,
+  mass_haste: { ...SUPPORT, colour: 0xfff176, glow: 0xffffff },
+  lay_on_hands: HEALING,
+  ward: SUPPORT,
   bane: { colour: 0x7b1fa2, glow: 0xce93d8, missile: 'orb', impact: 'cloud' },
   lightning_bolt: { colour: 0xfff59d, glow: 0xffffff, missile: 'dart', impact: 'burst' },
   drain_life: { colour: 0x8e1b1b, glow: 0xe57373, missile: 'dart', impact: 'burst' },
   curse: { colour: 0x6a1b9a, glow: 0xb39ddb, missile: 'orb', impact: 'cloud' },
   web: { colour: 0xbdbdbd, glow: 0xeeeeee, missile: 'orb', impact: 'ring' },
+  // Stage 3's special spells, each in its own colours: a pale ice dart, a cold cloud that closes round the foe,
+  // a white-gold sparkle that cleans, gold that raises the fallen, a green ring that lasts, and a gold bolt.
+  ice_lance: { colour: 0xb3e5fc, glow: 0xffffff, missile: 'dart', impact: 'burst' },
+  glacial_prison: { colour: 0x4fc3f7, glow: 0xe1f5fe, missile: 'orb', impact: 'cloud' },
+  purify: { colour: 0xfff9c4, glow: 0xffffff, missile: 'orb', impact: 'sparkle' },
+  revive: { colour: 0xffe082, glow: 0xfffde7, missile: 'orb', impact: 'sparkle' },
+  renew: { ...HEALING, colour: 0xa5d6a7, impact: 'ring' },
+  holy_light: { colour: 0xffd54f, glow: 0xffffff, missile: 'dart', impact: 'burst' },
   dark_shield: { ...SUPPORT, colour: 0x283593, glow: 0x7986cb },
 }
 
-/** The area abilities' looks; a routine has none, as its strikes are blows. */
+/**
+ * The looks of the abilities that are not blows: the areas, and the statuses
+ * laid with no roll. A routine has none, as its strikes are blows; a hero's
+ * technique strike may flash on a hit (`strikeFlash`).
+ */
 export const ABILITY_LOOKS: Partial<Record<AbilityId, SpellLook>> = {
   spider_web: { colour: 0xbdbdbd, glow: 0xeeeeee, missile: 'orb', impact: 'ring' },
   fire_spit: { ...FIRE, impact: 'burst' },
+  volley: { colour: 0xd7ccc8, glow: 0xffffff, missile: 'dart', impact: 'burst', arrows: true },
+  consecrate: { ...SPELL_LOOKS.bless, impact: 'burst' },
+  taunt: { colour: 0xe53935, glow: 0xffcdd2, missile: 'orb', impact: 'ring', onUser: true },
+  hunters_mark: { colour: 0xe8c040, glow: 0xfff8e1, missile: 'dart', impact: 'ring' },
+  sprint: SPELL_LOOKS.haste,
+}
+
+/** The flash a technique strike's hit shows on the defender, by its element: the look of a spell of it. */
+const STRIKE_FLASHES: Partial<Record<AbilityId, SpellLook>> = {
+  flame_strike: SPELL_LOOKS.fireball,
+  frost_strike: SPELL_LOOKS.frost_blast,
+  thunder_strike: SPELL_LOOKS.lightning_bolt,
+  smite: SPELL_LOOKS.bless,
+}
+
+/** The flash a technique strike shows where it lands: its look on a hit that struck no image, else null. */
+export function strikeFlash(event: AttackEvent): SpellLook | null {
+  if (!event.ability || !event.hit || event.image) return null
+  return STRIKE_FLASHES[event.ability] ?? null
 }
 
 const ABILITY_FALLBACK: SpellLook = { colour: 0xe0e0e0, glow: 0xffffff, missile: 'orb', impact: 'ring' }
@@ -160,6 +200,33 @@ export function bonusElement(event: AttackEvent): Element | undefined {
   return event.bonus.find((b) => b.damage > 0)?.element
 }
 
+/** What a floating word says and how it is coloured: a restore's hit points, a restore's mana, a note on a blow. */
+export interface FloatNote {
+  text: string
+  kind: 'heal' | 'mana' | 'note'
+}
+
+/** The floats of a turn-start restore: "+3" for hit points, "+2 mana" for mana, one each when it gave both. */
+export function restoreFloats(event: Extract<BattleEvent, { type: 'restore' }>): FloatNote[] {
+  return [
+    ...((event.hp ?? 0) > 0 ? [{ text: `+${event.hp}`, kind: 'heal' as const }] : []),
+    ...((event.mana ?? 0) > 0 ? [{ text: `+${event.mana} mana`, kind: 'mana' as const }] : []),
+  ]
+}
+
+/** The notes a blow earns over its attacker: an Ambush, and the action points Blademaster gave back. */
+export function attackerNotes(event: AttackEvent): FloatNote[] {
+  return [
+    ...(event.ambush ? [{ text: 'Ambush', kind: 'note' as const }] : []),
+    ...((event.apRefunded ?? 0) > 0 ? [{ text: `+${event.apRefunded} AP`, kind: 'note' as const }] : []),
+  ]
+}
+
+/** The note a blow earns over its defender: a Deathblow felling it. */
+export function defenderNotes(event: AttackEvent): FloatNote[] {
+  return event.deathblow ? [{ text: 'Deathblow', kind: 'note' }] : []
+}
+
 /** Whether an event may have laid or ended a status, so that the nameplates' status letters need drawing again. */
 export function changesStatusMarks(event: BattleEvent): boolean {
   switch (event.type) {
@@ -167,6 +234,8 @@ export function changesStatusMarks(event: BattleEvent): boolean {
       return event.status !== undefined || (event.onHitStatuses?.length ?? 0) > 0
     case 'cast':
     case 'ability':
+    case 'status_laid':
+    case 'restore':
     case 'status_end':
     case 'status_tick':
     case 'unit_down':
