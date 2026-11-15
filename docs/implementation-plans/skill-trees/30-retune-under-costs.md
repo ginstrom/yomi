@@ -252,3 +252,11 @@ Not tried: the Spider Nest's count (SN5 sits in band at 451) and tier levels (th
 - CLAUDE.md now states `banditGear` (plain at threat 4), `FOE_HP_PER_LEVEL` 115% and the ready-made heroes' node levels; the bandits' node levels in CLAUDE.md's bandits line ("Rooted at 2, Taunt at 4 and Pin at 6" and the like) predate step 28 and are step 31's to restate.
 - Serenity at level 4 alone took the one-party campaign from 180 to 342 (row 8): the Saint's tier 1 stands out if a later stage looks for outliers.
 - `autoHeal` casts no heal larger than a wound, so a hero with a big heal bonus (Mending) leaves small wounds to camping: 65 days of camping a campaign against 26 (row 5). Not changed here (it is the game's rule for Camp until healed too).
+
+### The user's decisions (2026-11-15, via the orchestrator)
+
+- SG10 at 1 accepted ("Accept (Rec.)"); the Horror stays at 63 hit points.
+- The evoker's level-4 parity at −54 accepted ("Accept (Rec.)"), recorded as a cost of the path's shape at level 4.
+- The orchestrator accepted the node-level departures (Aldric's Unbreakable at 13, Delwyn's Meteor at 15) as deliberate plan-order changes. **Step 31** restates them in the design's §4.4 table, the manual and CLAUDE.md, and restates CLAUDE.md's stale bandit node levels (the bandits line still gives the pre-step-28 levels).
+
+Every figure is now in band or accepted; step 30 is done.
