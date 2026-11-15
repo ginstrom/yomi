@@ -423,10 +423,10 @@ export class CreationScene extends Phaser.Scene {
    * refused sit beside the tabs, where the summary would be.
    */
   private buildPerks(character: Character): void {
-    const picks = perkPointsLeft(this.draft)
+    const pointsLeft = perkPointsLeft(this.draft)
     const right = TREE_W
     const tabsY = TREE_TAB_Y + TREE_SHIFT_Y
-    this.text(right, tabsY, `Perk points: ${picks} of ${CREATION_PERK_POINTS}`, picks > 0 ? GOLD : DIM).setOrigin(1, 0.5)
+    this.text(right, tabsY, `Perk points: ${pointsLeft} of ${CREATION_PERK_POINTS}`, pointsLeft > 0 ? GOLD : DIM).setOrigin(1, 0.5)
     // A note is cut short before it could reach the legend at the left of its row.
     if (this.notes.length > 0) fitText(this.text(right, tabsY + 20, this.notes[0], WARN, 11).setOrigin(1, 0.5), right - legendLayout().at(-1)!.right - 12)
     const tree = this.add.container(0, TREE_SHIFT_Y)

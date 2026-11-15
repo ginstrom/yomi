@@ -77,3 +77,7 @@ The player's manual describes perk points and node costs and shows them in retak
 - [ ] Final gates pass; index step 31 status `done (<commit>)`.
 
 ## Execution record
+
+Done. Manual chapter 3, the Skills tab and tree-view paragraphs, "Building a hero" (with the cost table) and the level-up list reworded to perk points; all 15 manual screenshots retaken with `npm run manual:screenshots` (creation-perks, panel-perk-tree and panel-level-up viewed: cost digits and "Perk points" show). CLAUDE.md: stage 5 amendment and step 30's figures added to the scaling paragraph, the "spell picks" phrase reworded; its bandit and ready-made node levels were already current (checked against `progression.test.ts` and a scratch run of the mage and archer plans to level 14). The design's NC5 and section 4.4 table annotated with the accepted departures (Meteor 15, Unbreakable 13); feature record's two "for the user" lines reworded; index names step 30's `4badc8b`; `pickWaits` renamed `pointsToSpend`, `picks` in `CreationScene` `pointsLeft`.
+
+Gates: `npm test` 87 files, 2061 tests pass; `npm run test:browser` 10 files, 122 tests pass; `npm run build` ok. NC8 grep: no `picksAt`, `perkPicks`, `PICK_LEVEL_STEP`, "even level" or perk "pick" left in CLAUDE.md or the manual.

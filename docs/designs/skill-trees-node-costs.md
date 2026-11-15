@@ -119,7 +119,7 @@ Without the save in step 2, simulated heroes would spend every point on T1s and 
 | --- | --- | --- | --- |
 | `knight` | rooted, taunt, pin, heavy_hand, iron_skin, **unbreakable**, guardian, shield_wall, … | Aldric: Rooted 3, Taunt 5, Pin 8, Iron Skin 11, Unbreakable 15 | Unbreakable moves ahead of Guardian. Otherwise Guardian's 3 points at 12 would push the capstone to 18. |
 | `ranger` | aimed_shot, **volley**, far_shot, **deadeye**, hunters_mark, pinning_shot, dodger, … | Brenna: Aimed Shot 3, Volley 6, Far Shot 8, Deadeye 12 | Volley moves ahead of Far Shot. The first T3 stays at 6, and the capstone at 12. |
-| `evoker_healer` | flame_arrow, **fireball**, heal_all, pyromancy, meteor, greater_heal, mending, death_cloud, greater_heal_all, purify | Delwyn: Flame Arrow 3, Fireball 6, Heal All 8, Pyromancy 10, Meteor 14 | Fireball stays at 6, as today. Heal All moves from 4 to 8, and Meteor from 12 to 14. |
+| `evoker_healer` | flame_arrow, **fireball**, heal_all, pyromancy, meteor, greater_heal, mending, death_cloud, greater_heal_all, purify | Delwyn: Flame Arrow 3, Fireball 6, Heal All 8, Pyromancy 10, Meteor 14 | Fireball stays at 6, as today. Heal All moves from 4 to 8, and Meteor from 12 to 14. *(Amended by step 30, accepted: Delwyn takes Arcane Blood 4, Heal All 6, Fireball 9, Pyromancy 11 and Meteor 15; Aldric's Unbreakable comes at 13, Shield Wall at 9, Iron Skin at 16.)* |
 | `swordmaster`, `rogue`, `cryomancer`, `bandit_mage`, path plans | unchanged | | Already ordered by depth. Capstone-first plans are unaffected. |
 
 At the campaign's ready level of 7, each ready-made hero has one node fewer than today:
@@ -360,7 +360,7 @@ Seed 1, 500 each, one run at a time, with Node 26 (`PATH=$HOME/.nvm/versions/nod
 | NC2 (N2) | Taking a T1, T2, T3 or capstone spends 1, 2, 3 or 4. A node the hero cannot afford cannot be taken by click, `takePerk` or `autoAdvance`. |
 | NC3 (N3) | A hero with both T1s of a path and one other T1 at creation, then every point in that path, takes the T3 at level 6 and the capstone at level 12, and not earlier. A level-14 hero holding 5 Swordmaster and 6 Assassin nodes, and given 4 points, can take Deathblow and not Blademaster. |
 | NC4 (N4) | Creation shows "Perk points: 3 of 3", allows three T1s and plays as before. The pre-rolls are legal. |
-| NC5 (N5) | `autoAdvance` never spends below the cost of the plan's next open node. Brenna holds Deadeye at 12, Delwyn Meteor at 14 and Aldric Unbreakable at 15. The bandit-built hero and the bandit still have equal stats. |
+| NC5 (N5) | `autoAdvance` never spends below the cost of the plan's next open node. Brenna holds Deadeye at 12, Delwyn Meteor at 14 and Aldric Unbreakable at 15. The bandit-built hero and the bandit still have equal stats. *(Amended by step 30, accepted by the user: Delwyn's Meteor at 15 and Aldric's Unbreakable at 13, deliberate plan-order changes; Brenna's Deadeye stays at 12.)* |
 | NC6 (N6) | The v25, v22 and v18 fixtures load with every held node kept and `perkPoints = max(0, pointsAt(level) − nodesCost)`. `SAVE_VERSION` is 26. |
 | NC7 (N7) | In the browser at 840×560, every node shows its cost inside its frame. The status reads "Perk points: N". An unaffordable open node's hint names the points it needs and the level. No screen says "pick". |
 | NC8 (N8) | The manual describes perk points and costs, and its screenshots are retaken. `CLAUDE.md` is current, with no `picksAt`, `perkPicks` or "pick at every even level" left. |

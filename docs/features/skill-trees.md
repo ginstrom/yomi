@@ -202,7 +202,7 @@ Final gates (step 26): `npm test`, `npm run test:browser` and `npm run build` pa
 | days a campaign (one party) | 243–297 | 287 | 287 | 286 | in |
 | GR3 / BC3 / BC4 / BC5 | ≥ 470 / 400–470 / 430–490 / 420–490 | 500 / 455 / 462 / 484 | 500 / 455 / 462 / 484 | 500 / 455 / 454 / 494 | in |
 | SN5 / SP5 / TL5 | 410–480 / 410–480 / report | 448 / 454 / 0 | 448 / 454 / 0 | 451 / 475 / 0 | in |
-| SG7 / SG10 | 0 ± 40 / above 2 | 0 / 5 | 0 / 5 | 0 / **1** | SG10 out: for the user |
+| SG7 / SG10 | 0 ± 40 / above 2 | 0 / 5 | 0 / 5 | 0 / **1** | SG10 out: accepted by the user |
 | F1 / F2 / F3 | nearly all / most / 7 in 10 | 500 / 500 / 453 | 500 / 500 / 453 | 500 / 500 / 463 | in |
 
 Path parity (Bandit Camp threat 4 at level 4, the gate; Hobgoblin Warband threat 5 at 8 and Bandit Camp threat 7 at 14, reported), with the capstone each hero holds at 14:
@@ -224,6 +224,6 @@ Path parity (Bandit Camp threat 4 at level 4, the gate; Hobgoblin Warband threat
 | magic | saint | 471 | -5 | 496 | 0 | 411 | -84 | sanctuary (14) |
 | magic | evoker_healer (reference) | 454 |  | 181 |  | 493 |  | none (Meteor at 15) |
 
-Level 4: every plan within ±50 but the evoker (−54, for the user: the path has nothing to buy with a fourth point at level 4). Level 14: melee all within 24; `rogue_archer` −75, cryomancer −59, saint −84 and arcanist −444, the mage carrying the party's damage as in step 24. Both assassins hold no capstone at 14 (Deathblow at 16, by their asks).
+Level 4: every plan within ±50 but the evoker (−54, accepted by the user: the path has nothing to buy with a fourth point at level 4). Level 14: melee all within 24; `rogue_archer` −75, cryomancer −59, saint −84 and arcanist −444, the mage carrying the party's damage as in step 24. Both assassins hold no capstone at 14 (Deathblow at 16, by their asks).
 
 How it got there: perk points first took one party to 172, the company to 177 and BC4 to 364 (step 30's first measurement, untuned). Step 30 moved plan orders (the knight's Unbreakable to 13 and the swordmaster's Blademaster to 12, so the parity heroes hold their capstones at 14; Delwyn's Arcane Blood at 4 and Heal All at 6, ahead of Fireball, for BC4 and the days spent camping), put bandits at threat 4 back in plain gear, and lowered `FOE_HP_PER_LEVEL` from 1.3 to 1.15. Details in step 30's record.

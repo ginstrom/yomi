@@ -793,7 +793,7 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   /** Whether some open node is affordable and perk points can be spent here. */
-  private pickWaits(): boolean {
+  private pointsToSpend(): boolean {
     return this.canAdvance && availablePerks(this.character).some((perk) => canAffordPerk(this.character, perk))
   }
 
@@ -802,7 +802,7 @@ export class InventoryScene extends Phaser.Scene {
     const { perkPoints } = this.character
     content.add(
       this.add
-        .text(right, y, `Perk points: ${perkPoints}`, { fontFamily: FONT, fontSize: '14px', color: this.pickWaits() ? GOLD : DIM })
+        .text(right, y, `Perk points: ${perkPoints}`, { fontFamily: FONT, fontSize: '14px', color: this.pointsToSpend() ? GOLD : DIM })
         .setOrigin(1, 0),
     )
   }
@@ -850,7 +850,7 @@ export class InventoryScene extends Phaser.Scene {
         }),
       ])
     })
-    this.buildPanelButton(this.skillsContent, TREE_BUTTON, 'Skill Trees', this.pickWaits(), () => this.openTree())
+    this.buildPanelButton(this.skillsContent, TREE_BUTTON, 'Skill Trees', this.pointsToSpend(), () => this.openTree())
   }
 
   // ---- build: perk tree -------------------------------------------------

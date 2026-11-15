@@ -76,11 +76,11 @@ Skills start low and are set by attributes alone. **Tag** one skill: tagging add
 
 An untrained skill sits near 10%, and against an armoured foe that becomes the minimum 5% chance to hit. A hero who specialises (tags a skill, puts all 10 points into it and takes its skill perk) starts at around 60%.
 
-### Picks, perks and spells
+### Perk points, perks and spells
 
 ![The Warrior tree in creation](images/creation-perks.png)
 
-The screen's rule line reads "3 picks. One more comes with every even level. Any path, any tree; only your deepest path may open its capstone." You have **3 picks**, and one more comes with every even level; there are no separate spell picks and no Spellcasting perk. There are four skill trees, **Warrior**, **Scout**, **Mage** and **Cleric**, each with a tab at the top left (or press 1 to 4), and each tree has three paths, one to a column. Any hero may take nodes from any path of any tree. A spell is a node like any other, bought with a pick.
+The screen's rule line reads "3 perk points. One more comes with every level. A node costs 1 to 4 by its tier. Any path, any tree; only your deepest path may open its capstone." You have **3 perk points**, and one more comes with every level. A node costs its tier's points (1, 2, 3, and 4 for a capstone), and points you do not spend are kept. There are no separate spell points and no Spellcasting perk. There are four skill trees, **Warrior**, **Scout**, **Mage** and **Cleric**, each with a tab at the top left (or press 1 to 4), and each tree has three paths, one to a column. Any hero may take nodes from any path of any tree. A spell is a node like any other, bought with perk points like any other node.
 
 At creation only the first tier (marked **L1** in the left margin) can be taken: click an open node to take it and click it again to give it back. The tiers below ask a higher level (L2, L6, L12) and nodes already held in the same path; the number beside each path's name is how many of its nodes the hero holds, in gold for the deepest. The bottom of the tree is a **capstone** (★, haloed in a double gold frame): only the hero's deepest path may open its capstone, and a hero may hold only one. A line runs down each path's left side through its nodes, top to bottom, and a bracket on a node's right side, ending in an arrowhead, means the node at the bracket's other end, which may be several rows up, must be taken first. Lines are gold into nodes taken, pale into nodes you can take now and dark into nodes still closed; a stretch of a path's left-hand line is gold only when the nodes at both its ends are taken.
 
@@ -88,7 +88,7 @@ At creation only the first tier (marked **L1** in the left margin) can be taken:
 
 The coloured tab on a node's left edge says what it is, as the legend under the tree tabs shows: a dim gold disc for a passive, an amber blade for an ability used at will, a violet diamond for an ability that costs mana, and a blue star for a spell. Point at a node to read, under the tree, what it does (with a spell's mana and action points), what it asks, and why it is closed.
 
-If a change you make (an attribute lowered, a skill point taken back) leaves a perk you already took without its requirements, that perk is dropped and its pick returned, and the screen says so.
+If a change you make (an attribute lowered, a skill point taken back) leaves a perk you already took without its requirements, that perk is dropped and its perk points returned, and the screen says so.
 
 ### Name and face
 
@@ -96,7 +96,7 @@ If a change you make (an attribute lowered, a skill point taken back) leaves a p
 
 Pick a portrait and type a name of up to 12 letters. Gear is not chosen: every hero starts holding the weapon of their tagged skill (a melee hero also holds an oak shield), wears an Iron Breastplate, and carries the other plain weapons in their backpack, and the oak shield too, unless they hold it.
 
-Any skill points or picks you leave unspent stay with the character, and you can spend them later on the world map.
+Any skill points or perk points you leave unspent stay with the character, and you can spend them later on the world map.
 
 ---
 
@@ -223,11 +223,11 @@ This tab shows the hero's attributes, their title (their level and their deepest
 
 ![The Skills tab](images/panel-skills.png)
 
-When the hero has skill points to spend, a **+** appears beside each skill. The tab lists the passives the hero has taken, spells aside, and when the next pick comes ("Next pick at level 4"). Press **Skill Trees** (or P) to choose new ones: the view opens on the tree of the hero's deepest path, and its tabs (or 1 to 4) show the others.
+When the hero has skill points to spend, a **+** appears beside each skill. The tab lists the passives the hero has taken, spells aside, and the perk points the hero has ("Perk points: 4"). Press **Skill Trees** (or P) to choose new ones: the view opens on the tree of the hero's deepest path, and its tabs (or 1 to 4) show the others.
 
 ![The skill trees](images/panel-perk-tree.png)
 
-Nodes you can take now are framed in gold, and a click takes one for a pick. A taken node is gold with a ✓. A dim node is closed: point at it to see what it still asks, a level, an attribute, a skill or nodes in its path. A capstone closed by another path being deeper, or by a capstone already held, is drawn in rust with a ✕. In battle the trees can be read but not changed.
+Nodes you can take now are framed in gold, and a click takes one for its cost in perk points. The digit on a node is that cost: gold when you can take it now, dim otherwise (a ✓ marks a taken node and a ✕ a locked capstone). The header's "Perk points: N" is what the hero has to spend. A taken node is gold with a ✓. A dim node is closed: point at it to see what it still asks, a level, an attribute, a skill or nodes in its path. A capstone closed by another path being deeper, or by a capstone already held, is drawn in rust with a ✕. In battle the trees can be read but not changed.
 
 ### Abilities
 
@@ -400,7 +400,7 @@ Wounds carry over from battle to battle. Heal before you go looking for the next
 
 ## 6. Magic
 
-Every hero has **mana**: twice their Intelligence, plus half their Intelligence for each level after the first, plus 2 for each node they hold in the Mage and Cleric trees, plus whatever their gear and nodes add. A hero who knows no spell has mana but nothing to spend it on. Spells are nodes of the skill trees (chapter 7), bought with a pick like any other and gated by the **Magic** skill, and they need no other skill: a warrior who trains Magic can learn them too. Every battle starts with full mana. Mana spent in battle does not come back until the battle ends. Whatever a winner has left is carried onto the world map, where it can be spent on heals. A day of camping or a new level refills it. At level 1 Aldric, the ready-made fighter, has 6 mana, which he has no spell to spend, and Delwyn, the mage, 28.
+Every hero has **mana**: twice their Intelligence, plus half their Intelligence for each level after the first, plus 2 for each node they hold in the Mage and Cleric trees, plus whatever their gear and nodes add. A hero who knows no spell has mana but nothing to spend it on. Spells are nodes of the skill trees (chapter 7), bought with perk points like any other node and gated by the **Magic** skill, and they need no other skill: a warrior who trains Magic can learn them too. Every battle starts with full mana. Mana spent in battle does not come back until the battle ends. Whatever a winner has left is carried onto the world map, where it can be spent on heals. A day of camping or a new level refills it. At level 1 Aldric, the ready-made fighter, has 6 mana, which he has no spell to spend, and Delwyn, the mage, 28.
 
 Several nodes sharpen a caster: some add flat **spell power** to each damaging spell (Destruction, Pyromancy, Numbing Cold), **Mending** adds to every heal, **Lingering Cold** and **Lasting Magic** lengthen the effects a spell lays, **Serenity** extends the reach of friendly spells and regains mana each turn, and **Quickened Casting** and **Swift Hands** take an action point off every spell or every heal, never below 2.
 
@@ -472,7 +472,7 @@ Each new level:
 
 - raises maximum hit points (by 2 plus half the hero's Endurance) and **heals the hero fully**, refilling their mana as well
 - gives **skill points**: 2 plus a third of the hero's Intelligence
-- gives a **pick** at every even level (2, 4, 6 and so on), which buys one node of the skill trees, a spell included; the panel's Skills tab says "Next pick at level N"
+- gives **1 perk point**, which buys nodes of the skill trees, spells included, at their cost; unspent points are kept
 
 A **+** on a portrait means that hero has something to spend. Spend it from the character panel on the world map, since nothing can be spent in battle.
 
@@ -482,8 +482,18 @@ A **+** on a portrait means that hero has something to spend. Spend it from the 
 
 There are no classes. A hero is defined by their attributes, the skill they tagged and the nodes they chose from four **skill trees**, Warrior, Scout, Mage and Cleric, each of three **paths**. Any hero may take nodes from any path of any tree, and mix them.
 
-- Every node has **one rank**: a pick buys it once, and nothing is spent again on it.
-- A node sits at a **tier**, and a tier asks a level and a **depth**, the nodes already held in the same path: tier 1 asks level 1 and none, tier 2 level 2 and 1, tier 3 level 6 and 3, and the **capstone** level 12 and 5. A node may also ask an attribute, a skill (or one of two skills, as Bless asks Melee 30% or Magic 40%) or a node of its own path before it.
+- Every node has **one rank**: perk points buy it once, and nothing is spent again on it.
+- A node sits at a **tier**, and a tier asks a level and a **depth**, the nodes already held in the same path: tier 1 asks level 1 and none, tier 2 level 2 and 1, tier 3 level 6 and 3, and the **capstone** level 12 and 5. A node costs perk points by its tier (the table below). A node may also ask an attribute, a skill (or one of two skills, as Bless asks Melee 30% or Magic 40%) or a node of its own path before it.
+
+| Tier | Level asked | Depth asked | Cost |
+| --- | --- | --- | --- |
+| 1 | 1 | 0 | 1 |
+| 2 | 2 | 1 | 2 |
+| 3 | 6 | 3 | 3 |
+| Capstone | 12 | 5 | 4 |
+
+Points you save buy deeper nodes; a hero who stays in one path reaches its tier 3 at level 6 and its capstone at 12, and one who mixes paths holds more nodes but reaches a capstone later.
+
 - A hero's **calling** is the path they hold the most nodes in, shown under their name as "Level 9 · Heavy Knight" (two paths level for deepest are both named). Only the calling's capstone may be taken, and a hero may hold only one capstone: taking it closes every other for good.
 - A node asks only to be taken; it is never lost afterwards. There is no respec, so choose with care.
 - **Revive** and **Unbreakable** soften permadeath a little: Revive stands an ally who fell this battle up again, and Unbreakable keeps its holder at 1 hit point the first time damage would fell it, each once per battle. A hero who still falls and is not raised is dead for good.
