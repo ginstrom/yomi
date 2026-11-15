@@ -1,7 +1,7 @@
 # Feature: skill trees and progression
 
 **Slug:** skill-trees
-**Phase:** 4b — node-cost amendment: steps 27–31 done; verification passed (review clean, QA pass); fixing the verification findings. Earlier stage (tiers: 27 sonnet, 28 opus, 29 sonnet, 30 opus, 31 sonnet; reviewers at the same tier) (verification of the base feature done, fixes at dae81d1). Earlier: 4 — implemented (all 26 steps done; manual, screenshots and CLAUDE.md current)
+**Phase:** 6 — done and verified at b074c7e (the base feature and the node-cost amendment). Not pushed; a PR waits on the user.
 
 ## Request (user's words)
 
@@ -72,6 +72,10 @@ Large/structural (hero abilities in the engine, new perk tree data, save format,
 - Node 26: `PATH=$HOME/.nvm/versions/node/v26.13.0/bin:$PATH`
 
 ## Notes carried forward
+
+- Follow-ups, outside this feature:
+  - Phaser replays queued keys to every scene hotkey. Only typing is guarded (`onceEachEvent`); Esc and the hotkeys can fire twice when two keys land in one frame.
+  - Stage 9: the XP pace and capstone reach (a normal campaign ends at about level 7–10); `--ready-level 10` 434 over its band; parity at levels 8 and 14 (arcanist −444); SG10 at 1.
 
 - Verification-fix review (clean, dae81d1) left these for the next step that touches them:
   - CLAUDE.md:118 says the panel opens over Battle with "(C, S, B, I)"; it is "C, S, I; B within the panel".
