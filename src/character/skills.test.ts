@@ -9,6 +9,7 @@ import {
   raiseSkill,
   skillLevel,
   skillRaiseCost,
+  skillRaiseRefusal,
 } from './skills.ts'
 
 describe('skillLevel', () => {
@@ -78,8 +79,34 @@ describe('raiseSkill', () => {
     expect(skillRaiseCost(warrior, 'archery')).toBe(2)
     warrior.trained.archery += 1
     expect(skillRaiseCost(warrior, 'archery')).toBe(3)
-    warrior.trained.archery += 40
+    warrior.trained.archery += 9
     expect(skillRaiseCost(warrior, 'archery')).toBe(3)
+    warrior.trained.archery += 1
+    expect(skillRaiseCost(warrior, 'archery')).toBeNull()
+  })
+
+  it('caps a skill at 100%', () => {
+    expect(MAX_SKILL).toBe(100)
+  })
+
+  it('refuses a raise at 100% or more, with a reason, and keeps the points', () => {
+    const warrior = createWarrior()
+    warrior.skillPoints = 10
+    expect(skillRaiseRefusal(warrior, 'melee')).toBeNull()
+    // A node's bonus may carry a skill past 100; points never raise it further.
+    warrior.trained.melee = 105 - skillLevel(warrior, 'melee')
+    expect(skillRaiseRefusal(warrior, 'melee')).toBe('Melee Weapons is at 105%; skill points raise a skill no higher than 100%')
+    expect(raiseSkill(warrior, 'melee')).toBe(false)
+    expect(warrior.skillPoints).toBe(10)
+  })
+
+  it('says when the points do not cover a raise', () => {
+    const warrior = createWarrior()
+    warrior.trained.archery = 85 - skillLevel(warrior, 'archery')
+    warrior.skillPoints = 1
+    expect(skillRaiseRefusal(warrior, 'archery')).toBe('Needs 2 skill points; you have 1')
+    warrior.skillPoints = 0
+    expect(skillRaiseRefusal(warrior, 'melee')).toBe('Needs 1 skill point; you have 0')
   })
 
   it('stops at the highest a skill goes, a tagged one too', () => {

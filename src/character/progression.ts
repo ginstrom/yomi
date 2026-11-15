@@ -1,7 +1,7 @@
 import { maxHp, maxMana, weaponSkill, type Character } from './character.ts'
 import { PERKS, PERK_IDS, attributeLevel, availablePerks, perkBonus, perkCost, perkLevel, qualifiesFor, type Perk, type PerkId } from './perks.ts'
 import type { PathId } from './trees.ts'
-import { SKILL_COST_TIERS, SKILL_IDS, raiseSkill, skillLevel, type SkillId } from './skills.ts'
+import { SKILL_COST_TIERS, SKILL_IDS, raiseSkill, skillLevel, skillRaiseRefusal, type SkillId } from './skills.ts'
 
 /**
  * Levels and the experience that buys them. A foe is worth a fixed amount of
@@ -65,9 +65,14 @@ export function affordableAt(character: Pick<Character, 'level' | 'perkPoints'>,
   return character.level + Math.max(0, Math.ceil((perkCost(perk) - character.perkPoints) / PERK_POINTS_PER_LEVEL))
 }
 
-/** Whether the character has skill points, or the perk points for a node it could take now, waiting. */
+/** Whether some skill would take a raise with the skill points the character has. */
+export function canRaiseAnySkill(character: Character): boolean {
+  return SKILL_IDS.some((skill) => skillRaiseRefusal(character, skill) === null)
+}
+
+/** Whether the character has skill points some skill can take (none past 100%), or the perk points for a node it could take now, waiting. */
 export function canAdvance(character: Character): boolean {
-  return character.skillPoints > 0 || availablePerks(character).some((perk) => canAffordPerk(character, perk))
+  return canRaiseAnySkill(character) || availablePerks(character).some((perk) => canAffordPerk(character, perk))
 }
 
 /** What a gain of experience came to. */

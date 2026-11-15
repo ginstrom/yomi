@@ -15,6 +15,7 @@ import {
   canAffordPerk,
   gainXp,
   levelUp,
+  canRaiseAnySkill,
   planFor,
   pointsAt,
   skillPointsPerLevel,
@@ -213,6 +214,15 @@ describe('canAdvance', () => {
     warrior.perkPoints = 2
     expect(canAdvance(warrior)).toBe(true)
   })
+
+  it('does not hold for skill points no skill can take: every skill at 100%', () => {
+    const warrior = createWarrior()
+    warrior.skillPoints = 3
+    for (const skill of SKILL_IDS) warrior.trained[skill] = 100 - skillLevel(warrior, skill)
+    expect(canAdvance(warrior)).toBe(false)
+    warrior.trained.magic -= 1
+    expect(canAdvance(warrior)).toBe(true)
+  })
 })
 
 describe('planFor', () => {
@@ -246,6 +256,19 @@ describe('AUTO_PLANS', () => {
 })
 
 describe('autoAdvance', () => {
+  it('raises no skill past 100% with points, spending them on the other skills', () => {
+    const [aldric] = READY_MADE.map(draftCharacter)
+    while (aldric.level < 20) {
+      levelUp(aldric)
+      autoAdvance(aldric)
+    }
+    // His Melee reaches 100% by points and passes it only by a node's 10%.
+    expect(skillLevel(aldric, 'melee')).toBeGreaterThanOrEqual(100)
+    expect(skillLevel(aldric, 'melee')).toBeLessThanOrEqual(100 + 10)
+    expect(aldric.trained.archery + aldric.trained.magic).toBeGreaterThan(0)
+    expect(canRaiseAnySkill(aldric)).toBe(false)
+  })
+
   it('puts skill points into the weapon in hand and saves its perk point for the plan\'s next node', () => {
     const warrior = createWarrior()
     const before = skillLevel(warrior, 'melee')
