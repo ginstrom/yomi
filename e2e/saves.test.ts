@@ -20,6 +20,22 @@ async function openLoad(game: Game) {
 describe('save slots', () => {
   const games = useGames()
 
+  it('keeps the threat line of a confrontation through Continue and the menu opened and closed', async () => {
+    const game = await games.open()
+    await game.newGame()
+    await game.travelTo(RAIDERS.position)
+    await game.click((await game.reload()).buttons.continue)
+    await game.waitForScenes(['World'])
+    const standing = await game.settled('World')
+    expect(standing.message).toMatch(/^You stand before .+ \(threat \d\)\.$/)
+    await game.press('Escape')
+    await game.waitForScenes(['Menu'], ['World'])
+    await game.settled('Menu')
+    await game.press('Escape')
+    await game.waitForScenes(['World'])
+    expect((await game.waitFor('World')).message).toBe(standing.message)
+  })
+
   it('keeps a game on the world map through a reload, for Continue to open', async () => {
     const game = await games.open()
     // Nothing is saved yet, so there is nothing to continue.

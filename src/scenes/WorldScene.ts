@@ -412,14 +412,9 @@ export class WorldScene extends Phaser.Scene {
     this.music.play()
 
     const here = monstersHere(this.world, this.expedition())
-    this.messageText.setText(
-      this.world.status === 'won'
-        ? ''
-        : here
-        ? describeStanding(this.gameState, this.expedition(), here)
-        : advanceMessage(this.expedition().members),
-    )
-    this.advancePrompt = this.messageText.text
+    // Only the prompt to spend points is the advance prompt; a threat line is kept as it is when an overlay closes.
+    this.advancePrompt = this.world.status === 'won' || here ? '' : advanceMessage(this.expedition().members)
+    this.messageText.setText(this.world.status !== 'won' && here ? describeStanding(this.gameState, this.expedition(), here) : this.advancePrompt)
     this.refresh()
     // After the first refresh: the view centres on where the party stands.
     this.layout()
