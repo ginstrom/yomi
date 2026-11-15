@@ -440,6 +440,12 @@ describe('eventSounds: spells and abilities', () => {
       expect(cues(eventSounds(ability(id, true, false)))).toEqual([release, impactCue])
     })
 
+    it('rings an Unbreakable save after the landing', () => {
+      const spit = ability('fire_spit', true, false)
+      const endured = { ...spit, outcomes: [{ ...spit.outcomes[0], endured: true as const }] }
+      expect(eventSounds(endured)).toContainEqual({ cue: 'battle.impact.buff', delayMs: impactMs(endured) + 60 })
+    })
+
     it('hears a Volley as a bow shot, landing as arrows do and missing as a shot', () => {
       expect(cues(eventSounds(ability('volley', true, false)))).toEqual(['battle.shot.bow', 'battle.hit.pierce'])
       expect(cues(eventSounds(ability('volley', false, false)))).toEqual(['battle.shot.bow', 'battle.miss.shot'])
@@ -478,6 +484,19 @@ describe('eventSounds for the skill trees’ events', () => {
     expect(cues(eventSounds({ ...attack(true), deathblow: true }))).toEqual([...hit, 'battle.hit.crit'])
     const at = impactMs(attack(true))
     expect(eventSounds({ ...attack(true), endured: true })).toContainEqual({ cue: 'battle.impact.buff', delayMs: at + 60 })
+  })
+
+  it('rings an Unbreakable save on a spell and a tick as on a blow', () => {
+    const spell = cast(true, false, 'flame_arrow')
+    const endured = { ...spell, outcomes: [{ ...spell.outcomes[0], endured: true as const }] }
+    expect(eventSounds(endured)).toContainEqual({ cue: 'battle.impact.buff', delayMs: impactMs(endured) + 60 })
+    expect(cues(eventSounds(spell))).not.toContain('battle.impact.buff')
+    const tick: StatusTickEvent = { type: 'status_tick', seq: 0, round: 1, unit: 'hero', status: 'poisoned', damage: 2, warded: 0, hpBefore: 2, hpAfter: 1 }
+    expect(eventSounds({ ...tick, endured: true })).toEqual([
+      { cue: 'battle.element.poison', delayMs: 0 },
+      { cue: 'battle.impact.buff', delayMs: 60 },
+    ])
+    expect(eventSounds(tick)).toEqual([{ cue: 'battle.element.poison', delayMs: 0 }])
   })
 
   it('hears an Ambush as the critical it is', () => {

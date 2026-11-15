@@ -844,6 +844,7 @@ export class InventoryScene extends Phaser.Scene {
     label: string,
     marked: boolean,
     onClick: () => void,
+    cue: CueId = buttonCue(label),
   ): void {
     const bg = this.add.rectangle(x, y, width, height, 0x1b1712, 0.95).setStrokeStyle(2, marked ? 0xc9a227 : 0x6b5a3a)
     const text = this.add.text(x, y, label, { fontFamily: FONT, fontSize: '14px', color: marked ? GOLD : TEXT }).setOrigin(0.5)
@@ -851,7 +852,7 @@ export class InventoryScene extends Phaser.Scene {
     bg.on('pointerover', () => bg.setFillStyle(0x3a2f1c, 0.95))
     bg.on('pointerout', () => bg.setFillStyle(0x1b1712, 0.95))
     bg.on('pointerdown', () => {
-      playCue(this, buttonCue(label))
+      playCue(this, cue)
       onClick()
     })
     content.add([bg, text])
@@ -887,7 +888,7 @@ export class InventoryScene extends Phaser.Scene {
         this.add.text(PERKS_X, PASSIVES_TOP + moreTop, `+${more} more: see the Skill Trees`, { fontFamily: FONT, fontSize: '11px', color: FAINT }),
       )
     }
-    this.buildPanelButton(this.skillsContent, TREE_BUTTON, 'Skill Trees', this.pointsToSpend(), () => this.openTree())
+    this.buildPanelButton(this.skillsContent, TREE_BUTTON, 'Skill Trees', this.pointsToSpend(), () => this.openTree(), 'ui.tab')
   }
 
   // ---- build: perk tree -------------------------------------------------

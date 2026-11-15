@@ -74,7 +74,7 @@ describe('world and interface sounds', () => {
     const skills = await game.settled('Inventory', (p) => p.tab === 'skills')
     expect(skills.perkPoints).toBe(1)
 
-    expect(await played(game, () => game.click(skills.treesButton))).toEqual(['ui.click'])
+    expect(await played(game, () => game.click(skills.treesButton))).toEqual(['ui.tab'])
     const tree = await game.settled('Inventory', (p) => p.tab === 'trees')
     const other = tree.tree === 'scout' ? 'mage' : 'scout'
     expect(await played(game, () => game.click(tree.trees[other]))).toEqual(['ui.tab'])

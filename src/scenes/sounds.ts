@@ -390,6 +390,9 @@ export function stepCue(kind: UnitKind | null, body: ItemIcon | null): CueId {
  * and what walks or falls. An outcome is heard as the blow or the missile lands
  * (`impactMs`). Pure: it draws from no RNG, so listening never moves a battle.
  */
+/** An Unbreakable save, however the lethal damage came: a ward's ring, just after the blow, spell or tick lands. */
+const ENDURED_CUE: CueId = 'battle.impact.buff'
+
 export function eventSounds(event: BattleEvent, context?: SoundContext): SoundCue[] {
   switch (event.type) {
     case 'attack': {
@@ -402,7 +405,7 @@ export function eventSounds(event: BattleEvent, context?: SoundContext): SoundCu
       if (inMetal(event.defender, context)) cues.push({ cue: 'battle.armor.metal', delayMs: at })
       // A deathblow lands as hard as a critical; an Unbreakable save rings as a ward does.
       if (event.critical || event.deathblow) cues.push({ cue: 'battle.hit.crit', delayMs: at })
-      if (event.endured) cues.push({ cue: 'battle.impact.buff', delayMs: at + 60 })
+      if (event.endured) cues.push({ cue: ENDURED_CUE, delayMs: at + 60 })
       for (const bonus of event.bonus.filter((b) => b.damage > 0).slice(0, 2)) {
         const element = bonus.bane ? 'blight' : bonus.element
         if (element) cues.push({ cue: elementCue(element), delayMs: at + 30 })
@@ -426,6 +429,7 @@ export function eventSounds(event: BattleEvent, context?: SoundContext): SoundCu
         }
       }
       if (event.drained > 0) cues.push({ cue: 'battle.heal.small', delayMs: at + 150 })
+      if (event.outcomes.some((o) => o.endured)) cues.push({ cue: ENDURED_CUE, delayMs: at + 60 })
       return cues
     }
     case 'ability': {
@@ -433,12 +437,17 @@ export function eventSounds(event: BattleEvent, context?: SoundContext): SoundCu
       if (!sound) return []
       // A miss that still burns for half is heard to strike.
       const struck = event.outcomes.some((o) => (o.hit || (o.half && o.damage > 0)) && !o.image)
-      const landing: SoundCue = { cue: struck ? sound.impact : (sound.miss ?? 'battle.miss.magic'), delayMs: impactMs(event) }
-      return sound.release ? [{ cue: sound.release, delayMs: 0 }, landing] : [landing]
+      const at = impactMs(event)
+      const landing: SoundCue = { cue: struck ? sound.impact : (sound.miss ?? 'battle.miss.magic'), delayMs: at }
+      const cues: SoundCue[] = sound.release ? [{ cue: sound.release, delayMs: 0 }, landing] : [landing]
+      if (event.outcomes.some((o) => o.endured)) cues.push({ cue: ENDURED_CUE, delayMs: at + 60 })
+      return cues
     }
     case 'status_tick': {
       const element = STATUSES[event.status].element
-      return element ? [{ cue: elementCue(element), delayMs: 0 }] : []
+      const cues: SoundCue[] = element ? [{ cue: elementCue(element), delayMs: 0 }] : []
+      if (event.endured) cues.push({ cue: ENDURED_CUE, delayMs: 60 })
+      return cues
     }
     case 'regenerate':
       return [{ cue: 'battle.regen', delayMs: 0 }]
