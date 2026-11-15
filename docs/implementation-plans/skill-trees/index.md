@@ -58,7 +58,7 @@ The plan follows the design; where the design leaves a choice open, these settle
 | 27 | [Baseline and the v25 fixture](27-baseline-and-v25-fixture.md) | Today's figures re-measured (cells, campaigns, parity at levels 4, 8, 14); `src/game/fixtures/save-v25.json` captured by v25 code | 26 | sonnet | done (c981a25) |
 | 28 | [Perk points: the economy, plans and save v26](28-perk-points-economy.md) | Tier costs 1/2/3/4; a perk point every level; `autoAdvance` saves up; plan reorders; `migrateFrom25`, `SAVE_VERSION` 26; guard re-recorded | 27 | opus | done (a351f32, 924a808, record) |
 | 29 | [Perk points in the UI](29-perk-points-ui.md) | Cost digit on every node; "Perk points" in the panel, strip, creation and probes; e2e; two carried-forward notes | 28 | sonnet | done (3d09907) |
-| 30 | [Re-tune under costs](30-retune-under-costs.md) | First measurement, then cells, level-4 parity, the level-14 capstone cell and campaigns back in band, or the user accepts the figure; Amendment table in the feature record | 29 | opus | pending |
+| 30 | [Re-tune under costs](30-retune-under-costs.md) | First measurement, then cells, level-4 parity, the level-14 capstone cell and campaigns back in band, or the user accepts the figure; Amendment table in the feature record | 29 | opus | in progress (def1bf3, ceed2f8; SG10 1 and the evoker's level-4 parity −54 await the user) |
 | 31 | [Manual, screenshots and CLAUDE.md](31-manual-and-docs.md) | Manual's perk points and cost table; screenshots retaken; CLAUDE.md's rules restated from step 30; final gates | 30 | sonnet | pending |
 
 **Tiers.** For steps 27 to 31 the reviewer runs at the engineer's tier (feature record, Model tiers); for steps 01 to 26 the line below held. "opus" means leave the engineer's model unset (the session's); "sonnet" means `model: "sonnet"`. Opus steps change the engine's rules, the AI policy, the save migration, the economy or the balance, or carry layout judgement (06, 14). Sonnet steps follow fixed contracts and existing patterns, or measure and document. Reviewers: leave the model unset for every step.
@@ -645,15 +645,15 @@ Plans: melee `knight`, `swordmaster`, `spellsword`, `assassin`, `paladin`; arche
 
 | Figure | Band | 25 final | 27 baseline | 30 first (untuned) | 30 final |
 | --- | --- | --- | --- | --- | --- |
-| one party (`--parties 1`) | 215–250 | 243 | 243 | | |
-| default company | 220–260 | 243 | 243 | | |
-| `--ready-level 10` | 370–420 | 445 (accepted over) | 445 | | |
-| deaths a campaign (one party) | ≤ 2.0 | 1.0 | 1.0 | | |
-| days a campaign (one party) | 243–297 | 287 | 287 | | |
-| GR3 / BC3 / BC4 / BC5 | ≥ 470 / 400–470 / 430–490 / 420–490 | 500 / 455 / 462 / 484 | 500 / 455 / 462 / 484 | | |
-| SN5 / SP5 / TL5 | 410–480 / 410–480 / report | 448 / 454 / 0 | 448 / 454 / 0 | | |
-| SG7 / SG10 | 0 ± 40 / above 2 | 0 / 5 | 0 / 5 | | |
-| F1 / F2 / F3 | nearly all / most / 7 in 10 | 500 / 500 / 453 | 500 / 500 / 453 | | |
+| one party (`--parties 1`) | 215–250 | 243 | 243 | 172 | 234 |
+| default company | 220–260 | 243 | 243 | 177 | 236 |
+| `--ready-level 10` | 370–420 | 445 (accepted over) | 445 | 422 | 434 (over, below the accepted 445) |
+| deaths a campaign (one party) | ≤ 2.0 | 1.0 | 1.0 | 1.1 | 1.1 |
+| days a campaign (one party) | 243–297 | 287 | 287 | 302 | 286 |
+| GR3 / BC3 / BC4 / BC5 | ≥ 470 / 400–470 / 430–490 / 420–490 | 500 / 455 / 462 / 484 | 500 / 455 / 462 / 484 | 500 / 455 / 364 / 486 | 500 / 455 / 454 / 494 |
+| SN5 / SP5 / TL5 | 410–480 / 410–480 / report | 448 / 454 / 0 | 448 / 454 / 0 | 410 / 466 / 0 | 451 / 475 / 0 |
+| SG7 / SG10 | 0 ± 40 / above 2 | 0 / 5 | 0 / 5 | 0 / 0 | 0 / 1 (out; for the user) |
+| F1 / F2 / F3 | nearly all / most / 7 in 10 | 500 / 500 / 453 | 500 / 500 / 453 | 500 / 500 / 453 | 500 / 500 / 463 |
 
 Parity tables go in steps 27 and 30's records. Step 27's baseline equals step 25's finals exactly (unchanged code, deterministic).
 
