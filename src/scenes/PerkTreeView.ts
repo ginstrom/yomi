@@ -131,6 +131,8 @@ export class PerkTreeView {
       addPanelButton(scene, container, treeTabRect(id), treeTabLabel(character, id), () => options.onTree(id), {
         marked: id === tree,
         fontSize: 13,
+        // The scene's `onTree` sounds the turn of the tree (`ui.tab`).
+        cue: null,
       })
     }
 

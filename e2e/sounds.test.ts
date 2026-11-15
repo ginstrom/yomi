@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { useGames, type Game } from './driver.ts'
 
-const cues = async (game: Game) => (await game.page.evaluate(() => window.__yomi!.audioLog())).map((entry) => entry.cue)
+const entries = (game: Game) => game.page.evaluate(() => window.__yomi!.audioLog())
+const cues = async (game: Game) => (await entries(game)).map((entry) => entry.cue)
 
-/** The cues played by `act`, those after what was logged before it. */
+/** The cues `act` played: those logged after the last one before it, as the log keeps only its latest 50. */
 async function played(game: Game, act: () => Promise<unknown>): Promise<string[]> {
-  const before = (await cues(game)).length
+  const last = (await entries(game)).at(-1)
   await act()
-  return (await cues(game)).slice(before)
+  const after = await entries(game)
+  const from = last ? after.findLastIndex((e) => e.cue === last.cue && e.marker === last.marker && e.at === last.at) + 1 : 0
+  return after.slice(from).map((entry) => entry.cue)
 }
 
 /** A new game with `plant` (dotted paths into the saved game) set, reloaded and continued on the map. */

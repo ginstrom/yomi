@@ -453,7 +453,7 @@ export class CreationScene extends Phaser.Scene {
   }
 
   private showTree(tree: TreeId): void {
-    playCue(this, 'ui.tab')
+    if (tree !== this.tree) playCue(this, 'ui.tab')
     this.tree = tree
     this.render()
   }
