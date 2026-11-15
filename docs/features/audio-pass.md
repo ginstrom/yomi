@@ -3,7 +3,7 @@
 **Request (user's words):** "separately from the ongoing skill tree work, I'd like you to improve the quality of the sound effects, to create indie game-quality SFX. If possible I'd also like a framework for narration of cutscenes and the like, maybe using a local version of a voice model, especially one that supports emotions and other effects."
 
 - **Slug:** `audio-pass`
-- **Phase:** done, awaiting merge. Verified at `3e6b59c`; G10 and G11 (with G4–G8) passed 2026-11-14. Next: merge with `skill-trees` once that branch is finalized (user's call), following the merge note below; then push or PR on the user's go-ahead.
+- **Phase:** done and merged into local `main` (2026-11-16): `main` (skill trees, `6119591`) merged into `audio-pass` (`75bdb5b`, sound mappings `4b63427`, fixes `b5c1461`, `555bcb3`), reviewed clean (opus, round 2), then `main` fast-forwarded to it. Not pushed.
 - **Branch / worktree:** `audio-pass`, from `main` at `d18abf4`, in `.claude/worktrees/audio-pass` (kept apart from `skill-trees`)
 - **Architecture brief:** `docs/architecture/audio-pass.md` (`a82ae8f`)
 - **Design:** `docs/designs/audio-pass.md` (`84f5f35`, approved by the user)
@@ -88,7 +88,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 - Any later voiced line: check heteronyms (the user heard "winds" misread) and respell in `spoken`; rule is in `audio/CLAUDE.md`.
 - Steps 08–13: `sourcing.md` names some Kenney files loosely (`creak_001` is `creak1`; `knifeSlice`, `drawKnife`, `handleCoins` plain numbers; "Retro Electric Off" is `Retro Charge Electric Off 07_s05`), and a few Freesound cue lists differ between `sourcing.md` and `freesound-wanted.md` (review-04). Check names on disk.
 - G11: music now plays at −24 LUFS (battle 4.0 dB, world 1.7 dB louder than before); judge by ear.
-- Merging with `skill-trees` (overall review, trial `git merge-tree`): conflicts in `CLAUDE.md`, `BattleScene.ts`, `CreationScene.ts`, `InventoryScene.ts`, `sounds.ts`, `sounds.test.ts`, `testHook.ts`. Rewrite skill-trees' `sounds.test.ts` cases from `{ key: 'sfx_…' }` to cue ids; `e2e/sounds.test.ts` uses `tab === 'perkTree'`/`perkTreeButton` (skill-trees: `'trees'`); move the `ui.click`/`ui.tab`/`ui.learn` hooks from `pickSpell`, `buildSpellTree`, `K`/`toggleTree` onto skill-trees' skill menu, `openTree`, `showTree`, `onTree`. Give sounds to `restore`, `status_laid`, the status-only abilities (Hunter's Mark, Sprint), Volley/Taunt/Consecrate (AC3 catches these) and Holy Light (no element; falls back to arcane, should be holy). New spells sound by element/school automatically.
+- Merged with skill trees 2026-11-16: the new techniques and events map onto existing cues (list in the index's merge note); taste calls for a playtest: Taunt's metal clang, Holy Light/Consecrate landing on the Dawn chime, Meteor on the Fireball impact. Nit left: `ENDURED_CUE` sits between `eventSounds`'s JSDoc and the function in `sounds.ts`.
 - `yomi-audio source remove` exists since step 09.
 - Browser tests' 60 s timeout is tight under load; run the full suite with nothing else running.
 - Step 09: start `ui.click` from the fixed version in `tools/audio/tests/test_build.py` (the design's example fails the correlation and DC checks). 43 impact variants over 15 cues are peak-limited at −20.6 to −22.6 LUFS against −19 (steps 08, 10).
