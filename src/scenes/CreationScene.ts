@@ -38,6 +38,7 @@ import { PORTRAIT_SCALE, PORTRAIT_SIZE, portraitKey } from './partyPanel.ts'
 import { TREE_TAB_Y, TREE_W, draftCostTone, draftNodeClickable, draftNodeHint, legendLayout, treeForKey, treeTabRect } from './perkTree.ts'
 import { TREE_IDS, type TreeId } from '../character/trees.ts'
 import { PerkTreeView } from './PerkTreeView.ts'
+import { onceEachEvent } from './keyEvents.ts'
 
 interface CreationData {
   /** The party being built, which the screen hands back with its character added or changed. */
@@ -204,7 +205,7 @@ export class CreationScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ESC', () => this.finish(this.drafts))
     for (const released of ['pointerup', 'pointerupoutside', 'gameout']) this.input.on(released, () => this.release())
     // The name is typed, while its step shows.
-    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => this.onKey(event))
+    this.input.keyboard?.on('keydown', onceEachEvent((event: KeyboardEvent) => this.onKey(event)))
   }
 
   /** Where a tree tab sits in the panel, the tree view being raised on the perks step. */

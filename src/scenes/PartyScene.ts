@@ -13,6 +13,7 @@ import type { Rect } from './mapScroll.ts'
 import { addPanelButton, type PanelButtonLook } from './panelButton.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { PORTRAIT_SCALE, PORTRAIT_SIZE, portraitKey } from './partyPanel.ts'
+import { onceEachEvent } from './keyEvents.ts'
 
 interface PartyData {
   /** The party being built, when coming back from character creation; absent, the screen opens on its choice. */
@@ -139,7 +140,7 @@ export class PartyScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this)
     })
     this.input.keyboard?.on('keydown-ESC', () => this.onBack())
-    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => this.onKey(event))
+    this.input.keyboard?.on('keydown', onceEachEvent((event: KeyboardEvent) => this.onKey(event)))
   }
 
   /** What the in-browser tests see of the party screen; see testHook.ts. */

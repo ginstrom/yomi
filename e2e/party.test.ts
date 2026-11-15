@@ -122,6 +122,38 @@ describe('the party screen', () => {
     expect((await game.probe('Creation'))!.attributes.strength.value).toBe(stopped)
   })
 
+  it('takes a name and the encampment\'s typed fast, each letter once', async () => {
+    // Phaser replays its key queue on each key within a frame; typed quickly, "Borin" once read "BBoBoBoriiin".
+    const game = await games.open()
+    const choice = await game.openPartyScreen()
+    await game.click(choice.buttons.createOwn)
+    const roster = await game.settled('Party', (p) => p.view === 'roster')
+    for (let i = 0; i < roster.encampmentName.length; i++) await game.press('Backspace')
+    await game.page.keyboard.type('Hearthold', { delay: 0 })
+    await game.waitFor('Party', (p) => p.encampmentName.length >= 'Hearthold'.length)
+    await game.frames(3)
+    expect((await game.probe('Party'))!.encampmentName).toBe('Hearthold')
+
+    await game.click(roster.rows[0].create)
+    await game.waitForScenes(['Creation'])
+    const start = await game.settled('Creation')
+    await game.click(start.steps.name)
+    const naming = await game.waitFor('Creation', (c) => c.step === 'name')
+    // A click in the name box, then the keys as fast as they come, and as a browser automation tool sends them.
+    await game.page.mouse.click(naming.portraits[0].x, naming.portraits[0].y + 120)
+    await game.page.keyboard.type('Thessaly', { delay: 0 })
+    await game.frames(3)
+    expect((await game.probe('Creation'))!.draft.name).toBe('Thessaly')
+    for (let i = 0; i < 'Thessaly'.length; i++) await game.press('Backspace')
+    const cdp = await game.page.context().newCDPSession(game.page)
+    for (const key of 'Borin') {
+      await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key, text: key, code: `Key${key.toUpperCase()}` })
+      await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key, code: `Key${key.toUpperCase()}` })
+    }
+    await game.frames(3)
+    expect((await game.probe('Creation'))!.draft.name).toBe('Borin')
+  })
+
   it('removes a member and creates one in its place through all four steps, who then begins the game', async () => {
     const game = await games.open()
     const choice = await game.openPartyScreen()
