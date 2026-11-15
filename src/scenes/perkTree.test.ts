@@ -443,6 +443,13 @@ describe('savingLine', () => {
     )
   })
 
+  it('names the capstone as a goal, with what it still asks, while it waits on more than level and points', () => {
+    const swordsman = { ...warriorAt(10, 9), perks: { weapon_training: 1, heavy_hand: 1 } }
+    swordsman.trained.melee = 60
+    // Every open node is affordable at 9 points; Blademaster asks depth 5 too, which saving alone never brings.
+    expect(savingLine(swordsman)).toBe("Goal: Blademaster, your calling's capstone: 4 perk points, 5 nodes in Swordmaster, level 12")
+  })
+
   it('says nothing once a capstone is held and nothing open is out of reach', () => {
     const hero = warriorAt(14, 0)
     hero.perks = Object.fromEntries(PERK_IDS.map((id) => [id, 1]))

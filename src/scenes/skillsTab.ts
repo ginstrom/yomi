@@ -40,7 +40,9 @@ export interface PassiveRow {
  * Where the passives' rows sit in a list `height` pixels tall: each its title
  * and its description wrapped in full while all fit; else each description
  * cut to one line; and if even that is too many, as many rows as fit with a
- * "+N more" line (`more`, at `moreTop`) under them.
+ * "+N more" line (`more`, at `moreTop`, a gap under the last row and
+ * inside the list) under them. With nothing hidden, `moreTop` is the last
+ * row's end.
  */
 export function passiveRows(descriptions: readonly string[], height: number): { rows: PassiveRow[]; more: number; moreTop: number } {
   const stack = (all: string[][], limit: number) => {
@@ -52,13 +54,15 @@ export function passiveRows(descriptions: readonly string[], height: number): { 
       rows.push({ top, height: rowHeight, lines })
       top += rowHeight + PASSIVE_GAP
     }
-    return { rows, top }
+    // The end of the last row, its trailing gap not counted.
+    return { rows, top: Math.max(0, top - PASSIVE_GAP) }
   }
   const full = stack(descriptions.map((text) => wrapLines(text, PASSIVE_LINE_CHARS)), height)
   if (full.rows.length === descriptions.length) return { rows: full.rows, more: 0, moreTop: full.top }
   const cut = descriptions.map((text) => [clampLines(text, 1, PASSIVE_LINE_CHARS)])
   const all = stack(cut, height)
   if (all.rows.length === descriptions.length) return { rows: all.rows, more: 0, moreTop: all.top }
-  const some = stack(cut, height - MORE_H)
-  return { rows: some.rows, more: descriptions.length - some.rows.length, moreTop: some.top }
+  // Room for the "+N more" line, a gap under the last row.
+  const some = stack(cut, height - MORE_H - PASSIVE_GAP)
+  return { rows: some.rows, more: descriptions.length - some.rows.length, moreTop: some.top + PASSIVE_GAP }
 }

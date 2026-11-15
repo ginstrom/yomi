@@ -38,7 +38,7 @@ import {
   isTagged,
   raiseSkill,
   skillLevel,
-  skillRaiseCost,
+  skillRaiseRefusal,
   type SkillId,
 } from '../character/skills.ts'
 import { formatDamage, type CombatantStats } from '../combat/combat.ts'
@@ -173,6 +173,8 @@ const SKILLS_X = 24
 const SKILLS_W = 320
 const SKILL_ROW_Y = 104
 const SKILL_ROW_H = 52
+/** Where a greyed "+" says why it refuses, under the skills' rules and clear of the panel's foot. */
+const RAISE_HINT_Y = 440
 const RAISE_SIZE = 22
 const PERKS_X = 368
 const PERKS_W = PANEL_W - PERKS_X - 20
@@ -288,6 +290,8 @@ export class InventoryScene extends Phaser.Scene {
   private abilityRowTexts: Phaser.GameObjects.Text[][] = []
   /** The Skills tab's passives as drawn, each its title and description lines, for the probe. */
   private passiveTexts: Phaser.GameObjects.Text[][] = []
+  /** Why the greyed "+" pointed at refuses a raise, under the skills' rules; empty otherwise. */
+  private raiseHint: Phaser.GameObjects.Text | null = null
   /** The tree view while it is built, for the probe's strip. */
   private treeView: PerkTreeView | null = null
   private exchangeFor: InventoryData['exchange'] | null = null
@@ -448,6 +452,7 @@ export class InventoryScene extends Phaser.Scene {
       tooltip: this.tooltipLines,
       takenPerks: this.takenPerks().map((id) => ({ perk: id, ranks: perkRanks(this.character, id) })),
       skillPointsLine: skillPointsLine(this.character, this.canAdvance).text,
+      raiseHint: this.raiseHint?.active ? this.raiseHint.text : '',
       passiveBounds: this.passiveTexts.map((texts) => boundsOf(texts)),
       treeStrip: this.treeView?.stripLines() ?? [],
       treesButton: onScreen(TREE_BUTTON),
@@ -705,8 +710,7 @@ export class InventoryScene extends Phaser.Scene {
 
   /** Whether a click would raise `skill` now. */
   private canRaise(skill: SkillId): boolean {
-    const cost = skillRaiseCost(this.character, skill)
-    return this.canAdvance && cost !== null && cost <= this.character.skillPoints
+    return this.canAdvance && skillRaiseRefusal(this.character, skill) === null
   }
 
   /** Whether a click on `perk` in the tree view would take it now: with its perk points, on the world map, its asks met. */
@@ -759,6 +763,13 @@ export class InventoryScene extends Phaser.Scene {
       ])
       if (this.canAdvance && skillPoints > 0) this.buildRaiseButton(id, button)
     })
+    this.raiseHint = this.add.text(SKILLS_X, RAISE_HINT_Y, '', {
+      fontFamily: FONT,
+      fontSize: '12px',
+      color: WARN,
+      wordWrap: { width: SKILLS_W },
+    })
+    this.skillsContent.add(this.raiseHint)
 
     const rules = [
       `A skill point raises a skill by 1%, or a tagged one by ${TAGGED_SKILL_STEP}%. ${SKILL_COST_TIERS.map(({ level, cost }) => `From ${level}%, a raise costs ${cost} skill points.`).join(' ')} Points raise no skill past ${MAX_SKILL}%.`,
@@ -786,7 +797,13 @@ export class InventoryScene extends Phaser.Scene {
       .text(x, y, '+', { fontFamily: FONT, fontSize: '16px', color: enabled ? GOLD : FAINT })
       .setOrigin(0.5)
     this.skillsContent.add([bg, plus])
-    if (!enabled) return
+    if (!enabled) {
+      // A greyed "+" says why when pointed at: the skill at 100%, or too few points for the raise.
+      bg.setInteractive()
+      bg.on('pointerover', () => this.raiseHint?.setText(skillRaiseRefusal(this.character, skill) ?? ''))
+      bg.on('pointerout', () => this.raiseHint?.setText(''))
+      return
+    }
     bg.setInteractive({ useHandCursor: true })
     bg.on('pointerdown', () => this.advance(() => raiseSkill(this.character, skill)))
   }

@@ -51,4 +51,12 @@ describe('passiveRows', () => {
     expect(lots.moreTop + 14).toBeLessThanOrEqual(340)
     expect(lots.rows.at(-1)!.top + lots.rows.at(-1)!.height).toBeLessThanOrEqual(lots.moreTop)
   })
+
+  it('keeps the "+N more" line inside the list at any height, the gap under the last row counted', () => {
+    for (let height = 280; height <= 360; height++) {
+      const { more, moreTop } = passiveRows(Array.from({ length: 20 }, () => long), height)
+      expect(more).toBeGreaterThan(0)
+      expect(moreTop + 14).toBeLessThanOrEqual(height)
+    }
+  })
 })

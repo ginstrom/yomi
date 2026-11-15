@@ -412,6 +412,8 @@ export interface InventoryProbe {
   takenPerks: Array<{ perk: string; ranks: number }>
   /** The Skills tab's line over the skills: "3 skill points to spend" while a raise can be made here, else "Skill points: N". */
   skillPointsLine: string
+  /** Why the greyed "+" pointed at refuses a raise (`skillRaiseRefusal`), shown under the skills; empty when none is pointed at. */
+  raiseHint: string
   /** The Skills tab's passives as drawn, each its name and description lines' bounds on screen together. */
   passiveBounds: Rect[]
   /** The tree view's strip as it reads now (the rule and the saving line with the pointer on no node); empty before the view is first built. */

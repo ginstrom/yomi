@@ -20,7 +20,7 @@ import {
   type Perk,
   type PerkId,
 } from '../character/perks.ts'
-import { affordableAt, canAffordPerk } from '../character/progression.ts'
+import { affordableAt, canAffordPerk, waitsOnlyForLevel } from '../character/progression.ts'
 import type { Point } from './boardGeometry.ts'
 import { PATHS, TIERS, TREES, TREE_IDS, calling, capstoneOf, pathDepth, pathsOf, treeNodes, type PathId, type Tier, type TreeId } from '../character/trees.ts'
 
@@ -355,7 +355,10 @@ export function nodeHint(character: Character, perk: PerkId, canAdvance: boolean
  * pointer on no node: the cheapest open node the hero cannot yet afford (the
  * first in `PERKS` order on a tie), "Saving: Pin (3 perk points) is yours at
  * level 11"; else, while it holds no capstone, the capstone of its calling
- * (the first path of a tie), at its tier's level at the soonest; else null.
+ * (the first path of a tie): at its tier's level at the soonest when only the
+ * level and the points wait (`waitsOnlyForLevel`), else as a goal with what
+ * it still asks ("Goal: Blademaster, your calling's capstone: 4 perk points,
+ * 5 nodes in Swordmaster, level 12"); else null.
  */
 export function savingLine(character: Character): string | null {
   const dear = availablePerks(character).filter((perk) => !canAffordPerk(character, perk))
@@ -367,8 +370,17 @@ export function savingLine(character: Character): string | null {
   if (!path || capstoneOf(character)) return null
   const capstone = PERK_IDS.find((id) => (PERKS[id] as Perk).path === path && (PERKS[id] as Perk).tier === 'capstone')
   if (!capstone) return null
-  const level = Math.max(affordableAt(character, capstone), TIERS.capstone.level)
-  return `Saving: ${PERKS[capstone].name}, your calling's capstone (${perkPointWords(perkCost(capstone))}), is yours at level ${level}`
+  const name = PERKS[capstone].name
+  if (waitsOnlyForLevel(character, capstone)) {
+    const level = Math.max(affordableAt(character, capstone), TIERS.capstone.level)
+    return `Saving: ${name}, your calling's capstone (${perkPointWords(perkCost(capstone))}), is yours at level ${level}`
+  }
+  // It asks more than saving brings (depth, a skill, an attribute): a goal, with what is still lacking, the level last.
+  const lacking = missingRequirements(character, capstone)
+  const levelAsk = lacking.filter((ask) => ask.startsWith('Level '))
+  const rest = lacking.filter((ask) => !ask.startsWith('Level '))
+  const asks = [perkPointWords(perkCost(capstone)), ...rest, ...levelAsk.map((ask) => ask.toLowerCase())]
+  return `Goal: ${name}, your calling's capstone: ${asks.join(', ')}`
 }
 
 /**

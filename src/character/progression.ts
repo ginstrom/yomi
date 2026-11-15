@@ -261,7 +261,7 @@ export function planFor(character: Character): PlanId {
  * its level were higher: nothing but the level lacking, no attribute capped.
  * No other ask reads the level, so raising it alone is the check.
  */
-function waitsOnlyForLevel(character: Character, perk: PerkId): boolean {
+export function waitsOnlyForLevel(character: Character, perk: PerkId): boolean {
   return qualifiesFor({ ...character, level: Math.max(character.level, perkLevel(perk)) }, perk)
 }
 

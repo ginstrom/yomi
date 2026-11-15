@@ -492,8 +492,8 @@ describe('a hero’s panel', () => {
     // Shield Wall, Rooted and Iron Skin (Heavy Knight), and Armour Breaker: seven passives with the three of creation.
     await game.click(skills.treesButton)
     const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees' && p.tree === 'warrior')
-    // With the pointer on no node, the strip says when saving next pays: here, the calling's capstone.
-    expect(tree.treeStrip.at(-1)).toBe("Saving: Blademaster, your calling's capstone (4 perk points), is yours at level 12")
+    // With the pointer on no node, the strip says what saving is for: here the calling's capstone, a goal while it asks Melee and depth too.
+    expect(tree.treeStrip.at(-1)).toBe("Goal: Blademaster, your calling's capstone: 4 perk points, Melee 70%, 5 nodes in Swordmaster, level 12")
     for (const [perk, left] of [['shield_wall', 8], ['rooted', 6], ['iron_skin', 3], ['armor_breaker', 1]] as const) {
       await game.click((await game.probe('Inventory'))!.perks.find((n) => n.perk === perk)!)
       await game.waitFor('Inventory', (p) => p.perkPoints === left)
@@ -509,11 +509,20 @@ describe('a hero’s panel', () => {
       expect(row.y + row.height).toBeLessThan(listed.treesButton.y - 16)
     }
 
-    // Every skill point spent, the prompt on the map is gone; the perk point left is too few for any open node.
-    for (let left = listed.skillPoints; left > 0; left--) {
-      await game.click((await game.probe('Inventory'))!.skills.archery)
-      await game.waitFor('Inventory', (p) => p.skillPoints === left - 1)
+    // Melee raised past 80%, where a raise costs 2, and the points spent on Archery down to the last: Melee's "+" greys and says why.
+    const spend = async (skill: 'melee' | 'archery') => {
+      const before = (await game.probe('Inventory'))!
+      await game.click(before.skills[skill])
+      return game.waitFor('Inventory', (p) => p.skillPoints < before.skillPoints)
     }
+    let now = listed
+    while (now.skills.melee.level < 80) now = await spend('melee')
+    while (now.skillPoints > 1) now = await spend('archery')
+    expect(now.skills.melee.canRaise).toBe(false)
+    await game.hover(now.skills.melee)
+    expect((await game.waitFor('Inventory', (p) => p.raiseHint !== '')).raiseHint).toBe('Needs 2 skill points; you have 1')
+    // Every skill point spent, the prompt on the map is gone; the perk point left is too few for any open node.
+    await spend('archery')
     expect((await game.probe('Inventory'))!.skillPointsLine).toBe('Skill points: 0')
     await game.press('Escape')
     await game.waitForScenes(['World'])
