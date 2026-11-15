@@ -1,7 +1,7 @@
 # Feature: skill trees and progression
 
 **Slug:** skill-trees
-**Phase:** 6 — done and verified at b074c7e (the base feature and the node-cost amendment). Not pushed; a PR waits on the user.
+**Phase:** 6, done: merged into main as PR #7 (merge c0044f0, 2026-11-15).
 
 ## Request (user's words)
 
