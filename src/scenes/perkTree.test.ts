@@ -34,6 +34,7 @@ import {
   draftNodeClickable,
   draftNodeHint,
   nodeHint,
+  savingLine,
   nodeLabel,
   nodeRect,
   nodeState,
@@ -421,6 +422,34 @@ describe('nodeLabel', () => {
   })
 })
 
+describe('savingLine', () => {
+  it('says when the cheapest open node the hero cannot yet afford comes within reach', () => {
+    // At level 3 with no points, the cheapest open nodes are the tier 1s at 1: the first in PERKS order, at level 4.
+    const first = PERK_IDS.find((id) => (PERKS[id] as Perk).tier === 1)!
+    expect(savingLine(warriorAt(3))).toBe(`Saving: ${PERKS[first].name} (1 perk point) is yours at level 4`)
+    // With 2 points every open tier 1 and 2 is affordable; Pin, at 3, is the cheapest that is not.
+    const knight = { ...warriorAt(9, 2), perks: { toughness: 1, rooted: 1, taunt: 1 } }
+    knight.trained.melee = 40
+    expect(savingLine(knight)).toMatch(/^Saving: .+ \(3 perk points\) is yours at level 10$/)
+  })
+
+  it("falls back to the capstone of the calling once every open node is affordable, at its tier's level at the soonest", () => {
+    const knight = { ...warriorAt(9, 3), perks: { toughness: 1, shield_wall: 1, rooted: 1, taunt: 1, iron_skin: 1 } }
+    expect(savingLine(knight)).toBe("Saving: Unbreakable, your calling's capstone (4 perk points), is yours at level 12")
+    expect(savingLine({ ...knight, level: 12, perkPoints: 0 })).toMatch(/^Saving: .+ \(1 perk point\) is yours at level 13$/)
+    // Nothing open is dear at 3 points, until the capstone is open at 12 and asks 4: the line names it, at 13.
+    expect(savingLine({ ...knight, level: 12, perkPoints: 3, perks: { ...knight.perks, pin: 1, guardian: 1 } })).toBe(
+      'Saving: Unbreakable (4 perk points) is yours at level 13',
+    )
+  })
+
+  it('says nothing once a capstone is held and nothing open is out of reach', () => {
+    const hero = warriorAt(14, 0)
+    hero.perks = Object.fromEntries(PERK_IDS.map((id) => [id, 1]))
+    expect(savingLine(hero)).toBeNull()
+  })
+})
+
 describe('nodeHint', () => {
   it('offers an open node it can afford for a click where perk points can be spent', () => {
     expect(nodeHint(warriorAt(3, 1), 'toughness', true)).toBe('Click to take (1 of your 1 perk point)')
@@ -431,10 +460,10 @@ describe('nodeHint', () => {
   })
 
   it('says how many perk points an open node needs and the level saving alone reaches it', () => {
-    expect(nodeHint(warriorAt(3), 'toughness', true)).toBe('Needs 1 perk point; you have 0 (level 4)')
+    expect(nodeHint(warriorAt(3), 'toughness', true)).toBe('Needs 1 perk point; you have 0 — affordable at level 4')
     const knight = { ...warriorAt(9, 1), perks: { toughness: 1, rooted: 1, taunt: 1 } }
     knight.trained.melee = 40
-    expect(nodeHint(knight, 'pin', true)).toBe('Needs 3 perk points; you have 1 (level 11)')
+    expect(nodeHint(knight, 'pin', true)).toBe('Needs 3 perk points; you have 1 — affordable at level 11')
     expect(nodeHint(knight, 'pin', false)).toBe('Perk points are spent on the world map')
   })
 

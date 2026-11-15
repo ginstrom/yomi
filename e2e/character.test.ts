@@ -474,6 +474,53 @@ describe('a hero’s panel', () => {
     expect((await game.waitFor('World')).party[0].canAdvance).toBe(true)
   })
 
+  it('prompts for points to spend, says when saving pays, and lists many passives without overlap', async () => {
+    const game = await games.open()
+    await game.resize(840, 560)
+    await game.newGame()
+    const xpTo = (level: number) => Array.from({ length: level - 1 }, (_, i) => xpToNextLevel(i + 1)).reduce((a, b) => a + b, 0)
+    await debugCommand(game, `xp ${xpTo(10)} Aldric`)
+    const world = await game.waitFor('World', (w) => w.party[0].level === 10)
+    expect(world.message).toBe('Aldric has points to spend: click the portrait marked "+".')
+
+    await game.click(world.party[0])
+    await game.waitForScenes(['Inventory'], ['World'])
+    const skills = await game.waitFor('Inventory', (p) => p.tab === 'skills')
+    expect(skills.skillPointsLine).toBe(`${skills.skillPoints} skill points to spend`)
+    expect(skills.perkPoints).toBe(9)
+
+    // Shield Wall, Rooted and Iron Skin (Heavy Knight), and Armour Breaker: seven passives with the three of creation.
+    await game.click(skills.treesButton)
+    const tree = await game.waitFor('Inventory', (p) => p.tab === 'trees' && p.tree === 'warrior')
+    // With the pointer on no node, the strip says when saving next pays: here, the calling's capstone.
+    expect(tree.treeStrip.at(-1)).toBe("Saving: Blademaster, your calling's capstone (4 perk points), is yours at level 12")
+    for (const [perk, left] of [['shield_wall', 8], ['rooted', 6], ['iron_skin', 3], ['armor_breaker', 1]] as const) {
+      await game.click((await game.probe('Inventory'))!.perks.find((n) => n.perk === perk)!)
+      await game.waitFor('Inventory', (p) => p.perkPoints === left)
+    }
+    await game.click(tree.back)
+    const listed = await game.waitFor('Inventory', (p) => p.tab === 'skills')
+    expect(listed.takenPerks).toHaveLength(7)
+    const rows = listed.passiveBounds
+    expect(rows).toHaveLength(7)
+    for (const [i, row] of rows.entries()) {
+      const next = rows[i + 1]
+      if (next) expect(row.y + row.height).toBeLessThanOrEqual(next.y)
+      expect(row.y + row.height).toBeLessThan(listed.treesButton.y - 16)
+    }
+
+    // Every skill point spent, the prompt on the map is gone; the perk point left is too few for any open node.
+    for (let left = listed.skillPoints; left > 0; left--) {
+      await game.click((await game.probe('Inventory'))!.skills.archery)
+      await game.waitFor('Inventory', (p) => p.skillPoints === left - 1)
+    }
+    expect((await game.probe('Inventory'))!.skillPointsLine).toBe('Skill points: 0')
+    await game.press('Escape')
+    await game.waitForScenes(['World'])
+    const after = await game.waitFor('World')
+    expect(after.message).toBe(after.party[0].canAdvance ? 'Aldric has points to spend: click the portrait marked "+".' : '')
+  })
+
   it('takes a tier-2 node from the tree with the perk points that the second and third levels bring', async () => {
     // A seed with which the simple player of `fightBattle` wins all three battles, unlevelled as it goes.
     const game = await games.open({ seed: 2 })

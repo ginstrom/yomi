@@ -5,7 +5,7 @@ import { newExpedition } from '../game/expedition.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { readyMadeParty } from '../game/party.ts'
 import type { MonsterLocation } from '../game/worldMap.ts'
-import { describeDays, describeOthers, describeStanding, describePartyEvent, describeWalk, describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
+import { advanceMessage, describeDays, describeOthers, describeStanding, describePartyEvent, describeWalk, describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
 
 const spawned: WorldEvent = { type: 'spawned', location: 'spawn_1', name: 'Kobold Nest', at: { q: 0, r: 0 }, threat: 2 }
 const sighted: WorldEvent = { ...spawned, type: 'sighted' }
@@ -189,5 +189,16 @@ describe('describeStanding', () => {
     expect(describeStanding(game, game.parties[0], monsters)).toBe(`You stand before the ${monsters.name} (threat ${monsters.threat}).`)
     game.parties.push({ ...newExpedition(readyMadeParty(), game.parties[0].position), id: 'party_2', name: 'Second Company' })
     expect(describeStanding(game, game.parties[1], monsters)).toBe(`Second Company stands before the ${monsters.name} (threat ${monsters.threat}).`)
+  })
+})
+
+describe('advanceMessage', () => {
+  it('names the one hero with points to spend, or counts several, and says what the "+" is', () => {
+    const party = readyMadeParty()
+    expect(advanceMessage(party)).toBe('')
+    party[0].skillPoints = 2
+    expect(advanceMessage(party)).toBe('Aldric has points to spend: click the portrait marked "+".')
+    party[2].perkPoints = 1
+    expect(advanceMessage(party)).toBe('2 heroes have points to spend: click a portrait marked "+".')
   })
 })

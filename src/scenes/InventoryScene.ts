@@ -30,6 +30,7 @@ import { canAffordPerk, takePerk, xpToNextLevel } from '../character/progression
 import { castOnWorldMap, healsOne, worldHealing, worldSpells } from '../character/worldCasting.ts'
 import { SPELLS, type HeroSpellId, type SpellId } from '../combat/spells.ts'
 import {
+  MAX_SKILL,
   SKILL_COST_TIERS,
   SKILLS,
   SKILL_IDS,
@@ -57,8 +58,9 @@ import { isSecondaryClick } from './clicks.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook } from './unitLook.ts'
-import { PARTY_PANEL_W, portraitKey } from './partyPanel.ts'
-import { NODE_H, NODE_W, clampLines, costTone, nodeHint, openingTree, perkTitle, treeForKey } from './perkTree.ts'
+import { ADVANCE_COLOR, PARTY_PANEL_W, portraitKey } from './partyPanel.ts'
+import { PASSIVE_LINE_H, PASSIVE_TITLE_H, passiveRows, skillPointsLine } from './skillsTab.ts'
+import { NODE_H, NODE_W, clampLines, costTone, nodeHint, openingTree, perkTitle, savingLine, treeForKey } from './perkTree.ts'
 import { PerkTreeView } from './PerkTreeView.ts'
 import { heroTitle, type TreeId } from '../character/trees.ts'
 import { ABILITY_DESCRIPTION_LINES, ABILITY_LIST, abilityCostLine, abilityPages, abilityRowPlace, abilityRowRect, abilityRows } from './abilityList.ts'
@@ -175,8 +177,10 @@ const RAISE_SIZE = 22
 const PERKS_X = 368
 const PERKS_W = PANEL_W - PERKS_X - 20
 const PERK_ROW_Y = 104
-const PERK_ROW_H = 38
 const TREE_BUTTON = { x: PERKS_X + PERKS_W / 2, y: 462, width: 160, height: 32 }
+/** The passives' list (`passiveRows`), from under the heading to above the Skill Trees button. */
+const PASSIVES_TOP = PERK_ROW_Y - 15
+const PASSIVES_BOTTOM = TREE_BUTTON.y - TREE_BUTTON.height / 2 - 8
 
 /** The tree view's button back, beside its tabs; the tree itself is `PerkTreeView`'s. */
 const BACK_BUTTON = { x: PANEL_W - 20 - 40, y: 75, width: 80, height: 24 }
@@ -282,6 +286,10 @@ export class InventoryScene extends Phaser.Scene {
   private abilityPage = 0
   private abilityManaLine = ''
   private abilityRowTexts: Phaser.GameObjects.Text[][] = []
+  /** The Skills tab's passives as drawn, each its title and description lines, for the probe. */
+  private passiveTexts: Phaser.GameObjects.Text[][] = []
+  /** The tree view while it is built, for the probe's strip. */
+  private treeView: PerkTreeView | null = null
   private exchangeFor: InventoryData['exchange'] | null = null
   private exchangeAt: Rect | null = null
   private resumeKey: NonNullable<InventoryData['resume']> = 'Battle'
@@ -439,6 +447,9 @@ export class InventoryScene extends Phaser.Scene {
       statLines: this.statLines(),
       tooltip: this.tooltipLines,
       takenPerks: this.takenPerks().map((id) => ({ perk: id, ranks: perkRanks(this.character, id) })),
+      skillPointsLine: skillPointsLine(this.character, this.canAdvance).text,
+      passiveBounds: this.passiveTexts.map((texts) => boundsOf(texts)),
+      treeStrip: this.treeView?.stripLines() ?? [],
       treesButton: onScreen(TREE_BUTTON),
       back: onScreen(BACK_BUTTON),
       tree: this.tree,
@@ -459,15 +470,7 @@ export class InventoryScene extends Phaser.Scene {
       abilityPages: abilityPages(abilityRows(this.character).length),
       abilityPager:
         abilityPages(abilityRows(this.character).length) > 1 ? { prev: onScreen(PAGE_PREV), next: onScreen(PAGE_NEXT) } : null,
-      abilityRowBounds: this.abilityRowTexts.map((texts) => {
-        const boxes = texts.map((text) => text.getBounds())
-        const left = Math.min(...boxes.map((b) => b.x))
-        const top = Math.min(...boxes.map((b) => b.y))
-        const right = Math.max(...boxes.map((b) => b.x + b.width))
-        const bottom = Math.max(...boxes.map((b) => b.y + b.height))
-        // getBounds is in world space, the panel's scale and place included.
-        return { x: left, y: top, width: right - left, height: bottom - top }
-      }),
+      abilityRowBounds: this.abilityRowTexts.map((texts) => boundsOf(texts)),
       title: heroTitle(this.character),
       spells: knownSpells(this.character).map((spell, i) => ({
         ...onScreen(this.castButtonAt(i)),
@@ -718,11 +721,12 @@ export class InventoryScene extends Phaser.Scene {
 
   private buildSkills(): void {
     const { skillPoints } = this.character
+    const line = skillPointsLine(this.character, this.canAdvance)
     const points = this.add
-      .text(SKILLS_X + SKILLS_W, 66, `Skill points: ${skillPoints}`, {
+      .text(SKILLS_X + SKILLS_W, 66, line.text, {
         fontFamily: FONT,
         fontSize: '14px',
-        color: skillPoints > 0 ? GOLD : DIM,
+        color: line.attention ? ADVANCE_COLOR : skillPoints > 0 ? GOLD : DIM,
       })
       .setOrigin(1, 0)
     this.skillsContent.add([this.heading('Skills', SKILLS_X, 66), points])
@@ -757,10 +761,10 @@ export class InventoryScene extends Phaser.Scene {
     })
 
     const rules = [
-      `A skill point raises a skill by 1%, or a tagged one by ${TAGGED_SKILL_STEP}%. ${SKILL_COST_TIERS.map(({ level, cost }) => `From ${level}%, a raise costs ${cost} points.`).join(' ')}`,
+      `A skill point raises a skill by 1%, or a tagged one by ${TAGGED_SKILL_STEP}%. ${SKILL_COST_TIERS.map(({ level, cost }) => `From ${level}%, a raise costs ${cost} skill points.`).join(' ')} Points raise no skill past ${MAX_SKILL}%.`,
       this.canAdvance
         ? 'Every level brings skill points.'
-        : 'Skill points and perks are spent on the world map, in this panel.',
+        : 'Skill points and perk points are spent on the world map, in this panel.',
     ]
     this.skillsContent.add(
       this.add.text(SKILLS_X, SKILL_ROW_Y + SKILL_IDS.length * SKILL_ROW_H, rules.join('\n\n'), {
@@ -835,21 +839,28 @@ export class InventoryScene extends Phaser.Scene {
     const taken = this.takenPerks()
     if (taken.length === 0) {
       this.skillsContent.add(
-        this.add.text(PERKS_X, PERK_ROW_Y - 15, 'No passives yet.', { fontFamily: FONT, fontSize: '13px', color: FAINT }),
+        this.add.text(PERKS_X, PASSIVES_TOP, 'No passives yet.', { fontFamily: FONT, fontSize: '13px', color: FAINT }),
       )
     }
-    taken.forEach((id, row) => {
-      const y = PERK_ROW_Y + row * PERK_ROW_H
-      this.skillsContent.add([
-        this.add.text(PERKS_X, y - 15, perkTitle(this.character, id), { fontFamily: FONT, fontSize: '13px', color: GOLD }),
-        this.add.text(PERKS_X, y + 1, PERKS[id].description, {
-          fontFamily: FONT,
-          fontSize: '11px',
-          color: DIM,
-          wordWrap: { width: PERKS_W },
-        }),
-      ])
+    const { rows, more, moreTop } = passiveRows(
+      taken.map((id) => PERKS[id].description),
+      PASSIVES_BOTTOM - PASSIVES_TOP,
+    )
+    this.passiveTexts = rows.map(({ top, lines }, row) => {
+      const y = PASSIVES_TOP + top
+      return [
+        this.add.text(PERKS_X, y, perkTitle(this.character, taken[row]), { fontFamily: FONT, fontSize: '13px', color: GOLD }),
+        ...lines.map((line, i) =>
+          this.add.text(PERKS_X, y + PASSIVE_TITLE_H + i * PASSIVE_LINE_H, line, { fontFamily: FONT, fontSize: '11px', color: DIM }),
+        ),
+      ]
     })
+    this.skillsContent.add(this.passiveTexts.flat())
+    if (more > 0) {
+      this.skillsContent.add(
+        this.add.text(PERKS_X, PASSIVES_TOP + moreTop, `+${more} more: see the Skill Trees`, { fontFamily: FONT, fontSize: '11px', color: FAINT }),
+      )
+    }
     this.buildPanelButton(this.skillsContent, TREE_BUTTON, 'Skill Trees', this.pointsToSpend(), () => this.openTree())
   }
 
@@ -859,7 +870,7 @@ export class InventoryScene extends Phaser.Scene {
   private buildPerkTree(): void {
     this.buildPerkStatus(this.treeContent, BACK_BUTTON.x - BACK_BUTTON.width / 2 - 16, BACK_BUTTON.y - 9)
     this.buildPanelButton(this.treeContent, BACK_BUTTON, 'Back', false, () => this.showTab(TREE_OF[this.activeTab] ?? 'skills'))
-    new PerkTreeView(this, this.treeContent, {
+    this.treeView = new PerkTreeView(this, this.treeContent, {
       tree: this.tree,
       character: this.character,
       clickable: (perk) => this.canTake(perk),
@@ -869,6 +880,7 @@ export class InventoryScene extends Phaser.Scene {
       costTone: (perk) => costTone(this.character, perk, this.canAdvance),
       hint: (perk) => nodeHint(this.character, perk, this.canAdvance),
       rule: TREE_RULE,
+      ruleNote: savingLine(this.character),
     })
   }
 
@@ -1498,4 +1510,14 @@ export class InventoryScene extends Phaser.Scene {
     this.scene.stop()
     this.scene.resume(this.resumeKey, { member: this.index })
   }
+}
+
+/** The bounds on screen of `texts` together; getBounds is in world space, the panel's scale and place included. */
+function boundsOf(texts: readonly Phaser.GameObjects.Text[]): { x: number; y: number; width: number; height: number } {
+  const boxes = texts.map((text) => text.getBounds())
+  const left = Math.min(...boxes.map((b) => b.x))
+  const top = Math.min(...boxes.map((b) => b.y))
+  const right = Math.max(...boxes.map((b) => b.x + b.width))
+  const bottom = Math.max(...boxes.map((b) => b.y + b.height))
+  return { x: left, y: top, width: right - left, height: bottom - top }
 }

@@ -89,6 +89,8 @@ export interface PerkTreeOptions {
   hint(perk: PerkId): string
   /** What the strip says with the pointer on no node. */
   rule: string
+  /** A line in gold under the rule, with the pointer on no node: when saving next pays for something (`savingLine`). */
+  ruleNote?: string | null
 }
 
 /**
@@ -270,13 +272,18 @@ export class PerkTreeView {
     })
   }
 
+  /** The strip's texts as they read now, the empty ones left out, for a scene's probe. */
+  stripLines(): string[] {
+    return this.strip.map((text) => text.text).filter((text) => text !== '')
+  }
+
   /** Fills the strip for the node pointed at, a line under another, or with the rule when there is none. */
   private describe(perk: PerkId | null): void {
     const [what, asks, hint] = this.strip
     if (perk === null) {
       what.setText(this.options.rule).setColor(DIM)
       asks.setText('')
-      hint.setText('')
+      hint.setText(this.options.ruleNote ?? '').setY(what.y + what.height + 4)
       return
     }
     what.setText(clampLines(nodeSummary(this.options.character, perk))).setColor(TEXT)

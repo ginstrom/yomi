@@ -7,6 +7,7 @@ import { draftCharacter, perkPointsLeft, togglePerk, type CharacterDraft } from 
 import {
   PERKS,
   PERK_IDS,
+  availablePerks,
   cappedAttribute,
   describePerkRequirements,
   missingRequirements,
@@ -346,7 +347,28 @@ export function nodeHint(character: Character, perk: PerkId, canAdvance: boolean
   if (!canAdvance) return 'Perk points are spent on the world map'
   const cost = perkCost(perk)
   if (canAffordPerk(character, perk)) return `Click to take (${cost} of your ${perkPointWords(character.perkPoints)})`
-  return `Needs ${perkPointWords(cost)}; you have ${character.perkPoints} (level ${affordableAt(character, perk)})`
+  return `Needs ${perkPointWords(cost)}; you have ${character.perkPoints} — affordable at level ${affordableAt(character, perk)}`
+}
+
+/**
+ * When saving next pays for something, for the strip under the tree with the
+ * pointer on no node: the cheapest open node the hero cannot yet afford (the
+ * first in `PERKS` order on a tie), "Saving: Pin (3 perk points) is yours at
+ * level 11"; else, while it holds no capstone, the capstone of its calling
+ * (the first path of a tie), at its tier's level at the soonest; else null.
+ */
+export function savingLine(character: Character): string | null {
+  const dear = availablePerks(character).filter((perk) => !canAffordPerk(character, perk))
+  if (dear.length > 0) {
+    const next = dear.reduce((best, perk) => (affordableAt(character, perk) < affordableAt(character, best) ? perk : best))
+    return `Saving: ${PERKS[next].name} (${perkPointWords(perkCost(next))}) is yours at level ${affordableAt(character, next)}`
+  }
+  const path = calling(character)[0]
+  if (!path || capstoneOf(character)) return null
+  const capstone = PERK_IDS.find((id) => (PERKS[id] as Perk).path === path && (PERKS[id] as Perk).tier === 'capstone')
+  if (!capstone) return null
+  const level = Math.max(affordableAt(character, capstone), TIERS.capstone.level)
+  return `Saving: ${PERKS[capstone].name}, your calling's capstone (${perkPointWords(perkCost(capstone))}), is yours at level ${level}`
 }
 
 /**
