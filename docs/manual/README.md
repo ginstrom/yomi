@@ -72,7 +72,7 @@ There are three skills, each a percentage:
 - **Archery**: your chance to hit with a bow.
 - **Magic**: your chance of landing a spell or a wand shot. Spell nodes also require a minimum Magic.
 
-Skills start low and are set by attributes alone. **Tag** one skill: tagging adds 20% to it and makes each skill point raise it by 2% instead of 1%. You then have **10 skill points** to place. From 80% a raise costs 2 points, and from 90% it costs 3.
+Skills start low and are set by attributes alone. **Tag** one skill: tagging adds 20% to it and makes each skill point raise it by 2% instead of 1%. You then have **10 skill points** to place. From 80% a raise costs 2 points, and from 90% it costs 3. Skill points raise no skill past **100%**.
 
 An untrained skill sits near 10%, and against an armoured foe that becomes the minimum 5% chance to hit. A hero who specialises (tags a skill, puts all 10 points into it and takes its skill perk) starts at around 60%.
 
@@ -173,7 +173,7 @@ When you walk onto a monster lair, the footer offers three actions:
 
 You can also click a hex to walk away.
 
-**Bandits.** Not every lair holds monsters. Bandits hold the **Bandit Camp** (threat 3) and the **Bandit Hideout** (threat 4), and new **Bandit Gangs** appear where the blight breeds lairs of threat 3 or more. Bandits are people, built the way your heroes are, and always led by a Captain with sword, shield and breastplate. At threat 3 a Brute with a battle axe and breastplate fights beside him; at threat 4 a Hedge-Mage takes the Brute's place, casting Magic Arrow, Flame Arrow and Shield and healing; at threat 5 a Bandit Archer takes the Hedge-Mage's place, standing back with a bow and shooting. They have a hero's hit points, the Captain and the Brute a hero's armour, and at threat 5 they carry Fine gear. Further out still, beyond threat 5, four bandits take the field together, a **Crossbowman** among them whose bolts punch through armour, all in Fine steel. Expect a hard fight against a party of your level: bring a heavy weapon, or spells, for the armoured ones, and close in on the Archer and the Hedge-Mage, who wear none.
+**Bandits.** Not every lair holds monsters. Bandits hold the **Bandit Camp** (threat 3) and the **Bandit Hideout** (threat 4), and new **Bandit Gangs** appear where the blight breeds lairs of threat 3 or more. Bandits are people, built the way your heroes are, and always led by a Captain with sword, shield and breastplate. At threat 3 a Brute with a battle axe and breastplate fights beside him; at threat 4 a Hedge-Mage takes the Brute's place, casting Magic Arrow, Flame Arrow and Shield (it never heals); at threat 5 a Bandit Archer takes the Hedge-Mage's place, standing back with a bow and shooting. They have a hero's hit points, the Captain and the Brute a hero's armour, and they carry Fine gear at threats 3 and 5 and plain gear at threat 4. Further out still, beyond threat 5, four bandits take the field together, a **Crossbowman** among them whose bolts punch through armour, all in Fine steel. Expect a hard fight against a party of your level: bring a heavy weapon, or spells, for the armoured ones, and close in on the Archer and the Hedge-Mage, who wear none.
 
 ![Bandits at threat 5: the Captain and the Archer](images/battle-bandits.png)
 
@@ -223,11 +223,11 @@ This tab shows the hero's attributes, their title (their level and their deepest
 
 ![The Skills tab](images/panel-skills.png)
 
-When the hero has skill points to spend, a **+** appears beside each skill. The tab lists the passives the hero has taken, spells aside, and the perk points the hero has ("Perk points: 4"). Press **Skill Trees** (or P) to choose new ones: the view opens on the tree of the hero's deepest path, and its tabs (or 1 to 4) show the others.
+When the hero has skill points to spend, the tab says so in green over the skills ("5 skill points to spend") and a **+** appears beside each skill; the **+** greys out for a skill at 100%, which points raise no further (a node's bonus may still carry it past). The tab lists the passives the hero has taken, spells aside, and the perk points the hero has ("Perk points: 4"). Press **Skill Trees** (or P) to choose new ones: the view opens on the tree of the hero's deepest path, and its tabs (or 1 to 4) show the others.
 
 ![The skill trees](images/panel-perk-tree.png)
 
-Nodes you can take now are framed in gold, and a click takes one for its cost in perk points. The digit on a node is that cost: gold when you can take it now, dim otherwise (a ✓ marks a taken node and a ✕ a locked capstone). The header's "Perk points: N" is what the hero has to spend. A taken node is gold with a ✓. A dim node is closed: point at it to see what it still asks, a level, an attribute, a skill or nodes in its path. A capstone closed by another path being deeper, or by a capstone already held, is drawn in rust with a ✕. In battle the trees can be read but not changed.
+Nodes you can take now are framed in gold, and a click takes one for its cost in perk points. The digit on a node is that cost: gold when you can take it now, dim otherwise (a ✓ marks a taken node, drawn in gold, and a ✕ a locked capstone). The header's "Perk points: N" is what the hero has to spend. Point at an open node you cannot yet afford and the strip says when saving pays for it: "Needs 3 perk points; you have 1 — affordable at level 8". With the pointer on no node, a gold line under the rules names the next thing saving buys: the cheapest open node you cannot yet afford, or else your calling's capstone ("Saving: Pin (3 perk points) is yours at level 11"). A dim node is closed: point at it to see what it still asks, a level, an attribute, a skill or nodes in its path. A capstone closed by another path being deeper, or by a capstone already held, is drawn in rust with a ✕. In battle the trees can be read but not changed.
 
 ### Abilities
 
@@ -474,7 +474,7 @@ Each new level:
 - gives **skill points**: 2 plus a third of the hero's Intelligence
 - gives **1 perk point**, which buys nodes of the skill trees, spells included, at their cost; unspent points are kept
 
-A **+** on a portrait means that hero has something to spend. Spend it from the character panel on the world map, since nothing can be spent in battle.
+A **+** on a portrait means that hero has points to spend: skill points some skill can take, or perk points enough for a node open to them. The world map says so too ("Aldric has points to spend: click the portrait marked "+"."). Spend them from the character panel on the world map, since nothing can be spent in battle.
 
 ![Skill points ready to spend](images/panel-level-up.png)
 
@@ -484,6 +484,9 @@ There are no classes. A hero is defined by their attributes, the skill they tagg
 
 - Every node has **one rank**: perk points buy it once, and nothing is spent again on it.
 - A node sits at a **tier**, and a tier asks a level and a **depth**, the nodes already held in the same path: tier 1 asks level 1 and none, tier 2 level 2 and 1, tier 3 level 6 and 3, and the **capstone** level 12 and 5. A node costs perk points by its tier (the table below). A node may also ask an attribute, a skill (or one of two skills, as Bless asks Melee 30% or Magic 40%) or a node of its own path before it.
+- A hero's **calling** is the path they hold the most nodes in, shown under their name as "Level 9 · Heavy Knight" (two paths level for deepest are both named). Only the calling's capstone may be taken, and a hero may hold only one capstone: taking it closes every other for good.
+- A node asks only to be taken; it is never lost afterwards. There is no respec, so choose with care.
+- **Revive** and **Unbreakable** soften permadeath a little: Revive stands an ally who fell this battle up again, and Unbreakable keeps its holder at 1 hit point the first time damage would fell it, each once per battle. A hero who still falls and is not raised is dead for good.
 
 | Tier | Level asked | Depth asked | Cost |
 | --- | --- | --- | --- |
@@ -493,10 +496,6 @@ There are no classes. A hero is defined by their attributes, the skill they tagg
 | Capstone | 12 | 5 | 4 |
 
 Points you save buy deeper nodes; a hero who stays in one path reaches its tier 3 at level 6 and its capstone at 12, and one who mixes paths holds more nodes but reaches a capstone later.
-
-- A hero's **calling** is the path they hold the most nodes in, shown under their name as "Level 9 · Heavy Knight" (two paths level for deepest are both named). Only the calling's capstone may be taken, and a hero may hold only one capstone: taking it closes every other for good.
-- A node asks only to be taken; it is never lost afterwards. There is no respec, so choose with care.
-- **Revive** and **Unbreakable** soften permadeath a little: Revive stands an ally who fell this battle up again, and Unbreakable keeps its holder at 1 hit point the first time damage would fell it, each once per battle. A hero who still falls and is not raised is dead for good.
 
 A hero born with an attribute of 7 or 8 reaches the nodes that ask it from the start, and the trees' attribute nodes (Gain Strength, Toughness and others) raise one further.
 

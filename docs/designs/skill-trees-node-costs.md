@@ -117,7 +117,7 @@ Without the save in step 2, simulated heroes would spend every point on T1s and 
 
 | Plan | New order (head) | Hero | Effect |
 | --- | --- | --- | --- |
-| `knight` | rooted, taunt, pin, heavy_hand, iron_skin, **unbreakable**, guardian, shield_wall, … | Aldric: Rooted 3, Taunt 5, Pin 8, Iron Skin 11, Unbreakable 15 | Unbreakable moves ahead of Guardian. Otherwise Guardian's 3 points at 12 would push the capstone to 18. |
+| `knight` | rooted, taunt, pin, heavy_hand, iron_skin, **unbreakable**, guardian, shield_wall, … | Aldric: Rooted 3, Taunt 5, Pin 8, Iron Skin 11, Unbreakable 15 | Unbreakable moves ahead of Guardian. Otherwise Guardian's 3 points at 12 would push the capstone to 18. *(Amended by step 30, accepted: Aldric takes Unbreakable at 13, Shield Wall at 9 and Iron Skin at 16.)* |
 | `ranger` | aimed_shot, **volley**, far_shot, **deadeye**, hunters_mark, pinning_shot, dodger, … | Brenna: Aimed Shot 3, Volley 6, Far Shot 8, Deadeye 12 | Volley moves ahead of Far Shot. The first T3 stays at 6, and the capstone at 12. |
 | `evoker_healer` | flame_arrow, **fireball**, heal_all, pyromancy, meteor, greater_heal, mending, death_cloud, greater_heal_all, purify | Delwyn: Flame Arrow 3, Fireball 6, Heal All 8, Pyromancy 10, Meteor 14 | Fireball stays at 6, as today. Heal All moves from 4 to 8, and Meteor from 12 to 14. *(Amended by step 30, accepted: Delwyn takes Arcane Blood 4, Heal All 6, Fireball 9, Pyromancy 11 and Meteor 15; Aldric's Unbreakable comes at 13, Shield Wall at 9, Iron Skin at 16.)* |
 | `swordmaster`, `rogue`, `cryomancer`, `bandit_mage`, path plans | unchanged | | Already ordered by depth. Capstone-first plans are unaffected. |
