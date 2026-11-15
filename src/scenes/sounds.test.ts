@@ -372,6 +372,13 @@ describe('eventSounds: spells and abilities', () => {
     ['bless', 'battle.cast.holy', 'battle.impact.buff'],
     ['dark_shield', 'battle.cast.shadow', 'battle.impact.buff'],
     ['web', 'battle.cast.arcane', 'battle.impact.web'],
+    ['holy_light', 'battle.cast.holy', 'battle.element.blight'],
+    ['meteor', 'battle.cast.fire', 'battle.impact.fireball'],
+    ['glacial_prison', 'battle.cast.frost', 'battle.impact.frost'],
+    ['ice_lance', 'battle.cast.frost', 'battle.impact.frost'],
+    ['renew', 'battle.cast.holy', 'battle.impact.buff'],
+    ['purify', 'battle.cast.holy', 'battle.impact.heal'],
+    ['revive', 'battle.cast.holy', 'battle.impact.heal'],
   ] as const)('%s casts %s and lands as %s', (spell, release, impactCue) => {
     expect(spellSound(spell)).toEqual({ cast: release, impact: impactCue })
   })
@@ -403,7 +410,7 @@ describe('eventSounds: spells and abilities', () => {
   })
 
   describe('an area ability', () => {
-    const ability = (id: 'fire_spit' | 'spider_web', hit: boolean, half: boolean): AbilityEvent => ({
+    const ability = (id: AbilityId, hit: boolean, half: boolean): AbilityEvent => ({
       type: 'ability', seq: 0, round: 1, unit: 'foe', ability: id, at: { q: 2, r: 0 }, shape: 'cone',
       hexes: [], distance: 2, apCost: 4, apAfter: 4, facing: 0, skill: 70,
       outcomes: [
@@ -425,20 +432,56 @@ describe('eventSounds: spells and abilities', () => {
       expect(cues(eventSounds(ability(id, false, true)))).toEqual([release, impactCue])
       expect(cues(eventSounds(ability(id, false, false)))).toEqual([release, 'battle.miss.magic'])
     })
+
+    it.each([
+      ['taunt', 'battle.armor.metal', 'battle.impact.hex'],
+      ['consecrate', 'battle.cast.holy', 'battle.element.blight'],
+    ] as const)('%s releases %s and lands as %s', (id, release, impactCue) => {
+      expect(cues(eventSounds(ability(id, true, false)))).toEqual([release, impactCue])
+    })
+
+    it('hears a Volley as a bow shot, landing as arrows do and missing as a shot', () => {
+      expect(cues(eventSounds(ability('volley', true, false)))).toEqual(['battle.shot.bow', 'battle.hit.pierce'])
+      expect(cues(eventSounds(ability('volley', false, false)))).toEqual(['battle.shot.bow', 'battle.miss.shot'])
+    })
+
+    it.each([
+      ['hunters_mark', 'battle.impact.hex'],
+      ['sprint', 'battle.impact.buff'],
+    ] as const)('lands %s, a status laid with no roll, as %s and nothing else', (id, impactCue) => {
+      const e = ability(id, true, false)
+      expect(eventSounds(e)).toEqual([{ cue: impactCue, delayMs: impactMs(e) }])
+    })
   })
 })
 
-describe('eventSounds for the stage-3 events', () => {
-  it('shimmers a restore, and hears a Revive as any friendly heal', () => {
+describe('eventSounds for the skill trees’ events', () => {
+  it('shimmers a restore of hit points, and leaves mana alone silent', () => {
     expect(eventSounds({ type: 'restore', seq: 0, round: 1, unit: 'hero', hp: 3, cause: 'renewing' })).toEqual([{ cue: 'battle.heal.small', delayMs: 0 }])
+    expect(eventSounds({ type: 'restore', seq: 0, round: 1, unit: 'hero', mana: 2, cause: 'serenity' })).toEqual([])
+  })
+
+  it('rings a Shadowdancer’s image as Mirror Image lands, and lays Rooted in silence', () => {
+    const laid = { type: 'status_laid', seq: 0, round: 1, unit: 'hero', turns: 2 } as const
+    expect(eventSounds({ ...laid, status: 'mirrored', cause: 'shadowdancer' })).toEqual([{ cue: spellSound('mirror_image').impact, delayMs: 0 }])
+    expect(eventSounds({ ...laid, status: 'rooted', cause: 'rooted' })).toEqual([])
+  })
+
+  it('hears a Revive as any friendly heal', () => {
     const revive = cast(true, false, 'revive')
     expect(cues(eventSounds({ ...revive, outcomes: [{ ...revive.outcomes[0], revived: true }] }))).toEqual(['battle.cast.holy', 'battle.impact.heal'])
   })
 
-  it('lands a counter and a deathblow as any hit', () => {
+  it('lands a counter as any hit, a deathblow with a critical’s weight, and an Unbreakable save with a ward’s ring', () => {
     const hit = cues(eventSounds(attack(true)))
     expect(cues(eventSounds({ ...attack(true), counter: true }))).toEqual(hit)
-    expect(cues(eventSounds({ ...attack(true), deathblow: true }))).toEqual(hit)
+    expect(cues(eventSounds({ ...attack(true), deathblow: true }))).toEqual([...hit, 'battle.hit.crit'])
+    const at = impactMs(attack(true))
+    expect(eventSounds({ ...attack(true), endured: true })).toContainEqual({ cue: 'battle.impact.buff', delayMs: at + 60 })
+  })
+
+  it('hears an Ambush as the critical it is', () => {
+    expect(cues(eventSounds({ ...attack(true, true), ambush: true }))).toContain('battle.hit.crit')
   })
 })
 
@@ -539,8 +582,7 @@ describe('AC3: every weapon, foe, spell and ability has a sound', () => {
       expect(CUES[impact], `${id} impact`).toBeDefined()
     }
     for (const ability of Object.values(ABILITY_SOUNDS)) {
-      expect(CUES[ability.release]).toBeDefined()
-      expect(CUES[ability.impact]).toBeDefined()
+      for (const cue of [ability.release, ability.impact, ability.miss]) if (cue !== undefined) expect(CUES[cue], cue).toBeDefined()
     }
     for (const sound of [...Object.values(WEAPON_SOUNDS), ...Object.values(FOE_SOUNDS)]) {
       for (const cue of [sound.release, sound.hit, sound.miss]) expect(CUES[cue]).toBeDefined()
@@ -558,7 +600,7 @@ describe('AC3: every weapon, foe, spell and ability has a sound', () => {
     regenerate: 'sounds',
     restore: 'sounds',
     status_end: 'silent',
-    status_laid: 'silent',
+    status_laid: 'sounds',
     equip: 'silent',
     unit_down: 'sounds',
     end_turn: 'silent',
@@ -566,7 +608,11 @@ describe('AC3: every weapon, foe, spell and ability has a sound', () => {
   }
 
   /** Abilities that are only strikes, which sound as the attacks they are. Any other needs an `ABILITY_SOUNDS` entry. */
-  const SOUNDS_AS_ATTACKS: readonly AbilityId[] = ['troll_claws', 'spider_bite']
+  const SOUNDS_AS_ATTACKS: readonly AbilityId[] = [
+    'troll_claws', 'spider_bite',
+    'power_attack', 'cleave', 'pin', 'flame_strike', 'frost_strike', 'thunder_strike', 'aimed_shot', 'pinning_shot',
+    'dirty_trick', 'venom_strike', 'hamstring', 'smite',
+  ]
 
   it('knows, for every kind of battle event, whether it sounds (a new kind fails the typecheck here until listed)', () => {
     const source = readFileSync(join(ROOT, 'src/scenes/sounds.ts'), 'utf8')

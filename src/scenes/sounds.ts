@@ -290,6 +290,11 @@ const SPELL_SOUND_OVERRIDES: Partial<Record<SpellId, { cast: CueId; impact: CueI
   bless: { cast: 'battle.cast.holy', impact: 'battle.impact.buff' },
   dark_shield: { cast: 'battle.cast.shadow', impact: 'battle.impact.buff' },
   web: { cast: 'battle.cast.arcane', impact: 'battle.impact.web' },
+  meteor: { cast: 'battle.cast.fire', impact: 'battle.impact.fireball' },
+  glacial_prison: { cast: 'battle.cast.frost', impact: 'battle.impact.frost' },
+  renew: { cast: 'battle.cast.holy', impact: 'battle.impact.buff' },
+  // Holy damage: the holy swell, landing as the Dawn rune's bright chime over a dark swell.
+  holy_light: { cast: 'battle.cast.holy', impact: 'battle.element.blight' },
 }
 
 const ELEMENT_SPELL_SOUNDS: Partial<Record<Element, { cast: CueId; impact: CueId }>> = {
@@ -311,10 +316,24 @@ export function spellSound(id: SpellId): { cast: CueId; impact: CueId } {
   return spell.school === 'healing' ? { cast: 'battle.cast.holy', impact: 'battle.impact.heal' } : { cast: 'battle.cast.ward', impact: 'battle.impact.buff' }
 }
 
-/** The area abilities' sounds; a routine's strikes are attacks and need none. */
-export const ABILITY_SOUNDS: Partial<Record<AbilityId, { release: CueId; impact: CueId }>> = {
+/** How an area or status ability sounds: let go (if heard at all), landing, and missing every unit (a magic miss by default). */
+export interface AbilitySound {
+  release?: CueId
+  impact: CueId
+  miss?: CueId
+}
+
+/** The area and status abilities' sounds; a routine's strikes, a technique's included, are attacks and need none. */
+export const ABILITY_SOUNDS: Partial<Record<AbilityId, AbilitySound>> = {
   fire_spit: { release: 'battle.ability.spit', impact: 'battle.impact.fire' },
   spider_web: { release: 'battle.ability.web', impact: 'battle.impact.web' },
+  // A shield struck for a challenge, and the hex of the foes it draws.
+  taunt: { release: 'battle.armor.metal', impact: 'battle.impact.hex' },
+  volley: { release: 'battle.shot.bow', impact: 'battle.hit.pierce', miss: 'battle.miss.shot' },
+  consecrate: { release: 'battle.cast.holy', impact: 'battle.element.blight' },
+  // Laid with no roll: only the landing is heard.
+  hunters_mark: { impact: 'battle.impact.hex' },
+  sprint: { impact: 'battle.impact.buff' },
 }
 
 export const DEATH: Record<UnitKind, CueId> = {
@@ -381,7 +400,9 @@ export function eventSounds(event: BattleEvent, context?: SoundContext): SoundCu
       if (event.image) return [...cues, { cue: 'battle.hit.image', delayMs: at }]
       cues.push({ cue: sound.hit, delayMs: at })
       if (inMetal(event.defender, context)) cues.push({ cue: 'battle.armor.metal', delayMs: at })
-      if (event.critical) cues.push({ cue: 'battle.hit.crit', delayMs: at })
+      // A deathblow lands as hard as a critical; an Unbreakable save rings as a ward does.
+      if (event.critical || event.deathblow) cues.push({ cue: 'battle.hit.crit', delayMs: at })
+      if (event.endured) cues.push({ cue: 'battle.impact.buff', delayMs: at + 60 })
       for (const bonus of event.bonus.filter((b) => b.damage > 0).slice(0, 2)) {
         const element = bonus.bane ? 'blight' : bonus.element
         if (element) cues.push({ cue: elementCue(element), delayMs: at + 30 })
@@ -412,10 +433,8 @@ export function eventSounds(event: BattleEvent, context?: SoundContext): SoundCu
       if (!sound) return []
       // A miss that still burns for half is heard to strike.
       const struck = event.outcomes.some((o) => (o.hit || (o.half && o.damage > 0)) && !o.image)
-      return [
-        { cue: sound.release, delayMs: 0 },
-        { cue: struck ? sound.impact : 'battle.miss.magic', delayMs: impactMs(event) },
-      ]
+      const landing: SoundCue = { cue: struck ? sound.impact : (sound.miss ?? 'battle.miss.magic'), delayMs: impactMs(event) }
+      return sound.release ? [{ cue: sound.release, delayMs: 0 }, landing] : [landing]
     }
     case 'status_tick': {
       const element = STATUSES[event.status].element
@@ -424,7 +443,11 @@ export function eventSounds(event: BattleEvent, context?: SoundContext): SoundCu
     case 'regenerate':
       return [{ cue: 'battle.regen', delayMs: 0 }]
     case 'restore':
-      return [{ cue: 'battle.heal.small', delayMs: 0 }]
+      // A heal's warm shimmer; Serenity's mana alone, every turn, is left silent on purpose.
+      return event.hp ? [{ cue: 'battle.heal.small', delayMs: 0 }] : []
+    case 'status_laid':
+      // Shadowdancer's image is heard as Mirror Image is; Rooted, laid on every unmoved unit each turn, is silent on purpose.
+      return event.cause === 'shadowdancer' ? [{ cue: spellSound('mirror_image').impact, delayMs: 0 }] : []
     case 'unit_down': {
       const kind = context?.kind(event.unit) ?? null
       const cues: SoundCue[] = [{ cue: kind ? DEATH[kind] : 'battle.death.human', delayMs: 0 }]
