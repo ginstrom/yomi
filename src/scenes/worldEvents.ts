@@ -1,3 +1,5 @@
+import type { Character } from '../character/character.ts'
+import { canAdvance } from '../character/progression.ts'
 import type { WorldEvent } from '../game/blight.ts'
 import { isPartyEvent, worldInterrupt, type DayReport, type Interrupt, type PartyEvent } from '../game/company.ts'
 import type { Expedition } from '../game/expedition.ts'
@@ -167,4 +169,16 @@ export function describeOthers(game: GameState, party: Expedition, reports: read
 export function describeStanding(game: GameState, party: Expedition, here: MonsterLocation): string {
   const met = `${theName(here.name)} (threat ${here.threat})`
   return speaker(game, party.id) === null ? `You stand before ${met}.` : `${party.name} stands before ${met}.`
+}
+
+/**
+ * The map's opening words while heroes of the party shown have points to
+ * spend (`canAdvance`, what a portrait's "+" marks): the one hero by name, or
+ * how many; empty when none has.
+ */
+export function advanceMessage(members: readonly Character[]): string {
+  const ready = members.filter(canAdvance)
+  if (ready.length === 0) return ''
+  if (ready.length === 1) return `${ready[0].name} has points to spend: click the portrait marked "+".`
+  return `${ready.length} heroes have points to spend: click a portrait marked "+".`
 }

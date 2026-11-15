@@ -54,8 +54,8 @@ describe('the manual’s screenshots', () => {
       creation = await game.settled('Creation', (c) => c.step === step)
       await shot(game, `creation-${step}`)
       if (step === 'perks') {
-        await game.click(creation.treeSwitch.spells)
-        creation = await game.settled('Creation', (c) => c.tree === 'spells')
+        await game.click(creation.trees.mage)
+        creation = await game.settled('Creation', (c) => c.tree === 'mage')
         await shot(game, 'creation-spells')
       }
     }
@@ -81,7 +81,7 @@ describe('the manual’s screenshots', () => {
     await shot(game, 'panel-character')
     for (const [key, tab, name] of [
       ['s', 'skills', 'panel-skills'],
-      ['p', 'perkTree', 'panel-perk-tree'],
+      ['p', 'trees', 'panel-perk-tree'],
       ['i', 'inventory', 'panel-inventory'],
     ] as const) {
       await game.press(key)
@@ -92,7 +92,7 @@ describe('the manual’s screenshots', () => {
     await game.click(panel.party[2])
     await game.settled('Inventory', (p) => p.party[2].active)
     await game.press('b')
-    await game.settled('Inventory', (p) => p.tab === 'spells')
+    await game.settled('Inventory', (p) => p.tab === 'abilities')
     await shot(game, 'panel-spells-mage')
     // The mage, of strength 3, hovering the Iron Greatsword it carries, which asks 6.
     await game.press('i')
@@ -135,15 +135,15 @@ describe('the manual’s screenshots', () => {
     await game.click(battleHexOnScreen(battle, { q: mage.position.q + 2, r: mage.position.r }))
     const stepped = await game.waitFor('Battle', (b) => b.playerControl && b.state.units.find((u) => u.id === 'hero_3')!.ap === 6)
     await game.press('m')
-    const menu = await game.waitFor('Battle', (b) => b.spellMenu !== null)
+    const menu = await game.waitFor('Battle', (b) => b.skillMenu !== null)
     await shot(game, 'battle-spell-menu')
-    await game.click(menu.spellMenu!.find((row) => row.spell === 'magic_arrow')!)
-    await game.waitFor('Battle', (b) => b.casting === 'magic_arrow')
+    await game.click(menu.skillMenu!.find((row) => row.id === 'magic_arrow')!)
+    await game.waitFor('Battle', (b) => b.aiming?.id === 'magic_arrow')
     const target = stepped.state.units.filter((u) => u.side === 'enemy').find((u) => hexDistance(stepped.state.units.find((m) => m.id === 'hero_3')!.position, u.position) <= 5)!
     await game.hover(battleHexOnScreen(battle, target.position))
     await shot(game, 'battle-targeting')
     await game.press('Escape')
-    await game.waitFor('Battle', (b) => b.casting === null)
+    await game.waitFor('Battle', (b) => b.aiming === null)
 
     const over = await game.fightBattle()
     await game.waitFor('Battle', (b) => b.buttons.result.visible)

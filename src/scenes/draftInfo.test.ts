@@ -13,7 +13,7 @@ describe('draftInfo', () => {
     expect(lines[1]).toBe(`HP ${stats.maxHp}  AP ${stats.actionPoints}  AC ${stats.ac}  Mana -`)
     expect(lines[2]).toBe('STR 9  PER 3  END 7  INT 3  AGI 6  LUC 4')
     expect(lines[3]).toBe('Holds: Iron Longsword, Oak Shield')
-    expect(lines[4]).toBe('Perks: Weapon Training, Toughness, Heavy Hand')
+    expect(lines[4]).toBe('Perks: Weapon Training, Heavy Hand, Toughness')
   })
 
   it('gives a caster its mana', () => {
@@ -21,9 +21,9 @@ describe('draftInfo', () => {
     expect(draftInfo(delwyn)[1]).toContain(`Mana ${deriveCombatStats(draftCharacter(delwyn)).magic!.maxMana}`)
   })
 
-  it('counts the ranks of a perk taken twice, and says so of a draft with nothing chosen', () => {
+  it('lists a node chosen twice once, and says so of a draft with nothing chosen', () => {
     expect(draftInfo({ ...READY_MADE[0], perks: ['weapon_training', 'weapon_training', 'toughness'] })[4]).toBe(
-      'Perks: Weapon Training x2, Toughness',
+      'Perks: Weapon Training, Toughness',
     )
     const blank = draftInfo(newDraft())
     expect(blank[0]).toBe('No tagged skill')
@@ -33,9 +33,9 @@ describe('draftInfo', () => {
 
 describe('draftSkills', () => {
   it('gives the tagged skill first, then any other the draft placed points in', () => {
-    expect(draftSkills(READY_MADE[0])).toBe('Melee Weapons 60%')
+    expect(draftSkills(READY_MADE[0])).toBe('Melee Weapons 65%')
     const garrick = PREROLLS.find((preroll) => preroll.draft.name === 'Garrick')!.draft
-    expect(draftSkills(garrick)).toBe('Melee Weapons 39%  Archery 34%')
+    expect(draftSkills(garrick)).toBe('Melee Weapons 44%  Archery 34%')
     expect(draftSkills({ ...garrick, tagged: null })).toBe('Archery 34%')
   })
 })

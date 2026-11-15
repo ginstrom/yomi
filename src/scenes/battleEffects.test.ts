@@ -14,13 +14,18 @@ import {
   RELEASE_MS,
   SETTLE_MS,
   SWING_IMPACT_MS,
+  SPELL_LOOKS,
   abilityLook,
   areaOutline,
   attackLook,
+  attackerNotes,
   castOutline,
+  defenderNotes,
+  restoreFloats,
   flightMs,
   holdMs,
   impactMs,
+  strikeFlash,
 } from './battleEffects.ts'
 
 /** An attack from `distance` hexes: a blow from the next hex, a shot from further, unless told. */
@@ -57,6 +62,12 @@ describe('attackLook', () => {
     expect(attackLook(attack(4), 'bow')).toBe('arrow')
     expect(attackLook(attack(4), 'bow_hawk')).toBe('arrow')
     expect(attackLook(attack(3), 'wand_storm')).toBe('bolt')
+  })
+
+  it('plays a technique’s strike with its weapon’s look, as a plain blow or shot', () => {
+    expect(attackLook({ ...attack(1), ability: 'power_attack', strike: 'Power Attack' }, 'sword')).toBe('swing')
+    expect(attackLook({ ...attack(4), ability: 'aimed_shot', strike: 'Aimed Shot' }, 'bow')).toBe('arrow')
+    expect(attackLook({ ...attack(3), ability: 'venom_strike', strike: 'Venom Strike' }, 'wand')).toBe('bolt')
   })
 
   it('swings a reach weapon’s blow from two hexes, and shoots from the next hex', () => {
@@ -110,6 +121,14 @@ describe('an area ability', () => {
     expect(abilityLook('troll_claws').missile).toBe('orb')
   })
 
+  it('has a look for each hero technique that is not a blow: Volley’s arrows, Consecrate’s gold burst, Taunt’s red ring on the user', () => {
+    for (const id of ['volley', 'consecrate', 'taunt', 'hunters_mark', 'sprint'] as const) expect(ABILITY_LOOKS[id]).toBeDefined()
+    expect(ABILITY_LOOKS.volley).toMatchObject({ arrows: true })
+    expect(ABILITY_LOOKS.consecrate).toMatchObject({ impact: 'burst', colour: SPELL_LOOKS.bless.colour })
+    expect(ABILITY_LOOKS.taunt).toMatchObject({ impact: 'ring', onUser: true })
+    expect(ABILITY_LOOKS.sprint).toEqual(SPELL_LOOKS.haste)
+  })
+
   it('outlines a hit, a critical, half damage and an image, and nothing for a clean miss', () => {
     expect(areaOutline({ ...struck, hit: true, damage: 9 })).toBe(OUTLINE_HURT)
     expect(areaOutline({ ...struck, hit: true, critical: true, damage: 9 })).toBe(OUTLINE_CRITICAL)
@@ -137,6 +156,24 @@ describe('an attack\'s on-hit damage', () => {
   })
 })
 
+describe('a technique strike\'s flash', () => {
+  const strike = (ability: AttackEvent['ability'], extra: Partial<AttackEvent> = {}): AttackEvent => ({ ...attack(1), ability, strike: 'x', ...extra })
+
+  it('lights an elemental strike that hits with its element\'s spell look, and Smite in gold', () => {
+    expect(strikeFlash(strike('flame_strike'))).toBe(SPELL_LOOKS.fireball)
+    expect(strikeFlash(strike('frost_strike'))).toBe(SPELL_LOOKS.frost_blast)
+    expect(strikeFlash(strike('thunder_strike'))).toBe(SPELL_LOOKS.lightning_bolt)
+    expect(strikeFlash(strike('smite'))).toBe(SPELL_LOOKS.bless)
+  })
+
+  it('shows nothing on a miss, an image, a plain blow or a strike without one', () => {
+    expect(strikeFlash(strike('flame_strike', { hit: false }))).toBeNull()
+    expect(strikeFlash(strike('flame_strike', { image: true }))).toBeNull()
+    expect(strikeFlash(attack(1))).toBeNull()
+    expect(strikeFlash(strike('power_attack'))).toBeNull()
+  })
+})
+
 describe('the nameplates\' status letters', () => {
   it('are drawn again for a status laid by an attack, its own or a rune\'s', () => {
     const base = attack(1)
@@ -146,10 +183,41 @@ describe('the nameplates\' status letters', () => {
     expect(changesStatusMarks(base)).toBe(false)
   })
 
-  it('are drawn again after every cast, area ability, status\'s end or tick and fall, and not for a move', () => {
-    for (const type of ['cast', 'ability', 'status_end', 'status_tick', 'unit_down'] as const) {
+  it('are drawn again after every cast, ability, status laid (Rooted), status\'s end or tick and fall, and not for a move', () => {
+    for (const type of ['cast', 'ability', 'status_laid', 'restore', 'status_end', 'status_tick', 'unit_down'] as const) {
       expect(changesStatusMarks({ type } as BattleEvent)).toBe(true)
     }
     expect(changesStatusMarks({ type: 'move' } as BattleEvent)).toBe(false)
+  })
+})
+
+describe('the stage-3 events', () => {
+  const restore = (extra: object) => ({ type: 'restore', seq: 0, round: 1, unit: 'hero', cause: 'renewing', ...extra }) as Extract<BattleEvent, { type: 'restore' }>
+
+  it('floats a restore\'s hit points as "+N" and its mana as "+N mana", one each', () => {
+    expect(restoreFloats(restore({ hp: 3 }))).toEqual([{ text: '+3', kind: 'heal' }])
+    expect(restoreFloats(restore({ mana: 2, cause: 'serenity' }))).toEqual([{ text: '+2 mana', kind: 'mana' }])
+    expect(restoreFloats(restore({ hp: 3, mana: 2 }))).toHaveLength(2)
+    expect(restoreFloats(restore({ hp: 0 }))).toEqual([])
+  })
+
+  it('notes an ambush and refunded AP over the attacker and a deathblow over the defender', () => {
+    const base = attack(1)
+    expect(attackerNotes(base)).toEqual([])
+    expect(attackerNotes({ ...base, ambush: true, apRefunded: 4 })).toEqual([
+      { text: 'Ambush', kind: 'note' },
+      { text: '+4 AP', kind: 'note' },
+    ])
+    expect(defenderNotes(base)).toEqual([])
+    expect(defenderNotes({ ...base, deathblow: true })).toEqual([{ text: 'Deathblow', kind: 'note' }])
+  })
+
+  it('gives each of the six special spells a look of its own, not its kin\'s', () => {
+    const six = ['ice_lance', 'glacial_prison', 'purify', 'revive', 'renew', 'holy_light'] as const
+    expect(new Set(six.map((id) => SPELL_LOOKS[id].colour)).size).toBe(6)
+    for (const id of six) {
+      expect(SPELL_LOOKS[id]).not.toBe(SPELL_LOOKS.heal)
+      expect(SPELL_LOOKS[id]).not.toBe(SPELL_LOOKS.frost_blast)
+    }
   })
 })

@@ -12,6 +12,7 @@ import {
   FRAME_HOVER_COLOR,
   HEADER_BOTTOM,
   hpBarColor,
+  ADVANCE_COLOR,
   PARTY_PANEL_W,
   PORTRAIT_SCALE,
   portraitBarRect,
@@ -19,7 +20,6 @@ import {
   portraitRect,
 } from './partyPanel.ts'
 
-const ADVANCE_COLOR = '#9ccc65'
 /** How faint the portrait of a member who has fallen is. */
 const FALLEN_ALPHA = 0.3
 

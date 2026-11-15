@@ -29,6 +29,18 @@ describe('debug commands', () => {
     expect(runCommand('help nonsense', onWorldMap()).lines).toEqual(['No command "nonsense".'])
   })
 
+  it('party counts what each member has to spend in words of the right number', () => {
+    const context = onWorldMap()
+    const [aldric, brenna] = context.source!.game.parties[0].members
+    aldric.skillPoints = 1
+    aldric.perkPoints = 1
+    brenna.skillPoints = 3
+    brenna.perkPoints = 2
+    const lines = runCommand('party', context).lines
+    expect(lines.find((line) => line.includes('Aldric'))).toMatch(/\(1 skill point, 1 perk point\)$/)
+    expect(lines.find((line) => line.includes('Brenna'))).toMatch(/\(3 skill points, 2 perk points\)$/)
+  })
+
   it('tells of an unknown command, and does nothing for an empty line', () => {
     expect(runCommand('fly', onWorldMap()).lines[0]).toMatch(/Unknown command "fly"/)
     expect(runCommand('   ', onWorldMap())).toEqual({ lines: [], changed: false })

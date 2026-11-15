@@ -428,6 +428,20 @@ describe('eventSounds: spells and abilities', () => {
   })
 })
 
+describe('eventSounds for the stage-3 events', () => {
+  it('shimmers a restore, and hears a Revive as any friendly heal', () => {
+    expect(eventSounds({ type: 'restore', seq: 0, round: 1, unit: 'hero', hp: 3, cause: 'renewing' })).toEqual([{ cue: 'battle.heal.small', delayMs: 0 }])
+    const revive = cast(true, false, 'revive')
+    expect(cues(eventSounds({ ...revive, outcomes: [{ ...revive.outcomes[0], revived: true }] }))).toEqual(['battle.cast.holy', 'battle.impact.heal'])
+  })
+
+  it('lands a counter and a deathblow as any hit', () => {
+    const hit = cues(eventSounds(attack(true)))
+    expect(cues(eventSounds({ ...attack(true), counter: true }))).toEqual(hit)
+    expect(cues(eventSounds({ ...attack(true), deathblow: true }))).toEqual(hit)
+  })
+})
+
 describe('eventSounds: ticks, regeneration, falls, steps and the end', () => {
   const tick = (status: StatusTickEvent['status']): StatusTickEvent => ({ type: 'status_tick', seq: 0, round: 1, unit: 'goblin', status, damage: 2, warded: 0, hpBefore: 5, hpAfter: 3 })
   it('ticks by the status’s element, and not at all without one', () => {
@@ -542,7 +556,9 @@ describe('AC3: every weapon, foe, spell and ability has a sound', () => {
     ability: 'sounds',
     status_tick: 'sounds',
     regenerate: 'sounds',
+    restore: 'sounds',
     status_end: 'silent',
+    status_laid: 'silent',
     equip: 'silent',
     unit_down: 'sounds',
     end_turn: 'silent',

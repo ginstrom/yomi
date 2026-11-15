@@ -253,11 +253,13 @@ const TROLL_LAIR_SLOTS: readonly FoeSlot[] = [
   { id: 'whelp', kind: 'troll', name: 'Troll Whelp', at: [9, 6] },
 ]
 
-// The Spider first, the Sneak beside it, and the second Spider: all three at threat 5, the only threat it is fought at.
+// The Spider first, the Sneak beside it, and two more Spiders: all four at threat 5, the only threat it is fought at
+// (the fourth, the Nest Spider, added in skill trees step 24, when a party of level 5 won three foes 500 times in 500).
 const SPIDER_NEST_SLOTS: readonly FoeSlot[] = [
   { id: 'spider', kind: 'giant_spider', name: 'Giant Spider', at: [8, 4] },
   { id: 'sneak', kind: 'kobold', name: 'Kobold Sneak', at: [9, 2] },
   { id: 'spider2', kind: 'giant_spider', name: 'Brood Spider', at: [8, 6] },
+  { id: 'spider3', kind: 'giant_spider', name: 'Nest Spider', at: [9, 6] },
 ]
 
 // The Salamander in the middle, a Kobold either side: its cone burns them too.
@@ -301,7 +303,7 @@ const SOURCE_GUARDIANS: EncounterDef = { slots: SOURCE_GUARDIANS_SLOTS, ...TODAY
  * The Giant Spider's nest, fought at threat 5 only (the user's choice at stage 2: at threat 4 its two foes were
  * won 500 times in 500, and only a third foe moved that, which would have fielded as many at the band's bottom as at its top).
  */
-const SPIDER_NEST: EncounterDef = { slots: SPIDER_NEST_SLOTS, band: { min: 5, max: 5 }, counts: [3] }
+const SPIDER_NEST: EncounterDef = { slots: SPIDER_NEST_SLOTS, band: { min: 5, max: 5 }, counts: [4] }
 /** The Salamander's pool, fought at threat 5 only. */
 const SALAMANDER_POOL: EncounterDef = { slots: SALAMANDER_POOL_SLOTS, band: { min: 5, max: 5 }, counts: [3] }
 /**
@@ -340,7 +342,7 @@ export function trollLair(party: readonly Fighter[], threat = 1): Encounter {
 
 /**
  * Giant Spiders that web a hero from range, then close and bite twice, the
- * second bite poisoning, with a Kobold Sneak; at threat 5 a second spider.
+ * second bite poisoning: three of them, with a Kobold Sneak.
  */
 export function spiderNest(party: readonly Fighter[], threat = 5): Encounter {
   return encounter(party, SPIDER_NEST, threat)
@@ -367,7 +369,7 @@ export function sourceGuardians(party: readonly Fighter[], threat = 1): Encounte
  * Bandits, built by the rules heroes are: a Bandit Captain with sword, shield
  * and breastplate, and a Brute with an axe and breastplate at threat 3; at
  * threat 4 a Hedge-Mage in the Brute's place, and at threat 5 an Archer, their
- * gear Fine at 5. From threat 6 four fight, the Captain, Archer, Hedge-Mage and
+ * gear Fine iron. From threat 6 four fight, the Captain, Archer, Hedge-Mage and
  * Crossbowman, in Fine steel and ironwood; the Brute and the Cutthroat take the
  * field only once a later stage raises a count to 5 (stage 9).
  */

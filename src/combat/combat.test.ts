@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BLIGHT_HORROR_STATS, GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, baneApplies, damageThrough, effectiveResistance, foeAtLevel, foeYardstick, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, sameCombatStats, warded, type CombatantStats } from './combat.ts'
+import { BLIGHT_HORROR_STATS, GOBLIN_SHAMAN_STATS, GOBLIN_STATS, TROLL_STATS, baneApplies, damageThrough, effectiveResistance, foeAtLevel, foeYardstick, formatDamage, hitChance, resolveAttack, rollDamage, rollDie, rollHitDamage, sameCombatStats, warded, type CombatantStats } from './combat.ts'
 
 const WARRIOR_STATS: CombatantStats = {
   name: 'Warrior',
@@ -126,7 +126,39 @@ describe('formatDamage', () => {
   })
 })
 
+describe('rollHitDamage', () => {
+  it('doubles the dice on a critical, or multiplies them by the multiplier given, drawing a die each', () => {
+    const draws = (critical: boolean, multiplier?: number) => {
+      let n = 0
+      const rng = () => (n++, 0.5)
+      return { damage: rollHitDamage({ count: 1, sides: 8, bonus: 1 }, critical, rng, multiplier), n }
+    }
+    expect(draws(false)).toEqual({ damage: 6, n: 1 })
+    expect(draws(false, 3)).toEqual({ damage: 6, n: 1 })
+    expect(draws(true)).toEqual({ damage: 11, n: 2 })
+    expect(draws(true, 3)).toEqual({ damage: 16, n: 3 })
+  })
+})
+
 describe('sameCombatStats', () => {
+  it('tells apart the attack traits’ numbers, a field at 0 being the same as none', () => {
+    const fields: Partial<CombatantStats>[] = [
+      { opportunity: { toHit: 15, damage: 3 } },
+      { rear: { toHit: 15, damage: 4 } },
+      { rear: { toHit: 0, damage: 4 } },
+      { movedToHit: 10 },
+      { execute: 5 },
+      { critDamage: 4 },
+      { manaOnHit: 1 },
+      { manaRegen: 2 },
+    ]
+    for (const field of fields) {
+      expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, ...field })).toBe(false)
+      expect(sameCombatStats({ ...WARRIOR_STATS, ...field }, { ...WARRIOR_STATS, ...structuredClone(field) })).toBe(true)
+    }
+    expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, movedToHit: 0, opportunity: { toHit: 0, damage: 0 } })).toBe(true)
+  })
+
   it('compares every stat, damage dice included', () => {
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, damage: { ...WARRIOR_STATS.damage } })).toBe(true)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, attackRange: 5 })).toBe(false)
@@ -140,6 +172,22 @@ describe('sameCombatStats', () => {
     expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, maxMana: 24 } })).toBe(false)
     expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, skill: 86 } })).toBe(false)
     expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, spells: [] } })).toBe(false)
+    // The spell modifiers, a missing one as none.
+    expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, power: {} } })).toBe(true)
+    for (const modifier of [
+      { power: { all: 2 } },
+      { power: { fire: 3 } },
+      { power: { frost: 3 } },
+      { healBonus: 4 },
+      { extend: { hostile: 1 } },
+      { extend: { friendly: 1 } },
+      { friendlyRange: 2 },
+      { apDiscount: { all: 1 } },
+      { apDiscount: { heal: 1 } },
+    ]) {
+      expect(sameCombatStats(mage, { ...WARRIOR_STATS, magic: { ...magic, ...modifier } })).toBe(false)
+      expect(sameCombatStats({ ...WARRIOR_STATS, magic: { ...magic, ...modifier } }, { ...WARRIOR_STATS, magic: { ...magic, ...modifier } })).toBe(true)
+    }
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, weapon: 'Iron Longsword' })).toBe(false)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, armorPierce: 0 })).toBe(true)
     expect(sameCombatStats(WARRIOR_STATS, { ...WARRIOR_STATS, armorPierce: 2 })).toBe(false)
@@ -208,10 +256,10 @@ describe('foeAtLevel', () => {
   })
 
   it('adds hit points, chance to hit and armour every level, and damage every second', () => {
-    expect(foeAtLevel(GOBLIN_STATS, 2)).toEqual({ ...GOBLIN_STATS, maxHp: 20, ac: 20, toHit: 75 })
+    expect(foeAtLevel(GOBLIN_STATS, 2)).toEqual({ ...GOBLIN_STATS, maxHp: 26, ac: 20, toHit: 75 })
     expect(foeAtLevel(GOBLIN_STATS, 5)).toEqual({
       ...GOBLIN_STATS,
-      maxHp: 46,
+      maxHp: 67,
       ac: 35,
       toHit: 90,
       damage: { count: 1, sides: 6, bonus: 3 },

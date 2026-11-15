@@ -60,7 +60,7 @@ Every attribute starts at 1, and you have **26 points** to place. You must place
 | Agility | Action points, armour class, the weapon skills |
 | Luck | Chance of a critical hit |
 
-The budget is tight. Raising one attribute to 10 leaves room for two at about 7 and the rest low. Perks can raise attributes later, from level 3 onward.
+The budget is tight. Raising one attribute to 10 leaves room for two at about 7 and the rest low. Nodes of the skill trees can raise attributes later: Toughness, open at level 1, adds 1 to Endurance, and Gain Strength, from level 2, adds 2 to Strength.
 
 ### Skills
 
@@ -70,23 +70,25 @@ There are three skills, each a percentage:
 
 - **Melee Weapons**: your chance to hit with a blade, an axe or bare hands.
 - **Archery**: your chance to hit with a bow.
-- **Magic**: your chance of landing a spell or a wand shot. Spell perks also require a minimum Magic.
+- **Magic**: your chance of landing a spell or a wand shot. Spell nodes also require a minimum Magic.
 
-Skills start low and are set by attributes alone. **Tag** one skill: tagging adds 20% to it and makes each skill point raise it by 2% instead of 1%. You then have **10 skill points** to place. From 80% a raise costs 2 points, and from 90% it costs 3.
+Skills start low and are set by attributes alone. **Tag** one skill: tagging adds 20% to it and makes each skill point raise it by 2% instead of 1%. You then have **10 skill points** to place. From 80% a raise costs 2 points, and from 90% it costs 3. Skill points raise no skill past **100%**.
 
 An untrained skill sits near 10%, and against an armoured foe that becomes the minimum 5% chance to hit. A hero who specialises (tags a skill, puts all 10 points into it and takes its skill perk) starts at around 60%.
 
-### Perks and spells
+### Perk points, perks and spells
 
-![The perk tree in creation](images/creation-perks.png)
+![The Warrior tree in creation](images/creation-perks.png)
 
-You have **3 perk picks**. The perk tree has a branch for each attribute. Click an open perk to take it and click it again to give it back. A line between two perks means the one on the left must be taken first. Section 11 lists every perk.
+The screen's rule line reads "3 perk points. One more comes with every level. A node costs 1 to 4 by its tier. Any path, any tree; only your deepest path may open its capstone." You have **3 perk points**, and one more comes with every level. A node costs its tier's points (1, 2, 3, and 4 for a capstone), and points you do not spend are kept. There are no separate spell points and no Spellcasting perk. There are four skill trees, **Warrior**, **Scout**, **Mage** and **Cleric**, each with a tab at the top left (or press 1 to 4), and each tree has three paths, one to a column. Any hero may take nodes from any path of any tree. A spell is a node like any other, bought with perk points like any other node.
 
-![The spell tree in creation](images/creation-spells.png)
+At creation only the first tier (marked **L1** in the left margin) can be taken: click an open node to take it and click it again to give it back. The tiers below ask a higher level (L2, L6, L12) and nodes already held in the same path; the number beside each path's name is how many of its nodes the hero holds, in gold for the deepest. The bottom of the tree is a **capstone** (★, haloed in a double gold frame): only the hero's deepest path may open its capstone, and a hero may hold only one. A line runs down each path's left side through its nodes, top to bottom, and a bracket on a node's right side, ending in an arrowhead, means the node at the bracket's other end, which may be several rows up, must be taken first. Lines are gold into nodes taken, pale into nodes you can take now and dark into nodes still closed; a stretch of a path's left-hand line is gold only when the nodes at both its ends are taken.
 
-Taking **Spellcasting** (an Intelligence perk that needs 40% Magic) opens the spell tree and gives **2 spell picks**. Use the **Perks / Spells** switch at the top left to move between the trees. Spells come in three schools, each marked by the colour on its node: red for offence, green for healing and blue for support.
+![The Mage tree in creation](images/creation-spells.png)
 
-If a change you make leaves a perk you already took without its requirements, that perk is dropped and its pick returned, and the screen says so.
+The coloured tab on a node's left edge says what it is, as the legend under the tree tabs shows: a dim gold disc for a passive, an amber blade for an ability used at will, a violet diamond for an ability that costs mana, and a blue star for a spell. Point at a node to read, under the tree, what it does (with a spell's mana and action points), what it asks, and why it is closed.
+
+If a change you make (an attribute lowered, a skill point taken back) leaves a perk you already took without its requirements, that perk is dropped and its perk points returned, and the screen says so.
 
 ### Name and face
 
@@ -94,7 +96,7 @@ If a change you make leaves a perk you already took without its requirements, th
 
 Pick a portrait and type a name of up to 12 letters. Gear is not chosen: every hero starts holding the weapon of their tagged skill (a melee hero also holds an oak shield), wears an Iron Breastplate, and carries the other plain weapons in their backpack, and the oak shield too, unless they hold it.
 
-Any skill points or picks you leave unspent stay with the character, and you can spend them later on the world map.
+Any skill points or perk points you leave unspent stay with the character, and you can spend them later on the world map.
 
 ---
 
@@ -171,7 +173,7 @@ When you walk onto a monster lair, the footer offers three actions:
 
 You can also click a hex to walk away.
 
-**Bandits.** Not every lair holds monsters. Bandits hold the **Bandit Camp** (threat 3) and the **Bandit Hideout** (threat 4), and new **Bandit Gangs** appear where the blight breeds lairs of threat 3 or more. Bandits are people, built the way your heroes are, and always led by a Captain with sword, shield and breastplate. At threat 3 a Brute with a battle axe and breastplate fights beside him; at threat 4 a Hedge-Mage takes the Brute's place, casting Magic Arrow, Flame Arrow and Shield and healing; at threat 5 a Bandit Archer takes the Hedge-Mage's place, standing back with a bow and shooting. They have a hero's hit points, the Captain and the Brute a hero's armour, and at threat 5 they carry Fine gear. Further out still, beyond threat 5, four bandits take the field together, a **Crossbowman** among them whose bolts punch through armour, all in Fine steel. Expect a hard fight against a party of your level: bring a heavy weapon, or spells, for the armoured ones, and close in on the Archer and the Hedge-Mage, who wear none.
+**Bandits.** Not every lair holds monsters. Bandits hold the **Bandit Camp** (threat 3) and the **Bandit Hideout** (threat 4), and new **Bandit Gangs** appear where the blight breeds lairs of threat 3 or more. Bandits are people, built the way your heroes are, and always led by a Captain with sword, shield and breastplate. At threat 3 a Brute with a battle axe and breastplate fights beside him; at threat 4 a Hedge-Mage takes the Brute's place, casting Magic Arrow, Flame Arrow and Shield (it never heals); at threat 5 a Bandit Archer takes the Hedge-Mage's place, standing back with a bow and shooting. They have a hero's hit points, the Captain and the Brute a hero's armour, and they carry Fine gear at threats 3 and 5 and plain gear at threat 4. Further out still, beyond threat 5, four bandits take the field together, a **Crossbowman** among them whose bolts punch through armour, all in Fine steel. Expect a hard fight against a party of your level: bring a heavy weapon, or spells, for the armoured ones, and close in on the Archer and the Hedge-Mage, who wear none.
 
 ![Bandits at threat 5: the Captain and the Archer](images/battle-bandits.png)
 
@@ -203,11 +205,11 @@ Press **C**, or click the portrait of the hero marked in gold, to open the chara
 | --- | --- |
 | C | Character |
 | S | Skills |
-| B | Spells |
+| B | Abilities |
 | I | Inventory |
-| P | Perk tree (press again to go back to Skills) |
-| K | Spell tree (press again to go back to Spells) |
-| Esc | Close, or step back from a tree |
+| P | Skill trees (press again to go back to Skills) |
+| 1 to 4 | In the skill trees: Warrior, Scout, Mage, Cleric |
+| Esc | Close, or step back from the skill trees |
 
 To switch the panel to another hero, click their portrait on the left.
 
@@ -215,23 +217,23 @@ To switch the panel to another hero, click their portrait on the left.
 
 ![The Character tab](images/panel-character.png)
 
-This tab shows the hero's attributes, their level and experience, and what they fight with: hit points, armour class, resistance, chance to hit, damage, attack cost, how much resistance their blows pierce (if any), action points, critical chance and, for a caster, mana. A hero with runes that ward against an element shows a **Wards** line, for example "Wards: fire 2, frost 4", and one whose weapon has runes that add to a hit an **On a hit** line, for example "On a hit: +3 fire, lays Seared" (see "Runes" in chapter 9).
+This tab shows the hero's attributes, their title (their level and their deepest path, with the second-deepest after a slash once it holds three nodes, as in "Level 9 · Heavy Knight / Paladin"), their experience, and what they fight with: hit points, armour class, resistance, chance to hit, damage, attack cost, how much resistance their blows pierce (if any), action points, critical chance and, for a caster, mana. A hero with runes that ward against an element shows a **Wards** line, for example "Wards: fire 2, frost 4", and one whose weapon has runes that add to a hit an **On a hit** line, for example "On a hit: +3 fire, lays Seared" (see "Runes" in chapter 9).
 
 ### Skills and perks
 
 ![The Skills tab](images/panel-skills.png)
 
-When the hero has skill points to spend, a **+** appears beside each skill. The tab lists the perks the hero has taken. Press **Perk Tree** (or P) to choose new ones.
+When the hero has skill points to spend, the tab says so in green over the skills ("5 skill points to spend") and a **+** appears beside each skill; the **+** greys out for a skill at 100%, which points raise no further (a node's bonus may still carry it past); point at a grey **+** to see why it is grey. The tab lists the passives the hero has taken, spells aside, and the perk points the hero has ("Perk points: 4"). Press **Skill Trees** (or P) to choose new ones: the view opens on the tree of the hero's deepest path, and its tabs (or 1 to 4) show the others.
 
-![The perk tree](images/panel-perk-tree.png)
+![The skill trees](images/panel-perk-tree.png)
 
-Perks you can take now are drawn brightly, and a taken perk shows its ranks (for example 1/2). Most perks also ask a minimum in their attribute, so a dim perk may be waiting for a higher attribute rather than a higher level.
+Nodes you can take now are framed in gold, and a click takes one for its cost in perk points. The digit on a node is that cost: gold when you can take it now, dim otherwise (a ✓ marks a taken node, drawn in gold, and a ✕ a locked capstone). The header's "Perk points: N" is what the hero has to spend. Point at an open node you cannot yet afford and the strip says when saving pays for it: "Needs 3 perk points; you have 1 — affordable at level 8". With the pointer on no node, a gold line under the rules names the next thing saving buys: the cheapest open node you cannot yet afford ("Saving: Pin (3 perk points) is yours at level 11"), or else your calling's capstone, as a goal with what it still asks while it waits on more than levels ("Goal: Blademaster, your calling's capstone: 4 perk points, 5 nodes in Swordmaster, level 12"). A dim node is closed: point at it to see what it still asks, a level, an attribute, a skill or nodes in its path. A capstone closed by another path being deeper, or by a capstone already held, is drawn in rust with a ✕. In battle the trees can be read but not changed.
 
-### Spells
+### Abilities
 
-![The Spells tab](images/panel-spells-mage.png)
+![The Abilities tab](images/panel-spells-mage.png)
 
-This tab lists the spells the hero knows, the mana they are carrying and their **spell skill**, the chance a spell strikes before the foe's armour, with what their gear adds or takes shown beside it. On the world map, the **Cast** button beside a heal casts it out of battle. A heal on one hero asks you to click that hero's portrait. A heal cast on the world map always restores the average of its dice. **Spell Tree** (or K) opens the spell tree.
+This tab lists the actives the hero knows, each with its kind, action points and mana, the mana they are carrying and their **spell skill**, the chance a spell strikes before the foe's armour, with what their gear adds or takes shown beside it. On the world map, the **Cast** button beside a heal casts it out of battle. A heal on one hero asks you to click that hero's portrait. A heal cast on the world map always restores the average of its dice.
 
 ### Inventory
 
@@ -318,7 +320,7 @@ Defence works in two ways. **Armour class** (from agility, shields and some magi
 
 Because resistance comes off every hit, it hurts weapons that hit often for a little, such as the dagger, the shortsword and the bow, much more than weapons that hit hard. Those quick weapons are best against lightly armoured foes. Against heavily armoured ones, reach for a heavy weapon.
 
-**Armour piercing**: melee blows ignore some points of the foe's resistance (see the table above, and the Bearded modifier and the Armour Breaker and Sunder perks). Bow and wand shots pierce nothing; a crossbow bolt pierces its own 2 points, but not the perks'. Spells ignore resistance altogether, which makes a mage the other answer to armour.
+**Armour piercing**: melee blows ignore some points of the foe's resistance (see the table above, and the Bearded modifier and the Armour Breaker and Weapon Mastery nodes). Bow and wand shots pierce nothing and a crossbow bolt its own 2 points, never the melee nodes' piercing; a Deadeye's shots pierce 3 points more. Spells ignore resistance altogether, which makes a mage the other answer to armour.
 
 When a hero is selected, every foe they can attack from where they stand shows on its nameplate your chance to hit, any bonus from flanking and the arc, and, after piercing, how much damage its armour will stop: "60% −3 dmg", or "70% +10 −3 dmg" from its flank.
 
@@ -334,9 +336,39 @@ Some monsters can do more than swing a weapon:
 
 **Hover over a monster** to see what it can do: a small panel beside it, headed with its name, lists each special attack as "ready", "ready next turn" or "ready in 2 turns" (counting the monster's own turns), with what it does underneath (for example "cone 2: 4d6+2 fire, half on a miss" and "seared 1 turn (no regeneration)"), and any wards it has ("Wards: fire 99").
 
+### Skills: spells and techniques
+
+A hero who knows a spell or a **technique** has a **Skills** button (or M). It shows the mana the hero has left, if they have any magic, and reads **Cancel** while you aim. It opens one list of everything the hero can use besides a plain attack: their spells first, then their techniques, each with its mana cost and its AP. Pick one by clicking it or pressing its number.
+
+```
+1. Taunt  3 AP  (ready in 1)
+2. Pin  3 mana  6 AP
+3. Power Attack  7 AP
+```
+
+Techniques are nodes of the skill trees (chapter 7), most of them in the Warrior and Scout trees. Most are a blow or a shot of the hero's own weapon with something added: Power Attack strikes at −10 to hit for +6 damage, Pin pins the foe in place on a hit, Flame Strike adds fire. Their AP is the weapon's attack cost plus the technique's own (Pin is "weapon + 1": 6 AP with a longsword, 4 with a dagger), so the list always shows the cost for the weapon the hero holds now. Some cost mana as well; some, once used, have to wait a turn or more, and the list says "(ready in 1)".
+
+A row you cannot use right now is greyed out. Hover over it to see why: "Needs a melee weapon" (a technique for a melee weapon while the hero holds a bow) or "Needs a ranged weapon", "Once a battle", "Recharging (ready in 2)", "Needs 3 mana", "Needs 6 AP", or "No foe in range" ("No target in range" for Revive with no fallen ally near). "Not now" means none of these, such as an area that would catch no foe where it can be aimed.
+
+Once picked, a skill asks for its target, even when there is only one:
+
+- A **strike** or a technique that marks a foe (Hunter's Mark) asks for a foe. Hovering over one shows your chance to hit, the technique's bonus or penalty included.
+- A technique the hero uses on themselves (Sprint) asks you to click the hero.
+- An area **around the hero** (Taunt, Consecrate) also asks you to click the hero. Hovering over them outlines the area and marks every foe it would touch.
+- **Revive** asks for a fallen ally: click the hex where the ally lies (fallen allies stay on the board, faded, and are outlined while Revive is aimed). A hex a standing unit has taken offers nothing.
+- Any other area (Volley) asks for a hex within reach. Hovering over one outlines the area and shows the odds for every unit inside, your own heroes included: a volley hits everyone under it.
+
+Press **Cancel** or **Esc** to back out. Spells are aimed the same way (see chapter 6).
+
+**Taunt** lays Taunted (**T** on the nameplate) on every foe within 2 hexes for a turn: they strike anyone but the taunter at −25, and it ends at once if the taunter falls. A hero with **Rooted** who ends a turn without moving stands rooted (**R**: +10 armour class, +2 resistance) through the enemy's turn, until they take a step or their next turn ends; standing still again renews it. **Pinned** foes (**N**), struck by Pin or Pinning Shot, cannot move, though they still attack and cast. Hunter's Mark leaves a foe **Marked** (**Y**, −10 armour class, easier for everyone to hit), and Hamstring leaves one **Slowed** (**L**, 3 AP fewer next turn). The table of lasting effects in chapter 6 lists them all. Foes that know techniques use them too: bandits grow into them as they level, the Captain taunting and pinning, the Brute power-attacking and cleaving, archers taking aimed shots.
+
+Other things you will see in a battle: green **+3** floating over a unit is a restore at the start of its turn (Renewing, a Sanctuary's aura), and a blue **+2 mana** a Serenity's; **Endures** shows a hero kept standing at 1 hit point by Unbreakable; **Deathblow** a foe felled outright by a hit that left it a quarter of its hit points; **Ambush** and **+4 AP** an Ambush's first blow and the action points Blademaster gave back. A hero brought back by Revive stands up again at once. Hovering over a foe lists its abilities with their costs, and the on-hit damage of a technique such as Smite reads "+4 on hit".
+
+Some nodes work by themselves, with nothing to click. **Auras** (Guardian, Aura of Courage, Aegis) help the allies near the hero for as long as the hero stands, and two of the same aura do not add up. **Traits** act when their moment comes: Counter strikes back at a melee blow, Backstab, Ambush and Executioner add to a blow in the right moment, Deathblow fells a weakened foe, Blademaster refunds the action points of a blow that felled one, and Unbreakable keeps a hero at 1 hit point the first time each battle that damage would fell them. Sanctuary, Serenity and Shadowdancer work as a turn begins. The tables in chapter 11 say what each asks and does.
+
 ### Zones of control and free attacks
 
-A foe holding a **melee** weapon controls the hexes next to it. **Leaving** those hexes gives that foe one free attack on you; stepping to another hex next to the same foe does not. Each foe gets at most one free attack per enemy turn. A spear or halberd controls only the hexes next to it too, though it strikes from two. Ranged units (bows, crossbows, wands) and sleepers have no zone of control. Pathfinding prefers routes that provoke the fewest foes, and the orange edges show where the danger is. Your heroes threaten the enemy in exactly the same way.
+A foe holding a **melee** weapon controls the hexes next to it. **Leaving** those hexes gives that foe one free attack on you; stepping to another hex next to the same foe does not. Each foe gets at most one free attack per enemy turn. A spear or halberd controls only the hexes next to it too, though it strikes from two. Ranged units (bows, crossbows, wands) and sleepers have no zone of control. Pathfinding prefers routes that provoke the fewest foes, and the orange edges show where the danger is. Your heroes threaten the enemy in exactly the same way. A hero with **Tumble** provokes no free attacks when moving, and one with **Counter** answers a melee blow that misses with a free attack of their own, once per enemy turn.
 
 ### Changing gear in battle
 
@@ -347,12 +379,12 @@ Press **I** to open the inventory for the selected hero. Equipping, stowing, dro
 | Key | Does |
 | --- | --- |
 | Click | Select a hero, move, or attack |
-| M | Open the Cast list (heroes with magic) |
-| 1–9 | Pick a spell from the open list |
+| M | Open the Skills list (heroes with spells or techniques) |
+| 1–9 | Pick a spell or technique from the open list |
 | I / C / S | Inventory / Character / Skills panel |
-| Esc | Close the spell list, cancel aiming, or open the menu |
+| Esc | Close the Skills list, cancel aiming, or open the menu |
 
-While aiming a spell the pointer is crossed swords over a valid target of an attacking spell, and a green cross over a valid target of a healing or protective one.
+While aiming, the pointer is crossed swords over a valid target of an attacking spell or a technique, and a green cross over a valid target of a healing or protective spell, or over the hero for a technique they use on themselves.
 
 ### Victory and defeat
 
@@ -368,11 +400,13 @@ Wounds carry over from battle to battle. Heal before you go looking for the next
 
 ## 6. Magic
 
-A hero who knows a spell has **mana**: twice their Intelligence, plus half their Intelligence for each level after the first, plus whatever their gear and perks add. Every battle starts with full mana. Mana spent in battle does not come back until the battle ends. Whatever a winner has left is carried onto the world map, where it can be spent on heals. A day of camping or a new level refills it.
+Every hero has **mana**: twice their Intelligence, plus half their Intelligence for each level after the first, plus 2 for each node they hold in the Mage and Cleric trees, plus whatever their gear and nodes add. A hero who knows no spell has mana but nothing to spend it on. Spells are nodes of the skill trees (chapter 7), bought with perk points like any other node and gated by the **Magic** skill, and they need no other skill: a warrior who trains Magic can learn them too. Every battle starts with full mana. Mana spent in battle does not come back until the battle ends. Whatever a winner has left is carried onto the world map, where it can be spent on heals. A day of camping or a new level refills it. At level 1 Aldric, the ready-made fighter, has 6 mana, which he has no spell to spend, and Delwyn, the mage, 28.
+
+Several nodes sharpen a caster: some add flat **spell power** to each damaging spell (Destruction, Pyromancy, Numbing Cold), **Mending** adds to every heal, **Lingering Cold** and **Lasting Magic** lengthen the effects a spell lays, **Serenity** extends the reach of friendly spells and regains mana each turn, and **Quickened Casting** and **Swift Hands** take an action point off every spell or every heal, never below 2.
 
 ![The spell list](images/battle-spell-menu.png)
 
-To cast, select the hero and press **Cast** (or M); the button shows the mana the hero has left, and reads **Cancel** while you aim. Pick a spell by clicking it or pressing its number. A spell you cannot cast right now is greyed out, for example because no target is in range or the hero lacks the AP or mana.
+Spells are one kind of skill. To cast, select the hero and press **Skills** (or M); the button shows the mana the hero has left, and reads **Cancel** while you aim. The list holds the hero's spells first, then their techniques (see "Skills" in chapter 5), each spell with its mana and the AP it costs this hero. Pick a spell by clicking it or pressing its number. A spell you cannot cast right now is greyed out, and hovering it says why, for example "No foe in range" or "Needs 10 mana".
 
 ![Choosing a spell's target](images/battle-targeting.png)
 
@@ -382,17 +416,21 @@ The spell then asks for a target. Valid targets are outlined, and hovering over 
 - **Area spells** touch **everyone** in the area, including your own heroes and the caster. Hovering over the centre of an area outlines it and shows the odds for every unit inside.
 - **Friendly spells** never miss.
 
+A technique that costs mana is not a spell: it is a blow or a shot of the hero's weapon, rolled with the weapon's skill, flanking and facing included, and it uses mana only as its price. Flame Strike, Frost Strike and Thunder Strike add their element's damage to the blow on a hit, and the foe's ward against that element takes its points off as it would from a spell.
+
+Six of the later spells are special. **Ice Lance** (frost, 2d8) does 2d8 more to a foe already chilled, slowed, webbed, asleep or frozen. **Glacial Prison** freezes a foe within 5 hexes for 2 turns: **Frozen** (**I**) is helpless like sleep, but damage does not wake it. **Purify** ends every hostile effect on an ally and heals 1d6; the log names each effect it removed. **Revive** raises an ally that fell in this battle, on a free hex within 2, at a quarter of its hit points, once a battle. **Renew** gives each ally near the caster 3 hit points as its turn begins, for 3 turns (**U**). **Holy Light** is a bolt of light that deals double dice against the regenerating and the blightborn.
+
 ### Elements and wards
 
 Some spells and effects carry an **element**. Flame Arrow and Fireball are fire, Frost Blast is frost, Acid Arrow and its corrosion are acid, and Death Cloud and its poison are poison. Magic Arrow has no element. A monster may have a **ward** against an element: the ward takes that many points off each hit and each tick of that element, and the log notes it, for example "HITS Salamander for 0 dmg (warded 9)". A ward never stops an effect from landing, only its damage. Choose spells with no element, or a different one, against a warded foe.
 
 Heroes can have wards too, from **runes** in their armour and shields (see "Runes" in chapter 9): a breastplate with a Rime rune gives "Frost ward 2", and a Venom rune makes a Giant Spider's poison tick 2 less. Wards from every item worn add up.
 
-Monsters have spells of their own that heroes cannot learn, among them Web and Curse.
+Web and Curse, once only monsters cast them, are nodes in the Cryomancer and Saint paths, and heroes can learn them too. Monsters have spells of their own that heroes cannot learn, among them Lightning Bolt, Drain Life and Dark Shield.
 
 ### Lasting effects
 
-The letters beside a unit's health bar show its current effects. An effect lasts for that unit's own turns. Casting the same effect again keeps whichever duration is longer, and different effects stack.
+The coloured letters over a unit's name show its current effects. An effect lasts for that unit's own turns. Casting the same effect again keeps whichever duration is longer, and different effects stack.
 
 | Effect | What it does |
 | --- | --- |
@@ -407,8 +445,16 @@ The letters beside a unit's health bar show its current effects. An effect lasts
 | Hasted | +3 AP |
 | Mirrored | Images take the next hits, and a hit on an image deals no damage |
 | Seared | No regeneration for a turn |
-| Cursed | −15 to hit and −5 armour class (laid by monsters) |
-| Webbed | −4 AP (laid by a Giant Spider's web) |
+| Cursed | −15 to hit and −5 armour class |
+| Webbed | −4 AP |
+| Warded | +4 ward against every element |
+| Marked (Y) | −10 armour class |
+| Slowed (L) | −3 AP |
+| Taunted (T) | −25 to hit at anyone but the taunter |
+| Pinned (N) | Cannot move, though it still attacks and casts |
+| Frozen (I) | No AP, helpless like sleep, but damage does not wake it |
+| Renewing (U) | Regains 3 hit points as its turn begins |
+| Rooted (R) | +10 armour class, +2 resistance, until the unit moves or its next turn ends |
 
 Damage over time strikes at the start of the affected unit's side's turn. Section 11 lists every spell.
 
@@ -426,22 +472,32 @@ Each new level:
 
 - raises maximum hit points (by 2 plus half the hero's Endurance) and **heals the hero fully**, refilling their mana as well
 - gives **skill points**: 2 plus a third of the hero's Intelligence
-- gives a **perk pick** every 3rd level (3, 6, 9 and so on)
-- gives a **spell pick**, for a hero who has Spellcasting
+- gives **1 perk point**, which buys nodes of the skill trees, spells included, at their cost; unspent points are kept
 
-A **+** on a portrait means that hero has something to spend. Spend it from the character panel on the world map, since nothing can be spent in battle.
+A **+** on a portrait means that hero has points to spend: skill points some skill can take, or perk points enough for a node open to them. The world map says so too ("Aldric has points to spend: click the portrait marked "+"."). Spend them from the character panel on the world map, since nothing can be spent in battle.
 
 ![Skill points ready to spend](images/panel-level-up.png)
 
 ### Building a hero
 
-There are no classes. A hero is defined by their attributes, the skill they tagged and the perks they chose. Each attribute's branch of the perk tree has:
+There are no classes. A hero is defined by their attributes, the skill they tagged and the nodes they chose from four **skill trees**, Warrior, Scout, Mage and Cleric, each of three **paths**. Any hero may take nodes from any path of any tree, and mix them.
 
-- a **trunk** perk that raises the attribute by 1, for two ranks, from level 3 onward
-- perks that open at level 1
-- **masteries** at level 6 that need 8 in the attribute
+- Every node has **one rank**: perk points buy it once, and nothing is spent again on it.
+- A node sits at a **tier**, and a tier asks a level and a **depth**, the nodes already held in the same path: tier 1 asks level 1 and none, tier 2 level 2 and 1, tier 3 level 6 and 3, and the **capstone** level 12 and 5. A node costs perk points by its tier (the table below). A node may also ask an attribute, a skill (or one of two skills, as Bless asks Melee 30% or Magic 40%) or a node of its own path before it.
+- A hero's **calling** is the path they hold the most nodes in, shown under their name as "Level 9 · Heavy Knight" (two paths level for deepest are both named). Only the calling's capstone may be taken, and a hero may hold only one capstone: taking it closes every other for good.
+- A node asks only to be taken; it is never lost afterwards. There is no respec, so choose with care.
+- **Revive** and **Unbreakable** soften permadeath a little: Revive stands an ally who fell this battle up again, and Unbreakable keeps its holder at 1 hit point the first time damage would fell it, each once per battle. A hero who still falls and is not raised is dead for good.
 
-A hero born with an attribute of 7 can reach that attribute's masteries by taking its trunk perk.
+| Tier | Level asked | Depth asked | Cost |
+| --- | --- | --- | --- |
+| 1 | 1 | 0 | 1 |
+| 2 | 2 | 1 | 2 |
+| 3 | 6 | 3 | 3 |
+| Capstone | 12 | 5 | 4 |
+
+Points you save buy deeper nodes; a hero who stays in one path reaches its tier 3 at level 6 and its capstone at 12, and one who mixes paths holds more nodes but reaches a capstone later.
+
+A hero born with an attribute of 7 or 8 reaches the nodes that ask it from the start, and the trees' attribute nodes (Gain Strength, Toughness and others) raise one further.
 
 ---
 
@@ -531,7 +587,7 @@ Gear comes in **families**, each a trade-off: the weapons in the table in chapte
 
 **Weight.** Heavy gear asks for strength. For every point of strength a hero lacks for an item, they lose 5% to hit with weapon attacks (spells are not affected), and each item counts on its own: a strength 3 hero with a War Hammer (6) and Iron Gauntlets (4) loses 15% + 5%. An item's tooltip shows it, as "Strength: 6 (you have 3): to hit −15%".
 
-Plate and the tower shield also take **1 AP** off every turn, and metal armour lowers the chance of a hero's **spells** (the breastplate, helm and gauntlets by 5% each, plate by 15%), which is the price a mage pays for armour. The Spells tab shows a caster's spell skill with its gear counted. If the AP a hero's gear leaves is fewer than its weapon's attack costs (plate and a 7 AP halberd on a hero of 7 AP), the Character tab warns in amber, "Attack costs 7 AP, you have 6: cannot attack", as the hero could never strike.
+Plate and the tower shield also take **1 AP** off every turn, and metal armour lowers the chance of a hero's **spells** (the breastplate, helm and gauntlets by 5% each, plate by 15%), which is the price a mage pays for armour. The Abilities tab shows a caster's spell skill with its gear counted. If the AP a hero's gear leaves is fewer than its weapon's attack costs (plate and a 7 AP halberd on a hero of 7 AP), the Character tab warns in amber, "Attack costs 7 AP, you have 6: cannot attack", as the hero could never strike.
 
 ![A mage of strength 3 looking at the Iron Greatsword, which asks 6](images/panel-strength.png)
 
@@ -650,54 +706,157 @@ It cannot raise the dead.
 
 | Spell | School | Mana | AP | Effect |
 | --- | --- | --- | --- | --- |
-| Magic Arrow | Offence | 3 | 4 | 1d10 to a foe within 5 hexes |
-| Flame Arrow | Offence | 5 | 4 | 2d8 to a foe within 5 hexes |
-| Sleep | Offence | 5 | 4 | A foe within 5 hexes sleeps for 2 turns, helpless until hurt |
-| Frost Blast | Offence | 6 | 5 | 1d8 and −3 AP for a turn to everyone within 1 hex of a point within 4 |
-| Fireball | Offence | 10 | 6 | 3d6 to everyone within 1 hex of a point within 6 |
-| Acid Arrow | Offence | 7 | 4 | 1d8 to a foe within 5 hexes, then −5 AC and 1d4 a turn for 3 turns |
-| Death Cloud | Offence | 10 | 6 | Poisons everyone within 1 hex of a point within 5: 1d6 a turn for 3 turns |
-| Heal | Healing | 3 | 4 | Restores 1d8+2 to an ally within 4 hexes |
-| Greater Heal | Healing | 6 | 4 | Restores 2d8+4 to an ally within 4 hexes |
-| Heal All | Healing | 8 | 5 | Restores 1d8 to each ally within 2 hexes of the caster |
-| Greater Heal All | Healing | 14 | 6 | Restores 2d8+2 to each ally within 2 hexes of the caster |
+| Magic Arrow | Offensive | 3 | 4 | 1d10 to a foe within 5 hexes |
+| Flame Arrow | Offensive | 5 | 4 | 2d8 to a foe within 5 hexes, and no regeneration next turn |
+| Sleep | Offensive | 5 | 4 | A foe within 5 hexes sleeps for 2 turns, helpless, until it is hurt |
+| Frost Blast | Offensive | 6 | 5 | 1d8 and -3 AP for a turn to everyone within 1 hex of a point within 4 hexes |
+| Fireball | Offensive | 10 | 6 | 3d6 to everyone within 1 hex of a point within 6 hexes, and no regeneration next turn |
+| Acid Arrow | Offensive | 7 | 4 | 1d8 to a foe within 5 hexes, and -5 AC, -2 resistance, 1d4 a turn and no regeneration for 3 turns |
+| Death Cloud | Offensive | 10 | 6 | Poisons everyone within 1 hex of a point within 5 hexes: 1d6 a turn for 3 turns |
+| Heal | Healing | 3 | 4 | Restores 1d8+2 hit points to an ally within 4 hexes |
+| Greater Heal | Healing | 6 | 4 | Restores 2d8+4 hit points to an ally within 4 hexes |
+| Heal All | Healing | 8 | 5 | Restores 1d8 hit points to each ally within 2 hexes of the caster |
+| Greater Heal All | Healing | 14 | 6 | Restores 2d8+2 hit points to each ally within 2 hexes of the caster |
 | Shield | Support | 3 | 2 | +15 AC to the caster for 3 turns |
 | Protect | Support | 3 | 3 | +10 AC to an ally within 4 hexes for 3 turns |
 | Bless | Support | 4 | 4 | +10 to hit for each ally within 2 hexes of the caster, for 3 turns |
-| Mirror Image | Support | 6 | 3 | 3 images of the caster take the next 3 hits, for 3 turns |
+| Mirror Image | Support | 6 | 3 | 3 images of the caster take the next 3 hits on it, for 3 turns |
 | Haste | Support | 7 | 4 | +3 AP to an ally within 4 hexes for 2 turns |
-| Bane | Support | 5 | 4 | −15 to hit for everyone within 1 hex of a point within 5, for 3 turns |
+| Bane | Support | 5 | 4 | -15 to hit for everyone within 1 hex of a point within 5 hexes, for 3 turns |
+| Frostbite | Offensive | 3 | 4 | 1d6+1 frost to a foe within 5 hexes, chilled for 1 turn |
+| Meteor | Offensive | 16 | 7 | 4d8 to everyone within 2 hexes of a point within 6 hexes, and no regeneration next turn |
+| Mass Haste | Support | 12 | 5 | +3 AP for 2 turns to each ally within 2 hexes of the caster |
+| Lay on Hands | Healing | 4 | 3 | Restores 2d6+2 hit points to an ally within 1 hex |
+| Ward | Support | 4 | 3 | +4 ward against every element to an ally within 4 hexes for 3 turns |
+| Web | Offensive | 5 | 4 | -4 AP for 2 turns to everyone within 1 hex of a point within 4 hexes |
+| Curse | Offensive | 5 | 4 | -15 to hit and -5 AC to a foe within 5 hexes, for 3 turns |
+| Ice Lance | Offensive | 7 | 4 | 2d8 frost to a foe within 6 hexes, 2d8 more if it is chilled, slowed, webbed, asleep or frozen |
+| Glacial Prison | Offensive | 12 | 5 | A foe within 5 hexes is frozen for 2 turns, helpless, even when hurt |
+| Purify | Healing | 4 | 3 | Ends every hostile status on an ally within 4 hexes and restores 1d6 hit points |
+| Revive | Healing | 20 | 6 | An ally within 2 hexes that fell this battle, on a free hex, stands again at a quarter of its hit points; once a battle |
+| Renew | Support | 10 | 5 | Each ally within 2 hexes of the caster regains 3 hit points as its turn begins, for 3 turns |
+| Holy Light | Offensive | 7 | 4 | 3d6 to a foe within 5 hexes, double the dice against the regenerating and the blightborn |
 
-Spells further out in a school need the spell before them, and their tier asks more: level 1 and 40% Magic, then level 3 and 55%, then level 5 and 70%.
+Each spell is a node of a path in the Mage or Cleric tree (Bless and Lay on Hands are in the Paladin's); the tables below say where, and what it asks. Some nodes lower a spell's cost or lengthen its reach (Quickened Casting, Swift Hands, Serenity), so the costs above are the base.
 
-### Perks
+### Skill tree nodes
 
-| Branch | Perk | Effect |
-| --- | --- | --- |
-| Strength | Heavy Hand | +1 melee damage |
-| | Weapon Training | +5% Melee Weapons |
-| | Armour Breaker | Melee blows pierce 1 point of resistance |
-| | Mighty Blow | +2 melee damage |
-| | Weapon Mastery | +10% Melee Weapons |
-| | Sunder | Melee blows pierce 2 more points of resistance |
-| Perception | Deadly Aim | +1 ranged damage |
-| | Marksmanship | +5% Archery |
-| | Far Shot | Ranged weapons reach 2 hexes further |
-| | Eagle Eye | +10% Archery |
-| Endurance | Toughness | +6 hit points |
-| | Tireless | +1 AP every turn |
-| Intelligence | Quick Study | +10% experience |
-| | Spellcasting | Opens the spell tree: 2 spells now and 1 every level |
-| | Arcane Study | +5% Magic |
-| | Scholar | +2 skill points every level |
-| | Deep Well | +6 mana |
-| | Arcane Mastery | +10% Magic |
-| Agility | Dodger | +5 armour class |
-| | Evasion | +10 armour class |
-| Luck | Keen Eye | +5% critical chance |
-| | Fortune | +10% critical chance |
+This lists every node of the game, 95 in all, by tree and path. **Tier** is the level a node asks (L1, L2, L6, L12; the capstone is marked ★), and each tier also asks depth, the nodes already held in the same path: none, 1, 3 and 5 (chapter 7). **Asks** is what a node needs beyond that: attributes, skills ("Melee 40% or Magic 40%" means either) and the node of its own path it follows. **Kind** is a passive (always in effect), an ability used **at will**, an ability that costs **mana**, or a **spell** (see above). A technique's cost reads "weapon AP + 1" where it is the weapon's attack cost plus 1.
 
-Each branch also has its trunk perk, which gives +1 to the attribute per rank. The perks in the right-hand column of the tree are the level 6 masteries, which need 8 in their attribute. Most of the other perks have two ranks.
+#### Warrior
+
+| Path | Node | Tier | Kind | Asks | Effect |
+| --- | --- | --- | --- | --- | --- |
+| Swordmaster | Weapon Training | L1 | Passive | Strength 5 | +10% Melee Weapons |
+|  | Heavy Hand | L1 | Passive | Strength 6 | +2 damage with melee weapons and bare hands |
+|  | Power Attack | L2 | At will | Melee 40% | weapon AP + 2. A weapon blow at −10 to hit for +6 damage. |
+|  | Armour Breaker | L2 | Passive | Strength 6 | Melee blows pierce 2 points of a foe's resistance |
+|  | Gain Strength | L2 | Passive | — | +2 Strength; not for one whose Strength is above 8 |
+|  | Cleave | L6 | At will | Melee 55% | weapon AP + 2, recharge 2. Two weapon blows at −5 each, the second at another foe in reach if there is one. |
+|  | Weapon Mastery | L6 | Passive | Strength 8 | +10% Melee Weapons, +2 melee damage, and melee blows pierce 1 more point of a foe's resistance |
+|  | Blademaster | L12 ★ | Passive | Melee 70% | Once a turn, a weapon blow or strike technique of its own that fells a foe gives back the action points it cost |
+| Heavy Knight | Toughness | L1 | Passive | Endurance 5 | +8 hit points and +1 Endurance |
+|  | Shield Wall | L1 | Passive | — | +8 armour class while a shield is in the off hand |
+|  | Taunt | L2 | At will | Endurance 5 | 3 AP, recharge 2. Lays Taunted on every foe within 2 hexes for a turn: they strike others at −25. |
+|  | Rooted | L2 | Passive | Endurance 6 | At the end of its side's turn, if it has not moved, it is rooted: +10 armour class and +2 resistance until it moves or the end of its next turn |
+|  | Pin | L6 | Mana | Melee 55% | 3 mana, weapon AP + 1, recharge 1. A weapon blow; a hit pins the foe for a turn. |
+|  | Iron Skin | L6 | Passive | Endurance 7 | +2 resistance; its free attacks get +15 to hit and +3 damage |
+|  | Guardian | L6 | Passive | Endurance 7 | Allies beside it (not itself) get +5 armour class; two Guardians do not add up |
+|  | Unbreakable | L12 ★ | Passive | Endurance 8 | The first time each battle that damage would bring it to 0, it is left at 1 hit point and Shielded for 2 turns |
+| Spellsword | Arcane Blood | L1 | Passive | Intelligence 3 | +10 mana |
+|  | Flame Strike | L1 | Mana | Melee 30% | 3 mana, weapon AP + 1. A weapon blow; a hit adds 5 fire and sears the foe for a turn. |
+|  | Frost Strike | L2 | Mana | Melee 40% | 3 mana, weapon AP + 1. A weapon blow; a hit adds 4 frost and chills the foe for a turn. |
+|  | Spell Ward | L2 | Passive | — | +3 ward against every element |
+|  | Thunder Strike | L6 | Mana | Melee 55% | 4 mana, weapon AP + 1. A weapon blow at +10 to hit; a hit adds 7 lightning. |
+|  | Battle Mage | L6 | Passive | Intelligence 5 | +6 mana; each melee hit that strikes no image restores 1 mana; its Strikes' elemental damage +2 |
+|  | Arcane Knight | L12 ★ | Passive | Melee 70% | Every melee hit adds 4 fire damage, as a rune does, and its Strikes cost only the weapon's AP |
+
+#### Scout
+
+| Path | Node | Tier | Kind | Asks | Effect |
+| --- | --- | --- | --- | --- | --- |
+| Ranger | Marksmanship | L1 | Passive | Perception 5 | +10% Archery |
+|  | Deadly Aim | L1 | Passive | Perception 6 | +2 damage with ranged weapons |
+|  | Aimed Shot | L2 | At will | Archery 40% | weapon AP + 2. A weapon shot at +20 to hit for +3 damage. |
+|  | Far Shot | L2 | Passive | Perception 6 | Ranged weapons reach 2 hexes further; +1 Perception |
+|  | Hunter's Mark | L2 | At will | Archery 40% | 2 AP, recharge 3. Marks a foe within weapon range for 2 turns: 10 off its armour class. |
+|  | Volley | L6 | At will | Archery 55% | weapon AP + 2, recharge 2. A rain of shots on a hex within weapon range: everyone within 1 hex of it, allies too, takes a shot, through armour. |
+|  | Pinning Shot | L6 | Mana | Archery 55% | 3 mana, weapon AP + 1, recharge 1. A weapon shot; a hit pins the foe for a turn. |
+|  | Deadeye | L12 ★ | Passive | Archery 70% | +10% Archery; its shots pierce 3 points of resistance, and a critical shot rolls triple dice instead of double |
+| Rogue | Dodger | L1 | Passive | Agility 6 | +10 armour class |
+|  | Sprint | L1 | At will | Agility 5 | 0 AP, recharge 3. 3 more action points this turn. |
+|  | Skirmisher | L2 | Passive | Agility 6 | +1 Agility; after it has moved this turn, its attacks get +10 to hit |
+|  | Dirty Trick | L2 | At will | Melee 40% | weapon AP + 1, recharge 2. A weapon blow; a hit banes the foe for 2 turns: −15 to hit. |
+|  | Tumble | L6 | Passive | Agility 7 | Its moves provoke no free attacks |
+|  | Evasion | L6 | Passive | Agility 8 | +10 armour class and +1 action point every turn |
+|  | Counter | L6 | Passive | Melee 55% | Once per enemy turn, when a foe's melee blow misses it, it strikes back with a free attack, if it holds a melee weapon and the foe is in reach |
+|  | Shadowdancer | L12 ★ | Passive | Agility 8 | As its side's turn begins, it gains a mirror image for 2 turns, unless it has one already |
+| Assassin | Keen Eye | L1 | Passive | Luck 6 | +10% chance of a critical hit |
+|  | Backstab | L1 | Passive | Melee 30% or Archery 30% | +15 to hit and +4 damage on a weapon attack from a foe's rear arc |
+|  | Venom Strike | L2 | Mana | Melee 40% or Archery 40% | 2 mana, weapon AP + 1. A weapon blow or shot; a hit poisons the foe for 3 turns. |
+|  | Hamstring | L2 | At will | Melee 40% or Archery 40% | weapon AP + 1, recharge 2. A weapon blow or shot; a hit slows the foe for a turn: 3 fewer action points. |
+|  | Fortune | L6 | Passive | Luck 7 | +10% chance of a critical hit and +1 Luck; its critical hits deal 4 more damage, after the dice are doubled |
+|  | Ambush | L6 | Passive | Agility 6 | Its first weapon attack of a battle (not a free one) gets +25 to hit, and a hit is critical |
+|  | Executioner | L6 | Passive | Melee 55% or Archery 55% | +5 damage against a foe at half its hit points or less |
+|  | Deathblow | L12 ★ | Passive | Melee 70% or Archery 70% | A weapon hit that leaves a foe at a quarter of its maximum hit points or less fells it, unless the foe is blightborn |
+
+#### Mage
+
+| Path | Node | Tier | Kind | Asks | Effect |
+| --- | --- | --- | --- | --- | --- |
+| Evoker | Magic Arrow | L1 | Spell | Magic 40% | 1d10 to a foe within 5 hexes; 3 mana, 4 AP |
+|  | Destruction | L1 | Passive | Intelligence 5 | +2 damage to each instance of its damaging spells; +4 mana |
+|  | Flame Arrow | L2 | Spell | Magic 55%, Magic Arrow | 2d8 to a foe within 5 hexes, and no regeneration next turn; 5 mana, 4 AP |
+|  | Pyromancy | L2 | Passive | Intelligence 6 | +3 damage to its fire spells |
+|  | Fireball | L6 | Spell | Magic 65%, Flame Arrow | 3d6 to everyone within 1 hex of a point within 6 hexes, and no regeneration next turn; 10 mana, 6 AP |
+|  | Acid Arrow | L6 | Spell | Magic 65%, Flame Arrow | 1d8 to a foe within 5 hexes, and -5 AC, -2 resistance, 1d4 a turn and no regeneration for 3 turns; 7 mana, 4 AP |
+|  | Death Cloud | L6 | Spell | Magic 70% | Poisons everyone within 1 hex of a point within 5 hexes: 1d6 a turn for 3 turns; 10 mana, 6 AP |
+|  | Meteor | L12 ★ | Spell | Magic 80% | 4d8 to everyone within 2 hexes of a point within 6 hexes, and no regeneration next turn; 16 mana, 7 AP |
+| Cryomancer | Frostbite | L1 | Spell | Magic 40% | 1d6+1 frost to a foe within 5 hexes, chilled for 1 turn; 3 mana, 4 AP |
+|  | Numbing Cold | L1 | Passive | Intelligence 5 | +3 damage to its frost spells |
+|  | Sleep | L2 | Spell | Magic 55% | A foe within 5 hexes sleeps for 2 turns, helpless, until it is hurt; 5 mana, 4 AP |
+|  | Frost Blast | L2 | Spell | Magic 55%, Frostbite | 1d8 and -3 AP for a turn to everyone within 1 hex of a point within 4 hexes; 6 mana, 5 AP |
+|  | Web | L6 | Spell | Magic 65% | -4 AP for 2 turns to everyone within 1 hex of a point within 4 hexes; 5 mana, 4 AP |
+|  | Ice Lance | L6 | Spell | Magic 70% | 2d8 frost to a foe within 6 hexes, 2d8 more if it is chilled, slowed, webbed, asleep or frozen; 7 mana, 4 AP |
+|  | Lingering Cold | L6 | Passive | Intelligence 7 | Statuses its hostile spells lay last 1 turn longer; +10% Magic |
+|  | Glacial Prison | L12 ★ | Spell | Magic 80% | A foe within 5 hexes is frozen for 2 turns, helpless, even when hurt; 12 mana, 5 AP |
+| Arcanist | Shield | L1 | Spell | Magic 40% | +15 AC to the caster for 3 turns; 3 mana, 2 AP |
+|  | Arcane Study | L1 | Passive | Intelligence 5 | +10% Magic |
+|  | Mirror Image | L2 | Spell | Magic 55% | 3 images of the caster take the next 3 hits on it, for 3 turns; 6 mana, 3 AP |
+|  | Ward | L2 | Spell | Magic 55% | +4 ward against every element to an ally within 4 hexes for 3 turns; 4 mana, 3 AP |
+|  | Haste | L6 | Spell | Magic 65% | +3 AP to an ally within 4 hexes for 2 turns; 7 mana, 4 AP |
+|  | Lasting Magic | L6 | Passive | Intelligence 7 | Statuses its friendly spells lay last 1 turn longer; +1 Intelligence |
+|  | Quickened Casting | L6 | Passive | Magic 70% | Its spells cost 1 AP less (never below 2); +8 mana |
+|  | Mass Haste | L12 ★ | Spell | Magic 80% | +3 AP for 2 turns to each ally within 2 hexes of the caster; 12 mana, 5 AP |
+
+#### Cleric
+
+| Path | Node | Tier | Kind | Asks | Effect |
+| --- | --- | --- | --- | --- | --- |
+| Healer | Heal | L1 | Spell | Magic 40% | Restores 1d8+2 hit points to an ally within 4 hexes; 3 mana, 4 AP |
+|  | Mending | L1 | Passive | Magic 30% | Its heals restore 4 more |
+|  | Greater Heal | L2 | Spell | Magic 55%, Heal | Restores 2d8+4 hit points to an ally within 4 hexes; 6 mana, 4 AP |
+|  | Heal All | L2 | Spell | Magic 55%, Heal | Restores 1d8 hit points to each ally within 2 hexes of the caster; 8 mana, 5 AP |
+|  | Greater Heal All | L6 | Spell | Magic 65%, Heal All | Restores 2d8+2 hit points to each ally within 2 hexes of the caster; 14 mana, 6 AP |
+|  | Purify | L6 | Spell | Magic 55% | Ends every hostile status on an ally within 4 hexes and restores 1d6 hit points; 4 mana, 3 AP |
+|  | Swift Hands | L6 | Passive | Magic 60% | Its healing spells cost 1 AP less (never below 2); +8 mana |
+|  | Revive | L12 ★ | Spell | Magic 75% | An ally within 2 hexes that fell this battle, on a free hex, stands again at a quarter of its hit points; once a battle; 20 mana, 6 AP |
+| Paladin | Bless | L1 | Spell | Melee 30% or Magic 40% | +10 to hit for each ally within 2 hexes of the caster, for 3 turns; 4 mana, 4 AP |
+|  | Smite | L1 | Mana | Melee 30% | 3 mana, weapon AP + 1. A weapon blow; a hit adds 4 damage, and 6 more against the regenerating and the blightborn. |
+|  | Lay on Hands | L2 | Spell | Melee 40% or Magic 40% | Restores 2d6+2 hit points to an ally within 1 hex; 4 mana, 3 AP |
+|  | Blessed Armour | L2 | Passive | Endurance 5 | +1 resistance, +3 ward against blight, +6 mana |
+|  | Aura of Courage | L6 | Passive | Melee 55% | Allies within 2 hexes (not itself) get +5 to hit; two such auras do not add up |
+|  | Consecrate | L6 | Mana | Melee 55% | 5 mana, 5 AP, recharge 2. Every foe beside the user takes 2d6, half on a miss, double the dice against the regenerating and the blightborn. |
+|  | Sacred Weapon | L6 | Passive | Melee 60% | +10% Melee Weapons; every melee hit adds 2 damage, and 4 more as bane |
+|  | Aegis | L12 ★ | Passive | Melee 70% | Allies within 2 hexes, itself included, get +2 resistance and +2 ward against every element; two such auras do not add up |
+| Saint | Serenity | L1 | Passive | Intelligence 5 | Regains 2 mana as its side's turn begins (never above its maximum); its friendly spells aimed at an ally or a point reach 2 hexes further |
+|  | Bane | L1 | Spell | Magic 40% | -15 to hit for everyone within 1 hex of a point within 5 hexes, for 3 turns; 5 mana, 4 AP |
+|  | Protect | L2 | Spell | Magic 55% | +10 AC to an ally within 4 hexes for 3 turns; 3 mana, 3 AP |
+|  | Scholar | L2 | Passive | Intelligence 6 | +2 skill points every level |
+|  | Curse | L6 | Spell | Magic 65% | -15 to hit and -5 AC to a foe within 5 hexes, for 3 turns; 5 mana, 4 AP |
+|  | Renew | L6 | Spell | Magic 65% | Each ally within 2 hexes of the caster regains 3 hit points as its turn begins, for 3 turns; 10 mana, 5 AP |
+|  | Holy Light | L6 | Spell | Magic 70% | 3d6 to a foe within 5 hexes, double the dice against the regenerating and the blightborn; 7 mana, 4 AP |
+|  | Sanctuary | L12 ★ | Passive | Magic 80% | As its side's turn begins, every ally within 2 hexes, itself included, regains 3 hit points |
 
 ### Magic items
 

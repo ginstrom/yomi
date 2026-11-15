@@ -1,6 +1,6 @@
 import { SPELLS, averageRoll, isHealing, type HeroSpellId, type SpellId } from '../combat/spells.ts'
 import { manaOf, maxHp, maxMana, type Character } from './character.ts'
-import { knownSpells } from './perks.ts'
+import { knownSpells, perkBonus } from './perks.ts'
 
 /**
  * Casting out of battle, on the world map: only healing spells, paid from the
@@ -22,15 +22,15 @@ export function worldSpells(caster: Character): Array<{ spell: HeroSpellId; affo
     .map((spell) => ({ spell, affordable: manaOf(caster) >= SPELLS[spell].manaCost }))
 }
 
-/** What `spell` restores to each member it touches out of battle. */
-export function worldHealing(spell: SpellId): number {
+/** What `spell` restores to each member it touches out of battle: the average of its dice, and the heal bonus of `caster`'s nodes (Mending) when given. */
+export function worldHealing(spell: SpellId, caster?: Character): number {
   const { heal } = SPELLS[spell]
-  return heal ? averageRoll(heal) : 0
+  return heal ? averageRoll(heal) + (caster ? perkBonus(caster, 'healBonus') : 0) : 0
 }
 
 /**
  * Casts a healing spell out of battle: pays its mana and restores
- * `worldHealing` to `target`, or to every member of `party` standing or not
+ * `worldHealing`, its heal bonus included, to `target`, or to every member of `party` standing or not
  * for a spell centred on the caster, never above a member's maximum. Returns
  * false, changing nothing, if the caster does not know it, has not the mana,
  * or a one-member spell has no target.
@@ -40,6 +40,6 @@ export function castOnWorldMap(caster: Character, spell: HeroSpellId, party: rea
   const touched = healsOne(spell) ? (target ? [target] : []) : party
   if (touched.length === 0) return false
   caster.mana = Math.min(caster.mana, maxMana(caster)) - SPELLS[spell].manaCost
-  for (const member of touched) member.hp = Math.min(maxHp(member), member.hp + worldHealing(spell))
+  for (const member of touched) member.hp = Math.min(maxHp(member), member.hp + worldHealing(spell, caster))
   return true
 }

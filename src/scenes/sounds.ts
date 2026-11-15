@@ -423,6 +423,8 @@ export function eventSounds(event: BattleEvent, context?: SoundContext): SoundCu
     }
     case 'regenerate':
       return [{ cue: 'battle.regen', delayMs: 0 }]
+    case 'restore':
+      return [{ cue: 'battle.heal.small', delayMs: 0 }]
     case 'unit_down': {
       const kind = context?.kind(event.unit) ?? null
       const cues: SoundCue[] = [{ cue: kind ? DEATH[kind] : 'battle.death.human', delayMs: 0 }]

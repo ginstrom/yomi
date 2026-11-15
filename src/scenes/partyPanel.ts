@@ -22,6 +22,9 @@ const PORTRAIT_MARGIN = 8
 /** From one portrait's top to the next: a full party of six fits the least window (MIN_GAME_SIZE in main.ts). */
 const PORTRAIT_PITCH = PORTRAIT_SIZE + PORTRAIT_BAR_GAP + PORTRAIT_BAR_H + 6
 
+/** The colour of a portrait's "+" (points to spend), and of the Skills tab's prompt to spend them. */
+export const ADVANCE_COLOR = '#9ccc65'
+
 /** The column's background and its edge, which the world map's party list shares. */
 export const COLUMN_COLOR = 0x17130f
 export const COLUMN_EDGE = 0x4a3d28

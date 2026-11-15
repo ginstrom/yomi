@@ -65,17 +65,20 @@ describe('world and interface sounds', () => {
 
   it('sounds a tab, a gear change, a node learnt and the panel closing', async () => {
     const game = await games.open()
-    const world = await plantedGame(game, { 'parties.0.members.0.perkPicks': 1 })
+    const world = await plantedGame(game, { 'parties.0.members.0.perkPoints': 1 })
     await game.click(world.party[0])
     await game.waitForScenes(['Inventory'], ['World'])
     const skills = await game.settled('Inventory', (p) => p.tab === 'skills')
-    expect(skills.perkPicks).toBe(1)
+    expect(skills.perkPoints).toBe(1)
 
-    await game.click(skills.perkTreeButton)
-    const tree = await game.settled('Inventory', (p) => p.tab === 'perkTree')
-    const node = tree.perks.find((n) => n.canTake)!
+    expect(await played(game, () => game.click(skills.treesButton))).toEqual(['ui.click'])
+    const tree = await game.settled('Inventory', (p) => p.tab === 'trees')
+    const other = tree.tree === 'scout' ? 'mage' : 'scout'
+    expect(await played(game, () => game.click(tree.trees[other]))).toEqual(['ui.tab'])
+    const turned = await game.settled('Inventory', (p) => p.tab === 'trees' && p.tree === other)
+    const node = turned.perks.find((n) => n.canTake)!
     expect(await played(game, () => game.click(node))).toEqual(['ui.learn'])
-    await game.waitFor('Inventory', (p) => p.perkPicks === 0)
+    await game.waitFor('Inventory', (p) => p.perkPoints === 0)
 
     expect(await played(game, () => game.press('i'))).toEqual(['ui.tab'])
     const panel = await game.settled('Inventory', (p) => p.tab === 'inventory')

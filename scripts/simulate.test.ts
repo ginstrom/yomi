@@ -4,7 +4,10 @@ import type { SpellId } from '../src/combat/spells.ts'
 import { BattleEngine, type CastOutcome, type Side } from '../src/engine/battleEngine.ts'
 import { GOBLIN_STATS } from '../src/combat/combat.ts'
 import { hex } from '../src/grid/hex.ts'
-import { canAdvance } from '../src/character/progression.ts'
+import { autoAdvance, planFor } from '../src/character/progression.ts'
+import type { PerkId } from '../src/character/perks.ts'
+import { capstoneOf } from '../src/character/trees.ts'
+import { banditStats } from '../src/game/bandits.ts'
 import { newGame } from '../src/game/gameState.ts'
 import { heroId } from '../src/game/encounters.ts'
 import { readyMadeParty } from '../src/game/party.ts'
@@ -15,7 +18,7 @@ import { craft } from '../src/game/crafting.ts'
 import type { FamilyId } from '../src/inventory/catalog.ts'
 import { itemById, unruned } from '../src/inventory/inventory.ts'
 import { modifiersFor } from '../src/inventory/modifiers.ts'
-import { maxHp } from '../src/character/character.ts'
+import { maxHp, type Character } from '../src/character/character.ts'
 import { worldHealing } from '../src/character/worldCasting.ts'
 import { lootRng, rollRunes } from '../src/game/loot.ts'
 import { runePrice, salePrice } from '../src/game/tradingPost.ts'
@@ -35,9 +38,13 @@ import {
   nextTarget,
   outpostErrand,
   parseArgs,
+  playerPlan,
+  raisedParty,
+  runBattle,
   runCampaign,
   summarize,
   summarizeCampaigns,
+  vanguardTallies,
   craftGear,
   materialNeeds,
   visitFacilities,
@@ -91,6 +98,13 @@ function battle(battleId: number, rounds: number, winner: Side | null): LoggedEv
       survivors: {},
     },
   ]
+}
+
+/** Whether `autoAdvance` has spent all `hero` would spend: no skill point left, and its perk points saved for a node it cannot take yet. */
+const spentByPlan = (hero: Character): boolean => {
+  const copy = { ...hero, perks: { ...hero.perks }, trained: { ...hero.trained } }
+  autoAdvance(copy)
+  return hero.skillPoints === 0 && JSON.stringify(copy.perks) === JSON.stringify(hero.perks)
 }
 
 describe('summarize', () => {
@@ -249,6 +263,217 @@ describe('parseArgs', () => {
       expect(() => parseArgs(['--campaign', '--parties', raw])).toThrow(`--parties must be from 1 to ${MAX_PARTIES}`)
     }
     expect(() => parseArgs(['--parties', '2'])).toThrow('--parties applies only to --campaign')
+  })
+})
+
+describe('--plans', () => {
+  it('takes role=plan pairs, none by default, with and without --campaign', () => {
+    expect(parseArgs([]).plans).toEqual({})
+    expect(parseArgs(['--plans', 'melee=swordmaster,magic=cryomancer']).plans).toEqual({ melee: 'swordmaster', magic: 'cryomancer' })
+    expect(parseArgs(['--campaign', '--plans', 'archery=ranger']).plans).toEqual({ archery: 'ranger' })
+  })
+
+  it('refuses a bad role, plan, repeat, missing value or entry without =, naming the part', () => {
+    expect(() => parseArgs(['--plans', 'bard=knight'])).toThrow('bard')
+    expect(() => parseArgs(['--plans', 'bard=knight'])).toThrow('melee, archery, magic')
+    expect(() => parseArgs(['--plans', 'melee=wizard'])).toThrow('wizard')
+    expect(() => parseArgs(['--plans', 'melee=wizard'])).toThrow('knight')
+    expect(() => parseArgs(['--plans', 'melee=knight,melee=swordmaster'])).toThrow('melee given twice')
+    expect(() => parseArgs(['--plans', 'melee'])).toThrow('"melee"')
+    expect(() => parseArgs(['--plans'])).toThrow('Missing value for --plans')
+    expect(() => parseArgs(['--plans', ''])).toThrow('--plans')
+  })
+
+  it('steers the hero tagged in the named skill only, and falls back to planFor', () => {
+    const [soldier, archer, mage] = readyMadeParty()
+    const plans = parseArgs(['--plans', 'melee=swordmaster']).plans
+    expect(playerPlan(plans, soldier)).toBe('swordmaster')
+    expect(playerPlan(plans, archer)).toBe(planFor(archer))
+    expect(playerPlan(plans, mage)).toBe(planFor(mage))
+    expect(playerPlan({}, soldier)).toBe(planFor(soldier))
+  })
+
+  it('raises a party along the plan, the others as without the flag', () => {
+    const base = parseArgs(['--party-level', '6'])
+    const plain = raisedParty(base)
+    const planned = raisedParty(parseArgs(['--party-level', '6', '--plans', 'melee=swordmaster']))
+    expect(plain[0].perks.power_attack).toBeUndefined()
+    expect(planned[0].perks.power_attack).toBe(1)
+    expect(planned[0].perks).not.toEqual(plain[0].perks)
+    expect(planned[1].perks).toEqual(plain[1].perks)
+    expect(planned[2].perks).toEqual(plain[2].perks)
+  })
+
+  it('hires recruits along the plan', () => {
+    const game = newGame(readyMadeParty(), null, 1)
+    game.world.guildHall = 3
+    game.world.stock = { ...game.world.stock, gold: 9999 }
+    game.parties[0].members.pop()
+    visitGuildHall(game, game.parties[0], 1, { melee: 'swordmaster' })
+    const hired = game.parties[0].members.at(-1)!
+    expect(hired.tagged).toContain('melee')
+    expect(hired.perks.power_attack).toBe(1)
+  })
+
+  it('leaves the enemy alone: a bandit camp’s foes are the same with the flag', () => {
+    const foes = (args: string[]) => {
+      const start = runBattle(0, 5, parseArgs(['--encounter', 'bandit_camp', '--threat', '4', '--party-level', '4', ...args]))[0]
+      if (start.type !== 'battle_start') throw new Error('expected a battle_start')
+      return start.units.filter((u) => u.side === 'enemy')
+    }
+    expect(foes(['--plans', 'melee=swordmaster'])).toEqual(foes([]))
+    expect(banditStats('captain', 4, { tier: 1, grade: 1 })).toBe(banditStats('captain', 4, { tier: 1, grade: 1 }))
+  })
+  // The parity plans (design skill-trees-node-costs §7.2 step 5): each plan's hero, raised to level 14 by raisedParty,
+  // holds its path's capstone, so the level-14 capstone cell measures the capstones.
+  const PARITY: readonly [role: string, plan: string, capstone: PerkId][] = [
+    ['melee', 'knight', 'unbreakable'],
+    ['melee', 'swordmaster', 'blademaster'],
+    ['melee', 'spellsword', 'arcane_knight'],
+    ['melee', 'paladin', 'aegis'],
+    ['archery', 'ranger', 'deadeye'],
+    ['archery', 'rogue_archer', 'shadowdancer'],
+    ['magic', 'evoker', 'meteor'],
+    ['magic', 'cryomancer', 'glacial_prison'],
+    ['magic', 'arcanist', 'mass_haste'],
+    ['magic', 'healer', 'revive'],
+    ['magic', 'saint', 'sanctuary'],
+  ]
+  // The exceptions. The default evoker_healer (Delwyn's own, a reference beside the parity plans) takes Arcane Blood and
+  // Heal All before Fireball (skill trees step 30), so Meteor comes at 15. The others cannot hold it by their asks: the Assassin's Keen Eye asks Luck 6 and Fortune Luck 7, which
+  // Aldric (4) and Brenna (4) lack, and their creation nodes lie outside the path, so its other five nodes (Backstab,
+  // Venom Strike, Hamstring, Ambush, Executioner: 11 perk points) and Deathblow's 4 need 15 points beyond creation,
+  // which come at level 16, not 14 (13).
+  const NOT_BY_14: readonly [role: string, plan: string, capstone: PerkId, level: number][] = [
+    ['melee', 'assassin', 'deathblow', 16],
+    ['archery', 'assassin', 'deathblow', 16],
+    ['magic', 'evoker_healer', 'meteor', 15],
+  ]
+  const roleIndex: Record<string, number> = { melee: 0, archery: 1, magic: 2 }
+
+  it.each(PARITY)('raises the %s hero on the %s plan to level 14 holding %s', (role, plan, capstone) => {
+    const hero = raisedParty(parseArgs(['--party-level', '14', '--plans', `${role}=${plan}`]))[roleIndex[role]]
+    expect(capstoneOf(hero)).toBe(capstone)
+  })
+
+  it.each(NOT_BY_14)('raises the %s hero on the %s plan to %s only at level %i, an exception', (role, plan, capstone, level) => {
+    const at = (n: number) => capstoneOf(raisedParty(parseArgs(['--party-level', String(n), '--plans', `${role}=${plan}`]))[roleIndex[role]])
+    expect(at(14)).toBeNull()
+    expect(at(level - 1)).toBeNull()
+    expect(at(level)).toBe(capstone)
+  })
+})
+
+describe('summarize, with techniques', () => {
+  const run = (middle: (outcome: (target: string, status?: CastOutcome['status']) => CastOutcome) => LoggedEvent[]): LoggedEvent[] => {
+    const [start, end] = battle(0, 3, 'player')
+    if (start.type !== 'battle_start') throw new Error('expected a battle_start')
+    const unit = (id: string, side: Side) => ({ id, side }) as (typeof start.units)[number]
+    const outcome = (target: string, status: CastOutcome['status'] = null): CastOutcome => ({
+      unit: target, attackRoll: 40, chance: 61, defenderAc: 15, hit: true, critical: false, fumble: false,
+      image: false, damage: 0, warded: 0, half: false, healed: 0, hpBefore: 12, hpAfter: 12, status,
+    })
+    return [{ ...start, units: [unit('hero', 'player'), unit('orc', 'enemy'), unit('imp', 'enemy')] }, ...middle(outcome), end]
+  }
+  const strike = (attacker: string, ability: string, n: number, extra: object = {}): LoggedEvent =>
+    ({
+      type: 'attack', battleId: 0, seq: 1, round: 1, attacker, defender: 'orc', ability, strike: `s${n}`, hit: true,
+      critical: false, damage: 0, bonus: [], opportunity: false, apCost: n === 0 ? 4 : 0, ...extra,
+    }) as unknown as LoggedEvent
+  const area = (unit: string, ability: string, outcomes: CastOutcome[], extra: object = {}): LoggedEvent =>
+    ({ type: 'ability', battleId: 0, seq: 1, round: 1, unit, ability, at: { q: 0, r: 0 }, shape: 'burst', hexes: [], distance: 1, apCost: 4, apAfter: 4, facing: 0, skill: 80, outcomes, ...extra }) as unknown as LoggedEvent
+
+  it('counts a technique once, whatever its strikes, and taunts, pins and mana by side', () => {
+    const summary = summarize(
+      run((outcome) => [
+        strike('hero', 'power_attack', 0, { manaCost: 2, manaAfter: 10 }),
+        strike('hero', 'cleave', 0, {}),
+        strike('hero', 'cleave', 1, {}),
+        area('hero', 'taunt', [outcome('orc', { id: 'taunted', turnsLeft: 2 }), outcome('imp', { id: 'taunted', turnsLeft: 2 })], { manaCost: 3, manaAfter: 7 }),
+        strike('hero', 'pin', 0, { status: { id: 'pinned', turnsLeft: 1 } }),
+        strike('orc', 'troll_claws', 0, {}),
+        area('orc', 'fire_spit', [outcome('hero')]),
+      ]),
+      1,
+    )
+    expect(summary.playerTechniques).toEqual({ power_attack: 1, cleave: 1, taunt: 1, pin: 1 })
+    expect(summary.enemyTechniques).toEqual({})
+    expect(summary).toMatchObject({ avgPlayerTaunts: 2, avgEnemyTaunts: 0, avgPlayerPins: 1, avgEnemyPins: 0, avgPlayerTechniqueMana: 5, avgEnemyTechniqueMana: 0 })
+  })
+
+  it('averages over the battles', () => {
+    const summary = summarize(run((outcome) => [area('hero', 'taunt', [outcome('orc', { id: 'taunted', turnsLeft: 2 })])]), 2)
+    expect(summary.playerTechniques).toEqual({ taunt: 0.5 })
+    expect(summary.avgPlayerTaunts).toBe(0.5)
+  })
+})
+
+describe('summarize, with the stage-3 traits', () => {
+  const run = (middle: LoggedEvent[]): LoggedEvent[] => {
+    const [start, end] = battle(0, 3, 'player')
+    if (start.type !== 'battle_start') throw new Error('expected a battle_start')
+    const unit = (id: string, side: Side) => ({ id, side }) as (typeof start.units)[number]
+    return [{ ...start, units: [unit('hero', 'player'), unit('ally', 'player'), unit('orc', 'enemy')] }, ...middle, end]
+  }
+  const attack = (attacker: string, defender: string, extra: object = {}): LoggedEvent =>
+    ({ type: 'attack', battleId: 0, seq: 1, round: 1, attacker, defender, hit: true, critical: false, damage: 0, bonus: [], opportunity: false, apCost: 4, ...extra }) as unknown as LoggedEvent
+  const outcome = (unit: string, extra: object = {}) =>
+    ({ unit, attackRoll: 40, chance: 61, defenderAc: 15, hit: true, critical: false, fumble: false, image: false, damage: 0, warded: 0, half: false, healed: 0, hpBefore: 1, hpAfter: 1, status: null, ...extra })
+  const cast = (caster: string, outcomes: object[]): LoggedEvent =>
+    ({ type: 'cast', battleId: 0, seq: 1, round: 1, caster, spell: 'revive', drained: 0, outcomes }) as unknown as LoggedEvent
+  const tick = (unit: string, extra: object = {}): LoggedEvent =>
+    ({ type: 'status_tick', battleId: 0, seq: 1, round: 1, unit, status: 'poisoned', damage: 1, warded: 0, hpBefore: 2, hpAfter: 1, ...extra }) as unknown as LoggedEvent
+
+  it('counts counters, deathblows, revives and Unbreakable saves by side', () => {
+    const summary = summarize(
+      run([
+        attack('hero', 'orc', { counter: true }),
+        attack('hero', 'orc', { deathblow: true }),
+        attack('orc', 'hero', { counter: true, endured: true }),
+        attack('orc', 'ally', { endured: true }),
+        cast('hero', [outcome('ally', { revived: true }), outcome('hero', { endured: true })]),
+        tick('orc', { endured: true }),
+        tick('hero'),
+        attack('hero', 'orc'),
+      ]),
+      1,
+    )
+    expect(summary).toMatchObject({
+      avgPlayerCounters: 1, avgEnemyCounters: 1,
+      avgPlayerDeathblows: 1, avgEnemyDeathblows: 0,
+      avgPlayerRevives: 1, avgEnemyRevives: 0,
+      avgPlayerUnbreakableSaves: 3, avgEnemyUnbreakableSaves: 1,
+    })
+  })
+
+  it('counts nothing when no event carries the fields, and averages over the battles', () => {
+    expect(summarize(run([attack('hero', 'orc')]), 1)).toMatchObject({ avgPlayerCounters: 0, avgPlayerDeathblows: 0, avgPlayerRevives: 0, avgPlayerUnbreakableSaves: 0, avgEnemyUnbreakableSaves: 0 })
+    expect(summarize(run([attack('hero', 'orc', { deathblow: true })]), 4).avgPlayerDeathblows).toBe(0.25)
+  })
+})
+
+describe('callings and capstones of a vanguard', () => {
+  const hero = (...perks: string[]) => ({ perks: Object.fromEntries(perks.map((id) => [id, 1])) }) as unknown as Character
+  it('counts the deepest paths of each hero, a tie counting every tied path, and the capstones held', () => {
+    expect(vanguardTallies([hero('power_attack'), hero('power_attack', 'meteor'), hero()])).toEqual({
+      callings: { swordmaster: 2, evoker: 1 },
+      capstones: { meteor: 1 },
+    })
+  })
+  it('counts a tie for every path and nothing for a hero with no nodes', () => {
+    const tied = vanguardTallies([hero('power_attack', 'fireball')])
+    expect(Object.keys(tied.callings).sort()).toEqual(['evoker', 'swordmaster'])
+    expect(vanguardTallies([hero()])).toEqual({ callings: {}, capstones: {} })
+  })
+})
+
+describe('techniques in a small run', () => {
+  it('counts what the player’s side used, never negative', () => {
+    const events = [0, 1, 2].flatMap((i) => runBattle(i, 100 + i, parseArgs(['--encounter', 'bandit_camp', '--threat', '4', '--party-level', '4'])))
+    const summary = summarize(events, 3)
+    expect(Object.values(summary.playerTechniques).every((n) => n >= 0)).toBe(true)
+    expect(Object.values(summary.playerTechniques).reduce((a, b) => a + b, 0)).toBeGreaterThan(0)
+    expect(summary.avgPlayerTaunts).toBeGreaterThanOrEqual(0)
   })
 })
 
@@ -433,7 +658,7 @@ describe('the guild hall in a campaign', () => {
     expect(visitGuildHall(game, game.parties[0])).toBe(1)
     expect(game.world.guildHall).toBe(3)
     expect(game.parties[0].members.map((member) => member.name)).toEqual(['Aldric', 'Brenna', 'Delwyn', 'Garrick'])
-    expect(canAdvance(game.parties[0].members[3])).toBe(false)
+    expect(spentByPlan(game.parties[0].members[3])).toBe(true)
     expect(game.world.stock).toEqual({ gold: 0, iron: 5 })
     // A fifth place, and no gold to fill it.
     expect(hallErrand(game, game.parties[0])).toBe(false)
@@ -782,16 +1007,33 @@ describe('runes in a campaign', () => {
  * The refactor guard: the output of `--campaign --battles 5 --seed 1`, first recorded for stage 5 at commit 4a2b824.
  * Re-recorded in stage 6 step 09, from `--parties 1`, for `LOG_SCHEMA_VERSION` 24 (battle_start meta `party` and
  * `role`) and the company record's new fields, every old field and every other event unchanged; never edited again
- * in this stage. A mismatch means a step changed behaviour.
+ * in this stage. Re-recorded in skill trees step 03: the trees' nodes, a pick every even level and the plans
+ * changed play. Re-recorded in skill trees step 04: every hero has mana, 2 more a Mage or Cleric node, and the
+ * derived passives (resistance, wards, Shield Wall, Sacred Weapon, the spell modifiers) work in battle. Re-hashed in
+ * skill trees step 09 for `LOG_SCHEMA_VERSION` 25 alone: the records unchanged, and the new log with every
+ * `"schemaVersion":25` written back as 24 hashes to the old `8e01443a...db5c94`. Re-recorded in skill trees step 13:
+ * the stage-2 nodes and plans move play (heroes and bandits learn techniques as they level). Re-recorded in skill trees
+ * step 16: `techniqueScore` weighing a technique by the blows that fit this turn, then the knight plan taking Pin before
+ * Heavy Hand (the bandit Captain and recruited knights). Re-hashed in skill trees step 17 for `LOG_SCHEMA_VERSION` 26
+ * alone: the records unchanged, and the new log with each of its 115 `"schemaVersion":26` written back as 25 hashes
+ * to the old `aa9ffae5...ff5119`. Re-hashed in skill trees step 21, the records unchanged: the stage-3 nodes enter
+ * the plans and the six partial nodes are completed (Iron Skin's free attacks, Battle Mage's mana on hit, Skirmisher,
+ * Fortune, Deadeye, Serenity), which changes the heroes' events (the guard's heroes reach level 9, past Iron Skin
+ * at 8) but no campaign's figures. Re-recorded in skill trees step 23: `CampaignRecord`
+ * gains `callings` and `capstones` (the events unchanged, the hash the same as before). Re-recorded in skill trees
+ * step 28: perk points (a node costs its tier's 1 to 4, a point every level) and `autoAdvance` saving for the plan's
+ * next node move every hero's and bandit's nodes, so play and the campaigns' figures change. Re-recorded in skill trees
+ * step 30: the knight and evoker_healer plans reordered, bandits in plain gear at threat 4 and `FOE_HP_PER_LEVEL`
+ * 1.15. A mismatch means a step changed behaviour.
  */
 const GUARD_RECORDS: CampaignRecord[] = [
-  { outcome: 'source', days: 333, battles: 20, spawns: 30, captured: 2, lost: 0, blighted: 0.41, healedHp: 138, campDays: 18, towersBuilt: 3, towersLost: 0, deaths: 4, recruits: 2, hallLevel: 3, shrineLevel: 1, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 5, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 16, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8], deathsAtLevel: [8, 8, 7, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 20, wipes: 0, finalLevels: [[8]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 66, guardBattles: 0 },
-  { outcome: 'fallen', days: 234, battles: 18, spawns: 28, captured: 4, lost: 0, blighted: 0.42875, healedHp: 68, campDays: 6, towersBuilt: 3, towersLost: 0, deaths: 1, recruits: 2, hallLevel: 2, shrineLevel: 1, outpostsBuilt: 3, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 3, fieldCraftDays: 3, runesFound: 11, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [7, 7, 7, 7], deathsAtLevel: [3], battlesToLevel: {5: 10}, roles: { vanguard: { battles: 18, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 33, guardBattles: 0 },
-  { outcome: 'fallen', days: 426, battles: 20, spawns: 30, captured: 4, lost: 1, blighted: 0.4425, healedHp: 148, campDays: 29, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 5, hallLevel: 3, shrineLevel: 3, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 184, tierTwoBought: 0, crafted: 9, fieldCraftDays: 3, runesFound: 12, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7, 7, 7], deathsAtLevel: [3, 4, 2], battlesToLevel: {5: 9}, roles: { vanguard: { battles: 20, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 129, guardBattles: 0 },
-  { outcome: 'fallen', days: 125, battles: 9, spawns: 17, captured: 0, lost: 0, blighted: 0.4066666666666667, healedHp: 57, campDays: 6, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 5, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [5, 5, 5], deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 9, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 0, guardBattles: 0 },
-  { outcome: 'fallen', days: 62, battles: 5, spawns: 6, captured: 0, lost: 0, blighted: 0.41791666666666666, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 2, recruits: 0, hallLevel: 2, shrineLevel: 1, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 102, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 3, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [4], deathsAtLevel: [3, 3], battlesToLevel: {}, roles: { vanguard: { battles: 5, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 22, guardBattles: 0 },
+  { outcome: "source", days: 389, battles: 25, spawns: 35, captured: 5, lost: 0, blighted: 0.38458333333333333, healedHp: 360, campDays: 44, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 2, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 23, tierTwoBought: 0, crafted: 7, fieldCraftDays: 3, runesFound: 22, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [9, 9, 9, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 25, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 91, guardBattles: 0 },
+  { outcome: "source", days: 385, battles: 26, spawns: 36, captured: 4, lost: 0, blighted: 0.33458333333333334, healedHp: 286, campDays: 34, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, outpostsBuilt: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 13, tierTwoBought: 0, crafted: 7, fieldCraftDays: 3, runesFound: 21, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [9, 9, 9, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 26, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 66, guardBattles: 0 },
+  { outcome: "source", days: 310, battles: 19, spawns: 29, captured: 4, lost: 0, blighted: 0.35083333333333333, healedHp: 193, campDays: 19, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 3, hallLevel: 3, shrineLevel: 1, outpostsBuilt: 1, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 12, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 1 }, capstones: {}, deathsAtLevel: [2, 8, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 59, guardBattles: 0 },
+  { outcome: "source", days: 423, battles: 21, spawns: 31, captured: 3, lost: 0, blighted: 0.4170833333333333, healedHp: 131, campDays: 35, towersBuilt: 1, towersLost: 0, deaths: 4, recruits: 5, hallLevel: 3, shrineLevel: 3, outpostsBuilt: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 183, tierTwoBought: 0, crafted: 10, fieldCraftDays: 3, runesFound: 15, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 8, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 2 }, capstones: {}, deathsAtLevel: [3, 5, 4, 7], battlesToLevel: { 5: 9 }, roles: { vanguard: { battles: 21, wipes: 0, finalLevels: [[8, 8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 122, guardBattles: 0 },
+  { outcome: "fallen", days: 29, battles: 4, spawns: 2, captured: 0, lost: 0, blighted: 0.32625, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 2, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [3, 3, 3], callings: { swordmaster: 1, heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [], battlesToLevel: {}, roles: { vanguard: { battles: 4, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 0, guardBattles: 0 },
 ]
-const GUARD_EVENTS_SHA256 = '820e5b5d2740ee6549069200270ab5c882e3e95033d37dc1b5eb191c5c472cf1'
+const GUARD_EVENTS_SHA256 = '0ce256904b042dce7a301e226854d3938e463ff30c64440fc6ba5b412d6bc717'
 
 describe('the campaign’s policy on the day loop', () => {
   const args = parseArgs(['--campaign', '--parties', '1'])
@@ -1042,14 +1284,14 @@ describe('the company’s record', () => {
     expect(roleOf(run, party)).toBe('guard')
   })
 
-  it('logs the party and its role on battle_start, under schema version 24, and counts the battle to the role', () => {
+  it('logs the party and its role on battle_start, under schema version 26, and counts the battle to the role', () => {
     const { run, game, party } = campaignOf()
     const target = nextTarget(game.world, party, args.readyLevel)!
     party.position = { ...target.position }
     party.confronting = target.id
     carryOut(run, party, { kind: 'fight', target })
     const start = run.battles[0][0]
-    expect(start).toMatchObject({ type: 'battle_start', schemaVersion: 24, meta: { party: 'party_1', role: 'vanguard' } })
+    expect(start).toMatchObject({ type: 'battle_start', schemaVersion: 26, meta: { party: 'party_1', role: 'vanguard' } })
     // The new keys come after the old, so the old keys keep their order in the log.
     if (start.type !== 'battle_start') throw new Error('no battle_start')
     expect(Object.keys(start.meta).slice(-2)).toEqual(['party', 'role'])
@@ -1526,7 +1768,7 @@ describe('the company policy', () => {
       expect(formed.hired).toBe(GUARD_MIN_SIZE)
       expect(formed.party.name).toBe('Second Company')
       expect(formed.party.members).toHaveLength(GUARD_MIN_SIZE)
-      expect(formed.party.members.every((m) => m.level === 4 && !canAdvance(m))).toBe(true)
+      expect(formed.party.members.every((m) => m.level === 4 && spentByPlan(m))).toBe(true)
       expect(game.parties).toContain(formed.party)
     })
     it('forms none short of three heroes, under --parties 1, or past the hall’s parties', () => {

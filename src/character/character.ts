@@ -1,4 +1,5 @@
-import { ELEMENTS, type CombatantStats, type DamageRoll, type Element } from '../combat/combat.ts'
+import { ABILITIES } from '../combat/abilities.ts'
+import { ELEMENTS, type CombatantStats, type DamageRoll, type Element, type OnHit } from '../combat/combat.ts'
 import type { GearChange } from '../engine/battleEngine.ts'
 import {
   BACKPACK_SIZE,
@@ -17,9 +18,10 @@ import {
   type ItemStats,
 } from '../inventory/inventory.ts'
 import type { Attributes } from './attributes.ts'
-import { attributeLevel, attributesOf, knownSpells, perkBonus, type PerkId } from './perks.ts'
+import { PERKS, PERK_IDS, attributeLevel, attributesOf, knownAbilities, knownSpells, perkBonus, perkRanks, traitsOf, type Perk, type PerkId } from './perks.ts'
 import type { PortraitId } from './portraits.ts'
 import { SKILL_IDS, skillLevel, type SkillId } from './skills.ts'
+import { MANA_PER_TREE_NODE, treeNodes } from './trees.ts'
 
 /**
  * One of the player's persistent characters: what it was born with
@@ -46,12 +48,10 @@ export interface Character {
   trained: Record<SkillId, number>
   /** Skill points earned by levelling and not yet spent. */
   skillPoints: number
-  /** Ranks taken of each perk. */
+  /** The skill trees' nodes it holds, each at 1 (every node has one rank). */
   perks: Partial<Record<PerkId, number>>
-  /** Perks earned by levelling and not yet chosen. */
-  perkPicks: number
-  /** Spells to learn, from Spellcasting and the levels after it, not yet chosen; a perk pick can buy a spell too. */
-  spellPicks: number
+  /** Perk points earned (at creation and every level) and not yet spent on a node; a node costs its tier's (`perkCost`). */
+  perkPoints: number
   hp: number
   /** Mana carried out of the last battle, spent on the world map; read it through `manaOf`. Every battle begins at `maxMana`. */
   mana: number
@@ -138,16 +138,45 @@ export function manaOf(character: Character): number {
 }
 
 /**
- * The mana the character enters every battle with: none for one that knows no
- * spell, whatever it wears; otherwise twice its intelligence, half its
- * intelligence more for each level above the first, and what its gear and perks add.
+ * The mana the character enters every battle with, whether or not it knows a
+ * spell: twice its intelligence, half its intelligence more for each level
+ * above the first, `MANA_PER_TREE_NODE` for each node it holds in the Mage and
+ * Cleric trees, and what its gear and nodes add.
  */
 export function maxMana(character: Character): number {
-  if (knownSpells(character).length === 0) return 0
   const intelligence = attributeLevel(character, 'intelligence')
   const gear = wornStats(character).reduce((total, stats) => total + (stats.maxMana ?? 0), 0)
   const perks = perkBonus(character, 'maxMana')
-  return MANA_PER_INTELLIGENCE * intelligence + (character.level - 1) * Math.floor(intelligence / 2) + gear + perks
+  const nodes = MANA_PER_TREE_NODE * (treeNodes(character, 'mage') + treeNodes(character, 'cleric'))
+  return MANA_PER_INTELLIGENCE * intelligence + (character.level - 1) * Math.floor(intelligence / 2) + nodes + gear + perks
+}
+
+/** `fields` without its zero entries, or undefined when none is left. */
+function nonZero<K extends string>(fields: Record<K, number>): Partial<Record<K, number>> | undefined {
+  const kept = Object.fromEntries(Object.entries<number>(fields).filter(([, value]) => value !== 0)) as Partial<Record<K, number>>
+  return Object.keys(kept).length > 0 ? kept : undefined
+}
+
+/** What the character's nodes do to the spells it casts (C7), each key only when it does something. */
+function spellModifiers(character: Character): Omit<NonNullable<CombatantStats['magic']>, 'maxMana' | 'skill' | 'spells'> {
+  const bonus = (effect: Parameters<typeof perkBonus>[1]) => perkBonus(character, effect)
+  const power = nonZero({ all: bonus('spellDamage'), fire: bonus('fireSpellDamage'), frost: bonus('frostSpellDamage') })
+  const extend = nonZero({ hostile: bonus('hostileExtend'), friendly: bonus('friendlyExtend') })
+  const apDiscount = nonZero({ all: bonus('spellApDiscount'), heal: bonus('healApDiscount') })
+  const healBonus = bonus('healBonus')
+  const friendlyRange = bonus('friendlyRange')
+  return {
+    ...(power ? { power } : {}),
+    ...(healBonus !== 0 ? { healBonus } : {}),
+    ...(extend ? { extend } : {}),
+    ...(friendlyRange !== 0 ? { friendlyRange } : {}),
+    ...(apDiscount ? { apDiscount } : {}),
+  }
+}
+
+/** The on-hit entries of the nodes the character holds (Sacred Weapon), in node order. */
+function nodesOnHit(character: Character): OnHit[] {
+  return PERK_IDS.flatMap((id) => (perkRanks(character, id) > 0 ? [...((PERKS[id] as Perk).meleeOnHit ?? [])] : []))
 }
 
 export function deriveCombatStats(character: Character): CombatantStats {
@@ -155,6 +184,8 @@ export function deriveCombatStats(character: Character): CombatantStats {
   const skill = weaponSkill(character.equipment.mainHand)
 
   let ac = agility + perkBonus(character, 'armorClass')
+  // Shield Wall: only while a shield (every off-hand item is one) is held, which a two-handed weapon leaves no hand for.
+  if (character.equipment.offHand && !isTwoHanded(character.equipment.mainHand)) ac += perkBonus(character, 'shieldAc')
   let toHit = skillLevel(character, skill)
   let critChance = luck + perkBonus(character, 'critChance')
   let spellSkill = skillLevel(character, 'magic')
@@ -162,7 +193,7 @@ export function deriveCombatStats(character: Character): CombatantStats {
   let attackApCost = UNARMED_ATTACK_AP_COST
   let attackRange = MELEE_RANGE
   let armorPierce = 0
-  let resistance = 0
+  let resistance = perkBonus(character, 'resistance')
   const wardTotals: Partial<Record<Element, number>> = {}
   let shortfall = 0
   let apPenalty = 0
@@ -184,6 +215,11 @@ export function deriveCombatStats(character: Character): CombatantStats {
     shortfall += strengthShortfall(strength, stats)
     apPenalty += stats.apPenalty ?? 0
   }
+  const wardAll = perkBonus(character, 'wardAll')
+  for (const element of ELEMENTS) {
+    const ward = wardAll + (element === 'blight' ? perkBonus(character, 'wardBlight') : 0)
+    if (ward > 0) wardTotals[element] = (wardTotals[element] ?? 0) + ward
+  }
   toHit -= SHORTFALL_TO_HIT * shortfall
   const weapon = character.equipment.mainHand?.stats
   // By its range and not its skill: a wand is a ranged weapon that strikes with Magic,
@@ -196,9 +232,16 @@ export function deriveCombatStats(character: Character): CombatantStats {
   // bolts pierce by their own weight, but the strength perks' piercing is in a blow.
   const pierce = ranged ? (weapon?.rangedPierce ? armorPierce : 0) : armorPierce + perkBonus(character, 'armorPierce')
   const spells = knownSpells(character)
+  const abilities = knownAbilities(character)
+  // A hero with a technique that costs mana has mana to spend in battle, even with no spell.
+  const usesMana = spells.length > 0 || abilities.some((ability) => ABILITIES[ability].manaCost !== undefined)
+  const imbueDamage = perkBonus(character, 'imbueDamage')
+  const traits = traitsOf(character)
+  const traitNumbers = stageThreeNumbers(character)
   const wards: Partial<Record<Element, number>> = {}
   for (const element of ELEMENTS) if (wardTotals[element]) wards[element] = wardTotals[element]
-  const onHit = weapon?.onHit
+  // A node's on-hit entries (Sacred Weapon) go with a blow, never a shot.
+  const onHit = ranged ? (weapon?.onHit ?? []) : [...(weapon?.onHit ?? []), ...nodesOnHit(character)]
 
   return {
     name: character.name,
@@ -209,15 +252,34 @@ export function deriveCombatStats(character: Character): CombatantStats {
     ...(pierce > 0 ? { armorPierce: pierce } : {}),
     ...(resistance > 0 ? { resistance } : {}),
     ...(Object.keys(wards).length > 0 ? { wards } : {}),
-    ...(onHit && onHit.length > 0 ? { onHit } : {}),
+    ...(onHit.length > 0 ? { onHit } : {}),
     damage: { ...damage, bonus: damage.bonus + damageBonus },
     weapon: character.equipment.mainHand?.name ?? UNARMED_WEAPON,
     attackApCost,
     attackRange: attackRange + (ranged ? perkBonus(character, 'range') : 0),
     ...(weapon?.reach ? { reach: true as const } : {}),
     actionPoints: BASE_ACTION_POINTS + Math.floor(agility / 2) + perkBonus(character, 'actionPoints') - apPenalty,
-    ...(spells.length > 0 ? { magic: { maxMana: maxMana(character), skill: spellSkill, spells } } : {}),
+    ...(usesMana ? { magic: { maxMana: maxMana(character), skill: spellSkill, spells, ...spellModifiers(character) } } : {}),
+    ...(abilities.length > 0 ? { abilities } : {}),
+    ...(imbueDamage !== 0 ? { imbueDamage } : {}),
+    ...(traits.length > 0 ? { traits } : {}),
+    ...traitNumbers,
   }
+}
+
+/** The attack traits' numbers a character's nodes add (`CombatantStats.opportunity` to `manaRegen`), each only when not 0. */
+function stageThreeNumbers(character: Character): Partial<CombatantStats> {
+  const pair = (toHit: number, damage: number) => (toHit !== 0 || damage !== 0 ? { toHit, damage } : undefined)
+  const numbers: Partial<CombatantStats> = {
+    opportunity: pair(perkBonus(character, 'opportunityToHit'), perkBonus(character, 'opportunityDamage')),
+    rear: pair(perkBonus(character, 'rearToHit'), perkBonus(character, 'rearDamage')),
+    movedToHit: perkBonus(character, 'movedToHit'),
+    execute: perkBonus(character, 'executeDamage'),
+    critDamage: perkBonus(character, 'critDamage'),
+    manaOnHit: perkBonus(character, 'manaOnHit'),
+    manaRegen: perkBonus(character, 'manaRegen'),
+  }
+  return Object.fromEntries(Object.entries(numbers).filter(([, value]) => value !== undefined && value !== 0))
 }
 
 const RING_SLOTS: readonly EquipmentSlot[] = ['ring1', 'ring2']
@@ -389,8 +451,7 @@ export function createCharacter(name: string, build: Build): Character {
     trained: Object.fromEntries(SKILL_IDS.map((id) => [id, 0])) as Record<SkillId, number>,
     skillPoints: 0,
     perks: {},
-    perkPicks: 0,
-    spellPicks: 0,
+    perkPoints: 0,
     hp: 0,
     mana: 0,
     equipment: { armor: IRON_BREASTPLATE, mainHand: build.mainHand, ...(build.offHand ? { offHand: build.offHand } : {}) },

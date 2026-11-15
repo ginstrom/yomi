@@ -1,6 +1,7 @@
 import { maxHp, maxMana, weaponSkill, type Character } from './character.ts'
-import { PERK_IDS, attributeLevel, availablePerks, isSpellPerk, perkBonus, perkRanks, qualifiesFor, type PerkId } from './perks.ts'
-import { SKILL_COST_TIERS, SKILL_IDS, raiseSkill, skillLevel, type SkillId } from './skills.ts'
+import { PERKS, PERK_IDS, attributeLevel, availablePerks, perkBonus, perkCost, perkLevel, qualifiesFor, type Perk, type PerkId } from './perks.ts'
+import type { PathId } from './trees.ts'
+import { SKILL_COST_TIERS, SKILL_IDS, raiseSkill, skillLevel, skillRaiseRefusal, type SkillId } from './skills.ts'
 
 /**
  * Levels and the experience that buys them. A foe is worth a fixed amount of
@@ -15,9 +16,10 @@ import { SKILL_COST_TIERS, SKILL_IDS, raiseSkill, skillLevel, type SkillId } fro
  * one at level 2, two at level 3, three at level 4.
  *
  * A level brings hit points (`hpPerLevel`), skill points to spend on skills
- * (`skillPointsPerLevel`) and, every `PERK_LEVEL_STEP` levels, a perk to
- * choose. The points and the pick wait on the character until its player
- * spends them (`raiseSkill`, `takePerk`), or `autoAdvance` does.
+ * (`skillPointsPerLevel`) and a perk point (`PERK_POINTS_PER_LEVEL`) to spend
+ * on the skill trees, where a node costs its tier's points (`perkCost`). Both
+ * kinds of point wait on the character until its player spends them
+ * (`raiseSkill`, `takePerk`), or `autoAdvance` does.
  */
 export const EVEN_FOE_XP_PER_LEVEL = 100
 
@@ -26,8 +28,10 @@ const FIRST_LEVEL_XP = 80
 
 /** Skill points a level brings before intelligence adds a third of itself. */
 const BASE_SKILL_POINTS = 2
-/** Every level that is a multiple of this brings a perk. */
-export const PERK_LEVEL_STEP = 3
+/** The perk points every level up brings. */
+export const PERK_POINTS_PER_LEVEL = 1
+/** The perk points a new character has: creation.ts's `CREATION_PERK_POINTS`, kept here as creation.ts imports this module. */
+const CREATION_POINTS = 3
 
 /** The experience it takes to rise from `level` to the next. */
 export function xpToNextLevel(level: number): number {
@@ -43,57 +47,54 @@ export function skillPointsPerLevel(character: Character): number {
   return BASE_SKILL_POINTS + Math.floor(attributeLevel(character, 'intelligence') / 3) + perkBonus(character, 'skillPoints')
 }
 
-/** The spell picks taking Spellcasting brings at once; every level after brings one more. */
-export const SPELLCASTING_SPELL_PICKS = 2
-
-/** Whether the character has taken Spellcasting, and so earns a spell pick with every level. */
-export function hasSpellcasting(character: Character): boolean {
-  return perkRanks(character, 'spellcasting') > 0
+/**
+ * The perk points a hero has had by `level`: the three of creation and one at
+ * every level up (6 by level 4, 10 by 8, 14 by 12, 22 by 20).
+ */
+export function pointsAt(level: number): number {
+  return CREATION_POINTS + (level - 1) * PERK_POINTS_PER_LEVEL
 }
 
-/** The level the character's next spell pick comes at. */
-export function nextSpellLevel(character: Character): number {
-  return character.level + 1
+/** Whether the character has the perk points `perk` costs. */
+export function canAffordPerk(character: Pick<Character, 'perkPoints'>, perk: PerkId): boolean {
+  return character.perkPoints >= perkCost(perk)
 }
 
-/** The level the character's next perk comes at. */
-export function nextPerkLevel(character: Character): number {
-  return (Math.floor(character.level / PERK_LEVEL_STEP) + 1) * PERK_LEVEL_STEP
+/** The level by which saving alone affords `perk`: its level now if it can afford it already. */
+export function affordableAt(character: Pick<Character, 'level' | 'perkPoints'>, perk: PerkId): number {
+  return character.level + Math.max(0, Math.ceil((perkCost(perk) - character.perkPoints) / PERK_POINTS_PER_LEVEL))
 }
 
-/** Whether the character has a pick it could spend on `perk` now: a spell pick for a spell, else a perk pick. */
-export function hasPickFor(character: Character, perk: PerkId): boolean {
-  return character.perkPicks > 0 || (isSpellPerk(perk) && character.spellPicks > 0)
+/** Whether some skill would take a raise with the skill points the character has. */
+export function canRaiseAnySkill(character: Character): boolean {
+  return SKILL_IDS.some((skill) => skillRaiseRefusal(character, skill) === null)
 }
 
-/** Whether the character has skill points, or a perk or spell pick it could spend, waiting. */
+/** Whether the character has skill points some skill can take (none past 100%), or the perk points for a node it could take now, waiting. */
 export function canAdvance(character: Character): boolean {
-  return character.skillPoints > 0 || availablePerks(character).some((perk) => hasPickFor(character, perk))
+  return canRaiseAnySkill(character) || availablePerks(character).some((perk) => canAffordPerk(character, perk))
 }
 
 /** What a gain of experience came to. */
 export interface XpGain {
-  /** The experience earned, after what the character's perks add to it. */
+  /** The experience earned. */
   xp: number
   /** How many levels it bought; usually none. */
   levelsGained: number
   /** What those levels brought. */
   maxHpGained: number
   skillPointsGained: number
-  perksGained: number
-  spellsGained: number
+  perkPointsGained: number
 }
 
 /**
  * Raises the character a level, whatever its experience: hit points, skill
- * points, a perk pick at every `PERK_LEVEL_STEP`th level, a spell pick if it
- * has Spellcasting, all its wounds healed and its mana full.
+ * points, a perk point, all its wounds healed and its mana full.
  */
 export function levelUp(character: Character): void {
   character.level += 1
   character.skillPoints += skillPointsPerLevel(character)
-  if (character.level % PERK_LEVEL_STEP === 0) character.perkPicks += 1
-  if (hasSpellcasting(character)) character.spellPicks += 1
+  character.perkPoints += PERK_POINTS_PER_LEVEL
   character.hp = maxHp(character)
   character.mana = maxMana(character)
 }
@@ -103,13 +104,12 @@ export function levelUp(character: Character): void {
  * pays for; what is left over counts towards the next.
  */
 export function gainXp(character: Character, xp: number): XpGain {
-  const earned = Math.round(xp * (1 + perkBonus(character, 'xpPercent') / 100))
+  const earned = Math.round(xp)
   const before = {
     maxHp: maxHp(character),
     level: character.level,
     points: character.skillPoints,
-    picks: character.perkPicks,
-    spells: character.spellPicks,
+    perkPoints: character.perkPoints,
   }
   character.xp += earned
   while (character.xp >= xpToNextLevel(character.level)) {
@@ -121,63 +121,164 @@ export function gainXp(character: Character, xp: number): XpGain {
     levelsGained: character.level - before.level,
     maxHpGained: maxHp(character) - before.maxHp,
     skillPointsGained: character.skillPoints - before.points,
-    perksGained: character.perkPicks - before.picks,
-    spellsGained: character.spellPicks - before.spells,
+    perkPointsGained: character.perkPoints - before.perkPoints,
   }
 }
 
 /**
- * Spends a pick on a rank of `perk`: a spell pick for a spell if there is
- * one, else a perk pick. A perk that adds hit points or mana, itself or by an
- * attribute it raises, adds as many to those the character has left, and
- * Spellcasting brings its spell picks. Returns false if the character has no
- * pick for it or does not qualify.
+ * Spends `perk`'s cost in perk points on it. A node that adds hit points or
+ * mana, itself or by an attribute it raises, adds as many to those the
+ * character has left. Returns false if the character cannot afford it or does
+ * not qualify.
  */
 export function takePerk(character: Character, perk: PerkId): boolean {
-  if (!hasPickFor(character, perk) || !qualifiesFor(character, perk)) return false
+  if (!canAffordPerk(character, perk) || !qualifiesFor(character, perk)) return false
   const before = { hp: maxHp(character), mana: maxMana(character) }
-  if (isSpellPerk(perk) && character.spellPicks > 0) character.spellPicks -= 1
-  else character.perkPicks -= 1
-  character.perks[perk] = (character.perks[perk] ?? 0) + 1
-  if (perk === 'spellcasting') character.spellPicks += SPELLCASTING_SPELL_PICKS
+  character.perkPoints -= perkCost(perk)
+  character.perks[perk] = 1
   character.hp += maxHp(character) - before.hp
   character.mana = Math.min(character.mana, before.mana) + maxMana(character) - before.mana
   return true
 }
 
 /**
- * The perks `autoAdvance` takes, most wanted first; it takes any other only
- * when none of these is on offer, in the order of `PERKS`, where the perks
- * that raise an attribute come last. A perk at the end of a branch is not on offer
- * until the one before it is taken.
+ * The builds `autoAdvance` grows a hero by: a plan is the nodes it takes, most
+ * wanted first. The design's six are written out (`knight`, `swordmaster`,
+ * `ranger`, `rogue`, `evoker_healer`, `bandit_mage`); the others are a path's
+ * nodes in `PERKS` order. A plan names only nodes in `PERKS`.
  */
-const AUTO_PERKS: readonly PerkId[] = [
-  'weapon_mastery',
-  'eagle_eye',
-  'arcane_mastery',
-  'tireless',
-  'mighty_blow',
-  'sunder',
-  'evasion',
-  'toughness',
-  'dodger',
-  'heavy_hand',
-  'armor_breaker',
-  'deadly_aim',
-  'keen_eye',
-  'weapon_training',
-  'marksmanship',
-  'arcane_study',
-]
+export const PLAN_IDS = [
+  'knight',
+  'swordmaster',
+  'spellsword',
+  'ranger',
+  'rogue',
+  'rogue_archer',
+  'assassin',
+  'evoker',
+  'evoker_healer',
+  'cryomancer',
+  'arcanist',
+  'healer',
+  'paladin',
+  'saint',
+  'bandit_mage',
+] as const
+
+export type PlanId = (typeof PLAN_IDS)[number]
 
 /**
- * Spends everything the character has waiting, the way a plain fighter
- * would: skill points on the skill of the weapon in hand (a mage's wand
- * makes that Magic) and then on whatever is left to raise; perk picks on
- * combat perks first; spell picks by `AUTO_SPELLS`. It is what the simulator's parties do with their
- * levels, so balance runs fight heroes that have grown.
+ * A path's capstone, then its other nodes in `PERKS` order: the capstone is
+ * taken as soon as it opens (level 12, depth 5), as a player of the path would,
+ * rather than after every other node of the path.
  */
-export function autoAdvance(character: Character): void {
+const pathPlan = (path: PathId): PerkId[] => {
+  const nodes = PERK_IDS.filter((id) => (PERKS[id] as Perk).path === path)
+  return [...nodes.filter((id) => (PERKS[id] as Perk).tier === 'capstone'), ...nodes.filter((id) => (PERKS[id] as Perk).tier !== 'capstone')]
+}
+
+export const AUTO_PLANS: Record<PlanId, readonly PerkId[]> = {
+  knight: [
+    'weapon_training',
+    'toughness',
+    'rooted',
+    'taunt',
+    'pin',
+    // Shield Wall, the path's cheap fifth node, and then Unbreakable ahead of Iron Skin and Guardian: the capstone at 13
+    // rather than 15 under the tiers' costs (skill trees step 30; Guardian's 3 points at 12 would push it to 18).
+    'shield_wall',
+    'unbreakable',
+    'heavy_hand',
+    'iron_skin',
+    'guardian',
+    'power_attack',
+    'armor_breaker',
+    'weapon_mastery',
+  ],
+  // Blademaster ahead of Weapon Mastery: the path's fifth node is Cleave, so the capstone comes at 12 rather than 15
+  // (skill trees step 30). Gain Strength is refused to Aldric (strength 9), as ever.
+  swordmaster: ['weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'cleave', 'blademaster', 'gain_strength', 'weapon_mastery', 'toughness'],
+  spellsword: pathPlan('spellsword'),
+  ranger: [
+    'marksmanship',
+    'deadly_aim',
+    'aimed_shot',
+    // Volley, the path's first tier 3, ahead of Far Shot and Deadeye ahead of Hunter's Mark: Volley stays at 6 and
+    // the capstone at 12 under the tiers' costs (skill trees step 28).
+    'volley',
+    'far_shot',
+    'deadeye',
+    'hunters_mark',
+    'pinning_shot',
+    'dodger',
+    'sprint',
+    'skirmisher',
+    'tumble',
+    'evasion',
+  ],
+  rogue: ['backstab', 'dirty_trick', 'sprint', 'tumble', 'evasion', 'counter', 'skirmisher', 'shadowdancer'],
+  rogue_archer: pathPlan('rogue'),
+  assassin: pathPlan('assassin'),
+  evoker: pathPlan('evoker'),
+  evoker_healer: [
+    'magic_arrow',
+    'heal',
+    'destruction',
+    'flame_arrow',
+    // Arcane Blood's +10 mana at 4 and Heal All at 6, ahead of Fireball (9) and Meteor (15) (skill trees step 30): saving
+    // for Fireball left a level-4 Delwyn nothing new (the Bandit Camp at threat 4, 422 of 500), and without Heal All
+    // camping until healed took the one-party campaign to 302 days. Mending at 4 won the camp too but kept the party
+    // camping longer (`autoHeal` casts no heal that would heal past a wound), and Serenity at 4 took the campaign to 342.
+    'arcane_blood',
+    'heal_all',
+    'fireball',
+    'pyromancy',
+    'meteor',
+    'greater_heal',
+    'mending',
+    'death_cloud',
+    'greater_heal_all',
+    'purify',
+  ],
+  // Ice Lance ahead of Web: with the capstone first, Web would come before Ice Lance and leave the cryomancer without it
+  // when the capstone opens (skill trees step 24, under picks: 292 of 500 at Bandit Camp threat 7 with it, 31 without).
+  cryomancer: ['glacial_prison', 'frostbite', 'numbing_cold', 'sleep', 'frost_blast', 'ice_lance', 'web', 'lingering_cold'],
+  arcanist: pathPlan('arcanist'),
+  healer: pathPlan('healer'),
+  paladin: pathPlan('paladin'),
+  saint: pathPlan('saint'),
+  bandit_mage: ['flame_arrow', 'destruction', 'fireball', 'heal', 'heal_all'],
+}
+
+/** The plan a hero grows by when none is named: by its tagged skill, Melee `knight`, Archery `ranger`, Magic `evoker_healer`. */
+export function planFor(character: Character): PlanId {
+  const tag = character.tagged[0]
+  return tag === 'archery' ? 'ranger' : tag === 'magic' ? 'evoker_healer' : 'knight'
+}
+
+/**
+ * Whether `perk` is not held and the character would qualify for it if only
+ * its level were higher: nothing but the level lacking, no attribute capped.
+ * No other ask reads the level, so raising it alone is the check.
+ */
+export function waitsOnlyForLevel(character: Character, perk: PerkId): boolean {
+  return qualifiesFor({ ...character, level: Math.max(character.level, perkLevel(perk)) }, perk)
+}
+
+/**
+ * Spends everything the character has waiting, the way a player of its build
+ * would: skill points on the skill of the weapon in hand (a mage's wand makes
+ * that Magic) and then on whatever is left to raise; then perk points, again
+ * and again, on a target: the first node of `plan` it qualifies for, or would
+ * if only its level were higher, else the first node in `PERKS` order it
+ * qualifies for now that is no capstone. A target short of the level or of the
+ * points stops it: the points are saved for it, never spent on a cheaper node
+ * further down. A node short of anything else (depth, a skill, an attribute, a
+ * node it requires) is skipped, as waiting alone will not open it. It is what
+ * the simulator's parties and the bandits do with their levels, so balance
+ * runs fight heroes that have grown.
+ */
+export function autoAdvance(character: Character, plan: PlanId = planFor(character)): void {
   const weapon = weaponSkill(character.equipment.mainHand)
   const order: Array<[SkillId, number]> = [
     [weapon, SKILL_COST_TIERS[0].level],
@@ -187,39 +288,10 @@ export function autoAdvance(character: Character): void {
   for (const [skill, upTo] of order) {
     while (skillLevel(character, skill) < upTo && raiseSkill(character, skill));
   }
-  while (character.perkPicks > 0) {
-    // Never Spellcasting: the simulator's heroes are what their drafts made them.
-    const fallback = PERK_IDS.filter((id) => !isSpellPerk(id) && id !== 'spellcasting')
-    const perk = [...AUTO_PERKS, ...fallback].find((id) => qualifiesFor(character, id))
-    if (!perk || !takePerk(character, perk)) break
-  }
-  while (character.spellPicks > 0) {
-    const spell = AUTO_SPELLS.find((id) => qualifiesFor(character, id))
-    if (!spell || !takePerk(character, spell)) break
+  const fallback = PERK_IDS.filter((id) => (PERKS[id] as Perk).tier !== 'capstone')
+  for (;;) {
+    const target =
+      AUTO_PLANS[plan].find((id) => waitsOnlyForLevel(character, id)) ?? fallback.find((id) => qualifiesFor(character, id))
+    if (!target || !takePerk(character, target)) break
   }
 }
-
-/**
- * The spells `autoAdvance` learns, most wanted first: a heal, a strike and
- * the stronger of each, then the rest. Every spell perk is here, so a caster
- * spends every spell pick it can.
- */
-const AUTO_SPELLS: readonly PerkId[] = [
-  'heal',
-  'magic_arrow',
-  'flame_arrow',
-  'heal_all',
-  'fireball',
-  'greater_heal',
-  'bless',
-  'greater_heal_all',
-  'acid_arrow',
-  'bane',
-  'frost_blast',
-  'sleep',
-  'death_cloud',
-  'shield',
-  'mirror_image',
-  'protect',
-  'haste',
-]

@@ -47,8 +47,12 @@ export const TAG_BONUS = 20
 /** What a skill point adds to a skill, and to a tagged one. */
 export const SKILL_STEP = 1
 export const TAGGED_SKILL_STEP = 2
-/** No skill is raised beyond this. */
-export const MAX_SKILL = 150
+/**
+ * Skill points raise no skill beyond this, 100%. A node's bonus (Weapon
+ * Training's 10%) may still carry a skill past it; points then raise it no
+ * further, and a point that would have gone there stays to spend elsewhere.
+ */
+export const MAX_SKILL = 100
 /**
  * What a raise costs as a skill nears mastery: from each `level` on, `cost`
  * skill points instead of 1, the dearest that applies. Ascending by level.
@@ -80,13 +84,26 @@ export function skillRaiseCost(character: Character, skill: SkillId): number | n
 }
 
 /**
+ * Why a raise of `skill` is refused now, or null when it is not: the skill at
+ * `MAX_SKILL` or more, or too few skill points for the raise.
+ */
+export function skillRaiseRefusal(character: Character, skill: SkillId): string | null {
+  const cost = skillRaiseCost(character, skill)
+  if (cost === null) {
+    return `${SKILLS[skill].name} is at ${skillLevel(character, skill)}%; skill points raise a skill no higher than ${MAX_SKILL}%`
+  }
+  if (character.skillPoints < cost) return `Needs ${cost} ${cost === 1 ? 'skill point' : 'skill points'}; you have ${character.skillPoints}`
+  return null
+}
+
+/**
  * Spends skill points on one raise of `skill`: `SKILL_STEP` percent, or
  * `TAGGED_SKILL_STEP` for a tagged skill. Returns false if the character has
  * not the points or the skill is at `MAX_SKILL`.
  */
 export function raiseSkill(character: Character, skill: SkillId): boolean {
-  const cost = skillRaiseCost(character, skill)
-  if (cost === null || character.skillPoints < cost) return false
+  if (skillRaiseRefusal(character, skill) !== null) return false
+  const cost = skillRaiseCost(character, skill)!
   const step = isTagged(character, skill) ? TAGGED_SKILL_STEP : SKILL_STEP
   character.skillPoints -= cost
   character.trained[skill] += Math.min(step, MAX_SKILL - skillLevel(character, skill))

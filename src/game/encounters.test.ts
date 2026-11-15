@@ -271,15 +271,15 @@ describe('spiderNest', () => {
       .setup.units.filter((u) => u.side === 'enemy')
       .map((u) => u.id)
 
-  it('is registered, with the band 5 to 5 and the count 3', () => {
+  it('is registered, with the band 5 to 5 and the count 4', () => {
     expect(ENCOUNTERS.spider_nest).toBe(spiderNest)
     expect(ENCOUNTER_BANDS.spider_nest).toEqual({ min: 5, max: 5 })
-    expect(ENCOUNTER_COUNTS.spider_nest).toEqual([3])
+    expect(ENCOUNTER_COUNTS.spider_nest).toEqual([4])
   })
 
-  it('fields a Giant Spider, a Kobold Sneak and a Brood Spider at any threat, fought as threat 5', () => {
+  it('fields a Giant Spider, a Kobold Sneak, a Brood Spider and a Nest Spider at any threat, fought as threat 5', () => {
     for (const threat of [1, 4, 5, 9]) {
-      expect(field(threat)).toEqual(['spider', 'sneak', 'spider2'])
+      expect(field(threat)).toEqual(['spider', 'sneak', 'spider2', 'spider3'])
       expect(spiderNest(party(), threat).threat).toBe(5)
     }
     expect(spiderNest(party()).threat).toBe(5)
@@ -291,11 +291,12 @@ describe('spiderNest', () => {
       ['spider', 'Giant Spider', offsetToHex(8, 4)],
       ['sneak', 'Kobold Sneak', offsetToHex(9, 2)],
       ['spider2', 'Brood Spider', offsetToHex(8, 6)],
+      ['spider3', 'Nest Spider', offsetToHex(9, 6)],
     ])
   })
 
-  it('pays (100 + 50 + 100) x 5', () => {
-    expect(xpReward(spiderNest(party(), 5))).toBe((100 + 50 + 100) * 5)
+  it('pays (100 + 50 + 100 + 100) x 5', () => {
+    expect(xpReward(spiderNest(party(), 5))).toBe((100 + 50 + 100 + 100) * 5)
   })
 })
 
@@ -450,7 +451,7 @@ describe('the foe yardstick', () => {
   const routineTurn = (s: CombatantStats, id: AbilityId) => {
     const { strikes = [], apCost, recharge } = ABILITIES[id]
     const uses = Math.floor(s.actionPoints / apCost)
-    return (recharge >= 1 ? Math.min(1, uses) : uses) * strikes.reduce((sum, strike) => sum + mean(strike.damage, s.abilityDamageBonus), 0)
+    return (recharge >= 1 ? Math.min(1, uses) : uses) * strikes.reduce((sum, strike) => sum + mean(strike.damage!, s.abilityDamageBonus), 0)
   }
   /** The better of the weapon's turn and the best routine's. */
   const meanDamage = (s: CombatantStats) =>
