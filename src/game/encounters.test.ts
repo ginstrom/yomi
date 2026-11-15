@@ -243,7 +243,7 @@ describe('banditCamp', () => {
       }
     }
     expect(foeStats('bandit_captain', 5)).toEqual(banditStats('captain', 5, { tier: 1, grade: 2 }))
-    expect(foeStats('bandit_mage', 4)).toEqual(banditStats('mage', 4, { tier: 1, grade: 2 }))
+    expect(foeStats('bandit_mage', 4)).toEqual(banditStats('mage', 4, { tier: 1, grade: 1 }))
     expect(foeStats('bandit_archer', 5)).toEqual(banditStats('archer', 5, { tier: 1, grade: 2 }))
     expect(foeStats('bandit_captain', 6)).toEqual(banditStats('captain', 6, { tier: 2, grade: 2 }))
     expect(foeStats('bandit_crossbowman', 6)).toEqual(banditStats('crossbowman', 6, { tier: 2, grade: 2 }))

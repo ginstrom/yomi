@@ -1089,7 +1089,7 @@ describe('policies', () => {
     expect(isPolicyName('toString')).toBe(false)
   })
 
-  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, and in step 28 when nodes came to cost perk points and the heroes and bandits to save for them)', () => {
+  describe('the choices of today’s encounters (a snapshot, re-recorded in skill trees step 13 when heroes and bandits learned techniques, in step 16 when a technique came to be weighed by the blows that fit this turn and the Captain took Pin before Heavy Hand, in step 28 when nodes came to cost perk points and the heroes and bandits to save for them, and in step 30 when the knight, swordmaster and evoker_healer plans moved and the bandits at threat 4 went back to plain gear)', () => {
     /** Every action `aggressive` chooses, both sides, over each encounter at each threat of its band against the ready-made party of that level, a few seeds, 8 rounds at most. */
     function choices(): string[] {
       const lines: string[] = []
@@ -1120,8 +1120,8 @@ describe('policies', () => {
 
     it('are what they were', () => {
       const lines = choices()
-      expect(lines.length).toBe(5648)
-      expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe('0257e54f53ec1379d3bf916ac7d45e17388738cb4169601a3c3545fd7474f969')
+      expect(lines.length).toBe(5439)
+      expect(createHash('sha256').update(lines.join('\n')).digest('hex')).toBe('fcaf77a15c151f336155f5eaef9965b320bd7111db3ed450312c88e5b6674c64')
     }, 60_000)
   })
 })

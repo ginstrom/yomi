@@ -179,17 +179,20 @@ export const AUTO_PLANS: Record<PlanId, readonly PerkId[]> = {
     'rooted',
     'taunt',
     'pin',
+    // Shield Wall, the path's cheap fifth node, and then Unbreakable ahead of Iron Skin and Guardian: the capstone at 13
+    // rather than 15 under the tiers' costs (skill trees step 30; Guardian's 3 points at 12 would push it to 18).
+    'shield_wall',
+    'unbreakable',
     'heavy_hand',
     'iron_skin',
-    // Unbreakable ahead of Guardian: Guardian's 3 points at 12 would push the capstone from 15 to 18 (skill trees step 28).
-    'unbreakable',
     'guardian',
-    'shield_wall',
     'power_attack',
     'armor_breaker',
     'weapon_mastery',
   ],
-  swordmaster: ['weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'cleave', 'gain_strength', 'weapon_mastery', 'blademaster', 'toughness'],
+  // Blademaster ahead of Weapon Mastery: the path's fifth node is Cleave, so the capstone comes at 12 rather than 15
+  // (skill trees step 30). Gain Strength is refused to Aldric (strength 9), as ever.
+  swordmaster: ['weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'cleave', 'blademaster', 'gain_strength', 'weapon_mastery', 'toughness'],
   spellsword: pathPlan('spellsword'),
   ranger: [
     'marksmanship',
@@ -217,10 +220,13 @@ export const AUTO_PLANS: Record<PlanId, readonly PerkId[]> = {
     'heal',
     'destruction',
     'flame_arrow',
-    // Fireball, the first tier 3, ahead of Heal All, so that it stays at 6; Meteor ahead of Greater Heal and Mending,
-    // which would otherwise take the points saved for it (skill trees step 28: Heal All at 8, Meteor at 14).
-    'fireball',
+    // Arcane Blood's +10 mana at 4 and Heal All at 6, ahead of Fireball (9) and Meteor (15) (skill trees step 30): saving
+    // for Fireball left a level-4 Delwyn nothing new (the Bandit Camp at threat 4, 422 of 500), and without Heal All
+    // camping until healed took the one-party campaign to 302 days. Mending at 4 won the camp too but kept the party
+    // camping longer (`autoHeal` casts no heal that would heal past a wound), and Serenity at 4 took the campaign to 342.
+    'arcane_blood',
     'heal_all',
+    'fireball',
     'pyromancy',
     'meteor',
     'greater_heal',

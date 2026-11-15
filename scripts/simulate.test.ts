@@ -5,6 +5,8 @@ import { BattleEngine, type CastOutcome, type Side } from '../src/engine/battleE
 import { GOBLIN_STATS } from '../src/combat/combat.ts'
 import { hex } from '../src/grid/hex.ts'
 import { autoAdvance, planFor } from '../src/character/progression.ts'
+import type { PerkId } from '../src/character/perks.ts'
+import { capstoneOf } from '../src/character/trees.ts'
 import { banditStats } from '../src/game/bandits.ts'
 import { newGame } from '../src/game/gameState.ts'
 import { heroId } from '../src/game/encounters.ts'
@@ -321,6 +323,44 @@ describe('--plans', () => {
     }
     expect(foes(['--plans', 'melee=swordmaster'])).toEqual(foes([]))
     expect(banditStats('captain', 4, { tier: 1, grade: 1 })).toBe(banditStats('captain', 4, { tier: 1, grade: 1 }))
+  })
+  // The parity plans (design skill-trees-node-costs §7.2 step 5): each plan's hero, raised to level 14 by raisedParty,
+  // holds its path's capstone, so the level-14 capstone cell measures the capstones.
+  const PARITY: readonly [role: string, plan: string, capstone: PerkId][] = [
+    ['melee', 'knight', 'unbreakable'],
+    ['melee', 'swordmaster', 'blademaster'],
+    ['melee', 'spellsword', 'arcane_knight'],
+    ['melee', 'paladin', 'aegis'],
+    ['archery', 'ranger', 'deadeye'],
+    ['archery', 'rogue_archer', 'shadowdancer'],
+    ['magic', 'evoker', 'meteor'],
+    ['magic', 'cryomancer', 'glacial_prison'],
+    ['magic', 'arcanist', 'mass_haste'],
+    ['magic', 'healer', 'revive'],
+    ['magic', 'saint', 'sanctuary'],
+  ]
+  // The exceptions. The default evoker_healer (Delwyn's own, a reference beside the parity plans) takes Arcane Blood and
+  // Heal All before Fireball (skill trees step 30), so Meteor comes at 15. The others cannot hold it by their asks: the Assassin's Keen Eye asks Luck 6 and Fortune Luck 7, which
+  // Aldric (4) and Brenna (4) lack, and their creation nodes lie outside the path, so its other five nodes (Backstab,
+  // Venom Strike, Hamstring, Ambush, Executioner: 11 perk points) and Deathblow's 4 need 15 points beyond creation,
+  // which come at level 16, not 14 (13).
+  const NOT_BY_14: readonly [role: string, plan: string, capstone: PerkId, level: number][] = [
+    ['melee', 'assassin', 'deathblow', 16],
+    ['archery', 'assassin', 'deathblow', 16],
+    ['magic', 'evoker_healer', 'meteor', 15],
+  ]
+  const roleIndex: Record<string, number> = { melee: 0, archery: 1, magic: 2 }
+
+  it.each(PARITY)('raises the %s hero on the %s plan to level 14 holding %s', (role, plan, capstone) => {
+    const hero = raisedParty(parseArgs(['--party-level', '14', '--plans', `${role}=${plan}`]))[roleIndex[role]]
+    expect(capstoneOf(hero)).toBe(capstone)
+  })
+
+  it.each(NOT_BY_14)('raises the %s hero on the %s plan to %s only at level %i, an exception', (role, plan, capstone, level) => {
+    const at = (n: number) => capstoneOf(raisedParty(parseArgs(['--party-level', String(n), '--plans', `${role}=${plan}`]))[roleIndex[role]])
+    expect(at(14)).toBeNull()
+    expect(at(level - 1)).toBeNull()
+    expect(at(level)).toBe(capstone)
   })
 })
 

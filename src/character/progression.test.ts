@@ -299,24 +299,26 @@ describe('autoAdvance', () => {
     return levels
   }
 
-  it('saves for the plan\'s next node rather than spend on a cheaper one: Delwyn keeps Heal All for after Fireball', () => {
-    const delwyn = grown(2, 5)
-    expect(delwyn.perks.flame_arrow).toBe(1)
-    expect(delwyn.perks.heal_all).toBeUndefined()
-    // Levels 4 and 5 brought 2 points, saved for Fireball's 3 at level 6.
+  it('saves for the plan\'s next node rather than spend on a cheaper one: Delwyn keeps Mending for after Fireball', () => {
+    const delwyn = grown(2, 8)
+    expect(delwyn.perks).toMatchObject({ flame_arrow: 1, arcane_blood: 1, heal_all: 1 })
+    expect(delwyn.perks.fireball).toBeUndefined()
+    // Levels 7 and 8 brought 2 points, saved for Fireball's 3 at level 9, not spent on Mending's 1.
     expect(delwyn.perkPoints).toBe(2)
-    expect(grown(2, 6).perks).toMatchObject({ fireball: 1 })
-    expect(grown(2, 6).perks.heal_all).toBeUndefined()
+    expect(delwyn.perks.mending).toBeUndefined()
+    expect(grown(2, 9).perks).toMatchObject({ fireball: 1 })
   })
 
   it('takes the ready-made heroes\' nodes at the levels the costs allow (C18)', () => {
-    expect(nodeLevels(READY_MADE[0])).toMatchObject({ rooted: 3, taunt: 5, pin: 8, iron_skin: 11, unbreakable: 15 })
+    // Step 30 moved Shield Wall and Unbreakable ahead of Iron Skin in the knight plan: the capstone at 13, not 15.
+    expect(nodeLevels(READY_MADE[0], undefined, 16)).toMatchObject({ rooted: 3, taunt: 5, pin: 8, shield_wall: 9, unbreakable: 13, iron_skin: 16 })
     expect(nodeLevels(READY_MADE[1])).toMatchObject({ aimed_shot: 3, volley: 6, far_shot: 8, deadeye: 12 })
-    expect(nodeLevels(READY_MADE[2])).toMatchObject({ flame_arrow: 3, fireball: 6, heal_all: 8, pyromancy: 10, meteor: 14 })
+    // Step 30 gave Delwyn Arcane Blood at 4 and Heal All at 6 ahead of Fireball: Meteor at 15, not 14.
+    expect(nodeLevels(READY_MADE[2], undefined, 16)).toMatchObject({ flame_arrow: 3, arcane_blood: 4, heal_all: 6, fireball: 9, pyromancy: 11, meteor: 15 })
     // Not a level earlier.
-    expect(grown(0, 14).perks.unbreakable).toBeUndefined()
+    expect(grown(0, 12).perks.unbreakable).toBeUndefined()
     expect(grown(1, 11).perks.deadeye).toBeUndefined()
-    expect(grown(2, 13).perks.meteor).toBeUndefined()
+    expect(grown(2, 14).perks.meteor).toBeUndefined()
   })
 
   it('takes each bandit role\'s nodes at the levels the costs allow, by its plan (C18)', () => {
@@ -390,11 +392,11 @@ describe('autoAdvance', () => {
 
   it('writes the plans of C18 in full', () => {
     expect(AUTO_PLANS.knight).toEqual([
-      'weapon_training', 'toughness', 'rooted', 'taunt', 'pin', 'heavy_hand', 'iron_skin', 'unbreakable', 'guardian',
-      'shield_wall', 'power_attack', 'armor_breaker', 'weapon_mastery',
+      'weapon_training', 'toughness', 'rooted', 'taunt', 'pin', 'shield_wall', 'unbreakable', 'heavy_hand', 'iron_skin',
+      'guardian', 'power_attack', 'armor_breaker', 'weapon_mastery',
     ])
     expect(AUTO_PLANS.swordmaster).toEqual([
-      'weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'cleave', 'gain_strength', 'weapon_mastery', 'blademaster', 'toughness',
+      'weapon_training', 'heavy_hand', 'power_attack', 'armor_breaker', 'cleave', 'blademaster', 'gain_strength', 'weapon_mastery', 'toughness',
     ])
     expect(AUTO_PLANS.ranger).toEqual([
       'marksmanship', 'deadly_aim', 'aimed_shot', 'volley', 'far_shot', 'deadeye', 'hunters_mark', 'pinning_shot',
@@ -402,8 +404,8 @@ describe('autoAdvance', () => {
     ])
     expect(AUTO_PLANS.rogue).toEqual(['backstab', 'dirty_trick', 'sprint', 'tumble', 'evasion', 'counter', 'skirmisher', 'shadowdancer'])
     expect(AUTO_PLANS.evoker_healer).toEqual([
-      'magic_arrow', 'heal', 'destruction', 'flame_arrow', 'fireball', 'heal_all', 'pyromancy', 'meteor', 'greater_heal',
-      'mending', 'death_cloud', 'greater_heal_all', 'purify',
+      'magic_arrow', 'heal', 'destruction', 'flame_arrow', 'arcane_blood', 'heal_all', 'fireball', 'pyromancy', 'meteor',
+      'greater_heal', 'mending', 'death_cloud', 'greater_heal_all', 'purify',
     ])
     expect(AUTO_PLANS.bandit_mage).toEqual(['flame_arrow', 'destruction', 'fireball', 'heal', 'heal_all'])
     // The parity plans are their path, the capstone first (taken as soon as it opens), stage-3 nodes included.
