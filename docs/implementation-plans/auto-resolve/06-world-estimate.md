@@ -160,4 +160,4 @@ Then:
 - **Deviations:** none to the contract's words. Docs: `docs/reference/scenes.md` (footer) and the "Seeds" line of `src/scenes/CLAUDE.md`.
 - **Known and unchanged:** if the pointer leaves the hovered button while it hides during a walk, `autoHovered` stays set until the next drop; harmless (the hint shows it only while the button shows, and `dropForecast` clears it).
 - **For step 07:** the footer shows "Auto-resolve (win NN%)" only after the estimate is ready (seconds), so screenshots must wait on `forecast !== null`.
-
+- **Review round 1:** (1) found: the keep/restart test could not fail. Fixed: `WorldProbe.forecastRuns` (estimates started since the map opened); the test asserts it is unchanged after marking a member and one more after Scout's day. Run against a constant key it failed (`expected 1 to be 2`), then reverted. (2) Not added: a walk can only start from a hex with no monsters, where `refresh()` has already dropped the forecaster and none exists until the walk ends, so "works during a walk" is unreachable through the UI and no cheap in-browser check bites. `update()`'s walking guard stays as defence.

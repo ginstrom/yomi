@@ -188,6 +188,8 @@ export class WorldScene extends Phaser.Scene {
   /** The auto-resolve estimate being worked out for the battle Attack would start, and the key of that battle (see refresh). */
   private forecaster: Forecaster | null = null
   private forecastKey: string | null = null
+  /** How many estimates this visit to the map has started, for the probe. */
+  private forecastRuns = 0
   /** The finished estimate for the battle in hand, else null. */
   private forecastResult: Forecast | null = null
   /** Whether the pointer is over the Auto-resolve button, whose hover puts the estimate in the hint. */
@@ -272,6 +274,7 @@ export class WorldScene extends Phaser.Scene {
     this.walking = false
     this.forecaster = null
     this.forecastKey = null
+    this.forecastRuns = 0
     this.forecastResult = null
     this.autoHovered = false
     this.hovered = null
@@ -477,6 +480,7 @@ export class WorldScene extends Phaser.Scene {
     if (key !== this.forecastKey) {
       this.forecaster = new Forecaster(start.start, start.base)
       this.forecastKey = key
+      this.forecastRuns++
       this.forecastResult = null
     }
     this.setAutoLabel()
@@ -538,6 +542,7 @@ export class WorldScene extends Phaser.Scene {
       message: this.messageText.text,
       hint: this.hintText.text,
       forecast: this.forecastResult,
+      forecastRuns: this.forecastRuns,
       autoLabel: (this.buttons[3].getData('text') as Phaser.GameObjects.Text).text,
       outcome: this.outcomeText.visible ? this.outcomeText.text : '',
       visible: [...this.visible].sort((a, b) => a - b),

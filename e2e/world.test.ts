@@ -413,14 +413,14 @@ describe('the world map', () => {
       await game.click(among.party[1])
       const marked = await game.waitFor('World', (w) => w.party[1].active)
       expect(marked.forecast).toEqual(ready.forecast)
+      expect(marked.forecastRuns).toBe(ready.forecastRuns)
 
       // A day passes: the day is in the estimate's base, so it starts afresh and comes back.
       await game.click(among.buttons.scout)
       const later = await game.waitFor('World', (w) => w.world.turn === among.world.turn + 1)
-      if (later.buttons.autoResolve.visible) {
-        expect(later.autoLabel).toMatch(/^Auto-resolve \((…|win .*)\)$/)
-        await game.waitFor('World', (w) => w.forecast !== null)
-      }
+      expect(later.buttons.autoResolve.visible).toBe(true)
+      expect(later.forecastRuns).toBe(ready.forecastRuns + 1)
+      await game.waitFor('World', (w) => w.forecast !== null)
     })
 
     it('leaves the real battle the seed and the log it would have had (A10)', async () => {

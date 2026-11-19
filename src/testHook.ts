@@ -164,6 +164,8 @@ export interface WorldProbe {
   hint: string
   /** The finished auto-resolve estimate for the battle Attack would start; null while it is worked out, and whenever no Auto-resolve button shows. */
   forecast: Forecast | null
+  /** How many estimates the map has started since it opened: a redraw that changes no battle leaves it, a new battle (a day, another party) adds one. */
+  forecastRuns: number
   /** The Auto-resolve button's label: "Auto-resolve (…)" until the estimate is ready, then its win chance ("Auto-resolve (win 90%)"). */
   autoLabel: string
   /** The words of the victory or defeat screen over the map, or '' while the game goes on. The blight, held sites and status are in `world`. */
