@@ -148,6 +148,7 @@ export function forecastHint(forecast: Forecast | null): string
 - `BattleProbe` gains `forecast: Forecast | null` (the finished estimate for the battle as it stands, else null) and `autoLabel: string` (the Auto button's label).
 - `WorldProbe.buttons` gains `autoResolve: ButtonProbe` (step 04); `WorldProbe` gains `forecast: Forecast | null` and `autoLabel: string` (step 06).
 - Battle label `forecastLabel(f, true)`; world label `forecastLabel(f, false)`. Hovering the button sets the screen's hint to `forecastHint(f)` in the hint's normal colour, not the warning colour; leaving it restores the hint. The scene's `update` calls `workFor(forecaster, FORECAST_SLICE_MS)` while a forecaster is unfinished and the screen is idle (battle: `playerControl`; world: not walking, an Auto-resolve button shown); a finished one updates the label (and the hint if hovered).
+- Note: on the world map the estimate is a tooltip above the Auto-resolve button, not the header hint (an orchestrator decision during verification, because the full hint did not fit beside the status text).
 
 ### C5. The world map's button (step 04)
 

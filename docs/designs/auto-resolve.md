@@ -27,7 +27,7 @@
 | R9 | If the battle has not ended `AUTO_ROUND_LIMIT` (50) rounds after auto-resolve began, it stops at that point, says so in the log, and hands the battle back to the player, who may press Auto-resolve again or play on. |
 | R10 | The headless loop that plays a battle out with policies is one Phaser-free function in the engine's directory, with tests, used by the battle scene and by the simulator. |
 | R11 | The player's manual describes auto-resolve, and its screenshots are retaken; the long campaign's open question is marked answered. |
-| R12 | Wherever Auto-resolve is offered (world map and battle screen), an estimate of its outcome is shown with it: the win chance on the button's label, and on hovering the button a line in the screen's hint giving the win chance, the chance a hero dies, and that it is an estimate of the AI playing the player's side. Until it is ready the label says so ("…"). |
+| R12 | Wherever Auto-resolve is offered (world map and battle screen), an estimate of its outcome is shown with it: the win chance on the button's label, and on hovering the button a line in the screen's hint giving the win chance, the chance a hero dies, and that it is an estimate of the AI playing the player's side. Until it is ready the label says so ("…"). Note: on the world map the estimate is a tooltip above the Auto-resolve button, not the header hint (an orchestrator decision during verification, because the full hint did not fit beside the status text). |
 | R13 | The estimate is computed by a Phaser-free domain module from `FORECAST_SAMPLES` (40) battles played out with `playOut` from the battle as it stands: on the world map from the encounter's setup, mid-battle from an engine `snapshot()` restored with another stream. |
 | R14 | Estimating never draws from, steps or changes the real battle's engine, its streams, the world's RNG, `Math.random` or the page's seed, and does not change which seed the real battle gets. Its sample seeds are derived by hashing from the battle (mid-battle: its seed and how far it has gone; on the world map: the location, the party and the day) with a salt, so the figure is deterministic for a given battle state. |
 | R15 | Estimating never freezes the screen: it runs one engine step at a time in slices of at most `FORECAST_SLICE_MS` (10 ms) a frame, only while the screen is idle (on the world map with nothing walking, in battle while the player has control), and is thrown away and restarted when the battle state it was for changes. Auto-resolve may be pressed before the estimate is ready. |
@@ -128,7 +128,7 @@ Statuses do not outlast a battle, played or auto-resolved; wounds and mana carry
 
 Both are rounded to the nearest 5%, shown as ">95%" when every sample came out that way and "<5%" when none did, so that 40 samples never claim certainty, and otherwise clamped to 5% to 95%.
 
-**Where.** Both screens that offer Auto-resolve:
+**Where.** Both screens that offer Auto-resolve (note: on the world map the estimate is a tooltip above the Auto-resolve button, not the header hint (an orchestrator decision during verification, because the full hint did not fit beside the status text).):
 
 - **On the button's label**, the win chance alone: "Auto-resolve (win 90%)" in the world's footer (its buttons size to their labels), "Auto (90%)" in battle. While working: "Auto-resolve (…)" and "Auto (…)".
 - **On hovering the button**, the screen's hint line (`hintText`, under the header on both screens) gives the whole estimate:
