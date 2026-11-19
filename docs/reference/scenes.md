@@ -1,0 +1,260 @@
+# The scene layer: reference
+
+The full detail behind `src/scenes/CLAUDE.md`, which holds the contracts and checklists. This file says how each screen behaves, what each helper module covers, which assets are loaded where, and how the debug console works. Grep it by scene, helper or table name.
+
+## Scene flow
+
+Scenes are `Boot` → `Menu` → `Party` ⇄ `Creation` → `World` ⇄ `Battle`, with `Encampment` ⇄ `GuildHall` (⇄ `Creation`), `TradingPost` and `Crafting` over `World`; `Exchange` over `World` (opened from the footer and the character panel); `Crafting` over `World` alone from the map's Craft button; and `Story` over `World`, `Battle` or `Encampment`.
+
+`Menu` is an overlay over `World` or `Battle` (Esc). Both are told which scene to resume by their `resume` scene data; overlays pause the scene under them and resume it on close.
+
+Every scene that acts for a party takes `party?: string` (its id) in its scene data, resolves it with `selectedParty(game, data.party)` and passes it on to the scene it starts. `Inventory` is handed the members themselves.
+
+## Story
+
+`Story` is the story told at a moment (`tellStory` in `StoryScene.ts`, or `showStory` with what `storyFor` already chose, as `Battle` does so as to save what it shows with the turn). It pauses the scene under it and plays its items: a cutscene a beat at a time (a click, Space or Enter goes on, Esc skips the rest) and a tip as a panel with a ring round its anchor, whose Turn tutorial off drops the tips still waiting. Then it resumes the scene, which saves.
+
+A voiced beat (`beatLine`: a `line` the voice manifest has) speaks on the voice bus as it is shown, `LINE_DELAY_MS` after it is drawn, with the music ducked under it. Next cuts the line with a short fade, and Esc stops it and skips. Leaving the story or shutting the scene down stops it and releases the duck. A beat whose file is missing or failed to load, or with the Voice slider at 0, is silent, its text staying as the subtitle. The lines load in `StoryScene.preload` with the backdrops, never in `BootScene`.
+
+`World` raises its moments as it opens and after everything that passes time, `Battle` as each of the player's turns begins, and `Encampment` as it opens.
+
+## Menu
+
+The menu's Continue resumes the game paused under it, or with none loads the slot written last. Load lists the three slots and starts `World`, or `Battle` with the saved battle (`saved` in its scene data), for the one picked. Manual lays the player's manual over the page as HTML (`manualOverlay.ts`, loaded only then, rendered from `docs/manual/README.md` by `manualHtml.ts` with `marked`), taking every key until its Back to game link or Esc closes it, so the game under the menu is left as it was. Options hold the volume sliders and turn the tutorial on and off over a game (`Menu` is handed the `game` for it).
+
+## Party and Creation
+
+New on the menu starts `Party`, which asks whether to take the ready-made party (shown under its button as portraits and names, a hover telling what a member comes to) or to create one's own, and then shows the roster: a row for each place up to the party limit, where a member is edited or removed, and an empty place leads to `Creation` or to the prerolls, a row of faces where a click adds that character (one already in the party is greyed out, as names must be unique).
+
+`Party` holds the party as drafts and passes them to `Creation` and back as scene data (`{ drafts, index? }`, `index` being the member to edit). The roster also holds the encampment's name, typed there (every key goes to it) and carried through `Creation` and back as `encampmentName`. The roster's Tutorial box (ticked by default, carried the same way as `tutorial`) sets the new game's tutorial. Begin makes the characters and a `GameState` of them, in an encampment of that name, in the first empty save slot (asking which to overwrite when all three are full), and starts `World`.
+
+`Creation` walks four steps (attributes, skills, perks, name and portrait) over one draft. The perks step shows the tree view across the whole panel (the summary gives way to it), headed "Perk points: N of 3", where only a tier-1 node answers a click, taking it or giving it back. Every control calls a function of `creation.ts`. A plus or minus held down repeats as a held key does, the hold being the scene's, since each change redraws the button.
+
+## Encampment, Guild Hall, Trading Post, Crafting
+
+`Encampment` is an overlay over the paused map, opened by the footer's Enter button (named for the encampment) while the party stands there. It is a picture of the place, each facility of `facilities` (encampment.ts) drawn on its plot at its level, or as an empty plot while not built (`encampmentView.ts`). A click on one shows what it does and costs, with Build or Raise, and for the guild hall, the trading post and the workshop, once built, a button to go in, which starts `GuildHall`, `TradingPost` or `Crafting`, each starting `Encampment` again when it closes. Leave starts `World` again, as the party under its column may have changed. The encampment, trading post and crafting screens say "For: <name>" (`actingFor`, encampmentView.ts) while more than one party is at home.
+
+`GuildHall` resolves its party with `homeParty(game, data.party)`. It is a column of faces for each party at home (`homeParties`) and one for the reserves (`hallColumns.ts` maps a pick and a click onto `moveHero`, `swap` and `exchange`): a click picks a hero, a click on a hero of another column swaps the two, and a click on that column's heading moves it there. Form party, Rename and Disband act on the picked hero's party (`formParty`, `renameParty`, `disband`). In Rename every key goes to the name, the first replacing the old one as a selected field's text is, a Ctrl, Cmd or Alt chord typing nothing (`typeInRename`); Enter keeps it and Esc cancels. Recruit offers the pre-rolls not in the company, or Create new, which starts `Creation` with `returnTo: 'GuildHall'` and the game (the company's names are taken); `Creation` then starts `GuildHall` again with its draft to recruit, or none on Cancel. Close starts `Encampment` again.
+
+`TradingPost` has Buy and Sell tabs of paged lines. The Buy tab is filtered by slot and family, or by its Runes button after the slots, which lists the runes the post's level sells; it opens on weapons, and goes back to them whenever the tab is shown, with eight lines a page under the filter. Sell is unfiltered: the baggage first, then the packs, then the stock's materials, then the pouch's runes, sold one at a time. A click on a line shows its stats (a rune's effect in each place) and price, and a button that confirms.
+
+`Crafting` has two tabs, Modify, which it opens on, and Runes. Modify lists the party's items a modifier fits, worn, carried and in the baggage; a click on one lists the modifiers and grades on offer where the party stands, a click on one of those shows what it changes (`gearCompare.ts`, attacks a turn included), and Work it confirms. Runes lists the items with a socket over the rune pouch (with none, it says which gear has sockets, `noSocketsHint`, read off `socketsOf` over the catalog by `socketSources`; hovering a pouch row shows what the rune does in each place). A click on an item shows its sockets, each rune with what it does there and Extract; each rune of the pouch has Embed (into the item clicked) and Fuse; a click on an action, greyed but still clickable when refused, previews it with its cost or refusal (`runecraftView.ts`), and Confirm does it. Opened from the map's Craft button (`resume: 'World'`), a field craft or a field embed stops the scene and resumes `World` with what it made and the day's events (`CraftedData`), which the map reports as it does camping.
+
+## Exchange
+
+`Exchange` is two parties on one hex as two rows of faces and two baggage lists (`exchangeView.ts`: partners on a hex, a pick and a click as an `ExchangeMove`), every change going through `exchange`. It is opened by the world footer's Exchange button or by the Inventory tab's (passed to the panel in its data as `exchange`), and resumes `World` with `{ exchanged: true }`, which rebuilds the party column.
+
+## The world map
+
+### Footer
+
+The footer has two rows, the time buttons over the actions.
+
+Next day (`passDay`: every party carries on its order, a walk cut short or a camp resuming) and Until something happens (`advance`, stopping at an interrupt, the party it concerns selected and centred, or after `UNTIL_LIMIT` (30) days passed quietly, which the message says) show while the game is active and the selected party stands on no monster location (confronting it or, after a scout or a wait, not). Each refuses with `advanceRefusal`'s reason and then selects and centres the party whose monsters block the days (`blockingParty`), whose footer offers Scout, Wait and Attack. A map click, Return home, and every footer action that passes a day (Scout and Wait included where another party's monsters block it, `actionBlocked`; Camp, Camp until healed, a field Craft and the buildings) refuse the same way, giving no order.
+
+The time buttons save as the days are passed and then play the selected party's steps as a journey plays, the party list's order line showing the order walked by until the walk ends (`deployedParties`' `shown`); every other party jumps to its hex when the walk ends (only the selected party's walk is animated). The words are `describeDays` (`worldEvents.ts`), which lead with the party's name ("Second Company: arrived at Kobold Scouts.") once the company has two parties or more. A day the selected party spends on its own action (Scout, Wait, Camp, Camp until healed, a building) is told in its own words followed by `describeOthers`, what else the day brought (another party's event or a notable one, whose party is selected and centred as for an interrupt).
+
+Beside the time buttons in that row: Return home (away from the encampment; not "Home", the key that centres the view) walks the selected party home by a `home` order; Garrison (on a held resource it does not garrison yet) sets a `garrison` order, passing no day; and Exchange (another party on the selected party's hex) opens `Exchange`.
+
+The row below offers, among monsters, Scout, Wait and Attack, and anywhere else Camp, Camp until healed and Craft, with Build Watchtower where the land would take one, Build Outpost on a held site without one (a click without the stock says what it costs) and Enter at the encampment.
+
+### Opening, clicks and walks
+
+The map opens on the party its scene data names, else (a load) on the first whose monsters block the days, else the first (`openingParty`), its opening line naming that party where there are several (`describeStanding`).
+
+A click on a hex where another party stands sends the selected party to meet it (`meetTarget`, the first there in list order; the header's hint says "Meet <name>" over it); any other hex is travel. A walk (a click, Return home, a meet: `walkTo` and `followOrder` in worldMap.ts) is told by `describeWalk` and, like the days, selects and centres the party its interrupt concerns.
+
+### Drawing the land
+
+The map draws the land as the player knows it (`seen`): black where never explored, and elsewhere the blight as a tint a level over the grass, a growth on corrupted land (`map_blight`, one animated sprite a hex) and a faint line along clean land's edge, under a veil where out of sight, rendered into a texture whenever that changes. A location shows once known (a monster location sighted, a resource explored), faded out of sight, and the header's blighted share is of the land explored. A held site's name is starred and green, with "outpost" under it where one stands, and a threatened one's is orange with the days until it falls.
+
+Hovering a hex shows the route a click would walk. While nothing is hovered and no walk plays, the map draws the selected party's standing route instead, in amber: what is left of its travel order to its destination (`standingRoute` in `partyList.ts`; gone once the order ends, and back after a reload, as the order is saved). At the view's top right is an info panel on the hovered hex (`hexInfo.ts`).
+
+### Party list
+
+Down the map's right side, in an opaque strip the view ends at (`PARTY_LIST_W`), is the list of the company's parties ("Your party" while there is one, else each by its name). An entry shows the party's leader's portrait with its banner at its edge and, with two parties or more, its name shortened across its foot (`entryName`); member count; hit point bar; its order ("Travelling to Troll Lair", "Camping", "Idle", "Before the …", two small lines under the bar, in full on hover); and a red "!" while it stands before monsters. The selected one is framed in gold. A click on one selects it, so that the left column and Home follow it, and centres the view on it; hovering one shows its summary in the info panel.
+
+### Battles and the game's end
+
+Attacking a monster location starts `Battle` with that location's id. A victory clears the location and returns to `World`. A defeat wipes the party out (`wipeParty`) and, with heroes left elsewhere, saves and returns to `World` with the first party selected, or with none left deletes the game's slot and goes back to `Menu`.
+
+When the game is won or lost a screen covers the map: End (to `Menu`, the save kept) and Continue (endless) after a victory, Main Menu after the encampment falls.
+
+## The character panel (`Inventory`)
+
+`Inventory` is an overlay showing one party member at a time in four tabs (Character, Skills, Abilities, Inventory; `PanelTab` adds `'trees'` for the tree view): over `Battle` (C, S, I; B within the panel), where gear can be changed for an action point but skill points, nodes and abilities are only shown, and over `World` (C), where all can be spent and gear is changed freely, through the baggage. It is handed the whole party (`PanelMember`s: each character, and in battle what its gear may do) and the member to open on, and when it closes it tells the scene under it which member it last showed, as the data of the resume.
+
+- Item tooltips list an item's sockets and runes below its stats.
+- The stat lines, on the Character and Inventory tabs, carry a `Wards:` line while any ward is above 0. The Character tab has an `On a hit:` line for the main hand's runes (`onHitLines`), which the Inventory tab, short of room, leaves to the weapon's tooltip.
+- The Character tab's line under the name is `heroTitle` (`trees.ts`: "Level 9 · Heavy Knight / Paladin").
+- The Skills tab lists the skills, with "N skill points to spend" over them in the portrait's "+" green while a raise can be made (`skillPointsLine`, `skillsTab.ts`; a greyed "+" pointed at gives `skillRaiseRefusal`'s reason under the rules), and only the passives a character has taken, spells aside, stacked by the lines each description wraps to (`passiveRows`, cut to a line each and then "+N more" when they would not fit), and "Perk points: N" (gold on the world map while some open node is affordable). Its Skill Trees button (or P) swaps the panel's content for the tree view, on the tree of the hero's calling, with no panel tab of its own but a tab for each of the four trees (or keys 1 to 4), where a click on an open node takes it and Esc or Back steps back to the Skills tab.
+- The Abilities tab lists the actives known, the spells and then the techniques (`abilityRows`, `abilityList.ts`: kind, AP with discounts and for the weapon held, mana, recharge, and a damaging spell's dice with the caster's power, `shownDescription`), twelve a page in two columns of fixed-height rows (`abilityRowRect`, with a pager over them past twelve), each description cut to two lines (`ABILITY_DESCRIPTION_LINES`) so that a hero with many actives fits at 840×560; then the mana every hero has and the spell skill, gear included. K is unbound. On the world map a heal's Cast button casts it (`castOnWorldMap`), a heal of one asking for a portrait to be clicked (`worldCast`).
+
+## The party column
+
+The party's portraits run down the left of `World`, `Battle` and `Inventory` alike (`PartyColumn`, placed by `partyPanel.ts`), so they seem to stay put under the panel. One member is the active one, marked in gold: in battle the selected unit, on the world map only the member a panel opens for. A click on a portrait makes its member active and a click on the active member's opens its panel (`portraitClick`); in battle a member that cannot be selected (spent, fallen, or during the enemy's turn) has its panel opened at once. A click on a portrait beside the open panel turns the panel to that member.
+
+## The battle screen
+
+### Attacks and the header hint
+
+A click on a foe always means a weapon attack, from where the unit stands if it can, else after the walk into reach that leaves the AP for it (`planAttack`), and nothing at all when no such walk exists, as a walk that cannot end in the attack is a plain move, a click on a hex. Hovering that foe says why in the header hint, in the warning colour (`noStrikeHint`: "Too few AP to reach and strike", or "Too few AP to strike" for a foe in range). The hint wraps at the window's width, and the usual one is kept to one line at 840 wide, as the party's column covers a second.
+
+### The Skills menu and targeting
+
+A spell or an ability (a hero's technique) is used from the Skills button (M), shown for a unit with magic or abilities ("Skills (mana)" for one with magic), which opens the list of its skills whenever the player has control (`skillMenu.ts`: spells in `ALL_SPELL_IDS` order, then abilities in `ABILITY_IDS` order, each with its mana and the AP the unit pays now, `spellApCost` or `abilityApCost` for the weapon held, and "(ready in N)" while recharging). Each row is greyed when the engine lists no use of it now, its hover saying why: the weapon it needs, "Once a battle" (a once-a-battle spell already in `usedOnce`), "Recharging (ready in N)", "Needs N mana", "Needs N AP", "No foe in range" or "No target in range", from the engine's state and the battle's units, and "Not now" only when none of these holds. A row is picked by a click or its number.
+
+The skill then asks for its target even when there is only one (`targeting` holds what the next board click picks a target for, an attack or a `Skill`): a foe for a strike or a foe status, the user for a self status (Sprint) or an area round it (Taunt, Consecrate), a hex for any other area, drawn with the engine's `abilityArea`. Hovering an area's centre outlines the area and shows the odds on every unit it would touch, allies included (a status laid with no roll shows its letter), and a foe a strike is aimed at shows its odds (`previewCast`, `previewAbility`). A spell aimed at `'fallen'` (Revive) is picked by a click on the fallen ally's hex (`aimedAt`; a standing unit on the hex offers nothing), the fallen staying on the board faded.
+
+The pointer over a valid target is the crossed swords for a weapon attack, a hostile spell or an ability, or a green cross for a friendly spell or a status the user lays on itself (`spellCursor`, `CURSORS.heal` in `cursors.ts`).
+
+### Nameplates and the foe panel
+
+Nameplates show each unit's statuses as coloured letters, bold and outlined, in a row centred over the unit's name (the probe's `marks`), in a layer of their own over every plate and never smaller than 12 px on screen however far the board is scaled down (`statusMarks.ts`). The letters are redrawn for a status a rune laid as for one an attack did (`changesStatusMarks`).
+
+Hovering a standing foe that has abilities or wards shows a small panel beside it (`foeInfoLines`; the probe's `foeInfo`), its name the title and each ability's description dimmer under it, drawn at its own size however far the board is scaled down, cleared as each event plays and drawn again when playback ends.
+
+### Playback
+
+- A hit's on-hit damage floats over the defender as "+3 fire" at its own size (`bonusText`, in a layer of its own), and a Life rune's healing refreshes the attacker's hit points.
+- A `restore` event floats its hit points and mana and refills the bar; an Unbreakable save floats "Endures"; a `revived` cast outcome stands the figure back up (`standUp`: full opacity, idle, plate back).
+- Spells have their looks in `SPELL_LOOKS`.
+- A routine's strikes, a technique's included, play as successive attacks with the weapon's look, an elemental or holy technique's hit flashing in its spell's colour (`strikeFlash`). An area ability or a status laid with no roll (`AbilityEvent`) plays through the spell-effect path: its hexes flash and each unit touched shows how it fared (Volley an arrow at each hex, Taunt a red ring on the user).
+- A strike's lunge, a hit's flash and the battle's other effects are tweens in `BattleScene`, not frames: a blade or axe swung about the fist (`UnitFigure.swing`, the sprites in `SWUNG_GEAR`, turned about the body's `grip` point, which the atlas carries on each frame as Phaser's `customData` and `pointFromAnchor` reads), a slash, arrows and wand bolts in flight, each spell's missile and impact (as `battleEffects.ts` picks; an arrow, a missile and a burst are atlas sprites from `art/effects/`, turned along their flight about their `tip`, a missile and a burst tinted in the spell's colour, while flares, trails, clouds, motes and rings are drawn shapes), shots and spells aimed at and flying from each unit's `chest` point, a hit's knock or a miss's dodge, a step's bob, and an outline pulsed on whoever a blow or a spell lands on (`UnitFigure.pulseOutline`, Phaser's Glow filter, drawn only by WebGL).
+
+### Winning
+
+A win at a monster location rolls its runes into the pouch when the battle ends (`takeRunes`, seeded from the `battle_start` seed in the log, so a reloaded battle finds the same; a battle with no location rolls none) and names them with the items on the "Found:" line.
+
+## Changing gear
+
+### In battle
+
+The inventory opens for the selected unit (I or C) and edits its `Character` directly (`equipFromBackpack`, `unequipToBackpack`). When it closes, `BattleScene` sends the engine an `equip` action carrying the newly derived stats, one for each member whose gear was changed while the panel was open (its portraits turn it from member to member), since the engine knows stats and not items. The action also lists the items changed (`gearChanges`), which the engine only copies into the `equip` event. New stats never add mana to spend: the engine keeps what is left, within the new maximum.
+
+Items can be dropped on the unit's hex and picked up from it: the inventory's Ground section edits that hex's pile (`dropFromBackpack`, `dropEquipped`, `pickUp`; right-click or Ctrl+click drops, a click on a ground item picks it up into the backpack, and a pile deeper than the grid scrolls with the wheel), and the same `equip` action lists what was `dropped` and `pickedUp`, again only for the log.
+
+An item can also be dragged between the backpack, the equipment slots and the ground, a drop making one of those same changes or nothing (`gearDrag.ts`; dropped on its slot it is equipped there, so a ring goes on whichever ring slot it is dropped on, the optional slot of `equipFromBackpack`). A primary click therefore acts on release, and a press that moves more than `DRAG_THRESHOLD_PX` is a drag.
+
+Equipping, stowing, dropping and picking up share one cost: a change costs `EQUIP_AP_COST` (1 AP), paid once; further changes are free until the unit moves or attacks or its turn ends (`equipCost`). `legalActions` never lists `equip`, so the AI policies do not change gear. `BattleScene` puts a hero's gear on its figure again whenever the character panel closes.
+
+### On the world map
+
+The same panel changes gear at no cost, with the party's baggage where the ground is (`WorldScene` passes `gearApCost: 0` and `ground: <the party>.baggage`): a click takes an item from the baggage into the open member's backpack, a right- or Ctrl+click puts one in, and so an item passes from member to member. Nothing is told to anyone when the panel closes, as the characters and the baggage were edited in place.
+
+### Hit points when gear changes
+
+Only a Life rune's `maxHp` changes maximum hit points (in armour or a shield; in a weapon Life heals on a hit), so every change to what a character wears ends with `clampHp(character, maxBefore)`, the maximum read before the change. Outside battle the hero keeps the same share of its hit points, both ways: `min(max, max(1, round(hp × max / maxBefore)))`, never above the new maximum and never to 0 from a positive value, so taking Life gear off and putting it back leaves `hp` where it was, within rounding, and a full hero stays full; a hero at 0 stays at 0. In battle the rule is the engine's, whose `equip` only lowers hit points to the new maximum, so Life armour put on mid-fight heals nothing; the character panel changes gear there by the cap rule (`HpRule` 'cap', which `BattleScene` hands the panel as each member's `hpRule`), so it shows what the engine holds. `equipFromBackpack`, `unequipToBackpack` and `dropEquipped` apply the rule they are given; a new way of changing what a character wears must too.
+
+A ring (`Item.ring`) fits either ring slot: clicked, the first if it is empty, else the second, else in place of the first; dragged, the one it is dropped on.
+
+## Helper modules in detail
+
+Pure helpers (no runtime Phaser import, tested in the `domain` project):
+
+- `eventSchedule.ts`: timing of event playback.
+- `battleEffects.ts`: how a blow, a shot, each spell and each area ability look and when they land (`attackLook`, `SPELL_LOOKS`, `ABILITY_LOOKS`, `strikeFlash`, `impactMs`, which the schedule holds later events for and the sounds time their outcome by); `MOVE_STEP_MS`, the time a unit takes to walk a hex, which the footsteps keep to; the floating text of an attack's on-hit damage (`bonusText`), of a `restore` (`restoreFloats`: "+3" green, "+2 mana" blue) and of a blow (`attackerNotes`: Ambush, "+N AP"; `defenderNotes`: Deathblow); and `changesStatusMarks`, which events redraw the nameplates' status letters (a `restore` and a `status_laid` among them).
+- `boardGeometry.ts`: hex ↔ screen for a `BoardLayout`; the battlefield's is squashed to look like a floor, the world map's is flat with smaller hexes.
+- `attackPlan.ts`: what clicking a foe does, and the hint when it does nothing.
+- `battleSetup.ts`: which encounter and threat a `Battle` start asks for (a monster location's, or else the data's); the seed a battle's log started with, which seeds the runes a win finds; and the names the victory screen's "Found:" line lists.
+- `storyAudio.ts`: which line a cutscene beat speaks, its cache key and files, the lines of a cutscene to load, the delay and fade, and the duck constants, which are `soundPlayer.ts`'s.
+- `scrollingLog.ts`: the battle log.
+- `slotScroll.ts`: which rows of the ground pile the inventory shows.
+- `gearDrag.ts`: where an item dragged in the inventory may be dropped, and which change of gear a drop makes.
+- `mapScroll.ts`: where the world map sits on screen for the party to be in view or as a drag panned it, and when a press has moved far enough to be a drag. The map scrolls to follow the party until a drag pans it; the next journey, Home or a click on the party's entry brings it back (`centreOnSelected`).
+- `abilityList.ts`: the rows of the Abilities tab and where each sits.
+- `partyPanel.ts`: where the party's portraits sit and what a click on one does; the column's colours and `hpBarColor`.
+- `draftInfo.ts`: the lines a hover shows of a draft.
+- `encampmentView.ts`: where the encampment screen draws each facility, with which frame of its sprite; `actingFor`, the "For: <name>" line.
+- `hallColumns.ts`: the Guild Hall's columns and what a click does with a picked hero.
+- `exchangeView.ts`: the Exchange scene's partners, moves and baggage lines.
+- `gearCompare.ts`: the stat sheet's wards (`wardsLines`, wrapped onto indented rows to fit each tab's column); the character panel's warning when the weapon's attack costs more AP than a turn gives (`attackCostWarning`, in the panel's amber, and `attackWarning` in its probe); the trading post's and crafting screen's words for an item's stats and what a craft changes, attacks a turn included, with the strength an item asks and, where a wearer is known, the shortfall's cost, and the AP, reach, ranged-piercing, spell-skill, mana, wards, Max HP and on-hit lines, every on-hit entry on one line. The trading post knows no wearer and shows the bare requirement.
+- `runecraftView.ts`: the crafting screen's Runes tab in words (an item's sockets, the pouch's lines, a rune's effect in each place, and each action's id, preview, refusal and message, from runecraft.ts), and where sockets come from (`socketSources`, which the empty list's hint and a rune's "Set in a socketed item" line at the trading post and in the pouch say).
+- `worldEvents.ts`: the world map's words for what a turn brought, and for days and walks, led by the name of the party concerned once there are several; `advanceMessage`, the prompt to spend points, shown as the map opens and brought up to date as an overlay closes.
+- `skillsTab.ts`: the character panel's Skills tab in plain data (the skill points line and where the passives sit).
+- `hexInfo.ts`: what the world map's info panel tells of the hovered hex, only what the fog lets the player know, and every party of the company standing there.
+- `partyList.ts`: the parties the world map lists, where their entries sit and where their figures stand. `deployedParties` maps `game.parties`, one entry each, called "Your party" while there is only one (though the expedition's stored name is "First Company"), else by name; each party's banner by the number in its id (`bannerOf`, `BANNER_SPRITES`); parties sharing a hex spread across it (`figureOffsets`); the party a click on a hex meets (`meetTarget`); `orderLabel` words a party's order for the entry's line and hover, naming a destination only where the player knows it, and `orderLines` wraps it into the strip; `standingRoute`.
+- `perkTree.ts`: the skill-tree view's layout and words.
+  - Layout (`treeLayout`): a column a path, row 0 its heading and its nodes below in `PERKS` order, each tier beginning on the same row in all three columns (`tierBands`, and `bandRects` the bands in pixels, each labelled with its level, L1 to L12, in the left gutter), so the bands run straight across. The strip's first line and its last (the hint, "Not yet: …") are each cut to two lines (`clampLines`), so that the strip stays inside the panel.
+  - Lines (`treeLinks`): each path's trunk down its column's left gutter with a branch into each node, and a bracket on the right from the node each `requires`, one lane a parent, brackets of different parents that meet nesting (the shorter span inside). A line's tone (`linkToneOf`) is brighter into a node taken or open than into one closed; a trunk stretch is lit only when the nodes at both ends are taken.
+  - The legend of the node kinds under the tabs (`legendLayout`); the view's geometry (`nodeRect`, the tree tabs, the strip); the path headings and which tree the view opens on.
+  - The strip's words: `nodeSummary` (an active's cost from its spell or ability data), `nodeAsks` ("Costs 3 perk points. Asks: …"), `nodeHint` ("Needs 3 perk points; you have 1 — affordable at level 8"), and `savingLine`, under the rule with the pointer on no node ("Saving: Pin (3 perk points) is yours at level 11", the cheapest open node not yet affordable, else the calling's capstone, as "Goal: …" with what it still asks unless only level and points wait).
+  - The cost digit in each node's `NODE_COST_W` slot (`costTone`, `draftCostTone`: gold while open and affordable, dim otherwise, null where the view draws a check or a cross); `costWords`.
+  - How each node stands for a character (taken, open, closed, or a capstone locked by the calling or another capstone) or, in creation, for a draft.
+- `skillMenu.ts`: the battle's Skills list of spells and abilities, why a row is greyed (`skillMenuRows`), and the words of aiming each kind.
+- `statusMarks.ts`: where a nameplate's status letters sit and the scale that keeps them legible.
+- `foeInfo.ts`: the lines the battle's hover panel shows of a foe: its name, each ability with when it is next usable (counted in the foe's turns) and what it does, worked out from the ability's data, `STATUSES` and the foe's `abilityDamageBonus`, so a new ability is described for free; a technique with its mana, its AP for the foe's weapon (`costWords`, `perkTree.ts`) and the weapon it needs; then its wards.
+- `clicks.ts`: what counts as a right-click.
+- `keyEvents.ts`: `onceEachEvent`, which every scene that types text (`Creation`'s name, `Party`'s encampment name, `GuildHall`'s Rename) wraps its `keydown` listener in, as Phaser hands a listener the same key again when two arrive within a frame.
+- `sounds.ts`: the cue table and which cues each event plays. See "Sound" below.
+- `audioSettings.ts`: volume levels, saved to `localStorage`: master, Sound FX (the effects and ui buses), music (the themes and stings) and voice; `busVolume`, and each theme's gain to −24 LUFS (`MUSIC_GAIN`).
+- `cursors.ts`: the pointer cursors, as inline SVG.
+- `seed.ts`: the seed in the page's address.
+- `debugCommands.ts`: the debug console's commands.
+- `unitLook.ts`: the names of the sprite atlas's frames, animations and points, and which sprites are laid under and over a hero's body for what it wears and holds.
+- `itemIcons.ts`: item, rune and socket-pip icon keys and tints. See "Assets" below.
+- `manualHtml.ts`: the manual rendered to HTML with `marked`.
+
+Helpers that import Phaser (the game objects of something one or more scenes draw, with no logic of their own; `debugConsole.ts`, `manualOverlay.ts`, `socketPips.ts` and `soundPlayer.ts` import Phaser's types only):
+
+- `PartyColumn.ts`: the party's column, shared by the three scenes that show it.
+- `PartyListView.ts`: the world map's party list.
+- `UnitFigure.ts`: a unit's body with what it wears and holds drawn under and over it, animated as one: the battle's units, the world map's parties and the character panel's doll.
+- `PerkTreeView.ts`: the tree view: the four tree tabs, the kind legend, a skill tree's path headings, tier bands, trunks and brackets, nodes and three-line strip, each node with its cost digit (the tone from its caller's `costTone`) and a tab in its kind's colour and glyph (a passive's disc, an at-will active's blade, a mana active's diamond, a spell's star), a capstone haloed in a double gold frame. Drawn by the character panel and by creation, each of which says what a click on a node or a tab does.
+- `socketPips.ts`: an item's socket pips under its icon (`createPips`).
+- `panelButton.ts`: the framed button of the party screen and creation, drawn faint but clickable when `dimmed`, and `fitText`, which cuts a list line's name short with an ellipsis.
+- `debugConsole.ts`, `manualOverlay.ts`: plain-HTML overlays (see below).
+
+## Sound
+
+`soundPlayer.ts` is the one player: every play goes through it, and no scene calls `sound.play` or `sound.add`. It imports Phaser's types only, so it is tested over a fake sound manager. It plays cues (`playCue`, `playCues`), the one theme (`startMusic`, `pauseMusic` and `resumeMusic` under the menu, `stopMusic`, `duck` under a voice line), voice lines (`playVoice`), the limiter on the output (`installLimiter`) and the dev hook's `audioLog`. Anything not loaded is silence, never an exception.
+
+`sounds.ts` is pure and draws from no RNG:
+
+- The cue table: every sound effect is a cue `<bank>.<name>` of the generated `audio/sfx.manifest.json`, imported as JSON, with its bus, pitch and volume jitter and voice limits in `CUES`.
+- `pickVariant`, a shuffle bag per cue drawn with the player's own `Math.random`, never a battle's or the world's seeded stream; `admitPlay`, the per-cue and global voice limits.
+- Battle: `eventSounds(event, context)` chooses the cues a battle event triggers, by attack class (`WEAPON_SOUNDS` by the main hand's icon and `FOE_SOUNDS` by kind, keyed like `GEAR_SPRITES`, with a coverage test that a new weapon icon or foe kind must satisfy), the outcome, the defender's armour, the spell's element or school (`spellSound`), the area or status ability (`ABILITY_SOUNDS`; a technique of strikes sounds as the attacks it makes, and each new ability is one or the other by a coverage test), a rune's element, a deathblow (a critical's sweetener) and an Unbreakable save, a status's tick, regeneration, a restore of hit points (Serenity's mana is silent) and a Shadowdancer's image (Rooted is silent), the faller's body type (`DEATH`) and a footstep for each hex walked (`STEP`). `BattleScene` supplies its `SoundContext` (kind, held weapon and body armour of a unit, read live). `levelUpDelayMs` times the victory screen's level-up sting.
+- World: `worldSounds(events)`, at most two cues for a world message, one per kind of event in a priority table, the second `WORLD_SOUND_GAP_MS` after the first (`reportEvents` flattens the days' reports for it). `WorldScene` plays them with each walk, days or own-action message and `crafted` resume.
+- Interface: `refusalCue(refusal, success)`, which every action returning a refusal plays through so that a refusal sounds `ui.error` in place of its success sound (`world.coins`, `world.craft`, `runeCue`'s `world.rune.*`, `world.upgrade`, `ui.confirm`, `ui.gear`, `ui.learn`); and `buttonCue(label)`, `ui.back` for the labels that close or step back (`BACK_LABELS`: Close, Back, Leave, Cancel, Back to game, Main Menu, End), else `ui.click`. `addPanelButton` takes the cue to sound (`null` for a button whose action sounds its own outcome, a dimmed one sounding `ui.error`), and a refused buy, craft or rune action is a faint but clickable confirm so that the refusal is heard.
+
+## Assets the scenes load
+
+Each asset directory's `README.md` records provenance and licence and should be updated when files are added.
+
+### Boot
+
+`BootScene` preloads the four sound-effect banks as audio sprites (`BANKS`, `bankFiles` in `sounds.ts`) and the two themes (`MUSIC_KEYS`; `BattleScene` and `WorldScene` each start theirs through `soundPlayer.ts`, `music_battle` and `music_world_map`, paused while the menu is over them), installs the output limiter, and loads the sprite atlas with its animations (`atlas.png`, `atlas.json`, `atlas.anims.json`), from which everything that moves is shown: units, what they hold and the world map's locations. A frame is named `<sprite>/<frame>` and an animation `<sprite>/<anim>` (`spriteFrame`, `spriteAnim`); the animations are written in the sprites' sources, not in the scenes.
+
+### Units and heroes
+
+A unit is drawn as the atlas sprite named for its `UnitKind`, with `idle` and `walk` animations. Every hero is the `warrior` body, bare, with sprites laid under and over it for what it wears (`WORN_SPRITES`, and `WORN_BACK_SPRITES` for the cloak's cape behind it) and holds (`GEAR_SPRITES`), all in `unitLook.ts` by the item's icon, from `art/gear/`, and drawn in `heroLook`'s order (cape, body, armour, cloak, head, main hand, off hand, whichever way it faces). An item whose icon has no entry is worn or held unseen.
+
+### Icons
+
+`InventoryScene`, `TradingPostScene` and `CraftingScene` load one icon per `ItemIcon` from `assets/sprites/icon_<icon>.png`, keyed by `ITEM_ICON_KEYS`, and also every rune's icon and the two socket pips (`RUNE_ICON_KEYS`, `SOCKET_PIP_KEYS`), all in `itemIcons.ts`. `RUNE_COLOURS` tints a filled pip, and `socketPips` and `pipOffsets` say which pips an item shows and where, drawn under its icon by `socketPips.ts`'s `createPips`, which `InventoryScene` uses in its slots, backpack and ground and `TradingPostScene` and `CraftingScene` in their lists. `itemIcons.ts` also has the pale tint a tier-2 material lays over its family's icon (`MATERIAL_TINTS`, `iconTint`), which the three scenes apply to every item icon they draw.
+
+### World map
+
+`WorldScene` shows one atlas sprite per `LocationKind`, keyed by `LOCATION_SPRITES`, `map_watchtower` for a tower and `map_blight` on each corrupted hex, each playing its `idle`. It shows each party as its first member's battle figure, dressed in what it wears and holds, with its banner behind it (`BANNER_SPRITES` in `partyList.ts`, by banner number: `map_banner`, `map_banner_azure`, `map_banner_green`, each with its `idle`, which the party list also draws); parties sharing a hex spread across it (each banner on its outer side), the selected one on top with a gold ring under its feet.
+
+### Encampment
+
+`EncampmentScene` draws each facility from the atlas as `camp_<facility>/level_<n>` (by `FACILITY_SPRITES`; the guild hall has five, levels 4 and 5 the Barracks), or `camp_plot` while it is not built, on the 48px `building` canvas, with `camp_tent` and `camp_fire` for the look of the place.
+
+### Portraits
+
+Every scene with a `PartyColumn`, and `Party` and `Creation`, loads one portrait per `PortraitId` from `assets/sprites/portrait_<id>.png` (`portraitKey`).
+
+## Debug console
+
+In dev builds `~` (or `` ` ``) opens a debug console over the game (`debugConsole.ts`, plain HTML as the manual is, taking every key while open; `help` lists the commands, which live in `debugCommands.ts`). It works on the `DebugSource` of the scene in front (`debugSource()`, which `World` and `Battle` have).
+
+Anything reads, but a command that changes the game runs only on the world map, which redraws and saves after it, as a battle's engine would never hear of the change. Such commands cover healing; setting hit points (`hp <amount> [member|all]`, to stage a death); experience; stock; items; facilities' levels (`facility guild_hall` up to 5); revealing the map; moving the party; passing days (`days`, through `passDay`, so each party carries out its order, refused while one faces monsters); and starting a battle of any encounter at any threat (`fight`, through the source's `fight`, which only `World` offers). A new command is an entry in `COMMANDS`.
+
+A command that acts on a party (`heal`, `hp`, `xp`, `give`, `goto`, `fight`, `party`) takes an optional last argument `@<party>`, a party id (`party_1`) or the start of its name (`@first`); else it acts on the source's `party` (the scene's selected party) or the first. `party` lists the company (id, name, hex, order, confrontation, then the members). `give <item|rune> [count]` puts items in the party's baggage or, given a rune key (`storm1`), runes in the pouch; `items` lists the item ids, the rune keys and the `#` grammar, and `runes` lists the pouch.
+
+A battle `fight` starts has no location behind it: `Battle` is started with `encounter` and `threat` in its data instead (`chooseBattle`, used only without a `location`), and a win gives experience but clears no location, takes no loot and rolls no runes, leaves the blight alone and is never saved mid-battle.
+
+## Seeds
+
+The game takes a seed from the page's address, as in `http://localhost:5173/?seed=42` (`seed.ts`; `main.ts` puts it in the game's registry). Every battle of that session is then fought with it, the enemy's choices included, so the same actions play out the same way: use it to replay a battle from the seed its `battle_start` logged. Without one each battle draws a seed of its own, which its `battle_start` logs all the same. The enemy's RNG is seeded with the seed plus one.

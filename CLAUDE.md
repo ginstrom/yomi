@@ -85,6 +85,8 @@ Scenes are `Boot` → `Menu` → `Party` ⇄ `Creation` → `World` ⇄ `Battle`
 | `art/CLAUDE.md` | sprites (generated from `art/` with sprite-tool; never edit an exported PNG, run `npm run sprites`) |
 | `audio/CLAUDE.md` | sound effects and narration (generated from `audio/`; never edit the banks or manifests by hand) |
 
+Each directory's `CLAUDE.md` is a working guide: contracts, checklists and one line a module. The exhaustive rules (every constant, status, UI behaviour, policy step and printed statistic) are in `docs/reference/` (`battle.md`, `characters.md`, `game.md`, `scenes.md`, `simulator.md`, `audio.md`, `sprites.md`), which nothing loads by itself: open the section you need when the guide points there.
+
 ## Tests
 
 `vitest.config.ts` defines two projects, and where a test file lives decides how it runs:
@@ -105,7 +107,8 @@ The `CLAUDE.md` files are the project's code map, worth loading only while they 
 Where a fact goes:
 
 - **This file**: what most tasks need: commands, the module map (one line a module), the contracts that span directories, where the detail is. A new rule of play or a new module's detail does not go here.
-- **A directory's `CLAUDE.md`**: the rules and contracts that matter when working in that directory. Give a module one line on what it is responsible for, not a list of its exports.
+- **A directory's `CLAUDE.md`**: the contracts, gotchas and "if you add X, also update Y" checklists for that directory, and one line a module on what it is responsible for, not a list of its exports.
+- **`docs/reference/<area>.md`**: the full rule text and detail a task in that area may need to look up. A new rule's detail goes here, with a line in the directory's guide only if getting it wrong would cause a bug.
 - **Nowhere**: what a grep answers, what the code says for itself, and history (which step changed a number, measurements of past runs). History belongs in `docs/implementation-plans/`.
 
-This file is held under 16 KB by `scripts/claudeMd.test.ts`. When it fails, move detail down into a directory's file rather than raising the limit. Keep the directory files lean too: when one passes about 30 KB, cut what a grep answers and history before adding.
+`scripts/claudeMd.test.ts` holds this file under 16 KB and each directory's `CLAUDE.md` under 12 KB. When it fails, move detail into `docs/reference/` rather than raising the limit.
