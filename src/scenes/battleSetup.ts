@@ -46,3 +46,11 @@ export function battleSeed(log: readonly BattleEvent[]): number | null {
 export function foundNames(items: readonly { name: string }[], runes: readonly RuneKey[]): string[] {
   return [...items.map((item) => item.name), ...runes.map(runeName)]
 }
+
+/** The result screen's line for a battle auto-resolved to its end, over `rounds` rounds. */
+export function autoResolvedLine(rounds: number): string {
+  return `Auto-resolved in ${rounds} round${rounds === 1 ? '' : 's'}.`
+}
+
+/** The log's line when auto-resolve reaches its round limit and hands the battle back. */
+export const AUTO_DRAG_ON_LINE = 'The battle drags on. It is yours to finish.'

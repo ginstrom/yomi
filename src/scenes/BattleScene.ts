@@ -15,7 +15,7 @@ import {
   type UnitId,
   type UnitSnapshot,
 } from '../engine/battleEngine.ts'
-import { ENEMY_POLICY } from '../engine/autoPlay.ts'
+import { AUTO_POLICY, AUTO_ROUND_LIMIT, ENEMY_POLICY, playOut } from '../engine/autoPlay.ts'
 import { POLICIES } from '../engine/policies.ts'
 import type { Expedition } from '../game/expedition.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId, type UnitKind } from '../game/encounters.ts'
@@ -86,7 +86,7 @@ import { ITEM_ICON_KEYS, ITEM_ICON_SCALE, RUNE_COLOURS, cssColour, iconTint } fr
 import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { CHEST_POINT, SPRITE_ATLAS, heroLook, pointFromAnchor, spriteAnim, spriteFrame } from './unitLook.ts'
-import { DEFAULT_ENCOUNTER, battleSeed, chooseBattle, foundNames } from './battleSetup.ts'
+import { AUTO_DRAG_ON_LINE, DEFAULT_ENCOUNTER, autoResolvedLine, battleSeed, chooseBattle, foundNames } from './battleSetup.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
 import { showStory, type StoryAnchors } from './StoryScene.ts'
 import { storyFor, type StoryItem } from '../story/story.ts'
@@ -106,6 +106,8 @@ interface BattleData {
   threat?: number
   /** A battle read from a save slot, to take up where it stood instead of starting one. */
   saved?: SavedBattle
+  /** Auto-resolve the battle from its first moment (the world map's Auto-resolve); a saved battle ignores it. */
+  auto?: boolean
 }
 
 type MoveAction = Extract<Action, { type: 'move' }>
@@ -194,7 +196,7 @@ const SKILL_ROW_W = 240
 const SKILL_ROW_H = 26
 /** The width a character of the list's 13px monospace takes, to fit a row to its label. */
 const SKILL_CHAR_W = 8
-/** From one button's centre to the next; three fit the least window (MIN_GAME_SIZE in main.ts) beside the party's column. */
+/** From one button's centre to the next; the row of four fits the least window (MIN_GAME_SIZE in main.ts) beside the party's column. */
 const BUTTON_SPACING = 160
 const PROVOKE_OUTLINE = 0xffa726
 const SELECTED_OUTLINE = 0xffffff
@@ -276,6 +278,8 @@ export class BattleScene extends Phaser.Scene {
   private enemyRng: SeededRng = mulberry32(0)
   /** The round whose start was last saved, so that each of the player's turns is saved once. */
   private savedRound: number | null = null
+  /** The rounds auto-resolve took to end the battle, for the result screen's line; null when it was not auto-resolved to its end. */
+  private autoRounds: number | null = null
   /** What a lost battle did to the company (`wipeParty`), once it is lost; null until then, and after a win. */
   private wipe: Wipe | null = null
   private board!: HexBoard
@@ -338,6 +342,8 @@ export class BattleScene extends Phaser.Scene {
   /** Shown for a unit with magic; reads its mana, and Cancel while a spell's target is being picked. */
   private castButton!: Phaser.GameObjects.Container
   private endTurnButton!: Phaser.GameObjects.Container
+  /** Resolves the rest of the battle at once with the AI playing the heroes; enabled with End Turn, no key. */
+  private autoButton!: Phaser.GameObjects.Container
   private menuButton!: Phaser.GameObjects.Container
 
   constructor() {
@@ -366,7 +372,9 @@ export class BattleScene extends Phaser.Scene {
     this.loggedEquipment = new Map(party.map((member, i) => [heroId(i), { ...member.equipment }]))
     this.openPiles = null
     this.savedRound = null
+    this.autoRounds = null
     const saved = data?.saved
+    const auto = !saved && data?.auto === true
     if (saved) {
       // The encounter above is built only for its kinds and its worth: the units are the engine's.
       this.engine = BattleEngine.restore(saved.engine)
@@ -375,7 +383,13 @@ export class BattleScene extends Phaser.Scene {
     } else {
       // Every battle is seeded, by the page's address or at random, so every battle can be saved and replayed.
       const seed = (this.registry.get(SEED_KEY) as number | null | undefined) ?? randomSeed()
-      this.engine = new BattleEngine(setup, { seed, meta: { source: 'game', enemyPolicy: ENEMY_POLICY, party: this.expedition.id } })
+      this.engine = new BattleEngine(setup, { seed, meta: {
+          source: 'game',
+          enemyPolicy: ENEMY_POLICY,
+          party: this.expedition.id,
+          ...(auto ? { playerPolicy: AUTO_POLICY } : {}),
+        },
+      })
       // A stream of its own, so the enemy's choices do not shift the engine's dice.
       this.enemyRng = mulberry32(seed + 1)
       this.ground = new Ground()
@@ -481,6 +495,7 @@ export class BattleScene extends Phaser.Scene {
     this.attackButton = this.createButton('Attack', () => this.onAttack())
     this.castButton = this.createButton('Skills', () => this.onSkills())
     this.endTurnButton = this.createButton('End Turn', () => this.onEndTurn())
+    this.autoButton = this.createButton('Auto', () => this.onAutoResolve())
     // Under the result screen, whose shade keeps clicks off the portraits once the battle is over.
     // A copy: the dead leave the party as the battle ends, and stay in the column, faded, under the result screen.
     this.column = new PartyColumn(this, [...party], (index) => this.onPortrait(index))
@@ -527,7 +542,11 @@ export class BattleScene extends Phaser.Scene {
     startMusic(this, 'music_battle')
 
     if (saved) this.showRestored()
-    else this.applyEvents(this.engine.getLog())
+    else if (auto) {
+      // Resolved from its first moment: the opening goes into the log with nothing played back.
+      this.autoResolve(this.engine.getLog())
+      return
+    } else this.applyEvents(this.engine.getLog())
     // A side can enter already fallen (e.g. a party carried over at 0 hp).
     this.continueBattle()
   }
@@ -540,11 +559,63 @@ export class BattleScene extends Phaser.Scene {
   private showRestored(): void {
     for (const event of this.engine.getLog()) this.log.push(formatEvent(event, this.names))
     this.renderLog()
-    for (const { id, hp } of this.engine.getState().units) {
+    this.showBoardAsItStands()
+  }
+
+  /**
+   * Brings the board to the engine's state with nothing played back: every unit
+   * where it stands, the fallen faded and those standing again stood up, the
+   * ground's piles marked, and hit points, facing and statuses as they are.
+   */
+  private showBoardAsItStands(): void {
+    for (const { id, hp, position } of this.engine.getState().units) {
+      this.placeUnit(id, position)
       if (hp <= 0) this.showFallen(id)
+      else if (!this.units.get(id)!.plate.visible) this.standUp(id)
     }
     this.refreshGroundMarks()
     this.syncUnitsFromEngine()
+  }
+
+  private onAutoResolve(): void {
+    if (this.playerControl) this.autoResolve()
+  }
+
+  /**
+   * Plays the rest of the battle at once, the heroes by AUTO_POLICY and the foes
+   * by ENEMY_POLICY on the battle's own enemy stream: every event's line goes
+   * into the log (`lead` first, events not yet logged, as a fresh battle's
+   * opening), the board jumps to the end, and the end is shown and settled as
+   * a played battle's. A battle still going AUTO_ROUND_LIMIT rounds on is
+   * handed back to the player. Nothing is saved in between: the turn's save
+   * and the end's bracket the run.
+   */
+  private autoResolve(lead: readonly BattleEvent[] = []): void {
+    this.targeting = null
+    this.setHovered(null)
+    this.setPlayerControl(false)
+    // A stream of its own beside the enemy's, made afresh on each press and never saved.
+    const playerRng = mulberry32((battleSeed(this.engine.getLog()) ?? 0) + 2)
+    const startRound = this.engine.getState().round
+    const { events, over } = playOut(this.engine, {
+      policies: { player: AUTO_POLICY, enemy: ENEMY_POLICY },
+      rngs: { player: playerRng, enemy: this.enemyRng },
+      lastRound: startRound + AUTO_ROUND_LIMIT,
+    })
+    const all = [...lead, ...events]
+    const end = all.at(-1)?.type === 'battle_end' ? all.pop()! : null
+    for (const event of all) this.log.push(formatEvent(event, this.names))
+    this.renderLog()
+    this.showBoardAsItStands()
+    if (over) {
+      // Its line, the sting and the theme's stop, as in a played battle; the level-up sting times itself from it.
+      if (end) this.showEvent(end)
+      this.autoRounds = this.engine.getState().round - startRound + 1
+      this.endBattle()
+      return
+    }
+    this.pushLog(AUTO_DRAG_ON_LINE)
+    this.continueBattle()
   }
 
   /** Others may stand on a fallen unit's hex, so its plate goes rather than collide with theirs. */
@@ -575,6 +646,7 @@ export class BattleScene extends Phaser.Scene {
         attack: buttonProbe(this.attackButton, enabled(this.attackButton)),
         cast: buttonProbe(this.castButton, enabled(this.castButton)),
         endTurn: buttonProbe(this.endTurnButton, enabled(this.endTurnButton)),
+        auto: buttonProbe(this.autoButton, enabled(this.autoButton)),
         result: buttonProbe(this.menuButton),
       },
       aiming: this.targeting === 'attack' ? null : this.targeting,
@@ -867,9 +939,9 @@ export class BattleScene extends Phaser.Scene {
     this.column.layout(height)
     const centreX = PARTY_PANEL_W + (width - PARTY_PANEL_W) / 2
     const buttonY = height - 50
-    this.attackButton.setPosition(centreX - BUTTON_SPACING, buttonY)
-    this.castButton.setPosition(centreX, buttonY)
-    this.endTurnButton.setPosition(centreX + BUTTON_SPACING, buttonY)
+    // Attack, Skills, End Turn and Auto, in a row centred where the board is.
+    const row = [this.attackButton, this.castButton, this.endTurnButton, this.autoButton]
+    row.forEach((button, i) => button.setPosition(centreX + (i - 1.5) * BUTTON_SPACING, buttonY))
 
     this.hintText.setWordWrapWidth(width - 40)
     this.resultShade.setSize(width, height)
@@ -1986,6 +2058,7 @@ export class BattleScene extends Phaser.Scene {
     this.setButtonEnabled(this.castButton, enabled && user !== undefined)
     this.setButtonLabel(this.castButton, aiming ? 'Cancel' : this.skillsLabel())
     this.setButtonEnabled(this.endTurnButton, enabled)
+    this.setButtonEnabled(this.autoButton, enabled)
     this.refreshHighlights()
     this.updateRoundText()
     this.column.refresh(this.activeIndex())
@@ -2260,6 +2333,7 @@ export class BattleScene extends Phaser.Scene {
     this.attackButton.setVisible(false)
     this.castButton.setVisible(false)
     this.endTurnButton.setVisible(false)
+    this.autoButton.setVisible(false)
     // The win and what it won are the world's from here on, however the scene is left.
     const found = playerWon && this.location ? takeLoot(this.expedition, this.location) : []
     // Runes roll from the battle's own seed, so a reloaded battle finds the same; a debug fight has no location and none.
@@ -2300,7 +2374,9 @@ export class BattleScene extends Phaser.Scene {
     const lootLines = foundAll.length > 0 ? [`Found: ${listNames(foundAll)}.`] : []
     this.bannerText.setText(playerWon ? 'VICTORY!' : 'DEFEAT')
     this.bannerText.setColor(playerWon ? '#66bb6a' : '#ef5350')
-    this.resultText.setText(playerWon ? [`${foes} are beaten.`, ...xpLines, ...lootLines].join('\n') : this.defeatLines(wipe!).join('\n'))
+    const [first, ...rest] = playerWon ? [`${foes} are beaten.`, ...xpLines, ...lootLines] : this.defeatLines(wipe!)
+    const autoLines = this.autoRounds === null ? [] : [autoResolvedLine(this.autoRounds)]
+    this.resultText.setText([first, ...autoLines, ...rest].join('\n'))
     this.setButtonLabel(this.menuButton, wipe?.lost ? 'Main Menu' : 'OK')
     this.layout()
     for (const part of [this.resultShade, this.bannerText, this.resultText, this.menuButton]) part.setVisible(true)

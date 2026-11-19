@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { newGame } from '../game/gameState.ts'
 import { BattleEngine } from '../engine/battleEngine.ts'
-import { battleSeed, chooseBattle, foundNames } from './battleSetup.ts'
+import { AUTO_DRAG_ON_LINE, autoResolvedLine, battleSeed, chooseBattle, foundNames } from './battleSetup.ts'
 
 describe('chooseBattle', () => {
   const { world } = newGame(undefined, null, 7)
@@ -64,5 +64,18 @@ describe('foundNames', () => {
   it('lists the items and then the runes, and nothing when nothing was found', () => {
     expect(foundNames([{ name: 'Iron Sword' }], ['ember1', 'storm2'])).toEqual(['Iron Sword', 'Lesser Ember Rune', 'Storm Rune'])
     expect(foundNames([], [])).toEqual([])
+  })
+})
+
+describe('autoResolvedLine', () => {
+  it('counts the rounds, one round in the singular', () => {
+    expect(autoResolvedLine(1)).toBe('Auto-resolved in 1 round.')
+    expect(autoResolvedLine(4)).toBe('Auto-resolved in 4 rounds.')
+  })
+})
+
+describe('AUTO_DRAG_ON_LINE', () => {
+  it('hands the battle back to the player', () => {
+    expect(AUTO_DRAG_ON_LINE).toBe('The battle drags on. It is yours to finish.')
   })
 })

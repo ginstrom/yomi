@@ -14,7 +14,7 @@ Full detail (each screen's buttons, tabs and hovers, every helper's exports, ass
 - **Sound.** Every play goes through `soundPlayer.ts`; no scene calls `sound.play` or `sound.add`. Anything not loaded is silence, never an exception. An action that returns a refusal sounds through `refusalCue`, and a button through `buttonCue` (or the cue `addPanelButton` is given).
 - **Gear changes and hit points.** Every change to what a character wears ends with `clampHp(character, maxBefore)`: the share rule outside battle, the cap rule (`HpRule` 'cap') in battle, where the engine's `equip` only lowers hit points. `equipFromBackpack`, `unequipToBackpack` and `dropEquipped` apply the rule they are given; a new way of changing gear must too. In battle the panel edits the `Character` and `BattleScene` sends one `equip` action per changed member when it closes; on the world map nothing is sent. Reference: "Changing gear".
 - **Text input.** Every scene that types text wraps its `keydown` listener in `onceEachEvent` (`keyEvents.ts`), as Phaser hands a listener the same key again when two arrive within a frame.
-- **Seeds.** Every battle is seeded (the page's `?seed=` or else at random), the enemy's RNG with the seed plus one, so that any battle can be saved and replayed from its log. Sound variants use `Math.random`, never a game stream.
+- **Seeds.** Every battle is seeded (the page's `?seed=` or else at random), the enemy's RNG with the seed plus one (auto-resolve's player policy stream with the seed plus two), so that any battle can be saved and replayed from its log. Sound variants use `Math.random`, never a game stream.
 
 ## Probes
 
@@ -50,7 +50,7 @@ Pure (no runtime Phaser import):
 - `battleEffects.ts`: how blows, shots, spells and area abilities look and when they land; floating text; which events redraw status letters.
 - `boardGeometry.ts`: hex ↔ screen for the battlefield and the world map.
 - `attackPlan.ts`: what clicking a foe does, and the hint when it does nothing.
-- `battleSetup.ts`: which encounter and threat a `Battle` asks for, the log's seed, the "Found:" line.
+- `battleSetup.ts`: which encounter and threat a `Battle` asks for, the log's seed, the "Found:" line, auto-resolve's lines.
 - `storyAudio.ts`: which line a cutscene beat speaks, its files, delay, fade and duck.
 - `scrollingLog.ts`: the battle log.
 - `slotScroll.ts`: which rows of the ground pile the inventory shows.

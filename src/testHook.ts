@@ -369,8 +369,8 @@ export interface BattleProbe {
   /** Where the board's top-left corner is on screen and how far it is scaled; with BATTLE_LAYOUT, that places every hex. */
   origin: Point
   scale: number
-  /** `cast` is the Skills button, shown only for a unit with a spell or an ability; `result` is the one button of the victory or defeat screen. */
-  buttons: { attack: ButtonProbe; cast: ButtonProbe; endTurn: ButtonProbe; result: ButtonProbe }
+  /** `cast` is the Skills button, shown only for a unit with a spell or an ability; `auto` resolves the rest of the battle (enabled with End Turn); `result` is the one button of the victory or defeat screen. */
+  buttons: { attack: ButtonProbe; cast: ButtonProbe; endTurn: ButtonProbe; auto: ButtonProbe; result: ButtonProbe }
   /** The skill (a spell or an ability) the next board click picks a target for, after the Skills button. */
   aiming: Skill | null
   /** The Skills button's list, a row a spell or ability (`skillMenuRows`) with its centre, while it is open; null when shut. Each unit's statuses are in `state`. */

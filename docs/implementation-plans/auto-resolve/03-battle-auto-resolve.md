@@ -125,12 +125,38 @@ Debug `fight` cannot pass `auto`, and the world button arrives in step 04, so th
 
 ## 6. Completion criteria
 
-- [ ] `autoResolvedLine` and `AUTO_DRAG_ON_LINE` in `battleSetup.ts`, unit-tested.
-- [ ] `BattleData.auto`, `meta.playerPolicy` on a from-start auto battle, the opening logged with no playback, `autoResolve()` in place of `continueBattle()`; a restored battle ignores `auto`.
-- [ ] The Auto button in a row of four, enabled with End Turn, hidden at the end, no key; `buttons.auto` in the probe and `BattleProbe`.
-- [ ] `autoResolve()` per C3: lines, final board, `battle_end` through `showEvent`, unchanged `endBattle` plus the result line; the drag-on hand-back through `continueBattle`; no save inside the run.
-- [ ] In-browser tests for A2, the disabled state and the reloaded battle pass; the whole `npm run test:browser` passes; `npm test` passes with the guard unedited.
-- [ ] `docs/reference/scenes.md` (and `src/scenes/CLAUDE.md` if needed) updated.
-- [ ] One commit on `main`; the index's row 03 updated with status and hash.
+- [x] `autoResolvedLine` and `AUTO_DRAG_ON_LINE` in `battleSetup.ts`, unit-tested.
+- [x] `BattleData.auto`, `meta.playerPolicy` on a from-start auto battle, the opening logged with no playback, `autoResolve()` in place of `continueBattle()`; a restored battle ignores `auto`.
+- [x] The Auto button in a row of four, enabled with End Turn, hidden at the end, no key; `buttons.auto` in the probe and `BattleProbe`.
+- [x] `autoResolve()` per C3: lines, final board, `battle_end` through `showEvent`, unchanged `endBattle` plus the result line; the drag-on hand-back through `continueBattle`; no save inside the run.
+- [x] In-browser tests for A2, the disabled state and the reloaded battle pass; the whole `npm run test:browser` passes; `npm test` passes with the guard unedited.
+- [x] `docs/reference/scenes.md` (and `src/scenes/CLAUDE.md` if needed) updated.
+- [x] One commit on `main`; the index's row 03 updated with status and hash.
 
 ## 7. Execution record
+
+### Execution record (2026-11-20)
+
+**Built.** `autoResolvedLine` and `AUTO_DRAG_ON_LINE` in `battleSetup.ts`; in `BattleScene`: `BattleData.auto`, `meta.playerPolicy: AUTO_POLICY` on a fresh `auto` battle, `autoRounds`, the Auto button (row of four at `centreX + (i - 1.5) * BUTTON_SPACING`, enabled in `setPlayerControl` with End Turn, hidden in `endBattle`, no key), `onAutoResolve` (needs `playerControl`), `autoResolve(lead = [])` per C3, and `showBoardAsItStands()` shared with `showRestored`; `endBattle` puts `autoResolvedLine` second; `buttons.auto` in the probe and `BattleProbe`.
+
+**Choices within the contract.**
+- `autoResolve` takes the fresh battle's opening events as `lead`, so the opening's lines and the run's go into the log together and a final `battle_end` is split off whichever list it is in (covers a side already down at the start: `playOut` returns at once, `autoRounds` 1).
+- `showBoardAsItStands` also places every unit at its engine position (`placeUnit`) and stands up a unit with a hidden plate that is standing again (`standUp`), since a mid-battle press jumps over moves and revivals that `showRestored` never had to undo.
+- `autoResolve` clears `targeting` and the hovered hex before `setPlayerControl(false)`, so no aiming, path arrow or Skills list lingers.
+
+**Verification.**
+- Red first: `npx vitest run src/scenes/battleSetup.test.ts` failed 2 (`autoResolvedLine is not a function`, `expected undefined`); green after: 9 passed.
+- Red first: `npm run test:browser -- -t "auto-resolve on the battle screen"`: 3 failed (`buttons.auto` undefined); green after: 3 passed. Tests in `e2e/battle.test.ts`, `describe('auto-resolve on the battle screen')`:
+  - **A2** "resolves the rest of a battle at once from a played move, to the played battle’s result and save (A2)": one hand move, Auto; phase over, VICTORY with `WINNING_SEED`, log ends `battle_end`, result `[ "The Goblin Raiders are beaten.", autoResolvedLine(rounds), … ]`, Auto/Attack/End Turn hidden; slot has `battle: null`, the raiders gone, levels as the result; from the press on, only `ui.click`, `stings.victory`, then `stings.level_up` are heard (no `battle.*` playback cue).
+  - "is greyed while the enemy plays, and enabled again when control returns".
+  - "resolves a battle taken up from a save" (reload, Continue, Auto: result with the auto-resolved line).
+- `npm test`: 95 files, 2309 tests passed (refactor guard green, `scripts/simulate.test.ts` untouched).
+- `npm run test:browser` (whole suite, foreground): 12 files, 145 tests passed.
+- `npm run build`: passes (the usual chunk-size warning only).
+- `LOG_SCHEMA_VERSION` and `SAVE_VERSION` still 26.
+- **By hand (from-start path):** a throwaway in-browser script with `WorldScene`'s Attack temporarily passing `auto: true` (reverted; not committed), tutorial ticked on, seed 1: `battle_start.meta` was `{ source: 'game', enemyPolicy: 'aggressive', party: 'party_1', playerPolicy: 'aggressive' }`; the result showed at once with "Auto-resolved in 4 rounds." second; cues after the click were `stings.victory`, `stings.level_up`; only `Battle` running, no `Story` overlay (no tutorial tip). The world button and its in-browser test come in step 04.
+
+**Docs.** `docs/reference/scenes.md`: new "Auto-resolve" section under the battle screen, `battleSetup.ts` line, Seeds (plus two). `src/scenes/CLAUDE.md`: Seeds contract and `battleSetup.ts` line (9552 bytes).
+
+**For later steps.** Step 04 starts `Battle` with `auto: true`; its in-browser test should wait on `buttons.result.visible`, not `playerControl` (`enterBattle` would time out). Step 05: the Auto button is `this.autoButton` (140 px wide, label "Auto"); `setPlayerControl(true)` runs on every selection and aim, as decision 5 says.
+

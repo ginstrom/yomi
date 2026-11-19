@@ -3,6 +3,7 @@ import { perkCost, type PerkId } from '../src/character/perks.ts'
 import { xpToNextLevel } from '../src/character/progression.ts'
 import { hexDistance, offsetToHex } from '../src/grid/hex.ts'
 import { itemById } from '../src/inventory/inventory.ts'
+import { autoResolvedLine } from '../src/scenes/battleSetup.ts'
 import { GEAR_SPRITES } from '../src/scenes/unitLook.ts'
 import type { BattleProbe } from '../src/testHook.ts'
 import { RAIDERS, battleHexOnScreen, useGames, type Game } from './driver.ts'
@@ -567,6 +568,70 @@ describe('a battle', () => {
     const to = offsetToHex(5, 4)
     await game.click(battleHexOnScreen(battle, to))
     expect(hero(await game.awaitTurn())).toMatchObject({ position: to })
+  })
+})
+
+describe('auto-resolve on the battle screen', () => {
+  const games = useGames()
+
+  it('resolves the rest of a battle at once from a played move, to the played battle’s result and save (A2)', async () => {
+    const game = await games.open()
+    const start = await game.enterBattle()
+    expect(start.buttons.auto).toMatchObject({ visible: true, enabled: true })
+    await game.click(battleHexOnScreen(start, offsetToHex(5, 4)))
+    const moved = await game.awaitTurn()
+    expect(hero(moved).position).toEqual(offsetToHex(5, 4))
+
+    await game.click(moved.buttons.auto)
+    const over = await game.waitFor('Battle', (b) => b.buttons.result.visible)
+    expect(over.state.phase).toBe('over')
+    expect(over.state.winner).toBe('player')
+    expect(over.log.at(-1)?.type).toBe('battle_end')
+    const rounds = over.state.round - moved.state.round + 1
+    expect(over.result[0]).toBe('The Goblin Raiders are beaten.')
+    expect(over.result[1]).toBe(autoResolvedLine(rounds))
+    for (const button of [over.buttons.auto, over.buttons.attack, over.buttons.endTurn]) expect(button.visible).toBe(false)
+    // Nothing is played back, but the end sounds as a played battle's: the victory sting, then the level-up's.
+    const heard = () => game.page.evaluate(() => window.__yomi!.audioLog().map((entry) => entry.cue))
+    await game.page.waitForFunction(() => window.__yomi!.audioLog().some((entry) => entry.cue === 'stings.level_up'))
+    const all = await heard()
+    // What was heard from the press of Auto on.
+    const cues = all.slice(all.lastIndexOf('ui.click'))
+    expect(cues.indexOf('stings.victory')).toBeGreaterThan(-1)
+    expect(cues.indexOf('stings.level_up')).toBeGreaterThan(cues.indexOf('stings.victory'))
+    expect(cues.filter((cue) => cue.startsWith('battle.'))).toEqual([])
+
+    // Settled as a played victory: no battle saved, the raiders gone, the experience won kept.
+    const saved = await game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!))
+    expect(saved.battle).toBeNull()
+    expect(saved.game.world.locations.some((l: { id: string }) => l.id === RAIDERS.id)).toBe(false)
+    const members = saved.game.parties[0].members as Array<{ level: number; xp: number }>
+    expect(members.map((m) => m.level)).toEqual(over.party.map((p) => p.level))
+    expect(members.every((m) => m.level > 1 || m.xp > 0)).toBe(true)
+  })
+
+  it('is greyed while the enemy plays, and enabled again when control returns', async () => {
+    const game = await games.open()
+    const start = await game.enterBattle()
+    await game.click(start.buttons.endTurn)
+    const enemy = await game.waitFor('Battle', (b) => !b.playerControl)
+    expect(enemy.buttons.auto).toMatchObject({ visible: true, enabled: false })
+    const back = await game.waitFor('Battle', (b) => b.playerControl && b.state.round === 2)
+    expect(back.buttons.auto.enabled).toBe(true)
+  })
+
+  it('resolves a battle taken up from a save', async () => {
+    const game = await games.open()
+    await game.enterBattle()
+    const menu = await game.reload()
+    await game.click(menu.buttons.continue)
+    await game.waitForScenes(['Battle'])
+    const restored = await game.waitFor('Battle', (b) => b.playerControl)
+    await game.frames()
+    await game.click(restored.buttons.auto)
+    const over = await game.waitFor('Battle', (b) => b.buttons.result.visible)
+    expect(over.log.at(-1)?.type).toBe('battle_end')
+    expect(over.result[1]).toBe(autoResolvedLine(over.state.round))
   })
 })
 
