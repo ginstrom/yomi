@@ -44,4 +44,5 @@ None.
 
 ## Verification
 
-—
+- 01 (ad71f69, sonnet/sonnet): clean, 1 round
+- 02 (64b794a + 95ceef8, opus/opus): clean, 1 round; 3 nits fixed
