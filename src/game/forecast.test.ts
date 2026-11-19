@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mulberry32 } from '../combat/rng.ts'
 import { AUTO_POLICY, AUTO_ROUND_LIMIT, ENEMY_POLICY, playOut, playStep, type PlayOutOptions } from '../engine/autoPlay.ts'
-import { BattleEngine, type BattleSetup, type BattleSnapshot } from '../engine/battleEngine.ts'
+import { BattleEngine, type BattleEvent, type BattleSetup, type BattleSnapshot } from '../engine/battleEngine.ts'
 import { ENCOUNTERS, type EncounterId } from './encounters.ts'
 import {
   FORECAST_SAMPLES,
@@ -247,16 +247,22 @@ describe('seeds', () => {
     const grown = battleUnderWay(5).engine
     expect(grown.getLog().length).toBeGreaterThan(a.getLog().length)
     expect(battleForecastBase(grown.getLog())).not.toBe(battleForecastBase(a.getLog()))
-    // Another seed, same length: another base.
-    const other = battleUnderWay(4, SEED + 100).engine
-    if (other.getLog().length === a.getLog().length) {
-      expect(battleForecastBase(other.getLog())).not.toBe(battleForecastBase(a.getLog()))
-    }
+    // Another seed, a log of the same length: another base.
+    const length = a.getLog().length
+    const other = battleUnderWay(8, SEED + 100).engine.getLog().slice(0, length)
+    expect(other.length).toBe(length)
+    expect(other[0]).toMatchObject({ type: 'battle_start', seed: SEED + 100 })
+    expect(battleForecastBase(other)).not.toBe(battleForecastBase(a.getLog()))
   })
 
   it('a log with no battle_start reads its seed as 0', () => {
-    expect(battleForecastBase([])).toBe(battleForecastBase([]))
-    expect(typeof battleForecastBase([])).toBe('number')
+    const [start, second] = battleUnderWay(1).engine.getLog()
+    expect(start.type).toBe('battle_start')
+    expect(second.type).not.toBe('battle_start')
+    const zero = battleForecastBase([{ ...start, seed: 0 } as BattleEvent])
+    expect(battleForecastBase([second])).toBe(zero)
+    expect(battleForecastBase([{ ...start, seed: null } as BattleEvent])).toBe(zero)
+    expect(battleForecastBase([start])).not.toBe(zero)
   })
 
   it('a world base changes with the location, the party and the day; none equals a fixed battle seed', () => {
