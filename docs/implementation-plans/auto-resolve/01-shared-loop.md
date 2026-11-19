@@ -129,3 +129,13 @@ export function playOut(engine: BattleEngine, options: PlayOutOptions): PlayOut
 - [ ] `npm test` passes; one commit on `main`; the index's row 01 updated with status and hash.
 
 ## 7. Execution record
+
+Engineer: sonnet-class subagent, no paid calls.
+
+- Baseline (before code): `npm run simulate -- --campaign --battles 50 --seed 1 --out logs/guard-50-before.jsonl` ran in 21 s.
+- Red: `npx vitest run src/engine/autoPlay.test.ts` failed (module missing). Green: 10 tests pass (A3, A4, A5, `playStep` to the end, restored snapshot's remainder, past-`lastRound`, side already down, per-side streams via `random` vs `aggressive` counting streams).
+- `src/engine/autoPlay.ts` per C1; `playOut` collects the events `engine.step` returns (a private `stepOnce` shared with `playStep`). `fight` now calls `playOut` and abandons on `over: false`. `ENEMY_POLICY` moved; `BattleScene` imports it and no longer imports `PolicyName`.
+- 50-campaign check after: `shasum -a 256` of before and after both `50755e5127b00b599dd9f0bfe0015342cfc5304809baa401b2e085270d40ff1f`; summaries differ only in the `--out` filename on two lines.
+- `npm test`: 94 files, 2284 tests pass (tsc, guard unedited, claudeMd limits). In-browser tests not run (no scene behaviour change).
+- Docs: root `CLAUDE.md`, `src/engine/CLAUDE.md`, `docs/reference/simulator.md`.
+- Deviations: none. Later steps: the test builds its battle from `ENCOUNTERS.goblin_raid(partyFighters(readyMadeParty()), 1).setup`, a usable pattern for step 02's tests.

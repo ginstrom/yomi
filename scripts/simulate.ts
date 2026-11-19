@@ -21,6 +21,7 @@ import { closeSync, mkdirSync, openSync, writeSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { mulberry32, randomSeed } from '../src/combat/rng.ts'
 import { BattleEngine, type BattleEvent, type BattleSetup, type Side, type UnitId } from '../src/engine/battleEngine.ts'
+import { playOut } from '../src/engine/autoPlay.ts'
 import { POLICIES, isPolicyName, type PolicyName } from '../src/engine/policies.ts'
 import { autoAdvance, levelUp, planFor, PLAN_IDS, type PlanId } from '../src/character/progression.ts'
 import type { Character } from '../src/character/character.ts'
@@ -298,15 +299,9 @@ function fight(setup: BattleSetup, seed: number, party: Party, args: CliArgs, me
   // Policies get their own stream so swapping one doesn't change the dice.
   const policyRng = mulberry32(seed ^ 0x9e3779b9)
 
-  for (let state = engine.getState(); state.phase !== 'over'; state = engine.getState()) {
-    // Aimless policies (e.g. random) can circle forever; log those as abandoned.
-    if (state.round > args.maxRounds) {
-      engine.abandon()
-      break
-    }
-    const policy = POLICIES[args.policies[state.phase]]
-    engine.step(policy({ state, legal: engine.legalActions(), rng: policyRng }))
-  }
+  // Aimless policies (e.g. random) can circle forever; log those as abandoned.
+  const { over } = playOut(engine, { policies: args.policies, rngs: { player: policyRng, enemy: policyRng }, lastRound: args.maxRounds })
+  if (!over) engine.abandon()
   return engine
 }
 

@@ -155,7 +155,7 @@ export function forecastHint(forecast: Forecast | null): string
 
 | Step | Task | Outcome | Depends on | Engineer (suggested) | Status |
 | --- | --- | --- | --- | --- | --- |
-| 01 | [The shared loop](01-shared-loop.md) | `autoPlay.ts` (C1) with tests (A4, A3, A5 at the domain level); the simulator's `fight` on `playOut`; `ENEMY_POLICY` moved; guard unchanged (A7) | — | sonnet | pending |
+| 01 | [The shared loop](01-shared-loop.md) | `autoPlay.ts` (C1) with tests (A4, A3, A5 at the domain level); the simulator's `fight` on `playOut`; `ENEMY_POLICY` moved; guard unchanged (A7) | — | sonnet | done (see git log: "Auto-resolve step 01") |
 | 02 | [The estimate's domain module](02-forecast-module.md) | `forecast.ts` (C2) with tests (A10, A11, words) | 01 | opus | pending |
 | 03 | [Auto-resolve on the battle screen](03-battle-auto-resolve.md) | Auto button, `autoResolve`, `auto` scene data and meta, result line, drag-on hand-back (C3); in-browser A2 | 01 | opus | pending |
 | 04 | [Auto-resolve on the world map](04-world-auto-resolve.md) | Footer button (C5); in-browser A1, A6, A3 | 03 | sonnet | pending |

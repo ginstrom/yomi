@@ -52,7 +52,7 @@ The central rule: **game rules are Phaser-free and live outside the scenes.** Th
 - `src/combat/`: attack resolution, damage and resistance, monster stat blocks and their scaling by level, spells, statuses, abilities, elements and wards, and the seedable `mulberry32` RNG.
 - `src/character/`: the persistent `Character` (attributes, skills, the skill trees' nodes, levels and experience), character creation, `autoAdvance`'s plans, and healing cast on the world map.
 - `src/inventory/`: the gear catalog, items with their grades, modifiers and runes, and equipping.
-- `src/engine/battleEngine.ts`: the battle state machine; `src/engine/policies.ts`: the AI, as pure functions in `POLICIES`, shared by the game's enemy and both sides of the simulator.
+- `src/engine/battleEngine.ts`: the battle state machine; `src/engine/policies.ts`: the AI, as pure functions in `POLICIES`, shared by the game's enemy and both sides of the simulator. `src/engine/autoPlay.ts`: the headless loop (`playStep`, `playOut`) that plays a battle with a policy on each side, shared by the simulator and auto-resolve, with `AUTO_POLICY`, `ENEMY_POLICY` and `AUTO_ROUND_LIMIT`.
 - `src/game/`: everything outside battle: encounters and bandits, the party and the company of parties with its day loop (`company.ts`), the world map, the blight and territory, fog of war, camping, the encampment's buildings and facilities, loot, the `GameState`, and saving.
 - `src/story/`: cutscenes and the tutorial, which change no rule.
 

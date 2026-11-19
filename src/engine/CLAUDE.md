@@ -33,6 +33,8 @@ As a side's turn begins (`startTurn`, which returns events), in this order: stat
 
 Policies are pure functions `({ state, legal, rng }) => Action`, registered in `POLICIES`; the game's enemy and both of the simulator's sides pick from the same registry (`aggressive`, `random`). `aggressive` picks the first applicable of a fixed priority list (revive, heal, cleanse, self-defence, taunt, support, area spells, control, mark, damage spell, best strike or technique or damaging area, Web, Sprint); the list and its scoring (`techniqueScore`, `STATUS_VALUE`, `MANA_WEIGHT`) are in the reference. It works only over what `legalActions` lists and what `castTouches` / `abilityTouches` say, so an enemy caster needs only a stat block with `magic`, and Taunt, Mark and Sprint are recognised by their data, not their ids.
 
+`autoPlay.ts` is the one loop that steps a battle by policies (the simulator and the game): it draws nothing itself, each side's policy drawing on the stream it is given, and it never abandons a battle it stops (`over: false`).
+
 `policies.test.ts` holds a snapshot of today's encounters' choices. A change that moves a monster's or bandit's choice fails it; re-record it only when the change is meant, and say why in the test's title as earlier re-recordings do. The simulator's refactor guard (`scripts/simulate.test.ts`) will usually move too.
 
 ## Checklists

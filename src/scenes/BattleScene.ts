@@ -15,7 +15,8 @@ import {
   type UnitId,
   type UnitSnapshot,
 } from '../engine/battleEngine.ts'
-import { POLICIES, type PolicyName } from '../engine/policies.ts'
+import { ENEMY_POLICY } from '../engine/autoPlay.ts'
+import { POLICIES } from '../engine/policies.ts'
 import type { Expedition } from '../game/expedition.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId, type UnitKind } from '../game/encounters.ts'
 import { newGame, selectedParty, takeLoot, type GameState } from '../game/gameState.ts'
@@ -230,7 +231,6 @@ const LOG_BOX_H = LOG_VISIBLE_LINES * LOG_LINE_H + LOG_BOX_PADDING * 2
 const LOG_BOX_GAP = 14
 /** Width kept clear of wrapped log text for the scrollbar. */
 const LOG_SCROLLBAR_SPACE = 16
-const ENEMY_POLICY: PolicyName = 'aggressive'
 
 /**
  * Every unit sprite is a 32px canvas shown at 2x (before the board's own scale), so a small
