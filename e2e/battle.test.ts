@@ -698,7 +698,7 @@ describe('auto-resolve on the battle screen', () => {
     const restored = await game.waitFor('Battle', (b) => b.playerControl)
     await game.frames()
     await game.click(restored.buttons.auto)
-    const back = await game.waitFor('Battle', (b) => b.playerControl && b.state.round >= restored.state.round + 50)
+    const back = await game.waitFor('Battle', (b) => b.playerControl && b.state.round === restored.state.round + 50)
     expect(back.state.phase).not.toBe('over')
     expect(back.buttons.result.visible).toBe(false)
     expect(back.logText).toContain(AUTO_DRAG_ON_LINE)

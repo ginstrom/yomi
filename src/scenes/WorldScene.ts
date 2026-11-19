@@ -150,6 +150,8 @@ const ROW_PITCH = BUTTON_H + 8
 /** The info panel on the hovered hex or party, at the view's top right, left of the party list. */
 const INFO_W = 280
 const INFO_PAD = 10
+/** The estimate tooltip's width, its text wrapped inside the padding. */
+const FORECAST_TIP_W = 400
 const INFO_MARGIN = 12
 
 export class WorldScene extends Phaser.Scene {
@@ -227,6 +229,9 @@ export class WorldScene extends Phaser.Scene {
   /** What the player knows of the hovered hex (`hexInfo`), hidden while no hex is hovered. */
   private infoBox!: Phaser.GameObjects.Rectangle
   private infoText!: Phaser.GameObjects.Text
+  /** The estimate's tooltip above the Auto-resolve button, shown while the button is hovered. */
+  private forecastTipBox!: Phaser.GameObjects.Rectangle
+  private forecastTipText!: Phaser.GameObjects.Text
 
   /**
    * The blight's tint and the front line, drawn in
@@ -310,7 +315,7 @@ export class WorldScene extends Phaser.Scene {
     this.statusText = this.add
       .text(0, 16, '', { fontFamily: 'monospace', fontSize: '13px', color: '#ce93d8', align: 'right' })
       .setOrigin(1, 0)
-    this.hintText = this.add.text(20, 38, '', { fontFamily: 'monospace', fontSize: '13px', color: '#9e9e9e', lineSpacing: -2 })
+    this.hintText = this.add.text(20, 44, '', { fontFamily: 'monospace', fontSize: '13px', color: '#9e9e9e' })
     this.messageText = this.add
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: '15px', color: '#cfd8dc' })
       .setOrigin(0.5)
@@ -322,6 +327,10 @@ export class WorldScene extends Phaser.Scene {
       lineSpacing: 3,
       wordWrap: { width: INFO_W - 2 * INFO_PAD },
     })
+    this.forecastTipBox = this.add.rectangle(0, 0, FORECAST_TIP_W, 0, BAR_COLOR, BAR_ALPHA).setOrigin(0).setStrokeStyle(1, 0x616161).setVisible(false)
+    this.forecastTipText = this.add
+      .text(0, 0, '', { fontFamily: 'monospace', fontSize: '12px', color: '#e0e0e0', lineSpacing: 3, wordWrap: { width: FORECAST_TIP_W - 2 * INFO_PAD } })
+      .setVisible(false)
 
     this.buttons = [
       this.createButton('Scout', () => this.onLinger('scout')),
@@ -541,7 +550,9 @@ export class WorldScene extends Phaser.Scene {
       view: this.view,
       message: this.messageText.text,
       hint: this.hintText.text,
-      hintBounds: this.hintText.getBounds(),
+      forecastTip: this.forecastTipBox.visible ? this.rectOf(this.forecastTipBox) : null,
+      forecastTipText: this.forecastTipBox.visible ? this.forecastTipText.text : '',
+      statusRect: this.statusText.getBounds(),
       forecast: this.forecastResult,
       forecastRuns: this.forecastRuns,
       autoLabel: (this.buttons[3].getData('text') as Phaser.GameObjects.Text).text,
@@ -863,8 +874,7 @@ export class WorldScene extends Phaser.Scene {
     const messageY = timeY - BUTTON_H / 2 - 26
     this.messageText.setPosition(centreX, messageY)
     this.statusText.setPosition(width - 20, 16)
-    // The estimate's hint runs to two lines at the least window width; wrapped, it stays within the header.
-    this.hintText.setWordWrapWidth(width - 40)
+    this.layoutForecastTip()
     this.infoBox.setPosition(width - PARTY_LIST_W - INFO_MARGIN - INFO_W, HEADER_BOTTOM + INFO_MARGIN)
     this.infoText.setPosition(this.infoBox.x + INFO_PAD, this.infoBox.y + INFO_PAD)
     this.outcomeShade.setSize(width, height)
@@ -1090,12 +1100,30 @@ export class WorldScene extends Phaser.Scene {
     this.input.setDefaultCursor(toMonsters ? CURSORS.attack : CURSORS.select)
   }
 
+  private rectOf(box: Phaser.GameObjects.Rectangle): { x: number; y: number; width: number; height: number } {
+    return { x: box.x, y: box.y, width: box.width, height: box.height }
+  }
+
+  /** The estimate's tooltip: just above the Auto-resolve button while it is hovered, flush right of the window when it would overflow. */
+  private layoutForecastTip(): void {
+    const shown = this.autoHovered && this.buttons[3].visible
+    this.forecastTipBox.setVisible(shown)
+    this.forecastTipText.setVisible(shown)
+    if (!shown) return
+    const { width } = this.scale
+    const button = this.buttons[3]
+    this.forecastTipText.setText(forecastHint(this.forecastResult))
+    const height = this.forecastTipText.height + 2 * INFO_PAD
+    this.forecastTipBox.setSize(FORECAST_TIP_W, height)
+    const x = Math.max(PARTY_PANEL_W + 8, Math.min(button.x - FORECAST_TIP_W / 2, width - 20 - FORECAST_TIP_W))
+    const y = button.y - BUTTON_H / 2 - 8 - height
+    this.forecastTipBox.setPosition(x, y)
+    this.forecastTipText.setPosition(x + INFO_PAD, y + INFO_PAD)
+  }
+
   /** The header's hint: what the selected party may do where it stands, or whom a click on the hovered hex sends it to meet. */
   private refreshHint(): void {
-    if (this.autoHovered && this.buttons[3].visible) {
-      this.hintText.setText(forecastHint(this.forecastResult))
-      return
-    }
+    this.layoutForecastTip()
     const expedition = this.expedition()
     const meeting = this.hovered && !this.walking ? meetTarget(this.gameState, expedition, this.hovered) : null
     this.hintText.setText(

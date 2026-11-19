@@ -162,8 +162,12 @@ export interface WorldProbe {
   message: string
   /** The header's hint under the turn: what the selected party may do, or "Meet <name>: …" while the pointer is over another party's hex. */
   hint: string
-  /** The hint's bounds on screen. */
-  hintBounds: Rect
+  /** The estimate's tooltip above the Auto-resolve button while it is hovered, else null. */
+  forecastTip: Rect | null
+  /** The tooltip's text while it shows, else an empty string. */
+  forecastTipText: string
+  /** The header's status text (blight and stock) on screen. */
+  statusRect: Rect
   /** The finished auto-resolve estimate for the battle Attack would start; null while it is worked out, and whenever no Auto-resolve button shows. */
   forecast: Forecast | null
   /** How many estimates the map has started since it opened: a redraw that changes no battle leaves it, a new battle (a day, another party) adds one. */

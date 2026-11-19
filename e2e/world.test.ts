@@ -4,7 +4,6 @@ import { hexDistance, offsetToHex, type Hex } from '../src/grid/hex.ts'
 import { WORLD_LAYOUT, boardHexCenter, boardPixelSize, type Point } from '../src/scenes/boardGeometry.ts'
 import { clampOrigin, mapOrigin, pannedOrigin } from '../src/scenes/mapScroll.ts'
 import type { WorldProbe } from '../src/testHook.ts'
-import { HEADER_BOTTOM } from '../src/scenes/partyPanel.ts'
 import { FIGURE_SPREAD } from '../src/scenes/partyList.ts'
 import { RAIDERS, useGames, worldHexOnScreen, type Game } from './driver.ts'
 
@@ -387,10 +386,10 @@ describe('the world map', () => {
       expect(ready.forecast!.wins).toBeLessThanOrEqual(40)
 
       await game.hover(ready.buttons.autoResolve)
-      const hovered = await game.settled('World', (w) => w.hint.startsWith('Estimate from'))
-      expect(hovered.hint).toMatch(/^Estimate from 40 trial battles with the AI playing your side: it wins .* of them, and a hero dies in .*Your own play may do better\.$/)
+      const hovered = await game.settled('World', (w) => w.forecastTipText.startsWith('Estimate from'))
+      expect(hovered.forecastTipText).toMatch(/^Estimate from 40 trial battles with the AI playing your side: it wins .* of them, and a hero dies in .*Your own play may do better\.$/)
       await game.hover({ x: 0, y: 0 })
-      const off = await game.settled('World', (w) => !w.hint.startsWith('Estimate from'))
+      const off = await game.settled('World', (w) => w.forecastTipText === '')
       expect(off.hint).toContain('Monsters!')
     })
 
@@ -404,19 +403,33 @@ describe('the world map', () => {
       await game.waitFor('World', (w) => w.forecast !== null)
     })
 
-    it('wraps the estimate’s hint inside the header at the least window size', async () => {
-      const game = await games.open()
-      await game.resize(840, 560)
-      await game.newGame()
-      const among = await game.travelTo(RAIDERS.position)
-      await game.waitFor('World', (w) => w.forecast !== null)
-      await game.hover(among.buttons.autoResolve)
-      const hovered = await game.waitFor('World', (w) => w.hint.startsWith('Estimate from'))
-      const { x, y, width, height } = hovered.hintBounds
-      expect(x).toBeGreaterThanOrEqual(0)
-      expect(x + width).toBeLessThanOrEqual(840)
-      expect(y + height).toBeLessThanOrEqual(HEADER_BOTTOM)
-    })
+    for (const [width, height] of [[840, 560], [1280, 800]]) {
+      it(`shows the estimate as a tooltip above the button, clear of the footer and the status, at ${width}×${height}`, async () => {
+        const game = await games.open()
+        await game.resize(width, height)
+        await game.newGame()
+        const among = await game.travelTo(RAIDERS.position)
+        await game.waitFor('World', (w) => w.forecast !== null)
+        await game.hover(among.buttons.autoResolve)
+        const hovered = await game.waitFor('World', (w) => w.forecastTip !== null)
+        const tip = hovered.forecastTip!
+        expect(tip.x).toBeGreaterThanOrEqual(0)
+        expect(tip.y).toBeGreaterThanOrEqual(0)
+        expect(tip.x + tip.width).toBeLessThanOrEqual(width)
+        expect(tip.y + tip.height).toBeLessThanOrEqual(hovered.buttons.autoResolve.y)
+        const meets = (a: { x: number; y: number; width: number; height: number }, b: typeof a) =>
+          a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
+        expect(meets(tip, hovered.statusRect)).toBe(false)
+        for (const button of Object.values(hovered.buttons)) {
+          if (!button.visible || button.width === undefined) continue
+          expect(meets(tip, { x: button.x - button.width / 2, y: button.y - 22, width: button.width, height: 44 })).toBe(false)
+        }
+        // The header's hint is the usual one, not the estimate; moving off hides the tooltip.
+        expect(hovered.hint.startsWith('Estimate from')).toBe(false)
+        await game.hover({ x: 0, y: 0 })
+        await game.waitFor('World', (w) => w.forecastTip === null)
+      })
+    }
 
     it('keeps the estimate while nothing changes and works it out again after a day (A9)', async () => {
       const game = await games.open()

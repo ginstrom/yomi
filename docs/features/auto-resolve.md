@@ -24,6 +24,7 @@ Medium: design, plan, implement, verify. No architecture brief: the engine alrea
 
 | Date | Decision | By | Alternatives | Reason |
 |---|---|---|---|---|
+| 2026-11-20 | World map's estimate hint shows as a tooltip above the Auto-resolve button, not in the header hint line | orchestrator | shorter world hint; smaller line height; move the status text | the full hint needs 3 lines beside the status text at 840 wide and the header holds 2; a tooltip at the button keeps the design's wording |
 | 2026-11-20 | Plan's departures accepted (scene smoke tests → in-browser tests; `ENEMY_POLICY` to autoPlay.ts; restart estimates only when their start / log changes) | orchestrator | follow design to the letter | routine engineering choices; none changes what the player gets |
 | 2026-11-20 | Design §8.4–8.6 defaults taken: 40 samples; show chance a hero dies; re-estimate after every action | orchestrator | 20 or 100 samples; expected losses; once a turn | one constant, tunable after play; idle-time only |
 | 2026-11-20 | Resolve at once, no playback | user | fast playback with Stop | saves the most time; playback can sit on `playOut` later |
@@ -54,4 +55,4 @@ Medium: design, plan, implement, verify. No architecture brief: the engine alrea
 - Overall review (opus, at 42e7f18): clean; 4 non-blocking (manual wording, stale comments, no e2e of battle hand-back, step 07 boxes). Suite: npm test, build pass; 4 browser timeouts under load passed on rerun
 - QA (sonnet, at 42e7f18): pass; minor: world hint unwrapped at 840 wide, manual wording; estimate slower in headless (~3 s at threat 1), real hardware unverified. Evidence in .git/pr-review/main/evidence/
 - Simulated user (sonnet, hands-on, at 42e7f18): auto-resolve saves the time hoped for; estimate sorts fights. Friction: result screen omits cost; result text over sprites; 20→30% swing after 3 skill points (40-sample noise); second party not reached
-- Fixes: step 07 engineer (sonnet) on items 1–5 of the merged findings
+- Fixes round 1 (c9d8de8, sonnet): 4 review items fixed; the world hint wrap then overlapped the status text (blocking, overall reviewer). Round 2: tooltip, same engineer
