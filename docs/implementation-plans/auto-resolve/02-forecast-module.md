@@ -166,10 +166,20 @@ New files (proposed): `src/game/forecast.ts`, `src/game/forecast.test.ts`.
 
 ## 6. Completion criteria
 
-- [ ] `src/game/forecast.ts` exports exactly C2, Phaser-free and scene-free.
-- [ ] Tests for determinism and slicing (A10), independence of the real engine (A10), the hand recount (A11), the sensible cells, seeds, `Math.random`, the fallen hero, `worldForecastStart` and the words, all passing.
-- [ ] `src/game/CLAUDE.md` (module line, RNG contract) and, if apt, root `CLAUDE.md` updated.
-- [ ] `npm test` green; guard unedited.
-- [ ] One commit on `main`; the index's row 02 updated with status and hash.
+- [x] `src/game/forecast.ts` exports exactly C2, Phaser-free and scene-free.
+- [x] Tests for determinism and slicing (A10), independence of the real engine (A10), the hand recount (A11), the sensible cells, seeds, `Math.random`, the fallen hero, `worldForecastStart` and the words, all passing.
+- [x] `src/game/CLAUDE.md` (module line, RNG contract) and, if apt, root `CLAUDE.md` updated.
+- [x] `npm test` green; guard unedited.
+- [x] One commit on `main`; the index's row 02 updated with status and hash.
 
 ## 7. Execution record
+
+**2026-11-20, engineer (session model).** Done in one commit ("Auto-resolve step 02: the estimate's domain module").
+
+- Red: `npx vitest run src/game/forecast.test.ts` failed to load (`./forecast.ts` missing) before the module was written. Green: 23 tests pass.
+- `npm test`: tsc clean; 95 files, 2307 tests pass, the refactor guard and `scripts/claudeMd.test.ts` among them. Guard unedited; no simulator code touched.
+- Figures (base 12345, ready-made level-1 party): `goblin_raid` threat 1, 40 samples: 40 won, 0 hero lost, 0 stalled, 110 ms (about 2.8 ms a battle, under the design's 6 ms); `source_guardians` threat 5: 0 won, 40 hero lost, 428 ms (about 11 ms a battle). `hobgoblin_warband` threat 2, 10 samples (the hand-recount cell): 10 won, 1 hero lost.
+- Hashing: murmur3's finaliser (`fmix`, a bijection) over the inputs with salt `0x464f5245` ("FORE", distinct from `RUNE_LOOT_SALT`); FNV-1a for the location and party ids. `forecastSeed(base, i) = fmix(hash(base) ^ i)`, so a base's samples always get distinct seeds.
+- Tests map to the task: determinism and slicing (A10: `determinism (A10)`), independence (A10: `independence from the real battle (A10)`, including the snapshot handed in left unwritten and `Math.random` never called), the hand recount (A11: `an honest count (A11)`, from a setup and from a snapshot), `sensible figures` (both cells, and a hero already fallen giving `heroLost === samples`), `seeds`, `worldForecastStart` (setup deep-equal to Attack's, `GameState` unchanged) and `words`.
+- No deviation from C2. `forecastFigure` treats `share >= of` as ">95%" and `share <= 0` as "<5%" (equal to C2 for counts within 0..of).
+- For steps 05 and 06: `forecast.ts` is Phaser-free; `workFor`'s clock defaults to `performance.now()`. A finished `Forecaster.step()` returns a fresh copy of the tally each call.
