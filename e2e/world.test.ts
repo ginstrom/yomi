@@ -638,6 +638,20 @@ describe('the world map', () => {
       }
       expect(small.buttons.nextDay.y).toBeLessThan(small.buttons.camp.y)
     })
+
+    it('fits the monster row in the least window', async () => {
+      const game = await games.open()
+      await game.newGame()
+      await game.resize(840, 560)
+      await game.waitFor('World', (w) => w.view.width < 700)
+      const world = await game.travelTo(RAIDERS.position)
+      for (const button of [world.buttons.scout, world.buttons.wait, world.buttons.attack, world.buttons.autoResolve]) {
+        expect(button.visible).toBe(true)
+        expect(button.x).toBeGreaterThan(80)
+        expect(button.x).toBeLessThan(840 - 80)
+        expect(button.y).toBeLessThan(560)
+      }
+    })
   })
 
   it('pauses under the menu on Esc and resumes where it was', async () => {

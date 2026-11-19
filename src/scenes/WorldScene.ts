@@ -312,6 +312,7 @@ export class WorldScene extends Phaser.Scene {
       this.createButton('Scout', () => this.onLinger('scout')),
       this.createButton('Wait', () => this.onLinger('wait')),
       this.createButton('Attack', () => this.onAttack()),
+      this.createButton('Auto-resolve', () => this.onAutoResolve()),
     ]
     this.timeButtons = [
       this.createButton('Next day', () => this.onNextDay()),
@@ -444,7 +445,7 @@ export class WorldScene extends Phaser.Scene {
 
   probe(): WorldProbe {
     const game = this.gameState
-    const [scout, wait, attack] = this.buttons.map((button) => buttonProbe(button))
+    const [scout, wait, attack, autoResolve] = this.buttons.map((button) => buttonProbe(button))
     const [nextDay, untilSomething] = this.timeButtons.map((button) => buttonProbe(button))
     const camp = buttonProbe(this.campButtons[0])
     const campUntilHealed = buttonProbe(this.campButtons[1], partyWounded(this.expedition().members))
@@ -465,6 +466,7 @@ export class WorldScene extends Phaser.Scene {
         scout,
         wait,
         attack,
+        autoResolve,
         nextDay,
         untilSomething,
         home: buttonProbe(this.homeButton),
@@ -943,7 +945,7 @@ export class WorldScene extends Phaser.Scene {
     this.column.refresh(this.active)
     this.partyList.refresh(this.listedParties(), this.selectedParty)
     for (const button of this.buttons) button.setVisible(here !== null && !this.walking && world.status !== 'lost')
-    // Among monsters, confronting them or not, the footer offers only Scout, Wait and Attack.
+    // Among monsters, confronting them or not, the footer offers only Scout, Wait, Attack and Auto-resolve.
     const ordering = worldActive(world) && here === null && !this.walking
     for (const button of this.timeButtons) button.setVisible(ordering)
     this.homeButton.setVisible(ordering && !hexEquals(expedition.position, encampment(world).position))
@@ -1007,9 +1009,9 @@ export class WorldScene extends Phaser.Scene {
       meeting && expedition.confronting === null
         ? `Meet ${meeting.name}: click to send the party to it.`
         : expedition.confronting !== null
-          ? 'Monsters! Scout them, wait, or attack.'
+          ? 'Monsters! Scout them, wait, attack or auto-resolve.'
           : monstersHere(this.world, expedition)
-            ? 'Scout, wait or attack, or click a hex to move away.'
+            ? 'Scout, wait, attack or auto-resolve, or click a hex to move away.'
             : 'Click a hex to travel there, or camp or pass days below. Each day takes a turn.',
     )
   }
@@ -1419,6 +1421,12 @@ export class WorldScene extends Phaser.Scene {
   private onAttack(): void {
     const here = monstersHere(this.world, this.expedition())
     if (here) this.scene.start('Battle', { game: this.gameState, location: here.id, party: this.selectedParty })
+  }
+
+  /** Fights the battle at once: the battle scene plays it out and opens on its result. */
+  private onAutoResolve(): void {
+    const here = monstersHere(this.world, this.expedition())
+    if (here) this.scene.start('Battle', { game: this.gameState, location: here.id, party: this.selectedParty, auto: true })
   }
 
   /** A click on a portrait marks that member, and a click on the one marked opens its panel. */

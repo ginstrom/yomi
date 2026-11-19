@@ -166,13 +166,15 @@ export interface WorldProbe {
   /** The info panel's words on the hovered hex, or '' while no hex is hovered. */
   info: string
   /**
-   * Scout, Wait and Attack show among monsters, the camp buttons and the time buttons elsewhere (so, with the game still going); `campUntilHealed` is enabled while someone is wounded.
+   * Scout, Wait, Attack and Auto-resolve show among monsters, the camp buttons and the time buttons elsewhere (so, with the game still going); `campUntilHealed` is enabled while someone is wounded.
    * `end` and `endless` show on the victory screen, `menu` on the defeat screen.
    */
   buttons: {
     scout: ButtonProbe
     wait: ButtonProbe
     attack: ButtonProbe
+    /** Fights the battle at once. Shows with `attack`. */
+    autoResolve: ButtonProbe
     /** Passes one day, every party carrying on its order. Shows while the selected party is not before monsters and the game is active. */
     nextDay: ButtonProbe
     /** Passes days until something happens, or `UNTIL_LIMIT` of them quietly. Shows with `nextDay`. */

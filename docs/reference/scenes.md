@@ -50,13 +50,13 @@ New on the menu starts `Party`, which asks whether to take the ready-made party 
 
 The footer has two rows, the time buttons over the actions.
 
-Next day (`passDay`: every party carries on its order, a walk cut short or a camp resuming) and Until something happens (`advance`, stopping at an interrupt, the party it concerns selected and centred, or after `UNTIL_LIMIT` (30) days passed quietly, which the message says) show while the game is active and the selected party stands on no monster location (confronting it or, after a scout or a wait, not). Each refuses with `advanceRefusal`'s reason and then selects and centres the party whose monsters block the days (`blockingParty`), whose footer offers Scout, Wait and Attack. A map click, Return home, and every footer action that passes a day (Scout and Wait included where another party's monsters block it, `actionBlocked`; Camp, Camp until healed, a field Craft and the buildings) refuse the same way, giving no order.
+Next day (`passDay`: every party carries on its order, a walk cut short or a camp resuming) and Until something happens (`advance`, stopping at an interrupt, the party it concerns selected and centred, or after `UNTIL_LIMIT` (30) days passed quietly, which the message says) show while the game is active and the selected party stands on no monster location (confronting it or, after a scout or a wait, not). Each refuses with `advanceRefusal`'s reason and then selects and centres the party whose monsters block the days (`blockingParty`), whose footer offers Scout, Wait, Attack and Auto-resolve. A map click, Return home, and every footer action that passes a day (Scout and Wait included where another party's monsters block it, `actionBlocked`; Camp, Camp until healed, a field Craft and the buildings) refuse the same way, giving no order.
 
 The time buttons save as the days are passed and then play the selected party's steps as a journey plays, the party list's order line showing the order walked by until the walk ends (`deployedParties`' `shown`); every other party jumps to its hex when the walk ends (only the selected party's walk is animated). The words are `describeDays` (`worldEvents.ts`), which lead with the party's name ("Second Company: arrived at Kobold Scouts.") once the company has two parties or more. A day the selected party spends on its own action (Scout, Wait, Camp, Camp until healed, a building) is told in its own words followed by `describeOthers`, what else the day brought (another party's event or a notable one, whose party is selected and centred as for an interrupt).
 
 Beside the time buttons in that row: Return home (away from the encampment; not "Home", the key that centres the view) walks the selected party home by a `home` order; Garrison (on a held resource it does not garrison yet) sets a `garrison` order, passing no day; and Exchange (another party on the selected party's hex) opens `Exchange`.
 
-The row below offers, among monsters, Scout, Wait and Attack, and anywhere else Camp, Camp until healed and Craft, with Build Watchtower where the land would take one, Build Outpost on a held site without one (a click without the stock says what it costs) and Enter at the encampment.
+The row below offers, among monsters, Scout, Wait, Attack and Auto-resolve (the last labelled plainly; shown by the rule Attack is), and anywhere else Camp, Camp until healed and Craft, with Build Watchtower where the land would take one, Build Outpost on a held site without one (a click without the stock says what it costs) and Enter at the encampment.
 
 ### Opening, clicks and walks
 
@@ -76,7 +76,7 @@ Down the map's right side, in an opaque strip the view ends at (`PARTY_LIST_W`),
 
 ### Battles and the game's end
 
-Attacking a monster location starts `Battle` with that location's id. A victory clears the location and returns to `World`. A defeat wipes the party out (`wipeParty`) and, with heroes left elsewhere, saves and returns to `World` with the first party selected, or with none left deletes the game's slot and goes back to `Menu`.
+Attacking a monster location starts `Battle` with that location's id. Auto-resolve starts it with `auto: true` for the selected party (no confirmation, no key), so `Battle` opens on the battle resolved (see "The battle screen"). A victory clears the location and returns to `World`. A defeat, played or auto-resolved, wipes the party out (`wipeParty`) and, with heroes left elsewhere, saves and returns to `World` with the first party selected, or with none left deletes the game's slot and goes back to `Menu`.
 
 When the game is won or lost a screen covers the map: End (to `Menu`, the save kept) and Continue (endless) after a victory, Main Menu after the encampment falls.
 

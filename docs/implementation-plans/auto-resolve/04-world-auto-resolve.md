@@ -106,3 +106,12 @@ On the world map, while the selected party stands among monsters, the footer off
 - [ ] One commit on `main`; the index's row 04 updated with status and hash.
 
 ## 7. Execution record
+
+**Done.** Tests first (in-browser, in `e2e/battle.test.ts` "auto-resolve from the world map", and `e2e/world.test.ts` "fits the monster row in the least window"), then the button.
+
+- `WorldScene.ts`: fourth footer button "Auto-resolve" and `onAutoResolve()`; `probe().buttons.autoResolve` and `WorldProbe.buttons.autoResolve` in `src/testHook.ts`; the hints among monsters now say "attack or auto-resolve" (65 chars at 13px monospace, one line at 840 wide).
+- Tests: A1 (victory settles as played: result second line, raiders gone, save has no battle, experience kept; result up before any player control), A3 (two games with seed 7 give equal logs; `meta.playerPolicy: 'aggressive'`; an Attack battle has none), A6 (a lone 1-hp hero planted in the save loses: Menu, Continue disabled; and a lone 1-hp second party loses while the first lives: `party_2` meta, wiped, baggage at the raiders), R3 (that same test is the lesser party's auto-resolve), and the least-window row.
+- Forced loss (decision 10): `hp 1 all` is not enough, since the aggressive AI still wins with three 1-hp heroes (seeds 1 to 6); a party cut to one hero at 1 hp, planted in the save, loses on seeds 1 to 3, so the tests use the default seed.
+- Width of step 06's "Auto-resolve (win >95%)": 23 characters, not 24, so `footerWidth` gives 254 px (not 264); with Scout, Wait and Attack (96 each) and three 12 px gaps the row is 578 px, inside the 760 px right of the party column at 840 wide. Step 06 needs no footer redesign.
+- Docs: `docs/reference/scenes.md` (Footer, monster row, "Battles and the game's end"); `src/scenes/CLAUDE.md` names no footer buttons, unchanged.
+- Verification: `npm test` 95 files, 2310 tests pass (guard unedited); `npm run test:browser` 12 files, 151 tests pass; `LOG_SCHEMA_VERSION` and `SAVE_VERSION` untouched.

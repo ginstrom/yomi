@@ -635,6 +635,141 @@ describe('auto-resolve on the battle screen', () => {
   })
 })
 
+describe('auto-resolve from the world map', () => {
+  const games = useGames()
+
+  /** From a new game: the party before the raiders, the footer's Auto-resolve button up. */
+  async function atRaiders(game: Game) {
+    await game.newGame()
+    const world = await game.travelTo(RAIDERS.position)
+    expect(world.buttons.autoResolve).toMatchObject({ visible: true, enabled: true })
+    expect(world.buttons.attack.visible).toBe(true)
+    return world
+  }
+
+  /** The debug console's lines, typed in the world map. */
+  async function debugLines(game: Game, lines: string[]): Promise<void> {
+    await game.press('Shift+Backquote')
+    for (const line of lines) {
+      await game.page.locator('#yomi-debug input').fill(line)
+      await game.press('Enter')
+    }
+    await game.press('Shift+Backquote')
+  }
+
+  it('fights the battle at once and settles it as a played victory (A1)', async () => {
+    const game = await games.open()
+    const world = await atRaiders(game)
+    await game.click(world.buttons.autoResolve)
+    await game.waitForScenes(['Battle'])
+    // Never the player's turn: the result is up before control is given.
+    const over = await game.waitFor('Battle', (b) => b.buttons.result.visible || b.playerControl)
+    expect(over.buttons.result.visible).toBe(true)
+    expect(over.playerControl).toBe(false)
+    expect(over.state.winner).toBe('player')
+    expect(over.log.at(-1)?.type).toBe('battle_end')
+    expect(over.result[0]).toBe('The Goblin Raiders are beaten.')
+    expect(over.result[1]).toMatch(/^Auto-resolved in \d+ rounds?\.$/)
+    expect(over.buttons.auto.visible).toBe(false)
+    const found = over.result.at(-1)!.match(/^Found: (.*)\.$/)
+
+    await game.click(over.buttons.result)
+    await game.waitForScenes(['World'])
+    const after = await game.waitFor('World')
+    expect(after.world.locations.some((l) => l.id === RAIDERS.id)).toBe(false)
+    expect(after.confronting).toBeNull()
+    const saved = await game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!))
+    expect(saved.battle).toBeNull()
+    const members = saved.game.parties[0].members as Array<{ level: number; xp: number }>
+    expect(members.every((m) => m.level > 1 || m.xp > 0)).toBe(true)
+    if (found) expect(saved.game.parties[0].baggage.length).toBeGreaterThan(0)
+  })
+
+  it('plays the same battle twice from the same seed, with the auto policy in its meta (A3)', async () => {
+    const logs = []
+    for (let i = 0; i < 2; i++) {
+      const game = await games.open({ seed: 7 })
+      const world = await atRaiders(game)
+      await game.click(world.buttons.autoResolve)
+      await game.waitForScenes(['Battle'])
+      const over = await game.waitFor('Battle', (b) => b.buttons.result.visible)
+      expect(over.log[0]).toMatchObject({ type: 'battle_start', seed: 7, meta: { source: 'game', party: 'party_1', playerPolicy: 'aggressive' } })
+      logs.push(over.log)
+    }
+    expect(logs[1]).toEqual(logs[0])
+  })
+
+  it('leaves the policy out of the meta of a battle that Attack starts', async () => {
+    const game = await games.open()
+    const battle = await game.enterBattle()
+    expect((battle.log[0] as { meta: Record<string, unknown> }).meta).not.toHaveProperty('playerPolicy')
+  })
+
+  it('ends the game at the main menu when the last party falls, as a played defeat does (A6)', async () => {
+    const game = await games.open()
+    await game.newGame()
+    // A lone hero on one hit point, certain to fall to the raiders.
+    await game.page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      saved.game.parties[0].members = saved.game.parties[0].members.slice(0, 1)
+      saved.game.parties[0].members[0].hp = 1
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    })
+    const menu = await game.reload()
+    await game.click(menu.buttons.continue)
+    await game.waitForScenes(['World'])
+    await game.settled('World')
+    const world = await game.travelTo(RAIDERS.position)
+    await game.click(world.buttons.autoResolve)
+    await game.waitForScenes(['Battle'])
+    const over = await game.waitFor('Battle', (b) => b.buttons.result.visible)
+    expect(over.state.winner).toBe('enemy')
+    expect(over.result.some((line) => /^Auto-resolved in \d+ rounds?\.$/.test(line))).toBe(true)
+    await game.click(over.buttons.result)
+    await game.waitForScenes(['Menu'])
+    expect((await game.waitFor('Menu')).buttons.continue.enabled).toBe(false)
+  })
+
+  it('wipes a lesser party that falls while another lives, its baggage left at the nest (A6, R3)', async () => {
+    const game = await games.open()
+    await game.newGame()
+    await game.page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      const first = saved.game.parties[0]
+      const second = JSON.parse(JSON.stringify(first))
+      second.id = 'party_2'
+      second.name = 'Second Company'
+      second.members = second.members.slice(0, 1)
+      for (const member of second.members) member.name = `${member.name}2`
+      second.baggage = ['iron_sword']
+      saved.game.parties.push(second)
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    })
+    const menu = await game.reload()
+    await game.click(menu.buttons.continue)
+    await game.waitForScenes(['World'])
+    await game.settled('World')
+    await debugLines(game, ['hp 1 all @second', `goto ${RAIDERS.id} @second`])
+    const world = await game.waitFor('World', (w) => w.parties.length === 2 && w.parties[1].confronting)
+    await game.click(world.parties[1])
+    const selected = await game.waitFor('World', (w) => w.selectedParty === 'party_2' && w.buttons.autoResolve.visible)
+    await game.click(selected.buttons.autoResolve)
+    await game.waitForScenes(['Battle'])
+    const over = await game.waitFor('Battle', (b) => b.buttons.result.visible)
+    expect(over.log[0]).toMatchObject({ meta: { party: 'party_2', playerPolicy: 'aggressive' } })
+    expect(over.state.winner).toBe('enemy')
+    expect(over.result[0]).toBe('The Second Company has fallen. Its baggage lies at the Goblin Raiders.')
+    const saved = await game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!))
+    expect(saved.game.parties.map((p: { id: string }) => p.id)).toEqual(['party_1'])
+    await game.click(over.buttons.result)
+    await game.waitForScenes(['World'])
+    const after = await game.waitFor('World')
+    expect(after.selectedParty).toBe('party_1')
+    const raiders = after.world.locations.find((l) => l.id === RAIDERS.id)
+    expect(raiders?.kind === 'monsters' && raiders.loot.map((item) => item.id)).toContain('iron_sword')
+  })
+})
+
 describe('a battle’s sounds', () => {
   const games = useGames()
   const cues = (game: Game) => game.page.evaluate(() => window.__yomi!.audioLog().map((entry) => entry.cue))
