@@ -370,6 +370,80 @@ describe('the world map', () => {
     expect(battle.log[0]).toMatchObject({ type: 'battle_start', seed: 1, meta: { source: 'game', party: 'party_1' } })
   })
 
+  describe('the auto-resolve estimate', () => {
+    const FIGURE = /^Auto-resolve \(win (>95%|<5%|\d{1,2}%)\)$/
+
+    it('labels Auto-resolve with its estimate and tells the whole of it on hover (A9)', async () => {
+      const game = await games.open()
+      await game.newGame()
+      const among = await game.travelTo(RAIDERS.position)
+      expect(among.buttons.autoResolve.visible).toBe(true)
+      expect(among.autoLabel === 'Auto-resolve (…)' || FIGURE.test(among.autoLabel)).toBe(true)
+
+      const ready = await game.waitFor('World', (w) => w.forecast !== null)
+      expect(ready.autoLabel).toMatch(FIGURE)
+      expect(ready.forecast!.samples).toBe(40)
+      expect(ready.forecast!.wins).toBeLessThanOrEqual(40)
+
+      await game.hover(ready.buttons.autoResolve)
+      const hovered = await game.settled('World', (w) => w.hint.startsWith('Estimate from'))
+      expect(hovered.hint).toMatch(/^Estimate from 40 trial battles with the AI playing your side: it wins .* of them, and a hero dies in .*Your own play may do better\.$/)
+      await game.hover({ x: 0, y: 0 })
+      const off = await game.settled('World', (w) => !w.hint.startsWith('Estimate from'))
+      expect(off.hint).toContain('Monsters!')
+    })
+
+    it('answers the pointer while it works (A9)', async () => {
+      const game = await games.open()
+      await game.newGame()
+      const among = await game.travelTo(RAIDERS.position)
+      await game.hover(worldHexOnScreen(among, RAIDERS.position))
+      const told = await game.waitFor('World', (w) => w.info.startsWith('Goblin Raiders'))
+      expect(told.info).toContain('threat 1')
+      await game.waitFor('World', (w) => w.forecast !== null)
+    })
+
+    it('keeps the estimate while nothing changes and works it out again after a day (A9)', async () => {
+      const game = await games.open()
+      await game.newGame()
+      const among = await game.travelTo(RAIDERS.position)
+      const ready = await game.waitFor('World', (w) => w.forecast !== null)
+
+      // Marking another member redraws the map but changes no battle.
+      await game.click(among.party[1])
+      const marked = await game.waitFor('World', (w) => w.party[1].active)
+      expect(marked.forecast).toEqual(ready.forecast)
+
+      // A day passes: the day is in the estimate's base, so it starts afresh and comes back.
+      await game.click(among.buttons.scout)
+      const later = await game.waitFor('World', (w) => w.world.turn === among.world.turn + 1)
+      if (later.buttons.autoResolve.visible) {
+        expect(later.autoLabel).toMatch(/^Auto-resolve \((…|win .*)\)$/)
+        await game.waitFor('World', (w) => w.forecast !== null)
+      }
+    })
+
+    it('leaves the real battle the seed and the log it would have had (A10)', async () => {
+      const quick = await games.open()
+      await quick.newGame()
+      const quickWorld = await quick.travelTo(RAIDERS.position)
+      await quick.click(quickWorld.buttons.attack)
+      await quick.waitForScenes(['Battle'])
+      const first = await quick.waitFor('Battle', (b) => b.playerControl)
+
+      const patient = await games.open()
+      await patient.newGame()
+      const patientWorld = await patient.travelTo(RAIDERS.position)
+      await patient.waitFor('World', (w) => w.forecast !== null)
+      await patient.click(patientWorld.buttons.attack)
+      await patient.waitForScenes(['Battle'])
+      const second = await patient.waitFor('Battle', (b) => b.playerControl)
+
+      expect(second.log[0]).toMatchObject({ type: 'battle_start', seed: 1 })
+      expect(second.log).toEqual(first.log)
+    })
+  })
+
   it('puts a beaten location’s loot in the baggage, from which a hero takes it and wears it', async () => {
     const game = await games.open()
     await game.enterBattle()
@@ -644,12 +718,20 @@ describe('the world map', () => {
       await game.newGame()
       await game.resize(840, 560)
       await game.waitFor('World', (w) => w.view.width < 700)
-      const world = await game.travelTo(RAIDERS.position)
-      for (const button of [world.buttons.scout, world.buttons.wait, world.buttons.attack, world.buttons.autoResolve]) {
+      await game.travelTo(RAIDERS.position)
+      // With the estimate's figure on the button, which widens it.
+      const world = await game.waitFor('World', (w) => w.forecast !== null)
+      expect(world.autoLabel).toMatch(/^Auto-resolve \(win /)
+      const row = [world.buttons.scout, world.buttons.wait, world.buttons.attack, world.buttons.autoResolve]
+      // Each button's whole width lies inside the screen and right of the party column (which ends where the view starts).
+      for (const button of row) {
         expect(button.visible).toBe(true)
-        expect(button.x).toBeGreaterThan(80)
-        expect(button.x).toBeLessThan(840 - 80)
         expect(button.y).toBeLessThan(560)
+        expect(button.x - button.width! / 2).toBeGreaterThanOrEqual(world.view.x)
+        expect(button.x + button.width! / 2).toBeLessThanOrEqual(840)
+      }
+      for (let i = 1; i < row.length; i++) {
+        expect(row[i].x - row[i].width! / 2).toBeGreaterThan(row[i - 1].x + row[i - 1].width! / 2)
       }
     })
   })

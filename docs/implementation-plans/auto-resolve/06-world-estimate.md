@@ -150,3 +150,14 @@ Then:
 - [ ] One commit on `main`; the index's row 06 updated with status and hash.
 
 ## 7. Execution record
+
+**2026-11-20, engineer.** Done.
+
+- **Built:** `WorldScene` gains `forecaster`, `forecastKey`, `forecastResult`, `autoHovered` (reset in `create`). `refresh()` ends with `refreshForecast()`: a new `Forecaster` only when the key `base:JSON(start)` differs (decision 4), dropped when the Auto-resolve button is hidden, while walking, or the game is over. `update()` works `workFor(…, FORECAST_SLICE_MS)` only when not walking, the button shows and no outcome screen. `setAutoLabel()` sets the label (`forecastLabel(…, false)`), resizes the button and its `bg` by `footerWidth` and runs `layout()` only when the label changed (`createButton` now keeps `bg` and `text` as container data). Hover on the button sets `autoHovered`; `refreshHint()` shows `forecastHint` while it is set and the button shows. `onAttack`/`onAutoResolve` call `dropForecast()` first. `WorldProbe.forecast` and `autoLabel` added; `ButtonProbe` gained an optional `width` (from `buttonProbe`) so tests can bound a button's edges.
+- **Tests (`e2e/world.test.ts`, `describe('the auto-resolve estimate')`):** label and hover hint, responsive while it works, kept after marking a member and restarted after Scout's day, and A10 (two games with the same seed, one pressing Attack at once and one after the estimate: same `battle_start` seed 1 and identical first-turn log). Written after the code, so no red run was seen; they were not checked against a broken implementation.
+- **Review nits folded in:** (1) "fits the monster row in the least window" now waits for the estimate, then bounds each button's left edge by the party column (`view.x`), its right edge by the screen (840), and each button clear of the previous one. (2) `showHint()`'s doc comment moved back above it in `BattleScene.ts`. (3) The A9 battle test asserts `forecast` null and `autoLabel` "Auto (…)" right after the move click.
+- **Verification:** `npm test` 95 files, 2310 tests passed (guard unedited); `npm run test:browser -- -t "auto-resolve|least window|labels Auto"` 20 passed; the full browser suite result is in the commit report.
+- **Deviations:** none to the contract's words. Docs: `docs/reference/scenes.md` (footer) and the "Seeds" line of `src/scenes/CLAUDE.md`.
+- **Known and unchanged:** if the pointer leaves the hovered button while it hides during a walk, `autoHovered` stays set until the next drop; harmless (the hint shows it only while the button shows, and `dropForecast` clears it).
+- **For step 07:** the footer shows "Auto-resolve (win NN%)" only after the estimate is ready (seconds), so screenshots must wait on `forecast !== null`.
+

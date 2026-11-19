@@ -648,6 +648,10 @@ describe('auto-resolve on the battle screen', () => {
 
     // An action drops it, and it is worked out again once control is back.
     await game.click(battleHexOnScreen(back, offsetToHex(5, 4)))
+    // Control is out while the move plays: no estimate, and the label says it is being worked out.
+    const playing = (await game.probe('Battle'))!
+    expect(playing.forecast).toBeNull()
+    expect(playing.autoLabel).toBe('Auto (…)')
     const moved = await game.awaitTurn()
     expect(moved.log.length).toBeGreaterThan(ready.log.length)
     expect((await game.waitFor('Battle', (b) => b.forecast !== null)).autoLabel).toMatch(/^Auto \((>95%|<5%|\d+%)\)$/)

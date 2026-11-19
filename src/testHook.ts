@@ -31,6 +31,8 @@ import type { Skill, SkillMenuRow } from './scenes/skillMenu.ts'
 export interface ButtonProbe extends Point {
   visible: boolean
   enabled: boolean
+  /** The button's width, when it is made by buttonProbe from a container, so a test can bound its edges (x is its centre). */
+  width?: number
 }
 
 /** A party member's portrait in the column at the left, by its centre on screen; see partyPanel.ts for what a click does. */
@@ -160,6 +162,10 @@ export interface WorldProbe {
   message: string
   /** The header's hint under the turn: what the selected party may do, or "Meet <name>: …" while the pointer is over another party's hex. */
   hint: string
+  /** The finished auto-resolve estimate for the battle Attack would start; null while it is worked out, and whenever no Auto-resolve button shows. */
+  forecast: Forecast | null
+  /** The Auto-resolve button's label: "Auto-resolve (…)" until the estimate is ready, then its win chance ("Auto-resolve (win 90%)"). */
+  autoLabel: string
   /** The words of the victory or defeat screen over the map, or '' while the game goes on. The blight, held sites and status are in `world`. */
   outcome: string
   /** The hexes in sight, by `boardIndex`, in order; what the player remembers of the rest is `world.seen`. */
@@ -539,7 +545,7 @@ declare global {
 
 /** A button built as a container centred on its place on screen. */
 export function buttonProbe(button: Phaser.GameObjects.Container, enabled = true): ButtonProbe {
-  return { x: button.x, y: button.y, visible: button.visible, enabled }
+  return { x: button.x, y: button.y, visible: button.visible, enabled, width: button.width }
 }
 
 export function installTestHook(game: Phaser.Game): void {

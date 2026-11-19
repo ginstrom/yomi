@@ -10,6 +10,7 @@ import { FIRST_PARTY_ID, presences, type DayAction, type Expedition, type PartyP
 import { newGame, selectedParty, type GameState } from '../game/gameState.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
 import { craftTier } from '../game/crafting.ts'
+import { FORECAST_SLICE_MS, Forecaster, forecastHint, forecastLabel, worldForecastStart, workFor, type Forecast } from '../game/forecast.ts'
 import { daysToFall } from '../game/territory.ts'
 import { UNEXPLORED, knownBlightedShare, visibleHexes } from '../game/vision.ts'
 import {
@@ -184,6 +185,13 @@ export class WorldScene extends Phaser.Scene {
 
   private turnText!: Phaser.GameObjects.Text
   private hintText!: Phaser.GameObjects.Text
+  /** The auto-resolve estimate being worked out for the battle Attack would start, and the key of that battle (see refresh). */
+  private forecaster: Forecaster | null = null
+  private forecastKey: string | null = null
+  /** The finished estimate for the battle in hand, else null. */
+  private forecastResult: Forecast | null = null
+  /** Whether the pointer is over the Auto-resolve button, whose hover puts the estimate in the hint. */
+  private autoHovered = false
   /** The party's portraits down the left. */
   private column!: PartyColumn
   /** The party member marked in the column, whose panel C or a click on its portrait opens. */
@@ -262,6 +270,10 @@ export class WorldScene extends Phaser.Scene {
     this.board = new HexBoard(this.world.board)
     // Phaser reuses the scene instance on restart, so field initializers don't run again.
     this.walking = false
+    this.forecaster = null
+    this.forecastKey = null
+    this.forecastResult = null
+    this.autoHovered = false
     this.hovered = null
     this.panOrigin = null
     this.press = null
@@ -312,8 +324,17 @@ export class WorldScene extends Phaser.Scene {
       this.createButton('Scout', () => this.onLinger('scout')),
       this.createButton('Wait', () => this.onLinger('wait')),
       this.createButton('Attack', () => this.onAttack()),
-      this.createButton('Auto-resolve', () => this.onAutoResolve()),
+      this.createButton(forecastLabel(null, false), () => this.onAutoResolve()),
     ]
+    const autoBg = this.buttons[3].getData('bg') as Phaser.GameObjects.Rectangle
+    autoBg.on('pointerover', () => {
+      this.autoHovered = true
+      this.refreshHint()
+    })
+    autoBg.on('pointerout', () => {
+      this.autoHovered = false
+      this.refreshHint()
+    })
     this.timeButtons = [
       this.createButton('Next day', () => this.onNextDay()),
       this.createButton('Until something happens', () => this.onUntilSomething()),
@@ -422,8 +443,65 @@ export class WorldScene extends Phaser.Scene {
     this.tell({ kind: 'world_opened' })
   }
 
+  /**
+   * While walking, follows the walk; otherwise works the auto-resolve estimate
+   * in a slice of at most FORECAST_SLICE_MS a frame. Phaser calls no update on
+   * a paused scene, so nothing is worked under an overlay.
+   */
   update(): void {
-    if (this.walking) this.applyOrigin()
+    if (this.walking) {
+      this.applyOrigin()
+      return
+    }
+    if (!this.forecaster || !this.buttons[3].visible || this.outcomeShade.visible) return
+    const done = workFor(this.forecaster, FORECAST_SLICE_MS)
+    if (!done) return
+    this.forecastResult = done
+    this.forecaster = null
+    this.setAutoLabel()
+    this.refreshHint()
+  }
+
+  /**
+   * Starts an estimate for the battle Attack would start, unless the one in
+   * hand is for it already (the same location, party, day and fighters), and
+   * drops it when no Auto-resolve button shows. Never while walking.
+   */
+  private refreshForecast(): void {
+    const start = this.buttons[3].visible && !this.walking && this.world.status !== 'lost' && this.world.status !== 'won' ? worldForecastStart(this.gameState, this.expedition()) : null
+    if (!start) {
+      this.dropForecast()
+      return
+    }
+    const key = `${start.base}:${JSON.stringify(start.start)}`
+    if (key !== this.forecastKey) {
+      this.forecaster = new Forecaster(start.start, start.base)
+      this.forecastKey = key
+      this.forecastResult = null
+    }
+    this.setAutoLabel()
+  }
+
+  /** Throws the estimate away: the battle it was for no longer stands, or the map is left. */
+  private dropForecast(): void {
+    this.forecaster = null
+    this.forecastKey = null
+    this.forecastResult = null
+    this.autoHovered = false
+    this.setAutoLabel()
+  }
+
+  /** The Auto-resolve button reads the estimate; the row is laid out again when its width changes. */
+  private setAutoLabel(): void {
+    const button = this.buttons[3]
+    const label = forecastLabel(this.forecastResult, false)
+    const text = button.getData('text') as Phaser.GameObjects.Text
+    if (text.text === label) return
+    text.setText(label)
+    const width = WorldScene.footerWidth(label)
+    ;(button.getData('bg') as Phaser.GameObjects.Rectangle).setSize(width, BUTTON_H)
+    button.setSize(width, BUTTON_H)
+    this.layout()
   }
 
   /** What the in-browser tests see of the world map; see testHook.ts. */
@@ -459,6 +537,8 @@ export class WorldScene extends Phaser.Scene {
       view: this.view,
       message: this.messageText.text,
       hint: this.hintText.text,
+      forecast: this.forecastResult,
+      autoLabel: (this.buttons[3].getData('text') as Phaser.GameObjects.Text).text,
       outcome: this.outcomeText.visible ? this.outcomeText.text : '',
       visible: [...this.visible].sort((a, b) => a - b),
       info: this.infoText.visible ? this.infoText.text : '',
@@ -744,7 +824,7 @@ export class WorldScene extends Phaser.Scene {
       playCue(this, buttonCue(label))
       onClick()
     })
-    return this.add.container(0, 0, [bg, text]).setSize(width, BUTTON_H)
+    return this.add.container(0, 0, [bg, text]).setSize(width, BUTTON_H).setData('bg', bg).setData('text', text)
   }
 
   // ---- layout ---------------------------------------------------------------
@@ -957,6 +1037,7 @@ export class WorldScene extends Phaser.Scene {
     this.outpostButton.setVisible(campable && !this.walking && outpostSiteRefusal(world, expedition) === null)
     this.encampmentButton.setVisible(atEncampment(world, expedition) && !this.walking)
     this.layout()
+    this.refreshForecast()
     const over = world.status === 'won' || world.status === 'lost'
     this.outcomeShade.setVisible(over)
     this.outcomeText.setVisible(over).setText(
@@ -1003,6 +1084,10 @@ export class WorldScene extends Phaser.Scene {
 
   /** The header's hint: what the selected party may do where it stands, or whom a click on the hovered hex sends it to meet. */
   private refreshHint(): void {
+    if (this.autoHovered && this.buttons[3].visible) {
+      this.hintText.setText(forecastHint(this.forecastResult))
+      return
+    }
     const expedition = this.expedition()
     const meeting = this.hovered && !this.walking ? meetTarget(this.gameState, expedition, this.hovered) : null
     this.hintText.setText(
@@ -1420,13 +1505,17 @@ export class WorldScene extends Phaser.Scene {
 
   private onAttack(): void {
     const here = monstersHere(this.world, this.expedition())
-    if (here) this.scene.start('Battle', { game: this.gameState, location: here.id, party: this.selectedParty })
+    if (!here) return
+    this.dropForecast()
+    this.scene.start('Battle', { game: this.gameState, location: here.id, party: this.selectedParty })
   }
 
   /** Fights the battle at once: the battle scene plays it out and opens on its result. */
   private onAutoResolve(): void {
     const here = monstersHere(this.world, this.expedition())
-    if (here) this.scene.start('Battle', { game: this.gameState, location: here.id, party: this.selectedParty, auto: true })
+    if (!here) return
+    this.dropForecast()
+    this.scene.start('Battle', { game: this.gameState, location: here.id, party: this.selectedParty, auto: true })
   }
 
   /** A click on a portrait marks that member, and a click on the one marked opens its panel. */

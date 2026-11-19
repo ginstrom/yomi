@@ -1327,7 +1327,6 @@ export class BattleScene extends Phaser.Scene {
     this.showHint()
   }
 
-  /** Shows the hint of the unit's turn, or the warning for the foe under the pointer. */
   /**
    * Works the auto-resolve estimate in a slice of at most FORECAST_SLICE_MS a
    * frame while the player has control. Phaser calls no update on a paused
@@ -1370,6 +1369,7 @@ export class BattleScene extends Phaser.Scene {
     this.hintText.setText(forecastHint(this.shownForecast)).setColor('#9e9e9e')
   }
 
+  /** Shows the hint of the unit's turn, or the warning for the foe under the pointer. */
   private showHint(): void {
     if (this.autoHovered && this.playerControl) {
       this.showForecastHint()
