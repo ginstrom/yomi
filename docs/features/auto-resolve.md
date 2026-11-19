@@ -1,7 +1,7 @@
 # Feature: auto-resolve for battles
 
 **Slug:** auto-resolve
-**Phase:** 5, verification (c1dc3f2..42e7f18)
+**Phase:** 6, done on main (c1dc3f2..b17a547); not pushed
 
 ## Request (user's words)
 
@@ -55,4 +55,4 @@ Medium: design, plan, implement, verify. No architecture brief: the engine alrea
 - Overall review (opus, at 42e7f18): clean; 4 non-blocking (manual wording, stale comments, no e2e of battle hand-back, step 07 boxes). Suite: npm test, build pass; 4 browser timeouts under load passed on rerun
 - QA (sonnet, at 42e7f18): pass; minor: world hint unwrapped at 840 wide, manual wording; estimate slower in headless (~3 s at threat 1), real hardware unverified. Evidence in .git/pr-review/main/evidence/
 - Simulated user (sonnet, hands-on, at 42e7f18): auto-resolve saves the time hoped for; estimate sorts fights. Friction: result screen omits cost; result text over sprites; 20→30% swing after 3 skill points (40-sample noise); second party not reached
-- Fixes round 1 (c9d8de8, sonnet): 4 review items fixed; the world hint wrap then overlapped the status text (blocking, overall reviewer). Round 2: tooltip, same engineer
+- Fixes round 1 (c9d8de8, sonnet): 4 review items fixed; the world hint wrap then overlapped the status text (blocking, overall reviewer). Round 2 (0564e8c): world estimate as a tooltip; overall reviewer clean at three sizes. Doc touch-ups b17a547
