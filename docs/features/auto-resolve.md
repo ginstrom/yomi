@@ -1,7 +1,7 @@
 # Feature: auto-resolve for battles
 
 **Slug:** auto-resolve
-**Phase:** 3, planning
+**Phase:** 4, implementation (base c1dc3f2)
 
 ## Request (user's words)
 
@@ -12,8 +12,8 @@ Given in answer to the orchestrator's 2026-11-20 summary, which listed stage 7 (
 ## Links
 
 - Design: `docs/designs/auto-resolve.md` (8a818e0, estimate §4.6/§5.5 added in caae9e3; approved 2026-11-20)
-- Plan: —
-- Branch: —
+- Plan: `docs/implementation-plans/auto-resolve/index.md` (7 steps, c1dc3f2)
+- Branch: main
 - Prior context: `docs/designs/long-campaign/reference/multiple-parties.md` §6 (player time) and §8.3; `docs/designs/long-campaign/index.md` open-questions table.
 
 ## Path
@@ -24,6 +24,7 @@ Medium: design, plan, implement, verify. No architecture brief: the engine alrea
 
 | Date | Decision | By | Alternatives | Reason |
 |---|---|---|---|---|
+| 2026-11-20 | Plan's departures accepted (scene smoke tests → in-browser tests; `ENEMY_POLICY` to autoPlay.ts; restart estimates only when their start / log changes) | orchestrator | follow design to the letter | routine engineering choices; none changes what the player gets |
 | 2026-11-20 | Design §8.4–8.6 defaults taken: 40 samples; show chance a hero dies; re-estimate after every action | orchestrator | 20 or 100 samples; expected losses; once a turn | one constant, tunable after play; idle-time only |
 | 2026-11-20 | Resolve at once, no playback | user | fast playback with Stop | saves the most time; playback can sit on `playOut` later |
 | 2026-11-20 | No confirmation before auto-resolving | user | second click / dialog | Attack doesn't confirm either |
@@ -37,7 +38,9 @@ None.
 
 ## Tiers
 
-- Designer: opus
+- Designer: opus; planner: opus
+- Engineer / reviewer per step (planner's suggestions taken): 01 sonnet/sonnet, 02 opus/opus, 03 opus/opus, 04 sonnet/sonnet, 05 opus/opus, 06 sonnet/sonnet, 07 sonnet/sonnet; overall review opus
+- Steps run one at a time in one tree: 01, 02, 03, 04, 05, 06, 07
 
 ## Verification
 
