@@ -1,0 +1,44 @@
+# Feature: auto-resolve for battles
+
+**Slug:** auto-resolve
+**Phase:** 3, planning
+
+## Request (user's words)
+
+> there should be an auto-resolve option for all battles
+
+Given in answer to the orchestrator's 2026-11-20 summary, which listed stage 7 (site improvements and markets) as the next roadmap item and noted that auto-resolve for lesser parties' battles (company design §8.3, stages index open question) was waiting on the user playing a multi-party campaign. This settles that question, and widens it from lesser parties to every battle.
+
+## Links
+
+- Design: `docs/designs/auto-resolve.md` (8a818e0, estimate §4.6/§5.5 added in caae9e3; approved 2026-11-20)
+- Plan: —
+- Branch: —
+- Prior context: `docs/designs/long-campaign/reference/multiple-parties.md` §6 (player time) and §8.3; `docs/designs/long-campaign/index.md` open-questions table.
+
+## Path
+
+Medium: design, plan, implement, verify. No architecture brief: the engine already runs headless with `POLICIES` on both sides (the simulator), so auto-resolve reuses an existing contract rather than adding components.
+
+## Decision log
+
+| Date | Decision | By | Alternatives | Reason |
+|---|---|---|---|---|
+| 2026-11-20 | Design §8.4–8.6 defaults taken: 40 samples; show chance a hero dies; re-estimate after every action | orchestrator | 20 or 100 samples; expected losses; once a turn | one constant, tunable after play; idle-time only |
+| 2026-11-20 | Resolve at once, no playback | user | fast playback with Stop | saves the most time; playback can sit on `playOut` later |
+| 2026-11-20 | No confirmation before auto-resolving | user | second click / dialog | Attack doesn't confirm either |
+| 2026-11-20 | Show a predicted outcome (estimated win chance) before choosing auto-resolve, in this feature | user | leave for later (designer's rec.) | user's choice |
+| 2026-11-20 | Design approved, conditional on the prediction amendment; build on main (CLAUDE.md: commit on the current branch) | user | changes first | |
+| 2026-11-20 | Build auto-resolve before stage 7; offer it for every battle, not only lesser parties' | user | stage 7 first; lesser parties only (§8.3's framing) | Request above |
+
+## Open questions
+
+None.
+
+## Tiers
+
+- Designer: opus
+
+## Verification
+
+—
