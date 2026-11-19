@@ -23,6 +23,7 @@ import { newGame, selectedParty, takeLoot, type GameState } from '../game/gameSt
 import { takeRunes } from '../game/loot.ts'
 import { Ground, pileChanges } from '../game/ground.ts'
 import { describeRewards, partyFighters, rewardVictory } from '../game/party.ts'
+import { FORECAST_SLICE_MS, Forecaster, battleForecastBase, forecastHint, forecastLabel, workFor, type Forecast } from '../game/forecast.ts'
 import type { SavedBattle } from '../game/save.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
 import { clearLocation, encampmentName, theName, theNameCapital, type MonsterLocation } from '../game/worldMap.ts'
@@ -287,6 +288,14 @@ export class BattleScene extends Phaser.Scene {
   private logDumped = false
   /** True while the player may act; off during animations and the enemy's turn. */
   private playerControl = false
+  /** The auto-resolve estimate being worked out for the battle as it stands, while the player has control; null otherwise. */
+  private forecaster: Forecaster | null = null
+  /** The `battleForecastBase` the forecaster (or the finished estimate) is for; null when there is none. */
+  private forecastBase: number | null = null
+  /** The finished estimate for the battle as it stands, which the Auto button's label shows; null until it is ready. */
+  private shownForecast: Forecast | null = null
+  /** Whether the pointer is over the Auto button, whose hover shows the estimate in the hint. */
+  private autoHovered = false
   /** The player unit that board clicks and the Attack button act for. */
   private selected: UnitId | null = null
   /**
@@ -403,6 +412,8 @@ export class BattleScene extends Phaser.Scene {
     this.log = new ScrollingLog(LOG_HISTORY, LOG_VISIBLE_LINES)
     this.logDumped = false
     this.playerControl = false
+    this.dropForecast()
+    this.autoHovered = false
     this.selected = null
     this.targeting = null
     this.skillMenu = null
@@ -495,7 +506,16 @@ export class BattleScene extends Phaser.Scene {
     this.attackButton = this.createButton('Attack', () => this.onAttack())
     this.castButton = this.createButton('Skills', () => this.onSkills())
     this.endTurnButton = this.createButton('End Turn', () => this.onEndTurn())
-    this.autoButton = this.createButton('Auto', () => this.onAutoResolve())
+    this.autoButton = this.createButton(forecastLabel(null, true), () => this.onAutoResolve())
+    const autoBg = this.autoButton.getData('bg') as Phaser.GameObjects.Rectangle
+    autoBg.on('pointerover', () => {
+      this.autoHovered = true
+      this.showForecastHint()
+    })
+    autoBg.on('pointerout', () => {
+      this.autoHovered = false
+      this.showHint()
+    })
     // Under the result screen, whose shade keeps clicks off the portraits once the battle is over.
     // A copy: the dead leave the party as the battle ends, and stay in the column, faded, under the result screen.
     this.column = new PartyColumn(this, [...party], (index) => this.onPortrait(index))
@@ -520,6 +540,7 @@ export class BattleScene extends Phaser.Scene {
       // Leaving mid-battle (e.g. "New" from the pause menu) still yields a complete log.
       this.engine.abandon()
       this.dumpLog()
+      this.dropForecast()
     })
 
     this.input.keyboard?.on('keydown-I', () => this.openPanel('inventory'))
@@ -649,6 +670,8 @@ export class BattleScene extends Phaser.Scene {
         auto: buttonProbe(this.autoButton, enabled(this.autoButton)),
         result: buttonProbe(this.menuButton),
       },
+      forecast: this.shownForecast,
+      autoLabel: (this.autoButton.getData('text') as Phaser.GameObjects.Text).text,
       aiming: this.targeting === 'attack' ? null : this.targeting,
       skillMenu:
         this.skillMenu?.rows.map(({ row, bg }) => {
@@ -1305,7 +1328,53 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** Shows the hint of the unit's turn, or the warning for the foe under the pointer. */
+  /**
+   * Works the auto-resolve estimate in a slice of at most FORECAST_SLICE_MS a
+   * frame while the player has control. Phaser calls no update on a paused
+   * scene, so nothing is worked under an overlay.
+   */
+  update(): void {
+    if (!this.playerControl || !this.forecaster || this.shownForecast) return
+    const done = workFor(this.forecaster, FORECAST_SLICE_MS)
+    if (!done) return
+    this.shownForecast = done
+    this.forecaster = null
+    this.setButtonLabel(this.autoButton, forecastLabel(done, true))
+    if (this.autoHovered) this.showForecastHint()
+  }
+
+  /**
+   * Starts an estimate for the battle as it stands, unless the one in hand is
+   * already for it: control is also given back on selecting a hero or aiming,
+   * which move nothing, and the log grows with every action. The estimate is
+   * played from a snapshot of the engine on its own seeds, never the engine itself.
+   */
+  private startForecast(): void {
+    const base = battleForecastBase(this.engine.getLog())
+    if (base === this.forecastBase) return
+    this.forecaster = new Forecaster({ snapshot: this.engine.snapshot() }, base)
+    this.forecastBase = base
+    this.shownForecast = null
+    this.setButtonLabel(this.autoButton, forecastLabel(null, true))
+  }
+
+  /** Throws the estimate away: the battle it was for no longer stands, or control has gone. */
+  private dropForecast(): void {
+    this.forecaster = null
+    this.forecastBase = null
+    this.shownForecast = null
+  }
+
+  /** The whole estimate in the hint, in its normal colour, while the pointer is over Auto. */
+  private showForecastHint(): void {
+    this.hintText.setText(forecastHint(this.shownForecast)).setColor('#9e9e9e')
+  }
+
   private showHint(): void {
+    if (this.autoHovered && this.playerControl) {
+      this.showForecastHint()
+      return
+    }
     this.hintText.setText(this.hoverHint ?? this.baseHint).setColor(this.hoverHint ? '#ffb74d' : '#9e9e9e')
   }
 
@@ -2059,6 +2128,11 @@ export class BattleScene extends Phaser.Scene {
     this.setButtonLabel(this.castButton, aiming ? 'Cancel' : this.skillsLabel())
     this.setButtonEnabled(this.endTurnButton, enabled)
     this.setButtonEnabled(this.autoButton, enabled)
+    if (enabled) this.startForecast()
+    else {
+      this.dropForecast()
+      this.setButtonLabel(this.autoButton, forecastLabel(null, true))
+    }
     this.refreshHighlights()
     this.updateRoundText()
     this.column.refresh(this.activeIndex())

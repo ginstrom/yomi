@@ -161,7 +161,7 @@ export function forecastHint(forecast: Forecast | null): string
 | 02 | [The estimate's domain module](02-forecast-module.md) | `forecast.ts` (C2) with tests (A10, A11, words) | 01 | opus | done (see git log: "Auto-resolve step 02") |
 | 03 | [Auto-resolve on the battle screen](03-battle-auto-resolve.md) | Auto button, `autoResolve`, `auto` scene data and meta, result line, drag-on hand-back (C3); in-browser A2 | 01 | opus | done (see git log: "Auto-resolve step 03") |
 | 04 | [Auto-resolve on the world map](04-world-auto-resolve.md) | Footer button (C5); in-browser A1, A6, A3 | 03 | sonnet | done (see git log: "Auto-resolve step 04") |
-| 05 | [The estimate in battle](05-battle-estimate.md) | Sliced `Forecaster` in `BattleScene`, label, hover hint, probe (C4); in-browser A9 (battle) | 02, 03 | opus | pending |
+| 05 | [The estimate in battle](05-battle-estimate.md) | Sliced `Forecaster` in `BattleScene`, label, hover hint, probe (C4); in-browser A9 (battle) | 02, 03 | opus | done (see git log: "Auto-resolve step 05") |
 | 06 | [The estimate on the world map](06-world-estimate.md) | Sliced `Forecaster` in `WorldScene`, keyed restart, label, hover hint, probe (C4); in-browser A9 (world), A10 (seed) | 02, 04 | sonnet | pending |
 | 07 | [Manual, screenshots and records](07-manual-and-docs.md) | Manual chapters 3 and 5, screenshots retaken (waiting on the estimate), long-campaign open question answered, docs checked (A8) | 05, 06 | sonnet | pending |
 

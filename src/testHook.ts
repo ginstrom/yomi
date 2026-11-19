@@ -5,6 +5,7 @@ import type { PortraitId } from './character/portraits.ts'
 import type { SkillId } from './character/skills.ts'
 import type { SpellId } from './combat/spells.ts'
 import type { BattleEvent, BattleState, UnitId } from './engine/battleEngine.ts'
+import type { Forecast } from './game/forecast.ts'
 import type { FacilityId } from './game/encampment.ts'
 import type { WorldState } from './game/worldMap.ts'
 import type { Hex } from './grid/hex.ts'
@@ -373,6 +374,10 @@ export interface BattleProbe {
   scale: number
   /** `cast` is the Skills button, shown only for a unit with a spell or an ability; `auto` resolves the rest of the battle (enabled with End Turn); `result` is the one button of the victory or defeat screen. */
   buttons: { attack: ButtonProbe; cast: ButtonProbe; endTurn: ButtonProbe; auto: ButtonProbe; result: ButtonProbe }
+  /** The finished auto-resolve estimate for the battle as it stands; null while it is worked out, and whenever the player has no control. */
+  forecast: Forecast | null
+  /** The Auto button's label: "Auto (…)" until the estimate is ready, then its win chance ("Auto (90%)"). */
+  autoLabel: string
   /** The skill (a spell or an ability) the next board click picks a target for, after the Skills button. */
   aiming: Skill | null
   /** The Skills button's list, a row a spell or ability (`skillMenuRows`) with its centre, while it is open; null when shut. Each unit's statuses are in `state`. */

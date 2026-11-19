@@ -3,6 +3,7 @@ import { perkCost, type PerkId } from '../src/character/perks.ts'
 import { xpToNextLevel } from '../src/character/progression.ts'
 import { hexDistance, offsetToHex } from '../src/grid/hex.ts'
 import { itemById } from '../src/inventory/inventory.ts'
+import { FORECAST_SAMPLES, forecastHint, forecastLabel } from '../src/game/forecast.ts'
 import { autoResolvedLine } from '../src/scenes/battleSetup.ts'
 import { GEAR_SPRITES } from '../src/scenes/unitLook.ts'
 import type { BattleProbe } from '../src/testHook.ts'
@@ -618,6 +619,46 @@ describe('auto-resolve on the battle screen', () => {
     expect(enemy.buttons.auto).toMatchObject({ visible: true, enabled: false })
     const back = await game.waitFor('Battle', (b) => b.playerControl && b.state.round === 2)
     expect(back.buttons.auto.enabled).toBe(true)
+  })
+
+  it('labels Auto with its estimate, keeps it while a hero is selected, and works it out again after each action (A9)', async () => {
+    const game = await games.open()
+    await game.enterBattle()
+    const ready = await game.waitFor('Battle', (b) => b.forecast !== null)
+    expect(ready.forecast!.samples).toBe(FORECAST_SAMPLES)
+    expect(ready.autoLabel).toMatch(/^Auto \((>95%|<5%|\d+%)\)$/)
+    expect(ready.autoLabel).toBe(forecastLabel(ready.forecast, true))
+
+    // Hovering Auto puts the whole estimate in the hint; moving off brings the turn's hint back.
+    await game.hover(ready.buttons.auto)
+    const hovered = await game.settled('Battle', (b) => b.hint.startsWith('Estimate from'))
+    expect(hovered.hint).toBe(forecastHint(ready.forecast))
+    expect(hovered.hint).toMatch(/^Estimate from 40 trial battles.*Your own play may do better\.$/)
+    await game.hover(battleHexOnScreen(ready, hero(ready).position))
+    expect((await game.settled('Battle', (b) => !b.hint.startsWith('Estimate from'))).hint).toContain('Click a foe to attack')
+
+    // Selecting another hero is no action: the estimate in hand stays.
+    await game.click(ready.party[1])
+    const other = await game.waitFor('Battle', (b) => b.selected === 'hero_2')
+    expect(other.forecast).toEqual(ready.forecast)
+
+    await game.click(other.party[0])
+    const back = await game.waitFor('Battle', (b) => b.selected === 'hero_1')
+    expect(back.forecast).toEqual(ready.forecast)
+
+    // An action drops it, and it is worked out again once control is back.
+    await game.click(battleHexOnScreen(back, offsetToHex(5, 4)))
+    const moved = await game.awaitTurn()
+    expect(moved.log.length).toBeGreaterThan(ready.log.length)
+    expect((await game.waitFor('Battle', (b) => b.forecast !== null)).autoLabel).toMatch(/^Auto \((>95%|<5%|\d+%)\)$/)
+
+    // While the enemy plays there is none.
+    await game.click(moved.buttons.endTurn)
+    const enemy = await game.waitFor('Battle', (b) => !b.playerControl)
+    expect(enemy.forecast).toBeNull()
+    expect(enemy.autoLabel).toBe('Auto (…)')
+    await game.waitFor('Battle', (b) => b.playerControl && b.state.round === 2)
+    await game.waitFor('Battle', (b) => b.forecast !== null)
   })
 
   it('resolves a battle taken up from a save', async () => {

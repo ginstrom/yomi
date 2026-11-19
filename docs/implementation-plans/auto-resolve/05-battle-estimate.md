@@ -152,3 +152,14 @@ This step does the battle's half of C4; step 06 does the world's.
 - [ ] One commit on `main`; the index's row 05 updated with status and hash.
 
 ## 7. Execution record
+
+**2026-11-20, engineer.** Done.
+
+- **Red:** the new in-browser test "labels Auto with its estimate, keeps it while a hero is selected, and works it out again after each action (A9)" (`e2e/battle.test.ts`, `describe('auto-resolve on the battle screen')`) failed on the missing `forecast` (`TypeError: Cannot read properties of undefined (reading 'samples')`).
+- **Green:** `BattleScene` gains `forecaster`, `forecastBase`, `shownForecast` and `autoHovered` (reset in `create`, dropped on `SHUTDOWN`); `setPlayerControl(true)` calls `startForecast()` (a new `Forecaster` on `engine.snapshot()` only when `battleForecastBase(log)` changed), `setPlayerControl(false)` drops it and sets the label back to "Auto (…)"; `update()` runs `workFor(…, FORECAST_SLICE_MS)` while `playerControl` and unfinished, then sets the label and, if hovered, the hint. Auto's own `pointerover`/`pointerout` show `forecastHint` in `#9e9e9e` and restore with `showHint()`; `showHint()` keeps the estimate in the hint while Auto is hovered, so a redraw of the turn's hint does not overwrite it. `BattleProbe.forecast` and `autoLabel` added and documented.
+- Every `engine.step` in the scene (`commitGearChange`'s equip, `goFor`, `playerAct`, the enemy's action) and `playOut` in `autoResolve` follow `setPlayerControl(false)`, so no path changes the engine under a live estimate.
+- The test covers: label `forecastLabel(f, true)` matching `/^Auto \((>95%|<5%|\d+%)\)$/`, 40 samples; hover hint equals `forecastHint(f)` and the turn's hint returns off it; selecting hero 2 and back by portrait keeps the same estimate (decision 5); a move restarts it to a fresh one; during the enemy's turn `forecast` is null and the label "Auto (…)"; it returns in round 2.
+- **Verification:** `npx vitest run src/game/forecast.test.ts` 23 passed; `npm test` 95 files, 2310 tests passed (guard green, unedited); `npm run test:browser -- -t "labels Auto"` passed; full `npm run test:browser` 12 files, 152 tests passed (325 s); `npm run build` passed.
+- **Responsiveness:** not checked by hand in a browser. Headless timing of one `Forecaster` per encounter at threat 7 (ready-made party, Node): 1300–3550 steps and 0.8–2.9 s of work an estimate, mean step about 0.5 ms, but 1–6 steps an estimate exceed 10 ms (worst 48 ms), so a slice can run that much over its 10 ms budget now and then. `workFor` checks the clock between steps and cannot split one; not a defect of this step, but a rare frame hitch is possible.
+- **Deviations:** none. `src/scenes/CLAUDE.md`'s "Seeds" line gained the estimate's sentence; `docs/reference/scenes.md`'s "Auto-resolve" section gained a paragraph on the estimate.
+- **For step 06:** `testHook.ts` now imports `type Forecast` from `./game/forecast.ts`; reuse it for `WorldProbe`.
