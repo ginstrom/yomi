@@ -103,12 +103,14 @@ describe('the manual’s screenshots', () => {
     await game.waitForScenes(['World'])
 
     const near = await game.travelTo(RAIDERS.position)
+    await game.waitFor('World', (w) => w.forecast !== null)
     await game.hover({ x: 0, y: 0 })
     await shot(game, 'world-confront')
 
     await game.click(near.buttons.attack)
     await game.waitForScenes(['Battle'])
     const battle = await game.waitFor('Battle', (b) => b.playerControl)
+    await game.waitFor('Battle', (b) => b.forecast !== null)
     await game.hover({ x: 0, y: 0 })
     await shot(game, 'battle-start')
 
@@ -116,6 +118,7 @@ describe('the manual’s screenshots', () => {
     const foes = battle.state.units.filter((u) => u.side === 'enemy')
     const nearest = foes.reduce((a, b) => (hexDistance(hero.position, b.position) < hexDistance(hero.position, a.position) ? b : a))
     await game.hover(battleHexOnScreen(battle, offsetToHex(5, 4)))
+    await game.waitFor('Battle', (b) => b.forecast !== null)
     await shot(game, 'battle-move')
     // The archer, who can walk into range of a foe and still shoot it this turn: the path and the crossed swords.
     await game.click(battle.party[1])
@@ -126,6 +129,7 @@ describe('the manual’s screenshots', () => {
       return beyond > 0 && beyond <= archer.ap - archer.attackApCost
     }
     await game.hover(battleHexOnScreen(battle, (foes.find(walkable) ?? nearest).position))
+    await game.waitFor('Battle', (b) => b.forecast !== null)
     await shot(game, 'battle-attack')
 
     // The mage steps two hexes forward, to bring a foe within Magic Arrow's reach.
@@ -136,11 +140,13 @@ describe('the manual’s screenshots', () => {
     const stepped = await game.waitFor('Battle', (b) => b.playerControl && b.state.units.find((u) => u.id === 'hero_3')!.ap === 6)
     await game.press('m')
     const menu = await game.waitFor('Battle', (b) => b.skillMenu !== null)
+    await game.waitFor('Battle', (b) => b.forecast !== null)
     await shot(game, 'battle-spell-menu')
     await game.click(menu.skillMenu!.find((row) => row.id === 'magic_arrow')!)
     await game.waitFor('Battle', (b) => b.aiming?.id === 'magic_arrow')
     const target = stepped.state.units.filter((u) => u.side === 'enemy').find((u) => hexDistance(stepped.state.units.find((m) => m.id === 'hero_3')!.position, u.position) <= 5)!
     await game.hover(battleHexOnScreen(battle, target.position))
+    await game.waitFor('Battle', (b) => b.forecast !== null)
     await shot(game, 'battle-targeting')
     await game.press('Escape')
     await game.waitFor('Battle', (b) => b.aiming === null)
@@ -172,7 +178,7 @@ describe('the manual’s screenshots', () => {
     }
     await game.waitForScenes(['Battle'])
     await game.press('Escape')
-    await game.waitFor('Battle', (b) => b.playerControl)
+    await game.waitFor('Battle', (b) => b.playerControl && b.forecast !== null)
     await game.hover({ x: 0, y: 0 })
     await shot(game, 'battle-bandits')
   })
@@ -188,7 +194,7 @@ describe('the manual’s screenshots', () => {
     }
     await game.waitForScenes(['Battle'])
     await game.press('Escape')
-    const battle = await game.waitFor('Battle', (b) => b.playerControl)
+    const battle = await game.waitFor('Battle', (b) => b.playerControl && b.forecast !== null)
     const salamander = battle.state.units.find((u) => u.id === 'salamander')!
     await game.hover(battleHexOnScreen(battle, salamander.position))
     await game.waitFor('Battle', (b) => b.foeInfo.length > 0)

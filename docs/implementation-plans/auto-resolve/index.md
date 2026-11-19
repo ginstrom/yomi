@@ -163,7 +163,7 @@ export function forecastHint(forecast: Forecast | null): string
 | 04 | [Auto-resolve on the world map](04-world-auto-resolve.md) | Footer button (C5); in-browser A1, A6, A3 | 03 | sonnet | done (see git log: "Auto-resolve step 04") |
 | 05 | [The estimate in battle](05-battle-estimate.md) | Sliced `Forecaster` in `BattleScene`, label, hover hint, probe (C4); in-browser A9 (battle) | 02, 03 | opus | done (see git log: "Auto-resolve step 05") |
 | 06 | [The estimate on the world map](06-world-estimate.md) | Sliced `Forecaster` in `WorldScene`, keyed restart, label, hover hint, probe (C4); in-browser A9 (world), A10 (seed) | 02, 04 | sonnet | done (see git log: "Auto-resolve step 06") |
-| 07 | [Manual, screenshots and records](07-manual-and-docs.md) | Manual chapters 3 and 5, screenshots retaken (waiting on the estimate), long-campaign open question answered, docs checked (A8) | 05, 06 | sonnet | pending |
+| 07 | [Manual, screenshots and records](07-manual-and-docs.md) | Manual chapters 3 and 5, screenshots retaken (waiting on the estimate), long-campaign open question answered, docs checked (A8) | 05, 06 | sonnet | done (see the commit "Auto-resolve step 07") |
 
 **Tiers.** "opus" means leave the model unset (the session's); "sonnet" means `model: "sonnet"`. Step 02 decides determinism and the estimate's independence from the real battle; 03 reworks the battle's control flow (playback bypass, sting, hand-back); 05 ties the estimate to that flow. 01 is an extraction the guard proves; 04 and 06 follow 03's and 05's patterns; 07 is docs and screenshots, reviewed for truth.
 

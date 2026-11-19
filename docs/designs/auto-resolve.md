@@ -8,7 +8,7 @@
 
 **Outcome.** Any battle can be auto-resolved, either before it starts (from the world map, beside Attack) or at any point during the player's turn (from the battle screen). The engine plays the battle to its end with the AI's policy on both sides, at once, as the simulator does, and the battle's result screen shows what happened. Everything after a battle (experience, deaths, loot, runes, the location cleared, the blight, the save) runs through the same code as for a played battle. Before choosing, the player sees an **estimate** beside the button: the chance the AI wins the battle for them and the chance a hero dies, from 40 sample battles played out headless on seeds of their own (section 4.6).
 
-**Status: approved by the user on condition of the estimate, which this revision adds; ready for planning.** The user's answers (2026-11-20): resolve at once, no playback (8.1); no confirmation (8.2); include a predicted outcome in this feature (8.3). New questions in section 8 have recommended defaults and do not block.
+**Status: implemented** (plan: `docs/implementation-plans/auto-resolve/`). The design was approved by the user on condition of the estimate. The user's answers (2026-11-20): resolve at once, no playback (8.1); no confirmation (8.2); include a predicted outcome in this feature (8.3). New questions in section 8 have recommended defaults and do not block.
 
 ## 2. Requirements and scope
 

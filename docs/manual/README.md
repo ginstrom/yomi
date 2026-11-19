@@ -166,9 +166,10 @@ Black hexes have never been seen. The party sees 5 hexes around it, the encampme
 
 ![Confronting monsters](images/world-confront.png)
 
-When you walk onto a monster lair, the footer offers three actions:
+When you walk onto a monster lair, the footer offers four actions:
 
 - **Attack** starts a battle.
+- **Auto-resolve** fights the battle for you at once, your heroes played by the same rules as the monsters. The result is final, and heroes who fall are dead, as in any battle. The button carries the AI's chance of winning, as in "Auto-resolve (win 90%)"; see [Auto-resolve](#auto-resolve) in the Battle chapter.
 - **Scout** and **Wait** each pass a turn without fighting. Neither does more yet.
 
 You can also click a hex to walk away.
@@ -269,6 +270,14 @@ Click a hero, or their portrait, to select them. The selected hero is marked in 
 ![Hovering a hex shows the path](images/battle-move.png)
 
 Hover over a hex to see the path, then click to move there. Each hex costs **1 AP**. A hero usually has **8 AP** a turn (5 plus half their Agility). Facing is automatic: a unit turns as it moves, attacks and casts.
+
+### Auto-resolve
+
+The fourth button on the battle screen, after Attack, Skills and End Turn, is **Auto**. It is enabled whenever End Turn is, and it has no key. Press it and the battle is finished at once, from wherever it stands, even in the middle of your turn: your heroes are played by the same rules as the monsters, the board shows the battle's end and the log lists every action. The result screen is the one a played battle gives, with "Auto-resolved in N rounds." after its first line. You can also auto-resolve from the world map, with the **Auto-resolve** button beside Attack, before the battle starts.
+
+If the battle has not ended 50 rounds after you press, the log says "The battle drags on. It is yours to finish." and the battle is yours again.
+
+**The estimate.** The figure on the button, as in "Auto (90%)", is the chance the AI wins the battle for you, worked out from 40 trial battles played in the background with the AI on your side; "(…)" means it is still working. Figures are rounded to the nearest 5% and never claim certainty: the ends read "over 95%" and "under 5%". Hover the button to read more in the hint line: the chance a hero dies, and how many trials dragged on past 50 rounds, if any. It is the AI's odds, not a promise, and a careful player usually does better. In battle the estimate is worked out again after each of your actions; on the world map, whenever something changes (a heal, new gear, another party, a day passing).
 
 ### Attacking
 
@@ -391,6 +400,8 @@ While aiming, the pointer is crossed swords over a valid target of an attacking 
 ![Victory](images/battle-victory.png)
 
 You win when every foe has fallen. Every surviving hero earns the full experience reward. The lair disappears from the map, the land around it is cleansed, and its loot goes into the baggage. A lair may also yield a **rune**, which goes into the party's rune pouch: the victory screen names it, as in "Found: Lesser Ember Rune". Lairs of threat 1 to 3 give a Lesser rune half the time; from threat 4 every win gives one, sometimes of the second rank. The Salamander Pool favours Ember runes and the Spider Nest Venom.
+
+An auto-resolved battle's rewards and losses are the same as a played one's: experience, loot, runes, the cleared lair and any heroes who fall. No confirmation is asked.
 
 **Death is permanent.** A hero who fell in a battle you won is gone for good. Their gear goes to the baggage, and the party fights on smaller until the guild hall fills the place. If **every** hero in the battle falls, that party is wiped out: its heroes are dead, and everything they wore and carried, with the party's baggage, lies at the lair as its loot, for whoever beats it. The game goes on while you have a hero anywhere, in another party or in the guild hall's reserves; if the last party falls with reserves left, they form a new party at the encampment at once. Only when no hero is left is the game over and its save deleted.
 

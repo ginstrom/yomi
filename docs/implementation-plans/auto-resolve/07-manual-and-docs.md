@@ -86,3 +86,8 @@ The player's manual describes auto-resolve and its estimate, its screenshots sho
 - [ ] Commit(s) on `main`; the index's row 07 updated with status and hashes.
 
 ## 7. Execution record
+
+- **Built:** manual chapter 3 bullet (four actions), a `### Auto-resolve` section in chapter 5 (the button, mid-turn, the 50-round hand-back, the estimate), a line in "Victory and defeat"; "Battle keys" unchanged. Design status set to implemented; the long campaign's open-question row marked answered, with a pointer in stage 6's notes. Step 06's record corrected (the forecaster survives a walk's start; `refresh()` does not run there; the `walking` guard in `update()` is redundant). `src/scenes/CLAUDE.md` gained an Auto-resolve line. The sweep found the root map, `src/engine/CLAUDE.md`, `src/game/CLAUDE.md`, `docs/reference/scenes.md` and `docs/reference/simulator.md` already current; `e2e/CLAUDE.md` needed nothing.
+- **Screenshots:** `e2e/manual.shots.ts` waits for `forecast !== null` before `world-confront` and every battle shot taken under player control. Retaken and checked by eye: `world-confront` ("Auto-resolve (win >95%)" fits in the footer row), `battle-start`, `battle-move`, `battle-attack`, `battle-spell-menu`, `battle-targeting`, `battle-bandits`, `battle-salamander` (four buttons fit, "Auto (>95%)"). The run also re-encoded 14 unrelated PNGs by a few bytes (nondeterminism); they were reverted and not committed.
+- **Verification:** `npm run manual:screenshots` 7 passed; `npm test` 95 files, 2310 tests passed (guard unedited); `npm run test:browser` 12 files, 156 tests passed; `npm run build` passed; `SAVE_VERSION` and `LOG_SCHEMA_VERSION` both 26.
+
