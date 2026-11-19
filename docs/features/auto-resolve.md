@@ -1,7 +1,7 @@
 # Feature: auto-resolve for battles
 
 **Slug:** auto-resolve
-**Phase:** 4, implementation (base c1dc3f2)
+**Phase:** 5, verification (c1dc3f2..42e7f18)
 
 ## Request (user's words)
 
@@ -36,14 +36,10 @@ Medium: design, plan, implement, verify. No architecture brief: the engine alrea
 
 None.
 
-## Notes carried forward
-
-- Step 07: correct step 06's execution record on the walk: the forecaster survives a walk's start (`refreshWalking` hides the buttons without `refresh()`); it is not worked because `update()` stops on the hidden button, so the `walking` guard is redundant (step 06 review).
-
 ## Tiers
 
 - Designer: opus; planner: opus
-- Engineer / reviewer per step (planner's suggestions taken): 01 sonnet/sonnet, 02 opus/opus, 03 opus/opus, 04 sonnet/sonnet, 05 opus/opus, 06 sonnet/sonnet, 07 sonnet/sonnet; overall review opus
+- Engineer / reviewer per step (planner's suggestions taken): 01 sonnet/sonnet, 02 opus/opus, 03 opus/opus, 04 sonnet/sonnet, 05 opus/opus, 06 sonnet/sonnet, 07 sonnet/sonnet; overall review opus; QA sonnet; simulated user sonnet
 - Steps run one at a time in one tree: 01, 02, 03, 04, 05, 06, 07
 
 ## Verification
@@ -54,3 +50,4 @@ None.
 - 04 (a9d51d6, sonnet/sonnet): clean, 1 round
 - 05 (70c704b, opus/opus): clean, 1 round; occasional single engine steps up to ~48 ms can overrun a 10 ms slice (accepted by orchestrator; revisit if felt in play); two nits carried to step 06
 - 06 (aca1957, 10e63c9, 29f8e88, sonnet/sonnet): clean after 2 rounds; restart test made to bite (`forecastRuns`), checked by mutation
+- 07 (42e7f18, sonnet): no step review; covered by the overall review
