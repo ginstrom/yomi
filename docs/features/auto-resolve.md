@@ -46,3 +46,4 @@ None.
 
 - 01 (ad71f69, sonnet/sonnet): clean, 1 round
 - 02 (64b794a + 95ceef8, opus/opus): clean, 1 round; 3 nits fixed
+- 03 (f67389b + 45c80b8, opus/opus): clean, 1 round; fixed the 51-round off-by-one (now `autoLastRound`, also in forecast) and a test assumption
