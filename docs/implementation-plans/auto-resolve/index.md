@@ -209,3 +209,5 @@ None blocks a step. Decisions 1–11 above are the planner's; decision 8 drops t
 ## For implementers
 
 When you start or finish a step, update its status and commits in the table above. Record evidence (commands and output, the guard's result), deviations and blockers in your task file's "Execution record". Keep this index short; every implementer reads it.
+
+**Verification fixes:** after the overall review, QA and a simulated user, one commit wrapped the world hint (both hints moved to sit inside the header), corrected the manual's button wording and stale footer comments, added an in-browser test of the 50-round hand-back and 840x560 hint checks, and retook the header screenshots.

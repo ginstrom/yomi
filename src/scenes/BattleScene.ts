@@ -442,10 +442,11 @@ export class BattleScene extends Phaser.Scene {
       .text(20, 16, '', { fontFamily: 'monospace', fontSize: '20px', color: '#ffffff' })
       .setScrollFactor(0)
     this.hintText = this.add
-      .text(20, 44, '', {
+      .text(20, 38, '', {
         fontFamily: 'monospace',
         fontSize: '13px',
         color: '#9e9e9e',
+        lineSpacing: -2,
       })
       .setScrollFactor(0)
 
@@ -660,6 +661,8 @@ export class BattleScene extends Phaser.Scene {
       log: this.engine.getLog(),
       playerControl: this.playerControl,
       hint: this.hintText.text,
+      hintBounds: this.hintText.getBounds(),
+      logText: this.logText.text,
       selected: this.selected,
       origin: { x: this.floorLayer.x, y: this.floorLayer.y },
       scale: this.floorLayer.scale,

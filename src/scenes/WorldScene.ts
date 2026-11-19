@@ -208,7 +208,7 @@ export class WorldScene extends Phaser.Scene {
   private messageText!: Phaser.GameObjects.Text
   /** The prompt to spend points the message line last showed (`advanceMessage`), so that an overlay closing may bring it up to date. */
   private advancePrompt = ''
-  /** Scout, Wait and Attack, shown while the party stands among monsters. */
+  /** Scout, Wait, Attack and Auto-resolve, shown while the party stands among monsters. */
   private buttons: Phaser.GameObjects.Container[] = []
   /** Camp, Camp until healed and Craft, shown wherever else the party stands still, and Build Watchtower where one may stand. */
   private campButtons: Phaser.GameObjects.Container[] = []
@@ -310,7 +310,7 @@ export class WorldScene extends Phaser.Scene {
     this.statusText = this.add
       .text(0, 16, '', { fontFamily: 'monospace', fontSize: '13px', color: '#ce93d8', align: 'right' })
       .setOrigin(1, 0)
-    this.hintText = this.add.text(20, 44, '', { fontFamily: 'monospace', fontSize: '13px', color: '#9e9e9e' })
+    this.hintText = this.add.text(20, 38, '', { fontFamily: 'monospace', fontSize: '13px', color: '#9e9e9e', lineSpacing: -2 })
     this.messageText = this.add
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: '15px', color: '#cfd8dc' })
       .setOrigin(0.5)
@@ -541,6 +541,7 @@ export class WorldScene extends Phaser.Scene {
       view: this.view,
       message: this.messageText.text,
       hint: this.hintText.text,
+      hintBounds: this.hintText.getBounds(),
       forecast: this.forecastResult,
       forecastRuns: this.forecastRuns,
       autoLabel: (this.buttons[3].getData('text') as Phaser.GameObjects.Text).text,
@@ -862,6 +863,8 @@ export class WorldScene extends Phaser.Scene {
     const messageY = timeY - BUTTON_H / 2 - 26
     this.messageText.setPosition(centreX, messageY)
     this.statusText.setPosition(width - 20, 16)
+    // The estimate's hint runs to two lines at the least window width; wrapped, it stays within the header.
+    this.hintText.setWordWrapWidth(width - 40)
     this.infoBox.setPosition(width - PARTY_LIST_W - INFO_MARGIN - INFO_W, HEADER_BOTTOM + INFO_MARGIN)
     this.infoText.setPosition(this.infoBox.x + INFO_PAD, this.infoBox.y + INFO_PAD)
     this.outcomeShade.setSize(width, height)
@@ -1320,7 +1323,7 @@ export class WorldScene extends Phaser.Scene {
   /**
    * Whether no day can pass now (`advanceRefusal`): if so, the message says
    * why, and the party whose monsters block the days is selected and centred,
-   * its footer offering Scout, Wait and Attack.
+   * its footer offering Scout, Wait, Attack and Auto-resolve.
    */
   private refused(refusal = advanceRefusal(this.gameState), blocking = blockingParty(this.gameState)): boolean {
     if (refusal === null) return false

@@ -162,6 +162,8 @@ export interface WorldProbe {
   message: string
   /** The header's hint under the turn: what the selected party may do, or "Meet <name>: …" while the pointer is over another party's hex. */
   hint: string
+  /** The hint's bounds on screen. */
+  hintBounds: Rect
   /** The finished auto-resolve estimate for the battle Attack would start; null while it is worked out, and whenever no Auto-resolve button shows. */
   forecast: Forecast | null
   /** How many estimates the map has started since it opened: a redraw that changes no battle leaves it, a new battle (a day, another party) adds one. */
@@ -376,6 +378,8 @@ export interface BattleProbe {
   playerControl: boolean
   /** The header's hint line, with the warning for a foe the pointer is over that no click can strike. */
   hint: string
+  /** The hint's bounds on screen. */
+  hintBounds: Rect
   selected: UnitId | null
   /** Where the board's top-left corner is on screen and how far it is scaled; with BATTLE_LAYOUT, that places every hex. */
   origin: Point
@@ -394,6 +398,8 @@ export interface BattleProbe {
   marks: Record<UnitId, string>
   /** Each unit's figure opacity: 1 standing, dimmed once it has fallen, 1 again once revived. */
   figureAlpha: Record<UnitId, number>
+  /** The log box's text as drawn (the lines in view). */
+  logText: string
   /** The lines of the victory or defeat screen; empty until the battle is over. */
   result: string[]
   /** The lines of the foe info panel shown beside the hovered foe now (`foeInfoLines`: its name, then its abilities and wards); empty when none shows. */

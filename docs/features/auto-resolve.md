@@ -34,7 +34,7 @@ Medium: design, plan, implement, verify. No architecture brief: the engine alrea
 
 ## Open questions
 
-None.
+- Should the result screen show what a battle cost (hit points lost, before level-up heals)? Simulated user's friction; applies to played battles too, so it changes the approved design. Blocks nothing; for the user.
 
 ## Tiers
 
@@ -51,3 +51,7 @@ None.
 - 05 (70c704b, opus/opus): clean, 1 round; occasional single engine steps up to ~48 ms can overrun a 10 ms slice (accepted by orchestrator; revisit if felt in play); two nits carried to step 06
 - 06 (aca1957, 10e63c9, 29f8e88, sonnet/sonnet): clean after 2 rounds; restart test made to bite (`forecastRuns`), checked by mutation
 - 07 (42e7f18, sonnet): no step review; covered by the overall review
+- Overall review (opus, at 42e7f18): clean; 4 non-blocking (manual wording, stale comments, no e2e of battle hand-back, step 07 boxes). Suite: npm test, build pass; 4 browser timeouts under load passed on rerun
+- QA (sonnet, at 42e7f18): pass; minor: world hint unwrapped at 840 wide, manual wording; estimate slower in headless (~3 s at threat 1), real hardware unverified. Evidence in .git/pr-review/main/evidence/
+- Simulated user (sonnet, hands-on, at 42e7f18): auto-resolve saves the time hoped for; estimate sorts fights. Friction: result screen omits cost; result text over sprites; 20→30% swing after 3 skill points (40-sample noise); second party not reached
+- Fixes: step 07 engineer (sonnet) on items 1–5 of the merged findings

@@ -4,6 +4,7 @@ import { hexDistance, offsetToHex, type Hex } from '../src/grid/hex.ts'
 import { WORLD_LAYOUT, boardHexCenter, boardPixelSize, type Point } from '../src/scenes/boardGeometry.ts'
 import { clampOrigin, mapOrigin, pannedOrigin } from '../src/scenes/mapScroll.ts'
 import type { WorldProbe } from '../src/testHook.ts'
+import { HEADER_BOTTOM } from '../src/scenes/partyPanel.ts'
 import { FIGURE_SPREAD } from '../src/scenes/partyList.ts'
 import { RAIDERS, useGames, worldHexOnScreen, type Game } from './driver.ts'
 
@@ -403,6 +404,20 @@ describe('the world map', () => {
       await game.waitFor('World', (w) => w.forecast !== null)
     })
 
+    it('wraps the estimate’s hint inside the header at the least window size', async () => {
+      const game = await games.open()
+      await game.resize(840, 560)
+      await game.newGame()
+      const among = await game.travelTo(RAIDERS.position)
+      await game.waitFor('World', (w) => w.forecast !== null)
+      await game.hover(among.buttons.autoResolve)
+      const hovered = await game.waitFor('World', (w) => w.hint.startsWith('Estimate from'))
+      const { x, y, width, height } = hovered.hintBounds
+      expect(x).toBeGreaterThanOrEqual(0)
+      expect(x + width).toBeLessThanOrEqual(840)
+      expect(y + height).toBeLessThanOrEqual(HEADER_BOTTOM)
+    })
+
     it('keeps the estimate while nothing changes and works it out again after a day (A9)', async () => {
       const game = await games.open()
       await game.newGame()
@@ -621,7 +636,7 @@ describe('the world map', () => {
       expect(among.buttons.nextDay.visible).toBe(false)
       expect(among.buttons.untilSomething.visible).toBe(false)
       expect(among.parties[0].order).toBe(`Before the Goblin Raiders`)
-      // Scouting answers the monsters, but the party still stands among them: Scout, Wait and Attack are all the footer offers.
+      // Scouting answers the monsters, but the party still stands among them: Scout, Wait, Attack and Auto-resolve are all the footer offers.
       await game.click(among.buttons.scout)
       const scouted = await game.waitFor('World', (w) => w.world.turn === among.world.turn + 1)
       expect(scouted.confronting).toBeNull()
@@ -869,7 +884,7 @@ describe('the world map', () => {
       expect([opened.buttons.scout.visible, opened.buttons.wait.visible, opened.buttons.attack.visible]).toEqual([true, true, true])
     })
 
-    it('refuses the days while another party stands before monsters, selecting it with Scout, Wait and Attack', async () => {
+    it('refuses the days while another party stands before monsters, selecting it with Scout, Wait, Attack and Auto-resolve', async () => {
       const game = await games.open()
       const world = await blockedCompany(game)
       expect(world.parties[1].confronting).toBe(true)

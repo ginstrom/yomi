@@ -78,16 +78,16 @@ The player's manual describes auto-resolve and its estimate, its screenshots sho
 
 ## 6. Completion criteria
 
-- [ ] Manual chapter 3 bullet, chapter 5 "Auto-resolve" section and "Victory and defeat" line written, matching the code's words; "Battle keys" unchanged.
-- [ ] `manual.shots.ts` waits for the estimate; screenshots retaken and checked by eye.
-- [ ] Long campaign open-questions row reads answered, linking the design.
-- [ ] CLAUDE.md files and `docs/reference/scenes.md`, `docs/reference/simulator.md` current; `claudeMd.test.ts` green.
-- [ ] `npm test`, `npm run test:browser`, `npm run build` pass.
-- [ ] Commit(s) on `main`; the index's row 07 updated with status and hashes.
+- [x] Manual chapter 3 bullet, chapter 5 "Auto-resolve" section and "Victory and defeat" line written, matching the code's words; "Battle keys" unchanged.
+- [x] `manual.shots.ts` waits for the estimate; screenshots retaken and checked by eye.
+- [x] Long campaign open-questions row reads answered, linking the design.
+- [x] CLAUDE.md files and `docs/reference/scenes.md`, `docs/reference/simulator.md` current; `claudeMd.test.ts` green.
+- [x] `npm test`, `npm run test:browser`, `npm run build` pass.
+- [x] Commit(s) on `main`; the index's row 07 updated with status and hashes.
 
 ## 7. Execution record
 
 - **Built:** manual chapter 3 bullet (four actions), a `### Auto-resolve` section in chapter 5 (the button, mid-turn, the 50-round hand-back, the estimate), a line in "Victory and defeat"; "Battle keys" unchanged. Design status set to implemented; the long campaign's open-question row marked answered, with a pointer in stage 6's notes. Step 06's record corrected (the forecaster survives a walk's start; `refresh()` does not run there; the `walking` guard in `update()` is redundant). `src/scenes/CLAUDE.md` gained an Auto-resolve line. The sweep found the root map, `src/engine/CLAUDE.md`, `src/game/CLAUDE.md`, `docs/reference/scenes.md` and `docs/reference/simulator.md` already current; `e2e/CLAUDE.md` needed nothing.
 - **Screenshots:** `e2e/manual.shots.ts` waits for `forecast !== null` before `world-confront` and every battle shot taken under player control. Retaken and checked by eye: `world-confront` ("Auto-resolve (win >95%)" fits in the footer row), `battle-start`, `battle-move`, `battle-attack`, `battle-spell-menu`, `battle-targeting`, `battle-bandits`, `battle-salamander` (four buttons fit, "Auto (>95%)"). The run also re-encoded 14 unrelated PNGs by a few bytes (nondeterminism); they were reverted and not committed.
 - **Verification:** `npm run manual:screenshots` 7 passed; `npm test` 95 files, 2310 tests passed (guard unedited); `npm run test:browser` 12 files, 156 tests passed; `npm run build` passed; `SAVE_VERSION` and `LOG_SCHEMA_VERSION` both 26.
-
+- **Verification fixes (overall review, QA, simulated user):** the world's hint now wraps at `width - 40` (reset in `layout()`), and both screens' hints sit at y 38 with line spacing -2 so two lines end inside the 64 px header (a `hintBounds` probe on each scene; in-browser checks at 840x560 on both screens). The manual says the button's ends read ">95%" and "<5%" and the hint's read "over"/"under". Stale "Scout, Wait and Attack" comments fixed. New in-browser test of the 50-round hand-back (a planted stalemate: toHit 0, no damage, no mana), run once against a removed `AUTO_DRAG_ON_LINE` push, where it failed; the world wrap check failed with the wrap removed. Header screenshots (`world-*`, `battle-*`) retaken for the 2 px move; other re-encoded PNGs not committed. A `logText` probe field was added to `BattleProbe`.

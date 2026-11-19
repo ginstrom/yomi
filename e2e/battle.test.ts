@@ -4,7 +4,8 @@ import { xpToNextLevel } from '../src/character/progression.ts'
 import { hexDistance, offsetToHex } from '../src/grid/hex.ts'
 import { itemById } from '../src/inventory/inventory.ts'
 import { FORECAST_SAMPLES, forecastHint, forecastLabel } from '../src/game/forecast.ts'
-import { autoResolvedLine } from '../src/scenes/battleSetup.ts'
+import { HEADER_BOTTOM } from '../src/scenes/partyPanel.ts'
+import { AUTO_DRAG_ON_LINE, autoResolvedLine } from '../src/scenes/battleSetup.ts'
 import { GEAR_SPRITES } from '../src/scenes/unitLook.ts'
 import type { BattleProbe } from '../src/testHook.ts'
 import { RAIDERS, battleHexOnScreen, useGames, type Game } from './driver.ts'
@@ -663,6 +664,50 @@ describe('auto-resolve on the battle screen', () => {
     expect(enemy.autoLabel).toBe('Auto (…)')
     await game.waitFor('Battle', (b) => b.playerControl && b.state.round === 2)
     await game.waitFor('Battle', (b) => b.forecast !== null)
+  })
+
+  it('wraps the estimate’s hint inside the header at the least window size', async () => {
+    const game = await games.open()
+    await game.resize(840, 560)
+    const start = await game.enterBattle()
+    await game.waitFor('Battle', (b) => b.forecast !== null)
+    await game.hover(start.buttons.auto)
+    const hovered = await game.waitFor('Battle', (b) => b.hint.startsWith('Estimate from'))
+    const { x, y, width, height } = hovered.hintBounds
+    expect(x).toBeGreaterThanOrEqual(0)
+    expect(x + width).toBeLessThanOrEqual(840)
+    expect(y + height).toBeLessThanOrEqual(HEADER_BOTTOM)
+  })
+
+  it('hands a battle that drags on past 50 rounds back to the player, who can play on', async () => {
+    const game = await games.open()
+    await game.enterBattle()
+    // A stalemate planted in the saved battle: no unit can hit or hurt, and none has mana to cast.
+    await game.page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      for (const unit of saved.battle.engine.units) {
+        unit.stats.toHit = 0
+        unit.stats.damage = { count: 0, sides: 1, bonus: 0 }
+        unit.mana = 0
+      }
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    })
+    const menu = await game.reload()
+    await game.click(menu.buttons.continue)
+    await game.waitForScenes(['Battle'])
+    const restored = await game.waitFor('Battle', (b) => b.playerControl)
+    await game.frames()
+    await game.click(restored.buttons.auto)
+    const back = await game.waitFor('Battle', (b) => b.playerControl && b.state.round >= restored.state.round + 50)
+    expect(back.state.phase).not.toBe('over')
+    expect(back.buttons.result.visible).toBe(false)
+    expect(back.logText).toContain(AUTO_DRAG_ON_LINE)
+    for (const button of [back.buttons.auto, back.buttons.endTurn]) expect(button).toMatchObject({ visible: true, enabled: true })
+
+    // The battle is still the player's to play: a turn passes.
+    await game.click(back.buttons.endTurn)
+    const next = await game.waitFor('Battle', (b) => b.playerControl && b.state.round > back.state.round)
+    expect(next.state.phase).not.toBe('over')
   })
 
   it('resolves a battle taken up from a save', async () => {
