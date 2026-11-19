@@ -38,8 +38,7 @@ None.
 
 ## Notes carried forward
 
-- Step 06: tighten `e2e/world.test.ts` "fits the monster row in the least window" to bound each button's right edge (with its width) clear of the party column and of each other, since the label widens there (step 04 review nit).
-- Step 06: in BattleScene.ts move `showHint()`'s orphaned doc comment back above it (it sits above `update()`); in e2e/battle.test.ts's A9 test assert `forecast` null and `autoLabel` "Auto (…)" right after the move click (step 05 review nits).
+- Step 07: correct step 06's execution record on the walk: the forecaster survives a walk's start (`refreshWalking` hides the buttons without `refresh()`); it is not worked because `update()` stops on the hidden button, so the `walking` guard is redundant (step 06 review).
 
 ## Tiers
 
@@ -54,3 +53,4 @@ None.
 - 03 (f67389b + 45c80b8, opus/opus): clean, 1 round; fixed the 51-round off-by-one (now `autoLastRound`, also in forecast) and a test assumption
 - 04 (a9d51d6, sonnet/sonnet): clean, 1 round
 - 05 (70c704b, opus/opus): clean, 1 round; occasional single engine steps up to ~48 ms can overrun a 10 ms slice (accepted by orchestrator; revisit if felt in play); two nits carried to step 06
+- 06 (aca1957, 10e63c9, 29f8e88, sonnet/sonnet): clean after 2 rounds; restart test made to bite (`forecastRuns`), checked by mutation
