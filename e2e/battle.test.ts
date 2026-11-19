@@ -631,7 +631,7 @@ describe('auto-resolve on the battle screen', () => {
     await game.click(restored.buttons.auto)
     const over = await game.waitFor('Battle', (b) => b.buttons.result.visible)
     expect(over.log.at(-1)?.type).toBe('battle_end')
-    expect(over.result[1]).toBe(autoResolvedLine(over.state.round))
+    expect(over.result[1]).toBe(autoResolvedLine(over.state.round - restored.state.round + 1))
   })
 })
 

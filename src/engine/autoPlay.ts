@@ -45,3 +45,8 @@ export function playOut(engine: BattleEngine, options: PlayOutOptions): PlayOut 
   for (let step = stepOnce(engine, options); step !== null; step = stepOnce(engine, options)) events.push(...step)
   return { events, over: engine.getState().phase === 'over' }
 }
+
+/** The `lastRound` that plays AUTO_ROUND_LIMIT rounds from `startRound`, it included. */
+export function autoLastRound(startRound: number): number {
+  return startRound + AUTO_ROUND_LIMIT - 1
+}

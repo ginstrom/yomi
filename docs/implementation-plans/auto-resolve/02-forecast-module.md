@@ -184,3 +184,5 @@ New files (proposed): `src/game/forecast.ts`, `src/game/forecast.test.ts`.
 - No deviation from C2. `forecastFigure` treats `share >= of` as ">95%" and `share <= 0` as "<5%" (equal to C2 for counts within 0..of).
 - For steps 05 and 06: `forecast.ts` is Phaser-free; `workFor`'s clock defaults to `performance.now()`. A finished `Forecaster.step()` returns a fresh copy of the tally each call.
 - **Review round 1** (three non-blocking findings, all fixed in "Auto-resolve step 02: review fixes"): the "another seed, same length" check now compares a log cut to the same length (asserted) instead of sitting in an `if`; "a log with no battle_start reads its seed as 0" now compares a one-event log without `battle_start` to one with seed 0 (and seed null), and a real seed to differ; `src/game/CLAUDE.md`'s "Two RNG streams" is now "RNG streams". `npm test`: 95 files, 2307 tests pass, tsc clean.
+
+**After step 03's review (2026-11-20).** A sample's `lastRound` is now `autoLastRound(firstRound)` (`firstRound + AUTO_ROUND_LIMIT - 1`), so a sample plays exactly 50 rounds before it counts as stalled, as C2 now says; see step 03's execution record.

@@ -3,7 +3,7 @@ import { mulberry32 } from '../combat/rng.ts'
 import { ENCOUNTERS } from '../game/encounters.ts'
 import { partyFighters, readyMadeParty } from '../game/party.ts'
 import { BattleEngine, type BattleEvent, type BattleSetup, type Side } from './battleEngine.ts'
-import { AUTO_POLICY, AUTO_ROUND_LIMIT, ENEMY_POLICY, playOut, playStep, type PlayOutOptions } from './autoPlay.ts'
+import { AUTO_POLICY, AUTO_ROUND_LIMIT, ENEMY_POLICY, autoLastRound, playOut, playStep, type PlayOutOptions } from './autoPlay.ts'
 import { POLICIES } from './policies.ts'
 
 const SEED = 7
@@ -113,6 +113,18 @@ describe('autoPlay', () => {
     expect(state.phase).not.toBe('over')
     expect(state.winner).toBeNull()
     expect(engine.getLog().some((e) => e.type === 'battle_end')).toBe(false)
+  })
+
+  it('plays exactly AUTO_ROUND_LIMIT rounds to autoLastRound, from the first round or a later one', () => {
+    // No side can fall in so few rounds, so the battle only stops at the limit.
+    const setup = raidSetup()
+    const endless: BattleSetup = { ...setup, units: setup.units.map((u) => ({ ...u, stats: { ...u.stats, maxHp: 1e9 }, hp: 1e9 })) }
+    const engine = newEngine(endless)
+    expect(playOut(engine, options(autoLastRound(1))).over).toBe(false)
+    expect(engine.getState().round - 1).toBe(AUTO_ROUND_LIMIT)
+    const from = engine.getState().round
+    expect(playOut(engine, options(autoLastRound(from))).over).toBe(false)
+    expect(engine.getState().round - from).toBe(AUTO_ROUND_LIMIT)
   })
 
   it('returns at once for a battle already over', () => {

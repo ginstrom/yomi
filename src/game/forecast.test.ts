@@ -41,7 +41,7 @@ function gameOptions(seed: number, lastRound: number): PlayOutOptions {
 /** A real battle, stepped `steps` engine steps with the game's policies; its options carry on from there. */
 function battleUnderWay(steps: number, seed = SEED): { engine: BattleEngine; options: PlayOutOptions } {
   const engine = new BattleEngine(setupOf(), { seed, meta: { source: 'test' } })
-  const options = gameOptions(seed, 1 + AUTO_ROUND_LIMIT)
+  const options = gameOptions(seed, AUTO_ROUND_LIMIT)
   for (let i = 0; i < steps; i++) expect(playStep(engine, options)).toBe(true)
   return { engine, options }
 }
@@ -54,7 +54,7 @@ function sampleByHand(start: ForecastStart, base: number, i: number): { won: boo
       ? new BattleEngine(start.setup, { seed: s, meta: { source: 'forecast' } })
       : BattleEngine.restore({ ...start.snapshot, rng: s })
   const firstRound = 'setup' in start ? 1 : start.snapshot.round
-  const { over } = playOut(engine, gameOptions(s, firstRound + AUTO_ROUND_LIMIT))
+  const { over } = playOut(engine, gameOptions(s, firstRound + AUTO_ROUND_LIMIT - 1))
   const state = engine.getState()
   return {
     won: state.winner === 'player',

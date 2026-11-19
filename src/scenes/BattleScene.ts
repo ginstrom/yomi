@@ -15,7 +15,7 @@ import {
   type UnitId,
   type UnitSnapshot,
 } from '../engine/battleEngine.ts'
-import { AUTO_POLICY, AUTO_ROUND_LIMIT, ENEMY_POLICY, playOut } from '../engine/autoPlay.ts'
+import { AUTO_POLICY, ENEMY_POLICY, autoLastRound, playOut } from '../engine/autoPlay.ts'
 import { POLICIES } from '../engine/policies.ts'
 import type { Expedition } from '../game/expedition.ts'
 import { ENCOUNTERS, heroId, xpReward, type EncounterId, type UnitKind } from '../game/encounters.ts'
@@ -600,7 +600,7 @@ export class BattleScene extends Phaser.Scene {
     const { events, over } = playOut(this.engine, {
       policies: { player: AUTO_POLICY, enemy: ENEMY_POLICY },
       rngs: { player: playerRng, enemy: this.enemyRng },
-      lastRound: startRound + AUTO_ROUND_LIMIT,
+      lastRound: autoLastRound(startRound),
     })
     const all = [...lead, ...events]
     const end = all.at(-1)?.type === 'battle_end' ? all.pop()! : null

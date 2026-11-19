@@ -1,5 +1,5 @@
 import { mulberry32 } from '../combat/rng.ts'
-import { AUTO_POLICY, AUTO_ROUND_LIMIT, ENEMY_POLICY, playStep, type PlayOutOptions } from '../engine/autoPlay.ts'
+import { AUTO_POLICY, AUTO_ROUND_LIMIT, ENEMY_POLICY, autoLastRound, playStep, type PlayOutOptions } from '../engine/autoPlay.ts'
 import { BattleEngine, type BattleEvent, type BattleSetup, type BattleSnapshot } from '../engine/battleEngine.ts'
 import { ENCOUNTERS } from './encounters.ts'
 import type { Expedition } from './expedition.ts'
@@ -119,7 +119,7 @@ export class Forecaster {
     this.options = {
       policies: { player: AUTO_POLICY, enemy: ENEMY_POLICY },
       rngs: { enemy: mulberry32(s + 1), player: mulberry32(s + 2) },
-      lastRound: firstRound + AUTO_ROUND_LIMIT,
+      lastRound: autoLastRound(firstRound),
     }
   }
 
