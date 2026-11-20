@@ -8,6 +8,31 @@ import { midSentence, monstersHere, theName, type MonsterLocation } from '../gam
 import { withArticle } from '../game/territory.ts'
 import { knownLocationAt } from './partyList.ts'
 
+/** What a razed improvement is called in the message, by level. */
+const RAZED = ['', 'outpost', 'works', 'fort'] as const
+
+/**
+ * The yields among `events` summed by source, for the stock panel's third
+ * line: "Last yield: sites 4 gold, 5 iron; market 3 gold". Sites' materials
+ * come in order of first appearance, gold first. Null when none yielded.
+ */
+export function yieldSummary(events: readonly WorldEvent[]): string | null {
+  const sites = new Map<string, number>()
+  let market = 0
+  for (const event of events) {
+    if (event.type !== 'yield') continue
+    if (event.source === 'market') market += event.amount
+    else sites.set(event.material, (sites.get(event.material) ?? 0) + event.amount)
+  }
+  const parts: string[] = []
+  if (sites.size > 0) {
+    const ordered = [...sites.entries()].sort(([a], [b]) => Number(b === 'gold') - Number(a === 'gold'))
+    parts.push(`sites ${ordered.map(([material, amount]) => `${amount} ${material}`).join(', ')}`)
+  }
+  if (market > 0) parts.push(`market ${market} gold`)
+  return parts.length > 0 ? `Last yield: ${parts.join('; ')}` : null
+}
+
 /** The world map's line for an event, or '' for one too small to tell (a hex's level changing). */
 export function describeWorldEvent(event: WorldEvent): string {
   switch (event.type) {
@@ -20,14 +45,16 @@ export function describeWorldEvent(event: WorldEvent): string {
     case 'site_captured':
       return `${event.name} is cleansed, and now yours.`
     case 'site_lost':
-      return event.improvement ? `${event.name} is lost to the blight, and its outpost razed.` : `${event.name} is lost to the blight.`
+      return event.improvement
+        ? `${event.name} is lost to the blight, and its ${RAZED[event.improvement]} razed.`
+        : `${event.name} is lost to the blight.`
     case 'yield':
-      return `${event.name} yields ${event.amount} ${event.material}.`
+      return event.source === 'market' ? `The market at ${event.name} brings ${event.amount} ${event.material}.` : `${event.name} yields ${event.amount} ${event.material}.`
     case 'tower_built':
       return 'A watchtower rises over the land.'
     case 'site_improved': {
       const building = withArticle(event.level === 1 ? 'outpost' : event.building)
-      return `${building.charAt(0).toUpperCase()}${building.slice(1)} stands at ${event.name}.`
+      return `${building.charAt(0).toUpperCase()}${building.slice(1)} ${event.level > 1 && event.building.endsWith('s') ? 'stand' : 'stands'} at ${event.name}.`
     }
     case 'tower_lost':
       return 'A watchtower is lost to the blight.'

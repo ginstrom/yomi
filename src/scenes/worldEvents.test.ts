@@ -5,7 +5,7 @@ import { newExpedition } from '../game/expedition.ts'
 import { newGame, type GameState } from '../game/gameState.ts'
 import { readyMadeParty } from '../game/party.ts'
 import type { MonsterLocation } from '../game/worldMap.ts'
-import { advanceMessage, describeDays, describeOthers, describeStanding, describePartyEvent, describeWalk, describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
+import { yieldSummary, advanceMessage, describeDays, describeOthers, describeStanding, describePartyEvent, describeWalk, describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
 
 const spawned: WorldEvent = { type: 'spawned', location: 'spawn_1', name: 'Kobold Nest', at: { q: 0, r: 0 }, threat: 2 }
 const sighted: WorldEvent = { ...spawned, type: 'sighted' }
@@ -33,6 +33,28 @@ describe('describeWorldEvent', () => {
     expect(describeWorldEvent({ type: 'site_improved', site: 'iron_vein', name: 'Iron Vein', level: 2, building: 'Mine' })).toBe('A Mine stands at Iron Vein.')
     expect(describeWorldEvent({ type: 'site_lost', site: 'iron_vein', name: 'Iron Vein' })).toBe('Iron Vein is lost to the blight.')
     expect(describeWorldEvent({ type: 'site_lost', site: 'iron_vein', name: 'Iron Vein', improvement: 1 })).toBe('Iron Vein is lost to the blight, and its outpost razed.')
+  })
+})
+
+describe('improvement and market lines', () => {
+  it('says "stand" for a plural works, tells each level razed and the market', () => {
+    expect(describeWorldEvent({ type: 'site_improved', site: 'salt_flats', name: 'Salt Flats', level: 2, building: 'Saltworks' })).toBe('Saltworks stand at Salt Flats.')
+    expect(describeWorldEvent({ type: 'site_improved', site: 'iron_vein', name: 'Iron Vein', level: 3, building: 'Fort' })).toBe('A Fort stands at Iron Vein.')
+    expect(describeWorldEvent({ type: 'site_lost', site: 'iron_vein', name: 'Iron Vein', improvement: 2 })).toBe('Iron Vein is lost to the blight, and its works razed.')
+    expect(describeWorldEvent({ type: 'site_lost', site: 'iron_vein', name: 'Iron Vein', improvement: 3 })).toBe('Iron Vein is lost to the blight, and its fort razed.')
+    expect(describeWorldEvent({ ...yielded, source: 'market', amount: 3 })).toBe('The market at Oakvale brings 3 gold.')
+  })
+})
+
+describe('yieldSummary', () => {
+  const site = (material: 'gold' | 'iron', amount: number): WorldEvent => ({ type: 'yield', site: 's', name: 'S', material, amount })
+  const market: WorldEvent = { type: 'yield', site: 'encampment', name: 'Oakvale', material: 'gold', amount: 3, source: 'market' }
+  it('sums sites by material, gold first, then the market', () => {
+    expect(yieldSummary([site('iron', 3), site('gold', 1), site('iron', 2), site('gold', 3), market])).toBe('Last yield: sites 4 gold, 5 iron; market 3 gold')
+    expect(yieldSummary([site('gold', 2)])).toBe('Last yield: sites 2 gold')
+    expect(yieldSummary([market])).toBe('Last yield: market 3 gold')
+    expect(yieldSummary([level])).toBeNull()
+    expect(yieldSummary([])).toBeNull()
   })
 })
 

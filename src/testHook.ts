@@ -180,6 +180,12 @@ export interface WorldProbe {
   visible: number[]
   /** The info panel's words on the hovered hex, or '' while no hex is hovered. */
   info: string
+  /** The Improve button's text while it shows, else null. */
+  improveLabel: string | null
+  /** The stock panel's text: the blight line, the stock, and the last yield line when there is one. */
+  status: string
+  /** How many forts' palisades (`map_fort`) the map draws. */
+  palisades: number
   /**
    * Scout, Wait, Attack and Auto-resolve show among monsters, the camp buttons and the time buttons elsewhere (so, with the game still going); `campUntilHealed` is enabled while someone is wounded.
    * `end` and `endless` show on the victory screen, `menu` on the defeat screen.
@@ -204,8 +210,8 @@ export interface WorldProbe {
     campUntilHealed: ButtonProbe
     /** Shows where the party may camp on land a watchtower could stand on; a click without the stock says why in the message. */
     buildTower: ButtonProbe
-    /** Shows on a held resource without an outpost; a click without the stock says why in the message. */
-    buildOutpost: ButtonProbe
+    /** Shows on a held resource below a fort; a click without the Lodge or the stock says why in the message. `improveLabel` is its text. */
+    improve: ButtonProbe
     /** Shows while the party stands at the encampment: goes in, to its facilities. */
     enterEncampment: ButtonProbe
     /** Shows wherever the party may camp: opens field crafting. */

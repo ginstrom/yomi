@@ -192,7 +192,7 @@ When there are no monsters on your hex, the footer offers:
 - **Camp**: rest for a day. Each day of camping heals every hero 1 hit point (more with an infirmary, see [The infirmary](#the-infirmary)) and refills every caster's mana.
 - **Camp until healed**: your healers cast their heals with the mana they have, then the party camps a day and casts again, repeating until everyone is whole. Anything important that happens breaks camp.
 - **Craft**: rework a piece of gear in the field, a day's work (see [Crafting](#crafting)).
-- **Build Watchtower** or **Build Outpost**, where the land allows (see [Building](#9-building)).
+- **Build Watchtower** or **Improve**, where the land allows (see [Building](#9-building)).
 - **Return home** and **Garrison** sit in the row above, with the time buttons.
 - **Enter** the encampment, when the party stands on it (see [The encampment](#the-encampment)).
 
@@ -521,7 +521,7 @@ A hero born with an attribute of 7 or 8 reaches the nodes that ask it from the s
 Every hex of land has a blight level from 0 (clean) to 3 (corrupted), shown as a tint over the grass. Corrupted land also shows dark growths. Every day, sources of influence push on the hexes around them, and their strength fades by a point for each hex of distance:
 
 - **Pushing the blight forward**: monster lairs (more strongly the higher their threat), the Source itself, and corrupted land spreading to its neighbours. The blight grows stronger over time, by a tenth every 30 days, up to half again as strong.
-- **Pushing it back**: the encampment (stronger with its shrine), every resource you hold (stronger with an outpost), every watchtower, and the party itself, which grows stronger as the heroes level up.
+- **Pushing it back**: the encampment (stronger with its shrine), every resource you hold (stronger with an outpost, works or fort), every watchtower, and the party itself, which grows stronger as the heroes level up.
 
 Consequences:
 
@@ -536,12 +536,14 @@ The header's percentage counts only the land you have explored.
 
 ## 9. Building
 
-The stock pays for everything you build.
+The stock pays for everything you build. On a held resource the **Improve** button names the next level and its cost ("Build a Mine: 30 gold, 15 stone"), or, when the Builders' Lodge is too low, what it needs ("A Mine needs the Builders' Lodge"); in a narrow window it drops the cost, which the hovered hex's panel still tells. The stock panel's third line sums the last yield day by source.
 
 | Building | Where | Cost | Time | Effect |
 | --- | --- | --- | --- | --- |
 | Watchtower | Clean land off any location, 4+ hexes from other towers | 10 iron, 5 gold | A day | Sees 8 hexes and pushes the blight back. New lairs will not spawn close to it. |
-| Outpost | A held resource without one | 15 gold, 10 timber | A day | The site resists the blight more strongly and yields more. Lost with the site. |
+| Outpost | A held resource without one | 15 gold, 10 timber | A day | The site resists the blight more strongly and yields 1 more. Lost with the site. |
+| Works (Mine, Lumber Camp, Quarry, Saltworks or Peat Cuttings, by the resource) | A held resource with an outpost | 30 gold, 15 stone; Builders' Lodge level 1 | A day | Yields 3 more than the bare site. Razed with the site. |
+| Fort | A held resource with a works | 50 gold, 20 iron, 10 stone; Builders' Lodge level 2 | A day | Much stronger against the blight, and lost only when its land is corrupted (level 3). Razed with the site. |
 | Shrine | The encampment's empty plot | 20 gold, then 40 gold + 15 silver, then 80 gold + 30 silver | Instant | Each level strengthens the encampment against the blight |
 | Guild hall | The encampment | 30 gold + 15 iron, then 60 gold + 30 iron | Instant | Party limit 3, then 4, then 5 |
 | Trading post | The encampment | 40 gold + 15 stone, then 80 gold + 15 copper, then 120 gold + 20 silver | Instant | Sells plain gear, then Fine and Lesser runes, then Masterwork, then steel and second-rank runes |

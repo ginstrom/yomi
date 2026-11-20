@@ -66,7 +66,8 @@ Pure (no runtime Phaser import):
 - `exchangeView.ts`: the Exchange scene's partners, moves and baggage lines.
 - `gearCompare.ts`: the words for an item's stats and what a craft or gear change does.
 - `runecraftView.ts`: the crafting screen's Runes tab in words, and where sockets come from.
-- `worldEvents.ts`: the world map's words for turns, days and walks, and the prompt to spend points.
+- `worldEvents.ts`: the world map's words for turns, days and walks, the yield summary, and the prompt to spend points.
+- `improveButton.ts`: the Improve button's label (full and compact).
 - `skillsTab.ts`: the Skills tab in plain data.
 - `hexInfo.ts`: what the info panel tells of the hovered hex, within the fog.
 - `partyList.ts`: the world map's party list, figures, banners, meet target and order words.

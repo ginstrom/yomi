@@ -18,6 +18,44 @@ function info(game: GameState, at: Hex = game.parties[0].position) {
   return hexInfo(game, game.parties[0], visibleHexes(game.world, presences(game.parties)), at)
 }
 
+describe('hexInfo of a resource', () => {
+  function site(level: 0 | 1 | 2 | 3) {
+    const it = solo()
+    const iron = it.world.locations.find((l) => l.id === 'iron_vein')!
+    if (!it.world.held.includes('iron_vein')) it.world.held.push('iron_vein')
+    if (level > 0) it.world.improvements.iron_vein = level as 1 | 2 | 3
+    return { ...it, at: iron.position }
+  }
+
+  it('gives the building, its yield and strength, and a fort is lost only when corrupted', () => {
+    const plain = site(0)
+    expect(info(plain.game, plain.at).lines).toContain('Yields 2 iron.')
+    expect(info(plain.game, plain.at).lines).toContain('Next: an Outpost, 15 gold, 10 timber.')
+    const works = site(2)
+    works.world.lodge = 1
+    const lines = info(works.game, works.at).lines
+    expect(lines).toContain('Mine: 5 iron every 5 days.')
+    expect(lines).toContain('Strength 6 against the blight.')
+    expect(lines).toContain('Next: a Fort, 50 gold, 20 iron, 10 stone (needs Lodge 2).')
+    expect(lines).not.toContain('Lost only when corrupted.')
+    const fort = site(3)
+    const fortLines = info(fort.game, fort.at).lines
+    expect(fortLines).toContain('Fort: 5 iron every 5 days.')
+    expect(fortLines).toContain('Lost only when corrupted.')
+    expect(fortLines.some((l) => l.startsWith('Next:'))).toBe(false)
+  })
+
+  it('counts a fort threatened at level 2 to the day corruption takes it', () => {
+    const fort = site(3)
+    fort.world.threatened.push('iron_vein')
+    fort.world.locations.push({ id: 'besiegers', kind: 'monsters', name: 'Besiegers', position: { q: fort.at.q + 2, r: fort.at.r }, encounter: 'goblin_raid', threat: 40, loot: [] })
+    const i = boardIndex(fort.world.board, fort.at)
+    fort.world.seen[i] = 2
+    const line = info(fort.game, fort.at).lines.find((l) => l.startsWith('Under threat'))
+    expect(line).toMatch(/^Under threat: falls in \d+ days?\.$/)
+  })
+})
+
 describe('hexInfo', () => {
   it('names every party standing on the hex, with its members, and how far the selected party is from it', () => {
     const { game, party } = solo()

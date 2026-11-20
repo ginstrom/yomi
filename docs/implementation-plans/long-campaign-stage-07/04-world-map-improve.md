@@ -196,3 +196,19 @@ Step 05 consumes `yieldSummary` (the debug `days` line) and the probe; step 07 r
 - [ ] One commit, "Stage 7 step 04: the world map's Improve", no attribution lines; the index's row 04 updated with status and commit.
 
 ## 7. Execution record
+
+Step 04, on `long-campaign-stage-07`, local Node 26. User confirmed decisions 6 and 13 as written.
+
+**Built:** `src/scenes/improveButton.ts` (`improveLabel(world, party, compact = false)`), `yieldSummary` and the new event lines in `worldEvents.ts` (plural works "stand"; the old step-01 "stands" for Saltworks is fixed), hex info lines (`hexInfo.ts`), `WorldScene` (the Improve button with a label that follows the site, the palisade via `map_fort`/`idle`, the map label's building line, the stock panel's third line from `noteYield`, the garrison button on `improvementSite`), `testHook.ts` (`buttons.improve`, `improveLabel`, plus `status` and `palisades` for the tests), manual §3/§8/§9, `docs/reference/scenes.md`, `src/scenes/CLAUDE.md`. `sounds.ts` already played `world.build` on `site_improved` (step 01). Carried items: `pending` set emptied in `encampmentView.test.ts`; the duplicated `wares` sentence removed from `docs/reference/game.md`.
+
+**Deviations (for the orchestrator):**
+
+- **Footer overflow.** At 840 wide the camp row (Camp, Camp until healed, Craft) leaves room for about 30 label characters, so almost every full label overflows. The button therefore shows the full label (decision 6) whenever the row fits the window beside the party column, else a compact one: "Build a Mine" (no cost) or "A Fort needs Lodge 2". The cost then lives in the hex info, where I added one line for a held resource below a fort: "Next: a Mine, 30 gold, 15 stone (needs Lodge 1)." (not in decision 13). `improveLabel` has an optional third parameter for the compact form.
+- Plural names in the label read "Peat Cuttings need Lodge 1" / "need the Builders' Lodge"; step 01's refusal still says "needs" for every name (out of scope: "Peat Cuttings needs the Builders' Lodge.").
+- With three status lines the header's status block starts at y 3 (not 16) so its third line clears the hint text.
+
+**Verification:** `npx vitest run` on improveButton, hexInfo, worldEvents: pass. `npm test`: 97 files, 2374 tests passed (guard fixture untouched). The step's grep (`outpostSite|canBuildOutpost|buildOutpost|outpost_built|Build Outpost`) over `src/scenes`, `src/testHook.ts`, `e2e`: empty. In-browser: `-t Improve` 3 passed (outpost, works, fort with palisade; the Lodge refusal; the 840 x 560 fit). The 50-campaign check was not run (no rule change).
+
+**Screenshots** (throwaway e2e, deleted, at 840 x 560, planting the saved game): `/private/tmp/claude-501/-Users-ryan-personal-yomi/c29fd0f8-7769-4320-b391-0ba24583f291/scratchpad/` `works-fort-label.png` (works hex info, "Build a Fort" compact), `fort-hexinfo.png`, `fort-yield.png` (stock panel's yield line), `palisade.png` (map_fort over Iron Vein), `peat-label.png` ("Build Peat Cuttings" full label fits). Seen: no overlaps in the footer or header; the info panel over the goblin sprite is as before.
+
+**For later steps:** step 05 reads `yieldSummary` and the probe. Step 06 may delete the wrappers: no scene uses them.

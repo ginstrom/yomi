@@ -19,12 +19,10 @@ describe('the encampment screen', () => {
     expect(facilityFrame({ id: 'guild_hall', level: 5 })).toBe('camp_guild_hall/level_5')
     const atlas = JSON.parse(readFileSync('public/assets/sprites/atlas.json', 'utf8')) as { frames: Record<string, unknown> }
     const names = new Set(Object.keys(atlas.frames))
-    // Drawn by stage 7 step 03: the Lodge's three levels and the trading post's 5 and 6. Step 03 empties this list.
-    const pending = new Set(['camp_lodge/level_1', 'camp_lodge/level_2', 'camp_lodge/level_3', 'camp_trading_post/level_5', 'camp_trading_post/level_6'])
     for (const facility of facilities(newGame(), newGame().parties[0])) {
       for (let level = 1; level <= facility.maxLevel; level++) {
         const frame = facilityFrame({ id: facility.id, level })
-        if (!pending.has(frame)) expect(names, `${facility.id} ${level}`).toContain(frame)
+        expect(names, `${facility.id} ${level}`).toContain(frame)
       }
     }
   })
