@@ -3,7 +3,7 @@ import { HexBoard, hexDistance, hexNeighbors, hexToOffset, offsetToHex, type Boa
 import { MAGIC_ITEMS, type Item } from '../inventory/inventory.ts'
 import { ENCOUNTER_BANDS, type EncounterId } from './encounters.ts'
 import type { PartyPresence } from './expedition.ts'
-import type { ImprovementLevel, Material } from './territory.ts'
+import type { ImprovementLevel, Material, YieldSource } from './territory.ts'
 import { ENCAMPMENT_ID, threatAt, type MonsterLocation, type WorldState } from './worldMap.ts'
 
 /**
@@ -80,7 +80,7 @@ export type WorldEvent =
   | { type: 'tower_lost'; tower: string; at: Hex }
   /** `building`: the level's name ("Outpost", "Mine", "Fort", …). */
   | { type: 'site_improved'; site: string; name: string; level: ImprovementLevel; building: string }
-  | { type: 'yield'; site: string; name: string; material: Material; amount: number }
+  | { type: 'yield'; site: string; name: string; material: Material; amount: number; source?: YieldSource }
   | { type: 'encampment_lost'; name: string }
 
 /** Where a hex's level and shift counter are kept in `WorldState.blight` and `.shift`. */

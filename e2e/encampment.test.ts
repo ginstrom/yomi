@@ -227,7 +227,7 @@ describe('the encampment', () => {
     expect((await game.settled('GuildHall')).reserves).toEqual([])
   })
 
-  it('shows five plots, the trading post built, and buys and sells there', async () => {
+  it('shows six facilities, the trading post built, and buys and sells there', async () => {
     const game = await games.open()
     await richAtHome(game, { gold: 100, salt: 4 })
     const camp = await enter(game)
@@ -237,6 +237,7 @@ describe('the encampment', () => {
       ['trading_post', 'camp_trading_post/level_1'],
       ['workshop', 'camp_plot/base'],
       ['infirmary', 'camp_plot/base'],
+      ['builders_lodge', 'camp_plot/base'],
     ])
     await game.click(facility(camp, 'trading_post'))
     const shown = await game.settled('Encampment', (c) => c.selected === 'trading_post')

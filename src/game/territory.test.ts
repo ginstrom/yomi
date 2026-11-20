@@ -8,6 +8,7 @@ import {
   LOSS_LEVEL,
   WORKS_NAMES,
   YIELD_DAYS,
+  marketIncome,
   daysToFall,
   improvementName,
   lossLevel,
@@ -293,5 +294,44 @@ describe('improvements (economy A1)', () => {
     expect(['Outpost', 'Mine', 'Lumber Camp', 'Quarry', 'Saltworks', 'Peat Cuttings', 'Fort'].map(withArticle)).toEqual([
       'an Outpost', 'a Mine', 'a Lumber Camp', 'a Quarry', 'Saltworks', 'Peat Cuttings', 'a Fort',
     ])
+  })
+})
+
+describe('market income (economy A3)', () => {
+  /** The encampment held alone with Iron Vein, the post at `level`, the encampment's hex at `blight`, on a yield day. */
+  function marketDay(level: number, blight = 0, turn = YIELD_DAYS) {
+    const { game, world } = solo(1)
+    world.held = [ENCAMPMENT_ID, 'iron_vein']
+    world.tradingPost = level
+    setLevel(world, site(world, ENCAMPMENT_ID), blight)
+    world.turn = turn
+    const gold = world.stock.gold ?? 0
+    const events = updateTerritory(world, presences(game.parties)).filter((e) => e.type === 'yield')
+    return { world, events, gained: (world.stock.gold ?? 0) - gold }
+  }
+  const market = (events: ReturnType<typeof marketDay>['events']) => events.filter((e) => e.type === 'yield' && e.source === 'market')
+
+  it('brings nothing below trading post level 4', () => {
+    for (const level of [1, 2, 3]) expect(market(marketDay(level).events), `${level}`).toEqual([])
+  })
+
+  it('brings 2, 3 and 5 gold at levels 4 to 6, after the sites\' yields, marked as the market\'s', () => {
+    for (const [level, amount] of [[4, 2], [5, 3], [6, 5]] as const) {
+      const { world, events, gained } = marketDay(level)
+      expect(market(events), `${level}`).toEqual([{ type: 'yield', site: ENCAMPMENT_ID, name: 'Oakvale', material: 'gold', amount, source: 'market' }])
+      expect(events[events.length - 1].type === 'yield' && events[events.length - 1].source, `${level}`).toBe('market')
+      expect(gained).toBe(events.reduce((sum, e) => sum + (e.type === 'yield' && e.material === 'gold' ? e.amount : 0), 0))
+      expect(marketIncome(world)).toBe(amount)
+    }
+  })
+
+  it('is halved, rounded down, while the encampment\'s hex is tainted: 1, 1 and 2', () => {
+    expect([4, 5, 6].map((level) => { const [e] = market(marketDay(level, 1).events); return e.type === 'yield' ? e.amount : null })).toEqual([1, 1, 2])
+  })
+
+  it('leaves a site\'s yield without a source, and comes on yield days only', () => {
+    const { events } = marketDay(4)
+    expect(events.filter((e) => e.type === 'yield' && e.site === 'iron_vein').every((e) => !('source' in e))).toBe(true)
+    expect(marketDay(6, 0, YIELD_DAYS - 1).events).toEqual([])
   })
 })

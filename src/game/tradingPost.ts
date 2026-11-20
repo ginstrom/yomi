@@ -13,15 +13,28 @@ import { encampmentName, type WorldState } from './worldMap.ts'
  * The trading post at the encampment (docs/designs/expeditions-and-encampment.md
  * §4.2): it sells plain items, up to the grade its level allows, into the
  * baggage, and buys whatever the party carries but does not wear, and the
- * stock's materials at a poor rate. It also sells runes into the pouch (rank 1
+ * stock's materials at a poor rate. From level 4 it is a market, and brings
+ * gold every yield day (`MARKET_INCOME`, territory.ts). It also sells runes into the pouch (rank 1
  * from level 2, rank 2 from level 4, six kinds) and buys any from it. It never
  * sells materials, nor a runed item. Built from the
  * start; each action returns why it was refused, or null when done.
  */
 
-/** What raising the post to each level costs, from level 1 (built). Levels 1 to 3 sell tier 1 at grades up to the level; level 4 adds tier 2 at every grade. Runes: rank 1 from level 2, rank 2 from level 4. */
-export const TRADING_POST_COSTS: readonly Stock[] = [{}, { gold: 40, stone: 15 }, { gold: 80, copper: 15 }, { gold: 120, silver: 20 }]
+/** What raising the post to each level costs, from level 1 (built). Levels 1 to 3 sell tier 1 at grades up to the level; level 4 adds tier 2 at every grade, and levels 5 and 6 sell as 4 does. Runes: rank 1 from level 2, rank 2 from level 4. Levels 4 to 6 also bring gold (`MARKET_INCOME`, territory.ts). */
+export const TRADING_POST_COSTS: readonly Stock[] = [
+  {},
+  { gold: 40, stone: 15 },
+  { gold: 80, copper: 15 },
+  { gold: 120, silver: 20 },
+  { gold: 160, silver: 30, stone: 20 },
+  { gold: 220, silver: 40, crystal: 10 },
+]
 export const MAX_TRADING_POST_LEVEL = TRADING_POST_COSTS.length
+
+/** What the post is called at a level: a Trading Post to level 3, then the Market, the Market Hall and the Trading House. */
+export function tradingPostName(level: number): string {
+  return level >= 6 ? 'Trading House' : level === 5 ? 'Market Hall' : level === 4 ? 'Market' : 'Trading Post'
+}
 
 /** The level from which the post sells tier 2. */
 export const TIER_TWO_LEVEL = 4

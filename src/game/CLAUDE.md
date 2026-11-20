@@ -25,12 +25,12 @@ Loaded when working in `src/game/`: encounters and bandits, the company and its 
 - `worldMap.ts`: `WorldState` and what changes it (`passTurn`, `travel`, `walkTo`, `followOrder`, `linger`, `clearLocation`), routing and `isNotable`.
 - `camp.ts`: camping, a day's rest and camping until healed.
 - `blight.ts`: each hex's level, the day's contest of influence, growth with time, spawning and cleansing; the `WorldEvent`s a turn returns.
-- `territory.ts`: resources and the encampment held and lost, warnings of a site under threat, yields to the stock.
+- `territory.ts`: resources and the encampment held and lost, warnings of a site under threat, yields to the stock, the market's gold among them (`MARKET_INCOME`).
 - `vision.ts`: fog of war.
 - `buildings.ts`: the stock's arithmetic, the watchtower and shrine, a held resource's improvements (outpost, works, fort) and the Builders' Lodge that allows them; the outpost wrappers stand until stage 7 step 06.
 - `encampment.ts`: the facilities as the encampment screen shows them, and `improveFacility`.
 - `guildHall.ts`: the hall's level and what it allows (party size, parties, company size), recruiting and the reserves, `homeParties` and `homeParty`.
-- `tradingPost.ts`: buying and selling items, runes and materials.
+- `tradingPost.ts`: buying and selling items, runes and materials; levels 4 to 6 are the Market, Market Hall and Trading House, whose gold `territory.ts` yields.
 - `crafting.ts`: modifiers on items, in the field or at the workshop.
 - `runecraft.ts`: embedding, fusing and extracting runes.
 - `infirmary.ts`: the infirmary and `restHealing`.

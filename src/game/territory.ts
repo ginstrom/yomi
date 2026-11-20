@@ -1,7 +1,7 @@
 import type { Hex } from '../grid/hex.ts'
 import { MAX_BLIGHT, SHIFT_COST, blightAt, boardIndex, netInfluence, type WorldEvent } from './blight.ts'
 import type { PartyPresence } from './expedition.ts'
-import { ENCAMPMENT_ID, type QuietLocation, type WorldState } from './worldMap.ts'
+import { ENCAMPMENT_ID, encampment, type QuietLocation, type WorldState } from './worldMap.ts'
 
 /**
  * Territory (docs/designs/blight.md §4.5, §4.7): the resources the party
@@ -27,6 +27,14 @@ export const LOSS_LEVEL = 2
 export const YIELD_DAYS = 5
 /** What the encampment yields, in gold. */
 export const ENCAMPMENT_YIELD = 2
+/** Where a yield comes from: a held site (the default, left out of the event) or the encampment's market. */
+export type YieldSource = 'site' | 'market'
+/** What the market brings the stock in gold each yield day, by trading post level - 1 (levels 4 to 6), before taint halves it. */
+export const MARKET_INCOME: readonly number[] = [0, 0, 0, 2, 3, 5]
+/** The market's income at full strength: the trading post's level reads the table. */
+export function marketIncome(world: WorldState): number {
+  return MARKET_INCOME[world.tradingPost - 1] ?? 0
+}
 /** A resource's improvement (buildings.ts): 1 an outpost, 2 its works, 3 a fort. */
 export type ImprovementLevel = 1 | 2 | 3
 /** What each improvement level adds to its site's yield, by level 0 to 3, before taint halves it. */
@@ -158,6 +166,14 @@ export function updateTerritory(world: WorldState, presences: readonly PartyPres
       if (yielded === 0) continue
       world.stock[material] = (world.stock[material] ?? 0) + yielded
       events.push({ type: 'yield', site: site.id, name: site.name, material, amount: yielded })
+    }
+    // The market's gold comes after every site's, so a day's earlier events keep their order.
+    const camp = encampment(world)
+    const income = marketIncome(world)
+    const market = blightAt(world, camp.position) > 0 ? Math.floor(income / 2) : income
+    if (market > 0) {
+      world.stock.gold = (world.stock.gold ?? 0) + market
+      events.push({ type: 'yield', site: ENCAMPMENT_ID, name: camp.name, material: 'gold', amount: market, source: 'market' })
     }
   }
   return events

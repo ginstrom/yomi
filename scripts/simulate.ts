@@ -622,6 +622,9 @@ export function fieldCraft(game: GameState, party: Expedition): Extract<DayActio
   return action
 }
 
+/** Temporary, removed in stage 7 step 06: the highest trading post level the simulator raises, so the new levels' costs and income stay out of play until the simulator is ready for them. */
+export const SIM_TRADING_POST_CAP = 4
+
 /** What the stock should keep of each material for what the careful party still means to buy: every level left of every building, and a craft for each place in the party. */
 export function materialNeeds(game: GameState, parties = 1): Stock {
   const { world } = game
@@ -631,7 +634,7 @@ export function materialNeeds(game: GameState, parties = 1): Stock {
   }
   GUILD_HALL_LEVELS.slice(world.guildHall, hallCap(parties)).forEach(({ cost }) => add(cost))
   SHRINE_COSTS.slice(world.shrine).forEach(add)
-  TRADING_POST_COSTS.slice(world.tradingPost).forEach(add)
+  TRADING_POST_COSTS.slice(world.tradingPost, SIM_TRADING_POST_CAP).forEach(add)
   WORKSHOP_COSTS.slice(world.workshop).forEach(add)
   INFIRMARY_COSTS.slice(world.infirmary).forEach(add)
   add(TOWER_COST)
@@ -739,7 +742,7 @@ export function visitFacilities(game: GameState, party: Expedition, parties = 1)
     const lots = surplus - (surplus % 2)
     if (material !== 'gold' && lots >= 2 && sellMaterial(game, party, material, lots) === null) trade.goldFromSales += lots / 2
   }
-  while (raiseTradingPost(game, party) === null);
+  while (world.tradingPost < SIM_TRADING_POST_CAP && raiseTradingPost(game, party) === null);
   while (upgradeWorkshop(game, party) === null);
   while (raiseInfirmary(game, party) === null);
   for (const [member, hero] of party.members.entries()) {

@@ -150,7 +150,7 @@ A won battle lowers the land within 1 + its threat by two levels (`cleanse`). Th
 
 ## The encampment's facilities
 
-`encampment.ts` lists every facility (`FACILITIES`: the guild hall, the shrine, the trading post, the workshop, the infirmary), built or not, its level, what it does and what its next level costs; `improveFacility` calls the facility's own module for the party at home (`homeParty`), refusing with none at home.
+`encampment.ts` lists every facility (`FACILITIES`: the guild hall, the shrine, the trading post, the workshop, the infirmary, the Builders' Lodge), built or not, its level, what it does and what its next level costs; `improveFacility` calls the facility's own module for the party at home (`homeParty`), refusing with none at home.
 
 ### Guild hall
 
@@ -168,12 +168,16 @@ The party limit is derived, never stored. The company limit counts parties and r
 
 ### Trading post
 
-`tradingPost.ts` (`WorldState.tradingPost`, built from the start at 1). Levels 1 to 3 sell tier 1 at grades up to the level; 4 adds tier 2 at every grade (`sells`). `wares(world, filter)` lists what it sells, narrowed by slot or family.
+`tradingPost.ts` (`WorldState.tradingPost`, built from the start at 1, up to 6). Levels 1 to 3 sell tier 1 at grades up to the level; 4 adds tier 2 at every grade (`sells`), and 5 and 6 sell as 4 does. `TRADING_POST_COSTS` is 40 gold 15 stone, 80 gold 15 copper, 120 gold 20 silver, 160 gold 30 silver 20 stone, 220 gold 40 silver 10 crystal for levels 2 to 6. `tradingPostName` calls levels 1 to 3 the Trading Post, then the Market, Market Hall and Trading House. Levels 4 to 6 bring gold: `MARKET_INCOME` 2, 3 and 5 every `YIELD_DAYS`, added to the stock after the sites' yields as a `yield` event with `source: 'market'` (a site's yield has no source), halved and rounded down while the encampment's hex is tainted (`territory.ts`). `wares(world, filter)` lists what it sells, narrowed by slot or family. `wares(world, filter)` lists what it sells, narrowed by slot or family.
 
 - Buying plain items at a grade into the baggage, priced by family (`PRICES`) times the tier's and the grade's multipliers (`TIER_PRICE`, `GRADE_PRICE`).
 - Selling from the baggage and backpacks (never what is worn) for half; a modifier adds nothing, an enchanted item sells for half its `VALUES`, and an embedded rune adds half its price (`salePrice`). The post never sells a runed item.
 - Runes (`runeWares`): Ember, Rime, Storm, Stone, Wind and Life at rank 1 from level 2 and rank 2 from level 4, `RUNE_PRICES` 15, 45, 135, 405 by rank. `buyRune` puts one in the pouch (`GameState.runes`); `sellRune` sells from it for a third.
 - Materials sell two for a gold piece; the post never sells materials.
+
+### Builders' Lodge
+
+`WorldState.lodge`, 0 (not built) to `MAX_LODGE_LEVEL` 3, raised by `raiseLodge` at the encampment (`LODGE_COSTS`, buildings.ts). It allows works (level 1) and forts (level 2). Level 3, roads, is in the cost table but `raiseLodge` refuses at `LODGE_LEVEL_LIMIT` (2) with "Roads come with trade routes." until stage 8; the debug console may still set 3. A facility may carry a `refusal` checked before the stock, which is how the encampment screen shows that line.
 
 ### Crafting
 

@@ -153,3 +153,19 @@ export const SIM_TRADING_POST_CAP = 4   // visitFacilities raises the post only 
 - [ ] One commit, "Stage 7 step 02: market income and the facilities", no attribution lines; the index's row 02 updated with status and commit.
 
 ## 7. Execution record
+
+Step 02, on `long-campaign-stage-07` from `64d0cd2`, local Node 26.
+
+**Built** (C2 as written): `TRADING_POST_COSTS` to level 6 and `tradingPostName`; `MARKET_INCOME`, `marketIncome`, `YieldSource` and the market's `yield` (`source: 'market'`, after the sites' yields, halved on taint) in `territory.ts`; `FacilityId` `builders_lodge`, `Facility.refusal` (checked after "no party at home", before the stock), `Facility.name` as a string or a function of level, the trading post's income in its effect line, `setFacilityLevel`'s `lodge`; `FACILITY_SPRITES.builders_lodge`; `SIM_TRADING_POST_CAP` 4 in `visitFacilities` and `materialNeeds`. The private `improveRefusal` in `encampment.ts` became `facilityRefusal`. Docs: `docs/reference/game.md` (trading post levels and income, a Lodge section) and `src/game/CLAUDE.md`'s module lines.
+
+Also carried from step 01's review, in `save.test.ts`: a save labelled 26 in the current shape keeps a hero's `perkPoints` (derived + 3), so `migrateFrom25` running on it would fail; and a version-25 fixture given a real outpost (`iron_vein`) migrates to `improvements {iron_vein: 1}`, Lodge 0.
+
+**Verification:**
+- `npm test`: 96 files, 2367 tests passed. One run timed out in `forecast.test.ts` ("a level-1 party wins no fight with the Source at threat 5", 5000 ms) under full-suite load; it passes alone (23 of 23) and the next full run was green.
+- 50-campaign check, `--campaign --battles 50 --seed 1 --parties 1 --out logs/guard-50-s2.jsonl`: `shasum` `5f92e363577e3216cd2fb233421d6ab2b514031b8c51b6c58f52db944cc8e2cb`, **identical** to step 01's; the printed summary differs from step 01's only in the output path. The simulator is held at level 4 and its campaigns average trading post level 1.1, so market income did not change play; no `MARKET_INCOME[3] = 0` rerun was needed.
+- The refactor guard fixture is unedited and green. `npm run build` built. `npm run test:browser -- -t encampment`: 15 passed after the encampment test learned the sixth facility.
+
+**Deviations:**
+- `encampmentView.test.ts`: the atlas test lists every facility level's frame, and the Lodge's three and the post's 5 and 6 have no art until step 03, so those five names are in a `pending` set it skips (step 03 empties it). The "every facility a plot of its own" test checks the first five facilities only until step 05 adds the Lodge's plot (step 05 drops the `slice`).
+- `debugCommands.test.ts` (`from 1 to 4` became `from 1 to 6`) and `e2e/encampment.test.ts` (the sixth facility, the Lodge's plot frame `camp_plot/base`) changed expectations the new facility and levels deliberately change. In the encampment screen the Lodge draws at the last plot, over the infirmary, until step 05.
+- The manual's building table (§9) is left to step 05.

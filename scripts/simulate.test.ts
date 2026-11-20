@@ -47,6 +47,7 @@ import {
   vanguardTallies,
   craftGear,
   materialNeeds,
+  SIM_TRADING_POST_CAP,
   visitFacilities,
   PREFERRED_MODIFIERS,
   RUNE_ORDER,
@@ -801,6 +802,21 @@ describe('the trading post and crafting in a campaign', () => {
     const withPost = materialNeeds(game).silver ?? 0
     game.world.tradingPost = 3
     expect(materialNeeds(game).silver! - withPost).toBe(20)
+  })
+
+  it('counts the post\'s levels only up to the temporary cap of 4, and raises it no higher', () => {
+    expect(SIM_TRADING_POST_CAP).toBe(4)
+    const game = newGame(undefined, null, 1)
+    const unbuilt = materialNeeds(game)
+    game.world.tradingPost = 4
+    const at4 = materialNeeds(game)
+    expect((unbuilt.stone ?? 0) - (at4.stone ?? 0)).toBe(15)
+    game.world.tradingPost = 6
+    expect(materialNeeds(game)).toEqual(at4)
+    game.world.tradingPost = 4
+    game.world.stock = { gold: 5000, silver: 500, stone: 500, crystal: 50 }
+    visitFacilities(game, game.parties[0])
+    expect(game.world.tradingPost).toBe(4)
   })
 
   it('prefers, family by family, only modifiers that fit the family', () => {

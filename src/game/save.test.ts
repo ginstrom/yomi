@@ -454,6 +454,33 @@ describe('a company', () => {
   })
 })
 
+describe('a save labelled version 26 in the current shape of the heroes', () => {
+  it('keeps a hero\'s perk points as they are: migrateFrom25 does not run on it', () => {
+    const game = gameUnderWay()
+    const saved = before27(JSON.parse(serializeSave({ game, battle: null, savedAt: 5 })), 26)
+    const hero = saved.game.parties[0].members[0]
+    const derived = pointsAt(hero.level) - nodesCost({ perks: hero.perks })
+    hero.perkPoints = derived + 3
+    const parsed = parseSave(JSON.stringify(saved))!
+    expect(parsed).not.toBeNull()
+    expect(parsed.game.parties[0].members[0].perkPoints).toBe(derived + 3)
+  })
+})
+
+describe('a version-25 save with a real outpost', () => {
+  it('goes through the whole chain to improvements at level 1 and the Lodge at 0', () => {
+    const saved = JSON.parse(readFileSync(new URL('./fixtures/save-v25.json', import.meta.url), 'utf8'))
+    expect(saved.version).toBe(25)
+    saved.game.world.outposts = ['iron_vein']
+    const parsed = parseSave(JSON.stringify(saved))!
+    expect(parsed).not.toBeNull()
+    expect(parsed.game.world.improvements).toEqual({ iron_vein: 1 })
+    expect(parsed.game.world.lodge).toBe(0)
+    expect('outposts' in parsed.game.world).toBe(false)
+    expect(JSON.parse(serializeSave(parsed)).version).toBe(SAVE_VERSION)
+  })
+})
+
 describe('a version-26 save', () => {
   const raw = readFileSync(new URL('./fixtures/save-v26.json', import.meta.url), 'utf8')
   const old = JSON.parse(raw)

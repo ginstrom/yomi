@@ -1,12 +1,12 @@
 import { SHRINE_STRENGTH } from './blight.ts'
-import { MAX_SHRINE_LEVEL, canAfford, describeCost, raiseShrine, shrineCost } from './buildings.ts'
+import { LODGE_LEVEL_LIMIT, MAX_LODGE_LEVEL, MAX_SHRINE_LEVEL, ROADS_REFUSAL, canAfford, describeCost, lodgeCost, raiseLodge, raiseShrine, shrineCost } from './buildings.ts'
 import type { Expedition } from './expedition.ts'
 import type { GameState } from './gameState.ts'
 import { GUILD_HALL_LEVELS, MAX_GUILD_HALL_LEVEL, homeParty, noPartyHome, upgradeCost, upgradeGuildHall } from './guildHall.ts'
 import { MAX_WORKSHOP_LEVEL, upgradeWorkshop, workshopCost } from './crafting.ts'
 import { MAX_INFIRMARY_LEVEL, infirmaryCost, infirmaryEffect, raiseInfirmary } from './infirmary.ts'
-import type { Stock } from './territory.ts'
-import { MAX_TRADING_POST_LEVEL, RUNE_RANK_LEVELS, raiseTradingPost, tradingPostCost } from './tradingPost.ts'
+import { MARKET_INCOME, YIELD_DAYS, type Stock } from './territory.ts'
+import { MAX_TRADING_POST_LEVEL, RUNE_RANK_LEVELS, raiseTradingPost, tradingPostCost, tradingPostName } from './tradingPost.ts'
 import { encampmentName } from './worldMap.ts'
 
 /**
@@ -19,7 +19,7 @@ import { encampmentName } from './worldMap.ts'
  * this only reads them and calls them.
  */
 
-export type FacilityId = 'guild_hall' | 'shrine' | 'trading_post' | 'workshop' | 'infirmary'
+export type FacilityId = 'guild_hall' | 'shrine' | 'trading_post' | 'workshop' | 'infirmary' | 'builders_lodge'
 
 /** What the encampment screen shows of a facility. */
 export interface FacilityView {
@@ -46,7 +46,8 @@ export interface FacilityView {
 
 interface Facility {
   id: FacilityId
-  name: string
+  /** What it is called: one name, or one by level (the trading post's, from level 1 when it is shown unbuilt). */
+  name: string | ((level: number) => string)
   maxLevel: number
   /** Built from the start, as the guild hall is, or only once the stock pays for it. */
   level: (game: GameState) => number
@@ -56,6 +57,8 @@ interface Facility {
   cost: (game: GameState) => Stock | null
   /** Buys the next level; returns why it cannot, or null when done. */
   improve: (game: GameState, party: Expedition) => string | null
+  /** Why the next level cannot be had whatever the stock holds, checked before the stock; null when nothing bars it. */
+  refusal?: (game: GameState) => string | null
   opens: boolean
 }
 
@@ -87,15 +90,17 @@ const FACILITIES: readonly Facility[] = [
   },
   {
     id: 'trading_post',
-    name: 'Trading Post',
+    name: tradingPostName,
     maxLevel: MAX_TRADING_POST_LEVEL,
     level: (game) => game.world.tradingPost,
     about: () => 'Merchants sell plain gear and runes for gold and buy what the party no longer needs.',
-    effect: (_, level) => {
+    effect: (game, level) => {
       const gear = level >= 4 ? 'plain, Fine and Masterwork gear, in iron and steel' : `${['plain', 'plain and Fine', 'plain, Fine and Masterwork'][level - 1]} gear`
       // The runes it sells (RUNE_RANK_LEVELS): Lesser from level 2, the rank above from level 4.
       const runes = level >= RUNE_RANK_LEVELS[2]! ? ', and runes of the first two ranks' : level >= RUNE_RANK_LEVELS[1]! ? ', and Lesser runes' : ''
-      return `Sells ${gear}${runes}.`
+      const income = MARKET_INCOME[level - 1] ?? 0
+      const market = income > 0 ? `; brings ${income} gold every ${YIELD_DAYS} days, half while ${encampmentName(game.world)}'s land is tainted` : ''
+      return `Sells ${gear}${runes}${market}.`
     },
     cost: (game) => tradingPostCost(game.world),
     improve: raiseTradingPost,
@@ -128,6 +133,23 @@ const FACILITIES: readonly Facility[] = [
     improve: raiseInfirmary,
     opens: false,
   },
+  {
+    id: 'builders_lodge',
+    name: "Builders' Lodge",
+    maxLevel: MAX_LODGE_LEVEL,
+    level: (game) => game.world.lodge,
+    about: () => 'Builders who raise works and forts on the land the company holds.',
+    effect: (_, level) =>
+      [
+        'Works can be built on held sites (a Mine, Lumber Camp, Quarry, Saltworks or Peat Cuttings), for 3 more yield.',
+        'Forts too: stronger against the blight, and lost only when corrupted.',
+        'Roads: open trade routes push back the blight.',
+      ][level - 1],
+    cost: (game) => lodgeCost(game.world),
+    improve: raiseLodge,
+    refusal: (game) => (game.world.lodge >= LODGE_LEVEL_LIMIT ? ROADS_REFUSAL : null),
+    opens: false,
+  },
 ]
 
 /** Every facility of the encampment, built or not, in the order the screen lays them out. */
@@ -138,7 +160,7 @@ export function facilities(game: GameState, party: Expedition): FacilityView[] {
     const top = level >= facility.maxLevel
     return {
       id: facility.id,
-      name: facility.name,
+      name: typeof facility.name === 'function' ? facility.name(Math.max(level, 1)) : facility.name,
       level,
       maxLevel: facility.maxLevel,
       about: facility.about(game),
@@ -146,7 +168,7 @@ export function facilities(game: GameState, party: Expedition): FacilityView[] {
       next: top ? null : facility.effect(game, level + 1),
       cost: top ? null : cost,
       action: top ? null : level === 0 ? 'Build' : `Raise to level ${level + 1}`,
-      refusal: top ? null : improveRefusal(game, party, cost),
+      refusal: top ? null : facilityRefusal(game, party, facility, cost),
       opens: facility.opens && level > 0,
     }
   })
@@ -163,13 +185,15 @@ export function improveFacility(game: GameState, party: Expedition, id: Facility
 
 /** Sets a facility's level outright, for the debug console; the caller keeps it within the facility's levels. */
 export function setFacilityLevel(game: GameState, id: FacilityId, level: number): void {
-  const field = { guild_hall: 'guildHall', shrine: 'shrine', trading_post: 'tradingPost', workshop: 'workshop', infirmary: 'infirmary' } as const
+  const field = { guild_hall: 'guildHall', shrine: 'shrine', trading_post: 'tradingPost', workshop: 'workshop', infirmary: 'infirmary', builders_lodge: 'lodge' } as const
   game.world[field[id]] = level
 }
 
 /** The encampment acts for the party at home (`homeParty`): `party` if it is, else the first that is. */
-function improveRefusal(game: GameState, party: Expedition, cost: Stock | null): string | null {
+function facilityRefusal(game: GameState, party: Expedition, facility: Facility, cost: Stock | null): string | null {
   if (!homeParty(game, party.id)) return noPartyHome(game)
+  const barred = facility.refusal?.(game)
+  if (barred) return barred
   if (cost && !canAfford(game.world.stock, cost)) return `It costs ${describeCost(cost)}, more than the stock holds.`
   return null
 }

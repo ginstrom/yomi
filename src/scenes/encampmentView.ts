@@ -19,6 +19,7 @@ export const FACILITY_SPRITES: Record<FacilityId, string> = {
   trading_post: 'camp_trading_post',
   workshop: 'camp_workshop',
   infirmary: 'camp_infirmary',
+  builders_lodge: 'camp_lodge',
 }
 
 /** Where a facility not yet built is drawn: its plot, staked out. */
