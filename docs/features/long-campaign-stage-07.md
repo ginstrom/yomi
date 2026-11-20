@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 7 (site improvements and markets)
 
 **Slug:** long-campaign-stage-07
-**Phase:** 4, implementation (step 04)
+**Phase:** 4, implementation (step 05)
 
 ## Request (user's words)
 
@@ -45,12 +45,12 @@ Large, but the stage design is the approved design. Straight to planning, as sta
 - 01 (494cddb + 88afcf7, opus): 50 hash unchanged; npm test 2353; world e2e 58; build. Review (opus): clean, 1 round; hash re-verified before/after; v26 fixture genuine; 15/16 mutations caught. Two test nits to step 02.
 - 03 (a94e044, sonnet, worktree branch `long-campaign-stage-07-sprites` at .claude/worktrees/agent-adaf679f85afb4743): sprites:check 126; npm test. Review (opus): clean. Merged into the stage branch; worktree removed.
 - 02 (0619dbf, sonnet): 50 hash unchanged (simulator capped at trading post 4); npm test 2367. Review (opus): clean, 1 round; nits: duplicated `wares` sentence in docs/reference/game.md (to step 04); market pays on the day the encampment falls (harmless, by design; note for stage 8).
-- 04 (b20054e + bd9ba57, sonnet): Improve button, palisade, events, Last yield; compact label at 840 and a "Next:" hex line (reviewer: within user decisions 6/13). Review (opus): changes needed — label not re-chosen on resize (blocking); stale-visibility count; record misdescribes peat-label.png; no Outpost hexInfo test; refusal plural. Fixing (same engineer).
-- 06 (560c660, opus, worktree branch `long-campaign-stage-07-sim`): improveErrand, Lodge/market raised, record fields, waiting twin behind `--waiting` (twin ≈ +20% per campaign, reviewer's stable measure). 50 (`--waiting`) hash 1ceefe63…, Source 23/50; guard re-recorded once (a179187a…). Review (opus): clean; guard change decomposed to the simulated economy (Lodge stock kept + Lodge raised); `--waiting` changes no play. At merge: delete `outpostSite`/`outpostSiteRefusal` + their test, CLAUDE.md/game.md wrapper sentences; fix the twin's cost to "about a fifth again"; index hash; fixture indent.
+- 04 (b20054e + bd9ba57, sonnet): Improve button, palisade, events, Last yield; compact label at 840 and a "Next:" hex line (reviewer: within user decisions 6/13). Review (opus): changes needed — label not re-chosen on resize (blocking); stale-visibility count; record misdescribes peat-label.png; no Outpost hexInfo test; refusal plural. Fixed 6dba9b3; re-review clean (new e2e fails on the old code).
+- 06 (560c660, opus, worktree branch `long-campaign-stage-07-sim`): improveErrand, Lodge/market raised, record fields, waiting twin behind `--waiting` (twin ≈ +20% per campaign, reviewer's stable measure). 50 (`--waiting`) hash 1ceefe63…, Source 23/50; guard re-recorded once (a179187a…). Review (opus): clean; guard change decomposed to the simulated economy (Lodge stock kept + Lodge raised); `--waiting` changes no play. Merged (95997c3) with clean-up f6c2416 (wrappers gone, twin cost corrected); npm test 2385; world e2e 60; worktree removed.
 
 ## Carried forward
 
-- To step 04: empty encampmentView.test.ts's `pending` frame set (art merged); delete the duplicated `wares(world, filter)` sentence in docs/reference/game.md (Trading post paragraph).
+- To step 07: in the screenshot retake, the world header's status block (moved to y 3) overlaps a map label showing through (e.g. "Gold Seam").
 - To step 05: drop the `.slice(0, 5)` in encampmentView.test.ts's plot test.
 
 - Lodge level 3 sprite: milestone reads as a bottle, paving faint, level 2→3 jump weak at 1x. Level 3 is unreachable until stage 8 (`LODGE_LEVEL_LIMIT` 2); redraw in stage 8.
