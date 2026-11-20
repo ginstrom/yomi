@@ -28,12 +28,13 @@ Large, but the stage design is the approved design. Straight to planning, as sta
 | 2026-11-20 | Plan decisions 8, 6, 13 as recommended: waiting check is an idle-company twin (behind `--waiting` if >10% runtime); Improve button visible with the reason when the Lodge is too low; hex info and unsaved 'Last yield' wording as written | user | literal 'gold per day at home'; hide button; save last yield | Recommended |
 | 2026-11-20 | Accept the planner's departures (index decisions): party args, `improve` day action, event shapes, optional yield `source`, extra sprites, debug commands, Lodge 3 refusal | orchestrator | follow design to the letter | routine engineering choices following the code's conventions |
 | 2026-11-20 | Own branch `long-campaign-stage-07` off main | orchestrator | commit on main | Precedent: one branch and PR per stage |
+| 2026-11-20 | Push and open a PR | user | wait | Stage done |
+| 2026-11-20 | Keep market income as it is; revisit in stage 12's retune | user | raise it now | |
+| 2026-11-20 | Simulator spend order (works, forts, market levels) waits for stage 12's retune | user | change it now | |
 
 ## Open questions
 
-- Push and PR (outward-facing): awaiting the user.
-- Balance, for the user: market income is small (simulated player: not worth building toward); the simulator never builds works/forts or market levels, so the figures don't exercise them (spend order is the lever).
-- Untracked AGENTS.md (a renamed copy of CLAUDE.md, not from this run): symlink, delete or leave — awaiting the user.
+- Untracked AGENTS.md (a renamed copy of CLAUDE.md, not from this run; points at directory AGENTS.md files that don't exist): awaiting the user. Kept out of the PR.
 
 ## Tiers
 
@@ -53,6 +54,7 @@ Large, but the stage design is the approved design. Straight to planning, as sta
 - 07 (458a72d + 35c5d06, opus): 500 × seed 1 without `--waiting`: `--parties 1` 239 (+5), company 239 (+3); move from the simulated party's spending (step 06), no rule change; no retune. Simulated party barely improves (0.55 outposts, 0.01 works, 0 forts) and never reaches market levels, so the figures don't exercise forts or market gold. Waiting check: 1.30/day campaigning vs 0.98 waiting; waiting never earned more (438 less, 62 equal). Play script walked headless (fort held at blight 2, razed at 3; market halved on taint; v26 save loads). npm test 2392; browser 171; build; sprites:check. Step 07 reviewed by the overall review.
 - Overall review (opus) at 049dc22: changes needed. Blocking: WorldScene `lastYield` not reset in create(), so another game's "Last yield" shows after Continue/new game. Non-blocking: CLAUDE.md facility checklist; market pays on the fall day (recorded). npm test 2392, build, sprites:check, browser 171; 50-campaign spot check matches.
 - QA (sonnet) at 049dc22: pass. Minor: Last yield line overlaps the header hint at 840; Lodge 3 reason not shown until reselected. Gap: fort days-to-corruption warning not reachable in play (unit tests only). Evidence qa-* in .git/pr-review/long-campaign-stage-07/evidence/.
+- PR review at ae59b5f: npm test 2393, build, sprites:check, browser 176/176; browser review of the fix round passed (pr-* evidence); local CRISP: no critical, 4 of 5 observations fixed in e6d94ac (npm test 2394, build), 1 dismissed. Record: .git/pr-review/long-campaign-stage-07.md.
 - Simulated user (sonnet, hands-on) at 049dc22: goals 1, 2, 4 met; 3 partly. Friction: market income invisible before level 4; Lodge 3 dead end; market income small (balance, for the user); blight tint near own sites hard to see (pre-existing). Its `pkill -f vite` likely killed the user's dev server on 5173. Evidence su-*.
 - Fix round 1 (opus, step 07 engineer): lastYield reset + e2e; 840 overlap; Lodge 3 reason shown at once; market-income hint at post levels 1–3; checklist line. Not fixing: market income size and simulator spend order (user decisions); blight tint (pre-existing); Mine strength = Outpost (design: +3 at levels 1 and 2).
 - Fix round 1 (6405b5c): all five fixed, each new test failed first. Re-review (opus): clean, ready for a PR; npm test 2393, build, sprites:check, browser 176/176; 840 status text legible. Nit left: `refreshHint`'s doc comment sits above `fitStatus` (WorldScene.ts ~l.1188).
