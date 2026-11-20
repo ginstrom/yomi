@@ -195,7 +195,7 @@ waitingIncomePerDay: number          // the waiting twin's, over the same days (
 | 04 | [The world map's Improve](04-world-map-improve.md) | Improve button, hex info, labels, palisade, event lines, yield summary, sound (C4); manual text; in-browser tests | 02, 03 | sonnet / opus | done (b20054e) |
 | 05 | [The encampment and the debug console](05-encampment-and-debug.md) | The Lodge's plot, the post's names on screen, debug `stock`, `blight`, `days` (C5); manual text; in-browser tests | 04 | sonnet / opus | done (b6c9bf2) |
 | 06 | [The simulator's improvements and record](06-simulator.md) | `improveErrand`, Lodge and market raised, record and summary, the waiting twin (C6); wrappers gone; fixture re-recorded once | 02 | opus / opus | done (560c660) |
-| 07 | [Measure, document, play](07-measure-document-play.md) | The guard and the company figure, the waiting check; CLAUDE.md, reference docs, manual and screenshots; implementation notes; play script walked | 05, 06 | opus / opus | done (see git log: "Stage 7 step 07") |
+| 07 | [Measure, document, play](07-measure-document-play.md) | The guard and the company figure, the waiting check; CLAUDE.md, reference docs, manual and screenshots; implementation notes; play script walked | 05, 06 | opus / opus | done (458a72d) |
 
 **Tiers.** "opus" means leave the model unset (the session's); "sonnet" means `model: "sonnet"`; no step needs "fable". Steps 01 and 06 decide the guard, the save migration and the simulator's economy; 07 is measurement and a balance judgment. Steps 02, 04 and 05 follow fixed contracts and existing patterns; 03 is tool work with a judged look. Every reviewer is opus.
 
