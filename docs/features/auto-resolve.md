@@ -24,6 +24,7 @@ Medium: design, plan, implement, verify. No architecture brief: the engine alrea
 
 | Date | Decision | By | Alternatives | Reason |
 |---|---|---|---|---|
+| 2026-11-20 | Result screen to show what a battle cost (hit points lost before level-ups heal), as a separate small change | user | leave out | simulated user's friction; touches every battle's result screen |
 | 2026-11-20 | World map's estimate hint shows as a tooltip above the Auto-resolve button, not in the header hint line | orchestrator | shorter world hint; smaller line height; move the status text | the full hint needs 3 lines beside the status text at 840 wide and the header holds 2; a tooltip at the button keeps the design's wording |
 | 2026-11-20 | Plan's departures accepted (scene smoke tests → in-browser tests; `ENEMY_POLICY` to autoPlay.ts; restart estimates only when their start / log changes) | orchestrator | follow design to the letter | routine engineering choices; none changes what the player gets |
 | 2026-11-20 | Design §8.4–8.6 defaults taken: 40 samples; show chance a hero dies; re-estimate after every action | orchestrator | 20 or 100 samples; expected losses; once a turn | one constant, tunable after play; idle-time only |
@@ -35,7 +36,7 @@ Medium: design, plan, implement, verify. No architecture brief: the engine alrea
 
 ## Open questions
 
-- Should the result screen show what a battle cost (hit points lost, before level-up heals)? Simulated user's friction; applies to played battles too, so it changes the approved design. Blocks nothing; for the user.
+- None. The result screen's battle cost went to its own small change: `docs/features/battle-cost.md`.
 
 ## Tiers
 
