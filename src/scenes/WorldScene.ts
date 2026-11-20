@@ -514,13 +514,19 @@ export class WorldScene extends Phaser.Scene {
   /**
    * The Improve button's text: the whole label where the camp row, with it,
    * fits the window beside the party's column, else the compact one (no
-   * cost; the hex info tells it). The row is laid out again by `refresh`.
+   * cost; the hex info tells it). Chosen by `layout`, so a resize and every
+   * refresh (after the other buttons' visibility is set) get it right.
    */
-  private setImproveLabel(full: string, compact: string): void {
+  private setImproveLabel(): void {
+    if (!this.improveButton.visible) return
+    const world = this.world
+    const expedition = this.expedition()
+    const full = improveLabel(world, expedition)
+    if (full === null) return
     const others = [...this.campButtons, this.towerButton, this.encampmentButton].filter((button) => button.visible)
     const used = others.reduce((sum, button) => sum + button.width + FOOTER_GAP, 0)
     const room = this.scale.width - PARTY_PANEL_W - 2 * FOOTER_GAP - used
-    const label = WorldScene.footerWidth(full) <= room ? full : compact
+    const label = WorldScene.footerWidth(full) <= room ? full : improveLabel(world, expedition, true)!
     const text = this.improveButton.getData('text') as Phaser.GameObjects.Text
     if (text.text === label) return
     text.setText(label)
@@ -901,6 +907,7 @@ export class WorldScene extends Phaser.Scene {
     const { width, height } = this.scale
     const centreX = PARTY_PANEL_W + (width - PARTY_PANEL_W) / 2
     const buttonY = height - 50
+    this.setImproveLabel()
     // Only the buttons shown take room: the camp row has one of the tower's, the improvement's and the encampment's at most.
     const timeY = buttonY - ROW_PITCH
     const rows: [Phaser.GameObjects.Container[], number][] = [
@@ -1102,7 +1109,6 @@ export class WorldScene extends Phaser.Scene {
     this.towerButton.setVisible(campable && !this.walking && towerSiteRefusal(world, expedition) === null)
     const improving = improveLabel(world, expedition)
     this.improveButton.setVisible(campable && !this.walking && improving !== null)
-    if (improving !== null) this.setImproveLabel(improving, improveLabel(world, expedition, true)!)
     this.encampmentButton.setVisible(atEncampment(world, expedition) && !this.walking)
     this.layout()
     this.refreshForecast()

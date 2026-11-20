@@ -31,6 +31,9 @@ describe('hexInfo of a resource', () => {
     const plain = site(0)
     expect(info(plain.game, plain.at).lines).toContain('Yields 2 iron.')
     expect(info(plain.game, plain.at).lines).toContain('Next: an Outpost, 15 gold, 10 timber.')
+    const outpost = site(1)
+    expect(info(outpost.game, outpost.at).lines).toContain('Outpost: 3 iron every 5 days.')
+    expect(info(outpost.game, outpost.at).lines).toContain('Strength 6 against the blight.')
     const works = site(2)
     works.world.lodge = 1
     const lines = info(works.game, works.at).lines

@@ -170,7 +170,7 @@ export function improveRefusal(world: WorldState, party: Expedition): string | n
   if (refusal) return refusal
   const next = nextImprovement(world, improvementSite(world, party)!)!
   const building = capitalised(withArticle(next.name))
-  if (world.lodge < next.lodge) return `${building} needs the Builders' Lodge${next.lodge > 1 ? ` at level ${next.lodge}` : ''}.`
+  if (world.lodge < next.lodge) return `${building} ${next.name.endsWith('s') ? 'need' : 'needs'} the Builders' Lodge${next.lodge > 1 ? ` at level ${next.lodge}` : ''}.`
   if (!canAfford(world.stock, next.cost)) return `${building} costs ${describeCost(next.cost)}, more than the stock holds.`
   return null
 }

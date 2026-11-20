@@ -1065,17 +1065,21 @@ describe('the world map', () => {
       expect(refused.world.improvements.iron_vein).toBe(1)
     })
 
-    it('fits the footer at 840 x 560 with the longest label', async () => {
+    it('fits the footer at 840 x 560 with the longest label, also after a resize from a wide window', async () => {
       const game = await games.open()
       await game.newGame()
       await reloadedWith(game, { stock: { gold: 200 }, improvements: { iron_vein: 2 }, lodge: 2 })
+      const wide = await game.travelTo(IRON_VEIN)
+      // At the default size the whole label shows.
+      expect(wide.improveLabel).toBe('Build a Fort: 50 gold, 20 iron, 10 stone')
       await game.resize(840, 560)
-      const there = await game.travelTo(IRON_VEIN)
+      const there = await game.settled('World', (w) => w.improveLabel !== wide.improveLabel)
       expect(there.buttons.improve.visible).toBe(true)
       const { x, width } = there.buttons.improve
       expect(x - width! / 2).toBeGreaterThanOrEqual(80)
       expect(x + width! / 2).toBeLessThanOrEqual(840)
       for (const button of [there.buttons.camp, there.buttons.campUntilHealed, there.buttons.craft]) {
+        expect(button.x - button.width! / 2).toBeGreaterThanOrEqual(80)
         expect(Math.abs(button.x - there.buttons.improve.x)).toBeGreaterThan((button.width! + width!) / 2)
       }
     })

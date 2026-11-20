@@ -403,6 +403,12 @@ describe('improvements (economy A1, A2)', () => {
     noLodge.world.improvements.gold_seam = 1
     expect(improveSiteRefusal(noLodge.world, noLodge.party)).toBeNull()
     expect(improveRefusal(noLodge.world, noLodge.party)).toBe("A Mine needs the Builders' Lodge.")
+    // A plural name agrees: "Peat Cuttings need", as a Mine needs.
+    const peat = atGoldSeam(0)
+    peat.party.position = peat.world.locations.find((l) => l.id === 'peat_bog')!.position
+    peat.world.held = [...new Set([...peat.world.held, 'peat_bog'])]
+    peat.world.improvements.peat_bog = 1
+    expect(improveRefusal(peat.world, peat.party)).toBe("Peat Cuttings need the Builders' Lodge.")
     const lowLodge = atGoldSeam(1)
     lowLodge.world.improvements.gold_seam = 2
     expect(improveRefusal(lowLodge.world, lowLodge.party)).toBe("A Fort needs the Builders' Lodge at level 2.")
