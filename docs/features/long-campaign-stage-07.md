@@ -25,15 +25,22 @@ Large, but the stage design is the approved design. Straight to planning, as sta
 | Date | Decision | By | Alternatives | Reason |
 |---|---|---|---|---|
 | 2026-11-20 | Skip architecture and design; the stage design is the approved design | orchestrator | new design | Marked ready for planning; precedent stages 2–6 |
+| 2026-11-20 | Plan decisions 8, 6, 13 as recommended: waiting check is an idle-company twin (behind `--waiting` if >10% runtime); Improve button visible with the reason when the Lodge is too low; hex info and unsaved 'Last yield' wording as written | user | literal 'gold per day at home'; hide button; save last yield | Recommended |
 | 2026-11-20 | Accept the planner's departures (index decisions): party args, `improve` day action, event shapes, optional yield `source`, extra sprites, debug commands, Lodge 3 refusal | orchestrator | follow design to the letter | routine engineering choices following the code's conventions |
 | 2026-11-20 | Own branch `long-campaign-stage-07` off main | orchestrator | commit on main | Precedent: one branch and PR per stage |
 
 ## Open questions
 
-- Plan decision 8 (waiting check: idle-company twin compared on income per day, behind `--waiting` if >10% runtime), decision 6 (Improve button visible with reason when the Lodge is too low), decision 13 (hex info / 'Last yield' wording): defaults taken, asked of the user 2026-11-20. 8 blocks step 06; 6 and 13 block step 04.
+- None.
 
 ## Tiers
 
 - Planner: opus
 - Steps (engineer / reviewer, planner's suggestions): 01 opus/opus; 02 sonnet/opus; 03 sonnet/opus; 04 sonnet/opus; 05 sonnet/opus; 06 opus/opus; 07 opus/opus; overall review opus
 - Order: 01 → 02 → {04 → 05 on branch; 06 in a worktree, merged after 04}; 03 any time in a worktree, merged before 04; 07 last
+
+## Verification
+
+- Baseline (step 01, seed 1, 500): `--parties 1` 234/500; default company 236/500; 50-campaign hash 5f92e363…
+- 01 (494cddb + 88afcf7, opus): 50 hash unchanged; npm test 2353; world e2e 58; build. Under review.
+- 03 (a94e044, sonnet, worktree branch `long-campaign-stage-07-sprites` at .claude/worktrees/agent-adaf679f85afb4743): sprites:check 126; npm test. Under review. Merge before 04.
