@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 7 (site improvements and markets)
 
 **Slug:** long-campaign-stage-07
-**Phase:** 5, verification (at 35c5d06)
+**Phase:** 6, done on branch (17cc2e3..6405b5c); not pushed
 
 ## Request (user's words)
 
@@ -31,7 +31,9 @@ Large, but the stage design is the approved design. Straight to planning, as sta
 
 ## Open questions
 
-- None.
+- Push and PR (outward-facing): awaiting the user.
+- Balance, for the user: market income is small (simulated player: not worth building toward); the simulator never builds works/forts or market levels, so the figures don't exercise them (spend order is the lever).
+- Untracked AGENTS.md (a renamed copy of CLAUDE.md, not from this run): symlink, delete or leave — awaiting the user.
 
 ## Tiers
 
@@ -53,6 +55,7 @@ Large, but the stage design is the approved design. Straight to planning, as sta
 - QA (sonnet) at 049dc22: pass. Minor: Last yield line overlaps the header hint at 840; Lodge 3 reason not shown until reselected. Gap: fort days-to-corruption warning not reachable in play (unit tests only). Evidence qa-* in .git/pr-review/long-campaign-stage-07/evidence/.
 - Simulated user (sonnet, hands-on) at 049dc22: goals 1, 2, 4 met; 3 partly. Friction: market income invisible before level 4; Lodge 3 dead end; market income small (balance, for the user); blight tint near own sites hard to see (pre-existing). Its `pkill -f vite` likely killed the user's dev server on 5173. Evidence su-*.
 - Fix round 1 (opus, step 07 engineer): lastYield reset + e2e; 840 overlap; Lodge 3 reason shown at once; market-income hint at post levels 1–3; checklist line. Not fixing: market income size and simulator spend order (user decisions); blight tint (pre-existing); Mine strength = Outpost (design: +3 at levels 1 and 2).
+- Fix round 1 (6405b5c): all five fixed, each new test failed first. Re-review (opus): clean, ready for a PR; npm test 2393, build, sprites:check, browser 176/176; 840 status text legible. Nit left: `refreshHint`'s doc comment sits above `fitStatus` (WorldScene.ts ~l.1188).
 
 ## Carried forward
 
