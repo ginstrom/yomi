@@ -88,6 +88,7 @@ import { PartyColumn } from './PartyColumn.ts'
 import { UnitFigure } from './UnitFigure.ts'
 import { CHEST_POINT, SPRITE_ATLAS, heroLook, pointFromAnchor, spriteAnim, spriteFrame } from './unitLook.ts'
 import { AUTO_DRAG_ON_LINE, DEFAULT_ENCOUNTER, autoResolvedLine, battleSeed, chooseBattle, foundNames } from './battleSetup.ts'
+import { battleCost, costLines } from './battleCost.ts'
 import { HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
 import { showStory, type StoryAnchors } from './StoryScene.ts'
 import { storyFor, type StoryItem } from '../story/story.ts'
@@ -976,6 +977,14 @@ export class BattleScene extends Phaser.Scene {
     // so the button keeps below however many lines there are.
     this.resultText.setPosition(width / 2, height / 2 - 60)
     this.menuButton.setPosition(width / 2, this.resultText.y + this.resultText.height + 46)
+    // A long result lifts the whole block together, as far as the banner may go, to keep the button on screen.
+    const overflow = this.menuButton.y + 30 - (height - 16)
+    if (overflow > 0) {
+      const lift = Math.min(overflow, Math.max(0, this.bannerText.y - 40))
+      this.bannerText.y -= lift
+      this.resultText.y -= lift
+      this.menuButton.y -= lift
+    }
 
     const buttonTop = buttonY - 22
     const logBoxX = PARTY_PANEL_W + BOARD_MARGIN_X
@@ -2427,9 +2436,13 @@ export class BattleScene extends Phaser.Scene {
         if (member) member.mana = unit.mana
       }
     }
+    // What the battle cost is read before the reward heals anyone: the hit points lost between the start and the end.
+    const cost = playerWon ? costLines(battleCost(this.engine.getLog(), state.units, this.names)) : []
     // The fallen are dead: out of the party, their gear in the baggage.
     const reward = playerWon ? rewardVictory(this.expedition.members, this.xpReward, this.expedition.baggage) : null
+    // The cost follows the first line, the experience won.
     const xpLines = reward ? describeRewards(reward) : []
+    xpLines.splice(1, 0, ...cost)
     // A level gained is heard after the victory sting has played out.
     if (reward?.members.some(({ gain }) => gain.levelsGained > 0)) {
       const elapsed = this.endShownAt === null ? 0 : this.time.now - this.endShownAt

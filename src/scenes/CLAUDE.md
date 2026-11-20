@@ -51,6 +51,7 @@ Pure (no runtime Phaser import):
 - `battleEffects.ts`: how blows, shots, spells and area abilities look and when they land; floating text; which events redraw status letters.
 - `boardGeometry.ts`: hex ↔ screen for the battlefield and the world map.
 - `attackPlan.ts`: what clicking a foe does, and the hint when it does nothing.
+- `battleCost.ts`: the victory screen's cost line: hit points lost per hero, net, measured before the reward heals.
 - `battleSetup.ts`: which encounter and threat a `Battle` asks for, the log's seed, the "Found:" line, auto-resolve's lines.
 - `storyAudio.ts`: which line a cutscene beat speaks, its files, delay, fade and duck.
 - `scrollingLog.ts`: the battle log.

@@ -13,6 +13,15 @@ import { RAIDERS, battleHexOnScreen, useGames, type Game } from './driver.ts'
 /** The first party member's unit, which is the one selected as a battle opens. */
 const hero = (battle: BattleProbe) => battle.state.units.find((u) => u.id === 'hero_1')!
 
+/** The hit points the party lost over a finished battle, as the result screen's cost line should say: by hero, from the log's start to the final units. */
+function lostInBattle(over: BattleProbe): number {
+  const start = over.log[0]
+  if (start.type !== 'battle_start') throw new Error('log does not start a battle')
+  return start.units
+    .filter((u) => u.side === 'player')
+    .reduce((sum, u) => sum + Math.max(0, u.hp - over.state.units.find((f) => f.id === u.id)!.hp), 0)
+}
+
 /** Types a line at the debug console, opening it first, and closes it again. */
 async function debugCommand(game: Game, line: string): Promise<void> {
   await game.press('Shift+Backquote')
@@ -504,6 +513,7 @@ describe('a battle', () => {
     const over = await game.loseBattle()
     expect(over.state.winner).toBe('enemy')
     expect(over.result).toEqual(['The Second Company has fallen. Its baggage lies at the Goblin Raiders.'])
+    expect(over.result.some((line) => line.includes('cost'))).toBe(false)
     const saved = await game.page.evaluate(() => JSON.parse(localStorage.getItem('yomi.save.1')!))
     expect(saved.battle).toBeNull()
     expect(saved.game.parties.map((p: { id: string }) => p.id)).toEqual(['party_1'])
@@ -592,6 +602,14 @@ describe('auto-resolve on the battle screen', () => {
     const rounds = over.state.round - moved.state.round + 1
     expect(over.result[0]).toBe('The Goblin Raiders are beaten.')
     expect(over.result[1]).toBe(autoResolvedLine(rounds))
+    // The cost, from the log's start to the final hit points, stands after the experience and before any level.
+    const lost = lostInBattle(over)
+    expect(lost).toBeGreaterThan(0)
+    const costAt = over.result.findIndex((line) => line.startsWith('The battle cost'))
+    expect(over.result[costAt]).toMatch(new RegExp(`^The battle cost ${lost} HP: `))
+    expect(over.result[costAt - 1]).toMatch(/^\+\d+ XP/)
+    const firstLevel = over.result.findIndex((line) => line.includes('reaches level'))
+    if (firstLevel >= 0) expect(costAt).toBeLessThan(firstLevel)
     for (const button of [over.buttons.auto, over.buttons.attack, over.buttons.endTurn]) expect(button.visible).toBe(false)
     // Nothing is played back, but the end sounds as a played battle's: the victory sting, then the level-up's.
     const heard = () => game.page.evaluate(() => window.__yomi!.audioLog().map((entry) => entry.cue))
@@ -664,6 +682,18 @@ describe('auto-resolve on the battle screen', () => {
     expect(enemy.autoLabel).toBe('Auto (…)')
     await game.waitFor('Battle', (b) => b.playerControl && b.state.round === 2)
     await game.waitFor('Battle', (b) => b.forecast !== null)
+  })
+
+  it('keeps the result screen’s button on screen at the least window size, cost line and all (A6)', async () => {
+    const game = await games.open()
+    await game.resize(840, 560)
+    const start = await game.enterBattle()
+    await game.click(battleHexOnScreen(start, offsetToHex(5, 4)))
+    const moved = await game.awaitTurn()
+    await game.click(moved.buttons.auto)
+    const over = await game.waitFor('Battle', (b) => b.buttons.result.visible)
+    expect(over.result.some((line) => line.startsWith('The battle cost'))).toBe(true)
+    expect(over.buttons.result.y + 30).toBeLessThanOrEqual(560)
   })
 
   it('wraps the estimate’s hint inside the header at the least window size', async () => {

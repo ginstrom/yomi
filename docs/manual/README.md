@@ -401,6 +401,8 @@ While aiming, the pointer is crossed swords over a valid target of an attacking 
 
 You win when every foe has fallen. Every surviving hero earns the full experience reward. The lair disappears from the map, the land around it is cleansed, and its loot goes into the baggage. A lair may also yield a **rune**, which goes into the party's rune pouch: the victory screen names it, as in "Found: Lesser Ember Rune". Lairs of threat 1 to 3 give a Lesser rune half the time; from threat 4 every win gives one, sometimes of the second rank. The Salamander Pool favours Ember runes and the Spider Nest Venom.
 
+The victory screen also says what the battle cost the party in hit points, counted before any level-up healed anyone: "The battle cost 23 HP: Aiko 12, Ren 8, Mia 3.". Heroes are listed most lost first, and a hero who fell counts for the hit points they started with. A battle that cost nothing has no such line.
+
 An auto-resolved battle's rewards and losses are the same as a played one's: experience, loot, runes, the cleared lair and any heroes who fall. No confirmation is asked.
 
 **Death is permanent.** A hero who fell in a battle you won is gone for good. Their gear goes to the baggage, and the party fights on smaller until the guild hall fills the place. If **every** hero in the battle falls, that party is wiped out: its heroes are dead, and everything they wore and carried, with the party's baggage, lies at the lair as its loot, for whoever beats it. The game goes on while you have a hero anywhere, in another party or in the guild hall's reserves; if the last party falls with reserves left, they form a new party at the encampment at once. Only when no hero is left is the game over and its save deleted.

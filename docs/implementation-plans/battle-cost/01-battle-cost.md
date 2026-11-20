@@ -56,3 +56,11 @@ Decisions: HP only, no mana. A hero who fell counts for the HP they started with
 - [ ] One commit on `main`; this step's status and hash set in [index.md](index.md).
 
 ## Execution record
+
+Step 01, engineer run.
+
+- Red/green: `src/scenes/battleCost.test.ts` (9 tests) written first; one test of mine failed first on names too short to overflow (test fixed, not code). `npx vitest run src/scenes/battleCost.test.ts`: 9 passed.
+- `endBattle`: cost lines computed before `rewardVictory` (only on a win) and spliced into `xpLines` at index 1. `layout()` lifts banner, result text and button together when `menuButton.y + 30 > height - 16`, banner kept at y >= 40.
+- e2e (`e2e/battle.test.ts`): auto-resolve test now asserts the cost line (N equals the sum computed from `over.log[0]` and `over.state.units`, N > 0 since the battle is seeded, after the `+N XP` line, before any level line); new A6 test at 840x560 auto-resolves a win and asserts the OK button's bottom (y + 30) is within 560 (a full party was not arranged: the driver's party is 3 heroes; the largest it can); the defeat test asserts no line contains `cost`.
+- `npm test`: tsc clean, 96 files, 2319 tests passed. `npm run test:browser`: 12 files, 161 tests passed. `npm run manual:screenshots`: 7 passed; it rewrote 14 images, only `battle-victory.png` kept (the others differ by render noise and are unrelated), viewed and sensible (cost line "The battle cost 7 HP: Delwyn 7." after "+130 XP each").
+- Docs: manual sentence, `docs/reference/scenes.md` (cost-line paragraph and module entry), `src/scenes/CLAUDE.md` line. No `describeRewards`, engine, `LOG_SCHEMA_VERSION` or `SAVE_VERSION` change. `docs/features/battle-cost.md` did not exist or was unmodified, so nothing to carry.
