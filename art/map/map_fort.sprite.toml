@@ -1,0 +1,42 @@
+# A fort: a ring of sharpened stakes drawn over a resource's icon, with a red
+# pennant on the tallest stake at the back. It is drawn at the same origin as
+# map_resource (and the other map icons), and is transparent inside the ring so
+# the resource shows through; the front stakes are low so as not to hide it.
+canvas = "map"
+outline = "auto"
+
+[frames.base.runs]
+1 = [[11, "T"], [12, "rrrr"]]
+2 = [[7, "T"], [11, "Tt"], [13, "rr"], [15, "T"]]
+3 = [[3, "T"], [7, "Tt"], [11, "Tt"], [15, "Tt"], [19, "T"]]
+4 = [[3, "Tt"], [7, "Tt"], [11, "Tt"], [15, "Tt"], [19, "Tt"]]
+5 = [[3, "Tt"], [7, "Tt"], [11, "Tt"], [15, "Tt"], [19, "Tt"]]
+6 = [[3, "Tt"], [7, "nn"], [11, "nn"], [15, "nn"], [19, "Tt"]]
+7 = [[3, "Tt"], [19, "Tt"]]
+8 = [[3, "nn"], [19, "nn"]]
+9 = [[1, "T"], [21, "T"]]
+10 = [[1, "Tt"], [21, "Tt"]]
+11 = [[1, "Tt"], [21, "Tt"]]
+12 = [[1, "Tt"], [21, "Tt"]]
+13 = [[1, "Tt"], [21, "Tt"]]
+14 = [[1, "nn"], [3, "T"], [19, "T"], [21, "nn"]]
+15 = [[3, "Tt"], [19, "Tt"]]
+16 = [[3, "Tt"], [19, "Tt"]]
+17 = [[3, "Tt"], [19, "Tt"]]
+18 = [[3, "Tt"], [7, "T"], [11, "T"], [15, "T"], [19, "Tt"]]
+19 = [[3, "nn"], [7, "Tt"], [11, "Tt"], [15, "Tt"], [19, "nn"]]
+20 = [[7, "Tt"], [11, "Tt"], [15, "Tt"]]
+21 = [[7, "Tt"], [11, "Tt"], [15, "Tt"]]
+22 = [[7, "nn"], [11, "nn"], [15, "nn"]]
+
+# The pennant lifts and falls.
+[frames.flutter]
+from = "base"
+
+[frames.flutter.runs]
+1 = [[12, "rrr."]]
+2 = [[13, "rrr"]]
+
+[anim.idle]
+frames = ["base", "flutter"]
+ms = 500

@@ -90,3 +90,12 @@ No game code changes in this step beyond what the sprite pipeline itself needs (
 - [ ] One commit, "Stage 7 step 03: sprites: Lodge, market and fort", no attribution lines, on the step's worktree branch; the index's row 03 updated with status and commit.
 
 ## 7. Execution record
+
+**Done (engineer).** Drawn as runs in `art/` with sprite-tool, no generator script; `sprite check` ok, `npm run sprites` built 126 sprites / 255 frames, `npm run sprites:check` up to date, `npm test` 96 files / 2319 tests green. No rule changed, so the 50-campaign guard check was not run. No CLAUDE.md edit was needed (no id-to-asset table touched).
+
+Names for steps 04 and 05:
+- `camp_lodge/level_1`, `level_2`, `level_3` (`art/encampment/camp_lodge.sprite.toml`), `building` canvas, 48x48, anchor [24, 48]. Footing at rows 44-46, cols 2-45; shed at cols 12-35; crane mast to col 45 at levels 2-3. The plot origin does not move between levels. Also exported: `camp_lodge` (default frame, level_1).
+- `camp_trading_post/level_5` (Market Hall: slate-roofed plastered storey where the sign was) and `level_6` (Trading House: stone storey, gold finial, red pennants), 48x48, same canvas and footprint as `level_4`.
+- `map_fort/base` and `map_fort/flutter`, animation `map_fort/idle` (base, flutter, 500 ms), `map` canvas 24x24, anchor [12, 12]. Same canvas and origin as `map_resource`: place it at the same position with no offset. Transparent inside the ring. Front stakes cover the bottom rows (18-22) of the resource icon; sides and back sit at its edge.
+- Looked at: `sprite preview` at scales 6 and 12 (all frames) and a composite of `map_resource/base` under `map_fort/base`. The palisade reads over the ore, which stays visible in the middle; the Lodge's levels grow each step and differ from the workshop (timber, not steel).
+- Notes: the level 3 milestone is slim and reads a little like a bottle at 1x; accepted. The export also writes the `flutter` frame for the fort.

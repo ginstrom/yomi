@@ -1475,6 +1475,22 @@
       "frames": [
         {
           "duration": 500,
+          "frame": "map_fort/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 500,
+          "frame": "map_fort/flutter",
+          "key": "atlas"
+        }
+      ],
+      "key": "map_fort/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 500,
           "frame": "map_monsters/base",
           "key": "atlas"
         },
