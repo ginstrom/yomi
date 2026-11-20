@@ -5,7 +5,7 @@ import { isPartyEvent, worldInterrupt, type DayReport, type Interrupt, type Part
 import type { Expedition } from '../game/expedition.ts'
 import { partyById, type GameState } from '../game/gameState.ts'
 import { midSentence, monstersHere, theName, type MonsterLocation } from '../game/worldMap.ts'
-import { withArticle } from '../game/territory.ts'
+import { capitalised, isPluralName, withArticle } from '../game/territory.ts'
 import { knownLocationAt } from './partyList.ts'
 
 /** What a razed improvement is called in the message, by level. */
@@ -16,7 +16,7 @@ const RAZED = ['', 'outpost', 'works', 'fort'] as const
  * line: "Last yield: sites 4 gold, 5 iron; market 3 gold". Sites' materials
  * come in order of first appearance, gold first. Null when none yielded.
  */
-export function yieldSummary(events: readonly WorldEvent[]): string | null {
+export function yieldSummary(events: readonly WorldEvent[], heading = 'Last yield'): string | null {
   const sites = new Map<string, number>()
   let market = 0
   for (const event of events) {
@@ -30,7 +30,7 @@ export function yieldSummary(events: readonly WorldEvent[]): string | null {
     parts.push(`sites ${ordered.map(([material, amount]) => `${amount} ${material}`).join(', ')}`)
   }
   if (market > 0) parts.push(`market ${market} gold`)
-  return parts.length > 0 ? `Last yield: ${parts.join('; ')}` : null
+  return parts.length > 0 ? `${heading}: ${parts.join('; ')}` : null
 }
 
 /** The world map's line for an event, or '' for one too small to tell (a hex's level changing). */
@@ -53,8 +53,8 @@ export function describeWorldEvent(event: WorldEvent): string {
     case 'tower_built':
       return 'A watchtower rises over the land.'
     case 'site_improved': {
-      const building = withArticle(event.level === 1 ? 'outpost' : event.building)
-      return `${building.charAt(0).toUpperCase()}${building.slice(1)} ${event.level > 1 && event.building.endsWith('s') ? 'stand' : 'stands'} at ${event.name}.`
+      const name = event.level === 1 ? 'outpost' : event.building
+      return `${capitalised(withArticle(name))} ${isPluralName(name) ? 'stand' : 'stands'} at ${event.name}.`
     }
     case 'tower_lost':
       return 'A watchtower is lost to the blight.'

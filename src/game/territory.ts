@@ -74,9 +74,19 @@ export function improvementName(site: QuietLocation, level: ImprovementLevel): s
   return WORKS_NAMES[RESOURCE_YIELDS[site.id]?.material ?? 'gold']
 }
 
+/** Whether an improvement's name is plural ("Saltworks", "Peat Cuttings"), so takes "need" and "stand" rather than "needs" and "stands". */
+export function isPluralName(name: string): boolean {
+  return name.endsWith('s')
+}
+
+/** The text with its first letter in capitals: "an Outpost" → "An Outpost". */
+export function capitalised(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
 /** An improvement's name with its article: "an Outpost", "a Mine"; a plural name ("Saltworks", "Peat Cuttings") bare. */
 export function withArticle(name: string): string {
-  if (name.endsWith('s')) return name
+  if (isPluralName(name)) return name
   return `${/^[AEIOU]/i.test(name) ? 'an' : 'a'} ${name}`
 }
 

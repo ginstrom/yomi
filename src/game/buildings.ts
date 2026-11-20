@@ -3,7 +3,7 @@ import { blightAt, type WorldEvent } from './blight.ts'
 import { act } from './company.ts'
 import type { Expedition } from './expedition.ts'
 import type { GameState } from './gameState.ts'
-import { improvementName, siteImprovement, withArticle, type ImprovementLevel, type Material, type Stock } from './territory.ts'
+import { capitalised, improvementName, isPluralName, siteImprovement, withArticle, type ImprovementLevel, type Material, type Stock } from './territory.ts'
 import { ENCAMPMENT_ID, encampmentName, locationAt, monstersHere, worldActive, type QuietLocation, type WorldState } from './worldMap.ts'
 
 /**
@@ -150,8 +150,6 @@ export function nextImprovement(world: WorldState, site: QuietLocation): { level
   return { level, name: improvementName(site, level), cost: IMPROVEMENT_COSTS[level - 1], lodge: IMPROVEMENT_LODGE[level - 1] }
 }
 
-const capitalised = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1)
-
 /** Why no improvement can go where the party stands, the Lodge and the stock aside, or null when the place will do. */
 export function improveSiteRefusal(world: WorldState, party: Expedition): string | null {
   if (!worldActive(world) || monstersHere(world, party)) return 'Nothing can be built here now.'
@@ -161,14 +159,23 @@ export function improveSiteRefusal(world: WorldState, party: Expedition): string
   return null
 }
 
+/**
+ * The words for an improvement the Lodge is too low for: "A Mine needs the Builders' Lodge" (at level N, above 1);
+ * `compact`, for a narrow footer: "A Mine needs Lodge 2".
+ */
+export function lodgeNeeded(next: { name: string; lodge: number }, compact = false): string {
+  const building = `${capitalised(withArticle(next.name))} ${isPluralName(next.name) ? 'need' : 'needs'}`
+  if (compact) return `${building} Lodge ${next.lodge}`
+  return `${building} the Builders' Lodge${next.lodge > 1 ? ` at level ${next.lodge}` : ''}`
+}
+
 /** Why the site the party stands on cannot be improved now, or null when it can: the place, then the Lodge, then the stock. */
 export function improveRefusal(world: WorldState, party: Expedition): string | null {
   const refusal = improveSiteRefusal(world, party)
   if (refusal) return refusal
   const next = nextImprovement(world, improvementSite(world, party)!)!
-  const building = capitalised(withArticle(next.name))
-  if (world.lodge < next.lodge) return `${building} ${next.name.endsWith('s') ? 'need' : 'needs'} the Builders' Lodge${next.lodge > 1 ? ` at level ${next.lodge}` : ''}.`
-  if (!canAfford(world.stock, next.cost)) return `${building} costs ${describeCost(next.cost)}, more than the stock holds.`
+  if (world.lodge < next.lodge) return `${lodgeNeeded(next)}.`
+  if (!canAfford(world.stock, next.cost)) return `${capitalised(withArticle(next.name))} costs ${describeCost(next.cost)}, more than the stock holds.`
   return null
 }
 

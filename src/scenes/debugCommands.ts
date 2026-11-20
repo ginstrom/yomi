@@ -417,11 +417,11 @@ const COMMANDS: Record<string, Command> = {
           }
         }
       }
-      const summed = yieldSummary(yields)
+      const summed = yieldSummary(yields, `Yields over ${passed} ${passed === 1 ? 'day' : 'days'}`)
       return [
         `${passed} ${passed === 1 ? 'day passes' : 'days pass'}; it is turn ${game.world.turn}.`,
         ...told,
-        ...(summed ? [summed.replace('Last yield', `Yields over ${passed} ${passed === 1 ? 'day' : 'days'}`)] : []),
+        ...(summed ? [summed] : []),
       ]
     },
   },

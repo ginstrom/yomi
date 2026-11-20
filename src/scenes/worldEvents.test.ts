@@ -56,6 +56,10 @@ describe('yieldSummary', () => {
     expect(yieldSummary([level])).toBeNull()
     expect(yieldSummary([])).toBeNull()
   })
+
+  it('takes the heading it is given', () => {
+    expect(yieldSummary([site('iron', 2)], 'Yields over 3 days')).toBe('Yields over 3 days: sites 2 iron')
+  })
 })
 
 describe('describeWorldEvents', () => {

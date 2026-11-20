@@ -1185,7 +1185,6 @@ export class WorldScene extends Phaser.Scene {
     this.forecastTipText.setPosition(x + INFO_PAD, y + INFO_PAD)
   }
 
-  /** The header's hint: what the selected party may do where it stands, or whom a click on the hovered hex sends it to meet. */
   /**
    * Places the stock panel at the header's right. Three lines (with the last yield) start higher, to clear the hint under the
    * turn's number, and are set smaller when they would still reach it (a narrow window, a long hint).
@@ -1198,6 +1197,7 @@ export class WorldScene extends Phaser.Scene {
     if (a.x < b.right && b.x < a.right && a.y < b.bottom && b.y < a.bottom) this.statusText.setFontSize(STATUS_FONT_SMALL).setLineSpacing(-2).setY(1)
   }
 
+  /** The header's hint: what the selected party may do where it stands, or whom a click on the hovered hex sends it to meet. */
   private refreshHint(): void {
     this.layoutForecastTip()
     const expedition = this.expedition()

@@ -5,7 +5,7 @@ import type { GameState } from './gameState.ts'
 import { GUILD_HALL_LEVELS, MAX_GUILD_HALL_LEVEL, homeParty, noPartyHome, upgradeCost, upgradeGuildHall } from './guildHall.ts'
 import { MAX_WORKSHOP_LEVEL, upgradeWorkshop, workshopCost } from './crafting.ts'
 import { MAX_INFIRMARY_LEVEL, infirmaryCost, infirmaryEffect, raiseInfirmary } from './infirmary.ts'
-import { MARKET_INCOME, YIELD_DAYS, type Stock } from './territory.ts'
+import { IMPROVEMENT_YIELD, MARKET_INCOME, YIELD_DAYS, type Stock } from './territory.ts'
 import { MAX_TRADING_POST_LEVEL, RUNE_RANK_LEVELS, raiseTradingPost, tradingPostCost, tradingPostName } from './tradingPost.ts'
 import { encampmentName } from './worldMap.ts'
 
@@ -163,7 +163,7 @@ const FACILITIES: readonly Facility[] = [
     about: () => 'Builders who raise works and forts on the land the company holds.',
     effect: (_, level) =>
       [
-        'Works can be built on held sites (a Mine, Lumber Camp, Quarry, Saltworks or Peat Cuttings), for 3 more yield.',
+        `Works can be built on held sites (a Mine, Lumber Camp, Quarry, Saltworks or Peat Cuttings), for ${IMPROVEMENT_YIELD[2]} more yield.`,
         'Forts too: stronger against the blight, and lost only when corrupted.',
         'Roads: open trade routes push back the blight.',
       ][level - 1],
