@@ -27,7 +27,7 @@ export function costLines(costs: HeroCost[], width?: number): string[]   // defa
 
 | Step | Task | Outcome | Depends on | Status |
 | --- | --- | --- | --- | --- |
-| 01 | [Battle cost line](01-battle-cost.md) | `battleCost.ts`, its use in `endBattle`, the layout shift, tests, e2e, manual and docs | none | pending |
+| 01 | [Battle cost line](01-battle-cost.md) | `battleCost.ts`, its use in `endBattle`, the layout shift, tests, e2e, manual and docs | none | done (0aea703) |
 
 One step; nothing to parallelise.
 
