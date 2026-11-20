@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { SpellId } from '../src/combat/spells.ts'
 import { BattleEngine, type CastOutcome, type Side } from '../src/engine/battleEngine.ts'
 import { GOBLIN_STATS } from '../src/combat/combat.ts'
-import { hex } from '../src/grid/hex.ts'
+import { hex, hexDistance } from '../src/grid/hex.ts'
 import { autoAdvance, planFor } from '../src/character/progression.ts'
 import type { PerkId } from '../src/character/perks.ts'
 import { capstoneOf } from '../src/character/trees.ts'
@@ -11,9 +11,9 @@ import { banditStats } from '../src/game/bandits.ts'
 import { newGame } from '../src/game/gameState.ts'
 import { heroId } from '../src/game/encounters.ts'
 import { readyMadeParty } from '../src/game/party.ts'
-import { OUTPOST_COST, TOWER_COST } from '../src/game/buildings.ts'
+import { IMPROVEMENT_COSTS, LODGE_COSTS, LODGE_LEVEL_LIMIT, TOWER_COST } from '../src/game/buildings.ts'
 import { advance, formParty, moveHero, type DayReport } from '../src/game/company.ts'
-import { MAX_PARTIES, type Expedition } from '../src/game/expedition.ts'
+import { MAX_PARTIES, presenceOf, type Expedition } from '../src/game/expedition.ts'
 import { craft } from '../src/game/crafting.ts'
 import type { FamilyId } from '../src/inventory/catalog.ts'
 import { itemById, unruned } from '../src/inventory/inventory.ts'
@@ -21,22 +21,23 @@ import { modifiersFor } from '../src/inventory/modifiers.ts'
 import { maxHp, type Character } from '../src/character/character.ts'
 import { worldHealing } from '../src/character/worldCasting.ts'
 import { lootRng, rollRunes } from '../src/game/loot.ts'
-import { runePrice, salePrice } from '../src/game/tradingPost.ts'
+import { MATERIALS_PER_GOLD, runePrice, salePrice } from '../src/game/tradingPost.ts'
 import { pouchKeys } from '../src/inventory/runes.ts'
-import { boardIndex, monsterStrength } from '../src/game/blight.ts'
-import { LOSS_LEVEL, daysToFall } from '../src/game/territory.ts'
+import { boardIndex, monsterStrength, type WorldEvent } from '../src/game/blight.ts'
+import { LOSS_LEVEL, daysToFall, type Stock } from '../src/game/territory.ts'
 import { extractRefusal } from '../src/game/runecraft.ts'
 import type { EncounterId } from '../src/game/encounters.ts'
 import { ENCAMPMENT_ID, SOURCE_ID, routeTo, type MonsterLocation } from '../src/game/worldMap.ts'
 import {
   CAMPAIGN_SEED_STEP,
   MAX_CAMPAIGN_DAYS,
-  OUTPOST_ERRAND_RADIUS,
+  FORT_FIRST_DAYS,
+  IMPROVE_ERRAND_RADIUS,
   SOURCE_READY_LEVEL,
   HALL_FOR_PARTIES,
   hallErrand,
   nextTarget,
-  outpostErrand,
+  improveErrand,
   parseArgs,
   playerPlan,
   raisedParty,
@@ -44,10 +45,12 @@ import {
   runCampaign,
   summarize,
   summarizeCampaigns,
+  waitingLine,
+  waitingIncome,
+  yieldValue,
   vanguardTallies,
   craftGear,
   materialNeeds,
-  SIM_TRADING_POST_CAP,
   visitFacilities,
   PREFERRED_MODIFIERS,
   RUNE_ORDER,
@@ -264,6 +267,12 @@ describe('parseArgs', () => {
       expect(() => parseArgs(['--campaign', '--parties', raw])).toThrow(`--parties must be from 1 to ${MAX_PARTIES}`)
     }
     expect(() => parseArgs(['--parties', '2'])).toThrow('--parties applies only to --campaign')
+  })
+
+  it('takes --waiting with --campaign only, off by default', () => {
+    expect(parseArgs(['--campaign']).waiting).toBe(false)
+    expect(parseArgs(['--campaign', '--waiting']).waiting).toBe(true)
+    expect(() => parseArgs(['--waiting'])).toThrow('--waiting applies only to --campaign')
   })
 })
 
@@ -709,21 +718,76 @@ describe('the shrine and outposts in a campaign', () => {
     expect(game.world.stock).toMatchObject({ gold: 0, silver: 0 })
   })
 
-  it('puts an outpost on the nearest held site without one, within reach, when the stock affords it', () => {
-    const game = newGame(undefined, null, 1)
-    const { world } = game
-    const party = game.parties[0]
-    const goldSeam = world.locations.find((l) => l.id === 'gold_seam')!
-    world.held = [...new Set([...world.held, 'gold_seam'])]
-    party.position = { q: goldSeam.position.q - 2, r: goldSeam.position.r }
-    expect(outpostErrand(world, party)).toBeNull()
-    world.stock = { ...OUTPOST_COST }
-    expect(outpostErrand(world, party)?.id).toBe('gold_seam')
-    world.improvements = { gold_seam: 1 }
-    expect(outpostErrand(world, party)?.id).not.toBe('gold_seam')
-    world.improvements = {}
-    party.position = { q: goldSeam.position.q + OUTPOST_ERRAND_RADIUS + 8, r: goldSeam.position.r }
-    expect(outpostErrand(world, party)?.id).not.toBe('gold_seam')
+  describe('the improve errand', () => {
+    // Iron Vein is 3 hexes from home and held; Gold Seam 7, held too.
+    const errandOf = (stock: Stock, lodge = 0) => {
+      const game = newGame(undefined, null, 1)
+      game.world.stock = { ...stock }
+      game.world.lodge = lodge
+      const site = (id: string) => game.world.locations.find((l) => l.id === id)!
+      return { game, world: game.world, party: game.parties[0], site }
+    }
+    const ample: Stock = { gold: 500, timber: 100, stone: 100, iron: 100 }
+
+    it('goes nowhere when the stock affords nothing', () => {
+      const { world, party } = errandOf({ gold: 14, timber: 10 })
+      expect(improveErrand(world, party)).toBeNull()
+    })
+
+    it('puts an outpost on the nearest held resource at Lodge 0, never on the encampment', () => {
+      const { world, party } = errandOf({ ...IMPROVEMENT_COSTS[0] })
+      expect(improveErrand(world, party)?.id).toBe('iron_vein')
+      world.improvements = { iron_vein: 1 }
+      // Gold Seam is beyond the radius from home; the encampment never counts.
+      expect(improveErrand(world, party)).toBeNull()
+    })
+
+    it('raises no works at Lodge 0, and works from Lodge 1', () => {
+      const at0 = errandOf(ample, 0)
+      at0.world.improvements = { iron_vein: 1 }
+      expect(improveErrand(at0.world, at0.party)).toBeNull()
+      const at1 = errandOf(ample, 1)
+      at1.world.improvements = { iron_vein: 1 }
+      expect(improveErrand(at1.world, at1.party)?.id).toBe('iron_vein')
+      at1.world.stock = { ...IMPROVEMENT_COSTS[1], gold: IMPROVEMENT_COSTS[1].gold! - 1 }
+      expect(improveErrand(at1.world, at1.party)).toBeNull()
+    })
+
+    it('takes the nearest when several qualify, and ignores a site beyond the radius', () => {
+      const { world, party, site } = errandOf(ample)
+      party.position = { q: site('gold_seam').position.q - 2, r: site('gold_seam').position.r }
+      expect(hexDistance(party.position, site('iron_vein').position)).toBeLessThanOrEqual(IMPROVE_ERRAND_RADIUS)
+      expect(improveErrand(world, party)?.id).toBe('gold_seam')
+      party.position = { q: site('gold_seam').position.q + IMPROVE_ERRAND_RADIUS + 1, r: site('gold_seam').position.r }
+      expect(improveErrand(world, party)).toBeNull()
+    })
+
+    it('raises a fort first on a site under FORT_FIRST_DAYS to fall, over a nearer one', () => {
+      const { world, party, site } = errandOf(ample, 2)
+      const seam = site('gold_seam')
+      // Iron Vein 2 hexes off, an outpost; Gold Seam 4, a works.
+      party.position = { q: 3, r: 19 }
+      world.improvements = { iron_vein: 1, gold_seam: 2 }
+      expect([hexDistance(party.position, site('iron_vein').position), hexDistance(party.position, seam.position)]).toEqual([2, 4])
+      expect(improveErrand(world, party)?.id).toBe('iron_vein')
+      // Nests all round Gold Seam: it falls within days.
+      for (const [dq, dr] of [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]]) {
+        const at = { q: seam.position.q + dq, r: seam.position.r + dr }
+        world.locations.push({ id: `nest_${dq}_${dr}`, kind: 'monsters', name: 'Nest', position: at, encounter: 'goblin_raid', threat: 5, loot: [] })
+        world.blight[boardIndex(world.board, at)] = 3
+      }
+      world.blight[boardIndex(world.board, seam.position)] = 2
+      const days = daysToFall(world, [presenceOf(party)], seam)
+      expect(days).not.toBeNull()
+      expect(days!).toBeLessThan(FORT_FIRST_DAYS)
+      expect(improveErrand(world, party)?.id).toBe('gold_seam')
+      // Not so soon to fall: the nearest again.
+      world.locations = world.locations.filter((l) => !l.id.startsWith('nest_'))
+      for (const [dq, dr] of [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]]) world.blight[boardIndex(world.board, { q: seam.position.q + dq, r: seam.position.r + dr })] = 0
+      world.blight[boardIndex(world.board, seam.position)] = 0
+      expect(daysToFall(world, [presenceOf(party)], seam)).toBeNull()
+      expect(improveErrand(world, party)?.id).toBe('iron_vein')
+    })
   })
 })
 
@@ -731,7 +795,9 @@ describe('the trading post and crafting in a campaign', () => {
   it('sells the baggage and surplus, builds, buys better grades and crafts at home', () => {
     const game = newGame(undefined, null, 1)
     game.parties[0].baggage.push(game.parties[0].members[0].backpack[0]!)
-    game.world.stock = { gold: 400, iron: 60, timber: 40, stone: 60, copper: 40, salt: 9 }
+    // The Lodge already at its limit (its gold is not under test here), its improvements kept for in the stock.
+    game.world.lodge = LODGE_LEVEL_LIMIT
+    game.world.stock = { gold: 500, iron: 60, timber: 40, stone: 60, copper: 40, salt: 9 }
     const trade = visitFacilities(game, game.parties[0])
     expect(game.parties[0].baggage).toEqual([])
     expect(trade.goldFromSales).toBeGreaterThan(0)
@@ -804,19 +870,51 @@ describe('the trading post and crafting in a campaign', () => {
     expect(materialNeeds(game).silver! - withPost).toBe(20)
   })
 
-  it('counts the post\'s levels only up to the temporary cap of 4, and raises it no higher', () => {
-    expect(SIM_TRADING_POST_CAP).toBe(4)
+  it('counts every level of the post left, and raises it to 6', () => {
     const game = newGame(undefined, null, 1)
-    const unbuilt = materialNeeds(game)
     game.world.tradingPost = 4
     const at4 = materialNeeds(game)
-    expect((unbuilt.stone ?? 0) - (at4.stone ?? 0)).toBe(15)
     game.world.tradingPost = 6
-    expect(materialNeeds(game)).toEqual(at4)
+    const at6 = materialNeeds(game)
+    expect((at4.crystal ?? 0) - (at6.crystal ?? 0)).toBe(10)
+    expect((at4.silver ?? 0) - (at6.silver ?? 0)).toBe(70)
     game.world.tradingPost = 4
-    game.world.stock = { gold: 5000, silver: 500, stone: 500, crystal: 50 }
+    game.world.stock = { gold: 5000, silver: 500, stone: 500, crystal: 50, timber: 100, iron: 100, copper: 100 }
     visitFacilities(game, game.parties[0])
-    expect(game.world.tradingPost).toBe(4)
+    expect(game.world.tradingPost).toBe(6)
+  })
+
+  it('raises the Builders\' Lodge after the infirmary, to its limit and no further', () => {
+    const game = newGame(undefined, null, 1)
+    game.world.stock = { gold: 5000, silver: 500, stone: 500, crystal: 50, timber: 100, iron: 100, copper: 100 }
+    visitFacilities(game, game.parties[0])
+    expect(game.world.lodge).toBe(LODGE_LEVEL_LIMIT)
+    expect(LODGE_LEVEL_LIMIT).toBe(2)
+    // Last for the gold: with only the infirmary's first level and the Lodge's to buy, the infirmary comes first.
+    const poor = newGame(undefined, null, 1)
+    poor.world.tradingPost = 6
+    poor.world.workshop = 3
+    poor.world.shrine = 3
+    poor.world.stock = { gold: 30, timber: 20 }
+    visitFacilities(poor, poor.parties[0])
+    expect([poor.world.infirmary, poor.world.lodge]).toEqual([1, 0])
+  })
+
+  it('keeps the Lodge\'s levels left to its limit, and each improvement level the Lodge allows', () => {
+    const game = newGame(undefined, null, 1)
+    const at0 = materialNeeds(game)
+    game.world.lodge = 1
+    const at1 = materialNeeds(game)
+    game.world.lodge = 2
+    const at2 = materialNeeds(game)
+    // Lodge 0 to 1: its first level (20 timber) no longer kept; the works' 15 stone now kept, its second level's 25 stone still.
+    expect((at0.timber ?? 0) - (at1.timber ?? 0)).toBe(LODGE_COSTS[0].timber)
+    expect((at1.stone ?? 0) - (at0.stone ?? 0)).toBe(IMPROVEMENT_COSTS[1].stone)
+    // Lodge 1 to 2: its second level's 25 stone gone, the fort's 10 stone and 20 iron kept.
+    expect((at2.stone ?? 0) - (at1.stone ?? 0)).toBe(IMPROVEMENT_COSTS[2].stone! - LODGE_COSTS[1].stone!)
+    expect((at2.iron ?? 0) - (at1.iron ?? 0)).toBe(IMPROVEMENT_COSTS[2].iron)
+    // The Lodge's third level waits for roads, and is never kept for.
+    expect(at2.iron! - at1.iron!).not.toBe(IMPROVEMENT_COSTS[2].iron! + LODGE_COSTS[2].iron!)
   })
 
   it('prefers, family by family, only modifiers that fit the family', () => {
@@ -875,6 +973,60 @@ describe('summarizeCampaigns, the runes', () => {
       avgGoldOnRunes: 20,
     })
   }, 20_000)
+})
+
+describe('summarizeCampaigns, the improvements and income', () => {
+  it('averages improvements by level, the Lodge, gold by source and both incomes, and says whether waiting earns less', () => {
+    const base = { ...runCampaign(3, 1, parseArgs(['--campaign', '--parties', '1']), 0).record }
+    const records = [
+      { ...base, improvementsBuilt: [2, 1, 0], improvementLevels: [3, 1, 1, 0], lodgeLevel: 2, goldBySource: { sites: 40, market: 10, sales: 30 }, incomePerDay: 3, waitingIncomePerDay: 1 },
+      { ...base, improvementsBuilt: [1, 0, 1], improvementLevels: [4, 0, 0, 1], lodgeLevel: 1, goldBySource: { sites: 20, market: 0, sales: 10 }, incomePerDay: 2, waitingIncomePerDay: 2 },
+    ]
+    const summary = summarizeCampaigns([], records)
+    expect(summary).toMatchObject({
+      avgImprovementsBuilt: [1.5, 0.5, 0.5],
+      avgImprovementLevels: [3.5, 0.5, 0.5, 0.5],
+      avgLodgeLevel: 1.5,
+      avgGoldBySource: { sites: 30, market: 5, sales: 20 },
+      avgIncomePerDay: 2.5,
+      avgWaitingIncomePerDay: 1.5,
+    })
+    expect(waitingLine(summary)).toBe('Waiting check: income 2.5 a day campaigning, 1.5 waiting at home: waiting earns less')
+    expect(waitingLine({ ...summary, avgWaitingIncomePerDay: 2.5 })).toMatch(/waiting earns as much or more$/)
+  }, 20_000)
+})
+
+describe('the waiting check (A9)', () => {
+  it('values the yields: gold as it is, every other material at the trading post\'s rate, nothing else', () => {
+    const events: WorldEvent[] = [
+      { type: 'yield', site: 'gold_seam', name: 'Gold Seam', material: 'gold', amount: 4 },
+      { type: 'yield', site: 'iron_vein', name: 'Iron Vein', material: 'iron', amount: 5 },
+      { type: 'yield', site: ENCAMPMENT_ID, name: 'Home', material: 'gold', amount: 3, source: 'market' },
+      { type: 'site_captured', site: 'timber_stand', name: 'Timber Stand' },
+    ]
+    expect(yieldValue(events)).toBe(4 + 3 + 5 / MATERIALS_PER_GOLD)
+  })
+
+  it('earns less waiting at home than campaigning over the same first 120 days of seed 1', () => {
+    const args = parseArgs(['--campaign', '--parties', '1'])
+    const run = startCampaign(0, 1, args)
+    let last: DayReport | undefined
+    while (run.game.world.turn < 120) {
+      const round = playRound(run, last)
+      if (!Array.isArray(round)) throw new Error(`The campaign ended (${round}) before day 120`)
+      last = round.at(-1)
+    }
+    const days = run.game.world.turn
+    const waiting = waitingIncome(1, args, days)
+    expect(waiting).toBeGreaterThan(0)
+    expect(waiting).toBeLessThan(run.income / days)
+  }, 30_000)
+
+  it('is the same for the same seed and days, and 0 over no days', () => {
+    const args = parseArgs(['--campaign', '--parties', '1'])
+    expect(waitingIncome(1, args, 40)).toBe(waitingIncome(1, args, 40))
+    expect(waitingIncome(1, args, 0)).toBe(0)
+  })
 })
 
 describe('runes in a campaign', () => {
@@ -1040,16 +1192,21 @@ describe('runes in a campaign', () => {
  * step 28: perk points (a node costs its tier's 1 to 4, a point every level) and `autoAdvance` saving for the plan's
  * next node move every hero's and bandit's nodes, so play and the campaigns' figures change. Re-recorded in skill trees
  * step 30: the knight and evoker_healer plans reordered, bandits in plain gear at threat 4 and `FOE_HP_PER_LEVEL`
- * 1.15. A mismatch means a step changed behaviour.
+ * 1.15. Re-recorded in stage 7 step 06: the Lodge, works, forts and the trading post's levels 5 and 6 in the careful
+ * party's economy, and the record's improvement, income and waiting fields (`outpostsBuilt` gone; `waitingIncomePerDay`
+ * is 0 without `--waiting`). Play moved through `materialNeeds` keeping the Lodge's and the post's higher levels'
+ * materials and raising the Lodge: days 389, 385, 310, 423, 29 became 390, 385, 310, 423, 29; outcomes unchanged (four
+ * Source, one fallen); campaign 1 built an outpost (0 before), campaign 2 lost two heroes (0 before), campaign 4 raised
+ * the Lodge to 1. A mismatch means a step changed behaviour.
  */
 const GUARD_RECORDS: CampaignRecord[] = [
-  { outcome: "source", days: 389, battles: 25, spawns: 35, captured: 5, lost: 0, blighted: 0.38458333333333333, healedHp: 360, campDays: 44, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 2, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 23, tierTwoBought: 0, crafted: 7, fieldCraftDays: 3, runesFound: 22, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [9, 9, 9, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 25, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 91, guardBattles: 0 },
-  { outcome: "source", days: 385, battles: 26, spawns: 36, captured: 4, lost: 0, blighted: 0.33458333333333334, healedHp: 286, campDays: 34, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, outpostsBuilt: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 13, tierTwoBought: 0, crafted: 7, fieldCraftDays: 3, runesFound: 21, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [9, 9, 9, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 26, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 66, guardBattles: 0 },
-  { outcome: "source", days: 310, battles: 19, spawns: 29, captured: 4, lost: 0, blighted: 0.35083333333333333, healedHp: 193, campDays: 19, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 3, hallLevel: 3, shrineLevel: 1, outpostsBuilt: 1, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 12, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 1 }, capstones: {}, deathsAtLevel: [2, 8, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 59, guardBattles: 0 },
-  { outcome: "source", days: 423, battles: 21, spawns: 31, captured: 3, lost: 0, blighted: 0.4170833333333333, healedHp: 131, campDays: 35, towersBuilt: 1, towersLost: 0, deaths: 4, recruits: 5, hallLevel: 3, shrineLevel: 3, outpostsBuilt: 1, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 183, tierTwoBought: 0, crafted: 10, fieldCraftDays: 3, runesFound: 15, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 8, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 2 }, capstones: {}, deathsAtLevel: [3, 5, 4, 7], battlesToLevel: { 5: 9 }, roles: { vanguard: { battles: 21, wipes: 0, finalLevels: [[8, 8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 122, guardBattles: 0 },
-  { outcome: "fallen", days: 29, battles: 4, spawns: 2, captured: 0, lost: 0, blighted: 0.32625, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 2, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [3, 3, 3], callings: { swordmaster: 1, heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [], battlesToLevel: {}, roles: { vanguard: { battles: 4, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 0, guardBattles: 0 },
+{ outcome: "source", days: 390, battles: 25, spawns: 35, captured: 5, lost: 0, blighted: 0.38375, healedHp: 370, campDays: 41, towersBuilt: 3, towersLost: 0, deaths: 0, recruits: 2, hallLevel: 3, shrineLevel: 0, tradingPostLevel: 2, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 7, tierTwoBought: 0, crafted: 5, fieldCraftDays: 4, runesFound: 22, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [9, 9, 9, 8, 7], callings: { heavy_knight: 3, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 25, wipes: 0, finalLevels: [[9, 9, 9, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 91, guardBattles: 0, improvementsBuilt: [1, 0, 0], improvementLevels: [6, 1, 0, 0], lodgeLevel: 0, goldBySource: { sites: 312, market: 0, sales: 7 }, incomePerDay: 1.4282051282051282, waitingIncomePerDay: 0 },
+  { outcome: "source", days: 385, battles: 26, spawns: 36, captured: 4, lost: 0, blighted: 0.33458333333333334, healedHp: 286, campDays: 34, towersBuilt: 3, towersLost: 0, deaths: 2, recruits: 2, hallLevel: 3, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 6, fieldCraftDays: 3, runesFound: 21, runesBought: 0, runesFused: 1, socketsFilled: 0, goldOnRunes: 20, finalLevels: [9, 9, 9], callings: { heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [8, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 26, wipes: 0, finalLevels: [[9, 9, 9]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 66, guardBattles: 0, improvementsBuilt: [1, 0, 0], improvementLevels: [5, 1, 0, 0], lodgeLevel: 0, goldBySource: { sites: 308, market: 0, sales: 0 }, incomePerDay: 1.4506493506493507, waitingIncomePerDay: 0 },
+  { outcome: "source", days: 310, battles: 19, spawns: 29, captured: 4, lost: 0, blighted: 0.35083333333333333, healedHp: 193, campDays: 19, towersBuilt: 3, towersLost: 0, deaths: 3, recruits: 3, hallLevel: 3, shrineLevel: 1, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 51, tierTwoBought: 0, crafted: 4, fieldCraftDays: 4, runesFound: 12, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 1 }, capstones: {}, deathsAtLevel: [2, 8, 7], battlesToLevel: { 5: 6 }, roles: { vanguard: { battles: 19, wipes: 0, finalLevels: [[8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 59, guardBattles: 0, improvementsBuilt: [1, 0, 0], improvementLevels: [5, 1, 0, 0], lodgeLevel: 0, goldBySource: { sites: 248, market: 0, sales: 51 }, incomePerDay: 1.2758064516129033, waitingIncomePerDay: 0 },
+  { outcome: "source", days: 423, battles: 21, spawns: 31, captured: 3, lost: 0, blighted: 0.4170833333333333, healedHp: 131, campDays: 35, towersBuilt: 1, towersLost: 0, deaths: 4, recruits: 5, hallLevel: 3, shrineLevel: 3, tradingPostLevel: 1, workshopLevel: 1, infirmaryLevel: 1, goldOnGear: 0, goldFromSales: 169, tierTwoBought: 0, crafted: 10, fieldCraftDays: 3, runesFound: 15, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [8, 8, 8, 7], callings: { ranger: 1, evoker: 1, heavy_knight: 2 }, capstones: {}, deathsAtLevel: [3, 5, 4, 7], battlesToLevel: { 5: 9 }, roles: { vanguard: { battles: 21, wipes: 0, finalLevels: [[8, 8, 8, 7]] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 0, promotions: 0, vanguardWalkHomeDays: 122, guardBattles: 0, improvementsBuilt: [1, 0, 0], improvementLevels: [4, 1, 0, 0], lodgeLevel: 1, goldBySource: { sites: 336, market: 0, sales: 169 }, incomePerDay: 1.3475177304964538, waitingIncomePerDay: 0 },
+  { outcome: "fallen", days: 29, battles: 4, spawns: 2, captured: 0, lost: 0, blighted: 0.32625, healedHp: 1, campDays: 1, towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 1, fieldCraftDays: 1, runesFound: 2, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0, finalLevels: [3, 3, 3], callings: { swordmaster: 1, heavy_knight: 1, ranger: 1, evoker: 1 }, capstones: {}, deathsAtLevel: [], battlesToLevel: {}, roles: { vanguard: { battles: 4, wipes: 1, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } }, wipes: 1, promotions: 0, vanguardWalkHomeDays: 0, guardBattles: 0, improvementsBuilt: [0, 0, 0], improvementLevels: [2, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 20, market: 0, sales: 0 }, incomePerDay: 0.8620689655172413, waitingIncomePerDay: 0 },
 ]
-const GUARD_EVENTS_SHA256 = '0ce256904b042dce7a301e226854d3938e463ff30c64440fc6ba5b412d6bc717'
+const GUARD_EVENTS_SHA256 = 'a179187a675ed7be47daa3fe252174dd8e86858a09cc730785eaae11770211a1'
 
 describe('the campaign’s policy on the day loop', () => {
   const args = parseArgs(['--campaign', '--parties', '1'])
@@ -1373,6 +1530,40 @@ describe('the company’s record', () => {
     expect(record.socketsFilled).toBe(2)
     expect(record.roles.vanguard.finalLevels).toEqual([guard.members.map(() => 9)])
     expect(record.roles.guard.finalLevels).toEqual([first.members.map((m) => m.level)])
+  })
+
+  it('records the improvements built and held by level, the Lodge, gold by source and income a day', () => {
+    const { run, game } = campaignOf()
+    const { world } = game
+    const report = (events: WorldEvent[]): DayReport => ({ events, partyEvents: [], parties: [], interrupt: null })
+    takeDays(run, [
+      report([
+        { type: 'site_improved', site: 'iron_vein', name: 'Iron Vein', level: 1, building: 'Outpost' },
+        { type: 'yield', site: 'gold_seam', name: 'Gold Seam', material: 'gold', amount: 4 },
+        { type: 'yield', site: 'iron_vein', name: 'Iron Vein', material: 'iron', amount: 5 },
+      ]),
+      report([
+        { type: 'site_improved', site: 'iron_vein', name: 'Iron Vein', level: 2, building: 'Mine' },
+        { type: 'site_improved', site: 'gold_seam', name: 'Gold Seam', level: 1, building: 'Outpost' },
+        { type: 'yield', site: ENCAMPMENT_ID, name: 'Home', material: 'gold', amount: 3, source: 'market' },
+      ]),
+    ])
+    run.record.goldFromSales = 12
+    world.improvements = { iron_vein: 2, gold_seam: 3 }
+    world.lodge = 2
+    world.turn = 10
+    const { record } = finishCampaign(run, 'timeout')
+    expect(record.improvementsBuilt).toEqual([2, 1, 0])
+    // Held resources at the end, the encampment not among them: Iron Vein a works, Gold Seam a fort.
+    expect(record.improvementLevels).toEqual([world.held.length - 3, 0, 1, 1])
+    expect(record.lodgeLevel).toBe(2)
+    expect(record.goldBySource).toEqual({ sites: 4, market: 3, sales: 12 })
+    // 4 + 3 gold and 5 iron at 2 to the gold piece, over 10 days.
+    expect(record.incomePerDay).toBeCloseTo((4 + 3 + 5 / MATERIALS_PER_GOLD) / 10)
+    // The waiting twin runs only with --waiting.
+    expect(record.waitingIncomePerDay).toBe(0)
+    run.args = parseArgs(['--campaign', '--parties', '1', '--waiting'])
+    expect(finishCampaign(run, 'timeout').record.waitingIncomePerDay).toBe(waitingIncome(1, run.args, 10))
   })
 
   it('counts the vanguard’s days walking home', () => {

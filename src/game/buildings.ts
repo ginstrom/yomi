@@ -113,9 +113,6 @@ export const MAX_LODGE_LEVEL = LODGE_COSTS.length
 export const LODGE_LEVEL_LIMIT = 2
 export const ROADS_REFUSAL = 'Roads come with trade routes.'
 
-/** @deprecated until stage 7 step 06: `IMPROVEMENT_COSTS[0]`. */
-export const OUTPOST_COST: Stock = IMPROVEMENT_COSTS[0]
-
 /** Whether the party stands at the encampment, free to use what is built there (the guild hall, the shrine). */
 export function atEncampment(world: WorldState, party: Expedition): boolean {
   const camp = world.locations.find((l) => l.id === ENCAMPMENT_ID)
@@ -217,31 +214,16 @@ export function raiseLodge(game: GameState, party: Expedition): string | null {
   return null
 }
 
-// The outpost's names, kept with their old behaviour until the world map (step 04) and the simulator (step 06) move to the improvements'.
+// The outpost's names the world map still uses, kept with their old behaviour until it moves to the improvements' (step 04); then deleted.
 
-/** @deprecated until stage 7 step 06: `improvementSite`. */
+/** @deprecated until the world map moves off it (stage 7 step 04): `improvementSite`. */
 export const outpostSite = improvementSite
 
-/** @deprecated until stage 7 step 06. Why no outpost can go where the party stands, the stock aside, or null when the place will do; a site with any improvement is refused. */
+/** @deprecated until the world map moves off it (stage 7 step 04). Why no outpost can go where the party stands, the stock aside, or null when the place will do; a site with any improvement is refused. */
 export function outpostSiteRefusal(world: WorldState, party: Expedition): string | null {
   if (!worldActive(world) || monstersHere(world, party)) return 'Nothing can be built here now.'
   const site = improvementSite(world, party)
   if (!site) return 'An outpost goes on a held resource.'
   if (siteImprovement(world, site.id) !== 0) return `${site.name} already has an outpost.`
   return null
-}
-
-/** @deprecated until stage 7 step 06. Why no outpost can be built where the party stands now, or null when one can. */
-export function canBuildOutpost(world: WorldState, party: Expedition): string | null {
-  const refusal = outpostSiteRefusal(world, party)
-  if (refusal) return refusal
-  if (!canAfford(world.stock, OUTPOST_COST)) return `An outpost costs ${describeCost(OUTPOST_COST)}, more than the stock holds.`
-  return null
-}
-
-/** @deprecated until stage 7 step 06. Builds an outpost (`{ kind: 'improve' }` on an unimproved site) when `canBuildOutpost` allows, a day; else null, nothing done. */
-export function buildOutpost(game: GameState, party: Expedition): WorldEvent[] | null {
-  if (canBuildOutpost(game.world, party)) return null
-  const report = act(game, party.id, { kind: 'improve' })
-  return typeof report === 'string' ? null : report.events
 }
