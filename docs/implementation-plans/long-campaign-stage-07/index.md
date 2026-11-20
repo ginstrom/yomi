@@ -190,8 +190,8 @@ waitingIncomePerDay: number          // the waiting twin's, over the same days (
 | Step | Task | Outcome | Depends on | Engineer / reviewer | Status |
 | --- | --- | --- | --- | --- | --- |
 | 01 | [Improvements and the Lodge's rules](01-improvements-domain.md) | Baseline figures; `improvements`, `lodge`, levels 1–3 yields, strength and loss level, razing, `site_improved`, `improveSite`, `raiseLodge`; save 27 with migration (C1); guard identical | — | opus / opus | done (494cddb) |
-| 02 | [Market income and the facilities](02-market-and-facilities.md) | Trading post 5–6, market income with `source: 'market'`, the post's names, the Lodge in `FACILITIES` (C2); guard fixture green, 50-check moved only by market income | 01 | sonnet / opus | done (see git log) |
-| 03 | [Sprites: Lodge, market and fort](03-sprites.md) | `camp_lodge` ×3, `camp_trading_post` 5–6, `map_fort` (C3) | — | sonnet / opus | pending |
+| 02 | [Market income and the facilities](02-market-and-facilities.md) | Trading post 5–6, market income with `source: 'market'`, the post's names, the Lodge in `FACILITIES` (C2); guard fixture green, 50-check moved only by market income | 01 | sonnet / opus | done (0619dbf) |
+| 03 | [Sprites: Lodge, market and fort](03-sprites.md) | `camp_lodge` ×3, `camp_trading_post` 5–6, `map_fort` (C3) | — | sonnet / opus | done (a94e044) |
 | 04 | [The world map's Improve](04-world-map-improve.md) | Improve button, hex info, labels, palisade, event lines, yield summary, sound (C4); manual text; in-browser tests | 02, 03 | sonnet / opus | pending |
 | 05 | [The encampment and the debug console](05-encampment-and-debug.md) | The Lodge's plot, the post's names on screen, debug `stock`, `blight`, `days` (C5); manual text; in-browser tests | 04 | sonnet / opus | pending |
 | 06 | [The simulator's improvements and record](06-simulator.md) | `improveErrand`, Lodge and market raised, record and summary, the waiting twin (C6); wrappers gone; fixture re-recorded once | 02 | opus / opus | pending |

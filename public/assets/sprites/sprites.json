@@ -1107,6 +1107,55 @@
       48
     ]
   },
+  "camp_lodge": {
+    "anchor": [
+      24,
+      48
+    ],
+    "anims": {},
+    "bounds": [
+      0,
+      5,
+      47,
+      43
+    ],
+    "canvas": "building",
+    "display_scale": 3,
+    "file": "camp_lodge.png",
+    "frames": {
+      "level_1": {
+        "bounds": [
+          0,
+          18,
+          47,
+          30
+        ],
+        "file": "camp_lodge__level_1.png"
+      },
+      "level_2": {
+        "bounds": [
+          0,
+          5,
+          47,
+          43
+        ],
+        "file": "camp_lodge__level_2.png"
+      },
+      "level_3": {
+        "bounds": [
+          0,
+          5,
+          47,
+          43
+        ],
+        "file": "camp_lodge__level_3.png"
+      }
+    },
+    "size": [
+      48,
+      48
+    ]
+  },
   "camp_plot": {
     "anchor": [
       24,
@@ -1226,9 +1275,9 @@
     "anims": {},
     "bounds": [
       0,
-      2,
+      0,
       48,
-      46
+      48
     ],
     "canvas": "building",
     "display_scale": 3,
@@ -1269,6 +1318,24 @@
           46
         ],
         "file": "camp_trading_post__level_4.png"
+      },
+      "level_5": {
+        "bounds": [
+          0,
+          1,
+          48,
+          47
+        ],
+        "file": "camp_trading_post__level_5.png"
+      },
+      "level_6": {
+        "bounds": [
+          0,
+          0,
+          48,
+          48
+        ],
+        "file": "camp_trading_post__level_6.png"
       }
     },
     "size": [
@@ -5919,6 +5986,60 @@
           22
         ],
         "file": "map_encampment__smoke_1.png"
+      }
+    },
+    "size": [
+      24,
+      24
+    ]
+  },
+  "map_fort": {
+    "anchor": [
+      12,
+      12
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 500
+          },
+          {
+            "frame": "flutter",
+            "ms": 500
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      0,
+      24,
+      24
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "map_fort.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          24,
+          24
+        ],
+        "file": "map_fort__base.png"
+      },
+      "flutter": {
+        "bounds": [
+          0,
+          0,
+          24,
+          24
+        ],
+        "file": "map_fort__flutter.png"
       }
     },
     "size": [
