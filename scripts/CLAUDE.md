@@ -12,12 +12,13 @@ Loaded when working in `scripts/`. Read it before tuning: the bands below are th
 - `--campaign`: each battle is a whole campaign (below).
 - `--ready-level` (campaign only): the level every member needs before marching on the Source, default `SOURCE_READY_LEVEL` (7).
 - `--parties` (campaign only): 1 to `MAX_PARTIES` (3), default 3; a vanguard and home guards. The refactor guard and the early-game figure use 1.
+- `--waiting` (campaign only): runs each campaign's waiting twin (the same world with the company idle at home) and prints the waiting check; it costs about a third again of the run's time.
 
 Every event is written as JSONL; a summary of win rate, rounds, hit rates, spells, techniques, traits and more is printed.
 
 ## Campaigns
 
-`--campaign` is how scaling is judged. A new ready-made party sets out on a new world (seeded per campaign) with the blight spreading, walking a day a hex on the company's day loop (`company.ts`) to where `nextTarget` sends it: the nest pushing hardest on a threatened held site, else the nearest nest no higher in threat than its lowest level, and the Source once all are at the ready level. It carries its wounds and mana between battles, levels by `rewardVictory` and `autoAdvance`, camps until healed, takes rune loot (not item loot), and runs its errands at the hall and facilities. A campaign ends when the Source is beaten, no hero is left, the encampment falls or `MAX_CAMPAIGN_DAYS` pass. Run one at a time: `npm run simulate -- --campaign --battles 500 --seed 1` takes about five minutes alone (longer beside other work) and logs some 70 MB.
+`--campaign` is how scaling is judged. A new ready-made party sets out on a new world (seeded per campaign) with the blight spreading, walking a day a hex on the company's day loop (`company.ts`) to where `nextTarget` sends it: the nest pushing hardest on a threatened held site, else the nearest nest no higher in threat than its lowest level, and the Source once all are at the ready level. It carries its wounds and mana between battles, levels by `rewardVictory` and `autoAdvance`, camps until healed, takes rune loot (not item loot), raises held resources a level after a win (`improveErrand`: a fort first where a site falls in under `FORT_FIRST_DAYS`), and runs its errands at the hall and facilities (the trading post to 6, the Builders' Lodge last, to `LODGE_LEVEL_LIMIT`). A campaign ends when the Source is beaten, no hero is left, the encampment falls or `MAX_CAMPAIGN_DAYS` pass. Run one at a time: `npm run simulate -- --campaign --battles 500 --seed 1` takes about five minutes alone (longer beside other work) and logs some 70 MB.
 
 ## Balance
 

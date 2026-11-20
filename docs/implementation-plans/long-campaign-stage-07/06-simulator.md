@@ -191,3 +191,43 @@ waitingIncomePerDay: number          // the waiting twin's, over the same days (
 - [ ] One commit, "Stage 7 step 06: the simulator's improvements and record", no attribution lines; the index's row 06 updated with status and commit.
 
 ## 7. Execution record
+
+Run in worktree branch `long-campaign-stage-07-sim` off the stage branch at `0e2dfe2` (steps 01–03 merged, step 04 not), local Node 26.
+
+**What was built.** `improveErrand` with `IMPROVE_ERRAND_RADIUS` (renamed from `OUTPOST_ERRAND_RADIUS`, still 6) and `FORT_FIRST_DAYS` (30), using `nextImprovement`, `IMPROVEMENT_LODGE`'s gate (through `nextImprovement(...).lodge`) and `canAfford`; the `'improve'` phase (was `'outpost'`), whose `'build'` acts `{ kind: 'improve' }` when `improveRefusal` allows on arrival. `visitFacilities` raises the post to 6 and, after the infirmary, the Lodge (to `LODGE_LEVEL_LIMIT` by `ROADS_REFUSAL`); `SIM_TRADING_POST_CAP` is gone. `materialNeeds` keeps the post's levels to 6, the Lodge's to its limit and each improvement level the Lodge allows. The record gains `improvementsBuilt`, `improvementLevels`, `lodgeLevel`, `goldBySource`, `incomePerDay`, `waitingIncomePerDay` (`outpostsBuilt` gone); `CampaignRun` gains `income` (the yields' value so far, `yieldValue`). The summary prints the Lodge, improvements built and held by level, gold by source and the waiting line (`waitingLine`). The waiting twin is `waitingIncome(seed, args, days)`.
+
+**The twin's cost and the flag.** `--campaign --battles 100 --seed 1 --parties 1`, one run at a time (the machine was loaded by other work: load average 7 to 40, so wall times are unreliable and CPU time is the measure):
+
+| Run | real | user |
+| --- | --- | --- |
+| without the twin (first pair, load ~30–40) | 397.8 s | 134.2 s |
+| with the twin (first pair) | 122.8 s | 118.1 s |
+| without the twin (second pair, load ~7) | 84.5 s | 85.4 s |
+| with the twin (second pair, load rising to ~22) | 161.5 s | 122.5 s |
+
+The first pair is inverted by load and discarded. The second pair puts the twin at about +43% CPU; a direct measure agrees (a 300-day twin of seed 1 takes about 0.3 s against about 0.85 s a campaign, some +35%). Well over 10%, so the twin runs only with **`--waiting`** (campaign only); without it `waitingIncomePerDay` is 0 and the summary leaves out the waiting line.
+
+**The A9 test.** Seed 1, campaign against twin (income a day): day 30 1.000 / 1.000, day 63 0.952 / 0.952, day 91 0.989 / 0.989, day 122 1.025 / 0.984, day 167 1.096 / 0.988, day 305 1.311 / 1.000 (seeds 1001 and 2001 alike: equal to about day 90, the campaign ahead from about 120). The test runs to day 120 (the campaign reaches 122) and asserts the twin below the campaign: 618 ms alone. `npx vitest run scripts/simulate.test.ts src/game/buildings.test.ts`: 173 passed, 33 s.
+
+**The 50-campaign run** (`--campaign --battles 50 --seed 1 --parties 1 --waiting --out logs/s7-06-50.jsonl`; sha256 `1ceefe63...e74400d1`, step 02's `5f92e363...cc8e2cb`):
+
+| | Step 02 (= step 01) | Step 06 |
+| --- | --- | --- |
+| Source wins | 22 of 50 | 23 of 50 |
+| Days, battles | 294, 19.7 (984) | 294, 19.7 (983) |
+| Deaths (battles won) | 1.1 | 1.1 |
+| Trading post at end | 1.1 | 1.1 |
+| Outposts built | 0.7 | 0.7 outposts, 0.0 works, 0.0 forts |
+
+New lines: "Shrine: level 0.7 at the end; Builders' Lodge: level 0.3 at the end"; "Improvements: 0.7 outposts, 0.0 works, 0.0 forts built a campaign; held resources at the end: 4.6 bare, 0.6 outposts, 0.0 works, 0.0 forts"; "Gold by source: sites 234, market 0, sales 40 a campaign"; "Waiting check: income 1.3 a day campaigning, 1.0 waiting at home: waiting earns less". The careful party rarely reaches the Lodge (0.3) or the market (post 1.1), so works, forts and market gold barely show at 50 campaigns; step 07 measures at 500.
+
+**The refactor guard**, re-recorded once (new hash `a179187a...770211a1`, was `0ce25690...6bc717`). Outcomes unchanged (source ×4, fallen); days 389, 385, 310, 423, 29 → 390, 385, 310, 423, 29. Campaign 1 built an outpost (0 before) and sold less (23 → 7 gold); campaign 2 lost two heroes in won battles (0 before; final levels [9,9,9,8,7] → [9,9,9]); campaign 4 raised the Lodge to 1 and sold less (183 → 169); campaign 3 and 5 unchanged but for the new fields. The cause is the economy alone: `materialNeeds` now keeps the Lodge's timber and stone and the post's levels 5–6 (silver, crystal), so less is sold and the outpost's timber stays in stock, and the Lodge takes gold; that changes what is bought, crafted and when the party goes home, and so the battles. No rule of play changed.
+
+**Other test changes.** `'sells the baggage and surplus, builds, buys better grades and crafts at home'` now starts with the Lodge at its limit and 500 gold (was 400): with the Lodge's and the fort's materials kept, sales bring less, and 400 gold no longer reached the craft the test checks. The SIM-cap test became "counts every level of the post left, and raises it to 6". `buildings.test.ts`'s outpost tests use `improveRefusal`/`improveSite` in place of the deleted wrappers (an outposted site now refused "A Mine needs the Builders' Lodge.").
+
+**Wrappers (decision 11, §3).** Step 04 was not merged into this branch, and `WorldScene` still imports `outpostSite` and `outpostSiteRefusal`, so only `OUTPOST_COST`, `canBuildOutpost` and `buildOutpost` are deleted (with their tests' uses). **`outpostSite` and `outpostSiteRefusal` remain** in `buildings.ts`, with the test "keep the outpost wrappers the world map still uses", for deletion once step 04 is merged (by the orchestrator at the merge, or step 07). The button probe `buildOutpost` in `testHook.ts`/`e2e/world.test.ts` is step 04's.
+
+**Docs.** `scripts/CLAUDE.md` (the campaign line, `--waiting`), `docs/reference/simulator.md` (the improve errand, `materialNeeds`, the Lodge in the facilities, the summary lines, a paragraph on the record's new fields and the twin), `docs/reference/game.md` and `src/game/CLAUDE.md` (the wrappers left). The bands table is step 07's.
+
+**For step 07.** Run the 500-campaign figures without `--waiting` (as the baseline was) and the waiting check with it (one extra run, or both with it: the flag changes no play, only the record's `waitingIncomePerDay` and the line).
+
