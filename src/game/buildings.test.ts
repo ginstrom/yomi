@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { hexDistance, offsetToHex, type Hex } from '../grid/hex.ts'
-import { OUTPOST_STRENGTH, SHRINE_STRENGTH, TOWER_STRENGTH, boardIndex, netInfluence } from './blight.ts'
+import { IMPROVEMENT_STRENGTH, SHRINE_STRENGTH, TOWER_STRENGTH, boardIndex, netInfluence } from './blight.ts'
 import {
+  IMPROVEMENT_COSTS,
+  IMPROVEMENT_LODGE,
+  LODGE_COSTS,
+  LODGE_LEVEL_LIMIT,
+  MAX_LODGE_LEVEL,
   MAX_SHRINE_LEVEL,
   OUTPOST_COST,
+  ROADS_REFUSAL,
   SHRINE_COSTS,
   TOWER_COST,
   TOWER_SPACING,
@@ -13,6 +19,15 @@ import {
   canBuildOutpost,
   canBuildTower,
   describeCost,
+  improveRefusal,
+  improveSite,
+  improveSiteRefusal,
+  improvementSite,
+  lodgeCost,
+  nextImprovement,
+  outpostSiteRefusal,
+  raiseImprovement,
+  raiseLodge,
   raiseShrine,
   shrineCost,
   spend,
@@ -20,7 +35,7 @@ import {
 import { presences } from './expedition.ts'
 import { newGame } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
-import { LOSS_LEVEL, OUTPOST_YIELD, YIELD_DAYS, siteYield, sites, updateTerritory } from './territory.ts'
+import { IMPROVEMENT_YIELD, LOSS_LEVEL, YIELD_DAYS, siteYield, sites, updateTerritory } from './territory.ts'
 import { TOWER_VISION, visibleHexes } from './vision.ts'
 import { ENCAMPMENT_ID, isNotable, locationAt, passTurn, type MonsterLocation } from './worldMap.ts'
 
@@ -185,8 +200,8 @@ describe('an outpost', () => {
     const { game, world, party } = atStonebridge()
     expect(canBuildOutpost(world, party)).toBeNull()
     const events = buildOutpost(game, party)!
-    expect(events[0]).toEqual({ type: 'outpost_built', site: 'gold_seam', name: 'Gold Seam' })
-    expect(world.outposts).toEqual(['gold_seam'])
+    expect(events[0]).toEqual({ type: 'site_improved', site: 'gold_seam', name: 'Gold Seam', level: 1, building: 'Outpost' })
+    expect(world.improvements).toEqual({ gold_seam: 1 })
     expect(world.stock).toEqual({ gold: 5, timber: 2 })
     expect(world.turn).toBe(2)
     expect(canBuildOutpost(world, party)).toMatch(/already has an outpost/)
@@ -212,7 +227,7 @@ describe('an outpost', () => {
     expect(poor.turn).toBe(1)
   })
 
-  it('adds OUTPOST_STRENGTH to its site and OUTPOST_YIELD to what it yields', () => {
+  it('adds IMPROVEMENT_STRENGTH[1] to its site and IMPROVEMENT_YIELD[1] to what it yields', () => {
     const { game, world, party } = atStonebridge()
     const at = party.position
     const away = offsetToHex(30, 2)
@@ -223,13 +238,13 @@ describe('an outpost', () => {
     party.position = at
     buildOutpost(game, party)
     party.position = away
-    expect(netInfluence(world, presences(game.parties), at)).toBeCloseTo(before - OUTPOST_STRENGTH)
-    expect(siteYield(world, goldSeam).amount).toBe(yieldBefore + OUTPOST_YIELD)
+    expect(netInfluence(world, presences(game.parties), at)).toBeCloseTo(before - IMPROVEMENT_STRENGTH[1])
+    expect(siteYield(world, goldSeam).amount).toBe(yieldBefore + IMPROVEMENT_YIELD[1])
     world.blight[boardIndex(world.board, at)] = 0
     world.stock = {}
     world.turn = YIELD_DAYS
     const yielded = updateTerritory(world, presences(game.parties)).find((e) => e.type === 'yield' && e.site === 'gold_seam')
-    expect(yielded).toMatchObject({ amount: yieldBefore + OUTPOST_YIELD })
+    expect(yielded).toMatchObject({ amount: yieldBefore + IMPROVEMENT_YIELD[1] })
   })
 
   it('is razed when its site is lost', () => {
@@ -237,8 +252,8 @@ describe('an outpost', () => {
     buildOutpost(game, party)
     world.blight[boardIndex(world.board, party.position)] = LOSS_LEVEL
     const lost = updateTerritory(world, presences(game.parties)).find((e) => e.type === 'site_lost')
-    expect(lost).toEqual({ type: 'site_lost', site: 'gold_seam', name: 'Gold Seam', outpost: true })
-    expect(world.outposts).toEqual([])
+    expect(lost).toEqual({ type: 'site_lost', site: 'gold_seam', name: 'Gold Seam', improvement: 1 })
+    expect(world.improvements).toEqual({})
   })
 })
 
@@ -290,10 +305,10 @@ describe('building, as it is (characterization)', () => {
     const [now, then] = eventfulTwins(atGoldSeam)
     const turn = now.world.turn
     spend(then.world.stock, OUTPOST_COST)
-    then.world.outposts.push('gold_seam')
+    then.world.improvements.gold_seam = 1
     const day = passTurn(then.world, presences(then.game.parties))
     expect(day.length).toBeGreaterThan(0)
-    expect(buildOutpost(now.game, now.party)).toEqual([{ type: 'outpost_built', site: 'gold_seam', name: 'Gold Seam' }, ...day])
+    expect(buildOutpost(now.game, now.party)).toEqual([{ type: 'site_improved', site: 'gold_seam', name: 'Gold Seam', level: 1, building: 'Outpost' }, ...day])
     expect(now.world.turn).toBe(turn + 1)
     expect(now.party.confronting).toBeNull()
     expect(JSON.stringify(now.game)).toBe(JSON.stringify(then.game))
@@ -326,5 +341,178 @@ describe('building, as it is (characterization)', () => {
     among.world.locations.push({ ...nest, id: 'here', position: among.party.position })
     refusedUnchanged(among.game, () => buildTower(among.game, among.party))
     refusedUnchanged(among.game, () => buildOutpost(among.game, among.party))
+  })
+})
+
+describe('improvements (economy A1, A2)', () => {
+  const RICH = { gold: 500, timber: 100, stone: 100, iron: 100 }
+  /** The party on held Gold Seam (a gold resource: its works a Mine), the stock rich and the Lodge at `lodge`. */
+  function atGoldSeam(lodge = 0) {
+    const it = solo()
+    it.world.held = [...new Set([...it.world.held, 'gold_seam'])]
+    it.party.position = it.world.locations.find((l) => l.id === 'gold_seam')!.position
+    it.world.stock = { ...RICH }
+    it.world.lodge = lodge
+    return it
+  }
+  const goldSeam = (it: ReturnType<typeof solo>) => sites(it.world).find((l) => l.id === 'gold_seam')!
+
+  it('cost, need and are named, level by level, and end at the fort', () => {
+    const it = atGoldSeam()
+    expect(IMPROVEMENT_COSTS).toEqual([{ gold: 15, timber: 10 }, { gold: 30, stone: 15 }, { gold: 50, iron: 20, stone: 10 }])
+    expect(OUTPOST_COST).toEqual(IMPROVEMENT_COSTS[0])
+    expect(nextImprovement(it.world, goldSeam(it))).toEqual({ level: 1, name: 'Outpost', cost: IMPROVEMENT_COSTS[0], lodge: 0 })
+    it.world.improvements.gold_seam = 1
+    expect(nextImprovement(it.world, goldSeam(it))).toEqual({ level: 2, name: 'Mine', cost: IMPROVEMENT_COSTS[1], lodge: 1 })
+    it.world.improvements.gold_seam = 2
+    expect(nextImprovement(it.world, goldSeam(it))).toEqual({ level: 3, name: 'Fort', cost: IMPROVEMENT_COSTS[2], lodge: 2 })
+    it.world.improvements.gold_seam = 3
+    expect(nextImprovement(it.world, goldSeam(it))).toBeNull()
+    expect(IMPROVEMENT_LODGE).toEqual([0, 1, 2])
+  })
+
+  it('go only on a held resource the party stands on, never the encampment', () => {
+    const it = atGoldSeam()
+    expect(improvementSite(it.world, it.party)?.id).toBe('gold_seam')
+    it.party.position = it.world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
+    expect(improvementSite(it.world, it.party)).toBeNull()
+  })
+
+  it('are refused in order: the place, the level, the Lodge, the stock', () => {
+    const off = atGoldSeam()
+    off.party.position = offsetToHex(7, 17)
+    expect(improveRefusal(off.world, off.party)).toBe('Improvements go on a held resource.')
+    const home = atGoldSeam()
+    home.party.position = home.world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
+    expect(improveRefusal(home.world, home.party)).toBe('Improvements go on a held resource.')
+    const unheld = atGoldSeam()
+    unheld.world.held = unheld.world.held.filter((id) => id !== 'gold_seam')
+    expect(improveRefusal(unheld.world, unheld.party)).toBe('Improvements go on a held resource.')
+    // A site and a nest never share a hex: among monsters is on the nest's.
+    const among = atGoldSeam()
+    among.party.position = among.world.locations.find((l) => l.kind === 'monsters')!.position
+    expect(improveRefusal(among.world, among.party)).toBe('Nothing can be built here now.')
+    const over = atGoldSeam(2)
+    over.world.status = 'won'
+    expect(improveRefusal(over.world, over.party)).toBe('Nothing can be built here now.')
+    const fort = atGoldSeam(2)
+    fort.world.improvements.gold_seam = 3
+    expect(improveRefusal(fort.world, fort.party)).toBe('Gold Seam is as strong as it gets.')
+    expect(improveSiteRefusal(fort.world, fort.party)).toBe('Gold Seam is as strong as it gets.')
+    const noLodge = atGoldSeam(0)
+    noLodge.world.improvements.gold_seam = 1
+    expect(improveSiteRefusal(noLodge.world, noLodge.party)).toBeNull()
+    expect(improveRefusal(noLodge.world, noLodge.party)).toBe("A Mine needs the Builders' Lodge.")
+    const lowLodge = atGoldSeam(1)
+    lowLodge.world.improvements.gold_seam = 2
+    expect(improveRefusal(lowLodge.world, lowLodge.party)).toBe("A Fort needs the Builders' Lodge at level 2.")
+    // The Lodge is told before the stock.
+    lowLodge.world.stock = {}
+    expect(improveRefusal(lowLodge.world, lowLodge.party)).toBe("A Fort needs the Builders' Lodge at level 2.")
+    const poor = atGoldSeam(0)
+    poor.world.stock = { gold: 15, timber: 9 }
+    expect(improveRefusal(poor.world, poor.party)).toBe('An Outpost costs 15 gold, 10 timber, more than the stock holds.')
+    const poorWorks = atGoldSeam(1)
+    poorWorks.world.improvements.gold_seam = 1
+    poorWorks.world.stock = { gold: 30, stone: 14 }
+    expect(improveRefusal(poorWorks.world, poorWorks.party)).toBe('A Mine costs 30 gold, 15 stone, more than the stock holds.')
+  })
+
+  it('are raised a level at a time, the stock paying, 1 to 2 to 3', () => {
+    const it = atGoldSeam(2)
+    const events = [1, 2, 3].map(() => {
+      expect(improveRefusal(it.world, it.party)).toBeNull()
+      return raiseImprovement(it.world, it.party)
+    })
+    expect(events).toEqual([
+      { type: 'site_improved', site: 'gold_seam', name: 'Gold Seam', level: 1, building: 'Outpost' },
+      { type: 'site_improved', site: 'gold_seam', name: 'Gold Seam', level: 2, building: 'Mine' },
+      { type: 'site_improved', site: 'gold_seam', name: 'Gold Seam', level: 3, building: 'Fort' },
+    ])
+    expect(it.world.improvements).toEqual({ gold_seam: 3 })
+    expect(it.world.stock).toEqual({ gold: 500 - 15 - 30 - 50, timber: 90, stone: 75, iron: 80 })
+    expect(it.world.turn).toBe(1)
+    expect(improveRefusal(it.world, it.party)).toBe('Gold Seam is as strong as it gets.')
+  })
+
+  it('take a day on the day loop (improveSite), and nothing when refused', () => {
+    const it = atGoldSeam(1)
+    it.world.improvements.gold_seam = 1
+    const events = improveSite(it.game, it.party)!
+    expect(events[0]).toEqual({ type: 'site_improved', site: 'gold_seam', name: 'Gold Seam', level: 2, building: 'Mine' })
+    expect(it.world.improvements.gold_seam).toBe(2)
+    expect(it.world.turn).toBe(2)
+    refusedUnchanged(it.game, () => improveSite(it.game, it.party))
+  })
+
+  it('a works or fort lifts its site as the table says', () => {
+    const it = atGoldSeam(2)
+    const at = it.party.position
+    it.party.position = offsetToHex(30, 2)
+    const net = () => netInfluence(it.world, presences(it.game.parties), at)
+    const before = net()
+    it.world.improvements.gold_seam = 2
+    expect(net()).toBeCloseTo(before - 3)
+    expect(siteYield(it.world, goldSeam(it)).amount).toBe(5)
+    it.world.improvements.gold_seam = 3
+    expect(net()).toBeCloseTo(before - 7)
+    expect(siteYield(it.world, goldSeam(it)).amount).toBe(5)
+  })
+
+  it('keep the outpost wrappers as they were: any improvement is "already has an outpost"', () => {
+    const it = atGoldSeam(2)
+    it.world.improvements.gold_seam = 2
+    expect(outpostSiteRefusal(it.world, it.party)).toBe('Gold Seam already has an outpost.')
+    expect(canBuildOutpost(it.world, it.party)).toBe('Gold Seam already has an outpost.')
+    refusedUnchanged(it.game, () => buildOutpost(it.game, it.party))
+    const off = atGoldSeam()
+    off.party.position = offsetToHex(7, 17)
+    expect(outpostSiteRefusal(off.world, off.party)).toBe('An outpost goes on a held resource.')
+  })
+})
+
+describe('the Builders\' Lodge (economy A2)', () => {
+  /** The party at home, the stock rich. */
+  function atHome() {
+    const it = solo()
+    it.world.stock = { gold: 500, timber: 100, stone: 100, iron: 100 }
+    return it
+  }
+
+  it('costs each level, to MAX_LODGE_LEVEL', () => {
+    const { world } = atHome()
+    expect(LODGE_COSTS).toEqual([{ gold: 30, timber: 20 }, { gold: 60, stone: 25 }, { gold: 100, iron: 20, stone: 20 }])
+    expect(MAX_LODGE_LEVEL).toBe(3)
+    expect(LODGE_LEVEL_LIMIT).toBe(2)
+    expect([0, 1, 2, 3].map((lodge) => ((world.lodge = lodge), lodgeCost(world)))).toEqual([...LODGE_COSTS, null])
+  })
+
+  it('is raised at home to level 1 and 2, the stock paying, and no further until roads', () => {
+    const { game, world, party } = atHome()
+    expect(raiseLodge(game, party)).toBeNull()
+    expect(world.lodge).toBe(1)
+    expect(world.stock).toEqual({ gold: 470, timber: 80, stone: 100, iron: 100 })
+    expect(raiseLodge(game, party)).toBeNull()
+    expect(world.lodge).toBe(2)
+    expect(world.stock).toEqual({ gold: 410, timber: 80, stone: 75, iron: 100 })
+    expect(raiseLodge(game, party)).toBe(ROADS_REFUSAL)
+    expect(ROADS_REFUSAL).toBe('Roads come with trade routes.')
+    expect(world.lodge).toBe(2)
+    expect(world.stock).toEqual({ gold: 410, timber: 80, stone: 75, iron: 100 })
+    // Set to 3 (as the debug console may), it is refused the same.
+    world.lodge = 3
+    expect(raiseLodge(game, party)).toBe(ROADS_REFUSAL)
+  })
+
+  it('is refused away from home or without the stock, changing nothing', () => {
+    const away = atHome()
+    away.party.position = offsetToHex(7, 17)
+    expect(raiseLodge(away.game, away.party)).toBe(`The Builders' Lodge is at ${away.world.locations.find((l) => l.id === ENCAMPMENT_ID)!.name}.`)
+    expect(away.world.lodge).toBe(0)
+    const poor = atHome()
+    poor.world.stock = { gold: 30, timber: 19 }
+    const before = JSON.stringify(poor.game)
+    expect(raiseLodge(poor.game, poor.party)).toBe('The next level costs 30 gold, 20 timber, more than the stock holds.')
+    expect(JSON.stringify(poor.game)).toBe(before)
   })
 })

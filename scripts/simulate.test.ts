@@ -718,9 +718,9 @@ describe('the shrine and outposts in a campaign', () => {
     expect(outpostErrand(world, party)).toBeNull()
     world.stock = { ...OUTPOST_COST }
     expect(outpostErrand(world, party)?.id).toBe('gold_seam')
-    world.outposts = ['gold_seam']
+    world.improvements = { gold_seam: 1 }
     expect(outpostErrand(world, party)?.id).not.toBe('gold_seam')
-    world.outposts = []
+    world.improvements = {}
     party.position = { q: goldSeam.position.q + OUTPOST_ERRAND_RADIUS + 8, r: goldSeam.position.r }
     expect(outpostErrand(world, party)?.id).not.toBe('gold_seam')
   })

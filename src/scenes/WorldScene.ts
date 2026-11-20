@@ -11,7 +11,7 @@ import { newGame, selectedParty, type GameState } from '../game/gameState.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
 import { craftTier } from '../game/crafting.ts'
 import { FORECAST_SLICE_MS, Forecaster, forecastHint, forecastLabel, worldForecastStart, workFor, type Forecast } from '../game/forecast.ts'
-import { daysToFall } from '../game/territory.ts'
+import { daysToFall, siteImprovement } from '../game/territory.ts'
 import { UNEXPLORED, knownBlightedShare, visibleHexes } from '../game/vision.ts'
 import {
   encampment,
@@ -674,7 +674,7 @@ export class WorldScene extends Phaser.Scene {
           ? daysToFall(this.world, this.presences(), location)
           : null
       const lines = [held ? `${location.name} *` : location.name]
-      if (this.world.outposts.includes(location.id)) lines.push('outpost')
+      if (siteImprovement(this.world, location.id) >= 1) lines.push('outpost')
       if (days !== null) lines.push(`falls in ${days}d`)
       this.siteLabels.add(
         this.add
@@ -1471,7 +1471,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Builds an outpost at the held site the party stands on, a day's work, or says why it cannot. */
   private onBuildOutpost(): void {
-    this.built({ kind: 'outpost' })
+    this.built({ kind: 'improve' })
   }
 
   /** A building's day: what it built and what else the day brought, or why it was refused. */

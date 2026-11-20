@@ -6,6 +6,8 @@ import { presences, type PartyPresence } from './expedition.ts'
 import { newGame, type GameState } from './gameState.ts'
 import {
   CLEANSE_LEVELS,
+  IMPROVEMENT_STRENGTH,
+  SITE_STRENGTH,
   MAX_BLIGHT,
   MAX_MONSTER_LOCATIONS,
   SHIFT_COST,
@@ -18,6 +20,7 @@ import {
   boardIndex,
   netInfluence,
   partyStrength,
+  siteStrength,
   type WorldEvent,
 } from './blight.ts'
 import { readyMadeParty } from './party.ts'
@@ -427,5 +430,32 @@ describe('the rules over several parties', () => {
     for (const nest of both) for (const p of [a, b]) expect(hexDistance(p.position, nest.position)).toBeGreaterThanOrEqual(SPAWN_CLEARANCE)
     // Without `b` in the list, some nest lands too near it: the test can tell.
     expect(nestsBeside([a]).some((nest) => hexDistance(b.position, nest.position) < SPAWN_CLEARANCE)).toBe(true)
+  })
+})
+
+describe('an improved site\'s strength (economy A1)', () => {
+  it('is 3, 6, 6 and 10 by improvement level 0 to 3', () => {
+    const { world } = solo(1)
+    expect(IMPROVEMENT_STRENGTH).toEqual([0, 3, 3, 7])
+    const strengths = [0, 1, 2, 3].map((level) => {
+      if (level === 0) delete world.improvements.iron_vein
+      else world.improvements.iron_vein = level as 1 | 2 | 3
+      return siteStrength(world, 'iron_vein')
+    })
+    expect(strengths).toEqual([SITE_STRENGTH, 6, 6, 10])
+  })
+
+  it('moves the fields (their memo is keyed afresh) when a held site is improved', () => {
+    const { world } = solo(1)
+    const ironVein = world.locations.find((l) => l.id === 'iron_vein')!
+    if (!world.held.includes('iron_vein')) world.held.push('iron_vein')
+    const net = () => netInfluence(world, [], ironVein.position)
+    const before = net()
+    world.improvements.iron_vein = 1
+    expect(net()).toBeCloseTo(before - 3)
+    world.improvements.iron_vein = 3
+    expect(net()).toBeCloseTo(before - 7)
+    delete world.improvements.iron_vein
+    expect(net()).toBeCloseTo(before)
   })
 })

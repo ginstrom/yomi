@@ -169,3 +169,35 @@ export function raiseLodge(game: GameState, party: Expedition): string | null   
 
 ## 7. Execution record
 
+
+Step 01, on `long-campaign-stage-07` from `d4e33de` (clean tree), local Node 26.
+
+**Baseline, measured before any edit** (one at a time, nothing else running; the stage's baseline, which step 07 compares against):
+
+| Run | Source wins | Days | Battles | Deaths (battles won) | Trading post at end | Outposts built |
+| --- | --- | --- | --- | --- | --- | --- |
+| `npm run simulate -- --campaign --battles 500 --seed 1 --parties 1 --out logs/base-p1.jsonl > logs/base-p1.txt` (4 min 26 s) | **234 of 500** (46.8%); fell 266 | 286 | 19.4 (9709 in all) | 1.1 | 1.1 | 0.6 |
+| `npm run simulate -- --campaign --battles 500 --seed 1 --out logs/base-p3.jsonl > logs/base-p3.txt` (default company) | **236 of 500** (47.2%); fell 264 | 286 | 19.5 (9730 in all) | 1.1 | 1.1 | 0.5 |
+| 50-campaign check (`--battles 50 --seed 1 --parties 1 --out logs/guard-50.jsonl`) | 22 of 50 | 294 | 19.7 (984 in all) | 1.1 | 1.1 | 0.7 |
+
+- The one-party figure is **234**, matching scripts/CLAUDE.md's bands table (234), not stage 6's 230; auto-resolve has not moved the simulator (it plays every battle out). Both are inside the user's bands (one party 215–250, default company 220–260, days 243–297, deaths at most 2.0).
+- 50-campaign baseline: `shasum -a 256 logs/guard-50.jsonl` = `5f92e363577e3216cd2fb233421d6ab2b514031b8c51b6c58f52db944cc8e2cb`.
+
+**Built** (C1 as written): `WorldState.improvements` / `lodge`; territory.ts `ImprovementLevel`, `IMPROVEMENT_YIELD`, `WORKS_NAMES`, `siteImprovement`, `improvementName`, `withArticle`, `lossLevel`, `daysToFall` with the site's id, `updateTerritory` losing at `lossLevel` and razing every level (`site_lost.improvement`); blight.ts `IMPROVEMENT_STRENGTH`, `siteStrength`, `site_improved`; buildings.ts every C1 name with the refusal words, and the wrappers (`OUTPOST_COST`, `outpostSite`, `outpostSiteRefusal`, `canBuildOutpost`, `buildOutpost`) with today's words, marked `@deprecated until stage 7 step 06`; `DayAction` `improve` through `company.ts` (`improveRefusal`, `raiseImprovement`, garrison via `improvementSite`); `orderLabel` "Building"; `SAVE_VERSION` 27 with `migrateFrom26` (applied last to every older version; `migrateFrom25` now runs for 25 and older only) and the world check; `src/game/fixtures/save-v26.json`, written by the code at `d4e33de` before the bump (an outpost on Iron Vein, party 1 on Gold Seam with the day order `outpost`). Minimal moves: the simulator (`outpostErrand` reads `siteImprovement`, the build phase acts `improve` behind `canBuildOutpost`, `tally` counts level-1 `site_improved`), `worldEvents.ts`, `sounds.ts`, `hexInfo.ts` (ids to `daysToFall`), `WorldScene.ts` (label line, `improve`), `e2e/world.test.ts` (reads `improvements`).
+
+**Verification:**
+
+- `npm test`: 96 files, 2353 tests passed (the refactor guard's fixture untouched and green).
+- 50-campaign check after the change: same `shasum` `5f92e363…e2cb`, and the printed summary is identical line for line: **identical**.
+- `npm run test:browser -- -t outpost`: 1 passed; `npm run test:browser -- e2e/world.test.ts`: 58 passed.
+- `npm run build`: built (the usual chunk-size warning only).
+- The step's grep (`world.outposts|outpost_built|OUTPOST_YIELD|OUTPOST_STRENGTH|kind: 'outpost'`, plus `raiseOutpost`) over `src scripts e2e docs/reference` and the CLAUDE.md files finds only `save.ts`'s `migrateFrom26` and `save.test.ts`'s migration tests.
+
+**Deviations and notes:**
+
+- `worldMap.test.ts`'s characterization ("a seeded session of walks and camps") hashes the whole `WorldState`, so its shape change alone moved the digest. Rather than re-record the hash, the test now maps the world back to the old shape (`improvements` as the `outposts` id list, after `shrine`; no `lodge`) before hashing, and the **old** `SESSION_SHA256` matches: play there is unchanged too.
+- `save.test.ts` tests that relabel a current save as version 22–26 now pass it through a `before27` helper (the world in the old shape), since an older version must hold `outposts`; a current-shaped world labelled 26 or older is checked to be unreadable.
+- Among-monsters refusal: a nest never shares a hex with a site, so the test stands the party on a nest's hex.
+- `docs/reference/scenes.md` and `simulator.md` still describe the Build Outpost button and the outpost errand, which are still true until steps 04 and 06.
+
+**For later steps:** C1 is as the index states. `improveSiteRefusal` refuses a fort ("<site> is as strong as it gets."), so step 04's `improveLabel` returns null there. The `site_improved` line at levels 2–3 uses "stands" for every name (step 04 adds "stand" for plural names). Budgets: three 500-or-50-campaign runs before the change and one 50-campaign run after, all one at a time.

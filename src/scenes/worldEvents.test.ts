@@ -27,6 +27,13 @@ describe('describeWorldEvent', () => {
     expect(describeWorldEvent({ type: 'encampment_lost', name: 'Oakvale' })).toBe('The blight has taken Oakvale.')
     expect(describeWorldEvent(level)).toBe('')
   })
+
+  it('tells an improvement built and one razed with its site', () => {
+    expect(describeWorldEvent({ type: 'site_improved', site: 'iron_vein', name: 'Iron Vein', level: 1, building: 'Outpost' })).toBe('An outpost stands at Iron Vein.')
+    expect(describeWorldEvent({ type: 'site_improved', site: 'iron_vein', name: 'Iron Vein', level: 2, building: 'Mine' })).toBe('A Mine stands at Iron Vein.')
+    expect(describeWorldEvent({ type: 'site_lost', site: 'iron_vein', name: 'Iron Vein' })).toBe('Iron Vein is lost to the blight.')
+    expect(describeWorldEvent({ type: 'site_lost', site: 'iron_vein', name: 'Iron Vein', improvement: 1 })).toBe('Iron Vein is lost to the blight, and its outpost razed.')
+  })
 })
 
 describe('describeWorldEvents', () => {

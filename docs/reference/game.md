@@ -77,7 +77,7 @@ A monster kind has a native level (`FOE_NATIVE_LEVEL`: 1 but for the Giant Spide
 
 `passDay` runs every party's day by its order, in list order, then `passTurn` once, then checks each order against the day. Idle and garrisoned parties away from monsters heal each living member `NATURAL_HEALING_PER_DAY` (1) a day, capped at maximum hit points, without mana or the infirmary's bonus. `advance` passes days until an `Interrupt` (the first notable world event, else a party's own event: arrived, confronting, order done, met), the game ending, or `UNTIL_LIMIT` (30) days.
 
-`travel` (worldMap.ts, over `startTravel`, which gives the travel order and handles a refused one or a nest on its first hex, passing no day) and `campUntilHealed` (camp.ts) are conveniences that give an order and advance. `orderAction` gives a party a one-day action (scout, wait, a day's camp, a tower, an outpost, a field craft or embed) as a `day` order for the next day to run, refusing, changing nothing, what the action's own check or `advanceRefusal` refuses. `blockingParty` is the party whose monsters a refusal is for, and `partyNoun` how a refusal names a party ("The party" alone, else its name). `act` is `orderAction` then the day passed; `linger`, `campDay`, `buildTower`, `buildOutpost` and the field `craft` and `embed` are conveniences over it.
+`travel` (worldMap.ts, over `startTravel`, which gives the travel order and handles a refused one or a nest on its first hex, passing no day) and `campUntilHealed` (camp.ts) are conveniences that give an order and advance. `orderAction` gives a party a one-day action (scout, wait, a day's camp, a tower, an improvement, a field craft or embed) as a `day` order for the next day to run, refusing, changing nothing, what the action's own check or `advanceRefusal` refuses. `blockingParty` is the party whose monsters a refusal is for, and `partyNoun` how a refusal names a party ("The party" alone, else its name). `act` is `orderAction` then the day passed; `linger`, `campDay`, `buildTower`, `improveSite` (and, until stage 7 step 06, `buildOutpost`) and the field `craft` and `embed` are conveniences over it.
 
 ### Company actions
 
@@ -103,7 +103,7 @@ Two parties' business in the field:
 - A party may be sent home (from anywhere away from the encampment), set to garrison a held resource it stands on, or sent to meet another party (by a click on that party's hex); two parties sharing a hex may trade heroes and baggage (`exchange`, the `Exchange` scene).
 - A journey is walked a hex and a turn at a time and stops where a notable event happens (`isNotable`: monsters sighted within `NOTICE_RADIUS` of some party's presence, the Source wherever it is sighted, a held site or tower newly under threat or lost, the encampment lost; a spawn is told only when sighted) or where monsters stand on the road. Routes keep clear of every sighted monster location except one they end on, and go through the unexplored as through open land.
 - Walking into monsters sets the party's `confronting`, and it cannot travel on until it scouts, waits (a turn each, and neither does more yet) or attacks.
-- On a held resource the party may build an outpost (`buildOutpost`, a day, `OUTPOST_COST`). Anywhere but among monsters it may build a watchtower on clean land off every location, `TOWER_SPACING` (4) hexes from any other, for `TOWER_COST` from the stock wherever the party is, in a day (`buildTower`).
+- On a held resource the party may build its next improvement (`improveSite`, a day, `IMPROVEMENT_COSTS`, the Lodge allowing). Anywhere but among monsters it may build a watchtower on clean land off every location, `TOWER_SPACING` (4) hexes from any other, for `TOWER_COST` from the stock wherever the party is, in a day (`buildTower`).
 - Camping (`camp.ts`) is a turn a day. Each day heals every member `NATURAL_HEALING_PER_DAY` (1), or more with the infirmary (`restHealing`: a third, then all of it at the encampment, then 3 a day elsewhere), and fills every caster's mana. Camping until healed casts the party's heals with the mana it has (`autoHeal`), then camps a day and casts again while anyone is wounded, unless a notable event breaks camp. `rest` is a day's healing with no time passing, which both camp orders use.
 - A won battle takes its location off the map, cleanses the land around it and puts its loot in the baggage (`BattleScene.endBattle` calls `takeLoot` and `clearLocation`, and the victory screen names what was found).
 - The game ends only when the encampment falls (`status` 'lost', permadeath as a defeat that leaves no hero is) or the Source is beaten ('won'), after which the player ends the game, keeping the save, or goes on in 'endless' mode.
@@ -119,7 +119,7 @@ Two parties' business in the field:
 Each source pushes with its strength less a point a hex of distance:
 
 - for the blight: a monster location with `BLIGHT_PER_THREAT` × its threat, the Source with `SOURCE_STRENGTH`, each corrupted neighbour with `CREEP`, all times the blight's growth with time (`blightGrowth`: a tenth more every 30 days, to half again at day 151, worked out from the turn);
-- against it: the encampment (`CAMP_STRENGTH`, more with its shrine), each held resource (more with an outpost), each watchtower (`TOWER_STRENGTH`) and each party (each presence, in list order), with `PARTY_BASE` and half its levels together (`partyStrength`; nothing else of a party counts).
+- against it: the encampment (`CAMP_STRENGTH`, more with its shrine), each held resource (more with an improvement), each watchtower (`TOWER_STRENGTH`) and each party (each presence, in list order), with `PARTY_BASE` and half its levels together (`partyStrength`; nothing else of a party counts).
 
 A monster location's hex stays blighted or worse until it is beaten. Each party's hex is neutral, so the blight never rises there nor creeps from it, but the parties' influence lowers it. The fixed sources' influence is worked out again only when a location or a held site changes (`fields`, a memo outside the state).
 
@@ -129,7 +129,7 @@ A won battle lowers the land within 1 + its threat by two levels (`cleanse`). Th
 
 ### Territory
 
-`territory.ts`. A resource is held while its land is clean enough: captured at level 0, lost at `LOSS_LEVEL` (2), under threat (with the days until it falls, `daysToFall`) while the blight is gaining on it. Every `YIELD_DAYS` each held site adds its yield to the encampment's `stock`, half if tainted, which the buildings and the guild hall spend (`updateTerritory`). A watchtower is lost, and warned of, as a held site is.
+`territory.ts`. A resource is held while its land is clean enough: captured at level 0, lost at its `lossLevel` (`LOSS_LEVEL`, 2; a fort's `MAX_BLIGHT`, 3: only when corrupted), under threat (with the days until it falls, `daysToFall`) while the blight is gaining on it. Every `YIELD_DAYS` each held site adds its yield to the encampment's `stock`, half if tainted, which the buildings and the guild hall spend (`updateTerritory`). A watchtower is lost, and warned of, as a held site is, at `LOSS_LEVEL`. A site lost razes its improvement, of whatever level (`site_lost` with `improvement`, the level razed).
 
 ## Buildings
 
@@ -137,7 +137,16 @@ A won battle lowers the land within 1 + its threat by two levels (`cleanse`). Th
 
 - Watchtower: built where a party stands. `canBuildTower(world, party)` gives the reason it cannot; `buildTower(game, party)` builds it as a one-day order, over `raiseTower`, which spends and raises it with no time passing. A tower is `WorldState.towers`, not a location: blight.ts counts it a clean source, vision.ts a watcher, and territory.ts loses it as a held site.
 - Shrine: raised a level at a time by a party at the encampment (`atEncampment(world, party)`, `raiseShrine`, no time passing), each level adding `SHRINE_STRENGTH` to the encampment. It is `WorldState.shrine`.
-- Outpost: built by the party standing on a held resource (`buildOutpost`, a one-day order over `raiseOutpost`), adding `OUTPOST_STRENGTH` to the site and `OUTPOST_YIELD` to its yield. Outposts are `WorldState.outposts` (site ids), read by blight.ts's `siteStrength` and territory.ts's `siteYield`; an outpost falls with its site (`site_lost` with `outpost`).
+- Improvements: a held resource (`improvementSite`; never the encampment) is raised a level at a time by the party standing on it (`improveSite`, a one-day order over `raiseImprovement`, which spends and raises with no time passing and returns `site_improved` with the level and its name). `WorldState.improvements` maps a site's id to its level (`siteImprovement`, 0 for none), read by blight.ts's `siteStrength` (`IMPROVEMENT_STRENGTH`) and territory.ts's `siteYield` (`IMPROVEMENT_YIELD`) and `lossLevel`:
+
+  | Level | Name (`improvementName`) | Needs (`IMPROVEMENT_LODGE`) | Cost (`IMPROVEMENT_COSTS`) | Yield, on the site's 2 | Strength, on `SITE_STRENGTH` 3 | Lost at |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | 1 | Outpost | — | 15 gold, 10 timber | +1 | +3 | 2 |
+  | 2 | works, by material (`WORKS_NAMES`: Mine for iron, gold, silver, copper and crystal; Lumber Camp, Quarry, Saltworks, Peat Cuttings) | Lodge 1 | 30 gold, 15 stone | +3 | +3 | 2 |
+  | 3 | Fort | Lodge 2 | 50 gold, 20 iron, 10 stone | +3 | +7 | 3 (corrupted) |
+
+  `improveRefusal(world, party)` refuses in order: "Nothing can be built here now." (the game over, or among monsters), "Improvements go on a held resource.", "<site> is as strong as it gets." (a fort), "<A Mine> needs the Builders' Lodge." (or "… at level 2." for a fort), "<An Outpost> costs …, more than the stock holds." (`withArticle`); `improveSiteRefusal` is its first three. Until stage 7 step 06 the old names stand as wrappers with their old words: `OUTPOST_COST`, `outpostSite`, `outpostSiteRefusal` (any improved site "already has an outpost"), `canBuildOutpost` and `buildOutpost` (an `improve` on a bare site).
+- Builders' Lodge: `WorldState.lodge`, 0 to `MAX_LODGE_LEVEL` (3), raised a level at a time by a party at the encampment (`raiseLodge(game, party)`, no time passing; `lodgeCost`, `LODGE_COSTS`: 30 gold and 20 timber, 60 gold and 25 stone, 100 gold, 20 iron and 20 stone). Level 1 allows works, 2 forts; `raiseLodge` builds no higher than `LODGE_LEVEL_LIMIT` (2), refusing with `ROADS_REFUSAL` ("Roads come with trade routes.") until stage 8's roads.
 
 ## The encampment's facilities
 
@@ -236,13 +245,15 @@ In the saved string every `Item` is its id, put back by `itemById` as the consta
 
 ### Versions and migrations
 
-`SAVE_VERSION` is 26. Raise it whenever the shape of `GameState`, `Character`, `WorldState` or `BattleSnapshot` changes. Saves need not stay compatible while the game is in development: break the format whenever a change calls for it, and raise the version rather than work around old saves. A migration is written only when a design asks for one; otherwise older saves read as unreadable, which the menu lists and will not load.
+`SAVE_VERSION` is 27. Raise it whenever the shape of `GameState`, `Character`, `WorldState` or `BattleSnapshot` changes. Saves need not stay compatible while the game is in development: break the format whenever a change calls for it, and raise the version rather than work around old saves. A migration is written only when a design asks for one; otherwise older saves read as unreadable, which the menu lists and will not load.
 
-The migrations, each followed by a check as strict as a current save's, with captured fixtures in `src/game/fixtures/` (`save-v18.json`, `save-v22.json`, `save-v25.json`):
+The migrations, each followed by a check as strict as a current save's, with captured fixtures in `src/game/fixtures/` (`save-v18.json`, `save-v22.json`, `save-v25.json`, `save-v26.json`):
 
 - `migrateFrom18` (stage 5's design): a version-18 save, with one `party` and one `baggage` and the world holding the party's hex and confrontation, becomes version 22's shape (with the home, garrison and meet orders, a meet naming a party of the save) as a company of one, its battle if any naming `party_1`. Versions 19, 20 and 21 read as unreadable.
 - `migrateFrom22` (the skill trees' design): for every hero of every party and the reserves, `spellcasting`, `quick_study` and unknown perk ids are dropped, the folded perks (`FOLDED`) are mapped onto their node, every node is held at one rank and kept even where its asks would now refuse it, `spellPicks` is deleted and mana is clamped to the new maximum; a saved battle is kept as it was.
 - Version 23 has characters holding the trees' nodes at one rank and no `spellPicks`; version 24 adds `UnitRecord.moved` to a saved battle; version 25 the fields `attackedYet`, `endured`, `refunded`, `fallenThisBattle` and `usedOnce` (`BattleEngine.restore` takes what a unit lacks of them up as false or `[]`; a `UnitSnapshot` carries each only when set, as it does `moved`).
-- `migrateFrom25` (the node-cost design), which every older readable save goes through: every hero of every party and the reserves keeps every node, with no refund, and has `max(0, pointsAt(level) − nodesCost(hero))` perk points, `perkPicks` deleted. `characterOf` asks `perkPoints` to be an integer of 0 or more.
+- `migrateFrom25` (the node-cost design), which every save of version 25 or older goes through: every hero of every party and the reserves keeps every node, with no refund, and has `max(0, pointsAt(level) − nodesCost(hero))` perk points, `perkPicks` deleted. `characterOf` asks `perkPoints` to be an integer of 0 or more.
 
-The chains: a version-23, 24 or 25 save loads through `migrateFrom25` alone; a version-22 save through `migrateFrom22` then `migrateFrom25`; a version-18 save through `migrateFrom18`, `migrateFrom22` and `migrateFrom25`.
+- `migrateFrom26` (long campaign stage 7), which every older readable save goes through last: each id in the world's `outposts` becomes a level-1 entry of `improvements`, `outposts` is deleted, `lodge` is 0, and a party's day order of the `outpost` action becomes `improve`. The check asks `improvements` to be an object whose levels are 1, 2 or 3 and whose ids name resource locations, and `lodge` an integer from 0 to `MAX_LODGE_LEVEL`.
+
+The chains: a version-26 save loads through `migrateFrom26` alone; a version-23, 24 or 25 save through `migrateFrom25` then `migrateFrom26`; a version-22 save through `migrateFrom22`, `migrateFrom25` and `migrateFrom26`; a version-18 save through `migrateFrom18` and then the rest.

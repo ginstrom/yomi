@@ -711,7 +711,7 @@ describe('worldSounds (step 07)', () => {
     threatened: { type: 'site_threatened', site: 's', name: 'S', days: 3 },
     captured: { type: 'site_captured', site: 's', name: 'S' },
     tower: { type: 'tower_built', tower: 't', at },
-    outpost: { type: 'outpost_built', site: 's', name: 'S' },
+    outpost: { type: 'site_improved', site: 's', name: 'S', level: 1, building: 'Outpost' },
     arrived: { type: 'arrived', party: 'party_1', at },
     met: { type: 'met', party: 'party_1', other: 'party_2' },
   } as const

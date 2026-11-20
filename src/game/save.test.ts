@@ -13,7 +13,7 @@ import { newGame, takeLoot, type GameState } from './gameState.ts'
 import { Ground } from './ground.ts'
 import { PREROLLS, partyFighters, partyFromDrafts } from './party.ts'
 import { SAVE_VERSION, describeSave, parseSave, saveSummary, serializeSave, type SaveFile, type SavedBattle } from './save.ts'
-import { encampment, type MonsterLocation } from './worldMap.ts'
+import { ENCAMPMENT_ID, encampment, type MonsterLocation } from './worldMap.ts'
 
 const monsters = (game: GameState): MonsterLocation[] =>
   game.world.locations.filter((location): location is MonsterLocation => location.kind === 'monsters')
@@ -34,6 +34,19 @@ function gameUnderWay(): GameState {
   game.reserves.push(partyFromDrafts([PREROLLS[3].draft])[0])
   game.world.guildHall = 2
   return game
+}
+
+/**
+ * A current save's parsed JSON given a version from before stage 7 (26 or
+ * older): the world's improvements as the `outposts` list (each level 1
+ * then), without the Lodge, and a day order `improve` as `outpost`.
+ */
+function before27(saved: any, version: number): any {
+  saved.version = version
+  const { improvements, lodge: _lodge, ...world } = saved.game.world
+  saved.game.world = { ...world, outposts: Object.keys(improvements) }
+  for (const party of saved.game.parties) if (party.order.kind === 'day' && party.order.action.kind === 'improve') party.order.action = { kind: 'outpost' }
+  return saved
 }
 
 function battleOf(game: GameState): SavedBattle {
@@ -119,8 +132,8 @@ describe('a save', () => {
     expect(parsed.game.parties[0].baggage.length).toBeGreaterThan(0)
   })
 
-  it('is version 26, whose characters hold perk points', () => {
-    expect(SAVE_VERSION).toBe(26)
+  it('is version 27, whose world holds improvements and the Builders\' Lodge', () => {
+    expect(SAVE_VERSION).toBe(27)
   })
 
   it('round-trips a hero\'s perk points', () => {
@@ -150,16 +163,21 @@ describe('a save', () => {
     expect(parseSave(broken((hero) => (hero.perkPicks = 2)))).toBeNull()
   })
 
-  it('reads a save of a version other than 26, 25, 24, 23, 22 or 18 as unreadable', () => {
+  it('reads a save of a version other than 27, 26, 25, 24, 23, 22 or 18 as unreadable', () => {
     const saved = JSON.parse(serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 }))
-    for (const version of [17, 19, 20, 21, 27]) expect(parseSave(JSON.stringify({ ...saved, version })), `${version}`).toBeNull()
-    for (const version of [26, 25, 24, 23]) expect(parseSave(JSON.stringify({ ...saved, version })), `${version}`).not.toBeNull()
+    for (const version of [17, 19, 20, 21, 28]) expect(parseSave(JSON.stringify({ ...saved, version })), `${version}`).toBeNull()
+    expect(parseSave(JSON.stringify(saved))).not.toBeNull()
+    for (const version of [26, 25, 24, 23]) {
+      expect(parseSave(JSON.stringify(before27(structuredClone(saved), version))), `${version}`).not.toBeNull()
+      // A save of an older version in the current world's shape is unreadable.
+      expect(parseSave(JSON.stringify({ ...saved, version })), `${version} as 27`).toBeNull()
+    }
   })
 
   it('loads a version-24 save, its battle\'s units taking up the stage-3 fields at their defaults', () => {
     const game = gameUnderWay()
     const saved = JSON.parse(serializeSave({ game, battle: battleOf(game), savedAt: 5 }))
-    saved.version = 24
+    before27(saved, 24)
     const fields = ['attackedYet', 'endured', 'refunded', 'fallenThisBattle', 'usedOnce']
     for (const unit of saved.battle.engine.units) for (const field of fields) delete unit[field]
     const parsed = parseSave(JSON.stringify(saved))!
@@ -173,7 +191,7 @@ describe('a save', () => {
   it('loads a version-23 save, its battle\'s units taking up `moved` as false', () => {
     const game = gameUnderWay()
     const saved = JSON.parse(serializeSave({ game, battle: battleOf(game), savedAt: 5 }))
-    saved.version = 23
+    before27(saved, 23)
     for (const unit of saved.battle.engine.units) delete unit.moved
     const parsed = parseSave(JSON.stringify(saved))!
     expect(parsed).not.toBeNull()
@@ -327,7 +345,7 @@ describe('parseSave', () => {
       const orders = [
         { kind: 'travel', to: hex(5, 6), route: [hex(4, 6), hex(5, 6)] },
         { kind: 'camp' },
-        ...['scout', 'wait', 'camp', 'tower', 'outpost'].map((kind) => ({ kind: 'day', action: { kind } })),
+        ...['scout', 'wait', 'camp', 'tower', 'improve'].map((kind) => ({ kind: 'day', action: { kind } })),
         { kind: 'day', action: { kind: 'craft', place, modifier: 'light', grade: 2 } },
         { kind: 'day', action: { kind: 'embed', place: { from: 'baggage', party: FIRST_PARTY_ID, index: 0, itemId: 'x' }, rune: 'ember1' } },
         { kind: 'day', action: { kind: 'embed', place: { from: 'backpack', party: FIRST_PARTY_ID, member: 1, index: 2, itemId: 'x' }, rune: 'storm2' } },
@@ -436,6 +454,99 @@ describe('a company', () => {
   })
 })
 
+describe('a version-26 save', () => {
+  const raw = readFileSync(new URL('./fixtures/save-v26.json', import.meta.url), 'utf8')
+  const old = JSON.parse(raw)
+  const loaded = parseSave(raw)!
+
+  it('is the fixture the code before stage 7 wrote: an outpost on Iron Vein and a party ordered to build one', () => {
+    expect(old.version).toBe(26)
+    expect(old.game.world.outposts).toEqual(['iron_vein'])
+    expect('improvements' in old.game.world || 'lodge' in old.game.world).toBe(false)
+    expect(old.game.parties[0].order).toEqual({ kind: 'day', action: { kind: 'outpost' } })
+  })
+
+  it('loads each outpost as a level-1 improvement, the Lodge at 0 and the order as improve', () => {
+    expect(loaded).not.toBeNull()
+    expect(loaded.game.world.improvements).toEqual({ iron_vein: 1 })
+    expect(loaded.game.world.lodge).toBe(0)
+    expect('outposts' in loaded.game.world).toBe(false)
+    expect(loaded.game.parties[0].order).toEqual({ kind: 'day', action: { kind: 'improve' } })
+  })
+
+  it('keeps its heroes\' perk points as they were, and saves back as the current version', () => {
+    const heroes = (game: any) => [...game.parties.flatMap((party: any) => party.members), ...game.reserves]
+    expect(heroes(loaded.game).map((m) => [m.name, m.perks, m.perkPoints])).toEqual(heroes(old.game).map((m) => [m.name, m.perks, m.perkPoints]))
+    expect(JSON.parse(serializeSave(loaded)).version).toBe(SAVE_VERSION)
+    expect(parseSave(serializeSave(loaded))).toEqual(loaded)
+  })
+
+  it('reads one whose outposts are not a list of ids as unreadable', () => {
+    const edited = (change: (saved: any) => void) => {
+      const saved = JSON.parse(raw)
+      change(saved)
+      return JSON.stringify(saved)
+    }
+    expect(parseSave(edited((s) => delete s.game.world.outposts))).toBeNull()
+    expect(parseSave(edited((s) => (s.game.world.outposts = [3])))).toBeNull()
+  })
+})
+
+describe('the older fixtures', () => {
+  it.each(['save-v18.json', 'save-v22.json', 'save-v25.json'])('%s loads through the chain and then migrateFrom26: its outposts level 1, the Lodge at 0', (file) => {
+    const raw = readFileSync(new URL(`./fixtures/${file}`, import.meta.url), 'utf8')
+    const old = JSON.parse(raw)
+    const loaded = parseSave(raw)!
+    expect(loaded).not.toBeNull()
+    expect(loaded.game.world.improvements).toEqual(Object.fromEntries(old.game.world.outposts.map((id: string) => [id, 1])))
+    expect(loaded.game.world.lodge).toBe(0)
+    expect('outposts' in loaded.game.world).toBe(false)
+  })
+})
+
+describe('a version-27 save', () => {
+  /** A current save's JSON, its world edited as the test asks. */
+  const v27With = (change: (world: any) => void): string => {
+    const saved = JSON.parse(serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 }))
+    change(saved.game.world)
+    return JSON.stringify(saved)
+  }
+
+  it('round-trips improvements at levels 1 to 3 and the Lodge\'s level', () => {
+    const game = gameUnderWay()
+    game.world.improvements = { iron_vein: 2, gold_seam: 3, timber_stand: 1 }
+    game.world.lodge = 2
+    const parsed = parseSave(serializeSave({ game, battle: null, savedAt: 5 }))!
+    expect(parsed.game.world.improvements).toEqual({ iron_vein: 2, gold_seam: 3, timber_stand: 1 })
+    expect(parsed.game.world.lodge).toBe(2)
+    expect(parsed).toEqual({ game, battle: null, savedAt: 5 })
+  })
+
+  it('reads a bad improvement or Lodge level, or the old outposts list, as unreadable', () => {
+    expect(parseSave(v27With(() => {}))).not.toBeNull()
+    expect(parseSave(v27With((w) => (w.improvements = { iron_vein: 3 })))).not.toBeNull()
+    expect(parseSave(v27With((w) => (w.lodge = 3)))).not.toBeNull()
+    expect(parseSave(v27With((w) => (w.improvements = { iron_vein: 4 })))).toBeNull()
+    expect(parseSave(v27With((w) => (w.improvements = { iron_vein: 0 })))).toBeNull()
+    expect(parseSave(v27With((w) => (w.improvements = { [ENCAMPMENT_ID]: 1 })))).toBeNull()
+    expect(parseSave(v27With((w) => (w.improvements = { nowhere: 1 })))).toBeNull()
+    expect(parseSave(v27With((w) => (w.improvements = ['iron_vein'])))).toBeNull()
+    expect(parseSave(v27With((w) => delete w.improvements))).toBeNull()
+    expect(parseSave(v27With((w) => (w.lodge = 4)))).toBeNull()
+    expect(parseSave(v27With((w) => (w.lodge = -1)))).toBeNull()
+    expect(parseSave(v27With((w) => (w.lodge = 1.5)))).toBeNull()
+    expect(parseSave(v27With((w) => delete w.lodge))).toBeNull()
+  })
+
+  it('reads a day order of the old outpost action as unreadable', () => {
+    const saved = JSON.parse(serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 }))
+    saved.game.parties[0].order = { kind: 'day', action: { kind: 'outpost' } }
+    expect(parseSave(JSON.stringify(saved))).toBeNull()
+    saved.game.parties[0].order = { kind: 'day', action: { kind: 'improve' } }
+    expect(parseSave(JSON.stringify(saved))).not.toBeNull()
+  })
+})
+
 describe('a version-25 save', () => {
   const raw = readFileSync(new URL('./fixtures/save-v25.json', import.meta.url), 'utf8')
   const old = JSON.parse(raw)
@@ -483,7 +594,7 @@ describe('a version-22 save', () => {
   /** A version-22 save made from a current game, its characters edited as the test asks. */
   const v22With = (change: (saved: any) => void, game = gameUnderWay(), battle: SavedBattle | null = null): string => {
     const saved = JSON.parse(serializeSave({ game, battle, savedAt: 5 }))
-    saved.version = 22
+    before27(saved, 22)
     for (const m of [...saved.game.parties.flatMap((p: any) => p.members), ...saved.game.reserves]) m.spellPicks = 0
     change(saved)
     return JSON.stringify(saved)

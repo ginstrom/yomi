@@ -77,7 +77,7 @@ import {
 } from '../src/game/company.ts'
 import { INFIRMARY_COSTS, raiseInfirmary } from '../src/game/infirmary.ts'
 import { TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, wares } from '../src/game/tradingPost.ts'
-import { daysToFall, sites, type Material, type Stock } from '../src/game/territory.ts'
+import { daysToFall, siteImprovement, sites, type Material, type Stock } from '../src/game/territory.ts'
 import {
   ENCAMPMENT_ID,
   clearLocation,
@@ -798,7 +798,7 @@ export function outpostErrand(world: WorldState, party: Expedition): QuietLocati
     (site) =>
       site.id !== ENCAMPMENT_ID &&
       world.held.includes(site.id) &&
-      !world.outposts.includes(site.id) &&
+      siteImprovement(world, site.id) === 0 &&
       hexDistance(site.position, party.position) <= OUTPOST_ERRAND_RADIUS,
   )
   if (near.length === 0) return null
@@ -1090,7 +1090,7 @@ function afterBattle(world: WorldState, party: Expedition, plan: Plan): Decision
         const walked = walking(world, party, plan)
         if (walked === 'go') return { kind: 'order', order: { kind: 'travel', to: plan.to! } }
         plan.phase = 'craft'
-        if (walked && canBuildOutpost(world, party) === null) return { kind: 'act', action: { kind: 'outpost' } }
+        if (walked && canBuildOutpost(world, party) === null) return { kind: 'act', action: { kind: 'improve' } }
         continue
       }
       case 'craft':
@@ -1333,7 +1333,7 @@ function tally(record: CampaignRecord, events: readonly WorldEvent[]): void {
     if (event.type === 'site_lost') record.lost++
     if (event.type === 'tower_built') record.towersBuilt++
     if (event.type === 'tower_lost') record.towersLost++
-    if (event.type === 'outpost_built') record.outpostsBuilt++
+    if (event.type === 'site_improved' && event.level === 1) record.outpostsBuilt++
   }
 }
 

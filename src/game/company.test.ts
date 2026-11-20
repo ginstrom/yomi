@@ -393,10 +393,21 @@ describe('act with one party', () => {
 
   it('builds an outpost, its event before the day’s', () => {
     const { game, world } = onGoldSeam()
-    const report = actedDay(game, { kind: 'outpost' })
-    expect(report.events[0]).toEqual({ type: 'outpost_built', site: 'gold_seam', name: 'Gold Seam' })
-    expect(world.outposts).toEqual(['gold_seam'])
+    const report = actedDay(game, { kind: 'improve' })
+    expect(report.events[0]).toEqual({ type: 'site_improved', site: 'gold_seam', name: 'Gold Seam', level: 1, building: 'Outpost' })
+    expect(world.improvements).toEqual({ gold_seam: 1 })
     expect(world.stock).toEqual({ gold: 5, timber: 2 })
+  })
+
+  it('builds a site\'s works by an improve order, the Lodge allowing, and passes the day', () => {
+    const { game, world } = onGoldSeam()
+    world.improvements.gold_seam = 1
+    world.lodge = 1
+    world.stock = { gold: 40, stone: 20 }
+    const report = actedDay(game, { kind: 'improve' })
+    expect(report.events[0]).toEqual({ type: 'site_improved', site: 'gold_seam', name: 'Gold Seam', level: 2, building: 'Mine' })
+    expect(world.improvements).toEqual({ gold_seam: 2 })
+    expect(world.stock).toEqual({ gold: 10, stone: 5 })
   })
 
   it('crafts in the field, recording the item it made', () => {
@@ -448,6 +459,13 @@ describe('act refused', () => {
     refused(over.game, over.party.id, { kind: 'camp' }, /cannot camp here/)
   })
 
+  it('to improve beyond what the Lodge allows', () => {
+    const it = withStandingOrder(onGoldSeam())
+    it.world.improvements.gold_seam = 1
+    it.world.stock = { gold: 40, stone: 20 }
+    refused(it.game, it.party.id, { kind: 'improve' }, /needs the Builders' Lodge/)
+  })
+
   it('to build without the stock or on the wrong land', () => {
     const poor = withStandingOrder(onCleanLand())
     poor.world.stock = { gold: 5, iron: 9 }
@@ -456,7 +474,7 @@ describe('act refused', () => {
     refused(site.game, site.party.id, { kind: 'tower' }, /cannot stand on the encampment or a resource/)
     const land = withStandingOrder(onCleanLand())
     land.world.stock = { gold: 20, timber: 12 }
-    refused(land.game, land.party.id, { kind: 'outpost' }, /held resource/)
+    refused(land.game, land.party.id, { kind: 'improve' }, /held resource/)
   })
 
   it('to craft or embed at the workshop, which is no day’s work, or for a stale place', () => {
@@ -536,7 +554,7 @@ describe('orderAction', () => {
       [withStandingOrder(quiet()), 'party_9', { kind: 'camp' }],
       [withStandingOrder(quiet()), 'party_1', { kind: 'scout' }],
       [confronting(), 'party_1', { kind: 'camp' }],
-      [withStandingOrder(onCleanLand()), 'party_1', { kind: 'outpost' }],
+      [withStandingOrder(onCleanLand()), 'party_1', { kind: 'improve' }],
     ]
     for (const [it, id, action] of cases) {
       const twin = structuredClone(it.game)
@@ -800,6 +818,13 @@ describe('the garrison order', () => {
     expect(setOrder(game, party.id, { kind: 'garrison' })).toBeNull()
     const reports = days(game, 30)
     expect(reports.every((r) => r.partyEvents.length === 0 && r.parties[0].walked === null)).toBe(true)
+    expect(party.order).toEqual({ kind: 'garrison' })
+  })
+
+  it('is given on an improved resource as on a bare one', () => {
+    const { game, world, party } = onGoldSeam()
+    world.improvements.gold_seam = 3
+    expect(setOrder(game, party.id, { kind: 'garrison' })).toBeNull()
     expect(party.order).toEqual({ kind: 'garrison' })
   })
 

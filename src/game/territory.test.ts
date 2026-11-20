@@ -1,10 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { blightAt, boardIndex } from './blight.ts'
+import { MAX_BLIGHT, SHIFT_COST, blightAt, boardIndex, netInfluence } from './blight.ts'
 import { passDay, setOrder } from './company.ts'
 import { PARTY_NAMES, newExpedition, partyId, presences, type PartyPresence } from './expedition.ts'
 import { newGame } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
-import { LOSS_LEVEL, YIELD_DAYS, daysToFall, siteYield, sites, updateTerritory } from './territory.ts'
+import {
+  LOSS_LEVEL,
+  WORKS_NAMES,
+  YIELD_DAYS,
+  daysToFall,
+  improvementName,
+  lossLevel,
+  siteImprovement,
+  siteYield,
+  sites,
+  updateTerritory,
+  withArticle,
+  type ImprovementLevel,
+  type Material,
+} from './territory.ts'
 import { ENCAMPMENT_ID, newWorld, passTurn, travel, type MonsterLocation, type QuietLocation, type WorldState } from './worldMap.ts'
 
 /** A new game on world `seed`: its world and its one party, the ready-made three, at home. */
@@ -159,5 +173,125 @@ describe('a garrisoned site', () => {
     expect(world.held).toContain('gold_seam')
     expect(game.parties[1].order).toEqual({ kind: 'garrison' })
     expect(game.parties[1].position).toEqual(seam.position)
+  })
+})
+
+describe('improvements (economy A1)', () => {
+  /** Iron Vein held, at `level` of improvement (0 for none), its hex clean and the turn a yield day. */
+  function improvedIronVein(level: 0 | ImprovementLevel) {
+    const { game, world } = solo(1)
+    world.held = [ENCAMPMENT_ID, 'iron_vein']
+    if (level !== 0) world.improvements.iron_vein = level
+    setLevel(world, site(world, 'iron_vein'), 0)
+    world.turn = YIELD_DAYS
+    return { game, world }
+  }
+  const ironYield = (level: 0 | ImprovementLevel, blight: number) => {
+    const { game, world } = improvedIronVein(level)
+    setLevel(world, site(world, 'iron_vein'), blight)
+    return updateTerritory(world, presences(game.parties)).find((e) => e.type === 'yield' && e.site === 'iron_vein')
+  }
+
+  it('yield 2, 3, 5 and 5 iron by level 0 to 3, half (rounded down) on tainted land', () => {
+    const levels = [0, 1, 2, 3] as const
+    expect(levels.map((level) => {
+      const { world } = improvedIronVein(level)
+      return siteYield(world, site(world, 'iron_vein')).amount
+    })).toEqual([2, 3, 5, 5])
+    expect(levels.map((level) => ironYield(level, 0))).toEqual(
+      [2, 3, 5, 5].map((amount) => ({ type: 'yield', site: 'iron_vein', name: 'Iron Vein', material: 'iron', amount })),
+    )
+    expect(levels.map((level) => { const e = ironYield(level, 1); return e?.type === 'yield' ? e.amount : null })).toEqual([1, 1, 2, 2])
+  })
+
+  it('read the level, 0 for none', () => {
+    const { world } = improvedIronVein(2)
+    expect(siteImprovement(world, 'iron_vein')).toBe(2)
+    expect(siteImprovement(world, 'gold_seam')).toBe(0)
+    expect(siteImprovement(world, ENCAMPMENT_ID)).toBe(0)
+  })
+
+  it('lose a fort only when corrupted, and everything else at LOSS_LEVEL', () => {
+    const { world } = improvedIronVein(3)
+    expect(lossLevel(world, 'iron_vein')).toBe(MAX_BLIGHT)
+    for (const level of [1, 2] as const) {
+      world.improvements.iron_vein = level
+      expect(lossLevel(world, 'iron_vein')).toBe(LOSS_LEVEL)
+    }
+    expect(lossLevel(world, 'gold_seam')).toBe(LOSS_LEVEL)
+    expect(lossLevel(world, ENCAMPMENT_ID)).toBe(LOSS_LEVEL)
+    expect(lossLevel(world, 'tower_1')).toBe(LOSS_LEVEL)
+  })
+
+  it('hold a fort at blight level 2 and lose it at 3; lose works at 2', () => {
+    const fort = improvedIronVein(3)
+    fort.world.turn = 1
+    setLevel(fort.world, site(fort.world, 'iron_vein'), 2)
+    expect(updateTerritory(fort.world, presences(fort.game.parties)).some((e) => e.type === 'site_lost')).toBe(false)
+    expect(fort.world.held).toContain('iron_vein')
+    setLevel(fort.world, site(fort.world, 'iron_vein'), 3)
+    expect(updateTerritory(fort.world, presences(fort.game.parties))).toContainEqual({ type: 'site_lost', site: 'iron_vein', name: 'Iron Vein', improvement: 3 })
+    expect(fort.world.held).not.toContain('iron_vein')
+
+    const works = improvedIronVein(2)
+    works.world.turn = 1
+    setLevel(works.world, site(works.world, 'iron_vein'), 2)
+    expect(updateTerritory(works.world, presences(works.game.parties))).toContainEqual({ type: 'site_lost', site: 'iron_vein', name: 'Iron Vein', improvement: 2 })
+  })
+
+  it('are razed with their site, of every level, and say so in site_lost', () => {
+    for (const level of [1, 2, 3] as const) {
+      const { game, world } = improvedIronVein(level)
+      world.turn = 1
+      setLevel(world, site(world, 'iron_vein'), MAX_BLIGHT)
+      expect(updateTerritory(world, presences(game.parties))).toContainEqual({ type: 'site_lost', site: 'iron_vein', name: 'Iron Vein', improvement: level })
+      expect(world.improvements).toEqual({})
+      expect(siteYield(world, site(world, 'iron_vein')).amount).toBe(2)
+    }
+  })
+
+  it('count a fort\'s days to fall to level 3, others\' to LOSS_LEVEL', () => {
+    for (const [level, loss] of [[1, LOSS_LEVEL], [2, LOSS_LEVEL], [3, MAX_BLIGHT]] as const) {
+      const { world } = improvedIronVein(level)
+      // Two threat-5 nests at its side and no party about: the blight gains even on a fort.
+      besiege(world, 'iron_vein')
+      const ironVein = site(world, 'iron_vein')
+      const second = { ...(world.locations.at(-1) as MonsterLocation), id: 'besiegers_2', position: { q: ironVein.position.q - 2, r: ironVein.position.r } }
+      world.locations.push(second)
+      setLevel(world, ironVein, 1)
+      const net = netInfluence(world, [], ironVein.position)
+      expect(net, `level ${level}`).toBeGreaterThan(0)
+      const shift = world.shift[boardIndex(world.board, ironVein.position)]
+      const expected = Math.ceil((SHIFT_COST - shift) / net) + (loss - 2) * Math.ceil(SHIFT_COST / net)
+      expect(daysToFall(world, [], ironVein), `level ${level}`).toBe(expected)
+      // At level 2 a works has fallen; a fort still stands its last level.
+      setLevel(world, ironVein, 2)
+      expect(daysToFall(world, [], ironVein) === 0, `level ${level} at 2`).toBe(level !== 3)
+    }
+  })
+
+  it('are named Outpost, the works by material, and Fort', () => {
+    const { world } = solo(1)
+    const materials: Record<string, Material> = {
+      iron_vein: 'iron', gold_seam: 'gold', timber_stand: 'timber', peat_bog: 'peat', silver_lode: 'silver',
+      old_quarry: 'stone', salt_flats: 'salt', copper_pit: 'copper', crystal_cave: 'crystal',
+    }
+    const resources = sites(world).filter((l) => l.kind === 'resource')
+    expect(resources.map((l) => l.id).sort()).toEqual(Object.keys(materials).sort())
+    for (const resource of resources) {
+      expect(improvementName(resource, 1)).toBe('Outpost')
+      expect(improvementName(resource, 2)).toBe(WORKS_NAMES[materials[resource.id]])
+      expect(improvementName(resource, 3)).toBe('Fort')
+    }
+    expect(WORKS_NAMES).toEqual({
+      iron: 'Mine', gold: 'Mine', silver: 'Mine', copper: 'Mine', crystal: 'Mine',
+      timber: 'Lumber Camp', stone: 'Quarry', salt: 'Saltworks', peat: 'Peat Cuttings',
+    })
+  })
+
+  it('take their article, a plural name none', () => {
+    expect(['Outpost', 'Mine', 'Lumber Camp', 'Quarry', 'Saltworks', 'Peat Cuttings', 'Fort'].map(withArticle)).toEqual([
+      'an Outpost', 'a Mine', 'a Lumber Camp', 'a Quarry', 'Saltworks', 'Peat Cuttings', 'a Fort',
+    ])
   })
 })

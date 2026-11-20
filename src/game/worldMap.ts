@@ -17,7 +17,7 @@ import { act, advance, setOrder, startTravel, worldInterrupt, type DayReport, ty
 import { MAX_THREAT, type EncounterId } from './encounters.ts'
 import { presences, type Expedition, type PartyPresence } from './expedition.ts'
 import type { GameState } from './gameState.ts'
-import { initialHeld, updateTerritory, type Stock } from './territory.ts'
+import { initialHeld, updateTerritory, type ImprovementLevel, type Stock } from './territory.ts'
 import { seedSight, updateSight } from './vision.ts'
 
 /**
@@ -97,8 +97,10 @@ export interface WorldState {
   towersBuilt: number
   /** The shrine's level at the encampment, 0 (none) to `MAX_SHRINE_LEVEL` (buildings.ts): each adds to the encampment's strength. */
   shrine: number
-  /** The ids of the held sites with an outpost (buildings.ts), which adds to a site's strength and yield; razed when the site is lost. */
-  outposts: string[]
+  /** Each improved held resource's level (buildings.ts: 1 an outpost, 2 works, 3 a fort), by its id, which adds to the site's strength and yield; deleted when the site is lost. */
+  improvements: Record<string, ImprovementLevel>
+  /** The Builders' Lodge's level at the encampment, 0 (none) to `MAX_LODGE_LEVEL` (buildings.ts): the improvement levels it allows. */
+  lodge: number
   /** The trading post's level at the encampment, 1 to `MAX_TRADING_POST_LEVEL` (tradingPost.ts): the grades it sells. */
   tradingPost: number
   /** The workshop's level at the encampment, 0 (none) to `MAX_WORKSHOP_LEVEL` (crafting.ts): the modifiers and grades it makes. */
@@ -220,7 +222,8 @@ export function newWorld(seed: number = randomSeed(), encampmentName: string = D
     towers: [],
     towersBuilt: 0,
     shrine: 0,
-    outposts: [],
+    improvements: {},
+    lodge: 0,
     tradingPost: 1,
     workshop: 0,
     infirmary: 0,

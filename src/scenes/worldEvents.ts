@@ -5,6 +5,7 @@ import { isPartyEvent, worldInterrupt, type DayReport, type Interrupt, type Part
 import type { Expedition } from '../game/expedition.ts'
 import { partyById, type GameState } from '../game/gameState.ts'
 import { midSentence, monstersHere, theName, type MonsterLocation } from '../game/worldMap.ts'
+import { withArticle } from '../game/territory.ts'
 import { knownLocationAt } from './partyList.ts'
 
 /** The world map's line for an event, or '' for one too small to tell (a hex's level changing). */
@@ -19,13 +20,15 @@ export function describeWorldEvent(event: WorldEvent): string {
     case 'site_captured':
       return `${event.name} is cleansed, and now yours.`
     case 'site_lost':
-      return event.outpost ? `${event.name} is lost to the blight, and its outpost razed.` : `${event.name} is lost to the blight.`
+      return event.improvement ? `${event.name} is lost to the blight, and its outpost razed.` : `${event.name} is lost to the blight.`
     case 'yield':
       return `${event.name} yields ${event.amount} ${event.material}.`
     case 'tower_built':
       return 'A watchtower rises over the land.'
-    case 'outpost_built':
-      return `An outpost stands at ${event.name}.`
+    case 'site_improved': {
+      const building = withArticle(event.level === 1 ? 'outpost' : event.building)
+      return `${building.charAt(0).toUpperCase()}${building.slice(1)} stands at ${event.name}.`
+    }
     case 'tower_lost':
       return 'A watchtower is lost to the blight.'
     case 'encampment_lost':

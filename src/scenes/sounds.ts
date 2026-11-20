@@ -495,7 +495,7 @@ const WORLD_SOUND_KINDS: readonly { cue: CueId; is: (event: WorldEvent | PartyEv
   { cue: 'world.sighted', is: (e) => e.type === 'sighted' && e.source !== true },
   { cue: 'world.threatened', is: (e) => e.type === 'site_threatened' },
   { cue: 'world.captured', is: (e) => e.type === 'site_captured' },
-  { cue: 'world.build', is: (e) => e.type === 'tower_built' || e.type === 'outpost_built' },
+  { cue: 'world.build', is: (e) => e.type === 'tower_built' || e.type === 'site_improved' },
   { cue: 'world.arrive', is: (e) => e.type === 'arrived' || e.type === 'met' },
 ]
 
