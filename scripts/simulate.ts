@@ -1704,7 +1704,7 @@ export function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Camp
   }
   record.goldBySource.sales = record.goldFromSales
   record.incomePerDay = record.days > 0 ? run.income / record.days : 0
-  // The twin costs about a third again of a campaign's time: only with --waiting.
+  // The twin costs about a fifth again of a campaign's time (~0.25 s against ~1.18 s): only with --waiting.
   record.waitingIncomePerDay = run.args.waiting ? waitingIncome(run.seed, run.args, record.days) : 0
   if (vanguard) {
     record.finalLevels = vanguard.members.map((member) => member.level)

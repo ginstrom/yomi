@@ -213,17 +213,3 @@ export function raiseLodge(game: GameState, party: Expedition): string | null {
   world.lodge += 1
   return null
 }
-
-// The outpost's names the world map still uses, kept with their old behaviour until it moves to the improvements' (step 04); then deleted.
-
-/** @deprecated until the world map moves off it (stage 7 step 04): `improvementSite`. */
-export const outpostSite = improvementSite
-
-/** @deprecated until the world map moves off it (stage 7 step 04). Why no outpost can go where the party stands, the stock aside, or null when the place will do; a site with any improvement is refused. */
-export function outpostSiteRefusal(world: WorldState, party: Expedition): string | null {
-  if (!worldActive(world) || monstersHere(world, party)) return 'Nothing can be built here now.'
-  const site = improvementSite(world, party)
-  if (!site) return 'An outpost goes on a held resource.'
-  if (siteImprovement(world, site.id) !== 0) return `${site.name} already has an outpost.`
-  return null
-}

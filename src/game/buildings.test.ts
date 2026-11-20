@@ -22,7 +22,6 @@ import {
   improvementSite,
   lodgeCost,
   nextImprovement,
-  outpostSiteRefusal,
   raiseImprovement,
   raiseLodge,
   raiseShrine,
@@ -459,15 +458,6 @@ describe('improvements (economy A1, A2)', () => {
     it.world.improvements.gold_seam = 3
     expect(net()).toBeCloseTo(before - 7)
     expect(siteYield(it.world, goldSeam(it)).amount).toBe(5)
-  })
-
-  it('keep the outpost wrappers the world map still uses as they were: any improvement is "already has an outpost"', () => {
-    const it = atGoldSeam(2)
-    it.world.improvements.gold_seam = 2
-    expect(outpostSiteRefusal(it.world, it.party)).toBe('Gold Seam already has an outpost.')
-    const off = atGoldSeam()
-    off.party.position = offsetToHex(7, 17)
-    expect(outpostSiteRefusal(off.world, off.party)).toBe('An outpost goes on a held resource.')
   })
 })
 

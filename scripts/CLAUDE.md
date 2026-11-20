@@ -12,7 +12,7 @@ Loaded when working in `scripts/`. Read it before tuning: the bands below are th
 - `--campaign`: each battle is a whole campaign (below).
 - `--ready-level` (campaign only): the level every member needs before marching on the Source, default `SOURCE_READY_LEVEL` (7).
 - `--parties` (campaign only): 1 to `MAX_PARTIES` (3), default 3; a vanguard and home guards. The refactor guard and the early-game figure use 1.
-- `--waiting` (campaign only): runs each campaign's waiting twin (the same world with the company idle at home) and prints the waiting check; it costs about a third again of the run's time.
+- `--waiting` (campaign only): runs each campaign's waiting twin (the same world with the company idle at home) and prints the waiting check; it costs about a fifth again of the run's time (about 0.25 s a twin against 1.18 s a campaign).
 
 Every event is written as JSONL; a summary of win rate, rounds, hit rates, spells, techniques, traits and more is printed.
 
