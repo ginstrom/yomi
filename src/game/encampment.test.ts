@@ -141,6 +141,22 @@ describe('the trading post as a market', () => {
     expect(at(4).next).toContain('3 gold every 5 days')
     expect(at(6).next).toBeNull()
   })
+
+  it('says only what the next level adds, short enough to sit under the effect', () => {
+    const game = newGame(undefined, null, 1, 'Hearthold')
+    const next = (level: number) => {
+      setFacilityLevel(game, 'trading_post', level)
+      return view(game, 'trading_post').next
+    }
+    expect([0, 1, 2, 3, 4, 5].map(next)).toEqual([
+      'Sells plain gear.',
+      'Adds Fine gear and Lesser runes.',
+      'Adds Masterwork gear.',
+      'Adds iron and steel gear, runes of the second rank and 2 gold every 5 days.',
+      'Brings 3 gold every 5 days, up from 2.',
+      'Brings 5 gold every 5 days, up from 3.',
+    ])
+  })
 })
 
 describe('the Builders\' Lodge', () => {

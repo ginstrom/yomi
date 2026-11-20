@@ -527,8 +527,8 @@ Consequences:
 
 - **Corrupted land breeds new monster lairs.** A new lair's threat depends on how far from the encampment it appears: goblins and kobolds at any threat, and bandits from threat 3.
 - **Winning a battle cleanses the land** around the lair, lowering every hex within 1 + its threat by two levels.
-- **Resources** are captured when their land is clean (level 0) and lost when it reaches level 2. While the blight gains on a site, the map shows it in orange with the number of days left until it falls. A watchtower can be lost the same way.
-- **Stock**: every 5 days, each site you hold adds its yield to the encampment's stock (gold, iron, timber, silver and so on), and the encampment itself adds 2 gold. A site whose land is tainted yields half.
+- **Resources** are captured when their land is clean (level 0) and lost when it reaches level 2, or, behind a fort, only when it is corrupted (level 3). A site lost razes whatever was built on it. While the blight gains on a site, the map shows it in orange with the number of days left until it falls. A watchtower can be lost the same way.
+- **Stock**: every 5 days, each site you hold adds its yield to the encampment's stock (gold, iron, timber, silver and so on), and the encampment itself adds 2 gold, with more once its trading post is a Market (see [Building](#9-building)). A site whose land is tainted yields half, and so does the market while the encampment's is.
 
 The header's percentage counts only the land you have explored.
 
@@ -538,12 +538,14 @@ The header's percentage counts only the land you have explored.
 
 The stock pays for everything you build. On a held resource the **Improve** button names the next level and its cost ("Build a Mine: 30 gold, 15 stone"), or, when the Builders' Lodge is too low, what it needs ("A Mine needs the Builders' Lodge"); in a narrow window it drops the cost, which the hovered hex's panel still tells. The stock panel's third line sums the last yield day by source.
 
+![A Mine at Iron Vein: the hovered hex's panel gives its yield, strength and next level, and the Improve button offers the fort](images/world-improve.png)
+
 | Building | Where | Cost | Time | Effect |
 | --- | --- | --- | --- | --- |
 | Watchtower | Clean land off any location, 4+ hexes from other towers | 10 iron, 5 gold | A day | Sees 8 hexes and pushes the blight back. New lairs will not spawn close to it. |
 | Outpost | A held resource without one | 15 gold, 10 timber | A day | The site resists the blight more strongly and yields 1 more. Lost with the site. |
-| Works (Mine, Lumber Camp, Quarry, Saltworks or Peat Cuttings, by the resource) | A held resource with an outpost | 30 gold, 15 stone; Builders' Lodge level 1 | A day | Yields 3 more than the bare site. Razed with the site. |
-| Fort | A held resource with a works | 50 gold, 20 iron, 10 stone; Builders' Lodge level 2 | A day | Much stronger against the blight, and lost only when its land is corrupted (level 3). Razed with the site. |
+| Works (Mine, Lumber Camp, Quarry, Saltworks or Peat Cuttings, by the resource) | A held resource with an outpost | 30 gold, 15 stone; Builders' Lodge level 1 | A day | Yields 3 more than the bare site, and stands as strong as an outpost against the blight. Razed with the site. |
+| Fort | A held resource with a works | 50 gold, 20 iron, 10 stone; Builders' Lodge level 2 | A day | Much stronger against the blight, and lost only when its land is corrupted (level 3); yields as the works did. Razed with the site. A palisade marks it on the map. |
 | Shrine | The encampment's empty plot | 20 gold, then 40 gold + 15 silver, then 80 gold + 30 silver | Instant | Each level strengthens the encampment against the blight |
 | Guild hall | The encampment | 30 gold + 15 iron, then 60 gold + 30 iron | Instant | Party limit 3, then 4, then 5 |
 | Trading post | The encampment | 40 gold + 15 stone, then 80 gold + 15 copper, then 120 gold + 20 silver, then 160 gold + 30 silver + 20 stone, then 220 gold + 40 silver + 10 crystal | Instant | Sells plain gear, then Fine and Lesser runes, then Masterwork, then steel and second-rank runes. Levels 4 to 6 (the Market, the Market Hall, the Trading House) also bring gold every 5 days, with the land's yields: 2, 3 and 5 gold, halved while the encampment's land is tainted |

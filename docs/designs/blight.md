@@ -154,6 +154,7 @@ The party's power is its levels only, so a new party of three at level 1 pushes 
     - **Workshop:** crafting.
     - **Barracks:** a second party (§5.4).
   - **Buildings at held sites:** an outpost, for instance, adds its strength to the site's and lifts that site's yield. These are the "buildings" of the influence war, the way to make the front line stick without the party standing there.
+    *Since long campaign stage 7:* the outpost is the first of three improvements (outpost, works, fort), the higher two gated by the Builders' Lodge; a fort is lost only when its land is corrupted. See [stage 7](long-campaign/stage-07-site-improvements-and-markets.md) and `docs/reference/game.md` ("Buildings").
 - **Who decides what:** the list, costs and services of the improvements belong to the expeditions design. This design adds only what bears on influence and warning.
 - **Losing the encampment** loses the game, permadeath as a party wipe is now.
 
@@ -165,6 +166,7 @@ The party's power is its levels only, so a new party of three at level 1 pushes 
 - **Taint:** a tainted site yields half.
 - **Where the stock lives:** at the encampment. Nothing is carried in baggage.
 - **Waiting is not free money.** The expeditions design worried that per-turn income would make waiting a wealth generator. That no longer holds, because waiting feeds the blight, which threatens the sites that yield.
+  *Since long campaign stage 7:* the trading post at levels 4 to 6 (the Market) brings 2, 3 or 5 gold every 5 days whatever the party does, halved while the encampment's land is tainted. The simulator's waiting check (`--waiting`) measures that waiting at home still earns less than campaigning; see [stage 7's implementation notes](long-campaign/stage-07-site-improvements-and-markets.md#implementation-notes).
 
 ### 4.8 Time and interruptions
 

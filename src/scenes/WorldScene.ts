@@ -320,7 +320,8 @@ export class WorldScene extends Phaser.Scene {
     this.footerBar = this.add.rectangle(0, 0, 0, 0, BAR_COLOR, BAR_ALPHA).setOrigin(0)
     this.turnText = this.add.text(20, 16, '', { fontFamily: 'monospace', fontSize: '20px', color: '#ffffff' })
     this.statusText = this.add
-      .text(0, 16, '', { fontFamily: 'monospace', fontSize: '13px', color: '#ce93d8', align: 'right' })
+      // Outlined in the bar's colour: a map label dimmed under the header can show through behind its three lines.
+      .text(0, 16, '', { fontFamily: 'monospace', fontSize: '13px', color: '#ce93d8', align: 'right', stroke: '#1d1d1d', strokeThickness: 4 })
       .setOrigin(1, 0)
     this.hintText = this.add.text(20, 44, '', { fontFamily: 'monospace', fontSize: '13px', color: '#9e9e9e' })
     this.messageText = this.add

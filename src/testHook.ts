@@ -257,6 +257,8 @@ export interface EncampmentProbe {
   message: string
   /** The lines of the details shown (name and level, what it is, what it does, what is next), or none while no facility is. */
   details: string[]
+  /** The font size the details' lines below the title were set at: 12, or 11 when they had to shrink to fit; 0 while none is shown. */
+  detailsSize: number
   /** Why the next level of the facility shown cannot be bought now, or null (also null while none is shown). */
   refusal: string | null
   /**

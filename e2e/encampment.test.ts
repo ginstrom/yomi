@@ -159,6 +159,19 @@ describe('the encampment', () => {
     expect(raised.message).toBe('The Trading House is raised to level 6.')
   })
 
+  // A long effect and a long "Next:" once set the details smaller, or dropped the flavour line, to clear the message line.
+  for (const level of [3, 4, 5]) {
+    it(`fits the trading post's details at level ${level} at full size, flavour line and all`, async () => {
+      const game = await games.open()
+      await richAtHome(game, { gold: 100 }, level)
+      const camp = await enter(game)
+      await game.click(facility(camp, 'trading_post'))
+      const shown = await game.settled('Encampment', (c) => c.selected === 'trading_post')
+      expect(shown.details[1]).toBe('Merchants sell plain gear and runes for gold and buy what the party no longer needs.')
+      expect(shown.detailsSize).toBe(12)
+    })
+  }
+
   for (const [name, plant] of [
     ['bare plots', {}],
     ['every facility at its top', { 'world.guildHall': 5, 'world.shrine': 3, 'world.workshop': 3, 'world.infirmary': 3, 'world.lodge': 3, 'world.tradingPost': 6 }],

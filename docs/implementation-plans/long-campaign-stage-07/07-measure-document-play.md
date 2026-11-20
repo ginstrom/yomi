@@ -195,3 +195,44 @@ If a part shows a bug, fix it test-first if it is small and in this stage's code
 - [ ] One commit (or a retune commit and this one), "Stage 7 step 07: measure, document, play", no attribution lines; the index's row 07 updated with status and commits.
 
 ## 7. Execution record
+
+On `long-campaign-stage-07` from `cc03a58`, local Node 26. The machine was loaded (load 5–12); runs one simulation at a time.
+
+**Measured** (seed 1, 500 campaigns, without `--waiting`, as the baseline was; summaries in `logs/s7-guard.txt` and `logs/s7-company.txt`):
+
+| Run | Source | Days | Battles | Dead | Captured, lost | Blighted | Shrine, Lodge, post at end | Built (outpost, works, fort) | Gold: sites, market, sales |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `--parties 1`, step 01 baseline | 234 | 286 | 19.4 (9709) | 1.1 | 3.3, 0.1 | 38% | 1.0, —, 1.1 | 0.6 outposts | —, 0, 46 |
+| `--parties 1`, now (`logs/s7-guard.jsonl`, 6 min 37 s) | **239** | 286 | 19.5 (9730) | 1.1 | 3.4, 0.1 | 38% | 0.9, 0.2, 1.1 | 0.6, 0.0, 0.0 | 228, 0, 42 |
+| default company, step 01 baseline | 236 | 286 | 19.5 (9730) | 1.1 | 3.3, 0.1 | 38% | 1.0, —, 1.1 | 0.5 outposts | —, 0, 45 |
+| default company, now (`logs/s7-company.jsonl`) | **239** | 286 | 19.5 (9729) | 1.1 | 3.4, 0.1 | 38% | 0.9, 0.2, 1.1 | 0.6, 0.0, 0.0 | 227, 0, 42 |
+
+Full first summary lines (`--parties 1`): "Beat the Source: 239 of 500 (47.8%); party fell: 261 (52.2%); encampment lost: 0"; "A campaign: 286 days, 19.5 battles, 28.0 spawns, 3.4 sites captured and 0.1 lost, 38% of the land blighted at the end"; "Shrine: level 0.9 at the end; Builders' Lodge: level 0.2 at the end"; "Improvements: 0.6 outposts, 0.0 works, 0.0 forts built a campaign; held resources at the end: 4.7 bare, 0.5 outposts, 0.0 works, 0.0 forts"; "Gold by source: sites 228, market 0, sales 42 a campaign"; "Trading post, workshop, infirmary: levels 1.1, 0.6, 0.5 at the end; 0 gold on gear and 42 from sales, 4.4 items crafted".
+
+**The waiting check and the distributions** came from a scratch script (`scratchpad/records.ts`, not committed) that runs `runCampaign` exactly as `--campaign` does, with `--waiting`, and dumps every `CampaignRecord` (`logs/s7-guard-waiting-records.json`, `logs/s7-company-waiting-records.json`): its Source count and battles equal the runs above, so `--waiting` changes no play.
+
+- One party: "Waiting check: income 1.3 a day campaigning, 1.0 waiting at home: waiting earns less" (1.298 against 0.984; the twin below in 438 campaigns, equal in 62, above in none). Lodge at the end ≥1 in 105 campaigns, 2 in 2; trading post at the end 1 in 451, 2 in 49, never 3 or higher (no market gold in any campaign); built a campaign 0.55 outposts, 0.01 works, 0 forts (works in 7 campaigns); held at the end 4.71 bare, 0.53 outposts, 0.01 works, 0 forts; gold by source 227.5 sites, 0 market, 42.5 sales.
+- Company: the same line, 1.298 against 0.984 (below in 438, equal in 62, above in none); Source 239 and 9729 battles, as without `--waiting`. Lodge ≥1 in 105, 2 in 1; post 1 in 452, 2 in 48, never higher; built 0.55 outposts, 0.01 works, 0 forts; gold 227.5 sites, 0 market, 42.4 sales. The company of three plays as one party here: the hall never reaches level 4 by the ready level of 7 (0 campaigns, 1 at the baseline).
+
+**Judgement.** +5 with one party (234 → 239), +3 with the company (236 → 239): within about 5 points, and inside the bands (215–250, 220–260; days 286; deaths 1.1). The land does not end cleaner (38% blighted, 0.1 lost, no forts held), so the fort's strength is not retuned. Works, forts and the market barely occur, so the move is not theirs; it is step 06's simulated economy (materials kept for the Lodge and the post's upper levels, so less sold: 42 against 46 gold; the Lodge raised in a fifth of campaigns), which changes buys, crafts and walks home and so the battles, as step 06's 50-campaign run (22 → 23) and its guard decomposition showed. No rule changed in this step; the refactor guard is untouched and green.
+
+**Carried-in fixes.**
+- Encampment details (step 05's review): every attempt now wraps at `FRAME_W - 2 * left`; the line gap is 3 (was 4); `Facility.next` lets a facility word its next level as what it adds, and the trading post's does ("Adds Fine gear and Lesser runes.", "Adds Masterwork gear.", "Adds iron and steel gear, runes of the second rank and 2 gold every 5 days.", "Brings 3 gold every 5 days, up from 2.", "Brings 5 gold every 5 days, up from 3."), so levels 3–5 fit at 12 px with the flavour line. The probe gains `detailsSize`. Tests: `encampment.test.ts` "says only what the next level adds…" and e2e "fits the trading post's details at level 3/4/5 at full size…", which failed on the old wording (the flavour line dropped at all three) and, with only the wording changed, still failed at 11 px (the three lines ended at 439.3 against the 438 limit) until the gap went to 3. The duplicated JSDoc above `detailLines` is gone. The index's row 05 names b6c9bf2.
+- World header (step 04's review): no retaken screenshot shows a map label behind the status block, so it could not be seen; the status text is now outlined in the bar's colour (`stroke`, 4) so a label dimmed under the header cannot muddle it. Recorded in `docs/reference/scenes.md`.
+
+**Wrappers.** None left: step 06's merge clean-up (f6c2416) deleted `outpostSite` and `outpostSiteRefusal`; the §4.3 grep finds only the doc comment above the guard records saying `outpostsBuilt` went.
+
+**Docs.** `scripts/CLAUDE.md` (bands "Now" with stage 7's figures, the waiting check); `docs/reference/scenes.md` (encampment details wording and fit, the status outline); the manual §8 (a fort lost only when corrupted, a lost site razes its building, the market's gold and its taint) and §9 (works' strength, the fort's yield and palisade, a new screenshot `world-improve.png` of a Mine with the Improve button offering the fort, added to `e2e/manual.shots.ts`); `docs/designs/blight.md` §4.6 and §4.7 (pointers to stage 7); the stage design (status done, Implementation notes); the stages index (row 7, the guard's history). The CLAUDE.md files, `docs/reference/game.md` and `simulator.md` were already current from steps 01–06 (checked).
+
+**Screenshots.** `npm run manual:screenshots`: 8 passed; every image retaken. Looked at `encampment.png` (six plots, the Lodge's empty plot), `world-blight.png` (the three-line status with "Last yield: sites 4 gold, 2 iron"), `world-parties.png`, `world-travelling.png` and the new `world-improve.png`.
+
+**Play script.** Walked headless through a temporary in-browser test (`scratchpad/zz-walk.test.ts`, not committed) at 1280×800; what was seen is in the stage design's Implementation notes, part by part; screenshots in `scratchpad/walk/`. Not seen: the fort's days-to-corruption warning at level 2 (the fort pushed its hex back from 2 to 1, so it was "receding"); the land never reached the fort by itself in 200 days, so `blight 2` set it.
+
+**Verification.**
+- `npx tsc` clean; `npx vitest run --maxWorkers=3` (`npm test`'s second half; under load): 97 files, 2392 tests passed, the refactor guard and `claudeMd.test.ts` among them.
+- `npm run test:browser -- --maxWorkers=2`: 12 files, 171 tests passed (168 before, plus the three trading-post fit tests).
+- `npm run build`: built (the usual chunk-size warning). `npm run sprites:check`: up to date, 126 sprites.
+- The §4.3 grep over `src scripts e2e`: only the doc comment above `GUARD_RECORDS`.
+- Budgets: two 500-campaign CLI runs and two 500-campaign `--waiting` record runs, one at a time.
+
+**For the orchestrator / later stages.** The simulated party's economy barely reaches works, forts or a Market, so this stage's buildings are not exercised by the balance figure; if the user wants the simulator to measure them, the careful party's spending order (the Lodge last, the post raised only with spare silver and crystal) is the lever. The two record runs' JSON stays in `logs/` (gitignored).

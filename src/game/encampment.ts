@@ -57,10 +57,15 @@ interface Facility {
   cost: (game: GameState) => Stock | null
   /** Buys the next level; returns why it cannot, or null when done. */
   improve: (game: GameState, party: Expedition) => string | null
+  /** What the next level adds, when the effect at that level is too long to show under the effect at this one. */
+  next?: (game: GameState, level: number) => string
   /** Why the next level cannot be had whatever the stock holds, checked before the stock; null when nothing bars it. */
   refusal?: (game: GameState) => string | null
   opens: boolean
 }
+
+/** The gear each level of the trading post adds to what it sells, by level - 1. */
+const TRADING_POST_GEAR: readonly (string | undefined)[] = ['plain gear', 'Fine gear', 'Masterwork gear', 'iron and steel gear']
 
 const FACILITIES: readonly Facility[] = [
   {
@@ -101,6 +106,18 @@ const FACILITIES: readonly Facility[] = [
       const income = MARKET_INCOME[level - 1] ?? 0
       const market = income > 0 ? `; brings ${income} gold every ${YIELD_DAYS} days, half while ${encampmentName(game.world)}'s land is tainted` : ''
       return `Sells ${gear}${runes}${market}.`
+    },
+    next: (_, level) => {
+      if (level === 1) return `Sells ${TRADING_POST_GEAR[0]}.`
+      const income = MARKET_INCOME[level - 1] ?? 0
+      const before = MARKET_INCOME[level - 2] ?? 0
+      if (before > 0) return `Brings ${income} gold every ${YIELD_DAYS} days, up from ${before}.`
+      const added = [TRADING_POST_GEAR[level - 1]]
+      if (RUNE_RANK_LEVELS[1] === level) added.push('Lesser runes')
+      if (RUNE_RANK_LEVELS[2] === level) added.push('runes of the second rank')
+      if (income > 0) added.push(`${income} gold every ${YIELD_DAYS} days`)
+      const list = added.filter((part) => part !== undefined)
+      return `Adds ${list.length > 1 ? `${list.slice(0, -1).join(', ')} and ${list.at(-1)}` : list[0]}.`
     },
     cost: (game) => tradingPostCost(game.world),
     improve: raiseTradingPost,
@@ -165,7 +182,7 @@ export function facilities(game: GameState, party: Expedition): FacilityView[] {
       maxLevel: facility.maxLevel,
       about: facility.about(game),
       effect: level > 0 ? facility.effect(game, level) : `Not built. Once built: ${lowerFirst(facility.effect(game, 1))}`,
-      next: top ? null : facility.effect(game, level + 1),
+      next: top ? null : (facility.next ?? facility.effect)(game, level + 1),
       cost: top ? null : cost,
       action: top ? null : level === 0 ? 'Build' : `Raise to level ${level + 1}`,
       refusal: top ? null : facilityRefusal(game, party, facility, cost),

@@ -336,6 +336,28 @@ describe('the manual’s screenshots', () => {
     await shot(game, 'world-blight')
   })
 
+  it('an improved site: a Mine at Iron Vein, with the Improve button offering the fort', async () => {
+    const game = await games.open()
+    await game.newGame()
+    await game.page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      saved.game.world.stock = { gold: 120, iron: 30, stone: 20 }
+      saved.game.world.lodge = 2
+      saved.game.world.improvements = { iron_vein: 2 }
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    })
+    const menu = await game.reload()
+    await game.click(menu.buttons.continue)
+    await game.waitForScenes(['World'])
+    const home = await game.settled('World')
+    const vein = home.world.locations.find((l) => l.id === 'iron_vein')!
+    const there = await game.travelTo(vein.position)
+    expect(there.improveLabel).toMatch(/^Build a Fort/)
+    await game.hover(worldHexOnScreen(there, vein.position))
+    await game.waitFor('World', (w) => w.info.includes('Mine: 5 iron'))
+    await shot(game, 'world-improve')
+  })
+
   it('a company of two parties: the guild hall’s columns, the exchange and the party bar', async () => {
     const game = await games.open()
     await game.newGame()

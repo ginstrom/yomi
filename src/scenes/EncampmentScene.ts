@@ -79,9 +79,10 @@ export class EncampmentScene extends Phaser.Scene {
   private message = ''
   private bg!: Phaser.GameObjects.Rectangle
   private frame!: Phaser.GameObjects.Container
-  /** Where each label was drawn, in the frame, for the probe. */
-  /** The text of the details drawn, line by line, for the probe. */
+  /** The text of the details drawn, line by line, and their font size, for the probe. */
   private detailLines: string[] = []
+  private detailSize = 0
+  /** Where each label was drawn, in the frame, for the probe. */
   private labelBoxes: Partial<Record<FacilityId, BoxProbe>> = {}
   private controls: Partial<Record<keyof EncampmentProbe['buttons'], { at: Rect; enabled: boolean }>> = {}
 
@@ -129,6 +130,7 @@ export class EncampmentScene extends Phaser.Scene {
       selected: this.selected,
       message: this.message,
       details: this.detailLines,
+      detailsSize: this.detailSize,
       refusal: this.shown()?.refusal ?? null,
       facilities: facilities(this.gameState, this.expedition).map((facility, index) => {
         const box = (at: BoxProbe): BoxProbe => ({ ...onScreen(at), width: at.width * this.frame.scale, height: at.height * this.frame.scale })
@@ -160,6 +162,7 @@ export class EncampmentScene extends Phaser.Scene {
     this.controls = {}
     this.labelBoxes = {}
     this.detailLines = []
+    this.detailSize = 0
     const { world } = this.gameState
     const stock = Object.entries(world.stock)
       .filter(([, amount]) => amount)
@@ -279,18 +282,20 @@ export class EncampmentScene extends Phaser.Scene {
     // Each line sits below the one before at its wrapped height, so a long description cannot print over the next. A trading post's
     // lines are long: if they would run into the message line, they are set smaller, then without the flavour line, until they fit.
     const lines = [[facility.about, DIM], [facility.effect, TEXT], [next, facility.refusal ? REFUSED : TEXT]] as const
-    const attempts = [{ size: 12, about: true, width: FRAME_W - 2 * left }, { size: 11, about: true, width: FRAME_W - 40 }, { size: 11, about: false, width: FRAME_W - 40 }]
-    for (const [i, { size, about, width }] of attempts.entries()) {
+    const width = FRAME_W - 2 * left
+    const attempts = [{ size: 12, about: true }, { size: 11, about: true }, { size: 11, about: false }]
+    for (const [i, { size, about }] of attempts.entries()) {
       const drawn: Phaser.GameObjects.Text[] = []
       let y = DETAILS_Y + 6
       for (const [text, color] of lines.slice(about ? 0 : 1)) {
         const line = this.add.text(left, y, text, { fontFamily: FONT, fontSize: `${size}px`, color, wordWrap: { width } })
         drawn.push(line)
-        y += line.height + 4
+        y += line.height + 3
       }
       if (y <= MESSAGE_Y - 8 || i === attempts.length - 1) {
         this.frame.add(drawn)
         this.detailLines.push(...lines.slice(about ? 0 : 1).map(([text]) => text))
+        this.detailSize = size
         break
       }
       for (const line of drawn) line.destroy()
