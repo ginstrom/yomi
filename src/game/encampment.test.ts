@@ -72,8 +72,8 @@ describe('the encampment', () => {
         return view(game, id).effect
       })
     expect(effects('trading_post', [1, 2, 3, 4])).toEqual([
-      'Sells plain gear.',
-      'Sells plain and Fine gear, and Lesser runes.',
+      'Sells plain gear. From level 4: 2 to 5 gold every 5 days.',
+      'Sells plain and Fine gear, and Lesser runes. From level 4: 2 to 5 gold every 5 days.',
       'Sells plain, Fine and Masterwork gear, and Lesser runes.',
       "Sells plain, Fine and Masterwork gear, in iron and steel, and runes of the first two ranks; brings 2 gold every 5 days, half while Hearthold's land is tainted.",
     ])
@@ -142,6 +142,17 @@ describe('the trading post as a market', () => {
     expect(at(6).next).toBeNull()
   })
 
+  it('tells at levels 1 and 2 what the market will bring from level 4', () => {
+    const game = newGame(undefined, null, 1, 'Hearthold')
+    const effect = (level: number) => {
+      setFacilityLevel(game, 'trading_post', level)
+      return view(game, 'trading_post').effect
+    }
+    expect(effect(1)).toBe('Sells plain gear. From level 4: 2 to 5 gold every 5 days.')
+    expect(effect(2)).toBe('Sells plain and Fine gear, and Lesser runes. From level 4: 2 to 5 gold every 5 days.')
+    expect(effect(3)).not.toContain('From level 4')
+  })
+
   it('says only what the next level adds, short enough to sit under the effect', () => {
     const game = newGame(undefined, null, 1, 'Hearthold')
     const next = (level: number) => {
@@ -165,7 +176,7 @@ describe('the Builders\' Lodge', () => {
     game.world.stock = { gold: 500, timber: 50, stone: 50, iron: 50 }
     const lodge = () => view(game, 'builders_lodge')
     expect(facilities(game, game.parties[0])[5].id).toBe('builders_lodge')
-    expect(lodge()).toMatchObject({ name: "Builders' Lodge", level: 0, maxLevel: 3, action: 'Build', cost: LODGE_COSTS[0], refusal: null })
+    expect(lodge()).toMatchObject({ name: "Builders' Lodge", level: 0, maxLevel: 3, action: 'Build', cost: LODGE_COSTS[0], refusal: null, barred: null })
     expect(improveFacility(game, game.parties[0], 'builders_lodge')).toBeNull()
     expect(game.world.lodge).toBe(1)
     expect(game.world.stock).toMatchObject({ gold: 470, timber: 30 })
@@ -173,6 +184,7 @@ describe('the Builders\' Lodge', () => {
     expect(improveFacility(game, game.parties[0], 'builders_lodge')).toBeNull()
     expect(game.world.lodge).toBe(2)
     expect(lodge().refusal).toBe(ROADS_REFUSAL)
+    expect(lodge().barred).toBe(ROADS_REFUSAL)
     expect(improveFacility(game, game.parties[0], 'builders_lodge')).toBe(ROADS_REFUSAL)
     expect(game.world.lodge).toBe(2)
   })
@@ -181,6 +193,7 @@ describe('the Builders\' Lodge', () => {
     const game = newGame(undefined, null, 1, 'Hearthold')
     game.world.stock = { gold: 5 }
     expect(view(game, 'builders_lodge').refusal).toMatch(/costs 30 gold, 20 timber, more than the stock holds/)
+    expect(view(game, 'builders_lodge').barred).toBeNull()
     expect(improveFacility(game, game.parties[0], 'builders_lodge')).toMatch(/more than the stock holds/)
   })
 

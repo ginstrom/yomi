@@ -236,3 +236,15 @@ Full first summary lines (`--parties 1`): "Beat the Source: 239 of 500 (47.8%); 
 - Budgets: two 500-campaign CLI runs and two 500-campaign `--waiting` record runs, one at a time.
 
 **For the orchestrator / later stages.** The simulated party's economy barely reaches works, forts or a Market, so this stage's buildings are not exercised by the balance figure; if the user wants the simulator to measure them, the careful party's spending order (the Lodge last, the post raised only with spare silver and crystal) is the lever. The two record runs' JSON stays in `logs/` (gitignored).
+
+### Verification fix round (overall review, QA, simulated user)
+
+1. **Fixed (blocking): the last yield carried into another game.** `WorldScene.create` now clears `lastYield` when the game it is given is not the one it had (kept back from a battle of the same game; blank after Continue on a load or a new game). Test: e2e "is not carried into another game started from the menu" (a yield day, Esc, New game: no "Last yield"), red before the fix.
+2. **Fixed: the three-line stock panel ran into the hint at 840×560.** `fitStatus` places the panel and, when its three lines would still meet the hint's box, sets them at 11 px with line spacing −2 from y 1 (they end at about y 43, the hint starting at 44); at 1280 nothing changes. It runs on layout, after the status's text and after the hint's. The probe gains `hintRect`. Test: e2e "stays clear of the header hint at 840 by 560…" (trading post 6, a yield day with "market 5 gold"), red before (the boxes met: status 3–55, hint 44–57), and red once more at 11 px alone (still 3–49) until the spacing and position.
+3. **Fixed: the Lodge's roads reason only after reselecting.** `FacilityView.barred` is the facility's own refusal (the Lodge's `ROADS_REFUSAL` at 2), never the stock's; a successful raise that leaves one appends it to the message: "The Builders' Lodge is raised to level 2. Roads come with trade routes.". Tests: `encampment.test.ts` (`barred` set at Lodge 2, null for a stock shortfall) and e2e "says why the Lodge goes no higher as soon as it is raised to 2…", red before.
+4. **Fixed: no word of the market's gold below level 3.** The trading post's effect at levels 1 and 2 ends "From level 4: 2 to 5 gold every 5 days." (from `MARKET_INCOME`); level 3's Next line already says "2 gold every 5 days". The fit tests now cover levels 1 to 5, all at 12 px with the flavour line.
+5. **Fixed:** `src/game/CLAUDE.md`'s "A new facility" checklist names `setFacilityLevel`'s field.
+
+Docs: `docs/reference/scenes.md` (the barred message, the trading post's market line, `fitStatus`, the last yield's reset), the manual §9 (the Lodge's reason at once, the market's line, the panel smaller in a narrow window and blank after a load). No manual screenshot shows these (the shots are at 1280, the encampment's selects the guild hall), so none was retaken.
+
+Verification: `npx tsc` clean; `npx vitest run --maxWorkers=3` 97 files, 2393 tests passed; `npm run test:browser -- --maxWorkers=2 e2e/world.test.ts e2e/encampment.test.ts e2e/debug.test.ts` 3 files, 90 tests passed; `npm run build` built.

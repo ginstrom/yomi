@@ -54,7 +54,7 @@ Each has a full section in `docs/reference/game.md`.
 
 - **Changing the shape** of `GameState`, `Character`, `WorldState` or `BattleSnapshot`: raise `SAVE_VERSION`. Write a migration only when a design asks for one; otherwise older saves read as unreadable, which is fine in development. A migration ends with the same strict check as a current save and gets a captured fixture in `src/game/fixtures/`.
 - **A new base or enchanted item**: it must be in `BASE_ITEMS` or `MAGIC_ITEMS`, or a game holding it cannot be loaded.
-- **A new facility**: an entry in `FACILITIES` (`encampment.ts`), a sprite and a plot (`encampmentView.ts`), and a scene in `EncampmentScene`'s `OPENS` if it has a screen of its own.
+- **A new facility**: an entry in `FACILITIES` (`encampment.ts`), a field in `setFacilityLevel`, a sprite and a plot (`encampmentView.ts`), and a scene in `EncampmentScene`'s `OPENS` if it has a screen of its own.
 - **A new encounter**: an entry in `ENCOUNTERS`, its band in `ENCOUNTER_BANDS` and counts in `ENCOUNTER_COUNTS`; add it to `SPAWN_KINDS` only if the blight should spawn it.
 - **A new foe kind**: a sprite of that name with `idle` and `walk` animations, an experience value in `FOE_XP`, a native level in `FOE_NATIVE_LEVEL` if not 1, a sound in `FOE_SOUNDS`, and a stat block within `foeYardstick` at its native level (a test checks), each field outside it a named exception.
 - **A new one-day action**: a refusal and a time-free apply in its module, a `DayAction` case (`expedition.ts`) that `company.ts` runs, and a convenience over `act`.

@@ -40,6 +40,8 @@ export interface FacilityView {
   action: string | null
   /** Why the next level cannot be bought now, or null when it can (or there is none). */
   refusal: string | null
+  /** Why the next level cannot be had whatever the stock holds (the Lodge's roads), or null: a refusal the screen shows unasked. */
+  barred: string | null
   /** Whether the facility has a screen of its own to open (the guild hall's roster), which it has once built. */
   opens: boolean
 }
@@ -105,7 +107,10 @@ const FACILITIES: readonly Facility[] = [
       const runes = level >= RUNE_RANK_LEVELS[2]! ? ', and runes of the first two ranks' : level >= RUNE_RANK_LEVELS[1]! ? ', and Lesser runes' : ''
       const income = MARKET_INCOME[level - 1] ?? 0
       const market = income > 0 ? `; brings ${income} gold every ${YIELD_DAYS} days, half while ${encampmentName(game.world)}'s land is tainted` : ''
-      return `Sells ${gear}${runes}${market}.`
+      // Below the market, a word on what it will bring, but not at the level whose Next line already says it.
+      const marketLevel = MARKET_INCOME.findIndex((gold) => gold > 0) + 1
+      const ahead = level < marketLevel - 1 ? ` From level ${marketLevel}: ${MARKET_INCOME[marketLevel - 1]} to ${Math.max(...MARKET_INCOME)} gold every ${YIELD_DAYS} days.` : ''
+      return `Sells ${gear}${runes}${market}.${ahead}`
     },
     next: (_, level) => {
       if (level === 1) return `Sells ${TRADING_POST_GEAR[0]}.`
@@ -186,6 +191,7 @@ export function facilities(game: GameState, party: Expedition): FacilityView[] {
       cost: top ? null : cost,
       action: top ? null : level === 0 ? 'Build' : `Raise to level ${level + 1}`,
       refusal: top ? null : facilityRefusal(game, party, facility, cost),
+      barred: top ? null : (facility.refusal?.(game) ?? null),
       opens: facility.opens && level > 0,
     }
   })

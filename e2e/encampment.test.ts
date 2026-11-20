@@ -132,6 +132,18 @@ describe('the encampment', () => {
     expect(built.message).toBe("The Builders' Lodge is built.")
   })
 
+  it('says why the Lodge goes no higher as soon as it is raised to 2, without another click', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 500, stone: 50 }, undefined, { 'world.lodge': 1 })
+    const camp = await enter(game)
+    await game.click(facility(camp, 'builders_lodge'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'builders_lodge')
+    await game.click(shown.buttons.improve)
+    const raised = await game.settled('Encampment', (c) => facility(c, 'builders_lodge').level === 2)
+    expect(raised.message).toBe("The Builders' Lodge is raised to level 2. Roads come with trade routes.")
+    expect(raised.buttons.improve.enabled).toBe(false)
+  })
+
   it('shows the Lodge at level 2 with its Raise disabled and the roads line', async () => {
     const game = await games.open()
     await richAtHome(game, { gold: 500, iron: 50, stone: 50 }, undefined, { 'world.lodge': 2 })
@@ -160,7 +172,7 @@ describe('the encampment', () => {
   })
 
   // A long effect and a long "Next:" once set the details smaller, or dropped the flavour line, to clear the message line.
-  for (const level of [3, 4, 5]) {
+  for (const level of [1, 2, 3, 4, 5]) {
     it(`fits the trading post's details at level ${level} at full size, flavour line and all`, async () => {
       const game = await games.open()
       await richAtHome(game, { gold: 100 }, level)

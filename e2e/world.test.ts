@@ -1026,6 +1026,42 @@ describe('the world map', () => {
     expect(built.buttons.buildTower.visible).toBe(false)
   })
 
+  describe('the last yield line', () => {
+    /** Next day until a yield day has put its line in the stock panel. */
+    async function toYieldDay(game: Game): Promise<WorldProbe> {
+      for (let day = 0; day < 6; day++) {
+        const world = await game.settled('World', (w) => !w.walking)
+        if (world.status.includes('Last yield')) return world
+        await game.click(world.buttons.nextDay)
+        await game.waitFor('World', (w) => w.world.turn > world.world.turn && !w.walking)
+      }
+      throw new Error('no yield day in six days')
+    }
+
+    it('is not carried into another game started from the menu', async () => {
+      const game = await games.open()
+      await game.newGame()
+      await toYieldDay(game)
+      await game.press('Escape')
+      await game.waitForScenes(['Menu'], ['World'])
+      const fresh = await game.newGame()
+      expect(fresh.world.turn).toBeLessThan(5)
+      expect(fresh.status).not.toContain('Last yield')
+    })
+
+    it('stays clear of the header hint at 840 by 560, the market\'s gold among the yields', async () => {
+      const game = await games.open()
+      await game.resize(840, 560)
+      await game.newGame()
+      await reloadedWith(game, { tradingPost: 6 })
+      const shown = await toYieldDay(game)
+      expect(shown.status).toContain('market 5 gold')
+      const { statusRect: a, hintRect: b } = shown
+      expect(a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height, JSON.stringify({ a, b })).toBe(false)
+      expect(a.y + a.height).toBeLessThanOrEqual(64)
+    })
+  })
+
   describe('Improve', () => {
     const IRON_VEIN = offsetToHex(11, 21)
 

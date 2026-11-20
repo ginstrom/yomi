@@ -536,7 +536,7 @@ The header's percentage counts only the land you have explored.
 
 ## 9. Building
 
-The stock pays for everything you build. On a held resource the **Improve** button names the next level and its cost ("Build a Mine: 30 gold, 15 stone"), or, when the Builders' Lodge is too low, what it needs ("A Mine needs the Builders' Lodge"); in a narrow window it drops the cost, which the hovered hex's panel still tells. The stock panel's third line sums the last yield day by source.
+The stock pays for everything you build. On a held resource the **Improve** button names the next level and its cost ("Build a Mine: 30 gold, 15 stone"), or, when the Builders' Lodge is too low, what it needs ("A Mine needs the Builders' Lodge"); in a narrow window it drops the cost, which the hovered hex's panel still tells. The stock panel's third line sums the last yield day by source (in a narrow window it is set smaller); it starts blank when you load a game.
 
 ![A Mine at Iron Vein: the hovered hex's panel gives its yield, strength and next level, and the Improve button offers the fort](images/world-improve.png)
 
@@ -561,7 +561,7 @@ If you click a build button without enough stock, the game tells you the cost.
 
 ![The encampment](images/encampment.png)
 
-When the party stands on the encampment, **Enter** (the button carries the encampment's name) shows the place: every facility on its plot. A facility not yet built is an empty plot with a sign, and a built one is drawn at its level, so the encampment grows as you build. The Builders' Lodge stands in front of the infirmary, and the trading post is named for its level (Market, Market Hall, Trading House) on its plot and in its screen. Click a building or a plot to see what it does, what its next level brings and costs, and **Build** or **Raise** it; when the next level is barred (the Lodge's third, or one the stock cannot pay for) the line under the details says why. **Leave** (or Esc) goes back to the map.
+When the party stands on the encampment, **Enter** (the button carries the encampment's name) shows the place: every facility on its plot. A facility not yet built is an empty plot with a sign, and a built one is drawn at its level, so the encampment grows as you build. The Builders' Lodge stands in front of the infirmary, and the trading post is named for its level (Market, Market Hall, Trading House) on its plot and in its screen. Click a building or a plot to see what it does, what its next level brings and costs, and **Build** or **Raise** it; when the next level is barred (the Lodge's third, or one the stock cannot pay for) the line under the details says why, and raising the Lodge to level 2 says at once that roads come with trade routes. Until the trading post is a Market, its details say what the market will bring (2 to 5 gold every 5 days from level 4). **Leave** (or Esc) goes back to the map.
 
 ### The guild hall
 

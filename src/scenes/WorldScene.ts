@@ -136,6 +136,9 @@ const SOURCE_SCALE = 3
 /** The bars behind the header and the buttons: the map shows through them, dimmed. */
 const BAR_COLOR = 0x1d1d1d
 const BAR_ALPHA = 0.8
+/** The stock panel's font, and the smaller one its three lines take where they would reach the hint. */
+const STATUS_FONT = '13px'
+const STATUS_FONT_SMALL = '11px'
 /** The outcome screen's buttons. */
 const BUTTON_W = 140
 const BUTTON_H = 44
@@ -280,7 +283,10 @@ export class WorldScene extends Phaser.Scene {
   }
 
   create(data: WorldData): void {
+    const previous = this.gameState
     this.gameState = data?.game ?? newGame()
+    // The last yield is the scene's, not saved: kept over a battle of the same game, blank for another or a loaded one.
+    if (this.gameState !== previous) this.lastYield = null
     this.board = new HexBoard(this.world.board)
     // Phaser reuses the scene instance on restart, so field initializers don't run again.
     this.walking = false
@@ -321,7 +327,7 @@ export class WorldScene extends Phaser.Scene {
     this.turnText = this.add.text(20, 16, '', { fontFamily: 'monospace', fontSize: '20px', color: '#ffffff' })
     this.statusText = this.add
       // Outlined in the bar's colour: a map label dimmed under the header can show through behind its three lines.
-      .text(0, 16, '', { fontFamily: 'monospace', fontSize: '13px', color: '#ce93d8', align: 'right', stroke: '#1d1d1d', strokeThickness: 4 })
+      .text(0, 16, '', { fontFamily: 'monospace', fontSize: STATUS_FONT, color: '#ce93d8', align: 'right', stroke: '#1d1d1d', strokeThickness: 4 })
       .setOrigin(1, 0)
     this.hintText = this.add.text(20, 44, '', { fontFamily: 'monospace', fontSize: '13px', color: '#9e9e9e' })
     this.messageText = this.add
@@ -590,6 +596,7 @@ export class WorldScene extends Phaser.Scene {
       forecastTip: this.forecastTipBox.visible ? this.rectOf(this.forecastTipBox) : null,
       forecastTipText: this.forecastTipBox.visible ? this.forecastTipText.text : '',
       statusRect: this.statusText.getBounds(),
+      hintRect: this.hintText.getBounds(),
       forecast: this.forecastResult,
       forecastRuns: this.forecastRuns,
       autoLabel: (this.buttons[3].getData('text') as Phaser.GameObjects.Text).text,
@@ -927,8 +934,7 @@ export class WorldScene extends Phaser.Scene {
     }
     const messageY = timeY - BUTTON_H / 2 - 26
     this.messageText.setPosition(centreX, messageY)
-    // Three lines (with the last yield) start higher, to clear the hint under the turn's number.
-    this.statusText.setPosition(width - 20, this.lastYield ? 3 : 16)
+    this.fitStatus()
     this.layoutForecastTip()
     this.infoBox.setPosition(width - PARTY_LIST_W - INFO_MARGIN - INFO_W, HEADER_BOTTOM + INFO_MARGIN)
     this.infoText.setPosition(this.infoBox.x + INFO_PAD, this.infoBox.y + INFO_PAD)
@@ -1096,6 +1102,7 @@ export class WorldScene extends Phaser.Scene {
         ...(this.lastYield ? [this.lastYield] : []),
       ].join('\n'),
     )
+    this.fitStatus()
     this.column.refresh(this.active)
     this.partyList.refresh(this.listedParties(), this.selectedParty)
     for (const button of this.buttons) button.setVisible(here !== null && !this.walking && world.status !== 'lost')
@@ -1179,6 +1186,18 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** The header's hint: what the selected party may do where it stands, or whom a click on the hovered hex sends it to meet. */
+  /**
+   * Places the stock panel at the header's right. Three lines (with the last yield) start higher, to clear the hint under the
+   * turn's number, and are set smaller when they would still reach it (a narrow window, a long hint).
+   */
+  private fitStatus(): void {
+    this.statusText.setFontSize(STATUS_FONT).setLineSpacing(0).setPosition(this.scale.width - 20, this.lastYield ? 3 : 16)
+    if (!this.lastYield) return
+    const [a, b] = [this.statusText.getBounds(), this.hintText.getBounds()]
+    // Set small and close, from the header's top edge, the three lines end above the hint's row.
+    if (a.x < b.right && b.x < a.right && a.y < b.bottom && b.y < a.bottom) this.statusText.setFontSize(STATUS_FONT_SMALL).setLineSpacing(-2).setY(1)
+  }
+
   private refreshHint(): void {
     this.layoutForecastTip()
     const expedition = this.expedition()
@@ -1192,6 +1211,7 @@ export class WorldScene extends Phaser.Scene {
             ? 'Scout, wait, attack or auto-resolve, or click a hex to move away.'
             : 'Click a hex to travel there, or camp or pass days below. Each day takes a turn.',
     )
+    this.fitStatus()
   }
 
   /** Draws `route` from the selected party's hex in `color`, its end ringed, red where it ends among sighted monsters; returns whether it does. */

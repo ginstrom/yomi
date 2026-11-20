@@ -168,6 +168,8 @@ export interface WorldProbe {
   forecastTipText: string
   /** The header's status text (blight and stock) on screen. */
   statusRect: Rect
+  /** The header's hint (under the turn) on screen. */
+  hintRect: Rect
   /** The finished auto-resolve estimate for the battle Attack would start; null while it is worked out, and whenever no Auto-resolve button shows. */
   forecast: Forecast | null
   /** How many estimates the map has started since it opened: a redraw that changes no battle leaves it, a new battle (a day, another party) adds one. */
