@@ -6,7 +6,7 @@ import { selectedParty, type GameState } from '../game/gameState.ts'
 import { homeParty } from '../game/guildHall.ts'
 import { actingFor } from './encampmentView.ts'
 import { encampmentName } from '../game/worldMap.ts'
-import type { ButtonProbe, EncampmentProbe } from '../testHook.ts'
+import type { BoxProbe, ButtonProbe, EncampmentProbe } from '../testHook.ts'
 import { playCue } from './soundPlayer.ts'
 import { buttonCue, refusalCue } from './sounds.ts'
 import type { Point } from './boardGeometry.ts'
@@ -32,10 +32,12 @@ const TITLE_Y = 34
 /** The picture of the encampment: grass, a clearing, a palisade behind and the facilities on their plots. */
 const PICTURE: Rect = { x: CENTRE_X, y: 214, width: FRAME_W - 40, height: 260 }
 const PICTURE_TOP = PICTURE.y - PICTURE.height / 2
-const BUILDING_SCALE = 3
+const BUILDING_SCALE = 2
 const BUILDING_SIZE = 48 * BUILDING_SCALE
 const DECOR_SCALE = 2
 const LABEL_DY = 6
+/** A label wraps to a second line past this width, so a long one ("Builders' Lodge: empty plot") stays between its neighbours' (encampmentView.ts's plots). */
+const LABEL_WRAP = 240
 /** The details of the facility clicked, under the picture. */
 const DETAILS_Y = 372
 const MESSAGE_Y = 446
@@ -77,6 +79,10 @@ export class EncampmentScene extends Phaser.Scene {
   private message = ''
   private bg!: Phaser.GameObjects.Rectangle
   private frame!: Phaser.GameObjects.Container
+  /** Where each label was drawn, in the frame, for the probe. */
+  /** The text of the details drawn, line by line, for the probe. */
+  private detailLines: string[] = []
+  private labelBoxes: Partial<Record<FacilityId, BoxProbe>> = {}
   private controls: Partial<Record<keyof EncampmentProbe['buttons'], { at: Rect; enabled: boolean }>> = {}
 
   constructor() {
@@ -122,16 +128,29 @@ export class EncampmentScene extends Phaser.Scene {
       actingFor: this.expedition.id,
       selected: this.selected,
       message: this.message,
-      facilities: facilities(this.gameState, this.expedition).map((facility, index) => ({
-        ...onScreen(this.buildingCentre(index)),
-        visible: true,
-        enabled: true,
-        id: facility.id,
-        level: facility.level,
-        frame: facilityFrame(facility),
-      })),
+      details: this.detailLines,
+      refusal: this.shown()?.refusal ?? null,
+      facilities: facilities(this.gameState, this.expedition).map((facility, index) => {
+        const box = (at: BoxProbe): BoxProbe => ({ ...onScreen(at), width: at.width * this.frame.scale, height: at.height * this.frame.scale })
+        return {
+          ...onScreen(this.buildingCentre(index)),
+          visible: true,
+          enabled: true,
+          id: facility.id,
+          level: facility.level,
+          frame: facilityFrame(facility),
+          labelText: facilityLabel(facility),
+          building: box({ ...this.buildingCentre(index), width: BUILDING_SIZE, height: BUILDING_SIZE }),
+          label: box(this.labelBoxes[facility.id] ?? { x: 0, y: 0, width: 0, height: 0 }),
+        }
+      }),
       buttons: { improve: control('improve'), open: control('open'), leave: control('leave') },
     }
+  }
+
+  /** The facility whose details show, as `facilities` now has it. */
+  private shown(): FacilityView | null {
+    return facilities(this.gameState, this.expedition).find((f) => f.id === this.selected) ?? null
   }
 
   // ---- build -----------------------------------------------------------------
@@ -139,6 +158,8 @@ export class EncampmentScene extends Phaser.Scene {
   private render(): void {
     this.frame.removeAll(true)
     this.controls = {}
+    this.labelBoxes = {}
+    this.detailLines = []
     const { world } = this.gameState
     const stock = Object.entries(world.stock)
       .filter(([, amount]) => amount)
@@ -161,10 +182,13 @@ export class EncampmentScene extends Phaser.Scene {
     this.drawGrounds()
     const all = facilities(this.gameState, this.expedition)
     all.forEach((facility, index) => this.drawFacility(facility, index))
-    this.drawDetails(all.find((f) => f.id === this.selected) ?? null)
+    const selected = all.find((f) => f.id === this.selected) ?? null
+    this.drawDetails(selected)
+    // Under the details, what the action did, or while it has not been tried why it cannot be done.
+    const note = this.message || selected?.refusal || ''
     this.frame.add(
       this.add
-        .text(CENTRE_X, MESSAGE_Y, this.message, { fontFamily: FONT, fontSize: '13px', color: TEXT, align: 'center', wordWrap: { width: FRAME_W - 40 } })
+        .text(CENTRE_X, MESSAGE_Y, note, { fontFamily: FONT, fontSize: '13px', color: this.message ? TEXT : REFUSED, align: 'center', wordWrap: { width: FRAME_W - 40 } })
         .setOrigin(0.5),
     )
   }
@@ -190,7 +214,9 @@ export class EncampmentScene extends Phaser.Scene {
         .setOrigin(0.5, 1)
         .setScale(DECOR_SCALE)
     this.frame.add([decor('camp_tent', { x: 248, y: 176 }), decor('camp_tent', { x: 484, y: 172 })])
-    this.frame.add(decor('camp_fire', { x: CENTRE_X + 4, y: 296 }).play(spriteAnim('camp_fire', 'idle')))
+    // The fire and a third tent fill the gaps in the lower half, between the columns of buildings.
+    this.frame.add(decor('camp_tent', { x: 482, y: 290 }))
+    this.frame.add(decor('camp_fire', { x: 245, y: 284 }).play(spriteAnim('camp_fire', 'idle')))
   }
 
   /** A facility's building on its plot, or the empty plot, with its name under it; a click shows its details. */
@@ -219,19 +245,19 @@ export class EncampmentScene extends Phaser.Scene {
       // Next tick: the redraw destroys the sprite whose handler this runs in.
       this.time.delayedCall(0, () => this.select(facility.id))
     })
-    this.frame.add([
-      building,
-      edge,
-      this.add
-        .text(at.x, at.y + LABEL_DY, facilityLabel(facility), {
-          fontFamily: FONT,
-          fontSize: '14px',
-          color: marked ? GOLD : facility.level > 0 ? TEXT : DIM,
-          backgroundColor: '#14100ccc',
-          padding: { x: 6, y: 2 },
-        })
-        .setOrigin(0.5, 0),
-    ])
+    const label = this.add
+      .text(at.x, at.y + LABEL_DY, facilityLabel(facility), {
+        fontFamily: FONT,
+        fontSize: '14px',
+        color: marked ? GOLD : facility.level > 0 ? TEXT : DIM,
+        backgroundColor: '#14100ccc',
+        padding: { x: 6, y: 2 },
+        align: 'center',
+        wordWrap: { width: LABEL_WRAP },
+      })
+      .setOrigin(0.5, 0)
+    this.labelBoxes[facility.id] = { x: at.x, y: at.y + LABEL_DY + label.height / 2, width: label.width, height: label.height }
+    this.frame.add([building, edge, label])
   }
 
   /** What the facility clicked does and costs, and the buttons for it; a hint while none is. */
@@ -247,14 +273,27 @@ export class EncampmentScene extends Phaser.Scene {
     const level = facility.level > 0 ? `level ${facility.level} of ${facility.maxLevel}` : 'not built'
     const next = facility.next && facility.cost ? `Next: ${facility.next}  Cost: ${describeCost(facility.cost) || 'nothing'}.` : 'It is as great as it gets.'
     const left = 40
-    const wrap = { wordWrap: { width: FRAME_W - 2 * left } }
-    this.frame.add(this.add.text(left, DETAILS_Y - 16, `${facility.name}, ${level}`, { fontFamily: FONT, fontSize: '16px', color: GOLD }))
-    // Each line sits below the one before at its wrapped height, so a long description cannot print over the next.
-    let y = DETAILS_Y + 6
-    for (const [text, color] of [[facility.about, DIM], [facility.effect, TEXT], [next, facility.refusal ? REFUSED : TEXT]] as const) {
-      const line = this.add.text(left, y, text, { fontFamily: FONT, fontSize: '12px', color, ...wrap })
-      this.frame.add(line)
-      y += line.height + 4
+    const title = `${facility.name}, ${level}`
+    this.detailLines = [title]
+    this.frame.add(this.add.text(left, DETAILS_Y - 16, title, { fontFamily: FONT, fontSize: '16px', color: GOLD }))
+    // Each line sits below the one before at its wrapped height, so a long description cannot print over the next. A trading post's
+    // lines are long: if they would run into the message line, they are set smaller, then without the flavour line, until they fit.
+    const lines = [[facility.about, DIM], [facility.effect, TEXT], [next, facility.refusal ? REFUSED : TEXT]] as const
+    const attempts = [{ size: 12, about: true, width: FRAME_W - 2 * left }, { size: 11, about: true, width: FRAME_W - 40 }, { size: 11, about: false, width: FRAME_W - 40 }]
+    for (const [i, { size, about, width }] of attempts.entries()) {
+      const drawn: Phaser.GameObjects.Text[] = []
+      let y = DETAILS_Y + 6
+      for (const [text, color] of lines.slice(about ? 0 : 1)) {
+        const line = this.add.text(left, y, text, { fontFamily: FONT, fontSize: `${size}px`, color, wordWrap: { width } })
+        drawn.push(line)
+        y += line.height + 4
+      }
+      if (y <= MESSAGE_Y - 8 || i === attempts.length - 1) {
+        this.frame.add(drawn)
+        this.detailLines.push(...lines.slice(about ? 0 : 1).map(([text]) => text))
+        break
+      }
+      for (const line of drawn) line.destroy()
     }
     const of = 2 + (facility.opens ? 1 : 0)
     let slot = 0
@@ -298,7 +337,9 @@ export class EncampmentScene extends Phaser.Scene {
   private improve(facility: FacilityView): void {
     const refusal = improveFacility(this.gameState, this.expedition, facility.id)
     playCue(this, refusalCue(refusal, 'world.upgrade'))
-    this.message = refusal ?? (facility.level === 0 ? `The ${facility.name} is built.` : `The ${facility.name} is raised to level ${facility.level + 1}.`)
+    // The name after the change: the trading post becomes a Market Hall as it is raised.
+    const now = facilities(this.gameState, this.expedition).find((f) => f.id === facility.id) ?? facility
+    this.message = refusal ?? (facility.level === 0 ? `The ${now.name} is built.` : `The ${now.name} is raised to level ${now.level}.`)
     this.render()
   }
 

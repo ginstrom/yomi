@@ -80,6 +80,20 @@ describe('debug commands', () => {
     expect(runCommand('stock mithril 5', context).lines[0]).toMatch(/No material "mithril"/)
   })
 
+  it('adds several material pairs at once, checking every pair before applying any', () => {
+    const context = onWorldMap()
+    const { world } = context.source!.game
+    world.stock = {}
+    expect(runCommand('stock gold 300 stone 50 iron 50', context)).toEqual({ lines: ['Stock: gold 300, stone 50, iron 50'], changed: true })
+    for (const bad of ['stock gold 5 mithril 5', 'stock gold 5 iron', 'stock gold 5 iron x', 'stock gold 5 stone 1.5']) {
+      const before = { ...world.stock }
+      const result = runCommand(bad, context)
+      expect(result.lines[0], bad).toMatch(/No material "mithril"|whole number/)
+      expect(result.changed).toBe(false)
+      expect(world.stock).toEqual(before)
+    }
+  })
+
   it('puts items in the baggage by id', () => {
     const context = onWorldMap()
     runCommand('give yew_bow 2', context)
@@ -148,6 +162,20 @@ describe('debug commands', () => {
     expect(party.position).toEqual(route[1])
   })
 
+  it('adds a line of the yields over the days passed, by source', () => {
+    const context = onWorldMap()
+    const { world } = context.source!.game
+    world.tradingPost = 4
+    world.turn = 0
+    world.stock = {}
+    const lines = runCommand('days 5', context).lines
+    expect(lines.at(-1)).toMatch(/^Yields over 5 days: .*market 2 gold$/)
+    expect(world.stock.gold).toBeGreaterThanOrEqual(2)
+    // None when nothing yielded: a day short of a yield day.
+    expect(runCommand('days 1', context).lines.some((line) => line.startsWith('Yield'))).toBe(false)
+    expect(runCommand('days 1', context).lines).toHaveLength(1)
+  })
+
   it('stops passing days, saying why, while the party faces monsters', () => {
     const context = onWorldMap()
     const { world, parties } = context.source!.game
@@ -180,8 +208,61 @@ describe('debug commands', () => {
     expect(runCommand('facility guild_hall 4', context).changed).toBe(true)
     expect(world.guildHall).toBe(4)
     expect(runCommand('facility guild_hall 6', context).lines[0]).toMatch(/from 1 to 5/)
+    expect(runCommand('facility builders_lodge 2', context).changed).toBe(true)
+    expect(world.lodge).toBe(2)
+    expect(runCommand('facility builders_lodge 3', context).changed).toBe(true)
+    expect(runCommand('facility builders_lodge 4', context).lines[0]).toMatch(/from 0 to 3/)
     runCommand('give iron_sword@3+light2', context)
     expect(baggage.at(-1)!.name).toBe('Light Masterwork Iron Longsword (II)')
+  })
+
+  describe('blight', () => {
+    const level = (context: DebugContext, col: number, row: number) => {
+      const { world } = context.source!.game
+      return [world.blight[row * world.board.cols + col], world.shift[row * world.board.cols + col]]
+    }
+
+    it('sets the level of the party’s hex, by default, and resets its shift', () => {
+      const context = onWorldMap()
+      const { world, parties } = context.source!.game
+      const { col, row } = hexToOffset(parties[0].position)
+      world.shift[row * world.board.cols + col] = 5
+      const result = runCommand('blight 2', context)
+      expect(result.changed).toBe(true)
+      expect(result.lines[0]).toMatch(/blight level 2/)
+      expect(level(context, col, row)).toEqual([2, 0])
+      expect(runCommand('blight 1 here', context).changed).toBe(true)
+      expect(level(context, col, row)).toEqual([1, 0])
+    })
+
+    it('takes a location by id, or a hex by column and row, and names what stands there', () => {
+      const context = onWorldMap()
+      const { world } = context.source!.game
+      const site = world.locations.find((l) => l.id !== 'encampment' && l.kind === 'resource')!
+      const { col, row } = hexToOffset(site.position)
+      world.shift[row * world.board.cols + col] = 3
+      expect(runCommand(`blight 3 ${site.id}`, context).lines[0]).toContain(site.name)
+      expect(level(context, col, row)).toEqual([3, 0])
+      expect(runCommand('blight 1 4 5', context).lines[0]).toContain('(4, 5)')
+      expect(level(context, 4, 5)).toEqual([1, 0])
+      expect(runCommand('blight 1 encampment', context).changed).toBe(true)
+    })
+
+    it('refuses a level out of range, an unknown location and a hex off the map, changing nothing', () => {
+      const context = onWorldMap()
+      const before = JSON.stringify(context.source!.game.world.blight)
+      expect(runCommand('blight 4', context)).toMatchObject({ changed: false, lines: [expect.stringMatching(/0 to 3/)] })
+      expect(runCommand('blight -1', context).changed).toBe(false)
+      expect(runCommand('blight 1 nowhere', context).lines[0]).toMatch(/No location "nowhere"/)
+      expect(runCommand('blight 1 999 999', context).lines[0]).toMatch(/off the map/)
+      expect(runCommand('blight x', context).lines[0]).toMatch(/whole number/)
+      expect(JSON.stringify(context.source!.game.world.blight)).toBe(before)
+    })
+
+    it('needs the world map, as every change does', () => {
+      const reading: DebugContext = { scenes: ['Battle'], seed: null, source: { game: newGame(undefined, null, 7) } }
+      expect(runCommand('blight 1', reading).changed).toBe(false)
+    })
   })
 
   describe('fight', () => {

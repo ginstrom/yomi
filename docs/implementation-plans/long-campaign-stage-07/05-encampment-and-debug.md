@@ -149,3 +149,10 @@ export function yieldSummary(events: readonly WorldEvent[]): string | null
 - [ ] One commit, "Stage 7 step 05: the encampment and the debug console", no attribution lines; the index's row 05 updated with status and commit.
 
 ## 7. Execution record
+
+### Record (step 05)
+
+- Built test-first: view tests, debug-command tests, then scene code; in-browser tests added in `e2e/encampment.test.ts` (Lodge build, level 2 refusal, Market Hall/Trading House names and income, no-overlap geometry at 840x560 for bare plots and all-top) and `e2e/debug.test.ts` (several stock pairs, blight).
+- Verification: `npm test` 97 files / 2391 tests pass (run with `--maxWorkers=3`: under machine load 17-36 the default run timed out forecast/blight/bandits/encounters/progression tests, each passing alone); `npm run test:browser` 12 files / 168 tests pass (run serially under load; a parallel run timed out at 60 s across many files); `npm run build` passes. The 50-campaign check was not run: no rule changed. Refactor guard untouched.
+- Departures: the five-plot layout could not take a sixth, so the plots became three columns (guild hall/shrine front corners, trading post/workshop back corners, infirmary back middle, Lodge front middle), buildings drawn at 2x (was 3x), labels wrap at 240, the fire and a third tent moved into the gaps. The probe gained `details`, `refusal`, and per-facility `labelText`, `building` and `label` boxes. The refusal (e.g. "Roads come with trade routes.") shows on the message line in the refused colour until an action's message replaces it. The details lines shrink (12px, then 11px, then without the flavour line) when a trading post's long effect would run into the message line. The improve message uses the name after the change. The trading post's title and header both use `tradingPostName`.
+- Screenshots (840x560) in the scratchpad `shots/` folder: lodge0-post4-bare, lodge1-post5, lodge2-post6, lodge3-post5, lodge2-post6-details.

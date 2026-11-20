@@ -21,8 +21,10 @@ describe('the debug console', () => {
 
     await command(game, 'help')
     await expect.poll(() => console.textContent()).toContain('goto <col> <row>')
-    await command(game, 'stock gold 30')
-    await game.waitFor('World', (w) => w.world.stock.gold === 30)
+    await command(game, 'stock gold 30 stone 5 iron 7')
+    await game.waitFor('World', (w) => w.world.stock.gold === 30 && w.world.stock.stone === 5 && w.world.stock.iron === 7)
+    await command(game, 'blight 2')
+    await expect.poll(() => console.textContent()).toContain('blight level 2')
 
     // C would open the character panel, were the console not taking every key.
     await game.press('KeyC')

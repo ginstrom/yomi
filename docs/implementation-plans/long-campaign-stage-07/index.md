@@ -193,7 +193,7 @@ waitingIncomePerDay: number          // the waiting twin's, over the same days (
 | 02 | [Market income and the facilities](02-market-and-facilities.md) | Trading post 5–6, market income with `source: 'market'`, the post's names, the Lodge in `FACILITIES` (C2); guard fixture green, 50-check moved only by market income | 01 | sonnet / opus | done (0619dbf) |
 | 03 | [Sprites: Lodge, market and fort](03-sprites.md) | `camp_lodge` ×3, `camp_trading_post` 5–6, `map_fort` (C3) | — | sonnet / opus | done (a94e044) |
 | 04 | [The world map's Improve](04-world-map-improve.md) | Improve button, hex info, labels, palisade, event lines, yield summary, sound (C4); manual text; in-browser tests | 02, 03 | sonnet / opus | done (b20054e) |
-| 05 | [The encampment and the debug console](05-encampment-and-debug.md) | The Lodge's plot, the post's names on screen, debug `stock`, `blight`, `days` (C5); manual text; in-browser tests | 04 | sonnet / opus | pending |
+| 05 | [The encampment and the debug console](05-encampment-and-debug.md) | The Lodge's plot, the post's names on screen, debug `stock`, `blight`, `days` (C5); manual text; in-browser tests | 04 | sonnet / opus | done (see git log: "Stage 7 step 05") |
 | 06 | [The simulator's improvements and record](06-simulator.md) | `improveErrand`, Lodge and market raised, record and summary, the waiting twin (C6); wrappers gone; fixture re-recorded once | 02 | opus / opus | done (560c660) |
 | 07 | [Measure, document, play](07-measure-document-play.md) | The guard and the company figure, the waiting check; CLAUDE.md, reference docs, manual and screenshots; implementation notes; play script walked | 05, 06 | opus / opus | pending |
 

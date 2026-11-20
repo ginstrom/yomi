@@ -2,6 +2,7 @@ import { maxHp, maxMana, manaOf, type Character } from '../character/character.t
 import { gainXp, xpToNextLevel } from '../character/progression.ts'
 import type { BattleState } from '../engine/battleEngine.ts'
 import { advanceRefusal, passDay, setOrder } from '../game/company.ts'
+import { MAX_BLIGHT, boardIndex, type WorldEvent } from '../game/blight.ts'
 import { facilities, setFacilityLevel, type FacilityId } from '../game/encampment.ts'
 import { presences, type Expedition, type Order } from '../game/expedition.ts'
 import { ENCOUNTERS, type EncounterId } from '../game/encounters.ts'
@@ -13,7 +14,7 @@ import { HexBoard, hexToOffset, offsetToHex } from '../grid/hex.ts'
 import { BASE_ITEMS, MAGIC_ITEMS, itemById } from '../inventory/inventory.ts'
 import { MODIFIER_IDS } from '../inventory/modifiers.ts'
 import { RANKS, RUNE_IDS, addToPouch, isRuneKey, pouchKeys, runeKey, runeName } from '../inventory/runes.ts'
-import { describeWorldEvent } from './worldEvents.ts'
+import { describeWorldEvent, yieldSummary } from './worldEvents.ts'
 
 /**
  * The debug console's commands (debugConsole.ts lays the console over the game, in dev
@@ -230,16 +231,19 @@ const COMMANDS: Record<string, Command> = {
     },
   },
   stock: {
-    usage: 'stock [material amount]',
-    summary: "Show the encampment's stock, or add to it (a negative amount takes away).",
+    usage: 'stock [material amount]...',
+    summary: "Show the encampment's stock, or add to it, any number of materials at once (a negative amount takes away); a bad pair changes nothing.",
     changes: 'withArgs',
-    run([material, amount], context) {
+    run(args, context) {
       const { world } = gameOf(context)
-      if (material !== undefined) {
+      // Every pair is checked before any is applied.
+      const pairs: Array<[Material, number]> = []
+      for (let i = 0; i < args.length; i += 2) {
+        const material = args[i]
         if (!MATERIALS.includes(material as Material)) throw new DebugError(`No material "${material}"; there are ${MATERIALS.join(', ')}.`)
-        const key = material as Material
-        world.stock[key] = Math.max(0, (world.stock[key] ?? 0) + integer(amount, 'the amount'))
+        pairs.push([material as Material, integer(args[i + 1], `the amount of ${material}`)])
       }
+      for (const [key, amount] of pairs) world.stock[key] = Math.max(0, (world.stock[key] ?? 0) + amount)
       const held = Object.entries(world.stock).map(([name, n]) => `${name} ${n}`)
       return [`Stock: ${held.join(', ') || 'nothing'}`]
     },
@@ -357,15 +361,46 @@ const COMMANDS: Record<string, Command> = {
       return [`The party stands at ${offset({ position: to })}${here ? `, before ${theName(here.name)}` : ''}.`]
     },
   },
+  blight: {
+    usage: 'blight <level> [here | <location id> | <col> <row>] [@party]',
+    acts: true,
+    summary:
+      "Set a hex's blight level (0 to 3) and its shift counter to 0: the party's hex by default (here), a location's, or a hex's. The next day's influence moves it on, and the encampment's clean push undoes a taint within a few days: taint it the day before a yield day (days to one short of a multiple of 5, blight 1 encampment, days 1).",
+    changes: true,
+    run(args, context) {
+      const game = gameOf(context)
+      const { world } = game
+      const level = integer(args[0], 'the level')
+      if (level < 0 || level > MAX_BLIGHT) throw new DebugError(`The blight level goes from 0 to ${MAX_BLIGHT}.`)
+      let at
+      if (args.length >= 3) {
+        at = offsetToHex(integer(args[1], 'the column'), integer(args[2], 'the row'))
+        if (!new HexBoard(world.board).contains(at)) throw new DebugError(`${args[1]},${args[2]} is off the map (${world.board.cols}×${world.board.rows}).`)
+      } else if (args[1] === undefined || args[1] === 'here') {
+        at = partyOf(context).position
+      } else {
+        const location = world.locations.find((l) => l.id === args[1])
+        if (!location) throw new DebugError(`No location "${args[1]}"; \`locations all\` lists them.`)
+        at = location.position
+      }
+      const index = boardIndex(world.board, at)
+      world.blight[index] = level
+      world.shift[index] = 0
+      const { col, row } = hexToOffset(at)
+      const here = world.locations.find((l) => l.position.q === at.q && l.position.r === at.r)
+      return [`${here ? `${theName(here.name)} ` : 'Hex '}(${col}, ${row}) is now at blight level ${level}${level === 0 ? ' (clear)' : ''}.`]
+    },
+  },
   days: {
     usage: 'days <count>',
-    summary: 'Pass days through the day loop, each party carrying out its order, telling what they brought.',
+    summary: 'Pass days through the day loop, each party carrying out its order, telling what they brought and the yields by source.',
     changes: true,
     run([count], context) {
       const game = gameOf(context)
       const n = integer(count, 'the days')
       if (n < 1) throw new DebugError('Pass at least 1 day.')
       const told: string[] = []
+      const yields: WorldEvent[] = []
       let passed = 0
       while (passed < n && worldActive(game.world)) {
         const report = passDay(game)
@@ -375,13 +410,19 @@ const COMMANDS: Record<string, Command> = {
         }
         passed += 1
         const present = presences(game.parties)
+        yields.push(...report.events.filter((event) => event.type === 'yield'))
         for (const event of report.events) {
           if (isNotable(game.world, event, present) || event.type === 'spawned') {
             told.push(`  day ${game.world.turn}: ${describeWorldEvent(event) || `${event.type} ${'name' in event ? event.name : ''}`}`)
           }
         }
       }
-      return [`${passed} ${passed === 1 ? 'day passes' : 'days pass'}; it is turn ${game.world.turn}.`, ...told]
+      const summed = yieldSummary(yields)
+      return [
+        `${passed} ${passed === 1 ? 'day passes' : 'days pass'}; it is turn ${game.world.turn}.`,
+        ...told,
+        ...(summed ? [summed.replace('Last yield', `Yields over ${passed} ${passed === 1 ? 'day' : 'days'}`)] : []),
+      ]
     },
   },
   fight: {
