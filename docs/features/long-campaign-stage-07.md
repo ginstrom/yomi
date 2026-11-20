@@ -1,7 +1,7 @@
 # Feature: long campaign, stage 7 (site improvements and markets)
 
 **Slug:** long-campaign-stage-07
-**Phase:** 4, implementation (step 01)
+**Phase:** 4, implementation (step 04)
 
 ## Request (user's words)
 
@@ -43,11 +43,13 @@ Large, but the stage design is the approved design. Straight to planning, as sta
 
 - Baseline (step 01, seed 1, 500): `--parties 1` 234/500; default company 236/500; 50-campaign hash 5f92e363…
 - 01 (494cddb + 88afcf7, opus): 50 hash unchanged; npm test 2353; world e2e 58; build. Review (opus): clean, 1 round; hash re-verified before/after; v26 fixture genuine; 15/16 mutations caught. Two test nits to step 02.
-- 03 (a94e044, sonnet, worktree branch `long-campaign-stage-07-sprites` at .claude/worktrees/agent-adaf679f85afb4743): sprites:check 126; npm test. Review (opus): clean. Merge before 04, adding the hash to index row 03.
+- 03 (a94e044, sonnet, worktree branch `long-campaign-stage-07-sprites` at .claude/worktrees/agent-adaf679f85afb4743): sprites:check 126; npm test. Review (opus): clean. Merged into the stage branch; worktree removed.
+- 02 (0619dbf, sonnet): 50 hash unchanged (simulator capped at trading post 4); npm test 2367. Review (opus): clean, 1 round; nits: duplicated `wares` sentence in docs/reference/game.md (to step 04); market pays on the day the encampment falls (harmless, by design; note for stage 8).
 
 ## Carried forward
 
-- To step 02: a test that `migrateFrom25` doesn't run on a v26 save (hero with perkPoints ≠ pointsAt(level) − nodesCost labelled 26, value survives); a `before27(..., 25)` case with a real outpost.
+- To step 04: empty encampmentView.test.ts's `pending` frame set (art merged); delete the duplicated `wares(world, filter)` sentence in docs/reference/game.md (Trading post paragraph).
+- To step 05: drop the `.slice(0, 5)` in encampmentView.test.ts's plot test.
 
 - Lodge level 3 sprite: milestone reads as a bottle, paving faint, level 2→3 jump weak at 1x. Level 3 is unreachable until stage 8 (`LODGE_LEVEL_LIMIT` 2); redraw in stage 8.
 - `forecast.test.ts` "a level-1 party wins no fight with the Source at threat 5" times out (5 s) under full-suite load; passes alone.
