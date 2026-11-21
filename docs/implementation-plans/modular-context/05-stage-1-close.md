@@ -135,16 +135,17 @@ Measure with `wc -c`. For descriptions, use the same byte sum the step 01 budget
 
 ## 6. Completion criteria
 
-- [ ] The root `CLAUDE.md` has the §4.8 table, the two framing sentences, the `.claude/` line under Docs, and the cap sentence naming the `.claude/` caps. It is at or under 6,500 bytes.
-- [ ] No text in the root file says the bands are anywhere other than `yomi-balance` **[Q1]**.
-- [ ] The findability check has been run against the recorded base, and every miss is justified or restored. The result is in `log.md`.
-- [ ] The stage 1 size table is in `log.md`, with the always-loaded total under 8,500.
-- [ ] Every stage 1 directory guide is under 8,000 bytes, or the exception is reported.
-- [ ] `npm test` passes. One commit has been made, and its hash is in the index's task table, with the step marked `done`.
-- [ ] The step's section of `log.md` has been written (date, tiers, verdict, review rounds, commands and results).
+- [x] The root `CLAUDE.md` has the §4.8 table, the two framing sentences, the `.claude/` line under Docs, and the cap sentence naming the `.claude/` caps. It is at or under 6,500 bytes.
+- [x] No text in the root file says the bands are anywhere other than `yomi-balance` **[Q1]**.
+- [x] The findability check has been run against the recorded base, and every miss is justified or restored. The result is in `log.md`.
+- [x] The stage 1 size table is in `log.md`, with the always-loaded total under 8,500.
+- [x] Every stage 1 directory guide is under 8,000 bytes, or the exception is reported.
+- [x] `npm test` passes. One commit has been made, and its hash is in the index's task table, with the step marked `done`.
+- [x] The step's section of `log.md` has been written (date, tiers, verdict, review rounds, commands and results).
 
 ## 7. Execution record
 
 - Root `CLAUDE.md` edited as 3.1 says; 6,783 bytes, over the 6,500 guide by 283 (the verbatim table and Docs line cost about 700 bytes; my own wording is already tight). The always-loaded total is 7,431 against 8,500. [Q1] checked: no root text sends to `scripts/CLAUDE.md` for the bands.
 - Findability, sizes and the pointer sweep are in `log.md` (Step 05). No miss was unjustified; no restore was needed. Deviation: the 6,500-byte root guide is exceeded, reported for the orchestrator.
 - `npm test`: tsc clean; 97 files, 2407 tests passed.
+- Review (opus, 1 round): clean. Record fixes only: reviewer tier corrected in `log.md`, the rune half of "An item icon" noted (`rune.md`), the "Headings removed on purpose" entries dropped (not misses), a double blank line removed; §6 ticked. The root size (6,783) was accepted.

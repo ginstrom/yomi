@@ -45,10 +45,9 @@ Append-only history for [the plan](index.md): one `## Step NN: <title>` section 
 - Guides after: `src/game/CLAUDE.md` 7,554; `src/scenes/CLAUDE.md` 4,837; `src/inventory/CLAUDE.md` 2,925; `src/story/CLAUDE.md` 1,223.
 - `npm test`: tsc clean; 97 files, 2407 tests passed. Ledger, dropped duplicate and deviations: the execution record of `04-add-content-world.md`.
 
-
 ## Step 05: stage 1 close
 
-- Date 2026-11-21. Tiers: engineer sonnet, reviewer sonnet. Base `f0814da` confirmed (the parent of step 01's first commit `07cdd3c`).
+- Date 2026-11-21. Tiers: engineer sonnet, reviewer opus; verdict clean, 1 round. Base `f0814da` confirmed (the parent of step 01's first commit `07cdd3c`).
 - Root `CLAUDE.md`: the design §4.8 table, the two framing sentences, the `.claude/` line under Docs, and the cap sentence naming the `.claude/` caps. It is 6,783 bytes, 283 over the plan's 6,500 guide: the verbatim table and Docs line cost about 700 bytes, my own wording was tightened as far as it goes, and the always-loaded cap (8,500) still holds with room. [Q1] check: the root file has no text naming `scripts/CLAUDE.md` as the bands' home; Balance names `yomi-balance`, and the Architecture row `scripts/` stays as designed.
 - Findability check (scratch script outside the repository, `scratchpad/find.py`). For each of the eight guides: every backticked span and every `**bold**` lead of `git show f0814da:<guide>`, with `**` and a trailing `:` stripped for bold leads, looked up verbatim in the union of the guide now, `.claude/skills|agents|roles/**` and `docs/reference/**`.
 
@@ -64,10 +63,9 @@ Append-only history for [the plan](index.md): one `## Step NN: <title>` section 
 | `scripts` | 38 | 0 | 0 |
 
 - Missing, all justified:
-  - Checklist headings that became file names (`yomi-add-content/`): `A new spell` is `spell.md`; `A new status` is `status.md`; `A new ability` is `ability.md`; `A new trait` is `trait.md`; `A new element` is `element.md`; `Any event shape change` is `battle-event.md`; `A new encounter` is `encounter.md`; `A new facility` is `facility.md`; `A new foe kind` is `foe.md`; `A new one-day action` is `day-action.md`; scenes `A unit kind` is `foe.md`; `A weapon or shield icon, or an armour, head or cloak icon` is `gear-icon.md`; `An item icon` is `item.md`; `A portrait preset` is `portrait.md`; `A location kind` is `location-kind.md`; `A party banner` is `party-banner.md`; `A debug command` is `debug-command.md`; `A battle event that changes statuses on screen` is `battle-event.md`.
+  - Checklist headings that became file names (`yomi-add-content/`): `A new spell` is `spell.md`; `A new status` is `status.md`; `A new ability` is `ability.md`; `A new trait` is `trait.md`; `A new element` is `element.md`; `Any event shape change` is `battle-event.md`; `A new encounter` is `encounter.md`; `A new facility` is `facility.md`; `A new foe kind` is `foe.md`; `A new one-day action` is `day-action.md`; scenes `A unit kind` is `foe.md`; `A weapon or shield icon, or an armour, head or cloak icon` is `gear-icon.md`; `An item icon` is `item.md` (its rune half went to `rune.md`); `A portrait preset` is `portrait.md`; `A location kind` is `location-kind.md`; `A party banner` is `party-banner.md`; `A debug command` is `debug-command.md`; `A battle event that changes statuses on screen` is `battle-event.md`.
   - `A control a browser test clicks`: dropped as a duplicate of the scenes guide's Probes line.
   - Span `npm run sounds` (scenes "A sound effect"): the item is now a pointer in the scenes guide to `audio/CLAUDE.md`, "Which sound plays when" (heading confirmed), which holds `npm run sounds` (lines 29, 42, 52, 77).
-  - Headings removed on purpose (not matched as bold leads, or matched elsewhere): "Checklists" and "If you add X, also update Y" went to `yomi-add-content/` (engine, game and scenes now have short "Checklists" or "Adding content" pointer sections); "Changing hero growth means retuning", "Balance", "Flags", "Campaigns" and "What a tuner needs to know" went to `yomi-balance/` (`levers.md`, `bands.md`, `running.md`, `guards.md`) and `docs/reference/simulator.md`.
 - Pointer sweep (CLAUDE.md files, `.claude/`, `docs/reference/`): every quoted heading a pointer names exists (`audio/CLAUDE.md` "Which sound plays when" and "Narration", `src/character/CLAUDE.md` "Perk points", `src/inventory/CLAUDE.md` "One id is one object"); no remaining text sends to a guide for a checklist or the bands that it no longer holds. `docs/reference/audio.md` line 4 mentions "the checklists" of the audio guide, which stage 4 has not touched. No fixes were needed in files this stage touched.
 - Sizes (design §7), `wc -c`; descriptions are the bytes of `name` plus `description` as step 01's test sums them:
 
