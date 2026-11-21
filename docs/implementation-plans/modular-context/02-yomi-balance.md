@@ -88,12 +88,12 @@ Body (< 6,000 bytes in all):
 
 ## 5. Completion criteria
 
-- [ ] Five skill files and the agent file exist, each under its cap, frontmatter exactly as above.
-- [ ] The four guides, root `CLAUDE.md` and the two comments carry the exact lines in §1; nothing moved was dropped.
-- [ ] `npm test` passes; one commit `Modular context step 02: the yomi-balance skill and yomi-measure agent`, no attribution lines, staged by path.
-- [ ] `yomi-measure` run recorded in `log.md` (`## Step 02: …`: date, tiers, verdict, rounds, the table, run time, any fallback used).
-- [ ] Index: step 02 `done` with its commit.
+- [x] Five skill files and the agent file exist, each under its cap, frontmatter exactly as above.
+- [x] The four guides, root `CLAUDE.md` and the two comments carry the exact lines in §1; nothing moved was dropped.
+- [x] `npm test` passes; one commit `Modular context step 02: the yomi-balance skill and yomi-measure agent`, no attribution lines, staged by path.
+- [x] `yomi-measure` run recorded in `log.md` (`## Step 02: …`: date, tiers, verdict, rounds, the table, run time, any fallback used).
+- [x] Index: step 02 `done` with its commit.
 
 ## 6. Execution record
 
-Done 2026-11-21 (engineer). Created the five skill files and the agent; trimmed the four guides, root and two comments as §1 says. `npx vitest run scripts/claudeMd.test.ts` 15 passed with the new files. `yomi-measure` run and the figures are in `log.md` (the agent type was not listed, so the general-purpose sonnet fallback ran). Deviations: `parity-L8` and `parity-L14` flags in `bands.md` are the parity command with `--party-level 8` and `--threat 7 --party-level 14` (the old guide named "Hobgoblin Warband" at level 8 without a command; the skill-trees plan 15 ran Bandit Camp threat 4 at levels 4 and 8). Heroes dead a campaign is read from the `Guild hall` line. For later steps: `docs/reference/simulator.md` line 3 still names `scripts/CLAUDE.md` as holding the bands.
+Done 2026-11-21 (engineer). Created the five skill files and the agent; trimmed the four guides, root and two comments as §1 says. `npx vitest run scripts/claudeMd.test.ts` 15 passed with the new files. `yomi-measure` run and the figures are in `log.md` (the agent type was not listed, so the general-purpose sonnet fallback ran). Deviations: `parity-L14` is the parity command with `--threat 7 --party-level 14`; `parity-L8` is `--encounter hobgoblin_warband --threat 5 --party-level 8` (corrected in review round 1 from a wrong first reading). Heroes dead a campaign is read from the `Guild hall` line. Exception to §3's "no `docs/reference/`" exclusion, by the orchestrator's ruling in review round 1: `docs/reference/simulator.md` line 3 now names `bands.md` for the bands and current figures. `standard` lists its cells explicitly (`tl5` is report-only).
