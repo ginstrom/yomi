@@ -3,9 +3,9 @@
 ## State
 
 - Request (user's words): "Please examine your workflows. Can you selectively load context depending on what you are working on? For example, design vs asset creation, coding, planning, etc. Can some of this be offloaded to skills so the main orchestrator does not need to hold as much context? Please think about how to design your context/skill system to be more modular." Then, after the proposal: "please replace AGENTS.md with a simlink, and then go through the suggested order".
-- Slug `modular-context` · Phase 4, implementation. Phase 6, done on branch (`f0814da..` this commit); not pushed. · Next action: the user decides the open questions below · Branch: `long-campaign-stage-07` (the current branch; project rule: commit on the current branch)
+- Slug `modular-context` · Phase 4, implementation. Phase 6, done on branch (`f0814da..` this commit); not pushed. · Next action: PR review, then a PR stacked on the stage 7 PR (user, 2026-11-21) · Branch: `long-campaign-stage-07` (the current branch; project rule: commit on the current branch)
 - Links: architecture none (the approved proposal is the architecture); design `docs/designs/modular-context.md` (makes the approved proposal of 2026-11-21 concrete; the verbatim proposal is in the plan's `log.md`); plan `docs/implementation-plans/modular-context/index.md` (13 steps, four stages; per-step tiers in its task table); plan log `docs/implementation-plans/modular-context/log.md`.
-- Open questions: for the user, at the end of the feature: commit the global-skill edits in the dotfiles repository (uncommitted there, steps 07 and 09)? It blocks nothing here. The stage 7 PR question is in stage 7's record.
+- Open questions: none. Global-skill edits committed in dotfiles as `16f02ab` (its `main`, not pushed; only `home/.claude/skills`).
 - Tiers: designer opus; planner opus; steps as the plan index's task table (opus for 01, 06, 07, 09; sonnet engineers elsewhere, reviewers at least the engineer's tier).
 - Verification: per step, the plan's `log.md`. Overall review (opus): changes needed, 1 blocking (the QA profile's never-kill rule); fixed in `cd0b29b`; re-review clean (98 files, 2,419 tests; build passed). QA and simulated user: not run (an instructions refactor; the step 09 smoke check and step 13 trigger check exercise what agents read and pick). PR review: not run.
 - Carried forward: none.
@@ -17,6 +17,7 @@
 | 2026-11-21 | AGENTS.md becomes a symlink to `CLAUDE.md`; done in `f0814da` | user | keep the copy | |
 | 2026-11-21 | Path: medium, no architecture brief | orchestrator | architecture brief | The approved proposal is the architecture; the designer writes a design that makes it concrete |
 | 2026-11-21 | Design gate: the design proceeds to planning unless it departs from the proposal or raises questions only the user can answer | orchestrator | ask the user to approve the design | The user approved the proposal and asked to go through the order |
+| 2026-11-21 | Ship: PR review, then a PR stacked on the stage 7 PR (cut at `a51ed58`); the dotfiles skill edits are committed (`16f02ab`), not pushed | user | merge into local main; one combined PR | |
 | 2026-11-21 | Global skills: every file under `~/.claude/skills/` is a symlink into the dotfiles git repository; edit the targets, record with `git diff` there, and leave them uncommitted (the user's repository). A real copy is at `~/.claude/skills-backup-2026-11-21/`, since the first copy held only links. Edits stay generic and backward compatible | orchestrator | commit in dotfiles | Other projects use them; step 07 found the links |
 | 2026-11-21 | Design written (`docs/designs/modular-context.md`); it follows the proposal, so no approval gate | orchestrator | | Per the design gate above |
 | 2026-11-21 | Bands live in `.claude/skills/yomi-balance/bands.md` | user | `docs/reference/` | |

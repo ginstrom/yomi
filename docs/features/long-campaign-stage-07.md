@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > After that, stage 7 (site improvements and markets) is next on the roadmap.
-- Slug `long-campaign-stage-07` · Phase 6, done on branch (17cc2e3..a51ed58; code through `e6d94ac`); not pushed · Next action: the user answers the open question below; then re-run the PR review and push · Branch: `long-campaign-stage-07`, off main (17cc2e3). The branch also carries `06085b3`, `f0814da` and the unfinished modular-context work.
+- Slug `long-campaign-stage-07` · Phase 6, done on branch (17cc2e3..a51ed58; code through `e6d94ac`); not pushed · Next action: loose ends below in progress; then the PR review at a stage 7 branch cut at `a51ed58`, and the PR · Branch: `long-campaign-stage-07`, off main (17cc2e3). The branch also carries `06085b3`, `f0814da` and the unfinished modular-context work.
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–6 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md` (cross-stage rules: early-game guard re-measured at start, versions, docs, sprites, play script)
@@ -14,7 +14,6 @@
   - Plan: `docs/implementation-plans/long-campaign-stage-07/` (7 steps, 3416f16)
   - Plan log (history): `docs/implementation-plans/long-campaign-stage-07/log.md`
 - Open questions:
-  - For the user, blocks the stage 7 push: does the stage 7 PR wait for modular-context, include it, or go from a branch cut at `a51ed58`? The orchestrator recommends a branch cut at `a51ed58`.
   - Resolved: AGENTS.md, by `f0814da` (now a symlink to CLAUDE.md).
 - Tiers (engineer / reviewer): planner opus; steps 01, 06, 07 opus/opus, 02–05 sonnet/opus; overall review opus.
 - Verification (latest verdict of each gate):
@@ -37,6 +36,7 @@
 | 2026-11-20 | Skip architecture and design; the stage design is the approved design | orchestrator | new design | Marked ready for planning; precedent stages 2–6 |
 | 2026-11-20 | Plan decisions 8, 6, 13 as recommended: waiting check is an idle-company twin (behind `--waiting` if >10% runtime); Improve button visible with the reason when the Lodge is too low; hex info and unsaved 'Last yield' wording as written | user | literal 'gold per day at home'; hide button; save last yield | Recommended |
 | 2026-11-20 | Accept the planner's departures (index decisions): party args, `improve` day action, event shapes, optional yield `source`, extra sprites, debug commands, Lodge 3 refusal | orchestrator | follow design to the letter | routine engineering choices following the code's conventions |
+| 2026-11-21 | Two stacked PRs: stage 7 from a branch cut at `a51ed58`, modular-context on top. Loose ends done now: forecast test timeout, sprite-tool pin, overlay frames above 1x (short design `overlay-frame-scaling`) | user | one combined PR; stage 7 only | Recommended |
 | 2026-11-20 | Own branch `long-campaign-stage-07` off main | orchestrator | commit on main | Precedent: one branch and PR per stage |
 | 2026-11-20 | Push and open a PR | user | wait | Stage done |
 | 2026-11-20 | Keep market income as it is; revisit in stage 12's retune | user | raise it now | |
