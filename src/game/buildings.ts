@@ -1,4 +1,4 @@
-import { hexDistance, hexEquals } from '../grid/hex.ts'
+import { hexDistance, hexEquals, type Hex } from '../grid/hex.ts'
 import { blightAt, type WorldEvent } from './blight.ts'
 import { act } from './company.ts'
 import type { Expedition } from './expedition.ts'
@@ -54,8 +54,17 @@ export function describeCost(cost: Stock): string {
  * land, off every location and tower, and `TOWER_SPACING` from every tower.
  */
 export function towerSiteRefusal(world: WorldState, party: Expedition): string | null {
-  const here = party.position
   if (!worldActive(world) || monstersHere(world, party)) return 'Nothing can be built here now.'
+  return towerHexRefusal(world, party.position)
+}
+
+/**
+ * Why no watchtower could stand on `here`, by the place rules alone (whoever
+ * would build it), or null when one could: `towerSiteRefusal`'s words, for any
+ * hex. The simulator asks it of a hex it has not walked to yet.
+ */
+export function towerHexRefusal(world: WorldState, here: Hex): string | null {
+  if (!worldActive(world)) return 'Nothing can be built here now.'
   if (world.towers.some((tower) => hexEquals(tower.position, here))) return 'A watchtower already stands here.'
   if (locationAt(world, here)) return 'A watchtower cannot stand on a location.'
   if (blightAt(world, here) > 0) return 'A watchtower needs clean land.'

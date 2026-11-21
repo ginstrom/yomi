@@ -4,6 +4,7 @@ import { MAGIC_ITEMS, type Item } from '../inventory/inventory.ts'
 import { ENCOUNTER_BANDS, type EncounterId } from './encounters.ts'
 import type { PartyPresence } from './expedition.ts'
 import type { ImprovementLevel, Material, YieldSource } from './territory.ts'
+import type { RaidCause } from './trade.ts'
 import { ENCAMPMENT_ID, threatAt, type MonsterLocation, type WorldState } from './worldMap.ts'
 
 /**
@@ -82,12 +83,19 @@ export type WorldEvent =
   | { type: 'tower_lost'; tower: string; at: Hex }
   /** `building`: the level's name ("Outpost", "Mine", "Fort", …). */
   | { type: 'site_improved'; site: string; name: string; level: ImprovementLevel; building: string }
-  | { type: 'yield'; site: string; name: string; material: Material; amount: number; source?: YieldSource }
+  /** `route`: the route's id, for a route's yield (`source: 'route'`, `site` the partner). */
+  | { type: 'yield'; site: string; name: string; material: Material; amount: number; source?: YieldSource; route?: string }
   | { type: 'encampment_lost'; name: string }
   /** `home`: the encampment's name. */
   | { type: 'partner_contacted'; partner: string; name: string; home: string }
   | { type: 'partner_silent'; partner: string; name: string }
   | { type: 'partner_restored'; partner: string; name: string }
+  /** `name`: the partner's; `length`: the road's hexes. */
+  | { type: 'route_opened'; route: string; partner: string; name: string; length: number }
+  /** `days`: raided yield days in a row, 1 on the first; `raider`, `raiderName`: the nearest nest, for 'raiders'. */
+  | { type: 'route_raided'; route: string; partner: string; name: string; cause: RaidCause; raider?: string; raiderName?: string; days: number }
+  | { type: 'route_restored'; route: string; partner: string; name: string }
+  | { type: 'route_abandoned'; route: string; partner: string; name: string }
 
 /** Where a hex's level and shift counter are kept in `WorldState.blight` and `.shift`. */
 export function boardIndex(board: BoardSize, h: Hex): number {

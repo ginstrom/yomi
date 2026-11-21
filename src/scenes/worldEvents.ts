@@ -66,6 +66,12 @@ export function describeWorldEvent(event: WorldEvent): string {
       return `${event.name} has fallen silent under the blight.`
     case 'partner_restored':
       return `${event.name} is trading again.`
+    // The routes' lines are stage 8 step 05's.
+    case 'route_opened':
+    case 'route_raided':
+    case 'route_restored':
+    case 'route_abandoned':
+      return ''
     // Unseen: a spawn is told when it comes into sight.
     case 'spawned':
     case 'level_changed':

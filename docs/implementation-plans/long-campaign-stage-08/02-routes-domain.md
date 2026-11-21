@@ -223,3 +223,30 @@ export const SIM_PARTNERS: readonly PartnerLocation[] = []   // every simulated 
 - [ ] One commit, "Stage 8 step 02: routes, raids and guards", no attribution lines; the index's row 02 updated with status and commit.
 
 ## 7. Execution record
+
+Engineer: opus (model unset), 2026-11-21, on `long-campaign-stage-08` after `c4bc8fa`.
+
+**Built as C2**, every name, signature and refusal word as written. Details later steps consume:
+
+- `trade.ts` now imports `buildings.ts` (`atEncampment`, `canAfford`, `describeCost`, `spend`) and `tradingPost.ts` (`tradingPostName`); `trade.ts` joins the second cycle list in `src/game/CLAUDE.md` (with `company.ts`, `buildings.ts`, …). `blight.ts` imports `RaidCause` from it as a type only.
+- `route_raided` carries `raider` and `raiderName` only for `cause: 'raiders'` (the keys are absent, not undefined, otherwise).
+- A route's yields are `{ type: 'yield', site: <partner id>, name: <partner name>, material, amount, source: 'route', route: <route id> }`, gold first, then the good.
+- `openRoute(game, _party, partnerId)` ignores the party (the refusal checks it); it recomputes `roadTo`, which the refusal also computed, so the route holds the checked road.
+- `towerHexRefusal(world, here)` also says "Nothing can be built here now." when the game is over (as `towerSiteRefusal` did), so it stands alone; `towerSiteRefusal` keeps that and its monsters-here check first. Words unchanged ("A watchtower cannot stand on a location." was already the wording); no manual or test edit needed.
+- The save's check (§4 item 11): `isRoute` takes the set of contacted partners and asks `id === 'route_' + partner`; `isRoutes` adds one route at most per partner. A route to a contacted partner that is silent now still reads.
+- `describeWorldEvent` returns `''` for the four route events (step 05 writes the lines); `yieldSummary` counts a route's yields under sites for now (it only singles out `source: 'market'`). Note for step 05: while a notable `route_raided` or `route_abandoned` interrupts a journey, the message line is empty until step 05's lines land; no player can open a route before step 06's tab, so nothing shows it.
+
+**Fresh world (any seed: the locations are fixed):** Millbrook's road is 14 hexes (cost 27 gold, 10 timber; security 0.857, `routeIncome(world, road, [])` 1 gold), Saltmere's 30 (cost 35 gold, 10 timber; security 0.667, income 2). Neither is raided: the nearest nest to either road is 3 hexes away, so decision 6's clear search finds roads as short as the looser rule's (the plan's decision 7 figures hold). Income is below decision 7's "about 2 when clean" for Millbrook because 4 of its 14 hexes start tainted.
+
+**Deviation from test-first.** The `trade.ts` routes were written before their tests in one pass; to show the tests bind, each key rule was then mutated by hand and the trade tests rerun: dropping the clear search, the fallback, the partner's-hex exception, `<=` on `GUARD_RADIUS`, party guards, the raider sort, the lost check, the even-day goods, the `ABANDON_AFTER` boundary, the silent refusal and the corrupted-never-guarded rule each failed 1 to 4 tests; `>= 0.5` → `> 0.5` passed, so a test at security ½ exactly was added and then failed that mutant. The save check was written red first (the new test failed, then passed).
+
+**Tests added:** `trade.test.ts` (the road: determinism, shape, clear of `RAID_RADIUS` with an unsighted nest, the fallback through a gap in a ring of nests, the partner's hex beside a nest, walled in; cost and slots; `openRoute`; all thirteen refusals in order, each leaving the game deep-equal; security, income, tower and party guards at 3 and 4; raid causes, distance 2 and 3, ordering, precedence; `tradeDay`: other days, gold and goods, ½ exactly, below ½, raids counted and restored, silence and corruption, abandonment freeing the slot, reopening on a fresh road, nothing once lost), `worldMap.test.ts` (`isNotable` for the four route events), `territory.test.ts` (order after sites, market and partners; no routes as before), `save.test.ts` (wrong id, duplicate, uncontacted; `openRoute` round-trips), `buildings.test.ts` (`towerHexRefusal`'s words).
+
+**Verification:**
+
+- `npm test`: 100 files, 2463 tests passed (2417 before the step).
+- The refactor guard: green, `GUARD_RECORDS` untouched.
+- 50-campaign check (`npm run simulate -- --campaign --battles 50 --seed 1 --parties 1 --out logs/guard-50.jsonl`): SHA-256 `1ceefe633e71c0326c0c5b261c77e1c010c49e30303a85286a782589e74400d1`, **identical** to step 01's baseline (23 of 50). The baseline was not rerun before the change: the branch had moved only by step 01's review follow-up (save checks), and the identical hash after the change shows it held.
+- `npm run test:browser` not run: no scene changed beyond the four `''` cases in `worldEvents.ts`' `switch`.
+
+**Docs:** `src/game/CLAUDE.md` (the `trade.ts` line; `trade.ts` in the second cycle list), `docs/reference/game.md` (a short "Trade routes" item under the world map; `partnerDay` no longer "called last"; `isNotable`'s list; Territory; `towerHexRefusal`; the save's route check). The root CLAUDE.md cycle line already named `trade`.

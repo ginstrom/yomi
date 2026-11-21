@@ -132,15 +132,20 @@ function locationOf(saved: WorldLocation): WorldLocation {
 const isPartnerIds = (ids: unknown, partners: ReadonlySet<string>): boolean =>
   Array.isArray(ids) && ids.every((id) => partners.has(id)) && new Set(ids).size === ids.length
 
-/** Whether `route` is a `TradeRoute` to one of the `partners`. */
-function isRoute(route: unknown, partners: ReadonlySet<string>): boolean {
+/** Whether `route` is a `TradeRoute` to one of the `contacted` partners, with the id it is opened under (`route_<partner>`). */
+function isRoute(route: unknown, contacted: ReadonlySet<string>): boolean {
   if (typeof route !== 'object' || route === null) return false
   const r = route as Record<string, unknown>
   return (
-    typeof r.id === 'string' && typeof r.partner === 'string' && partners.has(r.partner) &&
+    typeof r.partner === 'string' && contacted.has(r.partner) && r.id === `route_${r.partner}` &&
     Array.isArray(r.road) && r.road.every(isHex) && Number.isInteger(r.opened) && isIndex(r.raidedDays)
   )
 }
+
+/** Whether `routes` are trade routes to contacted partners, one at most to each. */
+const isRoutes = (routes: unknown, contacted: ReadonlySet<string>): boolean =>
+  Array.isArray(routes) && routes.every((route) => isRoute(route, contacted)) &&
+  new Set(routes.map((route: { partner: string }) => route.partner)).size === routes.length
 
 const isHex = (hex: unknown): boolean =>
   typeof hex === 'object' && hex !== null && typeof (hex as { q: unknown }).q === 'number' && typeof (hex as { r: unknown }).r === 'number'
@@ -227,7 +232,8 @@ export function parseSave(raw: string | null): SaveFile | null {
     // A partner's good is a material: `WORKS_NAMES` is a full record of them.
     check(world.locations.every((l) => !l || l.kind !== 'partner' || (typeof l.good === 'string' && Object.hasOwn(WORKS_NAMES, l.good))))
     check(isPartnerIds(world.contacted, partnerIds) && isPartnerIds(world.silent, partnerIds))
-    check(Array.isArray(world.routes) && world.routes.every((route) => isRoute(route, partnerIds)))
+    // `contacted` holds partners only (checked above), so a route to a contacted partner is to a partner.
+    check(isRoutes(world.routes, new Set(world.contacted)))
     check(isIndex(world.routesOpened))
     check(typeof world.tradingPost === 'number' && typeof world.workshop === 'number' && typeof world.infirmary === 'number')
     check(Array.isArray(world.held) && Array.isArray(world.threatened) && world.stock && typeof world.stock === 'object')

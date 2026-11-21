@@ -11,6 +11,7 @@ import { ENCOUNTERS } from './encounters.ts'
 import { newGame, takeLoot, type GameState } from './gameState.ts'
 import { Ground } from './ground.ts'
 import { PREROLLS, partyFighters, partyFromDrafts } from './party.ts'
+import { openRoute, openRouteRefusal } from './trade.ts'
 import { SAVE_VERSION, describeSave, parseSave, saveSummary, serializeSave, type SaveFile, type SavedBattle } from './save.ts'
 import { ENCAMPMENT_ID, PARTNERS, encampment, type MonsterLocation, type PartnerLocation } from './worldMap.ts'
 
@@ -528,5 +529,29 @@ describe('a version-28 save', () => {
     expect(parseSave(edited((w) => (w.routes = [null])))).toBeNull()
     expect(parseSave(edited((w) => (w.routesOpened = -1)))).toBeNull()
     expect(parseSave(edited((w) => delete w.routesOpened))).toBeNull()
+  })
+
+  it('reads a route with the wrong id, a second route to one partner or a route to an uncontacted partner as unreadable', () => {
+    expect(parseSave(edited((w) => (w.routes[0].id = 'route_saltmere')))).toBeNull()
+    expect(parseSave(edited((w) => (w.routes[0].id = 'millbrook')))).toBeNull()
+    expect(parseSave(edited((w) => w.routes.push({ ...w.routes[0] })))).toBeNull()
+    expect(parseSave(edited((w) => (w.contacted = ['saltmere'])))).toBeNull()
+    // A route to a contacted partner that has since fallen silent is fine.
+    expect(parseSave(edited((w) => w.routes.push({ ...w.routes[0], id: 'route_saltmere', partner: 'saltmere' })))).not.toBeNull()
+  })
+
+  it('round-trips a route opened by openRoute', () => {
+    const game = gameUnderWay()
+    const { world } = game
+    world.contacted = ['millbrook']
+    world.tradingPost = 4
+    world.stock = { gold: 100, timber: 20 }
+    const party = game.parties[0]
+    party.position = { ...encampment(world).position }
+    party.confronting = null
+    expect(openRouteRefusal(game, party, 'millbrook')).toBeNull()
+    openRoute(game, party, 'millbrook')
+    expect(world.routes).toHaveLength(1)
+    expect(parseSave(serializeSave({ game, battle: null, savedAt: 5 }))).toEqual({ game, battle: null, savedAt: 5 })
   })
 })

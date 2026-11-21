@@ -1,7 +1,7 @@
 import type { Hex } from '../grid/hex.ts'
 import { MAX_BLIGHT, SHIFT_COST, blightAt, boardIndex, netInfluence, type WorldEvent } from './blight.ts'
 import type { PartyPresence } from './expedition.ts'
-import { partnerDay } from './trade.ts'
+import { partnerDay, tradeDay } from './trade.ts'
 import { ENCAMPMENT_ID, encampment, type QuietLocation, type WorldState } from './worldMap.ts'
 
 /**
@@ -15,7 +15,8 @@ import { ENCAMPMENT_ID, encampment, type QuietLocation, type WorldState } from '
  * levels 1 to 3) lifts its site's yield and strength and is razed when the
  * site is lost. A watchtower is lost and warned of as a held site is, at
  * `LOSS_LEVEL`, and yields nothing. At the end of the day the trade
- * partners are contacted and fall silent or wake (`partnerDay` in trade.ts).
+ * partners are contacted and fall silent or wake (`partnerDay` in trade.ts),
+ * and on yield days the trade routes pay or are raided (`tradeDay`).
  */
 
 /** What the warning of a tower under threat calls it. */
@@ -29,8 +30,8 @@ export const LOSS_LEVEL = 2
 export const YIELD_DAYS = 5
 /** What the encampment yields, in gold. */
 export const ENCAMPMENT_YIELD = 2
-/** Where a yield comes from: a held site (the default, left out of the event) or the encampment's market. */
-export type YieldSource = 'site' | 'market'
+/** Where a yield comes from: a held site (the default, left out of the event), the encampment's market or a trade route. */
+export type YieldSource = 'site' | 'market' | 'route'
 /** What the market brings the stock in gold each yield day, by trading post level - 1 (levels 4 to 6), before taint halves it. */
 export const MARKET_INCOME: readonly number[] = [0, 0, 0, 2, 3, 5]
 /** The market's income at full strength: the trading post's level reads the table. */
@@ -189,7 +190,8 @@ export function updateTerritory(world: WorldState, presences: readonly PartyPres
       events.push({ type: 'yield', site: ENCAMPMENT_ID, name: camp.name, material: 'gold', amount: market, source: 'market' })
     }
   }
-  // The partners' day comes last, so a day's earlier events keep their order.
+  // The partners' day and then the routes' come last, so a day's earlier events keep their order.
   events.push(...partnerDay(world, presences))
+  events.push(...tradeDay(world, presences))
   return events
 }

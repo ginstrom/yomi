@@ -27,6 +27,7 @@ import {
   raiseShrine,
   shrineCost,
   spend,
+  towerHexRefusal,
 } from './buildings.ts'
 import { presences } from './expedition.ts'
 import { newGame } from './gameState.ts'
@@ -99,6 +100,22 @@ describe('a watchtower', () => {
     const { world: among, party: amongParty } = ready()
     among.locations.push({ ...(among.locations.find((l) => l.kind === 'monsters') as MonsterLocation), id: 'here', position: amongParty.position })
     expect(canBuildTower(among, amongParty)).not.toBeNull()
+  })
+
+  it('is judged for any hex by towerHexRefusal, in towerSiteRefusal\'s words', () => {
+    const { game, world, party } = ready()
+    const here = party.position
+    expect(towerHexRefusal(world, here)).toBeNull()
+    expect(towerHexRefusal(world, offsetToHex(9, 19))).toBe('A watchtower cannot stand on a location.')
+    world.blight[boardIndex(world.board, here)] = 1
+    expect(towerHexRefusal(world, here)).toBe('A watchtower needs clean land.')
+    world.blight[boardIndex(world.board, here)] = 0
+    buildTower(game, party)
+    expect(towerHexRefusal(world, here)).toBe('A watchtower already stands here.')
+    expect(towerHexRefusal(world, offsetToHex(7 + TOWER_SPACING - 1, 17))).toBe(`Too near another watchtower: they must stand ${TOWER_SPACING} hexes apart.`)
+    expect(towerHexRefusal(world, offsetToHex(7 + TOWER_SPACING, 17))).toBeNull()
+    world.status = 'lost'
+    expect(towerHexRefusal(world, offsetToHex(7 + TOWER_SPACING, 17))).toBe('Nothing can be built here now.')
   })
 
   it('pushes back the blight with TOWER_STRENGTH and sees TOWER_VISION hexes around', () => {

@@ -27,3 +27,9 @@ Measured by the `yomi-measure` agent on a clean worktree at `b28bba1` (no code c
 ## Step 01 outcome
 
 - Step 01 (partners, contact and silence): engineer opus, reviewer opus; verdict clean after 1 review round. Commits `a2df674`, `5916f52`, and the review follow-up (two small save fixes, step 02's route save check, the index trimmed under its cap).
+
+## Step 02: after the change (2026-11-21)
+
+- 50-campaign check: SHA-256 `1ceefe633e71c0326c0c5b261c77e1c010c49e30303a85286a782589e74400d1`, **identical** to the baseline (23 of 50; gold by source: sites 234, market 0, sales 40 a campaign).
+- The refactor guard passes with the fixture untouched.
+- Roads on a fresh world (`roadTo`, any seed): Millbrook 14 hexes (27 gold, 10 timber; security 0.857, 1 gold a yield day), Saltmere 30 (35 gold, 10 timber; security 0.667, 2 gold); neither raided, the nearest nest 3 hexes from either road.

@@ -319,7 +319,11 @@ export function isNotable(_world: WorldState, event: WorldEvent, presences: read
     case 'tower_lost':
     case 'encampment_lost':
     case 'partner_silent':
+    case 'route_abandoned':
       return true
+    case 'route_raided':
+      // Told once, on the first raided yield day of a run (economy R9).
+      return event.days === 1
     default:
       return false
   }

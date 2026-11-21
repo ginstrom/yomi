@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_BLIGHT, SHIFT_COST, blightAt, boardIndex, netInfluence } from './blight.ts'
+import { MAX_BLIGHT, SHIFT_COST, blightAt, boardIndex, netInfluence, type WorldEvent } from './blight.ts'
 import { passDay, setOrder } from './company.ts'
 import { PARTY_NAMES, newExpedition, partyId, presences, type PartyPresence } from './expedition.ts'
 import { newGame } from './gameState.ts'
@@ -20,6 +20,7 @@ import {
   type ImprovementLevel,
   type Material,
 } from './territory.ts'
+import { roadTo } from './trade.ts'
 import { ENCAMPMENT_ID, newWorld, passTurn, travel, type MonsterLocation, type QuietLocation, type WorldState } from './worldMap.ts'
 
 /** A new game on world `seed`: its world and its one party, the ready-made three, at home. */
@@ -352,5 +353,40 @@ describe('trade partners in the territory', () => {
       expect(events.filter((e) => 'site' in e && e.site === 'millbrook')).toEqual([])
       expect(world.held).not.toContain('millbrook')
     }
+  })
+})
+
+describe('trade routes in the territory', () => {
+  /** World 1 at the Market with Millbrook contacted and a route open to it, on its road as `roadTo` gives it. */
+  function routed() {
+    const { world } = solo(1)
+    world.tradingPost = 4
+    world.contacted.push('millbrook')
+    world.routes.push({ id: 'route_millbrook', partner: 'millbrook', road: roadTo(world, 'millbrook')!, opened: 1, raidedDays: 0 })
+    return world
+  }
+  const kinds = (events: readonly WorldEvent[]) => events.map((e) => (e.type === 'yield' ? `yield:${e.source ?? 'site'}` : e.type))
+
+  it('yield on yield days after the sites\', the market\'s and the partners\' events', () => {
+    const world = routed()
+    world.turn = 2 * YIELD_DAYS
+    const saltmere = world.locations.find((l) => l.id === 'saltmere')!
+    const types = kinds(updateTerritory(world, [{ position: { ...saltmere.position }, levels: [1, 1, 1] }]))
+    expect(types.slice(-3)).toEqual(['partner_contacted', 'yield:route', 'yield:route'])
+    expect(types.lastIndexOf('yield:site')).toBeLessThan(types.indexOf('yield:market'))
+    expect(types.indexOf('yield:market')).toBeLessThan(types.indexOf('partner_contacted'))
+  })
+
+  it('leave a world with no routes yielding exactly as before', () => {
+    const plain = solo(1).world
+    const routes = routed()
+    routes.routes = []
+    plain.tradingPost = routes.tradingPost
+    plain.contacted = [...routes.contacted]
+    plain.turn = routes.turn = 2 * YIELD_DAYS
+    const events = updateTerritory(routes, [])
+    expect(events).toEqual(updateTerritory(plain, []))
+    expect(kinds(events).at(-1)).toBe('yield:market')
+    expect(routes.stock).toEqual(plain.stock)
   })
 })
