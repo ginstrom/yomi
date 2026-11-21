@@ -15,18 +15,18 @@ outline = "auto"
 8 = [[1, "gegggggeggg"], [12, "TTTNTT"], [18, "geggg"]]
 # grass, the salt heap and the flat pans
 9 = [[1, "gggegggggeggggegggggeg"]]
-10 = [[1, "gggegggge"], [10, "W"], [11, "g"], [12, "aaaaaaaaaa"], [22, "g"]]
-11 = [[1, "gggegggg"], [9, "WWW"], [12, "aWWWaWWWWa"], [22, "e"]]
-12 = [[1, "gegggggg"], [9, "wWw"], [12, "aaaaaaaaaa"], [22, "g"]]
-# the bay (stepped shore), the boat and its mast, grass beyond
+10 = [[10, "W"], [12, "aaaaaaaaaa"]]
+11 = [[9, "WWW"], [12, "aWWWaWWWWa"]]
+12 = [[9, "wWw"], [12, "aaaaaaaaaa"]]
+# a ground strip under the pans, and the bay (stepped shore) with the boat
 13 = [[1, "bbbbb"], [6, "ggegggggeggggggge"]]
-14 = [[1, "bbbb"], [5, "r"], [6, "bb"], [8, "gegggggeggggggg"]]
-15 = [[1, "bbb"], [4, "Wn"], [6, "bbbb"], [10, "ggeggggggegge"]]
-16 = [[1, "bb"], [3, "WWn"], [6, "bbcbb"], [11, "ggegggggeggg"]]
-17 = [[1, "bb"], [3, "WWn"], [6, "bbbbb"], [11, "gggeggggggeg"]]
-18 = [[1, "bb"], [3, "nnnnnn"], [9, "bb"], [11, "geggggggegge"]]
-19 = [[1, "bbb"], [4, "NNNN"], [8, "bcb"], [11, "ggeggggggegg"]]
-20 = [[2, "bbbbbbbb"], [10, "ggeggeggggegg"]]
+14 = [[1, "bbbb"], [5, "r"], [6, "bb"]]
+15 = [[1, "bbb"], [4, "Wn"], [6, "bbbb"]]
+16 = [[1, "bb"], [3, "WWn"], [6, "bbcbb"]]
+17 = [[1, "bb"], [3, "WWn"], [6, "bbbbb"]]
+18 = [[1, "bb"], [3, "nnnnnn"], [9, "bb"]]
+19 = [[1, "bbb"], [4, "NNNN"], [8, "bcb"]]
+20 = [[2, "bbbbbbbb"]]
 
 # The water shimmers.
 [frames.swell]
