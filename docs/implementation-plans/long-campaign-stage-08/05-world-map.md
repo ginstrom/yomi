@@ -47,11 +47,12 @@ export function roadSegments(world: WorldState, presences: readonly PartyPresenc
 //   else each segment by hexSecurity of its `to` hex: 1 'secure', 0.5 'tainted', 0 'raided'
 export function roadInfoLines(world: WorldState, presences: readonly PartyPresence[], at: Hex): string[]
 //   for each open route whose road holds `at`: "The Millbrook road: security 75%, about 2 gold every 5 days." (income as decision 8),
-//   and when raided today "Raided: <raidWords>."
+//   or, when raided today, "The Millbrook road: security 75%, pays nothing while raided." then "Raided: <raidWords>."
 export function raidWords(raid: { cause: RaidCause; raider?: MonsterLocation }, partner: PartnerLocation): string
 //   raiders "the Goblin Brood is within 2 hexes" (theName, RAID_RADIUS; "are" for a plural name such as "the Goblin Raiders");
 //   corrupted "the blight has overrun it"; silent "Millbrook is silent"
 export function partnerInfoLines(world: WorldState, partner: PartnerLocation): string[]
+//   (silence told only when contacted or the hex is in sight: `partnerInfoLines(world, partner, inSight = true)`)
 //   "Trade partner: <good>."; "Not yet contacted: walk here to trade." | "Trades with <encampment name>." ; "Silent while the blight holds its land." when silent;
 //   "Route open: security N%." when routed
 // src/scenes/worldEvents.ts describeWorldEvent:
@@ -165,7 +166,7 @@ export function raidCause(world: WorldState, route: Pick<TradeRoute, 'partner' |
 
 1. **`src/scenes/roadsView.ts`** (new, Phaser-free) with `RoadShade`, `ROAD_COLORS`, `RoadSegment`, `roadSegments`, `roadInfoLines`, `raidWords` and `partnerInfoLines` exactly as C5:
    - `roadSegments`: for each route in `world.routes`, the segments encampment → `road[0]`, `road[0]` → `road[1]`, …; if `raidCause(world, route)` is not null every segment is `'raided'`, else each by `hexSecurity(world, to, presences)`.
-   - `roadInfoLines`: "The Millbrook road: security 75%, about 2 gold every 5 days." with `Math.round(routeSecurity(world, road, []) * 100)` and `routeIncome(world, road, [])` (decision 8: towers, not parties), `YIELD_DAYS` for the 5; then "Raided: <raidWords>." when `raidCause` holds today. One pair of lines per route through the hex.
+   - `roadInfoLines`: "The Millbrook road: security 75%, about 2 gold every 5 days." with `Math.round(routeSecurity(world, road, []) * 100)` and `routeIncome(world, road, [])` (decision 8: towers, not parties), `YIELD_DAYS` for the 5; when `raidCause` holds today the first line reads "…security 75%, pays nothing while raided." (no income quoted), followed by "Raided: <raidWords>." One pair of lines per route through the hex.
    - `raidWords` uses `theName` (and the plural "are" for a name ending in s, as `isPluralName`) and `RAID_RADIUS`. Step 06's Routes tab reuses it; keep it exported and pure.
    - `partnerInfoLines`: as C5; the encampment's name from `encampmentName`.
 2. **`WorldScene.ts`:**
@@ -220,4 +221,6 @@ Checked by eye (screenshots kept outside the repo, in the scratchpad: `roads-128
 Results: `npm test` 101 files, 2489 tests pass; `npm run build` passes; `npm run test:browser` ran three times under heavy machine load (step 07's simulator running): runs 1 and 2 failed on timeouts in "fights any encounter at any threat..." (debug.test.ts) and, in run 3, "drags gear between the equipment, the backpack and the baggage" (character.test.ts); each passed when rerun alone (debug.test.ts whole file 4 of 4, the gear drag alone). No rule changed: the refactor guard is untouched and green, the 50-campaign check was not needed.
 
 Searched `CLAUDE.md`, `.claude/` and `docs/reference` for `LOCATION_SPRITES` and the `map_resource` stand-in: none left (only the scenes reference now names `roadsView.ts`).
+
+Review round 1 (clean, four non-blocking findings), all fixed: (1) the probe's `partners[].grey` reads the drawn sprite's tint and label colour, asserted in the e2e test; (2) a silent partner is greyed, and its "Silent while the blight holds its land." line told, only when it is contacted or in sight (`silenceShown`, `partnerInfoLines`' `inSight`), with unit tests; (3) a raided road's first line is "The Millbrook road: security 75%, pays nothing while raided." (C5 wording updated here); (4) the manual says gold is "clean, or tainted or blighted but guarded (corrupted land cannot be guarded)" and that the hover's income counts watchtowers, not parties.
 

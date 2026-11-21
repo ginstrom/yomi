@@ -129,6 +129,11 @@ describe('hexInfo of a trade partner', () => {
   })
 })
 
+function solo2() {
+  const it = solo()
+  return { ...it, at: it.world.locations.find((l) => l.id === 'millbrook')!.position }
+}
+
 describe('hexInfo of a partner and its road (stage 8)', () => {
   function withRoute() {
     const it = solo()
@@ -149,6 +154,15 @@ describe('hexInfo of a partner and its road (stage 8)', () => {
     expect(shown.lines).toContain('Trade partner: timber.')
     expect(shown.lines.some((l) => l.startsWith('Route open: security '))).toBe(true)
     expect(shown.lines.some((l) => l.startsWith('The Millbrook road:'))).toBe(true)
+  })
+
+  it('keeps an uncontacted partner\'s silence from a player who cannot see it', () => {
+    const { game, world, at } = solo2()
+    world.seen[boardIndex(world.board, at)] = 0
+    world.silent.push('millbrook')
+    expect(info(game, at).lines).not.toContain('Silent while the blight holds its land.')
+    world.contacted.push('millbrook')
+    expect(info(game, at).lines).toContain('Silent while the blight holds its land.')
   })
 
   it('tells the road on an unexplored road hex', () => {

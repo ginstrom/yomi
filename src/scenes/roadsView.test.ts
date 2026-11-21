@@ -121,7 +121,10 @@ describe('roadInfoLines', () => {
     const { world, road } = routed()
     clear(world, road)
     world.locations.push(nest(offsetToHexNear(road[5])))
-    expect(roadInfoLines(world, [], road[0]).at(-1)).toBe('Raided: the Goblin Brood is within 2 hexes.')
+    expect(roadInfoLines(world, [], road[0])).toEqual([
+      expect.stringMatching(/^The Millbrook road: security \d+%, pays nothing while raided\.$/),
+      'Raided: the Goblin Brood is within 2 hexes.',
+    ])
     world.silent.push('millbrook')
     expect(roadInfoLines(world, [], road[0]).at(-1)).toBe('Raided: Millbrook is silent.')
   })
@@ -147,6 +150,14 @@ describe('partnerInfoLines', () => {
     expect(partnerInfoLines(world, partner)).toEqual(['Trade partner: timber.', `Trades with ${home}.`])
     world.silent.push('millbrook')
     expect(partnerInfoLines(world, partner)).toContain('Silent while the blight holds its land.')
+    world.silent.length = 0
+    // An uncontacted partner's silence is told only while in sight.
+    world.contacted.length = 0
+    world.silent.push('millbrook')
+    expect(partnerInfoLines(world, partner, false)).not.toContain('Silent while the blight holds its land.')
+    expect(partnerInfoLines(world, partner, true)).toContain('Silent while the blight holds its land.')
+    world.contacted.push('millbrook')
+    expect(partnerInfoLines(world, partner, false)).toContain('Silent while the blight holds its land.')
     world.silent.length = 0
     const road = roadTo(world, 'millbrook')!
     clear(world, road)

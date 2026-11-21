@@ -66,18 +66,29 @@ export function roadInfoLines(world: WorldState, _presences: readonly PartyPrese
     const partner = world.locations.find((l): l is PartnerLocation => l.kind === 'partner' && l.id === route.partner)
     if (!partner) return []
     const security = Math.round(routeSecurity(world, route.road, []) * 100)
-    const lines = [`The ${partner.name} road: security ${security}%, about ${routeIncome(world, route.road, [])} gold every ${YIELD_DAYS} days.`]
     const raid = raidCause(world, route)
+    // A raided road pays nothing, so it does not quote the income it would have.
+    const pays = raid ? 'pays nothing while raided' : `about ${routeIncome(world, route.road, [])} gold every ${YIELD_DAYS} days`
+    const lines = [`The ${partner.name} road: security ${security}%, ${pays}.`]
     if (raid) lines.push(`Raided: ${raidWords(raid, partner)}.`)
     return lines
   })
 }
 
-/** The info panel's lines for a trade partner. */
-export function partnerInfoLines(world: WorldState, partner: PartnerLocation): string[] {
+/**
+ * Whether the player may see that a partner is silent: it is contacted, or its
+ * hex is in sight now. An uncontacted partner seen earlier and out of sight
+ * shows as it was last seen.
+ */
+export function silenceShown(world: WorldState, partnerId: string, inSight: boolean): boolean {
+  return isSilent(world, partnerId) && (isContacted(world, partnerId) || inSight)
+}
+
+/** The info panel's lines for a trade partner; `inSight`: its hex is in sight now (silence of an uncontacted partner is told only then). */
+export function partnerInfoLines(world: WorldState, partner: PartnerLocation, inSight = true): string[] {
   const lines = [`Trade partner: ${partner.good}.`]
   lines.push(isContacted(world, partner.id) ? `Trades with ${encampmentName(world)}.` : 'Not yet contacted: walk here to trade.')
-  if (isSilent(world, partner.id)) lines.push('Silent while the blight holds its land.')
+  if (silenceShown(world, partner.id, inSight)) lines.push('Silent while the blight holds its land.')
   const route = routeOf(world, partner.id)
   if (route) lines.push(`Route open: security ${Math.round(routeSecurity(world, route.road, []) * 100)}%.`)
   return lines

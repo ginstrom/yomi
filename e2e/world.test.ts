@@ -1187,7 +1187,7 @@ describe('the world map', () => {
     expect(planted.roads[0].route).toBe('route_millbrook')
     expect(planted.roads[0].shades).toHaveLength(road.length)
     expect(planted.roads[0].shades.every((shade) => shade !== 'raided')).toBe(true)
-    expect(planted.partners.find((p) => p.id === 'millbrook')).toMatchObject({ contacted: true, silent: false })
+    expect(planted.partners.find((p) => p.id === 'millbrook')).toMatchObject({ contacted: true, silent: false, grey: false })
 
     // The road is the company's own, told through the fog; the partner shows once its land is seen.
     const hexOnRoad = road[Math.floor(road.length / 2)]
@@ -1214,6 +1214,9 @@ describe('the world map', () => {
     await debug('blight 2 millbrook')
     await debug('days 1')
     const silent = await game.waitFor('World', (w) => w.partners.find((p) => p.id === 'millbrook')?.silent === true)
+    // The drawn icon and label are grey, not just the state.
+    expect(silent.partners.find((p) => p.id === 'millbrook')!.grey).toBe(true)
+    expect(silent.partners.find((p) => p.id === 'saltmere')!.grey).toBe(false)
     expect(silent.roads[0].shades.every((shade) => shade === 'raided')).toBe(true)
     await game.hover(worldHexOnScreen(silent, millbrook.position))
     const quiet = await game.waitFor('World', (w) => w.info.includes('Silent while the blight holds its land.'))

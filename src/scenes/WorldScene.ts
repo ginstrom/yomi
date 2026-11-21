@@ -47,7 +47,7 @@ import { BANNER_SPRITES, PARTY_LIST_W, bannerOf, deployedParties, figureOffsets,
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { FRAME_ACTIVE_COLOR, HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
-import { ROAD_COLORS, roadSegments, type RoadSegment } from './roadsView.ts'
+import { ROAD_COLORS, roadSegments, silenceShown, type RoadSegment } from './roadsView.ts'
 import { advanceMessage, describeDays, describeOthers, describeStanding, describeWalk, describeWorldEvent, describeWorldEvents, yieldSummary } from './worldEvents.ts'
 import { improveLabel } from './improveButton.ts'
 import { hexInfo } from './hexInfo.ts'
@@ -279,6 +279,9 @@ export class WorldScene extends Phaser.Scene {
   /** The segments as drawn now, and their key. */
   private drawnRoads: RoadSegment[] = []
   private drawnRoadsKey = ''
+  /** The partners' sprites and labels as drawn now, for the probe's `grey`. */
+  private partnerSprites = new Map<string, Phaser.GameObjects.Sprite>()
+  private partnerLabels = new Map<string, Phaser.GameObjects.Text>()
   private drawnBlight = ''
   /** The hexes in sight as of the last refresh, by `boardIndex`. */
   private visible = new Set<number>()
@@ -638,6 +641,7 @@ export class WorldScene extends Phaser.Scene {
         id: p.id,
         contacted: isContacted(this.world, p.id),
         silent: isSilent(this.world, p.id),
+        grey: this.partnerGrey(p.id),
         drawn: this.knowledgeOf(p) !== 'hidden',
       })),
       buttons: {
@@ -731,15 +735,28 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /** Whether a partner is drawn grey: silent, and the player may know it (contacted, or in sight now). */
+  private greyed(id: string): boolean {
+    return silenceShown(this.world, id, this.visible.has(boardIndex(this.world.board, partners(this.world).find((p) => p.id === id)!.position)))
+  }
+
+  /** Whether a partner's drawn sprite is tinted grey and its drawn label is grey, for the probe. */
+  private partnerGrey(id: string): boolean {
+    const sprite = this.partnerSprites.get(id)
+    const label = this.partnerLabels.get(id)
+    return !!sprite && !!label && sprite.isTinted && sprite.tintTopLeft === SILENT_TINT && label.style.color === SILENT_LABEL
+  }
+
   /** Every known location's sprite, under the party, faded where out of sight; drawn again only when that changes. */
   private refreshLocations(): void {
     const key = [
-      ...this.world.locations.map((l) => `${l.id}:${this.knowledgeOf(l)}${l.kind === 'partner' && isSilent(this.world, l.id) ? ':silent' : ''}`),
+      ...this.world.locations.map((l) => `${l.id}:${this.knowledgeOf(l)}${l.kind === 'partner' && this.greyed(l.id) ? ':silent' : ''}`),
       ...this.world.towers.map((t) => t.id),
       ...this.world.locations.filter((l) => siteImprovement(this.world, l.id) === 3).map((l) => `fort:${l.id}`),
     ].join()
     if (key === this.drawnLocations) return
     this.drawnLocations = key
+    this.partnerSprites.clear()
     this.siteSprites.removeAll(true)
     this.palisades = 0
     for (const [i, location] of this.world.locations.entries()) {
@@ -753,7 +770,10 @@ export class WorldScene extends Phaser.Scene {
         .setScale(source ? SOURCE_SCALE : LOCATION_SCALE)
         .play({ key: spriteAnim(sprite, 'idle'), delay: (i * LOCATION_STAGGER_MS) % 1000 })
       if (source) figure.setTint(SOURCE_TINT)
-      if (location.kind === 'partner' && isSilent(this.world, location.id)) figure.setTint(SILENT_TINT)
+      if (location.kind === 'partner') {
+        this.partnerSprites.set(location.id, figure)
+        if (this.greyed(location.id)) figure.setTint(SILENT_TINT)
+      }
       if (knowledge === 'remembered') figure.setAlpha(REMEMBERED_ALPHA)
       this.siteSprites.add(figure)
       // A fort's palisade rings its resource's icon.
@@ -781,6 +801,7 @@ export class WorldScene extends Phaser.Scene {
   /** Every known location's name over the party, so none is hidden: a held site's starred, and a threatened one's with the days until it falls. */
   private refreshLabels(): void {
     this.siteLabels.removeAll(true)
+    this.partnerLabels.clear()
     for (const location of this.world.locations) {
       const knowledge = this.knowledgeOf(location)
       if (knowledge === 'hidden') continue
@@ -794,19 +815,19 @@ export class WorldScene extends Phaser.Scene {
       const built = siteImprovement(this.world, location.id)
       if (built !== 0 && location.kind === 'resource') lines.push(improvementName(location, built))
       if (days !== null) lines.push(`falls in ${days}d`)
-      this.siteLabels.add(
-        this.add
+      const label = this.add
           .text(x, y + LABEL_Y, lines.join('\n'), {
             fontFamily: 'monospace',
             fontSize: '11px',
-            color: labelColor(location, held, days !== null, location.kind === 'partner' && isSilent(this.world, location.id)),
+            color: labelColor(location, held, days !== null, location.kind === 'partner' && this.greyed(location.id)),
             stroke: '#000000',
             strokeThickness: 3,
             align: 'center',
           })
           .setOrigin(0.5, 0)
-          .setAlpha(knowledge === 'remembered' ? REMEMBERED_ALPHA + 0.25 : 1),
-      )
+          .setAlpha(knowledge === 'remembered' ? REMEMBERED_ALPHA + 0.25 : 1)
+      this.siteLabels.add(label)
+      if (location.kind === 'partner') this.partnerLabels.set(location.id, label)
     }
     // A tower goes unnamed until the blight gains on it.
     for (const tower of this.world.towers) {
