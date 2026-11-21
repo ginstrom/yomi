@@ -13,6 +13,7 @@ Loaded when working in `src/game/`: encounters and bandits, the company and its 
 - **Vision is knowledge only.** `vision.ts` says what the player has seen (`seen`, `sighted`); the rules run on the true state and the simulator ignores it. Every change to the land ends with `updateSight`.
 - **Hit points follow gear.** A worn item replaced or removed (`ItemPlace`, runecraft's `replaceAt`) ends with `clampHp` on the wearer.
 - **Balance.** Anything that changes a battle's outcome, a foe or an encounter moves balance: `.claude/skills/yomi-balance/`.
+- **Saves.** Changing the shape of `GameState`, `Character`, `WorldState` or `BattleSnapshot`: raise `SAVE_VERSION`. Write a migration only when a design asks for one; otherwise older saves read as unreadable, which is fine in development. A migration ends with the same strict check as a current save and gets a captured fixture in `src/game/fixtures/`.
 - **The game state lives in scene data**, never in a module global. A game with no `slot` (`newGame()`'s default) is never saved.
 
 ## The modules
@@ -45,10 +46,6 @@ Loaded when working in `src/game/`: encounters and bandits, the company and its 
 
 World map, blight and territory, scaling, encounters, bandits and saving each have a section in `docs/reference/game.md`; read it before changing one. Two easy to get wrong: the encampment's name is the player's (read through `encampmentName`, never assumed), and a site lost razes its improvement.
 
-## Checklists
+## Adding content
 
-- **Changing the shape** of `GameState`, `Character`, `WorldState` or `BattleSnapshot`: raise `SAVE_VERSION`. Write a migration only when a design asks for one; otherwise older saves read as unreadable, which is fine in development. A migration ends with the same strict check as a current save and gets a captured fixture in `src/game/fixtures/`.
-- **A new facility**: an entry in `FACILITIES` (`encampment.ts`), a field in `setFacilityLevel`, sprites in `FACILITY_SPRITES` and a plot (`encampmentView.ts`), and a scene in `EncampmentScene`'s `OPENS` if it has a screen of its own.
-- **A new encounter**: an entry in `ENCOUNTERS`, its band in `ENCOUNTER_BANDS` and counts in `ENCOUNTER_COUNTS`; add it to `SPAWN_KINDS` only if the blight should spawn it.
-- **A new foe kind**: a sprite of that name with `idle` and `walk` animations, an experience value in `FOE_XP`, a native level in `FOE_NATIVE_LEVEL` if not 1, a sound in `FOE_SOUNDS`, and a stat block within `foeYardstick` at its native level (a test checks), each field outside it a named exception.
-- **A new one-day action**: a refusal and a time-free apply in its module, a `DayAction` case (`expedition.ts`) that `company.ts` runs, and a convenience over `act`.
+Adding a facility, encounter, foe kind or one-day action: `.claude/skills/yomi-add-content/`.

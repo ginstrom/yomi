@@ -25,4 +25,4 @@ An item's id is `<plain>[@<grade>][+<modifier><grade>][#<rune>(.<rune>)*]`, as i
 
 ## Equipping
 
-Every change to what a character wears ends with `clampHp` (`src/character/CLAUDE.md`). A two-handed weapon and an off-hand item cannot be held together. A new gear icon needs a sprite and a `unitLook.ts` entry (`src/scenes/CLAUDE.md`'s checklist).
+Every change to what a character wears ends with `clampHp` (`src/character/CLAUDE.md`). A two-handed weapon and an off-hand item cannot be held together. A new gear icon: `.claude/skills/yomi-add-content/gear-icon.md`.

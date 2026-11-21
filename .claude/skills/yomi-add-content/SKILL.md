@@ -16,7 +16,19 @@ Open the file for your case, touch every item in it, then run `npm test`. Each f
 | [element.md](element.md) | an element |
 | [skill-node.md](skill-node.md) | a perk node of the trees |
 | [battle-event.md](battle-event.md) | a new event kind or a changed event shape |
-| (no file) | a sound effect: `audio/CLAUDE.md`, "Which sound plays when" |
+| [foe.md](foe.md) | a foe or unit kind |
+| [encounter.md](encounter.md) | an encounter |
+| [facility.md](facility.md) | an encampment facility |
+| [location-kind.md](location-kind.md) | a world map location kind |
+| [day-action.md](day-action.md) | a one-day action |
+| [item.md](item.md) | a base or enchanted item |
+| [rune.md](rune.md) | a rune kind |
+| [gear-icon.md](gear-icon.md) | a weapon, shield, armour, head or cloak look |
+| [portrait.md](portrait.md) | a portrait preset |
+| [party-banner.md](party-banner.md) | a party banner |
+| [debug-command.md](debug-command.md) | a debug command |
+| [story.md](story.md) | a cutscene, tip, story moment or tutorial anchor |
+| (no file) | a sound effect: `audio/CLAUDE.md`, "Which sound plays when"; a button that closes or steps back also belongs in `BACK_LABELS` (`src/scenes/sounds.ts`) |
 
 ## General rules
 

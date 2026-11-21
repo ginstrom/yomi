@@ -1,6 +1,6 @@
 # The scene layer: reference
 
-The full detail behind `src/scenes/CLAUDE.md`, which holds the contracts and checklists. This file says how each screen behaves, what each helper module covers, which assets are loaded where, and how the debug console works. Grep it by scene, helper or table name.
+The full detail behind `src/scenes/CLAUDE.md`, which holds the contracts; the 'if you add X' checklists are in `.claude/skills/yomi-add-content/`. This file says how each screen behaves, what each helper module covers, which assets are loaded where, and how the debug console works. Grep it by scene, helper or table name.
 
 ## Scene flow
 
