@@ -131,7 +131,7 @@ Append-only, one `## Step NN: <title>` section per step: date, engineer and revi
 | 02 | [02-yomi-balance.md](02-yomi-balance.md) | `yomi-balance` skill, `yomi-measure` agent, balance text out of scripts/character/engine/game guides, root Balance and Subagents lines, two code comments; one `yomi-measure` run **[Q1]** | 01 | sonnet / opus | done | 05aeac2 |
 | 03 | [03-add-content-battle.md](03-add-content-battle.md) | `yomi-add-content` index and its seven battle files; engine checklists, combat bullet 1, character node line, three scenes items moved | 02 | sonnet / sonnet | done | 27254d2 |
 | 04 | [04-add-content-world.md](04-add-content-world.md) | the other twelve content files; game, scenes, inventory and story checklists moved; scenes reference header | 03 | sonnet / sonnet | done | cadbe87 |
-| 05 | [05-stage-1-close.md](05-stage-1-close.md) | root "Keeping these files current" table and Docs line; findability check of eight guides; stage 1 sizes | 04 | sonnet / opus | done | STEP05 |
+| 05 | [05-stage-1-close.md](05-stage-1-close.md) | root "Keeping these files current" table and Docs line; findability check of eight guides; stage 1 sizes | 04 | sonnet / opus | done | 368cc13 |
 | 06 | [06-records-and-migration.md](06-records-and-migration.md) | `records.test.ts`; stage 7 record migrated (history to its `log.md`); this feature's record in shape | 05 | opus / opus | pending | |
 | 07 | [07-global-state-history.md](07-global-state-history.md) | the design §5.3 global edits, diff in `log.md` **[Q2]** | 06 | opus / opus | pending | |
 | 08 | [08-role-profiles.md](08-role-profiles.md) | seven role profiles and their cap **[Q2]** | 07 | sonnet / opus | pending | |
