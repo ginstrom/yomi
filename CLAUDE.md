@@ -2,7 +2,7 @@
 
 Yomi is a 2D turn-based fantasy tactics game: Phaser 4 + TypeScript, bundled with Vite. Battles are fought on a pointy-top hex grid (action points, flanking, facing arcs, zones of control). Between battles the company's parties travel a hex world map against a spreading blight, from a home encampment they build up.
 
-This file is the map. A directory's `CLAUDE.md` loads when you work there; the exhaustive rules are in `docs/reference/`, which nothing loads.
+This file is the map. A directory's `CLAUDE.md` loads when you work there; the exhaustive rules are in `docs/reference/`, which nothing loads by itself.
 
 ## Commands
 
@@ -25,7 +25,7 @@ Commit finished work without being asked: once a change is complete and `npm tes
 
 ## Subagents
 
-Pass `model: "sonnet"` for simple work: searching, reading and summarising, running tests or the simulator and reporting, mechanical edits whose shape is decided. Leave the model unset for work that needs judgement: designing, changing rules or balance, debugging an unknown cause, reviewing code. When in doubt, leave it unset. Simulator measurements: the `yomi-measure` agent; asset checks: `yomi-asset-check`.
+Pass `model: "sonnet"` for work that is not too complex: searching, reading and summarising, running tests or the simulator and reporting, mechanical edits whose shape is decided. Leave the model unset for work that needs judgement: designing, changing rules or balance, debugging an unknown cause, reviewing code. When in doubt, leave it unset. Simulator measurements: the `yomi-measure` agent; asset checks: `yomi-asset-check`.
 
 ## Architecture
 
@@ -34,9 +34,9 @@ Pass `model: "sonnet"` for simple work: searching, reading and summarising, runn
 | Directory | What | Guide |
 | --- | --- | --- |
 | `src/grid/hex.ts` | axial hex maths, areas, the free-attack-avoiding pathfinder | — |
-| `src/combat/` | attack resolution, stat blocks, foe scaling, spells, statuses, abilities, elements, `mulberry32` | yes |
+| `src/combat/` | attack resolution, stat blocks, foe scaling, spells, statuses, abilities, elements, the seedable `mulberry32` | yes |
 | `src/engine/` | battle state machine, AI (`POLICIES`), headless loop (`autoPlay.ts`) | yes |
-| `src/character/` | the persistent `Character`, skill trees, progression | yes |
+| `src/character/` | the persistent `Character`, creation, skill trees, progression | yes |
 | `src/inventory/` | gear catalog, grades, modifiers, runes | yes |
 | `src/game/` | everything outside battle: encounters, the day loop, world map, blight, encampment, `GameState`, saving | yes |
 | `src/story/` | cutscenes and tutorial (change no rule) | yes |
@@ -60,8 +60,8 @@ Two vitest projects: `scenes` (jsdom smoke tests) is only `src/scenes/*Scene.tes
 
 ## Docs
 
-- `docs/reference/<area>.md`: `battle`, `characters`, `game`, `scenes`, `simulator`, `audio`, `sprites`, `e2e`.
-- `docs/manual/README.md`: the player's manual; a rule or screen change updates it and retakes its screenshots.
+- `docs/reference/<area>.md`: `battle`, `characters`, `game`, `scenes`, `simulator`, `audio`, `sprites`, `e2e`. Open the section you need when a guide points there.
+- `docs/manual/README.md`: the player's manual; a change to a rule it states or a screen it shows updates it and retakes its screenshots.
 - `.claude/`: project skills (`yomi-*`), agents and role profiles.
 - `docs/designs/`: feature designs (may be ahead of the code). `docs/implementation-plans/`: step plans and their history (`log.md`).
 
@@ -74,7 +74,7 @@ Update the right file in the commit that makes it wrong; search the CLAUDE.md fi
 | commands, the map, contracts spanning directories | this file |
 | a rule that stops you breaking one directory's code | that directory's `CLAUDE.md`, a line a module |
 | how to do a kind of task (an "if you add X" list, a tool workflow, tuning) | a skill, `.claude/skills/yomi-<task>/`, a file per case |
-| what one role needs to know | `.claude/roles/<role>.md` |
+| what one role needs to know about Yomi | `.claude/roles/<role>.md` |
 | a delegated job with a fixed report | `.claude/agents/<name>.md` |
 | full rule text and detail | `docs/reference/<area>.md` |
 | a feature's state / its history | `docs/features/<slug>.md` State / the plan's `log.md` |

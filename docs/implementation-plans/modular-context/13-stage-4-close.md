@@ -134,4 +134,4 @@ If any criterion is unmet, leave this step `in progress` and report which.
 - Root `CLAUDE.md` 6,817 -> 6,492 (Commands and cap sentences updated; wording trims listed in `log.md`). Always loaded 7,912 of 8,500.
 - Findability of art/audio/e2e against base `c2e6cc3`: nothing missing. Trigger check: 10 of 10 in round 1. Details, size tables and plan completion are in `log.md`.
 - `npm test`: 98 files, 2,419 tests, all pass. No deviations. Step 13 needs nothing further; the outcome line is appended after review.
-
+- Deviation: the root's 6,500-byte target was met by rewording (not moving) text; the review judged some trims to lose meaning and they were restored (root 6,632, always loaded 8,052; the target is not a cap). Other review fixes are in `log.md`.

@@ -46,8 +46,8 @@ A level brings one perk point; creation gives three. For a hero never migrated, 
 
 `autoAdvance` picks a target again and again: the first node of the plan it qualifies for or would at a higher level, else the first non-capstone in `PERKS` order it qualifies for now. While the target is short of level or points it stops and saves, never spending on a cheaper node further down; a node short of anything waiting will not bring (depth, a skill, an attribute, the node it requires) is skipped. A parity plan names its capstone first so that it is saved for.
 
+A change to hero growth moves balance: `.claude/skills/yomi-balance/` (`levers.md`, "When to retune").
+
 ## Creation
 
 `draftCharacter` spends the draft's points with `raiseSkill` and `takePerk`, so creation has no rules of its own and waives nothing; a change that leaves a chosen node unqualified drops it and returns its point (`pruneDraft`). The prerolls, the ready-made three among them, are drafts held to the same rules by a test.
-
-A change to hero growth moves balance: `.claude/skills/yomi-balance/` (`levers.md`, "When to retune").

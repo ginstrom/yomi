@@ -8,7 +8,7 @@ The ones most runs need:
 
 - `--battles` (default 1000), `--seed`, `--out` (default `logs/battles.jsonl`, gitignored), `--player-policy` / `--enemy-policy` (`aggressive` or `random`), `--player-weapon <id>` (quote ids with `#`).
 - One cell of scaling: `--encounter` (an `ENCOUNTERS` id), `--threat`, `--party-level`; refused with `--campaign`.
-- `--plans role=plan[,...]` (roles `melee`, `archery`, `magic`; plans `PLAN_IDS`): the player's heroes only. Path parity: `--encounter bandit_camp --threat 4 --party-level 8 --plans melee=swordmaster,archery=ranger,magic=cryomancer`.
+- `--plans role=plan[,...]` (roles `melee`, `archery`, `magic`; plans `PLAN_IDS`): the player's heroes only. Path parity: `--encounter bandit_camp --threat 4 --party-level 4 --plans melee=swordmaster,archery=ranger,magic=cryomancer`.
 - `--campaign`, with `--ready-level` (default `SOURCE_READY_LEVEL`, 7), `--parties` (1 to 3, default 3; the refactor guard and the early-game figure use 1) and `--waiting` (runs each campaign's waiting twin and prints the waiting check).
 
 ## Campaigns

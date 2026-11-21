@@ -1012,13 +1012,13 @@ index 393d4a8..827e335 100644
 
 | Measure | Before (`f0814da`) | After |
 | --- | --- | --- |
-| root `CLAUDE.md` | 6,243 | 6,492 |
-| skill descriptions (5 skills, name + description) | 0 | 1,038 |
-| agent descriptions (2 agents) | 0 | 382 |
-| **always loaded** | **6,243** | **7,912** (cap 8,500 [Q3]; +1,669) |
+| root `CLAUDE.md` | 6,243 | 6,632 (6,492 at the step's first commit) |
+| skill descriptions (5 skills, name + description) | 0 | 1,048 |
+| agent descriptions (2 agents) | 0 | 372 |
+| **always loaded** | **6,243** | **8,052** (cap 8,500 [Q3]; +1,809; 7,912 at the first commit) |
 | directory guides in total (11) | 55,328 | 46,003 |
 | adding a spell: guides to read | ~22.3 KB | engine + combat + `yomi-add-content/spell.md` = 9,152 (step 05) |
-| orchestrator resume | record 8.7 KB + index 28 KB | see plan completion below |
+| orchestrator resume (`wc -c`: `docs/features/modular-context.md` + `index.md`) | record 8.7 KB + index 28 KB (the earlier record) | 4,263 + 24,319 = 28,582 |
 
 | Guide | Before | After |
 | --- | --- | --- |
@@ -1034,5 +1034,6 @@ index 393d4a8..827e335 100644
 | `src/combat` | 2,582 | 2,576 |
 | `src/story` | 1,617 | 1,269 |
 
-- Plan completion (index criteria): every step 01-13 is `done` in the index with commits (step 11's "review pending" marker cleared; its outcome line is above); `npm test` 98 files, 2,419 tests pass; findability checks of steps 05 and 13 clean or justified; always-loaded total 7,912 under the enforced 8,500; re-run `diff -ru ~/.claude/skills-backup-2026-11-21 ~/.claude/skills` shows the same 10 files as step 09's record (`architect`, `designer`, `orchestrator`, `planner`, `pr-reviewer`, `qa`, and `SKILL.md`, `implement-step.md`, `review-step.md`, `step-loop.md` of `plan-implementer`) and no "Only in" line under a backed-up directory, so it still holds only design §5.3 and §4.7 lines; `yomi-measure` (step 02) and `yomi-asset-check` (step 12) have each run once; stage 3 smoke check (step 09) and this trigger check recorded. Orchestrator-resume sizes were not re-measured here (the record's State is capped at about 3 KB by step 06; the index no longer holds history).
-
+- Plan completion (index criteria): every step 01-13 is `done` in the index with commits (step 11's "review pending" marker cleared; its outcome line is above); `npm test` 98 files, 2,419 tests pass; findability checks of steps 05 and 13 clean or justified; always-loaded total 8,052 (after the review fixes) under the enforced 8,500; re-run `diff -ru ~/.claude/skills-backup-2026-11-21 ~/.claude/skills` shows the same 10 files as step 09's record (`architect`, `designer`, `orchestrator`, `planner`, `pr-reviewer`, `qa`, and `SKILL.md`, `implement-step.md`, `review-step.md`, `step-loop.md` of `plan-implementer`) and no "Only in" line under a backed-up directory, so it still holds only design §5.3 and §4.7 lines; `yomi-measure` (step 02) and `yomi-asset-check` (step 12) have each run once; stage 3 smoke check (step 09) and this trigger check recorded. Orchestrator-resume sizes are measured in the table above.
+- Review fixes (step 13 review and the overall review), one commit: `qa.md` restores "`npm run dev` on 5173 is often the user's ... never kill a process you did not start" (source `docs/implementation-plans/long-campaign-stage-07/log.md:18`; step 08's "no source" note corrected); root meaning restored (`by itself`, the Docs "Open the section" sentence, the manual bullet, `creation`, `seedable`, `about Yomi`, `not too complex`); `yomi-add-content/foe.md` names `MonsterKind`, `FOE_STATS`, `BanditKind` and `BANDIT_ROLE` (each confirmed in `src/game/`) and says `foeYardstick` is a check; `yomi-balance/running.md` path parity at `--party-level 4`; `levers.md` duplicate bullet dropped; the hero-growth balance pointer moved from `## Creation` to the end of `## Perk points` in `src/character/CLAUDE.md`. Always-loaded: root 6,632 (over the 6,500 design target, which is not a cap), total 8,052 of 8,500.
+- Outcome: engineer sonnet, reviewer opus, verdict clean, 1 review round, plus the overall review's batch above.
