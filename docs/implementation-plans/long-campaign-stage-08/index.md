@@ -155,7 +155,7 @@ Moved to [step 07's task file](07-simulator.md) §3: the holds removed, `contact
 | 03 | [Roads and the Lodge's level 3](03-roads-and-lodge.md) | Lodge 3 buildable; road sources at Lodge 3; the Lodge's effect line; `SIM_LODGE_CAP` (C3); guard identical | 02 | sonnet / opus | done (see its record) |
 | 04 | [Sprites: partners and the Lodge](04-sprites.md) | `map_partner_village`, `map_partner_port`, `camp_lodge/level_3` redrawn (C4) | — | sonnet / opus | done (15d13ff, merged 07451c5) |
 | 05 | [The world map's roads and partners](05-world-map.md) | Roads overlay, partner icons and greying, hex info and road lines, event lines, yield summary, sounds (C5); manual text; in-browser tests | 03, 04 | sonnet / opus | done (see its record) |
-| 06 | [The Routes tab and the debug console](06-routes-tab-and-debug.md) | The trading post's Routes tab with preview and minimap; debug `spawn` and `contact` (C6); manual text; in-browser tests | 05 | sonnet / opus | pending |
+| 06 | [The Routes tab and the debug console](06-routes-tab-and-debug.md) | The trading post's Routes tab with preview and minimap; debug `spawn` and `contact` (C6); manual text; in-browser tests | 05 | sonnet / opus | done (see its record; awaiting review) |
 | 07 | [The simulator's trade](07-simulator.md) | Holds removed; contact detour, routes opened, Lodge 3, raiders weighed, tower errand, guard defends roads, record and summary (C7); fixture re-recorded once | 03 | opus / opus | pending |
 | 08 | [Measure, document, play](08-measure-document-play.md) | Guard and company figures, `--ready-level 10` routes check; CLAUDE.md, reference docs, manual and screenshots; implementation notes; play script walked | 06, 07 | opus / opus | pending |
 

@@ -279,7 +279,7 @@ export interface EncampmentProbe {
 export interface TradingPostProbe {
   /** The id of the party the post acts for. */
   actingFor: string
-  tab: 'buy' | 'sell'
+  tab: 'buy' | 'sell' | 'routes'
   /** The gold in the stock. */
   gold: number
   /** What the last action did, or why it was refused. */
@@ -304,12 +304,19 @@ export interface TradingPostProbe {
   buttons: {
     buyTab: ButtonProbe
     sellTab: ButtonProbe
+    routesTab: ButtonProbe
     confirm: ButtonProbe
     confirmAll: ButtonProbe
     prev: ButtonProbe
     next: ButtonProbe
     close: ButtonProbe
   }
+  /**
+   * The Routes tab's lines, one for each contacted partner in contact order (empty on the other tabs): the
+   * route's status, the line shown, and its Open button (null for an open or raided route). `selected` is
+   * the partner id whose road the minimap draws, or null.
+   */
+  routes: Array<{ partner: string; status: 'open' | 'raided' | 'closed'; line: string; open: ButtonProbe | null; selected: boolean }>
 }
 
 export interface CraftingProbe {

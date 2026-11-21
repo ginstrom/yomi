@@ -300,7 +300,7 @@ export function advanceDay(world: WorldState, presences: readonly PartyPresence[
 }
 
 /** What corrupted land spawns: a nest that fights one of these encounters, by its name, where the encounter's band holds the threat. */
-const SPAWN_KINDS: ReadonlyArray<{ encounter: EncounterId; name: string }> = [
+export const SPAWN_KINDS: ReadonlyArray<{ encounter: EncounterId; name: string }> = [
   { encounter: 'goblin_raid', name: 'Goblin Brood' },
   { encounter: 'kobold_scouts', name: 'Kobold Nest' },
   { encounter: 'bandit_camp', name: 'Bandit Gang' },
