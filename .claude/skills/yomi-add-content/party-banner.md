@@ -6,5 +6,5 @@ Touch every line, then run `npm test`.
 
 ## Tests that catch a miss
 
-- `src/scenes/partyList.test.ts`.
+- `src/scenes/partyList.test.ts` hard-codes the three banners that exist, so a new one is not enforced; check by hand.
 - The sprite's existence in the atlas: not enforced; check by hand.

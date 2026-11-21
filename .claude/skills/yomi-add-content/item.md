@@ -9,6 +9,6 @@ The rule stays in `src/inventory/CLAUDE.md`, "One id is one object". Touch every
 
 ## Tests that catch a miss
 
-- `src/game/save.test.ts` (every base and magic item round-trips through `itemById`).
+- `src/game/save.test.ts` only round-trips the items already in `BASE_ITEMS` and `MAGIC_ITEMS`; that a new item is listed there is not enforced; check by hand.
 - `src/scenes/itemIcons.test.ts` (an exported icon for every item).
 - `src/scenes/unitLook.test.ts` (a worn look for every gear icon).

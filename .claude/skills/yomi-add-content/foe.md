@@ -11,7 +11,7 @@ A foe kind is a `UnitKind`. Touch every line, then run `npm test`.
 
 ## Tests that catch a miss
 
-- `tsc` (`FOE_NATIVE_LEVEL` and `FOE_SOUNDS` are full `Record`s).
+- `tsc` (`FOE_XP`, `FOE_NATIVE_LEVEL` and `FOE_SOUNDS` are full `Record`s).
 - `src/scenes/unitLook.test.ts` (every kind in the atlas, with `idle` and `walk`).
 - `src/scenes/sounds.test.ts` (a class, a fall and a step for every kind).
 - The yardstick test in `src/game/encounters.test.ts`.

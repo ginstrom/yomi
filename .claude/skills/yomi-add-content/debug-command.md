@@ -6,4 +6,4 @@
 
 ## Tests that catch a miss
 
-- `src/scenes/debugCommands.test.ts` (`help` lists every command and how to use it).
+- `src/scenes/debugCommands.test.ts` (the `help` test only checks that each command has usage text).

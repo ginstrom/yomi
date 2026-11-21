@@ -13,6 +13,5 @@ Touch every line, then run `npm test`.
 
 - `tsc` (`ENCOUNTER_BANDS` and `ENCOUNTER_COUNTS` are full `Record`s).
 - `src/game/encounters.test.ts` (each encounter builds, across its band).
-- `src/scenes/sounds.test.ts` reads `ENCOUNTERS` (its foes sound).
 - `SPAWN_KINDS` is a choice: not enforced; check by hand.
 - A change that moves play: `scripts/simulate.test.ts`; see `yomi-balance`.

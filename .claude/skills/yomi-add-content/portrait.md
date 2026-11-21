@@ -7,5 +7,5 @@ Touch every line, then run `npm test`.
 
 ## Tests that catch a miss
 
-- `src/scenes/partyPanel.test.ts` (one distinct key per id).
+- Nothing enforces a new id: the distinct-keys test in `src/scenes/partyPanel.test.ts` catches nothing for it; check by hand.
 - The sprite's existence: not enforced; check by hand.
