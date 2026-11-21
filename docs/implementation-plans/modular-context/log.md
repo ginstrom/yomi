@@ -953,3 +953,9 @@ index 393d4a8..827e335 100644
 - Stage 7 record's "Sprite-tool pin drift" line now names the skill's `workflow.md` (shortened without backticks to keep State under 3,000 bytes).
 - Findability script not run (step 13 does it).
 - Outcome: engineer sonnet, reviewer sonnet, verdict clean, 1 review round (two cosmetic nits, no action).
+
+## Step 11: the yomi-sound skill
+
+- `audio/CLAUDE.md` 6,726 -> 2,211 bytes. Skill: `SKILL.md` 1,441; `commands.md` 1,342; `new-cue.md` 1,446; `sourcing.md` 991; `narration.md` 1,258.
+- `npm test`: 98 files, 2,419 tests, all pass. Findability script not run (step 13 does it).
+- Ledger: the `BACK_LABELS` line is in `new-cue.md`; "Listening" and "Which sound plays when" in `new-cue.md`; the Commands table in `commands.md`; sourcing preferences and folders in `sourcing.md`; the allow-list, downloads rule and runtime hints stay in `audio/CLAUDE.md`.

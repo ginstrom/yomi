@@ -1,7 +1,7 @@
 # Audio reference
 
-The full detail behind `audio/CLAUDE.md`, which keeps the workflow, the rules
-and the checklists. Read this when writing a recipe, chasing a failed check,
+The full detail behind `audio/CLAUDE.md`, which keeps the contracts, and the
+`yomi-sound` skill (`.claude/skills/yomi-sound/`), which keeps the workflow. Read this when writing a recipe, chasing a failed check,
 or working on the narration tool. The design is `docs/designs/audio-pass.md`
 (the recipe format is normative in its §5.6); the architecture brief
 `docs/architecture/audio-pass.md` gives the reasons behind the tool and the

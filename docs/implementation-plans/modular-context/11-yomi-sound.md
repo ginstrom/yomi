@@ -84,3 +84,8 @@ With `PATH=/opt/homebrew/opt/node@26/bin:$PATH`:
 
 ## 6. Execution record
 
+- Wrote `.claude/skills/yomi-sound/` (`SKILL.md` 1,441 bytes; `commands.md` 1,342; `new-cue.md` 1,446; `sourcing.md` 991; `narration.md` 1,258). Text moved, not rewritten; the narration's "Designing a voice"/"Narration engines" pointer now names `docs/reference/audio.md`. `BACK_LABELS` line moved into `new-cue.md`.
+- Trimmed `audio/CLAUDE.md` 6,726 -> 2,211 bytes (intro, Layout, a Contracts list, the C4 pointer line). Shortened the reference pointer in the intro.
+- Repointed `src/scenes/CLAUDE.md`, `src/story/CLAUDE.md` (both pointers), `yomi-add-content` `SKILL.md` (row and general rule) and `story.md`, and the `docs/reference/audio.md` header. No other content file named `audio/CLAUDE.md`.
+- Code comments checked, unedited: `scripts/narration.ts:2` (host-only rule stays), `audio/audio.toml:3` (Layout describes `audio.toml`), `audio/sources.toml:4` and `tools/audio/yomi_audio/sources.py:41` ("written by the tool, never by hand" stays in Layout; the trim/mono/resample detail is now in `sourcing.md`, so those two comments land on a pointer that still holds but not on the detail), `tools/audio/yomi_audio/tts/models.py:6` (the intro still points to the reference's pinned licences).
+- `npx vitest run scripts/claudeMd.test.ts` 17 passed; `npm test` 98 files, 2,419 tests pass. The `yomi-sound` frontmatter verbatim; `git status` under `audio/`, `tools/`, `public/` shows only `audio/CLAUDE.md`.

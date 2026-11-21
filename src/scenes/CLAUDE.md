@@ -27,7 +27,7 @@ Every scene but `Boot` has a `probe()`: plain data telling where its controls ar
 
 ## Adding content
 
-Adding content (a unit kind, a gear, item or rune icon, an ability, spell, portrait, facility, location kind, party banner, battle event or debug command): `.claude/skills/yomi-add-content/`. A sound effect: `audio/CLAUDE.md`, "Which sound plays when".
+Adding content (a unit kind, a gear, item or rune icon, an ability, spell, portrait, facility, location kind, party banner, battle event or debug command): `.claude/skills/yomi-add-content/`. A sound effect: `.claude/skills/yomi-sound/new-cue.md`.
 
 Each asset directory's `README.md` records provenance and licence; update it when files are added. Reference: "Assets the scenes load".
 

@@ -7,7 +7,7 @@ Touch every line, then run `npm test`. The modules and `storyFor`'s order stay i
 - Text may say `{encampment}` and `{leader}` (`fillText`).
 - A new moment: a case in `StoryMoment` (`src/story/story.ts`) and a scene that raises it.
 - A new anchor: a name in `TutorialAnchor` and a place in the `anchors()` of the scene that has the control.
-- A voiced beat's fields (`line`, `voice`, `emotion`, `intensity`, `spoken`, `take`): `audio/CLAUDE.md`, "Narration". The leader and the tutorial tips are not voiced, and a voiced line speaks no `{…}` template.
+- A voiced beat's fields (`line`, `voice`, `emotion`, `intensity`, `spoken`, `take`): `.claude/skills/yomi-sound/narration.md`. The leader and the tutorial tips are not voiced, and a voiced line speaks no `{…}` template.
 
 ## Tests that catch a miss
 

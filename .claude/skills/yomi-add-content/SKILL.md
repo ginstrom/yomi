@@ -28,7 +28,7 @@ Open the file for your case, touch every item in it, then run `npm test`. Each f
 | [party-banner.md](party-banner.md) | a party banner |
 | [debug-command.md](debug-command.md) | a debug command |
 | [story.md](story.md) | a cutscene, tip, story moment or tutorial anchor |
-| (no file) | a sound effect: `audio/CLAUDE.md`, "Which sound plays when"; a button that closes or steps back also belongs in `BACK_LABELS` (`src/scenes/sounds.ts`) |
+| (no file) | a sound effect: `.claude/skills/yomi-sound/new-cue.md` (a button that closes or steps back also belongs in `BACK_LABELS`, `src/scenes/sounds.ts`) |
 
 ## General rules
 
@@ -36,5 +36,5 @@ Open the file for your case, touch every item in it, then run `npm test`. Each f
 - Coverage tests enforce some lists: `src/scenes/sounds.test.ts`, `src/scenes/unitLook.test.ts` and the yardstick test in `src/game/encounters.test.ts`.
 - Run `npm run test:browser` after touching a scene.
 - Anything that moves an outcome goes through `yomi-balance` (`.claude/skills/yomi-balance/`).
-- Sprites go through `.claude/skills/yomi-sprites/`, and sounds through `audio/CLAUDE.md` (`yomi-sound` from stage 4).
+- Sprites go through `.claude/skills/yomi-sprites/`, and sounds through `.claude/skills/yomi-sound/`.
 - A renamed name gets a search of the CLAUDE.md files and `.claude/`.
