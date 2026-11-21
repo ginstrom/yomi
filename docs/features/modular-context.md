@@ -3,7 +3,7 @@
 **Request (user's words):** "Please examine your workflows. Can you selectively load context depending on what you are working on? For example, design vs asset creation, coding, planning, etc. Can some of this be offloaded to skills so the main orchestrator does not need to hold as much context? Please think about how to design your context/skill system to be more modular." Then, after the proposal: "please replace AGENTS.md with a simlink, and then go through the suggested order".
 
 - **Slug:** `modular-context`
-- **Phase:** 4, implementation (step 01 next)
+- **Phase:** 4, implementation (steps 01–02 done; step 03 next)
 - **Branch:** `long-campaign-stage-07` (the current branch; project rule: commit on the current branch)
 - **Design:** `docs/designs/modular-context.md`
 - **Plan:** `docs/implementation-plans/modular-context/index.md` (13 steps, four stages; per-step tiers in its task table)
@@ -47,4 +47,4 @@ None.
 
 ## Verification
 
-Not started.
+Per step: the plan's `log.md`. Step 02 took three review rounds (parity cells); the third was checked by the orchestrator (`a1584bc`, `npm test` 2,407 passed).
