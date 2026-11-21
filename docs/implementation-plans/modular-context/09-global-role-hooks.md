@@ -105,3 +105,13 @@ Other mentions of AGENTS.md **stay unchanged**: `pr-reviewer/run-checks.md`, `pr
 - [ ] The step is `done` in the index with its commit. The commit is `Modular context step 09: role hooks in the global skills`, with no attribution lines, and contains only `log.md`, `index.md` and this task file, staged by path.
 
 ## 7. Execution record
+
+- 2026-11-21, engineer opus. Smoke-check spawn authorized in the orchestrator's brief.
+- Pre-checks: the backup holds all seven directories edited; every old phrase in §2.3 matched exactly; `npm test` baseline 98 files, 2,419 tests passed.
+- Edits (with Edit, at the dotfiles targets `/Users/ryan/personal/dotfiles/home/.claude/skills/`, left uncommitted): §2.1 hook in eight files (both orchestrator Phase 0 bullets); §2.2 agent-types line; §2.3 phrase in nine files. Plus the index's "Added to step 09 by the orchestrator": the `implement-step.md` "Review feedback" outcome-line paragraph, the orchestrator feature-record path ("the plan folder's `log.md`"), and the orchestrator stall bullet. Step 07's review recorded in `log.md`.
+- Verification 1: restricted diff pasted in `log.md`; only §5.3 lines (step 07), the nine hooks, the agent-types line, the nine phrase changes and the three orchestrator additions; its change lines are byte-identical to `git -C /Users/ryan/personal/dotfiles diff -- home/.claude/skills` (also pasted, hunks attributed).
+- Verification 2: `grep -Rn "AGENTS.md"` shows the new phrase nine times, no "instructions instructions"; `run-checks.md` and `crisp-check.md` unchanged. (Plain `grep -rn` finds nothing, since the files are symlinks; use `-R`.)
+- Verification 3: smoke check passed; its list included `.claude/roles/engineer.md` and `.claude/skills/yomi-add-content/spell.md` (brief and list in `log.md`).
+- Verification 4: `npm test` 98 files, 2,419 tests passed.
+- Deviations: wording of the three orchestrator-added fixes was not given verbatim; chosen text is in `log.md`. The step 07 verdict line in `log.md` was wrong (said 9 findings fixed); left in place (append-only) and superseded by a new "Step 07: review" section.
+- For later steps: none.
