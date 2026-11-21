@@ -4,7 +4,7 @@ Commands are run from the repository root.
 
 ## Install
 
-Sprites are made with [sprite-tool](https://github.com/ginstrom/sprite-tool) (`uv tool install git+https://github.com/ginstrom/sprite-tool@v0.6.0`; add `--force` to upgrade a copy already installed), which is installed on the host and is not in the podman image. The pin is `v0.6.0`; the host has 0.7.0 (the stage 7 record) and no export changed. Run `sprite guide --project art` before drawing or changing a sprite: it prints the file format, the palette and the canvas classes.
+Sprites are made with [sprite-tool](https://github.com/ginstrom/sprite-tool) (`uv tool install git+https://github.com/ginstrom/sprite-tool@v0.7.0`; add `--force` to upgrade a copy already installed), which is installed on the host and is not in the podman image. The pin is `v0.7.0`. Run `sprite guide --project art` before drawing or changing a sprite: it prints the file format, the palette and the canvas classes.
 
 ## Starting a sprite
 
