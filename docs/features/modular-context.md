@@ -3,11 +3,11 @@
 ## State
 
 - Request (user's words): "Please examine your workflows. Can you selectively load context depending on what you are working on? For example, design vs asset creation, coding, planning, etc. Can some of this be offloaded to skills so the main orchestrator does not need to hold as much context? Please think about how to design your context/skill system to be more modular." Then, after the proposal: "please replace AGENTS.md with a simlink, and then go through the suggested order".
-- Slug `modular-context` · Phase 4, implementation. Stages 1–3 (steps 01–09) are done and reviewed clean; step 09's outcome-line follow-up is in progress. · Next action: step 10 (stage 4) · Branch: `long-campaign-stage-07` (the current branch; project rule: commit on the current branch)
+- Slug `modular-context` · Phase 4, implementation. Phase 5, verification. All 13 steps are done and reviewed; the overall review's fix batch is `cd0b29b`, re-review pending. · Next action: report to the user · Branch: `long-campaign-stage-07` (the current branch; project rule: commit on the current branch)
 - Links: architecture none (the approved proposal is the architecture); design `docs/designs/modular-context.md` (makes the approved proposal of 2026-11-21 concrete; the verbatim proposal is in the plan's `log.md`); plan `docs/implementation-plans/modular-context/index.md` (13 steps, four stages; per-step tiers in its task table); plan log `docs/implementation-plans/modular-context/log.md`.
 - Open questions: for the user, at the end of the feature: commit the global-skill edits in the dotfiles repository (uncommitted there, steps 07 and 09)? It blocks nothing here. The stage 7 PR question is in stage 7's record.
 - Tiers: designer opus; planner opus; steps as the plan index's task table (opus for 01, 06, 07, 09; sonnet engineers elsewhere, reviewers at least the engineer's tier).
-- Verification: per step, the plan's `log.md`. No feature-level gate (overall review, QA, simulated user, PR review) has run yet.
+- Verification: per step, the plan's `log.md`. Overall review (opus): changes needed, 1 blocking (the QA profile's never-kill rule); fixed in `cd0b29b`, re-review pending. QA and simulated user: not run (an instructions refactor; the step 09 smoke check and step 13 trigger check exercise what agents read and pick). PR review: not run.
 - Carried forward: none.
 
 ## Decision log
@@ -24,5 +24,7 @@
 | 2026-11-21 | Always-loaded cap 8,500 bytes | user | 7,500 | |
 | 2026-11-21 | Plan accepted; its four open points settled in the index; `yomi-measure` runs in the foreground, without `Monitor` | orchestrator | background runs | Subagent rules forbid waiting on background jobs |
 | 2026-11-21 | Repoint the header lines of `docs/reference/simulator.md` (step 02) and `docs/reference/game.md` (step 04) | orchestrator | leave them stale | An exception to "docs/reference stays": the lines were made wrong by the move |
-| 2026-11-21 | Root `CLAUDE.md` accepted at 6,783 bytes, over the design's 6,500 target | orchestrator | trim further | The always-loaded total of 7,431 is under the 8,500 cap |
+| 2026-11-21 | Root `CLAUDE.md` may exceed the design's 6,500-byte target (6,632 at `cd0b29b`; always-loaded 8,052) | orchestrator | trim by rewording | The target is not a cap; step 13's rewording trims changed meaning and were restored |
 | 2026-11-21 | Wording fixes beyond design §5.3 and §4.7 in the global skills: who writes a step's outcome line in `log.md` (the engineer, told by the orchestrator), the plan folder's `log.md`, stalls in `log.md`, no `log.md` without a plan | orchestrator | leave the gaps | Step 07 and 09 reviews found the skills disagreeing |
+| 2026-11-21 | Pointer repairs outside the plan's file scope: `tools/audio/yomi_audio/tts/models.py:6` (comment) and `docs/features/audio-pass.md` (legacy record) | orchestrator | leave stale | The moves made them wrong; recorded in the plan's `log.md` (step 11) |
+| 2026-11-21 | No QA or simulated-user pass | orchestrator | run them | Nothing user-facing changed; agent behaviour was checked by the smoke and trigger checks |
