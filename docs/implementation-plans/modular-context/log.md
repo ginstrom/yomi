@@ -952,3 +952,4 @@ index 393d4a8..827e335 100644
 - Ledger: facility, portrait and location keys confirmed already in `yomi-add-content` (`facility.md` FACILITY_SPRITES, `portrait.md` PORTRAIT_IDS, `location-kind.md` LOCATION_SPRITES); last line dropped. Also repointed `item.md`, `rune.md`, `party-banner.md` (same "How to draw" line).
 - Stage 7 record's "Sprite-tool pin drift" line now names the skill's `workflow.md` (shortened without backticks to keep State under 3,000 bytes).
 - Findability script not run (step 13 does it).
+- Outcome: engineer sonnet, reviewer sonnet, verdict clean, 1 review round (two cosmetic nits, no action).
