@@ -33,3 +33,11 @@ Measured by the `yomi-measure` agent on a clean worktree at `b28bba1` (no code c
 - 50-campaign check: SHA-256 `1ceefe633e71c0326c0c5b261c77e1c010c49e30303a85286a782589e74400d1`, **identical** to the baseline (23 of 50; gold by source: sites 234, market 0, sales 40 a campaign).
 - The refactor guard passes with the fixture untouched.
 - Roads on a fresh world (`roadTo`, any seed): Millbrook 14 hexes (27 gold, 10 timber; security 0.857, 1 gold a yield day), Saltmere 30 (35 gold, 10 timber; security 0.667, 2 gold); neither raided, the nearest nest 3 hexes from either road.
+
+## Step 02 outcome
+
+- Step 02 (routes, raids and guards): engineer opus, reviewer opus; verdict clean after 2 review rounds. Commits `615a263`, `9d0507a`, `8d2eabe` (tests from round 1) and the round 2 record. In round 2 the engineer disputed the reviewer's partner-hex break: the edit is the same code, because `passable` lets the partner's hex through before it reads the blocked set (see the step's execution record).
+
+## Step 04 outcome
+
+- Step 04 (sprites: partners and the Lodge): engineer sonnet, reviewer opus; verdict clean after 3 review rounds. Commits `15d13ff..861be38`, merged into the stage branch in `07451c5`.
