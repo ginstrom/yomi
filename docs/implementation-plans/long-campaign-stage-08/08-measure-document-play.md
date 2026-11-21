@@ -44,7 +44,7 @@ Close the stage:
   12. The simulator's Lodge reaches 2 as before, and 3 once a route is open; routes open after the infirmary, before the Lodge.
   13. The contact detour is the vanguard's (or a lone party's), within `CONTACT_DETOUR` (8) of the party, when no held site is threatened; raiders are weighed after threatened sites, nearest first, in `nextTarget` and the guard's defend.
   14. Determinism through step 06 (`SIM_PARTNERS`, `SIM_LODGE_CAP`); step 07 removed both and re-recorded the fixture once.
-  15. Saves migrate: `SAVE_VERSION` 28, `migrateFrom27` (empty contacts, silence, routes, `routesOpened` 0, the two partners where their hex is free).
+  15. No save migration: `SAVE_VERSION` 28; older saves read as unreadable (the old migrations removed).
   16. Routes pay nothing once the encampment is lost.
   17. Sounds reuse cues (`world.threatened`, `world.lost`, `world.captured`, `world.build`).
   18. Debug `spawn <encounter> [here | <location id> | <col> <row>]` and `contact <partner id | all>`; `days`' totals include routes.
@@ -62,7 +62,7 @@ Close the stage:
   // trade.ts: partners, partnerById, isContacted, isSilent, contactPartner, partnerDay
   export const PARTNER_STRENGTH = 3   // blight.ts
   // WorldEvent: partner_contacted { partner, name, home }; partner_silent { partner, name }; partner_restored { partner, name }
-  // sites() excludes partners; isNotable(partner_silent); SAVE_VERSION = 28, migrateFrom27; SIM_PARTNERS (removed in step 07)
+  // sites() excludes partners; isNotable(partner_silent); SAVE_VERSION = 28 (no migration); SIM_PARTNERS (removed in step 07)
   // C2 (step 02)
   // ROUTE_BASE 1, ROUTE_HEXES_PER_GOLD 10, ROUTE_COST_GOLD 20, ROUTE_HEXES_PER_COST_GOLD 2, ROUTE_TIMBER 10,
   // ROUTE_SLOTS [0, 0, 0, 1, 2, 4], GUARD_RADIUS 3, RAID_RADIUS 2, ABANDON_AFTER 6; RaidCause 'silent' | 'corrupted' | 'raiders'
@@ -148,7 +148,7 @@ Run each from seed 1, one at a time, each with its own `--out`, through the `yom
 ### 4.3 Document
 
 - **Root `CLAUDE.md`:** the import-cycle line gains `trade` (`blight`/`territory`/`worldMap`/`trade`); the map's `src/game/` line names trade partners and routes if it lists the world's parts. Keep it a map, not detail (16 KB cap).
-- **`src/game/CLAUDE.md`:** a `trade.ts` line in the modules list (partners, contact and silence, routes, roads' security, raids, `tradeDay`); the import-cycle contract gains `trade.ts`; `blight.ts` (partners and roads as sources), `territory.ts` (`partnerDay` and `tradeDay` after the yields), `buildings.ts` (the Lodge to 3, `towerHexRefusal`), `worldMap.ts` (partners in `newWorld`) lines; the saving contract's version (28, `migrateFrom27`); the rules of scaling, with any move over 5 points explained (8 KB cap).
+- **`src/game/CLAUDE.md`:** a `trade.ts` line in the modules list (partners, contact and silence, routes, roads' security, raids, `tradeDay`); the import-cycle contract gains `trade.ts`; `blight.ts` (partners and roads as sources), `territory.ts` (`partnerDay` and `tradeDay` after the yields), `buildings.ts` (the Lodge to 3, `towerHexRefusal`), `worldMap.ts` (partners in `newWorld`) lines; the saving contract's version (28, no migration); the rules of scaling, with any move over 5 points explained (8 KB cap).
 - **`src/scenes/CLAUDE.md`:** only if a contract or the helper-module list needs it (`roadsView.ts`, `routesTab.ts` are ordinary helpers; the full detail goes in `docs/reference/scenes.md`).
 - **`scripts/CLAUDE.md`:** the bands table's "Now" column, if the file keeps one, with this step's figures and "(stage 8, seed 1)"; otherwise only what a tuner needs (route levers) by pointer to `.claude/skills/yomi-balance/levers.md` (add `ROAD_STRENGTH`, `RAID_RADIUS`, `ABANDON_AFTER` there if it lists levers).
 - **`docs/reference/game.md`:** partners (placements, contact, silence, strength); routes (slots, cost, the road rule, security and guards by towers and parties, income and goods, raid causes, abandonment, restoration, refusals); roads at Lodge 3 (`ROAD_STRENGTH`); the Builders' Lodge's level 3; the new events and `yield`'s `source: 'route'`; `isNotable`'s additions; save version 28 and `migrateFrom27`; the constants by name.

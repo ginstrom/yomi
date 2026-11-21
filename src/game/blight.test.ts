@@ -7,6 +7,7 @@ import { newGame, type GameState } from './gameState.ts'
 import {
   CLEANSE_LEVELS,
   IMPROVEMENT_STRENGTH,
+  PARTNER_STRENGTH,
   SITE_STRENGTH,
   MAX_BLIGHT,
   MAX_MONSTER_LOCATIONS,
@@ -233,7 +234,9 @@ describe('spawning', () => {
       ],
     }
     for (const [seed, expected] of Object.entries(before)) {
-      const { game, world } = solo(Number(seed))
+      const { game } = solo(Number(seed))
+      // Captured before the trade partners (stage 8), so on a world without them.
+      const world = (game.world = newWorld(Number(seed), undefined, []))
       for (let d = 0; d < 3; d++) {
         corruptWhere(world, (threat) => threat <= 2)
         world.spawnPressure = SPAWN_COST
@@ -303,7 +306,8 @@ describe('the numbers of one party, pinned', () => {
   const pinned = (): PartyPresence[] => [{ position: stands, levels: members.map((m) => m.level) }]
   /** A party of strength 8 standing on corrupted land beside the Source's corruption, on day 45 (growth 1.1). */
   const scene = (): WorldState => {
-    const world = newWorld(1)
+    // Pinned before the trade partners (stage 8), so on a world without them.
+    const world = newWorld(1, undefined, [])
     world.turn = 45
     setLevel(world, stands, MAX_BLIGHT)
     return world
@@ -457,5 +461,37 @@ describe('an improved site\'s strength (economy A1)', () => {
     expect(net()).toBeCloseTo(before - 7)
     delete world.improvements.iron_vein
     expect(net()).toBeCloseTo(before)
+  })
+})
+
+describe('a trade partner\'s strength (economy A4)', () => {
+  /** The same world with and without its partners, on the same land. */
+  function pair() {
+    const withPartners = newWorld(1)
+    const without = newWorld(1, undefined, [])
+    without.blight = withPartners.blight.slice()
+    without.shift = withPartners.shift.slice()
+    return { withPartners, without }
+  }
+  const millbrook = (world: WorldState) => world.locations.find((l) => l.id === 'millbrook')!.position
+
+  it('pushes back as a clean source of PARTNER_STRENGTH: 3 on its hex, 2 beside, 1 two out, none beyond', () => {
+    const { withPartners, without } = pair()
+    expect(PARTNER_STRENGTH).toBe(3)
+    const at = millbrook(withPartners)
+    const less = (h: Hex) => netInfluence(without, [], h) - netInfluence(withPartners, [], h)
+    expect(less(at)).toBeCloseTo(3)
+    for (const n of hexNeighbors(at)) expect(less(n)).toBeCloseTo(2)
+    expect(less({ q: at.q + 2, r: at.r })).toBeCloseTo(1)
+    expect(less({ q: at.q + 3, r: at.r })).toBeCloseTo(0)
+  })
+
+  it('pushes the same when silent, and is never held', () => {
+    const { withPartners } = pair()
+    const at = millbrook(withPartners)
+    const before = [netInfluence(withPartners, [], at), netInfluence(withPartners, [], { q: at.q + 1, r: at.r })]
+    withPartners.silent.push('millbrook')
+    expect([netInfluence(withPartners, [], at), netInfluence(withPartners, [], { q: at.q + 1, r: at.r })]).toEqual(before)
+    expect(withPartners.held).not.toContain('millbrook')
   })
 })

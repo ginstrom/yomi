@@ -17,7 +17,8 @@ import { act, advance, setOrder, startTravel, worldInterrupt, type DayReport, ty
 import { MAX_THREAT, type EncounterId } from './encounters.ts'
 import { presences, type Expedition, type PartyPresence } from './expedition.ts'
 import type { GameState } from './gameState.ts'
-import { initialHeld, updateTerritory, type ImprovementLevel, type Stock } from './territory.ts'
+import { initialHeld, updateTerritory, type ImprovementLevel, type Material, type Stock } from './territory.ts'
+import type { TradeRoute } from './trade.ts'
 import { seedSight, updateSight } from './vision.ts'
 
 /**
@@ -56,7 +57,18 @@ export interface QuietLocation extends LocationBase {
   kind: 'encampment' | 'resource'
 }
 
-export type WorldLocation = MonsterLocation | QuietLocation
+/**
+ * A trade partner (trade.ts): a neutral settlement, never held and never
+ * lost, a clean source of `PARTNER_STRENGTH` (blight.ts) whatever its land.
+ * The party contacts it by standing on it; it falls silent while its land is
+ * at `LOSS_LEVEL` or worse, and its `good` is what it trades.
+ */
+export interface PartnerLocation extends LocationBase {
+  kind: 'partner'
+  good: Material
+}
+
+export type WorldLocation = MonsterLocation | QuietLocation | PartnerLocation
 
 /** A watchtower the party built (buildings.ts): not a location, as it holds no battle and blocks no route. */
 export interface Tower {
@@ -111,6 +123,14 @@ export interface WorldState {
   threatened: string[]
   /** What held sites have yielded, kept at the encampment, which buildings and the guild hall spend. */
   stock: Stock
+  /** The ids of the trade partners contacted (trade.ts), in the order contacted; contact is permanent. */
+  contacted: string[]
+  /** The ids of the trade partners silent now: entered when the partner's hex reaches `LOSS_LEVEL`, left when it is clean. */
+  silent: string[]
+  /** The open trade routes, in the order opened (trade.ts). */
+  routes: TradeRoute[]
+  /** How many trade routes have ever been opened. */
+  routesOpened: number
   /** 'won' once the Source is beaten, until the player ends the game or goes on in 'endless' mode; 'lost' once the encampment falls. */
   status: WorldStatus
 }
@@ -173,11 +193,25 @@ const monsters = (
 })
 
 /**
+ * The trade partners on today's map: Millbrook in the threat 2 ring, Saltmere
+ * on the south edge in the threat 3 ring. A world holds copies (`newWorld`).
+ */
+export const PARTNERS: readonly PartnerLocation[] = [
+  { id: 'millbrook', kind: 'partner', name: 'Millbrook', position: offsetToHex(18, 30), good: 'timber' },
+  { id: 'saltmere', kind: 'partner', name: 'Saltmere', position: offsetToHex(30, 38), good: 'salt' },
+]
+
+/**
  * A new world, the blight seeded from its sources; `seed` is the world RNG's,
  * which only spawns draw from, and `encampmentName` what the player called
- * home.
+ * home. `partners` are placed as copies after the resources and before the
+ * monsters (the simulator passes none until stage 8's step 07).
  */
-export function newWorld(seed: number = randomSeed(), encampmentName: string = DEFAULT_ENCAMPMENT_NAME): WorldState {
+export function newWorld(
+  seed: number = randomSeed(),
+  encampmentName: string = DEFAULT_ENCAMPMENT_NAME,
+  partners: readonly PartnerLocation[] = PARTNERS,
+): WorldState {
   const world: WorldState = {
     board: WORLD_SIZE,
     turn: 1,
@@ -197,6 +231,7 @@ export function newWorld(seed: number = randomSeed(), encampmentName: string = D
       resource('salt_flats', 'Salt Flats', 33, 36),
       resource('copper_pit', 'Copper Pit', 41, 10),
       resource('crystal_cave', 'Crystal Cave', 56, 24),
+      ...partners.map((p) => ({ ...p, position: { ...p.position } })),
       monsters('goblin_reavers', 'Goblin Reavers', 12, 8, 'goblin_raid', [RING_FORTUNE]),
       monsters('kobold_trappers', 'Kobold Trappers', 8, 30, 'kobold_scouts', [SAGE_CIRCLET]),
       monsters('hobgoblin_warband', 'Hobgoblin Warband', 24, 10, 'hobgoblin_warband', [RING_PROTECTION]),
@@ -228,6 +263,10 @@ export function newWorld(seed: number = randomSeed(), encampmentName: string = D
     workshop: 0,
     infirmary: 0,
     stock: {},
+    contacted: [],
+    silent: [],
+    routes: [],
+    routesOpened: 0,
     status: 'playing',
   }
   seedBlight(world)
@@ -267,7 +306,7 @@ export function passTurn(world: WorldState, presences: readonly PartyPresence[])
 /**
  * Whether an event stops a journey or a stretch of camping: monsters sighted
  * near a party (within `NOTICE_RADIUS` of some presence), the Source found wherever it is sighted, a held site
- * threatened or lost, the encampment lost. A
+ * threatened or lost, the encampment lost, a trade partner fallen silent. A
  * spawn is not seen as such: it is told when it comes into sight. A tower
  * under threat is told as a site is.
  */
@@ -279,6 +318,7 @@ export function isNotable(_world: WorldState, event: WorldEvent, presences: read
     case 'site_lost':
     case 'tower_lost':
     case 'encampment_lost':
+    case 'partner_silent':
       return true
     default:
       return false

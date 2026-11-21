@@ -23,7 +23,7 @@ No rule changes. The refactor guard and the 50-campaign check are untouched (thi
   8. **The preview's income counts towers, not parties.** The Routes tab and the road tooltip's "about N gold every 5 days" use `routeIncome(world, road, [])`, so the party standing at home does not inflate it; the map's overlay and the real yields count every presence.
   11. **The Routes tab's open routes** show security, expected income now (decision 8's figure) and the raided count, not "last income" (which would need new saved state). The tab is always present; below trading post 4 it says why routes cannot open. It lists contacted partners only, in contact order.
   18. **Debug commands for the play script and the in-browser tests:** `spawn <goblin_raid|kobold_scouts|bandit_camp> [here | <location id> | <col> <row>]` places a nest by `SPAWN_KINDS` (exported from `blight.ts`) at the hex's `threatAt`, drawing no RNG; `contact <partner id | all>` contacts partners. `facility builders_lodge 3`, `facility trading_post 4`, `stock` and `days` exist; `days`' yield totals gain routes through `yieldSummary`.
-- **Open question 1's default (taken):** a new road can be raided the day it opens (it avoids monster hexes and their neighbours, but raids count nests within `RAID_RADIUS`, 2). The design's rule stands, and the Routes tab's preview names any raider before the player pays: `RouteRow.raid` and the offer's "Raided at once: …" tail. If the orchestrator chooses otherwise (`roadTo` preferring a road clear of `RAID_RADIUS`), the preview's tail simply never shows for such roads; nothing here changes.
+- **Decision 6 (the user's):** `roadTo` keeps more than `RAID_RADIUS` from every nest where it can, falling back to avoiding only nests and their neighbours. A fallback road (or one whose partner has a nest within 2) can be raided the day it opens, so the preview still names any raider before the player pays: `RouteRow.raid` and the offer's "Raided at once: …" tail, shown only then.
 
 ### Contract (copied unchanged from the index)
 
@@ -106,7 +106,7 @@ export const ABANDON_AFTER = 6                  // raided yield days in a row (3
 export type RaidCause = 'silent' | 'corrupted' | 'raiders'
 export function routeLimit(world: WorldState): number                          // ROUTE_SLOTS[world.tradingPost - 1] ?? 0
 export function routeOf(world: WorldState, partnerId: string): TradeRoute | null
-export function roadTo(world: WorldState, partnerId: string): Hex[] | null     // decision 6; null when no road
+export function roadTo(world: WorldState, partnerId: string): Hex[] | null     // decision 6: clear of RAID_RADIUS where it can, else clear of nests' neighbours; null when no road
 export function routeCost(length: number): Stock                               // { gold: 20 + floor(length / 2), timber: 10 }
 export function openRouteRefusal(game: GameState, party: Expedition, partnerId: string): string | null
 export function openRoute(game: GameState, party: Expedition, partnerId: string): WorldEvent

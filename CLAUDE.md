@@ -52,7 +52,7 @@ Contracts that span directories (each guide has the detail):
 - **Refusals.** An action on the game state returns why it was refused, or null, and checks everything before changing anything.
 - **Saves.** Raise `SAVE_VERSION` when `GameState`, `Character`, `WorldState` or `BattleSnapshot` changes shape; no migration unless a design asks. Items save by id, so new items must be in `BASE_ITEMS` or `MAGIC_ITEMS`.
 - **Balance.** Constants are tuned against the user's bands (`yomi-balance` skill); a change that moves play fails the refactor guard (`scripts/simulate.test.ts`).
-- **Import cycles** (`skills`/`perks`/`trees`, `blight`/`territory`/`worldMap`, `company` and the day-passing modules) are safe only while nothing calls across at module load.
+- **Import cycles** (`skills`/`perks`/`trees`, `blight`/`territory`/`worldMap`/`trade`, `company` and the day-passing modules) are safe only while nothing calls across at module load.
 
 ## Tests
 

@@ -89,8 +89,10 @@ import {
   clearLocation,
   encampment,
   monstersHere,
+  newWorld,
   worldActive,
   type MonsterLocation,
+  type PartnerLocation,
   type QuietLocation,
   type WorldState,
 } from '../src/game/worldMap.ts'
@@ -991,8 +993,18 @@ export function setVanguard(run: CampaignRun, id: string): void {
   run.roles.set(id, 'vanguard')
 }
 
+/** The trade partners every simulated world has: none. Temporary: removed in step 07 (stage 8 plan, decision 14). */
+export const SIM_PARTNERS: readonly PartnerLocation[] = []
+
+/** A new game of the run's party on world `seed`, its world built with `SIM_PARTNERS` (the party stands at the same home). */
+function simGame(args: CliArgs, seed: number): GameState {
+  const game = newGame(startingParty(args), null, seed)
+  game.world = newWorld(seed, undefined, SIM_PARTNERS)
+  return game
+}
+
 /** A campaign about to begin, from a new game of the run's party unless one is given. */
-export function startCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0, game = newGame(startingParty(args), null, seed)): CampaignRun {
+export function startCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0, game = simGame(args, seed)): CampaignRun {
   const record: CampaignRecord = {
     outcome: 'timeout', days: 0, battles: 0, spawns: 0, captured: 0, lost: 0, blighted: 0, healedHp: 0, campDays: 0,
     towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0,
@@ -1729,7 +1741,7 @@ export function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Camp
  */
 export function waitingIncome(seed: number, args: CliArgs, days: number): number {
   if (days <= 0) return 0
-  const game = newGame(startingParty(args), null, seed)
+  const game = simGame(args, seed)
   let value = 0
   while (game.world.turn < days && worldActive(game.world)) {
     const report = passDay(game)

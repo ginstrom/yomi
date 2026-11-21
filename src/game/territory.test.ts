@@ -335,3 +335,22 @@ describe('market income (economy A3)', () => {
     expect(marketDay(6, 0, YIELD_DAYS - 1).events).toEqual([])
   })
 })
+
+describe('trade partners in the territory', () => {
+  it('are no sites: never held at the start, captured, lost or yielding, whatever their land', () => {
+    const { world } = solo(1)
+    expect(sites(world).map((s) => s.id)).not.toContain('millbrook')
+    expect(sites(world).every((s) => s.kind === 'encampment' || s.kind === 'resource')).toBe(true)
+    expect(world.held).not.toContain('millbrook')
+    expect(world.held).not.toContain('saltmere')
+    const millbrook = world.locations.find((l) => l.id === 'millbrook')!
+    const at = boardIndex(world.board, millbrook.position)
+    for (const level of [0, 3, 0]) {
+      world.blight[at] = level
+      world.turn = YIELD_DAYS * level + YIELD_DAYS
+      const events = updateTerritory(world, [])
+      expect(events.filter((e) => 'site' in e && e.site === 'millbrook')).toEqual([])
+      expect(world.held).not.toContain('millbrook')
+    }
+  })
+})

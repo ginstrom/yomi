@@ -115,3 +115,15 @@ describe('hexInfo', () => {
     expect(lines).toContain('Out of sight.')
   })
 })
+
+describe('hexInfo of a trade partner', () => {
+  it('names it and its good, with no resource lines', () => {
+    const { game, world } = solo()
+    const millbrook = world.locations.find((l) => l.id === 'millbrook')!
+    world.seen[boardIndex(world.board, millbrook.position)] = 1
+    const { title, lines } = info(game, millbrook.position)
+    expect(title).toBe('Millbrook')
+    expect(lines).toContain('Trade partner: timber.')
+    expect(lines.some((l) => /Resource|Yields|Next:|Strength/.test(l))).toBe(false)
+  })
+})

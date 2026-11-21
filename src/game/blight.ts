@@ -11,7 +11,7 @@ import { ENCAMPMENT_ID, threatAt, type MonsterLocation, type WorldState } from '
  * from 0 (clean) to 3 (corrupted), and each day blight and clean influence
  * contend for it. Monster locations, the Source and corrupted land push the
  * blight; the encampment (with its shrine), held sites (with their improvements),
- * watchtowers and every party push back. A hex's `shift`
+ * trade partners, watchtowers and every party push back. A hex's `shift`
  * counter moves by the difference each day, and a level goes up or down when
  * it reaches `SHIFT_COST` either way. Corrupted land spawns new monster
  * locations. Phaser-free; worldMap.ts calls `advanceDay` once a world turn.
@@ -34,6 +34,8 @@ export const CAMP_STRENGTH = 8
 export const SITE_STRENGTH = 3
 /** A watchtower (buildings.ts), a little stronger than a resource. */
 export const TOWER_STRENGTH = 4
+/** A trade partner (trade.ts), silent or not: never held, never lost, and always pushing back. */
+export const PARTNER_STRENGTH = 3
 /** What each level of the encampment's shrine adds to its strength (buildings.ts). */
 export const SHRINE_STRENGTH = 3
 /** What a held resource's improvement (buildings.ts) adds to its strength, by level 0 to 3: an outpost and works 3, a fort 7. */
@@ -82,6 +84,10 @@ export type WorldEvent =
   | { type: 'site_improved'; site: string; name: string; level: ImprovementLevel; building: string }
   | { type: 'yield'; site: string; name: string; material: Material; amount: number; source?: YieldSource }
   | { type: 'encampment_lost'; name: string }
+  /** `home`: the encampment's name. */
+  | { type: 'partner_contacted'; partner: string; name: string; home: string }
+  | { type: 'partner_silent'; partner: string; name: string }
+  | { type: 'partner_restored'; partner: string; name: string }
 
 /** Where a hex's level and shift counter are kept in `WorldState.blight` and `.shift`. */
 export function boardIndex(board: BoardSize, h: Hex): number {
@@ -158,6 +164,7 @@ function sources(world: WorldState): { blight: Array<[Hex, number]>; clean: Arra
   const clean: Array<[Hex, number]> = []
   for (const location of world.locations) {
     if (location.kind === 'monsters') blight.push([location.position, monsterStrength(location)])
+    else if (location.kind === 'partner') clean.push([location.position, PARTNER_STRENGTH])
     else if (world.held.includes(location.id)) clean.push([location.position, siteStrength(world, location.id)])
   }
   for (const tower of world.towers) clean.push([tower.position, TOWER_STRENGTH])

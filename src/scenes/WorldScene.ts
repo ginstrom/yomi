@@ -71,6 +71,8 @@ const LOCATION_SPRITES: Record<LocationKind, string> = {
   monsters: 'map_monsters',
   encampment: 'map_encampment',
   resource: 'map_resource',
+  // Temporary (stage 8 step 01): step 05 draws the partners' own sprites.
+  partner: 'map_resource',
 }
 /** A watchtower's sprite, which is not a location's. */
 const TOWER_SPRITE = 'map_watchtower'
@@ -734,7 +736,7 @@ export class WorldScene extends Phaser.Scene {
           : null
       const lines = [held ? `${location.name} *` : location.name]
       const built = siteImprovement(this.world, location.id)
-      if (built !== 0 && location.kind !== 'monsters') lines.push(improvementName(location, built))
+      if (built !== 0 && location.kind === 'resource') lines.push(improvementName(location, built))
       if (days !== null) lines.push(`falls in ${days}d`)
       this.siteLabels.add(
         this.add
@@ -1729,6 +1731,8 @@ export class WorldScene extends Phaser.Scene {
 /** A location's name colour: monsters reddish, the Source violet, held sites green, threatened ones orange. */
 function labelColor(location: WorldLocation, held: boolean, threatened: boolean): string {
   if (location.kind === 'monsters') return location.source ? '#ce93d8' : '#ffab91'
+  // A trade partner is never held or threatened: neutral (stage 8 step 05 sets its own colour).
+  if (location.kind === 'partner') return '#ffffff'
   if (threatened) return '#ffb74d'
   return held ? '#a5d6a7' : '#ffffff'
 }

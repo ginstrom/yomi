@@ -7,7 +7,7 @@
 ## 1. Objective
 
 Give `src/game/trade.ts` the routes:
-- `roadTo`, a deterministic road from the encampment to a partner, avoiding monsters and their neighbours;
+- `roadTo`, a deterministic road from the encampment to a partner, clear of `RAID_RADIUS` of every nest where it can be, else avoiding nests and their neighbours (decision 6);
 - `openRouteRefusal` and `openRoute`, with route slots by trading post level and the cost;
 - `guarded`, `hexSecurity`, `routeSecurity` and `routeIncome`, with watchtowers and parties guarding road hexes;
 - `raiders` and `raidCause`, by their three causes;
@@ -42,13 +42,13 @@ Play does not change: the simulator builds its worlds without partners (`SIM_PAR
 1. **Signatures follow the code's patterns.** `openRouteRefusal(game, party, partnerId)` and `openRoute(game, party, partnerId)` take the party (every encampment action checks `atEncampment`), and `openRoute` is the time-free apply that assumes its refusal said null and returns the `route_opened` event (as `raiseImprovement` does). `routeSecurity` and `routeIncome` take a road (`readonly Hex[]`) and the presences, not a route, so the Routes tab can preview a road not yet opened; `raidCause` takes `{ partner, road }`.
 4. **Partners' goods.** Paid 1 of the partner's good every second yield day when security is at least ½: on a yield day whose `world.turn / YIELD_DAYS` is even, from the world's turn (no new state). Its `yield` event has `source: 'route'`.
 5. **Raid messages and repeats.** `route_raided` is emitted on every raided yield day, carrying `days` (the run's count, 1 on the first). Only `days === 1` is notable (its message line is step 05's). On the sixth raided day the event is followed by `route_abandoned`, and the route is removed (its slot freed).
-6. **The road** is `reachableHexes` from the encampment over the board, every monster location's hex and its neighbours impassable (all monsters, sighted or not: the rules run on the true state, `vision.ts` is knowledge only), the partner's own hex always passable. That breadth-first search is deterministic with ties broken by neighbour order; the design's "`hexKey` tie-breaks" is read as "deterministic for a seed", which it is. The world map has no movement costs (a hex a day), so length is the hex count. The road excludes the encampment's hex and includes the partner's.
-7. **The road's figures in design §4 are illustrative.** On today's map Millbrook's road is 14 hexes (cost 27 gold and 10 timber, about 2 gold a yield day when clean), not 26; Saltmere's is 30. Tests use the formulas, not §4's numbers.
+6. **The road keeps out of raid range where it can** (the user's decision, 2026-11-21; was open question 1). `roadTo` is `reachableHexes` from the encampment over the board with every hex within `RAID_RADIUS` (2) of a monster location impassable (all monsters, sighted or not: the rules run on the true state, `vision.ts` is knowledge only), the partner's own hex always passable; only when that finds no road does it fall back to the looser rule, every monster location's hex and its neighbours impassable. A fallback road (or a nest within 2 of the partner itself) can be raided the day it opens, which the Routes tab's preview names ("Raided at once: …", step 06). Each breadth-first search is deterministic with ties broken by neighbour order; the design's "`hexKey` tie-breaks" is read as "deterministic for a seed", which it is. The world map has no movement costs (a hex a day), so length is the hex count. The road excludes the encampment's hex and includes the partner's.
+7. **The road's figures in design §4 are illustrative.** On today's map, under the looser rule, Millbrook's road is 14 hexes (cost 27 gold and 10 timber, about 2 gold a yield day when clean), not 26; Saltmere's is 30. Decision 6's road keeps clear of the home nests and may be longer while they stand. Tests use the formulas, not these numbers.
 8. **The preview's income counts towers, not parties.** The Routes tab and the road tooltip use `routeIncome(world, road, [])` (steps 05, 06); the real yields in `tradeDay` count every presence. This step provides the signature that allows it.
 14. **Determinism through step 06.** Steps 01–06 must not move the refactor guard or the 50-campaign check. The simulator builds its worlds without partners (`SIM_PARTNERS`, step 01), so no simulated campaign has a partner or route until step 07.
 16. **Routes pay nothing once the encampment is lost** (`tradeDay` returns nothing when `world.status === 'lost'`). The market's payment on the day of the fall (stage 7's note) is left as it is.
 
-**Open question 1's default (implement it):** a new road can be raided the day it opens, because `roadTo` avoids only distance 1 of a nest while raids count distance 2 (from a new world, Millbrook's road passes 2 hexes from the Goblin Raiders, Saltmere's from three nests). The plan keeps the design's letter: `roadTo` is as decision 6 says; the Routes tab (step 06) will name the raider in its preview. If the orchestrator chooses option (b) instead (prefer a road clear of `RAID_RADIUS`, falling back), it will say so before this step starts.
+**Open question 1 is settled (decision 6, the user's):** `roadTo` prefers a road more than `RAID_RADIUS` from every nest and falls back to the looser rule only when there is none.
 
 ### Contract (copied unchanged from the index)
 
@@ -68,7 +68,7 @@ export const ABANDON_AFTER = 6                  // raided yield days in a row (3
 export type RaidCause = 'silent' | 'corrupted' | 'raiders'
 export function routeLimit(world: WorldState): number                          // ROUTE_SLOTS[world.tradingPost - 1] ?? 0
 export function routeOf(world: WorldState, partnerId: string): TradeRoute | null
-export function roadTo(world: WorldState, partnerId: string): Hex[] | null     // decision 6; null when no road
+export function roadTo(world: WorldState, partnerId: string): Hex[] | null     // decision 6: clear of RAID_RADIUS where it can, else clear of nests' neighbours; null when no road
 export function routeCost(length: number): Stock                               // { gold: 20 + floor(length / 2), timber: 10 }
 export function openRouteRefusal(game: GameState, party: Expedition, partnerId: string): string | null
 export function openRoute(game: GameState, party: Expedition, partnerId: string): WorldEvent
@@ -176,13 +176,13 @@ export const SIM_PARTNERS: readonly PartnerLocation[] = []   // every simulated 
   - `src/game/buildings.ts`: `towerSiteRefusal(world, party)` (place rules on `party.position`), `canAfford`, `spend`, `describeCost`, `atEncampment`.
   - `src/game/tradingPost.ts`: `tradingPostName(level)` ('Trading Post', 'Market', 'Market Hall', 'Trading House').
   - `src/scenes/worldEvents.ts`: `describeWorldEvent`'s `switch` over `WorldEvent['type']` (tsc will ask for the new types; return `''` for them in this step, step 05 writes the lines), `yieldSummary` (a route yield may be counted under sites for now; step 05 adds its part). Any other exhaustive `switch` or `Record` over event types `tsc` flags gets a minimal entry.
-- **No blockers.** Open question 1 has a default (above).
+- **No blockers.**
 
 ## 4. Scope and guidance
 
 1. **Baseline first.** Before any change, confirm the 50-campaign hash equals step 01's recorded value (rerun only if the branch moved since step 01).
 2. **Constants and small readers** in `trade.ts`: as C2 (`routeLimit`, `routeOf`, `routeCost`).
-3. **`roadTo(world, partnerId)`**: null if `partnerId` is not a partner. Blocked: every monster location's hex and each of its `hexNeighbors` (all monster locations, sighted or not); off-board hexes. The partner's own hex is always passable. Search with `reachableHexes(encampment(world).position, board.hexes.length, passable)` and take the partner's entry; null when absent. The result excludes the encampment's hex, includes the partner's.
+3. **`roadTo(world, partnerId)`**: null if `partnerId` is not a partner. First search: blocked are every hex within `RAID_RADIUS` of a monster location (all monster locations, sighted or not) and off-board hexes. If it finds no road, the fallback search: blocked are every monster location's hex and each of its `hexNeighbors`, and off-board hexes. In both the partner's own hex is always passable. Each search is `reachableHexes(encampment(world).position, board.hexes.length, passable)`, taking the partner's entry; null when neither finds it. The result excludes the encampment's hex, includes the partner's.
 4. **Opening.** `openRouteRefusal` checks in the order of the refusal words above, computing `roadTo` only after the cheaper checks and before the cost (the cost depends on the road's length). `openRoute` assumes null and does what C2 says; it computes the road again (or the same way) so the route holds exactly what the refusal checked.
 5. **Guards and security.** `guarded`: level 1 or 2 and within `GUARD_RADIUS` of any `world.towers` position or any presence's position. `hexSecurity` per the rules. `routeSecurity`: mean; an empty road can't occur (a road always holds the partner's hex) but return 0 rather than divide by zero.
 6. **Raids.** `raiders(world, road)`: distance to the road is the minimum `hexDistance` to any road hex; keep those `<= RAID_RADIUS`; sort by that distance, ties by index in `world.locations`. `raidCause`: silent (`isSilent`), then corrupted (`blightAt(...) >= MAX_BLIGHT` on any road hex), then `raiders[0]` as `{ cause: 'raiders', raider }`.
@@ -197,7 +197,7 @@ export const SIM_PARTNERS: readonly PartnerLocation[] = []   // every simulated 
 ## 5. Verification
 
 - **`src/game/trade.test.ts`** (extend step 01's file), on small fixed boards (a world from `newWorld(seed, undefined, PARTNERS)` with locations, blight, towers and stock set by hand, or a hand-built small `WorldState`), seeded or RNG-free:
-  - `roadTo`: the same road twice and for two worlds built from the same seed (determinism); it avoids a monster's hex and its neighbours, sighted or not; the partner's hex is passable even next to a nest; it excludes the encampment's hex and ends on the partner; null when walled in, and `openRouteRefusal` then says "No safe road to <name>.".
+  - `roadTo`: the same road twice and for two worlds built from the same seed (determinism); it keeps more than `RAID_RADIUS` from every nest, sighted or not, where it can, and falls back to avoiding only a nest's hex and neighbours when a nest walls the clear road off (then `raidCause` says raiders); the partner's hex is passable even next to a nest; it excludes the encampment's hex and ends on the partner; null when walled in, and `openRouteRefusal` then says "No safe road to <name>.".
   - Every refusal, one test each, in the listed order (a setup that fails only that check): not at the encampment, unknown id, not contacted, silent, already open, trading post below 4, slots full (1 at level 4, 2 at 5, 4 at 6), no road, the stock short of gold or of timber. A refused open leaves the world unchanged (deep-equal before and after).
   - `openRoute`: spends `routeCost` (27 gold, 10 timber for a 14-hex road), pushes the route as C2 says, `routesOpened` +1, returns `route_opened` with the length; reopening after abandonment recomputes the road (a nest placed since changes it).
   - Income formula: all clean; half tainted (security 0.75 on a road half level 1); a blighted stretch counted 0; tainted and blighted hexes guarded by a watchtower within 3 count 1, at 4 do not; guarded by a party presence within 3 (company A8), not without it; a corrupted hex is never guarded.

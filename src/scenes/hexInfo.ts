@@ -40,6 +40,8 @@ export function hexInfo(game: GameState, party: Expedition, visible: ReadonlySet
     if (location.kind === 'monsters') {
       if (location.source) lines.push('The Source of the blight: beat it to win.')
       lines.push(`Monsters, threat ${location.threat}: foes of level ${location.threat}.`)
+    } else if (location.kind === 'partner') {
+      lines.push(`Trade partner: ${location.good}.`)
     } else {
       const held = world.held.includes(location.id)
       lines.push(location.kind === 'encampment' ? 'Your encampment.' : `Resource, ${held ? 'held' : 'not held'}.`)

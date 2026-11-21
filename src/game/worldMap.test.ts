@@ -8,6 +8,7 @@ import { newGame, type GameState } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
 import {
   DEFAULT_ENCAMPMENT_NAME,
+  PARTNERS,
   ENCAMPMENT_ID,
   NOTICE_RADIUS,
   SOURCE_ID,
@@ -67,8 +68,8 @@ describe('newWorld', () => {
     for (const a of lairs) for (const b of lairs) if (a !== b) expect(hexDistance(a.position, b.position)).toBeGreaterThan(2)
   })
 
-  it('shows monsters and resources, and no settlement but the encampment', () => {
-    expect(new Set(world.locations.map((l) => l.kind))).toEqual(new Set(['monsters', 'encampment', 'resource']))
+  it('shows monsters, resources and trade partners, and no settlement of the party\'s but the encampment', () => {
+    expect(new Set(world.locations.map((l) => l.kind))).toEqual(new Set(['monsters', 'encampment', 'resource', 'partner']))
     expect(world.locations.filter((l) => l.kind === 'encampment').map((l) => l.id)).toEqual([ENCAMPMENT_ID])
   })
 
@@ -524,7 +525,9 @@ describe('travel, as it is (characterization)', () => {
 
 describe('a seeded session of walks and camps (characterization)', () => {
   it('gives the same journeys, camps, world and party as before the day loop', () => {
-    const { game, world, party } = fresh()
+    const { game, party } = fresh()
+    // Recorded before the trade partners (stage 8), so on a world without them.
+    const world = (game.world = newWorld(1, undefined, []))
     const results: unknown[] = []
     const wound = () => party.members.forEach((m, i) => (m.hp = Math.max(1, m.hp - 7 - 3 * i)))
     const targets = [offsetToHex(30, 5), offsetToHex(40, 20), offsetToHex(20, 30), offsetToHex(5, 35), offsetToHex(13, 18)]
@@ -541,7 +544,8 @@ describe('a seeded session of walks and camps (characterization)', () => {
     // The order is left out: the day loop keeps one past an interrupt, as nothing did before it.
     const { order: _order, ...rest } = party
     // The world as it was before stage 7: its improvements as the outposts list (none here), and no Lodge.
-    const { improvements, lodge: _lodge, ...kept } = world
+    // And before stage 8: no contacts, silence or routes.
+    const { improvements, lodge: _lodge, contacted: _contacted, silent: _silent, routes: _routes, routesOpened: _routesOpened, ...kept } = world
     const before = Object.fromEntries(Object.entries(kept).flatMap(([key, value]) => (key === 'shrine' ? [[key, value], ['outposts', Object.keys(improvements)]] : [[key, value]])))
     const digest = createHash('sha256').update(JSON.stringify({ results, world: before, party: rest })).digest('hex')
     expect(world.turn).toBe(SESSION_TURN)
@@ -554,3 +558,44 @@ const SESSION_TURN = 153
 // Re-recorded in skill trees step 04: every hero has mana (camping fills it), and the mage 2 more for each Mage and Cleric node.
 // Re-recorded in skill trees step 28: the characters' `perkPicks` renamed `perkPoints`, nothing else (the old hash held with the name put back).
 const SESSION_SHA256 = '250b73821d053343d30cc4209b6f36ec15f526bdcb5c0e109894535e7dbedaa0'
+
+describe('the trade partners on a new world', () => {
+  const kinds = (world: WorldState) => world.locations.map((l) => l.kind)
+
+  it('are Millbrook (timber, threat 2) and Saltmere (salt, threat 3), where the stage puts them', () => {
+    const world = newWorld(1)
+    const millbrook = world.locations.find((l) => l.id === 'millbrook')!
+    const saltmere = world.locations.find((l) => l.id === 'saltmere')!
+    expect(millbrook).toMatchObject({ kind: 'partner', name: 'Millbrook', good: 'timber', position: offsetToHex(18, 30) })
+    expect(saltmere).toMatchObject({ kind: 'partner', name: 'Saltmere', good: 'salt', position: offsetToHex(30, 38) })
+    expect(threatAt(millbrook.position)).toBe(2)
+    expect(threatAt(saltmere.position)).toBe(3)
+    expect([world.contacted, world.silent, world.routes, world.routesOpened]).toEqual([[], [], [], 0])
+  })
+
+  it('stand after the resources and before the monsters', () => {
+    const order = kinds(newWorld(1))
+    const first = order.indexOf('partner')
+    expect(order.slice(first, first + 2)).toEqual(['partner', 'partner'])
+    expect(order.lastIndexOf('resource')).toBeLessThan(first)
+    expect(order.indexOf('monsters', order.lastIndexOf('resource'))).toBe(first + 2)
+  })
+
+  it('are copies: changing one world\'s partner leaves PARTNERS and other worlds alone', () => {
+    const a = newWorld(1)
+    const b = newWorld(1)
+    const ofA = a.locations.find((l) => l.id === 'millbrook')!
+    ;(ofA.position as { q: number }).q += 1
+    ofA.name = 'Changed'
+    expect(PARTNERS[0]).toEqual({ id: 'millbrook', kind: 'partner', name: 'Millbrook', position: offsetToHex(18, 30), good: 'timber' })
+    expect(b.locations.find((l) => l.id === 'millbrook')!.position).toEqual(offsetToHex(18, 30))
+  })
+
+  it('can be left out, giving the world as it was before them', () => {
+    const world = newWorld(1, undefined, [])
+    expect(kinds(world)).not.toContain('partner')
+    // Hashed from newWorld(1) as the code before stage 8 built it.
+    const digest = createHash('sha256').update(JSON.stringify([world.blight, world.shift, world.held, world.seen])).digest('hex')
+    expect(digest).toBe('a8b5ad3c78005c2a13ce7b987d5318fa61cde4a284cf5ffdeb24da6216f5970e')
+  })
+})

@@ -87,7 +87,7 @@ describe('a watchtower', () => {
 
     const { world: onHome, party: onHomeParty } = ready()
     onHomeParty.position = offsetToHex(9, 19)
-    expect(canBuildTower(onHome, onHomeParty)).toMatch(/encampment or a resource/)
+    expect(canBuildTower(onHome, onHomeParty)).toMatch(/cannot stand on a location/)
 
     const { game: crowdedGame, world: crowded, party: crowdedParty } = ready()
     buildTower(crowdedGame, crowdedParty)

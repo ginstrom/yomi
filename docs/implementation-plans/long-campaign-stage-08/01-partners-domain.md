@@ -2,7 +2,7 @@
 
 [Plan index](index.md) · [Stage design](../../designs/long-campaign/stage-08-trade-routes.md) (§2 Partners; §5 technical notes, versions) · [Reference](../../designs/long-campaign/reference/economy-and-trade-routes.md) §4.3 (trade partners), §5.1 (state), §5.2 (modules) · [Stages index](../../designs/long-campaign/index.md) (the early-game guard, versions)
 
-**Difficulty:** opus / opus. The engineer should be opus (model unset): the step adds a location kind that many switches on `kind` must handle, adds saved state with a migration, and must leave the refactor guard and the 50-campaign check identical. The reviewer should be opus, to check the migration chain, every `kind` switch, and that no simulated campaign moves.
+**Difficulty:** opus / opus. The engineer should be opus (model unset): the step adds a location kind that many switches on `kind` must handle, adds saved state (with no migration, decision 15), and must leave the refactor guard and the 50-campaign check identical. The reviewer should be opus, to check the save's strict check, every `kind` switch, and that no simulated campaign moves.
 
 ## 1. Objective
 
@@ -12,7 +12,7 @@ Measure the stage's baseline, then give the domain its trade partners:
 - `src/game/trade.ts` (new) with `TradeRoute`, the partner readers, `contactPartner` and the daily `partnerDay` (contact by a presence on the partner's hex; silence at `LOSS_LEVEL`, waking at 0);
 - partners as clean sources of `PARTNER_STRENGTH` (3) in the blight;
 - the events `partner_contacted`, `partner_silent`, `partner_restored`; `partner_silent` is notable;
-- `SAVE_VERSION` 28 with `migrateFrom27`.
+- `SAVE_VERSION` 28, with no migration: older saves read as unreadable (decision 15).
 
 Play in the simulator does not change: every simulated world is built without partners (`SIM_PARTNERS = []`, temporary), so the refactor guard and the 50-campaign check stay identical. In the game itself, partners appear on the world map (drawn with the resource sprite until step 05) and can be contacted. Routes are step 02's; the world map's partner icons, lines and hex info are step 05's.
 
@@ -28,7 +28,7 @@ Play in the simulator does not change: every simulated world is built without pa
 2. **Contact and silence are daily, in a new `partnerDay`.** The design names `contactPartner` "called from the travel step"; the plan instead contacts in the world's day (`updateTerritory` calls `partnerDay`), for every presence standing on an uncontacted partner's hex. Each walked hex ends a day with the party on it, so this is the same for walking and covers garrisons and debug moves too. `contactPartner(world, id)` stays exported for `partnerDay` and the debug console. Contact is not notable (the design's `isNotable` list leaves it out); its line shows in the day's events like a capture.
 3. **Silence is tracked for every partner, told only for contacted ones.** `WorldState.silent` holds the partners silent now (entered at `LOSS_LEVEL`, left at 0). `partner_silent` and `partner_restored` are emitted only for contacted partners. A partner is a clean source of `PARTNER_STRENGTH` (3) whether silent or not: it is never lost, and its strength never changes, so the fields memo is untouched by silence.
 14. **Determinism through step 06.** Steps 01–06 must not move the refactor guard or the 50-campaign check. The simulator builds its worlds without partners (`SIM_PARTNERS`, temporary, step 01) and keeps the Lodge at 2 (`SIM_LODGE_CAP`, temporary, step 03), so no simulated campaign has a partner, route or road until step 07, which removes both holds and re-records the fixture once.
-15. **Saves migrate** (for the user's eye). `SAVE_VERSION` 27 → 28 in step 01, one bump for the stage (contacts, silence, routes and the partner locations together). The stages index says a stage "migrates where it can"; this one can, cheaply, so `migrateFrom27` adds empty `contacted`, `silent`, `routes`, `routesOpened: 0` and the two partners (each only if no location stands on its hex), keeping the chain from 18 readable. The land around them is not reseeded; their strength pushes from the next day.
+15. **No save migration** (the user's decision, 2026-11-21). `SAVE_VERSION` 27 → 28 in step 01, one bump for the stage (contacts, silence, routes and the partner locations together), and no `migrateFrom27`: a save of any earlier version reads as unreadable, the project's default. With nothing to take them to 28, the older migrations (`migrateFrom18` to `migrateFrom26`) go too; the captured fixtures stay, as tests that each older version is refused.
 
 ### Contract (copied unchanged from the index)
 
@@ -77,7 +77,7 @@ export const PARTNER_STRENGTH = 3   // sources(): every partner location a clean
 
 // src/game/territory.ts: sites(world) returns only 'encampment' and 'resource' locations (partners excluded)
 // src/game/worldMap.ts: isNotable(partner_silent) is true
-// src/game/save.ts: SAVE_VERSION = 28; migrateFrom27 (decision 15); the strict check covers partners (kind, a Material good),
+// src/game/save.ts: SAVE_VERSION = 28, no migration (decision 15: older saves unreadable); the strict check covers partners (kind, a Material good),
 //   contacted and silent (ids of partner locations), routes (TradeRoute's shape, partner a location id) and routesOpened
 // src/scenes/WorldScene.ts: LOCATION_SPRITES.partner = 'map_resource' (temporary, for tsc; step 05 draws the partner sprites)
 // scripts/simulate.ts (temporary, removed in step 07):
@@ -177,7 +177,7 @@ Search `src/`, `scripts/` and `e2e/` for `kind === 'monsters'`, `kind !== 'monst
 
 ### 4.7 Saves (`src/game/save.ts`)
 
-- `SAVE_VERSION = 28`; accept 27 in the version list; `migrateFrom27(game)`: check `world` is an object; set `contacted = []`, `silent = []`, `routes = []`, `routesOpened = 0`; append a copy of each of `PARTNERS` unless some location already stands on its hex (compare `q` and `r`); do not reseed the blight. Run it for every version below 28 (after `migrateFrom26` for older ones), so the whole chain from 18 reaches 28.
+- `SAVE_VERSION = 28` and only it accepted (decision 15: no migration). The old migrations (`migrateFrom18`, `migrateFrom22`, `migrateFrom25`, `migrateFrom26`, `clampMana`) have nothing to take a save to 28 and go, with their tests; every older fixture (18, 22, 25, 26, and a captured `save-v27.json`) is tested to read as unreadable.
 - The strict check (C1): every `kind === 'partner'` location has a `good` that is a `Material`; `contacted` and `silent` are arrays of ids of partner locations (no duplicates); `routes` is an array of `TradeRoute` (string `id` and `partner`, `partner` the id of a partner location, `road` an array of hexes, integer `opened` and `raidedDays` ≥ 0); `routesOpened` an integer ≥ 0. Keep the improvements check's `kind === 'resource'`.
 - Capture a version-27 fixture **before** bumping: `src/game/fixtures/save-v27.json`, a real `serializeSave` output of a game with an outpost or works and some turns passed (follow how `save-v26.json` was captured; see its test). Test that it loads as 28 with both partners, empty contacts and routes, and that it round-trips.
 - Doc comment above `SAVE_VERSION`: what 28 adds.
@@ -205,7 +205,7 @@ Search `src/`, `scripts/` and `e2e/` for `kind === 'monsters'`, `kind !== 'monst
   - `src/game/blight.test.ts`: a partner is a clean source of `PARTNER_STRENGTH` (`netInfluence` at and beside its hex differs from a world without it by the expected pushes); its strength is the same when silent; the fields memo key does not change when a partner goes silent.
   - `src/game/territory.test.ts`: `sites()` excludes partners; `initialHeld` never holds a partner; no yield, capture or `site_lost` for a partner whatever its blight.
   - `src/game/worldMap.test.ts`: `newWorld()` places Millbrook at `offsetToHex(18, 30)` (good timber, `threatAt` 2) and Saltmere at `offsetToHex(30, 38)` (good salt, `threatAt` 3), after the resources and before the monsters, as copies (mutating one world's partner leaves `PARTNERS` and other worlds alone); `newWorld(seed, name, [])` has no partner and the same blight as before this step for that seed (compare with a stored count or hash taken from the old code, or with a world built by filtering partners out before seeding).
-  - `src/game/save.test.ts`: `save-v27.json` migrates (partners added, fields defaulted, not added twice when a location stands on a partner's hex); a version-28 game with contacts, silence and a hand-made route round-trips; the strict check refuses a bad `good`, a `contacted` id that is not a partner, and a malformed route; the older fixtures (18, 22, 25, 26) still load, now at 28.
+  - `src/game/save.test.ts`: every older fixture (18 to 27) reads as unreadable; a version-28 game with contacts, silence and a hand-made route round-trips; the strict check refuses a bad `good`, a `contacted` id that is not a partner, and a malformed route.
   - `src/game/buildings.test.ts`: the tower refusal's new words.
   - `src/scenes/hexInfo.test.ts`: a partner's hex reads its name and "Trade partner: timber.", no resource lines.
 - **Gates:**
@@ -219,7 +219,7 @@ Search `src/`, `scripts/` and `e2e/` for `kind === 'monsters'`, `kind !== 'monst
 - [ ] Baseline recorded in `log.md`: the 50-campaign hash, and Source wins (and days, deaths, income lines) of the 500-campaign `--parties 1`, default company, and default company `--ready-level 10` runs, seed 1, run one at a time.
 - [ ] C1 implemented exactly: `PartnerLocation`, `PARTNERS`, `newWorld`'s `partners` parameter, the four `WorldState` fields, `trade.ts` with `TradeRoute`, the readers, `contactPartner`, `partnerDay`; `PARTNER_STRENGTH` sources; the three events; `sites()` without partners; `isNotable(partner_silent)`.
 - [ ] Every `kind` switch checked (§4.6), with the record listing each place and what changed.
-- [ ] `SAVE_VERSION` 28 with `migrateFrom27`, the strict check, and the captured `save-v27.json` fixture and tests.
+- [ ] `SAVE_VERSION` 28 with no migration (older fixtures refused), the strict check, and its tests.
 - [ ] `SIM_PARTNERS = []` used for every simulated world; the refactor guard green and untouched; the 50-campaign hash identical to the baseline.
 - [ ] The tests of §5 written and passing; `npm test` and the world map's in-browser tests pass.
 - [ ] CLAUDE.md (root and `src/game/`), `docs/reference/game.md` and `.claude/skills/yomi-add-content/location-kind.md` updated as §4.6 and §4.9 say.
@@ -227,3 +227,35 @@ Search `src/`, `scripts/` and `e2e/` for `kind === 'monsters'`, `kind !== 'monst
 - [ ] The execution record says whether `describeWorldEvent` got the partner lines here or `''` for step 05.
 
 ## 7. Execution record
+
+**Engineer (opus), 2026-11-21.**
+
+Baseline (§4.1): run by the `yomi-measure` agent in a clean worktree at `b28bba1`, one run at a time, before any code change; figures in [`log.md`](log.md). 50-campaign SHA-256 `1ceefe63…74400d1` (23 of 50); `one` 239 of 500, 286 days, 1.1 dead; `company` 239, 286 days, 1.1 dead; `rl10` 434, 509 days, 1.0 dead. Gold by source: sites 228 / 227 / 406, market 0 / 0 / 3, sales 42 / 42 / 144. No income line (that needs `--waiting`).
+
+What was built: C1 as written, except the save (below). `PartnerLocation`, `PARTNERS` and `newWorld`'s `partners` parameter (copies, after the resources, before the monsters); `contacted`, `silent`, `routes`, `routesOpened`; `trade.ts` with `TradeRoute`, `partners`, `partnerById`, `isContacted`, `isSilent`, `contactPartner`, `partnerDay` (called last in `updateTerritory`); `PARTNER_STRENGTH` 3 in `sources()`; the three events; `isNotable(partner_silent)`; `sites()` only the encampment and resources; `SIM_PARTNERS = []` through a `simGame` helper used by `startCampaign` and `waitingIncome`. `describeWorldEvent` got the C5 lines for the three partner events (not `''`), with a test.
+
+**Deviation: no save migration** (the user's decision, relayed by the orchestrator mid-step; decision 15 revised in the index and this file). I first built `migrateFrom27` and its tests, then removed it. `SAVE_VERSION` is 28 and only 28 is read. With no migration to 28, the older chain (`migrateFrom18`, `migrateFrom22`, `migrateFrom25`, `migrateFrom26`, `clampMana`, and the `FOLDED`/`RETIRED_PERKS` tables) could never produce a readable save and `tsc`'s `noUnusedLocals` refused it, so it went with its tests (the version-18, 22, 25, 26 describes, the version-23 and 24 battle-default tests, the version-18 battle test). The fixtures stay, with `save-v27.json` captured before the bump (a real `serializeSave` of `newGame(_, 1, 1)` after 12 turns, works on Iron Vein, the Lodge at 2, a day order `improve`): one test reads each of 18, 22, 25, 26, 27 as unreadable. The strict check covers partners' `good` (a key of `WORKS_NAMES`, the full record of materials), `contacted` and `silent` (distinct partner ids), `routes` (`TradeRoute`'s shape to a partner) and `routesOpened`.
+
+The other decision the orchestrator relayed (the road keeps out of `RAID_RADIUS` where it can) is step 02's: decision 6, the open question, C2's `roadTo` comment, and steps 02, 06 and 07's text were updated; nothing was implemented here.
+
+Every `kind` switch (§4.6):
+- `territory.ts` `sites()`: now `encampment` or `resource` (a type guard to `QuietLocation`).
+- `buildings.ts` `improvementSite`: `here.kind !== 'resource'` (was `=== 'monsters'`); `towerSiteRefusal`: "A watchtower cannot stand on a location." (`company.test.ts` and `buildings.test.ts` updated; the manual does not quote it).
+- `blight.ts` `sources()`: the partner branch before the held-site branch; `spawn`'s `keepClear` and `occupied` unchanged.
+- `hexInfo.ts`: a partner branch, "Trade partner: <good>."; known by `seen`.
+- `WorldScene.ts`: `LOCATION_SPRITES.partner = 'map_resource'` (temporary); `refreshLabels` names an improvement only for a resource (tsc caught it); `labelColor` white for a partner; `knowledgeOf` unchanged (by `seen`).
+- Checked, unchanged: `vision.ts` (held sites only), `partyList.ts` `knownLocationAt`, `debugCommands.ts` `locations` (lists "partner") and `goto` (any location id), `company.ts` (monsters only), `save.ts` `locationOf` (partners pass through), `scripts/simulate.ts` `improveErrand`, `nextTarget`, `guardChoice` (on `sites()` or monster filters, so partners excluded; moot while `SIM_PARTNERS` is empty), `sounds.ts` (no partner sounds until step 05).
+
+Tests: `trade.test.ts` (new, 11), partner tests in `blight.test.ts`, `territory.test.ts`, `worldMap.test.ts`, `hexInfo.test.ts`, `worldEvents.test.ts`, `save.test.ts`. Five existing tests pinned numbers from before the partners (`blight.test.ts` "the numbers of one party, pinned" ×2 and "spawns at threats 1 and 2 as before bandits", `worldMap.test.ts`'s walks-and-camps characterization, and its "no settlement but the encampment"); the first four now build their world with `newWorld(seed, undefined, [])` and still match their stored hashes, which shows the rest of the rules unchanged; the last now expects the `partner` kind. A new test checks `newWorld(1, undefined, [])` against a hash taken from the code at `b28bba1`. Mutation checks: dropping the `partnerDay` call, the partner source, or the `sites()` filter each fails a new test.
+
+Verification:
+- `npm test`: 2416 passed, 1 failed: `scripts/records.test.ts` "keeps each new plan index under 32000 bytes" (this plan's `index.md` is about 38.7 KB). It failed the same at `b28bba1`, before any change of mine; the plan's own size, not this step. Committed regardless; the orchestrator should trim the index (or decide otherwise).
+- Refactor guard: green, fixture untouched.
+- 50-campaign check after the change: SHA-256 identical to the baseline.
+- `npm run test:browser -- e2e/world.test.ts`: 62 passed (run before the save change, which touches no scene).
+- `scripts/claudeMd.test.ts`: passes.
+- A dev build was not looked at by eye; the world map's in-browser tests load the map with partners on it, and `hexInfo`'s test covers their line.
+
+Docs: root `CLAUDE.md` (cycle list), `src/game/CLAUDE.md` (cycle, `trade.ts`), `docs/reference/game.md` (partners, strength, notable, versions rewritten for 28 with no migration), `.claude/skills/yomi-add-content/location-kind.md` (the `kind` switches, and what tsc catches).
+
+For later steps: `trade.ts` does not import `buildings.ts` yet (step 02 adds it). `simGame` in `scripts/simulate.ts` is where step 07 drops `SIM_PARTNERS`. Tests that build `newGame(…, 1)` in `scripts/simulate.test.ts` now have partners on their world; none moved.

@@ -235,3 +235,11 @@ describe('advanceMessage', () => {
     expect(advanceMessage(party)).toBe('2 heroes have points to spend: click a portrait marked "+".')
   })
 })
+
+describe('trade partner lines (stage 8)', () => {
+  it('tell of contact, silence and waking', () => {
+    expect(describeWorldEvent({ type: 'partner_contacted', partner: 'millbrook', name: 'Millbrook', home: 'Oakvale' })).toBe('Millbrook will trade with Oakvale.')
+    expect(describeWorldEvent({ type: 'partner_silent', partner: 'millbrook', name: 'Millbrook' })).toBe('Millbrook has fallen silent under the blight.')
+    expect(describeWorldEvent({ type: 'partner_restored', partner: 'millbrook', name: 'Millbrook' })).toBe('Millbrook is trading again.')
+  })
+})

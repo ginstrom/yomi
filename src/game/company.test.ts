@@ -471,7 +471,7 @@ describe('act refused', () => {
     poor.world.stock = { gold: 5, iron: 9 }
     refused(poor.game, poor.party.id, { kind: 'tower' }, /more than the stock holds/)
     const site = withStandingOrder(onGoldSeam())
-    refused(site.game, site.party.id, { kind: 'tower' }, /cannot stand on the encampment or a resource/)
+    refused(site.game, site.party.id, { kind: 'tower' }, /cannot stand on a location/)
     const land = withStandingOrder(onCleanLand())
     land.world.stock = { gold: 20, timber: 12 }
     refused(land.game, land.party.id, { kind: 'improve' }, /held resource/)
