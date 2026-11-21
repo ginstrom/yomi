@@ -976,3 +976,4 @@ index 393d4a8..827e335 100644
 | sounds:check | PASS | none (85 cues, 4 banks up to date, within budget) | uv 0.13.6, ffmpeg 9.0.2 |
 
 - Pin drift: host `sprite` 0.7.0 against pin v0.6.0 in `workflow.md` (known; no export changed).
+- Outcome: engineer sonnet, reviewer sonnet, verdict clean, 1 review round (the added embed line in `screenshots.md` made exact; two overlapping paragraphs merged).
