@@ -8,5 +8,5 @@ Touch every line, then run `npm test`.
 ## Tests that catch a miss
 
 - `tsc` (full `Record`s keyed by element).
-- `src/scenes/sounds.test.ts` (element sounds).
-- `src/combat/spells.test.ts`.
+- `src/combat/spells.test.ts` (the `ELEMENTS` list check) is the sure catch.
+- `ELEMENT_SPELL_SOUNDS` is a `Partial`, so nothing enforces it: check it by hand.

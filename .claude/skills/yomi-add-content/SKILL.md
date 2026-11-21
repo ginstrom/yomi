@@ -5,7 +5,7 @@ description: Every place to touch when adding or renaming Yomi content (spell, s
 
 # Adding content
 
-Open the file for your case, touch every item in it, then run `npm test`. Each file lists every place across all directories, so you need not read the guides to find them.
+Open the file for your case, touch every item in it, then run `npm test`. Each file lists every place across all directories; the directory guides' contracts still apply.
 
 | File | Content type |
 | --- | --- |

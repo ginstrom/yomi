@@ -32,7 +32,7 @@ Append-only history for [the plan](index.md): one `## Step NN: <title>` section 
 
 ## Step 03: yomi-add-content, the battle content
 
-- Date 2026-11-21. Tiers: engineer sonnet, reviewer sonnet. Verdict: engineer done, awaiting review. Rounds: 0.
+- Date 2026-11-21. Tiers: engineer sonnet, reviewer sonnet. Verdict: clean (review sonnet, 1 round; three accuracy nits fixed in a follow-up commit: SKILL.md guides sentence, element.md catches, battle-event.md catch scope). Rounds: 1.
 - Files: `.claude/skills/yomi-add-content/` `SKILL.md` 1,576 bytes (cap 4,000); `spell.md` 1,330; `status.md` 929; `ability.md` 1,219; `trait.md` 1,165; `element.md` 478; `skill-node.md` 1,007; `battle-event.md` 985 (cap 8,000 each).
 - Guides after: `src/engine/CLAUDE.md` 5,246; `src/combat/CLAUDE.md` 2,576; `src/character/CLAUDE.md` 5,485; `src/scenes/CLAUDE.md` 6,011. Root 6,294.
 - `npm test`: tsc clean; 97 files, 2407 tests passed.

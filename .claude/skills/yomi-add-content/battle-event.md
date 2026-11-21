@@ -11,6 +11,6 @@ Events are the engine's only output and the log format. Touch every line, then r
 
 ## Tests that catch a miss
 
-- `tsc` (the `BattleEvent['type']` record in `src/scenes/sounds.test.ts`).
+- `tsc` (the `BattleEvent['type']` record in `src/scenes/sounds.test.ts`) catches a new event type only; a changed shape is caught by nothing automatic, so check each line above.
 - `src/scenes/sounds.test.ts`.
 - `scripts/simulate.test.ts` (the refactor guard, when the log moves).

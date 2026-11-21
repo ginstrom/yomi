@@ -122,3 +122,5 @@ Run with `PATH=/opt/homebrew/opt/node@26/bin:$PATH`:
 ## 7. Execution record
 
 Done 2026-11-21 (sonnet engineer). Created the skill index and seven content files; moved the engine Checklists, combat bullet 1, the character new-node sentence and the scenes ability, spell and battle-event items; C4 pointer lines exact. `npm test`: 97 files, 2407 tests passed. Self-check recorded in `log.md`. Deviations: none. Every symbol written was confirmed by grep; `SOUNDS_AS_ATTACKS` lives in `src/scenes/sounds.test.ts`, not `sounds.ts`, so `ability.md` points to the test. The character guide keeps "`PERKS` is ordered by tree, path and tier" (a rule); `skill-node.md` repeats the layout-order fact.
+
+Review (sonnet): clean, 1 round. Three nits fixed: SKILL.md no longer says the guides need not be read; element.md names the ELEMENTS check as the sure catch and ELEMENT_SPELL_SOUNDS as checked by hand; battle-event.md says the type record catches only a new type.
