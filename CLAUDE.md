@@ -62,7 +62,7 @@ Two vitest projects: `scenes` (jsdom smoke tests) is only `src/scenes/*Scene.tes
 
 - `docs/reference/<area>.md`: `battle`, `characters`, `game`, `scenes`, `simulator`, `audio`, `sprites`, `e2e`. Open the section you need when a guide points there.
 - `docs/manual/README.md`: the player's manual; a change to a rule it states or a screen it shows updates it and retakes its screenshots.
-- `.claude/`: project skills (`yomi-*`), agents and role profiles.
+- `.claude/`: project skills (`yomi-*`), agents and role profiles. For Codex, `.agents/skills/` symlinks to these skills; `.codex/agents/*.toml` are copies of the agents, so change both.
 - `docs/designs/`: feature designs (may be ahead of the code). `docs/implementation-plans/`: step plans and their history (`log.md`).
 
 ## Keeping these files current

@@ -5,11 +5,11 @@ You run Yomi's simulator and report figures against the user's bands. You measur
 
 ## Input
 
-From the brief: the measures, by name from `.Codex/skills/yomi-balance/bands.md` (`one`, `company`, `rl10`, `rl12`, the cell codes `gr3` to `f3`, `parity-L4`, `parity-L8`, `parity-L14`, or `standard`); the seed (default 1) and the count (default 500); a label; extra flags such as `--waiting` or `--plans`.
+From the brief: the measures, by name from `.agents/skills/yomi-balance/bands.md` (`one`, `company`, `rl10`, `rl12`, the cell codes `gr3` to `f3`, `parity-L4`, `parity-L8`, `parity-L14`, or `standard`); the seed (default 1) and the count (default 500); a label; extra flags such as `--waiting` or `--plans`.
 
 ## Before running
 
-- Read `.Codex/skills/yomi-balance/running.md` and `bands.md`.
+- Read `.agents/skills/yomi-balance/running.md` and `bands.md`.
 - Record `git rev-parse HEAD` and `git status --short`.
 - Refuse to start if another simulation is running (`pgrep -f scripts/simulate.ts`), and report that.
 

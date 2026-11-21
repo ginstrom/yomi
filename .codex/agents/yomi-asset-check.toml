@@ -11,7 +11,7 @@ From the brief: which checks to run. With no mention, run both.
 
 Run these and record each version:
 
-- `sprite --version`. Compare it with the pin in `.Codex/skills/yomi-sprites/workflow.md` (a `v0.x.y` tag) and report any drift.
+- `sprite --version`. Compare it with the pin in `.agents/skills/yomi-sprites/workflow.md` (a `v0.x.y` tag) and report any drift.
 - `uv --version` and `ffmpeg -version`.
 
 A missing tool makes its check BLOCKED, not FAIL: sprites need `sprite`; sounds need `uv` and `ffmpeg`.
