@@ -9,6 +9,9 @@ import type { BoardSize, Hex } from '../grid/hex.ts'
 import { WORLD_LAYOUT, boardHexCenter, boardPixelSize, type Point } from './boardGeometry.ts'
 import { raidWords } from './roadsView.ts'
 
+/** How many partners' rows the Routes tab draws; more partners need paging. */
+export const ROUTE_ROWS = 4
+
 /** Where a partner's route stands: open and paying, open but raided today, or not yet opened. */
 export type RouteStatus = 'open' | 'raided' | 'closed'
 

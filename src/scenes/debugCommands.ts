@@ -400,7 +400,7 @@ const COMMANDS: Record<string, Command> = {
     usage: 'spawn <goblin_raid|kobold_scouts|bandit_camp> [here | <location id> | <col> <row>] [@party]',
     acts: true,
     summary:
-      "Place a nest of a kind at a hex (the party's by default) at that hex's threat, with no RNG drawn and no pressure spent; its hex goes to blight 3 and the nest is sighted. A hex where a location stands is refused. Place one within 2 hexes of a road to raid it.",
+      "Place a nest of a kind at a hex (the party's by default) at that hex's threat, with no RNG drawn and no pressure spent; its hex goes to blight 3 and the nest is sighted. A hex where a location or a party stands is refused. Place one within 2 hexes of a road to raid it.",
     changes: true,
     run([kind, ...where], context) {
       const { world } = gameOf(context)
@@ -409,6 +409,8 @@ const COMMANDS: Record<string, Command> = {
       const at = hexArgument(where, context)
       const there = world.locations.find((l) => l.position.q === at.q && l.position.r === at.r)
       if (there) throw new DebugError(`${theName(there.name)} already stands at ${offset({ position: at })}.`)
+      const { parties } = gameOf(context)
+      if (parties.some((party) => party.position.q === at.q && party.position.r === at.r)) throw new DebugError(`A party stands at ${offset({ position: at })}: move it, or name another hex.`)
       world.spawns += 1
       const nest: MonsterLocation = { id: `spawn_${world.spawns}`, kind: 'monsters', name: spawnKind.name, position: at, encounter: spawnKind.encounter, threat: threatAt(at), loot: [] }
       world.locations.push(nest)

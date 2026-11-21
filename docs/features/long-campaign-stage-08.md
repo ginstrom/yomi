@@ -18,7 +18,8 @@
 - Verification: none yet.
 - Carried forward:
   - Step 08: screenshots must show an amber road stretch and a road over blight tints (step 05 review). Index decision 13 and C5 raided-road wording to update from steps 07/05 reports.
-  - Accepted, not fixed: a road's shape (avoiding unsighted nests, decision 6) can hint at nests in the fog.
+  - Accepted, not fixed: a road's shape (avoiding unsighted nests, decision 6) can hint at nests in the fog; the Routes preview's security, income and corruption cause use the true blight, not `seen` (follows C6 and decision 8).
+  - Stage 9: the Routes tab shows at most 4 rows with no paging (a test trips when PARTNERS exceeds it).
   - Full in-browser suite stalled for the step 01 reviewer (~34 min, killed); run it in verification.
   - From stage 7: the Lodge level 3 sprite (milestone reads as a bottle, paving faint, 2→3 jump weak at 1x) is to be redrawn now that level 3 becomes reachable.
   - From stage 7, not this stage: market income and the simulator's spend order (works, forts, market levels) wait for stage 12's retune.

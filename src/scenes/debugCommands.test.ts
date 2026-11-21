@@ -239,9 +239,11 @@ describe('debug commands', () => {
     it('takes here, a location’s hex, and the other kinds; the next spawn has the next id', () => {
       const context = onWorldMap()
       const { world, parties } = context.source!.game
-      parties[0].position = offsetToHex(10, 12)
-      runCommand('spawn kobold_scouts', context)
-      expect(world.locations.at(-1)).toMatchObject({ name: 'Kobold Nest', encounter: 'kobold_scouts', position: offsetToHex(10, 12) })
+      const site = world.locations.find((l) => l.id !== 'encampment' && l.kind === 'resource')!
+      parties[0].position = offsetToHex(10, 14)
+      runCommand(`spawn kobold_scouts 11 12`, context)
+      expect(world.locations.at(-1)).toMatchObject({ name: 'Kobold Nest', encounter: 'kobold_scouts', position: offsetToHex(11, 12) })
+      expect(runCommand(`spawn kobold_scouts ${site.id}`, context).changed).toBe(false)
       runCommand('spawn bandit_camp 4 5', context)
       expect(world.locations.at(-1)).toMatchObject({ name: 'Bandit Gang', id: `spawn_${world.spawns}` })
       const first = world.locations.at(-2)!.id
@@ -258,6 +260,19 @@ describe('debug commands', () => {
       expect(runCommand('spawn goblin_raid 999 999', context).lines[0]).toMatch(/off the map/)
       expect(runCommand('spawn', context).changed).toBe(false)
       expect(JSON.stringify(world)).toBe(before)
+    })
+
+    it('refuses the hex a party stands on, here included, so no party stands on a nest unconfronted', () => {
+      const context = onWorldMap()
+      const { world, parties } = context.source!.game
+      parties[0].position = offsetToHex(10, 14)
+      const count = world.locations.length
+      expect(runCommand('spawn goblin_raid', context)).toMatchObject({ changed: false, lines: [expect.stringMatching(/A party stands/)] })
+      expect(runCommand('spawn goblin_raid here', context).changed).toBe(false)
+      const { col, row } = hexToOffset(parties[0].position)
+      expect(runCommand(`spawn goblin_raid ${col} ${row}`, context).changed).toBe(false)
+      expect(world.locations).toHaveLength(count)
+      expect(world.spawns).toBe(0)
     })
 
     it('needs the world map', () => {

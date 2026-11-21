@@ -695,10 +695,10 @@ describe('the encampment', () => {
       await game.press('Enter')
     }
     await game.press('Shift+Backquote')
-    await typed('contact millbrook')
+    await typed('contact all')
     await typed('facility trading_post 4')
     await typed('stock gold 100 timber 20')
-    await game.waitFor('World', (w) => w.world.contacted.includes('millbrook') && w.world.tradingPost === 4 && w.world.stock.gold === 100)
+    await game.waitFor('World', (w) => w.world.contacted.length === 2 && w.world.tradingPost === 4 && w.world.stock.gold === 100)
     await game.press('Escape')
 
     const goToTradingPost = async () => {
@@ -712,8 +712,7 @@ describe('the encampment', () => {
     const post = await goToTradingPost()
     await game.click(post.buttons.routesTab)
     const tab = await game.settled('TradingPost', (p) => p.tab === 'routes')
-    expect(tab.routes).toHaveLength(1)
-    expect(tab.routes[0]).toMatchObject({ partner: 'millbrook', status: 'closed' })
+    expect(tab.routes.map((r) => [r.partner, r.status])).toEqual([['millbrook', 'closed'], ['saltmere', 'closed']])
     expect(tab.routes[0].line).toMatch(/^Open a route to Millbrook: \d+ hexes, about \d+ gold every 5 days, costs \d+ gold, 10 timber$/)
     expect(tab.routes[0].open).toMatchObject({ visible: true, enabled: true })
     // Every control lies inside the window: the frame is scaled to fit.
@@ -732,7 +731,14 @@ describe('the encampment', () => {
     expect(opened.routes[0].open).toBeNull()
     expect(opened.routes[0].line).toMatch(/^Millbrook road: security \d+%, about \d+ gold every 5 days$/)
 
-    await game.click(opened.buttons.close)
+    // The Market keeps one route: Saltmere's Open is faint but clickable, and says why, spending nothing.
+    expect(opened.routes[1].open).toMatchObject({ visible: true, enabled: false })
+    await game.click(opened.routes[1].open!)
+    const refused = await game.settled('TradingPost', (p) => p.message === 'The Market keeps 1 route open at most.')
+    expect(refused.gold).toBe(100 - cost)
+    expect(refused.routes.map((r) => r.status)).toEqual(['open', 'closed'])
+
+    await game.click(refused.buttons.close)
     await game.waitForScenes(['Encampment'], ['World'])
     await game.click((await game.settled('Encampment')).buttons.leave)
     await game.waitForScenes(['World'])

@@ -7,7 +7,8 @@ import { RAID_RADIUS, contactPartner, partnerById, raiders, roadTo, routeCost, r
 import { encampment, type MonsterLocation, type WorldState } from '../game/worldMap.ts'
 import { hexDistance, hexEquals, hexNeighbors, type Hex } from '../grid/hex.ts'
 import { boardHexCenter, WORLD_LAYOUT } from './boardGeometry.ts'
-import { minimapBoard, minimapPoints, routeOffer, routeRows, routeState, type RouteRow } from './routesTab.ts'
+import { PARTNERS } from '../game/worldMap.ts'
+import { ROUTE_ROWS, minimapBoard, minimapPoints, routeOffer, routeRows, routeState, type RouteRow } from './routesTab.ts'
 
 /** A new game with Millbrook contacted, the trading post at 4, the stock rich and the party at home. */
 function trading(): { game: GameState; world: WorldState; party: GameState['parties'][number] } {
@@ -208,5 +209,11 @@ describe('minimapPoints', () => {
     expect(b.y + b.height).toBeLessThanOrEqual(rect.y + rect.height + 1e-9)
     expect(b.x - rect.x).toBeCloseTo(rect.x + rect.width - (b.x + b.width), 6)
     expect(b.y - rect.y).toBeCloseTo(rect.y + rect.height - (b.y + b.height), 6)
+  })
+})
+
+describe('the Routes tab', () => {
+  it('has a row for every partner there is; more partners need paging', () => {
+    expect(PARTNERS.length).toBeLessThanOrEqual(ROUTE_ROWS)
   })
 })

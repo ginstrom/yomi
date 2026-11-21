@@ -38,7 +38,7 @@ import { addPanelButton, fitText } from './panelButton.ts'
 import { runeEffectLines, runeSocketLine } from './runecraftView.ts'
 import { createPips } from './socketPips.ts'
 import { overlayScale } from './overlayScale.ts'
-import { minimapBoard, minimapPoints, routeOffer, routeRows, routeState, type RouteRow } from './routesTab.ts'
+import { ROUTE_ROWS, minimapBoard, minimapPoints, routeOffer, routeRows, routeState, type RouteRow } from './routesTab.ts'
 import { describeWorldEvent } from './worldEvents.ts'
 import { encampment, encampmentName } from '../game/worldMap.ts'
 import { openRoute, openRouteRefusal, routeLimit } from '../game/trade.ts'
@@ -125,7 +125,6 @@ const RAIDED = '#ef5350'
 /** The Routes tab: a line to each partner, an Open button at its right, and the selected road on a minimap. */
 const ROUTE_TOP = 150
 const ROUTE_ROW_H = 72
-const ROUTE_ROWS = 4
 const ROUTE_TEXT_W = LIST_W - 112
 const OPEN_W = 88
 const MINIMAP = { x: DETAILS_X, y: ROUTE_TOP, width: DETAILS_W, height: 190 }
@@ -157,7 +156,7 @@ export class TradingPostScene extends Phaser.Scene {
   private familyAt = new Map<FamilyId | null, Point>()
   /** The Routes tab's chosen partner; the first row when none is (or it is gone). */
   private routeChosen: string | null = null
-  private routeLines: Array<{ row: RouteRow; line: string; open: Point | null; openEnabled: boolean }> = []
+  private routeLines: Array<{ row: RouteRow; line: string; open: Point | null; openEnabled: boolean; selected: boolean }> = []
 
   constructor() {
     super('TradingPost')
@@ -225,12 +224,12 @@ export class TradingPostScene extends Phaser.Scene {
         next: control('next'),
         close: control('close'),
       },
-      routes: this.routeLines.map(({ row, line, open, openEnabled }) => ({
+      routes: this.routeLines.map(({ row, line, open, openEnabled, selected }) => ({
         partner: row.partner,
         status: row.status,
         line,
         open: open ? { ...onScreen(open), visible: true, enabled: openEnabled, width: OPEN_W * this.frame.scale } : null,
-        selected: row.partner === this.chosenRoute(),
+        selected,
       })),
     }
   }
@@ -449,16 +448,12 @@ export class TradingPostScene extends Phaser.Scene {
 
   // ---- the Routes tab ----------------------------------------------------------
 
-  /** The partner whose road the minimap shows: the one clicked, else the first. */
-  private chosenRoute(): string | null {
-    const rows = routeRows(this.gameState, this.expedition)
-    return (rows.find((r) => r.partner === this.routeChosen) ?? rows[0])?.partner ?? null
-  }
-
   private drawRoutes(): void {
     const { world } = this.gameState
-    const rows = routeRows(this.gameState, this.expedition).slice(0, ROUTE_ROWS)
-    const chosen = rows.find((r) => r.partner === this.chosenRoute()) ?? null
+    const all = routeRows(this.gameState, this.expedition)
+    const rows = all.slice(0, ROUTE_ROWS)
+    // The row clicked, else the first.
+    const chosen = rows.find((r) => r.partner === this.routeChosen) ?? rows[0] ?? null
     const limit = routeLimit(world)
     const heading =
       limit === 0
@@ -496,7 +491,7 @@ export class TradingPostScene extends Phaser.Scene {
         cue: null,
       })
     }
-    this.routeLines.push({ row, line, open, openEnabled: row.status === 'closed' && row.refusal === null })
+    this.routeLines.push({ row, line, open, openEnabled: row.status === 'closed' && row.refusal === null, selected: marked })
   }
 
   /** The board's outline, the known nests and partners, the home, and the chosen row's road. */
@@ -518,7 +513,7 @@ export class TradingPostScene extends Phaser.Scene {
     }
     if (row?.road) {
       const points = minimapPoints(world.board, row.road, home, MINIMAP)
-      g.lineStyle(2, row.status === 'raided' ? RAIDED_COLOR : ROAD_COLOR, 1).beginPath().moveTo(points[0].x, points[0].y)
+      g.lineStyle(2, row.status === 'raided' || row.raid ? RAIDED_COLOR : ROAD_COLOR, 1).beginPath().moveTo(points[0].x, points[0].y)
       for (const p of points.slice(1)) g.lineTo(p.x, p.y)
       g.strokePath()
     }
