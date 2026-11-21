@@ -7,4 +7,3 @@
 - Commit messages are "<Feature> step NN: title", no attribution lines, files staged by path.
 - A sprite step may run in its own worktree and merge before the steps that use its frames (stage 7, step 03).
 - A docs step covers the CLAUDE.md files, `.claude/`, `docs/reference/` and the manual (and retakes its screenshots).
-- Measurement tables and verification lines go in the plan's `log.md`, not the index.

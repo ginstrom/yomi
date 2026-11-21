@@ -135,7 +135,7 @@ Per step: the plan's `log.md`. Step 02 took three review rounds (parity cells); 
 
 ## Step 06: records test and the stage 7 record's migration
 
-- 2026-11-21. Engineer opus; reviewer opus. Verdict: pending review; review rounds: 0.
+- 2026-11-21. Engineer opus; reviewer opus. Verdict: round 1 changes requested (9 findings), fixed; review rounds: 1.
 - `npx vitest run scripts/records.test.ts`: with the three check functions stubbed to return `[]`, the 5 fixture tests that expect a problem failed (the empty-tree and in-shape fixtures passed, as they should). With the checks written, one fixture failed on my own arithmetic (the State section counts the blank line before the next `## ` heading), fixed in the fixture. The real-repository test then failed only on the old records: `long-campaign-stage-07.md: no "## State" heading`, `long-campaign-stage-07.md: 8683 bytes (limit 8000)`, `modular-context.md: no "## State" heading`. After the migration: 10 passed.
 - `npm test`: tsc clean, 98 test files, 2,417 tests passed (baseline 97 files, 2,407).
 - Sizes after the migration (`wc -c`; the State section is measured from `## State` up to the next `## ` line):
@@ -164,7 +164,7 @@ Per step: the plan's `log.md`. Step 02 took three review rounds (parity cells); 
 
 ## Step 07: the state/history split in the global skills
 
-- 2026-11-21. Engineer opus; reviewer opus. Verdict: pending review; review rounds: 0. Ran on **[Q2]**'s default: the edits apply to every project.
+- 2026-11-21. Engineer opus; reviewer opus. Verdict: round 1 changes requested (9 findings), fixed; review rounds: 1. Ran on **[Q2]**'s default: the edits apply to every project.
 - Blocker found and settled before any edit: every file under `/Users/ryan/.claude/skills/` is a symlink into the dotfiles git repository (`/Users/ryan/personal/dotfiles/home/.claude/skills/`), and the first backup held only links (17 links, 0 files), so it protected nothing and `diff -ru` against it could never show a change. The orchestrator replaced it with a dereferenced copy (0 links) and recorded the rule in the index (`690aa7b`). The edits were made at the dotfiles target paths and are left **uncommitted** in the dotfiles repository (committing it is the user's call); that repository's other uncommitted files (`README.md`, `home/.claude/settings.json`, `home/.codex/config.toml`, `home/.gemini/`) were not touched.
 - Pre-edit: `diff -ru /Users/ryan/.claude/skills-backup-2026-11-21 /Users/ryan/.claude/skills` against the new backup printed only the expected "Only in" lines (`.trash`, `browser-auth`, `linear`, `pr-creator`, `recursive-slack`, `simulated-user`, `synced`, `technical-report-writing`); `git -C /Users/ryan/personal/dotfiles status --short -- home/.claude/skills` was empty. All eight old texts matched the task file.
 - Edits 1a, 1b, 2a, 2b, 2c, 3, 4a, 4b applied. 1a: "It has two parts." starts a new paragraph after "…decision and escalation."; "It holds:" dropped; "Commit the record…" kept. 4b: the two "and"s joined with a comma.
@@ -261,8 +261,9 @@ index 7f1d8cb..fa7ed4b 100644
 
 ## Step 08: role profiles
 
-- 2026-11-21. Engineer sonnet; reviewer opus. Verdict: pending review; review rounds: 0.
+- 2026-11-21. Engineer sonnet; reviewer opus. Verdict: round 1 changes requested (9 findings), fixed; review rounds: 1.
 - `npx vitest run scripts/claudeMd.test.ts`: with the role cap wired in and a 4,000-byte `.claude/roles/tmp.md` present, the size test failed listing that file (1 failed, 16 passed); removed it, then passes.
 - `npm test`: tsc clean, 98 test files, 2,419 tests passed (step 07: 2,417).
 - Profile sizes (`wc -c`): `orchestrator.md` 1,371; `designer.md` 995; `planner.md` 1,050; `engineer.md` 964; `reviewer.md` 653; `qa.md` 811; `pr-reviewer.md` 359. Cap 4,000. Some are under the 1 KB aim: each holds only facts checked against a source.
 - Grep for `.claude/skills/yomi-(sprites|sound|manual)` and `.claude/agents/yomi-asset-check` in the profiles: no match.
+- Round 1 (opus): 9 findings (2 blocking), all fixed; `npm test` 98 files, 2,419 tests. Profile sizes now: orchestrator 1,378; designer 995; planner 964; engineer 1,159; reviewer 770; qa 852; pr-reviewer 413.
