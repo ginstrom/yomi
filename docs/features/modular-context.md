@@ -3,11 +3,11 @@
 ## State
 
 - Request (user's words): "Please examine your workflows. Can you selectively load context depending on what you are working on? For example, design vs asset creation, coding, planning, etc. Can some of this be offloaded to skills so the main orchestrator does not need to hold as much context? Please think about how to design your context/skill system to be more modular." Then, after the proposal: "please replace AGENTS.md with a simlink, and then go through the suggested order".
-- Slug `modular-context` · Phase 4, implementation. Phase 5, verification. All 13 steps are done and reviewed; the overall review's fix batch is `cd0b29b`, re-review pending. · Next action: report to the user · Branch: `long-campaign-stage-07` (the current branch; project rule: commit on the current branch)
+- Slug `modular-context` · Phase 4, implementation. Phase 6, done on branch (`f0814da..` this commit); not pushed. · Next action: the user decides the open questions below · Branch: `long-campaign-stage-07` (the current branch; project rule: commit on the current branch)
 - Links: architecture none (the approved proposal is the architecture); design `docs/designs/modular-context.md` (makes the approved proposal of 2026-11-21 concrete; the verbatim proposal is in the plan's `log.md`); plan `docs/implementation-plans/modular-context/index.md` (13 steps, four stages; per-step tiers in its task table); plan log `docs/implementation-plans/modular-context/log.md`.
 - Open questions: for the user, at the end of the feature: commit the global-skill edits in the dotfiles repository (uncommitted there, steps 07 and 09)? It blocks nothing here. The stage 7 PR question is in stage 7's record.
 - Tiers: designer opus; planner opus; steps as the plan index's task table (opus for 01, 06, 07, 09; sonnet engineers elsewhere, reviewers at least the engineer's tier).
-- Verification: per step, the plan's `log.md`. Overall review (opus): changes needed, 1 blocking (the QA profile's never-kill rule); fixed in `cd0b29b`, re-review pending. QA and simulated user: not run (an instructions refactor; the step 09 smoke check and step 13 trigger check exercise what agents read and pick). PR review: not run.
+- Verification: per step, the plan's `log.md`. Overall review (opus): changes needed, 1 blocking (the QA profile's never-kill rule); fixed in `cd0b29b`; re-review clean (98 files, 2,419 tests; build passed). QA and simulated user: not run (an instructions refactor; the step 09 smoke check and step 13 trigger check exercise what agents read and pick). PR review: not run.
 - Carried forward: none.
 
 ## Decision log
