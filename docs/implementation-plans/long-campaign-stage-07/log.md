@@ -34,3 +34,9 @@ Append-only history for [the plan](index.md) and [the feature record](../../feat
 
 - Step 07: status text given a dark outline; overlap not reproduced. Originally: in the screenshot retake, the world header's status block (moved to y 3) overlaps a map label showing through (e.g. "Gold Seam").
 - Done in step 07 (from step 05 review): details wrap in attempts 2–3 should stay at `FRAME_W - 2 * left` (text touches the frame border); shorter trading-post "Next:" wording so shrink-to-fit isn't needed; duplicated JSDoc above `detailLines` (EncampmentScene.ts ~l.82); index row 05 hash b6c9bf2.
+
+## Superseded State (modular-context step 06, review round 1)
+
+The State's phase as first migrated, from the record's old wording; the range was corrected to `17cc2e3..a51ed58` (code through `e6d94ac`):
+
+**Phase:** 6, done on branch (17cc2e3..6405b5c); not pushed

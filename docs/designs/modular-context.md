@@ -1,6 +1,6 @@
 # Design: modular context and skills
 
-- **Slug:** `modular-context`. **Feature record:** [`docs/features/modular-context.md`](../features/modular-context.md), which holds the approved proposal (five layers, four stages).
+- **Slug:** `modular-context`. **Feature record:** [`docs/features/modular-context.md`](../features/modular-context.md), the feature's state and decisions. The approved proposal (five layers, four stages), verbatim, is in the plan's [`log.md`](../implementation-plans/modular-context/log.md), "Moved from the feature record (step 06)".
 - **Status:** ready for planning. No question blocks a stage; three non-blocking questions for the user are in §9.
 - **What this is:** an instructions refactor. No game code, rule or balance changes. The only code is tests in `scripts/`.
 

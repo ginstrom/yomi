@@ -3,8 +3,8 @@
 ## State
 
 - Request (user's words): "Please examine your workflows. Can you selectively load context depending on what you are working on? For example, design vs asset creation, coding, planning, etc. Can some of this be offloaded to skills so the main orchestrator does not need to hold as much context? Please think about how to design your context/skill system to be more modular." Then, after the proposal: "please replace AGENTS.md with a simlink, and then go through the suggested order".
-- Slug `modular-context` · Phase 4, implementation. Stage 1 (steps 01–05) is done and clean, the last commit `74da937`. Step 06 is in progress; next is 07. · Branch: `long-campaign-stage-07` (the current branch; project rule: commit on the current branch)
-- Links: architecture none (the approved proposal is the architecture); design `docs/designs/modular-context.md` (holds the approved proposal of 2026-11-21, whose text is in the plan log); plan `docs/implementation-plans/modular-context/index.md` (13 steps, four stages; per-step tiers in its task table); plan log `docs/implementation-plans/modular-context/log.md`.
+- Slug `modular-context` · Phase 4, implementation. Stage 1 (steps 01–05) is done and clean, the last commit `74da937`. Step 06 is in progress; next is 07. · Next action: step 06 review fixes, then step 07 · Branch: `long-campaign-stage-07` (the current branch; project rule: commit on the current branch)
+- Links: architecture none (the approved proposal is the architecture); design `docs/designs/modular-context.md` (makes the approved proposal of 2026-11-21 concrete; the verbatim proposal is in the plan's `log.md`); plan `docs/implementation-plans/modular-context/index.md` (13 steps, four stages; per-step tiers in its task table); plan log `docs/implementation-plans/modular-context/log.md`.
 - Open questions: none.
 - Tiers: designer opus; planner opus; steps as the plan index's task table (opus for 01, 06, 07, 09; sonnet engineers elsewhere, reviewers at least the engineer's tier).
 - Verification: per step, the plan's `log.md`. No feature-level gate (overall review, QA, simulated user, PR review) has run yet.
