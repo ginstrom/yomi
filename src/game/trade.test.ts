@@ -219,6 +219,23 @@ describe('the road (economy A5, decision 6)', () => {
     expect(raidCause(world, { partner: 'millbrook', road: after })).toBeNull()
   })
 
+  it('enters the partner\'s hex within RAID_RADIUS of a nest without falling back, clear of every nest on the way', () => {
+    const world = newWorld(1)
+    const millbrook = partnerById(world, 'millbrook')!.position
+    const before = roadTo(world, 'millbrook')!
+    // Two hexes from Millbrook and one from the road it took: the road must bend, but can stay clear.
+    const spot = offsetToHex(18, 28)
+    expect(hexDistance(spot, millbrook)).toBe(RAID_RADIUS)
+    expect(before.some((h) => hexEquals(h, spot))).toBe(false)
+    expect(Math.min(...before.map((h) => hexDistance(h, spot)))).toBe(1)
+    const placed = nest(world, spot)
+    const road = roadTo(world, 'millbrook')!
+    expect(road.at(-1)).toEqual(millbrook)
+    expect(nearestNest(world, road.slice(0, -1))).toBeGreaterThan(RAID_RADIUS)
+    // Only the partner itself stands in its reach, so the route is raided by it, as the Routes tab warns.
+    expect(raidCause(world, { partner: 'millbrook', road })).toEqual({ cause: 'raiders', raider: placed })
+  })
+
   it('falls back to avoiding only a nest and its neighbours when nests wall the clear road off, and is then raided', () => {
     const world = newWorld(1)
     const millbrook = partnerById(world, 'millbrook')!.position
@@ -296,6 +313,7 @@ describe('opening a route (economy A5)', () => {
     it('confronting monsters at home', refused(({ party }) => ((party.confronting = 'goblin_raiders'), 'millbrook'), 'Routes are opened at Oakvale.'))
     it('for no partner', refused(() => 'iron_vein', 'No partner "iron_vein".'))
     it('to a partner not contacted', refused(() => 'saltmere', 'Saltmere has not been contacted: walk there first.'))
+    it('to a partner both uncontacted and silent, as uncontacted', refused(({ world }) => (world.silent.push('saltmere'), 'saltmere'), 'Saltmere has not been contacted: walk there first.'))
     it('to a silent partner', refused(({ world }) => (world.silent.push('millbrook'), 'millbrook'), 'Millbrook is silent while the blight holds its land.'))
     it('when the route is open already', refused(({ world }) => (world.routes.push(fakeRoute('millbrook')), 'millbrook'), 'A route to Millbrook is already open.'))
     it('below trading post level 4', refused(({ world }) => ((world.tradingPost = 3), 'millbrook'), 'Routes need the Market (trading post level 4).'))
@@ -363,16 +381,30 @@ describe('security and income (economy A6, company A8)', () => {
     expect(hexDistance(world.towers[0].position, blighted)).toBe(GUARD_RADIUS + 1)
     expect(guarded(world, blighted, [])).toBe(false)
     expect(hexSecurity(world, blighted, [])).toBe(0)
+    // The tainted hex the same way: safe with the tower 3 away, half safe with it 4 away.
+    world.towers = [{ id: 'tower_1', position: offsetToHex(2, LANE - GUARD_RADIUS) }]
+    expect(hexDistance(world.towers[0].position, tainted)).toBe(GUARD_RADIUS)
+    expect(guarded(world, tainted, [])).toBe(true)
+    expect(hexSecurity(world, tainted, [])).toBe(1)
+    world.towers = [{ id: 'tower_1', position: offsetToHex(2, LANE - GUARD_RADIUS - 1) }]
+    expect(hexDistance(world.towers[0].position, tainted)).toBe(GUARD_RADIUS + 1)
+    expect(guarded(world, tainted, [])).toBe(false)
+    expect(hexSecurity(world, tainted, [])).toBe(0.5)
   })
 
   it('counts them safe within GUARD_RADIUS of a party, not without it (company A8)', () => {
     const world = newWorld(1)
     const road = lane(world, 4)
     for (const h of road) setHex(world, h, 2)
-    expect(routeSecurity(world, road, [])).toBe(0)
+    // The first hex tainted, the rest blighted.
+    setHex(world, road[0], 1)
+    expect(routeSecurity(world, road, [])).toBe(0.5 / road.length)
     const party: PartyPresence = { position: offsetToHex(2, LANE - GUARD_RADIUS), levels: [1, 1, 1] }
+    expect(hexDistance(party.position, road[0])).toBe(GUARD_RADIUS)
+    expect(guarded(world, road[0], [party])).toBe(true)
+    expect(hexSecurity(world, road[0], [party])).toBe(1)
     const safe = road.filter((h) => hexDistance(h, party.position) <= GUARD_RADIUS).length
-    expect(safe).toBeGreaterThan(0)
+    expect(safe).toBeGreaterThan(1)
     expect(safe).toBeLessThan(road.length)
     expect(routeSecurity(world, road, [party])).toBe(safe / road.length)
   })
@@ -480,7 +512,7 @@ describe('the routes\' yield day (economy A6)', () => {
     ])
     const second = day(world, 10)
     expect(second).toMatchObject([{ type: 'route_raided', days: 2 }])
-    expect(isNotable(world, day(world, 7)[0] ?? second[0], [])).toBe(false)
+    expect(isNotable(world, second[0], [])).toBe(false)
     expect(world.stock).toEqual({})
     expect(route.raidedDays).toBe(2)
     world.locations = world.locations.filter((l) => l !== raider)
@@ -492,8 +524,13 @@ describe('the routes\' yield day (economy A6)', () => {
   it('tells silence and corruption without a raider', () => {
     const { world, route } = open()
     setHex(world, route.road[2], MAX_BLIGHT)
-    expect(day(world, 5)).toMatchObject([{ type: 'route_raided', cause: 'corrupted', days: 1 }])
-    expect('raider' in day(world, 10)[0]).toBe(false)
+    const corrupted = day(world, 5)
+    expect(corrupted).toMatchObject([{ type: 'route_raided', cause: 'corrupted', days: 1 }])
+    expect('raider' in corrupted[0]).toBe(false)
+    world.silent.push('millbrook')
+    const silent = day(world, 10)
+    expect(silent).toMatchObject([{ type: 'route_raided', cause: 'silent', days: 2 }])
+    expect('raider' in silent[0] || 'raiderName' in silent[0]).toBe(false)
   })
 
   it('abandons a route raided ABANDON_AFTER yield days in a row, freeing its slot', () => {
@@ -507,11 +544,8 @@ describe('the routes\' yield day (economy A6)', () => {
       return { route: world.routes[0] }
     })()
     world.silent.push('millbrook')
-    const told: string[] = []
     for (let k = 1; k < ABANDON_AFTER; k++) {
-      const events = day(world, k * YIELD_DAYS)
-      expect(events).toMatchObject([{ type: 'route_raided', cause: 'silent', days: k }])
-      told.push(...events.map((e) => e.type))
+      expect(day(world, k * YIELD_DAYS)).toMatchObject([{ type: 'route_raided', cause: 'silent', days: k }])
     }
     expect(world.routes).toEqual([route])
     const last = day(world, ABANDON_AFTER * YIELD_DAYS)

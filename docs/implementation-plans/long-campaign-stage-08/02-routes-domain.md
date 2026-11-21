@@ -250,3 +250,12 @@ Engineer: opus (model unset), 2026-11-21, on `long-campaign-stage-08` after `c4b
 - `npm run test:browser` not run: no scene changed beyond the four `''` cases in `worldEvents.ts`' `switch`.
 
 **Docs:** `src/game/CLAUDE.md` (the `trade.ts` line; `trade.ts` in the second cycle list), `docs/reference/game.md` (a short "Trade routes" item under the world map; `partnerDay` no longer "called last"; `isNotable`'s list; Territory; `towerHexRefusal`; the save's route check). The root CLAUDE.md cycle line already named `trade`.
+
+**Review round 1 (tests only; no code defect found).** All fixed in `trade.test.ts`, no change to `trade.ts`:
+
+1. Fixed: a tainted hex guarded by a watchtower 3 away counts 1, and 0.5 with the tower 4 away; the party-guard test gains a tainted hex. Each failed the reviewer's two mutants (`guarded` false below level 2; `hexSecurity` counting a guard only at level 2).
+2. Fixed: Saltmere uncontacted and silent is refused as uncontacted. Failed with the two checks swapped.
+3. Fixed: a nest 2 hexes from Millbrook (offset 18,28), off the road and 1 hex from it. The road bends to 15 hexes, ends on Millbrook and keeps every other hex more than `RAID_RADIUS` from every nest; the nest raids it through the partner's hex. Failed with the partner's hex passable only in the fallback search.
+4. Fixed: dropped the unread `told`; the silence-and-corruption test now sets up silence too (and checks no raider keys); the restoration test's `isNotable` reads `second[0]`.
+
+`npm test` green after the round (100 files, 2465 tests); the code is unchanged, so the 50-campaign check was not rerun.
