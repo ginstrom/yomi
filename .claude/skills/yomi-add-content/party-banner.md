@@ -2,7 +2,7 @@
 
 Touch every line, then run `npm test`.
 
-- `src/scenes/partyList.ts` → `BANNER_SPRITES`: a number and its atlas sprite (`map_banner`, `map_banner_azure`, …). How to draw it: `art/CLAUDE.md`.
+- `src/scenes/partyList.ts` → `BANNER_SPRITES`: a number and its atlas sprite (`map_banner`, `map_banner_azure`, …). How to draw it: `.claude/skills/yomi-sprites/`.
 
 ## Tests that catch a miss
 

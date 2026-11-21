@@ -1,6 +1,6 @@
 # Sprites reference
 
-The detail behind `art/CLAUDE.md`, which keeps the workflow. `sprite guide
+The detail behind `art/CLAUDE.md`, which keeps the contracts, and the `yomi-sprites` skill (`.claude/skills/yomi-sprites/`), which keeps the workflow. `sprite guide
 --project art` prints the file format, the palette and the canvas classes;
 this file says how the game uses them.
 

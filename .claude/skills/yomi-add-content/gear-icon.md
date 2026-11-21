@@ -3,7 +3,7 @@
 Touch every line, then run `npm test`.
 
 - `src/scenes/unitLook.ts` → `GEAR_SPRITES` (weapon or shield) or `WORN_SPRITES` (armour, head or cloak); `WORN_BACK_SPRITES` for a cape.
-- `art/gear/gear_<icon>.sprite.toml` → the sprite: `over = "warrior"`, `[anim.idle]` `like = "warrior"`, `[anim.walk]` `rest = true`, and out of the body's fist, off-hand and face regions. How to draw it: `art/CLAUDE.md`.
+- `art/gear/gear_<icon>.sprite.toml` → the sprite: `over = "warrior"`, `[anim.idle]` `like = "warrior"`, `[anim.walk]` `rest = true`, and out of the body's fist, off-hand and face regions. How to draw it: `.claude/skills/yomi-sprites/`.
 - `src/scenes/sounds.ts` → `WEAPON_SOUNDS`: a weapon icon needs a sound.
 - `src/scenes/unitLook.ts` → `SWUNG_GEAR`: a blade or axe that swings.
 - An item that wears it: `item.md`.

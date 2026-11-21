@@ -2,7 +2,7 @@
 
 A foe kind is a `UnitKind`. Touch every line, then run `npm test`.
 
-- `art/units/<kind>.sprite.toml` → a sprite named for the kind (its id is the `UnitKind`), with `idle` and `walk` animations and a `[points] chest` (where shots and spells are aimed and fly from). How to draw it: `art/CLAUDE.md`.
+- `art/units/<kind>.sprite.toml` → a sprite named for the kind (its id is the `UnitKind`), with `idle` and `walk` animations and a `[points] chest` (where shots and spells are aimed and fly from). How to draw it: `.claude/skills/yomi-sprites/`.
 - `src/game/encounters.ts` → `FOE_XP`: an experience value.
 - `src/game/encounters.ts` → `FOE_NATIVE_LEVEL`: a native level, if not 1.
 - `src/scenes/sounds.ts` → `FOE_SOUNDS`: a sound.

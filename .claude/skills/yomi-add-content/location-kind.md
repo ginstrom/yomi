@@ -2,7 +2,7 @@
 
 Touch every line, then run `npm test`.
 
-- `src/scenes/WorldScene.ts` → `LOCATION_SPRITES`: an atlas sprite `map_<kind>` with `idle`. How to draw it: `art/CLAUDE.md`.
+- `src/scenes/WorldScene.ts` → `LOCATION_SPRITES`: an atlas sprite `map_<kind>` with `idle`. How to draw it: `.claude/skills/yomi-sprites/`.
 
 ## Tests that catch a miss
 

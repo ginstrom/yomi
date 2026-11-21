@@ -28,7 +28,7 @@
   - Noted, not fixed: the market pays on the day the encampment falls (harmless, by design); the fort days-to-corruption warning is reached only in unit tests.
   - Pre-existing: blight tint near own sites is hard to see.
   - `forecast.test.ts` "a level-1 party wins no fight with the Source at threat 5" times out (5 s) under full-suite load; passes alone.
-  - Sprite-tool pin drift: art/CLAUDE.md pins v0.6.0, host has 0.7.0 (no export changed).
+  - Sprite-tool pin drift: yomi-sprites skill (workflow.md) pins v0.6.0, host has 0.7.0 (no export changed).
 
 ## Decision log
 

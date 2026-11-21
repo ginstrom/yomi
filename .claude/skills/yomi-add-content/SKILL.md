@@ -36,5 +36,5 @@ Open the file for your case, touch every item in it, then run `npm test`. Each f
 - Coverage tests enforce some lists: `src/scenes/sounds.test.ts`, `src/scenes/unitLook.test.ts` and the yardstick test in `src/game/encounters.test.ts`.
 - Run `npm run test:browser` after touching a scene.
 - Anything that moves an outcome goes through `yomi-balance` (`.claude/skills/yomi-balance/`).
-- Sprites go through `art/CLAUDE.md` (`yomi-sprites` from stage 4), and sounds through `audio/CLAUDE.md` (`yomi-sound` from stage 4).
+- Sprites go through `.claude/skills/yomi-sprites/`, and sounds through `audio/CLAUDE.md` (`yomi-sound` from stage 4).
 - A renamed name gets a search of the CLAUDE.md files and `.claude/`.
