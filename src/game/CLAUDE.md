@@ -1,6 +1,6 @@
 # The game outside battle
 
-Loaded when working in `src/game/`: encounters and bandits, the company and its day loop, the world map, the blight, the encampment and its facilities, and saving. This is the working guide; the full rules, with every constant, encounter, bandit role, facility level and price and the save migrations, are in `docs/reference/game.md`. The simulator and the balance figures are in `scripts/CLAUDE.md`.
+Loaded when working in `src/game/`: encounters and bandits, the company and its day loop, the world map, the blight, the encampment and its facilities, and saving. This is the working guide; the full rules, with every constant, encounter, bandit role, facility level and price and the save migrations, are in `docs/reference/game.md`. The simulator is in `scripts/CLAUDE.md`; the balance figures are in `.claude/skills/yomi-balance/`.
 
 ## Contracts
 
@@ -11,8 +11,9 @@ Loaded when working in `src/game/`: encounters and bandits, the company and its 
 - **Import cycles are safe only while nothing calls across at load.** `blight.ts`, `territory.ts` and `worldMap.ts` import one another, as do `company.ts`, `worldMap.ts`, `camp.ts`, `buildings.ts`, `crafting.ts` and `runecraft.ts`. Never call into one of them at module top level. `company.ts` imports `guildHall.ts`, which must never import it.
 - **RNG streams.** The world RNG (its state saved in `WorldState`) draws spawns and nothing else; rune loot draws from `lootRng`, seeded from the battle's seed, so the battle's dice are untouched and a reloaded battle finds the same runes. Do not draw world or loot randomness from a battle's stream or `Math.random`. The auto-resolve estimate (`forecast.ts`) draws from neither: each sample has its own engine and policy streams, seeded by hashing, with a salt, the battle's seed and log length (mid-battle) or the location, party and day (world map); nothing in it draws from the real battle, the world's RNG or `Math.random`.
 - **Vision is knowledge only.** `vision.ts` says what the player has seen (`seen`, `sighted`); the rules run on the true state and the simulator ignores it. Every change to the land ends with `updateSight`.
-- **Scenes do not decide.** `WorldScene` asks `routeTo` what a click would do.
-- **Hit points follow gear.** A worn item replaced or removed (through `ItemPlace`, runecraft's `replaceAt`) ends with `clampHp` on the wearer, as a Life rune moves the maximum.
+- **Hit points follow gear.** A worn item replaced or removed (`ItemPlace`, runecraft's `replaceAt`) ends with `clampHp` on the wearer.
+- **Balance.** Anything that changes a battle's outcome, a foe or an encounter moves balance: `.claude/skills/yomi-balance/`.
+- **Saves.** Changing the shape of `GameState`, `Character`, `WorldState` or `BattleSnapshot`: raise `SAVE_VERSION`. Write a migration only when a design asks for one; otherwise older saves read as unreadable, which is fine in development. A migration ends with the same strict check as a current save and gets a captured fixture in `src/game/fixtures/`.
 - **The game state lives in scene data**, never in a module global. A game with no `slot` (`newGame()`'s default) is never saved.
 
 ## The modules
@@ -41,21 +42,10 @@ Loaded when working in `src/game/`: encounters and bandits, the company and its 
 - `gameState.ts`: state that outlives a scene: the parties, the world, the rune pouch, the reserves, the story and the save slot.
 - `save.ts`, `saveSlots.ts`: the save format and the three `localStorage` slots (through `src/storage.ts`).
 
-## The rules in short
+## The rules
 
-Each has a full section in `docs/reference/game.md`.
+World map, blight and territory, scaling, encounters, bandits and saving each have a section in `docs/reference/game.md`; read it before changing one. Two easy to get wrong: the encampment's name is the player's (read through `encampmentName`, never assumed), and a site lost razes its improvement.
 
-- **World map** (reference: "The world map"). The encampment is the only settlement, named by the player (read through `encampmentName`, never assumed); every other quiet location is a resource. A turn is a hex walked and the blight's day. A walk stops at a notable event or monsters on the road; walking into monsters sets `confronting`, and the party must scout, wait or attack. The game ends when the encampment falls ('lost') or the Source is beaten ('won', then optionally 'endless').
-- **Blight** (reference: "The blight", "Territory"). Every hex has a level 0 to 3, moved by a counter of net influence: monster locations, the Source and corrupted neighbours push up, growing with time; the encampment, held sites, towers and parties push down. Party hexes are neutral. Corrupted land builds spawn pressure, and spawns take the threat of where they lie. A won battle cleanses around it. Resources are captured at 0 and lost at `lossLevel` (`LOSS_LEVEL`, or level 3 for a fort); a site lost razes its improvement.
-- **Scaling** (reference: "Scaling", "Encounters and foes", "Bandits"). Threat rises a step every `THREAT_BAND` hexes from the encampment, up to `MAX_THREAT`. A battle at threat T fields the encounter's count for T, all at level T; a threat outside an encounter's band is fought as the nearest in it. Monsters scale from their native level by `foeAtLevel`; bandits are built as heroes of that level.
-- **Saving** (reference: "Saving"). There is no save button: the scenes save after every change and at each player turn in battle (rewinding a reload to that turn, with the same dice). A defeat that leaves no hero anywhere, or the encampment's fall, deletes the slot (permadeath). Items are saved as their ids and rebuilt by `itemById`.
+## Adding content
 
-## Checklists
-
-- **Changing the shape** of `GameState`, `Character`, `WorldState` or `BattleSnapshot`: raise `SAVE_VERSION`. Write a migration only when a design asks for one; otherwise older saves read as unreadable, which is fine in development. A migration ends with the same strict check as a current save and gets a captured fixture in `src/game/fixtures/`.
-- **A new base or enchanted item**: it must be in `BASE_ITEMS` or `MAGIC_ITEMS`, or a game holding it cannot be loaded.
-- **A new facility**: an entry in `FACILITIES` (`encampment.ts`), a field in `setFacilityLevel`, a sprite and a plot (`encampmentView.ts`), and a scene in `EncampmentScene`'s `OPENS` if it has a screen of its own.
-- **A new encounter**: an entry in `ENCOUNTERS`, its band in `ENCOUNTER_BANDS` and counts in `ENCOUNTER_COUNTS`; add it to `SPAWN_KINDS` only if the blight should spawn it.
-- **A new foe kind**: a sprite of that name with `idle` and `walk` animations, an experience value in `FOE_XP`, a native level in `FOE_NATIVE_LEVEL` if not 1, a sound in `FOE_SOUNDS`, and a stat block within `foeYardstick` at its native level (a test checks), each field outside it a named exception.
-- **A new one-day action**: a refusal and a time-free apply in its module, a `DayAction` case (`expedition.ts`) that `company.ts` runs, and a convenience over `act`.
-- **Anything that changes a battle's outcome, a foe or an encounter**: re-run the balance cells and campaigns as `scripts/CLAUDE.md` describes.
+Adding a facility, encounter, foe kind or one-day action: `.claude/skills/yomi-add-content/`.

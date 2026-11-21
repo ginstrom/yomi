@@ -17,6 +17,6 @@ Loaded when working in `src/combat/`. This is the data and arithmetic the engine
 
 ## When you add data
 
-- A spell, status, ability, trait or element: follow the checklists in `src/engine/CLAUDE.md`.
+- Adding a spell, status, ability, trait or element: `.claude/skills/yomi-add-content/`.
 - A new `StatusRule` field or `Ability` field means engine code to apply it; keep it out of the RNG unless it is a roll.
 - Ids are `as const` arrays whose order matters: `ALL_SPELL_IDS` and `ABILITY_IDS` order the battle's Skills list and the Abilities tab.

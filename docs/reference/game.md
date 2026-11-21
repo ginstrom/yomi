@@ -1,6 +1,6 @@
 # The game outside battle: reference
 
-The full rules of `src/game/`: encounters and bandits, the company and its day loop, the world map, the blight, the encampment and its facilities, and saving. The working guide, with the contracts and the checklists, is `src/game/CLAUDE.md`; this file holds the detail it leaves out. The simulator and the balance figures are in `scripts/CLAUDE.md`.
+The full rules of `src/game/`: encounters and bandits, the company and its day loop, the world map, the blight, the encampment and its facilities, and saving. The working guide, with the contracts, is `src/game/CLAUDE.md`; the checklists are in `.claude/skills/yomi-add-content/`; this file holds the detail they leave out. The simulator and the balance figures are in `.claude/skills/yomi-balance/`.
 
 ## Encounters and foes
 

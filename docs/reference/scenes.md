@@ -1,6 +1,6 @@
 # The scene layer: reference
 
-The full detail behind `src/scenes/CLAUDE.md`, which holds the contracts and checklists. This file says how each screen behaves, what each helper module covers, which assets are loaded where, and how the debug console works. Grep it by scene, helper or table name.
+The full detail behind `src/scenes/CLAUDE.md`, which holds the contracts; the 'if you add X' checklists are in `.claude/skills/yomi-add-content/`. This file says how each screen behaves, what each helper module covers, which assets are loaded where, and how the debug console works. Grep it by scene, helper or table name.
 
 ## Scene flow
 
@@ -176,6 +176,7 @@ Pure helpers (no runtime Phaser import, tested in the `domain` project):
 - `battleSetup.ts`: which encounter and threat a `Battle` start asks for (a monster location's, or else the data's); the seed a battle's log started with, which seeds the runes a win finds; the names the victory screen's "Found:" line lists; and auto-resolve's result line (`autoResolvedLine`) and hand-back line (`AUTO_DRAG_ON_LINE`).
 - `storyAudio.ts`: which line a cutscene beat speaks, its cache key and files, the lines of a cutscene to load, the delay and fade, and the duck constants, which are `soundPlayer.ts`'s.
 - `scrollingLog.ts`: the battle log.
+- `improveButton.ts`: the world footer's Improve button label, full and compact (`improveLabel`).
 - `slotScroll.ts`: which rows of the ground pile the inventory shows.
 - `gearDrag.ts`: where an item dragged in the inventory may be dropped, and which change of gear a drop makes.
 - `mapScroll.ts`: where the world map sits on screen for the party to be in view or as a drag panned it, and when a press has moved far enough to be a drag. The map scrolls to follow the party until a drag pans it; the next journey, Home or a click on the party's entry brings it back (`centreOnSelected`).
@@ -202,6 +203,7 @@ Pure helpers (no runtime Phaser import, tested in the `domain` project):
 - `statusMarks.ts`: where a nameplate's status letters sit and the scale that keeps them legible.
 - `foeInfo.ts`: the lines the battle's hover panel shows of a foe: its name, each ability with when it is next usable (counted in the foe's turns) and what it does, worked out from the ability's data, `STATUSES` and the foe's `abilityDamageBonus`, so a new ability is described for free; a technique with its mana, its AP for the foe's weapon (`costWords`, `perkTree.ts`) and the weapon it needs; then its wards.
 - `clicks.ts`: what counts as a right-click.
+- `overlayScale.ts`: `overlayScale(freeW, freeH, frameW, frameH, margin = 32)`, the scale of an overlay frame (`Encampment`, `GuildHall`, `Crafting`, `Exchange`, `TradingPost`, `Party`, `Creation`, `Inventory` in the space right of the party column): the fit to the free space less 16 px each side; below 1 as it is (down to 0); 1 from 1 to under 2; `floor(fit)` from 2, so the pixel art stays crisp (1280x800 gives 1, 1920x1080 gives 2 for a 720x500 frame, 3840x2160 gives 4). Everything in the frame scales together, text included (not re-rasterised), and the probes already multiply by the frame's scale. Two frames of different heights may differ in one window. No cap.
 - `keyEvents.ts`: `onceEachEvent`, which every scene that types text (`Creation`'s name, `Party`'s encampment name, `GuildHall`'s Rename) wraps its `keydown` listener in, as Phaser hands a listener the same key again when two arrive within a frame.
 - `sounds.ts`: the cue table and which cues each event plays. See "Sound" below.
 - `audioSettings.ts`: volume levels, saved to `localStorage`: master, Sound FX (the effects and ui buses), music (the themes and stings) and voice; `busVolume`, and each theme's gain to −24 LUFS (`MUSIC_GAIN`).

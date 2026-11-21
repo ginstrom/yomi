@@ -33,7 +33,7 @@ A Life rune's `maxHp` is the only thing that moves maximum hit points, so every 
 
 ## Nodes are data
 
-A perk (`PERKS`) is a node of the skill trees: four trees of three paths, each node its `path`, `tier`, asks (attributes, skills, `anySkill`, a `requires` in its own path) and effects (`PerkEffects`, summed by `perkBonus` wherever the number is derived), or the `spell`, `ability` or `trait` it gives. `PERKS` is ordered by tree, path and tier, which is the order the tree view lays a path out in; a new node of an existing shape is one entry there. A spell or a technique is a node like any other, and a trait is read by the engine by name (`TRAIT_IDS`).
+A perk (`PERKS`) is a node of the skill trees: four trees of three paths, each node its `path`, `tier`, asks (attributes, skills, `anySkill`, a `requires` in its own path) and effects (`PerkEffects`, summed by `perkBonus` wherever the number is derived), or the `spell`, `ability` or `trait` it gives. `PERKS` is ordered by tree, path and tier, which is the order the tree view lays a path out in. A spell or a technique is a node like any other, and a trait is read by the engine by name (`TRAIT_IDS`). A new node: `.claude/skills/yomi-add-content/skill-node.md`.
 
 - Every node has one rank and costs its tier's points (`TIERS`: 1, 2, 3, and 4 for a capstone); no node is priced on its own. `nodesCost` sums the nodes held.
 - A tier asks a level and a depth (nodes held in its path, not points).
@@ -46,10 +46,8 @@ A level brings one perk point; creation gives three. For a hero never migrated, 
 
 `autoAdvance` picks a target again and again: the first node of the plan it qualifies for or would at a higher level, else the first non-capstone in `PERKS` order it qualifies for now. While the target is short of level or points it stops and saves, never spending on a cheaper node further down; a node short of anything waiting will not bring (depth, a skill, an attribute, the node it requires) is skipped. A parity plan names its capstone first so that it is saved for.
 
+A change to hero growth moves balance: `.claude/skills/yomi-balance/` (`levers.md`, "When to retune").
+
 ## Creation
 
 `draftCharacter` spends the draft's points with `raiseSkill` and `takePerk`, so creation has no rules of its own and waives nothing; a change that leaves a chosen node unqualified drops it and returns its point (`pruneDraft`). The prerolls, the ready-made three among them, are drafts held to the same rules by a test.
-
-## Changing hero growth means retuning
-
-The campaign's balance was tuned against today's growth. A change to the budgets of creation, skill points or perk points a level, what a node costs, a node, spell or technique, mana, the ready-made party or the plans moves the simulator's figures: re-run the guard and the bands in `scripts/CLAUDE.md`, and re-record the refactor guard if play moved.

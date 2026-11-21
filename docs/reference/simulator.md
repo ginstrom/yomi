@@ -1,6 +1,6 @@
 # The simulator in full
 
-The whole of what `scripts/simulate.ts` does: every flag, the campaign's policy errand by errand, the parties and guards, and every statistic the summary prints. `scripts/CLAUDE.md` is the short guide, with the balance bands and current figures; this is the detail behind it. The history of the skill trees' measurements is the Measurements table of `docs/implementation-plans/skill-trees/index.md`.
+The whole of what `scripts/simulate.ts` does: every flag, the campaign's policy errand by errand, the parties and guards, and every statistic the summary prints. `scripts/CLAUDE.md` is the short guide; the balance bands and current figures are in `.claude/skills/yomi-balance/bands.md`; this is the detail behind it. The history of the skill trees' measurements is the Measurements table of `docs/implementation-plans/skill-trees/index.md`.
 
 ## Flags and single battles
 

@@ -1,0 +1,40 @@
+---
+name: yomi-add-content
+description: Every place to touch when adding or renaming Yomi content (spell, status, ability, trait, element, skill node, foe, encounter, facility, item, rune, icon, location, portrait, banner, day action, battle event, debug command, story). Use before adding one.
+---
+
+# Adding content
+
+Open the file for your case, touch every item in it, then run `npm test`. Each file lists every place across all directories; the directory guides' contracts still apply.
+
+| File | Content type |
+| --- | --- |
+| [spell.md](spell.md) | a spell (hero or monster) |
+| [status.md](status.md) | a status |
+| [ability.md](ability.md) | a monster ability or hero technique |
+| [trait.md](trait.md) | a trait |
+| [element.md](element.md) | an element |
+| [skill-node.md](skill-node.md) | a perk node of the trees |
+| [battle-event.md](battle-event.md) | a new event kind or a changed event shape |
+| [foe.md](foe.md) | a foe or unit kind |
+| [encounter.md](encounter.md) | an encounter |
+| [facility.md](facility.md) | an encampment facility |
+| [location-kind.md](location-kind.md) | a world map location kind |
+| [day-action.md](day-action.md) | a one-day action |
+| [item.md](item.md) | a base or enchanted item |
+| [rune.md](rune.md) | a rune kind |
+| [gear-icon.md](gear-icon.md) | a weapon, shield, armour, head or cloak look |
+| [portrait.md](portrait.md) | a portrait preset |
+| [party-banner.md](party-banner.md) | a party banner |
+| [debug-command.md](debug-command.md) | a debug command |
+| [story.md](story.md) | a cutscene, tip, story moment or tutorial anchor |
+| (no file) | a sound effect: `.claude/skills/yomi-sound/new-cue.md` (a button that closes or steps back also belongs in `BACK_LABELS`, `src/scenes/sounds.ts`) |
+
+## General rules
+
+- A full `Record` makes `tsc` ask for an entry; follow its errors.
+- Coverage tests enforce some lists: `src/scenes/sounds.test.ts`, `src/scenes/unitLook.test.ts` and the yardstick test in `src/game/encounters.test.ts`.
+- Run `npm run test:browser` after touching a scene.
+- Anything that moves an outcome goes through `yomi-balance` (`.claude/skills/yomi-balance/`).
+- Sprites go through `.claude/skills/yomi-sprites/`, and sounds through `.claude/skills/yomi-sound/`.
+- A renamed name gets a search of the CLAUDE.md files and `.claude/`.

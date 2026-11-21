@@ -31,3 +31,6 @@ audio/narration.jobs.json
 tools/audio/**/__pycache__/
 tools/audio/.pytest_cache/
 tools/audio/tests/fixtures/project/.audition/
+
+# Agent worktrees (whole repository copies)
+.claude/worktrees/
