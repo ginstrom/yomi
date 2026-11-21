@@ -161,3 +161,100 @@ Per step: the plan's `log.md`. Step 02 took three review rounds (parity cells); 
   2. The carried-forward line is labelled "Noted, not fixed:"; the blight tint is its own "Pre-existing:" item.
   3. This feature's State has a "Next action: step 06 review fixes, then step 07" field; Links say the design makes the proposal concrete and the verbatim proposal is in this `log.md`. Line 3 of `docs/designs/modular-context.md` repointed to match (authorized by the orchestrator for that line).
   - Sizes after round 1: `long-campaign-stage-07.md` 4,350 bytes, State 2,977; `modular-context.md` 3,553, State 1,550; stage 7 `log.md` 6,563. Line-set check rerun against the pre-step records: stage 7 5 not found (the four folded lines minus Phase, now in the stage 7 log; the three headings), this record 2 (the reformatted Request and Tiers lines); all justified as above.
+
+## Step 07: the state/history split in the global skills
+
+- 2026-11-21. Engineer opus; reviewer opus. Verdict: pending review; review rounds: 0. Ran on **[Q2]**'s default: the edits apply to every project.
+- Blocker found and settled before any edit: every file under `/Users/ryan/.claude/skills/` is a symlink into the dotfiles git repository (`/Users/ryan/personal/dotfiles/home/.claude/skills/`), and the first backup held only links (17 links, 0 files), so it protected nothing and `diff -ru` against it could never show a change. The orchestrator replaced it with a dereferenced copy (0 links) and recorded the rule in the index (`690aa7b`). The edits were made at the dotfiles target paths and are left **uncommitted** in the dotfiles repository (committing it is the user's call); that repository's other uncommitted files (`README.md`, `home/.claude/settings.json`, `home/.codex/config.toml`, `home/.gemini/`) were not touched.
+- Pre-edit: `diff -ru /Users/ryan/.claude/skills-backup-2026-11-21 /Users/ryan/.claude/skills` against the new backup printed only the expected "Only in" lines (`.trash`, `browser-auth`, `linear`, `pr-creator`, `recursive-slack`, `simulated-user`, `synced`, `technical-report-writing`); `git -C /Users/ryan/personal/dotfiles status --short -- home/.claude/skills` was empty. All eight old texts matched the task file.
+- Edits 1a, 1b, 2a, 2b, 2c, 3, 4a, 4b applied. 1a: "It has two parts." starts a new paragraph after "…decision and escalation."; "It holds:" dropped; "Commit the record…" kept. 4b: the two "and"s joined with a comma.
+- `git -C /Users/ryan/personal/dotfiles diff --stat -- home/.claude/skills`: 4 files changed, 10 insertions(+), 13 deletions(-) (`orchestrator/SKILL.md`, `plan-implementer/implement-step.md`, `plan-implementer/step-loop.md`, `planner/SKILL.md`).
+- Second check: `diff -ru` against the new backup, restricted (`| grep -v '^Only in /Users/ryan/.claude/skills: '`), shows the same four files and no "Only in" line under a backed-up directory; its `+`/`-` lines are byte-identical to the git diff's (`cmp` of the extracted change lines).
+- `npm test`: tsc clean, 98 test files, 2,417 tests passed (baseline the same).
+- The record, `git -C /Users/ryan/personal/dotfiles diff -- home/.claude/skills`:
+
+```diff
+diff --git a/home/.claude/skills/orchestrator/SKILL.md b/home/.claude/skills/orchestrator/SKILL.md
+index 3c285a9..43e1685 100644
+--- a/home/.claude/skills/orchestrator/SKILL.md
++++ b/home/.claude/skills/orchestrator/SKILL.md
+@@ -48,17 +48,11 @@ Rules:
+ 
+ ## The feature record
+ 
+-Keep one file per feature at `docs/features/<slug>.md` (follow project conventions if they place such records elsewhere). Create it at intake and update it at every phase change, decision and escalation. It holds:
++Keep one file per feature at `docs/features/<slug>.md` (follow project conventions if they place such records elsewhere). Create it at intake and update it at every phase change, decision and escalation.
+ 
+-- the request in the user's words, the slug, and the current phase
+-- links to the architecture brief, design, plan index, and branch or worktree
+-- a **decision log**: each decision, who made it (user or orchestrator), the alternatives, and the reason
+-- open questions, and what each one blocks
+-- the model tier chosen per role and step, with escalations
+-- verification outcomes: one line per step (tier, verdict, rounds), and the QA and simulated-user verdicts with the head SHA they ran against
+-- notes carried forward to a later step, removed once that step has used them
++It has two parts. **State**, at the top, kept under about 3 KB: the request in the user's words, the slug, the phase and the next action; links to the architecture brief, design, plan index, plan `log.md`, and branch or worktree; open questions and what each blocks; the tier per role and step, with escalations; the latest verdict of each verification gate with its head SHA; and notes carried forward, removed once used. **Decision log**, below it: one row per decision in force (the decision, who made it, the alternatives, the reason). Replace a superseded row.
+ 
+-You reread the record on every resume, so keep it an index, not a log. Findings, test counts, commit lists and fix narratives already live in the task files' execution records, the plan index and the review record; link to them instead of copying them. Replace a superseded entry rather than striking it through. When you resume a record that has grown into a log, trim it to this shape first and commit the trim on its own.
++History goes in the plan's `log.md` (`docs/implementation-plans/<slug>/log.md`), not the record: each step's verification line (tier, verdict, rounds), review and QA outcomes, fix narratives, measurements. Append to it; don't read it on resume. Findings, test counts and commit lists already in task files and the review record are linked, not copied. When you resume a record that has grown into a log, move its history to `log.md`, trim it to this shape, and commit that on its own.
+ 
+ Commit the record with the documents it describes. Before implementation starts, commit it yourself, or leave it to the first engineer, who carries plan-folder files into its commit (see `implement-step.md`).
+ 
+@@ -96,7 +90,7 @@ Tell the user the plan's size and order in a few lines. Stop and ask only if the
+ 
+ Before the first step, settle the branch: on the default branch, ask whether to create a feature branch or worktree, unless project instructions already decide.
+ 
+-Read `plan-implementer/step-loop.md` and run every step through it, with one override: each engineer and reviewer runs at the tier you assigned the step, and escalations go up from there. Record each escalation and each step's verdict in the feature record.
++Read `plan-implementer/step-loop.md` and run every step through it, with one override: each engineer and reviewer runs at the tier you assigned the step, and escalations go up from there. Record each escalation in the feature record and each step's verdict in the plan's `log.md`.
+ 
+ If the user says the token budget is running short, offer cheaper tiers or deferrals, don't start a step the remaining budget may not cover, and stop only at a committed step boundary with the resume point in the feature record.
+ 
+diff --git a/home/.claude/skills/plan-implementer/implement-step.md b/home/.claude/skills/plan-implementer/implement-step.md
+index dde40fc..3fdffb3 100644
+--- a/home/.claude/skills/plan-implementer/implement-step.md
++++ b/home/.claude/skills/plan-implementer/implement-step.md
+@@ -36,6 +36,7 @@ Commit only on green, following the repository's message conventions and attribu
+ - Run every verification check in the task file, plus the wider test suite and the project's lint, type-check and build. Fix what the step broke.
+ - Confirm each completion criterion with evidence. If one can't be met, leave the step `in progress`, record why, and report.
+ - Append an **Execution record** to your task file: commands run and results, budgets spent, deviations and their reasons, and what later steps need to know. If a deviation changes a contract a later task relies on, update the index and that task file. In the index, set the step `done` with its commits, and unblock steps this work resolved. Include these updates in the step's final commit.
++- Put figures and histories the plan accumulates (measurements, run tables) in the plan's `log.md`, not the index; create it if absent.
+ 
+ Report: what now works; commits with hashes and subjects; each verification command and its actual result; budgets spent against caps; deviations, out-of-scope problems and decisions needed, with recommendations. Don't start the next step.
+ 
+diff --git a/home/.claude/skills/plan-implementer/step-loop.md b/home/.claude/skills/plan-implementer/step-loop.md
+index 67dad1f..17ebaf7 100644
+--- a/home/.claude/skills/plan-implementer/step-loop.md
++++ b/home/.claude/skills/plan-implementer/step-loop.md
+@@ -13,8 +13,8 @@ Steps run one at a time in the index's execution order. Run a parallel group the
+ 3. **Decisions.** If it stopped on a question, settle it from the plan, design and repository, or take it to the user. Reply with SendMessage so its context stays intact. A blocker no one can resolve now ends the run: have it recorded in the index, then report.
+ 4. **Review.** Brief a fresh reviewer with the repository path, plan path, step ID and the step's commit range. Don't pass along the engineer's account of its work.
+ 5. **Iterate.** Relay blocking findings to the same engineer, then its new commits and any disputes to the same reviewer. Judge disputes against the plan and design; only the ones neither settles go to the user. After two rounds without a clean verdict, replace the engineer with a fresh one a tier up, briefed with the open findings. After a third, stop and report.
+-6. **Confirm.** The index marks the step `done`, the task file's execution record includes the review rounds, and the working tree is clean apart from changes that predate the run.
++6. **Confirm.** The index marks the step `done`, the task file's execution record includes the review rounds, the step's outcome line is in `log.md`, and the working tree is clean apart from changes that predate the run.
+ 
+ ## Overall review
+ 
+-After the last step in scope, brief a fresh reviewer with the base commit, `HEAD`, the plan path and the steps covered, and say it is the overall review. Send its findings to the last engineer via SendMessage (or a fresh one briefed with the findings) and iterate under the same rules. The outcome goes in the index's execution notes, committed by the engineer.
++After the last step in scope, brief a fresh reviewer with the base commit, `HEAD`, the plan path and the steps covered, and say it is the overall review. Send its findings to the last engineer via SendMessage (or a fresh one briefed with the findings) and iterate under the same rules. The outcome goes in the plan's `log.md`, committed by the engineer.
+diff --git a/home/.claude/skills/planner/SKILL.md b/home/.claude/skills/planner/SKILL.md
+index 7f1d8cb..fa7ed4b 100644
+--- a/home/.claude/skills/planner/SKILL.md
++++ b/home/.claude/skills/planner/SKILL.md
+@@ -24,6 +24,7 @@ Store the entire plan in that dedicated folder:
+ ```text
+ <feature-slug>/
+   index.md
++  log.md
+   01-<step-slug>.md
+   02-<step-slug>.md
+   ...
+@@ -56,7 +57,8 @@ Include:
+ - Execution order, any safe parallel groups, and integration checkpoints where needed. The index is the canonical record of overall task status and coordination.
+ - A requirement-to-task mapping using the design's requirement IDs. If the design lacks IDs, assign local mapping labels without modifying its meaning.
+ - Overall completion criteria, cross-task validation, and unresolved questions or blockers.
+-- A brief instruction for implementers: update the step's status and commits here, and record evidence, deviations and blockers in the task file's execution record. Keep the index short; every implementer reads it.
++- Keep the index to what decides the next step. Anything that grows as steps finish (measurements, run histories, review summaries) goes in `log.md` in the plan folder, which the index links.
++- A brief instruction for implementers: update the step's status and commits here, and record evidence, deviations and blockers in the task file's execution record, and anything the plan as a whole accumulates in `log.md`. Keep the index short; every implementer reads it.
+ 
+ ## Write each task file
+ 
+```

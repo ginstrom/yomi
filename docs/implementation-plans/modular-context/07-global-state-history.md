@@ -150,3 +150,12 @@ Light rewording is allowed for grammar, such as joining the two "and"s with a co
 - [ ] The execution record notes the [Q2] answer the step ran on.
 
 ## 7. Execution record
+
+- **[Q2]:** ran on the default answer: the edits apply to every project.
+- **Deviation (settled by the orchestrator, `690aa7b`):** the global skill files are symlinks into the dotfiles git repository, and the first backup held only links. The orchestrator replaced the backup with a dereferenced copy. The edits were made at `/Users/ryan/personal/dotfiles/home/.claude/skills/…` and left uncommitted there. The record is `git -C /Users/ryan/personal/dotfiles diff -- home/.claude/skills`, with `diff -ru` against the new backup as a second check. Step 09 works the same way (index, "Global skills").
+- Pre-edit diff: clean within the backed-up directories. All eight old texts matched.
+- Edits 1a, 1b, 2a, 2b, 2c, 3, 4a and 4b were applied with the task's text. 1a puts "It has two parts." in a new paragraph. 4b joins its "and"s with a comma.
+- Verification 1: the git diff and the restricted `diff -ru` both show only the four files, with identical change lines: 10 insertions, 13 deletions. Pasted into `log.md` ("Step 07").
+- Verification 2 (read-through): "The feature record" reads as one section, with no "It holds:", "Commit the record…" kept, and no sentence duplicated. The planner's new bullet sits before the implementers' bullet. `implement-step.md` "Complete" now has four bullets, and "Report:" is unchanged.
+- Verification 3: `npm test` passed, with 98 files and 2,417 tests.
+- Genericness: the new text names no project path beyond the planner's own default (`docs/implementation-plans/<slug>/log.md`). A project with no `log.md` gets one on first use ("create it if absent").
