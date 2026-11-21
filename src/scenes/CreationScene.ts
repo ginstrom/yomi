@@ -41,6 +41,7 @@ import { TREE_TAB_Y, TREE_W, draftCostTone, draftNodeClickable, draftNodeHint, l
 import { TREE_IDS, type TreeId } from '../character/trees.ts'
 import { PerkTreeView } from './PerkTreeView.ts'
 import { onceEachEvent } from './keyEvents.ts'
+import { overlayScale } from './overlayScale.ts'
 
 interface CreationData {
   /** The party being built, which the screen hands back with its character added or changed. */
@@ -533,7 +534,7 @@ export class CreationScene extends Phaser.Scene {
   private layout(): void {
     const { width, height } = this.scale
     this.bg.setSize(width, height)
-    const scale = Math.max(0, Math.min(1, (width - 32) / PANEL_W, (height - 32) / PANEL_H))
+    const scale = overlayScale(width, height, PANEL_W, PANEL_H)
     this.panel.setScale(scale).setPosition((width - PANEL_W * scale) / 2, (height - PANEL_H * scale) / 2)
   }
 

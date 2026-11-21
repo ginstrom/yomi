@@ -29,6 +29,7 @@ import { addPanelButton, fitText } from './panelButton.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { PORTRAIT_SCALE, PORTRAIT_SIZE, portraitKey } from './partyPanel.ts'
 import { onceEachEvent } from './keyEvents.ts'
+import { overlayScale } from './overlayScale.ts'
 
 interface GuildHallData {
   /** The id of the party at the hall; the first if left out or unknown. */
@@ -38,7 +39,7 @@ interface GuildHallData {
   recruit?: CharacterDraft
 }
 
-/** Drawn in a frame of this size, centred over the map and scaled down (never up) to fit the window. */
+/** Drawn in a frame of this size, centred over the map and fitted to the window: scaled down to fit, up in whole steps from 2x (`overlayScale`). */
 const FRAME_W = 720
 const FRAME_H = 500
 const CENTRE_X = FRAME_W / 2
@@ -349,7 +350,7 @@ export class GuildHallScene extends Phaser.Scene {
   private layout(): void {
     const { width, height } = this.scale
     this.bg.setSize(width, height)
-    const scale = Math.max(0, Math.min(1, (width - 32) / FRAME_W, (height - 32) / FRAME_H))
+    const scale = overlayScale(width, height, FRAME_W, FRAME_H)
     this.frame.setScale(scale).setPosition((width - FRAME_W * scale) / 2, (height - FRAME_H * scale) / 2)
   }
 

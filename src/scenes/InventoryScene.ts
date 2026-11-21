@@ -66,6 +66,7 @@ import { PerkTreeView } from './PerkTreeView.ts'
 import { heroTitle, type TreeId } from '../character/trees.ts'
 import { ABILITY_DESCRIPTION_LINES, ABILITY_LIST, abilityCostLine, abilityPages, abilityRowPlace, abilityRowRect, abilityRows } from './abilityList.ts'
 import { SlotScroll } from './slotScroll.ts'
+import { overlayScale } from './overlayScale.ts'
 
 /** What the panel can show: one of its four tabs, or the tree view, opened from the Skills tab (on the calling's tree). */
 type PanelTab = InventoryProbe['tab']
@@ -1402,11 +1403,11 @@ export class InventoryScene extends Phaser.Scene {
     this.dimBg.setSize(width, height)
     this.dimBg.setPosition(width / 2, height / 2)
     this.column.layout(height)
-    // Right of the party's column, and scaled down (never up) to fit there, keeping 16 px clear
+    // Right of the party's column, and fitted there (down to fit, up in whole steps from 2x: `overlayScale`), keeping 16 px clear
     // on each side; slot hit areas and tooltips scale with the panel. At MIN_GAME_SIZE (main.ts)
     // it fits unscaled.
     const free = width - PARTY_PANEL_W
-    const scale = Math.max(0, Math.min(1, (free - 32) / PANEL_W, (height - 32) / PANEL_H))
+    const scale = overlayScale(free, height, PANEL_W, PANEL_H)
     this.panel.setScale(scale)
     this.panel.setPosition(PARTY_PANEL_W + (free - PANEL_W * scale) / 2, (height - PANEL_H * scale) / 2)
   }

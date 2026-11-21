@@ -37,6 +37,7 @@ import type { Rect } from './mapScroll.ts'
 import { addPanelButton, fitText } from './panelButton.ts'
 import { runeEffectLines, runeSocketLine } from './runecraftView.ts'
 import { createPips } from './socketPips.ts'
+import { overlayScale } from './overlayScale.ts'
 
 interface TradingPostData {
   game: GameState
@@ -81,7 +82,7 @@ interface Row {
   ap: number
 }
 
-/** Drawn in a frame of this size, centred over the map and scaled down (never up) to fit the window. */
+/** Drawn in a frame of this size, centred over the map and fitted to the window: scaled down to fit, up in whole steps from 2x (`overlayScale`). */
 const FRAME_W = 720
 const FRAME_H = 520
 const CENTRE_X = FRAME_W / 2
@@ -427,7 +428,7 @@ export class TradingPostScene extends Phaser.Scene {
   private layout(): void {
     const { width, height } = this.scale
     this.bg.setSize(width, height)
-    const scale = Math.max(0, Math.min(1, (width - 32) / FRAME_W, (height - 32) / FRAME_H))
+    const scale = overlayScale(width, height, FRAME_W, FRAME_H)
     this.frame.setScale(scale).setPosition((width - FRAME_W * scale) / 2, (height - FRAME_H * scale) / 2)
   }
 
