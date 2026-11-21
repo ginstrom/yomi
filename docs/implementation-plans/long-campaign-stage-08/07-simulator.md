@@ -28,7 +28,7 @@ The refactor guard's fixture is re-recorded once, here.
 
 9. **Watchtowers keep needing clean land** (for the user's eye). The design's play script says "build a watchtower on a tainted road hex", and its simulator "towers preferred on unguarded tainted road hexes"; the code refuses a tower on any land above 0 (`towerSiteRefusal`), and the code is right. Both are read as "a watchtower within `GUARD_RADIUS` of a tainted road hex": the play script's step 5 builds on clean land beside the stretch, and the simulator's tower errand walks to a clean hex that guards an unguarded tainted or blighted road hex.
 12. **The simulator's Lodge reaches 3** (for the user's eye). The stage design's simulator list does not say; the reference (§5.4) raises the Lodge "when routes are possible". The plan raises it to 2 as today and to 3 once a route is open, so roads are measured. Routes are opened in `visitFacilities` after the infirmary and before the Lodge; the order of the works, forts and market levels is untouched (carried forward to stage 12).
-13. **The simulator's contact detour** is the vanguard's (and a lone party's) only, at its `choose` phase: the nearest uncontacted partner within `CONTACT_DETOUR` (8) hexes of the party (the reference's "of its path" read as "of the party"), when no held site is threatened. Raiders are weighed after threatened sites and before the nearest nest, nearest raider first, in both `nextTarget` and the guard's defend branch.
+13. **The simulator's contact detour** is the vanguard's (and a lone party's) only, at its `choose` phase: the nearest uncontacted partner within `CONTACT_DETOUR` (8) hexes of the party (the reference's "of its path" read as "of the party"), once the trading post allows routes (level 4, `routeLimit` above 0) and when no held site is threatened; each partner is sought once a campaign (`Plan.contactsTried`). (Gated on the post by the user's decision, 2026-11-22: ungated, the detour alone moved `one` from 239 to 304 of 500.) Raiders are weighed after threatened sites and before the nearest nest, nearest raider first, in both `nextTarget` and the guard's defend branch.
 14. **Determinism through step 06.** Steps 01–06 must not move the refactor guard or the 50-campaign check. The simulator builds its worlds without partners (`SIM_PARTNERS`, temporary, step 01) and keeps the Lodge at 2 (`SIM_LODGE_CAP`, temporary, step 03), so no simulated campaign has a partner, route or road until step 07, which removes both holds and re-records the fixture once.
 
 ### Shared constraints (from the index)
@@ -159,6 +159,8 @@ export function tradeDay(world: WorldState, presences: readonly PartyPresence[])
 // src/game/buildings.ts: towerHexRefusal(world: WorldState, at: Hex): string | null   // towerSiteRefusal's place rules for any hex (towerSiteRefusal calls it); same words
 ```
 
+- **Refusal words** (`openRouteRefusal`, in order): "Routes are opened at <encampment name>." (not `atEncampment`); `No partner "<id>".`; "<name> has not been contacted: walk there first."; "<name> is silent while the blight holds its land."; "A route to <name> is already open."; "Routes need the Market (trading post level 4)." (limit 0); "The <tradingPostName> keeps <n> route(s) open at most." ("1 route", "2 routes"); "No safe road to <name>."; "The route costs <describeCost>, more than the stock holds."
+
 **C3. Roads and the Lodge's level 3 (step 03)**
 
 ```ts
@@ -182,8 +184,9 @@ export const SIM_LODGE_CAP = 2   // visitFacilities raises the Lodge only below 
 // scripts/simulate.ts
 // SIM_PARTNERS and SIM_LODGE_CAP are removed: every simulated world has PARTNERS
 export const CONTACT_DETOUR = 8
-export function contactErrand(world: WorldState, party: Expedition): PartnerLocation | null
-//   the nearest uncontacted partner within CONTACT_DETOUR of the party, when no held site is threatened; ties in locations order
+export function contactErrand(world: WorldState, party: Expedition, skip?: ReadonlySet<string>): PartnerLocation | null
+//   the nearest uncontacted partner within CONTACT_DETOUR of the party, none of `skip` (Plan.contactsTried), once routeLimit(world) > 0 (trading post 4)
+//   and when no held site is threatened; ties in locations order
 export const TOWER_ERRAND_RADIUS = 6
 export function towerErrand(world: WorldState, party: Expedition): Hex | null
 //   if the stock affords TOWER_COST: the nearest hex within TOWER_ERRAND_RADIUS of the party with towerHexRefusal null that lies within
@@ -268,3 +271,32 @@ All in `scripts/simulate.ts` unless named; line numbers are approximate and will
 - [ ] One commit, "Stage 8 step 07: the simulator's trade", no attribution lines, files staged by path; the index's row 07 updated with status and commit.
 
 ## 7. Execution record
+
+**First pass** (2026-11-22, worktree branch `long-campaign-stage-08-sim` from `00a40ff`): blocked on a balance decision, nothing committed.
+
+- C2 re-synced from the index (the refusal-words line was missing from this file's copy).
+- Built as §4 says, uncommitted in the worktree: the holds gone (every simulated world, campaigns and the twin, is `newGame`'s default world with `PARTNERS`); `CONTACT_DETOUR`, `contactErrand(world, party, skip?)` (the optional `skip`, fed from a new `Plan.contactsTried`, keeps a partner the walk reached or gave up on from being sought again, which would otherwise loop), the `contact` phase; `routeChoices`, `lodgeCap`, routes opened in `visitFacilities` after the infirmary, the `route_opened` events carried on `Trade.events` and tallied by `carryOut`; `materialNeeds` with the Lodge to `lodgeCap` and route timber; `routeRaiders` in `nextTarget` and `guardChoice`; `TOWER_ERRAND_RADIUS`, `towerErrand`, the `road_tower` phase (in `AFTER_BATTLE`); the record's four counts and `goldBySource.routes`; `tradeLine` in the summary. 16 new tests (§4.10) pass; every other test passes; only the refactor guard fails, not yet re-recorded. Docs: `docs/reference/simulator.md`, `.claude/skills/yomi-balance/levers.md`; `scripts/CLAUDE.md` needed no change.
+- 50-campaign check before: SHA-256 `1ceefe63...74400d1`, identical to step 01's baseline (23 of 50, 294 days).
+- **The early-game figure moved far out of band.** 50-campaign check after: SHA-256 `aa837343...191796`, 35 of 50, 375 days, 25.8 battles, 1.54 partners contacted, no route opened. `one` (500, seed 1, `--parties 1`): **304 of 500** (band 215 to 250; baseline 239), **359 days** (band 243 to 297), 24.8 battles, 1.2 heroes dead, 1.56 partners contacted, routes 0 opened. Logs `logs/s8-07A-one.*`, `logs/guard-50*`.
+- Cause, by diagnostic 50-campaign runs (not kept): partners as clean sources with no detour give 22 of 50 (`CONTACT_DETOUR` set below 0); the full step gives 35; picking the nest before the detour and walking to it after contact gives 31; the detour only while `routeLimit(world) > 0` gives 22 (0.5 partners contacted, as without a detour). So the contact detour alone moves the early game: no route opens (the post stays at 1 or 2), so `ROAD_STRENGTH`, `RAID_RADIUS` and `ABANDON_AFTER` cannot retune it. Its walks add days and move the vanguard before its next nest; in campaign 4, for one, the party that died at the bandit camp on day 29 instead walks to Millbrook after the kobold diggers and fights two threat-2 nests near it first.
+- Decision needed: gate the detour on routes being possible, accept the move, or another rule.
+
+**Second pass** (2026-11-22, the user's decision, option 1): the detour runs only once the trading post allows routes.
+
+- `contactErrand` returns null while `routeLimit(world)` is 0 (decision 13 and C7 above reworded; `skip` and `Plan.contactsTried` accepted as a C7 change). Two tests (none below post 4 at each of levels 1 to 3; the vanguard chooses its nest at once below post 4) fail with the gate removed and pass with it; the other contact tests set the post to 4.
+- The refactor guard re-recorded once (old and new figures in the doc comment above `GUARD_RECORDS`): no route opens in the five campaigns, so the move is the partners' land as clean sources from day 1 (and 1, 1, 1, 0, 0 contacts made on the way): days 390, 385, 310, 423, 29 became 457, 383, 331, 346, 29; outcomes four Source and one fallen became three and two. Events SHA-256 `e638f2a4...6f1180`.
+- 50-campaign check after: SHA-256 `b50f7b50626d6e2832deb18c44a808b9be0521002698dc97c1fa8216db904e52`, 22 of 50 (baseline 23), 281 days (294), 0.50 partners contacted, no route.
+- Measured through `yomi-measure`, 500 campaigns, seed 1, one at a time (logs `logs/s8-07-{one,company,rl10}.*`; 335 s, 499 s, 960 s):
+
+  | Run | Source wins | Mean days | Partners contacted | Routes opened | Route gold |
+  | --- | --- | --- | --- | --- | --- |
+  | `one`, baseline | 239 | 286 | — | — | — |
+  | `one` | 233 (band 215 to 250) | 284 | 0.47 | 0.00 | 0 |
+  | `company`, baseline | 239 | 286 | — | — | — |
+  | `company` | 232 (band 220 to 260) | 285 | 0.47 | 0.00 | 0 |
+  | `rl10`, baseline | 434 | 509 | — | — | — |
+  | `rl10` | 433 (370 to 420, accepted up to 445) | 509 | 0.54 | 0.03 | 1 |
+
+  Heroes dead 1.2 (`one`; at most 2.0). The early game moved 6 and 7 of 500, just past "about 5": with no detour and no route in it, the cause is the partners' land (clean sources of `PARTNER_STRENGTH`, step 01's rule) reshuffling where the blight and the spawns fall, a seed-for-seed reshuffle the size of the 500-campaign sampling spread (about 11 wins); the 50-campaign check moved 1. No design lever (`ROAD_STRENGTH`, `RAID_RADIUS`, `ABANDON_AFTER`) touches it, since no road exists.
+- For step 08: at `--ready-level 10` routes barely open (0.03 a campaign, route gold 1): the trading post rarely reaches 4 under the untouched spend order (stage 12's), so the completion criterion "routes opened, raided sometimes, route gold a visible share" is not met by the simulator as it stands; that is step 08's call to report.
+- `npm test`: 100 files, 2,489 tests pass. `grep -rn "SIM_PARTNERS\|SIM_LODGE_CAP" src scripts .claude docs/reference` finds nothing (only the plan's own history files name them).
