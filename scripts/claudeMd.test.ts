@@ -230,7 +230,7 @@ describe('the .claude/ checks, on a fixture tree', () => {
     ])
   })
 
-  it('never reads .claude/ outside skills and agents', () => {
+  it('never reads .claude/ outside skills, agents and roles', () => {
     const root = fixture({ '.claude/worktrees/agent-1/.claude/skills/x/SKILL.md': skill('y', 'Y.', pad(SKILL_LIMIT_BYTES) + '`src/missing.ts`') })
     expect(oversizeFiles(root)).toEqual([])
     expect(frontmatterProblems(root)).toEqual([])
