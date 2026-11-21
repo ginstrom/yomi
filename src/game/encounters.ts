@@ -191,7 +191,7 @@ interface EncounterDef {
  * (a whole number) held within the band; the foes are the slots that take the
  * field at that level (`fromThreat`), cut to the band's count for it, each
  * a foe at that level (`foeStats`). The numbers behind the counts were
- * chosen with the simulator; see the rules of scaling in CLAUDE.md.
+ * chosen with the simulator; see `.claude/skills/yomi-balance/levers.md`.
  */
 function encounter(party: readonly Fighter[], { slots, band, counts }: EncounterDef, threat: number): Encounter {
   if (counts.length !== band.max - band.min + 1) throw new Error('An encounter needs a foe count for each threat of its band')

@@ -1,6 +1,6 @@
 # The game outside battle
 
-Loaded when working in `src/game/`: encounters and bandits, the company and its day loop, the world map, the blight, the encampment and its facilities, and saving. This is the working guide; the full rules, with every constant, encounter, bandit role, facility level and price and the save migrations, are in `docs/reference/game.md`. The simulator and the balance figures are in `scripts/CLAUDE.md`.
+Loaded when working in `src/game/`: encounters and bandits, the company and its day loop, the world map, the blight, the encampment and its facilities, and saving. This is the working guide; the full rules, with every constant, encounter, bandit role, facility level and price and the save migrations, are in `docs/reference/game.md`. The simulator is in `scripts/CLAUDE.md`; the balance figures are in `.claude/skills/yomi-balance/`.
 
 ## Contracts
 
@@ -12,6 +12,7 @@ Loaded when working in `src/game/`: encounters and bandits, the company and its 
 - **RNG streams.** The world RNG (its state saved in `WorldState`) draws spawns and nothing else; rune loot draws from `lootRng`, seeded from the battle's seed, so the battle's dice are untouched and a reloaded battle finds the same runes. Do not draw world or loot randomness from a battle's stream or `Math.random`. The auto-resolve estimate (`forecast.ts`) draws from neither: each sample has its own engine and policy streams, seeded by hashing, with a salt, the battle's seed and log length (mid-battle) or the location, party and day (world map); nothing in it draws from the real battle, the world's RNG or `Math.random`.
 - **Vision is knowledge only.** `vision.ts` says what the player has seen (`seen`, `sighted`); the rules run on the true state and the simulator ignores it. Every change to the land ends with `updateSight`.
 - **Hit points follow gear.** A worn item replaced or removed (`ItemPlace`, runecraft's `replaceAt`) ends with `clampHp` on the wearer.
+- **Balance.** Anything that changes a battle's outcome, a foe or an encounter moves balance: `.claude/skills/yomi-balance/`.
 - **The game state lives in scene data**, never in a module global. A game with no `slot` (`newGame()`'s default) is never saved.
 
 ## The modules
@@ -51,4 +52,3 @@ World map, blight and territory, scaling, encounters, bandits and saving each ha
 - **A new encounter**: an entry in `ENCOUNTERS`, its band in `ENCOUNTER_BANDS` and counts in `ENCOUNTER_COUNTS`; add it to `SPAWN_KINDS` only if the blight should spawn it.
 - **A new foe kind**: a sprite of that name with `idle` and `walk` animations, an experience value in `FOE_XP`, a native level in `FOE_NATIVE_LEVEL` if not 1, a sound in `FOE_SOUNDS`, and a stat block within `foeYardstick` at its native level (a test checks), each field outside it a named exception.
 - **A new one-day action**: a refusal and a time-free apply in its module, a `DayAction` case (`expedition.ts`) that `company.ts` runs, and a convenience over `act`.
-- **Anything that changes a battle's outcome, a foe or an encounter**: re-run the balance cells and campaigns as `scripts/CLAUDE.md` describes.

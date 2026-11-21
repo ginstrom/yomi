@@ -9,7 +9,7 @@
 // sets out on a new world with the blight spreading, fights its nests,
 // carrying its wounds and spending its levels, and marches on the Source when
 // ready, until it beats it, falls, or loses the encampment. That is how
-// scaling is judged; see the rules of scaling in CLAUDE.md.
+// scaling is judged; see `.claude/skills/yomi-balance/levers.md`.
 //
 // Usage: node scripts/simulate.ts [--battles 1000] [--out logs/battles.jsonl] [--seed 1] [--max-rounds 200]
 //                                 [--player-policy aggressive] [--enemy-policy aggressive]

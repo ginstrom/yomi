@@ -25,7 +25,7 @@ Commit finished work without being asked: once a change is complete and `npm tes
 
 ## Subagents
 
-Pass `model: "sonnet"` for work that is not too complex: searching, reading and summarising, running tests or the simulator and reporting, mechanical edits whose shape is decided. Leave the model unset for work that needs judgement: designing, changing rules or balance, debugging an unknown cause, reviewing code. When in doubt, leave it unset.
+Pass `model: "sonnet"` for work that is not too complex: searching, reading and summarising, running tests or the simulator and reporting, mechanical edits whose shape is decided. Leave the model unset for work that needs judgement: designing, changing rules or balance, debugging an unknown cause, reviewing code. When in doubt, leave it unset. Simulator measurements: the `yomi-measure` agent.
 
 ## Architecture
 
@@ -51,7 +51,7 @@ Contracts that span directories (each guide has the detail):
 - **Derived, never stored.** Every number a character fights with is derived; a change to worn gear ends with `clampHp`.
 - **Refusals.** An action on the game state returns why it was refused, or null, and checks everything before changing anything.
 - **Saves.** Raise `SAVE_VERSION` when `GameState`, `Character`, `WorldState` or `BattleSnapshot` changes shape; no migration unless a design asks. Items save by id, so new items must be in `BASE_ITEMS` or `MAGIC_ITEMS`.
-- **Balance.** Constants are tuned against the user's bands (`scripts/CLAUDE.md`); a change that moves play fails the refactor guard (`scripts/simulate.test.ts`).
+- **Balance.** Constants are tuned against the user's bands (`yomi-balance` skill); a change that moves play fails the refactor guard (`scripts/simulate.test.ts`).
 - **Import cycles** (`skills`/`perks`/`trees`, `blight`/`territory`/`worldMap`, `company` and the day-passing modules) are safe only while nothing calls across at module load.
 
 ## Tests

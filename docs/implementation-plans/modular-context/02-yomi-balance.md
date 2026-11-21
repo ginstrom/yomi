@@ -95,3 +95,5 @@ Body (< 6,000 bytes in all):
 - [ ] Index: step 02 `done` with its commit.
 
 ## 6. Execution record
+
+Done 2026-11-21 (engineer). Created the five skill files and the agent; trimmed the four guides, root and two comments as §1 says. `npx vitest run scripts/claudeMd.test.ts` 15 passed with the new files. `yomi-measure` run and the figures are in `log.md` (the agent type was not listed, so the general-purpose sonnet fallback ran). Deviations: `parity-L8` and `parity-L14` flags in `bands.md` are the parity command with `--party-level 8` and `--threat 7 --party-level 14` (the old guide named "Hobgoblin Warband" at level 8 without a command; the skill-trees plan 15 ran Bandit Camp threat 4 at levels 4 and 8). Heroes dead a campaign is read from the `Guild hall` line. For later steps: `docs/reference/simulator.md` line 3 still names `scripts/CLAUDE.md` as holding the bands.

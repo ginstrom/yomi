@@ -50,6 +50,4 @@ A level brings one perk point; creation gives three. For a hero never migrated, 
 
 `draftCharacter` spends the draft's points with `raiseSkill` and `takePerk`, so creation has no rules of its own and waives nothing; a change that leaves a chosen node unqualified drops it and returns its point (`pruneDraft`). The prerolls, the ready-made three among them, are drafts held to the same rules by a test.
 
-## Changing hero growth means retuning
-
-The campaign's balance was tuned against today's growth. A change to the budgets of creation, skill points or perk points a level, what a node costs, a node, spell or technique, mana, the ready-made party or the plans moves the simulator's figures: re-run the guard and the bands in `scripts/CLAUDE.md`, and re-record the refactor guard if play moved.
+A change to hero growth moves balance: `.claude/skills/yomi-balance/` (`levers.md`, "When to retune").

@@ -35,7 +35,7 @@ Policies are pure functions `({ state, legal, rng }) => Action`, registered in `
 
 `autoPlay.ts` is the one loop that steps a battle by policies (the simulator and the game): it draws nothing itself, each side's policy drawing on the stream it is given, and it never abandons a battle it stops (`over: false`).
 
-`policies.test.ts` holds a snapshot of today's encounters' choices. A change that moves a monster's or bandit's choice fails it; re-record it only when the change is meant, and say why in the test's title as earlier re-recordings do. The simulator's refactor guard (`scripts/simulate.test.ts`) will usually move too.
+`policies.test.ts` holds a snapshot of today's encounters' choices: re-record it only when the change is meant (`.claude/skills/yomi-balance/guards.md`).
 
 ## Checklists
 
