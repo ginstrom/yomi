@@ -397,15 +397,15 @@ const COMMANDS: Record<string, Command> = {
     },
   },
   spawn: {
-    usage: 'spawn <goblin_raid|kobold_scouts|bandit_camp> [here | <location id> | <col> <row>] [@party]',
-    acts: true,
+    usage: 'spawn <goblin_raid|kobold_scouts|bandit_camp> <location id | col row>',
     summary:
-      "Place a nest of a kind at a hex (the party's by default) at that hex's threat, with no RNG drawn and no pressure spent; its hex goes to blight 3 and the nest is sighted. A hex where a location or a party stands is refused. Place one within 2 hexes of a road to raid it.",
+      "Place a nest of a kind at a named hex (a location's, or a column and row) at that hex's threat, with no RNG drawn and no pressure spent; its hex goes to blight 3 and the nest is sighted. A hex where a location or a party stands is refused. Place one within 2 hexes of a road to raid it.",
     changes: true,
     run([kind, ...where], context) {
       const { world } = gameOf(context)
       const spawnKind = SPAWN_KINDS.find((k) => k.encounter === kind)
       if (!spawnKind) throw new DebugError(`Expected one of ${SPAWN_KINDS.map((k) => k.encounter).join(', ')}, got "${kind ?? ''}".`)
+      if (where.length === 0) throw new DebugError('Name the hex: a location id, or a column and a row.')
       const at = hexArgument(where, context)
       const there = world.locations.find((l) => l.position.q === at.q && l.position.r === at.r)
       if (there) throw new DebugError(`${theName(there.name)} already stands at ${offset({ position: at })}.`)

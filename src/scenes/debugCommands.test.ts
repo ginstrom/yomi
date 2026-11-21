@@ -236,7 +236,7 @@ describe('debug commands', () => {
       expect(world.sighted).toContain(placed.id)
     })
 
-    it('takes here, a location’s hex, and the other kinds; the next spawn has the next id', () => {
+    it('takes a location’s hex, and the other kinds; the next spawn has the next id', () => {
       const context = onWorldMap()
       const { world, parties } = context.source!.game
       const site = world.locations.find((l) => l.id !== 'encampment' && l.kind === 'resource')!
@@ -262,13 +262,13 @@ describe('debug commands', () => {
       expect(JSON.stringify(world)).toBe(before)
     })
 
-    it('refuses the hex a party stands on, here included, so no party stands on a nest unconfronted', () => {
+    it('needs a hex, and refuses the one a party stands on, here included, so no party stands on a nest unconfronted', () => {
       const context = onWorldMap()
       const { world, parties } = context.source!.game
       parties[0].position = offsetToHex(10, 14)
       const count = world.locations.length
-      expect(runCommand('spawn goblin_raid', context)).toMatchObject({ changed: false, lines: [expect.stringMatching(/A party stands/)] })
-      expect(runCommand('spawn goblin_raid here', context).changed).toBe(false)
+      expect(runCommand('spawn goblin_raid', context)).toMatchObject({ changed: false, lines: [expect.stringMatching(/Name the hex/)] })
+      expect(runCommand('spawn goblin_raid here', context).lines[0]).toMatch(/A party stands/)
       const { col, row } = hexToOffset(parties[0].position)
       expect(runCommand(`spawn goblin_raid ${col} ${row}`, context).changed).toBe(false)
       expect(world.locations).toHaveLength(count)

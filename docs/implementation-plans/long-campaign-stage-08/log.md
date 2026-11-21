@@ -45,3 +45,5 @@ Measured by the `yomi-measure` agent on a clean worktree at `b28bba1` (no code c
 - Step 03 (roads and the Lodge's level 3): engineer sonnet, reviewer opus; verdict clean after 1 review round. Commits `d851174` and the round 1 follow-ups.
 
 - Step 05 (the world map's roads and partners): engineer sonnet, reviewer opus; verdict clean after 1 review round. Commits `75603ad` and the round 1 follow-ups (a `grey` probe field from the drawn tint and label, silence told only when contacted or in sight, "pays nothing while raided" on a raided road, manual wording).
+
+- Step 06 (the Routes tab and the debug console): engineer sonnet, reviewer opus; verdict clean after 2 review rounds. Commits `ba4b82b`, the round 1 follow-ups `a04d476` and the round 2 follow-ups (`spawn` takes a named hex, never a party's).
