@@ -144,3 +144,11 @@ export const ABANDON_AFTER = 6                  // raided yield days in a row (3
 - [ ] One commit, "Stage 8 step 03: roads and the Lodge's level 3", no attribution lines; the index's row 03 updated with status and commit.
 
 ## 7. Execution record
+
+Test-first: the A8 road tests (blight.test.ts), `raiseLodge` 2 to 3 and top refusal (buildings.test.ts), the encampment Lodge and the SIM_LODGE_CAP imports were written first and seen to fail (ROAD_STRENGTH/ROAD_LODGE_LEVEL undefined, "Roads come with trade routes." returned). After green, the road source line was disabled once: the three road tests failed, then it was restored.
+
+Done: `ROAD_LODGE_LEVEL` (buildings.ts), `ROAD_STRENGTH` and road sources in `sources()` (blight.ts, which now imports `ROAD_LODGE_LEVEL` from buildings.ts, read only inside `sources`, so safe), `LODGE_LEVEL_LIMIT`/`ROADS_REFUSAL` and the Lodge's `refusal` removed (the generic `Facility.refusal`/`barred` hook kept; `tsc` was content), `SIM_LODGE_CAP = 2` in scripts/simulate.ts. Level-3 effect line unchanged. Docs: manual row, reference game/scenes/simulator.
+
+Deviations: the e2e test "shows the Lodge at level 2 with its Raise disabled" was deleted (the behavior is gone) and the "says why the Lodge goes no higher" test replaced by one that raises 1 to 2 to 3.
+
+Results: `npm test` 100 files, 2470 tests pass; refactor guard untouched and green. `npm run test:browser`: 176 of 177 passed; the one failure ("drags gear between the equipment, the backpack and the baggage", untouched, ran while another poller loaded the machine) passed alone on rerun. 50-campaign SHA-256 `1ceefe633e71c0326c0c5b261c77e1c010c49e30303a85286a782589e74400d1`, identical to step 01's baseline. Grep for the removed names is clean in src, scripts, e2e, docs/reference, docs/manual, .claude skills/agents/roles and CLAUDE.md (stale copies remain only in `.claude/worktrees/agent-*`, another agent's worktree, left alone).

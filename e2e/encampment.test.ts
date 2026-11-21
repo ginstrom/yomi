@@ -118,7 +118,7 @@ describe('the encampment', () => {
     expect(back.world.stock).toMatchObject({ gold: 60, iron: 35 })
   })
 
-  it("builds the Builders' Lodge on its plot, and refuses its third level with the roads line", async () => {
+  it("builds the Builders' Lodge on its plot", async () => {
     const game = await games.open()
     await richAtHome(game, { gold: 100, timber: 50 })
     const camp = await enter(game)
@@ -132,28 +132,21 @@ describe('the encampment', () => {
     expect(built.message).toBe("The Builders' Lodge is built.")
   })
 
-  it('says why the Lodge goes no higher as soon as it is raised to 2, without another click', async () => {
+  it('raises the Lodge to level 2 without a word about roads, and to level 3', async () => {
     const game = await games.open()
-    await richAtHome(game, { gold: 500, stone: 50 }, undefined, { 'world.lodge': 1 })
+    await richAtHome(game, { gold: 500, iron: 50, stone: 50 }, undefined, { 'world.lodge': 1 })
     const camp = await enter(game)
     await game.click(facility(camp, 'builders_lodge'))
     const shown = await game.settled('Encampment', (c) => c.selected === 'builders_lodge')
     await game.click(shown.buttons.improve)
     const raised = await game.settled('Encampment', (c) => facility(c, 'builders_lodge').level === 2)
-    expect(raised.message).toBe("The Builders' Lodge is raised to level 2. Roads come with trade routes.")
-    expect(raised.buttons.improve.enabled).toBe(false)
-  })
-
-  it('shows the Lodge at level 2 with its Raise disabled and the roads line', async () => {
-    const game = await games.open()
-    await richAtHome(game, { gold: 500, iron: 50, stone: 50 }, undefined, { 'world.lodge': 2 })
-    const camp = await enter(game)
-    expect(facility(camp, 'builders_lodge').frame).toBe('camp_lodge/level_2')
-    await game.click(facility(camp, 'builders_lodge'))
-    const shown = await game.settled('Encampment', (c) => c.selected === 'builders_lodge')
-    expect(shown.buttons.improve.enabled).toBe(false)
-    expect(shown.refusal).toBe('Roads come with trade routes.')
-    expect(shown.details[0]).toBe("Builders' Lodge, level 2 of 3")
+    expect(raised.message).toBe("The Builders' Lodge is raised to level 2.")
+    expect(raised.buttons.improve.enabled).toBe(true)
+    await game.click(raised.buttons.improve)
+    const third = await game.settled('Encampment', (c) => facility(c, 'builders_lodge').level === 3)
+    expect(third.message).toBe("The Builders' Lodge is raised to level 3.")
+    expect(third.buttons.improve.enabled).toBe(false)
+    expect(third.details[0]).toBe("Builders' Lodge, level 3 of 3")
   })
 
   it('names the trading post by its level, with its market income, and raises it to the Trading House', async () => {

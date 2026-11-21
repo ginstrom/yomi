@@ -8,6 +8,7 @@ import {
   CLEANSE_LEVELS,
   IMPROVEMENT_STRENGTH,
   PARTNER_STRENGTH,
+  ROAD_STRENGTH,
   SITE_STRENGTH,
   MAX_BLIGHT,
   MAX_MONSTER_LOCATIONS,
@@ -25,6 +26,8 @@ import {
   type WorldEvent,
 } from './blight.ts'
 import { readyMadeParty } from './party.ts'
+import { YIELD_DAYS } from './territory.ts'
+import { ABANDON_AFTER, roadTo, tradeDay, type TradeRoute } from './trade.ts'
 import {
   ENCAMPMENT_ID,
   SOURCE_ID,
@@ -493,5 +496,72 @@ describe('a trade partner\'s strength (economy A4)', () => {
     withPartners.silent.push('millbrook')
     expect([netInfluence(withPartners, [], at), netInfluence(withPartners, [], { q: at.q + 1, r: at.r })]).toEqual(before)
     expect(withPartners.held).not.toContain('millbrook')
+  })
+})
+
+describe('the roads\' strength (economy A8)', () => {
+  /** A world with Millbrook's road open (pushed on directly), and the same land with no routes. */
+  function roaded() {
+    const world = newWorld(1)
+    const road = roadTo(world, 'millbrook')!
+    const route: TradeRoute = { id: 'route_millbrook', partner: 'millbrook', road, opened: world.turn, raidedDays: 0 }
+    const bare = newWorld(1)
+    bare.blight = world.blight.slice()
+    bare.shift = world.shift.slice()
+    world.routes.push(route)
+    return { world, bare, road, route }
+  }
+  const everyHex = (world: WorldState) => world.blight.map((_, i) => boardHex(world.board, i))
+  const nets = (world: WorldState) => everyHex(world).map((h) => netInfluence(world, [], h))
+
+  it('pushes back as a clean source of ROAD_STRENGTH (1) on each road hex at Lodge 3, and nowhere else', () => {
+    const { world, bare, road } = roaded()
+    expect(ROAD_STRENGTH).toBe(1)
+    world.lodge = 3
+    const onRoad = new Set(road.map((h) => boardIndex(world.board, h)))
+    everyHex(world).forEach((h, i) => {
+      const less = netInfluence(bare, [], h) - netInfluence(world, [], h)
+      expect(less).toBeCloseTo(onRoad.has(i) ? ROAD_STRENGTH : 0)
+    })
+  })
+
+  it('changes nothing at Lodge 2 or below, or with no routes', () => {
+    const { world, bare } = roaded()
+    for (const lodge of [0, 1, 2]) {
+      world.lodge = lodge
+      expect(nets(world)).toEqual(nets(bare))
+    }
+    world.lodge = 3
+    world.routes = []
+    expect(nets(world)).toEqual(nets(bare))
+  })
+
+  it('is worked out again when the Lodge reaches 3, a route opens, and a route is abandoned', () => {
+    const { world, bare, road, route } = roaded()
+    const at = road[0]
+    world.lodge = 2
+    const before = netInfluence(world, [], at)
+    world.lodge = 3
+    expect(netInfluence(world, [], at)).toBeCloseTo(before - ROAD_STRENGTH)
+    // A route opening on a world already read.
+    world.routes = []
+    expect(netInfluence(world, [], at)).toBeCloseTo(before)
+    world.routes.push(route)
+    expect(netInfluence(world, [], at)).toBeCloseTo(before - ROAD_STRENGTH)
+    // Abandoned by tradeDay after ABANDON_AFTER raided days.
+    world.silent.push('millbrook')
+    route.raidedDays = ABANDON_AFTER - 1
+    world.turn = YIELD_DAYS
+    expect(tradeDay(world, []).some((e) => e.type === 'route_abandoned')).toBe(true)
+    expect(world.routes).toEqual([])
+    expect(netInfluence(world, [], at)).toBeCloseTo(netInfluence(bare, [], at))
+  })
+
+  it('pushes once per route, so two roads sharing a hex push twice there', () => {
+    const { world, bare, road } = roaded()
+    world.lodge = 3
+    world.routes.push({ id: 'route_other', partner: 'other', road: [road[0]], opened: 0, raidedDays: 0 })
+    expect(netInfluence(bare, [], road[0]) - netInfluence(world, [], road[0])).toBeCloseTo(2 * ROAD_STRENGTH)
+    expect(netInfluence(bare, [], road[1]) - netInfluence(world, [], road[1])).toBeCloseTo(ROAD_STRENGTH)
   })
 })

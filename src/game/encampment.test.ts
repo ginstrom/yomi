@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LODGE_COSTS, ROADS_REFUSAL, SHRINE_COSTS } from './buildings.ts'
+import { LODGE_COSTS, SHRINE_COSTS } from './buildings.ts'
 import { newExpedition } from './expedition.ts'
 import { facilities, improveFacility, setFacilityLevel } from './encampment.ts'
 import { newGame } from './gameState.ts'
@@ -171,7 +171,7 @@ describe('the trading post as a market', () => {
 })
 
 describe('the Builders\' Lodge', () => {
-  it('is the sixth facility, built and raised to 2 for its costs, then refused for roads', () => {
+  it('is the sixth facility, built and raised to 3 for its costs, level 3 naming roads', () => {
     const game = rich()
     game.world.stock = { gold: 500, timber: 50, stone: 50, iron: 50 }
     const lodge = () => view(game, 'builders_lodge')
@@ -183,10 +183,10 @@ describe('the Builders\' Lodge', () => {
     expect(lodge().cost).toEqual(LODGE_COSTS[1])
     expect(improveFacility(game, game.parties[0], 'builders_lodge')).toBeNull()
     expect(game.world.lodge).toBe(2)
-    expect(lodge().refusal).toBe(ROADS_REFUSAL)
-    expect(lodge().barred).toBe(ROADS_REFUSAL)
-    expect(improveFacility(game, game.parties[0], 'builders_lodge')).toBe(ROADS_REFUSAL)
-    expect(game.world.lodge).toBe(2)
+    expect(lodge()).toMatchObject({ level: 2, cost: LODGE_COSTS[2], refusal: null, barred: null })
+    expect(improveFacility(game, game.parties[0], 'builders_lodge')).toBeNull()
+    expect(game.world.lodge).toBe(3)
+    expect(lodge()).toMatchObject({ level: 3, cost: null, effect: 'Roads: open trade routes push back the blight.' })
   })
 
   it('refuses for the stock when it is short', () => {

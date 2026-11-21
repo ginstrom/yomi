@@ -5,10 +5,9 @@ import {
   IMPROVEMENT_COSTS,
   IMPROVEMENT_LODGE,
   LODGE_COSTS,
-  LODGE_LEVEL_LIMIT,
   MAX_LODGE_LEVEL,
   MAX_SHRINE_LEVEL,
-  ROADS_REFUSAL,
+  ROAD_LODGE_LEVEL,
   SHRINE_COSTS,
   TOWER_COST,
   TOWER_SPACING,
@@ -490,11 +489,11 @@ describe('the Builders\' Lodge (economy A2)', () => {
     const { world } = atHome()
     expect(LODGE_COSTS).toEqual([{ gold: 30, timber: 20 }, { gold: 60, stone: 25 }, { gold: 100, iron: 20, stone: 20 }])
     expect(MAX_LODGE_LEVEL).toBe(3)
-    expect(LODGE_LEVEL_LIMIT).toBe(2)
+    expect(ROAD_LODGE_LEVEL).toBe(3)
     expect([0, 1, 2, 3].map((lodge) => ((world.lodge = lodge), lodgeCost(world)))).toEqual([...LODGE_COSTS, null])
   })
 
-  it('is raised at home to level 1 and 2, the stock paying, and no further until roads', () => {
+  it('is raised at home to level 1, 2 and 3, the stock paying, and no further', () => {
     const { game, world, party } = atHome()
     expect(raiseLodge(game, party)).toBeNull()
     expect(world.lodge).toBe(1)
@@ -502,13 +501,21 @@ describe('the Builders\' Lodge (economy A2)', () => {
     expect(raiseLodge(game, party)).toBeNull()
     expect(world.lodge).toBe(2)
     expect(world.stock).toEqual({ gold: 410, timber: 80, stone: 75, iron: 100 })
-    expect(raiseLodge(game, party)).toBe(ROADS_REFUSAL)
-    expect(ROADS_REFUSAL).toBe('Roads come with trade routes.')
+    expect(raiseLodge(game, party)).toBeNull()
+    expect(world.lodge).toBe(3)
+    expect(world.stock).toEqual({ gold: 310, timber: 80, stone: 55, iron: 80 })
+    expect(raiseLodge(game, party)).toBe("The Builders' Lodge is as great as it gets.")
+    expect(world.lodge).toBe(3)
+    expect(world.stock).toEqual({ gold: 310, timber: 80, stone: 55, iron: 80 })
+  })
+
+  it('refuses level 3 for a short stock in the stock\'s words, changing nothing', () => {
+    const { game, world, party } = atHome()
+    world.lodge = 2
+    world.stock = { gold: 100, iron: 20, stone: 19 }
+    expect(raiseLodge(game, party)).toBe('The next level costs 100 gold, 20 iron, 20 stone, more than the stock holds.')
     expect(world.lodge).toBe(2)
-    expect(world.stock).toEqual({ gold: 410, timber: 80, stone: 75, iron: 100 })
-    // Set to 3 (as the debug console may), it is refused the same.
-    world.lodge = 3
-    expect(raiseLodge(game, party)).toBe(ROADS_REFUSAL)
+    expect(world.stock).toEqual({ gold: 100, iron: 20, stone: 19 })
   })
 
   it('is refused away from home or without the stock, changing nothing', () => {

@@ -121,7 +121,7 @@ Two parties' business in the field:
 Each source pushes with its strength less a point a hex of distance:
 
 - for the blight: a monster location with `BLIGHT_PER_THREAT` × its threat, the Source with `SOURCE_STRENGTH`, each corrupted neighbour with `CREEP`, all times the blight's growth with time (`blightGrowth`: a tenth more every 30 days, to half again at day 151, worked out from the turn);
-- against it: the encampment (`CAMP_STRENGTH`, more with its shrine), each held resource (more with an improvement), each trade partner (`PARTNER_STRENGTH`, 3, silent or not), each watchtower (`TOWER_STRENGTH`) and each party (each presence, in list order), with `PARTY_BASE` and half its levels together (`partyStrength`; nothing else of a party counts).
+- against it: the encampment (`CAMP_STRENGTH`, more with its shrine), each held resource (more with an improvement), each trade partner (`PARTNER_STRENGTH`, 3, silent or not), each watchtower (`TOWER_STRENGTH`), each hex of each open route's road once the Builders' Lodge is at 3 (`ROAD_STRENGTH`, 1) and each party (each presence, in list order), with `PARTY_BASE` and half its levels together (`partyStrength`; nothing else of a party counts).
 
 A monster location's hex stays blighted or worse until it is beaten. Each party's hex is neutral, so the blight never rises there nor creeps from it, but the parties' influence lowers it. The fixed sources' influence is worked out again only when a location or a held site changes (`fields`, a memo outside the state).
 
@@ -148,7 +148,7 @@ A won battle lowers the land within 1 + its threat by two levels (`cleanse`). Th
   | 3 | Fort | Lodge 2 | 50 gold, 20 iron, 10 stone | +3 | +7 | 3 (corrupted) |
 
   `improveRefusal(world, party)` refuses in order: "Nothing can be built here now." (the game over, or among monsters), "Improvements go on a held resource.", "<site> is as strong as it gets." (a fort), "<A Mine> needs the Builders' Lodge." ("need" for a plural name: "Saltworks need …", "Peat Cuttings need …"; "… at level 2." for a fort), "<An Outpost> costs …, more than the stock holds." (`withArticle`); `improveSiteRefusal` is its first three.
-- Builders' Lodge: `WorldState.lodge`, 0 to `MAX_LODGE_LEVEL` (3), raised a level at a time by a party at the encampment (`raiseLodge(game, party)`, no time passing; `lodgeCost`, `LODGE_COSTS`: 30 gold and 20 timber, 60 gold and 25 stone, 100 gold, 20 iron and 20 stone). Level 1 allows works, 2 forts; `raiseLodge` builds no higher than `LODGE_LEVEL_LIMIT` (2), refusing with `ROADS_REFUSAL` ("Roads come with trade routes.") until stage 8's roads.
+- Builders' Lodge: `WorldState.lodge`, 0 to `MAX_LODGE_LEVEL` (3), raised a level at a time by a party at the encampment (`raiseLodge(game, party)`, no time passing; `lodgeCost`, `LODGE_COSTS`: 30 gold and 20 timber, 60 gold and 25 stone, 100 gold, 20 iron and 20 stone). Level 1 allows works, 2 forts; Level 3 (`ROAD_LODGE_LEVEL`) makes every open trade route's road a clean source of `ROAD_STRENGTH` (1) in the blight's contest (blight.ts `sources`); at the top `raiseLodge` refuses "The Builders' Lodge is as great as it gets."
 
 ## The encampment's facilities
 
@@ -179,7 +179,7 @@ The party limit is derived, never stored. The company limit counts parties and r
 
 ### Builders' Lodge
 
-`WorldState.lodge`, 0 (not built) to `MAX_LODGE_LEVEL` 3, raised by `raiseLodge` at the encampment (`LODGE_COSTS`, buildings.ts). It allows works (level 1) and forts (level 2). Level 3, roads, is in the cost table but `raiseLodge` refuses at `LODGE_LEVEL_LIMIT` (2) with "Roads come with trade routes." until stage 8; the debug console may still set 3. A facility may carry a `refusal` checked before the stock, which is how the encampment screen shows that line.
+`WorldState.lodge`, 0 (not built) to `MAX_LODGE_LEVEL` 3, raised by `raiseLodge` at the encampment (`LODGE_COSTS`, buildings.ts). It allows works (level 1) and forts (level 2). Level 3 (`ROAD_LODGE_LEVEL`) is roads: each hex of each open route's road is a clean source of `ROAD_STRENGTH` (1), one per hex per route, reaching only its own hex; raising the Lodge to 3 while routes are open starts them pushing the next day (the fields memo is keyed on the source list). A facility may carry a `refusal` checked before the stock (none does now).
 
 ### Crafting
 

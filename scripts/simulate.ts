@@ -36,7 +36,6 @@ import {
   IMPROVEMENT_COSTS,
   IMPROVEMENT_LODGE,
   LODGE_COSTS,
-  LODGE_LEVEL_LIMIT,
   SHRINE_COSTS,
   TOWER_COST,
   canAfford,
@@ -653,7 +652,7 @@ export function fieldCraft(game: GameState, party: Expedition): Extract<DayActio
 /**
  * What the stock should keep of each material for what the careful party
  * still means to buy: every level left of every building (the Builders' Lodge
- * up to `LODGE_LEVEL_LIMIT`), a watchtower, one of each improvement level the
+ * up to `SIM_LODGE_CAP`), a watchtower, one of each improvement level the
  * Lodge allows now, and a craft for each place in the party.
  */
 export function materialNeeds(game: GameState, parties = 1): Stock {
@@ -667,7 +666,7 @@ export function materialNeeds(game: GameState, parties = 1): Stock {
   TRADING_POST_COSTS.slice(world.tradingPost).forEach(add)
   WORKSHOP_COSTS.slice(world.workshop).forEach(add)
   INFIRMARY_COSTS.slice(world.infirmary).forEach(add)
-  LODGE_COSTS.slice(world.lodge, LODGE_LEVEL_LIMIT).forEach(add)
+  LODGE_COSTS.slice(world.lodge, SIM_LODGE_CAP).forEach(add)
   add(TOWER_COST)
   IMPROVEMENT_COSTS.forEach((cost, i) => {
     if (world.lodge >= IMPROVEMENT_LODGE[i]) add(cost)
@@ -778,8 +777,8 @@ export function visitFacilities(game: GameState, party: Expedition, parties = 1)
   while (raiseTradingPost(game, party) === null);
   while (upgradeWorkshop(game, party) === null);
   while (raiseInfirmary(game, party) === null);
-  // Last of the buildings for the gold; it stops at `LODGE_LEVEL_LIMIT`, refused until roads come.
-  while (raiseLodge(game, party) === null);
+  // Last of the buildings for the gold; it stops at `SIM_LODGE_CAP`.
+  while (game.world.lodge < SIM_LODGE_CAP && raiseLodge(game, party) === null);
   for (const [member, hero] of party.members.entries()) {
     for (const slot of GEAR_SLOTS) {
       const worn = hero.equipment[slot]
@@ -995,6 +994,9 @@ export function setVanguard(run: CampaignRun, id: string): void {
 
 /** The trade partners every simulated world has: none. Temporary: removed in step 07 (stage 8 plan, decision 14). */
 export const SIM_PARTNERS: readonly PartnerLocation[] = []
+
+/** The highest level the simulated Builders' Lodge is raised to, so roads never push (temporary, removed in stage 8 step 07). */
+export const SIM_LODGE_CAP = 2
 
 /** A new game of the run's party on world `seed`, its world built with `SIM_PARTNERS` (the party stands at the same home). */
 function simGame(args: CliArgs, seed: number): GameState {

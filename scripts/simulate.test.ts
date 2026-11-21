@@ -11,7 +11,7 @@ import { banditStats } from '../src/game/bandits.ts'
 import { newGame } from '../src/game/gameState.ts'
 import { heroId } from '../src/game/encounters.ts'
 import { readyMadeParty } from '../src/game/party.ts'
-import { IMPROVEMENT_COSTS, LODGE_COSTS, LODGE_LEVEL_LIMIT, TOWER_COST } from '../src/game/buildings.ts'
+import { IMPROVEMENT_COSTS, LODGE_COSTS, TOWER_COST } from '../src/game/buildings.ts'
 import { advance, formParty, moveHero, type DayReport } from '../src/game/company.ts'
 import { MAX_PARTIES, presenceOf, type Expedition } from '../src/game/expedition.ts'
 import { craft } from '../src/game/crafting.ts'
@@ -73,6 +73,7 @@ import {
   guardChoice,
   needsDecision,
   playRound,
+  SIM_LODGE_CAP,
   strongestParty,
   takenTargets,
   type CampaignRecord,
@@ -796,7 +797,7 @@ describe('the trading post and crafting in a campaign', () => {
     const game = newGame(undefined, null, 1)
     game.parties[0].baggage.push(game.parties[0].members[0].backpack[0]!)
     // The Lodge already at its limit (its gold is not under test here), its improvements kept for in the stock.
-    game.world.lodge = LODGE_LEVEL_LIMIT
+    game.world.lodge = SIM_LODGE_CAP
     game.world.stock = { gold: 500, iron: 60, timber: 40, stone: 60, copper: 40, salt: 9 }
     const trade = visitFacilities(game, game.parties[0])
     expect(game.parties[0].baggage).toEqual([])
@@ -888,8 +889,8 @@ describe('the trading post and crafting in a campaign', () => {
     const game = newGame(undefined, null, 1)
     game.world.stock = { gold: 5000, silver: 500, stone: 500, crystal: 50, timber: 100, iron: 100, copper: 100 }
     visitFacilities(game, game.parties[0])
-    expect(game.world.lodge).toBe(LODGE_LEVEL_LIMIT)
-    expect(LODGE_LEVEL_LIMIT).toBe(2)
+    expect(game.world.lodge).toBe(SIM_LODGE_CAP)
+    expect(SIM_LODGE_CAP).toBe(2)
     // Last for the gold: with only the infirmary's first level and the Lodge's to buy, the infirmary comes first.
     const poor = newGame(undefined, null, 1)
     poor.world.tradingPost = 6

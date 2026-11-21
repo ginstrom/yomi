@@ -21,7 +21,8 @@ import { ENCAMPMENT_ID, encampmentName, locationAt, monstersHere, worldActive, t
  *   (2, named by its material) and a fort (3), each adding to the site's
  *   yield and strength; a fort is lost only when corrupted (territory.ts), and
  *   every level falls with its site. Works need the Builders' Lodge, raised at
- *   the encampment, and a fort its level 2.
+ *   the encampment, and a fort its level 2; its level 3 makes open trade
+ *   routes' roads push back the blight (`ROAD_LODGE_LEVEL`, blight.ts).
  */
 
 /** Iron and gold, which the home valley yields from the start: timber and stone come too late in a campaign (the simulator never had them). */
@@ -118,9 +119,8 @@ export const IMPROVEMENT_LODGE: readonly number[] = [0, 1, 2]
 /** What raising the Builders' Lodge to each level costs, from level 1. */
 export const LODGE_COSTS: readonly Stock[] = [{ gold: 30, timber: 20 }, { gold: 60, stone: 25 }, { gold: 100, iron: 20, stone: 20 }]
 export const MAX_LODGE_LEVEL = LODGE_COSTS.length
-/** The highest level `raiseLodge` builds until roads come with trade routes (stage 8). */
-export const LODGE_LEVEL_LIMIT = 2
-export const ROADS_REFUSAL = 'Roads come with trade routes.'
+/** The Lodge level at which open trade routes' roads push back the blight (blight.ts). */
+export const ROAD_LODGE_LEVEL = 3
 
 /** Whether the party stands at the encampment, free to use what is built there (the guild hall, the shrine). */
 export function atEncampment(world: WorldState, party: Expedition): boolean {
@@ -218,12 +218,12 @@ export function lodgeCost(world: WorldState): Stock | null {
   return world.lodge < MAX_LODGE_LEVEL ? LODGE_COSTS[world.lodge] : null
 }
 
-/** Raises the Builders' Lodge a level, at once and without passing time, up to `LODGE_LEVEL_LIMIT`; returns why it cannot, or null when done. */
+/** Raises the Builders' Lodge a level, at once and without passing time, up to `MAX_LODGE_LEVEL`; returns why it cannot, or null when done. */
 export function raiseLodge(game: GameState, party: Expedition): string | null {
   const { world } = game
   if (!atEncampment(world, party)) return `The Builders' Lodge is at ${encampmentName(world)}.`
   const cost = lodgeCost(world)
-  if (!cost || world.lodge >= LODGE_LEVEL_LIMIT) return ROADS_REFUSAL
+  if (!cost) return "The Builders' Lodge is as great as it gets."
   if (!canAfford(world.stock, cost)) return `The next level costs ${describeCost(cost)}, more than the stock holds.`
   spend(world.stock, cost)
   world.lodge += 1

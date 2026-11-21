@@ -2,6 +2,7 @@ import { mulberry32 } from '../combat/rng.ts'
 import { HexBoard, hexDistance, hexNeighbors, hexToOffset, offsetToHex, type BoardSize, type Hex } from '../grid/hex.ts'
 import { MAGIC_ITEMS, type Item } from '../inventory/inventory.ts'
 import { ENCOUNTER_BANDS, type EncounterId } from './encounters.ts'
+import { ROAD_LODGE_LEVEL } from './buildings.ts'
 import type { PartyPresence } from './expedition.ts'
 import type { ImprovementLevel, Material, YieldSource } from './territory.ts'
 import type { RaidCause } from './trade.ts'
@@ -12,13 +13,14 @@ import { ENCAMPMENT_ID, threatAt, type MonsterLocation, type WorldState } from '
  * from 0 (clean) to 3 (corrupted), and each day blight and clean influence
  * contend for it. Monster locations, the Source and corrupted land push the
  * blight; the encampment (with its shrine), held sites (with their improvements),
- * trade partners, watchtowers and every party push back. A hex's `shift`
+ * trade partners, watchtowers, open trade routes' roads (at Lodge 3) and every party push back. A hex's `shift`
  * counter moves by the difference each day, and a level goes up or down when
  * it reaches `SHIFT_COST` either way. Corrupted land spawns new monster
  * locations. Phaser-free; worldMap.ts calls `advanceDay` once a world turn.
  *
  * This module imports worldMap.ts and worldMap.ts imports it, which is safe
- * while neither calls the other as its module loads.
+ * while neither calls the other as its module loads; buildings.ts too, for
+ * `ROAD_LODGE_LEVEL`, read only inside `sources`.
  */
 
 export const MAX_BLIGHT = 3
@@ -37,6 +39,8 @@ export const SITE_STRENGTH = 3
 export const TOWER_STRENGTH = 4
 /** A trade partner (trade.ts), silent or not: never held, never lost, and always pushing back. */
 export const PARTNER_STRENGTH = 3
+/** Each hex of an open trade route's road (trade.ts), from the Builders' Lodge's level `ROAD_LODGE_LEVEL`: weak, so it reaches only its own hex. */
+export const ROAD_STRENGTH = 1
 /** What each level of the encampment's shrine adds to its strength (buildings.ts). */
 export const SHRINE_STRENGTH = 3
 /** What a held resource's improvement (buildings.ts) adds to its strength, by level 0 to 3: an outpost and works 3, a fort 7. */
@@ -176,6 +180,7 @@ function sources(world: WorldState): { blight: Array<[Hex, number]>; clean: Arra
     else if (world.held.includes(location.id)) clean.push([location.position, siteStrength(world, location.id)])
   }
   for (const tower of world.towers) clean.push([tower.position, TOWER_STRENGTH])
+  if (world.lodge >= ROAD_LODGE_LEVEL) for (const route of world.routes) for (const hex of route.road) clean.push([hex, ROAD_STRENGTH])
   return { blight, clean }
 }
 

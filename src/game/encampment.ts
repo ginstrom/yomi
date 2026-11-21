@@ -1,5 +1,5 @@
 import { SHRINE_STRENGTH } from './blight.ts'
-import { LODGE_LEVEL_LIMIT, MAX_LODGE_LEVEL, MAX_SHRINE_LEVEL, ROADS_REFUSAL, canAfford, describeCost, lodgeCost, raiseLodge, raiseShrine, shrineCost } from './buildings.ts'
+import { MAX_LODGE_LEVEL, MAX_SHRINE_LEVEL, canAfford, describeCost, lodgeCost, raiseLodge, raiseShrine, shrineCost } from './buildings.ts'
 import type { Expedition } from './expedition.ts'
 import type { GameState } from './gameState.ts'
 import { GUILD_HALL_LEVELS, MAX_GUILD_HALL_LEVEL, homeParty, noPartyHome, upgradeCost, upgradeGuildHall } from './guildHall.ts'
@@ -169,7 +169,6 @@ const FACILITIES: readonly Facility[] = [
       ][level - 1],
     cost: (game) => lodgeCost(game.world),
     improve: raiseLodge,
-    refusal: (game) => (game.world.lodge >= LODGE_LEVEL_LIMIT ? ROADS_REFUSAL : null),
     opens: false,
   },
 ]
