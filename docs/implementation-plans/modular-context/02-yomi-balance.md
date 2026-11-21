@@ -97,3 +97,5 @@ Body (< 6,000 bytes in all):
 ## 6. Execution record
 
 Done 2026-11-21 (engineer). Created the five skill files and the agent; trimmed the four guides, root and two comments as §1 says. `npx vitest run scripts/claudeMd.test.ts` 15 passed with the new files. `yomi-measure` run and the figures are in `log.md` (the agent type was not listed, so the general-purpose sonnet fallback ran). Deviations: `parity-L14` is the parity command with `--threat 7 --party-level 14`; `parity-L8` is `--encounter hobgoblin_warband --threat 5 --party-level 8` (corrected in review round 1 from a wrong first reading). Heroes dead a campaign is read from the `Guild hall` line. Exception to §3's "no `docs/reference/`" exclusion, by the orchestrator's ruling in review round 1: `docs/reference/simulator.md` line 3 now names `bands.md` for the bands and current figures. `standard` lists its cells explicitly (`tl5` is report-only).
+
+Review round 2: `parity-L14` in `bands.md` spelled out in full (`bandit_camp`, threat 7, level 14, `--plans`), as "the same with" read as the Warband row above.

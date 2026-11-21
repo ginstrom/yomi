@@ -57,7 +57,7 @@ Each runs from the seed and count the brief gives (default seed 1, 500). The ban
 | `gr3`, `bc3`, `bc4`, `bc5`, `sn5`, `sp5`, `tl5`, `sg7`, `sg10`, `f1`, `f2`, `f3` | the cell code's `--encounter`, `--threat`, `--party-level` |
 | `parity-L4` | `--encounter bandit_camp --threat 4 --party-level 4 --plans <role>=<plan>`, one run per plan of `AUTO_PLANS`, in its role's slot (`melee`, `archery` or `magic`) |
 | `parity-L8` | `--encounter hobgoblin_warband --threat 5 --party-level 8 --plans <role>=<plan>`, one run per plan (reported, not gated) |
-| `parity-L14` | the same with `--threat 7 --party-level 14` (reported, not gated) |
+| `parity-L14` | `--encounter bandit_camp --threat 7 --party-level 14 --plans <role>=<plan>`, one run per plan (reported, not gated) |
 | `standard` | every row of the bands table: `one`, `company`, `rl10`, then the cells `gr3`, `bc3`, `bc4`, `bc5`, `sn5`, `sp5`, `sg7`, `sg10` (`tl5` is report-only, not a band row) |
 
 `--waiting` or `--plans` may be added by the brief. Heroes dead and days a campaign come from the `one` run.
