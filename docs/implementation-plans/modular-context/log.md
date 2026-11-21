@@ -960,3 +960,19 @@ index 393d4a8..827e335 100644
 - `npm test`: 98 files, 2,419 tests, all pass. Findability script not run (step 13 does it).
 - Ledger: the `BACK_LABELS` line is in `new-cue.md`; "Listening" and "Which sound plays when" in `new-cue.md`; the Commands table in `commands.md`; sourcing preferences and folders in `sourcing.md`; the allow-list, downloads rule and runtime hints stay in `audio/CLAUDE.md`.
 - Outcome: engineer sonnet, reviewer sonnet, verdict clean, 1 review round (two pointers fixed: `docs/features/audio-pass.md` heteronym rule, `tools/audio/yomi_audio/tts/models.py` licence comment).
+
+## Step 12: the yomi-manual skill and the yomi-asset-check agent
+
+- 2026-11-21. Tiers: engineer sonnet, reviewer sonnet.
+- Always-loaded total (root `CLAUDE.md` + name + description of every skill and agent): 8,237 bytes of 8,500.
+- Sizes (bytes): `e2e/CLAUDE.md` 4,844 -> 4,691; `yomi-manual/SKILL.md` 853; `screenshots.md` 961; `yomi-asset-check.md` 1,594.
+- Pointers made plain: root Subagents line, `yomi-sound/SKILL.md`, `yomi-sprites/SKILL.md`, `yomi-add-content/facility.md`. Roles already named the agent; no change.
+- `npm test`: 98 files, 2,419 tests, all pass.
+- Asset check: fallback spawn used (`subagent_type: "yomi-asset-check"` was not found; a `general-purpose` agent on haiku ran with the agent file's instructions).
+
+| check | result | failing ids or first error line | tool version |
+| --- | --- | --- | --- |
+| sprites:check | PASS | none (126 sprites, 255 frames, 2 targets up to date) | sprite 0.7.0 |
+| sounds:check | PASS | none (85 cues, 4 banks up to date, within budget) | uv 0.13.6, ffmpeg 9.0.2 |
+
+- Pin drift: host `sprite` 0.7.0 against pin v0.6.0 in `workflow.md` (known; no export changed).

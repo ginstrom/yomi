@@ -15,7 +15,7 @@ Sprites are text sources in `art/**/<id>.sprite.toml`, built by sprite-tool into
 4. `sprite show <id> --project art` to read the result as text; `sprite preview <id> --grid --project art` for the colours, looking at the PNG it names.
 5. `npm run sprites` to build, then `npm run sprites:check`; commit the source with everything the build wrote.
 
-Before handing off, run the `yomi-asset-check` agent.
+Before handing off, run the `yomi-asset-check` agent (`.claude/agents/yomi-asset-check.md`).
 
 ## Files here
 

@@ -7,7 +7,7 @@ Touch every line, then run `npm test`.
 - `src/scenes/EncampmentScene.ts` → `OPENS`: a scene, if it has a screen of its own.
 - `src/scenes/encampmentView.ts` → `FACILITY_SPRITES`: sprites `camp_<facility>/level_<n>`. How to draw them: `.claude/skills/yomi-sprites/`.
 - `src/scenes/encampmentView.ts` → a plot, a seventh (six now; `plotAt` falls back to the last plot).
-- `docs/manual/README.md` → the encampment screen: update it and retake its screenshots (`yomi-manual` from stage 4).
+- `docs/manual/README.md` → the encampment screen: update it and retake its screenshots (`.claude/skills/yomi-manual/`).
 
 ## Tests that catch a miss
 

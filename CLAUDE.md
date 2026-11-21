@@ -25,7 +25,7 @@ Commit finished work without being asked: once a change is complete and `npm tes
 
 ## Subagents
 
-Pass `model: "sonnet"` for work that is not too complex: searching, reading and summarising, running tests or the simulator and reporting, mechanical edits whose shape is decided. Leave the model unset for work that needs judgement: designing, changing rules or balance, debugging an unknown cause, reviewing code. When in doubt, leave it unset. Simulator measurements: the `yomi-measure` agent.
+Pass `model: "sonnet"` for work that is not too complex: searching, reading and summarising, running tests or the simulator and reporting, mechanical edits whose shape is decided. Leave the model unset for work that needs judgement: designing, changing rules or balance, debugging an unknown cause, reviewing code. When in doubt, leave it unset. Simulator measurements: the `yomi-measure` agent; asset checks: `yomi-asset-check`.
 
 ## Architecture
 

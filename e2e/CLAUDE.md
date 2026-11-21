@@ -28,4 +28,4 @@ When a test needs to see or click something no probe gives, add it to that scene
 
 ## The files
 
-One file a scene or feature, named for it (`menu`, `world`, `battle`, `character`, `party`, `encampment`, `exchange`, `story`, `saves`, `debug`, `audio`, `sounds`); each covers its scene and the hand-overs out of it. Less obvious homes: creation is in `party.test.ts`, the guild hall, trading post, workshop, runes and field crafting in `encampment.test.ts`. `manual.shots.ts` is not a test: it plays to each screen the player's manual (`docs/manual/`) shows and saves a screenshot. Retake them with `npm run manual:screenshots` (its own config, so neither test run picks it up).
+One file a scene or feature, named for it (`menu`, `world`, `battle`, `character`, `party`, `encampment`, `exchange`, `story`, `saves`, `debug`, `audio`, `sounds`); each covers its scene and the hand-overs out of it. Less obvious homes: creation is in `party.test.ts`, the guild hall, trading post, workshop, runes and field crafting in `encampment.test.ts`. `manual.shots.ts` is not a test; see `.claude/skills/yomi-manual/`.

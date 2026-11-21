@@ -7,7 +7,7 @@ description: Make or change Yomi's sound effects and narration with the yomi-aud
 
 Sounds are text sources in `audio/` (recipes, sources, settings), built by the host-only `yomi-audio` tool in `tools/audio/` into `public/assets/audio/` and `public/assets/voice/`. Run every command from the repository root. What `audio/` must keep true (layout, licences, generated files) is in `audio/CLAUDE.md`.
 
-Before handing off, run the `yomi-asset-check` agent (until it exists, `npm run sounds:check` and `npm test`).
+Before handing off, run the `yomi-asset-check` agent (`.claude/agents/yomi-asset-check.md`).
 
 ## Files here
 
