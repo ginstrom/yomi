@@ -115,3 +115,4 @@ Other mentions of AGENTS.md **stay unchanged**: `pr-reviewer/run-checks.md`, `pr
 - Verification 4: `npm test` 98 files, 2,419 tests passed.
 - Deviations: wording of the three orchestrator-added fixes was not given verbatim; chosen text is in `log.md`. The step 07 verdict line in `log.md` was wrong (said 9 findings fixed); left in place (append-only) and superseded by a new "Step 07: review" section.
 - For later steps: none.
+- Review round 1 (opus): clean. Two findings closed the outcome-line loop (`step-loop.md` step 5 tells the engineer; orchestrator Phase 4 has the engineer record the verdict), plus a third fix ("Without a plan" skips the `log.md` updates). All three were authorized by the orchestrator and go beyond C6. Made at the dotfiles targets; diff addendum and outcome line in `log.md`. `npm test`: 98 files, 2,419 tests passed.

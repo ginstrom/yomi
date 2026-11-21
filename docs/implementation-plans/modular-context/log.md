@@ -712,3 +712,234 @@ diff -ru /Users/ryan/.claude/skills-backup-2026-11-21/qa/SKILL.md /Users/ryan/.c
  - Build a test matrix before you start. List each requirement and acceptance criterion by ID, along with the scenarios that would show it holds: the happy path, boundaries, invalid and missing input, error and failure behavior, permissions, concurrency or repetition where relevant, and the neighboring existing behavior the change could regress.
  
 ```
+
+### Step 09: review follow-ups (addendum)
+
+- Outcome: engineer opus; reviewer opus. Verdict: clean; review rounds: 1. The "pending review" line above is superseded by this one. Follow-ups: the reviewer's two findings closing the outcome-line loop, plus one consistency fix; the orchestrator signed off on all three.
+- **Beyond C6.** These three generic edits go past C6 and design §4.7/§5.3. They were authorized by the orchestrator, are made at the dotfiles targets and left uncommitted:
+  1. `plan-implementer/step-loop.md`, step 5 (Iterate) gains "When the verdict is clean, tell the engineer (SendMessage) so it appends the step's outcome line to the plan's `log.md`."
+  2. `orchestrator/SKILL.md`, Phase 4: "Record each escalation in the feature record and have the engineer record each step's verdict in the plan's `log.md`."
+  3. `plan-implementer/implement-step.md`, last paragraph: "skip the index, execution-record and `log.md` updates".
+- `git -C /Users/ryan/personal/dotfiles diff --stat -- home/.claude/skills`: 10 files changed, 26 insertions(+), 27 deletions(-). The restricted `diff -ru` against the backup still has no "Only in" line under a backed-up directory, and its change lines are byte-identical to the git diff's (`cmp`). `npm test`: 98 files, 2,419 tests passed.
+- The full dotfiles diff, re-pasted. New hunks: orchestrator `@@ -96` is now step 07's line with the step 09 follow-up change (item 2). `step-loop.md` `@@ -12` now joins step 07's "Confirm" and "Overall review" lines with the step 09 follow-up line in step 5 (item 1). `implement-step.md` `@@ -48` adds item 3 to step 09's outcome-line paragraph. Every other hunk is the same as in the diff above.
+
+```diff
+diff --git a/home/.claude/skills/architect/SKILL.md b/home/.claude/skills/architect/SKILL.md
+index eeeb0cb..5a34313 100644
+--- a/home/.claude/skills/architect/SKILL.md
++++ b/home/.claude/skills/architect/SKILL.md
+@@ -10,7 +10,7 @@ Decide how a feature fits the system's structure before anyone designs its behav
+ 
+ ## Ground the brief
+ 
+-- Read the request, applicable CLAUDE.md and AGENTS.md instructions, existing architecture documents and ADRs, and the code that defines the relevant structure: entry points, module boundaries, data models, configuration, dependency manifests, and deployment setup.
++- Read the request, applicable CLAUDE.md or AGENTS.md instructions (once if one links to the other), existing architecture documents and ADRs, and the code that defines the relevant structure: entry points, module boundaries, data models, configuration, dependency manifests, and deployment setup. Also read `.claude/roles/architect.md` at the project root if it exists: the project's notes for this role.
+ - Describe the current architecture as you found it, separating inspected facts from inferences. Respect any distinction the project draws between current and intended architecture.
+ - Identify the forces at work: requirements that constrain structure, quality attributes that matter here (performance, scale, reliability, security, privacy, cost, operability), and constraints from the existing system, team, or environment.
+ - Ask focused questions when a missing fact would change the structure. Continue independent investigation while answers are pending.
+diff --git a/home/.claude/skills/designer/SKILL.md b/home/.claude/skills/designer/SKILL.md
+index 5605953..2553897 100644
+--- a/home/.claude/skills/designer/SKILL.md
++++ b/home/.claude/skills/designer/SKILL.md
+@@ -10,7 +10,7 @@ Produce a design that explains what to build, why, and how it should fit the exi
+ 
+ ## Ground the design
+ 
+-- Read the user specifications (including any skill argument passed as `/designer <spec>`), applicable CLAUDE.md (and AGENTS.md) instructions, relevant existing designs, and the code and interfaces affected by the feature before choosing an approach. Respect project distinctions between current architecture and intended future architecture.
++- Read the user specifications (including any skill argument passed as `/designer <spec>`), applicable CLAUDE.md or AGENTS.md instructions (once if one links to the other), relevant existing designs, and the code and interfaces affected by the feature before choosing an approach. Respect project distinctions between current architecture and intended future architecture. Also read `.claude/roles/designer.md` at the project root if it exists: the project's notes for this role.
+ - Identify desired behavior, constraints, non-goals, and observable success criteria. Preserve explicit user decisions.
+ - Ask focused questions when missing information materially changes the feature or architecture. Continue independent investigation while answers are pending. Record reasonable assumptions explicitly; do not present unresolved decisions as settled requirements.
+ - Prefer the simplest approach that satisfies the requirements and fits existing conventions. Discuss alternatives only where they explain a meaningful tradeoff.
+diff --git a/home/.claude/skills/orchestrator/SKILL.md b/home/.claude/skills/orchestrator/SKILL.md
+index 3c285a9..fb54592 100644
+--- a/home/.claude/skills/orchestrator/SKILL.md
++++ b/home/.claude/skills/orchestrator/SKILL.md
+@@ -29,7 +29,7 @@ This skill's base directory holds `subagent-rules.md`. Role instructions live in
+ 
+ Every brief tells the subagent to read `subagent-rules.md` and its role file by absolute path and follow them. Never tell a subagent to invoke a role skill or this skill.
+ 
+-Spawn workers as `general-purpose` agents and set `model` on every spawn. For read-only lookups you need answered (where is X, what does Y return, which tests cover Z), use an `Explore` agent on haiku instead of reading the code yourself.
++Spawn workers as `general-purpose` agents and set `model` on every spawn. If the project defines agent types in `.claude/agents/` for a job (such as measurements), use them for it. For read-only lookups you need answered (where is X, what does Y return, which tests cover Z), use an `Explore` agent on haiku instead of reading the code yourself.
+ 
+ ## Choosing a model
+ 
+@@ -48,17 +48,11 @@ Rules:
+ 
+ ## The feature record
+ 
+-Keep one file per feature at `docs/features/<slug>.md` (follow project conventions if they place such records elsewhere). Create it at intake and update it at every phase change, decision and escalation. It holds:
++Keep one file per feature at `docs/features/<slug>.md` (follow project conventions if they place such records elsewhere). Create it at intake and update it at every phase change, decision and escalation.
+ 
+-- the request in the user's words, the slug, and the current phase
+-- links to the architecture brief, design, plan index, and branch or worktree
+-- a **decision log**: each decision, who made it (user or orchestrator), the alternatives, and the reason
+-- open questions, and what each one blocks
+-- the model tier chosen per role and step, with escalations
+-- verification outcomes: one line per step (tier, verdict, rounds), and the QA and simulated-user verdicts with the head SHA they ran against
+-- notes carried forward to a later step, removed once that step has used them
++It has two parts. **State**, at the top, kept under about 3 KB: the request in the user's words, the slug, the phase and the next action; links to the architecture brief, design, plan index, plan `log.md`, and branch or worktree; open questions and what each blocks; the tier per role and step, with escalations; the latest verdict of each verification gate with its head SHA; and notes carried forward, removed once used. **Decision log**, below it: one row per decision in force (the decision, who made it, the alternatives, the reason). Replace a superseded row.
+ 
+-You reread the record on every resume, so keep it an index, not a log. Findings, test counts, commit lists and fix narratives already live in the task files' execution records, the plan index and the review record; link to them instead of copying them. Replace a superseded entry rather than striking it through. When you resume a record that has grown into a log, trim it to this shape first and commit the trim on its own.
++History goes in the plan folder's `log.md`, not the record: each step's verification line (tier, verdict, rounds), review and QA outcomes, fix narratives, measurements. Append to it; don't read it on resume. Findings, test counts and commit lists already in task files and the review record are linked, not copied. When you resume a record that has grown into a log, move its history to `log.md`, trim it to this shape, and commit that on its own.
+ 
+ Commit the record with the documents it describes. Before implementation starts, commit it yourself, or leave it to the first engineer, who carries plan-folder files into its commit (see `implement-step.md`).
+ 
+@@ -66,8 +60,8 @@ Commit the record with the documents it describes. Before implementation starts,
+ 
+ ### 0. Intake
+ 
+-- With a slug or no argument, resume: find the record in `docs/features/` and continue from its phase. If several are unfinished, ask which.
+-- Otherwise read the request, applicable CLAUDE.md and AGENTS.md, and the repository state (git or not, branch, uncommitted changes). Delegate a haiku `Explore` survey of the relevant code if you need orientation.
++- With a slug or no argument, resume: find the record in `docs/features/` and continue from its phase. If several are unfinished, ask which. Also read `.claude/roles/orchestrator.md` at the project root if it exists: the project's notes for this role.
++- Otherwise read the request, applicable CLAUDE.md or AGENTS.md instructions (once if one links to the other), and the repository state (git or not, branch, uncommitted changes). Delegate a haiku `Explore` survey of the relevant code if you need orientation. Also read `.claude/roles/orchestrator.md` at the project root if it exists: the project's notes for this role.
+ - Size the feature and choose its path, and record the choice:
+   - **Small** (one cohesive change, no new components or contracts): skip architecture. Have the designer write a short design, or, for a trivial fix, go straight to a one-step plan.
+   - **Medium:** design, plan, implement, verify.
+@@ -96,7 +90,7 @@ Tell the user the plan's size and order in a few lines. Stop and ask only if the
+ 
+ Before the first step, settle the branch: on the default branch, ask whether to create a feature branch or worktree, unless project instructions already decide.
+ 
+-Read `plan-implementer/step-loop.md` and run every step through it, with one override: each engineer and reviewer runs at the tier you assigned the step, and escalations go up from there. Record each escalation and each step's verdict in the feature record.
++Read `plan-implementer/step-loop.md` and run every step through it, with one override: each engineer and reviewer runs at the tier you assigned the step, and escalations go up from there. Record each escalation in the feature record and have the engineer record each step's verdict in the plan's `log.md`.
+ 
+ If the user says the token budget is running short, offer cheaper tiers or deferrals, don't start a step the remaining budget may not cover, and stop only at a committed step boundary with the resume point in the feature record.
+ 
+@@ -142,7 +136,7 @@ A background agent can stall without failing. It may wait on a notification that
+   - to continue, running long commands in the foreground.
+ 
+   If it doesn't respond or stalls again, stop it (`TaskStop`) and start a fresh agent from the last committed state, with a brief that names what is already done.
+-- **Tell the user.** Report a stall and what you did about it in your next message. Record it in the feature record when it cost real time.
++- **Tell the user.** Report a stall and what you did about it in your next message. When it cost real time, record it in the plan's `log.md`; note it in the feature record only if it changes the State.
+ 
+ ## Bringing decisions to the user
+ 
+diff --git a/home/.claude/skills/plan-implementer/SKILL.md b/home/.claude/skills/plan-implementer/SKILL.md
+index d8d1c9d..d53bdb9 100644
+--- a/home/.claude/skills/plan-implementer/SKILL.md
++++ b/home/.claude/skills/plan-implementer/SKILL.md
+@@ -14,7 +14,7 @@ This skill's base directory holds `step-loop.md` (how you run steps), `implement
+ ## Establish the scope
+ 
+ - Use the plan path from the argument, else find the plan in `docs/implementation-plans/` from the feature context, including in git worktrees (then work in that worktree). Ask if candidates are genuinely ambiguous or none exists.
+-- Read `index.md` and applicable CLAUDE.md or AGENTS.md. Don't read the task files; the subagents do.
++- Read `index.md` and applicable CLAUDE.md or AGENTS.md instructions (once if one links to the other). Don't read the task files; the subagents do.
+ - Choose the steps from the request: a named step, a range, or a milestone such as "up to the first PR". With no scope, run from the next eligible step to the first natural checkpoint: a step that produces a PR or other deliverable, the step before one gated on user approval, or the end of the plan.
+ - A step is eligible when its dependencies are `done` and it isn't `blocked`; a step left `in progress` is resumed first. Never start a step whose gate (an approval, a merge) is unmet; report what it waits on.
+ - Check the repository state first: git or not, branch, uncommitted changes. On the default branch, settle the feature-branch question with the user before the first spawn, unless project instructions decide it. Uncommitted plan files are the engineer's to commit; anything else stays out of the commits.
+diff --git a/home/.claude/skills/plan-implementer/implement-step.md b/home/.claude/skills/plan-implementer/implement-step.md
+index dde40fc..03fe427 100644
+--- a/home/.claude/skills/plan-implementer/implement-step.md
++++ b/home/.claude/skills/plan-implementer/implement-step.md
+@@ -4,7 +4,7 @@ You are the engineer for **one step** of an implementation plan. Build it as an
+ 
+ ## Start
+ 
+-- Read the index's task table, shared constraints and cross-step contracts, applicable CLAUDE.md or AGENTS.md, and your step's task file (it is self-contained; don't read the others). Then read the code and tests it names, and check that the interfaces it expects from earlier steps exist as described.
++- Read the index's task table, shared constraints and cross-step contracts, applicable CLAUDE.md or AGENTS.md instructions (once if one links to the other), and your step's task file (it is self-contained; don't read the others). Then read the code and tests it names, and check that the interfaces it expects from earlier steps exist as described. Also read `.claude/roles/engineer.md` at the project root if it exists: the project's notes for this role.
+ - Don't start a `blocked` step or one with unfinished dependencies; report what it waits on. If the step is `in progress`, use `git log`, the working tree and its execution record to find what's already done.
+ - Uncommitted plan or design files the step is meant to carry are yours to commit. Stop and report if other uncommitted changes overlap the step's files.
+ - Run the relevant existing tests for a green baseline. If they already fail, report that before building on them.
+@@ -36,6 +36,7 @@ Commit only on green, following the repository's message conventions and attribu
+ - Run every verification check in the task file, plus the wider test suite and the project's lint, type-check and build. Fix what the step broke.
+ - Confirm each completion criterion with evidence. If one can't be met, leave the step `in progress`, record why, and report.
+ - Append an **Execution record** to your task file: commands run and results, budgets spent, deviations and their reasons, and what later steps need to know. If a deviation changes a contract a later task relies on, update the index and that task file. In the index, set the step `done` with its commits, and unblock steps this work resolved. Include these updates in the step's final commit.
++- Put figures and histories the plan accumulates (measurements, run tables) in the plan's `log.md`, not the index; create it if absent.
+ 
+ Report: what now works; commits with hashes and subjects; each verification command and its actual result; budgets spent against caps; deviations, out-of-scope problems and decisions needed, with recommendations. Don't start the next step.
+ 
+@@ -48,4 +49,6 @@ For each finding the orchestrator sends:
+ 
+ Rerun the affected verification, and the full verification if code changed. Add the round (found, fixed, disputed) to the execution record and commit it. Report in the same format, listing each finding as fixed (commit) or disputed (reason).
+ 
+-Without a plan (for example, fixes from `pr-reviewer`), skip the index and execution-record updates; the rest applies.
++When the orchestrator tells you the reviewer's verdict is clean, append the step's outcome line (engineer and reviewer tiers, verdict, review rounds) to the plan's `log.md` and commit it. This is the line the orchestrator checks for before it closes the step.
++
++Without a plan (for example, fixes from `pr-reviewer`), skip the index, execution-record and `log.md` updates; the rest applies.
+diff --git a/home/.claude/skills/plan-implementer/review-step.md b/home/.claude/skills/plan-implementer/review-step.md
+index b32c359..b76d52c 100644
+--- a/home/.claude/skills/plan-implementer/review-step.md
++++ b/home/.claude/skills/plan-implementer/review-step.md
+@@ -4,7 +4,7 @@ You review an implementation plan's work: either **one step** (a step review) or
+ 
+ ## Sources
+ 
+-The index's cross-step contracts, shared constraints, requirement coverage and completion criteria; the task file for each step reviewed and the design files it cites; applicable CLAUDE.md or AGENTS.md; and the commits and diff in the range (`git log`, `git diff <base>..<head>`) with the code around them.
++The index's cross-step contracts, shared constraints, requirement coverage and completion criteria; the task file for each step reviewed and the design files it cites; applicable CLAUDE.md or AGENTS.md instructions (once if one links to the other); and the commits and diff in the range (`git log`, `git diff <base>..<head>`) with the code around them. Also read `.claude/roles/reviewer.md` at the project root if it exists: the project's notes for this role.
+ 
+ ## Check a step
+ 
+diff --git a/home/.claude/skills/plan-implementer/step-loop.md b/home/.claude/skills/plan-implementer/step-loop.md
+index 67dad1f..bdb9841 100644
+--- a/home/.claude/skills/plan-implementer/step-loop.md
++++ b/home/.claude/skills/plan-implementer/step-loop.md
+@@ -12,9 +12,9 @@ Steps run one at a time in the index's execution order. Run a parallel group the
+ 2. **Wait.** You're notified when it finishes. Don't do its work meanwhile. On a long step, check for progress now and then (new commits, changed files, the agent's last activity) instead of trusting silence, and before telling the user it's still running. An agent that ended its turn without a report has stalled: resume it with SendMessage, naming what is unfinished.
+ 3. **Decisions.** If it stopped on a question, settle it from the plan, design and repository, or take it to the user. Reply with SendMessage so its context stays intact. A blocker no one can resolve now ends the run: have it recorded in the index, then report.
+ 4. **Review.** Brief a fresh reviewer with the repository path, plan path, step ID and the step's commit range. Don't pass along the engineer's account of its work.
+-5. **Iterate.** Relay blocking findings to the same engineer, then its new commits and any disputes to the same reviewer. Judge disputes against the plan and design; only the ones neither settles go to the user. After two rounds without a clean verdict, replace the engineer with a fresh one a tier up, briefed with the open findings. After a third, stop and report.
+-6. **Confirm.** The index marks the step `done`, the task file's execution record includes the review rounds, and the working tree is clean apart from changes that predate the run.
++5. **Iterate.** Relay blocking findings to the same engineer, then its new commits and any disputes to the same reviewer. Judge disputes against the plan and design; only the ones neither settles go to the user. After two rounds without a clean verdict, replace the engineer with a fresh one a tier up, briefed with the open findings. After a third, stop and report. When the verdict is clean, tell the engineer (SendMessage) so it appends the step's outcome line to the plan's `log.md`.
++6. **Confirm.** The index marks the step `done`, the task file's execution record includes the review rounds, the step's outcome line is in `log.md`, and the working tree is clean apart from changes that predate the run.
+ 
+ ## Overall review
+ 
+-After the last step in scope, brief a fresh reviewer with the base commit, `HEAD`, the plan path and the steps covered, and say it is the overall review. Send its findings to the last engineer via SendMessage (or a fresh one briefed with the findings) and iterate under the same rules. The outcome goes in the index's execution notes, committed by the engineer.
++After the last step in scope, brief a fresh reviewer with the base commit, `HEAD`, the plan path and the steps covered, and say it is the overall review. Send its findings to the last engineer via SendMessage (or a fresh one briefed with the findings) and iterate under the same rules. The outcome goes in the plan's `log.md`, committed by the engineer.
+diff --git a/home/.claude/skills/planner/SKILL.md b/home/.claude/skills/planner/SKILL.md
+index 7f1d8cb..5308bda 100644
+--- a/home/.claude/skills/planner/SKILL.md
++++ b/home/.claude/skills/planner/SKILL.md
+@@ -10,7 +10,7 @@ Convert a design into executable, coordinated tasks. Call the deliverable an **i
+ 
+ ## Establish the source of truth
+ 
+-- Read the source design completely, applicable CLAUDE.md (and AGENTS.md) instructions, relevant project documentation, and enough of the affected code and test setup to ground the tasks in the current repository.
++- Read the source design completely, applicable CLAUDE.md or AGENTS.md instructions (once if one links to the other), relevant project documentation, and enough of the affected code and test setup to ground the tasks in the current repository. Also read `.claude/roles/planner.md` at the project root if it exists: the project's notes for this role.
+ - Use the design path supplied by the user (passed as the skill argument when invoked as `/planner <path>`). If absent, locate the relevant design in `docs/designs/` using the feature context; ask if multiple candidates remain genuinely ambiguous or no design exists.
+ - Preserve the design's requirements, scope, architecture, and acceptance criteria. Identify contradictions, stale assumptions, or missing decisions that materially affect implementation instead of silently redesigning the feature.
+ - Resolve routine implementation choices from repository conventions. If a material decision remains open, mark affected tasks blocked and record the question in the index. Continue planning independent work without inventing the missing decision.
+@@ -24,6 +24,7 @@ Store the entire plan in that dedicated folder:
+ ```text
+ <feature-slug>/
+   index.md
++  log.md
+   01-<step-slug>.md
+   02-<step-slug>.md
+   ...
+@@ -56,7 +57,8 @@ Include:
+ - Execution order, any safe parallel groups, and integration checkpoints where needed. The index is the canonical record of overall task status and coordination.
+ - A requirement-to-task mapping using the design's requirement IDs. If the design lacks IDs, assign local mapping labels without modifying its meaning.
+ - Overall completion criteria, cross-task validation, and unresolved questions or blockers.
+-- A brief instruction for implementers: update the step's status and commits here, and record evidence, deviations and blockers in the task file's execution record. Keep the index short; every implementer reads it.
++- Keep the index to what decides the next step. Anything that grows as steps finish (measurements, run histories, review summaries) goes in `log.md` in the plan folder, which the index links.
++- A brief instruction for implementers: update the step's status and commits here, and record evidence, deviations and blockers in the task file's execution record, and anything the plan as a whole accumulates in `log.md`. Keep the index short; every implementer reads it.
+ 
+ ## Write each task file
+ 
+diff --git a/home/.claude/skills/pr-reviewer/SKILL.md b/home/.claude/skills/pr-reviewer/SKILL.md
+index f270dc3..ecc62a5 100644
+--- a/home/.claude/skills/pr-reviewer/SKILL.md
++++ b/home/.claude/skills/pr-reviewer/SKILL.md
+@@ -19,7 +19,7 @@ This skill's base directory holds the checkers' role files. Every brief names, b
+ 
+ - Find the base branch: the argument, else the repository's default branch (`gh repo view --json defaultBranchRef`, or `origin/HEAD`). Run `git fetch origin <base>` and use the merge base with `origin/<base>` as the base commit. CRISP reviews the PR diff against the base, so this is the diff that matters.
+ - Record the head SHA. Note uncommitted changes. They aren't part of the PR, so ask whether to commit them first or review without them.
+-- Read applicable CLAUDE.md and AGENTS.md instructions, any design, plan or feature record for the branch, and the CI workflows in `.github/workflows/`, which define what "all tests" means here. Note any QA results the feature record holds for the current head SHA, and the evidence already in `<git-common-dir>/pr-review/<branch>/evidence/`.
++- Read applicable CLAUDE.md or AGENTS.md instructions (once if one links to the other), any design, plan or feature record for the branch, and the CI workflows in `.github/workflows/`, which define what "all tests" means here. Note any QA results the feature record holds for the current head SHA, and the evidence already in `<git-common-dir>/pr-review/<branch>/evidence/`. Also read `.claude/roles/pr-reviewer.md` at the project root if it exists: the project's notes for this role.
+ - Check what CRISP would reject before it reviews anything, and report each failure as blocking:
+   - the branch merges cleanly into `origin/<base>` (`git merge-tree --write-tree`); CRISP skips conflicting PRs
+   - the diff is under 2 MiB and touches at most 300 files
+diff --git a/home/.claude/skills/qa/SKILL.md b/home/.claude/skills/qa/SKILL.md
+index 393d4a8..827e335 100644
+--- a/home/.claude/skills/qa/SKILL.md
++++ b/home/.claude/skills/qa/SKILL.md
+@@ -12,7 +12,7 @@ You don't change the product. Don't edit tracked files or commit. Put throwaway
+ 
+ ## Prepare
+ 
+-- Read the design (requirements, proposed behavior, acceptance criteria, and verification sections), the plan index if there is one, applicable CLAUDE.md and AGENTS.md instructions, and the diff for the range under test.
++- Read the design (requirements, proposed behavior, acceptance criteria, and verification sections), the plan index if there is one, applicable CLAUDE.md or AGENTS.md instructions (once if one links to the other), and the diff for the range under test. Also read `.claude/roles/qa.md` at the project root if it exists: the project's notes for this role.
+ - Work out how to run the software for real: the CLI, server, UI, or library entry point. Use the project's documented commands. The `run` skill and the browser or computer-use skills can help with launching and driving apps. For a web UI, follow the `browser-qa` skill for the browser work: it reads the project's browser QA profile and checklists, and traces failures through logs to code. If you can't get it running, report exactly what failed; don't fall back to reasoning about the code and calling that testing.
+ - Build a test matrix before you start. List each requirement and acceptance criterion by ID, along with the scenarios that would show it holds: the happy path, boundaries, invalid and missing input, error and failure behavior, permissions, concurrency or repetition where relevant, and the neighboring existing behavior the change could regress.
+ 
+```
