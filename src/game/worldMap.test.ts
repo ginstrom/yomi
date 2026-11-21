@@ -540,7 +540,10 @@ describe('a seeded session of walks and camps (characterization)', () => {
     }
     // The order is left out: the day loop keeps one past an interrupt, as nothing did before it.
     const { order: _order, ...rest } = party
-    const digest = createHash('sha256').update(JSON.stringify({ results, world, party: rest })).digest('hex')
+    // The world as it was before stage 7: its improvements as the outposts list (none here), and no Lodge.
+    const { improvements, lodge: _lodge, ...kept } = world
+    const before = Object.fromEntries(Object.entries(kept).flatMap(([key, value]) => (key === 'shrine' ? [[key, value], ['outposts', Object.keys(improvements)]] : [[key, value]])))
+    const digest = createHash('sha256').update(JSON.stringify({ results, world: before, party: rest })).digest('hex')
     expect(world.turn).toBe(SESSION_TURN)
     expect(digest).toBe(SESSION_SHA256)
   })

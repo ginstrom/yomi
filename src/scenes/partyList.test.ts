@@ -148,7 +148,7 @@ describe('orderLabel', () => {
     expect(day({ kind: 'wait' })).toBe('Waiting')
     expect(day({ kind: 'camp' })).toBe('Camping')
     expect(day({ kind: 'tower' })).toBe('Building')
-    expect(day({ kind: 'outpost' })).toBe('Building')
+    expect(day({ kind: 'improve' })).toBe('Building')
     const place = { party: FIRST_PARTY_ID, kind: 'baggage', index: 0, id: 'x' } as never
     expect(day({ kind: 'craft', place, modifier: 'light', grade: 1 })).toBe('Crafting')
     expect(day({ kind: 'embed', place, rune: 'ember1' })).toBe('Crafting')

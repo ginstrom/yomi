@@ -133,7 +133,7 @@ export function orderLabel(world: WorldState, party: Expedition, parties: readon
         case 'camp':
           return 'Camping'
         case 'tower':
-        case 'outpost':
+        case 'improve':
           return 'Building'
         case 'craft':
         case 'embed':

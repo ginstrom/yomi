@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BASE_ITEMS, IRON_SWORD, SPARK_WAND, STORM_WAND, itemById } from '../inventory/inventory.ts'
 import { newGame } from './gameState.ts'
 import type { RuneKey } from '../inventory/runes.ts'
-import { MAX_TRADING_POST_LEVEL, TIER_TWO_LEVEL, TRADING_POST_COSTS, VALUES, buy, buyPrice, buyRefusal, buyRune, raiseTradingPost, runePrice, runeSalePrice, runeWares, salePrice, sell, sellMaterial, sellRune, sellables, sells, wares } from './tradingPost.ts'
+import { MAX_TRADING_POST_LEVEL, TIER_TWO_LEVEL, TRADING_POST_COSTS, VALUES, buy, buyPrice, buyRefusal, buyRune, raiseTradingPost, runePrice, runeSalePrice, runeWares, salePrice, sell, sellMaterial, sellRune, sellables, sells, tradingPostName, wares } from './tradingPost.ts'
 
 /** A new game at home, with 100 gold. */
 function home() {
@@ -133,16 +133,13 @@ describe('the price list', () => {
 })
 
 describe('trading post level 4', () => {
-  it('costs 120 gold and 20 silver, and is the last level', () => {
+  it('costs 120 gold and 20 silver', () => {
     expect(TRADING_POST_COSTS[3]).toEqual({ gold: 120, silver: 20 })
-    expect(MAX_TRADING_POST_LEVEL).toBe(4)
     const game = home()
     game.world.tradingPost = 3
     game.world.stock = { gold: 130, silver: 25 }
     expect(raiseTradingPost(game, game.parties[0])).toBeNull()
     expect(game.world.stock).toMatchObject({ gold: 10, silver: 5 })
-    expect(raiseTradingPost(game, game.parties[0])).toBe('The trading post is as great as it gets.')
-    game.world.tradingPost = 3
     expect(raiseTradingPost(game, game.parties[0])).toMatch(/costs/)
   })
 
@@ -272,5 +269,38 @@ describe('the trading post\'s runes', () => {
     expect(salePrice(runed)).toBe(Math.floor((96 + 15) / 2))
     expect(salePrice(itemById('steel_longsword@3#ember1.rime2')!)).toBe(Math.floor((buyPrice(itemById('steel_longsword@3')!)! + 60) / 2))
     expect(salePrice(itemById('emberblade#dawn1')!)).toBe(Math.floor((VALUES.emberblade + 15) / 2))
+  })
+})
+
+describe('trading post levels 5 and 6', () => {
+  it('cost what the table says, and 6 is the last level', () => {
+    expect(MAX_TRADING_POST_LEVEL).toBe(6)
+    expect(TRADING_POST_COSTS[4]).toEqual({ gold: 160, silver: 30, stone: 20 })
+    expect(TRADING_POST_COSTS[5]).toEqual({ gold: 220, silver: 40, crystal: 10 })
+    const game = home()
+    game.world.tradingPost = 4
+    game.world.stock = { gold: 400, silver: 100, stone: 30, crystal: 10 }
+    expect(raiseTradingPost(game, game.parties[0])).toBeNull()
+    expect(game.world.stock).toEqual({ gold: 240, silver: 70, stone: 10, crystal: 10 })
+    expect(raiseTradingPost(game, game.parties[0])).toBeNull()
+    expect(game.world.tradingPost).toBe(6)
+    expect(game.world.stock).toMatchObject({ gold: 20, silver: 30, crystal: 0 })
+    expect(raiseTradingPost(game, game.parties[0])).toBe('The trading post is as great as it gets.')
+  })
+
+  it('sell as level 4 does', () => {
+    const game = home()
+    game.world.tradingPost = 4
+    const at4 = wares(game.world).map((i) => i.id)
+    const runes4 = runeWares(game.world)
+    for (const level of [5, 6]) {
+      game.world.tradingPost = level
+      expect(wares(game.world).map((i) => i.id)).toEqual(at4)
+      expect(runeWares(game.world)).toEqual(runes4)
+    }
+  })
+
+  it('are named Trading Post, Market, Market Hall and Trading House', () => {
+    expect([1, 2, 3, 4, 5, 6].map(tradingPostName)).toEqual(['Trading Post', 'Trading Post', 'Trading Post', 'Market', 'Market Hall', 'Trading House'])
   })
 })

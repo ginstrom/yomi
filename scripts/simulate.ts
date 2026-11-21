@@ -15,7 +15,7 @@
 //                                 [--player-policy aggressive] [--enemy-policy aggressive]
 //                                 [--player-weapon iron_sword]
 //                                 [--encounter goblin_raid] [--threat 1] [--party-level 1]
-//                                 [--campaign] [--ready-level 7] [--parties 3]
+//                                 [--campaign] [--ready-level 7] [--parties 3] [--waiting]
 //                                 [--plans melee=swordmaster,archery=ranger,magic=cryomancer]
 import { closeSync, mkdirSync, openSync, writeSync } from 'node:fs'
 import { dirname } from 'node:path'
@@ -33,12 +33,17 @@ import { ENCOUNTERS, heroId, xpReward, type EncounterId } from '../src/game/enco
 import { PREROLLS, autoHeal, readyMadeParty, partyFighters, rewardVictory, type Party } from '../src/game/party.ts'
 import { blightedShare, monsterStrength, type WorldEvent } from '../src/game/blight.ts'
 import {
-  OUTPOST_COST,
+  IMPROVEMENT_COSTS,
+  IMPROVEMENT_LODGE,
+  LODGE_COSTS,
+  LODGE_LEVEL_LIMIT,
   SHRINE_COSTS,
   TOWER_COST,
   canAfford,
-  canBuildOutpost,
   canBuildTower,
+  improveRefusal,
+  nextImprovement,
+  raiseLodge,
   raiseShrine,
 } from '../src/game/buildings.ts'
 import { WORKSHOP_COSTS, craft, craftRefusal, craftTier, highestGrade, upgradeWorkshop } from '../src/game/crafting.ts'
@@ -68,6 +73,7 @@ import {
   formParty,
   moveHero,
   orderAction,
+  passDay,
   setOrder,
   startTravel,
   wipeParty,
@@ -76,8 +82,8 @@ import {
   type OrderRequest,
 } from '../src/game/company.ts'
 import { INFIRMARY_COSTS, raiseInfirmary } from '../src/game/infirmary.ts'
-import { TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, wares } from '../src/game/tradingPost.ts'
-import { daysToFall, sites, type Material, type Stock } from '../src/game/territory.ts'
+import { MATERIALS_PER_GOLD, TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, wares } from '../src/game/tradingPost.ts'
+import { daysToFall, siteImprovement, sites, type Material, type Stock } from '../src/game/territory.ts'
 import {
   ENCAMPMENT_ID,
   clearLocation,
@@ -128,6 +134,8 @@ export interface CliArgs {
    * a skill not named keeps `planFor`'s. Never reaches the enemy (bandits keep their role's plan).
    */
   plans: Partial<Record<SkillId, PlanId>>
+  /** With `campaign`, run each campaign's waiting twin (`waitingIncome`) and print the waiting check; off, `waitingIncomePerDay` is 0. */
+  waiting: boolean
 }
 
 /** The plan a player's hero follows: the one `--plans` names for a skill it is tagged in, else `planFor`'s. */
@@ -196,6 +204,7 @@ export function parseArgs(argv: string[]): CliArgs {
     readyLevel: SOURCE_READY_LEVEL,
     parties: MAX_PARTIES,
     plans: {},
+    waiting: false,
   }
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i]
@@ -252,6 +261,9 @@ export function parseArgs(argv: string[]): CliArgs {
       case '--plans':
         args.plans = parsePlans(flag, value())
         break
+      case '--waiting':
+        args.waiting = true
+        break
       default:
         throw new Error(`Unknown argument: ${flag}`)
     }
@@ -265,6 +277,9 @@ export function parseArgs(argv: string[]): CliArgs {
   }
   if (!args.campaign && argv.includes('--parties')) {
     throw new Error('--parties applies only to --campaign, whose company fields its parties')
+  }
+  if (!args.campaign && argv.includes('--waiting')) {
+    throw new Error('--waiting applies only to --campaign, whose world the twin waits in')
   }
   return args
 }
@@ -358,9 +373,20 @@ export interface CampaignRecord {
   /** Heroes hired at the guild hall, and its level at the end. */
   recruits: number
   hallLevel: number
-  /** The shrine's level at the end, and the outposts built. */
+  /** The shrine's level at the end. */
   shrineLevel: number
-  outpostsBuilt: number
+  /** Improvements built (`site_improved`) by level, index level - 1: outposts, works, forts. */
+  improvementsBuilt: number[]
+  /** The held resources (the encampment not among them) at each improvement level 0 to 3 at the end. */
+  improvementLevels: number[]
+  /** The Builders' Lodge's level at the end. */
+  lodgeLevel: number
+  /** Gold come in by source: the sites' and the market's yields, and sales at the trading post (`goldFromSales`). */
+  goldBySource: { sites: number; market: number; sales: number }
+  /** The yields' value a day (gold, and every other material at `MATERIALS_PER_GOLD` to the gold piece; sales left out), over `days`. */
+  incomePerDay: number
+  /** The same for the waiting twin: the campaign's world with the company idle at home, over the same days (`waitingIncome`). */
+  waitingIncomePerDay: number
   /** The trading post's, workshop's and infirmary's levels at the end. */
   tradingPostLevel: number
   workshopLevel: number
@@ -622,7 +648,12 @@ export function fieldCraft(game: GameState, party: Expedition): Extract<DayActio
   return action
 }
 
-/** What the stock should keep of each material for what the careful party still means to buy: every level left of every building, and a craft for each place in the party. */
+/**
+ * What the stock should keep of each material for what the careful party
+ * still means to buy: every level left of every building (the Builders' Lodge
+ * up to `LODGE_LEVEL_LIMIT`), a watchtower, one of each improvement level the
+ * Lodge allows now, and a craft for each place in the party.
+ */
 export function materialNeeds(game: GameState, parties = 1): Stock {
   const { world } = game
   const needs: Stock = {}
@@ -634,8 +665,11 @@ export function materialNeeds(game: GameState, parties = 1): Stock {
   TRADING_POST_COSTS.slice(world.tradingPost).forEach(add)
   WORKSHOP_COSTS.slice(world.workshop).forEach(add)
   INFIRMARY_COSTS.slice(world.infirmary).forEach(add)
+  LODGE_COSTS.slice(world.lodge, LODGE_LEVEL_LIMIT).forEach(add)
   add(TOWER_COST)
-  add(OUTPOST_COST)
+  IMPROVEMENT_COSTS.forEach((cost, i) => {
+    if (world.lodge >= IMPROVEMENT_LODGE[i]) add(cost)
+  })
   for (const material of ['iron', 'timber', 'copper', 'crystal'] as const) add({ [material]: 5 * partyLimit(world) })
   return needs
 }
@@ -713,8 +747,8 @@ export function runecraftGear(game: GameState, party: Expedition): { embedded: n
 /**
  * At the encampment, after the guild hall: sells the baggage (the careful
  * party fights without loot, so all of it is surplus) and the materials
- * beyond `materialNeeds`; raises the trading post, the workshop and the
- * infirmary as the stock allows; buys each member the best grade it can of
+ * beyond `materialNeeds`; raises the trading post, the workshop, the
+ * infirmary and the Builders' Lodge as the stock allows; buys each member the best grade it can of
  * its weapon, shield and armour, the old one sold (its runes taken out first
  * where the workshop can, else sold with it); fuses, buys and embeds runes (`runecraftGear`);
  * crafts the best it can on them (`craftGear`); and raises the shrine with
@@ -742,6 +776,8 @@ export function visitFacilities(game: GameState, party: Expedition, parties = 1)
   while (raiseTradingPost(game, party) === null);
   while (upgradeWorkshop(game, party) === null);
   while (raiseInfirmary(game, party) === null);
+  // Last of the buildings for the gold; it stops at `LODGE_LEVEL_LIMIT`, refused until roads come.
+  while (raiseLodge(game, party) === null);
   for (const [member, hero] of party.members.entries()) {
     for (const slot of GEAR_SLOTS) {
       const worn = hero.equipment[slot]
@@ -784,25 +820,34 @@ export function visitFacilities(game: GameState, party: Expedition, parties = 1)
   return trade
 }
 
-/** How far the careful party goes out of its way, after a win, to put an outpost on a held site. */
-export const OUTPOST_ERRAND_RADIUS = 6
+/** How far the careful party goes out of its way, after a win, to improve a held site. */
+export const IMPROVE_ERRAND_RADIUS = 6
+/** A site under this many days to fall gets its fort before any nearer improvement. */
+export const FORT_FIRST_DAYS = 30
 
 /**
- * The held site the careful party should build an outpost on after a win: the
- * nearest within `OUTPOST_ERRAND_RADIUS` that has none, when the stock affords
- * one; the encampment has its shrine instead.
+ * The held resource the careful party should raise a level after a win: of
+ * those within `IMPROVE_ERRAND_RADIUS` whose next level the Lodge allows and
+ * the stock affords, the nearest whose next level is a fort and which falls in
+ * under `FORT_FIRST_DAYS` (with the party where it stands), else the nearest.
+ * The encampment has its shrine instead. A tie goes to the first in `sites`.
  */
-export function outpostErrand(world: WorldState, party: Expedition): QuietLocation | null {
-  if (!canAfford(world.stock, OUTPOST_COST)) return null
-  const near = sites(world).filter(
-    (site) =>
-      site.id !== ENCAMPMENT_ID &&
-      world.held.includes(site.id) &&
-      !world.outposts.includes(site.id) &&
-      hexDistance(site.position, party.position) <= OUTPOST_ERRAND_RADIUS,
-  )
-  if (near.length === 0) return null
-  return near.reduce((a, b) => (hexDistance(party.position, b.position) < hexDistance(party.position, a.position) ? b : a))
+export function improveErrand(world: WorldState, party: Expedition): QuietLocation | null {
+  const candidates = sites(world).filter((site) => {
+    if (site.id === ENCAMPMENT_ID || !world.held.includes(site.id)) return false
+    if (hexDistance(site.position, party.position) > IMPROVE_ERRAND_RADIUS) return false
+    const next = nextImprovement(world, site)
+    return next !== null && world.lodge >= next.lodge && canAfford(world.stock, next.cost)
+  })
+  const nearest = (among: QuietLocation[]) =>
+    among.length === 0 ? null : among.reduce((a, b) => (hexDistance(party.position, b.position) < hexDistance(party.position, a.position) ? b : a))
+  const presence = [presenceOf(party)]
+  const forts = candidates.filter((site) => {
+    if (nextImprovement(world, site)!.level !== 3) return false
+    const days = daysToFall(world, presence, site)
+    return days !== null && days < FORT_FIRST_DAYS
+  })
+  return nearest(forts) ?? nearest(candidates)
 }
 
 /**
@@ -840,8 +885,8 @@ export function nextTarget(world: WorldState, party: Expedition, readyLevel = SO
  * Where a party stands in the careful party's round, which runs: home to the
  * guild hall when there is a hall errand (`home`), the hall's and facilities'
  * errands there (`hall`), the walk to the next target (`target`), the battle
- * (`fight`, then `won`), a watchtower (`tower`), the outpost errand
- * (`outpost`, then `build` once there), a field craft (`craft`, then
+ * (`fight`, then `won`), a watchtower (`tower`), the improve errand
+ * (`improve`, then `build` once there), a field craft (`craft`, then
  * `crafted`), camping until healed (`heal`, casting the party's heals, then
  * `camp`, the camp order), and back to the top (`start`). A guard's round
  * (`decideGuard`) chooses at `start` and walks in its choice's phase
@@ -863,7 +908,7 @@ export type Phase =
   | 'fight'
   | 'won'
   | 'tower'
-  | 'outpost'
+  | 'improve'
   | 'build'
   | 'craft'
   | 'crafted'
@@ -930,6 +975,8 @@ export interface CampaignRun {
   vanguard: string
   /** Each party's role, by id; `vanguard` is the one truth for which party is the vanguard. */
   roles: Map<string, Role>
+  /** The yields' value so far (`yieldValue`), which `incomePerDay` is made of. */
+  income: number
 }
 
 /** Party `party`'s role in the run, a guard's for a party the run has no role for. */
@@ -948,16 +995,18 @@ export function setVanguard(run: CampaignRun, id: string): void {
 export function startCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0, game = newGame(startingParty(args), null, seed)): CampaignRun {
   const record: CampaignRecord = {
     outcome: 'timeout', days: 0, battles: 0, spawns: 0, captured: 0, lost: 0, blighted: 0, healedHp: 0, campDays: 0,
-    towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0, outpostsBuilt: 0,
+    towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0,
     tradingPostLevel: 1, workshopLevel: 0, infirmaryLevel: 0, goldOnGear: 0, goldFromSales: 0, tierTwoBought: 0, crafted: 0, fieldCraftDays: 0,
     runesFound: 0, runesBought: 0, runesFused: 0, socketsFilled: 0, goldOnRunes: 0,
     finalLevels: [], callings: {}, capstones: {}, deathsAtLevel: [], battlesToLevel: {},
     roles: { vanguard: { battles: 0, wipes: 0, finalLevels: [] }, guard: { battles: 0, wipes: 0, finalLevels: [] } },
     wipes: 0, promotions: 0, vanguardWalkHomeDays: 0, guardBattles: 0,
+    improvementsBuilt: [0, 0, 0], improvementLevels: [0, 0, 0, 0], lodgeLevel: 0, goldBySource: { sites: 0, market: 0, sales: 0 },
+    incomePerDay: 0, waitingIncomePerDay: 0,
   }
   const vanguard = game.parties[0].id
   const roles = new Map<string, Role>(game.parties.map((party) => [party.id, party.id === vanguard ? 'vanguard' : 'guard']))
-  return { campaign, seed, args, firstBattleId, game, battles: [], record, plans: new Map(game.parties.map((party) => [party.id, newPlan()])), vanguard, roles }
+  return { campaign, seed, args, firstBattleId, game, battles: [], record, income: 0, plans: new Map(game.parties.map((party) => [party.id, newPlan()])), vanguard, roles }
 }
 
 /** The plan of party `party`, a new one if it has none yet. */
@@ -1076,12 +1125,12 @@ function afterBattle(world: WorldState, party: Expedition, plan: Plan): Decision
         continue
       case 'tower':
         // A watchtower wherever the party stops on land that takes one and the stock affords it.
-        plan.phase = 'outpost'
+        plan.phase = 'improve'
         if (canBuildTower(world, party) === null) return { kind: 'act', action: { kind: 'tower' } }
         continue
-      case 'outpost': {
-        // An outpost on a held site nearby, if the stock affords one; the party camps there.
-        const site = outpostErrand(world, party)
+      case 'improve': {
+        // The next level of a held site nearby, if the Lodge allows it and the stock affords it; the party camps there.
+        const site = improveErrand(world, party)
         if (site) walk(plan, 'build', site.position)
         else plan.phase = 'craft'
         continue
@@ -1090,7 +1139,7 @@ function afterBattle(world: WorldState, party: Expedition, plan: Plan): Decision
         const walked = walking(world, party, plan)
         if (walked === 'go') return { kind: 'order', order: { kind: 'travel', to: plan.to! } }
         plan.phase = 'craft'
-        if (walked && canBuildOutpost(world, party) === null) return { kind: 'act', action: { kind: 'outpost' } }
+        if (walked && improveRefusal(world, party) === null) return { kind: 'act', action: { kind: 'improve' } }
         continue
       }
       case 'craft':
@@ -1323,17 +1372,29 @@ export function decideGuard(run: CampaignRun, party: Expedition): Decision {
 }
 
 /** The phases from the battle to camping until healed, which the vanguard and a guard share (`afterBattle`). */
-const AFTER_BATTLE: ReadonlySet<Phase> = new Set(['fight', 'won', 'tower', 'outpost', 'build', 'craft', 'crafted', 'heal', 'camp'])
+const AFTER_BATTLE: ReadonlySet<Phase> = new Set(['fight', 'won', 'tower', 'improve', 'build', 'craft', 'crafted', 'heal', 'camp'])
 
-/** Sums what a stretch of days brought into the record: the world's events counted by `tally`. */
-function tally(record: CampaignRecord, events: readonly WorldEvent[]): void {
+/** The yields among `events` as value: gold, and every other material at `MATERIALS_PER_GOLD` to the gold piece. */
+export function yieldValue(events: readonly WorldEvent[]): number {
+  let value = 0
+  for (const event of events) {
+    if (event.type === 'yield') value += event.material === 'gold' ? event.amount : event.amount / MATERIALS_PER_GOLD
+  }
+  return value
+}
+
+/** Sums what a stretch of days brought into the run's record: the world's events counted, and the yields' value. */
+function tally(run: CampaignRun, events: readonly WorldEvent[]): void {
+  const { record } = run
+  run.income += yieldValue(events)
   for (const event of events) {
     if (event.type === 'spawned') record.spawns++
     if (event.type === 'site_captured') record.captured++
     if (event.type === 'site_lost') record.lost++
     if (event.type === 'tower_built') record.towersBuilt++
     if (event.type === 'tower_lost') record.towersLost++
-    if (event.type === 'outpost_built') record.outpostsBuilt++
+    if (event.type === 'site_improved') record.improvementsBuilt[event.level - 1]++
+    if (event.type === 'yield' && event.material === 'gold') record.goldBySource[event.source === 'market' ? 'market' : 'sites'] += event.amount
   }
 }
 
@@ -1564,7 +1625,7 @@ export function carryOut(run: CampaignRun, party: Expedition, decision: Decision
  */
 export function takeDays(run: CampaignRun, reports: readonly DayReport[]): void {
   const { game, record } = run
-  for (const report of reports) tally(record, report.events)
+  for (const report of reports) tally(run, report.events)
   if (game.parties.some((party) => planOf(run, party).running === 'camp')) record.campDays += reports.length
   for (const party of game.parties) {
     const plan = planOf(run, party)
@@ -1636,6 +1697,15 @@ export function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Camp
   record.tradingPostLevel = world.tradingPost
   record.workshopLevel = world.workshop
   record.infirmaryLevel = world.infirmary
+  record.lodgeLevel = world.lodge
+  record.improvementLevels = [0, 0, 0, 0]
+  for (const site of sites(world)) {
+    if (site.id !== ENCAMPMENT_ID && world.held.includes(site.id)) record.improvementLevels[siteImprovement(world, site.id)]++
+  }
+  record.goldBySource.sales = record.goldFromSales
+  record.incomePerDay = record.days > 0 ? run.income / record.days : 0
+  // The twin costs about a fifth again of a campaign's time (~0.25 s against ~1.18 s): only with --waiting.
+  record.waitingIncomePerDay = run.args.waiting ? waitingIncome(run.seed, run.args, record.days) : 0
   if (vanguard) {
     record.finalLevels = vanguard.members.map((member) => member.level)
     Object.assign(record, vanguardTallies(vanguard.members))
@@ -1646,6 +1716,27 @@ export function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Camp
   // A fallen company's were counted as its last party fell (`wipe`).
   if (game.parties.length > 0) record.socketsFilled = socketsFilled(game.parties)
   return { battles, record }
+}
+
+/**
+ * The waiting twin (A9): the yields' value a day over `days` of the campaign
+ * seeded `seed`, its company left idle at the encampment from the first day.
+ * A game of its own, from the same start as `startCampaign`'s: it fights,
+ * buys and sells nothing, and shares no game, stream or battle id with the
+ * campaign. Days pass until the world turn reaches `days` (as the campaign's
+ * `days` is its last turn) or the world is no longer active (the encampment
+ * lost); the value is divided by `days` all the same.
+ */
+export function waitingIncome(seed: number, args: CliArgs, days: number): number {
+  if (days <= 0) return 0
+  const game = newGame(startingParty(args), null, seed)
+  let value = 0
+  while (game.world.turn < days && worldActive(game.world)) {
+    const report = passDay(game)
+    if (!report) break
+    value += yieldValue(report.events)
+  }
+  return value / days
 }
 
 /**
@@ -1929,7 +2020,15 @@ export interface CampaignSummary {
   avgDeaths: number
   avgHallLevel: number
   avgShrineLevel: number
-  avgOutpostsBuilt: number
+  /** Improvements built a campaign by level (outposts, works, forts), and held resources at each level 0 to 3 at the end. */
+  avgImprovementsBuilt: number[]
+  avgImprovementLevels: number[]
+  avgLodgeLevel: number
+  /** Gold a campaign from the sites' yields, the market's and sales. */
+  avgGoldBySource: { sites: number; market: number; sales: number }
+  /** Income a day (`incomePerDay`) campaigning, and the waiting twin's (`waitingIncomePerDay`). */
+  avgIncomePerDay: number
+  avgWaitingIncomePerDay: number
   avgTradingPostLevel: number
   avgWorkshopLevel: number
   avgInfirmaryLevel: number
@@ -2039,7 +2138,16 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
     avgDeaths: avg((r) => r.deaths),
     avgHallLevel: avg((r) => r.hallLevel),
     avgShrineLevel: avg((r) => r.shrineLevel),
-    avgOutpostsBuilt: avg((r) => r.outpostsBuilt),
+    avgImprovementsBuilt: [0, 1, 2].map((i) => avg((r) => r.improvementsBuilt[i])),
+    avgImprovementLevels: [0, 1, 2, 3].map((i) => avg((r) => r.improvementLevels[i])),
+    avgLodgeLevel: avg((r) => r.lodgeLevel),
+    avgGoldBySource: {
+      sites: avg((r) => r.goldBySource.sites),
+      market: avg((r) => r.goldBySource.market),
+      sales: avg((r) => r.goldBySource.sales),
+    },
+    avgIncomePerDay: avg((r) => r.incomePerDay),
+    avgWaitingIncomePerDay: avg((r) => r.waitingIncomePerDay),
     avgTradingPostLevel: avg((r) => r.tradingPostLevel),
     avgWorkshopLevel: avg((r) => r.workshopLevel),
     avgInfirmaryLevel: avg((r) => r.infirmaryLevel),
@@ -2080,6 +2188,12 @@ export function summarizeCampaigns(events: readonly LoggedEvent[], records: read
       avgHighestFinalLevel: mean(levels.map((l) => Math.max(...l))),
     }
   }
+}
+
+/** The waiting check's summary line (A9): income a day campaigning against the waiting twin's. */
+export function waitingLine(summary: Pick<CampaignSummary, 'avgIncomePerDay' | 'avgWaitingIncomePerDay'>): string {
+  const verdict = summary.avgWaitingIncomePerDay < summary.avgIncomePerDay ? 'waiting earns less' : 'waiting earns as much or more'
+  return `Waiting check: income ${summary.avgIncomePerDay.toFixed(1)} a day campaigning, ${summary.avgWaitingIncomePerDay.toFixed(1)} waiting at home: ${verdict}`
 }
 
 function printTraits(summary: Summary): void {
@@ -2152,7 +2266,15 @@ function main(): void {
     `A campaign: ${summary.avgDays.toFixed(0)} days, ${summary.avgBattles.toFixed(1)} battles, ${summary.avgSpawns.toFixed(1)} spawns, ${summary.avgCaptured.toFixed(1)} sites captured and ${summary.avgLost.toFixed(1)} lost, ${(summary.avgBlighted * 100).toFixed(0)}% of the land blighted at the end`,
   )
   console.log(`Watchtowers: ${summary.avgTowersBuilt.toFixed(1)} built a campaign, ${summary.avgTowersLost.toFixed(1)} lost`)
-  console.log(`Shrine: level ${summary.avgShrineLevel.toFixed(1)} at the end; outposts: ${summary.avgOutpostsBuilt.toFixed(1)} built a campaign`)
+  console.log(`Shrine: level ${summary.avgShrineLevel.toFixed(1)} at the end; Builders' Lodge: level ${summary.avgLodgeLevel.toFixed(1)} at the end`)
+  const [outposts, works, forts] = summary.avgImprovementsBuilt
+  const held = summary.avgImprovementLevels.map((n) => n.toFixed(1))
+  console.log(
+    `Improvements: ${outposts.toFixed(1)} outposts, ${works.toFixed(1)} works, ${forts.toFixed(1)} forts built a campaign; held resources at the end: ${held[0]} bare, ${held[1]} outposts, ${held[2]} works, ${held[3]} forts`,
+  )
+  const gold = summary.avgGoldBySource
+  console.log(`Gold by source: sites ${gold.sites.toFixed(0)}, market ${gold.market.toFixed(0)}, sales ${gold.sales.toFixed(0)} a campaign`)
+  if (args.waiting) console.log(waitingLine(summary))
   console.log(
     `Trading post, workshop, infirmary: levels ${summary.avgTradingPostLevel.toFixed(1)}, ${summary.avgWorkshopLevel.toFixed(1)}, ${summary.avgInfirmaryLevel.toFixed(1)} at the end; ${summary.avgGoldOnGear.toFixed(0)} gold on gear and ${summary.avgGoldFromSales.toFixed(0)} from sales, ${summary.avgCrafted.toFixed(1)} items crafted (${summary.avgFieldCraftDays.toFixed(1)} days in the field) a campaign`,
   )

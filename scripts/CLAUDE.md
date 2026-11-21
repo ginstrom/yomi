@@ -12,12 +12,13 @@ Loaded when working in `scripts/`. Read it before tuning: the bands below are th
 - `--campaign`: each battle is a whole campaign (below).
 - `--ready-level` (campaign only): the level every member needs before marching on the Source, default `SOURCE_READY_LEVEL` (7).
 - `--parties` (campaign only): 1 to `MAX_PARTIES` (3), default 3; a vanguard and home guards. The refactor guard and the early-game figure use 1.
+- `--waiting` (campaign only): runs each campaign's waiting twin (the same world with the company idle at home) and prints the waiting check; it costs about a fifth again of the run's time (about 0.25 s a twin against 1.18 s a campaign).
 
 Every event is written as JSONL; a summary of win rate, rounds, hit rates, spells, techniques, traits and more is printed.
 
 ## Campaigns
 
-`--campaign` is how scaling is judged. A new ready-made party sets out on a new world (seeded per campaign) with the blight spreading, walking a day a hex on the company's day loop (`company.ts`) to where `nextTarget` sends it: the nest pushing hardest on a threatened held site, else the nearest nest no higher in threat than its lowest level, and the Source once all are at the ready level. It carries its wounds and mana between battles, levels by `rewardVictory` and `autoAdvance`, camps until healed, takes rune loot (not item loot), and runs its errands at the hall and facilities. A campaign ends when the Source is beaten, no hero is left, the encampment falls or `MAX_CAMPAIGN_DAYS` pass. Run one at a time: `npm run simulate -- --campaign --battles 500 --seed 1` takes about five minutes alone (longer beside other work) and logs some 70 MB.
+`--campaign` is how scaling is judged. A new ready-made party sets out on a new world (seeded per campaign) with the blight spreading, walking a day a hex on the company's day loop (`company.ts`) to where `nextTarget` sends it: the nest pushing hardest on a threatened held site, else the nearest nest no higher in threat than its lowest level, and the Source once all are at the ready level. It carries its wounds and mana between battles, levels by `rewardVictory` and `autoAdvance`, camps until healed, takes rune loot (not item loot), raises held resources a level after a win (`improveErrand`: a fort first where a site falls in under `FORT_FIRST_DAYS`), and runs its errands at the hall and facilities (the trading post to 6, the Builders' Lodge last, to `LODGE_LEVEL_LIMIT`). A campaign ends when the Source is beaten, no hero is left, the encampment falls or `MAX_CAMPAIGN_DAYS` pass. Run one at a time: `npm run simulate -- --campaign --battles 500 --seed 1` takes about five minutes alone (longer beside other work) and logs some 70 MB.
 
 ## Balance
 
@@ -25,13 +26,13 @@ The measure is the share of 500 campaigns from seed 1 that beat the Source witho
 
 The bands, set by the user (the targets; keep them):
 
-| Measure | Band | Now (step 30, seed 1) |
+| Measure | Band | Now (seed 1: stage 7 where marked, else the skill trees' step 30) |
 | --- | --- | --- |
-| One party (`--parties 1`) | 215 to 250 | 234 (286 days, 19.4 battles, 1.1 dead) |
-| Default company | 220 to 260 | 236 |
+| One party (`--parties 1`) | 215 to 250 | 239 (286 days, 19.5 battles, 1.1 dead; stage 7) |
+| Default company | 220 to 260 | 239 (stage 7) |
 | `--ready-level 10` | 370 to 420 | 434 (509 days), accepted up to 445 |
-| Heroes dead a campaign | at most 2.0 | 1.1 |
-| Days a campaign | 243 to 297 | 286 |
+| Heroes dead a campaign | at most 2.0 | 1.1 (stage 7) |
+| Days a campaign | 243 to 297 | 286 (stage 7) |
 | GR3 | at least 470 | 500 |
 | BC3 | 400 to 470 | 455 |
 | BC4 | 430 to 490 | 454 |
@@ -39,6 +40,8 @@ The bands, set by the user (the targets; keep them):
 | SN5, SP5 | 410 to 480 | 451, 475 |
 | SG7 | 0 within 40 | 0 |
 | SG10 | above 2 | 1, accepted |
+
+The waiting check (`--waiting`, stage 7's design): income a day campaigning must stay above the waiting twin's, or idling at home pays; stage 7 measured 1.3 against 1.0 a day (one party and the company alike), the twin never ahead in any campaign. The careful simulated party rarely builds past an outpost or raises the post past 2, so works, forts and market gold barely show in these figures.
 
 Also: TL5 0 (report-only), F1 to F3 500, 500, 463. Capstones barely show at level 7 or 10; `--ready-level 12` is where they do.
 

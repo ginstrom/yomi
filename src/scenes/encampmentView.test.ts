@@ -11,6 +11,9 @@ describe('the encampment screen', () => {
     expect(facilityFrame({ id: 'shrine', level: 0 })).toBe('camp_plot/base')
     expect(facilityFrame({ id: 'shrine', level: 2 })).toBe('camp_shrine/level_2')
     expect(facilityFrame({ id: 'guild_hall', level: 1 })).toBe('camp_guild_hall/level_1')
+    expect(facilityFrame({ id: 'builders_lodge', level: 1 })).toBe('camp_lodge/level_1')
+    expect(facilityFrame({ id: 'builders_lodge', level: 2 })).toBe('camp_lodge/level_2')
+    expect(facilityFrame({ id: 'builders_lodge', level: 0 })).toBe('camp_plot/base')
   })
 
   it('draws the guild hall’s barracks at levels 4 and 5, frames the atlas has, as it has every facility’s every level', () => {
@@ -19,17 +22,23 @@ describe('the encampment screen', () => {
     const atlas = JSON.parse(readFileSync('public/assets/sprites/atlas.json', 'utf8')) as { frames: Record<string, unknown> }
     const names = new Set(Object.keys(atlas.frames))
     for (const facility of facilities(newGame(), newGame().parties[0])) {
-      for (let level = 1; level <= facility.maxLevel; level++) expect(names, `${facility.id} ${level}`).toContain(facilityFrame({ id: facility.id, level }))
+      for (let level = 1; level <= facility.maxLevel; level++) {
+        const frame = facilityFrame({ id: facility.id, level })
+        expect(names, `${facility.id} ${level}`).toContain(frame)
+      }
     }
   })
 
   it('labels each by its name and level', () => {
     expect(facilityLabel({ name: 'Shrine', level: 0, maxLevel: 3 })).toBe('Shrine: empty plot')
     expect(facilityLabel({ name: 'Guild Hall', level: 2, maxLevel: 3 })).toBe('Guild Hall 2/3')
+    expect(facilityLabel({ name: 'Market Hall', level: 5, maxLevel: 6 })).toBe('Market Hall 5/6')
+    expect(facilityLabel({ name: "Builders' Lodge", level: 0, maxLevel: 3 })).toBe("Builders' Lodge: empty plot")
   })
 
   it('gives every facility a plot of its own', () => {
     const plots = facilities(newGame(), newGame().parties[0]).map((_, i) => plotAt(i))
+    expect(plots).toHaveLength(6)
     expect(new Set(plots.map(({ x, y }) => `${x},${y}`)).size).toBe(plots.length)
   })
 })

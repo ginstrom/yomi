@@ -61,12 +61,13 @@ Pure (no runtime Phaser import):
 - `abilityList.ts`: the Abilities tab's rows and where each sits.
 - `partyPanel.ts`: where the party's portraits sit and what a click on one does.
 - `draftInfo.ts`: the lines a hover shows of a draft.
-- `encampmentView.ts`: where the encampment draws each facility; the "For: <name>" line.
+- `encampmentView.ts`: where the encampment draws each facility (six plots at 2x: a new facility needs a seventh and room for its label, which the in-browser overlap test checks); the "For: <name>" line.
 - `hallColumns.ts`: the Guild Hall's columns and what a click does with a picked hero.
 - `exchangeView.ts`: the Exchange scene's partners, moves and baggage lines.
 - `gearCompare.ts`: the words for an item's stats and what a craft or gear change does.
 - `runecraftView.ts`: the crafting screen's Runes tab in words, and where sockets come from.
-- `worldEvents.ts`: the world map's words for turns, days and walks, and the prompt to spend points.
+- `worldEvents.ts`: the world map's words for turns, days and walks, the yield summary, and the prompt to spend points.
+- `improveButton.ts`: the Improve button's label (full and compact).
 - `skillsTab.ts`: the Skills tab in plain data.
 - `hexInfo.ts`: what the info panel tells of the hovered hex, within the fog.
 - `partyList.ts`: the world map's party list, figures, banners, meet target and order words.
@@ -80,7 +81,7 @@ Pure (no runtime Phaser import):
 - `audioSettings.ts`: volume levels and bus gains.
 - `cursors.ts`: the pointer cursors.
 - `seed.ts`: the seed in the page's address.
-- `debugCommands.ts`: the debug console's commands.
+- `debugCommands.ts`: the debug console's commands (`stock` takes several pairs, `blight` sets a hex's level, `days` ends with the yields by source).
 - `unitLook.ts`: atlas frame names and which sprites dress a hero.
 - `itemIcons.ts`: item, rune and pip icon keys and tints.
 - `manualHtml.ts`: the manual as HTML.

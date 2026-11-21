@@ -7,6 +7,7 @@ import { GRADES } from '../inventory/grades.ts'
 import { EQUIPMENT_SLOT_LABELS, itemById, type Equipment, type Item } from '../inventory/inventory.ts'
 import { MODIFIER_IDS } from '../inventory/modifiers.ts'
 import { isRuneKey } from '../inventory/runes.ts'
+import { MAX_LODGE_LEVEL } from './buildings.ts'
 import { FIRST_PARTY_ID, FIRST_PARTY_NAME, MAX_PARTIES, ORDER_KINDS, type Expedition } from './expedition.ts'
 import { MAX_GUILD_HALL_LEVEL } from './guildHall.ts'
 import type { GameState } from './gameState.ts'
@@ -38,11 +39,16 @@ import { CUTSCENE_IDS } from '../story/cutscenes.ts'
  * `perkPicks`; the node-cost design asked for `migrateFrom25`, which every
  * older save readable (25, 24, 23, and 22 and 18 after `migrateFrom22`) goes
  * through: every node kept and the points recomputed from the level.
+ * Version 27 (long campaign stage 7) keeps each held resource's improvement
+ * level in `improvements` in place of the `outposts` list, and the Builders'
+ * Lodge's level; the stage asked for `migrateFrom26`, which every older save
+ * readable goes through last: each outpost a level-1 improvement, the Lodge
+ * at 0 and a party's day order `outpost` an `improve`.
  * Rules and item numbers may change
  * freely, as a character stores no derived number and an item is saved by
  * its id.
  */
-export const SAVE_VERSION = 26
+export const SAVE_VERSION = 27
 
 /** One slot's contents. */
 export interface SaveFile {
@@ -229,6 +235,25 @@ function migrateFrom25(game: Record<string, unknown>): void {
   }
 }
 
+/**
+ * A game of version 26 or older (after the migrations before) with
+ * improvements: each id in the world's `outposts` a level-1 improvement, the
+ * Builders' Lodge at 0, and a party's day order `outpost` an `improve`.
+ */
+function migrateFrom26(game: Record<string, unknown>): void {
+  const world = game.world as Record<string, unknown> | undefined
+  check(world && typeof world === 'object' && Array.isArray(world.outposts))
+  check(world.outposts.every((id) => typeof id === 'string'))
+  world.improvements = Object.fromEntries((world.outposts as string[]).map((id) => [id, 1]))
+  delete world.outposts
+  world.lodge = 0
+  check(Array.isArray(game.parties))
+  for (const party of game.parties as Record<string, unknown>[]) {
+    const order = party?.order as { kind?: unknown; action?: { kind?: unknown } } | undefined
+    if (order?.kind === 'day' && order.action?.kind === 'outpost') order.action = { kind: 'improve' }
+  }
+}
+
 /** A migrated character's mana within its maximum under the new rules. */
 const clampMana = (character: Character): Character => ({ ...character, mana: Math.min(character.mana, maxMana(character)) })
 
@@ -263,7 +288,7 @@ function isDayAction(action: unknown): boolean {
     case 'wait':
     case 'camp':
     case 'tower':
-    case 'outpost':
+    case 'improve':
       return true
     case 'craft':
       return isPlace(a.place) && (MODIFIER_IDS as unknown[]).includes(a.modifier) && (GRADES as unknown[]).includes(a.grade)
@@ -285,13 +310,13 @@ function isOrder(order: unknown, self: string, partyIds: readonly string[]): boo
   return true
 }
 
-/** Null for anything that is not a save of this version (or version 25, 24 or 23, or version 22 or 18, migrated), or names an item, perk or skill the game does not have. */
+/** Null for anything that is not a save of this version (or version 26, 25, 24 or 23, or version 22 or 18, migrated), or names an item, perk or skill the game does not have. */
 export function parseSave(raw: string | null): SaveFile | null {
   if (raw === null) return null
   try {
     // What `serializeSave` wrote has the file's shape but for its items, which are ids until put back below.
     const saved = JSON.parse(raw) as SaveFile & { version: unknown }
-    check(saved && typeof saved === 'object' && [SAVE_VERSION, 25, 24, 23, 22, 18].includes(saved.version as number))
+    check(saved && typeof saved === 'object' && [SAVE_VERSION, 26, 25, 24, 23, 22, 18].includes(saved.version as number))
     check(typeof saved.savedAt === 'number')
     const { game, battle } = saved
     check(game && typeof game === 'object')
@@ -302,7 +327,8 @@ export function parseSave(raw: string | null): SaveFile | null {
     }
     const migrated = saved.version === 22 || saved.version === 18
     if (migrated) migrateFrom22(game as unknown as Record<string, unknown>)
-    if (saved.version !== SAVE_VERSION) migrateFrom25(game as unknown as Record<string, unknown>)
+    if (saved.version !== SAVE_VERSION && saved.version !== 26) migrateFrom25(game as unknown as Record<string, unknown>)
+    if (saved.version !== SAVE_VERSION) migrateFrom26(game as unknown as Record<string, unknown>)
     const heroOf = (member: Character): Character => (migrated ? clampMana(characterOf(member)) : characterOf(member))
     check(Array.isArray(game.parties) && game.parties.length > 0 && game.parties.length <= MAX_PARTIES)
     check(game.parties.every((party) => party && typeof party.id === 'string' && typeof party.name === 'string'))
@@ -315,7 +341,13 @@ export function parseSave(raw: string | null): SaveFile | null {
     check(world.board && Array.isArray(world.blight) && Array.isArray(world.shift) && world.blight.length === world.board.cols * world.board.rows)
     check(Array.isArray(world.seen) && world.seen.length === world.blight.length && Array.isArray(world.sighted))
     check(Array.isArray(world.towers) && typeof world.towersBuilt === 'number')
-    check(typeof world.shrine === 'number' && Array.isArray(world.outposts))
+    check(typeof world.shrine === 'number' && Number.isInteger(world.lodge) && world.lodge >= 0 && world.lodge <= MAX_LODGE_LEVEL)
+    check(world.improvements && typeof world.improvements === 'object' && !Array.isArray(world.improvements))
+    check(
+      Object.entries(world.improvements).every(
+        ([id, level]) => [1, 2, 3].includes(level) && world.locations.some((l) => l && l.id === id && l.kind === 'resource'),
+      ),
+    )
     check(typeof world.tradingPost === 'number' && typeof world.workshop === 'number' && typeof world.infirmary === 'number')
     check(Array.isArray(world.held) && Array.isArray(world.threatened) && world.stock && typeof world.stock === 'object')
     check(typeof world.rng === 'number' && typeof world.spawnPressure === 'number' && typeof world.status === 'string')

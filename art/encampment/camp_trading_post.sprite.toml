@@ -126,3 +126,44 @@ from = "level_3"
 43 = [[9, "n"], [38, "n"], [46, "n"]]
 44 = [[46, "a"]]
 45 = [[46, "m"]]
+
+# Level 5, the Market Hall: the sign comes down and a timbered upper storey
+# takes its place, plastered, with two windows and a gold coin between them,
+# under a slate roof with a gold ridge.
+[frames.level_5]
+from = "level_4"
+
+[frames.level_5.runs]
+2 = [[20, "yyyyyyyyyy"]]
+3 = [[18, "bcbbbcbbbcbbbc"]]
+4 = [[16, "bbbcbbbcbbbcbbbcbb"]]
+5 = [[14, "BBBBBBBBBBBBBBBBBBBBBB"]]
+6 = [[14, "nnnnnnnnnnnnnnnnnnnnnn"]]
+7 = [[14, "nWWWWWWWWWWWWWWWWWWWWn"]]
+8 = [[14, "nWnnnnnnWWyyWWnnnnnnWn"]]
+9 = [[14, "nWnbccbnWyYYyWnbccbnWn"]]
+10 = [[14, "nWnbbbbnWyOOyWnbbbbnWn"]]
+11 = [[14, "nWnbccbnWWyyWWnbccbnWn"]]
+12 = [[14, "nWnnnnnnWWWWWWnnnnnnWn"]]
+13 = [[14, "nWWWWWWWWWWWWWWWWWWWWn"]]
+14 = [[14, "nWWWWWWWWWWWWWWWWWWWWn"]]
+15 = [[14, "nnnnnnnnnnnnnnnnnnnnnn"]]
+
+# Level 6, the Trading House: the storey is cut in stone and timber, the roof
+# climbs to a gold finial, and red pennants fly from both gable corners.
+[frames.level_6]
+from = "level_5"
+
+[frames.level_6.runs]
+1 = [[14, "nrrrrr"], [24, "YY"], [30, "rrrrrn"]]
+2 = [[14, "nrrr"], [20, "bbcbbbcbbb"], [32, "rrrn"]]
+3 = [[14, "n"], [35, "n"]]
+4 = [[14, "n"], [35, "n"]]
+7 = [[15, "aaaaaamaaaaaaamaaaaa"]]
+8 = [[15, "allllllaayyaallllllaa"]]
+9 = [[15, "alBccBlayYYyalBccBlaa"]]
+10 = [[15, "alBBBBlayOOyalBBBBlaa"]]
+11 = [[15, "alBccBlaayyaalBccBlaa"]]
+12 = [[15, "allllllaaaaaallllllaa"]]
+13 = [[15, "aaamaaaaaaamaaaaaaam"]]
+14 = [[15, "aaaaaamaaaaaaamaaaaa"]]

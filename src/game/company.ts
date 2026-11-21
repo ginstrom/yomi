@@ -2,7 +2,7 @@ import { hexDistance, hexEquals, type Hex } from '../grid/hex.ts'
 import { maxHp, type Character } from '../character/character.ts'
 import type { Item } from '../inventory/inventory.ts'
 import type { WorldEvent } from './blight.ts'
-import { canBuildOutpost, canBuildTower, outpostSite, raiseOutpost, raiseTower } from './buildings.ts'
+import { canBuildTower, improveRefusal, improvementSite, raiseImprovement, raiseTower } from './buildings.ts'
 import { NATURAL_HEALING_PER_DAY, canCamp, partyWounded, rest } from './camp.ts'
 import { applyCraft, craftRefusal, craftTier } from './crafting.ts'
 import { MAX_PARTIES, PARTY_NAMES, newExpedition, partyId, presences, type DayAction, type Expedition, type Order, type PartyPresence } from './expedition.ts'
@@ -61,7 +61,7 @@ export interface PartyDay {
 
 /** What a day brought. */
 export interface DayReport {
-  /** The parties' own events (tower_built, outpost_built), in party order, then the world day's (passTurn's), in that order. */
+  /** The parties' own events (tower_built, site_improved), in party order, then the world day's (passTurn's), in that order. */
   events: WorldEvent[]
   partyEvents: PartyEvent[]
   parties: PartyDay[]
@@ -185,7 +185,7 @@ export function setOrder(game: GameState, id: string, request: OrderRequest): st
     case 'garrison':
       if (!worldActive(world)) return 'The game is over.'
       if (party.confronting !== null) return `${partyNoun(game, party)} must first answer the monsters it faces.`
-      if (!outpostSite(world, party)) return 'Only a held resource can be garrisoned.'
+      if (!improvementSite(world, party)) return 'Only a held resource can be garrisoned.'
       party.order = { kind: 'garrison' }
       return null
     case 'meet': {
@@ -243,8 +243,8 @@ function actionRefusal(game: GameState, party: Expedition, action: DayAction): s
       return canCamp(world, party) ? null : `${partyNoun(game, party)} cannot camp here.`
     case 'tower':
       return canBuildTower(world, party)
-    case 'outpost':
-      return canBuildOutpost(world, party)
+    case 'improve':
+      return improveRefusal(world, party)
     case 'craft':
     case 'embed': {
       if (action.place.party !== party.id) return `That item is not ${partyNoun(game, party)}'s.`
@@ -280,8 +280,8 @@ function runAction(game: GameState, party: Expedition, action: DayAction, done: 
     case 'tower':
       done.built = raiseTower(world, party)
       break
-    case 'outpost':
-      done.built = raiseOutpost(world, party)
+    case 'improve':
+      done.built = raiseImprovement(world, party)
       break
     case 'craft':
       done.day.made = applyCraft(game, action.place, action.modifier, action.grade)

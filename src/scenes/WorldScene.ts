@@ -1,8 +1,8 @@
 import Phaser from 'phaser'
 import type { Character } from '../character/character.ts'
 import { canAdvance } from '../character/progression.ts'
-import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex } from '../game/blight.ts'
-import { atEncampment, outpostSite, outpostSiteRefusal, towerSiteRefusal } from '../game/buildings.ts'
+import { MAX_BLIGHT, blightAt, blightGrowth, boardHex, boardIndex, type WorldEvent } from '../game/blight.ts'
+import { atEncampment, improvementSite, towerSiteRefusal } from '../game/buildings.ts'
 import { exchangePartners } from './exchangeView.ts'
 import { UNTIL_LIMIT, act, actionBlocked, advance, advanceRefusal, blockingParty, partyNoun, passDay, setOrder, type DayReport } from '../game/company.ts'
 import { campUntilHealed, canCamp, describeCamp, partyWounded } from '../game/camp.ts'
@@ -11,7 +11,7 @@ import { newGame, selectedParty, type GameState } from '../game/gameState.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
 import { craftTier } from '../game/crafting.ts'
 import { FORECAST_SLICE_MS, Forecaster, forecastHint, forecastLabel, worldForecastStart, workFor, type Forecast } from '../game/forecast.ts'
-import { daysToFall } from '../game/territory.ts'
+import { daysToFall, improvementName, siteImprovement } from '../game/territory.ts'
 import { UNEXPLORED, knownBlightedShare, visibleHexes } from '../game/vision.ts'
 import {
   encampment,
@@ -46,7 +46,8 @@ import { BANNER_SPRITES, PARTY_LIST_W, bannerOf, deployedParties, figureOffsets,
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { FRAME_ACTIVE_COLOR, HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
-import { advanceMessage, describeDays, describeOthers, describeStanding, describeWalk, describeWorldEvent, describeWorldEvents } from './worldEvents.ts'
+import { advanceMessage, describeDays, describeOthers, describeStanding, describeWalk, describeWorldEvent, describeWorldEvents, yieldSummary } from './worldEvents.ts'
+import { improveLabel } from './improveButton.ts'
 import { hexInfo } from './hexInfo.ts'
 import { tellStory, type StoryAnchors } from './StoryScene.ts'
 import type { StoryMoment } from '../story/story.ts'
@@ -73,6 +74,8 @@ const LOCATION_SPRITES: Record<LocationKind, string> = {
 }
 /** A watchtower's sprite, which is not a location's. */
 const TOWER_SPRITE = 'map_watchtower'
+/** A fort's palisade, drawn over its resource's icon. */
+const FORT_SPRITE = 'map_fort'
 /** Map sprites are drawn on a 24px canvas and shown at 2x. */
 const LOCATION_SCALE = 2
 /** Each party is its first member as the battlefield shows it, gear and all, but smaller, with its banner planted at its side. */
@@ -133,6 +136,9 @@ const SOURCE_SCALE = 3
 /** The bars behind the header and the buttons: the map shows through them, dimmed. */
 const BAR_COLOR = 0x1d1d1d
 const BAR_ALPHA = 0.8
+/** The stock panel's font, and the smaller one its three lines take where they would reach the hint. */
+const STATUS_FONT = '13px'
+const STATUS_FONT_SMALL = '11px'
 /** The outcome screen's buttons. */
 const BUTTON_W = 140
 const BUTTON_H = 44
@@ -222,8 +228,12 @@ export class WorldScene extends Phaser.Scene {
   /** Also in the time row, while another party stands on the selected party's hex: opens the Exchange overlay. */
   private exchangeButton!: Phaser.GameObjects.Container
   private towerButton!: Phaser.GameObjects.Container
-  /** Shown on a held town or resource that has no outpost yet. */
-  private outpostButton!: Phaser.GameObjects.Container
+  /** Shown on a held resource below a fort: builds its next level, and names it and its cost (`improveLabel`). */
+  private improveButton!: Phaser.GameObjects.Container
+  /** The last yield day's summary the scene saw (`yieldSummary`), the stock panel's third line; not saved, so blank after a load. */
+  private lastYield: string | null = null
+  /** How many forts' palisades the map draws, for the probe. */
+  private palisades = 0
   /** Shown at the encampment, beside the camp buttons: goes in, to its facilities. */
   private encampmentButton!: Phaser.GameObjects.Container
   /** What the player knows of the hovered hex (`hexInfo`), hidden while no hex is hovered. */
@@ -273,7 +283,10 @@ export class WorldScene extends Phaser.Scene {
   }
 
   create(data: WorldData): void {
+    const previous = this.gameState
     this.gameState = data?.game ?? newGame()
+    // The last yield is the scene's, not saved: kept over a battle of the same game, blank for another or a loaded one.
+    if (this.gameState !== previous) this.lastYield = null
     this.board = new HexBoard(this.world.board)
     // Phaser reuses the scene instance on restart, so field initializers don't run again.
     this.walking = false
@@ -313,7 +326,8 @@ export class WorldScene extends Phaser.Scene {
     this.footerBar = this.add.rectangle(0, 0, 0, 0, BAR_COLOR, BAR_ALPHA).setOrigin(0)
     this.turnText = this.add.text(20, 16, '', { fontFamily: 'monospace', fontSize: '20px', color: '#ffffff' })
     this.statusText = this.add
-      .text(0, 16, '', { fontFamily: 'monospace', fontSize: '13px', color: '#ce93d8', align: 'right' })
+      // Outlined in the bar's colour: a map label dimmed under the header can show through behind its three lines.
+      .text(0, 16, '', { fontFamily: 'monospace', fontSize: STATUS_FONT, color: '#ce93d8', align: 'right', stroke: '#1d1d1d', strokeThickness: 4 })
       .setOrigin(1, 0)
     this.hintText = this.add.text(20, 44, '', { fontFamily: 'monospace', fontSize: '13px', color: '#9e9e9e' })
     this.messageText = this.add
@@ -361,7 +375,7 @@ export class WorldScene extends Phaser.Scene {
       this.createButton('Craft', () => this.openCrafting()),
     ]
     this.towerButton = this.createButton('Build Watchtower', () => this.onBuildTower())
-    this.outpostButton = this.createButton('Build Outpost', () => this.onBuildOutpost())
+    this.improveButton = this.createButton('Build an Outpost', () => this.onImprove())
     this.encampmentButton = this.createButton(`Enter ${encampmentName(this.world)}`, () => this.openEncampment())
     this.column = new PartyColumn(this, this.selectedMembers(), (index) => this.onPortrait(index))
     // Before the outcome screen, which covers it.
@@ -504,6 +518,35 @@ export class WorldScene extends Phaser.Scene {
     this.setAutoLabel()
   }
 
+  /**
+   * The Improve button's text: the whole label where the camp row, with it,
+   * fits the window beside the party's column, else the compact one (no
+   * cost; the hex info tells it). Chosen by `layout`, so a resize and every
+   * refresh (after the other buttons' visibility is set) get it right.
+   */
+  private setImproveLabel(): void {
+    if (!this.improveButton.visible) return
+    const world = this.world
+    const expedition = this.expedition()
+    const full = improveLabel(world, expedition)
+    if (full === null) return
+    const others = [...this.campButtons, this.towerButton, this.encampmentButton].filter((button) => button.visible)
+    const used = others.reduce((sum, button) => sum + button.width + FOOTER_GAP, 0)
+    const room = this.scale.width - PARTY_PANEL_W - 2 * FOOTER_GAP - used
+    const label = WorldScene.footerWidth(full) <= room ? full : improveLabel(world, expedition, true)!
+    const text = this.improveButton.getData('text') as Phaser.GameObjects.Text
+    if (text.text === label) return
+    text.setText(label)
+    const width = WorldScene.footerWidth(label)
+    ;(this.improveButton.getData('bg') as Phaser.GameObjects.Rectangle).setSize(width, BUTTON_H)
+    this.improveButton.setSize(width, BUTTON_H)
+  }
+
+  /** Keeps the last yield day among `events` for the stock panel; days without one leave the line as it was. */
+  private noteYield(events: readonly WorldEvent[]): void {
+    this.lastYield = yieldSummary(events) ?? this.lastYield
+  }
+
   /** The Auto-resolve button reads the estimate; the row is laid out again when its width changes. */
   private setAutoLabel(): void {
     const button = this.buttons[3]
@@ -553,12 +596,16 @@ export class WorldScene extends Phaser.Scene {
       forecastTip: this.forecastTipBox.visible ? this.rectOf(this.forecastTipBox) : null,
       forecastTipText: this.forecastTipBox.visible ? this.forecastTipText.text : '',
       statusRect: this.statusText.getBounds(),
+      hintRect: this.hintText.getBounds(),
       forecast: this.forecastResult,
       forecastRuns: this.forecastRuns,
       autoLabel: (this.buttons[3].getData('text') as Phaser.GameObjects.Text).text,
       outcome: this.outcomeText.visible ? this.outcomeText.text : '',
       visible: [...this.visible].sort((a, b) => a - b),
       info: this.infoText.visible ? this.infoText.text : '',
+      improveLabel: this.improveButton.visible ? (this.improveButton.getData('text') as Phaser.GameObjects.Text).text : null,
+      status: this.statusText.text,
+      palisades: this.palisades,
       buttons: {
         scout,
         wait,
@@ -572,7 +619,7 @@ export class WorldScene extends Phaser.Scene {
         camp,
         campUntilHealed,
         buildTower: buttonProbe(this.towerButton),
-        buildOutpost: buttonProbe(this.outpostButton),
+        improve: buttonProbe(this.improveButton),
         enterEncampment: buttonProbe(this.encampmentButton),
         craft: buttonProbe(this.campButtons[2]),
         end: buttonProbe(this.endButton),
@@ -632,10 +679,12 @@ export class WorldScene extends Phaser.Scene {
     const key = [
       ...this.world.locations.map((l) => `${l.id}:${this.knowledgeOf(l)}`),
       ...this.world.towers.map((t) => t.id),
+      ...this.world.locations.filter((l) => siteImprovement(this.world, l.id) === 3).map((l) => `fort:${l.id}`),
     ].join()
     if (key === this.drawnLocations) return
     this.drawnLocations = key
     this.siteSprites.removeAll(true)
+    this.palisades = 0
     for (const [i, location] of this.world.locations.entries()) {
       const knowledge = this.knowledgeOf(location)
       if (knowledge === 'hidden') continue
@@ -649,6 +698,16 @@ export class WorldScene extends Phaser.Scene {
       if (source) figure.setTint(SOURCE_TINT)
       if (knowledge === 'remembered') figure.setAlpha(REMEMBERED_ALPHA)
       this.siteSprites.add(figure)
+      // A fort's palisade rings its resource's icon.
+      if (siteImprovement(this.world, location.id) === 3) {
+        const palisade = this.add
+          .sprite(x, y + LOCATION_Y, SPRITE_ATLAS, spriteFrame(FORT_SPRITE, 'base'))
+          .setScale(LOCATION_SCALE)
+          .play({ key: spriteAnim(FORT_SPRITE, 'idle'), delay: (i * LOCATION_STAGGER_MS) % 1000 })
+        if (knowledge === 'remembered') palisade.setAlpha(REMEMBERED_ALPHA)
+        this.siteSprites.add(palisade)
+        this.palisades++
+      }
     }
     for (const [i, tower] of this.world.towers.entries()) {
       const { x, y } = boardHexCenter(tower.position, WORLD_LAYOUT)
@@ -674,7 +733,8 @@ export class WorldScene extends Phaser.Scene {
           ? daysToFall(this.world, this.presences(), location)
           : null
       const lines = [held ? `${location.name} *` : location.name]
-      if (this.world.outposts.includes(location.id)) lines.push('outpost')
+      const built = siteImprovement(this.world, location.id)
+      if (built !== 0 && location.kind !== 'monsters') lines.push(improvementName(location, built))
       if (days !== null) lines.push(`falls in ${days}d`)
       this.siteLabels.add(
         this.add
@@ -855,12 +915,13 @@ export class WorldScene extends Phaser.Scene {
     const { width, height } = this.scale
     const centreX = PARTY_PANEL_W + (width - PARTY_PANEL_W) / 2
     const buttonY = height - 50
-    // Only the buttons shown take room: the camp row has one of the tower's, the outpost's and the encampment's at most.
+    this.setImproveLabel()
+    // Only the buttons shown take room: the camp row has one of the tower's, the improvement's and the encampment's at most.
     const timeY = buttonY - ROW_PITCH
     const rows: [Phaser.GameObjects.Container[], number][] = [
       [[...this.timeButtons, this.homeButton, this.garrisonButton, this.exchangeButton], timeY],
       [this.buttons, buttonY],
-      [[...this.campButtons, this.towerButton, this.outpostButton, this.encampmentButton], buttonY],
+      [[...this.campButtons, this.towerButton, this.improveButton, this.encampmentButton], buttonY],
     ]
     for (const [all, y] of rows) {
       const row = all.filter((button) => button.visible)
@@ -873,7 +934,7 @@ export class WorldScene extends Phaser.Scene {
     }
     const messageY = timeY - BUTTON_H / 2 - 26
     this.messageText.setPosition(centreX, messageY)
-    this.statusText.setPosition(width - 20, 16)
+    this.fitStatus()
     this.layoutForecastTip()
     this.infoBox.setPosition(width - PARTY_LIST_W - INFO_MARGIN - INFO_W, HEADER_BOTTOM + INFO_MARGIN)
     this.infoText.setPosition(this.infoBox.x + INFO_PAD, this.infoBox.y + INFO_PAD)
@@ -1038,8 +1099,10 @@ export class WorldScene extends Phaser.Scene {
       [
         `Blighted ${Math.round(knownBlightedShare(world) * 100)}% of the land known${growth > 0 ? `, blight +${growth}%` : ''}${world.status === 'endless' ? ' (endless)' : ''}`,
         `Stock: ${stock || 'nothing yet'}`,
+        ...(this.lastYield ? [this.lastYield] : []),
       ].join('\n'),
     )
+    this.fitStatus()
     this.column.refresh(this.active)
     this.partyList.refresh(this.listedParties(), this.selectedParty)
     for (const button of this.buttons) button.setVisible(here !== null && !this.walking && world.status !== 'lost')
@@ -1047,12 +1110,13 @@ export class WorldScene extends Phaser.Scene {
     const ordering = worldActive(world) && here === null && !this.walking
     for (const button of this.timeButtons) button.setVisible(ordering)
     this.homeButton.setVisible(ordering && !hexEquals(expedition.position, encampment(world).position))
-    this.garrisonButton.setVisible(ordering && outpostSite(world, expedition) !== null && expedition.order.kind !== 'garrison')
+    this.garrisonButton.setVisible(ordering && improvementSite(world, expedition) !== null && expedition.order.kind !== 'garrison')
     this.exchangeButton.setVisible(ordering && exchangePartners(this.gameState, expedition).length > 0)
     const campable = canCamp(world, expedition)
     for (const button of this.campButtons) button.setVisible(campable && !this.walking)
     this.towerButton.setVisible(campable && !this.walking && towerSiteRefusal(world, expedition) === null)
-    this.outpostButton.setVisible(campable && !this.walking && outpostSiteRefusal(world, expedition) === null)
+    const improving = improveLabel(world, expedition)
+    this.improveButton.setVisible(campable && !this.walking && improving !== null)
     this.encampmentButton.setVisible(atEncampment(world, expedition) && !this.walking)
     this.layout()
     this.refreshForecast()
@@ -1121,6 +1185,18 @@ export class WorldScene extends Phaser.Scene {
     this.forecastTipText.setPosition(x + INFO_PAD, y + INFO_PAD)
   }
 
+  /**
+   * Places the stock panel at the header's right. Three lines (with the last yield) start higher, to clear the hint under the
+   * turn's number, and are set smaller when they would still reach it (a narrow window, a long hint).
+   */
+  private fitStatus(): void {
+    this.statusText.setFontSize(STATUS_FONT).setLineSpacing(0).setPosition(this.scale.width - 20, this.lastYield ? 3 : 16)
+    if (!this.lastYield) return
+    const [a, b] = [this.statusText.getBounds(), this.hintText.getBounds()]
+    // Set small and close, from the header's top edge, the three lines end above the hint's row.
+    if (a.x < b.right && b.x < a.right && a.y < b.bottom && b.y < a.bottom) this.statusText.setFontSize(STATUS_FONT_SMALL).setLineSpacing(-2).setY(1)
+  }
+
   /** The header's hint: what the selected party may do where it stands, or whom a click on the hovered hex sends it to meet. */
   private refreshHint(): void {
     this.layoutForecastTip()
@@ -1135,6 +1211,7 @@ export class WorldScene extends Phaser.Scene {
             ? 'Scout, wait, attack or auto-resolve, or click a hex to move away.'
             : 'Click a hex to travel there, or camp or pass days below. Each day takes a turn.',
     )
+    this.fitStatus()
   }
 
   /** Draws `route` from the selected party's hex in `color`, its end ringed, red where it ends among sighted monsters; returns whether it does. */
@@ -1265,6 +1342,7 @@ export class WorldScene extends Phaser.Scene {
     const told = describeWalk(this.gameState, this.expedition(), reports)
     // A walk blocked at its first hex has no day to report, but the party now stands before what blocked it.
     const events = reportEvents(reports)
+    this.noteYield(reports.flatMap((report) => report.events))
     const here = monstersHere(this.world, this.expedition())
     if (here && !events.some((event) => event.type === 'confronting')) events.push({ type: 'confronting', party: this.selectedParty, location: here.id })
     playCues(this, worldSounds(events))
@@ -1316,7 +1394,7 @@ export class WorldScene extends Phaser.Scene {
   private refreshWalking(): void {
     this.partyMark.clear()
     this.selectedMark.clear()
-    for (const button of [...this.buttons, ...this.timeButtons, this.homeButton, this.garrisonButton, this.exchangeButton, ...this.campButtons, this.towerButton, this.outpostButton, this.encampmentButton]) button.setVisible(false)
+    for (const button of [...this.buttons, ...this.timeButtons, this.homeButton, this.garrisonButton, this.exchangeButton, ...this.campButtons, this.towerButton, this.improveButton, this.encampmentButton]) button.setVisible(false)
     this.partyList.refresh(this.listedParties(), this.selectedParty)
     this.refreshHover()
   }
@@ -1373,6 +1451,7 @@ export class WorldScene extends Phaser.Scene {
     const events = reports.flatMap((report) => report.events)
     const told = describeDays(reports, this.gameState, limit)
     const finish = () => {
+      this.noteYield(events)
       playCues(this, worldSounds(reportEvents(reports)))
       this.focusInterrupt(reports)
       this.messageText.setText(told)
@@ -1417,6 +1496,7 @@ export class WorldScene extends Phaser.Scene {
    * concerns, if any, is selected and centred as for an interrupt; then saves.
    */
   private ownDays(own: string, reports: readonly DayReport[], others = describeOthers(this.gameState, this.expedition(), reports)): void {
+    this.noteYield(reports.flatMap((report) => report.events))
     playCues(this, worldSounds(reportEvents(reports, this.selectedParty)))
     if (others.party !== null) this.selectParty(others.party)
     this.messageText.setText(others.text ? `${own} ${others.text}` : own)
@@ -1469,9 +1549,9 @@ export class WorldScene extends Phaser.Scene {
     this.built({ kind: 'tower' })
   }
 
-  /** Builds an outpost at the held site the party stands on, a day's work, or says why it cannot. */
-  private onBuildOutpost(): void {
-    this.built({ kind: 'outpost' })
+  /** Builds the next improvement at the held site the party stands on, a day's work, or says why it cannot (the Lodge, the stock). */
+  private onImprove(): void {
+    this.built({ kind: 'improve' })
   }
 
   /** A building's day: what it built and what else the day brought, or why it was refused. */
@@ -1621,6 +1701,7 @@ export class WorldScene extends Phaser.Scene {
     // The craft or the rune set in, then what its day brought.
     playCue(this, kind === 'embed' ? 'world.rune.embed' : 'world.craft')
     playCues(this, worldSounds(events).map((sound) => ({ ...sound, delayMs: sound.delayMs + WORLD_SOUND_GAP_MS })))
+    this.noteYield(events)
     const told = describeWorldEvents(events, events.find((event) => isNotable(this.world, event, this.presences())) ?? null)
     this.messageText.setText(`A day's work makes the ${item}.${told ? ` ${told}` : ''}`)
     this.checkOutcome()

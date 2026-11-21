@@ -19,6 +19,7 @@ export const FACILITY_SPRITES: Record<FacilityId, string> = {
   trading_post: 'camp_trading_post',
   workshop: 'camp_workshop',
   infirmary: 'camp_infirmary',
+  builders_lodge: 'camp_lodge',
 }
 
 /** Where a facility not yet built is drawn: its plot, staked out. */
@@ -31,16 +32,22 @@ export function facilityFrame(facility: Pick<FacilityView, 'id' | 'level'>): str
 
 /**
  * Where each plot's building stands, its bottom centre, in the screen's
- * frame (720 by 500), in the order `facilities` lists them: two across the
- * front of the clearing, either side of the campfire, then three along the
- * back, the middle one behind the fire, the tents between them.
+ * frame (720 by 500), in the order `facilities` lists them: three columns,
+ * each with a building across the back and, but for the middle one's, across
+ * the front: guild hall and shrine at the front corners, trading post and
+ * workshop at the back corners, the infirmary behind the middle and the
+ * Builders' Lodge in front of it. The tents and the campfire stand in the gaps
+ * between the columns (EncampmentScene). Buildings are drawn at
+ * `BUILDING_SCALE`, small enough that no two overlap and every label, a line
+ * or two, stays between its neighbours'.
  */
 const PLOTS: readonly Point[] = [
-  { x: 230, y: 312 },
-  { x: 500, y: 312 },
-  { x: 120, y: 236 },
-  { x: 610, y: 236 },
-  { x: 365, y: 222 },
+  { x: 130, y: 308 },
+  { x: 590, y: 308 },
+  { x: 130, y: 178 },
+  { x: 590, y: 178 },
+  { x: 360, y: 178 },
+  { x: 360, y: 308 },
 ]
 
 export function plotAt(index: number): Point {

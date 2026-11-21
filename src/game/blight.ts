@@ -3,14 +3,14 @@ import { HexBoard, hexDistance, hexNeighbors, hexToOffset, offsetToHex, type Boa
 import { MAGIC_ITEMS, type Item } from '../inventory/inventory.ts'
 import { ENCOUNTER_BANDS, type EncounterId } from './encounters.ts'
 import type { PartyPresence } from './expedition.ts'
-import type { Material } from './territory.ts'
+import type { ImprovementLevel, Material, YieldSource } from './territory.ts'
 import { ENCAMPMENT_ID, threatAt, type MonsterLocation, type WorldState } from './worldMap.ts'
 
 /**
  * The blight (docs/designs/blight.md): every hex of the world map has a level
  * from 0 (clean) to 3 (corrupted), and each day blight and clean influence
  * contend for it. Monster locations, the Source and corrupted land push the
- * blight; the encampment (with its shrine), held sites (with their outposts),
+ * blight; the encampment (with its shrine), held sites (with their improvements),
  * watchtowers and every party push back. A hex's `shift`
  * counter moves by the difference each day, and a level goes up or down when
  * it reaches `SHIFT_COST` either way. Corrupted land spawns new monster
@@ -36,8 +36,8 @@ export const SITE_STRENGTH = 3
 export const TOWER_STRENGTH = 4
 /** What each level of the encampment's shrine adds to its strength (buildings.ts). */
 export const SHRINE_STRENGTH = 3
-/** What an outpost adds to its held site's strength (buildings.ts). */
-export const OUTPOST_STRENGTH = 3
+/** What a held resource's improvement (buildings.ts) adds to its strength, by level 0 to 3: an outpost and works 3, a fort 7. */
+export const IMPROVEMENT_STRENGTH: readonly number[] = [0, 3, 3, 7]
 /** A party pushes with this plus half the sum of its members' levels. */
 export const PARTY_BASE = 2
 /** How far a hex's shift counter must go, either way, to move its level by one. */
@@ -74,11 +74,13 @@ export type WorldEvent =
   | { type: 'sighted'; location: string; name: string; at: Hex; threat: number; source?: true }
   | { type: 'site_threatened'; site: string; name: string; days: number }
   | { type: 'site_captured'; site: string; name: string }
-  | { type: 'site_lost'; site: string; name: string; outpost?: true }
+  /** `improvement`: the level razed with the site, if it had one. */
+  | { type: 'site_lost'; site: string; name: string; improvement?: ImprovementLevel }
   | { type: 'tower_built'; tower: string; at: Hex }
   | { type: 'tower_lost'; tower: string; at: Hex }
-  | { type: 'outpost_built'; site: string; name: string }
-  | { type: 'yield'; site: string; name: string; material: Material; amount: number }
+  /** `building`: the level's name ("Outpost", "Mine", "Fort", …). */
+  | { type: 'site_improved'; site: string; name: string; level: ImprovementLevel; building: string }
+  | { type: 'yield'; site: string; name: string; material: Material; amount: number; source?: YieldSource }
   | { type: 'encampment_lost'; name: string }
 
 /** Where a hex's level and shift counter are kept in `WorldState.blight` and `.shift`. */
@@ -112,10 +114,10 @@ export function monsterStrength(location: MonsterLocation): number {
   return location.source ? SOURCE_STRENGTH : BLIGHT_PER_THREAT * location.threat
 }
 
-/** What a held site pushes with: the encampment with its shrine, a resource with its outpost. */
+/** What a held site pushes with: the encampment with its shrine, a resource with its improvement. */
 export function siteStrength(world: WorldState, id: string): number {
   if (id === ENCAMPMENT_ID) return CAMP_STRENGTH + SHRINE_STRENGTH * world.shrine
-  return SITE_STRENGTH + (world.outposts.includes(id) ? OUTPOST_STRENGTH : 0)
+  return SITE_STRENGTH + IMPROVEMENT_STRENGTH[world.improvements[id] ?? 0]
 }
 
 // ---- the board's geometry and the fixed sources' fields, worked out once ----

@@ -168,6 +168,8 @@ export interface WorldProbe {
   forecastTipText: string
   /** The header's status text (blight and stock) on screen. */
   statusRect: Rect
+  /** The header's hint (under the turn) on screen. */
+  hintRect: Rect
   /** The finished auto-resolve estimate for the battle Attack would start; null while it is worked out, and whenever no Auto-resolve button shows. */
   forecast: Forecast | null
   /** How many estimates the map has started since it opened: a redraw that changes no battle leaves it, a new battle (a day, another party) adds one. */
@@ -180,6 +182,12 @@ export interface WorldProbe {
   visible: number[]
   /** The info panel's words on the hovered hex, or '' while no hex is hovered. */
   info: string
+  /** The Improve button's text while it shows, else null. */
+  improveLabel: string | null
+  /** The stock panel's text: the blight line, the stock, and the last yield line when there is one. */
+  status: string
+  /** How many forts' palisades (`map_fort`) the map draws. */
+  palisades: number
   /**
    * Scout, Wait, Attack and Auto-resolve show among monsters, the camp buttons and the time buttons elsewhere (so, with the game still going); `campUntilHealed` is enabled while someone is wounded.
    * `end` and `endless` show on the victory screen, `menu` on the defeat screen.
@@ -204,8 +212,8 @@ export interface WorldProbe {
     campUntilHealed: ButtonProbe
     /** Shows where the party may camp on land a watchtower could stand on; a click without the stock says why in the message. */
     buildTower: ButtonProbe
-    /** Shows on a held resource without an outpost; a click without the stock says why in the message. */
-    buildOutpost: ButtonProbe
+    /** Shows on a held resource below a fort; a click without the Lodge or the stock says why in the message. `improveLabel` is its text. */
+    improve: ButtonProbe
     /** Shows while the party stands at the encampment: goes in, to its facilities. */
     enterEncampment: ButtonProbe
     /** Shows wherever the party may camp: opens field crafting. */
@@ -232,6 +240,14 @@ export interface HallFaceProbe extends ButtonProbe {
   name: string
 }
 
+/** A box on screen: its centre and size. */
+export interface BoxProbe {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 export interface EncampmentProbe {
   /** What the player named the encampment. */
   name: string
@@ -241,8 +257,17 @@ export interface EncampmentProbe {
   selected: FacilityId | null
   /** What the last action did, or why it was refused. */
   message: string
-  /** Every facility, built or an empty plot, at its building's centre: a click shows its details. `frame` is the atlas frame drawn. */
-  facilities: Array<ButtonProbe & { id: FacilityId; level: number; frame: string }>
+  /** The lines of the details shown (name and level, what it is, what it does, what is next), or none while no facility is. */
+  details: string[]
+  /** The font size the details' lines below the title were set at: 12, or 11 when they had to shrink to fit; 0 while none is shown. */
+  detailsSize: number
+  /** Why the next level of the facility shown cannot be bought now, or null (also null while none is shown). */
+  refusal: string | null
+  /**
+   * Every facility, built or an empty plot, at its building's centre: a click shows its details. `frame` is the atlas frame drawn;
+   * `building` and `label` are the boxes (centre, size) of the picture and of the line under it, on screen.
+   */
+  facilities: Array<ButtonProbe & { id: FacilityId; level: number; frame: string; labelText: string; building: BoxProbe; label: BoxProbe }>
   /** `improve` builds or raises the facility shown, `open` goes into it (the guild hall, trading post or workshop), `leave` goes back to the map. */
   buttons: { improve: ButtonProbe; open: ButtonProbe; leave: ButtonProbe }
 }

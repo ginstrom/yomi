@@ -192,7 +192,7 @@ When there are no monsters on your hex, the footer offers:
 - **Camp**: rest for a day. Each day of camping heals every hero 1 hit point (more with an infirmary, see [The infirmary](#the-infirmary)) and refills every caster's mana.
 - **Camp until healed**: your healers cast their heals with the mana they have, then the party camps a day and casts again, repeating until everyone is whole. Anything important that happens breaks camp.
 - **Craft**: rework a piece of gear in the field, a day's work (see [Crafting](#crafting)).
-- **Build Watchtower** or **Build Outpost**, where the land allows (see [Building](#9-building)).
+- **Build Watchtower** or **Improve**, where the land allows (see [Building](#9-building)).
 - **Return home** and **Garrison** sit in the row above, with the time buttons.
 - **Enter** the encampment, when the party stands on it (see [The encampment](#the-encampment)).
 
@@ -521,14 +521,14 @@ A hero born with an attribute of 7 or 8 reaches the nodes that ask it from the s
 Every hex of land has a blight level from 0 (clean) to 3 (corrupted), shown as a tint over the grass. Corrupted land also shows dark growths. Every day, sources of influence push on the hexes around them, and their strength fades by a point for each hex of distance:
 
 - **Pushing the blight forward**: monster lairs (more strongly the higher their threat), the Source itself, and corrupted land spreading to its neighbours. The blight grows stronger over time, by a tenth every 30 days, up to half again as strong.
-- **Pushing it back**: the encampment (stronger with its shrine), every resource you hold (stronger with an outpost), every watchtower, and the party itself, which grows stronger as the heroes level up.
+- **Pushing it back**: the encampment (stronger with its shrine), every resource you hold (stronger with an outpost, works or fort), every watchtower, and the party itself, which grows stronger as the heroes level up.
 
 Consequences:
 
 - **Corrupted land breeds new monster lairs.** A new lair's threat depends on how far from the encampment it appears: goblins and kobolds at any threat, and bandits from threat 3.
 - **Winning a battle cleanses the land** around the lair, lowering every hex within 1 + its threat by two levels.
-- **Resources** are captured when their land is clean (level 0) and lost when it reaches level 2. While the blight gains on a site, the map shows it in orange with the number of days left until it falls. A watchtower can be lost the same way.
-- **Stock**: every 5 days, each site you hold adds its yield to the encampment's stock (gold, iron, timber, silver and so on), and the encampment itself adds 2 gold. A site whose land is tainted yields half.
+- **Resources** are captured when their land is clean (level 0) and lost when it reaches level 2, or, behind a fort, only when it is corrupted (level 3). A site lost razes whatever was built on it. While the blight gains on a site, the map shows it in orange with the number of days left until it falls. A watchtower can be lost the same way.
+- **Stock**: every 5 days, each site you hold adds its yield to the encampment's stock (gold, iron, timber, silver and so on), and the encampment itself adds 2 gold, with more once its trading post is a Market (see [Building](#9-building)). A site whose land is tainted yields half, and so does the market while the encampment's is.
 
 The header's percentage counts only the land you have explored.
 
@@ -536,15 +536,20 @@ The header's percentage counts only the land you have explored.
 
 ## 9. Building
 
-The stock pays for everything you build.
+The stock pays for everything you build. On a held resource the **Improve** button names the next level and its cost ("Build a Mine: 30 gold, 15 stone"), or, when the Builders' Lodge is too low, what it needs ("A Mine needs the Builders' Lodge"); in a narrow window it drops the cost, which the hovered hex's panel still tells. The stock panel's third line sums the last yield day by source (in a narrow window it is set smaller); it starts blank when you load a game.
+
+![A Mine at Iron Vein: the hovered hex's panel gives its yield, strength and next level, and the Improve button offers the fort](images/world-improve.png)
 
 | Building | Where | Cost | Time | Effect |
 | --- | --- | --- | --- | --- |
 | Watchtower | Clean land off any location, 4+ hexes from other towers | 10 iron, 5 gold | A day | Sees 8 hexes and pushes the blight back. New lairs will not spawn close to it. |
-| Outpost | A held resource without one | 15 gold, 10 timber | A day | The site resists the blight more strongly and yields more. Lost with the site. |
+| Outpost | A held resource without one | 15 gold, 10 timber | A day | The site resists the blight more strongly and yields 1 more. Lost with the site. |
+| Works (Mine, Lumber Camp, Quarry, Saltworks or Peat Cuttings, by the resource) | A held resource with an outpost | 30 gold, 15 stone; Builders' Lodge level 1 | A day | Yields 3 more than the bare site, and stands as strong as an outpost against the blight. Razed with the site. |
+| Fort | A held resource with a works | 50 gold, 20 iron, 10 stone; Builders' Lodge level 2 | A day | Much stronger against the blight, and lost only when its land is corrupted (level 3); yields as the works did. Razed with the site. A palisade marks it on the map. |
 | Shrine | The encampment's empty plot | 20 gold, then 40 gold + 15 silver, then 80 gold + 30 silver | Instant | Each level strengthens the encampment against the blight |
 | Guild hall | The encampment | 30 gold + 15 iron, then 60 gold + 30 iron | Instant | Party limit 3, then 4, then 5 |
-| Trading post | The encampment | 40 gold + 15 stone, then 80 gold + 15 copper, then 120 gold + 20 silver | Instant | Sells plain gear, then Fine and Lesser runes, then Masterwork, then steel and second-rank runes |
+| Trading post | The encampment | 40 gold + 15 stone, then 80 gold + 15 copper, then 120 gold + 20 silver, then 160 gold + 30 silver + 20 stone, then 220 gold + 40 silver + 10 crystal | Instant | Sells plain gear, then Fine and Lesser runes, then Masterwork, then steel and second-rank runes. Levels 4 to 6 (the Market, the Market Hall, the Trading House) also bring gold every 5 days, with the land's yields: 2, 3 and 5 gold, halved while the encampment's land is tainted |
+| Builders' Lodge | The encampment's empty plot | 30 gold + 20 timber, then 60 gold + 25 stone (a third level, 100 gold + 20 iron + 20 stone, comes with trade routes: the game says "Roads come with trade routes.") | Instant | Level 1 lets you raise works on held resources, level 2 forts |
 | Workshop | The encampment's empty plot | 25 gold + 15 iron, then 40 gold + 15 stone, then 60 gold + 10 crystal | Instant | Crafts more modifiers, at higher grades; sets and fuses runes from level 1, takes them out from level 2 |
 | Infirmary | The encampment's empty plot | 20 gold + 10 timber, then 40 gold + 15 peat, then 60 gold + 20 salt | Instant | Faster healing while you camp |
 
@@ -556,7 +561,7 @@ If you click a build button without enough stock, the game tells you the cost.
 
 ![The encampment](images/encampment.png)
 
-When the party stands on the encampment, **Enter** (the button carries the encampment's name) shows the place: every facility on its plot. A facility not yet built is an empty plot with a sign, and a built one is drawn at its level, so the encampment grows as you build. Click a building or a plot to see what it does, what its next level brings and costs, and **Build** or **Raise** it. **Leave** (or Esc) goes back to the map.
+When the party stands on the encampment, **Enter** (the button carries the encampment's name) shows the place: every facility on its plot. A facility not yet built is an empty plot with a sign, and a built one is drawn at its level, so the encampment grows as you build. The Builders' Lodge stands in front of the infirmary, and the trading post is named for its level (Market, Market Hall, Trading House) on its plot and in its screen. Click a building or a plot to see what it does, what its next level brings and costs, and **Build** or **Raise** it; when the next level is barred (the Lodge's third, or one the stock cannot pay for) the line under the details says why, and raising the Lodge to level 2 says at once that roads come with trade routes. Until the trading post is a Market, its details say what the market will bring (2 to 5 gold every 5 days from level 4). **Leave** (or Esc) goes back to the map.
 
 ### The guild hall
 

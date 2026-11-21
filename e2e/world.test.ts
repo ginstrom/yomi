@@ -1026,19 +1026,99 @@ describe('the world map', () => {
     expect(built.buttons.buildTower.visible).toBe(false)
   })
 
-  it('builds an outpost on a held site with the stock, and marks the site', async () => {
-    const game = await games.open()
-    await game.newGame()
-    await reloadedWith(game, { stock: { gold: 15, timber: 10 } })
-    // Iron Vein, held from the start.
-    const there = await game.travelTo(offsetToHex(11, 21))
-    expect(there.buttons.buildOutpost.visible).toBe(true)
-    expect(there.buttons.buildTower.visible).toBe(false)
-    await game.click(there.buttons.buildOutpost)
-    const built = await game.waitFor('World', (w) => w.world.outposts.length === 1)
-    expect(built.world.outposts).toEqual(['iron_vein'])
-    expect(built.message).toContain('An outpost stands at Iron Vein')
-    expect(built.buttons.buildOutpost.visible).toBe(false)
+  describe('the last yield line', () => {
+    /** Next day until a yield day has put its line in the stock panel. */
+    async function toYieldDay(game: Game): Promise<WorldProbe> {
+      for (let day = 0; day < 6; day++) {
+        const world = await game.settled('World', (w) => !w.walking)
+        if (world.status.includes('Last yield')) return world
+        await game.click(world.buttons.nextDay)
+        await game.waitFor('World', (w) => w.world.turn > world.world.turn && !w.walking)
+      }
+      throw new Error('no yield day in six days')
+    }
+
+    it('is not carried into another game started from the menu', async () => {
+      const game = await games.open()
+      await game.newGame()
+      await toYieldDay(game)
+      await game.press('Escape')
+      await game.waitForScenes(['Menu'], ['World'])
+      const fresh = await game.newGame()
+      expect(fresh.world.turn).toBeLessThan(5)
+      expect(fresh.status).not.toContain('Last yield')
+    })
+
+    it('stays clear of the header hint at 840 by 560, the market\'s gold among the yields', async () => {
+      const game = await games.open()
+      await game.resize(840, 560)
+      await game.newGame()
+      await reloadedWith(game, { tradingPost: 6 })
+      const shown = await toYieldDay(game)
+      expect(shown.status).toContain('market 5 gold')
+      const { statusRect: a, hintRect: b } = shown
+      expect(a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height, JSON.stringify({ a, b })).toBe(false)
+      expect(a.y + a.height).toBeLessThanOrEqual(64)
+    })
+  })
+
+  describe('Improve', () => {
+    const IRON_VEIN = offsetToHex(11, 21)
+
+    it('builds an outpost, a works and a fort on a held site, showing a palisade at the fort', async () => {
+      const game = await games.open()
+      await game.newGame()
+      await reloadedWith(game, { stock: { gold: 200, timber: 20, stone: 40, iron: 40 }, lodge: 2 })
+      const there = await game.travelTo(IRON_VEIN)
+      expect(there.improveLabel).toBe('Build an Outpost: 15 gold, 10 timber')
+      expect(there.buttons.buildTower.visible).toBe(false)
+      await game.click(there.buttons.improve)
+      const outpost = await game.waitFor('World', (w) => w.world.improvements.iron_vein === 1)
+      expect(outpost.message).toContain('An outpost stands at Iron Vein')
+      expect(outpost.improveLabel).toBe('Build a Mine: 30 gold, 15 stone')
+      await game.click(outpost.buttons.improve)
+      const works = await game.waitFor('World', (w) => w.world.improvements.iron_vein === 2)
+      expect(works.message).toContain('A Mine stands at Iron Vein')
+      expect(works.palisades).toBe(0)
+      await game.click(works.buttons.improve)
+      const fort = await game.waitFor('World', (w) => w.world.improvements.iron_vein === 3)
+      expect(fort.message).toContain('A Fort stands at Iron Vein')
+      expect(fort.palisades).toBe(1)
+      expect(fort.buttons.improve.visible).toBe(false)
+      expect(fort.improveLabel).toBeNull()
+    })
+
+    it('says why when the Lodge is too low, and leaves the level alone', async () => {
+      const game = await games.open()
+      await game.newGame()
+      await reloadedWith(game, { stock: { gold: 200, stone: 40 }, improvements: { iron_vein: 1 }, lodge: 0 })
+      const there = await game.travelTo(IRON_VEIN)
+      expect(there.improveLabel).toBe("A Mine needs the Builders' Lodge")
+      expect(there.buttons.improve.visible).toBe(true)
+      await game.click(there.buttons.improve)
+      const refused = await game.settled('World')
+      expect(refused.message).toBe("A Mine needs the Builders' Lodge.")
+      expect(refused.world.improvements.iron_vein).toBe(1)
+    })
+
+    it('fits the footer at 840 x 560 with the longest label, also after a resize from a wide window', async () => {
+      const game = await games.open()
+      await game.newGame()
+      await reloadedWith(game, { stock: { gold: 200 }, improvements: { iron_vein: 2 }, lodge: 2 })
+      const wide = await game.travelTo(IRON_VEIN)
+      // At the default size the whole label shows.
+      expect(wide.improveLabel).toBe('Build a Fort: 50 gold, 20 iron, 10 stone')
+      await game.resize(840, 560)
+      const there = await game.settled('World', (w) => w.improveLabel !== wide.improveLabel)
+      expect(there.buttons.improve.visible).toBe(true)
+      const { x, width } = there.buttons.improve
+      expect(x - width! / 2).toBeGreaterThanOrEqual(80)
+      expect(x + width! / 2).toBeLessThanOrEqual(840)
+      for (const button of [there.buttons.camp, there.buttons.campUntilHealed, there.buttons.craft]) {
+        expect(button.x - button.width! / 2).toBeGreaterThanOrEqual(80)
+        expect(Math.abs(button.x - there.buttons.improve.x)).toBeGreaterThan((button.width! + width!) / 2)
+      }
+    })
   })
 
   it('shows the victory once the Source is beaten, to end on or go on in endless mode', async () => {

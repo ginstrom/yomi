@@ -34,7 +34,7 @@ export type DayAction =
   | { kind: 'wait' }
   | { kind: 'camp' } // one day's rest (campDay), no spells
   | { kind: 'tower' } // build a watchtower where it stands
-  | { kind: 'outpost' } // build an outpost on the held site it stands on
+  | { kind: 'improve' } // build the next improvement (outpost, works, fort) on the held resource it stands on
   | { kind: 'craft'; place: ItemPlace; modifier: ModifierId; grade: Grade } // a field craft
   | { kind: 'embed'; place: ItemPlace; rune: RuneKey } // a field embed
 

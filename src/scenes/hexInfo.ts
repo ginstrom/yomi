@@ -1,10 +1,10 @@
 import { maxHp } from '../character/character.ts'
-import { BLIGHT_NAMES, boardIndex, netInfluence } from '../game/blight.ts'
-import { MAX_SHRINE_LEVEL } from '../game/buildings.ts'
+import { BLIGHT_NAMES, boardIndex, netInfluence, siteStrength } from '../game/blight.ts'
+import { MAX_SHRINE_LEVEL, describeCost, nextImprovement } from '../game/buildings.ts'
 import { presences, type Expedition, type PartyPresence } from '../game/expedition.ts'
 import type { GameState } from '../game/gameState.ts'
 import { MAX_GUILD_HALL_LEVEL } from '../game/guildHall.ts'
-import { daysToFall, siteYield } from '../game/territory.ts'
+import { YIELD_DAYS, daysToFall, improvementName, siteImprovement, siteYield, withArticle } from '../game/territory.ts'
 import { UNEXPLORED } from '../game/vision.ts'
 import { ENCAMPMENT_ID, locationAt, routeTo, type WorldState } from '../game/worldMap.ts'
 import { hexEquals, type Hex } from '../grid/hex.ts'
@@ -47,13 +47,25 @@ export function hexInfo(game: GameState, party: Expedition, visible: ReadonlySet
         lines.push(`Guild hall level ${world.guildHall}/${MAX_GUILD_HALL_LEVEL}, shrine ${world.shrine}/${MAX_SHRINE_LEVEL}.`)
       } else {
         const { material, amount } = siteYield(world, location)
-        lines.push(`Yields ${amount} ${material}${held ? '' : ' once held'}${world.outposts.includes(location.id) ? ', with an outpost' : ''}.`)
+        const level = siteImprovement(world, location.id)
+        if (level === 0) {
+          lines.push(`Yields ${amount} ${material}${held ? '' : ' once held'}.`)
+        } else {
+          lines.push(`${improvementName(location, level)}: ${amount} ${material} every ${YIELD_DAYS} days.`)
+          lines.push(`Strength ${siteStrength(world, location.id)} against the blight.`)
+          if (level === 3) lines.push('Lost only when corrupted.')
+        }
+        const next = held ? nextImprovement(world, location) : null
+        if (next) {
+          const needs = world.lodge < next.lodge ? ` (needs Lodge ${next.lodge})` : ''
+          lines.push(`Next: ${withArticle(next.name)}, ${describeCost(next.cost)}${needs}.`)
+        }
       }
-      if (held && world.threatened.includes(location.id)) lines.push(fallsIn(world, present, location.position))
+      if (held && world.threatened.includes(location.id)) lines.push(fallsIn(world, present, location))
     }
   } else if (tower) {
     title = 'Watchtower'
-    if (world.threatened.includes(tower.id)) lines.push(fallsIn(world, present, tower.position))
+    if (world.threatened.includes(tower.id)) lines.push(fallsIn(world, present, tower))
   }
 
   if (seen !== UNEXPLORED) {
@@ -79,7 +91,7 @@ export function hexInfo(game: GameState, party: Expedition, visible: ReadonlySet
   return { title, lines }
 }
 
-function fallsIn(world: WorldState, present: readonly PartyPresence[], at: Hex): string {
-  const days = daysToFall(world, present, { position: at })
+function fallsIn(world: WorldState, present: readonly PartyPresence[], site: { id: string; position: Hex }): string {
+  const days = daysToFall(world, present, site)
   return days === null ? 'Under threat.' : `Under threat: falls in ${days} ${days === 1 ? 'day' : 'days'}.`
 }

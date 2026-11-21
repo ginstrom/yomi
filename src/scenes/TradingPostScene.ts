@@ -21,6 +21,7 @@ import {
   sellMaterial,
   sellRune,
   sellables,
+  tradingPostName,
   wares,
 } from '../game/tradingPost.ts'
 import { FAMILIES, type FamilyId } from '../inventory/catalog.ts'
@@ -296,9 +297,9 @@ export class TradingPostScene extends Phaser.Scene {
     this.page = Math.min(this.page, pages - 1)
     this.frame.add([
       this.add.rectangle(CENTRE_X, FRAME_H / 2, FRAME_W, FRAME_H, 0x241d15, 0.98).setStrokeStyle(3, 0xc9a227),
-      this.add.text(CENTRE_X, TITLE_Y, 'Trading Post', { fontFamily: FONT, fontSize: '28px', color: GOLD, fontStyle: 'bold' }).setOrigin(0.5),
+      this.add.text(CENTRE_X, TITLE_Y, tradingPostName(world.tradingPost), { fontFamily: FONT, fontSize: '28px', color: GOLD, fontStyle: 'bold' }).setOrigin(0.5),
       this.add
-        .text(CENTRE_X, TITLE_Y + 28, `${actingFor(this.gameState, this.expedition)}Level ${world.tradingPost}.  Gold in the stock: ${world.stock.gold ?? 0}`, { fontFamily: FONT, fontSize: '13px', color: DIM })
+        .text(CENTRE_X, TITLE_Y + 28, `${actingFor(this.gameState, this.expedition)}${tradingPostName(world.tradingPost)}, level ${world.tradingPost}.  Gold in the stock: ${world.stock.gold ?? 0}`, { fontFamily: FONT, fontSize: '13px', color: DIM })
         .setOrigin(0.5),
       this.add
         .text(CENTRE_X, MESSAGE_Y, this.message, { fontFamily: FONT, fontSize: '13px', color: TEXT, align: 'center', wordWrap: { width: FRAME_W - 40 } })

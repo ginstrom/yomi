@@ -118,6 +118,109 @@ describe('the encampment', () => {
     expect(back.world.stock).toMatchObject({ gold: 60, iron: 35 })
   })
 
+  it("builds the Builders' Lodge on its plot, and refuses its third level with the roads line", async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 100, timber: 50 })
+    const camp = await enter(game)
+    expect(facility(camp, 'builders_lodge')).toMatchObject({ level: 0, frame: 'camp_plot/base', labelText: "Builders' Lodge: empty plot" })
+    await game.click(facility(camp, 'builders_lodge'))
+    const plot = await game.settled('Encampment', (c) => c.selected === 'builders_lodge')
+    expect(plot.buttons.improve.enabled).toBe(true)
+    await game.click(plot.buttons.improve)
+    const built = await game.settled('Encampment', (c) => facility(c, 'builders_lodge').level === 1)
+    expect(facility(built, 'builders_lodge')).toMatchObject({ frame: 'camp_lodge/level_1', labelText: "Builders' Lodge 1/3" })
+    expect(built.message).toBe("The Builders' Lodge is built.")
+  })
+
+  it('says why the Lodge goes no higher as soon as it is raised to 2, without another click', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 500, stone: 50 }, undefined, { 'world.lodge': 1 })
+    const camp = await enter(game)
+    await game.click(facility(camp, 'builders_lodge'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'builders_lodge')
+    await game.click(shown.buttons.improve)
+    const raised = await game.settled('Encampment', (c) => facility(c, 'builders_lodge').level === 2)
+    expect(raised.message).toBe("The Builders' Lodge is raised to level 2. Roads come with trade routes.")
+    expect(raised.buttons.improve.enabled).toBe(false)
+  })
+
+  it('shows the Lodge at level 2 with its Raise disabled and the roads line', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 500, iron: 50, stone: 50 }, undefined, { 'world.lodge': 2 })
+    const camp = await enter(game)
+    expect(facility(camp, 'builders_lodge').frame).toBe('camp_lodge/level_2')
+    await game.click(facility(camp, 'builders_lodge'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'builders_lodge')
+    expect(shown.buttons.improve.enabled).toBe(false)
+    expect(shown.refusal).toBe('Roads come with trade routes.')
+    expect(shown.details[0]).toBe("Builders' Lodge, level 2 of 3")
+  })
+
+  it('names the trading post by its level, with its market income, and raises it to the Trading House', async () => {
+    const game = await games.open()
+    await richAtHome(game, { gold: 500, silver: 50, crystal: 20 }, 5)
+    const camp = await enter(game)
+    expect(facility(camp, 'trading_post')).toMatchObject({ frame: 'camp_trading_post/level_5', labelText: 'Market Hall 5/6' })
+    await game.click(facility(camp, 'trading_post'))
+    const shown = await game.settled('Encampment', (c) => c.selected === 'trading_post')
+    expect(shown.details[0]).toBe('Market Hall, level 5 of 6')
+    expect(shown.details.join(' ')).toContain('3 gold every 5 days')
+    await game.click(shown.buttons.improve)
+    const raised = await game.settled('Encampment', (c) => facility(c, 'trading_post').level === 6)
+    expect(facility(raised, 'trading_post')).toMatchObject({ frame: 'camp_trading_post/level_6', labelText: 'Trading House 6/6' })
+    expect(raised.message).toBe('The Trading House is raised to level 6.')
+  })
+
+  // A long effect and a long "Next:" once set the details smaller, or dropped the flavour line, to clear the message line.
+  for (const level of [1, 2, 3, 4, 5]) {
+    it(`fits the trading post's details at level ${level} at full size, flavour line and all`, async () => {
+      const game = await games.open()
+      await richAtHome(game, { gold: 100 }, level)
+      const camp = await enter(game)
+      await game.click(facility(camp, 'trading_post'))
+      const shown = await game.settled('Encampment', (c) => c.selected === 'trading_post')
+      expect(shown.details[1]).toBe('Merchants sell plain gear and runes for gold and buy what the party no longer needs.')
+      expect(shown.detailsSize).toBe(12)
+    })
+  }
+
+  for (const [name, plant] of [
+    ['bare plots', {}],
+    ['every facility at its top', { 'world.guildHall': 5, 'world.shrine': 3, 'world.workshop': 3, 'world.infirmary': 3, 'world.lodge': 3, 'world.tradingPost': 6 }],
+  ] as const) {
+    it(`draws all six buildings and their labels inside the frame at 840 by 560, overlapping none (${name})`, async () => {
+      const game = await games.open()
+      await richAtHome(game, { gold: 100 }, undefined, plant)
+      await game.resize(840, 560)
+      const camp = await enter(game)
+      expect(camp.facilities).toHaveLength(6)
+      // The frame is 720 by 500, scaled down to fit and centred; the probe's boxes are on screen.
+      const scale = Math.min(1, (840 - 32) / 720, (560 - 32) / 500)
+      const frame = { x: 420, y: 280, width: 720 * scale, height: 500 * scale }
+      const boxes = camp.facilities.flatMap((f) => [
+        { what: `${f.id} building`, box: f.building, of: f.id },
+        { what: `${f.id} label`, box: f.label, of: f.id },
+      ])
+      const edges = (b: { x: number; y: number; width: number; height: number }) => ({ l: b.x - b.width / 2, r: b.x + b.width / 2, t: b.y - b.height / 2, b: b.y + b.height / 2 })
+      for (const { what, box } of boxes) {
+        const e = edges(box)
+        expect(box.width, what).toBeGreaterThan(0)
+        expect(e.l, what).toBeGreaterThanOrEqual(frame.x - frame.width / 2)
+        expect(e.r, what).toBeLessThanOrEqual(frame.x + frame.width / 2)
+        expect(e.t, what).toBeGreaterThanOrEqual(frame.y - frame.height / 2)
+        expect(e.b, what).toBeLessThanOrEqual(frame.y + frame.height / 2)
+      }
+      for (const a of boxes) {
+        for (const b of boxes) {
+          if (a.what >= b.what || a.of === b.of) continue
+          const [p, q] = [edges(a.box), edges(b.box)]
+          const apart = p.r <= q.l || q.r <= p.l || p.b <= q.t || q.b <= p.t
+          expect(apart, `${a.what} overlaps ${b.what}`).toBe(true)
+        }
+      }
+    })
+  }
+
   it('forms, renames, fills and disbands a second party at hall level 4, and the map lists both', async () => {
     const game = await games.open()
     await richAtHome(game, { gold: 500, iron: 100, stone: 50, silver: 50 }, undefined, { 'world.guildHall': 4 })
@@ -227,7 +330,7 @@ describe('the encampment', () => {
     expect((await game.settled('GuildHall')).reserves).toEqual([])
   })
 
-  it('shows five plots, the trading post built, and buys and sells there', async () => {
+  it('shows six facilities, the trading post built, and buys and sells there', async () => {
     const game = await games.open()
     await richAtHome(game, { gold: 100, salt: 4 })
     const camp = await enter(game)
@@ -237,6 +340,7 @@ describe('the encampment', () => {
       ['trading_post', 'camp_trading_post/level_1'],
       ['workshop', 'camp_plot/base'],
       ['infirmary', 'camp_plot/base'],
+      ['builders_lodge', 'camp_plot/base'],
     ])
     await game.click(facility(camp, 'trading_post'))
     const shown = await game.settled('Encampment', (c) => c.selected === 'trading_post')
