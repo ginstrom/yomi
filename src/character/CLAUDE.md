@@ -33,7 +33,7 @@ A Life rune's `maxHp` is the only thing that moves maximum hit points, so every 
 
 ## Nodes are data
 
-A perk (`PERKS`) is a node of the skill trees: four trees of three paths, each node its `path`, `tier`, asks (attributes, skills, `anySkill`, a `requires` in its own path) and effects (`PerkEffects`, summed by `perkBonus` wherever the number is derived), or the `spell`, `ability` or `trait` it gives. `PERKS` is ordered by tree, path and tier, which is the order the tree view lays a path out in; a new node of an existing shape is one entry there. A spell or a technique is a node like any other, and a trait is read by the engine by name (`TRAIT_IDS`).
+A perk (`PERKS`) is a node of the skill trees: four trees of three paths, each node its `path`, `tier`, asks (attributes, skills, `anySkill`, a `requires` in its own path) and effects (`PerkEffects`, summed by `perkBonus` wherever the number is derived), or the `spell`, `ability` or `trait` it gives. `PERKS` is ordered by tree, path and tier, which is the order the tree view lays a path out in. A spell or a technique is a node like any other, and a trait is read by the engine by name (`TRAIT_IDS`). A new node: `.claude/skills/yomi-add-content/skill-node.md`.
 
 - Every node has one rank and costs its tier's points (`TIERS`: 1, 2, 3, and 4 for a capstone); no node is priced on its own. `nodesCost` sums the nodes held.
 - A tier asks a level and a depth (nodes held in its path, not points).

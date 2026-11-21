@@ -39,18 +39,4 @@ Policies are pure functions `({ state, legal, rng }) => Action`, registered in `
 
 ## Checklists
 
-**A new spell** (`SPELLS` in `src/combat/spells.ts`):
-- its id in `SPELL_IDS` (a hero's, taught by exactly one node, `perkTeaching` in `src/character/perks.ts`) or `MONSTER_SPELL_IDS`;
-- a look in `SPELL_LOOKS` (`src/scenes/battleEffects.ts`, a full `Record`, so `tsc` asks), and a sound if its element or school does not cover it (`spellSound`, `SPELL_SOUND_OVERRIDES` in `src/scenes/sounds.ts`);
-- if the policy should cast it deliberately, a rule in `policies.ts`; else it is used only as the hardest-hitting spell or not at all;
-- `isHealing` decides whether the world map, `autoHeal` and the heal reserve count it.
-
-**A new status** (`STATUSES`, `STATUS_IDS`): a `mark` letter and colour; `hostile: true` if a foe lays it to harm (Purify ends it); anything not expressible as a `StatusRule` field needs engine code read through `effectiveStats` / `statsIn` so previews agree; `STATUS_VALUE` if the policy should value laying it.
-
-**A new ability** (`ABILITIES`, `ABILITY_IDS`; monsters' first, techniques after): a node's `ability` to teach a technique; a sound in `ABILITY_SOUNDS` or a place in `SOUNDS_AS_ATTACKS` (`sounds.test.ts` enforces); an `ABILITY_LOOKS` or `STRIKE_FLASHES` entry for an area, status or elemental strike; AP read only through `abilityApCost`. The foe hover panel (`foeInfo.ts`) describes it from its data for free.
-
-**A new trait** (`TRAIT_IDS` in `src/combat/combat.ts`): a node's `trait` switches it on (`traitsOf`); the engine reads it by name. Put its effect in the shared helpers (`traitToHit`, `traitDamage`, `applyDamage`, the turn-start passes, `auraBonus`) so previews and the policy see it; any per-unit state it needs goes on `UnitRecord` and the snapshot. A new event field from it bumps `LOG_SCHEMA_VERSION`; a new sound or float goes in `sounds.ts` / `battleEffects.ts`.
-
-**A new element** (`ELEMENTS`): wards everywhere are `Partial<Record<Element, number>>`, and most readers iterate `ELEMENTS`; check those that key by name (`ELEMENT_SPELL_SOUNDS` in `sounds.ts`, the runes in `src/inventory/runes.ts`).
-
-**Any event shape change**: bump `LOG_SCHEMA_VERSION`, update `formatEvent`, and check `eventSounds` (`sounds.ts`) and the battle playback (`eventSchedule.ts`, `battleEffects.ts`).
+Adding a spell, status, ability, trait, element or battle event: `.claude/skills/yomi-add-content/`.

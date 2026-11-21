@@ -30,14 +30,11 @@ Every scene but `Boot` has a `probe()`: plain data telling where its controls ar
 - **A unit kind:** the foe-kind checklist in `src/game/CLAUDE.md`.
 - **A weapon or shield icon, or an armour, head or cloak icon:** an entry in `GEAR_SPRITES` or `WORN_SPRITES` (`WORN_BACK_SPRITES` for a cape) in `unitLook.ts` and a sprite in `art/gear/`, or `unitLook.test.ts` fails; a weapon icon also needs `WEAPON_SOUNDS`. A blade or axe that swings goes in `SWUNG_GEAR`.
 - **An item icon:** `assets/sprites/icon_<icon>.png` and its key in `ITEM_ICON_KEYS` (`itemIcons.ts`); a rune, `RUNE_ICON_KEYS` and `RUNE_COLOURS`.
-- **An ability:** unless it is a technique of strikes, an entry in `ABILITY_SOUNDS` (coverage test); optionally a look in `ABILITY_LOOKS` or, for an elemental technique, `STRIKE_FLASHES` (`battleEffects.ts`). Its foe-panel description comes free from `foeInfo.ts`.
-- **A spell:** a look in `SPELL_LOOKS` (a full record, so `tsc` asks for it).
 - **A portrait preset:** an id in `PORTRAIT_IDS` and `art/portraits/` sprite (`portrait_<id>.png`, `portraitKey`).
 - **A facility:** the checklist in `src/game/CLAUDE.md`; sprites `camp_<facility>/level_<n>` in `FACILITY_SPRITES`, and a seventh plot in `encampmentView.ts` (six now; the in-browser overlap test checks labels).
 - **A location kind:** an atlas sprite with `idle` keyed in `LOCATION_SPRITES`.
 - **A party banner:** `BANNER_SPRITES` in `partyList.ts`.
 - **A sound effect:** a recipe in `audio/sfx/` built into the manifest (`npm run sounds`), then its cue in `CUES`. A button that closes or steps back belongs in `BACK_LABELS`.
-- **A battle event that changes statuses on screen:** `changesStatusMarks` (`battleEffects.ts`).
 - **A debug command:** an entry in `COMMANDS` (`debugCommands.ts`); commands that change the game run only on the world map. `~` opens the console in dev builds (reference: "Debug console").
 - **A control a browser test clicks:** its scene's probe.
 
