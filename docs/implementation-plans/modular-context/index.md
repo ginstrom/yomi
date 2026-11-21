@@ -142,7 +142,7 @@ Append-only, one `## Step NN: <title>` section per step: date, engineer and revi
 | 07 | [07-global-state-history.md](07-global-state-history.md) | the design §5.3 global edits, diff in `log.md` **[Q2]** | 06 | opus / opus | done ([Q2]: default, every project) | 3a13821 |
 | 08 | [08-role-profiles.md](08-role-profiles.md) | seven role profiles and their cap **[Q2]** | 07 | sonnet / opus | done | 9bf3118 |
 | 09 | [09-global-role-hooks.md](09-global-role-hooks.md) | the hook lines, agent-types line and AGENTS.md phrase in the global skills; smoke check | 08 | opus / opus | done (smoke check passed) | cb0100e |
-| 10 | [10-yomi-sprites.md](10-yomi-sprites.md) | `yomi-sprites` skill; `art/CLAUDE.md` to contracts; content files repointed | 09 | sonnet / sonnet | pending | |
+| 10 | [10-yomi-sprites.md](10-yomi-sprites.md) | `yomi-sprites` skill; `art/CLAUDE.md` to contracts; content files repointed | 09 | sonnet / sonnet | done (review pending) | 644883b |
 | 11 | [11-yomi-sound.md](11-yomi-sound.md) | `yomi-sound` skill; `audio/CLAUDE.md` to contracts; sound and narration pointers repointed | 10 | sonnet / sonnet | pending | |
 | 12 | [12-yomi-manual-and-asset-check.md](12-yomi-manual-and-asset-check.md) | `yomi-manual` skill, `e2e/CLAUDE.md` screenshot paragraph, `yomi-asset-check` agent and its run | 11 | sonnet / sonnet | pending | |
 | 13 | [13-stage-4-close.md](13-stage-4-close.md) | directory cap to 8,000; root Commands and cap lines; findability of art/audio/e2e; trigger check; final sizes **[Q3]** | 12 | sonnet / opus | pending | |

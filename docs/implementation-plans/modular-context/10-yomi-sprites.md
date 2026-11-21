@@ -97,3 +97,5 @@ Local Node 26: prefix `PATH=/opt/homebrew/opt/node@26/bin:$PATH`.
 
 ## 7. Execution record
 
+
+Execution record: implemented as specified; commit `644883b`. `npm test` 2,419 pass. Deviations: the install line moved, so the stage 7 record's pin-drift line was repointed (and kept short for the 3,000-byte State cap). Added "How to draw" repoints in item.md, rune.md and party-banner.md. Details in log.md.

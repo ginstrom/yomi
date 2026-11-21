@@ -943,3 +943,12 @@ index 393d4a8..827e335 100644
  - Build a test matrix before you start. List each requirement and acceptance criterion by ID, along with the scenarios that would show it holds: the happy path, boundaries, invalid and missing input, error and failure behavior, permissions, concurrency or repetition where relevant, and the neighboring existing behavior the change could regress.
  
 ```
+
+## Step 10: the yomi-sprites skill
+
+- Stage 4 base (parent of step 10's first commit): `c2e6cc3`. Commit: `644883b`.
+- Sizes (bytes): `art/CLAUDE.md` 4,161 -> 1,827; `SKILL.md` 1,731; `workflow.md` 1,609; `drawing.md` 1,396.
+- `npm test`: 98 files, 2,419 tests, all pass. No `art/**/*.sprite.toml` or export changed, so no sprite build or `sprites:check` was run.
+- Ledger: facility, portrait and location keys confirmed already in `yomi-add-content` (`facility.md` FACILITY_SPRITES, `portrait.md` PORTRAIT_IDS, `location-kind.md` LOCATION_SPRITES); last line dropped. Also repointed `item.md`, `rune.md`, `party-banner.md` (same "How to draw" line).
+- Stage 7 record's "Sprite-tool pin drift" line now names the skill's `workflow.md` (shortened without backticks to keep State under 3,000 bytes).
+- Findability script not run (step 13 does it).
