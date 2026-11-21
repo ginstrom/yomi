@@ -224,7 +224,7 @@ export const SIM_PARTNERS: readonly PartnerLocation[] = []   // every simulated 
 
 ## 7. Execution record
 
-Engineer: opus (model unset), 2026-11-21, on `long-campaign-stage-08` after `c4bc8fa`.
+Engineer: opus (model unset), 2026-11-21, on `long-campaign-stage-08` after `c4bc8fa`; commit `615a263`.
 
 **Built as C2**, every name, signature and refusal word as written. Details later steps consume:
 

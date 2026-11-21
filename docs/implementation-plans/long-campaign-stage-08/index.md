@@ -151,7 +151,7 @@ Moved to [step 07's task file](07-simulator.md) §3: the holds removed, `contact
 | Step | Task | Outcome | Depends on | Engineer / reviewer | Status |
 | --- | --- | --- | --- | --- | --- |
 | 01 | [Partners, contact and silence](01-partners-domain.md) | Baseline figures; `PartnerLocation`, Millbrook and Saltmere, `contacted`, `silent`, `routes`, `partnerDay`, partner events, partners as sources; save 28, no migration; `SIM_PARTNERS` (C1); guard identical | — | opus / opus | done (a2df674) |
-| 02 | [Routes, raids and guards](02-routes-domain.md) | `trade.ts` routes: `roadTo`, `openRoute` and its refusal, security with tower and party guards, income and goods, raid causes, `tradeDay`, abandonment and restoration, route events, `towerHexRefusal` (C2); guard identical | 01 | opus / opus | done (see the step's record) |
+| 02 | [Routes, raids and guards](02-routes-domain.md) | `trade.ts` routes: `roadTo`, `openRoute` and its refusal, security with tower and party guards, income and goods, raid causes, `tradeDay`, abandonment and restoration, route events, `towerHexRefusal` (C2); guard identical | 01 | opus / opus | done (615a263) |
 | 03 | [Roads and the Lodge's level 3](03-roads-and-lodge.md) | Lodge 3 buildable; road sources at Lodge 3; the Lodge's effect line; `SIM_LODGE_CAP` (C3); guard identical | 02 | sonnet / opus | pending |
 | 04 | [Sprites: partners and the Lodge](04-sprites.md) | `map_partner_village`, `map_partner_port`, `camp_lodge/level_3` redrawn (C4) | — | sonnet / opus | pending |
 | 05 | [The world map's roads and partners](05-world-map.md) | Roads overlay, partner icons and greying, hex info and road lines, event lines, yield summary, sounds (C5); manual text; in-browser tests | 03, 04 | sonnet / opus | pending |
