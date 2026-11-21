@@ -161,6 +161,11 @@ Black hexes have never been seen. The party sees 5 hexes around it, the encampme
 - **Your encampment**, the only settlement left, where the guild hall, the trading post and the rest of your facilities stand.
 - **Resources** (Iron Vein, Gold Seam, Timber Stand and others). A held site's name is starred and drawn in green. A site under threat is drawn in orange, along with the number of days left until it falls.
 - **Monster lairs**, marked with a skull, each with a **threat** from 1 to 5. The further a lair is from the encampment, the higher its threat.
+- **Trade partners** (Millbrook and Saltmere), neutral settlements with their own icons and names in gold. A partner is never held and never lost: walk a party onto its hex and it will trade with your encampment ("Millbrook will trade with Oakvale"). While its own land is blighted (level 2) or worse the partner falls silent, and its icon and name turn grey; it trades again once that land is clean. Hover a partner to see its good, whether it is contacted, and whether a route runs to it.
+
+### Trade roads
+
+Once a trade route is open (see the trading post), the map draws its road from the encampment to the partner as a dashed line, through the fog, since the road is your own. Each stretch is **gold** where the land is clean or guarded (a watchtower or one of your parties within 3 hexes), **amber** where it is tainted, and **red** where it is blighted and unguarded. The whole road is red while it is raided: by raiders (a monster lair within 2 hexes of the road), by corrupted land on the road, or by a silent partner. A raided road earns nothing, and one raided for 30 days in a row is abandoned. Hover any hex of the road for its security, what it brings every 5 days, and the cause of a raid; the message line tells once when a road is raided, restored or abandoned, and the stock panel's last yield line counts what the routes brought ("routes 3 gold, 1 timber").
 
 ### Monsters
 
@@ -521,7 +526,7 @@ A hero born with an attribute of 7 or 8 reaches the nodes that ask it from the s
 Every hex of land has a blight level from 0 (clean) to 3 (corrupted), shown as a tint over the grass. Corrupted land also shows dark growths. Every day, sources of influence push on the hexes around them, and their strength fades by a point for each hex of distance:
 
 - **Pushing the blight forward**: monster lairs (more strongly the higher their threat), the Source itself, and corrupted land spreading to its neighbours. The blight grows stronger over time, by a tenth every 30 days, up to half again as strong.
-- **Pushing it back**: the encampment (stronger with its shrine), every resource you hold (stronger with an outpost, works or fort), every watchtower, and the party itself, which grows stronger as the heroes level up.
+- **Pushing it back**: the encampment (stronger with its shrine), every resource you hold (stronger with an outpost, works or fort), every watchtower, every trade partner (a clean source that is never lost, silent or not), and the party itself, which grows stronger as the heroes level up.
 
 Consequences:
 

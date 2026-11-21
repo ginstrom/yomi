@@ -11,6 +11,7 @@ import { newGame, selectedParty, type GameState } from '../game/gameState.ts'
 import { SAVE_FAILED_MESSAGE, SAVE_WARNED_KEY, deleteSlot, saveGame } from '../game/saveSlots.ts'
 import { craftTier } from '../game/crafting.ts'
 import { FORECAST_SLICE_MS, Forecaster, forecastHint, forecastLabel, worldForecastStart, workFor, type Forecast } from '../game/forecast.ts'
+import { isContacted, isSilent, partners } from '../game/trade.ts'
 import { daysToFall, improvementName, siteImprovement } from '../game/territory.ts'
 import { UNEXPLORED, knownBlightedShare, visibleHexes } from '../game/vision.ts'
 import {
@@ -46,6 +47,7 @@ import { BANNER_SPRITES, PARTY_LIST_W, bannerOf, deployedParties, figureOffsets,
 import { UnitFigure } from './UnitFigure.ts'
 import { heroLook, SPRITE_ATLAS, spriteAnim, spriteFrame } from './unitLook.ts'
 import { FRAME_ACTIVE_COLOR, HEADER_BOTTOM, PARTY_PANEL_W, portraitClick, portraitRect } from './partyPanel.ts'
+import { ROAD_COLORS, roadSegments, type RoadSegment } from './roadsView.ts'
 import { advanceMessage, describeDays, describeOthers, describeStanding, describeWalk, describeWorldEvent, describeWorldEvents, yieldSummary } from './worldEvents.ts'
 import { improveLabel } from './improveButton.ts'
 import { hexInfo } from './hexInfo.ts'
@@ -71,9 +73,21 @@ const LOCATION_SPRITES: Record<LocationKind, string> = {
   monsters: 'map_monsters',
   encampment: 'map_encampment',
   resource: 'map_resource',
-  // Temporary (stage 8 step 01): step 05 draws the partners' own sprites.
-  partner: 'map_resource',
+  partner: 'map_partner_village',
 }
+/** Each trade partner's own sprite; a partner without one uses `LOCATION_SPRITES.partner`. */
+const PARTNER_SPRITES: Record<string, string> = { millbrook: 'map_partner_village', saltmere: 'map_partner_port' }
+/** A silent partner's sprite and label, greyed. */
+const SILENT_TINT = 0x9e9e9e
+const SILENT_LABEL = '#9e9e9e'
+/** A partner's name colour: a warm trade gold, apart from held green. */
+const PARTNER_LABEL = '#ffe082'
+/** The road overlay: dash and gap lengths along a segment, line widths, and the dark edge's colour. */
+const ROAD_DASH = 9
+const ROAD_GAP = 6
+const ROAD_WIDTH = 3
+const ROAD_EDGE_WIDTH = 6
+const ROAD_EDGE = 0x1b1b1b
 /** A watchtower's sprite, which is not a location's. */
 const TOWER_SPRITE = 'map_watchtower'
 /** A fort's palisade, drawn over its resource's icon. */
@@ -260,6 +274,11 @@ export class WorldScene extends Phaser.Scene {
   private siteLabels!: Phaser.GameObjects.Container
   /** The ids of the locations drawn, and the levels of the land, to tell when they must be drawn again. */
   private drawnLocations = ''
+  /** The roads layer: dashed segments between hex centres, in `ROAD_COLORS`. */
+  private roadMarks!: Phaser.GameObjects.Graphics
+  /** The segments as drawn now, and their key. */
+  private drawnRoads: RoadSegment[] = []
+  private drawnRoadsKey = ''
   private drawnBlight = ''
   /** The hexes in sight as of the last refresh, by `boardIndex`. */
   private visible = new Set<number>()
@@ -311,6 +330,9 @@ export class WorldScene extends Phaser.Scene {
     const map = boardPixelSize(this.world.board, WORLD_LAYOUT)
     this.blightLayer = this.add.renderTexture(0, 0, Math.ceil(map.width), Math.ceil(map.height)).setOrigin(0)
     this.blightSprites = this.add.container(0, 0)
+    this.roadMarks = this.add.graphics()
+    this.drawnRoads = []
+    this.drawnRoadsKey = ''
     this.hoverMarks = this.add.graphics()
     this.partyMark = this.add.graphics()
     this.siteSprites = this.add.container(0, 0)
@@ -321,7 +343,7 @@ export class WorldScene extends Phaser.Scene {
     this.selectedMark = this.add.graphics()
     this.partyLayer = this.add.container(0, 0, [this.selectedMark])
     this.figures = new Map()
-    this.mapLayer.add([this.blightLayer, this.blightSprites, this.hoverMarks, this.partyMark, this.siteSprites, this.partyLayer, this.siteLabels])
+    this.mapLayer.add([this.blightLayer, this.blightSprites, this.roadMarks, this.hoverMarks, this.partyMark, this.siteSprites, this.partyLayer, this.siteLabels])
     this.syncFigures()
 
     this.headerBar = this.add.rectangle(0, 0, 0, 0, BAR_COLOR, BAR_ALPHA).setOrigin(0)
@@ -608,6 +630,16 @@ export class WorldScene extends Phaser.Scene {
       improveLabel: this.improveButton.visible ? (this.improveButton.getData('text') as Phaser.GameObjects.Text).text : null,
       status: this.statusText.text,
       palisades: this.palisades,
+      roads: this.world.routes.map((route) => ({
+        route: route.id,
+        shades: this.drawnRoads.filter((s) => s.route === route.id).map((s) => s.shade),
+      })),
+      partners: partners(this.world).map((p) => ({
+        id: p.id,
+        contacted: isContacted(this.world, p.id),
+        silent: isSilent(this.world, p.id),
+        drawn: this.knowledgeOf(p) !== 'hidden',
+      })),
       buttons: {
         scout,
         wait,
@@ -676,10 +708,33 @@ export class WorldScene extends Phaser.Scene {
     return this.visible.has(i) ? 'seen' : 'remembered'
   }
 
+  /** The open roads, dashed between hex centres in their security's colour; redrawn only when a shade changes. Drawn through the fog: the roads are the company's own. */
+  private refreshRoads(): void {
+    const segments = roadSegments(this.world, this.presences())
+    const key = segments.map((s) => `${s.route}:${s.from.q},${s.from.r}:${s.shade}`).join()
+    if (key === this.drawnRoadsKey) return
+    this.drawnRoadsKey = key
+    this.drawnRoads = segments
+    const g = this.roadMarks.clear()
+    for (const edge of [true, false]) {
+      for (const seg of segments) {
+        const a = boardHexCenter(seg.from, WORLD_LAYOUT)
+        const b = boardHexCenter(seg.to, WORLD_LAYOUT)
+        const length = Math.hypot(b.x - a.x, b.y - a.y)
+        g.lineStyle(edge ? ROAD_EDGE_WIDTH : ROAD_WIDTH, edge ? ROAD_EDGE : ROAD_COLORS[seg.shade], edge ? 0.7 : 1)
+        for (let d = 0; d < length; d += ROAD_DASH + ROAD_GAP) {
+          const from = d / length
+          const to = Math.min(length, d + ROAD_DASH) / length
+          g.lineBetween(a.x + (b.x - a.x) * from, a.y + (b.y - a.y) * from, a.x + (b.x - a.x) * to, a.y + (b.y - a.y) * to)
+        }
+      }
+    }
+  }
+
   /** Every known location's sprite, under the party, faded where out of sight; drawn again only when that changes. */
   private refreshLocations(): void {
     const key = [
-      ...this.world.locations.map((l) => `${l.id}:${this.knowledgeOf(l)}`),
+      ...this.world.locations.map((l) => `${l.id}:${this.knowledgeOf(l)}${l.kind === 'partner' && isSilent(this.world, l.id) ? ':silent' : ''}`),
       ...this.world.towers.map((t) => t.id),
       ...this.world.locations.filter((l) => siteImprovement(this.world, l.id) === 3).map((l) => `fort:${l.id}`),
     ].join()
@@ -691,13 +746,14 @@ export class WorldScene extends Phaser.Scene {
       const knowledge = this.knowledgeOf(location)
       if (knowledge === 'hidden') continue
       const { x, y } = boardHexCenter(location.position, WORLD_LAYOUT)
-      const sprite = LOCATION_SPRITES[location.kind]
+      const sprite = location.kind === 'partner' ? (PARTNER_SPRITES[location.id] ?? LOCATION_SPRITES.partner) : LOCATION_SPRITES[location.kind]
       const source = location.kind === 'monsters' && location.source
       const figure = this.add
         .sprite(x, y + LOCATION_Y, SPRITE_ATLAS, spriteFrame(sprite, 'base'))
         .setScale(source ? SOURCE_SCALE : LOCATION_SCALE)
         .play({ key: spriteAnim(sprite, 'idle'), delay: (i * LOCATION_STAGGER_MS) % 1000 })
       if (source) figure.setTint(SOURCE_TINT)
+      if (location.kind === 'partner' && isSilent(this.world, location.id)) figure.setTint(SILENT_TINT)
       if (knowledge === 'remembered') figure.setAlpha(REMEMBERED_ALPHA)
       this.siteSprites.add(figure)
       // A fort's palisade rings its resource's icon.
@@ -743,7 +799,7 @@ export class WorldScene extends Phaser.Scene {
           .text(x, y + LABEL_Y, lines.join('\n'), {
             fontFamily: 'monospace',
             fontSize: '11px',
-            color: labelColor(location, held, days !== null),
+            color: labelColor(location, held, days !== null, location.kind === 'partner' && isSilent(this.world, location.id)),
             stroke: '#000000',
             strokeThickness: 3,
             align: 'center',
@@ -1089,6 +1145,7 @@ export class WorldScene extends Phaser.Scene {
       this.partyMark.lineStyle(2, NEUTRAL_RING, 0.9).strokeCircle(c.x, c.y, WORLD_LAYOUT.hexSize * 0.6)
     }
     this.refreshBlight()
+    this.refreshRoads()
     this.refreshLocations()
     this.refreshLabels()
 
@@ -1729,10 +1786,10 @@ export class WorldScene extends Phaser.Scene {
 }
 
 /** A location's name colour: monsters reddish, the Source violet, held sites green, threatened ones orange. */
-function labelColor(location: WorldLocation, held: boolean, threatened: boolean): string {
+function labelColor(location: WorldLocation, held: boolean, threatened: boolean, silent = false): string {
   if (location.kind === 'monsters') return location.source ? '#ce93d8' : '#ffab91'
-  // A trade partner is never held or threatened: neutral (stage 8 step 05 sets its own colour).
-  if (location.kind === 'partner') return '#ffffff'
+  // A trade partner is never held or threatened: trade gold, grey while silent.
+  if (location.kind === 'partner') return silent ? SILENT_LABEL : PARTNER_LABEL
   if (threatened) return '#ffb74d'
   return held ? '#a5d6a7' : '#ffffff'
 }

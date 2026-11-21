@@ -196,13 +196,28 @@ export function raidCause(world: WorldState, route: Pick<TradeRoute, 'partner' |
 
 ## 6. Completion criteria
 
-- [ ] `roadsView.ts` exports exactly C5's names and shapes, with tests.
-- [ ] The world map draws open roads dashed by security (red throughout when raided), partner icons from `PARTNER_SPRITES`, greyed with grey labels when silent; the hover panel tells partners and roads.
-- [ ] Every new event has its line (`route_raided` only on `days === 1`), the route yield line, routes in `yieldSummary`, and sounds per decision 17.
-- [ ] `WorldProbe.roads` and `WorldProbe.partners` as C5; an in-browser test uses them.
-- [ ] The manual's world map text covers partners and roads; stale screenshots listed for step 08.
-- [ ] `npm test`, `npm run test:browser` and `npm run build` pass; the refactor guard untouched and green; the record says the 50-campaign check was not needed (no rule changed).
-- [ ] `docs/reference/scenes.md` names `roadsView.ts`; CLAUDE.md files and `.claude/` searched for lines made wrong.
-- [ ] One commit, "Stage 8 step 05: the world map's roads and partners", no attribution lines; the index's row 05 updated with status and commit.
+- [x] `roadsView.ts` exports exactly C5's names and shapes, with tests.
+- [x] The world map draws open roads dashed by security (red throughout when raided), partner icons from `PARTNER_SPRITES`, greyed with grey labels when silent; the hover panel tells partners and roads.
+- [x] Every new event has its line (`route_raided` only on `days === 1`), the route yield line, routes in `yieldSummary`, and sounds per decision 17.
+- [x] `WorldProbe.roads` and `WorldProbe.partners` as C5; an in-browser test uses them.
+- [x] The manual's world map text covers partners and roads; stale screenshots listed for step 08.
+- [x] `npm test`, `npm run test:browser` and `npm run build` pass; the refactor guard untouched and green; the record says the 50-campaign check was not needed (no rule changed).
+- [x] `docs/reference/scenes.md` names `roadsView.ts`; CLAUDE.md files and `.claude/` searched for lines made wrong.
+- [x] One commit, "Stage 8 step 05: the world map's roads and partners", no attribution lines; the index's row 05 updated with status and commit.
 
 ## 7. Execution record
+
+Test-first for the Phaser-free parts: `sounds.test.ts` (trade cues, repeat raids silent), `worldEvents.test.ts` (route lines, route yields, `yieldSummary` with routes), `roadsView.test.ts` (new), `hexInfo.test.ts` (partner branch, road lines through the fog); each written before its code. The scene and probe were then built, and `e2e/world.test.ts` gained "draws an open road by its security, a partner greyed when silent, and tells of them on hover".
+
+Done: `roadsView.ts` as C5 (`roadInfoLines` keeps the contract's `presences` parameter, unused by decision 8, named `_presences`); the four route events' lines, the route yield line and `yieldSummary`'s routes part (route yields now count under routes, no longer sites); sounds per decision 17; `WorldScene`: `LOCATION_SPRITES.partner = 'map_partner_village'`, `PARTNER_SPRITES`, silent partners tinted `0x9e9e9e` with a grey label (silence is in the redraw key), partner label colour `#ffe082`, a `roadMarks` Graphics (dashed, dark edge, redrawn when a shade changes, drawn through the fog) between the blight sprites and the hover marks (so below the site sprites); `WorldProbe.roads` and `.partners`; `hexInfo` gives a partner `partnerInfoLines` and every road hex `roadInfoLines` (through the fog).
+
+Deviations: (1) the jsdom `WorldScene.test.ts` case ("a world with a contacted, routed and silent partner creates and probes") was not added: the file only registers the scene key (a jsdom smoke cannot create the Phaser scene), so the e2e test, which reads the probe's `roads` and `partners` and fails on any console error, covers it. (2) The e2e plants the route through the save as planned; to reach Millbrook (off the view from home) it uses the existing debug `reveal` and `goto millbrook`, then `blight 2 millbrook` and `days 1` for the silence. (3) Manual: partners in §3 "Places", a "Trade roads" subsection, partners as clean sources in §8; the Lodge-3 road text was step 03's and is left as it is.
+
+Stale manual screenshots for step 08: every `world-*.png` (start, travelling, confront, parties, blight, improve, after-victory) was taken with the stand-in `map_resource` icon where Millbrook and Saltmere now show their own icons; a shot with a road is new.
+
+Checked by eye (screenshots kept outside the repo, in the scratchpad: `roads-1280.png`, `roads-840.png`, `roads-silent-840.png`): dashes read over clean and darker land in gold; red throughout when the partner is silent; partner icon shows. At 840x560 the map view is short, so a partner near the footer can sit under the buttons (the existing layout). No amber stretch was captured; the colour is checked by `roadsView.test.ts`.
+
+Results: `npm test` 101 files, 2489 tests pass; `npm run build` passes; `npm run test:browser` ran three times under heavy machine load (step 07's simulator running): runs 1 and 2 failed on timeouts in "fights any encounter at any threat..." (debug.test.ts) and, in run 3, "drags gear between the equipment, the backpack and the baggage" (character.test.ts); each passed when rerun alone (debug.test.ts whole file 4 of 4, the gear drag alone). No rule changed: the refactor guard is untouched and green, the 50-campaign check was not needed.
+
+Searched `CLAUDE.md`, `.claude/` and `docs/reference` for `LOCATION_SPRITES` and the `map_resource` stand-in: none left (only the scenes reference now names `roadsView.ts`).
+

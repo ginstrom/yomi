@@ -13,23 +13,28 @@ const RAZED = ['', 'outpost', 'works', 'fort'] as const
 
 /**
  * The yields among `events` summed by source, for the stock panel's third
- * line: "Last yield: sites 4 gold, 5 iron; market 3 gold". Sites' materials
- * come in order of first appearance, gold first. Null when none yielded.
+ * line: "Last yield: sites 4 gold, 5 iron; market 3 gold; routes 2 gold, 1 timber".
+ * Sites' and routes' materials come in order of first appearance, gold first. Null when none yielded.
  */
 export function yieldSummary(events: readonly WorldEvent[], heading = 'Last yield'): string | null {
   const sites = new Map<string, number>()
+  const routes = new Map<string, number>()
   let market = 0
   for (const event of events) {
     if (event.type !== 'yield') continue
     if (event.source === 'market') market += event.amount
+    else if (event.source === 'route') routes.set(event.material, (routes.get(event.material) ?? 0) + event.amount)
     else sites.set(event.material, (sites.get(event.material) ?? 0) + event.amount)
   }
+  const told = (sums: Map<string, number>) =>
+    [...sums.entries()]
+      .sort(([a], [b]) => Number(b === 'gold') - Number(a === 'gold'))
+      .map(([material, amount]) => `${amount} ${material}`)
+      .join(', ')
   const parts: string[] = []
-  if (sites.size > 0) {
-    const ordered = [...sites.entries()].sort(([a], [b]) => Number(b === 'gold') - Number(a === 'gold'))
-    parts.push(`sites ${ordered.map(([material, amount]) => `${amount} ${material}`).join(', ')}`)
-  }
+  if (sites.size > 0) parts.push(`sites ${told(sites)}`)
   if (market > 0) parts.push(`market ${market} gold`)
+  if (routes.size > 0) parts.push(`routes ${told(routes)}`)
   return parts.length > 0 ? `${heading}: ${parts.join('; ')}` : null
 }
 
@@ -49,6 +54,7 @@ export function describeWorldEvent(event: WorldEvent): string {
         ? `${event.name} is lost to the blight, and its ${RAZED[event.improvement]} razed.`
         : `${event.name} is lost to the blight.`
     case 'yield':
+      if (event.source === 'route') return `The ${event.name} road brings ${event.amount} ${event.material}.`
       return event.source === 'market' ? `The market at ${event.name} brings ${event.amount} ${event.material}.` : `${event.name} yields ${event.amount} ${event.material}.`
     case 'tower_built':
       return 'A watchtower rises over the land.'
@@ -66,12 +72,18 @@ export function describeWorldEvent(event: WorldEvent): string {
       return `${event.name} has fallen silent under the blight.`
     case 'partner_restored':
       return `${event.name} is trading again.`
-    // The routes' lines are stage 8 step 05's.
     case 'route_opened':
+      return `A road is opened to ${event.name}.`
     case 'route_raided':
+      // Told once, on the first raided day; the repeats are left to the map.
+      if (event.days > 1) return ''
+      if (event.cause === 'raiders') return `Raiders on the ${event.name} road: ${theName(event.raiderName ?? 'raiders')}.`
+      if (event.cause === 'corrupted') return `The blight has overrun the ${event.name} road.`
+      return `The ${event.name} road is idle: ${event.name} is silent.`
     case 'route_restored':
+      return `The ${event.name} road is safe again.`
     case 'route_abandoned':
-      return ''
+      return `The ${event.name} road is abandoned.`
     // Unseen: a spawn is told when it comes into sight.
     case 'spawned':
     case 'level_changed':

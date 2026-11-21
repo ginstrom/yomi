@@ -491,11 +491,11 @@ const WORLD_SOUND_KINDS: readonly { cue: CueId; is: (event: WorldEvent | PartyEv
   { cue: 'stings.defeat', is: (e) => e.type === 'encampment_lost' },
   { cue: 'world.confront', is: (e) => e.type === 'confronting' },
   { cue: 'world.source', is: (e) => e.type === 'sighted' && e.source === true },
-  { cue: 'world.lost', is: (e) => e.type === 'site_lost' || e.type === 'tower_lost' },
+  { cue: 'world.lost', is: (e) => e.type === 'site_lost' || e.type === 'tower_lost' || e.type === 'route_abandoned' },
   { cue: 'world.sighted', is: (e) => e.type === 'sighted' && e.source !== true },
-  { cue: 'world.threatened', is: (e) => e.type === 'site_threatened' },
-  { cue: 'world.captured', is: (e) => e.type === 'site_captured' },
-  { cue: 'world.build', is: (e) => e.type === 'tower_built' || e.type === 'site_improved' },
+  { cue: 'world.threatened', is: (e) => e.type === 'site_threatened' || e.type === 'partner_silent' || (e.type === 'route_raided' && e.days === 1) },
+  { cue: 'world.captured', is: (e) => e.type === 'site_captured' || e.type === 'route_restored' || e.type === 'partner_restored' },
+  { cue: 'world.build', is: (e) => e.type === 'tower_built' || e.type === 'site_improved' || e.type === 'partner_contacted' || e.type === 'route_opened' },
   { cue: 'world.arrive', is: (e) => e.type === 'arrived' || e.type === 'met' },
 ]
 

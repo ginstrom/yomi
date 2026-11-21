@@ -9,6 +9,7 @@ import { UNEXPLORED } from '../game/vision.ts'
 import { ENCAMPMENT_ID, locationAt, routeTo, type WorldState } from '../game/worldMap.ts'
 import { hexEquals, type Hex } from '../grid/hex.ts'
 import { SINGLE_PARTY_NAME } from './partyList.ts'
+import { partnerInfoLines, roadInfoLines } from './roadsView.ts'
 
 /** What the world map's info panel says of a hex: a title and the lines under it. */
 export interface HexInfo {
@@ -41,7 +42,7 @@ export function hexInfo(game: GameState, party: Expedition, visible: ReadonlySet
       if (location.source) lines.push('The Source of the blight: beat it to win.')
       lines.push(`Monsters, threat ${location.threat}: foes of level ${location.threat}.`)
     } else if (location.kind === 'partner') {
-      lines.push(`Trade partner: ${location.good}.`)
+      lines.push(...partnerInfoLines(world, location))
     } else {
       const held = world.held.includes(location.id)
       lines.push(location.kind === 'encampment' ? 'Your encampment.' : `Resource, ${held ? 'held' : 'not held'}.`)
@@ -69,6 +70,9 @@ export function hexInfo(game: GameState, party: Expedition, visible: ReadonlySet
     title = 'Watchtower'
     if (world.threatened.includes(tower.id)) lines.push(fallsIn(world, present, tower))
   }
+
+  // The roads are the company's own: told through the fog.
+  lines.push(...roadInfoLines(world, present, at))
 
   if (seen !== UNEXPLORED) {
     lines.push(`Blight: ${BLIGHT_NAMES[seen]}${inSight ? '' : ' (as last seen)'}.`)

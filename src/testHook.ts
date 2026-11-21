@@ -188,6 +188,10 @@ export interface WorldProbe {
   status: string
   /** How many forts' palisades (`map_fort`) the map draws. */
   palisades: number
+  /** Each open route's id and the shades of its segments as drawn now, from the encampment out. */
+  roads: { route: string; shades: ('secure' | 'tainted' | 'raided')[] }[]
+  /** Each trade partner: whether it is contacted, silent, and its sprite on the map now (not hidden by the fog). */
+  partners: { id: string; contacted: boolean; silent: boolean; drawn: boolean }[]
   /**
    * Scout, Wait, Attack and Auto-resolve show among monsters, the camp buttons and the time buttons elsewhere (so, with the game still going); `campUntilHealed` is enabled while someone is wounded.
    * `end` and `endless` show on the victory screen, `menu` on the defeat screen.
