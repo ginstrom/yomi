@@ -145,7 +145,7 @@ Append-only, one `## Step NN: <title>` section per step: date, engineer and revi
 | 10 | [10-yomi-sprites.md](10-yomi-sprites.md) | `yomi-sprites` skill; `art/CLAUDE.md` to contracts; content files repointed | 09 | sonnet / sonnet | done | 644883b |
 | 11 | [11-yomi-sound.md](11-yomi-sound.md) | `yomi-sound` skill; `audio/CLAUDE.md` to contracts; sound and narration pointers repointed | 10 | sonnet / sonnet | done | 2fbb166 |
 | 12 | [12-yomi-manual-and-asset-check.md](12-yomi-manual-and-asset-check.md) | `yomi-manual` skill, `e2e/CLAUDE.md` screenshot paragraph, `yomi-asset-check` agent and its run | 11 | sonnet / sonnet | done | Modular context step 12: yomi-manual skill and yomi-asset-check agent (08a7196) |
-| 13 | [13-stage-4-close.md](13-stage-4-close.md) | directory cap to 8,000; root Commands and cap lines; findability of art/audio/e2e; trigger check; final sizes **[Q3]** | 12 | sonnet / opus | in progress | |
+| 13 | [13-stage-4-close.md](13-stage-4-close.md) | directory cap to 8,000; root Commands and cap lines; findability of art/audio/e2e; trigger check; final sizes **[Q3]** | 12 | sonnet / opus | done | cdfa417 |
 
 ## Execution order
 
