@@ -62,15 +62,22 @@ Two vitest projects: `scenes` (jsdom, smoke tests) is only `src/scenes/*Scene.te
 
 - `docs/reference/<area>.md`: `battle`, `characters`, `game`, `scenes`, `simulator`, `audio`, `sprites`, `e2e`. Open the section you need when a guide points there.
 - `docs/manual/README.md`: the player's manual; a change to a rule it states or a screen it shows updates it and retakes its screenshots.
-- `docs/designs/`: feature designs (may be ahead of the code). `docs/implementation-plans/`: step plans with completion logs, the record of past reasoning and balance history.
+- `.claude/`: project skills (`yomi-*`), agents and role profiles; `scripts/claudeMd.test.ts` caps them.
+- `docs/designs/`: feature designs (may be ahead of the code). `docs/implementation-plans/`: step plans (`index.md`) and their history (`log.md`).
 
 ## Keeping these files current
 
-Update the right `CLAUDE.md` in the same commit as the change that makes it wrong; search them for every name renamed or deleted. Where a fact goes:
+Update the right file in the same commit as the change that makes it wrong; search the CLAUDE.md files and `.claude/` for every name renamed or deleted. Where a fact goes:
 
-- **This file**: commands, the map, contracts spanning directories.
-- **A directory's `CLAUDE.md`**: that directory's contracts, gotchas and "if you add X, also update Y" checklists, one line a module.
-- **`docs/reference/<area>.md`**: full rule text and detail.
-- **Nowhere**: what a grep answers, what the code says, and history (that goes in `docs/implementation-plans/`).
+| A fact | Goes in |
+| --- | --- |
+| commands, the map, contracts spanning directories | this file |
+| a rule that stops you breaking code in one directory | that directory's `CLAUDE.md`, one line a module |
+| how to do a kind of task: an "if you add X" list, a tool workflow, tuning | a project skill, `.claude/skills/yomi-<task>/`, one file per case |
+| what one role needs to know about Yomi | `.claude/roles/<role>.md` |
+| a delegated job with a fixed report | `.claude/agents/<name>.md` |
+| full rule text and detail | `docs/reference/<area>.md` |
+| a feature's state / its history | `docs/features/<slug>.md` State / the plan's `log.md` |
+| what a grep answers, what the code says | nowhere |
 
-`scripts/claudeMd.test.ts` caps this file at 16 KB and each directory's at 12 KB; when it fails, move detail into `docs/reference/`.
+`scripts/claudeMd.test.ts` caps this file at 16 KB, each directory's at 12 KB, and the `.claude/` skills, agents and always-loaded total; when it fails, move detail into `docs/reference/` or a skill.

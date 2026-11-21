@@ -144,3 +144,7 @@ Measure with `wc -c`. For descriptions, use the same byte sum the step 01 budget
 - [ ] The step's section of `log.md` has been written (date, tiers, verdict, review rounds, commands and results).
 
 ## 7. Execution record
+
+- Root `CLAUDE.md` edited as 3.1 says; 6,783 bytes, over the 6,500 guide by 283 (the verbatim table and Docs line cost about 700 bytes; my own wording is already tight). The always-loaded total is 7,431 against 8,500. [Q1] checked: no root text sends to `scripts/CLAUDE.md` for the bands.
+- Findability, sizes and the pointer sweep are in `log.md` (Step 05). No miss was unjustified; no restore was needed. Deviation: the 6,500-byte root guide is exceeded, reported for the orchestrator.
+- `npm test`: tsc clean; 97 files, 2407 tests passed.
