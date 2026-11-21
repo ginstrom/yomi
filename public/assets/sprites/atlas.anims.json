@@ -1511,6 +1511,48 @@
     {
       "frames": [
         {
+          "duration": 600,
+          "frame": "map_partner_port/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 600,
+          "frame": "map_partner_port/swell",
+          "key": "atlas"
+        }
+      ],
+      "key": "map_partner_port/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
+          "duration": 500,
+          "frame": "map_partner_village/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 500,
+          "frame": "map_partner_village/turn",
+          "key": "atlas"
+        },
+        {
+          "duration": 500,
+          "frame": "map_partner_village/base",
+          "key": "atlas"
+        },
+        {
+          "duration": 500,
+          "frame": "map_partner_village/turn",
+          "key": "atlas"
+        }
+      ],
+      "key": "map_partner_village/idle",
+      "repeat": -1
+    },
+    {
+      "frames": [
+        {
           "duration": 450,
           "frame": "map_resource/base",
           "key": "atlas"
