@@ -889,6 +889,11 @@ export function improveErrand(world: WorldState, party: Expedition): QuietLocati
   return nearest(forts) ?? nearest(candidates)
 }
 
+/** Whether some held site is threatened (a threatened watchtower does not count). */
+function heldThreatened(world: WorldState): boolean {
+  return sites(world).some((site) => world.held.includes(site.id) && world.threatened.includes(site.id))
+}
+
 /** How far from the vanguard (or a lone party) an uncontacted trade partner may be for it to walk there first. */
 export const CONTACT_DETOUR = 8
 
@@ -902,7 +907,7 @@ export const CONTACT_DETOUR = 8
  */
 export function contactErrand(world: WorldState, party: Expedition, skip: ReadonlySet<string> = new Set()): PartnerLocation | null {
   if (routeLimit(world) === 0) return null
-  if (sites(world).some((site) => world.held.includes(site.id) && world.threatened.includes(site.id))) return null
+  if (heldThreatened(world)) return null
   const distance = (p: PartnerLocation) => hexDistance(party.position, p.position)
   const near = partners(world).filter((p) => !isContacted(world, p.id) && !skip.has(p.id) && distance(p) <= CONTACT_DETOUR)
   return near.length === 0 ? null : near.reduce((a, b) => (distance(b) < distance(a) ? b : a))
@@ -1205,7 +1210,12 @@ export function decide(run: CampaignRun, party: Expedition): Decision {
         continue
       }
       case 'contact': {
-        // Contact comes with the day the party ends on the partner's hex; a walk given up chooses again.
+        // Contact comes with the day the party ends on the partner's hex; a walk given up chooses again, as does one
+        // whose partner was contacted on the way or which a threatened held site calls off.
+        if (isContacted(world, plan.contactsTried.at(-1)!) || heldThreatened(world)) {
+          plan.phase = 'choose'
+          continue
+        }
         const walked = walking(world, party, plan)
         if (walked === 'go') return { kind: 'order', order: { kind: 'travel', to: plan.to! } }
         plan.phase = 'choose'
@@ -1401,8 +1411,8 @@ export function guardChoice(run: CampaignRun, party: Expedition): GuardChoice {
   const distance = (l: MonsterLocation) => hexDistance(party.position, l.position)
   const nearest = (a: MonsterLocation, b: MonsterLocation) => (distance(b) < distance(a) ? b : a)
   const raiding = routeRaiders(world)
-  const raiders = nests.filter((l) => raiding.includes(l))
-  if (raiders.length > 0) return { kind: 'defend', target: raiders.reduce(nearest) }
+  const raidingNests = nests.filter((l) => raiding.includes(l))
+  if (raidingNests.length > 0) return { kind: 'defend', target: raidingNests.reduce(nearest) }
   if (nests.length > 0) return { kind: 'train', target: nests.reduce(nearest) }
   const held = takenSites(run, party)
   const garrison = threatened.find(({ site }) => site.kind !== 'encampment' && !held.has(site.id))

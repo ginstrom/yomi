@@ -2092,8 +2092,7 @@ describe('the simulator’s trade', () => {
       expect(contactErrand(game.world, party)).toBeNull()
       party.position = shifted(at(game, 'millbrook'), 2)
       game.world.contacted.push('millbrook')
-      expect(contactErrand(game.world, party)?.id).not.toBe('millbrook')
-      game.world.contacted.push('saltmere')
+      // Saltmere is 14 hexes off: none.
       expect(contactErrand(game.world, party)).toBeNull()
     })
 
@@ -2166,6 +2165,31 @@ describe('the simulator’s trade', () => {
     expect(decide(run, party)).toEqual({ kind: 'order', order: { kind: 'travel', to: next.position } })
     expect(plan.phase).toBe('target')
   }, 20_000)
+
+  it('calls the walk off for a partner contacted on the way, or a held site threatened, and chooses a nest', () => {
+    const walkingTo = () => {
+      const game = newGame(undefined, null, 1)
+      game.world.tradingPost = 4
+      const party = game.parties[0]
+      party.position = shifted(at(game, 'millbrook'), 4)
+      const run = startCampaign(0, 1, args, 0, game)
+      const plan = planOf(run, party)
+      plan.phase = 'choose'
+      expect(decide(run, party)).toEqual({ kind: 'order', order: { kind: 'travel', to: at(game, 'millbrook') } })
+      return { game, party, run, plan }
+    }
+    const contacted = walkingTo()
+    contacted.game.world.contacted.push('millbrook')
+    const next = nextTarget(contacted.game.world, contacted.party, args.readyLevel)!
+    expect(decide(contacted.run, contacted.party)).toEqual({ kind: 'order', order: { kind: 'travel', to: next.position } })
+    expect(contacted.plan.phase).toBe('target')
+    const threatened = walkingTo()
+    threatened.game.world.held.push('gold_seam')
+    threatened.game.world.threatened = ['gold_seam']
+    const defend = nextTarget(threatened.game.world, threatened.party, args.readyLevel)!
+    expect(decide(threatened.run, threatened.party)).toEqual({ kind: 'order', order: { kind: 'travel', to: defend.position } })
+    expect(threatened.plan.phase).toBe('target')
+  })
 
   it('gives up a partner it cannot reach and chooses a nest instead', () => {
     const game = newGame(undefined, null, 1)
