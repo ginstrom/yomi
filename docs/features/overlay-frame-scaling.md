@@ -3,7 +3,7 @@
 ## State
 
 - Request (carried forward from `docs/features/long-campaign-stage-07.md`, approved by the user 2026-11-21 as a loose end): "let overlay frames scale above 1 on large windows (encampment buildings stay 96 px at 1280)."
-- Slug `overlay-frame-scaling` · Path: small (design, then one step, no planner) · Phase 6, done (`039dc70`); not pushed · In PR #9 · Next action: merge with #9 · Branch: `long-campaign-stage-07` (current branch; goes out in the PR stacked above stage 7)
+- Slug `overlay-frame-scaling` · Path: small (design, then one step, no planner) · Done (`039dc70`): merged into main with PR #9 (`400af6a`) · Next action: none · Branch: `long-campaign-stage-07` (current branch; goes out in the PR stacked above stage 7)
 - Links: design `docs/designs/overlay-frame-scaling.md`; no plan index (one step from the design); history `docs/implementation-plans/overlay-frame-scaling/log.md`.
 - Open questions: none.
 - Tiers: designer sonnet; engineer sonnet; reviewer sonnet.
