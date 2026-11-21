@@ -23,3 +23,7 @@ Measured by the `yomi-measure` agent on a clean worktree at `b28bba1` (no code c
 
 - 50-campaign check on the step's tree: SHA-256 `1ceefe633e71c0326c0c5b261c77e1c010c49e30303a85286a782589e74400d1`, **identical** to the baseline (23 of 50).
 - The refactor guard (`scripts/simulate.test.ts`) passes with the fixture untouched.
+
+## Step 01 outcome
+
+- Step 01 (partners, contact and silence): engineer opus, reviewer opus; verdict clean after 1 review round. Commits `a2df674`, `5916f52`, and the review follow-up (two small save fixes, step 02's route save check, the index trimmed under its cap).

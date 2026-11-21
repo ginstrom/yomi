@@ -192,7 +192,8 @@ export const SIM_PARTNERS: readonly PartnerLocation[] = []   // every simulated 
 8. **Wiring.** `updateTerritory` calls `partnerDay` (step 01) then, on yield days, `tradeDay`, appending their events after the market's. `YieldSource` gains `'route'`; `yield` gains `route?: string`.
 9. **`isNotable`:** `route_raided` when `event.days === 1`; `route_abandoned` always. `route_opened` and `route_restored` are not notable.
 10. **`towerHexRefusal(world, at)`** in `buildings.ts`: move `towerSiteRefusal`'s place rules into it, keyed on a hex; `towerSiteRefusal(world, party)` keeps its monsters-here check and calls it with `party.position`, returning exactly the same words in the same order as today. (Its "cannot stand on the encampment or a resource" message may say "on a location" now that partners exist; if you change the words, update every test and the manual line that quotes them, and say so in the record.)
-11. **Exclusions:** no scene lines, overlay or Routes tab (steps 05, 06); no road sources or Lodge 3 (step 03); no simulator change (step 07; `SIM_PARTNERS` stays `[]`); no new saved field.
+11. **The save's route check** (from step 01's review). `isRoute` in `src/game/save.ts` (with the strict check around it) also refuses a route whose `id` is not `'route_' + partner`, a second route to the same partner, and a route to a partner not in `contacted`. No new field, so `SAVE_VERSION` stays 28.
+12. **Exclusions:** no scene lines, overlay or Routes tab (steps 05, 06); no road sources or Lodge 3 (step 03); no simulator change (step 07; `SIM_PARTNERS` stays `[]`); no new saved field.
 
 ## 5. Verification
 
@@ -205,6 +206,7 @@ export const SIM_PARTNERS: readonly PartnerLocation[] = []   // every simulated 
   - `tradeDay`: nothing on non-yield days; a raided route pays nothing and counts `days` 1, 2, …; after `ABANDON_AFTER` raided yield days `route_abandoned` follows the sixth `route_raided` and the route is gone (slot freed: `openRouteRefusal` no longer says full); the first clear yield day after a raid emits `route_restored` and resets; gold `yield` with `source: 'route'`, `route`, `site` the partner's id; the good on a yield day with `turn / YIELD_DAYS` even and security ≥ 0.5, not on odd ones, not below 0.5; nothing at all when `world.status === 'lost'`.
 - **`src/game/worldMap.test.ts`:** `isNotable` true for `route_raided` with `days: 1`, false with `days: 2`; true for `route_abandoned`; false for `route_opened`, `route_restored`.
 - **`src/game/territory.test.ts`:** on a yield day, route events come after the sites' and the market's yields; a world with no routes yields exactly as before.
+- **`src/game/save.test.ts`:** a version-28 save is unreadable with a route whose `id` is not `route_<partner>`, with two routes to one partner, or with a route to an uncontacted partner; one opened by `openRoute` round-trips.
 - **`src/game/buildings.test.ts`:** `towerHexRefusal` gives each of today's tower refusals for a hex; `towerSiteRefusal`'s existing tests pass unchanged.
 - `npm test` passes; the refactor guard is green and its fixture untouched.
 - The 50-campaign check (command above): hash **identical** to step 01's baseline; record both values.
@@ -212,6 +214,7 @@ export const SIM_PARTNERS: readonly PartnerLocation[] = []   // every simulated 
 ## 6. Completion criteria
 
 - [ ] `trade.ts` exports everything in C2 with those signatures; `YieldSource` has `'route'`; the four route events are in `WorldEvent`; `isNotable` as C2; `towerHexRefusal` in `buildings.ts`.
+- [ ] The save's strict check refuses a route with the wrong id, a duplicate partner or an uncontacted partner (§4 item 11).
 - [ ] `updateTerritory` runs `partnerDay` then, on yield days, `tradeDay`, after the market's yield.
 - [ ] The tests in §5 exist and pass; `npm test` passes.
 - [ ] The refactor guard is green with its fixture unedited; the 50-campaign hash is identical to step 01's (both recorded).

@@ -58,59 +58,11 @@ The plan follows the stage design, then the reference, then the code (where they
 
 ## Contracts
 
-Task files copy these unchanged. "Existing" means at `42cde46`.
+Each step's task file copies its contracts unchanged; C2 and C3, which several steps consume, stay here in full, and the others' bodies live in their step's task file. "Existing" means at `42cde46`.
 
 ### C1. Partners, contact and silence (step 01)
 
-```ts
-// src/game/worldMap.ts
-export interface PartnerLocation extends LocationBase { kind: 'partner'; good: Material }   // a neutral settlement: never held, never lost
-export type WorldLocation = MonsterLocation | QuietLocation | PartnerLocation                // LocationKind gains 'partner'
-export const PARTNERS: readonly PartnerLocation[] = [
-  { id: 'millbrook', kind: 'partner', name: 'Millbrook', position: offsetToHex(18, 30), good: 'timber' },   // threat 2 ring
-  { id: 'saltmere', kind: 'partner', name: 'Saltmere', position: offsetToHex(30, 38), good: 'salt' },       // threat 3 ring, south edge
-]
-export function newWorld(seed?: number, encampmentName?: string, partners: readonly PartnerLocation[] = PARTNERS): WorldState
-//   copies of `partners` placed in `locations` after the resources, before the monsters, before the blight is seeded
-// WorldState gains (newWorld: [], [], [], 0):
-contacted: string[]        // partner ids contacted, in the order contacted; permanent
-silent: string[]           // partner ids silent now: entered when the hex reaches LOSS_LEVEL, left when it is 0
-routes: TradeRoute[]       // open routes, in the order opened (filled from step 02)
-routesOpened: number       // routes ever opened
-
-// src/game/trade.ts (new)
-export interface TradeRoute {
-  id: string               // 'route_<partner id>'
-  partner: string
-  road: Hex[]              // the encampment's hex excluded, the partner's included; fixed when opened
-  opened: number           // the world turn it opened
-  raidedDays: number       // raided yield days in a row
-}
-export function partners(world: WorldState): PartnerLocation[]                 // in locations order
-export function partnerById(world: WorldState, id: string): PartnerLocation | null
-export function isContacted(world: WorldState, id: string): boolean
-export function isSilent(world: WorldState, id: string): boolean
-export function contactPartner(world: WorldState, id: string): WorldEvent | null   // partner_contacted, or null (not a partner, or contacted already)
-export function partnerDay(world: WorldState, presences: readonly PartyPresence[]): WorldEvent[]
-//   every day, called by updateTerritory after the yields: first contact (partners in locations order, each with a presence on its hex),
-//   then silence (a partner not silent whose hex is >= LOSS_LEVEL joins `silent`; a silent one whose hex is 0 leaves it);
-//   partner_silent / partner_restored only for contacted partners
-
-// src/game/blight.ts
-export const PARTNER_STRENGTH = 3   // sources(): every partner location a clean source of this, silent or not
-// WorldEvent gains:
-//   | { type: 'partner_contacted'; partner: string; name: string; home: string }   // home: the encampment's name
-//   | { type: 'partner_silent'; partner: string; name: string }
-//   | { type: 'partner_restored'; partner: string; name: string }
-
-// src/game/territory.ts: sites(world) returns only 'encampment' and 'resource' locations (partners excluded)
-// src/game/worldMap.ts: isNotable(partner_silent) is true
-// src/game/save.ts: SAVE_VERSION = 28, no migration (decision 15: older saves unreadable); the strict check covers partners (kind, a Material good),
-//   contacted and silent (ids of partner locations), routes (TradeRoute's shape, partner a location id) and routesOpened
-// src/scenes/WorldScene.ts: LOCATION_SPRITES.partner = 'map_resource' (temporary, for tsc; step 05 draws the partner sprites)
-// scripts/simulate.ts (temporary, removed in step 07):
-export const SIM_PARTNERS: readonly PartnerLocation[] = []   // every simulated world (campaigns and the waiting twin) is newWorld(seed, undefined, SIM_PARTNERS)
-```
+Moved to [step 01's task file](01-partners-domain.md) §2 (built; the code at `a2df674` is the reference). Steps 02, 03, 06 and 07 copy the parts they consume.
 
 ### C2. Routes, raids and guards (step 02)
 
@@ -180,103 +132,19 @@ export const SIM_LODGE_CAP = 2   // visitFacilities raises the Lodge only below 
 
 ### C4. Sprites (step 04)
 
-- `map_partner_village` (Millbrook, a farming village: thatched cottages, a granary or windmill, a strip of field) and `map_partner_port` (Saltmere, a fishing port on the coast: a quay, a boat, salt pans), each on the 24px `map` canvas with frame `base` and an `idle` animation, distinct at a glance from `map_encampment` and `map_resource`, and readable when tinted grey (silent).
-- `camp_lodge/level_3` redrawn (stage 7's note: the milestone reads as a bottle, the paving is faint, the 2 → 3 step is weak at 1x): a clearly paved road and a milestone that reads as stone, a plain step up from `level_2`, same canvas, footprint and anchor.
+Moved to [step 04's task file](04-sprites.md) §2: the two partner sprites and `camp_lodge/level_3` redrawn.
 
 ### C5. The world map (step 05)
 
-```ts
-// src/scenes/roadsView.ts (new, Phaser-free, with tests)
-export type RoadShade = 'secure' | 'tainted' | 'raided'
-export const ROAD_COLORS: Record<RoadShade, number> = { secure: 0xffd54f, tainted: 0xffa726, raided: 0xe53935 }
-export interface RoadSegment { route: string; from: Hex; to: Hex; shade: RoadShade }
-export function roadSegments(world: WorldState, presences: readonly PartyPresence[]): RoadSegment[]
-//   every open route, from the encampment's hex along its road; a route with a raidCause today is 'raided' throughout,
-//   else each segment by hexSecurity of its `to` hex: 1 'secure', 0.5 'tainted', 0 'raided'
-export function roadInfoLines(world: WorldState, presences: readonly PartyPresence[], at: Hex): string[]
-//   for each open route whose road holds `at`: "The Millbrook road: security 75%, about 2 gold every 5 days." (income as decision 8),
-//   and when raided today "Raided: <raidWords>."
-export function raidWords(raid: { cause: RaidCause; raider?: MonsterLocation }, partner: PartnerLocation): string
-//   raiders "the Goblin Brood is within 2 hexes" (theName, RAID_RADIUS; "are" for a plural name such as "the Goblin Raiders");
-//   corrupted "the blight has overrun it"; silent "Millbrook is silent"
-export function partnerInfoLines(world: WorldState, partner: PartnerLocation): string[]
-//   "Trade partner: <good>."; "Not yet contacted: walk here to trade." | "Trades with <encampment name>." ; "Silent while the blight holds its land." when silent;
-//   "Route open: security N%." when routed
-// src/scenes/worldEvents.ts describeWorldEvent:
-//   partner_contacted "Millbrook will trade with Oakvale."; partner_silent "Millbrook has fallen silent under the blight.";
-//   partner_restored "Millbrook is trading again."; route_opened "A road is opened to Millbrook.";
-//   route_raided (days 1) raiders "Raiders on the Millbrook road: the Goblin Brood." | corrupted "The blight has overrun the Millbrook road." |
-//     silent "The Millbrook road is idle: Millbrook is silent."; (days > 1) '';
-//   route_restored "The Millbrook road is safe again."; route_abandoned "The Millbrook road is abandoned.";
-//   a route yield "The Millbrook road brings 2 gold."
-// yieldSummary: a third part "routes 3 gold, 1 timber" (gold first), after sites and market
-// src/scenes/sounds.ts: decision 17
-// src/scenes/WorldScene.ts: a roads layer under the locations, dashed segments in ROAD_COLORS; LOCATION_SPRITES.partner = 'map_partner_village';
-//   PARTNER_SPRITES: Record<string, string> = { millbrook: 'map_partner_village', saltmere: 'map_partner_port' } (a partner without one uses LOCATION_SPRITES.partner);
-//   a silent partner's sprite and label tinted grey (0x9e9e9e / '#9e9e9e'); hexInfo adds partnerInfoLines and roadInfoLines
-// src/testHook.ts WorldProbe gains:
-roads: { route: string; shades: RoadShade[] }[]
-partners: { id: string; contacted: boolean; silent: boolean; drawn: boolean }[]
-```
+Moved to [step 05's task file](05-world-map.md) §2: `roadsView.ts` (`roadSegments`, `roadInfoLines`, `raidWords`, `partnerInfoLines`), the event lines, `yieldSummary`, sounds, `WorldScene` and the `WorldProbe` fields. Step 06 copies what it consumes.
 
 ### C6. The Routes tab and the debug console (step 06)
 
-```ts
-// src/scenes/routesTab.ts (new, Phaser-free, with tests)
-export type RouteStatus = 'open' | 'raided' | 'closed'
-export interface RouteRow {
-  partner: string; name: string; good: Material; silent: boolean
-  status: RouteStatus            // open (a route, not raided today), raided (a route with a raidCause today), closed (no route)
-  road: Hex[] | null             // the open route's road, or roadTo's preview for a closed one (null when none)
-  length: number | null
-  income: number | null          // routeIncome(world, road, [])
-  security: number | null        // routeSecurity(world, road, [])
-  cost: Stock | null             // routeCost(length) for a closed one
-  raidedDays: number
-  refusal: string | null         // openRouteRefusal for a closed one, else null
-  raid: string | null            // for a closed row with a road: what would raid it today (raidCause on the preview), in words, else null
-}
-export function routeRows(game: GameState, party: Expedition): RouteRow[]   // one per contacted partner, in contact order
-export function routeOffer(row: RouteRow): string
-//   "Open a route to Millbrook: 14 hexes, about 2 gold every 5 days, costs 27 gold, 10 timber"
-//   (+ ". Raided at once: the Goblin Raiders are within 2 hexes" when row.raid; the cause words as roadInfoLines')
-export function routeState(row: RouteRow): string
-//   "Millbrook road: security 75%, about 2 gold every 5 days" (+ "; raided 2 yield days" when raidedDays > 0)
-export function minimapPoints(board: BoardSize, road: readonly Hex[], from: Hex, rect: { x: number; y: number; width: number; height: number }): Point[]
-// src/scenes/TradingPostScene.ts: Tab = 'buy' | 'sell' | 'routes'; a Routes tab button; per row its line, an Open button for a closed row
-//   (a refused one faint but clickable, sounding the refusal), and the selected row's road on a minimap of the board
-// src/testHook.ts TradingPostProbe gains: buttons.routesTab: ButtonProbe; routes: { partner: string; status: RouteStatus; line: string; open: ButtonProbe | null }[]
-// src/game/blight.ts: SPAWN_KINDS exported (unchanged)
-// src/scenes/debugCommands.ts: spawn <encounter> [here | <location id> | <col> <row>]; contact <partner id | all>   (decision 18)
-```
+Moved to [step 06's task file](06-routes-tab-and-debug.md) §2: `routesTab.ts` (`RouteRow`, `routeRows`, `routeOffer`, `routeState`, `minimapPoints`), the Routes tab, its probe, `SPAWN_KINDS` exported, the `spawn` and `contact` debug commands.
 
 ### C7. The simulator's trade (step 07)
 
-```ts
-// scripts/simulate.ts
-// SIM_PARTNERS and SIM_LODGE_CAP are removed: every simulated world has PARTNERS
-export const CONTACT_DETOUR = 8
-export function contactErrand(world: WorldState, party: Expedition): PartnerLocation | null
-//   the nearest uncontacted partner within CONTACT_DETOUR of the party, when no held site is threatened; ties in locations order
-export const TOWER_ERRAND_RADIUS = 6
-export function towerErrand(world: WorldState, party: Expedition): Hex | null
-//   if the stock affords TOWER_COST: the nearest hex within TOWER_ERRAND_RADIUS of the party with towerHexRefusal null that lies within
-//   GUARD_RADIUS of a hex of an open road at level 1 or 2 with no watchtower within GUARD_RADIUS; ties by board index
-export function routeRaiders(world: WorldState): MonsterLocation[]   // raiders() of every open route, once each, in route order
-// Phases gain 'contact' (the vanguard's walk to contactErrand's partner, from 'choose', back to 'choose' on arrival)
-//   and 'road_tower' (the walk to towerErrand's hex from 'tower', then a tower act if canBuildTower); 'tower' prefers the errand
-// nextTarget and the guard's defend branch: after the threatened sites, the nearest routeRaiders() nest the party is up to (not taken)
-// visitFacilities: after the infirmary, open routes to every contacted partner while openRouteRefusal says null, shortest road first
-//   (ties in contact order); then the Lodge, to 2, or 3 once world.routes is not empty (decision 12)
-// materialNeeds: LODGE_COSTS up to that cap; ROUTE_TIMBER for each free slot while a contacted partner has no route
-// CampaignRecord gains:
-partnersContacted: number
-routesOpened: number          // route_opened events
-routesRaided: number          // raid runs: route_raided with days 1
-routesAbandoned: number
-// goldBySource gains routes: number (gold from yields with source 'route')
-// The summary prints partners contacted, routes opened, raided and abandoned (averages), and routes in gold by source.
-```
+Moved to [step 07's task file](07-simulator.md) §3: the holds removed, `contactErrand`, `towerErrand`, `routeRaiders`, the `contact` and `road_tower` phases, raiders in `nextTarget` and the guard, `visitFacilities`, `materialNeeds`, the record's four counts and `goldBySource.routes`.
 
 ## Tasks
 

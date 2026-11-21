@@ -404,7 +404,7 @@ describe('a company', () => {
 
 describe('a save\'s improvements and Lodge', () => {
   /** A current save's JSON, its world edited as the test asks. */
-  const v27With = (change: (world: any) => void): string => {
+  const savedWith = (change: (world: any) => void): string => {
     const saved = JSON.parse(serializeSave({ game: gameUnderWay(), battle: null, savedAt: 5 }))
     change(saved.game.world)
     return JSON.stringify(saved)
@@ -421,19 +421,19 @@ describe('a save\'s improvements and Lodge', () => {
   })
 
   it('reads a bad improvement or Lodge level, or the old outposts list, as unreadable', () => {
-    expect(parseSave(v27With(() => {}))).not.toBeNull()
-    expect(parseSave(v27With((w) => (w.improvements = { iron_vein: 3 })))).not.toBeNull()
-    expect(parseSave(v27With((w) => (w.lodge = 3)))).not.toBeNull()
-    expect(parseSave(v27With((w) => (w.improvements = { iron_vein: 4 })))).toBeNull()
-    expect(parseSave(v27With((w) => (w.improvements = { iron_vein: 0 })))).toBeNull()
-    expect(parseSave(v27With((w) => (w.improvements = { [ENCAMPMENT_ID]: 1 })))).toBeNull()
-    expect(parseSave(v27With((w) => (w.improvements = { nowhere: 1 })))).toBeNull()
-    expect(parseSave(v27With((w) => (w.improvements = ['iron_vein'])))).toBeNull()
-    expect(parseSave(v27With((w) => delete w.improvements))).toBeNull()
-    expect(parseSave(v27With((w) => (w.lodge = 4)))).toBeNull()
-    expect(parseSave(v27With((w) => (w.lodge = -1)))).toBeNull()
-    expect(parseSave(v27With((w) => (w.lodge = 1.5)))).toBeNull()
-    expect(parseSave(v27With((w) => delete w.lodge))).toBeNull()
+    expect(parseSave(savedWith(() => {}))).not.toBeNull()
+    expect(parseSave(savedWith((w) => (w.improvements = { iron_vein: 3 })))).not.toBeNull()
+    expect(parseSave(savedWith((w) => (w.lodge = 3)))).not.toBeNull()
+    expect(parseSave(savedWith((w) => (w.improvements = { iron_vein: 4 })))).toBeNull()
+    expect(parseSave(savedWith((w) => (w.improvements = { iron_vein: 0 })))).toBeNull()
+    expect(parseSave(savedWith((w) => (w.improvements = { [ENCAMPMENT_ID]: 1 })))).toBeNull()
+    expect(parseSave(savedWith((w) => (w.improvements = { nowhere: 1 })))).toBeNull()
+    expect(parseSave(savedWith((w) => (w.improvements = ['iron_vein'])))).toBeNull()
+    expect(parseSave(savedWith((w) => delete w.improvements))).toBeNull()
+    expect(parseSave(savedWith((w) => (w.lodge = 4)))).toBeNull()
+    expect(parseSave(savedWith((w) => (w.lodge = -1)))).toBeNull()
+    expect(parseSave(savedWith((w) => (w.lodge = 1.5)))).toBeNull()
+    expect(parseSave(savedWith((w) => delete w.lodge))).toBeNull()
   })
 
   it('reads a day order of the old outpost action as unreadable', () => {
@@ -511,6 +511,7 @@ describe('a version-28 save', () => {
     const millbrook = (w: any) => w.locations.find((l: any) => l.id === 'millbrook')
     expect(parseSave(edited((w) => (millbrook(w).good = 'mithril')))).toBeNull()
     expect(parseSave(edited((w) => delete millbrook(w).good))).toBeNull()
+    expect(parseSave(edited((w) => (millbrook(w).good = ['timber'])))).toBeNull()
     expect(parseSave(edited((w) => (w.contacted = ['iron_vein'])))).toBeNull()
     expect(parseSave(edited((w) => (w.contacted = ['millbrook', 'millbrook'])))).toBeNull()
     expect(parseSave(edited((w) => (w.contacted = 'millbrook')))).toBeNull()

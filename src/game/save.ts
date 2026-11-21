@@ -225,7 +225,7 @@ export function parseSave(raw: string | null): SaveFile | null {
     )
     const partnerIds = new Set(world.locations.filter((l) => l && l.kind === 'partner').map((l) => l.id))
     // A partner's good is a material: `WORKS_NAMES` is a full record of them.
-    check(world.locations.every((l) => !l || l.kind !== 'partner' || Object.hasOwn(WORKS_NAMES, l.good)))
+    check(world.locations.every((l) => !l || l.kind !== 'partner' || (typeof l.good === 'string' && Object.hasOwn(WORKS_NAMES, l.good))))
     check(isPartnerIds(world.contacted, partnerIds) && isPartnerIds(world.silent, partnerIds))
     check(Array.isArray(world.routes) && world.routes.every((route) => isRoute(route, partnerIds)))
     check(isIndex(world.routesOpened))
