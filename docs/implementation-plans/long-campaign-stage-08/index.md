@@ -157,7 +157,7 @@ Moved to [step 07's task file](07-simulator.md) §3: the holds removed, `contact
 | 05 | [The world map's roads and partners](05-world-map.md) | Roads overlay, partner icons and greying, hex info and road lines, event lines, yield summary, sounds (C5); manual text; in-browser tests | 03, 04 | sonnet / opus | done (see its record) |
 | 06 | [The Routes tab and the debug console](06-routes-tab-and-debug.md) | The trading post's Routes tab with preview and minimap; debug `spawn` and `contact` (C6); manual text; in-browser tests | 05 | sonnet / opus | done (ba4b82b, review follow-ups a04d476) |
 | 07 | [The simulator's trade](07-simulator.md) | Holds removed; contact detour, routes opened, Lodge 3, raiders weighed, tower errand, guard defends roads, record and summary (C7); fixture re-recorded once | 03 | opus / opus | done (1dfbd59, follow-ups 9ce59b9, merged c94e05f) |
-| 08 | [Measure, document, play](08-measure-document-play.md) | Guard and company figures, `--ready-level 10` routes check; CLAUDE.md, reference docs, manual and screenshots; implementation notes; play script walked | 06, 07 | opus / opus | pending |
+| 08 | [Measure, document, play](08-measure-document-play.md) | Guard and company figures, `--ready-level 10` routes check; CLAUDE.md, reference docs, manual and screenshots; implementation notes; play script walked | 06, 07 | opus / opus | in progress |
 
 **Tiers.** "opus" means leave the model unset (the session's); "sonnet" means `model: "sonnet"`. Steps 01, 02 and 07 decide state, saves, rules and the simulator's play; 08 measures and judges balance. Steps 03, 05 and 06 follow fixed contracts and existing patterns; 04 is tool work with a judged look. Every reviewer is opus.
 

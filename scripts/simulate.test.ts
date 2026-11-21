@@ -12,7 +12,7 @@ import { newGame } from '../src/game/gameState.ts'
 import { heroId } from '../src/game/encounters.ts'
 import { readyMadeParty } from '../src/game/party.ts'
 import { IMPROVEMENT_COSTS, LODGE_COSTS, TOWER_COST, towerHexRefusal } from '../src/game/buildings.ts'
-import { GUARD_RADIUS, ROUTE_TIMBER, isContacted, roadTo, type TradeRoute } from '../src/game/trade.ts'
+import { GUARD_RADIUS, ROUTE_TIMBER, isContacted, roadTo, routeLimit, type TradeRoute } from '../src/game/trade.ts'
 import { HexBoard } from '../src/grid/hex.ts'
 import { advance, formParty, moveHero, type DayReport } from '../src/game/company.ts'
 import { MAX_PARTIES, presenceOf, type Expedition } from '../src/game/expedition.ts'
@@ -23,7 +23,7 @@ import { modifiersFor } from '../src/inventory/modifiers.ts'
 import { maxHp, type Character } from '../src/character/character.ts'
 import { worldHealing } from '../src/character/worldCasting.ts'
 import { lootRng, rollRunes } from '../src/game/loot.ts'
-import { MATERIALS_PER_GOLD, runePrice, salePrice } from '../src/game/tradingPost.ts'
+import { MATERIALS_PER_GOLD, MAX_TRADING_POST_LEVEL, runePrice, salePrice } from '../src/game/tradingPost.ts'
 import { pouchKeys } from '../src/inventory/runes.ts'
 import { boardIndex, monsterStrength, type WorldEvent } from '../src/game/blight.ts'
 import { LOSS_LEVEL, daysToFall, type Stock } from '../src/game/territory.ts'
@@ -284,6 +284,40 @@ describe('parseArgs', () => {
     expect(parseArgs(['--campaign', '--waiting']).waiting).toBe(true)
     expect(() => parseArgs(['--waiting'])).toThrow('--waiting applies only to --campaign')
   })
+
+  it('takes --trading-post for a campaign only, 1 to MAX_TRADING_POST_LEVEL, none by default', () => {
+    expect(parseArgs(['--campaign', '--trading-post', '4']).tradingPost).toBe(4)
+    expect(parseArgs(['--campaign', '--trading-post', String(MAX_TRADING_POST_LEVEL)]).tradingPost).toBe(MAX_TRADING_POST_LEVEL)
+    expect(parseArgs(['--campaign']).tradingPost).toBeNull()
+    for (const raw of ['0', String(MAX_TRADING_POST_LEVEL + 1), 'x']) {
+      expect(() => parseArgs(['--campaign', '--trading-post', raw])).toThrow(`--trading-post must be from 1 to ${MAX_TRADING_POST_LEVEL}`)
+    }
+    expect(() => parseArgs(['--trading-post', '4'])).toThrow('--trading-post applies only to --campaign')
+  })
+})
+
+describe('--trading-post', () => {
+  it('starts the campaign and its waiting twin with the post at that level, and leaves it at 1 without', () => {
+    const plain = startCampaign(0, 1, parseArgs(['--campaign']))
+    expect(plain.game.world.tradingPost).toBe(1)
+    expect(routeLimit(plain.game.world)).toBe(0)
+    const raised = startCampaign(0, 1, parseArgs(['--campaign', '--trading-post', '4']))
+    expect(raised.game.world.tradingPost).toBe(4)
+    expect(routeLimit(raised.game.world)).toBe(1)
+    // The waiting twin starts from the same post, so its market pays from day one as the campaign's does.
+    expect(waitingIncome(1, parseArgs(['--campaign', '--trading-post', '4']), 30)).toBeGreaterThan(waitingIncome(1, parseArgs(['--campaign']), 30))
+  })
+
+  it('lets the careful company open routes it could not open from a level 1 post', () => {
+    const count = (flags: string[]) => {
+      const args = parseArgs(['--campaign', '--ready-level', '10', ...flags])
+      let opened = 0
+      for (let c = 0; c < 4; c++) opened += runCampaign(c, 1000 + c, args).record.routesOpened
+      return opened
+    }
+    expect(count([])).toBe(0)
+    expect(count(['--trading-post', '4'])).toBeGreaterThan(0)
+  }, 120_000)
 })
 
 describe('--plans', () => {

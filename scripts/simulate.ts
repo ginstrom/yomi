@@ -15,7 +15,7 @@
 //                                 [--player-policy aggressive] [--enemy-policy aggressive]
 //                                 [--player-weapon iron_sword]
 //                                 [--encounter goblin_raid] [--threat 1] [--party-level 1]
-//                                 [--campaign] [--ready-level 7] [--parties 3] [--waiting]
+//                                 [--campaign] [--ready-level 7] [--parties 3] [--waiting] [--trading-post 4]
 //                                 [--plans melee=swordmaster,archery=ranger,magic=cryomancer]
 import { closeSync, mkdirSync, openSync, writeSync } from 'node:fs'
 import { dirname } from 'node:path'
@@ -85,7 +85,7 @@ import {
   type OrderRequest,
 } from '../src/game/company.ts'
 import { INFIRMARY_COSTS, raiseInfirmary } from '../src/game/infirmary.ts'
-import { MATERIALS_PER_GOLD, TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, wares } from '../src/game/tradingPost.ts'
+import { MATERIALS_PER_GOLD, MAX_TRADING_POST_LEVEL, TRADING_POST_COSTS, buy, buyPrice, raiseTradingPost, salePrice, sell, sellMaterial, wares } from '../src/game/tradingPost.ts'
 import { daysToFall, siteImprovement, sites, type Material, type Stock } from '../src/game/territory.ts'
 import {
   ENCAMPMENT_ID,
@@ -140,6 +140,12 @@ export interface CliArgs {
   plans: Partial<Record<SkillId, PlanId>>
   /** With `campaign`, run each campaign's waiting twin (`waitingIncome`) and print the waiting check; off, `waitingIncomePerDay` is 0. */
   waiting: boolean
+  /**
+   * With `campaign`, the trading post's level the world starts at (1 to `MAX_TRADING_POST_LEVEL`), for measuring
+   * routes, which open from level 4 (`ROUTE_SLOTS`); null, the default, leaves the new world's level 1 untouched.
+   * A measuring flag only: no band is read with it.
+   */
+  tradingPost: number | null
 }
 
 /** The plan a player's hero follows: the one `--plans` names for a skill it is tagged in, else `planFor`'s. */
@@ -209,6 +215,7 @@ export function parseArgs(argv: string[]): CliArgs {
     parties: MAX_PARTIES,
     plans: {},
     waiting: false,
+    tradingPost: null,
   }
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i]
@@ -268,6 +275,13 @@ export function parseArgs(argv: string[]): CliArgs {
       case '--waiting':
         args.waiting = true
         break
+      case '--trading-post': {
+        const raw = value()
+        const n = Number(raw)
+        if (!Number.isInteger(n) || n < 1 || n > MAX_TRADING_POST_LEVEL) throw new Error(`--trading-post must be from 1 to ${MAX_TRADING_POST_LEVEL}, got "${raw}"`)
+        args.tradingPost = n
+        break
+      }
       default:
         throw new Error(`Unknown argument: ${flag}`)
     }
@@ -284,6 +298,9 @@ export function parseArgs(argv: string[]): CliArgs {
   }
   if (!args.campaign && argv.includes('--waiting')) {
     throw new Error('--waiting applies only to --campaign, whose world the twin waits in')
+  }
+  if (!args.campaign && argv.includes('--trading-post')) {
+    throw new Error('--trading-post applies only to --campaign, whose world has the post')
   }
   return args
 }
@@ -1108,7 +1125,7 @@ export function setVanguard(run: CampaignRun, id: string): void {
 }
 
 /** A campaign about to begin, from a new game of the run's party unless one is given. */
-export function startCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0, game = newGame(startingParty(args), null, seed)): CampaignRun {
+export function startCampaign(campaign: number, seed: number, args: CliArgs, firstBattleId = 0, game = campaignGame(seed, args)): CampaignRun {
   const record: CampaignRecord = {
     outcome: 'timeout', days: 0, battles: 0, spawns: 0, captured: 0, lost: 0, blighted: 0, healedHp: 0, campDays: 0,
     towersBuilt: 0, towersLost: 0, deaths: 0, recruits: 0, hallLevel: 1, shrineLevel: 0,
@@ -1878,6 +1895,13 @@ export function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Camp
   return { battles, record }
 }
 
+/** A campaign's new game, seeded `seed`: the ready-made party, and the trading post at `--trading-post`'s level if given (drawing nothing). */
+function campaignGame(seed: number, args: CliArgs): GameState {
+  const game = newGame(startingParty(args), null, seed)
+  if (args.tradingPost !== null) game.world.tradingPost = args.tradingPost
+  return game
+}
+
 /**
  * The waiting twin (A9): the yields' value a day over `days` of the campaign
  * seeded `seed`, its company left idle at the encampment from the first day.
@@ -1889,7 +1913,7 @@ export function finishCampaign(run: CampaignRun, outcome: CampaignOutcome): Camp
  */
 export function waitingIncome(seed: number, args: CliArgs, days: number): number {
   if (days <= 0) return 0
-  const game = newGame(startingParty(args), null, seed)
+  const game = campaignGame(seed, args)
   let value = 0
   while (game.world.turn < days && worldActive(game.world)) {
     const report = passDay(game)
@@ -2451,6 +2475,7 @@ function main(): void {
   const gold = summary.avgGoldBySource
   console.log(`Gold by source: sites ${gold.sites.toFixed(0)}, market ${gold.market.toFixed(0)}, routes ${gold.routes.toFixed(0)}, sales ${gold.sales.toFixed(0)} a campaign`)
   console.log(tradeLine(summary))
+  if (args.tradingPost !== null) console.log(`Trading post started at level ${args.tradingPost} (--trading-post): a measuring run, read against no band`)
   if (args.waiting) console.log(waitingLine(summary))
   console.log(
     `Trading post, workshop, infirmary: levels ${summary.avgTradingPostLevel.toFixed(1)}, ${summary.avgWorkshopLevel.toFixed(1)}, ${summary.avgInfirmaryLevel.toFixed(1)} at the end; ${summary.avgGoldOnGear.toFixed(0)} gold on gear and ${summary.avgGoldFromSales.toFixed(0)} from sales, ${summary.avgCrafted.toFixed(1)} items crafted (${summary.avgFieldCraftDays.toFixed(1)} days in the field) a campaign`,
