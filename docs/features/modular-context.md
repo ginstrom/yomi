@@ -1,50 +1,27 @@
 # Feature: modular context and skills
 
-**Request (user's words):** "Please examine your workflows. Can you selectively load context depending on what you are working on? For example, design vs asset creation, coding, planning, etc. Can some of this be offloaded to skills so the main orchestrator does not need to hold as much context? Please think about how to design your context/skill system to be more modular." Then, after the proposal: "please replace AGENTS.md with a simlink, and then go through the suggested order".
+## State
 
-- **Slug:** `modular-context`
-- **Phase:** 4, implementation (steps 01–02 done; step 03 next)
-- **Branch:** `long-campaign-stage-07` (the current branch; project rule: commit on the current branch)
-- **Design:** `docs/designs/modular-context.md`
-- **Plan:** `docs/implementation-plans/modular-context/index.md` (13 steps, four stages; per-step tiers in its task table)
-
-## The approved proposal (from the conversation, 2026-11-21)
-
-Where each fact goes:
-
-1. **Directory `CLAUDE.md`: contracts only** (the rules that stop you breaking code in that directory). Procedures and cross-directory checklists move out.
-2. **Project skills (`.claude/skills/`), one per kind of task.** Each is a short index pointing at one supporting file per case:
-   - `yomi-add-content`: one file per content type (spell, ability, status, trait, element, foe, encounter, facility, gear icon, location kind, one-day action, …), each listing every place to touch across all directories;
-   - `yomi-balance`: the bands, the levers, running and reading the simulator, when to re-record the refactor guard and the policy snapshot;
-   - `yomi-sprites`, `yomi-sound` (narration included): the asset workflows; `art/` and `audio/` keep only their contracts;
-   - `yomi-manual`: when the player's manual changes, and retaking its screenshots.
-3. **Project role profiles (`.claude/roles/<role>.md`)**: what a designer, planner, engineer, reviewer or QA needs to know about Yomi. The global role skills get one generic line: read `.claude/roles/<role>.md` if it exists (the pattern `browser-qa`'s profile already uses).
-4. **Project subagent types (`.claude/agents/`)**: `yomi-measure` (sonnet; runs the campaign and cell simulations and returns one table against the bands) and `yomi-asset-check` (runs `sprites:check` and `sounds:check`).
-5. **State/history split for the orchestrator**: feature records get a state section capped at about 3 KB; plan `index.md` keeps the step table and statuses, while completion logs and measurement history go to `log.md`, which the orchestrator never reads; a size-cap test keeps it so.
-
-Order: (1) `yomi-add-content`, `yomi-balance`, `yomi-measure`, with the directory guides trimmed to match; (2) the state/history split and its size-cap test; (3) role profiles plus the hook in the global skills; (4) `yomi-sprites`, `yomi-sound`, `yomi-manual`.
+- Request (user's words): "Please examine your workflows. Can you selectively load context depending on what you are working on? For example, design vs asset creation, coding, planning, etc. Can some of this be offloaded to skills so the main orchestrator does not need to hold as much context? Please think about how to design your context/skill system to be more modular." Then, after the proposal: "please replace AGENTS.md with a simlink, and then go through the suggested order".
+- Slug `modular-context` · Phase 4, implementation. Stage 1 (steps 01–05) is done and clean, the last commit `74da937`. Step 06 is in progress; next is 07. · Branch: `long-campaign-stage-07` (the current branch; project rule: commit on the current branch)
+- Links: architecture none (the approved proposal is the architecture); design `docs/designs/modular-context.md` (holds the approved proposal of 2026-11-21, whose text is in the plan log); plan `docs/implementation-plans/modular-context/index.md` (13 steps, four stages; per-step tiers in its task table); plan log `docs/implementation-plans/modular-context/log.md`.
+- Open questions: none.
+- Tiers: designer opus; planner opus; steps as the plan index's task table (opus for 01, 06, 07, 09; sonnet engineers elsewhere, reviewers at least the engineer's tier).
+- Verification: per step, the plan's `log.md`. No feature-level gate (overall review, QA, simulated user, PR review) has run yet.
+- Carried forward: none.
 
 ## Decision log
 
-- **AGENTS.md** → symlink to `CLAUDE.md` (user). Done in `f0814da`.
-- **Path: medium, no architecture brief** (orchestrator). The approved proposal is the architecture; the designer writes a design that makes it concrete.
-- **Design gate** (orchestrator): the user approved the proposal and asked to go through the order, so the design proceeds to planning unless it departs from the proposal or raises questions only the user can answer.
-- **Global skills (`~/.claude/skills/`) are not in git** (orchestrator): backed up to `~/.claude/skills-backup-2026-11-21/` before any edit. Edits there must stay generic and backward compatible for other projects.
-
-- **Design written** (`docs/designs/modular-context.md`); it follows the proposal, so no approval gate (orchestrator, per the decision above).
-- **Bands live in `.claude/skills/yomi-balance/bands.md`** (user, 2026-11-21; alternative: `docs/reference/`).
-- **The global skills' state/history split applies to every project** (user; alternative: opt-in through a role profile).
-- **Always-loaded cap 8,500 bytes** (user; alternative: 7,500).
-- **Plan accepted**; its four open points settled in the index; `yomi-measure` runs in the foreground, without `Monitor` (orchestrator: subagent rules forbid waiting on background jobs).
-
-## Open questions
-
-None.
-
-## Tiers
-
-- Designer: opus. Planner: opus. Steps: as the plan index's task table (opus for 01, 06, 07, 09; sonnet engineers elsewhere, reviewers at least the engineer's tier).
-
-## Verification
-
-Per step: the plan's `log.md`. Step 02 took three review rounds (parity cells); the third was checked by the orchestrator (`a1584bc`, `npm test` 2,407 passed).
+| Date | Decision | By | Alternatives | Reason |
+|---|---|---|---|---|
+| 2026-11-21 | AGENTS.md becomes a symlink to `CLAUDE.md`; done in `f0814da` | user | keep the copy | |
+| 2026-11-21 | Path: medium, no architecture brief | orchestrator | architecture brief | The approved proposal is the architecture; the designer writes a design that makes it concrete |
+| 2026-11-21 | Design gate: the design proceeds to planning unless it departs from the proposal or raises questions only the user can answer | orchestrator | ask the user to approve the design | The user approved the proposal and asked to go through the order |
+| 2026-11-21 | Global skills (`~/.claude/skills/`) are not in git: backed up to `~/.claude/skills-backup-2026-11-21/` before any edit; edits there stay generic and backward compatible for other projects | orchestrator | | Other projects use them |
+| 2026-11-21 | Design written (`docs/designs/modular-context.md`); it follows the proposal, so no approval gate | orchestrator | | Per the design gate above |
+| 2026-11-21 | Bands live in `.claude/skills/yomi-balance/bands.md` | user | `docs/reference/` | |
+| 2026-11-21 | The global skills' state/history split applies to every project | user | opt-in through a role profile | |
+| 2026-11-21 | Always-loaded cap 8,500 bytes | user | 7,500 | |
+| 2026-11-21 | Plan accepted; its four open points settled in the index; `yomi-measure` runs in the foreground, without `Monitor` | orchestrator | background runs | Subagent rules forbid waiting on background jobs |
+| 2026-11-21 | Repoint the header lines of `docs/reference/simulator.md` (step 02) and `docs/reference/game.md` (step 04) | orchestrator | leave them stale | An exception to "docs/reference stays": the lines were made wrong by the move |
+| 2026-11-21 | Root `CLAUDE.md` accepted at 6,783 bytes, over the design's 6,500 target | orchestrator | trim further | The always-loaded total of 7,431 is under the 8,500 cap |

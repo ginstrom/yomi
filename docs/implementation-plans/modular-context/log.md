@@ -88,3 +88,71 @@ Append-only history for [the plan](index.md): one `## Step NN: <title>` section 
 | adding a spell: guides to read | engine + combat + scenes + character = 22,340 | engine + combat + `yomi-add-content/spell.md` = 9,152 |
 
 - Every stage 1 guide is under 8,000 bytes (the largest is `src/game/CLAUDE.md`, 7,554).
+
+## Moved from the feature record (step 06)
+
+The feature record took the State / Decision log shape in step 06. These lines are its former text, verbatim: the approved proposal (the design now holds it), the header bullets and the bulleted decision log (now the State bullets and the Decision log table), and the Verification section.
+
+### The approved proposal (from the conversation, 2026-11-21)
+
+Where each fact goes:
+
+1. **Directory `CLAUDE.md`: contracts only** (the rules that stop you breaking code in that directory). Procedures and cross-directory checklists move out.
+2. **Project skills (`.claude/skills/`), one per kind of task.** Each is a short index pointing at one supporting file per case:
+   - `yomi-add-content`: one file per content type (spell, ability, status, trait, element, foe, encounter, facility, gear icon, location kind, one-day action, …), each listing every place to touch across all directories;
+   - `yomi-balance`: the bands, the levers, running and reading the simulator, when to re-record the refactor guard and the policy snapshot;
+   - `yomi-sprites`, `yomi-sound` (narration included): the asset workflows; `art/` and `audio/` keep only their contracts;
+   - `yomi-manual`: when the player's manual changes, and retaking its screenshots.
+3. **Project role profiles (`.claude/roles/<role>.md`)**: what a designer, planner, engineer, reviewer or QA needs to know about Yomi. The global role skills get one generic line: read `.claude/roles/<role>.md` if it exists (the pattern `browser-qa`'s profile already uses).
+4. **Project subagent types (`.claude/agents/`)**: `yomi-measure` (sonnet; runs the campaign and cell simulations and returns one table against the bands) and `yomi-asset-check` (runs `sprites:check` and `sounds:check`).
+5. **State/history split for the orchestrator**: feature records get a state section capped at about 3 KB; plan `index.md` keeps the step table and statuses, while completion logs and measurement history go to `log.md`, which the orchestrator never reads; a size-cap test keeps it so.
+
+Order: (1) `yomi-add-content`, `yomi-balance`, `yomi-measure`, with the directory guides trimmed to match; (2) the state/history split and its size-cap test; (3) role profiles plus the hook in the global skills; (4) `yomi-sprites`, `yomi-sound`, `yomi-manual`.
+
+### Header bullets, as they stood
+
+- **Slug:** `modular-context`
+- **Phase:** 4, implementation (steps 01–02 done; step 03 next)
+- **Branch:** `long-campaign-stage-07` (the current branch; project rule: commit on the current branch)
+- **Design:** `docs/designs/modular-context.md`
+- **Plan:** `docs/implementation-plans/modular-context/index.md` (13 steps, four stages; per-step tiers in its task table)
+
+### Decision log, bulleted, as it stood
+
+- **AGENTS.md** → symlink to `CLAUDE.md` (user). Done in `f0814da`.
+- **Path: medium, no architecture brief** (orchestrator). The approved proposal is the architecture; the designer writes a design that makes it concrete.
+- **Design gate** (orchestrator): the user approved the proposal and asked to go through the order, so the design proceeds to planning unless it departs from the proposal or raises questions only the user can answer.
+- **Global skills (`~/.claude/skills/`) are not in git** (orchestrator): backed up to `~/.claude/skills-backup-2026-11-21/` before any edit. Edits there must stay generic and backward compatible for other projects.
+- **Design written** (`docs/designs/modular-context.md`); it follows the proposal, so no approval gate (orchestrator, per the decision above).
+- **Bands live in `.claude/skills/yomi-balance/bands.md`** (user, 2026-11-21; alternative: `docs/reference/`).
+- **The global skills' state/history split applies to every project** (user; alternative: opt-in through a role profile).
+- **Always-loaded cap 8,500 bytes** (user; alternative: 7,500).
+- **Plan accepted**; its four open points settled in the index; `yomi-measure` runs in the foreground, without `Monitor` (orchestrator: subagent rules forbid waiting on background jobs).
+
+### Verification
+
+Per step: the plan's `log.md`. Step 02 took three review rounds (parity cells); the third was checked by the orchestrator (`a1584bc`, `npm test` 2,407 passed).
+
+## Step 06: records test and the stage 7 record's migration
+
+- 2026-11-21. Engineer opus; reviewer opus. Verdict: pending review; review rounds: 0.
+- `npx vitest run scripts/records.test.ts`: with the three check functions stubbed to return `[]`, the 5 fixture tests that expect a problem failed (the empty-tree and in-shape fixtures passed, as they should). With the checks written, one fixture failed on my own arithmetic (the State section counts the blank line before the next `## ` heading), fixed in the fixture. The real-repository test then failed only on the old records: `long-campaign-stage-07.md: no "## State" heading`, `long-campaign-stage-07.md: 8683 bytes (limit 8000)`, `modular-context.md: no "## State" heading`. After the migration: 10 passed.
+- `npm test`: tsc clean, 98 test files, 2,417 tests passed (baseline 97 files, 2,407).
+- Sizes after the migration (`wc -c`; the State section is measured from `## State` up to the next `## ` line):
+
+| File | Whole | State |
+| --- | --- | --- |
+| `docs/features/long-campaign-stage-07.md` (was 8,683, no State) | 4,013 | 2,640 |
+| `docs/features/modular-context.md` (was 4,568, no State) | 3,475 | 1,472 |
+| `docs/implementation-plans/modular-context/index.md` | 22,617 | — |
+| `docs/implementation-plans/long-campaign-stage-07/log.md` (new) | 6,298 | — |
+| `docs/implementation-plans/long-campaign-stage-07/index.md` (unchanged, legacy) | 28,281 | — |
+
+- Line-set check (scratch script `scratchpad/lineset.py`, outside the repository): each non-blank, trimmed line of `git show HEAD:<record>` looked up as a substring of a trimmed line of the new record or log.
+  - `python3 -I lineset.py HEAD:docs/features/long-campaign-stage-07.md docs/features/long-campaign-stage-07.md docs/implementation-plans/long-campaign-stage-07/log.md`: 52 lines checked, 6 not found, all justified:
+    - `**Slug:** long-campaign-stage-07` and `**Phase:** 6, done on branch (17cc2e3..6405b5c); not pushed`: folded into the State bullet "Slug `long-campaign-stage-07` · Phase 6, done on branch (17cc2e3..6405b5c); not pushed · …".
+    - ``- Branch: `long-campaign-stage-07`, off main (17cc2e3)``: the same State bullet ends "Branch: `long-campaign-stage-07`, off main (17cc2e3)".
+    - Headings `## Request (user's words)`, `## Links`, `## Path`: now the State bullets "Request (user's words):", "Links:", "Path:" (the request quote, every link line and the Path sentence are verbatim).
+  - The same check on this feature's record (`HEAD:docs/features/modular-context.md` against the new record and this log): 35 lines checked, 5 not found, all reformatting: the `**Request (user's words):**` line is the State bullet "Request (user's words): …" with the quote verbatim; `## Open questions` / `None.` is "Open questions: none."; `## Tiers` and its line are the State bullet "Tiers: designer opus; planner opus; steps as the plan index's task table (…)", the parenthesis verbatim. The bulleted decision log, the header bullets, the proposal and the Verification section are also kept verbatim under "Moved from the feature record (step 06)" above.
+- Stage 7 record: State holds the request, slug, phase, next action (push and open a PR, the user's decision), branch, Path, links (with the new `log.md`), the resolved AGENTS.md question, compact tiers, the latest verdict of each gate, and the live carried-forward notes. Added as one carried-forward line, from verification lines now in the log: the market pays on the fall day, the fort warning reached only in unit tests, and the blight tint (stage 8 notes). The `refreshHint` nit is not carried: `e6d94ac` fixed it. No decision was superseded, so every Decision log row stays.
+- This feature's record was reshaped (it had no `## State`): State from the orchestrator's brief; the decision bullets became the table, plus the two rows the brief added (the `docs/reference/` header exception and root `CLAUDE.md` at 6,783 bytes).

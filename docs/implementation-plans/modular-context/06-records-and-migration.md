@@ -131,11 +131,18 @@ This is the orchestrator's record. It is untracked until step 01 commits it, and
 
 ## 6. Completion criteria
 
-- [ ] `scripts/records.test.ts` exists with the C3 constants and legacy lists exactly as above. Each check was seen failing first.
-- [ ] The stage 7 record has State under 3,000 bytes and the whole file under 8,000. It has `## State` and `## Decision log`. Its history is in `docs/implementation-plans/long-campaign-stage-07/log.md`. Its index is unchanged.
-- [ ] The line-set check result is in this plan's `log.md`.
-- [ ] `docs/features/modular-context.md` passes the test. The report says whether this step reshaped it.
-- [ ] `npm test` is green, committed as `Modular context step 06: records test and the stage 7 record's migration` (no attribution lines, files staged by path, not pushed).
-- [ ] Index: step 06 `done` with its commit. `log.md`: a `## Step 06` section (date, tiers, verdict, review rounds, commands and results, the record sizes).
+- [x] `scripts/records.test.ts` exists with the C3 constants and legacy lists exactly as above. Each check was seen failing first.
+- [x] The stage 7 record has State under 3,000 bytes and the whole file under 8,000. It has `## State` and `## Decision log`. Its history is in `docs/implementation-plans/long-campaign-stage-07/log.md`. Its index is unchanged.
+- [x] The line-set check result is in this plan's `log.md`.
+- [x] `docs/features/modular-context.md` passes the test. The report says whether this step reshaped it.
+- [x] `npm test` is green, committed as `Modular context step 06: records test and the stage 7 record's migration` (no attribution lines, files staged by path, not pushed).
+- [x] Index: step 06 `done` with its commit. `log.md`: a `## Step 06` section (date, tiers, verdict, review rounds, commands and results, the record sizes).
 
 ## 7. Execution record
+
+- 2026-11-21, engineer opus. Baseline `npm test`: 97 files, 2,407 passed.
+- `scripts/records.test.ts` written with the C3 constants and legacy lists in full. Red: with the checks stubbed, the 5 fixture tests that expect problems failed. Real-repository check failed on the old stage 7 record (no State, 8,683 bytes) and on `modular-context.md` (no State). Green after the migration: 10 passed. `npm test`: 98 files, 2,417 passed.
+- Stage 7 record migrated: 4,013 bytes, State 2,640. History moved verbatim to the new `docs/implementation-plans/long-campaign-stage-07/log.md` (6,298 bytes); its index is unchanged. The line-set check found 6 lines (folded Slug/Phase/Branch lines, three headings), all justified in this plan's `log.md`.
+- `docs/features/modular-context.md` **was reshaped** (it had no `## State`): 3,475 bytes, State 1,472. Its proposal, header bullets, bulleted decision log and Verification text moved verbatim to this plan's `log.md`.
+- Deviations: none from the task. Noted: the stage 7 record names a next action (push and open a PR), taken from its in-force user decision; the branch now also carries the modular-context commits.
+- For later steps: step 07's global edits make every new record follow this shape; `records.test.ts` enforces it only for records and plans not in its legacy lists.
