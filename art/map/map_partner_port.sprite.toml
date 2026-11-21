@@ -1,39 +1,41 @@
 # A trade partner on the world map: Saltmere, a fishing port on the south
-# coast. A tiled hut and white salt pans on the shore, a jetty into the
-# water, and a fishing boat with a pale sail at its mooring.
+# coast. Two tiled huts on grass, flat white salt pans and a salt heap, and a
+# small bay at the lower left with a fishing boat at its mooring.
 canvas = "map"
 outline = "auto"
 
 [frames.base.runs]
-# the shore: hut, salt heap and the two salt pans
-3 = [[4, "oo"]]
-4 = [[3, "orro"], [16, "W"]]
-5 = [[2, "orrrro"], [15, "WWW"]]
-6 = [[2, "TTTTTT"], [11, "aaaaaaaaaaaa"]]
-7 = [[2, "TbTNTT"], [11, "aWWWWaWWWWWa"]]
-8 = [[2, "TTTNTT"], [11, "aWWWWaWWWWWa"]]
-9 = [[2, "TTTNTT"], [11, "aaaaaaaaaaaa"]]
-10 = [[1, "TTtTTTtTTTtTTTtTTTtTTT"]]
-# the water, the jetty (cols 12-14) and the boat
-11 = [[1, "bbbbb"], [6, "r"], [7, "bbbbb"], [12, "tTt"], [15, "bbbbbbbb"]]
-12 = [[1, "bbbb"], [5, "Wn"], [7, "bbbbb"], [12, "TtT"], [15, "bbbbbbbb"]]
-13 = [[1, "bbb"], [4, "WWn"], [7, "bbbbb"], [12, "tTt"], [15, "bbbbbbbb"]]
-14 = [[1, "bb"], [3, "WWWn"], [7, "bbbbb"], [12, "TtT"], [15, "bbbbbbbb"]]
-15 = [[1, "bb"], [3, "WWWn"], [7, "bbbbb"], [12, "tTt"], [15, "bbbbbbbb"]]
-16 = [[1, "b"], [2, "WWWWn"], [7, "bbbbb"], [12, "TtT"], [15, "bbbbbbbb"]]
-17 = [[1, "bbbbb"], [6, "n"], [7, "bbbbb"], [12, "NtN"], [15, "bbbbbbbb"]]
-18 = [[1, "b"], [2, "nnnnnnnnn"], [11, "bbbbbbbbbbbb"]]
-19 = [[1, "bb"], [3, "NNNNNNN"], [10, "bbbbbbbbbbbbb"]]
-20 = [[1, "bbbbcbbbbbbbbbbbcbbbbb"]]
-21 = [[1, "bbbbbbbbbbbbbbbbbbbbbb"]]
+# the huts
+2 = [[5, "oo"]]
+3 = [[4, "orro"], [14, "oo"]]
+4 = [[3, "orrrro"], [13, "orro"]]
+5 = [[3, "TTTTTT"], [12, "orrrro"]]
+6 = [[3, "TbTNTT"], [12, "TTTTTT"]]
+7 = [[3, "TTTNTT"], [12, "TbTNTT"]]
+8 = [[1, "gegggggeggg"], [12, "TTTNTT"], [18, "geggg"]]
+# grass, the salt heap and the flat pans
+9 = [[1, "gggegggggeggggegggggeg"]]
+10 = [[1, "gggegggge"], [10, "W"], [11, "g"], [12, "aaaaaaaaaa"], [22, "g"]]
+11 = [[1, "gggegggg"], [9, "WWW"], [12, "aWWWaWWWWa"], [22, "e"]]
+12 = [[1, "gegggggg"], [9, "wWw"], [12, "aaaaaaaaaa"], [22, "g"]]
+# the bay (stepped shore), the boat and its mast, grass beyond
+13 = [[1, "bbbbb"], [6, "ggegggggeggggggge"]]
+14 = [[1, "bbbb"], [5, "r"], [6, "bb"], [8, "gegggggeggggggg"]]
+15 = [[1, "bbb"], [4, "Wn"], [6, "bbbb"], [10, "ggeggggggegge"]]
+16 = [[1, "bb"], [3, "WWn"], [6, "bbcbb"], [11, "ggegggggeggg"]]
+17 = [[1, "bb"], [3, "WWn"], [6, "bbbbb"], [11, "gggeggggggeg"]]
+18 = [[1, "bb"], [3, "nnnnnn"], [9, "bb"], [11, "geggggggegge"]]
+19 = [[1, "bbb"], [4, "NNNN"], [8, "bcb"], [11, "ggeggggggegg"]]
+20 = [[2, "bbbbbbbb"], [10, "ggeggeggggegg"]]
 
-# The water shimmers and the boat dips a pixel.
+# The water shimmers.
 [frames.swell]
 from = "base"
 
 [frames.swell.runs]
-17 = [[1, "bbbbb"], [6, "n"], [7, "bbbbb"], [12, "NtN"], [15, "bbbbcbbb"]]
-20 = [[1, "bbbbbbcbbbbbbbbbbcbbbb"]]
+16 = [[6, "bbbbb"]]
+19 = [[8, "bbb"]]
+20 = [[2, "bbcbbbbb"]]
 
 [anim.idle]
 frames = ["base", "swell"]

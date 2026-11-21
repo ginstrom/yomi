@@ -1535,16 +1535,6 @@
           "duration": 500,
           "frame": "map_partner_village/turn",
           "key": "atlas"
-        },
-        {
-          "duration": 500,
-          "frame": "map_partner_village/base",
-          "key": "atlas"
-        },
-        {
-          "duration": 500,
-          "frame": "map_partner_village/turn",
-          "key": "atlas"
         }
       ],
       "key": "map_partner_village/idle",

@@ -121,7 +121,8 @@ from = "level_2"
 41 = [[12, "a"], [35, "a"], [37, "laaMam"]]
 42 = [[12, "l"], [35, "l"], [37, "laaaam"]]
 43 = [[12, "a"], [35, "a"], [37, "mmmmmm"]]
-# paved road: light flagstones with dark joints, wider than the doorway
-44 = [[10, "TTTNTTTTNTTTTNTTTTNTTTTNTTTT"]]
-45 = [[10, "TNTTTTNTTTTNTTTTNTTTTNTTTTNT"]]
-46 = [[10, "NNNNNNNNNNNNNNNNNNNNNNNNNNNN"]]
+# paved road: pale stone flagstones with dark joints in a staggered bond,
+# laid across the footing and past the milestone
+44 = [[8, "WWWWMWWWWMWWWWMWWWWMWWWWMWWWWMWWWWMW"]]
+45 = [[8, "llMllllMllllMllllMllllMllllMllllMllll"]]
+46 = [[8, "WWMWWWWMWWWWMWWWWMWWWWMWWWWMWWWWMWWW"]]
