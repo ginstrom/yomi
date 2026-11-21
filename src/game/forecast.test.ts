@@ -203,7 +203,7 @@ describe('sensible figures', () => {
     const f = forecast({ setup: setupOf('source_guardians', 5) }, BASE)
     expect(f.wins).toBe(0)
     expect(f.heroLost).toBe(f.samples)
-  })
+  }, 30_000) // plays all 40 samples, ~0.5 s alone but over 5 s when the full suite loads the workers
 
   it('counts a hero already fallen, with none to revive him, in every sample', () => {
     const { engine } = battleUnderWay(3)
