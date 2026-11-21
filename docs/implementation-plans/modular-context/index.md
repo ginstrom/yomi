@@ -128,7 +128,7 @@ Append-only, one `## Step NN: <title>` section per step: date, engineer and revi
 | Step | File | Outcome | Depends on | Tier (eng / rev) | Status | Commits |
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | [01-claude-dir-caps.md](01-claude-dir-caps.md) | `.claude/worktrees/` ignored; cap, frontmatter, budget and name-existence tests for `.claude/` **[Q3]** | — | opus / opus | done | 07cdd3c |
-| 02 | [02-yomi-balance.md](02-yomi-balance.md) | `yomi-balance` skill, `yomi-measure` agent, balance text out of scripts/character/engine/game guides, root Balance and Subagents lines, two code comments; one `yomi-measure` run **[Q1]** | 01 | sonnet / opus | done | (this commit) |
+| 02 | [02-yomi-balance.md](02-yomi-balance.md) | `yomi-balance` skill, `yomi-measure` agent, balance text out of scripts/character/engine/game guides, root Balance and Subagents lines, two code comments; one `yomi-measure` run **[Q1]** | 01 | sonnet / opus | done | 05aeac2 |
 | 03 | [03-add-content-battle.md](03-add-content-battle.md) | `yomi-add-content` index and its seven battle files; engine checklists, combat bullet 1, character node line, three scenes items moved | 02 | sonnet / sonnet | pending | |
 | 04 | [04-add-content-world.md](04-add-content-world.md) | the other twelve content files; game, scenes, inventory and story checklists moved; scenes reference header | 03 | sonnet / sonnet | pending | |
 | 05 | [05-stage-1-close.md](05-stage-1-close.md) | root "Keeping these files current" table and Docs line; findability check of eight guides; stage 1 sizes | 04 | sonnet / opus | pending | |
