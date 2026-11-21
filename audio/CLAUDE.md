@@ -47,31 +47,9 @@ Run from the repository root (`--root` points elsewhere, as the tests do):
 
 A mistake prints one line naming the cue, source or field at fault and exits 1.
 
-## Recipes
+## Recipes and the build
 
-The format is normative in `docs/designs/audio-pass.md` §5.6; the tool's
-reading of it is in `tools/audio/yomi_audio/recipe.py`'s docstring. Each
-`[[layer]]` is a `source`, a `pick` list or a `synth` with its processing;
-`[post] chain` runs on the mix; normalisation to the group's target is always
-last, and never past the group's true-peak ceiling, so a very short cue lands
-under target and is reported *peak-limited* (make it denser, longer or
-compressed, not louder). Any number may be `[lo, hi]`, drawn per variant;
-rendering is deterministic. Runtime hints (bus, jitter, voice limits, extra
-gain) belong in `CUES` in `src/scenes/sounds.ts`, never in a recipe.
-
-## Building and checking
-
-`npm run sounds` is incremental: only the banks with a changed cue (by its
-inputs hash: recipe, sources, `audio.toml`, the tool's version, `uv.lock`)
-are rendered and reassembled. Every build first re-verifies every source's
-licence and hash. These fail the build, all reported in one run with nothing
-written: loudness off target (unless peak-limited), true peak over the
-ceiling, length over `max_ms`, DC offset over 0.5% (high-pass low sines and
-sources), two variants correlating above 0.95, and a source unregistered,
-not allowed or with a changed hash. The budgets in `audio.toml [budgets]`
-(banks and voice files per format, sources) are checked by `sfx check`, the
-first two also by the build. `npm run sounds:check` writes nothing and never
-re-encodes: the manifest's record of the encoded bytes is the reference.
+The format is normative in `docs/designs/audio-pass.md` §5.6, the tool's reading of it in `tools/audio/yomi_audio/recipe.py`; conventions and what the build fails on are in the reference ("Recipes", "Building and checking"). Runtime hints (bus, jitter, voice limits, extra gain) belong in `CUES` in `src/scenes/sounds.ts`, never in a recipe. A cue too short to reach its loudness target is reported *peak-limited*: make it denser, longer or compressed, not louder. `npm run sounds` is incremental by inputs hash; `npm run sounds:check` writes nothing and never re-encodes.
 
 ## Sources and licences
 
@@ -96,9 +74,7 @@ re-encodes: the manifest's record of the encoded bytes is the reference.
 
 ## Which sound plays when
 
-The tables that map a game event to a cue live in `src/scenes/sounds.ts`: `eventSounds` (battle events) over `WEAPON_SOUNDS`, `FOE_SOUNDS`, `SPELL_SOUND_OVERRIDES` and `spellSound`, `ABILITY_SOUNDS`, `DEATH`; `worldSounds` over `WORLD_SOUND_KINDS`; and `CUES`, every cue with its bus, gain and voice limits. `buttonCue` picks the interface cues. Not copied here, so it cannot go stale. A cue's variants are the markers of its bank in `audio/sfx.manifest.json` (`<cue>#0`, `<cue>#1`, ...). `src/scenes/sounds.test.ts` fails when an event kind or an ability would sound nothing without an entry saying so.
-
-A new sound: a recipe in `sfx/<bank>/`, `npm run sounds`, an entry in `CUES`, and the event table that plays it; commit the recipe, any new source and the generated files together.
+The tables mapping game events to cues are in `src/scenes/sounds.ts` (`eventSounds`, `worldSounds`, `CUES`, `buttonCue`; not copied here, so they cannot go stale). `src/scenes/sounds.test.ts` fails when an event kind or an ability would sound nothing without an entry saying so. A new sound: a recipe in `sfx/<bank>/`, `npm run sounds`, an entry in `CUES`, and the event table that plays it; commit the recipe, any new source and the generated files together.
 
 ## Listening
 
@@ -109,15 +85,10 @@ spectrogram PNG per variant to look at. The user listens, from the WAVs in
 
 ## Narration
 
-The TTS engines are only in the tool's optional `tts` extra (mlx-audio, Apple
-Silicon), so the sound commands and `sounds:check` never install them.
-Weights download into `~/.cache/huggingface/` on first use (about 13 GB,
-needs network), never into the repository.
+The TTS engines are only in the tool's optional `tts` extra (mlx-audio, Apple Silicon); weights download into `~/.cache/huggingface/` (about 13 GB), never into the repository.
 
-A line is voiced by fields on a cutscene beat in `src/story/cutscenes.ts`: `line` (id, `[a-z0-9_.]+`, unique), `voice`, and optionally `emotion`, `intensity` (0 to 1), `spoken` (what is said when the shown text cannot be; a voiced beat keeps its shown `text` as it is and puts the spoken wording here; never displayed, so nonverbal tags like `[sigh]` go only here) and `take` (bump to re-render with a new seed). The rules (`narrationProblems` in `src/story/narration.ts`, enforced by vitest): no duplicate ids, a voice for every line, no leader (speaker or portrait) and no `{…}` template in what is spoken, only known tags and only for a tag engine (`chatterbox_turbo`), an emotion the voice lists, intensity and take in range, nothing empty. Tutorial tips are not voiced.
+A line is voiced by fields on a cutscene beat in `src/story/cutscenes.ts`: `line` (unique id), `voice`, and optionally `emotion`, `intensity`, `spoken` (what is said when the shown text cannot be, nonverbal tags included; never displayed) and `take` (bump to re-render with a new seed, at most three). `narrationProblems` in `src/story/narration.ts` enforces the rules (no leader and no `{…}` template spoken, known tags only for a tag engine, …). Then `npm run narration` (`PATH=/opt/homebrew/opt/node@26/bin:$PATH` for node) renders only the changed lines. `npm test` fails while a voiced beat's hash differs from `audio/voice.manifest.json` or its files are missing, so edit, render, commit both.
 
-To voice a beat, give it those fields, then run `npm run narration` from the repository root (`PATH=/opt/homebrew/opt/node@26/bin:$PATH` for node): it exports the jobs and renders only the lines whose inputs changed into `public/assets/voice/`, recording them in `audio/voice.manifest.json`. A flawed line is re-taken by bumping its beat's `take` (a new seed; at most three takes). `npm test` fails while any voiced beat's hash differs from the manifest's or its files are missing, so edit, render, commit both.
+**Heteronyms** ("the road winds") are not left to the engine: check each shipped line's `spoken` for winds, wound, read, lead, live, close, tear, bow, row, bass, and reword it there. A respelling is a guess until rendered and auditioned.
 
-**Words spelled alike and said differently** ("the road winds" read as the wind that blows) are not left to the engine: check each shipped line's `spoken` for heteronyms (winds, wound, read, lead, live, close, tear, bow, row, bass) and reword it there. Rewording is the safe choice: a respelling ("wynds") is a guess until heard, so if you respell, render the line and audition it before shipping.
-
-A new fixed character is a new table in `voices.toml` (engine, pinned model, emotions, `design`, `clips`, `fallback`), its clips (designed with `voice design` and picked by ear, then committed with a `sources.toml` entry, licence `own`), and beats naming it; `VoiceId` in `src/story/narration.ts` grows with it. Model pins live in `tools/audio/yomi_audio/tts/models.py` and `voices.toml`, held equal by a pytest; a new model's licence must allow its output in a commercial game.
+A new voice, and the model pins and their licences: reference, "Designing a voice" and "Narration engines".

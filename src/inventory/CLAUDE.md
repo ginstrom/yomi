@@ -25,4 +25,4 @@ An item's id is `<plain>[@<grade>][+<modifier><grade>][#<rune>(.<rune>)*]`, as i
 
 ## Equipping
 
-Every change to what a character wears ends with `clampHp` (see `src/character/CLAUDE.md`): the share rule outside battle, the cap rule in battle. A two-handed weapon and an off-hand item cannot be held together. A new weapon, shield, armour, head or cloak icon needs a sprite and an entry in `unitLook.ts`, or `unitLook.test.ts` fails.
+Every change to what a character wears ends with `clampHp` (`src/character/CLAUDE.md`). A two-handed weapon and an off-hand item cannot be held together. A new gear icon needs a sprite and a `unitLook.ts` entry (`src/scenes/CLAUDE.md`'s checklist).

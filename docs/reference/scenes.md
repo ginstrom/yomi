@@ -176,6 +176,7 @@ Pure helpers (no runtime Phaser import, tested in the `domain` project):
 - `battleSetup.ts`: which encounter and threat a `Battle` start asks for (a monster location's, or else the data's); the seed a battle's log started with, which seeds the runes a win finds; the names the victory screen's "Found:" line lists; and auto-resolve's result line (`autoResolvedLine`) and hand-back line (`AUTO_DRAG_ON_LINE`).
 - `storyAudio.ts`: which line a cutscene beat speaks, its cache key and files, the lines of a cutscene to load, the delay and fade, and the duck constants, which are `soundPlayer.ts`'s.
 - `scrollingLog.ts`: the battle log.
+- `improveButton.ts`: the world footer's Improve button label, full and compact (`improveLabel`).
 - `slotScroll.ts`: which rows of the ground pile the inventory shows.
 - `gearDrag.ts`: where an item dragged in the inventory may be dropped, and which change of gear a drop makes.
 - `mapScroll.ts`: where the world map sits on screen for the party to be in view or as a drag panned it, and when a press has moved far enough to be a drag. The map scrolls to follow the party until a drag pans it; the next journey, Home or a click on the party's entry brings it back (`centreOnSelected`).

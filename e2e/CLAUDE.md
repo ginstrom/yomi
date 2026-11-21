@@ -18,7 +18,7 @@ Games open with `?seed=` (`WINNING_SEED` unless told otherwise), so dice and ene
 
 ## Sound
 
-`window.__yomi.audioLog()` lists the last 50 sounds the player (`src/scenes/soundPlayer.ts`) played, oldest first, each `{ cue, marker, bus, at }`: assert on the cues a click or a battle event logs, not on what is heard. `__yomi.playCue(cue)` plays a cue through the player on the topmost running scene, and `__yomi.limiter()` gives the output limiter's settings and its gain reduction now (null without Web Audio). Headless Chromium starts Web Audio only after a first gesture, so click something before asserting on the limiter. `__yomi.musicVolume()` gives the playing theme's volume now (null with none), which a duck moves 10 dB. The Story probe's `voice` is `{ line, playing }`: the line the showing beat speaks (null when unvoiced) and whether one is sounding. To make a voice file fail, route it before the cutscene loads (`page.route('**/assets/voice/**', (r) => r.fulfill({ status: 404 }))`) and then drop the 404s from `game.problems`, as `story.test.ts` does. 
+`window.__yomi.audioLog()` lists the last 50 sounds played: assert on the cues a click or event logs, not on what is heard. The other audio hooks (`playCue`, `limiter`, `musicVolume`, the Story probe's `voice`) and how to make a voice file fail: `docs/reference/e2e.md`.
 
 ## What belongs here
 
@@ -28,4 +28,4 @@ When a test needs to see or click something no probe gives, add it to that scene
 
 ## The files
 
-One file a scene or feature, named for it (`menu`, `world`, `battle`, `character`, `party`, `encampment`, `exchange`, `story`, `saves`, `debug`, `audio`, `sounds`); each covers its scene and the hand-overs out of it. Less obvious homes: creation is in `party.test.ts`, the guild hall, trading post, workshop, runes and field crafting in `encampment.test.ts`. `manual.shots.ts` is not a test: it plays to each screen the player's manual (`docs/manual/`) shows and saves a screenshot, run by `npm run manual:screenshots` with its own config so neither test run picks it up.
+One file a scene or feature, named for it (`menu`, `world`, `battle`, `character`, `party`, `encampment`, `exchange`, `story`, `saves`, `debug`, `audio`, `sounds`); each covers its scene and the hand-overs out of it. Less obvious homes: creation is in `party.test.ts`, the guild hall, trading post, workshop, runes and field crafting in `encampment.test.ts`. `manual.shots.ts` is not a test: it plays to each screen the player's manual (`docs/manual/`) shows and saves a screenshot. Retake them with `npm run manual:screenshots` (its own config, so neither test run picks it up).

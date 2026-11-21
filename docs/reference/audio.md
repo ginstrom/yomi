@@ -347,6 +347,12 @@ of `voices.toml`, for the author to pick **by ear**:
   measured Turbo cloning an emotion clip: the voice drifted, similarity to
   `A_0` 0.81 to 0.84 against 0.92 to 0.96, and only the pace followed).
 
+### A new fixed character
+
+A new fixed character is a new table in `voices.toml` (engine, pinned model, emotions, `design`, `clips`, `fallback`), its clips (designed with `voice design` and picked by ear, then committed with a `sources.toml` entry, licence `own`), and beats naming it; `VoiceId` in `src/story/narration.ts` grows with it. Model pins live in `tools/audio/yomi_audio/tts/models.py` and `voices.toml`, held equal by a pytest; a new model's licence must allow its output in a commercial game.
+
+The full rules `narrationProblems` enforces: no duplicate ids, a voice for every line, no leader (speaker or portrait) and no `{…}` template in what is spoken, only known tags and only for a tag engine (`chatterbox_turbo`), an emotion the voice lists, intensity (0 to 1) and take in range, nothing empty. Tutorial tips are not voiced. Line ids match `[a-z0-9_.]+`.
+
 ## Rendering in detail
 
 `scripts/narration.ts` (`npm run narration:export`) refuses a broken beat
