@@ -17,6 +17,12 @@
   - The one-line headers of `docs/reference/scenes.md`, `sprites.md` and `audio.md` that say the guide "holds the checklists" or "keeps the workflow" are repointed in the step that makes them wrong (04, 10, 11). Nothing else in `docs/reference/` changes.
   - The root `CLAUDE.md` Commands sentence ("Sprites, sounds, narration and the manual's screenshots have their own commands, in `art/`, `audio/` and `e2e/`'s guides") is repointed to the skills in step 13.
 
+- **Added to step 09 by the orchestrator** (from step 07's review, which was clean; these fix gaps in design §5.3's wording, which was applied exactly). These are generic global-skill edits, and step 09 makes them along with its own:
+  - `plan-implementer/implement-step.md`, "Review feedback": once the reviewer's verdict is clean, the engineer appends the step's outcome line (tiers, verdict, review rounds) to the plan's `log.md`. This is the line `step-loop.md` "Confirm" checks for.
+  - `orchestrator/SKILL.md`, "The feature record": `docs/implementation-plans/<slug>/log.md` becomes "the plan folder's `log.md`".
+  - `orchestrator/SKILL.md`, "Watching running agents", last bullet: a costly stall is recorded in the plan's `log.md`; the feature record notes it only if it changes the State.
+  - Step 09 also records step 07's review in `log.md`: opus, clean, 1 round, with these three findings handed to step 09.
+
 ## Scope and shared constraints
 
 - **In:** R1–R11 and the design's acceptance and §8 checks. **Out:** design non-goals (no rule, constant or play test changes; `docs/reference/` stays apart from the three header lines above; no migration of finished records or plans; no global-skill edits beyond §5.3 and §4.7; no `.claude/browser-qa/`).
