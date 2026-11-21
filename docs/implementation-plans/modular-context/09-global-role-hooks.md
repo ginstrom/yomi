@@ -67,7 +67,7 @@ Other mentions of AGENTS.md **stay unchanged**: `pr-reviewer/run-checks.md`, `pr
 ## 4. Scope and implementation guidance
 
 - **Edit:** only the nine global files named in §2.1–§2.3. Make them with Edit (exact string replacement), not sed, so that each change is the exact text.
-- **Repository:** change only `docs/implementation-plans/modular-context/log.md` (append this step's section) and `index.md` (status and commit). Do not edit any `.claude/` file, `CLAUDE.md` or code.
+- **Repository:** change only `docs/implementation-plans/modular-context/log.md` (append this step's section), `index.md` (status and commit) and this task file (execution record). Do not edit any `.claude/` file, `CLAUDE.md` or code.
 - **Keep it generic.** Nothing Yomi-specific goes into a global file: no `yomi-` names and no Yomi paths.
 - **Do not** add the hook to `plan-implementer/SKILL.md` or `step-loop.md`, which are not in the table. Only the AGENTS.md phrase changes in `plan-implementer/SKILL.md`.
 - Where a bullet gets both the AGENTS.md change and the hook (architect, designer, planner, qa, pr-reviewer, orchestrator Phase 0, implement-step, review-step), the bullet must still read as one coherent instruction.
@@ -102,6 +102,6 @@ Other mentions of AGENTS.md **stay unchanged**: `pr-reviewer/run-checks.md`, `pr
 - [ ] The restricted diff contains only §5.3, §4.7, the agent-types line and the AGENTS.md lines, and is pasted into `log.md`.
 - [ ] The smoke check passed and is recorded in `log.md`, or the orchestrator has run it because the spawn was not authorized.
 - [ ] `npm test` passes.
-- [ ] The step is `done` in the index with its commit. The commit is `Modular context step 09: role hooks in the global skills`, with no attribution lines, and contains only `log.md` and `index.md`, staged by path.
+- [ ] The step is `done` in the index with its commit. The commit is `Modular context step 09: role hooks in the global skills`, with no attribution lines, and contains only `log.md`, `index.md` and this task file, staged by path.
 
 ## 7. Execution record

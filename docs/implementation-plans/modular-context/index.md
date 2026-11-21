@@ -143,7 +143,7 @@ Append-only, one `## Step NN: <title>` section per step: date, engineer and revi
 
 ## Execution order
 
-Strictly sequential, 01 → 13: every step edits a shared file (`scripts/claudeMd.test.ts`, root `CLAUDE.md`, the `yomi-add-content` files or `log.md`). Integration checkpoints are the stage closes: 05, 07, 09, 13. Steps 07 and 09 change files outside git; their commit carries only `log.md` and the index.
+Strictly sequential, 01 → 13: every step edits a shared file (`scripts/claudeMd.test.ts`, root `CLAUDE.md`, the `yomi-add-content` files or `log.md`). Integration checkpoints are the stage closes: 05, 07, 09, 13. Steps 07 and 09 change files outside git; their commit carries only `log.md`, the index and their own task file.
 
 ## Requirement map
 
@@ -172,7 +172,7 @@ Strictly sequential, 01 → 13: every step edits a shared file (`scripts/claudeM
 ## Open questions
 
 - **[Q1], [Q2], [Q3]**: answered, defaults.
-- **For the orchestrator: settled.** (b), (c) and (d) as planned. (a) is changed: `yomi-measure` runs each simulation in the foreground with Bash's 600 s timeout (a 500-campaign run takes about 5 minutes), so it needs no `Monitor`; its `tools` stay the design's `Bash, Read, Grep, Glob`. As first planned: (a) `yomi-measure` gets `Monitor` in `tools`, since a foreground `sleep` is refused and its long runs wait on an until-loop; (b) the engineer profile's spawn grant (design §4.7) is a profile, not the role file or brief that `subagent-rules.md` names, so `orchestrator.md` also tells the orchestrator to grant it in engineer briefs (step 08); (c) the name-existence test's placeholder rule and `e2e/` search (C2); (d) the reference header lines and the `art/CLAUDE.md` pointer kept for the sprite-source comments.
+- **For the orchestrator: settled.** (b), (c) and (d) as planned. (a) is changed: `yomi-measure` runs each simulation in the foreground with Bash's 600 s timeout (a 500-campaign run takes about 5 minutes), so it needs no `Monitor`; its `tools` stay the design's `Bash, Read, Grep, Glob`. A run expected past 9 minutes (`rl10`, `rl12`, counts above 500) is started detached (`nohup … &`, PID noted) and waited on in the foreground with `caffeinate -w <PID>` at a 590,000 ms timeout, repeated until the process is gone; the agent never ends its turn while a run is alive. (b) the engineer profile's spawn grant (design §4.7) is a profile, not the role file or brief that `subagent-rules.md` names, so `orchestrator.md` also tells the orchestrator to grant it in engineer briefs (step 08); (c) the name-existence test's placeholder rule and `e2e/` search (C2); (d) the reference header lines and the `art/CLAUDE.md` pointer kept for the sprite-source comments.
 
 ## For implementers
 

@@ -65,7 +65,7 @@
      | 10 | Add a new foe kind | `yomi-add-content` |
 
    - Every pick must match.
-   - On a miss, edit that skill's or agent's `description` so it triggers correctly. Keep it a single line, under `DESCRIPTION_LIMIT_BYTES` (260), with the total still under the always-loaded cap.
+   - On a miss, stop and report the miss with a proposed `description` wording (single line, under 260 bytes, total under the cap). The orchestrator approves before you edit it, as C1 fixes the descriptions.
    - Rerun the whole check with a fresh haiku agent until all ten match. Record every round's answers in `log.md`.
 5. **Final sizes.**
    - In `log.md`, fill in the design §7 table with actuals beside "Before":
@@ -82,8 +82,7 @@
 
    - Measure each value with `wc -c`. The always-loaded figure uses the test's own formula.
    - Also list each directory guide's before and after bytes.
-6. **[Q3] if the user picks a cap below 8,500:** set `ALWAYS_LOADED_LIMIT_BYTES` to it and get under it.
-   - First shorten the descriptions, longest first (`yomi-add-content` is about 254 bytes). Rerun the trigger check after any description change.
+6. **[Q3] settled:** the user kept 8,500.
    - Then trim the root `CLAUDE.md` by moving detail to a directory guide, a skill or `docs/reference/`.
    - Never drop a contract. If the cap can't be met without losing triggers, stop and report the smallest total you reached.
 7. **Exclusions:** no change to skills' bodies beyond what findability or a trigger miss requires, to `docs/reference/` beyond moved detail, or to the global skills.

@@ -20,10 +20,7 @@ Make the shared global skills write and read the new record and plan shape (desi
 
 - **Step 06 is done** (it is in the index as `done`). It produced `scripts/records.test.ts`, which enforces the State/record/index caps (C3), and a migrated `long-campaign-stage-07` record together with its `docs/implementation-plans/long-campaign-stage-07/log.md`. That migration is the worked example of the shape these edits describe. This step does not depend on any code from 06. It only needs 06's commit to be in place, so that `npm test` is green before you start.
 - **Check before editing:** run `diff -ru /Users/ryan/.claude/skills-backup-2026-11-21 /Users/ryan/.claude/skills`. Within the backed-up directories (`architect`, `browser-qa`, `designer`, `orchestrator`, `plan-implementer`, `planner`, `pr-reviewer`, `qa`), it must show no differences. The backup lacks `browser-auth`, `linear`, `pr-creator`, `recursive-slack`, `simulated-user`, `synced`, `technical-report-writing` and `.trash`, so ignore their "Only in" lines. If another difference already exists, stop and report it, because someone else changed the skills.
-- **[Q2] if the user answers "Yomi only":**
-  - Do not make edit 1 (the orchestrator). The record/log rule then goes into `.claude/roles/orchestrator.md` in step 08 instead.
-  - Whether edits 2–4 (planner, `implement-step.md`, `step-loop.md`) still apply globally is a separate decision, because they also change other projects' plans. Recommendation: ask the user. If there is no answer, keep edits 2–4, since they are additive and harmless where `log.md` is absent.
-  - If this question is still open when the step starts, proceed on the default ("every project") and say so in the execution record.
+- **[Q2] settled:** the user chose the default (every project). Make all four edits.
 
 ## 4. Scope and implementation guidance
 

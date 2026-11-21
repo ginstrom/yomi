@@ -18,7 +18,7 @@ name: yomi-sound
 description: Make or change Yomi's sound effects and narration with the yomi-audio tool: sourcing and licences, recipes, audition, build and check, voicing a line. Use before editing audio/ or a voiced beat.
 ```
 
-`SKILL.md` (under 4,000 bytes) indexes four supporting files (each under 8,000 bytes), one line each saying when to open it. The full detail stays in `docs/reference/audio.md`, which the files link by section: "Sound design without ears" (read before writing a recipe) and "Designing a voice" (and "Narration engines" for the pins and licences). Also say: run `yomi-asset-check` (from step 12; until then `npm run sounds:check`) before handing off.
+`SKILL.md` (under 4,000 bytes) indexes four supporting files (each under 8,000 bytes), one line each saying when to open it. The full detail stays in `docs/reference/audio.md`, which the files link by section: "Sound design without ears" (read before writing a recipe) and "Designing a voice" (and "Narration engines" for the pins and licences). Also say: run `yomi-asset-check` before handing off (until step 12 creates it, the step's own verification uses `npm run sounds:check`).
 
 | File | Moves from `audio/CLAUDE.md` |
 | --- | --- |

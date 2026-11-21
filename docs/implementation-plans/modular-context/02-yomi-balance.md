@@ -43,7 +43,7 @@ Body (< 6,000 bytes in all):
 
 1. **Input** from the brief: the measures, by name from `bands.md` (`one`, `company`, `rl10`, `rl12`, the cell codes, `parity-L4`/`L8`/`L14`, or `standard`); the seed (default 1) and the count (default 500); a label; extra flags such as `--waiting` or `--plans`.
 2. **Before running:** read `.claude/skills/yomi-balance/running.md` and `bands.md`; record `git rev-parse HEAD` and `git status --short`; refuse to start if another `simulate` process is running (`pgrep -f scripts/simulate.ts`), and report that.
-3. **Run** each measure in order, never two at once, as `npm run simulate -- … --out logs/<label>-<m>.jsonl > logs/<label>-<m>.txt` (with the Node 26 prefix). In the foreground use a timeout of 600,000 ms. Never run one in the background. A run that may pass 9 minutes (`rl10`, `rl12`, or any count above 500) is not started: the report names it and the campaign count that would fit, and the caller decides.
+3. **Run** each measure in order, never two at once, as `npm run simulate -- … --out logs/<label>-<m>.jsonl > logs/<label>-<m>.txt` (with the Node 26 prefix). In the foreground use a timeout of 600,000 ms. A run that may pass 9 minutes (`rl10`, `rl12`, or any count above 500) is started detached (`nohup npm run simulate -- … > logs/<label>-<m>.txt 2>&1 &`, noting the PID) and waited on in the foreground with `caffeinate -w <PID>` at a 590,000 ms timeout, repeated until the process is gone. Never end the turn while a run is alive.
 4. **Read-only:** edit no tracked file; write only under `logs/`.
 5. **Return** one table, then the details:
 
@@ -63,7 +63,7 @@ Body (< 6,000 bytes in all):
 | root `CLAUDE.md` | Balance contract → "**Balance.** Constants are tuned against the user's bands (`yomi-balance` skill); a change that moves play fails the refactor guard (`scripts/simulate.test.ts`)." Subagents gains "Simulator measurements: the `yomi-measure` agent." (the `yomi-asset-check` half is added in step 12). The Architecture table's `scripts/` row stays. |
 | `src/game/encounters.ts:194`, `scripts/simulate.ts:12` | "see the rules of scaling in CLAUDE.md" → "see `.claude/skills/yomi-balance/levers.md`". Comments only. |
 
-**[Q1] if the user decides otherwise** (bands in `docs/reference/simulator.md`, section "Bands"): move the bands table, waiting check, also-figures, parity and cell codes there instead; `bands.md` keeps only the measure names, the "only the user changes a band" rule and a link to that section; the scripts contract line names `docs/reference/simulator.md` "Bands"; `yomi-measure` step 2 reads both files.
+**[Q1] settled:** the user chose the default (the bands live in `bands.md`).
 
 ## 2. Dependencies and prerequisites
 
