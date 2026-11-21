@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > After that, stage 7 (site improvements and markets) is next on the roadmap.
-- Slug `long-campaign-stage-07` · Phase 6, done on branch (17cc2e3..a51ed58; code through `e6d94ac`); not pushed · Next action: loose ends below in progress; then the PR review at a stage 7 branch cut at `a51ed58`, and the PR · Branch: `long-campaign-stage-07`, off main (17cc2e3). The branch also carries `06085b3`, `f0814da` and the unfinished modular-context work.
+- Slug `long-campaign-stage-07` · Phase 6, done on branch (17cc2e3..a51ed58; code through `e6d94ac`); not pushed · Next action: PR review at `a51ed58`, then the PR · Branch `long-campaign-stage-07` moved back to `a51ed58` (2026-11-21); later work is on `modular-context`, stacked above · Branch: `long-campaign-stage-07`, off main (17cc2e3). The branch also carries `06085b3`, `f0814da` and the unfinished modular-context work.
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–6 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md` (cross-stage rules: early-game guard re-measured at start, versions, docs, sprites, play script)
@@ -22,12 +22,12 @@
   - Simulated user (sonnet) at 049dc22: goals 1, 2, 4 met; 3 partly.
   - PR review at ae59b5f: no critical; 4 of 5 observations fixed in e6d94ac (npm test 2394, build), 1 dismissed. Record: `.git/pr-review/long-campaign-stage-07.md`. Re-run it at whatever head is pushed.
 - Carried forward:
-  - For the user: the simulator never builds works/forts or market levels (spend order is the lever). Possible follow-up: let overlay frames scale above 1 on large windows (encampment buildings stay 96 px at 1280).
+  - For the user: the simulator never builds works/forts or market levels (spend order is the lever).
   - Lodge level 3 sprite: milestone reads as a bottle, paving faint, level 2→3 jump weak at 1x. Level 3 is unreachable until stage 8 (`LODGE_LEVEL_LIMIT` 2); redraw in stage 8.
   - Noted, not fixed: the market pays on the day the encampment falls (harmless, by design); the fort days-to-corruption warning is reached only in unit tests.
   - Pre-existing: blight tint near own sites is hard to see.
-  - `forecast.test.ts` "a level-1 party wins no fight with the Source at threat 5" times out (5 s) under full-suite load; passes alone.
-  - Sprite-tool pin drift: yomi-sprites skill (workflow.md) pins v0.6.0, host has 0.7.0 (no export changed).
+  - Done on `modular-context`: forecast test timeout (`82802a3`), sprite-tool pin v0.7.0 (`04c5e63`), overlay frames above 1x (`039dc70`, record `overlay-frame-scaling`).
+  - Browser-suite flake under load: `saves.test.ts` "lists the three slots under Load" once threw `Cannot set properties of null (setting 'volume')`; long-battle e2e tests time out at 60 s under load.
 
 ## Decision log
 
