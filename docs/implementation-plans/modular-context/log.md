@@ -258,3 +258,11 @@ index 7f1d8cb..fa7ed4b 100644
  ## Write each task file
  
 ```
+
+## Step 08: role profiles
+
+- 2026-11-21. Engineer sonnet; reviewer opus. Verdict: pending review; review rounds: 0.
+- `npx vitest run scripts/claudeMd.test.ts`: with the role cap wired in and a 4,000-byte `.claude/roles/tmp.md` present, the size test failed listing that file (1 failed, 16 passed); removed it, then passes.
+- `npm test`: tsc clean, 98 test files, 2,419 tests passed (step 07: 2,417).
+- Profile sizes (`wc -c`): `orchestrator.md` 1,371; `designer.md` 995; `planner.md` 1,050; `engineer.md` 964; `reviewer.md` 653; `qa.md` 811; `pr-reviewer.md` 359. Cap 4,000. Some are under the 1 KB aim: each holds only facts checked against a source.
+- Grep for `.claude/skills/yomi-(sprites|sound|manual)` and `.claude/agents/yomi-asset-check` in the profiles: no match.

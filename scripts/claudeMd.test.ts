@@ -16,6 +16,7 @@ const DIRECTORY_LIMIT_BYTES = 12_000
 const SKILL_LIMIT_BYTES = 4_000
 const SKILL_FILE_LIMIT_BYTES = 8_000
 const AGENT_LIMIT_BYTES = 6_000
+const ROLE_LIMIT_BYTES = 4_000
 const DESCRIPTION_LIMIT_BYTES = 260
 const ALWAYS_LOADED_LIMIT_BYTES = 8_500
 // Constants a .claude/ file may name although no .ts file defines them.
@@ -35,7 +36,6 @@ type Offender = { file: string; problem: string }
 
 // .claude/ is never walked itself: agent worktrees (.claude/worktrees/) are whole
 // repository copies. Only these directories are read; a missing one is empty.
-// (Step 08 of the modular-context plan adds .claude/roles/*.md here.)
 function subdirectories(dir: string): string[] {
   if (!existsSync(dir)) return []
   return readdirSync(dir, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => join(dir, entry.name)).sort()
@@ -52,7 +52,8 @@ function markdownFiles(dir: string, recursive: boolean): string[] {
 
 const skillDirs = (root: string) => subdirectories(join(root, '.claude', 'skills'))
 const agentFiles = (root: string) => markdownFiles(join(root, '.claude', 'agents'), false)
-const projectFiles = (root: string) => [...skillDirs(root).flatMap(dir => markdownFiles(dir, true)), ...agentFiles(root)]
+const roleFiles = (root: string) => markdownFiles(join(root, '.claude', 'roles'), false)
+const projectFiles = (root: string) => [...skillDirs(root).flatMap(dir => markdownFiles(dir, true)), ...agentFiles(root), ...roleFiles(root)]
 
 // What every session loads: each skill's frontmatter (in its SKILL.md) and each
 // agent's, with the name it must carry.
@@ -87,6 +88,7 @@ function frontmatter(text: string): { fields: Map<string, string>; multiLine: Se
 function oversizeFiles(root: string): Offender[] {
   const limitFor = (file: string) =>
     file.startsWith(join(root, '.claude', 'agents')) ? AGENT_LIMIT_BYTES
+      : file.startsWith(join(root, '.claude', 'roles')) ? ROLE_LIMIT_BYTES
       : basename(file) === 'SKILL.md' && dirname(dirname(file)) === join(root, '.claude', 'skills') ? SKILL_LIMIT_BYTES
         : SKILL_FILE_LIMIT_BYTES
   return projectFiles(root)
@@ -169,8 +171,8 @@ describe('CLAUDE.md files', () => {
   })
 })
 
-describe('.claude/ skills and agents', () => {
-  it('keeps each skill, skill file and agent under its size limit', () => {
+describe('.claude/ skills, agents and role profiles', () => {
+  it('keeps each skill, skill file, agent and role profile under its size limit', () => {
     expect(oversizeFiles(ROOT)).toEqual([])
   })
 
@@ -233,6 +235,23 @@ describe('the .claude/ checks, on a fixture tree', () => {
     expect(oversizeFiles(root)).toEqual([])
     expect(frontmatterProblems(root)).toEqual([])
     expect(staleNames(root, new Set())).toEqual([])
+  })
+
+  it('reports an oversize role profile', () => {
+    const root = fixture({
+      '.claude/roles/big.md': pad(ROLE_LIMIT_BYTES),
+      '.claude/roles/fine.md': pad(ROLE_LIMIT_BYTES - 1),
+    })
+    expect(oversizeFiles(root)).toEqual([{ file: '.claude/roles/big.md', problem: `${ROLE_LIMIT_BYTES} bytes, limit ${ROLE_LIMIT_BYTES}` }])
+  })
+
+  it('checks the names in a role profile, which has no frontmatter', () => {
+    const root = fixture({ '.claude/roles/engineer.md': '# Notes\n`KNOWN_LIMIT` `src/a.ts` `src/gone.ts` `NO_SUCH_LIMIT`\n' })
+    expect(frontmatterProblems(root)).toEqual([])
+    expect(staleNames(root, new Set())).toEqual([
+      { file: '.claude/roles/engineer.md', problem: 'src/gone.ts' },
+      { file: '.claude/roles/engineer.md', problem: 'NO_SUCH_LIMIT' },
+    ])
   })
 
   it('reports a name that differs from its directory or file', () => {
