@@ -129,3 +129,9 @@ If any criterion is unmet, leave this step `in progress` and report which.
 - [ ] `## Step 13: stage 4 close` section in `log.md` (C7); index row set `done` with the commit; execution record below filled in. All of this goes in one commit.
 
 ## 7. Execution record
+
+- 2026-11-21. Red: `DIRECTORY_LIMIT_BYTES = 8_000` with a temporary 9,000-byte `src/zzscratch/CLAUDE.md` failed the directory test; fixture deleted; no real guide over 8,000.
+- Root `CLAUDE.md` 6,817 -> 6,492 (Commands and cap sentences updated; wording trims listed in `log.md`). Always loaded 7,912 of 8,500.
+- Findability of art/audio/e2e against base `c2e6cc3`: nothing missing. Trigger check: 10 of 10 in round 1. Details, size tables and plan completion are in `log.md`.
+- `npm test`: 98 files, 2,419 tests, all pass. No deviations. Step 13 needs nothing further; the outcome line is appended after review.
+

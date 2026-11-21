@@ -977,3 +977,62 @@ index 393d4a8..827e335 100644
 
 - Pin drift: host `sprite` 0.7.0 against pin v0.6.0 in `workflow.md` (known; no export changed).
 - Outcome: engineer sonnet, reviewer sonnet, verdict clean, 1 review round (the added embed line in `screenshots.md` made exact; two overlapping paragraphs merged).
+
+## Step 13: stage 4 close
+
+- 2026-11-21. Tiers: engineer sonnet, reviewer opus.
+- Directory cap: `DIRECTORY_LIMIT_BYTES` 12,000 -> 8,000. Seen failing first with a temporary 9,000-byte `src/zzscratch/CLAUDE.md` (deleted); every real guide is under it (largest `src/game/CLAUDE.md`, 7,554).
+- Root `CLAUDE.md` 6,817 -> 6,492 (cap sentence now "each directory's at 8 KB"; Commands sentence names `yomi-sprites`, `yomi-sound` and `yomi-manual`). The 6,500 target needed about 330 bytes of wording trims, no contract dropped: the `.claude/` Docs bullet lost "`scripts/claudeMd.test.ts` caps them" (the cap sentence names it), "Open the section you need when a guide points there." went, and several table cells and the Keeping-table rows are shorter.
+- Pointer sweep (CLAUDE.md files, `.claude/`, `docs/reference/`): no pointer still sends sprite, sound, narration or screenshot procedures to `art/`, `audio/` or `e2e/`'s guides. Remaining mentions are legitimate: `yomi-sound/sourcing.md` and `SKILL.md` and `yomi-sprites/SKILL.md` name `audio/CLAUDE.md` / `art/CLAUDE.md` for the contracts they kept; `docs/reference/{audio,sprites,e2e}.md` say what they back; `.claude/roles/qa.md` names `e2e/CLAUDE.md` for the driver.
+- Findability (scratch script outside the repository, `find13.py`). Base `c2e6cc3` (parent of step 10's first commit `644883b`). Every backticked span (outside fences) and `**bold**` lead (trailing `:` stripped) of `git show c2e6cc3:<guide>` looked up verbatim in the current guide plus `.claude/skills|agents|roles/**` and `docs/reference/**`:
+
+| Guide | Spans | Bold leads | Missing |
+| --- | --- | --- | --- |
+| `art/CLAUDE.md` | 55 | 0 | 0 |
+| `audio/CLAUDE.md` | 79 | 2 | 0 |
+| `e2e/CLAUDE.md` | 73 | 0 | 0 |
+
+  Nothing missing. The one expected unmatched item, `art/CLAUDE.md`'s last line ("update this file in the same commit"), has no backtick or bold and is dropped on purpose (design §4.1; the root "Keeping these files current" rule covers it).
+- Trigger check (one fresh `haiku` agent, no tools, briefed with only the seven `name` + `description` pairs from the frontmatter and the ten tasks). Round 1, 10 of 10:
+
+| # | Task | Pick | Intended |
+| --- | --- | --- | --- |
+| 1 | Add a Frost Lance spell | `yomi-add-content` | match |
+| 2 | Retune BC4 | `yomi-balance` | match |
+| 3 | Draw a new map icon | `yomi-sprites` | match |
+| 4 | Voice a cutscene line | `yomi-sound` | match |
+| 5 | Retake the manual's shots | `yomi-manual` | match |
+| 6 | Measure the one-party campaign win rate at seed 1 | `yomi-measure` | match |
+| 7 | Check that the sprite and sound builds are current before a PR | `yomi-asset-check` | match |
+| 8 | Add a new encampment facility | `yomi-add-content` | match |
+| 9 | Make a new sound cue for opening a chest | `yomi-sound` | match |
+| 10 | Add a new foe kind | `yomi-add-content` | match |
+
+- Final sizes (design §7), `wc -c`; always loaded = root + `name` + `description` of every skill and agent (the test's formula):
+
+| Measure | Before (`f0814da`) | After |
+| --- | --- | --- |
+| root `CLAUDE.md` | 6,243 | 6,492 |
+| skill descriptions (5 skills, name + description) | 0 | 1,038 |
+| agent descriptions (2 agents) | 0 | 382 |
+| **always loaded** | **6,243** | **7,912** (cap 8,500 [Q3]; +1,669) |
+| directory guides in total (11) | 55,328 | 46,003 |
+| adding a spell: guides to read | ~22.3 KB | engine + combat + `yomi-add-content/spell.md` = 9,152 (step 05) |
+| orchestrator resume | record 8.7 KB + index 28 KB | see plan completion below |
+
+| Guide | Before | After |
+| --- | --- | --- |
+| `src/game` | 8,308 | 7,554 |
+| `src/engine` | 7,542 | 5,246 |
+| `audio` | 6,726 | 2,211 |
+| `src/scenes` | 6,451 | 4,832 |
+| `src/character` | 5,765 | 5,485 |
+| `e2e` | 4,844 | 4,691 |
+| `scripts` | 4,377 | 895 |
+| `art` | 4,161 | 1,827 |
+| `src/inventory` | 2,955 | 2,925 |
+| `src/combat` | 2,582 | 2,576 |
+| `src/story` | 1,617 | 1,269 |
+
+- Plan completion (index criteria): every step 01-13 is `done` in the index with commits (step 11's "review pending" marker cleared; its outcome line is above); `npm test` 98 files, 2,419 tests pass; findability checks of steps 05 and 13 clean or justified; always-loaded total 7,912 under the enforced 8,500; re-run `diff -ru ~/.claude/skills-backup-2026-11-21 ~/.claude/skills` shows the same 10 files as step 09's record (`architect`, `designer`, `orchestrator`, `planner`, `pr-reviewer`, `qa`, and `SKILL.md`, `implement-step.md`, `review-step.md`, `step-loop.md` of `plan-implementer`) and no "Only in" line under a backed-up directory, so it still holds only design §5.3 and §4.7 lines; `yomi-measure` (step 02) and `yomi-asset-check` (step 12) have each run once; stage 3 smoke check (step 09) and this trigger check recorded. Orchestrator-resume sizes were not re-measured here (the record's State is capped at about 3 KB by step 06; the index no longer holds history).
+

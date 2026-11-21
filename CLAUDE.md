@@ -1,8 +1,8 @@
 # CLAUDE.md
 
-Yomi is a 2D turn-based fantasy tactics game: Phaser 4 + TypeScript, bundled with Vite. Battles are fought on a pointy-top hex grid (action points, flanking, facing arcs, zones of control). Between battles the company's parties travel a hex world map against a spreading blight, from a home encampment whose facilities they build up.
+Yomi is a 2D turn-based fantasy tactics game: Phaser 4 + TypeScript, bundled with Vite. Battles are fought on a pointy-top hex grid (action points, flanking, facing arcs, zones of control). Between battles the company's parties travel a hex world map against a spreading blight, from a home encampment they build up.
 
-This file is the map. Each directory's `CLAUDE.md` loads by itself when you work there; the exhaustive rules are in `docs/reference/`, which nothing loads by itself.
+This file is the map. A directory's `CLAUDE.md` loads when you work there; the exhaustive rules are in `docs/reference/`, which nothing loads.
 
 ## Commands
 
@@ -17,7 +17,7 @@ Node 26+ (`scripts/*.ts` run on Node's native TypeScript; imports use explicit `
 | Production build | `npm run build` |
 | Battle simulator / campaign balance measure (~5 min, one at a time) | `npm run simulate -- --battles 2000 --seed 1` / `npm run simulate -- --campaign --battles 500 --seed 1` |
 
-Sprites, sounds, narration and the manual's screenshots have their own commands, in `art/`, `audio/` and `e2e/`'s guides. There is no linter: `tsc` is the lint step (`noUnusedLocals`, `noUnusedParameters`, `erasableSyntaxOnly`: no enums, namespaces or parameter properties; `verbatimModuleSyntax`: `import type` for types). The `Makefile` runs the same in a podman container (`make test`, `make test-browser ARGS=...`, `make shell`). Dev builds: `~` opens a debug console, `?seed=42` fixes every battle's seed (`src/scenes/CLAUDE.md`).
+Sprites: the `yomi-sprites` skill; sounds and narration: `yomi-sound`; the manual's screenshots: `yomi-manual`. There is no linter: `tsc` is the lint step (`noUnusedLocals`, `noUnusedParameters`, `erasableSyntaxOnly`: no enums, namespaces or parameter properties; `verbatimModuleSyntax`: `import type` for types). The `Makefile` runs the same in a podman container (`make test`, `make test-browser ARGS=...`, `make shell`). Dev builds: `~` opens a debug console, `?seed=42` fixes battle seeds (`src/scenes/CLAUDE.md`).
 
 ## Committing
 
@@ -25,7 +25,7 @@ Commit finished work without being asked: once a change is complete and `npm tes
 
 ## Subagents
 
-Pass `model: "sonnet"` for work that is not too complex: searching, reading and summarising, running tests or the simulator and reporting, mechanical edits whose shape is decided. Leave the model unset for work that needs judgement: designing, changing rules or balance, debugging an unknown cause, reviewing code. When in doubt, leave it unset. Simulator measurements: the `yomi-measure` agent; asset checks: `yomi-asset-check`.
+Pass `model: "sonnet"` for simple work: searching, reading and summarising, running tests or the simulator and reporting, mechanical edits whose shape is decided. Leave the model unset for work that needs judgement: designing, changing rules or balance, debugging an unknown cause, reviewing code. When in doubt, leave it unset. Simulator measurements: the `yomi-measure` agent; asset checks: `yomi-asset-check`.
 
 ## Architecture
 
@@ -33,16 +33,16 @@ Pass `model: "sonnet"` for work that is not too complex: searching, reading and 
 
 | Directory | What | Guide |
 | --- | --- | --- |
-| `src/grid/hex.ts` | axial hex maths, areas, the pathfinder that avoids free attacks | — |
-| `src/combat/` | attack resolution, stat blocks and foe scaling, spells, statuses, abilities, elements, the seedable `mulberry32` | yes |
-| `src/engine/` | the battle state machine, the AI (`POLICIES`), the headless loop (`autoPlay.ts`) | yes |
-| `src/character/` | the persistent `Character`, creation, skill trees, progression | yes |
-| `src/inventory/` | the gear catalog, grades, modifiers, runes | yes |
-| `src/game/` | everything outside battle: encounters, the company's day loop, world map, blight, encampment, `GameState`, saving | yes |
-| `src/story/` | cutscenes and the tutorial (change no rule) | yes |
-| `src/scenes/` | Phaser scenes and their Phaser-free helper modules | yes |
-| `scripts/` | the simulator and the balance bands | yes |
-| `e2e/`, `art/`, `audio/` | in-browser tests, sprite sources, sound sources | yes |
+| `src/grid/hex.ts` | axial hex maths, areas, the free-attack-avoiding pathfinder | — |
+| `src/combat/` | attack resolution, stat blocks, foe scaling, spells, statuses, abilities, elements, `mulberry32` | yes |
+| `src/engine/` | battle state machine, AI (`POLICIES`), headless loop (`autoPlay.ts`) | yes |
+| `src/character/` | the persistent `Character`, skill trees, progression | yes |
+| `src/inventory/` | gear catalog, grades, modifiers, runes | yes |
+| `src/game/` | everything outside battle: encounters, the day loop, world map, blight, encampment, `GameState`, saving | yes |
+| `src/story/` | cutscenes and tutorial (change no rule) | yes |
+| `src/scenes/` | Phaser scenes and their Phaser-free helpers | yes |
+| `scripts/` | the simulator and balance bands | yes |
+| `e2e/`, `art/`, `audio/` | in-browser tests, sprite and sound sources | yes |
 
 Contracts that span directories (each guide has the detail):
 
@@ -56,28 +56,28 @@ Contracts that span directories (each guide has the detail):
 
 ## Tests
 
-Two vitest projects: `scenes` (jsdom, smoke tests) is only `src/scenes/*Scene.test.ts`; every other `*.test.ts` under `src/` and `scripts/` is `domain` (Node). Deterministic tests pass a seeded `mulberry32` or scripted RNG. `e2e/` is a separate run; run it after changing a scene.
+Two vitest projects: `scenes` (jsdom smoke tests) is only `src/scenes/*Scene.test.ts`; every other `*.test.ts` under `src/` and `scripts/` is `domain` (Node). Deterministic tests pass a seeded `mulberry32` or scripted RNG. `e2e/` is a separate run; run it after changing a scene.
 
 ## Docs
 
-- `docs/reference/<area>.md`: `battle`, `characters`, `game`, `scenes`, `simulator`, `audio`, `sprites`, `e2e`. Open the section you need when a guide points there.
-- `docs/manual/README.md`: the player's manual; a change to a rule it states or a screen it shows updates it and retakes its screenshots.
-- `.claude/`: project skills (`yomi-*`), agents and role profiles; `scripts/claudeMd.test.ts` caps them.
-- `docs/designs/`: feature designs (may be ahead of the code). `docs/implementation-plans/`: step plans (`index.md`) and their history (`log.md`).
+- `docs/reference/<area>.md`: `battle`, `characters`, `game`, `scenes`, `simulator`, `audio`, `sprites`, `e2e`.
+- `docs/manual/README.md`: the player's manual; a rule or screen change updates it and retakes its screenshots.
+- `.claude/`: project skills (`yomi-*`), agents and role profiles.
+- `docs/designs/`: feature designs (may be ahead of the code). `docs/implementation-plans/`: step plans and their history (`log.md`).
 
 ## Keeping these files current
 
-Update the right file in the same commit as the change that makes it wrong; search the CLAUDE.md files and `.claude/` for every name renamed or deleted. Where a fact goes:
+Update the right file in the commit that makes it wrong; search the CLAUDE.md files and `.claude/` for each renamed or deleted name. Where a fact goes:
 
 | A fact | Goes in |
 | --- | --- |
 | commands, the map, contracts spanning directories | this file |
-| a rule that stops you breaking code in one directory | that directory's `CLAUDE.md`, one line a module |
-| how to do a kind of task: an "if you add X" list, a tool workflow, tuning | a project skill, `.claude/skills/yomi-<task>/`, one file per case |
-| what one role needs to know about Yomi | `.claude/roles/<role>.md` |
+| a rule that stops you breaking one directory's code | that directory's `CLAUDE.md`, a line a module |
+| how to do a kind of task (an "if you add X" list, a tool workflow, tuning) | a skill, `.claude/skills/yomi-<task>/`, a file per case |
+| what one role needs to know | `.claude/roles/<role>.md` |
 | a delegated job with a fixed report | `.claude/agents/<name>.md` |
 | full rule text and detail | `docs/reference/<area>.md` |
 | a feature's state / its history | `docs/features/<slug>.md` State / the plan's `log.md` |
 | what a grep answers, what the code says | nowhere |
 
-`scripts/claudeMd.test.ts` caps this file at 16 KB, each directory's at 12 KB, and the `.claude/` skills, agents and always-loaded total; when it fails, move detail into `docs/reference/` or a skill.
+`scripts/claudeMd.test.ts` caps this file at 16 KB, each directory's at 8 KB, and the `.claude/` skills, agents and always-loaded total; when it fails, move detail into `docs/reference/` or a skill.

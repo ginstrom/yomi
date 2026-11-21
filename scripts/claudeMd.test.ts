@@ -12,7 +12,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 // detail lives in docs/reference/. When a cap fails, move detail out; do not
 // raise the limits.
 const ROOT_LIMIT_BYTES = 16_000
-const DIRECTORY_LIMIT_BYTES = 12_000
+const DIRECTORY_LIMIT_BYTES = 8_000
 const SKILL_LIMIT_BYTES = 4_000
 const SKILL_FILE_LIMIT_BYTES = 8_000
 const AGENT_LIMIT_BYTES = 6_000
