@@ -41,3 +41,5 @@ Measured by the `yomi-measure` agent on a clean worktree at `b28bba1` (no code c
 ## Step 04 outcome
 
 - Step 04 (sprites: partners and the Lodge): engineer sonnet, reviewer opus; verdict clean after 3 review rounds. Commits `15d13ff..861be38`, merged into the stage branch in `07451c5`.
+
+- Step 03 (roads and the Lodge's level 3): engineer sonnet, reviewer opus; verdict clean after 1 review round. Commits `d851174` and the round 1 follow-ups.

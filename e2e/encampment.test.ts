@@ -146,6 +146,7 @@ describe('the encampment', () => {
     const third = await game.settled('Encampment', (c) => facility(c, 'builders_lodge').level === 3)
     expect(third.message).toBe("The Builders' Lodge is raised to level 3.")
     expect(third.buttons.improve.enabled).toBe(false)
+    expect(facility(third, 'builders_lodge').frame).toBe('camp_lodge/level_3')
     expect(third.details[0]).toBe("Builders' Lodge, level 3 of 3")
   })
 

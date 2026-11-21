@@ -148,7 +148,7 @@ A won battle lowers the land within 1 + its threat by two levels (`cleanse`). Th
   | 3 | Fort | Lodge 2 | 50 gold, 20 iron, 10 stone | +3 | +7 | 3 (corrupted) |
 
   `improveRefusal(world, party)` refuses in order: "Nothing can be built here now." (the game over, or among monsters), "Improvements go on a held resource.", "<site> is as strong as it gets." (a fort), "<A Mine> needs the Builders' Lodge." ("need" for a plural name: "Saltworks need …", "Peat Cuttings need …"; "… at level 2." for a fort), "<An Outpost> costs …, more than the stock holds." (`withArticle`); `improveSiteRefusal` is its first three.
-- Builders' Lodge: `WorldState.lodge`, 0 to `MAX_LODGE_LEVEL` (3), raised a level at a time by a party at the encampment (`raiseLodge(game, party)`, no time passing; `lodgeCost`, `LODGE_COSTS`: 30 gold and 20 timber, 60 gold and 25 stone, 100 gold, 20 iron and 20 stone). Level 1 allows works, 2 forts; Level 3 (`ROAD_LODGE_LEVEL`) makes every open trade route's road a clean source of `ROAD_STRENGTH` (1) in the blight's contest (blight.ts `sources`); at the top `raiseLodge` refuses "The Builders' Lodge is as great as it gets."
+- Builders' Lodge: `WorldState.lodge`, 0 to `MAX_LODGE_LEVEL` (3), raised a level at a time by a party at the encampment (`raiseLodge(game, party)`, no time passing; `lodgeCost`, `LODGE_COSTS`: 30 gold and 20 timber, 60 gold and 25 stone, 100 gold, 20 iron and 20 stone). Level 1 allows works, 2 forts; level 3 (`ROAD_LODGE_LEVEL`) makes every open trade route's road a clean source of `ROAD_STRENGTH` (1) in the blight's contest (blight.ts `sources`); at the top `raiseLodge` refuses "The Builders' Lodge is as great as it gets."
 
 ## The encampment's facilities
 

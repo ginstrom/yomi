@@ -346,7 +346,7 @@ export class EncampmentScene extends Phaser.Scene {
     // The name after the change: the trading post becomes a Market Hall as it is raised.
     const now = facilities(this.gameState, this.expedition).find((f) => f.id === facility.id) ?? facility
     const done = facility.level === 0 ? `The ${now.name} is built.` : `The ${now.name} is raised to level ${now.level}.`
-    // A next level barred whatever the stock holds (the Lodge's roads) says so at once, as its Raise greys.
+    // A next level barred whatever the stock holds (a generic hook; no facility uses it now) says so at once, as its Raise greys.
     this.message = refusal ?? (now.barred ? `${done} ${now.barred}` : done)
     this.render()
   }

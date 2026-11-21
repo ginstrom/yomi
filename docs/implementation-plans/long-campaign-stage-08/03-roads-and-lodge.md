@@ -152,3 +152,5 @@ Done: `ROAD_LODGE_LEVEL` (buildings.ts), `ROAD_STRENGTH` and road sources in `so
 Deviations: the e2e test "shows the Lodge at level 2 with its Raise disabled" was deleted (the behavior is gone) and the "says why the Lodge goes no higher" test replaced by one that raises 1 to 2 to 3.
 
 Results: `npm test` 100 files, 2470 tests pass; refactor guard untouched and green. `npm run test:browser`: 176 of 177 passed; the one failure ("drags gear between the equipment, the backpack and the baggage", untouched, ran while another poller loaded the machine) passed alone on rerun. 50-campaign SHA-256 `1ceefe633e71c0326c0c5b261c77e1c010c49e30303a85286a782589e74400d1`, identical to step 01's baseline. Grep for the removed names is clean in src, scripts, e2e, docs/reference, docs/manual, .claude skills/agents/roles and CLAUDE.md (stale copies remain only in `.claude/worktrees/agent-*`, another agent's worktree, left alone).
+
+Review round 1 (clean, five non-blocking items), all fixed: scene comment, CLAUDE.md cycle group, level-3 frame checks (unit and e2e), a raided-but-open route keeps pushing (fails if raided routes are filtered out), lower-case 'level 3' in game.md.

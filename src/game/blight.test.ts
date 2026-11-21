@@ -557,6 +557,13 @@ describe('the roads\' strength (economy A8)', () => {
     expect(netInfluence(world, [], at)).toBeCloseTo(netInfluence(bare, [], at))
   })
 
+  it('keeps pushing while a raided route is still open, until it is abandoned', () => {
+    const { world, bare, road, route } = roaded()
+    world.lodge = 3
+    route.raidedDays = ABANDON_AFTER - 2
+    expect(netInfluence(bare, [], road[0]) - netInfluence(world, [], road[0])).toBeCloseTo(ROAD_STRENGTH)
+  })
+
   it('pushes once per route, so two roads sharing a hex push twice there', () => {
     const { world, bare, road } = roaded()
     world.lodge = 3
