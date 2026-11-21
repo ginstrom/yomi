@@ -3,7 +3,7 @@
 Each engine loads an MLX conversion from mlx-community through mlx-audio,
 pinned to a Hugging Face commit; `upstream` is the model it was converted
 from, whose card states the licence that governs the weights and their
-output. Licences were checked on each card on `CHECKED` (see audio/CLAUDE.md).
+output. Licences were checked on each card on `CHECKED` (see docs/reference/audio.md, "Narration engines").
 Step 15 copies the chosen pins into `audio/voices.toml`.
 """
 from dataclasses import dataclass

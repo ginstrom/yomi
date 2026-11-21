@@ -959,3 +959,4 @@ index 393d4a8..827e335 100644
 - `audio/CLAUDE.md` 6,726 -> 2,211 bytes. Skill: `SKILL.md` 1,441; `commands.md` 1,342; `new-cue.md` 1,446; `sourcing.md` 991; `narration.md` 1,258.
 - `npm test`: 98 files, 2,419 tests, all pass. Findability script not run (step 13 does it).
 - Ledger: the `BACK_LABELS` line is in `new-cue.md`; "Listening" and "Which sound plays when" in `new-cue.md`; the Commands table in `commands.md`; sourcing preferences and folders in `sourcing.md`; the allow-list, downloads rule and runtime hints stay in `audio/CLAUDE.md`.
+- Outcome: engineer sonnet, reviewer sonnet, verdict clean, 1 review round (two pointers fixed: `docs/features/audio-pass.md` heteronym rule, `tools/audio/yomi_audio/tts/models.py` licence comment).

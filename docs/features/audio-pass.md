@@ -85,7 +85,7 @@ Large: new offline tooling (a sound build pipeline, a local TTS model), new asse
 
 - Step 02: also fix review-01 findings: check every source id a recipe names (not only those drawn), catch non-AudioError failures without tracebacks, stop reading pyloudnorm's private `_filters` (or comment/pin it).
 - Step 02 (and 09): apply the short-cue normalisation rule above; `hit.slash` over stand-in sources peaked +4.4 dBTP, the same rule catches it.
-- Any later voiced line: check heteronyms (the user heard "winds" misread) and respell in `spoken`; rule is in `audio/CLAUDE.md`.
+- Any later voiced line: check heteronyms (the user heard "winds" misread) and respell in `spoken`; rule is in `.claude/skills/yomi-sound/narration.md`.
 - Steps 08–13: `sourcing.md` names some Kenney files loosely (`creak_001` is `creak1`; `knifeSlice`, `drawKnife`, `handleCoins` plain numbers; "Retro Electric Off" is `Retro Charge Electric Off 07_s05`), and a few Freesound cue lists differ between `sourcing.md` and `freesound-wanted.md` (review-04). Check names on disk.
 - G11: music now plays at −24 LUFS (battle 4.0 dB, world 1.7 dB louder than before); judge by ear.
 - Merged with skill trees 2026-11-16: the new techniques and events map onto existing cues (list in the index's merge note); taste calls for a playtest: Taunt's metal clang, Holy Light/Consecrate landing on the Dawn chime, Meteor on the Fireball impact. Nit left: `ENDURED_CUE` sits between `eventSounds`'s JSDoc and the function in `sounds.ts`.
