@@ -47,3 +47,24 @@ Measured by the `yomi-measure` agent on a clean worktree at `b28bba1` (no code c
 - Step 05 (the world map's roads and partners): engineer sonnet, reviewer opus; verdict clean after 1 review round. Commits `75603ad` and the round 1 follow-ups (a `grey` probe field from the drawn tint and label, silence told only when contacted or in sight, "pays nothing while raided" on a raided road, manual wording).
 
 - Step 06 (the Routes tab and the debug console): engineer sonnet, reviewer opus; verdict clean after 2 review rounds. Commits `ba4b82b`, the round 1 follow-ups `a04d476` and the round 2 follow-ups (`spawn` takes a named hex, never a party's).
+
+## Step 07: the simulator's trade (2026-11-22)
+
+- 50-campaign check before `1ceefe63…74400d1` (23/50, identical to step 01); after `b50f7b50626d6e2832deb18c44a808b9be0521002698dc97c1fa8216db904e52` (22/50, 281 days, 0.50 partners contacted, no route). The ungated detour was measured first: `one` 304/500, 359 days, out of band; the user chose to gate it on trading post 4 (decision 13). Gated, 500 campaigns: `one` 233 (284 days), `company` 232 (285 days), `rl10` 433 (509 days; 0.54 partners contacted, 0.03 routes opened, 1 route gold, none raided or abandoned). The refactor guard re-recorded once (events `e638f2a4…6f1180`).
+- Ungated against gated, 50 campaigns (seed 1, `--parties 1`): partners and no detour 22/50; the detour as first specified 35/50 (375 days); the nest chosen before the detour 31/50; the detour gated on `routeLimit(world) > 0` 22/50. Ungated `one`, 500: 304/500, 359 days, 24.8 battles, 1.2 dead, 1.56 partners contacted, no route.
+- 500 campaigns, seed 1, gated, measured by `yomi-measure` one at a time (logs `logs/s8-07-{one,company,rl10}.*` in the step's worktree):
+
+  | Run | Source wins | Mean days | Partners contacted | Routes opened | Route gold (a campaign) |
+  | --- | --- | --- | --- | --- | --- |
+  | `one`, baseline | 239 | 286 | — | — | — |
+  | `one` | 233 (band 215 to 250) | 284 | 0.47 | 0.00 | 0 |
+  | `company`, baseline | 239 | 286 | — | — | — |
+  | `company` | 232 (band 220 to 260) | 285 | 0.47 | 0.00 | 0 |
+  | `rl10`, baseline | 434 | 509 | — | — | — |
+  | `rl10` | 433 (370 to 420, accepted up to 445) | 509 | 0.54 | 0.03 | 1 |
+
+  The early game's 6 and 7 points come from the partners' land as clean sources reshuffling the spawns (no detour and no road in it), within the 500-campaign sampling spread.
+
+## Step 07 outcome
+
+- Step 07 (the simulator's trade): engineer opus, reviewer opus; verdict clean after 1 review round. The review's only blocking item was these records (this section and the index row), held back on purpose until the merge; its follow-ups (N2 to N5) are in `9ce59b9`. Commits `1dfbd59`, `9ce59b9`, merged into the stage branch in `c94e05f`.
