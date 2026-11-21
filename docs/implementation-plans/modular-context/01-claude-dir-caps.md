@@ -106,13 +106,13 @@ The host's default `node` is 22. Prefix every command with `PATH=/opt/homebrew/o
 
 ## 5. Completion criteria
 
-- [ ] `.gitignore` ignores `.claude/worktrees/`.
-- [ ] `scripts/claudeMd.test.ts` has the C2 constants (bar `ROLE_LIMIT_BYTES`) and the scope, frontmatter, budget and name-existence rules, each shown red once.
-- [ ] `npm test` passes.
-- [ ] One commit, `Modular context step 01: caps and checks for .claude/`, with no attribution lines. It is on the current branch (`long-campaign-stage-07`), not pushed, and staged by path. It includes the design, the feature record and the plan folder.
-- [ ] Index: step 01 `done` with its commit hash.
-- [ ] `log.md`: a `## Step 01: caps and checks for .claude/` section (contract C7), with the date, tiers, verdict, review rounds, commands and results, and the budget total today (6,243 bytes).
-- [ ] Execution record below: the red cases, the fenced-block choice, and anything later steps need. For example: how to read the budget total, and where step 08 adds roles.
+- [x] `.gitignore` ignores `.claude/worktrees/`.
+- [x] `scripts/claudeMd.test.ts` has the C2 constants (bar `ROLE_LIMIT_BYTES`) and the scope, frontmatter, budget and name-existence rules, each shown red once.
+- [x] `npm test` passes.
+- [x] One commit, `Modular context step 01: caps and checks for .claude/`, with no attribution lines. It is on the current branch (`long-campaign-stage-07`), not pushed, and staged by path. It includes the design, the feature record and the plan folder.
+- [x] Index: step 01 `done` with its commit hash.
+- [x] `log.md`: a `## Step 01: caps and checks for .claude/` section (contract C7), with the date, tiers, verdict, review rounds, commands and results, and the budget total today (6,243 bytes).
+- [x] Execution record below: the red cases, the fenced-block choice, and anything later steps need. For example: how to read the budget total, and where step 08 adds roles.
 
 ## 6. Execution record
 
@@ -124,3 +124,4 @@ The host's default `node` is 22. Prefix every command with `PATH=/opt/homebrew/o
 - **Choices:** spans inside fenced code blocks (```` ``` ```` lines) are **not** checked; only inline single-backtick spans in prose are. A constant counts as present if it occurs as a word (`\b[A-Z][A-Z0-9_]*\b`) in any `.ts` file under `src/`, `scripts/` or `e2e/` (skipping `SKIP` directories). Path suffixes stripped: a trailing `#anchor`, then a trailing `:<line>` or `:<line>-<line>`. A skill directory without `SKILL.md` is a frontmatter failure. Offenders are sorted by file (skills, then agents), spans in order of appearance.
 - **For later steps:** the budget total is in the live test's title, so `npx vitest run scripts/claudeMd.test.ts --reporter=verbose` prints it ("… under 8500 bytes (now 6243)"), and in the failure message. Step 08 adds roles where the comment above `subdirectories` says: a `roleFiles = root => markdownFiles(join(root, '.claude', 'roles'), false)` list, added to `projectFiles` (name-existence) and to `oversizeFiles`' limit choice with `ROLE_LIMIT_BYTES`; not to `described` (no frontmatter, not in the budget). Step 13 changes only `DIRECTORY_LIMIT_BYTES`.
 - **Deviation:** the index's Commits cell is filled by a second commit (`Modular context step 01: the index names its commit`), as stage 7 step 07 did, since a commit cannot name its own hash.
+- **Review (opus, 1 round): clean.** Follow-up asked by the orchestrator: a fence indented inside a list item was not recognised (`backtickedSpans` matched ```` ``` ```` only at column 0). The fixture test `skips spans in a fence indented inside a list item` failed first (it reported `INDENTED_FENCED` and `src/indented.ts` from inside the fence); the fence pattern now allows leading spaces or tabs (`/^[ \t]*```.*$/m`), and the test passes. The fenced-block choice above now covers indented fences.

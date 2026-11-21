@@ -135,7 +135,7 @@ function tsFiles(dir: string): string[] {
 
 // Inline backticked spans outside fenced code blocks.
 function backtickedSpans(text: string): string[] {
-  const prose = text.split(/^```.*$/m).filter((_, i) => i % 2 === 0).join('\n')
+  const prose = text.split(/^[ \t]*```.*$/m).filter((_, i) => i % 2 === 0).join('\n')
   return [...prose.matchAll(/`([^`\n]+)`/g)].map(match => match[1])
 }
 
@@ -301,5 +301,19 @@ describe('the .claude/ checks, on a fixture tree', () => {
       { file: '.claude/skills/names/SKILL.md', problem: 'docs/gone.md:4' },
       { file: '.claude/agents/runner.md', problem: 'e2e/nothing.ts' },
     ])
+  })
+
+  it('skips spans in a fence indented inside a list item', () => {
+    const root = fixture({
+      '.claude/skills/listed/SKILL.md': skill('listed', 'Listed.', [
+        '- A step:',
+        '',
+        '  ```sh',
+        '  `INDENTED_FENCED` `src/indented.ts`',
+        '  ```',
+        '- After it: `src/after.ts`.',
+      ].join('\n')),
+    })
+    expect(staleNames(root, new Set())).toEqual([{ file: '.claude/skills/listed/SKILL.md', problem: 'src/after.ts' }])
   })
 })
