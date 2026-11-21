@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > After that, stage 7 (site improvements and markets) is next on the roadmap.
-- Slug `long-campaign-stage-07` · Phase 6, done on branch (17cc2e3..a51ed58; code through `e6d94ac`); not pushed · Next action: the user approves pushing; then pr-creator (PR review stands at `a51ed58`) · Branch `long-campaign-stage-07` moved back to `a51ed58` (2026-11-21); later work is on `modular-context`, stacked above · Branch: `long-campaign-stage-07`, off main (17cc2e3). The branch also carries `06085b3`, `f0814da` and the unfinished modular-context work.
+- Slug `long-campaign-stage-07` · Phase 6, done on branch (17cc2e3..a51ed58; code through `e6d94ac`); not pushed · PR #8 open → main (head `a51ed58`); #9 (modular-context) stacked on it · Next action: review and merge #8 · Branch `long-campaign-stage-07` moved back to `a51ed58` (2026-11-21); later work is on `modular-context`, stacked above · Branch: `long-campaign-stage-07`, off main (17cc2e3). The branch also carries `06085b3`, `f0814da` and the unfinished modular-context work.
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–6 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md` (cross-stage rules: early-game guard re-measured at start, versions, docs, sprites, play script)
