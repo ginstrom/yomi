@@ -1,0 +1,47 @@
+# A trade partner on the world map: Millbrook, a farming village. A windmill
+# with turning sails, two thatched cottages and a strip of golden field.
+canvas = "map"
+outline = "auto"
+
+[frames.base.runs]
+# windmill sails (a plus) over the mill
+1 = [[5, "W"]]
+2 = [[5, "W"]]
+3 = [[5, "W"]]
+4 = [[5, "W"]]
+5 = [[1, "WWWWYWWWW"]]
+6 = [[4, "nWn"]]
+7 = [[3, "nnWnn"]]
+8 = [[3, "TTWtt"]]
+9 = [[3, "TTWtt"]]
+10 = [[3, "TTTtt"], [12, "yY"]]
+11 = [[3, "TTTtt"], [11, "OyYyO"]]
+12 = [[3, "TbTtt"], [10, "OyyYyyO"], [19, "yYy"]]
+13 = [[3, "TTTtt"], [11, "WWWWW"], [18, "OyYyO"]]
+14 = [[3, "TTTtt"], [11, "WbWNW"], [19, "WbW"]]
+15 = [[3, "TTNtt"], [11, "WWWNW"], [19, "WNW"]]
+16 = [[3, "TTNtt"], [11, "WWWNW"], [19, "WNW"]]
+# grass, then the field
+17 = [[1, "gggeggggeggggegggegggg"]]
+18 = [[1, "yYyYyYyYyYyYyYyYyYyYyY"]]
+19 = [[1, "OyOyOyOyOyOyOyOyOyOyOy"]]
+20 = [[1, "gggggggggggggggggggggg"]]
+
+# The sails turn a quarter: a cross becomes an X.
+[frames.turn]
+from = "base"
+
+[frames.turn.runs]
+1 = [[5, "."], [1, "W"], [9, "W"]]
+2 = [[5, "."], [2, "W"], [8, "W"]]
+3 = [[5, "."], [3, "W"], [7, "W"]]
+4 = [[5, "."], [4, "W"], [6, "W"]]
+5 = [[1, "...."], [5, "Y"], [6, "...."]]
+6 = [[4, "W"], [5, "n"], [6, "W"]]
+7 = [[3, "W"], [5, "n"], [7, "W"]]
+8 = [[2, "W"], [5, "T"], [8, "W"]]
+9 = [[1, "W"], [5, "T"], [9, "W"]]
+
+[anim.idle]
+frames = ["base", "turn"]
+ms = 500

@@ -6105,6 +6105,114 @@
       24
     ]
   },
+  "map_partner_port": {
+    "anchor": [
+      12,
+      12
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 600
+          },
+          {
+            "frame": "swell",
+            "ms": 600
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      1,
+      24,
+      21
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "map_partner_port.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          1,
+          24,
+          21
+        ],
+        "file": "map_partner_port__base.png"
+      },
+      "swell": {
+        "bounds": [
+          0,
+          1,
+          24,
+          21
+        ],
+        "file": "map_partner_port__swell.png"
+      }
+    },
+    "size": [
+      24,
+      24
+    ]
+  },
+  "map_partner_village": {
+    "anchor": [
+      12,
+      12
+    ],
+    "anims": {
+      "idle": {
+        "frames": [
+          {
+            "frame": "base",
+            "ms": 500
+          },
+          {
+            "frame": "turn",
+            "ms": 500
+          }
+        ],
+        "loop": true
+      }
+    },
+    "bounds": [
+      0,
+      0,
+      24,
+      22
+    ],
+    "canvas": "map",
+    "display_scale": 2,
+    "file": "map_partner_village.png",
+    "frames": {
+      "base": {
+        "bounds": [
+          0,
+          0,
+          24,
+          22
+        ],
+        "file": "map_partner_village__base.png"
+      },
+      "turn": {
+        "bounds": [
+          0,
+          0,
+          24,
+          22
+        ],
+        "file": "map_partner_village__turn.png"
+      }
+    },
+    "size": [
+      24,
+      24
+    ]
+  },
   "map_resource": {
     "anchor": [
       12,
