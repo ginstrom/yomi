@@ -347,6 +347,7 @@ describe('the record\'s route counts and walking days', () => {
   const raided = (route: string, days: number): WorldEvent => ({ type: 'route_raided', route, partner: 'millbrook', name: 'Millbrook', cause: 'raiders', days })
   const restored = (route: string): WorldEvent => ({ type: 'route_restored', route, partner: 'millbrook', name: 'Millbrook' })
   const abandoned = (route: string): WorldEvent => ({ type: 'route_abandoned', route, partner: 'millbrook', name: 'Millbrook' })
+  const opened = (route: string): WorldEvent => ({ type: 'route_opened', route, partner: 'millbrook', name: 'Millbrook', length: 3 })
   const fresh = () => startCampaign(0, 1, parseArgs(['--campaign', '--parties', '1']))
 
   it('counts each road turned raided (days 0) as a raid told, and not the raided yield days', () => {
@@ -390,6 +391,23 @@ describe('the record\'s route counts and walking days', () => {
     for (let days = 1; days <= ABANDON_AFTER; days++) tally(gone, [raided('a', days)], days)
     tally(gone, [abandoned('a')], ABANDON_AFTER)
     expect(gone.record.routesRaidedLong).toBe(0)
+  })
+
+  it('starts a route\'s count afresh when it is opened again after being abandoned', () => {
+    const run = fresh()
+    tally(run, [opened('a')], 1)
+    for (let days = 1; days <= ABANDON_AFTER; days++) tally(run, [raided('a', days)], 1 + days * YIELD_DAYS)
+    tally(run, [abandoned('a')], 1 + ABANDON_AFTER * YIELD_DAYS)
+    expect(run.record.routesRaidedLong).toBe(0)
+    // Reopened under the same id: three raided yield days, told safe, raided again, three more.
+    tally(run, [opened('a')], 50)
+    for (const days of [1, 2, 3]) tally(run, [raided('a', days)], 50 + days * YIELD_DAYS)
+    tally(run, [restored('a')], 70)
+    tally(run, [raided('a', 0)], 72)
+    for (const days of [1, 2]) tally(run, [raided('a', days)], 72 + days * YIELD_DAYS)
+    expect(run.record.routesRaidedLong).toBe(0)
+    tally(run, [raided('a', 3)], 72 + 3 * YIELD_DAYS)
+    expect(run.record).toMatchObject({ routesRaidedLong: 1, routeFlickers: 1 })
   })
 
   it('counts the vanguard\'s walked days in every phase, those walking home also apart', () => {

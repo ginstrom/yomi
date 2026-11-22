@@ -448,7 +448,7 @@ export interface CampaignRecord {
    * within `ABANDON_AFTER * YIELD_DAYS` days, the case whose raid count starts afresh and is never abandoned.
    */
   routeFlickers: number
-  /** Routes raided on `ABANDON_AFTER` or more yield days in all (`route_raided` with `days` >= 1) and not abandoned by the end. */
+  /** Routes raided on `ABANDON_AFTER` or more yield days in all since it was last opened (`route_raided` with `days` >= 1) and not abandoned by the end. */
   routesRaidedLong: number
   /** The yields' value a day (gold, and every other material at `MATERIALS_PER_GOLD` to the gold piece; sales left out), over `days`. */
   incomePerDay: number
@@ -1156,7 +1156,11 @@ export interface CampaignRun {
   routes: Map<string, RouteTally>
 }
 
-/** What `tally` keeps of one trade route: the turn it was last told safe (null once a raid answered it), its raided yield days in all, and whether it was abandoned. */
+/**
+ * What `tally` keeps of one trade route since it was last opened (`route_opened` starts it afresh: an abandoned route
+ * may be opened again under the same id): the turn it was last told safe (null once a raid answered it), its raided
+ * yield days in all, and whether it was abandoned.
+ */
 export interface RouteTally {
   restoredOn: number | null
   raidedDays: number
@@ -1625,7 +1629,9 @@ export function tally(run: CampaignRun, events: readonly WorldEvent[], turn = ru
     if (event.type === 'route_opened') record.routesOpened++
     if (event.type === 'route_raided' && event.days === 1) record.routesRaided++
     if (event.type === 'route_abandoned') record.routesAbandoned++
-    if (event.type === 'route_raided' || event.type === 'route_restored' || event.type === 'route_abandoned') tallyRoute(run, event, turn)
+    if (event.type === 'route_opened' || event.type === 'route_raided' || event.type === 'route_restored' || event.type === 'route_abandoned') {
+      tallyRoute(run, event, turn)
+    }
   }
 }
 
@@ -1633,7 +1639,7 @@ export function tally(run: CampaignRun, events: readonly WorldEvent[], turn = ru
 function tallyRoute(run: CampaignRun, event: Extract<WorldEvent, { route: string }>, turn: number): void {
   const { record } = run
   let route = run.routes.get(event.route)
-  if (!route) run.routes.set(event.route, (route = { restoredOn: null, raidedDays: 0, abandoned: false }))
+  if (!route || event.type === 'route_opened') run.routes.set(event.route, (route = { restoredOn: null, raidedDays: 0, abandoned: false }))
   if (event.type === 'route_restored') route.restoredOn = turn
   if (event.type === 'route_abandoned') route.abandoned = true
   if (event.type === 'route_raided' && event.days === 0) {

@@ -197,3 +197,10 @@ Engineer: model unset (opus), 2026-11-22, at `c07152a`.
 - The other existing simulator tests that parse `--campaign` alone now run at ready level 18; all pass unchanged.
 
 **For later steps.** Step 04 changes `SOURCE_PLACE` and `NEAR_SOURCE.position`; the near-Source world is `newWorld(seed, undefined, PARTNERS, NEAR_SOURCE)` in `campaignGame`. Step 09 reads `routeRaidsTold`, `routeFlickers`, `routesRaidedLong` and `vanguardWalkDays` from the `Trade:` and `Walking:` lines.
+
+**Review round 1** (reviewer opus: changes needed, 1 blocking, 2 smaller; all fixed, none disputed).
+1. Blocking: a reopened route (same id `route_${partner}`) carried its old tally, `abandoned` stuck, so it was never long-raided. Fixed: `route_opened` goes to `tallyRoute` and starts the route afresh; "since it was last opened" in the doc comments and `simulator.md`. Test "starts a route's count afresh when it is opened again after being abandoned" seen failing before the fix, passing after. Guard values stay 0.
+2. `simulator.md`'s Campaigns paragraph still gave the `--ready-level` default as 7: now 18.
+3. Note for step 04 (its §4.6): the near-Source tests cannot tell `NEAR_SOURCE` from `SOURCE_PLACE` yet; step 04 changes the equality test and checks the tests fail without `campaignGame`'s rebuild.
+Index row 02 given its commit 3ac2548.
+Rerun after the fix: `npm test` 102 files, 2589 tests passed; 50-check `b50f7b50…904e52`, identical.
