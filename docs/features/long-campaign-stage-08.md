@@ -4,7 +4,7 @@
 
 - Request (user's words):
   > The next thing is stage 8 of the long campaign: trade partners and routes. Its design is docs/designs/long-campaign/stage-08-trade-routes.md and it is marked "ready for planning". [...] I'd start with the bookkeeping commit, then cut a long-campaign-stage-08 branch off main and run the orchestrator.
-- Slug `long-campaign-stage-08` · Phase 6, PR #10 open (42cde46..c66a473) · Next action: merge PR #10, then stage 9 · Branch: `long-campaign-stage-08`, off main (after the bookkeeping commit for #8/#9).
+- Slug `long-campaign-stage-08` · Done: PR #10 merged into main (f1bb2dd, 2026-11-22) · Next action: none (stage 9 is `long-campaign-stage-09`) · Branch: `long-campaign-stage-08`, off main (after the bookkeeping commit for #8/#9).
 - Path: Large, but the stage design is the approved design. Straight to planning, as stages 2–7 did.
 - Links:
   - Stages overview: `docs/designs/long-campaign/index.md`
