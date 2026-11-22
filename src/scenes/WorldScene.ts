@@ -40,6 +40,7 @@ import { pauseMusic, playCue, playCues, resumeMusic, startMusic, stopMusic } fro
 import { WORLD_SOUND_GAP_MS, buttonCue, reportEvents, worldSounds } from './sounds.ts'
 import { WORLD_LAYOUT, boardHexAt, boardHexCenter, boardPixelSize, type Point } from './boardGeometry.ts'
 import { CURSORS } from './cursors.ts'
+import { blightTiles, type BlightTile } from './blightTiles.ts'
 import { clampOrigin, mapOrigin, pannedOrigin, pressMoved, rectContains, type Rect } from './mapScroll.ts'
 import { PartyColumn } from './PartyColumn.ts'
 import { PartyListView } from './PartyListView.ts'
@@ -76,7 +77,13 @@ const LOCATION_SPRITES: Record<LocationKind, string> = {
   partner: 'map_partner_village',
 }
 /** Each trade partner's own sprite; a partner without one uses `LOCATION_SPRITES.partner`. */
-const PARTNER_SPRITES: Record<string, string> = { millbrook: 'map_partner_village', saltmere: 'map_partner_port' }
+const PARTNER_SPRITES: Record<string, string> = {
+  millbrook: 'map_partner_village',
+  saltmere: 'map_partner_port',
+  stonehollow: 'map_partner_hold',
+  elder_glade: 'map_partner_glade',
+  emberwatch: 'map_partner_pass',
+}
 /** A silent partner's sprite and label, greyed. */
 const SILENT_TINT = 0x9e9e9e
 const SILENT_LABEL = '#9e9e9e'
@@ -266,7 +273,10 @@ export class WorldScene extends Phaser.Scene {
    * worked out again every frame.
    */
   private blightMarks!: Phaser.GameObjects.Graphics
-  private blightLayer!: Phaser.GameObjects.RenderTexture
+  /** The blight layer: render textures tiling the map, each no larger than `BLIGHT_TILE_PX` a side. */
+  private blightLayer: { tile: BlightTile; texture: Phaser.GameObjects.RenderTexture; key: { value: string } }[] = []
+  /** How long the last `refreshBlight` took, in ms, for the probe. */
+  private blightRefreshMs = 0
   /** The growths on corrupted land as the player knows it, rebuilt with `blightLayer`. */
   private blightSprites!: Phaser.GameObjects.Container
   /** The locations' sprites, under the party, and their names and badges, over it; the sprites are rebuilt when a location comes or goes. */
@@ -330,8 +340,11 @@ export class WorldScene extends Phaser.Scene {
     this.mapLayer = this.add.container(0, 0)
     this.buildTerrain()
     this.blightMarks = this.make.graphics({}, false)
-    const map = boardPixelSize(this.world.board, WORLD_LAYOUT)
-    this.blightLayer = this.add.renderTexture(0, 0, Math.ceil(map.width), Math.ceil(map.height)).setOrigin(0)
+    this.blightLayer = blightTiles(this.world.board, WORLD_LAYOUT).map((tile) => ({
+      tile,
+      texture: this.add.renderTexture(tile.x, tile.y, tile.width, tile.height).setOrigin(0),
+      key: { value: '' },
+    }))
     this.blightSprites = this.add.container(0, 0)
     this.roadMarks = this.add.graphics()
     this.drawnRoads = []
@@ -346,7 +359,7 @@ export class WorldScene extends Phaser.Scene {
     this.selectedMark = this.add.graphics()
     this.partyLayer = this.add.container(0, 0, [this.selectedMark])
     this.figures = new Map()
-    this.mapLayer.add([this.blightLayer, this.blightSprites, this.roadMarks, this.hoverMarks, this.partyMark, this.siteSprites, this.partyLayer, this.siteLabels])
+    this.mapLayer.add([...this.blightLayer.map((t) => t.texture), this.blightSprites, this.roadMarks, this.hoverMarks, this.partyMark, this.siteSprites, this.partyLayer, this.siteLabels])
     this.syncFigures()
 
     this.headerBar = this.add.rectangle(0, 0, 0, 0, BAR_COLOR, BAR_ALPHA).setOrigin(0)
@@ -637,8 +650,15 @@ export class WorldScene extends Phaser.Scene {
         route: route.id,
         shades: this.drawnRoads.filter((s) => s.route === route.id).map((s) => s.shade),
       })),
+      blightTiles: {
+        count: this.blightLayer.length,
+        size: Math.max(...this.blightLayer.map((t) => Math.max(t.tile.width, t.tile.height))),
+        refreshMs: this.blightRefreshMs,
+        growths: this.blightSprites.length,
+      },
       partners: partners(this.world).map((p) => ({
         id: p.id,
+        sprite: PARTNER_SPRITES[p.id] ?? LOCATION_SPRITES.partner,
         contacted: isContacted(this.world, p.id),
         silent: isSilent(this.world, p.id),
         grey: this.partnerGrey(p.id),
@@ -859,46 +879,62 @@ export class WorldScene extends Phaser.Scene {
     const { board, seen } = this.world
     const drawn = `${seen.join('')}|${[...this.visible].join()}`
     if (drawn === this.drawnBlight) return
+    const started = performance.now()
     this.drawnBlight = drawn
-    const g = this.blightMarks.clear()
+    const g = this.blightMarks
     this.blightSprites.removeAll(true)
-    const size = WORLD_LAYOUT.hexSize
     for (let i = 0; i < seen.length; i++) {
-      const level = seen[i]
-      const h = boardHex(board, i)
-      const c = boardHexCenter(h, WORLD_LAYOUT)
-      if (level === UNEXPLORED) {
-        g.fillStyle(UNEXPLORED_COLOR, 1).fillPoints(this.hexPolygon(h), true)
-        continue
-      }
-      if (!this.visible.has(i)) g.fillStyle(0x000000, FOG_VEIL_ALPHA).fillPoints(this.hexPolygon(h), true)
-      if (level > 0) {
-        g.fillStyle(BLIGHT_TINTS[level], BLIGHT_ALPHAS[level]).fillPoints(this.hexPolygon(h), true)
-        if (level === MAX_BLIGHT) {
-          const growth = this.add
-            .sprite(c.x, c.y, SPRITE_ATLAS, spriteFrame(BLIGHT_SPRITE, 'base'))
-            .setScale(BLIGHT_SCALE)
-            .play({ key: spriteAnim(BLIGHT_SPRITE, 'idle'), delay: (i * LOCATION_STAGGER_MS) % 1400 })
-          if (!this.visible.has(i)) growth.setAlpha(REMEMBERED_ALPHA)
-          this.blightSprites.add(growth)
-        }
-        continue
-      }
-      // The edge two hexes share is a side's length, square across the line between their centres.
-      g.lineStyle(2, FRONT_COLOR, 0.35)
-      for (const n of hexNeighbors(h)) {
-        if (!this.board.contains(n) || seen[boardIndex(board, n)] <= 0) continue
-        const d = boardHexCenter(n, WORLD_LAYOUT)
-        const mx = (c.x + d.x) / 2
-        const my = (c.y + d.y) / 2
-        const length = Math.hypot(d.x - c.x, d.y - c.y)
-        const px = (-(d.y - c.y) / length) * (size / 2)
-        const py = ((d.x - c.x) / length) * (size / 2)
-        g.lineBetween(mx - px, my - py, mx + px, my + py)
-      }
+      if (seen[i] !== MAX_BLIGHT) continue
+      const c = boardHexCenter(boardHex(board, i), WORLD_LAYOUT)
+      const growth = this.add
+        .sprite(c.x, c.y, SPRITE_ATLAS, spriteFrame(BLIGHT_SPRITE, 'base'))
+        .setScale(BLIGHT_SCALE)
+        .play({ key: spriteAnim(BLIGHT_SPRITE, 'idle'), delay: (i * LOCATION_STAGGER_MS) % 1400 })
+      if (!this.visible.has(i)) growth.setAlpha(REMEMBERED_ALPHA)
+      this.blightSprites.add(growth)
     }
-    this.blightLayer.clear().draw(g).render()
+    // Each tile gets the marks of the hexes that reach it, drawn in map pixels and shifted by the tile's corner.
+    // Only a tile whose hexes changed is drawn again: a step of the party or a day's blight touches one or two.
+    for (const { tile, texture, key } of this.blightLayer) {
+      const now = tile.watch.map((i) => (seen[i] << 1) | (this.visible.has(i) ? 1 : 0)).join()
+      if (now === key.value) continue
+      key.value = now
+      g.clear()
+      for (const i of tile.hexes) this.drawHexMarks(g, i)
+      texture.clear().draw(g, -tile.x, -tile.y).render()
+    }
     g.clear()
+    this.blightRefreshMs = performance.now() - started
+  }
+
+  /** One hex's marks: black if unexplored, else the fog veil out of sight, the level's tint, or on clear land the front line along its edges with blighted land. */
+  private drawHexMarks(g: Phaser.GameObjects.Graphics, i: number): void {
+    const { board, seen } = this.world
+    const size = WORLD_LAYOUT.hexSize
+    const level = seen[i]
+    const h = boardHex(board, i)
+    const c = boardHexCenter(h, WORLD_LAYOUT)
+    if (level === UNEXPLORED) {
+      g.fillStyle(UNEXPLORED_COLOR, 1).fillPoints(this.hexPolygon(h), true)
+      return
+    }
+    if (!this.visible.has(i)) g.fillStyle(0x000000, FOG_VEIL_ALPHA).fillPoints(this.hexPolygon(h), true)
+    if (level > 0) {
+      g.fillStyle(BLIGHT_TINTS[level], BLIGHT_ALPHAS[level]).fillPoints(this.hexPolygon(h), true)
+      return
+    }
+    // The edge two hexes share is a side's length, square across the line between their centres.
+    g.lineStyle(2, FRONT_COLOR, 0.35)
+    for (const n of hexNeighbors(h)) {
+      if (!this.board.contains(n) || seen[boardIndex(board, n)] <= 0) continue
+      const d = boardHexCenter(n, WORLD_LAYOUT)
+      const mx = (c.x + d.x) / 2
+      const my = (c.y + d.y) / 2
+      const length = Math.hypot(d.x - c.x, d.y - c.y)
+      const px = (-(d.y - c.y) / length) * (size / 2)
+      const py = ((d.x - c.x) / length) * (size / 2)
+      g.lineBetween(mx - px, my - py, mx + px, my + py)
+    }
   }
 
   /**

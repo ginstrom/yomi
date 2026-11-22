@@ -5,7 +5,7 @@ import { readyMadeParty } from '../game/party.ts'
 import { YIELD_DAYS } from '../game/territory.ts'
 import { RAID_RADIUS, contactPartner, partnerById, raiders, roadTo, routeCost, routeIncome, routeSecurity, type TradeRoute } from '../game/trade.ts'
 import { encampment, type MonsterLocation, type WorldState } from '../game/worldMap.ts'
-import { hexDistance, hexEquals, hexNeighbors, type Hex } from '../grid/hex.ts'
+import { hexDistance, hexEquals, hexNeighbors, offsetToHex, type Hex } from '../grid/hex.ts'
 import { boardHexCenter, WORLD_LAYOUT } from './boardGeometry.ts'
 import { minimapBoard, minimapPoints, routeNotes, routeOffer, routeRows, routeState, type RouteRow } from './routesTab.ts'
 import { UNEXPLORED } from '../game/vision.ts'
@@ -225,6 +225,16 @@ describe('minimapPoints', () => {
       expect(p.y).toBeGreaterThanOrEqual(rect.y)
       expect(p.y).toBeLessThanOrEqual(rect.y + rect.height)
     }
+  })
+
+  it('puts a hex of the far east column inside the rect, near its right edge', () => {
+    const { world } = trading()
+    const [p] = minimapPoints(world.board, [], offsetToHex(139, 36), rect)
+    const board = minimapBoard(world.board, rect)
+    expect(p.x).toBeLessThanOrEqual(board.x + board.width)
+    expect(p.x).toBeGreaterThan(board.x + board.width * 0.98)
+    expect(p.y).toBeGreaterThan(board.y)
+    expect(p.y).toBeLessThan(board.y + board.height)
   })
 
   it("keeps the board's aspect: distances scale alike in x and y", () => {
