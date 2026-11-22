@@ -6,7 +6,7 @@ Append-only history for [the plan](index.md) and [the feature record](../../feat
 
 ## Step 01: the stage's baseline (2026-11-22)
 
-Measured by the `yomi-measure` agent at `5664289` (no code change since `08854d3`), seed 1, 500 campaigns, one at a time. `one` ran in the main tree before any source edit (Node loads its modules at start); `company` and `rl10` in a clean worktree at `5664289`. Logs: `logs/s9-base-one.*` (main tree), `../yomi-s9base/logs/s9-base-{company,rl10}.*` (gitignored).
+Measured by the `yomi-measure` agent at `5664289` (no code change since `08854d3`), seed 1, 500 campaigns, one at a time. `one` ran in the main tree before any source edit (Node loads its modules at start); `company` and `rl10` in a clean worktree at `5664289`. Logs: `logs/s9-base-{one,company,rl10}.*` (gitignored; the worktree's logs moved there and the worktree removed).
 
 | Run | Flags | Source wins | Mean days | Battles | Heroes dead | Gold by source (a campaign) | Wall time |
 | --- | --- | --- | --- | --- | --- | --- | --- |
