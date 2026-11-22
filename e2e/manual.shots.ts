@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { CreationStep } from '../src/testHook.ts'
 import { WORLD_SIZE } from '../src/game/worldMap.ts'
-import { hexDistance, offsetToHex, type Hex } from '../src/grid/hex.ts'
+import { hexDistance, hexNeighbors, hexToOffset, offsetToHex, type Hex } from '../src/grid/hex.ts'
 import { RAIDERS, battleHexOnScreen, worldHexOnScreen, useGames, type Game } from './driver.ts'
 
 /**
@@ -356,6 +356,86 @@ describe('the manual’s screenshots', () => {
     await game.hover(worldHexOnScreen(there, vein.position))
     await game.waitFor('World', (w) => w.info.includes('Mine: 5 iron'))
     await shot(game, 'world-improve')
+  })
+
+  it('trade: the Routes tab, and Millbrook’s road on the world map by its security', async () => {
+    const game = await games.open()
+    await game.newGame()
+    await game.page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      saved.game.world.contacted = ['millbrook', 'saltmere']
+      saved.game.world.tradingPost = 5
+      saved.game.world.stock = { gold: 100, timber: 30 }
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    })
+    await game.click((await game.reload()).buttons.continue)
+    await game.waitForScenes(['World'])
+    await game.click((await game.settled('World')).buttons.enterEncampment)
+    await game.waitForScenes(['Encampment'], ['World'])
+    const camp = await game.settled('Encampment')
+    await game.click(camp.facilities.find((f) => f.id === 'trading_post')!)
+    await game.click((await game.settled('Encampment', (c) => c.selected === 'trading_post')).buttons.open)
+    await game.waitForScenes(['TradingPost'], ['World'])
+    await game.click((await game.settled('TradingPost')).buttons.routesTab)
+    const tab = await game.settled('TradingPost', (p) => p.tab === 'routes' && p.routes.length === 2)
+    // Millbrook's route opened; Saltmere's offer shown with its road on the minimap.
+    await game.click(tab.routes[0].open!)
+    const opened = await game.settled('TradingPost', (p) => p.routes[0]?.status === 'open')
+    await game.click({ x: opened.routes[1].open!.x - 200, y: opened.routes[1].open!.y })
+    await game.settled('TradingPost', (p) => p.routes[1]?.selected === true)
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'trading-post-routes')
+    await game.click(opened.buttons.close)
+    await game.waitForScenes(['Encampment'], ['World'])
+    await game.click((await game.settled('Encampment')).buttons.leave)
+    await game.waitForScenes(['World'])
+    await game.settled('World', (w) => w.world.routes.length === 1)
+
+    // Taint the road's middle (amber), blight a stretch further out (red, beyond the party's guard at home),
+    // and lay darker blight beside it, seen, so the road shows over the tints.
+    const road = await game.page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      return saved.game.world.routes[0].road as { q: number; r: number }[]
+    })
+    const key = (h: Hex) => `${h.q},${h.r}`
+    const onRoad = new Set(road.map(key))
+    const levels = new Map<string, { hex: Hex; level: number }>()
+    const set = (h: Hex, level: number) => levels.set(key(h), { hex: h, level })
+    for (let i = 8; i < road.length - 1; i++) {
+      for (const n of hexNeighbors(road[i])) if (!onRoad.has(key(n))) set(n, i % 3 === 0 ? 3 : 2)
+    }
+    for (const i of [5, 6, 7]) set(road[i], 1)
+    for (const i of [9, 10]) set(road[i], 2)
+    const cols = WORLD_SIZE.cols
+    const indexOf = (h: Hex) => {
+      const { col, row } = hexToOffset(h)
+      return row * cols + col
+    }
+    const marks = [...levels.values()].map(({ hex, level }) => ({ index: indexOf(hex), level }))
+    // The land within two hexes of the road seen as it is, so the road runs through explored country to Millbrook.
+    const near = new Set<number>()
+    for (const h of road) for (const n of [h, ...hexNeighbors(h)]) for (const m of [n, ...hexNeighbors(n)]) near.add(indexOf(m))
+    await game.page.evaluate(({ planted, explored }) => {
+      const saved = JSON.parse(localStorage.getItem('yomi.save.1')!)
+      const { world } = saved.game
+      for (const index of explored) if (index >= 0 && index < world.blight.length) world.seen[index] = world.blight[index]
+      for (const { index, level } of planted) {
+        world.blight[index] = level
+        world.shift[index] = 0
+        world.seen[index] = level
+      }
+      localStorage.setItem('yomi.save.1', JSON.stringify(saved))
+    }, { planted: marks, explored: [...near] })
+    await game.click((await game.reload()).buttons.continue)
+    await game.waitForScenes(['World'])
+    const map = await game.settled('World', (w) => w.roads.length === 1)
+    expect(map.roads[0].shades).toContain('tainted')
+    expect(map.roads[0].shades).toContain('secure')
+    // Pan the view so the road's far half, below the home, is in the middle of it.
+    await game.drag(worldHexOnScreen(map, road[6]), { x: 600, y: 250 })
+    await game.settled('World', (w) => w.walking === false)
+    await game.hover({ x: 0, y: 0 })
+    await shot(game, 'world-road')
   })
 
   it('a company of two parties: the guild hall’s columns, the exchange and the party bar', async () => {

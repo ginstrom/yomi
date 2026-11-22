@@ -205,7 +205,7 @@ export const PARTNERS: readonly PartnerLocation[] = [
  * A new world, the blight seeded from its sources; `seed` is the world RNG's,
  * which only spawns draw from, and `encampmentName` what the player called
  * home. `partners` are placed as copies after the resources and before the
- * monsters (the simulator passes none until stage 8's step 07).
+ * monsters (tests may pass none).
  */
 export function newWorld(
   seed: number = randomSeed(),

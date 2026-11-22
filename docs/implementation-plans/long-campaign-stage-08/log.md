@@ -68,3 +68,20 @@ Measured by the `yomi-measure` agent on a clean worktree at `b28bba1` (no code c
 ## Step 07 outcome
 
 - Step 07 (the simulator's trade): engineer opus, reviewer opus; verdict clean after 1 review round. The review's only blocking item was these records (this section and the index row), held back on purpose until the merge; its follow-ups (N2 to N5) are in `9ce59b9`. Commits `1dfbd59`, `9ce59b9`, merged into the stage branch in `c94e05f`.
+
+## Step 08: the final figures (2026-11-22)
+
+Measured by the `yomi-measure` agent at `8256690` (the `--trading-post` flag committed; doc edits uncommitted), seed 1, 500 campaigns, one run at a time. Logs `logs/s8-08-*` (gitignored). The 50-campaign check at `8256690`: `b50f7b50…e52`, identical to step 07's.
+
+| Run | Source wins | Band | Days | Battles | Heroes dead | Blighted at end | Gold (sites, market, routes, sales) | Partners; routes opened, raided, abandoned | Post, Lodge at end |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `one`, baseline | 239 | 215–250 | 286 | 19.5 | 1.1 | 38% | 228, 0, —, 42 | — | 1.1, 0.2 |
+| `one` | 233 | in | 284 | 19.3 | 1.2 | 38% | 226, 0, 0, 42 | 0.47; 0, 0, 0 | 1.1, 0.2 |
+| `company`, baseline | 239 | 220–260 | 286 | 19.5 | 1.1 | 38% | 227, 0, —, 42 | — | 1.1, 0.2 |
+| `company` | 232 | in | 285 | 19.3 | 1.2 | 38% | 226, 0, 0, 42 | 0.47; 0, 0, 0 | 1.1, 0.2 |
+| `rl10`, baseline | 434 | 370–420 (accepted to 445) | 509 | 42.1 | 1.0 | 26% | 406, 3, —, 144 | — | 2.1, 0.5 |
+| `rl10` | 433 | accepted | 509 | 42.2 | 1.0 | 26% | 406, 3, 1, 147 | 0.54; 0.03, 0, 0 | 2.1, 0.5 |
+| `rl10 --trading-post 4` | 487 | none (measuring) | 624 | 58.3 | 0.9 | 14% | 497, 257, 39, 190 | 1.82; 0.47, 0, 0 | 4.3, 0.2 |
+
+- The same as step 07's figures for `one`, `company` and `rl10`: nothing after step 07 moved play.
+- The route check (the user's decision of 2026-11-22): with the post started at 4, routes open 0.47 a campaign; route gold 39 a campaign is 4.0% of all gold (983) and 4.9% of the yields' (793); no route raided or abandoned. Campaigns with a route opened: not countable from the outputs (the log holds battle events only).

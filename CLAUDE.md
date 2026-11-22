@@ -38,7 +38,7 @@ Pass `model: "sonnet"` for work that is not too complex: searching, reading and 
 | `src/engine/` | battle state machine, AI (`POLICIES`), headless loop (`autoPlay.ts`) | yes |
 | `src/character/` | the persistent `Character`, creation, skill trees, progression | yes |
 | `src/inventory/` | gear catalog, grades, modifiers, runes | yes |
-| `src/game/` | everything outside battle: encounters, the day loop, world map, blight, encampment, `GameState`, saving | yes |
+| `src/game/` | everything outside battle: encounters, the day loop, world map, blight, trade partners and routes, encampment, `GameState`, saving | yes |
 | `src/story/` | cutscenes and tutorial (change no rule) | yes |
 | `src/scenes/` | Phaser scenes and their Phaser-free helpers | yes |
 | `scripts/` | the simulator and balance bands | yes |
