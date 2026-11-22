@@ -154,3 +154,21 @@ No rule change, no new simulator flag or policy, no scene or doc work beyond the
 - [ ] One commit, "Stage 9 step 09: measure and judge", files staged by path, no attribution lines; the index's row 09 updated with status and commit.
 
 ## 7. Execution record
+
+### Round 1: measured, stopped for the orchestrator (2026-11-23)
+
+Every measure of §4.1 run once, one at a time (figures, tables and logs: [log.md](log.md), "Step 09"). Step 08's `one` (`logs/s9-08-one-after.txt`) and `long` (`logs/s9-08-long-after.txt`) reused: since `22407a9` only `ee3a675` (byte-identical, by step 08's diffs) and step 07's scenes changed. No code changed; `npm test` 103 files, 2621 tests passed.
+
+**Out of band, brought to the orchestrator (not tuned):**
+1. `one` 288 (band 215–250, out by 38; baseline 233) and `company` 289 (220–260, out by 29; baseline 232); `one`'s days 331 (243–297, out by 34). Cause: mostly `SPAWN_DIVISOR` 840 (step 04), the rest the bigger board. Diagnostics (500 `one` campaigns, the constant changed locally and put back): 400 gives 244 wins and 303 days, 300 gives 248 and 298. Options: (a) accept, the user's bands kept; (b) `SPAWN_DIVISOR` 300 or 400, which brings wins into the band and days to or just over its top, and moves the refactor guard, the 50-check and the long campaign (re-record and re-measure); (c) another lever for days (walks on the larger board), none in this step's scope.
+2. The Source at 20 is unwinnable and the count cannot make it so: 0 wins at counts 5, 4 and 3 (`sg20-18` 500 each, 50 long campaigns each). Cause: foe scaling at level 20 (the guardians' AC 105–115 and to-hit 145–165 against a level-18 party's to-hit 100–109). Count left at 5. Making it winnable needs more than the count (decision 3's limit): e.g. a higher native level for the Source's foes, a different per-level scaling for monsters, or the Horror's block (stage 11). The user's decision.
+
+**Reported, no band:** `rl10` 409 (in band; −24 from 433); `rl10-one` 409, equal to the company as on stage 6's map (company 530 days, 33.9 battles, 1.3 dead, 3.2 guard battles, 0.0 promotions; one party 496 days, 30.7 battles, 1.0 dead). On the long campaign the company does far worse than one party: 9.7 wipes against 1.0, threat 12 won 0.485 against 0.996, threat 18 0.038 against 0.982; its first losses come earlier (threat 12 and 15: 33 campaigns against 6; the Source: 15 against 45), and after the vanguard's first wipe the replacements (levels about 5) keep being sent at threat 9 to 18 nests and wiped. A simulator policy matter, not a rule; recorded for stage 12. Routes: no flickers and no route raided long on the new map (carried item 2 does not occur here: every raid but 0.09 a campaign ended in abandonment); raided 2.57 and abandoned 2.48 a campaign of 3.87 opened (`long-tp4`). Home rings in the real long campaign: 8.3 spawns a campaign over 1602 days (near Source: about 14.5 over 325 days), so the design question stands. The report-only cells at their own level are nearly all lost (bc7 1, bco9 1, sn9 29, sp9 73, sn7 99, sp7 290; bco12, fh15, fh18, sg20-18, sg20 0), while the campaign's parties, levelled and geared, win threats 7 to 18 at 0.97 to 0.98 alone.
+
+### Figures for the implementation notes (step 10; provisional until the orchestrator answers)
+
+- Early, against step 01's baseline: `one` 233 → 288 (days 284 → 331), `company` 232 → 289, `rl10` 433 → 409; heroes dead 1.2; cells `gr3`–`sg10` and `tl5` unchanged.
+- Long baseline (100): 0 Source wins, 99 fell; 1602 days, 50.3 battles; walked 1457.8 days (172.2 home); levels 5/10/15/20 after 6.8/28.5/54.3/— battles in 84/55/44/0 campaigns; win rate by ring 7 0.956, 9 0.808, 12 0.485, 15 0.739, 18 0.038, 20 0. One party: 0 wins; 1322 days; 0.97–1.00 to threat 18; 45 of 100 die at the Source.
+- Company against one party: equal at `rl10` (409, 409); far apart on the long campaign (above).
+- Routes (`long-tp4`): 3.87 opened, 2.57 raided, 2.48 abandoned, 0 flickers, 0 raided long; routes 26% of gold.
+- Cells: as in `log.md`. The Source's count at 20: 5 (unchanged; 4 and 3 tried, unwinnable).

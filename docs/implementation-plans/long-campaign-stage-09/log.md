@@ -140,3 +140,101 @@ The user chose option 1: the optimisations that leave every result byte-identica
 ### Step 08 review round 1 (2026-11-23)
 
 Clean, with three non-blocking findings, all fixed in one commit: (1) the fields memo kept the world's own source hexes, so a position changed in place would have gone unnoticed (the old string key caught it); it now keeps copies, and `blight.test.ts`'s memo test, which now probes beside every lair, changes a position in place (red before the fix); (2) `running.md`: 500 early campaigns log some 300 MB (the 50-campaign check writes 30.6 MB), not 70 MB; (3) the root `CLAUDE.md`'s command table: about 8 minutes for 500 early campaigns and 10 for 100 long ones. After: `npm test` 102 files, 2614 tests passed, fixtures untouched; 50-campaign hash `57fdea1553a35b1af0e33b74a11ea9fe0a0e2f62ef9e5c80972af59276e53e75`, identical (0:50, load 17.2).
+
+Step 08 re-review: clean (ee3a675); the full npm test timed out under load (5 s timeouts in encounters/party tests), and the files pass alone or with a longer timeout.
+
+## Step 07
+
+07 | engineer sonnet, reviewer opus | blight layer tiled (8 × ≤2048 px, redraw per changed tile), far partners' sprites mapped, spawn by band, scroll to the far edge verified | refresh ~42 ms, frame ~46 ms vs 48 ms before at 140 × 72 (headless, loaded) | review clean (screenshot diff: 0 pixels differ at home, no seam), 1 round, 3 non-blocking fixes | df460bc, aafea7d
+
+## Step 09: measure and judge (2026-11-23)
+
+Seed 1, one run at a time. No code changed since step 08's runs at `22407a9` but the byte-identical review fix (`ee3a675`) and step 07's scenes (`d628e7a`), so step 08's `one` and `long` runs are reused. Runs by `yomi-measure` at `ee3a675` (early) and `d628e7a` (long, cells); the diagnostics (not kept) by the engineer. Logs under `logs/` (gitignored). Wall times on a machine loaded by other work (load 6 to 30).
+
+### The early figures (`--near-source`), against step 01's baseline
+
+| Measure | Figure | Band | Baseline (step 01) | Change | Days | Battles | Heroes dead | Spawns | Blighted at end | Sites captured / lost | Wall | Log |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `one` (reused) | **288** | 215–250, **out by 38** | 233 | +55 | **331** (band 243–297, **out by 34**) | 18.8 | 1.2 | 33.3 | 27% | 3.5 / 0.1 | 7:44 | `s9-08-one-after.txt` |
+| `company` | **289** | 220–260, **out by 29** | 232 | +57 | 334 | 18.9 | 1.2 | 33.6 | 27% | 3.5 / 0.1 | 19:09 | `s9-09-company.txt` |
+| `rl10` | 409 | 370–420, in | 433 | −24 | 530 | 33.9 | 1.3 | 62.8 | 32% | 5.3 / 0.6 | 23:03 | `s9-09-rl10.txt` |
+| `rl10-one` | 409 | report only | — | — | 496 | 30.7 | 1.0 | 55.8 | 32% | 5.0 / 0.5 | 14:40 | `s9-09-rl10-one.txt` |
+| `rl12` | 407 | report only | — | — | 644 | 45.9 | 1.6 | 78.0 | 33% | 6.6 / 1.0 | 18:24 | `s9-09-rl12.txt` |
+
+- `rl10` and `rl12` fight spawns past the home rings (`rl10`: 2378 battles at threat 7, 233 at 9; `rl12`: 4537 at 7, 1757 at 9, 4 at 12): under `--near-source` the outer rings have no fixed nests but blight spreads there and spawns land there.
+- **Cause of the rise in `one` and `company`** (diagnostics, `one` with `SPAWN_DIVISOR` changed locally and put back, `--log none`): step 04 attributed about +2 of 50 to the bigger board and +4 to the divisor (200 → 840). At 500 campaigns:
+
+  | `SPAWN_DIVISOR` | Campaigns | Source wins | Days | Spawns | Blighted at end | Heroes dead | Log |
+  | --- | --- | --- | --- | --- | --- | --- | --- |
+  | 840 (today) | 500 | 288 (57.6%) | 331 | 33.3 | 27% | 1.2 | `s9-08-one-after.txt` |
+  | 400 | 500 | 244 (48.8%) | 303 | 53.2 | 32% | 1.1 | `s9-09-div400-500.txt` |
+  | 300 | 500 | 248 (49.6%) | 298 | 56.1 | 33% | 1.2 | `s9-09-div300-500.txt` |
+  | 840 | 200 | 119 (59.5%) | 335 | 34.0 | 28% | — | `s9-09-div840.txt` |
+  | 400 | 200 | 100 (50.0%) | 302 | 52.6 | 32% | — | `s9-09-div400.txt` |
+  | 200 | 200 | 107 (53.5%) | 295 | 59.2 | 34% | — | `s9-09-div200.txt` |
+
+  So most of the rise is the divisor (fewer spawns, so fewer home nests and longer walks, the party levelling on threat 5 nests before the Source); 300 to 400 brings wins into the band, but days stay at or above its top (the board's longer walks). Not retuned (the user's decision).
+
+### The long campaign (100, ready level 18, `--log none`)
+
+| Measure | Source | Fell | Out of days | Days | Battles | Spawns | Blighted | Sites cap. / lost | Walked (home) | Wipes | Recruits; hall | Levels at end (lowest, highest) | Wall | Log |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `long` (reused) | 0 | 99 | 1 | 1602 | 50.3 | 60.1 | 62% | 8.1 / 1.8 | 1457.8 (172.2) | 9.7 | 47.5; 3.7 | 4.8, 5.9 | 10:21 | `s9-08-long-after.txt` |
+| `long-one` | 0 | 100 | 0 | 1322 | 52.8 | 71.2 | 43% | 10.5 / 2.8 | 1058.1 (253.8) | 1.0 | 5.4; 2.7 | 11.0, 14.1 | ~8:04 | `s9-09-long-one.txt` |
+| `long-tp4` | 0 | 88 | 12 | 2469 | 76.8 | 84.7 | 60% | 12.3 / 3.8 | 2284.3 (207.8) | 14.9 | 75.5; 4.5 | 6.0, 6.5 | 11:55 | `s9-09-long-tp4.txt` |
+
+Battles to level (campaigns reaching it): `long` 5: 6.8 (84), 10: 28.5 (55), 15: 54.3 (44), 20: — (0); `long-one` 6.8 (84), 28.9 (55), 53.8 (51), — (0); `long-tp4` 7.0 (99), 28.6 (83), 50.8 (76), 93.0 (1).
+
+Deaths by level: `long` 2 (12), 3 (40), 4 (18), 5 (48), 6 (40), 7 (40), 8 (30), 9 (15), 10 (17), 11 (3), 12 (3), 13 (7), 14 (2), 15 (21), 16 (29), 17 (16), 18 (3), 20 (1), 21 (1); `long-one` 2 (12), 3 (101), 4 (16), 5 (26), 6 (44), 7 (39), 8 (31), 9 (13), 10 (11), 11 (8), 12 (2), 13 (12), 14 (3), 15 (20), 16 (23), 17 (9), 18 (6), 19 (4), 21 (2).
+
+Threat table (battles, win rate):
+
+| Threat | `long` | `long-one` | `long-tp4` |
+| --- | --- | --- | --- |
+| 1 | 200, 1.000 | 201, 1.000 | 200, 1.000 |
+| 2 | 367, 0.992 | 370, 0.992 | 462, 1.000 |
+| 3 | 316, 0.959 | 317, 0.959 | 421, 0.998 |
+| 4 | 461, 0.998 | 455, 0.998 | 582, 0.998 |
+| 5 | 517, 0.998 | 498, 1.000 | 672, 0.997 |
+| 7 | 780, 0.956 | 764, 0.970 | 1057, 0.965 |
+| 9 | 863, 0.808 | 747, 0.992 | 1235, 0.893 |
+| 12 | 1133, 0.485 | 855, 0.996 | 1657, 0.619 |
+| 15 | 295, 0.739 | 863, 0.997 | 1242, 0.558 |
+| 18 | 79, 0.038 | 164, 0.982 | 93, 0.108 |
+| 20 | 18, 0 | 45, 0 | 58, 0 |
+
+Diagnostic probe of `long` (the simulator's own loop, the same 100 campaigns: 60.1 spawns, 0 wins, as the run): spawns by threat a campaign 2: 0.12, 3: 1.34, 4: 3.02, 5: 3.78, 7: 6.04, 9: 6.71, 12: 8.21, 15: 9.41, 18: 21.45; **home rings (threat ≤ 5) 8.3 a campaign** over 1602 days (the near-Source `one`: about 14.5 over 325 days, step 05's probe). The vanguard's first loss: threat 7 Bandit Camp 23, threat 15 Freebooter Host 20, the Source 15, threat 3 Bandit Camp 13, threat 12 Bandit Company 13, threat 9 Bandit Company 8, others 8; its lowest level then 10.0 on average. Lost of fought, vanguard: threat 9 166/863, 12 584/1133, 15 77/295, 18 76/79, 20 18/18. `long-one`'s losses (one each) are its first losses: the Source 45, threat 7 23, threat 3 13, threat 9 6, 2/12/15/18 3 each, 4 1.
+
+### Routes (`long-tp4`, carried items 2 and 3)
+
+3.42 partners contacted, 3.87 routes opened, 2.57 raided (runs), 2.57 raids told, 2.48 abandoned a campaign; **0.00 flickers, 0.00 routes raided 6+ yield days and kept**. Gold by source a campaign: sites 1973, market 1922, routes 3307 (26% of 12,671), sales 5469. `long`: 1.53 contacted, 1.45 opened, 0.85 raided, 0.83 abandoned, 0 flickers, 0 raided long; routes 953 of 6217 gold (15%). `long-one`: 1.77 contacted, 0.83 opened, 0.10 raided, 0.10 abandoned, 0, 0. Which partners were contacted is not in the summary (not counted).
+
+### The cells (500 battles, seed 1)
+
+| Cell | Wins | Band | Now | | Cell | Wins (report only) |
+| --- | --- | --- | --- | --- | --- | --- |
+| gr3 | 500 | ≥ 470 | 500 | | bc7 | 1 |
+| bc3 | 455 | 400–470 | 455 | | sn7 | 99 |
+| bc4 | 454 | 430–490 | 454 | | sn9 | 29 |
+| bc5 | 494 | 420–490 (Now above) | 494 | | sp7 | 290 |
+| sn5 | 451 | 410–480 | 451 | | sp9 | 73 |
+| sp5 | 475 | 410–480 | 475 | | bco9 | 1 |
+| sg7 | 0 | 0 within 40 | 0 | | bco12 | 0 |
+| sg10 | 1 | above 2 (accepted) | 1 | | fh15, fh18 | 0, 0 |
+| tl5 | 0 | report only | 0 | | sg20-18, sg20 | 0, 0 |
+
+Every standard cell equals "Now".
+
+### The Source at 20 (decision 3)
+
+Unwinnable at the stage's count (0 of 100 `long`, 0 of 500 `sg20-18`). Tried locally, then put back:
+
+| Count at 20 | `sg20-18` | 50 long campaigns (`--campaign --battles 50 --seed 1 --log none`) | Log |
+| --- | --- | --- | --- |
+| 5 (stage) | 0 of 500 | — (100: 0) | `s9-09-sg20-18.txt` |
+| 4 | 0 of 500 (party hit rate 0.26, deals 47, takes 380) | 0 of 50 (10 battles at 20, all lost) | `s9-09-sg20-18-c4.txt`, `s9-09-long50-c4.txt` |
+| 3 | 0 of 500 (hit rate 0.24, deals 52) | 0 of 50 | `s9-09-sg20-18-c3.txt`, `s9-09-long50-c3.txt` |
+
+Cause: foe scaling, not the count. At threat 20 each guardian is raised from its native level 1 by `FOE_AC_PER_LEVEL` and `FOE_TO_HIT_PER_LEVEL` (5 each a level): the Horror has AC 110, to-hit 165 and 1440 HP, its guards AC 105 to 115, against a level-18 ready-made party's to-hit 100 to 109 and AC 16 to 34. The Freebooter Host at 18 (bandits, scaled by gear) has AC 6 to 54. Even the Horror alone could not be hit. Stopped at 3 and brought to the orchestrator; the count is unchanged (5).
+
+- No code changed; `npm test` 103 files, 2621 tests passed. The 50-campaign check not rerun (no code change since step 08's identical `57fdea15…`).
