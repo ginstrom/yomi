@@ -18,9 +18,10 @@ The encounters worth knowing:
 - Hobgoblin Warband (threat 2 on the map): the Hobgoblin Chief, resistance 4.
 - Troll Lair (threat 5 only): the Armoured Troll (resistance 5, regeneration 2) beside a Troll (resistance 1, regeneration 3, `troll_claws` as one 8 AP routine standing still or one 4 AP claw after a move). The simulator's heroes never change weapons, so this is a report-only cell, won 0 or nearly 0 of 500 at threat 5, level 5.
 - Bandit Camp (`bandit_camp`, threats 3 to 7): fields bandits, at two of the map's nests (the Bandit Camp, threat 3, and the Bandit Hideout, threat 4) and in the Bandit Gangs the blight spawns from threat 3.
-- Spider Nest (`spider_nest`, threat 5 only, 4 foes: a Giant Spider, a Kobold Sneak, a Brood Spider and a Nest Spider): fights with abilities; the Giant Spider (native level 4) webs and bites.
-- Salamander Pool (`salamander_pool`, threat 5 only, 3 foes: a Salamander between two Kobolds): the Salamander (native level 5) spits fire and is warded against it (`wards.fire` 99), so Flame Arrow and Fireball deal it 0, though statuses land, and the policy's area rule counts only foes a spell can hurt.
-- Source Guardians (`source_guardians`, threat 5): the Blight Horror, a boss whose claws pierce 2 points of resistance and which casts Death Cloud and Bane, with a Goblin Brute, a shaman and a Kobold Sneak.
+- Bandit Company (`bandit_company`, threats 8 to 13, 4 foes: a Bandit Sergeant (a brute), a Crossbowman, a Hedge-Mage and an Archer; a Cutthroat waits for a count of 5) and Freebooter Host (`freebooter_host`, threats 14 to 20: a Freebooter Captain, a Brute, a Crossbowman and a Hedge-Mage, and an Archer from 17): the far rings' bandits (long-campaign stage 9), not on today's map nor among the spawns yet.
+- Spider Nest (`spider_nest`, threats 4 to 9; 3 foes at 4, a Giant Spider, a Kobold Sneak and a Brood Spider, and a Nest Spider too from 5): fights with abilities; the Giant Spider (native level 4) webs and bites. Today's map has it at threat 5 only.
+- Salamander Pool (`salamander_pool`, threats 5 to 9, 3 foes: a Salamander between two Kobolds; today's map has it at 5): the Salamander (native level 5) spits fire and is warded against it (`wards.fire` 99), so Flame Arrow and Fireball deal it 0, though statuses land, and the policy's area rule counts only foes a spell can hurt.
+- Source Guardians (`source_guardians`, threats 1 to 20; today's map fights it at 5): the Blight Horror, a boss whose claws pierce 2 points of resistance and which casts Death Cloud and Bane, with a Goblin Brute, a shaman and a Kobold Sneak; from threat 6 a Goblin Cutter too, so at `SOURCE_THREAT` (20, `worldMap.ts`) all five fight at level 20, a provisional block until stage 11.
 
 The Salamander Pool and the Spider Nest are not among the spawns.
 
@@ -41,7 +42,7 @@ Each of the six roles (`BanditRole`; `BANDIT_ROLE` maps the kinds to them) has a
 
 Each technique level is held in `progression.test.ts`.
 
-Each item is named by catalog family in two ids, tier 1 (iron, oak, yew) and tier 2 (steel, ironwood). The gear is at `banditGear(threat)`, `{ tier, grade }`: tier 1 Fine at threats 3 and 5, tier 1 plain at 4, tier 2 Fine from 6, the wand included, as it is a plain item.
+Each item is named by catalog family in two ids, tier 1 (iron, oak, yew) and tier 2 (steel, ironwood). The gear is at `banditGear(threat)`, `{ tier, grade }`: tier 1 Fine at threats 3 and 5, tier 1 plain at 4, tier 2 Fine at 6 and 7, and tier 2 Masterwork (grade 3) from 8, the far rings' bandits, whose proper tiers wait for stage 10; the wand included, as it is a plain item.
 
 The camp's slots, in order, are the Captain, the Archer (from threat 5), the Hedge-Mage (from 4), the Crossbowman (from 6), the Brute and the Cutthroat, so each threat of today's map has its own second bandit (Brute at 3, Hedge-Mage at 4, Archer at 5). At 6 and 7 four take the field; the Brute and Cutthroat take the field there only once a count is raised to 5 or 6.
 
@@ -49,7 +50,7 @@ The camp's slots, in order, are the Captain, the Archer (from threat 5), the Hed
 
 Monsters are the more dangerous the further from home they lie. A monster location's `threat` is 1 within `THREAT_BAND` (11) hexes of the encampment and one more for each band beyond, up to `MAX_THREAT` (5) (`threatAt`), and `WorldScene` tells the player the threat of the monsters it stands before.
 
-Bands and counts (`ENCOUNTER_BANDS`, `ENCOUNTER_COUNTS`): the monsters' five encounters cover threats 1 to 5 with 2, 3, 3, 3, 4 foes; the Bandit Camp 3 to 7 with 2, 2, 2 at threats 3 to 5 and 4, 4 at 6 and 7 (a first guess); the Spider Nest 5 only. A battle at threat T fields that many foes, all of level T, the first of the encounter's slots that take the field at T (`FoeSlot.fromThreat`).
+Bands and counts (`ENCOUNTER_BANDS`, `ENCOUNTER_COUNTS`): the goblins', kobolds', hobgoblins' and trolls' four encounters cover threats 1 to 5 with 2, 3, 3, 3, 4 foes; the Bandit Camp 3 to 7 with 2, 2, 2 at threats 3 to 5 and 4, 4 at 6 and 7 (a first guess); the Source Guardians 1 to 20, today's 2, 3, 3, 3, 4 to 5 and then 5; the Spider Nest 4 to 9 with 3, then 4; the Salamander Pool 5 to 9 with 3; the Bandit Company 8 to 13 with 4; the Freebooter Host 14 to 20 with 4, 4, 4 and then 5 from 17. The counts past 5 are first values (stage 9), for the simulator to judge. A battle at threat T fields that many foes, all of level T, the first of the encounter's slots that take the field at T (`FoeSlot.fromThreat`).
 
 A monster kind has a native level (`FOE_NATIVE_LEVEL`: 1 but for the Giant Spider's 4 and the Salamander's 5), its stat block written for that level. A level above it adds (`foeAtLevel`) 115% of its level-1 hit points (`FOE_HP_PER_LEVEL`), 5 to chance to hit and to armour class, 1 damage every second level, and to a caster 3 mana and 5 to its spells' chance; resistance and regeneration are the kind's at every level. `foeYardstick(level)` gives the ranges a foe of a level should sit in, which a test holds each kind to at its native level.
 
@@ -224,7 +225,7 @@ Gold is the contested resource: the guild hall, recruits, the shrine, gear and c
 
 ## Loot
 
-`loot.ts`: rune loot after a win (`takeRunes` into the pouch), drawn from a stream of its own seeded from the battle's seed (`lootRng`), so the battle's dice are untouched. It rolls by threat, a nest's leader favouring its element (`FAVOURED_RUNES`); the rows past threat 7 and the Source's own are not written yet (the Source rolls threat 5's). `BattleScene.endBattle` calls `takeRunes` for a win at a monster location, and the simulator after each win; a debug `fight` rolls none.
+`loot.ts`: rune loot after a win (`takeRunes` into the pouch), drawn from a stream of its own seeded from the battle's seed (`lootRng`), so the battle's dice are untouched. It rolls by threat, each rune drawing its kind (a nest's leader favouring its element, `FAVOURED_RUNES`, at half) and then its rank: threats 1 to 3, a rune at half, rank 1; 4 to 8, one, rank 1 at 70% else 2; 9 to 13, one and a second at half (drawn first), each rank 2 at 60% else 3; 14 up to `SOURCE_THREAT` − 1, two, each rank 4 at 15%, 3 at 60%, else 2; `SOURCE_THREAT` (20) and above, three, each rank 3 at half, else 4. The rows go by threat, so the Source near home (threat 5) rolls threat 5's. `BattleScene.endBattle` calls `takeRunes` for a win at a monster location, and the simulator after each win; a debug `fight` rolls none.
 
 ## Ground
 

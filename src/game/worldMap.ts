@@ -154,6 +154,8 @@ export const DEFAULT_ENCAMPMENT_NAME = 'Oakvale'
 /** The longest name the encampment may have. */
 export const MAX_ENCAMPMENT_NAME_LENGTH = 16
 export const SOURCE_ID = 'blight_source'
+/** The threat the Source is fought at once it stands in the far ring (long-campaign stage 9; the map places it there from step 04), and the threat of rune loot's Source row. */
+export const SOURCE_THREAT = 20
 
 /** How far from the party a spawn must be to stop it travelling or camping. */
 export const NOTICE_RADIUS = 8

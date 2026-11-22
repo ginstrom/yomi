@@ -130,14 +130,25 @@ describe('banditStats', () => {
 })
 
 describe('banditGear', () => {
-  it('is tier 1 Fine at threats 3 and 5, plain at 4, and tier 2 Fine from threat 6', () => {
-    expect([3, 4, 5, 6, 7].map(banditGear)).toEqual([
+  it('is tier 1 Fine at threats 3 and 5, plain at 4, tier 2 Fine at 6 and 7, and Masterwork steel from threat 8', () => {
+    expect([3, 4, 5, 6, 7, 8, 13, 20].map(banditGear)).toEqual([
       { tier: 1, grade: 2 },
       { tier: 1, grade: 1 },
       { tier: 1, grade: 2 },
       { tier: 2, grade: 2 },
       { tier: 2, grade: 2 },
+      { tier: 2, grade: 3 },
+      { tier: 2, grade: 3 },
+      { tier: 2, grade: 3 },
     ])
+  })
+
+  it('builds a bandit of each role at level 20 in Masterwork steel, as a hero built the same way', () => {
+    for (const role of ROLES) {
+      const stats = banditStats(role, 20, banditGear(20))
+      expect(stats, role).toEqual(deriveCombatStats(heroLike(role, 20, 2, 3)))
+      expect(stats.weapon, role).toMatch(/^Masterwork (Steel|Ironwood) /)
+    }
   })
 })
 

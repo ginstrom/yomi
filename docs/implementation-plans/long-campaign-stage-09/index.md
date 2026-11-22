@@ -6,10 +6,10 @@ The world map grows from 60 × 40 to **140 × 72**, with home at (9, 36) and tod
 
 ## Decisions taken for the orchestrator
 
-The plan follows the stage design, then the references, then the code (where they disagree the code is right, per the stages index). Items marked *(for the user's eye)* change no band but read the design one way where it is silent or loose; item 2 is open question 1 and blocks step 02.
+The plan follows the stage design, then the references, then the code (where they disagree the code is right, per the stages index). Items marked *(for the user's eye)* change no band but read the design one way where it is silent or loose; item 2 was open question 1, answered by the user: `--near-source`. The user accepted decisions 4, 5, 7 and 8 as written.
 
 1. **The +17-row shift is an axial translation** (q −9, r +17). The map is odd-r, so adding 17 to every offset row is not a translation: it changes distances by one between locations on rows of different parity (Gold Seam 7 → 8 hexes from home, Timber Stand 10 → 9, Salt Flats 32 → 33, which crosses from the threat-3 ring into the threat-4 ring). The translation keeps every distance exactly: a location on an odd stage-8 row keeps its column, one on an even row moves one column west; home (9, 19) becomes (9, 36), as the design says. `earlyHex(col, row)` (C4) places today's locations from their stage-8 offsets.
-2. **A stand-in Source for the early figures (open question 1, recommended answer).** The design keeps `--ready-level 7` as the early-game guard, but its Source is 122 hexes out at threat 20, which a level-7 party walks to through five rings and cannot beat: the guard, the bands `one`, `company` and `rl10` and the refactor guard would all collapse. The plan adds `--near-source` to the simulator (C2): the campaign's world puts the Source where it stood before this stage (stage 8's (58, 19), shifted to (58, 36)), fought at threat 5 as today; everything else is the stage-9 world. The early figures, the refactor guard and the 50-campaign check run with `--ready-level 7 --near-source` (`rl10` with `--ready-level 10 --near-source`), so they keep their meaning and the bands their values; `bands.md`'s measure names gain the flags (step 02). The long campaign runs without it.
+2. **A stand-in Source for the early figures (open question 1, answered by the user: option (a), `--near-source`).** The design keeps `--ready-level 7` as the early-game guard, but its Source is 122 hexes out at threat 20, which a level-7 party walks to through five rings and cannot beat: the guard, the bands `one`, `company` and `rl10` and the refactor guard would all collapse. The plan adds `--near-source` to the simulator (C2): the campaign's world puts the Source where it stood before this stage (stage 8's (58, 19), shifted to (58, 36)), fought at threat 5 as today; everything else is the stage-9 world. The early figures, the refactor guard and the 50-campaign check run with `--ready-level 7 --near-source` (`rl10` with `--ready-level 10 --near-source`), so they keep their meaning and the bands their values; `bands.md`'s measure names gain the flags (step 02). The long campaign runs without it.
 3. **The Source's band is 1 to 20**, with today's counts at 1 to 5 and 5 foes (every slot) at 6 to 20, so the near Source and the `SG7`, `SG10` cells (threat 5) fight as today and the Source at 20 fields the Horror and its four guards at level 20 (design: "native level 1 rules, clamped" read as the encounter's level clamped to its band). Step 09 may lower the count at 20 to make it winnable, which the design allows; nothing else about the Source is tuned.
 4. **New spawn kinds spawn only from threat 7** *(for the user's eye)*. Spider Nest's band now reaches down to 4 and Salamander Pool's to 5, so "spawns by band" would let them spawn in the home rings and change the early game, which the design keeps unchanged. `SPAWN_KINDS` entries gain `fromThreat`; the four new kinds take 7. The home rings spawn as today.
 5. **Bandit gear** *(for the user's eye)*: Masterwork steel (tier 2, grade 3) from threat 8; Fine steel at 6 and 7 as today; below as today. The design's "steel from threat 7" already holds, and "far bandits wear Masterwork steel" is read as the rings whose proper tier (gear §4.2: tier 3 from threat 9) waits for stage 10.
@@ -59,80 +59,17 @@ The plan follows the stage design, then the references, then the code (where the
 
 ## Contracts
 
+The task files hold each contract's full text, copied verbatim (C1, C2, C4 and C5 are summarised here to keep this index under its cap); a step that changes a contract updates every task file that copies it.
+
 Each task file copies its contracts unchanged. "Existing" means at `08854d3`.
 
 ### C1. The far encounters, bandit gear and rune loot (step 01)
 
-```ts
-// src/game/encounters.ts
-export function banditCompany(party: readonly Fighter[], threat = 8): Encounter
-export function freebooterHost(party: readonly Fighter[], threat = 14): Encounter
-// ENCOUNTERS gains bandit_company and freebooter_host, after salamander_pool, so EncounterId gains them.
-// ENCOUNTER_BANDS / ENCOUNTER_COUNTS, from each definition (counts from band.min up):
-//   goblin_raid, kobold_scouts, hobgoblin_warband, troll_lair  { 1, 5 }   [2, 3, 3, 3, 4]          unchanged
-//   bandit_camp      { 3, 7 }   [2, 2, 2, 4, 4]                                                   unchanged
-//   spider_nest      { 4, 9 }   [3, 4, 4, 4, 4, 4]                                                threat 5 unchanged
-//   salamander_pool  { 5, 9 }   [3, 3, 3, 3, 3]                                                   threat 5 unchanged
-//   bandit_company   { 8, 13 }  [4, 4, 4, 4, 4, 4]
-//   freebooter_host  { 14, 20 } [4, 4, 4, 5, 5, 5, 5]
-//   source_guardians { 1, 20 }  [2, 3, 3, 3, 4, then 5 at each of 6 to 20]                       threats 1–5 unchanged
-// Slots (existing bandit kinds; no new FoeKind; names are the implementer's to polish):
-//   BANDIT_COMPANY_SLOTS:  sergeant (bandit_brute), crossbowman (bandit_crossbowman), mage (bandit_mage), archer (bandit_archer), cutthroat (bandit_cutthroat)
-//   FREEBOOTER_HOST_SLOTS: captain (bandit_captain, 'Freebooter Captain'), brute (bandit_brute), crossbowman, mage, archer
-// MAX_THREAT stays until step 04.
-
-// src/game/bandits.ts
-export function banditGear(threat: number): BanditGear
-//   threat >= 8: { tier: 2, grade: 3 } (Masterwork steel); 6–7: { tier: 2, grade: 2 }; 4: { tier: 1, grade: 1 }; else { tier: 1, grade: 2 }
-
-// src/game/worldMap.ts
-export const SOURCE_THREAT = 20   // the Source's threat; on the map from step 04
-
-// src/game/loot.ts: rollRunes(threat, encounter, rng), by row; each rune draws its kind (the favoured one at FAVOURED_CHANCE, else uniform) and then its rank:
-//   threat <= 3:            unchanged (0 or 1 rune, rank 1)
-//   4 to 8:                 unchanged (1 rune; rank 1 at 70%, else 2)
-//   9 to 13:                1 rune, and a second at 50% (drawn first); each rank 2 at 60%, else 3
-//   14 to SOURCE_THREAT-1:  2 runes; each rank 4 at 15%, rank 3 at 60%, else 2 (one draw: < 0.15 → 4, < 0.75 → 3, else 2)
-//   >= SOURCE_THREAT:       3 runes; each rank 3 at 50%, else 4
-// For threats up to 8 every draw is today's, in today's order. SOURCE_THREAT is read inside rollRunes only.
-
-// scripts/dayCost.ts (new, committed; step 08 reruns it): `node scripts/dayCost.ts [--days N] [--seed S]` prints the ms a day of
-//   passTurn and of advanceDay over N days (default 1000) of newWorld(seed) with the ready-made party at home
-```
+`encounters.ts`: `banditCompany` (8–13, 4 foes) and `freebooterHost` (14–20, 4 then 5 from 17), after `salamander_pool` in `ENCOUNTERS`; bands widened: Spider Nest 4–9, Salamander Pool 5–9, Source Guardians 1–20 (5 foes from 6), threats 1–5 unchanged; `MAX_THREAT` stays until step 04. `bandits.ts`: `banditGear` Masterwork steel (tier 2, grade 3) from threat 8. `worldMap.ts`: `SOURCE_THREAT = 20`. `loot.ts`: `rollRunes` by row (≤ 8 drawing exactly as today; 9–13, 14–19, ≥ `SOURCE_THREAT`). `scripts/dayCost.ts`: ms a day of `passTurn` and `advanceDay`. Full text: the task files of steps 01, 04, 05.
 
 ### C2. The simulator's long-campaign settings and the Source's place (step 02)
 
-```ts
-// src/game/worldMap.ts
-export interface SourcePlace { position: Hex; threat: number }
-export const SOURCE_PLACE: SourcePlace
-//   step 02: { position: offsetToHex(58, 19), threat: 5 } (today's); step 04: { position: offsetToHex(131, 36), threat: SOURCE_THREAT }
-export function newWorld(seed?: number, encampmentName?: string, partners: readonly PartnerLocation[] = PARTNERS, source: SourcePlace = SOURCE_PLACE): WorldState
-//   the Source location ('blight_source', its name, encounter and loot unchanged) stands at source.position with source.threat, before the blight is seeded
-
-// scripts/simulate.ts
-export const SOURCE_READY_LEVEL = 18
-export const MAX_CAMPAIGN_DAYS = 6000
-export const NEAR_SOURCE: SourcePlace = { position: offsetToHex(58, 19), threat: 5 }   // step 04 changes the position to earlyHex(58, 19), i.e. offsetToHex(58, 36)
-// CliArgs gains:
-//   log: 'jsonl' | 'none'   (--log jsonl|none, default 'jsonl'; 'none' opens and writes no file; every printed figure is the same)
-//   nearSource: boolean     (--near-source; refused without --campaign)
-// With nearSource, a campaign's world and its waiting twin's are newWorld(seed, undefined, PARTNERS, NEAR_SOURCE).
-// CampaignRecord gains:
-vanguardWalkDays: number     // days the vanguard (a lone party is the vanguard) walked, on any errand; vanguardWalkHomeDays counts those walking home
-routeRaidsTold: number       // route_raided events with days 0 (a road turned raided)
-routeFlickers: number        // route_restored events after which the same route turns raided again (route_raided, days 0) within ABANDON_AFTER * YIELD_DAYS days
-routesRaidedLong: number     // routes raided on ABANDON_AFTER or more yield days in all (route_raided, days >= 1) and not abandoned by the end
-// summarizeCampaigns averages them; the printed summary shows them in the trade line and a walking line.
-// The refactor guard's args: --campaign --battles 5 --seed 1 --parties 1 --ready-level 7 --near-source.
-// .claude/skills/yomi-balance/bands.md, measure names (flags only; no band value changes):
-//   one: --campaign --parties 1 --ready-level 7 --near-source · company: --campaign --ready-level 7 --near-source
-//   rl10: --campaign --ready-level 10 --near-source · rl12: --campaign --ready-level 12 --near-source
-//   rl10-one: --campaign --parties 1 --ready-level 10 --near-source (report only)
-//   long: --campaign --log none (count 100 unless told; report only) · long-one: long with --parties 1 · long-tp4: long with --trading-post 4
-//   report-only cells: bc7 (bandit_camp 7, L7), sn7, sn9 (spider_nest), sp7, sp9 (salamander_pool), bco9, bco12 (bandit_company),
-//   fh15, fh18 (freebooter_host), sg20-18 and sg20 (source_guardians 20 at L18 and L20); each --encounter E --threat T --party-level T unless named
-```
+`worldMap.ts`: `SourcePlace`, `SOURCE_PLACE` (today's place at step 02, `SOURCE_THREAT` far out from step 04), `newWorld(..., source)`. `simulate.ts`: `SOURCE_READY_LEVEL = 18`, `MAX_CAMPAIGN_DAYS = 6000`, `NEAR_SOURCE`, `--log none`, `--near-source`; `CampaignRecord` gains `vanguardWalkDays`, `routeRaidsTold`, `routeFlickers`, `routesRaidedLong`; the refactor guard's args gain `--ready-level 7 --near-source`; `bands.md`'s measure names gain the flags and the long-campaign measures and report-only cells. Full text: the task files of steps 02, 04, 08, 09.
 
 ### C3. The Routes tab pages (step 03)
 
@@ -146,64 +83,11 @@ routesRaidedLong: number     // routes raided on ABANDON_AFTER or more yield day
 
 ### C4. The board and the rings (step 04)
 
-```ts
-// src/game/worldMap.ts
-export const THREAT_RINGS: readonly { upTo: number; threat: number }[] = [
-  { upTo: 10, threat: 1 }, { upTo: 21, threat: 2 }, { upTo: 32, threat: 3 }, { upTo: 43, threat: 4 }, { upTo: 54, threat: 5 },
-  { upTo: 67, threat: 7 }, { upTo: 80, threat: 9 }, { upTo: 94, threat: 12 }, { upTo: 108, threat: 15 }, { upTo: 122, threat: 18 },
-]
-export function threatAt(position: Hex): number   // the first ring whose upTo >= the distance from home; beyond the table, the last ring's threat (18)
-// THREAT_BAND goes; MAX_THREAT (encounters.ts) goes, its tests using their own bounds.
-export const WORLD_SIZE: BoardSize = { cols: 140, rows: 72 }
-export const EARLY_SHIFT: Hex = { q: -9, r: 17 }
-export function earlyHex(col: number, row: number): Hex   // stage 8's offset (col, row), translated by EARLY_SHIFT (decision 1)
-// HOME = earlyHex(9, 19), which is offsetToHex(9, 36); every location of stage 8's map stands at earlyHex(its stage-8 col, row):
-//   PARTNERS: millbrook earlyHex(18, 30) = offsetToHex(17, 47); saltmere earlyHex(30, 38) = offsetToHex(29, 55)
-export const SOURCE_PLACE: SourcePlace = { position: offsetToHex(131, 36), threat: SOURCE_THREAT }   // 122 hexes from home
-
-// src/game/blight.ts
-export const BLIGHT_THREAT_CAP = 5
-// monsterStrength(l) = l.source ? SOURCE_STRENGTH : BLIGHT_PER_THREAT * Math.min(l.threat, BLIGHT_THREAT_CAP)
-export const SPAWN_DIVISOR = 840          // 200 × (140 × 72) / (60 × 40): the same pressure per hex
-export const MAX_MONSTER_LOCATIONS = 60
-export const SPAWN_KINDS: ReadonlyArray<{ encounter: EncounterId; name: string; fromThreat?: number }> = [
-  { encounter: 'goblin_raid', name: 'Goblin Brood' },
-  { encounter: 'kobold_scouts', name: 'Kobold Nest' },
-  { encounter: 'bandit_camp', name: 'Bandit Gang' },
-  { encounter: 'spider_nest', name: 'Spider Brood', fromThreat: 7 },
-  { encounter: 'salamander_pool', name: 'Salamander Spring', fromThreat: 7 },
-  { encounter: 'bandit_company', name: 'Bandit Troop', fromThreat: 7 },
-  { encounter: 'freebooter_host', name: 'Freebooter Band', fromThreat: 7 },
-]
-// spawn: a kind is eligible where its band holds threatAt(at) and threat >= (fromThreat ?? 1); order and draws otherwise as today
-
-// src/game/save.ts: SAVE_VERSION = 30, no migration
-// scripts/simulate.ts: NEAR_SOURCE.position = earlyHex(58, 19) (offsetToHex(58, 36))
-```
+`worldMap.ts`: `THREAT_RINGS` and `threatAt` by ring (`THREAT_BAND` and `MAX_THREAT` go), `WORLD_SIZE` 140 × 72, `EARLY_SHIFT` and `earlyHex` (decision 1), `SOURCE_PLACE` at (131, 36), threat 20. `blight.ts`: `BLIGHT_THREAT_CAP = 5`, `SPAWN_DIVISOR = 840`, `MAX_MONSTER_LOCATIONS = 60`, `SPAWN_KINDS` gains the four new kinds with `fromThreat: 7`. `SAVE_VERSION` 30; `NEAR_SOURCE` at `earlyHex(58, 19)`. Full text: the task files of steps 04, 05, 07.
 
 ### C5. The outer rings' content (step 05)
 
-```ts
-// src/game/territory.ts
-export type Material = 'gold' | 'iron' | 'timber' | 'silver' | 'stone' | 'salt' | 'copper' | 'crystal' | 'peat'
-  | 'ironwood' | 'mithril' | 'elderwood' | 'adamant' | 'wyrmwood' | 'starmetal' | 'heartwood'
-// WORKS_NAMES: mithril, adamant, starmetal 'Mine'; ironwood, elderwood, wyrmwood, heartwood 'Lumber Camp'
-// RESOURCE_YIELDS, amount 2 each (id, name, material, ring by threat):
-//   ironwood_grove 'Ironwood Grove' ironwood 7 · mithril_lode 'Mithril Lode' mithril 9 · elder_grove 'Elder Grove' elderwood 9
-//   adamant_deep 'Adamant Deep' adamant 12 · wyrmwood_thicket 'Wyrmwood Thicket' wyrmwood 15
-//   fallen_star 'Fallen Star' starmetal 18 · heartwood 'The Heartwood' heartwood 18
-
-// src/game/worldMap.ts: PARTNERS gains, after saltmere (positions the implementer's, inside the ring):
-//   { id: 'stonehollow', name: 'Stonehollow', good: 'mithril' }   ring 7
-//   { id: 'elder_glade', name: 'Elder Glade', good: 'elderwood' } ring 12
-//   { id: 'emberwatch', name: 'Emberwatch', good: 'adamant' }     ring 15
-// Fixed nests, 4 to 6 in each outer ring, by ring: 7 bandit_camp, spider_nest, salamander_pool (each at least once);
-//   9 spider_nest, salamander_pool, bandit_company (each at least once); 12 bandit_company; 15 and 18 freebooter_host.
-//   Threat by threatAt; ids and names the implementer's; loot from today's unique items.
-// newWorld's locations order: the encampment, today's resources, the new resources (ring order), the partners (PARTNERS order),
-//   today's nests, the outer nests (ring order), the Source last.
-// src/scenes/debugCommands.ts: MATERIALS gains the seven (tsc enforces)
-```
+`territory.ts`: seven new materials and resource sites (rings 7 to 18) and their works names. `worldMap.ts`: partners Stonehollow (ring 7), Elder Glade (12), Emberwatch (15); fixed outer nests, 4 to 6 a ring, by ring; `newWorld`'s location order. `debugCommands.ts`: `MATERIALS` gains the seven. Full text: the task files of steps 05, 07.
 
 ### C6. Partner sprites (step 06)
 
@@ -224,8 +108,8 @@ export type Material = 'gold' | 'iron' | 'timber' | 'silver' | 'stone' | 'salt' 
 
 | Step | Task | Outcome | Depends on | Engineer / reviewer | Status |
 | --- | --- | --- | --- | --- | --- |
-| 01 | [Baseline and the far encounters](01-baseline-and-encounters.md) | Stage baseline (`one`, `company`, `rl10`, 50-check, day cost by a new `scripts/dayCost.ts`, rerun in step 08); Bandit Company, Freebooter Host, widened bands, the Source's band, bandit gear, rune loot rows, `SOURCE_THREAT` (C1); policy snapshot re-recorded; guard identical | — | opus / opus | pending |
-| 02 | [The simulator's long-campaign settings](02-simulator-settings.md) | `--log none`, `--near-source` and `SourcePlace`, ready level 18, 6000 days, walk and route-flicker fields, guard args, measure names (C2); guard identical | 01 | opus / opus | blocked (open question 1) |
+| 01 | [Baseline and the far encounters](01-baseline-and-encounters.md) | Stage baseline (`one`, `company`, `rl10`, 50-check, day cost by a new `scripts/dayCost.ts`, rerun in step 08); Bandit Company, Freebooter Host, widened bands, the Source's band, bandit gear, rune loot rows, `SOURCE_THREAT` (C1); policy snapshot re-recorded; guard identical | — | opus / opus | done (see `git log --grep "Stage 9 step 01"`) |
+| 02 | [The simulator's long-campaign settings](02-simulator-settings.md) | `--log none`, `--near-source` and `SourcePlace`, ready level 18, 6000 days, walk and route-flicker fields, guard args, measure names (C2); guard identical | 01 | opus / opus | pending |
 | 03 | [The Routes tab pages](03-routes-tab-paging.md) | Routes tab paging (C3); manual text; in-browser test | — | sonnet / opus | pending |
 | 04 | [The board and the rings](04-board-and-rings.md) | 140 × 72, ring table, the shift, the Source at 20, blight cap, spawns by band, `SPAWN_DIVISOR`, save 30, coordinates in tests and `e2e/` (C4); room made in `src/game/CLAUDE.md`; guard re-recorded | 02 | opus / opus | pending |
 | 05 | [The outer rings' content](05-outer-content.md) | Outer nests, seven sites and their materials, three far partners (C5); guard re-recorded | 03, 04 | opus / opus | pending |
@@ -255,7 +139,7 @@ export type Material = 'gold' | 'iron' | 'timber' | 'silver' | 'stone' | 'salt' 
 - **06** touches only `art/` and `public/assets/sprites/`: any time, in its own worktree, merged before 07.
 - **07** may run beside 08 and 09: it touches `src/scenes/`, `src/testHook.ts`, `e2e/` and the manual; 08 and 09 touch `scripts/`, `logs/` and the plan (and, in 09, possibly `encounters.ts`). The index's table is the only shared file (update your row only).
 - **Checkpoints:** after 02 the guard has its stage-9 meaning; after 05 the domain is complete; **after 08 the orchestrator decides whether to go on** if the runtime is over the gate; 09 measures on the code as 08 left it.
-- **Open question 1** blocks 02 and everything after it but 03 and 06.
+- **Open question 1** is answered (`--near-source`); nothing is blocked on it.
 
 ## Requirement map
 
@@ -290,9 +174,9 @@ export type Material = 'gold' | 'iron' | 'timber' | 'silver' | 'stone' | 'salt' 
 
 ## Open questions
 
-1. **(Blocks step 02 and after.) How are the early figures measured once the Source is at threat 20, 122 hexes out?** Options: (a) *recommended:* `--near-source`, a simulator-only stand-in that puts the Source where it stood before this stage at threat 5, with the early figures, the refactor guard and the 50-campaign check run with it, and `bands.md`'s measure names (`one`, `company`, `rl10`, `rl12`) gaining `--ready-level 7` or `10` and `--near-source` (band values unchanged) — decision 2; (b) keep the real Source and redefine the early figure (for example "the vanguard reaches level 7 without losing the encampment"), with new bands set by the user; (c) drop the early figures until stage 12. The plan is written for (a).
+1. **(Answered: (a), `--near-source`, the user's choice; step 02 builds it.) How are the early figures measured once the Source is at threat 20, 122 hexes out?** Options: (a) *recommended:* `--near-source`, a simulator-only stand-in that puts the Source where it stood before this stage at threat 5, with the early figures, the refactor guard and the 50-campaign check run with it, and `bands.md`'s measure names (`one`, `company`, `rl10`, `rl12`) gaining `--ready-level 7` or `10` and `--near-source` (band values unchanged) — decision 2; (b) keep the real Source and redefine the early figure (for example "the vanguard reaches level 7 without losing the encampment"), with new bands set by the user; (c) drop the early figures until stage 12. The plan is written for (a).
 
-Not blocking, assumed as written, for the user's eye: decisions 4 (new spawn kinds from threat 7), 5 (Masterwork steel from threat 8), 7 (the loot rows), 8 (partner sprites).
+Accepted by the user as written: decisions 4 (new spawn kinds from threat 7), 5 (Masterwork steel from threat 8), 7 (the loot rows), 8 (partner sprites).
 
 ## For implementers
 

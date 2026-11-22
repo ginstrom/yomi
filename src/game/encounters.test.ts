@@ -32,6 +32,8 @@ import {
   encountersFor,
   foeStats,
   banditCamp,
+  banditCompany,
+  freebooterHost,
   type BanditKind,
   type EncounterId,
   type MonsterKind,
@@ -96,7 +98,9 @@ describe.each(Object.entries(ENCOUNTERS))('the %s encounter, as the threat rises
         expect(foes(threat)[0].stats.maxHp).toBeGreaterThan(foes(threat - 1)[0].stats.maxHp)
       }
     }
-    if (max > min) expect(foes(max).length).toBeGreaterThan(foes(min).length)
+    // More at the top than at the bottom, unless the band's counts are flat by design (stage 9 decision 6).
+    const flat = new Set(ENCOUNTER_COUNTS[id as EncounterId]).size === 1
+    if (max > min && !flat) expect(foes(max).length).toBeGreaterThan(foes(min).length)
   })
 
   it('is worth more the higher the threat', () => {
@@ -136,6 +140,27 @@ describe('sourceGuardians', () => {
 
   it('is worth more than a Goblin Raid of the same threat', () => {
     expect(xpReward(sourceGuardians(party(), MAX_THREAT))).toBeGreaterThan(xpReward(goblinRaid(party(), MAX_THREAT)))
+  })
+
+  it('is fought at threats 1 to 20: today\'s counts to 5, then all five guardians', () => {
+    expect(ENCOUNTER_BANDS.source_guardians).toEqual({ min: 1, max: 20 })
+    expect(ENCOUNTER_COUNTS.source_guardians).toEqual([2, 3, 3, 3, 4, ...Array(15).fill(5)])
+  })
+
+  it('fields the same four at threat 5 as before stage 9, and all five slots at level 20 at the Source\'s threat', () => {
+    const field = (threat: number) => sourceGuardians(party(), threat).setup.units.filter((u) => u.side === 'enemy')
+    expect(field(5).map((u) => u.id)).toEqual(['horror', 'brute', 'shaman', 'sneak'])
+    const top = sourceGuardians(party(), 20)
+    expect(top.threat).toBe(20)
+    expect(field(20).map((u) => [u.id, top.kinds[u.id]])).toEqual([
+      ['horror', 'horror'],
+      ['brute', 'goblin'],
+      ['shaman', 'shaman'],
+      ['sneak', 'kobold'],
+      ['cutter', 'goblin'],
+    ])
+    for (const u of field(20)) expect(u.stats).toEqual({ ...foeStats(top.kinds[u.id] as MonsterKind, 20), name: u.stats.name })
+    expect(sourceGuardians(party(), 25)).toEqual(top)
   })
 })
 
@@ -265,22 +290,88 @@ describe('banditCamp', () => {
   })
 })
 
+/** The two far bandit encounters: their slots (id, kind, name, hex), band and counts, as C1 of stage 9's plan names them. */
+describe.each([
+  {
+    id: 'bandit_company' as const,
+    build: banditCompany,
+    band: { min: 8, max: 13 },
+    counts: [4, 4, 4, 4, 4, 4],
+    kinds: ['bandit_brute', 'bandit_crossbowman', 'bandit_mage', 'bandit_archer', 'bandit_cutthroat'],
+    names: ['Bandit Sergeant'],
+  },
+  {
+    id: 'freebooter_host' as const,
+    build: freebooterHost,
+    band: { min: 14, max: 20 },
+    counts: [4, 4, 4, 5, 5, 5, 5],
+    kinds: ['bandit_captain', 'bandit_brute', 'bandit_crossbowman', 'bandit_mage', 'bandit_archer'],
+    names: ['Freebooter Captain'],
+  },
+])('the far bandits: $id', ({ id, build, band, counts, kinds, names }) => {
+  const enemies = (threat: number) => build(party(), threat).setup.units.filter((u) => u.side === 'enemy')
+
+  it('is registered, after the Salamander Pool, with its band and counts', () => {
+    const ids = Object.keys(ENCOUNTERS)
+    expect(ENCOUNTERS[id]).toBe(build)
+    expect(ids.indexOf(id)).toBeGreaterThan(ids.indexOf('salamander_pool'))
+    expect(ENCOUNTER_BANDS[id]).toEqual(band)
+    expect(ENCOUNTER_COUNTS[id]).toEqual(counts)
+    expect(build(party()).threat).toBe(band.min)
+  })
+
+  it('fields its count of bandits at every threat of its band, the first slots in order, each at the threat\'s level and gear', () => {
+    for (let threat = band.min; threat <= band.max; threat++) {
+      const encounter = build(party(), threat)
+      const foes = enemies(threat)
+      expect(encounter.threat).toBe(threat)
+      expect(foes.length).toBe(counts[threat - band.min])
+      expect(foes.map((u) => encounter.kinds[u.id])).toEqual(kinds.slice(0, foes.length))
+      for (const u of foes) {
+        const kind = encounter.kinds[u.id] as BanditKind
+        expect(u.stats).toEqual({ ...banditStats(BANDIT_ROLE[kind], threat, { tier: 2, grade: 3 }), name: u.stats.name })
+      }
+    }
+    expect(enemies(band.min)[0].stats.name).toBe(names[0])
+  })
+
+  it('stands every slot in the far columns, 8 and 9, on a hex of its own', () => {
+    const far = [8, 9].flatMap((col) => Array.from({ length: 9 }, (_, row) => offsetToHex(col, row)))
+    const foes = build(party(), 30).setup.units.filter((u) => u.side === 'enemy')
+    for (const u of foes) expect(far).toContainEqual(u.position)
+    expect(new Set(foes.map((u) => `${u.position.q},${u.position.r}`)).size).toBe(foes.length)
+  })
+
+  it('clamps a threat outside its band to the nearest in it, and pays more the higher the threat', () => {
+    expect(build(party(), band.min - 3)).toEqual(build(party(), band.min))
+    expect(build(party(), band.max + 3)).toEqual(build(party(), band.max))
+    for (let threat = band.min + 1; threat <= band.max; threat++) {
+      expect(xpReward(build(party(), threat))).toBeGreaterThan(xpReward(build(party(), threat - 1)))
+    }
+    expect(xpReward(build(party(), band.min))).toBe(100 * counts[0] * band.min)
+  })
+})
+
 describe('spiderNest', () => {
   const field = (threat: number) =>
     spiderNest(party(), threat)
       .setup.units.filter((u) => u.side === 'enemy')
       .map((u) => u.id)
 
-  it('is registered, with the band 5 to 5 and the count 4', () => {
+  it('is registered, with the band 4 to 9 and the counts 3 at threat 4 and 4 from 5', () => {
     expect(ENCOUNTERS.spider_nest).toBe(spiderNest)
-    expect(ENCOUNTER_BANDS.spider_nest).toEqual({ min: 5, max: 5 })
-    expect(ENCOUNTER_COUNTS.spider_nest).toEqual([4])
+    expect(ENCOUNTER_BANDS.spider_nest).toEqual({ min: 4, max: 9 })
+    expect(ENCOUNTER_COUNTS.spider_nest).toEqual([3, 4, 4, 4, 4, 4])
   })
 
-  it('fields a Giant Spider, a Kobold Sneak, a Brood Spider and a Nest Spider at any threat, fought as threat 5', () => {
-    for (const threat of [1, 4, 5, 9]) {
+  it('fields a Giant Spider, a Kobold Sneak and a Brood Spider at threat 4, and a Nest Spider too from threat 5 to 9', () => {
+    for (const threat of [1, 4]) {
+      expect(field(threat)).toEqual(['spider', 'sneak', 'spider2'])
+      expect(spiderNest(party(), threat).threat).toBe(4)
+    }
+    for (const threat of [5, 9, 12]) {
       expect(field(threat)).toEqual(['spider', 'sneak', 'spider2', 'spider3'])
-      expect(spiderNest(party(), threat).threat).toBe(5)
+      expect(spiderNest(party(), threat).threat).toBe(Math.min(threat, 9))
     }
     expect(spiderNest(party()).threat).toBe(5)
   })
@@ -301,16 +392,16 @@ describe('spiderNest', () => {
 })
 
 describe('salamanderPool', () => {
-  it('is registered, with the band 5 to 5 and the count 3', () => {
+  it('is registered, with the band 5 to 9 and the count 3 at each', () => {
     expect(ENCOUNTERS.salamander_pool).toBe(salamanderPool)
-    expect(ENCOUNTER_BANDS.salamander_pool).toEqual({ min: 5, max: 5 })
-    expect(ENCOUNTER_COUNTS.salamander_pool).toEqual([3])
+    expect(ENCOUNTER_BANDS.salamander_pool).toEqual({ min: 5, max: 9 })
+    expect(ENCOUNTER_COUNTS.salamander_pool).toEqual([3, 3, 3, 3, 3])
   })
 
-  it('fields a Salamander between two Kobolds at any threat, fought as threat 5', () => {
-    for (const threat of [1, 5, 9]) {
+  it('fields a Salamander between two Kobolds at any threat, fought as the nearest of 5 to 9', () => {
+    for (const threat of [1, 5, 9, 12]) {
       const pool = salamanderPool(party(), threat)
-      expect(pool.threat).toBe(5)
+      expect(pool.threat).toBe(Math.min(Math.max(threat, 5), 9))
       expect(pool.setup.units.filter((u) => u.side === 'enemy').map((u) => [u.id, u.stats.name, u.position])).toEqual([
         ['salamander', 'Salamander', offsetToHex(8, 4)],
         ['kobold', 'Kobold Stoker', offsetToHex(8, 2)],
@@ -343,14 +434,16 @@ describe('the Giant Spider and the Salamander', () => {
 
 describe('the encounters\' bands and counts', () => {
   const ids = Object.keys(ENCOUNTERS) as EncounterId[]
-  /** The five encounters the map had before bandits, which keep the band 1 to 5. */
-  const today = ids.filter((id) => !['bandit_camp', 'spider_nest', 'salamander_pool'].includes(id))
+  /** The five encounters the map had before bandits, which keep the counts 2, 3, 3, 3, 4 at threats 1 to 5. */
+  const today: EncounterId[] = ['goblin_raid', 'kobold_scouts', 'hobgoblin_warband', 'troll_lair', 'source_guardians']
+  /** Of those, the ones whose band is still 1 to 5 (the Source's grew to 20 in stage 9). */
+  const near = today.filter((id) => id !== 'source_guardians')
   const foeCount = (id: EncounterId, threat: number) =>
     ENCOUNTERS[id](party(), threat).setup.units.filter((u) => u.side === 'enemy').length
 
-  it('gives each of today\'s encounters the band 1 to 5', () => {
-    expect(today.length).toBe(5)
-    for (const id of today) expect(ENCOUNTER_BANDS[id]).toEqual({ min: 1, max: 5 })
+  it('gives each of today\'s encounters but the Source the band 1 to 5', () => {
+    expect(ids.slice(0, 5).sort()).toEqual([...today].sort())
+    for (const id of near) expect(ENCOUNTER_BANDS[id]).toEqual({ min: 1, max: 5 })
   })
 
   it('gives every encounter one foe count for each threat of its band', () => {
@@ -365,11 +458,12 @@ describe('the encounters\' bands and counts', () => {
 
   it('fights a threat outside its band as the nearest threat in it, and a fractional one as the whole below', () => {
     for (const id of today) {
+      const top = ENCOUNTER_BANDS[id].max
       expect(ENCOUNTERS[id](party(), 0)).toEqual(ENCOUNTERS[id](party(), 1))
-      expect(ENCOUNTERS[id](party(), 9)).toEqual(ENCOUNTERS[id](party(), 5))
+      expect(ENCOUNTERS[id](party(), top + 4)).toEqual(ENCOUNTERS[id](party(), top))
       expect(ENCOUNTERS[id](party(), 3.7)).toEqual(ENCOUNTERS[id](party(), 3))
       expect(ENCOUNTERS[id](party(), 0).threat).toBe(1)
-      expect(ENCOUNTERS[id](party(), 9).threat).toBe(5)
+      expect(ENCOUNTERS[id](party(), top + 4).threat).toBe(top)
       expect(ENCOUNTERS[id](party(), 3.7).threat).toBe(3)
     }
   })
@@ -378,11 +472,13 @@ describe('the encounters\' bands and counts', () => {
     expect(encountersFor(1)).toEqual(today)
     expect(encountersFor(2)).toEqual(today)
     expect(encountersFor(3)).toEqual([...today, 'bandit_camp'])
-    expect(encountersFor(4)).toEqual([...today, 'bandit_camp'])
+    expect(encountersFor(4)).toEqual([...today, 'bandit_camp', 'spider_nest'])
     expect(encountersFor(5)).toEqual([...today, 'bandit_camp', 'spider_nest', 'salamander_pool'])
-    expect(encountersFor(6)).toEqual(['bandit_camp'])
-    expect(encountersFor(7)).toEqual(['bandit_camp'])
-    expect(encountersFor(8)).toEqual([])
+    for (const threat of [6, 7]) expect(encountersFor(threat)).toEqual(['source_guardians', 'bandit_camp', 'spider_nest', 'salamander_pool'])
+    for (const threat of [8, 9]) expect(encountersFor(threat)).toEqual(['source_guardians', 'spider_nest', 'salamander_pool', 'bandit_company'])
+    for (const threat of [10, 13]) expect(encountersFor(threat)).toEqual(['source_guardians', 'bandit_company'])
+    for (const threat of [14, 20]) expect(encountersFor(threat)).toEqual(['source_guardians', 'freebooter_host'])
+    expect(encountersFor(21)).toEqual([])
     expect(encountersFor(0)).toEqual([])
   })
 
