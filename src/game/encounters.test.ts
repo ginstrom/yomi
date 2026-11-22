@@ -28,7 +28,6 @@ import {
   ENCOUNTER_COUNTS,
   FOE_NATIVE_LEVEL,
   FOE_XP,
-  MAX_THREAT,
   encountersFor,
   foeStats,
   banditCamp,
@@ -51,6 +50,8 @@ import { readyMadeParty, partyFighters } from './party.ts'
 
 /** A party of four: one more than a new game's, to stand in the second row. */
 const party = () => partyFighters([...readyMadeParty(), createWarrior()])
+/** The home rings' threats, today's encounters' band (1 to 5). */
+const HOME_THREATS = 5
 
 describe.each(Object.entries(ENCOUNTERS))('the %s encounter', (_id, build) => {
   const wounded = party().map((fighter, i) => ({ ...fighter, hp: 5 + i }))
@@ -131,7 +132,7 @@ describe('goblinRaid', () => {
 
 describe('sourceGuardians', () => {
   it('fields the Blight Horror at every threat, a caster of its level', () => {
-    for (let threat = 1; threat <= MAX_THREAT; threat++) {
+    for (let threat = 1; threat <= HOME_THREATS; threat++) {
       const [horror] = sourceGuardians(party(), threat).setup.units.filter((u) => u.side === 'enemy')
       expect(horror.stats).toEqual({ ...foeAtLevel(BLIGHT_HORROR_STATS, threat), name: 'Blight Horror' })
     }
@@ -139,7 +140,7 @@ describe('sourceGuardians', () => {
   })
 
   it('is worth more than a Goblin Raid of the same threat', () => {
-    expect(xpReward(sourceGuardians(party(), MAX_THREAT))).toBeGreaterThan(xpReward(goblinRaid(party(), MAX_THREAT)))
+    expect(xpReward(sourceGuardians(party(), HOME_THREATS))).toBeGreaterThan(xpReward(goblinRaid(party(), HOME_THREATS)))
   })
 
   it('is fought at threats 1 to 20: today\'s counts to 5, then all five guardians', () => {
@@ -166,7 +167,7 @@ describe('sourceGuardians', () => {
 
 describe('hobgoblinWarband', () => {
   it('fields the Hobgoblin Chief, in its mail, at every threat', () => {
-    for (let threat = 1; threat <= MAX_THREAT; threat++) {
+    for (let threat = 1; threat <= HOME_THREATS; threat++) {
       const [chief] = hobgoblinWarband(party(), threat).setup.units.filter((u) => u.side === 'enemy')
       expect(chief.stats).toEqual({ ...foeAtLevel(HOBGOBLIN_CHIEF_STATS, threat), name: 'Hobgoblin Chief' })
     }
@@ -178,7 +179,7 @@ describe('trollLair', () => {
   const kinds = (threat: number) => Object.values(trollLair(party(), threat).kinds)
 
   it('fields a regenerating Troll at every threat', () => {
-    for (let threat = 1; threat <= MAX_THREAT; threat++) expect(kinds(threat)).toContain('troll')
+    for (let threat = 1; threat <= HOME_THREATS; threat++) expect(kinds(threat)).toContain('troll')
     expect(TROLL_STATS.regeneration).toBeGreaterThan(0)
   })
 
@@ -480,10 +481,6 @@ describe('the encounters\' bands and counts', () => {
     for (const threat of [14, 20]) expect(encountersFor(threat)).toEqual(['source_guardians', 'freebooter_host'])
     expect(encountersFor(21)).toEqual([])
     expect(encountersFor(0)).toEqual([])
-  })
-
-  it('keeps the top of today\'s map at 5', () => {
-    expect(MAX_THREAT).toBe(5)
   })
 })
 

@@ -52,7 +52,8 @@ describe('hexInfo of a resource', () => {
   it('counts a fort threatened at level 2 to the day corruption takes it', () => {
     const fort = site(3)
     fort.world.threatened.push('iron_vein')
-    fort.world.locations.push({ id: 'besiegers', kind: 'monsters', name: 'Besiegers', position: { q: fort.at.q + 2, r: fort.at.r }, encounter: 'goblin_raid', threat: 40, loot: [] })
+    // Strong enough to take a fort: a nest's push is capped at threat 5's since stage 9, so the Source's strength.
+    fort.world.locations.push({ id: 'besiegers', kind: 'monsters', name: 'Besiegers', position: { q: fort.at.q + 2, r: fort.at.r }, encounter: 'goblin_raid', threat: 40, loot: [], source: true })
     const i = boardIndex(fort.world.board, fort.at)
     fort.world.seen[i] = 2
     const line = info(fort.game, fort.at).lines.find((l) => l.startsWith('Under threat'))

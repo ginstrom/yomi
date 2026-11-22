@@ -92,6 +92,7 @@ import {
   ENCAMPMENT_ID,
   PARTNERS,
   clearLocation,
+  earlyHex,
   encampment,
   monstersHere,
   newWorld,
@@ -102,7 +103,7 @@ import {
   type SourcePlace,
   type WorldState,
 } from '../src/game/worldMap.ts'
-import { HexBoard, hexDistance, hexEquals, offsetToHex, type Hex } from '../src/grid/hex.ts'
+import { HexBoard, hexDistance, hexEquals, type Hex } from '../src/grid/hex.ts'
 import type { FamilyId } from '../src/inventory/catalog.ts'
 import { GRADES, type Grade } from '../src/inventory/grades.ts'
 import { baseItem, craftedItem, itemById, type EquipmentSlot, type Item } from '../src/inventory/inventory.ts'
@@ -395,10 +396,11 @@ export const MAX_CAMPAIGN_DAYS = 6000
 /** The level every member must reach before the party marches on the Source, unless nothing else is left: the long campaign's (the early-game guard runs `--ready-level 7`). */
 export const SOURCE_READY_LEVEL = 18
 /**
- * `--near-source`'s Source: where it stood before stage 9, at threat 5. On today's map it is
- * `SOURCE_PLACE`; stage 9 step 04 moves its position to `earlyHex(58, 19)` as the map grows.
+ * `--near-source`'s Source: where it stood before stage 9, at threat 5: stage 8's (58, 19), moved with
+ * the home country (`earlyHex`), so it stands where it did relative to home. The real one (`SOURCE_PLACE`)
+ * is 122 hexes out, at `SOURCE_THREAT`.
  */
-export const NEAR_SOURCE: SourcePlace = { position: offsetToHex(58, 19), threat: 5 }
+export const NEAR_SOURCE: SourcePlace = { position: earlyHex(58, 19), threat: 5 }
 
 /** How a campaign ended: the Source beaten, the company fallen (no hero left), the encampment lost, or out of days (or of routes). */
 export type CampaignOutcome = 'source' | 'fallen' | 'encampment' | 'timeout'

@@ -13,7 +13,7 @@ import { readyMadeParty } from './party.ts'
 import { ABANDON_AFTER, roadTo } from './trade.ts'
 import { YIELD_DAYS } from './territory.ts'
 import { parseSave, serializeSave } from './save.ts'
-import { NOTICE_RADIUS, encampment, locationAt, passTurn, routeTo, travel, type MonsterLocation, type WorldState } from './worldMap.ts'
+import { earlyHex, NOTICE_RADIUS, encampment, locationAt, passTurn, routeTo, travel, type MonsterLocation, type WorldState } from './worldMap.ts'
 
 /** A new game on world 1 with the ready-made three: the game, its world and its one party. */
 function fresh() {
@@ -42,7 +42,7 @@ function besiegeGoldSeam(world: WorldState): void {
   nestAt(world, 'besiegers', { q: seam.q + 2, r: seam.r }, 5)
 }
 
-const NEAR = () => offsetToHex(3, 1)
+const NEAR = () => earlyHex(3, 1)
 
 describe('passDay with one party', () => {
   it('passes one turn for an idle party, giving what passTurn alone gives, and leaves it where it is', () => {
@@ -187,7 +187,7 @@ describe('setOrder', () => {
 
   it('plans the route routeTo gives, ending on the destination', () => {
     const { game, world, party } = fresh()
-    const to = offsetToHex(30, 5)
+    const to = earlyHex(30, 5)
     const route = routeTo(world, party, to)
     setOrder(game, party.id, { kind: 'travel', to })
     expect(party.order).toEqual({ kind: 'travel', to, route })
@@ -197,7 +197,7 @@ describe('setOrder', () => {
 describe('advance', () => {
   it('stops on the first notable event, naming the party a nearby sighting concerns', () => {
     const { game, party } = fresh()
-    setOrder(game, party.id, { kind: 'travel', to: offsetToHex(40, 20) })
+    setOrder(game, party.id, { kind: 'travel', to: earlyHex(40, 20) })
     const reports = advance(game)
     const last = reports.at(-1)!
     expect(reports.slice(0, -1).every((r) => r.interrupt === null)).toBe(true)
@@ -264,7 +264,7 @@ describe('advance', () => {
 describe('orders past an interrupt', () => {
   it('keep travelling: the order holds the rest of the route, and the next day walks on', () => {
     const { game, party } = fresh()
-    const to = offsetToHex(40, 20)
+    const to = earlyHex(40, 20)
     setOrder(game, party.id, { kind: 'travel', to })
     const planned = party.order.kind === 'travel' ? [...party.order.route] : []
     const walked = advance(game).length
@@ -290,7 +290,7 @@ describe('travel on the loop', () => {
   it('gives the journey the loop walks, a day a hex', () => {
     const a = fresh()
     const b = fresh()
-    const to = offsetToHex(40, 20)
+    const to = earlyHex(40, 20)
     const journey = travel(a.game, a.party, to)
     setOrder(b.game, b.party.id, { kind: 'travel', to })
     const reports = advance(b.game, Infinity)
@@ -304,7 +304,7 @@ describe('travel on the loop', () => {
 
 /** A party in a quiet land given a standing travel order, so that a refusal can be seen to leave it. */
 function withStandingOrder(it: ReturnType<typeof fresh>) {
-  const to = offsetToHex(40, 20)
+  const to = earlyHex(40, 20)
   it.party.order = { kind: 'travel', to, route: routeTo(it.world, it.party, to) ?? [] }
   return it
 }
@@ -312,7 +312,7 @@ function withStandingOrder(it: ReturnType<typeof fresh>) {
 /** On clean, empty land near home, with the stock for a watchtower. */
 function onCleanLand() {
   const it = quiet()
-  it.party.position = offsetToHex(7, 17)
+  it.party.position = earlyHex(7, 17)
   expect(it.world.blight[boardIndex(it.world.board, it.party.position)]).toBe(0)
   it.world.stock = { gold: 6, iron: 12 }
   return it
@@ -582,7 +582,7 @@ describe('orderAction', () => {
 
   it('lets two parties each take a day’s action, both done in one day', () => {
     const { game, world, party } = onCleanLand()
-    const second = { ...structuredClone(party), id: 'party_2', name: 'Second Company', position: offsetToHex(3, 1) }
+    const second = { ...structuredClone(party), id: 'party_2', name: 'Second Company', position: earlyHex(3, 1) }
     second.members.forEach((m) => (m.hp = 1))
     game.parties.push(second)
     expect(orderAction(game, party.id, { kind: 'tower' })).toBeNull()
@@ -712,7 +712,7 @@ describe('natural healing while idle', () => {
 describe('a company of two on the day loop', () => {
   it('walks both travel orders a hex a day, in list order, the world’s day once a day (A3)', () => {
     const { game, world, party, second } = withSecond(quiet())
-    const [toA, toB] = [NEAR(), offsetToHex(1, 5)]
+    const [toA, toB] = [NEAR(), earlyHex(1, 5)]
     const [routeA, routeB] = [routeTo(world, party, toA)!, routeTo(world, second, toB)!]
     expect(setOrder(game, party.id, { kind: 'travel', to: toA })).toBeNull()
     expect(setOrder(game, second.id, { kind: 'travel', to: toB })).toBeNull()
@@ -729,8 +729,8 @@ describe('a company of two on the day loop', () => {
 
   it('passes the day for both when one takes a day’s action (A4)', () => {
     const { game, world, party, second } = withSecond(quiet())
-    const route = routeTo(world, second, offsetToHex(1, 5))!
-    setOrder(game, second.id, { kind: 'travel', to: offsetToHex(1, 5) })
+    const route = routeTo(world, second, earlyHex(1, 5))!
+    setOrder(game, second.id, { kind: 'travel', to: earlyHex(1, 5) })
     const report = act(game, party.id, { kind: 'camp' })
     if (typeof report === 'string') throw new Error(report)
     expect(world.turn).toBe(2)
@@ -847,7 +847,7 @@ describe('the garrison order', () => {
 
 describe('the meet order', () => {
   it('closes a hex a day on a party standing still, ending with met and idle', () => {
-    const { game, party, second } = withSecond(quiet(), offsetToHex(5, 4))
+    const { game, party, second } = withSecond(quiet(), earlyHex(5, 4))
     const apart = hexDistance(party.position, second.position)
     expect(apart).toBeGreaterThan(2)
     expect(setOrder(game, party.id, { kind: 'meet', party: second.id })).toBeNull()
@@ -862,7 +862,7 @@ describe('the meet order', () => {
   })
 
   it('brings two parties meeting each other together', () => {
-    const { game, party, second } = withSecond(quiet(), offsetToHex(5, 4))
+    const { game, party, second } = withSecond(quiet(), earlyHex(5, 4))
     setOrder(game, party.id, { kind: 'meet', party: second.id })
     setOrder(game, second.id, { kind: 'meet', party: party.id })
     const apart = hexDistance(party.position, second.position)
@@ -881,14 +881,14 @@ describe('the meet order', () => {
     expect(setOrder(game, party.id, { kind: 'meet', party: party.id })).toMatch(/itself/)
     expect(setOrder(game, party.id, { kind: 'meet', party: 'party_9' })).toMatch(/party_9/)
     expect(setOrder(game, party.id, { kind: 'meet', party: second.id })).toBe('First Company and Second Company are already together.')
-    second.position = offsetToHex(5, 4)
+    second.position = earlyHex(5, 4)
     party.confronting = 'goblin_raiders'
     expect(setOrder(game, party.id, { kind: 'meet', party: second.id })).toMatch(/must first answer/)
     expect(party.order).toEqual({ kind: 'idle' })
   })
 
   it('ends idle, with order_done, when the other party is gone', () => {
-    const { game, party, second } = withSecond(quiet(), offsetToHex(5, 4))
+    const { game, party, second } = withSecond(quiet(), earlyHex(5, 4))
     setOrder(game, party.id, { kind: 'meet', party: second.id })
     passDay(game)
     game.parties.splice(game.parties.indexOf(second), 1)
@@ -984,7 +984,7 @@ describe('a meet cut short', () => {
   })
 
   it('ends idle, with order_done, once no way to the other party is left', () => {
-    const { game, world, party, second } = withSecond(quiet(), offsetToHex(5, 4))
+    const { game, world, party, second } = withSecond(quiet(), earlyHex(5, 4))
     expect(setOrder(game, party.id, { kind: 'meet', party: second.id })).toBeNull()
     // Known nests on every hex around the other party close every way to it.
     const around = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]].map(([dq, dr]) => ({ q: second.position.q + dq, r: second.position.r + dr }))
@@ -1064,7 +1064,7 @@ describe('the guild hall’s company', () => {
       expect(refuses(game, () => formParty(game, 'first company', { from: 'reserves', index: 0 }))).toMatch(/already/)
       party.members.length = 1
       expect(refuses(game, () => formParty(game, 'Two', { from: 'party', party: party.id, index: 0 }))).toMatch(/cannot be left empty/)
-      party.position = offsetToHex(11, 19)
+      party.position = earlyHex(11, 19)
       expect(refuses(game, () => formParty(game, 'Two', { from: 'reserves', index: 0 }))).toMatch(/No party is at/)
     })
 
@@ -1073,7 +1073,7 @@ describe('the guild hall’s company', () => {
       formParty(game, 'B', { from: 'reserves', index: 0 })
       expect(refuses(game, () => formParty(game, 'C', { from: 'party', party: party.id, index: 0 }))).toMatch(/allows 2 parties/)
       game.world.guildHall = 5
-      game.parties[1].position = offsetToHex(11, 19)
+      game.parties[1].position = earlyHex(11, 19)
       expect(refuses(game, () => formParty(game, 'C', { from: 'party', party: 'party_2', index: 0 }))).toMatch(/not at/)
     })
   })
@@ -1081,7 +1081,7 @@ describe('the guild hall’s company', () => {
   describe('renameParty', () => {
     it('renames, trimmed, anywhere, and allows the party’s own name in another case', () => {
       const { game, party } = hall()
-      party.position = offsetToHex(11, 19)
+      party.position = earlyHex(11, 19)
       expect(renameParty(game, party.id, ' Vanguard ')).toBeNull()
       expect(party.name).toBe('Vanguard')
       expect(renameParty(game, party.id, 'VANGUARD')).toBeNull()
@@ -1116,7 +1116,7 @@ describe('the guild hall’s company', () => {
       expect(refuses(game, () => disband(game, party.id))).toMatch(/last party/)
       const second = formParty(game, 'B', { from: 'party', party: party.id, index: 2 }) as Expedition
       expect(refuses(game, () => disband(game, 'party_9'))).toMatch(/party_9/)
-      second.position = offsetToHex(11, 19)
+      second.position = earlyHex(11, 19)
       expect(refuses(game, () => disband(game, second.id))).toMatch(/not at/)
       expect(refuses(game, () => disband(game, party.id))).toMatch(/another party at home/)
       second.position = { ...party.position }
@@ -1152,7 +1152,7 @@ describe('the guild hall’s company', () => {
       expect(refuses(game, () => moveHero(game, from0, 'reserves'))).toMatch(/no more than 4/)
       while (second.members.length < 5) second.members.push(structuredClone(party.members[0]))
       expect(refuses(game, () => moveHero(game, from0, { party: second.id }))).toMatch(/is full/)
-      second.position = offsetToHex(11, 19)
+      second.position = earlyHex(11, 19)
       expect(refuses(game, () => moveHero(game, from0, { party: second.id }))).toMatch(/not at/)
       expect(refuses(game, () => moveHero(game, { from: 'party', party: second.id, index: 0 }, { party: party.id }))).toMatch(/not at/)
     })
@@ -1162,8 +1162,8 @@ describe('the guild hall’s company', () => {
 describe('exchange (A7)', () => {
   /** Two parties of the ready-made three on one hex in the field, at a hall of `level`; the second's names marked so the two can be told apart. */
   function together(level = 2) {
-    const it = withSecond(quiet(), offsetToHex(11, 19))
-    it.party.position = offsetToHex(11, 19)
+    const it = withSecond(quiet(), earlyHex(11, 19))
+    it.party.position = earlyHex(11, 19)
     it.world.guildHall = level
     for (const member of it.second.members) member.name = `${member.name}2`
     return it
@@ -1236,13 +1236,13 @@ describe('exchange (A7)', () => {
     party.baggage.push(itemById('iron_sword')!)
     refused(game, party.id, 'party_9', move, /party_9/)
     refused(game, party.id, party.id, move, /itself/)
-    second.position = offsetToHex(12, 19)
+    second.position = earlyHex(12, 19)
     refused(game, party.id, second.id, move, /First Company and Second Company are not on the same hex/)
     second.position = { ...party.position }
     nestAt(world, 'shared', party.position)
     party.confronting = 'shared'
     refused(game, party.id, second.id, move, /First Company must first answer/)
-    nestAt(world, 'other', offsetToHex(30, 30))
+    nestAt(world, 'other', earlyHex(30, 30))
     second.confronting = 'other'
     refused(game, party.id, second.id, move, /must first answer/)
   })
@@ -1277,7 +1277,7 @@ describe('exchange (A7)', () => {
 describe('wipeParty (A9)', () => {
   /** The second party standing on a nest in the field, fallen to the last hero, its baggage holding a sword. */
   function beaten() {
-    const it = withSecond(quiet(), offsetToHex(11, 19))
+    const it = withSecond(quiet(), earlyHex(11, 19))
     const nest = nestAt(it.world, 'wiper', it.second.position)
     it.second.confronting = nest.id
     it.second.baggage.push(itemById('iron_sword')!)
@@ -1328,7 +1328,7 @@ describe('wipeParty (A9)', () => {
 
   it('is not lost while a reserve lives, forming a party of the reserves at the encampment', () => {
     const { game, world, party } = fresh()
-    const nest = nestAt(world, 'wiper', offsetToHex(11, 19))
+    const nest = nestAt(world, 'wiper', earlyHex(11, 19))
     party.position = nest.position
     world.guildHall = 1
     for (let i = 0; i < 4; i++) {
@@ -1364,7 +1364,7 @@ describe('wipeParty (A9)', () => {
 
   it('is lost when the last party falls with no reserves', () => {
     const { game, world, party } = fresh()
-    const nest = nestAt(world, 'wiper', offsetToHex(11, 19))
+    const nest = nestAt(world, 'wiper', earlyHex(11, 19))
     const wipe = wipeParty(game, party.id, nest)
     expect(wipe.lost).toBe(true)
     expect(wipe.reformed).toBeNull()
@@ -1379,7 +1379,7 @@ describe('a removed party leaves no meet order naming it', () => {
   const roundTrips = (game: GameState) => parseSave(serializeSave({ game, battle: null, savedAt: 1 })) !== null
 
   it('wipeParty turns another party’s meet on it to idle, and the save still reads', () => {
-    const { game, world, party, second } = withSecond(quiet(), offsetToHex(11, 19))
+    const { game, world, party, second } = withSecond(quiet(), earlyHex(11, 19))
     const nest = nestAt(world, 'wiper', second.position)
     second.confronting = nest.id
     expect(setOrder(game, party.id, { kind: 'meet', party: second.id })).toBeNull()
@@ -1391,7 +1391,7 @@ describe('a removed party leaves no meet order naming it', () => {
   it('disband turns another party’s meet on it to idle, and the save still reads', () => {
     const { game, second } = withSecond(quiet())
     game.world.guildHall = 5
-    const third = newExpedition(readyMadeParty(), offsetToHex(5, 4), partyId(3), PARTY_NAMES[2])
+    const third = newExpedition(readyMadeParty(), earlyHex(5, 4), partyId(3), PARTY_NAMES[2])
     game.parties.push(third)
     expect(setOrder(game, third.id, { kind: 'meet', party: second.id })).toBeNull()
     expect(disband(game, second.id)).toBeNull()
@@ -1402,7 +1402,7 @@ describe('a removed party leaves no meet order naming it', () => {
   it('leaves other orders alone', () => {
     const { game, party, second } = withSecond(quiet())
     game.world.guildHall = 5
-    const third = newExpedition(readyMadeParty(), offsetToHex(5, 4), partyId(3), PARTY_NAMES[2])
+    const third = newExpedition(readyMadeParty(), earlyHex(5, 4), partyId(3), PARTY_NAMES[2])
     game.parties.push(third)
     expect(setOrder(game, party.id, { kind: 'meet', party: third.id })).toBeNull()
     expect(disband(game, second.id)).toBeNull()
@@ -1412,7 +1412,7 @@ describe('a removed party leaves no meet order naming it', () => {
 
 describe('actionBlocked', () => {
   it('names the other party whose monsters stop a day the action would pass, and none where the action answers its own', () => {
-    const { game, world, party, second } = withSecond(quiet(), offsetToHex(11, 19))
+    const { game, world, party, second } = withSecond(quiet(), earlyHex(11, 19))
     const nest = nestAt(world, 'blocker', second.position)
     expect(actionBlocked(game, party.id, { kind: 'camp' })).toBeNull()
     second.confronting = nest.id

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hexDistance, offsetToHex, type Hex } from '../grid/hex.ts'
+import { hexDistance, type Hex } from '../grid/hex.ts'
 import { IMPROVEMENT_STRENGTH, SHRINE_STRENGTH, TOWER_STRENGTH, boardIndex, netInfluence } from './blight.ts'
 import {
   IMPROVEMENT_COSTS,
@@ -33,7 +33,7 @@ import { newGame } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
 import { IMPROVEMENT_YIELD, LOSS_LEVEL, YIELD_DAYS, siteYield, sites, updateTerritory } from './territory.ts'
 import { TOWER_VISION, visibleHexes } from './vision.ts'
-import { ENCAMPMENT_ID, isNotable, locationAt, passTurn, type MonsterLocation } from './worldMap.ts'
+import { earlyHex, ENCAMPMENT_ID, isNotable, locationAt, passTurn, type MonsterLocation } from './worldMap.ts'
 
 /** A new game on world 1: the game, its world and its one party, the ready-made three, at home. */
 function solo() {
@@ -44,7 +44,7 @@ function solo() {
 /** A new game with the party on clean, empty land near home and the stock to build. */
 function ready() {
   const it = solo()
-  it.party.position = offsetToHex(7, 17)
+  it.party.position = earlyHex(7, 17)
   expect(locationAt(it.world, it.party.position)).toBeNull()
   expect(it.world.blight[boardIndex(it.world.board, it.party.position)]).toBe(0)
   it.world.stock = { gold: 6, iron: 12, timber: 4 }
@@ -86,13 +86,13 @@ describe('a watchtower', () => {
     expect(canBuildTower(tainted, taintedParty)).toMatch(/clean land/)
 
     const { world: onHome, party: onHomeParty } = ready()
-    onHomeParty.position = offsetToHex(9, 19)
+    onHomeParty.position = earlyHex(9, 19)
     expect(canBuildTower(onHome, onHomeParty)).toMatch(/cannot stand on a location/)
 
     const { game: crowdedGame, world: crowded, party: crowdedParty } = ready()
     buildTower(crowdedGame, crowdedParty)
     expect(canBuildTower(crowded, crowdedParty)).toMatch(/already stands/)
-    crowdedParty.position = offsetToHex(7 + TOWER_SPACING - 1, 17)
+    crowdedParty.position = earlyHex(7 + TOWER_SPACING - 1, 17)
     crowded.stock = { ...TOWER_COST }
     expect(canBuildTower(crowded, crowdedParty)).toMatch(/apart/)
 
@@ -105,22 +105,22 @@ describe('a watchtower', () => {
     const { game, world, party } = ready()
     const here = party.position
     expect(towerHexRefusal(world, here)).toBeNull()
-    expect(towerHexRefusal(world, offsetToHex(9, 19))).toBe('A watchtower cannot stand on a location.')
+    expect(towerHexRefusal(world, earlyHex(9, 19))).toBe('A watchtower cannot stand on a location.')
     world.blight[boardIndex(world.board, here)] = 1
     expect(towerHexRefusal(world, here)).toBe('A watchtower needs clean land.')
     world.blight[boardIndex(world.board, here)] = 0
     buildTower(game, party)
     expect(towerHexRefusal(world, here)).toBe('A watchtower already stands here.')
-    expect(towerHexRefusal(world, offsetToHex(7 + TOWER_SPACING - 1, 17))).toBe(`Too near another watchtower: they must stand ${TOWER_SPACING} hexes apart.`)
-    expect(towerHexRefusal(world, offsetToHex(7 + TOWER_SPACING, 17))).toBeNull()
+    expect(towerHexRefusal(world, earlyHex(7 + TOWER_SPACING - 1, 17))).toBe(`Too near another watchtower: they must stand ${TOWER_SPACING} hexes apart.`)
+    expect(towerHexRefusal(world, earlyHex(7 + TOWER_SPACING, 17))).toBeNull()
     world.status = 'lost'
-    expect(towerHexRefusal(world, offsetToHex(7 + TOWER_SPACING, 17))).toBe('Nothing can be built here now.')
+    expect(towerHexRefusal(world, earlyHex(7 + TOWER_SPACING, 17))).toBe('Nothing can be built here now.')
   })
 
   it('pushes back the blight with TOWER_STRENGTH and sees TOWER_VISION hexes around', () => {
     const { game, world, party } = ready()
     const at = party.position
-    const away = offsetToHex(30, 2)
+    const away = earlyHex(30, 2)
     party.position = away
     const before = netInfluence(world, presences(game.parties), at)
     party.position = at
@@ -137,7 +137,7 @@ describe('a watchtower', () => {
     const { game, world, party } = ready()
     const at = party.position
     buildTower(game, party)
-    party.position = offsetToHex(30, 2)
+    party.position = earlyHex(30, 2)
     world.locations.push({
       id: 'besiegers',
       kind: 'monsters',
@@ -167,7 +167,7 @@ describe('the shrine', () => {
     const { game, world, party } = solo()
     const oakvale = world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
     world.stock = { gold: 1000, silver: 1000 }
-    const away = offsetToHex(30, 2)
+    const away = earlyHex(30, 2)
     party.position = away
     const before = netInfluence(world, presences(game.parties), oakvale)
     party.position = oakvale
@@ -188,7 +188,7 @@ describe('the shrine', () => {
   it('is refused away from Oakvale or without the stock', () => {
     const { world, party } = solo()
     world.stock = { gold: 1000 }
-    party.position = offsetToHex(7, 17)
+    party.position = earlyHex(7, 17)
     expect(raiseShrine(world, party)).toMatch(/at Oakvale/)
     party.position = world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
     world.stock = { gold: 19 }
@@ -221,7 +221,7 @@ describe('an outpost', () => {
 
   it('is refused off a held site, at Oakvale, or without the stock', () => {
     const { world: empty, party: emptyParty } = atStonebridge()
-    emptyParty.position = offsetToHex(7, 17)
+    emptyParty.position = earlyHex(7, 17)
     expect(improveRefusal(empty, emptyParty)).toMatch(/held resource/)
 
     const { world: home, party: homeParty } = atStonebridge()
@@ -242,7 +242,7 @@ describe('an outpost', () => {
   it('adds IMPROVEMENT_STRENGTH[1] to its site and IMPROVEMENT_YIELD[1] to what it yields', () => {
     const { game, world, party } = atStonebridge()
     const at = party.position
-    const away = offsetToHex(30, 2)
+    const away = earlyHex(30, 2)
     party.position = away
     const before = netInfluence(world, presences(game.parties), at)
     const goldSeam = sites(world).find((l) => l.id === 'gold_seam')!
@@ -346,7 +346,7 @@ describe('building, as it is (characterization)', () => {
     poorOutpost.world.stock = { gold: 15, timber: 9 }
     refusedUnchanged(poorOutpost.game, () => improveSite(poorOutpost.game, poorOutpost.party))
     const offSite = atGoldSeam()
-    offSite.party.position = offsetToHex(7, 17)
+    offSite.party.position = earlyHex(7, 17)
     refusedUnchanged(offSite.game, () => improveSite(offSite.game, offSite.party))
     const among = ready()
     const nest = among.world.locations.find((l) => l.kind === 'monsters') as MonsterLocation
@@ -391,7 +391,7 @@ describe('improvements (economy A1, A2)', () => {
 
   it('are refused in order: the place, the level, the Lodge, the stock', () => {
     const off = atGoldSeam()
-    off.party.position = offsetToHex(7, 17)
+    off.party.position = earlyHex(7, 17)
     expect(improveRefusal(off.world, off.party)).toBe('Improvements go on a held resource.')
     const home = atGoldSeam()
     home.party.position = home.world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
@@ -465,7 +465,7 @@ describe('improvements (economy A1, A2)', () => {
   it('a works or fort lifts its site as the table says', () => {
     const it = atGoldSeam(2)
     const at = it.party.position
-    it.party.position = offsetToHex(30, 2)
+    it.party.position = earlyHex(30, 2)
     const net = () => netInfluence(it.world, presences(it.game.parties), at)
     const before = net()
     it.world.improvements.gold_seam = 2
@@ -520,7 +520,7 @@ describe('the Builders\' Lodge (economy A2)', () => {
 
   it('is refused away from home or without the stock, changing nothing', () => {
     const away = atHome()
-    away.party.position = offsetToHex(7, 17)
+    away.party.position = earlyHex(7, 17)
     expect(raiseLodge(away.game, away.party)).toBe(`The Builders' Lodge is at ${away.world.locations.find((l) => l.id === ENCAMPMENT_ID)!.name}.`)
     expect(away.world.lodge).toBe(0)
     const poor = atHome()

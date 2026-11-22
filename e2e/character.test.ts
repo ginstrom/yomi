@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { PERK_IDS } from '../src/character/perks.ts'
 import { xpToNextLevel } from '../src/character/progression.ts'
-import { offsetToHex } from '../src/grid/hex.ts'
+import { earlyHex } from '../src/game/worldMap.ts'
 import { useGames, type Game } from './driver.ts'
 
 /** Types a line at the debug console, opening it first, and closes it again. */
@@ -544,7 +544,7 @@ describe('a hero’s panel', () => {
     // The Kobold Scouts next, then by way of open country to the Goblin Reavers, who are worth the third level.
     for (const hops of [[[16, 21]], [[14, 16], [13, 12], [12, 8]]]) {
       let world = await game.waitFor('World')
-      for (const [col, row] of hops) world = await game.travelTo(offsetToHex(col, row))
+      for (const [col, row] of hops) world = await game.travelTo(earlyHex(col, row))
       await game.click(world.buttons.attack)
       await game.waitForScenes(['Battle'])
       await game.waitFor('Battle', (b) => b.playerControl)

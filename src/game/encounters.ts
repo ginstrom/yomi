@@ -101,9 +101,6 @@ export interface Encounter {
   threat: number
 }
 
-/** The highest threat on today's map, and `threatAt`'s cap until the map grows. */
-export const MAX_THREAT = 5
-
 /** The threats an encounter is fought at, from `min` to `max`; any threat outside is fought as the nearest in it. */
 export interface ThreatBand {
   min: number

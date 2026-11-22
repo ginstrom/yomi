@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { offsetToHex, type Hex } from '../src/grid/hex.ts'
+import type { Hex } from '../src/grid/hex.ts'
+import { earlyHex } from '../src/game/worldMap.ts'
 import { useGames, type Game } from './driver.ts'
 
 /**
@@ -24,7 +25,7 @@ async function twoParties(game: Game, { members = 1, apart = false, away: awayFr
       saved.game.world.guildHall = 4
       localStorage.setItem('yomi.save.1', JSON.stringify(saved))
     },
-    [members, apart, offsetToHex(7, 19), awayFromHome, at ?? null] as const,
+    [members, apart, earlyHex(7, 19), awayFromHome, at ?? null] as const,
   )
   const menu = await game.reload()
   await game.click(menu.buttons.continue)
@@ -109,7 +110,7 @@ describe('exchange', () => {
 
   it('fits all five time buttons in the least window with two parties on a held site', async () => {
     const game = await games.open()
-    await twoParties(game, { away: true, at: offsetToHex(11, 21) })
+    await twoParties(game, { away: true, at: earlyHex(11, 21) })
     await game.resize(840, 560)
     const busy = await game.waitFor('World', (w) => w.view.width < 700 && w.buttons.exchange.visible && w.buttons.garrison.visible)
     // A footer button is as wide as its label needs, but for 96px (WorldScene's footerWidth).

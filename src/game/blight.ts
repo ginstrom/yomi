@@ -26,8 +26,10 @@ import { ENCAMPMENT_ID, threatAt, type MonsterLocation, type WorldState } from '
 export const MAX_BLIGHT = 3
 export const BLIGHT_NAMES = ['clean', 'tainted', 'blighted', 'corrupted'] as const
 
-/** A monster location pushes with this times its threat... */
+/** A monster location pushes with this times its threat, up to `BLIGHT_THREAT_CAP`... */
 export const BLIGHT_PER_THREAT = 2
+/** The threat above which a nest pushes no harder: the outer rings' nests push as a threat-5 nest does. */
+export const BLIGHT_THREAT_CAP = 5
 /** ...and the Source with this. */
 export const SOURCE_STRENGTH = 20
 /** What each corrupted neighbour adds to a hex's blight. */
@@ -55,13 +57,14 @@ export const BLIGHT_GROWTH = 0.1
 export const GROWTH_DAYS = 30
 export const MAX_BLIGHT_GROWTH = 0.5
 
-/** Each day spawn pressure grows by the corrupted hexes over this, times the growth... */
-export const SPAWN_DIVISOR = 200
+/** Each day spawn pressure grows by the corrupted hexes over this, times the growth: 200 × (140 × 72) / (60 × 40), stage 8's pressure per hex on today's board... */
+export const SPAWN_DIVISOR = 840
 /** ...and a monster location appears when it reaches this. */
 export const SPAWN_COST = 30
 /** A spawn keeps this many hexes from every party, other monster locations, held sites and watchtowers. */
 export const SPAWN_CLEARANCE = 4
-export const MAX_MONSTER_LOCATIONS = 24
+/** No spawn while this many monster locations stand on the map. */
+export const MAX_MONSTER_LOCATIONS = 60
 /** The chance a spawned location guards an item. */
 export const SPAWN_LOOT_CHANCE = 0.5
 
@@ -129,7 +132,7 @@ export function partyStrength(levels: readonly number[]): number {
 }
 
 export function monsterStrength(location: MonsterLocation): number {
-  return location.source ? SOURCE_STRENGTH : BLIGHT_PER_THREAT * location.threat
+  return location.source ? SOURCE_STRENGTH : BLIGHT_PER_THREAT * Math.min(location.threat, BLIGHT_THREAT_CAP)
 }
 
 /** What a held site pushes with: the encampment with its shrine, a resource with its improvement. */
@@ -299,11 +302,21 @@ export function advanceDay(world: WorldState, presences: readonly PartyPresence[
   return events
 }
 
-/** What corrupted land spawns: a nest that fights one of these encounters, by its name, where the encounter's band holds the threat. */
-export const SPAWN_KINDS: ReadonlyArray<{ encounter: EncounterId; name: string }> = [
+/**
+ * What corrupted land spawns: a nest that fights one of these encounters, by
+ * its name, where the encounter's band holds the threat and the threat is
+ * `fromThreat` or more (the outer rings' kinds, from 7, so the home rings
+ * spawn as they did before stage 9). New kinds go after these, keeping the
+ * draws of the threats they do not reach.
+ */
+export const SPAWN_KINDS: ReadonlyArray<{ encounter: EncounterId; name: string; fromThreat?: number }> = [
   { encounter: 'goblin_raid', name: 'Goblin Brood' },
   { encounter: 'kobold_scouts', name: 'Kobold Nest' },
   { encounter: 'bandit_camp', name: 'Bandit Gang' },
+  { encounter: 'spider_nest', name: 'Spider Brood', fromThreat: 7 },
+  { encounter: 'salamander_pool', name: 'Salamander Spring', fromThreat: 7 },
+  { encounter: 'bandit_company', name: 'Bandit Troop', fromThreat: 7 },
+  { encounter: 'freebooter_host', name: 'Freebooter Band', fromThreat: 7 },
 ]
 
 function spawn(
@@ -335,9 +348,11 @@ function spawn(
   const at = hexes[candidates[Math.floor(rng() * candidates.length)]]
   // By distance, never by the blight or the date: home's nests stay ones a weak party can beat.
   const threat = threatAt(at)
-  const eligible = SPAWN_KINDS.filter((k) => threat >= ENCOUNTER_BANDS[k.encounter].min && threat <= ENCOUNTER_BANDS[k.encounter].max)
+  const eligible = SPAWN_KINDS.filter(
+    (k) => threat >= (k.fromThreat ?? 1) && threat >= ENCOUNTER_BANDS[k.encounter].min && threat <= ENCOUNTER_BANDS[k.encounter].max,
+  )
   // No kind for this threat: no spawn, the world RNG left as it was and the pressure kept for another day.
-  // Unreachable on today's map, as threatAt stops at MAX_THREAT, inside the goblins' and kobolds' bands (1 to 5).
+  // Unreachable on today's map, as every threat of THREAT_RINGS has a kind (blight.test.ts checks it); a guard for a ring added without one.
   if (eligible.length === 0) return null
   const kind = eligible[Math.floor(rng() * eligible.length)]
   const loot: Item[] = rng() < SPAWN_LOOT_CHANCE ? [MAGIC_ITEMS[Math.floor(rng() * MAGIC_ITEMS.length)]] : []

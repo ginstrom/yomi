@@ -1,5 +1,5 @@
 import { randomSeed } from '../combat/rng.ts'
-import { HexBoard, hexDistance, hexEquals, hexKey, offsetToHex, reachableHexes, type BoardSize, type Hex } from '../grid/hex.ts'
+import { HexBoard, hexAdd, hexDistance, hexEquals, hexKey, offsetToHex, reachableHexes, type BoardSize, type Hex } from '../grid/hex.ts'
 import {
   AMULET_FOCUS,
   EMBERBLADE,
@@ -14,7 +14,7 @@ import {
 } from '../inventory/inventory.ts'
 import { advanceDay, cleanse, seedBlight, type WorldEvent } from './blight.ts'
 import { act, advance, setOrder, startTravel, worldInterrupt, type DayReport, type OrderRequest } from './company.ts'
-import { MAX_THREAT, type EncounterId } from './encounters.ts'
+import type { EncounterId } from './encounters.ts'
 import { presences, type Expedition, type PartyPresence } from './expedition.ts'
 import type { GameState } from './gameState.ts'
 import { initialHeld, updateTerritory, type ImprovementLevel, type Material, type Stock } from './territory.ts'
@@ -40,7 +40,7 @@ interface LocationBase {
 export interface MonsterLocation extends LocationBase {
   kind: 'monsters'
   encounter: EncounterId
-  /** How dangerous they are, from 1: set by how far from home they lie (`threatAt`). */
+  /** How dangerous they are, from 1: set by the ring of `THREAT_RINGS` they lie in (`threatAt`). */
   threat: number
   /** What the party finds when it has beaten them (`takeLoot` in gameState.ts): better the further out. */
   loot: Item[]
@@ -144,10 +144,24 @@ export type Lingering = 'scout' | 'wait'
  * The map is far larger than a window shows, so the party sees only what lies
  * around it and the rest comes into view as it travels.
  */
-export const WORLD_SIZE: BoardSize = { cols: 60, rows: 40 }
+export const WORLD_SIZE: BoardSize = { cols: 140, rows: 72 }
 
-/** Where a new game's party stands: the encampment, in the west. */
-const HOME: Hex = offsetToHex(9, 19)
+/**
+ * Stage 8's map (60 × 40) stands inside today's moved by this axial
+ * translation, so every distance among its locations is kept (an odd-r board:
+ * adding rows alone would not be a translation). A location on an odd stage-8
+ * row keeps its column, one on an even row moves a column west; every row
+ * gains 17.
+ */
+export const EARLY_SHIFT: Hex = { q: -9, r: 17 }
+
+/** Where stage 8's offset (`col`, `row`) stands on today's board (`EARLY_SHIFT`). */
+export function earlyHex(col: number, row: number): Hex {
+  return hexAdd(offsetToHex(col, row), EARLY_SHIFT)
+}
+
+/** Where a new game's party stands: the encampment, in the west; offset (9, 36). */
+const HOME: Hex = earlyHex(9, 19)
 export const ENCAMPMENT_ID = 'encampment'
 /** What the encampment is called unless the player names it otherwise. */
 export const DEFAULT_ENCAMPMENT_NAME = 'Oakvale'
@@ -162,29 +176,45 @@ export interface SourcePlace {
   position: Hex
   threat: number
 }
-/** The Source's place on the map: today's (58, 19) at threat 5 (a literal, not `threatAt`: the import-cycle rule); stage 9 step 04 moves it to the far ring at `SOURCE_THREAT`. */
-export const SOURCE_PLACE: SourcePlace = { position: offsetToHex(58, 19), threat: 5 }
+/** The Source's place on the map: in the far east, 122 hexes from home, in the last ring, fought at `SOURCE_THREAT`. */
+export const SOURCE_PLACE: SourcePlace = { position: offsetToHex(131, 36), threat: SOURCE_THREAT }
 
 /** How far from the party a spawn must be to stop it travelling or camping. */
 export const NOTICE_RADIUS = 8
 
 /**
- * How many hexes from home each step of threat is. The first band holds the
- * party's home country, and the map's far corners reach the top threat.
+ * The rings of threat around home: a hex up to `upTo` hexes from home (and
+ * beyond the last ring's) has the first ring's threat that reaches it. The
+ * home country's five rings are 11 hexes wide, as stage 8's bands were; the
+ * outer rings are wider and step faster, out to the Source's at 122.
  */
-export const THREAT_BAND = 11
+export const THREAT_RINGS: readonly { upTo: number; threat: number }[] = [
+  { upTo: 10, threat: 1 },
+  { upTo: 21, threat: 2 },
+  { upTo: 32, threat: 3 },
+  { upTo: 43, threat: 4 },
+  { upTo: 54, threat: 5 },
+  { upTo: 67, threat: 7 },
+  { upTo: 80, threat: 9 },
+  { upTo: 94, threat: 12 },
+  { upTo: 108, threat: 15 },
+  { upTo: 122, threat: 18 },
+]
 
-/** How dangerous the monsters at `position` are: 1 around home, and one more for every `THREAT_BAND` hexes out, up to `MAX_THREAT`. */
+/** How dangerous the monsters at `position` are: the threat of its ring of `THREAT_RINGS` by its distance from home, the last ring's beyond it. */
 export function threatAt(position: Hex): number {
-  return Math.min(MAX_THREAT, 1 + Math.floor(hexDistance(HOME, position) / THREAT_BAND))
+  const distance = hexDistance(HOME, position)
+  return (THREAT_RINGS.find((ring) => distance <= ring.upTo) ?? THREAT_RINGS[THREAT_RINGS.length - 1]).threat
 }
 
+/** A resource at stage 8's offset (`earlyHex`). */
 const resource = (id: string, name: string, col: number, row: number): WorldLocation => ({
   id,
   kind: 'resource',
   name,
-  position: offsetToHex(col, row),
+  position: earlyHex(col, row),
 })
+/** Monsters at stage 8's offset (`earlyHex`), at the threat of their ring. */
 const monsters = (
   id: string,
   name: string,
@@ -196,19 +226,20 @@ const monsters = (
   id,
   kind: 'monsters',
   name,
-  position: offsetToHex(col, row),
+  position: earlyHex(col, row),
   encounter,
-  threat: threatAt(offsetToHex(col, row)),
+  threat: threatAt(earlyHex(col, row)),
   loot,
 })
 
 /**
  * The trade partners on today's map: Millbrook in the threat 2 ring, Saltmere
- * on the south edge in the threat 3 ring. A world holds copies (`newWorld`).
+ * in the threat 3 ring, each at stage 8's place (`earlyHex`). A world holds
+ * copies (`newWorld`).
  */
 export const PARTNERS: readonly PartnerLocation[] = [
-  { id: 'millbrook', kind: 'partner', name: 'Millbrook', position: offsetToHex(18, 30), good: 'timber' },
-  { id: 'saltmere', kind: 'partner', name: 'Saltmere', position: offsetToHex(30, 38), good: 'salt' },
+  { id: 'millbrook', kind: 'partner', name: 'Millbrook', position: earlyHex(18, 30), good: 'timber' },
+  { id: 'saltmere', kind: 'partner', name: 'Saltmere', position: earlyHex(30, 38), good: 'salt' },
 ]
 
 /**
@@ -229,6 +260,8 @@ export function newWorld(
     turn: 1,
     // The party's home country first, in the west, then the lands further out,
     // whose monsters are the more dangerous the further they lie (threatAt).
+    // Each stands at its stage-8 offset, moved by EARLY_SHIFT (earlyHex); the
+    // Source last, at `source`.
     locations: [
       { id: ENCAMPMENT_ID, kind: 'encampment', name: encampmentName.trim() || DEFAULT_ENCAMPMENT_NAME, position: HOME },
       resource('iron_vein', 'Iron Vein', 11, 21),

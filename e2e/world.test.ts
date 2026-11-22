@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { WorldState, WorldStatus } from '../src/game/worldMap.ts'
+import { earlyHex, type WorldState, type WorldStatus } from '../src/game/worldMap.ts'
 import { roadTo } from '../src/game/trade.ts'
-import { hexDistance, offsetToHex, type Hex } from '../src/grid/hex.ts'
+import { hexDistance, type Hex } from '../src/grid/hex.ts'
 import { WORLD_LAYOUT, boardHexCenter, boardPixelSize, type Point } from '../src/scenes/boardGeometry.ts'
 import { clampOrigin, mapOrigin, pannedOrigin } from '../src/scenes/mapScroll.ts'
 import type { WorldProbe } from '../src/testHook.ts'
@@ -15,10 +15,10 @@ describe('the world map', () => {
     const game = await games.open()
     const start = await game.newGame()
     expect(start.world.turn).toBe(1)
-    expect(start.partyAt).toEqual(offsetToHex(9, 19))
+    expect(start.partyAt).toEqual(earlyHex(9, 19))
     expect(start.buttons.attack.visible).toBe(false)
 
-    const arrived = await game.travelTo(offsetToHex(11, 19))
+    const arrived = await game.travelTo(earlyHex(11, 19))
     expect(arrived.world.turn).toBe(3)
     expect(arrived.confronting).toBeNull()
   })
@@ -27,14 +27,15 @@ describe('the world map', () => {
     const game = await games.open()
     const start = await game.newGame()
     const index = (col: number, row: number) => row * start.world.board.cols + col
-    expect(start.visible).toContain(index(9, 19))
-    expect(start.world.seen[index(58, 19)]).toBe(-1)
-    expect(start.world.seen[index(9, 28)]).toBe(-1)
+    // Offsets on the 140 × 72 board: home (9, 36), the Source (131, 36), and stage 8's (9, 28) moved with home, (8, 45).
+    expect(start.visible).toContain(index(9, 36))
+    expect(start.world.seen[index(131, 36)]).toBe(-1)
+    expect(start.world.seen[index(8, 45)]).toBe(-1)
     expect(start.world.sighted).not.toContain('blight_source')
 
-    const south = await game.travelTo(offsetToHex(9, 23))
-    expect(south.visible).toContain(index(9, 28))
-    expect(south.world.seen[index(9, 28)]).toBeGreaterThanOrEqual(0)
+    const south = await game.travelTo(earlyHex(9, 23))
+    expect(south.visible).toContain(index(8, 45))
+    expect(south.world.seen[index(8, 45)]).toBeGreaterThanOrEqual(0)
   })
 
   it('tells of the hovered hex in the info panel', async () => {
@@ -94,7 +95,7 @@ describe('the world map', () => {
   it('still travels on a press that moves less than the drag threshold', async () => {
     const game = await games.open()
     const start = await game.newGame()
-    const to = offsetToHex(11, 19)
+    const to = earlyHex(11, 19)
     const at = worldHexOnScreen(start, to)
     await game.holdDown(at)
     await game.hover(plus(at, 3, 2))
@@ -107,7 +108,7 @@ describe('the world map', () => {
     const game = await games.open()
     const start = await game.newGame()
     const panned = await pan(game, start, -40, -30)
-    const to = offsetToHex(11, 19)
+    const to = earlyHex(11, 19)
     await game.click(worldHexOnScreen(panned, to))
     const arrived = await game.waitFor('World', (w) => !w.walking && w.world.turn !== start.world.turn)
     expect(arrived.partyAt).toEqual(to)
@@ -133,7 +134,7 @@ describe('the world map', () => {
   it('does not travel on a press let go past the threshold, even with no move reported on the way', async () => {
     const game = await games.open()
     const start = await game.newGame()
-    const at = worldHexOnScreen(start, offsetToHex(11, 19))
+    const at = worldHexOnScreen(start, earlyHex(11, 19))
     await game.holdDown(at)
     // The release alone carries the new position, as a browser may send it after a fast flick.
     const cdp = await game.page.context().newCDPSession(game.page)
@@ -208,7 +209,7 @@ describe('the world map', () => {
   it('ignores Home while the party walks', async () => {
     const game = await games.open()
     const start = await game.newGame()
-    const to = offsetToHex(11, 19)
+    const to = earlyHex(11, 19)
     // Slower than life, so the walk lasts long enough to press Home during it.
     await game.page.evaluate(() => {
       window.__yomi!.speed = 0.25
@@ -304,7 +305,7 @@ describe('the world map', () => {
   it('ignores a click on the party’s entry while the party walks', async () => {
     const game = await games.open()
     const start = await game.newGame()
-    const to = offsetToHex(11, 19)
+    const to = earlyHex(11, 19)
     await game.page.evaluate(() => {
       window.__yomi!.speed = 0.25
     })
@@ -351,7 +352,7 @@ describe('the world map', () => {
     expect(among.buttons.attack.visible).toBe(true)
 
     // No walking away from them.
-    await game.click(worldHexOnScreen(among, offsetToHex(11, 19)))
+    await game.click(worldHexOnScreen(among, earlyHex(11, 19)))
     const held = (await game.probe('World'))!
     expect(held.walking).toBe(false)
     expect(held.partyAt).toEqual(RAIDERS.position)
@@ -359,7 +360,7 @@ describe('the world map', () => {
     await game.click(among.buttons.wait)
     const waited = await game.waitFor('World', (w) => w.confronting === null)
     expect(waited.world.turn).toBe(among.world.turn + 1)
-    await game.travelTo(offsetToHex(11, 19))
+    await game.travelTo(earlyHex(11, 19))
   })
 
   it('starts a battle when the party attacks', async () => {
@@ -526,7 +527,7 @@ describe('the world map', () => {
     expect(among.buttons.campUntilHealed.visible).toBe(false)
     await game.click(among.buttons.wait)
     await game.waitFor('World', (w) => w.confronting === null)
-    await game.travelTo(offsetToHex(11, 19))
+    await game.travelTo(earlyHex(11, 19))
 
     // Wounded as a battle leaves a party: planted in the save, and loaded.
     await game.page.evaluate(() => {
@@ -596,7 +597,7 @@ describe('the world map', () => {
     it('carries a walk cut short on, a hex a day, the line saying where', async () => {
       const game = await games.open()
       const home = await game.newGame()
-      const far = offsetToHex(19, 19)
+      const far = earlyHex(19, 19)
       await game.click(worldHexOnScreen(home, far))
       const stopped = await game.waitFor('World', (w) => !w.walking && w.world.turn > home.world.turn)
       expect(stopped.partyAt).not.toEqual(far)
@@ -666,7 +667,7 @@ describe('the world map', () => {
     it('draws what is left of a walk cut short until it arrives, across a reload', async () => {
       const game = await games.open()
       const home = await game.newGame()
-      const far = offsetToHex(19, 19)
+      const far = earlyHex(19, 19)
       await game.click(worldHexOnScreen(home, far))
       await game.waitFor('World', (w) => !w.walking && w.world.turn > home.world.turn)
       // Off the map, nothing is hovered: the standing route is drawn, from where the party stands to where it was going.
@@ -701,7 +702,7 @@ describe('the world map', () => {
       const game = await games.open()
       const home = await game.newGame()
       await slowly(game)
-      await game.click(worldHexOnScreen(home, offsetToHex(19, 19)))
+      await game.click(worldHexOnScreen(home, earlyHex(19, 19)))
       const walking = await game.waitFor('World', (w) => w.walking)
       expect(order(walking)).toMatch(/^Travelling/)
       expect(await savedTurn(game)).toBe(walking.world.turn)
@@ -712,7 +713,7 @@ describe('the world map', () => {
     it('says the party is travelling while Next day and Until something happens play its walk, and saves before', async () => {
       const game = await games.open()
       const home = await game.newGame()
-      const far = offsetToHex(19, 19)
+      const far = earlyHex(19, 19)
       await game.click(worldHexOnScreen(home, far))
       const stopped = await game.waitFor('World', (w) => !w.walking && w.world.turn > home.world.turn)
       expect(order(stopped)).toMatch(/^Travelling/)
@@ -768,7 +769,7 @@ describe('the world map', () => {
   it('pauses under the menu on Esc and resumes where it was', async () => {
     const game = await games.open()
     await game.newGame()
-    const before = await game.travelTo(offsetToHex(11, 19))
+    const before = await game.travelTo(earlyHex(11, 19))
 
     await game.press('Escape')
     await game.waitForScenes(['Menu'], ['World'])
@@ -838,7 +839,7 @@ describe('the world map', () => {
       await game.waitForScenes(['World'])
       return game.settled('World', (w) => w.figures.length === parties.length + 1)
     }
-    const at = (col: number, row: number) => offsetToHex(col, row)
+    const at = (col: number, row: number) => earlyHex(col, row)
     const walk = (...hexes: Hex[]) => ({ kind: 'travel', to: hexes.at(-1)!, route: hexes })
     /** A company whose second party stands before the Goblin Raiders, the first (at `first`'s hex, else at home) selected again after the load opened on the second. */
     async function blockedCompany(game: Game, first: { position?: Hex } = {}): Promise<WorldProbe> {
@@ -989,7 +990,7 @@ describe('the world map', () => {
     expect(start.buttons.home.visible).toBe(false)
     expect(start.buttons.garrison.visible).toBe(false)
     // Iron Vein, held from the start.
-    const vein = await game.travelTo(offsetToHex(11, 21))
+    const vein = await game.travelTo(earlyHex(11, 21))
     expect(vein.buttons.home.visible).toBe(true)
     expect(vein.buttons.garrison.visible).toBe(true)
     await game.click(vein.buttons.garrison)
@@ -1011,7 +1012,7 @@ describe('the world map', () => {
   it('builds a watchtower on clean land with the stock, and says what it costs without', async () => {
     const game = await games.open()
     await game.newGame()
-    const there = await game.travelTo(offsetToHex(7, 17))
+    const there = await game.travelTo(earlyHex(7, 17))
     expect(there.buttons.buildTower.visible).toBe(true)
     await game.click(there.buttons.buildTower)
     const poor = await game.waitFor('World', (w) => w.message.includes('costs'))
@@ -1064,7 +1065,7 @@ describe('the world map', () => {
   })
 
   describe('Improve', () => {
-    const IRON_VEIN = offsetToHex(11, 21)
+    const IRON_VEIN = earlyHex(11, 21)
 
     it('builds an outpost, a works and a fort on a held site, showing a palisade at the fort', async () => {
       const game = await games.open()

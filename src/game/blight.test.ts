@@ -5,6 +5,8 @@ import { ENCOUNTER_BANDS } from './encounters.ts'
 import { presences, type PartyPresence } from './expedition.ts'
 import { newGame, type GameState } from './gameState.ts'
 import {
+  BLIGHT_PER_THREAT,
+  BLIGHT_THREAT_CAP,
   CLEANSE_LEVELS,
   IMPROVEMENT_STRENGTH,
   PARTNER_STRENGTH,
@@ -15,23 +17,28 @@ import {
   SHIFT_COST,
   SPAWN_CLEARANCE,
   SPAWN_COST,
+  SPAWN_KINDS,
   advanceDay,
   blightAt,
   blightGrowth,
   boardHex,
   boardIndex,
   netInfluence,
+  monsterStrength,
   partyStrength,
   siteStrength,
+  SOURCE_STRENGTH,
   type WorldEvent,
 } from './blight.ts'
 import { readyMadeParty } from './party.ts'
 import { YIELD_DAYS } from './territory.ts'
 import { ABANDON_AFTER, roadTo, tradeDay, type TradeRoute } from './trade.ts'
 import {
+  EARLY_SHIFT,
+  earlyHex,
   ENCAMPMENT_ID,
   SOURCE_ID,
-  THREAT_BAND,
+  THREAT_RINGS,
   clearLocation,
   newWorld,
   passTurn,
@@ -150,6 +157,20 @@ describe('the contest', () => {
   })
 })
 
+describe('a nest\'s strength, capped (stage 9)', () => {
+  const nest = (threat: number, source?: true): MonsterLocation => ({ id: 'n', kind: 'monsters', name: 'Nest', position: { q: 0, r: 0 }, encounter: 'goblin_raid', threat, loot: [], ...(source ? { source } : {}) })
+
+  it('pushes with BLIGHT_PER_THREAT a threat up to BLIGHT_THREAT_CAP, and no harder beyond', () => {
+    expect(BLIGHT_THREAT_CAP).toBe(5)
+    for (const threat of [1, 3, 5]) expect(monsterStrength(nest(threat))).toBe(BLIGHT_PER_THREAT * threat)
+    for (const threat of [7, 9, 12, 15, 18, 20]) expect(monsterStrength(nest(threat))).toBe(BLIGHT_PER_THREAT * 5)
+  })
+
+  it('leaves the Source at SOURCE_STRENGTH, whatever its threat', () => {
+    for (const threat of [5, 20]) expect(monsterStrength(nest(threat, true))).toBe(SOURCE_STRENGTH)
+  })
+})
+
 describe('spawning', () => {
   it('puts a monster location on corrupted land, clear of the party and the rest, at the threat of where it lies', () => {
     const { game, world, party } = solo(1)
@@ -171,69 +192,121 @@ describe('spawning', () => {
       world.spawnPressure = SPAWN_COST
       passTurn(world, presences(game.parties))
     }
+    expect(MAX_MONSTER_LOCATIONS).toBe(60)
     expect(lairs(world).length).toBe(MAX_MONSTER_LOCATIONS)
   })
 
   /**
-   * One forced spawn on each of 80 fresh worlds with all land corrupted, worked out once for the two tests below
-   * (a world and its first day are costly, and 200 worlds for each test ran past the timeout on a busy machine).
-   * 80 seeds spawn at every threat from 1 to 5, and Bandit Gangs at 3, 4 and 5.
+   * One forced spawn on each of 80 world seeds, with the land corrupted at the threats `holds` admits: one world
+   * (a world and its first day are costly on the 140 × 72 board) copied for each seed, its world RNG set to the seed.
    */
-  let forced: MonsterLocation[] | undefined
-  const forcedSpawns = (): MonsterLocation[] => {
-    if (!forced) {
-      forced = []
-      for (let seed = 1; seed <= 80; seed++) {
-        const { game, world } = solo(seed)
-        corruptWhere(world, () => true)
-        world.spawnPressure = SPAWN_COST
-        passTurn(world, presences(game.parties))
-        forced.push(...spawns(world))
-      }
+  const forceSpawns = (holds: (threat: number) => boolean): MonsterLocation[] => {
+    const { game, world } = solo(1)
+    // Clean elsewhere, the Source's corruption included, so every spawn lies at a threat `holds` admits.
+    world.blight.forEach((_, i) => {
+      if (!holds(threatAt(boardHex(world.board, i)))) world.blight[i] = 0
+    })
+    corruptWhere(world, holds)
+    const spawned: MonsterLocation[] = []
+    for (let seed = 1; seed <= 80; seed++) {
+      const copy = structuredClone(world)
+      copy.rng = seed
+      copy.spawnPressure = SPAWN_COST
+      passTurn(copy, presences(game.parties))
+      spawned.push(...spawns(copy))
     }
-    return forced
+    return spawned
+  }
+  /** The home rings' (threats 1 to 5), and the outer rings' (7 and up), each worked out once for the tests below. */
+  let home: MonsterLocation[] | undefined
+  let outer: MonsterLocation[] | undefined
+  const homeSpawns = () => (home ??= forceSpawns((threat) => threat <= 5))
+  const outerSpawns = () => (outer ??= forceSpawns((threat) => threat >= 7))
+  const holds = (l: MonsterLocation) => {
+    const band = ENCOUNTER_BANDS[l.encounter]
+    expect(l.threat, l.name).toBeGreaterThanOrEqual(band.min)
+    expect(l.threat, l.name).toBeLessThanOrEqual(band.max)
   }
 
+  // The first test works out both sets: a second or two alone, more on a busy machine.
   it('spawns only kinds whose encounter band holds the threat of where they lie', () => {
-    const spawned = forcedSpawns()
+    for (const l of [...homeSpawns(), ...outerSpawns()]) holds(l)
+  }, 30_000)
+
+  it('spawns in the home rings only today\'s kinds, at every threat from 1 to 5', () => {
+    const spawned = homeSpawns()
     expect(spawned.length).toBeGreaterThan(60)
     expect(new Set(spawned.map((l) => l.threat))).toEqual(new Set([1, 2, 3, 4, 5]))
-    for (const l of spawned) {
-      const band = ENCOUNTER_BANDS[l.encounter]
-      expect(l.threat).toBeGreaterThanOrEqual(band.min)
-      expect(l.threat).toBeLessThanOrEqual(band.max)
-    }
+    expect(new Set(spawned.map((l) => l.name))).toEqual(new Set(['Goblin Brood', 'Kobold Nest', 'Bandit Gang']))
   })
 
   it('spawns a Bandit Gang only from threat 3, and does spawn one there', () => {
-    const gangs = forcedSpawns().filter((l) => l.name === 'Bandit Gang')
-    expect(new Set(gangs.map((l) => l.threat))).toEqual(new Set([3, 4, 5]))
+    const gangs = [...homeSpawns(), ...outerSpawns()].filter((l) => l.name === 'Bandit Gang')
+    expect(new Set(gangs.map((l) => l.threat))).toEqual(new Set([3, 4, 5, 7]))
     for (const l of gangs) expect(l.encounter).toBe('bandit_camp')
   })
 
-  it('spawns at threats 1 and 2 as before bandits: the same places, kinds and loot', () => {
+  it('spawns in the outer rings, at each of their threats, the kinds whose band holds it and none before its fromThreat', () => {
+    const spawned = outerSpawns()
+    expect(spawned.length).toBeGreaterThan(60)
+    expect(new Set(spawned.map((l) => l.threat))).toEqual(new Set([7, 9, 12, 15, 18]))
+    for (const l of spawned) {
+      const kind = SPAWN_KINDS.find((k) => k.name === l.name)!
+      expect(l.encounter).toBe(kind.encounter)
+      expect(l.threat).toBeGreaterThanOrEqual(kind.fromThreat ?? 1)
+    }
+    // Every new kind spawns somewhere out there.
+    expect(new Set(spawned.map((l) => l.name))).toEqual(new Set(SPAWN_KINDS.slice(2).map((k) => k.name)))
+  })
+
+  it('has a kind for every ring\'s threat, and at threats 1 to 5 only today\'s three, in their order', () => {
+    const eligible = (threat: number) =>
+      SPAWN_KINDS.filter((k) => threat >= (k.fromThreat ?? 1) && threat >= ENCOUNTER_BANDS[k.encounter].min && threat <= ENCOUNTER_BANDS[k.encounter].max).map(
+        (k) => k.name,
+      )
+    for (const { threat } of THREAT_RINGS) expect(eligible(threat).length, `threat ${threat}`).toBeGreaterThan(0)
+    expect([1, 2, 3, 4, 5].map(eligible)).toEqual([
+      ['Goblin Brood', 'Kobold Nest'],
+      ['Goblin Brood', 'Kobold Nest'],
+      ['Goblin Brood', 'Kobold Nest', 'Bandit Gang'],
+      ['Goblin Brood', 'Kobold Nest', 'Bandit Gang'],
+      ['Goblin Brood', 'Kobold Nest', 'Bandit Gang'],
+    ])
+    expect([7, 9, 12, 15, 18].map(eligible)).toEqual([
+      ['Bandit Gang', 'Spider Brood', 'Salamander Spring'],
+      ['Spider Brood', 'Salamander Spring', 'Bandit Troop'],
+      ['Bandit Troop'],
+      ['Freebooter Band'],
+      ['Freebooter Band'],
+    ])
+    expect(SPAWN_KINDS.slice(0, 3).map((k) => [k.encounter, k.name, k.fromThreat])).toEqual([
+      ['goblin_raid', 'Goblin Brood', undefined],
+      ['kobold_scouts', 'Kobold Nest', undefined],
+      ['bandit_camp', 'Bandit Gang', undefined],
+    ])
+  })
+
+  it('spawns at threats 1 and 2 as recorded (before bandits, again on stage 9\'s board): the same places, kinds and loot', () => {
     // Captured from the code before the Bandit Gang joined SPAWN_KINDS: [col, row, threat, name, loot].
     // The loot was captured again when the Wand of Sparks left the enchanted items (stage 3):
     // the same draws, over eight items rather than nine.
+    // Re-captured in stage 9 step 04 on the 140 × 72 board (the corrupted hexes, from which a spawn is drawn,
+    // are listed by the board's index, so every place moved); the draws are the same code's.
     const before: Record<number, [number, number, number, string, string[]][]> = {
       1: [
-        [6, 25, 1, 'Goblin Brood', []],
-        [2, 39, 2, 'Kobold Nest', ['Ring of Fortune']],
-        [18, 28, 2, 'Goblin Brood', []],
+        [18, 56, 2, 'Kobold Nest', ['Ring of Fortune']],
+        [10, 44, 1, 'Goblin Brood', []],
       ],
       2: [
-        [19, 29, 2, 'Goblin Brood', ['Ring of Fortune']],
-        [21, 34, 2, 'Kobold Nest', ['Hawkeye Bow']],
-        [12, 30, 2, 'Goblin Brood', []],
+        [0, 45, 2, 'Goblin Brood', ['Ring of Fortune']],
+        [5, 51, 2, 'Kobold Nest', ['Hawkeye Bow']],
+        [11, 46, 1, 'Goblin Brood', []],
       ],
-      // A spawn at threat 5 comes first here: the draws after it are unchanged all the same.
-      3: [
-        [23, 30, 2, 'Goblin Brood', ['Emberblade']],
-        [17, 10, 2, 'Kobold Nest', ['Wand of Storms']],
-      ],
+      // Spawns at threat 18, on the Source's corruption, come among these: the draws after them are unchanged all the same.
+      3: [[14, 46, 1, 'Goblin Brood', ['Emberblade']]],
       4: [
-        [11, 36, 2, 'Goblin Brood', ['Wand of Storms']],
-        [16, 9, 2, 'Kobold Nest', ['Cloak of Shadows']],
+        [14, 53, 2, 'Goblin Brood', ['Wand of Storms']],
+        [0, 27, 2, 'Kobold Nest', ['Cloak of Shadows']],
       ],
     }
     for (const [seed, expected] of Object.entries(before)) {
@@ -260,7 +333,7 @@ describe('spawning', () => {
     days(game, 400)
     expect(world.status).toBe('playing')
     const home = world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
-    const near = lairs(world).filter((l) => hexDistance(home, l.position) < THREAT_BAND)
+    const near = lairs(world).filter((l) => hexDistance(home, l.position) <= THREAT_RINGS[0].upTo)
     expect(near.length).toBeGreaterThan(0)
     expect(near.every((l) => l.threat === 1)).toBe(true)
   })
@@ -305,12 +378,15 @@ describe('blightAt', () => {
  */
 describe('the numbers of one party, pinned', () => {
   const members = [{ level: 3 }, { level: 4 }, { level: 5 }]
-  const stands = { q: 34, r: 19 }
+  /** Stage 8's axial hex (q, r), moved with the home country (`EARLY_SHIFT`, stage 9). */
+  const moved = (q: number, r: number): Hex => ({ q: q + EARLY_SHIFT.q, r: r + EARLY_SHIFT.r })
+  const stands = moved(34, 19)
   const pinned = (): PartyPresence[] => [{ position: stands, levels: members.map((m) => m.level) }]
   /** A party of strength 8 standing on corrupted land beside the Source's corruption, on day 45 (growth 1.1). */
   const scene = (): WorldState => {
-    // Pinned before the trade partners (stage 8), so on a world without them.
-    const world = newWorld(1, undefined, [])
+    // Pinned before the trade partners (stage 8), so on a world without them; since stage 9, with the Source
+    // where it stood then relative to home (the simulator's NEAR_SOURCE).
+    const world = newWorld(1, undefined, [], { position: earlyHex(58, 19), threat: 5 })
     world.turn = 45
     setLevel(world, stands, MAX_BLIGHT)
     return world
@@ -319,7 +395,7 @@ describe('the numbers of one party, pinned', () => {
 
   it('gives the same net influence about the party', () => {
     const world = scene()
-    const at = (q: number, r: number) => netInfluence(world, pinned(), { q, r })
+    const at = (q: number, r: number) => netInfluence(world, pinned(), moved(q, r))
     expect(at(34, 19)).toBe(-8) // the party's hex, neutral
     expect([at(35, 19), at(35, 18), at(34, 18), at(33, 19), at(33, 20), at(34, 20)]).toEqual([
       4, 4, -1.5, -2.5999999999999996, -2.5999999999999996, 0.7000000000000011,
@@ -334,24 +410,26 @@ describe('the numbers of one party, pinned', () => {
     world.spawnPressure = SPAWN_COST - 0.01
     const events: WorldEvent[] = []
     for (let d = 0; d < 30; d++) events.push(...passTurn(world, pinned()))
-    expect(events.length).toBe(663)
-    expect(sha(events)).toBe('e4d8c398717c3c242985e77f3a7a49f62a7d75eb8794df86beebf0708355ab58')
+    // Re-pinned in stage 9 step 04: on the 140 × 72 board the land past stage 8's edges changes level too
+    // (663 events before, 962 now), spawn pressure grows by a 840th of the corrupted hexes (a 200th before), and
+    // the land beyond 54 hexes of home is the threat 7 ring. The net influence and the cells below are unchanged.
+    expect(events.length).toBe(962)
+    expect(sha(events)).toBe('0b1099fcdac91f66ceb732901eb9ca28d990c6929f1f56f326f00b4aad3d9d18')
     expect(events.filter((e) => e.type === 'spawned')).toEqual([
-      { type: 'spawned', location: 'spawn_1', name: 'Goblin Brood', at: { q: 44, r: 23 }, threat: 5 },
-      { type: 'spawned', location: 'spawn_2', name: 'Bandit Gang', at: { q: 35, r: 36 }, threat: 5 },
-      { type: 'spawned', location: 'spawn_3', name: 'Kobold Nest', at: { q: 34, r: 28 }, threat: 4 },
+      { type: 'spawned', location: 'spawn_1', name: 'Bandit Gang', at: moved(58, 22), threat: 7 },
+      { type: 'spawned', location: 'spawn_2', name: 'Salamander Spring', at: moved(42, 36), threat: 7 },
     ])
-    expect(world.spawnPressure).toBe(28.11)
-    expect(world.spawns).toBe(3)
-    expect(world.rng).toBe(1135788947)
-    const cell = (q: number, r: number) => [world.blight[boardIndex(world.board, { q, r })], world.shift[boardIndex(world.board, { q, r })]]
+    expect(world.spawnPressure).toBe(4.82)
+    expect(world.spawns).toBe(2)
+    expect(world.rng).toBe(-63941196)
+    const cell = (q: number, r: number) => [world.blight[boardIndex(world.board, moved(q, r))], world.shift[boardIndex(world.board, moved(q, r))]]
     expect([cell(34, 19), cell(34, 18), cell(33, 19), cell(34, 20)]).toEqual([
       [0, 0],
       [2, -9.900000000000004],
       [1, -11],
       [2, 52.80000000000003],
     ])
-    expect(sha([world.blight, world.shift, world.seen])).toBe('3a9e5cc9fe7b870e85a089bb1dcb5245203346687cd773a02c79fc2c292d9918')
+    expect(sha([world.blight, world.shift, world.seen])).toBe('e007d4a160d4aac9fee698200d1ea7c387fc7fe5d89732a0982c7b96486a423d')
   })
 
   it('gives the same blight days alone', () => {
@@ -362,11 +440,12 @@ describe('the numbers of one party, pinned', () => {
       world.turn++
       events.push(...advanceDay(world, pinned()))
     }
-    expect(events.length).toBe(645)
-    expect(sha(events)).toBe('aa2219ab17b432b4186ad4d2eb48bb02530b00fdd8359716cfd1fa10512dc9ba')
-    expect(world.spawnPressure).toBe(28.11)
-    expect(world.rng).toBe(1135788947)
-    expect(sha([world.blight, world.shift])).toBe('4666e8b2d21011b459a503b3c5bf8a65a5b5c5487c0abe39a6cc7d28e6a8bd8c')
+    // Re-pinned in stage 9 step 04, as above (645 events before).
+    expect(events.length).toBe(944)
+    expect(sha(events)).toBe('7dc90977164b51b9f3437c71bc62f1c02110841a0f221192733ab6d5882b2332')
+    expect(world.spawnPressure).toBe(4.82)
+    expect(world.rng).toBe(-63941196)
+    expect(sha([world.blight, world.shift])).toBe('d5b899e19093c8a427f7ad8cd1118311ceb6f9d2751746f0238c493d380485d3')
   })
 })
 
@@ -418,8 +497,8 @@ describe('the rules over several parties', () => {
 
   it('spawns clear of every party', () => {
     /** Corrupts the land within 6 of `a` and cleans the rest, and forces a spawn: the nest must land 4 to 6 from `a`, and only the rule keeps it from `b`. */
-    const a: PartyPresence = { position: offsetToHex(20, 12), levels: [1] }
-    const b: PartyPresence = { position: offsetToHex(26, 12), levels: [1] }
+    const a: PartyPresence = { position: earlyHex(20, 12), levels: [1] }
+    const b: PartyPresence = { position: earlyHex(26, 12), levels: [1] }
     const nestsBeside = (parties: PartyPresence[]) =>
       Array.from({ length: 20 }, (_, k) => {
         const world = newWorld(k + 1)

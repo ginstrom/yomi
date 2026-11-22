@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CreationStep } from '../src/testHook.ts'
-import { WORLD_SIZE } from '../src/game/worldMap.ts'
+import { WORLD_SIZE, earlyHex } from '../src/game/worldMap.ts'
 import { hexDistance, hexNeighbors, hexToOffset, offsetToHex, type Hex } from '../src/grid/hex.ts'
 import { RAIDERS, battleHexOnScreen, worldHexOnScreen, useGames, type Game } from './driver.ts'
 
@@ -68,7 +68,7 @@ describe('the manual’s screenshots', () => {
     await shot(game, 'world-start')
 
     // A walk cut short keeps its order: the line says where the party is going.
-    await game.click(worldHexOnScreen(world, offsetToHex(19, 19)))
+    await game.click(worldHexOnScreen(world, earlyHex(19, 19)))
     const cut = await game.waitFor('World', (w) => !w.walking && w.world.turn > world.world.turn)
     // The seed cuts this walk short; if a change of rules lets it arrive, pick another hex, or the image goes stale.
     expect(cut.parties[0].order).toMatch(/^Travelling/)
@@ -496,7 +496,7 @@ describe('the manual’s screenshots', () => {
     await game.click(back.parties.find((p) => p.id === 'party_2')!)
     await game.settled('World', (w) => w.selectedParty === 'party_2')
     try {
-      await game.travelTo(offsetToHex(8, 17))
+      await game.travelTo(earlyHex(8, 17))
     } catch {
       // Stopped short by a sighting: the view is as good from there.
     }

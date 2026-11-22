@@ -6,7 +6,7 @@ import { newGame, type GameState } from '../game/gameState.ts'
 import { readyMadeParty } from '../game/party.ts'
 import { UNEXPLORED } from '../game/vision.ts'
 import { boardIndex } from '../game/blight.ts'
-import { SOURCE_ID, threatAt } from '../game/worldMap.ts'
+import { SOURCE_ID, earlyHex, threatAt } from '../game/worldMap.ts'
 import { hexToOffset, offsetToHex } from '../grid/hex.ts'
 import { completions, runCommand, COMMAND_NAMES, type DebugContext } from './debugCommands.ts'
 
@@ -136,7 +136,7 @@ describe('debug commands', () => {
     const context = onWorldMap()
     const { game } = context.source!
     const party = game.parties[0]
-    expect(setOrder(game, party.id, { kind: 'travel', to: offsetToHex(30, 10) })).toBeNull()
+    expect(setOrder(game, party.id, { kind: 'travel', to: earlyHex(30, 10) })).toBeNull()
     runCommand('goto 2 3', context)
     expect(party.order).toEqual({ kind: 'idle' })
     runCommand('days 2', context)
@@ -157,7 +157,7 @@ describe('debug commands', () => {
     const game = context.source!.game
     const party = game.parties[0]
     game.world.sighted = game.world.locations.filter((l) => l.kind === 'monsters').map((l) => l.id)
-    expect(setOrder(game, party.id, { kind: 'travel', to: offsetToHex(3, 1) })).toBeNull()
+    expect(setOrder(game, party.id, { kind: 'travel', to: earlyHex(3, 1) })).toBeNull()
     const route = party.order.kind === 'travel' ? [...party.order.route] : []
     runCommand('days 2', context)
     expect(party.position).toEqual(route[1])
@@ -221,9 +221,10 @@ describe('debug commands', () => {
     it('places a nest of the kind at a hex, with the next id and the hex’s threat, drawing no RNG', () => {
       const context = onWorldMap()
       const { world } = context.source!.game
-      const at = offsetToHex(20, 20)
+      // Stage 8's (20, 20), moved with home (earlyHex): offset (19, 37).
+      const at = offsetToHex(19, 37)
       const before = { rng: world.rng, pressure: world.spawnPressure, spawns: world.spawns, count: world.locations.length }
-      const result = runCommand('spawn goblin_raid 20 20', context)
+      const result = runCommand('spawn goblin_raid 19 37', context)
       expect(result.changed).toBe(true)
       expect(result.lines[0]).toMatch(/Goblin Brood/)
       const placed = world.locations.at(-1)!
@@ -233,18 +234,19 @@ describe('debug commands', () => {
       expect(world.spawns).toBe(before.spawns + 1)
       expect(world.rng).toBe(before.rng)
       expect(world.spawnPressure).toBe(before.pressure)
-      expect(world.blight[20 * world.board.cols + 20]).toBe(3)
+      expect(world.blight[37 * world.board.cols + 19]).toBe(3)
       expect(world.sighted).toContain(placed.id)
     })
 
     it('updates sight: a nest placed in sight shows its corrupted hex as seen (verification round 1)', () => {
       const context = onWorldMap()
       const { world } = context.source!.game
-      const at = offsetToHex(10, 21)
+      // Stage 8's (10, 21), moved with home (earlyHex): offset (10, 38).
+      const at = offsetToHex(10, 38)
       const index = boardIndex(world.board, at)
       expect(world.seen[index]).toBeGreaterThanOrEqual(0)
       expect(world.seen[index]).toBeLessThan(3)
-      runCommand('spawn goblin_raid 10 21', context)
+      runCommand('spawn goblin_raid 10 38', context)
       expect(world.seen[index]).toBe(3)
     })
 
@@ -252,11 +254,12 @@ describe('debug commands', () => {
       const context = onWorldMap()
       const { world, parties } = context.source!.game
       const site = world.locations.find((l) => l.id !== 'encampment' && l.kind === 'resource')!
-      parties[0].position = offsetToHex(10, 14)
-      runCommand(`spawn kobold_scouts 11 12`, context)
-      expect(world.locations.at(-1)).toMatchObject({ name: 'Kobold Nest', encounter: 'kobold_scouts', position: offsetToHex(11, 12) })
+      // Stage 8's (10, 14), (11, 12) and (4, 5), moved with home (earlyHex).
+      parties[0].position = offsetToHex(9, 31)
+      runCommand(`spawn kobold_scouts 10 29`, context)
+      expect(world.locations.at(-1)).toMatchObject({ name: 'Kobold Nest', encounter: 'kobold_scouts', position: offsetToHex(10, 29) })
       expect(runCommand(`spawn kobold_scouts ${site.id}`, context).changed).toBe(false)
-      runCommand('spawn bandit_camp 4 5', context)
+      runCommand('spawn bandit_camp 4 22', context)
       expect(world.locations.at(-1)).toMatchObject({ name: 'Bandit Gang', id: `spawn_${world.spawns}` })
       const first = world.locations.at(-2)!.id
       expect(first).not.toBe(world.locations.at(-1)!.id)
@@ -277,7 +280,7 @@ describe('debug commands', () => {
     it('needs a hex, and refuses the one a party stands on, here included, so no party stands on a nest unconfronted', () => {
       const context = onWorldMap()
       const { world, parties } = context.source!.game
-      parties[0].position = offsetToHex(10, 14)
+      parties[0].position = earlyHex(10, 14)
       const count = world.locations.length
       expect(runCommand('spawn goblin_raid', context)).toMatchObject({ changed: false, lines: [expect.stringMatching(/Name the hex/)] })
       expect(runCommand('spawn goblin_raid here', context).lines[0]).toMatch(/A party stands/)
@@ -516,9 +519,9 @@ describe('debug commands', () => {
       expect(all[1 + context.source!.game.parties[0].members.length]).toMatch(/^party_2 \(Second Company\)/)
       const [first, second] = context.source!.game.parties
       first.order = { kind: 'meet', party: 'party_2' }
-      second.order = { kind: 'travel', to: offsetToHex(4, 2), route: [offsetToHex(4, 2)] }
+      second.order = { kind: 'travel', to: earlyHex(4, 2), route: [earlyHex(4, 2)] }
       const orders = runCommand('party', context).lines.filter((line) => /^party_\d /.test(line))
-      expect(orders).toEqual([expect.stringMatching(/, order meet party_2$/), expect.stringMatching(/, order travel to 4,2$/)])
+      expect(orders).toEqual([expect.stringMatching(/, order meet party_2$/), expect.stringMatching(/, order travel to 3,19$/)])
       first.order = { kind: 'garrison' }
       second.order = { kind: 'day', action: { kind: 'camp' } }
       expect(runCommand('party', context).lines.filter((line) => /^party_\d /.test(line))).toEqual([

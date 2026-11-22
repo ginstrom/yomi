@@ -5,7 +5,7 @@ Touch every line, then run `npm test`.
 - `src/game/encounters.ts` → `ENCOUNTERS`: an entry.
 - `src/game/encounters.ts` → `ENCOUNTER_BANDS`: its band.
 - `src/game/encounters.ts` → `ENCOUNTER_COUNTS`: its counts.
-- `src/game/blight.ts` → `SPAWN_KINDS`: add it only if the blight should spawn it.
+- `src/game/blight.ts` → `SPAWN_KINDS`: add it only if the blight should spawn it, after the entries there (so the draws at the threats it does not reach stay the same); `fromThreat` keeps it out below a threat its band holds (the outer rings' kinds take 7, so the home rings spawn as before).
 - A foe kind it needs: see `foe.md`.
 - Anything that changes an encounter moves balance: `.claude/skills/yomi-balance/`.
 

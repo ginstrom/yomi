@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { hexDistance, hexEquals, offsetToHex } from '../grid/hex.ts'
+import { hexDistance, hexEquals } from '../grid/hex.ts'
 import { boardHex, boardIndex } from './blight.ts'
 import { presences, type PartyPresence } from './expedition.ts'
 import { newGame } from './gameState.ts'
 import { readyMadeParty } from './party.ts'
 import { CAMP_VISION, PARTY_VISION, UNEXPLORED, knownBlightedShare, updateSight, visibleHexes } from './vision.ts'
 import {
+  EARLY_SHIFT,
+  earlyHex,
   ENCAMPMENT_ID,
   NOTICE_RADIUS,
   SOURCE_ID,
@@ -33,7 +35,7 @@ function hiddenNest(world: WorldState, col: number, row: number): MonsterLocatio
     id: 'hidden',
     kind: 'monsters',
     name: 'Hidden Nest',
-    position: offsetToHex(col, row),
+    position: earlyHex(col, row),
     encounter: 'goblin_raid',
     threat: 1,
     loot: [],
@@ -53,7 +55,7 @@ describe('a new world', () => {
     expect(seenAt(world, at(world, SOURCE_ID))).toBe(UNEXPLORED)
     expect(world.sighted).not.toContain(SOURCE_ID)
     expect(world.sighted).toContain('goblin_raiders')
-    expect(seenAt(world, offsetToHex(40, 2))).toBe(UNEXPLORED)
+    expect(seenAt(world, earlyHex(40, 2))).toBe(UNEXPLORED)
     expect(world.sighted).not.toContain('spider_nest')
   })
 
@@ -66,7 +68,7 @@ describe('a new world', () => {
 describe('sight', () => {
   it('reveals the land within sight of the party as it travels', () => {
     const { game, world, party } = solo(1)
-    const far = offsetToHex(9, 31)
+    const far = earlyHex(9, 31)
     expect(seenAt(world, far)).toBe(UNEXPLORED)
     for (let tries = 0; tries < 10 && !hexEquals(party.position, far); tries++) travel(game, party, far)
     for (const i of visibleHexes(world, presences(game.parties))) expect(world.seen[i]).toBe(world.blight[i])
@@ -90,12 +92,12 @@ describe('sight', () => {
     world.sighted = world.locations.filter((l) => l.kind === 'monsters').map((l) => l.id)
     const nest = hiddenNest(world, 9, 29)
     expect(updateSight(world, presences(game.parties))).toEqual([])
-    const journey = travel(game, party, offsetToHex(9, 34))
+    const journey = travel(game, party, earlyHex(9, 34))
     expect(journey.interruptedBy).toMatchObject({ type: 'sighted', location: nest.id })
     expect(hexDistance(party.position, nest.position)).toBe(PARTY_VISION)
     expect(world.sighted).toContain(nest.id)
     expect(isNotable(world, journey.interruptedBy!, presences(game.parties))).toBe(true)
-    expect(isNotable(world, { type: 'sighted', location: 'x', name: 'x', at: offsetToHex(50, 2), threat: 1 }, presences(game.parties))).toBe(false)
+    expect(isNotable(world, { type: 'sighted', location: 'x', name: 'x', at: earlyHex(50, 2), threat: 1 }, presences(game.parties))).toBe(false)
     expect(isNotable(world, { type: 'spawned', location: 'x', name: 'x', at: party.position, threat: 1 }, presences(game.parties))).toBe(false)
     expect(NOTICE_RADIUS).toBeGreaterThanOrEqual(PARTY_VISION)
   })
@@ -108,16 +110,16 @@ describe('sight', () => {
     const found = events.find((e) => e.type === 'sighted' && e.location === SOURCE_ID)
     expect(found).toMatchObject({ type: 'sighted', source: true })
     expect(world.sighted).toContain(SOURCE_ID)
-    party.position = offsetToHex(9, 19)
+    party.position = earlyHex(9, 19)
     expect(hexDistance(party.position, source)).toBeGreaterThan(NOTICE_RADIUS)
     expect(isNotable(world, found!, presences(game.parties))).toBe(true)
   })
 
   it('routes through an unsighted nest, and around it once sighted', () => {
     const { world, party } = solo(1)
-    party.position = offsetToHex(30, 2)
+    party.position = earlyHex(30, 2)
     const nest = hiddenNest(world, 32, 2)
-    const to = offsetToHex(34, 2)
+    const to = earlyHex(34, 2)
     expect(routeTo(world, party, to)!.some((h) => hexEquals(h, nest.position))).toBe(true)
     world.sighted.push(nest.id)
     expect(routeTo(world, party, to)!.some((h) => hexEquals(h, nest.position))).toBe(false)
@@ -134,7 +136,7 @@ describe('sight', () => {
     const [a, b] = [solo(5).game, solo(5).game]
     for (const game of [a, b]) {
       const party = game.parties[0]
-      for (let tries = 0; tries < 10 && !hexEquals(party.position, offsetToHex(30, 20)); tries++) travel(game, party, offsetToHex(30, 20))
+      for (let tries = 0; tries < 10 && !hexEquals(party.position, earlyHex(30, 20)); tries++) travel(game, party, earlyHex(30, 20))
     }
     expect(a.world.seen).toEqual(b.world.seen)
     expect(a.world.sighted).toEqual(b.world.sighted)
@@ -145,13 +147,15 @@ describe('sight', () => {
 describe('the sight of one party, pinned', () => {
   it('sees the same hexes and sights the same nest', () => {
     const { game, world, party } = solo(1)
-    party.position = { q: 20, r: 12 }
+    // Stage 8's axial hexes, moved with the home country (EARLY_SHIFT, stage 9): the same sight.
+    const moved = (q: number, r: number) => ({ q: q + EARLY_SHIFT.q, r: r + EARLY_SHIFT.r })
+    party.position = moved(20, 12)
     const visible = visibleHexes(world, presences(game.parties))
     expect(visible.size).toBe(230)
-    const has = (q: number, r: number) => visible.has(boardIndex(world.board, { q, r }))
+    const has = (q: number, r: number) => visible.has(boardIndex(world.board, moved(q, r)))
     expect([has(20, 12), has(25, 12), has(26, 12), has(20, 7), has(20, 6)]).toEqual([true, true, false, true, false])
     expect(updateSight(world, presences(game.parties))).toEqual([
-      { type: 'sighted', location: 'hobgoblin_warband', name: 'Hobgoblin Warband', at: { q: 19, r: 10 }, threat: 2 },
+      { type: 'sighted', location: 'hobgoblin_warband', name: 'Hobgoblin Warband', at: moved(19, 10), threat: 2 },
     ])
   })
 })
@@ -159,8 +163,8 @@ describe('the sight of one party, pinned', () => {
 describe('the sight of several parties', () => {
   it('is the union of what each sees', () => {
     const world = newWorld(1)
-    const a: PartyPresence = { position: offsetToHex(20, 12), levels: [1] }
-    const b: PartyPresence = { position: offsetToHex(40, 30), levels: [] }
+    const a: PartyPresence = { position: earlyHex(20, 12), levels: [1] }
+    const b: PartyPresence = { position: earlyHex(40, 30), levels: [] }
     const both = visibleHexes(world, [a, b])
     const union = new Set([...visibleHexes(world, [a]), ...visibleHexes(world, [b])])
     expect(both).toEqual(union)
@@ -172,9 +176,9 @@ describe('the sight of several parties', () => {
     const world = newWorld(1)
     world.sighted = world.locations.filter((l) => l.kind === 'monsters').map((l) => l.id)
     const nest = hiddenNest(world, 40, 30)
-    const home: PartyPresence = { position: offsetToHex(9, 19), levels: [] }
+    const home: PartyPresence = { position: earlyHex(9, 19), levels: [] }
     expect(updateSight(world, [home])).toEqual([])
-    const events = updateSight(world, [home, { position: offsetToHex(42, 30), levels: [] }])
+    const events = updateSight(world, [home, { position: earlyHex(42, 30), levels: [] }])
     expect(events).toEqual([{ type: 'sighted', location: nest.id, name: nest.name, at: nest.position, threat: 1 }])
   })
 })
