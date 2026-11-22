@@ -15,7 +15,7 @@ Node 26+ (`scripts/*.ts` run on Node's native TypeScript; imports use explicit `
 | One test file / by name | `npx vitest run src/grid/hex.test.ts` / `... -t "routes around zones"` |
 | In-browser tests (headless Chromium) | `npm run test:browser` (`-- -t "victorious"` for one) |
 | Production build | `npm run build` |
-| Battle simulator / campaign balance measure (~8 min for 500 campaigns, one at a time) | `npm run simulate -- --battles 2000 --seed 1` / `npm run simulate -- --campaign --battles 500 --seed 1 --ready-level 7 --near-source` (the default campaign is the long one, ready level 18) |
+| Battle simulator / campaign balance measure (one at a time; ~8 min for 500 early campaigns, ~10 for 100 long ones) | `npm run simulate -- --battles 2000 --seed 1` / `npm run simulate -- --campaign --battles 500 --seed 1 --ready-level 7 --near-source` (the default campaign is the long one, ready level 18) |
 
 Sprites: the `yomi-sprites` skill; sounds and narration: `yomi-sound`; the manual's screenshots: `yomi-manual`. There is no linter: `tsc` is the lint step (`noUnusedLocals`, `noUnusedParameters`, `erasableSyntaxOnly`: no enums, namespaces or parameter properties; `verbatimModuleSyntax`: `import type` for types). The `Makefile` runs the same in a podman container (`make test`, `make test-browser ARGS=...`, `make shell`). Dev builds: `~` opens a debug console, `?seed=42` fixes battle seeds (`src/scenes/CLAUDE.md`).
 

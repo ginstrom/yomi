@@ -18,7 +18,7 @@ The ones most runs need:
 
 ## One run at a time
 
-Never two simulations at once: on the stage-9 map, 500 early campaigns (`one`) take about 8 minutes alone and 100 long campaigns about 10 (stage 9 step 08); 500 campaigns log some 70 MB. Give each its own output under `logs/` (gitignored):
+Never two simulations at once: on the stage-9 map, 500 early campaigns (`one`) take about 8 minutes alone and 100 long campaigns about 10 (stage 9 step 08); 500 early campaigns log some 300 MB (the 50-campaign check writes about 31 MB). Give each its own output under `logs/` (gitignored):
 
 ```sh
 PATH=/opt/homebrew/opt/node@26/bin:$PATH npm run simulate -- --campaign --battles 500 --seed 1 --parties 1 --ready-level 7 --near-source --out logs/<label>-one.jsonl > logs/<label>-one.txt

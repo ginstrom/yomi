@@ -201,12 +201,13 @@ const sameList = (a: ReadonlyArray<[Hex, number]>, b: ReadonlyArray<[Hex, number
   a.length === b.length && a.every(([h, strength], i) => h.q === b[i][0].q && h.r === b[i][0].r && strength === b[i][1])
 
 function fields(world: WorldState): Fields {
-  const now = sources(world)
-  const { blight, clean } = now
+  const { blight, clean } = sources(world)
   const memo = fieldMemo.get(world)
   if (memo && sameList(memo.sources.blight, blight) && sameList(memo.sources.clean, clean)) return memo
   const { hexes } = geometry(world.board)
-  const made: Fields = { sources: now, blight: new Float64Array(hexes.length), clean: new Float64Array(hexes.length) }
+  // Copies, not the world's own hexes, so a position changed in place still misses the memo.
+  const copy = (list: Array<[Hex, number]>): Array<[Hex, number]> => list.map(([h, strength]) => [{ q: h.q, r: h.r }, strength])
+  const made: Fields = { sources: { blight: copy(blight), clean: copy(clean) }, blight: new Float64Array(hexes.length), clean: new Float64Array(hexes.length) }
   for (const [at, strength] of blight) addSource(made.blight, hexes, at, strength)
   for (const [at, strength] of clean) addSource(made.clean, hexes, at, strength)
   fieldMemo.set(world, made)

@@ -108,8 +108,8 @@ describe('the contest', () => {
   it('works the sources\u2019 fields out afresh whenever a source changes, as a world never memoised does', () => {
     const { game, world } = solo(1)
     const home = world.locations.find((l) => l.id === ENCAMPMENT_ID)!.position
-    const probes = [home, { q: home.q + 4, r: home.r }, { q: home.q + 9, r: home.r - 3 }, ...lairs(world).slice(0, 3).map((l) => ({ q: l.position.q + 1, r: l.position.r }))]
-    const net = (w: WorldState) => probes.map((h) => netInfluence(w, presences(game.parties), h))
+    const probes = (w: WorldState) => [home, { q: home.q + 4, r: home.r }, { q: home.q + 9, r: home.r - 3 }, ...lairs(w).map((l) => ({ q: l.position.q + 1, r: l.position.r }))]
+    const net = (w: WorldState) => probes(w).map((h) => netInfluence(w, presences(game.parties), h))
     const fresh = () => net(structuredClone(world))
     const changes: Array<() => void> = [
       () => world.towers.push({ id: 'tower_probe', position: { q: home.q + 4, r: home.r } }),
@@ -118,6 +118,8 @@ describe('the contest', () => {
       () => world.held.push(world.locations.find((l) => l.kind === 'resource' && !world.held.includes(l.id))!.id),
       () => (world.improvements[world.held.at(-1)!] = 1),
       () => clearLocation(game, lairs(world)[1].id),
+      // In place, as no rule does today: the memo must not hold the world's own hexes.
+      () => ((lairs(world)[2].position as { q: number }).q += 1),
     ]
     for (const change of changes) {
       expect(net(world)).toEqual(fresh())
